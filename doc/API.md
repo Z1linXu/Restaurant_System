@@ -1,0 +1,354 @@
+# Restaurant System API (MVP)
+
+This document defines the core API endpoints for the restaurant management system MVP.
+
+## Base URL
+/api/v1
+
+## MVP Auth Context
+
+For MVP, backend authorization uses request header:
+- `X-User-Id`
+
+Behavior:
+- backend loads the current user from `users`
+- backend resolves role from `roles`
+- backend enforces role capability checks server-side
+- this header-based context is temporary and should be replaceable by real login/auth later
+
+## Modules
+- Orders
+- Kitchen
+- Inventory
+- Prep
+- Menu
+- Users & Stations
+
+---
+
+## Orders
+
+### Order Status Definition
+`draft`, `submitted`, `preparing`, `ready`, `picked_up`, `completed`
+
+### Create Order
+POST /orders
+
+Request assumption for MVP:
+- Combo 订单必须直接提交为真实 `order_items`
+- 不允许把 Combo 作为单独 `menu_item`
+- 套餐主品、配菜、鸡蛋分别作为独立 order line
+- 同一套餐组共享 `combo_group_no`
+- `combo_role` 支持：`main`, `combo_side`, `combo_egg`, `standalone`
+- 订单项与选项响应应返回双语快照字段
+- 历史订单展示必须使用快照，不依赖当前菜单主数据
+- 订单项应返回 `category_code_snapshot`
+- 订单选项应返回 `option_type_snapshot`
+
+### Submit Order
+POST /orders/{id}/submit
+
+### Get Order
+GET /orders/{id}
+
+Order detail should include:
+- snapshot-based item names/options
+- kitchen progression when applicable
+- beverage progression when applicable
+- item notes and instructions
+- modified-after-submit flags when applicable
+- order header and timestamps
+
+### Complete Order
+POST /orders/{id}/complete
+
+### Post-Submit Item Modification Rule
+For MVP, frontdesk may continue to modify item lines after submit when:
+- order status is `submitted`, `preparing`, or `ready`
+- target item is not already `ready_for_pickup`
+- target item is not already `served`
+
+Allowed actions:
+- add item
+- update quantity
+- update notes/options/specs
+- remove item
+
+Important:
+- backend does not depend on true kitchen `in_progress` tracking to decide modification eligibility
+- if a submitted order is modified, downstream snapshot-based reads must reflect the updated item snapshot/instructions
+- if a new kitchen item is added to a previously `ready` order, the order must move back into active kitchen flow
+
+---
+
+## Kitchen
+
+### Get Tasks
+GET /kitchen-tasks
+
+Task response should use snapshot fields:
+- `item_name_snapshot_zh`
+- `item_name_snapshot_en`
+- `special_instructions_snapshot`
+
+### Kitchen Task Status Definition
+`pending`, `in_progress`, `ready_for_pickup`, `served`, `cancelled`
+
+### Complete Task
+POST /kitchen-tasks/{id}/complete
+
+Compatibility alias:
+- for MVP this means mark item `ready_for_pickup`
+
+### Start Task
+POST /kitchen-tasks/{id}/start
+
+### Mark Ready For Pickup
+POST /kitchen-tasks/{id}/ready-for-pickup
+
+### Mark Served
+POST /kitchen-tasks/{id}/served
+
+### Get Ready Orders
+GET /orders/ready
+
+### Mark Picked Up
+POST /orders/{id}/pickup
+
+### KDS APIs
+- GET `/kds/noodle-display`
+- GET `/kds/hot-kitchen`
+- GET `/kds/pass`
+- GET `/kds/frontdesk-beverages`
+- GET `/kds/serving-shelf`
+- GET `/kds/history`
+
+---
+
+## Frontdesk Beverage
+
+### Beverage Item Status Definition
+`pending`, `preparing`, `ready`, `served`, `cancelled`
+
+### Beverage Board
+GET `/frontdesk/beverages`
+
+Default behavior:
+- show frontdesk-managed beverage items for one store
+- include `DRINK`, `ALCOHOL`, and taskless `MILK_TEA`
+- use order/item snapshot fields only
+
+### Start Beverage Preparation
+POST `/frontdesk/beverages/{orderItemId}/start`
+
+### Mark Beverage Ready
+POST `/frontdesk/beverages/{orderItemId}/ready`
+
+### Mark Beverage Served
+POST `/frontdesk/beverages/{orderItemId}/served`
+
+### Cancel Beverage Item
+POST `/frontdesk/beverages/{orderItemId}/cancel`
+
+---
+
+## Frontdesk Order Board
+
+### Frontdesk Active Board
+GET `/frontdesk/orders`
+
+Recommended filters:
+- `store_id`
+- `status` (`submitted`, `preparing`, `ready`, `completed`, `cancelled`, or `all`)
+- `order_type`
+- `table_no`
+- `pickup_no`
+- `keyword`
+
+Default behavior:
+- active board defaults to `submitted`, `preparing`, `ready`
+- completed/cancelled only appear when explicitly filtered
+
+Summary response should include:
+- `order_id`
+- `order_no`
+- `order_type`
+- `table_no`
+- `pickup_no`
+- `order_status`
+- `is_modified_after_submit`
+- `modified_after_submit_at`
+- `submitted_at`
+- `updated_at`
+- `total_item_count`
+- `ready_item_count`
+- `beverage_pending_count`
+- `kitchen_pending_count`
+
+### Frontdesk Order History
+GET `/frontdesk/orders/history`
+
+Recommended filters:
+- `store_id`
+- `status` (`completed`, `cancelled`, or `all`)
+- `order_type`
+- `table_no`
+- `pickup_no`
+- `keyword`
+- `limit`
+
+Default behavior:
+- recent history defaults to 20 orders
+- default statuses are `completed` and `cancelled`
+
+---
+
+## Realtime / WebSocket
+
+### WebSocket Endpoint
+`/ws`
+
+Recommended transport for MVP:
+- Spring WebSocket + STOMP
+- SockJS fallback is enabled
+
+### Topic Design
+Topics are store-scoped and screen-scoped:
+- `/topic/stores/{storeId}/frontdesk/orders`
+- `/topic/stores/{storeId}/frontdesk/beverages`
+- `/topic/stores/{storeId}/kds/noodle-display`
+- `/topic/stores/{storeId}/kds/hot-kitchen`
+- `/topic/stores/{storeId}/kds/pass`
+- `/topic/stores/{storeId}/kds/serving-shelf`
+- `/topic/stores/{storeId}/history`
+
+### Event Payload
+For MVP the backend publishes lightweight refresh events. Frontend may re-fetch the relevant REST view after receiving an event.
+
+Recommended payload shape:
+- `event_type`
+- `store_id`
+- `order_id`
+- `order_item_id`
+- `order_status`
+- `task_status`
+- `beverage_status`
+- `is_modified_after_submit`
+- `happened_at`
+- `suggested_topics`
+
+### Realtime Publish Triggers
+Order events:
+- order created
+- order submitted
+- order modified after submit
+- order cancelled
+- order marked ready
+- order marked completed
+
+Kitchen task events:
+- kitchen task started
+- kitchen task marked `ready_for_pickup`
+- kitchen task marked `served`
+- kitchen task cancelled
+
+Beverage item events:
+- beverage item started
+- beverage item marked `ready`
+- beverage item marked `served`
+- beverage item cancelled
+
+### Frontend Refresh Expectation
+- submitted orders should appear automatically on frontdesk and KDS screens
+- modified orders/items should refresh and expose modified flags
+- serving shelf should refresh when pass marks an item `ready_for_pickup`
+- serving shelf should refresh again when runner marks an item `served`
+- beverage board and order detail should refresh when beverage status changes
+
+---
+
+## Inventory
+
+### Get Items
+GET /inventory/items
+
+### Restock
+POST /inventory/restock
+
+### Transactions
+GET /inventory/transactions
+
+---
+
+## Prep
+
+### Execute Prep
+POST /prep-recipes/{id}/execute
+
+---
+
+## Menu
+
+### Get Items
+GET /menu/items
+
+### Get Categories
+GET /menu/categories
+
+### Menu Modeling Notes
+- `menu_items.station_id` 是菜品默认工位
+- `menu_item_options` 为菜品级独立选项，不是全局选项
+- 推荐 `option_type`：`noodle_type`, `size`, `addon`, `remove`, `soup_base`, `combo_side`, `combo_egg`, `combo_upgrade`
+- 菜单主数据使用双语字段：`name_zh`, `name_en`
+- MVP API 默认返回双语字段，由前端决定中文优先与英文回退逻辑
+- `DRINK` 与 `ALCOHOL` 为 direct-serve，不进厨房
+- `MILK_TEA` 是否进入 BAR 任务流由门店配置决定
+
+---
+
+## Users & Stations
+
+### Get Stations
+GET /stations
+
+### Assign Stations
+POST /users/{id}/stations
+
+### MVP Role Model
+
+Role codes:
+- `FRONTDESK`
+- `HOT_KITCHEN`
+- `NOODLE_VIEW`
+- `PASS`
+- `ADMIN`
+
+Capability summary:
+- `FRONTDESK`: order create/edit/submit/modify/complete/cancel, active/history/detail reads, beverage board/actions, serving shelf view, mark shelf item served
+- `HOT_KITCHEN`: hot kitchen view, start task, mark item ready_for_pickup
+- `NOODLE_VIEW`: read-only noodle display
+- `PASS`: pass screen view, full-order monitoring, mark item ready_for_pickup, serving shelf view
+- `ADMIN`: full access for MVP
+
+---
+
+## Notes
+- All responses use JSON
+- Use ISO datetime format
+- MVP focuses on core flow only
+- Order status flow is strictly: `draft` -> `submitted` -> `preparing` -> `ready` -> `picked_up` -> `completed`
+- Combo is pricing/sales logic only, not a standalone kitchen item
+- Kitchen tasks are assigned using `menu_items.station_id`
+- Kitchen tasks are generated on `POST /orders/{id}/submit`
+- `station_code` is copied from the resolved enabled station record
+- If the configured station is not enabled for the store, submission must fail clearly
+- Kitchen task handoff is item-level: `ready_for_pickup` means the item is prepared and placed on the serving shelf
+- Runner/server marks individual shelf items as `served`
+- Order becomes `ready` automatically when all required kitchen tasks are `ready_for_pickup` or `served`
+- Frontdesk beverage view uses order snapshots for `DRINK`, `ALCOHOL`, and store-configured taskless `MILK_TEA`
+- Frontdesk beverage workflow is item-level and stored separately from `kitchen_tasks`
+- Beverage items do not block kitchen READY automation for this store
+- Order detail should show both kitchen progression and beverage progression when applicable
+- Frontdesk board and history must use snapshot-backed order/item/task/beverage data, not live menu names
+- Chinese is the default display language; English is optional via UI language switch
+- If English text is empty, frontend should fall back to Chinese

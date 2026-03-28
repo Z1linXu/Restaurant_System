@@ -1,0 +1,5 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/restaurant_system
+    username: your_username
+    password: your_password

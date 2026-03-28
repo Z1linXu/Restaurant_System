@@ -1,0 +1,25 @@
+spring:
+  profiles:
+    active: local
+  application:
+    name: restaurant-system-backend
+  datasource:
+    url: jdbc:postgresql://localhost:5432/restaurant_system
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+server:
+  port: 8080
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+
+app:
+  note: Local datasource credentials should be configured in application-local.yml.
