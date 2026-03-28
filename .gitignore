@@ -1,0 +1,25 @@
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.iml
+
+# Logs
+*.log
+
+# Java / Maven
+backend/target/
+*.class
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+
+# Local config / secrets
+backend/src/main/resources/application-local.yml
+.env
+.env.*
+
+# Misc
+coverage/
