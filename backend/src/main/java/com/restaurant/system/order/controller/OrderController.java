@@ -40,6 +40,26 @@ public class OrderController {
         return ApiResponse.success("Order created in draft status", orderService.createOrder(request));
     }
 
+    @GetMapping("/draft-open")
+    public ApiResponse<OrderResponse> findOpenDraftOrder(
+        @RequestParam Long store_id,
+        @RequestParam(required = false) String table_no,
+        @RequestParam(required = false) String pickup_no
+    ) {
+        authorizationService.requireForStore(store_id, Capability.ORDER_CREATE);
+        return ApiResponse.success(orderService.findOpenDraftOrder(store_id, table_no, pickup_no));
+    }
+
+    @GetMapping("/open-editable")
+    public ApiResponse<OrderResponse> findOpenEditableOrder(
+        @RequestParam Long store_id,
+        @RequestParam(required = false) String table_no,
+        @RequestParam(required = false) String pickup_no
+    ) {
+        authorizationService.requireForStore(store_id, Capability.ORDER_VIEW_DETAIL);
+        return ApiResponse.success(orderService.findOpenEditableOrder(store_id, table_no, pickup_no));
+    }
+
     @GetMapping("/{id}")
     public ApiResponse<OrderResponse> getOrderDetail(@PathVariable Long id) {
         authorizationService.requireOrder(id, Capability.ORDER_VIEW_DETAIL);

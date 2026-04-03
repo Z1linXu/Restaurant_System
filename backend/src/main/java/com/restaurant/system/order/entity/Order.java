@@ -17,7 +17,7 @@ public class Order {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGSERIAL")
+    @Column(name = "id")
     public Long id;
 
     @Column(name = "store_id")

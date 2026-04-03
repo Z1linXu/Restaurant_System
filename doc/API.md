@@ -289,11 +289,31 @@ POST /prep-recipes/{id}/execute
 
 ## Menu
 
-### Get Items
-GET /menu/items
+### Health
+GET /menu/health
 
-### Get Categories
-GET /menu/categories
+### Get Catalog
+GET /menu/catalog?store_id=...
+
+Response behavior:
+- requires `X-User-Id`
+- current backend enforces `order:create` capability for store-scoped catalog access
+- returns active categories with nested active items and nested active options
+- returns bilingual fields directly (`name_zh`, `name_en`)
+- item payload includes:
+  - `id`
+  - `category_id`
+  - `station_id`
+  - `sku`
+  - `item_type`
+  - `base_price`
+  - `is_sold_out`
+- option payload includes:
+  - `id`
+  - `option_type`
+  - `name_zh`
+  - `name_en`
+  - `price_delta`
 
 ### Menu Modeling Notes
 - `menu_items.station_id` 是菜品默认工位

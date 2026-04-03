@@ -52,6 +52,44 @@ public interface KitchenTaskRepository extends JpaRepository<KitchenTask, Long> 
 
     @Query("""
         select kt from KitchenTask kt
+        where kt.store_id = :storeId
+          and kt.station_code in :stationCodes
+          and kt.order_id in :orderIds
+          and kt.status <> 'cancelled'
+        order by kt.created_at asc, kt.id asc
+        """)
+    List<KitchenTask> findVisibleTasksByStoreIdAndStationCodesAndOrderIds(
+        @Param("storeId") Long storeId,
+        @Param("stationCodes") List<String> stationCodes,
+        @Param("orderIds") List<Long> orderIds
+    );
+
+    @Query("""
+        select kt from KitchenTask kt
+        where kt.store_id = :storeId
+          and kt.station_code = :stationCode
+          and kt.status in ('ready_for_pickup', 'served')
+        order by coalesce(kt.served_at, kt.completed_at) desc, kt.id desc
+        """)
+    List<KitchenTask> findCompletedTasksByStoreIdAndStationCode(
+        @Param("storeId") Long storeId,
+        @Param("stationCode") String stationCode
+    );
+
+    @Query("""
+        select kt from KitchenTask kt
+        where kt.store_id = :storeId
+          and kt.station_code in :stationCodes
+          and kt.status in ('ready_for_pickup', 'served')
+        order by coalesce(kt.served_at, kt.completed_at) desc, kt.id desc
+        """)
+    List<KitchenTask> findCompletedTasksByStoreIdAndStationCodes(
+        @Param("storeId") Long storeId,
+        @Param("stationCodes") List<String> stationCodes
+    );
+
+    @Query("""
+        select kt from KitchenTask kt
         where kt.order_id in :orderIds
         order by kt.created_at asc, kt.id asc
         """)

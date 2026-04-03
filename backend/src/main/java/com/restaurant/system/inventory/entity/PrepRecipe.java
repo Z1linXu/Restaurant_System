@@ -17,7 +17,7 @@ public class PrepRecipe {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGSERIAL")
+    @Column(name = "id")
     private Long id;
 
     @Column(name = "output_inventory_item_id")

@@ -16,11 +16,14 @@ import com.restaurant.system.order.repository.OrderItemOptionRepository;
 import com.restaurant.system.order.repository.OrderItemRepository;
 import com.restaurant.system.order.repository.OrderRepository;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.time.LocalDateTime;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +31,12 @@ import org.springframework.stereotype.Service;
 public class KdsServiceImpl implements KdsService {
 
     private static final String STATION_NOODLE = "NOODLE";
+    private static final String STATION_WOK = "WOK";
+    private static final String STATION_COLD = "COLD";
+    private static final String STATION_DEEPFRIED = "DEEPFRIED";
+    private static final String STATION_GROUP_ASSEMBLING = "ASSEMBLING";
+    private static final int KITCHEN_TASK_PRIORITY_COMBO_SIDE = 100;
+    private static final List<String> ASSEMBLING_STATIONS = List.of(STATION_NOODLE, STATION_WOK, STATION_COLD, STATION_DEEPFRIED);
     private static final List<String> HOT_STATIONS = List.of("WOK", "DEEPFRIED");
     private static final Set<String> FRONTDESK_CODES = Set.of("DRINK", "ALCOHOL", "MILK_TEA");
     private static final Set<String> EXTRA_FLAG_OPTION_TYPES = Set.of("addon", "remove");
@@ -49,12 +58,16 @@ public class KdsServiceImpl implements KdsService {
         this.orderItemOptionRepository = orderItemOptionRepository;
     }
 
+    private boolean isComboSideTask(KitchenTask task) {
+        return task != null && Integer.valueOf(KITCHEN_TASK_PRIORITY_COMBO_SIDE).equals(task.priority);
+    }
+
     @Override
     public List<KdsTaskDisplayResponse> getNoodleDisplay(Long storeId, Integer limit) {
         int maxOrders = limit == null || limit < 1 ? 10 : limit;
         List<KitchenTask> activeTasks = kitchenTaskRepository.findActiveTasksByStoreIdAndStationCodes(
             storeId,
-            List.of(STATION_NOODLE)
+            ASSEMBLING_STATIONS
         );
 
         Set<Long> visibleOrderIds = new HashSet<>();
@@ -64,8 +77,15 @@ public class KdsServiceImpl implements KdsService {
                 continue;
             }
             visibleOrderIds.add(task.order_id);
-            visibleTasks.add(task);
         }
+        if (visibleOrderIds.isEmpty()) {
+            return List.of();
+        }
+        visibleTasks = kitchenTaskRepository.findVisibleTasksByStoreIdAndStationCodesAndOrderIds(
+            storeId,
+            ASSEMBLING_STATIONS,
+            new ArrayList<>(visibleOrderIds)
+        );
         return buildTaskDisplayResponses(visibleTasks);
     }
 
@@ -116,21 +136,32 @@ public class KdsServiceImpl implements KdsService {
     public List<ServingShelfItemResponse> getServingShelfView(Long storeId) {
         List<KitchenTask> tasks = kitchenTaskRepository.findShelfTasksByStoreId(storeId);
         Map<Long, Order> ordersById = fetchOrdersMap(tasks.stream().map(task -> task.order_id).collect(java.util.stream.Collectors.toSet()));
+        Map<Long, OrderItem> orderItemsById = fetchOrderItemsMap(tasks.stream().map(task -> task.order_item_id).collect(java.util.stream.Collectors.toSet()));
+        Map<Long, List<OrderItemOption>> optionsByOrderItemId = fetchOptionsByOrderItemId(orderItemsById.keySet());
         List<ServingShelfItemResponse> responses = new ArrayList<>();
         for (KitchenTask task : tasks) {
             Order order = ordersById.get(task.order_id);
-            if (order == null) {
+            OrderItem orderItem = orderItemsById.get(task.order_item_id);
+            if (order == null || orderItem == null) {
+                continue;
+            }
+            if ("delivery".equalsIgnoreCase(order.order_type)) {
                 continue;
             }
             ServingShelfItemResponse response = new ServingShelfItemResponse();
             response.task_id = task.id;
             response.order_id = task.order_id;
+            response.order_item_id = task.order_item_id;
             response.order_no = order.order_no;
+            response.order_type = order.order_type;
             response.table_no = order.table_no;
             response.pickup_no = order.pickup_no;
+            response.category_code_snapshot = isComboSideTask(task) ? "SIDE" : orderItem.category_code_snapshot;
             response.item_name_snapshot_zh = task.item_name_snapshot_zh;
             response.item_name_snapshot_en = task.item_name_snapshot_en;
             response.quantity = task.quantity;
+            response.special_instructions_snapshot = task.special_instructions_snapshot;
+            response.size_label = extractOptionLabel(optionsByOrderItemId.getOrDefault(orderItem.id, List.of()), "size");
             response.created_at = task.created_at;
             response.ready_for_pickup_at = task.completed_at;
             responses.add(response);
@@ -139,8 +170,29 @@ public class KdsServiceImpl implements KdsService {
     }
 
     @Override
-    public List<KdsOrderGroupResponse> getHistoryView(Long storeId, Integer limit) {
+    public List<KdsOrderGroupResponse> getHistoryView(Long storeId, Integer limit, String stationCode) {
         int historyLimit = limit == null || limit < 1 ? 20 : limit;
+        if (stationCode != null && !stationCode.isBlank()) {
+            List<String> stationCodes = resolveStationCodes(stationCode);
+            List<KitchenTask> completedTasks = stationCodes.size() == 1
+                ? kitchenTaskRepository.findCompletedTasksByStoreIdAndStationCode(storeId, stationCodes.get(0))
+                : kitchenTaskRepository.findCompletedTasksByStoreIdAndStationCodes(storeId, stationCodes);
+            Set<Long> activeOrderIds = kitchenTaskRepository.findActiveTasksByStoreIdAndStationCodes(storeId, stationCodes).stream()
+                .map(task -> task.order_id)
+                .collect(java.util.stream.Collectors.toSet());
+            List<Long> orderedIds = completedTasks.stream()
+                .map(task -> task.order_id)
+                .filter(orderId -> !activeOrderIds.contains(orderId))
+                .distinct()
+                .limit(historyLimit)
+                .toList();
+            List<KdsOrderGroupResponse> groups = buildOrderGroups(fetchOrders(new LinkedHashSet<>(orderedIds)));
+            groups.sort(Comparator.comparing(
+                (KdsOrderGroupResponse group) -> resolveLatestCompletionTimestamp(group, stationCodes),
+                Comparator.nullsLast(Comparator.naturalOrder())
+            ).reversed().thenComparing(group -> group.order_id, Comparator.reverseOrder()));
+            return groups;
+        }
         List<Order> orders = orderRepository.findRecentFinishedOrders(storeId, PageRequest.of(0, historyLimit));
         return buildOrderGroups(orders);
     }
@@ -203,9 +255,9 @@ public class KdsServiceImpl implements KdsService {
         Map<Long, List<OrderItemOption>> optionsByOrderItemId = fetchOptionsByOrderItemId(
             orderItems.stream().map(item -> item.id).collect(java.util.stream.Collectors.toSet())
         );
-        Map<Long, KitchenTask> taskByOrderItemId = new HashMap<>();
+        Map<Long, List<KitchenTask>> tasksByOrderItemId = new HashMap<>();
         for (KitchenTask task : kitchenTaskRepository.findAllByOrderIds(orderIds)) {
-            taskByOrderItemId.put(task.order_item_id, task);
+            tasksByOrderItemId.computeIfAbsent(task.order_item_id, key -> new ArrayList<>()).add(task);
         }
 
         List<KdsOrderGroupResponse> responses = new ArrayList<>();
@@ -224,7 +276,11 @@ public class KdsServiceImpl implements KdsService {
             response.items = new ArrayList<>();
 
             for (OrderItem orderItem : itemsByOrderId.getOrDefault(order.id, List.of())) {
-                KitchenTask task = taskByOrderItemId.get(orderItem.id);
+                List<KitchenTask> itemTasks = tasksByOrderItemId.getOrDefault(orderItem.id, List.of());
+                KitchenTask task = itemTasks.stream()
+                    .filter(candidate -> !isComboSideTask(candidate))
+                    .findFirst()
+                    .orElseGet(() -> itemTasks.stream().findFirst().orElse(null));
                 KdsOrderItemStatusResponse itemResponse = new KdsOrderItemStatusResponse();
                 itemResponse.order_item_id = orderItem.id;
                 itemResponse.category_code_snapshot = orderItem.category_code_snapshot;
@@ -243,6 +299,28 @@ public class KdsServiceImpl implements KdsService {
                 itemResponse.completed_at = task == null ? null : task.completed_at;
                 itemResponse.served_at = task == null ? null : task.served_at;
                 response.items.add(itemResponse);
+
+                for (KitchenTask comboTask : itemTasks) {
+                    if (!isComboSideTask(comboTask)) {
+                        continue;
+                    }
+                    KdsOrderItemStatusResponse comboResponse = new KdsOrderItemStatusResponse();
+                    comboResponse.order_item_id = orderItem.id;
+                    comboResponse.category_code_snapshot = "SIDE";
+                    comboResponse.item_name_snapshot_zh = comboTask.item_name_snapshot_zh;
+                    comboResponse.item_name_snapshot_en = comboTask.item_name_snapshot_en;
+                    comboResponse.quantity = comboTask.quantity;
+                    comboResponse.is_modified_after_submit = Boolean.TRUE.equals(orderItem.is_modified_after_submit);
+                    comboResponse.modified_after_submit_at = orderItem.modified_after_submit_at;
+                    comboResponse.requires_kitchen_task = true;
+                    comboResponse.station_code = comboTask.station_code;
+                    comboResponse.task_status = comboTask.status;
+                    comboResponse.special_instructions_snapshot = comboTask.special_instructions_snapshot;
+                    comboResponse.started_at = comboTask.started_at;
+                    comboResponse.completed_at = comboTask.completed_at;
+                    comboResponse.served_at = comboTask.served_at;
+                    response.items.add(comboResponse);
+                }
             }
 
             responses.add(response);
@@ -252,6 +330,30 @@ public class KdsServiceImpl implements KdsService {
 
     private Map<Long, Order> fetchOrdersMap(Set<Long> orderIds) {
         return fetchOrders(orderIds).stream().collect(java.util.stream.Collectors.toMap(order -> order.id, order -> order));
+    }
+
+    private List<String> resolveStationCodes(String stationCode) {
+        if (STATION_GROUP_ASSEMBLING.equalsIgnoreCase(stationCode)) {
+            return ASSEMBLING_STATIONS;
+        }
+        return List.of(stationCode);
+    }
+
+    private LocalDateTime resolveLatestCompletionTimestamp(KdsOrderGroupResponse group, List<String> stationCodes) {
+        LocalDateTime latest = null;
+        for (KdsOrderItemStatusResponse item : group.items) {
+            if (item.station_code == null || !stationCodes.contains(item.station_code)) {
+                continue;
+            }
+            LocalDateTime candidate = item.served_at != null ? item.served_at : item.completed_at;
+            if (candidate == null) {
+                continue;
+            }
+            if (latest == null || candidate.isAfter(latest)) {
+                latest = candidate;
+            }
+        }
+        return latest;
     }
 
     private List<Order> fetchOrders(Set<Long> orderIds) {

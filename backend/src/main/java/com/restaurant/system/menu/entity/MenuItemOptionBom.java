@@ -17,7 +17,7 @@ public class MenuItemOptionBom {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGSERIAL")
+    @Column(name = "id")
     public Long id;
 
     @Column(name = "menu_item_option_id")
