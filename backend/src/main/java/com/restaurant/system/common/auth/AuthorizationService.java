@@ -45,18 +45,24 @@ public class AuthorizationService {
 
     public AuthenticatedUser requireOrder(Long orderId, Capability... capabilities) {
         AuthenticatedUser authenticatedUser = require(capabilities);
-        Order order = orderRepository.findById(orderId)
-            .orElseThrow(() -> new ForbiddenException("Order not found for authorization"));
+        Order order = orderRepository.findExistingById(orderId);
+        if (order == null) {
+            throw new ForbiddenException("Order not found for authorization");
+        }
         ensureSameStore(authenticatedUser, order.store_id);
         return authenticatedUser;
     }
 
     public AuthenticatedUser requireOrderItem(Long orderItemId, Capability... capabilities) {
         AuthenticatedUser authenticatedUser = require(capabilities);
-        OrderItem orderItem = orderItemRepository.findById(orderItemId)
-            .orElseThrow(() -> new ForbiddenException("Order item not found for authorization"));
-        Order order = orderRepository.findById(orderItem.order_id)
-            .orElseThrow(() -> new ForbiddenException("Order not found for authorization"));
+        OrderItem orderItem = orderItemRepository.findExistingById(orderItemId);
+        if (orderItem == null) {
+            throw new ForbiddenException("Order item not found for authorization");
+        }
+        Order order = orderRepository.findExistingById(orderItem.order_id);
+        if (order == null) {
+            throw new ForbiddenException("Order not found for authorization");
+        }
         ensureSameStore(authenticatedUser, order.store_id);
         return authenticatedUser;
     }

@@ -18,5 +18,5 @@ public interface KdsService {
 
     List<ServingShelfItemResponse> getServingShelfView(Long storeId);
 
-    List<KdsOrderGroupResponse> getHistoryView(Long storeId, Integer limit);
+    List<KdsOrderGroupResponse> getHistoryView(Long storeId, Integer limit, String stationCode);
 }

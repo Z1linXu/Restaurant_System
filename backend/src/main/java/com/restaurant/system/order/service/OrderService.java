@@ -13,6 +13,10 @@ public interface OrderService {
 
     OrderResponse createOrder(CreateOrderRequest request);
 
+    OrderResponse findOpenDraftOrder(Long storeId, String tableNo, String pickupNo);
+
+    OrderResponse findOpenEditableOrder(Long storeId, String tableNo, String pickupNo);
+
     OrderResponse getOrderDetail(Long id);
 
     OrderResponse updateDraftOrderHeader(Long id, UpdateDraftOrderHeaderRequest request);

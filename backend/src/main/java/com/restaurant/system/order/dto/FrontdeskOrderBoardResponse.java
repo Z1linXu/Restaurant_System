@@ -13,6 +13,7 @@ public class FrontdeskOrderBoardResponse {
     public Boolean is_modified_after_submit;
     public LocalDateTime modified_after_submit_at;
     public LocalDateTime submitted_at;
+    public LocalDateTime completed_at;
     public LocalDateTime updated_at;
     public Integer total_item_count;
     public Integer ready_item_count;

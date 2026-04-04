@@ -78,17 +78,20 @@ public class OrderServiceImpl implements OrderService {
     private static final String CATEGORY_CODE_DRINK = "DRINK";
     private static final String CATEGORY_CODE_ALCOHOL = "ALCOHOL";
     private static final String CATEGORY_CODE_MILK_TEA = "MILK_TEA";
+    private static final String CATEGORY_CODE_SIDE = "SIDE";
     private static final String OPTION_TYPE_NOODLE_TYPE = "noodle_type";
     private static final String OPTION_TYPE_SIZE = "size";
     private static final String OPTION_TYPE_ADDON = "addon";
     private static final String OPTION_TYPE_REMOVE = "remove";
     private static final String OPTION_TYPE_SOUP_BASE = "soup_base";
+    private static final String OPTION_TYPE_SPICY_LEVEL = "spicy_level";
     private static final String BEVERAGE_STATUS_PENDING = "pending";
     private static final String BEVERAGE_STATUS_PREPARING = "preparing";
     private static final String BEVERAGE_STATUS_READY = "ready";
     private static final String BEVERAGE_STATUS_SERVED = "served";
     private static final String BEVERAGE_STATUS_CANCELLED = "cancelled";
     private static final int DEFAULT_FRONTDESK_HISTORY_LIMIT = 20;
+    private static final int KITCHEN_TASK_PRIORITY_COMBO_SIDE = 100;
     private static final Set<String> ALLOWED_COMBO_ROLES = Set.of(
         COMBO_ROLE_MAIN,
         COMBO_ROLE_SIDE,
@@ -100,7 +103,8 @@ public class OrderServiceImpl implements OrderService {
         OPTION_TYPE_SIZE,
         OPTION_TYPE_ADDON,
         OPTION_TYPE_REMOVE,
-        OPTION_TYPE_SOUP_BASE
+        OPTION_TYPE_SOUP_BASE,
+        OPTION_TYPE_SPICY_LEVEL
     );
     private static final Set<String> ACTIVE_ORDER_STATUSES = Set.of(
         ORDER_STATUS_SUBMITTED,
@@ -115,6 +119,11 @@ public class OrderServiceImpl implements OrderService {
     private static final Set<String> DEFAULT_HISTORY_ORDER_STATUSES = Set.of(
         ORDER_STATUS_COMPLETED,
         ORDER_STATUS_CANCELLED
+    );
+    private static final Set<String> EDITABLE_TABLE_ORDER_STATUSES = Set.of(
+        ORDER_STATUS_DRAFT,
+        ORDER_STATUS_SUBMITTED,
+        ORDER_STATUS_PREPARING
     );
 
     private final OrderRepository orderRepository;
@@ -171,6 +180,10 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponse createOrder(CreateOrderRequest request) {
         LocalDateTime now = LocalDateTime.now();
+        Order existingEditableOrder = findExistingEditableOrder(request.store_id, request.table_no, request.pickup_no);
+        if (existingEditableOrder != null) {
+            return loadOrderResponse(existingEditableOrder.id);
+        }
 
         Order order = new Order();
         order.store_id = request.store_id;
@@ -195,6 +208,25 @@ public class OrderServiceImpl implements OrderService {
         recalculateOrderAmounts(savedOrder, now);
         publishOrderEvent("order.created", savedOrder, null, null, null);
         return loadOrderResponse(savedOrder.id);
+    }
+
+    @Override
+    public OrderResponse findOpenDraftOrder(Long storeId, String tableNo, String pickupNo) {
+        Order order = null;
+        if (tableNo != null && !tableNo.isBlank()) {
+            order = orderRepository.findLatestDraftByStoreIdAndTableNo(storeId, tableNo);
+        } else if (pickupNo != null && !pickupNo.isBlank()) {
+            order = orderRepository.findLatestDraftByStoreIdAndPickupNo(storeId, pickupNo);
+        }
+
+        return order == null ? null : loadOrderResponse(order.id);
+    }
+
+    @Override
+    public OrderResponse findOpenEditableOrder(Long storeId, String tableNo, String pickupNo) {
+        Order order = findExistingEditableOrder(storeId, tableNo, pickupNo);
+
+        return order == null ? null : loadOrderResponse(order.id);
     }
 
     @Override
@@ -334,8 +366,7 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponse submitOrder(Long id) {
         LocalDateTime now = LocalDateTime.now();
-        Order order = orderRepository.findById(id)
-            .orElseThrow(() -> new BusinessException("Order not found: " + id));
+        Order order = requireOrder(id);
 
         if (!ORDER_STATUS_DRAFT.equals(order.status)) {
             throw new BusinessException("Only draft orders can be submitted");
@@ -431,17 +462,48 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse completeOrder(Long id) {
-        Order order = orderRepository.findById(id)
-            .orElseThrow(() -> new BusinessException("Order not found: " + id));
+        Order order = requireOrder(id);
 
         if (ORDER_STATUS_COMPLETED.equals(order.status)) {
             throw new BusinessException("Order is already completed");
         }
-        if (!ORDER_STATUS_READY.equals(order.status)) {
-            throw new BusinessException("Only ready orders can be completed");
+        if (!ORDER_STATUS_READY.equals(order.status)
+            && !ORDER_STATUS_PREPARING.equals(order.status)
+            && !ORDER_STATUS_SUBMITTED.equals(order.status)) {
+            throw new BusinessException("Only submitted, preparing, or ready orders can be completed");
         }
 
         LocalDateTime now = LocalDateTime.now();
+        List<KitchenTask> tasks = kitchenTaskRepository.findAllByOrderId(order.id);
+        for (KitchenTask task : tasks) {
+            if (KitchenTaskStatus.cancelled.name().equals(task.status) || KitchenTaskStatus.served.name().equals(task.status)) {
+                continue;
+            }
+            if (KitchenTaskStatus.ready_for_pickup.name().equals(task.status)) {
+                task.status = KitchenTaskStatus.served.name();
+                task.served_at = now;
+            } else {
+                task.status = KitchenTaskStatus.cancelled.name();
+                task.cancelled_at = now;
+            }
+            kitchenTaskRepository.save(task);
+        }
+
+        List<FrontdeskBeverageItem> beverageItems = frontdeskBeverageItemRepository.findAllByOrderId(order.id);
+        for (FrontdeskBeverageItem beverageItem : beverageItems) {
+            if (BEVERAGE_STATUS_CANCELLED.equals(beverageItem.status) || BEVERAGE_STATUS_SERVED.equals(beverageItem.status)) {
+                continue;
+            }
+            if (BEVERAGE_STATUS_READY.equals(beverageItem.status)) {
+                beverageItem.status = BEVERAGE_STATUS_SERVED;
+                beverageItem.served_at = now;
+            } else {
+                beverageItem.status = BEVERAGE_STATUS_CANCELLED;
+                beverageItem.cancelled_at = now;
+            }
+            frontdeskBeverageItemRepository.save(beverageItem);
+        }
+
         order.status = ORDER_STATUS_COMPLETED;
         order.completed_at = now;
         order.updated_at = now;
@@ -453,8 +515,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse cancelOrder(Long id) {
-        Order order = orderRepository.findById(id)
-            .orElseThrow(() -> new BusinessException("Order not found: " + id));
+        Order order = requireOrder(id);
 
         if (ORDER_STATUS_COMPLETED.equals(order.status)) {
             throw new BusinessException("Completed orders cannot be cancelled");
@@ -502,8 +563,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private OrderResponse loadOrderResponse(Long orderId) {
-        Order order = orderRepository.findById(orderId)
-            .orElseThrow(() -> new BusinessException("Order not found: " + orderId));
+        Order order = requireOrder(orderId);
         List<OrderItem> orderItems = orderItemRepository.findAllByOrderId(order.id).stream()
             .filter(this::isActiveOrderItem)
             .toList();
@@ -546,6 +606,10 @@ public class OrderServiceImpl implements OrderService {
             List<KitchenTask> kitchenTasks = kitchenTasksByOrderId.getOrDefault(order.id, List.of());
             List<FrontdeskBeverageItem> beverageItems = beverageItemsByOrderId.getOrDefault(order.id, List.of());
 
+            if (ORDER_STATUS_DRAFT.equals(order.status) && orderLevelItems.isEmpty()) {
+                continue;
+            }
+
             int totalItemCount = orderLevelItems.size();
             int kitchenPendingCount = 0;
             int beveragePendingCount = 0;
@@ -583,6 +647,7 @@ public class OrderServiceImpl implements OrderService {
             response.is_modified_after_submit = Boolean.TRUE.equals(order.is_modified_after_submit);
             response.modified_after_submit_at = order.modified_after_submit_at;
             response.submitted_at = order.submitted_at;
+            response.completed_at = order.completed_at;
             response.updated_at = order.updated_at;
             response.total_item_count = totalItemCount;
             response.ready_item_count = readyItemCount;
@@ -594,8 +659,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private Order requireDraftOrder(Long id) {
-        Order order = orderRepository.findById(id)
-            .orElseThrow(() -> new BusinessException("Order not found: " + id));
+        Order order = requireOrder(id);
         if (!ORDER_STATUS_DRAFT.equals(order.status)) {
             throw new BusinessException("Only draft orders can be edited");
         }
@@ -603,8 +667,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private Order requireItemEditableOrder(Long id) {
-        Order order = orderRepository.findById(id)
-            .orElseThrow(() -> new BusinessException("Order not found: " + id));
+        Order order = requireOrder(id);
         if (ORDER_STATUS_COMPLETED.equals(order.status) || ORDER_STATUS_CANCELLED.equals(order.status)) {
             throw new BusinessException("Completed or cancelled orders cannot be modified");
         }
@@ -615,16 +678,12 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private OrderItem requireEditableOrderItem(Order order, Long itemId) {
-        OrderItem orderItem = orderItemRepository.findById(itemId)
-            .orElseThrow(() -> new BusinessException("Order item not found: " + itemId));
+        OrderItem orderItem = requireOrderItem(itemId);
         if (!order.id.equals(orderItem.order_id)) {
             throw new BusinessException("Order item does not belong to order: " + itemId);
         }
         if (!isActiveOrderItem(orderItem)) {
             throw new BusinessException("Cancelled order item cannot be modified");
-        }
-        if (isSubmittedOrder(order)) {
-            validateSubmittedOrderItemCanBeModified(orderItem.id);
         }
         return orderItem;
     }
@@ -769,36 +828,37 @@ public class OrderServiceImpl implements OrderService {
         }
 
         KitchenTask kitchenTask = findKitchenTaskByOrderItemId(order.id, orderItem.id);
+        MenuItem menuItem = menuItemRepository.findById(orderItem.menu_item_id)
+            .orElseThrow(() -> new BusinessException("Menu item not found for kitchen task: " + orderItem.menu_item_id));
         if (kitchenTask == null) {
-            kitchenTask = createKitchenTaskForOrderItem(order, orderItem, orderItemOptions, now);
+            kitchenTask = createKitchenTaskForOrderItem(order, orderItem, orderItemOptions, menuItem, now);
         } else {
-            if (KitchenTaskStatus.ready_for_pickup.name().equals(kitchenTask.status)
+            if (KitchenTaskStatus.cancelled.name().equals(kitchenTask.status)
+                || KitchenTaskStatus.ready_for_pickup.name().equals(kitchenTask.status)
                 || KitchenTaskStatus.served.name().equals(kitchenTask.status)) {
-                throw new BusinessException("ready_for_pickup or served kitchen item cannot be modified");
-            }
-            if (KitchenTaskStatus.cancelled.name().equals(kitchenTask.status)) {
                 kitchenTask.status = KitchenTaskStatus.pending.name();
                 kitchenTask.cancelled_at = null;
                 kitchenTask.started_at = null;
                 kitchenTask.completed_at = null;
                 kitchenTask.served_at = null;
             }
-            kitchenTask.item_name_snapshot_zh = orderItem.item_name_snapshot_zh;
+            kitchenTask.item_name_snapshot_zh = buildKitchenDisplayNameZh(menuItem, orderItem);
             kitchenTask.item_name_snapshot_en = orderItem.item_name_snapshot_en;
             kitchenTask.quantity = orderItem.quantity;
-            kitchenTask.special_instructions_snapshot = buildSpecialInstructionsSnapshot(orderItem, orderItemOptions);
+            kitchenTask.special_instructions_snapshot = buildSpecialInstructionsSnapshot(menuItem, orderItem, orderItemOptions);
             kitchenTaskRepository.save(kitchenTask);
         }
+
+        synchronizeComboSideKitchenTasks(order, orderItem, orderItemOptions, now);
     }
 
     private KitchenTask createKitchenTaskForOrderItem(
         Order order,
         OrderItem orderItem,
         List<OrderItemOption> orderItemOptions,
+        MenuItem menuItem,
         LocalDateTime now
     ) {
-        MenuItem menuItem = menuItemRepository.findById(orderItem.menu_item_id)
-            .orElseThrow(() -> new BusinessException("Menu item not found for kitchen task: " + orderItem.menu_item_id));
         if (menuItem.station_id == null) {
             throw new BusinessException("menu_items.station_id is required for kitchen task assignment: " + menuItem.id);
         }
@@ -814,9 +874,9 @@ public class OrderServiceImpl implements OrderService {
         kitchenTask.order_item_id = orderItem.id;
         kitchenTask.store_id = order.store_id;
         kitchenTask.station_code = station.code;
-        kitchenTask.item_name_snapshot_zh = orderItem.item_name_snapshot_zh;
+        kitchenTask.item_name_snapshot_zh = buildKitchenDisplayNameZh(menuItem, orderItem);
         kitchenTask.item_name_snapshot_en = orderItem.item_name_snapshot_en;
-        kitchenTask.special_instructions_snapshot = buildSpecialInstructionsSnapshot(orderItem, orderItemOptions);
+        kitchenTask.special_instructions_snapshot = buildSpecialInstructionsSnapshot(menuItem, orderItem, orderItemOptions);
         kitchenTask.status = KitchenTaskStatus.pending.name();
         kitchenTask.quantity = orderItem.quantity;
         kitchenTask.created_at = now;
@@ -835,12 +895,7 @@ public class OrderServiceImpl implements OrderService {
             return;
         }
 
-        KitchenTask kitchenTask = findKitchenTaskByOrderItemId(order.id, orderItem.id);
-        if (kitchenTask != null) {
-            if (KitchenTaskStatus.ready_for_pickup.name().equals(kitchenTask.status)
-                || KitchenTaskStatus.served.name().equals(kitchenTask.status)) {
-                throw new BusinessException("ready_for_pickup or served kitchen item cannot be modified");
-            }
+        for (KitchenTask kitchenTask : findKitchenTasksByOrderItemId(order.id, orderItem.id)) {
             kitchenTask.status = KitchenTaskStatus.cancelled.name();
             kitchenTask.cancelled_at = now;
             kitchenTaskRepository.save(kitchenTask);
@@ -895,27 +950,52 @@ public class OrderServiceImpl implements OrderService {
             return;
         }
         KitchenTask kitchenTask = findKitchenTaskByOrderItemId(null, orderItemId);
-        if (kitchenTask != null && (KitchenTaskStatus.ready_for_pickup.name().equals(kitchenTask.status)
-            || KitchenTaskStatus.served.name().equals(kitchenTask.status))) {
-            throw new BusinessException("ready_for_pickup or served kitchen item cannot be modified");
-        }
     }
 
     private KitchenTask findKitchenTaskByOrderItemId(Long orderId, Long orderItemId) {
+        List<KitchenTask> tasks = findKitchenTasksByOrderItemId(orderId, orderItemId);
+        return tasks.stream()
+            .filter(task -> !isComboSideKitchenTask(task))
+            .findFirst()
+            .orElseGet(() -> tasks.stream().findFirst().orElse(null));
+    }
+
+    private List<KitchenTask> findKitchenTasksByOrderItemId(Long orderId, Long orderItemId) {
         Long resolvedOrderId = orderId == null ? orderItemsOrderId(orderItemId) : orderId;
-        List<KitchenTask> tasks = kitchenTaskRepository.findAllByOrderId(resolvedOrderId);
-        for (KitchenTask task : tasks) {
-            if (orderItemId.equals(task.order_item_id)) {
-                return task;
-            }
+        return kitchenTaskRepository.findAllByOrderId(resolvedOrderId).stream()
+            .filter(task -> orderItemId.equals(task.order_item_id))
+            .toList();
+    }
+
+    private Long orderItemsOrderId(Long orderItemId) {
+        OrderItem orderItem = requireOrderItem(orderItemId);
+        return orderItem.order_id;
+    }
+
+    private Order requireOrder(Long id) {
+        Order order = orderRepository.findExistingById(id);
+        if (order == null) {
+            throw new BusinessException("Order not found: " + id);
+        }
+        return order;
+    }
+
+    private Order findExistingEditableOrder(Long storeId, String tableNo, String pickupNo) {
+        if (tableNo != null && !tableNo.isBlank()) {
+            return orderRepository.findLatestEditableByStoreIdAndTableNo(storeId, tableNo);
+        }
+        if (pickupNo != null && !pickupNo.isBlank()) {
+            return orderRepository.findLatestEditableByStoreIdAndPickupNo(storeId, pickupNo);
         }
         return null;
     }
 
-    private Long orderItemsOrderId(Long orderItemId) {
-        OrderItem orderItem = orderItemRepository.findById(orderItemId)
-            .orElseThrow(() -> new BusinessException("Order item not found: " + orderItemId));
-        return orderItem.order_id;
+    private OrderItem requireOrderItem(Long itemId) {
+        OrderItem orderItem = orderItemRepository.findExistingById(itemId);
+        if (orderItem == null) {
+            throw new BusinessException("Order item not found: " + itemId);
+        }
+        return orderItem;
     }
 
     private BigDecimal calculateLineAmount(BigDecimal unitPrice, Integer quantity, List<OrderItemOption> options) {
@@ -969,9 +1049,10 @@ public class OrderServiceImpl implements OrderService {
             kitchenTask.order_item_id = orderItem.id;
             kitchenTask.store_id = order.store_id;
             kitchenTask.station_code = station.code;
-            kitchenTask.item_name_snapshot_zh = orderItem.item_name_snapshot_zh;
+            kitchenTask.item_name_snapshot_zh = buildKitchenDisplayNameZh(menuItem, orderItem);
             kitchenTask.item_name_snapshot_en = orderItem.item_name_snapshot_en;
             kitchenTask.special_instructions_snapshot = buildSpecialInstructionsSnapshot(
+                menuItem,
                 orderItem,
                 optionsByOrderItemId.getOrDefault(orderItem.id, List.of())
             );
@@ -980,6 +1061,13 @@ public class OrderServiceImpl implements OrderService {
             kitchenTask.priority = null;
             kitchenTask.created_at = now;
             kitchenTasks.add(kitchenTask);
+
+            kitchenTasks.addAll(createComboSideKitchenTasks(
+                order,
+                orderItem,
+                optionsByOrderItemId.getOrDefault(orderItem.id, List.of()),
+                now
+            ));
         }
         return kitchenTaskRepository.saveAll(kitchenTasks);
     }
@@ -1077,9 +1165,9 @@ public class OrderServiceImpl implements OrderService {
             optionsByOrderItemId.computeIfAbsent(orderItemOption.order_item_id, key -> new ArrayList<>()).add(response);
         }
 
-        Map<Long, KitchenTask> taskByOrderItemId = new HashMap<>();
+        Map<Long, List<KitchenTask>> tasksByOrderItemId = new HashMap<>();
         for (KitchenTask kitchenTask : kitchenTasks) {
-            taskByOrderItemId.put(kitchenTask.order_item_id, kitchenTask);
+            tasksByOrderItemId.computeIfAbsent(kitchenTask.order_item_id, key -> new ArrayList<>()).add(kitchenTask);
         }
         Map<Long, FrontdeskBeverageItem> beverageItemByOrderItemId = new HashMap<>();
         for (FrontdeskBeverageItem beverageItem : beverageItems) {
@@ -1087,7 +1175,10 @@ public class OrderServiceImpl implements OrderService {
         }
 
         List<OrderItemResponse> itemResponses = orderItems.stream().map(orderItem -> {
-            KitchenTask kitchenTask = taskByOrderItemId.get(orderItem.id);
+            KitchenTask kitchenTask = tasksByOrderItemId.getOrDefault(orderItem.id, List.of()).stream()
+                .filter(task -> !isComboSideKitchenTask(task))
+                .findFirst()
+                .orElseGet(() -> tasksByOrderItemId.getOrDefault(orderItem.id, List.of()).stream().findFirst().orElse(null));
             FrontdeskBeverageItem beverageTracker = beverageItemByOrderItemId.get(orderItem.id);
             boolean beverageRow = isFrontdeskBeverageItem(orderItem.category_code_snapshot, store);
 
@@ -1216,25 +1307,18 @@ public class OrderServiceImpl implements OrderService {
             .orElseThrow(() -> new BusinessException("Menu category not found for menu item: " + menuItem.id));
     }
 
-    private String buildSpecialInstructionsSnapshot(OrderItem orderItem, List<OrderItemOption> orderItemOptions) {
-        List<String> parts = new ArrayList<>();
-        if (orderItem.notes != null && !orderItem.notes.isBlank()) {
-            parts.add(orderItem.notes.trim());
-        }
+    private String buildSpecialInstructionsSnapshot(MenuItem menuItem, OrderItem orderItem, List<OrderItemOption> orderItemOptions) {
+        String primaryLine = buildKitchenPrimaryLine(menuItem, orderItemOptions);
+        List<String> secondaryParts = buildKitchenSecondaryParts(orderItem, orderItemOptions);
 
-        for (OrderItemOption orderItemOption : orderItemOptions) {
-            if (!KITCHEN_RELEVANT_OPTION_TYPES.contains(orderItemOption.option_type_snapshot)) {
-                continue;
-            }
-            String label = bilingualLabel(orderItemOption.option_name_snapshot_zh, orderItemOption.option_name_snapshot_en);
-            if (orderItemOption.quantity != null && orderItemOption.quantity > 1) {
-                label = label + " x" + orderItemOption.quantity;
-            }
-            parts.add(label);
+        List<String> lines = new ArrayList<>();
+        if (primaryLine != null && !primaryLine.isBlank()) {
+            lines.add(primaryLine);
         }
-
-        List<String> normalized = deduplicate(parts);
-        return normalized.isEmpty() ? null : String.join(" | ", normalized);
+        if (!secondaryParts.isEmpty()) {
+            lines.add(String.join(" ", deduplicate(secondaryParts)));
+        }
+        return lines.isEmpty() ? null : String.join(" | ", lines);
     }
 
     private String buildBeverageInstructionsSnapshot(OrderItem orderItem, List<OrderItemOption> orderItemOptions) {
@@ -1279,6 +1363,433 @@ public class OrderServiceImpl implements OrderService {
             result.add(value);
         }
         return result;
+    }
+
+    private String buildKitchenDisplayNameZh(MenuItem menuItem, OrderItem orderItem) {
+        return switch (menuItem.sku) {
+            case "beef_chow_mein" -> "牛炒";
+            case "chicken_chow_mein" -> "鸡炒";
+            case "tomato_chow_mein" -> "番炒";
+            case "vegetable_chow_mein" -> "素炒";
+            case "zha_jiang_noodle" -> "炸";
+            case "dan_dan_noodle" -> "担";
+            case "cold_noodle_shredded_chicken" -> "鸡凉";
+            default -> orderItem.item_name_snapshot_zh;
+        };
+    }
+
+    private String buildKitchenPrimaryLine(MenuItem menuItem, List<OrderItemOption> options) {
+        String sizeCode = mapSizeCode(findOptionZh(options, OPTION_TYPE_SIZE));
+        String baseCode = mapItemBaseCode(menuItem.sku);
+        String noodleCode = mapNoodleCode(menuItem.sku, findOptionZh(options, OPTION_TYPE_NOODLE_TYPE));
+        String spicyCode = mapSpicyCode(findOptionZh(options, OPTION_TYPE_SPICY_LEVEL));
+        String soupBaseCode = mapSoupBaseCode(menuItem.sku, findOptionZh(options, OPTION_TYPE_SOUP_BASE));
+
+        List<String> inline = new ArrayList<>();
+        if (sizeCode != null) {
+            inline.add(sizeCode);
+        }
+        if (baseCode != null) {
+            inline.add(baseCode);
+        }
+        if (soupBaseCode != null) {
+            inline.add(soupBaseCode);
+        }
+        if (noodleCode != null) {
+            inline.add(noodleCode);
+        }
+
+        String primary = String.join("", inline);
+        if (primary.isBlank()) {
+            primary = null;
+        }
+        if (spicyCode != null) {
+            primary = (primary == null ? "" : primary) + spicyCode;
+        }
+        return primary;
+    }
+
+    private String mapItemBaseCode(String sku) {
+        return switch (sku) {
+            case "braised_beef_tendon_noodle" -> "红";
+            case "pickled_vegetable_beef_noodle" -> "酸";
+            case "beef_chow_mein" -> "牛炒";
+            case "chicken_chow_mein" -> "鸡炒";
+            case "tomato_chow_mein" -> "番炒";
+            case "vegetable_chow_mein" -> "素炒";
+            case "zha_jiang_noodle" -> "炸";
+            case "dan_dan_noodle" -> "担";
+            case "cold_noodle_shredded_chicken" -> "鸡凉";
+            case "cucumber_salad" -> "黄瓜";
+            case "edamame" -> "毛豆";
+            case "shredded_potato" -> "土豆";
+            case "braised_beef_shank_salad" -> "牛展";
+            default -> null;
+        };
+    }
+
+    private List<String> buildKitchenSecondaryParts(OrderItem orderItem, List<OrderItemOption> options) {
+        List<String> parts = new ArrayList<>();
+        if (orderItem.notes != null && !orderItem.notes.isBlank()) {
+            parts.add(orderItem.notes.trim());
+        }
+        for (OrderItemOption option : options) {
+            if (OPTION_TYPE_ADDON.equals(option.option_type_snapshot)) {
+                String addonCode = canonicalAddonCode(option.option_name_snapshot_zh);
+                if (isComboSideCode(addonCode)) {
+                    continue;
+                }
+                String token = mapAddonToken(option);
+                if (token != null) {
+                    parts.add(token);
+                }
+                continue;
+            }
+            if (OPTION_TYPE_REMOVE.equals(option.option_type_snapshot)) {
+                String token = mapRemoveToken(option);
+                if (token != null) {
+                    parts.add(token);
+                }
+            }
+        }
+        return parts;
+    }
+
+    private String findOptionZh(List<OrderItemOption> options, String optionType) {
+        for (OrderItemOption option : options) {
+            if (optionType.equals(option.option_type_snapshot)) {
+                return option.option_name_snapshot_zh;
+            }
+        }
+        return null;
+    }
+
+    private String mapSizeCode(String sizeZh) {
+        if (sizeZh == null || sizeZh.isBlank()) {
+            return null;
+        }
+        if (sizeZh.contains("大")) {
+            return "大";
+        }
+        return "中";
+    }
+
+    private String mapNoodleCode(String sku, String noodleZh) {
+        if (noodleZh == null || noodleZh.isBlank()) {
+            return null;
+        }
+        if (isDefaultNoodleType(sku, noodleZh)) {
+            return null;
+        }
+        return switch (noodleZh) {
+            case "二细" -> "二";
+            case "三细" -> "三";
+            case "细" -> "细";
+            case "毛细" -> "毛";
+            case "韭叶" -> "韭";
+            case "宽" -> "宽";
+            case "大宽" -> "大宽";
+            default -> noodleZh;
+        };
+    }
+
+    private boolean isDefaultNoodleType(String sku, String noodleZh) {
+        return switch (sku) {
+            case "traditional_beef_noodle",
+                 "braised_beef_tendon_noodle",
+                 "pickled_vegetable_beef_noodle",
+                 "vegetable_noodle",
+                 "dan_dan_noodle" -> "三细".equals(noodleZh);
+            case "zha_jiang_noodle",
+                 "cold_noodle_shredded_chicken" -> "韭叶".equals(noodleZh);
+            default -> false;
+        };
+    }
+
+    private String mapSpicyCode(String spicyZh) {
+        if (spicyZh == null || spicyZh.isBlank() || "不辣".equals(spicyZh)) {
+            return null;
+        }
+        return switch (spicyZh) {
+            case "少辣" -> "（少s）";
+            case "正常辣" -> "（s）";
+            case "加辣" -> "（大s）";
+            default -> "（s）";
+        };
+    }
+
+    private String mapSoupBaseCode(String sku, String soupBaseZh) {
+        if (!"vegetable_noodle".equals(sku)) {
+            return null;
+        }
+        if (soupBaseZh == null || soupBaseZh.isBlank()) {
+            return "素";
+        }
+        if ("素汤".equals(soupBaseZh)) {
+            return "素";
+        }
+        if ("肉汤".equals(soupBaseZh) || "牛汤".equals(soupBaseZh)) {
+            return "素（肉汤）";
+        }
+        return null;
+    }
+
+    private String mapAddonToken(OrderItemOption option) {
+        String label = option.option_name_snapshot_zh;
+        String code = canonicalAddonCode(label);
+        if (code == null || "combo".equals(code)) {
+            return null;
+        }
+        String mapped = switch (code) {
+            case "extra_noodle" -> "+面";
+            case "tea_egg" -> "+蛋";
+            case "fried_egg" -> "+煎";
+            case "extra_meat" -> "+肉";
+            case "extra_radish" -> "+萝";
+            case "bok_choy" -> "+青";
+            case "cilantro" -> "+香";
+            case "green_onion" -> "+葱";
+            case "extra_sauce" -> "+酱";
+            case "broccoli" -> "+西兰";
+            case "cabbage" -> "+包";
+            case "corn" -> "+玉";
+            case "seaweed" -> "+海";
+            case "mushroom" -> "+菇";
+            case "carrot_slice" -> "+胡";
+            case "combo_edamame" -> "+毛豆";
+            case "combo_shredded_potato" -> "+土豆";
+            case "combo_cucumber_salad" -> "+黄瓜";
+            default -> null;
+        };
+        if (mapped == null) {
+            return null;
+        }
+        int quantity = option.quantity == null ? 1 : option.quantity;
+        return quantity > 1 ? mapped + "x" + quantity : mapped;
+    }
+
+    private String mapRemoveToken(OrderItemOption option) {
+        String label = option.option_name_snapshot_zh;
+        String code = canonicalRemoveCode(label);
+        if (code == null) {
+            return null;
+        }
+        return switch (code) {
+            case "cilantro" -> "走香";
+            case "green_onion" -> "走葱";
+            case "beef" -> "走牛";
+            case "radish" -> "走萝";
+            case "noodle" -> "走面";
+            case "less_noodle" -> "少面";
+            case "bok_choy" -> "走青";
+            case "broccoli" -> "走西兰";
+            case "corn" -> "走玉米";
+            case "mushroom" -> "走菇";
+            case "seaweed" -> "走海";
+            case "carrot" -> "走胡";
+            case "cucumber" -> "走黄瓜";
+            case "edamame" -> "走毛豆";
+            case "peanut" -> "走花生";
+            case "cabbage" -> "走包";
+            case "meat" -> "走肉";
+            case "green_pepper" -> "走青椒";
+            default -> label;
+        };
+    }
+
+    private String canonicalAddonCode(String label) {
+        if (label == null || label.isBlank()) {
+            return null;
+        }
+        return switch (label) {
+            case "套餐" -> "combo";
+            case "加面" -> "extra_noodle";
+            case "加蛋", "套餐卤蛋" -> "tea_egg";
+            case "加煎蛋", "套餐煎蛋" -> "fried_egg";
+            case "加肉" -> "extra_meat";
+            case "加萝卜" -> "extra_radish";
+            case "加上海青" -> "bok_choy";
+            case "加香菜" -> "cilantro";
+            case "加葱" -> "green_onion";
+            case "加酱" -> "extra_sauce";
+            case "加西兰花" -> "broccoli";
+            case "加包菜" -> "cabbage";
+            case "加玉米" -> "corn";
+            case "加海菜" -> "seaweed";
+            case "加蘑菇" -> "mushroom";
+            case "加胡萝卜片" -> "carrot_slice";
+            case "套餐毛豆" -> "combo_edamame";
+            case "套餐土豆丝" -> "combo_shredded_potato";
+            case "套餐拌黄瓜" -> "combo_cucumber_salad";
+            default -> null;
+        };
+    }
+
+    private boolean isComboSideKitchenTask(KitchenTask task) {
+        return task != null && Integer.valueOf(KITCHEN_TASK_PRIORITY_COMBO_SIDE).equals(task.priority);
+    }
+
+    private record ComboSideSelection(String labelZh, String labelEn, int quantity) {
+    }
+
+    private List<ComboSideSelection> extractComboSideSelections(OrderItem orderItem, List<OrderItemOption> options) {
+        Map<String, ComboSideSelection> selections = new HashMap<>();
+        for (OrderItemOption option : options) {
+            if (!OPTION_TYPE_ADDON.equals(option.option_type_snapshot)) {
+                continue;
+            }
+            String code = canonicalAddonCode(option.option_name_snapshot_zh);
+            if (!isComboSideCode(code)) {
+                continue;
+            }
+            int optionQuantity = option.quantity == null ? 1 : option.quantity;
+            int totalQuantity = optionQuantity * (orderItem.quantity == null ? 1 : orderItem.quantity);
+            ComboSideSelection selection = switch (code) {
+                case "combo_edamame" -> new ComboSideSelection("毛豆", "Edamame", totalQuantity);
+                case "combo_shredded_potato" -> new ComboSideSelection("土豆", "Shredded Potato", totalQuantity);
+                case "combo_cucumber_salad" -> new ComboSideSelection("黄瓜", "Cucumber Salad", totalQuantity);
+                default -> null;
+            };
+            if (selection == null) {
+                continue;
+            }
+            selections.put(selection.labelZh(), selection);
+        }
+        return new ArrayList<>(selections.values());
+    }
+
+    private List<KitchenTask> createComboSideKitchenTasks(
+        Order order,
+        OrderItem orderItem,
+        List<OrderItemOption> options,
+        LocalDateTime now
+    ) {
+        List<ComboSideSelection> selections = extractComboSideSelections(orderItem, options);
+        if (selections.isEmpty()) {
+            return List.of();
+        }
+        Station coldStation = stationRepository.findActiveStationByCodeAndStoreId("COLD", order.store_id);
+        if (coldStation == null) {
+            throw new BusinessException("Assigned station is not enabled for combo side items. station_code=COLD");
+        }
+
+        List<KitchenTask> tasks = new ArrayList<>();
+        for (ComboSideSelection selection : selections) {
+            KitchenTask kitchenTask = new KitchenTask();
+            kitchenTask.order_id = order.id;
+            kitchenTask.order_item_id = orderItem.id;
+            kitchenTask.store_id = order.store_id;
+            kitchenTask.station_code = coldStation.code;
+            kitchenTask.item_name_snapshot_zh = selection.labelZh();
+            kitchenTask.item_name_snapshot_en = selection.labelEn();
+            kitchenTask.special_instructions_snapshot = null;
+            kitchenTask.status = KitchenTaskStatus.pending.name();
+            kitchenTask.quantity = selection.quantity();
+            kitchenTask.priority = KITCHEN_TASK_PRIORITY_COMBO_SIDE;
+            kitchenTask.created_at = now;
+            tasks.add(kitchenTask);
+        }
+        return tasks;
+    }
+
+    private void synchronizeComboSideKitchenTasks(
+        Order order,
+        OrderItem orderItem,
+        List<OrderItemOption> options,
+        LocalDateTime now
+    ) {
+        List<KitchenTask> existingTasks = findKitchenTasksByOrderItemId(order.id, orderItem.id).stream()
+            .filter(this::isComboSideKitchenTask)
+            .toList();
+        Map<String, KitchenTask> existingByLabel = new HashMap<>();
+        for (KitchenTask task : existingTasks) {
+            existingByLabel.put(task.item_name_snapshot_zh, task);
+        }
+
+        Map<String, ComboSideSelection> desiredByLabel = new HashMap<>();
+        for (ComboSideSelection selection : extractComboSideSelections(orderItem, options)) {
+            desiredByLabel.put(selection.labelZh(), selection);
+        }
+
+        Station coldStation = null;
+        if (!desiredByLabel.isEmpty()) {
+            coldStation = stationRepository.findActiveStationByCodeAndStoreId("COLD", order.store_id);
+            if (coldStation == null) {
+                throw new BusinessException("Assigned station is not enabled for combo side items. station_code=COLD");
+            }
+        }
+
+        for (ComboSideSelection selection : desiredByLabel.values()) {
+            KitchenTask task = existingByLabel.get(selection.labelZh());
+            if (task == null) {
+                task = new KitchenTask();
+                task.order_id = order.id;
+                task.order_item_id = orderItem.id;
+                task.store_id = order.store_id;
+                task.created_at = now;
+                task.priority = KITCHEN_TASK_PRIORITY_COMBO_SIDE;
+            }
+            if (KitchenTaskStatus.cancelled.name().equals(task.status)
+                || KitchenTaskStatus.ready_for_pickup.name().equals(task.status)
+                || KitchenTaskStatus.served.name().equals(task.status)) {
+                task.status = KitchenTaskStatus.pending.name();
+                task.cancelled_at = null;
+                task.started_at = null;
+                task.completed_at = null;
+                task.served_at = null;
+            }
+            task.station_code = coldStation.code;
+            task.item_name_snapshot_zh = selection.labelZh();
+            task.item_name_snapshot_en = selection.labelEn();
+            task.special_instructions_snapshot = null;
+            task.quantity = selection.quantity();
+            kitchenTaskRepository.save(task);
+        }
+
+        for (KitchenTask task : existingTasks) {
+            if (desiredByLabel.containsKey(task.item_name_snapshot_zh)) {
+                continue;
+            }
+            if (KitchenTaskStatus.served.name().equals(task.status)) {
+                continue;
+            }
+            task.status = KitchenTaskStatus.cancelled.name();
+            task.cancelled_at = now;
+            kitchenTaskRepository.save(task);
+        }
+    }
+
+    private boolean isComboSideCode(String code) {
+        return "combo_edamame".equals(code)
+            || "combo_shredded_potato".equals(code)
+            || "combo_cucumber_salad".equals(code);
+    }
+
+    private String canonicalRemoveCode(String label) {
+        if (label == null || label.isBlank()) {
+            return null;
+        }
+        return switch (label) {
+            case "走香菜", "不要香菜" -> "cilantro";
+            case "走葱", "不要葱", "走洋葱" -> "green_onion";
+            case "走牛肉" -> "beef";
+            case "走萝卜" -> "radish";
+            case "走面", "No Noodle" -> "noodle";
+            case "少面" -> "less_noodle";
+            case "走上海青" -> "bok_choy";
+            case "走西兰花" -> "broccoli";
+            case "走玉米" -> "corn";
+            case "走蘑菇" -> "mushroom";
+            case "走海菜" -> "seaweed";
+            case "走胡萝卜片", "走胡萝卜" -> "carrot";
+            case "走黄瓜" -> "cucumber";
+            case "走毛豆" -> "edamame";
+            case "走花生", "走花生碎" -> "peanut";
+            case "走包菜" -> "cabbage";
+            case "走肉" -> "meat";
+            case "走青椒" -> "green_pepper";
+            default -> null;
+        };
     }
 
     private List<CreateOrderItemRequest> normalizeItemRequests(List<CreateOrderItemRequest> requests) {

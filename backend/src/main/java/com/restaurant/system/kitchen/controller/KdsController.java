@@ -62,9 +62,10 @@ public class KdsController {
     @GetMapping("/history")
     public ApiResponse<List<KdsOrderGroupResponse>> getHistoryView(
         @RequestParam Long store_id,
-        @RequestParam(required = false) Integer limit
+        @RequestParam(required = false) Integer limit,
+        @RequestParam(required = false) String station_code
     ) {
         authorizationService.requireForStore(store_id, Capability.KDS_HOT_VIEW, Capability.KDS_PASS_VIEW);
-        return ApiResponse.success(kdsService.getHistoryView(store_id, limit));
+        return ApiResponse.success(kdsService.getHistoryView(store_id, limit, station_code));
     }
 }

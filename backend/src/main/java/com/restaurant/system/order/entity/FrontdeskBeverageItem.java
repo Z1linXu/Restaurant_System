@@ -16,7 +16,7 @@ public class FrontdeskBeverageItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGSERIAL")
+    @Column(name = "id")
     public Long id;
 
     @Column(name = "order_id")

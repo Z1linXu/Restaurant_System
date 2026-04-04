@@ -1,4 +1,9 @@
 # AGENTS.md
+Rules for Codex:
+- Always update SYSTEM_DOCUMENTATION.md
+- Never assume missing API
+- Follow existing naming
+- Keep UI minimal (iPad friendly)
 
 ## 📌 Project Overview
 

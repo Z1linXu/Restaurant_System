@@ -9,6 +9,72 @@ import org.springframework.data.repository.query.Param;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
+    @Query(
+        value = """
+            select *
+            from orders
+            where id = :id
+            """,
+        nativeQuery = true
+    )
+    Order findExistingById(@Param("id") Long id);
+
+    @Query(
+        value = """
+            select *
+            from orders
+            where store_id = :storeId
+              and table_no = :tableNo
+              and status = 'draft'
+            order by updated_at desc, id desc
+            limit 1
+            """,
+        nativeQuery = true
+    )
+    Order findLatestDraftByStoreIdAndTableNo(@Param("storeId") Long storeId, @Param("tableNo") String tableNo);
+
+    @Query(
+        value = """
+            select *
+            from orders
+            where store_id = :storeId
+              and pickup_no = :pickupNo
+              and status = 'draft'
+            order by updated_at desc, id desc
+            limit 1
+            """,
+        nativeQuery = true
+    )
+    Order findLatestDraftByStoreIdAndPickupNo(@Param("storeId") Long storeId, @Param("pickupNo") String pickupNo);
+
+    @Query(
+        value = """
+            select *
+            from orders
+            where store_id = :storeId
+              and table_no = :tableNo
+              and status in ('draft', 'submitted', 'preparing')
+            order by updated_at desc, id desc
+            limit 1
+            """,
+        nativeQuery = true
+    )
+    Order findLatestEditableByStoreIdAndTableNo(@Param("storeId") Long storeId, @Param("tableNo") String tableNo);
+
+    @Query(
+        value = """
+            select *
+            from orders
+            where store_id = :storeId
+              and pickup_no = :pickupNo
+              and status in ('draft', 'submitted', 'preparing')
+            order by updated_at desc, id desc
+            limit 1
+            """,
+        nativeQuery = true
+    )
+    Order findLatestEditableByStoreIdAndPickupNo(@Param("storeId") Long storeId, @Param("pickupNo") String pickupNo);
+
     @Query("""
         select o from Order o
         where o.store_id = :storeId and o.ready_at is not null

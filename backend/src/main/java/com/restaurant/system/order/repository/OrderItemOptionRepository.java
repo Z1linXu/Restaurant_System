@@ -9,10 +9,24 @@ import org.springframework.data.repository.query.Param;
 
 public interface OrderItemOptionRepository extends JpaRepository<OrderItemOption, Long> {
 
-    @Query("select oio from OrderItemOption oio where oio.order_item_id in :orderItemIds")
+    @Query(
+        value = """
+            select *
+            from order_item_options
+            where order_item_id in (:orderItemIds)
+            order by id asc
+            """,
+        nativeQuery = true
+    )
     List<OrderItemOption> findAllByOrderItemIds(@Param("orderItemIds") List<Long> orderItemIds);
 
     @Modifying
-    @Query("delete from OrderItemOption oio where oio.order_item_id = :orderItemId")
+    @Query(
+        value = """
+            delete from order_item_options
+            where order_item_id = :orderItemId
+            """,
+        nativeQuery = true
+    )
     void deleteByOrderItemId(@Param("orderItemId") Long orderItemId);
 }
