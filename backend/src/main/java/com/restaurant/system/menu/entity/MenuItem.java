@@ -1,5 +1,6 @@
 package com.restaurant.system.menu.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -43,6 +44,10 @@ public class MenuItem {
 
     @Column(name = "base_price")
     public BigDecimal base_price;
+
+    @Column(name = "cost_per_item")
+    @JsonProperty("cost_per_item")
+    public BigDecimal cost_per_item;
 
     @Column(name = "is_active")
     public Boolean is_active;

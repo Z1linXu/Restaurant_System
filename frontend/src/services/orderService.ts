@@ -5,6 +5,7 @@ import type {
   ItemCustomizationDraft,
   MenuItem,
 } from '../types/ordering'
+import type { RealtimeUpdateMessage } from '../types/kds'
 
 const DEFAULT_STORE_ID = 1
 const DEFAULT_USER_ID = '1'
@@ -162,6 +163,57 @@ export async function fetchFrontdeskOrderHistory(input: FrontdeskOrderQueryInput
   })
 }
 
+export function subscribeToFrontdeskOrders(
+  storeId: number,
+  onMessage: (message: RealtimeUpdateMessage) => void,
+) {
+  let disposed = false
+  let deactivate: (() => void) | null = null
+
+  void Promise.all([import('@stomp/stompjs'), import('sockjs-client')])
+    .then(([stompModule, sockJsModule]) => {
+      if (disposed) {
+        return
+      }
+
+      const ClientCtor = stompModule.Client
+      const SockJSImport = sockJsModule.default
+      const SockJSCtor =
+        typeof SockJSImport === 'function'
+          ? SockJSImport
+          : ((sockJsModule as unknown as { SockJS?: typeof SockJSImport }).SockJS ?? SockJSImport)
+
+      const client = new ClientCtor({
+        webSocketFactory: () => new SockJSCtor('/ws'),
+        reconnectDelay: 3000,
+      })
+
+      client.onConnect = () => {
+        client.subscribe(`/topic/stores/${storeId}/frontdesk/orders`, (frame) => {
+          try {
+            const message = JSON.parse(frame.body) as RealtimeUpdateMessage
+            onMessage(message)
+          } catch {
+            // ignore malformed message
+          }
+        })
+      }
+
+      client.activate()
+      deactivate = () => {
+        void client.deactivate()
+      }
+    })
+    .catch(() => {
+      // ignore websocket bootstrap failures; polling remains the fallback
+    })
+
+  return () => {
+    disposed = true
+    deactivate?.()
+  }
+}
+
 export async function fetchOrderDetail(orderId: number) {
   let lastError: unknown = null
 
@@ -250,7 +302,7 @@ export async function submitDraftOrder(orderId: number) {
   throw lastError instanceof Error ? lastError : new Error('Failed to submit order')
 }
 
-export async function addDraftOrderItem(orderId: number, menuItem: MenuItem, draft: ItemCustomizationDraft) {
+export async function addDraftOrderItem(orderId: number, menuItem: MenuItem, draft: ItemCustomizationDraft, notes = '') {
   return request<BackendOrderResponse>(`/api/v1/orders/${orderId}/items`, {
     method: 'POST',
     headers: buildHeaders(),
@@ -259,7 +311,7 @@ export async function addDraftOrderItem(orderId: number, menuItem: MenuItem, dra
       quantity: draft.quantity,
       combo_group_no: null,
       combo_role: 'standalone',
-      notes: null,
+      notes: notes.trim() || null,
       options: mapOptions(draft, menuItem),
     }),
   })
@@ -274,6 +326,7 @@ export async function updateDraftOrderItemWithMenuItem(
   itemId: number,
   menuItem: MenuItem | undefined,
   draft: ItemCustomizationDraft,
+  notes = '',
 ) {
   return request<BackendOrderResponse>(`/api/v1/orders/${orderId}/items/${itemId}`, {
     method: 'PUT',
@@ -282,7 +335,7 @@ export async function updateDraftOrderItemWithMenuItem(
       quantity: draft.quantity,
       combo_group_no: null,
       combo_role: 'standalone',
-      notes: null,
+      notes: notes.trim() || null,
       options: mapOptions(draft, menuItem),
     }),
   })

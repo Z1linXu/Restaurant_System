@@ -5,37 +5,44 @@ import com.restaurant.system.user.entity.User;
 import com.restaurant.system.user.repository.RoleRepository;
 import com.restaurant.system.user.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
 public class RequestUserContextService {
 
+    public static final String AUTHENTICATED_USER_ATTRIBUTE = RequestUserContextService.class.getName() + ".currentUser";
     static final String USER_ID_HEADER = "X-User-Id";
-    private static final String REQUEST_ATTRIBUTE = RequestUserContextService.class.getName() + ".currentUser";
 
     private final HttpServletRequest request;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final boolean xUserIdFallbackEnabled;
 
     public RequestUserContextService(
         HttpServletRequest request,
         UserRepository userRepository,
-        RoleRepository roleRepository
+        RoleRepository roleRepository,
+        @Value("${app.auth.x-user-id-fallback-enabled:true}") boolean xUserIdFallbackEnabled
     ) {
         this.request = request;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
+        this.xUserIdFallbackEnabled = xUserIdFallbackEnabled;
     }
 
     public AuthenticatedUser getRequiredUser() {
-        Object cached = request.getAttribute(REQUEST_ATTRIBUTE);
+        Object cached = request.getAttribute(AUTHENTICATED_USER_ATTRIBUTE);
         if (cached instanceof AuthenticatedUser authenticatedUser) {
             return authenticatedUser;
         }
 
         String rawUserId = request.getHeader(USER_ID_HEADER);
+        if (!xUserIdFallbackEnabled && rawUserId != null && !rawUserId.isBlank()) {
+            throw new UnauthorizedException("X-User-Id fallback is disabled");
+        }
         if (rawUserId == null || rawUserId.isBlank()) {
-            throw new UnauthorizedException(USER_ID_HEADER + " header is required");
+            throw new UnauthorizedException("Authorization Bearer token is required");
         }
 
         Long userId;
@@ -71,7 +78,7 @@ public class RequestUserContextService {
             user.getFull_name(),
             role.getCode().toUpperCase()
         );
-        request.setAttribute(REQUEST_ATTRIBUTE, authenticatedUser);
+        request.setAttribute(AUTHENTICATED_USER_ATTRIBUTE, authenticatedUser);
         return authenticatedUser;
     }
 }

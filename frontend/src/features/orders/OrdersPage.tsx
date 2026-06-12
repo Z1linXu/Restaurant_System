@@ -45,6 +45,16 @@ export function OrdersPage() {
   const [allocations, setAllocations] = useState<Record<number, ItemAllocation>>({})
   const [cashSelected, setCashSelected] = useState(false)
 
+  const preferredOrderIdFromRoute = useMemo(() => {
+    const params = new URLSearchParams(window.location.search)
+    const rawOrderId = params.get('orderId')
+    if (!rawOrderId) {
+      return null
+    }
+    const parsed = Number(rawOrderId)
+    return Number.isFinite(parsed) ? parsed : null
+  }, [])
+
   const loadBoard = async (preferredOrderId?: number | null) => {
     setLoading(true)
     setError(null)
@@ -75,8 +85,8 @@ export function OrdersPage() {
   }
 
   useEffect(() => {
-    void loadBoard()
-  }, [])
+    void loadBoard(preferredOrderIdFromRoute)
+  }, [preferredOrderIdFromRoute])
 
   useEffect(() => {
     if (!selectedOrderId) {

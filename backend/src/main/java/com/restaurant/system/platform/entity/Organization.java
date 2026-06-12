@@ -1,0 +1,36 @@
+package com.restaurant.system.platform.entity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import java.time.LocalDateTime;
+import lombok.Data;
+
+@Data
+@Entity
+@Table(name = "organizations")
+public class Organization {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    public Long id;
+
+    @Column(name = "name")
+    public String name;
+
+    @Column(name = "code")
+    public String code;
+
+    @Column(name = "status")
+    public String status;
+
+    @Column(name = "created_at")
+    public LocalDateTime created_at;
+
+    @Column(name = "updated_at")
+    public LocalDateTime updated_at;
+}

@@ -46,3 +46,16 @@ export interface TableSlot {
 export interface DineInMockData {
   tables: DiningTable[]
 }
+
+export interface BackendDiningTableConfig {
+  id: number
+  store_id: number
+  table_code: string
+  table_name: string
+  area_name: string
+  table_config: TableConfigMode
+  capacity: number
+  supports_split: boolean
+  sort_order: number
+  is_active: boolean
+}

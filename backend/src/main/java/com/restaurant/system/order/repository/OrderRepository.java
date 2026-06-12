@@ -95,4 +95,32 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         order by o.updated_at desc, o.id desc
         """)
     List<Order> findAllByStoreId(@Param("storeId") Long storeId);
+
+    @Query(
+        value = """
+            select *
+            from orders
+            where store_id = :storeId
+              and status = 'completed'
+              and completed_at is not null
+              and date(completed_at) = :summaryDate
+            order by completed_at asc, id asc
+            """,
+        nativeQuery = true
+    )
+    List<Order> findCompletedByStoreIdAndCompletedDate(@Param("storeId") Long storeId, @Param("summaryDate") java.sql.Date summaryDate);
+
+    @Query(
+        value = """
+            select *
+            from orders
+            where store_id = :storeId
+              and status = 'cancelled'
+              and updated_at is not null
+              and date(updated_at) = :summaryDate
+            order by updated_at asc, id asc
+            """,
+        nativeQuery = true
+    )
+    List<Order> findCancelledByStoreIdAndUpdatedDate(@Param("storeId") Long storeId, @Param("summaryDate") java.sql.Date summaryDate);
 }

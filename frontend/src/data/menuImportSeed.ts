@@ -359,7 +359,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Noodle",
       "nameZh": "加面",
-      "priceDelta": 2,
+      "priceDelta": 3.99,
       "isActive": true
     },
     {
@@ -368,7 +368,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Combo",
       "nameZh": "套餐",
-      "priceDelta": 4.5,
+      "priceDelta": 5,
       "isActive": true
     },
     {
@@ -512,7 +512,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Tea Egg",
       "nameZh": "加蛋",
-      "priceDelta": 1.5,
+      "priceDelta": 1.99,
       "isActive": true
     },
     {
@@ -521,7 +521,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Beef",
       "nameZh": "加肉",
-      "priceDelta": 4,
+      "priceDelta": 6.99,
       "isActive": true
     },
     {
@@ -539,7 +539,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Bok Choy",
       "nameZh": "加上海青",
-      "priceDelta": 1.5,
+      "priceDelta": 3,
       "isActive": true
     },
     {
@@ -656,7 +656,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Noodle",
       "nameZh": "加面",
-      "priceDelta": 2,
+      "priceDelta": 3.99,
       "isActive": true
     },
     {
@@ -665,7 +665,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Combo",
       "nameZh": "套餐",
-      "priceDelta": 4.5,
+      "priceDelta": 5,
       "isActive": true
     },
     {
@@ -809,7 +809,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Tea Egg",
       "nameZh": "加蛋",
-      "priceDelta": 1.5,
+      "priceDelta": 1.99,
       "isActive": true
     },
     {
@@ -818,7 +818,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Beef",
       "nameZh": "加肉",
-      "priceDelta": 4,
+      "priceDelta": 6.99,
       "isActive": true
     },
     {
@@ -836,7 +836,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Bok Choy",
       "nameZh": "加上海青",
-      "priceDelta": 1.5,
+      "priceDelta": 3,
       "isActive": true
     },
     {
@@ -953,7 +953,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Noodle",
       "nameZh": "加面",
-      "priceDelta": 2,
+      "priceDelta": 3.99,
       "isActive": true
     },
     {
@@ -962,7 +962,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Combo",
       "nameZh": "套餐",
-      "priceDelta": 4.5,
+      "priceDelta": 5,
       "isActive": true
     },
     {
@@ -1106,7 +1106,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Tea Egg",
       "nameZh": "加蛋",
-      "priceDelta": 1.5,
+      "priceDelta": 1.99,
       "isActive": true
     },
     {
@@ -1115,7 +1115,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Beef",
       "nameZh": "加肉",
-      "priceDelta": 4,
+      "priceDelta": 6.99,
       "isActive": true
     },
     {
@@ -1133,7 +1133,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Bok Choy",
       "nameZh": "加上海青",
-      "priceDelta": 1.5,
+      "priceDelta": 3,
       "isActive": true
     },
     {
@@ -1223,7 +1223,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Combo",
       "nameZh": "套餐",
-      "priceDelta": 4.5,
+      "priceDelta": 5,
       "isActive": true
     },
     {
@@ -1412,7 +1412,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Noodle",
       "nameZh": "加面",
-      "priceDelta": 2,
+      "priceDelta": 3.99,
       "isActive": true
     },
     {
@@ -1421,7 +1421,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Tea Egg",
       "nameZh": "加蛋",
-      "priceDelta": 1.5,
+      "priceDelta": 1.99,
       "isActive": true
     },
     {
@@ -1430,7 +1430,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Beef",
       "nameZh": "加肉",
-      "priceDelta": 4,
+      "priceDelta": 6.99,
       "isActive": true
     },
     {
@@ -1448,7 +1448,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Bok Choy",
       "nameZh": "加上海青",
-      "priceDelta": 1.2,
+      "priceDelta": 3,
       "isActive": true
     },
     {
@@ -1574,7 +1574,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Combo",
       "nameZh": "套餐",
-      "priceDelta": 4.5,
+      "priceDelta": 5,
       "isActive": true
     },
     {
@@ -1682,7 +1682,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Meat",
       "nameZh": "加肉",
-      "priceDelta": 3.5,
+      "priceDelta": 6.99,
       "isActive": true
     },
     {
@@ -1718,7 +1718,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Combo",
       "nameZh": "套餐",
-      "priceDelta": 4.5,
+      "priceDelta": 5,
       "isActive": true
     },
     {
@@ -1826,7 +1826,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Meat",
       "nameZh": "加肉",
-      "priceDelta": 3.5,
+      "priceDelta": 6.99,
       "isActive": true
     },
     {
@@ -1862,7 +1862,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Combo",
       "nameZh": "套餐",
-      "priceDelta": 4.5,
+      "priceDelta": 5,
       "isActive": true
     },
     {
@@ -1970,7 +1970,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Meat",
       "nameZh": "加肉",
-      "priceDelta": 3.5,
+      "priceDelta": 6.99,
       "isActive": true
     },
     {
@@ -2015,7 +2015,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Combo",
       "nameZh": "套餐",
-      "priceDelta": 4.5,
+      "priceDelta": 5,
       "isActive": true
     },
     {
@@ -2159,7 +2159,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Noodle",
       "nameZh": "加面",
-      "priceDelta": 2,
+      "priceDelta": 3.99,
       "isActive": true
     },
     {
@@ -2168,7 +2168,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Combo",
       "nameZh": "套餐",
-      "priceDelta": 4.5,
+      "priceDelta": 5,
       "isActive": true
     },
     {
@@ -2303,7 +2303,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Tea Egg",
       "nameZh": "加蛋",
-      "priceDelta": 1.5,
+      "priceDelta": 1.99,
       "isActive": true
     },
     {
@@ -2312,7 +2312,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Meat",
       "nameZh": "加肉",
-      "priceDelta": 4,
+      "priceDelta": 6.99,
       "isActive": true
     },
     {
@@ -2330,7 +2330,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Bok Choy",
       "nameZh": "加上海青",
-      "priceDelta": 1.2,
+      "priceDelta": 3,
       "isActive": true
     },
     {
@@ -2411,7 +2411,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Noodle",
       "nameZh": "加面",
-      "priceDelta": 2,
+      "priceDelta": 3.99,
       "isActive": true
     },
     {
@@ -2420,7 +2420,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Combo",
       "nameZh": "套餐",
-      "priceDelta": 4.5,
+      "priceDelta": 5,
       "isActive": true
     },
     {
@@ -2555,7 +2555,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Tea Egg",
       "nameZh": "加蛋",
-      "priceDelta": 1.5,
+      "priceDelta": 1.99,
       "isActive": true
     },
     {
@@ -2564,7 +2564,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Meat",
       "nameZh": "加肉",
-      "priceDelta": 4,
+      "priceDelta": 6.99,
       "isActive": true
     },
     {
@@ -2582,7 +2582,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Bok Choy",
       "nameZh": "加上海青",
-      "priceDelta": 1.2,
+      "priceDelta": 3,
       "isActive": true
     },
     {
@@ -2690,7 +2690,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Noodle",
       "nameZh": "加面",
-      "priceDelta": 2,
+      "priceDelta": 3.99,
       "isActive": true
     },
     {
@@ -2699,7 +2699,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Combo",
       "nameZh": "套餐",
-      "priceDelta": 4.5,
+      "priceDelta": 5,
       "isActive": true
     },
     {
@@ -2834,7 +2834,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Tea Egg",
       "nameZh": "加蛋",
-      "priceDelta": 1.5,
+      "priceDelta": 1.99,
       "isActive": true
     },
     {
@@ -2843,7 +2843,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Meat",
       "nameZh": "加肉",
-      "priceDelta": 4,
+      "priceDelta": 6.99,
       "isActive": true
     },
     {
@@ -2861,7 +2861,7 @@ export const menuImportSeed = {
       "optionType": "addon",
       "nameEn": "Extra Bok Choy",
       "nameZh": "加上海青",
-      "priceDelta": 1.2,
+      "priceDelta": 3,
       "isActive": true
     },
     {

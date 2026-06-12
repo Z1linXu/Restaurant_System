@@ -12,6 +12,7 @@ interface OrderSummaryPanelProps {
   onDecrementItem: (itemId: string) => void
   onEditItem: (itemId: string) => void
   onRemoveItem: (itemId: string) => void
+  onUpdateItemNote: (itemId: string, notes: string) => void
   onSaveDraft: () => void
   onCancelOrder: () => void
   onSubmitOrder: () => void
@@ -28,6 +29,7 @@ export function OrderSummaryPanel({
   onDecrementItem,
   onEditItem,
   onRemoveItem,
+  onUpdateItemNote,
   onSaveDraft,
   onCancelOrder,
   onSubmitOrder,
@@ -74,6 +76,7 @@ export function OrderSummaryPanel({
               onDecrement={() => onDecrementItem(item.id)}
               onEdit={() => onEditItem(item.id)}
               onRemove={() => onRemoveItem(item.id)}
+              onUpdateNote={(notes) => onUpdateItemNote(item.id, notes)}
             />
           ))
         ) : (

@@ -1,3 +1,6 @@
+import { navigateTo } from '../../frontdesk/navigation'
+import { isFeatureEnabled, type FeaturePackage } from '../../feature-flags/featureConfig'
+
 interface DineInSidebarProps {
   activeItem?: 'menu'
   collapsed?: boolean
@@ -6,11 +9,15 @@ interface DineInSidebarProps {
 }
 
 const navItems = [
-  { id: 'orders', label: 'Orders', icon: '▤' },
-  { id: 'menu', label: 'Menu', icon: '✕' },
-  { id: 'stations', label: 'Stations', icon: '⌂' },
-  { id: 'dashboard', label: 'Dashboard', icon: '◫' },
-] as const
+  { id: 'orders', label: 'Orders', icon: '▤', feature: 'CORE_POS' },
+  { id: 'menu', label: 'Menu', icon: '✕', feature: 'CORE_POS' },
+  { id: 'dashboard', label: 'Dashboard', icon: '◫', feature: 'ADMIN' },
+] as const satisfies Array<{
+  id: 'orders' | 'menu' | 'dashboard'
+  label: string
+  icon: string
+  feature: FeaturePackage
+}>
 
 export function DineInSidebar({
   activeItem = 'menu',
@@ -55,12 +62,25 @@ export function DineInSidebar({
         </div>
 
         <nav className={`${compact ? 'space-y-2' : 'space-y-2.5'}`}>
-          {navItems.map((item) => {
+          {navItems.filter((item) => isFeatureEnabled(item.feature)).map((item) => {
             const active = item.id === activeItem
             return (
               <button
                 key={item.id}
                 type="button"
+                onClick={() => {
+                  if (item.id === 'orders') {
+                    navigateTo('/frontdesk/order')
+                    return
+                  }
+                  if (item.id === 'menu') {
+                    navigateTo('/frontdesk')
+                    return
+                  }
+                  if (item.id === 'dashboard') {
+                    navigateTo('/admin/dashboard')
+                  }
+                }}
                 className={`flex w-full items-center rounded-[22px] text-left transition ${
                   collapsed ? (compact ? 'justify-center px-0 py-3' : 'justify-center px-0 py-3.5') : compact ? 'gap-3 px-3 py-3' : 'gap-4 px-4 py-3.5'
                 } ${

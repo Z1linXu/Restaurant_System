@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Button } from '../../../components/ui/Button'
 import type { OrderLineItem } from '../../../types/ordering'
 
@@ -7,6 +8,7 @@ interface OrderLineItemRowProps {
   onDecrement: () => void
   onEdit: () => void
   onRemove: () => void
+  onUpdateNote: (notes: string) => void
   compact?: boolean
 }
 
@@ -16,8 +18,25 @@ export function OrderLineItemRow({
   onDecrement,
   onEdit,
   onRemove,
+  onUpdateNote,
   compact = false,
 }: OrderLineItemRowProps) {
+  const [noteValue, setNoteValue] = useState(item.notes)
+
+  useEffect(() => {
+    setNoteValue(item.notes)
+  }, [item.notes])
+
+  useEffect(() => {
+    if (noteValue === item.notes) {
+      return undefined
+    }
+    const timeoutId = window.setTimeout(() => {
+      onUpdateNote(noteValue)
+    }, 450)
+    return () => window.clearTimeout(timeoutId)
+  }, [item.notes, noteValue, onUpdateNote])
+
   return (
     <div className={`bg-[var(--surface-container-lowest)] shadow-[0_12px_30px_rgba(26,28,25,0.05)] ${compact ? 'rounded-[20px] p-3.5' : 'rounded-[26px] p-5'}`}>
       <div className="flex items-start justify-between gap-4">
@@ -51,6 +70,19 @@ export function OrderLineItemRow({
           ))}
         </div>
       ) : null}
+
+      <label className={`block ${compact ? 'mt-2' : 'mt-3'}`}>
+        <span className={`font-semibold text-[var(--muted)] ${compact ? 'text-[0.72rem]' : 'text-[0.82rem]'}`}>
+          备注 / Special note
+        </span>
+        <textarea
+          value={noteValue}
+          onChange={(event) => setNoteValue(event.target.value)}
+          placeholder="备注 / Special note"
+          rows={compact ? 1 : 2}
+          className={`mt-1 w-full resize-none rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-[rgba(255,255,255,0.78)] px-3 py-2 font-medium text-[var(--on-surface)] outline-none focus:border-[rgba(97,0,0,0.38)] ${compact ? 'text-[0.82rem]' : 'text-[0.92rem]'}`}
+        />
+      </label>
 
       <div className={`${compact ? 'mt-3' : 'mt-4'} flex items-center justify-between gap-4`}>
         <div className={`inline-flex items-center bg-[var(--surface-container-low)] p-1 ${compact ? 'rounded-[16px]' : 'rounded-[20px]'}`}>

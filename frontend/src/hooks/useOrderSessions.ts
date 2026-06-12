@@ -148,6 +148,7 @@ function buildLineItem(menuItem: MenuItem, draft: ItemCustomizationDraft, itemId
     lineSubtotal: unitPrice * draft.quantity,
     selection: draft,
     summaryTags,
+    notes: '',
   }
 }
 

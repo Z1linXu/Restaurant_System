@@ -172,6 +172,7 @@ function buildLineItem(
     lineSubtotal,
     selection: draft,
     summaryTags,
+    notes: '',
   }
 }
 

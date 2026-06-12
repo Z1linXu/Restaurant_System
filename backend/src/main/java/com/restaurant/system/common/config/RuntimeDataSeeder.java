@@ -1,12 +1,31 @@
 package com.restaurant.system.common.config;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.restaurant.system.auth.entity.UserCredential;
+import com.restaurant.system.auth.repository.UserCredentialRepository;
+import com.restaurant.system.auth.service.PasswordService;
 import com.restaurant.system.menu.entity.MenuCategory;
 import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.entity.MenuItemOption;
 import com.restaurant.system.menu.repository.MenuCategoryRepository;
 import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.menu.repository.MenuItemRepository;
+import com.restaurant.system.platform.entity.Organization;
+import com.restaurant.system.platform.entity.RestaurantTemplate;
+import com.restaurant.system.platform.entity.StoreKdsDisplayConfig;
+import com.restaurant.system.platform.repository.OrganizationRepository;
+import com.restaurant.system.platform.repository.RestaurantTemplateRepository;
+import com.restaurant.system.platform.repository.StoreKdsDisplayConfigRepository;
+import com.restaurant.system.printing.PrintModuleCode;
+import com.restaurant.system.printing.entity.PrinterAssignment;
+import com.restaurant.system.printing.entity.PrinterConfig;
+import com.restaurant.system.printing.repository.PrinterAssignmentRepository;
+import com.restaurant.system.printing.repository.PrinterConfigRepository;
+import com.restaurant.system.printing.transport.EscPosFontSizeMode;
+import com.restaurant.system.station.entity.DiningTable;
 import com.restaurant.system.station.entity.Station;
+import com.restaurant.system.station.repository.DiningTableRepository;
 import com.restaurant.system.station.repository.StationRepository;
 import com.restaurant.system.user.entity.Role;
 import com.restaurant.system.user.entity.Store;
@@ -23,48 +42,105 @@ import java.util.Map;
 import java.util.Set;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class RuntimeDataSeeder implements ApplicationRunner {
 
+    private static final Logger logger = LoggerFactory.getLogger(RuntimeDataSeeder.class);
+
     private final StoreRepository storeRepository;
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
     private final StationRepository stationRepository;
+    private final DiningTableRepository diningTableRepository;
+    private final OrganizationRepository organizationRepository;
+    private final RestaurantTemplateRepository restaurantTemplateRepository;
+    private final StoreKdsDisplayConfigRepository storeKdsDisplayConfigRepository;
     private final MenuCategoryRepository menuCategoryRepository;
     private final MenuItemRepository menuItemRepository;
     private final MenuItemOptionRepository menuItemOptionRepository;
+    private final PrinterConfigRepository printerConfigRepository;
+    private final PrinterAssignmentRepository printerAssignmentRepository;
+    private final UserCredentialRepository userCredentialRepository;
+    private final PasswordService passwordService;
+    private final ObjectMapper objectMapper;
+    private final boolean runtimeSeedEnabled;
+    private final boolean forceOverwrite;
 
     public RuntimeDataSeeder(
         StoreRepository storeRepository,
         RoleRepository roleRepository,
         UserRepository userRepository,
         StationRepository stationRepository,
+        DiningTableRepository diningTableRepository,
+        OrganizationRepository organizationRepository,
+        RestaurantTemplateRepository restaurantTemplateRepository,
+        StoreKdsDisplayConfigRepository storeKdsDisplayConfigRepository,
         MenuCategoryRepository menuCategoryRepository,
         MenuItemRepository menuItemRepository,
-        MenuItemOptionRepository menuItemOptionRepository
+        MenuItemOptionRepository menuItemOptionRepository,
+        PrinterConfigRepository printerConfigRepository,
+        PrinterAssignmentRepository printerAssignmentRepository,
+        UserCredentialRepository userCredentialRepository,
+        PasswordService passwordService,
+        @Value("${app.seed.runtime-enabled:true}") boolean runtimeSeedEnabled,
+        @Value("${app.seed.force-overwrite:false}") boolean forceOverwrite
     ) {
         this.storeRepository = storeRepository;
         this.roleRepository = roleRepository;
         this.userRepository = userRepository;
         this.stationRepository = stationRepository;
+        this.diningTableRepository = diningTableRepository;
+        this.organizationRepository = organizationRepository;
+        this.restaurantTemplateRepository = restaurantTemplateRepository;
+        this.storeKdsDisplayConfigRepository = storeKdsDisplayConfigRepository;
         this.menuCategoryRepository = menuCategoryRepository;
         this.menuItemRepository = menuItemRepository;
         this.menuItemOptionRepository = menuItemOptionRepository;
+        this.printerConfigRepository = printerConfigRepository;
+        this.printerAssignmentRepository = printerAssignmentRepository;
+        this.userCredentialRepository = userCredentialRepository;
+        this.passwordService = passwordService;
+        this.objectMapper = new ObjectMapper();
+        this.runtimeSeedEnabled = runtimeSeedEnabled;
+        this.forceOverwrite = forceOverwrite;
     }
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
+        if (!runtimeSeedEnabled) {
+            logger.info("RuntimeDataSeeder disabled: app.seed.runtime-enabled=false");
+            return;
+        }
+        logger.info(
+            "RuntimeDataSeeder running in {}",
+            forceOverwrite ? "force overwrite mode" : "missing-data supplement mode"
+        );
         seedStores();
         seedRoles();
         seedUsers();
+        seedAuthCredentials();
         seedStations();
         seedMenuCategories();
         seedMenuItems();
         seedMenuItemOptions();
+        if (forceOverwrite) {
+            syncTargetOptionPrices();
+        } else {
+            logger.info("Skipping syncTargetOptionPrices because app.seed.force-overwrite=false");
+        }
+        seedOrganizations();
+        attachStoresToOrganizations();
+        seedDiningTables();
+        seedStoreKdsDisplayConfigs();
+        seedRamenTemplate();
+        seedPrintingCenter();
     }
 
     private void seedStores() {
@@ -73,10 +149,12 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         }
 
         Store store = new Store();
+        store.organization_id = null;
         store.name = "Main Kitchen";
         store.code = "MAIN";
         store.status = "active";
         store.enable_bar_kitchen_tasks = false;
+        store.printing_enabled = true;
         store.created_at = now();
         store.updated_at = now();
         storeRepository.save(store);
@@ -126,6 +204,66 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         adminUser.setUpdated_at(now());
 
         userRepository.saveAll(List.of(frontdeskUser, adminUser));
+    }
+
+    private void seedAuthCredentials() {
+        Store store = firstStore();
+        User owner = ensureAuthUser(store.id, "owner", "Owner User", "ADMIN", "555-0100");
+        User frontdesk = ensureAuthUser(store.id, "frontdesk", "Frontdesk User", "FRONTDESK", "555-0001");
+        User kitchen = ensureAuthUser(store.id, "kitchen", "Kitchen User", "HOT_KITCHEN", "555-0101");
+        ensureCredential(owner, "owner", "ChangeMe123!");
+        ensureCredential(frontdesk, "frontdesk", "ChangeMe123!");
+        ensureCredential(kitchen, "kitchen", "ChangeMe123!");
+    }
+
+    private User ensureAuthUser(Long storeId, String username, String fullName, String roleCode, String phone) {
+        User existing = userRepository.findAll().stream()
+            .filter(user -> username.equalsIgnoreCase(user.getUsername()))
+            .findFirst()
+            .orElse(null);
+        if (existing != null && !forceOverwrite) {
+            logger.info("Seeder skip existing auth user {}", username);
+            return existing;
+        }
+
+        User target = existing == null ? new User() : existing;
+        logger.info("{} auth user {}", existing == null ? "Seeder inserting missing" : "Seeder force overwriting", username);
+        target.setStore_id(storeId);
+        target.setRole_id(findRoleId(roleCode));
+        target.setUsername(username);
+        target.setFull_name(fullName);
+        target.setPhone(phone);
+        target.setStatus("active");
+        target.setUpdated_at(now());
+        if (target.getCreated_at() == null) {
+            target.setCreated_at(now());
+        }
+        return userRepository.save(target);
+    }
+
+    private void ensureCredential(User user, String loginIdentifier, String defaultPassword) {
+        boolean credentialExists = userCredentialRepository.existsByLoginIdentifierIgnoreCase(loginIdentifier);
+        if (credentialExists && !forceOverwrite) {
+            logger.info("Seeder skip existing user credential {}", loginIdentifier);
+            return;
+        }
+
+        UserCredential credential = credentialExists
+            ? userCredentialRepository.findFirstByLoginIdentifierIgnoreCase(loginIdentifier)
+                .orElseGet(UserCredential::new)
+            : new UserCredential();
+        logger.info("{} user credential {}", credential.id == null ? "Seeder inserting missing" : "Seeder force overwriting", loginIdentifier);
+        credential.userId = user.getId();
+        credential.loginIdentifier = loginIdentifier;
+        credential.passwordHash = passwordService.hashPassword(defaultPassword);
+        credential.passwordAlgorithm = "BCRYPT";
+        credential.passwordUpdatedAt = now();
+        credential.isActive = true;
+        credential.updatedAt = now();
+        if (credential.createdAt == null) {
+            credential.createdAt = now();
+        }
+        userCredentialRepository.save(credential);
     }
 
     private void seedStations() {
@@ -200,34 +338,38 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         ensureItem(store.id, drink.id, barStationId, "sake", "清酒", "Sake", "drink", "7.80");
         ensureItem(store.id, drink.id, barStationId, "tsingtao_beer", "青岛啤酒", "Tsingtao Beer", "drink", "5.50");
 
-        deactivateLegacyMenuItems(store.id, Set.of(
-            "traditional_beef_noodle",
-            "braised_beef_tendon_noodle",
-            "pickled_vegetable_beef_noodle",
-            "vegetable_noodle",
-            "beef_chow_mein",
-            "chicken_chow_mein",
-            "tomato_chow_mein",
-            "vegetable_chow_mein",
-            "cold_noodle_shredded_chicken",
-            "zha_jiang_noodle",
-            "dan_dan_noodle",
-            "cucumber_salad",
-            "edamame",
-            "shredded_potato",
-            "braised_beef_shank_salad",
-            "fried_spring_rolls",
-            "tempura_shrimp",
-            "fried_steamed_buns",
-            "fried_wontons",
-            "coke",
-            "diet_coke",
-            "chinese_herbal_tea",
-            "ice_tea",
-            "shochu",
-            "sake",
-            "tsingtao_beer"
-        ));
+        if (forceOverwrite) {
+            deactivateLegacyMenuItems(store.id, Set.of(
+                "traditional_beef_noodle",
+                "braised_beef_tendon_noodle",
+                "pickled_vegetable_beef_noodle",
+                "vegetable_noodle",
+                "beef_chow_mein",
+                "chicken_chow_mein",
+                "tomato_chow_mein",
+                "vegetable_chow_mein",
+                "cold_noodle_shredded_chicken",
+                "zha_jiang_noodle",
+                "dan_dan_noodle",
+                "cucumber_salad",
+                "edamame",
+                "shredded_potato",
+                "braised_beef_shank_salad",
+                "fried_spring_rolls",
+                "tempura_shrimp",
+                "fried_steamed_buns",
+                "fried_wontons",
+                "coke",
+                "diet_coke",
+                "chinese_herbal_tea",
+                "ice_tea",
+                "shochu",
+                "sake",
+                "tsingtao_beer"
+            ));
+        } else {
+            logger.info("Skipping legacy menu item deactivation because app.seed.force-overwrite=false");
+        }
     }
 
     private void seedMenuItemOptions() {
@@ -269,11 +411,11 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         seeds.addAll(buildNoodleTypeOptions("sanxi"));
         seeds.addAll(buildSpicyOptions());
         seeds.addAll(optionSeeds(
-            optionSeed("addon", "加面", "Extra Noodle", "2.00"),
-            optionSeed("addon", "加蛋", "Extra Tea Egg", "1.50"),
-            optionSeed("addon", "加肉", "Extra Beef", "4.00"),
+            optionSeed("addon", "加面", "Extra Noodle", "3.99"),
+            optionSeed("addon", "加蛋", "Extra Tea Egg", "1.99"),
+            optionSeed("addon", "加肉", "Extra Beef", "6.99"),
             optionSeed("addon", "加煎蛋", "Extra Fried Egg", "1.80"),
-            optionSeed("addon", "加上海青", "Extra Bok Choy", "1.50"),
+            optionSeed("addon", "加上海青", "Extra Bok Choy", "3.00"),
             optionSeed("addon", "加香菜", "Extra Cilantro", "0.00"),
             optionSeed("addon", "加葱", "Extra Green Onion", "0.00")
         ));
@@ -302,11 +444,11 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         seeds.addAll(optionSeeds(
             optionSeed("soup_base", "素汤", "Vegan Broth", "0.00"),
             optionSeed("soup_base", "肉汤", "Beef Broth", "0.00"),
-            optionSeed("addon", "加面", "Extra Noodle", "2.00"),
-            optionSeed("addon", "加蛋", "Extra Tea Egg", "1.50"),
-            optionSeed("addon", "加肉", "Extra Beef", "4.00"),
+            optionSeed("addon", "加面", "Extra Noodle", "3.99"),
+            optionSeed("addon", "加蛋", "Extra Tea Egg", "1.99"),
+            optionSeed("addon", "加肉", "Extra Beef", "6.99"),
             optionSeed("addon", "加煎蛋", "Extra Fried Egg", "1.80"),
-            optionSeed("addon", "加上海青", "Extra Bok Choy", "1.20"),
+            optionSeed("addon", "加上海青", "Extra Bok Choy", "3.00"),
             optionSeed("addon", "加西兰花", "Extra Broccoli", "1.20"),
             optionSeed("addon", "加玉米", "Extra Corn", "1.20"),
             optionSeed("addon", "加海菜", "Extra Seaweed", "1.20"),
@@ -333,7 +475,7 @@ public class RuntimeDataSeeder implements ApplicationRunner {
             optionSeed("addon", "加包菜", "Extra Cabbage", "1.20")
         ));
         if (includeMeatAdjustments) {
-            seeds.add(optionSeed("addon", "加肉", "Extra Meat", "3.50"));
+            seeds.add(optionSeed("addon", "加肉", "Extra Meat", "6.99"));
             seeds.add(optionSeed("remove", "走肉", "No Meat", "0.00"));
         }
         seeds.addAll(optionSeeds(
@@ -355,11 +497,11 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         seeds.addAll(buildNoodleTypeOptions("sanxi"));
         seeds.addAll(buildSpicyOptions());
         seeds.addAll(optionSeeds(
-            optionSeed("addon", "加面", "Extra Noodle", "2.00"),
-            optionSeed("addon", "加蛋", "Extra Tea Egg", "1.50"),
-            optionSeed("addon", "加肉", "Extra Meat", "4.00"),
+            optionSeed("addon", "加面", "Extra Noodle", "3.99"),
+            optionSeed("addon", "加蛋", "Extra Tea Egg", "1.99"),
+            optionSeed("addon", "加肉", "Extra Meat", "6.99"),
             optionSeed("addon", "加煎蛋", "Extra Fried Egg", "1.80"),
-            optionSeed("addon", "加上海青", "Extra Bok Choy", "1.20"),
+            optionSeed("addon", "加上海青", "Extra Bok Choy", "3.00"),
             optionSeed("addon", "加酱", "Extra Sauce", "1.00"),
             optionSeed("addon", "加香菜", "Extra Cilantro", "0.00"),
             optionSeed("addon", "加葱", "Extra Green Onion", "0.00"),
@@ -377,11 +519,11 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         seeds.addAll(buildNoodleTypeOptions("leek_leaf"));
         seeds.addAll(buildSpicyOptions());
         seeds.addAll(optionSeeds(
-            optionSeed("addon", "加面", "Extra Noodle", "2.00"),
-            optionSeed("addon", "加蛋", "Extra Tea Egg", "1.50"),
-            optionSeed("addon", "加肉", "Extra Meat", "4.00"),
+            optionSeed("addon", "加面", "Extra Noodle", "3.99"),
+            optionSeed("addon", "加蛋", "Extra Tea Egg", "1.99"),
+            optionSeed("addon", "加肉", "Extra Meat", "6.99"),
             optionSeed("addon", "加煎蛋", "Extra Fried Egg", "1.80"),
-            optionSeed("addon", "加上海青", "Extra Bok Choy", "1.20"),
+            optionSeed("addon", "加上海青", "Extra Bok Choy", "3.00"),
             optionSeed("addon", "加酱", "Extra Sauce", "1.00"),
             optionSeed("addon", "加香菜", "Extra Cilantro", "0.50"),
             optionSeed("addon", "加葱", "Extra Green Onion", "0.50"),
@@ -401,11 +543,11 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         seeds.addAll(buildNoodleTypeOptions("leek_leaf"));
         seeds.addAll(buildSpicyOptions());
         seeds.addAll(optionSeeds(
-            optionSeed("addon", "加面", "Extra Noodle", "2.00"),
-            optionSeed("addon", "加蛋", "Extra Tea Egg", "1.50"),
-            optionSeed("addon", "加肉", "Extra Meat", "4.00"),
+            optionSeed("addon", "加面", "Extra Noodle", "3.99"),
+            optionSeed("addon", "加蛋", "Extra Tea Egg", "1.99"),
+            optionSeed("addon", "加肉", "Extra Meat", "6.99"),
             optionSeed("addon", "加煎蛋", "Extra Fried Egg", "1.80"),
-            optionSeed("addon", "加上海青", "Extra Bok Choy", "1.20"),
+            optionSeed("addon", "加上海青", "Extra Bok Choy", "3.00"),
             optionSeed("addon", "加香菜", "Extra Cilantro", "0.00"),
             optionSeed("addon", "加葱", "Extra Green Onion", "0.00"),
             optionSeed("remove", "走香菜", "No Cilantro", "0.00"),
@@ -418,7 +560,7 @@ public class RuntimeDataSeeder implements ApplicationRunner {
 
     private List<OptionSeed> buildComboOptions(boolean friedEggDefault) {
         List<OptionSeed> seeds = new ArrayList<>();
-        seeds.add(optionSeed("addon", "套餐", "Combo", "4.50"));
+        seeds.add(optionSeed("addon", "套餐", "Combo", "5.00"));
         if (friedEggDefault) {
             seeds.add(optionSeed("addon", "套餐煎蛋", "Combo Fried Egg", "0.00"));
             seeds.add(optionSeed("addon", "套餐卤蛋", "Combo Tea Egg", "0.00"));
@@ -494,7 +636,12 @@ public class RuntimeDataSeeder implements ApplicationRunner {
             if (allowedKeys.contains(existingKey)) {
                 continue;
             }
+            if (!forceOverwrite) {
+                logger.info("Seeder skip existing extra menu option {} for sku {} because force overwrite is disabled", existingKey, sku);
+                continue;
+            }
             if (!Boolean.FALSE.equals(option.is_active)) {
+                logger.info("Seeder force deactivating menu option {} for sku {}", existingKey, sku);
                 option.is_active = false;
                 option.updated_at = now();
                 menuItemOptionRepository.save(option);
@@ -507,6 +654,16 @@ public class RuntimeDataSeeder implements ApplicationRunner {
     }
 
     private record OptionSeed(String optionType, String nameZh, String nameEn, String priceDelta) {}
+
+    private record DiningTableSeed(
+        String tableCode,
+        String tableName,
+        String areaName,
+        String tableConfig,
+        Integer capacity,
+        boolean supportsSplit,
+        int sortOrder
+    ) {}
 
     private Role role(String name, String code) {
         Role role = new Role();
@@ -548,7 +705,13 @@ public class RuntimeDataSeeder implements ApplicationRunner {
             .findFirst()
             .orElse(null);
 
+        if (existing != null && !forceOverwrite) {
+            logger.info("Seeder skip existing menu category {}", code);
+            return;
+        }
+
         MenuCategory target = existing == null ? new MenuCategory() : existing;
+        logger.info("{} menu category {}", existing == null ? "Seeder inserting missing" : "Seeder force overwriting", code);
         target.store_id = storeId;
         target.code = code;
         target.name_zh = nameZh;
@@ -603,7 +766,13 @@ public class RuntimeDataSeeder implements ApplicationRunner {
             .findFirst()
             .orElse(null);
 
+        if (existing != null && !forceOverwrite) {
+            logger.info("Seeder skip existing menu item {}", sku);
+            return;
+        }
+
         MenuItem target = existing == null ? new MenuItem() : existing;
+        logger.info("{} menu item {}", existing == null ? "Seeder inserting missing" : "Seeder force overwriting", sku);
         target.store_id = storeId;
         target.category_id = categoryId;
         target.station_id = stationId;
@@ -645,7 +814,13 @@ public class RuntimeDataSeeder implements ApplicationRunner {
             .findFirst()
             .orElse(null);
 
+        if (existing != null && !forceOverwrite) {
+            logger.info("Seeder skip existing menu option {} for menu_item_id {}", nameZh, menuItemId);
+            return;
+        }
+
         MenuItemOption target = existing == null ? new MenuItemOption() : existing;
+        logger.info("{} menu option {} for menu_item_id {}", existing == null ? "Seeder inserting missing" : "Seeder force overwriting", nameZh, menuItemId);
         target.menu_item_id = menuItemId;
         target.option_type = optionType;
         target.name_zh = nameZh;
@@ -657,6 +832,25 @@ public class RuntimeDataSeeder implements ApplicationRunner {
             target.created_at = now();
         }
         menuItemOptionRepository.save(target);
+    }
+
+    private void syncTargetOptionPrices() {
+        Map<String, BigDecimal> targetPrices = Map.of(
+            "套餐", new BigDecimal("5.00"),
+            "加面", new BigDecimal("3.99"),
+            "加蛋", new BigDecimal("1.99"),
+            "加肉", new BigDecimal("6.99"),
+            "加上海青", new BigDecimal("3.00")
+        );
+        for (MenuItemOption option : menuItemOptionRepository.findAll()) {
+            BigDecimal targetPrice = targetPrices.get(option.name_zh);
+            if (targetPrice == null || targetPrice.compareTo(option.price_delta) == 0) {
+                continue;
+            }
+            option.price_delta = targetPrice;
+            option.updated_at = now();
+            menuItemOptionRepository.save(option);
+        }
     }
 
     private void deactivateLegacyMenuItems(Long storeId, Set<String> allowedSkus) {
@@ -713,5 +907,328 @@ public class RuntimeDataSeeder implements ApplicationRunner {
 
     private LocalDateTime now() {
         return LocalDateTime.now();
+    }
+
+    private void seedOrganizations() {
+        Organization existing = organizationRepository.findByCode("RAMEN_NOODLE_RESTAURANT");
+        if (existing != null) {
+            if (!forceOverwrite) {
+                logger.info("Seeder skip existing organization {}", existing.code);
+                return;
+            }
+            if (!"active".equals(existing.status)) {
+                logger.info("Seeder force overwriting organization status {}", existing.code);
+                existing.status = "active";
+                existing.updated_at = now();
+                organizationRepository.save(existing);
+            }
+            return;
+        }
+
+        Organization organization = new Organization();
+        organization.name = "Ramen / Noodle Restaurant";
+        organization.code = "RAMEN_NOODLE_RESTAURANT";
+        organization.status = "active";
+        organization.created_at = now();
+        organization.updated_at = now();
+        organizationRepository.save(organization);
+    }
+
+    private void attachStoresToOrganizations() {
+        Organization organization = organizationRepository.findByCode("RAMEN_NOODLE_RESTAURANT");
+        if (organization == null) {
+            return;
+        }
+
+        for (Store store : storeRepository.findAll()) {
+            if (store.organization_id != null) {
+                continue;
+            }
+            store.organization_id = organization.id;
+            store.updated_at = now();
+            storeRepository.save(store);
+        }
+    }
+
+    private void seedDiningTables() {
+        Long storeId = firstStore().id;
+        List<DiningTableSeed> seeds = List.of(
+            new DiningTableSeed("T12", "10", "Main Hall", "split_supported", 4, true, 1),
+            new DiningTableSeed("T12", "11", "Main Hall", "split_supported", 4, true, 2),
+            new DiningTableSeed("T1", "1里", "Main Hall", "single_only", 4, false, 3),
+            new DiningTableSeed("T9", "7", "Main Hall", "single_only", 4, false, 4),
+            new DiningTableSeed("T10", "8", "Main Hall", "single_only", 4, false, 5),
+            new DiningTableSeed("T11", "9", "Main Hall", "single_only", 4, false, 6),
+            new DiningTableSeed("T2", "1外", "Main Hall", "split_supported", 4, true, 7),
+            new DiningTableSeed("T3", "2里", "Main Hall", "single_only", 4, false, 8),
+            new DiningTableSeed("T4", "2外", "Main Hall", "split_supported", 4, true, 9),
+            new DiningTableSeed("T5", "3", "Patio", "split_supported", 4, true, 10),
+            new DiningTableSeed("T6", "4", "Patio", "split_supported", 4, true, 11),
+            new DiningTableSeed("T7", "5", "Window", "split_supported", 4, true, 12),
+            new DiningTableSeed("T8", "6", "Window", "single_only", 4, false, 13)
+        );
+        syncDiningTables(storeId, seeds);
+    }
+
+    private void seedStoreKdsDisplayConfigs() {
+        Long storeId = firstStore().id;
+        ensureKdsDisplayConfig(storeId, "FRONTDESK_TABLE_BOARD", "top_nav", "compact", "standard", "{\"layout\":\"ipad_workstation\"}");
+        ensureKdsDisplayConfig(storeId, "FRONTDESK_MENU", "top_nav", "compact", "standard", "{\"layout\":\"three_column\"}");
+        ensureKdsDisplayConfig(storeId, "KDS_GRAB", "top_bar", "compact", "standard", "{\"stations\":[\"NOODLE\",\"WOK\",\"DEEPFRIED\",\"COLD\"]}");
+        ensureKdsDisplayConfig(storeId, "KDS_HOT_KITCHEN", "top_bar", "compact", "standard", "{\"stations\":[\"WOK\",\"DEEPFRIED\"]}");
+        ensureKdsDisplayConfig(storeId, "KDS_NOODLE_MONITOR", "top_bar", "compact", "standard", "{\"stations\":[\"NOODLE\",\"WOK\"]}");
+        ensureKdsDisplayConfig(storeId, "PICKUP_BOARD", "top_bar", "standard", "standard", "{\"source\":\"READY_FOR_PICKUP\"}");
+    }
+
+    private void seedRamenTemplate() {
+        Organization organization = organizationRepository.findByCode("RAMEN_NOODLE_RESTAURANT");
+        Store store = firstStore();
+        RestaurantTemplate existing = restaurantTemplateRepository.findByCode("RAMEN_NOODLE_SHOP_TEMPLATE");
+        if (existing != null && !forceOverwrite) {
+            logger.info("Seeder skip existing restaurant template {}", existing.code);
+            return;
+        }
+        RestaurantTemplate template = existing == null ? new RestaurantTemplate() : existing;
+
+        template.organization_id = organization == null ? null : organization.id;
+        template.name = "Ramen / Noodle Shop Template";
+        template.code = "RAMEN_NOODLE_SHOP_TEMPLATE";
+        template.description = "Template created from the current ramen / noodle restaurant setup.";
+        template.source_store_id = store.id;
+        template.default_station_setup_json = toJson(
+            stationRepository.findAll().stream()
+                .filter(station -> store.id.equals(station.store_id))
+                .sorted((left, right) -> Integer.compare(left.sort_order == null ? 0 : left.sort_order, right.sort_order == null ? 0 : right.sort_order))
+                .map(station -> Map.of(
+                    "code", station.code,
+                    "name", station.name,
+                    "sort_order", station.sort_order == null ? 0 : station.sort_order,
+                    "is_active", Boolean.TRUE.equals(station.is_active)
+                ))
+                .toList()
+        );
+        template.default_kds_display_rules_json = toJson(
+            storeKdsDisplayConfigRepository.findAllByStoreIdOrderByIdAsc(store.id).stream()
+                .map(config -> Map.of(
+                    "screen_code", config.screen_code,
+                    "header_layout", nullToEmpty(config.header_layout),
+                    "density_mode", nullToEmpty(config.density_mode),
+                    "card_size_mode", nullToEmpty(config.card_size_mode),
+                    "config_json", nullToEmpty(config.config_json)
+                ))
+                .toList()
+        );
+        template.default_menu_category_structure_json = toJson(
+            menuCategoryRepository.findAll().stream()
+                .filter(category -> store.id.equals(category.store_id))
+                .sorted((left, right) -> Integer.compare(left.sort_order == null ? 0 : left.sort_order, right.sort_order == null ? 0 : right.sort_order))
+                .map(category -> Map.of(
+                    "code", category.code,
+                    "name_zh", category.name_zh,
+                    "name_en", category.name_en,
+                    "sort_order", category.sort_order == null ? 0 : category.sort_order,
+                    "is_active", Boolean.TRUE.equals(category.is_active)
+                ))
+                .toList()
+        );
+        template.default_dining_table_layout_rules_json = toJson(
+            diningTableRepository.findAllByStoreIdOrderBySortOrderAscIdAsc(store.id).stream()
+                .map(table -> Map.of(
+                    "table_code", table.table_code,
+                    "table_name", table.table_name,
+                    "area_name", table.area_name,
+                    "table_config", nullToEmpty(table.table_config),
+                    "capacity", table.capacity == null ? 0 : table.capacity,
+                    "supports_split", Boolean.TRUE.equals(table.supports_split),
+                    "sort_order", table.sort_order == null ? 0 : table.sort_order
+                ))
+                .toList()
+        );
+        template.default_role_setup_json = toJson(
+            roleRepository.findAll().stream()
+                .map(role -> Map.of(
+                    "name", role.getName(),
+                    "code", role.getCode()
+                ))
+                .toList()
+        );
+        template.is_active = true;
+        template.updated_at = now();
+        if (template.created_at == null) {
+            template.created_at = now();
+        }
+        restaurantTemplateRepository.save(template);
+    }
+
+    private void seedPrintingCenter() {
+        Store store = firstStore();
+        if (store.printing_enabled == null) {
+            store.printing_enabled = true;
+            store.updated_at = now();
+            storeRepository.save(store);
+        }
+
+        PrinterConfig defaultPrinter = printerConfigRepository.findAllByStoreIdOrderByIdAsc(store.id).stream()
+            .findFirst()
+            .orElseGet(() -> {
+                PrinterConfig printerConfig = new PrinterConfig();
+                printerConfig.store_id = store.id;
+                printerConfig.name = "Main Print Center Printer";
+                printerConfig.ip_address = "192.168.2.200";
+                printerConfig.port = 9100;
+                printerConfig.printer_type = "ESC_POS_TCP";
+                printerConfig.text_encoding = "GBK";
+                printerConfig.escpos_code_page = null;
+                printerConfig.font_size = EscPosFontSizeMode.DEFAULT_CODE;
+                printerConfig.enabled = true;
+                printerConfig.paper_width_mm = 80;
+                printerConfig.timeout_ms = 3000;
+                printerConfig.created_at = now();
+                printerConfig.updated_at = now();
+                return printerConfigRepository.save(printerConfig);
+            });
+        if (defaultPrinter.text_encoding == null || defaultPrinter.text_encoding.isBlank()) {
+            defaultPrinter.text_encoding = "GBK";
+            defaultPrinter.updated_at = now();
+            printerConfigRepository.save(defaultPrinter);
+        }
+        if (defaultPrinter.font_size_mode == null || defaultPrinter.font_size_mode.isBlank()) {
+            defaultPrinter.font_size_mode = EscPosFontSizeMode.DEFAULT_CODE;
+            defaultPrinter.updated_at = now();
+            printerConfigRepository.save(defaultPrinter);
+        }
+        for (PrinterConfig printerConfig : printerConfigRepository.findAllByStoreIdOrderByIdAsc(store.id)) {
+            if (printerConfig.font_size == null || printerConfig.font_size.isBlank()) {
+                printerConfig.font_size = EscPosFontSizeMode.DEFAULT_CODE;
+                printerConfig.updated_at = now();
+                printerConfigRepository.save(printerConfig);
+            }
+        }
+
+        for (String moduleCode : PrintModuleCode.ALL) {
+            PrinterAssignment assignment = printerAssignmentRepository.findByStoreIdAndModuleCode(store.id, moduleCode)
+                .orElseGet(PrinterAssignment::new);
+            boolean isNew = assignment.id == null;
+            if (!isNew && !forceOverwrite) {
+                logger.info("Seeder skip existing printer assignment {}", moduleCode);
+                continue;
+            }
+            logger.info("{} printer assignment {}", isNew ? "Seeder inserting missing" : "Seeder force overwriting", moduleCode);
+            assignment.store_id = store.id;
+            assignment.module_code = moduleCode;
+            assignment.printer_id = PrintModuleCode.PHASE_ONE_ENABLED.contains(moduleCode) ? defaultPrinter.id : null;
+            assignment.enabled = PrintModuleCode.PHASE_ONE_ENABLED.contains(moduleCode);
+            assignment.font_size = EscPosFontSizeMode.DEFAULT_CODE;
+            if (isNew) {
+                assignment.created_at = now();
+            }
+            assignment.updated_at = now();
+            printerAssignmentRepository.save(assignment);
+        }
+    }
+
+    private void syncDiningTables(Long storeId, List<DiningTableSeed> seeds) {
+        List<DiningTable> existingTables = diningTableRepository.findAllByStoreIdOrderBySortOrderAscIdAsc(storeId);
+        Set<Long> usedTableIds = new LinkedHashSet<>();
+        for (DiningTableSeed seed : seeds) {
+            if (!forceOverwrite && diningTableSeedExists(existingTables, seeds, seed)) {
+                logger.info("Seeder skip existing dining table {} / {}", seed.tableCode(), seed.tableName());
+                continue;
+            }
+            DiningTable target = findReusableDiningTable(existingTables, usedTableIds, seed);
+            saveDiningTableSeed(storeId, target, seed);
+            if (target.id != null) {
+                usedTableIds.add(target.id);
+            }
+        }
+        if (!forceOverwrite) {
+            logger.info("Skipping dining table deactivation because app.seed.force-overwrite=false");
+            return;
+        }
+        for (DiningTable table : existingTables) {
+            if (table.id != null && !usedTableIds.contains(table.id) && Boolean.TRUE.equals(table.is_active)) {
+                logger.info("Seeder force deactivating dining table {} / {}", table.table_code, table.table_name);
+                table.is_active = false;
+                table.updated_at = now();
+                diningTableRepository.save(table);
+            }
+        }
+    }
+
+    private boolean diningTableSeedExists(List<DiningTable> existingTables, List<DiningTableSeed> seeds, DiningTableSeed seed) {
+        long seedCodeCount = seeds.stream().filter(candidate -> seed.tableCode().equals(candidate.tableCode())).count();
+        return existingTables.stream().anyMatch(table ->
+            seed.tableCode().equals(table.table_code)
+                && (seedCodeCount <= 1 || seed.tableName().equals(table.table_name))
+        );
+    }
+
+    private DiningTable findReusableDiningTable(List<DiningTable> existingTables, Set<Long> usedTableIds, DiningTableSeed seed) {
+        List<DiningTable> sameCodeTables = existingTables.stream()
+            .filter(table -> table.id != null && !usedTableIds.contains(table.id))
+            .filter(table -> seed.tableCode().equals(table.table_code))
+            .toList();
+        return sameCodeTables.stream()
+            .filter(table -> seed.tableName().equals(table.table_name))
+            .findFirst()
+            .orElseGet(() -> sameCodeTables.stream().findFirst().orElseGet(DiningTable::new));
+    }
+
+    private void saveDiningTableSeed(Long storeId, DiningTable target, DiningTableSeed seed) {
+        logger.info("{} dining table {} / {}", target.id == null ? "Seeder inserting missing" : "Seeder force overwriting", seed.tableCode(), seed.tableName());
+        target.store_id = storeId;
+        target.table_code = seed.tableCode();
+        target.table_name = seed.tableName();
+        target.area_name = seed.areaName();
+        target.table_config = seed.tableConfig();
+        target.capacity = seed.capacity();
+        target.supports_split = seed.supportsSplit();
+        target.sort_order = seed.sortOrder();
+        target.is_active = true;
+        target.updated_at = now();
+        if (target.created_at == null) {
+            target.created_at = now();
+        }
+        diningTableRepository.save(target);
+    }
+
+    private void ensureKdsDisplayConfig(
+        Long storeId,
+        String screenCode,
+        String headerLayout,
+        String densityMode,
+        String cardSizeMode,
+        String configJson
+    ) {
+        StoreKdsDisplayConfig existing = storeKdsDisplayConfigRepository.findByStoreIdAndScreenCode(storeId, screenCode);
+        if (existing != null && !forceOverwrite) {
+            logger.info("Seeder skip existing KDS display config {}", screenCode);
+            return;
+        }
+        StoreKdsDisplayConfig target = existing == null ? new StoreKdsDisplayConfig() : existing;
+        logger.info("{} KDS display config {}", existing == null ? "Seeder inserting missing" : "Seeder force overwriting", screenCode);
+        target.store_id = storeId;
+        target.screen_code = screenCode;
+        target.header_layout = headerLayout;
+        target.density_mode = densityMode;
+        target.card_size_mode = cardSizeMode;
+        target.config_json = configJson;
+        target.updated_at = now();
+        if (target.created_at == null) {
+            target.created_at = now();
+        }
+        storeKdsDisplayConfigRepository.save(target);
+    }
+
+    private String toJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Failed to serialize platform template seed data", exception);
+        }
+    }
+
+    private String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 }

@@ -19,6 +19,9 @@ public class Store {
     @Column(name = "id")
     public Long id;
 
+    @Column(name = "organization_id")
+    public Long organization_id;
+
     @Column(name = "name")
     public String name;
 
@@ -30,6 +33,9 @@ public class Store {
 
     @Column(name = "enable_bar_kitchen_tasks")
     public Boolean enable_bar_kitchen_tasks;
+
+    @Column(name = "printing_enabled")
+    public Boolean printing_enabled;
 
     @Column(name = "created_at")
     public LocalDateTime created_at;
