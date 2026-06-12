@@ -3,11 +3,17 @@ export interface MenuRouteContext {
   tableLabel: string
   orderType: 'dine_in' | 'pickup'
   pickupLabel: string | null
+  workstation: string | null
 }
 
 export function navigateTo(path: string) {
   window.history.pushState({}, '', path)
   window.dispatchEvent(new PopStateEvent('popstate'))
+}
+
+export function inferFrontdeskWorkstation(pathname: string) {
+  const match = pathname.match(/^\/frontdesk\/menu\/([^/?#]+)/)
+  return match?.[1] ?? null
 }
 
 export function buildMenuPath(context: MenuRouteContext) {
@@ -19,7 +25,12 @@ export function buildMenuPath(context: MenuRouteContext) {
   if (context.pickupLabel) {
     params.set('pickup', context.pickupLabel)
   }
-  return `/frontdesk/menu?${params.toString()}`
+  const workstationSegment = context.workstation ? `/${context.workstation}` : ''
+  return `/frontdesk/menu${workstationSegment}?${params.toString()}`
+}
+
+export function buildFrontdeskBoardPath(workstation: string | null) {
+  return workstation ? `/frontdesk/menu/${workstation}` : '/frontdesk'
 }
 
 export function parseMenuRoute(pathname: string, search: string): MenuRouteContext | null {
@@ -41,5 +52,6 @@ export function parseMenuRoute(pathname: string, search: string): MenuRouteConte
     tableLabel,
     orderType,
     pickupLabel: params.get('pickup'),
+    workstation: inferFrontdeskWorkstation(pathname),
   }
 }

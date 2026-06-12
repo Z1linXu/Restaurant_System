@@ -76,6 +76,7 @@ export interface OrderLineItem {
   lineSubtotal: number
   selection: ItemSelectionState
   summaryTags: LocalizedText[]
+  notes: string
 }
 
 export interface OrderSession {

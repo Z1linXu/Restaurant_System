@@ -24,6 +24,7 @@ interface OrderingPageProps {
   tableLabel: string
   orderType?: 'dine_in' | 'pickup'
   pickupLabel?: string | null
+  workstationLabel?: string | null
   onBack: () => void
   onDraftCancelled: (slotLabel: string, tableLabel: string) => void
   onOrderSubmitted: (slotLabel: string, tableLabel: string) => void
@@ -58,6 +59,7 @@ export function OrderingPage({
   tableLabel,
   orderType = 'dine_in',
   pickupLabel = null,
+  workstationLabel = null,
   onBack,
   onDraftCancelled,
   onOrderSubmitted,
@@ -77,6 +79,7 @@ export function OrderingPage({
     error: draftError,
     addItem,
     updateItem,
+    updateItemNote,
     incrementItem,
     decrementItem,
     removeItem,
@@ -216,6 +219,7 @@ export function OrderingPage({
           slotLabel={slotLabel}
           orderType={orderType}
           pickupLabel={effectivePickupLabel}
+          workstationLabel={workstationLabel}
           onEditPickupLabel={orderType === 'pickup' ? () => setTakeoutDialogOpen(true) : undefined}
           onBack={onBack}
           searchValue={menuSearch}
@@ -293,6 +297,7 @@ export function OrderingPage({
               }}
               onEditItem={handleEditItem}
               onRemoveItem={(itemId) => void removeItem(Number(itemId))}
+              onUpdateItemNote={(itemId, notes) => void updateItemNote(itemId, notes)}
               onSaveDraft={() => void refreshOrder()}
               onCancelOrder={() => void handleCancelOrder()}
               onSubmitOrder={() => void handleSubmitOrder()}

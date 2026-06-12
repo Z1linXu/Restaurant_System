@@ -2,6 +2,9 @@
 
 Generated from the current codebase only. If a detail is not explicit in code, it is marked as `UNKNOWN`.
 
+Additional maintainable architecture document:
+- `doc/SystemDesign_Bilingual.md`
+
 ## 1. Project Overview
 
 ### 1.1 Tech Stack
@@ -47,11 +50,13 @@ Restaurant_System/
 │   └── src/
 │       ├── main/
 │       │   ├── java/com/restaurant/system/
+│       │   │   ├── analytics/
 │       │   │   ├── common/
 │       │   │   ├── inventory/
 │       │   │   ├── kitchen/
 │       │   │   ├── menu/
 │       │   │   ├── order/
+│       │   │   ├── production/
 │       │   │   ├── station/
 │       │   │   └── user/
 │       │   └── resources/
@@ -70,11 +75,13 @@ Restaurant_System/
 
 ### 1.3 Backend Modules Present in Code
 
+- `analytics`
 - `common`
 - `inventory`
 - `kitchen`
 - `menu`
 - `order`
+- `production`
 - `station`
 - `user`
 
@@ -106,6 +113,73 @@ Restaurant_System/
   - cancel draft order
 - submit draft order
 - Submit-order flow is now connected from the frontend ordering page.
+- Owner Admin `Sales Report` now uses a split presentation rule:
+  - the trend chart always keeps the full selected date range visually, including zero-sales dates
+  - the `Daily Summary Table` hides rows where both sales and orders are `0`
+  - if no non-zero days exist in the selected range, the table shows `No sales data for this period.`
+- The `Sales Trend` chart now shows compact value labels only for non-zero bars:
+  - examples: `$727`, `$2.0k`, `$65`
+  - zero-value bars do not render `$0.00`
+  - exact value and order count remain available through hover tooltip text
+- The analytics layer now includes profit-oriented fields:
+  - `menu_items.cost_per_item`
+  - `sales_daily_summary.total_cost`
+  - `sales_daily_summary.total_profit`
+  - `sales_daily_summary.profit_margin`
+  - `menu_item_sales_summary.total_cost`
+  - `menu_item_sales_summary.total_profit`
+- Profit values are derived only from analytics summary tables in reports:
+  - item total cost = `quantity_sold * cost_per_item`
+  - item total profit = `sales_amount - total_cost`
+  - daily total profit = `net_sales - total_cost`
+  - daily profit margin = `total_profit / net_sales`
+- Owner Admin Reports now include `/admin/reports/profit`:
+  - KPI cards for total sales, total cost, total profit, and profit margin
+  - top profitable items
+  - worst margin items
+  - daily profit trend
+  - profit by day table
+- Profit analytics do not change POS, KDS, Frontdesk, or Platform Admin behavior.
+- If `menu_items.cost_per_item` is missing or `0`, profit analytics will treat that item cost as `0` until restaurant cost data is maintained.
+- Owner Admin now includes a menu maintenance module at `/admin/menu/items`.
+- The owner menu management page uses existing database-driven configuration:
+  - `menu_items`
+  - `menu_categories`
+  - `stations`
+- The page displays and edits:
+  - item name zh/en
+  - category
+  - station
+  - `base_price`
+  - `cost_per_item`
+  - `is_active`
+  - `is_sold_out`
+- Menu item updates are saved through the existing admin platform API:
+  - `GET /api/v1/admin/platform/menu/items?store_id=...`
+  - `POST /api/v1/admin/platform/menu/items`
+  - `PUT /api/v1/admin/platform/menu/items/{id}`
+- `PlatformAdminServiceImpl.saveMenuItem(...)` now persists `cost_per_item`.
+- The owner menu page now verifies save results by:
+  - saving through the existing backend API
+  - reloading menu items from `GET /api/v1/admin/platform/menu/items?store_id=...`
+  - showing success only after persisted values match the saved form values
+  - keeping the edit form open and showing an error if backend verification fails
+- The owner menu page supports search and filters:
+  - search by Chinese name
+  - search by English name
+  - search by SKU
+  - filter by category
+  - filter by station
+  - filter by status: `All`, `Active`, `Inactive`, `Sold Out`, `Available`
+- The owner menu page supports quick row-level toggles:
+  - `Active / Inactive`
+  - `Sold Out / Available`
+  - each toggle saves to backend and refreshes the row from backend data
+- The owner menu page shows an explicit rebuild warning when price or cost changes are saved:
+  - `Price or cost changes affect future orders immediately. Historical profit reports require analytics rebuild.`
+- The owner menu page includes a `Rebuild Analytics` action:
+  - uses the existing backend API `POST /api/v1/admin/analytics/rebuild?date=YYYY-MM-DD&store_id=...`
+  - currently rebuilds one selected summary date at a time
 
 ### 1.5 Table System
 
@@ -196,6 +270,10 @@ Current frontend table behavior in code:
 #### Shared Backend Components
 - `common/config/MybatisPlusConfig.java`
 - `common/config/RuntimeDataSeeder.java`
+  - controlled by:
+    - `app.seed.runtime-enabled`
+    - `app.seed.force-overwrite`
+  - default mode is missing-data supplement only
 - `common/config/WebSocketConfig.java`
 - `common/response/ApiResponse.java`
 - `common/exception/BusinessException.java`
@@ -213,6 +291,9 @@ Current frontend table behavior in code:
 #### Kitchen Module
 - `KitchenController`
 - `KdsController`
+
+#### Analytics Module
+- `AnalyticsAdminController`
 
 #### Placeholder / Health Controllers
 - `InventoryController`
@@ -669,11 +750,13 @@ The following entity classes exist in code and map to database tables:
 - `OrderItemOption` -> `order_item_options`
 - `FrontdeskBeverageItem` -> `frontdesk_beverage_items`
 - `KitchenTask` -> `kitchen_tasks`
+- `ProductionTask` -> `production_tasks`
 - `InventoryItem` -> `inventory_items`
 - `InventoryTransaction` -> `inventory_transactions`
 - `PrepRecipe` -> `prep_recipes`
 - `PrepRecipeDetail` -> `prep_recipe_details`
 - `Station` -> `stations`
+- `DiningTable` -> `dining_tables`
 
 ## 3. API Specification
 
@@ -1658,6 +1741,40 @@ The schema below is based on entity classes. Exact SQL column types other than e
 - `served_at` LocalDateTime
 - `cancelled_at` LocalDateTime
 
+#### production_tasks
+- `id` BIGSERIAL
+- `order_id` Long
+- `order_item_id` Long
+- `store_id` Long
+- `source_type` String
+- `source_id` Long
+- `station_code` String
+- `item_name_snapshot_zh` String
+- `item_name_snapshot_en` String
+- `special_instructions_snapshot` String
+- `status` String
+- `quantity` Integer
+- `priority` Integer
+- `started_at` LocalDateTime
+- `completed_at` LocalDateTime
+- `ready_at` LocalDateTime
+- `served_at` LocalDateTime
+- `cancelled_at` LocalDateTime
+- `created_at` LocalDateTime
+- `updated_at` LocalDateTime
+
+#### dining_tables
+- `id` BIGSERIAL
+- `store_id` Long
+- `table_code` String
+- `table_name` String
+- `area_name` String
+- `capacity` Integer
+- `supports_split` Boolean
+- `is_active` Boolean
+- `created_at` LocalDateTime
+- `updated_at` LocalDateTime
+
 #### kitchen_tasks
 - `id` BIGSERIAL
 - `order_id` Long
@@ -1758,6 +1875,9 @@ The schema below is based on entity classes. Exact SQL column types other than e
 - `order_item_options.option_id -> menu_item_options.id`
 - `frontdesk_beverage_items.order_id -> orders.id`
 - `frontdesk_beverage_items.order_item_id -> order_items.id`
+- `production_tasks.order_id -> orders.id` inferred by field naming only
+- `production_tasks.order_item_id -> order_items.id` inferred by field naming only
+- `dining_tables.store_id -> stores.id` inferred by field naming only
 - `kitchen_tasks.order_id -> orders.id`
 - `kitchen_tasks.order_item_id -> order_items.id`
 - `kitchen_tasks.store_id -> stores.id`
@@ -1769,7 +1889,8 @@ The schema below is based on entity classes. Exact SQL column types other than e
 - `prep_recipe_details.input_inventory_item_id -> inventory_items.id`
 
 #### Explicit database foreign key constraints
-- `UNKNOWN`
+- `order_items.order_id -> orders.id`
+- `order_item_options.order_item_id -> order_items.id`
 
 ## 5. Frontend Structure (React + TypeScript)
 
@@ -1866,8 +1987,12 @@ Current actual behavior:
   - `/`
 - The frontdesk table board is mounted at:
   - `/frontdesk`
+- Additional dedicated frontdesk workstation routes are also mounted at:
+  - `/frontdesk/menu/a`
+  - `/frontdesk/menu/b`
 - The shared ordering workflow is mounted at:
   - `/frontdesk/menu?slot={slotLabel}&table={tableLabel}&type={dine_in|pickup}[&pickup={pickupLabel}]`
+  - `/frontdesk/menu/{workstation}?slot={slotLabel}&table={tableLabel}&type={dine_in|pickup}[&pickup={pickupLabel}]`
 - The frontdesk order lookup / checkout page is mounted at:
   - `/frontdesk/order`
 - The frontdesk pickup / handoff board is mounted at:
@@ -1930,6 +2055,8 @@ Current actual behavior:
 - `MenuItemCard`
 - `OrderSummaryPanel`
 - `OrderLineItemRow`
+  - includes per-item `备注 / Special note` input in the cart
+  - notes are bound to the concrete `order_items` row, not the whole order
 - `ItemCustomizationModal`
 
 #### Orders Feature Components
@@ -2355,12 +2482,19 @@ Step-by-step:
 1. Validate referenced store and creator user.
 2. Create `orders` row with status `draft`.
 3. Generate `order_no`.
-4. Create `order_items` rows from request items.
+4. Create `order_items` rows from request items, including per-item `notes` when provided.
 5. Create `order_item_options` rows from selected options.
 6. Copy snapshot data from menu master data into bilingual snapshot fields.
 7. Calculate subtotal and total amount.
 8. Save the order.
 9. Publish realtime event `order.created`.
+
+Current item-note behavior:
+- frontend cart item rows allow staff to enter `备注 / Special note`
+- notes are saved through draft item create/update APIs into `order_items.notes`
+- notes survive refresh because they are returned in `OrderItemResponse.notes`
+- GRAB tickets print notes under the corresponding item as `备注：...`
+- `FRONTDESK_RECEIPT` intentionally does not print item notes
 
 ### 6.2 Submit Order
 
@@ -2380,16 +2514,21 @@ Step-by-step:
      - create `kitchen_tasks`
    - If beverage/direct-serve item:
      - create `frontdesk_beverage_items`
-6. Deduct inventory using `menu_item_bom` and `menu_item_option_bom`.
-7. Insert `inventory_transactions`.
-8. If kitchen tasks exist:
+6. Phase 1 schema-refactor dual-write is active:
+   - after old operational rows are created, the backend also inserts additive `production_tasks` rows
+   - `source_type = kitchen_task` rows mirror newly created `kitchen_tasks`
+   - `source_type = frontdesk_beverage_item` rows mirror newly created `frontdesk_beverage_items`
+   - existing APIs and old tables remain the source of current runtime behavior
+7. Deduct inventory using `menu_item_bom` and `menu_item_option_bom`.
+8. Insert `inventory_transactions`.
+9. If kitchen tasks exist:
    - final order status becomes `preparing`
-9. If kitchen tasks do not exist:
+10. If kitchen tasks do not exist:
    - final order status becomes `ready`
    - `ready_at` is set
-10. Save the order.
-11. Publish realtime event `order.submitted`.
-12. If status became `ready`, also publish `order.ready`.
+11. Save the order.
+12. Publish realtime event `order.submitted`.
+13. If status became `ready`, also publish `order.ready`.
 
 ### 6.3 Kitchen Processing
 
@@ -2653,25 +2792,38 @@ This section is based on current code only.
 
 ### 9.1 Frontend Gaps
 
-- The table board is still driven by local mock slot occupancy state.
 - Order completion / end-table flow is not wired into the visible ordering page yet.
 - No payment UI exists.
 - No routing beyond the current single-page setup is present.
 - The frontend currently hardcodes:
   - `store_id = 1`
   - `X-User-Id = 1`
+- The new platform admin UI is intentionally minimal:
+  - one `/admin/platform` page
+  - JSON editor workflow
+  - no advanced form validation, pagination, or bulk operations yet
 - Backend draft writes can have a short visibility delay on immediate follow-up `GET /api/v1/orders/{id}` reads; the frontend currently mitigates this with a small retry window for manual refresh reads.
 - `GET /api/v1/orders/{id}` can still return stale order-level totals/flags after some submitted/preparing-order edits, even when mutation responses are correct.
 - The frontend works around table re-entry by resolving the latest editable order id through the frontdesk order board before fetching full order detail.
 
 ### 9.2 Backend Gaps
 
-- Inventory, menu, station, and user modules currently expose health endpoints only.
 - Payment flow is not implemented.
 - Refund flow is not implemented.
 - Authentication is not fully implemented; current authorization depends on `X-User-Id` request header.
 - Explicit database foreign key constraints are `UNKNOWN` from code.
 - No Flyway or Liquibase migration files were found in the current codebase.
+- `production_tasks` has been introduced in additive migration mode, but the system still dual-writes to:
+  - `kitchen_tasks`
+  - `frontdesk_beverage_items`
+  - `production_tasks`
+- Platform onboarding is currently template-driven for:
+  - stations
+  - dining tables
+  - menu category structure
+  - KDS display configs
+  - role setup
+- Template-based store creation does not yet clone live menu items/options or historical transactional data.
 
 ### 9.3 Order Lifecycle Gaps
 
@@ -2690,3 +2842,1492 @@ Backend tests found:
 
 Frontend tests found:
 - `NONE`
+
+## 10. Platformization Phase 1
+
+### 10.1 Goal
+
+The current ramen / noodle restaurant has been preserved as the first onboarded tenant while introducing a platform-ready configuration layer.
+
+This phase is intentionally additive and non-breaking:
+- existing `store_id = 1` remains valid
+- existing menu, station, user, role, dining, and order data stay attached to `store_id = 1`
+- existing APIs for POS, KDS, pickup, and checkout remain unchanged
+
+### 10.2 New Platform Tables
+
+Additive tables now present in the running system:
+- `organizations`
+- `restaurant_templates`
+- `store_kds_display_configs`
+
+These are in addition to previously added:
+- `dining_tables`
+- `production_tasks`
+
+### 10.3 Current Tenant Seed
+
+Runtime seed now creates and maintains:
+- `organization_id = 1`
+- organization code: `RAMEN_NOODLE_RESTAURANT`
+- organization name: `Ramen / Noodle Restaurant`
+
+The existing store is attached without changing its id:
+- `stores.id = 1`
+- `stores.organization_id = 1`
+
+### 10.4 Database-Driven Table Board
+
+Frontdesk table layout is no longer frontend-mock-first.
+
+Current runtime behavior:
+- frontend requests `GET /api/v1/frontdesk/dining-tables?store_id=1`
+- backend returns the configured `dining_tables` rows
+- frontend derives slot display from:
+  - `dining_tables`
+  - active orders
+
+Safe fallback:
+- if the dining-table config endpoint fails, the frontend still falls back to local mock table definitions to avoid breaking service during development
+
+### 10.5 Current Template
+
+A default template is seeded from the current restaurant:
+- template code: `RAMEN_NOODLE_SHOP_TEMPLATE`
+- template name: `Ramen / Noodle Shop Template`
+
+Template payload currently captures:
+- default station setup
+- default KDS display rules
+- default menu category structure
+- default dining table layout rules
+- default role setup
+
+### 10.6 New Admin APIs
+
+Platform admin APIs are now available under:
+- `GET /api/v1/admin/platform/overview?store_id=1`
+- `GET/POST/PUT /api/v1/admin/platform/organizations`
+- `GET/POST/PUT /api/v1/admin/platform/templates`
+- `GET/POST/PUT /api/v1/admin/platform/stores`
+- `POST /api/v1/admin/platform/stores/from-template`
+- `GET/POST/PUT /api/v1/admin/platform/stations`
+- `GET/POST/PUT /api/v1/admin/platform/dining-tables`
+- `GET/POST/PUT /api/v1/admin/platform/menu/categories`
+- `GET/POST/PUT /api/v1/admin/platform/menu/items`
+- `GET/POST/PUT /api/v1/admin/platform/menu/item-options`
+- `GET/POST/PUT /api/v1/admin/platform/kds-configs`
+- `GET/POST/PUT /api/v1/admin/platform/users`
+- `GET/POST/PUT /api/v1/admin/platform/roles`
+
+### 10.7 New Admin UI
+
+A minimal admin management page is available at:
+- `/admin/platform`
+
+Current UI characteristics:
+- overview-based loading from the live backend
+- JSON editor driven create/update workflow
+- template-based store creation form
+- intentionally minimal operational UI, suitable for solo-developer MVP maintenance
+
+### 10.8 Current KDS / Screen Config Seed
+
+Per-store KDS/screen config is now seeded in `store_kds_display_configs` for:
+- `FRONTDESK_TABLE_BOARD`
+- `FRONTDESK_MENU`
+- `KDS_GRAB`
+- `KDS_HOT_KITCHEN`
+- `KDS_NOODLE_MONITOR`
+- `PICKUP_BOARD`
+
+This is the first step in moving restaurant-specific screen behavior out of hardcoded frontend defaults and into database-driven configuration.
+
+### 10.9 Owner Admin Console
+
+A separate owner/manager-facing admin shell is now available at:
+- `/admin/dashboard`
+
+This is intentionally distinct from:
+- `/admin/platform`
+
+Current role split:
+- `Platform Admin`
+  - software-provider / developer operations
+  - tenant, template, and low-level configuration management
+- `Owner Admin Console`
+  - restaurant owner / manager experience
+  - operational business dashboard
+  - no developer-oriented configuration workflow
+
+Current Owner Admin Console layout:
+- left sidebar
+  - `Home`
+  - `Stores`
+  - `Menu Management`
+  - `Reports`
+  - `Integrations`
+  - `Settings`
+- top header with:
+  - current organization context
+  - store selector
+  - date range selector:
+    - `Today`
+    - `Week`
+    - `Month`
+  - compare toggle:
+    - previous period on/off
+
+Current owner routes also include:
+- `/admin/menu/items`
+  - menu maintenance
+- `/admin/settings/printing`
+  - Print Center
+- `/admin/settings/tables`
+  - dining table add/edit workflow for owners/managers
+  - live clock
+
+Current store selector behavior:
+- `All Stores`
+- each individual store under the current organization
+
+Current data source behavior:
+- organization/store seed data is loaded from the live backend via:
+  - `GET /api/v1/admin/platform/overview?store_id=1`
+- owner analytics are loaded from the live backend via:
+  - `GET /api/v1/admin/dashboard`
+- owner dashboard query params:
+  - `organization_id`
+  - `store_id`
+  - `range=today|week|month`
+  - `compare=true|false`
+- the owner dashboard is no longer mock-only
+
+Current dashboard widgets:
+- KPI cards:
+  - `Today Sales`
+  - `Today Orders`
+  - `Average Order Value`
+  - `Active Orders`
+  - each KPI includes percentage change vs the previous period
+- `Alerts & Insights`
+- `Sales Trend`
+- `Top Selling Items`
+- `Worst Items`
+- `Order Status`
+- `Sales by Hour`
+- `Sales by Store`
+- `Recent Orders`
+
+Current owner analytics behavior:
+- `Sales Trend`
+  - uses real completed-order data
+  - `Today` renders hourly points
+  - `Week` renders daily points
+  - `Month` renders weekly points
+- `Top Selling Items`
+  - shows quantity and revenue
+- `Worst Items`
+  - ranks lowest-performing items by revenue
+- `Order Status`
+  - shows `Pending / Preparing / Ready` counts from active orders
+- `Alerts & Insights`
+  - detects sales drops greater than 15%
+  - detects trending items based on quantity change vs the previous period
+  - detects low inventory when `current_stock <= safety_stock`
+- `Sales by Store`
+  - shows per-store sales, previous sales, change percentage, and active order count
+- `Recent Orders`
+  - is clickable
+  - opens `/frontdesk/order?orderId={id}`
+  - the checkout / order lookup page now respects this `orderId` query param as the initial selected order
+
+Current non-home sections:
+- present as layout-ready placeholders
+- no deep CRUD/reporting logic yet
+
+### 10.10 Analytics Data Layer
+
+The backend now includes a dedicated `analytics` module for pre-aggregated owner-reporting data.
+
+Current analytics package:
+- `backend/src/main/java/com/restaurant/system/analytics/entity`
+- `backend/src/main/java/com/restaurant/system/analytics/repository`
+- `backend/src/main/java/com/restaurant/system/analytics/service`
+- `backend/src/main/java/com/restaurant/system/analytics/controller`
+
+Current analytics summary tables:
+- `sales_daily_summary`
+  - daily sales/order rollup per store and organization
+  - fields include:
+    - `summary_date`
+    - `gross_sales`
+    - `net_sales`
+    - `order_count`
+    - `completed_order_count`
+    - `cancelled_order_count`
+    - `average_order_value`
+- `sales_hourly_summary`
+  - hourly sales rollup for a single operating date
+  - fields include:
+    - `summary_date`
+    - `hour_of_day`
+    - `sales_amount`
+    - `order_count`
+- `menu_item_sales_summary`
+  - per-item sales rollup by date
+  - fields include:
+    - `menu_item_id`
+    - `item_name_snapshot_zh`
+    - `item_name_snapshot_en`
+    - `quantity_sold`
+    - `sales_amount`
+    - `order_count`
+- `store_performance_summary`
+  - daily store comparison snapshot
+  - fields include:
+    - `sales_amount`
+    - `order_count`
+    - `average_order_value`
+    - `active_order_count`
+- `analytics_alerts`
+  - persisted analytics insight records
+  - fields include:
+    - `alert_type`
+    - `severity`
+    - `title`
+    - `message`
+    - `metric_value`
+    - `comparison_value`
+    - `is_resolved`
+
+Current aggregation service:
+- `AnalyticsAggregationService`
+- implementation:
+  - `AnalyticsAggregationServiceImpl`
+
+Current rebuild behavior:
+- `POST /api/v1/admin/analytics/rebuild?date=YYYY-MM-DD`
+- optional:
+  - `store_id`
+- if `store_id` is omitted, the service rebuilds all stores
+- rebuild currently:
+  - loads raw `orders`
+  - loads raw `order_items`
+  - writes daily summary rows
+  - writes hourly summary rows
+  - writes item sales summary rows
+  - writes store performance summary rows
+  - writes analytics alert rows
+
+Current source-of-truth rules for aggregation:
+- completed sales metrics use `orders.status = completed`
+- completed sales date uses `orders.completed_at`
+- cancelled-order count uses `orders.status = cancelled`
+- cancelled date uses `orders.updated_at`
+- item sales are aggregated from `order_items` that belong to completed orders
+- inventory alerts read live `inventory_items.current_stock` and `inventory_items.safety_stock`
+
+Current rebuild query rule:
+- `rebuild(date, store_id)` now queries completed sales rows with:
+  - `store_id = :storeId`
+  - `status = 'completed'`
+  - `DATE(completed_at) = :date`
+- summary rows for the same `summary_date + store_id` are deleted before reinsertion
+- `sales_daily_summary.order_count` now counts completed orders only
+- debug logs now print:
+  - target date
+  - store id
+  - completed orders found
+  - total gross sales
+  - total net sales
+  - summary rows inserted
+
+Current analytics summary read API:
+- `GET /api/v1/admin/analytics/summaries?store_id=1&range=today|week|month`
+- optional:
+  - `organization_id`
+- current response includes:
+  - `sales_daily_summaries`
+  - `sales_hourly_summaries`
+  - `menu_item_sales_summaries`
+  - `store_performance_summaries`
+  - `analytics_alerts`
+
+Current scheduling behavior:
+- Spring scheduling is enabled at application level with `@EnableScheduling`
+- a daily analytics rebuild job now runs automatically for yesterday:
+  - cron: `0 20 0 * * *`
+  - timezone: `America/Toronto`
+
+Current owner dashboard read strategy:
+- owner dashboard still uses the existing API:
+  - `GET /api/v1/admin/dashboard`
+- dashboard now reads from analytics summary tables where possible
+- current priority:
+  - if current-day summary coverage exists for the selected scope, use summary tables for:
+    - KPI sales/order/AOV
+    - sales trend
+    - top items
+    - worst items
+    - store comparison
+    - persisted analytics alerts
+  - always use live raw data for:
+    - active orders KPI
+    - order status panel
+    - recent orders
+    - low-inventory inspection fallback
+- if current-day summary data does not exist yet, dashboard falls back to raw `orders` / `order_items`
+
+Current scope protection:
+- this analytics upgrade does not change:
+  - POS ordering behavior
+  - KDS behavior
+  - Pickup / handoff behavior
+  - Platform Admin behavior
+- it is a backend data-layer upgrade only
+
+### 10.11 Reports Module Design
+
+Current owner reports routes:
+- `/admin/reports/sales`
+- `/admin/reports/items`
+- `/admin/reports/stores`
+
+Current reports module location:
+- `frontend/src/features/reports`
+
+Current report pages:
+- `SalesReportPage`
+- `ItemSalesReportPage`
+- `StoreComparisonReportPage`
+
+Current shared report components:
+- `OwnerAdminReportsShell`
+- `ReportsTopBar`
+- `ReportMetricCard`
+- `ReportPanel`
+- `ReportTrendChart`
+- `ReportEmptyState`
+
+Current report data source rule:
+- reports consume analytics summary APIs only
+- reports do not query raw `orders`
+- reports do not query raw `order_items`
+- reports do not use the owner dashboard raw fallback path
+
+Current analytics report API usage:
+- `GET /api/v1/admin/analytics/summaries`
+
+Current supported query parameters for reports:
+- `organization_id`
+- `store_id`
+- `range=today|week|month|custom`
+- `anchor_date=YYYY-MM-DD`
+- `start_date=YYYY-MM-DD`
+- `end_date=YYYY-MM-DD`
+
+Current behavior of report date windows:
+- `today`
+  - current period uses today
+  - compare mode uses previous day through `anchor_date`
+- `week`
+  - current period uses the current Monday-Sunday window
+  - compare mode uses the previous Monday-Sunday window through `anchor_date`
+- `month`
+  - current period uses the current calendar month
+  - compare mode uses the previous calendar month through `anchor_date`
+- `custom`
+  - current period uses `start_date` + `end_date`
+  - compare mode uses the immediately preceding window with the same duration
+
+Current reports data consumption:
+- Sales Report
+  - `sales_daily_summary`
+  - `sales_hourly_summary`
+- Item Sales Report
+  - `menu_item_sales_summary`
+- Store Comparison Report
+  - `store_performance_summary`
+
+Current empty-data rule:
+- if analytics summary data does not exist for the selected scope or period:
+  - report pages show an empty state
+  - report pages do not fall back to raw order queries
+
+Current report date-axis behavior:
+- reports use `start_date` + `end_date` returned by analytics summaries as the display window
+- `Sales Report` fills missing dates in the selected window with zero-value rows on the frontend
+- this applies to:
+  - `week`
+  - `month`
+  - `custom`
+- result:
+  - the daily summary table always shows every day in the selected period
+  - the sales trend chart always shows a continuous day sequence for the selected period
+- `Sales Report` KPI totals are also computed from this visible filled date sequence:
+  - `Total Sales` = sum of visible daily sales rows
+  - `Order Count` = sum of visible daily completed-order counts
+  - `Average Order Value` = `Total Sales / Order Count`
+- this zero-fill behavior is presentation-only
+- reports still read only analytics summary tables and do not query raw order data
+
+Current hourly chart readability rule:
+- `today` uses the full `00:00-23:00` hourly series from `sales_hourly_summary`
+- the sales trend chart suppresses repeated currency labels under every bar
+- hourly x-axis shows sampled hour ticks to avoid overlap on laptop-width screens
+- exact hourly value remains available through chart hover/title text and the hourly breakdown table
+
+Current loading/caching rule:
+- analytics summary responses are cached on the frontend per:
+  - organization
+  - store
+  - range
+  - anchor/custom date window
+- cache is read-only and only affects report rendering performance
+- cache does not change analytics values or business logic
+
+Current navigation integration:
+- owner dashboard `Reports` sidebar entry now routes to:
+  - `/admin/reports/sales`
+- home launcher page also links to:
+  - sales report
+  - item sales report
+  - store comparison report
+
+Current scope protection:
+- this reports module upgrade does not modify:
+  - POS ordering
+  - KDS screens
+  - Frontdesk table flow
+  - Platform Admin
+  - analytics aggregation logic
+- this step adds a reporting layer on top of existing analytics summary tables only
+
+### 10.12 Print Center Phase 1
+
+Current Print Center route:
+- `/admin/settings/printing`
+
+Current Print Center purpose:
+- provide a store-level multi-printer foundation
+- keep printer IP/port out of order and KDS controllers
+- support future printer routing by business module
+- support future receipt template editing without redesigning the print data model
+
+Current Phase 1 database additions:
+- `printer_configs`
+  - store-level printer registry
+  - fields:
+    - `id`
+    - `store_id`
+    - `name`
+    - `ip_address`
+    - `port`
+    - `printer_type`
+    - `enabled`
+    - `font_size`
+    - `font_size_mode`
+      - legacy compatibility field from the temporary diagnostic implementation
+      - production printing now reads `font_size`
+    - `paper_width_mm`
+    - `timeout_ms`
+    - `created_at`
+    - `updated_at`
+- `printer_assignments`
+  - module-to-printer routing
+  - assignment-level print preferences override physical-printer defaults for that module
+  - fields:
+    - `id`
+    - `store_id`
+    - `printer_id`
+    - `module_code`
+    - `enabled`
+    - `font_size`
+    - `created_at`
+    - `updated_at`
+- `receipt_templates`
+  - future-ready template storage placeholder
+  - fields:
+    - `id`
+    - `store_id`
+    - `template_code`
+    - `template_name`
+    - `template_json`
+    - `is_default`
+    - `created_at`
+    - `updated_at`
+
+Current store-level global print flag:
+- `stores.printing_enabled`
+- this is the store-wide master gate for Print Center
+- module assignment still applies underneath the global switch
+
+Current supported module codes:
+- `GRAB`
+- `FRONTDESK_RECEIPT`
+- `HOT_KITCHEN`
+- `COLD_KITCHEN`
+- `BAR`
+- `TAKEOUT_RECEIPT`
+
+Current Phase 1 active modules:
+- `GRAB`
+- `FRONTDESK_RECEIPT`
+
+Current default local printer seed for store `1`:
+- printer name:
+  - `Main Print Center Printer`
+- printer IP:
+  - `192.168.2.200`
+- printer port:
+  - `9100`
+- printer type:
+  - `ESC_POS_TCP`
+
+Current backend Print Center module location:
+- `backend/src/main/java/com/restaurant/system/printing`
+
+Current backend Print Center structure:
+- `controller`
+  - `OwnerPrintingController`
+- `service`
+  - `PrinterConfigService`
+  - `PrinterAssignmentService`
+  - `PrintDispatcherService`
+- `service/impl`
+  - `PrinterConfigServiceImpl`
+  - `PrinterAssignmentServiceImpl`
+  - `PrintDispatcherServiceImpl`
+- `repository`
+  - `PrinterConfigRepository`
+  - `PrinterAssignmentRepository`
+  - `ReceiptTemplateRepository`
+- `entity`
+  - `PrinterConfig`
+  - `PrinterAssignment`
+  - `ReceiptTemplate`
+- `dto`
+  - `PrintCenterOverviewResponse`
+  - `PrinterAssignmentUpdateRequest`
+  - `PrinterTestRequest`
+  - `PrinterTestResponse`
+  - `StorePrintingStatusRequest`
+  - `PrintRenderRequest`
+- `transport`
+  - `PrinterTransport`
+  - `EscPosTcpPrinterTransport`
+- `renderer`
+  - `ReceiptRenderer`
+  - `GrabReceiptRenderer`
+  - `FrontdeskReceiptRenderer`
+
+Current transport architecture:
+- Print Center currently supports:
+  - `ESC_POS_TCP`
+- `EscPosTcpPrinterTransport` opens a TCP socket to the configured IP/port
+- ESC/POS init + cut commands are handled inside the transport layer
+- emphasized receipt / ticket lines respect assignment-level `font_size` first, then per-printer `font_size`
+- production renderers do not write ESC/POS font bytes directly
+- `EscPosTcpPrinterTransport` converts `PrintMarkup.doubleHeight(...)` content into the configured ESC/POS font command for the module assignment or assigned printer
+- current supported `font_size` values:
+  - `XS`
+    - `GS ! 0x00`
+  - `SMALL`
+    - `GS ! 0x11`
+  - `MEDIUM`
+    - `GS ! 0x22`
+  - `LARGE`
+    - `GS ! 0x33`
+  - `XL`
+    - `GS ! 0x44`
+- default `font_size`:
+  - `MEDIUM`
+- current font-size resolution priority:
+  1. `printer_assignments.font_size`
+  2. `printer_configs.font_size`
+  3. `MEDIUM`
+- after each enlarged line, transport resets font mode with:
+  - `GS ! 0x00`
+
+Current dispatch architecture:
+- business modules do not look up printer IPs directly
+- `PrintDispatcherService` receives:
+  - `module_code`
+  - `store_id`
+  - `order_id`
+- it resolves:
+  - store global print enable state
+  - module assignment
+  - assigned printer
+  - correct receipt renderer
+  - correct transport
+
+Current async/safety rule:
+- printing is dispatched after transaction commit
+- printing runs on a dedicated background executor:
+  - `printTaskExecutor`
+- printing errors are logged
+- printing errors do not block:
+  - order submission
+  - KDS update
+  - frontdesk checkout completion
+
+Current Phase 1 trigger points:
+- `GRAB`
+  - triggered after `OrderServiceImpl.submitOrder(...)`
+- `FRONTDESK_RECEIPT`
+  - triggered after `OrderServiceImpl.submitOrder(...)`
+  - no longer triggered after `OrderServiceImpl.completeOrder(...)`
+
+Current duplicate-print guard:
+- `submitOrder(...)` only allows printing from `draft -> submitted`
+- a second submit attempt fails because only draft orders can be submitted
+- `GRAB` and `FRONTDESK_RECEIPT` are dispatched as two separate after-commit tasks during submit
+- if one module print fails, the other module dispatch still continues independently
+- `completeOrder(...)` still keeps business completion rules, but it no longer triggers `FRONTDESK_RECEIPT`
+- Phase 1 therefore has basic duplicate-print protection at the business action level
+
+Current Print Center priority order:
+1. `stores.printing_enabled`
+   - global store-wide master gate
+2. `printer_assignments.enabled`
+   - per-module enable gate
+3. `printer_assignments.printer_id`
+   - module must point to a real printer
+4. `printer_configs.enabled`
+   - assigned printer itself must be enabled
+5. `printer_assignments.font_size`
+   - optional module-specific font size
+   - if blank, `printer_configs.font_size` is used
+- if any layer above blocks printing, dispatch is skipped without breaking business flow
+
+Current skip behavior:
+- if global printing is disabled:
+  - all module printing is skipped for that store
+- if a module assignment is disabled:
+  - that module is skipped even if global printing is enabled
+- if no printer is assigned:
+  - that module is skipped
+- if the assigned printer is disabled:
+  - that module is skipped
+
+Current GRAB ticket content:
+- table number or pickup number
+- order type
+- item name
+- quantity
+- special instructions/customizations
+- submitted or created time if available
+- no order number
+- current GRAB renderer prints kitchen-task content only:
+  - item name from `kitchen_tasks.item_name_snapshot_zh/en`
+  - customization text from `kitchen_tasks.special_instructions_snapshot`
+- item notes are printed as a separate line under the corresponding item:
+  - `备注：{order_items.notes}`
+- `OrderServiceImpl.buildKitchenSecondaryParts(...)` intentionally excludes item notes from the kitchen-task special-instruction snapshot so notes do not duplicate in GRAB output
+- `FRONTDESK_RECEIPT` does not read or print `order_items.notes`
+- current text layout:
+  - centered `GRAB TICKET`
+  - divider line
+  - `Table/Pickup: ...`
+  - `Order Type: ...`
+  - `Submitted: ...` or `Created: ...`
+  - divider line
+  - GRAB item rows now use transport-level ESC/POS double-height mode for kitchen readability
+  - GRAB item sorting is now kitchen-facing and module-specific:
+    - `COLD` / side items first
+    - `DEEPFRIED` items second
+    - `NOODLE` and `WOK` items after that
+    - any remaining fallback task types last
+  - GRAB item rendering now prefers the kitchen shorthand when it already represents the real production instruction
+    - example:
+      - old:
+        - `传统牛肉面 x1`
+        - `大二（s） | +蛋 +葱 走香 走牛`
+      - new:
+        - `大二（s） | +蛋 +葱 走香 走牛 x1`
+    - side-item shorthand also suppresses duplicated parent names when the shorthand is the real kitchen label
+      - old:
+        - `拌黄瓜 x1`
+        - `黄瓜`
+      - new:
+        - `黄瓜 x1`
+  - one GRAB item block now prints as:
+    - primary kitchen-facing line in double-height mode:
+      - `{kitchen_shorthand_or_item_name} x{quantity}`
+    - optional secondary line in double-height mode only if the special instruction is modifier-only and should remain separate
+      - `  {special_instructions_snapshot}`
+  - divider line
+  - `No order number printed.`
+
+Current GRAB ticket target example:
+
+```text
+GRAB TICKET
+Table/Pickup: T2
+Order Type: Dine-in
+Submitted: 2026-05-28 23:18
+---------------------------
+黄瓜 x1
+炸春卷 x1
+炸馒头 x1
+
+大二（s） | +蛋 +葱 走香 走牛 x1
+中素 x1
+中酸大宽 x1
+--------------------------------
+No order number printed.
+```
+
+Current GRAB layout behavior notes:
+- Chinese output is expected to use the printer-configured transport encoding
+- the current local RP820 recommendation remains:
+  - `text_encoding = GBK`
+- GRAB ticket layout changes do not modify:
+  - printer assignment routing
+  - module dispatch architecture
+  - frontdesk receipt rendering
+
+Current frontdesk receipt content:
+- enlarged table number or pickup number header
+- `Order Type: Takeout` only for takeout / pickup orders
+- submitted time
+- customer-facing item name
+- optional `Combo` marker
+- Chinese size prefix:
+  - `中碗`
+  - `大碗`
+- English size label:
+  - `Regular`
+  - `Large`
+- noodle type line when present:
+  - `二细`
+  - `三细`
+  - `毛细`
+  - `大宽`
+- quantity
+- line price from persisted order data
+- subtotal
+- tax
+- total
+- no order number
+- current text layout:
+  - centered `FRONTDESK RECEIPT`
+  - enlarged `桌号: ...` or `取餐号: ...`
+  - for takeout / pickup only:
+    - `Order Type: Takeout`
+  - divider line
+  - one order item block per line:
+    - `{中碗|大碗}{item_name} [Combo] [Regular|Large] x{quantity}`
+    - optional noodle-type line:
+      - `{noodle_type}`
+    - optional charged add-on lines only:
+      - `加面 x1`
+      - `加蛋 x1`
+    - money line:
+      - `{line_total}`
+      - or `{unit_price} x{quantity} = {line_total}` when quantity > 1
+    - blank line between item blocks
+  - divider line
+  - `Subtotal: ...`
+  - `Tax: ...`
+  - `Total: ...`
+  - divider line
+  - `Submitted: ...`
+- dine-in orders intentionally do not print an order-type line
+- no order-number line or explanatory debug text is printed
+- frontdesk receipt intentionally does not print kitchen-production details such as:
+  - spicy level
+  - soup base
+  - remove/addon instructions
+  - grab shorthand
+- combo display rule:
+  - a main item is treated as combo when:
+    - `order_items.combo_role = main`
+    - or an addon option label contains `套餐` / `combo`
+  - zero-priced combo included parts are not printed as separate priced rows
+- size display rule:
+  - both Chinese and English size markers can be shown:
+    - `中碗 Regular`
+    - `大碗 Large`
+  - size is read from `order_item_options.option_type_snapshot = size`
+  - if no size option exists, no size label is printed
+- option visibility rule:
+  - show noodle type
+  - show charged options only when `price_delta > 0`
+  - do not show zero-priced remove instructions
+  - do not show zero-priced spicy or soup-base production-only details
+
+Current frontdesk receipt totals source:
+- `subtotal`
+  - from `orders.subtotal_amount`
+- `tax`
+  - derived from persisted order totals as:
+    - `orders.total_amount - orders.subtotal_amount`
+  - because the current schema has no dedicated tax column
+- `total`
+  - from `orders.total_amount`
+- receipt money lines still use:
+  - `order_items.unit_price`
+  - `order_items.line_amount`
+
+Current owner admin APIs:
+- `GET /api/v1/admin/printing?store_id=1`
+  - print center overview
+- `GET /api/v1/admin/printing/printers?store_id=1`
+  - list printers
+- `POST /api/v1/admin/printing/printers`
+  - create printer
+- `PUT /api/v1/admin/printing/printers/{id}`
+  - update printer
+- `DELETE /api/v1/admin/printing/printers/{id}?store_id=1`
+  - soft disable printer
+- `PUT /api/v1/admin/printing/status`
+  - update global store print enabled flag
+- `GET /api/v1/admin/printing/assignments?store_id=1`
+  - list module assignments
+- `PUT /api/v1/admin/printing/assignments/{moduleCode}`
+  - update one module assignment
+- `POST /api/v1/admin/printing/printers/test`
+  - send a simple test ticket
+- `POST /api/v1/admin/printing/printers/font-size-test`
+  - send one current-font-size test ticket using that printer's saved `font_size`
+- `POST /api/v1/admin/printing/modules/test`
+  - send a module-routed test ticket using the currently assigned printer
+  - currently used for `FRONTDESK_RECEIPT`
+- `POST /api/v1/admin/printing/printers/encoding-test`
+  - send temporary Chinese encoding comparison tickets for:
+    - `UTF-8`
+    - `GBK`
+    - `GB2312`
+- `POST /api/v1/admin/printing/grab-font-test`
+  - send temporary GRAB font size comparison tickets for:
+    - `FONT TEST A`
+    - `FONT TEST B`
+    - `FONT TEST C`
+    - `FONT TEST D (3X)`
+    - `FONT TEST E (4X)`
+
+Current frontend Owner Admin page:
+- `frontend/src/features/owner-admin/PrintingSettingsPage.tsx`
+
+Current frontend page sections:
+- `Print Center Status`
+  - global enable/disable for the store
+- `Printer List`
+  - add printer
+  - edit printer
+  - disable printer
+  - test print
+  - encoding test
+  - current font size test
+  - GRAB font size test
+  - per-printer `font_size` selector with 5 modes:
+    - `XS`
+    - `SMALL`
+    - `MEDIUM`
+    - `LARGE`
+    - `XL`
+  - show IP/port
+  - show text encoding
+  - show selected font size
+  - optional ESC/POS code page
+- `Printer Assignment`
+  - editable in Phase 1:
+    - `GRAB`
+    - `FRONTDESK_RECEIPT`
+  - each assignment row can configure:
+    - assigned printer
+    - enabled/disabled
+    - assignment-level `font_size`
+  - active assignment rows also include module test buttons:
+    - `Test GRAB`
+    - `Test FRONTDESK_RECEIPT`
+    - this tests the currently assigned printer rather than a manually selected printer row
+  - reserved for future:
+    - `HOT_KITCHEN`
+    - `COLD_KITCHEN`
+    - `BAR`
+    - `TAKEOUT_RECEIPT`
+
+Current menu option price seed values:
+- source of truth for runtime seeding:
+  - `backend/src/main/java/com/restaurant/system/common/config/RuntimeDataSeeder.java`
+- front-end import seed kept in sync:
+  - `frontend/src/data/menuImportSeed.ts`
+- current target option prices:
+  - `套餐` / `Combo` / `Make it Combo`
+    - `+5.00`
+  - `加面`
+    - `+3.99`
+  - `加蛋`
+    - `+1.99`
+  - `加肉`
+    - `+6.99`
+  - `加上海青`
+    - `+3.00`
+- default startup behavior does not update existing `menu_item_options.price_delta`
+- existing Admin-managed option prices are preserved across restart
+- missing options are inserted on startup when `app.seed.runtime-enabled=true`
+- `syncTargetOptionPrices()` only runs when `app.seed.force-overwrite=true`
+- new order snapshots use `menu_item_options.price_delta` when creating `order_item_options.price_delta`
+- order totals continue to use persisted order item and option amounts from the order flow
+
+Current runtime seed controls:
+- `app.seed.runtime-enabled=true`
+  - run startup seed
+- `app.seed.runtime-enabled=false`
+  - skip `RuntimeDataSeeder` entirely
+- `app.seed.force-overwrite=false`
+  - default
+  - insert missing seed records only
+  - skip existing menu categories, menu items, menu item options, dining tables, KDS configs, restaurant templates, and printer assignments
+  - do not deactivate records that are not present in seed data
+- `app.seed.force-overwrite=true`
+  - force demo/test reset behavior
+  - overwrite configured seed records
+  - allow target option price sync
+  - allow seed-driven dining-table deactivation
+
+Current phase boundary:
+- this Print Center step does not modify:
+  - POS ordering UI behavior
+  - KDS screen interaction logic
+  - Frontdesk operational flow
+  - analytics aggregation
+  - receipt template editor UI
+- this step adds a future-ready print routing foundation with Phase 1 live printing on:
+  - `GRAB`
+  - `FRONTDESK_RECEIPT`
+
+Current local testing setup:
+- default seeded local test printer for store `1`:
+  - `192.168.2.200:9100`
+- if the database is fresh, startup seed inserts:
+  - the default printer row
+  - module assignments for all supported module codes
+  - active default assignments for:
+    - `GRAB`
+    - `FRONTDESK_RECEIPT`
+  - existing assignments are now preserved across restart; startup seed no longer overwrites a manually selected printer assignment
+- local print-center setup steps:
+  1. open `/admin/settings/printing`
+  2. confirm store printing is enabled
+  3. confirm an enabled printer exists with:
+     - IP `192.168.2.200`
+     - port `9100`
+     - type `ESC_POS_TCP`
+     - text encoding `GBK`
+     - preferred `font_size` for that physical printer
+  4. confirm `GRAB` is assigned to its intended printer and enabled
+  5. confirm `FRONTDESK_RECEIPT` is assigned to its intended printer and enabled
+  6. run row-level `Test Print` for a raw printer connectivity check
+  7. run `Test FRONTDESK_RECEIPT` inside the `FRONTDESK_RECEIPT` assignment row to verify module routing and receipt formatting together
+  8. run `Encoding Test` to compare:
+     - `UTF-8`
+     - `GBK`
+     - `GB2312`
+  9. run `GRAB Font Size Test` to compare:
+     - `ESC ! 0x10`
+     - `ESC ! 0x30`
+     - `GS ! 0x11`
+     - `GS ! 0x22`
+     - `GS ! 0x33`
+  10. submit a draft order to test:
+     - `GRAB`
+     - `FRONTDESK_RECEIPT`
+  11. complete an order only to verify business completion flow, not receipt auto-print
+
+Current dining-table ordering rule:
+- all frontdesk dining-table APIs now apply natural table-code sorting centrally in the backend
+- sort behavior:
+  - letter prefix first
+  - numeric portion ascending
+  - suffix next
+  - raw fallback string last
+- example:
+  - `T1`
+  - `T2`
+  - `T3`
+  - `...`
+  - `T10`
+  - `T11`
+  - `T12`
+- implementation lives in:
+  - `PlatformAdminServiceImpl.getDiningTables(...)`
+- this keeps both owner-admin table management and frontdesk table-board screens aligned on the same natural ordering
+
+Current active dining-table seed for store `1`:
+
+| Code | Name | Area | Config | Capacity | Status |
+| ---- | ---- | ---- | ------ | -------: | ------ |
+| T12 | 10 | Main Hall | Split | 4 | Active |
+| T12 | 11 | Main Hall | Split | 4 | Active |
+| T1 | 1里 | Main Hall | Single | 4 | Active |
+| T9 | 7 | Main Hall | Single | 4 | Active |
+| T10 | 8 | Main Hall | Single | 4 | Active |
+| T11 | 9 | Main Hall | Single | 4 | Active |
+| T2 | 1外 | Main Hall | Split | 4 | Active |
+| T3 | 2里 | Main Hall | Single | 4 | Active |
+| T4 | 2外 | Main Hall | Split | 4 | Active |
+| T5 | 3 | Patio | Split | 4 | Active |
+| T6 | 4 | Patio | Split | 4 | Active |
+| T7 | 5 | Window | Split | 4 | Active |
+| T8 | 6 | Window | Single | 4 | Active |
+
+Seed behavior:
+- `RuntimeDataSeeder.seedDiningTables()` inserts missing defaults only when `app.seed.force-overwrite=false`.
+- Existing dining-table rows are not renamed, moved, reconfigured, resized, activated, or deactivated by default.
+- Rows outside this configured set are preserved by default.
+- Full seed synchronization and deactivation only happens when `app.seed.force-overwrite=true`.
+- Duplicate table codes are currently allowed because the live restaurant uses two `T12` entries with different display names.
+
+### 10.12.1 Frontdesk Ordering Concurrency Notes
+
+Current `/frontdesk/menu` isolation model:
+- no `localStorage`
+- no `sessionStorage`
+- draft isolation is backend-driven by:
+  - `store_id`
+  - `table_no`
+  - `pickup_no`
+- frontend hook:
+  - `useDraftOrder`
+- backend lookup:
+  - `GET /api/v1/orders/open-editable`
+- dedicated workstation routes are available:
+  - `/frontdesk/menu/a`
+  - `/frontdesk/menu/b`
+- workstation routes share the same backend order model but keep each iPad on a stable frontdesk URL
+
+Current safe behavior:
+- two iPads can open different tables at the same time
+- different tables do not share draft state
+- different browser tabs/windows do not share local cart state through browser storage because browser storage is not used for draft persistence
+- the table board now subscribes to realtime `frontdesk/orders` updates and also polls every 4 seconds as a fallback, so table occupancy changes appear quickly across workstation pages
+
+Current same-table behavior:
+- two iPads opening the same table attach to the same backend editable order
+- this is intentional current behavior, not isolated forked carts
+- once one iPad submits the draft:
+  - backend prevents a second successful `submitOrder(...)`
+  - duplicate GRAB / FRONTDESK_RECEIPT auto-print is blocked by order status because only `draft` orders can be submitted
+- current frontend now also has a local in-flight submit guard inside `useDraftOrder`
+
+Current limitation:
+- same-table concurrent editing is still last-write-wins at the backend editable-order level
+- there is no optimistic locking or editor-presence indicator yet
+- if two iPads edit the same table simultaneously after one side submits, they are still collaborating on the same backend order rather than on isolated copies
+
+Temporary GRAB font size diagnostic:
+- Owner Admin button:
+  - `GRAB Font Size Test`
+- current purpose:
+  - compare kitchen ticket readability on RP820 before changing production GRAB font mode
+- all 3 tickets print the same sample content:
+
+```text
+GRAB TICKET
+
+Table/Pickup: T2
+Order Type: Dine-in
+
+黄瓜 x1
+炸春卷 x1
+炸馒头 x1
+
+大二(S) | 走香 走牛 +蛋 +葱
+中素
+中酸大宽
+----
+```
+
+- current command set:
+  - `FONT TEST A`
+    - activate: `1B 21 10`
+    - reset: `1B 21 00`
+    - meaning:
+      - `ESC ! 0x10`
+      - double-height only
+  - `FONT TEST B`
+    - activate: `1B 21 30`
+    - reset: `1B 21 00`
+    - meaning:
+      - `ESC ! 0x30`
+      - double-width + double-height
+  - `FONT TEST C`
+    - activate: `1D 21 11`
+    - reset: `1D 21 00`
+    - meaning:
+      - `GS ! 0x11`
+      - double-width + double-height using GS command
+  - `FONT TEST D (3X)`
+    - activate: `1D 21 22`
+    - reset: `1D 21 00`
+    - meaning:
+      - `GS ! 0x22`
+      - triple-width + triple-height
+  - `FONT TEST E (4X)`
+    - activate: `1D 21 33`
+    - reset: `1D 21 00`
+    - meaning:
+      - `GS ! 0x33`
+      - quadruple-width + quadruple-height
+- the diagnostic resets the font mode back to normal after the enlarged sample section
+- this path is temporary and does not modify production GRAB ticket rendering
+
+Current printer text encoding support:
+- `printer_configs.text_encoding`
+  - dedicated text-to-bytes charset setting
+  - current supported practical values:
+    - `GBK`
+    - `GB2312`
+    - `UTF-8`
+- `printer_configs.escpos_code_page`
+  - optional numeric ESC/POS code page value
+  - when present, Print Center sends:
+    - `ESC t n`
+  - this remains optional because Chinese output on ESC/POS printers is usually driven first by the selected multibyte charset and firmware support
+
+Current transport encoding behavior:
+- `EscPosTcpPrinterTransport` is the only place that converts rendered text into bytes
+- previous Phase 1 behavior:
+  - fixed `GBK`
+  - no ESC/POS code page command
+- current behavior:
+  - resolve bytes using `printer_configs.text_encoding`
+  - default fallback remains:
+    - `GBK`
+  - optionally send `ESC t n` before text bytes when `escpos_code_page` is configured
+
+Current Chinese rendering findings:
+- `GrabReceiptRenderer` and `FrontdeskReceiptRenderer` only generate Java `String` content
+- they do not choose or enforce charset
+- Chinese garbling risk is therefore in the transport layer, not in the renderer layer
+- current RP820-class recommendation:
+  - use `GBK` as the default encoding
+  - treat `GB2312` as a secondary compatibility test option
+  - do not use `UTF-8` as the default for ESC/POS Chinese tickets
+- current ESC/POS code-page guidance:
+  - single-byte code page selection alone usually does not solve Chinese output
+  - for Chinese-capable firmware, correct multibyte charset selection is the first priority
+  - keep code page support optional for vendor-specific testing, not as the default fix
+
+Current print logging behavior:
+- successful dispatch:
+  - `Printed module {moduleCode} for store {storeId} order {orderId} using printer {printerId}`
+- skipped dispatch:
+  - info-level log with the skip reason
+- failed dispatch:
+  - `Print dispatch failed for module ...`
+- test-print failure:
+  - `Test print failed for printer ...`
+- Phase 1 uses application log output from Spring Boot / SLF4J
+
+## Feature Package Architecture
+
+The system now has a lightweight Feature Package layer. This is not a SaaS billing system and it does not change existing business flows. The purpose is to define stable package boundaries so routes, APIs, and future permissions can be mapped consistently.
+
+### Feature Packages
+
+| Feature Package | Purpose | Current Page / API Scope |
+| --- | --- | --- |
+| `CORE_POS` | Core frontdesk table board, ordering, checkout, and order lookup | `/`, `/frontdesk`, `/frontdesk/menu`, `/frontdesk/menu/a`, `/frontdesk/menu/b`, `/frontdesk/order`, order/menu/frontdesk APIs |
+| `PRINTING` | Print Center configuration and business receipt/ticket printing | `/admin/settings/printing`, `/api/v1/admin/printing/**`, automatic GRAB and FRONTDESK receipt dispatch |
+| `KDS` | Kitchen display, pickup board, serving shelf, and kitchen task actions | `/pickup`, `/kds/grab`, `/kds/hot-kitchen`, `/kds/noodle`, `/kds/ramen`, `/kds/history`, `/api/v1/kds/**`, `/api/v1/kitchen-tasks/**` |
+| `ADMIN` | Restaurant owner/admin operational configuration | `/admin/dashboard`, `/admin/menu/items`, `/admin/settings/tables`, admin menu/table APIs |
+| `ANALYTICS` | Analytics summaries and reports | `/admin/reports/sales`, `/admin/reports/items`, `/admin/reports/stores`, `/admin/reports/profit`, `/api/v1/admin/analytics/**` |
+| `PLATFORM` | Platform/developer tenant, template, store, and KDS display configuration tools | `/admin/platform`, platform-only organization/template/store/KDS-config APIs |
+| `DEVELOPER_TOOLS` | Temporary diagnostics and JSON/debug editors | Print encoding/font diagnostics, Platform Admin JSON editor/debug tools |
+
+### Backend Feature Configuration
+
+Backend static configuration lives in:
+
+- `backend/src/main/resources/application.yml`
+- `backend/src/main/java/com/restaurant/system/common/feature/FeaturePackage.java`
+- `backend/src/main/java/com/restaurant/system/common/feature/FeatureFlagService.java`
+
+Default current customer configuration:
+
+```yaml
+app:
+  features:
+    core-pos: true
+    printing: true
+    kds: false
+    admin: true
+    analytics: true
+    platform: false
+    developer-tools: false
+```
+
+Backend guard behavior:
+
+- `PRINTING` guard protects `/api/v1/admin/printing/**`
+- `KDS` guard protects `/api/v1/kds/**` and `/api/v1/kitchen-tasks/**`
+- `ANALYTICS` guard protects `/api/v1/admin/analytics/**`
+- `PLATFORM` guard protects platform-only organization/template/store/KDS-config APIs
+- disabled features return `403` with message `Feature Disabled: {FEATURE_PACKAGE}`
+- automatic print dispatch skips safely when `PRINTING=false`, so core order submission remains available
+
+Note: `PlatformAdminController` also hosts some current owner-admin APIs used by menu/table/printing pages. Those owner-admin endpoints remain available under `ADMIN`; only platform-only endpoints are gated by `PLATFORM`.
+
+### Frontend Feature Configuration
+
+Frontend static configuration lives in:
+
+- `frontend/src/features/feature-flags/featureConfig.ts`
+- `frontend/src/features/feature-flags/useFeatureFlags.ts`
+- `frontend/src/features/feature-flags/FeatureDisabledPage.tsx`
+
+Frontend behavior:
+
+- routes declare a `requiredFeature`
+- disabled routes render a `Feature Disabled / Not Available` page instead of crashing
+- home page and navigation entries hide links for disabled features
+- developer diagnostic buttons are hidden when `DEVELOPER_TOOLS=false`
+
+### Current Customer Feature Config
+
+```yaml
+features:
+  core_pos: true
+  printing: true
+  kds: false
+  admin: true
+  analytics: true
+  platform: false
+  developer_tools: false
+```
+
+Expected behavior:
+
+- Core POS pages remain available
+- Print Center remains available
+- Owner Admin and Analytics reports remain available
+- KDS routes and pickup board are hidden/disabled
+- Platform Admin route is hidden/disabled
+- developer-only print diagnostics and JSON editor are hidden/disabled
+
+### Future KDS Tablet Configuration Example
+
+```yaml
+features:
+  core_pos: true
+  printing: false
+  kds: true
+  admin: true
+  analytics: true
+  platform: false
+  developer_tools: false
+```
+
+Expected behavior:
+
+- Core POS remains available
+- KDS and pickup screens are available
+- Print Center is hidden/disabled
+- Admin and analytics remain available
+- Platform and developer diagnostics remain disabled
+
+### Future Authentication / Authorization Integration
+
+This feature layer is intentionally separate from login and permissions. Future auth should combine:
+
+- `Role`
+- `FeaturePackage`
+- `Permission`
+
+Reserved code locations:
+
+- `FeaturePackage`:
+  - `backend/src/main/java/com/restaurant/system/common/feature/FeaturePackage.java`
+- `Permission`:
+  - `backend/src/main/java/com/restaurant/system/common/auth/Permission.java`
+- route metadata:
+  - `frontend/src/features/feature-flags/featureConfig.ts`
+- backend feature checks:
+  - controller/service-level calls to `FeatureFlagService.requireEnabled(...)`
+
+Recommended future rule shape:
+
+```text
+CanAccess = feature_enabled && role_has_permission_for_feature
+```
+
+This allows the current custom restaurant setup to remain simple while giving future restaurants a clear path to package-specific access control.
+
+## Authentication Phase 1 + Phase 2
+
+### Design Goal
+
+The authentication module adds modern login/session foundations inside the current Restaurant POS system without replacing the existing business user model.
+
+Kept business model:
+
+- `organizations`
+- `stores`
+- `users`
+- `roles`
+
+Added authentication model:
+
+- `user_credentials`
+- `refresh_tokens`
+- `role_permissions`
+
+The current `X-User-Id` development mode remains available as a fallback for local/dev flows while new clients can use `Authorization: Bearer <access_token>`.
+
+### Backend Files
+
+| File | Purpose |
+| --- | --- |
+| `backend/src/main/java/com/restaurant/system/auth/controller/AuthController.java` | Exposes `/api/v1/auth/login`, `/refresh`, `/logout`, `/me` |
+| `backend/src/main/java/com/restaurant/system/auth/service/AuthService.java` | Auth use-case interface |
+| `backend/src/main/java/com/restaurant/system/auth/service/impl/AuthServiceImpl.java` | Login, refresh rotation, logout revoke, current-user response |
+| `backend/src/main/java/com/restaurant/system/auth/service/PasswordService.java` | Password hashing contract |
+| `backend/src/main/java/com/restaurant/system/auth/service/impl/PasswordServiceImpl.java` | BCrypt password hashing and verification |
+| `backend/src/main/java/com/restaurant/system/auth/service/TokenService.java` | Access/refresh token contract |
+| `backend/src/main/java/com/restaurant/system/auth/service/impl/TokenServiceImpl.java` | HMAC-SHA256 JWT access token and SHA-256 refresh token hash support |
+| `backend/src/main/java/com/restaurant/system/auth/filter/AuthTokenFilter.java` | Reads Bearer token and sets request authenticated user |
+| `backend/src/main/java/com/restaurant/system/common/auth/RequestUserContextService.java` | Reads Bearer-derived context first, then optional `X-User-Id` fallback |
+| `backend/src/main/java/com/restaurant/system/common/auth/RoleCapabilityRegistry.java` | Still provides current role capability summary |
+| `backend/src/main/java/com/restaurant/system/common/config/RuntimeDataSeeder.java` | Seeds missing dev/local credentials only; does not overwrite existing credentials unless `force-overwrite=true` |
+
+### Database Tables
+
+| Table | Purpose | Key Fields |
+| --- | --- | --- |
+| `user_credentials` | Login credentials linked to existing `users` | `user_id`, `login_identifier`, `password_hash`, `password_algorithm`, `password_updated_at`, `is_active` |
+| `refresh_tokens` | Server-side refresh token lifecycle | `user_id`, `store_id`, `token_hash`, `expires_at`, `revoked_at`, `created_by_ip`, `user_agent` |
+| `role_permissions` | Future-ready database permissions | `role_id`, `feature_package`, `permission`, `capability_code`, `is_allowed` |
+
+`refresh_tokens.token_hash` stores only the hash of the refresh token. Raw refresh tokens are only returned to the client once.
+
+### Auth APIs
+
+`POST /api/v1/auth/login`
+
+```json
+{
+  "login_identifier": "owner",
+  "password": "ChangeMe123!"
+}
+```
+
+Returns:
+
+```json
+{
+  "access_token": "jwt...",
+  "refresh_token": "random...",
+  "expires_in": 900,
+  "user": {
+    "id": 1,
+    "username": "owner",
+    "full_name": "Owner User",
+    "role_code": "ADMIN",
+    "store_id": 1,
+    "organization_id": 1
+  },
+  "features": {
+    "core_pos": true,
+    "printing": true,
+    "kds": false,
+    "admin": true,
+    "analytics": true,
+    "platform": false,
+    "developer_tools": false
+  },
+  "permissions": []
+}
+```
+
+Other endpoints:
+
+- `POST /api/v1/auth/refresh`
+- `POST /api/v1/auth/logout`
+- `GET /api/v1/auth/me`
+
+### Token Policy
+
+Access token:
+
+- JWT
+- HMAC-SHA256
+- default expiry: 15 minutes
+- contains `user_id`, `role_id`, `store_id`, `organization_id`, `role_code`, `iat`, `exp`
+
+Refresh token:
+
+- secure random string
+- default expiry: 14 days
+- database stores only SHA-256 hash
+- refresh rotates the refresh token and revokes the old token
+- logout marks the token `revoked_at`
+
+Config lives in `backend/src/main/resources/application.yml`:
+
+```yaml
+app:
+  auth:
+    jwt-secret: dev-local-restaurant-pos-change-this-secret-please-2026
+    access-token-expiration-seconds: 900
+    refresh-token-expiration-days: 14
+    x-user-id-fallback-enabled: true
+```
+
+Production must replace `jwt-secret` and default dev passwords.
+
+### Dev / Local Default Users
+
+Seeded only when missing:
+
+| Login ID | Password | Role | Store |
+| --- | --- | --- | --- |
+| `owner` | `ChangeMe123!` | `ADMIN` | `1` |
+| `frontdesk` | `ChangeMe123!` | `FRONTDESK` | `1` |
+| `kitchen` | `ChangeMe123!` | `HOT_KITCHEN` | `1` |
+
+Passwords are stored as BCrypt hashes, never plaintext.
+
+### Request User Resolution
+
+Current order:
+
+1. `AuthTokenFilter` validates `Authorization: Bearer <token>` and attaches `AuthenticatedUser` to the request.
+2. `RequestUserContextService` uses that authenticated user if present.
+3. If no Bearer token exists and `app.auth.x-user-id-fallback-enabled=true`, existing `X-User-Id` mode still works.
+
+This keeps existing POS, KDS, Print Center, and Admin APIs compatible during the transition.
+
+### Frontend Phase 1 Connection
+
+Added minimal frontend files:
+
+- `frontend/src/pages/Login.tsx`
+- `frontend/src/services/authService.ts`
+- `frontend/src/services/apiClient.ts`
+
+Route:
+
+- `/login`
+
+The login page saves `access_token` and `refresh_token` in `localStorage`. Existing business service files still use their current `X-User-Id` headers and should be migrated gradually to `apiClient`.
+
+### Next Authorization Step
+
+Recommended next rule:
+
+```text
+CanAccess = feature_enabled && role_has_permission_for_feature
+```
+
+Suggested next backend pieces:
+
+- `CurrentUserContext`
+- permission-aware route/service guard
+- `role_permissions` seed and admin maintenance screen
+- gradual replacement of hardcoded `X-User-Id` frontend service headers

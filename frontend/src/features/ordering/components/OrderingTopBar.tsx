@@ -5,6 +5,7 @@ interface OrderingTopBarProps {
   slotLabel: string
   orderType?: 'dine_in' | 'pickup'
   pickupLabel?: string | null
+  workstationLabel?: string | null
   onEditPickupLabel?: () => void
   onBack: () => void
   searchValue: string
@@ -17,6 +18,7 @@ export function OrderingTopBar({
   slotLabel,
   orderType = 'dine_in',
   pickupLabel = null,
+  workstationLabel = null,
   onEditPickupLabel,
   onBack,
   searchValue,
@@ -41,6 +43,11 @@ export function OrderingTopBar({
           <p className={`mt-1 font-display font-extrabold tracking-[-0.04em] text-[var(--on-surface)] ${compact ? 'text-[1.45rem]' : 'text-[2rem]'}`}>
             {tableLabel} / {slotLabel}
           </p>
+          {workstationLabel ? (
+            <div className={`mt-2 inline-flex items-center rounded-full bg-[rgba(97,0,0,0.08)] px-2.5 py-1 text-[var(--primary)] ${compact ? 'text-[0.72rem]' : 'text-[0.8rem]'} font-semibold uppercase tracking-[0.14em]`}>
+              {workstationLabel}
+            </div>
+          ) : null}
           {orderType === 'pickup' ? (
             <div className={`mt-1 flex items-center gap-2 ${compact ? 'text-[0.8rem]' : 'text-[0.95rem]'}`}>
               <p className="font-medium text-[var(--muted)]">

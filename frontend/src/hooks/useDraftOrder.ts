@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   addDraftOrderItem,
   cancelDraftOrder,
@@ -145,6 +145,7 @@ function mapOrderItem(item: BackendOrderItemResponse, catalogItems: MenuItem[]):
     lineSubtotal: Number(item.line_amount),
     selection: buildItemSelection(item, menuItem),
     summaryTags: item.options.map(optionTag),
+    notes: item.notes ?? '',
   }
 }
 
@@ -238,6 +239,7 @@ function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationDraft): 
     lineSubtotal: calculateDraftLineSubtotal(menuItem, draft),
     selection: draft,
     summaryTags,
+    notes: '',
   }
 }
 
@@ -253,6 +255,7 @@ export function useDraftOrder(
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const submitInFlightRef = useRef(false)
 
   useEffect(() => {
     let active = true
@@ -334,6 +337,7 @@ export function useDraftOrder(
           return true
         }
         return normalizeSelection(staged.selection) !== normalizeSelection(item.selection)
+          || staged.notes !== item.notes
       })
       || stagedItems.some((item) => item.id.startsWith('temp-'))
 
@@ -389,7 +393,27 @@ export function useDraftOrder(
       }
       const targetItem = order.items.find((item) => item.id === itemId)
       const menuItem = catalogItems.find((item) => item.id === String(targetItem?.menu_item_id))
-      return runMutation(() => updateDraftOrderItemWithMenuItem(order.id, itemId, menuItem, draft))
+      const currentNotes = targetItem?.notes ?? ''
+      return runMutation(() => updateDraftOrderItemWithMenuItem(order.id, itemId, menuItem, draft, currentNotes))
+    },
+    updateItemNote: async (itemId: string | number, notes: string) => {
+      if (!order) {
+        return null
+      }
+      const itemKey = String(itemId)
+      if (!isDraftOrder) {
+        return syncStagedItems((items) =>
+          items.map((item) => item.id === itemKey ? { ...item, notes } : item),
+        )
+      }
+      const numericItemId = Number(itemId)
+      const targetItem = order.items.find((item) => item.id === numericItemId)
+      if (!targetItem) {
+        return null
+      }
+      const menuItem = catalogItems.find((item) => item.id === String(targetItem.menu_item_id))
+      const selection = buildItemSelection(targetItem, menuItem)
+      return runMutation(() => updateDraftOrderItemWithMenuItem(order.id, numericItemId, menuItem, selection, notes))
     },
     incrementItem: async (itemId: number, currentQuantity: number) => {
       if (!order) {
@@ -466,6 +490,10 @@ export function useDraftOrder(
       if (!order) {
         return null
       }
+      if (submitInFlightRef.current) {
+        return order
+      }
+      submitInFlightRef.current = true
       if (!isDraftOrder) {
         const baseItems = order.items.map((item) => mapOrderItem(item, catalogItems))
         const nextItems = stagedItems ?? baseItems
@@ -485,13 +513,13 @@ export function useDraftOrder(
             const menuItem = catalogItems.find((catalogItem) => catalogItem.id === item.menuItemId)
             if (item.id.startsWith('temp-')) {
               // eslint-disable-next-line no-await-in-loop
-              await addDraftOrderItem(order.id, menuItem!, item.selection)
+              await addDraftOrderItem(order.id, menuItem!, item.selection, item.notes)
               continue
             }
             const baseItem = baseItems.find((current) => current.id === item.id)
-            if (!baseItem || normalizeSelection(baseItem.selection) !== normalizeSelection(item.selection)) {
+            if (!baseItem || normalizeSelection(baseItem.selection) !== normalizeSelection(item.selection) || baseItem.notes !== item.notes) {
               // eslint-disable-next-line no-await-in-loop
-              await updateDraftOrderItemWithMenuItem(order.id, Number(item.id), menuItem, item.selection)
+              await updateDraftOrderItemWithMenuItem(order.id, Number(item.id), menuItem, item.selection, item.notes)
             }
           }
 
@@ -505,9 +533,28 @@ export function useDraftOrder(
           throw mutationError
         } finally {
           setSaving(false)
+          submitInFlightRef.current = false
         }
       }
-      return runMutation(() => submitDraftOrder(order.id))
+      try {
+        return await runMutation(() => submitDraftOrder(order.id))
+      } catch (mutationError) {
+        if (
+          mutationError instanceof Error
+          && (mutationError.message.includes('Only draft orders can be submitted')
+            || mutationError.message.includes('already completed'))
+        ) {
+          try {
+            const refreshed = await fetchOrderDetail(order.id)
+            setOrder(refreshed)
+          } catch {
+            // Keep the original submit error visible if refresh also fails.
+          }
+        }
+        throw mutationError
+      } finally {
+        submitInFlightRef.current = false
+      }
     },
     refreshOrder: async () => {
       if (!order) {

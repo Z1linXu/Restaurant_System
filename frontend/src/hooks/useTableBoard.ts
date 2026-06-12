@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { dineInService } from '../services/dineInService'
-import { fetchActiveOrderBoard } from '../services/orderService'
-import type { DiningTable, TableSeatCode, TableSlot, TableStatus } from '../types/dinein'
+import { fetchDiningTables } from '../services/frontdeskConfigService'
+import { fetchActiveOrderBoard, subscribeToFrontdeskOrders } from '../services/orderService'
+import type { BackendDiningTableConfig, DiningTable, TableSeatCode, TableSlot, TableStatus } from '../types/dinein'
 
 const initialData = dineInService.getInitialData()
 const SEAT_CODES: TableSeatCode[] = ['A', 'B']
@@ -18,6 +19,17 @@ function stripOccupancy(table: DiningTable): DiningTable {
 
 function createBaseTables() {
   return initialData.tables.map(stripOccupancy)
+}
+
+function mapBackendDiningTable(table: BackendDiningTableConfig): DiningTable {
+  return {
+    id: table.id,
+    label: table.table_name || table.table_code,
+    seats: table.capacity,
+    zone: table.area_name,
+    tableConfig: table.table_config,
+    occupancyMode: 'empty',
+  }
 }
 
 function buildSlots(tables: DiningTable[]) {
@@ -87,10 +99,23 @@ function orderPriority(order: Awaited<ReturnType<typeof fetchActiveOrderBoard>>[
 
 export function useTableBoard() {
   const [tables, setTables] = useState<DiningTable[]>(createBaseTables)
+  const syncInFlightRef = useRef(false)
+
+  const hydrateBaseTables = useCallback(async () => {
+    try {
+      const diningTables = await fetchDiningTables()
+      if (!diningTables.length) {
+        return createBaseTables()
+      }
+      return diningTables.map(mapBackendDiningTable)
+    } catch (_error) {
+      return createBaseTables()
+    }
+  }, [])
 
   const deriveTablesFromActiveOrders = useCallback(
-    (activeOrders: Awaited<ReturnType<typeof fetchActiveOrderBoard>>): DiningTable[] =>
-      createBaseTables().map<DiningTable>((table) => {
+    (baseTables: DiningTable[], activeOrders: Awaited<ReturnType<typeof fetchActiveOrderBoard>>): DiningTable[] =>
+      baseTables.map<DiningTable>((table) => {
         const matchingOrders = activeOrders
           .filter((order) => {
             const tableNo = order.table_no ?? ''
@@ -147,14 +172,22 @@ export function useTableBoard() {
   )
 
   const syncFromBackend = useCallback(async () => {
-    const activeOrders = await fetchActiveOrderBoard()
-    setTables(deriveTablesFromActiveOrders(activeOrders))
-  }, [deriveTablesFromActiveOrders])
+    if (syncInFlightRef.current) {
+      return
+    }
+    syncInFlightRef.current = true
+    try {
+      const [baseTables, activeOrders] = await Promise.all([hydrateBaseTables(), fetchActiveOrderBoard()])
+      setTables(deriveTablesFromActiveOrders(baseTables, activeOrders))
+    } finally {
+      syncInFlightRef.current = false
+    }
+  }, [deriveTablesFromActiveOrders, hydrateBaseTables])
 
   const refreshTableAfterFinish = useCallback(
     async (baseTableLabel: string) => {
-      const activeOrders = await fetchActiveOrderBoard()
-      const nextTables = deriveTablesFromActiveOrders(activeOrders)
+      const [baseTables, activeOrders] = await Promise.all([hydrateBaseTables(), fetchActiveOrderBoard()])
+      const nextTables = deriveTablesFromActiveOrders(baseTables, activeOrders)
       const hasRemainingSeatOrders = activeOrders.some((order) => {
         const tableNo = order.table_no ?? ''
         return tableNo === baseTableLabel || tableNo.startsWith(`${baseTableLabel}-`)
@@ -174,11 +207,26 @@ export function useTableBoard() {
         }),
       )
     },
-    [deriveTablesFromActiveOrders],
+    [deriveTablesFromActiveOrders, hydrateBaseTables],
   )
 
   useEffect(() => {
     void syncFromBackend()
+  }, [syncFromBackend])
+
+  useEffect(() => {
+    const unsubscribe = subscribeToFrontdeskOrders(1, () => {
+      void syncFromBackend()
+    })
+
+    const poller = window.setInterval(() => {
+      void syncFromBackend()
+    }, 4000)
+
+    return () => {
+      unsubscribe()
+      window.clearInterval(poller)
+    }
   }, [syncFromBackend])
 
   const tableSlots = useMemo(() => buildSlots(tables), [tables])

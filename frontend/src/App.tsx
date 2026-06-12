@@ -1,11 +1,23 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
+import { FeatureDisabledPage } from './features/feature-flags/FeatureDisabledPage'
+import { getRequiredFeatureForPath, isFeatureEnabled } from './features/feature-flags/featureConfig'
 
 const DineIn = lazy(() => import('./pages/DineIn'))
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
+const AdminDiningTables = lazy(() => import('./pages/AdminDiningTables'))
+const AdminMenuItems = lazy(() => import('./pages/AdminMenuItems'))
+const AdminPrintingSettings = lazy(() => import('./pages/AdminPrintingSettings'))
+const AdminPlatform = lazy(() => import('./pages/AdminPlatform'))
+const AdminReportsItems = lazy(() => import('./pages/AdminReportsItems'))
+const AdminReportsProfit = lazy(() => import('./pages/AdminReportsProfit'))
+const AdminReportsSales = lazy(() => import('./pages/AdminReportsSales'))
+const AdminReportsStores = lazy(() => import('./pages/AdminReportsStores'))
 const Home = lazy(() => import('./pages/Home'))
 const KdsHistory = lazy(() => import('./pages/KdsHistory'))
 const KdsHotKitchen = lazy(() => import('./pages/KdsHotKitchen'))
 const KdsNoodle = lazy(() => import('./pages/KdsNoodle'))
 const KdsRamen = lazy(() => import('./pages/KdsRamen'))
+const Login = lazy(() => import('./pages/Login'))
 const Orders = lazy(() => import('./pages/Orders'))
 const PickupBoard = lazy(() => import('./pages/PickupBoard'))
 
@@ -33,6 +45,23 @@ function App() {
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
+
+  const requiredFeature = getRequiredFeatureForPath(pathname)
+  if (!isFeatureEnabled(requiredFeature)) {
+    return (
+      <AppShell>
+        <FeatureDisabledPage feature={requiredFeature} />
+      </AppShell>
+    )
+  }
+
+  if (pathname.startsWith('/login')) {
+    return (
+      <AppShell>
+        <Login />
+      </AppShell>
+    )
+  }
 
   if (pathname.startsWith('/kds/grab')) {
     return (
@@ -70,6 +99,78 @@ function App() {
     return (
       <AppShell>
         <Orders />
+      </AppShell>
+    )
+  }
+
+  if (pathname.startsWith('/admin/dashboard')) {
+    return (
+      <AppShell>
+        <AdminDashboard />
+      </AppShell>
+    )
+  }
+
+  if (pathname.startsWith('/admin/settings/tables')) {
+    return (
+      <AppShell>
+        <AdminDiningTables />
+      </AppShell>
+    )
+  }
+
+  if (pathname.startsWith('/admin/menu/items')) {
+    return (
+      <AppShell>
+        <AdminMenuItems />
+      </AppShell>
+    )
+  }
+
+  if (pathname.startsWith('/admin/settings/printing')) {
+    return (
+      <AppShell>
+        <AdminPrintingSettings />
+      </AppShell>
+    )
+  }
+
+  if (pathname.startsWith('/admin/reports/sales')) {
+    return (
+      <AppShell>
+        <AdminReportsSales />
+      </AppShell>
+    )
+  }
+
+  if (pathname.startsWith('/admin/reports/items')) {
+    return (
+      <AppShell>
+        <AdminReportsItems />
+      </AppShell>
+    )
+  }
+
+  if (pathname.startsWith('/admin/reports/profit')) {
+    return (
+      <AppShell>
+        <AdminReportsProfit />
+      </AppShell>
+    )
+  }
+
+  if (pathname.startsWith('/admin/reports/stores')) {
+    return (
+      <AppShell>
+        <AdminReportsStores />
+      </AppShell>
+    )
+  }
+
+  if (pathname.startsWith('/admin/platform')) {
+    return (
+      <AppShell>
+        <AdminPlatform />
       </AppShell>
     )
   }

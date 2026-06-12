@@ -1,6 +1,7 @@
 package com.restaurant.system.common.auth;
 
 import java.util.EnumSet;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.stereotype.Component;
@@ -58,6 +59,14 @@ public class RoleCapabilityRegistry {
         }
         Set<Capability> capabilities = ROLE_CAPABILITIES.get(roleCode.toUpperCase());
         return capabilities != null && capabilities.contains(capability);
+    }
+
+    public Set<Capability> getCapabilities(String roleCode) {
+        if (roleCode == null) {
+            return Collections.emptySet();
+        }
+        Set<Capability> capabilities = ROLE_CAPABILITIES.get(roleCode.toUpperCase());
+        return capabilities == null ? Collections.emptySet() : Set.copyOf(capabilities);
     }
 
     public boolean isAdmin(String roleCode) {

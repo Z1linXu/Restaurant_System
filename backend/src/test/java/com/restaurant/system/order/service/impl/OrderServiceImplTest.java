@@ -39,6 +39,8 @@ import com.restaurant.system.order.repository.FrontdeskBeverageItemRepository;
 import com.restaurant.system.order.repository.OrderItemOptionRepository;
 import com.restaurant.system.order.repository.OrderItemRepository;
 import com.restaurant.system.order.repository.OrderRepository;
+import com.restaurant.system.production.repository.ProductionTaskRepository;
+import com.restaurant.system.printing.service.PrintDispatcherService;
 import com.restaurant.system.station.entity.Station;
 import com.restaurant.system.station.repository.StationRepository;
 import com.restaurant.system.user.entity.Store;
@@ -83,6 +85,8 @@ class OrderServiceImplTest {
     @Mock
     private KitchenTaskRepository kitchenTaskRepository;
     @Mock
+    private ProductionTaskRepository productionTaskRepository;
+    @Mock
     private InventoryItemRepository inventoryItemRepository;
     @Mock
     private InventoryTransactionRepository inventoryTransactionRepository;
@@ -92,6 +96,8 @@ class OrderServiceImplTest {
     private StoreRepository storeRepository;
     @Mock
     private RealtimeEventPublisher realtimeEventPublisher;
+    @Mock
+    private PrintDispatcherService printDispatcherService;
 
     private OrderServiceImpl orderService;
     private KitchenServiceImpl kitchenService;
@@ -126,11 +132,13 @@ class OrderServiceImplTest {
             menuItemBomRepository,
             menuItemOptionBomRepository,
             kitchenTaskRepository,
+            productionTaskRepository,
             inventoryItemRepository,
             inventoryTransactionRepository,
             stationRepository,
             storeRepository,
-            realtimeEventPublisher
+            realtimeEventPublisher,
+            printDispatcherService
         );
         kitchenService = new KitchenServiceImpl(kitchenTaskRepository, orderRepository, realtimeEventPublisher);
         frontdeskBeverageService = new FrontdeskBeverageServiceImpl(

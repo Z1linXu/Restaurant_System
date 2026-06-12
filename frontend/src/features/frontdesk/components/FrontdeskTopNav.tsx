@@ -1,16 +1,21 @@
 import { navigateTo } from '../navigation'
+import { isFeatureEnabled, type FeaturePackage } from '../../feature-flags/featureConfig'
 
 interface FrontdeskTopNavProps {
   activeItem?: 'menu' | 'orders' | 'pickup' | 'stations' | 'dashboard' | null
 }
 
 const navItems = [
-  { id: 'orders', label: 'Orders', icon: '▤' },
-  { id: 'menu', label: 'Menu', icon: '✕' },
-  { id: 'pickup', label: 'Pickup', icon: '◉' },
-  { id: 'stations', label: 'Stations', icon: '⌂' },
-  { id: 'dashboard', label: 'Dashboard', icon: '◫' },
-] as const
+  { id: 'orders', label: 'Orders', icon: '▤', feature: 'CORE_POS' },
+  { id: 'menu', label: 'Menu', icon: '✕', feature: 'CORE_POS' },
+  { id: 'pickup', label: 'Pickup', icon: '◉', feature: 'KDS' },
+  { id: 'dashboard', label: 'Dashboard', icon: '◫', feature: 'ADMIN' },
+] as const satisfies Array<{
+  id: 'menu' | 'orders' | 'pickup' | 'dashboard'
+  label: string
+  icon: string
+  feature: FeaturePackage
+}>
 
 export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
   return (
@@ -26,7 +31,7 @@ export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
       </div>
 
       <nav className="flex items-center gap-2">
-        {navItems.map((item) => {
+        {navItems.filter((item) => isFeatureEnabled(item.feature)).map((item) => {
           const active = item.id === activeItem
           return (
             <button
@@ -48,6 +53,10 @@ export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
                 }
                 if (item.id === 'menu') {
                   navigateTo('/frontdesk')
+                  return
+                }
+                if (item.id === 'dashboard') {
+                  navigateTo('/admin/dashboard')
                 }
               }}
             >

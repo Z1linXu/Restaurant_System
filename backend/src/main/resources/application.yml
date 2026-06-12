@@ -23,3 +23,19 @@ mybatis-plus:
 
 app:
   note: Local datasource credentials should be configured in application-local.yml.
+  features:
+    core-pos: true
+    printing: true
+    kds: false
+    admin: true
+    analytics: true
+    platform: false
+    developer-tools: false
+  seed:
+    runtime-enabled: true
+    force-overwrite: false
+  auth:
+    jwt-secret: dev-local-restaurant-pos-change-this-secret-please-2026
+    access-token-expiration-seconds: 900
+    refresh-token-expiration-days: 14
+    x-user-id-fallback-enabled: true

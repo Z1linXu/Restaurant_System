@@ -40,6 +40,10 @@ import com.restaurant.system.order.repository.OrderItemOptionRepository;
 import com.restaurant.system.order.repository.OrderItemRepository;
 import com.restaurant.system.order.repository.OrderRepository;
 import com.restaurant.system.order.service.OrderService;
+import com.restaurant.system.production.entity.ProductionTask;
+import com.restaurant.system.production.repository.ProductionTaskRepository;
+import com.restaurant.system.printing.PrintModuleCode;
+import com.restaurant.system.printing.service.PrintDispatcherService;
 import com.restaurant.system.station.entity.Station;
 import com.restaurant.system.station.repository.StationRepository;
 import com.restaurant.system.user.entity.Store;
@@ -90,6 +94,9 @@ public class OrderServiceImpl implements OrderService {
     private static final String BEVERAGE_STATUS_READY = "ready";
     private static final String BEVERAGE_STATUS_SERVED = "served";
     private static final String BEVERAGE_STATUS_CANCELLED = "cancelled";
+    private static final String PRODUCTION_STATION_FRONTDESK_BEVERAGE = "FRONTDESK_BEVERAGE";
+    private static final String PRODUCTION_SOURCE_KITCHEN_TASK = "kitchen_task";
+    private static final String PRODUCTION_SOURCE_FRONTDESK_BEVERAGE = "frontdesk_beverage_item";
     private static final int DEFAULT_FRONTDESK_HISTORY_LIMIT = 20;
     private static final int KITCHEN_TASK_PRIORITY_COMBO_SIDE = 100;
     private static final Set<String> ALLOWED_COMBO_ROLES = Set.of(
@@ -136,11 +143,13 @@ public class OrderServiceImpl implements OrderService {
     private final MenuItemBomRepository menuItemBomRepository;
     private final MenuItemOptionBomRepository menuItemOptionBomRepository;
     private final KitchenTaskRepository kitchenTaskRepository;
+    private final ProductionTaskRepository productionTaskRepository;
     private final InventoryItemRepository inventoryItemRepository;
     private final InventoryTransactionRepository inventoryTransactionRepository;
     private final StationRepository stationRepository;
     private final StoreRepository storeRepository;
     private final RealtimeEventPublisher realtimeEventPublisher;
+    private final PrintDispatcherService printDispatcherService;
 
     public OrderServiceImpl(
         OrderRepository orderRepository,
@@ -153,11 +162,13 @@ public class OrderServiceImpl implements OrderService {
         MenuItemBomRepository menuItemBomRepository,
         MenuItemOptionBomRepository menuItemOptionBomRepository,
         KitchenTaskRepository kitchenTaskRepository,
+        ProductionTaskRepository productionTaskRepository,
         InventoryItemRepository inventoryItemRepository,
         InventoryTransactionRepository inventoryTransactionRepository,
         StationRepository stationRepository,
         StoreRepository storeRepository,
-        RealtimeEventPublisher realtimeEventPublisher
+        RealtimeEventPublisher realtimeEventPublisher,
+        PrintDispatcherService printDispatcherService
     ) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
@@ -169,11 +180,13 @@ public class OrderServiceImpl implements OrderService {
         this.menuItemBomRepository = menuItemBomRepository;
         this.menuItemOptionBomRepository = menuItemOptionBomRepository;
         this.kitchenTaskRepository = kitchenTaskRepository;
+        this.productionTaskRepository = productionTaskRepository;
         this.inventoryItemRepository = inventoryItemRepository;
         this.inventoryTransactionRepository = inventoryTransactionRepository;
         this.stationRepository = stationRepository;
         this.storeRepository = storeRepository;
         this.realtimeEventPublisher = realtimeEventPublisher;
+        this.printDispatcherService = printDispatcherService;
     }
 
     @Override
@@ -385,7 +398,8 @@ public class OrderServiceImpl implements OrderService {
         orderRepository.save(order);
 
         List<KitchenTask> kitchenTasks = createKitchenTasks(order, orderItems, orderItemOptions, now);
-        createFrontdeskBeverageItems(order, orderItems, orderItemOptions, now);
+        List<FrontdeskBeverageItem> beverageItems = createFrontdeskBeverageItems(order, orderItems, orderItemOptions, now);
+        createProductionTasks(order, kitchenTasks, beverageItems, now);
         deductInventory(order, orderItems, orderItemOptions, now);
 
         order.status = kitchenTasks.isEmpty() ? ORDER_STATUS_READY : ORDER_STATUS_PREPARING;
@@ -399,6 +413,8 @@ public class OrderServiceImpl implements OrderService {
         if (ORDER_STATUS_READY.equals(order.status)) {
             publishOrderEvent("order.ready", order, null, null, null);
         }
+        printDispatcherService.dispatchAfterCommit(PrintModuleCode.GRAB, order.store_id, order.id);
+        printDispatcherService.dispatchAfterCommit(PrintModuleCode.FRONTDESK_RECEIPT, order.store_id, order.id);
         return loadOrderResponse(order.id);
     }
 
@@ -767,7 +783,7 @@ public class OrderServiceImpl implements OrderService {
         orderRepository.save(order);
     }
 
-    private void createFrontdeskBeverageItems(
+    private List<FrontdeskBeverageItem> createFrontdeskBeverageItems(
         Order order,
         List<OrderItem> orderItems,
         List<OrderItemOption> orderItemOptions,
@@ -798,7 +814,67 @@ public class OrderServiceImpl implements OrderService {
         }
 
         if (!beverageItems.isEmpty()) {
-            frontdeskBeverageItemRepository.saveAll(beverageItems);
+            return frontdeskBeverageItemRepository.saveAll(beverageItems);
+        }
+        return List.of();
+    }
+
+    private void createProductionTasks(
+        Order order,
+        List<KitchenTask> kitchenTasks,
+        List<FrontdeskBeverageItem> beverageItems,
+        LocalDateTime now
+    ) {
+        List<ProductionTask> productionTasks = new ArrayList<>();
+
+        for (KitchenTask kitchenTask : kitchenTasks) {
+            ProductionTask productionTask = new ProductionTask();
+            productionTask.order_id = order.id;
+            productionTask.order_item_id = kitchenTask.order_item_id;
+            productionTask.store_id = order.store_id;
+            productionTask.source_type = PRODUCTION_SOURCE_KITCHEN_TASK;
+            productionTask.source_id = kitchenTask.id;
+            productionTask.station_code = kitchenTask.station_code;
+            productionTask.item_name_snapshot_zh = kitchenTask.item_name_snapshot_zh;
+            productionTask.item_name_snapshot_en = kitchenTask.item_name_snapshot_en;
+            productionTask.special_instructions_snapshot = kitchenTask.special_instructions_snapshot;
+            productionTask.status = kitchenTask.status;
+            productionTask.quantity = kitchenTask.quantity;
+            productionTask.priority = kitchenTask.priority;
+            productionTask.started_at = kitchenTask.started_at;
+            productionTask.completed_at = kitchenTask.completed_at;
+            productionTask.served_at = kitchenTask.served_at;
+            productionTask.cancelled_at = kitchenTask.cancelled_at;
+            productionTask.created_at = kitchenTask.created_at;
+            productionTask.updated_at = now;
+            productionTasks.add(productionTask);
+        }
+
+        for (FrontdeskBeverageItem beverageItem : beverageItems) {
+            ProductionTask productionTask = new ProductionTask();
+            productionTask.order_id = order.id;
+            productionTask.order_item_id = beverageItem.order_item_id;
+            productionTask.store_id = order.store_id;
+            productionTask.source_type = PRODUCTION_SOURCE_FRONTDESK_BEVERAGE;
+            productionTask.source_id = beverageItem.id;
+            productionTask.station_code = PRODUCTION_STATION_FRONTDESK_BEVERAGE;
+            productionTask.item_name_snapshot_zh = beverageItem.item_name_snapshot_zh;
+            productionTask.item_name_snapshot_en = beverageItem.item_name_snapshot_en;
+            productionTask.special_instructions_snapshot = beverageItem.special_instructions_snapshot;
+            productionTask.status = beverageItem.status;
+            productionTask.quantity = beverageItem.quantity;
+            productionTask.priority = null;
+            productionTask.started_at = beverageItem.started_at;
+            productionTask.ready_at = beverageItem.ready_at;
+            productionTask.served_at = beverageItem.served_at;
+            productionTask.cancelled_at = beverageItem.cancelled_at;
+            productionTask.created_at = beverageItem.created_at;
+            productionTask.updated_at = now;
+            productionTasks.add(productionTask);
+        }
+
+        if (!productionTasks.isEmpty()) {
+            productionTaskRepository.saveAll(productionTasks);
         }
     }
 
@@ -1430,9 +1506,6 @@ public class OrderServiceImpl implements OrderService {
 
     private List<String> buildKitchenSecondaryParts(OrderItem orderItem, List<OrderItemOption> options) {
         List<String> parts = new ArrayList<>();
-        if (orderItem.notes != null && !orderItem.notes.isBlank()) {
-            parts.add(orderItem.notes.trim());
-        }
         for (OrderItemOption option : options) {
             if (OPTION_TYPE_ADDON.equals(option.option_type_snapshot)) {
                 String addonCode = canonicalAddonCode(option.option_name_snapshot_zh);

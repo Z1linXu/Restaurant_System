@@ -3,7 +3,13 @@ import { useMenuCatalog } from '../../hooks/useMenuCatalog'
 import { Card } from '../../components/ui/Card'
 import { useIpadLandscape } from '../../hooks/useIpadLandscape'
 import { useTableBoard } from '../../hooks/useTableBoard'
-import { buildMenuPath, navigateTo, parseMenuRoute } from '../frontdesk/navigation'
+import {
+  buildFrontdeskBoardPath,
+  buildMenuPath,
+  inferFrontdeskWorkstation,
+  navigateTo,
+  parseMenuRoute,
+} from '../frontdesk/navigation'
 import { FrontdeskTopNav } from '../frontdesk/components/FrontdeskTopNav'
 import { OrderingPage } from '../ordering/OrderingPage'
 import { completeOrder } from '../../services/orderService'
@@ -26,17 +32,21 @@ interface DineInPageProps {
 
 export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
   const isIpadLandscape = useIpadLandscape()
+  const workstation = inferFrontdeskWorkstation(routePath)
+  const workstationLabel = workstation ? `Menu ${workstation.toUpperCase()}` : null
   const [sidebarCollapsed, setSidebarCollapsed] = useState(isIpadLandscape)
   const [activeOrderingContext, setActiveOrderingContext] = useState<{
     slotLabel: string
     tableLabel: string
     orderType: 'dine_in' | 'pickup'
     pickupLabel: string | null
+    workstation: string | null
   } | null>(null)
   const [submissionMessage, setSubmissionMessage] = useState<string | null>(null)
   const menuCatalog = useMenuCatalog()
   const { tableSlots, statusCounts, startOrder, editOrder, endOrder, refreshFromBackend, refreshTableAfterFinish } = useTableBoard()
   const workstationCompact = isIpadLandscape
+  const boardPath = buildFrontdeskBoardPath(workstation)
 
   useEffect(() => {
     setSidebarCollapsed(isIpadLandscape)
@@ -60,6 +70,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
       tableLabel: target.slotLabel.split('-')[0] ?? target.slotLabel,
       orderType: 'dine_in',
       pickupLabel: null,
+      workstation,
     } as const
     setActiveOrderingContext(nextContext)
     navigateTo(buildMenuPath(nextContext))
@@ -76,6 +87,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
       tableLabel: target.slotLabel.split('-')[0] ?? target.slotLabel,
       orderType: 'dine_in',
       pickupLabel: null,
+      workstation,
     } as const
     setActiveOrderingContext(nextContext)
     navigateTo(buildMenuPath(nextContext))
@@ -92,6 +104,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
       tableLabel: target.slotLabel.split('-')[0] ?? target.slotLabel,
       orderType: 'dine_in',
       pickupLabel: null,
+      workstation,
     } as const
     setActiveOrderingContext(nextContext)
     navigateTo(buildMenuPath(nextContext))
@@ -104,6 +117,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
       tableLabel: 'Takeout',
       orderType: 'pickup',
       pickupLabel,
+      workstation,
     } as const
     setActiveOrderingContext(nextContext)
     navigateTo(buildMenuPath(nextContext))
@@ -111,7 +125,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
 
   const handleBackToTables = () => {
     setActiveOrderingContext(null)
-    navigateTo('/frontdesk')
+    navigateTo(boardPath)
     void refreshFromBackend()
   }
 
@@ -153,6 +167,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
         tableLabel={activeOrderingContext.tableLabel}
         orderType={activeOrderingContext.orderType}
         pickupLabel={activeOrderingContext.pickupLabel}
+        workstationLabel={workstationLabel}
         onBack={handleBackToTables}
         onDraftCancelled={(slotLabel, tableLabel) => {
           if (activeOrderingContext.orderType === 'dine_in') {
@@ -160,7 +175,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
             endOrder(tableLabel, seatCode)
           }
           setActiveOrderingContext(null)
-          navigateTo('/frontdesk')
+          navigateTo(boardPath)
           void refreshFromBackend()
         }}
         onOrderSubmitted={(slotLabel) => {
@@ -170,7 +185,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
               : `Order confirmed for ${slotLabel}.`,
           )
           setActiveOrderingContext(null)
-          navigateTo('/frontdesk')
+          navigateTo(boardPath)
           void refreshFromBackend()
         }}
       />
@@ -185,6 +200,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
             <FrontdeskTopNav activeItem={null} />
             <DineInTopBar
               onTakeoutClick={handleTakeoutEntry}
+              workstationLabel={workstationLabel}
               compact={workstationCompact}
             />
 
@@ -225,6 +241,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
             <div className="mx-auto max-w-[1880px] space-y-5">
               <DineInTopBar
                 onTakeoutClick={handleTakeoutEntry}
+                workstationLabel={workstationLabel}
               />
 
               {submissionMessage ? (
