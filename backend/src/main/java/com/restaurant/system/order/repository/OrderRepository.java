@@ -1,13 +1,20 @@
 package com.restaurant.system.order.repository;
 
 import com.restaurant.system.order.entity.Order;
+import jakarta.persistence.LockModeType;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select o from Order o where o.id = :id")
+    Order findByIdForUpdate(@Param("id") Long id);
 
     @Query(
         value = """
@@ -53,7 +60,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             from orders
             where store_id = :storeId
               and table_no = :tableNo
-              and status in ('draft', 'submitted', 'preparing')
+              and status in ('draft', 'submitted', 'preparing', 'ready')
             order by updated_at desc, id desc
             limit 1
             """,
@@ -67,7 +74,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             from orders
             where store_id = :storeId
               and pickup_no = :pickupNo
-              and status in ('draft', 'submitted', 'preparing')
+              and status in ('draft', 'submitted', 'preparing', 'ready')
             order by updated_at desc, id desc
             limit 1
             """,
@@ -95,6 +102,96 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         order by o.updated_at desc, o.id desc
         """)
     List<Order> findAllByStoreId(@Param("storeId") Long storeId);
+
+    @Query(
+        value = """
+            select *
+            from orders
+            where store_id = :storeId
+              and (
+                (created_at is not null and created_at >= :startAt and created_at < :endAt)
+                or (submitted_at is not null and submitted_at >= :startAt and submitted_at < :endAt)
+                or (completed_at is not null and completed_at >= :startAt and completed_at < :endAt)
+                or (updated_at is not null and updated_at >= :startAt and updated_at < :endAt)
+              )
+            order by
+              case when updated_at is null then 1 else 0 end,
+              updated_at desc,
+              case when submitted_at is null then 1 else 0 end,
+              submitted_at desc,
+              created_at desc,
+              id desc
+            """,
+        nativeQuery = true
+    )
+    List<Order> findTodayByStoreId(
+        @Param("storeId") Long storeId,
+        @Param("startAt") LocalDateTime startAt,
+        @Param("endAt") LocalDateTime endAt,
+        Pageable pageable
+    );
+
+    @Query(
+        value = """
+            select count(*)
+            from orders
+            where store_id = :storeId
+              and (
+                (created_at is not null and created_at >= :startAt and created_at < :endAt)
+                or (submitted_at is not null and submitted_at >= :startAt and submitted_at < :endAt)
+                or (completed_at is not null and completed_at >= :startAt and completed_at < :endAt)
+                or (updated_at is not null and updated_at >= :startAt and updated_at < :endAt)
+              )
+            """,
+        nativeQuery = true
+    )
+    long countTodayByStoreId(
+        @Param("storeId") Long storeId,
+        @Param("startAt") LocalDateTime startAt,
+        @Param("endAt") LocalDateTime endAt
+    );
+
+    @Query(
+        value = """
+            select coalesce(sum(total_amount), 0)
+            from orders
+            where store_id = :storeId
+              and status = 'completed'
+              and completed_at is not null
+              and completed_at >= :startAt
+              and completed_at < :endAt
+            """,
+        nativeQuery = true
+    )
+    java.math.BigDecimal sumCompletedTotalByStoreIdAndCompletedAtBetween(
+        @Param("storeId") Long storeId,
+        @Param("startAt") LocalDateTime startAt,
+        @Param("endAt") LocalDateTime endAt
+    );
+
+    @Query(
+        value = """
+            select count(*)
+            from orders
+            where store_id = :storeId
+              and status in ('submitted', 'preparing', 'ready')
+            """,
+        nativeQuery = true
+    )
+    long countActiveByStoreId(@Param("storeId") Long storeId);
+
+    @Query(
+        value = """
+            select count(distinct table_no)
+            from orders
+            where store_id = :storeId
+              and order_type = 'dine_in'
+              and table_no is not null
+              and status in ('draft', 'submitted', 'preparing', 'ready')
+            """,
+        nativeQuery = true
+    )
+    long countOccupiedDineInTablesByStoreId(@Param("storeId") Long storeId);
 
     @Query(
         value = """

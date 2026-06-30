@@ -26,7 +26,9 @@ import com.restaurant.system.menu.repository.MenuItemOptionBomRepository;
 import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.menu.repository.MenuItemRepository;
 import com.restaurant.system.order.dto.CreateOrderItemRequest;
+import com.restaurant.system.order.dto.CreateOrderItemOptionRequest;
 import com.restaurant.system.order.dto.CreateOrderRequest;
+import com.restaurant.system.order.dto.CreateOrderUpdateRequest;
 import com.restaurant.system.order.dto.FrontdeskBeverageItemResponse;
 import com.restaurant.system.order.dto.FrontdeskOrderBoardResponse;
 import com.restaurant.system.order.dto.OrderResponse;
@@ -35,10 +37,12 @@ import com.restaurant.system.order.entity.FrontdeskBeverageItem;
 import com.restaurant.system.order.entity.Order;
 import com.restaurant.system.order.entity.OrderItem;
 import com.restaurant.system.order.entity.OrderItemOption;
+import com.restaurant.system.order.entity.OrderUpdateBatch;
 import com.restaurant.system.order.repository.FrontdeskBeverageItemRepository;
 import com.restaurant.system.order.repository.OrderItemOptionRepository;
 import com.restaurant.system.order.repository.OrderItemRepository;
 import com.restaurant.system.order.repository.OrderRepository;
+import com.restaurant.system.order.repository.OrderUpdateBatchRepository;
 import com.restaurant.system.production.repository.ProductionTaskRepository;
 import com.restaurant.system.printing.service.PrintDispatcherService;
 import com.restaurant.system.station.entity.Station;
@@ -66,6 +70,8 @@ class OrderServiceImplTest {
 
     @Mock
     private OrderRepository orderRepository;
+    @Mock
+    private OrderUpdateBatchRepository orderUpdateBatchRepository;
     @Mock
     private OrderItemRepository orderItemRepository;
     @Mock
@@ -113,6 +119,8 @@ class OrderServiceImplTest {
     private final AtomicLong orderItemOptionIdSeq = new AtomicLong(1);
     private final AtomicLong kitchenTaskIdSeq = new AtomicLong(1);
     private final AtomicLong beverageItemIdSeq = new AtomicLong(1);
+    private final AtomicLong orderUpdateBatchIdSeq = new AtomicLong(1);
+    private final Map<Long, OrderUpdateBatch> orderUpdateBatches = new HashMap<>();
 
     private Store store;
     private MenuCategory menuCategory;
@@ -123,6 +131,7 @@ class OrderServiceImplTest {
     void setUp() {
         orderService = new OrderServiceImpl(
             orderRepository,
+            orderUpdateBatchRepository,
             orderItemRepository,
             orderItemOptionRepository,
             frontdeskBeverageItemRepository,
@@ -169,6 +178,7 @@ class OrderServiceImplTest {
         menuItem.station_id = station.id;
         menuItem.name_zh = "牛肉面";
         menuItem.name_en = "Beef Noodle";
+        menuItem.sku = "traditional_beef_noodle";
         menuItem.base_price = new BigDecimal("12.50");
 
         when(storeRepository.findById(store.id)).thenAnswer(invocation -> Optional.of(store));
@@ -190,6 +200,8 @@ class OrderServiceImplTest {
             return order;
         });
         when(orderRepository.findById(anyLong())).thenAnswer(invocation -> Optional.ofNullable(orders.get(invocation.getArgument(0))));
+        when(orderRepository.findExistingById(anyLong())).thenAnswer(invocation -> orders.get(invocation.getArgument(0)));
+        when(orderRepository.findByIdForUpdate(anyLong())).thenAnswer(invocation -> orders.get(invocation.getArgument(0)));
         when(orderRepository.findActiveOperationalOrders(anyLong())).thenAnswer(invocation -> orders.values().stream()
             .filter(order -> store.id.equals(order.store_id))
             .toList());
@@ -206,6 +218,7 @@ class OrderServiceImplTest {
             return orderItem;
         });
         when(orderItemRepository.findById(anyLong())).thenAnswer(invocation -> Optional.ofNullable(orderItems.get(invocation.getArgument(0))));
+        when(orderItemRepository.findExistingById(anyLong())).thenAnswer(invocation -> orderItems.get(invocation.getArgument(0)));
         when(orderItemRepository.findAllByOrderId(anyLong())).thenAnswer(invocation -> orderItems.values().stream()
             .filter(item -> invocation.getArgument(0).equals(item.order_id))
             .sorted((left, right) -> left.id.compareTo(right.id))
@@ -289,6 +302,23 @@ class OrderServiceImplTest {
             .filter(item -> invocation.getArgument(0).equals(item.order_id))
             .sorted((left, right) -> left.id.compareTo(right.id))
             .toList());
+        when(frontdeskBeverageItemRepository.findAllByOrderIds(anyList())).thenAnswer(invocation -> {
+            List<Long> orderIds = invocation.getArgument(0);
+            return beverageItems.values().stream().filter(item -> orderIds.contains(item.order_id)).toList();
+        });
+        when(orderUpdateBatchRepository.save(any(OrderUpdateBatch.class))).thenAnswer(invocation -> {
+            OrderUpdateBatch batch = invocation.getArgument(0);
+            if (batch.id == null) {
+                batch.id = orderUpdateBatchIdSeq.getAndIncrement();
+            }
+            orderUpdateBatches.put(batch.id, batch);
+            return batch;
+        });
+        when(orderUpdateBatchRepository.findByOrderIdAndIdempotencyKey(anyLong(), org.mockito.ArgumentMatchers.anyString()))
+            .thenAnswer(invocation -> orderUpdateBatches.values().stream()
+                .filter(batch -> invocation.getArgument(0).equals(batch.order_id))
+                .filter(batch -> invocation.getArgument(1).equals(batch.idempotency_key))
+                .findFirst());
         when(frontdeskBeverageItemRepository.findByOrderItemId(anyLong())).thenAnswer(invocation -> beverageItems.values().stream()
             .filter(item -> invocation.getArgument(0).equals(item.order_item_id))
             .findFirst()
@@ -320,7 +350,8 @@ class OrderServiceImplTest {
         OrderResponse draftOrder = orderService.createOrder(request);
         assertEquals("draft", draftOrder.status);
         assertEquals(1, draftOrder.items.size());
-        assertEquals(new BigDecimal("12.50"), draftOrder.total_amount);
+        assertEquals(new BigDecimal("12.50"), draftOrder.subtotal_amount);
+        assertEquals(new BigDecimal("14.37"), draftOrder.total_amount);
 
         OrderResponse submittedOrder = orderService.submitOrder(draftOrder.id);
         assertEquals("preparing", submittedOrder.status);
@@ -497,7 +528,7 @@ class OrderServiceImplTest {
     }
 
     @Test
-    void submittedOrderCanModifyPendingItemsButNotReadyItems() {
+    void submittedOrderLocksOldItemsAndUsesIdempotentUpdateBatchForNewItems() {
         CreateOrderItemRequest itemRequest = new CreateOrderItemRequest();
         itemRequest.menu_item_id = menuItem.id;
         itemRequest.quantity = 1;
@@ -513,29 +544,88 @@ class OrderServiceImplTest {
         UpdateDraftOrderItemQuantityRequest quantityRequest = new UpdateDraftOrderItemQuantityRequest();
         quantityRequest.quantity = 2;
 
-        OrderResponse modifiedOrder = orderService.updateDraftOrderItemQuantity(
-            submittedOrder.id,
-            submittedOrder.items.get(0).id,
-            quantityRequest
-        );
-        assertEquals("preparing", modifiedOrder.status);
-        assertTrue(Boolean.TRUE.equals(modifiedOrder.is_modified_after_submit));
-        assertTrue(Boolean.TRUE.equals(modifiedOrder.items.get(0).is_modified_after_submit));
-        assertEquals(2, modifiedOrder.items.get(0).quantity);
-        assertEquals(2, kitchenTaskRepository.findAllByOrderId(modifiedOrder.id).get(0).quantity);
-
-        kitchenService.markReadyForPickup(kitchenTaskRepository.findAllByOrderId(modifiedOrder.id).get(0).id);
         assertThrows(
-            RuntimeException.class,
-            () -> orderService.updateDraftOrderItemQuantity(modifiedOrder.id, modifiedOrder.items.get(0).id, quantityRequest)
+            com.restaurant.system.common.exception.BusinessException.class,
+            () -> orderService.updateDraftOrderItemQuantity(submittedOrder.id, submittedOrder.items.get(0).id, quantityRequest)
         );
 
         CreateOrderItemRequest newItemRequest = new CreateOrderItemRequest();
         newItemRequest.menu_item_id = menuItem.id;
         newItemRequest.quantity = 1;
 
-        OrderResponse reopenedOrder = orderService.addDraftOrderItem(modifiedOrder.id, newItemRequest);
-        assertEquals("preparing", reopenedOrder.status);
-        assertEquals(2, reopenedOrder.kitchen_items.size());
+        CreateOrderUpdateRequest updateRequest = new CreateOrderUpdateRequest();
+        updateRequest.idempotency_key = "update-T5-1";
+        updateRequest.items = List.of(newItemRequest);
+
+        var firstResult = orderService.createOrderUpdate(submittedOrder.id, updateRequest, 1L);
+        var repeatedResult = orderService.createOrderUpdate(submittedOrder.id, updateRequest, 1L);
+
+        assertFalse(firstResult.already_processed);
+        assertTrue(repeatedResult.already_processed);
+        assertEquals(firstResult.update_batch_id, repeatedResult.update_batch_id);
+        assertEquals(2, firstResult.order.items.size());
+        assertEquals(firstResult.update_batch_id, firstResult.order.items.get(1).order_update_batch_id);
+        assertEquals(2, kitchenTaskRepository.findAllByOrderId(submittedOrder.id).size());
+        org.mockito.Mockito.verify(printDispatcherService, org.mockito.Mockito.times(1))
+            .dispatchOrderUpdateAfterCommit("GRAB", store.id, submittedOrder.id, firstResult.update_batch_id);
+    }
+
+    @Test
+    void comboEggAndExtraEggRemainVisibleInKitchenInstructions() {
+        MenuItemOption comboEgg = menuOption(101L, "addon", "combo_tea_egg", "COMBO_EGG", "套餐卤蛋", "Combo Tea Egg", BigDecimal.ZERO);
+        MenuItemOption extraEgg = menuOption(102L, "addon", "tea_egg", "ADD_ON", "加蛋", "Extra Egg", new BigDecimal("1.99"));
+        Map<Long, MenuItemOption> optionsById = Map.of(comboEgg.id, comboEgg, extraEgg.id, extraEgg);
+        when(menuItemOptionRepository.findById(anyLong())).thenAnswer(invocation -> {
+            Long optionId = invocation.getArgument(0);
+            return Optional.ofNullable(optionsById.get(optionId));
+        });
+
+        CreateOrderItemRequest itemRequest = new CreateOrderItemRequest();
+        itemRequest.menu_item_id = menuItem.id;
+        itemRequest.quantity = 1;
+        itemRequest.options = List.of(optionRequest(comboEgg.id, 1), optionRequest(extraEgg.id, 1));
+
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.store_id = store.id;
+        request.created_by = 1L;
+        request.order_type = "dine_in";
+        request.table_no = "T8";
+        request.items = List.of(itemRequest);
+
+        OrderResponse submittedOrder = orderService.submitOrder(orderService.createOrder(request).id);
+        List<KitchenTask> tasks = kitchenTaskRepository.findAllByOrderId(submittedOrder.id);
+
+        assertEquals(1, tasks.size());
+        assertTrue(tasks.get(0).special_instructions_snapshot.contains("+蛋x2"));
+        assertFalse(tasks.get(0).special_instructions_snapshot.contains("+蛋 +蛋"));
+    }
+
+    private MenuItemOption menuOption(
+        Long id,
+        String optionType,
+        String optionCode,
+        String optionGroup,
+        String nameZh,
+        String nameEn,
+        BigDecimal priceDelta
+    ) {
+        MenuItemOption option = new MenuItemOption();
+        option.id = id;
+        option.menu_item_id = menuItem.id;
+        option.option_type = optionType;
+        option.option_code = optionCode;
+        option.option_group = optionGroup;
+        option.name_zh = nameZh;
+        option.name_en = nameEn;
+        option.price_delta = priceDelta;
+        option.is_active = true;
+        return option;
+    }
+
+    private CreateOrderItemOptionRequest optionRequest(Long optionId, int quantity) {
+        CreateOrderItemOptionRequest request = new CreateOrderItemOptionRequest();
+        request.option_id = optionId;
+        request.quantity = quantity;
+        return request;
     }
 }

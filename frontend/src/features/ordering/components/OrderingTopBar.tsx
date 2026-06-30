@@ -1,4 +1,5 @@
 import { Input } from '../../../components/ui/Input'
+import { formatSplitSlotLabel } from '../../../utils/tableDisplay'
 
 interface OrderingTopBarProps {
   tableLabel: string
@@ -25,6 +26,9 @@ export function OrderingTopBar({
   onSearchChange,
   compact = false,
 }: OrderingTopBarProps) {
+  const displayTableLabel = formatSplitSlotLabel(tableLabel)
+  const displaySlotLabel = formatSplitSlotLabel(slotLabel)
+
   return (
     <div className={`flex rounded-[30px] bg-[rgba(255,255,255,0.74)] shadow-[0_14px_32px_rgba(26,28,25,0.05)] ${compact ? 'items-center justify-between gap-4 px-5 py-3.5' : 'flex-col gap-4 px-6 py-5 xl:flex-row xl:items-center xl:justify-between'}`}>
       <div className={`flex items-center ${compact ? 'gap-3' : 'gap-4'}`}>
@@ -41,7 +45,7 @@ export function OrderingTopBar({
             {orderType === 'pickup' ? 'Takeout / 外带' : 'Dine-in / 堂食'}
           </p>
           <p className={`mt-1 font-display font-extrabold tracking-[-0.04em] text-[var(--on-surface)] ${compact ? 'text-[1.45rem]' : 'text-[2rem]'}`}>
-            {tableLabel} / {slotLabel}
+            {displayTableLabel} / {displaySlotLabel}
           </p>
           {workstationLabel ? (
             <div className={`mt-2 inline-flex items-center rounded-full bg-[rgba(97,0,0,0.08)] px-2.5 py-1 text-[var(--primary)] ${compact ? 'text-[0.72rem]' : 'text-[0.8rem]'} font-semibold uppercase tracking-[0.14em]`}>

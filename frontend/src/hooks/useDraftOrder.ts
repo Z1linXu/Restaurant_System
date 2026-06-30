@@ -6,6 +6,7 @@ import {
   fetchOrderDetail,
   removeDraftOrderItem,
   submitDraftOrder,
+  submitOrderUpdate,
   updateEditableOrderHeader,
   updateDraftOrderItemWithMenuItem,
   updateDraftOrderItemQuantity,
@@ -64,6 +65,7 @@ function buildItemSelection(item: BackendOrderItemResponse, menuItem: MenuItem |
     comboEnabled: false,
     comboEggId: undefined,
     comboSideId: undefined,
+    comboSideRemoveIds: [],
     addOnQuantities: {},
     removeIds: [],
     quantity: item.quantity,
@@ -84,6 +86,10 @@ function buildItemSelection(item: BackendOrderItemResponse, menuItem: MenuItem |
     if (comboConfig?.sides.some((comboOption) => comboOption.id === optionId)) {
       draft.comboEnabled = true
       draft.comboSideId = optionId
+      return
+    }
+    if (comboConfig?.sideRemoveOptions.some((comboOption) => comboOption.id === optionId)) {
+      draft.comboSideRemoveIds.push(optionId)
       return
     }
     switch (option.option_type_snapshot) {
@@ -132,7 +138,7 @@ function buildItemSelection(item: BackendOrderItemResponse, menuItem: MenuItem |
   return draft
 }
 
-function mapOrderItem(item: BackendOrderItemResponse, catalogItems: MenuItem[]): OrderLineItem {
+function mapOrderItem(item: BackendOrderItemResponse, catalogItems: MenuItem[], locked = false): OrderLineItem {
   const menuItem = catalogItems.find((catalogItem) => catalogItem.id === String(item.menu_item_id))
 
   return {
@@ -146,6 +152,7 @@ function mapOrderItem(item: BackendOrderItemResponse, catalogItems: MenuItem[]):
     selection: buildItemSelection(item, menuItem),
     summaryTags: item.options.map(optionTag),
     notes: item.notes ?? '',
+    locked,
   }
 }
 
@@ -161,25 +168,8 @@ function mapOrderToSession(order: BackendOrderResponse, slotLabel: string, table
           ? 'preparing'
           : 'submitted',
     isModifiedAfterSubmit: Boolean(order.is_modified_after_submit),
-    items: order.items.map((item) => mapOrderItem(item, catalogItems)),
+    items: order.items.map((item) => mapOrderItem(item, catalogItems, order.status !== 'draft')),
   }
-}
-
-function normalizeSelection(selection: ItemCustomizationDraft) {
-  return JSON.stringify({
-    sizeId: selection.sizeId ?? null,
-    soupBaseId: selection.soupBaseId ?? null,
-    noodleTypeId: selection.noodleTypeId ?? null,
-    spicyLevelId: selection.spicyLevelId ?? null,
-    comboEnabled: selection.comboEnabled,
-    comboEggId: selection.comboEggId ?? null,
-    comboSideId: selection.comboSideId ?? null,
-    addOnQuantities: Object.entries(selection.addOnQuantities)
-      .filter(([, quantity]) => quantity > 0)
-      .sort(([left], [right]) => left.localeCompare(right)),
-    removeIds: [...selection.removeIds].sort(),
-    quantity: selection.quantity,
-  })
 }
 
 function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationDraft): OrderLineItem {
@@ -196,6 +186,7 @@ function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationDraft): 
       ...(menuItem.customization?.spicyLevels ?? []),
       ...(menuItem.customization?.combo?.eggs ?? []),
       ...(menuItem.customization?.combo?.sides ?? []),
+      ...(menuItem.customization?.combo?.sideRemoveOptions ?? []),
       ...(menuItem.customization?.addOns ?? []),
       ...(menuItem.customization?.removeOptions ?? []),
     ]
@@ -213,6 +204,7 @@ function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationDraft): 
     summaryTags.push({ en: 'Combo', zh: '套餐' })
     pushOptionTag(draft.comboEggId ?? menuItem.customization?.combo?.eggs[0]?.id)
     pushOptionTag(draft.comboSideId ?? menuItem.customization?.combo?.sides[0]?.id)
+    draft.comboSideRemoveIds.forEach((optionId) => pushOptionTag(optionId))
   }
   Object.entries(draft.addOnQuantities).forEach(([optionId, quantity]) => {
     if (quantity <= 0) {
@@ -240,10 +232,12 @@ function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationDraft): 
     selection: draft,
     summaryTags,
     notes: '',
+    locked: false,
   }
 }
 
 export function useDraftOrder(
+  storeId: number,
   slotLabel: string,
   tableLabel: string,
   orderType: 'dine_in' | 'pickup',
@@ -256,6 +250,7 @@ export function useDraftOrder(
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const submitInFlightRef = useRef(false)
+  const updateIdempotencyKeyRef = useRef<string | null>(null)
 
   useEffect(() => {
     let active = true
@@ -266,6 +261,7 @@ export function useDraftOrder(
 
       try {
         const resolvedOrder = await ensureEditableOrder({
+          storeId,
           orderType,
           tableNo: orderType === 'dine_in' ? slotLabel : null,
           pickupNo: orderType === 'pickup' ? pickupLabel : null,
@@ -289,7 +285,7 @@ export function useDraftOrder(
     return () => {
       active = false
     }
-  }, [orderType, pickupLabel, slotLabel])
+  }, [orderType, pickupLabel, slotLabel, storeId])
 
   useEffect(() => {
     if (!order) {
@@ -300,7 +296,7 @@ export function useDraftOrder(
       setStagedItems(null)
       return
     }
-    const mappedItems = order.items.map((item) => mapOrderItem(item, catalogItems))
+    const mappedItems = order.items.map((item) => mapOrderItem(item, catalogItems, true))
     setStagedItems(mappedItems)
   }, [catalogItems, order])
 
@@ -328,18 +324,7 @@ export function useDraftOrder(
     if (order.status === 'draft' || !stagedItems) {
       return baseSession
     }
-    const baseItems = baseSession.items
-    const dirty =
-      baseItems.length !== stagedItems.length
-      || baseItems.some((item) => {
-        const staged = stagedItems.find((current) => current.id === item.id)
-        if (!staged) {
-          return true
-        }
-        return normalizeSelection(staged.selection) !== normalizeSelection(item.selection)
-          || staged.notes !== item.notes
-      })
-      || stagedItems.some((item) => item.id.startsWith('temp-'))
+    const dirty = stagedItems.some((item) => item.id.startsWith('temp-'))
 
     return {
       ...baseSession,
@@ -370,15 +355,16 @@ export function useDraftOrder(
       }
       return runMutation(() => addDraftOrderItem(order.id, menuItem, draft))
     },
-    updateItem: async (itemId: number, draft: ItemCustomizationDraft) => {
+    updateItem: async (itemId: string | number, draft: ItemCustomizationDraft) => {
       if (!order) {
         return null
       }
       if (!isDraftOrder) {
-        return syncStagedItems((items) =>
-          items.map((item) =>
-            Number(item.id) === itemId
-              ? {
+        return syncStagedItems((items) => items.map((item) => {
+          if (item.id !== String(itemId) || item.locked) {
+            return item
+          }
+          return {
                   ...item,
                   quantity: draft.quantity,
                   selection: draft,
@@ -387,14 +373,13 @@ export function useDraftOrder(
                     draft,
                   ),
                 }
-              : item,
-          ),
-        )
+        }))
       }
-      const targetItem = order.items.find((item) => item.id === itemId)
+      const numericItemId = Number(itemId)
+      const targetItem = order.items.find((item) => item.id === numericItemId)
       const menuItem = catalogItems.find((item) => item.id === String(targetItem?.menu_item_id))
       const currentNotes = targetItem?.notes ?? ''
-      return runMutation(() => updateDraftOrderItemWithMenuItem(order.id, itemId, menuItem, draft, currentNotes))
+      return runMutation(() => updateDraftOrderItemWithMenuItem(order.id, numericItemId, menuItem, draft, currentNotes))
     },
     updateItemNote: async (itemId: string | number, notes: string) => {
       if (!order) {
@@ -403,7 +388,7 @@ export function useDraftOrder(
       const itemKey = String(itemId)
       if (!isDraftOrder) {
         return syncStagedItems((items) =>
-          items.map((item) => item.id === itemKey ? { ...item, notes } : item),
+          items.map((item) => item.id === itemKey && !item.locked ? { ...item, notes } : item),
         )
       }
       const numericItemId = Number(itemId)
@@ -415,14 +400,14 @@ export function useDraftOrder(
       const selection = buildItemSelection(targetItem, menuItem)
       return runMutation(() => updateDraftOrderItemWithMenuItem(order.id, numericItemId, menuItem, selection, notes))
     },
-    incrementItem: async (itemId: number, currentQuantity: number) => {
+    incrementItem: async (itemId: string | number, currentQuantity: number) => {
       if (!order) {
         return null
       }
       if (!isDraftOrder) {
         return syncStagedItems((items) =>
           items.map((item) => {
-            if (item.id !== String(itemId)) {
+            if (item.id !== String(itemId) || item.locked) {
               return item
             }
             const nextSelection = { ...item.selection, quantity: currentQuantity + 1 }
@@ -438,14 +423,18 @@ export function useDraftOrder(
           }),
         )
       }
-      return runMutation(() => updateDraftOrderItemQuantity(order.id, itemId, currentQuantity + 1))
+      return runMutation(() => updateDraftOrderItemQuantity(order.id, Number(itemId), currentQuantity + 1))
     },
-    decrementItem: async (itemId: number, currentQuantity: number) => {
+    decrementItem: async (itemId: string | number, currentQuantity: number) => {
       if (!order) {
         return null
       }
       if (!isDraftOrder) {
         return syncStagedItems((items) => {
+          const target = items.find((item) => item.id === String(itemId))
+          if (target?.locked) {
+            return items
+          }
           if (currentQuantity <= 1) {
             return items.filter((item) => item.id !== String(itemId))
           }
@@ -467,18 +456,18 @@ export function useDraftOrder(
         })
       }
       if (currentQuantity <= 1) {
-        return runMutation(() => removeDraftOrderItem(order.id, itemId))
+        return runMutation(() => removeDraftOrderItem(order.id, Number(itemId)))
       }
-      return runMutation(() => updateDraftOrderItemQuantity(order.id, itemId, currentQuantity - 1))
+      return runMutation(() => updateDraftOrderItemQuantity(order.id, Number(itemId), currentQuantity - 1))
     },
-    removeItem: async (itemId: number) => {
+    removeItem: async (itemId: string | number) => {
       if (!order) {
         return null
       }
       if (!isDraftOrder) {
-        return syncStagedItems((items) => items.filter((item) => item.id !== String(itemId)))
+        return syncStagedItems((items) => items.filter((item) => item.id !== String(itemId) || item.locked))
       }
-      return runMutation(() => removeDraftOrderItem(order.id, itemId))
+      return runMutation(() => removeDraftOrderItem(order.id, Number(itemId)))
     },
     cancelOrder: async () => {
       if (!order) {
@@ -495,37 +484,23 @@ export function useDraftOrder(
       }
       submitInFlightRef.current = true
       if (!isDraftOrder) {
-        const baseItems = order.items.map((item) => mapOrderItem(item, catalogItems))
-        const nextItems = stagedItems ?? baseItems
+        const newItems = (stagedItems ?? []).filter((item) => item.id.startsWith('temp-'))
+        if (!newItems.length) {
+          setError('No new items to update')
+          submitInFlightRef.current = false
+          return order
+        }
 
         setSaving(true)
         setError(null)
         try {
-          for (const baseItem of baseItems) {
-            const stillExists = nextItems.find((item) => item.id === baseItem.id)
-            if (!stillExists) {
-              // eslint-disable-next-line no-await-in-loop
-              await removeDraftOrderItem(order.id, Number(baseItem.id))
-            }
-          }
-
-          for (const item of nextItems) {
-            const menuItem = catalogItems.find((catalogItem) => catalogItem.id === item.menuItemId)
-            if (item.id.startsWith('temp-')) {
-              // eslint-disable-next-line no-await-in-loop
-              await addDraftOrderItem(order.id, menuItem!, item.selection, item.notes)
-              continue
-            }
-            const baseItem = baseItems.find((current) => current.id === item.id)
-            if (!baseItem || normalizeSelection(baseItem.selection) !== normalizeSelection(item.selection) || baseItem.notes !== item.notes) {
-              // eslint-disable-next-line no-await-in-loop
-              await updateDraftOrderItemWithMenuItem(order.id, Number(item.id), menuItem, item.selection, item.notes)
-            }
-          }
-
-          const refreshed = await fetchOrderDetail(order.id)
+          const idempotencyKey = updateIdempotencyKeyRef.current ?? crypto.randomUUID()
+          updateIdempotencyKeyRef.current = idempotencyKey
+          const result = await submitOrderUpdate(order.id, idempotencyKey, newItems, catalogItems)
+          const refreshed = result.order
           setOrder(refreshed)
-          setStagedItems(refreshed.items.map((item) => mapOrderItem(item, catalogItems)))
+          setStagedItems(refreshed.items.map((item) => mapOrderItem(item, catalogItems, true)))
+          updateIdempotencyKeyRef.current = null
           return refreshed
         } catch (mutationError) {
           const message = mutationError instanceof Error ? mutationError.message : 'Order update failed'

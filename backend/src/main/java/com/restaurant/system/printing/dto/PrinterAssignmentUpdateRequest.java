@@ -7,4 +7,5 @@ public class PrinterAssignmentUpdateRequest {
     public String module_code;
     public Boolean enabled;
     public String font_size;
+    public Integer takeout_receipt_copies;
 }

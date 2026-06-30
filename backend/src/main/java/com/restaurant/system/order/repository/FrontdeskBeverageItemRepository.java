@@ -34,6 +34,13 @@ public interface FrontdeskBeverageItemRepository extends JpaRepository<Frontdesk
 
     @Query("""
         select fbi from FrontdeskBeverageItem fbi
+        where fbi.order_id in :orderIds
+        order by fbi.order_id asc, fbi.created_at asc, fbi.id asc
+        """)
+    List<FrontdeskBeverageItem> findAllByOrderIds(@Param("orderIds") List<Long> orderIds);
+
+    @Query("""
+        select fbi from FrontdeskBeverageItem fbi
         where fbi.order_item_id = :orderItemId
         """)
     FrontdeskBeverageItem findByOrderItemId(@Param("orderItemId") Long orderItemId);

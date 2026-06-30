@@ -1,16 +1,28 @@
 package com.restaurant.system.order.controller;
 
+import com.restaurant.system.audit.service.AuditLogService;
 import com.restaurant.system.common.auth.AuthorizationService;
 import com.restaurant.system.common.auth.Capability;
+import com.restaurant.system.common.feature.FeatureFlagService;
+import com.restaurant.system.common.feature.FeaturePackage;
 import com.restaurant.system.common.response.ApiResponse;
 import com.restaurant.system.order.dto.CreateOrderRequest;
 import com.restaurant.system.order.dto.CreateOrderItemRequest;
+import com.restaurant.system.order.dto.CreateOrderUpdateRequest;
 import com.restaurant.system.order.dto.OrderResponse;
+import com.restaurant.system.order.dto.OrderUpdateResponse;
 import com.restaurant.system.order.dto.UpdateDraftOrderHeaderRequest;
 import com.restaurant.system.order.dto.UpdateDraftOrderItemQuantityRequest;
 import com.restaurant.system.order.dto.UpdateDraftOrderItemRequest;
 import com.restaurant.system.order.service.OrderService;
+import com.restaurant.system.printing.dto.OrderReprintRequest;
+import com.restaurant.system.printing.dto.OrderPrintOptionResponse;
+import com.restaurant.system.printing.dto.PrintJobResponse;
+import com.restaurant.system.printing.service.PrintDispatcherService;
+import com.restaurant.system.printing.service.PrintJobService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.Map;
 import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,10 +40,25 @@ public class OrderController {
 
     private final OrderService orderService;
     private final AuthorizationService authorizationService;
+    private final PrintDispatcherService printDispatcherService;
+    private final PrintJobService printJobService;
+    private final FeatureFlagService featureFlagService;
+    private final AuditLogService auditLogService;
 
-    public OrderController(OrderService orderService, AuthorizationService authorizationService) {
+    public OrderController(
+        OrderService orderService,
+        AuthorizationService authorizationService,
+        PrintDispatcherService printDispatcherService,
+        PrintJobService printJobService,
+        FeatureFlagService featureFlagService,
+        AuditLogService auditLogService
+    ) {
         this.orderService = orderService;
         this.authorizationService = authorizationService;
+        this.printDispatcherService = printDispatcherService;
+        this.printJobService = printJobService;
+        this.featureFlagService = featureFlagService;
+        this.auditLogService = auditLogService;
     }
 
     @PostMapping
@@ -119,6 +146,21 @@ public class OrderController {
         );
     }
 
+    @PostMapping("/{id}/updates")
+    public ApiResponse<OrderUpdateResponse> createOrderUpdate(
+        @PathVariable Long id,
+        @Valid @RequestBody CreateOrderUpdateRequest request,
+        HttpServletRequest servletRequest
+    ) {
+        var user = authorizationService.requireOrder(id, Capability.ORDER_MODIFY_SUBMITTED);
+        OrderUpdateResponse response = orderService.createOrderUpdate(id, request, user.userId());
+        auditLogService.record(user.storeId(), user, "ORDER_UPDATED", "ORDER", id, "Update Order processed", Map.of("idempotency_key", request.idempotency_key), servletRequest);
+        return ApiResponse.success(
+            "Order update processed",
+            response
+        );
+    }
+
     @GetMapping("/active")
     public ApiResponse<List<OrderResponse>> getActiveOrders(
         @RequestParam Long store_id,
@@ -131,9 +173,37 @@ public class OrderController {
     }
 
     @PostMapping("/{id}/complete")
-    public ApiResponse<OrderResponse> completeOrder(@PathVariable Long id) {
-        authorizationService.requireOrder(id, Capability.ORDER_COMPLETE);
-        return ApiResponse.success("Order completed", orderService.completeOrder(id));
+    public ApiResponse<OrderResponse> completeOrder(@PathVariable Long id, HttpServletRequest servletRequest) {
+        var user = authorizationService.requireOrder(id, Capability.ORDER_COMPLETE);
+        OrderResponse response = orderService.completeOrder(id);
+        auditLogService.record(user.storeId(), user, "ORDER_FINISHED", "ORDER", id, "Finished table/order", Map.of(), servletRequest);
+        return ApiResponse.success("Order completed", response);
+    }
+
+    @PostMapping("/{id}/reprint")
+    public ApiResponse<PrintJobResponse> reprintOrderReceipt(
+        @PathVariable Long id,
+        @RequestBody OrderReprintRequest request,
+        HttpServletRequest servletRequest
+    ) {
+        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
+        var user = authorizationService.requireOrder(id, Capability.ORDER_VIEW_DETAIL);
+        PrintJobResponse response = printDispatcherService.reprintOrder(id, request, user.userId());
+        auditLogService.record(user.storeId(), user, "ORDER_REPRINTED", "ORDER", id, "Reprint requested", Map.of("receipt_type", request.receipt_type == null ? "" : request.receipt_type), servletRequest);
+        return ApiResponse.success("Reprint requested", response);
+    }
+
+    @GetMapping("/{id}/print-jobs")
+    public ApiResponse<List<PrintJobResponse>> getOrderPrintJobs(@PathVariable Long id) {
+        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
+        var user = authorizationService.requireOrder(id, Capability.ORDER_VIEW_DETAIL, Capability.ORDER_SUBMIT);
+        return ApiResponse.success(printJobService.listOrderJobs(user.storeId(), id));
+    }
+
+    @GetMapping("/{id}/print-options")
+    public ApiResponse<List<OrderPrintOptionResponse>> getOrderPrintOptions(@PathVariable Long id) {
+        authorizationService.requireOrder(id, Capability.ORDER_VIEW_DETAIL);
+        return ApiResponse.success(printDispatcherService.getOrderPrintOptions(id));
     }
 
     @PostMapping("/{id}/cancel")

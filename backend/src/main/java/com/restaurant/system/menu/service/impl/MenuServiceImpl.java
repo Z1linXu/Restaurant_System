@@ -50,13 +50,37 @@ public class MenuServiceImpl implements MenuService {
                     option -> new MenuCatalogResponse.OptionResponse(
                         option.id,
                         option.option_type,
+                        option.option_code,
+                        option.option_group,
+                        option.parent_option_id,
+                        option.sort_order,
                         option.name_zh,
                         option.name_en,
-                        option.price_delta
+                        option.price_delta,
+                        option.is_active
                     ),
                     Collectors.toList()
                 )
             ));
+        Map<String, MenuItem> itemBySku = items.stream()
+            .filter(item -> item.sku != null && !item.sku.isBlank())
+            .collect(Collectors.toMap(item -> item.sku, item -> item, (left, right) -> left, LinkedHashMap::new));
+
+        for (List<MenuCatalogResponse.OptionResponse> itemOptions : optionsByItemId.values()) {
+            for (MenuCatalogResponse.OptionResponse option : itemOptions) {
+                String sideSku = resolveComboSideSku(option.option_code, option.name_zh);
+                if (sideSku == null) {
+                    continue;
+                }
+                MenuItem sideItem = itemBySku.get(sideSku);
+                if (sideItem == null) {
+                    continue;
+                }
+                option.side_item_remove_options = optionsByItemId.getOrDefault(sideItem.id, List.of()).stream()
+                    .filter(this::isRemoveOption)
+                    .toList();
+            }
+        }
 
         Map<Long, List<MenuCatalogResponse.ItemResponse>> itemsByCategoryId = new LinkedHashMap<>();
         for (MenuItem item : items) {
@@ -90,5 +114,42 @@ public class MenuServiceImpl implements MenuService {
             .toList();
 
         return new MenuCatalogResponse(storeId, categoryResponses);
+    }
+
+    private boolean isRemoveOption(MenuCatalogResponse.OptionResponse option) {
+        if (option.option_group != null && "REMOVE".equalsIgnoreCase(option.option_group)) {
+            return true;
+        }
+        return option.option_group == null
+            && option.option_type != null
+            && "remove".equalsIgnoreCase(option.option_type);
+    }
+
+    private String resolveComboSideSku(String optionCode, String nameZh) {
+        if (optionCode != null && !optionCode.isBlank()) {
+            String code = optionCode.trim().toLowerCase();
+            if (code.contains("combo_shredded_potato")) {
+                return "shredded_potato";
+            }
+            if (code.contains("combo_cucumber_salad")) {
+                return "cucumber_salad";
+            }
+            if (code.contains("combo_edamame")) {
+                return "edamame";
+            }
+            return switch (code) {
+                case "edamame" -> "edamame";
+                case "shredded_potato" -> "shredded_potato";
+                case "cucumber_salad" -> "cucumber_salad";
+                default -> null;
+            };
+        }
+        // Legacy fallback for databases created before stable combo side codes existed.
+        return switch (nameZh == null ? "" : nameZh.trim()) {
+            case "套餐毛豆" -> "edamame";
+            case "套餐土豆丝" -> "shredded_potato";
+            case "套餐拌黄瓜" -> "cucumber_salad";
+            default -> null;
+        };
     }
 }

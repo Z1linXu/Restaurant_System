@@ -30,10 +30,13 @@ export const routeFeatureMetadata: Array<{
   { matcher: (pathname) => pathname === '/frontdesk' || pathname === '/frontdesk/', requiredFeature: 'CORE_POS' },
   { matcher: (pathname) => pathname.startsWith('/frontdesk/menu') || pathname.startsWith('/menu'), requiredFeature: 'CORE_POS' },
   { matcher: (pathname) => pathname.startsWith('/frontdesk/order') || pathname.startsWith('/orders'), requiredFeature: 'CORE_POS' },
+  { matcher: (pathname) => pathname === '/owner' || pathname === '/owner/' || pathname.startsWith('/owner/'), requiredFeature: 'ADMIN' },
   { matcher: (pathname) => pathname.startsWith('/admin/settings/printing'), requiredFeature: 'PRINTING' },
   { matcher: (pathname) => pathname.startsWith('/pickup'), requiredFeature: 'KDS' },
   { matcher: (pathname) => pathname.startsWith('/kds/'), requiredFeature: 'KDS' },
-  { matcher: (pathname) => pathname.startsWith('/admin/dashboard'), requiredFeature: 'ADMIN' },
+  { matcher: (pathname) => pathname === '/admin' || pathname === '/admin/' || pathname.startsWith('/admin/dashboard'), requiredFeature: 'ADMIN' },
+  { matcher: (pathname) => pathname.startsWith('/admin/staff'), requiredFeature: 'ADMIN' },
+  { matcher: (pathname) => pathname.startsWith('/admin/audit-logs') || pathname.startsWith('/admin/audit'), requiredFeature: 'ADMIN' },
   { matcher: (pathname) => pathname.startsWith('/admin/menu/items'), requiredFeature: 'ADMIN' },
   { matcher: (pathname) => pathname.startsWith('/admin/settings/tables'), requiredFeature: 'ADMIN' },
   { matcher: (pathname) => pathname.startsWith('/admin/reports/'), requiredFeature: 'ANALYTICS' },
@@ -41,5 +44,6 @@ export const routeFeatureMetadata: Array<{
 ]
 
 export function getRequiredFeatureForPath(pathname: string) {
-  return routeFeatureMetadata.find((entry) => entry.matcher(pathname))?.requiredFeature ?? 'CORE_POS'
+  const normalized = pathname.replace(/^\/stores\/\d+/, '') || '/'
+  return routeFeatureMetadata.find((entry) => entry.matcher(normalized))?.requiredFeature ?? 'CORE_POS'
 }

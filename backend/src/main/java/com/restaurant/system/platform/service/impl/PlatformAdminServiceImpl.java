@@ -317,6 +317,10 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
             : menuItemOptionRepository.findById(menuItemOption.id).orElseThrow(() -> new BusinessException("Menu item option not found"));
         target.menu_item_id = menuItemOption.menu_item_id;
         target.option_type = menuItemOption.option_type;
+        target.option_code = menuItemOption.option_code;
+        target.option_group = menuItemOption.option_group;
+        target.parent_option_id = menuItemOption.parent_option_id;
+        target.sort_order = menuItemOption.sort_order;
         target.name_zh = menuItemOption.name_zh;
         target.name_en = menuItemOption.name_en;
         target.price_delta = menuItemOption.price_delta;

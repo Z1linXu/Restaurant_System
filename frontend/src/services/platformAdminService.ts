@@ -1,11 +1,4 @@
-const DEFAULT_ADMIN_USER_ID = '2'
-const DEFAULT_STORE_ID = 1
-
-interface BackendApiResponse<T> {
-  success: boolean
-  message?: string
-  data: T
-}
+import { apiRequest } from './apiClient'
 
 export interface OrganizationRecord {
   id?: number
@@ -101,43 +94,22 @@ export interface MenuItemAdminRecord {
   updated_at?: string
 }
 
-async function request<T>(input: string, init?: RequestInit) {
-  const response = await fetch(input, init)
-  if (!response.ok) {
-    throw new Error(`Request failed (${response.status})`)
-  }
-
-  const payload = (await response.json()) as BackendApiResponse<T>
-  if (!payload.success) {
-    throw new Error(payload.message || 'Request failed')
-  }
-
-  return payload.data
-}
+const request = apiRequest
 
 function buildHeaders() {
   return {
     'Content-Type': 'application/json',
-    'X-User-Id': DEFAULT_ADMIN_USER_ID,
   }
 }
 
-export async function fetchPlatformOverview(storeId = DEFAULT_STORE_ID) {
+export async function fetchPlatformOverview(storeId: number) {
   const params = new URLSearchParams({ store_id: String(storeId) })
-  return request<PlatformAdminOverview>(`/api/v1/admin/platform/overview?${params.toString()}`, {
-    headers: {
-      'X-User-Id': DEFAULT_ADMIN_USER_ID,
-    },
-  })
+  return request<PlatformAdminOverview>(`/api/v1/admin/platform/overview?${params.toString()}`)
 }
 
-export async function fetchAdminMenuItems(storeId = DEFAULT_STORE_ID) {
+export async function fetchAdminMenuItems(storeId: number) {
   const params = new URLSearchParams({ store_id: String(storeId) })
-  return request<MenuItemAdminRecord[]>(`/api/v1/admin/platform/menu/items?${params.toString()}`, {
-    headers: {
-      'X-User-Id': DEFAULT_ADMIN_USER_ID,
-    },
-  })
+  return request<MenuItemAdminRecord[]>(`/api/v1/admin/platform/menu/items?${params.toString()}`)
 }
 
 export async function savePlatformEntity(path: string, payload: Record<string, unknown>, id?: number) {
@@ -157,15 +129,12 @@ export async function createStoreFromTemplate(payload: TemplateCreateStoreInput)
   })
 }
 
-export async function rebuildAnalyticsForDate(date: string, storeId = DEFAULT_STORE_ID) {
+export async function rebuildAnalyticsForDate(date: string, storeId: number) {
   const params = new URLSearchParams({
     date,
     store_id: String(storeId),
   })
   return request<string>(`/api/v1/admin/analytics/rebuild?${params.toString()}`, {
     method: 'POST',
-    headers: {
-      'X-User-Id': DEFAULT_ADMIN_USER_ID,
-    },
   })
 }

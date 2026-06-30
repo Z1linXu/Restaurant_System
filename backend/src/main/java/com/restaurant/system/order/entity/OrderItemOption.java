@@ -43,6 +43,15 @@ public class OrderItemOption {
     @Column(name = "option_type_snapshot")
     public String option_type_snapshot;
 
+    @Column(name = "option_code_snapshot")
+    public String option_code_snapshot;
+
+    @Column(name = "option_group_snapshot")
+    public String option_group_snapshot;
+
+    @Column(name = "parent_option_id_snapshot")
+    public Long parent_option_id_snapshot;
+
     @Column(name = "option_name_snapshot_zh")
     public String option_name_snapshot_zh;
 

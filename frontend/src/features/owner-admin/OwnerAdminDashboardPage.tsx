@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { navigateTo } from '../frontdesk/navigation'
-import { isFeatureEnabled, type FeaturePackage } from '../feature-flags/featureConfig'
 import {
   fetchOwnerDashboard,
   type OwnerDashboardItemPerformance,
@@ -10,17 +9,8 @@ import {
   type OwnerDashboardTrendPoint,
 } from '../../services/ownerDashboardService'
 import { fetchPlatformOverview, type PlatformAdminOverview } from '../../services/platformAdminService'
-
-type OwnerSection = 'home' | 'stores' | 'menu' | 'reports' | 'integrations' | 'settings'
-
-const sidebarItems: { id: OwnerSection; label: string; icon: string; description: string; feature: FeaturePackage | null }[] = [
-  { id: 'home', label: 'Home', icon: '⌂', description: 'Daily operating overview', feature: 'ADMIN' },
-  { id: 'stores', label: 'Stores', icon: '▣', description: 'Store portfolio and health', feature: 'ADMIN' },
-  { id: 'menu', label: 'Menu Management', icon: '☰', description: 'Menu maintenance workspace', feature: 'ADMIN' },
-  { id: 'reports', label: 'Reports', icon: '◫', description: 'Sales and performance reports', feature: 'ANALYTICS' },
-  { id: 'integrations', label: 'Integrations', icon: '◎', description: 'Delivery and platform links', feature: null },
-  { id: 'settings', label: 'Settings', icon: '⚙', description: 'Organization-level settings', feature: 'PRINTING' },
-]
+import { useCurrentStore } from '../store/StoreContext'
+import { buildStorePath } from '../store/storeRoutes'
 
 const RANGE_OPTIONS: { value: OwnerDashboardRange; label: string }[] = [
   { value: 'today', label: 'Today' },
@@ -62,20 +52,6 @@ function getSeverityTone(severity: string) {
     default:
       return 'border-[rgba(26,28,25,0.12)] bg-[rgba(26,28,25,0.04)] text-[var(--on-surface)]'
   }
-}
-
-function PlaceholderSection({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="rounded-[28px] bg-[rgba(255,255,255,0.82)] p-6 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
-      <div className="text-[1.4rem] font-black tracking-[-0.04em] text-[var(--on-surface)]">{title}</div>
-      <div className="mt-2 max-w-2xl text-[0.95rem] leading-6 text-[var(--muted)]">
-        {description}
-      </div>
-      <div className="mt-6 rounded-[22px] border border-dashed border-[rgba(97,0,0,0.18)] bg-[rgba(97,0,0,0.03)] px-5 py-6 text-[0.92rem] font-medium text-[var(--primary)]">
-        This module shell is ready. We can layer in live owner workflows here without changing the dashboard layout.
-      </div>
-    </div>
-  )
 }
 
 function MetricCard({
@@ -177,12 +153,12 @@ function ItemPerformanceList({
 }
 
 export function OwnerAdminDashboardPage() {
+  const { storeId } = useCurrentStore()
   const [overview, setOverview] = useState<PlatformAdminOverview | null>(null)
   const [dashboard, setDashboard] = useState<OwnerDashboardResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [dashboardLoading, setDashboardLoading] = useState(true)
-  const [activeSection, setActiveSection] = useState<OwnerSection>('home')
-  const [selectedStoreId, setSelectedStoreId] = useState<string>('ALL')
+  const [selectedStoreId, setSelectedStoreId] = useState<string>(String(storeId))
   const [selectedRange, setSelectedRange] = useState<OwnerDashboardRange>('today')
   const [compareEnabled, setCompareEnabled] = useState(true)
   const [clock, setClock] = useState(new Date())
@@ -198,7 +174,7 @@ export function OwnerAdminDashboardPage() {
       setLoading(true)
       setError(null)
       try {
-        const data = await fetchPlatformOverview(1)
+        const data = await fetchPlatformOverview(storeId)
         setOverview(data)
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : 'Failed to load owner dashboard data')
@@ -208,7 +184,11 @@ export function OwnerAdminDashboardPage() {
     }
 
     void loadOverview()
-  }, [])
+  }, [storeId])
+
+  useEffect(() => {
+    setSelectedStoreId(String(storeId))
+  }, [storeId])
 
   const organization = overview?.organizations?.[0]
   const stores = useMemo<OwnerDashboardStoreSummary[]>(
@@ -222,7 +202,7 @@ export function OwnerAdminDashboardPage() {
   )
 
   useEffect(() => {
-    if (!overview || activeSection !== 'home') {
+    if (!overview) {
       return
     }
 
@@ -232,7 +212,7 @@ export function OwnerAdminDashboardPage() {
       try {
         const nextDashboard = await fetchOwnerDashboard({
           organizationId: Number(organization?.id ?? dashboard?.organization_id ?? 1),
-          storeId: selectedStoreId === 'ALL' ? null : Number(selectedStoreId),
+          storeId: Number(selectedStoreId),
           range: selectedRange,
           compare: compareEnabled,
         })
@@ -245,10 +225,9 @@ export function OwnerAdminDashboardPage() {
     }
 
     void loadDashboard()
-  }, [activeSection, compareEnabled, dashboard?.organization_id, organization?.id, overview, selectedRange, selectedStoreId])
+  }, [compareEnabled, dashboard?.organization_id, organization?.id, overview, selectedRange, selectedStoreId])
 
-  const currentStoreLabel =
-    selectedStoreId === 'ALL' ? 'All Stores' : stores.find((store) => String(store.id) === selectedStoreId)?.name ?? 'Store'
+  const currentStoreLabel = stores.find((store) => String(store.id) === selectedStoreId)?.name ?? 'Store'
 
   const salesTrendPoints = dashboard?.trend.points ?? []
   const topItems = dashboard?.top_items ?? []
@@ -258,74 +237,14 @@ export function OwnerAdminDashboardPage() {
   const statusPanel = dashboard?.order_status ?? { pending: 0, preparing: 0, ready: 0 }
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#f6f3ec_0%,#efe9dd_100%)] text-[var(--on-surface)]">
-      <div className="grid min-h-screen xl:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="border-r border-[rgba(97,0,0,0.08)] bg-[rgba(255,255,255,0.8)] px-4 py-5 backdrop-blur-sm">
-          <div className="rounded-[24px] bg-[rgba(97,0,0,0.04)] px-4 py-4">
-            <div className="text-[1.6rem] font-black tracking-[-0.05em] text-[var(--primary)]">Owner Console</div>
-            <div className="mt-1 text-[0.84rem] leading-5 text-[var(--muted)]">
-              {String(organization?.name ?? dashboard?.organization_name ?? 'Restaurant Organization')}
-            </div>
-          </div>
-
-          <nav className="mt-5 space-y-2">
-            {sidebarItems.filter((item) => item.feature == null || isFeatureEnabled(item.feature)).map((item) => {
-              const active = item.id === activeSection
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    if (item.id === 'reports') {
-                      navigateTo('/admin/reports/sales')
-                      return
-                    }
-                    if (item.id === 'stores') {
-                      navigateTo('/admin/settings/tables')
-                      return
-                    }
-                    if (item.id === 'menu') {
-                      navigateTo('/admin/menu/items')
-                      return
-                    }
-                    if (item.id === 'settings') {
-                      navigateTo('/admin/settings/printing')
-                      return
-                    }
-                    setActiveSection(item.id)
-                  }}
-                  className={`w-full rounded-[20px] px-4 py-3 text-left transition ${
-                    active
-                      ? 'bg-[var(--primary)] text-white shadow-[0_18px_34px_rgba(97,0,0,0.18)]'
-                      : 'bg-transparent text-[rgba(26,28,25,0.78)] hover:bg-[rgba(97,0,0,0.06)]'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-[1.2rem] leading-none">{item.icon}</span>
-                    <div>
-                      <div className="text-[0.98rem] font-semibold">{item.label}</div>
-                      <div className={`mt-0.5 text-[0.76rem] ${active ? 'text-[rgba(255,255,255,0.82)]' : 'text-[var(--muted)]'}`}>
-                        {item.description}
-                      </div>
-                    </div>
-                  </div>
-                </button>
-              )
-            })}
-          </nav>
-        </aside>
-
-        <main className="px-5 py-5 xl:px-6">
-          <div className="mx-auto max-w-[1600px] space-y-5">
-            <div className="flex flex-wrap items-center justify-between gap-4 rounded-[28px] bg-[rgba(255,255,255,0.84)] px-5 py-4 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-[28px] bg-[rgba(255,255,255,0.84)] px-5 py-4 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
               <div>
                 <div className="text-[1.7rem] font-black tracking-[-0.05em] text-[var(--on-surface)]">
-                  {activeSection === 'home' ? 'Restaurant Performance Dashboard' : sidebarItems.find((item) => item.id === activeSection)?.label}
+                  Restaurant Performance Dashboard
                 </div>
                 <div className="mt-1 text-[0.9rem] text-[var(--muted)]">
-                  {activeSection === 'home'
-                    ? 'Production analytics for owners and store managers.'
-                    : 'Section shell ready for the next phase of owner tooling.'}
+                  Production analytics for owners and store managers.
                 </div>
               </div>
 
@@ -337,7 +256,6 @@ export function OwnerAdminDashboardPage() {
                     onChange={(event) => setSelectedStoreId(event.target.value)}
                     className="mt-1 min-w-[220px] bg-transparent text-[0.95rem] font-semibold text-[var(--on-surface)] outline-none"
                   >
-                    <option value="ALL">All Stores</option>
                     {stores.map((store) => (
                       <option key={store.id} value={String(store.id)}>
                         {store.name}
@@ -386,9 +304,9 @@ export function OwnerAdminDashboardPage() {
                   </div>
                 </div>
               </div>
-            </div>
+      </div>
 
-            {loading ? (
+      {loading ? (
               <div className="rounded-[26px] bg-[rgba(255,255,255,0.82)] px-5 py-6 text-[0.95rem] text-[var(--muted)] shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
                 Loading owner console shell...
               </div>
@@ -396,11 +314,6 @@ export function OwnerAdminDashboardPage() {
               <div className="rounded-[24px] bg-[rgba(97,0,0,0.08)] px-5 py-4 text-[0.95rem] font-semibold text-[var(--primary)]">
                 {error}
               </div>
-            ) : activeSection !== 'home' ? (
-              <PlaceholderSection
-                title={sidebarItems.find((item) => item.id === activeSection)?.label ?? 'Owner Module'}
-                description={`The ${sidebarItems.find((item) => item.id === activeSection)?.label ?? 'module'} area will live under the same owner-admin shell and store selector.`}
-              />
             ) : dashboardLoading || !dashboard ? (
               <div className="rounded-[26px] bg-[rgba(255,255,255,0.82)] px-5 py-6 text-[0.95rem] text-[var(--muted)] shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
                 Loading analytics dashboard...
@@ -488,14 +401,14 @@ export function OwnerAdminDashboardPage() {
 
                   <div className="rounded-[26px] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
                     <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">Recent Orders</div>
-                    <div className="mt-1 text-[0.85rem] text-[var(--muted)]">Tap an order to jump into checkout and detail view.</div>
+                    <div className="mt-1 text-[0.85rem] text-[var(--muted)]">Tap an order to open the read-only order history detail.</div>
                     <div className="mt-4 space-y-3">
                       {recentOrders.length ? (
                         recentOrders.map((order) => (
                           <button
                             key={order.order_id}
                             type="button"
-                            onClick={() => navigateTo(`/frontdesk/order?orderId=${order.order_id}`)}
+                            onClick={() => navigateTo(`${buildStorePath(storeId, '/frontdesk/order')}?orderId=${order.order_id}`)}
                             className="flex w-full items-center justify-between gap-4 rounded-[18px] bg-[rgba(26,28,25,0.04)] px-4 py-3 text-left transition hover:bg-[rgba(97,0,0,0.05)]"
                           >
                             <div className="min-w-0">
@@ -552,9 +465,6 @@ export function OwnerAdminDashboardPage() {
                 </div>
               </>
             )}
-          </div>
-        </main>
-      </div>
     </div>
   )
 }

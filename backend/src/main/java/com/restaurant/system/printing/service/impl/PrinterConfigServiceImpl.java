@@ -1,6 +1,7 @@
 package com.restaurant.system.printing.service.impl;
 
 import com.restaurant.system.common.exception.BusinessException;
+import com.restaurant.system.printing.PrintingMode;
 import com.restaurant.system.printing.dto.PrintCenterOverviewResponse;
 import com.restaurant.system.printing.entity.PrinterConfig;
 import com.restaurant.system.printing.repository.PrinterAssignmentRepository;
@@ -36,6 +37,7 @@ public class PrinterConfigServiceImpl implements PrinterConfigService {
         PrintCenterOverviewResponse response = new PrintCenterOverviewResponse();
         response.store_id = storeId;
         response.printing_enabled = isPrintingEnabled(storeId);
+        response.printing_mode = getStorePrintingMode(storeId);
         response.printers = getPrinters(storeId);
         response.assignments = printerAssignmentRepository.findAllByStoreIdOrderByIdAsc(storeId);
         return response;
@@ -67,7 +69,8 @@ public class PrinterConfigServiceImpl implements PrinterConfigService {
             ? EscPosFontSizeMode.DEFAULT_CODE
             : EscPosFontSizeMode.fromConfig(printerConfig.font_size).code;
         target.font_size_mode = printerConfig.font_size_mode;
-        target.enabled = printerConfig.enabled == null ? true : printerConfig.enabled;
+        // Printer availability is an operational assignment concern. Physical printer configs stay enabled.
+        target.enabled = true;
         target.paper_width_mm = printerConfig.paper_width_mm == null ? 80 : printerConfig.paper_width_mm;
         target.timeout_ms = printerConfig.timeout_ms == null ? 3000 : printerConfig.timeout_ms;
         stamp(target, printerConfig.id == null);
@@ -76,20 +79,38 @@ public class PrinterConfigServiceImpl implements PrinterConfigService {
 
     @Override
     @Transactional
-    public PrinterConfig disablePrinter(Long id, Long storeId) {
+    public void deletePrinter(Long id, Long storeId) {
         PrinterConfig printer = printerConfigRepository.findById(id).orElseThrow(() -> new BusinessException("Printer not found"));
         if (!storeId.equals(printer.store_id)) {
             throw new BusinessException("Printer does not belong to store");
         }
-        printer.enabled = false;
-        printer.updated_at = LocalDateTime.now();
-        return printerConfigRepository.save(printer);
+        long assignmentCount = printerAssignmentRepository.countByStoreIdAndPrinterId(storeId, id);
+        if (assignmentCount > 0) {
+            throw new BusinessException("Printer is currently assigned to modules. Remove assignments before deleting.");
+        }
+        printerConfigRepository.delete(printer);
     }
 
     @Override
     public boolean isPrintingEnabled(Long storeId) {
+        return !PrintingMode.DISABLED.equals(getStorePrintingMode(storeId));
+    }
+
+    @Override
+    public String getStorePrintingMode(Long storeId) {
         Store store = requireStore(storeId);
-        return store.printing_enabled == null || Boolean.TRUE.equals(store.printing_enabled);
+        if (store.printing_mode != null && !store.printing_mode.isBlank()) {
+            return PrintingMode.normalize(store.printing_mode);
+        }
+        if (Boolean.FALSE.equals(store.printing_enabled)) {
+            return PrintingMode.DISABLED;
+        }
+        return PrintingMode.REAL;
+    }
+
+    @Override
+    public boolean isMockPrinting(Long storeId) {
+        return PrintingMode.MOCK.equals(getStorePrintingMode(storeId));
     }
 
     @Override
@@ -97,9 +118,22 @@ public class PrinterConfigServiceImpl implements PrinterConfigService {
     public boolean updateStorePrintingEnabled(Long storeId, boolean enabled) {
         Store store = requireStore(storeId);
         store.printing_enabled = enabled;
+        store.printing_mode = enabled ? PrintingMode.REAL : PrintingMode.DISABLED;
         store.updated_at = LocalDateTime.now();
         storeRepository.save(store);
         return enabled;
+    }
+
+    @Override
+    @Transactional
+    public String updateStorePrintingMode(Long storeId, String printingMode) {
+        Store store = requireStore(storeId);
+        String normalizedMode = PrintingMode.normalize(printingMode);
+        store.printing_mode = normalizedMode;
+        store.printing_enabled = !PrintingMode.DISABLED.equals(normalizedMode);
+        store.updated_at = LocalDateTime.now();
+        storeRepository.save(store);
+        return normalizedMode;
     }
 
     private Store requireStore(Long storeId) {

@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { navigateTo } from '../frontdesk/navigation'
-import { isFeatureEnabled, type FeaturePackage } from '../feature-flags/featureConfig'
 import {
   fetchPlatformOverview,
   savePlatformEntity,
   type DiningTableRecord,
   type PlatformAdminOverview,
 } from '../../services/platformAdminService'
+import { useCurrentStore } from '../store/StoreContext'
 
 type ToastState =
   | { kind: 'success' | 'error'; message: string }
@@ -68,9 +67,10 @@ function sameSavedValues(expected: DiningTableRecord, actual: DiningTableRecord)
 }
 
 export function DiningTablesManagementPage() {
+  const { storeId } = useCurrentStore()
   const [overview, setOverview] = useState<PlatformAdminOverview | null>(null)
   const [tables, setTables] = useState<DiningTableRecord[]>([])
-  const [selectedStoreId, setSelectedStoreId] = useState('1')
+  const [selectedStoreId, setSelectedStoreId] = useState(String(storeId))
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -97,6 +97,10 @@ export function DiningTablesManagementPage() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    setSelectedStoreId(String(storeId))
+  }, [storeId])
 
   useEffect(() => {
     void loadOverview(Number(selectedStoreId))
@@ -190,54 +194,7 @@ export function DiningTablesManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#f6f3ec_0%,#efe9dd_100%)] text-[var(--on-surface)]">
-      <div className="grid min-h-screen xl:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="border-r border-[rgba(97,0,0,0.08)] bg-[rgba(255,255,255,0.8)] px-4 py-5 backdrop-blur-sm">
-          <div className="rounded-[24px] bg-[rgba(97,0,0,0.04)] px-4 py-4">
-            <div className="text-[1.6rem] font-black tracking-[-0.05em] text-[var(--primary)]">Owner Console</div>
-            <div className="mt-1 text-[0.84rem] leading-5 text-[var(--muted)]">Frontdesk table management workspace</div>
-          </div>
-
-          <nav className="mt-5 space-y-2">
-            {([
-              { label: 'Home', path: '/admin/dashboard', icon: '⌂', description: 'Daily operating overview' },
-              { label: 'Dining Tables', path: '/admin/settings/tables', icon: '▣', description: 'Table layout and split setup' },
-              { label: 'Menu Management', path: '/admin/menu/items', icon: '☰', description: 'Menu maintenance workspace' },
-              { label: 'Printing Settings', path: '/admin/settings/printing', icon: '🖨', description: 'Print Center and assignments' },
-              { label: 'Reports', path: '/admin/reports/sales', icon: '◫', description: 'Sales and performance reports' },
-            ] as Array<{ label: string; path: string; icon: string; description: string; feature?: FeaturePackage }>).map((item) => ({
-              ...item,
-              feature: (item.path.startsWith('/admin/reports') ? 'ANALYTICS' : item.path.startsWith('/admin/settings/printing') ? 'PRINTING' : 'ADMIN') as FeaturePackage,
-            })).filter((item) => isFeatureEnabled(item.feature)).map((item) => {
-              const active = item.path === '/admin/settings/tables'
-              return (
-                <button
-                  key={item.path}
-                  type="button"
-                  onClick={() => navigateTo(item.path)}
-                  className={`w-full rounded-[20px] px-4 py-3 text-left transition ${
-                    active
-                      ? 'bg-[var(--primary)] text-white shadow-[0_18px_34px_rgba(97,0,0,0.18)]'
-                      : 'bg-transparent text-[rgba(26,28,25,0.78)] hover:bg-[rgba(97,0,0,0.06)]'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-[1.2rem] leading-none">{item.icon}</span>
-                    <div>
-                      <div className="text-[0.98rem] font-semibold">{item.label}</div>
-                      <div className={`mt-0.5 text-[0.76rem] ${active ? 'text-[rgba(255,255,255,0.82)]' : 'text-[var(--muted)]'}`}>
-                        {item.description}
-                      </div>
-                    </div>
-                  </div>
-                </button>
-              )
-            })}
-          </nav>
-        </aside>
-
-        <main className="px-5 py-5 xl:px-6">
-          <div className="mx-auto max-w-[1600px] space-y-5">
+    <div className="space-y-5">
             <div className="rounded-[28px] bg-[rgba(255,255,255,0.84)] px-5 py-4 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
@@ -498,9 +455,6 @@ export function DiningTablesManagementPage() {
                 )}
               </div>
             </div>
-          </div>
-        </main>
-      </div>
     </div>
   )
 }

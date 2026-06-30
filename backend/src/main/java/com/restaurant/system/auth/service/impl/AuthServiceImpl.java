@@ -10,6 +10,7 @@ import com.restaurant.system.auth.repository.UserCredentialRepository;
 import com.restaurant.system.auth.service.AuthService;
 import com.restaurant.system.auth.service.PasswordService;
 import com.restaurant.system.auth.service.TokenService;
+import com.restaurant.system.audit.service.AuditLogService;
 import com.restaurant.system.common.auth.AuthenticatedUser;
 import com.restaurant.system.common.auth.Capability;
 import com.restaurant.system.common.auth.ForbiddenException;
@@ -29,6 +30,9 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuthServiceImpl implements AuthService {
 
+    private static final Logger logger = LoggerFactory.getLogger(AuthServiceImpl.class);
     private static final String PASSWORD_ALGORITHM_BCRYPT = "BCRYPT";
 
     private final UserCredentialRepository userCredentialRepository;
@@ -47,6 +52,7 @@ public class AuthServiceImpl implements AuthService {
     private final TokenService tokenService;
     private final FeatureFlagService featureFlagService;
     private final RoleCapabilityRegistry roleCapabilityRegistry;
+    private final AuditLogService auditLogService;
     private final long refreshTokenExpirationDays;
 
     public AuthServiceImpl(
@@ -59,7 +65,8 @@ public class AuthServiceImpl implements AuthService {
         TokenService tokenService,
         FeatureFlagService featureFlagService,
         RoleCapabilityRegistry roleCapabilityRegistry,
-        @Value("${app.auth.refresh-token-expiration-days:14}") long refreshTokenExpirationDays
+        AuditLogService auditLogService,
+        @Value("${app.auth.refresh-token-expiration-days:30}") long refreshTokenExpirationDays
     ) {
         this.userCredentialRepository = userCredentialRepository;
         this.refreshTokenRepository = refreshTokenRepository;
@@ -70,24 +77,73 @@ public class AuthServiceImpl implements AuthService {
         this.tokenService = tokenService;
         this.featureFlagService = featureFlagService;
         this.roleCapabilityRegistry = roleCapabilityRegistry;
+        this.auditLogService = auditLogService;
         this.refreshTokenExpirationDays = refreshTokenExpirationDays;
     }
 
     @Override
     @Transactional
     public LoginResponse login(LoginRequest request, HttpServletRequest servletRequest) {
-        UserCredential credential = userCredentialRepository
-            .findFirstByLoginIdentifierIgnoreCaseAndIsActiveTrue(request.loginIdentifier)
-            .orElseThrow(() -> new UnauthorizedException("Invalid login identifier or password"));
+        String loginIdentifier = request.loginIdentifier == null ? "" : request.loginIdentifier.trim();
+        try {
+            Optional<UserCredential> credentialLookup = userCredentialRepository.findFirstByLoginIdentifierIgnoreCase(loginIdentifier);
+            if (credentialLookup.isEmpty()) {
+                logger.info("Login failed: credential not found for identifier {}", safeIdentifier(loginIdentifier));
+                throw new UnauthorizedException("Invalid login identifier or password");
+            }
+            UserCredential credential = credentialLookup.get();
+            if (!Boolean.TRUE.equals(credential.isActive)) {
+                logger.info("Login failed: credential inactive for identifier {}", safeIdentifier(loginIdentifier));
+                throw new UnauthorizedException("Invalid login identifier or password");
+            }
+            logger.debug(
+                "Login credential lookup: identifier={} found=true active=true algorithm={}",
+                safeIdentifier(loginIdentifier),
+                credential.passwordAlgorithm
+            );
 
-        if (!PASSWORD_ALGORITHM_BCRYPT.equalsIgnoreCase(credential.passwordAlgorithm)
-            || !passwordService.matches(request.password, credential.passwordHash)) {
-            throw new UnauthorizedException("Invalid login identifier or password");
+            if (!PASSWORD_ALGORITHM_BCRYPT.equalsIgnoreCase(credential.passwordAlgorithm)) {
+                logger.info(
+                    "Login failed: unsupported password algorithm for identifier {} algorithm={}",
+                    safeIdentifier(loginIdentifier),
+                    credential.passwordAlgorithm
+                );
+                throw new UnauthorizedException("Invalid login identifier or password");
+            }
+            boolean passwordMatches = passwordService.matches(request.password, credential.passwordHash);
+            if (!passwordMatches) {
+                logger.info("Login failed: password mismatch for identifier {}", safeIdentifier(loginIdentifier));
+                throw new UnauthorizedException("Invalid login identifier or password");
+            }
+
+            AuthenticatedUser authenticatedUser = buildAuthenticatedUser(credential.userId);
+            String refreshToken = createRefreshToken(authenticatedUser, servletRequest);
+            auditLogService.record(
+                authenticatedUser.storeId(),
+                authenticatedUser,
+                "LOGIN_SUCCESS",
+                "USER",
+                authenticatedUser.userId(),
+                "Login succeeded for " + authenticatedUser.username(),
+                Map.of("login_identifier", loginIdentifier),
+                servletRequest
+            );
+            return buildLoginResponse(authenticatedUser, refreshToken);
+        } catch (UnauthorizedException | ForbiddenException exception) {
+            auditLogService.recordSystem(
+                null,
+                null,
+                loginIdentifier,
+                null,
+                "LOGIN_FAILED",
+                "USER",
+                null,
+                "Login failed",
+                Map.of("login_identifier", loginIdentifier),
+                servletRequest
+            );
+            throw exception;
         }
-
-        AuthenticatedUser authenticatedUser = buildAuthenticatedUser(credential.userId);
-        String refreshToken = createRefreshToken(authenticatedUser, servletRequest);
-        return buildLoginResponse(authenticatedUser, refreshToken);
     }
 
     @Override
@@ -118,6 +174,18 @@ public class AuthServiceImpl implements AuthService {
                 storedToken.revokedAt = LocalDateTime.now();
                 refreshTokenRepository.save(storedToken);
             }
+            auditLogService.recordSystem(
+                storedToken.storeId,
+                storedToken.userId,
+                null,
+                null,
+                "LOGOUT",
+                "USER",
+                storedToken.userId,
+                "User logged out",
+                Map.of(),
+                null
+            );
         });
     }
 
@@ -198,6 +266,13 @@ public class AuthServiceImpl implements AuthService {
             return forwardedFor.split(",")[0].trim();
         }
         return request.getRemoteAddr();
+    }
+
+    private String safeIdentifier(String loginIdentifier) {
+        if (loginIdentifier == null || loginIdentifier.isBlank()) {
+            return "<blank>";
+        }
+        return loginIdentifier;
     }
 
     private Map<String, Boolean> featureMap() {

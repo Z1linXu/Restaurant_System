@@ -1,5 +1,8 @@
 import { navigateTo } from '../navigation'
 import { isFeatureEnabled, type FeaturePackage } from '../../feature-flags/featureConfig'
+import { StoreSwitcher } from '../../store/StoreSwitcher'
+import { buildStorePath } from '../../store/storeRoutes'
+import { useOptionalCurrentStore } from '../../store/StoreContext'
 
 interface FrontdeskTopNavProps {
   activeItem?: 'menu' | 'orders' | 'pickup' | 'stations' | 'dashboard' | null
@@ -18,6 +21,8 @@ const navItems = [
 }>
 
 export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
+  const currentStore = useOptionalCurrentStore()
+  const path = (target: string) => currentStore ? buildStorePath(currentStore.storeId, target) : target
   return (
     <div className="flex items-center justify-between gap-3 rounded-[22px] bg-[rgba(255,255,255,0.78)] px-4 py-2.5 shadow-[0_10px_22px_rgba(26,28,25,0.05)] backdrop-blur-sm">
       <div className="flex items-center gap-3">
@@ -25,12 +30,13 @@ export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
           👨🏻‍🍳
         </div>
         <div>
-          <p className="font-display text-[1.2rem] font-extrabold tracking-[-0.04em] text-[var(--primary)]">Ichiraku POS</p>
-          <p className="text-[0.72rem] text-[var(--muted)]">Frontdesk Workstation</p>
+          <p className="font-display text-[1.2rem] font-extrabold tracking-[-0.04em] text-[var(--primary)]">蘭</p>
+          <p className="text-[0.72rem] text-[var(--muted)]">{currentStore?.storeName ?? 'Frontdesk Workstation'}</p>
         </div>
       </div>
 
       <nav className="flex items-center gap-2">
+        <StoreSwitcher compact />
         {navItems.filter((item) => isFeatureEnabled(item.feature)).map((item) => {
           const active = item.id === activeItem
           return (
@@ -44,19 +50,19 @@ export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
               }`}
               onClick={() => {
                 if (item.id === 'orders') {
-                  navigateTo('/frontdesk/order')
+                  navigateTo(path('/frontdesk/order'))
                   return
                 }
                 if (item.id === 'pickup') {
-                  navigateTo('/pickup')
+                  navigateTo(path('/pickup'))
                   return
                 }
                 if (item.id === 'menu') {
-                  navigateTo('/frontdesk')
+                  navigateTo(path('/frontdesk'))
                   return
                 }
                 if (item.id === 'dashboard') {
-                  navigateTo('/admin/dashboard')
+                  navigateTo(path('/admin/dashboard'))
                 }
               }}
             >

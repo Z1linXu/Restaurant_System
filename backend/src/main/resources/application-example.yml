@@ -11,5 +11,5 @@ app:
   auth:
     jwt-secret: replace-with-a-long-random-production-secret
     access-token-expiration-seconds: 900
-    refresh-token-expiration-days: 14
+    refresh-token-expiration-days: 30
     x-user-id-fallback-enabled: true

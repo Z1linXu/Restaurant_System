@@ -16,6 +16,29 @@ Behavior:
 - backend enforces role capability checks server-side
 - this header-based context is temporary and should be replaceable by real login/auth later
 
+## Store Access Scope
+
+Backend store access is enforced by `StoreAccessService`.
+
+- `organization_memberships` grants organization-level access, primarily for owners.
+- `store_memberships` grants store-level access for managers, frontdesk, kitchen, noodle, and pass/runner users.
+- `users.store_id` remains a legacy/default store, but new authorization checks should not depend on it alone.
+- `ADMIN` is treated as platform/legacy admin and can access all stores.
+- `OWNER` can access stores inside active organization memberships.
+- Store-scoped APIs must return `403` when the authenticated user cannot access the requested store.
+
+### Current User Workspaces
+
+GET `/me/workspaces`
+
+Returns the organizations and stores available to the current authenticated user.
+
+### Store Context
+
+GET `/stores/{storeId}/context`
+
+Returns store context only if the current user is authorized for that store. URL `storeId` is never considered proof of access.
+
 ## Modules
 - Orders
 - Kitchen
@@ -62,22 +85,35 @@ Order detail should include:
 ### Complete Order
 POST /orders/{id}/complete
 
-### Post-Submit Item Modification Rule
-For MVP, frontdesk may continue to modify item lines after submit when:
-- order status is `submitted`, `preparing`, or `ready`
-- target item is not already `ready_for_pickup`
-- target item is not already `served`
+### Post-Submit Add-Only Update Rule
+For orders in `submitted`, `preparing`, or `ready` status, existing items are immutable after they have been submitted.
 
-Allowed actions:
-- add item
-- update quantity
-- update notes/options/specs
-- remove item
+- Existing item quantity, options, notes, and deletion are locked.
+- Legacy `POST /orders/{id}/items`, item `PUT`, quantity `PUT`, and item `DELETE` endpoints accept draft orders only.
+- New items are added atomically through `POST /orders/{id}/updates` with an `idempotency_key`.
+- One update request creates one `order_update_batches` revision and tags each new item with `order_update_batch_id`.
+- The automatic GRAB update ticket contains only items from that exact update batch.
+- FRONTDESK_RECEIPT is not automatically reprinted for an update.
+- Manual order reprint always renders the complete current order.
 
-Important:
-- backend does not depend on true kitchen `in_progress` tracking to decide modification eligibility
-- if a submitted order is modified, downstream snapshot-based reads must reflect the updated item snapshot/instructions
-- if a new kitchen item is added to a previously `ready` order, the order must move back into active kitchen flow
+### Create Submitted Order Update
+POST `/orders/{id}/updates`
+
+Request:
+- `idempotency_key` (required)
+- `items` (required, new items only)
+
+The same `order_id + idempotency_key` returns the previously created batch and does not duplicate items, tasks, inventory deductions, or print jobs.
+
+### Order Print Options
+GET `/orders/{id}/print-options`
+
+Returns renderer-backed module options with availability and an unavailable reason based on feature, store mode, assignment, and printer configuration.
+
+### Today Order History
+GET `/frontdesk/orders/today?store_id=1&limit=100`
+
+Returns lightweight summaries for today's orders. Order detail is loaded separately through `GET /orders/{id}`.
 
 ---
 
@@ -311,14 +347,24 @@ Response behavior:
 - option payload includes:
   - `id`
   - `option_type`
+  - `option_code`
+  - `option_group`
+  - `parent_option_id`
+  - `sort_order`
   - `name_zh`
   - `name_en`
   - `price_delta`
+  - `is_active`
 
 ### Menu Modeling Notes
 - `menu_items.station_id` 是菜品默认工位
 - `menu_item_options` 为菜品级独立选项，不是全局选项
-- 推荐 `option_type`：`noodle_type`, `size`, `addon`, `remove`, `soup_base`, `combo_side`, `combo_egg`, `combo_upgrade`
+- `option_type` remains for compatibility: `noodle_type`, `size`, `addon`, `remove`, `soup_base`, `spicy_level`
+- `option_group` is the preferred semantic grouping for new code: `SIZE`, `SOUP_BASE`, `NOODLE_TYPE`, `SPICY_LEVEL`, `ADD_ON`, `REMOVE`, `COMBO`, `COMBO_EGG`, `COMBO_SIDE`, `COMBO_SIDE_REMOVE`
+- `option_code` is the preferred stable machine identifier. Legacy Chinese-name matching is fallback only.
+- `parent_option_id` supports child option modeling, for example `COMBO_SIDE_REMOVE` under a specific `COMBO_SIDE`
+- Catalog option ordering is `sort_order ASC NULLS LAST, id ASC`
+- Inactive options are hidden from new ordering, but historical orders use `order_item_options` snapshots
 - 菜单主数据使用双语字段：`name_zh`, `name_en`
 - MVP API 默认返回双语字段，由前端决定中文优先与英文回退逻辑
 - `DRINK` 与 `ALCOHOL` 为 direct-serve，不进厨房
@@ -327,6 +373,55 @@ Response behavior:
 ---
 
 ## Users & Stations
+
+## Owner Workspace
+
+### Owner Multi-Store Overview
+GET `/api/v1/owner/overview`
+
+Purpose:
+- Returns the current user's accessible organizations/stores and lightweight per-store operating summary for Owner Home.
+- Used by `/owner/dashboard`.
+- Does not replace store-scoped operational APIs.
+
+Access:
+- Allowed: `OWNER`, `ADMIN`, `MANAGER`
+- Denied: `FRONTDESK`, `HOT_KITCHEN`, `NOODLE_VIEW`, `PASS`
+- Backend must scope stores through `StoreAccessService`; frontend filtering is not a security boundary.
+
+Response data:
+- `organizations[]`
+  - `id`
+  - `name`
+  - `code`
+  - `status`
+  - `role_code`
+  - `stores[]`
+- `stores[]`
+  - `id`
+  - `name`
+  - `code`
+  - `status`
+  - `role_code`
+  - `features.core_pos`
+  - `features.printing`
+  - `features.kds`
+  - `features.admin`
+  - `features.analytics`
+  - `summary.today_orders`
+  - `summary.today_sales`
+  - `summary.active_orders`
+  - `summary.occupied_tables`
+  - `summary.open_tables`
+  - `summary.failed_print_jobs`
+  - `summary.printing_mode`
+  - `summary.last_failed_print_at`
+  - `summary.kds_active_count`
+  - `summary.last_updated_at`
+
+Notes:
+- KDS active count is returned only when KDS feature is enabled; Owner Home must not call KDS live endpoints when KDS is disabled.
+- Printing summary is read-only and must not dispatch jobs.
 
 ### Get Stations
 GET /stations
@@ -358,6 +453,7 @@ Capability summary:
 - MVP focuses on core flow only
 - Order status flow is strictly: `draft` -> `submitted` -> `preparing` -> `ready` -> `picked_up` -> `completed`
 - Combo is pricing/sales logic only, not a standalone kitchen item
+- Combo egg/side/side-remove selection should use `option_group` and `option_code`; display-name matching is legacy fallback only
 - Kitchen tasks are assigned using `menu_items.station_id`
 - Kitchen tasks are generated on `POST /orders/{id}/submit`
 - `station_code` is copied from the resolved enabled station record

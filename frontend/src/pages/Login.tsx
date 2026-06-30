@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { login } from '../services/authService'
+import { useAuth } from '../features/auth/useAuth'
+import { defaultWorkspacePathForRole } from '../features/store/storeRoutes'
+import { fetchWorkspaces } from '../services/storeWorkspaceService'
+import { ApiRequestError, getApiUserMessage } from '../services/apiClient'
 
 function navigateTo(path: string) {
   window.history.pushState({}, '', path)
@@ -8,8 +11,9 @@ function navigateTo(path: string) {
 }
 
 export default function Login() {
+  const { signIn } = useAuth()
   const [loginIdentifier, setLoginIdentifier] = useState('owner')
-  const [password, setPassword] = useState('ChangeMe123!')
+  const [password, setPassword] = useState('741xu741')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -18,10 +22,24 @@ export default function Login() {
     setError(null)
     setIsSubmitting(true)
     try {
-      await login(loginIdentifier, password)
-      navigateTo('/admin/dashboard')
+      const response = await signIn(loginIdentifier, password).catch((exception) => {
+        if (exception instanceof ApiRequestError && exception.status === 401) {
+          throw new Error('账号或密码错误 / Login ID or password is incorrect.')
+        }
+        throw exception
+      })
+      const workspaces = await fetchWorkspaces().catch((exception) => {
+        console.error('[Login] workspace loading failed after successful login', exception)
+        throw new Error('登录成功，但门店权限加载失败，请联系管理员检查门店权限 / Login succeeded, but workspace loading failed. Please contact manager or check store access.')
+      })
+      const targetPath = defaultWorkspacePathForRole(response.user.role_code, workspaces)
+      if (!targetPath) {
+        setError('此账号还没有分配门店权限 / No store access assigned to this account.')
+        return
+      }
+      navigateTo(targetPath)
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : 'Login failed')
+      setError(getApiUserMessage(exception, '登录失败，请稍后重试 / Login failed. Please try again.'))
     } finally {
       setIsSubmitting(false)
     }

@@ -1,10 +1,4 @@
-const DEFAULT_ADMIN_USER_ID = '2'
-
-interface BackendApiResponse<T> {
-  success: boolean
-  message?: string
-  data: T
-}
+import { apiRequest } from './apiClient'
 
 export type AnalyticsReportRange = 'today' | 'week' | 'month' | 'custom'
 
@@ -118,23 +112,7 @@ function buildCacheKey(query: AnalyticsSummaryQuery) {
   })
 }
 
-async function request<T>(input: string) {
-  const response = await fetch(input, {
-    headers: {
-      'X-User-Id': DEFAULT_ADMIN_USER_ID,
-    },
-  })
-  if (!response.ok) {
-    throw new Error(`Request failed (${response.status})`)
-  }
-
-  const payload = (await response.json()) as BackendApiResponse<T>
-  if (!payload.success) {
-    throw new Error(payload.message || 'Request failed')
-  }
-
-  return payload.data
-}
+const request = apiRequest
 
 export async function fetchAnalyticsSummaries(query: AnalyticsSummaryQuery) {
   const key = buildCacheKey(query)

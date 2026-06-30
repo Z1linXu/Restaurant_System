@@ -12,11 +12,16 @@ export function navigateTo(path: string) {
 }
 
 export function inferFrontdeskWorkstation(pathname: string) {
-  const match = pathname.match(/^\/frontdesk\/menu\/([^/?#]+)/)
+  const normalized = pathname.replace(/^\/stores\/\d+/, '')
+  const match = normalized.match(/^\/frontdesk\/menu\/([^/?#]+)/)
   return match?.[1] ?? null
 }
 
-export function buildMenuPath(context: MenuRouteContext) {
+function storePrefix(storeId?: number | null) {
+  return storeId ? `/stores/${storeId}` : ''
+}
+
+export function buildMenuPath(context: MenuRouteContext, storeId?: number | null) {
   const params = new URLSearchParams({
     slot: context.slotLabel,
     table: context.tableLabel,
@@ -26,15 +31,16 @@ export function buildMenuPath(context: MenuRouteContext) {
     params.set('pickup', context.pickupLabel)
   }
   const workstationSegment = context.workstation ? `/${context.workstation}` : ''
-  return `/frontdesk/menu${workstationSegment}?${params.toString()}`
+  return `${storePrefix(storeId)}/frontdesk/menu${workstationSegment}?${params.toString()}`
 }
 
-export function buildFrontdeskBoardPath(workstation: string | null) {
-  return workstation ? `/frontdesk/menu/${workstation}` : '/frontdesk'
+export function buildFrontdeskBoardPath(workstation: string | null, storeId?: number | null) {
+  return workstation ? `${storePrefix(storeId)}/frontdesk/menu/${workstation}` : `${storePrefix(storeId)}/frontdesk`
 }
 
 export function parseMenuRoute(pathname: string, search: string): MenuRouteContext | null {
-  if (!pathname.startsWith('/frontdesk/menu') && !pathname.startsWith('/menu')) {
+  const normalized = pathname.replace(/^\/stores\/\d+/, '')
+  if (!normalized.startsWith('/frontdesk/menu') && !normalized.startsWith('/menu')) {
     return null
   }
 
@@ -52,6 +58,6 @@ export function parseMenuRoute(pathname: string, search: string): MenuRouteConte
     tableLabel,
     orderType,
     pickupLabel: params.get('pickup'),
-    workstation: inferFrontdeskWorkstation(pathname),
+    workstation: inferFrontdeskWorkstation(normalized),
   }
 }

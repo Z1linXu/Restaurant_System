@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { fetchServingShelf, markShelfItemServed, subscribeToServingShelf } from '../services/pickupService'
 import type { BackendServingShelfItem } from '../types/kds'
 
-const DEFAULT_STORE_ID = 1
 const PICKUP_REFRESH_INTERVAL_MS = 4000
 
 export interface PickupBoardOrder {
@@ -49,7 +48,7 @@ function buildOrderMap(items: BackendServingShelfItem[]) {
   return nextMap
 }
 
-export function usePickupBoard(storeId = DEFAULT_STORE_ID) {
+export function usePickupBoard(storeId: number) {
   const [ordersMap, setOrdersMap] = useState<Map<number, PickupBoardOrder>>(new Map())
   const [busyTaskIds, setBusyTaskIds] = useState<Set<number>>(new Set())
   const [error, setError] = useState<string | null>(null)

@@ -1,0 +1,1 @@
+import{t as e}from"./react-C9_5Kbch.js";var t=e(),n=(0,t.createContext)(null);function r(){let e=(0,t.useContext)(n);if(!e)throw Error(`useAuth must be used inside AuthProvider`);return e}export{r as n,n as t};

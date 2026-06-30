@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { dineInService } from '../services/dineInService'
 import { fetchDiningTables } from '../services/frontdeskConfigService'
-import { fetchActiveOrderBoard, subscribeToFrontdeskOrders } from '../services/orderService'
+import { fetchActiveOrderBoardForStore, subscribeToFrontdeskOrders } from '../services/orderService'
 import type { BackendDiningTableConfig, DiningTable, TableSeatCode, TableSlot, TableStatus } from '../types/dinein'
 
 const initialData = dineInService.getInitialData()
 const SEAT_CODES: TableSeatCode[] = ['A', 'B']
+const FRONTDESK_POLL_INTERVAL_MS = 30_000
+const FRONTDESK_WS_DEBOUNCE_MS = 500
 
 function stripOccupancy(table: DiningTable): DiningTable {
   return {
@@ -89,7 +91,7 @@ function buildSlots(tables: DiningTable[]) {
   })
 }
 
-function orderPriority(order: Awaited<ReturnType<typeof fetchActiveOrderBoard>>[number]) {
+function orderPriority(order: Awaited<ReturnType<typeof fetchActiveOrderBoardForStore>>[number]) {
   const draftPenalty = order.order_status === 'draft' ? 0 : 1000
   const itemWeight = order.total_item_count ?? 0
   const readyWeight =
@@ -97,13 +99,41 @@ function orderPriority(order: Awaited<ReturnType<typeof fetchActiveOrderBoard>>[
   return draftPenalty + itemWeight * 10 + readyWeight
 }
 
-export function useTableBoard() {
+interface UseTableBoardOptions {
+  enabled?: boolean
+  storeId: number
+}
+
+export function useTableBoard(options: UseTableBoardOptions) {
+  const enabled = options.enabled ?? true
+  const storeId = options.storeId
+  console.count('useTableBoard render')
   const [tables, setTables] = useState<DiningTable[]>(createBaseTables)
   const syncInFlightRef = useRef(false)
+  const syncPendingRef = useRef(false)
+  const wsRefreshTimeoutRef = useRef<number | null>(null)
+  const enabledRef = useRef(enabled)
+
+  useEffect(() => {
+    console.count('useTableBoard effect')
+    console.log('[useTableBoard] enabled changed', {
+      enabled,
+      visibilityState: document.visibilityState,
+    })
+    enabledRef.current = enabled
+    if (!enabled) {
+      syncPendingRef.current = false
+      if (wsRefreshTimeoutRef.current !== null) {
+        console.log('[useTableBoard] clearing pending WebSocket debounce because enabled=false')
+        window.clearTimeout(wsRefreshTimeoutRef.current)
+        wsRefreshTimeoutRef.current = null
+      }
+    }
+  }, [enabled])
 
   const hydrateBaseTables = useCallback(async () => {
     try {
-      const diningTables = await fetchDiningTables()
+      const diningTables = await fetchDiningTables(storeId)
       if (!diningTables.length) {
         return createBaseTables()
       }
@@ -111,10 +141,10 @@ export function useTableBoard() {
     } catch (_error) {
       return createBaseTables()
     }
-  }, [])
+  }, [storeId])
 
   const deriveTablesFromActiveOrders = useCallback(
-    (baseTables: DiningTable[], activeOrders: Awaited<ReturnType<typeof fetchActiveOrderBoard>>): DiningTable[] =>
+    (baseTables: DiningTable[], activeOrders: Awaited<ReturnType<typeof fetchActiveOrderBoardForStore>>): DiningTable[] =>
       baseTables.map<DiningTable>((table) => {
         const matchingOrders = activeOrders
           .filter((order) => {
@@ -171,22 +201,61 @@ export function useTableBoard() {
     [],
   )
 
-  const syncFromBackend = useCallback(async () => {
-    if (syncInFlightRef.current) {
+  const syncFromBackend = useCallback(async (options?: { force?: boolean }) => {
+    console.count('syncFromBackend called')
+    console.log('[useTableBoard] syncFromBackend requested', {
+      force: options?.force === true,
+      enabled: enabledRef.current,
+      visibilityState: document.visibilityState,
+      inFlight: syncInFlightRef.current,
+      pending: syncPendingRef.current,
+    })
+    if (!enabledRef.current) {
+      console.log('[useTableBoard] syncFromBackend skipped: enabled=false')
+      syncPendingRef.current = false
       return
     }
+
+    if (!options?.force && document.visibilityState !== 'visible') {
+      console.log('[useTableBoard] syncFromBackend skipped: document hidden')
+      return
+    }
+
+    if (syncInFlightRef.current) {
+      console.log('[useTableBoard] syncFromBackend queued behind in-flight sync')
+      syncPendingRef.current = true
+      return
+    }
+
     syncInFlightRef.current = true
+    console.log('[useTableBoard] syncFromBackend start')
     try {
-      const [baseTables, activeOrders] = await Promise.all([hydrateBaseTables(), fetchActiveOrderBoard()])
-      setTables(deriveTablesFromActiveOrders(baseTables, activeOrders))
+      do {
+        syncPendingRef.current = false
+        const [baseTables, activeOrders] = await Promise.all([hydrateBaseTables(), fetchActiveOrderBoardForStore(storeId)])
+        if (!enabledRef.current) {
+          console.log('[useTableBoard] syncFromBackend result ignored: enabled=false after fetch')
+          syncPendingRef.current = false
+          return
+        }
+        console.log('[useTableBoard] syncFromBackend applying table state', {
+          baseTableCount: baseTables.length,
+          activeOrderCount: activeOrders.length,
+        })
+        setTables(deriveTablesFromActiveOrders(baseTables, activeOrders))
+      } while (enabledRef.current && syncPendingRef.current && (options?.force || document.visibilityState === 'visible'))
     } finally {
       syncInFlightRef.current = false
+      console.log('[useTableBoard] syncFromBackend finished', {
+        pending: syncPendingRef.current,
+        enabled: enabledRef.current,
+      })
     }
   }, [deriveTablesFromActiveOrders, hydrateBaseTables])
 
   const refreshTableAfterFinish = useCallback(
     async (baseTableLabel: string) => {
-      const [baseTables, activeOrders] = await Promise.all([hydrateBaseTables(), fetchActiveOrderBoard()])
+      const [baseTables, activeOrders] = await Promise.all([hydrateBaseTables(), fetchActiveOrderBoardForStore(storeId)])
       const nextTables = deriveTablesFromActiveOrders(baseTables, activeOrders)
       const hasRemainingSeatOrders = activeOrders.some((order) => {
         const tableNo = order.table_no ?? ''
@@ -207,27 +276,113 @@ export function useTableBoard() {
         }),
       )
     },
-    [deriveTablesFromActiveOrders, hydrateBaseTables],
+    [deriveTablesFromActiveOrders, hydrateBaseTables, storeId],
   )
 
   useEffect(() => {
-    void syncFromBackend()
-  }, [syncFromBackend])
+    console.count('useTableBoard effect')
+    console.log('[useTableBoard] initial sync effect evaluated', { enabled })
+    if (!enabled) {
+      console.log('[useTableBoard] initial sync skipped: enabled=false')
+      return
+    }
+
+    void syncFromBackend({ force: true })
+  }, [enabled, syncFromBackend])
 
   useEffect(() => {
-    const unsubscribe = subscribeToFrontdeskOrders(1, () => {
-      void syncFromBackend()
+    console.count('useTableBoard effect')
+    console.log('[useTableBoard] subscription/polling effect evaluated', { enabled })
+    if (!enabled) {
+      console.log('[useTableBoard] subscription/polling skipped: enabled=false')
+      return () => undefined
+    }
+
+    const scheduleWebSocketRefresh = () => {
+      console.count('useTableBoard websocket refresh scheduled')
+      if (!enabledRef.current) {
+        console.log('[useTableBoard] WebSocket refresh ignored: enabled=false')
+        return
+      }
+      if (document.visibilityState !== 'visible') {
+        console.log('[useTableBoard] WebSocket refresh ignored: document hidden')
+        return
+      }
+
+      if (wsRefreshTimeoutRef.current !== null) {
+        console.log('[useTableBoard] replacing pending WebSocket debounce timeout')
+        window.clearTimeout(wsRefreshTimeoutRef.current)
+      }
+
+      wsRefreshTimeoutRef.current = window.setTimeout(() => {
+        wsRefreshTimeoutRef.current = null
+        if (!enabledRef.current) {
+          console.log('[useTableBoard] debounced WebSocket sync skipped: enabled=false')
+          return
+        }
+        console.log('[useTableBoard] debounced WebSocket sync firing')
+        void syncFromBackend()
+      }, FRONTDESK_WS_DEBOUNCE_MS)
+    }
+
+    console.log('[useTableBoard] WebSocket subscription created')
+    const unsubscribe = subscribeToFrontdeskOrders(storeId, () => {
+      console.count('useTableBoard websocket message')
+      scheduleWebSocketRefresh()
     })
 
     const poller = window.setInterval(() => {
+      console.count('useTableBoard polling interval tick')
+      if (!enabledRef.current) {
+        console.log('[useTableBoard] polling tick ignored: enabled=false')
+        return
+      }
+      if (document.visibilityState !== 'visible') {
+        console.log('[useTableBoard] polling tick ignored: document hidden')
+        return
+      }
       void syncFromBackend()
-    }, 4000)
+    }, FRONTDESK_POLL_INTERVAL_MS)
+    console.log('[useTableBoard] interval created', {
+      poller,
+      intervalMs: FRONTDESK_POLL_INTERVAL_MS,
+    })
+
+    const handleVisibilityChange = () => {
+      console.log('[useTableBoard] visibility changed', {
+        visibilityState: document.visibilityState,
+        enabled: enabledRef.current,
+      })
+      if (!enabledRef.current) {
+        return
+      }
+      if (document.visibilityState !== 'visible') {
+        if (wsRefreshTimeoutRef.current !== null) {
+          console.log('[useTableBoard] clearing WebSocket debounce because document hidden')
+          window.clearTimeout(wsRefreshTimeoutRef.current)
+          wsRefreshTimeoutRef.current = null
+        }
+        return
+      }
+
+      void syncFromBackend({ force: true })
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
+      console.log('[useTableBoard] WebSocket subscription cleaned up')
       unsubscribe()
+      console.log('[useTableBoard] interval cleared', { poller })
       window.clearInterval(poller)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      if (wsRefreshTimeoutRef.current !== null) {
+        console.log('[useTableBoard] clearing WebSocket debounce during cleanup')
+        window.clearTimeout(wsRefreshTimeoutRef.current)
+        wsRefreshTimeoutRef.current = null
+      }
     }
-  }, [syncFromBackend])
+  }, [enabled, storeId, syncFromBackend])
 
   const tableSlots = useMemo(() => buildSlots(tables), [tables])
 

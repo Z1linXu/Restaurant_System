@@ -12,9 +12,15 @@ public interface PrinterConfigService {
 
     PrinterConfig savePrinter(PrinterConfig printerConfig);
 
-    PrinterConfig disablePrinter(Long id, Long storeId);
+    void deletePrinter(Long id, Long storeId);
 
     boolean isPrintingEnabled(Long storeId);
 
+    String getStorePrintingMode(Long storeId);
+
+    boolean isMockPrinting(Long storeId);
+
     boolean updateStorePrintingEnabled(Long storeId, boolean enabled);
+
+    String updateStorePrintingMode(Long storeId, String printingMode);
 }

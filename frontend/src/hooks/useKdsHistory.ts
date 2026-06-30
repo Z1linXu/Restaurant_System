@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { fetchKdsHistory } from '../services/kdsService'
 import type { BackendKdsHistoryOrder } from '../types/kds'
 
-export function useKdsHistory(storeId = 1, stationCode?: string) {
+export function useKdsHistory(storeId: number, stationCode?: string) {
   const [orders, setOrders] = useState<BackendKdsHistoryOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

@@ -8,6 +8,7 @@ public class PrintCenterOverviewResponse {
 
     public Long store_id;
     public Boolean printing_enabled;
+    public String printing_mode;
     public List<PrinterConfig> printers;
     public List<PrinterAssignment> assignments;
 }

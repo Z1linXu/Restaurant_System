@@ -1,6 +1,7 @@
 package com.restaurant.system.order.service.impl;
 
 import com.restaurant.system.common.exception.BusinessException;
+import com.restaurant.system.common.pricing.TaxCalculator;
 import com.restaurant.system.common.realtime.RealtimeEventPublisher;
 import com.restaurant.system.common.realtime.RealtimeTopics;
 import com.restaurant.system.common.realtime.RealtimeUpdateMessage;
@@ -24,10 +25,12 @@ import com.restaurant.system.menu.repository.MenuItemRepository;
 import com.restaurant.system.order.dto.CreateOrderItemOptionRequest;
 import com.restaurant.system.order.dto.CreateOrderItemRequest;
 import com.restaurant.system.order.dto.CreateOrderRequest;
+import com.restaurant.system.order.dto.CreateOrderUpdateRequest;
 import com.restaurant.system.order.dto.FrontdeskOrderBoardResponse;
 import com.restaurant.system.order.dto.OrderItemOptionResponse;
 import com.restaurant.system.order.dto.OrderItemResponse;
 import com.restaurant.system.order.dto.OrderResponse;
+import com.restaurant.system.order.dto.OrderUpdateResponse;
 import com.restaurant.system.order.entity.FrontdeskBeverageItem;
 import com.restaurant.system.order.dto.UpdateDraftOrderHeaderRequest;
 import com.restaurant.system.order.dto.UpdateDraftOrderItemQuantityRequest;
@@ -36,9 +39,11 @@ import com.restaurant.system.order.repository.FrontdeskBeverageItemRepository;
 import com.restaurant.system.order.entity.Order;
 import com.restaurant.system.order.entity.OrderItem;
 import com.restaurant.system.order.entity.OrderItemOption;
+import com.restaurant.system.order.entity.OrderUpdateBatch;
 import com.restaurant.system.order.repository.OrderItemOptionRepository;
 import com.restaurant.system.order.repository.OrderItemRepository;
 import com.restaurant.system.order.repository.OrderRepository;
+import com.restaurant.system.order.repository.OrderUpdateBatchRepository;
 import com.restaurant.system.order.service.OrderService;
 import com.restaurant.system.production.entity.ProductionTask;
 import com.restaurant.system.production.repository.ProductionTaskRepository;
@@ -50,17 +55,20 @@ import com.restaurant.system.user.entity.Store;
 import com.restaurant.system.user.repository.StoreRepository;
 import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.PageRequest;
 
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -130,10 +138,12 @@ public class OrderServiceImpl implements OrderService {
     private static final Set<String> EDITABLE_TABLE_ORDER_STATUSES = Set.of(
         ORDER_STATUS_DRAFT,
         ORDER_STATUS_SUBMITTED,
-        ORDER_STATUS_PREPARING
+        ORDER_STATUS_PREPARING,
+        ORDER_STATUS_READY
     );
 
     private final OrderRepository orderRepository;
+    private final OrderUpdateBatchRepository orderUpdateBatchRepository;
     private final OrderItemRepository orderItemRepository;
     private final OrderItemOptionRepository orderItemOptionRepository;
     private final FrontdeskBeverageItemRepository frontdeskBeverageItemRepository;
@@ -153,6 +163,7 @@ public class OrderServiceImpl implements OrderService {
 
     public OrderServiceImpl(
         OrderRepository orderRepository,
+        OrderUpdateBatchRepository orderUpdateBatchRepository,
         OrderItemRepository orderItemRepository,
         OrderItemOptionRepository orderItemOptionRepository,
         FrontdeskBeverageItemRepository frontdeskBeverageItemRepository,
@@ -171,6 +182,7 @@ public class OrderServiceImpl implements OrderService {
         PrintDispatcherService printDispatcherService
     ) {
         this.orderRepository = orderRepository;
+        this.orderUpdateBatchRepository = orderUpdateBatchRepository;
         this.orderItemRepository = orderItemRepository;
         this.orderItemOptionRepository = orderItemOptionRepository;
         this.frontdeskBeverageItemRepository = frontdeskBeverageItemRepository;
@@ -210,6 +222,7 @@ public class OrderServiceImpl implements OrderService {
         order.discount_amount = BigDecimal.ZERO;
         order.total_amount = BigDecimal.ZERO;
         order.is_modified_after_submit = false;
+        order.current_revision = 1;
         order.created_at = now;
         order.updated_at = now;
         Order savedOrder = orderRepository.save(order);
@@ -272,15 +285,9 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponse addDraftOrderItem(Long id, CreateOrderItemRequest request) {
         Order order = requireItemEditableOrder(id);
+        requireDraftForLegacyItemMutation(order);
         LocalDateTime now = LocalDateTime.now();
         OrderItem orderItem = addDraftOrderItemInternal(order, request, now);
-        if (isSubmittedOrder(order)) {
-            markSubmittedModification(order, now);
-            markSubmittedModification(orderItem, now);
-            synchronizeOperationalRecordForOrderItem(order, orderItem, now);
-            recalculateOrderStatusAfterSubmittedModification(order, now);
-            publishOrderEvent("order.modified_after_submit", order, orderItem.id, null, null);
-        }
         recalculateOrderAmounts(order, now);
         return loadOrderResponse(order.id);
     }
@@ -289,6 +296,7 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponse updateDraftOrderItemQuantity(Long id, Long itemId, UpdateDraftOrderItemQuantityRequest request) {
         Order order = requireItemEditableOrder(id);
+        requireDraftForLegacyItemMutation(order);
         OrderItem orderItem = requireEditableOrderItem(order, itemId);
         LocalDateTime now = LocalDateTime.now();
         orderItem.quantity = request.quantity;
@@ -314,6 +322,7 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponse updateDraftOrderItem(Long id, Long itemId, UpdateDraftOrderItemRequest request) {
         Order order = requireItemEditableOrder(id);
+        requireDraftForLegacyItemMutation(order);
         OrderItem orderItem = requireEditableOrderItem(order, itemId);
         LocalDateTime now = LocalDateTime.now();
 
@@ -356,6 +365,7 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponse removeDraftOrderItem(Long id, Long itemId) {
         Order order = requireItemEditableOrder(id);
+        requireDraftForLegacyItemMutation(order);
         OrderItem orderItem = requireEditableOrderItem(order, itemId);
         LocalDateTime now = LocalDateTime.now();
         if (isSubmittedOrder(order)) {
@@ -419,6 +429,74 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
+    public OrderUpdateResponse createOrderUpdate(Long id, CreateOrderUpdateRequest request, Long userId) {
+        Order order = orderRepository.findByIdForUpdate(id);
+        if (order == null) {
+            throw new BusinessException("Order not found: " + id);
+        }
+        if (!MODIFIABLE_AFTER_SUBMIT_ORDER_STATUSES.contains(order.status)) {
+            throw new BusinessException("Only submitted, preparing, or ready orders can receive an update batch");
+        }
+
+        String idempotencyKey = request.idempotency_key == null ? "" : request.idempotency_key.trim();
+        if (idempotencyKey.isEmpty()) {
+            throw new BusinessException("idempotency_key is required");
+        }
+        OrderUpdateBatch existingBatch = orderUpdateBatchRepository
+            .findByOrderIdAndIdempotencyKey(order.id, idempotencyKey)
+            .orElse(null);
+        if (existingBatch != null) {
+            return buildOrderUpdateResponse(order.id, existingBatch, true);
+        }
+        if (request.items == null || request.items.isEmpty()) {
+            throw new BusinessException("At least one new item is required for Update Order");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        int currentRevision = order.current_revision == null ? 1 : order.current_revision;
+        int nextRevision = currentRevision + 1;
+
+        OrderUpdateBatch batch = new OrderUpdateBatch();
+        batch.order_id = order.id;
+        batch.revision = nextRevision;
+        batch.idempotency_key = idempotencyKey;
+        batch.created_by = userId;
+        batch.created_at = now;
+        batch = orderUpdateBatchRepository.save(batch);
+
+        List<OrderItem> addedItems = new ArrayList<>();
+        for (CreateOrderItemRequest itemRequest : request.items) {
+            OrderItem addedItem = addDraftOrderItemInternal(order, itemRequest, now);
+            addedItem.added_revision = nextRevision;
+            addedItem.order_update_batch_id = batch.id;
+            markSubmittedModification(addedItem, now);
+            addedItems.add(orderItemRepository.save(addedItem));
+        }
+
+        List<OrderItemOption> addedOptions = loadOptionsForOrderItems(addedItems);
+        List<KitchenTask> kitchenTasks = createKitchenTasks(order, addedItems, addedOptions, now);
+        List<FrontdeskBeverageItem> beverageItems = createFrontdeskBeverageItems(order, addedItems, addedOptions, now);
+        createProductionTasks(order, kitchenTasks, beverageItems, now);
+        deductInventory(order, addedItems, addedOptions, now);
+
+        order.current_revision = nextRevision;
+        order.modified_after_submit_by = userId;
+        markSubmittedModification(order, now);
+        recalculateOrderAmounts(order, now);
+        recalculateOrderStatusAfterSubmittedModification(order, now);
+        publishOrderEvent("order.updated", order, null, null, null);
+
+        printDispatcherService.dispatchOrderUpdateAfterCommit(
+            PrintModuleCode.GRAB,
+            order.store_id,
+            order.id,
+            batch.id
+        );
+        return buildOrderUpdateResponse(order.id, batch, false);
+    }
+
+    @Override
     public List<OrderResponse> getActiveOrders(Long storeId, List<String> statuses, String orderType, String sortBy) {
         Set<String> statusFilter = normalizeStatuses(statuses);
         List<Order> orders = orderRepository.findActiveOperationalOrders(storeId).stream()
@@ -472,6 +550,19 @@ public class OrderServiceImpl implements OrderService {
             .sorted(resolveFrontdeskHistoryComparator())
             .limit(historyLimit)
             .toList();
+        return buildFrontdeskOrderBoardResponses(orders);
+    }
+
+    @Override
+    public List<FrontdeskOrderBoardResponse> getFrontdeskTodayOrderHistory(Long storeId, Integer limit) {
+        int resolvedLimit = limit == null ? 100 : Math.max(1, Math.min(limit, 200));
+        LocalDate today = LocalDate.now();
+        List<Order> orders = orderRepository.findTodayByStoreId(
+            storeId,
+            today.atStartOfDay(),
+            today.plusDays(1).atStartOfDay(),
+            PageRequest.of(0, resolvedLimit)
+        );
         return buildFrontdeskOrderBoardResponses(orders);
     }
 
@@ -609,11 +700,8 @@ public class OrderServiceImpl implements OrderService {
         }
 
         Map<Long, List<FrontdeskBeverageItem>> beverageItemsByOrderId = new HashMap<>();
-        for (Long orderId : orderIds) {
-            List<FrontdeskBeverageItem> beverageItems = frontdeskBeverageItemRepository.findAllByOrderId(orderId);
-            if (!beverageItems.isEmpty()) {
-                beverageItemsByOrderId.put(orderId, beverageItems);
-            }
+        for (FrontdeskBeverageItem beverageItem : frontdeskBeverageItemRepository.findAllByOrderIds(orderIds)) {
+            beverageItemsByOrderId.computeIfAbsent(beverageItem.order_id, key -> new ArrayList<>()).add(beverageItem);
         }
 
         List<FrontdeskOrderBoardResponse> responses = new ArrayList<>();
@@ -669,6 +757,7 @@ public class OrderServiceImpl implements OrderService {
             response.ready_item_count = readyItemCount;
             response.beverage_pending_count = beveragePendingCount;
             response.kitchen_pending_count = kitchenPendingCount;
+            response.total_amount = defaultIfNull(order.total_amount);
             responses.add(response);
         }
         return responses;
@@ -691,6 +780,27 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("Order status does not allow item modification: " + order.status);
         }
         return order;
+    }
+
+    private void requireDraftForLegacyItemMutation(Order order) {
+        if (!ORDER_STATUS_DRAFT.equals(order.status)) {
+            throw new BusinessException(
+                "Submitted order items are locked. Add new items through POST /api/v1/orders/{orderId}/updates"
+            );
+        }
+    }
+
+    private OrderUpdateResponse buildOrderUpdateResponse(
+        Long orderId,
+        OrderUpdateBatch batch,
+        boolean alreadyProcessed
+    ) {
+        OrderUpdateResponse response = new OrderUpdateResponse();
+        response.order = loadOrderResponse(orderId);
+        response.update_batch_id = batch.id;
+        response.revision = batch.revision;
+        response.already_processed = alreadyProcessed;
+        return response;
     }
 
     private OrderItem requireEditableOrderItem(Order order, Long itemId) {
@@ -724,6 +834,8 @@ public class OrderServiceImpl implements OrderService {
         orderItem.status = null;
         orderItem.notes = itemRequest.notes;
         orderItem.is_modified_after_submit = false;
+        orderItem.added_revision = order.current_revision == null ? 1 : order.current_revision;
+        orderItem.order_update_batch_id = null;
         orderItem.created_at = now;
         orderItem.updated_at = now;
 
@@ -750,17 +862,28 @@ public class OrderServiceImpl implements OrderService {
         List<CreateOrderItemOptionRequest> optionRequests,
         LocalDateTime now
     ) {
+        MenuItem mainMenuItem = menuItemRepository.findById(menuItemId)
+            .orElseThrow(() -> new BusinessException("Menu item not found: " + menuItemId));
+        Map<Long, MenuItemOption> requestedOptionsById = loadRequestedMenuItemOptions(optionRequests);
+        Map<Long, Long> comboSideRemoveParentByOptionId = buildComboSideRemoveParentMap(mainMenuItem, requestedOptionsById);
+
         List<OrderItemOption> savedOptions = new ArrayList<>();
         for (CreateOrderItemOptionRequest optionRequest : optionRequests) {
-            MenuItemOption menuItemOption = menuItemOptionRepository.findById(optionRequest.option_id)
-                .orElseThrow(() -> new BusinessException("Menu item option not found: " + optionRequest.option_id));
+            MenuItemOption menuItemOption = requestedOptionsById.get(optionRequest.option_id);
+            if (menuItemOption == null) {
+                throw new BusinessException("Menu item option not found: " + optionRequest.option_id);
+            }
 
-            validateOptionBelongsToMenuItem(menuItemOption, menuItemId);
+            Long comboSideParentOptionId = comboSideRemoveParentByOptionId.get(menuItemOption.id);
+            validateOptionBelongsToMenuItem(menuItemOption, menuItemId, comboSideParentOptionId != null);
 
             OrderItemOption orderItemOption = new OrderItemOption();
             orderItemOption.order_item_id = orderItem.id;
             orderItemOption.option_id = menuItemOption.id;
             orderItemOption.option_type_snapshot = menuItemOption.option_type;
+            orderItemOption.option_code_snapshot = menuItemOption.option_code;
+            orderItemOption.option_group_snapshot = comboSideParentOptionId == null ? menuItemOption.option_group : "COMBO_SIDE_REMOVE";
+            orderItemOption.parent_option_id_snapshot = comboSideParentOptionId == null ? menuItemOption.parent_option_id : comboSideParentOptionId;
             orderItemOption.option_name_snapshot_zh = menuItemOption.name_zh;
             orderItemOption.option_name_snapshot_en = menuItemOption.name_en;
             orderItemOption.price_delta = defaultIfNull(menuItemOption.price_delta);
@@ -771,6 +894,47 @@ public class OrderServiceImpl implements OrderService {
         return savedOptions;
     }
 
+    private Map<Long, MenuItemOption> loadRequestedMenuItemOptions(List<CreateOrderItemOptionRequest> optionRequests) {
+        Map<Long, MenuItemOption> optionsById = new HashMap<>();
+        for (CreateOrderItemOptionRequest optionRequest : optionRequests) {
+            if (optionRequest == null || optionRequest.option_id == null) {
+                throw new BusinessException("Option id is required");
+            }
+            if (optionsById.containsKey(optionRequest.option_id)) {
+                continue;
+            }
+            MenuItemOption option = menuItemOptionRepository.findById(optionRequest.option_id)
+                .orElseThrow(() -> new BusinessException("Menu item option not found: " + optionRequest.option_id));
+            optionsById.put(option.id, option);
+        }
+        return optionsById;
+    }
+
+    private Map<Long, Long> buildComboSideRemoveParentMap(MenuItem mainMenuItem, Map<Long, MenuItemOption> requestedOptionsById) {
+        Map<Long, Long> allowedParentByRemoveOptionId = new HashMap<>();
+        for (MenuItemOption selectedOption : requestedOptionsById.values()) {
+            if (!mainMenuItem.id.equals(selectedOption.menu_item_id) || !isComboSideOption(selectedOption)) {
+                continue;
+            }
+            String sideSku = resolveComboSideSku(selectedOption.option_code, selectedOption.name_zh);
+            if (sideSku == null) {
+                continue;
+            }
+            MenuItem sideItem = menuItemRepository.findAll().stream()
+                .filter(item -> mainMenuItem.store_id.equals(item.store_id))
+                .filter(item -> sideSku.equals(item.sku))
+                .findFirst()
+                .orElse(null);
+            if (sideItem == null) {
+                continue;
+            }
+            menuItemOptionRepository.findAllByMenuItemIdOrdered(sideItem.id).stream()
+                .filter(this::isRemoveMenuOption)
+                .forEach(removeOption -> allowedParentByRemoveOptionId.put(removeOption.id, selectedOption.id));
+        }
+        return allowedParentByRemoveOptionId;
+    }
+
     private void recalculateOrderAmounts(Order order, LocalDateTime now) {
         BigDecimal subtotal = BigDecimal.ZERO;
         for (OrderItem orderItem : orderItemRepository.findAllByOrderId(order.id).stream().filter(this::isActiveOrderItem).toList()) {
@@ -778,7 +942,7 @@ public class OrderServiceImpl implements OrderService {
         }
         order.subtotal_amount = subtotal;
         order.discount_amount = BigDecimal.ZERO;
-        order.total_amount = subtotal;
+        order.total_amount = TaxCalculator.calculateTotal(subtotal);
         order.updated_at = now;
         orderRepository.save(order);
     }
@@ -1213,8 +1377,17 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private void validateOptionBelongsToMenuItem(MenuItemOption menuItemOption, Long menuItemId) {
+        validateOptionBelongsToMenuItem(menuItemOption, menuItemId, false);
+    }
+
+    private void validateOptionBelongsToMenuItem(MenuItemOption menuItemOption, Long menuItemId, boolean allowComboSideRemove) {
         if (menuItemOption.menu_item_id == null || !menuItemOption.menu_item_id.equals(menuItemId)) {
-            throw new BusinessException("Menu item option does not belong to menu item: " + menuItemOption.id);
+            if (!allowComboSideRemove) {
+                throw new BusinessException("Menu item option does not belong to menu item: " + menuItemOption.id);
+            }
+            if (!isRemoveMenuOption(menuItemOption)) {
+                throw new BusinessException("Only combo side remove options can reference another menu item: " + menuItemOption.id);
+            }
         }
     }
 
@@ -1234,6 +1407,9 @@ public class OrderServiceImpl implements OrderService {
             response.id = orderItemOption.id;
             response.option_id = orderItemOption.option_id;
             response.option_type_snapshot = orderItemOption.option_type_snapshot;
+            response.option_code_snapshot = orderItemOption.option_code_snapshot;
+            response.option_group_snapshot = orderItemOption.option_group_snapshot;
+            response.parent_option_id_snapshot = orderItemOption.parent_option_id_snapshot;
             response.option_name_snapshot_zh = orderItemOption.option_name_snapshot_zh;
             response.option_name_snapshot_en = orderItemOption.option_name_snapshot_en;
             response.price_delta = defaultIfNull(orderItemOption.price_delta);
@@ -1272,6 +1448,8 @@ public class OrderServiceImpl implements OrderService {
             response.notes = orderItem.notes;
             response.is_modified_after_submit = Boolean.TRUE.equals(orderItem.is_modified_after_submit);
             response.modified_after_submit_at = orderItem.modified_after_submit_at;
+            response.added_revision = orderItem.added_revision;
+            response.order_update_batch_id = orderItem.order_update_batch_id;
             response.requires_kitchen_task = kitchenTask != null;
             response.is_beverage_item = beverageRow;
             response.is_kitchen_related_item = !beverageRow;
@@ -1310,6 +1488,7 @@ public class OrderServiceImpl implements OrderService {
         response.is_modified_after_submit = Boolean.TRUE.equals(order.is_modified_after_submit);
         response.modified_after_submit_at = order.modified_after_submit_at;
         response.modified_after_submit_by = order.modified_after_submit_by;
+        response.current_revision = order.current_revision == null ? 1 : order.current_revision;
         response.created_at = order.created_at;
         response.updated_at = order.updated_at;
         response.items = itemResponses;
@@ -1392,7 +1571,7 @@ public class OrderServiceImpl implements OrderService {
             lines.add(primaryLine);
         }
         if (!secondaryParts.isEmpty()) {
-            lines.add(String.join(" ", deduplicate(secondaryParts)));
+            lines.add(String.join(" ", aggregateKitchenSecondaryParts(secondaryParts)));
         }
         return lines.isEmpty() ? null : String.join(" | ", lines);
     }
@@ -1439,6 +1618,63 @@ public class OrderServiceImpl implements OrderService {
             result.add(value);
         }
         return result;
+    }
+
+    private List<String> aggregateKitchenSecondaryParts(List<String> values) {
+        Map<String, Integer> addonQuantities = new LinkedHashMap<>();
+        List<String> orderedKeys = new ArrayList<>();
+        Set<String> seenOther = new HashSet<>();
+
+        for (String value : values) {
+            KitchenAddonToken addonToken = parseKitchenAddonToken(value);
+            if (addonToken != null) {
+                String key = "ADDON:" + addonToken.label();
+                if (!addonQuantities.containsKey(key)) {
+                    orderedKeys.add(key);
+                    addonQuantities.put(key, 0);
+                }
+                addonQuantities.put(key, addonQuantities.get(key) + addonToken.quantity());
+                continue;
+            }
+
+            if (value == null || value.isBlank() || !seenOther.add(value)) {
+                continue;
+            }
+            orderedKeys.add("RAW:" + value);
+        }
+
+        List<String> result = new ArrayList<>();
+        for (String key : orderedKeys) {
+            if (key.startsWith("ADDON:")) {
+                String label = key.substring("ADDON:".length());
+                int quantity = addonQuantities.getOrDefault(key, 1);
+                result.add(quantity > 1 ? label + "x" + quantity : label);
+            } else if (key.startsWith("RAW:")) {
+                result.add(key.substring("RAW:".length()));
+            }
+        }
+        return result;
+    }
+
+    private KitchenAddonToken parseKitchenAddonToken(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isBlank() || !trimmed.startsWith("+")) {
+            return null;
+        }
+        int quantity = 1;
+        String label = trimmed;
+        int markerIndex = Math.max(trimmed.lastIndexOf('x'), trimmed.lastIndexOf('*'));
+        if (markerIndex > 0 && markerIndex < trimmed.length() - 1) {
+            String quantityText = trimmed.substring(markerIndex + 1);
+            if (quantityText.chars().allMatch(Character::isDigit)) {
+                quantity = Integer.parseInt(quantityText);
+                label = trimmed.substring(0, markerIndex);
+            }
+        }
+        return new KitchenAddonToken(label, quantity);
     }
 
     private String buildKitchenDisplayNameZh(MenuItem menuItem, OrderItem orderItem) {
@@ -1519,6 +1755,9 @@ public class OrderServiceImpl implements OrderService {
                 continue;
             }
             if (OPTION_TYPE_REMOVE.equals(option.option_type_snapshot)) {
+                if (isOptionGroup(option, "COMBO_SIDE_REMOVE")) {
+                    continue;
+                }
                 String token = mapRemoveToken(option);
                 if (token != null) {
                     parts.add(token);
@@ -1609,14 +1848,14 @@ public class OrderServiceImpl implements OrderService {
 
     private String mapAddonToken(OrderItemOption option) {
         String label = option.option_name_snapshot_zh;
-        String code = canonicalAddonCode(label);
+        String code = resolveAddonCode(option);
         if (code == null || "combo".equals(code)) {
             return null;
         }
         String mapped = switch (code) {
             case "extra_noodle" -> "+面";
-            case "tea_egg" -> "+蛋";
-            case "fried_egg" -> "+煎";
+            case "tea_egg", "combo_tea_egg" -> "+蛋";
+            case "fried_egg", "combo_fried_egg" -> "+煎";
             case "extra_meat" -> "+肉";
             case "extra_radish" -> "+萝";
             case "bok_choy" -> "+青";
@@ -1643,7 +1882,7 @@ public class OrderServiceImpl implements OrderService {
 
     private String mapRemoveToken(OrderItemOption option) {
         String label = option.option_name_snapshot_zh;
-        String code = canonicalRemoveCode(label);
+        String code = resolveRemoveCode(option);
         if (code == null) {
             return null;
         }
@@ -1668,6 +1907,23 @@ public class OrderServiceImpl implements OrderService {
             case "green_pepper" -> "走青椒";
             default -> label;
         };
+    }
+
+    private String resolveAddonCode(OrderItemOption option) {
+        if (option.option_code_snapshot != null && !option.option_code_snapshot.isBlank()) {
+            return option.option_code_snapshot;
+        }
+        // Legacy fallback for orders/options created before stable option_code metadata existed.
+        return canonicalAddonCode(option.option_name_snapshot_zh);
+    }
+
+    private String resolveRemoveCode(OrderItemOption option) {
+        if (option.option_code_snapshot != null && !option.option_code_snapshot.isBlank()) {
+            String code = option.option_code_snapshot;
+            return code.startsWith("remove_") ? code.substring("remove_".length()) : code;
+        }
+        // Legacy fallback for orders/options created before stable option_code metadata existed.
+        return canonicalRemoveCode(option.option_name_snapshot_zh);
     }
 
     private String canonicalAddonCode(String label) {
@@ -1702,33 +1958,54 @@ public class OrderServiceImpl implements OrderService {
         return task != null && Integer.valueOf(KITCHEN_TASK_PRIORITY_COMBO_SIDE).equals(task.priority);
     }
 
-    private record ComboSideSelection(String labelZh, String labelEn, int quantity) {
+    private record ComboSideSelection(String code, String labelZh, String labelEn, int quantity, List<String> instructions) {
+    }
+
+    private record KitchenAddonToken(String label, int quantity) {
     }
 
     private List<ComboSideSelection> extractComboSideSelections(OrderItem orderItem, List<OrderItemOption> options) {
         Map<String, ComboSideSelection> selections = new HashMap<>();
         for (OrderItemOption option : options) {
-            if (!OPTION_TYPE_ADDON.equals(option.option_type_snapshot)) {
+            if (!OPTION_TYPE_ADDON.equals(option.option_type_snapshot) && !isOptionGroup(option, "COMBO_SIDE")) {
                 continue;
             }
-            String code = canonicalAddonCode(option.option_name_snapshot_zh);
+            String code = resolveAddonCode(option);
             if (!isComboSideCode(code)) {
                 continue;
             }
             int optionQuantity = option.quantity == null ? 1 : option.quantity;
             int totalQuantity = optionQuantity * (orderItem.quantity == null ? 1 : orderItem.quantity);
+            List<String> childInstructions = extractComboSideChildInstructions(option, options);
             ComboSideSelection selection = switch (code) {
-                case "combo_edamame" -> new ComboSideSelection("毛豆", "Edamame", totalQuantity);
-                case "combo_shredded_potato" -> new ComboSideSelection("土豆", "Shredded Potato", totalQuantity);
-                case "combo_cucumber_salad" -> new ComboSideSelection("黄瓜", "Cucumber Salad", totalQuantity);
+                case "combo_edamame" -> new ComboSideSelection(code, "毛豆", "Edamame", totalQuantity, childInstructions);
+                case "combo_shredded_potato" -> new ComboSideSelection(code, "土豆", "Shredded Potato", totalQuantity, childInstructions);
+                case "combo_cucumber_salad" -> new ComboSideSelection(code, "黄瓜", "Cucumber Salad", totalQuantity, childInstructions);
                 default -> null;
             };
             if (selection == null) {
                 continue;
             }
-            selections.put(selection.labelZh(), selection);
+            selections.put(selection.code(), selection);
         }
         return new ArrayList<>(selections.values());
+    }
+
+    private List<String> extractComboSideChildInstructions(OrderItemOption sideOption, List<OrderItemOption> options) {
+        List<String> instructions = new ArrayList<>();
+        for (OrderItemOption option : options) {
+            if (!isOptionGroup(option, "COMBO_SIDE_REMOVE")) {
+                continue;
+            }
+            if (sideOption.option_id == null || !sideOption.option_id.equals(option.parent_option_id_snapshot)) {
+                continue;
+            }
+            String token = mapRemoveToken(option);
+            if (token != null) {
+                instructions.add(token);
+            }
+        }
+        return instructions;
     }
 
     private List<KitchenTask> createComboSideKitchenTasks(
@@ -1755,7 +2032,9 @@ public class OrderServiceImpl implements OrderService {
             kitchenTask.station_code = coldStation.code;
             kitchenTask.item_name_snapshot_zh = selection.labelZh();
             kitchenTask.item_name_snapshot_en = selection.labelEn();
-            kitchenTask.special_instructions_snapshot = null;
+            kitchenTask.special_instructions_snapshot = selection.instructions().isEmpty()
+                ? null
+                : String.join(" ", selection.instructions());
             kitchenTask.status = KitchenTaskStatus.pending.name();
             kitchenTask.quantity = selection.quantity();
             kitchenTask.priority = KITCHEN_TASK_PRIORITY_COMBO_SIDE;
@@ -1814,7 +2093,9 @@ public class OrderServiceImpl implements OrderService {
             task.station_code = coldStation.code;
             task.item_name_snapshot_zh = selection.labelZh();
             task.item_name_snapshot_en = selection.labelEn();
-            task.special_instructions_snapshot = null;
+            task.special_instructions_snapshot = selection.instructions().isEmpty()
+                ? null
+                : String.join(" ", selection.instructions());
             task.quantity = selection.quantity();
             kitchenTaskRepository.save(task);
         }
@@ -1833,9 +2114,62 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private boolean isComboSideCode(String code) {
-        return "combo_edamame".equals(code)
-            || "combo_shredded_potato".equals(code)
-            || "combo_cucumber_salad".equals(code);
+        if (code == null) {
+            return false;
+        }
+        String normalized = code.toLowerCase();
+        return normalized.contains("combo_edamame")
+            || normalized.contains("combo_shredded_potato")
+            || normalized.contains("combo_cucumber_salad");
+    }
+
+    private boolean isComboSideOption(MenuItemOption option) {
+        if (option.option_group != null && "COMBO_SIDE".equalsIgnoreCase(option.option_group)) {
+            return true;
+        }
+        String code = resolveComboSideSku(option.option_code, option.name_zh);
+        return code != null;
+    }
+
+    private boolean isRemoveMenuOption(MenuItemOption option) {
+        if (option.option_group != null && "REMOVE".equalsIgnoreCase(option.option_group)) {
+            return true;
+        }
+        return option.option_group == null
+            && option.option_type != null
+            && OPTION_TYPE_REMOVE.equalsIgnoreCase(option.option_type);
+    }
+
+    private String resolveComboSideSku(String optionCode, String nameZh) {
+        if (optionCode != null && !optionCode.isBlank()) {
+            String code = optionCode.trim().toLowerCase();
+            if (code.contains("combo_shredded_potato")) {
+                return "shredded_potato";
+            }
+            if (code.contains("combo_cucumber_salad")) {
+                return "cucumber_salad";
+            }
+            if (code.contains("combo_edamame")) {
+                return "edamame";
+            }
+            return switch (code) {
+                case "edamame" -> "edamame";
+                case "shredded_potato" -> "shredded_potato";
+                case "cucumber_salad" -> "cucumber_salad";
+                default -> null;
+            };
+        }
+        // Legacy fallback for older menu option metadata.
+        return switch (nameZh == null ? "" : nameZh.trim()) {
+            case "套餐毛豆" -> "edamame";
+            case "套餐土豆丝" -> "shredded_potato";
+            case "套餐拌黄瓜" -> "cucumber_salad";
+            default -> null;
+        };
+    }
+
+    private boolean isOptionGroup(OrderItemOption option, String group) {
+        return option.option_group_snapshot != null && group.equalsIgnoreCase(option.option_group_snapshot);
     }
 
     private String canonicalRemoveCode(String label) {

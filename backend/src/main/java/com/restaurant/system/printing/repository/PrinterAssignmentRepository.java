@@ -21,4 +21,10 @@ public interface PrinterAssignmentRepository extends JpaRepository<PrinterAssign
         where pa.store_id = :storeId and pa.module_code = :moduleCode
         """)
     Optional<PrinterAssignment> findByStoreIdAndModuleCode(@Param("storeId") Long storeId, @Param("moduleCode") String moduleCode);
+
+    @Query("""
+        select count(pa) from PrinterAssignment pa
+        where pa.store_id = :storeId and pa.printer_id = :printerId
+        """)
+    long countByStoreIdAndPrinterId(@Param("storeId") Long storeId, @Param("printerId") Long printerId);
 }

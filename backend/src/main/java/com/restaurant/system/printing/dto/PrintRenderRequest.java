@@ -17,4 +17,6 @@ public class PrintRenderRequest {
     public List<OrderItemOption> order_item_options;
     public List<KitchenTask> kitchen_tasks;
     public LocalDateTime happened_at;
+    public Boolean is_update_ticket;
+    public Long order_update_batch_id;
 }

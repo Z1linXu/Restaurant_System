@@ -12,12 +12,15 @@ import {
 } from '../frontdesk/navigation'
 import { FrontdeskTopNav } from '../frontdesk/components/FrontdeskTopNav'
 import { OrderingPage } from '../ordering/OrderingPage'
-import { completeOrder } from '../../services/orderService'
+import { completeOrder, fetchOrderPrintOptions, reprintOrderReceipt } from '../../services/orderService'
 import type { TableSlot } from '../../types/dinein'
+import type { OrderPrintOption } from '../../types/ordering'
+import { formatSplitSlotLabel } from '../../utils/tableDisplay'
 import { DineInSidebar } from './components/DineInSidebar'
 import { DineInTopBar } from './components/DineInTopBar'
 import { TableGrid } from './components/TableGrid'
 import { TableStatusLegend } from './components/TableStatusLegend'
+import { useCurrentStore } from '../store/StoreContext'
 
 function buildGeneratedTakeoutLabel() {
   const stamp = Date.now().toString().slice(-4)
@@ -31,6 +34,8 @@ interface DineInPageProps {
 }
 
 export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
+  console.count('DineInPage render')
+  const { storeId } = useCurrentStore()
   const isIpadLandscape = useIpadLandscape()
   const workstation = inferFrontdeskWorkstation(routePath)
   const workstationLabel = workstation ? `Menu ${workstation.toUpperCase()}` : null
@@ -41,12 +46,35 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     orderType: 'dine_in' | 'pickup'
     pickupLabel: string | null
     workstation: string | null
-  } | null>(null)
+  } | null>(() => parseMenuRoute(routePath, routeSearch))
   const [submissionMessage, setSubmissionMessage] = useState<string | null>(null)
-  const menuCatalog = useMenuCatalog()
-  const { tableSlots, statusCounts, startOrder, editOrder, endOrder, refreshFromBackend, refreshTableAfterFinish } = useTableBoard()
+  const [printTarget, setPrintTarget] = useState<TableSlot | null>(null)
+  const [printOptions, setPrintOptions] = useState<OrderPrintOption[]>([])
+  const [printBusy, setPrintBusy] = useState<string | null>(null)
+  const [printError, setPrintError] = useState<string | null>(null)
+  const menuCatalog = useMenuCatalog(storeId)
+  const tableBoardEnabled = activeOrderingContext == null
+  const { tableSlots, statusCounts, startOrder, editOrder, endOrder, refreshFromBackend, refreshTableAfterFinish } = useTableBoard({
+    enabled: tableBoardEnabled,
+    storeId,
+  })
   const workstationCompact = isIpadLandscape
-  const boardPath = buildFrontdeskBoardPath(workstation)
+  const boardPath = buildFrontdeskBoardPath(workstation, storeId)
+
+  const updateActiveOrderingContext = (
+    nextContext: typeof activeOrderingContext,
+    reason: string,
+  ) => {
+    console.count('setActiveOrderingContext called')
+    console.log('[DineInPage] setActiveOrderingContext requested', {
+      reason,
+      previousContext: activeOrderingContext,
+      nextContext,
+      routePath,
+      routeSearch,
+    })
+    setActiveOrderingContext(nextContext)
+  }
 
   useEffect(() => {
     setSidebarCollapsed(isIpadLandscape)
@@ -54,7 +82,13 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
 
   useEffect(() => {
     const routeContext = parseMenuRoute(routePath, routeSearch)
-    setActiveOrderingContext(routeContext)
+    console.log('[DineInPage] route parsing effect', {
+      routePath,
+      routeSearch,
+      routeContext,
+      currentContext: activeOrderingContext,
+    })
+    updateActiveOrderingContext(routeContext, 'route parsing effect')
   }, [routePath, routeSearch])
 
   const visibleSlots = useMemo(() => tableSlots, [tableSlots])
@@ -72,8 +106,8 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
       pickupLabel: null,
       workstation,
     } as const
-    setActiveOrderingContext(nextContext)
-    navigateTo(buildMenuPath(nextContext))
+    updateActiveOrderingContext(nextContext, 'entry select')
+    navigateTo(buildMenuPath(nextContext, storeId))
   }
 
   const handleStart = (slotId: string) => {
@@ -89,8 +123,8 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
       pickupLabel: null,
       workstation,
     } as const
-    setActiveOrderingContext(nextContext)
-    navigateTo(buildMenuPath(nextContext))
+    updateActiveOrderingContext(nextContext, 'start order')
+    navigateTo(buildMenuPath(nextContext, storeId))
   }
 
   const handleEdit = (slotId: string) => {
@@ -106,8 +140,8 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
       pickupLabel: null,
       workstation,
     } as const
-    setActiveOrderingContext(nextContext)
-    navigateTo(buildMenuPath(nextContext))
+    updateActiveOrderingContext(nextContext, 'edit order')
+    navigateTo(buildMenuPath(nextContext, storeId))
   }
 
   const handleTakeoutEntry = () => {
@@ -119,12 +153,12 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
       pickupLabel,
       workstation,
     } as const
-    setActiveOrderingContext(nextContext)
-    navigateTo(buildMenuPath(nextContext))
+    updateActiveOrderingContext(nextContext, 'takeout entry')
+    navigateTo(buildMenuPath(nextContext, storeId))
   }
 
   const handleBackToTables = () => {
-    setActiveOrderingContext(null)
+    updateActiveOrderingContext(null, 'back to tables')
     navigateTo(boardPath)
     void refreshFromBackend()
   }
@@ -145,17 +179,49 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
 
     try {
       await completeOrder(slot.orderDbId)
-      setSubmissionMessage(`Order completed for ${slot.label}.`)
+      setSubmissionMessage(`Order completed for ${formatSplitSlotLabel(slot.label)}.`)
       await refreshTableAfterFinish(slot.baseTableLabel)
 
-      // The frontdesk board read model can lag slightly behind the order completion mutation.
-      // Re-check a few times so split tables collapse back automatically once both sides are done.
-      for (let attempt = 0; attempt < 3; attempt += 1) {
-        await new Promise((resolve) => window.setTimeout(resolve, 700))
-        await refreshTableAfterFinish(slot.baseTableLabel)
-      }
+      // Keep one short fallback refresh for read-model lag; realtime and 30s polling handle the rest.
+      await new Promise((resolve) => window.setTimeout(resolve, 900))
+      await refreshTableAfterFinish(slot.baseTableLabel)
     } catch (error) {
       window.alert(error instanceof Error ? error.message : 'Failed to finish order')
+    }
+  }
+
+  const handlePrint = async (slot: TableSlot) => {
+    if (!slot.orderDbId) {
+      window.alert('Unable to print because the order id is missing.')
+      return
+    }
+    setPrintTarget(slot)
+    setPrintOptions([])
+    setPrintError(null)
+    try {
+      setPrintOptions(await fetchOrderPrintOptions(slot.orderDbId))
+    } catch (error) {
+      setPrintError(error instanceof Error ? error.message : 'Failed to load print options')
+    }
+  }
+
+  const handleManualReprint = async (option: OrderPrintOption) => {
+    if (!printTarget?.orderDbId || !option.available) {
+      return
+    }
+    try {
+      setPrintBusy(option.module_code)
+      setPrintError(null)
+      const result = await reprintOrderReceipt(printTarget.orderDbId, option.module_code)
+      if (result.status !== 'PRINTED') {
+        throw new Error(result.error_message ?? 'Print failed')
+      }
+      setSubmissionMessage(`${option.label} sent for ${formatSplitSlotLabel(printTarget.label)}.`)
+      setPrintTarget(null)
+    } catch (error) {
+      setPrintError(error instanceof Error ? error.message : 'Print failed')
+    } finally {
+      setPrintBusy(null)
     }
   }
 
@@ -168,13 +234,14 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
         orderType={activeOrderingContext.orderType}
         pickupLabel={activeOrderingContext.pickupLabel}
         workstationLabel={workstationLabel}
+        storeId={storeId}
         onBack={handleBackToTables}
         onDraftCancelled={(slotLabel, tableLabel) => {
           if (activeOrderingContext.orderType === 'dine_in') {
             const seatCode = slotLabel.includes('-') ? (slotLabel.split('-')[1] as 'A' | 'B') : 'full'
             endOrder(tableLabel, seatCode)
           }
-          setActiveOrderingContext(null)
+          updateActiveOrderingContext(null, 'draft cancelled')
           navigateTo(boardPath)
           void refreshFromBackend()
         }}
@@ -182,9 +249,9 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
           setSubmissionMessage(
             activeOrderingContext.orderType === 'pickup'
               ? `Takeout order confirmed for ${activeOrderingContext.pickupLabel ?? slotLabel}.`
-              : `Order confirmed for ${slotLabel}.`,
+              : `Order confirmed for ${formatSplitSlotLabel(slotLabel)}.`,
           )
-          setActiveOrderingContext(null)
+          updateActiveOrderingContext(null, 'order submitted')
           navigateTo(boardPath)
           void refreshFromBackend()
         }}
@@ -217,6 +284,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
                 onEntrySelect={handleEntrySelect}
                 onStart={handleStart}
                 onEdit={handleEdit}
+                onPrint={(slot) => void handlePrint(slot)}
                 onFinish={(slot) => void handleFinish(slot)}
                 compact={workstationCompact}
               />
@@ -257,6 +325,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
                   onEntrySelect={handleEntrySelect}
                   onStart={handleStart}
                   onEdit={handleEdit}
+                  onPrint={(slot) => void handlePrint(slot)}
                   onFinish={(slot) => void handleFinish(slot)}
                 />
               </Card>
@@ -264,6 +333,34 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
           </div>
         </div>
       )}
+      {printTarget ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(25,20,18,0.36)] p-4" onClick={() => setPrintTarget(null)}>
+          <div className="w-full max-w-md rounded-[28px] bg-white p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-[var(--muted)]">Print current full order</p>
+                <h2 className="mt-1 text-2xl font-extrabold">{formatSplitSlotLabel(printTarget.label)}</h2>
+              </div>
+              <button type="button" className="rounded-full px-3 py-2 font-bold" onClick={() => setPrintTarget(null)}>Close</button>
+            </div>
+            {printError ? <div className="mt-4 rounded-[16px] bg-red-50 px-4 py-3 font-semibold text-red-700">{printError}</div> : null}
+            <div className="mt-5 space-y-3">
+              {printOptions.length ? printOptions.map((option) => (
+                <button
+                  key={option.module_code}
+                  type="button"
+                  disabled={!option.available || printBusy != null}
+                  className="min-h-14 w-full rounded-[18px] bg-[var(--primary)] px-4 text-left font-bold text-white disabled:bg-stone-200 disabled:text-stone-500"
+                  onClick={() => void handleManualReprint(option)}
+                >
+                  <span>{printBusy === option.module_code ? 'Printing...' : option.label}</span>
+                  {!option.available ? <span className="mt-1 block text-xs font-medium">{option.unavailable_reason}</span> : null}
+                </button>
+              )) : !printError ? <p className="py-5 text-center text-[var(--muted)]">Loading print options...</p> : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

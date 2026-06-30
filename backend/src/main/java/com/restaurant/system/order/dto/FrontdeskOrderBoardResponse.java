@@ -1,6 +1,7 @@
 package com.restaurant.system.order.dto;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 public class FrontdeskOrderBoardResponse {
 
@@ -19,4 +20,5 @@ public class FrontdeskOrderBoardResponse {
     public Integer ready_item_count;
     public Integer beverage_pending_count;
     public Integer kitchen_pending_count;
+    public BigDecimal total_amount;
 }

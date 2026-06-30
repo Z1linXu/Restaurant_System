@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { navigateTo } from '../frontdesk/navigation'
-import { isFeatureEnabled, type FeaturePackage } from '../feature-flags/featureConfig'
 import {
   fetchAdminMenuItems,
   fetchPlatformOverview,
@@ -9,6 +7,8 @@ import {
   type MenuItemAdminRecord,
   type PlatformAdminOverview,
 } from '../../services/platformAdminService'
+import { MenuOptionsPanel } from './MenuOptionsPanel'
+import { useCurrentStore } from '../store/StoreContext'
 
 interface MenuItemEditorState {
   id?: number
@@ -104,14 +104,16 @@ function sameSavedValues(expected: MenuItemEditorState, actual: MenuItemEditorSt
 }
 
 export function MenuManagementPage() {
+  const { storeId } = useCurrentStore()
   const [overview, setOverview] = useState<PlatformAdminOverview | null>(null)
   const [menuItems, setMenuItems] = useState<MenuItemEditorState[]>([])
-  const [selectedStoreId, setSelectedStoreId] = useState('1')
+  const [selectedStoreId, setSelectedStoreId] = useState(String(storeId))
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [rebuilding, setRebuilding] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [editor, setEditor] = useState<MenuItemEditorState | null>(null)
+  const [optionsItem, setOptionsItem] = useState<MenuItemEditorState | null>(null)
   const [analyticsNotice, setAnalyticsNotice] = useState<string | null>(null)
   const [toast, setToast] = useState<ToastState>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -140,6 +142,10 @@ export function MenuManagementPage() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    setSelectedStoreId(String(storeId))
+  }, [storeId])
 
   useEffect(() => {
     void loadOverview(Number(selectedStoreId))
@@ -231,6 +237,11 @@ export function MenuManagementPage() {
   const openEdit = (item: MenuItemEditorState) => {
     setToast(null)
     setEditor({ ...item })
+  }
+
+  const openOptions = (item: MenuItemEditorState) => {
+    setToast(null)
+    setOptionsItem(item)
   }
 
   const refreshMenuItems = async (storeId: number) => {
@@ -340,6 +351,57 @@ export function MenuManagementPage() {
     }
   }
 
+  const handleEditorActiveAction = async () => {
+    if (!editor?.id) {
+      return
+    }
+
+    const nextActive = !editor.is_active
+    if (!nextActive) {
+      const confirmed = window.confirm(
+        [
+          `Deactivate menu item "${editor.name_zh || '-'} / ${editor.name_en || '-'}"?`,
+          editor.sku ? `SKU: ${editor.sku}` : '',
+          'This will hide the item from future ordering but will not affect historical orders.',
+        ].filter(Boolean).join('\n'),
+      )
+      if (!confirmed) {
+        return
+      }
+    }
+
+    try {
+      setSaving(true)
+      setToast(null)
+      const savedPayload = {
+        ...editor,
+        is_active: nextActive,
+        base_price: normalizeMoney(editor.base_price),
+        cost_per_item: normalizeMoney(editor.cost_per_item),
+      }
+      await savePlatformEntity('menu/items', savedPayload, editor.id)
+
+      const reloadedItems = await refreshMenuItems(Number(selectedStoreId))
+      const persistedItem = reloadedItems.find((item) => item.id === editor.id)
+      if (!persistedItem || persistedItem.is_active !== nextActive) {
+        throw new Error('Backend status verification failed.')
+      }
+
+      setEditor({ ...persistedItem })
+      setToast({
+        kind: 'success',
+        message: `${persistedItem.name_zh || persistedItem.name_en || 'Item'} ${nextActive ? 'reactivated' : 'deactivated'}.`,
+      })
+    } catch (actionError) {
+      setToast({
+        kind: 'error',
+        message: actionError instanceof Error ? actionError.message : 'Failed to update menu item status',
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const handleRebuildAnalytics = async () => {
     if (!rebuildDate) {
       setToast({ kind: 'error', message: 'Select a rebuild date first.' })
@@ -362,63 +424,7 @@ export function MenuManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#f6f3ec_0%,#efe9dd_100%)] text-[var(--on-surface)]">
-      <div className="grid min-h-screen xl:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="border-r border-[rgba(97,0,0,0.08)] bg-[rgba(255,255,255,0.8)] px-4 py-5 backdrop-blur-sm">
-          <div className="rounded-[24px] bg-[rgba(97,0,0,0.04)] px-4 py-4">
-            <div className="text-[1.6rem] font-black tracking-[-0.05em] text-[var(--primary)]">Owner Console</div>
-            <div className="mt-1 text-[0.84rem] leading-5 text-[var(--muted)]">Restaurant management workspace</div>
-          </div>
-
-          <nav className="mt-5 space-y-2">
-            {([
-              { id: 'home', label: 'Home', icon: '⌂', description: 'Daily operating overview', path: '/admin/dashboard' },
-              { id: 'stores', label: 'Dining Tables', icon: '▣', description: 'Table layout and split setup', path: '/admin/settings/tables' },
-              { id: 'menu', label: 'Menu Management', icon: '☰', description: 'Menu maintenance workspace', path: '/admin/menu/items' },
-              { id: 'reports', label: 'Reports', icon: '◫', description: 'Sales and performance reports', path: '/admin/reports/sales' },
-              { id: 'integrations', label: 'Integrations', icon: '◎', description: 'Delivery and platform links', path: null },
-              { id: 'settings', label: 'Printing Settings', icon: '⚙', description: 'Print Center and assignments', path: '/admin/settings/printing' },
-            ] as Array<{ id: string; label: string; icon: string; description: string; path: string | null; feature?: FeaturePackage | null }>).map((item) => ({
-              ...item,
-              feature: (item.id === 'reports' ? 'ANALYTICS' : item.id === 'settings' ? 'PRINTING' : item.id === 'integrations' ? null : 'ADMIN') as FeaturePackage | null,
-            })).filter((item) => item.feature == null || isFeatureEnabled(item.feature)).map((item) => {
-              const active = item.id === 'menu'
-              const disabled = item.path == null
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => {
-                    if (item.path) {
-                      navigateTo(item.path)
-                    }
-                  }}
-                  className={`w-full rounded-[20px] px-4 py-3 text-left transition ${
-                    active
-                      ? 'bg-[var(--primary)] text-white shadow-[0_18px_34px_rgba(97,0,0,0.18)]'
-                      : disabled
-                        ? 'cursor-default bg-transparent text-[rgba(26,28,25,0.45)]'
-                        : 'bg-transparent text-[rgba(26,28,25,0.78)] hover:bg-[rgba(97,0,0,0.06)]'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-[1.2rem] leading-none">{item.icon}</span>
-                    <div>
-                      <div className="text-[0.98rem] font-semibold">{item.label}</div>
-                      <div className={`mt-0.5 text-[0.76rem] ${active ? 'text-[rgba(255,255,255,0.82)]' : 'text-[var(--muted)]'}`}>
-                        {item.description}
-                      </div>
-                    </div>
-                  </div>
-                </button>
-              )
-            })}
-          </nav>
-        </aside>
-
-        <main className="px-5 py-5 xl:px-6">
-          <div className="mx-auto max-w-[1680px] space-y-5">
+    <div className="space-y-5">
             <div className="rounded-[28px] bg-[rgba(255,255,255,0.84)] px-5 py-4 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
@@ -609,13 +615,22 @@ export function MenuManagementPage() {
                               </div>
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <button
-                                type="button"
-                                onClick={() => openEdit(item)}
-                                className="rounded-full bg-[rgba(26,28,25,0.05)] px-3 py-1.5 text-[0.82rem] font-semibold text-[var(--on-surface)]"
-                              >
-                                Edit
-                              </button>
+                              <div className="flex justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => openOptions(item)}
+                                  className="rounded-full bg-[rgba(97,0,0,0.08)] px-3 py-1.5 text-[0.82rem] font-semibold text-[var(--primary)]"
+                                >
+                                  Options
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openEdit(item)}
+                                  className="rounded-full bg-[rgba(26,28,25,0.05)] px-3 py-1.5 text-[0.82rem] font-semibold text-[var(--on-surface)]"
+                                >
+                                  Edit
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -754,6 +769,31 @@ export function MenuManagementPage() {
                       Price or cost changes affect future orders immediately. Historical profit reports require analytics rebuild.
                     </div>
 
+                    {editor.id ? (
+                      <div className="rounded-[18px] border border-[rgba(97,0,0,0.16)] bg-[rgba(97,0,0,0.055)] px-4 py-3">
+                        <div className="text-[0.86rem] font-bold text-[var(--primary)]">
+                          {editor.is_active ? 'Deactivate Menu Item' : 'Reactivate Menu Item'}
+                        </div>
+                        <div className="mt-1 text-[0.78rem] leading-5 text-[var(--muted)]">
+                          {editor.is_active
+                            ? 'Hide this item from future ordering. Historical orders and print previews stay unchanged.'
+                            : 'Make this item visible again for future ordering.'}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void handleEditorActiveAction()}
+                          disabled={saving}
+                          className={`mt-3 rounded-[14px] px-3.5 py-2 text-[0.84rem] font-semibold disabled:opacity-60 ${
+                            editor.is_active
+                              ? 'bg-[var(--primary)] text-white'
+                              : 'bg-[rgba(64,124,73,0.14)] text-[rgb(48,96,56)]'
+                          }`}
+                        >
+                          {editor.is_active ? 'Delete / Deactivate Item' : 'Reactivate Item'}
+                        </button>
+                      </div>
+                    ) : null}
+
                     <div className="flex items-center justify-end gap-3">
                       <button
                         type="button"
@@ -778,10 +818,14 @@ export function MenuManagementPage() {
                   </div>
                 )}
               </div>
+
+              {optionsItem?.id ? (
+                <MenuOptionsPanel
+                  itemId={optionsItem.id}
+                  itemName={`${optionsItem.name_zh || optionsItem.name_en || 'Menu Item'}${optionsItem.sku ? ` · ${optionsItem.sku}` : ''}`}
+                />
+              ) : null}
             </div>
-          </div>
-        </main>
-      </div>
     </div>
   )
 }

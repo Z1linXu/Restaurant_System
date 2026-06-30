@@ -3,10 +3,12 @@ import { useIpadLandscape } from '../../hooks/useIpadLandscape'
 import { usePickupBoard } from '../../hooks/usePickupBoard'
 import { FrontdeskTopNav } from '../frontdesk/components/FrontdeskTopNav'
 import { PickupOrderCard } from './components/PickupOrderCard'
+import { useCurrentStore } from '../store/StoreContext'
 
 export function PickupBoardPage() {
+  const { storeId } = useCurrentStore()
   const isIpadLandscape = useIpadLandscape()
-  const { orders, busyTaskIds, error, completeItem, completeAll } = usePickupBoard()
+  const { orders, busyTaskIds, error, completeItem, completeAll } = usePickupBoard(storeId)
 
   return (
     <div className={`min-h-screen bg-[var(--surface)] ${isIpadLandscape ? 'px-3 py-3' : 'px-5 py-4 md:px-7 xl:px-8'}`}>

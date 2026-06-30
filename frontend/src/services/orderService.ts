@@ -1,18 +1,21 @@
 import type {
-  BackendApiResponse,
   BackendFrontdeskOrderBoardItem,
   BackendOrderResponse,
+  BackendOrderUpdateResponse,
   ItemCustomizationDraft,
   MenuItem,
+  OrderLineItem,
+  OrderPrintOption,
 } from '../types/ordering'
 import type { RealtimeUpdateMessage } from '../types/kds'
+import type { PrintJobRecord } from './printingAdminService'
+import { apiRequest } from './apiClient'
 
-const DEFAULT_STORE_ID = 1
-const DEFAULT_USER_ID = '1'
 const READ_RETRY_DELAYS_MS = [0, 250, 750]
 const pendingEditableOrderRequests = new Map<string, Promise<BackendOrderResponse>>()
 
 interface EditableOrderContext {
+  storeId: number
   orderType: 'dine_in' | 'pickup'
   tableNo?: string | null
   pickupNo?: string | null
@@ -25,6 +28,7 @@ interface UpdateOrderHeaderInput {
 }
 
 interface FrontdeskOrderQueryInput {
+  storeId: number
   statuses?: string[]
   limit?: number
 }
@@ -32,23 +36,10 @@ interface FrontdeskOrderQueryInput {
 function buildHeaders() {
   return {
     'Content-Type': 'application/json',
-    'X-User-Id': DEFAULT_USER_ID,
   }
 }
 
-async function request<T>(input: string, init?: RequestInit) {
-  const response = await fetch(input, init)
-  if (!response.ok) {
-    throw new Error(`Request failed (${response.status})`)
-  }
-
-  const payload = (await response.json()) as BackendApiResponse<T>
-  if (!payload.success) {
-    throw new Error(payload.message || 'Request failed')
-  }
-
-  return payload.data
-}
+const request = apiRequest
 
 function sleep(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms))
@@ -76,6 +67,7 @@ function mapOptions(draft: ItemCustomizationDraft, menuItem?: MenuItem) {
     pushOption(menuItem?.customization?.combo?.optionId)
     pushOption(draft.comboEggId ?? menuItem?.customization?.combo?.eggs[0]?.id)
     pushOption(draft.comboSideId ?? menuItem?.customization?.combo?.sides[0]?.id)
+    draft.comboSideRemoveIds.forEach((optionId) => pushOption(optionId))
   }
 
   draft.removeIds.forEach((optionId) => pushOption(optionId))
@@ -89,25 +81,18 @@ function mapOptions(draft: ItemCustomizationDraft, menuItem?: MenuItem) {
   return optionPayloads
 }
 
-export async function findDraftOrderByTableSlot(slotLabel: string) {
+export async function findDraftOrderByTableSlot(storeId: number, slotLabel: string) {
   const params = new URLSearchParams({
-    store_id: String(DEFAULT_STORE_ID),
+    store_id: String(storeId),
     table_no: slotLabel,
   })
 
-  return request<BackendOrderResponse | null>(
-    `/api/v1/orders/draft-open?${params.toString()}`,
-    {
-      headers: {
-        'X-User-Id': DEFAULT_USER_ID,
-      },
-    },
-  )
+  return request<BackendOrderResponse | null>(`/api/v1/orders/draft-open?${params.toString()}`)
 }
 
 export async function findEditableOrderByContext(context: EditableOrderContext) {
   const params = new URLSearchParams({
-    store_id: String(DEFAULT_STORE_ID),
+    store_id: String(context.storeId),
   })
   if (context.tableNo) {
     params.set('table_no', context.tableNo)
@@ -116,51 +101,37 @@ export async function findEditableOrderByContext(context: EditableOrderContext) 
     params.set('pickup_no', context.pickupNo)
   }
 
-  const order = await request<BackendOrderResponse | null>(
-    `/api/v1/orders/open-editable?${params.toString()}`,
-    {
-      headers: {
-        'X-User-Id': DEFAULT_USER_ID,
-      },
-    },
-  )
+  const order = await request<BackendOrderResponse | null>(`/api/v1/orders/open-editable?${params.toString()}`)
   return order
 }
 
-export async function fetchActiveOrderBoard() {
+export async function fetchActiveOrderBoardForStore(storeId: number) {
   return fetchFrontdeskOrderBoard({
+    storeId,
     statuses: ['draft', 'submitted', 'preparing', 'ready'],
   })
 }
 
-export async function fetchFrontdeskOrderBoard(input: FrontdeskOrderQueryInput = {}) {
+export async function fetchFrontdeskOrderBoard(input: FrontdeskOrderQueryInput) {
   const params = new URLSearchParams()
-  params.set('store_id', String(DEFAULT_STORE_ID))
+  params.set('store_id', String(input.storeId))
   ;(input.statuses ?? ['draft', 'submitted', 'preparing', 'ready']).forEach((status) => params.append('status', status))
   if (input.limit) {
     params.set('limit', String(input.limit))
   }
 
-  return request<BackendFrontdeskOrderBoardItem[]>(`/api/v1/frontdesk/orders?${params.toString()}`, {
-    headers: {
-      'X-User-Id': DEFAULT_USER_ID,
-    },
-  })
+  return request<BackendFrontdeskOrderBoardItem[]>(`/api/v1/frontdesk/orders?${params.toString()}`)
 }
 
-export async function fetchFrontdeskOrderHistory(input: FrontdeskOrderQueryInput = {}) {
+export async function fetchFrontdeskOrderHistory(input: FrontdeskOrderQueryInput) {
   const params = new URLSearchParams()
-  params.set('store_id', String(DEFAULT_STORE_ID))
+  params.set('store_id', String(input.storeId))
   ;(input.statuses ?? ['completed']).forEach((status) => params.append('status', status))
   if (input.limit) {
     params.set('limit', String(input.limit))
   }
 
-  return request<BackendFrontdeskOrderBoardItem[]>(`/api/v1/frontdesk/orders/history?${params.toString()}`, {
-    headers: {
-      'X-User-Id': DEFAULT_USER_ID,
-    },
-  })
+  return request<BackendFrontdeskOrderBoardItem[]>(`/api/v1/frontdesk/orders/history?${params.toString()}`)
 }
 
 export function subscribeToFrontdeskOrders(
@@ -223,11 +194,7 @@ export async function fetchOrderDetail(orderId: number) {
     }
 
     try {
-      return await request<BackendOrderResponse>(`/api/v1/orders/${orderId}`, {
-        headers: {
-          'X-User-Id': DEFAULT_USER_ID,
-        },
-      })
+      return await request<BackendOrderResponse>(`/api/v1/orders/${orderId}`)
     } catch (error) {
       lastError = error
     }
@@ -239,8 +206,8 @@ export async function fetchOrderDetail(orderId: number) {
 export async function ensureEditableOrder(context: EditableOrderContext) {
   const requestKey =
     context.orderType === 'pickup'
-      ? `pickup:${context.pickupNo ?? ''}`
-      : `table:${context.tableNo ?? ''}`
+      ? `${context.storeId}:pickup:${context.pickupNo ?? ''}`
+      : `${context.storeId}:table:${context.tableNo ?? ''}`
 
   const existingPendingRequest = pendingEditableOrderRequests.get(requestKey)
   if (existingPendingRequest) {
@@ -257,7 +224,7 @@ export async function ensureEditableOrder(context: EditableOrderContext) {
       method: 'POST',
       headers: buildHeaders(),
       body: JSON.stringify({
-        store_id: DEFAULT_STORE_ID,
+        store_id: context.storeId,
         created_by: 1,
         order_type: context.orderType,
         table_no: context.tableNo ?? null,
@@ -287,9 +254,6 @@ export async function submitDraftOrder(orderId: number) {
     try {
       return await request<BackendOrderResponse>(`/api/v1/orders/${orderId}/submit`, {
         method: 'POST',
-        headers: {
-          'X-User-Id': DEFAULT_USER_ID,
-        },
       })
     } catch (error) {
       lastError = error
@@ -313,6 +277,32 @@ export async function addDraftOrderItem(orderId: number, menuItem: MenuItem, dra
       combo_role: 'standalone',
       notes: notes.trim() || null,
       options: mapOptions(draft, menuItem),
+    }),
+  })
+}
+
+export async function submitOrderUpdate(
+  orderId: number,
+  idempotencyKey: string,
+  items: OrderLineItem[],
+  catalogItems: MenuItem[],
+) {
+  return request<BackendOrderUpdateResponse>(`/api/v1/orders/${orderId}/updates`, {
+    method: 'POST',
+    headers: buildHeaders(),
+    body: JSON.stringify({
+      idempotency_key: idempotencyKey,
+      items: items.map((item) => {
+        const menuItem = catalogItems.find((catalogItem) => catalogItem.id === item.menuItemId)
+        return {
+          menu_item_id: Number(item.menuItemId),
+          quantity: item.quantity,
+          combo_group_no: null,
+          combo_role: 'standalone',
+          notes: item.notes.trim() || null,
+          options: mapOptions(item.selection, menuItem),
+        }
+      }),
     }),
   })
 }
@@ -354,9 +344,6 @@ export async function updateDraftOrderItemQuantity(orderId: number, itemId: numb
 export async function removeDraftOrderItem(orderId: number, itemId: number) {
   return request<BackendOrderResponse>(`/api/v1/orders/${orderId}/items/${itemId}`, {
     method: 'DELETE',
-    headers: {
-      'X-User-Id': DEFAULT_USER_ID,
-    },
   })
 }
 
@@ -375,17 +362,38 @@ export async function updateEditableOrderHeader(orderId: number, input: UpdateOr
 export async function cancelDraftOrder(orderId: number) {
   return request<BackendOrderResponse>(`/api/v1/orders/${orderId}/cancel`, {
     method: 'POST',
-    headers: {
-      'X-User-Id': DEFAULT_USER_ID,
-    },
   })
 }
 
 export async function completeOrder(orderId: number) {
   return request<BackendOrderResponse>(`/api/v1/orders/${orderId}/complete`, {
     method: 'POST',
-    headers: {
-      'X-User-Id': DEFAULT_USER_ID,
-    },
   })
+}
+
+export async function reprintOrderReceipt(
+  orderId: number,
+  receiptType: string,
+) {
+  return request<PrintJobRecord>(`/api/v1/orders/${orderId}/reprint`, {
+    method: 'POST',
+    headers: buildHeaders(),
+    body: JSON.stringify({
+      receipt_type: receiptType,
+      update_ticket: false,
+    }),
+  })
+}
+
+export async function fetchOrderPrintJobs(orderId: number) {
+  return request<PrintJobRecord[]>(`/api/v1/orders/${orderId}/print-jobs`)
+}
+
+export async function fetchOrderPrintOptions(orderId: number) {
+  return request<OrderPrintOption[]>(`/api/v1/orders/${orderId}/print-options`)
+}
+
+export async function fetchTodayOrderHistory(storeId: number, limit = 100) {
+  const params = new URLSearchParams({ store_id: String(storeId), limit: String(limit) })
+  return request<BackendFrontdeskOrderBoardItem[]>(`/api/v1/frontdesk/orders/today?${params.toString()}`)
 }

@@ -6,11 +6,12 @@ interface TableGridProps {
   onEntrySelect: (slotId: string, selection: 'left' | 'right' | 'full') => void
   onStart: (slotId: string) => void
   onEdit: (slotId: string) => void
+  onPrint: (slot: TableSlot) => void
   onFinish: (slot: TableSlot) => void
   compact?: boolean
 }
 
-export function TableGrid({ slots, onEntrySelect, onStart, onEdit, onFinish, compact = false }: TableGridProps) {
+export function TableGrid({ slots, onEntrySelect, onStart, onEdit, onPrint, onFinish, compact = false }: TableGridProps) {
   return (
     <div
       className={
@@ -26,6 +27,7 @@ export function TableGrid({ slots, onEntrySelect, onStart, onEdit, onFinish, com
           onEntrySelect={onEntrySelect}
           onStart={onStart}
           onEdit={onEdit}
+          onPrint={onPrint}
           onFinish={onFinish}
           compact={compact}
         />

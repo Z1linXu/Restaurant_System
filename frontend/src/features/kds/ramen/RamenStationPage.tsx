@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useRamenStationOrders } from '../../../hooks/useRamenStationOrders'
 import { RamenOrderCard } from './components/RamenOrderCard'
+import { useCurrentStore } from '../../store/StoreContext'
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
   weekday: 'long',
@@ -9,7 +10,8 @@ const DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
 })
 
 export function RamenStationPage() {
-  const { orders, loading, error } = useRamenStationOrders(1)
+  const { storeId } = useCurrentStore()
+  const { orders, loading, error } = useRamenStationOrders(storeId)
   const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {

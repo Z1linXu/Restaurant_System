@@ -6,6 +6,7 @@ import {
 } from '../../services/analyticsReportService'
 import { fetchPlatformOverview, type PlatformAdminOverview } from '../../services/platformAdminService'
 import { toPreviousReportQuery, toReportQuery } from './reportUtils'
+import { useCurrentStore } from '../store/StoreContext'
 
 export interface ReportStoreOption {
   id: string
@@ -13,10 +14,11 @@ export interface ReportStoreOption {
 }
 
 export function useAnalyticsReports() {
+  const { storeId } = useCurrentStore()
   const [overview, setOverview] = useState<PlatformAdminOverview | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedStoreId, setSelectedStoreId] = useState('ALL')
+  const [selectedStoreId, setSelectedStoreId] = useState(String(storeId))
   const [selectedRange, setSelectedRange] = useState<AnalyticsReportRange>('today')
   const [compareEnabled, setCompareEnabled] = useState(true)
   const [customStartDate, setCustomStartDate] = useState('')
@@ -28,7 +30,7 @@ export function useAnalyticsReports() {
     const loadOverview = async () => {
       setError(null)
       try {
-        const nextOverview = await fetchPlatformOverview(1)
+        const nextOverview = await fetchPlatformOverview(storeId)
         setOverview(nextOverview)
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : 'Failed to load report scope')
@@ -36,7 +38,7 @@ export function useAnalyticsReports() {
     }
 
     void loadOverview()
-  }, [])
+  }, [storeId])
 
   const organizationId = useMemo(
     () => Number(overview?.organizations?.[0]?.id ?? 1),
@@ -44,15 +46,17 @@ export function useAnalyticsReports() {
   )
 
   const stores = useMemo<ReportStoreOption[]>(
-    () => [
-      { id: 'ALL', label: 'All Stores' },
-      ...(overview?.stores ?? []).map((store) => ({
+    () =>
+      (overview?.stores ?? []).map((store) => ({
         id: String(store.id),
         label: String(store.name ?? `Store ${store.id}`),
       })),
-    ],
     [overview],
   )
+
+  useEffect(() => {
+    setSelectedStoreId(String(storeId))
+  }, [storeId])
 
   useEffect(() => {
     if (selectedRange !== 'custom' || (customStartDate && customEndDate)) {
