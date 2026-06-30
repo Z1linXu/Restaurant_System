@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import { Input } from '../../../components/ui/Input'
+import { calculateTax, calculateTotal, TAX_RATE_LABEL } from '../../../utils/tax'
 import type {
   BackendOrderResponse,
   BillId,
@@ -24,6 +25,8 @@ interface OrderDetailPanelProps {
   onAllocationChange: (itemId: number, allocation: ItemAllocation) => void
   onCashSelectedChange: (selected: boolean) => void
   onCheckout: () => void
+  reprintBusy?: string | null
+  onReprint?: (receiptType: 'GRAB' | 'FRONTDESK_RECEIPT') => void
 }
 
 interface SharedEditorState {
@@ -35,7 +38,6 @@ interface SharedEditorState {
 
 const BILL_LABELS: BillId[] = ['A', 'B', 'C', 'D']
 const EMPTY_UNASSIGNED: ItemAllocation = { mode: 'UNASSIGNED' }
-const CHECKOUT_TAX_RATE = 0.14975
 
 function getOrderDisplayLabel(order: BackendOrderResponse) {
   return order.table_no ?? order.pickup_no ?? `#${order.id}`
@@ -79,7 +81,7 @@ function buildBillTotals(order: BackendOrderResponse, splitCount: SplitBillCount
       label: billId,
       items,
       subtotal: items.reduce((sum, entry) => sum + entry.amount, 0),
-      tax: items.reduce((sum, entry) => sum + entry.amount, 0) * CHECKOUT_TAX_RATE,
+      tax: calculateTax(items.reduce((sum, entry) => sum + entry.amount, 0)),
     }
   })
 }
@@ -122,6 +124,8 @@ export function OrderDetailPanel({
   onAllocationChange,
   onCashSelectedChange,
   onCheckout,
+  reprintBusy = null,
+  onReprint,
 }: OrderDetailPanelProps) {
   const [sharedEditor, setSharedEditor] = useState<SharedEditorState | null>(null)
 
@@ -156,8 +160,8 @@ export function OrderDetailPanel({
   const checkoutDisabled = !canCheckout || busy || hasUnassignedItems
   const activeSharedItem = sharedEditor ? order.items.find((item) => item.id === sharedEditor.itemId) : null
   const orderSubtotal = Number(order.subtotal_amount)
-  const orderTax = orderSubtotal * CHECKOUT_TAX_RATE
-  const orderTotal = orderSubtotal + orderTax
+  const orderTax = calculateTax(orderSubtotal)
+  const orderTotal = calculateTotal(orderSubtotal)
 
   const manualTotalValid = (() => {
     if (!sharedEditor || !activeSharedItem || sharedEditor.method !== 'MANUAL') {
@@ -486,7 +490,7 @@ export function OrderDetailPanel({
                       <span>${bill.subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span>Tax (14.975%)</span>
+                      <span>Tax ({TAX_RATE_LABEL})</span>
                       <span>${bill.tax.toFixed(2)}</span>
                     </div>
                     <div className="flex items-center justify-between font-semibold text-[var(--on-surface)]">
@@ -521,7 +525,7 @@ export function OrderDetailPanel({
                 <span>${orderSubtotal.toFixed(2)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span>Tax (14.975%)</span>
+                <span>Tax ({TAX_RATE_LABEL})</span>
                 <span>${orderTax.toFixed(2)}</span>
               </div>
               <div className="flex items-center justify-between text-[1rem] font-bold text-[var(--on-surface)]">
@@ -544,6 +548,28 @@ export function OrderDetailPanel({
             >
               {busy ? 'Checking out...' : canCheckout ? 'Checkout / 结账' : 'Closed / 已完成'}
             </Button>
+          </div>
+
+          <div className="rounded-[18px] bg-[rgba(26,28,25,0.04)] p-3.5">
+            <p className="text-[0.75rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Reprint</p>
+            <div className="mt-3 grid gap-2">
+              <button
+                type="button"
+                disabled={!onReprint || reprintBusy != null}
+                onClick={() => onReprint?.('GRAB')}
+                className="rounded-[16px] bg-[rgba(18,141,77,0.12)] px-3 py-2.5 text-[0.84rem] font-bold text-[rgb(25,112,69)] disabled:opacity-50"
+              >
+                {reprintBusy === 'GRAB' ? 'Reprinting GRAB...' : 'Reprint GRAB'}
+              </button>
+              <button
+                type="button"
+                disabled={!onReprint || reprintBusy != null}
+                onClick={() => onReprint?.('FRONTDESK_RECEIPT')}
+                className="rounded-[16px] bg-[rgba(97,0,0,0.08)] px-3 py-2.5 text-[0.84rem] font-bold text-[var(--primary)] disabled:opacity-50"
+              >
+                {reprintBusy === 'FRONTDESK_RECEIPT' ? 'Reprinting receipt...' : 'Reprint Receipt'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

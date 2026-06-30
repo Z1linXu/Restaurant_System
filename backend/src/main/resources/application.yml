@@ -37,5 +37,7 @@ app:
   auth:
     jwt-secret: dev-local-restaurant-pos-change-this-secret-please-2026
     access-token-expiration-seconds: 900
-    refresh-token-expiration-days: 14
+    refresh-token-expiration-days: 30
     x-user-id-fallback-enabled: true
+  dev-tools:
+    role-switcher-enabled: false

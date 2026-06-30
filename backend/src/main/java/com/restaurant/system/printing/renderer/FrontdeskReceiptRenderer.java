@@ -1,5 +1,6 @@
 package com.restaurant.system.printing.renderer;
 
+import com.restaurant.system.common.pricing.TaxCalculator;
 import com.restaurant.system.order.entity.Order;
 import com.restaurant.system.order.entity.OrderItem;
 import com.restaurant.system.order.entity.OrderItemOption;
@@ -42,13 +43,11 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         BigDecimal tax = total.subtract(subtotal).setScale(2, RoundingMode.HALF_UP);
 
         StringBuilder builder = new StringBuilder();
-        builder.append("\n");
-        builder.append(center("FRONTDESK RECEIPT", 32)).append("\n");
-        builder.append(PrintMarkup.doubleHeight(resolveLargeDisplayLabel(order))).append("\n");
+        appendLargeLine(builder, resolveLargeDisplayLabel(order));
         if ("pickup".equalsIgnoreCase(order.order_type) || "takeout".equalsIgnoreCase(order.order_type)) {
-            builder.append("Order Type: Takeout").append("\n");
+            appendSizedLine(builder, "Order Type: Takeout");
         }
-        builder.append("--------------------------------\n");
+        appendSizedLine(builder, "--------------------------------");
 
         List<OrderItem> items = request.order_items == null ? List.of() : request.order_items.stream()
             .filter(item -> !"cancelled".equals(item.status))
@@ -58,35 +57,41 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
 
         for (OrderItem item : items) {
             List<OrderItemOption> options = optionsByItemId.getOrDefault(item.id, List.of());
-            builder.append(buildDisplayName(item, options))
-                .append(" x")
-                .append(item.quantity == null ? 1 : item.quantity)
-                .append("\n");
+            appendSizedLine(builder, buildItemLine(item, options));
             String noodleType = resolveNoodleTypeLabel(options);
             if (noodleType != null) {
-                builder.append(noodleType).append("\n");
+                appendSizedLine(builder, noodleType);
             }
             List<String> chargeableLines = resolveChargeableOptionLines(options);
             for (String chargeableLine : chargeableLines) {
-                builder.append(chargeableLine).append("\n");
+                appendSizedLine(builder, chargeableLine);
             }
-            builder.append(formatItemMoney(item)).append("\n\n");
+            appendSizedLine(builder, formatItemMoney(item));
+            builder.append("\n");
         }
 
-        builder.append("--------------------------------\n");
-        builder.append("Subtotal: ").append(formatMoney(subtotal)).append("\n");
-        builder.append("Tax: ").append(formatMoney(tax)).append("\n");
-        builder.append("Total: ").append(formatMoney(total)).append("\n");
-        builder.append("--------------------------------\n");
+        appendSizedLine(builder, "--------------------------------");
+        appendSizedLine(builder, "Subtotal: " + formatMoney(subtotal));
+        appendSizedLine(builder, "Tax (" + TaxCalculator.TAX_RATE_LABEL + "): " + formatMoney(tax));
+        appendSizedLine(builder, "Total: " + formatMoney(total));
+        appendSizedLine(builder, "--------------------------------");
         if (order.submitted_at != null) {
-            builder.append("Submitted: ").append(order.submitted_at.format(TIME_FORMATTER)).append("\n");
+            appendSizedLine(builder, "Submitted: " + order.submitted_at.format(TIME_FORMATTER));
         } else if (request.happened_at != null) {
-            builder.append("Printed: ").append(request.happened_at.format(TIME_FORMATTER)).append("\n");
+            appendSizedLine(builder, "Printed: " + request.happened_at.format(TIME_FORMATTER));
         } else if (order.created_at != null) {
-            builder.append("Created: ").append(order.created_at.format(TIME_FORMATTER)).append("\n");
+            appendSizedLine(builder, "Created: " + order.created_at.format(TIME_FORMATTER));
         }
         builder.append("\n");
         return builder.toString();
+    }
+
+    private void appendSizedLine(StringBuilder builder, String value) {
+        builder.append(PrintMarkup.doubleHeight(value)).append("\n");
+    }
+
+    private void appendLargeLine(StringBuilder builder, String value) {
+        builder.append(PrintMarkup.large(value)).append("\n");
     }
 
     private boolean shouldDisplayItem(OrderItem item, List<OrderItemOption> options) {
@@ -96,17 +101,14 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         return true;
     }
 
-    private String buildDisplayName(OrderItem item, List<OrderItemOption> options) {
+    private String buildItemLine(OrderItem item, List<OrderItemOption> options) {
         String baseName = item.item_name_snapshot_zh == null ? item.item_name_snapshot_en : item.item_name_snapshot_zh;
         StringBuilder builder = new StringBuilder();
-        String sizeZh = resolveSizeZhLabel(options);
-        if (sizeZh != null) {
-            builder.append(sizeZh);
+        builder.append(item.quantity == null ? 1 : item.quantity).append(" x ");
+        if (isComboItem(item, options)) {
+            builder.append("Combo ");
         }
         builder.append(baseName == null ? "Item" : baseName);
-        if (isComboItem(item, options)) {
-            builder.append(" Combo");
-        }
         String sizeEn = resolveSizeEnLabel(options);
         if (sizeEn != null) {
             builder.append(" ").append(sizeEn);

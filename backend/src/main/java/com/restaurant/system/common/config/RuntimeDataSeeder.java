@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.restaurant.system.auth.entity.UserCredential;
 import com.restaurant.system.auth.repository.UserCredentialRepository;
 import com.restaurant.system.auth.service.PasswordService;
+import com.restaurant.system.dev.DevRoleSwitcherAccess;
+import com.restaurant.system.dev.DevTestUser;
 import com.restaurant.system.menu.entity.MenuCategory;
 import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.entity.MenuItemOption;
@@ -18,6 +20,7 @@ import com.restaurant.system.platform.repository.OrganizationRepository;
 import com.restaurant.system.platform.repository.RestaurantTemplateRepository;
 import com.restaurant.system.platform.repository.StoreKdsDisplayConfigRepository;
 import com.restaurant.system.printing.PrintModuleCode;
+import com.restaurant.system.printing.PrintingMode;
 import com.restaurant.system.printing.entity.PrinterAssignment;
 import com.restaurant.system.printing.entity.PrinterConfig;
 import com.restaurant.system.printing.repository.PrinterAssignmentRepository;
@@ -28,10 +31,14 @@ import com.restaurant.system.station.entity.Station;
 import com.restaurant.system.station.repository.DiningTableRepository;
 import com.restaurant.system.station.repository.StationRepository;
 import com.restaurant.system.user.entity.Role;
+import com.restaurant.system.user.entity.OrganizationMembership;
 import com.restaurant.system.user.entity.Store;
+import com.restaurant.system.user.entity.StoreMembership;
 import com.restaurant.system.user.entity.User;
+import com.restaurant.system.user.repository.OrganizationMembershipRepository;
 import com.restaurant.system.user.repository.RoleRepository;
 import com.restaurant.system.user.repository.StoreRepository;
+import com.restaurant.system.user.repository.StoreMembershipRepository;
 import com.restaurant.system.user.repository.UserRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -52,10 +59,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class RuntimeDataSeeder implements ApplicationRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(RuntimeDataSeeder.class);
+    private static final Set<String> FRIED_NOODLE_SKUS = Set.of(
+        "beef_chow_mein",
+        "chicken_chow_mein",
+        "tomato_chow_mein",
+        "vegetable_chow_mein"
+    );
 
     private final StoreRepository storeRepository;
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
+    private final OrganizationMembershipRepository organizationMembershipRepository;
+    private final StoreMembershipRepository storeMembershipRepository;
     private final StationRepository stationRepository;
     private final DiningTableRepository diningTableRepository;
     private final OrganizationRepository organizationRepository;
@@ -68,6 +83,7 @@ public class RuntimeDataSeeder implements ApplicationRunner {
     private final PrinterAssignmentRepository printerAssignmentRepository;
     private final UserCredentialRepository userCredentialRepository;
     private final PasswordService passwordService;
+    private final DevRoleSwitcherAccess devRoleSwitcherAccess;
     private final ObjectMapper objectMapper;
     private final boolean runtimeSeedEnabled;
     private final boolean forceOverwrite;
@@ -76,6 +92,8 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         StoreRepository storeRepository,
         RoleRepository roleRepository,
         UserRepository userRepository,
+        OrganizationMembershipRepository organizationMembershipRepository,
+        StoreMembershipRepository storeMembershipRepository,
         StationRepository stationRepository,
         DiningTableRepository diningTableRepository,
         OrganizationRepository organizationRepository,
@@ -88,12 +106,15 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         PrinterAssignmentRepository printerAssignmentRepository,
         UserCredentialRepository userCredentialRepository,
         PasswordService passwordService,
+        DevRoleSwitcherAccess devRoleSwitcherAccess,
         @Value("${app.seed.runtime-enabled:true}") boolean runtimeSeedEnabled,
         @Value("${app.seed.force-overwrite:false}") boolean forceOverwrite
     ) {
         this.storeRepository = storeRepository;
         this.roleRepository = roleRepository;
         this.userRepository = userRepository;
+        this.organizationMembershipRepository = organizationMembershipRepository;
+        this.storeMembershipRepository = storeMembershipRepository;
         this.stationRepository = stationRepository;
         this.diningTableRepository = diningTableRepository;
         this.organizationRepository = organizationRepository;
@@ -106,6 +127,7 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         this.printerAssignmentRepository = printerAssignmentRepository;
         this.userCredentialRepository = userCredentialRepository;
         this.passwordService = passwordService;
+        this.devRoleSwitcherAccess = devRoleSwitcherAccess;
         this.objectMapper = new ObjectMapper();
         this.runtimeSeedEnabled = runtimeSeedEnabled;
         this.forceOverwrite = forceOverwrite;
@@ -126,6 +148,7 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         seedRoles();
         seedUsers();
         seedAuthCredentials();
+        seedDevRoleSwitcherUsers();
         seedStations();
         seedMenuCategories();
         seedMenuItems();
@@ -137,6 +160,7 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         }
         seedOrganizations();
         attachStoresToOrganizations();
+        seedMemberships();
         seedDiningTables();
         seedStoreKdsDisplayConfigs();
         seedRamenTemplate();
@@ -161,17 +185,13 @@ public class RuntimeDataSeeder implements ApplicationRunner {
     }
 
     private void seedRoles() {
-        if (roleRepository.count() > 0) {
-            return;
-        }
-
-        roleRepository.saveAll(List.of(
-            role("Frontdesk", "FRONTDESK"),
-            role("Hot Kitchen", "HOT_KITCHEN"),
-            role("Noodle View", "NOODLE_VIEW"),
-            role("Pass", "PASS"),
-            role("Admin", "ADMIN")
-        ));
+        ensureRole("Owner", "OWNER");
+        ensureRole("Manager", "MANAGER");
+        ensureRole("Frontdesk", "FRONTDESK");
+        ensureRole("Hot Kitchen", "HOT_KITCHEN");
+        ensureRole("Noodle View", "NOODLE_VIEW");
+        ensureRole("Pass", "PASS");
+        ensureRole("Admin", "ADMIN");
     }
 
     private void seedUsers() {
@@ -208,12 +228,72 @@ public class RuntimeDataSeeder implements ApplicationRunner {
 
     private void seedAuthCredentials() {
         Store store = firstStore();
-        User owner = ensureAuthUser(store.id, "owner", "Owner User", "ADMIN", "555-0100");
-        User frontdesk = ensureAuthUser(store.id, "frontdesk", "Frontdesk User", "FRONTDESK", "555-0001");
-        User kitchen = ensureAuthUser(store.id, "kitchen", "Kitchen User", "HOT_KITCHEN", "555-0101");
-        ensureCredential(owner, "owner", "ChangeMe123!");
-        ensureCredential(frontdesk, "frontdesk", "ChangeMe123!");
-        ensureCredential(kitchen, "kitchen", "ChangeMe123!");
+        User owner = ensureDefaultLoginUser(store.id, "owner", "Owner User", "OWNER", "555-0100");
+        User manager = ensureDefaultLoginUser(store.id, "manager", "Manager User", "MANAGER", "555-0102");
+        User staff = ensureDefaultLoginUser(store.id, "staff", "Frontdesk Staff", "FRONTDESK", "555-0103");
+        User frontdesk = ensureDefaultLoginUser(store.id, "frontdesk", "Frontdesk User", "FRONTDESK", "555-0001");
+        User kitchen = ensureDefaultLoginUser(store.id, "kitchen", "Kitchen User", "HOT_KITCHEN", "555-0101");
+        ensureDefaultCredential(owner, "owner", "741xu741");
+        ensureDefaultCredential(manager, "manager", "741xu741");
+        ensureDefaultCredential(staff, "staff", "741xu741");
+        ensureDefaultCredential(frontdesk, "frontdesk", "741xu741");
+        ensureDefaultCredential(kitchen, "kitchen", "741xu741");
+    }
+
+    private void seedDevRoleSwitcherUsers() {
+        if (!devRoleSwitcherAccess.isEnabled()) {
+            logger.info("Skipping dev role switcher users because role switcher is disabled or profile is not local/dev");
+            return;
+        }
+        Store store = firstStore();
+        for (DevTestUser devUser : DevTestUser.USERS) {
+            ensureDevRoleSwitcherUser(store.id, devUser);
+        }
+    }
+
+    private void ensureDevRoleSwitcherUser(Long storeId, DevTestUser devUser) {
+        User existing = userRepository.findFirstByUsernameIgnoreCase(devUser.loginIdentifier()).orElse(null);
+        User target = existing == null ? new User() : existing;
+        logger.info("{} dev role switcher user {}", existing == null ? "Seeder inserting missing" : "Seeder ensuring", devUser.loginIdentifier());
+        target.setStore_id(storeId);
+        target.setRole_id(findRoleId(devUser.roleCode()));
+        target.setUsername(devUser.loginIdentifier());
+        if (target.getFull_name() == null || target.getFull_name().isBlank() || forceOverwrite) {
+            target.setFull_name(devUser.fullName());
+        }
+        if (target.getPhone() == null || target.getPhone().isBlank() || forceOverwrite) {
+            target.setPhone("dev-only");
+        }
+        target.setStatus("active");
+        target.setUpdated_at(now());
+        if (target.getCreated_at() == null) {
+            target.setCreated_at(now());
+        }
+        userRepository.save(target);
+    }
+
+    private User ensureDefaultLoginUser(Long storeId, String username, String fullName, String roleCode, String phone) {
+        User existing = userRepository.findAll().stream()
+            .filter(user -> username.equalsIgnoreCase(user.getUsername()))
+            .findFirst()
+            .orElse(null);
+        User target = existing == null ? new User() : existing;
+        logger.info("{} default login user {}", existing == null ? "Seeder inserting missing" : "Seeder ensuring", username);
+        target.setStore_id(storeId);
+        target.setRole_id(findRoleId(roleCode));
+        target.setUsername(username);
+        if (target.getFull_name() == null || target.getFull_name().isBlank() || forceOverwrite) {
+            target.setFull_name(fullName);
+        }
+        if (target.getPhone() == null || target.getPhone().isBlank() || forceOverwrite) {
+            target.setPhone(phone);
+        }
+        target.setStatus("active");
+        target.setUpdated_at(now());
+        if (target.getCreated_at() == null) {
+            target.setCreated_at(now());
+        }
+        return userRepository.save(target);
     }
 
     private User ensureAuthUser(Long storeId, String username, String fullName, String roleCode, String phone) {
@@ -253,6 +333,23 @@ public class RuntimeDataSeeder implements ApplicationRunner {
                 .orElseGet(UserCredential::new)
             : new UserCredential();
         logger.info("{} user credential {}", credential.id == null ? "Seeder inserting missing" : "Seeder force overwriting", loginIdentifier);
+        credential.userId = user.getId();
+        credential.loginIdentifier = loginIdentifier;
+        credential.passwordHash = passwordService.hashPassword(defaultPassword);
+        credential.passwordAlgorithm = "BCRYPT";
+        credential.passwordUpdatedAt = now();
+        credential.isActive = true;
+        credential.updatedAt = now();
+        if (credential.createdAt == null) {
+            credential.createdAt = now();
+        }
+        userCredentialRepository.save(credential);
+    }
+
+    private void ensureDefaultCredential(User user, String loginIdentifier, String defaultPassword) {
+        UserCredential credential = userCredentialRepository.findFirstByLoginIdentifierIgnoreCase(loginIdentifier)
+            .orElseGet(UserCredential::new);
+        logger.info("{} default user credential {}", credential.id == null ? "Seeder inserting missing" : "Seeder resetting", loginIdentifier);
         credential.userId = user.getId();
         credential.loginIdentifier = loginIdentifier;
         credential.passwordHash = passwordService.hashPassword(defaultPassword);
@@ -377,10 +474,12 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         syncOptions("braised_beef_tendon_noodle", buildSoupNoodleOptions(true));
         syncOptions("pickled_vegetable_beef_noodle", buildSoupNoodleOptions(true));
         syncOptions("vegetable_noodle", buildVegetableNoodleOptions());
-        syncOptions("beef_chow_mein", buildWokOptions(true));
-        syncOptions("chicken_chow_mein", buildWokOptions(true));
-        syncOptions("tomato_chow_mein", buildTomatoWokOptions());
-        syncOptions("vegetable_chow_mein", buildWokOptions(false));
+        List<OptionSeed> friedNoodleOptions = buildFriedNoodleOptions();
+        syncOptions("beef_chow_mein", friedNoodleOptions);
+        syncOptions("chicken_chow_mein", friedNoodleOptions);
+        syncOptions("tomato_chow_mein", friedNoodleOptions);
+        syncOptions("vegetable_chow_mein", friedNoodleOptions);
+        reconcileFriedNoodleOptions(friedNoodleOptions);
         syncOptions("dan_dan_noodle", buildDanDanOptions());
         syncOptions("zha_jiang_noodle", buildZhaJiangOptions());
         syncOptions("cold_noodle_shredded_chicken", buildColdChickenOptions());
@@ -466,28 +565,22 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         return seeds;
     }
 
-    private List<OptionSeed> buildWokOptions(boolean includeMeatAdjustments) {
+    private List<OptionSeed> buildFriedNoodleOptions() {
         List<OptionSeed> seeds = new ArrayList<>();
         seeds.addAll(buildComboOptions(true));
         seeds.addAll(buildSpicyOptions());
         seeds.addAll(optionSeeds(
-            optionSeed("addon", "加西兰花", "Extra Broccoli", "1.20"),
-            optionSeed("addon", "加包菜", "Extra Cabbage", "1.20")
-        ));
-        if (includeMeatAdjustments) {
-            seeds.add(optionSeed("addon", "加肉", "Extra Meat", "6.99"));
-            seeds.add(optionSeed("remove", "走肉", "No Meat", "0.00"));
-        }
-        seeds.addAll(optionSeeds(
+            optionSeed("addon", "加煎蛋", "Extra Fried Egg", "1.99"),
+            optionSeed("addon", "加卤蛋", "Extra Tea Egg", "1.99"),
+            optionSeed("remove", "走豆芽", "No Bean Sprouts", "0.00"),
+            optionSeed("remove", "走洋葱", "No Onion", "0.00"),
+            optionSeed("remove", "走青椒", "No Green Pepper", "0.00"),
             optionSeed("remove", "走西兰花", "No Broccoli", "0.00"),
-            optionSeed("remove", "走包菜", "No Cabbage", "0.00")
+            optionSeed("remove", "走大头菜", "No Cabbage", "0.00"),
+            optionSeed("remove", "走西葫芦", "No Zucchini", "0.00"),
+            optionSeed("remove", "走所有菜", "No Vegetables", "0.00"),
+            optionSeed("remove", "走番茄", "No Tomato", "0.00")
         ));
-        return seeds;
-    }
-
-    private List<OptionSeed> buildTomatoWokOptions() {
-        List<OptionSeed> seeds = new ArrayList<>(buildWokOptions(true));
-        seeds.add(optionSeed("remove", "走青椒", "No Green Pepper", "0.00"));
         return seeds;
     }
 
@@ -571,7 +664,8 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         seeds.addAll(optionSeeds(
             optionSeed("addon", "套餐毛豆", "Combo Edamame", "0.00"),
             optionSeed("addon", "套餐土豆丝", "Combo Shredded Potato", "0.00"),
-            optionSeed("addon", "套餐拌黄瓜", "Combo Cucumber Salad", "0.00")
+            optionSeed("addon", "套餐拌黄瓜", "Combo Cucumber Salad", "0.00"),
+            optionSeed("remove", "走花生", "No Peanut", "0.00", "COMBO_SIDE_REMOVE", "combo_cucumber_no_peanut", "combo_cucumber_salad")
         ));
         return seeds;
     }
@@ -613,7 +707,114 @@ public class RuntimeDataSeeder implements ApplicationRunner {
     }
 
     private OptionSeed optionSeed(String optionType, String nameZh, String nameEn, String priceDelta) {
-        return new OptionSeed(optionType, nameZh, nameEn, priceDelta);
+        return optionSeed(optionType, nameZh, nameEn, priceDelta, inferOptionGroup(optionType, nameZh), inferOptionCode(optionType, nameZh), null);
+    }
+
+    private OptionSeed optionSeed(
+        String optionType,
+        String nameZh,
+        String nameEn,
+        String priceDelta,
+        String optionGroup,
+        String optionCode,
+        String parentOptionCode
+    ) {
+        return new OptionSeed(optionType, optionGroup, optionCode, parentOptionCode, null, nameZh, nameEn, priceDelta);
+    }
+
+    private String inferOptionGroup(String optionType, String nameZh) {
+        if ("size".equals(optionType)) {
+            return "SIZE";
+        }
+        if ("soup_base".equals(optionType)) {
+            return "SOUP_BASE";
+        }
+        if ("noodle_type".equals(optionType)) {
+            return "NOODLE_TYPE";
+        }
+        if ("spicy_level".equals(optionType)) {
+            return "SPICY_LEVEL";
+        }
+        if ("remove".equals(optionType)) {
+            return "REMOVE";
+        }
+        if ("addon".equals(optionType)) {
+            return switch (nameZh) {
+                case "套餐" -> "COMBO";
+                case "套餐卤蛋", "套餐煎蛋" -> "COMBO_EGG";
+                case "套餐毛豆", "套餐土豆丝", "套餐拌黄瓜" -> "COMBO_SIDE";
+                default -> "ADD_ON";
+            };
+        }
+        return optionType == null ? null : optionType.toUpperCase();
+    }
+
+    private String inferOptionCode(String optionType, String nameZh) {
+        if (nameZh == null) {
+            return null;
+        }
+        return switch (nameZh) {
+            case "套餐" -> "combo";
+            case "套餐卤蛋" -> "combo_tea_egg";
+            case "套餐煎蛋" -> "combo_fried_egg";
+            case "套餐毛豆" -> "combo_edamame";
+            case "套餐土豆丝" -> "combo_shredded_potato";
+            case "套餐拌黄瓜" -> "combo_cucumber_salad";
+            case "中碗" -> "size_regular";
+            case "大碗" -> "size_large";
+            case "素汤" -> "soup_vegan";
+            case "肉汤" -> "soup_beef";
+            case "二细" -> "noodle_erxi";
+            case "三细" -> "noodle_sanxi";
+            case "细" -> "noodle_thin";
+            case "毛细" -> "noodle_capillary";
+            case "韭叶" -> "noodle_leek_leaf";
+            case "宽" -> "noodle_wide";
+            case "大宽" -> "noodle_extra_wide";
+            case "不辣" -> "spicy_none";
+            case "少辣" -> "spicy_mild";
+            case "正常辣" -> "spicy_regular";
+            case "加辣" -> "spicy_extra";
+            case "加面" -> "extra_noodle";
+            case "加蛋", "加卤蛋" -> "tea_egg";
+            case "加煎蛋" -> "fried_egg";
+            case "加肉" -> "extra_meat";
+            case "加萝卜" -> "extra_radish";
+            case "加上海青" -> "bok_choy";
+            case "加香菜" -> "cilantro";
+            case "加葱" -> "green_onion";
+            case "加酱" -> "extra_sauce";
+            case "加西兰花" -> "broccoli";
+            case "加包菜" -> "cabbage";
+            case "加玉米" -> "corn";
+            case "加海菜" -> "seaweed";
+            case "加蘑菇" -> "mushroom";
+            case "加胡萝卜片" -> "carrot_slice";
+            case "走香菜", "不要香菜" -> "remove_cilantro";
+            case "走葱" -> "remove_green_onion";
+            case "走洋葱" -> "remove_onion";
+            case "走牛肉" -> "remove_beef";
+            case "走萝卜" -> "remove_radish";
+            case "走面" -> "remove_noodle";
+            case "少面" -> "less_noodle";
+            case "走上海青" -> "remove_bok_choy";
+            case "走西兰花" -> "remove_broccoli";
+            case "走玉米" -> "remove_corn";
+            case "走蘑菇" -> "remove_mushroom";
+            case "走海菜" -> "remove_seaweed";
+            case "走胡萝卜片", "走胡萝卜" -> "remove_carrot";
+            case "走黄瓜" -> "remove_cucumber";
+            case "走毛豆" -> "remove_edamame";
+            case "走花生" -> "remove_peanut";
+            case "走花生碎" -> "remove_crushed_peanut";
+            case "走豆芽" -> "remove_bean_sprouts";
+            case "走青椒" -> "remove_green_pepper";
+            case "走大头菜" -> "remove_cabbage";
+            case "走西葫芦" -> "remove_zucchini";
+            case "走所有菜" -> "remove_all_vegetables";
+            case "走番茄" -> "remove_tomato";
+            default -> null;
+        };
     }
 
     private List<OptionSeed> optionSeeds(OptionSeed... seeds) {
@@ -623,16 +824,19 @@ public class RuntimeDataSeeder implements ApplicationRunner {
     private void syncOptions(String sku, List<OptionSeed> seeds) {
         Long menuItemId = findMenuItemId(sku);
         Set<String> allowedKeys = new LinkedHashSet<>();
+        int seedIndex = 0;
         for (OptionSeed seed : seeds) {
-            ensureOption(menuItemId, seed.optionType(), seed.nameZh(), seed.nameEn(), seed.priceDelta());
-            allowedKeys.add(optionKey(menuItemId, seed.optionType(), seed.nameZh(), seed.nameEn()));
+            ensureOption(menuItemId, seed, seed.sortOrder() == null ? seedIndex * 10 : seed.sortOrder());
+            allowedKeys.add(optionKey(menuItemId, seed));
+            seedIndex++;
         }
+        resolveOptionParents(menuItemId, seeds);
 
         for (MenuItemOption option : menuItemOptionRepository.findAll()) {
             if (!menuItemId.equals(option.menu_item_id)) {
                 continue;
             }
-            String existingKey = optionKey(menuItemId, option.option_type, option.name_zh, option.name_en);
+            String existingKey = optionKey(menuItemId, option);
             if (allowedKeys.contains(existingKey)) {
                 continue;
             }
@@ -649,11 +853,69 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         }
     }
 
+    private void reconcileFriedNoodleOptions(List<OptionSeed> allowedSeeds) {
+        Set<String> allowedKeys = new LinkedHashSet<>();
+        for (OptionSeed seed : allowedSeeds) {
+            allowedKeys.add(optionKeyWithoutMenuItem(seed.optionType(), seed.nameZh(), seed.nameEn()));
+        }
+
+        for (MenuItem item : menuItemRepository.findAll()) {
+            if (!FRIED_NOODLE_SKUS.contains(item.sku)) {
+                continue;
+            }
+            for (MenuItemOption option : menuItemOptionRepository.findAll()) {
+                if (!item.id.equals(option.menu_item_id)) {
+                    continue;
+                }
+                String optionKey = optionKeyWithoutMenuItem(option.option_type, option.name_zh, option.name_en);
+                boolean shouldBeActive = allowedKeys.contains(optionKey);
+                if (shouldBeActive && !Boolean.TRUE.equals(option.is_active)) {
+                    option.is_active = true;
+                    option.updated_at = now();
+                    menuItemOptionRepository.save(option);
+                    logger.info("Seeder activated required fried noodle option {} for sku {}", option.name_zh, item.sku);
+                } else if (!shouldBeActive && Boolean.TRUE.equals(option.is_active)) {
+                    option.is_active = false;
+                    option.updated_at = now();
+                    menuItemOptionRepository.save(option);
+                    logger.info("Seeder deactivated legacy fried noodle option {} for sku {}", option.name_zh, item.sku);
+                }
+            }
+        }
+    }
+
     private String optionKey(Long menuItemId, String optionType, String nameZh, String nameEn) {
         return menuItemId + "|" + optionType + "|" + nameZh + "|" + nameEn;
     }
 
-    private record OptionSeed(String optionType, String nameZh, String nameEn, String priceDelta) {}
+    private String optionKey(Long menuItemId, OptionSeed seed) {
+        if (seed.optionCode() != null && !seed.optionCode().isBlank()) {
+            return menuItemId + "|code|" + seed.optionCode();
+        }
+        return optionKey(menuItemId, seed.optionType(), seed.nameZh(), seed.nameEn());
+    }
+
+    private String optionKey(Long menuItemId, MenuItemOption option) {
+        if (option.option_code != null && !option.option_code.isBlank()) {
+            return menuItemId + "|code|" + option.option_code;
+        }
+        return optionKey(menuItemId, option.option_type, option.name_zh, option.name_en);
+    }
+
+    private String optionKeyWithoutMenuItem(String optionType, String nameZh, String nameEn) {
+        return optionType + "|" + nameZh + "|" + nameEn;
+    }
+
+    private record OptionSeed(
+        String optionType,
+        String optionGroup,
+        String optionCode,
+        String parentOptionCode,
+        Integer sortOrder,
+        String nameZh,
+        String nameEn,
+        String priceDelta
+    ) {}
 
     private record DiningTableSeed(
         String tableCode,
@@ -672,6 +934,26 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         role.setCreated_at(now());
         role.setUpdated_at(now());
         return role;
+    }
+
+    private void ensureRole(String name, String code) {
+        Role existing = roleRepository.findAll().stream()
+            .filter(role -> code.equalsIgnoreCase(role.getCode()))
+            .findFirst()
+            .orElse(null);
+        if (existing != null && !forceOverwrite) {
+            logger.info("Seeder skip existing role {}", code);
+            return;
+        }
+        Role target = existing == null ? role(name, code) : existing;
+        target.setName(name);
+        target.setCode(code);
+        target.setUpdated_at(now());
+        if (target.getCreated_at() == null) {
+            target.setCreated_at(now());
+        }
+        logger.info("{} role {}", existing == null ? "Seeder inserting missing" : "Seeder force overwriting", code);
+        roleRepository.save(target);
     }
 
     private Station station(Long storeId, String code, String name, int sortOrder) {
@@ -803,35 +1085,87 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         return option;
     }
 
-    private void ensureOption(Long menuItemId, String optionType, String nameZh, String nameEn, String priceDelta) {
-        MenuItemOption existing = menuItemOptionRepository.findAll().stream()
-            .filter(option ->
-                menuItemId.equals(option.menu_item_id)
-                    && optionType.equals(option.option_type)
-                    && nameZh.equals(option.name_zh)
-                    && nameEn.equals(option.name_en)
-            )
-            .findFirst()
-            .orElse(null);
-
-        if (existing != null && !forceOverwrite) {
-            logger.info("Seeder skip existing menu option {} for menu_item_id {}", nameZh, menuItemId);
-            return;
-        }
+    private void ensureOption(Long menuItemId, OptionSeed seed, Integer defaultSortOrder) {
+        MenuItemOption existing = findExistingOption(menuItemId, seed);
 
         MenuItemOption target = existing == null ? new MenuItemOption() : existing;
-        logger.info("{} menu option {} for menu_item_id {}", existing == null ? "Seeder inserting missing" : "Seeder force overwriting", nameZh, menuItemId);
+        logger.info("{} menu option {} for menu_item_id {}", existing == null ? "Seeder inserting missing" : forceOverwrite ? "Seeder force overwriting" : "Seeder supplementing metadata for", seed.nameZh(), menuItemId);
         target.menu_item_id = menuItemId;
-        target.option_type = optionType;
-        target.name_zh = nameZh;
-        target.name_en = nameEn;
-        target.price_delta = new BigDecimal(priceDelta);
-        target.is_active = true;
+        if (existing == null || forceOverwrite) {
+            target.option_type = seed.optionType();
+            target.name_zh = seed.nameZh();
+            target.name_en = seed.nameEn();
+            target.price_delta = new BigDecimal(seed.priceDelta());
+            target.is_active = true;
+        } else {
+            if (target.option_type == null || target.option_type.isBlank()) {
+                target.option_type = seed.optionType();
+            }
+            // Default mode only supplements metadata; owner-maintained name, price, and active state are preserved.
+        }
+        if (forceOverwrite || target.option_code == null || target.option_code.isBlank()) {
+            target.option_code = seed.optionCode();
+        }
+        if (forceOverwrite || target.option_group == null || target.option_group.isBlank()) {
+            target.option_group = seed.optionGroup();
+        }
+        if (forceOverwrite || target.sort_order == null) {
+            target.sort_order = defaultSortOrder;
+        }
         target.updated_at = now();
         if (target.created_at == null) {
             target.created_at = now();
         }
         menuItemOptionRepository.save(target);
+    }
+
+    private MenuItemOption findExistingOption(Long menuItemId, OptionSeed seed) {
+        if (seed.optionCode() != null && !seed.optionCode().isBlank()) {
+            MenuItemOption byCode = menuItemOptionRepository.findAll().stream()
+                .filter(option -> menuItemId.equals(option.menu_item_id) && seed.optionCode().equals(option.option_code))
+                .findFirst()
+                .orElse(null);
+            if (byCode != null) {
+                return byCode;
+            }
+            if (seed.parentOptionCode() != null && !seed.parentOptionCode().isBlank()) {
+                return null;
+            }
+        }
+        return menuItemOptionRepository.findAll().stream()
+            .filter(option ->
+                menuItemId.equals(option.menu_item_id)
+                    && seed.optionType().equals(option.option_type)
+                    && seed.nameZh().equals(option.name_zh)
+                    && seed.nameEn().equals(option.name_en)
+                    && (option.option_code == null || option.option_code.isBlank())
+            )
+            .findFirst()
+            .orElse(null);
+    }
+
+    private void resolveOptionParents(Long menuItemId, List<OptionSeed> seeds) {
+        Map<String, MenuItemOption> optionsByCode = menuItemOptionRepository.findAll().stream()
+            .filter(option -> menuItemId.equals(option.menu_item_id))
+            .filter(option -> option.option_code != null && !option.option_code.isBlank())
+            .collect(java.util.stream.Collectors.toMap(option -> option.option_code, option -> option, (left, right) -> left));
+
+        for (OptionSeed seed : seeds) {
+            if (seed.optionCode() == null || seed.parentOptionCode() == null) {
+                continue;
+            }
+            MenuItemOption option = optionsByCode.get(seed.optionCode());
+            MenuItemOption parent = optionsByCode.get(seed.parentOptionCode());
+            if (option == null || parent == null) {
+                continue;
+            }
+            if (!forceOverwrite && option.parent_option_id != null) {
+                continue;
+            }
+            option.parent_option_id = parent.id;
+            option.updated_at = now();
+            menuItemOptionRepository.save(option);
+        }
     }
 
     private void syncTargetOptionPrices() {
@@ -948,6 +1282,75 @@ public class RuntimeDataSeeder implements ApplicationRunner {
             store.updated_at = now();
             storeRepository.save(store);
         }
+    }
+
+    private void seedMemberships() {
+        for (User user : userRepository.findAll()) {
+            if (user.getId() == null || user.getStore_id() == null) {
+                continue;
+            }
+            Store store = storeRepository.findById(user.getStore_id()).orElse(null);
+            if (store == null) {
+                logger.info("Skipping membership seed for user {} because store {} is missing", user.getUsername(), user.getStore_id());
+                continue;
+            }
+            String roleCode = roleCodeForUser(user);
+            ensureStoreMembership(user, store, roleCode);
+            if (store.organization_id != null && isOrganizationScopedRole(roleCode)) {
+                ensureOrganizationMembership(user, store.organization_id, roleCode);
+            }
+        }
+    }
+
+    private void ensureStoreMembership(User user, Store store, String roleCode) {
+        StoreMembership membership = storeMembershipRepository.findFirstByUserIdAndStoreId(user.getId(), store.id)
+            .orElseGet(StoreMembership::new);
+        if (membership.id != null) {
+            logger.info("Seeder skip existing store membership user={} store={}", user.getUsername(), store.id);
+            return;
+        }
+        logger.info("Seeder inserting missing store membership user={} store={} role={}", user.getUsername(), store.id, roleCode);
+        membership.userId = user.getId();
+        membership.storeId = store.id;
+        membership.organizationId = store.organization_id;
+        membership.roleId = user.getRole_id();
+        membership.roleCode = roleCode;
+        membership.isActive = true;
+        membership.createdAt = now();
+        membership.updatedAt = now();
+        storeMembershipRepository.save(membership);
+    }
+
+    private void ensureOrganizationMembership(User user, Long organizationId, String roleCode) {
+        OrganizationMembership membership = organizationMembershipRepository.findFirstByUserIdAndOrganizationId(user.getId(), organizationId)
+            .orElseGet(OrganizationMembership::new);
+        if (membership.id != null) {
+            logger.info("Seeder skip existing organization membership user={} organization={}", user.getUsername(), organizationId);
+            return;
+        }
+        logger.info("Seeder inserting missing organization membership user={} organization={} role={}", user.getUsername(), organizationId, roleCode);
+        membership.userId = user.getId();
+        membership.organizationId = organizationId;
+        membership.roleId = user.getRole_id();
+        membership.roleCode = roleCode;
+        membership.isActive = true;
+        membership.createdAt = now();
+        membership.updatedAt = now();
+        organizationMembershipRepository.save(membership);
+    }
+
+    private String roleCodeForUser(User user) {
+        if (user.getRole_id() == null) {
+            return null;
+        }
+        return roleRepository.findById(user.getRole_id())
+            .map(Role::getCode)
+            .map(String::toUpperCase)
+            .orElse(null);
+    }
+
+    private boolean isOrganizationScopedRole(String roleCode) {
+        return "OWNER".equalsIgnoreCase(roleCode) || "ADMIN".equalsIgnoreCase(roleCode);
     }
 
     private void seedDiningTables() {
@@ -1067,6 +1470,11 @@ public class RuntimeDataSeeder implements ApplicationRunner {
             store.updated_at = now();
             storeRepository.save(store);
         }
+        if (store.printing_mode == null || store.printing_mode.isBlank()) {
+            store.printing_mode = PrintingMode.REAL;
+            store.updated_at = now();
+            storeRepository.save(store);
+        }
 
         PrinterConfig defaultPrinter = printerConfigRepository.findAllByStoreIdOrderByIdAsc(store.id).stream()
             .findFirst()
@@ -1110,6 +1518,12 @@ public class RuntimeDataSeeder implements ApplicationRunner {
                 .orElseGet(PrinterAssignment::new);
             boolean isNew = assignment.id == null;
             if (!isNew && !forceOverwrite) {
+                if (assignment.takeout_receipt_copies == null) {
+                    assignment.takeout_receipt_copies = 1;
+                    assignment.updated_at = now();
+                    printerAssignmentRepository.save(assignment);
+                    logger.info("Seeder filled missing takeout receipt copies for printer assignment {}", moduleCode);
+                }
                 logger.info("Seeder skip existing printer assignment {}", moduleCode);
                 continue;
             }
@@ -1119,6 +1533,7 @@ public class RuntimeDataSeeder implements ApplicationRunner {
             assignment.printer_id = PrintModuleCode.PHASE_ONE_ENABLED.contains(moduleCode) ? defaultPrinter.id : null;
             assignment.enabled = PrintModuleCode.PHASE_ONE_ENABLED.contains(moduleCode);
             assignment.font_size = EscPosFontSizeMode.DEFAULT_CODE;
+            assignment.takeout_receipt_copies = 1;
             if (isNew) {
                 assignment.created_at = now();
             }

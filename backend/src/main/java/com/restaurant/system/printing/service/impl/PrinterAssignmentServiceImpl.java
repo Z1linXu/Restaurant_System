@@ -55,11 +55,19 @@ public class PrinterAssignmentServiceImpl implements PrinterAssignmentService {
         target.module_code = request.module_code;
         target.enabled = request.enabled == null ? false : request.enabled;
         target.font_size = EscPosFontSizeMode.fromConfig(request.font_size).code;
+        target.takeout_receipt_copies = normalizeTakeoutReceiptCopies(request.takeout_receipt_copies);
         LocalDateTime now = LocalDateTime.now();
         if (isNew) {
             target.created_at = now;
         }
         target.updated_at = now;
         return printerAssignmentRepository.save(target);
+    }
+
+    private Integer normalizeTakeoutReceiptCopies(Integer copies) {
+        if (copies == null) {
+            return 1;
+        }
+        return copies >= 2 ? 2 : 1;
     }
 }

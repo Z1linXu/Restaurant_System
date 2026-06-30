@@ -68,6 +68,9 @@ public class Order {
     @Column(name = "modified_after_submit_by")
     public Long modified_after_submit_by;
 
+    @Column(name = "current_revision")
+    public Integer current_revision;
+
     @Column(name = "created_at")
     public LocalDateTime created_at;
 

@@ -1,13 +1,17 @@
 package com.restaurant.system.printing.controller;
 
+import com.restaurant.system.audit.service.AuditLogService;
 import com.restaurant.system.common.auth.AuthorizationService;
 import com.restaurant.system.common.auth.Capability;
 import com.restaurant.system.common.feature.FeatureFlagService;
 import com.restaurant.system.common.feature.FeaturePackage;
 import com.restaurant.system.common.response.ApiResponse;
 import com.restaurant.system.printing.dto.PrintCenterOverviewResponse;
+import com.restaurant.system.printing.dto.PrintJobResponse;
 import com.restaurant.system.printing.dto.GrabFontTestRequest;
 import com.restaurant.system.printing.dto.GrabFontTestResponse;
+import com.restaurant.system.printing.dto.PrinterConnectionTestRequest;
+import com.restaurant.system.printing.dto.PrinterConnectionTestResponse;
 import com.restaurant.system.printing.dto.PrinterEncodingTestRequest;
 import com.restaurant.system.printing.dto.PrinterEncodingTestResponse;
 import com.restaurant.system.printing.dto.PrinterAssignmentUpdateRequest;
@@ -18,9 +22,14 @@ import com.restaurant.system.printing.dto.ModuleAssignmentTestRequest;
 import com.restaurant.system.printing.entity.PrinterAssignment;
 import com.restaurant.system.printing.entity.PrinterConfig;
 import com.restaurant.system.printing.service.PrintDispatcherService;
+import com.restaurant.system.printing.service.PrintJobService;
 import com.restaurant.system.printing.service.PrinterAssignmentService;
 import com.restaurant.system.printing.service.PrinterConfigService;
+import jakarta.servlet.http.HttpServletRequest;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,21 +47,47 @@ public class OwnerPrintingController {
     private final PrinterConfigService printerConfigService;
     private final PrinterAssignmentService printerAssignmentService;
     private final PrintDispatcherService printDispatcherService;
+    private final PrintJobService printJobService;
     private final AuthorizationService authorizationService;
     private final FeatureFlagService featureFlagService;
+    private final AuditLogService auditLogService;
+
+    @Autowired
+    public OwnerPrintingController(
+        PrinterConfigService printerConfigService,
+        PrinterAssignmentService printerAssignmentService,
+        PrintDispatcherService printDispatcherService,
+        PrintJobService printJobService,
+        AuthorizationService authorizationService,
+        FeatureFlagService featureFlagService,
+        AuditLogService auditLogService
+    ) {
+        this.printerConfigService = printerConfigService;
+        this.printerAssignmentService = printerAssignmentService;
+        this.printDispatcherService = printDispatcherService;
+        this.printJobService = printJobService;
+        this.authorizationService = authorizationService;
+        this.featureFlagService = featureFlagService;
+        this.auditLogService = auditLogService;
+    }
 
     public OwnerPrintingController(
         PrinterConfigService printerConfigService,
         PrinterAssignmentService printerAssignmentService,
         PrintDispatcherService printDispatcherService,
+        PrintJobService printJobService,
         AuthorizationService authorizationService,
         FeatureFlagService featureFlagService
     ) {
-        this.printerConfigService = printerConfigService;
-        this.printerAssignmentService = printerAssignmentService;
-        this.printDispatcherService = printDispatcherService;
-        this.authorizationService = authorizationService;
-        this.featureFlagService = featureFlagService;
+        this(
+            printerConfigService,
+            printerAssignmentService,
+            printDispatcherService,
+            printJobService,
+            authorizationService,
+            featureFlagService,
+            null
+        );
     }
 
     @GetMapping
@@ -85,20 +120,25 @@ public class OwnerPrintingController {
     }
 
     @DeleteMapping("/printers/{id}")
-    public ApiResponse<PrinterConfig> disablePrinter(@PathVariable Long id, @RequestParam Long store_id) {
+    public ApiResponse<Boolean> deletePrinter(@PathVariable Long id, @RequestParam Long store_id) {
         featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         authorizationService.requireForStore(store_id, Capability.ADMIN_STORE_CONFIG);
-        return ApiResponse.success("Printer disabled", printerConfigService.disablePrinter(id, store_id));
+        printerConfigService.deletePrinter(id, store_id);
+        return ApiResponse.success("Printer deleted", true);
     }
 
     @PutMapping("/status")
-    public ApiResponse<Boolean> updatePrintingStatus(@RequestBody StorePrintingStatusRequest request) {
+    public ApiResponse<Boolean> updatePrintingStatus(@RequestBody StorePrintingStatusRequest request, HttpServletRequest servletRequest) {
         featureFlagService.requireEnabled(FeaturePackage.PRINTING);
-        authorizationService.requireForStore(request.store_id, Capability.ADMIN_STORE_CONFIG);
-        return ApiResponse.success(
-            "Printing status updated",
-            printerConfigService.updateStorePrintingEnabled(request.store_id, Boolean.TRUE.equals(request.printing_enabled))
-        );
+        var user = authorizationService.requireForStore(request.store_id, Capability.ADMIN_STORE_CONFIG);
+        if (request.printing_mode != null && !request.printing_mode.isBlank()) {
+            String mode = printerConfigService.updateStorePrintingMode(request.store_id, request.printing_mode);
+            recordAudit(request.store_id, user, "PRINTING_MODE_CHANGED", "STORE", request.store_id, "Printing mode changed", Map.of("printing_mode", mode), servletRequest);
+            return ApiResponse.success("Printing mode updated", !"DISABLED".equals(mode));
+        }
+        Boolean enabled = printerConfigService.updateStorePrintingEnabled(request.store_id, Boolean.TRUE.equals(request.printing_enabled));
+        recordAudit(request.store_id, user, "PRINTING_STATUS_CHANGED", "STORE", request.store_id, "Printing status changed", Map.of("printing_enabled", enabled), servletRequest);
+        return ApiResponse.success("Printing status updated", enabled);
     }
 
     @GetMapping("/assignments")
@@ -109,11 +149,13 @@ public class OwnerPrintingController {
     }
 
     @PutMapping("/assignments/{moduleCode}")
-    public ApiResponse<PrinterAssignment> updateAssignment(@PathVariable String moduleCode, @RequestBody PrinterAssignmentUpdateRequest request) {
+    public ApiResponse<PrinterAssignment> updateAssignment(@PathVariable String moduleCode, @RequestBody PrinterAssignmentUpdateRequest request, HttpServletRequest servletRequest) {
         featureFlagService.requireEnabled(FeaturePackage.PRINTING);
-        authorizationService.requireForStore(request.store_id, Capability.ADMIN_STORE_CONFIG);
+        var user = authorizationService.requireForStore(request.store_id, Capability.ADMIN_STORE_CONFIG);
         request.module_code = moduleCode;
-        return ApiResponse.success("Printer assignment updated", printerAssignmentService.saveAssignment(request));
+        PrinterAssignment assignment = printerAssignmentService.saveAssignment(request);
+        recordAudit(request.store_id, user, "PRINTING_ASSIGNMENT_UPDATED", "PRINTER_ASSIGNMENT", assignment.id, "Printer assignment updated", Map.of("module_code", moduleCode), servletRequest);
+        return ApiResponse.success("Printer assignment updated", assignment);
     }
 
     @PostMapping("/printers/test")
@@ -122,6 +164,54 @@ public class OwnerPrintingController {
         authorizationService.requireForStore(request.store_id, Capability.ADMIN_STORE_CONFIG);
         PrinterTestResponse response = printDispatcherService.testPrint(request);
         return ApiResponse.success(response.success ? "Test print sent" : "Test print failed", response);
+    }
+
+    @PostMapping("/printers/connection-test")
+    public ApiResponse<PrinterConnectionTestResponse> testConnection(@RequestBody PrinterConnectionTestRequest request) {
+        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
+        authorizationService.requireForStore(request.store_id, Capability.ADMIN_STORE_CONFIG);
+        PrinterConnectionTestResponse response = printDispatcherService.testConnection(request);
+        return ApiResponse.success(response.success ? "Printer connection successful" : "Printer connection failed", response);
+    }
+
+    @GetMapping("/jobs")
+    public ApiResponse<List<PrintJobResponse>> getPrintJobs(
+        @RequestParam Long store_id,
+        @RequestParam(required = false) String status,
+        @RequestParam(required = false) Long orderId,
+        @RequestParam(required = false) String moduleCode,
+        @RequestParam(required = false) Long printerId,
+        @RequestParam(required = false) LocalDate startDate,
+        @RequestParam(required = false) LocalDate endDate
+    ) {
+        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
+        authorizationService.requireForStore(store_id, Capability.ADMIN_STORE_CONFIG);
+        return ApiResponse.success(printJobService.searchJobs(store_id, status, orderId, moduleCode, printerId, startDate, endDate));
+    }
+
+    @PostMapping("/jobs/{jobId}/reprint")
+    public ApiResponse<PrintJobResponse> reprintJob(@PathVariable Long jobId, HttpServletRequest servletRequest) {
+        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
+        var job = printJobService.requireJob(jobId);
+        var user = authorizationService.requireForStore(job.store_id, Capability.ADMIN_STORE_CONFIG);
+        PrintJobResponse response = printDispatcherService.reprintJob(jobId, user.userId());
+        recordAudit(job.store_id, user, "PRINT_JOB_REPRINTED", "PRINT_JOB", jobId, "Print job reprint requested", Map.of("module_code", job.module_code), servletRequest);
+        return ApiResponse.success("Reprint requested", response);
+    }
+
+    private void recordAudit(
+        Long storeId,
+        com.restaurant.system.common.auth.AuthenticatedUser user,
+        String action,
+        String entityType,
+        Long entityId,
+        String summary,
+        Map<String, ?> metadata,
+        HttpServletRequest servletRequest
+    ) {
+        if (auditLogService != null) {
+            auditLogService.record(storeId, user, action, entityType, entityId, summary, metadata, servletRequest);
+        }
     }
 
     @PostMapping("/printers/font-size-test")

@@ -2,6 +2,8 @@ import { KdsSidebar } from '../noodle/components/KdsSidebar'
 import { KdsTopBar } from '../noodle/components/KdsTopBar'
 import { useKdsHistory } from '../../../hooks/useKdsHistory'
 import { useIpadLandscape } from '../../../hooks/useIpadLandscape'
+import { useCurrentStore } from '../../store/StoreContext'
+import { buildStorePath } from '../../store/storeRoutes'
 
 const ASSEMBLING_STATIONS = ['NOODLE', 'WOK', 'COLD', 'DEEPFRIED'] as const
 
@@ -33,7 +35,8 @@ function navigateTo(path: string) {
 }
 
 export function KdsHistoryPage() {
-  const { orders, loading, error } = useKdsHistory(1, 'ASSEMBLING')
+  const { storeId } = useCurrentStore()
+  const { orders, loading, error } = useKdsHistory(storeId, 'ASSEMBLING')
   const compact = useIpadLandscape()
   const now = new Date()
 
@@ -43,7 +46,7 @@ export function KdsHistoryPage() {
         <KdsSidebar
           activeItem="history"
           compact={compact}
-          onNavigate={(target) => navigateTo(target === 'orders' ? '/kds/grab' : '/kds/history')}
+          onNavigate={(target) => navigateTo(buildStorePath(storeId, target === 'orders' ? '/kds/grab' : '/kds/history'))}
         />
 
         <main className={compact ? 'px-3.5 py-3' : 'px-5 py-4 md:px-7 xl:px-8'}>

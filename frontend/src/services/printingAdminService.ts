@@ -1,10 +1,4 @@
-const DEFAULT_ADMIN_USER_ID = '2'
-
-interface BackendApiResponse<T> {
-  success: boolean
-  message?: string
-  data: T
-}
+import { apiRequest } from './apiClient'
 
 export interface PrinterConfigRecord {
   id?: number
@@ -20,6 +14,12 @@ export interface PrinterConfigRecord {
   enabled: boolean
   paper_width_mm: number
   timeout_ms: number
+  last_successful_print_at?: string | null
+  last_failed_print_at?: string | null
+  last_error_message?: string | null
+  last_connection_success_at?: string | null
+  last_connection_failed_at?: string | null
+  last_connection_error?: string | null
   created_at?: string
   updated_at?: string
 }
@@ -31,6 +31,7 @@ export interface PrinterAssignmentRecord {
   module_code: string
   enabled: boolean
   font_size?: string | null
+  takeout_receipt_copies?: number | null
   created_at?: string
   updated_at?: string
 }
@@ -38,6 +39,7 @@ export interface PrinterAssignmentRecord {
 export interface PrintCenterOverview {
   store_id: number
   printing_enabled: boolean
+  printing_mode?: 'REAL' | 'MOCK' | 'DISABLED'
   printers: PrinterConfigRecord[]
   assignments: PrinterAssignmentRecord[]
 }
@@ -45,6 +47,37 @@ export interface PrintCenterOverview {
 export interface PrinterTestResponse {
   success: boolean
   message: string
+}
+
+export interface PrinterConnectionTestResponse {
+  success: boolean
+  message: string
+  checked_at: string
+}
+
+export interface PrintJobRecord {
+  id: number
+  organization_id?: number | null
+  store_id: number
+  order_id?: number | null
+  order_update_batch_id?: number | null
+  printer_id?: number | null
+  printer_name?: string | null
+  printer_endpoint?: string | null
+  module_code: string
+  receipt_type: string
+  status: 'PENDING' | 'PRINTING' | 'PRINTED' | 'FAILED' | 'CANCELLED'
+  rendered_text_snapshot?: string | null
+  error_message?: string | null
+  error_code?: string | null
+  retry_count?: number | null
+  max_retry_count?: number | null
+  requested_by_user_id?: number | null
+  created_at: string
+  updated_at?: string | null
+  printed_at?: string | null
+  failed_at?: string | null
+  last_attempt_at?: string | null
 }
 
 export interface PrinterEncodingTestResult {
@@ -76,31 +109,14 @@ export interface GrabFontTestResponse {
 function buildHeaders() {
   return {
     'Content-Type': 'application/json',
-    'X-User-Id': DEFAULT_ADMIN_USER_ID,
   }
 }
 
-async function request<T>(input: string, init?: RequestInit) {
-  const response = await fetch(input, init)
-  if (!response.ok) {
-    throw new Error(`Request failed (${response.status})`)
-  }
-
-  const payload = (await response.json()) as BackendApiResponse<T>
-  if (!payload.success) {
-    throw new Error(payload.message || 'Request failed')
-  }
-
-  return payload.data
-}
+const request = apiRequest
 
 export async function fetchPrintCenterOverview(storeId: number) {
   const params = new URLSearchParams({ store_id: String(storeId) })
-  return request<PrintCenterOverview>(`/api/v1/admin/printing?${params.toString()}`, {
-    headers: {
-      'X-User-Id': DEFAULT_ADMIN_USER_ID,
-    },
-  })
+  return request<PrintCenterOverview>(`/api/v1/admin/printing?${params.toString()}`)
 }
 
 export async function savePrinterConfig(printer: PrinterConfigRecord) {
@@ -114,13 +130,10 @@ export async function savePrinterConfig(printer: PrinterConfigRecord) {
   })
 }
 
-export async function disablePrinterConfig(printerId: number, storeId: number) {
+export async function deletePrinterConfig(printerId: number, storeId: number) {
   const params = new URLSearchParams({ store_id: String(storeId) })
-  return request<PrinterConfigRecord>(`/api/v1/admin/printing/printers/${printerId}?${params.toString()}`, {
+  return request<boolean>(`/api/v1/admin/printing/printers/${printerId}?${params.toString()}`, {
     method: 'DELETE',
-    headers: {
-      'X-User-Id': DEFAULT_ADMIN_USER_ID,
-    },
   })
 }
 
@@ -135,6 +148,17 @@ export async function updatePrintingStatus(storeId: number, printingEnabled: boo
   })
 }
 
+export async function updatePrintingMode(storeId: number, printingMode: 'REAL' | 'MOCK' | 'DISABLED') {
+  return request<boolean>('/api/v1/admin/printing/status', {
+    method: 'PUT',
+    headers: buildHeaders(),
+    body: JSON.stringify({
+      store_id: storeId,
+      printing_mode: printingMode,
+    }),
+  })
+}
+
 export async function updatePrinterAssignment(assignment: PrinterAssignmentRecord) {
   return request<PrinterAssignmentRecord>(`/api/v1/admin/printing/assignments/${assignment.module_code}`, {
     method: 'PUT',
@@ -144,6 +168,7 @@ export async function updatePrinterAssignment(assignment: PrinterAssignmentRecor
       printer_id: assignment.printer_id,
       enabled: assignment.enabled,
       font_size: assignment.font_size ?? 'MEDIUM',
+      takeout_receipt_copies: assignment.takeout_receipt_copies ?? 1,
     }),
   })
 }
@@ -157,6 +182,56 @@ export async function triggerPrinterTest(storeId: number, printerId: number, mod
       printer_id: printerId,
       module_code: moduleCode ?? null,
     }),
+  })
+}
+
+export async function triggerPrinterConnectionTest(storeId: number, printerId: number) {
+  return request<PrinterConnectionTestResponse>('/api/v1/admin/printing/printers/connection-test', {
+    method: 'POST',
+    headers: buildHeaders(),
+    body: JSON.stringify({
+      store_id: storeId,
+      printer_id: printerId,
+    }),
+  })
+}
+
+export async function fetchPrintJobs(input: {
+  storeId: number
+  status?: string
+  orderId?: number
+  moduleCode?: string
+  printerId?: number
+  startDate?: string
+  endDate?: string
+}): Promise<PrintJobRecord[]> {
+  const params = new URLSearchParams({ store_id: String(input.storeId) })
+  if (input.status) {
+    params.set('status', input.status)
+  }
+  if (input.orderId) {
+    params.set('orderId', String(input.orderId))
+  }
+  if (input.moduleCode) {
+    params.set('moduleCode', input.moduleCode)
+  }
+  if (input.printerId) {
+    params.set('printerId', String(input.printerId))
+  }
+  if (input.startDate) {
+    params.set('startDate', input.startDate)
+  }
+  if (input.endDate) {
+    params.set('endDate', input.endDate)
+  }
+
+  return request<PrintJobRecord[]>(`/api/v1/admin/printing/jobs?${params.toString()}`)
+}
+
+export async function reprintPrintJob(jobId: number) {
+  return request<PrintJobRecord>(`/api/v1/admin/printing/jobs/${jobId}/reprint`, {
+    method: 'POST',
+    headers: buildHeaders(),
   })
 }
 

@@ -19,6 +19,8 @@ public class OrderItemResponse {
     public String notes;
     public Boolean is_modified_after_submit;
     public LocalDateTime modified_after_submit_at;
+    public Integer added_revision;
+    public Long order_update_batch_id;
     public Boolean requires_kitchen_task;
     public Boolean is_beverage_item;
     public Boolean is_kitchen_related_item;

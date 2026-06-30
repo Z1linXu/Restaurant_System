@@ -1,6 +1,7 @@
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import type { TableSlot } from '../../../types/dinein'
+import { formatSplitSlotLabel } from '../../../utils/tableDisplay'
 import { TableStatusBadge } from './TableStatusBadge'
 
 interface TableCardProps {
@@ -8,6 +9,7 @@ interface TableCardProps {
   onEntrySelect: (slotId: string, selection: 'left' | 'right' | 'full') => void
   onStart: (slotId: string) => void
   onEdit: (slotId: string) => void
+  onPrint: (slot: TableSlot) => void
   onFinish: (slot: TableSlot) => void
   compact?: boolean
 }
@@ -24,8 +26,9 @@ const titleColor = {
   alert: 'text-[#b4481c]',
 } as const
 
-export function TableCard({ slot, onEntrySelect, onStart, onEdit, onFinish, compact = false }: TableCardProps) {
+export function TableCard({ slot, onEntrySelect, onStart, onEdit, onPrint, onFinish, compact = false }: TableCardProps) {
   const buttonLabel = slot.action === 'edit' ? 'Edit order' : 'Start order'
+  const displayLabel = formatSplitSlotLabel(slot.label)
 
   return (
     <div className="text-left">
@@ -37,7 +40,7 @@ export function TableCard({ slot, onEntrySelect, onStart, onEdit, onFinish, comp
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className={`font-display font-extrabold tracking-[-0.07em] ${titleColor[slot.status]} ${compact ? 'text-[2.2rem]' : 'text-[2.6rem]'}`}>
-                {slot.label}
+                {displayLabel}
               </p>
               <p className={`${compact ? 'mt-0.5 text-[0.8rem]' : 'mt-1 text-sm'} text-[var(--muted)]`}>{slot.zone}</p>
             </div>
@@ -61,7 +64,7 @@ export function TableCard({ slot, onEntrySelect, onStart, onEdit, onFinish, comp
                       className="min-h-[2.8rem] rounded-[16px] px-3 text-[0.95rem]"
                       onClick={() => onEntrySelect(slot.id, 'left')}
                     >
-                      Left
+                      左
                     </Button>
                     <Button
                       size="lg"
@@ -69,7 +72,7 @@ export function TableCard({ slot, onEntrySelect, onStart, onEdit, onFinish, comp
                       className="min-h-[2.8rem] rounded-[16px] px-3 text-[0.95rem]"
                       onClick={() => onEntrySelect(slot.id, 'right')}
                     >
-                      Right
+                      右
                     </Button>
                   </div>
                   <Button
@@ -79,7 +82,7 @@ export function TableCard({ slot, onEntrySelect, onStart, onEdit, onFinish, comp
                     variant="secondary"
                     onClick={() => onEntrySelect(slot.id, 'full')}
                   >
-                    Full table
+                    整桌
                   </Button>
                 </div>
               ) : (
@@ -90,7 +93,7 @@ export function TableCard({ slot, onEntrySelect, onStart, onEdit, onFinish, comp
                     className="min-h-[3.35rem] rounded-[18px]"
                     onClick={() => onEntrySelect(slot.id, 'left')}
                   >
-                    Left
+                    左
                   </Button>
                   <Button
                     size="lg"
@@ -98,7 +101,7 @@ export function TableCard({ slot, onEntrySelect, onStart, onEdit, onFinish, comp
                     className="min-h-[3.35rem] rounded-[18px]"
                     onClick={() => onEntrySelect(slot.id, 'right')}
                   >
-                    Right
+                    右
                   </Button>
                   <Button
                     size="lg"
@@ -107,7 +110,7 @@ export function TableCard({ slot, onEntrySelect, onStart, onEdit, onFinish, comp
                     variant="secondary"
                     onClick={() => onEntrySelect(slot.id, 'full')}
                   >
-                    Full
+                    整桌
                   </Button>
                 </div>
               )
@@ -123,15 +126,26 @@ export function TableCard({ slot, onEntrySelect, onStart, onEdit, onFinish, comp
                   {buttonLabel}
                 </Button>
                 {slot.action === 'edit' && slot.orderDbId && slot.orderStatus && ['submitted', 'preparing', 'ready'].includes(slot.orderStatus) ? (
-                  <Button
-                    size="lg"
-                    fullWidth
-                    className={`${compact ? 'min-h-[2.6rem] rounded-[16px] px-3 text-[0.92rem]' : 'min-h-[3.35rem] rounded-[18px]'}`}
-                    variant="tertiary"
-                    onClick={() => onFinish(slot)}
-                  >
-                    Finish
-                  </Button>
+                  <>
+                    <Button
+                      size="lg"
+                      fullWidth
+                      className={`${compact ? 'min-h-[2.6rem] rounded-[16px] px-3 text-[0.92rem]' : 'min-h-[3.35rem] rounded-[18px]'}`}
+                      variant="secondary"
+                      onClick={() => onPrint(slot)}
+                    >
+                      Print
+                    </Button>
+                    <Button
+                      size="lg"
+                      fullWidth
+                      className={`${compact ? 'min-h-[2.6rem] rounded-[16px] px-3 text-[0.92rem]' : 'min-h-[3.35rem] rounded-[18px]'}`}
+                      variant="tertiary"
+                      onClick={() => onFinish(slot)}
+                    >
+                      Finish
+                    </Button>
+                  </>
                 ) : null}
               </div>
             )}

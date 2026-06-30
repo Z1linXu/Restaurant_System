@@ -7,6 +7,7 @@ import {
 } from '../../services/platformAdminService'
 import { isFeatureEnabled } from '../feature-flags/featureConfig'
 import { FrontdeskTopNav } from '../frontdesk/components/FrontdeskTopNav'
+import { useCurrentStore } from '../store/StoreContext'
 
 type SectionKey =
   | 'organizations'
@@ -151,6 +152,7 @@ function makeDraft(section: SectionKey, overview: PlatformAdminOverview): Record
 }
 
 export function PlatformAdminPage() {
+  const { storeId } = useCurrentStore()
   const [overview, setOverview] = useState<PlatformAdminOverview | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -167,7 +169,7 @@ export function PlatformAdminPage() {
     setLoading(true)
     setError(null)
     try {
-      const nextOverview = await fetchPlatformOverview(1)
+      const nextOverview = await fetchPlatformOverview(storeId)
       setOverview(nextOverview)
       setTemplateForm((current) => ({
         ...current,
@@ -183,7 +185,7 @@ export function PlatformAdminPage() {
 
   useEffect(() => {
     void loadOverview()
-  }, [])
+  }, [storeId])
 
   const sectionData = useMemo(() => {
     if (!overview) {

@@ -23,6 +23,7 @@ public enum Capability {
     KDS_NOODLE_VIEW("kds:noodle:view"),
     KDS_PASS_VIEW("kds:pass:view"),
     KDS_PASS_READY_FOR_PICKUP("kds:pass:ready_for_pickup"),
+    ADMIN_MENU_MANAGE("admin:menu_manage"),
     ADMIN_STORE_CONFIG("admin:store_config"),
     ADMIN_HISTORY_LIMIT("admin:history_limit"),
     ADMIN_USER_ROLE_MANAGE("admin:user_role_manage");

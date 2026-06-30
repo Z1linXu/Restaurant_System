@@ -4,6 +4,8 @@ import { useNoodleStationOrders } from '../../../hooks/useNoodleStationOrders'
 import { KdsOrderCard } from './components/KdsOrderCard'
 import { KdsSidebar } from './components/KdsSidebar'
 import { KdsTopBar, type KdsDisplaySizeMode } from './components/KdsTopBar'
+import { useCurrentStore } from '../../store/StoreContext'
+import { buildStorePath } from '../../store/storeRoutes'
 
 const PREP_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
   month: 'short',
@@ -18,7 +20,8 @@ function navigateTo(path: string) {
 }
 
 export function NoodleStationPage() {
-  const { orders, loading, refreshing, error, refresh } = useNoodleStationOrders(1)
+  const { storeId } = useCurrentStore()
+  const { orders, loading, refreshing, error, refresh } = useNoodleStationOrders(storeId)
   const compact = useIpadLandscape()
   const [now, setNow] = useState(() => new Date())
   const [displayMode, setDisplayMode] = useState<KdsDisplaySizeMode>(() => {
@@ -58,7 +61,7 @@ export function NoodleStationPage() {
         <KdsSidebar
           activeItem="orders"
           compact={compact}
-          onNavigate={(target) => navigateTo(target === 'orders' ? '/kds/grab' : '/kds/history')}
+          onNavigate={(target) => navigateTo(buildStorePath(storeId, target === 'orders' ? '/kds/grab' : '/kds/history'))}
         />
 
         <main className={compact ? 'px-3.5 py-3' : 'px-5 py-4 md:px-7 xl:px-8'}>

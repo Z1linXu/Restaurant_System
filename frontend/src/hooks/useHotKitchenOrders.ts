@@ -12,7 +12,7 @@ function filterHotKitchenTasks(tasks: NoodleStationOrder['tasks']) {
   )
 }
 
-export function useHotKitchenOrders(storeId = 1) {
+export function useHotKitchenOrders(storeId: number) {
   const [orders, setOrders] = useState<NoodleStationOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)

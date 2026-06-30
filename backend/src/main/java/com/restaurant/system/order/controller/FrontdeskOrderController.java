@@ -53,4 +53,13 @@ public class FrontdeskOrderController {
             orderService.getFrontdeskOrderHistory(store_id, status, order_type, table_no, pickup_no, keyword, limit)
         );
     }
+
+    @GetMapping("/today")
+    public ApiResponse<List<FrontdeskOrderBoardResponse>> getTodayOrderHistory(
+        @RequestParam Long store_id,
+        @RequestParam(required = false) Integer limit
+    ) {
+        authorizationService.requireForStore(store_id, Capability.ORDER_VIEW_HISTORY);
+        return ApiResponse.success(orderService.getFrontdeskTodayOrderHistory(store_id, limit));
+    }
 }

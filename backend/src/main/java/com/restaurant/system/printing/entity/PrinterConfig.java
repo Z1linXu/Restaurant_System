@@ -55,6 +55,24 @@ public class PrinterConfig {
     @Column(name = "timeout_ms")
     public Integer timeout_ms;
 
+    @Column(name = "last_successful_print_at")
+    public LocalDateTime last_successful_print_at;
+
+    @Column(name = "last_failed_print_at")
+    public LocalDateTime last_failed_print_at;
+
+    @Column(name = "last_error_message", columnDefinition = "text")
+    public String last_error_message;
+
+    @Column(name = "last_connection_success_at")
+    public LocalDateTime last_connection_success_at;
+
+    @Column(name = "last_connection_failed_at")
+    public LocalDateTime last_connection_failed_at;
+
+    @Column(name = "last_connection_error", columnDefinition = "text")
+    public String last_connection_error;
+
     @Column(name = "created_at")
     public LocalDateTime created_at;
 

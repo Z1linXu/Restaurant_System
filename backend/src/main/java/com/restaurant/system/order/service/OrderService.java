@@ -2,6 +2,8 @@ package com.restaurant.system.order.service;
 
 import com.restaurant.system.order.dto.CreateOrderRequest;
 import com.restaurant.system.order.dto.OrderResponse;
+import com.restaurant.system.order.dto.CreateOrderUpdateRequest;
+import com.restaurant.system.order.dto.OrderUpdateResponse;
 import com.restaurant.system.order.dto.CreateOrderItemRequest;
 import com.restaurant.system.order.dto.FrontdeskOrderBoardResponse;
 import com.restaurant.system.order.dto.UpdateDraftOrderHeaderRequest;
@@ -31,6 +33,8 @@ public interface OrderService {
 
     OrderResponse submitOrder(Long id);
 
+    OrderUpdateResponse createOrderUpdate(Long id, CreateOrderUpdateRequest request, Long userId);
+
     List<OrderResponse> getActiveOrders(Long storeId, List<String> statuses, String orderType, String sortBy);
 
     List<FrontdeskOrderBoardResponse> getFrontdeskOrderBoard(
@@ -51,6 +55,8 @@ public interface OrderService {
         String keyword,
         Integer limit
     );
+
+    List<FrontdeskOrderBoardResponse> getFrontdeskTodayOrderHistory(Long storeId, Integer limit);
 
     OrderResponse completeOrder(Long id);
 

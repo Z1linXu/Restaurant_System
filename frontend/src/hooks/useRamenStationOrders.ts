@@ -8,7 +8,7 @@ function filterRamenTasks(tasks: BackendKdsTaskDisplay[]) {
   return tasks.filter((task) => task.station_code === 'NOODLE' || task.station_code === 'WOK')
 }
 
-export function useRamenStationOrders(storeId = 1) {
+export function useRamenStationOrders(storeId: number) {
   const [orders, setOrders] = useState<NoodleStationOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

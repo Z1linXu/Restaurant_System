@@ -109,16 +109,26 @@ public class EscPosTcpPrinterTransport implements PrinterTransport {
         EscPosFontSizeMode fontSizeMode = EscPosFontSizeMode.fromConfig(fontSize);
         for (String rawLine : lines) {
             boolean doubleHeight = rawLine.contains(PrintMarkup.DOUBLE_HEIGHT_OPEN) && rawLine.contains(PrintMarkup.DOUBLE_HEIGHT_CLOSE);
+            boolean large = rawLine.contains(PrintMarkup.LARGE_OPEN) && rawLine.contains(PrintMarkup.LARGE_CLOSE);
+            boolean small = rawLine.contains(PrintMarkup.SMALL_OPEN) && rawLine.contains(PrintMarkup.SMALL_CLOSE);
             String line = rawLine
                 .replace(PrintMarkup.DOUBLE_HEIGHT_OPEN, "")
-                .replace(PrintMarkup.DOUBLE_HEIGHT_CLOSE, "");
+                .replace(PrintMarkup.DOUBLE_HEIGHT_CLOSE, "")
+                .replace(PrintMarkup.LARGE_OPEN, "")
+                .replace(PrintMarkup.LARGE_CLOSE, "")
+                .replace(PrintMarkup.SMALL_OPEN, "")
+                .replace(PrintMarkup.SMALL_CLOSE, "");
 
-            if (doubleHeight) {
+            if (large) {
+                outputStream.write(EscPosFontSizeMode.LARGE.activate_bytes);
+            } else if (small) {
+                outputStream.write(EscPosFontSizeMode.SMALL.activate_bytes);
+            } else if (doubleHeight) {
                 outputStream.write(fontSizeMode.activate_bytes);
             }
             outputStream.write(line.getBytes(charset));
-            if (doubleHeight) {
-                outputStream.write(fontSizeMode.reset_bytes);
+            if (large || small || doubleHeight) {
+                outputStream.write(EscPosFontSizeMode.XS.reset_bytes);
             }
             outputStream.write('\n');
         }

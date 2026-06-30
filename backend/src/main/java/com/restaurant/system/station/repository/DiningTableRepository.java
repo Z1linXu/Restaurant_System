@@ -12,4 +12,7 @@ public interface DiningTableRepository extends JpaRepository<DiningTable, Long> 
 
     @Query("select d from DiningTable d where d.store_id = :storeId and d.table_code = :tableCode")
     DiningTable findByStoreIdAndTableCode(@Param("storeId") Long storeId, @Param("tableCode") String tableCode);
+
+    @Query("select count(d) from DiningTable d where d.store_id = :storeId and d.is_active = true")
+    long countActiveByStoreId(@Param("storeId") Long storeId);
 }

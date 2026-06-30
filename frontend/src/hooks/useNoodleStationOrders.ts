@@ -4,7 +4,7 @@ import type { NoodleStationOrder } from '../types/kds'
 
 const POLL_INTERVAL_MS = 4000
 
-export function useNoodleStationOrders(storeId = 1) {
+export function useNoodleStationOrders(storeId: number) {
   const [orders, setOrders] = useState<NoodleStationOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)

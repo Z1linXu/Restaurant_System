@@ -7,6 +7,7 @@ import type {
   OrderLineItem,
   OrderSession,
 } from '../types/ordering'
+import { calculateTax, calculateTotal } from '../utils/tax'
 
 function getChoiceLabel(options: ChoiceOption[] | undefined, optionId: string | undefined): LocalizedText | null {
   if (!options || !optionId) {
@@ -52,6 +53,7 @@ export function buildDefaultDraft(menuItem: MenuItem): ItemCustomizationDraft {
     comboEnabled: false,
     comboEggId: menuItem.customization?.combo?.eggs[0]?.id,
     comboSideId: menuItem.customization?.combo?.sides[0]?.id,
+    comboSideRemoveIds: [],
     addOnQuantities: {},
     removeIds: [],
     quantity: 1,
@@ -84,8 +86,11 @@ function calculateUnitPrice(menuItem: MenuItem, draft: ItemCustomizationDraft) {
   const comboPrice = draft.comboEnabled ? (menuItem.customization?.combo?.upcharge ?? 0) : 0
   const addOnPrice = sumAddOnPrice(menuItem.customization?.addOns, draft.addOnQuantities)
   const removeOptionPrice = sumPrice(menuItem.customization?.removeOptions, draft.removeIds)
+  const comboSideRemovePrice = draft.comboEnabled
+    ? sumPrice(menuItem.customization?.combo?.sideRemoveOptions, draft.comboSideRemoveIds)
+    : 0
 
-  return menuItem.price + sizePrice + soupBasePrice + comboPrice + addOnPrice + removeOptionPrice
+  return menuItem.price + sizePrice + soupBasePrice + comboPrice + addOnPrice + removeOptionPrice + comboSideRemovePrice
 }
 
 function buildSummaryTags(menuItem: MenuItem, draft: ItemCustomizationDraft) {
@@ -118,6 +123,7 @@ function buildSummaryTags(menuItem: MenuItem, draft: ItemCustomizationDraft) {
 
     const eggLabel = getChoiceLabel(customization?.combo?.eggs, draft.comboEggId)
     const sideLabel = getChoiceLabel(customization?.combo?.sides, draft.comboSideId)
+    const sideRemoveLabels = getSelectedOptions(customization?.combo?.sideRemoveOptions, draft.comboSideRemoveIds)
 
     if (eggLabel) {
       summaryTags.push(eggLabel)
@@ -126,6 +132,7 @@ function buildSummaryTags(menuItem: MenuItem, draft: ItemCustomizationDraft) {
     if (sideLabel) {
       summaryTags.push(sideLabel)
     }
+    summaryTags.push(...sideRemoveLabels)
   }
 
   summaryTags.push(...getSelectedAddOns(customization?.addOns, draft.addOnQuantities))
@@ -154,8 +161,8 @@ function buildLineItem(menuItem: MenuItem, draft: ItemCustomizationDraft, itemId
 
 export function calculateTotals(session: OrderSession | null) {
   const subtotal = session?.items.reduce((sum, item) => sum + item.lineSubtotal, 0) ?? 0
-  const tax = subtotal * 0.085
-  const total = subtotal + tax
+  const tax = calculateTax(subtotal)
+  const total = calculateTotal(subtotal)
 
   return { subtotal, tax, total }
 }

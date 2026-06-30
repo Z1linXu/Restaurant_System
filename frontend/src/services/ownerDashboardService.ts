@@ -1,10 +1,4 @@
-const DEFAULT_ADMIN_USER_ID = '2'
-
-interface BackendApiResponse<T> {
-  success: boolean
-  message?: string
-  data: T
-}
+import { apiRequest } from './apiClient'
 
 export type OwnerDashboardRange = 'today' | 'week' | 'month'
 
@@ -93,19 +87,7 @@ export interface OwnerDashboardResponse {
   recent_orders: OwnerDashboardRecentOrder[]
 }
 
-async function request<T>(input: string, init?: RequestInit) {
-  const response = await fetch(input, init)
-  if (!response.ok) {
-    throw new Error(`Request failed (${response.status})`)
-  }
-
-  const payload = (await response.json()) as BackendApiResponse<T>
-  if (!payload.success) {
-    throw new Error(payload.message || 'Request failed')
-  }
-
-  return payload.data
-}
+const request = apiRequest
 
 export async function fetchOwnerDashboard(input: {
   organizationId?: number | null
@@ -125,9 +107,5 @@ export async function fetchOwnerDashboard(input: {
     params.set('store_id', String(input.storeId))
   }
 
-  return request<OwnerDashboardResponse>(`/api/v1/admin/dashboard?${params.toString()}`, {
-    headers: {
-      'X-User-Id': DEFAULT_ADMIN_USER_ID,
-    },
-  })
+  return request<OwnerDashboardResponse>(`/api/v1/admin/dashboard?${params.toString()}`)
 }

@@ -47,6 +47,11 @@ erDiagram
 
     STORES ||--o{ USERS : has
     ROLES ||--o{ USERS : assigned_to
+    ORGANIZATIONS ||--o{ ORGANIZATION_MEMBERSHIPS : grants
+    ORGANIZATIONS ||--o{ STORE_MEMBERSHIPS : scopes
+    STORES ||--o{ STORE_MEMBERSHIPS : grants
+    USERS ||--o{ ORGANIZATION_MEMBERSHIPS : belongs_to
+    USERS ||--o{ STORE_MEMBERSHIPS : assigned_to
 
     STORES ||--o{ MENU_CATEGORIES : has
     STORES ||--o{ MENU_ITEMS : has
@@ -84,8 +89,18 @@ erDiagram
     INVENTORY_ITEMS ||--o{ INVENTORY_TRANSACTIONS : logs
     USERS ||--o{ INVENTORY_TRANSACTIONS : operates
 
+    ORGANIZATIONS {
+        bigint id PK
+        varchar name
+        varchar code
+        varchar status
+        timestamp created_at
+        timestamp updated_at
+    }
+
     STORES {
         bigint id PK
+        bigint organization_id FK
         varchar name
         varchar code
         varchar status
@@ -110,6 +125,27 @@ erDiagram
         varchar full_name
         varchar phone
         varchar status
+        timestamp created_at
+        timestamp updated_at
+    }
+    ORGANIZATION_MEMBERSHIPS {
+        bigint id PK
+        bigint organization_id FK
+        bigint user_id FK
+        bigint role_id FK
+        varchar role_code
+        boolean is_active
+        timestamp created_at
+        timestamp updated_at
+    }
+    STORE_MEMBERSHIPS {
+        bigint id PK
+        bigint organization_id FK
+        bigint store_id FK
+        bigint user_id FK
+        bigint role_id FK
+        varchar role_code
+        boolean is_active
         timestamp created_at
         timestamp updated_at
     }

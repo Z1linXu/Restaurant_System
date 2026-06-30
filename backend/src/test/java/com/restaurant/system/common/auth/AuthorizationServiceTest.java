@@ -4,6 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 
 import com.restaurant.system.kitchen.entity.KitchenTask;
 import com.restaurant.system.kitchen.repository.KitchenTaskRepository;
@@ -33,6 +36,8 @@ class AuthorizationServiceTest {
     @Mock
     private RoleRepository roleRepository;
     @Mock
+    private StoreAccessService storeAccessService;
+    @Mock
     private OrderRepository orderRepository;
     @Mock
     private OrderItemRepository orderItemRepository;
@@ -46,11 +51,13 @@ class AuthorizationServiceTest {
         RequestUserContextService requestUserContextService = new RequestUserContextService(
             request,
             userRepository,
-            roleRepository
+            roleRepository,
+            true
         );
         authorizationService = new AuthorizationService(
             requestUserContextService,
             new RoleCapabilityRegistry(),
+            storeAccessService,
             orderRepository,
             orderItemRepository,
             kitchenTaskRepository
@@ -104,11 +111,12 @@ class AuthorizationServiceTest {
     @Test
     void adminBypassesStoreScopeChecks() {
         stubUser(6L, 100L, "ADMIN");
+        when(storeAccessService.canAccessStore(any(AuthenticatedUser.class), eq(999L))).thenReturn(true);
 
         Order order = new Order();
         order.id = 21L;
         order.store_id = 999L;
-        when(orderRepository.findById(21L)).thenReturn(Optional.of(order));
+        when(orderRepository.findExistingById(21L)).thenReturn(order);
 
         assertDoesNotThrow(() -> authorizationService.requireOrder(21L, Capability.ORDER_CANCEL));
     }
@@ -128,12 +136,12 @@ class AuthorizationServiceTest {
         OrderItem orderItem = new OrderItem();
         orderItem.id = 31L;
         orderItem.order_id = 41L;
-        when(orderItemRepository.findById(31L)).thenReturn(Optional.of(orderItem));
+        when(orderItemRepository.findExistingById(31L)).thenReturn(orderItem);
 
         Order order = new Order();
         order.id = 41L;
         order.store_id = 100L;
-        when(orderRepository.findById(41L)).thenReturn(Optional.of(order));
+        when(orderRepository.findExistingById(41L)).thenReturn(order);
 
         assertDoesNotThrow(() -> authorizationService.requireOrderItem(31L, Capability.BEVERAGE_START));
     }
@@ -156,5 +164,6 @@ class AuthorizationServiceTest {
         when(request.getHeader("X-User-Id")).thenReturn(String.valueOf(userId));
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(roleRepository.findById(userId)).thenReturn(Optional.of(role));
+        lenient().when(storeAccessService.canAccessStore(any(AuthenticatedUser.class), eq(storeId))).thenReturn(true);
     }
 }

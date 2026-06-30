@@ -1,5 +1,6 @@
 package com.restaurant.system.platform.controller;
 
+import com.restaurant.system.audit.service.AuditLogService;
 import com.restaurant.system.common.auth.AuthorizationService;
 import com.restaurant.system.common.auth.Capability;
 import com.restaurant.system.common.feature.FeatureFlagService;
@@ -19,7 +20,9 @@ import com.restaurant.system.station.entity.Station;
 import com.restaurant.system.user.entity.Role;
 import com.restaurant.system.user.entity.Store;
 import com.restaurant.system.user.entity.User;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,15 +39,18 @@ public class PlatformAdminController {
     private final PlatformAdminService platformAdminService;
     private final AuthorizationService authorizationService;
     private final FeatureFlagService featureFlagService;
+    private final AuditLogService auditLogService;
 
     public PlatformAdminController(
         PlatformAdminService platformAdminService,
         AuthorizationService authorizationService,
-        FeatureFlagService featureFlagService
+        FeatureFlagService featureFlagService,
+        AuditLogService auditLogService
     ) {
         this.platformAdminService = platformAdminService;
         this.authorizationService = authorizationService;
         this.featureFlagService = featureFlagService;
+        this.auditLogService = auditLogService;
     }
 
     @GetMapping("/overview")
@@ -185,21 +191,25 @@ public class PlatformAdminController {
 
     @GetMapping("/menu/items")
     public ApiResponse<List<MenuItem>> getMenuItems(@RequestParam Long store_id) {
-        authorizationService.requireForStore(store_id, Capability.ADMIN_STORE_CONFIG);
+        authorizationService.requireForStore(store_id, Capability.ADMIN_MENU_MANAGE, Capability.ADMIN_STORE_CONFIG);
         return ApiResponse.success(platformAdminService.getMenuItems(store_id));
     }
 
     @PostMapping("/menu/items")
-    public ApiResponse<MenuItem> createMenuItem(@RequestBody MenuItem menuItem) {
-        authorizationService.requireForStore(menuItem.store_id, Capability.ADMIN_STORE_CONFIG);
-        return ApiResponse.success("Menu item saved", platformAdminService.saveMenuItem(menuItem));
+    public ApiResponse<MenuItem> createMenuItem(@RequestBody MenuItem menuItem, HttpServletRequest servletRequest) {
+        var user = authorizationService.requireForStore(menuItem.store_id, Capability.ADMIN_MENU_MANAGE, Capability.ADMIN_STORE_CONFIG);
+        MenuItem saved = platformAdminService.saveMenuItem(menuItem);
+        auditLogService.record(saved.store_id, user, "MENU_ITEM_SAVED", "MENU_ITEM", saved.id, "Saved menu item " + saved.name_zh, Map.of("sku", saved.sku == null ? "" : saved.sku), servletRequest);
+        return ApiResponse.success("Menu item saved", saved);
     }
 
     @PutMapping("/menu/items/{id}")
-    public ApiResponse<MenuItem> updateMenuItem(@PathVariable Long id, @RequestBody MenuItem menuItem) {
-        authorizationService.requireForStore(menuItem.store_id, Capability.ADMIN_STORE_CONFIG);
+    public ApiResponse<MenuItem> updateMenuItem(@PathVariable Long id, @RequestBody MenuItem menuItem, HttpServletRequest servletRequest) {
+        var user = authorizationService.requireForStore(menuItem.store_id, Capability.ADMIN_MENU_MANAGE, Capability.ADMIN_STORE_CONFIG);
         menuItem.id = id;
-        return ApiResponse.success("Menu item updated", platformAdminService.saveMenuItem(menuItem));
+        MenuItem saved = platformAdminService.saveMenuItem(menuItem);
+        auditLogService.record(saved.store_id, user, Boolean.FALSE.equals(saved.is_active) ? "MENU_ITEM_DEACTIVATED" : "MENU_ITEM_UPDATED", "MENU_ITEM", saved.id, "Updated menu item " + saved.name_zh, Map.of("active", Boolean.TRUE.equals(saved.is_active)), servletRequest);
+        return ApiResponse.success("Menu item updated", saved);
     }
 
     @GetMapping("/menu/item-options")

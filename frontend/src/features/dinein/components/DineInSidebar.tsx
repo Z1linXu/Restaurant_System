@@ -1,5 +1,9 @@
 import { navigateTo } from '../../frontdesk/navigation'
 import { isFeatureEnabled, type FeaturePackage } from '../../feature-flags/featureConfig'
+import { useAuth } from '../../auth/useAuth'
+import { StoreSwitcher } from '../../store/StoreSwitcher'
+import { buildStorePath } from '../../store/storeRoutes'
+import { useOptionalCurrentStore } from '../../store/StoreContext'
 
 interface DineInSidebarProps {
   activeItem?: 'menu'
@@ -25,6 +29,9 @@ export function DineInSidebar({
   onToggleCollapse,
   compact = false,
 }: DineInSidebarProps) {
+  const { isFrontdesk } = useAuth()
+  const currentStore = useOptionalCurrentStore()
+  const path = (target: string) => currentStore ? buildStorePath(currentStore.storeId, target) : target
   return (
     <aside
       className={`flex h-full min-h-screen w-full flex-col bg-[rgba(244,244,239,0.72)] backdrop-blur-sm transition-[padding] duration-200 ${
@@ -41,7 +48,9 @@ export function DineInSidebar({
                 👨🏻‍🍳
               </div>
               <div>
-                <p className={`font-display font-bold tracking-[-0.04em] text-[var(--on-surface)] ${compact ? 'text-[1.15rem]' : 'text-[1.5rem]'}`}>Main Kitchen</p>
+                <p className={`font-display font-bold tracking-[-0.04em] text-[var(--on-surface)] ${compact ? 'text-[1.15rem]' : 'text-[1.5rem]'}`}>
+                  {currentStore?.storeName ?? 'Frontdesk'}
+                </p>
                 <p className={`${compact ? 'text-[0.78rem]' : 'text-sm'} text-[var(--muted)]`}>Shift: Morning</p>
               </div>
             </div>
@@ -62,7 +71,7 @@ export function DineInSidebar({
         </div>
 
         <nav className={`${compact ? 'space-y-2' : 'space-y-2.5'}`}>
-          {navItems.filter((item) => isFeatureEnabled(item.feature)).map((item) => {
+          {navItems.filter((item) => isFeatureEnabled(item.feature) && !(isFrontdesk && item.id === 'dashboard')).map((item) => {
             const active = item.id === activeItem
             return (
               <button
@@ -70,15 +79,15 @@ export function DineInSidebar({
                 type="button"
                 onClick={() => {
                   if (item.id === 'orders') {
-                    navigateTo('/frontdesk/order')
+                    navigateTo(path('/frontdesk/order'))
                     return
                   }
                   if (item.id === 'menu') {
-                    navigateTo('/frontdesk')
+                    navigateTo(path('/frontdesk'))
                     return
                   }
                   if (item.id === 'dashboard') {
-                    navigateTo('/admin/dashboard')
+                    navigateTo(path('/admin/dashboard'))
                   }
                 }}
                 className={`flex w-full items-center rounded-[22px] text-left transition ${
@@ -96,6 +105,7 @@ export function DineInSidebar({
             )
           })}
         </nav>
+        {!collapsed ? <StoreSwitcher compact /> : null}
       </div>
     </aside>
   )

@@ -16,21 +16,86 @@ function mapOption(option: BackendMenuItem['options'][number]): ChoiceOption {
     labelEn: option.name_en,
     labelZh: option.name_zh,
     priceDelta: Number(option.price_delta ?? 0),
+    optionType: option.option_type,
+    optionCode: option.option_code,
+    optionGroup: option.option_group,
+    parentOptionId: option.parent_option_id == null ? null : String(option.parent_option_id),
+    sortOrder: option.sort_order,
+    sideItemRemoveOptions: option.side_item_remove_options?.map(mapOption),
   }
 }
 
 function isComboUpcharge(option: ChoiceOption) {
+  if (option.optionGroup === 'COMBO' || option.optionCode === 'combo') {
+    return true
+  }
+  // Legacy fallback for databases created before option_group/option_code existed.
   return option.labelZh === '套餐' || option.labelEn === 'Combo'
 }
 
 function isComboEgg(option: ChoiceOption) {
+  if (option.optionGroup === 'COMBO_EGG') {
+    return true
+  }
+  // Legacy fallback for databases created before option_group existed.
   return option.labelZh.includes('套餐') && (option.labelZh.includes('卤蛋') || option.labelZh.includes('煎蛋'))
 }
 
 function isComboSide(option: ChoiceOption) {
+  if (option.optionGroup === 'COMBO_SIDE') {
+    return true
+  }
+  // Legacy fallback for databases created before option_group existed.
   return option.labelZh.includes('套餐') && (
     option.labelZh.includes('毛豆') || option.labelZh.includes('土豆丝') || option.labelZh.includes('拌黄瓜')
   )
+}
+
+function isComboSideRemove(option: ChoiceOption) {
+  return option.optionGroup === 'COMBO_SIDE_REMOVE'
+}
+
+function normalizeRequestLabel(value: string | undefined) {
+  return (value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+}
+
+function sideRemoveDedupeKey(option: ChoiceOption) {
+  const zh = normalizeRequestLabel(option.labelZh)
+  const en = normalizeRequestLabel(option.labelEn)
+  if (zh || en) {
+    return `${zh}|${en}`
+  }
+  return option.optionCode || option.id
+}
+
+function sortChoiceOptions(left: ChoiceOption, right: ChoiceOption) {
+  return (left.sortOrder ?? 999999) - (right.sortOrder ?? 999999) || Number(left.id) - Number(right.id)
+}
+
+function buildSideRemoveOptions(comboSides: ChoiceOption[], comboSideRemoves: ChoiceOption[]) {
+  const resultBySide = new Map<string, ChoiceOption[]>()
+
+  comboSides.forEach((side) => {
+    const managedSideRemoves = side.sideItemRemoveOptions ?? []
+    // Menu Management owns combo side requests. Legacy child options are only used when
+    // the real side item does not expose active REMOVE options.
+    const sourceOptions = managedSideRemoves.length
+      ? managedSideRemoves
+      : comboSideRemoves.filter((option) => option.parentOptionId === side.id)
+    const deduped = new Map<string, ChoiceOption>()
+    sourceOptions.sort(sortChoiceOptions).forEach((option) => {
+      const key = sideRemoveDedupeKey(option)
+      if (!deduped.has(key)) {
+        deduped.set(key, { ...option, parentOptionId: side.id })
+      }
+    })
+    resultBySide.set(side.id, Array.from(deduped.values()))
+  })
+
+  return Array.from(resultBySide.values()).flat()
 }
 
 function isFreeToggleAddOn(option: ChoiceOption) {
@@ -48,18 +113,20 @@ function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
   const items: MenuItem[] = data.categories.flatMap((category) =>
     category.items.map((item) => {
       const optionsByType = item.options.reduce<Record<string, ChoiceOption[]>>((groups, option) => {
-        groups[option.option_type] = [...(groups[option.option_type] ?? []), mapOption(option)]
+        const mapped = mapOption(option)
+        groups[option.option_type] = [...(groups[option.option_type] ?? []), mapped]
         return groups
       }, {})
+      const allOptions = item.options.map(mapOption)
 
       const customization =
         item.options.length > 0
           ? {
               combo: (() => {
-                const addonOptions = optionsByType.addon ?? []
-                const comboUpcharge = addonOptions.find(isComboUpcharge)
-                const comboEggs = addonOptions.filter(isComboEgg)
-                const comboSides = addonOptions.filter(isComboSide)
+                const comboUpcharge = allOptions.find(isComboUpcharge)
+                const comboEggs = allOptions.filter(isComboEgg)
+                const comboSides = allOptions.filter(isComboSide)
+                const comboSideRemoves = allOptions.filter(isComboSideRemove)
                 if (!comboUpcharge || comboEggs.length === 0 || comboSides.length === 0) {
                   return undefined
                 }
@@ -68,6 +135,7 @@ function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
                   upcharge: comboUpcharge.priceDelta ?? 0,
                   eggs: comboEggs,
                   sides: comboSides,
+                  sideRemoveOptions: buildSideRemoveOptions(comboSides, comboSideRemoves),
                 }
               })(),
               sizes: optionsByType.size?.length
@@ -94,7 +162,7 @@ function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
                   }
                   return 0
                 }),
-              removeOptions: optionsByType.remove,
+              removeOptions: (optionsByType.remove ?? []).filter((option) => !isComboSideRemove(option)),
             }
           : undefined
 
@@ -121,7 +189,7 @@ function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
   }
 }
 
-export function useMenuCatalog() {
+export function useMenuCatalog(storeId: number) {
   const [catalog, setCatalog] = useState<OrderingCatalog | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -134,7 +202,7 @@ export function useMenuCatalog() {
       setError(null)
 
       try {
-        const payload = await fetchMenuCatalog()
+        const payload = await fetchMenuCatalog(storeId)
         if (!active) {
           return
         }
@@ -156,7 +224,7 @@ export function useMenuCatalog() {
     return () => {
       active = false
     }
-  }, [])
+  }, [storeId])
 
   const categories = useMemo(() => catalog?.categories ?? [], [catalog])
   const items = useMemo(() => catalog?.items ?? [], [catalog])

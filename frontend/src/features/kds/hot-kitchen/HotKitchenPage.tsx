@@ -3,6 +3,7 @@ import { useIpadLandscape } from '../../../hooks/useIpadLandscape'
 import { useHotKitchenOrders } from '../../../hooks/useHotKitchenOrders'
 import { KdsTopBar, type KdsDisplaySizeMode } from '../noodle/components/KdsTopBar'
 import { HotKitchenOrderCard } from './components/HotKitchenOrderCard'
+import { useCurrentStore } from '../../store/StoreContext'
 
 const PREP_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
   month: 'short',
@@ -13,8 +14,9 @@ const PREP_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
 const DISPLAY_MODE_STORAGE_KEY = 'restaurant.kds.hot-kitchen.display-size'
 
 export function HotKitchenPage() {
+  const { storeId } = useCurrentStore()
   const compact = useIpadLandscape()
-  const { orders, loading, refreshing, error, activeTaskCount, refresh } = useHotKitchenOrders(1)
+  const { orders, loading, refreshing, error, activeTaskCount, refresh } = useHotKitchenOrders(storeId)
   const [now, setNow] = useState(() => new Date())
   const [displayMode, setDisplayMode] = useState<KdsDisplaySizeMode>(() => {
     const stored = window.localStorage.getItem(DISPLAY_MODE_STORAGE_KEY)

@@ -78,16 +78,39 @@ public class MenuCatalogResponse {
     public static class OptionResponse {
         public Long id;
         public String option_type;
+        public String option_code;
+        public String option_group;
+        public Long parent_option_id;
+        public Integer sort_order;
         public String name_zh;
         public String name_en;
         public BigDecimal price_delta;
+        public Boolean is_active;
+        public List<OptionResponse> side_item_remove_options;
 
-        public OptionResponse(Long id, String option_type, String name_zh, String name_en, BigDecimal price_delta) {
+        public OptionResponse(
+            Long id,
+            String option_type,
+            String option_code,
+            String option_group,
+            Long parent_option_id,
+            Integer sort_order,
+            String name_zh,
+            String name_en,
+            BigDecimal price_delta,
+            Boolean is_active
+        ) {
             this.id = id;
             this.option_type = option_type;
+            this.option_code = option_code;
+            this.option_group = option_group;
+            this.parent_option_id = parent_option_id;
+            this.sort_order = sort_order;
             this.name_zh = name_zh;
             this.name_en = name_en;
             this.price_delta = price_delta;
+            this.is_active = is_active;
+            this.side_item_remove_options = List.of();
         }
     }
 }

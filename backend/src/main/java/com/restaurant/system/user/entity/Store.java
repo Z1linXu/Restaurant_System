@@ -37,6 +37,9 @@ public class Store {
     @Column(name = "printing_enabled")
     public Boolean printing_enabled;
 
+    @Column(name = "printing_mode")
+    public String printing_mode;
+
     @Column(name = "created_at")
     public LocalDateTime created_at;
 

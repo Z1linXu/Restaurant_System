@@ -34,6 +34,9 @@ public class PrinterAssignment {
     @Column(name = "font_size")
     public String font_size;
 
+    @Column(name = "takeout_receipt_copies")
+    public Integer takeout_receipt_copies;
+
     @Column(name = "created_at")
     public LocalDateTime created_at;
 

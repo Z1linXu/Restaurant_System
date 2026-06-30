@@ -76,6 +76,12 @@ public class OrderItem {
     @Column(name = "modified_after_submit_at")
     public LocalDateTime modified_after_submit_at;
 
+    @Column(name = "added_revision")
+    public Integer added_revision;
+
+    @Column(name = "order_update_batch_id")
+    public Long order_update_batch_id;
+
     @Column(name = "created_at")
     public LocalDateTime created_at;
 

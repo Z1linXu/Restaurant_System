@@ -1,43 +1,16 @@
-import type { BackendApiResponse } from '../types/ordering'
 import type { BackendServingShelfItem, RealtimeUpdateMessage } from '../types/kds'
+import { apiRequest } from './apiClient'
 
-const DEFAULT_STORE_ID = 1
-const DEFAULT_USER_ID = '1'
+const request = apiRequest
 
-function buildHeaders() {
-  return {
-    'Content-Type': 'application/json',
-    'X-User-Id': DEFAULT_USER_ID,
-  }
-}
-
-async function request<T>(input: string, init?: RequestInit) {
-  const response = await fetch(input, init)
-  if (!response.ok) {
-    throw new Error(`Request failed (${response.status})`)
-  }
-
-  const payload = (await response.json()) as BackendApiResponse<T>
-  if (!payload.success) {
-    throw new Error(payload.message || 'Request failed')
-  }
-
-  return payload.data
-}
-
-export async function fetchServingShelf(storeId = DEFAULT_STORE_ID) {
+export async function fetchServingShelf(storeId: number) {
   const params = new URLSearchParams({ store_id: String(storeId) })
-  return request<BackendServingShelfItem[]>(`/api/v1/kds/serving-shelf?${params.toString()}`, {
-    headers: {
-      'X-User-Id': DEFAULT_USER_ID,
-    },
-  })
+  return request<BackendServingShelfItem[]>(`/api/v1/kds/serving-shelf?${params.toString()}`)
 }
 
 export async function markShelfItemServed(taskId: number) {
   return request(`/api/v1/kitchen-tasks/${taskId}/served`, {
     method: 'POST',
-    headers: buildHeaders(),
   })
 }
 

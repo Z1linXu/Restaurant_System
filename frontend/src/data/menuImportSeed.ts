@@ -1659,38 +1659,47 @@ export const menuImportSeed = {
       "isActive": true
     },
     {
-      "code": "beef_chow_mein_addon_extra_broccoli",
+      "code": "beef_chow_mein_addon_extra_fried_egg",
       "menuItemSku": "beef_chow_mein",
       "optionType": "addon",
-      "nameEn": "Extra Broccoli",
-      "nameZh": "加西兰花",
-      "priceDelta": 1.2,
+      "nameEn": "Extra Fried Egg",
+      "nameZh": "加煎蛋",
+      "priceDelta": 1.99,
       "isActive": true
     },
     {
-      "code": "beef_chow_mein_addon_extra_cabbage",
+      "code": "beef_chow_mein_addon_extra_tea_egg",
       "menuItemSku": "beef_chow_mein",
       "optionType": "addon",
-      "nameEn": "Extra Cabbage",
-      "nameZh": "加包菜",
-      "priceDelta": 1.2,
+      "nameEn": "Extra Tea Egg",
+      "nameZh": "加卤蛋",
+      "priceDelta": 1.99,
       "isActive": true
     },
     {
-      "code": "beef_chow_mein_addon_extra_meat",
-      "menuItemSku": "beef_chow_mein",
-      "optionType": "addon",
-      "nameEn": "Extra Meat",
-      "nameZh": "加肉",
-      "priceDelta": 6.99,
-      "isActive": true
-    },
-    {
-      "code": "beef_chow_mein_remove_no_meat",
+      "code": "beef_chow_mein_remove_no_bean_sprouts",
       "menuItemSku": "beef_chow_mein",
       "optionType": "remove",
-      "nameEn": "No Meat",
-      "nameZh": "走肉",
+      "nameEn": "No Bean Sprouts",
+      "nameZh": "走豆芽",
+      "priceDelta": 0,
+      "isActive": true
+    },
+    {
+      "code": "beef_chow_mein_remove_no_onion",
+      "menuItemSku": "beef_chow_mein",
+      "optionType": "remove",
+      "nameEn": "No Onion",
+      "nameZh": "走洋葱",
+      "priceDelta": 0,
+      "isActive": true
+    },
+    {
+      "code": "beef_chow_mein_remove_no_green_pepper",
+      "menuItemSku": "beef_chow_mein",
+      "optionType": "remove",
+      "nameEn": "No Green Pepper",
+      "nameZh": "走青椒",
       "priceDelta": 0,
       "isActive": true
     },
@@ -1708,7 +1717,34 @@ export const menuImportSeed = {
       "menuItemSku": "beef_chow_mein",
       "optionType": "remove",
       "nameEn": "No Cabbage",
-      "nameZh": "走包菜",
+      "nameZh": "走大头菜",
+      "priceDelta": 0,
+      "isActive": true
+    },
+    {
+      "code": "beef_chow_mein_remove_no_zucchini",
+      "menuItemSku": "beef_chow_mein",
+      "optionType": "remove",
+      "nameEn": "No Zucchini",
+      "nameZh": "走西葫芦",
+      "priceDelta": 0,
+      "isActive": true
+    },
+    {
+      "code": "beef_chow_mein_remove_no_vegetables",
+      "menuItemSku": "beef_chow_mein",
+      "optionType": "remove",
+      "nameEn": "No Vegetables",
+      "nameZh": "走所有菜",
+      "priceDelta": 0,
+      "isActive": true
+    },
+    {
+      "code": "beef_chow_mein_remove_no_tomato",
+      "menuItemSku": "beef_chow_mein",
+      "optionType": "remove",
+      "nameEn": "No Tomato",
+      "nameZh": "走番茄",
       "priceDelta": 0,
       "isActive": true
     },
@@ -1803,38 +1839,47 @@ export const menuImportSeed = {
       "isActive": true
     },
     {
-      "code": "chicken_chow_mein_addon_extra_broccoli",
+      "code": "chicken_chow_mein_addon_extra_fried_egg",
       "menuItemSku": "chicken_chow_mein",
       "optionType": "addon",
-      "nameEn": "Extra Broccoli",
-      "nameZh": "加西兰花",
-      "priceDelta": 1.2,
+      "nameEn": "Extra Fried Egg",
+      "nameZh": "加煎蛋",
+      "priceDelta": 1.99,
       "isActive": true
     },
     {
-      "code": "chicken_chow_mein_addon_extra_cabbage",
+      "code": "chicken_chow_mein_addon_extra_tea_egg",
       "menuItemSku": "chicken_chow_mein",
       "optionType": "addon",
-      "nameEn": "Extra Cabbage",
-      "nameZh": "加包菜",
-      "priceDelta": 1.2,
+      "nameEn": "Extra Tea Egg",
+      "nameZh": "加卤蛋",
+      "priceDelta": 1.99,
       "isActive": true
     },
     {
-      "code": "chicken_chow_mein_addon_extra_meat",
-      "menuItemSku": "chicken_chow_mein",
-      "optionType": "addon",
-      "nameEn": "Extra Meat",
-      "nameZh": "加肉",
-      "priceDelta": 6.99,
-      "isActive": true
-    },
-    {
-      "code": "chicken_chow_mein_remove_no_meat",
+      "code": "chicken_chow_mein_remove_no_bean_sprouts",
       "menuItemSku": "chicken_chow_mein",
       "optionType": "remove",
-      "nameEn": "No Meat",
-      "nameZh": "走肉",
+      "nameEn": "No Bean Sprouts",
+      "nameZh": "走豆芽",
+      "priceDelta": 0,
+      "isActive": true
+    },
+    {
+      "code": "chicken_chow_mein_remove_no_onion",
+      "menuItemSku": "chicken_chow_mein",
+      "optionType": "remove",
+      "nameEn": "No Onion",
+      "nameZh": "走洋葱",
+      "priceDelta": 0,
+      "isActive": true
+    },
+    {
+      "code": "chicken_chow_mein_remove_no_green_pepper",
+      "menuItemSku": "chicken_chow_mein",
+      "optionType": "remove",
+      "nameEn": "No Green Pepper",
+      "nameZh": "走青椒",
       "priceDelta": 0,
       "isActive": true
     },
@@ -1852,7 +1897,34 @@ export const menuImportSeed = {
       "menuItemSku": "chicken_chow_mein",
       "optionType": "remove",
       "nameEn": "No Cabbage",
-      "nameZh": "走包菜",
+      "nameZh": "走大头菜",
+      "priceDelta": 0,
+      "isActive": true
+    },
+    {
+      "code": "chicken_chow_mein_remove_no_zucchini",
+      "menuItemSku": "chicken_chow_mein",
+      "optionType": "remove",
+      "nameEn": "No Zucchini",
+      "nameZh": "走西葫芦",
+      "priceDelta": 0,
+      "isActive": true
+    },
+    {
+      "code": "chicken_chow_mein_remove_no_vegetables",
+      "menuItemSku": "chicken_chow_mein",
+      "optionType": "remove",
+      "nameEn": "No Vegetables",
+      "nameZh": "走所有菜",
+      "priceDelta": 0,
+      "isActive": true
+    },
+    {
+      "code": "chicken_chow_mein_remove_no_tomato",
+      "menuItemSku": "chicken_chow_mein",
+      "optionType": "remove",
+      "nameEn": "No Tomato",
+      "nameZh": "走番茄",
       "priceDelta": 0,
       "isActive": true
     },
@@ -1947,38 +2019,47 @@ export const menuImportSeed = {
       "isActive": true
     },
     {
-      "code": "tomato_chow_mein_addon_extra_broccoli",
+      "code": "tomato_chow_mein_addon_extra_fried_egg",
       "menuItemSku": "tomato_chow_mein",
       "optionType": "addon",
-      "nameEn": "Extra Broccoli",
-      "nameZh": "加西兰花",
-      "priceDelta": 1.2,
+      "nameEn": "Extra Fried Egg",
+      "nameZh": "加煎蛋",
+      "priceDelta": 1.99,
       "isActive": true
     },
     {
-      "code": "tomato_chow_mein_addon_extra_cabbage",
+      "code": "tomato_chow_mein_addon_extra_tea_egg",
       "menuItemSku": "tomato_chow_mein",
       "optionType": "addon",
-      "nameEn": "Extra Cabbage",
-      "nameZh": "加包菜",
-      "priceDelta": 1.2,
+      "nameEn": "Extra Tea Egg",
+      "nameZh": "加卤蛋",
+      "priceDelta": 1.99,
       "isActive": true
     },
     {
-      "code": "tomato_chow_mein_addon_extra_meat",
-      "menuItemSku": "tomato_chow_mein",
-      "optionType": "addon",
-      "nameEn": "Extra Meat",
-      "nameZh": "加肉",
-      "priceDelta": 6.99,
-      "isActive": true
-    },
-    {
-      "code": "tomato_chow_mein_remove_no_meat",
+      "code": "tomato_chow_mein_remove_no_bean_sprouts",
       "menuItemSku": "tomato_chow_mein",
       "optionType": "remove",
-      "nameEn": "No Meat",
-      "nameZh": "走肉",
+      "nameEn": "No Bean Sprouts",
+      "nameZh": "走豆芽",
+      "priceDelta": 0,
+      "isActive": true
+    },
+    {
+      "code": "tomato_chow_mein_remove_no_onion",
+      "menuItemSku": "tomato_chow_mein",
+      "optionType": "remove",
+      "nameEn": "No Onion",
+      "nameZh": "走洋葱",
+      "priceDelta": 0,
+      "isActive": true
+    },
+    {
+      "code": "tomato_chow_mein_remove_no_green_pepper",
+      "menuItemSku": "tomato_chow_mein",
+      "optionType": "remove",
+      "nameEn": "No Green Pepper",
+      "nameZh": "走青椒",
       "priceDelta": 0,
       "isActive": true
     },
@@ -1996,16 +2077,34 @@ export const menuImportSeed = {
       "menuItemSku": "tomato_chow_mein",
       "optionType": "remove",
       "nameEn": "No Cabbage",
-      "nameZh": "走包菜",
+      "nameZh": "走大头菜",
       "priceDelta": 0,
       "isActive": true
     },
     {
-      "code": "tomato_chow_mein_remove_no_green_pepper",
+      "code": "tomato_chow_mein_remove_no_zucchini",
       "menuItemSku": "tomato_chow_mein",
       "optionType": "remove",
-      "nameEn": "No Green Pepper",
-      "nameZh": "走青椒",
+      "nameEn": "No Zucchini",
+      "nameZh": "走西葫芦",
+      "priceDelta": 0,
+      "isActive": true
+    },
+    {
+      "code": "tomato_chow_mein_remove_no_vegetables",
+      "menuItemSku": "tomato_chow_mein",
+      "optionType": "remove",
+      "nameEn": "No Vegetables",
+      "nameZh": "走所有菜",
+      "priceDelta": 0,
+      "isActive": true
+    },
+    {
+      "code": "tomato_chow_mein_remove_no_tomato",
+      "menuItemSku": "tomato_chow_mein",
+      "optionType": "remove",
+      "nameEn": "No Tomato",
+      "nameZh": "走番茄",
       "priceDelta": 0,
       "isActive": true
     },
@@ -2100,21 +2199,48 @@ export const menuImportSeed = {
       "isActive": true
     },
     {
-      "code": "vegetable_chow_mein_addon_extra_broccoli",
+      "code": "vegetable_chow_mein_addon_extra_fried_egg",
       "menuItemSku": "vegetable_chow_mein",
       "optionType": "addon",
-      "nameEn": "Extra Broccoli",
-      "nameZh": "加西兰花",
-      "priceDelta": 1.2,
+      "nameEn": "Extra Fried Egg",
+      "nameZh": "加煎蛋",
+      "priceDelta": 1.99,
       "isActive": true
     },
     {
-      "code": "vegetable_chow_mein_addon_extra_cabbage",
+      "code": "vegetable_chow_mein_addon_extra_tea_egg",
       "menuItemSku": "vegetable_chow_mein",
       "optionType": "addon",
-      "nameEn": "Extra Cabbage",
-      "nameZh": "加包菜",
-      "priceDelta": 1.2,
+      "nameEn": "Extra Tea Egg",
+      "nameZh": "加卤蛋",
+      "priceDelta": 1.99,
+      "isActive": true
+    },
+    {
+      "code": "vegetable_chow_mein_remove_no_bean_sprouts",
+      "menuItemSku": "vegetable_chow_mein",
+      "optionType": "remove",
+      "nameEn": "No Bean Sprouts",
+      "nameZh": "走豆芽",
+      "priceDelta": 0,
+      "isActive": true
+    },
+    {
+      "code": "vegetable_chow_mein_remove_no_onion",
+      "menuItemSku": "vegetable_chow_mein",
+      "optionType": "remove",
+      "nameEn": "No Onion",
+      "nameZh": "走洋葱",
+      "priceDelta": 0,
+      "isActive": true
+    },
+    {
+      "code": "vegetable_chow_mein_remove_no_green_pepper",
+      "menuItemSku": "vegetable_chow_mein",
+      "optionType": "remove",
+      "nameEn": "No Green Pepper",
+      "nameZh": "走青椒",
+      "priceDelta": 0,
       "isActive": true
     },
     {
@@ -2131,7 +2257,34 @@ export const menuImportSeed = {
       "menuItemSku": "vegetable_chow_mein",
       "optionType": "remove",
       "nameEn": "No Cabbage",
-      "nameZh": "走包菜",
+      "nameZh": "走大头菜",
+      "priceDelta": 0,
+      "isActive": true
+    },
+    {
+      "code": "vegetable_chow_mein_remove_no_zucchini",
+      "menuItemSku": "vegetable_chow_mein",
+      "optionType": "remove",
+      "nameEn": "No Zucchini",
+      "nameZh": "走西葫芦",
+      "priceDelta": 0,
+      "isActive": true
+    },
+    {
+      "code": "vegetable_chow_mein_remove_no_vegetables",
+      "menuItemSku": "vegetable_chow_mein",
+      "optionType": "remove",
+      "nameEn": "No Vegetables",
+      "nameZh": "走所有菜",
+      "priceDelta": 0,
+      "isActive": true
+    },
+    {
+      "code": "vegetable_chow_mein_remove_no_tomato",
+      "menuItemSku": "vegetable_chow_mein",
+      "optionType": "remove",
+      "nameEn": "No Tomato",
+      "nameZh": "走番茄",
       "priceDelta": 0,
       "isActive": true
     },

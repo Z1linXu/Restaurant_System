@@ -23,6 +23,7 @@ public class OrderResponse {
     public Boolean is_modified_after_submit;
     public LocalDateTime modified_after_submit_at;
     public Long modified_after_submit_by;
+    public Integer current_revision;
     public LocalDateTime created_at;
     public LocalDateTime updated_at;
     public List<OrderItemResponse> items;

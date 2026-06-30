@@ -5,6 +5,75 @@ Generated from the current codebase only. If a detail is not explicit in code, i
 Additional maintainable architecture document:
 - `doc/SystemDesign_Bilingual.md`
 
+## Phase 1 Store Access Backend Scope
+
+Backend store scope is now based on explicit memberships instead of relying only on `users.store_id`.
+
+- `organization_memberships` records which organizations a user belongs to and the user's organization-level role.
+- `store_memberships` records which stores a user can access and the user's store-level role.
+- `users.store_id` remains as a legacy/default store for compatibility and login token claims.
+- `StoreAccessService` is the shared backend authority for store access checks.
+- `ADMIN` remains the platform/legacy admin role and can access all stores.
+- `OWNER` no longer bypasses store scope by role alone; an owner can access stores inside active `organization_memberships`.
+- `MANAGER`, `FRONTDESK`, `HOT_KITCHEN`, `NOODLE_VIEW`, and `PASS` require active `store_memberships`.
+- A legacy fallback allows `users.store_id` only when the user has no active organization or store memberships, so older local data can still boot before the seeder has filled memberships.
+- Runtime seeding adds missing memberships for existing users and dev role switcher users, but it does not overwrite or delete existing membership records.
+- Phase 1 QA tightened workspace listing to use the same fallback rule: `users.store_id` appears in workspaces only when the user has no active membership records.
+
+New backend APIs:
+
+- `GET /api/v1/me/workspaces`: returns accessible organizations, stores, and the user's default store.
+- `GET /api/v1/stores/{storeId}/context`: returns store context only after `StoreAccessService` authorizes the current user for that store.
+
+Phase 1 intentionally does not change frontend routes, does not add Store Switcher UI, and does not introduce `/stores/:storeId/...` workspace routes. Those are Phase 2 concerns.
+
+## Phase 1 Add-Only Order Updates and Read-Only History
+
+Submitted order editing now uses immutable old lines plus transactional update batches:
+
+- `orders.current_revision` tracks the latest committed order revision.
+- `order_update_batches` stores one revision per update and enforces unique `(order_id, revision)` and `(order_id, idempotency_key)` constraints.
+- New update items store `order_items.added_revision` and `order_items.order_update_batch_id`.
+- `POST /api/v1/orders/{orderId}/updates` performs batch creation, new item insertion, kitchen/frontdesk production task creation, inventory deduction, total recalculation, and revision update in one transaction.
+- The order row is pessimistically locked while checking idempotency, so duplicate taps with the same key do not duplicate items or GRAB update jobs.
+- Printing is registered after commit. A print failure cannot roll back the order update.
+- `is_modified_after_submit` remains a UI/KDS indicator only; it is not used to select update ticket lines.
+- GRAB update jobs use receipt type `GRAB_UPDATE`, retain `order_update_batch_id`, and render only items tagged with that exact batch.
+- Automatic updates do not print FRONTDESK_RECEIPT.
+- Manual reprint always renders the complete current order.
+
+The occupied table card now exposes `Edit Order`, `Print`, and `Finish` in that order. Print choices come from `GET /api/v1/orders/{orderId}/print-options`; unavailable modules include a reason rather than being hardcoded in the client.
+
+`/frontdesk/order` is now a read-only today-order history page. It has no checkout, split-bill, cash/payment, or completion controls. The first request loads up to 100 lightweight summaries from `/api/v1/frontdesk/orders/today`; details and print options are loaded only after selecting an order. The today endpoint treats an order as visible when any operational timestamp (`created_at`, `submitted_at`, `updated_at`, or `completed_at`) falls within the current local day, so a draft created earlier but submitted today still appears in frontdesk history. Summary construction batch-loads beverage rows for all listed order IDs, removing the prior per-order beverage query pattern.
+
+Owner/admin pages use a single shared `OwnerAdminShell` from the application route layer. Individual admin content pages such as Menu Management, Dining Tables, Printing Settings, Staff Management, Audit Logs, Dashboard, and Reports must render only their page content and must not create a second Owner Console sidebar/header internally.
+Audit Logs is available through `/admin/audit-logs`; `/admin/audit` is accepted as a compatibility alias and still renders inside the same single Owner Admin shell.
+
+Database compatibility:
+
+- The project currently uses JPA `ddl-auto=update`; the new table and nullable revision columns are added on application startup.
+- Existing orders with null `current_revision` are interpreted as revision `1` and are assigned the next revision on their first update.
+- Existing order items remain valid with null update batch fields and are treated as original/locked submitted items.
+
+Takeout receipt copies remain assignment-driven through `printer_assignments.takeout_receipt_copies`. `FRONTDESK_RECEIPT` resolves one copy for dine-in regardless of configuration, and one or two copies for `pickup`/`takeout`; GRAB always resolves one copy.
+
+## Order Tax Policy
+
+- The active order tax rate is `14.975%`.
+- Backend order totals use `TaxCalculator`:
+  - `backend/src/main/java/com/restaurant/system/common/pricing/TaxCalculator.java`
+- Frontend order summary displays use the matching shared utility:
+  - `frontend/src/utils/tax.ts`
+- Tax is calculated from the full order subtotal and rounded once to cents with half-up style rounding.
+- Example:
+  - subtotal `$1.99`
+  - tax `$0.30`
+  - total `$2.29`
+- The current schema has no dedicated tax column, so persisted orders store:
+  - `orders.subtotal_amount`
+  - `orders.total_amount = subtotal + rounded tax`
+- `FRONTDESK_RECEIPT` derives the tax amount as `orders.total_amount - orders.subtotal_amount` and labels it as `Tax (14.975%)`.
+
 ## 1. Project Overview
 
 ### 1.1 Tech Stack
@@ -3631,7 +3700,7 @@ Current frontdesk receipt content:
     - blank line between item blocks
   - divider line
   - `Subtotal: ...`
-  - `Tax: ...`
+  - `Tax (14.975%): ...`
   - `Total: ...`
   - divider line
   - `Submitted: ...`
@@ -3666,6 +3735,7 @@ Current frontdesk receipt totals source:
   - derived from persisted order totals as:
     - `orders.total_amount - orders.subtotal_amount`
   - because the current schema has no dedicated tax column
+  - displayed as `Tax (14.975%)`
 - `total`
   - from `orders.total_amount`
 - receipt money lines still use:
@@ -4194,7 +4264,7 @@ The current `X-User-Id` development mode remains available as a fallback for loc
 | `backend/src/main/java/com/restaurant/system/auth/filter/AuthTokenFilter.java` | Reads Bearer token and sets request authenticated user |
 | `backend/src/main/java/com/restaurant/system/common/auth/RequestUserContextService.java` | Reads Bearer-derived context first, then optional `X-User-Id` fallback |
 | `backend/src/main/java/com/restaurant/system/common/auth/RoleCapabilityRegistry.java` | Still provides current role capability summary |
-| `backend/src/main/java/com/restaurant/system/common/config/RuntimeDataSeeder.java` | Seeds missing dev/local credentials only; does not overwrite existing credentials unless `force-overwrite=true` |
+| `backend/src/main/java/com/restaurant/system/common/config/RuntimeDataSeeder.java` | Ensures local/dev default login users are active and have recoverable BCrypt credentials |
 
 ### Database Tables
 
@@ -4213,7 +4283,7 @@ The current `X-User-Id` development mode remains available as a fallback for loc
 ```json
 {
   "login_identifier": "owner",
-  "password": "ChangeMe123!"
+  "password": "741xu741"
 }
 ```
 
@@ -4263,7 +4333,7 @@ Access token:
 Refresh token:
 
 - secure random string
-- default expiry: 14 days
+- default expiry: 30 days
 - database stores only SHA-256 hash
 - refresh rotates the refresh token and revokes the old token
 - logout marks the token `revoked_at`
@@ -4275,7 +4345,7 @@ app:
   auth:
     jwt-secret: dev-local-restaurant-pos-change-this-secret-please-2026
     access-token-expiration-seconds: 900
-    refresh-token-expiration-days: 14
+    refresh-token-expiration-days: 30
     x-user-id-fallback-enabled: true
 ```
 
@@ -4283,15 +4353,21 @@ Production must replace `jwt-secret` and default dev passwords.
 
 ### Dev / Local Default Users
 
-Seeded only when missing:
+For local development, `RuntimeDataSeeder` ensures the default login users exist, are active, and have BCrypt credentials. These credentials are for local/dev recovery only and must be changed before production use.
 
 | Login ID | Password | Role | Store |
 | --- | --- | --- | --- |
-| `owner` | `ChangeMe123!` | `ADMIN` | `1` |
-| `frontdesk` | `ChangeMe123!` | `FRONTDESK` | `1` |
-| `kitchen` | `ChangeMe123!` | `HOT_KITCHEN` | `1` |
+| `owner` | `741xu741` | `OWNER` | `1` |
+| `manager` | `741xu741` | `MANAGER` | `1` |
+| `staff` | `741xu741` | `FRONTDESK` | `1` |
+| `frontdesk` | `741xu741` | `FRONTDESK` | `1` |
+| `kitchen` | `741xu741` | `HOT_KITCHEN` | `1` |
 
 Passwords are stored as BCrypt hashes, never plaintext.
+
+`POST /api/v1/auth/login` accepts the canonical `login_identifier` field and also tolerates legacy cached-client aliases `loginId`, `loginIdentifier`, and `username`.
+
+Login failure diagnostics log only non-secret facts: whether a credential was found, whether it is active, which password algorithm is configured, and whether password verification failed. The raw password is never logged or returned.
 
 ### Request User Resolution
 
@@ -4315,7 +4391,9 @@ Route:
 
 - `/login`
 
-The login page saves `access_token` and `refresh_token` in `localStorage`. Existing business service files still use their current `X-User-Id` headers and should be migrated gradually to `apiClient`.
+The login page saves `access_token` and `refresh_token` in `localStorage`. The frontend API client automatically refreshes an expired access token with `POST /api/v1/auth/refresh`, saves the rotated tokens, and retries the original request once. Concurrent 401 responses share one refresh request to avoid rotating the same refresh token multiple times.
+
+Long-running pages such as `/stores/{storeId}/frontdesk` must route API calls through `frontend/src/services/apiClient.ts`. Frontdesk table polling, dining table loading, order APIs, menu catalog, Print Center, admin dashboard, reports, KDS, pickup, platform admin, and owner menu option services use the shared `apiRequest(...)` path so background 401 responses can refresh tokens instead of causing request storms. If one request refreshes tokens before another old request receives its 401, the later request detects the changed access token and retries once without rotating the refresh token again. AuthProvider listens for `restaurant-auth-updated` and `restaurant-auth-expired` events so background refreshes keep React auth state in sync, while failed refreshes clear tokens and allow route guards to return to `/login`.
 
 ### Next Authorization Step
 
@@ -4331,3 +4409,756 @@ Suggested next backend pieces:
 - permission-aware route/service guard
 - `role_permissions` seed and admin maintenance screen
 - gradual replacement of hardcoded `X-User-Id` frontend service headers
+
+## Authentication Phase 3: Owner / Manager / Frontdesk Access
+
+Phase 3 keeps the existing BCrypt + JWT + refresh-token authentication module and adds the first operational authorization layer for real restaurant usage.
+
+### Business Roles
+
+| Role | Scope | Main Access |
+|---|---|---|
+| `OWNER` | All stores | Frontdesk, Owner Console, Menu Management, Printing Settings, Staff Management, Audit Logs, store switching |
+| `MANAGER` | Own store only | Frontdesk, Order History, Menu Management, Printing Settings, Dining Tables, own-store Frontdesk staff management, own-store Audit Logs |
+| `FRONTDESK` | Own store only | `/frontdesk`, `/frontdesk/menu`, `/frontdesk/order`, submit/update orders, print/reprint, finish table |
+| `ADMIN` | Legacy owner-equivalent | Kept for compatibility with existing local data while new data should use `OWNER` |
+
+Legacy roles such as `HOT_KITCHEN`, `NOODLE_VIEW`, and `PASS` remain in the database for compatibility but are not exposed in the Owner Staff UI.
+
+### Store Scope Rules
+
+- `OWNER` and legacy `ADMIN` can access any store.
+- `MANAGER` and `FRONTDESK` must match `users.store_id`.
+- Backend store checks are enforced through `AuthorizationService`; frontend route hiding is convenience only.
+- Production deployments should set `app.auth.x-user-id-fallback-enabled=false`.
+- Local/dev can keep `app.auth.x-user-id-fallback-enabled=true` during migration from older service calls.
+- Bearer token identity is always preferred over `X-User-Id`.
+
+### Staff Management
+
+Route: `/admin/staff`
+
+APIs:
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/v1/admin/staff/stores` | Return stores visible to the current actor |
+| `GET` | `/api/v1/admin/staff?store_id=` | List staff in a store |
+| `POST` | `/api/v1/admin/staff` | Create staff with BCrypt password credential |
+| `PUT` | `/api/v1/admin/staff/{userId}` | Edit staff profile / role |
+| `POST` | `/api/v1/admin/staff/{userId}/deactivate` | Soft deactivate user and credential |
+| `POST` | `/api/v1/admin/staff/{userId}/reactivate` | Reactivate user and credential |
+| `POST` | `/api/v1/admin/staff/{userId}/reset-password` | Replace password hash |
+
+Rules:
+
+- OWNER can create and manage `MANAGER` and `FRONTDESK`.
+- MANAGER can only create/edit/deactivate/reactivate/reset password for own-store `FRONTDESK`.
+- FRONTDESK receives `403` for Staff APIs.
+- Staff API responses never include `password_hash`, refresh tokens, or credential secrets.
+
+### Audit Logs
+
+Route: `/admin/audit-logs`
+
+Table: `audit_logs`
+
+| Field | Purpose |
+|---|---|
+| `store_id` | Store scope for filtering and authorization |
+| `actor_user_id` | User who performed the action |
+| `actor_name_snapshot` | Human-readable actor snapshot |
+| `actor_role_snapshot` | Actor role at event time |
+| `action` | Stable action code such as `LOGIN_SUCCESS`, `ORDER_REPRINTED` |
+| `entity_type` / `entity_id` | Target resource reference |
+| `summary` | Short human-readable description |
+| `metadata_json` | Redacted structured metadata; never store passwords, PINs, or tokens |
+| `request_ip` / `user_agent` | Operational trace metadata |
+
+API:
+
+`GET /api/v1/admin/audit-logs?store_id=&date=&actor=&action=&page=&size=`
+
+Audit visibility:
+
+- OWNER can view all stores or filter by store.
+- MANAGER can view own-store audit logs.
+- FRONTDESK cannot view audit logs.
+
+Current audit write points include login success/failure/logout, staff create/update/role change/status/password reset, menu item save/update/deactivate, menu option create/update/deactivate/reorder, printing status/mode/assignment changes, print job/order reprint, Update Order, and Finish table.
+
+Audit writes are best-effort. If audit persistence fails, the main order/printing/admin operation should continue and the backend logs a warning.
+
+### Frontend Auth Guard
+
+The frontend now has:
+
+- `AuthProvider`
+- `useAuth`
+- `RequireAuth`
+- `AccessDeniedPage`
+
+On app start, the frontend calls `/api/v1/auth/me` when either an access token or refresh token exists. If the access token is expired but the refresh token is still valid, the shared API client refreshes the session and restores the user without showing a login error. Protected routes redirect unauthenticated users to `/login`. Role failures render Access Denied instead of a blank page.
+
+Role redirects after login:
+
+- OWNER / ADMIN -> `/admin/dashboard`
+- MANAGER -> `/admin/dashboard`
+- FRONTDESK -> `/frontdesk`
+
+High-priority frontend services now route requests through the shared API header builder so Bearer tokens are attached consistently. The builder strips legacy `X-User-Id` headers before network dispatch.
+
+### Dev Role Switcher
+
+The Dev Role Switcher is a local-only testing tool for switching between real seeded users without bypassing authentication or authorization.
+
+Security model:
+
+- The switcher does not use `X-User-Id`.
+- The switcher does not directly spoof frontend user state.
+- The backend dev API signs a normal JWT access token and creates a normal hashed refresh token row.
+- All subsequent API calls still use `Authorization: Bearer <token>`.
+- `AuthorizationService` and `RoleCapabilityRegistry` remain the source of truth for permissions.
+- The backend requires both:
+  - active Spring profile `local` or `dev`
+  - `app.dev-tools.role-switcher-enabled=true`
+- Pilot/production config must keep `app.dev-tools.role-switcher-enabled=false`.
+
+Backend APIs:
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/v1/dev/test-users` | List predefined dev users only |
+| `POST` | `/api/v1/dev/switch-user` | Switch to one predefined dev user and return normal auth tokens |
+
+The API only accepts predefined usernames:
+
+| Login ID | Display Name | Role |
+|---|---|---|
+| `dev_owner` | Dev Owner | `OWNER` |
+| `dev_frontdesk` | Dev Frontdesk | `FRONTDESK` |
+| `dev_kitchen` | Dev Kitchen | `HOT_KITCHEN` |
+| `dev_runner` | Dev Runner | `PASS` |
+| `dev_platform_admin` | Dev Platform Admin | `ADMIN` |
+
+Local backend enablement:
+
+```yaml
+app:
+  dev-tools:
+    role-switcher-enabled: true
+```
+
+Frontend enablement:
+
+```bash
+VITE_ENABLE_DEV_ROLE_SWITCHER=true npm run dev
+```
+
+When the frontend env flag is missing or not `true`, no switcher UI is rendered. When the backend flag/profile check fails, dev API calls return `403` and the switcher shows a backend-disabled error.
+
+KDS route guards include the real KDS roles for local testing:
+
+- `/kds/hot-kitchen`: `HOT_KITCHEN`, plus owner/admin/manager
+- `/kds/noodle` and `/kds/ramen`: `NOODLE_VIEW`, plus owner/admin/manager
+- `/pickup` and `/kds/grab`: `PASS`, plus owner/admin/manager
+
+Feature flags still apply first. If `KDS=false`, these pages show Feature Disabled even when the switched user has the KDS role.
+
+## Printing Reliability Module
+
+Printing Mode has been upgraded from fire-and-forget dispatch to durable print job tracking for controlled restaurant pilot use.
+
+## iPad Local Production Testing
+
+Use a production preview build for iPad field testing. Do not use `npm run dev` from an iPad during restaurant trials because the Vite development server enables HMR, React development behavior, and extra websocket traffic that can make iPad Safari feel slow or unresponsive.
+
+Recommended local setup:
+
+1. Keep the backend running on port `8080`.
+2. Build the frontend from `frontend/`:
+   ```bash
+   npm run build:prod-preview
+   ```
+3. Serve the production build on the LAN:
+   ```bash
+   npm run preview:lan
+   ```
+4. Find the Mac LAN IP, for example `192.168.2.33`.
+5. Open the iPad browser at:
+   ```text
+   http://192.168.2.33:5173
+   ```
+
+Operational notes:
+
+- The iPad and Mac must be on the same WiFi network.
+- The Mac must not sleep during service.
+- `preview:lan` serves the compiled `dist` bundle and does not enable Vite HMR.
+- The preview server proxies `/api` and `/ws` to the backend at `http://localhost:8080`, so iPad pages can continue using relative API paths.
+- Use `npm run dev -- --host 0.0.0.0` only for development debugging from a laptop, not for iPad field testing.
+- If iPad production preview still feels slow, the next optimization targets are 4-second polling on frontdesk/KDS/pickup pages, WebSocket refresh debouncing, and KDS order-detail N+1 requests.
+
+### Purpose
+
+The target operating mode is Printer Restaurant Mode:
+
+1. Frontdesk submits an order.
+2. GRAB and FRONTDESK_RECEIPT print jobs are created.
+3. Each receipt is dispatched through Print Center module assignment.
+4. Waiter collects payment offline by terminal or cash.
+5. Waiter clicks Finish in Order Center.
+6. Order moves to completed history.
+
+No online payment provider integration is included in this phase.
+
+### New Tables
+
+| Table | Purpose |
+| --- | --- |
+| `print_jobs` | Durable record for each required receipt print. Tracks module, order, printer, rendered snapshot, status, retry count, and failure reason. |
+| `print_job_attempts` | Attempt history for each print job. Tracks attempt number, printer, status, start/end time, and error. |
+
+### Print Job Statuses
+
+| Status | Meaning |
+| --- | --- |
+| `PENDING` | Job was created but has not started transport dispatch. |
+| `PRINTING` | Transport dispatch is in progress. |
+| `PRINTED` | Socket print dispatch completed successfully. |
+| `FAILED` | Dispatch could not complete or configuration was missing/disabled. |
+| `CANCELLED` | Reserved for future operator cancellation. |
+
+### Important Reliability Behavior
+
+- Order submission still does not fail if printing fails.
+- GRAB and FRONTDESK_RECEIPT each create their own `print_jobs` row.
+- Missing assignment, disabled assignment, disabled printer, renderer failure, and socket failure are all recorded as `FAILED`.
+- If store-level Print Center status is disabled, order-triggered GRAB and FRONTDESK_RECEIPT jobs are created as `CANCELLED` with `error_code = PRINTING_DISABLED`.
+- Store-level Print Center status only controls automatic order-triggered printing.
+- Disabling Print Center does not hide or disable Print Center configuration APIs.
+- Printer list, printer assignment, print job history, printer save, assignment save, and connection test remain available while Print Center is disabled.
+- Successful dispatch updates `printed_at` and printer `last_successful_print_at`.
+- Failed dispatch updates `failed_at`, `error_message`, and printer `last_failed_print_at`.
+- Manual reprint is supported from Print Center and Order Center.
+- Basic connection testing opens a TCP socket to the configured printer host/port with timeout and stores the last connection result on `printer_configs`.
+
+### New Backend APIs
+
+| API | Purpose |
+| --- | --- |
+| `GET /api/v1/admin/printing/jobs` | List print jobs with filters for status, order, module, printer, and date range. Defaults to today. |
+| `POST /api/v1/admin/printing/jobs/{jobId}/reprint` | Reprint an existing job using its rendered snapshot when available. |
+| `POST /api/v1/orders/{orderId}/reprint` | Recreate and print GRAB or FRONTDESK_RECEIPT from the order snapshot. |
+| `POST /api/v1/admin/printing/printers/connection-test` | Test printer TCP connectivity and persist the last connection result. |
+
+### Frontend Surfaces
+
+Print Center `/admin/settings/printing` now shows:
+
+- printer IP/port/status
+- assigned modules per printer
+- last successful print time
+- last failed print time
+- last printer error
+- last connection test result with explicit `Connected`, `Failed`, or `Not tested` status
+- direct test print for a physical printer
+- module test print for assignment-backed production paths such as `Test GRAB` and `Test FRONTDESK_RECEIPT`
+- test connection
+- test all printer connections from the Printer List header
+- failed print jobs counter with a high-visibility warning state
+- failed print jobs
+- recent print jobs
+- manual reprint action
+- delete printer action, blocked when the printer is still assigned to any module
+- assignment-level enable/disable controls; physical printer configs are not disabled from normal operations
+
+Print Center UX hardening rules:
+
+- Printer configs are treated as physical devices and default to enabled.
+- Normal operations should enable or disable printing at the module assignment level.
+- Deleting a printer is allowed only after all module assignments are removed.
+- `Test GRAB` and `Test FRONTDESK_RECEIPT` follow the production routing path: module code → assignment → assigned printer enabled check → renderer → transport.
+- Frontdesk ordering checks GRAB print job status shortly after submit. If the kitchen ticket fails or is cancelled, the ordering page shows: `Kitchen ticket failed to print. Please reprint immediately.`
+
+GRAB Ticket v2.0 layout rules:
+
+- GRAB tickets no longer print `GRAB TICKET`, `Order Type`, `Table/Pickup`, order number, or explanatory debug text.
+- Dine-in tickets print the table line at the top as large text, for example `桌号：1里`.
+- Takeout tickets print the pickup identifier directly when available; they do not print `Order Type`.
+- Item content is printed in the middle using the assignment font size.
+- Takeout tickets print a large `外卖` above the final time.
+- The final submitted/created time is printed at the bottom in small text using `HH:mm`.
+- Green garnish shorthand is kitchen-optimized only when both matching options are selected: `加香菜` + `加葱` become `加青`, and `走香菜` + `走葱` become `走青`.
+- Single green garnish instructions stay explicit: only `加葱` prints `加葱`, only `加香菜` prints `加香菜`, only `走葱` prints `走葱`, and only `走香菜` prints `走香菜`.
+- If an item contains mixed add/remove green instructions such as both `加葱` and `走葱`, the original instructions are preserved.
+- Side dishes are grouped only by the same dish name and the same sorted requirement set.
+- Examples: two plain `黄瓜` rows print as `黄瓜 x2`; two `黄瓜 | 走花生` rows print as `黄瓜 x2` plus `走花生`.
+- Different side-dish requirements remain separate, for example `黄瓜 | 走花生` and `黄瓜 | 加辣` print as separate `黄瓜 x1` blocks.
+- GRAB never uses a generic `小菜 xN` total because kitchen staff still need the exact side-dish name.
+
+Frontdesk receipt font behavior:
+
+- `FRONTDESK_RECEIPT` uses assignment-level font size for the full receipt body.
+- The selected assignment size applies to item names, combo/size labels, option lines, prices, subtotal, tax, total, and submitted/created time.
+- Renderer output stays text/markup-only; ESC/POS font commands are still owned by the transport layer.
+
+Order Center `/orders` and `/frontdesk/order` now supports:
+
+- Reprint GRAB
+- Reprint Receipt
+
+## Field Test Feedback Fixes - 2026-06-17
+
+This pass keeps existing POS/KDS/Print Center architecture intact and applies focused restaurant-floor fixes.
+
+### Split Table Display
+
+- Backend slot/table values still use `A` and `B`.
+- Frontend display maps split slot suffixes only for UI readability:
+  - `-A` -> `-左`
+  - `-B` -> `-右`
+- The display mapping is used on the table board, occupied table cards, ordering header, order summary, finish/submit messages, and edit-order entry display.
+- No backend routing, table lookup, order table number, or slot persistence logic was changed.
+
+### GRAB Ticket Spacing
+
+- GRAB tickets add extra blank feed lines at the top before any header content.
+- This gives the kitchen roughly 1cm more paper above the ticket for clipping/inserting.
+- The change is renderer-only and does not affect `FRONTDESK_RECEIPT`, font-size settings, order numbers, assignment routing, print jobs, or retry/reprint behavior.
+
+### Fried Noodle Option Rules
+
+- All fried-noodle SKUs now share a dedicated fried-noodle option set:
+  - `beef_chow_mein`
+  - `chicken_chow_mein`
+  - `tomato_chow_mein`
+  - `vegetable_chow_mein`
+- Fried-noodle add-ons are limited to:
+  - `加煎蛋`
+  - `加卤蛋`
+- Fried-noodle remove options are ordered as:
+  - `走豆芽`
+  - `走洋葱`
+  - `走青椒`
+  - `走西兰花`
+  - `走大头菜`
+  - `走西葫芦`
+  - `走所有菜`
+  - `走番茄`
+- `RuntimeDataSeeder` now reconciles only fried-noodle options by activating required fried-noodle options and deactivating legacy fried-noodle-only extras such as soup-noodle add-ons.
+- Soup noodles, dry noodles, side dishes, and fried items keep their existing option behavior.
+- `frontend/src/data/menuImportSeed.ts` was synchronized with the same fried-noodle option set for future import/dev tooling consistency.
+
+### Edit Order Update Printing
+
+- Submitted/preparing/ready orders can still be edited through the existing staged update flow.
+- After `Update Order`, the frontend now requests a GRAB update ticket instead of only checking the original submit print job.
+- The update ticket uses the existing `/api/v1/orders/{orderId}/reprint` API with `update_ticket=true`.
+- `PrintDispatcherServiceImpl` renders update tickets through the normal assignment and printer routing path.
+- GRAB update tickets print a large `UPDATED` marker and filter render data to items/tasks marked `is_modified_after_submit=true`.
+- This does not re-submit the order and does not recreate kitchen tasks.
+- Current limitation: the update ticket uses the existing `is_modified_after_submit` flag, so an item previously modified after submission can still appear on a later update ticket until a more granular per-update diff snapshot is added.
+- `FRONTDESK_RECEIPT` is not automatically reprinted on edit/update; customer receipt reprint remains a manual Order Center action to avoid confusing duplicate customer receipts.
+
+### Takeout Receipt Copies
+
+- `printer_assignments` now includes `takeout_receipt_copies`.
+- The value belongs to assignment configuration because one physical printer can serve multiple modules with different operational needs.
+- The Printing Settings assignment row exposes the setting only for `FRONTDESK_RECEIPT`.
+- Supported values:
+  - `1 copy`
+  - `2 copies`
+- Default value is `1`.
+- Dine-in `FRONTDESK_RECEIPT` always prints one copy.
+- Takeout/pickup `FRONTDESK_RECEIPT` prints two copies only when the `FRONTDESK_RECEIPT` assignment is configured with `takeout_receipt_copies = 2`.
+- GRAB tickets are not affected.
+
+### Frontdesk Receipt Combo Ordering
+
+- `FRONTDESK_RECEIPT` now prints `Combo` before the item name.
+- Example: `Combo 大碗传统牛肉面 Large x1`.
+- GRAB kitchen tickets are unchanged and continue to focus on production instructions.
+
+### Frontend Cache Versioning
+
+- The frontend build defines a build version at compile time.
+- On first load after a build-version change, the browser clears known UI/menu cache keys and refreshes once.
+- Auth tokens are intentionally preserved:
+  - `restaurant_pos_access_token`
+  - `restaurant_pos_refresh_token`
+- Cleared cache keys currently include:
+  - `restaurant_pos_menu_catalog`
+  - `restaurant_pos_feature_config`
+  - `restaurant_pos_ui_cache`
+  - `restaurant_pos_owner_dashboard_cache`
+- A sessionStorage guard prevents infinite refresh loops.
+- If iPad Safari still displays stale assets, manually clear website data for the Mac LAN host or close/reopen the tab after restarting production preview.
+
+### Mock Printing Mode
+
+Print Center supports three store-level runtime modes through `stores.printing_mode`:
+
+- `REAL`: production/default mode. Renderers generate receipt text and the ESC/POS TCP transport connects to the configured printer IP/port.
+- `MOCK`: no-printer local testing mode. Renderers still run and print jobs are created, but the dispatcher never opens a socket connection. Jobs are marked `PRINTED` with attempt message `Mock print succeeded - no physical printer used`.
+- `DISABLED`: automatic printing is off. Order submission still succeeds and order-triggered print jobs are cancelled with `PRINTING_DISABLED`.
+
+The legacy `stores.printing_enabled` field is retained for compatibility:
+
+- `REAL` and `MOCK` set `printing_enabled = true`.
+- `DISABLED` sets `printing_enabled = false`.
+- If `printing_mode` is missing, the backend falls back to `printing_enabled=false -> DISABLED`, otherwise `REAL`.
+
+Mock mode behavior:
+
+- Submit Order still creates separate GRAB and FRONTDESK_RECEIPT print jobs.
+- GRAB and FRONTDESK_RECEIPT renderers still execute, so formatting, Chinese text, quantities, prices, tax, totals, table/pickup labels, and notes can be verified.
+- `rendered_text_snapshot` is saved on the print job and returned to Print Center.
+- `/admin/settings/printing` shows the current mode and displays a blue warning banner in Mock mode: `当前为无打印机测试模式，系统不会连接任何实体打印机。`
+- Recent/Failed Print Jobs include `Preview Receipt`, which opens the saved rendered receipt text.
+- Test Print, Test GRAB, Test FRONTDESK_RECEIPT, Order Center reprint, and Print Center reprint all honor Mock mode.
+- Connection test in Mock mode returns mock success and does not attempt TCP connection.
+- Backend logs include:
+  ```text
+  ===== MOCK PRINT START =====
+  Module: GRAB
+  Printer: Mock Printer
+  Print Job ID: ...
+  Order ID: ...
+
+  ...rendered receipt text...
+
+  ===== MOCK PRINT END =====
+  ```
+
+Operational safety:
+
+- Production/default mode remains `REAL`.
+- Mock mode must be explicitly selected from Print Center or set in the database for local testing.
+- Mock mode is designed for local order-flow, receipt-format, reprint, and performance testing without printer timeouts or socket failure noise.
+
+### Known Limitations
+
+- There is still no automatic retry scheduler.
+- There is still no ESC/POS paper-out detection.
+- `PRINTED` means socket write completed; it does not guarantee the printer physically produced paper.
+- Reprint is manual for pilot operations.
+- Existing developer-only encoding/font diagnostics remain behind `DEVELOPER_TOOLS`.
+
+## Frontdesk Performance P0 Optimization
+
+The current pilot target is Printer Restaurant Mode, so the first production-preview performance pass focuses on the Frontdesk table board instead of KDS aggregation.
+
+### Frontdesk Table Board Sync
+
+- Frontdesk table board realtime updates are WebSocket-led through `/topic/stores/{storeId}/frontdesk/orders`.
+- Polling remains as a safety fallback, but the interval is now 30 seconds instead of 4 seconds.
+- Polling is paused while the browser tab is hidden (`document.visibilityState !== 'visible'`).
+- When the page becomes visible again, the table board performs one immediate sync.
+- WebSocket-triggered board refreshes are debounced by 500ms so a burst of order events only causes one full board refresh.
+- In-flight sync protection prevents concurrent full board reloads.
+- If a new sync request arrives while another sync is running, the hook marks one pending sync and performs at most one follow-up sync after the current request completes.
+- `useTableBoard` accepts an `enabled` option.
+- `DineInPage` disables `useTableBoard` while an ordering context is active, including `/frontdesk/menu`, `/frontdesk/menu/a`, and `/frontdesk/menu/b`.
+- When disabled, the table board hook does not start polling, does not subscribe to the frontdesk WebSocket topic, does not listen for visibility resume sync, and ignores pending full-sync requests.
+- Direct entry to a menu URL initializes the ordering context from the route before the table-board hook is enabled, so menu pages do not perform an unnecessary initial table-board sync.
+- Returning from ordering mode to the table board re-enables the hook and triggers an immediate table-board sync.
+
+### Finish Flow Refresh
+
+- The Finish action still refreshes the affected table immediately after order completion.
+- The previous repeated read-model fallback refresh loop was reduced to one delayed fallback refresh.
+- WebSocket updates and 30-second fallback polling now cover any remaining eventual consistency cases without continuously hammering the backend.
+
+### Expected Operational Impact
+
+- Multiple iPads left open on `/frontdesk` no longer send table-board API requests every 4 seconds.
+- Background tabs do not continue polling.
+- Submit Order and Finish remain responsive because WebSocket events still drive quick board updates.
+- This optimization does not change order submission, printing, checkout, KDS, analytics, authentication, or business rules.
+
+### Temporary Frontdesk CPU Diagnostics
+
+Temporary browser-console diagnostics were added to investigate high idle CPU in the Frontdesk renderer.
+
+- `DineInPage` now counts renders with `console.count("DineInPage render")`.
+- `DineInPage` logs every `activeOrderingContext` update through `console.count("setActiveOrderingContext called")` with a reason.
+- `useTableBoard` counts hook renders, effect evaluations, and backend sync requests.
+- `useTableBoard` logs enabled-state changes, visibility changes, in-flight sync behavior, polling interval creation/cleanup, and WebSocket subscription creation/cleanup.
+- Expected healthy idle behavior:
+  - `DineInPage render` should not keep increasing when no user action occurs.
+  - `syncFromBackend called` should not fire continuously.
+  - There should be one active table-board polling interval only while the table board is enabled.
+  - There should be one active frontdesk WebSocket subscription only while the table board is enabled.
+  - When ordering mode is active (`/frontdesk/menu`, `/frontdesk/menu/a`, `/frontdesk/menu/b`), table-board polling and WebSocket sync should remain disabled.
+- These diagnostics are intentionally temporary and should be removed after the CPU loop root cause is confirmed.
+
+## Menu Option Management Phase 2
+
+Phase 2 upgrades menu item options from display-only seed data into owner-manageable menu master data while preserving historical order snapshots.
+
+### `menu_item_options` Metadata
+
+The `menu_item_options` table now supports nullable metadata fields:
+
+- `sort_order`: controls `/frontdesk/menu` display order. `NULL` falls back to `id` order.
+- `option_code`: stable machine code used by ordering, combo, and kitchen logic. If empty, code uses legacy Chinese-name fallback.
+- `option_group`: semantic group such as `SIZE`, `ADD_ON`, `REMOVE`, `COMBO`, `COMBO_EGG`, `COMBO_SIDE`, or `COMBO_SIDE_REMOVE`. If empty, frontend and backend fall back to legacy `option_type`.
+- `parent_option_id`: parent-child relation for child options, for example `COMBO_SIDE_REMOVE` (`走花生`) under `COMBO_SIDE` (`套餐拌黄瓜`).
+
+Historical orders remain safe because `order_item_options` stores snapshots. Changing, disabling, or reordering current menu options does not rewrite old order detail or old print previews.
+
+### Owner Admin Option APIs
+
+Owner menu option management uses store-scoped Admin APIs instead of the broad Platform Admin option endpoint:
+
+- `GET /api/v1/admin/menu/items/{itemId}/options`
+- `POST /api/v1/admin/menu/items/{itemId}/options`
+- `PUT /api/v1/admin/menu/items/{itemId}/options/{optionId}`
+- `DELETE /api/v1/admin/menu/items/{itemId}/options/{optionId}`
+- `PUT /api/v1/admin/menu/items/{itemId}/options/reorder`
+
+Delete is a soft delete: it sets `is_active=false` and does not physically remove the row. The backend validates that the current user can administer the item's store, options belong to the same menu item, parent options belong to the same menu item, parent options do not point to themselves or form cycles, and `COMBO_SIDE_REMOVE` parents are `COMBO_SIDE`.
+
+The Owner Menu Management UI currently exposes a simplified operations panel for day-to-day maintenance. The panel intentionally shows only `Add-on` and `Remove` groups, with create, edit, deactivate/reactivate, and Up/Down sorting controls. Advanced groups such as `SIZE`, `SOUP_BASE`, `NOODLE_TYPE`, `SPICY_LEVEL`, `COMBO`, `COMBO_EGG`, `COMBO_SIDE`, and `COMBO_SIDE_REMOVE` remain supported by the API/catalog data model for ordering and combo behavior, but they are not shown in this simplified owner panel yet. Inactive options remain visible in Admin for recovery, while `/frontdesk/menu` only receives active options.
+
+Owner menu option APIs use the `admin:menu_manage` capability instead of the broader `admin:store_config` capability. All calls remain store-scoped and still verify that the menu item and option belong to the current store. Menu item create/update endpoints accept `admin:menu_manage` as well as the older `admin:store_config` capability for backward compatibility.
+
+### Combo UI and Child Remove Options
+
+The ordering modal uses touch-friendly buttons for combo egg and combo side selection. Combo child remove options are shown only after their parent side is selected. Switching combo side clears previously selected child remove options to prevent stale requests.
+
+Example:
+
+- Select `套餐拌黄瓜`
+- Show child option `走花生`
+- Switching to `套餐毛豆` clears `走花生`
+
+Combo side remove options can be resolved from two sources:
+
+- the selected side dish's own active `REMOVE` options, resolved from stable combo side option codes such as `combo_shredded_potato` -> side item SKU `shredded_potato`
+- legacy explicit child options where `parent_option_id` points to a `COMBO_SIDE` option
+
+Menu Management owns the displayed side requests. The catalog includes side item remove options on combo side options so `/frontdesk/menu` can show existing side-dish requests such as `走洋葱`, `走花生`, and `走香菜` for `套餐土豆丝`. If the real side item has active `REMOVE` options, the frontend uses those options and ignores legacy child options to avoid duplicates. Legacy child options are used only when the real side item has no active remove data. When the selected side remove belongs to the real side item rather than the main dish, order save accepts it only if the matching combo side is selected, then stores the snapshot as `COMBO_SIDE_REMOVE` with the selected combo side option as its parent. This keeps GRAB/kitchen side-task instructions correct without exposing arbitrary cross-item options.
+
+The order payload includes selected combo, egg, side, and side child remove option IDs. New order option snapshots include `option_code_snapshot`, `option_group_snapshot`, and `parent_option_id_snapshot` so kitchen logic can use stable metadata for new orders. Legacy Chinese-name fallback remains only for older data.
+
+### Frontdesk Ordering UX and Receipt Readability
+
+- The item customization modal uses a large round close button with a touch-sized hit area. Tapping the modal backdrop closes the modal, while taps inside the modal content do not.
+- Closing the customization modal unmounts the draft editor. Reopening an item rebuilds the draft from the selected menu item or the selected order line, so stale size/add-on/notes/quantity state is not reused.
+- The `/frontdesk/menu` current-order panel uses a fixed-height flex layout in the ordering workspace: header, independently scrollable order lines, and a footer that remains visible with item count, subtotal, tax, total, and the submit/update action.
+- `FRONTDESK_RECEIPT` no longer prints the `FRONTDESK RECEIPT` title. Its first receipt line is the table/pickup label rendered through `PrintMarkup.large(...)`, for example `[[LARGE]]桌号: 1里[[/LARGE]]`.
+- Kitchen instruction generation and GRAB rendering aggregate duplicate add-on tokens instead of dropping or duplicating them. For example, `+蛋 +蛋x2` prints as `+蛋x3`; `+蛋 +煎x2` remains `+蛋 +煎x2`; item quantity such as trailing `x2` is not multiplied into modifier quantity.
+
+### Menu Item Deactivation
+
+Menu Management uses soft deactivation for menu item deletion. `Delete / Deactivate Item` sets `menu_items.is_active=false`; it does not hard delete the row. Active catalog queries hide inactive items from `/frontdesk/menu`, while Admin `All Status` can still show them and historical orders/print previews remain snapshot-backed. `Sold Out` remains a separate temporary availability state and should not be used as permanent deletion.
+
+### Runtime Seeder Rule
+
+`RuntimeDataSeeder` may supplement missing option metadata (`option_group`, `option_code`, `sort_order`, `parent_option_id`) but, when `app.seed.force-overwrite=false`, it must not overwrite owner-managed `name_zh`, `name_en`, `price_delta`, or `is_active`. Parent relationships are resolved through stable `option_code`, not display text.
+
+## Authentication Phase 3 Stability Updates
+
+Phase 3 adds simplified staff access management and audit log visibility for the Owner Admin Console.
+
+### Staff Management Reliability
+
+- `/api/v1/admin/staff/stores` returns the stores visible to the current owner-equivalent user (`OWNER` or legacy `ADMIN`) or the manager's own store.
+- `/api/v1/admin/staff?store_id={id}` returns store-scoped staff records only. Responses do not expose password hashes or credential secrets.
+- Legacy `ADMIN` is treated as owner-equivalent for staff visibility and store scope.
+- Staff repository queries use explicit JPQL for snake_case entity fields such as `store_id` to avoid runtime derived-query parsing failures.
+- Empty stores or empty staff lists are handled as empty states in the UI instead of backend 500 errors.
+
+### Audit Log Reliability
+
+- `/api/v1/admin/audit-logs` supports owner-equivalent all-store queries when `store_id` is omitted.
+- Managers can query only their own store by passing a store id; frontdesk users are denied by the admin route guard and backend capability checks.
+- Audit repository queries use explicit JPQL for `store_id` and `created_at`.
+- Empty audit-log result sets return an empty page response and the UI shows `No audit logs`.
+- Audit writes remain best-effort; audit persistence failures are logged and do not block the business operation.
+
+### Owner Admin Shell
+
+- Owner/admin pages use a shared Owner Admin Shell for consistent left navigation and page framing.
+- The shared navigation includes:
+  - Home / Dashboard
+  - Menu Management
+  - Dining Tables
+  - Printing Settings
+  - Staff Management
+  - Audit Logs
+  - Reports
+- Frontdesk users cannot access owner admin routes.
+- Managers see the owner admin shell for their permitted admin areas and remain store-scoped by backend authorization.
+
+### Dev Login Seed Accounts
+
+For local development, `RuntimeDataSeeder` ensures these login accounts exist and are active:
+
+- `owner` / `741xu741` with role `OWNER`
+- `manager` / `741xu741` with role `MANAGER`
+- `staff` / `741xu741` with role `FRONTDESK`
+- `frontdesk` / `741xu741` with role `FRONTDESK`
+- `kitchen` / `741xu741` with role `HOT_KITCHEN`
+
+Passwords are stored as BCrypt hashes in `user_credentials.password_hash`; plaintext passwords are never returned by auth or staff APIs. The local seeder resets these default credentials so a developer can always recover access after database changes.
+
+`OwnerPrintingController` has both production and legacy test constructors. The production constructor is marked with Spring `@Autowired` so backend startup can select the full dependency-injected constructor while unit tests can keep using the shorter compatibility constructor.
+
+## Windows Pilot Deployment Package
+
+The Windows pilot package is built from `deployment/windows-pilot/build-windows-pilot.sh`.
+
+Package output:
+
+- `deployment/windows-pilot/package/`
+- `deployment/windows-pilot/restaurant-pos-windows-pilot.zip`
+
+The package contains:
+
+- `backend/restaurant-system-backend.jar`
+- `frontend/dist/`
+- `config/application-pilot.yml`
+- `database/restaurant_pos.dump`
+- Windows scripts:
+  - `start-pos-windows.bat`
+  - `stop-pos-windows.bat`
+  - `restore-db-windows.bat`
+  - `backup-db-windows.bat`
+  - `check-pos-windows.bat`
+- `README_WINDOWS_PILOT.md`
+
+Pilot backend config uses the `pilot` Spring profile and environment variables for database settings:
+
+- `DB_HOST`
+- `DB_PORT`
+- `DB_NAME`
+- `DB_USER`
+- `DB_PASSWORD`
+- `JWT_SECRET`
+
+The Windows pilot frontend is served from static `dist` files by a lightweight Node server included in the package. It keeps frontend API calls relative (`/api`) and proxies `/api` and `/ws` to the local backend on port `8080`.
+
+Pads should access the Windows fixed LAN IP:
+
+```text
+http://WINDOWS_FIXED_IP:5173/
+```
+
+Reports are still under validation and should not be used for accounting during pilot operations.
+
+## Store Workspace Routing Phase 2
+
+Phase 2 adds frontend store workspace context on top of the Phase 1 backend store-access guard.
+
+Implemented routes now include store-scoped paths such as:
+
+- `/stores/{storeId}/frontdesk`
+- `/stores/{storeId}/frontdesk/menu`
+- `/stores/{storeId}/frontdesk/order`
+- `/stores/{storeId}/admin/dashboard`
+- `/stores/{storeId}/admin/settings/printing`
+- `/stores/{storeId}/admin/settings/tables`
+- `/stores/{storeId}/admin/menu/items`
+- `/stores/{storeId}/admin/reports/sales`
+- `/stores/{storeId}/admin/staff`
+- `/stores/{storeId}/admin/audit`
+- `/stores/{storeId}/kds/grab`
+- `/stores/{storeId}/kds/hot-kitchen`
+- `/stores/{storeId}/kds/noodle`
+- `/stores/{storeId}/pickup`
+
+Frontend components use `StoreContextProvider`, `RequireStoreAccess`, and `useCurrentStore()` to load `/api/v1/stores/{storeId}/context` and pass the active store id into menu, order, frontdesk board, KDS, pickup, printing, reports, tables, staff, and audit APIs.
+
+Legacy routes such as `/frontdesk`, `/frontdesk/menu`, `/frontdesk/order`, `/admin/settings/printing`, and `/kds/grab` redirect to the authenticated user's default accessible store using `/api/v1/me/workspaces`.
+
+Login redirects are role-aware:
+
+- `OWNER`, `ADMIN`, `MANAGER` -> `/stores/{storeId}/admin/dashboard`
+- `FRONTDESK` -> `/stores/{storeId}/frontdesk`
+- `HOT_KITCHEN` -> `/stores/{storeId}/kds/hot-kitchen`
+- `NOODLE_VIEW` -> `/stores/{storeId}/kds/noodle`
+- `PASS` -> `/stores/{storeId}/pickup`
+
+The URL store id is not trusted as authorization. Backend APIs must continue validating access through the Phase 1 store membership and `StoreAccessService` rules. The frontend store context is a workspace selector and API parameter source, not a security boundary.
+
+### Login Workspace Error Handling
+
+The Phase 2 login flow is:
+
+1. `POST /api/v1/auth/login`
+2. Save the returned access/refresh tokens
+3. `GET /api/v1/me/workspaces`
+4. Redirect to the default accessible store workspace
+
+Frontend API errors are normalized in `frontend/src/services/apiClient.ts`. Login displays separate user-facing messages for:
+
+- bad credentials
+- successful login with workspace loading failure
+- no store access assigned
+- forbidden store access
+- expired session
+- backend 500/system errors
+
+If `/api/v1/me/workspaces` returns 500 locally after a Phase 1/Phase 2 schema change, restart the backend so Hibernate/JPA and the runtime seeder can create/supplement `organization_memberships` and `store_memberships`.
+
+Phase 2 intentionally did not implement Platform tenant/store management, `/stores/:storeId` SaaS onboarding pages, Display Rules / Print Rules editor, or Phase 4 route cleanup.
+
+## Owner Multi-Store Dashboard Phase 3
+
+Phase 3 adds a lightweight Owner Home for owners, admins, and multi-store managers.
+
+Routes:
+
+- `/owner`
+- `/owner/dashboard`
+- `/owner/stores`
+
+`/owner/dashboard` is the primary page. It is a multi-store overview and launcher, not a replacement for the single-store workspace. Store-specific work still happens under `/stores/{storeId}/...`.
+
+Login redirect rules:
+
+- `OWNER`, `ADMIN`, `MANAGER` with one accessible store -> `/stores/{storeId}/admin/dashboard`
+- `OWNER`, `ADMIN`, `MANAGER` with multiple accessible stores -> `/owner/dashboard`
+- `FRONTDESK` -> `/stores/{storeId}/frontdesk`
+- `HOT_KITCHEN` -> `/stores/{storeId}/kds/hot-kitchen`
+- `NOODLE_VIEW` -> `/stores/{storeId}/kds/noodle`
+- `PASS` -> `/stores/{storeId}/pickup`
+
+Owner Home shows each accessible store with:
+
+- store name/code/status and current user's store role
+- feature availability for Core POS, Printing, KDS, Admin, and Analytics
+- today order count
+- today completed sales
+- active order count
+- occupied/open table count
+- failed print job count
+- printing mode
+- last print failure time
+- KDS active count only when KDS is enabled
+
+Backend API:
+
+- `GET /api/v1/owner/overview`
+
+Security rules:
+
+- The backend uses `StoreAccessService.accessibleStores(...)` to choose stores before calculating summary data.
+- `FRONTDESK`, `HOT_KITCHEN`, `NOODLE_VIEW`, and `PASS` cannot access the owner overview API or `/owner/dashboard`.
+- URL store ids are still not trusted. Store-scoped business APIs must continue checking backend store access.
+- Dev Role Switcher follows the same redirect rules and does not bypass store access.
+
+StoreSwitcher vs Owner Home:
+
+- `StoreSwitcher` lives inside a single-store workspace and switches the active store while keeping the same module path where possible.
+- `Owner Home` is the multi-store landing page and launcher before entering a store workspace.
+
+Printer Restaurant Mode behavior:
+
+- Owner Home reads print summary only. It does not dispatch print jobs.
+- If KDS is disabled, Owner Home does not call KDS live endpoints, mount KDS hooks, or create KDS polling/WebSocket subscriptions.
+
+Phase 3 still does not implement Platform Admin, SaaS billing/subscription, Display Rules / Print Rules, or organization-level settings UI.

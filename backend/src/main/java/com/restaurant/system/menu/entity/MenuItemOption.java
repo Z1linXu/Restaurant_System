@@ -26,6 +26,18 @@ public class MenuItemOption {
     @Column(name = "option_type")
     public String option_type;
 
+    @Column(name = "option_code")
+    public String option_code;
+
+    @Column(name = "option_group")
+    public String option_group;
+
+    @Column(name = "parent_option_id")
+    public Long parent_option_id;
+
+    @Column(name = "sort_order")
+    public Integer sort_order;
+
     @Column(name = "name_zh")
     public String name_zh;
 
