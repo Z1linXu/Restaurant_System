@@ -5,6 +5,7 @@ public final class PrintingMode {
     public static final String REAL = "REAL";
     public static final String MOCK = "MOCK";
     public static final String DISABLED = "DISABLED";
+    public static final String PAD_DIRECT = "PAD_DIRECT";
 
     private PrintingMode() {
     }
@@ -14,7 +15,7 @@ public final class PrintingMode {
             return REAL;
         }
         String normalized = value.trim().toUpperCase();
-        if (MOCK.equals(normalized) || DISABLED.equals(normalized)) {
+        if (MOCK.equals(normalized) || DISABLED.equals(normalized) || PAD_DIRECT.equals(normalized)) {
             return normalized;
         }
         return REAL;

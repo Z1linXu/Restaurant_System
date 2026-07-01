@@ -21,6 +21,7 @@ import type {
   OrderLineItem,
   OrderSession,
 } from '../types/ordering'
+import { createIdempotencyKey } from '../utils/randomId'
 
 function calculateDraftLineSubtotal(menuItem: MenuItem | undefined, draft: ItemCustomizationDraft) {
   if (!menuItem) {
@@ -494,7 +495,7 @@ export function useDraftOrder(
         setSaving(true)
         setError(null)
         try {
-          const idempotencyKey = updateIdempotencyKeyRef.current ?? crypto.randomUUID()
+          const idempotencyKey = updateIdempotencyKeyRef.current ?? createIdempotencyKey('order-update')
           updateIdempotencyKeyRef.current = idempotencyKey
           const result = await submitOrderUpdate(order.id, idempotencyKey, newItems, catalogItems)
           const refreshed = result.order

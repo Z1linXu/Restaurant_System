@@ -4,6 +4,48 @@ Generated from the current codebase only. If a detail is not explicit in code, i
 
 Additional maintainable architecture document:
 - `doc/SystemDesign_Bilingual.md`
+- `doc/PAD_APP_ARCHITECTURE.md`
+- `doc/PAD_APP_PR_PROMPTS.md`
+
+## Pad App Architecture PR 1
+
+`doc/PAD_APP_ARCHITECTURE.md` defines the proposed independent Android Pad shell architecture. This is documentation only and does not change runtime behavior.
+
+Key decisions:
+
+- `Restaurant_System` remains the stable Web + Backend source of truth.
+- A separate `restaurant-pad-app` should host the Android WebView / Capacitor shell.
+- The Pad App should reuse the current React frontend build instead of rewriting POS UI.
+- Backend remains responsible for orders, menu, auth, store workspace, owner multi-store access, print jobs, and receipt rendering.
+- Android native code should execute local LAN ESC/POS printing through a Pad-local printer bridge.
+- `PAD_DIRECT` printing mode creates and renders print jobs on the backend while the Pad claims, prints, and reports completion/failure locally.
+- The Android WebView shell serves the bundled frontend from `https://restaurant-pad.local`; backend REST APIs under `/api/**` must allow that origin through CORS. WebSocket origin configuration alone does not cover login or other REST calls.
+- Cloud servers must not directly connect to store-private `192.168.x.x` printers.
+- Current `MOCK`, `REAL`, and `DISABLED` printing modes must remain available for local testing, Windows pilot, and operations.
+
+The document also records the claim/lease anti-duplicate-print mechanism, device registration APIs, `print_jobs` / `store_devices` schema additions, Android native printing POC plan, environment configuration, risks, and follow-up PR sequence.
+
+`doc/PAD_APP_PR_PROMPTS.md` expands the follow-up work into PR2-PR8 execution prompts. It is a planning document only and does not implement Android, backend APIs, database migrations, frontend runtime changes, or printing behavior changes.
+
+Pad App PR2 has added an independent `restaurant-pad-app/` skeleton with documentation and placeholder directories only. It does not add Android runtime files, install dependencies, load frontend assets, implement printing, or modify existing backend/frontend business behavior.
+
+Pad App PR3 adds an independent Android WebView shell POC under `restaurant-pad-app/android`. It is isolated from the current Restaurant_System frontend/backend runtime. The shell serves bundled assets from Android assets, falls back to `index.html` for path-based routes, and stores a runtime API base URL in Android preferences. It does not implement printing, `PAD_DIRECT`, or print job integration.
+
+Pad App PR4 adds a code-level native TCP printer test POC under `restaurant-pad-app/android`. It exposes `RestaurantPrinter.testConnection(...)` and `RestaurantPrinter.printRawTcp(...)` to a Pad-only test page. This POC sends raw bytes only, does not print restaurant orders, does not use `print_jobs`, and requires manual hardware QA with a real Android Pad and LAN ESC/POS printer.
+
+Pad App PR5 adds backend/frontend recognition for `PAD_DIRECT` printing mode. In `PAD_DIRECT`, the backend creates `print_jobs`, resolves assignment/printer, renders `rendered_text_snapshot`, and leaves jobs `PENDING` for Android Pad local printing. The backend does not open TCP printer sockets in this mode. Existing `MOCK`, `REAL`, and `DISABLED` modes remain available.
+
+Pad App PR6 adds backend device registration and Pad Direct print job APIs. Store devices are recorded in `store_devices`; the raw device token is returned only at registration and only a SHA-256 hash is stored. Pad clients authenticate with `X-Device-Id` and `X-Device-Token`, poll pending jobs for their store, claim a job with a lease, fetch the rendered/ESC-POS base64 payload, and report complete/fail/release. Claiming uses an atomic database update so only one Pad can own a `PENDING` job at a time; expired claims can be reclaimed.
+
+Pad Direct JPA entities use camelCase Java properties mapped to snake_case database columns with `@Column(name = "...")`. Spring Data derived repository methods must reference Java property names such as `storeId`, `deviceTokenHash`, `claimedByDeviceId`, and `claimExpiresAt`, never database column names such as `store_id`.
+
+Pad App PR7 surfaces the PR6 queue state in Print Center. `/admin/settings/printing` shows registered Pad Direct devices, last seen/app/platform status, job execution mode, claimed device id, claim lease expiration, printed device id, and whether a Pad Direct preview has an ESC/POS base64 payload.
+
+## Web POS Field Compatibility Fixes
+
+- Submitted/preparing/ready order updates still require an `idempotency_key`, but the frontend now generates it through a compatibility helper instead of directly calling `crypto.randomUUID()`. The helper falls back to `crypto.getRandomValues()` and then a timestamp/random suffix for older iPad/Pad browsers on local HTTP pages.
+- GRAB kitchen instructions keep `加上海青` as a full modifier name. Green onion/cilantro can still use the existing green-shortening rules, but bok choy must not be collapsed to `加青`.
+- The shared frontend API client applies request timeouts and normalizes offline/network-timeout failures so long-running frontdesk/menu pages can recover after Android browser network suspension instead of leaving requests pending indefinitely.
 
 ## Phase 1 Store Access Backend Scope
 
@@ -39,7 +81,9 @@ Submitted order editing now uses immutable old lines plus transactional update b
 - Printing is registered after commit. A print failure cannot roll back the order update.
 - `is_modified_after_submit` remains a UI/KDS indicator only; it is not used to select update ticket lines.
 - GRAB update jobs use receipt type `GRAB_UPDATE`, retain `order_update_batch_id`, and render only items tagged with that exact batch.
-- Automatic updates do not print FRONTDESK_RECEIPT.
+- FRONTDESK update jobs use receipt type `FRONTDESK_RECEIPT_UPDATE`, retain `order_update_batch_id`, and render only items tagged with that exact batch.
+- FRONTDESK update receipts are marked `UPDATED` / `Added items only`; their subtotal, tax, and total are calculated from the added batch lines rather than the full order.
+- FRONTDESK receipts display combo side dishes under the combo main item, including combo side remove instructions such as `走花生`, so staff can pack takeout combo sides correctly.
 - Manual reprint always renders the complete current order.
 
 The occupied table card now exposes `Edit Order`, `Print`, and `Finish` in that order. Print choices come from `GET /api/v1/orders/{orderId}/print-options`; unavailable modules include a reason rather than being hardcoded in the client.
@@ -4669,6 +4713,8 @@ Print Center `/admin/settings/printing` now shows:
 - failed print jobs counter with a high-visibility warning state
 - failed print jobs
 - recent print jobs
+- Pad Direct registered devices with last seen, app version, platform, and active status
+- Pad Direct claim state on recent/failed jobs, including claimed device, lease expiration, printed device, and payload availability
 - manual reprint action
 - delete printer action, blocked when the printer is still assigned to any module
 - assignment-level enable/disable controls; physical printer configs are not disabled from normal operations
@@ -4753,13 +4799,13 @@ This pass keeps existing POS/KDS/Print Center architecture intact and applies fo
 ### Edit Order Update Printing
 
 - Submitted/preparing/ready orders can still be edited through the existing staged update flow.
-- After `Update Order`, the frontend now requests a GRAB update ticket instead of only checking the original submit print job.
-- The update ticket uses the existing `/api/v1/orders/{orderId}/reprint` API with `update_ticket=true`.
-- `PrintDispatcherServiceImpl` renders update tickets through the normal assignment and printer routing path.
-- GRAB update tickets print a large `UPDATED` marker and filter render data to items/tasks marked `is_modified_after_submit=true`.
+- After `Update Order`, the backend automatically creates GRAB and FRONTDESK_RECEIPT update print jobs after the update transaction commits.
+- Update print jobs use the normal assignment and printer routing path.
+- GRAB update tickets print a large `UPDATED` marker and filter render data to items/tasks whose `order_update_batch_id` matches the committed batch.
+- FRONTDESK update receipts print `UPDATED` / `Added items only`, filter render data to the same `order_update_batch_id`, and show subtotal/tax/total for the added batch only.
+- FRONTDESK update receipts include combo side dish lines and combo side remove instructions under the combo main item.
 - This does not re-submit the order and does not recreate kitchen tasks.
-- Current limitation: the update ticket uses the existing `is_modified_after_submit` flag, so an item previously modified after submission can still appear on a later update ticket until a more granular per-update diff snapshot is added.
-- `FRONTDESK_RECEIPT` is not automatically reprinted on edit/update; customer receipt reprint remains a manual Order Center action to avoid confusing duplicate customer receipts.
+- Manual Print / Reprint remains a complete current-order print and does not use the update batch filter.
 
 ### Takeout Receipt Copies
 
@@ -4777,7 +4823,8 @@ This pass keeps existing POS/KDS/Print Center architecture intact and applies fo
 ### Frontdesk Receipt Combo Ordering
 
 - `FRONTDESK_RECEIPT` now prints `Combo` before the item name.
-- Example: `Combo 大碗传统牛肉面 Large x1`.
+- Example: `1 x Combo 大碗传统牛肉面 Large`.
+- Combo side dishes are printed beneath the combo main line for packing visibility, for example `小菜: 拌黄瓜` followed by side-specific requests such as `走花生`.
 - GRAB kitchen tickets are unchanged and continue to focus on production instructions.
 
 ### Frontend Cache Versioning
@@ -4797,15 +4844,16 @@ This pass keeps existing POS/KDS/Print Center architecture intact and applies fo
 
 ### Mock Printing Mode
 
-Print Center supports three store-level runtime modes through `stores.printing_mode`:
+Print Center supports four store-level runtime modes through `stores.printing_mode`:
 
 - `REAL`: production/default mode. Renderers generate receipt text and the ESC/POS TCP transport connects to the configured printer IP/port.
 - `MOCK`: no-printer local testing mode. Renderers still run and print jobs are created, but the dispatcher never opens a socket connection. Jobs are marked `PRINTED` with attempt message `Mock print succeeded - no physical printer used`.
+- `PAD_DIRECT`: Android Pad local-printing mode. Renderers still run and print jobs are created with `rendered_text_snapshot` and `escpos_payload_base64`, but the backend leaves jobs `PENDING` for Pad clients to claim, print locally, and report complete/fail/release. The backend does not open a socket connection to the physical printer in this mode.
 - `DISABLED`: automatic printing is off. Order submission still succeeds and order-triggered print jobs are cancelled with `PRINTING_DISABLED`.
 
 The legacy `stores.printing_enabled` field is retained for compatibility:
 
-- `REAL` and `MOCK` set `printing_enabled = true`.
+- `REAL`, `MOCK`, and `PAD_DIRECT` set `printing_enabled = true`.
 - `DISABLED` sets `printing_enabled = false`.
 - If `printing_mode` is missing, the backend falls back to `printing_enabled=false -> DISABLED`, otherwise `REAL`.
 
@@ -4818,6 +4866,19 @@ Mock mode behavior:
 - Recent/Failed Print Jobs include `Preview Receipt`, which opens the saved rendered receipt text.
 - Test Print, Test GRAB, Test FRONTDESK_RECEIPT, Order Center reprint, and Print Center reprint all honor Mock mode.
 - Connection test in Mock mode returns mock success and does not attempt TCP connection.
+
+Pad Direct behavior:
+
+- Store devices are registered through `POST /api/v1/devices/register` by an authorized store admin/manager using normal Bearer authentication.
+- Registration returns a raw device token once; the backend stores only `device_token_hash`.
+- Runtime Pad worker requests authenticate with `X-Device-Id` and `X-Device-Token`.
+- `GET /api/v1/stores/{storeId}/printing/jobs/pending` returns `PAD_DIRECT` jobs that are `PENDING` or have expired `CLAIMED` leases.
+- `POST /api/v1/printing/jobs/{jobId}/claim` atomically changes the job to `CLAIMED` and records `claimed_by_device_id`, `claimed_at`, `claim_expires_at`, and `client_attempt_token`.
+- `GET /api/v1/printing/jobs/{jobId}/payload` returns the rendered receipt text plus `escpos_payload_base64` only to the device that owns the claim.
+- `POST /api/v1/printing/jobs/{jobId}/complete` marks the job `PRINTED`.
+- `POST /api/v1/printing/jobs/{jobId}/fail` marks the job `FAILED`, records the error, and increments `retry_count`.
+- `POST /api/v1/printing/jobs/{jobId}/release` returns the job to `PENDING` without counting it as a print failure.
+- `print_job_attempts` records Pad Direct attempts with `device_id`, `transport_type = PAD_DIRECT`, `client_attempt_token`, status, error, and raw result metadata.
 - Backend logs include:
   ```text
   ===== MOCK PRINT START =====

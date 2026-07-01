@@ -112,6 +112,38 @@ class PrintDispatcherServiceImplTest {
     }
 
     @Test
+    void frontdeskUpdateDispatchRendersOnlyItemsFromRequestedBatch() {
+        DispatchFixture fixture = configureSuccessfulDispatch(PrintModuleCode.FRONTDESK_RECEIPT, "dine_in", 1);
+        OrderItem oldItem = item(1L, null);
+        OrderItem batchItem = item(2L, 88L);
+        when(orderItemRepository.findAllByOrderId(fixture.order.id)).thenReturn(List.of(oldItem, batchItem));
+        when(orderItemOptionRepository.findAllByOrderItemIds(any())).thenReturn(List.of());
+        when(kitchenTaskRepository.findAllByOrderId(fixture.order.id)).thenReturn(List.of());
+        when(frontdeskRenderer.render(org.mockito.ArgumentMatchers.argThat(request ->
+            Boolean.TRUE.equals(request.is_update_ticket)
+                && Long.valueOf(88L).equals(request.order_update_batch_id)
+                && request.order_items.size() == 1
+                && request.order_items.get(0).id.equals(batchItem.id)
+        ))).thenReturn("FRONTDESK UPDATED ITEM ONLY");
+
+        service.dispatchOrderUpdateAfterCommit(PrintModuleCode.FRONTDESK_RECEIPT, 1L, fixture.order.id, 88L);
+
+        verify(frontdeskRenderer).render(any());
+        verify(grabRenderer, never()).render(any());
+        verify(printJobService).createPendingJob(
+            eq(1L),
+            eq(1L),
+            eq(fixture.order.id),
+            eq(88L),
+            any(),
+            eq(PrintModuleCode.FRONTDESK_RECEIPT),
+            eq("FRONTDESK_RECEIPT_UPDATE"),
+            any(),
+            anyString()
+        );
+    }
+
+    @Test
     void takeoutFrontdeskReceiptUsesConfiguredTwoCopies() {
         DispatchFixture fixture = configureSuccessfulDispatch(PrintModuleCode.FRONTDESK_RECEIPT, "pickup", 2);
         when(frontdeskRenderer.render(any())).thenReturn("TAKEOUT RECEIPT");

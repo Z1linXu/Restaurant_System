@@ -3,6 +3,8 @@ import type { BackendApiResponse } from '../types/ordering'
 const ACCESS_TOKEN_KEY = 'restaurant_pos_access_token'
 const REFRESH_TOKEN_KEY = 'restaurant_pos_refresh_token'
 const REFRESH_ENDPOINT = '/api/v1/auth/refresh'
+const DEFAULT_REQUEST_TIMEOUT_MS = 20_000
+const REFRESH_REQUEST_TIMEOUT_MS = 15_000
 
 let refreshInFlight: Promise<void> | null = null
 
@@ -86,6 +88,21 @@ export function getApiUserMessage(error: unknown, fallback = '请求失败，请
   return fallback
 }
 
+function networkFailureMessage() {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return '当前设备离线，请检查网络后重试 / Device is offline. Please check the network and try again.'
+  }
+  return '网络请求失败，请检查连接后重试 / Network request failed. Please check the connection and try again.'
+}
+
+function timeoutMessage() {
+  return '网络请求超时，请重新连接或稍后重试 / Network request timed out. Please reconnect or try again.'
+}
+
+function isAbortLikeError(error: unknown) {
+  return error instanceof DOMException && error.name === 'AbortError'
+}
+
 async function readResponsePayload(response: Response) {
   const text = await response.text()
   if (!text) return null
@@ -93,6 +110,43 @@ async function readResponsePayload(response: Response) {
     return JSON.parse(text) as unknown
   } catch {
     return text
+  }
+}
+
+async function fetchWithTimeout(input: string, init: RequestInit = {}, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS) {
+  const controller = new AbortController()
+  let timedOut = false
+  const timeoutId = window.setTimeout(() => {
+    timedOut = true
+    controller.abort()
+  }, timeoutMs)
+
+  const externalSignal = init.signal
+  const abortFromExternalSignal = () => controller.abort(externalSignal?.reason)
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      abortFromExternalSignal()
+    } else {
+      externalSignal.addEventListener('abort', abortFromExternalSignal, { once: true })
+    }
+  }
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    })
+  } catch (error) {
+    if (timedOut || (controller.signal.aborted && isAbortLikeError(error) && !externalSignal?.aborted)) {
+      throw new ApiRequestError(0, 'Request timed out', timeoutMessage(), error, 'REQUEST_TIMEOUT')
+    }
+    if (error instanceof ApiRequestError) {
+      throw error
+    }
+    throw new ApiRequestError(0, error instanceof Error ? error.message : 'Network request failed', networkFailureMessage(), error, 'NETWORK_ERROR')
+  } finally {
+    window.clearTimeout(timeoutId)
+    externalSignal?.removeEventListener('abort', abortFromExternalSignal)
   }
 }
 
@@ -142,11 +196,11 @@ async function refreshSessionOnce() {
         throw new ApiRequestError(401, 'Refresh token is missing', userMessageForStatus(401))
       }
 
-      const response = await fetch(REFRESH_ENDPOINT, {
+      const response = await fetchWithTimeout(REFRESH_ENDPOINT, {
         method: 'POST',
         headers: buildApiHeaders({}, false),
         body: JSON.stringify({ refresh_token: refreshToken }),
-      })
+      }, REFRESH_REQUEST_TIMEOUT_MS)
       const payload = await readResponsePayload(response)
       if (!response.ok) {
         const backendMessage = messageFromPayload(payload)
@@ -178,7 +232,7 @@ async function refreshSessionOnce() {
 async function fetchWithAuth(input: string, init: RequestInit = {}) {
   const includeAuth = !isAuthCredentialEndpoint(input)
   const accessToken = includeAuth ? getAccessToken() : null
-  const response = await fetch(input, {
+  const response = await fetchWithTimeout(input, {
     ...init,
     headers: buildApiHeaders(init.headers, includeAuth),
   })

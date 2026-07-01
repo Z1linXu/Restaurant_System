@@ -34,7 +34,6 @@ interface DineInPageProps {
 }
 
 export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
-  console.count('DineInPage render')
   const { storeId } = useCurrentStore()
   const isIpadLandscape = useIpadLandscape()
   const workstation = inferFrontdeskWorkstation(routePath)
@@ -54,7 +53,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
   const [printError, setPrintError] = useState<string | null>(null)
   const menuCatalog = useMenuCatalog(storeId)
   const tableBoardEnabled = activeOrderingContext == null
-  const { tableSlots, statusCounts, startOrder, editOrder, endOrder, refreshFromBackend, refreshTableAfterFinish } = useTableBoard({
+  const { tableSlots, statusCounts, syncError, isOnline, startOrder, editOrder, endOrder, refreshFromBackend, refreshTableAfterFinish } = useTableBoard({
     enabled: tableBoardEnabled,
     storeId,
   })
@@ -65,14 +64,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     nextContext: typeof activeOrderingContext,
     reason: string,
   ) => {
-    console.count('setActiveOrderingContext called')
-    console.log('[DineInPage] setActiveOrderingContext requested', {
-      reason,
-      previousContext: activeOrderingContext,
-      nextContext,
-      routePath,
-      routeSearch,
-    })
+    void reason
     setActiveOrderingContext(nextContext)
   }
 
@@ -82,12 +74,6 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
 
   useEffect(() => {
     const routeContext = parseMenuRoute(routePath, routeSearch)
-    console.log('[DineInPage] route parsing effect', {
-      routePath,
-      routeSearch,
-      routeContext,
-      currentContext: activeOrderingContext,
-    })
     updateActiveOrderingContext(routeContext, 'route parsing effect')
   }, [routePath, routeSearch])
 
@@ -277,6 +263,15 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
               </div>
             ) : null}
 
+            {syncError || !isOnline ? (
+              <div className="rounded-[20px] border border-[rgba(151,34,34,0.2)] bg-[rgba(151,34,34,0.08)] px-4 py-3 text-[0.92rem] font-semibold text-[rgb(116,22,22)]">
+                {syncError ?? '当前设备离线，请检查网络后重试 / Device is offline. Please check the network and try again.'}
+                <button type="button" className="ml-3 font-black underline" onClick={() => void refreshFromBackend({ force: true })}>
+                  Reconnect
+                </button>
+              </div>
+            ) : null}
+
             <Card tone="base" className={`bg-[rgba(255,255,255,0.36)] shadow-none ring-0 ${workstationCompact ? 'space-y-3 rounded-[24px] p-3.5' : 'space-y-5 rounded-[30px] p-4 md:p-5 xl:p-5'}`}>
               <TableStatusLegend counts={statusCounts} compact={workstationCompact} />
               <TableGrid
@@ -315,6 +310,15 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
               {submissionMessage ? (
                 <div className="rounded-[24px] bg-[rgba(97,0,0,0.08)] px-5 py-4 text-base font-semibold text-[var(--primary)]">
                   {submissionMessage}
+                </div>
+              ) : null}
+
+              {syncError || !isOnline ? (
+                <div className="rounded-[24px] border border-[rgba(151,34,34,0.2)] bg-[rgba(151,34,34,0.08)] px-5 py-4 text-base font-semibold text-[rgb(116,22,22)]">
+                  {syncError ?? '当前设备离线，请检查网络后重试 / Device is offline. Please check the network and try again.'}
+                  <button type="button" className="ml-3 font-black underline" onClick={() => void refreshFromBackend({ force: true })}>
+                    Reconnect
+                  </button>
                 </div>
               ) : null}
 

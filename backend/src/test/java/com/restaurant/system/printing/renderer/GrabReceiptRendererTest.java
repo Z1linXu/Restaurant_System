@@ -115,6 +115,14 @@ class GrabReceiptRendererTest {
     }
 
     @Test
+    void keepsExtraBokChoyFullName() {
+        String output = renderNoodle("加上海青");
+
+        assertTrue(output.contains("加上海青"));
+        assertFalse(output.contains("加青"));
+    }
+
+    @Test
     void doesNotCrossSimplifyAddAndRemoveGreenTokens() {
         String output = renderNoodle("走葱 加葱");
 
@@ -198,6 +206,88 @@ class GrabReceiptRendererTest {
 
         assertFalse(output.contains("走青"));
         assertFalse(output.contains("加青"));
+    }
+
+    @Test
+    void frontdeskUpdateReceiptShowsOnlyAddedComboSideAndSideRemove() {
+        FrontdeskReceiptRenderer frontdeskRenderer = new FrontdeskReceiptRenderer();
+        Order order = baseOrder();
+        order.subtotal_amount = new BigDecimal("100.00");
+        order.total_amount = new BigDecimal("114.98");
+
+        OrderItem addedItem = new OrderItem();
+        addedItem.id = 2L;
+        addedItem.order_id = order.id;
+        addedItem.item_name_snapshot_zh = "传统牛肉面";
+        addedItem.quantity = 1;
+        addedItem.unit_price = new BigDecimal("21.00");
+        addedItem.line_amount = new BigDecimal("21.00");
+        addedItem.status = "submitted";
+        addedItem.order_update_batch_id = 88L;
+
+        OrderItemOption size = new OrderItemOption();
+        size.id = 10L;
+        size.order_item_id = addedItem.id;
+        size.option_type_snapshot = "size";
+        size.option_name_snapshot_zh = "大碗";
+        size.option_name_snapshot_en = "Large";
+        size.price_delta = BigDecimal.ZERO;
+        size.quantity = 1;
+
+        OrderItemOption combo = new OrderItemOption();
+        combo.id = 11L;
+        combo.order_item_id = addedItem.id;
+        combo.option_type_snapshot = "addon";
+        combo.option_group_snapshot = "COMBO";
+        combo.option_code_snapshot = "combo";
+        combo.option_name_snapshot_zh = "套餐";
+        combo.option_name_snapshot_en = "Combo";
+        combo.price_delta = new BigDecimal("5.00");
+        combo.quantity = 1;
+
+        OrderItemOption comboSide = new OrderItemOption();
+        comboSide.id = 12L;
+        comboSide.option_id = 201L;
+        comboSide.order_item_id = addedItem.id;
+        comboSide.option_type_snapshot = "addon";
+        comboSide.option_group_snapshot = "COMBO_SIDE";
+        comboSide.option_code_snapshot = "combo_cucumber_salad";
+        comboSide.option_name_snapshot_zh = "套餐拌黄瓜";
+        comboSide.option_name_snapshot_en = "Combo Cucumber Salad";
+        comboSide.price_delta = BigDecimal.ZERO;
+        comboSide.quantity = 1;
+
+        OrderItemOption sideRemove = new OrderItemOption();
+        sideRemove.id = 13L;
+        sideRemove.order_item_id = addedItem.id;
+        sideRemove.option_type_snapshot = "remove";
+        sideRemove.option_group_snapshot = "COMBO_SIDE_REMOVE";
+        sideRemove.parent_option_id_snapshot = comboSide.option_id;
+        sideRemove.option_name_snapshot_zh = "走花生";
+        sideRemove.option_name_snapshot_en = "No Peanut";
+        sideRemove.price_delta = BigDecimal.ZERO;
+        sideRemove.quantity = 1;
+
+        PrintRenderRequest request = new PrintRenderRequest();
+        request.module_code = PrintModuleCode.FRONTDESK_RECEIPT;
+        request.order = order;
+        request.order_items = List.of(addedItem);
+        request.order_item_options = List.of(size, combo, comboSide, sideRemove);
+        request.happened_at = order.submitted_at;
+        request.is_update_ticket = true;
+        request.order_update_batch_id = 88L;
+
+        String output = stripMarkup(frontdeskRenderer.render(request));
+
+        assertTrue(output.contains("UPDATED"));
+        assertTrue(output.contains("Added items only"));
+        assertTrue(output.contains("1 x Combo 传统牛肉面 Large"));
+        assertTrue(output.contains("小菜: 拌黄瓜"));
+        assertTrue(output.contains("走花生"));
+        assertTrue(output.contains("Subtotal: $21.00"));
+        assertTrue(output.contains("Tax (14.975%): $3.14"));
+        assertTrue(output.contains("Total: $24.14"));
+        assertFalse(output.contains("Subtotal: $100.00"));
     }
 
     private String renderSides(SideCase... sideCases) {

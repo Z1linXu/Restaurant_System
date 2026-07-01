@@ -136,8 +136,8 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         Long orderId,
         Long orderUpdateBatchId
     ) {
-        if (!PrintModuleCode.GRAB.equals(moduleCode)) {
-            throw new BusinessException("Only GRAB supports automatic update tickets");
+        if (!supportsAutomaticUpdateTicket(moduleCode)) {
+            throw new BusinessException("Only GRAB and FRONTDESK_RECEIPT support automatic update tickets");
         }
         if (!featureFlagService.isEnabled(FeaturePackage.PRINTING)) {
             logger.info(
@@ -191,6 +191,14 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         try {
             String content = buildTestPrintContent(store, printer, request.module_code);
             job = printJobService.attachRenderedContent(job, printer.id, content);
+            if (isPadDirectMode(request.store_id)) {
+                job = printJobService.markPadDirectQueued(job, printer);
+                PrinterTestResponse response = new PrinterTestResponse();
+                response.success = true;
+                response.message = "Pad Direct test print job queued. Backend did not connect to the physical printer.";
+                logger.info("Queued PAD_DIRECT test print job {} for printer {} store {}", job.id, printer.id, request.store_id);
+                return response;
+            }
             job = printJobService.markPrinting(job, printer);
             if (isMockMode(request.store_id)) {
                 logMockPrint("TEST_PRINT", printer, job, content);
@@ -394,6 +402,13 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 buildPayloadSnapshot(request.module_code, request.store_id, null, "ADMIN_MODULE_TEST_PRINT")
             );
             job = printJobService.attachRenderedContent(job, printer.id, content);
+            if (isPadDirectMode(request.store_id)) {
+                job = printJobService.markPadDirectQueued(job, printer);
+                response.success = true;
+                response.message = "Pad Direct " + request.module_code + " test print job queued. Backend did not connect to the physical printer.";
+                logger.info("Queued PAD_DIRECT module test print job {} module {} store {}", job.id, request.module_code, request.store_id);
+                return response;
+            }
             job = printJobService.markPrinting(job, printer);
             if (isMockMode(request.store_id)) {
                 logMockPrint(request.module_code, printer, job, content);
@@ -431,7 +446,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 orderUpdateBatchId,
                 null,
                 moduleCode,
-                orderUpdateBatchId == null ? moduleCode : "GRAB_UPDATE",
+                orderUpdateBatchId == null ? moduleCode : moduleCode + "_UPDATE",
                 null,
                 buildPayloadSnapshot(
                     moduleCode,
@@ -494,6 +509,20 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             }
 
             job = printJobService.attachRenderedContent(job, printer.id, content);
+            if (isPadDirectMode(storeId)) {
+                job = printJobService.markPadDirectQueued(job, printer);
+                int copies = resolveCopyCount(moduleCode, assignment, renderRequest.order);
+                logger.info(
+                    "PAD_DIRECT queued print job {} module {} store {} order {} printer {} copies {}. Backend did not connect to printer.",
+                    job.id,
+                    moduleCode,
+                    storeId,
+                    orderId,
+                    printer.id,
+                    copies
+                );
+                return;
+            }
             job = printJobService.markPrinting(job, printer);
             logger.info("Dispatching print job {} module {} store {} order {} to printer {}", job.id, moduleCode, storeId, orderId, printer.id);
             int copies = resolveCopyCount(moduleCode, assignment, renderRequest.order);
@@ -531,6 +560,11 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 job = printJobService.attachRenderedContent(job, printer.id, content);
             } else {
                 job = printJobService.attachRenderedContent(job, printer.id, content);
+            }
+            if (isPadDirectMode(job.store_id)) {
+                job = printJobService.markPadDirectQueued(job, printer);
+                logger.info("PAD_DIRECT queued existing print job {} for client-side reprint", job.id);
+                return printJobService.toResponse(job);
             }
             job.requested_by_user_id = requestedByUserId;
             job = printJobService.markPrinting(job, printer);
@@ -576,6 +610,11 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             }
             String content = renderOrderContent(moduleCode, order.store_id, order.id);
             job = printJobService.attachRenderedContent(job, printer.id, content);
+            if (isPadDirectMode(order.store_id)) {
+                job = printJobService.markPadDirectQueued(job, printer);
+                logger.info("PAD_DIRECT queued order reprint job {} order {} module {}", job.id, orderId, moduleCode);
+                return printJobService.toResponse(job);
+            }
             job = printJobService.markPrinting(job, printer);
             logger.info("Order reprint requested for order {} module {} print job {} by user {}", orderId, moduleCode, job.id, requestedByUserId);
             if (isMockMode(order.store_id)) {
@@ -656,6 +695,12 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             logger.info("Mock printer connection test succeeded for printer {} store {}", printer.id, printer.store_id);
             return response;
         }
+        if (isPadDirectMode(request.store_id)) {
+            response.success = false;
+            response.message = "Pad Direct mode requires running connection tests from the Android Pad on the store LAN.";
+            logger.info("Skipped backend printer connection test for printer {} store {} because mode is PAD_DIRECT", printer.id, printer.store_id);
+            return response;
+        }
         try (Socket socket = new Socket()) {
             int timeout = printer.timeout_ms == null ? 3000 : printer.timeout_ms;
             socket.connect(new InetSocketAddress(printer.ip_address, printer.port == null ? 9100 : printer.port), timeout);
@@ -699,7 +744,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             orderItems.stream().map(item -> item.id).toList()
         );
         List<KitchenTask> kitchenTasks = kitchenTaskRepository.findAllByOrderId(order.id);
-        boolean updateTicket = orderUpdateBatchId != null && PrintModuleCode.GRAB.equals(moduleCode);
+        boolean updateTicket = orderUpdateBatchId != null && supportsAutomaticUpdateTicket(moduleCode);
         if (updateTicket) {
             Set<Long> modifiedOrderItemIds = orderItems.stream()
                 .filter(item -> orderUpdateBatchId.equals(item.order_update_batch_id))
@@ -760,6 +805,10 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         return "pickup".equalsIgnoreCase(order.order_type) || "takeout".equalsIgnoreCase(order.order_type);
     }
 
+    private boolean supportsAutomaticUpdateTicket(String moduleCode) {
+        return PrintModuleCode.GRAB.equals(moduleCode) || PrintModuleCode.FRONTDESK_RECEIPT.equals(moduleCode);
+    }
+
     private PrinterConfig requirePrinterForJob(PrintJob job) {
         if (job.printer_id != null) {
             return requirePrinterForStore(job.printer_id, job.store_id);
@@ -804,6 +853,10 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
 
     private boolean isMockMode(Long storeId) {
         return PrintingMode.MOCK.equals(printerConfigService.getStorePrintingMode(storeId));
+    }
+
+    private boolean isPadDirectMode(Long storeId) {
+        return PrintingMode.PAD_DIRECT.equals(printerConfigService.getStorePrintingMode(storeId));
     }
 
     private void logMockPrint(String moduleCode, PrinterConfig printer, PrintJob job, String content) {

@@ -6,12 +6,18 @@ import com.restaurant.system.printing.dto.PrintJobResponse;
 import com.restaurant.system.printing.entity.PrintJob;
 import com.restaurant.system.printing.entity.PrintJobAttempt;
 import com.restaurant.system.printing.entity.PrinterConfig;
+import com.restaurant.system.printing.renderer.PrintMarkup;
 import com.restaurant.system.printing.repository.PrintJobAttemptRepository;
 import com.restaurant.system.printing.repository.PrintJobRepository;
 import com.restaurant.system.printing.repository.PrinterConfigRepository;
 import com.restaurant.system.printing.service.PrintJobService;
+import com.restaurant.system.printing.transport.EscPosFontSizeMode;
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.List;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -99,6 +105,27 @@ public class PrintJobServiceImpl implements PrintJobService {
         PrintJob target = requireJob(job.id);
         target.printer_id = printerId;
         target.rendered_text_snapshot = renderedTextSnapshot;
+        target.updated_at = LocalDateTime.now();
+        return printJobRepository.save(target);
+    }
+
+    @Override
+    @Transactional
+    public PrintJob markPadDirectQueued(PrintJob job, PrinterConfig printer) {
+        PrintJob target = requireJob(job.id);
+        target.executionMode = "PAD_DIRECT";
+        target.status = PrintJobStatus.PENDING;
+        target.printer_id = printer == null ? target.printer_id : printer.id;
+        target.claimedByDeviceId = null;
+        target.claimedAt = null;
+        target.claimExpiresAt = null;
+        target.printedByDeviceId = null;
+        target.clientAttemptToken = null;
+        target.escposPayloadBase64 = buildEscPosPayloadBase64(target.rendered_text_snapshot, printer);
+        target.printed_at = null;
+        target.failed_at = null;
+        target.error_code = null;
+        target.error_message = null;
         target.updated_at = LocalDateTime.now();
         return printJobRepository.save(target);
     }
@@ -281,5 +308,69 @@ public class PrintJobServiceImpl implements PrintJobService {
             return value;
         }
         return value.substring(0, maxLength);
+    }
+
+    private String buildEscPosPayloadBase64(String renderedTextSnapshot, PrinterConfig printer) {
+        if (renderedTextSnapshot == null) {
+            return null;
+        }
+        try {
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            outputStream.write(new byte[] {0x1B, 0x40});
+            if (printer != null && printer.escpos_code_page != null) {
+                outputStream.write(new byte[] {0x1B, 0x74, (byte) (printer.escpos_code_page & 0xFF)});
+            }
+            writeEscPosContent(
+                outputStream,
+                renderedTextSnapshot,
+                resolveCharset(printer == null ? null : printer.text_encoding),
+                printer == null ? null : printer.font_size
+            );
+            outputStream.write(new byte[] {0x1D, 0x56, 0x41, 0x10});
+            return Base64.getEncoder().encodeToString(outputStream.toByteArray());
+        } catch (Exception exception) {
+            throw new BusinessException("Failed to build Pad Direct ESC/POS payload: " + exception.getMessage());
+        }
+    }
+
+    private void writeEscPosContent(ByteArrayOutputStream outputStream, String content, Charset charset, String fontSize) throws Exception {
+        String[] lines = content.split("\\n", -1);
+        EscPosFontSizeMode fontSizeMode = EscPosFontSizeMode.fromConfig(fontSize);
+        for (String rawLine : lines) {
+            boolean doubleHeight = rawLine.contains(PrintMarkup.DOUBLE_HEIGHT_OPEN) && rawLine.contains(PrintMarkup.DOUBLE_HEIGHT_CLOSE);
+            boolean large = rawLine.contains(PrintMarkup.LARGE_OPEN) && rawLine.contains(PrintMarkup.LARGE_CLOSE);
+            boolean small = rawLine.contains(PrintMarkup.SMALL_OPEN) && rawLine.contains(PrintMarkup.SMALL_CLOSE);
+            String line = rawLine
+                .replace(PrintMarkup.DOUBLE_HEIGHT_OPEN, "")
+                .replace(PrintMarkup.DOUBLE_HEIGHT_CLOSE, "")
+                .replace(PrintMarkup.LARGE_OPEN, "")
+                .replace(PrintMarkup.LARGE_CLOSE, "")
+                .replace(PrintMarkup.SMALL_OPEN, "")
+                .replace(PrintMarkup.SMALL_CLOSE, "");
+
+            if (large) {
+                outputStream.write(EscPosFontSizeMode.LARGE.activate_bytes);
+            } else if (small) {
+                outputStream.write(EscPosFontSizeMode.SMALL.activate_bytes);
+            } else if (doubleHeight) {
+                outputStream.write(fontSizeMode.activate_bytes);
+            }
+            outputStream.write(line.getBytes(charset));
+            if (large || small || doubleHeight) {
+                outputStream.write(EscPosFontSizeMode.XS.reset_bytes);
+            }
+            outputStream.write('\n');
+        }
+    }
+
+    private Charset resolveCharset(String configuredEncoding) {
+        if (configuredEncoding == null || configuredEncoding.isBlank()) {
+            return Charset.forName("GBK");
+        }
+        try {
+            return Charset.forName(configuredEncoding);
+        } catch (Exception ignored) {
+            return StandardCharsets.UTF_8;
+        }
     }
 }

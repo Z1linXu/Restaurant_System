@@ -39,7 +39,7 @@ export interface PrinterAssignmentRecord {
 export interface PrintCenterOverview {
   store_id: number
   printing_enabled: boolean
-  printing_mode?: 'REAL' | 'MOCK' | 'DISABLED'
+  printing_mode?: 'REAL' | 'MOCK' | 'DISABLED' | 'PAD_DIRECT'
   printers: PrinterConfigRecord[]
   assignments: PrinterAssignmentRecord[]
 }
@@ -66,18 +66,40 @@ export interface PrintJobRecord {
   printer_endpoint?: string | null
   module_code: string
   receipt_type: string
-  status: 'PENDING' | 'PRINTING' | 'PRINTED' | 'FAILED' | 'CANCELLED'
+  status: 'PENDING' | 'CLAIMED' | 'PRINTING' | 'PRINTED' | 'FAILED' | 'CANCELLED'
+  execution_mode?: string | null
   rendered_text_snapshot?: string | null
+  escpos_payload_base64?: string | null
   error_message?: string | null
   error_code?: string | null
   retry_count?: number | null
   max_retry_count?: number | null
   requested_by_user_id?: number | null
+  claimed_by_device_id?: number | null
+  claimed_at?: string | null
+  claim_expires_at?: string | null
+  printed_by_device_id?: number | null
+  client_attempt_token?: string | null
   created_at: string
   updated_at?: string | null
   printed_at?: string | null
   failed_at?: string | null
   last_attempt_at?: string | null
+}
+
+export interface StoreDeviceRecord {
+  id: number
+  organization_id?: number | null
+  store_id: number
+  device_name?: string | null
+  device_type?: string | null
+  status?: string | null
+  last_seen_at?: string | null
+  app_version?: string | null
+  platform?: string | null
+  is_active?: boolean | null
+  created_at?: string | null
+  updated_at?: string | null
 }
 
 export interface PrinterEncodingTestResult {
@@ -148,7 +170,7 @@ export async function updatePrintingStatus(storeId: number, printingEnabled: boo
   })
 }
 
-export async function updatePrintingMode(storeId: number, printingMode: 'REAL' | 'MOCK' | 'DISABLED') {
+export async function updatePrintingMode(storeId: number, printingMode: 'REAL' | 'MOCK' | 'DISABLED' | 'PAD_DIRECT') {
   return request<boolean>('/api/v1/admin/printing/status', {
     method: 'PUT',
     headers: buildHeaders(),
@@ -226,6 +248,11 @@ export async function fetchPrintJobs(input: {
   }
 
   return request<PrintJobRecord[]>(`/api/v1/admin/printing/jobs?${params.toString()}`)
+}
+
+export async function fetchStoreDevices(storeId: number): Promise<StoreDeviceRecord[]> {
+  const params = new URLSearchParams({ store_id: String(storeId) })
+  return request<StoreDeviceRecord[]>(`/api/v1/admin/printing/devices?${params.toString()}`)
 }
 
 export async function reprintPrintJob(jobId: number) {

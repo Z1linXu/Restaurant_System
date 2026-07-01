@@ -6,6 +6,7 @@ import {
   deletePrinterConfig,
   fetchPrintJobs,
   fetchPrintCenterOverview,
+  fetchStoreDevices,
   reprintPrintJob,
   savePrinterConfig,
   triggerPrinterConnectionTest,
@@ -21,12 +22,13 @@ import {
   type PrintJobRecord,
   type PrinterAssignmentRecord,
   type PrinterConfigRecord,
+  type StoreDeviceRecord,
 } from '../../services/printingAdminService'
 
 type ToastState = { kind: 'success' | 'error'; message: string } | null
 
 type PrinterEditorState = PrinterConfigRecord
-type PrintingMode = 'REAL' | 'MOCK' | 'DISABLED'
+type PrintingMode = 'REAL' | 'MOCK' | 'DISABLED' | 'PAD_DIRECT'
 
 const MODULE_OPTIONS = [
   { code: 'GRAB', label: 'GRAB', future: false },
@@ -48,6 +50,7 @@ const FONT_SIZE_OPTIONS = [
 const PRINTING_MODE_OPTIONS: Array<{ value: PrintingMode; label: string; description: string }> = [
   { value: 'REAL', label: 'Real Printer / 真实打印机', description: 'Connect to configured ESC/POS printers over TCP.' },
   { value: 'MOCK', label: 'Mock / 无打印机测试模式', description: 'Render receipts and mark print jobs successful without socket connections.' },
+  { value: 'PAD_DIRECT', label: 'Pad Direct / 平板本地打印', description: 'Backend queues rendered jobs; Android Pad claims and prints locally.' },
   { value: 'DISABLED', label: 'Disabled / 关闭打印', description: 'Do not dispatch automatic printing.' },
 ]
 
@@ -116,6 +119,9 @@ function statusTone(status: PrintJobRecord['status']) {
   if (status === 'PRINTING') {
     return 'bg-[rgba(38,86,160,0.12)] text-[rgb(38,86,160)]'
   }
+  if (status === 'CLAIMED') {
+    return 'bg-[rgba(118,77,21,0.14)] text-[rgb(118,77,21)]'
+  }
   return 'bg-[rgba(26,28,25,0.08)] text-[var(--muted)]'
 }
 
@@ -130,16 +136,21 @@ export function PrintingSettingsPage() {
   const [error, setError] = useState<string | null>(null)
   const [printerEditor, setPrinterEditor] = useState<PrinterEditorState | null>(null)
   const [printJobs, setPrintJobs] = useState<PrintJobRecord[]>([])
+  const [storeDevices, setStoreDevices] = useState<StoreDeviceRecord[]>([])
   const [jobsLoading, setJobsLoading] = useState(false)
   const [jobsError, setJobsError] = useState<string | null>(null)
+  const [devicesLoading, setDevicesLoading] = useState(false)
+  const [devicesError, setDevicesError] = useState<string | null>(null)
   const [testingAllConnections, setTestingAllConnections] = useState(false)
   const [previewJob, setPreviewJob] = useState<PrintJobRecord | null>(null)
 
   const loadData = async (storeId: number) => {
     setLoading(true)
     setJobsLoading(true)
+    setDevicesLoading(true)
     setError(null)
     setJobsError(null)
+    setDevicesError(null)
     try {
       const [platformOverview, printOverview] = await Promise.all([
         fetchPlatformOverview(storeId),
@@ -160,6 +171,15 @@ export function PrintingSettingsPage() {
       setJobsError(jobError instanceof Error ? jobError.message : 'Failed to load print jobs')
     } finally {
       setJobsLoading(false)
+    }
+
+    try {
+      setStoreDevices(await fetchStoreDevices(storeId))
+    } catch (deviceError) {
+      setStoreDevices([])
+      setDevicesError(deviceError instanceof Error ? deviceError.message : 'Failed to load Pad devices')
+    } finally {
+      setDevicesLoading(false)
     }
   }
 
@@ -420,6 +440,18 @@ export function PrintingSettingsPage() {
     }
   }
 
+  const refreshDevices = async () => {
+    try {
+      setDevicesLoading(true)
+      setDevicesError(null)
+      setStoreDevices(await fetchStoreDevices(Number(selectedStoreId)))
+    } catch (deviceError) {
+      setDevicesError(deviceError instanceof Error ? deviceError.message : 'Failed to refresh Pad devices')
+    } finally {
+      setDevicesLoading(false)
+    }
+  }
+
   return (
     <>
       <div className="space-y-5">
@@ -487,7 +519,9 @@ export function PrintingSettingsPage() {
                             ? 'bg-[rgba(38,86,160,0.16)] text-[rgb(38,86,160)]'
                             : option.value === 'DISABLED'
                               ? 'bg-[rgba(97,0,0,0.1)] text-[var(--primary)]'
-                              : 'bg-[rgba(18,141,77,0.12)] text-[rgb(25,112,69)]'
+                              : option.value === 'PAD_DIRECT'
+                                ? 'bg-[rgba(118,77,21,0.14)] text-[rgb(118,77,21)]'
+                                : 'bg-[rgba(18,141,77,0.12)] text-[rgb(25,112,69)]'
                           : 'bg-[rgba(26,28,25,0.06)] text-[var(--muted)] hover:bg-[rgba(26,28,25,0.1)]'
                       }`}
                     >
@@ -499,6 +533,11 @@ export function PrintingSettingsPage() {
               {printingMode === 'MOCK' ? (
                 <div className="mt-4 rounded-[18px] bg-[rgba(38,86,160,0.1)] px-4 py-3 text-[0.9rem] font-semibold text-[rgb(38,86,160)]">
                   当前为无打印机测试模式，系统不会连接任何实体打印机。订单会生成 print jobs，并保存可预览的小票内容。
+                </div>
+              ) : null}
+              {printingMode === 'PAD_DIRECT' ? (
+                <div className="mt-4 rounded-[18px] bg-[rgba(118,77,21,0.12)] px-4 py-3 text-[0.9rem] font-semibold text-[rgb(118,77,21)]">
+                  Pad Direct mode queues rendered print jobs for an Android Pad to claim and print locally. The backend will not connect to LAN printers.
                 </div>
               ) : null}
               {printingMode === 'DISABLED' ? (
@@ -539,6 +578,30 @@ export function PrintingSettingsPage() {
                 </span>
               </div>
             </button>
+
+            <section className="rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">Pad Direct Devices</div>
+                  <div className="mt-1 text-[0.86rem] text-[var(--muted)]">
+                    Registered Android Pad printers for local LAN printing. Tokens are never shown after registration.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void refreshDevices()}
+                  className="rounded-full bg-[rgba(26,28,25,0.06)] px-4 py-2 text-[0.84rem] font-semibold text-[var(--on-surface)]"
+                >
+                  {devicesLoading ? 'Refreshing...' : 'Refresh Devices'}
+                </button>
+              </div>
+              <PadDevicesTable devices={storeDevices} />
+              {devicesError ? (
+                <div className="mt-3 rounded-[16px] bg-[rgba(97,0,0,0.08)] px-4 py-3 text-[0.86rem] font-medium text-[var(--primary)]">
+                  Pad devices failed to load: {devicesError}
+                </div>
+              ) : null}
+            </section>
 
             <section className="rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -851,6 +914,11 @@ export function PrintingSettingsPage() {
                 <div className="mt-1 text-[0.82rem] text-[var(--muted)]">
                   Job #{previewJob.id} · {previewJob.module_code} · {previewJob.status}
                 </div>
+                {previewJob.execution_mode === 'PAD_DIRECT' ? (
+                  <div className="mt-1 text-[0.78rem] font-semibold text-[rgb(118,77,21)]">
+                    Pad Direct payload: {previewJob.escpos_payload_base64 ? `${previewJob.escpos_payload_base64.length} base64 chars` : 'not generated'}
+                  </div>
+                ) : null}
               </div>
               <button
                 type="button"
@@ -867,6 +935,57 @@ export function PrintingSettingsPage() {
         </div>
       ) : null}
     </>
+  )
+}
+
+function PadDevicesTable({ devices }: { devices: StoreDeviceRecord[] }) {
+  if (!devices.length) {
+    return (
+      <div className="mt-4 rounded-[18px] bg-[rgba(26,28,25,0.04)] px-4 py-5 text-[0.9rem] text-[var(--muted)]">
+        No Pad devices registered for this store yet.
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-4 overflow-x-auto rounded-[18px] bg-[rgba(26,28,25,0.04)]">
+      <table className="min-w-full text-left text-[0.84rem]">
+        <thead className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--muted)]">
+          <tr>
+            <th className="px-3 py-3">Device</th>
+            <th className="px-3 py-3">Type</th>
+            <th className="px-3 py-3">Status</th>
+            <th className="px-3 py-3">Last Seen</th>
+            <th className="px-3 py-3">App</th>
+            <th className="px-3 py-3">Platform</th>
+          </tr>
+        </thead>
+        <tbody>
+          {devices.map((device) => (
+            <tr key={device.id} className="border-t border-[rgba(26,28,25,0.06)]">
+              <td className="px-3 py-3">
+                <div className="font-semibold text-[var(--on-surface)]">{device.device_name ?? `Device #${device.id}`}</div>
+                <div className="text-[0.76rem] text-[var(--muted)]">ID {device.id}</div>
+              </td>
+              <td className="px-3 py-3 text-[var(--muted)]">{device.device_type ?? '-'}</td>
+              <td className="px-3 py-3">
+                <span className={`rounded-full px-2.5 py-1 text-[0.72rem] font-bold ${
+                  device.is_active === false || device.status !== 'ACTIVE'
+                    ? 'bg-[rgba(97,0,0,0.1)] text-[var(--primary)]'
+                    : 'bg-[rgba(18,141,77,0.12)] text-[rgb(25,112,69)]'
+                }`}
+                >
+                  {device.is_active === false ? 'INACTIVE' : device.status ?? 'UNKNOWN'}
+                </span>
+              </td>
+              <td className="px-3 py-3 text-[var(--muted)]">{formatDateTime(device.last_seen_at)}</td>
+              <td className="px-3 py-3 text-[var(--muted)]">{device.app_version ?? '-'}</td>
+              <td className="px-3 py-3 text-[var(--muted)]">{device.platform ?? '-'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
@@ -899,6 +1018,7 @@ function PrintJobsTable({
             <th className="px-3 py-3">Module</th>
             <th className="px-3 py-3">Printer</th>
             <th className="px-3 py-3">Status</th>
+            <th className="px-3 py-3">Pad Claim</th>
             <th className="px-3 py-3">Retry</th>
             <th className="px-3 py-3">Error</th>
             <th className="px-3 py-3 text-right">Action</th>
@@ -913,6 +1033,26 @@ function PrintJobsTable({
               <td className="px-3 py-3 text-[var(--muted)]">{job.printer_name ?? job.printer_endpoint ?? '-'}</td>
               <td className="px-3 py-3">
                 <span className={`rounded-full px-2.5 py-1 text-[0.72rem] font-bold ${statusTone(job.status)}`}>{job.status}</span>
+                {job.execution_mode ? (
+                  <div className="mt-1 text-[0.72rem] font-semibold text-[var(--muted)]">{job.execution_mode}</div>
+                ) : null}
+              </td>
+              <td className="px-3 py-3 text-[var(--muted)]">
+                {job.claimed_by_device_id ? (
+                  <div>
+                    <div className="font-semibold text-[var(--on-surface)]">Device #{job.claimed_by_device_id}</div>
+                    <div className="text-[0.74rem]">until {formatDateTime(job.claim_expires_at)}</div>
+                  </div>
+                ) : job.printed_by_device_id ? (
+                  <div>
+                    <div className="font-semibold text-[var(--on-surface)]">Printed by #{job.printed_by_device_id}</div>
+                    <div className="text-[0.74rem]">Pad Direct</div>
+                  </div>
+                ) : job.execution_mode === 'PAD_DIRECT' ? (
+                  <span>Waiting for Pad</span>
+                ) : (
+                  <span>-</span>
+                )}
               </td>
               <td className="px-3 py-3 text-[var(--muted)]">{job.retry_count ?? 0}/{job.max_retry_count ?? 0}</td>
               <td className="max-w-[18rem] truncate px-3 py-3 text-[var(--muted)]" title={job.error_message ?? ''}>

@@ -1,0 +1,16 @@
+# Pad app generated files
+android/.gradle/
+android/build/
+android/app/build/
+
+# Bundled frontend artifact copied during PR3+ POC
+web/dist/
+
+# Local device/runtime config
+*.local
+*.log
+
+# OS/editor noise
+.DS_Store
+.idea/
+.vscode/

@@ -110,6 +110,59 @@ GET `/orders/{id}/print-options`
 
 Returns renderer-backed module options with availability and an unavailable reason based on feature, store mode, assignment, and printer configuration.
 
+### Store Printing Modes
+
+Print Center stores the active mode in `stores.printing_mode`.
+
+- `REAL`: backend renders and sends ESC/POS TCP to the configured printer.
+- `MOCK`: backend renders, stores preview text, and marks jobs printed without socket access.
+- `PAD_DIRECT`: backend renders and stores `PENDING` print jobs for Android Pad local printing. Backend must not open TCP printer sockets in this mode.
+- `DISABLED`: backend cancels automatic print jobs without physical printing.
+
+`PAD_DIRECT` only changes where printing is executed. It does not change order submission, order update, manual reprint, or receipt rendering semantics.
+
+### Pad Direct Device APIs
+
+Admin/device registration:
+
+- `POST /api/v1/devices/register`
+  - Auth: normal Bearer token with store admin configuration access.
+  - Request: `store_id`, `device_name`, `device_type`, `app_version`, `platform`.
+  - Response includes `device_id` and one-time `device_token`.
+  - Backend stores only a SHA-256 hash of the token.
+- `POST /api/v1/devices/heartbeat`
+  - Auth: `X-Device-Id`, `X-Device-Token`.
+  - Updates `last_seen_at`, `app_version`, and `platform`.
+- `GET /api/v1/admin/printing/devices?store_id={storeId}`
+  - Auth: normal Bearer token with store admin configuration access.
+  - Returns registered store devices without token secrets.
+
+Pad print queue:
+
+- `GET /api/v1/stores/{storeId}/printing/jobs/pending?limit=25`
+  - Auth: `X-Device-Id`, `X-Device-Token`.
+  - Returns `PAD_DIRECT` jobs with status `PENDING` or expired `CLAIMED` lease.
+- `POST /api/v1/printing/jobs/{jobId}/claim`
+  - Auth: `X-Device-Id`, `X-Device-Token`.
+  - Request: `client_attempt_token`, optional `lease_seconds`.
+  - Atomically changes the job to `CLAIMED`; concurrent devices receive `409`.
+- `GET /api/v1/printing/jobs/{jobId}/payload`
+  - Auth: `X-Device-Id`, `X-Device-Token`.
+  - Only the claiming device can read payload.
+  - Returns `rendered_text_snapshot` and `escpos_payload_base64`.
+- `POST /api/v1/printing/jobs/{jobId}/complete`
+  - Auth: `X-Device-Id`, `X-Device-Token`.
+  - Request: `client_attempt_token`, optional `raw_result`.
+  - Marks the job `PRINTED`.
+- `POST /api/v1/printing/jobs/{jobId}/fail`
+  - Auth: `X-Device-Id`, `X-Device-Token`.
+  - Request: `client_attempt_token`, `error_code`, `error_message`, optional `raw_result`.
+  - Marks the job `FAILED` and increments `retry_count`.
+- `POST /api/v1/printing/jobs/{jobId}/release`
+  - Auth: `X-Device-Id`, `X-Device-Token`.
+  - Request: `client_attempt_token`, optional `reason`.
+  - Returns the job to `PENDING`.
+
 ### Today Order History
 GET `/frontdesk/orders/today?store_id=1&limit=100`
 

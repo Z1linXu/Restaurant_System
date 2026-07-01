@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card } from '../../components/ui/Card'
 import { useIpadLandscape } from '../../hooks/useIpadLandscape'
 import { buildDefaultDraft, calculateTotals } from '../../hooks/useOrderSessions'
@@ -80,6 +80,7 @@ export function OrderingPage({
   const [takeoutDialogOpen, setTakeoutDialogOpen] = useState(false)
   const [quickAddStates, setQuickAddStates] = useState<Record<string, 'idle' | 'adding' | 'added'>>({})
   const [printWarning, setPrintWarning] = useState<string | null>(null)
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine))
   const {
     session,
     order,
@@ -97,6 +98,37 @@ export function OrderingPage({
     refreshOrder,
     updateHeader,
   } = useDraftOrder(storeId, slotLabel, tableLabel, orderType, pickupLabel, items)
+  const refreshOrderRef = useRef(refreshOrder)
+
+  useEffect(() => {
+    refreshOrderRef.current = refreshOrder
+  }, [refreshOrder])
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true)
+      if (document.visibilityState === 'visible') {
+        void refreshOrderRef.current()
+      }
+    }
+    const handleOffline = () => setIsOnline(false)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) {
+        setIsOnline(true)
+        void refreshOrderRef.current()
+      }
+    }
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
 
   useEffect(() => {
     if (!activeCategoryId && categories[0]?.id) {
@@ -266,6 +298,12 @@ export function OrderingPage({
         {printWarning ? (
           <div className="rounded-[20px] border-2 border-[rgba(151,34,34,0.35)] bg-[rgba(151,34,34,0.12)] px-5 py-4 text-[1rem] font-black text-[rgb(116,22,22)] shadow-[0_18px_34px_rgba(151,34,34,0.12)]">
             {printWarning}
+          </div>
+        ) : null}
+
+        {!isOnline ? (
+          <div className="rounded-[20px] border border-[rgba(151,34,34,0.25)] bg-[rgba(151,34,34,0.1)] px-5 py-4 text-[1rem] font-bold text-[rgb(116,22,22)]">
+            当前设备离线，请检查网络后重试 / Device is offline. Please check the network and try again.
           </div>
         ) : null}
 
