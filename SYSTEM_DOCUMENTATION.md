@@ -71,6 +71,64 @@ Deployment notes:
 - Cloud/prod must use Flyway and `spring.jpa.hibernate.ddl-auto=validate` or `none`.
 - If startup fails with `Production safety check failed`, fix the listed configuration item rather than bypassing the guard.
 
+## Cloud Ready PR4: RuntimeDataSeeder Production Safety
+
+PR4 makes startup seed behavior explicit so cloud, production, and pilot deployments do not silently create default accounts or demo restaurant data.
+
+Runtime seeding is controlled by:
+
+- `app.seed.runtime-enabled`
+- `app.seed.force-overwrite`
+- `app.seed.safe-metadata-enabled`
+- `app.seed.default-users-enabled`
+- `app.seed.demo-data-enabled`
+- `app.seed.membership-supplement-enabled`
+- `app.seed.production-bootstrap-enabled`
+
+Local/default seed policy:
+
+- `safe-metadata-enabled=true`
+- `default-users-enabled=true`
+- `demo-data-enabled=true`
+- `membership-supplement-enabled=true`
+- `production-bootstrap-enabled=false`
+
+This keeps local development convenient. Local startup can still create the familiar demo store, roles, demo menu, dining tables, printer settings, memberships, and default recoverable login accounts.
+
+Cloud and pilot seed policy:
+
+- `safe-metadata-enabled=true`
+- `default-users-enabled=false`
+- `demo-data-enabled=false`
+- `membership-supplement-enabled=false`
+- `production-bootstrap-enabled=false`
+
+Under cloud/pilot policy, `RuntimeDataSeeder` does not:
+
+- create or reset `owner`, `manager`, `staff`, `frontdesk`, or `kitchen` default credentials
+- reset any password to `741xu741`
+- create demo menu categories, menu items, menu item options, or demo option reconciliation
+- run fried-noodle option activation/deactivation reconciliation
+- create demo dining tables
+- create the default `192.168.2.200` printer or printer assignments
+- create ramen/noodle demo templates or KDS display configs
+- attach stores to the demo `RAMEN_NOODLE_RESTAURANT` organization
+- supplement memberships from legacy `users.store_id`
+
+Strict production profiles (`cloud`, `prod`, `production`) fail startup if any of these are enabled:
+
+- `app.seed.default-users-enabled=true`
+- `app.seed.demo-data-enabled=true`
+- `app.seed.membership-supplement-enabled=true`
+- `app.seed.production-bootstrap-enabled=true`
+
+Pilot profile fails startup if either of these are enabled:
+
+- `app.seed.default-users-enabled=true`
+- `app.seed.demo-data-enabled=true`
+
+Production bootstrap is intentionally not implemented in PR4. A future PR must provide an explicit one-time owner/admin initialization path. Until then, cloud/pilot deployments should initialize real owner credentials through a reviewed operational script or migration/runbook, not through the local/demo default `owner / 741xu741` flow.
+
 ## Pad App Architecture PR 1
 
 `doc/PAD_APP_ARCHITECTURE.md` defines the proposed independent Android Pad shell architecture. This is documentation only and does not change runtime behavior.

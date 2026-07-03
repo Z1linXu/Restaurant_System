@@ -17,6 +17,9 @@ class ProductionSafetyConfigTest {
             .withProperty("app.auth.jwt-secret", "dev-local-restaurant-pos-change-this-secret-please-2026")
             .withProperty("app.auth.x-user-id-fallback-enabled", "true")
             .withProperty("app.dev-tools.role-switcher-enabled", "true")
+            .withProperty("app.seed.default-users-enabled", "true")
+            .withProperty("app.seed.demo-data-enabled", "true")
+            .withProperty("app.seed.membership-supplement-enabled", "true")
             .withProperty("spring.jpa.hibernate.ddl-auto", "update")
             .withProperty("spring.flyway.enabled", "false");
         environment.setActiveProfiles("local");
@@ -72,6 +75,62 @@ class ProductionSafetyConfigTest {
         );
 
         assertTrue(exception.getMessage().contains("app.seed.force-overwrite"));
+    }
+
+    @Test
+    void cloudProfileWithDefaultUsersSeedFails() {
+        MockEnvironment environment = cloudEnvironment()
+            .withProperty("app.auth.jwt-secret", SAFE_SECRET)
+            .withProperty("app.seed.default-users-enabled", "true");
+
+        IllegalStateException exception = assertThrows(
+            IllegalStateException.class,
+            () -> ProductionSafetyConfig.validateEnvironment(environment)
+        );
+
+        assertTrue(exception.getMessage().contains("app.seed.default-users-enabled"));
+    }
+
+    @Test
+    void cloudProfileWithDemoDataSeedFails() {
+        MockEnvironment environment = cloudEnvironment()
+            .withProperty("app.auth.jwt-secret", SAFE_SECRET)
+            .withProperty("app.seed.demo-data-enabled", "true");
+
+        IllegalStateException exception = assertThrows(
+            IllegalStateException.class,
+            () -> ProductionSafetyConfig.validateEnvironment(environment)
+        );
+
+        assertTrue(exception.getMessage().contains("app.seed.demo-data-enabled"));
+    }
+
+    @Test
+    void cloudProfileWithMembershipSupplementSeedFails() {
+        MockEnvironment environment = cloudEnvironment()
+            .withProperty("app.auth.jwt-secret", SAFE_SECRET)
+            .withProperty("app.seed.membership-supplement-enabled", "true");
+
+        IllegalStateException exception = assertThrows(
+            IllegalStateException.class,
+            () -> ProductionSafetyConfig.validateEnvironment(environment)
+        );
+
+        assertTrue(exception.getMessage().contains("app.seed.membership-supplement-enabled"));
+    }
+
+    @Test
+    void cloudProfileWithProductionBootstrapSeedFails() {
+        MockEnvironment environment = cloudEnvironment()
+            .withProperty("app.auth.jwt-secret", SAFE_SECRET)
+            .withProperty("app.seed.production-bootstrap-enabled", "true");
+
+        IllegalStateException exception = assertThrows(
+            IllegalStateException.class,
+            () -> ProductionSafetyConfig.validateEnvironment(environment)
+        );
+
+        assertTrue(exception.getMessage().contains("app.seed.production-bootstrap-enabled"));
     }
 
     @Test
@@ -156,6 +215,32 @@ class ProductionSafetyConfigTest {
     }
 
     @Test
+    void pilotProfileWithDefaultUsersSeedFails() {
+        MockEnvironment environment = pilotEnvironment()
+            .withProperty("app.seed.default-users-enabled", "true");
+
+        IllegalStateException exception = assertThrows(
+            IllegalStateException.class,
+            () -> ProductionSafetyConfig.validateEnvironment(environment)
+        );
+
+        assertTrue(exception.getMessage().contains("app.seed.default-users-enabled"));
+    }
+
+    @Test
+    void pilotProfileWithDemoDataSeedFails() {
+        MockEnvironment environment = pilotEnvironment()
+            .withProperty("app.seed.demo-data-enabled", "true");
+
+        IllegalStateException exception = assertThrows(
+            IllegalStateException.class,
+            () -> ProductionSafetyConfig.validateEnvironment(environment)
+        );
+
+        assertTrue(exception.getMessage().contains("app.seed.demo-data-enabled"));
+    }
+
+    @Test
     void pilotProfileWithDevSecretFails() {
         MockEnvironment environment = new MockEnvironment()
             .withProperty("app.auth.jwt-secret", "dev-local-restaurant-pos-change-this-secret-please-2026");
@@ -188,9 +273,22 @@ class ProductionSafetyConfigTest {
             .withProperty("app.auth.x-user-id-fallback-enabled", "false")
             .withProperty("app.dev-tools.role-switcher-enabled", "false")
             .withProperty("app.seed.force-overwrite", "false")
+            .withProperty("app.seed.default-users-enabled", "false")
+            .withProperty("app.seed.demo-data-enabled", "false")
+            .withProperty("app.seed.membership-supplement-enabled", "false")
+            .withProperty("app.seed.production-bootstrap-enabled", "false")
             .withProperty("spring.jpa.hibernate.ddl-auto", "validate")
             .withProperty("spring.flyway.enabled", "true");
         environment.setActiveProfiles("cloud");
+        return environment;
+    }
+
+    private MockEnvironment pilotEnvironment() {
+        MockEnvironment environment = new MockEnvironment()
+            .withProperty("app.auth.jwt-secret", SAFE_SECRET)
+            .withProperty("app.seed.default-users-enabled", "false")
+            .withProperty("app.seed.demo-data-enabled", "false");
+        environment.setActiveProfiles("pilot");
         return environment;
     }
 }

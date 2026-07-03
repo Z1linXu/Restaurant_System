@@ -30,6 +30,11 @@ app:
   seed:
     runtime-enabled: true
     force-overwrite: false
+    safe-metadata-enabled: true
+    default-users-enabled: false
+    demo-data-enabled: false
+    membership-supplement-enabled: false
+    production-bootstrap-enabled: false
   auth:
     jwt-secret: ${JWT_SECRET:replace-this-cloud-secret-before-production-use}
     access-token-expiration-seconds: 900

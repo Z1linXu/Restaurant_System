@@ -57,6 +57,8 @@ public class ProductionSafetyConfig implements BeanFactoryPostProcessor, Environ
 
         if (strictProductionProfile) {
             validateStrictProductionSettings(environment, violations);
+        } else if (pilotProfile) {
+            validatePilotSettings(environment, violations);
         }
 
         if (!violations.isEmpty()) {
@@ -100,6 +102,18 @@ public class ProductionSafetyConfig implements BeanFactoryPostProcessor, Environ
         if (environment.getProperty("app.seed.force-overwrite", Boolean.class, false)) {
             violations.add("app.seed.force-overwrite must be false for cloud/prod profiles.");
         }
+        if (environment.getProperty("app.seed.default-users-enabled", Boolean.class, false)) {
+            violations.add("app.seed.default-users-enabled must be false for cloud/prod profiles.");
+        }
+        if (environment.getProperty("app.seed.demo-data-enabled", Boolean.class, false)) {
+            violations.add("app.seed.demo-data-enabled must be false for cloud/prod profiles.");
+        }
+        if (environment.getProperty("app.seed.membership-supplement-enabled", Boolean.class, false)) {
+            violations.add("app.seed.membership-supplement-enabled must be false for cloud/prod profiles.");
+        }
+        if (environment.getProperty("app.seed.production-bootstrap-enabled", Boolean.class, false)) {
+            violations.add("app.seed.production-bootstrap-enabled is reserved for a future explicit bootstrap flow and must be false for cloud/prod profiles.");
+        }
 
         String ddlAuto = normalize(environment.getProperty("spring.jpa.hibernate.ddl-auto"));
         if (UNSAFE_DDL_AUTO_VALUES.contains(ddlAuto)) {
@@ -109,6 +123,15 @@ public class ProductionSafetyConfig implements BeanFactoryPostProcessor, Environ
 
         if (!environment.getProperty("spring.flyway.enabled", Boolean.class, false)) {
             violations.add("spring.flyway.enabled must be true for cloud/prod profiles.");
+        }
+    }
+
+    private static void validatePilotSettings(Environment environment, List<String> violations) {
+        if (environment.getProperty("app.seed.default-users-enabled", Boolean.class, false)) {
+            violations.add("app.seed.default-users-enabled must be false for pilot profile.");
+        }
+        if (environment.getProperty("app.seed.demo-data-enabled", Boolean.class, false)) {
+            violations.add("app.seed.demo-data-enabled must be false for pilot profile.");
         }
     }
 

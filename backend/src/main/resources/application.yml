@@ -36,6 +36,11 @@ app:
   seed:
     runtime-enabled: true
     force-overwrite: false
+    safe-metadata-enabled: true
+    default-users-enabled: true
+    demo-data-enabled: true
+    membership-supplement-enabled: true
+    production-bootstrap-enabled: false
   auth:
     jwt-secret: dev-local-restaurant-pos-change-this-secret-please-2026
     access-token-expiration-seconds: 900
