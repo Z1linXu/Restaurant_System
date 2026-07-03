@@ -29,6 +29,48 @@ Operational notes:
 - Follow-up migrations should add indexes, data checks, data repair, and stricter constraints in small reviewed PRs.
 - The current PR does not change order submission, `completeOrder`, payment/refund behavior, print modes, Android Pad code, Store Access rules, or menu/order business flows.
 
+## Cloud Ready PR3: Production Safety Guard
+
+PR3 adds a backend startup safety guard for cloud, production, and pilot profiles.
+
+The guard lives in `backend/src/main/java/com/restaurant/system/common/config/ProductionSafetyConfig.java` and runs before regular singleton beans are created. This is intentional: unsafe cloud/prod configuration should fail fast before Hibernate, Flyway, auth, printing, or business services start normal runtime work.
+
+Strict production profiles:
+
+- `cloud`
+- `prod`
+- `production`
+
+Strict production profiles fail startup when any of the following are true:
+
+- `app.auth.jwt-secret` is empty.
+- `app.auth.jwt-secret` is shorter than 32 characters.
+- `app.auth.jwt-secret` contains `dev-local`.
+- `app.auth.jwt-secret` contains `replace-this`.
+- `app.auth.x-user-id-fallback-enabled=true`.
+- `app.dev-tools.role-switcher-enabled=true`.
+- `app.seed.force-overwrite=true`.
+- `spring.jpa.hibernate.ddl-auto` is `update`, `create`, or `create-drop`.
+- `spring.flyway.enabled=false`.
+
+Pilot profile is semi-strict. It fails startup when:
+
+- `app.auth.jwt-secret` is empty.
+- `app.auth.jwt-secret` is shorter than 32 characters.
+- `app.auth.jwt-secret` contains `replace-this`.
+- `app.auth.jwt-secret` contains `dev-local`.
+
+Local/dev behavior remains unchanged. Local development may continue using the dev JWT secret, `X-User-Id` fallback, optional Dev Role Switcher, JPA `ddl-auto=update`, and Flyway disabled.
+
+Deployment notes:
+
+- Cloud/prod must provide a strong `JWT_SECRET` through environment variables or a secret manager.
+- Cloud/prod must keep `app.auth.x-user-id-fallback-enabled=false`.
+- Cloud/prod must keep `app.dev-tools.role-switcher-enabled=false`.
+- Cloud/prod must keep `app.seed.force-overwrite=false`.
+- Cloud/prod must use Flyway and `spring.jpa.hibernate.ddl-auto=validate` or `none`.
+- If startup fails with `Production safety check failed`, fix the listed configuration item rather than bypassing the guard.
+
 ## Pad App Architecture PR 1
 
 `doc/PAD_APP_ARCHITECTURE.md` defines the proposed independent Android Pad shell architecture. This is documentation only and does not change runtime behavior.
