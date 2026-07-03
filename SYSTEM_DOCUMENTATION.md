@@ -7,6 +7,28 @@ Additional maintainable architecture document:
 - `doc/PAD_APP_ARCHITECTURE.md`
 - `doc/PAD_APP_PR_PROMPTS.md`
 
+## Cloud Ready PR2: Flyway Migration Baseline
+
+PR2 introduces Flyway as the versioned schema migration mechanism for pilot/cloud profiles while preserving local development convenience.
+
+Current behavior after PR2:
+
+- Local/default profile still uses JPA `ddl-auto=update` and has Flyway disabled, so existing local developer databases are not unexpectedly blocked by missing Flyway history.
+- Pilot profile uses Flyway and `spring.jpa.hibernate.ddl-auto=validate`.
+- Cloud profile is introduced through `backend/src/main/resources/application-cloud.yml` and uses Flyway plus `ddl-auto=validate`.
+- `backend/src/main/resources/db/migration/V1__baseline_current_schema.sql` is the first schema baseline.
+- The V1 baseline was generated from the current PostgreSQL schema using `pg_dump --schema-only --no-owner --no-privileges --no-comments --schema=public` and then cleaned for Flyway execution.
+- V1 intentionally captures the existing schema as-is. It does not insert seed data, rename columns, drop tables, rewrite historical records, or add aggressive new production constraints.
+- `spring.flyway.baseline-on-migrate=true` is enabled for pilot/cloud so an existing non-empty database can be marked as baseline version `1` without replaying V1 over existing tables.
+- An empty pilot/cloud database can run V1 normally to create the baseline schema.
+
+Operational notes:
+
+- Before enabling the pilot/cloud profile on an existing database, create a PostgreSQL backup with `pg_dump -Fc`.
+- Existing databases without `flyway_schema_history` should be baselined by the application/Flyway startup path before follow-up migrations are added.
+- Follow-up migrations should add indexes, data checks, data repair, and stricter constraints in small reviewed PRs.
+- The current PR does not change order submission, `completeOrder`, payment/refund behavior, print modes, Android Pad code, Store Access rules, or menu/order business flows.
+
 ## Pad App Architecture PR 1
 
 `doc/PAD_APP_ARCHITECTURE.md` defines the proposed independent Android Pad shell architecture. This is documentation only and does not change runtime behavior.
