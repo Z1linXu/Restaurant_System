@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 
 import com.restaurant.system.common.feature.FeatureFlagService;
@@ -16,6 +17,7 @@ import com.restaurant.system.order.repository.OrderItemRepository;
 import com.restaurant.system.order.repository.OrderRepository;
 import com.restaurant.system.order.entity.Order;
 import com.restaurant.system.order.entity.OrderItem;
+import com.restaurant.system.printing.CloudPrintingGuard;
 import com.restaurant.system.printing.PrintJobStatus;
 import com.restaurant.system.printing.PrintModuleCode;
 import com.restaurant.system.printing.entity.PrintJob;
@@ -36,6 +38,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.env.MockEnvironment;
 
 @ExtendWith(MockitoExtension.class)
 class PrintDispatcherServiceImplTest {
@@ -73,7 +76,11 @@ class PrintDispatcherServiceImplTest {
     void setUp() {
         when(grabRenderer.getModuleCode()).thenReturn(PrintModuleCode.GRAB);
         when(frontdeskRenderer.getModuleCode()).thenReturn(PrintModuleCode.FRONTDESK_RECEIPT);
-        service = new PrintDispatcherServiceImpl(
+        service = newService(new CloudPrintingGuard(new MockEnvironment()));
+    }
+
+    private PrintDispatcherServiceImpl newService(CloudPrintingGuard cloudPrintingGuard) {
+        return new PrintDispatcherServiceImpl(
             printerConfigService,
             printerConfigRepository,
             printerAssignmentRepository,
@@ -86,7 +93,8 @@ class PrintDispatcherServiceImplTest {
             List.of(grabRenderer, frontdeskRenderer),
             Runnable::run,
             featureFlagService,
-            printJobService
+            printJobService,
+            cloudPrintingGuard
         );
     }
 
@@ -175,6 +183,74 @@ class PrintDispatcherServiceImplTest {
         );
     }
 
+    @Test
+    void cloudProfileBlocksPrivatePrinterBeforeTransport() {
+        MockEnvironment environment = new MockEnvironment();
+        environment.setActiveProfiles("cloud");
+        service = newService(new CloudPrintingGuard(environment));
+        DispatchFixture fixture = configureCloudBlockedDispatch();
+        when(grabRenderer.render(any())).thenReturn("GRAB RECEIPT");
+
+        service.dispatchAfterCommit(PrintModuleCode.GRAB, 1L, fixture.order.id);
+
+        verify(printJobService).markFailed(
+            any(PrintJob.class),
+            eq(fixture.printer),
+            eq(CloudPrintingGuard.ERROR_CODE),
+            contains("Cloud server cannot directly connect")
+        );
+        verify(printerTransport, never()).print(
+            any(PrinterConfig.class),
+            anyString(),
+            any(),
+            any(),
+            anyString()
+        );
+    }
+
+    private DispatchFixture configureCloudBlockedDispatch() {
+        Store store = new Store();
+        store.id = 1L;
+        store.organization_id = 1L;
+        Order order = new Order();
+        order.id = 123L;
+        order.store_id = store.id;
+        order.order_type = "dine_in";
+        PrinterAssignment assignment = new PrinterAssignment();
+        assignment.store_id = store.id;
+        assignment.module_code = PrintModuleCode.GRAB;
+        assignment.printer_id = 10L;
+        assignment.enabled = true;
+        PrinterConfig printer = new PrinterConfig();
+        printer.id = assignment.printer_id;
+        printer.store_id = store.id;
+        printer.enabled = true;
+        printer.printer_type = "ESC_POS_TCP";
+        printer.ip_address = "192.168.2.200";
+        printer.font_size = "MEDIUM";
+        PrintJob job = new PrintJob();
+        job.id = 99L;
+        job.store_id = store.id;
+        job.order_id = order.id;
+        job.module_code = PrintModuleCode.GRAB;
+        job.status = PrintJobStatus.PENDING;
+
+        when(featureFlagService.isEnabled(FeaturePackage.PRINTING)).thenReturn(true);
+        when(printerConfigService.isPrintingEnabled(store.id)).thenReturn(true);
+        when(printerConfigService.getStorePrintingMode(store.id)).thenReturn("REAL");
+        when(storeRepository.findById(store.id)).thenReturn(Optional.of(store));
+        when(orderRepository.findById(order.id)).thenReturn(Optional.of(order));
+        when(printerAssignmentRepository.findByStoreIdAndModuleCode(store.id, PrintModuleCode.GRAB)).thenReturn(Optional.of(assignment));
+        when(printerConfigRepository.findById(printer.id)).thenReturn(Optional.of(printer));
+        when(orderItemRepository.findAllByOrderId(order.id)).thenReturn(List.of());
+        when(kitchenTaskRepository.findAllByOrderId(order.id)).thenReturn(List.of());
+        when(printJobService.createPendingJob(
+            eq(store.organization_id), eq(store.id), eq(order.id), any(), any(), eq(PrintModuleCode.GRAB), anyString(), any(), anyString()
+        )).thenReturn(job);
+        when(printJobService.attachRenderedContent(eq(job), eq(printer.id), anyString())).thenReturn(job);
+        return new DispatchFixture(order, printer);
+    }
+
     private DispatchFixture configureSuccessfulDispatch(String moduleCode, String orderType, int copies) {
         Store store = new Store();
         store.id = 1L;
@@ -194,6 +270,7 @@ class PrintDispatcherServiceImplTest {
         printer.store_id = store.id;
         printer.enabled = true;
         printer.printer_type = "ESC_POS_TCP";
+        printer.ip_address = "8.8.8.8";
         printer.font_size = "MEDIUM";
         PrintJob job = new PrintJob();
         job.id = 99L;

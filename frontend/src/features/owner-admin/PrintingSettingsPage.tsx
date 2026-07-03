@@ -47,6 +47,10 @@ const FONT_SIZE_OPTIONS = [
   { value: 'XL', label: 'Extra Large' },
 ] as const
 
+const CLOUD_PRIVATE_PRINTER_BLOCKED = 'CLOUD_PRIVATE_PRINTER_BLOCKED'
+const CLOUD_PRIVATE_PRINTER_WARNING =
+  '云端服务器不能直接连接店内局域网打印机。请切换到 PAD_DIRECT、MOCK、DISABLED，或使用本地打印桥。'
+
 const PRINTING_MODE_OPTIONS: Array<{ value: PrintingMode; label: string; description: string }> = [
   { value: 'REAL', label: 'Real Printer / 真实打印机', description: 'Connect to configured ESC/POS printers over TCP.' },
   { value: 'MOCK', label: 'Mock / 无打印机测试模式', description: 'Render receipts and mark print jobs successful without socket connections.' },
@@ -218,6 +222,14 @@ export function PrintingSettingsPage() {
 
   const failedPrintJobs = useMemo(() => printJobs.filter((job) => job.status === 'FAILED'), [printJobs])
   const printingMode = (printCenter?.printing_mode ?? (printCenter?.printing_enabled ? 'REAL' : 'DISABLED')) as PrintingMode
+  const cloudPrivatePrinterWarning = useMemo(() => {
+    if (printCenter?.cloud_private_printer_warning) {
+      return CLOUD_PRIVATE_PRINTER_WARNING
+    }
+    return printJobs.some((job) => job.error_code === CLOUD_PRIVATE_PRINTER_BLOCKED)
+      ? CLOUD_PRIVATE_PRINTER_WARNING
+      : null
+  }, [printCenter, printJobs])
 
   const startCreatePrinter = () => {
     setToast(null)
@@ -543,6 +555,11 @@ export function PrintingSettingsPage() {
               {printingMode === 'DISABLED' ? (
                 <div className="mt-4 rounded-[18px] bg-[rgba(97,0,0,0.08)] px-4 py-3 text-[0.9rem] font-semibold text-[var(--primary)]">
                   Printing is disabled. Orders still submit normally, but automatic print jobs are cancelled.
+                </div>
+              ) : null}
+              {cloudPrivatePrinterWarning ? (
+                <div className="mt-4 rounded-[18px] bg-[rgba(151,34,34,0.12)] px-4 py-3 text-[0.9rem] font-semibold text-[rgb(116,22,22)]">
+                  {cloudPrivatePrinterWarning}
                 </div>
               ) : null}
               <button

@@ -129,6 +129,38 @@ Pilot profile fails startup if either of these are enabled:
 
 Production bootstrap is intentionally not implemented in PR4. A future PR must provide an explicit one-time owner/admin initialization path. Until then, cloud/pilot deployments should initialize real owner credentials through a reviewed operational script or migration/runbook, not through the local/demo default `owner / 741xu741` flow.
 
+## Cloud Ready PR5: Cloud Printing Guard
+
+PR5 adds a cloud/prod printing safety boundary. Strict production profiles (`cloud`, `prod`, `production`) must not open backend TCP sockets to store-private ESC/POS printers.
+
+Blocked backend printer endpoints include:
+
+- `10.0.0.0/8`
+- `172.16.0.0/12`
+- `192.168.0.0/16`
+- `127.0.0.0/8`
+- `localhost`
+- `0.0.0.0`
+- IPv4 link-local `169.254.0.0/16`
+- IPv6 loopback, any-local, link-local, and site-local literals
+
+The first implementation intentionally checks literal IPv4, literal IPv6, `localhost`, and `0.0.0.0` without DNS resolution. Domain names are not resolved during the guard check to avoid introducing DNS blocking during print dispatch. A future enhancement may add bounded DNS resolved-private-IP detection.
+
+Cloud/prod behavior:
+
+- `REAL` mode with a blocked private/local printer endpoint fails before socket connect.
+- The related print job is marked `FAILED` with `error_code = CLOUD_PRIVATE_PRINTER_BLOCKED`.
+- The error message tells operators to use `PAD_DIRECT`, `MOCK`, `DISABLED`, or a local print bridge.
+- Order submit still succeeds; print failure does not roll back the order.
+- Print Center keeps printer configuration visible and editable, but shows a cloud/private-printer warning when applicable.
+
+Local/dev/pilot behavior:
+
+- Local development and Windows/Mac store pilot deployments may continue using `REAL` mode with LAN printer IPs.
+- `MOCK` still renders receipts and marks jobs printed without opening sockets.
+- `PAD_DIRECT` still renders jobs and leaves them pending for Android Pad local printing; the backend does not connect to the LAN printer.
+- `DISABLED` still prevents automatic dispatch using the existing cancelled-job behavior.
+
 ## Pad App Architecture PR 1
 
 `doc/PAD_APP_ARCHITECTURE.md` defines the proposed independent Android Pad shell architecture. This is documentation only and does not change runtime behavior.

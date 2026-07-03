@@ -12,6 +12,7 @@ import com.restaurant.system.order.entity.OrderItemOption;
 import com.restaurant.system.order.repository.OrderItemOptionRepository;
 import com.restaurant.system.order.repository.OrderItemRepository;
 import com.restaurant.system.order.repository.OrderRepository;
+import com.restaurant.system.printing.CloudPrintingGuard;
 import com.restaurant.system.printing.PrintModuleCode;
 import com.restaurant.system.printing.PrintJobStatus;
 import com.restaurant.system.printing.PrintingMode;
@@ -79,6 +80,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
     private final Executor taskExecutor;
     private final FeatureFlagService featureFlagService;
     private final PrintJobService printJobService;
+    private final CloudPrintingGuard cloudPrintingGuard;
 
     public PrintDispatcherServiceImpl(
         PrinterConfigService printerConfigService,
@@ -93,7 +95,8 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         List<ReceiptRenderer> renderers,
         @Qualifier("printTaskExecutor") Executor taskExecutor,
         FeatureFlagService featureFlagService,
-        PrintJobService printJobService
+        PrintJobService printJobService,
+        CloudPrintingGuard cloudPrintingGuard
     ) {
         this.printerConfigService = printerConfigService;
         this.printerConfigRepository = printerConfigRepository;
@@ -108,6 +111,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         this.taskExecutor = taskExecutor;
         this.featureFlagService = featureFlagService;
         this.printJobService = printJobService;
+        this.cloudPrintingGuard = cloudPrintingGuard;
     }
 
     @Override
@@ -199,6 +203,12 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 logger.info("Queued PAD_DIRECT test print job {} for printer {} store {}", job.id, printer.id, request.store_id);
                 return response;
             }
+            if (!isMockMode(request.store_id) && markCloudPrivatePrinterBlocked(job, printer)) {
+                PrinterTestResponse response = new PrinterTestResponse();
+                response.success = false;
+                response.message = cloudPrintingGuard.blockedBackendTcpMessage(printer).orElse(CloudPrintingGuard.ERROR_MESSAGE);
+                return response;
+            }
             job = printJobService.markPrinting(job, printer);
             if (isMockMode(request.store_id)) {
                 logMockPrint("TEST_PRINT", printer, job, content);
@@ -236,14 +246,25 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         response.code_page_command_sent = sendCodePage;
         response.escpos_code_page = codePage;
         response.recommendation = "RP820-class ESC/POS printers usually work best with GBK first. UTF-8 often prints garbled text. GB2312 can work on some firmware, but GBK is the safer default if Chinese needs to coexist with mixed content.";
+        Optional<String> cloudBlockMessage = (!isMockMode(request.store_id) && !isPadDirectMode(request.store_id))
+            ? cloudPrintingGuard.blockedBackendTcpMessage(printer)
+            : Optional.empty();
 
         for (String encoding : Arrays.asList("UTF-8", "GBK", "GB2312")) {
             PrinterEncodingTestResponse.PrinterEncodingTestResult result = new PrinterEncodingTestResponse.PrinterEncodingTestResult();
             result.encoding = encoding;
             try {
                 String content = buildEncodingTestContent(store, printer, encoding, sendCodePage, codePage);
-                if (isMockMode(request.store_id)) {
+                if (isPadDirectMode(request.store_id)) {
+                    result.success = false;
+                    result.message = "Pad Direct mode requires running encoding tests from the Android Pad on the store LAN.";
+                } else if (isMockMode(request.store_id)) {
                     logMockPrint("ENCODING_TEST_" + encoding, printer, null, content);
+                    result.success = true;
+                    result.message = "Mock encoding test succeeded - no physical printer used";
+                } else if (cloudBlockMessage.isPresent()) {
+                    result.success = false;
+                    result.message = cloudBlockMessage.get();
                 } else {
                     sendToPrinter(
                         printer,
@@ -251,9 +272,9 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                         encoding,
                         codePage
                     );
+                    result.success = true;
+                    result.message = "Test ticket sent";
                 }
-                result.success = true;
-                result.message = isMockMode(request.store_id) ? "Mock encoding test succeeded - no physical printer used" : "Test ticket sent";
             } catch (Exception exception) {
                 logger.error("Encoding test print failed for printer {} store {} encoding {}", printer.id, request.store_id, encoding, exception);
                 result.success = false;
@@ -274,6 +295,9 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         }
 
         GrabFontTestResponse response = new GrabFontTestResponse();
+        Optional<String> cloudBlockMessage = (!isMockMode(request.store_id) && !isPadDirectMode(request.store_id))
+            ? cloudPrintingGuard.blockedBackendTcpMessage(printer)
+            : Optional.empty();
         for (EscPosFontTestMode mode : EscPosFontTestMode.values()) {
             GrabFontTestResponse.GrabFontTestResult result = new GrabFontTestResponse.GrabFontTestResult();
             result.test_mode = mode.label;
@@ -287,7 +311,10 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                     printer.ip_address,
                     printer.port
                 );
-                if (isMockMode(request.store_id)) {
+                if (isPadDirectMode(request.store_id)) {
+                    result.success = false;
+                    result.message = "Pad Direct mode requires running GRAB font diagnostics from the Android Pad on the store LAN.";
+                } else if (isMockMode(request.store_id)) {
                     logMockPrint("GRAB_FONT_TEST_" + mode.label, printer, null, String.join("\n", List.of(
                         mode.label,
                         "GRAB TICKET",
@@ -295,11 +322,16 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                         "炸春卷 x1",
                         "大二(S) | 走香 走牛 +蛋 +葱"
                     )));
+                    result.success = true;
+                    result.message = "Mock font test succeeded - no physical printer used";
+                } else if (cloudBlockMessage.isPresent()) {
+                    result.success = false;
+                    result.message = cloudBlockMessage.get();
                 } else {
                     sendDiagnosticGrabTicket(printer, mode);
+                    result.success = true;
+                    result.message = "Diagnostic ticket sent";
                 }
-                result.success = true;
-                result.message = isMockMode(request.store_id) ? "Mock font test succeeded - no physical printer used" : "Diagnostic ticket sent";
             } catch (Exception exception) {
                 logger.error(
                     "GRAB font size diagnostic failed: mode={} activate={} reset={} printer_ip={} printer_port={}",
@@ -330,8 +362,17 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         PrinterTestResponse response = new PrinterTestResponse();
         try {
             String content = buildCurrentFontSizeTestContent(store, printer);
+            if (isPadDirectMode(request.store_id)) {
+                response.success = false;
+                response.message = "Pad Direct mode requires running font size tests from the Android Pad on the store LAN.";
+                return response;
+            }
             if (isMockMode(request.store_id)) {
                 logMockPrint("FONT_SIZE_TEST", printer, null, content);
+            } else if (cloudPrintingGuard.blockedBackendTcpMessage(printer).isPresent()) {
+                response.success = false;
+                response.message = cloudPrintingGuard.blockedBackendTcpMessage(printer).get();
+                return response;
             } else {
                 sendToPrinter(printer, content);
             }
@@ -407,6 +448,11 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 response.success = true;
                 response.message = "Pad Direct " + request.module_code + " test print job queued. Backend did not connect to the physical printer.";
                 logger.info("Queued PAD_DIRECT module test print job {} module {} store {}", job.id, request.module_code, request.store_id);
+                return response;
+            }
+            if (!isMockMode(request.store_id) && markCloudPrivatePrinterBlocked(job, printer)) {
+                response.success = false;
+                response.message = cloudPrintingGuard.blockedBackendTcpMessage(printer).orElse(CloudPrintingGuard.ERROR_MESSAGE);
                 return response;
             }
             job = printJobService.markPrinting(job, printer);
@@ -523,6 +569,17 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 );
                 return;
             }
+            if (!isMockMode(storeId) && markCloudPrivatePrinterBlocked(job, printer)) {
+                logger.warn(
+                    "Blocked cloud private printer connection for print job {} module {} store {} order {} printer {}",
+                    job.id,
+                    moduleCode,
+                    storeId,
+                    orderId,
+                    printer.id
+                );
+                return;
+            }
             job = printJobService.markPrinting(job, printer);
             logger.info("Dispatching print job {} module {} store {} order {} to printer {}", job.id, moduleCode, storeId, orderId, printer.id);
             int copies = resolveCopyCount(moduleCode, assignment, renderRequest.order);
@@ -567,6 +624,9 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 return printJobService.toResponse(job);
             }
             job.requested_by_user_id = requestedByUserId;
+            if (!isMockMode(job.store_id) && markCloudPrivatePrinterBlocked(job, printer)) {
+                return printJobService.toResponse(job);
+            }
             job = printJobService.markPrinting(job, printer);
             logger.info("Manual reprint requested for print job {} by user {}", job.id, requestedByUserId);
             if (isMockMode(job.store_id)) {
@@ -613,6 +673,9 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             if (isPadDirectMode(order.store_id)) {
                 job = printJobService.markPadDirectQueued(job, printer);
                 logger.info("PAD_DIRECT queued order reprint job {} order {} module {}", job.id, orderId, moduleCode);
+                return printJobService.toResponse(job);
+            }
+            if (!isMockMode(order.store_id) && markCloudPrivatePrinterBlocked(job, printer)) {
                 return printJobService.toResponse(job);
             }
             job = printJobService.markPrinting(job, printer);
@@ -699,6 +762,17 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             response.success = false;
             response.message = "Pad Direct mode requires running connection tests from the Android Pad on the store LAN.";
             logger.info("Skipped backend printer connection test for printer {} store {} because mode is PAD_DIRECT", printer.id, printer.store_id);
+            return response;
+        }
+        Optional<String> cloudBlockMessage = cloudPrintingGuard.blockedBackendTcpMessage(printer);
+        if (cloudBlockMessage.isPresent()) {
+            printer.last_connection_failed_at = response.checked_at;
+            printer.last_connection_error = cloudBlockMessage.get();
+            printer.updated_at = response.checked_at;
+            printerConfigRepository.save(printer);
+            response.success = false;
+            response.message = cloudBlockMessage.get();
+            logger.warn("Blocked cloud printer connection test for printer {} store {}", printer.id, printer.store_id);
             return response;
         }
         try (Socket socket = new Socket()) {
@@ -857,6 +931,15 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
 
     private boolean isPadDirectMode(Long storeId) {
         return PrintingMode.PAD_DIRECT.equals(printerConfigService.getStorePrintingMode(storeId));
+    }
+
+    private boolean markCloudPrivatePrinterBlocked(PrintJob job, PrinterConfig printer) {
+        Optional<String> blockedMessage = cloudPrintingGuard.blockedBackendTcpMessage(printer);
+        if (blockedMessage.isEmpty()) {
+            return false;
+        }
+        printJobService.markFailed(job, printer, CloudPrintingGuard.ERROR_CODE, blockedMessage.get());
+        return true;
     }
 
     private void logMockPrint(String moduleCode, PrinterConfig printer, PrintJob job, String content) {

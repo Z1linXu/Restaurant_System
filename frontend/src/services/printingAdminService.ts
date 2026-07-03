@@ -40,6 +40,8 @@ export interface PrintCenterOverview {
   store_id: number
   printing_enabled: boolean
   printing_mode?: 'REAL' | 'MOCK' | 'DISABLED' | 'PAD_DIRECT'
+  cloud_private_printer_guard_active?: boolean
+  cloud_private_printer_warning?: string | null
   printers: PrinterConfigRecord[]
   assignments: PrinterAssignmentRecord[]
 }
