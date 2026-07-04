@@ -86,6 +86,17 @@ class HotKitchenReceiptRendererTest {
         assertFalse(content.contains("Shredded Potato"));
     }
 
+    @Test
+    void rendersSplitTableSideLabelInChinese() {
+        HotKitchenReceiptRenderer renderer = renderer();
+        PrintRenderRequest request = baseRequest();
+        request.order.table_no = "T2-B";
+
+        String content = renderer.render(request);
+
+        assertTrue(content.contains("桌号：T2-右"));
+    }
+
     private HotKitchenReceiptRenderer renderer() {
         MenuItemRepository menuItemRepository = Mockito.mock(MenuItemRepository.class);
         MenuItemOptionRepository optionRepository = Mockito.mock(MenuItemOptionRepository.class);

@@ -5573,3 +5573,25 @@ Important boundaries:
 - Cloud print mode should start with `MOCK`, `DISABLED`, `PAD_DIRECT`, or a local bridge; cloud backend direct LAN printer transport remains blocked.
 
 PR9-10 intentionally does not modify backend runtime code, frontend runtime code, database migrations, Android code, payment/refund behavior, `completeOrder`, order lifecycle, printing routing, or Pad Direct worker behavior.
+
+## PR11A-Hotfix: Android Local Ordering UX Fixes
+
+PR11A-Hotfix is a focused Android local preview ordering/display cleanup. It does not change order lifecycle, pricing, payment/refund behavior, database schema, Pad Direct, Android native printing, or print dispatch semantics.
+
+Frontend ordering behavior:
+
+- Menu item cards show a Chinese badge such as `已加 2 份` when the current order already contains that `menu_item_id`.
+- The badge totals all current active order rows with the same menu item id, including rows with different options, notes, or combo selections.
+- Drink-style items with stable metadata such as `categoryCode=DRINK`, `categoryCode=ALCOHOL`, `categoryCode=MILK_TEA`, `itemType=drink`, or `itemType=beverage` quick-add directly when they do not have required customization.
+- Fried items keep the existing no-customization quick-add behavior.
+- Noodles, combo-capable items, and any item with required customization still open the customization modal.
+- Ordering layout reserves bottom safe-area padding so Android WebView navigation controls do not cover the order summary footer or submit/update buttons.
+
+Printing display behavior:
+
+- Split table storage remains unchanged (`T1-A`, `T1-B`, etc.).
+- Receipt/ticket display maps split suffixes for human-readable output:
+  - `-A` -> `-左`
+  - `-B` -> `-右`
+- `GRAB`, `FRONTDESK_RECEIPT`, and `HOT_KITCHEN` renderers share the same backend display formatter for table labels.
+- Pickup/takeout labels are not transformed by the split-table formatter.

@@ -339,7 +339,7 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
 
     private String resolveDisplayLabel(Order order) {
         if (order.table_no != null && !order.table_no.isBlank()) {
-            return order.table_no;
+            return PrintTableDisplayFormatter.formatSplitTableLabel(order.table_no);
         }
         if (order.pickup_no != null && !order.pickup_no.isBlank()) {
             return order.pickup_no;
@@ -349,7 +349,7 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
 
     private String resolveLargeDisplayLabel(Order order) {
         if (order.table_no != null && !order.table_no.isBlank()) {
-            return "桌号: " + order.table_no;
+            return "桌号: " + PrintTableDisplayFormatter.formatSplitTableLabel(order.table_no);
         }
         if (order.pickup_no != null && !order.pickup_no.isBlank()) {
             return "取餐号: " + order.pickup_no;

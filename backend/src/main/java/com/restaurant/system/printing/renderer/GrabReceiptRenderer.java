@@ -97,7 +97,7 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
             return null;
         }
         if (order.table_no != null && !order.table_no.isBlank()) {
-            return "桌号：" + order.table_no;
+            return "桌号：" + PrintTableDisplayFormatter.formatSplitTableLabel(order.table_no);
         }
         return "桌号：Walk-in";
     }

@@ -6,10 +6,18 @@ interface MenuItemCardProps {
   onSelect: (item: MenuItem) => void
   onQuickAdd?: (item: MenuItem) => Promise<void> | void
   quickAddState?: 'idle' | 'adding' | 'added'
+  orderedQuantity?: number
   compact?: boolean
 }
 
-export function MenuItemCard({ item, onSelect, onQuickAdd, quickAddState = 'idle', compact = false }: MenuItemCardProps) {
+export function MenuItemCard({
+  item,
+  onSelect,
+  onQuickAdd,
+  quickAddState = 'idle',
+  orderedQuantity = 0,
+  compact = false,
+}: MenuItemCardProps) {
   return (
     <div
       role="button"
@@ -50,11 +58,18 @@ export function MenuItemCard({ item, onSelect, onQuickAdd, quickAddState = 'idle
           )}
 
           <div className="mt-auto flex items-end justify-between gap-3">
-            {item.badge ? (
-              <div className={`inline-flex w-fit rounded-full bg-[rgba(144,77,0,0.12)] font-bold uppercase tracking-[0.05em] text-[var(--secondary)] ${compact ? 'px-3 py-1.5 text-[0.72rem]' : 'px-4 py-2 text-sm'}`}>
-                {item.badge.en}
-              </div>
-            ) : <span />}
+            <div className="flex flex-wrap items-center gap-2">
+              {orderedQuantity > 0 ? (
+                <div className={`inline-flex w-fit rounded-full bg-[rgba(97,0,0,0.10)] font-black text-[var(--primary)] ${compact ? 'px-3 py-1.5 text-[0.72rem]' : 'px-4 py-2 text-sm'}`}>
+                  已加 {orderedQuantity} 份
+                </div>
+              ) : null}
+              {item.badge ? (
+                <div className={`inline-flex w-fit rounded-full bg-[rgba(144,77,0,0.12)] font-bold uppercase tracking-[0.05em] text-[var(--secondary)] ${compact ? 'px-3 py-1.5 text-[0.72rem]' : 'px-4 py-2 text-sm'}`}>
+                  {item.badge.en}
+                </div>
+              ) : null}
+            </div>
 
             {onQuickAdd ? (
               <button

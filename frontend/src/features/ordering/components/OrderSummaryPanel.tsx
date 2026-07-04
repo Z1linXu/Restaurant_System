@@ -65,7 +65,7 @@ export function OrderSummaryPanel({
         </div>
       </div>
 
-      <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 ${compact ? 'space-y-2.5 pb-3' : 'space-y-4 pb-4'}`}>
+      <div className={`order-summary-list-safe min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 ${compact ? 'space-y-2.5 pb-3' : 'space-y-4 pb-4'}`}>
         {session.items.length ? (
           session.items.map((item) => (
             <OrderLineItemRow
@@ -86,7 +86,7 @@ export function OrderSummaryPanel({
         )}
       </div>
 
-      <div className={`shrink-0 border-t border-[rgba(26,28,25,0.06)] bg-[rgba(255,255,255,0.92)] ${compact ? 'space-y-2.5 pt-3' : 'space-y-3.5 pt-4'}`}>
+      <div className={`order-summary-footer-safe shrink-0 border-t border-[rgba(26,28,25,0.06)] bg-[rgba(255,255,255,0.92)] ${compact ? 'space-y-2.5 pt-3' : 'space-y-3.5 pt-4'}`}>
         <div className={`rounded-[18px] bg-[rgba(26,28,25,0.04)] ${compact ? 'space-y-1.5 px-4 py-3' : 'space-y-2.5 px-5 py-4'}`}>
           <div className={`flex items-center justify-between font-bold text-[rgba(83,58,50,0.82)] ${compact ? 'text-[0.85rem]' : 'text-base'}`}>
             <span>数量：{itemCount}</span>

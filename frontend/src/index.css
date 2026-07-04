@@ -17,6 +17,8 @@
   --on-surface: #1a1c19;
   --muted: #6f726a;
   --success: #3b6f4e;
+  --app-safe-bottom: max(env(safe-area-inset-bottom, 0px), 0px);
+  --ordering-bottom-padding: calc(var(--app-safe-bottom) + 1rem);
   color: var(--on-surface);
   background: var(--surface);
   font-family: 'Inter', 'Noto Sans SC', ui-sans-serif, system-ui, sans-serif;
@@ -57,4 +59,16 @@ button {
 
 #root {
   min-height: 100vh;
+}
+
+.ordering-page-safe {
+  padding-bottom: var(--ordering-bottom-padding);
+}
+
+.order-summary-list-safe {
+  padding-bottom: calc(var(--ordering-bottom-padding) + 0.5rem);
+}
+
+.order-summary-footer-safe {
+  padding-bottom: var(--ordering-bottom-padding);
 }

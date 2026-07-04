@@ -43,6 +43,28 @@ interface CustomizationState {
 
 const PRINT_ATTENTION_MODULES = new Set(['GRAB', 'FRONTDESK_RECEIPT'])
 const PRINT_ATTENTION_STATUSES = new Set(['FAILED', 'CANCELLED'])
+const QUICK_ADD_DRINK_CATEGORY_CODES = new Set(['DRINK', 'ALCOHOL', 'MILK_TEA'])
+const QUICK_ADD_DRINK_ITEM_TYPES = new Set(['DRINK', 'BEVERAGE'])
+
+function normalizeCode(value: string | null | undefined) {
+  return (value ?? '').trim().toUpperCase()
+}
+
+function hasRequiredCustomization(item: MenuItem) {
+  return Boolean(item.customization?.sizes?.required || item.customization?.soupBases?.required)
+}
+
+function isQuickAddItem(item: MenuItem) {
+  const categoryCode = normalizeCode(item.categoryCode)
+  const itemType = normalizeCode(item.itemType)
+  if (categoryCode === 'FRIED') {
+    return !item.customization
+  }
+  if (QUICK_ADD_DRINK_CATEGORY_CODES.has(categoryCode) || QUICK_ADD_DRINK_ITEM_TYPES.has(itemType)) {
+    return !hasRequiredCustomization(item)
+  }
+  return false
+}
 
 function getDraftSubtotal(item: MenuItem, draft: ItemCustomizationDraft) {
   const sizeDelta = item.customization?.sizes?.options.find((option) => option.id === draft.sizeId)?.priceDelta ?? 0
@@ -162,6 +184,13 @@ export function OrderingPage({
   }, [activeCategoryId, categories])
 
   const { subtotal, tax, total } = useMemo(() => calculateTotals(session), [session])
+  const orderedQuantityByMenuItemId = useMemo(() => {
+    const quantities = new Map<string, number>()
+    session?.items.forEach((item) => {
+      quantities.set(item.menuItemId, (quantities.get(item.menuItemId) ?? 0) + item.quantity)
+    })
+    return quantities
+  }, [session?.items])
 
   const filteredItems = useMemo(
     () =>
@@ -174,7 +203,7 @@ export function OrderingPage({
   )
 
   const handleSelectMenuItem = (item: MenuItem) => {
-    if (item.categoryCode === 'FRIED' && !item.customization) {
+    if (isQuickAddItem(item)) {
       void addItem(item, buildDefaultDraft(item))
       return
     }
@@ -327,7 +356,7 @@ export function OrderingPage({
   }
 
   return (
-    <div className={`min-h-screen bg-[var(--surface)] ${isIpadLandscape ? 'px-3 py-3' : 'px-5 py-4 md:px-7 xl:px-8'}`}>
+    <div className={`ordering-page-safe min-h-screen bg-[var(--surface)] ${isIpadLandscape ? 'px-3 py-3' : 'px-5 py-4 md:px-7 xl:px-8'}`}>
       <div className={`mx-auto ${isIpadLandscape ? 'max-w-none space-y-3' : 'max-w-[1720px] space-y-6'}`}>
         {isIpadLandscape ? <FrontdeskTopNav activeItem="menu" /> : null}
 
@@ -396,8 +425,9 @@ export function OrderingPage({
                     key={item.id}
                     item={item}
                     onSelect={handleSelectMenuItem}
-                    onQuickAdd={item.categoryCode === 'FRIED' ? handleQuickAddItem : undefined}
+                    onQuickAdd={isQuickAddItem(item) ? handleQuickAddItem : undefined}
                     quickAddState={quickAddStates[item.id] ?? 'idle'}
+                    orderedQuantity={orderedQuantityByMenuItemId.get(item.id) ?? 0}
                     compact={isIpadLandscape}
                   />
                 ))}

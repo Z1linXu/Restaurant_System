@@ -165,6 +165,12 @@ class GrabReceiptRendererTest {
     }
 
     @Test
+    void grabReceiptDisplaysSplitTableSidesInChinese() {
+        assertTrue(renderNoodle("中", 1, "T1-A").contains("桌号：T1-左"));
+        assertTrue(renderNoodle("中", 1, "T1-B").contains("桌号：T1-右"));
+    }
+
+    @Test
     void frontdeskReceiptDoesNotApplyGrabGreenSimplification() {
         FrontdeskReceiptRenderer frontdeskRenderer = new FrontdeskReceiptRenderer();
         Order order = baseOrder();
@@ -206,6 +212,35 @@ class GrabReceiptRendererTest {
 
         assertFalse(output.contains("走青"));
         assertFalse(output.contains("加青"));
+    }
+
+    @Test
+    void frontdeskReceiptDisplaysSplitTableSidesInChinese() {
+        FrontdeskReceiptRenderer frontdeskRenderer = new FrontdeskReceiptRenderer();
+        Order order = baseOrder();
+        order.table_no = "T1-B";
+        order.subtotal_amount = new BigDecimal("12.00");
+        order.total_amount = new BigDecimal("13.80");
+
+        OrderItem item = new OrderItem();
+        item.id = 1L;
+        item.order_id = order.id;
+        item.item_name_snapshot_zh = "传统牛肉面";
+        item.quantity = 1;
+        item.unit_price = new BigDecimal("12.00");
+        item.line_amount = new BigDecimal("12.00");
+        item.status = "submitted";
+
+        PrintRenderRequest request = new PrintRenderRequest();
+        request.module_code = PrintModuleCode.FRONTDESK_RECEIPT;
+        request.order = order;
+        request.order_items = List.of(item);
+        request.order_item_options = List.of();
+        request.happened_at = order.submitted_at;
+
+        String rawOutput = frontdeskRenderer.render(request);
+
+        assertTrue(rawOutput.startsWith(PrintMarkup.LARGE_OPEN + "桌号: T1-右" + PrintMarkup.LARGE_CLOSE));
     }
 
     @Test
@@ -333,7 +368,12 @@ class GrabReceiptRendererTest {
     }
 
     private String renderNoodle(String specialInstructions, int quantity) {
+        return renderNoodle(specialInstructions, quantity, "T1");
+    }
+
+    private String renderNoodle(String specialInstructions, int quantity, String tableNo) {
         Order order = baseOrder();
+        order.table_no = tableNo;
 
         OrderItem item = new OrderItem();
         item.id = 1L;
