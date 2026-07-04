@@ -191,6 +191,15 @@ export function OrderingPage({
     })
     return quantities
   }, [session?.items])
+  const latestMutableItemByMenuItemId = useMemo(() => {
+    const mutableItems = new Map<string, { id: string; quantity: number }>()
+    session?.items.forEach((item) => {
+      if (!item.locked) {
+        mutableItems.set(item.menuItemId, { id: item.id, quantity: item.quantity })
+      }
+    })
+    return mutableItems
+  }, [session?.items])
 
   const filteredItems = useMemo(
     () =>
@@ -238,6 +247,26 @@ export function OrderingPage({
         [item.id]: 'idle',
       }))
     }
+  }
+
+  const handleMenuCardAdd = async (item: MenuItem) => {
+    if (isQuickAddItem(item)) {
+      await handleQuickAddItem(item)
+      return
+    }
+    handleSelectMenuItem(item)
+  }
+
+  const handleDecrementMenuItem = (menuItemId: string) => {
+    const targetItem = latestMutableItemByMenuItemId.get(menuItemId)
+    if (!targetItem) {
+      return
+    }
+    if (targetItem.quantity <= 1) {
+      void removeItem(targetItem.id)
+      return
+    }
+    void decrementItem(targetItem.id, targetItem.quantity)
   }
 
   const handleEditItem = (itemId: string) => {
@@ -391,13 +420,13 @@ export function OrderingPage({
           </div>
         ) : null}
 
-        <div className={`grid min-h-0 items-stretch ${isIpadLandscape ? 'h-[calc(100vh-12.5rem)] grid-cols-[14rem_minmax(0,1fr)_24rem] gap-3' : 'gap-6 xl:h-[calc(100vh-14rem)] xl:grid-cols-[18rem_minmax(0,1fr)_31rem]'}`}>
-          <Card tone="well" className={`${isIpadLandscape ? 'rounded-[24px] p-3.5' : 'rounded-[32px] p-5'}`}>
+        <div className={`ordering-workspace-grid grid items-start ${isIpadLandscape ? 'grid-cols-[14rem_minmax(0,1fr)_24rem] gap-3' : 'gap-6 xl:grid-cols-[18rem_minmax(0,1fr)_31rem]'}`}>
+          <Card tone="well" className={`ordering-sidebar-scroll ${isIpadLandscape ? 'rounded-[24px] p-3.5' : 'rounded-[32px] p-5'}`}>
             <CategoryNav categories={categories} activeCategoryId={activeCategoryId} onSelect={setActiveCategoryId} compact={isIpadLandscape} />
           </Card>
 
-          <Card tone="base" className={`${isIpadLandscape ? 'rounded-[24px] p-4' : 'rounded-[32px] p-6'}`}>
-            <div className={`${isIpadLandscape ? 'mb-3 flex items-center justify-between gap-3' : 'mb-5 flex items-center justify-between gap-4'}`}>
+          <Card tone="base" className={`flex flex-col overflow-hidden ${isIpadLandscape ? 'rounded-[24px] p-4' : 'rounded-[32px] p-6'}`}>
+            <div className={`shrink-0 ${isIpadLandscape ? 'mb-3 flex items-center justify-between gap-3' : 'mb-5 flex items-center justify-between gap-4'}`}>
               <div>
                 <h1 className={`font-display font-extrabold tracking-[-0.05em] text-[var(--on-surface)] ${isIpadLandscape ? 'text-[2rem]' : 'text-[2.6rem]'}`}>
                   菜单
@@ -413,21 +442,23 @@ export function OrderingPage({
             </div>
 
             {catalogLoading ? (
-              <div className={`grid ${isIpadLandscape ? 'gap-3 md:grid-cols-2' : 'gap-5 md:grid-cols-2'}`}>
+              <div className={`ordering-menu-scroll grid ${isIpadLandscape ? 'gap-3 md:grid-cols-2' : 'gap-5 md:grid-cols-2'}`}>
                 {Array.from({ length: 4 }).map((_, index) => (
                   <div key={`menu-loading-${index}`} className="h-[16rem] animate-pulse rounded-[28px] bg-[rgba(26,28,25,0.05)]" />
                 ))}
               </div>
             ) : (
-              <div className={`grid ${isIpadLandscape ? 'gap-3 md:grid-cols-2' : 'gap-5 md:grid-cols-2'}`}>
+              <div className={`ordering-menu-scroll grid ${isIpadLandscape ? 'gap-3 md:grid-cols-2' : 'gap-5 md:grid-cols-2'}`}>
                 {filteredItems.map((item) => (
                   <MenuItemCard
                     key={item.id}
                     item={item}
                     onSelect={handleSelectMenuItem}
-                    onQuickAdd={isQuickAddItem(item) ? handleQuickAddItem : undefined}
+                    onQuickAdd={handleMenuCardAdd}
+                    onDecrement={() => handleDecrementMenuItem(item.id)}
                     quickAddState={quickAddStates[item.id] ?? 'idle'}
                     orderedQuantity={orderedQuantityByMenuItemId.get(item.id) ?? 0}
+                    canDecrement={latestMutableItemByMenuItemId.has(item.id)}
                     compact={isIpadLandscape}
                   />
                 ))}
@@ -463,7 +494,7 @@ export function OrderingPage({
               compact={isIpadLandscape}
             />
           ) : (
-            <div className={`flex h-full min-h-[28rem] items-center justify-center bg-[rgba(255,255,255,0.82)] shadow-[0_18px_42px_rgba(26,28,25,0.06)] ${isIpadLandscape ? 'rounded-[24px] p-4' : 'rounded-[32px] p-5'}`}>
+            <div className={`flex min-h-[34rem] items-center justify-center bg-[rgba(255,255,255,0.82)] shadow-[0_18px_42px_rgba(26,28,25,0.06)] ${isIpadLandscape ? 'rounded-[24px] p-4' : 'rounded-[32px] p-5'}`}>
               <div className={`text-center text-[var(--muted)] ${isIpadLandscape ? 'text-[0.95rem]' : 'text-[1.05rem]'}`}>
                 {draftLoading ? '正在加载订单...' : '无法打开当前订单。'}
               </div>

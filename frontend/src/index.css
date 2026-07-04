@@ -19,6 +19,7 @@
   --success: #3b6f4e;
   --app-safe-bottom: max(env(safe-area-inset-bottom, 0px), 0px);
   --ordering-bottom-padding: calc(var(--app-safe-bottom) + 1rem);
+  --ordering-viewport-height: 100vh;
   color: var(--on-surface);
   background: var(--surface);
   font-family: 'Inter', 'Noto Sans SC', ui-sans-serif, system-ui, sans-serif;
@@ -26,6 +27,18 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+@supports (height: 100svh) {
+  :root {
+    --ordering-viewport-height: 100svh;
+  }
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --ordering-viewport-height: 100dvh;
+  }
 }
 
 * {
@@ -62,7 +75,42 @@ button {
 }
 
 .ordering-page-safe {
+  min-height: var(--ordering-viewport-height);
   padding-bottom: var(--ordering-bottom-padding);
+}
+
+.ordering-menu-scroll {
+  max-height: calc(var(--ordering-viewport-height) - 16rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 0.75rem;
+}
+
+.ordering-sidebar-scroll {
+  max-height: calc(var(--ordering-viewport-height) - 16rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.order-summary-panel {
+  min-height: 34rem;
+  max-height: calc(var(--ordering-viewport-height) - var(--ordering-bottom-padding) - 1.5rem);
+}
+
+@media (min-width: 1280px), (orientation: landscape) and (min-width: 1024px) {
+  .ordering-menu-scroll {
+    max-height: calc(var(--ordering-viewport-height) - 13.5rem);
+    padding-bottom: var(--ordering-bottom-padding);
+  }
+
+  .ordering-sidebar-scroll {
+    max-height: calc(var(--ordering-viewport-height) - 13.5rem);
+  }
+
+  .order-summary-panel {
+    min-height: 38rem;
+    max-height: calc(var(--ordering-viewport-height) - var(--ordering-bottom-padding) - 1rem);
+  }
 }
 
 .order-summary-list-safe {

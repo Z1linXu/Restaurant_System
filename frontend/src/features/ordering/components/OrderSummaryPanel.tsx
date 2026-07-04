@@ -51,7 +51,7 @@ export function OrderSummaryPanel({
   const itemCount = session.items.reduce((sum, item) => sum + item.quantity, 0)
 
   return (
-    <div className={`flex h-full min-h-0 flex-col overflow-hidden bg-[rgba(255,255,255,0.82)] shadow-[0_18px_42px_rgba(26,28,25,0.06)] ${compact ? 'gap-3 rounded-[24px] p-3.5' : 'gap-5 rounded-[32px] p-5'}`}>
+    <div className={`order-summary-panel flex flex-col overflow-hidden bg-[rgba(255,255,255,0.82)] shadow-[0_18px_42px_rgba(26,28,25,0.06)] ${compact ? 'gap-3 rounded-[24px] p-3.5' : 'gap-5 rounded-[32px] p-5'}`}>
       <div className={`shrink-0 bg-[rgba(26,28,25,0.04)] ${compact ? 'rounded-[18px] px-4 py-3' : 'rounded-[24px] px-5 py-4'}`}>
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">当前订单</p>
         <div className="mt-2 flex items-end justify-between gap-4">
@@ -65,7 +65,7 @@ export function OrderSummaryPanel({
         </div>
       </div>
 
-      <div className={`order-summary-list-safe min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 ${compact ? 'space-y-2.5 pb-3' : 'space-y-4 pb-4'}`}>
+      <div className={`order-summary-list-safe flex-1 overflow-y-auto overscroll-contain pr-1 ${compact ? 'min-h-[220px] max-h-[18rem] space-y-2.5 pb-3' : 'min-h-[280px] max-h-[30rem] space-y-4 pb-4'}`}>
         {session.items.length ? (
           session.items.map((item) => (
             <OrderLineItemRow
