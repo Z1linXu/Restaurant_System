@@ -12,6 +12,7 @@ import { MenuItemCard } from './components/MenuItemCard'
 import { OrderingTopBar } from './components/OrderingTopBar'
 import { OrderSummaryPanel } from './components/OrderSummaryPanel'
 import { fetchOrderPrintJobs } from '../../services/orderService'
+import type { PrintJobRecord } from '../../services/printingAdminService'
 
 interface OrderingPageProps {
   catalog: {
@@ -29,7 +30,7 @@ interface OrderingPageProps {
   storeId: number
   onBack: () => void
   onDraftCancelled: (slotLabel: string, tableLabel: string) => void
-  onOrderSubmitted: (slotLabel: string, tableLabel: string) => void
+  onOrderSubmitted: (slotLabel: string, tableLabel: string, orderId: number, updateBatchId?: number | null) => void
 }
 
 interface CustomizationState {
@@ -38,6 +39,9 @@ interface CustomizationState {
   draft: ItemCustomizationDraft
   editingItemId?: string
 }
+
+const PRINT_ATTENTION_MODULES = new Set(['GRAB', 'FRONTDESK_RECEIPT'])
+const PRINT_ATTENTION_STATUSES = new Set(['FAILED', 'CANCELLED'])
 
 function getDraftSubtotal(item: MenuItem, draft: ItemCustomizationDraft) {
   const sizeDelta = item.customization?.sizes?.options.find((option) => option.id === draft.sizeId)?.priceDelta ?? 0
@@ -58,6 +62,38 @@ function getDraftSubtotal(item: MenuItem, draft: ItemCustomizationDraft) {
       .reduce((sum, option) => sum + (option.priceDelta ?? 0), 0) ?? 0
 
   return (item.price + sizeDelta + soupBaseDelta + comboDelta + comboSideRemoveDelta + addOnDelta + removeDelta) * draft.quantity
+}
+
+function printJobNeedsAttention(job: PrintJobRecord) {
+  return PRINT_ATTENTION_MODULES.has(job.module_code) && PRINT_ATTENTION_STATUSES.has(job.status)
+}
+
+function printJobLabel(job: PrintJobRecord) {
+  if (job.receipt_type === 'GRAB_UPDATE') {
+    return 'Kitchen update ticket'
+  }
+  if (job.receipt_type === 'FRONTDESK_RECEIPT_UPDATE') {
+    return 'Frontdesk update receipt'
+  }
+  if (job.module_code === 'GRAB') {
+    return 'Kitchen ticket'
+  }
+  if (job.module_code === 'FRONTDESK_RECEIPT') {
+    return 'Frontdesk receipt'
+  }
+  return job.module_code.replaceAll('_', ' ')
+}
+
+function printJobReason(job: PrintJobRecord) {
+  return job.operator_message ?? job.error_message ?? job.error_code ?? 'Unknown print issue'
+}
+
+function buildPrintAttentionMessage(jobs: PrintJobRecord[]) {
+  const details = jobs
+    .map((job) => `${printJobLabel(job)}: ${printJobReason(job)}`)
+    .join(' ')
+
+  return `Order was saved, but printing needs attention. ${details} Please reprint from Order Center or Print Center.`
 }
 
 export function OrderingPage({
@@ -223,20 +259,31 @@ export function OrderingPage({
     onDraftCancelled(slotLabel, tableLabel)
   }
 
-  const checkKitchenTicketPrint = async (orderId: number, updateBatchId?: number | null) => {
+  const checkOrderPrintJobs = async (orderId: number, updateBatchId?: number | null) => {
     const delays = [450, 900, 1400, 2200]
     for (const delay of delays) {
       await new Promise((resolve) => window.setTimeout(resolve, delay))
       try {
         const jobs = await fetchOrderPrintJobs(orderId)
-        const grabJob = updateBatchId
-          ? jobs.find((job) => job.module_code === 'GRAB' && job.order_update_batch_id === updateBatchId)
-          : jobs.find((job) => job.module_code === 'GRAB' && !job.order_update_batch_id)
-        if (grabJob?.status === 'FAILED' || grabJob?.status === 'CANCELLED') {
-          setPrintWarning(`Kitchen ticket failed to print. Please reprint immediately. Reason: ${grabJob.error_message ?? grabJob.error_code ?? 'Unknown error'}`)
+        const relevantJobs = jobs.filter((job) => {
+          if (!PRINT_ATTENTION_MODULES.has(job.module_code)) {
+            return false
+          }
+          return updateBatchId
+            ? job.order_update_batch_id === updateBatchId
+            : job.order_update_batch_id == null
+        })
+        const attentionJobs = relevantJobs.filter(printJobNeedsAttention)
+        if (attentionJobs.length) {
+          setPrintWarning(buildPrintAttentionMessage(attentionJobs))
           return false
         }
-        if (grabJob?.status === 'PRINTED') {
+        const printedModules = new Set(
+          relevantJobs
+            .filter((job) => job.status === 'PRINTED')
+            .map((job) => job.module_code),
+        )
+        if (printedModules.has('GRAB') && printedModules.has('FRONTDESK_RECEIPT')) {
           return true
         }
       } catch {
@@ -253,11 +300,11 @@ export function OrderingPage({
       if (!submittedOrder) {
         return
       }
-      const printOk = await checkKitchenTicketPrint(submittedOrder.id)
+      const printOk = await checkOrderPrintJobs(submittedOrder.id)
       if (!printOk) {
         return
       }
-      onOrderSubmitted(slotLabel, tableLabel)
+      onOrderSubmitted(slotLabel, tableLabel, submittedOrder.id, null)
       return
     }
 
@@ -270,11 +317,11 @@ export function OrderingPage({
         .filter((item) => item.added_revision === updatedOrder.current_revision)
         .map((item) => item.order_update_batch_id)
         .find((batchId): batchId is number => batchId != null)
-      const printOk = await checkKitchenTicketPrint(updatedOrder.id, updateBatchId)
+      const printOk = await checkOrderPrintJobs(updatedOrder.id, updateBatchId)
       if (!printOk) {
         return
       }
-      onOrderSubmitted(slotLabel, tableLabel)
+      onOrderSubmitted(slotLabel, tableLabel, updatedOrder.id, updateBatchId ?? null)
     }
   }
 

@@ -33,7 +33,7 @@ type PrintingMode = 'REAL' | 'MOCK' | 'DISABLED' | 'PAD_DIRECT'
 const MODULE_OPTIONS = [
   { code: 'GRAB', label: 'GRAB', future: false },
   { code: 'FRONTDESK_RECEIPT', label: 'FRONTDESK_RECEIPT', future: false },
-  { code: 'HOT_KITCHEN', label: 'HOT_KITCHEN', future: true },
+  { code: 'HOT_KITCHEN', label: 'HOT_KITCHEN', future: false },
   { code: 'COLD_KITCHEN', label: 'COLD_KITCHEN', future: true },
   { code: 'BAR', label: 'BAR', future: true },
   { code: 'TAKEOUT_RECEIPT', label: 'TAKEOUT_RECEIPT', future: true },
@@ -129,6 +129,14 @@ function statusTone(status: PrintJobRecord['status']) {
   return 'bg-[rgba(26,28,25,0.08)] text-[var(--muted)]'
 }
 
+function printJobNeedsAttention(job: PrintJobRecord) {
+  return job.status === 'FAILED' || job.status === 'CANCELLED'
+}
+
+function printJobOperatorMessage(job: PrintJobRecord) {
+  return job.operator_message ?? job.error_message ?? job.error_code ?? ''
+}
+
 export function PrintingSettingsPage() {
   const { storeId } = useCurrentStore()
   const [overview, setOverview] = useState<PlatformAdminOverview | null>(null)
@@ -221,6 +229,7 @@ export function PrintingSettingsPage() {
   }, [printCenter])
 
   const failedPrintJobs = useMemo(() => printJobs.filter((job) => job.status === 'FAILED'), [printJobs])
+  const attentionPrintJobs = useMemo(() => printJobs.filter(printJobNeedsAttention), [printJobs])
   const printingMode = (printCenter?.printing_mode ?? (printCenter?.printing_enabled ? 'REAL' : 'DISABLED')) as PrintingMode
   const cloudPrivatePrinterWarning = useMemo(() => {
     if (printCenter?.cloud_private_printer_warning) {
@@ -433,7 +442,7 @@ export function PrintingSettingsPage() {
       setPrintCenter(await fetchPrintCenterOverview(Number(selectedStoreId)))
       setToast({
         kind: result.status === 'PRINTED' ? 'success' : 'error',
-        message: result.status === 'PRINTED' ? `Print job #${jobId} reprinted.` : `Reprint failed: ${result.error_message ?? 'Unknown error'}`,
+        message: result.status === 'PRINTED' ? `Print job #${jobId} reprinted.` : `Reprint failed: ${printJobOperatorMessage(result) || 'Unknown error'}`,
       })
     } catch (reprintError) {
       setToast({ kind: 'error', message: reprintError instanceof Error ? reprintError.message : 'Reprint failed' })
@@ -576,22 +585,22 @@ export function PrintingSettingsPage() {
               type="button"
               onClick={() => document.getElementById('failed-print-jobs')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
               className={`w-full rounded-[26px] px-5 py-4 text-left shadow-[0_18px_34px_rgba(26,28,25,0.05)] ${
-                failedPrintJobs.length
+                attentionPrintJobs.length
                   ? 'bg-[rgba(151,34,34,0.12)] text-[rgb(116,22,22)]'
                   : 'bg-[rgba(18,141,77,0.1)] text-[rgb(25,112,69)]'
               }`}
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <div className="text-[1.1rem] font-black">Failed Print Jobs: {failedPrintJobs.length}</div>
+                  <div className="text-[1.1rem] font-black">Print Jobs Need Attention: {attentionPrintJobs.length}</div>
                   <div className="mt-1 text-[0.86rem] font-medium">
-                    {failedPrintJobs.length
-                      ? 'Kitchen or receipt print failures need immediate reprint.'
-                      : 'No failed print jobs today.'}
+                    {attentionPrintJobs.length
+                      ? `${failedPrintJobs.length} failed. Cancelled jobs may mean printing is disabled by configuration.`
+                      : 'No failed or cancelled print jobs today.'}
                   </div>
                 </div>
                 <span className="rounded-full bg-white/70 px-4 py-2 text-[0.84rem] font-bold">
-                  View Failed Jobs
+                  View Print Issues
                 </span>
               </div>
             </button>
@@ -849,9 +858,9 @@ export function PrintingSettingsPage() {
             <section id="failed-print-jobs" className="scroll-mt-4 rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">Failed Print Jobs</div>
+                  <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">Print Jobs Needing Attention</div>
                   <div className="mt-1 text-[0.86rem] text-[var(--muted)]">
-                    Fix the printer, then reprint failed kitchen or frontdesk receipts from here.
+                    Fix printer failures, or review cancelled jobs such as PRINTING_DISABLED before service.
                   </div>
                 </div>
                 <button
@@ -862,7 +871,7 @@ export function PrintingSettingsPage() {
                   {jobsLoading ? 'Refreshing...' : 'Refresh Jobs'}
                 </button>
               </div>
-              <PrintJobsTable jobs={failedPrintJobs} emptyText="No failed print jobs today." onReprint={handleReprintJob} onPreview={setPreviewJob} />
+              <PrintJobsTable jobs={attentionPrintJobs} emptyText="No failed or cancelled print jobs today." onReprint={handleReprintJob} onPreview={setPreviewJob} />
               {jobsError ? (
                 <div className="mt-3 rounded-[16px] bg-[rgba(97,0,0,0.08)] px-4 py-3 text-[0.86rem] font-medium text-[var(--primary)]">
                   Print jobs failed to load: {jobsError}
@@ -886,7 +895,7 @@ export function PrintingSettingsPage() {
             <section className="rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
               <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">Printer Assignment</div>
               <div className="mt-1 text-[0.86rem] text-[var(--muted)]">
-                Phase 1 activates GRAB and FRONTDESK_RECEIPT. Other modules are reserved for future routing.
+                Active modules: GRAB, FRONTDESK_RECEIPT, and HOT_KITCHEN. Other modules are reserved for future routing.
               </div>
 
               <div className="mt-4 space-y-3">
@@ -1072,8 +1081,24 @@ function PrintJobsTable({
                 )}
               </td>
               <td className="px-3 py-3 text-[var(--muted)]">{job.retry_count ?? 0}/{job.max_retry_count ?? 0}</td>
-              <td className="max-w-[18rem] truncate px-3 py-3 text-[var(--muted)]" title={job.error_message ?? ''}>
-                {job.error_message ?? '-'}
+              <td className="max-w-[20rem] px-3 py-3 text-[var(--muted)]" title={job.error_message ?? ''}>
+                {job.error_code ? (
+                  <div className={`mb-1 inline-flex rounded-full px-2 py-0.5 text-[0.68rem] font-black ${
+                    job.error_code === CLOUD_PRIVATE_PRINTER_BLOCKED
+                      ? 'bg-[rgba(151,34,34,0.14)] text-[rgb(116,22,22)]'
+                      : 'bg-white text-[var(--muted)]'
+                  }`}>
+                    {job.error_code}
+                  </div>
+                ) : null}
+                <div className="font-semibold text-[var(--on-surface)]">
+                  {printJobOperatorMessage(job) || '-'}
+                </div>
+                {job.operator_message && job.error_message && job.operator_message !== job.error_message ? (
+                  <div className="mt-1 max-w-[20rem] truncate text-[0.72rem] text-[var(--muted)]">
+                    Raw: {job.error_message}
+                  </div>
+                ) : null}
               </td>
               <td className="px-3 py-3 text-right">
                 <div className="flex justify-end gap-2">
@@ -1224,7 +1249,7 @@ function AssignmentRow({
         >
           Save
         </button>
-        {!future && (moduleCode === 'FRONTDESK_RECEIPT' || moduleCode === 'GRAB') ? (
+        {!future && (moduleCode === 'FRONTDESK_RECEIPT' || moduleCode === 'GRAB' || moduleCode === 'HOT_KITCHEN') ? (
           <button
             type="button"
             onClick={() => onTest(moduleCode)}

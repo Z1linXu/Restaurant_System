@@ -74,6 +74,7 @@ export interface PrintJobRecord {
   escpos_payload_base64?: string | null
   error_message?: string | null
   error_code?: string | null
+  operator_message?: string | null
   retry_count?: number | null
   max_retry_count?: number | null
   requested_by_user_id?: number | null

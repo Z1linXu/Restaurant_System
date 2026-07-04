@@ -161,6 +161,85 @@ Local/dev/pilot behavior:
 - `PAD_DIRECT` still renders jobs and leaves them pending for Android Pad local printing; the backend does not connect to the LAN printer.
 - `DISABLED` still prevents automatic dispatch using the existing cancelled-job behavior.
 
+## Cloud Ready PR6: Print Failure Visibility Hardening
+
+PR6 keeps the existing rule that print failures do not roll back order submission, but makes failures easier for staff and owners to see and act on.
+
+Backend behavior:
+
+- `PrintJobResponse` now includes `operator_message`.
+- `operator_message` is generated dynamically from existing fields such as `status`, `error_code`, `module_code`, `receipt_type`, and `printing_mode` behavior.
+- No database schema or migration is added.
+- Existing raw `error_code` and `error_message` remain available for debugging.
+- Mapped operator-facing cases include `CLOUD_PRIVATE_PRINTER_BLOCKED`, `PRINTING_DISABLED`, `ASSIGNMENT_MISSING`, `ASSIGNMENT_DISABLED`, `PRINTER_MISSING`, `PRINTER_DISABLED`, render failures, dispatch/connection failures, Pad Direct failures, and fallback unknown failures.
+
+Frontend behavior:
+
+- Frontdesk ordering checks relevant print jobs shortly after submit/update for `GRAB`, `FRONTDESK_RECEIPT`, `GRAB_UPDATE`, and `FRONTDESK_RECEIPT_UPDATE`.
+- If a relevant job is `FAILED` or `CANCELLED`, the order is still saved and the page shows a visible warning that tells staff which ticket needs attention and where to reprint.
+- After returning to the table board, `DineInPage` performs a short one-time check for the just-submitted order at approximately 1s, 3s, 6s, and 10s so asynchronous printer failures such as socket timeouts are still visible to frontdesk staff.
+- Order History loads print jobs only when an order detail is opened, avoiding list-level N+1 requests.
+- Order History displays print job status, operator message, raw error detail when useful, and keeps full-order reprint buttons.
+- Print Center marks `FAILED` and `CANCELLED` jobs as needing attention, shows `error_code`, `operator_message`, and raw error details, and keeps manual reprint behavior unchanged.
+
+Explicitly unchanged:
+
+- No automatic retry system is introduced.
+- Print Center job reprint still reprints from that job snapshot.
+- Order Center reprint still prints the full current order.
+- Print failures still do not roll back orders.
+- `MOCK`, `REAL`, `PAD_DIRECT`, and `DISABLED` print modes keep their existing dispatch semantics.
+
+## Cloud Ready PR7A: HOT_KITCHEN Print Routing With Stable Semantics
+
+PR7A enables the `HOT_KITCHEN` printing module for heat-line / fry / wok / fried-egg workflows while keeping `COLD_KITCHEN`, `BAR`, and `TAKEOUT_RECEIPT` reserved.
+
+Routing rules:
+
+- Fried items route to `HOT_KITCHEN` by stable station/category metadata:
+  - primary: `kitchen_tasks.station_code = DEEPFRIED`
+  - fallback: `order_items.category_code_snapshot in (FRIED, DEEPFRIED)`
+- Chow mein routes to `HOT_KITCHEN` by stable station/category/SKU metadata:
+  - primary: `kitchen_tasks.station_code = WOK`
+  - fallback: `order_items.category_code_snapshot = FRIED_NOODLE`
+  - fallback: known chow-mein `menu_items.sku`
+- Noodle items route to `HOT_KITCHEN` only when they include fried egg semantics:
+  - extra fried egg: `order_item_options.option_code_snapshot = fried_egg`
+  - combo fried egg: `option_group_snapshot = COMBO_EGG` and `option_code_snapshot = combo_fried_egg`
+  - current `menu_item_options.option_code` is used only as fallback for older snapshots.
+  - Chinese/English display-name checks are legacy fallback only and are centralized in `OptionSemanticResolver`.
+
+Dispatch behavior:
+
+- Initial order submit still dispatches `GRAB` and `FRONTDESK_RECEIPT`.
+- Submit additionally dispatches `HOT_KITCHEN` only when the order has hot-kitchen content.
+- Update Order still dispatches `GRAB_UPDATE` and `FRONTDESK_RECEIPT_UPDATE`.
+- Update Order additionally dispatches `HOT_KITCHEN_UPDATE` only when the current `order_update_batch_id` has hot-kitchen content.
+- If an order or update batch has no hot-kitchen content, no `HOT_KITCHEN` print job is created. This avoids blank failed jobs.
+- Manual order reprint supports `HOT_KITCHEN`, but rejects orders without hot-kitchen content before creating a print job.
+- `HOT_KITCHEN` Test Module Print uses the real renderer path with synthetic wok and fried-egg examples.
+- Combo side tasks such as combo edamame, shredded potato, or cucumber salad do not inherit the main combo item's fried-egg eligibility. Synthetic combo side kitchen tasks route to `HOT_KITCHEN` only if their own task station is hot, such as `DEEPFRIED` or `WOK`.
+
+Renderer behavior:
+
+- `HotKitchenReceiptRenderer` renders only eligible hot-kitchen tasks.
+- For noodle items routed because of fried egg, the ticket prints the whole kitchen-facing item line, not just an isolated egg.
+- The renderer reuses `kitchen_tasks.special_instructions_snapshot` so HOT_KITCHEN output stays aligned with existing GRAB/kitchen shorthand where possible.
+
+Print Center behavior:
+
+- `HOT_KITCHEN` assignment is active and editable.
+- `Test HOT_KITCHEN` is available.
+- `COLD_KITCHEN`, `BAR`, and `TAKEOUT_RECEIPT` remain Future / Reserved.
+
+Explicitly unchanged:
+
+- GRAB and FRONTDESK_RECEIPT routing/rendering semantics are unchanged.
+- Print failures still do not roll back orders.
+- No automatic retry system is introduced.
+- No database migration is added.
+- Payment/refund, completeOrder semantics, Android Pad, Pad Direct worker, and order lifecycle are unchanged.
+
 ## Pad App Architecture PR 1
 
 `doc/PAD_APP_ARCHITECTURE.md` defines the proposed independent Android Pad shell architecture. This is documentation only and does not change runtime behavior.

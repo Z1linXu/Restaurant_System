@@ -36,6 +36,7 @@ import com.restaurant.system.printing.renderer.PrintMarkup;
 import com.restaurant.system.printing.renderer.ReceiptRenderer;
 import com.restaurant.system.printing.repository.PrinterAssignmentRepository;
 import com.restaurant.system.printing.repository.PrinterConfigRepository;
+import com.restaurant.system.printing.semantic.HotKitchenPrintEligibilityService;
 import com.restaurant.system.printing.service.PrintDispatcherService;
 import com.restaurant.system.printing.service.PrintJobService;
 import com.restaurant.system.printing.service.PrinterConfigService;
@@ -81,6 +82,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
     private final FeatureFlagService featureFlagService;
     private final PrintJobService printJobService;
     private final CloudPrintingGuard cloudPrintingGuard;
+    private final HotKitchenPrintEligibilityService hotKitchenPrintEligibilityService;
 
     public PrintDispatcherServiceImpl(
         PrinterConfigService printerConfigService,
@@ -96,7 +98,8 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         @Qualifier("printTaskExecutor") Executor taskExecutor,
         FeatureFlagService featureFlagService,
         PrintJobService printJobService,
-        CloudPrintingGuard cloudPrintingGuard
+        CloudPrintingGuard cloudPrintingGuard,
+        HotKitchenPrintEligibilityService hotKitchenPrintEligibilityService
     ) {
         this.printerConfigService = printerConfigService;
         this.printerConfigRepository = printerConfigRepository;
@@ -112,6 +115,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         this.featureFlagService = featureFlagService;
         this.printJobService = printJobService;
         this.cloudPrintingGuard = cloudPrintingGuard;
+        this.hotKitchenPrintEligibilityService = hotKitchenPrintEligibilityService;
     }
 
     @Override
@@ -141,7 +145,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         Long orderUpdateBatchId
     ) {
         if (!supportsAutomaticUpdateTicket(moduleCode)) {
-            throw new BusinessException("Only GRAB and FRONTDESK_RECEIPT support automatic update tickets");
+            throw new BusinessException("Only GRAB, FRONTDESK_RECEIPT, and HOT_KITCHEN support automatic update tickets");
         }
         if (!featureFlagService.isEnabled(FeaturePackage.PRINTING)) {
             logger.info(
@@ -166,6 +170,24 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             return;
         }
         dispatchTask.run();
+    }
+
+    @Override
+    public boolean hasPrintableContent(String moduleCode, Long storeId, Long orderId) {
+        if (!PrintModuleCode.HOT_KITCHEN.equals(moduleCode)) {
+            return true;
+        }
+        PrintRenderRequest renderRequest = buildRenderRequest(moduleCode, storeId, orderId);
+        return hotKitchenPrintEligibilityService.hasHotKitchenContent(renderRequest);
+    }
+
+    @Override
+    public boolean hasPrintableUpdateContent(String moduleCode, Long storeId, Long orderId, Long orderUpdateBatchId) {
+        if (!PrintModuleCode.HOT_KITCHEN.equals(moduleCode)) {
+            return true;
+        }
+        PrintRenderRequest renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId);
+        return hotKitchenPrintEligibilityService.hasHotKitchenContent(renderRequest);
     }
 
     @Override
@@ -479,11 +501,32 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
     private void doDispatch(String moduleCode, Long storeId, Long orderId, Long orderUpdateBatchId) {
         PrintJob job = null;
         PrinterConfig printer = null;
+        PrintRenderRequest renderRequest = null;
         try {
             Store store = storeRepository.findById(storeId).orElse(null);
             if (store == null) {
                 logger.error("Print dispatch failed before job creation: store {} not found for module {} order {}", storeId, moduleCode, orderId);
                 return;
+            }
+            if (PrintModuleCode.HOT_KITCHEN.equals(moduleCode)) {
+                renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId);
+                if (renderRequest == null) {
+                    logger.warn(
+                        "Skipping HOT_KITCHEN print before job creation because no render data was available for store {} order {} batch {}",
+                        storeId,
+                        orderId,
+                        orderUpdateBatchId
+                    );
+                    return;
+                }
+                if (!hotKitchenPrintEligibilityService.hasHotKitchenContent(renderRequest)) {
+                    logger.info(
+                        "Skipping HOT_KITCHEN print before job creation because order {} batch {} has no hot kitchen content",
+                        orderId,
+                        orderUpdateBatchId
+                    );
+                    return;
+                }
             }
             job = printJobService.createPendingJob(
                 store.organization_id,
@@ -539,7 +582,9 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 return;
             }
 
-            PrintRenderRequest renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId);
+            if (renderRequest == null) {
+                renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId);
+            }
             if (renderRequest == null) {
                 job = printJobService.attachRenderedContent(job, printer.id, null);
                 printJobService.markFailed(job, printer, "RENDER_DATA_MISSING", "No render data was available");
@@ -649,6 +694,9 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         }
         Store store = storeRepository.findById(order.store_id).orElseThrow(() -> new BusinessException("Store not found"));
         String moduleCode = normalizeReceiptType(request == null ? null : request.receipt_type);
+        if (PrintModuleCode.HOT_KITCHEN.equals(moduleCode) && !hasPrintableContent(moduleCode, order.store_id, order.id)) {
+            throw new BusinessException("Order has no HOT_KITCHEN content to reprint");
+        }
         PrinterAssignment assignment = printerAssignmentRepository.findByStoreIdAndModuleCode(order.store_id, moduleCode).orElse(null);
         PrinterConfig printer = request != null && request.printer_id != null
             ? requirePrinterForStore(request.printer_id, order.store_id)
@@ -702,11 +750,12 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         boolean storeEnabled = printerConfigService.isPrintingEnabled(order.store_id);
         return renderersByModuleCode.keySet().stream()
             .sorted()
-            .map(moduleCode -> buildOrderPrintOption(order.store_id, moduleCode, featureEnabled, storeEnabled))
+            .map(moduleCode -> buildOrderPrintOption(order.id, order.store_id, moduleCode, featureEnabled, storeEnabled))
             .toList();
     }
 
     private OrderPrintOptionResponse buildOrderPrintOption(
+        Long orderId,
         Long storeId,
         String moduleCode,
         boolean featureEnabled,
@@ -722,6 +771,10 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         }
         if (!storeEnabled) {
             response.unavailable_reason = "Store printing mode is disabled";
+            return response;
+        }
+        if (PrintModuleCode.HOT_KITCHEN.equals(moduleCode) && !hasPrintableContent(moduleCode, storeId, orderId)) {
+            response.unavailable_reason = "Order has no hot kitchen items to print";
             return response;
         }
         PrinterAssignment assignment = printerAssignmentRepository.findByStoreIdAndModuleCode(storeId, moduleCode).orElse(null);
@@ -880,7 +933,9 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
     }
 
     private boolean supportsAutomaticUpdateTicket(String moduleCode) {
-        return PrintModuleCode.GRAB.equals(moduleCode) || PrintModuleCode.FRONTDESK_RECEIPT.equals(moduleCode);
+        return PrintModuleCode.GRAB.equals(moduleCode)
+            || PrintModuleCode.FRONTDESK_RECEIPT.equals(moduleCode)
+            || PrintModuleCode.HOT_KITCHEN.equals(moduleCode);
     }
 
     private PrinterConfig requirePrinterForJob(PrintJob job) {
@@ -918,7 +973,10 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         if (PrintModuleCode.GRAB.equals(receiptType)) {
             return PrintModuleCode.GRAB;
         }
-        throw new BusinessException("receiptType must be GRAB or FRONTDESK_RECEIPT");
+        if (PrintModuleCode.HOT_KITCHEN.equals(receiptType)) {
+            return PrintModuleCode.HOT_KITCHEN;
+        }
+        throw new BusinessException("receiptType must be GRAB, FRONTDESK_RECEIPT, or HOT_KITCHEN");
     }
 
     private String buildPayloadSnapshot(String moduleCode, Long storeId, Long orderId, String source) {
@@ -1084,6 +1142,13 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 throw new BusinessException("No renderer is registered for module " + moduleCode);
             }
             return renderer.render(buildGrabReceiptTestRequest(store));
+        }
+        if (PrintModuleCode.HOT_KITCHEN.equals(moduleCode)) {
+            ReceiptRenderer renderer = renderersByModuleCode.get(PrintModuleCode.HOT_KITCHEN);
+            if (renderer == null) {
+                throw new BusinessException("No renderer is registered for module " + moduleCode);
+            }
+            return renderer.render(buildHotKitchenReceiptTestRequest(store));
         }
         throw new BusinessException("Module test printing is not supported for " + moduleCode + " yet.");
     }
@@ -1256,6 +1321,80 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         request.order_items = List.of(coldItem, coldItemTwo, noodleItem);
         request.order_item_options = List.of();
         request.kitchen_tasks = List.of(coldTask, coldTaskTwo, noodleTask);
+        request.happened_at = LocalDateTime.now();
+        return request;
+    }
+
+    private PrintRenderRequest buildHotKitchenReceiptTestRequest(Store store) {
+        Order order = new Order();
+        order.id = -3L;
+        order.store_id = store.id;
+        order.order_type = "dine_in";
+        order.table_no = "T2";
+        order.submitted_at = LocalDateTime.now();
+
+        OrderItem chowMeinItem = new OrderItem();
+        chowMeinItem.id = -401L;
+        chowMeinItem.order_id = order.id;
+        chowMeinItem.menu_item_id = -501L;
+        chowMeinItem.item_name_snapshot_zh = "牛肉炒面";
+        chowMeinItem.item_name_snapshot_en = "Beef Chow Mein";
+        chowMeinItem.category_code_snapshot = "FRIED_NOODLE";
+        chowMeinItem.quantity = 1;
+        chowMeinItem.status = "submitted";
+
+        OrderItem noodleWithEggItem = new OrderItem();
+        noodleWithEggItem.id = -402L;
+        noodleWithEggItem.order_id = order.id;
+        noodleWithEggItem.menu_item_id = -502L;
+        noodleWithEggItem.item_name_snapshot_zh = "传统牛肉面";
+        noodleWithEggItem.item_name_snapshot_en = "Traditional Beef Noodle";
+        noodleWithEggItem.category_code_snapshot = "SOUP_NOODLE";
+        noodleWithEggItem.quantity = 1;
+        noodleWithEggItem.status = "submitted";
+
+        OrderItemOption friedEggOption = new OrderItemOption();
+        friedEggOption.order_item_id = noodleWithEggItem.id;
+        friedEggOption.option_type_snapshot = "addon";
+        friedEggOption.option_code_snapshot = "fried_egg";
+        friedEggOption.option_group_snapshot = "ADD_ON";
+        friedEggOption.option_name_snapshot_zh = "加煎蛋";
+        friedEggOption.option_name_snapshot_en = "Fried Egg";
+        friedEggOption.quantity = 1;
+
+        KitchenTask chowMeinTask = new KitchenTask();
+        chowMeinTask.id = -601L;
+        chowMeinTask.order_id = order.id;
+        chowMeinTask.order_item_id = chowMeinItem.id;
+        chowMeinTask.store_id = store.id;
+        chowMeinTask.station_code = "WOK";
+        chowMeinTask.item_name_snapshot_zh = "牛肉炒面";
+        chowMeinTask.item_name_snapshot_en = "Beef Chow Mein";
+        chowMeinTask.special_instructions_snapshot = "牛炒 | 走洋葱";
+        chowMeinTask.status = "pending";
+        chowMeinTask.quantity = 1;
+        chowMeinTask.created_at = LocalDateTime.now();
+
+        KitchenTask noodleWithEggTask = new KitchenTask();
+        noodleWithEggTask.id = -602L;
+        noodleWithEggTask.order_id = order.id;
+        noodleWithEggTask.order_item_id = noodleWithEggItem.id;
+        noodleWithEggTask.store_id = store.id;
+        noodleWithEggTask.station_code = "NOODLE";
+        noodleWithEggTask.item_name_snapshot_zh = "传统牛肉面";
+        noodleWithEggTask.item_name_snapshot_en = "Traditional Beef Noodle";
+        noodleWithEggTask.special_instructions_snapshot = "大二(S) | +煎蛋 +葱";
+        noodleWithEggTask.status = "pending";
+        noodleWithEggTask.quantity = 1;
+        noodleWithEggTask.created_at = LocalDateTime.now().plusNanos(1);
+
+        PrintRenderRequest request = new PrintRenderRequest();
+        request.module_code = PrintModuleCode.HOT_KITCHEN;
+        request.store = store;
+        request.order = order;
+        request.order_items = List.of(chowMeinItem, noodleWithEggItem);
+        request.order_item_options = List.of(friedEggOption);
+        request.kitchen_tasks = List.of(chowMeinTask, noodleWithEggTask);
         request.happened_at = LocalDateTime.now();
         return request;
     }

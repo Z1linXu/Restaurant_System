@@ -44,6 +44,7 @@ import com.restaurant.system.order.repository.OrderItemRepository;
 import com.restaurant.system.order.repository.OrderRepository;
 import com.restaurant.system.order.repository.OrderUpdateBatchRepository;
 import com.restaurant.system.production.repository.ProductionTaskRepository;
+import com.restaurant.system.printing.PrintModuleCode;
 import com.restaurant.system.printing.service.PrintDispatcherService;
 import com.restaurant.system.station.entity.Station;
 import com.restaurant.system.station.repository.StationRepository;
@@ -375,6 +376,32 @@ class OrderServiceImplTest {
     }
 
     @Test
+    void submitDispatchesHotKitchenWhenPrintableContentExists() {
+        when(printDispatcherService.hasPrintableContent(
+            org.mockito.ArgumentMatchers.eq(PrintModuleCode.HOT_KITCHEN),
+            org.mockito.ArgumentMatchers.eq(store.id),
+            anyLong()
+        )).thenReturn(true);
+
+        CreateOrderItemRequest itemRequest = new CreateOrderItemRequest();
+        itemRequest.menu_item_id = menuItem.id;
+        itemRequest.quantity = 1;
+
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.store_id = store.id;
+        request.created_by = 1L;
+        request.order_type = "dine_in";
+        request.table_no = "T7";
+        request.items = List.of(itemRequest);
+
+        OrderResponse submittedOrder = orderService.submitOrder(orderService.createOrder(request).id);
+
+        org.mockito.Mockito.verify(printDispatcherService).dispatchAfterCommit(PrintModuleCode.GRAB, store.id, submittedOrder.id);
+        org.mockito.Mockito.verify(printDispatcherService).dispatchAfterCommit(PrintModuleCode.FRONTDESK_RECEIPT, store.id, submittedOrder.id);
+        org.mockito.Mockito.verify(printDispatcherService).dispatchAfterCommit(PrintModuleCode.HOT_KITCHEN, store.id, submittedOrder.id);
+    }
+
+    @Test
     void beverageItemsUseSeparateFrontdeskWorkflow() {
         MenuCategory drinkCategory = new MenuCategory();
         drinkCategory.id = 11L;
@@ -570,6 +597,45 @@ class OrderServiceImplTest {
             .dispatchOrderUpdateAfterCommit("GRAB", store.id, submittedOrder.id, firstResult.update_batch_id);
         org.mockito.Mockito.verify(printDispatcherService, org.mockito.Mockito.times(1))
             .dispatchOrderUpdateAfterCommit("FRONTDESK_RECEIPT", store.id, submittedOrder.id, firstResult.update_batch_id);
+    }
+
+    @Test
+    void updateDispatchesHotKitchenWhenBatchHasPrintableContent() {
+        when(printDispatcherService.hasPrintableUpdateContent(
+            org.mockito.ArgumentMatchers.eq(PrintModuleCode.HOT_KITCHEN),
+            org.mockito.ArgumentMatchers.eq(store.id),
+            anyLong(),
+            anyLong()
+        )).thenReturn(true);
+
+        CreateOrderItemRequest itemRequest = new CreateOrderItemRequest();
+        itemRequest.menu_item_id = menuItem.id;
+        itemRequest.quantity = 1;
+
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.store_id = store.id;
+        request.created_by = 1L;
+        request.order_type = "dine_in";
+        request.table_no = "T10";
+        request.items = List.of(itemRequest);
+
+        OrderResponse submittedOrder = orderService.submitOrder(orderService.createOrder(request).id);
+        CreateOrderItemRequest newItemRequest = new CreateOrderItemRequest();
+        newItemRequest.menu_item_id = menuItem.id;
+        newItemRequest.quantity = 1;
+
+        CreateOrderUpdateRequest updateRequest = new CreateOrderUpdateRequest();
+        updateRequest.idempotency_key = "update-T10-1";
+        updateRequest.items = List.of(newItemRequest);
+
+        var result = orderService.createOrderUpdate(submittedOrder.id, updateRequest, 1L);
+
+        org.mockito.Mockito.verify(printDispatcherService).dispatchOrderUpdateAfterCommit(
+            PrintModuleCode.HOT_KITCHEN,
+            store.id,
+            submittedOrder.id,
+            result.update_batch_id
+        );
     }
 
     @Test

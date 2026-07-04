@@ -3,6 +3,7 @@ package com.restaurant.system.printing.service.impl;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -11,6 +12,7 @@ import static org.mockito.ArgumentMatchers.eq;
 
 import com.restaurant.system.common.feature.FeatureFlagService;
 import com.restaurant.system.common.feature.FeaturePackage;
+import com.restaurant.system.kitchen.entity.KitchenTask;
 import com.restaurant.system.kitchen.repository.KitchenTaskRepository;
 import com.restaurant.system.order.repository.OrderItemOptionRepository;
 import com.restaurant.system.order.repository.OrderItemRepository;
@@ -20,12 +22,14 @@ import com.restaurant.system.order.entity.OrderItem;
 import com.restaurant.system.printing.CloudPrintingGuard;
 import com.restaurant.system.printing.PrintJobStatus;
 import com.restaurant.system.printing.PrintModuleCode;
+import com.restaurant.system.printing.dto.PrintRenderRequest;
 import com.restaurant.system.printing.entity.PrintJob;
 import com.restaurant.system.printing.entity.PrinterAssignment;
 import com.restaurant.system.printing.entity.PrinterConfig;
 import com.restaurant.system.printing.renderer.ReceiptRenderer;
 import com.restaurant.system.printing.repository.PrinterAssignmentRepository;
 import com.restaurant.system.printing.repository.PrinterConfigRepository;
+import com.restaurant.system.printing.semantic.HotKitchenPrintEligibilityService;
 import com.restaurant.system.printing.service.PrintJobService;
 import com.restaurant.system.printing.service.PrinterConfigService;
 import com.restaurant.system.printing.transport.PrinterTransport;
@@ -69,6 +73,10 @@ class PrintDispatcherServiceImplTest {
     private ReceiptRenderer grabRenderer;
     @Mock
     private ReceiptRenderer frontdeskRenderer;
+    @Mock
+    private ReceiptRenderer hotKitchenRenderer;
+    @Mock
+    private HotKitchenPrintEligibilityService hotKitchenPrintEligibilityService;
 
     private PrintDispatcherServiceImpl service;
 
@@ -76,6 +84,7 @@ class PrintDispatcherServiceImplTest {
     void setUp() {
         when(grabRenderer.getModuleCode()).thenReturn(PrintModuleCode.GRAB);
         when(frontdeskRenderer.getModuleCode()).thenReturn(PrintModuleCode.FRONTDESK_RECEIPT);
+        when(hotKitchenRenderer.getModuleCode()).thenReturn(PrintModuleCode.HOT_KITCHEN);
         service = newService(new CloudPrintingGuard(new MockEnvironment()));
     }
 
@@ -90,11 +99,12 @@ class PrintDispatcherServiceImplTest {
             kitchenTaskRepository,
             storeRepository,
             List.of(printerTransport),
-            List.of(grabRenderer, frontdeskRenderer),
+            List.of(grabRenderer, frontdeskRenderer, hotKitchenRenderer),
             Runnable::run,
             featureFlagService,
             printJobService,
-            cloudPrintingGuard
+            cloudPrintingGuard,
+            hotKitchenPrintEligibilityService
         );
     }
 
@@ -117,6 +127,91 @@ class PrintDispatcherServiceImplTest {
 
         verify(grabRenderer).render(any());
         verify(frontdeskRenderer, never()).render(any());
+    }
+
+    @Test
+    void hotKitchenDispatchSkipsBeforeJobCreationWhenOrderHasNoHotContent() {
+        Store store = new Store();
+        store.id = 1L;
+        store.organization_id = 1L;
+        Order order = new Order();
+        order.id = 123L;
+        order.store_id = store.id;
+        OrderItem item = item(1L, null);
+        KitchenTask task = new KitchenTask();
+        task.id = 9L;
+        task.order_id = order.id;
+        task.order_item_id = item.id;
+        task.station_code = "NOODLE";
+        task.status = "pending";
+
+        when(featureFlagService.isEnabled(FeaturePackage.PRINTING)).thenReturn(true);
+        when(storeRepository.findById(store.id)).thenReturn(Optional.of(store));
+        when(orderRepository.findById(order.id)).thenReturn(Optional.of(order));
+        when(orderItemRepository.findAllByOrderId(order.id)).thenReturn(List.of(item));
+        when(orderItemOptionRepository.findAllByOrderItemIds(any())).thenReturn(List.of());
+        when(kitchenTaskRepository.findAllByOrderId(order.id)).thenReturn(List.of(task));
+        when(hotKitchenPrintEligibilityService.hasHotKitchenContent(any(PrintRenderRequest.class))).thenReturn(false);
+
+        service.dispatchAfterCommit(PrintModuleCode.HOT_KITCHEN, store.id, order.id);
+
+        verifyNoInteractions(printJobService);
+        verify(printerAssignmentRepository, never()).findByStoreIdAndModuleCode(store.id, PrintModuleCode.HOT_KITCHEN);
+        verify(hotKitchenRenderer, never()).render(any());
+    }
+
+    @Test
+    void hotKitchenDispatchCreatesJobWhenOrderHasHotContent() {
+        DispatchFixture fixture = configureSuccessfulDispatch(PrintModuleCode.HOT_KITCHEN, "dine_in", 1);
+        when(hotKitchenPrintEligibilityService.hasHotKitchenContent(any(PrintRenderRequest.class))).thenReturn(true);
+        when(hotKitchenRenderer.render(any())).thenReturn("HOT KITCHEN TICKET");
+
+        service.dispatchAfterCommit(PrintModuleCode.HOT_KITCHEN, 1L, fixture.order.id);
+
+        verify(hotKitchenRenderer).render(any());
+        verify(printJobService).createPendingJob(
+            eq(1L),
+            eq(1L),
+            eq(fixture.order.id),
+            any(),
+            any(),
+            eq(PrintModuleCode.HOT_KITCHEN),
+            eq(PrintModuleCode.HOT_KITCHEN),
+            any(),
+            anyString()
+        );
+    }
+
+    @Test
+    void hotKitchenUpdateDispatchCreatesUpdateReceiptForRequestedBatch() {
+        DispatchFixture fixture = configureSuccessfulDispatch(PrintModuleCode.HOT_KITCHEN, "dine_in", 1);
+        OrderItem oldItem = item(1L, null);
+        OrderItem batchItem = item(2L, 99L);
+        when(orderItemRepository.findAllByOrderId(fixture.order.id)).thenReturn(List.of(oldItem, batchItem));
+        when(orderItemOptionRepository.findAllByOrderItemIds(any())).thenReturn(List.of());
+        when(kitchenTaskRepository.findAllByOrderId(fixture.order.id)).thenReturn(List.of());
+        when(hotKitchenPrintEligibilityService.hasHotKitchenContent(any(PrintRenderRequest.class))).thenReturn(true);
+        when(hotKitchenRenderer.render(org.mockito.ArgumentMatchers.argThat(request ->
+            Boolean.TRUE.equals(request.is_update_ticket)
+                && Long.valueOf(99L).equals(request.order_update_batch_id)
+                && request.order_items.size() == 1
+                && request.order_items.get(0).id.equals(batchItem.id)
+        ))).thenReturn("HOT UPDATED ITEM ONLY");
+
+        service.dispatchOrderUpdateAfterCommit(PrintModuleCode.HOT_KITCHEN, 1L, fixture.order.id, 99L);
+
+        verify(hotKitchenRenderer).render(any());
+        verify(printJobService).createPendingJob(
+            eq(1L),
+            eq(1L),
+            eq(fixture.order.id),
+            eq(99L),
+            any(),
+            eq(PrintModuleCode.HOT_KITCHEN),
+            eq("HOT_KITCHEN_UPDATE"),
+            any(),
+            anyString()
+        );
     }
 
     @Test

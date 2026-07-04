@@ -3,11 +3,13 @@ import { Card } from '../../components/ui/Card'
 import { useIpadLandscape } from '../../hooks/useIpadLandscape'
 import {
   fetchOrderDetail,
+  fetchOrderPrintJobs,
   fetchOrderPrintOptions,
   fetchTodayOrderHistory,
   reprintOrderReceipt,
 } from '../../services/orderService'
 import type { BackendFrontdeskOrderBoardItem, BackendOrderResponse, OrderPrintOption } from '../../types/ordering'
+import type { PrintJobRecord } from '../../services/printingAdminService'
 import { FrontdeskTopNav } from '../frontdesk/components/FrontdeskTopNav'
 import { OrderHistoryDetail } from './components/OrderHistoryDetail'
 import { OrderMiniCard } from './components/OrderMiniCard'
@@ -20,6 +22,8 @@ export function OrdersPage() {
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
   const [selectedOrder, setSelectedOrder] = useState<BackendOrderResponse | null>(null)
   const [printOptions, setPrintOptions] = useState<OrderPrintOption[]>([])
+  const [printJobs, setPrintJobs] = useState<PrintJobRecord[]>([])
+  const [printStatusMessage, setPrintStatusMessage] = useState<{ kind: 'success' | 'error'; message: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [detailLoading, setDetailLoading] = useState(false)
   const [printBusy, setPrintBusy] = useState<string | null>(null)
@@ -49,12 +53,19 @@ export function OrdersPage() {
     if (!selectedOrderId) {
       setSelectedOrder(null)
       setPrintOptions([])
+      setPrintJobs([])
+      setPrintStatusMessage(null)
       return
     }
     let active = true
     setDetailLoading(true)
-    Promise.allSettled([fetchOrderDetail(selectedOrderId), fetchOrderPrintOptions(selectedOrderId)])
-      .then(([detailResult, optionsResult]) => {
+    setPrintStatusMessage(null)
+    Promise.allSettled([
+      fetchOrderDetail(selectedOrderId),
+      fetchOrderPrintOptions(selectedOrderId),
+      fetchOrderPrintJobs(selectedOrderId),
+    ])
+      .then(([detailResult, optionsResult, printJobsResult]) => {
         if (!active) return
         if (detailResult.status === 'fulfilled') {
           setSelectedOrder(detailResult.value)
@@ -63,6 +74,7 @@ export function OrdersPage() {
           setError(detailResult.reason instanceof Error ? detailResult.reason.message : 'Failed to load order detail')
         }
         setPrintOptions(optionsResult.status === 'fulfilled' ? optionsResult.value : [])
+        setPrintJobs(printJobsResult.status === 'fulfilled' ? printJobsResult.value : [])
       })
       .finally(() => active && setDetailLoading(false))
     return () => { active = false }
@@ -72,10 +84,20 @@ export function OrdersPage() {
     if (!selectedOrder || !option.available) return
     try {
       setPrintBusy(option.module_code)
+      setPrintStatusMessage(null)
       const result = await reprintOrderReceipt(selectedOrder.id, option.module_code)
-      window.alert(result.status === 'PRINTED' ? `${option.label} sent.` : `${option.label} failed: ${result.error_message ?? 'Unknown error'}`)
+      setPrintStatusMessage({
+        kind: result.status === 'PRINTED' ? 'success' : 'error',
+        message: result.status === 'PRINTED'
+          ? `${option.label} sent.`
+          : `${option.label} failed: ${result.operator_message ?? result.error_message ?? 'Unknown error'}`,
+      })
+      setPrintJobs(await fetchOrderPrintJobs(selectedOrder.id))
     } catch (printError) {
-      window.alert(printError instanceof Error ? printError.message : 'Reprint failed')
+      setPrintStatusMessage({
+        kind: 'error',
+        message: printError instanceof Error ? printError.message : 'Reprint failed',
+      })
     } finally {
       setPrintBusy(null)
     }
@@ -103,7 +125,15 @@ export function OrdersPage() {
               )) : <p className="p-4 text-center text-[var(--muted)]">No orders today.</p>}
             </div>
           </Card>
-          <OrderHistoryDetail order={selectedOrder} loading={detailLoading} printOptions={printOptions} printBusy={printBusy} onReprint={(option) => void handleReprint(option)} />
+          <OrderHistoryDetail
+            order={selectedOrder}
+            loading={detailLoading}
+            printOptions={printOptions}
+            printJobs={printJobs}
+            printBusy={printBusy}
+            printStatusMessage={printStatusMessage}
+            onReprint={(option) => void handleReprint(option)}
+          />
         </div>
       </div>
     </div>

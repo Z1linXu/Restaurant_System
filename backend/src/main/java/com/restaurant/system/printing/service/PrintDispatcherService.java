@@ -20,6 +20,10 @@ public interface PrintDispatcherService {
 
     void dispatchOrderUpdateAfterCommit(String moduleCode, Long storeId, Long orderId, Long orderUpdateBatchId);
 
+    boolean hasPrintableContent(String moduleCode, Long storeId, Long orderId);
+
+    boolean hasPrintableUpdateContent(String moduleCode, Long storeId, Long orderId, Long orderUpdateBatchId);
+
     PrinterTestResponse testPrint(PrinterTestRequest request);
 
     PrinterEncodingTestResponse testEncodings(PrinterEncodingTestRequest request);

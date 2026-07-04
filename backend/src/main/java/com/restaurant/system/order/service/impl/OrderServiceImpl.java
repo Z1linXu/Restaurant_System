@@ -425,6 +425,9 @@ public class OrderServiceImpl implements OrderService {
         }
         printDispatcherService.dispatchAfterCommit(PrintModuleCode.GRAB, order.store_id, order.id);
         printDispatcherService.dispatchAfterCommit(PrintModuleCode.FRONTDESK_RECEIPT, order.store_id, order.id);
+        if (printDispatcherService.hasPrintableContent(PrintModuleCode.HOT_KITCHEN, order.store_id, order.id)) {
+            printDispatcherService.dispatchAfterCommit(PrintModuleCode.HOT_KITCHEN, order.store_id, order.id);
+        }
         return loadOrderResponse(order.id);
     }
 
@@ -499,6 +502,14 @@ public class OrderServiceImpl implements OrderService {
             order.id,
             batch.id
         );
+        if (printDispatcherService.hasPrintableUpdateContent(PrintModuleCode.HOT_KITCHEN, order.store_id, order.id, batch.id)) {
+            printDispatcherService.dispatchOrderUpdateAfterCommit(
+                PrintModuleCode.HOT_KITCHEN,
+                order.store_id,
+                order.id,
+                batch.id
+            );
+        }
         return buildOrderUpdateResponse(order.id, batch, false);
     }
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMenuCatalog } from '../../hooks/useMenuCatalog'
 import { Card } from '../../components/ui/Card'
 import { useIpadLandscape } from '../../hooks/useIpadLandscape'
@@ -12,9 +12,10 @@ import {
 } from '../frontdesk/navigation'
 import { FrontdeskTopNav } from '../frontdesk/components/FrontdeskTopNav'
 import { OrderingPage } from '../ordering/OrderingPage'
-import { completeOrder, fetchOrderPrintOptions, reprintOrderReceipt } from '../../services/orderService'
+import { completeOrder, fetchOrderPrintJobs, fetchOrderPrintOptions, reprintOrderReceipt } from '../../services/orderService'
 import type { TableSlot } from '../../types/dinein'
 import type { OrderPrintOption } from '../../types/ordering'
+import type { PrintJobRecord } from '../../services/printingAdminService'
 import { formatSplitSlotLabel } from '../../utils/tableDisplay'
 import { DineInSidebar } from './components/DineInSidebar'
 import { DineInTopBar } from './components/DineInTopBar'
@@ -26,6 +27,42 @@ function buildGeneratedTakeoutLabel() {
   const stamp = Date.now().toString().slice(-4)
   const suffix = Math.random().toString(36).slice(2, 4).toUpperCase()
   return `TO-${stamp}${suffix}`
+}
+
+const POST_SUBMIT_PRINT_CHECK_DELAYS_MS = [1000, 3000, 6000, 10000]
+const PRINT_ATTENTION_MODULES = new Set(['GRAB', 'FRONTDESK_RECEIPT'])
+const PRINT_ATTENTION_STATUSES = new Set(['FAILED', 'CANCELLED'])
+
+function printJobNeedsAttention(job: PrintJobRecord) {
+  return PRINT_ATTENTION_MODULES.has(job.module_code) && PRINT_ATTENTION_STATUSES.has(job.status)
+}
+
+function printJobLabel(job: PrintJobRecord) {
+  if (job.receipt_type === 'GRAB_UPDATE') {
+    return 'Kitchen update ticket'
+  }
+  if (job.receipt_type === 'FRONTDESK_RECEIPT_UPDATE') {
+    return 'Frontdesk update receipt'
+  }
+  if (job.module_code === 'GRAB') {
+    return 'Kitchen ticket'
+  }
+  if (job.module_code === 'FRONTDESK_RECEIPT') {
+    return 'Frontdesk receipt'
+  }
+  return job.module_code.replaceAll('_', ' ')
+}
+
+function printJobReason(job: PrintJobRecord) {
+  return job.operator_message ?? job.error_message ?? job.error_code ?? 'Unknown print issue'
+}
+
+function buildPostSubmitPrintAttentionMessage(jobs: PrintJobRecord[]) {
+  const details = jobs
+    .map((job) => `${printJobLabel(job)}: ${printJobReason(job)}`)
+    .join(' ')
+
+  return `Printing needs attention. ${details} Reprint immediately from Print Center or Order Center.`
 }
 
 interface DineInPageProps {
@@ -47,11 +84,14 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     workstation: string | null
   } | null>(() => parseMenuRoute(routePath, routeSearch))
   const [submissionMessage, setSubmissionMessage] = useState<string | null>(null)
+  const [printAttentionMessage, setPrintAttentionMessage] = useState<string | null>(null)
   const [printTarget, setPrintTarget] = useState<TableSlot | null>(null)
   const [printOptions, setPrintOptions] = useState<OrderPrintOption[]>([])
   const [printBusy, setPrintBusy] = useState<string | null>(null)
   const [printError, setPrintError] = useState<string | null>(null)
   const menuCatalog = useMenuCatalog(storeId)
+  const printCheckTimeoutsRef = useRef<number[]>([])
+  const printCheckRunIdRef = useRef(0)
   const tableBoardEnabled = activeOrderingContext == null
   const { tableSlots, statusCounts, syncError, isOnline, startOrder, editOrder, endOrder, refreshFromBackend, refreshTableAfterFinish } = useTableBoard({
     enabled: tableBoardEnabled,
@@ -59,6 +99,11 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
   })
   const workstationCompact = isIpadLandscape
   const boardPath = buildFrontdeskBoardPath(workstation, storeId)
+
+  const clearPrintCheckTimeouts = () => {
+    printCheckTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId))
+    printCheckTimeoutsRef.current = []
+  }
 
   const updateActiveOrderingContext = (
     nextContext: typeof activeOrderingContext,
@@ -72,6 +117,11 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     setSidebarCollapsed(isIpadLandscape)
   }, [isIpadLandscape])
 
+  useEffect(() => () => {
+    printCheckRunIdRef.current += 1
+    clearPrintCheckTimeouts()
+  }, [])
+
   useEffect(() => {
     const routeContext = parseMenuRoute(routePath, routeSearch)
     updateActiveOrderingContext(routeContext, 'route parsing effect')
@@ -84,6 +134,8 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     if (!target) {
       return
     }
+    setPrintAttentionMessage(null)
+    setSubmissionMessage(null)
 
     const nextContext = {
       slotLabel: target.slotLabel,
@@ -101,6 +153,8 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     if (!target) {
       return
     }
+    setPrintAttentionMessage(null)
+    setSubmissionMessage(null)
 
     const nextContext = {
       slotLabel: target.slotLabel,
@@ -118,6 +172,8 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     if (!target) {
       return
     }
+    setPrintAttentionMessage(null)
+    setSubmissionMessage(null)
 
     const nextContext = {
       slotLabel: target.slotLabel,
@@ -131,6 +187,8 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
   }
 
   const handleTakeoutEntry = () => {
+    setPrintAttentionMessage(null)
+    setSubmissionMessage(null)
     const pickupLabel = buildGeneratedTakeoutLabel()
     const nextContext = {
       slotLabel: pickupLabel,
@@ -147,6 +205,51 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     updateActiveOrderingContext(null, 'back to tables')
     navigateTo(boardPath)
     void refreshFromBackend()
+  }
+
+  const startPostSubmitPrintCheck = (orderId: number, updateBatchId?: number | null) => {
+    clearPrintCheckTimeouts()
+    setPrintAttentionMessage(null)
+    const runId = printCheckRunIdRef.current + 1
+    printCheckRunIdRef.current = runId
+
+    POST_SUBMIT_PRINT_CHECK_DELAYS_MS.forEach((delayMs) => {
+      const timeoutId = window.setTimeout(async () => {
+        if (printCheckRunIdRef.current !== runId) {
+          return
+        }
+
+        try {
+          const jobs = await fetchOrderPrintJobs(orderId)
+          const relevantJobs = jobs.filter((job) => {
+            if (!PRINT_ATTENTION_MODULES.has(job.module_code)) {
+              return false
+            }
+            return updateBatchId
+              ? job.order_update_batch_id === updateBatchId
+              : job.order_update_batch_id == null
+          })
+          const attentionJobs = relevantJobs.filter(printJobNeedsAttention)
+          if (attentionJobs.length) {
+            setPrintAttentionMessage(buildPostSubmitPrintAttentionMessage(attentionJobs))
+            clearPrintCheckTimeouts()
+            return
+          }
+
+          const printedModules = new Set(
+            relevantJobs
+              .filter((job) => job.status === 'PRINTED')
+              .map((job) => job.module_code),
+          )
+          if (printedModules.has('GRAB') && printedModules.has('FRONTDESK_RECEIPT')) {
+            clearPrintCheckTimeouts()
+          }
+        } catch {
+          // Keep this as a best-effort visibility check; order success should not depend on it.
+        }
+      }, delayMs)
+      printCheckTimeoutsRef.current.push(timeoutId)
+    })
   }
 
   const handleFinish = async (slot: TableSlot) => {
@@ -203,6 +306,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
         throw new Error(result.error_message ?? 'Print failed')
       }
       setSubmissionMessage(`${option.label} sent for ${formatSplitSlotLabel(printTarget.label)}.`)
+      setPrintAttentionMessage(null)
       setPrintTarget(null)
     } catch (error) {
       setPrintError(error instanceof Error ? error.message : 'Print failed')
@@ -231,12 +335,13 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
           navigateTo(boardPath)
           void refreshFromBackend()
         }}
-        onOrderSubmitted={(slotLabel) => {
+        onOrderSubmitted={(slotLabel, _tableLabel, orderId, updateBatchId) => {
           setSubmissionMessage(
             activeOrderingContext.orderType === 'pickup'
               ? `Takeout order confirmed for ${activeOrderingContext.pickupLabel ?? slotLabel}.`
               : `Order confirmed for ${formatSplitSlotLabel(slotLabel)}.`,
           )
+          startPostSubmitPrintCheck(orderId, updateBatchId)
           updateActiveOrderingContext(null, 'order submitted')
           navigateTo(boardPath)
           void refreshFromBackend()
@@ -260,6 +365,12 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
             {submissionMessage ? (
               <div className={`rounded-[20px] bg-[rgba(97,0,0,0.08)] font-semibold text-[var(--primary)] ${workstationCompact ? 'px-4 py-2.5 text-[0.95rem]' : 'px-5 py-4 text-base'}`}>
                 {submissionMessage}
+              </div>
+            ) : null}
+
+            {printAttentionMessage ? (
+              <div className={`rounded-[20px] border-2 border-[rgba(151,34,34,0.35)] bg-[rgba(151,34,34,0.12)] font-black text-[rgb(116,22,22)] shadow-[0_18px_34px_rgba(151,34,34,0.12)] ${workstationCompact ? 'px-4 py-2.5 text-[0.95rem]' : 'px-5 py-4 text-base'}`}>
+                {printAttentionMessage}
               </div>
             ) : null}
 
@@ -310,6 +421,12 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
               {submissionMessage ? (
                 <div className="rounded-[24px] bg-[rgba(97,0,0,0.08)] px-5 py-4 text-base font-semibold text-[var(--primary)]">
                   {submissionMessage}
+                </div>
+              ) : null}
+
+              {printAttentionMessage ? (
+                <div className="rounded-[24px] border-2 border-[rgba(151,34,34,0.35)] bg-[rgba(151,34,34,0.12)] px-5 py-4 text-base font-black text-[rgb(116,22,22)] shadow-[0_18px_34px_rgba(151,34,34,0.12)]">
+                  {printAttentionMessage}
                 </div>
               ) : null}
 
