@@ -15,10 +15,16 @@ Restaurant_System/backend
 During local development:
 
 ```text
+Recommended:
 Android Pad App
-  -> runtime API base: http://{developer-lan-ip}:8080
+  -> Web App URL: http://{developer-lan-ip}:5173
+  -> frontend production preview
+  -> /api and /ws proxy to backend localhost:8080
+
+Alternative bundled-assets mode:
+Android Pad App
   -> bundled frontend artifact: android/app/src/main/assets/web
-  -> local printer example: 192.168.2.200:9100
+  -> API Base URL: http://{developer-lan-ip}:8080
 ```
 
 The development computer, Android Pad, and printers must be on the same LAN when testing native printer behavior.
@@ -47,6 +53,13 @@ npm run build
 npm run preview:lan
 ```
 
+Confirm preview listens on the LAN:
+
+```bash
+ipconfig getifaddr en0
+curl -i http://{developer-lan-ip}:5173/
+```
+
 Build the frontend and copy it into Android assets:
 
 ```bash
@@ -56,20 +69,40 @@ cd ..
 bash restaurant-pad-app/scripts/copy-frontend-dist.sh
 ```
 
-## API Base Configuration
+## Local Preview Web App URL
 
-Configure the Android Pad App runtime API base to the development computer LAN address:
+For local testing, prefer setting the Android Pad App Web App URL to the development computer LAN preview address:
 
 ```text
-http://{developer-lan-ip}:8080
+http://{developer-lan-ip}:5173
 ```
 
 Examples:
 
 ```text
-http://192.168.2.140:8080
-http://192.168.2.33:8080
+http://192.168.2.140:5173
+http://192.168.2.33:5173
 ```
+
+Long press inside the Pad app to open the runtime config dialog. Fill `Local Preview Web App URL` and leave `Bundled Assets API Base URL` empty for this mode.
+
+Before using the shell, open the same URL in Android Chrome. If Android Chrome cannot open it, the shell cannot open it either.
+
+## Bundled Assets API Base Configuration
+
+If you leave Web App URL empty, the shell loads Android bundled assets from:
+
+```text
+https://restaurant-pad.local/index.html
+```
+
+Then configure API Base URL to the development computer LAN backend address:
+
+```text
+http://{developer-lan-ip}:8080
+```
+
+Bundled assets mode is useful when testing the copied frontend artifact, but local preview mode is simpler for day-to-day LAN testing because `/api` and `/ws` go through Vite preview proxy.
 
 Do not use Android's own `localhost` or `127.0.0.1` to mean the development computer. Inside Android, `localhost` points back to the Android device itself.
 
@@ -122,20 +155,34 @@ If connection fails, check:
 
 - Android Pad IP address
 - backend computer IP address
+- whether Android Chrome can open `http://{developer-lan-ip}:5173`
+- whether backend is reachable at `http://{developer-lan-ip}:8080/api/v1/auth/me`
 - printer IP address
 - subnet mask
 - gateway
 - router AP isolation / client isolation
+- computer firewall allowing port `5173`
+- computer firewall allowing port `8080` if using bundled assets API base mode
+- Vite preview `/api` and `/ws` proxy when using local preview mode
 - printer port `9100`
 - Android local-network socket permission / cleartext debug config
 - whether the printer has a fixed IP or DHCP reservation
+
+Common WebView / Android errors:
+
+- `ERR_CLEARTEXT_NOT_PERMITTED`: local HTTP is blocked. Use a debug build or HTTPS.
+- `ERR_CONNECTION_REFUSED`: server is not listening, wrong IP/port, or firewall blocked it.
+- `ERR_NAME_NOT_RESOLVED`: hostname cannot resolve. Use the LAN IP.
+- `Failed to fetch`: inspect whether the request went to `/api` through preview or directly to backend API base.
+- WebSocket errors: confirm `/ws` proxy exists in Vite preview and backend is running.
+- Old frontend dist: rebuild frontend and rerun `copy-frontend-dist.sh` if using bundled assets mode.
 
 ## Configuration Rules
 
 - Do not hardcode developer IP addresses in source code.
 - Do not hardcode printer IP addresses in source code.
-- Do not rely on Vite proxy inside Android WebView.
-- Runtime API base must be configurable in Pad native preferences or a setup screen.
+- Local Preview Web App URL should be configurable in Pad native preferences or a setup screen.
+- Runtime API base must remain configurable for bundled assets mode.
 - Printer IP must come from user input, runtime config, or backend printer configuration.
 - Android debug builds may allow cleartext HTTP only for local development.
 - Production should use HTTPS for backend API traffic.

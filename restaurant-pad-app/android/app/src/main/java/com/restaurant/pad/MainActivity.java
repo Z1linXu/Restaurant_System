@@ -2,9 +2,11 @@ package com.restaurant.pad;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.pm.ApplicationInfo;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.ViewGroup;
 import android.webkit.WebChromeClient;
@@ -14,6 +16,8 @@ import android.webkit.WebViewClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import androidx.webkit.WebViewAssetLoader;
 
 public class MainActivity extends Activity {
@@ -21,6 +25,7 @@ public class MainActivity extends Activity {
     private static final String APP_URL = "https://" + APP_HOST + "/index.html";
     private static final String PREFS = "restaurant_pad_settings";
     private static final String KEY_API_BASE = "api_base_url";
+    private static final String KEY_WEB_APP_URL = "web_app_url";
 
     private WebView webView;
     private SharedPreferences preferences;
@@ -35,8 +40,8 @@ public class MainActivity extends Activity {
             ViewGroup.LayoutParams.MATCH_PARENT
         ));
         configureWebView();
-        if (getApiBaseUrl().isBlank()) {
-            showApiBaseDialog(true);
+        if (getWebAppUrl().isBlank() && getApiBaseUrl().isBlank()) {
+            showRuntimeConfigDialog(true);
         } else {
             loadApp();
         }
@@ -48,6 +53,14 @@ public class MainActivity extends Activity {
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
+        if (isDebuggable()) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                WebView.setWebContentsDebuggingEnabled(true);
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+            }
+        }
         webView.addJavascriptInterface(new PrinterPluginBridge(), "RestaurantPrinter");
 
         WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
@@ -65,7 +78,7 @@ public class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
-                if (APP_HOST.equals(uri.getHost())) {
+                if (shouldOpenInApp(uri)) {
                     return false;
                 }
                 Intent intent = new Intent(Intent.ACTION_VIEW, uri);
@@ -75,37 +88,106 @@ public class MainActivity extends Activity {
         });
 
         webView.setOnLongClickListener(view -> {
-            showApiBaseDialog(false);
+            showRuntimeConfigDialog(false);
             return true;
         });
     }
 
     private void loadApp() {
-        webView.loadUrl(APP_URL);
+        String webAppUrl = getWebAppUrl();
+        webView.loadUrl(webAppUrl.isBlank() ? APP_URL : webAppUrl);
     }
 
     private String getApiBaseUrl() {
         return preferences.getString(KEY_API_BASE, "");
     }
 
-    private void showApiBaseDialog(boolean firstLaunch) {
-        EditText input = new EditText(this);
-        input.setSingleLine(true);
-        input.setHint("http://your-lan-ip:8080");
-        input.setText(getApiBaseUrl());
-        input.setSelectAllOnFocus(true);
+    private String getWebAppUrl() {
+        return preferences.getString(KEY_WEB_APP_URL, "");
+    }
+
+    private boolean isDebuggable() {
+        return (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+    }
+
+    private boolean shouldOpenInApp(Uri uri) {
+        if (uri == null) {
+            return false;
+        }
+        if (APP_HOST.equals(uri.getHost())) {
+            return true;
+        }
+        Uri configuredWebAppUri = Uri.parse(getWebAppUrl());
+        return configuredWebAppUri != null
+            && configuredWebAppUri.getHost() != null
+            && configuredWebAppUri.getHost().equals(uri.getHost())
+            && safePort(configuredWebAppUri) == safePort(uri)
+            && safeScheme(configuredWebAppUri).equals(safeScheme(uri));
+    }
+
+    private int safePort(Uri uri) {
+        int port = uri.getPort();
+        if (port > 0) {
+            return port;
+        }
+        return "https".equalsIgnoreCase(uri.getScheme()) ? 443 : 80;
+    }
+
+    private String safeScheme(Uri uri) {
+        return uri.getScheme() == null ? "" : uri.getScheme().toLowerCase();
+    }
+
+    private void showRuntimeConfigDialog(boolean firstLaunch) {
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int padding = Math.round(20 * getResources().getDisplayMetrics().density);
+        layout.setPadding(padding, 0, padding, 0);
+
+        TextView webUrlLabel = new TextView(this);
+        webUrlLabel.setText("Local Preview Web App URL (optional)");
+        EditText webUrlInput = new EditText(this);
+        webUrlInput.setSingleLine(true);
+        webUrlInput.setHint("http://your-lan-ip:5173");
+        webUrlInput.setText(getWebAppUrl());
+        webUrlInput.setSelectAllOnFocus(true);
+
+        TextView apiBaseLabel = new TextView(this);
+        apiBaseLabel.setText("Bundled Assets API Base URL (optional)");
+        EditText apiBaseInput = new EditText(this);
+        apiBaseInput.setSingleLine(true);
+        apiBaseInput.setHint("http://your-lan-ip:8080");
+        apiBaseInput.setText(getApiBaseUrl());
+        apiBaseInput.setSelectAllOnFocus(true);
+
+        layout.addView(webUrlLabel);
+        layout.addView(webUrlInput);
+        layout.addView(apiBaseLabel);
+        layout.addView(apiBaseInput);
 
         AlertDialog dialog = new AlertDialog.Builder(this)
-            .setTitle("Restaurant API Base")
-            .setMessage("Enter the backend base URL. Do not hardcode this in the app source.")
-            .setView(input)
+            .setTitle("Restaurant Pad Local Config")
+            .setMessage("For LAN preview, set Web App URL to http://computer-lan-ip:5173. Leave it empty to use bundled assets with API Base URL.")
+            .setView(layout)
             .setPositiveButton("Save", (ignored, which) -> {
-                String value = input.getText().toString().trim();
-                preferences.edit().putString(KEY_API_BASE, value).apply();
+                String webAppUrl = webUrlInput.getText().toString().trim();
+                String apiBaseUrl = apiBaseInput.getText().toString().trim();
+                preferences.edit()
+                    .putString(KEY_WEB_APP_URL, webAppUrl)
+                    .putString(KEY_API_BASE, apiBaseUrl)
+                    .apply();
                 loadApp();
             })
-            .setNegativeButton(firstLaunch ? "Load Offline Placeholder" : "Cancel", (ignored, which) -> loadApp())
+            .setNegativeButton(firstLaunch ? "Load Bundled Assets" : "Cancel", (ignored, which) -> loadApp())
             .create();
         dialog.show();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (webView != null && webView.canGoBack()) {
+            webView.goBack();
+            return;
+        }
+        super.onBackPressed();
     }
 }

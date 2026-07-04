@@ -344,6 +344,8 @@ Pad Direct JPA entities use camelCase Java properties mapped to snake_case datab
 
 Pad App PR7 surfaces the PR6 queue state in Print Center. `/admin/settings/printing` shows registered Pad Direct devices, last seen/app/platform status, job execution mode, claimed device id, claim lease expiration, printed device id, and whether a Pad Direct preview has an ESC/POS base64 payload.
 
+Pad App PR11A adds a debug/local Web App URL mode to the Android shell. The shell can now load `http://{developer-lan-ip}:5173` directly for LAN production-preview testing, letting the frontend continue to use relative `/api` and `/ws` paths through the Vite preview proxy to backend `localhost:8080`. If no Web App URL is configured, the existing bundled assets mode at `https://restaurant-pad.local/index.html` remains available with the runtime API Base URL bridge. Debug builds allow local HTTP cleartext and WebView debugging; release/default assets mode still keeps cleartext disabled by default.
+
 ## Web POS Field Compatibility Fixes
 
 - Submitted/preparing/ready order updates still require an `idempotency_key`, but the frontend now generates it through a compatibility helper instead of directly calling `crypto.randomUUID()`. The helper falls back to `crypto.getRandomValues()` and then a timestamp/random suffix for older iPad/Pad browsers on local HTTP pages.
