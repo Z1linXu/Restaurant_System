@@ -213,6 +213,28 @@ Future language work:
 
 - Full `zh-CN` / `en-US` i18n dictionaries, owner/store language preference, and backend `message_key + params` localization are deferred to a later PR.
 
+## Cloud Ready PR7-1: Frontend API Context Cleanup
+
+PR7-1 removes remaining frontend identity/store context shortcuts before cloud deployment.
+
+Frontend REST rules:
+
+- Business REST calls must use the shared `apiRequest` / `apiClient` path.
+- Frontend code must not add `X-User-Id`; `apiClient` strips the header as a defense-in-depth measure.
+- Production frontend paths must not hardcode `store_id=1`, `storeId=1`, or `DEFAULT_STORE_ID`.
+- Draft order creation no longer sends `created_by: 1`; the backend fills `created_by` from the authenticated JWT user after store/capability authorization.
+
+Admin context cleanup:
+
+- Platform Admin draft JSON now uses the active store workspace context instead of falling back to store `1`.
+- Menu Management and Dining Tables editor normalization use the active store as fallback when a backend record omits `store_id`.
+- Missing related ids such as organization, category, station, role, or menu item are left empty/zero-like for the operator to correct instead of silently targeting store `1`.
+
+Explicitly unchanged:
+
+- KDS/Pickup polling cleanup is deferred to PR7-2.
+- Order lifecycle, printing dispatch semantics, payment/refund, `completeOrder`, Android App code, and database schema are unchanged.
+
 ## Cloud Ready PR7A: HOT_KITCHEN Print Routing With Stable Semantics
 
 PR7A enables the `HOT_KITCHEN` printing module for heat-line / fry / wok / fried-egg workflows while keeping `COLD_KITCHEN`, `BAR`, and `TAKEOUT_RECEIPT` reserved.

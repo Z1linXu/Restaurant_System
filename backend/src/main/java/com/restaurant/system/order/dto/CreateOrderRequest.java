@@ -11,7 +11,6 @@ public class CreateOrderRequest {
     @NotNull
     public Long store_id;
 
-    @NotNull
     public Long created_by;
 
     @NotBlank

@@ -225,7 +225,6 @@ export async function ensureEditableOrder(context: EditableOrderContext) {
       headers: buildHeaders(),
       body: JSON.stringify({
         store_id: context.storeId,
-        created_by: 1,
         order_type: context.orderType,
         table_no: context.tableNo ?? null,
         pickup_no: context.pickupNo ?? null,

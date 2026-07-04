@@ -24,10 +24,10 @@ function asBoolean(value: unknown, fallback = false) {
   return typeof value === 'boolean' ? value : fallback
 }
 
-function toDiningTableRecord(record: Record<string, unknown>): DiningTableRecord {
+function toDiningTableRecord(record: Record<string, unknown>, fallbackStoreId: number): DiningTableRecord {
   return {
     id: asNumber(record.id, 0) || undefined,
-    store_id: asNumber(record.store_id, 1),
+    store_id: asNumber(record.store_id, fallbackStoreId),
     table_code: asString(record.table_code),
     table_name: asString(record.table_name),
     area_name: asString(record.area_name),
@@ -87,7 +87,7 @@ export function DiningTablesManagementPage() {
       setOverview(nextOverview)
       setTables(
         (nextOverview.dining_tables ?? [])
-          .map((record) => toDiningTableRecord(record))
+          .map((record) => toDiningTableRecord(record, storeId))
           .filter((record) => record.store_id === storeId)
           .sort((left, right) => left.sort_order - right.sort_order || left.table_name.localeCompare(right.table_name)),
       )
@@ -153,7 +153,7 @@ export function DiningTablesManagementPage() {
     const nextOverview = await fetchPlatformOverview(storeId)
     setOverview(nextOverview)
     const nextTables = (nextOverview.dining_tables ?? [])
-      .map((record) => toDiningTableRecord(record))
+      .map((record) => toDiningTableRecord(record, storeId))
       .filter((record) => record.store_id === storeId)
       .sort((left, right) => left.sort_order - right.sort_order || left.table_name.localeCompare(right.table_name))
     setTables(nextTables)

@@ -75,10 +75,10 @@ function buildDraft(overview: PlatformAdminOverview, storeId: number): MenuItemE
   }
 }
 
-function toEditorState(record: Record<string, unknown> | MenuItemAdminRecord): MenuItemEditorState {
+function toEditorState(record: Record<string, unknown> | MenuItemAdminRecord, fallbackStoreId: number): MenuItemEditorState {
   return {
     id: asNumber(record.id, 0) || undefined,
-    store_id: asNumber(record.store_id, 1),
+    store_id: asNumber(record.store_id, fallbackStoreId),
     category_id: asNumber(record.category_id, 0),
     station_id: asNumber(record.station_id, 0),
     name_zh: asString(record.name_zh),
@@ -133,7 +133,7 @@ export function MenuManagementPage() {
       setOverview(nextOverview)
       setMenuItems(
         nextMenuItems
-          .map((record) => toEditorState(record))
+          .map((record) => toEditorState(record, storeId))
           .sort((left, right) => left.name_zh.localeCompare(right.name_zh, 'zh-Hans')),
       )
     } catch (loadError) {
@@ -247,7 +247,7 @@ export function MenuManagementPage() {
   const refreshMenuItems = async (storeId: number) => {
     const nextMenuItems = await fetchAdminMenuItems(storeId)
     const normalized = nextMenuItems
-      .map((record) => toEditorState(record))
+      .map((record) => toEditorState(record, storeId))
       .sort((left, right) => left.name_zh.localeCompare(right.name_zh, 'zh-Hans'))
     setMenuItems(normalized)
     return normalized
