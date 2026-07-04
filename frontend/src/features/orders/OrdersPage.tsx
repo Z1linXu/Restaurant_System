@@ -14,6 +14,7 @@ import { FrontdeskTopNav } from '../frontdesk/components/FrontdeskTopNav'
 import { OrderHistoryDetail } from './components/OrderHistoryDetail'
 import { OrderMiniCard } from './components/OrderMiniCard'
 import { useCurrentStore } from '../store/StoreContext'
+import { printJobOperatorDisplayMessage, printOptionDisplayLabel } from '../../utils/displayLabels'
 
 export function OrdersPage() {
   const { storeId } = useCurrentStore()
@@ -39,7 +40,7 @@ export function OrdersPage() {
         ? current
         : nextOrders[0]?.order_id ?? null)
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load today orders')
+      setError(loadError instanceof Error ? loadError.message : '今日订单加载失败')
     } finally {
       setLoading(false)
     }
@@ -71,7 +72,7 @@ export function OrdersPage() {
           setSelectedOrder(detailResult.value)
         } else {
           setSelectedOrder(null)
-          setError(detailResult.reason instanceof Error ? detailResult.reason.message : 'Failed to load order detail')
+          setError(detailResult.reason instanceof Error ? detailResult.reason.message : '订单详情加载失败')
         }
         setPrintOptions(optionsResult.status === 'fulfilled' ? optionsResult.value : [])
         setPrintJobs(printJobsResult.status === 'fulfilled' ? printJobsResult.value : [])
@@ -89,14 +90,14 @@ export function OrdersPage() {
       setPrintStatusMessage({
         kind: result.status === 'PRINTED' ? 'success' : 'error',
         message: result.status === 'PRINTED'
-          ? `${option.label} sent.`
-          : `${option.label} failed: ${result.operator_message ?? result.error_message ?? 'Unknown error'}`,
+          ? `${printOptionDisplayLabel(option.module_code, option.label)}已发送。`
+          : `${printOptionDisplayLabel(option.module_code, option.label)}失败：${printJobOperatorDisplayMessage(result) || '未知错误'}`,
       })
       setPrintJobs(await fetchOrderPrintJobs(selectedOrder.id))
     } catch (printError) {
       setPrintStatusMessage({
         kind: 'error',
-        message: printError instanceof Error ? printError.message : 'Reprint failed',
+        message: printError instanceof Error ? printError.message : '重打失败',
       })
     } finally {
       setPrintBusy(null)
@@ -109,20 +110,20 @@ export function OrdersPage() {
         <FrontdeskTopNav activeItem="orders" />
         <header className="flex items-end justify-between rounded-[24px] bg-white/75 px-5 py-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Today / 今日</p>
-            <h1 className="mt-1 text-3xl font-extrabold">Order History / 订单记录</h1>
-            <p className="mt-1 text-sm text-[var(--muted)]">Read-only. Payment and checkout actions are not available here.</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">今日</p>
+            <h1 className="mt-1 text-3xl font-extrabold">订单记录</h1>
+            <p className="mt-1 text-sm text-[var(--muted)]">只读查看订单和打印记录；这里不做结账、拆单或收款操作。</p>
           </div>
-          <button type="button" onClick={() => void loadToday()} className="rounded-full bg-stone-100 px-4 py-2 font-bold">Refresh</button>
+          <button type="button" onClick={() => void loadToday()} className="rounded-full bg-stone-100 px-4 py-2 font-bold">刷新</button>
         </header>
         {error ? <div className="rounded-[18px] bg-red-50 px-4 py-3 font-semibold text-red-700">{error}</div> : null}
         <div className={`grid gap-4 ${isIpadLandscape ? 'grid-cols-[18rem_minmax(0,1fr)]' : 'xl:grid-cols-[20rem_minmax(0,1fr)]'}`}>
           <Card tone="well" className="rounded-[24px] p-3.5">
-            <div className="mb-3 flex justify-between text-sm font-bold text-[var(--muted)]"><span>Today orders</span><span>{orders.length}</span></div>
+            <div className="mb-3 flex justify-between text-sm font-bold text-[var(--muted)]"><span>今日订单</span><span>{orders.length}</span></div>
             <div className="max-h-[calc(100vh-15rem)] space-y-2 overflow-y-auto">
-              {loading ? <p className="p-4 text-center text-[var(--muted)]">Loading...</p> : orders.length ? orders.map((order) => (
+              {loading ? <p className="p-4 text-center text-[var(--muted)]">加载中...</p> : orders.length ? orders.map((order) => (
                 <OrderMiniCard key={order.order_id} order={order} selected={selectedOrderId === order.order_id} onClick={() => setSelectedOrderId(order.order_id)} compact={isIpadLandscape} />
-              )) : <p className="p-4 text-center text-[var(--muted)]">No orders today.</p>}
+              )) : <p className="p-4 text-center text-[var(--muted)]">今天暂无订单。</p>}
             </div>
           </Card>
           <OrderHistoryDetail

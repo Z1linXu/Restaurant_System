@@ -13,6 +13,7 @@ import { OrderingTopBar } from './components/OrderingTopBar'
 import { OrderSummaryPanel } from './components/OrderSummaryPanel'
 import { fetchOrderPrintJobs } from '../../services/orderService'
 import type { PrintJobRecord } from '../../services/printingAdminService'
+import { printJobDisplayLabel, printJobOperatorDisplayMessage } from '../../utils/displayLabels'
 
 interface OrderingPageProps {
   catalog: {
@@ -69,23 +70,11 @@ function printJobNeedsAttention(job: PrintJobRecord) {
 }
 
 function printJobLabel(job: PrintJobRecord) {
-  if (job.receipt_type === 'GRAB_UPDATE') {
-    return 'Kitchen update ticket'
-  }
-  if (job.receipt_type === 'FRONTDESK_RECEIPT_UPDATE') {
-    return 'Frontdesk update receipt'
-  }
-  if (job.module_code === 'GRAB') {
-    return 'Kitchen ticket'
-  }
-  if (job.module_code === 'FRONTDESK_RECEIPT') {
-    return 'Frontdesk receipt'
-  }
-  return job.module_code.replaceAll('_', ' ')
+  return printJobDisplayLabel(job)
 }
 
 function printJobReason(job: PrintJobRecord) {
-  return job.operator_message ?? job.error_message ?? job.error_code ?? 'Unknown print issue'
+  return printJobOperatorDisplayMessage(job) || '打印状态异常，请检查打印中心。'
 }
 
 function buildPrintAttentionMessage(jobs: PrintJobRecord[]) {
@@ -93,7 +82,7 @@ function buildPrintAttentionMessage(jobs: PrintJobRecord[]) {
     .map((job) => `${printJobLabel(job)}: ${printJobReason(job)}`)
     .join(' ')
 
-  return `Order was saved, but printing needs attention. ${details} Please reprint from Order Center or Print Center.`
+  return `订单已保存，但打印需要处理。${details} 请到订单记录或打印中心立即重打。`
 }
 
 export function OrderingPage({
@@ -350,7 +339,7 @@ export function OrderingPage({
 
         {!isOnline ? (
           <div className="rounded-[20px] border border-[rgba(151,34,34,0.25)] bg-[rgba(151,34,34,0.1)] px-5 py-4 text-[1rem] font-bold text-[rgb(116,22,22)]">
-            当前设备离线，请检查网络后重试 / Device is offline. Please check the network and try again.
+            当前设备离线，请检查网络后重试。
           </div>
         ) : null}
 
@@ -382,10 +371,10 @@ export function OrderingPage({
             <div className={`${isIpadLandscape ? 'mb-3 flex items-center justify-between gap-3' : 'mb-5 flex items-center justify-between gap-4'}`}>
               <div>
                 <h1 className={`font-display font-extrabold tracking-[-0.05em] text-[var(--on-surface)] ${isIpadLandscape ? 'text-[2rem]' : 'text-[2.6rem]'}`}>
-                  Main Selection
+                  菜单
                 </h1>
                 <p className={`${isIpadLandscape ? 'text-[0.95rem]' : 'text-[1.15rem]'} font-medium text-[var(--muted)]`}>
-                  {catalogLoading ? 'Loading menu...' : draftLoading ? 'Loading draft...' : 'Tap an item to customize and add it.'}
+                  {catalogLoading ? '正在加载菜单...' : draftLoading ? '正在加载订单...' : '点击菜品选择规格并加入订单。'}
                 </p>
               </div>
               <div className={`rounded-[20px] bg-[rgba(26,28,25,0.04)] font-semibold text-[var(--muted)] ${isIpadLandscape ? 'px-3 py-2 text-[0.8rem]' : 'px-4 py-3 text-sm'}`}>
@@ -446,7 +435,7 @@ export function OrderingPage({
           ) : (
             <div className={`flex h-full min-h-[28rem] items-center justify-center bg-[rgba(255,255,255,0.82)] shadow-[0_18px_42px_rgba(26,28,25,0.06)] ${isIpadLandscape ? 'rounded-[24px] p-4' : 'rounded-[32px] p-5'}`}>
               <div className={`text-center text-[var(--muted)] ${isIpadLandscape ? 'text-[0.95rem]' : 'text-[1.05rem]'}`}>
-                {draftLoading ? 'Loading draft order...' : 'Unable to open draft order.'}
+                {draftLoading ? '正在加载订单...' : '无法打开当前订单。'}
               </div>
             </div>
           )}
@@ -469,8 +458,8 @@ export function OrderingPage({
         open={takeoutDialogOpen}
         initialValue={effectivePickupLabel ?? ''}
         allowEmpty
-        confirmLabel="Save"
-        helperText="Optionally add a customer name or phone number. If left blank, the generated takeout number will stay in use."
+        confirmLabel="保存"
+        helperText="可填写顾客姓名或电话；不填则继续使用系统生成的外卖编号。"
         onClose={() => setTakeoutDialogOpen(false)}
         onConfirm={(value) => void handleUpdatePickupLabel(value)}
       />

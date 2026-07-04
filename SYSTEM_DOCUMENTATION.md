@@ -190,6 +190,29 @@ Explicitly unchanged:
 - Print failures still do not roll back orders.
 - `MOCK`, `REAL`, `PAD_DIRECT`, and `DISABLED` print modes keep their existing dispatch semantics.
 
+## PR6.5: Chinese-First UI Copy Cleanup
+
+PR6.5 is a display-only cleanup pass. It makes the most visible staff/owner UI copy Chinese-first without introducing a full i18n system and without changing backend business behavior.
+
+Frontend behavior:
+
+- Print Center uses Chinese-first labels for printer lists, printer assignments, print jobs, reprint actions, previews, connection tests, and failure/attention states.
+- Frontdesk Ordering uses Chinese-first loading, submit/update, cancel, totals, and print-failure warning copy.
+- Order History uses Chinese-first order detail, print job, reprint, status, empty-state, and refresh copy.
+- Login, store access, and feature-disabled screens use Chinese-first user-facing copy.
+- A lightweight frontend display helper centralizes module labels, print status labels, order status labels, and print error messages.
+
+Stable internal codes are intentionally not translated:
+
+- Print modules remain `GRAB`, `FRONTDESK_RECEIPT`, `HOT_KITCHEN`, `GRAB_UPDATE`, `FRONTDESK_RECEIPT_UPDATE`, and `HOT_KITCHEN_UPDATE`.
+- Print statuses remain `PENDING`, `PRINTING`, `PRINTED`, `FAILED`, and `CANCELLED`.
+- Print error codes such as `CLOUD_PRIVATE_PRINTER_BLOCKED`, `DISPATCH_ERROR`, and `PRINTING_DISABLED` remain stable English machine codes.
+- Backend `BusinessException` messages, `GlobalExceptionHandler`, `PrintJobResponse` fields, receipt renderers, database schema, and print routing logic are unchanged.
+
+Future language work:
+
+- Full `zh-CN` / `en-US` i18n dictionaries, owner/store language preference, and backend `message_key + params` localization are deferred to a later PR.
+
 ## Cloud Ready PR7A: HOT_KITCHEN Print Routing With Stable Semantics
 
 PR7A enables the `HOT_KITCHEN` printing module for heat-line / fry / wok / fried-egg workflows while keeping `COLD_KITCHEN`, `BAR`, and `TAKEOUT_RECEIPT` reserved.
