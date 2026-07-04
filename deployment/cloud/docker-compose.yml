@@ -1,0 +1,54 @@
+services:
+  backend:
+    image: ${BACKEND_IMAGE:-restaurant-pos-backend:local}
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-cloud}
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-restaurant_pos}
+      DB_USER: ${DB_USER:-restaurant_pos}
+      DB_PASSWORD: ${DB_PASSWORD:-}
+      JWT_SECRET: ${JWT_SECRET:-}
+    expose:
+      - "8080"
+    depends_on:
+      db:
+        condition: service_started
+        required: false
+    networks:
+      - restaurant-pos
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-nginx:1.27-alpine}
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      - ../../frontend/dist:/usr/share/nginx/html:ro
+      - ./nginx.conf.example:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+    networks:
+      - restaurant-pos
+
+  db:
+    image: postgres:16-alpine
+    profiles:
+      - local-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-restaurant_pos}
+      POSTGRES_USER: ${DB_USER:-restaurant_pos}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - restaurant-pos
+
+networks:
+  restaurant-pos:
+    driver: bridge
+
+volumes:
+  postgres_data:

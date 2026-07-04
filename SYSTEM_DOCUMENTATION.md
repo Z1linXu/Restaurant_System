@@ -235,6 +235,31 @@ Explicitly unchanged:
 - KDS/Pickup polling cleanup is deferred to PR7-2.
 - Order lifecycle, printing dispatch semantics, payment/refund, `completeOrder`, Android App code, and database schema are unchanged.
 
+## Cloud Ready PR7-2: Printer Restaurant Mode KDS/Pickup Route Guard
+
+PR7-2 documents the current Printer Restaurant Mode frontend boundary without changing business code.
+
+Current Printer Restaurant Mode:
+
+- `PRINTING=true`
+- `KDS=false`
+- `HOT_KITCHEN` printing module enabled
+
+KDS/Pickup display behavior:
+
+- When `KDS=false`, `/pickup`, `/kds/*`, `/stores/{storeId}/pickup`, and `/stores/{storeId}/kds/*` render `FeatureDisabledPage`.
+- Because those pages do not mount, KDS/Pickup hooks do not run.
+- Frontdesk, Order Center, Owner/Admin, Print Center, Menu, Dining Tables, Staff, Audit, and Reports pages should not create `/api/v1/kds/*`, `/api/v1/kitchen-tasks/*`, or KDS WebSocket polling/subscriptions while KDS is disabled.
+
+Important distinction:
+
+- `HOT_KITCHEN` printing module and `HOT_KITCHEN` KDS display page are separate features.
+- Disabling KDS/Pickup display pages does not disable `HOT_KITCHEN` print assignment, Test HOT_KITCHEN, automatic HOT_KITCHEN print job creation, Print Center visibility, or reprint behavior.
+
+Future work:
+
+- If `KDS=true` is re-enabled, do a dedicated KDS/Pickup polling cleanup PR before production use. Current KDS/Pickup display hooks still use short polling and should be converted to WebSocket-first, visibility-aware fallback polling before the feature is used operationally.
+
 ## Cloud Ready PR7A: HOT_KITCHEN Print Routing With Stable Semantics
 
 PR7A enables the `HOT_KITCHEN` printing module for heat-line / fry / wok / fried-egg workflows while keeping `COLD_KITCHEN`, `BAR`, and `TAKEOUT_RECEIPT` reserved.
@@ -5501,3 +5526,27 @@ Printer Restaurant Mode behavior:
 - If KDS is disabled, Owner Home does not call KDS live endpoints, mount KDS hooks, or create KDS polling/WebSocket subscriptions.
 
 Phase 3 still does not implement Platform Admin, SaaS billing/subscription, Display Rules / Print Rules, or organization-level settings UI.
+
+## Cloud Ready PR8: Cloud Deployment Architecture Package
+
+PR8 adds a template-only cloud deployment package under `deployment/cloud/`. It does not connect to any server, deploy any image, change runtime business behavior, or introduce production secrets.
+
+Package contents:
+
+- `README_CLOUD_DEPLOYMENT.md`: cloud architecture, environment setup, safety guards, printing boundary, and smoke test checklist.
+- `README_ROLLBACK.md`: application rollback, database restore, Flyway rollback cautions, and printing stabilization notes.
+- `.env.example`: blank deployment placeholders only; the filled `.env` must stay outside git.
+- `docker-compose.yml`: backend, frontend/Nginx, and optional local PostgreSQL profile for rehearsal.
+- `nginx.conf.example`: static frontend serving plus `/api` and `/ws` reverse proxy examples.
+- `application-cloud.yml.example`: documentation-only environment mapping for the cloud profile.
+- `deploy.sh`, `backup-db.sh`, `restore-db.sh`, `health-check.sh`: local templates for compose validation/start, database backup/restore, and reachability checks.
+
+Important boundaries:
+
+- Windows pilot deployment remains separate under `deployment/windows-pilot/`.
+- Cloud deployment should use `spring.profiles.active=cloud`, Flyway, production safety guards, and RuntimeDataSeeder cloud-safe settings.
+- Cloud deployment must not rely on development default accounts; the production owner/bootstrap runbook remains future work.
+- Cloud servers must not directly connect to private LAN printers. Use `MOCK`, `DISABLED`, `PAD_DIRECT`, or a local print bridge for real store printing.
+- `HOT_KITCHEN` remains a printing module, but physical printer transport follows the same cloud printing boundary.
+
+PR8 intentionally does not modify backend business code, frontend app code, database migrations, Android code, payment/refund behavior, `completeOrder`, or printing route semantics.
