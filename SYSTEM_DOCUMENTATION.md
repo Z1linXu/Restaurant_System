@@ -5550,3 +5550,24 @@ Important boundaries:
 - `HOT_KITCHEN` remains a printing module, but physical printer transport follows the same cloud printing boundary.
 
 PR8 intentionally does not modify backend business code, frontend app code, database migrations, Android code, payment/refund behavior, `completeOrder`, or printing route semantics.
+
+## Cloud Ready PR9-10: Production Bootstrap Runbook And Final Smoke Checklist
+
+PR9-10 adds documentation-only cloud launch preparation under `deployment/cloud/`.
+
+New documents:
+
+- `README_PRODUCTION_BOOTSTRAP.md`: safe manual runbook for first cloud organization, store, owner, memberships, menu/table/printer setup, and rollback notes.
+- `FINAL_SMOKE_TEST_CHECKLIST.md`: copy-paste checklist covering pre-deploy, cloud environment, backend startup, frontend, bootstrap, POS, printing, KDS-disabled mode, admin pages, backup/restore, long-running pilot, no-go conditions, accepted pilot limitations, and monitoring.
+- `bootstrap-template.sql.example`: placeholder-only SQL skeleton for reviewed bootstrap rehearsal. It is not a production-ready script and must not contain plaintext passwords or real hashes.
+
+Important boundaries:
+
+- PR9-10 does not implement a production bootstrap CLI/API.
+- PR9-10 does not connect to a server, deploy anything, or write secrets.
+- Cloud bootstrap must not depend on local/demo default users or RuntimeDataSeeder demo data.
+- Owner credentials must be generated securely, stored as BCrypt hashes, and handed to the owner through an out-of-band secure process.
+- Menu, table, and printer setup should use reviewed import data or Owner Admin, not cloud demo seed.
+- Cloud print mode should start with `MOCK`, `DISABLED`, `PAD_DIRECT`, or a local bridge; cloud backend direct LAN printer transport remains blocked.
+
+PR9-10 intentionally does not modify backend runtime code, frontend runtime code, database migrations, Android code, payment/refund behavior, `completeOrder`, order lifecycle, printing routing, or Pad Direct worker behavior.

@@ -28,6 +28,9 @@ Recommended cloud shape:
 - `backup-db.sh`: custom-format PostgreSQL backup.
 - `restore-db.sh`: explicit-confirm restore helper.
 - `health-check.sh`: frontend and backend reachability checks.
+- `README_PRODUCTION_BOOTSTRAP.md`: safe first organization/store/owner bootstrap runbook.
+- `FINAL_SMOKE_TEST_CHECKLIST.md`: final pre-deploy and post-deploy pilot checklist.
+- `bootstrap-template.sql.example`: reviewed skeleton only, not a production-ready script.
 - `README_ROLLBACK.md`: rollback checklist.
 
 ## Environment Setup
@@ -95,8 +98,16 @@ If any guard fails, fix configuration rather than bypassing the guard.
 ## First Owner Bootstrap
 
 Cloud deployment must not rely on development default accounts. The production
-owner/bootstrap runbook is intentionally left for a later PR. Until that exists,
-prepare a controlled one-time bootstrap procedure before live use.
+owner/bootstrap runbook lives in `README_PRODUCTION_BOOTSTRAP.md`. It is still a
+manual operations runbook, not a runtime CLI/API implementation.
+
+Bootstrap rules:
+
+- Generate owner credentials securely.
+- Store only BCrypt hashes.
+- Rehearse against staging or a temporary database.
+- Do not re-enable demo seed flags.
+- Do not commit plaintext passwords or filled bootstrap scripts.
 
 ## Printing Boundary
 
@@ -131,6 +142,9 @@ cp .env.example .env
 ```
 
 ## Smoke Test Checklist
+
+Use `FINAL_SMOKE_TEST_CHECKLIST.md` as the copy-paste operational checklist.
+At minimum, validate:
 
 - Frontend loads over the configured domain.
 - `/api/v1/auth/me` returns either authenticated user data or HTTP 401.
