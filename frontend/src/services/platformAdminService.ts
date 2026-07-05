@@ -107,6 +107,11 @@ export async function fetchPlatformOverview(storeId: number) {
   return request<PlatformAdminOverview>(`/api/v1/admin/platform/overview?${params.toString()}`)
 }
 
+export async function fetchMenuManagementContext(storeId: number) {
+  const params = new URLSearchParams({ store_id: String(storeId) })
+  return request<PlatformAdminOverview>(`/api/v1/admin/menu/management-context?${params.toString()}`)
+}
+
 export async function fetchAdminMenuItems(storeId: number) {
   const params = new URLSearchParams({ store_id: String(storeId) })
   return request<MenuItemAdminRecord[]>(`/api/v1/admin/platform/menu/items?${params.toString()}`)

@@ -84,9 +84,41 @@ http://192.168.2.140:5173
 http://192.168.2.33:5173
 ```
 
-Long press inside the Pad app to open the runtime config dialog. Fill `Local Preview Web App URL` and leave `Bundled Assets API Base URL` empty for this mode.
+Long press inside the Pad app to open the Local Control Panel. Fill `Local Preview Web App URL` and leave `Bundled Assets API Base URL` empty for this mode.
 
 Before using the shell, open the same URL in Android Chrome. If Android Chrome cannot open it, the shell cannot open it either.
+
+## Local Control Panel
+
+The long-press panel is intentionally lightweight. It is a Web shortcut and local
+debug panel, not a native replacement for the Restaurant POS admin pages.
+
+It provides:
+
+- current WebView URL
+- configured Web App URL
+- current mode: Local Preview Mode or Bundled Assets Mode
+- troubleshooting reminders for LAN preview
+- Refresh Current Page
+- Open Frontdesk
+- Open Order Center
+- Open Print Center
+- Open Menu Management
+- Open Dining Tables
+- Test Web App URL
+
+Shortcut behavior:
+
+- If the current page URL includes `/stores/{storeId}/`, shortcuts open the
+  matching store-scoped Web route.
+- If no store id is available, shortcuts open legacy Web routes such as
+  `/frontdesk` or `/admin/settings/printing`; the Web app then redirects through
+  its normal store workspace logic.
+- The Android shell does not read WebView `localStorage`, reuse auth tokens, or
+  call backend printing/menu APIs directly.
+
+`Test Web App URL` performs a simple reachability check against the configured
+Web App URL only. It does not test backend auth or business APIs.
 
 ## Bundled Assets API Base Configuration
 
@@ -193,3 +225,4 @@ Common WebView / Android errors:
 - production device pairing / cloud config
 - real order print job polling from Android
 - automated physical printer QA
+- native Print Center or Menu Management screens

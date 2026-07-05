@@ -33,6 +33,7 @@ const OwnerDashboard = lazy(() => import('./pages/OwnerDashboard'))
 const PickupBoard = lazy(() => import('./pages/PickupBoard'))
 
 const ADMIN_ROLES: AppRole[] = ['OWNER', 'ADMIN', 'MANAGER']
+const STORE_TOOL_ROLES: AppRole[] = ['OWNER', 'ADMIN', 'MANAGER', 'FRONTDESK']
 const OWNER_ROLES: AppRole[] = ['OWNER', 'ADMIN']
 const FRONTDESK_ROLES: AppRole[] = ['OWNER', 'ADMIN', 'MANAGER', 'FRONTDESK']
 const HOT_KITCHEN_ROLES: AppRole[] = ['OWNER', 'ADMIN', 'MANAGER', 'HOT_KITCHEN']
@@ -209,11 +210,11 @@ function App() {
   }
 
   if (storeId && routePath.startsWith('/admin/menu/items')) {
-    return <AppShell>{storePage(storeId, ownerAdminPage(<AdminMenuItems />, 'Menu Management', 'Maintain menu items, pricing, cost, and options.'), ADMIN_ROLES)}</AppShell>
+    return <AppShell>{storePage(storeId, ownerAdminPage(<AdminMenuItems />, 'Menu Management', 'Maintain menu items, pricing, cost, and options.'), STORE_TOOL_ROLES)}</AppShell>
   }
 
   if (storeId && routePath.startsWith('/admin/settings/printing')) {
-    return <AppShell>{storePage(storeId, ownerAdminPage(<AdminPrintingSettings />, 'Printing Settings', 'Configure printers, assignments, test prints, and print jobs.'), ADMIN_ROLES)}</AppShell>
+    return <AppShell>{storePage(storeId, ownerAdminPage(<AdminPrintingSettings />, 'Printing Settings', 'Configure printers, assignments, test prints, and print jobs.'), STORE_TOOL_ROLES)}</AppShell>
   }
 
   if (storeId && routePath.startsWith('/admin/reports/sales')) {

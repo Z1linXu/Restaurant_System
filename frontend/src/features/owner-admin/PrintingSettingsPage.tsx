@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { isFeatureEnabled } from '../feature-flags/featureConfig'
 import { fetchPlatformOverview, type PlatformAdminOverview } from '../../services/platformAdminService'
 import { useCurrentStore } from '../store/StoreContext'
+import { ApiRequestError } from '../../services/apiClient'
 import {
   deletePrinterConfig,
   fetchPrintJobs,
@@ -66,6 +67,22 @@ const PRINTING_MODE_OPTIONS: Array<{ value: PrintingMode; label: string; descrip
 
 function asString(value: unknown, fallback = '') {
   return typeof value === 'string' ? value : fallback
+}
+
+function buildStoreOnlyOverview(storeId: number, storeName: string): PlatformAdminOverview {
+  return {
+    organizations: [],
+    templates: [],
+    stores: [{ id: storeId, name: storeName }],
+    roles: [],
+    users: [],
+    stations: [],
+    dining_tables: [],
+    menu_categories: [],
+    menu_items: [],
+    menu_item_options: [],
+    kds_display_configs: [],
+  }
 }
 
 function defaultPrinter(storeId: number): PrinterEditorState {
@@ -147,7 +164,8 @@ function printJobOperatorMessage(job: PrintJobRecord) {
 }
 
 export function PrintingSettingsPage() {
-  const { storeId } = useCurrentStore()
+  const currentStore = useCurrentStore()
+  const { storeId } = currentStore
   const [overview, setOverview] = useState<PlatformAdminOverview | null>(null)
   const [printCenter, setPrintCenter] = useState<PrintCenterOverview | null>(null)
   const [selectedStoreId, setSelectedStoreId] = useState(String(storeId))
@@ -173,8 +191,18 @@ export function PrintingSettingsPage() {
     setJobsError(null)
     setDevicesError(null)
     try {
+      const loadPlatformOverview = async () => {
+        try {
+          return await fetchPlatformOverview(storeId)
+        } catch (overviewError) {
+          if (overviewError instanceof ApiRequestError && overviewError.status === 403) {
+            return buildStoreOnlyOverview(storeId, currentStore.storeName)
+          }
+          throw overviewError
+        }
+      }
       const [platformOverview, printOverview] = await Promise.all([
-        fetchPlatformOverview(storeId),
+        loadPlatformOverview(),
         fetchPrintCenterOverview(storeId),
       ])
       setOverview(platformOverview)

@@ -59,7 +59,50 @@ http://{developer-lan-ip}:8080
 
 Do not hardcode a real developer IP in source code. The shell stores both Web App URL and API Base URL in Android `SharedPreferences`.
 
-Long press inside the Pad app to reopen the runtime config dialog.
+Long press inside the Pad app to open the Local Control Panel. The panel keeps
+the runtime config fields and also provides Web shortcut buttons for common
+Restaurant POS pages.
+
+## Local Control Panel Shortcuts
+
+The Local Control Panel is a thin Android shell helper. It does not reimplement
+owner/admin pages, does not read WebView tokens, and does not call backend
+business APIs directly.
+
+The panel shows:
+
+- current WebView URL
+- configured Web App URL
+- current loading mode: Local Preview Mode or Bundled Assets Mode
+- local troubleshooting notes
+
+Shortcut buttons:
+
+- Refresh Current Page
+- Open Frontdesk
+- Open Order Center
+- Open Print Center
+- Open Menu Management
+- Open Dining Tables
+- Test Web App URL
+
+When the current WebView URL contains `/stores/{storeId}/`, shortcuts use the
+store-scoped routes:
+
+```text
+/stores/{storeId}/frontdesk
+/stores/{storeId}/frontdesk/order
+/stores/{storeId}/admin/settings/printing
+/stores/{storeId}/admin/menu/items
+/stores/{storeId}/admin/settings/tables
+```
+
+If no store id can be parsed, shortcuts use legacy routes such as `/frontdesk`
+or `/admin/settings/printing`. The Web frontend is responsible for redirecting
+those routes to the correct store workspace after normal auth/store checks.
+
+`Test Web App URL` only checks whether the configured Web App URL is reachable.
+It does not test backend APIs and does not use the logged-in Web session.
 
 ## Production Placeholder
 

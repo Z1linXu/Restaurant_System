@@ -5598,3 +5598,84 @@ Printing display behavior:
   - `-B` -> `-右`
 - `GRAB`, `FRONTDESK_RECEIPT`, and `HOT_KITCHEN` renderers share the same backend display formatter for table labels.
 - Pickup/takeout labels are not transformed by the split-table formatter.
+
+## PR11B: Android App Web Shortcut Control Panel
+
+PR11B adds a lightweight Android shell Local Control Panel. It is a Web shortcut
+and local debugging panel only. It does not implement Pad Direct, native
+ESC/POS printing, native Print Center, native Menu Management, payment/refund
+behavior, `completeOrder`, backend APIs, frontend POS runtime logic, database
+migrations, or cloud deployment changes.
+
+Control Panel behavior:
+
+- Long press inside the Android Pad App opens the Local Control Panel.
+- The panel preserves Local Preview Web App URL and Bundled Assets API Base URL
+  configuration.
+- The panel displays current WebView URL, configured Web App URL, and current
+  mode (`Local Preview Mode` or `Bundled Assets Mode`).
+- The panel provides shortcuts for Frontdesk, Order Center, Print Center, Menu
+  Management, Dining Tables, page refresh, and Web App URL reachability testing.
+- If the current URL contains `/stores/{storeId}/`, shortcuts use
+  store-scoped routes. If no store id is available, shortcuts use legacy routes
+  such as `/frontdesk` or `/admin/settings/printing`; the Web frontend handles
+  redirecting those routes through normal auth/store access checks.
+- Android native code does not read WebView localStorage, reuse bearer tokens,
+  or call backend printing/menu/order APIs directly.
+- `Test Web App URL` only checks the configured Web App URL reachability and
+  does not test backend business APIs.
+
+## PR11C: Frontdesk User Menu And Staff Store Tools Access
+
+PR11C adds a Web frontdesk user menu for Android Pad and browser workflows. It
+does not add Android native pages, Pad Direct, native ESC/POS printing,
+payment/refund behavior, `completeOrder` changes, order lifecycle changes,
+database migrations, or print routing changes.
+
+Frontdesk user menu behavior:
+
+- The round chef icon in the frontdesk top-left area is a touch-friendly user
+  menu button.
+- The menu shows the current user, current role, Printing, Menu Management, and
+  Logout.
+- Printing opens the current store workspace route:
+  `/stores/{storeId}/admin/settings/printing` when a store context exists, or
+  legacy `/admin/settings/printing` otherwise.
+- Menu Management opens `/stores/{storeId}/admin/menu/items` when a store
+  context exists, or legacy `/admin/menu/items` otherwise.
+- Logout uses the normal Web auth logout flow, clears tokens/auth state, and
+  returns to `/login`.
+
+Authorization policy:
+
+- This restaurant configuration intentionally allows `FRONTDESK` staff to
+  access store-scoped Print Center and Menu Management.
+- `FRONTDESK` receives `admin:menu_manage` and `admin:printing_manage`.
+- `FRONTDESK` does not receive `admin:store_config`,
+  `admin:user_role_manage`, or `admin:history_limit`.
+- Staff Management, Audit Logs, Platform Admin, Owner Home, and other owner
+  admin routes remain blocked for `FRONTDESK`.
+- Store scope remains enforced by backend `StoreAccessService`; URL store ids
+  are not trusted as authorization.
+
+Owner Admin shell behavior:
+
+- When `FRONTDESK` enters allowed admin tools, the shell only exposes Menu
+  Management, Printing Settings, and Sign out.
+- Owner, Admin, and Manager navigation remains unchanged.
+
+PR11C hotfix notes:
+
+- The frontdesk user menu and logout confirmation render in a fixed portal layer
+  so table cards and table board stacking contexts cannot cover them.
+- Logout requires explicit confirmation with touch-friendly Cancel and Logout
+  actions.
+- `FRONTDESK` Store Tools uses a lightweight top toolbar instead of the full
+  owner sidebar to keep Printing Settings and Menu Management usable on Android
+  Pad landscape screens.
+- Store Tools exposes a `返回前台` shortcut back to
+  `/stores/{storeId}/frontdesk` when a store context exists, or `/frontdesk`
+  otherwise.
+- Printing Settings falls back to current store context when `FRONTDESK` cannot
+  load platform overview data; this does not grant Platform Admin, Staff, or
+  Audit access.

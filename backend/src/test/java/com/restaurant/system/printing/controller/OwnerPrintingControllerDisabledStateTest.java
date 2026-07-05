@@ -68,7 +68,7 @@ class OwnerPrintingControllerDisabledStateTest {
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
         objectMapper = new ObjectMapper();
-        when(authorizationService.requireForStore(eq(1L), any(Capability.class))).thenReturn(
+        when(authorizationService.requireForStore(eq(1L), any(Capability[].class))).thenReturn(
             new AuthenticatedUser(2L, 1L, 1L, "owner", "Owner", "ADMIN")
         );
     }
