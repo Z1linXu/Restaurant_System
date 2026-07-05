@@ -129,6 +129,90 @@ The printer IP, port, and timeout are stored in Android `SharedPreferences`
 using local test keys only. The shell does not store device tokens, backend
 secrets, or WebView bearer tokens for this feature.
 
+## Pad Direct Device Pairing
+
+Pad Direct pairing is started from the Web Print Center, not from a native
+replacement settings page.
+
+Recommended local flow:
+
+1. Open the Android Pad App.
+2. Use the Local Control Panel shortcut `Open Print Center`.
+3. Log in to the Web app normally.
+4. In Print Center, use `配对本机 Pad`.
+5. The Web page calls the backend device registration API with the normal Web
+   bearer token and store-scoped permissions.
+6. The backend returns the raw `device_token` once.
+7. The Web page immediately calls `window.RestaurantPadDevice.saveDeviceCredentials(...)`.
+8. Android stores `device_id`, `device_token`, `store_id`, device name, and
+   registration metadata locally.
+
+The Web page does not persist the raw device token. The Android native layer
+does not read WebView `localStorage` or reuse the Web bearer token.
+
+The Local Control Panel shows pairing status:
+
+- 未配对 / 已配对
+- Device ID
+- Store ID
+- Device name
+- Registered at
+- Token last 4 characters only
+
+Use `Clear Pairing / 清除配对` only when replacing or resetting the Pad. Clearing
+pairing removes the local device credentials and requires pairing again before a
+future Pad Direct worker can claim print jobs.
+
+Current storage is Android `SharedPreferences` for local pilot testing. Before
+production Pad Direct worker rollout, move device token storage to
+`EncryptedSharedPreferences` or Android Keystore-backed storage.
+
+This pairing step still does not enable automatic printing. Pending jobs,
+claim, payload fetch, complete/fail/release, lease renewal, and background worker
+behavior remain later PRs.
+
+## Pad Direct Pending Jobs Viewer
+
+After pairing, the Local Control Panel can manually refresh `PAD_DIRECT` pending
+print jobs.
+
+API route used by the Android shell:
+
+```text
+GET /api/v1/stores/{storeId}/printing/jobs/pending?limit=25
+X-Device-Id: {saved device id}
+X-Device-Token: {saved device token}
+```
+
+Local Preview mode uses the configured Web App URL origin:
+
+```text
+http://{developer-lan-ip}:5173/api/v1/stores/{storeId}/printing/jobs/pending
+```
+
+Vite preview proxies `/api` to the backend on the development computer. This
+keeps Android native code from needing to know the backend `8080` port during
+local preview testing.
+
+Bundled Assets mode falls back to the configured API Base URL origin.
+
+The viewer is read-only. It does not claim jobs, fetch payloads, print,
+complete/fail/release jobs, poll in the background, or start a worker.
+
+Expected setup for manual testing:
+
+1. Pair this Android Pad from Web Print Center.
+2. Set store printing mode to `PAD_DIRECT`.
+3. Submit an order from the Web POS.
+4. Confirm Print Center shows `PENDING` jobs.
+5. Open Local Control Panel and tap `Refresh Pending Print Jobs / 刷新待打印任务`.
+
+Common viewer errors:
+
+- `设备认证失败，请重新配对`: the saved device id/token is missing, inactive, or invalid.
+- `无法连接后端`: Web App URL, Wi-Fi, `preview:lan`, backend, or firewall is not reachable.
+- `暂无待打印任务`: no `PAD_DIRECT` pending jobs are available for this store/device.
+
 ## Production Placeholder
 
 Example:

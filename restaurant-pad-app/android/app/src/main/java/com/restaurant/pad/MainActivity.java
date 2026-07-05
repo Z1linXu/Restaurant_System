@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.view.ViewGroup;
 import android.util.Base64;
 import android.webkit.WebChromeClient;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -24,13 +25,18 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.webkit.WebViewAssetLoader;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.BufferedReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class MainActivity extends Activity {
@@ -42,6 +48,13 @@ public class MainActivity extends Activity {
     private static final String KEY_PRINTER_TEST_IP = "printer_test_ip";
     private static final String KEY_PRINTER_TEST_PORT = "printer_test_port";
     private static final String KEY_PRINTER_TEST_TIMEOUT_MS = "printer_test_timeout_ms";
+    private static final String KEY_DEVICE_ID = "pad_direct_device_id";
+    private static final String KEY_DEVICE_TOKEN = "pad_direct_device_token";
+    private static final String KEY_DEVICE_STORE_ID = "pad_direct_store_id";
+    private static final String KEY_DEVICE_NAME = "pad_direct_device_name";
+    private static final String KEY_DEVICE_REGISTERED_AT = "pad_direct_registered_at";
+    private static final String KEY_DEVICE_APP_VERSION = "pad_direct_app_version";
+    private static final String KEY_DEVICE_PLATFORM = "pad_direct_platform";
     private static final int DEFAULT_PRINTER_TEST_PORT = 9100;
     private static final int DEFAULT_PRINTER_TEST_TIMEOUT_MS = 3000;
 
@@ -82,6 +95,7 @@ public class MainActivity extends Activity {
         }
         printerPluginBridge = new PrinterPluginBridge();
         webView.addJavascriptInterface(printerPluginBridge, "RestaurantPrinter");
+        webView.addJavascriptInterface(new PadDeviceBridge(), "RestaurantPadDevice");
 
         WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
             .setDomain(APP_HOST)
@@ -170,6 +184,7 @@ public class MainActivity extends Activity {
         addSectionText(layout, "Current WebView URL", currentWebViewUrl());
         addSectionText(layout, "Configured Web App URL", getWebAppUrl().isBlank() ? "(empty)" : getWebAppUrl());
         addSectionText(layout, "Mode", getWebAppUrl().isBlank() ? "Bundled Assets Mode" : "Local Preview Mode");
+        addSectionText(layout, "Pad Direct Pairing", deviceStatusText());
         addSectionText(layout, "Troubleshooting",
             "Android localhost is the Android device, not your computer.\n" +
             "Android and the computer must be on the same Wi-Fi.\n" +
@@ -196,6 +211,28 @@ public class MainActivity extends Activity {
         layout.addView(webUrlInput);
         layout.addView(apiBaseLabel);
         layout.addView(apiBaseInput);
+
+        TextView pendingHeading = new TextView(this);
+        pendingHeading.setText("PAD_DIRECT Pending Print Jobs / 待打印任务");
+        pendingHeading.setTextSize(16);
+        pendingHeading.setPadding(0, padding, 0, 4);
+        layout.addView(pendingHeading);
+
+        TextView pendingNote = new TextView(this);
+        pendingNote.setText("Read-only viewer. This does not claim, fetch payload, print, complete, fail, release, or start a worker.");
+        layout.addView(pendingNote);
+
+        TextView pendingResult = new TextView(this);
+        pendingResult.setText(isDevicePaired()
+            ? "点击刷新待打印任务。需要门店打印模式为 PAD_DIRECT。"
+            : "请先在 Web 打印中心配对本机 Pad。");
+        pendingResult.setTextIsSelectable(true);
+        pendingResult.setPadding(0, 8, 0, 8);
+        layout.addView(pendingResult);
+
+        Button refreshPendingJobsButton = addPanelButton(layout, "Refresh Pending Print Jobs / 刷新待打印任务", () -> {});
+        refreshPendingJobsButton.setEnabled(isDevicePaired());
+        refreshPendingJobsButton.setOnClickListener(view -> refreshPendingPrintJobs(pendingResult, refreshPendingJobsButton));
 
         TextView printerHeading = new TextView(this);
         printerHeading.setText("Local Printer Test / 本地打印机测试");
@@ -277,6 +314,7 @@ public class MainActivity extends Activity {
         addShortcutButton(layout, "Open Menu Management", "/admin/menu/items", "/admin/menu/items", dialogRef);
         addShortcutButton(layout, "Open Dining Tables", "/admin/settings/tables", "/admin/settings/tables", dialogRef);
         addPanelButton(layout, "Test Web App URL", () -> testWebAppUrl(webUrlInput.getText().toString().trim()));
+        addPanelButton(layout, "Clear Pairing / 清除配对", () -> confirmClearPairing(dialogRef));
 
         AlertDialog dialog = new AlertDialog.Builder(this)
             .setTitle("Restaurant Pad Local Control Panel")
@@ -341,6 +379,45 @@ public class MainActivity extends Activity {
     private String currentWebViewUrl() {
         String current = webView == null ? "" : webView.getUrl();
         return current == null || current.isBlank() ? "(not loaded yet)" : current;
+    }
+
+    private String deviceStatusText() {
+        String deviceId = preferences.getString(KEY_DEVICE_ID, "");
+        if (deviceId == null || deviceId.isBlank()) {
+            return "未配对。请在 Web 打印中心点击“配对本机 Pad”。";
+        }
+        String storeId = preferences.getString(KEY_DEVICE_STORE_ID, "");
+        String deviceName = preferences.getString(KEY_DEVICE_NAME, "");
+        String registeredAt = preferences.getString(KEY_DEVICE_REGISTERED_AT, "");
+        String tokenLast4 = tokenLast4(preferences.getString(KEY_DEVICE_TOKEN, ""));
+        return "已配对"
+            + "\nDevice ID: " + deviceId
+            + "\nStore ID: " + (storeId == null || storeId.isBlank() ? "-" : storeId)
+            + "\nDevice name: " + (deviceName == null || deviceName.isBlank() ? "-" : deviceName)
+            + "\nRegistered at: " + (registeredAt == null || registeredAt.isBlank() ? "-" : registeredAt)
+            + "\nToken: " + (tokenLast4.isBlank() ? "已保存" : "****" + tokenLast4);
+    }
+
+    private boolean isDevicePaired() {
+        String deviceId = preferences.getString(KEY_DEVICE_ID, "");
+        String deviceToken = preferences.getString(KEY_DEVICE_TOKEN, "");
+        String storeId = preferences.getString(KEY_DEVICE_STORE_ID, "");
+        return deviceId != null && !deviceId.isBlank()
+            && deviceToken != null && !deviceToken.isBlank()
+            && storeId != null && !storeId.isBlank();
+    }
+
+    private void confirmClearPairing(AlertDialog[] dialogRef) {
+        new AlertDialog.Builder(this)
+            .setTitle("清除配对")
+            .setMessage("确定要清除本机 Pad Direct device credentials 吗？清除后需要重新配对才能领取打印任务。")
+            .setNegativeButton("取消", null)
+            .setPositiveButton("清除", (ignored, which) -> {
+                clearDeviceCredentials();
+                Toast.makeText(this, "本机配对已清除。", Toast.LENGTH_LONG).show();
+                dismissDialog(dialogRef);
+            })
+            .show();
     }
 
     private String buildShortcutUrl(String storeScopedPath, String legacyPath) {
@@ -429,8 +506,155 @@ public class MainActivity extends Activity {
                 .setTitle("Web App URL Test")
                 .setMessage(finalMessage)
                 .setPositiveButton("OK", null)
-                .show());
+            .show());
         }).start();
+    }
+
+    private void refreshPendingPrintJobs(TextView resultView, Button refreshButton) {
+        String deviceId = preferences.getString(KEY_DEVICE_ID, "");
+        String deviceToken = preferences.getString(KEY_DEVICE_TOKEN, "");
+        String storeId = preferences.getString(KEY_DEVICE_STORE_ID, "");
+        if (deviceId == null || deviceId.isBlank() || deviceToken == null || deviceToken.isBlank() || storeId == null || storeId.isBlank()) {
+            resultView.setText("请先配对本机 Pad。");
+            return;
+        }
+        String apiBase = pendingJobsApiBaseOrigin();
+        if (apiBase.isBlank()) {
+            resultView.setText("无法推导后端 API 地址。Local Preview 请设置 Web App URL；Bundled Assets 请设置 API Base URL。");
+            return;
+        }
+
+        refreshButton.setEnabled(false);
+        resultView.setText("正在刷新待打印任务...");
+        new Thread(() -> {
+            String message;
+            HttpURLConnection connection = null;
+            try {
+                URL url = new URL(trimTrailingSlash(apiBase) + "/api/v1/stores/" + storeId + "/printing/jobs/pending?limit=25");
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(5000);
+                connection.setReadTimeout(8000);
+                connection.setRequestProperty("Accept", "application/json");
+                connection.setRequestProperty("X-Device-Id", deviceId);
+                connection.setRequestProperty("X-Device-Token", deviceToken);
+                int status = connection.getResponseCode();
+                String body = readConnectionBody(connection, status);
+                if (status == 401 || status == 403) {
+                    message = "设备认证失败，请重新配对。\nHTTP " + status;
+                } else if (status < 200 || status >= 300) {
+                    message = "待打印任务加载失败。\nHTTP " + status + "\n" + body;
+                } else {
+                    message = formatPendingJobs(body);
+                }
+            } catch (Exception exception) {
+                message = "无法连接后端，请检查 Web App URL / WiFi / preview:lan / backend。\n技术信息: "
+                    + exception.getClass().getSimpleName() + " - " + exception.getMessage();
+            } finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
+            }
+            String finalMessage = message;
+            runOnUiThread(() -> {
+                resultView.setText(finalMessage);
+                refreshButton.setEnabled(isDevicePaired());
+            });
+        }).start();
+    }
+
+    private String pendingJobsApiBaseOrigin() {
+        String webAppUrl = getWebAppUrl();
+        if (!webAppUrl.isBlank()) {
+            String origin = originOf(webAppUrl);
+            if (!origin.isBlank()) {
+                return origin;
+            }
+        }
+        String apiBaseUrl = getApiBaseUrl();
+        if (!apiBaseUrl.isBlank()) {
+            String origin = originOf(apiBaseUrl);
+            if (!origin.isBlank()) {
+                return origin;
+            }
+        }
+        String currentOrigin = originOf(webView == null ? null : webView.getUrl());
+        return currentOrigin.contains(APP_HOST) ? "" : currentOrigin;
+    }
+
+    private String readConnectionBody(HttpURLConnection connection, int status) throws Exception {
+        InputStream stream = status >= 200 && status < 300 ? connection.getInputStream() : connection.getErrorStream();
+        if (stream == null) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                builder.append(line);
+                builder.append('\n');
+            }
+        }
+        return builder.toString().trim();
+    }
+
+    private String formatPendingJobs(String body) throws Exception {
+        JSONObject response = new JSONObject(body);
+        if (!response.optBoolean("success", false)) {
+            return response.optString("message", "待打印任务加载失败。");
+        }
+        JSONArray jobs = response.optJSONArray("data");
+        if (jobs == null || jobs.length() == 0) {
+            return "暂无待打印任务。";
+        }
+        StringBuilder builder = new StringBuilder();
+        builder.append("待打印任务 ").append(jobs.length()).append(" 个\n");
+        for (int index = 0; index < jobs.length(); index++) {
+            JSONObject job = jobs.getJSONObject(index);
+            builder.append('\n');
+            builder.append('#').append(job.optString("id", "-"));
+            builder.append(" | ").append(job.optString("module_code", "-"));
+            builder.append(" | ").append(job.optString("status", "-"));
+            builder.append('\n');
+            builder.append("Order: ").append(job.optString("order_id", "-"));
+            String createdAt = job.optString("created_at", "");
+            if (!createdAt.isBlank()) {
+                builder.append(" | Created: ").append(createdAt);
+            }
+            builder.append('\n');
+            String endpoint = job.optString("printer_endpoint", "");
+            if (!endpoint.isBlank()) {
+                builder.append("Printer: ").append(endpoint).append('\n');
+            }
+            String claimedBy = job.optString("claimed_by_device_id", "");
+            if (!claimedBy.isBlank() && !"null".equalsIgnoreCase(claimedBy)) {
+                builder.append("Claimed by device: ").append(claimedBy);
+                String expiresAt = job.optString("claim_expires_at", "");
+                if (!expiresAt.isBlank()) {
+                    builder.append(" until ").append(expiresAt);
+                }
+                builder.append('\n');
+            }
+            String operatorMessage = job.optString("operator_message", "");
+            String errorMessage = job.optString("error_message", "");
+            if (!operatorMessage.isBlank() && !"null".equalsIgnoreCase(operatorMessage)) {
+                builder.append("Message: ").append(operatorMessage).append('\n');
+            } else if (!errorMessage.isBlank() && !"null".equalsIgnoreCase(errorMessage)) {
+                builder.append("Message: ").append(errorMessage).append('\n');
+            }
+        }
+        return builder.toString().trim();
+    }
+
+    private String trimTrailingSlash(String value) {
+        if (value == null) {
+            return "";
+        }
+        String trimmed = value.trim();
+        while (trimmed.endsWith("/")) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        return trimmed;
     }
 
     private String getPrinterTestIp() {
@@ -582,6 +806,121 @@ public class MainActivity extends Activity {
     private void writePrinterLine(ByteArrayOutputStream outputStream, String line, Charset charset) throws Exception {
         outputStream.write(line.getBytes(charset));
         outputStream.write('\n');
+    }
+
+    private void clearDeviceCredentials() {
+        preferences.edit()
+            .remove(KEY_DEVICE_ID)
+            .remove(KEY_DEVICE_TOKEN)
+            .remove(KEY_DEVICE_STORE_ID)
+            .remove(KEY_DEVICE_NAME)
+            .remove(KEY_DEVICE_REGISTERED_AT)
+            .remove(KEY_DEVICE_APP_VERSION)
+            .remove(KEY_DEVICE_PLATFORM)
+            .apply();
+    }
+
+    private String tokenLast4(String token) {
+        if (token == null || token.isBlank()) {
+            return "";
+        }
+        return token.length() <= 4 ? token : token.substring(token.length() - 4);
+    }
+
+    private String nowTimestamp() {
+        return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date());
+    }
+
+    private String jsonSuccess(JSONObject extra) {
+        try {
+            JSONObject response = extra == null ? new JSONObject() : extra;
+            response.put("success", true);
+            return response.toString();
+        } catch (Exception ignored) {
+            return "{\"success\":true}";
+        }
+    }
+
+    private String jsonFailure(String message) {
+        try {
+            JSONObject response = new JSONObject();
+            response.put("success", false);
+            response.put("message", message);
+            return response.toString();
+        } catch (Exception ignored) {
+            return "{\"success\":false,\"message\":\"Unknown error\"}";
+        }
+    }
+
+    private class PadDeviceBridge {
+        @JavascriptInterface
+        public String saveDeviceCredentials(String json) {
+            try {
+                JSONObject request = new JSONObject(json == null ? "{}" : json);
+                String deviceId = request.optString("device_id", "").trim();
+                String deviceToken = request.optString("device_token", "").trim();
+                String storeId = request.optString("store_id", "").trim();
+                if (deviceId.isEmpty() || deviceToken.isEmpty() || storeId.isEmpty()) {
+                    return jsonFailure("device_id, store_id, and device_token are required");
+                }
+                // Local pilot storage only. Move this token to EncryptedSharedPreferences
+                // or Android Keystore before production Pad Direct worker rollout.
+                preferences.edit()
+                    .putString(KEY_DEVICE_ID, deviceId)
+                    .putString(KEY_DEVICE_TOKEN, deviceToken)
+                    .putString(KEY_DEVICE_STORE_ID, storeId)
+                    .putString(KEY_DEVICE_NAME, request.optString("device_name", "Restaurant Pad"))
+                    .putString(KEY_DEVICE_REGISTERED_AT, request.optString("registered_at", nowTimestamp()))
+                    .putString(KEY_DEVICE_APP_VERSION, request.optString("app_version", "unknown"))
+                    .putString(KEY_DEVICE_PLATFORM, request.optString("platform", "ANDROID"))
+                    .apply();
+                JSONObject response = new JSONObject();
+                response.put("message", "Device credentials saved");
+                response.put("device_id", deviceId);
+                response.put("store_id", storeId);
+                response.put("token_last4", tokenLast4(deviceToken));
+                return jsonSuccess(response);
+            } catch (Exception exception) {
+                return jsonFailure(exception.getMessage() == null ? "Failed to save device credentials" : exception.getMessage());
+            }
+        }
+
+        @JavascriptInterface
+        public String getDeviceStatus() {
+            try {
+                JSONObject response = new JSONObject();
+                String deviceId = preferences.getString(KEY_DEVICE_ID, "");
+                String deviceToken = preferences.getString(KEY_DEVICE_TOKEN, "");
+                response.put("success", true);
+                response.put("paired", deviceId != null && !deviceId.isBlank() && deviceToken != null && !deviceToken.isBlank());
+                response.put("device_id", blankToJsonNull(deviceId));
+                response.put("store_id", blankToJsonNull(preferences.getString(KEY_DEVICE_STORE_ID, "")));
+                response.put("device_name", blankToJsonNull(preferences.getString(KEY_DEVICE_NAME, "")));
+                response.put("registered_at", blankToJsonNull(preferences.getString(KEY_DEVICE_REGISTERED_AT, "")));
+                response.put("app_version", blankToJsonNull(preferences.getString(KEY_DEVICE_APP_VERSION, "unknown")));
+                response.put("platform", blankToJsonNull(preferences.getString(KEY_DEVICE_PLATFORM, "ANDROID")));
+                response.put("token_last4", tokenLast4(deviceToken));
+                return response.toString();
+            } catch (Exception exception) {
+                return jsonFailure(exception.getMessage() == null ? "Failed to read device status" : exception.getMessage());
+            }
+        }
+
+        @JavascriptInterface
+        public String clearDeviceCredentials() {
+            MainActivity.this.clearDeviceCredentials();
+            try {
+                JSONObject response = new JSONObject();
+                response.put("message", "Device credentials cleared");
+                return jsonSuccess(response);
+            } catch (Exception ignored) {
+                return "{\"success\":true,\"message\":\"Device credentials cleared\"}";
+            }
+        }
+
+        private Object blankToJsonNull(String value) {
+            return value == null || value.isBlank() ? JSONObject.NULL : value;
+        }
     }
 
     @Override

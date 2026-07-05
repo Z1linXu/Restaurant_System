@@ -98,6 +98,7 @@ It provides:
 - current WebView URL
 - configured Web App URL
 - current mode: Local Preview Mode or Bundled Assets Mode
+- Pad Direct pairing status
 - troubleshooting reminders for LAN preview
 - Refresh Current Page
 - Open Frontdesk
@@ -109,6 +110,8 @@ It provides:
 - Local Printer Test fields
 - Test Printer Connection
 - Test Print
+- Clear Pairing / 清除配对
+- Refresh Pending Print Jobs / 刷新待打印任务
 
 Shortcut behavior:
 
@@ -126,6 +129,84 @@ Web App URL only. It does not test backend auth or business APIs.
 `Local Printer Test` performs direct Android-to-printer TCP checks. It does not
 use WebView login state, does not call backend APIs, and does not claim
 `PAD_DIRECT` jobs.
+
+## Pad Direct Device Pairing
+
+Use Web Print Center as the pairing UI. The Android shell only provides the
+native bridge and local credential storage.
+
+Recommended local pairing sequence:
+
+1. Run backend and frontend preview as usual.
+2. Open the Android Pad App in Local Preview mode.
+3. Log in with a user that can access this store's Print Center.
+4. Long press and tap `Open Print Center`, or navigate to the Web Print Center.
+5. In the Pad Direct devices section, tap `配对本机 Pad`.
+6. Confirm the Android Local Control Panel now shows `已配对`, Device ID, Store
+   ID, device name, registration time, and token last four characters.
+7. Restart the app and confirm the pairing status persists.
+
+The registration API uses the Web session and normal store-scoped authorization.
+The Android native layer does not read WebView `localStorage`, does not keep the
+Web bearer token, and does not call the register API directly.
+
+Security notes:
+
+- The raw `device_token` is returned by the backend only during registration.
+- The Web page immediately passes the token to the Android JS bridge and does
+  not store it in browser storage.
+- The Android shell currently stores the token in `SharedPreferences` for local
+  pilot testing.
+- Before production background printing, migrate token storage to
+  `EncryptedSharedPreferences` or Android Keystore-backed storage.
+- `Clear Pairing / 清除配对` requires confirmation because it removes the local
+  device credentials.
+
+This step still does not implement pending job polling, claim, payload fetch,
+native order printing, complete/fail/release, retry, or a background worker.
+
+## Pad Direct Pending Jobs Viewer
+
+The Local Control Panel includes a manual, read-only pending jobs viewer after
+the Android Pad is paired.
+
+Use it like this:
+
+1. Pair the Pad from Web Print Center.
+2. In Web Print Center, set the store printing mode to `PAD_DIRECT`.
+3. Submit an order.
+4. Confirm Web Print Center shows `PENDING` print jobs.
+5. Long press in the Android app.
+6. Tap `Refresh Pending Print Jobs / 刷新待打印任务`.
+
+The Android shell authenticates this request with the saved device credentials:
+
+```text
+X-Device-Id
+X-Device-Token
+```
+
+It does not use the Web bearer token and does not read WebView `localStorage`.
+
+In Local Preview mode, the Android native request goes to:
+
+```text
+http://{developer-lan-ip}:5173/api/v1/stores/{storeId}/printing/jobs/pending?limit=25
+```
+
+`npm run preview:lan` proxies `/api` to the backend on `localhost:8080`.
+
+In Bundled Assets mode, the viewer uses the configured API Base URL origin.
+
+This viewer does not:
+
+- auto poll
+- open WebSocket connections
+- claim jobs
+- fetch ESC/POS payloads
+- print
+- complete/fail/release
+- implement a worker
 
 ## Bundled Assets API Base Configuration
 
@@ -248,7 +329,8 @@ Common WebView / Android errors:
 ## Not Yet Available
 
 - production background print worker inside Android
-- production device pairing / cloud config
+- production-grade encrypted device token storage
 - real order print job polling from Android
+- claim / payload / print / complete happy path
 - automated physical printer QA
 - native Print Center or Menu Management screens

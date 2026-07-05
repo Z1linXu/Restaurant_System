@@ -105,6 +105,24 @@ export interface StoreDeviceRecord {
   updated_at?: string | null
 }
 
+export interface DeviceRegisterRequest {
+  store_id: number
+  device_name: string
+  device_type: string
+  app_version?: string | null
+  platform?: string | null
+}
+
+export interface DeviceRegisterResponse {
+  device_id: number
+  store_id: number
+  device_name?: string | null
+  device_type?: string | null
+  device_token: string
+  status?: string | null
+  created_at?: string | null
+}
+
 export interface PrinterEncodingTestResult {
   encoding: string
   success: boolean
@@ -256,6 +274,14 @@ export async function fetchPrintJobs(input: {
 export async function fetchStoreDevices(storeId: number): Promise<StoreDeviceRecord[]> {
   const params = new URLSearchParams({ store_id: String(storeId) })
   return request<StoreDeviceRecord[]>(`/api/v1/admin/printing/devices?${params.toString()}`)
+}
+
+export async function registerStoreDevice(input: DeviceRegisterRequest): Promise<DeviceRegisterResponse> {
+  return request<DeviceRegisterResponse>('/api/v1/devices/register', {
+    method: 'POST',
+    headers: buildHeaders(),
+    body: JSON.stringify(input),
+  })
 }
 
 export async function reprintPrintJob(jobId: number) {

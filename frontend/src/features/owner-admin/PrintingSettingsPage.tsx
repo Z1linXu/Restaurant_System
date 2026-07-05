@@ -8,6 +8,7 @@ import {
   fetchPrintJobs,
   fetchPrintCenterOverview,
   fetchStoreDevices,
+  registerStoreDevice,
   reprintPrintJob,
   savePrinterConfig,
   triggerPrinterConnectionTest,
@@ -36,6 +37,30 @@ type ToastState = { kind: 'success' | 'error'; message: string } | null
 
 type PrinterEditorState = PrinterConfigRecord
 type PrintingMode = 'REAL' | 'MOCK' | 'DISABLED' | 'PAD_DIRECT'
+type AndroidPadDeviceStatus = {
+  paired?: boolean
+  device_id?: number | null
+  store_id?: number | null
+  device_name?: string | null
+  registered_at?: string | null
+  token_last4?: string | null
+  app_version?: string | null
+  platform?: string | null
+  success?: boolean
+  message?: string | null
+}
+
+type AndroidPadDeviceBridge = {
+  saveDeviceCredentials: (json: string) => string
+  getDeviceStatus: () => string
+  clearDeviceCredentials: () => string
+}
+
+declare global {
+  interface Window {
+    RestaurantPadDevice?: AndroidPadDeviceBridge
+  }
+}
 
 const MODULE_OPTIONS = [
   { code: 'GRAB', label: moduleDisplayLabel('GRAB'), future: false },
@@ -163,6 +188,14 @@ function printJobOperatorMessage(job: PrintJobRecord) {
   return displayPrintJobOperatorMessage(job)
 }
 
+function parseAndroidPadStatus(rawStatus: string): AndroidPadDeviceStatus | null {
+  try {
+    return JSON.parse(rawStatus) as AndroidPadDeviceStatus
+  } catch {
+    return null
+  }
+}
+
 export function PrintingSettingsPage() {
   const currentStore = useCurrentStore()
   const { storeId } = currentStore
@@ -182,6 +215,19 @@ export function PrintingSettingsPage() {
   const [devicesError, setDevicesError] = useState<string | null>(null)
   const [testingAllConnections, setTestingAllConnections] = useState(false)
   const [previewJob, setPreviewJob] = useState<PrintJobRecord | null>(null)
+  const [padBridgeAvailable, setPadBridgeAvailable] = useState(false)
+  const [padDeviceStatus, setPadDeviceStatus] = useState<AndroidPadDeviceStatus | null>(null)
+  const [pairingPad, setPairingPad] = useState(false)
+
+  const refreshPadDeviceStatus = () => {
+    const bridge = typeof window === 'undefined' ? undefined : window.RestaurantPadDevice
+    setPadBridgeAvailable(Boolean(bridge))
+    if (!bridge) {
+      setPadDeviceStatus(null)
+      return
+    }
+    setPadDeviceStatus(parseAndroidPadStatus(bridge.getDeviceStatus()))
+  }
 
   const loadData = async (storeId: number) => {
     setLoading(true)
@@ -238,6 +284,10 @@ export function PrintingSettingsPage() {
 
   useEffect(() => {
     void loadData(Number(selectedStoreId))
+  }, [selectedStoreId])
+
+  useEffect(() => {
+    refreshPadDeviceStatus()
   }, [selectedStoreId])
 
   const stores = useMemo(
@@ -510,6 +560,56 @@ export function PrintingSettingsPage() {
     }
   }
 
+  const handlePairThisPad = async () => {
+    const bridge = typeof window === 'undefined' ? undefined : window.RestaurantPadDevice
+    if (!bridge) {
+      setToast({ kind: 'error', message: '请在 Android Pad App 内打开打印中心进行配对。' })
+      return
+    }
+
+    const currentStatus = parseAndroidPadStatus(bridge.getDeviceStatus())
+    if (currentStatus?.paired) {
+      const currentStore = currentStatus.store_id ? `门店 ${currentStatus.store_id}` : '未知门店'
+      const nextStore = `门店 ${selectedStoreId}`
+      const message = currentStatus.store_id && Number(currentStatus.store_id) !== Number(selectedStoreId)
+        ? `本机已经配对到${currentStore}。继续会为${nextStore}注册新的设备并覆盖本机凭证，确定继续吗？`
+        : `本机已经配对到${currentStore}。继续会注册新的设备并覆盖本机凭证，确定继续吗？`
+      if (!window.confirm(message)) {
+        return
+      }
+    }
+
+    try {
+      setPairingPad(true)
+      const registered = await registerStoreDevice({
+        store_id: Number(selectedStoreId),
+        device_name: 'Restaurant Pad',
+        device_type: 'ANDROID_PAD',
+        app_version: currentStatus?.app_version ?? 'unknown',
+        platform: 'ANDROID',
+      })
+      const saveResult = parseAndroidPadStatus(bridge.saveDeviceCredentials(JSON.stringify({
+        device_id: registered.device_id,
+        device_token: registered.device_token,
+        store_id: registered.store_id,
+        device_name: registered.device_name ?? 'Restaurant Pad',
+        app_version: currentStatus?.app_version ?? 'unknown',
+        platform: 'ANDROID',
+        registered_at: registered.created_at ?? new Date().toISOString(),
+      })))
+      if (!saveResult?.success) {
+        throw new Error(saveResult?.message ?? 'Android Pad 保存配对凭证失败')
+      }
+      setToast({ kind: 'success', message: `本机 Pad 已配对：设备 #${registered.device_id}` })
+      refreshPadDeviceStatus()
+      await refreshDevices()
+    } catch (pairError) {
+      setToast({ kind: 'error', message: pairError instanceof Error ? pairError.message : 'Pad 配对失败' })
+    } finally {
+      setPairingPad(false)
+    }
+  }
+
   return (
     <>
       <div className="space-y-5">
@@ -650,13 +750,51 @@ export function PrintingSettingsPage() {
                     已注册的 Android Pad 本地打印设备。设备 token 注册后不会再次显示。
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void refreshDevices()}
-                  className="rounded-full bg-[rgba(26,28,25,0.06)] px-4 py-2 text-[0.84rem] font-semibold text-[var(--on-surface)]"
-                >
-                  {devicesLoading ? '刷新中...' : '刷新设备'}
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void handlePairThisPad()}
+                    disabled={!padBridgeAvailable || pairingPad}
+                    title={padBridgeAvailable ? '通过 Android 原生桥保存本机 device token' : '请在 Android Pad App 内打开打印中心进行配对'}
+                    className={`rounded-full px-4 py-2 text-[0.84rem] font-semibold ${
+                      padBridgeAvailable
+                        ? 'bg-[rgba(118,77,21,0.14)] text-[rgb(118,77,21)]'
+                        : 'bg-[rgba(26,28,25,0.06)] text-[var(--muted)]'
+                    }`}
+                  >
+                    {pairingPad ? '配对中...' : '配对本机 Pad'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void refreshDevices()}
+                    className="rounded-full bg-[rgba(26,28,25,0.06)] px-4 py-2 text-[0.84rem] font-semibold text-[var(--on-surface)]"
+                  >
+                    {devicesLoading ? '刷新中...' : '刷新设备'}
+                  </button>
+                </div>
+              </div>
+              <div className={`mt-4 rounded-[18px] px-4 py-3 text-[0.86rem] font-medium ${
+                padBridgeAvailable
+                  ? padDeviceStatus?.paired && padDeviceStatus.store_id && Number(padDeviceStatus.store_id) !== Number(selectedStoreId)
+                    ? 'bg-[rgba(151,34,34,0.1)] text-[rgb(116,22,22)]'
+                    : 'bg-[rgba(18,141,77,0.1)] text-[rgb(25,112,69)]'
+                  : 'bg-[rgba(26,28,25,0.05)] text-[var(--muted)]'
+              }`}
+              >
+                {!padBridgeAvailable ? (
+                  <span>普通浏览器无法保存 Pad 凭证。请在 Android Pad App 内打开打印中心进行配对。</span>
+                ) : padDeviceStatus?.paired ? (
+                  <span>
+                    本机已保存设备 #{padDeviceStatus.device_id}，门店 #{padDeviceStatus.store_id}
+                    {padDeviceStatus.device_name ? `，${padDeviceStatus.device_name}` : ''}
+                    {padDeviceStatus.token_last4 ? `，token ****${padDeviceStatus.token_last4}` : ''}
+                    {padDeviceStatus.store_id && Number(padDeviceStatus.store_id) !== Number(selectedStoreId)
+                      ? '。当前页面门店与本机配对门店不一致，请重新配对后再启用自动领取。'
+                      : '。'}
+                  </span>
+                ) : (
+                  <span>当前 Android Pad App 尚未配对。点击“配对本机 Pad”后，device token 只会保存到本机原生层。</span>
+                )}
               </div>
               <PadDevicesTable devices={storeDevices} />
               {devicesError ? (

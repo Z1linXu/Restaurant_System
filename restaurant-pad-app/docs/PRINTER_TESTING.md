@@ -66,10 +66,8 @@ Time: yyyy-MM-dd HH:mm:ss
 
 ## Boundaries
 
-This panel does not:
+The local printer test area does not:
 
-- register Pad devices
-- store device tokens
 - poll pending jobs
 - claim jobs
 - fetch backend ESC/POS payloads
@@ -77,5 +75,10 @@ This panel does not:
 - implement background printing
 - read WebView `localStorage`
 - upload printer IP to the backend
+
+Device pairing is handled separately through Web Print Center plus the Android
+`RestaurantPadDevice` bridge. Pairing stores device credentials for future
+Pad Direct work, but it still does not make this printer test area a production
+order-printing worker.
 
 Those belong to later `PAD_DIRECT` worker PRs.

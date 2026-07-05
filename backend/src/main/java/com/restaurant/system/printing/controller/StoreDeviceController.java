@@ -39,7 +39,11 @@ public class StoreDeviceController {
     @PostMapping("/api/v1/devices/register")
     public ApiResponse<DeviceRegisterResponse> registerDevice(@RequestBody DeviceRegisterRequest request) {
         featureFlagService.requireEnabled(FeaturePackage.PRINTING);
-        authorizationService.requireForStore(request.store_id, Capability.ADMIN_STORE_CONFIG);
+        authorizationService.requireForStore(
+            request.store_id,
+            Capability.ADMIN_PRINTING_MANAGE,
+            Capability.ADMIN_STORE_CONFIG
+        );
         return ApiResponse.success("Device registered", storeDeviceService.registerDevice(request));
     }
 
@@ -56,7 +60,11 @@ public class StoreDeviceController {
     @GetMapping("/api/v1/admin/printing/devices")
     public ApiResponse<List<StoreDeviceResponse>> listStoreDevices(@RequestParam Long store_id) {
         featureFlagService.requireEnabled(FeaturePackage.PRINTING);
-        authorizationService.requireForStore(store_id, Capability.ADMIN_STORE_CONFIG);
+        authorizationService.requireForStore(
+            store_id,
+            Capability.ADMIN_PRINTING_MANAGE,
+            Capability.ADMIN_STORE_CONFIG
+        );
         return ApiResponse.success(storeDeviceService.listStoreDevices(store_id));
     }
 }

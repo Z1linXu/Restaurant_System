@@ -5659,6 +5659,85 @@ Operational notes:
 - This POC is the recommended hardware step before connecting Android to
   backend `PAD_DIRECT` device registration and print job claim APIs.
 
+## PR11D-2: Pad Device Pairing Via Web Print Center And Android Bridge
+
+PR11D-2 adds Pad Direct device pairing only. It does not implement pending jobs,
+claim, payload fetch, native order printing, complete/fail/release, lease
+renewal, retry, or an Android background worker.
+
+Pairing flow:
+
+- The operator opens Web Print Center inside the Android Pad App.
+- The Pad Direct devices section shows `配对本机 Pad` only when the Android
+  `window.RestaurantPadDevice` bridge is available.
+- A normal browser cannot save Pad credentials and shows a disabled pairing
+  prompt instead.
+- The Web page calls the existing backend device registration API with the
+  logged-in Web bearer token and current store id.
+- The backend returns the raw `device_token` only in the registration response.
+- The Web page immediately calls
+  `window.RestaurantPadDevice.saveDeviceCredentials(...)` and does not persist
+  the raw token in browser storage.
+- Android saves `device_id`, `device_token`, `store_id`, device name,
+  registration time, app version, and platform in local native preferences.
+- Android Local Control Panel shows paired/unpaired status, device id, store id,
+  device name, registration time, and token last four characters only.
+- `Clear Pairing / 清除配对` requires confirmation and removes the local device
+  credentials.
+
+Security and scope:
+
+- Android native code does not read WebView `localStorage`, does not reuse Web
+  bearer tokens, and does not directly call bearer-token backend business APIs.
+- `SharedPreferences` storage is acceptable for this local pilot pairing step.
+  Before production Pad Direct worker rollout, migrate `device_token` storage to
+  `EncryptedSharedPreferences` or Android Keystore-backed storage.
+- Store device registration/listing accepts store-scoped
+  `admin:printing_manage` or the legacy broader `admin:store_config`, so current
+  `FRONTDESK` staff can pair this store's Pad without receiving
+  `admin:store_config`, Staff Management, Audit Logs, or Platform Admin access.
+- Backend `StoreAccessService` still enforces store scope. A URL store id or
+  Web UI visibility is not treated as authorization.
+- The next recommended Pad Direct step is a pending jobs viewer, not an
+  automatic print worker.
+
+## PR11D-3: Android PAD_DIRECT Pending Jobs Viewer
+
+PR11D-3 adds a read-only Pending Print Jobs area to the Android Local Control
+Panel. It does not implement claim, payload fetch, native order printing,
+complete/fail/release, lease renewal, retry, automatic polling, WebSocket
+subscriptions, or a background worker.
+
+Viewer behavior:
+
+- If the Android Pad is not paired, the panel shows `请先配对本机 Pad` and the
+  pending jobs refresh button is disabled.
+- If paired, the panel shows saved device/store status and allows manual
+  `Refresh Pending Print Jobs / 刷新待打印任务`.
+- The Android native request uses device authentication headers:
+  `X-Device-Id` and `X-Device-Token`.
+- The Android shell does not use the Web bearer token and does not read WebView
+  `localStorage`.
+- Local Preview mode calls the configured Web App origin, for example
+  `http://{developer-lan-ip}:5173/api/v1/stores/{storeId}/printing/jobs/pending?limit=25`,
+  relying on Vite preview to proxy `/api` to backend `localhost:8080`.
+- Bundled Assets mode falls back to the configured API Base URL origin.
+- The list displays job id, order id, module code, status, created time, printer
+  endpoint, claimed device/lease when present, and operator/error message when
+  present.
+
+Operational notes:
+
+- Store printing mode must be `PAD_DIRECT` for submitted orders to become
+  pending Pad jobs.
+- No paper should print from this viewer.
+- `401/403` is shown as device authentication failure and should be fixed by
+  re-pairing the Pad.
+- Network failures are shown as Web App URL / Wi-Fi / `preview:lan` / backend
+  troubleshooting prompts.
+- The next recommended PR is a manual claim + print happy path, not a
+  long-running automatic worker.
+
 ## PR11C: Frontdesk User Menu And Staff Store Tools Access
 
 PR11C adds a Web frontdesk user menu for Android Pad and browser workflows. It
