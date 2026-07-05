@@ -112,6 +112,7 @@ It provides:
 - Test Print
 - Clear Pairing / 清除配对
 - Refresh Pending Print Jobs / 刷新待打印任务
+- 领取并打印, shown per pending job after refresh
 
 Shortcut behavior:
 
@@ -165,10 +166,11 @@ Security notes:
 This step still does not implement pending job polling, claim, payload fetch,
 native order printing, complete/fail/release, retry, or a background worker.
 
-## Pad Direct Pending Jobs Viewer
+## Pad Direct Pending Jobs And Manual Print
 
-The Local Control Panel includes a manual, read-only pending jobs viewer after
-the Android Pad is paired.
+The Local Control Panel includes manual PAD_DIRECT job handling after the
+Android Pad is paired. The list is refreshed manually, and each job can be
+processed with one explicit `领取并打印` tap.
 
 Use it like this:
 
@@ -178,6 +180,17 @@ Use it like this:
 4. Confirm Web Print Center shows `PENDING` print jobs.
 5. Long press in the Android app.
 6. Tap `Refresh Pending Print Jobs / 刷新待打印任务`.
+7. Confirm the local printer IP/port/timeout are correct.
+8. Tap `领取并打印` on one job.
+
+The button performs:
+
+```text
+claim -> payload -> native TCP print -> complete
+```
+
+If payload fetch or native printing fails after claim, the Android shell calls
+the backend `fail` API so Print Center can show a `FAILED` job.
 
 The Android shell authenticates this request with the saved device credentials:
 
@@ -198,14 +211,14 @@ http://{developer-lan-ip}:5173/api/v1/stores/{storeId}/printing/jobs/pending?lim
 
 In Bundled Assets mode, the viewer uses the configured API Base URL origin.
 
-This viewer does not:
+This manual flow does not:
 
 - auto poll
 - open WebSocket connections
-- claim jobs
-- fetch ESC/POS payloads
-- print
-- complete/fail/release
+- batch claim jobs
+- automatically print new jobs
+- renew claim leases
+- release jobs
 - implement a worker
 
 ## Bundled Assets API Base Configuration
@@ -330,7 +343,7 @@ Common WebView / Android errors:
 
 - production background print worker inside Android
 - production-grade encrypted device token storage
-- real order print job polling from Android
-- claim / payload / print / complete happy path
+- automatic real order print job polling from Android
+- automatic claim / payload / print / complete worker
 - automated physical printer QA
 - native Print Center or Menu Management screens

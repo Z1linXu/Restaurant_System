@@ -28,6 +28,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.BufferedReader;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.Charset;
@@ -61,6 +62,7 @@ public class MainActivity extends Activity {
     private WebView webView;
     private SharedPreferences preferences;
     private PrinterPluginBridge printerPluginBridge;
+    private volatile boolean padDirectJobInProgress = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -212,28 +214,6 @@ public class MainActivity extends Activity {
         layout.addView(apiBaseLabel);
         layout.addView(apiBaseInput);
 
-        TextView pendingHeading = new TextView(this);
-        pendingHeading.setText("PAD_DIRECT Pending Print Jobs / 待打印任务");
-        pendingHeading.setTextSize(16);
-        pendingHeading.setPadding(0, padding, 0, 4);
-        layout.addView(pendingHeading);
-
-        TextView pendingNote = new TextView(this);
-        pendingNote.setText("Read-only viewer. This does not claim, fetch payload, print, complete, fail, release, or start a worker.");
-        layout.addView(pendingNote);
-
-        TextView pendingResult = new TextView(this);
-        pendingResult.setText(isDevicePaired()
-            ? "点击刷新待打印任务。需要门店打印模式为 PAD_DIRECT。"
-            : "请先在 Web 打印中心配对本机 Pad。");
-        pendingResult.setTextIsSelectable(true);
-        pendingResult.setPadding(0, 8, 0, 8);
-        layout.addView(pendingResult);
-
-        Button refreshPendingJobsButton = addPanelButton(layout, "Refresh Pending Print Jobs / 刷新待打印任务", () -> {});
-        refreshPendingJobsButton.setEnabled(isDevicePaired());
-        refreshPendingJobsButton.setOnClickListener(view -> refreshPendingPrintJobs(pendingResult, refreshPendingJobsButton));
-
         TextView printerHeading = new TextView(this);
         printerHeading.setText("Local Printer Test / 本地打印机测试");
         printerHeading.setTextSize(16);
@@ -302,6 +282,39 @@ public class MainActivity extends Activity {
             printerResult,
             testConnectionButton,
             testPrintButton
+        ));
+
+        TextView pendingHeading = new TextView(this);
+        pendingHeading.setText("PAD_DIRECT Pending Print Jobs / 待打印任务");
+        pendingHeading.setTextSize(16);
+        pendingHeading.setPadding(0, padding, 0, 4);
+        layout.addView(pendingHeading);
+
+        TextView pendingNote = new TextView(this);
+        pendingNote.setText("Manual mode only. One button processes one job: claim -> payload -> local TCP print -> complete/fail. No worker or auto polling.");
+        layout.addView(pendingNote);
+
+        TextView pendingResult = new TextView(this);
+        pendingResult.setText(isDevicePaired()
+            ? "点击刷新待打印任务。需要门店打印模式为 PAD_DIRECT。"
+            : "请先在 Web 打印中心配对本机 Pad。");
+        pendingResult.setTextIsSelectable(true);
+        pendingResult.setPadding(0, 8, 0, 8);
+        layout.addView(pendingResult);
+
+        LinearLayout pendingJobsList = new LinearLayout(this);
+        pendingJobsList.setOrientation(LinearLayout.VERTICAL);
+        layout.addView(pendingJobsList);
+
+        Button refreshPendingJobsButton = addPanelButton(layout, "Refresh Pending Print Jobs / 刷新待打印任务", () -> {});
+        refreshPendingJobsButton.setEnabled(isDevicePaired());
+        refreshPendingJobsButton.setOnClickListener(view -> refreshPendingPrintJobs(
+            pendingResult,
+            pendingJobsList,
+            refreshPendingJobsButton,
+            printerIpInput,
+            printerPortInput,
+            printerTimeoutInput
         ));
 
         addPanelButton(layout, "Refresh Current Page", () -> {
@@ -510,24 +523,35 @@ public class MainActivity extends Activity {
         }).start();
     }
 
-    private void refreshPendingPrintJobs(TextView resultView, Button refreshButton) {
+    private void refreshPendingPrintJobs(
+        TextView resultView,
+        LinearLayout jobsList,
+        Button refreshButton,
+        EditText printerIpInput,
+        EditText printerPortInput,
+        EditText printerTimeoutInput
+    ) {
         String deviceId = preferences.getString(KEY_DEVICE_ID, "");
         String deviceToken = preferences.getString(KEY_DEVICE_TOKEN, "");
         String storeId = preferences.getString(KEY_DEVICE_STORE_ID, "");
         if (deviceId == null || deviceId.isBlank() || deviceToken == null || deviceToken.isBlank() || storeId == null || storeId.isBlank()) {
             resultView.setText("请先配对本机 Pad。");
+            jobsList.removeAllViews();
             return;
         }
         String apiBase = pendingJobsApiBaseOrigin();
         if (apiBase.isBlank()) {
             resultView.setText("无法推导后端 API 地址。Local Preview 请设置 Web App URL；Bundled Assets 请设置 API Base URL。");
+            jobsList.removeAllViews();
             return;
         }
 
         refreshButton.setEnabled(false);
+        jobsList.removeAllViews();
         resultView.setText("正在刷新待打印任务...");
         new Thread(() -> {
             String message;
+            String successBody = null;
             HttpURLConnection connection = null;
             try {
                 URL url = new URL(trimTrailingSlash(apiBase) + "/api/v1/stores/" + storeId + "/printing/jobs/pending?limit=25");
@@ -545,7 +569,8 @@ public class MainActivity extends Activity {
                 } else if (status < 200 || status >= 300) {
                     message = "待打印任务加载失败。\nHTTP " + status + "\n" + body;
                 } else {
-                    message = formatPendingJobs(body);
+                    message = "待打印任务已刷新。";
+                    successBody = body;
                 }
             } catch (Exception exception) {
                 message = "无法连接后端，请检查 Web App URL / WiFi / preview:lan / backend。\n技术信息: "
@@ -556,8 +581,22 @@ public class MainActivity extends Activity {
                 }
             }
             String finalMessage = message;
+            String finalSuccessBody = successBody;
             runOnUiThread(() -> {
-                resultView.setText(finalMessage);
+                if (finalSuccessBody == null) {
+                    resultView.setText(finalMessage);
+                    jobsList.removeAllViews();
+                } else {
+                    populatePendingJobs(
+                        finalSuccessBody,
+                        resultView,
+                        jobsList,
+                        refreshButton,
+                        printerIpInput,
+                        printerPortInput,
+                        printerTimeoutInput
+                    );
+                }
                 refreshButton.setEnabled(isDevicePaired());
             });
         }).start();
@@ -598,52 +637,374 @@ public class MainActivity extends Activity {
         return builder.toString().trim();
     }
 
-    private String formatPendingJobs(String body) throws Exception {
-        JSONObject response = new JSONObject(body);
-        if (!response.optBoolean("success", false)) {
-            return response.optString("message", "待打印任务加载失败。");
+    private void populatePendingJobs(
+        String body,
+        TextView resultView,
+        LinearLayout jobsList,
+        Button refreshButton,
+        EditText printerIpInput,
+        EditText printerPortInput,
+        EditText printerTimeoutInput
+    ) {
+        jobsList.removeAllViews();
+        try {
+            JSONObject response = new JSONObject(body);
+            if (!response.optBoolean("success", false)) {
+                resultView.setText(response.optString("message", "待打印任务加载失败。"));
+                return;
+            }
+            JSONArray jobs = response.optJSONArray("data");
+            if (jobs == null || jobs.length() == 0) {
+                resultView.setText("暂无待打印任务。");
+                return;
+            }
+            resultView.setText("待打印任务 " + jobs.length() + " 个。点击单个任务手动领取并打印。");
+            for (int index = 0; index < jobs.length(); index++) {
+                JSONObject job = jobs.getJSONObject(index);
+                addPendingJobCard(
+                    jobsList,
+                    job,
+                    resultView,
+                    refreshButton,
+                    printerIpInput,
+                    printerPortInput,
+                    printerTimeoutInput
+                );
+            }
+        } catch (Exception exception) {
+            resultView.setText("待打印任务解析失败: " + exception.getMessage());
         }
-        JSONArray jobs = response.optJSONArray("data");
-        if (jobs == null || jobs.length() == 0) {
-            return "暂无待打印任务。";
-        }
+    }
+
+    private void addPendingJobCard(
+        LinearLayout jobsList,
+        JSONObject job,
+        TextView resultView,
+        Button refreshButton,
+        EditText printerIpInput,
+        EditText printerPortInput,
+        EditText printerTimeoutInput
+    ) {
+        float density = getResources().getDisplayMetrics().density;
+        int padding = Math.round(10 * density);
+
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(padding, padding, padding, padding);
+
+        TextView details = new TextView(this);
+        details.setText(formatPendingJobDetails(job));
+        details.setTextIsSelectable(true);
+        card.addView(details);
+
+        Button printButton = new Button(this);
+        printButton.setAllCaps(false);
+        printButton.setText("领取并打印");
+        String jobJson = job.toString();
+        printButton.setOnClickListener(view -> {
+            try {
+                JSONObject selectedJob = new JSONObject(jobJson);
+                processPendingPrintJob(
+                    selectedJob,
+                    resultView,
+                    jobsList,
+                    refreshButton,
+                    printButton,
+                    printerIpInput,
+                    printerPortInput,
+                    printerTimeoutInput
+                );
+            } catch (Exception exception) {
+                resultView.setText("任务读取失败: " + exception.getMessage());
+            }
+        });
+        card.addView(printButton);
+        jobsList.addView(card);
+    }
+
+    private String formatPendingJobDetails(JSONObject job) {
         StringBuilder builder = new StringBuilder();
-        builder.append("待打印任务 ").append(jobs.length()).append(" 个\n");
-        for (int index = 0; index < jobs.length(); index++) {
-            JSONObject job = jobs.getJSONObject(index);
-            builder.append('\n');
-            builder.append('#').append(job.optString("id", "-"));
-            builder.append(" | ").append(job.optString("module_code", "-"));
-            builder.append(" | ").append(job.optString("status", "-"));
-            builder.append('\n');
-            builder.append("Order: ").append(job.optString("order_id", "-"));
-            String createdAt = job.optString("created_at", "");
-            if (!createdAt.isBlank()) {
-                builder.append(" | Created: ").append(createdAt);
+        builder.append("Job #").append(job.optString("id", "-"));
+        builder.append(" | ").append(job.optString("module_code", "-"));
+        builder.append(" | ").append(job.optString("status", "-"));
+        builder.append('\n');
+        builder.append("Order: ").append(job.optString("order_id", "-"));
+        String createdAt = job.optString("created_at", "");
+        if (!createdAt.isBlank() && !"null".equalsIgnoreCase(createdAt)) {
+            builder.append(" | Created: ").append(createdAt);
+        }
+        builder.append('\n');
+        String endpoint = job.optString("printer_endpoint", "");
+        if (!endpoint.isBlank() && !"null".equalsIgnoreCase(endpoint)) {
+            builder.append("Printer: ").append(endpoint).append('\n');
+        }
+        String claimedBy = job.optString("claimed_by_device_id", "");
+        if (!claimedBy.isBlank() && !"null".equalsIgnoreCase(claimedBy)) {
+            builder.append("Claimed by device: ").append(claimedBy);
+            String expiresAt = job.optString("claim_expires_at", "");
+            if (!expiresAt.isBlank() && !"null".equalsIgnoreCase(expiresAt)) {
+                builder.append(" until ").append(expiresAt);
             }
             builder.append('\n');
-            String endpoint = job.optString("printer_endpoint", "");
-            if (!endpoint.isBlank()) {
-                builder.append("Printer: ").append(endpoint).append('\n');
-            }
-            String claimedBy = job.optString("claimed_by_device_id", "");
-            if (!claimedBy.isBlank() && !"null".equalsIgnoreCase(claimedBy)) {
-                builder.append("Claimed by device: ").append(claimedBy);
-                String expiresAt = job.optString("claim_expires_at", "");
-                if (!expiresAt.isBlank()) {
-                    builder.append(" until ").append(expiresAt);
-                }
-                builder.append('\n');
-            }
-            String operatorMessage = job.optString("operator_message", "");
-            String errorMessage = job.optString("error_message", "");
-            if (!operatorMessage.isBlank() && !"null".equalsIgnoreCase(operatorMessage)) {
-                builder.append("Message: ").append(operatorMessage).append('\n');
-            } else if (!errorMessage.isBlank() && !"null".equalsIgnoreCase(errorMessage)) {
-                builder.append("Message: ").append(errorMessage).append('\n');
-            }
+        }
+        String operatorMessage = job.optString("operator_message", "");
+        String errorMessage = job.optString("error_message", "");
+        if (!operatorMessage.isBlank() && !"null".equalsIgnoreCase(operatorMessage)) {
+            builder.append("Message: ").append(operatorMessage).append('\n');
+        } else if (!errorMessage.isBlank() && !"null".equalsIgnoreCase(errorMessage)) {
+            builder.append("Message: ").append(errorMessage).append('\n');
         }
         return builder.toString().trim();
+    }
+
+    private void processPendingPrintJob(
+        JSONObject job,
+        TextView resultView,
+        LinearLayout jobsList,
+        Button refreshButton,
+        Button printButton,
+        EditText printerIpInput,
+        EditText printerPortInput,
+        EditText printerTimeoutInput
+    ) {
+        if (padDirectJobInProgress) {
+            resultView.setText("已有任务正在处理，请等待当前任务完成。");
+            return;
+        }
+        String deviceId = preferences.getString(KEY_DEVICE_ID, "");
+        String deviceToken = preferences.getString(KEY_DEVICE_TOKEN, "");
+        String storeId = preferences.getString(KEY_DEVICE_STORE_ID, "");
+        if (deviceId == null || deviceId.isBlank() || deviceToken == null || deviceToken.isBlank() || storeId == null || storeId.isBlank()) {
+            resultView.setText("请先配对本机 Pad。");
+            return;
+        }
+        String printerIp = printerIpInput.getText().toString().trim();
+        if (printerIp.isBlank()) {
+            resultView.setText("请先配置本机打印机 IP。");
+            return;
+        }
+        int printerPort = parsePort(printerPortInput.getText().toString());
+        int printerTimeoutMs = parseTimeoutMs(printerTimeoutInput.getText().toString());
+        printerPortInput.setText(String.valueOf(printerPort));
+        printerTimeoutInput.setText(String.valueOf(printerTimeoutMs));
+        preferences.edit()
+            .putString(KEY_PRINTER_TEST_IP, printerIp)
+            .putString(KEY_PRINTER_TEST_PORT, String.valueOf(printerPort))
+            .putString(KEY_PRINTER_TEST_TIMEOUT_MS, String.valueOf(printerTimeoutMs))
+            .apply();
+
+        long jobId = job.optLong("id", -1L);
+        if (jobId <= 0) {
+            resultView.setText("任务缺少有效 job id。");
+            return;
+        }
+        String moduleCode = job.optString("module_code", "PAD_DIRECT");
+        String attemptToken = "android-" + deviceId + "-" + jobId + "-" + System.currentTimeMillis();
+
+        padDirectJobInProgress = true;
+        printButton.setEnabled(false);
+        refreshButton.setEnabled(false);
+        resultView.setText("正在领取并打印 Job #" + jobId + " (" + moduleCode + ")...");
+
+        new Thread(() -> {
+            String message;
+            boolean claimed = false;
+            boolean localPrintSent = false;
+            boolean refreshAfter = false;
+            try {
+                JSONObject claimRequest = new JSONObject();
+                claimRequest.put("client_attempt_token", attemptToken);
+                claimRequest.put("lease_seconds", 300);
+                HttpResult claimResult = postDeviceJson("/api/v1/printing/jobs/" + jobId + "/claim", claimRequest);
+                if (claimResult.status == 401 || claimResult.status == 403) {
+                    message = "设备认证失败，请重新配对。";
+                    postUiAfterPadDirectJob(resultView, refreshButton, printButton, message, false, jobsList, printerIpInput, printerPortInput, printerTimeoutInput);
+                    return;
+                }
+                if (claimResult.status == 409) {
+                    message = "任务已被其他 Pad 领取。";
+                    postUiAfterPadDirectJob(resultView, refreshButton, printButton, message, true, jobsList, printerIpInput, printerPortInput, printerTimeoutInput);
+                    return;
+                }
+                requireSuccessResponse(claimResult, "领取任务失败");
+                claimed = true;
+
+                HttpResult payloadResult = getDeviceJson("/api/v1/printing/jobs/" + jobId + "/payload");
+                requireSuccessResponse(payloadResult, "获取打印 payload 失败");
+                JSONObject payloadData = responseData(payloadResult.body);
+                String payloadBase64 = payloadData.optString("escpos_payload_base64", "").trim();
+                if (payloadBase64.isBlank()) {
+                    throw new PadDirectStepException("ANDROID_PAYLOAD_MISSING", "打印 payload 缺失", payloadResult.body);
+                }
+                try {
+                    Base64.decode(payloadBase64, Base64.DEFAULT);
+                } catch (Exception exception) {
+                    throw new PadDirectStepException("ANDROID_PAYLOAD_INVALID", "打印 payload 不是有效 base64", exception.getMessage());
+                }
+
+                JSONObject printRequest = new JSONObject();
+                printRequest.put("ip", printerIp);
+                printRequest.put("port", printerPort);
+                printRequest.put("timeoutMs", printerTimeoutMs);
+                printRequest.put("payloadBase64", payloadBase64);
+                String rawPrintResult = printerPluginBridge.printRawTcp(printRequest.toString());
+                JSONObject printResult = new JSONObject(rawPrintResult);
+                if (!printResult.optBoolean("success", false)) {
+                    String nativeCode = printResult.optString("error_code", "ANDROID_NATIVE_PRINT_FAILED");
+                    String nativeMessage = printResult.optString("message", "");
+                    throw new PadDirectStepException(
+                        "ANDROID_NATIVE_PRINT_FAILED",
+                        "本机打印失败，检查打印机 IP/WiFi/纸张。" + (nativeMessage.isBlank() ? "" : " 技术信息: " + nativeCode + " - " + nativeMessage),
+                        rawPrintResult
+                    );
+                }
+                localPrintSent = true;
+
+                JSONObject completeRequest = new JSONObject();
+                completeRequest.put("client_attempt_token", attemptToken);
+                completeRequest.put("raw_result", rawPrintResult);
+                HttpResult completeResult = postDeviceJson("/api/v1/printing/jobs/" + jobId + "/complete", completeRequest);
+                requireSuccessResponse(completeResult, "本地已打印，但回报后端完成失败。请检查 Print Center，避免重复打印");
+                message = "打印完成：Job #" + jobId + " (" + moduleCode + ")";
+                refreshAfter = true;
+            } catch (PadDirectStepException exception) {
+                message = exception.getMessage();
+                if (claimed && !localPrintSent) {
+                    message = message + "\n" + reportPadDirectFail(jobId, attemptToken, exception.errorCode, exception.getMessage(), exception.rawResult);
+                    refreshAfter = true;
+                } else if (localPrintSent) {
+                    refreshAfter = true;
+                }
+            } catch (Exception exception) {
+                message = "无法连接后端或处理任务失败: " + exception.getClass().getSimpleName() + " - " + exception.getMessage();
+                if (claimed && !localPrintSent) {
+                    message = message + "\n" + reportPadDirectFail(jobId, attemptToken, "ANDROID_NETWORK_ERROR", message, exception.getMessage());
+                    refreshAfter = true;
+                } else if (localPrintSent) {
+                    refreshAfter = true;
+                }
+            }
+            postUiAfterPadDirectJob(resultView, refreshButton, printButton, message, refreshAfter, jobsList, printerIpInput, printerPortInput, printerTimeoutInput);
+        }).start();
+    }
+
+    private void postUiAfterPadDirectJob(
+        TextView resultView,
+        Button refreshButton,
+        Button printButton,
+        String message,
+        boolean refreshAfter,
+        LinearLayout jobsList,
+        EditText printerIpInput,
+        EditText printerPortInput,
+        EditText printerTimeoutInput
+    ) {
+        runOnUiThread(() -> {
+            resultView.setText(message);
+            padDirectJobInProgress = false;
+            refreshButton.setEnabled(isDevicePaired());
+            printButton.setEnabled(!refreshAfter && isDevicePaired());
+            if (refreshAfter) {
+                refreshPendingPrintJobs(resultView, jobsList, refreshButton, printerIpInput, printerPortInput, printerTimeoutInput);
+            }
+        });
+    }
+
+    private String reportPadDirectFail(Long jobId, String attemptToken, String errorCode, String errorMessage, String rawResult) {
+        try {
+            JSONObject failRequest = new JSONObject();
+            failRequest.put("client_attempt_token", attemptToken);
+            failRequest.put("error_code", errorCode == null || errorCode.isBlank() ? "ANDROID_NATIVE_PRINT_FAILED" : errorCode);
+            failRequest.put("error_message", truncateForJson(errorMessage, 1000));
+            failRequest.put("raw_result", truncateForJson(rawResult, 3000));
+            HttpResult failResult = postDeviceJson("/api/v1/printing/jobs/" + jobId + "/fail", failRequest);
+            if (failResult.status >= 200 && failResult.status < 300) {
+                return "打印失败，已回报后端。";
+            }
+            return "打印失败，但回报后端失败也失败。HTTP " + failResult.status;
+        } catch (Exception exception) {
+            return "打印失败，但回报后端失败也失败: " + exception.getMessage();
+        }
+    }
+
+    private HttpResult getDeviceJson(String path) throws Exception {
+        HttpURLConnection connection = null;
+        try {
+            connection = openDeviceConnection(path, "GET");
+            int status = connection.getResponseCode();
+            return new HttpResult(status, readConnectionBody(connection, status));
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+    }
+
+    private HttpResult postDeviceJson(String path, JSONObject body) throws Exception {
+        HttpURLConnection connection = null;
+        try {
+            connection = openDeviceConnection(path, "POST");
+            connection.setDoOutput(true);
+            connection.setRequestProperty("Content-Type", "application/json");
+            byte[] payload = body.toString().getBytes(StandardCharsets.UTF_8);
+            try (OutputStream outputStream = connection.getOutputStream()) {
+                outputStream.write(payload);
+            }
+            int status = connection.getResponseCode();
+            return new HttpResult(status, readConnectionBody(connection, status));
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+    }
+
+    private HttpURLConnection openDeviceConnection(String path, String method) throws Exception {
+        String apiBase = pendingJobsApiBaseOrigin();
+        if (apiBase.isBlank()) {
+            throw new IllegalStateException("无法推导后端 API 地址。");
+        }
+        URL url = new URL(trimTrailingSlash(apiBase) + path);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod(method);
+        connection.setConnectTimeout(5000);
+        connection.setReadTimeout(10000);
+        connection.setRequestProperty("Accept", "application/json");
+        connection.setRequestProperty("X-Device-Id", preferences.getString(KEY_DEVICE_ID, ""));
+        connection.setRequestProperty("X-Device-Token", preferences.getString(KEY_DEVICE_TOKEN, ""));
+        return connection;
+    }
+
+    private void requireSuccessResponse(HttpResult result, String fallbackMessage) throws Exception {
+        if (result.status == 401 || result.status == 403) {
+            throw new PadDirectStepException("ANDROID_DEVICE_AUTH_FAILED", "设备认证失败，请重新配对。", result.body);
+        }
+        if (result.status == 409) {
+            throw new PadDirectStepException("ANDROID_JOB_CONFLICT", "任务已被其他 Pad 领取。", result.body);
+        }
+        if (result.status < 200 || result.status >= 300) {
+            throw new PadDirectStepException("ANDROID_NETWORK_ERROR", fallbackMessage + " HTTP " + result.status, result.body);
+        }
+        JSONObject response = new JSONObject(result.body);
+        if (!response.optBoolean("success", false)) {
+            throw new PadDirectStepException("ANDROID_API_ERROR", response.optString("message", fallbackMessage), result.body);
+        }
+    }
+
+    private JSONObject responseData(String body) throws Exception {
+        JSONObject response = new JSONObject(body);
+        JSONObject data = response.optJSONObject("data");
+        if (data == null) {
+            throw new PadDirectStepException("ANDROID_PAYLOAD_MISSING", "后端响应缺少 data。", body);
+        }
+        return data;
+    }
+
+    private String truncateForJson(String value, int maxLength) {
+        if (value == null) {
+            return "";
+        }
+        return value.length() <= maxLength ? value : value.substring(0, maxLength);
     }
 
     private String trimTrailingSlash(String value) {
@@ -849,6 +1210,27 @@ public class MainActivity extends Activity {
             return response.toString();
         } catch (Exception ignored) {
             return "{\"success\":false,\"message\":\"Unknown error\"}";
+        }
+    }
+
+    private static class HttpResult {
+        private final int status;
+        private final String body;
+
+        private HttpResult(int status, String body) {
+            this.status = status;
+            this.body = body == null ? "" : body;
+        }
+    }
+
+    private static class PadDirectStepException extends Exception {
+        private final String errorCode;
+        private final String rawResult;
+
+        private PadDirectStepException(String errorCode, String message, String rawResult) {
+            super(message);
+            this.errorCode = errorCode == null || errorCode.isBlank() ? "ANDROID_NATIVE_PRINT_FAILED" : errorCode;
+            this.rawResult = rawResult == null ? "" : rawResult;
         }
     }
 

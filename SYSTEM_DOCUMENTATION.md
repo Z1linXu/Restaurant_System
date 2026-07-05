@@ -5735,8 +5735,50 @@ Operational notes:
   re-pairing the Pad.
 - Network failures are shown as Web App URL / Wi-Fi / `preview:lan` / backend
   troubleshooting prompts.
-- The next recommended PR is a manual claim + print happy path, not a
-  long-running automatic worker.
+- PR11D-4 builds on this viewer with a manual claim + print happy path while
+  still avoiding a long-running automatic worker.
+
+## PR11D-4: Android PAD_DIRECT Manual Claim And Native Print Happy Path
+
+PR11D-4 adds a manual one-job `领取并打印` action to the Android Local Control
+Panel pending jobs list. It does not implement an automatic worker, automatic
+polling, batch claim, lease renewal, release, retry/backoff, explicit PRINTING
+state changes, database migrations, order lifecycle changes, payment/refund
+changes, or `completeOrder` changes.
+
+Manual flow:
+
+- The operator manually refreshes pending jobs.
+- The operator taps one job's `领取并打印` button.
+- Android generates a `client_attempt_token`.
+- Android claims the job with `X-Device-Id` and `X-Device-Token`.
+- Android fetches the ESC/POS payload for the claimed job.
+- Android decodes `escpos_payload_base64` and sends it to the configured local
+  LAN printer with the native TCP bridge.
+- On native print success, Android calls the backend complete API.
+- If payload fetch or native TCP print fails after claim, Android calls the
+  backend fail API so Print Center shows the job as `FAILED`.
+
+Operational boundaries:
+
+- The backend still does not open a printer socket for `PAD_DIRECT`.
+- The Android shell does not use the Web bearer token and does not read WebView
+  `localStorage`.
+- The manual button processes only one job at a time and disables itself while
+  work is in progress.
+- A `409` claim response is shown as `任务已被其他 Pad 领取`.
+- `401/403` is shown as device authentication failure and should be fixed by
+  re-pairing the Pad.
+- Printer IP/port/timeout come from the Android Local Control Panel's local
+  printer settings.
+
+Pilot limitations:
+
+- If a claim lease expires while a device is still printing, another Pad could
+  reclaim the job; PR11D-5 should add PRINTING/lease-renewal/duplicate-print
+  hardening before unattended production worker use.
+- Device token storage still uses Android `SharedPreferences` for local pilot
+  testing and must move to encrypted storage before production worker rollout.
 
 ## PR11C: Frontdesk User Menu And Staff Store Tools Access
 

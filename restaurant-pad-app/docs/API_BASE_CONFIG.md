@@ -167,16 +167,26 @@ Current storage is Android `SharedPreferences` for local pilot testing. Before
 production Pad Direct worker rollout, move device token storage to
 `EncryptedSharedPreferences` or Android Keystore-backed storage.
 
-This pairing step still does not enable automatic printing. Pending jobs,
-claim, payload fetch, complete/fail/release, lease renewal, and background worker
-behavior remain later PRs.
+Pairing by itself does not enable automatic printing. The Android shell can
+save the device credentials for later PAD_DIRECT actions, but background
+workers, automatic polling, lease renewal, and unattended printing remain later
+PRs.
 
-## Pad Direct Pending Jobs Viewer
+## Pad Direct Pending Jobs And Manual Print
 
 After pairing, the Local Control Panel can manually refresh `PAD_DIRECT` pending
-print jobs.
+print jobs. Each listed job has a manual `领取并打印` action that runs one happy
+path only:
 
-API route used by the Android shell:
+```text
+claim -> fetch payload -> native TCP print -> complete
+```
+
+If payload fetch or native TCP printing fails after claim, the Android shell
+reports the job as failed through the backend `fail` API so Print Center can show
+the failure.
+
+Pending jobs API route used by the Android shell:
 
 ```text
 GET /api/v1/stores/{storeId}/printing/jobs/pending?limit=25
@@ -196,8 +206,19 @@ local preview testing.
 
 Bundled Assets mode falls back to the configured API Base URL origin.
 
-The viewer is read-only. It does not claim jobs, fetch payloads, print,
-complete/fail/release jobs, poll in the background, or start a worker.
+Manual print job APIs used after tapping `领取并打印`:
+
+```text
+POST /api/v1/printing/jobs/{jobId}/claim
+GET  /api/v1/printing/jobs/{jobId}/payload
+POST /api/v1/printing/jobs/{jobId}/complete
+POST /api/v1/printing/jobs/{jobId}/fail
+X-Device-Id: {saved device id}
+X-Device-Token: {saved device token}
+```
+
+The control panel still does not auto poll, batch claim, run a background
+worker, renew leases, or release jobs.
 
 Expected setup for manual testing:
 
@@ -206,12 +227,17 @@ Expected setup for manual testing:
 3. Submit an order from the Web POS.
 4. Confirm Print Center shows `PENDING` jobs.
 5. Open Local Control Panel and tap `Refresh Pending Print Jobs / 刷新待打印任务`.
+6. Configure local printer IP/port/timeout.
+7. Tap `领取并打印` on one job.
 
 Common viewer errors:
 
 - `设备认证失败，请重新配对`: the saved device id/token is missing, inactive, or invalid.
+- `任务已被其他 Pad 领取`: another Pad claimed this job first.
 - `无法连接后端`: Web App URL, Wi-Fi, `preview:lan`, backend, or firewall is not reachable.
 - `暂无待打印任务`: no `PAD_DIRECT` pending jobs are available for this store/device.
+- `打印 payload 缺失`: the backend did not return ESC/POS payload data.
+- `本机打印失败`: Android could not send the payload to the configured LAN printer.
 
 ## Production Placeholder
 

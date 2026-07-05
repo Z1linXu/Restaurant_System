@@ -1,10 +1,11 @@
-# Pad Direct Pending Jobs Viewer
+# Pad Direct Pending Jobs And Manual Print
 
-This document covers the Android Pad shell read-only pending jobs viewer.
+This document covers the Android Pad shell pending jobs list and the manual
+single-job print happy path.
 
-The viewer is not a worker. It does not claim jobs, fetch payloads, print,
-complete/fail/release jobs, retry jobs, poll in the background, or use
-WebSocket subscriptions.
+The panel is not a worker. It does not retry jobs, poll in the background, use
+WebSocket subscriptions, renew claim leases, release jobs, or automatically
+print new jobs. A user must tap one job at a time.
 
 ## Prerequisites
 
@@ -13,13 +14,25 @@ WebSocket subscriptions.
 3. The store is configured with printing mode `PAD_DIRECT`.
 4. Backend and frontend preview are running for local testing.
 5. Android Pad and development computer are on the same LAN.
+6. Local printer IP, port, and timeout are configured in the Local Control Panel.
 
-## API
+## APIs
 
-The Android shell calls:
+The Android shell calls this API to list pending jobs:
 
 ```text
 GET /api/v1/stores/{storeId}/printing/jobs/pending?limit=25
+X-Device-Id: {saved device id}
+X-Device-Token: {saved device token}
+```
+
+When the user taps `领取并打印`, the Android shell calls:
+
+```text
+POST /api/v1/printing/jobs/{jobId}/claim
+GET  /api/v1/printing/jobs/{jobId}/payload
+POST /api/v1/printing/jobs/{jobId}/complete
+POST /api/v1/printing/jobs/{jobId}/fail
 X-Device-Id: {saved device id}
 X-Device-Token: {saved device token}
 ```
@@ -34,6 +47,7 @@ Local Preview mode:
 ```text
 Web App URL: http://{developer-lan-ip}:5173
 Pending jobs API: http://{developer-lan-ip}:5173/api/v1/stores/{storeId}/printing/jobs/pending?limit=25
+Manual job APIs:  http://{developer-lan-ip}:5173/api/v1/printing/jobs/{jobId}/...
 ```
 
 The Vite preview server proxies `/api` to backend `localhost:8080`.
@@ -43,6 +57,7 @@ Bundled Assets mode:
 ```text
 API Base URL: http://{developer-lan-ip}:8080
 Pending jobs API: http://{developer-lan-ip}:8080/api/v1/stores/{storeId}/printing/jobs/pending?limit=25
+Manual job APIs:  http://{developer-lan-ip}:8080/api/v1/printing/jobs/{jobId}/...
 ```
 
 ## Manual Test Flow
@@ -55,11 +70,23 @@ Pending jobs API: http://{developer-lan-ip}:8080/api/v1/stores/{storeId}/printin
 6. Submit an order.
 7. Confirm Print Center shows `PENDING` jobs.
 8. Long press inside the Android app to open Local Control Panel.
-9. Tap `Refresh Pending Print Jobs / 刷新待打印任务`.
-10. Confirm the panel lists job id, order id, module code, status, created time,
+9. Confirm the local printer IP, port, and timeout are correct.
+10. Tap `Refresh Pending Print Jobs / 刷新待打印任务`.
+11. Confirm the panel lists job id, order id, module code, status, created time,
     printer endpoint, and any operator/error message.
+12. Tap `领取并打印` on one job.
+13. Confirm the printer outputs paper.
+14. Confirm Print Center marks the job `PRINTED`.
 
-No paper should print from this viewer.
+The manual print flow is:
+
+```text
+claim -> payload -> Android native TCP print -> complete
+```
+
+If payload fetch or native TCP print fails after claim, the Android shell calls
+the backend `fail` API with an Android error code so Print Center can show the
+job as `FAILED`.
 
 ## Expected Messages
 
@@ -67,22 +94,26 @@ No paper should print from this viewer.
 - `暂无待打印任务`: no pending jobs for this store.
 - `设备认证失败，请重新配对`: saved device id/token is invalid, inactive, or belongs
   to another setup.
+- `任务已被其他 Pad 领取`: another Pad claimed the job first.
 - `无法连接后端`: Web App URL, Wi-Fi, preview server, backend, or firewall is not
   reachable.
+- `请先配置本机打印机 IP`: the local printer test IP field is empty.
+- `打印 payload 缺失`: the backend did not return ESC/POS payload data.
+- `本机打印失败`: Android could not send the ESC/POS payload to the LAN printer.
 
 ## Boundaries
 
 This PR intentionally does not implement:
 
-- claim
-- payload fetch
-- native order printing
-- complete/fail/release
 - retry/backoff
 - lease renewal
 - background worker
 - printer selection
+- automatic polling
+- batch claim
+- release
 - production encrypted token storage
 
-The next recommended PR is a manual claim + print happy path, still without a
-long-running worker.
+The next recommended PR is worker hardening: explicit PRINTING state/lease
+renewal, duplicate-print prevention, retry UX, and foreground/background
+lifecycle decisions.
