@@ -179,12 +179,21 @@ print jobs. Each listed job has a manual `领取并打印` action that runs one 
 path only:
 
 ```text
-claim -> fetch payload -> native TCP print -> complete
+claim -> start-print -> fetch payload -> assigned printer native TCP print -> complete
 ```
 
 If payload fetch or native TCP printing fails after claim, the Android shell
 reports the job as failed through the backend `fail` API so Print Center can show
 the failure.
+
+`start-print` moves the job into `PRINTING` before Android opens the local TCP
+printer socket. Print Center uses this to show which Pad is actively printing
+and to warn operators when a `PRINTING` lease becomes stale.
+
+The payload response includes the backend assigned printer endpoint. Android
+prints real PAD_DIRECT jobs to `printer_host:printer_port` from the payload.
+The Local Control Panel printer IP/port fields are only for local connection
+testing and fixed test tickets.
 
 Pending jobs API route used by the Android shell:
 
@@ -210,6 +219,7 @@ Manual print job APIs used after tapping `领取并打印`:
 
 ```text
 POST /api/v1/printing/jobs/{jobId}/claim
+POST /api/v1/printing/jobs/{jobId}/start-print
 GET  /api/v1/printing/jobs/{jobId}/payload
 POST /api/v1/printing/jobs/{jobId}/complete
 POST /api/v1/printing/jobs/{jobId}/fail
@@ -217,8 +227,11 @@ X-Device-Id: {saved device id}
 X-Device-Token: {saved device token}
 ```
 
-The control panel still does not auto poll, batch claim, run a background
-worker, renew leases, or release jobs.
+The control panel can also run a foreground-only semi-auto loop when explicitly
+enabled by the operator. It refreshes pending jobs, processes one job at a time
+with the same `claim -> start-print -> payload -> assigned printer TCP print -> complete`
+flow, and stops on device auth, backend, or printer errors. It is not an Android
+background service and stops when the app is paused or closed.
 
 Expected setup for manual testing:
 
@@ -237,6 +250,7 @@ Common viewer errors:
 - `无法连接后端`: Web App URL, Wi-Fi, `preview:lan`, backend, or firewall is not reachable.
 - `暂无待打印任务`: no `PAD_DIRECT` pending jobs are available for this store/device.
 - `打印 payload 缺失`: the backend did not return ESC/POS payload data.
+- `打印任务缺少 assigned printer`: Print Center assignment/printer config is missing or disabled.
 - `本机打印失败`: Android could not send the payload to the configured LAN printer.
 
 ## Production Placeholder

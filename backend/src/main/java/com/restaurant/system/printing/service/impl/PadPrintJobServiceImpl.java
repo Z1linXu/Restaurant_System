@@ -6,6 +6,7 @@ import com.restaurant.system.printing.dto.PadPrintJobCompleteRequest;
 import com.restaurant.system.printing.dto.PadPrintJobFailRequest;
 import com.restaurant.system.printing.dto.PadPrintJobPayloadResponse;
 import com.restaurant.system.printing.dto.PadPrintJobReleaseRequest;
+import com.restaurant.system.printing.dto.PadPrintJobStartPrintRequest;
 import com.restaurant.system.printing.dto.PrintJobResponse;
 import com.restaurant.system.printing.entity.PrintJob;
 import com.restaurant.system.printing.entity.PrintJobAttempt;
@@ -31,6 +32,9 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
     private static final int DEFAULT_LEASE_SECONDS = 90;
     private static final int MIN_LEASE_SECONDS = 15;
     private static final int MAX_LEASE_SECONDS = 300;
+    private static final int DEFAULT_PRINTING_LEASE_SECONDS = 300;
+    private static final int MIN_PRINTING_LEASE_SECONDS = 60;
+    private static final int MAX_PRINTING_LEASE_SECONDS = 600;
 
     private final PrintJobRepository printJobRepository;
     private final PrintJobAttemptRepository printJobAttemptRepository;
@@ -88,10 +92,29 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
     }
 
     @Override
+    @Transactional
+    public PrintJobResponse startPrint(StoreDevice device, Long jobId, PadPrintJobStartPrintRequest request) {
+        PrintJob job = requirePadJobForDevice(device, jobId);
+        String attemptToken = normalizeAttemptToken(request == null ? null : request.client_attempt_token);
+        ensureClaimedOrPrintingByDevice(job, device, attemptToken);
+
+        LocalDateTime now = LocalDateTime.now();
+        int leaseSeconds = clampPrintingLeaseSeconds(request == null ? null : request.lease_seconds);
+        job.status = PrintJobStatus.PRINTING;
+        job.claimExpiresAt = now.plusSeconds(leaseSeconds);
+        job.last_attempt_at = now;
+        job.updated_at = now;
+        PrintJob saved = printJobRepository.save(job);
+        markAttemptPrinting(saved, device, attemptToken, now);
+        return printJobService.toResponse(saved);
+    }
+
+    @Override
     public PadPrintJobPayloadResponse getPayload(StoreDevice device, Long jobId) {
         PrintJob job = requirePadJobForDevice(device, jobId);
-        ensureClaimedByDevice(job, device, job.clientAttemptToken);
-        return PadPrintJobPayloadResponse.from(job);
+        ensureClaimedOrPrintingByDevice(job, device, job.clientAttemptToken);
+        PrinterConfig printer = requireAssignedPayloadPrinter(job);
+        return PadPrintJobPayloadResponse.from(job, printer);
     }
 
     @Override
@@ -102,7 +125,7 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
         if (PrintJobStatus.PRINTED.equals(job.status) && sameToken(job.clientAttemptToken, attemptToken)) {
             return printJobService.toResponse(job);
         }
-        ensureClaimedByDevice(job, device, attemptToken);
+        ensureClaimedOrPrintingByDevice(job, device, attemptToken);
 
         LocalDateTime now = LocalDateTime.now();
         job.status = PrintJobStatus.PRINTED;
@@ -124,7 +147,7 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
     public PrintJobResponse failJob(StoreDevice device, Long jobId, PadPrintJobFailRequest request) {
         PrintJob job = requirePadJobForDevice(device, jobId);
         String attemptToken = normalizeAttemptToken(request == null ? null : request.client_attempt_token);
-        ensureClaimedByDevice(job, device, attemptToken);
+        ensureClaimedOrPrintingByDevice(job, device, attemptToken);
 
         LocalDateTime now = LocalDateTime.now();
         String errorCode = truncate(request == null ? null : request.error_code, 80);
@@ -193,6 +216,33 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
         }
     }
 
+    private void ensureClaimedOrPrintingByDevice(PrintJob job, StoreDevice device, String attemptToken) {
+        boolean ownedActiveState = PrintJobStatus.CLAIMED.equals(job.status) || PrintJobStatus.PRINTING.equals(job.status);
+        if (!ownedActiveState
+            || !device.id.equals(job.claimedByDeviceId)
+            || !sameToken(job.clientAttemptToken, attemptToken)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Print job is not claimed by this device");
+        }
+    }
+
+    private PrinterConfig requireAssignedPayloadPrinter(PrintJob job) {
+        if (job.printer_id == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Pad Direct print job is missing assigned printer");
+        }
+        PrinterConfig printer = printerConfigRepository.findById(job.printer_id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "Assigned printer was not found"));
+        if (!job.store_id.equals(printer.store_id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Assigned printer does not belong to this print job store");
+        }
+        if (!Boolean.TRUE.equals(printer.enabled)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Assigned printer is disabled");
+        }
+        if (printer.ip_address == null || printer.ip_address.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Assigned printer is missing host");
+        }
+        return printer;
+    }
+
     private void createAttemptIfMissing(PrintJob job, StoreDevice device, String attemptToken, LocalDateTime startedAt) {
         List<PrintJobAttempt> existing = printJobAttemptRepository.findAllByPrintJobIdAndClientAttemptToken(job.id, attemptToken);
         if (!existing.isEmpty()) {
@@ -207,6 +257,26 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
         attempt.attempt_number = (int) printJobAttemptRepository.countByPrintJobId(job.id) + 1;
         attempt.status = PrintJobStatus.CLAIMED;
         attempt.started_at = startedAt;
+        printJobAttemptRepository.save(attempt);
+    }
+
+    private void markAttemptPrinting(PrintJob job, StoreDevice device, String attemptToken, LocalDateTime startedAt) {
+        List<PrintJobAttempt> attempts = printJobAttemptRepository.findAllByPrintJobIdAndClientAttemptToken(job.id, attemptToken);
+        if (attempts.isEmpty()) {
+            createAttemptIfMissing(job, device, attemptToken, startedAt);
+            attempts = printJobAttemptRepository.findAllByPrintJobIdAndClientAttemptToken(job.id, attemptToken);
+        }
+        if (attempts.isEmpty()) {
+            return;
+        }
+        PrintJobAttempt attempt = attempts.get(0);
+        attempt.status = PrintJobStatus.PRINTING;
+        if (attempt.started_at == null) {
+            attempt.started_at = startedAt;
+        }
+        attempt.finished_at = null;
+        attempt.errorCode = null;
+        attempt.error_message = null;
         printJobAttemptRepository.save(attempt);
     }
 
@@ -276,6 +346,13 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
             return DEFAULT_LEASE_SECONDS;
         }
         return Math.max(MIN_LEASE_SECONDS, Math.min(MAX_LEASE_SECONDS, value));
+    }
+
+    private int clampPrintingLeaseSeconds(Integer value) {
+        if (value == null) {
+            return DEFAULT_PRINTING_LEASE_SECONDS;
+        }
+        return Math.max(MIN_PRINTING_LEASE_SECONDS, Math.min(MAX_PRINTING_LEASE_SECONDS, value));
     }
 
     private String truncate(String value, int maxLength) {

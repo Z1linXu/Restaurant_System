@@ -1,7 +1,7 @@
 # Pad Direct Manual Print Happy Path
 
-This runbook covers PR11D-4 local pilot testing. It is a manual one-job flow,
-not an Android background worker.
+This runbook covers PR11D-4 and PR11D-5 local pilot testing. It is a manual
+one-job flow, not an Android background worker.
 
 ## Flow
 
@@ -9,8 +9,9 @@ not an Android background worker.
 Refresh Pending Jobs
 -> tap one job: 领取并打印
 -> claim
+-> start-print
 -> fetch ESC/POS payload
--> native TCP print
+-> native TCP print to the assigned printer endpoint
 -> complete on success
 -> fail on payload/native print error
 ```
@@ -39,10 +40,17 @@ It does not read the WebView bearer token or WebView `localStorage`.
 
 - Success: the printer outputs the ticket, Android shows `打印完成`, and Print
   Center marks the job `PRINTED`.
+- Printing: after `start-print`, Print Center shows the job as `PRINTING` with
+  the claiming Pad device and lease expiry.
+- Routing: Android prints to the payload `printer_host:printer_port`, not the
+  Local Control Panel test printer field.
 - Printer failure: Android shows a local print failure, calls the backend `fail`
   API, and Print Center marks the job `FAILED`.
 - Two Pads claim the same job: only one Pad succeeds; the other shows
   `任务已被其他 Pad 领取`.
+- If the printer physically printed but Android cannot call `complete`, treat
+  the Print Center warning as a duplicate-print risk. Confirm the paper before
+  reprinting.
 
 ## Boundaries
 
@@ -54,8 +62,8 @@ PR11D-4 does not implement:
 - lease renewal
 - release
 - retry/backoff
-- explicit PRINTING state
 - production encrypted token storage
 
-The next hardening step should address duplicate-print risk around lease expiry,
-worker lifecycle, retry UX, and encrypted device token storage.
+PR11D-5 adds the explicit `PRINTING` state and prevents ordinary claim from
+stealing active `PRINTING` jobs. It does not add force release, encrypted token
+storage, or a background worker.

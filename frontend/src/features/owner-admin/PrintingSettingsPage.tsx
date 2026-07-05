@@ -180,8 +180,61 @@ function statusTone(status: PrintJobRecord['status']) {
   return 'bg-[rgba(26,28,25,0.08)] text-[var(--muted)]'
 }
 
+function isPastDateTime(value?: string | null) {
+  if (!value) {
+    return false
+  }
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) {
+    return false
+  }
+  return parsed.getTime() < Date.now()
+}
+
+function padDirectClaimNotice(job: PrintJobRecord): { message: string; tone: 'warning' | 'danger' | 'info' } | null {
+  if (job.execution_mode !== 'PAD_DIRECT') {
+    return null
+  }
+  if (job.status === 'PRINTING' && isPastDateTime(job.claim_expires_at)) {
+    return {
+      message: 'Pad 正在打印但领取已过期：可能已经出纸，请确认后再重打，避免重复打印。',
+      tone: 'danger',
+    }
+  }
+  if (job.status === 'PRINTING') {
+    return {
+      message: 'Pad 正在本地打印，请等待完成回报。',
+      tone: 'info',
+    }
+  }
+  if (job.status === 'CLAIMED' && isPastDateTime(job.claim_expires_at)) {
+    return {
+      message: 'Pad 已领取但未开始打印且已过期：其他 Pad 可以重新领取。',
+      tone: 'warning',
+    }
+  }
+  if (job.status === 'CLAIMED') {
+    return {
+      message: 'Pad 已领取，等待开始打印。',
+      tone: 'info',
+    }
+  }
+  return null
+}
+
+function padDirectNoticeToneClass(tone: 'warning' | 'danger' | 'info') {
+  if (tone === 'danger') {
+    return 'bg-[rgba(151,34,34,0.1)] text-[rgb(116,22,22)]'
+  }
+  if (tone === 'warning') {
+    return 'bg-[rgba(180,120,20,0.16)] text-[rgb(130,82,14)]'
+  }
+  return 'bg-[rgba(38,86,160,0.1)] text-[rgb(38,86,160)]'
+}
+
 function printJobNeedsAttention(job: PrintJobRecord) {
-  return job.status === 'FAILED' || job.status === 'CANCELLED'
+  const padNotice = padDirectClaimNotice(job)
+  return job.status === 'FAILED' || job.status === 'CANCELLED' || padNotice?.tone === 'danger' || padNotice?.tone === 'warning'
 }
 
 function printJobOperatorMessage(job: PrintJobRecord) {
@@ -732,8 +785,8 @@ export function PrintingSettingsPage() {
                   <div className="text-[1.1rem] font-black">需要处理的打印任务：{attentionPrintJobs.length}</div>
                   <div className="mt-1 text-[0.86rem] font-medium">
                     {attentionPrintJobs.length
-                      ? `${failedPrintJobs.length} 个失败任务。已取消任务通常表示门店关闭了自动打印。`
-                      : '今天没有失败或取消的打印任务。'}
+                      ? `${failedPrintJobs.length} 个失败任务。PAD_DIRECT 领取/打印过期任务需要人工确认，避免重复出纸。`
+                      : '今天没有失败、取消或 Pad Direct 过期任务。'}
                   </div>
                 </div>
                 <span className="rounded-full bg-white/70 px-4 py-2 text-[0.84rem] font-bold">
@@ -1046,7 +1099,7 @@ export function PrintingSettingsPage() {
                   {jobsLoading ? '刷新中...' : '刷新任务'}
                 </button>
               </div>
-              <PrintJobsTable jobs={attentionPrintJobs} emptyText="今天没有失败或取消的打印任务。" onReprint={handleReprintJob} onPreview={setPreviewJob} />
+              <PrintJobsTable jobs={attentionPrintJobs} emptyText="今天没有失败、取消或 Pad Direct 过期任务。" onReprint={handleReprintJob} onPreview={setPreviewJob} />
               {jobsError ? (
                 <div className="mt-3 rounded-[16px] bg-[rgba(97,0,0,0.08)] px-4 py-3 text-[0.86rem] font-medium text-[var(--primary)]">
                   打印任务加载失败：{jobsError}
@@ -1226,75 +1279,95 @@ function PrintJobsTable({
           </tr>
         </thead>
         <tbody>
-          {jobs.map((job) => (
-            <tr key={job.id} className="border-t border-[rgba(26,28,25,0.06)]">
-              <td className="px-3 py-3 font-medium text-[var(--on-surface)]">{formatDateTime(job.created_at)}</td>
-              <td className="px-3 py-3 text-[var(--muted)]">{job.order_id ? `#${job.order_id}` : '-'}</td>
-              <td className="px-3 py-3 font-semibold text-[var(--on-surface)]">{printJobDisplayLabel(job)}</td>
-              <td className="px-3 py-3 text-[var(--muted)]">{job.printer_name ?? job.printer_endpoint ?? '-'}</td>
-              <td className="px-3 py-3">
-                <span className={`rounded-full px-2.5 py-1 text-[0.72rem] font-bold ${statusTone(job.status)}`}>{printStatusDisplayLabel(job.status)}</span>
-                {job.execution_mode ? (
-                  <div className="mt-1 text-[0.72rem] font-semibold text-[var(--muted)]">{job.execution_mode}</div>
-                ) : null}
-              </td>
-              <td className="px-3 py-3 text-[var(--muted)]">
-                {job.claimed_by_device_id ? (
-                  <div>
-                    <div className="font-semibold text-[var(--on-surface)]">设备 #{job.claimed_by_device_id}</div>
-                    <div className="text-[0.74rem]">到 {formatDateTime(job.claim_expires_at)}</div>
+          {jobs.map((job) => {
+            const padNotice = padDirectClaimNotice(job)
+            return (
+              <tr key={job.id} className="border-t border-[rgba(26,28,25,0.06)]">
+                <td className="px-3 py-3 font-medium text-[var(--on-surface)]">{formatDateTime(job.created_at)}</td>
+                <td className="px-3 py-3 text-[var(--muted)]">{job.order_id ? `#${job.order_id}` : '-'}</td>
+                <td className="px-3 py-3 font-semibold text-[var(--on-surface)]">{printJobDisplayLabel(job)}</td>
+                <td className="px-3 py-3 text-[var(--muted)]">
+                  <div>{job.printer_name ?? job.printer_endpoint ?? '-'}</div>
+                  {job.printer_id ? (
+                    <div className="mt-1 text-[0.72rem] font-semibold">
+                      ID {job.printer_id}{job.printer_endpoint ? ` · ${job.printer_endpoint}` : ''}
+                    </div>
+                  ) : null}
+                </td>
+                <td className="px-3 py-3">
+                  <span className={`rounded-full px-2.5 py-1 text-[0.72rem] font-bold ${statusTone(job.status)}`}>{printStatusDisplayLabel(job.status)}</span>
+                  {job.execution_mode ? (
+                    <div className="mt-1 text-[0.72rem] font-semibold text-[var(--muted)]">{job.execution_mode}</div>
+                  ) : null}
+                </td>
+                <td className="px-3 py-3 text-[var(--muted)]">
+                  {job.claimed_by_device_id ? (
+                    <div>
+                      <div className="font-semibold text-[var(--on-surface)]">设备 #{job.claimed_by_device_id}</div>
+                      <div className="text-[0.74rem]">到 {formatDateTime(job.claim_expires_at)}</div>
+                      {padNotice ? (
+                        <div className={`mt-2 rounded-[12px] px-2.5 py-1.5 text-[0.72rem] font-semibold ${padDirectNoticeToneClass(padNotice.tone)}`}>
+                          {padNotice.message}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : job.printed_by_device_id ? (
+                    <div>
+                      <div className="font-semibold text-[var(--on-surface)]">由设备 #{job.printed_by_device_id} 打印</div>
+                      <div className="text-[0.74rem]">Pad Direct</div>
+                    </div>
+                  ) : job.execution_mode === 'PAD_DIRECT' ? (
+                    <span>等待 Pad</span>
+                  ) : (
+                    <span>-</span>
+                  )}
+                </td>
+                <td className="px-3 py-3 text-[var(--muted)]">{job.retry_count ?? 0}/{job.max_retry_count ?? 0}</td>
+                <td className="max-w-[20rem] px-3 py-3 text-[var(--muted)]" title={job.error_message ?? ''}>
+                  {job.error_code ? (
+                    <div className={`mb-1 inline-flex rounded-full px-2 py-0.5 text-[0.68rem] font-black ${
+                      job.error_code === CLOUD_PRIVATE_PRINTER_BLOCKED
+                        ? 'bg-[rgba(151,34,34,0.14)] text-[rgb(116,22,22)]'
+                        : 'bg-white text-[var(--muted)]'
+                    }`}>
+                      {job.error_code}
+                    </div>
+                  ) : null}
+                  {padNotice ? (
+                    <div className={`mb-2 rounded-[12px] px-2.5 py-1.5 text-[0.72rem] font-semibold ${padDirectNoticeToneClass(padNotice.tone)}`}>
+                      {padNotice.message}
+                    </div>
+                  ) : null}
+                  <div className="font-semibold text-[var(--on-surface)]">
+                    {printJobOperatorMessage(job) || '-'}
                   </div>
-                ) : job.printed_by_device_id ? (
-                  <div>
-                    <div className="font-semibold text-[var(--on-surface)]">由设备 #{job.printed_by_device_id} 打印</div>
-                    <div className="text-[0.74rem]">Pad Direct</div>
+                  {job.operator_message && job.error_message && job.operator_message !== job.error_message ? (
+                    <div className="mt-1 max-w-[20rem] truncate text-[0.72rem] text-[var(--muted)]">
+                      技术信息：{job.error_message}
+                    </div>
+                  ) : null}
+                </td>
+                <td className="px-3 py-3 text-right">
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onPreview(job)}
+                      className="rounded-full bg-[rgba(38,86,160,0.12)] px-3 py-1.5 text-[0.78rem] font-semibold text-[rgb(38,86,160)]"
+                    >
+                      预览小票
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onReprint(job.id)}
+                      className="rounded-full bg-[rgba(18,141,77,0.12)] px-3 py-1.5 text-[0.78rem] font-semibold text-[rgb(25,112,69)]"
+                    >
+                      重新打印
+                    </button>
                   </div>
-                ) : job.execution_mode === 'PAD_DIRECT' ? (
-                  <span>等待 Pad</span>
-                ) : (
-                  <span>-</span>
-                )}
-              </td>
-              <td className="px-3 py-3 text-[var(--muted)]">{job.retry_count ?? 0}/{job.max_retry_count ?? 0}</td>
-              <td className="max-w-[20rem] px-3 py-3 text-[var(--muted)]" title={job.error_message ?? ''}>
-                {job.error_code ? (
-                  <div className={`mb-1 inline-flex rounded-full px-2 py-0.5 text-[0.68rem] font-black ${
-                    job.error_code === CLOUD_PRIVATE_PRINTER_BLOCKED
-                      ? 'bg-[rgba(151,34,34,0.14)] text-[rgb(116,22,22)]'
-                      : 'bg-white text-[var(--muted)]'
-                  }`}>
-                    {job.error_code}
-                  </div>
-                ) : null}
-                <div className="font-semibold text-[var(--on-surface)]">
-                  {printJobOperatorMessage(job) || '-'}
-                </div>
-                {job.operator_message && job.error_message && job.operator_message !== job.error_message ? (
-                  <div className="mt-1 max-w-[20rem] truncate text-[0.72rem] text-[var(--muted)]">
-                    技术信息：{job.error_message}
-                  </div>
-                ) : null}
-              </td>
-              <td className="px-3 py-3 text-right">
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onPreview(job)}
-                    className="rounded-full bg-[rgba(38,86,160,0.12)] px-3 py-1.5 text-[0.78rem] font-semibold text-[rgb(38,86,160)]"
-                  >
-                    预览小票
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onReprint(job.id)}
-                    className="rounded-full bg-[rgba(18,141,77,0.12)] px-3 py-1.5 text-[0.78rem] font-semibold text-[rgb(25,112,69)]"
-                  >
-                    重新打印
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>

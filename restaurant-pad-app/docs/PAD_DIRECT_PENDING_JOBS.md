@@ -30,6 +30,7 @@ When the user taps `领取并打印`, the Android shell calls:
 
 ```text
 POST /api/v1/printing/jobs/{jobId}/claim
+POST /api/v1/printing/jobs/{jobId}/start-print
 GET  /api/v1/printing/jobs/{jobId}/payload
 POST /api/v1/printing/jobs/{jobId}/complete
 POST /api/v1/printing/jobs/{jobId}/fail
@@ -81,12 +82,23 @@ Manual job APIs:  http://{developer-lan-ip}:8080/api/v1/printing/jobs/{jobId}/..
 The manual print flow is:
 
 ```text
-claim -> payload -> Android native TCP print -> complete
+claim -> start-print -> payload -> assigned printer Android native TCP print -> complete
 ```
 
 If payload fetch or native TCP print fails after claim, the Android shell calls
 the backend `fail` API with an Android error code so Print Center can show the
 job as `FAILED`.
+
+`start-print` marks the job `PRINTING`, extends the claim lease, and records
+the active Pad attempt before the local TCP socket is opened. Ordinary pending
+claim calls cannot steal active `PRINTING` jobs. If `PRINTING` expires, Print
+Center warns the operator to confirm whether paper already printed before
+reprinting.
+
+Payload also includes the assigned printer endpoint from Print Center. Android
+uses `printer_host` and `printer_port` from payload for real PAD_DIRECT jobs.
+The Local Control Panel printer test IP is not used as the route for restaurant
+order jobs.
 
 ## Expected Messages
 
@@ -99,6 +111,8 @@ job as `FAILED`.
   reachable.
 - `请先配置本机打印机 IP`: the local printer test IP field is empty.
 - `打印 payload 缺失`: the backend did not return ESC/POS payload data.
+- `打印任务缺少 assigned printer`: payload did not include a valid assigned
+  printer endpoint.
 - `本机打印失败`: Android could not send the ESC/POS payload to the LAN printer.
 
 ## Boundaries
@@ -113,7 +127,8 @@ This PR intentionally does not implement:
 - batch claim
 - release
 - production encrypted token storage
+- force release / stale reset tooling
 
-The next recommended PR is worker hardening: explicit PRINTING state/lease
-renewal, duplicate-print prevention, retry UX, and foreground/background
-lifecycle decisions.
+The next recommended PR is deeper worker hardening: encrypted credential
+storage, force-release/mark-failed operator tooling, module/printer affinity,
+and long-running lifecycle testing.

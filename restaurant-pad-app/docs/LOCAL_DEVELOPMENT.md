@@ -113,6 +113,8 @@ It provides:
 - Clear Pairing / 清除配对
 - Refresh Pending Print Jobs / 刷新待打印任务
 - 领取并打印, shown per pending job after refresh
+- Start Auto Print / 开启自动处理打印任务
+- Stop Auto Print / 停止自动处理
 
 Shortcut behavior:
 
@@ -129,7 +131,8 @@ Web App URL only. It does not test backend auth or business APIs.
 
 `Local Printer Test` performs direct Android-to-printer TCP checks. It does not
 use WebView login state, does not call backend APIs, and does not claim
-`PAD_DIRECT` jobs.
+`PAD_DIRECT` jobs. Real PAD_DIRECT order jobs use the printer endpoint returned
+by the backend payload for each job, not this local test IP.
 
 ## Pad Direct Device Pairing
 
@@ -186,11 +189,29 @@ Use it like this:
 The button performs:
 
 ```text
-claim -> payload -> native TCP print -> complete
+claim -> start-print -> payload -> assigned printer native TCP print -> complete
 ```
 
 If payload fetch or native printing fails after claim, the Android shell calls
 the backend `fail` API so Print Center can show a `FAILED` job.
+
+`start-print` marks the job `PRINTING`, extends the claim lease, and records the
+active Pad attempt before the local TCP print begins. Print Center warns when a
+`PRINTING` job becomes stale so staff can confirm whether paper already printed
+before reprinting.
+
+The payload contains the assigned printer from Print Center:
+
+```text
+printer_host
+printer_port
+printer_endpoint
+printer_name
+```
+
+Android prints to that endpoint. If the endpoint is missing, disabled, or
+unreachable from the Pad network, the job is failed and the semi-auto worker
+stops.
 
 The Android shell authenticates this request with the saved device credentials:
 
@@ -217,9 +238,30 @@ This manual flow does not:
 - open WebSocket connections
 - batch claim jobs
 - automatically print new jobs
-- renew claim leases
 - release jobs
 - implement a worker
+
+## Pad Direct Foreground Semi-Auto Mode
+
+For pilot testing, the Local Control Panel can run a foreground-only semi-auto
+loop after the Pad is paired and the local printer IP/port/timeout are set.
+
+Behavior:
+
+- The operator must explicitly tap `Start Auto Print / 开启自动处理打印任务`.
+- The loop checks pending jobs periodically through the same device-auth API.
+- It processes one job at a time.
+- Each job uses the same safe flow:
+  `claim -> start-print -> payload -> assigned printer native TCP print -> complete/fail`.
+- `409` conflicts are skipped because another Pad won the claim.
+- Device auth, backend connectivity, payload, or printer failures stop the loop
+  and show the reason in the panel.
+- The operator can tap `Stop Auto Print / 停止自动处理` at any time.
+- The loop stops when the Android app is paused or closed.
+
+This is not a production background daemon. It does not run after the app is
+killed, does not use Android foreground services, does not renew leases while a
+single print is in progress, and does not silently retry forever.
 
 ## Bundled Assets API Base Configuration
 

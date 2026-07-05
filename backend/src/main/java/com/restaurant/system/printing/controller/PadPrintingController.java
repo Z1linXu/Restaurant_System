@@ -8,6 +8,7 @@ import com.restaurant.system.printing.dto.PadPrintJobCompleteRequest;
 import com.restaurant.system.printing.dto.PadPrintJobFailRequest;
 import com.restaurant.system.printing.dto.PadPrintJobPayloadResponse;
 import com.restaurant.system.printing.dto.PadPrintJobReleaseRequest;
+import com.restaurant.system.printing.dto.PadPrintJobStartPrintRequest;
 import com.restaurant.system.printing.dto.PrintJobResponse;
 import com.restaurant.system.printing.entity.StoreDevice;
 import com.restaurant.system.printing.service.PadPrintJobService;
@@ -60,6 +61,18 @@ public class PadPrintingController {
         featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         StoreDevice device = storeDeviceService.authenticateDevice(deviceId, deviceToken);
         return ApiResponse.success("Print job claimed", padPrintJobService.claimJob(device, jobId, request));
+    }
+
+    @PostMapping("/api/v1/printing/jobs/{jobId}/start-print")
+    public ApiResponse<PrintJobResponse> startPrint(
+        @PathVariable Long jobId,
+        @RequestHeader("X-Device-Id") Long deviceId,
+        @RequestHeader("X-Device-Token") String deviceToken,
+        @RequestBody PadPrintJobStartPrintRequest request
+    ) {
+        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
+        StoreDevice device = storeDeviceService.authenticateDevice(deviceId, deviceToken);
+        return ApiResponse.success("Print job marked printing", padPrintJobService.startPrint(device, jobId, request));
     }
 
     @GetMapping("/api/v1/printing/jobs/{jobId}/payload")

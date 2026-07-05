@@ -9,6 +9,14 @@ public class PadPrintJobPayloadResponse {
     public Long order_id;
     public Long order_update_batch_id;
     public Long printer_id;
+    public String printer_name;
+    public String printer_host;
+    public Integer printer_port;
+    public String printer_endpoint;
+    public Integer paper_width_mm;
+    public String text_encoding;
+    public Integer escpos_code_page;
+    public Integer timeout_ms;
     public String module_code;
     public String receipt_type;
     public String rendered_text_snapshot;
@@ -31,6 +39,22 @@ public class PadPrintJobPayloadResponse {
         response.claimed_by_device_id = job.claimedByDeviceId;
         response.claim_expires_at = job.claimExpiresAt;
         response.client_attempt_token = job.clientAttemptToken;
+        return response;
+    }
+
+    public static PadPrintJobPayloadResponse from(PrintJob job, com.restaurant.system.printing.entity.PrinterConfig printer) {
+        PadPrintJobPayloadResponse response = from(job);
+        if (printer != null) {
+            response.printer_id = printer.id;
+            response.printer_name = printer.name;
+            response.printer_host = printer.ip_address;
+            response.printer_port = printer.port == null ? 9100 : printer.port;
+            response.printer_endpoint = printer.ip_address + ":" + response.printer_port;
+            response.paper_width_mm = printer.paper_width_mm;
+            response.text_encoding = printer.text_encoding;
+            response.escpos_code_page = printer.escpos_code_page;
+            response.timeout_ms = printer.timeout_ms;
+        }
         return response;
     }
 }

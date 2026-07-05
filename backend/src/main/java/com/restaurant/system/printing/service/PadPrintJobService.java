@@ -5,6 +5,7 @@ import com.restaurant.system.printing.dto.PadPrintJobCompleteRequest;
 import com.restaurant.system.printing.dto.PadPrintJobFailRequest;
 import com.restaurant.system.printing.dto.PadPrintJobPayloadResponse;
 import com.restaurant.system.printing.dto.PadPrintJobReleaseRequest;
+import com.restaurant.system.printing.dto.PadPrintJobStartPrintRequest;
 import com.restaurant.system.printing.dto.PrintJobResponse;
 import com.restaurant.system.printing.entity.StoreDevice;
 import java.util.List;
@@ -14,6 +15,8 @@ public interface PadPrintJobService {
     List<PrintJobResponse> listPendingJobs(StoreDevice device, Long storeId, int limit);
 
     PrintJobResponse claimJob(StoreDevice device, Long jobId, PadPrintJobClaimRequest request);
+
+    PrintJobResponse startPrint(StoreDevice device, Long jobId, PadPrintJobStartPrintRequest request);
 
     PadPrintJobPayloadResponse getPayload(StoreDevice device, Long jobId);
 

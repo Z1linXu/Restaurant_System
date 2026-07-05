@@ -5740,11 +5740,13 @@ Operational notes:
 
 ## PR11D-4: Android PAD_DIRECT Manual Claim And Native Print Happy Path
 
-PR11D-4 adds a manual one-job `领取并打印` action to the Android Local Control
-Panel pending jobs list. It does not implement an automatic worker, automatic
-polling, batch claim, lease renewal, release, retry/backoff, explicit PRINTING
-state changes, database migrations, order lifecycle changes, payment/refund
-changes, or `completeOrder` changes.
+PR11D-4 added the first manual one-job `领取并打印` action to the Android Local
+Control Panel pending jobs list. The original PR11D-4 scope did not include an
+automatic worker, automatic polling, batch claim, lease renewal, release,
+retry/backoff, explicit `PRINTING` state changes, database migrations, order
+lifecycle changes, payment/refund changes, or `completeOrder` changes. PR11D-5
+/ PR11D-6 / PR11D-7 later upgraded the runtime flow with `start-print`,
+`PRINTING`, and foreground semi-auto mode.
 
 Manual flow:
 
@@ -5752,7 +5754,8 @@ Manual flow:
 - The operator taps one job's `领取并打印` button.
 - Android generates a `client_attempt_token`.
 - Android claims the job with `X-Device-Id` and `X-Device-Token`.
-- Android fetches the ESC/POS payload for the claimed job.
+- Android marks the job `PRINTING` through `start-print`.
+- Android fetches the ESC/POS payload for the claimed/printing job.
 - Android decodes `escpos_payload_base64` and sends it to the configured local
   LAN printer with the native TCP bridge.
 - On native print success, Android calls the backend complete API.
@@ -5772,13 +5775,113 @@ Operational boundaries:
 - Printer IP/port/timeout come from the Android Local Control Panel's local
   printer settings.
 
-Pilot limitations:
+Original PR11D-4 pilot limitations:
 
 - If a claim lease expires while a device is still printing, another Pad could
-  reclaim the job; PR11D-5 should add PRINTING/lease-renewal/duplicate-print
-  hardening before unattended production worker use.
+  reclaim the job. PR11D-5/6/7 now reduces this risk with `PRINTING` and
+  foreground semi-auto mode, but encrypted storage, force release, and
+  long-running worker hardening are still future work.
 - Device token storage still uses Android `SharedPreferences` for local pilot
   testing and must move to encrypted storage before production worker rollout.
+
+## PR11D-5/6/7: PAD_DIRECT Safe Semi-Auto Printing
+
+PR11D-5/6/7 hardens the Android Pad Direct pilot from manual printing toward a
+safe foreground semi-auto workflow. It does not add an Android background
+service, boot receiver, WebSocket worker, database migration, order lifecycle
+change, payment/refund behavior, `completeOrder` change, menu/order business
+logic change, cloud deployment change, or REAL-mode server-side printing change.
+
+Backend duplicate-print hardening:
+
+- PAD Direct now supports `POST /api/v1/printing/jobs/{jobId}/start-print`.
+- `start-print` is device-authenticated with `X-Device-Id` and
+  `X-Device-Token`.
+- Only the device that owns the claim and matching `client_attempt_token` can
+  start printing.
+- `start-print` moves the job from `CLAIMED` to `PRINTING`, extends
+  `claim_expires_at`, and records the active attempt.
+- Payload fetch, complete, and fail accept the claimed device from either
+  `CLAIMED` or `PRINTING`, preserving compatibility with the earlier manual
+  client.
+- Ordinary claim can reclaim `PENDING` or expired `CLAIMED` jobs only; active
+  or expired `PRINTING` jobs are not automatically stolen by another Pad.
+
+Android pilot behavior:
+
+- Manual `领取并打印` now runs:
+  `claim -> start-print -> payload -> assigned printer TCP print -> complete/fail`.
+- Local Control Panel adds explicit `Start Auto Print / 开启自动处理打印任务`
+  and `Stop Auto Print / 停止自动处理` controls.
+- Semi-auto mode is foreground-only and operator controlled.
+- It polls pending jobs at a small interval only while enabled, processes one
+  job at a time, and uses the same safe flow as manual printing.
+- It stops on device auth, backend, payload, or printer failures instead of
+  retrying forever.
+- It stops when the Android app is paused or closed.
+
+Print Center visibility:
+
+- `PRINTING` status is visible in recent/attention print jobs.
+- Claim owner device and claim expiry are shown for Pad Direct jobs.
+- Expired `CLAIMED` jobs warn that another Pad may reclaim them.
+- Expired `PRINTING` jobs warn operators to confirm whether paper already
+  printed before reprinting, because blind reprint may duplicate tickets.
+
+Pilot limitations still remaining:
+
+- Device credentials are still stored in Android `SharedPreferences`; production
+  should migrate to `EncryptedSharedPreferences` or Android Keystore-backed
+  storage.
+- No Android long-running foreground service or background daemon.
+- No lease renewal loop during very long physical prints.
+- No force-release / mark-failed operator tooling.
+- No device-to-printer or device-to-module affinity.
+- If physical printing succeeds but complete fails, staff must reconcile in
+  Print Center before reprinting.
+
+## PR11D-8: PAD_DIRECT Multi-Printer Routing
+
+PR11D-8 changes PAD_DIRECT execution from a single Android-local default printer
+to backend-assigned printer routing. It does not add database migrations,
+device-printer affinity, Android background services, force release tooling,
+encrypted credential storage, order lifecycle changes, payment/refund changes,
+`completeOrder` changes, menu/order business logic changes, PrintDispatcher
+routing changes, or REAL-mode server-side printing changes.
+
+Routing model:
+
+- Print Center remains the source of truth for module-to-printer assignment.
+- `print_jobs.printer_id` is reused as the assigned printer reference.
+- No new table or column is added.
+- PAD_DIRECT payload now returns assigned printer fields:
+  `printer_id`, `printer_name`, `printer_host`, `printer_port`,
+  `printer_endpoint`, `paper_width_mm`, `text_encoding`, `escpos_code_page`,
+  and `timeout_ms`.
+- Android manual and foreground semi-auto flows print to
+  `printer_host:printer_port` from the payload.
+- The Local Control Panel printer IP/port fields are only for local printer
+  connection tests and fixed test tickets, not real PAD_DIRECT order routing.
+
+Operational behavior:
+
+- Any paired Pad for the store may claim any module job: `GRAB`,
+  `FRONTDESK_RECEIPT`, or `HOT_KITCHEN`.
+- Backend atomic claim and `PRINTING` state still prevent duplicate claim/print.
+- If payload is missing assigned printer details, Android fails the job with
+  `ANDROID_ASSIGNED_PRINTER_MISSING`.
+- If the Pad cannot reach the assigned printer, Android fails the job with
+  `ANDROID_ASSIGNED_PRINTER_UNREACHABLE` and stops the worker.
+- Print Center job tables show printer id, name, and endpoint for verification.
+
+Pilot limitations:
+
+- Printer endpoints are resolved from current `printer_configs` through
+  `print_jobs.printer_id`; there is no printer endpoint snapshot column.
+- If a printer IP is changed after a job is already pending, payload uses the
+  latest config for that printer id.
+- Each Pad must be on a LAN/VLAN that can reach all printers it may claim.
+- Device-printer/module affinity is intentionally not implemented in this PR.
 
 ## PR11C: Frontdesk User Menu And Staff Store Tools Access
 
