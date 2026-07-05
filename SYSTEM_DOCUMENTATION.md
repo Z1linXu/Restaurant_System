@@ -5625,6 +5625,40 @@ Control Panel behavior:
 - `Test Web App URL` only checks the configured Web App URL reachability and
   does not test backend business APIs.
 
+## PR11D-1: Android Native TCP Printer Connection Test POC
+
+PR11D-1 makes the existing Android native TCP printer bridge usable from the
+Local Control Panel for real hardware testing. It does not implement
+`PAD_DIRECT` worker behavior, device registration, pending job polling, claim,
+payload fetch, complete/fail/release, backend business API calls, Android
+background printing, payment/refund behavior, `completeOrder` changes, database
+migrations, or frontend POS runtime changes.
+
+Local Control Panel printer test behavior:
+
+- The panel stores local test-only settings in Android `SharedPreferences`:
+  `printer_test_ip`, `printer_test_port`, and `printer_test_timeout_ms`.
+- `Test Printer Connection` opens a TCP socket from the Android Pad to the
+  configured printer endpoint and reports a clear success/failure message.
+- `Test Print` builds a fixed local ESC/POS test ticket in Android and sends it
+  through the native raw TCP bridge.
+- The fixed test ticket includes English text, Chinese text, printer endpoint,
+  current timestamp, line feeds, and a cut command.
+- The test payload is built locally and encoded primarily with GBK for Chinese
+  printer compatibility testing.
+- The feature does not store device tokens, backend secrets, or WebView bearer
+  tokens and does not upload printer IP to the backend.
+
+Operational notes:
+
+- Android Pad and printer must be on the same LAN.
+- Default ESC/POS raw TCP port is `9100`.
+- Timeout defaults to `3000ms` and is configurable in the panel.
+- Common failures include timeout, connection refused, unreachable host,
+  write failure, Chinese encoding mismatch, and unsupported cut command.
+- This POC is the recommended hardware step before connecting Android to
+  backend `PAD_DIRECT` device registration and print job claim APIs.
+
 ## PR11C: Frontdesk User Menu And Staff Store Tools Access
 
 PR11C adds a Web frontdesk user menu for Android Pad and browser workflows. It

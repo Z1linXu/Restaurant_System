@@ -106,6 +106,9 @@ It provides:
 - Open Menu Management
 - Open Dining Tables
 - Test Web App URL
+- Local Printer Test fields
+- Test Printer Connection
+- Test Print
 
 Shortcut behavior:
 
@@ -119,6 +122,10 @@ Shortcut behavior:
 
 `Test Web App URL` performs a simple reachability check against the configured
 Web App URL only. It does not test backend auth or business APIs.
+
+`Local Printer Test` performs direct Android-to-printer TCP checks. It does not
+use WebView login state, does not call backend APIs, and does not claim
+`PAD_DIRECT` jobs.
 
 ## Bundled Assets API Base Configuration
 
@@ -142,7 +149,8 @@ Do not hardcode the development computer IP in source code. It should be entered
 
 ## Native Printer Bridge Local Test
 
-The PR4 native printer test page is a hardware connectivity POC only.
+The native printer test area inside the Local Control Panel is a hardware
+connectivity POC only.
 
 It does not:
 
@@ -155,7 +163,7 @@ It does not:
 Use the local test printer example:
 
 ```text
-Printer IP: 192.168.2.200
+Printer IP: your printer LAN IP
 Port: 9100
 Timeout: 3000 or 5000 ms
 ```
@@ -164,12 +172,28 @@ Recommended test sequence:
 
 1. Put the Android Pad on the same Wi-Fi/LAN as the printer.
 2. Confirm the backend computer is also reachable on the same LAN if the WebView needs API access.
-3. Open the Pad printer test page: `https://restaurant-pad.local/printer-test.html`.
-4. Enter `192.168.2.200`, port `9100`, and timeout `3000` or `5000`.
+3. Long press inside the Pad app to open the Local Control Panel.
+4. Enter the printer IP, port `9100`, and timeout `3000` or `5000`.
 5. Tap `Test Connection`.
-6. If the connection succeeds, tap `Print Test Receipt`.
+6. If the connection succeeds, tap `Test Print`.
 
-`192.168.2.200` is only an example test printer address. Real deployments must read the printer IP from a settings screen, runtime config, backend printer config, or operator input.
+Printer IP values are operator-entered local test settings. Real deployments
+must read the printer IP from runtime config, backend printer config, or an
+approved setup flow.
+
+The fixed test ticket contains:
+
+```text
+RESTAURANT PAD TEST
+打印机测试
+IP: {ip}:{port}
+Time: yyyy-MM-dd HH:mm:ss
+----------------
+```
+
+The Android shell builds a raw ESC/POS payload locally with init, GBK-encoded
+text, line feeds, and cut. If Chinese output is garbled, the printer firmware
+may require a different code page or encoding setting in a later hardening PR.
 
 ## LAN / Subnet Checklist
 
@@ -199,6 +223,8 @@ If connection fails, check:
 - printer port `9100`
 - Android local-network socket permission / cleartext debug config
 - whether the printer has a fixed IP or DHCP reservation
+- Chinese garbled output, which usually means firmware/code page mismatch
+- paper not cut, which usually means the printer uses a different cut command or cutter is disabled
 
 Common WebView / Android errors:
 

@@ -85,6 +85,8 @@ Shortcut buttons:
 - Open Menu Management
 - Open Dining Tables
 - Test Web App URL
+- Test Printer Connection
+- Test Print
 
 When the current WebView URL contains `/stores/{storeId}/`, shortcuts use the
 store-scoped routes:
@@ -103,6 +105,29 @@ those routes to the correct store workspace after normal auth/store checks.
 
 `Test Web App URL` only checks whether the configured Web App URL is reachable.
 It does not test backend APIs and does not use the logged-in Web session.
+
+## Local Printer Test
+
+The Local Control Panel also includes a small local printer test section:
+
+```text
+Printer IP
+Port, default 9100
+Timeout ms, default 3000
+```
+
+Buttons:
+
+- `Test Printer Connection`: opens a TCP socket to the printer and closes it.
+- `Test Print`: sends a fixed ESC/POS test ticket from the Android device.
+
+This is a local LAN hardware test only. It does not enable `PAD_DIRECT`, does
+not claim backend `print_jobs`, does not call complete/fail/release, and does
+not print real restaurant orders.
+
+The printer IP, port, and timeout are stored in Android `SharedPreferences`
+using local test keys only. The shell does not store device tokens, backend
+secrets, or WebView bearer tokens for this feature.
 
 ## Production Placeholder
 
