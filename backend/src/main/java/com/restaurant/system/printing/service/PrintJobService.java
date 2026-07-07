@@ -35,6 +35,8 @@ public interface PrintJobService {
 
     PrintJob markPadDirectQueued(PrintJob job, PrinterConfig printer);
 
+    PrintJob markPadDirectQueued(PrintJob job, PrinterConfig printer, String fontSize);
+
     PrintJob markPrinting(PrintJob job, PrinterConfig printer);
 
     PrintJob markPrinted(PrintJob job, PrinterConfig printer);

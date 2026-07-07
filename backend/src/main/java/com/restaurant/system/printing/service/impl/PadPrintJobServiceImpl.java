@@ -17,8 +17,11 @@ import com.restaurant.system.printing.repository.PrintJobRepository;
 import com.restaurant.system.printing.repository.PrinterConfigRepository;
 import com.restaurant.system.printing.service.PadPrintJobService;
 import com.restaurant.system.printing.service.PrintJobService;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -28,6 +31,7 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class PadPrintJobServiceImpl implements PadPrintJobService {
 
+    private static final Logger logger = LoggerFactory.getLogger(PadPrintJobServiceImpl.class);
     private static final int DEFAULT_PENDING_LIMIT = 25;
     private static final int DEFAULT_LEASE_SECONDS = 90;
     private static final int MIN_LEASE_SECONDS = 15;
@@ -57,10 +61,23 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
     public List<PrintJobResponse> listPendingJobs(StoreDevice device, Long storeId, int limit) {
         ensureDeviceStore(device, storeId);
         int effectiveLimit = limit <= 0 ? DEFAULT_PENDING_LIMIT : Math.min(limit, 100);
-        return printJobRepository.findPendingPadDirectJobs(storeId, LocalDateTime.now(), PageRequest.of(0, effectiveLimit))
+        LocalDateTime now = LocalDateTime.now();
+        List<PrintJobResponse> jobs = printJobRepository.findPendingPadDirectJobs(storeId, now, PageRequest.of(0, effectiveLimit))
             .stream()
             .map(printJobService::toResponse)
             .toList();
+        if (jobs.isEmpty()) {
+            logger.debug("PAD_DIRECT Worker Poll Queue device {} store {} returned 0 jobs", device.id, storeId);
+        } else {
+            long oldestJobAgeMs = jobs.get(0).created_at == null ? -1L : Duration.between(jobs.get(0).created_at, now).toMillis();
+            logger.info("PAD_DIRECT Worker Poll Queue device {} store {} returned {} jobs oldestJobAgeMs={}",
+                device.id,
+                storeId,
+                jobs.size(),
+                Math.max(-1L, oldestJobAgeMs)
+            );
+        }
+        return jobs;
     }
 
     @Override
@@ -83,11 +100,20 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
             now.plusSeconds(leaseSeconds)
         );
         if (updated != 1) {
+            logger.info("PAD_DIRECT Job Picked conflict job {} device {} store {}", jobId, device.id, device.storeId);
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Print job is not available to claim");
         }
 
         PrintJob claimed = printJobService.requireJob(jobId);
         createAttemptIfMissing(claimed, device, attemptToken, now);
+        long queueDelayMs = claimed.created_at == null ? -1L : Duration.between(claimed.created_at, now).toMillis();
+        logger.info("PAD_DIRECT Job Picked job {} module {} device {} store {} queueDelayMs={}",
+            claimed.id,
+            claimed.module_code,
+            device.id,
+            device.storeId,
+            Math.max(-1L, queueDelayMs)
+        );
         return printJobService.toResponse(claimed);
     }
 
@@ -106,6 +132,7 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
         job.updated_at = now;
         PrintJob saved = printJobRepository.save(job);
         markAttemptPrinting(saved, device, attemptToken, now);
+        logger.info("PAD_DIRECT Job Processing job {} module {} device {} store {}", saved.id, saved.module_code, device.id, device.storeId);
         return printJobService.toResponse(saved);
     }
 
@@ -114,6 +141,7 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
         PrintJob job = requirePadJobForDevice(device, jobId);
         ensureClaimedOrPrintingByDevice(job, device, job.clientAttemptToken);
         PrinterConfig printer = requireAssignedPayloadPrinter(job);
+        logger.info("PAD_DIRECT Job Processing payload job {} module {} device {} printer {}", job.id, job.module_code, device.id, printer.id);
         return PadPrintJobPayloadResponse.from(job, printer);
     }
 
@@ -139,6 +167,7 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
         PrintJob saved = printJobRepository.save(job);
         completeAttempt(saved, attemptToken, PrintJobStatus.PRINTED, null, null, request == null ? null : request.raw_result, now);
         updatePrinterSuccess(saved.printer_id, now);
+        logger.info("PAD_DIRECT Job Finished job {} module {} device {} store {}", saved.id, saved.module_code, device.id, device.storeId);
         return printJobService.toResponse(saved);
     }
 
@@ -162,6 +191,14 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
         PrintJob saved = printJobRepository.save(job);
         completeAttempt(saved, attemptToken, PrintJobStatus.FAILED, saved.error_code, saved.error_message, request == null ? null : request.raw_result, now);
         updatePrinterFailure(saved.printer_id, saved.error_message, now);
+        logger.warn("PAD_DIRECT Job Failed job {} module {} device {} store {} code {} message {}",
+            saved.id,
+            saved.module_code,
+            device.id,
+            device.storeId,
+            saved.error_code,
+            saved.error_message
+        );
         return printJobService.toResponse(saved);
     }
 
@@ -184,6 +221,7 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
         job.updated_at = now;
         PrintJob saved = printJobRepository.save(job);
         completeAttempt(saved, attemptToken, PrintJobStatus.CANCELLED, "PAD_DIRECT_RELEASED", reason, reason, now);
+        logger.info("PAD_DIRECT Job Released job {} module {} device {} store {}", saved.id, saved.module_code, device.id, device.storeId);
         return printJobService.toResponse(saved);
     }
 

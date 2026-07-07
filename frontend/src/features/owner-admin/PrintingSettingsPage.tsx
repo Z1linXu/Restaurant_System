@@ -54,6 +54,7 @@ type AndroidPadDeviceBridge = {
   saveDeviceCredentials: (json: string) => string
   getDeviceStatus: () => string
   clearDeviceCredentials: () => string
+  kickPrintWorker?: (json: string) => string
 }
 
 declare global {
@@ -140,6 +141,75 @@ function formatDateTime(value?: string | null) {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+function timestampMs(value?: string | null) {
+  if (!value) {
+    return null
+  }
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed.getTime()
+}
+
+function durationLabel(ms: number | null) {
+  if (ms == null || ms < 0) {
+    return '-'
+  }
+  if (ms < 1000) {
+    return `${ms}ms`
+  }
+  const seconds = Math.floor(ms / 1000)
+  if (seconds < 60) {
+    return `${seconds}s`
+  }
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = seconds % 60
+  if (minutes < 60) {
+    return remainingSeconds ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`
+  }
+  const hours = Math.floor(minutes / 60)
+  const remainingMinutes = minutes % 60
+  return remainingMinutes ? `${hours}h ${remainingMinutes}m` : `${hours}h`
+}
+
+function jobAgeMs(job: PrintJobRecord) {
+  const createdAt = timestampMs(job.created_at)
+  return createdAt == null ? null : Math.max(0, Date.now() - createdAt)
+}
+
+function queueDelayMs(job: PrintJobRecord) {
+  const createdAt = timestampMs(job.created_at)
+  const claimedAt = timestampMs(job.claimed_at)
+  return createdAt == null || claimedAt == null ? null : Math.max(0, claimedAt - createdAt)
+}
+
+function totalJobTimeMs(job: PrintJobRecord) {
+  const createdAt = timestampMs(job.created_at)
+  const finishedAt = timestampMs(job.printed_at ?? job.failed_at ?? null)
+  return createdAt == null || finishedAt == null ? null : Math.max(0, finishedAt - createdAt)
+}
+
+function pendingAgeNotice(job: PrintJobRecord): { message: string; tone: 'warning' | 'danger' } | null {
+  if (job.execution_mode !== 'PAD_DIRECT' || job.status !== 'PENDING') {
+    return null
+  }
+  const ageMs = jobAgeMs(job)
+  if (ageMs == null) {
+    return null
+  }
+  if (ageMs > 120000) {
+    return {
+      message: 'Pad 可能未运行或自动处理已停止。',
+      tone: 'danger',
+    }
+  }
+  if (ageMs > 30000) {
+    return {
+      message: '等待 Pad 处理。',
+      tone: 'warning',
+    }
+  }
+  return null
 }
 
 function connectionBadge(printer: PrinterConfigRecord) {
@@ -234,11 +304,42 @@ function padDirectNoticeToneClass(tone: 'warning' | 'danger' | 'info') {
 
 function printJobNeedsAttention(job: PrintJobRecord) {
   const padNotice = padDirectClaimNotice(job)
-  return job.status === 'FAILED' || job.status === 'CANCELLED' || padNotice?.tone === 'danger' || padNotice?.tone === 'warning'
+  const pendingNotice = pendingAgeNotice(job)
+  return job.status === 'FAILED'
+    || job.status === 'CANCELLED'
+    || padNotice?.tone === 'danger'
+    || padNotice?.tone === 'warning'
+    || pendingNotice?.tone === 'danger'
+    || pendingNotice?.tone === 'warning'
 }
 
 function printJobOperatorMessage(job: PrintJobRecord) {
   return displayPrintJobOperatorMessage(job)
+}
+
+function printJobNativeDiagnostics(job: PrintJobRecord) {
+  const source = `${job.error_message ?? ''}\n${job.operator_message ?? ''}`
+  const read = (key: string) => {
+    const match = source.match(new RegExp(`${key}=([^;\\n]+)`))
+    return match?.[1]?.trim() ?? ''
+  }
+  const nativeErrorCode = read('native_error_code')
+  const phase = read('phase')
+  const endpoint = read('endpoint')
+  const bytesWritten = read('bytes_written')
+  const exceptionClass = read('exception_class')
+  const deviceId = read('device_id')
+  if (!nativeErrorCode && !phase && !endpoint && !bytesWritten && !exceptionClass && !deviceId) {
+    return null
+  }
+  return {
+    nativeErrorCode,
+    phase,
+    endpoint,
+    bytesWritten,
+    exceptionClass,
+    deviceId,
+  }
 }
 
 function parseAndroidPadStatus(rawStatus: string): AndroidPadDeviceStatus | null {
@@ -370,6 +471,26 @@ export function PrintingSettingsPage() {
 
   const failedPrintJobs = useMemo(() => printJobs.filter((job) => job.status === 'FAILED'), [printJobs])
   const attentionPrintJobs = useMemo(() => printJobs.filter(printJobNeedsAttention), [printJobs])
+  const padDirectQueueStats = useMemo(() => {
+    const pendingJobs = printJobs.filter((job) => job.execution_mode === 'PAD_DIRECT' && job.status === 'PENDING')
+    const oldestPendingAgeMs = pendingJobs.reduce<number | null>((oldest, job) => {
+      const ageMs = jobAgeMs(job)
+      if (ageMs == null) {
+        return oldest
+      }
+      return oldest == null ? ageMs : Math.max(oldest, ageMs)
+    }, null)
+    const stalePrintingCount = printJobs.filter(
+      (job) => job.execution_mode === 'PAD_DIRECT'
+        && job.status === 'PRINTING'
+        && isPastDateTime(job.claim_expires_at),
+    ).length
+    return {
+      pendingCount: pendingJobs.length,
+      oldestPendingAgeMs,
+      stalePrintingCount,
+    }
+  }, [printJobs])
   const printingMode = (printCenter?.printing_mode ?? (printCenter?.printing_enabled ? 'REAL' : 'DISABLED')) as PrintingMode
   const cloudPrivatePrinterWarning = useMemo(() => {
     if (printCenter?.cloud_private_printer_warning) {
@@ -785,9 +906,14 @@ export function PrintingSettingsPage() {
                   <div className="text-[1.1rem] font-black">需要处理的打印任务：{attentionPrintJobs.length}</div>
                   <div className="mt-1 text-[0.86rem] font-medium">
                     {attentionPrintJobs.length
-                      ? `${failedPrintJobs.length} 个失败任务。PAD_DIRECT 领取/打印过期任务需要人工确认，避免重复出纸。`
+                      ? `${failedPrintJobs.length} 个失败任务。PAD_DIRECT 等待 ${padDirectQueueStats.pendingCount} 个，最老等待 ${durationLabel(padDirectQueueStats.oldestPendingAgeMs)}，过期 PRINTING ${padDirectQueueStats.stalePrintingCount} 个。`
                       : '今天没有失败、取消或 Pad Direct 过期任务。'}
                   </div>
+                  {padDirectQueueStats.oldestPendingAgeMs != null && padDirectQueueStats.oldestPendingAgeMs > 120000 ? (
+                    <div className="mt-2 rounded-[14px] bg-[rgba(151,34,34,0.1)] px-3 py-2 text-[0.82rem] font-bold text-[rgb(116,22,22)]">
+                      队列最前方有旧任务未处理，可能阻塞后续打印。请确认 Android Pad 自动处理是否开启。
+                    </div>
+                  ) : null}
                 </div>
                 <span className="rounded-full bg-white/70 px-4 py-2 text-[0.84rem] font-bold">
                   查看打印问题
@@ -1272,6 +1398,7 @@ function PrintJobsTable({
             <th className="px-3 py-3">模块</th>
             <th className="px-3 py-3">打印机</th>
             <th className="px-3 py-3">状态</th>
+            <th className="px-3 py-3">耗时</th>
             <th className="px-3 py-3">Pad 领取</th>
             <th className="px-3 py-3">重试</th>
             <th className="px-3 py-3">错误</th>
@@ -1281,6 +1408,8 @@ function PrintJobsTable({
         <tbody>
           {jobs.map((job) => {
             const padNotice = padDirectClaimNotice(job)
+            const pendingNotice = pendingAgeNotice(job)
+            const nativeDiagnostics = printJobNativeDiagnostics(job)
             return (
               <tr key={job.id} className="border-t border-[rgba(26,28,25,0.06)]">
                 <td className="px-3 py-3 font-medium text-[var(--on-surface)]">{formatDateTime(job.created_at)}</td>
@@ -1299,6 +1428,19 @@ function PrintJobsTable({
                   {job.execution_mode ? (
                     <div className="mt-1 text-[0.72rem] font-semibold text-[var(--muted)]">{job.execution_mode}</div>
                   ) : null}
+                  {pendingNotice ? (
+                    <div className={`mt-2 rounded-[12px] px-2.5 py-1.5 text-[0.72rem] font-semibold ${padDirectNoticeToneClass(pendingNotice.tone)}`}>
+                      {pendingNotice.message}
+                    </div>
+                  ) : null}
+                </td>
+                <td className="px-3 py-3 text-[0.74rem] text-[var(--muted)]">
+                  <div>年龄：{durationLabel(jobAgeMs(job))}</div>
+                  <div>排队：{durationLabel(queueDelayMs(job))}</div>
+                  <div>总计：{durationLabel(totalJobTimeMs(job))}</div>
+                  {job.claimed_at ? <div>领取：{formatDateTime(job.claimed_at)}</div> : null}
+                  {job.printed_at ? <div>打印：{formatDateTime(job.printed_at)}</div> : null}
+                  {job.failed_at ? <div>失败：{formatDateTime(job.failed_at)}</div> : null}
                 </td>
                 <td className="px-3 py-3 text-[var(--muted)]">
                   {job.claimed_by_device_id ? (
@@ -1336,6 +1478,26 @@ function PrintJobsTable({
                   {padNotice ? (
                     <div className={`mb-2 rounded-[12px] px-2.5 py-1.5 text-[0.72rem] font-semibold ${padDirectNoticeToneClass(padNotice.tone)}`}>
                       {padNotice.message}
+                    </div>
+                  ) : null}
+                  {pendingNotice ? (
+                    <div className={`mb-2 rounded-[12px] px-2.5 py-1.5 text-[0.72rem] font-semibold ${padDirectNoticeToneClass(pendingNotice.tone)}`}>
+                      {pendingNotice.message}
+                    </div>
+                  ) : null}
+                  {nativeDiagnostics ? (
+                    <div className="mb-2 rounded-[12px] bg-[rgba(151,34,34,0.08)] px-2.5 py-1.5 text-[0.72rem] font-semibold text-[rgb(116,22,22)]">
+                      <div>
+                        原生诊断：
+                        {nativeDiagnostics.nativeErrorCode ? ` ${nativeDiagnostics.nativeErrorCode}` : ''}
+                        {nativeDiagnostics.phase ? ` / ${nativeDiagnostics.phase}` : ''}
+                      </div>
+                      <div className="mt-1 text-[0.68rem]">
+                        {nativeDiagnostics.endpoint || job.printer_endpoint || '-'}
+                        {nativeDiagnostics.bytesWritten ? ` · bytes ${nativeDiagnostics.bytesWritten}` : ''}
+                        {nativeDiagnostics.deviceId ? ` · device #${nativeDiagnostics.deviceId}` : ''}
+                        {nativeDiagnostics.exceptionClass ? ` · ${nativeDiagnostics.exceptionClass}` : ''}
+                      </div>
                     </div>
                   ) : null}
                   <div className="font-semibold text-[var(--on-surface)]">

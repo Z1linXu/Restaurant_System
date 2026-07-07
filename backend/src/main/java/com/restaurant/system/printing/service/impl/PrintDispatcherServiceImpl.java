@@ -218,7 +218,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             String content = buildTestPrintContent(store, printer, request.module_code);
             job = printJobService.attachRenderedContent(job, printer.id, content);
             if (isPadDirectMode(request.store_id)) {
-                job = printJobService.markPadDirectQueued(job, printer);
+                job = printJobService.markPadDirectQueued(job, printer, printer.font_size);
                 PrinterTestResponse response = new PrinterTestResponse();
                 response.success = true;
                 response.message = "Pad Direct test print job queued. Backend did not connect to the physical printer.";
@@ -466,7 +466,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             );
             job = printJobService.attachRenderedContent(job, printer.id, content);
             if (isPadDirectMode(request.store_id)) {
-                job = printJobService.markPadDirectQueued(job, printer);
+                job = printJobService.markPadDirectQueued(job, printer, resolveEffectiveFontSize(assignment, printer));
                 response.success = true;
                 response.message = "Pad Direct " + request.module_code + " test print job queued. Backend did not connect to the physical printer.";
                 logger.info("Queued PAD_DIRECT module test print job {} module {} store {}", job.id, request.module_code, request.store_id);
@@ -601,7 +601,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
 
             job = printJobService.attachRenderedContent(job, printer.id, content);
             if (isPadDirectMode(storeId)) {
-                job = printJobService.markPadDirectQueued(job, printer);
+                job = printJobService.markPadDirectQueued(job, printer, resolveEffectiveFontSize(assignment, printer));
                 int copies = resolveCopyCount(moduleCode, assignment, renderRequest.order);
                 logger.info(
                     "PAD_DIRECT queued print job {} module {} store {} order {} printer {} copies {}. Backend did not connect to printer.",
@@ -664,7 +664,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 job = printJobService.attachRenderedContent(job, printer.id, content);
             }
             if (isPadDirectMode(job.store_id)) {
-                job = printJobService.markPadDirectQueued(job, printer);
+                job = printJobService.markPadDirectQueued(job, printer, resolveEffectiveFontSize(assignment, printer));
                 logger.info("PAD_DIRECT queued existing print job {} for client-side reprint", job.id);
                 return printJobService.toResponse(job);
             }
@@ -719,7 +719,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             String content = renderOrderContent(moduleCode, order.store_id, order.id);
             job = printJobService.attachRenderedContent(job, printer.id, content);
             if (isPadDirectMode(order.store_id)) {
-                job = printJobService.markPadDirectQueued(job, printer);
+                job = printJobService.markPadDirectQueued(job, printer, resolveEffectiveFontSize(assignment, printer));
                 logger.info("PAD_DIRECT queued order reprint job {} order {} module {}", job.id, orderId, moduleCode);
                 return printJobService.toResponse(job);
             }

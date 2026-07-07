@@ -40,8 +40,12 @@ use the Local Control Panel printer test IP for real PAD_DIRECT jobs.
 - Semi-auto mode uses the same endpoint selection for every job.
 - If payload is missing `printer_host` or `printer_port`, Android marks the job
   failed with `ANDROID_ASSIGNED_PRINTER_MISSING`.
-- If the assigned printer cannot be reached from this Pad, Android marks the
-  job failed with `ANDROID_ASSIGNED_PRINTER_UNREACHABLE` and stops the worker.
+- If the assigned printer cannot be reached from this Pad, Android records
+  structured native diagnostics (`native_error_code`, `phase`, `bytes_written`,
+  exception, endpoint). Safe connect failures are retried briefly; persistent
+  failures mark the job `FAILED` and stop the worker.
+- `WRITE` and `FLUSH` failures are not retried because the printer may have
+  already received part of the ticket.
 
 ## What Local Printer Test Means Now
 
@@ -68,4 +72,5 @@ They are not the default route for PAD_DIRECT restaurant order jobs.
   latest printer config for that `printer_id`.
 - Device credential storage is still local pilot storage.
 - No background daemon, force release tooling, or module affinity is included.
-
+- No automatic requeue/reprint is included. `retry_count` is a failure counter
+  only; `FAILED` jobs still require operator review and manual reprint.

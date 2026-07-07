@@ -10,6 +10,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
+import android.view.WindowManager;
 import android.view.ViewGroup;
 import android.util.Base64;
 import android.webkit.WebChromeClient;
@@ -43,6 +45,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class MainActivity extends Activity {
+    private static final String TAG = "RestaurantPad";
+    private static final String WORKER_TAG = "RestaurantPadWorker";
     private static final String APP_HOST = "restaurant-pad.local";
     private static final String APP_URL = "https://" + APP_HOST + "/index.html";
     private static final String PREFS = "restaurant_pad_settings";
@@ -58,21 +62,67 @@ public class MainActivity extends Activity {
     private static final String KEY_DEVICE_REGISTERED_AT = "pad_direct_registered_at";
     private static final String KEY_DEVICE_APP_VERSION = "pad_direct_app_version";
     private static final String KEY_DEVICE_PLATFORM = "pad_direct_platform";
+    private static final String KEY_PAD_DIRECT_AUTO_ENABLED = "pad_direct_auto_enabled";
     private static final int DEFAULT_PRINTER_TEST_PORT = 9100;
     private static final int DEFAULT_PRINTER_TEST_TIMEOUT_MS = 3000;
+    private static final long PAD_DIRECT_KICK_FIRST_DELAY_MS = 300;
+    private static final long PAD_DIRECT_KICK_RETRY_DELAY_MS = 700;
+    private static final int PAD_DIRECT_NATIVE_PRINT_MAX_ATTEMPTS = 3;
+    private static final long[] PAD_DIRECT_CONNECT_RETRY_DELAYS_MS = new long[] {0, 500, 1500};
+    private static final long PAD_DIRECT_WATCHDOG_INTERVAL_MS = 5000;
+    private static final long PAD_DIRECT_STALE_POLL_MS = 10000;
+    private static final int PAD_DIRECT_MAX_CONSECUTIVE_ERRORS = 3;
 
     private WebView webView;
     private SharedPreferences preferences;
     private PrinterPluginBridge printerPluginBridge;
     private volatile boolean padDirectJobInProgress = false;
     private final Handler padDirectWorkerHandler = new Handler(Looper.getMainLooper());
+    private final Runnable padDirectWorkerWatchdog = this::runPadDirectWorkerWatchdog;
     private volatile boolean padDirectWorkerRunning = false;
     private volatile boolean padDirectWorkerStopRequested = false;
     private volatile boolean padDirectWorkerInProgress = false;
+    private volatile boolean padDirectWorkerPendingKick = false;
+    private volatile int padDirectQuickPollsRemaining = 0;
+    private volatile boolean padDirectWorkerStoppedForLifecycle = false;
+    private volatile boolean padDirectWorkerUserStopped = false;
+    private volatile boolean padDirectAppForeground = false;
+    private volatile boolean padDirectWorkerPollScheduled = false;
+    private volatile boolean padDirectWorkerWatchdogScheduled = false;
+    private volatile boolean padDirectWorkerErrorStopped = false;
+    private volatile long padDirectWorkerLastPollAtMs = 0L;
+    private volatile long padDirectWorkerLastPollFinishedAtMs = 0L;
+    private volatile long padDirectWorkerLastPollDurationMs = -1L;
+    private volatile long padDirectWorkerLastOldestJobAgeMs = -1L;
+    private volatile long padDirectWorkerLastJobQueueDelayMs = -1L;
+    private volatile long padDirectWorkerLastJobProcessingDurationMs = -1L;
+    private volatile long padDirectWorkerLastScheduledAtMs = 0L;
+    private volatile long padDirectWorkerNextDelayMs = -1L;
+    private volatile int padDirectWorkerLastPollResultCount = -1;
+    private volatile int padDirectWorkerConsecutiveErrors = 0;
+    private volatile String padDirectWorkerLastPollError = "";
+    private volatile String padDirectWorkerLastStopReason = "";
+    private volatile String padDirectWorkerLastStartReason = "";
+    private volatile String padDirectWorkerCurrentJobId = "";
+    private volatile String padDirectWorkerCurrentModule = "";
+    private volatile String padDirectWorkerCurrentPrinterEndpoint = "";
+    private volatile PadDirectWorkerState padDirectWorkerState = PadDirectWorkerState.STOPPED;
+    private volatile PadDirectWorkerControls activePadDirectWorkerControls;
+
+    private enum PadDirectWorkerState {
+        STOPPED,
+        STARTING,
+        WAITING,
+        POLLING,
+        PROCESSING_JOB,
+        STOPPING,
+        ERROR_STOPPED
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        padDirectAppForeground = true;
         preferences = getSharedPreferences(PREFS, MODE_PRIVATE);
         webView = new WebView(this);
         setContentView(webView, new ViewGroup.LayoutParams(
@@ -84,6 +134,7 @@ public class MainActivity extends Activity {
             showRuntimeConfigDialog(true);
         } else {
             loadApp();
+            startPadDirectWorkerHeadlessIfPaired("app-create");
         }
     }
 
@@ -199,6 +250,13 @@ public class MainActivity extends Activity {
             "Run npm run preview:lan for local preview.\n" +
             "Allow port 5173 through the computer firewall.");
 
+        TextView controlPanelWarning = new TextView(this);
+        controlPanelWarning.setText("");
+        controlPanelWarning.setTextColor(0xFF9A3412);
+        controlPanelWarning.setTextIsSelectable(true);
+        controlPanelWarning.setPadding(0, 8, 0, 8);
+        layout.addView(controlPanelWarning);
+
         TextView webUrlLabel = new TextView(this);
         webUrlLabel.setText("Local Preview Web App URL (optional)");
         EditText webUrlInput = new EditText(this);
@@ -269,6 +327,16 @@ public class MainActivity extends Activity {
         layout.addView(printerTimeoutInput);
         layout.addView(printerResult);
 
+        addPanelButton(layout, "Save Settings / 保存配置", () -> saveRuntimeSettings(
+            webUrlInput,
+            apiBaseInput,
+            printerIpInput,
+            printerPortInput,
+            printerTimeoutInput,
+            dialogRef,
+            true
+        ));
+
         Button testConnectionButton = addPanelButton(layout, "Test Printer Connection", () -> {});
         Button testPrintButton = addPanelButton(layout, "Test Print", () -> {});
         testConnectionButton.setOnClickListener(view -> runPrinterTest(
@@ -330,11 +398,11 @@ public class MainActivity extends Activity {
         layout.addView(autoHeading);
 
         TextView autoNote = new TextView(this);
-        autoNote.setText("Foreground only. Default off. It processes one job at a time and stops on printer/backend/auth errors.");
+        autoNote.setText("Foreground only. Auto-start resumes only when auto processing is enabled. It processes one job at a time and stops on printer/backend/auth errors.");
         layout.addView(autoNote);
 
         TextView autoStatus = new TextView(this);
-        autoStatus.setText(padDirectWorkerRunning ? "自动处理打印任务：运行中" : "自动处理打印任务：已停止");
+        autoStatus.setText(formatPadDirectWorkerStatus());
         autoStatus.setTextIsSelectable(true);
         autoStatus.setPadding(0, 8, 0, 8);
         layout.addView(autoStatus);
@@ -352,14 +420,33 @@ public class MainActivity extends Activity {
             stopAutoButton,
             printerIpInput,
             printerPortInput,
-            printerTimeoutInput
+            printerTimeoutInput,
+            "manual/control-panel"
         ));
-        stopAutoButton.setOnClickListener(view -> stopPadDirectAutoWorker(
+        stopAutoButton.setOnClickListener(view -> {
+            padDirectWorkerUserStopped = true;
+            setPadDirectAutoPrintEnabled(false);
+            stopPadDirectAutoWorker(
+                autoStatus,
+                startAutoButton,
+                stopAutoButton,
+                "已停止。当前正在打印的任务会先完成/失败，不再领取新任务。",
+                "user-disabled",
+                false
+            );
+        });
+        autoStartPadDirectWorkerIfNeeded(
             autoStatus,
+            pendingResult,
+            pendingJobsList,
+            refreshPendingJobsButton,
             startAutoButton,
             stopAutoButton,
-            "已停止。当前正在打印的任务会先完成/失败，不再领取新任务。"
-        ));
+            printerIpInput,
+            printerPortInput,
+            printerTimeoutInput,
+            controlPanelWarning
+        );
 
         addPanelButton(layout, "Refresh Current Page", () -> {
             webView.reload();
@@ -378,15 +465,7 @@ public class MainActivity extends Activity {
             .setMessage("Use this panel for local navigation shortcuts and LAN preview configuration. Business pages still run in the Web app.")
             .setView(scrollView)
             .setPositiveButton("Save", (ignored, which) -> {
-                String webAppUrl = webUrlInput.getText().toString().trim();
-                String apiBaseUrl = apiBaseInput.getText().toString().trim();
-                preferences.edit()
-                    .putString(KEY_WEB_APP_URL, webAppUrl)
-                    .putString(KEY_API_BASE, apiBaseUrl)
-                    .putString(KEY_PRINTER_TEST_IP, printerIpInput.getText().toString().trim())
-                    .putString(KEY_PRINTER_TEST_PORT, String.valueOf(parsePort(printerPortInput.getText().toString())))
-                    .putString(KEY_PRINTER_TEST_TIMEOUT_MS, String.valueOf(parseTimeoutMs(printerTimeoutInput.getText().toString())))
-                    .apply();
+                saveRuntimeSettings(webUrlInput, apiBaseInput, printerIpInput, printerPortInput, printerTimeoutInput, dialogRef, false);
                 loadApp();
             })
             .setNegativeButton(firstLaunch ? "Load Bundled Assets" : "Cancel", (ignored, which) -> {
@@ -418,6 +497,38 @@ public class MainActivity extends Activity {
         button.setOnClickListener(view -> action.run());
         layout.addView(button);
         return button;
+    }
+
+    private void saveRuntimeSettings(
+        EditText webUrlInput,
+        EditText apiBaseInput,
+        EditText printerIpInput,
+        EditText printerPortInput,
+        EditText printerTimeoutInput,
+        AlertDialog[] dialogRef,
+        boolean dismissAndReload
+    ) {
+        String webAppUrl = webUrlInput.getText().toString().trim();
+        String apiBaseUrl = apiBaseInput.getText().toString().trim();
+        String printerIp = printerIpInput.getText().toString().trim();
+        int printerPort = parsePort(printerPortInput.getText().toString());
+        int printerTimeoutMs = parseTimeoutMs(printerTimeoutInput.getText().toString());
+        printerPortInput.setText(String.valueOf(printerPort));
+        printerTimeoutInput.setText(String.valueOf(printerTimeoutMs));
+
+        preferences.edit()
+            .putString(KEY_WEB_APP_URL, webAppUrl)
+            .putString(KEY_API_BASE, apiBaseUrl)
+            .putString(KEY_PRINTER_TEST_IP, printerIp)
+            .putString(KEY_PRINTER_TEST_PORT, String.valueOf(printerPort))
+            .putString(KEY_PRINTER_TEST_TIMEOUT_MS, String.valueOf(printerTimeoutMs))
+            .apply();
+
+        Toast.makeText(this, "Settings saved.", Toast.LENGTH_SHORT).show();
+        if (dismissAndReload) {
+            dismissDialog(dialogRef);
+            loadApp();
+        }
     }
 
     private void addShortcutButton(LinearLayout layout, String label, String storeScopedPath, String legacyPath, AlertDialog[] dialogRef) {
@@ -462,6 +573,209 @@ public class MainActivity extends Activity {
         return deviceId != null && !deviceId.isBlank()
             && deviceToken != null && !deviceToken.isBlank()
             && storeId != null && !storeId.isBlank();
+    }
+
+    private boolean isPadDirectAutoPrintEnabled() {
+        // Default true preserves existing paired pilot behavior. Manual Stop writes false.
+        return preferences.getBoolean(KEY_PAD_DIRECT_AUTO_ENABLED, true);
+    }
+
+    private void setPadDirectAutoPrintEnabled(boolean enabled) {
+        preferences.edit().putBoolean(KEY_PAD_DIRECT_AUTO_ENABLED, enabled).apply();
+    }
+
+    private void setPadDirectWorkerState(PadDirectWorkerState state) {
+        padDirectWorkerState = state == null ? PadDirectWorkerState.STOPPED : state;
+    }
+
+    private void clearPadDirectCurrentJob() {
+        padDirectWorkerCurrentJobId = "";
+        padDirectWorkerCurrentModule = "";
+        padDirectWorkerCurrentPrinterEndpoint = "";
+    }
+
+    private void clearPadDirectWorkerCallbacks() {
+        padDirectWorkerHandler.removeCallbacksAndMessages(null);
+        padDirectWorkerPollScheduled = false;
+        padDirectWorkerWatchdogScheduled = false;
+        padDirectWorkerNextDelayMs = -1L;
+    }
+
+    private String padDirectStateLabel(PadDirectWorkerState state) {
+        if (state == null) {
+            return "未知";
+        }
+        switch (state) {
+            case STOPPED:
+                return "已停止";
+            case STARTING:
+                return "正在启动";
+            case WAITING:
+                return "等待任务";
+            case POLLING:
+                return "正在轮询";
+            case PROCESSING_JOB:
+                return "正在处理任务";
+            case STOPPING:
+                return "正在停止";
+            case ERROR_STOPPED:
+                return "异常停止";
+            default:
+                return "未知";
+        }
+    }
+
+    private String timestampOrDash(long timestampMs) {
+        if (timestampMs <= 0) {
+            return "-";
+        }
+        return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date(timestampMs));
+    }
+
+    private String durationOrDash(long durationMs) {
+        if (durationMs < 0) {
+            return "-";
+        }
+        if (durationMs < 1000) {
+            return durationMs + "ms";
+        }
+        long seconds = durationMs / 1000;
+        if (seconds < 60) {
+            return seconds + "s";
+        }
+        long minutes = seconds / 60;
+        long remainingSeconds = seconds % 60;
+        return minutes + "m " + remainingSeconds + "s";
+    }
+
+    private long parseTimestampMs(String value) {
+        if (value == null || value.isBlank()) {
+            return -1L;
+        }
+        String normalized = value.trim();
+        String[] patterns = new String[] {
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd HH:mm:ss"
+        };
+        for (String pattern : patterns) {
+            try {
+                return new SimpleDateFormat(pattern, Locale.US).parse(normalized).getTime();
+            } catch (Exception ignored) {
+                // Try the next known backend timestamp shape.
+            }
+        }
+        return -1L;
+    }
+
+    private long ageMsFromTimestamp(String value, long nowMs) {
+        long parsed = parseTimestampMs(value);
+        if (parsed <= 0) {
+            return -1L;
+        }
+        return Math.max(0L, nowMs - parsed);
+    }
+
+    private void updatePadDirectKeepScreenOn() {
+        if (isPadDirectAutoPrintEnabled() && padDirectAppForeground && padDirectWorkerRunning && !padDirectWorkerStopRequested) {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        } else {
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
+    }
+
+    private long logWorkerDuration(String metric, long jobId, long startedAtMs) {
+        long durationMs = Math.max(0L, System.currentTimeMillis() - startedAtMs);
+        Log.i(WORKER_TAG, metric + " jobId=" + jobId + " durationMs=" + durationMs);
+        return durationMs;
+    }
+
+    private boolean isPadDirectWorkerPollStale(long nowMs) {
+        if (!padDirectWorkerRunning || padDirectWorkerStopRequested || padDirectWorkerInProgress || padDirectJobInProgress) {
+            return false;
+        }
+        return padDirectWorkerLastPollAtMs <= 0 || nowMs - padDirectWorkerLastPollAtMs > PAD_DIRECT_STALE_POLL_MS;
+    }
+
+    private String formatPadDirectWorkerStatus() {
+        long now = System.currentTimeMillis();
+        String deviceId = preferences.getString(KEY_DEVICE_ID, "");
+        String storeId = preferences.getString(KEY_DEVICE_STORE_ID, "");
+        StringBuilder builder = new StringBuilder();
+        builder.append("自动处理：")
+            .append(isPadDirectAutoPrintEnabled() ? "开启" : "关闭，不会消费 PENDING 打印任务")
+            .append('\n');
+        builder.append("Worker 状态：").append(padDirectStateLabel(padDirectWorkerState)).append('\n');
+        builder.append("运行中：").append(padDirectWorkerRunning && !padDirectWorkerStopRequested ? "是" : "否")
+            .append(" | App 前台：").append(padDirectAppForeground ? "是" : "否")
+            .append(" | Job处理中：").append(padDirectWorkerInProgress || padDirectJobInProgress ? "是" : "否")
+            .append('\n');
+        builder.append("Device ID: ").append(deviceId == null || deviceId.isBlank() ? "-" : deviceId)
+            .append(" | Store ID: ").append(storeId == null || storeId.isBlank() ? "-" : storeId)
+            .append('\n');
+        builder.append("最近 poll：").append(timestampOrDash(padDirectWorkerLastPollAtMs))
+            .append(" | 返回数量：").append(padDirectWorkerLastPollResultCount < 0 ? "-" : padDirectWorkerLastPollResultCount)
+            .append(" | 耗时：").append(durationOrDash(padDirectWorkerLastPollDurationMs))
+            .append('\n');
+        builder.append("最近 poll 完成：").append(timestampOrDash(padDirectWorkerLastPollFinishedAtMs)).append('\n');
+        builder.append("最老待处理年龄：").append(durationOrDash(padDirectWorkerLastOldestJobAgeMs))
+            .append(" | 上次队列等待：").append(durationOrDash(padDirectWorkerLastJobQueueDelayMs))
+            .append('\n');
+        builder.append("上次任务耗时：").append(durationOrDash(padDirectWorkerLastJobProcessingDurationMs))
+            .append(" | 连续错误：").append(padDirectWorkerConsecutiveErrors)
+            .append('\n');
+        builder.append("下一次 poll：").append(padDirectWorkerPollScheduled ? "已安排 " + padDirectWorkerNextDelayMs + "ms" : "未安排")
+            .append(" | Watchdog：").append(padDirectWorkerWatchdogScheduled ? "运行中" : "未安排")
+            .append('\n');
+        if (!padDirectWorkerCurrentJobId.isBlank()) {
+            builder.append("当前任务：#").append(padDirectWorkerCurrentJobId)
+                .append(" / ").append(padDirectWorkerCurrentModule.isBlank() ? "-" : padDirectWorkerCurrentModule)
+                .append(" / ").append(padDirectWorkerCurrentPrinterEndpoint.isBlank() ? "-" : padDirectWorkerCurrentPrinterEndpoint)
+                .append('\n');
+        }
+        if (!padDirectWorkerLastStartReason.isBlank()) {
+            builder.append("最近启动：").append(padDirectWorkerLastStartReason).append('\n');
+        }
+        if (!padDirectWorkerLastStopReason.isBlank()) {
+            builder.append("最近停止：").append(padDirectWorkerLastStopReason).append('\n');
+        }
+        if (!padDirectWorkerLastPollError.isBlank()) {
+            builder.append("最近错误：").append(padDirectWorkerLastPollError).append('\n');
+        }
+        if (!isPadDirectAutoPrintEnabled()) {
+            builder.append("提示：自动处理关闭，不会消费 PENDING 打印任务。").append('\n');
+        }
+        if (padDirectWorkerState == PadDirectWorkerState.ERROR_STOPPED) {
+            builder.append("警告：自动打印已停止，请检查原因后重新开启。").append('\n');
+        }
+        if (padDirectWorkerLastOldestJobAgeMs > 120000L) {
+            builder.append("警告：队列最前方有旧任务未处理，可能阻塞后续打印。请到 Print Center 检查。").append('\n');
+        }
+        if (isPadDirectWorkerPollStale(now)) {
+            builder.append("警告：自动处理可能卡住，系统会尝试恢复；如仍不动，请关闭后重新开启。");
+        }
+        return builder.toString().trim();
+    }
+
+    private void updatePadDirectWorkerControls() {
+        updatePadDirectKeepScreenOn();
+        PadDirectWorkerControls controls = activePadDirectWorkerControls;
+        if (controls == null) {
+            return;
+        }
+        Runnable update = () -> {
+            controls.autoStatus.setText(formatPadDirectWorkerStatus());
+            boolean paired = isDevicePaired();
+            boolean running = padDirectWorkerRunning && !padDirectWorkerStopRequested;
+            controls.startAutoButton.setEnabled(paired && !running);
+            controls.stopAutoButton.setEnabled(running);
+        };
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            update.run();
+        } else {
+            runOnUiThread(update);
+        }
     }
 
     private void confirmClearPairing(AlertDialog[] dialogRef) {
@@ -829,6 +1143,7 @@ public class MainActivity extends Activity {
         }
         String moduleCode = job.optString("module_code", "PAD_DIRECT");
         String attemptToken = "android-" + deviceId + "-" + jobId + "-" + System.currentTimeMillis();
+        padDirectWorkerLastJobQueueDelayMs = ageMsFromTimestamp(job.optString("created_at", ""), System.currentTimeMillis());
 
         padDirectJobInProgress = true;
         printButton.setEnabled(false);
@@ -868,6 +1183,15 @@ public class MainActivity extends Activity {
             if (refreshAfter) {
                 refreshPendingPrintJobs(resultView, jobsList, refreshButton, printerIpInput, printerPortInput, printerTimeoutInput);
             }
+            if (padDirectWorkerPendingKick && padDirectWorkerRunning && !padDirectWorkerStopRequested) {
+                PadDirectWorkerControls controls = activePadDirectWorkerControls;
+                if (controls != null) {
+                    padDirectWorkerPendingKick = false;
+                    padDirectQuickPollsRemaining = 2;
+                    clearPadDirectWorkerCallbacks();
+                    schedulePadDirectWorkerTick(controls, 0);
+                }
+            }
         });
     }
 
@@ -876,29 +1200,44 @@ public class MainActivity extends Activity {
         String moduleCode,
         String attemptToken
     ) throws Exception {
+        long jobStartedAt = System.currentTimeMillis();
         boolean claimed = false;
         boolean localPrintSent = false;
         try {
+            padDirectWorkerCurrentJobId = String.valueOf(jobId);
+            padDirectWorkerCurrentModule = moduleCode;
+            setPadDirectWorkerState(PadDirectWorkerState.PROCESSING_JOB);
+            Log.i(WORKER_TAG, "Worker Job Processing jobId=" + jobId + " step=claim module=" + moduleCode);
+            long stepStartedAt = System.currentTimeMillis();
             JSONObject claimRequest = new JSONObject();
             claimRequest.put("client_attempt_token", attemptToken);
             claimRequest.put("lease_seconds", 300);
             HttpResult claimResult = postDeviceJson("/api/v1/printing/jobs/" + jobId + "/claim", claimRequest);
+            logWorkerDuration("claim_duration_ms", jobId, stepStartedAt);
             if (claimResult.status == 401 || claimResult.status == 403) {
+                Log.w(WORKER_TAG, "Worker Job Failed jobId=" + jobId + " errorCode=DEVICE_AUTH_FAILED httpStatus=" + claimResult.status);
                 return PadDirectJobResult.stop("设备认证失败，请重新配对。", false);
             }
             if (claimResult.status == 409) {
+                Log.i(WORKER_TAG, "Worker Job Failed jobId=" + jobId + " errorCode=CLAIM_CONFLICT module=" + moduleCode);
                 return PadDirectJobResult.conflict("任务已被其他 Pad 领取。");
             }
             requireSuccessResponse(claimResult, "领取任务失败");
             claimed = true;
 
+            Log.i(WORKER_TAG, "Worker Job Processing jobId=" + jobId + " step=start-print module=" + moduleCode);
+            stepStartedAt = System.currentTimeMillis();
             JSONObject startPrintRequest = new JSONObject();
             startPrintRequest.put("client_attempt_token", attemptToken);
             startPrintRequest.put("lease_seconds", 300);
             HttpResult startPrintResult = postDeviceJson("/api/v1/printing/jobs/" + jobId + "/start-print", startPrintRequest);
+            logWorkerDuration("start_print_duration_ms", jobId, stepStartedAt);
             requireSuccessResponse(startPrintResult, "标记开始打印失败");
 
+            Log.i(WORKER_TAG, "Worker Job Processing jobId=" + jobId + " step=payload module=" + moduleCode);
+            stepStartedAt = System.currentTimeMillis();
             HttpResult payloadResult = getDeviceJson("/api/v1/printing/jobs/" + jobId + "/payload");
+            logWorkerDuration("payload_duration_ms", jobId, stepStartedAt);
             if (payloadResult.status == 409) {
                 throw new PadDirectStepException(
                     "ANDROID_ASSIGNED_PRINTER_MISSING",
@@ -918,34 +1257,35 @@ public class MainActivity extends Activity {
                 throw new PadDirectStepException("ANDROID_PAYLOAD_INVALID", "打印 payload 不是有效 base64", exception.getMessage());
             }
             AssignedPrinterEndpoint assignedPrinter = assignedPrinterFromPayload(payloadData);
+            padDirectWorkerCurrentPrinterEndpoint = assignedPrinter.endpoint;
+            updatePadDirectWorkerControls();
 
-            JSONObject printRequest = new JSONObject();
-            printRequest.put("ip", assignedPrinter.host);
-            printRequest.put("port", assignedPrinter.port);
-            printRequest.put("timeoutMs", assignedPrinter.timeoutMs);
-            printRequest.put("payloadBase64", payloadBase64);
-            String rawPrintResult = printerPluginBridge.printRawTcp(printRequest.toString());
-            JSONObject printResult = new JSONObject(rawPrintResult);
-            if (!printResult.optBoolean("success", false)) {
-                String nativeCode = printResult.optString("error_code", "ANDROID_NATIVE_PRINT_FAILED");
-                String nativeMessage = printResult.optString("message", "");
+            Log.i(WORKER_TAG, "Worker Job Processing jobId=" + jobId + " step=native-print module=" + moduleCode + " printerEndpoint=" + assignedPrinter.endpoint);
+            stepStartedAt = System.currentTimeMillis();
+            NativePrintAttemptResult printResult = printAssignedPrinterWithConnectRetry(jobId, moduleCode, payloadBase64, assignedPrinter);
+            logWorkerDuration("tcp_print_duration_ms", jobId, stepStartedAt);
+            if (!printResult.success) {
                 throw new PadDirectStepException(
-                    "ANDROID_ASSIGNED_PRINTER_UNREACHABLE",
-                    "本机打印失败，检查 assigned printer " + assignedPrinter.endpoint + " 的电源/IP/WiFi/纸张。"
-                        + (nativeMessage.isBlank() ? "" : " 技术信息: " + nativeCode + " - " + nativeMessage),
-                    rawPrintResult
+                    mapNativePrintErrorCode(printResult),
+                    buildNativePrintFailureMessage(jobId, moduleCode, assignedPrinter, printResult),
+                    printResult.rawResult
                 );
             }
             localPrintSent = true;
 
+            Log.i(WORKER_TAG, "Worker Job Processing jobId=" + jobId + " step=complete module=" + moduleCode);
+            stepStartedAt = System.currentTimeMillis();
             JSONObject completeRequest = new JSONObject();
             completeRequest.put("client_attempt_token", attemptToken);
-            completeRequest.put("raw_result", rawPrintResult);
+            completeRequest.put("raw_result", printResult.rawResult);
             HttpResult completeResult = postDeviceJson("/api/v1/printing/jobs/" + jobId + "/complete", completeRequest);
+            logWorkerDuration("complete_duration_ms", jobId, stepStartedAt);
             requireSuccessResponse(completeResult, "本地已打印，但回报后端完成失败。请检查 Print Center，避免重复打印");
+            Log.i(WORKER_TAG, "Worker Job Finished jobId=" + jobId + " status=PRINTED module=" + moduleCode + " printerEndpoint=" + assignedPrinter.endpoint);
             return PadDirectJobResult.success("打印完成：Job #" + jobId + " (" + moduleCode + ") -> " + assignedPrinter.endpoint);
         } catch (PadDirectStepException exception) {
             String message = exception.getMessage();
+            Log.e(WORKER_TAG, "Worker Job Failed jobId=" + jobId + " errorCode=" + exception.errorCode + " module=" + moduleCode + " message=" + message, exception);
             if (claimed && !localPrintSent) {
                 message = message + "\n" + reportPadDirectFail(jobId, attemptToken, exception.errorCode, exception.getMessage(), exception.rawResult);
                 return PadDirectJobResult.stop(message, true);
@@ -964,6 +1304,186 @@ public class MainActivity extends Activity {
                 return PadDirectJobResult.stop(message, true);
             }
             return PadDirectJobResult.stop(message, false);
+        }
+        finally {
+            padDirectWorkerLastJobProcessingDurationMs = Math.max(0L, System.currentTimeMillis() - jobStartedAt);
+            Log.i(WORKER_TAG, "job_finished totalDurationMs=" + padDirectWorkerLastJobProcessingDurationMs + " jobId=" + jobId + " module=" + moduleCode);
+        }
+    }
+
+    private NativePrintAttemptResult printAssignedPrinterWithConnectRetry(
+        long jobId,
+        String moduleCode,
+        String payloadBase64,
+        AssignedPrinterEndpoint assignedPrinter
+    ) throws Exception {
+        JSONArray attempts = new JSONArray();
+        NativePrintAttemptResult lastResult = null;
+        for (int attempt = 1; attempt <= PAD_DIRECT_NATIVE_PRINT_MAX_ATTEMPTS; attempt++) {
+            if (attempt > 1) {
+                long delay = PAD_DIRECT_CONNECT_RETRY_DELAYS_MS[Math.min(attempt - 1, PAD_DIRECT_CONNECT_RETRY_DELAYS_MS.length - 1)];
+                Log.w(WORKER_TAG, "Worker Job Processing retry assigned printer connect jobId=" + jobId
+                    + " module=" + moduleCode
+                    + " printerEndpoint=" + assignedPrinter.endpoint
+                    + " attempt=" + attempt + "/" + PAD_DIRECT_NATIVE_PRINT_MAX_ATTEMPTS
+                    + " delay_ms=" + delay);
+                Thread.sleep(delay);
+            }
+
+            JSONObject printRequest = new JSONObject();
+            printRequest.put("ip", assignedPrinter.host);
+            printRequest.put("port", assignedPrinter.port);
+            printRequest.put("timeoutMs", assignedPrinter.timeoutMs);
+            printRequest.put("payloadBase64", payloadBase64);
+            Log.i(WORKER_TAG, "Worker Job Processing connecting assigned printer jobId=" + jobId
+                + " module=" + moduleCode
+                + " printerEndpoint=" + assignedPrinter.endpoint
+                + " attempt=" + attempt + "/" + PAD_DIRECT_NATIVE_PRINT_MAX_ATTEMPTS);
+
+            String rawPrintResult = printerPluginBridge.printRawTcp(printRequest.toString());
+            NativePrintAttemptResult result = NativePrintAttemptResult.from(rawPrintResult, attempt);
+            attempts.put(result.toSummaryJson());
+            if (result.success) {
+                result.rawResult = buildNativePrintRawResult(jobId, moduleCode, assignedPrinter, attempts, rawPrintResult);
+                Log.i(WORKER_TAG, "Worker Job Finished native-send jobId=" + jobId
+                    + " module=" + moduleCode
+                    + " printerEndpoint=" + assignedPrinter.endpoint
+                    + " attempt=" + attempt
+                    + " bytes_written=" + result.bytesWritten);
+                return result;
+            }
+
+            lastResult = result;
+            if (isSafeConnectRetry(result) && attempt < PAD_DIRECT_NATIVE_PRINT_MAX_ATTEMPTS) {
+                Log.w(WORKER_TAG, "Worker Job Failed assigned printer connect attempt will retry jobId=" + jobId
+                    + " module=" + moduleCode
+                    + " printerEndpoint=" + assignedPrinter.endpoint
+                    + " native_error_code=" + result.nativeErrorCode
+                    + " phase=" + result.phase
+                    + " bytes_written=" + result.bytesWritten
+                    + " attempt=" + attempt + "/" + PAD_DIRECT_NATIVE_PRINT_MAX_ATTEMPTS);
+                continue;
+            }
+
+            if ("WRITE".equals(result.phase) || "FLUSH".equals(result.phase)) {
+                Log.w(WORKER_TAG, "Worker Job Failed assigned printer failed after socket connect; not retrying because paper may be partial jobId="
+                    + jobId
+                    + " module=" + moduleCode
+                    + " printerEndpoint=" + assignedPrinter.endpoint
+                    + " native_error_code=" + result.nativeErrorCode
+                    + " phase=" + result.phase
+                    + " bytes_written=" + result.bytesWritten);
+            } else {
+                Log.w(WORKER_TAG, "Worker Job Failed assigned printer failed without safe retry jobId="
+                    + jobId
+                    + " module=" + moduleCode
+                    + " printerEndpoint=" + assignedPrinter.endpoint
+                    + " native_error_code=" + result.nativeErrorCode
+                    + " phase=" + result.phase
+                    + " bytes_written=" + result.bytesWritten);
+            }
+            break;
+        }
+
+        if (lastResult == null) {
+            lastResult = NativePrintAttemptResult.failure("UNKNOWN", "UNKNOWN", 0, "", "", "", "No native print result", 0, "");
+        }
+        lastResult.rawResult = buildNativePrintRawResult(jobId, moduleCode, assignedPrinter, attempts, lastResult.rawResult);
+        return lastResult;
+    }
+
+    private boolean isSafeConnectRetry(NativePrintAttemptResult result) {
+        if (result == null) {
+            return false;
+        }
+        if (!"CONNECT".equals(result.phase) || result.bytesWritten != 0) {
+            return false;
+        }
+        return "TIMEOUT".equals(result.nativeErrorCode)
+            || "CONNECTION_REFUSED".equals(result.nativeErrorCode)
+            || "UNREACHABLE".equals(result.nativeErrorCode);
+    }
+
+    private String mapNativePrintErrorCode(NativePrintAttemptResult result) {
+        String phase = result == null ? "UNKNOWN" : result.phase;
+        String code = result == null ? "UNKNOWN" : result.nativeErrorCode;
+        if ("CONNECT".equals(phase) && "TIMEOUT".equals(code)) {
+            return "ANDROID_PRINTER_CONNECT_TIMEOUT";
+        }
+        if ("CONNECT".equals(phase) && "CONNECTION_REFUSED".equals(code)) {
+            return "ANDROID_PRINTER_CONNECTION_REFUSED";
+        }
+        if ("CONNECT".equals(phase) && "UNREACHABLE".equals(code)) {
+            return "ANDROID_PRINTER_NETWORK_UNREACHABLE";
+        }
+        if ("WRITE".equals(phase)) {
+            return "ANDROID_PRINTER_WRITE_FAILED";
+        }
+        if ("FLUSH".equals(phase)) {
+            return "ANDROID_PRINTER_FLUSH_FAILED";
+        }
+        return "ANDROID_NATIVE_PRINT_FAILED";
+    }
+
+    private String buildNativePrintFailureMessage(
+        long jobId,
+        String moduleCode,
+        AssignedPrinterEndpoint assignedPrinter,
+        NativePrintAttemptResult result
+    ) {
+        StringBuilder message = new StringBuilder();
+        message.append("PAD_DIRECT 本机打印失败。")
+            .append(" job_id=").append(jobId)
+            .append("; module_code=").append(moduleCode)
+            .append("; printer_id=").append(assignedPrinter.printerId == null ? "-" : assignedPrinter.printerId)
+            .append("; printer_name=").append(assignedPrinter.printerName == null || assignedPrinter.printerName.isBlank() ? "-" : assignedPrinter.printerName)
+            .append("; endpoint=").append(assignedPrinter.endpoint)
+            .append("; device_id=").append(preferences.getString(KEY_DEVICE_ID, "-"))
+            .append("; native_error_code=").append(result.nativeErrorCode)
+            .append("; phase=").append(result.phase)
+            .append("; bytes_written=").append(result.bytesWritten)
+            .append("; attempts=").append(result.attemptNumber).append("/").append(PAD_DIRECT_NATIVE_PRINT_MAX_ATTEMPTS);
+        if (result.exceptionClass != null && !result.exceptionClass.isBlank()) {
+            message.append("; exception_class=").append(result.exceptionClass);
+        }
+        if (result.exceptionMessage != null && !result.exceptionMessage.isBlank()) {
+            message.append("; exception_message=").append(truncateForJson(result.exceptionMessage, 240));
+        }
+        if ("WRITE".equals(result.phase) || "FLUSH".equals(result.phase)) {
+            message.append("\n写入/flush 过程中失败，可能已经部分出纸，请人工确认后再重打。");
+        } else if (isSafeConnectRetry(result)) {
+            message.append("\n连接阶段失败且未写入任何字节，已完成安全短重试后停止。请检查打印机电源、WiFi、IP、端口和 VLAN。");
+        } else {
+            message.append("\n本机打印失败，请检查 assigned printer 后人工重打。");
+        }
+        return message.toString();
+    }
+
+    private String buildNativePrintRawResult(
+        long jobId,
+        String moduleCode,
+        AssignedPrinterEndpoint assignedPrinter,
+        JSONArray attempts,
+        String finalRawResult
+    ) {
+        try {
+            JSONObject raw = new JSONObject();
+            raw.put("job_id", jobId);
+            raw.put("module_code", moduleCode);
+            raw.put("printer_id", assignedPrinter.printerId);
+            raw.put("printer_name", assignedPrinter.printerName);
+            raw.put("printer_endpoint", assignedPrinter.endpoint);
+            raw.put("attempts", attempts);
+            if (finalRawResult != null && !finalRawResult.isBlank()) {
+                try {
+                    raw.put("final_result", new JSONObject(finalRawResult));
+                } catch (Exception ignored) {
+                    raw.put("final_result_raw", truncateForJson(finalRawResult, 1000));
+                }
+            }
+            return raw.toString();
+        } catch (Exception exception) {
+            return finalRawResult == null ? "" : finalRawResult;
         }
     }
 
@@ -986,7 +1506,80 @@ public class MainActivity extends Activity {
         if (endpoint.isBlank() || "null".equalsIgnoreCase(endpoint)) {
             endpoint = host + ":" + port;
         }
-        return new AssignedPrinterEndpoint(host, port, timeoutMs, endpoint);
+        Long printerId = payloadData.has("printer_id") && !payloadData.isNull("printer_id") ? payloadData.optLong("printer_id") : null;
+        String printerName = payloadData.optString("printer_name", "").trim();
+        return new AssignedPrinterEndpoint(host, port, timeoutMs, endpoint, printerId, printerName);
+    }
+
+    private void autoStartPadDirectWorkerIfNeeded(
+        TextView autoStatus,
+        TextView resultView,
+        LinearLayout jobsList,
+        Button refreshButton,
+        Button startAutoButton,
+        Button stopAutoButton,
+        EditText printerIpInput,
+        EditText printerPortInput,
+        EditText printerTimeoutInput,
+        TextView warningView
+    ) {
+        if (padDirectWorkerRunning && !padDirectWorkerStopRequested) {
+            warningView.setText("");
+            rememberPadDirectWorkerControls(autoStatus, resultView, jobsList, refreshButton, startAutoButton, stopAutoButton, printerIpInput, printerPortInput, printerTimeoutInput);
+            updatePadDirectWorkerControls();
+            Log.i(WORKER_TAG, "Worker Started skipped: Control Panel attached to existing PAD_DIRECT worker");
+            return;
+        }
+        if (!isDevicePaired()) {
+            String message = "Warning: 自动打印处理服务未启动，请先配对本机 Pad。";
+            Log.w(WORKER_TAG, message);
+            warningView.setText(message);
+            autoStatus.setText(formatPadDirectWorkerStatus() + "\n请先配对本机 Pad。");
+            startAutoButton.setEnabled(false);
+            stopAutoButton.setEnabled(false);
+            return;
+        }
+        if (!isPadDirectAutoPrintEnabled()) {
+            warningView.setText("");
+            rememberPadDirectWorkerControls(autoStatus, resultView, jobsList, refreshButton, startAutoButton, stopAutoButton, printerIpInput, printerPortInput, printerTimeoutInput);
+            autoStatus.setText(formatPadDirectWorkerStatus());
+            startAutoButton.setEnabled(true);
+            stopAutoButton.setEnabled(false);
+            Log.i(WORKER_TAG, "Worker Started skipped: auto processing disabled by user");
+            return;
+        }
+        if (padDirectWorkerErrorStopped) {
+            String message = "Warning: 自动打印上次异常停止，请检查原因后手动重新开启。";
+            warningView.setText(message);
+            rememberPadDirectWorkerControls(autoStatus, resultView, jobsList, refreshButton, startAutoButton, stopAutoButton, printerIpInput, printerPortInput, printerTimeoutInput);
+            autoStatus.setText(formatPadDirectWorkerStatus());
+            startAutoButton.setEnabled(true);
+            stopAutoButton.setEnabled(false);
+            Log.i(WORKER_TAG, "Worker Started skipped: previous error stop requires manual restart");
+            return;
+        }
+        try {
+            warningView.setText("");
+            startPadDirectAutoWorker(
+                autoStatus,
+                resultView,
+                jobsList,
+                refreshButton,
+                startAutoButton,
+                stopAutoButton,
+                printerIpInput,
+                printerPortInput,
+                printerTimeoutInput,
+                "control-panel-auto-start"
+            );
+        } catch (Exception exception) {
+            String message = "Warning: 自动打印处理服务启动失败：" + exception.getMessage();
+            Log.e(WORKER_TAG, "Worker Exception: failed to auto-start Pad Direct print processing worker", exception);
+            warningView.setText(message);
+            padDirectWorkerLastPollError = message;
+            setPadDirectWorkerState(PadDirectWorkerState.ERROR_STOPPED);
+            autoStatus.setText(formatPadDirectWorkerStatus());
+        }
     }
 
     private void startPadDirectAutoWorker(
@@ -998,31 +1591,163 @@ public class MainActivity extends Activity {
         Button stopAutoButton,
         EditText printerIpInput,
         EditText printerPortInput,
-        EditText printerTimeoutInput
+        EditText printerTimeoutInput,
+        String startReason
     ) {
         if (padDirectWorkerRunning) {
-            autoStatus.setText("自动处理打印任务：已经运行中。");
+            Log.i(WORKER_TAG, "Worker Started skipped: PAD_DIRECT print processing worker already running");
+            rememberPadDirectWorkerControls(autoStatus, resultView, jobsList, refreshButton, startAutoButton, stopAutoButton, printerIpInput, printerPortInput, printerTimeoutInput);
+            updatePadDirectWorkerControls();
             return;
         }
         if (!isDevicePaired()) {
-            autoStatus.setText("设备认证失败，已停止。请先配对本机 Pad。");
+            Log.w(WORKER_TAG, "Worker Started failed: Pad is not paired");
+            padDirectWorkerLastStopReason = "not-paired";
+            setPadDirectWorkerState(PadDirectWorkerState.ERROR_STOPPED);
+            autoStatus.setText(formatPadDirectWorkerStatus() + "\n设备认证失败，已停止。请先配对本机 Pad。");
+            updatePadDirectWorkerControls();
             return;
         }
+        if (!padDirectAppForeground) {
+            Log.i(WORKER_TAG, "Worker Started skipped: app is not foreground");
+            padDirectWorkerLastStopReason = "app-not-foreground";
+            autoStatus.setText(formatPadDirectWorkerStatus() + "\nApp 不在前台，暂不启动自动处理。");
+            updatePadDirectWorkerControls();
+            return;
+        }
+        setPadDirectAutoPrintEnabled(true);
         padDirectWorkerRunning = true;
         padDirectWorkerStopRequested = false;
+        padDirectWorkerPendingKick = false;
+        padDirectQuickPollsRemaining = 0;
+        padDirectWorkerStoppedForLifecycle = false;
+        padDirectWorkerUserStopped = false;
+        padDirectWorkerErrorStopped = false;
+        padDirectWorkerLastPollError = "";
+        padDirectWorkerLastStartReason = startReason == null || startReason.isBlank() ? "manual/control-panel" : startReason;
+        padDirectWorkerLastStopReason = "";
+        padDirectWorkerConsecutiveErrors = 0;
+        clearPadDirectCurrentJob();
+        setPadDirectWorkerState(PadDirectWorkerState.STARTING);
+        rememberPadDirectWorkerControls(autoStatus, resultView, jobsList, refreshButton, startAutoButton, stopAutoButton, printerIpInput, printerPortInput, printerTimeoutInput);
         startAutoButton.setEnabled(false);
         stopAutoButton.setEnabled(true);
-        autoStatus.setText("自动处理打印任务：正在等待任务。将使用每个 job payload 指定的 assigned printer。");
+        autoStatus.setText(formatPadDirectWorkerStatus());
+        Log.i(WORKER_TAG, "Worker Started reason=" + padDirectWorkerLastStartReason);
+        Log.i(WORKER_TAG, "worker_started reason=" + padDirectWorkerLastStartReason);
+        setPadDirectWorkerState(PadDirectWorkerState.WAITING);
         schedulePadDirectWorkerTick(autoStatus, resultView, jobsList, refreshButton, startAutoButton, stopAutoButton, printerIpInput, printerPortInput, printerTimeoutInput, 0);
+        schedulePadDirectWorkerWatchdog();
     }
 
     private void stopPadDirectAutoWorker(TextView autoStatus, Button startAutoButton, Button stopAutoButton, String message) {
+        stopPadDirectAutoWorker(autoStatus, startAutoButton, stopAutoButton, message, message, false);
+    }
+
+    private void stopPadDirectAutoWorker(
+        TextView autoStatus,
+        Button startAutoButton,
+        Button stopAutoButton,
+        String message,
+        String reason,
+        boolean errorStopped
+    ) {
+        setPadDirectWorkerState(errorStopped ? PadDirectWorkerState.ERROR_STOPPED : PadDirectWorkerState.STOPPING);
         padDirectWorkerStopRequested = true;
         padDirectWorkerRunning = false;
-        padDirectWorkerHandler.removeCallbacksAndMessages(null);
+        padDirectWorkerPendingKick = false;
+        padDirectQuickPollsRemaining = 0;
+        padDirectWorkerStoppedForLifecycle = false;
+        padDirectWorkerErrorStopped = errorStopped;
+        padDirectWorkerLastStopReason = reason == null || reason.isBlank() ? message : reason;
+        clearPadDirectCurrentJob();
+        activePadDirectWorkerControls = null;
+        clearPadDirectWorkerCallbacks();
+        updatePadDirectKeepScreenOn();
+        setPadDirectWorkerState(errorStopped ? PadDirectWorkerState.ERROR_STOPPED : PadDirectWorkerState.STOPPED);
         startAutoButton.setEnabled(isDevicePaired());
         stopAutoButton.setEnabled(false);
-        autoStatus.setText("自动处理打印任务：" + message);
+        autoStatus.setText(formatPadDirectWorkerStatus() + "\n" + message);
+        Log.i(WORKER_TAG, "Worker Stopped reason=" + padDirectWorkerLastStopReason);
+        Log.i(WORKER_TAG, "worker_stopped reason=" + padDirectWorkerLastStopReason);
+    }
+
+    private void rememberPadDirectWorkerControls(
+        TextView autoStatus,
+        TextView resultView,
+        LinearLayout jobsList,
+        Button refreshButton,
+        Button startAutoButton,
+        Button stopAutoButton,
+        EditText printerIpInput,
+        EditText printerPortInput,
+        EditText printerTimeoutInput
+    ) {
+        activePadDirectWorkerControls = new PadDirectWorkerControls(
+            autoStatus,
+            resultView,
+            jobsList,
+            refreshButton,
+            startAutoButton,
+            stopAutoButton,
+            printerIpInput,
+            printerPortInput,
+            printerTimeoutInput
+        );
+        updatePadDirectWorkerControls();
+    }
+
+    private void startPadDirectWorkerHeadlessIfPaired(String reason) {
+        if (padDirectWorkerRunning && !padDirectWorkerStopRequested) {
+            return;
+        }
+        if (!padDirectAppForeground) {
+            Log.i(WORKER_TAG, "Worker Started skipped: app not foreground reason=" + reason);
+            return;
+        }
+        if (!isPadDirectAutoPrintEnabled()) {
+            Log.i(WORKER_TAG, "Worker Started skipped: auto processing disabled reason=" + reason);
+            return;
+        }
+        if (padDirectWorkerErrorStopped) {
+            Log.i(WORKER_TAG, "Worker Started skipped: previous worker error requires manual restart reason=" + reason);
+            return;
+        }
+        if (padDirectWorkerUserStopped) {
+            Log.i(WORKER_TAG, "Worker Started skipped: user manually stopped PAD_DIRECT worker");
+            return;
+        }
+        if (!isDevicePaired()) {
+            Log.i(WORKER_TAG, "Worker Started skipped: Pad is not paired");
+            return;
+        }
+        TextView autoStatus = new TextView(this);
+        TextView resultView = new TextView(this);
+        LinearLayout jobsList = new LinearLayout(this);
+        jobsList.setOrientation(LinearLayout.VERTICAL);
+        Button refreshButton = new Button(this);
+        Button startAutoButton = new Button(this);
+        Button stopAutoButton = new Button(this);
+        EditText printerIpInput = new EditText(this);
+        printerIpInput.setText(getPrinterTestIp());
+        EditText printerPortInput = new EditText(this);
+        printerPortInput.setText(String.valueOf(getPrinterTestPort()));
+        EditText printerTimeoutInput = new EditText(this);
+        printerTimeoutInput.setText(String.valueOf(getPrinterTestTimeoutMs()));
+        Log.i(WORKER_TAG, "Worker Started: auto-starting headless PAD_DIRECT worker reason=" + reason);
+        startPadDirectAutoWorker(
+            autoStatus,
+            resultView,
+            jobsList,
+            refreshButton,
+            startAutoButton,
+            stopAutoButton,
+            printerIpInput,
+            printerPortInput,
+            printerTimeoutInput,
+            reason
+        );
+        updatePadDirectWorkerControls();
     }
 
     private void schedulePadDirectWorkerTick(
@@ -1037,6 +1762,12 @@ public class MainActivity extends Activity {
         EditText printerTimeoutInput,
         long delayMs
     ) {
+        rememberPadDirectWorkerControls(autoStatus, resultView, jobsList, refreshButton, startAutoButton, stopAutoButton, printerIpInput, printerPortInput, printerTimeoutInput);
+        padDirectWorkerPollScheduled = true;
+        padDirectWorkerLastScheduledAtMs = System.currentTimeMillis();
+        padDirectWorkerNextDelayMs = delayMs;
+        Log.i(WORKER_TAG, "Worker Poll Scheduled delayMs=" + delayMs);
+        updatePadDirectWorkerControls();
         padDirectWorkerHandler.postDelayed(() -> runPadDirectWorkerTick(
             autoStatus,
             resultView,
@@ -1048,6 +1779,194 @@ public class MainActivity extends Activity {
             printerPortInput,
             printerTimeoutInput
         ), delayMs);
+        schedulePadDirectWorkerWatchdog();
+    }
+
+    private void schedulePadDirectWorkerTick(PadDirectWorkerControls controls, long delayMs) {
+        if (controls == null) {
+            return;
+        }
+        schedulePadDirectWorkerTick(
+            controls.autoStatus,
+            controls.resultView,
+            controls.jobsList,
+            controls.refreshButton,
+            controls.startAutoButton,
+            controls.stopAutoButton,
+            controls.printerIpInput,
+            controls.printerPortInput,
+            controls.printerTimeoutInput,
+            delayMs
+        );
+    }
+
+    private void schedulePadDirectWorkerWatchdog() {
+        if (!padDirectWorkerRunning || padDirectWorkerStopRequested) {
+            return;
+        }
+        padDirectWorkerHandler.removeCallbacks(padDirectWorkerWatchdog);
+        padDirectWorkerWatchdogScheduled = true;
+        padDirectWorkerHandler.postDelayed(padDirectWorkerWatchdog, PAD_DIRECT_WATCHDOG_INTERVAL_MS);
+    }
+
+    private void runPadDirectWorkerWatchdog() {
+        padDirectWorkerWatchdogScheduled = false;
+        if (!padDirectWorkerRunning || padDirectWorkerStopRequested) {
+            return;
+        }
+        if (!padDirectAppForeground || !isPadDirectAutoPrintEnabled()) {
+            PadDirectWorkerControls controls = activePadDirectWorkerControls;
+            if (controls != null) {
+                stopPadDirectAutoWorker(
+                    controls.autoStatus,
+                    controls.startAutoButton,
+                    controls.stopAutoButton,
+                    "已停止。App 不在前台或自动处理已关闭。",
+                    padDirectAppForeground ? "auto-disabled" : "app-background",
+                    false
+                );
+            } else {
+                padDirectWorkerRunning = false;
+                padDirectWorkerStopRequested = true;
+                padDirectWorkerLastStopReason = padDirectAppForeground ? "auto-disabled" : "app-background";
+                setPadDirectWorkerState(PadDirectWorkerState.STOPPED);
+                clearPadDirectWorkerCallbacks();
+            }
+            return;
+        }
+        if (padDirectWorkerInProgress || padDirectJobInProgress) {
+            schedulePadDirectWorkerWatchdog();
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (isPadDirectWorkerPollStale(now)) {
+            Log.w(WORKER_TAG, "Worker Watchdog Rescheduled lastPollAt=" + timestampOrDash(padDirectWorkerLastPollAtMs)
+                + " pollScheduled=" + padDirectWorkerPollScheduled);
+            padDirectWorkerLastPollError = "Watchdog rescheduled worker poll after stale tick.";
+            PadDirectWorkerControls controls = activePadDirectWorkerControls;
+            if (controls == null) {
+                padDirectWorkerLastStopReason = "watchdog-no-controls";
+                padDirectWorkerRunning = false;
+                padDirectWorkerStopRequested = true;
+                setPadDirectWorkerState(PadDirectWorkerState.ERROR_STOPPED);
+                clearPadDirectWorkerCallbacks();
+                return;
+            }
+            clearPadDirectWorkerCallbacks();
+            schedulePadDirectWorkerTick(controls, 0);
+            return;
+        }
+        schedulePadDirectWorkerWatchdog();
+        updatePadDirectWorkerControls();
+    }
+
+    private void resumePadDirectWorkerAfterLifecycleIfNeeded() {
+        if (!padDirectWorkerStoppedForLifecycle) {
+            return;
+        }
+        PadDirectWorkerControls controls = activePadDirectWorkerControls;
+        if (controls == null) {
+            Log.w(WORKER_TAG, "Worker Started failed after lifecycle resume: no active worker controls");
+            padDirectWorkerStoppedForLifecycle = false;
+            return;
+        }
+        if (!isDevicePaired()) {
+            Log.w(WORKER_TAG, "Worker Started failed after lifecycle resume: Pad is not paired");
+            padDirectWorkerStoppedForLifecycle = false;
+            controls.autoStatus.setText("自动处理打印任务：未恢复，请先重新配对本机 Pad。");
+            controls.startAutoButton.setEnabled(false);
+            controls.stopAutoButton.setEnabled(false);
+            return;
+        }
+        if (!padDirectAppForeground || !isPadDirectAutoPrintEnabled()) {
+            Log.i(WORKER_TAG, "Worker Started skipped after lifecycle resume: appForeground="
+                + padDirectAppForeground + " autoEnabled=" + isPadDirectAutoPrintEnabled());
+            padDirectWorkerStoppedForLifecycle = false;
+            updatePadDirectWorkerControls();
+            return;
+        }
+        if (padDirectWorkerRunning && !padDirectWorkerStopRequested) {
+            padDirectWorkerStoppedForLifecycle = false;
+            return;
+        }
+        padDirectWorkerRunning = true;
+        padDirectWorkerStopRequested = false;
+        padDirectWorkerInProgress = false;
+        padDirectWorkerPendingKick = false;
+        padDirectQuickPollsRemaining = 0;
+        padDirectWorkerStoppedForLifecycle = false;
+        padDirectWorkerErrorStopped = false;
+        padDirectWorkerLastStartReason = "auto-resume";
+        padDirectWorkerLastStopReason = "";
+        padDirectWorkerLastPollError = "";
+        setPadDirectWorkerState(PadDirectWorkerState.WAITING);
+        controls.startAutoButton.setEnabled(false);
+        controls.stopAutoButton.setEnabled(true);
+        controls.autoStatus.setText(formatPadDirectWorkerStatus() + "\nApp 回到前台，已恢复处理服务。");
+        Log.i(WORKER_TAG, "Worker Started reason=auto-resume");
+        Log.i(WORKER_TAG, "worker_started reason=auto-resume");
+        schedulePadDirectWorkerTick(controls, 0);
+        schedulePadDirectWorkerWatchdog();
+    }
+
+    private void schedulePadDirectQuickKickWindow(String reason, long firstDelayMs) {
+        if (!padDirectWorkerRunning || padDirectWorkerStopRequested) {
+            return;
+        }
+        if (padDirectWorkerInProgress || padDirectJobInProgress) {
+            padDirectWorkerPendingKick = true;
+            Log.i(WORKER_TAG, "Worker Poll Scheduled pendingKick=true reason=" + reason + " workerBusy=true");
+            return;
+        }
+        PadDirectWorkerControls controls = activePadDirectWorkerControls;
+        if (controls == null) {
+            padDirectWorkerPendingKick = true;
+            Log.i(WORKER_TAG, "Worker Poll Scheduled pendingKick=true reason=" + reason + " noControls=true");
+            return;
+        }
+        padDirectWorkerPendingKick = false;
+        padDirectQuickPollsRemaining = 2;
+        clearPadDirectWorkerCallbacks();
+        String suffix = reason == null || reason.isBlank() ? "" : "\n触发来源：" + reason;
+        controls.autoStatus.setText(formatPadDirectWorkerStatus() + "\n收到当前 Pad 提交订单触发，准备快速检查打印任务。" + suffix);
+        Log.i(WORKER_TAG, "Worker Poll Scheduled quickKick reason=" + reason + " firstDelayMs=" + firstDelayMs);
+        schedulePadDirectWorkerTick(controls, firstDelayMs);
+    }
+
+    private String kickPadDirectWorkerFromWeb(String json) {
+        String parsedReason = "web-order-submit";
+        try {
+            JSONObject request = new JSONObject(json == null || json.isBlank() ? "{}" : json);
+            parsedReason = request.optString("reason", parsedReason);
+        } catch (Exception ignored) {
+            // Ignore malformed optional metadata; the kick itself remains safe.
+        }
+        String reason = parsedReason;
+        try {
+            JSONObject response = new JSONObject();
+            response.put("worker_running", padDirectWorkerRunning && !padDirectWorkerStopRequested);
+            if (!padDirectWorkerRunning || padDirectWorkerStopRequested) {
+                response.put("accepted", false);
+                response.put("status", "ignored_worker_off");
+                response.put("message", "Semi-auto worker is not running; kick ignored.");
+                return jsonSuccess(response);
+            }
+            if (padDirectWorkerInProgress || padDirectJobInProgress) {
+                padDirectWorkerPendingKick = true;
+                response.put("accepted", true);
+                response.put("status", "queued_busy");
+                response.put("message", "Worker is busy; quick poll will run after current job finishes.");
+                return jsonSuccess(response);
+            }
+            runOnUiThread(() -> schedulePadDirectQuickKickWindow(reason, PAD_DIRECT_KICK_FIRST_DELAY_MS));
+            response.put("accepted", true);
+            response.put("status", "scheduled_quick_window");
+            response.put("first_delay_ms", PAD_DIRECT_KICK_FIRST_DELAY_MS);
+            response.put("retry_delay_ms", PAD_DIRECT_KICK_RETRY_DELAY_MS);
+            return jsonSuccess(response);
+        } catch (Exception exception) {
+            return jsonFailure(exception.getMessage() == null ? "Failed to kick print worker" : exception.getMessage());
+        }
     }
 
     private void runPadDirectWorkerTick(
@@ -1061,68 +1980,160 @@ public class MainActivity extends Activity {
         EditText printerPortInput,
         EditText printerTimeoutInput
     ) {
+        padDirectWorkerPollScheduled = false;
+        padDirectWorkerNextDelayMs = -1L;
         if (!padDirectWorkerRunning || padDirectWorkerStopRequested) {
-            stopPadDirectAutoWorker(autoStatus, startAutoButton, stopAutoButton, "已停止。");
+            Log.i(WORKER_TAG, "Worker Stopped reason=tick-ignored-not-running");
+            stopPadDirectAutoWorker(autoStatus, startAutoButton, stopAutoButton, "已停止。", "tick-ignored-not-running", false);
+            return;
+        }
+        if (!padDirectAppForeground || !isPadDirectAutoPrintEnabled()) {
+            String reason = padDirectAppForeground ? "auto-disabled" : "app-background";
+            Log.i(WORKER_TAG, "Worker Stopped reason=" + reason);
+            stopPadDirectAutoWorker(autoStatus, startAutoButton, stopAutoButton, "已停止。App 不在前台或自动处理已关闭。", reason, false);
             return;
         }
         if (padDirectWorkerInProgress || padDirectJobInProgress) {
+            Log.d(WORKER_TAG, "Worker Poll Queue delayed: another PAD_DIRECT job is already in progress");
             schedulePadDirectWorkerTick(autoStatus, resultView, jobsList, refreshButton, startAutoButton, stopAutoButton, printerIpInput, printerPortInput, printerTimeoutInput, 1000);
             return;
         }
         if (!isDevicePaired()) {
-            stopPadDirectAutoWorker(autoStatus, startAutoButton, stopAutoButton, "设备认证失败，已停止。请重新配对。");
+            Log.w(WORKER_TAG, "Worker Exception: device pairing missing during worker tick");
+            padDirectWorkerLastPollError = "device pairing missing during worker tick";
+            stopPadDirectAutoWorker(autoStatus, startAutoButton, stopAutoButton, "设备认证失败，已停止。请重新配对。", "auth-failed", true);
             return;
         }
         padDirectWorkerInProgress = true;
-        autoStatus.setText("自动处理打印任务：正在等待任务。");
+        setPadDirectWorkerState(PadDirectWorkerState.POLLING);
+        padDirectWorkerLastPollAtMs = System.currentTimeMillis();
+        updatePadDirectWorkerControls();
         new Thread(() -> {
             PadDirectJobResult workerResult;
             JSONObject job = null;
             try {
                 String storeId = preferences.getString(KEY_DEVICE_STORE_ID, "");
+                String deviceId = preferences.getString(KEY_DEVICE_ID, "");
+                Log.i(WORKER_TAG, "Worker Poll Started deviceId=" + deviceId + " storeId=" + storeId);
+                Log.i(WORKER_TAG, "poll_start deviceId=" + deviceId + " storeId=" + storeId);
                 HttpResult pendingResult = getDeviceJson("/api/v1/stores/" + storeId + "/printing/jobs/pending?limit=10");
                 if (pendingResult.status == 401 || pendingResult.status == 403) {
+                    Log.w(WORKER_TAG, "Worker Exception: pending queue auth failed HTTP " + pendingResult.status);
+                    padDirectWorkerLastPollError = "pending queue auth failed HTTP " + pendingResult.status;
+                    padDirectWorkerConsecutiveErrors += 1;
                     workerResult = PadDirectJobResult.stop("设备认证失败，请重新配对。", false);
                 } else {
                     requireSuccessResponse(pendingResult, "加载待打印任务失败");
                     JSONArray jobs = new JSONObject(pendingResult.body).optJSONArray("data");
                     if (jobs == null || jobs.length() == 0) {
+                        padDirectWorkerLastPollResultCount = 0;
+                        padDirectWorkerLastOldestJobAgeMs = -1L;
+                        padDirectWorkerLastPollError = "";
+                        padDirectWorkerConsecutiveErrors = 0;
+                        Log.d(WORKER_TAG, "Worker Poll Result count=0");
                         workerResult = PadDirectJobResult.idle("正在等待任务。");
                     } else {
+                        padDirectWorkerLastPollResultCount = jobs.length();
+                        padDirectWorkerLastPollError = "";
+                        padDirectWorkerConsecutiveErrors = 0;
                         job = jobs.getJSONObject(0);
                         long jobId = job.optLong("id", -1L);
                         String moduleCode = job.optString("module_code", "PAD_DIRECT");
-                        String deviceId = preferences.getString(KEY_DEVICE_ID, "");
                         String attemptToken = "android-auto-" + deviceId + "-" + jobId + "-" + System.currentTimeMillis();
+                        long nowMs = System.currentTimeMillis();
+                        padDirectWorkerLastOldestJobAgeMs = ageMsFromTimestamp(job.optString("created_at", ""), nowMs);
+                        padDirectWorkerLastJobQueueDelayMs = padDirectWorkerLastOldestJobAgeMs;
+                        padDirectWorkerCurrentJobId = String.valueOf(jobId);
+                        padDirectWorkerCurrentModule = moduleCode;
+                        padDirectWorkerCurrentPrinterEndpoint = job.optString("printer_endpoint", "");
+                        setPadDirectWorkerState(PadDirectWorkerState.PROCESSING_JOB);
+                        Log.i(WORKER_TAG, "Worker Poll Result count=" + jobs.length() + " oldestJobAgeMs=" + padDirectWorkerLastOldestJobAgeMs);
+                        Log.i(WORKER_TAG, "Worker Picked jobId=" + jobId
+                            + " module=" + moduleCode
+                            + " queueDelayMs=" + padDirectWorkerLastJobQueueDelayMs
+                            + " printerEndpoint=" + padDirectWorkerCurrentPrinterEndpoint);
+                        Log.i(WORKER_TAG, "job_picked jobId=" + jobId
+                            + " module=" + moduleCode
+                            + " queueDelayMs=" + padDirectWorkerLastJobQueueDelayMs
+                            + " printerEndpoint=" + padDirectWorkerCurrentPrinterEndpoint);
                         workerResult = executePadDirectJob(jobId, moduleCode, attemptToken);
                     }
                 }
             } catch (PadDirectStepException exception) {
+                padDirectWorkerLastPollError = exception.errorCode + " - " + exception.getMessage();
+                padDirectWorkerConsecutiveErrors += 1;
+                Log.e(WORKER_TAG, "Worker Exception exceptionClass=" + exception.getClass().getSimpleName() + " message=" + exception.getMessage(), exception);
                 workerResult = PadDirectJobResult.stop(exception.getMessage(), false);
             } catch (Exception exception) {
+                padDirectWorkerLastPollError = exception.getClass().getSimpleName() + " - " + exception.getMessage();
+                padDirectWorkerConsecutiveErrors += 1;
+                Log.e(WORKER_TAG, "Worker Exception exceptionClass=" + exception.getClass().getSimpleName() + " message=" + exception.getMessage(), exception);
                 workerResult = PadDirectJobResult.stop("后端连接失败，已停止: " + exception.getClass().getSimpleName() + " - " + exception.getMessage(), false);
             }
             PadDirectJobResult finalResult = workerResult;
             JSONObject finalJob = job;
             runOnUiThread(() -> {
                 padDirectWorkerInProgress = false;
+                padDirectWorkerLastPollFinishedAtMs = System.currentTimeMillis();
+                padDirectWorkerLastPollDurationMs = Math.max(0L, padDirectWorkerLastPollFinishedAtMs - padDirectWorkerLastPollAtMs);
+                Log.i(WORKER_TAG, "Worker Poll End durationMs=" + padDirectWorkerLastPollDurationMs
+                    + " resultCount=" + padDirectWorkerLastPollResultCount
+                    + " oldestJobAgeMs=" + padDirectWorkerLastOldestJobAgeMs);
+                Log.i(WORKER_TAG, "poll_end durationMs=" + padDirectWorkerLastPollDurationMs
+                    + " resultCount=" + padDirectWorkerLastPollResultCount
+                    + " oldestJobAgeMs=" + padDirectWorkerLastOldestJobAgeMs);
                 if (!padDirectWorkerRunning || padDirectWorkerStopRequested) {
-                    stopPadDirectAutoWorker(autoStatus, startAutoButton, stopAutoButton, "已停止。");
+                    stopPadDirectAutoWorker(autoStatus, startAutoButton, stopAutoButton, "已停止。", "stopped-during-poll", false);
                     return;
                 }
                 if (finalJob != null) {
-                    autoStatus.setText("自动处理打印任务：正在处理 job #" + finalJob.optString("id", "-") + " / " + finalJob.optString("module_code", "-") + "\n" + finalResult.message);
+                    autoStatus.setText(formatPadDirectWorkerStatus() + "\n" + finalResult.message);
                 } else {
-                    autoStatus.setText("自动处理打印任务：" + finalResult.message);
+                    autoStatus.setText(formatPadDirectWorkerStatus() + "\n" + finalResult.message);
                 }
                 if (finalResult.refreshAfter) {
                     refreshPendingPrintJobs(resultView, jobsList, refreshButton, printerIpInput, printerPortInput, printerTimeoutInput);
                 }
                 if (finalResult.stopWorker) {
-                    stopPadDirectAutoWorker(autoStatus, startAutoButton, stopAutoButton, finalResult.message);
+                    padDirectQuickPollsRemaining = 0;
+                    padDirectWorkerPendingKick = false;
+                    boolean thresholdReached = padDirectWorkerConsecutiveErrors >= PAD_DIRECT_MAX_CONSECUTIVE_ERRORS;
+                    String stopReason = thresholdReached ? "watchdog-error-threshold" : finalResult.message;
+                    Log.w(WORKER_TAG, "Worker Stopped reason=" + stopReason);
+                    stopPadDirectAutoWorker(autoStatus, startAutoButton, stopAutoButton, finalResult.message, stopReason, true);
                     return;
                 }
-                long delay = finalResult.conflict ? 500 : (finalResult.idle ? 4000 : 1000);
+                if (padDirectWorkerPendingKick) {
+                    padDirectWorkerPendingKick = false;
+                    padDirectQuickPollsRemaining = 2;
+                    clearPadDirectWorkerCallbacks();
+                    setPadDirectWorkerState(PadDirectWorkerState.WAITING);
+                    autoStatus.setText(formatPadDirectWorkerStatus() + "\n当前 job 已结束，立即处理提交订单触发的快速检查。");
+                    schedulePadDirectWorkerTick(autoStatus, resultView, jobsList, refreshButton, startAutoButton, stopAutoButton, printerIpInput, printerPortInput, printerTimeoutInput, 0);
+                    return;
+                }
+                long delay;
+                if (finalResult.idle && padDirectQuickPollsRemaining > 0) {
+                    padDirectQuickPollsRemaining -= 1;
+                    if (padDirectQuickPollsRemaining > 0) {
+                        delay = PAD_DIRECT_KICK_RETRY_DELAY_MS;
+                        autoStatus.setText(formatPadDirectWorkerStatus() + "\n快速检查暂未发现任务，700ms 后再查一次。");
+                    } else {
+                        delay = 4000;
+                        autoStatus.setText(formatPadDirectWorkerStatus() + "\n快速检查窗口结束，回到正常轮询。");
+                    }
+                } else {
+                    if (!finalResult.idle) {
+                        padDirectQuickPollsRemaining = 0;
+                    }
+                    delay = finalResult.conflict ? 500 : (finalResult.idle ? 4000 : 1000);
+                }
+                if (finalResult.idle) {
+                    setPadDirectWorkerState(PadDirectWorkerState.WAITING);
+                } else {
+                    clearPadDirectCurrentJob();
+                    setPadDirectWorkerState(PadDirectWorkerState.WAITING);
+                }
                 schedulePadDirectWorkerTick(autoStatus, resultView, jobsList, refreshButton, startAutoButton, stopAutoButton, printerIpInput, printerPortInput, printerTimeoutInput, delay);
             });
         }).start();
@@ -1130,12 +2141,14 @@ public class MainActivity extends Activity {
 
     private String reportPadDirectFail(Long jobId, String attemptToken, String errorCode, String errorMessage, String rawResult) {
         try {
+            long failStartedAt = System.currentTimeMillis();
             JSONObject failRequest = new JSONObject();
             failRequest.put("client_attempt_token", attemptToken);
             failRequest.put("error_code", errorCode == null || errorCode.isBlank() ? "ANDROID_NATIVE_PRINT_FAILED" : errorCode);
             failRequest.put("error_message", truncateForJson(errorMessage, 1000));
             failRequest.put("raw_result", truncateForJson(rawResult, 3000));
             HttpResult failResult = postDeviceJson("/api/v1/printing/jobs/" + jobId + "/fail", failRequest);
+            logWorkerDuration("fail_duration_ms", jobId == null ? -1L : jobId, failStartedAt);
             if (failResult.status >= 200 && failResult.status < 300) {
                 return "打印失败，已回报后端。";
             }
@@ -1183,6 +2196,7 @@ public class MainActivity extends Activity {
             throw new IllegalStateException("无法推导后端 API 地址。");
         }
         URL url = new URL(trimTrailingSlash(apiBase) + path);
+        Log.d(WORKER_TAG, "Worker API Request: " + method + " " + url);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod(method);
         connection.setConnectTimeout(5000);
@@ -1340,8 +2354,20 @@ public class MainActivity extends Activity {
                 return printTest ? "测试票已发送。请检查打印机出纸和切纸。" : "连接成功。";
             }
             String code = result.optString("error_code", "UNKNOWN");
+            String nativeCode = result.optString("native_error_code", code);
+            String phase = result.optString("phase", "UNKNOWN");
+            int bytesWritten = result.optInt("bytes_written", 0);
+            String endpoint = result.optString("endpoint", "");
+            String exceptionClass = result.optString("exception_class", "");
+            String exceptionMessage = result.optString("exception_message", result.optString("message", ""));
             String message = result.optString("message", "");
-            return printerErrorMessage(code) + "\n技术信息: " + code + (message.isBlank() ? "" : " - " + message);
+            return printerErrorMessage(nativeCode)
+                + "\n技术信息: native_error_code=" + nativeCode
+                + "; phase=" + phase
+                + "; bytes_written=" + bytesWritten
+                + (endpoint.isBlank() ? "" : "; endpoint=" + endpoint)
+                + (exceptionClass.isBlank() ? "" : "; exception_class=" + exceptionClass)
+                + (exceptionMessage.isBlank() ? (message.isBlank() ? "" : "; message=" + message) : "; exception_message=" + exceptionMessage);
         } catch (Exception exception) {
             return "无法读取测试结果: " + rawResult;
         }
@@ -1359,6 +2385,9 @@ public class MainActivity extends Activity {
         }
         if ("WRITE_FAILED".equals(code)) {
             return "连接后写入失败。请检查打印机状态、纸张、网络稳定性。";
+        }
+        if ("FLUSH_FAILED".equals(code)) {
+            return "发送完成时失败。请检查打印机状态，可能已经出纸。";
         }
         return "打印机测试失败。请检查 IP、端口、电源和网络。";
     }
@@ -1388,6 +2417,20 @@ public class MainActivity extends Activity {
     }
 
     private void clearDeviceCredentials() {
+        padDirectWorkerUserStopped = true;
+        setPadDirectAutoPrintEnabled(false);
+        padDirectWorkerStopRequested = true;
+        padDirectWorkerRunning = false;
+        padDirectWorkerInProgress = false;
+        padDirectWorkerStoppedForLifecycle = false;
+        padDirectWorkerErrorStopped = false;
+        activePadDirectWorkerControls = null;
+        clearPadDirectWorkerCallbacks();
+        updatePadDirectKeepScreenOn();
+        setPadDirectWorkerState(PadDirectWorkerState.STOPPED);
+        padDirectWorkerLastStopReason = "device-pairing-cleared";
+        clearPadDirectCurrentJob();
+        Log.i(WORKER_TAG, "Worker Stopped reason=device-pairing-cleared");
         preferences.edit()
             .remove(KEY_DEVICE_ID)
             .remove(KEY_DEVICE_TOKEN)
@@ -1399,10 +2442,29 @@ public class MainActivity extends Activity {
             .apply();
     }
 
-    private void stopPadDirectWorkerForLifecycle() {
+    private void stopPadDirectWorkerForLifecycle(String reason) {
+        if (padDirectWorkerStoppedForLifecycle && !padDirectWorkerRunning) {
+            Log.i(WORKER_TAG, "Worker Stopped already pending lifecycle resume reason=" + reason);
+            return;
+        }
+        boolean shouldResume = padDirectWorkerRunning
+            && !padDirectWorkerStopRequested
+            && activePadDirectWorkerControls != null
+            && isPadDirectAutoPrintEnabled();
+        if (shouldResume) {
+            Log.i(WORKER_TAG, "Worker Stopped reason=" + reason + "; worker will resume when app returns to foreground");
+        } else if (padDirectWorkerRunning) {
+            Log.i(WORKER_TAG, "Worker Stopped reason=" + reason + "; no automatic resume");
+        }
+        padDirectWorkerStoppedForLifecycle = shouldResume;
         padDirectWorkerStopRequested = true;
         padDirectWorkerRunning = false;
-        padDirectWorkerHandler.removeCallbacksAndMessages(null);
+        padDirectWorkerInProgress = false;
+        padDirectWorkerLastStopReason = reason;
+        clearPadDirectWorkerCallbacks();
+        updatePadDirectKeepScreenOn();
+        setPadDirectWorkerState(PadDirectWorkerState.STOPPED);
+        updatePadDirectWorkerControls();
     }
 
     private String tokenLast4(String token) {
@@ -1495,12 +2557,167 @@ public class MainActivity extends Activity {
         private final int port;
         private final int timeoutMs;
         private final String endpoint;
+        private final Long printerId;
+        private final String printerName;
 
-        private AssignedPrinterEndpoint(String host, int port, int timeoutMs, String endpoint) {
+        private AssignedPrinterEndpoint(String host, int port, int timeoutMs, String endpoint, Long printerId, String printerName) {
             this.host = host;
             this.port = port;
             this.timeoutMs = timeoutMs;
             this.endpoint = endpoint;
+            this.printerId = printerId;
+            this.printerName = printerName == null ? "" : printerName;
+        }
+    }
+
+    private static class NativePrintAttemptResult {
+        private final boolean success;
+        private final String nativeErrorCode;
+        private final String phase;
+        private final int bytesWritten;
+        private final String endpoint;
+        private final String exceptionClass;
+        private final String exceptionMessage;
+        private final String message;
+        private final int attemptNumber;
+        private String rawResult;
+
+        private NativePrintAttemptResult(
+            boolean success,
+            String nativeErrorCode,
+            String phase,
+            int bytesWritten,
+            String endpoint,
+            String exceptionClass,
+            String exceptionMessage,
+            String message,
+            int attemptNumber,
+            String rawResult
+        ) {
+            this.success = success;
+            this.nativeErrorCode = normalizeDiagnostic(nativeErrorCode, success ? "OK" : "UNKNOWN");
+            this.phase = normalizeDiagnostic(phase, success ? "DONE" : "UNKNOWN");
+            this.bytesWritten = Math.max(bytesWritten, 0);
+            this.endpoint = endpoint == null ? "" : endpoint;
+            this.exceptionClass = exceptionClass == null ? "" : exceptionClass;
+            this.exceptionMessage = exceptionMessage == null ? "" : exceptionMessage;
+            this.message = message == null ? "" : message;
+            this.attemptNumber = attemptNumber;
+            this.rawResult = rawResult == null ? "" : rawResult;
+        }
+
+        private static NativePrintAttemptResult from(String rawResult, int attemptNumber) {
+            try {
+                JSONObject json = new JSONObject(rawResult == null ? "{}" : rawResult);
+                return new NativePrintAttemptResult(
+                    json.optBoolean("success", false),
+                    json.optString("native_error_code", json.optString("error_code", "")),
+                    json.optString("phase", ""),
+                    json.optInt("bytes_written", 0),
+                    json.optString("endpoint", ""),
+                    json.optString("exception_class", ""),
+                    json.optString("exception_message", ""),
+                    json.optString("message", ""),
+                    attemptNumber,
+                    rawResult
+                );
+            } catch (Exception exception) {
+                return failure(
+                    "UNKNOWN",
+                    "UNKNOWN",
+                    0,
+                    "",
+                    exception.getClass().getSimpleName(),
+                    exception.getMessage(),
+                    "Invalid native print result",
+                    attemptNumber,
+                    rawResult
+                );
+            }
+        }
+
+        private static NativePrintAttemptResult failure(
+            String nativeErrorCode,
+            String phase,
+            int bytesWritten,
+            String endpoint,
+            String exceptionClass,
+            String exceptionMessage,
+            String message,
+            int attemptNumber,
+            String rawResult
+        ) {
+            return new NativePrintAttemptResult(
+                false,
+                nativeErrorCode,
+                phase,
+                bytesWritten,
+                endpoint,
+                exceptionClass,
+                exceptionMessage,
+                message,
+                attemptNumber,
+                rawResult
+            );
+        }
+
+        private JSONObject toSummaryJson() {
+            JSONObject summary = new JSONObject();
+            try {
+                summary.put("attempt", attemptNumber);
+                summary.put("success", success);
+                summary.put("native_error_code", nativeErrorCode);
+                summary.put("phase", phase);
+                summary.put("bytes_written", bytesWritten);
+                summary.put("endpoint", endpoint);
+                summary.put("exception_class", exceptionClass);
+                summary.put("exception_message", exceptionMessage);
+                summary.put("message", message);
+            } catch (Exception ignored) {
+                // Best-effort diagnostic only; never fail printing because diagnostic serialization failed.
+            }
+            return summary;
+        }
+
+        private static String normalizeDiagnostic(String value, String fallback) {
+            if (value == null || value.trim().isEmpty()) {
+                return fallback;
+            }
+            return value.trim().toUpperCase(Locale.US);
+        }
+    }
+
+    private static class PadDirectWorkerControls {
+        private final TextView autoStatus;
+        private final TextView resultView;
+        private final LinearLayout jobsList;
+        private final Button refreshButton;
+        private final Button startAutoButton;
+        private final Button stopAutoButton;
+        private final EditText printerIpInput;
+        private final EditText printerPortInput;
+        private final EditText printerTimeoutInput;
+
+        private PadDirectWorkerControls(
+            TextView autoStatus,
+            TextView resultView,
+            LinearLayout jobsList,
+            Button refreshButton,
+            Button startAutoButton,
+            Button stopAutoButton,
+            EditText printerIpInput,
+            EditText printerPortInput,
+            EditText printerTimeoutInput
+        ) {
+            this.autoStatus = autoStatus;
+            this.resultView = resultView;
+            this.jobsList = jobsList;
+            this.refreshButton = refreshButton;
+            this.startAutoButton = startAutoButton;
+            this.stopAutoButton = stopAutoButton;
+            this.printerIpInput = printerIpInput;
+            this.printerPortInput = printerPortInput;
+            this.printerTimeoutInput = printerTimeoutInput;
         }
     }
 
@@ -1525,7 +2742,11 @@ public class MainActivity extends Activity {
                     .putString(KEY_DEVICE_REGISTERED_AT, request.optString("registered_at", nowTimestamp()))
                     .putString(KEY_DEVICE_APP_VERSION, request.optString("app_version", "unknown"))
                     .putString(KEY_DEVICE_PLATFORM, request.optString("platform", "ANDROID"))
+                    .putBoolean(KEY_PAD_DIRECT_AUTO_ENABLED, true)
                     .apply();
+                padDirectWorkerUserStopped = false;
+                padDirectWorkerErrorStopped = false;
+                runOnUiThread(() -> startPadDirectWorkerHeadlessIfPaired("device-paired"));
                 JSONObject response = new JSONObject();
                 response.put("message", "Device credentials saved");
                 response.put("device_id", deviceId);
@@ -1570,8 +2791,35 @@ public class MainActivity extends Activity {
             }
         }
 
+        @JavascriptInterface
+        public String kickPrintWorker(String json) {
+            return kickPadDirectWorkerFromWeb(json);
+        }
+
         private Object blankToJsonNull(String value) {
             return value == null || value.isBlank() ? JSONObject.NULL : value;
+        }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        padDirectAppForeground = true;
+        Log.i(WORKER_TAG, "onStart workerRunning=" + padDirectWorkerRunning + " autoEnabled=" + isPadDirectAutoPrintEnabled());
+        resumePadDirectWorkerAfterLifecycleIfNeeded();
+        if (!padDirectWorkerStoppedForLifecycle) {
+            startPadDirectWorkerHeadlessIfPaired("app-start");
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        padDirectAppForeground = true;
+        Log.i(WORKER_TAG, "onResume workerRunning=" + padDirectWorkerRunning + " autoEnabled=" + isPadDirectAutoPrintEnabled());
+        resumePadDirectWorkerAfterLifecycleIfNeeded();
+        if (!padDirectWorkerStoppedForLifecycle) {
+            startPadDirectWorkerHeadlessIfPaired("app-resume");
         }
     }
 
@@ -1586,13 +2834,27 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onPause() {
-        stopPadDirectWorkerForLifecycle();
+        Log.i(WORKER_TAG, "onPause workerRunning=" + padDirectWorkerRunning + " inProgress=" + padDirectWorkerInProgress);
+        padDirectAppForeground = false;
+        stopPadDirectWorkerForLifecycle("app-pause");
         super.onPause();
     }
 
     @Override
+    protected void onStop() {
+        Log.i(WORKER_TAG, "onStop workerRunning=" + padDirectWorkerRunning + " stoppedForLifecycle=" + padDirectWorkerStoppedForLifecycle);
+        padDirectAppForeground = false;
+        stopPadDirectWorkerForLifecycle("app-stopped");
+        super.onStop();
+    }
+
+    @Override
     protected void onDestroy() {
-        stopPadDirectWorkerForLifecycle();
+        Log.i(WORKER_TAG, "onDestroy workerRunning=" + padDirectWorkerRunning);
+        padDirectAppForeground = false;
+        stopPadDirectWorkerForLifecycle("app-destroyed");
+        padDirectWorkerStoppedForLifecycle = false;
+        activePadDirectWorkerControls = null;
         super.onDestroy();
     }
 }

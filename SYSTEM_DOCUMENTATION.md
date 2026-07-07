@@ -5616,6 +5616,11 @@ Control Panel behavior:
   mode (`Local Preview Mode` or `Bundled Assets Mode`).
 - The panel provides shortcuts for Frontdesk, Order Center, Print Center, Menu
   Management, Dining Tables, page refresh, and Web App URL reachability testing.
+- `Save Settings / 保存配置` and the dialog `Save` action both persist Local
+  Preview Web App URL, Bundled Assets API Base URL, and local printer-test
+  IP/port/timeout to Android `SharedPreferences`.
+- `Test Printer Connection` and `Test Print` persist only the local printer-test
+  IP/port/timeout; they do not save the Web App URL.
 - If the current URL contains `/stores/{storeId}/`, shortcuts use
   store-scoped routes. If no store id is available, shortcuts use legacy routes
   such as `/frontdesk` or `/admin/settings/printing`; the Web frontend handles
@@ -5811,14 +5816,32 @@ Android pilot behavior:
 
 - Manual `领取并打印` now runs:
   `claim -> start-print -> payload -> assigned printer TCP print -> complete/fail`.
-- Local Control Panel adds explicit `Start Auto Print / 开启自动处理打印任务`
+- Local Control Panel includes explicit `Start Auto Print / 开启自动处理打印任务`
   and `Stop Auto Print / 停止自动处理` controls.
-- Semi-auto mode is foreground-only and operator controlled.
+- A paired Pad auto-starts one foreground/headless semi-auto worker when the App
+  opens or returns to the foreground. Opening the Control Panel attaches visible
+  controls to the same worker instead of creating a second polling loop.
+- When the Control Panel opens on a paired Pad, it also starts the same worker if
+  it is not already running. The start path is guarded by the existing
+  single-worker flag, so reopening the panel or refreshing the WebView does not
+  create duplicate polling loops.
+- If auto-start cannot run, Android logs the error and shows a top-panel warning.
+- Semi-auto mode is foreground-only and operator controlled through the panel.
 - It polls pending jobs at a small interval only while enabled, processes one
   job at a time, and uses the same safe flow as manual printing.
 - It stops on device auth, backend, payload, or printer failures instead of
   retrying forever.
-- It stops when the Android app is paused or closed.
+- It stops when the Android app leaves the foreground and resumes the same
+  worker when the app returns, as long as it was running before the lifecycle
+  stop. Manual Stop still disables auto processing until started again.
+- `PENDING / Waiting Pad / Attempt 0` means no Pad has successfully claimed the
+  job. In that state the backend is not stuck in processing; the Android worker
+  has not consumed the queue yet.
+- Android logcat emits `Worker Started`, `Worker Poll Queue`, `Job Picked`,
+  `Job Processing`, `Job Finished`, `Job Failed`, `Worker Stopped`, and
+  `Worker Exception` markers for PAD_DIRECT troubleshooting.
+- Backend logs emit PAD_DIRECT pending/claim/start/payload/complete/fail events
+  when the Android worker reaches the server APIs.
 
 Print Center visibility:
 
@@ -5862,6 +5885,10 @@ Routing model:
   `printer_host:printer_port` from the payload.
 - The Local Control Panel printer IP/port fields are only for local printer
   connection tests and fixed test tickets, not real PAD_DIRECT order routing.
+- PAD_DIRECT ESC/POS payload generation uses the effective module font size:
+  `printer_assignments.font_size` first, then `printer_configs.font_size`, then
+  `MEDIUM`. This keeps Web Print Center assignment changes and Android/iPad
+  local printing behavior consistent.
 
 Operational behavior:
 
@@ -5873,6 +5900,26 @@ Operational behavior:
 - If the Pad cannot reach the assigned printer, Android fails the job with
   `ANDROID_ASSIGNED_PRINTER_UNREACHABLE` and stops the worker.
 - Print Center job tables show printer id, name, and endpoint for verification.
+- PR11D-12 adds structured native printer diagnostics for assigned printer
+  failures. Android records `native_error_code`, `phase`, `bytes_written`,
+  exception class/message, endpoint, job/module, printer id/name, and device id
+  without logging ESC/POS payloads or device tokens.
+- Android now maps assigned-printer failures to more specific error codes:
+  `ANDROID_PRINTER_CONNECT_TIMEOUT`,
+  `ANDROID_PRINTER_CONNECTION_REFUSED`,
+  `ANDROID_PRINTER_NETWORK_UNREACHABLE`,
+  `ANDROID_PRINTER_WRITE_FAILED`,
+  `ANDROID_PRINTER_FLUSH_FAILED`, or fallback
+  `ANDROID_NATIVE_PRINT_FAILED`.
+- Safe short retry is limited to connect-phase failures where
+  `phase=CONNECT`, `bytes_written=0`, and the native code is `TIMEOUT`,
+  `CONNECTION_REFUSED`, or `UNREACHABLE`. Android retries the same job/device/
+  endpoint after 500ms and 1500ms, then reports `FAILED` and stops the worker.
+- `WRITE` and `FLUSH` failures are never retried automatically because the
+  printer may have already received part or all of the ticket. Staff must check
+  physical paper output before reprinting.
+- `retry_count` remains a failure counter/display value only. It does not
+  requeue failed jobs and the worker does not consume `FAILED` jobs.
 
 Pilot limitations:
 
@@ -5882,6 +5929,159 @@ Pilot limitations:
   latest config for that printer id.
 - Each Pad must be on a LAN/VLAN that can reach all printers it may claim.
 - Device-printer/module affinity is intentionally not implemented in this PR.
+
+## PR11D-9: PAD_DIRECT Immediate Print Trigger
+
+PR11D-9 adds a frontend-to-Android quick trigger for current-Pad order
+submissions. It does not add WebSocket printing, Android background services,
+backend state-machine changes, order lifecycle changes, payment/refund changes,
+or `completeOrder` changes.
+
+Behavior:
+
+- When an order submit or edit-order update succeeds inside the Android Pad
+  WebView, the web frontend calls `window.RestaurantPadDevice.kickPrintWorker`.
+- If the Pad Direct semi-auto worker is not enabled, the kick is ignored and no
+  automatic printing starts.
+- If the worker is busy, Android records a pending kick and starts a quick check
+  as soon as the current job finishes.
+- If the worker is idle, Android cancels the normal idle tick, polls after
+  roughly 300 ms, retries once about 700 ms later if no job is visible, then
+  returns to normal adaptive polling.
+- Normal polling remains required for jobs submitted by other Pads, browser
+  clients, reprint actions, and recovery after missed triggers.
+
+This quick window exists because order submission may commit before the
+after-commit asynchronous print dispatch has created PAD_DIRECT `print_jobs`.
+
+## PR11D-13: PAD_DIRECT Android Worker Lost Tick Hardening
+
+PR11D-13 hardens the Android foreground/headless PAD_DIRECT worker against the
+long-run case where Print Center shows `PENDING / Waiting Pad / Attempt 0`
+because no Pad is consuming the queue. It does not change PAD_DIRECT
+claim/start-print/payload/complete/fail semantics, pending query rules,
+PrintDispatcher routing, order lifecycle, payment/refund behavior,
+`completeOrder`, database schema, automatic reprint, or failed-job requeue.
+
+Android worker reliability changes:
+
+- The worker now tracks explicit state: stopped, starting, waiting, polling,
+  processing job, stopping, and error-stopped.
+- The Local Control Panel shows whether auto processing is enabled, whether the
+  worker is actually running, the current device/store, last poll time, last poll
+  result count, whether the next poll is scheduled, watchdog status, current
+  job/module/printer, last start reason, last stop reason, and last error.
+- Manual Stop persists `pad_direct_auto_enabled=false`; after that, app start or
+  foreground resume will not secretly restart automatic printing.
+- Pairing or manual Start enables auto processing and starts the single worker.
+- The worker records `pollScheduled`, `lastPollAt`, and `lastPollFinishedAt` so
+  operators can distinguish “no jobs” from “worker stopped polling”.
+- A lightweight watchdog checks foreground workers. If auto processing is
+  enabled, the app is foreground, no job is in progress, and the worker has not
+  polled for more than roughly 10 seconds, Android logs
+  `Worker Watchdog Rescheduled` and schedules a fresh poll.
+- App pause/stop/destroy cancels future polling. If auto processing was enabled,
+  the app foregrounds again, and the previous stop was lifecycle-related, the
+  worker safely resumes. Native printing that is already in progress is not
+  force-interrupted, but the worker will not pull new jobs while backgrounded.
+- Error stops remain visible and require a manual restart from the Control
+  Panel, avoiding hidden restart loops after auth/backend/printer failures.
+
+Logging changes:
+
+- Android PAD_DIRECT worker logs use the `RestaurantPadWorker` tag.
+- Logs include `Worker Started`, `Worker Stopped`, `Worker Poll Scheduled`,
+  `Worker Poll Started`, `Worker Poll Result`, `Worker Picked`,
+  `Worker Job Processing`, `Worker Job Finished`, `Worker Job Failed`,
+  `Worker Exception`, `Worker Watchdog Rescheduled`, and lifecycle actions.
+- Android logs do not print device tokens or ESC/POS payloads.
+- Backend pending polling logs now keep returned job counts greater than zero at
+  INFO while returned zero jobs is DEBUG, reducing idle log noise while keeping
+  actionable queue-consumption evidence.
+
+## PR11D-14: PAD_DIRECT Restaurant Pilot Preventive Hardening
+
+PR11D-14 is a preventive hardening pass for restaurant PAD_DIRECT pilot testing.
+It does not change order lifecycle, payment/refund behavior, `completeOrder`,
+menu/order business rules, PrintDispatcher routing, PAD_DIRECT claim/start/
+payload/complete/fail semantics, failed-job requeue behavior, automatic reprint,
+Android background daemon behavior, or device-printer affinity.
+
+Android Local Control Panel visibility:
+
+- The worker status panel shows auto processing enabled/disabled, worker state,
+  app foreground, device/store id, last poll time, last poll result count, last
+  poll duration, oldest pending job age, last queue delay, last job processing
+  duration, consecutive errors, scheduled poll/watchdog state, current job/
+  module/printer endpoint, last start reason, last stop reason, and last error.
+- If auto processing is disabled, the panel explicitly says no `PENDING` jobs
+  will be consumed.
+- If the worker is `ERROR_STOPPED`, the panel tells the operator to check the
+  displayed reason and restart manually.
+- If the worker appears stale for more than roughly 10 seconds while idle, the
+  watchdog reschedules a poll and the panel warns the operator.
+- While auto processing is enabled, the app is foregrounded, and the worker is
+  running, Android keeps the screen awake. The flag is cleared when auto
+  processing stops or the app backgrounds.
+
+Metrics and logs:
+
+- Android `RestaurantPadWorker` logs include both the existing human-readable
+  markers and stable markers such as `worker_started`, `worker_stopped`,
+  `poll_start`, `poll_end`, `job_picked`, `claim_duration_ms`,
+  `start_print_duration_ms`, `payload_duration_ms`, `tcp_print_duration_ms`,
+  `complete_duration_ms`, `fail_duration_ms`, and `job_finished`.
+- Android logs do not print device tokens or ESC/POS payloads.
+- Backend PAD_DIRECT pending polling logs returned-zero jobs at DEBUG and
+  returned-positive jobs at INFO with `oldestJobAgeMs`.
+- Backend claim success logs `queueDelayMs`.
+
+Print Center visibility:
+
+- Print job rows show job age, queue delay, total time, claim time, print/fail
+  time, claimed device, printed device, printer endpoint, and retry count.
+- PAD_DIRECT `PENDING` jobs older than 30 seconds show a warning that they are
+  waiting for Pad processing.
+- PAD_DIRECT `PENDING` jobs older than 2 minutes show danger messaging that the
+  Pad may not be running or auto processing may have stopped.
+- `PRINTING` stale and `FAILED` jobs remain visible and require manual operator
+  review before reprint.
+
+Database/index note:
+
+- PR11D-14 does not add a schema migration. PR11D-15 should evaluate a low-risk
+  index for the PAD_DIRECT pending query, such as
+  `(store_id, execution_mode, status, created_at, id)` plus a claim-expiry helper
+  if real pilot `EXPLAIN ANALYZE` data shows the pending poll becomes slow.
+
+Restaurant pilot checklist:
+
+- See `restaurant-pad-app/docs/PAD_DIRECT_RESTAURANT_PILOT_CHECKLIST.md` for
+  before-arrival checks, 20-order field test steps, failure-state interpretation,
+  and PR11D-15 index follow-up.
+
+## PR11D-14G: Ordering Combo Option Ordering
+
+PR11D-14G is a frontend-only ordering UI polish for Android Pad WebView and
+desktop browser ordering. It does not change backend menu models, option ids,
+option codes, option groups, parent option relationships, price calculation,
+order submit payloads, kitchen task generation, HOT_KITCHEN routing, printing
+routing, payment/refund behavior, or `completeOrder`.
+
+Behavior:
+
+- For noodle menu items, the customization modal renders the combo / 套餐
+  section at the top of the option area before size, soup base, noodle type,
+  and spicy level.
+- Noodle detection uses stable category codes such as `SOUP_NOODLE`,
+  `DRY_NOODLE`, `FRIED_NOODLE`, `NOODLE`, and `NOODLES`, with a structural
+  legacy fallback to existing noodle customization groups when old local data
+  lacks category codes.
+- Combo detection uses the existing normalized `customization.combo` data that
+  is built from stable combo option semantics. It does not rely on scattered
+  Chinese or English display-name checks in the modal.
+- Non-noodle items keep their previous option display order, and drink/fried
+  quick-add behavior is unchanged.
 
 ## PR11C: Frontdesk User Menu And Staff Store Tools Access
 

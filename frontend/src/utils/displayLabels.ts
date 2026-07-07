@@ -61,6 +61,13 @@ const PRINT_ERROR_MESSAGES: Record<string, string> = {
   ORDER_REPRINT_FAILED: '订单重打失败。请检查打印机状态后再试。',
   PAD_DIRECT_FAILED: 'Pad Direct 报告打印失败。请检查平板打印 App 后重打。',
   PAD_DIRECT_RELEASED: 'Pad Direct 已释放该任务，尚未打印。可重新领取或重打。',
+  ANDROID_PRINTER_CONNECT_TIMEOUT: '连接打印机超时，请检查打印机电源、WiFi、IP 和端口。',
+  ANDROID_PRINTER_CONNECTION_REFUSED: '打印机拒绝连接，请检查端口 9100 或打印服务。',
+  ANDROID_PRINTER_NETWORK_UNREACHABLE: 'Pad 无法访问打印机网络，请检查是否同 WiFi/VLAN，是否开启 AP isolation。',
+  ANDROID_PRINTER_WRITE_FAILED: '写入打印机失败，可能已经部分出纸，请人工确认后再重打。',
+  ANDROID_PRINTER_FLUSH_FAILED: '发送完成时失败，可能已经出纸，请人工确认。',
+  ANDROID_ASSIGNED_PRINTER_UNREACHABLE: 'Pad 无法访问该任务指定的 assigned printer，请检查打印机 IP、WiFi/VLAN 和端口。',
+  ANDROID_NATIVE_PRINT_FAILED: '本机打印失败，请检查打印机和网络。',
 }
 
 function normalize(value?: string | null) {

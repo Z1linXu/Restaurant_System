@@ -107,6 +107,22 @@ function buildPrintAttentionMessage(jobs: PrintJobRecord[]) {
   return `订单已保存，但打印需要处理。${details} 请到订单记录或打印中心立即重打。`
 }
 
+function kickPadDirectPrintWorker(reason: string, orderId: number, updateBatchId?: number | null) {
+  const bridge = typeof window === 'undefined' ? undefined : window.RestaurantPadDevice
+  if (!bridge?.kickPrintWorker) {
+    return
+  }
+  try {
+    bridge.kickPrintWorker(JSON.stringify({
+      reason,
+      order_id: orderId,
+      order_update_batch_id: updateBatchId ?? null,
+    }))
+  } catch {
+    // The Android bridge is an optimization for local Pad printing; ordering must not depend on it.
+  }
+}
+
 export function OrderingPage({
   catalog,
   slotLabel,
@@ -347,6 +363,7 @@ export function OrderingPage({
       if (!submittedOrder) {
         return
       }
+      kickPadDirectPrintWorker('order-submit', submittedOrder.id, null)
       const printOk = await checkOrderPrintJobs(submittedOrder.id)
       if (!printOk) {
         return
@@ -364,6 +381,7 @@ export function OrderingPage({
         .filter((item) => item.added_revision === updatedOrder.current_revision)
         .map((item) => item.order_update_batch_id)
         .find((batchId): batchId is number => batchId != null)
+      kickPadDirectPrintWorker('order-update-submit', updatedOrder.id, updateBatchId ?? null)
       const printOk = await checkOrderPrintJobs(updatedOrder.id, updateBatchId)
       if (!printOk) {
         return

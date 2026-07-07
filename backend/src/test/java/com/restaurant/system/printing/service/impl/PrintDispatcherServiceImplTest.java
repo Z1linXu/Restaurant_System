@@ -279,6 +279,27 @@ class PrintDispatcherServiceImplTest {
     }
 
     @Test
+    void padDirectDispatchQueuesPayloadWithAssignmentFontSize() {
+        DispatchFixture fixture = configureSuccessfulDispatch(PrintModuleCode.GRAB, "dine_in", 1, "PAD_DIRECT");
+        fixture.assignment.font_size = "LARGE";
+        fixture.printer.font_size = "SMALL";
+        when(grabRenderer.render(any())).thenReturn("GRAB RECEIPT");
+        when(printJobService.markPadDirectQueued(any(PrintJob.class), eq(fixture.printer), eq("LARGE")))
+            .thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.dispatchAfterCommit(PrintModuleCode.GRAB, 1L, fixture.order.id);
+
+        verify(printJobService).markPadDirectQueued(any(PrintJob.class), eq(fixture.printer), eq("LARGE"));
+        verify(printerTransport, never()).print(
+            any(PrinterConfig.class),
+            anyString(),
+            any(),
+            any(),
+            anyString()
+        );
+    }
+
+    @Test
     void cloudProfileBlocksPrivatePrinterBeforeTransport() {
         MockEnvironment environment = new MockEnvironment();
         environment.setActiveProfiles("cloud");
@@ -343,10 +364,14 @@ class PrintDispatcherServiceImplTest {
             eq(store.organization_id), eq(store.id), eq(order.id), any(), any(), eq(PrintModuleCode.GRAB), anyString(), any(), anyString()
         )).thenReturn(job);
         when(printJobService.attachRenderedContent(eq(job), eq(printer.id), anyString())).thenReturn(job);
-        return new DispatchFixture(order, printer);
+        return new DispatchFixture(order, printer, assignment);
     }
 
     private DispatchFixture configureSuccessfulDispatch(String moduleCode, String orderType, int copies) {
+        return configureSuccessfulDispatch(moduleCode, orderType, copies, "REAL");
+    }
+
+    private DispatchFixture configureSuccessfulDispatch(String moduleCode, String orderType, int copies, String printingMode) {
         Store store = new Store();
         store.id = 1L;
         store.organization_id = 1L;
@@ -376,21 +401,25 @@ class PrintDispatcherServiceImplTest {
 
         when(featureFlagService.isEnabled(FeaturePackage.PRINTING)).thenReturn(true);
         when(printerConfigService.isPrintingEnabled(store.id)).thenReturn(true);
-        when(printerConfigService.getStorePrintingMode(store.id)).thenReturn("REAL");
+        when(printerConfigService.getStorePrintingMode(store.id)).thenReturn(printingMode);
         when(storeRepository.findById(store.id)).thenReturn(Optional.of(store));
         when(orderRepository.findById(order.id)).thenReturn(Optional.of(order));
         when(printerAssignmentRepository.findByStoreIdAndModuleCode(store.id, moduleCode)).thenReturn(Optional.of(assignment));
         when(printerConfigRepository.findById(printer.id)).thenReturn(Optional.of(printer));
-        when(printerTransport.supports(printer.printer_type)).thenReturn(true);
+        if (!"PAD_DIRECT".equalsIgnoreCase(printingMode)) {
+            when(printerTransport.supports(printer.printer_type)).thenReturn(true);
+        }
         when(orderItemRepository.findAllByOrderId(order.id)).thenReturn(List.of());
         when(kitchenTaskRepository.findAllByOrderId(order.id)).thenReturn(List.of());
         when(printJobService.createPendingJob(
             eq(store.organization_id), eq(store.id), eq(order.id), any(), any(), eq(moduleCode), anyString(), any(), anyString()
         )).thenReturn(job);
         when(printJobService.attachRenderedContent(eq(job), eq(printer.id), anyString())).thenReturn(job);
-        when(printJobService.markPrinting(job, printer)).thenReturn(job);
-        when(printJobService.markPrinted(job, printer)).thenReturn(job);
-        return new DispatchFixture(order, printer);
+        if (!"PAD_DIRECT".equalsIgnoreCase(printingMode)) {
+            when(printJobService.markPrinting(job, printer)).thenReturn(job);
+            when(printJobService.markPrinted(job, printer)).thenReturn(job);
+        }
+        return new DispatchFixture(order, printer, assignment);
     }
 
     private OrderItem item(Long id, Long batchId) {
@@ -402,7 +431,7 @@ class PrintDispatcherServiceImplTest {
         return item;
     }
 
-    private record DispatchFixture(Order order, PrinterConfig printer) {
+    private record DispatchFixture(Order order, PrinterConfig printer, PrinterAssignment assignment) {
     }
 
     @Test

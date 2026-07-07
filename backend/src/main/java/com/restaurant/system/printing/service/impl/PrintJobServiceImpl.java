@@ -112,6 +112,12 @@ public class PrintJobServiceImpl implements PrintJobService {
     @Override
     @Transactional
     public PrintJob markPadDirectQueued(PrintJob job, PrinterConfig printer) {
+        return markPadDirectQueued(job, printer, printer == null ? null : printer.font_size);
+    }
+
+    @Override
+    @Transactional
+    public PrintJob markPadDirectQueued(PrintJob job, PrinterConfig printer, String fontSize) {
         PrintJob target = requireJob(job.id);
         target.executionMode = "PAD_DIRECT";
         target.status = PrintJobStatus.PENDING;
@@ -121,7 +127,7 @@ public class PrintJobServiceImpl implements PrintJobService {
         target.claimExpiresAt = null;
         target.printedByDeviceId = null;
         target.clientAttemptToken = null;
-        target.escposPayloadBase64 = buildEscPosPayloadBase64(target.rendered_text_snapshot, printer);
+        target.escposPayloadBase64 = buildEscPosPayloadBase64(target.rendered_text_snapshot, printer, fontSize);
         target.printed_at = null;
         target.failed_at = null;
         target.error_code = null;
@@ -311,6 +317,10 @@ public class PrintJobServiceImpl implements PrintJobService {
     }
 
     private String buildEscPosPayloadBase64(String renderedTextSnapshot, PrinterConfig printer) {
+        return buildEscPosPayloadBase64(renderedTextSnapshot, printer, printer == null ? null : printer.font_size);
+    }
+
+    private String buildEscPosPayloadBase64(String renderedTextSnapshot, PrinterConfig printer, String fontSize) {
         if (renderedTextSnapshot == null) {
             return null;
         }
@@ -324,7 +334,7 @@ public class PrintJobServiceImpl implements PrintJobService {
                 outputStream,
                 renderedTextSnapshot,
                 resolveCharset(printer == null ? null : printer.text_encoding),
-                printer == null ? null : printer.font_size
+                fontSize
             );
             outputStream.write(new byte[] {0x1D, 0x56, 0x41, 0x10});
             return Base64.getEncoder().encodeToString(outputStream.toByteArray());
