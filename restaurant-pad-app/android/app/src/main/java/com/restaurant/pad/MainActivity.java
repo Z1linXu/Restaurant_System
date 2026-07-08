@@ -69,6 +69,7 @@ public class MainActivity extends Activity {
     private static final long PAD_DIRECT_KICK_RETRY_DELAY_MS = 700;
     private static final int PAD_DIRECT_NATIVE_PRINT_MAX_ATTEMPTS = 3;
     private static final long[] PAD_DIRECT_CONNECT_RETRY_DELAYS_MS = new long[] {0, 500, 1500};
+    private static final long[] PAD_DIRECT_RECOVERY_BACKOFF_MS = new long[] {2000, 5000, 10000, 30000};
     private static final long PAD_DIRECT_WATCHDOG_INTERVAL_MS = 5000;
     private static final long PAD_DIRECT_STALE_POLL_MS = 10000;
     private static final int PAD_DIRECT_MAX_CONSECUTIVE_ERRORS = 3;
@@ -98,8 +99,10 @@ public class MainActivity extends Activity {
     private volatile long padDirectWorkerLastJobProcessingDurationMs = -1L;
     private volatile long padDirectWorkerLastScheduledAtMs = 0L;
     private volatile long padDirectWorkerNextDelayMs = -1L;
+    private volatile long padDirectWorkerLastRecoveryDelayMs = -1L;
     private volatile int padDirectWorkerLastPollResultCount = -1;
     private volatile int padDirectWorkerConsecutiveErrors = 0;
+    private volatile int padDirectWorkerRecoveryAttempt = 0;
     private volatile String padDirectWorkerLastPollError = "";
     private volatile String padDirectWorkerLastStopReason = "";
     private volatile String padDirectWorkerLastStartReason = "";
@@ -114,6 +117,7 @@ public class MainActivity extends Activity {
         STARTING,
         WAITING,
         POLLING,
+        RECOVERING,
         PROCESSING_JOB,
         STOPPING,
         ERROR_STOPPED
@@ -614,6 +618,8 @@ public class MainActivity extends Activity {
                 return "等待任务";
             case POLLING:
                 return "正在轮询";
+            case RECOVERING:
+                return "网络异常，自动恢复中";
             case PROCESSING_JOB:
                 return "正在处理任务";
             case STOPPING:
@@ -678,10 +684,17 @@ public class MainActivity extends Activity {
     }
 
     private void updatePadDirectKeepScreenOn() {
-        if (isPadDirectAutoPrintEnabled() && padDirectAppForeground && padDirectWorkerRunning && !padDirectWorkerStopRequested) {
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        Runnable update = () -> {
+            if (isPadDirectAutoPrintEnabled() && padDirectAppForeground && padDirectWorkerRunning && !padDirectWorkerStopRequested) {
+                getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            } else {
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            }
+        };
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            update.run();
         } else {
-            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            runOnUiThread(update);
         }
     }
 
@@ -695,7 +708,23 @@ public class MainActivity extends Activity {
         if (!padDirectWorkerRunning || padDirectWorkerStopRequested || padDirectWorkerInProgress || padDirectJobInProgress) {
             return false;
         }
+        if (padDirectWorkerState == PadDirectWorkerState.RECOVERING) {
+            return false;
+        }
         return padDirectWorkerLastPollAtMs <= 0 || nowMs - padDirectWorkerLastPollAtMs > PAD_DIRECT_STALE_POLL_MS;
+    }
+
+    private long nextPadDirectRecoveryDelayMs() {
+        int index = Math.min(Math.max(padDirectWorkerRecoveryAttempt, 0), PAD_DIRECT_RECOVERY_BACKOFF_MS.length - 1);
+        long delayMs = PAD_DIRECT_RECOVERY_BACKOFF_MS[index];
+        padDirectWorkerRecoveryAttempt += 1;
+        padDirectWorkerLastRecoveryDelayMs = delayMs;
+        return delayMs;
+    }
+
+    private void resetPadDirectRecovery() {
+        padDirectWorkerRecoveryAttempt = 0;
+        padDirectWorkerLastRecoveryDelayMs = -1L;
     }
 
     private String formatPadDirectWorkerStatus() {
@@ -725,6 +754,11 @@ public class MainActivity extends Activity {
         builder.append("上次任务耗时：").append(durationOrDash(padDirectWorkerLastJobProcessingDurationMs))
             .append(" | 连续错误：").append(padDirectWorkerConsecutiveErrors)
             .append('\n');
+        if (padDirectWorkerState == PadDirectWorkerState.RECOVERING) {
+            builder.append("恢复退避：").append(durationOrDash(padDirectWorkerLastRecoveryDelayMs))
+                .append(" | 恢复次数：").append(padDirectWorkerRecoveryAttempt)
+                .append('\n');
+        }
         builder.append("下一次 poll：").append(padDirectWorkerPollScheduled ? "已安排 " + padDirectWorkerNextDelayMs + "ms" : "未安排")
             .append(" | Watchdog：").append(padDirectWorkerWatchdogScheduled ? "运行中" : "未安排")
             .append('\n');
@@ -748,6 +782,9 @@ public class MainActivity extends Activity {
         }
         if (padDirectWorkerState == PadDirectWorkerState.ERROR_STOPPED) {
             builder.append("警告：自动打印已停止，请检查原因后重新开启。").append('\n');
+        }
+        if (padDirectWorkerState == PadDirectWorkerState.RECOVERING) {
+            builder.append("提示：网络/API 异常，自动处理中仍开启，恢复后会继续检查打印任务。").append('\n');
         }
         if (padDirectWorkerLastOldestJobAgeMs > 120000L) {
             builder.append("警告：队列最前方有旧任务未处理，可能阻塞后续打印。请到 Print Center 检查。").append('\n');
@@ -1286,6 +1323,9 @@ public class MainActivity extends Activity {
         } catch (PadDirectStepException exception) {
             String message = exception.getMessage();
             Log.e(WORKER_TAG, "Worker Job Failed jobId=" + jobId + " errorCode=" + exception.errorCode + " module=" + moduleCode + " message=" + message, exception);
+            if (!localPrintSent && isRecoverableApiStep(exception)) {
+                return PadDirectJobResult.recover(message + "\n网络/API 状态不确定，自动恢复中；不会自动重打，恢复后继续检查队列。");
+            }
             if (claimed && !localPrintSent) {
                 message = message + "\n" + reportPadDirectFail(jobId, attemptToken, exception.errorCode, exception.getMessage(), exception.rawResult);
                 return PadDirectJobResult.stop(message, true);
@@ -1296,6 +1336,9 @@ public class MainActivity extends Activity {
             return PadDirectJobResult.stop(message, false);
         } catch (Exception exception) {
             String message = "无法连接后端或处理任务失败: " + exception.getClass().getSimpleName() + " - " + exception.getMessage();
+            if (!localPrintSent) {
+                return PadDirectJobResult.recover(message + "\n网络异常，自动恢复中；尚未完成本地出纸，不会关闭自动处理。");
+            }
             if (claimed && !localPrintSent) {
                 message = message + "\n" + reportPadDirectFail(jobId, attemptToken, "ANDROID_NETWORK_ERROR", message, exception.getMessage());
                 return PadDirectJobResult.stop(message, true);
@@ -1627,6 +1670,7 @@ public class MainActivity extends Activity {
         padDirectWorkerLastStartReason = startReason == null || startReason.isBlank() ? "manual/control-panel" : startReason;
         padDirectWorkerLastStopReason = "";
         padDirectWorkerConsecutiveErrors = 0;
+        resetPadDirectRecovery();
         clearPadDirectCurrentJob();
         setPadDirectWorkerState(PadDirectWorkerState.STARTING);
         rememberPadDirectWorkerControls(autoStatus, resultView, jobsList, refreshButton, startAutoButton, stopAutoButton, printerIpInput, printerPortInput, printerTimeoutInput);
@@ -1899,6 +1943,7 @@ public class MainActivity extends Activity {
         padDirectWorkerLastStartReason = "auto-resume";
         padDirectWorkerLastStopReason = "";
         padDirectWorkerLastPollError = "";
+        resetPadDirectRecovery();
         setPadDirectWorkerState(PadDirectWorkerState.WAITING);
         controls.startAutoButton.setEnabled(false);
         controls.stopAutoButton.setEnabled(true);
@@ -1933,17 +1978,83 @@ public class MainActivity extends Activity {
         schedulePadDirectWorkerTick(controls, firstDelayMs);
     }
 
+    private JSONObject buildPadDirectWorkerStatusJson() throws Exception {
+        JSONObject response = new JSONObject();
+        response.put("auto_enabled", isPadDirectAutoPrintEnabled());
+        response.put("worker_running", padDirectWorkerRunning && !padDirectWorkerStopRequested);
+        response.put("worker_state", padDirectWorkerState.name());
+        response.put("worker_state_label", padDirectStateLabel(padDirectWorkerState));
+        response.put("app_foreground", padDirectAppForeground);
+        response.put("job_in_progress", padDirectWorkerInProgress || padDirectJobInProgress);
+        response.put("recovering", padDirectWorkerState == PadDirectWorkerState.RECOVERING);
+        response.put("error_stopped", padDirectWorkerErrorStopped || padDirectWorkerState == PadDirectWorkerState.ERROR_STOPPED);
+        response.put("user_stopped", padDirectWorkerUserStopped);
+        response.put("poll_scheduled", padDirectWorkerPollScheduled);
+        response.put("watchdog_scheduled", padDirectWorkerWatchdogScheduled);
+        response.put("last_poll_at_ms", padDirectWorkerLastPollAtMs > 0 ? padDirectWorkerLastPollAtMs : JSONObject.NULL);
+        response.put("last_poll_finished_at_ms", padDirectWorkerLastPollFinishedAtMs > 0 ? padDirectWorkerLastPollFinishedAtMs : JSONObject.NULL);
+        response.put("last_poll_result_count", padDirectWorkerLastPollResultCount);
+        response.put("last_poll_duration_ms", padDirectWorkerLastPollDurationMs);
+        response.put("last_error", padDirectWorkerLastPollError == null || padDirectWorkerLastPollError.isBlank() ? JSONObject.NULL : padDirectWorkerLastPollError);
+        response.put("last_stop_reason", padDirectWorkerLastStopReason == null || padDirectWorkerLastStopReason.isBlank() ? JSONObject.NULL : padDirectWorkerLastStopReason);
+        response.put("last_start_reason", padDirectWorkerLastStartReason == null || padDirectWorkerLastStartReason.isBlank() ? JSONObject.NULL : padDirectWorkerLastStartReason);
+        response.put("next_delay_ms", padDirectWorkerNextDelayMs);
+        response.put("recovery_delay_ms", padDirectWorkerLastRecoveryDelayMs);
+        response.put("recovery_attempt", padDirectWorkerRecoveryAttempt);
+        response.put("consecutive_errors", padDirectWorkerConsecutiveErrors);
+        response.put("current_job_id", padDirectWorkerCurrentJobId == null || padDirectWorkerCurrentJobId.isBlank() ? JSONObject.NULL : padDirectWorkerCurrentJobId);
+        response.put("current_module", padDirectWorkerCurrentModule == null || padDirectWorkerCurrentModule.isBlank() ? JSONObject.NULL : padDirectWorkerCurrentModule);
+        response.put("current_printer_endpoint", padDirectWorkerCurrentPrinterEndpoint == null || padDirectWorkerCurrentPrinterEndpoint.isBlank() ? JSONObject.NULL : padDirectWorkerCurrentPrinterEndpoint);
+        response.put("device_id", preferences.getString(KEY_DEVICE_ID, ""));
+        response.put("store_id", preferences.getString(KEY_DEVICE_STORE_ID, ""));
+        response.put("message", formatPadDirectWorkerStatus());
+        return response;
+    }
+
     private String kickPadDirectWorkerFromWeb(String json) {
         String parsedReason = "web-order-submit";
+        boolean recoverErrorStopped = false;
         try {
             JSONObject request = new JSONObject(json == null || json.isBlank() ? "{}" : json);
             parsedReason = request.optString("reason", parsedReason);
+            recoverErrorStopped = request.optBoolean("recover_error_stopped", false);
         } catch (Exception ignored) {
             // Ignore malformed optional metadata; the kick itself remains safe.
         }
         String reason = parsedReason;
         try {
             JSONObject response = new JSONObject();
+            if (!isDevicePaired()) {
+                response.put("accepted", false);
+                response.put("status", "not_paired");
+                response.put("message", "Pad is not paired; kick ignored.");
+                return jsonSuccess(response);
+            }
+            if (!isPadDirectAutoPrintEnabled()) {
+                response.put("accepted", false);
+                response.put("status", "auto_disabled");
+                response.put("message", "Auto print is disabled by user; kick ignored.");
+                return jsonSuccess(response);
+            }
+            if (padDirectWorkerErrorStopped || padDirectWorkerState == PadDirectWorkerState.ERROR_STOPPED) {
+                if (!recoverErrorStopped) {
+                    response.put("accepted", false);
+                    response.put("status", "error_stopped");
+                    response.put("message", "Worker is error-stopped; operator confirmation is required.");
+                    return jsonSuccess(response);
+                }
+                padDirectWorkerErrorStopped = false;
+                padDirectWorkerStopRequested = false;
+                padDirectWorkerLastStopReason = "";
+                padDirectWorkerLastPollError = "";
+                resetPadDirectRecovery();
+                setPadDirectWorkerState(PadDirectWorkerState.WAITING);
+                Log.i(WORKER_TAG, "Worker Started reason=" + reason + "-recover-error-stopped");
+                startPadDirectWorkerHeadlessIfPaired(reason + "-recover-error-stopped");
+            }
+            if (!padDirectWorkerRunning || padDirectWorkerStopRequested) {
+                startPadDirectWorkerHeadlessIfPaired(reason + "-wake");
+            }
             response.put("worker_running", padDirectWorkerRunning && !padDirectWorkerStopRequested);
             if (!padDirectWorkerRunning || padDirectWorkerStopRequested) {
                 response.put("accepted", false);
@@ -1958,10 +2069,11 @@ public class MainActivity extends Activity {
                 response.put("message", "Worker is busy; quick poll will run after current job finishes.");
                 return jsonSuccess(response);
             }
-            runOnUiThread(() -> schedulePadDirectQuickKickWindow(reason, PAD_DIRECT_KICK_FIRST_DELAY_MS));
+            long firstDelayMs = padDirectWorkerState == PadDirectWorkerState.RECOVERING ? 0 : PAD_DIRECT_KICK_FIRST_DELAY_MS;
+            runOnUiThread(() -> schedulePadDirectQuickKickWindow(reason, firstDelayMs));
             response.put("accepted", true);
-            response.put("status", "scheduled_quick_window");
-            response.put("first_delay_ms", PAD_DIRECT_KICK_FIRST_DELAY_MS);
+            response.put("status", padDirectWorkerState == PadDirectWorkerState.RECOVERING ? "scheduled_recovery_poll" : "scheduled_quick_window");
+            response.put("first_delay_ms", firstDelayMs);
             response.put("retry_delay_ms", PAD_DIRECT_KICK_RETRY_DELAY_MS);
             return jsonSuccess(response);
         } catch (Exception exception) {
@@ -2063,12 +2175,16 @@ public class MainActivity extends Activity {
                 padDirectWorkerLastPollError = exception.errorCode + " - " + exception.getMessage();
                 padDirectWorkerConsecutiveErrors += 1;
                 Log.e(WORKER_TAG, "Worker Exception exceptionClass=" + exception.getClass().getSimpleName() + " message=" + exception.getMessage(), exception);
-                workerResult = PadDirectJobResult.stop(exception.getMessage(), false);
+                if (isRecoverableApiStep(exception)) {
+                    workerResult = PadDirectJobResult.recover("加载待打印任务失败，网络异常，自动恢复中。");
+                } else {
+                    workerResult = PadDirectJobResult.stop(exception.getMessage(), false);
+                }
             } catch (Exception exception) {
                 padDirectWorkerLastPollError = exception.getClass().getSimpleName() + " - " + exception.getMessage();
                 padDirectWorkerConsecutiveErrors += 1;
                 Log.e(WORKER_TAG, "Worker Exception exceptionClass=" + exception.getClass().getSimpleName() + " message=" + exception.getMessage(), exception);
-                workerResult = PadDirectJobResult.stop("后端连接失败，已停止: " + exception.getClass().getSimpleName() + " - " + exception.getMessage(), false);
+                workerResult = PadDirectJobResult.recover(recoverableWorkerMessage("后端连接失败", exception));
             }
             PadDirectJobResult finalResult = workerResult;
             JSONObject finalJob = job;
@@ -2091,6 +2207,15 @@ public class MainActivity extends Activity {
                 } else {
                     autoStatus.setText(formatPadDirectWorkerStatus() + "\n" + finalResult.message);
                 }
+                if (finalResult.recovering) {
+                    long recoveryDelayMs = nextPadDirectRecoveryDelayMs();
+                    setPadDirectWorkerState(PadDirectWorkerState.RECOVERING);
+                    autoStatus.setText(formatPadDirectWorkerStatus() + "\n" + finalResult.message + "\n" + (recoveryDelayMs / 1000) + " 秒后自动重试。");
+                    Log.w(WORKER_TAG, "Worker Recovering delayMs=" + recoveryDelayMs + " reason=" + finalResult.message);
+                    schedulePadDirectWorkerTick(autoStatus, resultView, jobsList, refreshButton, startAutoButton, stopAutoButton, printerIpInput, printerPortInput, printerTimeoutInput, recoveryDelayMs);
+                    return;
+                }
+                resetPadDirectRecovery();
                 if (finalResult.refreshAfter) {
                     refreshPendingPrintJobs(resultView, jobsList, refreshButton, printerIpInput, printerPortInput, printerTimeoutInput);
                 }
@@ -2221,6 +2346,19 @@ public class MainActivity extends Activity {
         if (!response.optBoolean("success", false)) {
             throw new PadDirectStepException("ANDROID_API_ERROR", response.optString("message", fallbackMessage), result.body);
         }
+    }
+
+    private boolean isRecoverableApiStep(PadDirectStepException exception) {
+        if (exception == null || exception.errorCode == null) {
+            return false;
+        }
+        return "ANDROID_NETWORK_ERROR".equals(exception.errorCode)
+            || "ANDROID_API_ERROR".equals(exception.errorCode);
+    }
+
+    private String recoverableWorkerMessage(String context, Exception exception) {
+        String detail = exception == null ? "" : exception.getClass().getSimpleName() + " - " + exception.getMessage();
+        return context + "。网络异常，自动恢复中。" + (detail.isBlank() ? "" : " 技术信息: " + detail);
     }
 
     private JSONObject responseData(String body) throws Exception {
@@ -2526,29 +2664,35 @@ public class MainActivity extends Activity {
         private final boolean stopWorker;
         private final boolean conflict;
         private final boolean idle;
+        private final boolean recovering;
 
-        private PadDirectJobResult(String message, boolean refreshAfter, boolean stopWorker, boolean conflict, boolean idle) {
+        private PadDirectJobResult(String message, boolean refreshAfter, boolean stopWorker, boolean conflict, boolean idle, boolean recovering) {
             this.message = message == null ? "" : message;
             this.refreshAfter = refreshAfter;
             this.stopWorker = stopWorker;
             this.conflict = conflict;
             this.idle = idle;
+            this.recovering = recovering;
         }
 
         private static PadDirectJobResult success(String message) {
-            return new PadDirectJobResult(message, true, false, false, false);
+            return new PadDirectJobResult(message, true, false, false, false, false);
         }
 
         private static PadDirectJobResult conflict(String message) {
-            return new PadDirectJobResult(message, true, false, true, false);
+            return new PadDirectJobResult(message, true, false, true, false, false);
         }
 
         private static PadDirectJobResult idle(String message) {
-            return new PadDirectJobResult(message, false, false, false, true);
+            return new PadDirectJobResult(message, false, false, false, true, false);
+        }
+
+        private static PadDirectJobResult recover(String message) {
+            return new PadDirectJobResult(message, false, false, false, false, true);
         }
 
         private static PadDirectJobResult stop(String message, boolean refreshAfter) {
-            return new PadDirectJobResult(message, refreshAfter, true, false, false);
+            return new PadDirectJobResult(message, refreshAfter, true, false, false, false);
         }
     }
 
@@ -2776,6 +2920,15 @@ public class MainActivity extends Activity {
                 return response.toString();
             } catch (Exception exception) {
                 return jsonFailure(exception.getMessage() == null ? "Failed to read device status" : exception.getMessage());
+            }
+        }
+
+        @JavascriptInterface
+        public String getPrintWorkerStatus() {
+            try {
+                return jsonSuccess(buildPadDirectWorkerStatusJson());
+            } catch (Exception exception) {
+                return jsonFailure(exception.getMessage() == null ? "Failed to read print worker status" : exception.getMessage());
             }
         }
 

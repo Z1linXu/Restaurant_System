@@ -32,36 +32,16 @@ import {
   printJobOperatorDisplayMessage as displayPrintJobOperatorMessage,
   printStatusDisplayLabel,
 } from '../../utils/displayLabels'
+import {
+  getAndroidPadDeviceBridge,
+  parseAndroidBridgeJson,
+  type AndroidPadDeviceStatus,
+} from '../../types/androidPadBridge'
 
 type ToastState = { kind: 'success' | 'error'; message: string } | null
 
 type PrinterEditorState = PrinterConfigRecord
 type PrintingMode = 'REAL' | 'MOCK' | 'DISABLED' | 'PAD_DIRECT'
-type AndroidPadDeviceStatus = {
-  paired?: boolean
-  device_id?: number | null
-  store_id?: number | null
-  device_name?: string | null
-  registered_at?: string | null
-  token_last4?: string | null
-  app_version?: string | null
-  platform?: string | null
-  success?: boolean
-  message?: string | null
-}
-
-type AndroidPadDeviceBridge = {
-  saveDeviceCredentials: (json: string) => string
-  getDeviceStatus: () => string
-  clearDeviceCredentials: () => string
-  kickPrintWorker?: (json: string) => string
-}
-
-declare global {
-  interface Window {
-    RestaurantPadDevice?: AndroidPadDeviceBridge
-  }
-}
 
 const MODULE_OPTIONS = [
   { code: 'GRAB', label: moduleDisplayLabel('GRAB'), future: false },
@@ -343,11 +323,7 @@ function printJobNativeDiagnostics(job: PrintJobRecord) {
 }
 
 function parseAndroidPadStatus(rawStatus: string): AndroidPadDeviceStatus | null {
-  try {
-    return JSON.parse(rawStatus) as AndroidPadDeviceStatus
-  } catch {
-    return null
-  }
+  return parseAndroidBridgeJson<AndroidPadDeviceStatus>(rawStatus)
 }
 
 export function PrintingSettingsPage() {
@@ -374,7 +350,7 @@ export function PrintingSettingsPage() {
   const [pairingPad, setPairingPad] = useState(false)
 
   const refreshPadDeviceStatus = () => {
-    const bridge = typeof window === 'undefined' ? undefined : window.RestaurantPadDevice
+    const bridge = getAndroidPadDeviceBridge()
     setPadBridgeAvailable(Boolean(bridge))
     if (!bridge) {
       setPadDeviceStatus(null)
@@ -735,7 +711,7 @@ export function PrintingSettingsPage() {
   }
 
   const handlePairThisPad = async () => {
-    const bridge = typeof window === 'undefined' ? undefined : window.RestaurantPadDevice
+    const bridge = getAndroidPadDeviceBridge()
     if (!bridge) {
       setToast({ kind: 'error', message: '请在 Android Pad App 内打开打印中心进行配对。' })
       return

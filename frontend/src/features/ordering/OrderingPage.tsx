@@ -5,6 +5,7 @@ import { buildDefaultDraft, calculateTotals } from '../../hooks/useOrderSessions
 import { useDraftOrder } from '../../hooks/useDraftOrder'
 import type { ItemCustomizationDraft, MenuItem, OrderingCatalog } from '../../types/ordering'
 import { FrontdeskTopNav } from '../frontdesk/components/FrontdeskTopNav'
+import { PrintWorkerHealthBanner } from '../frontdesk/components/PrintWorkerHealthBanner'
 import { TakeoutEntryDialog } from '../dinein/components/TakeoutEntryDialog'
 import { CategoryNav } from './components/CategoryNav'
 import { ItemCustomizationModal } from './components/ItemCustomizationModal'
@@ -14,6 +15,7 @@ import { OrderSummaryPanel } from './components/OrderSummaryPanel'
 import { fetchOrderPrintJobs } from '../../services/orderService'
 import type { PrintJobRecord } from '../../services/printingAdminService'
 import { printJobDisplayLabel, printJobOperatorDisplayMessage } from '../../utils/displayLabels'
+import { getAndroidPadDeviceBridge } from '../../types/androidPadBridge'
 
 interface OrderingPageProps {
   catalog: {
@@ -108,7 +110,7 @@ function buildPrintAttentionMessage(jobs: PrintJobRecord[]) {
 }
 
 function kickPadDirectPrintWorker(reason: string, orderId: number, updateBatchId?: number | null) {
-  const bridge = typeof window === 'undefined' ? undefined : window.RestaurantPadDevice
+  const bridge = getAndroidPadDeviceBridge()
   if (!bridge?.kickPrintWorker) {
     return
   }
@@ -406,6 +408,7 @@ export function OrderingPage({
     <div className={`ordering-page-safe min-h-screen bg-[var(--surface)] ${isIpadLandscape ? 'px-3 py-3' : 'px-5 py-4 md:px-7 xl:px-8'}`}>
       <div className={`mx-auto ${isIpadLandscape ? 'max-w-none space-y-3' : 'max-w-[1720px] space-y-6'}`}>
         {isIpadLandscape ? <FrontdeskTopNav activeItem="menu" /> : null}
+        {isIpadLandscape ? <PrintWorkerHealthBanner /> : null}
 
         {printWarning ? (
           <div className="rounded-[20px] border-2 border-[rgba(151,34,34,0.35)] bg-[rgba(151,34,34,0.12)] px-5 py-4 text-[1rem] font-black text-[rgb(116,22,22)] shadow-[0_18px_34px_rgba(151,34,34,0.12)]">

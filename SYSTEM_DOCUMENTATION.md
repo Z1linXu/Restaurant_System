@@ -6022,7 +6022,9 @@ Android Local Control Panel visibility:
   watchdog reschedules a poll and the panel warns the operator.
 - While auto processing is enabled, the app is foregrounded, and the worker is
   running, Android keeps the screen awake. The flag is cleared when auto
-  processing stops or the app backgrounds.
+  processing stops or the app backgrounds. PR11D-14 hotfix ensures this window
+  flag update is always marshalled to the Android main thread so a background
+  print worker cannot fail a job with `CalledFromWrongThreadException`.
 
 Metrics and logs:
 
@@ -6059,6 +6061,61 @@ Restaurant pilot checklist:
 - See `restaurant-pad-app/docs/PAD_DIRECT_RESTAURANT_PILOT_CHECKLIST.md` for
   before-arrival checks, 20-order field test steps, failure-state interpretation,
   and PR11D-15 index follow-up.
+
+## PR11E-A: PAD_DIRECT Worker Recovery And Frontdesk Print Health
+
+PR11E-A hardens the Android PAD_DIRECT foreground worker against temporary
+network/API interruptions and exposes worker health directly in frontdesk
+ordering pages. It does not add Android background daemon behavior, automatic
+FAILED-job requeue, automatic reprint, database migrations, order lifecycle
+changes, payment/refund behavior, `completeOrder` changes, or any bypass of the
+`PRINTING` duplicate-print guard.
+
+Android worker recovery policy:
+
+- `pad_direct_auto_enabled` is now treated as a user preference only. It is set
+  to true by pairing/manual Start and set to false only by manual Stop or clear
+  pairing.
+- Temporary pending-poll/backend/API failures enter `RECOVERING` instead of
+  permanently stopping the worker. Auto processing remains enabled.
+- Recovery backoff is 2s, 5s, 10s, then 30s. When the backend/network recovers,
+  the worker resumes normal polling without requiring the operator to reopen
+  the Control Panel.
+- `RECOVERING` is visible in Android Control Panel and in the frontdesk print
+  health banner. The watchdog does not mistake intentional recovery backoff for
+  a lost poll tick.
+- High-risk states still stop the worker for operator review: device auth
+  401/403, TCP write/flush failures, successful local TCP print followed by
+  complete API failure, failed failure-reporting, manual Stop, and other states
+  where automatic continuation could duplicate or hide a print.
+- Printer connect failures still use the safe short connect retry behavior from
+  PR11D-12. If still unreachable, the current job is failed and the worker stops
+  so the operator can inspect the assigned printer.
+
+Android bridge additions:
+
+- `RestaurantPadDevice.getPrintWorkerStatus()` returns auto-enabled, worker
+  state, recovering/error-stopped flags, last poll time, last error, stop reason,
+  device/store id, current job/module/printer endpoint, and recovery backoff
+  metadata.
+- `RestaurantPadDevice.kickPrintWorker(...)` can now wake an idle worker,
+  queue a pending kick while busy, immediately retry a `RECOVERING` worker, or
+  restart an `ERROR_STOPPED` worker only when the caller explicitly passes
+  operator-confirmed recovery metadata.
+- If auto processing is disabled by the user, kick requests are ignored and do
+  not secretly restart automatic printing.
+
+Frontdesk visibility:
+
+- `/frontdesk` table board and Android landscape ordering pages show a print
+  health banner.
+- In Android Pad App, the banner shows whether automatic printing is running,
+  recovering, stopped, or disabled, plus the latest worker/device/store status.
+- In a normal desktop/iPad browser without the Android bridge, the banner says
+  that print executor status is only visible inside Android Pad App.
+- The `检查打印 / 唤醒打印` button calls the Android bridge. It wakes idle
+  workers, triggers a recovery poll, queues a pending kick if a job is already
+  running, and asks for confirmation before recovering an error-stopped worker.
 
 ## PR11D-14G: Ordering Combo Option Ordering
 

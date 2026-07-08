@@ -11,6 +11,7 @@ import {
   parseMenuRoute,
 } from '../frontdesk/navigation'
 import { FrontdeskTopNav } from '../frontdesk/components/FrontdeskTopNav'
+import { PrintWorkerHealthBanner } from '../frontdesk/components/PrintWorkerHealthBanner'
 import { OrderingPage } from '../ordering/OrderingPage'
 import { completeOrder, fetchOrderPrintJobs, fetchOrderPrintOptions, reprintOrderReceipt } from '../../services/orderService'
 import type { TableSlot } from '../../types/dinein'
@@ -356,6 +357,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
         <div className="px-3 py-3">
           <div className="mx-auto max-w-none space-y-3">
             <FrontdeskTopNav activeItem={null} />
+            <PrintWorkerHealthBanner />
             <DineInTopBar
               onTakeoutClick={handleTakeoutEntry}
               workstationLabel={workstationLabel}
@@ -417,6 +419,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
                 onTakeoutClick={handleTakeoutEntry}
                 workstationLabel={workstationLabel}
               />
+              <PrintWorkerHealthBanner />
 
               {submissionMessage ? (
                 <div className="rounded-[24px] bg-[rgba(97,0,0,0.08)] px-5 py-4 text-base font-semibold text-[var(--primary)]">

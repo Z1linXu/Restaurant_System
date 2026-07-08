@@ -53,7 +53,12 @@ calls do not reclaim active `PRINTING` jobs.
 - It calls complete on success.
 - It retries safe connect-phase failures briefly when no bytes were written.
 - It calls fail when payload/native TCP fails after the safe retry window.
-- It stops on device auth, backend, payload, or printer errors.
+- It enters `RECOVERING` for temporary pending-poll/backend/API network errors
+  before local TCP printing begins. Auto processing remains enabled and retries
+  use 2s / 5s / 10s / 30s backoff.
+- It still stops on device auth, TCP write/flush, complete-reporting, fail-
+  reporting, and other high-risk errors where continuing could hide or duplicate
+  a print.
 - It stops when the app leaves the foreground and resumes when the app returns,
   as long as the user preference is still enabled and the last stop was
   lifecycle-related.
@@ -69,14 +74,15 @@ operator can tell whether the Pad is really consuming the queue.
 The panel shows:
 
 - Auto processing enabled/disabled.
-- Worker state: stopped, starting, waiting, polling, processing job, stopping,
-  or error-stopped.
+- Worker state: stopped, starting, waiting, polling, recovering, processing
+  job, stopping, or error-stopped.
 - Device id and store id.
 - Last poll time and last poll result count.
 - Last poll duration.
 - Oldest pending job age and last queue delay.
 - Last job processing duration.
 - Consecutive error count.
+- Recovery backoff delay and recovery attempt count when state is recovering.
 - Whether the next poll is scheduled.
 - Watchdog status.
 - Current job, module, and printer endpoint while processing.
@@ -90,6 +96,11 @@ fresh poll and logs `Worker Watchdog Rescheduled`.
 Manual Stop persists auto processing as disabled. App start or foreground
 resume will not secretly restart printing until the operator taps Start again.
 Pairing or manual Start enables auto processing.
+
+Temporary network/API failures do not disable the user preference. If the panel
+shows `RECOVERING`, leave the app open; the worker will retry automatically.
+Use the frontdesk `检查打印 / 唤醒打印` button to trigger an immediate recovery
+poll if the network has already returned.
 
 ## Multi-Pad Pilot Rules
 
@@ -124,6 +135,9 @@ Pairing or manual Start enables auto processing.
   last poll result count, next poll scheduled, and last stop/error reason. If
   auto processing is disabled, tap Start. If the worker is error-stopped, fix
   the displayed reason and restart manually.
+- If the frontdesk print health banner says the worker is recovering, first
+  verify Wi-Fi/backend availability and tap `检查打印 / 唤醒打印`; do not reprint
+  failed or stale jobs until you confirm whether paper already came out.
 
 ## Logcat Markers
 
