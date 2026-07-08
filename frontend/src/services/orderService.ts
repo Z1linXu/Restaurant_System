@@ -266,6 +266,7 @@ export async function submitDraftOrder(orderId: number) {
 }
 
 export async function addDraftOrderItem(orderId: number, menuItem: MenuItem, draft: ItemCustomizationDraft, notes = '') {
+  const effectiveNotes = notes || draft.notes
   return request<BackendOrderResponse>(`/api/v1/orders/${orderId}/items`, {
     method: 'POST',
     headers: buildHeaders(),
@@ -274,7 +275,7 @@ export async function addDraftOrderItem(orderId: number, menuItem: MenuItem, dra
       quantity: draft.quantity,
       combo_group_no: null,
       combo_role: 'standalone',
-      notes: notes.trim() || null,
+      notes: effectiveNotes.trim() || null,
       options: mapOptions(draft, menuItem),
     }),
   })
@@ -317,6 +318,7 @@ export async function updateDraftOrderItemWithMenuItem(
   draft: ItemCustomizationDraft,
   notes = '',
 ) {
+  const effectiveNotes = notes || draft.notes
   return request<BackendOrderResponse>(`/api/v1/orders/${orderId}/items/${itemId}`, {
     method: 'PUT',
     headers: buildHeaders(),
@@ -324,7 +326,7 @@ export async function updateDraftOrderItemWithMenuItem(
       quantity: draft.quantity,
       combo_group_no: null,
       combo_role: 'standalone',
-      notes: notes.trim() || null,
+      notes: effectiveNotes.trim() || null,
       options: mapOptions(draft, menuItem),
     }),
   })

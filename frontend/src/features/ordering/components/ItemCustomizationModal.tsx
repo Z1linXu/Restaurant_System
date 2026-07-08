@@ -157,7 +157,8 @@ export function ItemCustomizationModal({
   const toggleAddOns = customization?.addOns?.filter((option) => isToggleAddOn(option.labelZh, option.priceDelta)) ?? []
   const quantityAddOns = customization?.addOns?.filter((option) => !isToggleAddOn(option.labelZh, option.priceDelta)) ?? []
   const comboConfig = customization?.combo
-  const showComboFirst = isNoodleMenuItem(item) && Boolean(comboConfig)
+  const isNoodleItem = isNoodleMenuItem(item)
+  const showComboFirst = isNoodleItem && Boolean(comboConfig)
   const comboSection = comboConfig ? (
     <section className={`bg-[rgba(26,28,25,0.03)] ${compact ? 'space-y-3 rounded-[20px] p-4' : 'space-y-4 rounded-[28px] p-6'}`}>
       {(() => {
@@ -502,6 +503,26 @@ export function ItemCustomizationModal({
                     })}
                   </div>
                 ) : null}
+              </section>
+            ) : null}
+
+            {isNoodleItem ? (
+              <section className={`bg-[rgba(26,28,25,0.03)] ${compact ? 'space-y-2 rounded-[20px] p-4' : 'space-y-3 rounded-[24px] p-5'}`}>
+                <div>
+                  <h3 className={`${compact ? 'text-[1.05rem]' : 'text-[1.35rem]'} font-bold tracking-[-0.03em]`}>
+                    备注 / Special note
+                  </h3>
+                  <p className={`${compact ? 'mt-1 text-[0.78rem]' : 'mt-1.5 text-sm'} font-medium text-[var(--muted)]`}>
+                    面类备注会打印到厨房/前台小票，例如少汤、分开装。
+                  </p>
+                </div>
+                <textarea
+                  value={draft.notes}
+                  onChange={(event) => onChange({ ...draft, notes: event.target.value })}
+                  placeholder="输入备注，例如少汤、分开装"
+                  rows={compact ? 2 : 3}
+                  className={`w-full resize-none rounded-[18px] border border-[rgba(26,28,25,0.08)] bg-white/85 px-4 py-3 font-medium text-[var(--on-surface)] outline-none transition focus:border-[rgba(97,0,0,0.38)] focus:ring-4 focus:ring-[rgba(97,0,0,0.10)] ${compact ? 'text-[0.92rem]' : 'text-base'}`}
+                />
               </section>
             ) : null}
           </div>

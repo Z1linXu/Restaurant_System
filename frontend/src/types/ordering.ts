@@ -72,6 +72,7 @@ export interface ItemSelectionState {
   addOnQuantities: Record<string, number>
   removeIds: string[]
   quantity: number
+  notes: string
 }
 
 export interface OrderLineItem {

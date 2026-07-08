@@ -502,6 +502,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         PrintJob job = null;
         PrinterConfig printer = null;
         PrintRenderRequest renderRequest = null;
+        String preRenderedContent = null;
         try {
             Store store = storeRepository.findById(storeId).orElse(null);
             if (store == null) {
@@ -526,6 +527,45 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                         orderUpdateBatchId
                     );
                     return;
+                }
+            }
+            if (orderUpdateBatchId != null) {
+                ReceiptRenderer updateRenderer = renderersByModuleCode.get(moduleCode);
+                if (updateRenderer != null) {
+                    if (renderRequest == null) {
+                        renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId);
+                    }
+                    if (renderRequest == null) {
+                        logger.warn(
+                            "Skipping update print before job creation because no render data was available for module {} store {} order {} batch {}",
+                            moduleCode,
+                            storeId,
+                            orderId,
+                            orderUpdateBatchId
+                        );
+                        return;
+                    }
+                    try {
+                        preRenderedContent = updateRenderer.render(renderRequest);
+                    } catch (RuntimeException exception) {
+                        preRenderedContent = null;
+                        logger.warn(
+                            "Pre-render check failed for module {} order {} batch {}; creating a print job so the render failure remains visible",
+                            moduleCode,
+                            orderId,
+                            orderUpdateBatchId,
+                            exception
+                        );
+                    }
+                    if (preRenderedContent != null && preRenderedContent.isBlank()) {
+                        logger.info(
+                            "Skipping update print before job creation because module {} order {} batch {} has no printable content",
+                            moduleCode,
+                            orderId,
+                            orderUpdateBatchId
+                        );
+                        return;
+                    }
                 }
             }
             job = printJobService.createPendingJob(
@@ -591,7 +631,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 logger.warn("Print job {} failed because no render data was available", job.id);
                 return;
             }
-            String content = renderer.render(renderRequest);
+            String content = preRenderedContent != null ? preRenderedContent : renderer.render(renderRequest);
             if (content == null || content.isBlank()) {
                 job = printJobService.attachRenderedContent(job, printer.id, content);
                 printJobService.markFailed(job, printer, "RENDERED_CONTENT_BLANK", "Rendered content was blank");

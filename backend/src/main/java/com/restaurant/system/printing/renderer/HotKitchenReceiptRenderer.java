@@ -3,11 +3,16 @@ package com.restaurant.system.printing.renderer;
 import com.restaurant.system.kitchen.entity.KitchenTask;
 import com.restaurant.system.order.entity.Order;
 import com.restaurant.system.order.entity.OrderItem;
+import com.restaurant.system.order.entity.OrderItemOption;
 import com.restaurant.system.printing.PrintModuleCode;
 import com.restaurant.system.printing.dto.PrintRenderRequest;
 import com.restaurant.system.printing.semantic.HotKitchenPrintEligibilityService;
 import java.time.format.DateTimeFormatter;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -46,6 +51,15 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
             }
         }
 
+        Map<Long, List<OrderItemOption>> optionsByItemId = new HashMap<>();
+        if (request.order_item_options != null) {
+            for (OrderItemOption option : request.order_item_options) {
+                if (option != null && option.order_item_id != null) {
+                    optionsByItemId.computeIfAbsent(option.order_item_id, ignored -> new ArrayList<>()).add(option);
+                }
+            }
+        }
+
         StringBuilder builder = new StringBuilder();
         builder.append("\n\n\n");
         if (Boolean.TRUE.equals(request.is_update_ticket)) {
@@ -59,37 +73,92 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
         builder.append(PrintMarkup.large("HOT KITCHEN")).append("\n");
         builder.append("--------------------------------\n");
 
-        for (KitchenTask task : tasks) {
-            appendTask(builder, task, itemById.get(task.order_item_id));
+        for (AggregatedHotKitchenTask task : aggregateTasks(tasks, itemById, optionsByItemId)) {
+            appendTask(builder, task);
         }
 
         builder.append("--------------------------------\n");
+        if (isTakeout(request.order)) {
+            builder.append(PrintMarkup.large("外卖 / TAKEOUT")).append("\n");
+        }
         builder.append(PrintMarkup.small(resolveTime(request.order))).append("\n");
         builder.append("--------------------------------\n\n");
         return builder.toString();
     }
 
-    private void appendTask(StringBuilder builder, KitchenTask task, OrderItem item) {
-        builder.append(PrintMarkup.doubleHeight(resolvePrimaryLine(task))).append("\n");
-        String secondary = resolveSecondaryLine(task);
+    private void appendTask(StringBuilder builder, AggregatedHotKitchenTask task) {
+        builder.append(PrintMarkup.doubleHeight(resolvePrimaryLine(task.representative(), task.quantity()))).append("\n");
+        String secondary = resolveSecondaryLine(task.representative());
         if (secondary != null) {
             builder.append(PrintMarkup.doubleHeight(secondary)).append("\n");
         }
-        String note = item == null ? null : normalize(item.notes);
+        String note = task.item() == null ? null : normalize(task.item().notes);
         if (note != null) {
             builder.append(PrintMarkup.doubleHeight("备注：" + note)).append("\n");
         }
         builder.append("\n");
     }
 
-    private String resolvePrimaryLine(KitchenTask task) {
+    private List<AggregatedHotKitchenTask> aggregateTasks(
+        List<KitchenTask> tasks,
+        Map<Long, OrderItem> itemById,
+        Map<Long, List<OrderItemOption>> optionsByItemId
+    ) {
+        Map<HotKitchenGroupKey, AggregatedHotKitchenTask> grouped = new LinkedHashMap<>();
+        for (KitchenTask task : tasks) {
+            OrderItem item = itemById.get(task.order_item_id);
+            HotKitchenGroupKey key = buildGroupKey(task, item, optionsByItemId.getOrDefault(task.order_item_id, List.of()));
+            grouped.compute(key, (ignored, existing) -> {
+                int quantity = task.quantity == null ? 1 : task.quantity;
+                if (existing == null) {
+                    return new AggregatedHotKitchenTask(task, item, quantity);
+                }
+                return existing.addQuantity(quantity);
+            });
+        }
+        return new ArrayList<>(grouped.values());
+    }
+
+    private HotKitchenGroupKey buildGroupKey(KitchenTask task, OrderItem item, List<OrderItemOption> options) {
+        List<String> optionKeys = options.stream()
+            .sorted(Comparator
+                .comparing((OrderItemOption option) -> stable(option.option_group_snapshot))
+                .thenComparing(option -> stable(option.option_type_snapshot))
+                .thenComparing(option -> stable(option.option_code_snapshot))
+                .thenComparing(option -> option.option_id == null ? Long.MAX_VALUE : option.option_id)
+                .thenComparing(option -> option.id == null ? Long.MAX_VALUE : option.id))
+            .map(this::buildStableOptionKey)
+            .toList();
+        return new HotKitchenGroupKey(
+            item == null ? null : item.menu_item_id,
+            item == null ? null : item.category_code_snapshot,
+            item == null ? null : item.combo_role,
+            stable(task.station_code),
+            stable(task.special_instructions_snapshot),
+            stable(item == null ? null : item.notes),
+            optionKeys
+        );
+    }
+
+    private String buildStableOptionKey(OrderItemOption option) {
+        return String.join("|",
+            stable(option.option_group_snapshot),
+            stable(option.option_type_snapshot),
+            stable(option.option_code_snapshot),
+            String.valueOf(option.option_id),
+            String.valueOf(option.parent_option_id_snapshot),
+            String.valueOf(option.quantity == null ? 1 : option.quantity),
+            String.valueOf(option.price_delta == null ? BigDecimal.ZERO : option.price_delta.stripTrailingZeros())
+        );
+    }
+
+    private String resolvePrimaryLine(KitchenTask task, int quantity) {
         String itemName = fallback(task.item_name_snapshot_zh, task.item_name_snapshot_en, "Item");
         String special = normalize(task.special_instructions_snapshot);
-        int quantity = task.quantity == null ? 1 : task.quantity;
         if (special != null && shouldUseSpecialAsPrimary(itemName, special)) {
-            return special + " x" + quantity;
+            return special + " ×" + quantity;
         }
-        return itemName + " x" + quantity;
+        return itemName + " ×" + quantity;
     }
 
     private String resolveSecondaryLine(KitchenTask task) {
@@ -162,5 +231,26 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
         }
         String trimmed = value.trim();
         return trimmed.isBlank() ? null : trimmed;
+    }
+
+    private String stable(String value) {
+        return value == null ? "" : value.trim().toUpperCase();
+    }
+
+    private record HotKitchenGroupKey(
+        Long menuItemId,
+        String categoryCode,
+        String comboRole,
+        String stationCode,
+        String specialInstructions,
+        String notes,
+        List<String> optionKeys
+    ) {
+    }
+
+    private record AggregatedHotKitchenTask(KitchenTask representative, OrderItem item, int quantity) {
+        AggregatedHotKitchenTask addQuantity(int delta) {
+            return new AggregatedHotKitchenTask(representative, item, quantity + delta);
+        }
     }
 }

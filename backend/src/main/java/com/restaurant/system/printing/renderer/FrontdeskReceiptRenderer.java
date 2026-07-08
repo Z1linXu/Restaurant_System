@@ -28,6 +28,7 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
     private static final String OPTION_TYPE_ADDON = "addon";
     private static final String OPTION_TYPE_NOODLE_TYPE = "noodle_type";
     private static final String OPTION_TYPE_SIZE = "size";
+    private static final String OPTION_TYPE_SPICY_LEVEL = "spicy_level";
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     @Override
@@ -76,6 +77,10 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
             String noodleType = resolveNoodleTypeLabel(options);
             if (noodleType != null) {
                 appendSizedLine(builder, noodleType);
+            }
+            String spicyLevel = resolveSpicyLevelLabel(options);
+            if (spicyLevel != null) {
+                appendSizedLine(builder, "辣度: " + spicyLevel);
             }
             List<String> chargeableLines = resolveChargeableOptionLines(options);
             for (String chargeableLine : chargeableLines) {
@@ -197,6 +202,26 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
             .filter(Objects::nonNull)
             .findFirst()
             .orElse(null);
+    }
+
+    private String resolveSpicyLevelLabel(List<OrderItemOption> options) {
+        return options.stream()
+            .filter(this::isSpicyLevelOption)
+            .map(option -> firstPresent(option.option_name_snapshot_zh, option.option_name_snapshot_en))
+            .filter(Objects::nonNull)
+            .findFirst()
+            .orElse(null);
+    }
+
+    private boolean isSpicyLevelOption(OrderItemOption option) {
+        if (OPTION_TYPE_SPICY_LEVEL.equals(option.option_type_snapshot)) {
+            return true;
+        }
+        if (isOptionGroup(option, "SPICY_LEVEL")) {
+            return true;
+        }
+        String code = option.option_code_snapshot == null ? "" : option.option_code_snapshot.trim().toLowerCase();
+        return code.contains("_spicy_level_") || code.startsWith("spicy_");
     }
 
     private List<String> resolveChargeableOptionLines(List<OrderItemOption> options) {

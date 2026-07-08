@@ -247,6 +247,43 @@ class PrintDispatcherServiceImplTest {
     }
 
     @Test
+    void grabUpdateDispatchSkipsBlankRendererBeforeCreatingFailedJob() {
+        Store store = new Store();
+        store.id = 1L;
+        store.organization_id = 1L;
+        Order order = new Order();
+        order.id = 123L;
+        order.store_id = store.id;
+        OrderItem drinkItem = item(2L, 77L);
+
+        when(featureFlagService.isEnabled(FeaturePackage.PRINTING)).thenReturn(true);
+        when(storeRepository.findById(store.id)).thenReturn(Optional.of(store));
+        when(orderRepository.findById(order.id)).thenReturn(Optional.of(order));
+        when(orderItemRepository.findAllByOrderId(order.id)).thenReturn(List.of(drinkItem));
+        when(orderItemOptionRepository.findAllByOrderItemIds(any())).thenReturn(List.of());
+        when(kitchenTaskRepository.findAllByOrderId(order.id)).thenReturn(List.of());
+        when(grabRenderer.render(org.mockito.ArgumentMatchers.argThat(request ->
+            Boolean.TRUE.equals(request.is_update_ticket)
+                && Long.valueOf(77L).equals(request.order_update_batch_id)
+                && request.order_items.size() == 1
+                && request.order_items.get(0).id.equals(drinkItem.id)
+        ))).thenReturn("");
+
+        service.dispatchOrderUpdateAfterCommit(PrintModuleCode.GRAB, store.id, order.id, 77L);
+
+        verify(grabRenderer).render(any());
+        verifyNoInteractions(printJobService);
+        verify(printerAssignmentRepository, never()).findByStoreIdAndModuleCode(store.id, PrintModuleCode.GRAB);
+        verify(printerTransport, never()).print(
+            any(PrinterConfig.class),
+            anyString(),
+            any(),
+            any(),
+            anyString()
+        );
+    }
+
+    @Test
     void takeoutFrontdeskReceiptUsesConfiguredTwoCopies() {
         DispatchFixture fixture = configureSuccessfulDispatch(PrintModuleCode.FRONTDESK_RECEIPT, "pickup", 2);
         when(frontdeskRenderer.render(any())).thenReturn("TAKEOUT RECEIPT");

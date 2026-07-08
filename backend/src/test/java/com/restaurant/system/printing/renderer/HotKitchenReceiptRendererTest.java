@@ -31,7 +31,7 @@ class HotKitchenReceiptRendererTest {
         assertTrue(content.contains("UPDATED"));
         assertTrue(content.contains("HOT KITCHEN"));
         assertTrue(content.contains("桌号：T2"));
-        assertTrue(content.contains("大二(S) | +煎蛋 +葱 x1"));
+        assertTrue(content.contains("大二(S) | +煎蛋 +葱 ×1"));
         assertTrue(content.contains("备注：less soup"));
     }
 
@@ -79,7 +79,7 @@ class HotKitchenReceiptRendererTest {
 
         String content = renderer.render(request);
 
-        assertTrue(content.contains("大二(S) | +煎蛋 +葱 x1"));
+        assertTrue(content.contains("大二(S) | +煎蛋 +葱 ×1"));
         assertFalse(content.contains("毛豆"));
         assertFalse(content.contains("Edamame"));
         assertFalse(content.contains("土豆"));
@@ -95,6 +95,73 @@ class HotKitchenReceiptRendererTest {
         String content = renderer.render(request);
 
         assertTrue(content.contains("桌号：T2-右"));
+    }
+
+    @Test
+    void takeoutTicketShowsOrderTypeAtBottom() {
+        HotKitchenReceiptRenderer renderer = renderer();
+        PrintRenderRequest request = baseRequest();
+        request.order.order_type = "takeout";
+        request.order.table_no = null;
+        request.order.pickup_no = "TO-18";
+
+        String content = renderer.render(request);
+
+        assertTrue(content.contains("TO-18"));
+        assertTrue(content.contains("外卖 / TAKEOUT"));
+    }
+
+    @Test
+    void mergesIdenticalHotKitchenItemsByStableOptionsAndNotes() {
+        HotKitchenReceiptRenderer renderer = renderer();
+        PrintRenderRequest request = baseRequest();
+        OrderItem item = request.order_items.get(0);
+        item.menu_item_id = 100L;
+        item.notes = "same note";
+        request.kitchen_tasks = List.of(task(20L, item.id, "DEEPFRIED", "炸虾", "炸虾", 1), task(21L, item.id, "DEEPFRIED", "炸虾", "炸虾", 2));
+
+        String content = renderer.render(request);
+
+        assertTrue(content.contains("炸虾 ×3"));
+        assertEquals(1, countOccurrences(content, "炸虾 ×"));
+    }
+
+    @Test
+    void doesNotMergeHotKitchenItemsWhenStableOptionsDiffer() {
+        HotKitchenReceiptRenderer renderer = renderer();
+        PrintRenderRequest request = baseRequest();
+        OrderItem firstItem = request.order_items.get(0);
+        firstItem.menu_item_id = 100L;
+
+        OrderItem secondItem = new OrderItem();
+        secondItem.id = 11L;
+        secondItem.order_id = request.order.id;
+        secondItem.menu_item_id = 100L;
+        secondItem.item_name_snapshot_zh = "炸虾";
+        secondItem.item_name_snapshot_en = "Fried Shrimp";
+        secondItem.category_code_snapshot = "DEEPFRIED";
+        secondItem.quantity = 1;
+
+        OrderItemOption firstSpicy = new OrderItemOption();
+        firstSpicy.order_item_id = firstItem.id;
+        firstSpicy.option_code_snapshot = "spicy_mild";
+        firstSpicy.option_group_snapshot = "SPICY_LEVEL";
+        firstSpicy.option_type_snapshot = "spicy_level";
+
+        OrderItemOption secondSpicy = new OrderItemOption();
+        secondSpicy.order_item_id = secondItem.id;
+        secondSpicy.option_code_snapshot = "spicy_extra";
+        secondSpicy.option_group_snapshot = "SPICY_LEVEL";
+        secondSpicy.option_type_snapshot = "spicy_level";
+
+        request.order_items = List.of(firstItem, secondItem);
+        request.order_item_options = List.of(firstSpicy, secondSpicy);
+        request.kitchen_tasks = List.of(task(20L, firstItem.id, "DEEPFRIED", "炸虾", "炸虾", 1), task(21L, secondItem.id, "DEEPFRIED", "炸虾", "炸虾", 1));
+
+        String content = renderer.render(request);
+
+        assertEquals(2, countOccurrences(content, "炸虾 ×1"));
+        assertFalse(content.contains("炸虾 ×2"));
     }
 
     private HotKitchenReceiptRenderer renderer() {
@@ -149,5 +216,29 @@ class HotKitchenReceiptRendererTest {
         request.kitchen_tasks = List.of(task);
         request.happened_at = LocalDateTime.now();
         return request;
+    }
+
+    private KitchenTask task(Long id, Long orderItemId, String stationCode, String zh, String special, int quantity) {
+        KitchenTask task = new KitchenTask();
+        task.id = id;
+        task.order_id = 1L;
+        task.order_item_id = orderItemId;
+        task.station_code = stationCode;
+        task.item_name_snapshot_zh = zh;
+        task.item_name_snapshot_en = zh;
+        task.special_instructions_snapshot = special;
+        task.status = "pending";
+        task.quantity = quantity;
+        return task;
+    }
+
+    private int countOccurrences(String value, String needle) {
+        int count = 0;
+        int index = 0;
+        while ((index = value.indexOf(needle, index)) >= 0) {
+            count++;
+            index += needle.length();
+        }
+        return count;
     }
 }

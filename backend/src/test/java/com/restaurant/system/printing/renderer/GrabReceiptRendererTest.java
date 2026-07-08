@@ -244,6 +244,45 @@ class GrabReceiptRendererTest {
     }
 
     @Test
+    void frontdeskReceiptDisplaysNoodleSpicyLevelFromStableOptionType() {
+        FrontdeskReceiptRenderer frontdeskRenderer = new FrontdeskReceiptRenderer();
+        Order order = baseOrder();
+        order.subtotal_amount = new BigDecimal("12.00");
+        order.total_amount = new BigDecimal("13.80");
+
+        OrderItem item = new OrderItem();
+        item.id = 1L;
+        item.order_id = order.id;
+        item.item_name_snapshot_zh = "传统牛肉面";
+        item.quantity = 1;
+        item.unit_price = new BigDecimal("12.00");
+        item.line_amount = new BigDecimal("12.00");
+        item.status = "submitted";
+
+        OrderItemOption spicy = new OrderItemOption();
+        spicy.id = 2L;
+        spicy.order_item_id = item.id;
+        spicy.option_type_snapshot = "spicy_level";
+        spicy.option_group_snapshot = "SPICY_LEVEL";
+        spicy.option_code_snapshot = "traditional_beef_noodle_spicy_level_extra";
+        spicy.option_name_snapshot_zh = "加辣";
+        spicy.option_name_snapshot_en = "Extra";
+        spicy.price_delta = BigDecimal.ZERO;
+        spicy.quantity = 1;
+
+        PrintRenderRequest request = new PrintRenderRequest();
+        request.module_code = PrintModuleCode.FRONTDESK_RECEIPT;
+        request.order = order;
+        request.order_items = List.of(item);
+        request.order_item_options = List.of(spicy);
+        request.happened_at = order.submitted_at;
+
+        String output = stripMarkup(frontdeskRenderer.render(request));
+
+        assertTrue(output.contains("辣度: 加辣"));
+    }
+
+    @Test
     void frontdeskUpdateReceiptShowsOnlyAddedComboSideAndSideRemove() {
         FrontdeskReceiptRenderer frontdeskRenderer = new FrontdeskReceiptRenderer();
         Order order = baseOrder();

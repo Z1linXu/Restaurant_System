@@ -269,7 +269,7 @@ export function useTableBoard(options: UseTableBoardOptions) {
       return () => undefined
     }
 
-    const scheduleWebSocketRefresh = () => {
+    const scheduleWebSocketRefresh = (force = false) => {
       if (!enabledRef.current) {
         return
       }
@@ -286,12 +286,14 @@ export function useTableBoard(options: UseTableBoardOptions) {
         if (!enabledRef.current) {
           return
         }
-        void syncFromBackend()
-      }, FRONTDESK_WS_DEBOUNCE_MS)
+        void syncFromBackend(force ? { force: true } : undefined)
+      }, force ? 100 : FRONTDESK_WS_DEBOUNCE_MS)
     }
 
-    const unsubscribe = subscribeToFrontdeskOrders(storeId, () => {
-      scheduleWebSocketRefresh()
+    const unsubscribe = subscribeToFrontdeskOrders(storeId, (message) => {
+      const eventType = (message.event_type ?? '').toLowerCase()
+      const isFinishEvent = eventType === 'order.completed' || eventType === 'order.cancelled' || message.order_status === 'completed'
+      scheduleWebSocketRefresh(isFinishEvent)
     })
 
     const poller = window.setInterval(() => {

@@ -6117,6 +6117,34 @@ Frontdesk visibility:
   workers, triggers a recovery poll, queues a pending kick if a job is already
   running, and asks for confirmation before recovering an error-stopped worker.
 
+## PR11E-BF: Frontdesk Sync, Receipt Routing, And Ordering UI Fixes
+
+This patch keeps the existing order lifecycle, payment/refund behavior,
+PAD_DIRECT duplicate-print guard, and printing failure/no-auto-reprint policy.
+
+Behavior:
+
+- Finish table/order continues to publish the existing `order.completed`
+  realtime event on the store `frontdesk/orders` topic. Frontdesk table boards
+  treat completed/cancelled realtime events as urgent and run a short forced
+  refresh instead of waiting for the normal 30 second fallback poll.
+- HOT_KITCHEN tickets now show `外卖 / TAKEOUT` at the bottom for pickup/takeout
+  orders. HOT_KITCHEN item lines are merged only when stable identity inputs
+  match: menu item id, category/combo/station, stable option group/type/code/id
+  keys, notes, and kitchen instruction snapshot. Different spicy levels,
+  add-ons, removes, or notes remain separate.
+- Update-ticket dispatch pre-renders update modules before creating a print job.
+  If a module has no printable content for that update batch, such as a beverage
+  only update for `GRAB_UPDATE`, the dispatcher skips that module instead of
+  creating a `RENDERED_CONTENT_BLANK` failed job. Other modules in the same
+  update still dispatch independently.
+- FRONTDESK_RECEIPT displays noodle spicy level using stable option
+  type/group/code metadata and prints the user-facing option label only as
+  display text.
+- Noodle customization modals include the same notes/special-instructions field
+  below add-ons/removes. The right-side order summary can still display/edit
+  notes, and the submitted payload still uses the existing `notes` field.
+
 ## PR11D-14G: Ordering Combo Option Ordering
 
 PR11D-14G is a frontend-only ordering UI polish for Android Pad WebView and
