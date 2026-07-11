@@ -7,8 +7,10 @@ cloud server:
 - Backend is built from `backend/Dockerfile`.
 - Frontend is built from `frontend/Dockerfile`.
 - Nginx serves the React build and reverse-proxies `/api` and `/ws`.
-- Certbot issues and renews Let's Encrypt certificates through the webroot
-  challenge path.
+- HTTP-only mode uses `nginx.http.conf`, `server_name _`, and does not require a
+  domain.
+- HTTPS mode uses `nginx.conf`; Certbot issues and renews Let's Encrypt
+  certificates through the webroot challenge path.
 
 For the complete fresh-server runbook, use:
 
@@ -20,9 +22,11 @@ For the complete fresh-server runbook, use:
 
 - `.env.example`: production environment template.
 - `docker-compose.yml`: `db`, `backend`, `nginx`, and `certbot` services.
-- `nginx.http.conf`: temporary HTTP config for first certificate issuance.
+- `nginx.http.conf`: HTTP-only config for public-IP deploy and temporary HTTPS
+  certificate issuance.
 - `nginx.conf`: HTTPS production config.
-- `deploy.sh`: first-server deploy script.
+- `deploy.sh`: first-server deploy script. Supports `--http-only` and
+  `--https`.
 - `update.sh`: future one-command update script.
 - `backup-db.sh`: PostgreSQL custom-format backup through the `db` container.
 - `restore-db.sh`: explicit-confirm restore through the `db` container.
@@ -37,8 +41,18 @@ For the complete fresh-server runbook, use:
 cd deployment/cloud
 cp .env.example .env
 nano .env
-./deploy.sh
+./deploy.sh --http-only
 ./health-check.sh
 ```
+
+For HTTPS, set `ENABLE_HTTPS=true`, fill `DOMAIN` and `LETSENCRYPT_EMAIL`, then
+run:
+
+```bash
+./deploy.sh --https
+```
+
+In HTTP-only mode, `DOMAIN` and `LETSENCRYPT_EMAIL` may stay blank. `DB_PASSWORD`
+and `JWT_SECRET` are always required.
 
 Do not commit `.env` or anything under `deployment/cloud/data`.

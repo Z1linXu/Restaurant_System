@@ -2,7 +2,7 @@
 
 This guide deploys Restaurant_System on one fresh Ubuntu 22.04 Tencent Cloud
 Lightweight server with Docker, PostgreSQL on the same server, Nginx reverse
-proxy, and Let's Encrypt HTTPS.
+proxy, and optional Let's Encrypt HTTPS.
 
 The deployment files live in `deployment/cloud`.
 
@@ -10,13 +10,13 @@ The deployment files live in `deployment/cloud`.
 
 Prepare:
 
-- A domain name, for example `pos.example.com`.
-- DNS `A` record pointing that domain to the Tencent Cloud server public IP.
 - Tencent Cloud firewall/security group allowing inbound `22`, `80`, and `443`.
 - SSH access to the server.
+- For HTTPS: a domain name, for example `pos.example.com`, with a DNS `A`
+  record pointing to the Tencent Cloud server public IP.
 
-The first deploy needs ports `80` and `443` free on the server. Do not run a
-host-level Nginx on the same ports.
+HTTP-only deploy needs port `80` free. HTTPS deploy needs ports `80` and `443`
+free. Do not run a host-level Nginx on the same ports.
 
 ## 1. SSH Into The Server
 
@@ -53,16 +53,24 @@ cp .env.example .env
 nano .env
 ```
 
-Required values:
+Required values for HTTP-only public-IP deploy:
 
 ```bash
-DOMAIN=pos.example.com
-LETSENCRYPT_EMAIL=owner@example.com
-ENABLE_HTTPS=true
+ENABLE_HTTPS=false
+DOMAIN=
+LETSENCRYPT_EMAIL=
 DB_NAME=restaurant_pos
 DB_USER=restaurant_pos
 DB_PASSWORD=replace-with-a-strong-database-password
 JWT_SECRET=replace-with-a-strong-jwt-secret
+```
+
+Required extra values for HTTPS/domain deploy:
+
+```bash
+ENABLE_HTTPS=true
+DOMAIN=pos.example.com
+LETSENCRYPT_EMAIL=owner@example.com
 ```
 
 Generate secrets on the server:
@@ -76,11 +84,18 @@ Use one generated value for `DB_PASSWORD` and another for `JWT_SECRET`.
 
 ## 4. First Deploy
 
-Run:
+For HTTP-only public-IP deploy, run:
 
 ```bash
 cd /opt/restaurant-system/deployment/cloud
-./deploy.sh
+./deploy.sh --http-only
+```
+
+For HTTPS/domain deploy, run:
+
+```bash
+cd /opt/restaurant-system/deployment/cloud
+./deploy.sh --https
 ```
 
 `deploy.sh` performs:
@@ -92,10 +107,18 @@ cd /opt/restaurant-system/deployment/cloud
 - Backend image build.
 - Frontend image build.
 - Backend startup, which runs Flyway schema initialization.
-- Temporary HTTP Nginx startup for Let's Encrypt HTTP-01 validation.
-- Let's Encrypt certificate issuance.
-- Final HTTPS Nginx startup.
+- HTTP-only mode: starts Nginx with `nginx.http.conf`, `server_name _`, and no
+  Certbot.
+- HTTPS mode: starts temporary HTTP Nginx for Let's Encrypt HTTP-01 validation,
+  requests/renews the certificate, then starts final HTTPS Nginx.
 - `docker compose up -d` for the application stack.
+
+If Certbot fails in HTTPS mode, PostgreSQL and backend remain running. Fix DNS,
+firewall, or certificate issues, then rerun:
+
+```bash
+./deploy.sh --https
+```
 
 ## 5. Verify
 
@@ -107,10 +130,22 @@ docker compose --env-file .env -f docker-compose.yml ps
 Open:
 
 ```text
+http://YOUR_SERVER_PUBLIC_IP
+```
+
+For HTTPS deploy, open:
+
+```text
 https://YOUR_DOMAIN
 ```
 
-Backend health through Nginx:
+Backend health through Nginx for HTTP-only:
+
+```bash
+curl http://YOUR_SERVER_PUBLIC_IP/api/v1/menu/health
+```
+
+Backend health through Nginx for HTTPS:
 
 ```bash
 curl -k https://YOUR_DOMAIN/api/v1/menu/health
