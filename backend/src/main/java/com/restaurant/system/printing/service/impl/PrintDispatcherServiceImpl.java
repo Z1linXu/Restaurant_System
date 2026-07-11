@@ -12,6 +12,7 @@ import com.restaurant.system.order.entity.OrderItemOption;
 import com.restaurant.system.order.repository.OrderItemOptionRepository;
 import com.restaurant.system.order.repository.OrderItemRepository;
 import com.restaurant.system.order.repository.OrderRepository;
+import com.restaurant.system.printing.CloudPrintingGuard;
 import com.restaurant.system.printing.PrintModuleCode;
 import com.restaurant.system.printing.PrintJobStatus;
 import com.restaurant.system.printing.PrintingMode;
@@ -35,6 +36,7 @@ import com.restaurant.system.printing.renderer.PrintMarkup;
 import com.restaurant.system.printing.renderer.ReceiptRenderer;
 import com.restaurant.system.printing.repository.PrinterAssignmentRepository;
 import com.restaurant.system.printing.repository.PrinterConfigRepository;
+import com.restaurant.system.printing.semantic.HotKitchenPrintEligibilityService;
 import com.restaurant.system.printing.service.PrintDispatcherService;
 import com.restaurant.system.printing.service.PrintJobService;
 import com.restaurant.system.printing.service.PrinterConfigService;
@@ -79,6 +81,8 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
     private final Executor taskExecutor;
     private final FeatureFlagService featureFlagService;
     private final PrintJobService printJobService;
+    private final CloudPrintingGuard cloudPrintingGuard;
+    private final HotKitchenPrintEligibilityService hotKitchenPrintEligibilityService;
 
     public PrintDispatcherServiceImpl(
         PrinterConfigService printerConfigService,
@@ -93,7 +97,9 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         List<ReceiptRenderer> renderers,
         @Qualifier("printTaskExecutor") Executor taskExecutor,
         FeatureFlagService featureFlagService,
-        PrintJobService printJobService
+        PrintJobService printJobService,
+        CloudPrintingGuard cloudPrintingGuard,
+        HotKitchenPrintEligibilityService hotKitchenPrintEligibilityService
     ) {
         this.printerConfigService = printerConfigService;
         this.printerConfigRepository = printerConfigRepository;
@@ -108,6 +114,8 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         this.taskExecutor = taskExecutor;
         this.featureFlagService = featureFlagService;
         this.printJobService = printJobService;
+        this.cloudPrintingGuard = cloudPrintingGuard;
+        this.hotKitchenPrintEligibilityService = hotKitchenPrintEligibilityService;
     }
 
     @Override
@@ -136,8 +144,8 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         Long orderId,
         Long orderUpdateBatchId
     ) {
-        if (!PrintModuleCode.GRAB.equals(moduleCode)) {
-            throw new BusinessException("Only GRAB supports automatic update tickets");
+        if (!supportsAutomaticUpdateTicket(moduleCode)) {
+            throw new BusinessException("Only GRAB, FRONTDESK_RECEIPT, and HOT_KITCHEN support automatic update tickets");
         }
         if (!featureFlagService.isEnabled(FeaturePackage.PRINTING)) {
             logger.info(
@@ -162,6 +170,24 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             return;
         }
         dispatchTask.run();
+    }
+
+    @Override
+    public boolean hasPrintableContent(String moduleCode, Long storeId, Long orderId) {
+        if (!PrintModuleCode.HOT_KITCHEN.equals(moduleCode)) {
+            return true;
+        }
+        PrintRenderRequest renderRequest = buildRenderRequest(moduleCode, storeId, orderId);
+        return hotKitchenPrintEligibilityService.hasHotKitchenContent(renderRequest);
+    }
+
+    @Override
+    public boolean hasPrintableUpdateContent(String moduleCode, Long storeId, Long orderId, Long orderUpdateBatchId) {
+        if (!PrintModuleCode.HOT_KITCHEN.equals(moduleCode)) {
+            return true;
+        }
+        PrintRenderRequest renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId);
+        return hotKitchenPrintEligibilityService.hasHotKitchenContent(renderRequest);
     }
 
     @Override
@@ -191,6 +217,20 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         try {
             String content = buildTestPrintContent(store, printer, request.module_code);
             job = printJobService.attachRenderedContent(job, printer.id, content);
+            if (isPadDirectMode(request.store_id)) {
+                job = printJobService.markPadDirectQueued(job, printer, printer.font_size);
+                PrinterTestResponse response = new PrinterTestResponse();
+                response.success = true;
+                response.message = "Pad Direct test print job queued. Backend did not connect to the physical printer.";
+                logger.info("Queued PAD_DIRECT test print job {} for printer {} store {}", job.id, printer.id, request.store_id);
+                return response;
+            }
+            if (!isMockMode(request.store_id) && markCloudPrivatePrinterBlocked(job, printer)) {
+                PrinterTestResponse response = new PrinterTestResponse();
+                response.success = false;
+                response.message = cloudPrintingGuard.blockedBackendTcpMessage(printer).orElse(CloudPrintingGuard.ERROR_MESSAGE);
+                return response;
+            }
             job = printJobService.markPrinting(job, printer);
             if (isMockMode(request.store_id)) {
                 logMockPrint("TEST_PRINT", printer, job, content);
@@ -228,14 +268,25 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         response.code_page_command_sent = sendCodePage;
         response.escpos_code_page = codePage;
         response.recommendation = "RP820-class ESC/POS printers usually work best with GBK first. UTF-8 often prints garbled text. GB2312 can work on some firmware, but GBK is the safer default if Chinese needs to coexist with mixed content.";
+        Optional<String> cloudBlockMessage = (!isMockMode(request.store_id) && !isPadDirectMode(request.store_id))
+            ? cloudPrintingGuard.blockedBackendTcpMessage(printer)
+            : Optional.empty();
 
         for (String encoding : Arrays.asList("UTF-8", "GBK", "GB2312")) {
             PrinterEncodingTestResponse.PrinterEncodingTestResult result = new PrinterEncodingTestResponse.PrinterEncodingTestResult();
             result.encoding = encoding;
             try {
                 String content = buildEncodingTestContent(store, printer, encoding, sendCodePage, codePage);
-                if (isMockMode(request.store_id)) {
+                if (isPadDirectMode(request.store_id)) {
+                    result.success = false;
+                    result.message = "Pad Direct mode requires running encoding tests from the Android Pad on the store LAN.";
+                } else if (isMockMode(request.store_id)) {
                     logMockPrint("ENCODING_TEST_" + encoding, printer, null, content);
+                    result.success = true;
+                    result.message = "Mock encoding test succeeded - no physical printer used";
+                } else if (cloudBlockMessage.isPresent()) {
+                    result.success = false;
+                    result.message = cloudBlockMessage.get();
                 } else {
                     sendToPrinter(
                         printer,
@@ -243,9 +294,9 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                         encoding,
                         codePage
                     );
+                    result.success = true;
+                    result.message = "Test ticket sent";
                 }
-                result.success = true;
-                result.message = isMockMode(request.store_id) ? "Mock encoding test succeeded - no physical printer used" : "Test ticket sent";
             } catch (Exception exception) {
                 logger.error("Encoding test print failed for printer {} store {} encoding {}", printer.id, request.store_id, encoding, exception);
                 result.success = false;
@@ -266,6 +317,9 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         }
 
         GrabFontTestResponse response = new GrabFontTestResponse();
+        Optional<String> cloudBlockMessage = (!isMockMode(request.store_id) && !isPadDirectMode(request.store_id))
+            ? cloudPrintingGuard.blockedBackendTcpMessage(printer)
+            : Optional.empty();
         for (EscPosFontTestMode mode : EscPosFontTestMode.values()) {
             GrabFontTestResponse.GrabFontTestResult result = new GrabFontTestResponse.GrabFontTestResult();
             result.test_mode = mode.label;
@@ -279,7 +333,10 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                     printer.ip_address,
                     printer.port
                 );
-                if (isMockMode(request.store_id)) {
+                if (isPadDirectMode(request.store_id)) {
+                    result.success = false;
+                    result.message = "Pad Direct mode requires running GRAB font diagnostics from the Android Pad on the store LAN.";
+                } else if (isMockMode(request.store_id)) {
                     logMockPrint("GRAB_FONT_TEST_" + mode.label, printer, null, String.join("\n", List.of(
                         mode.label,
                         "GRAB TICKET",
@@ -287,11 +344,16 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                         "炸春卷 x1",
                         "大二(S) | 走香 走牛 +蛋 +葱"
                     )));
+                    result.success = true;
+                    result.message = "Mock font test succeeded - no physical printer used";
+                } else if (cloudBlockMessage.isPresent()) {
+                    result.success = false;
+                    result.message = cloudBlockMessage.get();
                 } else {
                     sendDiagnosticGrabTicket(printer, mode);
+                    result.success = true;
+                    result.message = "Diagnostic ticket sent";
                 }
-                result.success = true;
-                result.message = isMockMode(request.store_id) ? "Mock font test succeeded - no physical printer used" : "Diagnostic ticket sent";
             } catch (Exception exception) {
                 logger.error(
                     "GRAB font size diagnostic failed: mode={} activate={} reset={} printer_ip={} printer_port={}",
@@ -322,8 +384,17 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         PrinterTestResponse response = new PrinterTestResponse();
         try {
             String content = buildCurrentFontSizeTestContent(store, printer);
+            if (isPadDirectMode(request.store_id)) {
+                response.success = false;
+                response.message = "Pad Direct mode requires running font size tests from the Android Pad on the store LAN.";
+                return response;
+            }
             if (isMockMode(request.store_id)) {
                 logMockPrint("FONT_SIZE_TEST", printer, null, content);
+            } else if (cloudPrintingGuard.blockedBackendTcpMessage(printer).isPresent()) {
+                response.success = false;
+                response.message = cloudPrintingGuard.blockedBackendTcpMessage(printer).get();
+                return response;
             } else {
                 sendToPrinter(printer, content);
             }
@@ -394,6 +465,18 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 buildPayloadSnapshot(request.module_code, request.store_id, null, "ADMIN_MODULE_TEST_PRINT")
             );
             job = printJobService.attachRenderedContent(job, printer.id, content);
+            if (isPadDirectMode(request.store_id)) {
+                job = printJobService.markPadDirectQueued(job, printer, resolveEffectiveFontSize(assignment, printer));
+                response.success = true;
+                response.message = "Pad Direct " + request.module_code + " test print job queued. Backend did not connect to the physical printer.";
+                logger.info("Queued PAD_DIRECT module test print job {} module {} store {}", job.id, request.module_code, request.store_id);
+                return response;
+            }
+            if (!isMockMode(request.store_id) && markCloudPrivatePrinterBlocked(job, printer)) {
+                response.success = false;
+                response.message = cloudPrintingGuard.blockedBackendTcpMessage(printer).orElse(CloudPrintingGuard.ERROR_MESSAGE);
+                return response;
+            }
             job = printJobService.markPrinting(job, printer);
             if (isMockMode(request.store_id)) {
                 logMockPrint(request.module_code, printer, job, content);
@@ -418,11 +501,72 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
     private void doDispatch(String moduleCode, Long storeId, Long orderId, Long orderUpdateBatchId) {
         PrintJob job = null;
         PrinterConfig printer = null;
+        PrintRenderRequest renderRequest = null;
+        String preRenderedContent = null;
         try {
             Store store = storeRepository.findById(storeId).orElse(null);
             if (store == null) {
                 logger.error("Print dispatch failed before job creation: store {} not found for module {} order {}", storeId, moduleCode, orderId);
                 return;
+            }
+            if (PrintModuleCode.HOT_KITCHEN.equals(moduleCode)) {
+                renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId);
+                if (renderRequest == null) {
+                    logger.warn(
+                        "Skipping HOT_KITCHEN print before job creation because no render data was available for store {} order {} batch {}",
+                        storeId,
+                        orderId,
+                        orderUpdateBatchId
+                    );
+                    return;
+                }
+                if (!hotKitchenPrintEligibilityService.hasHotKitchenContent(renderRequest)) {
+                    logger.info(
+                        "Skipping HOT_KITCHEN print before job creation because order {} batch {} has no hot kitchen content",
+                        orderId,
+                        orderUpdateBatchId
+                    );
+                    return;
+                }
+            }
+            if (orderUpdateBatchId != null) {
+                ReceiptRenderer updateRenderer = renderersByModuleCode.get(moduleCode);
+                if (updateRenderer != null) {
+                    if (renderRequest == null) {
+                        renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId);
+                    }
+                    if (renderRequest == null) {
+                        logger.warn(
+                            "Skipping update print before job creation because no render data was available for module {} store {} order {} batch {}",
+                            moduleCode,
+                            storeId,
+                            orderId,
+                            orderUpdateBatchId
+                        );
+                        return;
+                    }
+                    try {
+                        preRenderedContent = updateRenderer.render(renderRequest);
+                    } catch (RuntimeException exception) {
+                        preRenderedContent = null;
+                        logger.warn(
+                            "Pre-render check failed for module {} order {} batch {}; creating a print job so the render failure remains visible",
+                            moduleCode,
+                            orderId,
+                            orderUpdateBatchId,
+                            exception
+                        );
+                    }
+                    if (preRenderedContent != null && preRenderedContent.isBlank()) {
+                        logger.info(
+                            "Skipping update print before job creation because module {} order {} batch {} has no printable content",
+                            moduleCode,
+                            orderId,
+                            orderUpdateBatchId
+                        );
+                        return;
+                    }
+                }
             }
             job = printJobService.createPendingJob(
                 store.organization_id,
@@ -431,7 +575,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 orderUpdateBatchId,
                 null,
                 moduleCode,
-                orderUpdateBatchId == null ? moduleCode : "GRAB_UPDATE",
+                orderUpdateBatchId == null ? moduleCode : moduleCode + "_UPDATE",
                 null,
                 buildPayloadSnapshot(
                     moduleCode,
@@ -478,14 +622,16 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 return;
             }
 
-            PrintRenderRequest renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId);
+            if (renderRequest == null) {
+                renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId);
+            }
             if (renderRequest == null) {
                 job = printJobService.attachRenderedContent(job, printer.id, null);
                 printJobService.markFailed(job, printer, "RENDER_DATA_MISSING", "No render data was available");
                 logger.warn("Print job {} failed because no render data was available", job.id);
                 return;
             }
-            String content = renderer.render(renderRequest);
+            String content = preRenderedContent != null ? preRenderedContent : renderer.render(renderRequest);
             if (content == null || content.isBlank()) {
                 job = printJobService.attachRenderedContent(job, printer.id, content);
                 printJobService.markFailed(job, printer, "RENDERED_CONTENT_BLANK", "Rendered content was blank");
@@ -494,6 +640,31 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             }
 
             job = printJobService.attachRenderedContent(job, printer.id, content);
+            if (isPadDirectMode(storeId)) {
+                job = printJobService.markPadDirectQueued(job, printer, resolveEffectiveFontSize(assignment, printer));
+                int copies = resolveCopyCount(moduleCode, assignment, renderRequest.order);
+                logger.info(
+                    "PAD_DIRECT queued print job {} module {} store {} order {} printer {} copies {}. Backend did not connect to printer.",
+                    job.id,
+                    moduleCode,
+                    storeId,
+                    orderId,
+                    printer.id,
+                    copies
+                );
+                return;
+            }
+            if (!isMockMode(storeId) && markCloudPrivatePrinterBlocked(job, printer)) {
+                logger.warn(
+                    "Blocked cloud private printer connection for print job {} module {} store {} order {} printer {}",
+                    job.id,
+                    moduleCode,
+                    storeId,
+                    orderId,
+                    printer.id
+                );
+                return;
+            }
             job = printJobService.markPrinting(job, printer);
             logger.info("Dispatching print job {} module {} store {} order {} to printer {}", job.id, moduleCode, storeId, orderId, printer.id);
             int copies = resolveCopyCount(moduleCode, assignment, renderRequest.order);
@@ -532,7 +703,15 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             } else {
                 job = printJobService.attachRenderedContent(job, printer.id, content);
             }
+            if (isPadDirectMode(job.store_id)) {
+                job = printJobService.markPadDirectQueued(job, printer, resolveEffectiveFontSize(assignment, printer));
+                logger.info("PAD_DIRECT queued existing print job {} for client-side reprint", job.id);
+                return printJobService.toResponse(job);
+            }
             job.requested_by_user_id = requestedByUserId;
+            if (!isMockMode(job.store_id) && markCloudPrivatePrinterBlocked(job, printer)) {
+                return printJobService.toResponse(job);
+            }
             job = printJobService.markPrinting(job, printer);
             logger.info("Manual reprint requested for print job {} by user {}", job.id, requestedByUserId);
             if (isMockMode(job.store_id)) {
@@ -555,6 +734,9 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         }
         Store store = storeRepository.findById(order.store_id).orElseThrow(() -> new BusinessException("Store not found"));
         String moduleCode = normalizeReceiptType(request == null ? null : request.receipt_type);
+        if (PrintModuleCode.HOT_KITCHEN.equals(moduleCode) && !hasPrintableContent(moduleCode, order.store_id, order.id)) {
+            throw new BusinessException("Order has no HOT_KITCHEN content to reprint");
+        }
         PrinterAssignment assignment = printerAssignmentRepository.findByStoreIdAndModuleCode(order.store_id, moduleCode).orElse(null);
         PrinterConfig printer = request != null && request.printer_id != null
             ? requirePrinterForStore(request.printer_id, order.store_id)
@@ -576,6 +758,14 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             }
             String content = renderOrderContent(moduleCode, order.store_id, order.id);
             job = printJobService.attachRenderedContent(job, printer.id, content);
+            if (isPadDirectMode(order.store_id)) {
+                job = printJobService.markPadDirectQueued(job, printer, resolveEffectiveFontSize(assignment, printer));
+                logger.info("PAD_DIRECT queued order reprint job {} order {} module {}", job.id, orderId, moduleCode);
+                return printJobService.toResponse(job);
+            }
+            if (!isMockMode(order.store_id) && markCloudPrivatePrinterBlocked(job, printer)) {
+                return printJobService.toResponse(job);
+            }
             job = printJobService.markPrinting(job, printer);
             logger.info("Order reprint requested for order {} module {} print job {} by user {}", orderId, moduleCode, job.id, requestedByUserId);
             if (isMockMode(order.store_id)) {
@@ -600,11 +790,12 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         boolean storeEnabled = printerConfigService.isPrintingEnabled(order.store_id);
         return renderersByModuleCode.keySet().stream()
             .sorted()
-            .map(moduleCode -> buildOrderPrintOption(order.store_id, moduleCode, featureEnabled, storeEnabled))
+            .map(moduleCode -> buildOrderPrintOption(order.id, order.store_id, moduleCode, featureEnabled, storeEnabled))
             .toList();
     }
 
     private OrderPrintOptionResponse buildOrderPrintOption(
+        Long orderId,
         Long storeId,
         String moduleCode,
         boolean featureEnabled,
@@ -620,6 +811,10 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         }
         if (!storeEnabled) {
             response.unavailable_reason = "Store printing mode is disabled";
+            return response;
+        }
+        if (PrintModuleCode.HOT_KITCHEN.equals(moduleCode) && !hasPrintableContent(moduleCode, storeId, orderId)) {
+            response.unavailable_reason = "Order has no hot kitchen items to print";
             return response;
         }
         PrinterAssignment assignment = printerAssignmentRepository.findByStoreIdAndModuleCode(storeId, moduleCode).orElse(null);
@@ -654,6 +849,23 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             response.success = true;
             response.message = "Mock connection successful - no physical printer used";
             logger.info("Mock printer connection test succeeded for printer {} store {}", printer.id, printer.store_id);
+            return response;
+        }
+        if (isPadDirectMode(request.store_id)) {
+            response.success = false;
+            response.message = "Pad Direct mode requires running connection tests from the Android Pad on the store LAN.";
+            logger.info("Skipped backend printer connection test for printer {} store {} because mode is PAD_DIRECT", printer.id, printer.store_id);
+            return response;
+        }
+        Optional<String> cloudBlockMessage = cloudPrintingGuard.blockedBackendTcpMessage(printer);
+        if (cloudBlockMessage.isPresent()) {
+            printer.last_connection_failed_at = response.checked_at;
+            printer.last_connection_error = cloudBlockMessage.get();
+            printer.updated_at = response.checked_at;
+            printerConfigRepository.save(printer);
+            response.success = false;
+            response.message = cloudBlockMessage.get();
+            logger.warn("Blocked cloud printer connection test for printer {} store {}", printer.id, printer.store_id);
             return response;
         }
         try (Socket socket = new Socket()) {
@@ -699,7 +911,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             orderItems.stream().map(item -> item.id).toList()
         );
         List<KitchenTask> kitchenTasks = kitchenTaskRepository.findAllByOrderId(order.id);
-        boolean updateTicket = orderUpdateBatchId != null && PrintModuleCode.GRAB.equals(moduleCode);
+        boolean updateTicket = orderUpdateBatchId != null && supportsAutomaticUpdateTicket(moduleCode);
         if (updateTicket) {
             Set<Long> modifiedOrderItemIds = orderItems.stream()
                 .filter(item -> orderUpdateBatchId.equals(item.order_update_batch_id))
@@ -760,6 +972,12 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         return "pickup".equalsIgnoreCase(order.order_type) || "takeout".equalsIgnoreCase(order.order_type);
     }
 
+    private boolean supportsAutomaticUpdateTicket(String moduleCode) {
+        return PrintModuleCode.GRAB.equals(moduleCode)
+            || PrintModuleCode.FRONTDESK_RECEIPT.equals(moduleCode)
+            || PrintModuleCode.HOT_KITCHEN.equals(moduleCode);
+    }
+
     private PrinterConfig requirePrinterForJob(PrintJob job) {
         if (job.printer_id != null) {
             return requirePrinterForStore(job.printer_id, job.store_id);
@@ -795,7 +1013,10 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         if (PrintModuleCode.GRAB.equals(receiptType)) {
             return PrintModuleCode.GRAB;
         }
-        throw new BusinessException("receiptType must be GRAB or FRONTDESK_RECEIPT");
+        if (PrintModuleCode.HOT_KITCHEN.equals(receiptType)) {
+            return PrintModuleCode.HOT_KITCHEN;
+        }
+        throw new BusinessException("receiptType must be GRAB, FRONTDESK_RECEIPT, or HOT_KITCHEN");
     }
 
     private String buildPayloadSnapshot(String moduleCode, Long storeId, Long orderId, String source) {
@@ -804,6 +1025,19 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
 
     private boolean isMockMode(Long storeId) {
         return PrintingMode.MOCK.equals(printerConfigService.getStorePrintingMode(storeId));
+    }
+
+    private boolean isPadDirectMode(Long storeId) {
+        return PrintingMode.PAD_DIRECT.equals(printerConfigService.getStorePrintingMode(storeId));
+    }
+
+    private boolean markCloudPrivatePrinterBlocked(PrintJob job, PrinterConfig printer) {
+        Optional<String> blockedMessage = cloudPrintingGuard.blockedBackendTcpMessage(printer);
+        if (blockedMessage.isEmpty()) {
+            return false;
+        }
+        printJobService.markFailed(job, printer, CloudPrintingGuard.ERROR_CODE, blockedMessage.get());
+        return true;
     }
 
     private void logMockPrint(String moduleCode, PrinterConfig printer, PrintJob job, String content) {
@@ -948,6 +1182,13 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 throw new BusinessException("No renderer is registered for module " + moduleCode);
             }
             return renderer.render(buildGrabReceiptTestRequest(store));
+        }
+        if (PrintModuleCode.HOT_KITCHEN.equals(moduleCode)) {
+            ReceiptRenderer renderer = renderersByModuleCode.get(PrintModuleCode.HOT_KITCHEN);
+            if (renderer == null) {
+                throw new BusinessException("No renderer is registered for module " + moduleCode);
+            }
+            return renderer.render(buildHotKitchenReceiptTestRequest(store));
         }
         throw new BusinessException("Module test printing is not supported for " + moduleCode + " yet.");
     }
@@ -1120,6 +1361,80 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         request.order_items = List.of(coldItem, coldItemTwo, noodleItem);
         request.order_item_options = List.of();
         request.kitchen_tasks = List.of(coldTask, coldTaskTwo, noodleTask);
+        request.happened_at = LocalDateTime.now();
+        return request;
+    }
+
+    private PrintRenderRequest buildHotKitchenReceiptTestRequest(Store store) {
+        Order order = new Order();
+        order.id = -3L;
+        order.store_id = store.id;
+        order.order_type = "dine_in";
+        order.table_no = "T2";
+        order.submitted_at = LocalDateTime.now();
+
+        OrderItem chowMeinItem = new OrderItem();
+        chowMeinItem.id = -401L;
+        chowMeinItem.order_id = order.id;
+        chowMeinItem.menu_item_id = -501L;
+        chowMeinItem.item_name_snapshot_zh = "牛肉炒面";
+        chowMeinItem.item_name_snapshot_en = "Beef Chow Mein";
+        chowMeinItem.category_code_snapshot = "FRIED_NOODLE";
+        chowMeinItem.quantity = 1;
+        chowMeinItem.status = "submitted";
+
+        OrderItem noodleWithEggItem = new OrderItem();
+        noodleWithEggItem.id = -402L;
+        noodleWithEggItem.order_id = order.id;
+        noodleWithEggItem.menu_item_id = -502L;
+        noodleWithEggItem.item_name_snapshot_zh = "传统牛肉面";
+        noodleWithEggItem.item_name_snapshot_en = "Traditional Beef Noodle";
+        noodleWithEggItem.category_code_snapshot = "SOUP_NOODLE";
+        noodleWithEggItem.quantity = 1;
+        noodleWithEggItem.status = "submitted";
+
+        OrderItemOption friedEggOption = new OrderItemOption();
+        friedEggOption.order_item_id = noodleWithEggItem.id;
+        friedEggOption.option_type_snapshot = "addon";
+        friedEggOption.option_code_snapshot = "fried_egg";
+        friedEggOption.option_group_snapshot = "ADD_ON";
+        friedEggOption.option_name_snapshot_zh = "加煎蛋";
+        friedEggOption.option_name_snapshot_en = "Fried Egg";
+        friedEggOption.quantity = 1;
+
+        KitchenTask chowMeinTask = new KitchenTask();
+        chowMeinTask.id = -601L;
+        chowMeinTask.order_id = order.id;
+        chowMeinTask.order_item_id = chowMeinItem.id;
+        chowMeinTask.store_id = store.id;
+        chowMeinTask.station_code = "WOK";
+        chowMeinTask.item_name_snapshot_zh = "牛肉炒面";
+        chowMeinTask.item_name_snapshot_en = "Beef Chow Mein";
+        chowMeinTask.special_instructions_snapshot = "牛炒 | 走洋葱";
+        chowMeinTask.status = "pending";
+        chowMeinTask.quantity = 1;
+        chowMeinTask.created_at = LocalDateTime.now();
+
+        KitchenTask noodleWithEggTask = new KitchenTask();
+        noodleWithEggTask.id = -602L;
+        noodleWithEggTask.order_id = order.id;
+        noodleWithEggTask.order_item_id = noodleWithEggItem.id;
+        noodleWithEggTask.store_id = store.id;
+        noodleWithEggTask.station_code = "NOODLE";
+        noodleWithEggTask.item_name_snapshot_zh = "传统牛肉面";
+        noodleWithEggTask.item_name_snapshot_en = "Traditional Beef Noodle";
+        noodleWithEggTask.special_instructions_snapshot = "大二(S) | +煎蛋 +葱";
+        noodleWithEggTask.status = "pending";
+        noodleWithEggTask.quantity = 1;
+        noodleWithEggTask.created_at = LocalDateTime.now().plusNanos(1);
+
+        PrintRenderRequest request = new PrintRenderRequest();
+        request.module_code = PrintModuleCode.HOT_KITCHEN;
+        request.store = store;
+        request.order = order;
+        request.order_items = List.of(chowMeinItem, noodleWithEggItem);
+        request.order_item_options = List.of(friedEggOption);
+        request.kitchen_tasks = List.of(chowMeinTask, noodleWithEggTask);
         request.happened_at = LocalDateTime.now();
         return request;
     }

@@ -1,6 +1,7 @@
 package com.restaurant.system.printing.transport;
 
 import com.restaurant.system.common.exception.BusinessException;
+import com.restaurant.system.printing.CloudPrintingGuard;
 import com.restaurant.system.printing.entity.PrinterConfig;
 import com.restaurant.system.printing.renderer.PrintMarkup;
 import java.io.OutputStream;
@@ -13,6 +14,12 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class EscPosTcpPrinterTransport implements PrinterTransport {
+
+    private final CloudPrintingGuard cloudPrintingGuard;
+
+    public EscPosTcpPrinterTransport(CloudPrintingGuard cloudPrintingGuard) {
+        this.cloudPrintingGuard = cloudPrintingGuard;
+    }
 
     @Override
     public boolean supports(String printerType) {
@@ -37,6 +44,7 @@ public class EscPosTcpPrinterTransport implements PrinterTransport {
         Integer overrideCodePage,
         String overrideFontSize
     ) {
+        cloudPrintingGuard.assertBackendTcpAllowed(printerConfig);
         try (Socket socket = new Socket()) {
             int timeout = printerConfig.timeout_ms == null ? 3000 : printerConfig.timeout_ms;
             socket.connect(
@@ -67,6 +75,7 @@ public class EscPosTcpPrinterTransport implements PrinterTransport {
         Integer overrideCodePage,
         EscPosFontTestMode fontTestMode
     ) {
+        cloudPrintingGuard.assertBackendTcpAllowed(printerConfig);
         try (Socket socket = new Socket()) {
             int timeout = printerConfig.timeout_ms == null ? 3000 : printerConfig.timeout_ms;
             socket.connect(

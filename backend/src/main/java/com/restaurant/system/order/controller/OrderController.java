@@ -63,7 +63,8 @@ public class OrderController {
 
     @PostMapping
     public ApiResponse<OrderResponse> createOrder(@Valid @RequestBody CreateOrderRequest request) {
-        authorizationService.requireForStore(request.store_id, Capability.ORDER_CREATE);
+        var user = authorizationService.requireForStore(request.store_id, Capability.ORDER_CREATE);
+        request.created_by = user.userId();
         return ApiResponse.success("Order created in draft status", orderService.createOrder(request));
     }
 

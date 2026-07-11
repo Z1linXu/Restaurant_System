@@ -1,0 +1,139 @@
+-- Production bootstrap SQL skeleton.
+--
+-- This file is an example only. Do not run it directly in production.
+-- Rehearse against staging or a temporary database first.
+-- Fill placeholders from a secure password manager and reviewed operations note.
+-- Store only BCrypt hashes, never plaintext passwords.
+
+BEGIN;
+
+-- 1. Organization
+INSERT INTO organizations (code, name, status, created_at, updated_at)
+VALUES ('<ORG_CODE>', '<ORG_NAME>', 'ACTIVE', now(), now())
+RETURNING id;
+
+-- Record the returned id as <ORG_ID>.
+
+-- 2. Store
+INSERT INTO stores (
+    code,
+    name,
+    status,
+    organization_id,
+    printing_enabled,
+    printing_mode,
+    created_at,
+    updated_at
+)
+VALUES (
+    '<STORE_CODE>',
+    '<STORE_NAME>',
+    'ACTIVE',
+    <ORG_ID>,
+    true,
+    'MOCK',
+    now(),
+    now()
+)
+RETURNING id;
+
+-- Record the returned id as <STORE_ID>.
+
+-- 3. Owner user
+-- Confirm the OWNER role id from the roles table before inserting.
+SELECT id, code FROM roles WHERE code = 'OWNER';
+
+INSERT INTO users (
+    username,
+    full_name,
+    phone,
+    role_id,
+    store_id,
+    status,
+    created_at,
+    updated_at
+)
+VALUES (
+    '<OWNER_LOGIN>',
+    '<OWNER_FULL_NAME>',
+    '<OWNER_PHONE_OPTIONAL>',
+    <OWNER_ROLE_ID>,
+    <STORE_ID>,
+    'ACTIVE',
+    now(),
+    now()
+)
+RETURNING id;
+
+-- Record the returned id as <OWNER_USER_ID>.
+
+-- 4. Owner credential
+-- Generate <OWNER_BCRYPT_HASH> offline with a trusted tool.
+-- Do not store the plaintext password in this file.
+INSERT INTO user_credentials (
+    user_id,
+    login_identifier,
+    password_hash,
+    password_algorithm,
+    is_active,
+    password_updated_at,
+    created_at,
+    updated_at
+)
+VALUES (
+    <OWNER_USER_ID>,
+    '<OWNER_LOGIN>',
+    '<OWNER_BCRYPT_HASH>',
+    'BCRYPT',
+    true,
+    now(),
+    now(),
+    now()
+);
+
+-- 5. Memberships
+INSERT INTO organization_memberships (
+    organization_id,
+    user_id,
+    role_id,
+    role_code,
+    is_active,
+    created_at,
+    updated_at
+)
+VALUES (
+    <ORG_ID>,
+    <OWNER_USER_ID>,
+    <OWNER_ROLE_ID>,
+    'OWNER',
+    true,
+    now(),
+    now()
+);
+
+INSERT INTO store_memberships (
+    organization_id,
+    store_id,
+    user_id,
+    role_id,
+    role_code,
+    is_active,
+    created_at,
+    updated_at
+)
+VALUES (
+    <ORG_ID>,
+    <STORE_ID>,
+    <OWNER_USER_ID>,
+    <OWNER_ROLE_ID>,
+    'OWNER',
+    true,
+    now(),
+    now()
+);
+
+-- 6. Optional first-store configuration
+-- Prefer Owner Admin or reviewed import scripts for menu, tables, and printers.
+-- Keep cloud first smoke testing in MOCK, DISABLED, or PAD_DIRECT mode.
+
+COMMIT;

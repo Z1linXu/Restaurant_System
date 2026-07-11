@@ -107,24 +107,19 @@ interface UseTableBoardOptions {
 export function useTableBoard(options: UseTableBoardOptions) {
   const enabled = options.enabled ?? true
   const storeId = options.storeId
-  console.count('useTableBoard render')
   const [tables, setTables] = useState<DiningTable[]>(createBaseTables)
+  const [syncError, setSyncError] = useState<string | null>(null)
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine))
   const syncInFlightRef = useRef(false)
   const syncPendingRef = useRef(false)
   const wsRefreshTimeoutRef = useRef<number | null>(null)
   const enabledRef = useRef(enabled)
 
   useEffect(() => {
-    console.count('useTableBoard effect')
-    console.log('[useTableBoard] enabled changed', {
-      enabled,
-      visibilityState: document.visibilityState,
-    })
     enabledRef.current = enabled
     if (!enabled) {
       syncPendingRef.current = false
       if (wsRefreshTimeoutRef.current !== null) {
-        console.log('[useTableBoard] clearing pending WebSocket debounce because enabled=false')
         window.clearTimeout(wsRefreshTimeoutRef.current)
         wsRefreshTimeoutRef.current = null
       }
@@ -202,56 +197,38 @@ export function useTableBoard(options: UseTableBoardOptions) {
   )
 
   const syncFromBackend = useCallback(async (options?: { force?: boolean }) => {
-    console.count('syncFromBackend called')
-    console.log('[useTableBoard] syncFromBackend requested', {
-      force: options?.force === true,
-      enabled: enabledRef.current,
-      visibilityState: document.visibilityState,
-      inFlight: syncInFlightRef.current,
-      pending: syncPendingRef.current,
-    })
     if (!enabledRef.current) {
-      console.log('[useTableBoard] syncFromBackend skipped: enabled=false')
       syncPendingRef.current = false
       return
     }
 
     if (!options?.force && document.visibilityState !== 'visible') {
-      console.log('[useTableBoard] syncFromBackend skipped: document hidden')
       return
     }
 
     if (syncInFlightRef.current) {
-      console.log('[useTableBoard] syncFromBackend queued behind in-flight sync')
       syncPendingRef.current = true
       return
     }
 
     syncInFlightRef.current = true
-    console.log('[useTableBoard] syncFromBackend start')
     try {
       do {
         syncPendingRef.current = false
         const [baseTables, activeOrders] = await Promise.all([hydrateBaseTables(), fetchActiveOrderBoardForStore(storeId)])
         if (!enabledRef.current) {
-          console.log('[useTableBoard] syncFromBackend result ignored: enabled=false after fetch')
           syncPendingRef.current = false
           return
         }
-        console.log('[useTableBoard] syncFromBackend applying table state', {
-          baseTableCount: baseTables.length,
-          activeOrderCount: activeOrders.length,
-        })
+        setSyncError(null)
         setTables(deriveTablesFromActiveOrders(baseTables, activeOrders))
       } while (enabledRef.current && syncPendingRef.current && (options?.force || document.visibilityState === 'visible'))
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : 'Unable to sync table board')
     } finally {
       syncInFlightRef.current = false
-      console.log('[useTableBoard] syncFromBackend finished', {
-        pending: syncPendingRef.current,
-        enabled: enabledRef.current,
-      })
     }
-  }, [deriveTablesFromActiveOrders, hydrateBaseTables])
+  }, [deriveTablesFromActiveOrders, hydrateBaseTables, storeId])
 
   const refreshTableAfterFinish = useCallback(
     async (baseTableLabel: string) => {
@@ -280,10 +257,7 @@ export function useTableBoard(options: UseTableBoardOptions) {
   )
 
   useEffect(() => {
-    console.count('useTableBoard effect')
-    console.log('[useTableBoard] initial sync effect evaluated', { enabled })
     if (!enabled) {
-      console.log('[useTableBoard] initial sync skipped: enabled=false')
       return
     }
 
@@ -291,74 +265,53 @@ export function useTableBoard(options: UseTableBoardOptions) {
   }, [enabled, syncFromBackend])
 
   useEffect(() => {
-    console.count('useTableBoard effect')
-    console.log('[useTableBoard] subscription/polling effect evaluated', { enabled })
     if (!enabled) {
-      console.log('[useTableBoard] subscription/polling skipped: enabled=false')
       return () => undefined
     }
 
-    const scheduleWebSocketRefresh = () => {
-      console.count('useTableBoard websocket refresh scheduled')
+    const scheduleWebSocketRefresh = (force = false) => {
       if (!enabledRef.current) {
-        console.log('[useTableBoard] WebSocket refresh ignored: enabled=false')
         return
       }
       if (document.visibilityState !== 'visible') {
-        console.log('[useTableBoard] WebSocket refresh ignored: document hidden')
         return
       }
 
       if (wsRefreshTimeoutRef.current !== null) {
-        console.log('[useTableBoard] replacing pending WebSocket debounce timeout')
         window.clearTimeout(wsRefreshTimeoutRef.current)
       }
 
       wsRefreshTimeoutRef.current = window.setTimeout(() => {
         wsRefreshTimeoutRef.current = null
         if (!enabledRef.current) {
-          console.log('[useTableBoard] debounced WebSocket sync skipped: enabled=false')
           return
         }
-        console.log('[useTableBoard] debounced WebSocket sync firing')
-        void syncFromBackend()
-      }, FRONTDESK_WS_DEBOUNCE_MS)
+        void syncFromBackend(force ? { force: true } : undefined)
+      }, force ? 100 : FRONTDESK_WS_DEBOUNCE_MS)
     }
 
-    console.log('[useTableBoard] WebSocket subscription created')
-    const unsubscribe = subscribeToFrontdeskOrders(storeId, () => {
-      console.count('useTableBoard websocket message')
-      scheduleWebSocketRefresh()
+    const unsubscribe = subscribeToFrontdeskOrders(storeId, (message) => {
+      const eventType = (message.event_type ?? '').toLowerCase()
+      const isFinishEvent = eventType === 'order.completed' || eventType === 'order.cancelled' || message.order_status === 'completed'
+      scheduleWebSocketRefresh(isFinishEvent)
     })
 
     const poller = window.setInterval(() => {
-      console.count('useTableBoard polling interval tick')
       if (!enabledRef.current) {
-        console.log('[useTableBoard] polling tick ignored: enabled=false')
         return
       }
       if (document.visibilityState !== 'visible') {
-        console.log('[useTableBoard] polling tick ignored: document hidden')
         return
       }
       void syncFromBackend()
     }, FRONTDESK_POLL_INTERVAL_MS)
-    console.log('[useTableBoard] interval created', {
-      poller,
-      intervalMs: FRONTDESK_POLL_INTERVAL_MS,
-    })
 
     const handleVisibilityChange = () => {
-      console.log('[useTableBoard] visibility changed', {
-        visibilityState: document.visibilityState,
-        enabled: enabledRef.current,
-      })
       if (!enabledRef.current) {
         return
       }
       if (document.visibilityState !== 'visible') {
         if (wsRefreshTimeoutRef.current !== null) {
-          console.log('[useTableBoard] clearing WebSocket debounce because document hidden')
           window.clearTimeout(wsRefreshTimeoutRef.current)
           wsRefreshTimeoutRef.current = null
         }
@@ -368,16 +321,29 @@ export function useTableBoard(options: UseTableBoardOptions) {
       void syncFromBackend({ force: true })
     }
 
+    const handleOnline = () => {
+      setIsOnline(true)
+      if (enabledRef.current && document.visibilityState === 'visible') {
+        void syncFromBackend({ force: true })
+      }
+    }
+
+    const handleOffline = () => {
+      setIsOnline(false)
+      setSyncError('当前设备离线，请检查网络后重试 / Device is offline. Please check the network and try again.')
+    }
+
     document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
 
     return () => {
-      console.log('[useTableBoard] WebSocket subscription cleaned up')
       unsubscribe()
-      console.log('[useTableBoard] interval cleared', { poller })
       window.clearInterval(poller)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
       if (wsRefreshTimeoutRef.current !== null) {
-        console.log('[useTableBoard] clearing WebSocket debounce during cleanup')
         window.clearTimeout(wsRefreshTimeoutRef.current)
         wsRefreshTimeoutRef.current = null
       }
@@ -442,6 +408,8 @@ export function useTableBoard(options: UseTableBoardOptions) {
   return {
     tableSlots,
     statusCounts,
+    syncError,
+    isOnline,
     startOrder,
     editOrder,
     endOrder,

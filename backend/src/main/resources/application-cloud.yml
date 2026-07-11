@@ -1,0 +1,44 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:restaurant_system}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:CHANGE_ME}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 1
+    validate-on-migrate: true
+
+server:
+  port: ${SERVER_PORT:8080}
+
+app:
+  features:
+    core-pos: true
+    printing: true
+    kds: false
+    admin: true
+    analytics: true
+    platform: false
+    developer-tools: false
+  seed:
+    runtime-enabled: true
+    force-overwrite: false
+    safe-metadata-enabled: true
+    default-users-enabled: false
+    demo-data-enabled: false
+    membership-supplement-enabled: false
+    production-bootstrap-enabled: false
+  auth:
+    jwt-secret: ${JWT_SECRET:replace-this-cloud-secret-before-production-use}
+    access-token-expiration-seconds: 2592000
+    refresh-token-expiration-days: 90
+    x-user-id-fallback-enabled: false
+  dev-tools:
+    role-switcher-enabled: false

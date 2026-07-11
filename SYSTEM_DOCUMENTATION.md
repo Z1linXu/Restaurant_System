@@ -4,6 +4,353 @@ Generated from the current codebase only. If a detail is not explicit in code, i
 
 Additional maintainable architecture document:
 - `doc/SystemDesign_Bilingual.md`
+- `doc/PAD_APP_ARCHITECTURE.md`
+- `doc/PAD_APP_PR_PROMPTS.md`
+
+## Cloud Ready PR2: Flyway Migration Baseline
+
+PR2 introduces Flyway as the versioned schema migration mechanism for pilot/cloud profiles while preserving local development convenience.
+
+Current behavior after PR2:
+
+- Local/default profile still uses JPA `ddl-auto=update` and has Flyway disabled, so existing local developer databases are not unexpectedly blocked by missing Flyway history.
+- Pilot profile uses Flyway and `spring.jpa.hibernate.ddl-auto=validate`.
+- Cloud profile is introduced through `backend/src/main/resources/application-cloud.yml` and uses Flyway plus `ddl-auto=validate`.
+- `backend/src/main/resources/db/migration/V1__baseline_current_schema.sql` is the first schema baseline.
+- The V1 baseline was generated from the current PostgreSQL schema using `pg_dump --schema-only --no-owner --no-privileges --no-comments --schema=public` and then cleaned for Flyway execution.
+- V1 intentionally captures the existing schema as-is. It does not insert seed data, rename columns, drop tables, rewrite historical records, or add aggressive new production constraints.
+- `spring.flyway.baseline-on-migrate=true` is enabled for pilot/cloud so an existing non-empty database can be marked as baseline version `1` without replaying V1 over existing tables.
+- An empty pilot/cloud database can run V1 normally to create the baseline schema.
+
+Operational notes:
+
+- Before enabling the pilot/cloud profile on an existing database, create a PostgreSQL backup with `pg_dump -Fc`.
+- Existing databases without `flyway_schema_history` should be baselined by the application/Flyway startup path before follow-up migrations are added.
+- Follow-up migrations should add indexes, data checks, data repair, and stricter constraints in small reviewed PRs.
+- The current PR does not change order submission, `completeOrder`, payment/refund behavior, print modes, Android Pad code, Store Access rules, or menu/order business flows.
+
+## Cloud Ready PR3: Production Safety Guard
+
+PR3 adds a backend startup safety guard for cloud, production, and pilot profiles.
+
+The guard lives in `backend/src/main/java/com/restaurant/system/common/config/ProductionSafetyConfig.java` and runs before regular singleton beans are created. This is intentional: unsafe cloud/prod configuration should fail fast before Hibernate, Flyway, auth, printing, or business services start normal runtime work.
+
+Strict production profiles:
+
+- `cloud`
+- `prod`
+- `production`
+
+Strict production profiles fail startup when any of the following are true:
+
+- `app.auth.jwt-secret` is empty.
+- `app.auth.jwt-secret` is shorter than 32 characters.
+- `app.auth.jwt-secret` contains `dev-local`.
+- `app.auth.jwt-secret` contains `replace-this`.
+- `app.auth.x-user-id-fallback-enabled=true`.
+- `app.dev-tools.role-switcher-enabled=true`.
+- `app.seed.force-overwrite=true`.
+- `spring.jpa.hibernate.ddl-auto` is `update`, `create`, or `create-drop`.
+- `spring.flyway.enabled=false`.
+
+Pilot profile is semi-strict. It fails startup when:
+
+- `app.auth.jwt-secret` is empty.
+- `app.auth.jwt-secret` is shorter than 32 characters.
+- `app.auth.jwt-secret` contains `replace-this`.
+- `app.auth.jwt-secret` contains `dev-local`.
+
+Local/dev behavior remains unchanged. Local development may continue using the dev JWT secret, `X-User-Id` fallback, optional Dev Role Switcher, JPA `ddl-auto=update`, and Flyway disabled.
+
+Deployment notes:
+
+- Cloud/prod must provide a strong `JWT_SECRET` through environment variables or a secret manager.
+- Cloud/prod must keep `app.auth.x-user-id-fallback-enabled=false`.
+- Cloud/prod must keep `app.dev-tools.role-switcher-enabled=false`.
+- Cloud/prod must keep `app.seed.force-overwrite=false`.
+- Cloud/prod must use Flyway and `spring.jpa.hibernate.ddl-auto=validate` or `none`.
+- If startup fails with `Production safety check failed`, fix the listed configuration item rather than bypassing the guard.
+
+## Cloud Ready PR4: RuntimeDataSeeder Production Safety
+
+PR4 makes startup seed behavior explicit so cloud, production, and pilot deployments do not silently create default accounts or demo restaurant data.
+
+Runtime seeding is controlled by:
+
+- `app.seed.runtime-enabled`
+- `app.seed.force-overwrite`
+- `app.seed.safe-metadata-enabled`
+- `app.seed.default-users-enabled`
+- `app.seed.demo-data-enabled`
+- `app.seed.membership-supplement-enabled`
+- `app.seed.production-bootstrap-enabled`
+
+Local/default seed policy:
+
+- `safe-metadata-enabled=true`
+- `default-users-enabled=true`
+- `demo-data-enabled=true`
+- `membership-supplement-enabled=true`
+- `production-bootstrap-enabled=false`
+
+This keeps local development convenient. Local startup can still create the familiar demo store, roles, demo menu, dining tables, printer settings, memberships, and default recoverable login accounts.
+
+Cloud and pilot seed policy:
+
+- `safe-metadata-enabled=true`
+- `default-users-enabled=false`
+- `demo-data-enabled=false`
+- `membership-supplement-enabled=false`
+- `production-bootstrap-enabled=false`
+
+Under cloud/pilot policy, `RuntimeDataSeeder` does not:
+
+- create or reset `owner`, `manager`, `staff`, `frontdesk`, or `kitchen` default credentials
+- reset any password to `741xu741`
+- create demo menu categories, menu items, menu item options, or demo option reconciliation
+- run fried-noodle option activation/deactivation reconciliation
+- create demo dining tables
+- create the default `192.168.2.200` printer or printer assignments
+- create ramen/noodle demo templates or KDS display configs
+- attach stores to the demo `RAMEN_NOODLE_RESTAURANT` organization
+- supplement memberships from legacy `users.store_id`
+
+Strict production profiles (`cloud`, `prod`, `production`) fail startup if any of these are enabled:
+
+- `app.seed.default-users-enabled=true`
+- `app.seed.demo-data-enabled=true`
+- `app.seed.membership-supplement-enabled=true`
+- `app.seed.production-bootstrap-enabled=true`
+
+Pilot profile fails startup if either of these are enabled:
+
+- `app.seed.default-users-enabled=true`
+- `app.seed.demo-data-enabled=true`
+
+Production bootstrap is intentionally not implemented in PR4. A future PR must provide an explicit one-time owner/admin initialization path. Until then, cloud/pilot deployments should initialize real owner credentials through a reviewed operational script or migration/runbook, not through the local/demo default `owner / 741xu741` flow.
+
+## Cloud Ready PR5: Cloud Printing Guard
+
+PR5 adds a cloud/prod printing safety boundary. Strict production profiles (`cloud`, `prod`, `production`) must not open backend TCP sockets to store-private ESC/POS printers.
+
+Blocked backend printer endpoints include:
+
+- `10.0.0.0/8`
+- `172.16.0.0/12`
+- `192.168.0.0/16`
+- `127.0.0.0/8`
+- `localhost`
+- `0.0.0.0`
+- IPv4 link-local `169.254.0.0/16`
+- IPv6 loopback, any-local, link-local, and site-local literals
+
+The first implementation intentionally checks literal IPv4, literal IPv6, `localhost`, and `0.0.0.0` without DNS resolution. Domain names are not resolved during the guard check to avoid introducing DNS blocking during print dispatch. A future enhancement may add bounded DNS resolved-private-IP detection.
+
+Cloud/prod behavior:
+
+- `REAL` mode with a blocked private/local printer endpoint fails before socket connect.
+- The related print job is marked `FAILED` with `error_code = CLOUD_PRIVATE_PRINTER_BLOCKED`.
+- The error message tells operators to use `PAD_DIRECT`, `MOCK`, `DISABLED`, or a local print bridge.
+- Order submit still succeeds; print failure does not roll back the order.
+- Print Center keeps printer configuration visible and editable, but shows a cloud/private-printer warning when applicable.
+
+Local/dev/pilot behavior:
+
+- Local development and Windows/Mac store pilot deployments may continue using `REAL` mode with LAN printer IPs.
+- `MOCK` still renders receipts and marks jobs printed without opening sockets.
+- `PAD_DIRECT` still renders jobs and leaves them pending for Android Pad local printing; the backend does not connect to the LAN printer.
+- `DISABLED` still prevents automatic dispatch using the existing cancelled-job behavior.
+
+## Cloud Ready PR6: Print Failure Visibility Hardening
+
+PR6 keeps the existing rule that print failures do not roll back order submission, but makes failures easier for staff and owners to see and act on.
+
+Backend behavior:
+
+- `PrintJobResponse` now includes `operator_message`.
+- `operator_message` is generated dynamically from existing fields such as `status`, `error_code`, `module_code`, `receipt_type`, and `printing_mode` behavior.
+- No database schema or migration is added.
+- Existing raw `error_code` and `error_message` remain available for debugging.
+- Mapped operator-facing cases include `CLOUD_PRIVATE_PRINTER_BLOCKED`, `PRINTING_DISABLED`, `ASSIGNMENT_MISSING`, `ASSIGNMENT_DISABLED`, `PRINTER_MISSING`, `PRINTER_DISABLED`, render failures, dispatch/connection failures, Pad Direct failures, and fallback unknown failures.
+
+Frontend behavior:
+
+- Frontdesk ordering checks relevant print jobs shortly after submit/update for `GRAB`, `FRONTDESK_RECEIPT`, `GRAB_UPDATE`, and `FRONTDESK_RECEIPT_UPDATE`.
+- If a relevant job is `FAILED` or `CANCELLED`, the order is still saved and the page shows a visible warning that tells staff which ticket needs attention and where to reprint.
+- After returning to the table board, `DineInPage` performs a short one-time check for the just-submitted order at approximately 1s, 3s, 6s, and 10s so asynchronous printer failures such as socket timeouts are still visible to frontdesk staff.
+- Order History loads print jobs only when an order detail is opened, avoiding list-level N+1 requests.
+- Order History displays print job status, operator message, raw error detail when useful, and keeps full-order reprint buttons.
+- Print Center marks `FAILED` and `CANCELLED` jobs as needing attention, shows `error_code`, `operator_message`, and raw error details, and keeps manual reprint behavior unchanged.
+
+Explicitly unchanged:
+
+- No automatic retry system is introduced.
+- Print Center job reprint still reprints from that job snapshot.
+- Order Center reprint still prints the full current order.
+- Print failures still do not roll back orders.
+- `MOCK`, `REAL`, `PAD_DIRECT`, and `DISABLED` print modes keep their existing dispatch semantics.
+
+## PR6.5: Chinese-First UI Copy Cleanup
+
+PR6.5 is a display-only cleanup pass. It makes the most visible staff/owner UI copy Chinese-first without introducing a full i18n system and without changing backend business behavior.
+
+Frontend behavior:
+
+- Print Center uses Chinese-first labels for printer lists, printer assignments, print jobs, reprint actions, previews, connection tests, and failure/attention states.
+- Frontdesk Ordering uses Chinese-first loading, submit/update, cancel, totals, and print-failure warning copy.
+- Order History uses Chinese-first order detail, print job, reprint, status, empty-state, and refresh copy.
+- Login, store access, and feature-disabled screens use Chinese-first user-facing copy.
+- A lightweight frontend display helper centralizes module labels, print status labels, order status labels, and print error messages.
+
+Stable internal codes are intentionally not translated:
+
+- Print modules remain `GRAB`, `FRONTDESK_RECEIPT`, `HOT_KITCHEN`, `GRAB_UPDATE`, `FRONTDESK_RECEIPT_UPDATE`, and `HOT_KITCHEN_UPDATE`.
+- Print statuses remain `PENDING`, `PRINTING`, `PRINTED`, `FAILED`, and `CANCELLED`.
+- Print error codes such as `CLOUD_PRIVATE_PRINTER_BLOCKED`, `DISPATCH_ERROR`, and `PRINTING_DISABLED` remain stable English machine codes.
+- Backend `BusinessException` messages, `GlobalExceptionHandler`, `PrintJobResponse` fields, receipt renderers, database schema, and print routing logic are unchanged.
+
+Future language work:
+
+- Full `zh-CN` / `en-US` i18n dictionaries, owner/store language preference, and backend `message_key + params` localization are deferred to a later PR.
+
+## Cloud Ready PR7-1: Frontend API Context Cleanup
+
+PR7-1 removes remaining frontend identity/store context shortcuts before cloud deployment.
+
+Frontend REST rules:
+
+- Business REST calls must use the shared `apiRequest` / `apiClient` path.
+- Frontend code must not add `X-User-Id`; `apiClient` strips the header as a defense-in-depth measure.
+- Production frontend paths must not hardcode `store_id=1`, `storeId=1`, or `DEFAULT_STORE_ID`.
+- Draft order creation no longer sends `created_by: 1`; the backend fills `created_by` from the authenticated JWT user after store/capability authorization.
+
+Admin context cleanup:
+
+- Platform Admin draft JSON now uses the active store workspace context instead of falling back to store `1`.
+- Menu Management and Dining Tables editor normalization use the active store as fallback when a backend record omits `store_id`.
+- Missing related ids such as organization, category, station, role, or menu item are left empty/zero-like for the operator to correct instead of silently targeting store `1`.
+
+Explicitly unchanged:
+
+- KDS/Pickup polling cleanup is deferred to PR7-2.
+- Order lifecycle, printing dispatch semantics, payment/refund, `completeOrder`, Android App code, and database schema are unchanged.
+
+## Cloud Ready PR7-2: Printer Restaurant Mode KDS/Pickup Route Guard
+
+PR7-2 documents the current Printer Restaurant Mode frontend boundary without changing business code.
+
+Current Printer Restaurant Mode:
+
+- `PRINTING=true`
+- `KDS=false`
+- `HOT_KITCHEN` printing module enabled
+
+KDS/Pickup display behavior:
+
+- When `KDS=false`, `/pickup`, `/kds/*`, `/stores/{storeId}/pickup`, and `/stores/{storeId}/kds/*` render `FeatureDisabledPage`.
+- Because those pages do not mount, KDS/Pickup hooks do not run.
+- Frontdesk, Order Center, Owner/Admin, Print Center, Menu, Dining Tables, Staff, Audit, and Reports pages should not create `/api/v1/kds/*`, `/api/v1/kitchen-tasks/*`, or KDS WebSocket polling/subscriptions while KDS is disabled.
+
+Important distinction:
+
+- `HOT_KITCHEN` printing module and `HOT_KITCHEN` KDS display page are separate features.
+- Disabling KDS/Pickup display pages does not disable `HOT_KITCHEN` print assignment, Test HOT_KITCHEN, automatic HOT_KITCHEN print job creation, Print Center visibility, or reprint behavior.
+
+Future work:
+
+- If `KDS=true` is re-enabled, do a dedicated KDS/Pickup polling cleanup PR before production use. Current KDS/Pickup display hooks still use short polling and should be converted to WebSocket-first, visibility-aware fallback polling before the feature is used operationally.
+
+## Cloud Ready PR7A: HOT_KITCHEN Print Routing With Stable Semantics
+
+PR7A enables the `HOT_KITCHEN` printing module for heat-line / fry / wok / fried-egg workflows while keeping `COLD_KITCHEN`, `BAR`, and `TAKEOUT_RECEIPT` reserved.
+
+Routing rules:
+
+- Fried items route to `HOT_KITCHEN` by stable station/category metadata:
+  - primary: `kitchen_tasks.station_code = DEEPFRIED`
+  - fallback: `order_items.category_code_snapshot in (FRIED, DEEPFRIED)`
+- Chow mein routes to `HOT_KITCHEN` by stable station/category/SKU metadata:
+  - primary: `kitchen_tasks.station_code = WOK`
+  - fallback: `order_items.category_code_snapshot = FRIED_NOODLE`
+  - fallback: known chow-mein `menu_items.sku`
+- Noodle items route to `HOT_KITCHEN` only when they include fried egg semantics:
+  - extra fried egg: `order_item_options.option_code_snapshot = fried_egg`
+  - combo fried egg: `option_group_snapshot = COMBO_EGG` and `option_code_snapshot = combo_fried_egg`
+  - current `menu_item_options.option_code` is used only as fallback for older snapshots.
+  - Chinese/English display-name checks are legacy fallback only and are centralized in `OptionSemanticResolver`.
+
+Dispatch behavior:
+
+- Initial order submit still dispatches `GRAB` and `FRONTDESK_RECEIPT`.
+- Submit additionally dispatches `HOT_KITCHEN` only when the order has hot-kitchen content.
+- Update Order still dispatches `GRAB_UPDATE` and `FRONTDESK_RECEIPT_UPDATE`.
+- Update Order additionally dispatches `HOT_KITCHEN_UPDATE` only when the current `order_update_batch_id` has hot-kitchen content.
+- If an order or update batch has no hot-kitchen content, no `HOT_KITCHEN` print job is created. This avoids blank failed jobs.
+- Manual order reprint supports `HOT_KITCHEN`, but rejects orders without hot-kitchen content before creating a print job.
+- `HOT_KITCHEN` Test Module Print uses the real renderer path with synthetic wok and fried-egg examples.
+- Combo side tasks such as combo edamame, shredded potato, or cucumber salad do not inherit the main combo item's fried-egg eligibility. Synthetic combo side kitchen tasks route to `HOT_KITCHEN` only if their own task station is hot, such as `DEEPFRIED` or `WOK`.
+
+Renderer behavior:
+
+- `HotKitchenReceiptRenderer` renders only eligible hot-kitchen tasks.
+- For noodle items routed because of fried egg, the ticket prints the whole kitchen-facing item line, not just an isolated egg.
+- The renderer reuses `kitchen_tasks.special_instructions_snapshot` so HOT_KITCHEN output stays aligned with existing GRAB/kitchen shorthand where possible.
+
+Print Center behavior:
+
+- `HOT_KITCHEN` assignment is active and editable.
+- `Test HOT_KITCHEN` is available.
+- `COLD_KITCHEN`, `BAR`, and `TAKEOUT_RECEIPT` remain Future / Reserved.
+
+Explicitly unchanged:
+
+- GRAB and FRONTDESK_RECEIPT routing/rendering semantics are unchanged.
+- Print failures still do not roll back orders.
+- No automatic retry system is introduced.
+- No database migration is added.
+- Payment/refund, completeOrder semantics, Android Pad, Pad Direct worker, and order lifecycle are unchanged.
+
+## Pad App Architecture PR 1
+
+`doc/PAD_APP_ARCHITECTURE.md` defines the proposed independent Android Pad shell architecture. This is documentation only and does not change runtime behavior.
+
+Key decisions:
+
+- `Restaurant_System` remains the stable Web + Backend source of truth.
+- A separate `restaurant-pad-app` should host the Android WebView / Capacitor shell.
+- The Pad App should reuse the current React frontend build instead of rewriting POS UI.
+- Backend remains responsible for orders, menu, auth, store workspace, owner multi-store access, print jobs, and receipt rendering.
+- Android native code should execute local LAN ESC/POS printing through a Pad-local printer bridge.
+- `PAD_DIRECT` printing mode creates and renders print jobs on the backend while the Pad claims, prints, and reports completion/failure locally.
+- The Android WebView shell serves the bundled frontend from `https://restaurant-pad.local`; backend REST APIs under `/api/**` must allow that origin through CORS. WebSocket origin configuration alone does not cover login or other REST calls.
+- Cloud servers must not directly connect to store-private `192.168.x.x` printers.
+- Current `MOCK`, `REAL`, and `DISABLED` printing modes must remain available for local testing, Windows pilot, and operations.
+
+The document also records the claim/lease anti-duplicate-print mechanism, device registration APIs, `print_jobs` / `store_devices` schema additions, Android native printing POC plan, environment configuration, risks, and follow-up PR sequence.
+
+`doc/PAD_APP_PR_PROMPTS.md` expands the follow-up work into PR2-PR8 execution prompts. It is a planning document only and does not implement Android, backend APIs, database migrations, frontend runtime changes, or printing behavior changes.
+
+Pad App PR2 has added an independent `restaurant-pad-app/` skeleton with documentation and placeholder directories only. It does not add Android runtime files, install dependencies, load frontend assets, implement printing, or modify existing backend/frontend business behavior.
+
+Pad App PR3 adds an independent Android WebView shell POC under `restaurant-pad-app/android`. It is isolated from the current Restaurant_System frontend/backend runtime. The shell serves bundled assets from Android assets, falls back to `index.html` for path-based routes, and stores a runtime API base URL in Android preferences. It does not implement printing, `PAD_DIRECT`, or print job integration.
+
+Pad App PR4 adds a code-level native TCP printer test POC under `restaurant-pad-app/android`. It exposes `RestaurantPrinter.testConnection(...)` and `RestaurantPrinter.printRawTcp(...)` to a Pad-only test page. This POC sends raw bytes only, does not print restaurant orders, does not use `print_jobs`, and requires manual hardware QA with a real Android Pad and LAN ESC/POS printer.
+
+Pad App PR5 adds backend/frontend recognition for `PAD_DIRECT` printing mode. In `PAD_DIRECT`, the backend creates `print_jobs`, resolves assignment/printer, renders `rendered_text_snapshot`, and leaves jobs `PENDING` for Android Pad local printing. The backend does not open TCP printer sockets in this mode. Existing `MOCK`, `REAL`, and `DISABLED` modes remain available.
+
+Pad App PR6 adds backend device registration and Pad Direct print job APIs. Store devices are recorded in `store_devices`; the raw device token is returned only at registration and only a SHA-256 hash is stored. Pad clients authenticate with `X-Device-Id` and `X-Device-Token`, poll pending jobs for their store, claim a job with a lease, fetch the rendered/ESC-POS base64 payload, and report complete/fail/release. Claiming uses an atomic database update so only one Pad can own a `PENDING` job at a time; expired claims can be reclaimed.
+
+Pad Direct JPA entities use camelCase Java properties mapped to snake_case database columns with `@Column(name = "...")`. Spring Data derived repository methods must reference Java property names such as `storeId`, `deviceTokenHash`, `claimedByDeviceId`, and `claimExpiresAt`, never database column names such as `store_id`.
+
+Pad App PR7 surfaces the PR6 queue state in Print Center. `/admin/settings/printing` shows registered Pad Direct devices, last seen/app/platform status, job execution mode, claimed device id, claim lease expiration, printed device id, and whether a Pad Direct preview has an ESC/POS base64 payload.
+
+Pad App PR11A adds a debug/local Web App URL mode to the Android shell. The shell can now load `http://{developer-lan-ip}:5173` directly for LAN production-preview testing, letting the frontend continue to use relative `/api` and `/ws` paths through the Vite preview proxy to backend `localhost:8080`. If no Web App URL is configured, the existing bundled assets mode at `https://restaurant-pad.local/index.html` remains available with the runtime API Base URL bridge. Debug builds allow local HTTP cleartext and WebView debugging; release/default assets mode still keeps cleartext disabled by default.
+
+## Web POS Field Compatibility Fixes
+
+- Submitted/preparing/ready order updates still require an `idempotency_key`, but the frontend now generates it through a compatibility helper instead of directly calling `crypto.randomUUID()`. The helper falls back to `crypto.getRandomValues()` and then a timestamp/random suffix for older iPad/Pad browsers on local HTTP pages.
+- GRAB kitchen instructions keep `加上海青` as a full modifier name. Green onion/cilantro can still use the existing green-shortening rules, but bok choy must not be collapsed to `加青`.
+- The shared frontend API client applies request timeouts and normalizes offline/network-timeout failures so long-running frontdesk/menu pages can recover after Android browser network suspension instead of leaving requests pending indefinitely.
 
 ## Phase 1 Store Access Backend Scope
 
@@ -39,7 +386,9 @@ Submitted order editing now uses immutable old lines plus transactional update b
 - Printing is registered after commit. A print failure cannot roll back the order update.
 - `is_modified_after_submit` remains a UI/KDS indicator only; it is not used to select update ticket lines.
 - GRAB update jobs use receipt type `GRAB_UPDATE`, retain `order_update_batch_id`, and render only items tagged with that exact batch.
-- Automatic updates do not print FRONTDESK_RECEIPT.
+- FRONTDESK update jobs use receipt type `FRONTDESK_RECEIPT_UPDATE`, retain `order_update_batch_id`, and render only items tagged with that exact batch.
+- FRONTDESK update receipts are marked `UPDATED` / `Added items only`; their subtotal, tax, and total are calculated from the added batch lines rather than the full order.
+- FRONTDESK receipts display combo side dishes under the combo main item, including combo side remove instructions such as `走花生`, so staff can pack takeout combo sides correctly.
 - Manual reprint always renders the complete current order.
 
 The occupied table card now exposes `Edit Order`, `Print`, and `Finish` in that order. Print choices come from `GET /api/v1/orders/{orderId}/print-options`; unavailable modules include a reason rather than being hardcoded in the client.
@@ -4669,6 +5018,8 @@ Print Center `/admin/settings/printing` now shows:
 - failed print jobs counter with a high-visibility warning state
 - failed print jobs
 - recent print jobs
+- Pad Direct registered devices with last seen, app version, platform, and active status
+- Pad Direct claim state on recent/failed jobs, including claimed device, lease expiration, printed device, and payload availability
 - manual reprint action
 - delete printer action, blocked when the printer is still assigned to any module
 - assignment-level enable/disable controls; physical printer configs are not disabled from normal operations
@@ -4753,13 +5104,13 @@ This pass keeps existing POS/KDS/Print Center architecture intact and applies fo
 ### Edit Order Update Printing
 
 - Submitted/preparing/ready orders can still be edited through the existing staged update flow.
-- After `Update Order`, the frontend now requests a GRAB update ticket instead of only checking the original submit print job.
-- The update ticket uses the existing `/api/v1/orders/{orderId}/reprint` API with `update_ticket=true`.
-- `PrintDispatcherServiceImpl` renders update tickets through the normal assignment and printer routing path.
-- GRAB update tickets print a large `UPDATED` marker and filter render data to items/tasks marked `is_modified_after_submit=true`.
+- After `Update Order`, the backend automatically creates GRAB and FRONTDESK_RECEIPT update print jobs after the update transaction commits.
+- Update print jobs use the normal assignment and printer routing path.
+- GRAB update tickets print a large `UPDATED` marker and filter render data to items/tasks whose `order_update_batch_id` matches the committed batch.
+- FRONTDESK update receipts print `UPDATED` / `Added items only`, filter render data to the same `order_update_batch_id`, and show subtotal/tax/total for the added batch only.
+- FRONTDESK update receipts include combo side dish lines and combo side remove instructions under the combo main item.
 - This does not re-submit the order and does not recreate kitchen tasks.
-- Current limitation: the update ticket uses the existing `is_modified_after_submit` flag, so an item previously modified after submission can still appear on a later update ticket until a more granular per-update diff snapshot is added.
-- `FRONTDESK_RECEIPT` is not automatically reprinted on edit/update; customer receipt reprint remains a manual Order Center action to avoid confusing duplicate customer receipts.
+- Manual Print / Reprint remains a complete current-order print and does not use the update batch filter.
 
 ### Takeout Receipt Copies
 
@@ -4777,7 +5128,8 @@ This pass keeps existing POS/KDS/Print Center architecture intact and applies fo
 ### Frontdesk Receipt Combo Ordering
 
 - `FRONTDESK_RECEIPT` now prints `Combo` before the item name.
-- Example: `Combo 大碗传统牛肉面 Large x1`.
+- Example: `1 x Combo 大碗传统牛肉面 Large`.
+- Combo side dishes are printed beneath the combo main line for packing visibility, for example `小菜: 拌黄瓜` followed by side-specific requests such as `走花生`.
 - GRAB kitchen tickets are unchanged and continue to focus on production instructions.
 
 ### Frontend Cache Versioning
@@ -4797,15 +5149,16 @@ This pass keeps existing POS/KDS/Print Center architecture intact and applies fo
 
 ### Mock Printing Mode
 
-Print Center supports three store-level runtime modes through `stores.printing_mode`:
+Print Center supports four store-level runtime modes through `stores.printing_mode`:
 
 - `REAL`: production/default mode. Renderers generate receipt text and the ESC/POS TCP transport connects to the configured printer IP/port.
 - `MOCK`: no-printer local testing mode. Renderers still run and print jobs are created, but the dispatcher never opens a socket connection. Jobs are marked `PRINTED` with attempt message `Mock print succeeded - no physical printer used`.
+- `PAD_DIRECT`: Android Pad local-printing mode. Renderers still run and print jobs are created with `rendered_text_snapshot` and `escpos_payload_base64`, but the backend leaves jobs `PENDING` for Pad clients to claim, print locally, and report complete/fail/release. The backend does not open a socket connection to the physical printer in this mode.
 - `DISABLED`: automatic printing is off. Order submission still succeeds and order-triggered print jobs are cancelled with `PRINTING_DISABLED`.
 
 The legacy `stores.printing_enabled` field is retained for compatibility:
 
-- `REAL` and `MOCK` set `printing_enabled = true`.
+- `REAL`, `MOCK`, and `PAD_DIRECT` set `printing_enabled = true`.
 - `DISABLED` sets `printing_enabled = false`.
 - If `printing_mode` is missing, the backend falls back to `printing_enabled=false -> DISABLED`, otherwise `REAL`.
 
@@ -4818,6 +5171,19 @@ Mock mode behavior:
 - Recent/Failed Print Jobs include `Preview Receipt`, which opens the saved rendered receipt text.
 - Test Print, Test GRAB, Test FRONTDESK_RECEIPT, Order Center reprint, and Print Center reprint all honor Mock mode.
 - Connection test in Mock mode returns mock success and does not attempt TCP connection.
+
+Pad Direct behavior:
+
+- Store devices are registered through `POST /api/v1/devices/register` by an authorized store admin/manager using normal Bearer authentication.
+- Registration returns a raw device token once; the backend stores only `device_token_hash`.
+- Runtime Pad worker requests authenticate with `X-Device-Id` and `X-Device-Token`.
+- `GET /api/v1/stores/{storeId}/printing/jobs/pending` returns `PAD_DIRECT` jobs that are `PENDING` or have expired `CLAIMED` leases.
+- `POST /api/v1/printing/jobs/{jobId}/claim` atomically changes the job to `CLAIMED` and records `claimed_by_device_id`, `claimed_at`, `claim_expires_at`, and `client_attempt_token`.
+- `GET /api/v1/printing/jobs/{jobId}/payload` returns the rendered receipt text plus `escpos_payload_base64` only to the device that owns the claim.
+- `POST /api/v1/printing/jobs/{jobId}/complete` marks the job `PRINTED`.
+- `POST /api/v1/printing/jobs/{jobId}/fail` marks the job `FAILED`, records the error, and increments `retry_count`.
+- `POST /api/v1/printing/jobs/{jobId}/release` returns the job to `PENDING` without counting it as a print failure.
+- `print_job_attempts` records Pad Direct attempts with `device_id`, `transport_type = PAD_DIRECT`, `client_attempt_token`, status, error, and raw result metadata.
 - Backend logs include:
   ```text
   ===== MOCK PRINT START =====
@@ -5162,3 +5528,697 @@ Printer Restaurant Mode behavior:
 - If KDS is disabled, Owner Home does not call KDS live endpoints, mount KDS hooks, or create KDS polling/WebSocket subscriptions.
 
 Phase 3 still does not implement Platform Admin, SaaS billing/subscription, Display Rules / Print Rules, or organization-level settings UI.
+
+## Cloud Ready PR8: Cloud Deployment Architecture Package
+
+PR8 adds a template-only cloud deployment package under `deployment/cloud/`. It does not connect to any server, deploy any image, change runtime business behavior, or introduce production secrets.
+
+Package contents:
+
+- `README_CLOUD_DEPLOYMENT.md`: cloud architecture, environment setup, safety guards, printing boundary, and smoke test checklist.
+- `README_ROLLBACK.md`: application rollback, database restore, Flyway rollback cautions, and printing stabilization notes.
+- `.env.example`: blank deployment placeholders only; the filled `.env` must stay outside git.
+- `docker-compose.yml`: backend, frontend/Nginx, and optional local PostgreSQL profile for rehearsal.
+- `nginx.conf.example`: static frontend serving plus `/api` and `/ws` reverse proxy examples.
+- `application-cloud.yml.example`: documentation-only environment mapping for the cloud profile.
+- `deploy.sh`, `backup-db.sh`, `restore-db.sh`, `health-check.sh`: local templates for compose validation/start, database backup/restore, and reachability checks.
+
+Important boundaries:
+
+- Windows pilot deployment remains separate under `deployment/windows-pilot/`.
+- Cloud deployment should use `spring.profiles.active=cloud`, Flyway, production safety guards, and RuntimeDataSeeder cloud-safe settings.
+- Cloud deployment must not rely on development default accounts; the production owner/bootstrap runbook remains future work.
+- Cloud servers must not directly connect to private LAN printers. Use `MOCK`, `DISABLED`, `PAD_DIRECT`, or a local print bridge for real store printing.
+- `HOT_KITCHEN` remains a printing module, but physical printer transport follows the same cloud printing boundary.
+
+PR8 intentionally does not modify backend business code, frontend app code, database migrations, Android code, payment/refund behavior, `completeOrder`, or printing route semantics.
+
+## Cloud Ready PR9-10: Production Bootstrap Runbook And Final Smoke Checklist
+
+PR9-10 adds documentation-only cloud launch preparation under `deployment/cloud/`.
+
+New documents:
+
+- `README_PRODUCTION_BOOTSTRAP.md`: safe manual runbook for first cloud organization, store, owner, memberships, menu/table/printer setup, and rollback notes.
+- `FINAL_SMOKE_TEST_CHECKLIST.md`: copy-paste checklist covering pre-deploy, cloud environment, backend startup, frontend, bootstrap, POS, printing, KDS-disabled mode, admin pages, backup/restore, long-running pilot, no-go conditions, accepted pilot limitations, and monitoring.
+- `bootstrap-template.sql.example`: placeholder-only SQL skeleton for reviewed bootstrap rehearsal. It is not a production-ready script and must not contain plaintext passwords or real hashes.
+
+Important boundaries:
+
+- PR9-10 does not implement a production bootstrap CLI/API.
+- PR9-10 does not connect to a server, deploy anything, or write secrets.
+- Cloud bootstrap must not depend on local/demo default users or RuntimeDataSeeder demo data.
+- Owner credentials must be generated securely, stored as BCrypt hashes, and handed to the owner through an out-of-band secure process.
+- Menu, table, and printer setup should use reviewed import data or Owner Admin, not cloud demo seed.
+- Cloud print mode should start with `MOCK`, `DISABLED`, `PAD_DIRECT`, or a local bridge; cloud backend direct LAN printer transport remains blocked.
+
+PR9-10 intentionally does not modify backend runtime code, frontend runtime code, database migrations, Android code, payment/refund behavior, `completeOrder`, order lifecycle, printing routing, or Pad Direct worker behavior.
+
+## PR11A-Hotfix: Android Local Ordering UX Fixes
+
+PR11A-Hotfix is a focused Android local preview ordering/display cleanup. It does not change order lifecycle, pricing, payment/refund behavior, database schema, Pad Direct, Android native printing, or print dispatch semantics.
+
+Frontend ordering behavior:
+
+- Menu item cards show a touch-friendly stepper (`- 2 +`) when the current order already contains that `menu_item_id`; cards with zero quantity keep the standalone circular `+` add button.
+- The stepper quantity totals all current active order rows with the same menu item id, including rows with different options, notes, or combo selections.
+- Menu card `+` preserves existing behavior: quick-add items add directly, while items requiring customization open the customization modal.
+- Menu card `-` only targets mutable rows. In edit-order mode, previously submitted/locked rows are not modified; if multiple mutable rows share the same menu item id, the latest row is decremented first.
+- Drink-style items with stable metadata such as `categoryCode=DRINK`, `categoryCode=ALCOHOL`, `categoryCode=MILK_TEA`, `itemType=drink`, or `itemType=beverage` quick-add directly when they do not have required customization.
+- Fried items keep the existing no-customization quick-add behavior.
+- Noodles, combo-capable items, and any item with required customization still open the customization modal.
+- Ordering layout avoids a full-page hard fixed shell. The category list, menu list, and order panel use reasonable max heights so menu items and order rows scroll independently without compressing the order panel to a single row.
+- Ordering layout reserves bottom safe-area padding so Android WebView navigation controls do not cover the order summary footer or submit/update buttons.
+
+Printing display behavior:
+
+- Split table storage remains unchanged (`T1-A`, `T1-B`, etc.).
+- Receipt/ticket display maps split suffixes for human-readable output:
+  - `-A` -> `-左`
+  - `-B` -> `-右`
+- `GRAB`, `FRONTDESK_RECEIPT`, and `HOT_KITCHEN` renderers share the same backend display formatter for table labels.
+- Pickup/takeout labels are not transformed by the split-table formatter.
+
+## PR11B: Android App Web Shortcut Control Panel
+
+PR11B adds a lightweight Android shell Local Control Panel. It is a Web shortcut
+and local debugging panel only. It does not implement Pad Direct, native
+ESC/POS printing, native Print Center, native Menu Management, payment/refund
+behavior, `completeOrder`, backend APIs, frontend POS runtime logic, database
+migrations, or cloud deployment changes.
+
+Control Panel behavior:
+
+- Long press inside the Android Pad App opens the Local Control Panel.
+- The panel preserves Local Preview Web App URL and Bundled Assets API Base URL
+  configuration.
+- The panel displays current WebView URL, configured Web App URL, and current
+  mode (`Local Preview Mode` or `Bundled Assets Mode`).
+- The panel provides shortcuts for Frontdesk, Order Center, Print Center, Menu
+  Management, Dining Tables, page refresh, and Web App URL reachability testing.
+- `Save Settings / 保存配置` and the dialog `Save` action both persist Local
+  Preview Web App URL, Bundled Assets API Base URL, and local printer-test
+  IP/port/timeout to Android `SharedPreferences`.
+- `Test Printer Connection` and `Test Print` persist only the local printer-test
+  IP/port/timeout; they do not save the Web App URL.
+- If the current URL contains `/stores/{storeId}/`, shortcuts use
+  store-scoped routes. If no store id is available, shortcuts use legacy routes
+  such as `/frontdesk` or `/admin/settings/printing`; the Web frontend handles
+  redirecting those routes through normal auth/store access checks.
+- Android native code does not read WebView localStorage, reuse bearer tokens,
+  or call backend printing/menu/order APIs directly.
+- `Test Web App URL` only checks the configured Web App URL reachability and
+  does not test backend business APIs.
+
+## PR11D-1: Android Native TCP Printer Connection Test POC
+
+PR11D-1 makes the existing Android native TCP printer bridge usable from the
+Local Control Panel for real hardware testing. It does not implement
+`PAD_DIRECT` worker behavior, device registration, pending job polling, claim,
+payload fetch, complete/fail/release, backend business API calls, Android
+background printing, payment/refund behavior, `completeOrder` changes, database
+migrations, or frontend POS runtime changes.
+
+Local Control Panel printer test behavior:
+
+- The panel stores local test-only settings in Android `SharedPreferences`:
+  `printer_test_ip`, `printer_test_port`, and `printer_test_timeout_ms`.
+- `Test Printer Connection` opens a TCP socket from the Android Pad to the
+  configured printer endpoint and reports a clear success/failure message.
+- `Test Print` builds a fixed local ESC/POS test ticket in Android and sends it
+  through the native raw TCP bridge.
+- The fixed test ticket includes English text, Chinese text, printer endpoint,
+  current timestamp, line feeds, and a cut command.
+- The test payload is built locally and encoded primarily with GBK for Chinese
+  printer compatibility testing.
+- The feature does not store device tokens, backend secrets, or WebView bearer
+  tokens and does not upload printer IP to the backend.
+
+Operational notes:
+
+- Android Pad and printer must be on the same LAN.
+- Default ESC/POS raw TCP port is `9100`.
+- Timeout defaults to `3000ms` and is configurable in the panel.
+- Common failures include timeout, connection refused, unreachable host,
+  write failure, Chinese encoding mismatch, and unsupported cut command.
+- This POC is the recommended hardware step before connecting Android to
+  backend `PAD_DIRECT` device registration and print job claim APIs.
+
+## PR11D-2: Pad Device Pairing Via Web Print Center And Android Bridge
+
+PR11D-2 adds Pad Direct device pairing only. It does not implement pending jobs,
+claim, payload fetch, native order printing, complete/fail/release, lease
+renewal, retry, or an Android background worker.
+
+Pairing flow:
+
+- The operator opens Web Print Center inside the Android Pad App.
+- The Pad Direct devices section shows `配对本机 Pad` only when the Android
+  `window.RestaurantPadDevice` bridge is available.
+- A normal browser cannot save Pad credentials and shows a disabled pairing
+  prompt instead.
+- The Web page calls the existing backend device registration API with the
+  logged-in Web bearer token and current store id.
+- The backend returns the raw `device_token` only in the registration response.
+- The Web page immediately calls
+  `window.RestaurantPadDevice.saveDeviceCredentials(...)` and does not persist
+  the raw token in browser storage.
+- Android saves `device_id`, `device_token`, `store_id`, device name,
+  registration time, app version, and platform in local native preferences.
+- Android Local Control Panel shows paired/unpaired status, device id, store id,
+  device name, registration time, and token last four characters only.
+- `Clear Pairing / 清除配对` requires confirmation and removes the local device
+  credentials.
+
+Security and scope:
+
+- Android native code does not read WebView `localStorage`, does not reuse Web
+  bearer tokens, and does not directly call bearer-token backend business APIs.
+- `SharedPreferences` storage is acceptable for this local pilot pairing step.
+  Before production Pad Direct worker rollout, migrate `device_token` storage to
+  `EncryptedSharedPreferences` or Android Keystore-backed storage.
+- Store device registration/listing accepts store-scoped
+  `admin:printing_manage` or the legacy broader `admin:store_config`, so current
+  `FRONTDESK` staff can pair this store's Pad without receiving
+  `admin:store_config`, Staff Management, Audit Logs, or Platform Admin access.
+- Backend `StoreAccessService` still enforces store scope. A URL store id or
+  Web UI visibility is not treated as authorization.
+- The next recommended Pad Direct step is a pending jobs viewer, not an
+  automatic print worker.
+
+## PR11D-3: Android PAD_DIRECT Pending Jobs Viewer
+
+PR11D-3 adds a read-only Pending Print Jobs area to the Android Local Control
+Panel. It does not implement claim, payload fetch, native order printing,
+complete/fail/release, lease renewal, retry, automatic polling, WebSocket
+subscriptions, or a background worker.
+
+Viewer behavior:
+
+- If the Android Pad is not paired, the panel shows `请先配对本机 Pad` and the
+  pending jobs refresh button is disabled.
+- If paired, the panel shows saved device/store status and allows manual
+  `Refresh Pending Print Jobs / 刷新待打印任务`.
+- The Android native request uses device authentication headers:
+  `X-Device-Id` and `X-Device-Token`.
+- The Android shell does not use the Web bearer token and does not read WebView
+  `localStorage`.
+- Local Preview mode calls the configured Web App origin, for example
+  `http://{developer-lan-ip}:5173/api/v1/stores/{storeId}/printing/jobs/pending?limit=25`,
+  relying on Vite preview to proxy `/api` to backend `localhost:8080`.
+- Bundled Assets mode falls back to the configured API Base URL origin.
+- The list displays job id, order id, module code, status, created time, printer
+  endpoint, claimed device/lease when present, and operator/error message when
+  present.
+
+Operational notes:
+
+- Store printing mode must be `PAD_DIRECT` for submitted orders to become
+  pending Pad jobs.
+- No paper should print from this viewer.
+- `401/403` is shown as device authentication failure and should be fixed by
+  re-pairing the Pad.
+- Network failures are shown as Web App URL / Wi-Fi / `preview:lan` / backend
+  troubleshooting prompts.
+- PR11D-4 builds on this viewer with a manual claim + print happy path while
+  still avoiding a long-running automatic worker.
+
+## PR11D-4: Android PAD_DIRECT Manual Claim And Native Print Happy Path
+
+PR11D-4 added the first manual one-job `领取并打印` action to the Android Local
+Control Panel pending jobs list. The original PR11D-4 scope did not include an
+automatic worker, automatic polling, batch claim, lease renewal, release,
+retry/backoff, explicit `PRINTING` state changes, database migrations, order
+lifecycle changes, payment/refund changes, or `completeOrder` changes. PR11D-5
+/ PR11D-6 / PR11D-7 later upgraded the runtime flow with `start-print`,
+`PRINTING`, and foreground semi-auto mode.
+
+Manual flow:
+
+- The operator manually refreshes pending jobs.
+- The operator taps one job's `领取并打印` button.
+- Android generates a `client_attempt_token`.
+- Android claims the job with `X-Device-Id` and `X-Device-Token`.
+- Android marks the job `PRINTING` through `start-print`.
+- Android fetches the ESC/POS payload for the claimed/printing job.
+- Android decodes `escpos_payload_base64` and sends it to the configured local
+  LAN printer with the native TCP bridge.
+- On native print success, Android calls the backend complete API.
+- If payload fetch or native TCP print fails after claim, Android calls the
+  backend fail API so Print Center shows the job as `FAILED`.
+
+Operational boundaries:
+
+- The backend still does not open a printer socket for `PAD_DIRECT`.
+- The Android shell does not use the Web bearer token and does not read WebView
+  `localStorage`.
+- The manual button processes only one job at a time and disables itself while
+  work is in progress.
+- A `409` claim response is shown as `任务已被其他 Pad 领取`.
+- `401/403` is shown as device authentication failure and should be fixed by
+  re-pairing the Pad.
+- Printer IP/port/timeout come from the Android Local Control Panel's local
+  printer settings.
+
+Original PR11D-4 pilot limitations:
+
+- If a claim lease expires while a device is still printing, another Pad could
+  reclaim the job. PR11D-5/6/7 now reduces this risk with `PRINTING` and
+  foreground semi-auto mode, but encrypted storage, force release, and
+  long-running worker hardening are still future work.
+- Device token storage still uses Android `SharedPreferences` for local pilot
+  testing and must move to encrypted storage before production worker rollout.
+
+## PR11D-5/6/7: PAD_DIRECT Safe Semi-Auto Printing
+
+PR11D-5/6/7 hardens the Android Pad Direct pilot from manual printing toward a
+safe foreground semi-auto workflow. It does not add an Android background
+service, boot receiver, WebSocket worker, database migration, order lifecycle
+change, payment/refund behavior, `completeOrder` change, menu/order business
+logic change, cloud deployment change, or REAL-mode server-side printing change.
+
+Backend duplicate-print hardening:
+
+- PAD Direct now supports `POST /api/v1/printing/jobs/{jobId}/start-print`.
+- `start-print` is device-authenticated with `X-Device-Id` and
+  `X-Device-Token`.
+- Only the device that owns the claim and matching `client_attempt_token` can
+  start printing.
+- `start-print` moves the job from `CLAIMED` to `PRINTING`, extends
+  `claim_expires_at`, and records the active attempt.
+- Payload fetch, complete, and fail accept the claimed device from either
+  `CLAIMED` or `PRINTING`, preserving compatibility with the earlier manual
+  client.
+- Ordinary claim can reclaim `PENDING` or expired `CLAIMED` jobs only; active
+  or expired `PRINTING` jobs are not automatically stolen by another Pad.
+
+Android pilot behavior:
+
+- Manual `领取并打印` now runs:
+  `claim -> start-print -> payload -> assigned printer TCP print -> complete/fail`.
+- Local Control Panel includes explicit `Start Auto Print / 开启自动处理打印任务`
+  and `Stop Auto Print / 停止自动处理` controls.
+- A paired Pad auto-starts one foreground/headless semi-auto worker when the App
+  opens or returns to the foreground. Opening the Control Panel attaches visible
+  controls to the same worker instead of creating a second polling loop.
+- When the Control Panel opens on a paired Pad, it also starts the same worker if
+  it is not already running. The start path is guarded by the existing
+  single-worker flag, so reopening the panel or refreshing the WebView does not
+  create duplicate polling loops.
+- If auto-start cannot run, Android logs the error and shows a top-panel warning.
+- Semi-auto mode is foreground-only and operator controlled through the panel.
+- It polls pending jobs at a small interval only while enabled, processes one
+  job at a time, and uses the same safe flow as manual printing.
+- It stops on device auth, backend, payload, or printer failures instead of
+  retrying forever.
+- It stops when the Android app leaves the foreground and resumes the same
+  worker when the app returns, as long as it was running before the lifecycle
+  stop. Manual Stop still disables auto processing until started again.
+- `PENDING / Waiting Pad / Attempt 0` means no Pad has successfully claimed the
+  job. In that state the backend is not stuck in processing; the Android worker
+  has not consumed the queue yet.
+- Android logcat emits `Worker Started`, `Worker Poll Queue`, `Job Picked`,
+  `Job Processing`, `Job Finished`, `Job Failed`, `Worker Stopped`, and
+  `Worker Exception` markers for PAD_DIRECT troubleshooting.
+- Backend logs emit PAD_DIRECT pending/claim/start/payload/complete/fail events
+  when the Android worker reaches the server APIs.
+
+Print Center visibility:
+
+- `PRINTING` status is visible in recent/attention print jobs.
+- Claim owner device and claim expiry are shown for Pad Direct jobs.
+- Expired `CLAIMED` jobs warn that another Pad may reclaim them.
+- Expired `PRINTING` jobs warn operators to confirm whether paper already
+  printed before reprinting, because blind reprint may duplicate tickets.
+
+Pilot limitations still remaining:
+
+- Device credentials are still stored in Android `SharedPreferences`; production
+  should migrate to `EncryptedSharedPreferences` or Android Keystore-backed
+  storage.
+- No Android long-running foreground service or background daemon.
+- No lease renewal loop during very long physical prints.
+- No force-release / mark-failed operator tooling.
+- No device-to-printer or device-to-module affinity.
+- If physical printing succeeds but complete fails, staff must reconcile in
+  Print Center before reprinting.
+
+## PR11D-8: PAD_DIRECT Multi-Printer Routing
+
+PR11D-8 changes PAD_DIRECT execution from a single Android-local default printer
+to backend-assigned printer routing. It does not add database migrations,
+device-printer affinity, Android background services, force release tooling,
+encrypted credential storage, order lifecycle changes, payment/refund changes,
+`completeOrder` changes, menu/order business logic changes, PrintDispatcher
+routing changes, or REAL-mode server-side printing changes.
+
+Routing model:
+
+- Print Center remains the source of truth for module-to-printer assignment.
+- `print_jobs.printer_id` is reused as the assigned printer reference.
+- No new table or column is added.
+- PAD_DIRECT payload now returns assigned printer fields:
+  `printer_id`, `printer_name`, `printer_host`, `printer_port`,
+  `printer_endpoint`, `paper_width_mm`, `text_encoding`, `escpos_code_page`,
+  and `timeout_ms`.
+- Android manual and foreground semi-auto flows print to
+  `printer_host:printer_port` from the payload.
+- The Local Control Panel printer IP/port fields are only for local printer
+  connection tests and fixed test tickets, not real PAD_DIRECT order routing.
+- PAD_DIRECT ESC/POS payload generation uses the effective module font size:
+  `printer_assignments.font_size` first, then `printer_configs.font_size`, then
+  `MEDIUM`. This keeps Web Print Center assignment changes and Android/iPad
+  local printing behavior consistent.
+
+Operational behavior:
+
+- Any paired Pad for the store may claim any module job: `GRAB`,
+  `FRONTDESK_RECEIPT`, or `HOT_KITCHEN`.
+- Backend atomic claim and `PRINTING` state still prevent duplicate claim/print.
+- If payload is missing assigned printer details, Android fails the job with
+  `ANDROID_ASSIGNED_PRINTER_MISSING`.
+- If the Pad cannot reach the assigned printer, Android fails the job with
+  `ANDROID_ASSIGNED_PRINTER_UNREACHABLE` and stops the worker.
+- Print Center job tables show printer id, name, and endpoint for verification.
+- PR11D-12 adds structured native printer diagnostics for assigned printer
+  failures. Android records `native_error_code`, `phase`, `bytes_written`,
+  exception class/message, endpoint, job/module, printer id/name, and device id
+  without logging ESC/POS payloads or device tokens.
+- Android now maps assigned-printer failures to more specific error codes:
+  `ANDROID_PRINTER_CONNECT_TIMEOUT`,
+  `ANDROID_PRINTER_CONNECTION_REFUSED`,
+  `ANDROID_PRINTER_NETWORK_UNREACHABLE`,
+  `ANDROID_PRINTER_WRITE_FAILED`,
+  `ANDROID_PRINTER_FLUSH_FAILED`, or fallback
+  `ANDROID_NATIVE_PRINT_FAILED`.
+- Safe short retry is limited to connect-phase failures where
+  `phase=CONNECT`, `bytes_written=0`, and the native code is `TIMEOUT`,
+  `CONNECTION_REFUSED`, or `UNREACHABLE`. Android retries the same job/device/
+  endpoint after 500ms and 1500ms, then reports `FAILED` and stops the worker.
+- `WRITE` and `FLUSH` failures are never retried automatically because the
+  printer may have already received part or all of the ticket. Staff must check
+  physical paper output before reprinting.
+- `retry_count` remains a failure counter/display value only. It does not
+  requeue failed jobs and the worker does not consume `FAILED` jobs.
+
+Pilot limitations:
+
+- Printer endpoints are resolved from current `printer_configs` through
+  `print_jobs.printer_id`; there is no printer endpoint snapshot column.
+- If a printer IP is changed after a job is already pending, payload uses the
+  latest config for that printer id.
+- Each Pad must be on a LAN/VLAN that can reach all printers it may claim.
+- Device-printer/module affinity is intentionally not implemented in this PR.
+
+## PR11D-9: PAD_DIRECT Immediate Print Trigger
+
+PR11D-9 adds a frontend-to-Android quick trigger for current-Pad order
+submissions. It does not add WebSocket printing, Android background services,
+backend state-machine changes, order lifecycle changes, payment/refund changes,
+or `completeOrder` changes.
+
+Behavior:
+
+- When an order submit or edit-order update succeeds inside the Android Pad
+  WebView, the web frontend calls `window.RestaurantPadDevice.kickPrintWorker`.
+- If the Pad Direct semi-auto worker is not enabled, the kick is ignored and no
+  automatic printing starts.
+- If the worker is busy, Android records a pending kick and starts a quick check
+  as soon as the current job finishes.
+- If the worker is idle, Android cancels the normal idle tick, polls after
+  roughly 300 ms, retries once about 700 ms later if no job is visible, then
+  returns to normal adaptive polling.
+- Normal polling remains required for jobs submitted by other Pads, browser
+  clients, reprint actions, and recovery after missed triggers.
+
+This quick window exists because order submission may commit before the
+after-commit asynchronous print dispatch has created PAD_DIRECT `print_jobs`.
+
+## PR11D-13: PAD_DIRECT Android Worker Lost Tick Hardening
+
+PR11D-13 hardens the Android foreground/headless PAD_DIRECT worker against the
+long-run case where Print Center shows `PENDING / Waiting Pad / Attempt 0`
+because no Pad is consuming the queue. It does not change PAD_DIRECT
+claim/start-print/payload/complete/fail semantics, pending query rules,
+PrintDispatcher routing, order lifecycle, payment/refund behavior,
+`completeOrder`, database schema, automatic reprint, or failed-job requeue.
+
+Android worker reliability changes:
+
+- The worker now tracks explicit state: stopped, starting, waiting, polling,
+  processing job, stopping, and error-stopped.
+- The Local Control Panel shows whether auto processing is enabled, whether the
+  worker is actually running, the current device/store, last poll time, last poll
+  result count, whether the next poll is scheduled, watchdog status, current
+  job/module/printer, last start reason, last stop reason, and last error.
+- Manual Stop persists `pad_direct_auto_enabled=false`; after that, app start or
+  foreground resume will not secretly restart automatic printing.
+- Pairing or manual Start enables auto processing and starts the single worker.
+- The worker records `pollScheduled`, `lastPollAt`, and `lastPollFinishedAt` so
+  operators can distinguish “no jobs” from “worker stopped polling”.
+- A lightweight watchdog checks foreground workers. If auto processing is
+  enabled, the app is foreground, no job is in progress, and the worker has not
+  polled for more than roughly 10 seconds, Android logs
+  `Worker Watchdog Rescheduled` and schedules a fresh poll.
+- App pause/stop/destroy cancels future polling. If auto processing was enabled,
+  the app foregrounds again, and the previous stop was lifecycle-related, the
+  worker safely resumes. Native printing that is already in progress is not
+  force-interrupted, but the worker will not pull new jobs while backgrounded.
+- Error stops remain visible and require a manual restart from the Control
+  Panel, avoiding hidden restart loops after auth/backend/printer failures.
+
+Logging changes:
+
+- Android PAD_DIRECT worker logs use the `RestaurantPadWorker` tag.
+- Logs include `Worker Started`, `Worker Stopped`, `Worker Poll Scheduled`,
+  `Worker Poll Started`, `Worker Poll Result`, `Worker Picked`,
+  `Worker Job Processing`, `Worker Job Finished`, `Worker Job Failed`,
+  `Worker Exception`, `Worker Watchdog Rescheduled`, and lifecycle actions.
+- Android logs do not print device tokens or ESC/POS payloads.
+- Backend pending polling logs now keep returned job counts greater than zero at
+  INFO while returned zero jobs is DEBUG, reducing idle log noise while keeping
+  actionable queue-consumption evidence.
+
+## PR11D-14: PAD_DIRECT Restaurant Pilot Preventive Hardening
+
+PR11D-14 is a preventive hardening pass for restaurant PAD_DIRECT pilot testing.
+It does not change order lifecycle, payment/refund behavior, `completeOrder`,
+menu/order business rules, PrintDispatcher routing, PAD_DIRECT claim/start/
+payload/complete/fail semantics, failed-job requeue behavior, automatic reprint,
+Android background daemon behavior, or device-printer affinity.
+
+Android Local Control Panel visibility:
+
+- The worker status panel shows auto processing enabled/disabled, worker state,
+  app foreground, device/store id, last poll time, last poll result count, last
+  poll duration, oldest pending job age, last queue delay, last job processing
+  duration, consecutive errors, scheduled poll/watchdog state, current job/
+  module/printer endpoint, last start reason, last stop reason, and last error.
+- If auto processing is disabled, the panel explicitly says no `PENDING` jobs
+  will be consumed.
+- If the worker is `ERROR_STOPPED`, the panel tells the operator to check the
+  displayed reason and restart manually.
+- If the worker appears stale for more than roughly 10 seconds while idle, the
+  watchdog reschedules a poll and the panel warns the operator.
+- While auto processing is enabled, the app is foregrounded, and the worker is
+  running, Android keeps the screen awake. The flag is cleared when auto
+  processing stops or the app backgrounds. PR11D-14 hotfix ensures this window
+  flag update is always marshalled to the Android main thread so a background
+  print worker cannot fail a job with `CalledFromWrongThreadException`.
+
+Metrics and logs:
+
+- Android `RestaurantPadWorker` logs include both the existing human-readable
+  markers and stable markers such as `worker_started`, `worker_stopped`,
+  `poll_start`, `poll_end`, `job_picked`, `claim_duration_ms`,
+  `start_print_duration_ms`, `payload_duration_ms`, `tcp_print_duration_ms`,
+  `complete_duration_ms`, `fail_duration_ms`, and `job_finished`.
+- Android logs do not print device tokens or ESC/POS payloads.
+- Backend PAD_DIRECT pending polling logs returned-zero jobs at DEBUG and
+  returned-positive jobs at INFO with `oldestJobAgeMs`.
+- Backend claim success logs `queueDelayMs`.
+
+Print Center visibility:
+
+- Print job rows show job age, queue delay, total time, claim time, print/fail
+  time, claimed device, printed device, printer endpoint, and retry count.
+- PAD_DIRECT `PENDING` jobs older than 30 seconds show a warning that they are
+  waiting for Pad processing.
+- PAD_DIRECT `PENDING` jobs older than 2 minutes show danger messaging that the
+  Pad may not be running or auto processing may have stopped.
+- `PRINTING` stale and `FAILED` jobs remain visible and require manual operator
+  review before reprint.
+
+Database/index note:
+
+- PR11D-14 does not add a schema migration. PR11D-15 should evaluate a low-risk
+  index for the PAD_DIRECT pending query, such as
+  `(store_id, execution_mode, status, created_at, id)` plus a claim-expiry helper
+  if real pilot `EXPLAIN ANALYZE` data shows the pending poll becomes slow.
+
+Restaurant pilot checklist:
+
+- See `restaurant-pad-app/docs/PAD_DIRECT_RESTAURANT_PILOT_CHECKLIST.md` for
+  before-arrival checks, 20-order field test steps, failure-state interpretation,
+  and PR11D-15 index follow-up.
+
+## PR11E-A: PAD_DIRECT Worker Recovery And Frontdesk Print Health
+
+PR11E-A hardens the Android PAD_DIRECT foreground worker against temporary
+network/API interruptions and exposes worker health directly in frontdesk
+ordering pages. It does not add Android background daemon behavior, automatic
+FAILED-job requeue, automatic reprint, database migrations, order lifecycle
+changes, payment/refund behavior, `completeOrder` changes, or any bypass of the
+`PRINTING` duplicate-print guard.
+
+Android worker recovery policy:
+
+- `pad_direct_auto_enabled` is now treated as a user preference only. It is set
+  to true by pairing/manual Start and set to false only by manual Stop or clear
+  pairing.
+- Temporary pending-poll/backend/API failures enter `RECOVERING` instead of
+  permanently stopping the worker. Auto processing remains enabled.
+- Recovery backoff is 2s, 5s, 10s, then 30s. When the backend/network recovers,
+  the worker resumes normal polling without requiring the operator to reopen
+  the Control Panel.
+- `RECOVERING` is visible in Android Control Panel and in the frontdesk print
+  health banner. The watchdog does not mistake intentional recovery backoff for
+  a lost poll tick.
+- High-risk states still stop the worker for operator review: device auth
+  401/403, TCP write/flush failures, successful local TCP print followed by
+  complete API failure, failed failure-reporting, manual Stop, and other states
+  where automatic continuation could duplicate or hide a print.
+- Printer connect failures still use the safe short connect retry behavior from
+  PR11D-12. If still unreachable, the current job is failed and the worker stops
+  so the operator can inspect the assigned printer.
+
+Android bridge additions:
+
+- `RestaurantPadDevice.getPrintWorkerStatus()` returns auto-enabled, worker
+  state, recovering/error-stopped flags, last poll time, last error, stop reason,
+  device/store id, current job/module/printer endpoint, and recovery backoff
+  metadata.
+- `RestaurantPadDevice.kickPrintWorker(...)` can now wake an idle worker,
+  queue a pending kick while busy, immediately retry a `RECOVERING` worker, or
+  restart an `ERROR_STOPPED` worker only when the caller explicitly passes
+  operator-confirmed recovery metadata.
+- If auto processing is disabled by the user, kick requests are ignored and do
+  not secretly restart automatic printing.
+
+Frontdesk visibility:
+
+- `/frontdesk` table board and Android landscape ordering pages show a print
+  health banner.
+- In Android Pad App, the banner shows whether automatic printing is running,
+  recovering, stopped, or disabled, plus the latest worker/device/store status.
+- In a normal desktop/iPad browser without the Android bridge, the banner says
+  that print executor status is only visible inside Android Pad App.
+- The `检查打印 / 唤醒打印` button calls the Android bridge. It wakes idle
+  workers, triggers a recovery poll, queues a pending kick if a job is already
+  running, and asks for confirmation before recovering an error-stopped worker.
+
+## PR11E-BF: Frontdesk Sync, Receipt Routing, And Ordering UI Fixes
+
+This patch keeps the existing order lifecycle, payment/refund behavior,
+PAD_DIRECT duplicate-print guard, and printing failure/no-auto-reprint policy.
+
+Behavior:
+
+- Finish table/order continues to publish the existing `order.completed`
+  realtime event on the store `frontdesk/orders` topic. Frontdesk table boards
+  treat completed/cancelled realtime events as urgent and run a short forced
+  refresh instead of waiting for the normal 30 second fallback poll.
+- HOT_KITCHEN tickets now show `外卖 / TAKEOUT` at the bottom for pickup/takeout
+  orders. HOT_KITCHEN item lines are merged only when stable identity inputs
+  match: menu item id, category/combo/station, stable option group/type/code/id
+  keys, notes, and kitchen instruction snapshot. Different spicy levels,
+  add-ons, removes, or notes remain separate.
+- Update-ticket dispatch pre-renders update modules before creating a print job.
+  If a module has no printable content for that update batch, such as a beverage
+  only update for `GRAB_UPDATE`, the dispatcher skips that module instead of
+  creating a `RENDERED_CONTENT_BLANK` failed job. Other modules in the same
+  update still dispatch independently.
+- FRONTDESK_RECEIPT displays noodle spicy level using stable option
+  type/group/code metadata and prints the user-facing option label only as
+  display text.
+- Noodle customization modals include the same notes/special-instructions field
+  below add-ons/removes. The right-side order summary can still display/edit
+  notes, and the submitted payload still uses the existing `notes` field.
+
+## PR11D-14G: Ordering Combo Option Ordering
+
+PR11D-14G is a frontend-only ordering UI polish for Android Pad WebView and
+desktop browser ordering. It does not change backend menu models, option ids,
+option codes, option groups, parent option relationships, price calculation,
+order submit payloads, kitchen task generation, HOT_KITCHEN routing, printing
+routing, payment/refund behavior, or `completeOrder`.
+
+Behavior:
+
+- For noodle menu items, the customization modal renders the combo / 套餐
+  section at the top of the option area before size, soup base, noodle type,
+  and spicy level.
+- Noodle detection uses stable category codes such as `SOUP_NOODLE`,
+  `DRY_NOODLE`, `FRIED_NOODLE`, `NOODLE`, and `NOODLES`, with a structural
+  legacy fallback to existing noodle customization groups when old local data
+  lacks category codes.
+- Combo detection uses the existing normalized `customization.combo` data that
+  is built from stable combo option semantics. It does not rely on scattered
+  Chinese or English display-name checks in the modal.
+- Non-noodle items keep their previous option display order, and drink/fried
+  quick-add behavior is unchanged.
+
+## PR11C: Frontdesk User Menu And Staff Store Tools Access
+
+PR11C adds a Web frontdesk user menu for Android Pad and browser workflows. It
+does not add Android native pages, Pad Direct, native ESC/POS printing,
+payment/refund behavior, `completeOrder` changes, order lifecycle changes,
+database migrations, or print routing changes.
+
+Frontdesk user menu behavior:
+
+- The round chef icon in the frontdesk top-left area is a touch-friendly user
+  menu button.
+- The menu shows the current user, current role, Printing, Menu Management, and
+  Logout.
+- Printing opens the current store workspace route:
+  `/stores/{storeId}/admin/settings/printing` when a store context exists, or
+  legacy `/admin/settings/printing` otherwise.
+- Menu Management opens `/stores/{storeId}/admin/menu/items` when a store
+  context exists, or legacy `/admin/menu/items` otherwise.
+- Logout uses the normal Web auth logout flow, clears tokens/auth state, and
+  returns to `/login`.
+
+Authorization policy:
+
+- This restaurant configuration intentionally allows `FRONTDESK` staff to
+  access store-scoped Print Center and Menu Management.
+- `FRONTDESK` receives `admin:menu_manage` and `admin:printing_manage`.
+- `FRONTDESK` does not receive `admin:store_config`,
+  `admin:user_role_manage`, or `admin:history_limit`.
+- Staff Management, Audit Logs, Platform Admin, Owner Home, and other owner
+  admin routes remain blocked for `FRONTDESK`.
+- Store scope remains enforced by backend `StoreAccessService`; URL store ids
+  are not trusted as authorization.
+
+Owner Admin shell behavior:
+
+- When `FRONTDESK` enters allowed admin tools, the shell only exposes Menu
+  Management, Printing Settings, and Sign out.
+- Owner, Admin, and Manager navigation remains unchanged.
+
+PR11C hotfix notes:
+
+- The frontdesk user menu and logout confirmation render in a fixed portal layer
+  so table cards and table board stacking contexts cannot cover them.
+- Logout requires explicit confirmation with touch-friendly Cancel and Logout
+  actions.
+- `FRONTDESK` Store Tools uses a lightweight top toolbar instead of the full
+  owner sidebar to keep Printing Settings and Menu Management usable on Android
+  Pad landscape screens.
+- Store Tools exposes a `返回前台` shortcut back to
+  `/stores/{storeId}/frontdesk` when a store context exists, or `/frontdesk`
+  otherwise.
+- Printing Settings falls back to current store context when `FRONTDESK` cannot
+  load platform overview data; this does not grant Platform Admin, Staff, or
+  Audit access.

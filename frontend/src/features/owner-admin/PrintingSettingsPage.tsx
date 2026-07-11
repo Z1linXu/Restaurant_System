@@ -2,11 +2,17 @@ import { useEffect, useMemo, useState } from 'react'
 import { isFeatureEnabled } from '../feature-flags/featureConfig'
 import { fetchPlatformOverview, type PlatformAdminOverview } from '../../services/platformAdminService'
 import { useCurrentStore } from '../store/StoreContext'
+import { ApiRequestError } from '../../services/apiClient'
 import {
   deletePrinterConfig,
+  disableStoreDevice,
   fetchPrintJobs,
   fetchPrintCenterOverview,
+  fetchStoreDevices,
+  renameStoreDevice,
+  registerStoreDevice,
   reprintPrintJob,
+  revokeStoreDevice,
   savePrinterConfig,
   triggerPrinterConnectionTest,
   triggerCurrentFontSizeTest,
@@ -21,38 +27,71 @@ import {
   type PrintJobRecord,
   type PrinterAssignmentRecord,
   type PrinterConfigRecord,
+  type StoreDeviceRecord,
 } from '../../services/printingAdminService'
+import {
+  moduleDisplayLabel,
+  printJobDisplayLabel,
+  printJobOperatorDisplayMessage as displayPrintJobOperatorMessage,
+  printStatusDisplayLabel,
+} from '../../utils/displayLabels'
+import {
+  getAndroidPadDeviceBridge,
+  parseAndroidBridgeJson,
+  type AndroidPadDeviceStatus,
+} from '../../types/androidPadBridge'
 
 type ToastState = { kind: 'success' | 'error'; message: string } | null
 
 type PrinterEditorState = PrinterConfigRecord
-type PrintingMode = 'REAL' | 'MOCK' | 'DISABLED'
+type PrintingMode = 'REAL' | 'MOCK' | 'DISABLED' | 'PAD_DIRECT'
 
 const MODULE_OPTIONS = [
-  { code: 'GRAB', label: 'GRAB', future: false },
-  { code: 'FRONTDESK_RECEIPT', label: 'FRONTDESK_RECEIPT', future: false },
-  { code: 'HOT_KITCHEN', label: 'HOT_KITCHEN', future: true },
-  { code: 'COLD_KITCHEN', label: 'COLD_KITCHEN', future: true },
-  { code: 'BAR', label: 'BAR', future: true },
-  { code: 'TAKEOUT_RECEIPT', label: 'TAKEOUT_RECEIPT', future: true },
+  { code: 'GRAB', label: moduleDisplayLabel('GRAB'), future: false },
+  { code: 'FRONTDESK_RECEIPT', label: moduleDisplayLabel('FRONTDESK_RECEIPT'), future: false },
+  { code: 'HOT_KITCHEN', label: moduleDisplayLabel('HOT_KITCHEN'), future: false },
+  { code: 'COLD_KITCHEN', label: moduleDisplayLabel('COLD_KITCHEN'), future: true },
+  { code: 'BAR', label: moduleDisplayLabel('BAR'), future: true },
+  { code: 'TAKEOUT_RECEIPT', label: moduleDisplayLabel('TAKEOUT_RECEIPT'), future: true },
 ] as const
 
 const FONT_SIZE_OPTIONS = [
-  { value: 'XS', label: 'Extra Small' },
-  { value: 'SMALL', label: 'Small' },
-  { value: 'MEDIUM', label: 'Medium' },
-  { value: 'LARGE', label: 'Large' },
-  { value: 'XL', label: 'Extra Large' },
+  { value: 'XS', label: '极小 XS' },
+  { value: 'SMALL', label: '小号 SMALL' },
+  { value: 'MEDIUM', label: '中号 MEDIUM' },
+  { value: 'LARGE', label: '大号 LARGE' },
+  { value: 'XL', label: '超大 XL' },
 ] as const
 
+const CLOUD_PRIVATE_PRINTER_BLOCKED = 'CLOUD_PRIVATE_PRINTER_BLOCKED'
+const CLOUD_PRIVATE_PRINTER_WARNING =
+  '云端服务器不能直接连接店内局域网打印机。请切换到 PAD_DIRECT、MOCK、DISABLED，或使用本地打印桥。'
+
 const PRINTING_MODE_OPTIONS: Array<{ value: PrintingMode; label: string; description: string }> = [
-  { value: 'REAL', label: 'Real Printer / 真实打印机', description: 'Connect to configured ESC/POS printers over TCP.' },
-  { value: 'MOCK', label: 'Mock / 无打印机测试模式', description: 'Render receipts and mark print jobs successful without socket connections.' },
-  { value: 'DISABLED', label: 'Disabled / 关闭打印', description: 'Do not dispatch automatic printing.' },
+  { value: 'REAL', label: '真实打印机 REAL', description: '通过 TCP 连接已配置的 ESC/POS 打印机。' },
+  { value: 'MOCK', label: '无打印机测试 MOCK', description: '只生成小票预览并模拟打印成功，不连接实体打印机。' },
+  { value: 'PAD_DIRECT', label: '平板本地打印 PAD_DIRECT', description: '后端排队打印任务，由 Android Pad 本地领取并打印。' },
+  { value: 'DISABLED', label: '关闭打印 DISABLED', description: '订单照常提交，但不自动打印。' },
 ]
 
 function asString(value: unknown, fallback = '') {
   return typeof value === 'string' ? value : fallback
+}
+
+function buildStoreOnlyOverview(storeId: number, storeName: string): PlatformAdminOverview {
+  return {
+    organizations: [],
+    templates: [],
+    stores: [{ id: storeId, name: storeName }],
+    roles: [],
+    users: [],
+    stations: [],
+    dining_tables: [],
+    menu_categories: [],
+    menu_items: [],
+    menu_item_options: [],
+    kds_display_configs: [],
+  }
 }
 
 function defaultPrinter(storeId: number): PrinterEditorState {
@@ -73,7 +112,7 @@ function defaultPrinter(storeId: number): PrinterEditorState {
 
 function formatDateTime(value?: string | null) {
   if (!value) {
-    return 'Never'
+    return '从未'
   }
   const parsed = new Date(value)
   if (Number.isNaN(parsed.getTime())) {
@@ -87,21 +126,131 @@ function formatDateTime(value?: string | null) {
   })
 }
 
+function formatAgo(value?: string | null) {
+  const timestamp = timestampMs(value)
+  if (timestamp == null) {
+    return '从未在线'
+  }
+  const ageMs = Math.max(0, Date.now() - timestamp)
+  const minutes = Math.floor(ageMs / 60000)
+  if (minutes < 1) {
+    return '刚刚在线'
+  }
+  if (minutes < 60) {
+    return `${minutes} 分钟前`
+  }
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) {
+    return `${hours} 小时前`
+  }
+  const days = Math.floor(hours / 24)
+  return `${days} 天前`
+}
+
+function lastSeenTone(value?: string | null) {
+  const timestamp = timestampMs(value)
+  if (timestamp == null) {
+    return 'bg-[rgba(97,0,0,0.08)] text-[var(--primary)]'
+  }
+  const ageMs = Math.max(0, Date.now() - timestamp)
+  if (ageMs <= 10 * 60 * 1000) {
+    return 'bg-[rgba(18,141,77,0.12)] text-[rgb(25,112,69)]'
+  }
+  if (ageMs <= 24 * 60 * 60 * 1000) {
+    return 'bg-[rgba(180,120,20,0.16)] text-[rgb(130,82,14)]'
+  }
+  return 'bg-[rgba(97,0,0,0.08)] text-[var(--primary)]'
+}
+
+function isVeryOldDevice(value?: string | null) {
+  const timestamp = timestampMs(value)
+  return timestamp == null || Date.now() - timestamp > 7 * 24 * 60 * 60 * 1000
+}
+
+function timestampMs(value?: string | null) {
+  if (!value) {
+    return null
+  }
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed.getTime()
+}
+
+function durationLabel(ms: number | null) {
+  if (ms == null || ms < 0) {
+    return '-'
+  }
+  if (ms < 1000) {
+    return `${ms}ms`
+  }
+  const seconds = Math.floor(ms / 1000)
+  if (seconds < 60) {
+    return `${seconds}s`
+  }
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = seconds % 60
+  if (minutes < 60) {
+    return remainingSeconds ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`
+  }
+  const hours = Math.floor(minutes / 60)
+  const remainingMinutes = minutes % 60
+  return remainingMinutes ? `${hours}h ${remainingMinutes}m` : `${hours}h`
+}
+
+function jobAgeMs(job: PrintJobRecord) {
+  const createdAt = timestampMs(job.created_at)
+  return createdAt == null ? null : Math.max(0, Date.now() - createdAt)
+}
+
+function queueDelayMs(job: PrintJobRecord) {
+  const createdAt = timestampMs(job.created_at)
+  const claimedAt = timestampMs(job.claimed_at)
+  return createdAt == null || claimedAt == null ? null : Math.max(0, claimedAt - createdAt)
+}
+
+function totalJobTimeMs(job: PrintJobRecord) {
+  const createdAt = timestampMs(job.created_at)
+  const finishedAt = timestampMs(job.printed_at ?? job.failed_at ?? null)
+  return createdAt == null || finishedAt == null ? null : Math.max(0, finishedAt - createdAt)
+}
+
+function pendingAgeNotice(job: PrintJobRecord): { message: string; tone: 'warning' | 'danger' } | null {
+  if (job.execution_mode !== 'PAD_DIRECT' || job.status !== 'PENDING') {
+    return null
+  }
+  const ageMs = jobAgeMs(job)
+  if (ageMs == null) {
+    return null
+  }
+  if (ageMs > 120000) {
+    return {
+      message: 'Pad 可能未运行或自动处理已停止。',
+      tone: 'danger',
+    }
+  }
+  if (ageMs > 30000) {
+    return {
+      message: '等待 Pad 处理。',
+      tone: 'warning',
+    }
+  }
+  return null
+}
+
 function connectionBadge(printer: PrinterConfigRecord) {
   if (printer.last_connection_success_at) {
     return {
-      label: `Connected: ${formatDateTime(printer.last_connection_success_at)}`,
+      label: `连接成功：${formatDateTime(printer.last_connection_success_at)}`,
       className: 'bg-[rgba(18,141,77,0.12)] text-[rgb(25,112,69)]',
     }
   }
   if (printer.last_connection_failed_at) {
     return {
-      label: `Failed: ${formatDateTime(printer.last_connection_failed_at)}`,
+      label: `连接失败：${formatDateTime(printer.last_connection_failed_at)}`,
       className: 'bg-[rgba(97,0,0,0.08)] text-[var(--primary)]',
     }
   }
   return {
-    label: 'Not tested',
+    label: '未测试',
     className: 'bg-white text-[var(--muted)]',
   }
 }
@@ -116,11 +265,114 @@ function statusTone(status: PrintJobRecord['status']) {
   if (status === 'PRINTING') {
     return 'bg-[rgba(38,86,160,0.12)] text-[rgb(38,86,160)]'
   }
+  if (status === 'CLAIMED') {
+    return 'bg-[rgba(118,77,21,0.14)] text-[rgb(118,77,21)]'
+  }
+  if (status === 'CANCELLED') {
+    return 'bg-[rgba(118,77,21,0.14)] text-[rgb(118,77,21)]'
+  }
   return 'bg-[rgba(26,28,25,0.08)] text-[var(--muted)]'
 }
 
+function isPastDateTime(value?: string | null) {
+  if (!value) {
+    return false
+  }
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) {
+    return false
+  }
+  return parsed.getTime() < Date.now()
+}
+
+function padDirectClaimNotice(job: PrintJobRecord): { message: string; tone: 'warning' | 'danger' | 'info' } | null {
+  if (job.execution_mode !== 'PAD_DIRECT') {
+    return null
+  }
+  if (job.status === 'PRINTING' && isPastDateTime(job.claim_expires_at)) {
+    return {
+      message: 'Pad 正在打印但领取已过期：可能已经出纸，请确认后再重打，避免重复打印。',
+      tone: 'danger',
+    }
+  }
+  if (job.status === 'PRINTING') {
+    return {
+      message: 'Pad 正在本地打印，请等待完成回报。',
+      tone: 'info',
+    }
+  }
+  if (job.status === 'CLAIMED' && isPastDateTime(job.claim_expires_at)) {
+    return {
+      message: 'Pad 已领取但未开始打印且已过期：其他 Pad 可以重新领取。',
+      tone: 'warning',
+    }
+  }
+  if (job.status === 'CLAIMED') {
+    return {
+      message: 'Pad 已领取，等待开始打印。',
+      tone: 'info',
+    }
+  }
+  return null
+}
+
+function padDirectNoticeToneClass(tone: 'warning' | 'danger' | 'info') {
+  if (tone === 'danger') {
+    return 'bg-[rgba(151,34,34,0.1)] text-[rgb(116,22,22)]'
+  }
+  if (tone === 'warning') {
+    return 'bg-[rgba(180,120,20,0.16)] text-[rgb(130,82,14)]'
+  }
+  return 'bg-[rgba(38,86,160,0.1)] text-[rgb(38,86,160)]'
+}
+
+function printJobNeedsAttention(job: PrintJobRecord) {
+  const padNotice = padDirectClaimNotice(job)
+  const pendingNotice = pendingAgeNotice(job)
+  return job.status === 'FAILED'
+    || job.status === 'CANCELLED'
+    || padNotice?.tone === 'danger'
+    || padNotice?.tone === 'warning'
+    || pendingNotice?.tone === 'danger'
+    || pendingNotice?.tone === 'warning'
+}
+
+function printJobOperatorMessage(job: PrintJobRecord) {
+  return displayPrintJobOperatorMessage(job)
+}
+
+function printJobNativeDiagnostics(job: PrintJobRecord) {
+  const source = `${job.error_message ?? ''}\n${job.operator_message ?? ''}`
+  const read = (key: string) => {
+    const match = source.match(new RegExp(`${key}=([^;\\n]+)`))
+    return match?.[1]?.trim() ?? ''
+  }
+  const nativeErrorCode = read('native_error_code')
+  const phase = read('phase')
+  const endpoint = read('endpoint')
+  const bytesWritten = read('bytes_written')
+  const exceptionClass = read('exception_class')
+  const deviceId = read('device_id')
+  if (!nativeErrorCode && !phase && !endpoint && !bytesWritten && !exceptionClass && !deviceId) {
+    return null
+  }
+  return {
+    nativeErrorCode,
+    phase,
+    endpoint,
+    bytesWritten,
+    exceptionClass,
+    deviceId,
+  }
+}
+
+function parseAndroidPadStatus(rawStatus: string): AndroidPadDeviceStatus | null {
+  return parseAndroidBridgeJson<AndroidPadDeviceStatus>(rawStatus)
+}
+
 export function PrintingSettingsPage() {
-  const { storeId } = useCurrentStore()
+  const currentStore = useCurrentStore()
+  const { storeId } = currentStore
   const [overview, setOverview] = useState<PlatformAdminOverview | null>(null)
   const [printCenter, setPrintCenter] = useState<PrintCenterOverview | null>(null)
   const [selectedStoreId, setSelectedStoreId] = useState(String(storeId))
@@ -130,25 +382,53 @@ export function PrintingSettingsPage() {
   const [error, setError] = useState<string | null>(null)
   const [printerEditor, setPrinterEditor] = useState<PrinterEditorState | null>(null)
   const [printJobs, setPrintJobs] = useState<PrintJobRecord[]>([])
+  const [storeDevices, setStoreDevices] = useState<StoreDeviceRecord[]>([])
   const [jobsLoading, setJobsLoading] = useState(false)
   const [jobsError, setJobsError] = useState<string | null>(null)
+  const [devicesLoading, setDevicesLoading] = useState(false)
+  const [devicesError, setDevicesError] = useState<string | null>(null)
   const [testingAllConnections, setTestingAllConnections] = useState(false)
   const [previewJob, setPreviewJob] = useState<PrintJobRecord | null>(null)
+  const [padBridgeAvailable, setPadBridgeAvailable] = useState(false)
+  const [padDeviceStatus, setPadDeviceStatus] = useState<AndroidPadDeviceStatus | null>(null)
+  const [pairingPad, setPairingPad] = useState(false)
+
+  const refreshPadDeviceStatus = () => {
+    const bridge = getAndroidPadDeviceBridge()
+    setPadBridgeAvailable(Boolean(bridge))
+    if (!bridge) {
+      setPadDeviceStatus(null)
+      return
+    }
+    setPadDeviceStatus(parseAndroidPadStatus(bridge.getDeviceStatus()))
+  }
 
   const loadData = async (storeId: number) => {
     setLoading(true)
     setJobsLoading(true)
+    setDevicesLoading(true)
     setError(null)
     setJobsError(null)
+    setDevicesError(null)
     try {
+      const loadPlatformOverview = async () => {
+        try {
+          return await fetchPlatformOverview(storeId)
+        } catch (overviewError) {
+          if (overviewError instanceof ApiRequestError && overviewError.status === 403) {
+            return buildStoreOnlyOverview(storeId, currentStore.storeName)
+          }
+          throw overviewError
+        }
+      }
       const [platformOverview, printOverview] = await Promise.all([
-        fetchPlatformOverview(storeId),
+        loadPlatformOverview(),
         fetchPrintCenterOverview(storeId),
       ])
       setOverview(platformOverview)
       setPrintCenter(printOverview)
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load Print Center settings')
+      setError(loadError instanceof Error ? loadError.message : '打印中心设置加载失败')
     } finally {
       setLoading(false)
     }
@@ -157,9 +437,18 @@ export function PrintingSettingsPage() {
       setPrintJobs(await fetchPrintJobs({ storeId }))
     } catch (jobError) {
       setPrintJobs([])
-      setJobsError(jobError instanceof Error ? jobError.message : 'Failed to load print jobs')
+      setJobsError(jobError instanceof Error ? jobError.message : '打印任务加载失败')
     } finally {
       setJobsLoading(false)
+    }
+
+    try {
+      setStoreDevices(await fetchStoreDevices(storeId))
+    } catch (deviceError) {
+      setStoreDevices([])
+      setDevicesError(deviceError instanceof Error ? deviceError.message : 'Pad 设备加载失败')
+    } finally {
+      setDevicesLoading(false)
     }
   }
 
@@ -169,6 +458,10 @@ export function PrintingSettingsPage() {
 
   useEffect(() => {
     void loadData(Number(selectedStoreId))
+  }, [selectedStoreId])
+
+  useEffect(() => {
+    refreshPadDeviceStatus()
   }, [selectedStoreId])
 
   const stores = useMemo(
@@ -197,7 +490,50 @@ export function PrintingSettingsPage() {
   }, [printCenter])
 
   const failedPrintJobs = useMemo(() => printJobs.filter((job) => job.status === 'FAILED'), [printJobs])
+  const attentionPrintJobs = useMemo(() => printJobs.filter(printJobNeedsAttention), [printJobs])
+  const padDirectQueueStats = useMemo(() => {
+    const pendingJobs = printJobs.filter((job) => job.execution_mode === 'PAD_DIRECT' && job.status === 'PENDING')
+    const oldestPendingAgeMs = pendingJobs.reduce<number | null>((oldest, job) => {
+      const ageMs = jobAgeMs(job)
+      if (ageMs == null) {
+        return oldest
+      }
+      return oldest == null ? ageMs : Math.max(oldest, ageMs)
+    }, null)
+    const stalePrintingCount = printJobs.filter(
+      (job) => job.execution_mode === 'PAD_DIRECT'
+        && job.status === 'PRINTING'
+        && isPastDateTime(job.claim_expires_at),
+    ).length
+    return {
+      pendingCount: pendingJobs.length,
+      oldestPendingAgeMs,
+      stalePrintingCount,
+    }
+  }, [printJobs])
   const printingMode = (printCenter?.printing_mode ?? (printCenter?.printing_enabled ? 'REAL' : 'DISABLED')) as PrintingMode
+  const cloudPrivatePrinterWarning = useMemo(() => {
+    if (printCenter?.cloud_private_printer_warning) {
+      return CLOUD_PRIVATE_PRINTER_WARNING
+    }
+    return printJobs.some((job) => job.error_code === CLOUD_PRIVATE_PRINTER_BLOCKED)
+      ? CLOUD_PRIVATE_PRINTER_WARNING
+      : null
+  }, [printCenter, printJobs])
+  const padStatusStoreId = padDeviceStatus?.store_id ?? padDeviceStatus?.device_store_id ?? null
+  const padPairedToSelectedStore = Boolean(
+    padBridgeAvailable
+      && padDeviceStatus?.paired
+      && padStatusStoreId != null
+      && Number(padStatusStoreId) === Number(selectedStoreId),
+  )
+  const pairButtonLabel = pairingPad
+    ? '配对中...'
+    : padPairedToSelectedStore
+      ? '本机已配对'
+      : padDeviceStatus?.paired
+        ? '重新配对本机'
+        : '配对本机 Pad'
 
   const startCreatePrinter = () => {
     setToast(null)
@@ -220,9 +556,9 @@ export function PrintingSettingsPage() {
       const reloaded = await fetchPrintCenterOverview(Number(selectedStoreId))
       setPrintCenter(reloaded)
       setPrinterEditor(null)
-      setToast({ kind: 'success', message: 'Printer settings saved.' })
+      setToast({ kind: 'success', message: '打印机设置已保存。' })
     } catch (saveError) {
-      setToast({ kind: 'error', message: saveError instanceof Error ? saveError.message : 'Failed to save printer' })
+      setToast({ kind: 'error', message: saveError instanceof Error ? saveError.message : '打印机保存失败' })
     } finally {
       setSaving(false)
     }
@@ -236,20 +572,20 @@ export function PrintingSettingsPage() {
     if (assignedModules.length) {
       setToast({
         kind: 'error',
-        message: `Printer is currently assigned to modules: ${assignedModules.join(', ')}. Remove assignments before deleting.`,
+        message: `该打印机仍分配给模块：${assignedModules.map(moduleDisplayLabel).join('、')}。请先移除分配再删除。`,
       })
       return
     }
-    if (!window.confirm(`Are you sure you want to delete printer '${printer.name}'?`)) {
+    if (!window.confirm(`确定要删除打印机「${printer.name}」吗？这不会影响历史打印记录。`)) {
       return
     }
     try {
       setToast(null)
       await deletePrinterConfig(printer.id, Number(selectedStoreId))
       setPrintCenter(await fetchPrintCenterOverview(Number(selectedStoreId)))
-      setToast({ kind: 'success', message: 'Printer deleted.' })
+      setToast({ kind: 'success', message: '打印机已删除。' })
     } catch (actionError) {
-      setToast({ kind: 'error', message: actionError instanceof Error ? actionError.message : 'Failed to delete printer' })
+      setToast({ kind: 'error', message: actionError instanceof Error ? actionError.message : '删除打印机失败' })
     }
   }
 
@@ -259,7 +595,7 @@ export function PrintingSettingsPage() {
       const result = await triggerPrinterTest(Number(selectedStoreId), printerId, moduleCode)
       setToast({ kind: result.success ? 'success' : 'error', message: result.message })
     } catch (testError) {
-      setToast({ kind: 'error', message: testError instanceof Error ? testError.message : 'Test print failed' })
+      setToast({ kind: 'error', message: testError instanceof Error ? testError.message : '测试打印失败' })
     }
   }
 
@@ -268,16 +604,16 @@ export function PrintingSettingsPage() {
       setToast(null)
       const result = await triggerPrinterConnectionTest(Number(selectedStoreId), printerId)
       setPrintCenter(await fetchPrintCenterOverview(Number(selectedStoreId)))
-      setToast({ kind: result.success ? 'success' : 'error', message: result.success ? 'Connection successful.' : `Connection failed: ${result.message}` })
+      setToast({ kind: result.success ? 'success' : 'error', message: result.success ? '连接测试成功。' : `连接测试失败：${result.message}` })
     } catch (testError) {
-      setToast({ kind: 'error', message: testError instanceof Error ? testError.message : 'Connection test failed' })
+      setToast({ kind: 'error', message: testError instanceof Error ? testError.message : '连接测试失败' })
     }
   }
 
   const handleAllConnectionTests = async () => {
     const printers = printCenter?.printers ?? []
     if (!printers.length) {
-      setToast({ kind: 'error', message: 'No printers configured.' })
+      setToast({ kind: 'error', message: '还没有配置打印机。' })
       return
     }
     try {
@@ -293,11 +629,11 @@ export function PrintingSettingsPage() {
       setToast({
         kind: failedCount ? 'error' : 'success',
         message: failedCount
-          ? `${failedCount} printer connection test${failedCount === 1 ? '' : 's'} failed. Check each printer card for details.`
-          : 'All printer connections tested successfully.',
+          ? `${failedCount} 台打印机连接测试失败，请查看对应打印机卡片。`
+          : '所有打印机连接测试成功。',
       })
     } catch (testError) {
-      setToast({ kind: 'error', message: testError instanceof Error ? testError.message : 'Connection tests failed' })
+      setToast({ kind: 'error', message: testError instanceof Error ? testError.message : '批量连接测试失败' })
     } finally {
       setTestingAllConnections(false)
     }
@@ -309,7 +645,7 @@ export function PrintingSettingsPage() {
       const result = await triggerCurrentFontSizeTest(Number(selectedStoreId), printerId)
       setToast({ kind: result.success ? 'success' : 'error', message: result.message })
     } catch (testError) {
-      setToast({ kind: 'error', message: testError instanceof Error ? testError.message : 'Current font size test failed' })
+      setToast({ kind: 'error', message: testError instanceof Error ? testError.message : '当前字体测试失败' })
     }
   }
 
@@ -326,11 +662,11 @@ export function PrintingSettingsPage() {
       setToast({
         kind: failures.length ? 'error' : 'success',
         message: failures.length
-          ? `Encoding test sent with failures: ${failures.map((entry) => entry.encoding).join(', ')}.`
-          : `Encoding test tickets sent. Recommended default: ${printer.text_encoding ?? 'GBK'}.`,
+          ? `编码测试已发送，但以下编码失败：${failures.map((entry) => entry.encoding).join(', ')}。`
+          : `编码测试票已发送。推荐默认编码：${printer.text_encoding ?? 'GBK'}。`,
       })
     } catch (testError) {
-      setToast({ kind: 'error', message: testError instanceof Error ? testError.message : 'Encoding test failed' })
+      setToast({ kind: 'error', message: testError instanceof Error ? testError.message : '编码测试失败' })
     }
   }
 
@@ -342,11 +678,11 @@ export function PrintingSettingsPage() {
       setToast({
         kind: failures.length ? 'error' : 'success',
         message: failures.length
-          ? `GRAB font test sent with failures: ${failures.map((entry) => entry.test_mode).join(', ')}.`
-          : `GRAB font size test tickets sent: ${result.results.map((entry) => `${entry.test_mode} (${entry.command_bytes})`).join(' · ')}.`,
+          ? `GRAB 字体测试已发送，但以下模式失败：${failures.map((entry) => entry.test_mode).join(', ')}。`
+          : `GRAB 字体测试票已发送：${result.results.map((entry) => `${entry.test_mode} (${entry.command_bytes})`).join(' · ')}。`,
       })
     } catch (testError) {
-      setToast({ kind: 'error', message: testError instanceof Error ? testError.message : 'GRAB font size test failed' })
+      setToast({ kind: 'error', message: testError instanceof Error ? testError.message : 'GRAB 字体测试失败' })
     }
   }
 
@@ -355,9 +691,9 @@ export function PrintingSettingsPage() {
       setToast(null)
       await updatePrintingStatus(Number(selectedStoreId), nextEnabled)
       setPrintCenter(await fetchPrintCenterOverview(Number(selectedStoreId)))
-      setToast({ kind: 'success', message: `Printing ${nextEnabled ? 'enabled' : 'disabled'} for this store.` })
+      setToast({ kind: 'success', message: `门店自动打印已${nextEnabled ? '启用' : '关闭'}。` })
     } catch (statusError) {
-      setToast({ kind: 'error', message: statusError instanceof Error ? statusError.message : 'Failed to update printing status' })
+      setToast({ kind: 'error', message: statusError instanceof Error ? statusError.message : '打印状态更新失败' })
     }
   }
 
@@ -366,9 +702,9 @@ export function PrintingSettingsPage() {
       setToast(null)
       await updatePrintingMode(Number(selectedStoreId), nextMode)
       setPrintCenter(await fetchPrintCenterOverview(Number(selectedStoreId)))
-      setToast({ kind: 'success', message: `Printing mode changed to ${nextMode}.` })
+      setToast({ kind: 'success', message: `打印模式已切换为 ${nextMode}。` })
     } catch (statusError) {
-      setToast({ kind: 'error', message: statusError instanceof Error ? statusError.message : 'Failed to update printing mode' })
+      setToast({ kind: 'error', message: statusError instanceof Error ? statusError.message : '打印模式更新失败' })
     }
   }
 
@@ -377,9 +713,9 @@ export function PrintingSettingsPage() {
       setToast(null)
       await updatePrinterAssignment(assignment)
       setPrintCenter(await fetchPrintCenterOverview(Number(selectedStoreId)))
-      setToast({ kind: 'success', message: `Assignment saved for ${assignment.module_code}.` })
+      setToast({ kind: 'success', message: `${moduleDisplayLabel(assignment.module_code)} 分配已保存。` })
     } catch (assignmentError) {
-      setToast({ kind: 'error', message: assignmentError instanceof Error ? assignmentError.message : 'Failed to save assignment' })
+      setToast({ kind: 'error', message: assignmentError instanceof Error ? assignmentError.message : '打印机分配保存失败' })
     }
   }
 
@@ -389,7 +725,7 @@ export function PrintingSettingsPage() {
       const result = await triggerAssignedModulePrintTest(Number(selectedStoreId), moduleCode)
       setToast({ kind: result.success ? 'success' : 'error', message: result.message })
     } catch (testError) {
-      setToast({ kind: 'error', message: testError instanceof Error ? testError.message : 'Module test print failed' })
+      setToast({ kind: 'error', message: testError instanceof Error ? testError.message : '模块测试打印失败' })
     }
   }
 
@@ -401,10 +737,10 @@ export function PrintingSettingsPage() {
       setPrintCenter(await fetchPrintCenterOverview(Number(selectedStoreId)))
       setToast({
         kind: result.status === 'PRINTED' ? 'success' : 'error',
-        message: result.status === 'PRINTED' ? `Print job #${jobId} reprinted.` : `Reprint failed: ${result.error_message ?? 'Unknown error'}`,
+        message: result.status === 'PRINTED' ? `打印任务 #${jobId} 已重新打印。` : `重打失败：${printJobOperatorMessage(result) || '未知错误'}`,
       })
     } catch (reprintError) {
-      setToast({ kind: 'error', message: reprintError instanceof Error ? reprintError.message : 'Reprint failed' })
+      setToast({ kind: 'error', message: reprintError instanceof Error ? reprintError.message : '重打失败' })
     }
   }
 
@@ -414,9 +750,121 @@ export function PrintingSettingsPage() {
       setJobsError(null)
       setPrintJobs(await fetchPrintJobs({ storeId: Number(selectedStoreId) }))
     } catch (jobError) {
-      setJobsError(jobError instanceof Error ? jobError.message : 'Failed to refresh print jobs')
+      setJobsError(jobError instanceof Error ? jobError.message : '刷新打印任务失败')
     } finally {
       setJobsLoading(false)
+    }
+  }
+
+  const refreshDevices = async () => {
+    try {
+      setDevicesLoading(true)
+      setDevicesError(null)
+      setStoreDevices(await fetchStoreDevices(Number(selectedStoreId)))
+    } catch (deviceError) {
+      setDevicesError(deviceError instanceof Error ? deviceError.message : '刷新 Pad 设备失败')
+    } finally {
+      setDevicesLoading(false)
+    }
+  }
+
+  const handlePairThisPad = async () => {
+    const bridge = getAndroidPadDeviceBridge()
+    if (!bridge) {
+      setToast({ kind: 'error', message: '请在 Android Pad App 内打开打印中心进行配对。' })
+      return
+    }
+
+    const currentStatus = parseAndroidPadStatus(bridge.getDeviceStatus())
+    if (currentStatus?.paired) {
+      const currentStore = currentStatus.store_id ? `门店 ${currentStatus.store_id}` : '未知门店'
+      const nextStore = `门店 ${selectedStoreId}`
+      const message = currentStatus.store_id && Number(currentStatus.store_id) !== Number(selectedStoreId)
+        ? `本机已经配对到${currentStore}。继续会为${nextStore}注册新的设备并覆盖本机凭证，确定继续吗？`
+        : `本机已经配对到${currentStore}。继续会注册新的设备并覆盖本机凭证，确定继续吗？`
+      if (!window.confirm(message)) {
+        return
+      }
+    }
+
+    try {
+      setPairingPad(true)
+      const registered = await registerStoreDevice({
+        store_id: Number(selectedStoreId),
+        device_name: 'Restaurant Pad',
+        device_type: 'ANDROID_PAD',
+        app_version: currentStatus?.app_version ?? 'unknown',
+        platform: 'ANDROID',
+      })
+      const saveResult = parseAndroidPadStatus(bridge.saveDeviceCredentials(JSON.stringify({
+        device_id: registered.device_id,
+        device_token: registered.device_token,
+        store_id: registered.store_id,
+        device_name: registered.device_name ?? 'Restaurant Pad',
+        app_version: currentStatus?.app_version ?? 'unknown',
+        platform: 'ANDROID',
+        registered_at: registered.created_at ?? new Date().toISOString(),
+      })))
+      if (!saveResult?.success) {
+        throw new Error(saveResult?.message ?? 'Android Pad 保存配对凭证失败')
+      }
+      setToast({ kind: 'success', message: `本机 Pad 已配对：设备 #${registered.device_id}` })
+      refreshPadDeviceStatus()
+      await refreshDevices()
+    } catch (pairError) {
+      setToast({ kind: 'error', message: pairError instanceof Error ? pairError.message : 'Pad 配对失败' })
+    } finally {
+      setPairingPad(false)
+    }
+  }
+
+  const handleRenameDevice = async (device: StoreDeviceRecord) => {
+    const currentName = device.device_name ?? `Pad ${device.id}`
+    const nextName = window.prompt('输入新的 Pad 设备名称', currentName)
+    if (nextName == null) {
+      return
+    }
+    const trimmed = nextName.trim()
+    if (!trimmed) {
+      setToast({ kind: 'error', message: '设备名称不能为空。' })
+      return
+    }
+    try {
+      setToast(null)
+      await renameStoreDevice(Number(selectedStoreId), device.id, trimmed)
+      await refreshDevices()
+      refreshPadDeviceStatus()
+      setToast({ kind: 'success', message: `设备 #${device.id} 已改名。` })
+    } catch (actionError) {
+      setToast({ kind: 'error', message: actionError instanceof Error ? actionError.message : '设备改名失败' })
+    }
+  }
+
+  const handleDisableDevice = async (device: StoreDeviceRecord) => {
+    if (!window.confirm(`确定要停用设备「${device.device_name ?? `#${device.id}`}」吗？该设备会立即无法领取或回报打印任务。`)) {
+      return
+    }
+    try {
+      setToast(null)
+      await disableStoreDevice(Number(selectedStoreId), device.id)
+      await refreshDevices()
+      setToast({ kind: 'success', message: `设备 #${device.id} 已停用。` })
+    } catch (actionError) {
+      setToast({ kind: 'error', message: actionError instanceof Error ? actionError.message : '设备停用失败' })
+    }
+  }
+
+  const handleRevokeDevice = async (device: StoreDeviceRecord) => {
+    if (!window.confirm(`确定要吊销设备「${device.device_name ?? `#${device.id}`}」吗？该设备需要重新配对后才能使用。`)) {
+      return
+    }
+    try {
+      setToast(null)
+      await revokeStoreDevice(Number(selectedStoreId), device.id)
+      await refreshDevices()
+      setToast({ kind: 'success', message: `设备 #${device.id} 已吊销。` })
+    } catch (actionError) {
+      setToast({ kind: 'error', message: actionError instanceof Error ? actionError.message : '设备吊销失败' })
     }
   }
 
@@ -425,14 +873,14 @@ export function PrintingSettingsPage() {
       <div className="space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-4 rounded-[28px] bg-[rgba(255,255,255,0.84)] px-5 py-4 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
               <div>
-                <div className="text-[1.7rem] font-black tracking-[-0.05em] text-[var(--on-surface)]">Print Center</div>
+                <div className="text-[1.7rem] font-black tracking-[-0.05em] text-[var(--on-surface)]">打印中心</div>
                 <div className="mt-1 text-[0.9rem] text-[var(--muted)]">
-                  Multi-printer routing foundation for grab tickets and frontdesk receipts.
+                  管理厨房票、前台小票和热厨票的打印机、分配、测试与打印任务。
                 </div>
               </div>
 
               <div className="rounded-[16px] bg-[rgba(26,28,25,0.04)] px-3 py-2.5">
-                <div className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Store Scope</div>
+                <div className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">门店范围</div>
                 <select
                   value={selectedStoreId}
                   onChange={(event) => setSelectedStoreId(event.target.value)}
@@ -468,9 +916,9 @@ export function PrintingSettingsPage() {
             <section className="rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">Print Center Mode</div>
+                  <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">打印模式</div>
                   <div className="mt-1 text-[0.86rem] text-[var(--muted)]">
-                    Choose real printers, mock no-printer testing, or disabled automatic printing.
+                    选择真实打印机、无打印机测试、平板本地打印或关闭自动打印。
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -487,7 +935,9 @@ export function PrintingSettingsPage() {
                             ? 'bg-[rgba(38,86,160,0.16)] text-[rgb(38,86,160)]'
                             : option.value === 'DISABLED'
                               ? 'bg-[rgba(97,0,0,0.1)] text-[var(--primary)]'
-                              : 'bg-[rgba(18,141,77,0.12)] text-[rgb(25,112,69)]'
+                              : option.value === 'PAD_DIRECT'
+                                ? 'bg-[rgba(118,77,21,0.14)] text-[rgb(118,77,21)]'
+                                : 'bg-[rgba(18,141,77,0.12)] text-[rgb(25,112,69)]'
                           : 'bg-[rgba(26,28,25,0.06)] text-[var(--muted)] hover:bg-[rgba(26,28,25,0.1)]'
                       }`}
                     >
@@ -501,9 +951,19 @@ export function PrintingSettingsPage() {
                   当前为无打印机测试模式，系统不会连接任何实体打印机。订单会生成 print jobs，并保存可预览的小票内容。
                 </div>
               ) : null}
+              {printingMode === 'PAD_DIRECT' ? (
+                <div className="mt-4 rounded-[18px] bg-[rgba(118,77,21,0.12)] px-4 py-3 text-[0.9rem] font-semibold text-[rgb(118,77,21)]">
+                  当前为平板本地打印模式。后端只排队打印任务，由 Android Pad 在店内局域网领取并打印。
+                </div>
+              ) : null}
               {printingMode === 'DISABLED' ? (
                 <div className="mt-4 rounded-[18px] bg-[rgba(97,0,0,0.08)] px-4 py-3 text-[0.9rem] font-semibold text-[var(--primary)]">
-                  Printing is disabled. Orders still submit normally, but automatic print jobs are cancelled.
+                  当前已关闭自动打印。订单仍会正常提交，但自动打印任务会取消。
+                </div>
+              ) : null}
+              {cloudPrivatePrinterWarning ? (
+                <div className="mt-4 rounded-[18px] bg-[rgba(151,34,34,0.12)] px-4 py-3 text-[0.9rem] font-semibold text-[rgb(116,22,22)]">
+                  {cloudPrivatePrinterWarning}
                 </div>
               ) : null}
               <button
@@ -512,7 +972,7 @@ export function PrintingSettingsPage() {
                 disabled={loading}
                 className="mt-4 rounded-full bg-[rgba(26,28,25,0.06)] px-4 py-2 text-[0.82rem] font-semibold text-[var(--muted)]"
               >
-                Legacy status toggle: {printCenter?.printing_enabled ? 'Enabled' : 'Disabled'}
+                旧版总开关：{printCenter?.printing_enabled ? '已启用' : '已关闭'}
               </button>
             </section>
 
@@ -520,22 +980,27 @@ export function PrintingSettingsPage() {
               type="button"
               onClick={() => document.getElementById('failed-print-jobs')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
               className={`w-full rounded-[26px] px-5 py-4 text-left shadow-[0_18px_34px_rgba(26,28,25,0.05)] ${
-                failedPrintJobs.length
+                attentionPrintJobs.length
                   ? 'bg-[rgba(151,34,34,0.12)] text-[rgb(116,22,22)]'
                   : 'bg-[rgba(18,141,77,0.1)] text-[rgb(25,112,69)]'
               }`}
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <div className="text-[1.1rem] font-black">Failed Print Jobs: {failedPrintJobs.length}</div>
+                  <div className="text-[1.1rem] font-black">需要处理的打印任务：{attentionPrintJobs.length}</div>
                   <div className="mt-1 text-[0.86rem] font-medium">
-                    {failedPrintJobs.length
-                      ? 'Kitchen or receipt print failures need immediate reprint.'
-                      : 'No failed print jobs today.'}
+                    {attentionPrintJobs.length
+                      ? `${failedPrintJobs.length} 个失败任务。PAD_DIRECT 等待 ${padDirectQueueStats.pendingCount} 个，最老等待 ${durationLabel(padDirectQueueStats.oldestPendingAgeMs)}，过期 PRINTING ${padDirectQueueStats.stalePrintingCount} 个。`
+                      : '今天没有失败、取消或 Pad Direct 过期任务。'}
                   </div>
+                  {padDirectQueueStats.oldestPendingAgeMs != null && padDirectQueueStats.oldestPendingAgeMs > 120000 ? (
+                    <div className="mt-2 rounded-[14px] bg-[rgba(151,34,34,0.1)] px-3 py-2 text-[0.82rem] font-bold text-[rgb(116,22,22)]">
+                      队列最前方有旧任务未处理，可能阻塞后续打印。请确认 Android Pad 自动处理是否开启。
+                    </div>
+                  ) : null}
                 </div>
                 <span className="rounded-full bg-white/70 px-4 py-2 text-[0.84rem] font-bold">
-                  View Failed Jobs
+                  查看打印问题
                 </span>
               </div>
             </button>
@@ -543,9 +1008,78 @@ export function PrintingSettingsPage() {
             <section className="rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">Printer List</div>
+                  <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">Pad Direct 设备</div>
                   <div className="mt-1 text-[0.86rem] text-[var(--muted)]">
-                    Add and maintain TCP printers used by business modules. For RP820 local testing, use `GBK` as the default text encoding.
+                    已注册的 Android Pad 本地打印设备。设备 token 注册后不会再次显示。
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void handlePairThisPad()}
+                    disabled={!padBridgeAvailable || pairingPad}
+                    title={padBridgeAvailable ? '通过 Android 原生桥保存本机 device token' : '请在 Android Pad App 内打开打印中心进行配对'}
+                    className={`rounded-full px-4 py-2 text-[0.84rem] font-semibold ${
+                      padBridgeAvailable
+                        ? 'bg-[rgba(118,77,21,0.14)] text-[rgb(118,77,21)]'
+                        : 'bg-[rgba(26,28,25,0.06)] text-[var(--muted)]'
+                    }`}
+                  >
+                    {pairButtonLabel}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void refreshDevices()}
+                    className="rounded-full bg-[rgba(26,28,25,0.06)] px-4 py-2 text-[0.84rem] font-semibold text-[var(--on-surface)]"
+                  >
+                    {devicesLoading ? '刷新中...' : '刷新设备'}
+                  </button>
+                </div>
+              </div>
+              <div className={`mt-4 rounded-[18px] px-4 py-3 text-[0.86rem] font-medium ${
+                padBridgeAvailable
+                    ? padDeviceStatus?.paired && padStatusStoreId && Number(padStatusStoreId) !== Number(selectedStoreId)
+                    ? 'bg-[rgba(151,34,34,0.1)] text-[rgb(116,22,22)]'
+                    : 'bg-[rgba(18,141,77,0.1)] text-[rgb(25,112,69)]'
+                  : 'bg-[rgba(26,28,25,0.05)] text-[var(--muted)]'
+              }`}
+              >
+                {!padBridgeAvailable ? (
+                  <span>普通浏览器无法保存 Pad 凭证。请在 Android Pad App 内打开打印中心进行配对。</span>
+                ) : padDeviceStatus?.paired ? (
+                  <span>
+                    本机已保存设备 #{padDeviceStatus.device_id}，门店 #{padStatusStoreId ?? '-'}
+                    {padDeviceStatus.device_name ? `，${padDeviceStatus.device_name}` : ''}
+                    {padDeviceStatus.auto_print_enabled != null ? `，自动打印${padDeviceStatus.auto_print_enabled ? '开启' : '关闭'}` : ''}
+                    {padDeviceStatus.token_last4 ? `，token ****${padDeviceStatus.token_last4}` : ''}
+                    {padStatusStoreId && Number(padStatusStoreId) !== Number(selectedStoreId)
+                      ? '。当前页面门店与本机配对门店不一致，请重新配对后再启用自动领取。'
+                      : '。'}
+                  </span>
+                ) : (
+                  <span>当前 Android Pad App 尚未配对。点击“配对本机 Pad”后，device token 只会保存到本机原生层。</span>
+                )}
+              </div>
+              <PadDevicesTable
+                devices={storeDevices}
+                currentPadDeviceId={padDeviceStatus?.device_id ?? null}
+                onRename={handleRenameDevice}
+                onDisable={handleDisableDevice}
+                onRevoke={handleRevokeDevice}
+              />
+              {devicesError ? (
+                <div className="mt-3 rounded-[16px] bg-[rgba(97,0,0,0.08)] px-4 py-3 text-[0.86rem] font-medium text-[var(--primary)]">
+                  Pad 设备加载失败：{devicesError}
+                </div>
+              ) : null}
+            </section>
+
+            <section className="rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">打印机列表</div>
+                  <div className="mt-1 text-[0.86rem] text-[var(--muted)]">
+                    添加和维护各打印模块使用的 TCP 打印机。RP820 本地测试建议默认使用 `GBK` 编码。
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -555,14 +1089,14 @@ export function PrintingSettingsPage() {
                     disabled={testingAllConnections || !(printCenter?.printers ?? []).length}
                     className="rounded-full bg-[rgba(38,86,160,0.12)] px-4 py-2 text-[0.88rem] font-semibold text-[rgb(38,86,160)] disabled:opacity-60"
                   >
-                    {testingAllConnections ? 'Testing...' : 'Test All Connections'}
+                    {testingAllConnections ? '测试中...' : '测试全部连接'}
                   </button>
                   <button
                     type="button"
                     onClick={startCreatePrinter}
                     className="rounded-full bg-[var(--primary)] px-4 py-2 text-[0.88rem] font-semibold text-white"
                   >
-                    Add Printer
+                    添加打印机
                   </button>
                 </div>
               </div>
@@ -571,7 +1105,7 @@ export function PrintingSettingsPage() {
                 <div className="mt-4 rounded-[20px] bg-[rgba(26,28,25,0.04)] p-4">
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                     <label className="text-[0.84rem] text-[var(--muted)]">
-                      Name
+                      名称
                       <input
                         value={printerEditor.name}
                         onChange={(event) => setPrinterEditor((current) => current ? { ...current, name: event.target.value } : current)}
@@ -579,7 +1113,7 @@ export function PrintingSettingsPage() {
                       />
                     </label>
                     <label className="text-[0.84rem] text-[var(--muted)]">
-                      Printer IP
+                      打印机 IP
                       <input
                         value={printerEditor.ip_address}
                         onChange={(event) => setPrinterEditor((current) => current ? { ...current, ip_address: event.target.value } : current)}
@@ -587,7 +1121,7 @@ export function PrintingSettingsPage() {
                       />
                     </label>
                     <label className="text-[0.84rem] text-[var(--muted)]">
-                      Port
+                      端口
                       <input
                         type="number"
                         value={printerEditor.port}
@@ -596,7 +1130,7 @@ export function PrintingSettingsPage() {
                       />
                     </label>
                     <label className="text-[0.84rem] text-[var(--muted)]">
-                      Timeout (ms)
+                      超时 (ms)
                       <input
                         type="number"
                         value={printerEditor.timeout_ms}
@@ -605,7 +1139,7 @@ export function PrintingSettingsPage() {
                       />
                     </label>
                     <label className="text-[0.84rem] text-[var(--muted)]">
-                      Text Encoding
+                      文本编码
                       <select
                         value={printerEditor.text_encoding ?? 'GBK'}
                         onChange={(event) => setPrinterEditor((current) => current ? { ...current, text_encoding: event.target.value } : current)}
@@ -617,7 +1151,7 @@ export function PrintingSettingsPage() {
                       </select>
                     </label>
                     <label className="text-[0.84rem] text-[var(--muted)]">
-                      ESC/POS Code Page
+                      ESC/POS 代码页
                       <input
                         type="number"
                         value={printerEditor.escpos_code_page ?? ''}
@@ -631,12 +1165,12 @@ export function PrintingSettingsPage() {
                               : current,
                           )
                         }
-                        placeholder="Optional"
+                        placeholder="可选"
                         className="mt-1 w-full rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.95rem] text-[var(--on-surface)] outline-none"
                       />
                     </label>
                     <label className="text-[0.84rem] text-[var(--muted)]">
-                      Font Size
+                      字体大小
                       <select
                         value={printerEditor.font_size ?? 'MEDIUM'}
                         onChange={(event) => setPrinterEditor((current) => current ? { ...current, font_size: event.target.value } : current)}
@@ -653,7 +1187,7 @@ export function PrintingSettingsPage() {
 
                   <div className="mt-3 flex flex-wrap items-center gap-3">
                     <span className="rounded-full bg-[rgba(18,141,77,0.1)] px-3 py-1.5 text-[0.78rem] font-semibold text-[rgb(25,112,69)]">
-                      Printer configs are always active. Use Assignment status to control module printing.
+                      打印机配置默认有效。请通过「分配状态」控制某个模块是否打印。
                     </span>
                     <button
                       type="button"
@@ -661,14 +1195,14 @@ export function PrintingSettingsPage() {
                       disabled={saving}
                       className="rounded-full bg-[var(--primary)] px-4 py-2 text-[0.88rem] font-semibold text-white disabled:opacity-60"
                     >
-                      {saving ? 'Saving...' : 'Save Printer'}
+                      {saving ? '保存中...' : '保存打印机'}
                     </button>
                     <button
                       type="button"
                       onClick={() => setPrinterEditor(null)}
                       className="rounded-full bg-[rgba(26,28,25,0.06)] px-4 py-2 text-[0.88rem] font-semibold text-[var(--on-surface)]"
                     >
-                      Cancel
+                      取消
                     </button>
                   </div>
                 </div>
@@ -688,10 +1222,10 @@ export function PrintingSettingsPage() {
                           {` · ${FONT_SIZE_OPTIONS.find((option) => option.value === (printer.font_size ?? 'MEDIUM'))?.label ?? (printer.font_size ?? 'MEDIUM')}`}
                         </div>
                         <div className="mt-2 flex flex-wrap gap-2 text-[0.78rem] font-medium text-[var(--muted)]">
-                          <span className="rounded-full bg-white px-2.5 py-1">Modules: {assignmentsByPrinter.get(printer.id!)?.join(', ') || 'None'}</span>
-                          <span className="rounded-full bg-white px-2.5 py-1">Last print: {formatDateTime(printer.last_successful_print_at)}</span>
-                          <span className="rounded-full bg-white px-2.5 py-1">Last fail: {formatDateTime(printer.last_failed_print_at)}</span>
-                          <span className={`rounded-full px-2.5 py-1 ${connection.className}`}>Connection: {connection.label}</span>
+                          <span className="rounded-full bg-white px-2.5 py-1">模块：{assignmentsByPrinter.get(printer.id!)?.map(moduleDisplayLabel).join('、') || '无'}</span>
+                          <span className="rounded-full bg-white px-2.5 py-1">上次成功：{formatDateTime(printer.last_successful_print_at)}</span>
+                          <span className="rounded-full bg-white px-2.5 py-1">上次失败：{formatDateTime(printer.last_failed_print_at)}</span>
+                          <span className={`rounded-full px-2.5 py-1 ${connection.className}`}>连接：{connection.label}</span>
                         </div>
                         {printer.last_error_message || printer.last_connection_error ? (
                           <div className="mt-2 rounded-[14px] bg-[rgba(97,0,0,0.07)] px-3 py-2 text-[0.78rem] font-medium text-[var(--primary)]">
@@ -705,21 +1239,21 @@ export function PrintingSettingsPage() {
                           onClick={() => startEditPrinter(printer)}
                           className="rounded-full bg-[rgba(26,28,25,0.06)] px-3 py-1.5 text-[0.82rem] font-semibold text-[var(--on-surface)]"
                         >
-                          Edit
+                          编辑
                         </button>
                         <button
                           type="button"
                           onClick={() => handleTestPrint(printer.id!, 'FRONTDESK_RECEIPT')}
                           className="rounded-full bg-[rgba(18,141,77,0.12)] px-3 py-1.5 text-[0.82rem] font-semibold text-[rgb(25,112,69)]"
                         >
-                          Direct Test Print
+                          直接测试打印
                         </button>
                         <button
                           type="button"
                           onClick={() => handleConnectionTest(printer.id!)}
                           className="rounded-full bg-[rgba(38,86,160,0.12)] px-3 py-1.5 text-[0.82rem] font-semibold text-[rgb(38,86,160)]"
                         >
-                          Test Connection
+                          连接测试
                         </button>
                         {isFeatureEnabled('DEVELOPER_TOOLS') ? (
                           <>
@@ -728,21 +1262,21 @@ export function PrintingSettingsPage() {
                               onClick={() => handleEncodingTest(printer)}
                               className="rounded-full bg-[rgba(38,86,160,0.12)] px-3 py-1.5 text-[0.82rem] font-semibold text-[rgb(38,86,160)]"
                             >
-                              Encoding Test
+                              编码测试
                             </button>
                             <button
                               type="button"
                               onClick={() => handleCurrentFontSizeTest(printer.id!)}
                               className="rounded-full bg-[rgba(38,86,160,0.12)] px-3 py-1.5 text-[0.82rem] font-semibold text-[rgb(38,86,160)]"
                             >
-                              Test Current Font Size
+                              测试当前字体
                             </button>
                             <button
                               type="button"
                               onClick={() => handleGrabFontTest(printer)}
                               className="rounded-full bg-[rgba(97,0,0,0.08)] px-3 py-1.5 text-[0.82rem] font-semibold text-[var(--primary)]"
                             >
-                              GRAB Font Size Test
+                              GRAB 字体测试
                             </button>
                           </>
                         ) : null}
@@ -751,7 +1285,7 @@ export function PrintingSettingsPage() {
                           onClick={() => handleDeletePrinter(printer)}
                           className="rounded-full bg-[rgba(97,0,0,0.08)] px-3 py-1.5 text-[0.82rem] font-semibold text-[var(--primary)]"
                         >
-                          Delete
+                          删除
                         </button>
                       </div>
                     </div>
@@ -760,7 +1294,7 @@ export function PrintingSettingsPage() {
                 })}
                 {!loading && !(printCenter?.printers?.length ?? 0) ? (
                   <div className="rounded-[18px] bg-[rgba(26,28,25,0.04)] px-4 py-5 text-[0.9rem] text-[var(--muted)]">
-                    No printers configured yet.
+                    还没有配置打印机。
                   </div>
                 ) : null}
               </div>
@@ -769,9 +1303,9 @@ export function PrintingSettingsPage() {
             <section id="failed-print-jobs" className="scroll-mt-4 rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">Failed Print Jobs</div>
+                  <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">打印失败任务</div>
                   <div className="mt-1 text-[0.86rem] text-[var(--muted)]">
-                    Fix the printer, then reprint failed kitchen or frontdesk receipts from here.
+                    营业前请处理失败任务；如看到 PRINTING_DISABLED，通常表示门店关闭了自动打印。
                   </div>
                 </div>
                 <button
@@ -779,44 +1313,44 @@ export function PrintingSettingsPage() {
                   onClick={() => void refreshJobs()}
                   className="rounded-full bg-[rgba(26,28,25,0.06)] px-4 py-2 text-[0.84rem] font-semibold text-[var(--on-surface)]"
                 >
-                  {jobsLoading ? 'Refreshing...' : 'Refresh Jobs'}
+                  {jobsLoading ? '刷新中...' : '刷新任务'}
                 </button>
               </div>
-              <PrintJobsTable jobs={failedPrintJobs} emptyText="No failed print jobs today." onReprint={handleReprintJob} onPreview={setPreviewJob} />
+              <PrintJobsTable jobs={attentionPrintJobs} emptyText="今天没有失败、取消或 Pad Direct 过期任务。" onReprint={handleReprintJob} onPreview={setPreviewJob} />
               {jobsError ? (
                 <div className="mt-3 rounded-[16px] bg-[rgba(97,0,0,0.08)] px-4 py-3 text-[0.86rem] font-medium text-[var(--primary)]">
-                  Print jobs failed to load: {jobsError}
+                  打印任务加载失败：{jobsError}
                 </div>
               ) : null}
             </section>
 
             <section className="rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
-              <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">Recent Print Jobs</div>
+              <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">最近打印任务</div>
               <div className="mt-1 text-[0.86rem] text-[var(--muted)]">
-                Today&apos;s GRAB and frontdesk receipt print lifecycle.
+                查看今天厨房总票、前台小票和热厨票的打印状态。
               </div>
-              <PrintJobsTable jobs={printJobs.slice(0, 12)} emptyText="No print jobs today." onReprint={handleReprintJob} onPreview={setPreviewJob} />
+              <PrintJobsTable jobs={printJobs.slice(0, 12)} emptyText="今天还没有打印任务。" onReprint={handleReprintJob} onPreview={setPreviewJob} />
               {jobsError ? (
                 <div className="mt-3 rounded-[16px] bg-[rgba(97,0,0,0.08)] px-4 py-3 text-[0.86rem] font-medium text-[var(--primary)]">
-                  Recent jobs unavailable. Printer settings above are still editable.
+                  最近打印任务暂时不可用。上方打印机设置仍可编辑。
                 </div>
               ) : null}
             </section>
 
             <section className="rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
-              <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">Printer Assignment</div>
+              <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">打印机分配</div>
               <div className="mt-1 text-[0.86rem] text-[var(--muted)]">
-                Phase 1 activates GRAB and FRONTDESK_RECEIPT. Other modules are reserved for future routing.
+                当前启用模块：厨房总票 GRAB、前台小票 FRONTDESK_RECEIPT、热厨票 HOT_KITCHEN。其他模块暂时保留。
               </div>
 
               <div className="mt-4 space-y-3">
                 {isFeatureEnabled('DEVELOPER_TOOLS') ? (
                   <div className="rounded-[18px] bg-[rgba(38,86,160,0.08)] px-4 py-3 text-[0.86rem] text-[rgb(38,86,160)]">
-                    Encoding Test is a temporary debug tool for Chinese printer compatibility. RP820 should default to <span className="font-semibold">GBK</span>; use GB2312 only as a fallback.
+                    编码测试是临时调试工具，用于验证中文打印兼容性。RP820 默认建议使用 <span className="font-semibold">GBK</span>；GB2312 仅作为备用。
                   </div>
                 ) : null}
                 <div className="rounded-[18px] bg-[rgba(97,0,0,0.06)] px-4 py-3 text-[0.86rem] text-[rgba(97,0,0,0.84)]">
-                  Font size can be set per module assignment. If an assignment has no font size, the printer font size is used as fallback.
+                  字体大小可以按模块分配单独设置；如果模块未设置，则使用打印机默认字体。
                 </div>
                 {MODULE_OPTIONS.map((moduleOption) => {
                   const currentAssignment = assignmentsByModule.get(moduleOption.code) ?? {
@@ -847,26 +1381,171 @@ export function PrintingSettingsPage() {
           <div className="max-h-[88vh] w-full max-w-[760px] overflow-hidden rounded-[26px] bg-[#fbfaf5] shadow-[0_24px_80px_rgba(0,0,0,0.24)]">
             <div className="flex items-start justify-between gap-4 border-b border-[rgba(26,28,25,0.08)] px-5 py-4">
               <div>
-                <div className="text-[1.1rem] font-black text-[var(--on-surface)]">Rendered Receipt Preview</div>
+                <div className="text-[1.1rem] font-black text-[var(--on-surface)]">小票预览</div>
                 <div className="mt-1 text-[0.82rem] text-[var(--muted)]">
-                  Job #{previewJob.id} · {previewJob.module_code} · {previewJob.status}
+                  任务 #{previewJob.id} · {moduleDisplayLabel(previewJob.module_code)} · {printStatusDisplayLabel(previewJob.status)}
                 </div>
+                {previewJob.execution_mode === 'PAD_DIRECT' ? (
+                  <div className="mt-1 text-[0.78rem] font-semibold text-[rgb(118,77,21)]">
+                    Pad Direct 载荷：{previewJob.escpos_payload_base64 ? `${previewJob.escpos_payload_base64.length} 个 base64 字符` : '未生成'}
+                  </div>
+                ) : null}
               </div>
               <button
                 type="button"
                 onClick={() => setPreviewJob(null)}
                 className="rounded-full bg-[rgba(26,28,25,0.06)] px-3 py-1.5 text-[0.82rem] font-semibold text-[var(--on-surface)]"
               >
-                Close
+                关闭
               </button>
             </div>
             <pre className="max-h-[70vh] overflow-auto whitespace-pre-wrap px-5 py-4 font-mono text-[0.92rem] leading-6 text-[var(--on-surface)]">
-              {previewJob.rendered_text_snapshot || 'No rendered receipt snapshot saved for this job.'}
+              {previewJob.rendered_text_snapshot || '该打印任务没有保存小票预览。'}
             </pre>
           </div>
         </div>
       ) : null}
     </>
+  )
+}
+
+function PadDevicesTable({
+  devices,
+  currentPadDeviceId,
+  onRename,
+  onDisable,
+  onRevoke,
+}: {
+  devices: StoreDeviceRecord[]
+  currentPadDeviceId?: string | number | null
+  onRename: (device: StoreDeviceRecord) => void
+  onDisable: (device: StoreDeviceRecord) => void
+  onRevoke: (device: StoreDeviceRecord) => void
+}) {
+  if (!devices.length) {
+    return (
+      <div className="mt-4 rounded-[18px] bg-[rgba(26,28,25,0.04)] px-4 py-5 text-[0.9rem] text-[var(--muted)]">
+        这家店还没有注册 Pad Direct 设备。
+      </div>
+    )
+  }
+
+  const currentDeviceId = currentPadDeviceId == null ? null : String(currentPadDeviceId)
+  const activeNameCounts = devices.reduce((mapping, device) => {
+    if (device.is_active === false || device.status !== 'ACTIVE') {
+      return mapping
+    }
+    const key = (device.device_name ?? '').trim().toLowerCase()
+    if (!key) {
+      return mapping
+    }
+    mapping.set(key, (mapping.get(key) ?? 0) + 1)
+    return mapping
+  }, new Map<string, number>())
+
+  return (
+    <div className="mt-4 overflow-x-auto rounded-[18px] bg-[rgba(26,28,25,0.04)]">
+      <table className="min-w-full text-left text-[0.84rem]">
+        <thead className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--muted)]">
+          <tr>
+            <th className="px-3 py-3">设备</th>
+            <th className="px-3 py-3">门店/组织</th>
+            <th className="px-3 py-3">状态</th>
+            <th className="px-3 py-3">最后在线</th>
+            <th className="px-3 py-3">App/平台</th>
+            <th className="px-3 py-3">标记</th>
+            <th className="px-3 py-3 text-right">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {devices.map((device) => {
+            const active = device.is_active !== false && device.status === 'ACTIVE'
+            const nameKey = (device.device_name ?? '').trim().toLowerCase()
+            const duplicateName = active && Boolean(nameKey) && (activeNameCounts.get(nameKey) ?? 0) > 1
+            const oldDevice = isVeryOldDevice(device.last_seen_at)
+            const isCurrentPad = currentDeviceId != null && String(device.id) === currentDeviceId
+            return (
+              <tr key={device.id} className="border-t border-[rgba(26,28,25,0.06)]">
+                <td className="px-3 py-3">
+                  <div className="font-semibold text-[var(--on-surface)]">{device.device_name ?? `设备 #${device.id}`}</div>
+                  <div className="text-[0.76rem] text-[var(--muted)]">ID {device.id} · {device.device_type ?? '-'}</div>
+                </td>
+                <td className="px-3 py-3 text-[var(--muted)]">
+                  <div>Store {device.store_id}</div>
+                  <div className="mt-1 text-[0.74rem]">Org {device.organization_id ?? '-'}</div>
+                </td>
+                <td className="px-3 py-3">
+                  <span className={`rounded-full px-2.5 py-1 text-[0.72rem] font-bold ${
+                    active
+                      ? 'bg-[rgba(18,141,77,0.12)] text-[rgb(25,112,69)]'
+                      : 'bg-[rgba(97,0,0,0.1)] text-[var(--primary)]'
+                  }`}
+                  >
+                    {active ? device.status ?? 'ACTIVE' : device.status ?? 'INACTIVE'}
+                  </span>
+                  <div className="mt-1 text-[0.72rem] font-semibold text-[var(--muted)]">
+                    {device.is_active === false ? 'is_active=false' : 'is_active=true'}
+                  </div>
+                </td>
+                <td className="px-3 py-3 text-[var(--muted)]">
+                  <span className={`rounded-full px-2.5 py-1 text-[0.72rem] font-bold ${lastSeenTone(device.last_seen_at)}`}>
+                    {formatAgo(device.last_seen_at)}
+                  </span>
+                  <div className="mt-1 text-[0.72rem]">{formatDateTime(device.last_seen_at)}</div>
+                </td>
+                <td className="px-3 py-3 text-[var(--muted)]">
+                  <div>{device.app_version ?? '-'}</div>
+                  <div className="mt-1 text-[0.74rem]">{device.platform ?? '-'}</div>
+                </td>
+                <td className="px-3 py-3">
+                  <div className="flex flex-wrap gap-1.5">
+                    {isCurrentPad ? (
+                      <span className="rounded-full bg-[rgba(38,86,160,0.12)] px-2.5 py-1 text-[0.72rem] font-bold text-[rgb(38,86,160)]">本机</span>
+                    ) : null}
+                    {duplicateName ? (
+                      <span className="rounded-full bg-[rgba(180,120,20,0.16)] px-2.5 py-1 text-[0.72rem] font-bold text-[rgb(130,82,14)]">疑似重复</span>
+                    ) : null}
+                    {oldDevice ? (
+                      <span className="rounded-full bg-[rgba(97,0,0,0.08)] px-2.5 py-1 text-[0.72rem] font-bold text-[var(--primary)]">旧设备</span>
+                    ) : null}
+                    {!isCurrentPad && !duplicateName && !oldDevice ? (
+                      <span className="rounded-full bg-white px-2.5 py-1 text-[0.72rem] font-bold text-[var(--muted)]">正常</span>
+                    ) : null}
+                  </div>
+                </td>
+                <td className="px-3 py-3 text-right">
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onRename(device)}
+                      className="rounded-full bg-white px-3 py-1.5 text-[0.78rem] font-semibold text-[var(--on-surface)]"
+                    >
+                      改名
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDisable(device)}
+                      disabled={!active}
+                      className="rounded-full bg-[rgba(180,120,20,0.14)] px-3 py-1.5 text-[0.78rem] font-semibold text-[rgb(130,82,14)] disabled:opacity-45"
+                    >
+                      停用
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onRevoke(device)}
+                      disabled={device.status === 'REVOKED'}
+                      className="rounded-full bg-[rgba(97,0,0,0.08)] px-3 py-1.5 text-[0.78rem] font-semibold text-[var(--primary)] disabled:opacity-45"
+                    >
+                      吊销
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
@@ -894,50 +1573,143 @@ function PrintJobsTable({
       <table className="min-w-full text-left text-[0.84rem]">
         <thead className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--muted)]">
           <tr>
-            <th className="px-3 py-3">Created</th>
-            <th className="px-3 py-3">Order</th>
-            <th className="px-3 py-3">Module</th>
-            <th className="px-3 py-3">Printer</th>
-            <th className="px-3 py-3">Status</th>
-            <th className="px-3 py-3">Retry</th>
-            <th className="px-3 py-3">Error</th>
-            <th className="px-3 py-3 text-right">Action</th>
+            <th className="px-3 py-3">创建时间</th>
+            <th className="px-3 py-3">订单</th>
+            <th className="px-3 py-3">模块</th>
+            <th className="px-3 py-3">打印机</th>
+            <th className="px-3 py-3">状态</th>
+            <th className="px-3 py-3">耗时</th>
+            <th className="px-3 py-3">Pad 领取</th>
+            <th className="px-3 py-3">重试</th>
+            <th className="px-3 py-3">错误</th>
+            <th className="px-3 py-3 text-right">操作</th>
           </tr>
         </thead>
         <tbody>
-          {jobs.map((job) => (
-            <tr key={job.id} className="border-t border-[rgba(26,28,25,0.06)]">
-              <td className="px-3 py-3 font-medium text-[var(--on-surface)]">{formatDateTime(job.created_at)}</td>
-              <td className="px-3 py-3 text-[var(--muted)]">{job.order_id ? `#${job.order_id}` : '-'}</td>
-              <td className="px-3 py-3 font-semibold text-[var(--on-surface)]">{job.module_code}</td>
-              <td className="px-3 py-3 text-[var(--muted)]">{job.printer_name ?? job.printer_endpoint ?? '-'}</td>
-              <td className="px-3 py-3">
-                <span className={`rounded-full px-2.5 py-1 text-[0.72rem] font-bold ${statusTone(job.status)}`}>{job.status}</span>
-              </td>
-              <td className="px-3 py-3 text-[var(--muted)]">{job.retry_count ?? 0}/{job.max_retry_count ?? 0}</td>
-              <td className="max-w-[18rem] truncate px-3 py-3 text-[var(--muted)]" title={job.error_message ?? ''}>
-                {job.error_message ?? '-'}
-              </td>
-              <td className="px-3 py-3 text-right">
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onPreview(job)}
-                    className="rounded-full bg-[rgba(38,86,160,0.12)] px-3 py-1.5 text-[0.78rem] font-semibold text-[rgb(38,86,160)]"
-                  >
-                    Preview Receipt
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onReprint(job.id)}
-                    className="rounded-full bg-[rgba(18,141,77,0.12)] px-3 py-1.5 text-[0.78rem] font-semibold text-[rgb(25,112,69)]"
-                  >
-                    Reprint
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
+          {jobs.map((job) => {
+            const padNotice = padDirectClaimNotice(job)
+            const pendingNotice = pendingAgeNotice(job)
+            const nativeDiagnostics = printJobNativeDiagnostics(job)
+            return (
+              <tr key={job.id} className="border-t border-[rgba(26,28,25,0.06)]">
+                <td className="px-3 py-3 font-medium text-[var(--on-surface)]">{formatDateTime(job.created_at)}</td>
+                <td className="px-3 py-3 text-[var(--muted)]">{job.order_id ? `#${job.order_id}` : '-'}</td>
+                <td className="px-3 py-3 font-semibold text-[var(--on-surface)]">{printJobDisplayLabel(job)}</td>
+                <td className="px-3 py-3 text-[var(--muted)]">
+                  <div>{job.printer_name ?? job.printer_endpoint ?? '-'}</div>
+                  {job.printer_id ? (
+                    <div className="mt-1 text-[0.72rem] font-semibold">
+                      ID {job.printer_id}{job.printer_endpoint ? ` · ${job.printer_endpoint}` : ''}
+                    </div>
+                  ) : null}
+                </td>
+                <td className="px-3 py-3">
+                  <span className={`rounded-full px-2.5 py-1 text-[0.72rem] font-bold ${statusTone(job.status)}`}>{printStatusDisplayLabel(job.status)}</span>
+                  {job.execution_mode ? (
+                    <div className="mt-1 text-[0.72rem] font-semibold text-[var(--muted)]">{job.execution_mode}</div>
+                  ) : null}
+                  {pendingNotice ? (
+                    <div className={`mt-2 rounded-[12px] px-2.5 py-1.5 text-[0.72rem] font-semibold ${padDirectNoticeToneClass(pendingNotice.tone)}`}>
+                      {pendingNotice.message}
+                    </div>
+                  ) : null}
+                </td>
+                <td className="px-3 py-3 text-[0.74rem] text-[var(--muted)]">
+                  <div>年龄：{durationLabel(jobAgeMs(job))}</div>
+                  <div>排队：{durationLabel(queueDelayMs(job))}</div>
+                  <div>总计：{durationLabel(totalJobTimeMs(job))}</div>
+                  {job.claimed_at ? <div>领取：{formatDateTime(job.claimed_at)}</div> : null}
+                  {job.printed_at ? <div>打印：{formatDateTime(job.printed_at)}</div> : null}
+                  {job.failed_at ? <div>失败：{formatDateTime(job.failed_at)}</div> : null}
+                </td>
+                <td className="px-3 py-3 text-[var(--muted)]">
+                  {job.claimed_by_device_id ? (
+                    <div>
+                      <div className="font-semibold text-[var(--on-surface)]">设备 #{job.claimed_by_device_id}</div>
+                      <div className="text-[0.74rem]">到 {formatDateTime(job.claim_expires_at)}</div>
+                      {padNotice ? (
+                        <div className={`mt-2 rounded-[12px] px-2.5 py-1.5 text-[0.72rem] font-semibold ${padDirectNoticeToneClass(padNotice.tone)}`}>
+                          {padNotice.message}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : job.printed_by_device_id ? (
+                    <div>
+                      <div className="font-semibold text-[var(--on-surface)]">由设备 #{job.printed_by_device_id} 打印</div>
+                      <div className="text-[0.74rem]">Pad Direct</div>
+                    </div>
+                  ) : job.execution_mode === 'PAD_DIRECT' ? (
+                    <span>等待 Pad</span>
+                  ) : (
+                    <span>-</span>
+                  )}
+                </td>
+                <td className="px-3 py-3 text-[var(--muted)]">{job.retry_count ?? 0}/{job.max_retry_count ?? 0}</td>
+                <td className="max-w-[20rem] px-3 py-3 text-[var(--muted)]" title={job.error_message ?? ''}>
+                  {job.error_code ? (
+                    <div className={`mb-1 inline-flex rounded-full px-2 py-0.5 text-[0.68rem] font-black ${
+                      job.error_code === CLOUD_PRIVATE_PRINTER_BLOCKED
+                        ? 'bg-[rgba(151,34,34,0.14)] text-[rgb(116,22,22)]'
+                        : 'bg-white text-[var(--muted)]'
+                    }`}>
+                      {job.error_code}
+                    </div>
+                  ) : null}
+                  {padNotice ? (
+                    <div className={`mb-2 rounded-[12px] px-2.5 py-1.5 text-[0.72rem] font-semibold ${padDirectNoticeToneClass(padNotice.tone)}`}>
+                      {padNotice.message}
+                    </div>
+                  ) : null}
+                  {pendingNotice ? (
+                    <div className={`mb-2 rounded-[12px] px-2.5 py-1.5 text-[0.72rem] font-semibold ${padDirectNoticeToneClass(pendingNotice.tone)}`}>
+                      {pendingNotice.message}
+                    </div>
+                  ) : null}
+                  {nativeDiagnostics ? (
+                    <div className="mb-2 rounded-[12px] bg-[rgba(151,34,34,0.08)] px-2.5 py-1.5 text-[0.72rem] font-semibold text-[rgb(116,22,22)]">
+                      <div>
+                        原生诊断：
+                        {nativeDiagnostics.nativeErrorCode ? ` ${nativeDiagnostics.nativeErrorCode}` : ''}
+                        {nativeDiagnostics.phase ? ` / ${nativeDiagnostics.phase}` : ''}
+                      </div>
+                      <div className="mt-1 text-[0.68rem]">
+                        {nativeDiagnostics.endpoint || job.printer_endpoint || '-'}
+                        {nativeDiagnostics.bytesWritten ? ` · bytes ${nativeDiagnostics.bytesWritten}` : ''}
+                        {nativeDiagnostics.deviceId ? ` · device #${nativeDiagnostics.deviceId}` : ''}
+                        {nativeDiagnostics.exceptionClass ? ` · ${nativeDiagnostics.exceptionClass}` : ''}
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className="font-semibold text-[var(--on-surface)]">
+                    {printJobOperatorMessage(job) || '-'}
+                  </div>
+                  {job.operator_message && job.error_message && job.operator_message !== job.error_message ? (
+                    <div className="mt-1 max-w-[20rem] truncate text-[0.72rem] text-[var(--muted)]">
+                      技术信息：{job.error_message}
+                    </div>
+                  ) : null}
+                </td>
+                <td className="px-3 py-3 text-right">
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onPreview(job)}
+                      className="rounded-full bg-[rgba(38,86,160,0.12)] px-3 py-1.5 text-[0.78rem] font-semibold text-[rgb(38,86,160)]"
+                    >
+                      预览小票
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onReprint(job.id)}
+                      className="rounded-full bg-[rgba(18,141,77,0.12)] px-3 py-1.5 text-[0.78rem] font-semibold text-[rgb(25,112,69)]"
+                    >
+                      重新打印
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
@@ -965,21 +1737,21 @@ function AssignmentRow({
   const selectedPrinter = printers.find((printer) => printer.id === draft.printer_id)
   const status = !draft.printer_id
     ? {
-        label: `${moduleCode} has no printer assigned`,
+        label: `${moduleDisplayLabel(moduleCode)} 未分配打印机`,
         className: 'bg-[rgba(151,34,34,0.12)] text-[rgb(116,22,22)]',
       }
     : !draft.enabled
       ? {
-          label: 'Assignment Disabled',
+          label: '分配已停用',
           className: 'bg-[rgba(180,120,20,0.16)] text-[rgb(130,82,14)]',
         }
       : selectedPrinter && selectedPrinter.enabled === false
         ? {
-            label: 'Assigned Printer Disabled',
+            label: '已分配打印机已停用',
             className: 'bg-[rgba(151,34,34,0.12)] text-[rgb(116,22,22)]',
           }
         : {
-            label: 'Enabled',
+            label: '已启用',
             className: 'bg-[rgba(18,141,77,0.12)] text-[rgb(25,112,69)]',
           }
 
@@ -993,13 +1765,13 @@ function AssignmentRow({
         <div>
           <div className="text-[0.96rem] font-bold text-[var(--on-surface)]">{label}</div>
           <div className="mt-1 text-[0.82rem] text-[var(--muted)]">
-            {future ? 'Reserved for future routing.' : `${selectedPrinter?.name ?? 'No printer selected'} · ${draft.enabled ? 'Module printing enabled' : 'Module printing disabled'}`}
+            {future ? '预留给后续打印路由。' : `${selectedPrinter?.name ?? '未选择打印机'} · ${draft.enabled ? '模块打印已启用' : '模块打印已关闭'}`}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <span className={`rounded-full px-3 py-1.5 text-[0.78rem] font-semibold ${status.className}`}>{future ? 'Future' : status.label}</span>
+          <span className={`rounded-full px-3 py-1.5 text-[0.78rem] font-semibold ${status.className}`}>{future ? '未来模块' : status.label}</span>
           {future ? (
-            <span className="rounded-full bg-[rgba(26,28,25,0.06)] px-3 py-1.5 text-[0.78rem] font-semibold text-[var(--muted)]">Reserved</span>
+            <span className="rounded-full bg-[rgba(26,28,25,0.06)] px-3 py-1.5 text-[0.78rem] font-semibold text-[var(--muted)]">预留</span>
           ) : null}
         </div>
       </div>
@@ -1011,10 +1783,10 @@ function AssignmentRow({
           onChange={(event) => setDraft((current) => ({ ...current, printer_id: event.target.value ? Number(event.target.value) : null }))}
           className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.94rem] text-[var(--on-surface)] outline-none disabled:opacity-60"
         >
-          <option value="">Unassigned</option>
+          <option value="">未分配</option>
           {printers.map((printer) => (
             <option key={printer.id} value={printer.id}>
-              {printer.name} ({printer.ip_address}:{printer.port}){printer.enabled === false ? ' - disabled config' : ''}
+              {printer.name} ({printer.ip_address}:{printer.port}){printer.enabled === false ? ' - 配置已停用' : ''}
             </option>
           ))}
         </select>
@@ -1040,12 +1812,12 @@ function AssignmentRow({
             className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.94rem] text-[var(--on-surface)] outline-none disabled:opacity-60"
             aria-label="Takeout receipt copies"
           >
-            <option value={1}>Takeout: 1 copy</option>
-            <option value={2}>Takeout: 2 copies</option>
+            <option value={1}>外卖小票：1 份</option>
+            <option value={2}>外卖小票：2 份</option>
           </select>
         ) : (
           <div className="rounded-[14px] bg-[rgba(26,28,25,0.035)] px-3 py-2 text-[0.82rem] font-semibold text-[var(--muted)]">
-            Copies: n/a
+            份数：不适用
           </div>
         )}
 
@@ -1056,7 +1828,7 @@ function AssignmentRow({
             checked={draft.enabled}
             onChange={(event) => setDraft((current) => ({ ...current, enabled: event.target.checked }))}
           />
-          Enabled
+          已启用
         </label>
 
         <button
@@ -1065,15 +1837,15 @@ function AssignmentRow({
           onClick={() => onSave({ ...draft, module_code: moduleCode })}
           className="rounded-full bg-[var(--primary)] px-4 py-2 text-[0.84rem] font-semibold text-white disabled:cursor-not-allowed disabled:bg-[rgba(97,0,0,0.18)]"
         >
-          Save
+          保存
         </button>
-        {!future && (moduleCode === 'FRONTDESK_RECEIPT' || moduleCode === 'GRAB') ? (
+        {!future && (moduleCode === 'FRONTDESK_RECEIPT' || moduleCode === 'GRAB' || moduleCode === 'HOT_KITCHEN') ? (
           <button
             type="button"
             onClick={() => onTest(moduleCode)}
             className="rounded-full bg-[rgba(18,141,77,0.12)] px-4 py-2 text-[0.84rem] font-semibold text-[rgb(25,112,69)]"
           >
-            Test {moduleCode}
+            测试 {moduleDisplayLabel(moduleCode)}
           </button>
         ) : null}
       </div>

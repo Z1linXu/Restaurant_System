@@ -21,6 +21,7 @@ import type {
   OrderLineItem,
   OrderSession,
 } from '../types/ordering'
+import { createIdempotencyKey } from '../utils/randomId'
 
 function calculateDraftLineSubtotal(menuItem: MenuItem | undefined, draft: ItemCustomizationDraft) {
   if (!menuItem) {
@@ -69,6 +70,7 @@ function buildItemSelection(item: BackendOrderItemResponse, menuItem: MenuItem |
     addOnQuantities: {},
     removeIds: [],
     quantity: item.quantity,
+    notes: item.notes ?? '',
   }
 
   item.options.forEach((option) => {
@@ -231,7 +233,7 @@ function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationDraft): 
     lineSubtotal: calculateDraftLineSubtotal(menuItem, draft),
     selection: draft,
     summaryTags,
-    notes: '',
+    notes: draft.notes,
     locked: false,
   }
 }
@@ -353,7 +355,7 @@ export function useDraftOrder(
       if (!isDraftOrder) {
         return syncStagedItems((items) => [...items, buildLocalLineItem(menuItem, draft)])
       }
-      return runMutation(() => addDraftOrderItem(order.id, menuItem, draft))
+      return runMutation(() => addDraftOrderItem(order.id, menuItem, draft, draft.notes))
     },
     updateItem: async (itemId: string | number, draft: ItemCustomizationDraft) => {
       if (!order) {
@@ -368,6 +370,7 @@ export function useDraftOrder(
                   ...item,
                   quantity: draft.quantity,
                   selection: draft,
+                  notes: draft.notes,
                   lineSubtotal: calculateDraftLineSubtotal(
                     catalogItems.find((catalogItem) => catalogItem.id === item.menuItemId),
                     draft,
@@ -378,8 +381,7 @@ export function useDraftOrder(
       const numericItemId = Number(itemId)
       const targetItem = order.items.find((item) => item.id === numericItemId)
       const menuItem = catalogItems.find((item) => item.id === String(targetItem?.menu_item_id))
-      const currentNotes = targetItem?.notes ?? ''
-      return runMutation(() => updateDraftOrderItemWithMenuItem(order.id, numericItemId, menuItem, draft, currentNotes))
+      return runMutation(() => updateDraftOrderItemWithMenuItem(order.id, numericItemId, menuItem, draft, draft.notes))
     },
     updateItemNote: async (itemId: string | number, notes: string) => {
       if (!order) {
@@ -388,7 +390,7 @@ export function useDraftOrder(
       const itemKey = String(itemId)
       if (!isDraftOrder) {
         return syncStagedItems((items) =>
-          items.map((item) => item.id === itemKey && !item.locked ? { ...item, notes } : item),
+          items.map((item) => item.id === itemKey && !item.locked ? { ...item, notes, selection: { ...item.selection, notes } } : item),
         )
       }
       const numericItemId = Number(itemId)
@@ -397,7 +399,7 @@ export function useDraftOrder(
         return null
       }
       const menuItem = catalogItems.find((item) => item.id === String(targetItem.menu_item_id))
-      const selection = buildItemSelection(targetItem, menuItem)
+      const selection = { ...buildItemSelection(targetItem, menuItem), notes }
       return runMutation(() => updateDraftOrderItemWithMenuItem(order.id, numericItemId, menuItem, selection, notes))
     },
     incrementItem: async (itemId: string | number, currentQuantity: number) => {
@@ -494,7 +496,7 @@ export function useDraftOrder(
         setSaving(true)
         setError(null)
         try {
-          const idempotencyKey = updateIdempotencyKeyRef.current ?? crypto.randomUUID()
+          const idempotencyKey = updateIdempotencyKeyRef.current ?? createIdempotencyKey('order-update')
           updateIdempotencyKeyRef.current = idempotencyKey
           const result = await submitOrderUpdate(order.id, idempotencyKey, newItems, catalogItems)
           const refreshed = result.order

@@ -115,6 +115,14 @@ class GrabReceiptRendererTest {
     }
 
     @Test
+    void keepsExtraBokChoyFullName() {
+        String output = renderNoodle("加上海青");
+
+        assertTrue(output.contains("加上海青"));
+        assertFalse(output.contains("加青"));
+    }
+
+    @Test
     void doesNotCrossSimplifyAddAndRemoveGreenTokens() {
         String output = renderNoodle("走葱 加葱");
 
@@ -126,10 +134,10 @@ class GrabReceiptRendererTest {
 
     @Test
     void mergesAddOnModifierQuantitiesInGrabRenderer() {
-        assertTrue(renderNoodle("+蛋 +蛋x2").contains("+蛋x3"));
-        assertTrue(renderNoodle("+蛋 +蛋").contains("+蛋x2"));
-        assertTrue(renderNoodle("+蛋x2 +蛋x3").contains("+蛋x5"));
-        assertTrue(renderNoodle("+蛋 +煎x2").contains("+蛋 +煎x2"));
+        assertTrue(renderNoodle("+蛋 +蛋x2").contains("+蛋×3"));
+        assertTrue(renderNoodle("+蛋 +蛋").contains("+蛋×2"));
+        assertTrue(renderNoodle("+蛋x2 +蛋x3").contains("+蛋×5"));
+        assertTrue(renderNoodle("+蛋 +煎x2").contains("+蛋 +煎×2"));
         assertFalse(renderNoodle("+蛋 +蛋x2").contains("+蛋 +蛋x2"));
     }
 
@@ -137,7 +145,7 @@ class GrabReceiptRendererTest {
     void mergesAddOnModifierQuantitiesInsidePrimaryInstructionOnly() {
         String output = renderNoodle("中 | +蛋 +蛋x2 +煎x2");
 
-        assertTrue(output.contains("中 | +蛋x3 +煎x2 x1"));
+        assertTrue(output.contains("中 | +蛋×3 +煎×2"));
         assertFalse(output.contains("+蛋 +蛋x2"));
     }
 
@@ -145,15 +153,95 @@ class GrabReceiptRendererTest {
     void supportsStarModifierQuantitySyntax() {
         String output = renderNoodle("中 | +蛋*2 +蛋");
 
-        assertTrue(output.contains("中 | +蛋x3 x1"));
+        assertTrue(output.contains("中 | +蛋×3"));
     }
 
     @Test
     void doesNotTreatSizeOrItemQuantityAsAddOnQuantity() {
         String output = renderNoodle("中 | +蛋 +蛋x2", 2);
 
-        assertTrue(output.contains("中 | +蛋x3 x2"));
-        assertFalse(output.contains("+蛋x6"));
+        assertTrue(output.contains("(中 | +蛋×3) ×2"));
+        assertFalse(output.contains("+蛋×6"));
+    }
+
+    @Test
+    void groupsTwoIdenticalNoodlesAsSingleBowlConfigTimesQuantity() {
+        String output = renderNoodles(
+            noodle(1L, "中酸 | +蛋"),
+            noodle(2L, "中酸 | +蛋")
+        );
+
+        assertTrue(output.contains("(中酸 | +蛋) ×2"));
+        assertFalse(output.contains("中酸 | +蛋 x2"));
+    }
+
+    @Test
+    void groupsThreeIdenticalNoodlesAsSingleBowlConfigTimesQuantity() {
+        String output = renderNoodles(
+            noodle(1L, "中酸 | +蛋"),
+            noodle(2L, "中酸 | +蛋"),
+            noodle(3L, "中酸 | +蛋")
+        );
+
+        assertTrue(output.contains("(中酸 | +蛋) ×3"));
+    }
+
+    @Test
+    void singleNoodleWithOneEggDoesNotShowBowlQuantityAsEggQuantity() {
+        String output = renderNoodle("中酸 | +蛋");
+
+        assertTrue(output.contains("中酸 | +蛋"));
+        assertFalse(output.contains("+蛋 x2"));
+        assertFalse(output.contains("(中酸 | +蛋) ×1"));
+    }
+
+    @Test
+    void singleNoodleWithTwoEggsKeepsEggQuantityInsideConfig() {
+        String output = renderNoodle("中酸 | +蛋 +蛋");
+
+        assertTrue(output.contains("中酸 | +蛋×2"));
+        assertFalse(output.contains("(中酸 | +蛋×2) ×1"));
+    }
+
+    @Test
+    void groupsTwoIdenticalNoodlesWithTwoEggsByBowlQuantity() {
+        String output = renderNoodles(
+            noodle(1L, "中酸 | +蛋 +蛋"),
+            noodle(2L, "中酸 | +蛋 +蛋")
+        );
+
+        assertTrue(output.contains("(中酸 | +蛋×2) ×2"));
+    }
+
+    @Test
+    void doesNotMergeNoodlesWithDifferentSpicyLevels() {
+        String output = renderNoodles(
+            noodle(1L, "中酸 | +蛋"),
+            noodle(2L, "中辣 | +蛋")
+        );
+
+        assertTrue(output.contains("中酸 | +蛋"));
+        assertTrue(output.contains("中辣 | +蛋"));
+        assertFalse(output.contains("(中酸 | +蛋) ×2"));
+        assertFalse(output.contains("(中辣 | +蛋) ×2"));
+    }
+
+    @Test
+    void doesNotMergeNoodlesWithDifferentRemoveOrNotes() {
+        String output = renderNoodles(
+            noodle(1L, "中酸 | +蛋", "少汤"),
+            noodle(2L, "中酸 | 不要葱 | +蛋")
+        );
+
+        assertTrue(output.contains("中酸 | +蛋 | 备注：少汤"));
+        assertTrue(output.contains("中酸 | 不要葱 | +蛋"));
+        assertFalse(output.contains(") ×2"));
+    }
+
+    @Test
+    void grabReceiptDisplaysSplitTableSidesInChinese() {
+        assertTrue(renderNoodle("中", 1, "T1-A").contains("桌号：T1-左"));
+        assertTrue(renderNoodle("中", 1, "T1-B").contains("桌号：T1-右"));
     }
 
     @Test
@@ -200,6 +288,156 @@ class GrabReceiptRendererTest {
         assertFalse(output.contains("加青"));
     }
 
+    @Test
+    void frontdeskReceiptDisplaysSplitTableSidesInChinese() {
+        FrontdeskReceiptRenderer frontdeskRenderer = new FrontdeskReceiptRenderer();
+        Order order = baseOrder();
+        order.table_no = "T1-B";
+        order.subtotal_amount = new BigDecimal("12.00");
+        order.total_amount = new BigDecimal("13.80");
+
+        OrderItem item = new OrderItem();
+        item.id = 1L;
+        item.order_id = order.id;
+        item.item_name_snapshot_zh = "传统牛肉面";
+        item.quantity = 1;
+        item.unit_price = new BigDecimal("12.00");
+        item.line_amount = new BigDecimal("12.00");
+        item.status = "submitted";
+
+        PrintRenderRequest request = new PrintRenderRequest();
+        request.module_code = PrintModuleCode.FRONTDESK_RECEIPT;
+        request.order = order;
+        request.order_items = List.of(item);
+        request.order_item_options = List.of();
+        request.happened_at = order.submitted_at;
+
+        String rawOutput = frontdeskRenderer.render(request);
+
+        assertTrue(rawOutput.startsWith(PrintMarkup.LARGE_OPEN + "桌号: T1-右" + PrintMarkup.LARGE_CLOSE));
+    }
+
+    @Test
+    void frontdeskReceiptDisplaysNoodleSpicyLevelFromStableOptionType() {
+        FrontdeskReceiptRenderer frontdeskRenderer = new FrontdeskReceiptRenderer();
+        Order order = baseOrder();
+        order.subtotal_amount = new BigDecimal("12.00");
+        order.total_amount = new BigDecimal("13.80");
+
+        OrderItem item = new OrderItem();
+        item.id = 1L;
+        item.order_id = order.id;
+        item.item_name_snapshot_zh = "传统牛肉面";
+        item.quantity = 1;
+        item.unit_price = new BigDecimal("12.00");
+        item.line_amount = new BigDecimal("12.00");
+        item.status = "submitted";
+
+        OrderItemOption spicy = new OrderItemOption();
+        spicy.id = 2L;
+        spicy.order_item_id = item.id;
+        spicy.option_type_snapshot = "spicy_level";
+        spicy.option_group_snapshot = "SPICY_LEVEL";
+        spicy.option_code_snapshot = "traditional_beef_noodle_spicy_level_extra";
+        spicy.option_name_snapshot_zh = "加辣";
+        spicy.option_name_snapshot_en = "Extra";
+        spicy.price_delta = BigDecimal.ZERO;
+        spicy.quantity = 1;
+
+        PrintRenderRequest request = new PrintRenderRequest();
+        request.module_code = PrintModuleCode.FRONTDESK_RECEIPT;
+        request.order = order;
+        request.order_items = List.of(item);
+        request.order_item_options = List.of(spicy);
+        request.happened_at = order.submitted_at;
+
+        String output = stripMarkup(frontdeskRenderer.render(request));
+
+        assertTrue(output.contains("辣度: 加辣"));
+    }
+
+    @Test
+    void frontdeskUpdateReceiptShowsOnlyAddedComboSideAndSideRemove() {
+        FrontdeskReceiptRenderer frontdeskRenderer = new FrontdeskReceiptRenderer();
+        Order order = baseOrder();
+        order.subtotal_amount = new BigDecimal("100.00");
+        order.total_amount = new BigDecimal("114.98");
+
+        OrderItem addedItem = new OrderItem();
+        addedItem.id = 2L;
+        addedItem.order_id = order.id;
+        addedItem.item_name_snapshot_zh = "传统牛肉面";
+        addedItem.quantity = 1;
+        addedItem.unit_price = new BigDecimal("21.00");
+        addedItem.line_amount = new BigDecimal("21.00");
+        addedItem.status = "submitted";
+        addedItem.order_update_batch_id = 88L;
+
+        OrderItemOption size = new OrderItemOption();
+        size.id = 10L;
+        size.order_item_id = addedItem.id;
+        size.option_type_snapshot = "size";
+        size.option_name_snapshot_zh = "大碗";
+        size.option_name_snapshot_en = "Large";
+        size.price_delta = BigDecimal.ZERO;
+        size.quantity = 1;
+
+        OrderItemOption combo = new OrderItemOption();
+        combo.id = 11L;
+        combo.order_item_id = addedItem.id;
+        combo.option_type_snapshot = "addon";
+        combo.option_group_snapshot = "COMBO";
+        combo.option_code_snapshot = "combo";
+        combo.option_name_snapshot_zh = "套餐";
+        combo.option_name_snapshot_en = "Combo";
+        combo.price_delta = new BigDecimal("5.00");
+        combo.quantity = 1;
+
+        OrderItemOption comboSide = new OrderItemOption();
+        comboSide.id = 12L;
+        comboSide.option_id = 201L;
+        comboSide.order_item_id = addedItem.id;
+        comboSide.option_type_snapshot = "addon";
+        comboSide.option_group_snapshot = "COMBO_SIDE";
+        comboSide.option_code_snapshot = "combo_cucumber_salad";
+        comboSide.option_name_snapshot_zh = "套餐拌黄瓜";
+        comboSide.option_name_snapshot_en = "Combo Cucumber Salad";
+        comboSide.price_delta = BigDecimal.ZERO;
+        comboSide.quantity = 1;
+
+        OrderItemOption sideRemove = new OrderItemOption();
+        sideRemove.id = 13L;
+        sideRemove.order_item_id = addedItem.id;
+        sideRemove.option_type_snapshot = "remove";
+        sideRemove.option_group_snapshot = "COMBO_SIDE_REMOVE";
+        sideRemove.parent_option_id_snapshot = comboSide.option_id;
+        sideRemove.option_name_snapshot_zh = "走花生";
+        sideRemove.option_name_snapshot_en = "No Peanut";
+        sideRemove.price_delta = BigDecimal.ZERO;
+        sideRemove.quantity = 1;
+
+        PrintRenderRequest request = new PrintRenderRequest();
+        request.module_code = PrintModuleCode.FRONTDESK_RECEIPT;
+        request.order = order;
+        request.order_items = List.of(addedItem);
+        request.order_item_options = List.of(size, combo, comboSide, sideRemove);
+        request.happened_at = order.submitted_at;
+        request.is_update_ticket = true;
+        request.order_update_batch_id = 88L;
+
+        String output = stripMarkup(frontdeskRenderer.render(request));
+
+        assertTrue(output.contains("UPDATED"));
+        assertTrue(output.contains("Added items only"));
+        assertTrue(output.contains("1 x Combo 传统牛肉面 Large"));
+        assertTrue(output.contains("小菜: 拌黄瓜"));
+        assertTrue(output.contains("走花生"));
+        assertTrue(output.contains("Subtotal: $21.00"));
+        assertTrue(output.contains("Tax (14.975%): $3.14"));
+        assertTrue(output.contains("Total: $24.14"));
+        assertFalse(output.contains("Subtotal: $100.00"));
+    }
+
     private String renderSides(SideCase... sideCases) {
         Order order = baseOrder();
 
@@ -243,7 +481,12 @@ class GrabReceiptRendererTest {
     }
 
     private String renderNoodle(String specialInstructions, int quantity) {
+        return renderNoodle(specialInstructions, quantity, "T1");
+    }
+
+    private String renderNoodle(String specialInstructions, int quantity, String tableNo) {
         Order order = baseOrder();
+        order.table_no = tableNo;
 
         OrderItem item = new OrderItem();
         item.id = 1L;
@@ -274,6 +517,47 @@ class GrabReceiptRendererTest {
         return stripMarkup(renderer.render(request));
     }
 
+    private String renderNoodles(NoodleCase... noodleCases) {
+        Order order = baseOrder();
+        List<OrderItem> items = new ArrayList<>();
+        List<KitchenTask> tasks = new ArrayList<>();
+
+        for (NoodleCase noodleCase : noodleCases) {
+            OrderItem item = new OrderItem();
+            item.id = noodleCase.id();
+            item.order_id = order.id;
+            item.menu_item_id = noodleCase.menuItemId();
+            item.item_name_snapshot_zh = "酸菜牛肉面";
+            item.category_code_snapshot = "SOUP_NOODLE";
+            item.quantity = noodleCase.quantity();
+            item.notes = noodleCase.note();
+            item.status = "submitted";
+            items.add(item);
+
+            KitchenTask task = new KitchenTask();
+            task.id = noodleCase.id();
+            task.order_id = order.id;
+            task.order_item_id = item.id;
+            task.store_id = order.store_id;
+            task.station_code = "NOODLE";
+            task.item_name_snapshot_zh = "酸菜牛肉面";
+            task.special_instructions_snapshot = noodleCase.specialInstructions();
+            task.status = "pending";
+            task.quantity = noodleCase.quantity();
+            task.created_at = LocalDateTime.of(2026, 6, 16, 12, 0).plusSeconds(noodleCase.id());
+            tasks.add(task);
+        }
+
+        PrintRenderRequest request = new PrintRenderRequest();
+        request.module_code = PrintModuleCode.GRAB;
+        request.order = order;
+        request.order_items = items;
+        request.order_item_options = List.of();
+        request.kitchen_tasks = tasks;
+        request.happened_at = order.submitted_at;
+        return stripMarkup(renderer.render(request));
+    }
+
     private Order baseOrder() {
         Order order = new Order();
         order.id = 100L;
@@ -286,6 +570,14 @@ class GrabReceiptRendererTest {
 
     private SideCase side(Long id, String itemName, String specialInstructions) {
         return new SideCase(id, itemName, specialInstructions);
+    }
+
+    private NoodleCase noodle(Long id, String specialInstructions) {
+        return noodle(id, specialInstructions, null);
+    }
+
+    private NoodleCase noodle(Long id, String specialInstructions, String note) {
+        return new NoodleCase(id, 200L, specialInstructions, note, 1);
     }
 
     private String stripMarkup(String value) {
@@ -312,5 +604,8 @@ class GrabReceiptRendererTest {
     }
 
     private record SideCase(Long id, String itemName, String specialInstructions) {
+    }
+
+    private record NoodleCase(Long id, Long menuItemId, String specialInstructions, String note, int quantity) {
     }
 }

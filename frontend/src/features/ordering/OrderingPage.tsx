@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card } from '../../components/ui/Card'
 import { useIpadLandscape } from '../../hooks/useIpadLandscape'
 import { buildDefaultDraft, calculateTotals } from '../../hooks/useOrderSessions'
 import { useDraftOrder } from '../../hooks/useDraftOrder'
 import type { ItemCustomizationDraft, MenuItem, OrderingCatalog } from '../../types/ordering'
 import { FrontdeskTopNav } from '../frontdesk/components/FrontdeskTopNav'
+import { PrintWorkerHealthBanner } from '../frontdesk/components/PrintWorkerHealthBanner'
 import { TakeoutEntryDialog } from '../dinein/components/TakeoutEntryDialog'
 import { CategoryNav } from './components/CategoryNav'
 import { ItemCustomizationModal } from './components/ItemCustomizationModal'
@@ -12,6 +13,9 @@ import { MenuItemCard } from './components/MenuItemCard'
 import { OrderingTopBar } from './components/OrderingTopBar'
 import { OrderSummaryPanel } from './components/OrderSummaryPanel'
 import { fetchOrderPrintJobs } from '../../services/orderService'
+import type { PrintJobRecord } from '../../services/printingAdminService'
+import { printJobDisplayLabel, printJobOperatorDisplayMessage } from '../../utils/displayLabels'
+import { getAndroidPadDeviceBridge } from '../../types/androidPadBridge'
 
 interface OrderingPageProps {
   catalog: {
@@ -29,7 +33,7 @@ interface OrderingPageProps {
   storeId: number
   onBack: () => void
   onDraftCancelled: (slotLabel: string, tableLabel: string) => void
-  onOrderSubmitted: (slotLabel: string, tableLabel: string) => void
+  onOrderSubmitted: (slotLabel: string, tableLabel: string, orderId: number, updateBatchId?: number | null) => void
 }
 
 interface CustomizationState {
@@ -37,6 +41,31 @@ interface CustomizationState {
   mode: 'add' | 'edit'
   draft: ItemCustomizationDraft
   editingItemId?: string
+}
+
+const PRINT_ATTENTION_MODULES = new Set(['GRAB', 'FRONTDESK_RECEIPT'])
+const PRINT_ATTENTION_STATUSES = new Set(['FAILED', 'CANCELLED'])
+const QUICK_ADD_DRINK_CATEGORY_CODES = new Set(['DRINK', 'ALCOHOL', 'MILK_TEA'])
+const QUICK_ADD_DRINK_ITEM_TYPES = new Set(['DRINK', 'BEVERAGE'])
+
+function normalizeCode(value: string | null | undefined) {
+  return (value ?? '').trim().toUpperCase()
+}
+
+function hasRequiredCustomization(item: MenuItem) {
+  return Boolean(item.customization?.sizes?.required || item.customization?.soupBases?.required)
+}
+
+function isQuickAddItem(item: MenuItem) {
+  const categoryCode = normalizeCode(item.categoryCode)
+  const itemType = normalizeCode(item.itemType)
+  if (categoryCode === 'FRIED') {
+    return !item.customization
+  }
+  if (QUICK_ADD_DRINK_CATEGORY_CODES.has(categoryCode) || QUICK_ADD_DRINK_ITEM_TYPES.has(itemType)) {
+    return !hasRequiredCustomization(item)
+  }
+  return false
 }
 
 function getDraftSubtotal(item: MenuItem, draft: ItemCustomizationDraft) {
@@ -60,6 +89,42 @@ function getDraftSubtotal(item: MenuItem, draft: ItemCustomizationDraft) {
   return (item.price + sizeDelta + soupBaseDelta + comboDelta + comboSideRemoveDelta + addOnDelta + removeDelta) * draft.quantity
 }
 
+function printJobNeedsAttention(job: PrintJobRecord) {
+  return PRINT_ATTENTION_MODULES.has(job.module_code) && PRINT_ATTENTION_STATUSES.has(job.status)
+}
+
+function printJobLabel(job: PrintJobRecord) {
+  return printJobDisplayLabel(job)
+}
+
+function printJobReason(job: PrintJobRecord) {
+  return printJobOperatorDisplayMessage(job) || '打印状态异常，请检查打印中心。'
+}
+
+function buildPrintAttentionMessage(jobs: PrintJobRecord[]) {
+  const details = jobs
+    .map((job) => `${printJobLabel(job)}: ${printJobReason(job)}`)
+    .join(' ')
+
+  return `订单已保存，但打印需要处理。${details} 请到订单记录或打印中心立即重打。`
+}
+
+function kickPadDirectPrintWorker(reason: string, orderId: number, updateBatchId?: number | null) {
+  const bridge = getAndroidPadDeviceBridge()
+  if (!bridge?.kickPrintWorker) {
+    return
+  }
+  try {
+    bridge.kickPrintWorker(JSON.stringify({
+      reason,
+      order_id: orderId,
+      order_update_batch_id: updateBatchId ?? null,
+    }))
+  } catch {
+    // The Android bridge is an optimization for local Pad printing; ordering must not depend on it.
+  }
+}
+
 export function OrderingPage({
   catalog,
   slotLabel,
@@ -80,6 +145,7 @@ export function OrderingPage({
   const [takeoutDialogOpen, setTakeoutDialogOpen] = useState(false)
   const [quickAddStates, setQuickAddStates] = useState<Record<string, 'idle' | 'adding' | 'added'>>({})
   const [printWarning, setPrintWarning] = useState<string | null>(null)
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine))
   const {
     session,
     order,
@@ -97,6 +163,37 @@ export function OrderingPage({
     refreshOrder,
     updateHeader,
   } = useDraftOrder(storeId, slotLabel, tableLabel, orderType, pickupLabel, items)
+  const refreshOrderRef = useRef(refreshOrder)
+
+  useEffect(() => {
+    refreshOrderRef.current = refreshOrder
+  }, [refreshOrder])
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true)
+      if (document.visibilityState === 'visible') {
+        void refreshOrderRef.current()
+      }
+    }
+    const handleOffline = () => setIsOnline(false)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) {
+        setIsOnline(true)
+        void refreshOrderRef.current()
+      }
+    }
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
 
   useEffect(() => {
     if (!activeCategoryId && categories[0]?.id) {
@@ -105,6 +202,22 @@ export function OrderingPage({
   }, [activeCategoryId, categories])
 
   const { subtotal, tax, total } = useMemo(() => calculateTotals(session), [session])
+  const orderedQuantityByMenuItemId = useMemo(() => {
+    const quantities = new Map<string, number>()
+    session?.items.forEach((item) => {
+      quantities.set(item.menuItemId, (quantities.get(item.menuItemId) ?? 0) + item.quantity)
+    })
+    return quantities
+  }, [session?.items])
+  const latestMutableItemByMenuItemId = useMemo(() => {
+    const mutableItems = new Map<string, { id: string; quantity: number }>()
+    session?.items.forEach((item) => {
+      if (!item.locked) {
+        mutableItems.set(item.menuItemId, { id: item.id, quantity: item.quantity })
+      }
+    })
+    return mutableItems
+  }, [session?.items])
 
   const filteredItems = useMemo(
     () =>
@@ -117,7 +230,7 @@ export function OrderingPage({
   )
 
   const handleSelectMenuItem = (item: MenuItem) => {
-    if (item.categoryCode === 'FRIED' && !item.customization) {
+    if (isQuickAddItem(item)) {
       void addItem(item, buildDefaultDraft(item))
       return
     }
@@ -152,6 +265,26 @@ export function OrderingPage({
         [item.id]: 'idle',
       }))
     }
+  }
+
+  const handleMenuCardAdd = async (item: MenuItem) => {
+    if (isQuickAddItem(item)) {
+      await handleQuickAddItem(item)
+      return
+    }
+    handleSelectMenuItem(item)
+  }
+
+  const handleDecrementMenuItem = (menuItemId: string) => {
+    const targetItem = latestMutableItemByMenuItemId.get(menuItemId)
+    if (!targetItem) {
+      return
+    }
+    if (targetItem.quantity <= 1) {
+      void removeItem(targetItem.id)
+      return
+    }
+    void decrementItem(targetItem.id, targetItem.quantity)
   }
 
   const handleEditItem = (itemId: string) => {
@@ -191,20 +324,31 @@ export function OrderingPage({
     onDraftCancelled(slotLabel, tableLabel)
   }
 
-  const checkKitchenTicketPrint = async (orderId: number, updateBatchId?: number | null) => {
+  const checkOrderPrintJobs = async (orderId: number, updateBatchId?: number | null) => {
     const delays = [450, 900, 1400, 2200]
     for (const delay of delays) {
       await new Promise((resolve) => window.setTimeout(resolve, delay))
       try {
         const jobs = await fetchOrderPrintJobs(orderId)
-        const grabJob = updateBatchId
-          ? jobs.find((job) => job.module_code === 'GRAB' && job.order_update_batch_id === updateBatchId)
-          : jobs.find((job) => job.module_code === 'GRAB' && !job.order_update_batch_id)
-        if (grabJob?.status === 'FAILED' || grabJob?.status === 'CANCELLED') {
-          setPrintWarning(`Kitchen ticket failed to print. Please reprint immediately. Reason: ${grabJob.error_message ?? grabJob.error_code ?? 'Unknown error'}`)
+        const relevantJobs = jobs.filter((job) => {
+          if (!PRINT_ATTENTION_MODULES.has(job.module_code)) {
+            return false
+          }
+          return updateBatchId
+            ? job.order_update_batch_id === updateBatchId
+            : job.order_update_batch_id == null
+        })
+        const attentionJobs = relevantJobs.filter(printJobNeedsAttention)
+        if (attentionJobs.length) {
+          setPrintWarning(buildPrintAttentionMessage(attentionJobs))
           return false
         }
-        if (grabJob?.status === 'PRINTED') {
+        const printedModules = new Set(
+          relevantJobs
+            .filter((job) => job.status === 'PRINTED')
+            .map((job) => job.module_code),
+        )
+        if (printedModules.has('GRAB') && printedModules.has('FRONTDESK_RECEIPT')) {
           return true
         }
       } catch {
@@ -221,11 +365,12 @@ export function OrderingPage({
       if (!submittedOrder) {
         return
       }
-      const printOk = await checkKitchenTicketPrint(submittedOrder.id)
+      kickPadDirectPrintWorker('order-submit', submittedOrder.id, null)
+      const printOk = await checkOrderPrintJobs(submittedOrder.id)
       if (!printOk) {
         return
       }
-      onOrderSubmitted(slotLabel, tableLabel)
+      onOrderSubmitted(slotLabel, tableLabel, submittedOrder.id, null)
       return
     }
 
@@ -238,11 +383,12 @@ export function OrderingPage({
         .filter((item) => item.added_revision === updatedOrder.current_revision)
         .map((item) => item.order_update_batch_id)
         .find((batchId): batchId is number => batchId != null)
-      const printOk = await checkKitchenTicketPrint(updatedOrder.id, updateBatchId)
+      kickPadDirectPrintWorker('order-update-submit', updatedOrder.id, updateBatchId ?? null)
+      const printOk = await checkOrderPrintJobs(updatedOrder.id, updateBatchId)
       if (!printOk) {
         return
       }
-      onOrderSubmitted(slotLabel, tableLabel)
+      onOrderSubmitted(slotLabel, tableLabel, updatedOrder.id, updateBatchId ?? null)
     }
   }
 
@@ -259,13 +405,20 @@ export function OrderingPage({
   }
 
   return (
-    <div className={`min-h-screen bg-[var(--surface)] ${isIpadLandscape ? 'px-3 py-3' : 'px-5 py-4 md:px-7 xl:px-8'}`}>
+    <div className={`ordering-page-safe min-h-screen bg-[var(--surface)] ${isIpadLandscape ? 'px-3 py-3' : 'px-5 py-4 md:px-7 xl:px-8'}`}>
       <div className={`mx-auto ${isIpadLandscape ? 'max-w-none space-y-3' : 'max-w-[1720px] space-y-6'}`}>
         {isIpadLandscape ? <FrontdeskTopNav activeItem="menu" /> : null}
+        {isIpadLandscape ? <PrintWorkerHealthBanner /> : null}
 
         {printWarning ? (
           <div className="rounded-[20px] border-2 border-[rgba(151,34,34,0.35)] bg-[rgba(151,34,34,0.12)] px-5 py-4 text-[1rem] font-black text-[rgb(116,22,22)] shadow-[0_18px_34px_rgba(151,34,34,0.12)]">
             {printWarning}
+          </div>
+        ) : null}
+
+        {!isOnline ? (
+          <div className="rounded-[20px] border border-[rgba(151,34,34,0.25)] bg-[rgba(151,34,34,0.1)] px-5 py-4 text-[1rem] font-bold text-[rgb(116,22,22)]">
+            当前设备离线，请检查网络后重试。
           </div>
         ) : null}
 
@@ -288,19 +441,19 @@ export function OrderingPage({
           </div>
         ) : null}
 
-        <div className={`grid min-h-0 items-stretch ${isIpadLandscape ? 'h-[calc(100vh-12.5rem)] grid-cols-[14rem_minmax(0,1fr)_24rem] gap-3' : 'gap-6 xl:h-[calc(100vh-14rem)] xl:grid-cols-[18rem_minmax(0,1fr)_31rem]'}`}>
-          <Card tone="well" className={`${isIpadLandscape ? 'rounded-[24px] p-3.5' : 'rounded-[32px] p-5'}`}>
+        <div className={`ordering-workspace-grid grid items-start ${isIpadLandscape ? 'grid-cols-[14rem_minmax(0,1fr)_24rem] gap-3' : 'gap-6 xl:grid-cols-[18rem_minmax(0,1fr)_31rem]'}`}>
+          <Card tone="well" className={`ordering-sidebar-scroll ${isIpadLandscape ? 'rounded-[24px] p-3.5' : 'rounded-[32px] p-5'}`}>
             <CategoryNav categories={categories} activeCategoryId={activeCategoryId} onSelect={setActiveCategoryId} compact={isIpadLandscape} />
           </Card>
 
-          <Card tone="base" className={`${isIpadLandscape ? 'rounded-[24px] p-4' : 'rounded-[32px] p-6'}`}>
-            <div className={`${isIpadLandscape ? 'mb-3 flex items-center justify-between gap-3' : 'mb-5 flex items-center justify-between gap-4'}`}>
+          <Card tone="base" className={`flex flex-col overflow-hidden ${isIpadLandscape ? 'rounded-[24px] p-4' : 'rounded-[32px] p-6'}`}>
+            <div className={`shrink-0 ${isIpadLandscape ? 'mb-3 flex items-center justify-between gap-3' : 'mb-5 flex items-center justify-between gap-4'}`}>
               <div>
                 <h1 className={`font-display font-extrabold tracking-[-0.05em] text-[var(--on-surface)] ${isIpadLandscape ? 'text-[2rem]' : 'text-[2.6rem]'}`}>
-                  Main Selection
+                  菜单
                 </h1>
                 <p className={`${isIpadLandscape ? 'text-[0.95rem]' : 'text-[1.15rem]'} font-medium text-[var(--muted)]`}>
-                  {catalogLoading ? 'Loading menu...' : draftLoading ? 'Loading draft...' : 'Tap an item to customize and add it.'}
+                  {catalogLoading ? '正在加载菜单...' : draftLoading ? '正在加载订单...' : '点击菜品选择规格并加入订单。'}
                 </p>
               </div>
               <div className={`rounded-[20px] bg-[rgba(26,28,25,0.04)] font-semibold text-[var(--muted)] ${isIpadLandscape ? 'px-3 py-2 text-[0.8rem]' : 'px-4 py-3 text-sm'}`}>
@@ -310,20 +463,23 @@ export function OrderingPage({
             </div>
 
             {catalogLoading ? (
-              <div className={`grid ${isIpadLandscape ? 'gap-3 md:grid-cols-2' : 'gap-5 md:grid-cols-2'}`}>
+              <div className={`ordering-menu-scroll grid ${isIpadLandscape ? 'gap-3 md:grid-cols-2' : 'gap-5 md:grid-cols-2'}`}>
                 {Array.from({ length: 4 }).map((_, index) => (
                   <div key={`menu-loading-${index}`} className="h-[16rem] animate-pulse rounded-[28px] bg-[rgba(26,28,25,0.05)]" />
                 ))}
               </div>
             ) : (
-              <div className={`grid ${isIpadLandscape ? 'gap-3 md:grid-cols-2' : 'gap-5 md:grid-cols-2'}`}>
+              <div className={`ordering-menu-scroll grid ${isIpadLandscape ? 'gap-3 md:grid-cols-2' : 'gap-5 md:grid-cols-2'}`}>
                 {filteredItems.map((item) => (
                   <MenuItemCard
                     key={item.id}
                     item={item}
                     onSelect={handleSelectMenuItem}
-                    onQuickAdd={item.categoryCode === 'FRIED' ? handleQuickAddItem : undefined}
+                    onQuickAdd={handleMenuCardAdd}
+                    onDecrement={() => handleDecrementMenuItem(item.id)}
                     quickAddState={quickAddStates[item.id] ?? 'idle'}
+                    orderedQuantity={orderedQuantityByMenuItemId.get(item.id) ?? 0}
+                    canDecrement={latestMutableItemByMenuItemId.has(item.id)}
                     compact={isIpadLandscape}
                   />
                 ))}
@@ -359,9 +515,9 @@ export function OrderingPage({
               compact={isIpadLandscape}
             />
           ) : (
-            <div className={`flex h-full min-h-[28rem] items-center justify-center bg-[rgba(255,255,255,0.82)] shadow-[0_18px_42px_rgba(26,28,25,0.06)] ${isIpadLandscape ? 'rounded-[24px] p-4' : 'rounded-[32px] p-5'}`}>
+            <div className={`flex min-h-[34rem] items-center justify-center bg-[rgba(255,255,255,0.82)] shadow-[0_18px_42px_rgba(26,28,25,0.06)] ${isIpadLandscape ? 'rounded-[24px] p-4' : 'rounded-[32px] p-5'}`}>
               <div className={`text-center text-[var(--muted)] ${isIpadLandscape ? 'text-[0.95rem]' : 'text-[1.05rem]'}`}>
-                {draftLoading ? 'Loading draft order...' : 'Unable to open draft order.'}
+                {draftLoading ? '正在加载订单...' : '无法打开当前订单。'}
               </div>
             </div>
           )}
@@ -384,8 +540,8 @@ export function OrderingPage({
         open={takeoutDialogOpen}
         initialValue={effectivePickupLabel ?? ''}
         allowEmpty
-        confirmLabel="Save"
-        helperText="Optionally add a customer name or phone number. If left blank, the generated takeout number will stay in use."
+        confirmLabel="保存"
+        helperText="可填写顾客姓名或电话；不填则继续使用系统生成的外卖编号。"
         onClose={() => setTakeoutDialogOpen(false)}
         onConfirm={(value) => void handleUpdatePickupLabel(value)}
       />

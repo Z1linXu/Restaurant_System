@@ -43,11 +43,17 @@ public class PrintJob {
     @Column(name = "status")
     public String status;
 
+    @Column(name = "execution_mode")
+    public String executionMode;
+
     @Column(name = "payload_snapshot", columnDefinition = "text")
     public String payload_snapshot;
 
     @Column(name = "rendered_text_snapshot", columnDefinition = "text")
     public String rendered_text_snapshot;
+
+    @Column(name = "escpos_payload_base64", columnDefinition = "text")
+    public String escposPayloadBase64;
 
     @Column(name = "error_message", columnDefinition = "text")
     public String error_message;
@@ -63,6 +69,21 @@ public class PrintJob {
 
     @Column(name = "requested_by_user_id")
     public Long requested_by_user_id;
+
+    @Column(name = "claimed_by_device_id")
+    public Long claimedByDeviceId;
+
+    @Column(name = "claimed_at")
+    public LocalDateTime claimedAt;
+
+    @Column(name = "claim_expires_at")
+    public LocalDateTime claimExpiresAt;
+
+    @Column(name = "printed_by_device_id")
+    public Long printedByDeviceId;
+
+    @Column(name = "client_attempt_token")
+    public String clientAttemptToken;
 
     @Column(name = "created_at")
     public LocalDateTime created_at;

@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   fetchAdminMenuItems,
+  fetchMenuManagementContext,
   fetchPlatformOverview,
   rebuildAnalyticsForDate,
   savePlatformEntity,
   type MenuItemAdminRecord,
   type PlatformAdminOverview,
 } from '../../services/platformAdminService'
+import { ApiRequestError } from '../../services/apiClient'
 import { MenuOptionsPanel } from './MenuOptionsPanel'
+import { useAuth } from '../auth/useAuth'
 import { useCurrentStore } from '../store/StoreContext'
 
 interface MenuItemEditorState {
@@ -75,10 +78,10 @@ function buildDraft(overview: PlatformAdminOverview, storeId: number): MenuItemE
   }
 }
 
-function toEditorState(record: Record<string, unknown> | MenuItemAdminRecord): MenuItemEditorState {
+function toEditorState(record: Record<string, unknown> | MenuItemAdminRecord, fallbackStoreId: number): MenuItemEditorState {
   return {
     id: asNumber(record.id, 0) || undefined,
-    store_id: asNumber(record.store_id, 1),
+    store_id: asNumber(record.store_id, fallbackStoreId),
     category_id: asNumber(record.category_id, 0),
     station_id: asNumber(record.station_id, 0),
     name_zh: asString(record.name_zh),
@@ -105,6 +108,7 @@ function sameSavedValues(expected: MenuItemEditorState, actual: MenuItemEditorSt
 
 export function MenuManagementPage() {
   const { storeId } = useCurrentStore()
+  const { isFrontdesk } = useAuth()
   const [overview, setOverview] = useState<PlatformAdminOverview | null>(null)
   const [menuItems, setMenuItems] = useState<MenuItemEditorState[]>([])
   const [selectedStoreId, setSelectedStoreId] = useState(String(storeId))
@@ -126,14 +130,23 @@ export function MenuManagementPage() {
     setLoading(true)
     setError(null)
     try {
+      let overviewContext: PlatformAdminOverview
+      try {
+        overviewContext = await fetchPlatformOverview(storeId)
+      } catch (overviewError) {
+        if (!(overviewError instanceof ApiRequestError) || overviewError.status !== 403) {
+          throw overviewError
+        }
+        overviewContext = await fetchMenuManagementContext(storeId)
+      }
       const [nextOverview, nextMenuItems] = await Promise.all([
-        fetchPlatformOverview(storeId),
+        Promise.resolve(overviewContext),
         fetchAdminMenuItems(storeId),
       ])
       setOverview(nextOverview)
       setMenuItems(
         nextMenuItems
-          .map((record) => toEditorState(record))
+          .map((record) => toEditorState(record, storeId))
           .sort((left, right) => left.name_zh.localeCompare(right.name_zh, 'zh-Hans')),
       )
     } catch (loadError) {
@@ -247,7 +260,7 @@ export function MenuManagementPage() {
   const refreshMenuItems = async (storeId: number) => {
     const nextMenuItems = await fetchAdminMenuItems(storeId)
     const normalized = nextMenuItems
-      .map((record) => toEditorState(record))
+      .map((record) => toEditorState(record, storeId))
       .sort((left, right) => left.name_zh.localeCompare(right.name_zh, 'zh-Hans'))
     setMenuItems(normalized)
     return normalized
@@ -291,7 +304,7 @@ export function MenuManagementPage() {
       setEditor(null)
       setToast({ kind: 'success', message: `Saved ${persistedItem.name_zh || persistedItem.name_en || 'menu item'}.` })
       setAnalyticsNotice(
-        priceChanged || costChanged
+        !isFrontdesk && (priceChanged || costChanged)
           ? 'Price or cost changes affect future orders immediately. Historical profit reports require analytics rebuild.'
           : null,
       )

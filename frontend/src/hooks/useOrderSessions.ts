@@ -57,6 +57,7 @@ export function buildDefaultDraft(menuItem: MenuItem): ItemCustomizationDraft {
     addOnQuantities: {},
     removeIds: [],
     quantity: 1,
+    notes: '',
   }
 }
 
@@ -155,7 +156,7 @@ function buildLineItem(menuItem: MenuItem, draft: ItemCustomizationDraft, itemId
     lineSubtotal: unitPrice * draft.quantity,
     selection: draft,
     summaryTags,
-    notes: '',
+    notes: draft.notes,
   }
 }
 

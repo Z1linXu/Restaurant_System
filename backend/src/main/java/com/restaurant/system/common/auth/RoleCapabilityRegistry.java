@@ -39,6 +39,7 @@ public class RoleCapabilityRegistry {
             Capability.SHELF_VIEW,
             Capability.SHELF_SERVED,
             Capability.ADMIN_MENU_MANAGE,
+            Capability.ADMIN_PRINTING_MANAGE,
             Capability.ADMIN_STORE_CONFIG,
             Capability.ADMIN_HISTORY_LIMIT,
             Capability.ADMIN_USER_ROLE_MANAGE
@@ -60,7 +61,9 @@ public class RoleCapabilityRegistry {
             Capability.BEVERAGE_SERVED,
             Capability.BEVERAGE_CANCEL,
             Capability.SHELF_VIEW,
-            Capability.SHELF_SERVED
+            Capability.SHELF_SERVED,
+            Capability.ADMIN_MENU_MANAGE,
+            Capability.ADMIN_PRINTING_MANAGE
         ),
         ROLE_HOT_KITCHEN,
         EnumSet.of(

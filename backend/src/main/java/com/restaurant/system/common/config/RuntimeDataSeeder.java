@@ -87,6 +87,11 @@ public class RuntimeDataSeeder implements ApplicationRunner {
     private final ObjectMapper objectMapper;
     private final boolean runtimeSeedEnabled;
     private final boolean forceOverwrite;
+    private final boolean safeMetadataEnabled;
+    private final boolean defaultUsersEnabled;
+    private final boolean demoDataEnabled;
+    private final boolean membershipSupplementEnabled;
+    private final boolean productionBootstrapEnabled;
 
     public RuntimeDataSeeder(
         StoreRepository storeRepository,
@@ -108,7 +113,12 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         PasswordService passwordService,
         DevRoleSwitcherAccess devRoleSwitcherAccess,
         @Value("${app.seed.runtime-enabled:true}") boolean runtimeSeedEnabled,
-        @Value("${app.seed.force-overwrite:false}") boolean forceOverwrite
+        @Value("${app.seed.force-overwrite:false}") boolean forceOverwrite,
+        @Value("${app.seed.safe-metadata-enabled:true}") boolean safeMetadataEnabled,
+        @Value("${app.seed.default-users-enabled:true}") boolean defaultUsersEnabled,
+        @Value("${app.seed.demo-data-enabled:true}") boolean demoDataEnabled,
+        @Value("${app.seed.membership-supplement-enabled:true}") boolean membershipSupplementEnabled,
+        @Value("${app.seed.production-bootstrap-enabled:false}") boolean productionBootstrapEnabled
     ) {
         this.storeRepository = storeRepository;
         this.roleRepository = roleRepository;
@@ -131,6 +141,11 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         this.objectMapper = new ObjectMapper();
         this.runtimeSeedEnabled = runtimeSeedEnabled;
         this.forceOverwrite = forceOverwrite;
+        this.safeMetadataEnabled = safeMetadataEnabled;
+        this.defaultUsersEnabled = defaultUsersEnabled;
+        this.demoDataEnabled = demoDataEnabled;
+        this.membershipSupplementEnabled = membershipSupplementEnabled;
+        this.productionBootstrapEnabled = productionBootstrapEnabled;
     }
 
     @Override
@@ -141,30 +156,64 @@ public class RuntimeDataSeeder implements ApplicationRunner {
             return;
         }
         logger.info(
-            "RuntimeDataSeeder running in {}",
-            forceOverwrite ? "force overwrite mode" : "missing-data supplement mode"
+            "RuntimeDataSeeder running in {} with policy safeMetadata={}, defaultUsers={}, demoData={}, membershipSupplement={}, productionBootstrap={}",
+            forceOverwrite ? "force overwrite mode" : "missing-data supplement mode",
+            safeMetadataEnabled,
+            defaultUsersEnabled,
+            demoDataEnabled,
+            membershipSupplementEnabled,
+            productionBootstrapEnabled
         );
-        seedStores();
-        seedRoles();
-        seedUsers();
-        seedAuthCredentials();
-        seedDevRoleSwitcherUsers();
-        seedStations();
-        seedMenuCategories();
-        seedMenuItems();
-        seedMenuItemOptions();
-        if (forceOverwrite) {
-            syncTargetOptionPrices();
+
+        if (safeMetadataEnabled) {
+            seedRoles();
         } else {
-            logger.info("Skipping syncTargetOptionPrices because app.seed.force-overwrite=false");
+            logger.info("Skipping safe metadata seed because app.seed.safe-metadata-enabled=false");
         }
-        seedOrganizations();
-        attachStoresToOrganizations();
-        seedMemberships();
-        seedDiningTables();
-        seedStoreKdsDisplayConfigs();
-        seedRamenTemplate();
-        seedPrintingCenter();
+
+        if (productionBootstrapEnabled) {
+            logger.warn("Production bootstrap seed is configured but not implemented in this PR; no bootstrap data was created.");
+        }
+
+        if (demoDataEnabled) {
+            seedStores();
+        } else {
+            logger.info("Skipping demo store seed because app.seed.demo-data-enabled=false");
+        }
+
+        if (defaultUsersEnabled) {
+            seedUsers();
+            seedAuthCredentials();
+            seedDevRoleSwitcherUsers();
+        } else {
+            logger.info("Skipping default users and credentials seed because app.seed.default-users-enabled=false");
+        }
+
+        if (demoDataEnabled) {
+            seedStations();
+            seedMenuCategories();
+            seedMenuItems();
+            seedMenuItemOptions();
+            if (forceOverwrite) {
+                syncTargetOptionPrices();
+            } else {
+                logger.info("Skipping syncTargetOptionPrices because app.seed.force-overwrite=false");
+            }
+            seedOrganizations();
+            attachStoresToOrganizations();
+            seedDiningTables();
+            seedStoreKdsDisplayConfigs();
+            seedRamenTemplate();
+            seedPrintingCenter();
+        } else {
+            logger.info("Skipping demo menu, table, printing, template, and display seed because app.seed.demo-data-enabled=false");
+        }
+
+        if (membershipSupplementEnabled) {
+            seedMemberships();
+        } else {
+            logger.info("Skipping membership supplement seed because app.seed.membership-supplement-enabled=false");
+        }
     }
 
     private void seedStores() {

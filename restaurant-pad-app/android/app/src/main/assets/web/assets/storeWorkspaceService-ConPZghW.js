@@ -1,0 +1,1 @@
+import{n as e}from"./apiClient-85pqMrWF.js";function t(){return e(`/api/v1/me/workspaces`)}function n(t){return e(`/api/v1/stores/${t}/context`)}export{t as n,n as t};

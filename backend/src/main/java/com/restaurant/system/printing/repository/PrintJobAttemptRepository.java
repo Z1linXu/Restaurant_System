@@ -20,4 +20,15 @@ public interface PrintJobAttemptRepository extends JpaRepository<PrintJobAttempt
         where pja.print_job_id = :printJobId
         """)
     long countByPrintJobId(@Param("printJobId") Long printJobId);
+
+    @Query("""
+        select pja from PrintJobAttempt pja
+        where pja.print_job_id = :printJobId
+          and pja.clientAttemptToken = :clientAttemptToken
+        order by pja.id desc
+        """)
+    List<PrintJobAttempt> findAllByPrintJobIdAndClientAttemptToken(
+        @Param("printJobId") Long printJobId,
+        @Param("clientAttemptToken") String clientAttemptToken
+    );
 }

@@ -74,6 +74,18 @@ class AuthorizationServiceTest {
     }
 
     @Test
+    void frontdeskCanUseStoreScopedMenuAndPrintingToolsOnlyForOwnStore() {
+        stubUser(8L, 100L, "FRONTDESK");
+
+        assertDoesNotThrow(() -> authorizationService.requireForStore(100L, Capability.ADMIN_MENU_MANAGE));
+        assertDoesNotThrow(() -> authorizationService.requireForStore(100L, Capability.ADMIN_PRINTING_MANAGE));
+        assertThrows(ForbiddenException.class, () -> authorizationService.requireForStore(100L, Capability.ADMIN_STORE_CONFIG));
+        assertThrows(ForbiddenException.class, () -> authorizationService.requireForStore(100L, Capability.ADMIN_USER_ROLE_MANAGE));
+        assertThrows(ForbiddenException.class, () -> authorizationService.requireForStore(100L, Capability.ADMIN_HISTORY_LIMIT));
+        assertThrows(ForbiddenException.class, () -> authorizationService.requireForStore(200L, Capability.ADMIN_PRINTING_MANAGE));
+    }
+
+    @Test
     void hotKitchenCannotCreateOrders() {
         stubUser(2L, 100L, "HOT_KITCHEN");
 

@@ -1,6 +1,7 @@
 package com.restaurant.system.printing.service.impl;
 
 import com.restaurant.system.common.exception.BusinessException;
+import com.restaurant.system.printing.CloudPrintingGuard;
 import com.restaurant.system.printing.PrintingMode;
 import com.restaurant.system.printing.dto.PrintCenterOverviewResponse;
 import com.restaurant.system.printing.entity.PrinterConfig;
@@ -21,15 +22,18 @@ public class PrinterConfigServiceImpl implements PrinterConfigService {
     private final PrinterConfigRepository printerConfigRepository;
     private final PrinterAssignmentRepository printerAssignmentRepository;
     private final StoreRepository storeRepository;
+    private final CloudPrintingGuard cloudPrintingGuard;
 
     public PrinterConfigServiceImpl(
         PrinterConfigRepository printerConfigRepository,
         PrinterAssignmentRepository printerAssignmentRepository,
-        StoreRepository storeRepository
+        StoreRepository storeRepository,
+        CloudPrintingGuard cloudPrintingGuard
     ) {
         this.printerConfigRepository = printerConfigRepository;
         this.printerAssignmentRepository = printerAssignmentRepository;
         this.storeRepository = storeRepository;
+        this.cloudPrintingGuard = cloudPrintingGuard;
     }
 
     @Override
@@ -40,6 +44,8 @@ public class PrinterConfigServiceImpl implements PrinterConfigService {
         response.printing_mode = getStorePrintingMode(storeId);
         response.printers = getPrinters(storeId);
         response.assignments = printerAssignmentRepository.findAllByStoreIdOrderByIdAsc(storeId);
+        response.cloud_private_printer_guard_active = cloudPrintingGuard.isStrictCloudProfile();
+        response.cloud_private_printer_warning = buildCloudPrivatePrinterWarning(response.printing_mode, response.printers);
         return response;
     }
 
@@ -146,5 +152,16 @@ public class PrinterConfigServiceImpl implements PrinterConfigService {
             printerConfig.created_at = now;
         }
         printerConfig.updated_at = now;
+    }
+
+    private String buildCloudPrivatePrinterWarning(String printingMode, List<PrinterConfig> printers) {
+        if (!cloudPrintingGuard.isStrictCloudProfile() || !PrintingMode.REAL.equals(printingMode)) {
+            return null;
+        }
+        boolean hasBlockedPrinter = printers.stream()
+            .anyMatch(printer -> cloudPrintingGuard.blockedBackendTcpMessage(printer).isPresent());
+        return hasBlockedPrinter
+            ? CloudPrintingGuard.ERROR_MESSAGE
+            : null;
     }
 }

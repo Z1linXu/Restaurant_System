@@ -17,6 +17,9 @@ public class AuthUserResponse {
     @JsonProperty("store_id")
     public Long storeId;
 
+    @JsonProperty("store_name")
+    public String storeName;
+
     @JsonProperty("organization_id")
     public Long organizationId;
 }

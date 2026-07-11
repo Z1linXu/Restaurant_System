@@ -67,9 +67,18 @@ function getSummary(record: Record<string, unknown>) {
   )
 }
 
-function makeDraft(section: SectionKey, overview: PlatformAdminOverview): Record<string, unknown> {
-  const storeId = Number(overview.stores[0]?.id ?? 1)
-  const organizationId = Number(overview.organizations[0]?.id ?? 1)
+function firstId(records: Array<{ id?: unknown }>) {
+  const id = Number(records[0]?.id)
+  return Number.isFinite(id) && id > 0 ? id : null
+}
+
+function makeDraft(section: SectionKey, overview: PlatformAdminOverview, currentStoreId: number): Record<string, unknown> {
+  const storeId = currentStoreId
+  const organizationId = firstId(overview.organizations)
+  const defaultCategoryId = firstId(overview.menu_categories.filter((category) => Number(category.store_id) === storeId))
+  const defaultStationId = firstId(overview.stations.filter((station) => Number(station.store_id) === storeId))
+  const defaultMenuItemId = firstId(overview.menu_items.filter((item) => Number(item.store_id) === storeId))
+  const defaultRoleId = firstId(overview.roles)
 
   switch (section) {
     case 'organizations':
@@ -109,8 +118,8 @@ function makeDraft(section: SectionKey, overview: PlatformAdminOverview): Record
     case 'menu_items':
       return {
         store_id: storeId,
-        category_id: Number(overview.menu_categories[0]?.id ?? 1),
-        station_id: Number(overview.stations[0]?.id ?? 1),
+        category_id: defaultCategoryId,
+        station_id: defaultStationId,
         name_zh: '',
         name_en: '',
         sku: '',
@@ -121,7 +130,7 @@ function makeDraft(section: SectionKey, overview: PlatformAdminOverview): Record
       }
     case 'menu_item_options':
       return {
-        menu_item_id: Number(overview.menu_items[0]?.id ?? 1),
+        menu_item_id: defaultMenuItemId,
         option_type: 'addon',
         name_zh: '',
         name_en: '',
@@ -140,7 +149,7 @@ function makeDraft(section: SectionKey, overview: PlatformAdminOverview): Record
     case 'users':
       return {
         store_id: storeId,
-        role_id: Number(overview.roles[0]?.id ?? 1),
+        role_id: defaultRoleId,
         username: '',
         full_name: '',
         phone: '',
@@ -159,8 +168,8 @@ export function PlatformAdminPage() {
   const [editor, setEditor] = useState<EditorState | null>(null)
   const [saving, setSaving] = useState(false)
   const [templateForm, setTemplateForm] = useState({
-    organization_id: 1,
-    template_id: 1,
+    organization_id: 0,
+    template_id: 0,
     name: '',
     code: '',
   })
@@ -173,8 +182,8 @@ export function PlatformAdminPage() {
       setOverview(nextOverview)
       setTemplateForm((current) => ({
         ...current,
-        organization_id: Number(nextOverview.organizations[0]?.id ?? 1),
-        template_id: Number(nextOverview.templates[0]?.id ?? 1),
+        organization_id: firstId(nextOverview.organizations) ?? 0,
+        template_id: firstId(nextOverview.templates) ?? 0,
       }))
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Failed to load platform admin overview')
@@ -202,7 +211,7 @@ export function PlatformAdminPage() {
     if (!overview) {
       return
     }
-    const nextRecord = record ? { ...record } : makeDraft(section, overview)
+    const nextRecord = record ? { ...record } : makeDraft(section, overview, storeId)
     setEditor({
       section,
       path,

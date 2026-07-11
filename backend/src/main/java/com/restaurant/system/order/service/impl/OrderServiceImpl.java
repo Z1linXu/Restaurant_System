@@ -425,6 +425,9 @@ public class OrderServiceImpl implements OrderService {
         }
         printDispatcherService.dispatchAfterCommit(PrintModuleCode.GRAB, order.store_id, order.id);
         printDispatcherService.dispatchAfterCommit(PrintModuleCode.FRONTDESK_RECEIPT, order.store_id, order.id);
+        if (printDispatcherService.hasPrintableContent(PrintModuleCode.HOT_KITCHEN, order.store_id, order.id)) {
+            printDispatcherService.dispatchAfterCommit(PrintModuleCode.HOT_KITCHEN, order.store_id, order.id);
+        }
         return loadOrderResponse(order.id);
     }
 
@@ -493,6 +496,20 @@ public class OrderServiceImpl implements OrderService {
             order.id,
             batch.id
         );
+        printDispatcherService.dispatchOrderUpdateAfterCommit(
+            PrintModuleCode.FRONTDESK_RECEIPT,
+            order.store_id,
+            order.id,
+            batch.id
+        );
+        if (printDispatcherService.hasPrintableUpdateContent(PrintModuleCode.HOT_KITCHEN, order.store_id, order.id, batch.id)) {
+            printDispatcherService.dispatchOrderUpdateAfterCommit(
+                PrintModuleCode.HOT_KITCHEN,
+                order.store_id,
+                order.id,
+                batch.id
+            );
+        }
         return buildOrderUpdateResponse(order.id, batch, false);
     }
 
@@ -1858,7 +1875,7 @@ public class OrderServiceImpl implements OrderService {
             case "fried_egg", "combo_fried_egg" -> "+煎";
             case "extra_meat" -> "+肉";
             case "extra_radish" -> "+萝";
-            case "bok_choy" -> "+青";
+            case "bok_choy" -> "加上海青";
             case "cilantro" -> "+香";
             case "green_onion" -> "+葱";
             case "extra_sauce" -> "+酱";

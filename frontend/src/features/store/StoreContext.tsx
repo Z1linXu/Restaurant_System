@@ -18,7 +18,7 @@ const StoreContext = createContext<StoreContextValue | null>(null)
 function mapStoreContext(storeId: number, data: StoreContextResponse | null, loading: boolean, error: string | null): StoreContextValue {
   return {
     storeId,
-    storeName: data?.name ?? `Store ${storeId}`,
+    storeName: data?.name ?? `门店 ${storeId}`,
     storeCode: data?.code ?? null,
     organizationId: data?.organization_id ?? null,
     organizationName: data?.organization_name ?? null,
@@ -45,7 +45,7 @@ export function StoreContextProvider({ storeId, children }: { storeId: number; c
       .catch((exception) => {
         if (!active) return
         setData(null)
-        setError(getApiUserMessage(exception, '你没有权限访问这家门店 / You do not have access to this store.'))
+        setError(getApiUserMessage(exception, '你没有权限访问这家门店。'))
       })
       .finally(() => {
         if (active) setLoading(false)
@@ -77,7 +77,7 @@ export function RequireStoreAccess({ children }: { children: React.ReactNode }) 
     return (
       <div className="min-h-screen bg-[var(--surface)] px-6 py-8 text-[var(--on-surface)]">
         <div className="mx-auto max-w-[760px] rounded-[30px] bg-white px-7 py-8 shadow-[0_22px_54px_rgba(26,28,25,0.1)]">
-          <div className="text-[1rem] font-bold text-[var(--muted)]">Loading store workspace...</div>
+          <div className="text-[1rem] font-bold text-[var(--muted)]">正在加载门店工作区...</div>
         </div>
       </div>
     )
@@ -87,9 +87,9 @@ export function RequireStoreAccess({ children }: { children: React.ReactNode }) 
     return (
       <div className="min-h-screen bg-[var(--surface)] px-6 py-8 text-[var(--on-surface)]">
         <div className="mx-auto max-w-[760px] rounded-[30px] bg-white px-7 py-8 shadow-[0_22px_54px_rgba(26,28,25,0.1)]">
-          <div className="text-[1.8rem] font-black tracking-[-0.05em]">Access Denied</div>
+          <div className="text-[1.8rem] font-black tracking-[-0.05em]">无权访问</div>
           <div className="mt-2 text-[0.98rem] font-semibold text-[var(--muted)]">
-            {store.error || '你没有权限访问这家门店 / You do not have access to this store.'}
+            {store.error || '你没有权限访问这家门店。'}
           </div>
         </div>
       </div>

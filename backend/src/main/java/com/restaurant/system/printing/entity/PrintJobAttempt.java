@@ -25,14 +25,29 @@ public class PrintJobAttempt {
     @Column(name = "printer_id")
     public Long printer_id;
 
+    @Column(name = "device_id")
+    public Long device_id;
+
+    @Column(name = "transport_type")
+    public String transportType;
+
+    @Column(name = "client_attempt_token")
+    public String clientAttemptToken;
+
     @Column(name = "attempt_number")
     public Integer attempt_number;
 
     @Column(name = "status")
     public String status;
 
+    @Column(name = "error_code")
+    public String errorCode;
+
     @Column(name = "error_message", columnDefinition = "text")
     public String error_message;
+
+    @Column(name = "raw_result", columnDefinition = "text")
+    public String rawResult;
 
     @Column(name = "started_at")
     public LocalDateTime started_at;

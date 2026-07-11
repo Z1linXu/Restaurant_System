@@ -231,6 +231,7 @@ public class AuthServiceImpl implements AuthService {
         userResponse.fullName = user.fullName();
         userResponse.roleCode = user.roleCode();
         userResponse.storeId = user.storeId();
+        userResponse.storeName = store == null ? null : store.name;
         userResponse.organizationId = organizationId;
 
         LoginResponse response = new LoginResponse();

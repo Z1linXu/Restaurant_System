@@ -9,10 +9,13 @@ import com.restaurant.system.printing.dto.PrintRenderRequest;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
@@ -25,6 +28,7 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
     private static final String OPTION_TYPE_ADDON = "addon";
     private static final String OPTION_TYPE_NOODLE_TYPE = "noodle_type";
     private static final String OPTION_TYPE_SIZE = "size";
+    private static final String OPTION_TYPE_SPICY_LEVEL = "spicy_level";
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     @Override
@@ -37,22 +41,34 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         Order order = request.order;
         Map<Long, List<OrderItemOption>> optionsByItemId = (request.order_item_options == null ? List.<OrderItemOption>of() : request.order_item_options).stream()
             .collect(Collectors.groupingBy(option -> option.order_item_id));
+        boolean updateTicket = Boolean.TRUE.equals(request.is_update_ticket);
+        List<OrderItem> allItems = request.order_items == null ? List.of() : request.order_items.stream()
+            .filter(item -> !"cancelled".equals(item.status))
+            .sorted(Comparator.comparing(item -> item.id))
+            .toList();
 
-        BigDecimal subtotal = safeMoney(order.subtotal_amount);
-        BigDecimal total = safeMoney(order.total_amount);
-        BigDecimal tax = total.subtract(subtotal).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal subtotal = updateTicket ? calculateItemsSubtotal(allItems) : safeMoney(order.subtotal_amount);
+        BigDecimal tax = updateTicket ? TaxCalculator.calculateTax(subtotal) : safeMoney(order.total_amount).subtract(subtotal).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal total = updateTicket ? TaxCalculator.calculateTotal(subtotal) : safeMoney(order.total_amount);
 
         StringBuilder builder = new StringBuilder();
         appendLargeLine(builder, resolveLargeDisplayLabel(order));
+        if (updateTicket) {
+            appendLargeLine(builder, "UPDATED");
+            appendSizedLine(builder, "Added items only");
+        }
         if ("pickup".equalsIgnoreCase(order.order_type) || "takeout".equalsIgnoreCase(order.order_type)) {
             appendSizedLine(builder, "Order Type: Takeout");
         }
         appendSizedLine(builder, "--------------------------------");
 
-        List<OrderItem> items = request.order_items == null ? List.of() : request.order_items.stream()
-            .filter(item -> !"cancelled".equals(item.status))
+        Map<Integer, List<OrderItem>> comboSideItemsByGroup = allItems.stream()
+            .filter(item -> COMBO_ROLE_SIDE.equals(item.combo_role))
+            .filter(item -> item.combo_group_no != null)
+            .collect(Collectors.groupingBy(item -> item.combo_group_no));
+
+        List<OrderItem> items = allItems.stream()
             .filter(item -> shouldDisplayItem(item, optionsByItemId.getOrDefault(item.id, List.of())))
-            .sorted(Comparator.comparing(item -> item.id))
             .toList();
 
         for (OrderItem item : items) {
@@ -62,9 +78,21 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
             if (noodleType != null) {
                 appendSizedLine(builder, noodleType);
             }
+            String spicyLevel = resolveSpicyLevelLabel(options);
+            if (spicyLevel != null) {
+                appendSizedLine(builder, "辣度: " + spicyLevel);
+            }
             List<String> chargeableLines = resolveChargeableOptionLines(options);
             for (String chargeableLine : chargeableLines) {
                 appendSizedLine(builder, chargeableLine);
+            }
+            for (String comboSideLine : resolveComboSideLines(
+                item,
+                options,
+                comboSideItemsByGroup.getOrDefault(item.combo_group_no, List.of()),
+                optionsByItemId
+            )) {
+                appendSizedLine(builder, comboSideLine);
             }
             appendSizedLine(builder, formatItemMoney(item));
             builder.append("\n");
@@ -176,13 +204,113 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
             .orElse(null);
     }
 
+    private String resolveSpicyLevelLabel(List<OrderItemOption> options) {
+        return options.stream()
+            .filter(this::isSpicyLevelOption)
+            .map(option -> firstPresent(option.option_name_snapshot_zh, option.option_name_snapshot_en))
+            .filter(Objects::nonNull)
+            .findFirst()
+            .orElse(null);
+    }
+
+    private boolean isSpicyLevelOption(OrderItemOption option) {
+        if (OPTION_TYPE_SPICY_LEVEL.equals(option.option_type_snapshot)) {
+            return true;
+        }
+        if (isOptionGroup(option, "SPICY_LEVEL")) {
+            return true;
+        }
+        String code = option.option_code_snapshot == null ? "" : option.option_code_snapshot.trim().toLowerCase();
+        return code.contains("_spicy_level_") || code.startsWith("spicy_");
+    }
+
     private List<String> resolveChargeableOptionLines(List<OrderItemOption> options) {
         return options.stream()
             .filter(option -> safeMoney(option.price_delta).compareTo(BigDecimal.ZERO) > 0)
             .filter(option -> !OPTION_TYPE_SIZE.equals(option.option_type_snapshot))
+            .filter(option -> !isOptionGroup(option, "COMBO_SIDE"))
+            .filter(option -> !isOptionGroup(option, "COMBO_SIDE_REMOVE"))
             .filter(option -> !containsComboLabel(option.option_name_snapshot_zh) && !containsComboLabel(option.option_name_snapshot_en))
             .map(this::formatChargeableOption)
             .toList();
+    }
+
+    private List<String> resolveComboSideLines(
+        OrderItem item,
+        List<OrderItemOption> options,
+        List<OrderItem> comboSideItems,
+        Map<Long, List<OrderItemOption>> optionsByItemId
+    ) {
+        if (!isComboItem(item, options)) {
+            return List.of();
+        }
+        List<String> lines = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+
+        List<OrderItemOption> sideOptions = options.stream()
+            .filter(this::isComboSideOption)
+            .toList();
+        for (OrderItemOption sideOption : sideOptions) {
+            addUniqueLine(lines, seen, "小菜: " + cleanComboSideLabel(firstPresent(sideOption.option_name_snapshot_zh, sideOption.option_name_snapshot_en)));
+            options.stream()
+                .filter(option -> isOptionGroup(option, "COMBO_SIDE_REMOVE"))
+                .filter(option -> sideOption.option_id != null && sideOption.option_id.equals(option.parent_option_id_snapshot))
+                .map(option -> firstPresent(option.option_name_snapshot_zh, option.option_name_snapshot_en))
+                .filter(Objects::nonNull)
+                .forEach(line -> addUniqueLine(lines, seen, line));
+        }
+
+        for (OrderItem sideItem : comboSideItems) {
+            addUniqueLine(lines, seen, "小菜: " + cleanComboSideLabel(firstPresent(sideItem.item_name_snapshot_zh, sideItem.item_name_snapshot_en)));
+            optionsByItemId.getOrDefault(sideItem.id, List.of()).stream()
+                .filter(option -> safeMoney(option.price_delta).compareTo(BigDecimal.ZERO) == 0)
+                .map(option -> firstPresent(option.option_name_snapshot_zh, option.option_name_snapshot_en))
+                .filter(Objects::nonNull)
+                .forEach(line -> addUniqueLine(lines, seen, line));
+        }
+
+        return lines;
+    }
+
+    private void addUniqueLine(List<String> lines, Set<String> seen, String line) {
+        if (line == null || line.isBlank()) {
+            return;
+        }
+        String normalized = line.trim().replaceAll("\\s+", " ").toLowerCase();
+        if (seen.add(normalized)) {
+            lines.add(line.trim());
+        }
+    }
+
+    private String cleanComboSideLabel(String label) {
+        if (label == null || label.isBlank()) {
+            return "小菜";
+        }
+        String cleaned = label.trim();
+        if (cleaned.startsWith("套餐")) {
+            cleaned = cleaned.substring("套餐".length()).trim();
+        }
+        if (cleaned.toLowerCase().startsWith("combo ")) {
+            cleaned = cleaned.substring("combo ".length()).trim();
+        }
+        return cleaned.isBlank() ? label.trim() : cleaned;
+    }
+
+    private boolean isOptionGroup(OrderItemOption option, String group) {
+        return option.option_group_snapshot != null && group.equalsIgnoreCase(option.option_group_snapshot);
+    }
+
+    private boolean isComboSideOption(OrderItemOption option) {
+        if (isOptionGroup(option, "COMBO_SIDE")) {
+            return true;
+        }
+        if (option.option_code_snapshot == null) {
+            return false;
+        }
+        String code = option.option_code_snapshot.trim().toLowerCase();
+        return code.equals("combo_edamame")
+            || code.equals("combo_shredded_potato")
+            || code.equals("combo_cucumber_salad");
     }
 
     private String formatChargeableOption(OrderItemOption option) {
@@ -223,13 +351,20 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         return value == null ? BigDecimal.ZERO : value.setScale(2, RoundingMode.HALF_UP);
     }
 
+    private BigDecimal calculateItemsSubtotal(List<OrderItem> items) {
+        return items.stream()
+            .map(item -> safeMoney(item.line_amount))
+            .reduce(BigDecimal.ZERO, BigDecimal::add)
+            .setScale(2, RoundingMode.HALF_UP);
+    }
+
     private String formatMoney(BigDecimal value) {
         return "$" + safeMoney(value);
     }
 
     private String resolveDisplayLabel(Order order) {
         if (order.table_no != null && !order.table_no.isBlank()) {
-            return order.table_no;
+            return PrintTableDisplayFormatter.formatSplitTableLabel(order.table_no);
         }
         if (order.pickup_no != null && !order.pickup_no.isBlank()) {
             return order.pickup_no;
@@ -239,7 +374,7 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
 
     private String resolveLargeDisplayLabel(Order order) {
         if (order.table_no != null && !order.table_no.isBlank()) {
-            return "桌号: " + order.table_no;
+            return "桌号: " + PrintTableDisplayFormatter.formatSplitTableLabel(order.table_no);
         }
         if (order.pickup_no != null && !order.pickup_no.isBlank()) {
             return "取餐号: " + order.pickup_no;

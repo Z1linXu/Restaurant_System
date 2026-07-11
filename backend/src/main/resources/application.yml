@@ -10,6 +10,8 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+  flyway:
+    enabled: false
 server:
   port: 8080
 
@@ -34,10 +36,15 @@ app:
   seed:
     runtime-enabled: true
     force-overwrite: false
+    safe-metadata-enabled: true
+    default-users-enabled: true
+    demo-data-enabled: true
+    membership-supplement-enabled: true
+    production-bootstrap-enabled: false
   auth:
     jwt-secret: dev-local-restaurant-pos-change-this-secret-please-2026
-    access-token-expiration-seconds: 900
-    refresh-token-expiration-days: 30
+    access-token-expiration-seconds: 2592000
+    refresh-token-expiration-days: 90
     x-user-id-fallback-enabled: true
   dev-tools:
     role-switcher-enabled: false
