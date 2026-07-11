@@ -51,7 +51,8 @@ services:
     image: ${FRONTEND_IMAGE:-restaurant-pos-frontend:local}
     restart: unless-stopped
     environment:
-      DOMAIN: ${DOMAIN:?DOMAIN is required}
+      DOMAIN: ${DOMAIN:-}
+      NGINX_SERVER_NAME: ${NGINX_SERVER_NAME:-_}
       TZ: ${TZ:-America/Toronto}
     ports:
       - "${HTTP_PORT:-80}:80"

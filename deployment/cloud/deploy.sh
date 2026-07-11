@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 ENV_FILE="${ENV_FILE:-$SCRIPT_DIR/.env}"
 COMPOSE_FILE="${COMPOSE_FILE:-$SCRIPT_DIR/docker-compose.yml}"
+ENABLE_HTTPS_OVERRIDE=""
 
 if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
   SUDO=()
@@ -19,16 +20,51 @@ die() {
   exit 1
 }
 
+usage() {
+  cat <<'USAGE'
+Usage: ./deploy.sh [--http-only|--https]
+
+  --http-only  Deploy with ENABLE_HTTPS=false. DOMAIN and LETSENCRYPT_EMAIL are optional.
+  --https      Deploy with ENABLE_HTTPS=true. DOMAIN and LETSENCRYPT_EMAIL are required.
+USAGE
+}
+
+parse_args() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --http-only)
+        ENABLE_HTTPS_OVERRIDE=false
+        ;;
+      --https)
+        ENABLE_HTTPS_OVERRIDE=true
+        ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        die "Unknown argument: $1"
+        ;;
+    esac
+    shift
+  done
+}
+
 load_env() {
   if [[ ! -f "$ENV_FILE" ]]; then
     cp "$SCRIPT_DIR/.env.example" "$ENV_FILE"
-    die "Created $ENV_FILE. Fill DOMAIN, LETSENCRYPT_EMAIL, DB_PASSWORD, and JWT_SECRET, then run deploy.sh again."
+    die "Created $ENV_FILE. Fill DB_PASSWORD and JWT_SECRET. For HTTPS, also fill DOMAIN and LETSENCRYPT_EMAIL."
   fi
 
   set -a
   # shellcheck disable=SC1090
   source "$ENV_FILE"
   set +a
+
+  if [[ -n "$ENABLE_HTTPS_OVERRIDE" ]]; then
+    ENABLE_HTTPS="$ENABLE_HTTPS_OVERRIDE"
+    export ENABLE_HTTPS
+  fi
 }
 
 require_env() {
@@ -103,17 +139,17 @@ set_nginx_template() {
 }
 
 validate_env() {
-  require_env DOMAIN
   require_env DB_NAME
   require_env DB_USER
   require_env DB_PASSWORD
   require_env JWT_SECRET
-  require_not_placeholder DOMAIN
   require_not_placeholder DB_PASSWORD
   require_not_placeholder JWT_SECRET
 
   if [[ "${ENABLE_HTTPS:-true}" == "true" ]]; then
+    require_env DOMAIN
     require_env LETSENCRYPT_EMAIL
+    require_not_placeholder DOMAIN
     require_not_placeholder LETSENCRYPT_EMAIL
   fi
 }
@@ -175,10 +211,20 @@ issue_or_renew_certificate() {
 
   if certificate_exists; then
     echo "Certificate already exists. Running certbot renew."
-    compose --profile tools run --rm certbot renew --webroot -w /var/www/certbot
+    if ! compose --profile tools run --rm certbot renew --webroot -w /var/www/certbot; then
+      echo "Certbot renew failed. PostgreSQL and backend are still running; keeping HTTP Nginx active." >&2
+      set_nginx_template http
+      compose up -d --force-recreate nginx || true
+      return 1
+    fi
   else
     echo "Requesting initial Let's Encrypt certificate for $DOMAIN..."
-    compose --profile tools run --rm certbot certonly "${certbot_args[@]}"
+    if ! compose --profile tools run --rm certbot certonly "${certbot_args[@]}"; then
+      echo "Certbot certificate request failed. PostgreSQL and backend are still running; keeping HTTP Nginx active." >&2
+      set_nginx_template http
+      compose up -d --force-recreate nginx || true
+      return 1
+    fi
   fi
 }
 
@@ -200,6 +246,7 @@ start_services() {
 main() {
   echo "Restaurant POS cloud deploy"
   echo "Repository: $REPO_ROOT"
+  parse_args "$@"
   load_env
   validate_env
   install_docker
@@ -220,7 +267,10 @@ main() {
   compose up -d backend
   wait_for_backend
 
-  issue_or_renew_certificate
+  if ! issue_or_renew_certificate; then
+    compose ps || true
+    die "HTTPS certificate step failed. Fix DNS/firewall/certbot, then rerun ./deploy.sh --https."
+  fi
   start_services
 
   echo "Deployment finished."

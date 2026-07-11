@@ -6186,6 +6186,8 @@ proxy, and Let's Encrypt HTTPS.
 Deployment files:
 
 - Root `README_SERVER_DEPLOY.md` is the ordered fresh-server runbook.
+- Root `README_GIT_DEPLOY_WORKFLOW.md` is the repeatable Git, PR, server
+  update, backup, and rollback workflow for future releases.
 - `backend/Dockerfile` builds the Spring Boot jar with Maven and runs it on
   Eclipse Temurin 17 JRE.
 - `frontend/Dockerfile` builds the React/Vite app with Node 22 and serves the
@@ -6194,13 +6196,19 @@ Deployment files:
   `certbot` services. PostgreSQL data, certificates, ACME webroot files, and
   backups are stored under `deployment/cloud/data`.
 - `deployment/cloud/nginx.http.conf` is used only for initial HTTP validation
-  and HTTP-only fallback deployments.
+  and HTTP-only public-IP deployments. In HTTP-only mode, Nginx uses
+  `server_name _`, `DOMAIN` and `LETSENCRYPT_EMAIL` may stay blank, and Certbot
+  is not executed.
 - `deployment/cloud/nginx.conf` is the HTTPS production template. It serves the
-  React app and proxies `/api/` and `/ws` to the backend service.
+  React app and proxies `/api/` and `/ws` to the backend service. HTTPS mode
+  requires `DOMAIN` and `LETSENCRYPT_EMAIL`.
 - `deployment/cloud/deploy.sh` installs Docker Engine and the Docker Compose
   plugin, creates runtime directories, starts PostgreSQL, builds backend and
   frontend images, starts the backend so Flyway initializes the schema, issues
-  or renews the Let's Encrypt certificate, and starts the final stack.
+  or renews the Let's Encrypt certificate when HTTPS is enabled, and starts the
+  final stack. `./deploy.sh --http-only` is equivalent to
+  `ENABLE_HTTPS=false`; `./deploy.sh --https` forces HTTPS validation and
+  certificate handling.
 - `deployment/cloud/update.sh` rebuilds and restarts backend/frontend services
   for future code updates and runs `certbot renew` when HTTPS is enabled.
 - `deployment/cloud/backup-db.sh` and `restore-db.sh` use the PostgreSQL Docker
