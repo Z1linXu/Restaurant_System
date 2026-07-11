@@ -27,6 +27,7 @@ For the complete fresh-server runbook, use:
 - `nginx.conf`: HTTPS production config.
 - `deploy.sh`: first-server deploy script. Supports `--http-only` and
   `--https`.
+- `bootstrap-admin.sh`: one-time interactive first owner/admin bootstrap command.
 - `update.sh`: future one-command update script.
 - `backup-db.sh`: PostgreSQL custom-format backup through the `db` container.
 - `restore-db.sh`: explicit-confirm restore through the `db` container.
@@ -43,6 +44,8 @@ cp .env.example .env
 nano .env
 ./deploy.sh --http-only
 ./health-check.sh
+./bootstrap-admin.sh --dry-run
+./bootstrap-admin.sh
 ```
 
 For HTTPS, set `ENABLE_HTTPS=true`, fill `DOMAIN` and `LETSENCRYPT_EMAIL`, then
