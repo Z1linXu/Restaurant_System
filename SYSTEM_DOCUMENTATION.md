@@ -130,7 +130,9 @@ Pilot profile fails startup if either of these are enabled:
 Production bootstrap is handled by the explicit one-time
 `deployment/cloud/bootstrap-admin.sh` command. Cloud/pilot deployments must not
 initialize real owner credentials through local/demo default `owner / 741xu741`
-seed behavior.
+seed behavior. The bootstrap command runs a minimal non-Web Spring context, not
+the normal servlet application context, so it does not require
+`HttpServletRequest`-scoped beans.
 
 ## Cloud Ready PR5: Cloud Printing Guard
 
@@ -6216,9 +6218,12 @@ Deployment files:
   certificate handling.
 - `deployment/cloud/bootstrap-admin.sh` is the explicit one-time production
   owner bootstrap command. It runs backend code with all demo/default seed flags
-  disabled, reads the owner password through hidden stdin, creates the first
-  organization/store/owner credentials/memberships in one transaction, and
-  refuses to run after an active owner/admin already exists.
+  disabled, can read non-secret fields from a chmod `600`
+  `bootstrap-admin.env`, reads the owner password through hidden stdin or
+  explicit `--password-stdin`, creates the first organization/store/owner
+  credentials/memberships in one transaction, and refuses to run after an active
+  owner/admin already exists. The password is never passed through Docker
+  Compose env/config or command-line arguments.
 - `deployment/cloud/update.sh` rebuilds and restarts backend/frontend services
   for future code updates and runs `certbot renew` when HTTPS is enabled.
 - `deployment/cloud/backup-db.sh` and `restore-db.sh` use the PostgreSQL Docker

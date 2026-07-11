@@ -39,7 +39,7 @@ public class ProductionAdminBootstrapRunner implements ApplicationRunner {
             System.out.println("organization: " + result.organizationName());
             System.out.println("store: " + result.storeName());
             System.out.println("username: " + result.username());
-            System.out.println("bootstrap validation success");
+            System.out.println("bootstrap dry-run success");
             return;
         }
         System.out.println("organization: " + result.organizationName());

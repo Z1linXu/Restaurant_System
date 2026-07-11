@@ -161,13 +161,26 @@ After schema initialization, run the one-time owner bootstrap:
 
 ```bash
 cd /opt/restaurant-system/deployment/cloud
-./bootstrap-admin.sh --dry-run
-./bootstrap-admin.sh
+nano bootstrap-admin.env
+chmod 600 bootstrap-admin.env
+./bootstrap-admin.sh --dry-run --env-file bootstrap-admin.env
+./bootstrap-admin.sh --env-file bootstrap-admin.env
 ```
 
-The script interactively asks for organization, store, owner username, owner
-full name, optional owner email/phone, and password. Password input is hidden.
-Do not enable demo seed flags in production.
+Example `bootstrap-admin.env`:
+
+```text
+BOOTSTRAP_ORGANIZATION_NAME=Lanzhou Noodles
+BOOTSTRAP_STORE_NAME=4483 R. Saint-Denis
+BOOTSTRAP_OWNER_USERNAME=owner
+BOOTSTRAP_OWNER_FULL_NAME=Chuwen Huang
+BOOTSTRAP_OWNER_EMAIL=
+BOOTSTRAP_OWNER_PHONE=
+```
+
+Do not put the owner password in `bootstrap-admin.env`. The script reads the
+password from hidden stdin and asks for confirmation. Do not enable demo seed
+flags in production.
 
 For details, read:
 
