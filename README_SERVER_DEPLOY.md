@@ -157,15 +157,43 @@ Expected result is HTTP `200` with a JSON success response.
 
 The cloud profile does not create demo users or demo restaurant data.
 
-After schema initialization, follow:
+After schema initialization, run the one-time owner bootstrap:
+
+```bash
+cd /opt/restaurant-system/deployment/cloud
+./bootstrap-admin.sh --dry-run
+./bootstrap-admin.sh
+```
+
+The script interactively asks for organization, store, owner username, owner
+full name, optional owner email/phone, and password. Password input is hidden.
+Do not enable demo seed flags in production.
+
+For details, read:
 
 ```bash
 deployment/cloud/README_PRODUCTION_BOOTSTRAP.md
 ```
 
-Do not enable demo seed flags in production.
+## 7. First Login
 
-## 7. Future Code Update
+Open the site:
+
+```text
+http://YOUR_SERVER_PUBLIC_IP
+```
+
+For HTTPS deploy, open:
+
+```text
+https://YOUR_DOMAIN
+```
+
+Log in with the owner username and password entered in
+`./bootstrap-admin.sh`. The cloud profile starts with no demo/default users, so
+login returns `401` until this bootstrap has completed.
+
+## 8. Future Code Update
 
 After new code is available on the server:
 
@@ -191,7 +219,7 @@ cd /opt/restaurant-system/deployment/cloud
 ./health-check.sh
 ```
 
-## 8. Backup Database
+## 9. Backup Database
 
 ```bash
 cd /opt/restaurant-system/deployment/cloud
@@ -206,7 +234,7 @@ deployment/cloud/data/backups/
 
 Copy backup files off the server regularly.
 
-## 9. Restore Database
+## 10. Restore Database
 
 Stop live traffic if this is production. Then run:
 
@@ -218,7 +246,7 @@ cd /opt/restaurant-system/deployment/cloud
 The script asks you to type `RESTORE`, stops the backend during restore, restores
 the dump into PostgreSQL, and restarts the backend.
 
-## 10. Useful Operations
+## 11. Useful Operations
 
 View logs:
 
@@ -243,7 +271,7 @@ docker compose --env-file .env -f docker-compose.yml down
 Do not remove `deployment/cloud/data/postgres` unless you intentionally want to
 delete the database.
 
-## 11. HTTPS Renewal
+## 12. HTTPS Renewal
 
 `update.sh` runs `certbot renew`. You can also renew manually:
 
@@ -256,7 +284,7 @@ docker compose --env-file .env -f docker-compose.yml up -d --force-recreate ngin
 For production, add a root cron job or Tencent Cloud scheduled command to run
 the renewal command at least weekly.
 
-## 12. Rollback
+## 13. Rollback
 
 If a new code deploy fails:
 

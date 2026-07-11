@@ -127,7 +127,10 @@ Pilot profile fails startup if either of these are enabled:
 - `app.seed.default-users-enabled=true`
 - `app.seed.demo-data-enabled=true`
 
-Production bootstrap is intentionally not implemented in PR4. A future PR must provide an explicit one-time owner/admin initialization path. Until then, cloud/pilot deployments should initialize real owner credentials through a reviewed operational script or migration/runbook, not through the local/demo default `owner / 741xu741` flow.
+Production bootstrap is handled by the explicit one-time
+`deployment/cloud/bootstrap-admin.sh` command. Cloud/pilot deployments must not
+initialize real owner credentials through local/demo default `owner / 741xu741`
+seed behavior.
 
 ## Cloud Ready PR5: Cloud Printing Guard
 
@@ -5565,13 +5568,15 @@ PR9-10 adds documentation-only cloud launch preparation under `deployment/cloud/
 
 New documents:
 
-- `README_PRODUCTION_BOOTSTRAP.md`: safe manual runbook for first cloud organization, store, owner, memberships, menu/table/printer setup, and rollback notes.
+- `README_PRODUCTION_BOOTSTRAP.md`: safe runbook for first cloud organization, store, owner, memberships, menu/table/printer setup, and rollback notes.
 - `FINAL_SMOKE_TEST_CHECKLIST.md`: copy-paste checklist covering pre-deploy, cloud environment, backend startup, frontend, bootstrap, POS, printing, KDS-disabled mode, admin pages, backup/restore, long-running pilot, no-go conditions, accepted pilot limitations, and monitoring.
 - `bootstrap-template.sql.example`: placeholder-only SQL skeleton for reviewed bootstrap rehearsal. It is not a production-ready script and must not contain plaintext passwords or real hashes.
 
 Important boundaries:
 
-- PR9-10 does not implement a production bootstrap CLI/API.
+- Production bootstrap now uses `deployment/cloud/bootstrap-admin.sh`, an
+  explicit one-time command that invokes backend code rather than SQL snippets
+  or demo seed flags.
 - PR9-10 does not connect to a server, deploy anything, or write secrets.
 - Cloud bootstrap must not depend on local/demo default users or RuntimeDataSeeder demo data.
 - Owner credentials must be generated securely, stored as BCrypt hashes, and handed to the owner through an out-of-band secure process.
@@ -6209,6 +6214,11 @@ Deployment files:
   final stack. `./deploy.sh --http-only` is equivalent to
   `ENABLE_HTTPS=false`; `./deploy.sh --https` forces HTTPS validation and
   certificate handling.
+- `deployment/cloud/bootstrap-admin.sh` is the explicit one-time production
+  owner bootstrap command. It runs backend code with all demo/default seed flags
+  disabled, reads the owner password through hidden stdin, creates the first
+  organization/store/owner credentials/memberships in one transaction, and
+  refuses to run after an active owner/admin already exists.
 - `deployment/cloud/update.sh` rebuilds and restarts backend/frontend services
   for future code updates and runs `certbot renew` when HTTPS is enabled.
 - `deployment/cloud/backup-db.sh` and `restore-db.sh` use the PostgreSQL Docker
