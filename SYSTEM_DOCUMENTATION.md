@@ -6227,6 +6227,13 @@ Deployment files:
   credentials/memberships in one transaction, and refuses to run after an active
   owner/admin already exists. The password is never passed through Docker
   Compose env/config or command-line arguments.
+- `deployment/cloud/export-store-config.sh` and
+  `deployment/cloud/import-store-config.sh` support a guarded one-store legacy
+  configuration migration. The whitelist covers menu, options, stations,
+  dining tables, inventory/BOM, receipt templates, and KDS display config. The
+  scripts deliberately exclude organizations, stores, users, credentials,
+  memberships, orders, tokens, audit logs, analytics, print jobs, printer
+  configs, printer assignments, and store device bindings.
 - `deployment/cloud/update.sh` rebuilds and restarts backend/frontend services
   for future code updates and runs `certbot renew` when HTTPS is enabled.
 - `deployment/cloud/backup-db.sh` and `restore-db.sh` use the PostgreSQL Docker

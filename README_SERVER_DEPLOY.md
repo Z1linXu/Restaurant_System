@@ -206,7 +206,15 @@ Log in with the owner username and password entered in
 `./bootstrap-admin.sh`. The cloud profile starts with no demo/default users, so
 login returns `401` until this bootstrap has completed.
 
-## 8. Future Code Update
+## 8. Optional Store Config Migration
+
+For a one-store legacy Mac database, use the guarded config-only migration
+helpers. Export from the old Mac with `deployment/cloud/export-store-config.sh`,
+copy the dump to the server, then run `deployment/cloud/import-store-config.sh`
+with `--dry-run` first. The importer excludes users, orders, tokens, audit logs,
+printer configs, printer assignments, and device bindings.
+
+## 9. Future Code Update
 
 After new code is available on the server:
 
@@ -232,7 +240,7 @@ cd /opt/restaurant-system/deployment/cloud
 ./health-check.sh
 ```
 
-## 9. Backup Database
+## 10. Backup Database
 
 ```bash
 cd /opt/restaurant-system/deployment/cloud
@@ -247,7 +255,7 @@ deployment/cloud/data/backups/
 
 Copy backup files off the server regularly.
 
-## 10. Restore Database
+## 11. Restore Database
 
 Stop live traffic if this is production. Then run:
 
@@ -259,7 +267,7 @@ cd /opt/restaurant-system/deployment/cloud
 The script asks you to type `RESTORE`, stops the backend during restore, restores
 the dump into PostgreSQL, and restarts the backend.
 
-## 11. Useful Operations
+## 12. Useful Operations
 
 View logs:
 
@@ -284,7 +292,7 @@ docker compose --env-file .env -f docker-compose.yml down
 Do not remove `deployment/cloud/data/postgres` unless you intentionally want to
 delete the database.
 
-## 12. HTTPS Renewal
+## 13. HTTPS Renewal
 
 `update.sh` runs `certbot renew`. You can also renew manually:
 
@@ -297,7 +305,7 @@ docker compose --env-file .env -f docker-compose.yml up -d --force-recreate ngin
 For production, add a root cron job or Tencent Cloud scheduled command to run
 the renewal command at least weekly.
 
-## 13. Rollback
+## 14. Rollback
 
 If a new code deploy fails:
 
