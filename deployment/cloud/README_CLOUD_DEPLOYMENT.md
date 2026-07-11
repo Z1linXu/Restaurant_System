@@ -30,6 +30,10 @@ For the complete fresh-server runbook, use:
 - `bootstrap-admin.sh`: one-time interactive first owner/admin bootstrap command.
 - `bootstrap-admin.env`: optional server-local first owner/admin input file.
   Keep it chmod `600`; it is ignored by Git and must not contain a password.
+- `export-store-config.sh`: Mac-side helper for exporting only old single-store
+  configuration table data.
+- `import-store-config.sh`: cloud-side guarded importer for whitelisted store
+  configuration dumps.
 - `update.sh`: future one-command update script.
 - `backup-db.sh`: PostgreSQL custom-format backup through the `db` container.
 - `restore-db.sh`: explicit-confirm restore through the `db` container.
