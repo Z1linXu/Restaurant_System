@@ -5,9 +5,18 @@ import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
+@ComponentScan(
+    basePackages = "com.restaurant.system",
+    excludeFilters = @ComponentScan.Filter(
+        type = FilterType.ASSIGNABLE_TYPE,
+        classes = ProductionAdminBootstrapApplication.class
+    )
+)
 @MapperScan("com.restaurant.system.**.mapper")
 @EnableScheduling
 public class RestaurantSystemApplication {
