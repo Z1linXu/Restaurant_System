@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.restaurant.system.common.config.RuntimeDataSeeder;
+import com.restaurant.system.station.repository.StationRepository;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -60,6 +62,8 @@ class ProductionAdminBootstrapApplicationTest {
                 "--app.seed.production-bootstrap-enabled=false"
             )) {
             assertNotNull(context.getBean(ProductionAdminBootstrapService.class));
+            assertEquals(0, context.getBeanNamesForType(StationRepository.class).length);
+            assertEquals(0, context.getBeanNamesForType(RuntimeDataSeeder.class).length);
         } finally {
             System.setIn(originalIn);
             System.setOut(originalOut);

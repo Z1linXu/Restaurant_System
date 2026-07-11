@@ -132,7 +132,10 @@ Production bootstrap is handled by the explicit one-time
 initialize real owner credentials through local/demo default `owner / 741xu741`
 seed behavior. The bootstrap command runs a minimal non-Web Spring context, not
 the normal servlet application context, so it does not require
-`HttpServletRequest`-scoped beans.
+`HttpServletRequest`-scoped beans. The normal `RestaurantSystemApplication`
+component scan explicitly excludes the bootstrap application configuration so
+the bootstrap-only `@EnableJpaRepositories` and `@EntityScan` ranges cannot
+shrink the main web application's repository scan.
 
 ## Cloud Ready PR5: Cloud Printing Guard
 
