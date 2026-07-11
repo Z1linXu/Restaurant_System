@@ -150,6 +150,7 @@ class ProductionAdminBootstrapServiceTest {
     void dryRunValidatesButDoesNotPersist() {
         stubCleanOwnerAdminGuard(List.of(role(1L, "Owner", "OWNER")));
         stubAvailableUsername();
+        stubUniqueCodes();
 
         ProductionAdminBootstrapResult result = bootstrapService.bootstrap(request(true));
 
@@ -223,6 +224,23 @@ class ProductionAdminBootstrapServiceTest {
     }
 
     @Test
+    void refusesWhenOrganizationCodeAlreadyExists() {
+        stubCleanOwnerAdminGuard(List.of(role(1L, "Owner", "OWNER")));
+        stubAvailableUsername();
+        Organization organization = new Organization();
+        organization.id = 10L;
+        organization.code = "ACME_RESTAURANT_GROUP";
+        organization.name = "Acme Restaurant Group";
+        when(organizationRepository.findByCode("ACME_RESTAURANT_GROUP")).thenReturn(organization);
+
+        BusinessException exception = assertThrows(BusinessException.class, () -> bootstrapService.bootstrap(request(false)));
+
+        assertTrue(exception.getMessage().contains("Organization code already exists"));
+        verify(userRepository, never()).save(any(User.class));
+        verify(userCredentialRepository, never()).save(any(UserCredential.class));
+    }
+
+    @Test
     void bootstrapMethodIsTransactional() throws NoSuchMethodException {
         Method method = ProductionAdminBootstrapService.class.getMethod("bootstrap", ProductionAdminBootstrapRequest.class);
 
@@ -243,6 +261,7 @@ class ProductionAdminBootstrapServiceTest {
 
     private void stubUniqueCodes() {
         when(organizationRepository.findByCode("ACME_RESTAURANT_GROUP")).thenReturn(null);
+        when(organizationRepository.findAll()).thenReturn(List.of());
         when(storeRepository.findAll()).thenReturn(List.of());
     }
 

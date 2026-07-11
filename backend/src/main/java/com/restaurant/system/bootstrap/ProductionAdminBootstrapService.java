@@ -65,6 +65,7 @@ public class ProductionAdminBootstrapService {
         ValidatedInput input = validate(request);
         ensureNoProductionOwnerOrAdmin();
         ensureUsernameAndCredentialAvailable(input.ownerUsername());
+        ensureOrganizationAndStoreAvailable(input);
 
         if (request.dryRun()) {
             return new ProductionAdminBootstrapResult(input.organizationName(), input.storeName(), input.ownerUsername(), true);
@@ -200,6 +201,28 @@ public class ProductionAdminBootstrapService {
         });
         if (userCredentialRepository.existsByLoginIdentifierIgnoreCase(username)) {
             throw new BusinessException("Login identifier already exists");
+        }
+    }
+
+    private void ensureOrganizationAndStoreAvailable(ValidatedInput input) {
+        String organizationCode = baseCode(input.organizationName(), "ORG");
+        Organization existingOrganization = organizationRepository.findByCode(organizationCode);
+        if (existingOrganization != null) {
+            throw new BusinessException("Organization code already exists");
+        }
+        boolean organizationNameExists = organizationRepository.findAll().stream()
+            .anyMatch(organization -> organization.name != null
+                && organization.name.trim().equalsIgnoreCase(input.organizationName()));
+        if (organizationNameExists) {
+            throw new BusinessException("Organization name already exists");
+        }
+
+        String storeCode = baseCode(input.storeName(), "STORE");
+        boolean storeConflictExists = storeRepository.findAll().stream()
+            .anyMatch(store -> (store.code != null && store.code.trim().equalsIgnoreCase(storeCode))
+                || (store.name != null && store.name.trim().equalsIgnoreCase(input.storeName())));
+        if (storeConflictExists) {
+            throw new BusinessException("Store name or code already exists");
         }
     }
 

@@ -22,6 +22,8 @@ backend/src/main/resources/application-local.yml
 .env.*
 !.env.example
 !**/.env.example
+deployment/cloud/bootstrap-admin.env
+deployment/cloud/bootstrap-admin.*.env
 deployment/cloud/data/
 
 # Misc

@@ -28,6 +28,8 @@ For the complete fresh-server runbook, use:
 - `deploy.sh`: first-server deploy script. Supports `--http-only` and
   `--https`.
 - `bootstrap-admin.sh`: one-time interactive first owner/admin bootstrap command.
+- `bootstrap-admin.env`: optional server-local first owner/admin input file.
+  Keep it chmod `600`; it is ignored by Git and must not contain a password.
 - `update.sh`: future one-command update script.
 - `backup-db.sh`: PostgreSQL custom-format backup through the `db` container.
 - `restore-db.sh`: explicit-confirm restore through the `db` container.
@@ -44,8 +46,10 @@ cp .env.example .env
 nano .env
 ./deploy.sh --http-only
 ./health-check.sh
-./bootstrap-admin.sh --dry-run
-./bootstrap-admin.sh
+nano bootstrap-admin.env
+chmod 600 bootstrap-admin.env
+./bootstrap-admin.sh --dry-run --env-file bootstrap-admin.env
+./bootstrap-admin.sh --env-file bootstrap-admin.env
 ```
 
 For HTTPS, set `ENABLE_HTTPS=true`, fill `DOMAIN` and `LETSENCRYPT_EMAIL`, then

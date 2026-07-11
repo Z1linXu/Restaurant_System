@@ -40,6 +40,8 @@ Do not turn on these flags for production bootstrap:
   stdin only.
 - The password is not written to shell history, `.env`, logs, command-line
   arguments, or temporary files.
+- `bootstrap-admin.env` is optional and must contain only non-password fields.
+  The script parses this file itself and does not pass it to Docker Compose.
 - The backend hashes the password with the existing BCrypt password service.
 - The temporary bootstrap container is removed with `docker compose run --rm`.
 - The normal cloud backend container continues running.
@@ -59,6 +61,31 @@ Back up the empty or near-empty database anyway:
 ./backup-db.sh
 ```
 
+## Optional Env File
+
+To avoid typing organization/store/owner fields repeatedly, create a local
+bootstrap file on the server:
+
+```bash
+cd /opt/restaurant-system/deployment/cloud
+nano bootstrap-admin.env
+chmod 600 bootstrap-admin.env
+```
+
+Example:
+
+```text
+BOOTSTRAP_ORGANIZATION_NAME=Lanzhou Noodles
+BOOTSTRAP_STORE_NAME=4483 R. Saint-Denis
+BOOTSTRAP_OWNER_USERNAME=owner
+BOOTSTRAP_OWNER_FULL_NAME=Chuwen Huang
+BOOTSTRAP_OWNER_EMAIL=
+BOOTSTRAP_OWNER_PHONE=
+```
+
+Do not add `BOOTSTRAP_OWNER_PASSWORD`. The script rejects that field because the
+password must not be saved in this file.
+
 ## Dry Run
 
 Use dry-run first. It validates inputs and confirms the one-time owner/admin
@@ -66,6 +93,12 @@ guard without writing data:
 
 ```bash
 ./bootstrap-admin.sh --dry-run
+```
+
+With a local bootstrap file:
+
+```bash
+./bootstrap-admin.sh --dry-run --env-file bootstrap-admin.env
 ```
 
 You will be prompted for:
@@ -85,7 +118,7 @@ Expected success output:
 organization: ...
 store: ...
 username: ...
-bootstrap validation success
+bootstrap dry-run success
 ```
 
 ## Real Bootstrap
@@ -94,6 +127,12 @@ Run:
 
 ```bash
 ./bootstrap-admin.sh
+```
+
+With a local bootstrap file:
+
+```bash
+./bootstrap-admin.sh --env-file bootstrap-admin.env
 ```
 
 Expected success output:
@@ -106,6 +145,20 @@ bootstrap success
 ```
 
 The script must not print the plaintext password or password hash.
+
+## Password Stdin Mode
+
+For automation where the password comes from a password manager or another
+secure local command, use `--password-stdin` with `--env-file`:
+
+```bash
+your-password-manager-command \
+  | ./bootstrap-admin.sh --env-file bootstrap-admin.env --password-stdin
+```
+
+This mode reads the password once from stdin and does not ask for confirmation.
+Do not put the password in command history. Prefer a password manager command or
+an interactive hidden prompt when possible.
 
 ## First Login
 
