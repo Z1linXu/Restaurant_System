@@ -4642,13 +4642,14 @@ Returns:
 {
   "access_token": "jwt...",
   "refresh_token": "random...",
-  "expires_in": 900,
+  "expires_in": 2592000,
   "user": {
     "id": 1,
     "username": "owner",
     "full_name": "Owner User",
     "role_code": "ADMIN",
     "store_id": 1,
+    "store_name": "Main Store",
     "organization_id": 1
   },
   "features": {
@@ -4676,13 +4677,13 @@ Access token:
 
 - JWT
 - HMAC-SHA256
-- default expiry: 15 minutes
+- default expiry: 30 days
 - contains `user_id`, `role_id`, `store_id`, `organization_id`, `role_code`, `iat`, `exp`
 
 Refresh token:
 
 - secure random string
-- default expiry: 30 days
+- default expiry: 90 days
 - database stores only SHA-256 hash
 - refresh rotates the refresh token and revokes the old token
 - logout marks the token `revoked_at`
@@ -4693,8 +4694,8 @@ Config lives in `backend/src/main/resources/application.yml`:
 app:
   auth:
     jwt-secret: dev-local-restaurant-pos-change-this-secret-please-2026
-    access-token-expiration-seconds: 900
-    refresh-token-expiration-days: 30
+    access-token-expiration-seconds: 2592000
+    refresh-token-expiration-days: 90
     x-user-id-fallback-enabled: true
 ```
 
@@ -4740,9 +4741,9 @@ Route:
 
 - `/login`
 
-The login page saves `access_token` and `refresh_token` in `localStorage`. The frontend API client automatically refreshes an expired access token with `POST /api/v1/auth/refresh`, saves the rotated tokens, and retries the original request once. Concurrent 401 responses share one refresh request to avoid rotating the same refresh token multiple times.
+The login page saves `access_token` and `refresh_token` in `localStorage`. The frontend API client automatically refreshes an expired access token with `POST /api/v1/auth/refresh`, saves the rotated tokens, and retries the original request once. Concurrent 401 responses share one refresh request to avoid rotating the same refresh token multiple times. Logout clears only the Web account tokens and revoked refresh token; it does not clear Android Pad Direct pairing credentials.
 
-Long-running pages such as `/stores/{storeId}/frontdesk` must route API calls through `frontend/src/services/apiClient.ts`. Frontdesk table polling, dining table loading, order APIs, menu catalog, Print Center, admin dashboard, reports, KDS, pickup, platform admin, and owner menu option services use the shared `apiRequest(...)` path so background 401 responses can refresh tokens instead of causing request storms. If one request refreshes tokens before another old request receives its 401, the later request detects the changed access token and retries once without rotating the refresh token again. AuthProvider listens for `restaurant-auth-updated` and `restaurant-auth-expired` events so background refreshes keep React auth state in sync, while failed refreshes clear tokens and allow route guards to return to `/login`.
+Long-running pages such as `/stores/{storeId}/frontdesk` must route API calls through `frontend/src/services/apiClient.ts`. Frontdesk table polling, dining table loading, order APIs, menu catalog, Print Center, admin dashboard, reports, KDS, pickup, platform admin, and owner menu option services use the shared `apiRequest(...)` path so background 401 responses can refresh tokens instead of causing request storms. If one request refreshes tokens before another old request receives its 401, the later request detects the changed access token and retries once without rotating the refresh token again. AuthProvider listens for `restaurant-auth-updated` and `restaurant-auth-expired` events so background refreshes keep React auth state in sync. Failed refresh / true 401 clears account tokens; network errors, timeouts, and ordinary 403 responses do not erase saved tokens.
 
 ### Next Authorization Step
 
@@ -5315,7 +5316,7 @@ The order payload includes selected combo, egg, side, and side child remove opti
 - Closing the customization modal unmounts the draft editor. Reopening an item rebuilds the draft from the selected menu item or the selected order line, so stale size/add-on/notes/quantity state is not reused.
 - The `/frontdesk/menu` current-order panel uses a fixed-height flex layout in the ordering workspace: header, independently scrollable order lines, and a footer that remains visible with item count, subtotal, tax, total, and the submit/update action.
 - `FRONTDESK_RECEIPT` no longer prints the `FRONTDESK RECEIPT` title. Its first receipt line is the table/pickup label rendered through `PrintMarkup.large(...)`, for example `[[LARGE]]桌号: 1里[[/LARGE]]`.
-- Kitchen instruction generation and GRAB rendering aggregate duplicate add-on tokens instead of dropping or duplicating them. For example, `+蛋 +蛋x2` prints as `+蛋x3`; `+蛋 +煎x2` remains `+蛋 +煎x2`; item quantity such as trailing `x2` is not multiplied into modifier quantity.
+- Kitchen instruction generation and kitchen-facing renderers aggregate duplicate add-on tokens inside a single item config instead of dropping or duplicating them. For example, `+蛋 +蛋x2` prints as `+蛋×3`; `+蛋 +煎x2` prints as `+蛋 +煎×2`; item quantity such as trailing `x2` is not multiplied into modifier quantity.
 
 ### Menu Item Deactivation
 
@@ -5531,17 +5532,20 @@ Phase 3 still does not implement Platform Admin, SaaS billing/subscription, Disp
 
 ## Cloud Ready PR8: Cloud Deployment Architecture Package
 
-PR8 adds a template-only cloud deployment package under `deployment/cloud/`. It does not connect to any server, deploy any image, change runtime business behavior, or introduce production secrets.
+PR8 originally added a cloud deployment package under `deployment/cloud/`. The
+package has since been upgraded for a single Ubuntu 22.04 Docker server while
+still avoiding business logic changes and production secrets in git.
 
 Package contents:
 
-- `README_CLOUD_DEPLOYMENT.md`: cloud architecture, environment setup, safety guards, printing boundary, and smoke test checklist.
+- `README_CLOUD_DEPLOYMENT.md`: cloud deployment package summary and pointer to the full server runbook.
 - `README_ROLLBACK.md`: application rollback, database restore, Flyway rollback cautions, and printing stabilization notes.
-- `.env.example`: blank deployment placeholders only; the filled `.env` must stay outside git.
-- `docker-compose.yml`: backend, frontend/Nginx, and optional local PostgreSQL profile for rehearsal.
-- `nginx.conf.example`: static frontend serving plus `/api` and `/ws` reverse proxy examples.
+- `.env.example`: deployment placeholders only; the filled `.env` must stay outside git.
+- `docker-compose.yml`: PostgreSQL, backend, Nginx/static frontend, and Certbot services for same-server Docker deployment.
+- `nginx.http.conf`: temporary HTTP/static/proxy template used for initial Let's Encrypt HTTP-01 validation.
+- `nginx.conf`: HTTPS static frontend plus `/api` and `/ws` reverse proxy template.
 - `application-cloud.yml.example`: documentation-only environment mapping for the cloud profile.
-- `deploy.sh`, `backup-db.sh`, `restore-db.sh`, `health-check.sh`: local templates for compose validation/start, database backup/restore, and reachability checks.
+- `deploy.sh`, `update.sh`, `backup-db.sh`, `restore-db.sh`, `health-check.sh`: server install/deploy, one-command update, database backup/restore, and reachability checks.
 
 Important boundaries:
 
@@ -5551,7 +5555,9 @@ Important boundaries:
 - Cloud servers must not directly connect to private LAN printers. Use `MOCK`, `DISABLED`, `PAD_DIRECT`, or a local print bridge for real store printing.
 - `HOT_KITCHEN` remains a printing module, but physical printer transport follows the same cloud printing boundary.
 
-PR8 intentionally does not modify backend business code, frontend app code, database migrations, Android code, payment/refund behavior, `completeOrder`, or printing route semantics.
+The cloud deployment package does not modify backend business code, frontend app
+behavior, database migrations, Android code, payment/refund behavior,
+`completeOrder`, or printing route semantics.
 
 ## Cloud Ready PR9-10: Production Bootstrap Runbook And Final Smoke Checklist
 
@@ -6145,6 +6151,71 @@ Behavior:
   below add-ons/removes. The right-side order summary can still display/edit
   notes, and the submitted payload still uses the existing `notes` field.
 
+## PR11E-G: Noodle Same-Config Grouped Print Display
+
+PR11E-G is a backend renderer-only printing readability fix. It does not change
+order lifecycle, payment/refund behavior, `completeOrder`, menu/order pricing,
+order submit payloads, kitchen task generation, HOT_KITCHEN eligibility,
+PAD_DIRECT state, printer routing, or Android worker behavior.
+
+Behavior:
+
+- GRAB and HOT_KITCHEN kitchen-facing renderers group noodle tasks only when the
+  full single-bowl config is stable-identical: menu item id, noodle category,
+  station/module, kitchen instruction text, add/remove/options metadata, and
+  notes/special instructions.
+- For grouped noodles, the printed line uses `(single bowl config) ×quantity`.
+  Example: two identical medium sour noodles each with one egg print as
+  `(中酸 | +蛋) ×2`, so the parentheses describe one bowl and the outer quantity
+  describes how many bowls share that exact config.
+- Add-on quantities stay inside the single-bowl config. A single bowl with two
+  eggs prints `中酸 | +蛋×2`; two identical bowls each with two eggs print
+  `(中酸 | +蛋×2) ×2`.
+- Different spicy levels, add-ons, removes, option metadata, notes, or station
+  values remain separate lines. Non-noodle hot items keep the existing normal
+  quantity behavior such as `炸虾 ×3`.
+- Update tickets use the same GRAB/HOT_KITCHEN renderers, so the same display
+  rule applies to GRAB update tickets and HOT_KITCHEN update tickets.
+
+## Ubuntu Docker Server Deployment
+
+The server deployment package supports a fresh Ubuntu 22.04 Tencent Cloud
+Lightweight server with Docker Compose, same-server PostgreSQL, Nginx reverse
+proxy, and Let's Encrypt HTTPS.
+
+Deployment files:
+
+- Root `README_SERVER_DEPLOY.md` is the ordered fresh-server runbook.
+- `backend/Dockerfile` builds the Spring Boot jar with Maven and runs it on
+  Eclipse Temurin 17 JRE.
+- `frontend/Dockerfile` builds the React/Vite app with Node 22 and serves the
+  generated static assets with Nginx.
+- `deployment/cloud/docker-compose.yml` defines `db`, `backend`, `nginx`, and
+  `certbot` services. PostgreSQL data, certificates, ACME webroot files, and
+  backups are stored under `deployment/cloud/data`.
+- `deployment/cloud/nginx.http.conf` is used only for initial HTTP validation
+  and HTTP-only fallback deployments.
+- `deployment/cloud/nginx.conf` is the HTTPS production template. It serves the
+  React app and proxies `/api/` and `/ws` to the backend service.
+- `deployment/cloud/deploy.sh` installs Docker Engine and the Docker Compose
+  plugin, creates runtime directories, starts PostgreSQL, builds backend and
+  frontend images, starts the backend so Flyway initializes the schema, issues
+  or renews the Let's Encrypt certificate, and starts the final stack.
+- `deployment/cloud/update.sh` rebuilds and restarts backend/frontend services
+  for future code updates and runs `certbot renew` when HTTPS is enabled.
+- `deployment/cloud/backup-db.sh` and `restore-db.sh` use the PostgreSQL Docker
+  container for `pg_dump` / `pg_restore`, so the server does not need a host
+  PostgreSQL client package.
+
+Boundaries:
+
+- This deployment work does not change order lifecycle, payment/refund,
+  `completeOrder`, menu/pricing, order submit payloads, kitchen task generation,
+  printer routing, Android worker behavior, or database schema/migrations.
+- A filled `.env` remains server-local and must not be committed.
+- The cloud profile still relies on Flyway for schema initialization and keeps
+  production demo/default seed behavior disabled.
+
 ## PR11D-14G: Ordering Combo Option Ordering
 
 PR11D-14G is a frontend-only ordering UI polish for Android Pad WebView and
@@ -6222,3 +6293,92 @@ PR11C hotfix notes:
 - Printing Settings falls back to current store context when `FRONTDESK` cannot
   load platform overview data; this does not grant Platform Admin, Staff, or
   Audit access.
+
+## PR11E-C: Staff Long Login, Permanent Pad Binding, Device Management
+
+PR11E-C keeps the existing POS/order, payment/refund, menu/pricing,
+PrintDispatcher routing, and PAD_DIRECT print-job state semantics unchanged. It
+adds longer staff Web sessions, clearer separation between Web account logout
+and Android Pad pairing, store-scoped device management, and a frontdesk staff
+profile modal.
+
+Staff login/session policy:
+
+- `app.auth.access-token-expiration-seconds` is now `2592000` (30 days) in
+  local, cloud, pilot, and example backend configs.
+- `app.auth.refresh-token-expiration-days` is now `90`; refresh tokens are still
+  stored server-side as SHA-256 hashes and rotate on refresh.
+- `/api/v1/auth/me` now returns `user.store_name` when the authenticated user's
+  default store can be resolved.
+- Frontend logout still calls `/api/v1/auth/logout` and clears only
+  `restaurant_pos_access_token` / `restaurant_pos_refresh_token`.
+- Frontend auth bootstrap clears saved Web account tokens only on true `401`.
+  Network errors, timeouts, and ordinary `403` responses no longer erase saved
+  tokens.
+- Android WebView still has DOM storage enabled and does not clear Web
+  localStorage/cookies on app restart.
+
+Permanent Pad binding:
+
+- Android stores Pad Direct `device_id`, `device_token`, `store_id`,
+  `device_name`, `registered_at`, `app_version`, `platform`, and
+  `pad_direct_auto_enabled` in native `SharedPreferences`.
+- Web logout does not call `RestaurantPadDevice.clearDeviceCredentials()` and
+  therefore does not remove device pairing.
+- Pairing is removed only by explicit `Clear Pairing / 清除配对`, backend
+  disable/revoke causing device auth failure until re-pair, Android app data
+  clear, or uninstall.
+- `RestaurantPadDevice.getDeviceStatus()` returns pairing state, `device_id`,
+  `store_id` / `device_store_id`, `device_name`, `registered_at`,
+  `app_version`, `platform`, `auto_print_enabled`, and token last four
+  characters only.
+- Print Center detects current Android pairing via the bridge. A same-store
+  paired Pad shows `本机已配对`; re-registering still requires confirmation.
+  Cross-store pairing shows a warning and also requires confirmation before
+  overwriting native credentials.
+
+Device management API:
+
+- `GET /api/v1/admin/printing/devices?store_id={storeId}` returns registered
+  devices with `id`, `device_name`, `store_id`, `organization_id`, `device_type`,
+  `platform`, `app_version`, `status`, `is_active`, `last_seen_at`,
+  `created_at`, and `updated_at`. It never returns raw device tokens or token
+  hashes.
+- `PATCH /api/v1/admin/printing/devices/{deviceId}/rename?store_id={storeId}`
+  updates `device_name`.
+- `POST /api/v1/admin/printing/devices/{deviceId}/disable?store_id={storeId}`
+  soft-disables a device with `status = DISABLED` and `is_active = false`.
+- `POST /api/v1/admin/printing/devices/{deviceId}/revoke?store_id={storeId}`
+  soft-revokes a device with `status = REVOKED` and `is_active = false`.
+- All management endpoints require the existing store-scoped printing/admin
+  capabilities and do not hard-delete `store_devices`.
+
+Device authentication and `last_seen_at`:
+
+- `StoreDeviceService.authenticateDevice(...)` remains the shared gate for
+  heartbeat, pending poll, claim, start-print, payload, complete, fail, and
+  release.
+- Device auth rejects missing/bad tokens with `401`, and inactive,
+  `DISABLED`, or `REVOKED` devices with `403`.
+- Successful device-authenticated calls update `last_seen_at` only when the
+  stored value is older than 30 seconds, so rapid poll loops do not write every
+  few seconds.
+- Heartbeat also refreshes `app_version` and `platform` when those values
+  change, without exposing the raw token.
+
+Print Center UI:
+
+- The Pad Direct device table shows device/store/org/status/app/platform,
+  recent/ago/very-old activity, and marks the current Android Pad, old devices,
+  and likely duplicate active device names.
+- Device actions are `改名`, `停用`, and `吊销`, all routed through the new
+  store-scoped backend APIs with confirmation for destructive actions.
+
+Staff profile UI:
+
+- The frontdesk round avatar menu now includes `个人信息 / Profile`.
+- The modal shows user id, username, full name, role, store id/name,
+  organization id, capabilities, enabled feature flags, Android Pad device
+  status, and Android print worker status when the native bridge is available.
+- In a normal browser, the modal shows that Android native device status is not
+  available.
