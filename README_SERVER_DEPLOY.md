@@ -214,6 +214,14 @@ copy the dump to the server, then run `deployment/cloud/import-store-config.sh`
 with `--dry-run` first. The importer excludes users, orders, tokens, audit logs,
 printer configs, printer assignments, and device bindings.
 
+If the source Mac PostgreSQL is newer than the cloud database, keep the cloud
+database server version unchanged. For example, a PostgreSQL 18 custom-format
+dump must be read by PostgreSQL 18 or newer `pg_restore`, even when restoring
+into the PostgreSQL 16 Docker server. The cloud importer uses a temporary
+`postgres:18-alpine` client container for `pg_restore` and `psql`, connects to
+the existing Compose `db:5432` service, and removes the client container when
+the command exits.
+
 ## 9. Future Code Update
 
 After new code is available on the server:

@@ -33,7 +33,10 @@ For the complete fresh-server runbook, use:
 - `export-store-config.sh`: Mac-side helper for exporting only old single-store
   configuration table data.
 - `import-store-config.sh`: cloud-side guarded importer for whitelisted store
-  configuration dumps.
+  configuration dumps. It keeps the target PostgreSQL server on the configured
+  `db` image, but reads/restores dumps through a temporary PostgreSQL client
+  container. The default client image is `postgres:18-alpine`, so PostgreSQL 18
+  custom-format dumps can be restored into the PostgreSQL 16 server.
 - `update.sh`: future one-command update script.
 - `backup-db.sh`: PostgreSQL custom-format backup through the `db` container.
 - `restore-db.sh`: explicit-confirm restore through the `db` container.
@@ -67,3 +70,14 @@ In HTTP-only mode, `DOMAIN` and `LETSENCRYPT_EMAIL` may stay blank. `DB_PASSWORD
 and `JWT_SECRET` are always required.
 
 Do not commit `.env` or anything under `deployment/cloud/data`.
+
+## Store Config Dump Version Compatibility
+
+PostgreSQL custom-format dumps must be read by a `pg_restore` client that is at
+least as new as the dump producer. A PostgreSQL 18.3 Homebrew `pg_dump` can
+produce custom dump format `1.16`, which PostgreSQL 16 `pg_restore` cannot
+read. `import-store-config.sh` therefore uses `POSTGRES_CLIENT_IMAGE`, default
+`postgres:18-alpine`, for `pg_restore --list`, forbidden-table validation,
+dry-run checks, and formal restore. The temporary client joins the Compose
+network and connects to `db:5432`; the PostgreSQL server container itself stays
+on the configured server version.

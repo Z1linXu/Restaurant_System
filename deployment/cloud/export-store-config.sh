@@ -190,6 +190,16 @@ require_command pg_restore
 
 psql_base=(psql -h "$PGHOST_VALUE" -U "$PGUSER_VALUE" -d "$PGDATABASE_VALUE" -v ON_ERROR_STOP=1 -At)
 
+server_version_num="$("${psql_base[@]}" -c "show server_version_num;")"
+server_major=$((server_version_num / 10000))
+pg_dump_major="$(pg_dump --version | sed -E 's/.* ([0-9]+)(\.[0-9]+)?.*/\1/')"
+if [[ -z "$pg_dump_major" || ! "$pg_dump_major" =~ ^[0-9]+$ ]]; then
+  die "Unable to determine pg_dump major version."
+fi
+if (( pg_dump_major < server_major )); then
+  die "pg_dump major version $pg_dump_major is older than source server major version $server_major. Use PostgreSQL $server_major or newer client tools."
+fi
+
 store_count="$("${psql_base[@]}" -c "select count(*) from public.stores where id = $STORE_ID;")"
 [[ "$store_count" == "1" ]] || die "Source store id $STORE_ID was not found."
 
@@ -217,6 +227,7 @@ for table in "${ALLOWED_TABLES[@]}"; do
 done
 
 echo "Exporting store config data from $PGDATABASE_VALUE store_id=$STORE_ID to $OUTPUT_FILE"
+echo "Using pg_dump major $pg_dump_major against source PostgreSQL major $server_major"
 pg_dump "${pg_dump_args[@]}"
 
 toc_text="$(pg_restore -l "$OUTPUT_FILE")"
