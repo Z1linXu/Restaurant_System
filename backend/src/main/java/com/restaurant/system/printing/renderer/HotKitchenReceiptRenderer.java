@@ -87,6 +87,11 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
     }
 
     private void appendTask(StringBuilder builder, AggregatedHotKitchenTask task) {
+        if (task.noodleConfig() != null) {
+            builder.append(PrintMarkup.doubleHeight(KitchenNoodlePrintFormatter.formatLine(task.noodleConfig(), task.quantity()))).append("\n");
+            builder.append("\n");
+            return;
+        }
         builder.append(PrintMarkup.doubleHeight(resolvePrimaryLine(task.representative(), task.quantity()))).append("\n");
         String secondary = resolveSecondaryLine(task.representative());
         if (secondary != null) {
@@ -107,11 +112,15 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
         Map<HotKitchenGroupKey, AggregatedHotKitchenTask> grouped = new LinkedHashMap<>();
         for (KitchenTask task : tasks) {
             OrderItem item = itemById.get(task.order_item_id);
-            HotKitchenGroupKey key = buildGroupKey(task, item, optionsByItemId.getOrDefault(task.order_item_id, List.of()));
+            List<OrderItemOption> options = optionsByItemId.getOrDefault(task.order_item_id, List.of());
+            KitchenNoodlePrintFormatter.NoodleConfig noodleConfig = KitchenNoodlePrintFormatter.isNoodleTask(task, item)
+                ? KitchenNoodlePrintFormatter.buildConfig(task, item, KitchenNoodlePrintFormatter::normalizeModifierSegment)
+                : null;
+            HotKitchenGroupKey key = buildGroupKey(task, item, options, noodleConfig);
             grouped.compute(key, (ignored, existing) -> {
                 int quantity = task.quantity == null ? 1 : task.quantity;
                 if (existing == null) {
-                    return new AggregatedHotKitchenTask(task, item, quantity);
+                    return new AggregatedHotKitchenTask(task, item, quantity, noodleConfig);
                 }
                 return existing.addQuantity(quantity);
             });
@@ -119,7 +128,30 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
         return new ArrayList<>(grouped.values());
     }
 
-    private HotKitchenGroupKey buildGroupKey(KitchenTask task, OrderItem item, List<OrderItemOption> options) {
+    private HotKitchenGroupKey buildGroupKey(
+        KitchenTask task,
+        OrderItem item,
+        List<OrderItemOption> options,
+        KitchenNoodlePrintFormatter.NoodleConfig noodleConfig
+    ) {
+        if (noodleConfig != null) {
+            KitchenNoodlePrintFormatter.NoodleGroupKey noodleKey = KitchenNoodlePrintFormatter.buildGroupKey(
+                task,
+                item,
+                options,
+                noodleConfig
+            );
+            return new HotKitchenGroupKey(
+                noodleKey.menuItemId(),
+                noodleKey.categoryCode(),
+                item == null ? null : item.combo_role,
+                noodleKey.stationCode(),
+                noodleKey.displayText(),
+                noodleKey.notes(),
+                noodleKey.optionKeys()
+            );
+        }
+
         List<String> optionKeys = options.stream()
             .sorted(Comparator
                 .comparing((OrderItemOption option) -> stable(option.option_group_snapshot))
@@ -248,9 +280,14 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
     ) {
     }
 
-    private record AggregatedHotKitchenTask(KitchenTask representative, OrderItem item, int quantity) {
+    private record AggregatedHotKitchenTask(
+        KitchenTask representative,
+        OrderItem item,
+        int quantity,
+        KitchenNoodlePrintFormatter.NoodleConfig noodleConfig
+    ) {
         AggregatedHotKitchenTask addQuantity(int delta) {
-            return new AggregatedHotKitchenTask(representative, item, quantity + delta);
+            return new AggregatedHotKitchenTask(representative, item, quantity + delta, noodleConfig);
         }
     }
 }

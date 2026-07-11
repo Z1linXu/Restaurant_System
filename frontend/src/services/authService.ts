@@ -6,6 +6,7 @@ export interface AuthUser {
   full_name: string
   role_code: string
   store_id: number
+  store_name?: string | null
   organization_id: number | null
 }
 

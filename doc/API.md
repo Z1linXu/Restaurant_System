@@ -132,10 +132,25 @@ Admin/device registration:
   - Backend stores only a SHA-256 hash of the token.
 - `POST /api/v1/devices/heartbeat`
   - Auth: `X-Device-Id`, `X-Device-Token`.
-  - Updates `last_seen_at`, `app_version`, and `platform`.
+  - Updates `last_seen_at` only when stale by at least 30 seconds, and updates
+    `app_version` / `platform` when changed.
 - `GET /api/v1/admin/printing/devices?store_id={storeId}`
   - Auth: normal Bearer token with store admin configuration access.
-  - Returns registered store devices without token secrets.
+  - Returns registered store devices without token secrets, including
+    `id`, `device_name`, `store_id`, `organization_id`, `platform`,
+    `app_version`, `status`, `is_active`, `last_seen_at`, `created_at`, and
+    `updated_at`.
+- `PATCH /api/v1/admin/printing/devices/{deviceId}/rename?store_id={storeId}`
+  - Auth: normal Bearer token with store printing management/config access.
+  - Request: `device_name`.
+  - Renames the device without rotating credentials.
+- `POST /api/v1/admin/printing/devices/{deviceId}/disable?store_id={storeId}`
+  - Auth: normal Bearer token with store printing management/config access.
+  - Soft-disables the device with `status = DISABLED`, `is_active = false`.
+- `POST /api/v1/admin/printing/devices/{deviceId}/revoke?store_id={storeId}`
+  - Auth: normal Bearer token with store printing management/config access.
+  - Soft-revokes the device with `status = REVOKED`, `is_active = false`.
+  - Disabled/revoked devices fail device-authenticated runtime calls with `403`.
 
 Pad print queue:
 

@@ -43,8 +43,8 @@ app:
     production-bootstrap-enabled: false
   auth:
     jwt-secret: dev-local-restaurant-pos-change-this-secret-please-2026
-    access-token-expiration-seconds: 900
-    refresh-token-expiration-days: 30
+    access-token-expiration-seconds: 2592000
+    refresh-token-expiration-days: 90
     x-user-id-fallback-enabled: true
   dev-tools:
     role-switcher-enabled: false

@@ -134,10 +134,10 @@ class GrabReceiptRendererTest {
 
     @Test
     void mergesAddOnModifierQuantitiesInGrabRenderer() {
-        assertTrue(renderNoodle("+蛋 +蛋x2").contains("+蛋x3"));
-        assertTrue(renderNoodle("+蛋 +蛋").contains("+蛋x2"));
-        assertTrue(renderNoodle("+蛋x2 +蛋x3").contains("+蛋x5"));
-        assertTrue(renderNoodle("+蛋 +煎x2").contains("+蛋 +煎x2"));
+        assertTrue(renderNoodle("+蛋 +蛋x2").contains("+蛋×3"));
+        assertTrue(renderNoodle("+蛋 +蛋").contains("+蛋×2"));
+        assertTrue(renderNoodle("+蛋x2 +蛋x3").contains("+蛋×5"));
+        assertTrue(renderNoodle("+蛋 +煎x2").contains("+蛋 +煎×2"));
         assertFalse(renderNoodle("+蛋 +蛋x2").contains("+蛋 +蛋x2"));
     }
 
@@ -145,7 +145,7 @@ class GrabReceiptRendererTest {
     void mergesAddOnModifierQuantitiesInsidePrimaryInstructionOnly() {
         String output = renderNoodle("中 | +蛋 +蛋x2 +煎x2");
 
-        assertTrue(output.contains("中 | +蛋x3 +煎x2 x1"));
+        assertTrue(output.contains("中 | +蛋×3 +煎×2"));
         assertFalse(output.contains("+蛋 +蛋x2"));
     }
 
@@ -153,15 +153,89 @@ class GrabReceiptRendererTest {
     void supportsStarModifierQuantitySyntax() {
         String output = renderNoodle("中 | +蛋*2 +蛋");
 
-        assertTrue(output.contains("中 | +蛋x3 x1"));
+        assertTrue(output.contains("中 | +蛋×3"));
     }
 
     @Test
     void doesNotTreatSizeOrItemQuantityAsAddOnQuantity() {
         String output = renderNoodle("中 | +蛋 +蛋x2", 2);
 
-        assertTrue(output.contains("中 | +蛋x3 x2"));
-        assertFalse(output.contains("+蛋x6"));
+        assertTrue(output.contains("(中 | +蛋×3) ×2"));
+        assertFalse(output.contains("+蛋×6"));
+    }
+
+    @Test
+    void groupsTwoIdenticalNoodlesAsSingleBowlConfigTimesQuantity() {
+        String output = renderNoodles(
+            noodle(1L, "中酸 | +蛋"),
+            noodle(2L, "中酸 | +蛋")
+        );
+
+        assertTrue(output.contains("(中酸 | +蛋) ×2"));
+        assertFalse(output.contains("中酸 | +蛋 x2"));
+    }
+
+    @Test
+    void groupsThreeIdenticalNoodlesAsSingleBowlConfigTimesQuantity() {
+        String output = renderNoodles(
+            noodle(1L, "中酸 | +蛋"),
+            noodle(2L, "中酸 | +蛋"),
+            noodle(3L, "中酸 | +蛋")
+        );
+
+        assertTrue(output.contains("(中酸 | +蛋) ×3"));
+    }
+
+    @Test
+    void singleNoodleWithOneEggDoesNotShowBowlQuantityAsEggQuantity() {
+        String output = renderNoodle("中酸 | +蛋");
+
+        assertTrue(output.contains("中酸 | +蛋"));
+        assertFalse(output.contains("+蛋 x2"));
+        assertFalse(output.contains("(中酸 | +蛋) ×1"));
+    }
+
+    @Test
+    void singleNoodleWithTwoEggsKeepsEggQuantityInsideConfig() {
+        String output = renderNoodle("中酸 | +蛋 +蛋");
+
+        assertTrue(output.contains("中酸 | +蛋×2"));
+        assertFalse(output.contains("(中酸 | +蛋×2) ×1"));
+    }
+
+    @Test
+    void groupsTwoIdenticalNoodlesWithTwoEggsByBowlQuantity() {
+        String output = renderNoodles(
+            noodle(1L, "中酸 | +蛋 +蛋"),
+            noodle(2L, "中酸 | +蛋 +蛋")
+        );
+
+        assertTrue(output.contains("(中酸 | +蛋×2) ×2"));
+    }
+
+    @Test
+    void doesNotMergeNoodlesWithDifferentSpicyLevels() {
+        String output = renderNoodles(
+            noodle(1L, "中酸 | +蛋"),
+            noodle(2L, "中辣 | +蛋")
+        );
+
+        assertTrue(output.contains("中酸 | +蛋"));
+        assertTrue(output.contains("中辣 | +蛋"));
+        assertFalse(output.contains("(中酸 | +蛋) ×2"));
+        assertFalse(output.contains("(中辣 | +蛋) ×2"));
+    }
+
+    @Test
+    void doesNotMergeNoodlesWithDifferentRemoveOrNotes() {
+        String output = renderNoodles(
+            noodle(1L, "中酸 | +蛋", "少汤"),
+            noodle(2L, "中酸 | 不要葱 | +蛋")
+        );
+
+        assertTrue(output.contains("中酸 | +蛋 | 备注：少汤"));
+        assertTrue(output.contains("中酸 | 不要葱 | +蛋"));
+        assertFalse(output.contains(") ×2"));
     }
 
     @Test
@@ -443,6 +517,47 @@ class GrabReceiptRendererTest {
         return stripMarkup(renderer.render(request));
     }
 
+    private String renderNoodles(NoodleCase... noodleCases) {
+        Order order = baseOrder();
+        List<OrderItem> items = new ArrayList<>();
+        List<KitchenTask> tasks = new ArrayList<>();
+
+        for (NoodleCase noodleCase : noodleCases) {
+            OrderItem item = new OrderItem();
+            item.id = noodleCase.id();
+            item.order_id = order.id;
+            item.menu_item_id = noodleCase.menuItemId();
+            item.item_name_snapshot_zh = "酸菜牛肉面";
+            item.category_code_snapshot = "SOUP_NOODLE";
+            item.quantity = noodleCase.quantity();
+            item.notes = noodleCase.note();
+            item.status = "submitted";
+            items.add(item);
+
+            KitchenTask task = new KitchenTask();
+            task.id = noodleCase.id();
+            task.order_id = order.id;
+            task.order_item_id = item.id;
+            task.store_id = order.store_id;
+            task.station_code = "NOODLE";
+            task.item_name_snapshot_zh = "酸菜牛肉面";
+            task.special_instructions_snapshot = noodleCase.specialInstructions();
+            task.status = "pending";
+            task.quantity = noodleCase.quantity();
+            task.created_at = LocalDateTime.of(2026, 6, 16, 12, 0).plusSeconds(noodleCase.id());
+            tasks.add(task);
+        }
+
+        PrintRenderRequest request = new PrintRenderRequest();
+        request.module_code = PrintModuleCode.GRAB;
+        request.order = order;
+        request.order_items = items;
+        request.order_item_options = List.of();
+        request.kitchen_tasks = tasks;
+        request.happened_at = order.submitted_at;
+        return stripMarkup(renderer.render(request));
+    }
+
     private Order baseOrder() {
         Order order = new Order();
         order.id = 100L;
@@ -455,6 +570,14 @@ class GrabReceiptRendererTest {
 
     private SideCase side(Long id, String itemName, String specialInstructions) {
         return new SideCase(id, itemName, specialInstructions);
+    }
+
+    private NoodleCase noodle(Long id, String specialInstructions) {
+        return noodle(id, specialInstructions, null);
+    }
+
+    private NoodleCase noodle(Long id, String specialInstructions, String note) {
+        return new NoodleCase(id, 200L, specialInstructions, note, 1);
     }
 
     private String stripMarkup(String value) {
@@ -481,5 +604,8 @@ class GrabReceiptRendererTest {
     }
 
     private record SideCase(Long id, String itemName, String specialInstructions) {
+    }
+
+    private record NoodleCase(Long id, Long menuItemId, String specialInstructions, String note, int quantity) {
     }
 }

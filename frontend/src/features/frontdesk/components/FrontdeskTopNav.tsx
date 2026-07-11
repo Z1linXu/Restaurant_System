@@ -6,6 +6,13 @@ import { isFeatureEnabled, type FeaturePackage } from '../../feature-flags/featu
 import { StoreSwitcher } from '../../store/StoreSwitcher'
 import { buildStorePath } from '../../store/storeRoutes'
 import { useOptionalCurrentStore } from '../../store/StoreContext'
+import {
+  getAndroidPadDeviceBridge,
+  parseAndroidBridgeJson,
+  type AndroidPadDeviceStatus,
+  type AndroidPadPrintWorkerStatus,
+} from '../../../types/androidPadBridge'
+import type { AuthUser } from '../../../services/authService'
 
 interface FrontdeskTopNavProps {
   activeItem?: 'menu' | 'orders' | 'pickup' | 'stations' | 'dashboard' | null
@@ -25,8 +32,9 @@ const navItems = [
 
 export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
   const currentStore = useOptionalCurrentStore()
-  const { user, signOut } = useAuth()
+  const { user, signOut, permissions, features } = useAuth()
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
   const [userMenuPosition, setUserMenuPosition] = useState({ top: 0, left: 0 })
   const userMenuButtonRef = useRef<HTMLButtonElement | null>(null)
@@ -79,6 +87,11 @@ export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
     setLogoutConfirmOpen(true)
   }
 
+  const openProfile = () => {
+    setUserMenuOpen(false)
+    setProfileOpen(true)
+  }
+
   const confirmLogout = () => {
     setLogoutConfirmOpen(false)
     void signOut().finally(() => navigateTo('/login'))
@@ -114,6 +127,14 @@ export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
                 </div>
               </div>
               <div className="mt-2 space-y-1">
+                <button
+                  type="button"
+                  className="flex min-h-12 w-full items-center justify-between rounded-[16px] px-3 text-left text-[0.98rem] font-bold text-[rgba(26,28,25,0.84)] transition hover:bg-[rgba(97,0,0,0.06)]"
+                  onClick={openProfile}
+                >
+                  <span>个人信息</span>
+                  <span className="text-[0.78rem] font-semibold text-[var(--muted)]">Profile</span>
+                </button>
                 <button
                   type="button"
                   className="flex min-h-12 w-full items-center justify-between rounded-[16px] px-3 text-left text-[0.98rem] font-bold text-[rgba(26,28,25,0.84)] transition hover:bg-[rgba(97,0,0,0.06)]"
@@ -173,6 +194,16 @@ export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
             </div>,
             document.body,
           ) : null}
+          {profileOpen ? createPortal(
+            <StaffProfileModal
+              currentStoreName={currentStore?.storeName ?? null}
+              features={features}
+              onClose={() => setProfileOpen(false)}
+              permissions={permissions}
+              user={user}
+            />,
+            document.body,
+          ) : null}
         </div>
         <div>
           <p className="font-display text-[1.2rem] font-extrabold tracking-[-0.04em] text-[var(--primary)]">蘭</p>
@@ -217,6 +248,139 @@ export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
           )
         })}
       </nav>
+    </div>
+  )
+}
+
+function StaffProfileModal({
+  currentStoreName,
+  features,
+  onClose,
+  permissions,
+  user,
+}: {
+  currentStoreName: string | null
+  features: Record<string, boolean>
+  onClose: () => void
+  permissions: string[]
+  user: AuthUser | null
+}) {
+  const [bridgeAvailable, setBridgeAvailable] = useState(false)
+  const [deviceStatus, setDeviceStatus] = useState<AndroidPadDeviceStatus | null>(null)
+  const [workerStatus, setWorkerStatus] = useState<AndroidPadPrintWorkerStatus | null>(null)
+
+  const refreshAndroidState = () => {
+    const bridge = getAndroidPadDeviceBridge()
+    setBridgeAvailable(Boolean(bridge))
+    setDeviceStatus(bridge ? parseAndroidBridgeJson<AndroidPadDeviceStatus>(bridge.getDeviceStatus()) : null)
+    setWorkerStatus(bridge?.getPrintWorkerStatus ? parseAndroidBridgeJson<AndroidPadPrintWorkerStatus>(bridge.getPrintWorkerStatus()) : null)
+  }
+
+  useEffect(() => {
+    refreshAndroidState()
+    const intervalId = window.setInterval(refreshAndroidState, 5000)
+    return () => window.clearInterval(intervalId)
+  }, [])
+
+  const enabledFeatures = Object.entries(features ?? {})
+    .filter(([, enabled]) => enabled)
+    .map(([feature]) => feature)
+  const storeName = user?.store_name ?? currentStoreName ?? '-'
+  const androidStoreId = deviceStatus?.store_id ?? deviceStatus?.device_store_id ?? null
+
+  return (
+    <div
+      className="fixed inset-0 z-[10000] flex items-center justify-center bg-[rgba(26,28,25,0.34)] p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[88vh] w-full max-w-[620px] overflow-auto rounded-[26px] bg-white p-5 text-[var(--on-surface)] shadow-[0_24px_64px_rgba(26,28,25,0.22)]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-[1.35rem] font-black tracking-[-0.04em]">个人信息</div>
+            <div className="mt-1 text-[0.9rem] font-semibold text-[var(--muted)]">
+              {user?.full_name || user?.username || '当前用户'}
+            </div>
+          </div>
+          <button
+            type="button"
+            className="min-h-10 rounded-[14px] bg-[rgba(26,28,25,0.06)] px-3 text-[0.86rem] font-bold text-[var(--on-surface)]"
+            onClick={onClose}
+          >
+            关闭
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <ProfileRow label="User ID" value={user?.id ?? '-'} />
+          <ProfileRow label="Username" value={user?.username ?? '-'} />
+          <ProfileRow label="Full name" value={user?.full_name ?? '-'} />
+          <ProfileRow label="Role" value={user?.role_code ?? '-'} />
+          <ProfileRow label="Store" value={`${user?.store_id ?? '-'} · ${storeName}`} />
+          <ProfileRow label="Organization" value={user?.organization_id ?? '-'} />
+        </div>
+
+        <div className="mt-5">
+          <div className="text-[0.82rem] font-black uppercase tracking-[0.14em] text-[var(--muted)]">Capabilities</div>
+          <div className="mt-2 flex max-h-32 flex-wrap gap-2 overflow-auto">
+            {permissions.length ? permissions.map((permission) => (
+              <span key={permission} className="rounded-full bg-[rgba(26,28,25,0.06)] px-2.5 py-1 text-[0.72rem] font-bold text-[rgba(26,28,25,0.74)]">
+                {permission}
+              </span>
+            )) : (
+              <span className="text-[0.84rem] font-semibold text-[var(--muted)]">-</span>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-5">
+          <div className="text-[0.82rem] font-black uppercase tracking-[0.14em] text-[var(--muted)]">Features</div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {enabledFeatures.length ? enabledFeatures.map((feature) => (
+              <span key={feature} className="rounded-full bg-[rgba(18,141,77,0.1)] px-2.5 py-1 text-[0.72rem] font-bold text-[rgb(25,112,69)]">
+                {feature}
+              </span>
+            )) : (
+              <span className="text-[0.84rem] font-semibold text-[var(--muted)]">-</span>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-5 border-t border-[rgba(26,28,25,0.08)] pt-4">
+          <div className="text-[0.82rem] font-black uppercase tracking-[0.14em] text-[var(--muted)]">Android Pad</div>
+          {!bridgeAvailable ? (
+            <div className="mt-2 rounded-[16px] bg-[rgba(26,28,25,0.05)] px-4 py-3 text-[0.86rem] font-semibold text-[var(--muted)]">
+              当前是普通浏览器，没有 Android Pad 原生设备状态。
+            </div>
+          ) : (
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <ProfileRow label="Paired" value={deviceStatus?.paired ? 'yes' : 'no'} />
+              <ProfileRow label="Device" value={deviceStatus?.device_id ?? '-'} />
+              <ProfileRow label="Device name" value={deviceStatus?.device_name ?? '-'} />
+              <ProfileRow label="Store" value={androidStoreId ?? '-'} />
+              <ProfileRow label="Token" value={deviceStatus?.token_last4 ? `****${deviceStatus.token_last4}` : '-'} />
+              <ProfileRow label="Registered" value={deviceStatus?.registered_at ?? '-'} />
+              <ProfileRow label="App" value={deviceStatus?.app_version ?? '-'} />
+              <ProfileRow label="Platform" value={deviceStatus?.platform ?? '-'} />
+              <ProfileRow label="Worker" value={workerStatus?.worker_state_label ?? workerStatus?.worker_state ?? '-'} />
+              <ProfileRow label="Auto print" value={workerStatus?.auto_enabled == null ? '-' : workerStatus.auto_enabled ? 'on' : 'off'} />
+              <ProfileRow label="Worker running" value={workerStatus?.worker_running == null ? '-' : workerStatus.worker_running ? 'yes' : 'no'} />
+              <ProfileRow label="Last error" value={workerStatus?.last_error ?? '-'} />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ProfileRow({ label, value }: { label: string; value: string | number | boolean | null | undefined }) {
+  return (
+    <div className="min-w-0 rounded-[16px] bg-[rgba(26,28,25,0.04)] px-3 py-2.5">
+      <div className="text-[0.72rem] font-bold uppercase tracking-[0.12em] text-[var(--muted)]">{label}</div>
+      <div className="mt-1 break-words text-[0.94rem] font-black text-[var(--on-surface)]">{String(value ?? '-')}</div>
     </div>
   )
 }

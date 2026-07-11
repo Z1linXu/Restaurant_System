@@ -147,7 +147,8 @@ Recommended local pairing sequence:
 4. Long press and tap `Open Print Center`, or navigate to the Web Print Center.
 5. In the Pad Direct devices section, tap `配对本机 Pad`.
 6. Confirm the Android Local Control Panel now shows `已配对`, Device ID, Store
-   ID, device name, registration time, and token last four characters.
+   ID, device name, registration time, app version, platform, auto-print state,
+   and token last four characters.
 7. Restart the app and confirm the pairing status persists.
 
 The registration API uses the Web session and normal store-scoped authorization.
@@ -165,6 +166,8 @@ Security notes:
   `EncryptedSharedPreferences` or Android Keystore-backed storage.
 - `Clear Pairing / 清除配对` requires confirmation because it removes the local
   device credentials.
+- Web logout clears only the Web account tokens. It does not clear Android
+  Pad Direct device credentials or stop pairing persistence.
 
 This step still does not implement pending job polling, claim, payload fetch,
 native order printing, complete/fail/release, retry, or a background worker.

@@ -2,11 +2,13 @@ export interface AndroidPadDeviceStatus {
   paired?: boolean
   device_id?: string | number | null
   store_id?: string | number | null
+  device_store_id?: string | number | null
   device_name?: string | null
   registered_at?: string | null
   token_last4?: string | null
   app_version?: string | null
   platform?: string | null
+  auto_print_enabled?: boolean
   success?: boolean
   message?: string | null
 }

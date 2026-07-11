@@ -16,4 +16,10 @@ public interface StoreDeviceService {
     StoreDeviceResponse heartbeat(Long deviceId, String rawDeviceToken, DeviceHeartbeatRequest request);
 
     List<StoreDeviceResponse> listStoreDevices(Long storeId);
+
+    StoreDeviceResponse renameDevice(Long storeId, Long deviceId, String deviceName);
+
+    StoreDeviceResponse disableDevice(Long storeId, Long deviceId);
+
+    StoreDeviceResponse revokeDevice(Long storeId, Long deviceId);
 }

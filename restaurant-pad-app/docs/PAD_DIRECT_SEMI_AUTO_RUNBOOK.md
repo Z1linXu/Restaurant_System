@@ -13,6 +13,9 @@ This runbook covers PR11D-5/6/7 pilot behavior. The Android Pad can process
   user preference is enabled.
 - One job at a time.
 - Device-auth only: `X-Device-Id` and `X-Device-Token`.
+- Web logout does not clear Pad Direct pairing; explicit Clear Pairing,
+  backend disable/revoke, app data clear, or uninstall is required to remove or
+  invalidate the saved device identity.
 - Safe flow per job:
 
 ```text
@@ -59,6 +62,9 @@ calls do not reclaim active `PRINTING` jobs.
 - It still stops on device auth, TCP write/flush, complete-reporting, fail-
   reporting, and other high-risk errors where continuing could hide or duplicate
   a print.
+- Backend disabled/revoked devices receive `403` for pending, claim,
+  start-print, payload, complete, fail, release, and heartbeat until the Pad is
+  re-paired with an active device.
 - It stops when the app leaves the foreground and resumes when the app returns,
   as long as the user preference is still enabled and the last stop was
   lifecycle-related.

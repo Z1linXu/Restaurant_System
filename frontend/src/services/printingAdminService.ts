@@ -276,6 +276,31 @@ export async function fetchStoreDevices(storeId: number): Promise<StoreDeviceRec
   return request<StoreDeviceRecord[]>(`/api/v1/admin/printing/devices?${params.toString()}`)
 }
 
+export async function renameStoreDevice(storeId: number, deviceId: number, deviceName: string): Promise<StoreDeviceRecord> {
+  const params = new URLSearchParams({ store_id: String(storeId) })
+  return request<StoreDeviceRecord>(`/api/v1/admin/printing/devices/${deviceId}/rename?${params.toString()}`, {
+    method: 'PATCH',
+    headers: buildHeaders(),
+    body: JSON.stringify({ device_name: deviceName }),
+  })
+}
+
+export async function disableStoreDevice(storeId: number, deviceId: number): Promise<StoreDeviceRecord> {
+  const params = new URLSearchParams({ store_id: String(storeId) })
+  return request<StoreDeviceRecord>(`/api/v1/admin/printing/devices/${deviceId}/disable?${params.toString()}`, {
+    method: 'POST',
+    headers: buildHeaders(),
+  })
+}
+
+export async function revokeStoreDevice(storeId: number, deviceId: number): Promise<StoreDeviceRecord> {
+  const params = new URLSearchParams({ store_id: String(storeId) })
+  return request<StoreDeviceRecord>(`/api/v1/admin/printing/devices/${deviceId}/revoke?${params.toString()}`, {
+    method: 'POST',
+    headers: buildHeaders(),
+  })
+}
+
 export async function registerStoreDevice(input: DeviceRegisterRequest): Promise<DeviceRegisterResponse> {
   return request<DeviceRegisterResponse>('/api/v1/devices/register', {
     method: 'POST',

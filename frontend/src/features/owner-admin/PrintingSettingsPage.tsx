@@ -5,11 +5,14 @@ import { useCurrentStore } from '../store/StoreContext'
 import { ApiRequestError } from '../../services/apiClient'
 import {
   deletePrinterConfig,
+  disableStoreDevice,
   fetchPrintJobs,
   fetchPrintCenterOverview,
   fetchStoreDevices,
+  renameStoreDevice,
   registerStoreDevice,
   reprintPrintJob,
+  revokeStoreDevice,
   savePrinterConfig,
   triggerPrinterConnectionTest,
   triggerCurrentFontSizeTest,
@@ -121,6 +124,47 @@ function formatDateTime(value?: string | null) {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+function formatAgo(value?: string | null) {
+  const timestamp = timestampMs(value)
+  if (timestamp == null) {
+    return '从未在线'
+  }
+  const ageMs = Math.max(0, Date.now() - timestamp)
+  const minutes = Math.floor(ageMs / 60000)
+  if (minutes < 1) {
+    return '刚刚在线'
+  }
+  if (minutes < 60) {
+    return `${minutes} 分钟前`
+  }
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) {
+    return `${hours} 小时前`
+  }
+  const days = Math.floor(hours / 24)
+  return `${days} 天前`
+}
+
+function lastSeenTone(value?: string | null) {
+  const timestamp = timestampMs(value)
+  if (timestamp == null) {
+    return 'bg-[rgba(97,0,0,0.08)] text-[var(--primary)]'
+  }
+  const ageMs = Math.max(0, Date.now() - timestamp)
+  if (ageMs <= 10 * 60 * 1000) {
+    return 'bg-[rgba(18,141,77,0.12)] text-[rgb(25,112,69)]'
+  }
+  if (ageMs <= 24 * 60 * 60 * 1000) {
+    return 'bg-[rgba(180,120,20,0.16)] text-[rgb(130,82,14)]'
+  }
+  return 'bg-[rgba(97,0,0,0.08)] text-[var(--primary)]'
+}
+
+function isVeryOldDevice(value?: string | null) {
+  const timestamp = timestampMs(value)
+  return timestamp == null || Date.now() - timestamp > 7 * 24 * 60 * 60 * 1000
 }
 
 function timestampMs(value?: string | null) {
@@ -476,6 +520,20 @@ export function PrintingSettingsPage() {
       ? CLOUD_PRIVATE_PRINTER_WARNING
       : null
   }, [printCenter, printJobs])
+  const padStatusStoreId = padDeviceStatus?.store_id ?? padDeviceStatus?.device_store_id ?? null
+  const padPairedToSelectedStore = Boolean(
+    padBridgeAvailable
+      && padDeviceStatus?.paired
+      && padStatusStoreId != null
+      && Number(padStatusStoreId) === Number(selectedStoreId),
+  )
+  const pairButtonLabel = pairingPad
+    ? '配对中...'
+    : padPairedToSelectedStore
+      ? '本机已配对'
+      : padDeviceStatus?.paired
+        ? '重新配对本机'
+        : '配对本机 Pad'
 
   const startCreatePrinter = () => {
     setToast(null)
@@ -760,6 +818,56 @@ export function PrintingSettingsPage() {
     }
   }
 
+  const handleRenameDevice = async (device: StoreDeviceRecord) => {
+    const currentName = device.device_name ?? `Pad ${device.id}`
+    const nextName = window.prompt('输入新的 Pad 设备名称', currentName)
+    if (nextName == null) {
+      return
+    }
+    const trimmed = nextName.trim()
+    if (!trimmed) {
+      setToast({ kind: 'error', message: '设备名称不能为空。' })
+      return
+    }
+    try {
+      setToast(null)
+      await renameStoreDevice(Number(selectedStoreId), device.id, trimmed)
+      await refreshDevices()
+      refreshPadDeviceStatus()
+      setToast({ kind: 'success', message: `设备 #${device.id} 已改名。` })
+    } catch (actionError) {
+      setToast({ kind: 'error', message: actionError instanceof Error ? actionError.message : '设备改名失败' })
+    }
+  }
+
+  const handleDisableDevice = async (device: StoreDeviceRecord) => {
+    if (!window.confirm(`确定要停用设备「${device.device_name ?? `#${device.id}`}」吗？该设备会立即无法领取或回报打印任务。`)) {
+      return
+    }
+    try {
+      setToast(null)
+      await disableStoreDevice(Number(selectedStoreId), device.id)
+      await refreshDevices()
+      setToast({ kind: 'success', message: `设备 #${device.id} 已停用。` })
+    } catch (actionError) {
+      setToast({ kind: 'error', message: actionError instanceof Error ? actionError.message : '设备停用失败' })
+    }
+  }
+
+  const handleRevokeDevice = async (device: StoreDeviceRecord) => {
+    if (!window.confirm(`确定要吊销设备「${device.device_name ?? `#${device.id}`}」吗？该设备需要重新配对后才能使用。`)) {
+      return
+    }
+    try {
+      setToast(null)
+      await revokeStoreDevice(Number(selectedStoreId), device.id)
+      await refreshDevices()
+      setToast({ kind: 'success', message: `设备 #${device.id} 已吊销。` })
+    } catch (actionError) {
+      setToast({ kind: 'error', message: actionError instanceof Error ? actionError.message : '设备吊销失败' })
+    }
+  }
+
   return (
     <>
       <div className="space-y-5">
@@ -917,7 +1025,7 @@ export function PrintingSettingsPage() {
                         : 'bg-[rgba(26,28,25,0.06)] text-[var(--muted)]'
                     }`}
                   >
-                    {pairingPad ? '配对中...' : '配对本机 Pad'}
+                    {pairButtonLabel}
                   </button>
                   <button
                     type="button"
@@ -930,7 +1038,7 @@ export function PrintingSettingsPage() {
               </div>
               <div className={`mt-4 rounded-[18px] px-4 py-3 text-[0.86rem] font-medium ${
                 padBridgeAvailable
-                  ? padDeviceStatus?.paired && padDeviceStatus.store_id && Number(padDeviceStatus.store_id) !== Number(selectedStoreId)
+                    ? padDeviceStatus?.paired && padStatusStoreId && Number(padStatusStoreId) !== Number(selectedStoreId)
                     ? 'bg-[rgba(151,34,34,0.1)] text-[rgb(116,22,22)]'
                     : 'bg-[rgba(18,141,77,0.1)] text-[rgb(25,112,69)]'
                   : 'bg-[rgba(26,28,25,0.05)] text-[var(--muted)]'
@@ -940,10 +1048,11 @@ export function PrintingSettingsPage() {
                   <span>普通浏览器无法保存 Pad 凭证。请在 Android Pad App 内打开打印中心进行配对。</span>
                 ) : padDeviceStatus?.paired ? (
                   <span>
-                    本机已保存设备 #{padDeviceStatus.device_id}，门店 #{padDeviceStatus.store_id}
+                    本机已保存设备 #{padDeviceStatus.device_id}，门店 #{padStatusStoreId ?? '-'}
                     {padDeviceStatus.device_name ? `，${padDeviceStatus.device_name}` : ''}
+                    {padDeviceStatus.auto_print_enabled != null ? `，自动打印${padDeviceStatus.auto_print_enabled ? '开启' : '关闭'}` : ''}
                     {padDeviceStatus.token_last4 ? `，token ****${padDeviceStatus.token_last4}` : ''}
-                    {padDeviceStatus.store_id && Number(padDeviceStatus.store_id) !== Number(selectedStoreId)
+                    {padStatusStoreId && Number(padStatusStoreId) !== Number(selectedStoreId)
                       ? '。当前页面门店与本机配对门店不一致，请重新配对后再启用自动领取。'
                       : '。'}
                   </span>
@@ -951,7 +1060,13 @@ export function PrintingSettingsPage() {
                   <span>当前 Android Pad App 尚未配对。点击“配对本机 Pad”后，device token 只会保存到本机原生层。</span>
                 )}
               </div>
-              <PadDevicesTable devices={storeDevices} />
+              <PadDevicesTable
+                devices={storeDevices}
+                currentPadDeviceId={padDeviceStatus?.device_id ?? null}
+                onRename={handleRenameDevice}
+                onDisable={handleDisableDevice}
+                onRevoke={handleRevokeDevice}
+              />
               {devicesError ? (
                 <div className="mt-3 rounded-[16px] bg-[rgba(97,0,0,0.08)] px-4 py-3 text-[0.86rem] font-medium text-[var(--primary)]">
                   Pad 设备加载失败：{devicesError}
@@ -1294,7 +1409,19 @@ export function PrintingSettingsPage() {
   )
 }
 
-function PadDevicesTable({ devices }: { devices: StoreDeviceRecord[] }) {
+function PadDevicesTable({
+  devices,
+  currentPadDeviceId,
+  onRename,
+  onDisable,
+  onRevoke,
+}: {
+  devices: StoreDeviceRecord[]
+  currentPadDeviceId?: string | number | null
+  onRename: (device: StoreDeviceRecord) => void
+  onDisable: (device: StoreDeviceRecord) => void
+  onRevoke: (device: StoreDeviceRecord) => void
+}) {
   if (!devices.length) {
     return (
       <div className="mt-4 rounded-[18px] bg-[rgba(26,28,25,0.04)] px-4 py-5 text-[0.9rem] text-[var(--muted)]">
@@ -1303,42 +1430,119 @@ function PadDevicesTable({ devices }: { devices: StoreDeviceRecord[] }) {
     )
   }
 
+  const currentDeviceId = currentPadDeviceId == null ? null : String(currentPadDeviceId)
+  const activeNameCounts = devices.reduce((mapping, device) => {
+    if (device.is_active === false || device.status !== 'ACTIVE') {
+      return mapping
+    }
+    const key = (device.device_name ?? '').trim().toLowerCase()
+    if (!key) {
+      return mapping
+    }
+    mapping.set(key, (mapping.get(key) ?? 0) + 1)
+    return mapping
+  }, new Map<string, number>())
+
   return (
     <div className="mt-4 overflow-x-auto rounded-[18px] bg-[rgba(26,28,25,0.04)]">
       <table className="min-w-full text-left text-[0.84rem]">
         <thead className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--muted)]">
           <tr>
             <th className="px-3 py-3">设备</th>
-            <th className="px-3 py-3">类型</th>
+            <th className="px-3 py-3">门店/组织</th>
             <th className="px-3 py-3">状态</th>
             <th className="px-3 py-3">最后在线</th>
-            <th className="px-3 py-3">App</th>
-            <th className="px-3 py-3">平台</th>
+            <th className="px-3 py-3">App/平台</th>
+            <th className="px-3 py-3">标记</th>
+            <th className="px-3 py-3 text-right">操作</th>
           </tr>
         </thead>
         <tbody>
-          {devices.map((device) => (
-            <tr key={device.id} className="border-t border-[rgba(26,28,25,0.06)]">
-              <td className="px-3 py-3">
-                <div className="font-semibold text-[var(--on-surface)]">{device.device_name ?? `设备 #${device.id}`}</div>
-                <div className="text-[0.76rem] text-[var(--muted)]">ID {device.id}</div>
-              </td>
-              <td className="px-3 py-3 text-[var(--muted)]">{device.device_type ?? '-'}</td>
-              <td className="px-3 py-3">
-                <span className={`rounded-full px-2.5 py-1 text-[0.72rem] font-bold ${
-                  device.is_active === false || device.status !== 'ACTIVE'
-                    ? 'bg-[rgba(97,0,0,0.1)] text-[var(--primary)]'
-                    : 'bg-[rgba(18,141,77,0.12)] text-[rgb(25,112,69)]'
-                }`}
-                >
-                  {device.is_active === false ? '未启用 INACTIVE' : device.status ?? '未知 UNKNOWN'}
-                </span>
-              </td>
-              <td className="px-3 py-3 text-[var(--muted)]">{formatDateTime(device.last_seen_at)}</td>
-              <td className="px-3 py-3 text-[var(--muted)]">{device.app_version ?? '-'}</td>
-              <td className="px-3 py-3 text-[var(--muted)]">{device.platform ?? '-'}</td>
-            </tr>
-          ))}
+          {devices.map((device) => {
+            const active = device.is_active !== false && device.status === 'ACTIVE'
+            const nameKey = (device.device_name ?? '').trim().toLowerCase()
+            const duplicateName = active && Boolean(nameKey) && (activeNameCounts.get(nameKey) ?? 0) > 1
+            const oldDevice = isVeryOldDevice(device.last_seen_at)
+            const isCurrentPad = currentDeviceId != null && String(device.id) === currentDeviceId
+            return (
+              <tr key={device.id} className="border-t border-[rgba(26,28,25,0.06)]">
+                <td className="px-3 py-3">
+                  <div className="font-semibold text-[var(--on-surface)]">{device.device_name ?? `设备 #${device.id}`}</div>
+                  <div className="text-[0.76rem] text-[var(--muted)]">ID {device.id} · {device.device_type ?? '-'}</div>
+                </td>
+                <td className="px-3 py-3 text-[var(--muted)]">
+                  <div>Store {device.store_id}</div>
+                  <div className="mt-1 text-[0.74rem]">Org {device.organization_id ?? '-'}</div>
+                </td>
+                <td className="px-3 py-3">
+                  <span className={`rounded-full px-2.5 py-1 text-[0.72rem] font-bold ${
+                    active
+                      ? 'bg-[rgba(18,141,77,0.12)] text-[rgb(25,112,69)]'
+                      : 'bg-[rgba(97,0,0,0.1)] text-[var(--primary)]'
+                  }`}
+                  >
+                    {active ? device.status ?? 'ACTIVE' : device.status ?? 'INACTIVE'}
+                  </span>
+                  <div className="mt-1 text-[0.72rem] font-semibold text-[var(--muted)]">
+                    {device.is_active === false ? 'is_active=false' : 'is_active=true'}
+                  </div>
+                </td>
+                <td className="px-3 py-3 text-[var(--muted)]">
+                  <span className={`rounded-full px-2.5 py-1 text-[0.72rem] font-bold ${lastSeenTone(device.last_seen_at)}`}>
+                    {formatAgo(device.last_seen_at)}
+                  </span>
+                  <div className="mt-1 text-[0.72rem]">{formatDateTime(device.last_seen_at)}</div>
+                </td>
+                <td className="px-3 py-3 text-[var(--muted)]">
+                  <div>{device.app_version ?? '-'}</div>
+                  <div className="mt-1 text-[0.74rem]">{device.platform ?? '-'}</div>
+                </td>
+                <td className="px-3 py-3">
+                  <div className="flex flex-wrap gap-1.5">
+                    {isCurrentPad ? (
+                      <span className="rounded-full bg-[rgba(38,86,160,0.12)] px-2.5 py-1 text-[0.72rem] font-bold text-[rgb(38,86,160)]">本机</span>
+                    ) : null}
+                    {duplicateName ? (
+                      <span className="rounded-full bg-[rgba(180,120,20,0.16)] px-2.5 py-1 text-[0.72rem] font-bold text-[rgb(130,82,14)]">疑似重复</span>
+                    ) : null}
+                    {oldDevice ? (
+                      <span className="rounded-full bg-[rgba(97,0,0,0.08)] px-2.5 py-1 text-[0.72rem] font-bold text-[var(--primary)]">旧设备</span>
+                    ) : null}
+                    {!isCurrentPad && !duplicateName && !oldDevice ? (
+                      <span className="rounded-full bg-white px-2.5 py-1 text-[0.72rem] font-bold text-[var(--muted)]">正常</span>
+                    ) : null}
+                  </div>
+                </td>
+                <td className="px-3 py-3 text-right">
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onRename(device)}
+                      className="rounded-full bg-white px-3 py-1.5 text-[0.78rem] font-semibold text-[var(--on-surface)]"
+                    >
+                      改名
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDisable(device)}
+                      disabled={!active}
+                      className="rounded-full bg-[rgba(180,120,20,0.14)] px-3 py-1.5 text-[0.78rem] font-semibold text-[rgb(130,82,14)] disabled:opacity-45"
+                    >
+                      停用
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onRevoke(device)}
+                      disabled={device.status === 'REVOKED'}
+                      className="rounded-full bg-[rgba(97,0,0,0.08)] px-3 py-1.5 text-[0.78rem] font-semibold text-[var(--primary)] disabled:opacity-45"
+                    >
+                      吊销
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>

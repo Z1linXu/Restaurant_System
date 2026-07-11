@@ -13,6 +13,7 @@ import com.restaurant.system.user.repository.StoreRepository;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
@@ -25,6 +26,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class StoreDeviceServiceImpl implements StoreDeviceService {
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final Duration LAST_SEEN_TOUCH_INTERVAL = Duration.ofSeconds(30);
 
     private final StoreDeviceRepository storeDeviceRepository;
     private final StoreRepository storeRepository;
@@ -65,6 +67,7 @@ public class StoreDeviceServiceImpl implements StoreDeviceService {
     }
 
     @Override
+    @Transactional
     public StoreDevice authenticateDevice(Long deviceId, String rawDeviceToken) {
         if (deviceId == null || rawDeviceToken == null || rawDeviceToken.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Device credentials are required");
@@ -77,6 +80,7 @@ public class StoreDeviceServiceImpl implements StoreDeviceService {
         if (!hashToken(rawDeviceToken).equals(device.deviceTokenHash)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid device credentials");
         }
+        touchLastSeenIfStale(device, LocalDateTime.now());
         return device;
     }
 
@@ -84,13 +88,24 @@ public class StoreDeviceServiceImpl implements StoreDeviceService {
     @Transactional
     public StoreDeviceResponse heartbeat(Long deviceId, String rawDeviceToken, DeviceHeartbeatRequest request) {
         StoreDevice device = authenticateDevice(deviceId, rawDeviceToken);
-        device.lastSeenAt = LocalDateTime.now();
+        boolean changed = false;
         if (request != null) {
-            device.appVersion = blankToNull(request.app_version);
-            device.platform = blankToNull(request.platform);
+            String appVersion = blankToNull(request.app_version);
+            String platform = blankToNull(request.platform);
+            if (!equalsNullable(device.appVersion, appVersion)) {
+                device.appVersion = appVersion;
+                changed = true;
+            }
+            if (!equalsNullable(device.platform, platform)) {
+                device.platform = platform;
+                changed = true;
+            }
         }
-        device.updatedAt = device.lastSeenAt;
-        return StoreDeviceResponse.from(storeDeviceRepository.save(device));
+        if (changed) {
+            device.updatedAt = LocalDateTime.now();
+            storeDeviceRepository.save(device);
+        }
+        return StoreDeviceResponse.from(device);
     }
 
     @Override
@@ -99,6 +114,62 @@ public class StoreDeviceServiceImpl implements StoreDeviceService {
             .stream()
             .map(StoreDeviceResponse::from)
             .toList();
+    }
+
+    @Override
+    @Transactional
+    public StoreDeviceResponse renameDevice(Long storeId, Long deviceId, String deviceName) {
+        StoreDevice device = requireStoreDevice(storeId, deviceId);
+        device.deviceName = normalizeLabel(deviceName, device.deviceName == null || device.deviceName.isBlank() ? "Pad Device" : device.deviceName);
+        device.updatedAt = LocalDateTime.now();
+        return StoreDeviceResponse.from(storeDeviceRepository.save(device));
+    }
+
+    @Override
+    @Transactional
+    public StoreDeviceResponse disableDevice(Long storeId, Long deviceId) {
+        return markDeviceInactive(storeId, deviceId, "DISABLED");
+    }
+
+    @Override
+    @Transactional
+    public StoreDeviceResponse revokeDevice(Long storeId, Long deviceId) {
+        return markDeviceInactive(storeId, deviceId, "REVOKED");
+    }
+
+    private StoreDeviceResponse markDeviceInactive(Long storeId, Long deviceId, String status) {
+        StoreDevice device = requireStoreDevice(storeId, deviceId);
+        device.status = status;
+        device.isActive = false;
+        device.updatedAt = LocalDateTime.now();
+        return StoreDeviceResponse.from(storeDeviceRepository.save(device));
+    }
+
+    private StoreDevice requireStoreDevice(Long storeId, Long deviceId) {
+        if (storeId == null) {
+            throw new BusinessException("store_id is required");
+        }
+        if (deviceId == null) {
+            throw new BusinessException("device_id is required");
+        }
+        return storeDeviceRepository.findByIdAndStoreId(deviceId, storeId)
+            .orElseThrow(() -> new BusinessException("Device not found for store"));
+    }
+
+    private void touchLastSeenIfStale(StoreDevice device, LocalDateTime now) {
+        if (device.lastSeenAt != null && device.lastSeenAt.isAfter(now.minus(LAST_SEEN_TOUCH_INTERVAL))) {
+            return;
+        }
+        device.lastSeenAt = now;
+        device.updatedAt = now;
+        storeDeviceRepository.save(device);
+    }
+
+    private boolean equalsNullable(String left, String right) {
+        if (left == null) {
+            return right == null;
+        }
+        return left.equals(right);
     }
 
     private String generateDeviceToken() {

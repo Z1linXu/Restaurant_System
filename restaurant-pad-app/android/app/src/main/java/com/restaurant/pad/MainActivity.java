@@ -561,12 +561,17 @@ public class MainActivity extends Activity {
         String storeId = preferences.getString(KEY_DEVICE_STORE_ID, "");
         String deviceName = preferences.getString(KEY_DEVICE_NAME, "");
         String registeredAt = preferences.getString(KEY_DEVICE_REGISTERED_AT, "");
+        String appVersion = preferences.getString(KEY_DEVICE_APP_VERSION, "");
+        String platform = preferences.getString(KEY_DEVICE_PLATFORM, "");
         String tokenLast4 = tokenLast4(preferences.getString(KEY_DEVICE_TOKEN, ""));
         return "已配对"
             + "\nDevice ID: " + deviceId
             + "\nStore ID: " + (storeId == null || storeId.isBlank() ? "-" : storeId)
             + "\nDevice name: " + (deviceName == null || deviceName.isBlank() ? "-" : deviceName)
             + "\nRegistered at: " + (registeredAt == null || registeredAt.isBlank() ? "-" : registeredAt)
+            + "\nApp version: " + (appVersion == null || appVersion.isBlank() ? "-" : appVersion)
+            + "\nPlatform: " + (platform == null || platform.isBlank() ? "-" : platform)
+            + "\nAuto print: " + (isPadDirectAutoPrintEnabled() ? "enabled" : "disabled")
             + "\nToken: " + (tokenLast4.isBlank() ? "已保存" : "****" + tokenLast4);
     }
 
@@ -2911,11 +2916,14 @@ public class MainActivity extends Activity {
                 response.put("success", true);
                 response.put("paired", deviceId != null && !deviceId.isBlank() && deviceToken != null && !deviceToken.isBlank());
                 response.put("device_id", blankToJsonNull(deviceId));
-                response.put("store_id", blankToJsonNull(preferences.getString(KEY_DEVICE_STORE_ID, "")));
+                String storeId = preferences.getString(KEY_DEVICE_STORE_ID, "");
+                response.put("store_id", blankToJsonNull(storeId));
+                response.put("device_store_id", blankToJsonNull(storeId));
                 response.put("device_name", blankToJsonNull(preferences.getString(KEY_DEVICE_NAME, "")));
                 response.put("registered_at", blankToJsonNull(preferences.getString(KEY_DEVICE_REGISTERED_AT, "")));
                 response.put("app_version", blankToJsonNull(preferences.getString(KEY_DEVICE_APP_VERSION, "unknown")));
                 response.put("platform", blankToJsonNull(preferences.getString(KEY_DEVICE_PLATFORM, "ANDROID")));
+                response.put("auto_print_enabled", isPadDirectAutoPrintEnabled());
                 response.put("token_last4", tokenLast4(deviceToken));
                 return response.toString();
             } catch (Exception exception) {

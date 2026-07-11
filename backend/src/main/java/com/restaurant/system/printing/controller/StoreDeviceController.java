@@ -8,14 +8,16 @@ import com.restaurant.system.common.response.ApiResponse;
 import com.restaurant.system.printing.dto.DeviceHeartbeatRequest;
 import com.restaurant.system.printing.dto.DeviceRegisterRequest;
 import com.restaurant.system.printing.dto.DeviceRegisterResponse;
+import com.restaurant.system.printing.dto.StoreDeviceRenameRequest;
 import com.restaurant.system.printing.dto.StoreDeviceResponse;
 import com.restaurant.system.printing.service.StoreDeviceService;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -66,5 +68,45 @@ public class StoreDeviceController {
             Capability.ADMIN_STORE_CONFIG
         );
         return ApiResponse.success(storeDeviceService.listStoreDevices(store_id));
+    }
+
+    @PatchMapping("/api/v1/admin/printing/devices/{deviceId}/rename")
+    public ApiResponse<StoreDeviceResponse> renameDevice(
+        @PathVariable Long deviceId,
+        @RequestParam Long store_id,
+        @RequestBody StoreDeviceRenameRequest request
+    ) {
+        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
+        requirePrintingDeviceManagement(store_id);
+        String deviceName = request == null ? null : request.device_name;
+        return ApiResponse.success("Device renamed", storeDeviceService.renameDevice(store_id, deviceId, deviceName));
+    }
+
+    @PostMapping("/api/v1/admin/printing/devices/{deviceId}/disable")
+    public ApiResponse<StoreDeviceResponse> disableDevice(
+        @PathVariable Long deviceId,
+        @RequestParam Long store_id
+    ) {
+        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
+        requirePrintingDeviceManagement(store_id);
+        return ApiResponse.success("Device disabled", storeDeviceService.disableDevice(store_id, deviceId));
+    }
+
+    @PostMapping("/api/v1/admin/printing/devices/{deviceId}/revoke")
+    public ApiResponse<StoreDeviceResponse> revokeDevice(
+        @PathVariable Long deviceId,
+        @RequestParam Long store_id
+    ) {
+        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
+        requirePrintingDeviceManagement(store_id);
+        return ApiResponse.success("Device revoked", storeDeviceService.revokeDevice(store_id, deviceId));
+    }
+
+    private void requirePrintingDeviceManagement(Long storeId) {
+        authorizationService.requireForStore(
+            storeId,
+            Capability.ADMIN_PRINTING_MANAGE,
+            Capability.ADMIN_STORE_CONFIG
+        );
     }
 }

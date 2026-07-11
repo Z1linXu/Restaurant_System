@@ -3,6 +3,7 @@ package com.restaurant.system.printing.renderer;
 import com.restaurant.system.kitchen.entity.KitchenTask;
 import com.restaurant.system.order.entity.Order;
 import com.restaurant.system.order.entity.OrderItem;
+import com.restaurant.system.order.entity.OrderItemOption;
 import com.restaurant.system.printing.PrintModuleCode;
 import com.restaurant.system.printing.dto.PrintRenderRequest;
 import java.time.format.DateTimeFormatter;
@@ -53,6 +54,15 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
             }
         }
 
+        Map<Long, List<OrderItemOption>> optionsByItemId = new HashMap<>();
+        if (request.order_item_options != null) {
+            for (OrderItemOption option : request.order_item_options) {
+                if (option != null && option.order_item_id != null) {
+                    optionsByItemId.computeIfAbsent(option.order_item_id, ignored -> new ArrayList<>()).add(option);
+                }
+            }
+        }
+
         List<KitchenTask> tasks = request.kitchen_tasks == null ? List.of() : request.kitchen_tasks.stream()
             .filter(task -> task != null && GRAB_STATIONS.contains(task.station_code))
             .filter(task -> !"cancelled".equals(task.status))
@@ -66,10 +76,13 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
 
         Map<SideGroupKey, SideGroup> sideGroups = buildSideGroups(tasks, orderItemById);
         Set<SideGroupKey> printedSideGroups = new LinkedHashSet<>();
+        Map<KitchenNoodlePrintFormatter.NoodleGroupKey, NoodleGroup> noodleGroups = buildNoodleGroups(tasks, orderItemById, optionsByItemId);
+        Set<KitchenNoodlePrintFormatter.NoodleGroupKey> printedNoodleGroups = new LinkedHashSet<>();
 
         for (KitchenTask task : tasks) {
-            if (isSideTask(task, orderItemById.get(task.order_item_id))) {
-                SideGroupKey key = buildSideGroupKey(task, orderItemById.get(task.order_item_id));
+            OrderItem orderItem = orderItemById.get(task.order_item_id);
+            if (isSideTask(task, orderItem)) {
+                SideGroupKey key = buildSideGroupKey(task, orderItem);
                 if (!printedSideGroups.add(key)) {
                     continue;
                 }
@@ -77,7 +90,22 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
                 appendPrintLines(builder, sideGroup.toPrintLines());
                 continue;
             }
-            appendPrintLines(builder, simplifyGreenOptions(buildItemLines(task, orderItemById.get(task.order_item_id))));
+            if (KitchenNoodlePrintFormatter.isNoodleTask(task, orderItem)) {
+                KitchenNoodlePrintFormatter.NoodleConfig config = KitchenNoodlePrintFormatter.buildConfig(task, orderItem, this::normalizeNoodleConfigSegment);
+                KitchenNoodlePrintFormatter.NoodleGroupKey key = KitchenNoodlePrintFormatter.buildGroupKey(
+                    task,
+                    orderItem,
+                    optionsByItemId.getOrDefault(task.order_item_id, List.of()),
+                    config
+                );
+                if (!printedNoodleGroups.add(key)) {
+                    continue;
+                }
+                NoodleGroup noodleGroup = noodleGroups.get(key);
+                appendPrintLines(builder, List.of(KitchenNoodlePrintFormatter.formatLine(noodleGroup.config(), noodleGroup.quantity())));
+                continue;
+            }
+            appendPrintLines(builder, simplifyGreenOptions(buildItemLines(task, orderItem)));
         }
 
         builder.append("--------------------------------\n");
@@ -201,6 +229,35 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
             SideGroupKey key = buildSideGroupKey(task, orderItem);
             groups.computeIfAbsent(key, ignored -> new SideGroup(key.displayName(), key.demands()))
                 .addQuantity(task.quantity == null ? 1 : task.quantity);
+        }
+        return groups;
+    }
+
+    private Map<KitchenNoodlePrintFormatter.NoodleGroupKey, NoodleGroup> buildNoodleGroups(
+        List<KitchenTask> tasks,
+        Map<Long, OrderItem> orderItemById,
+        Map<Long, List<OrderItemOption>> optionsByItemId
+    ) {
+        Map<KitchenNoodlePrintFormatter.NoodleGroupKey, NoodleGroup> groups = new LinkedHashMap<>();
+        for (KitchenTask task : tasks) {
+            OrderItem orderItem = orderItemById.get(task.order_item_id);
+            if (!KitchenNoodlePrintFormatter.isNoodleTask(task, orderItem)) {
+                continue;
+            }
+            KitchenNoodlePrintFormatter.NoodleConfig config = KitchenNoodlePrintFormatter.buildConfig(task, orderItem, this::normalizeNoodleConfigSegment);
+            KitchenNoodlePrintFormatter.NoodleGroupKey key = KitchenNoodlePrintFormatter.buildGroupKey(
+                task,
+                orderItem,
+                optionsByItemId.getOrDefault(task.order_item_id, List.of()),
+                config
+            );
+            groups.compute(key, (ignored, existing) -> {
+                int quantity = task.quantity == null ? 1 : task.quantity;
+                if (existing == null) {
+                    return new NoodleGroup(config, quantity);
+                }
+                return existing.addQuantity(quantity);
+            });
         }
         return groups;
     }
@@ -354,6 +411,11 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
             }
         }
         return String.join(" ", result);
+    }
+
+    private String normalizeNoodleConfigSegment(String segment) {
+        List<String> simplified = simplifyGreenOptions(List.of(KitchenNoodlePrintFormatter.normalizeModifierSegment(segment)));
+        return simplified.isEmpty() ? KitchenNoodlePrintFormatter.normalizeModifierSegment(segment) : simplified.get(0);
     }
 
     private ModifierToken parseAddOnModifierToken(String token) {
@@ -515,6 +577,12 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
     }
 
     private record ModifierCount(String displayName, int quantity) {
+    }
+
+    private record NoodleGroup(KitchenNoodlePrintFormatter.NoodleConfig config, int quantity) {
+        NoodleGroup addQuantity(int delta) {
+            return new NoodleGroup(config, quantity + delta);
+        }
     }
 
     private static class SideGroup {

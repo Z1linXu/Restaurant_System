@@ -144,8 +144,9 @@ Recommended local flow:
    bearer token and store-scoped permissions.
 6. The backend returns the raw `device_token` once.
 7. The Web page immediately calls `window.RestaurantPadDevice.saveDeviceCredentials(...)`.
-8. Android stores `device_id`, `device_token`, `store_id`, device name, and
-   registration metadata locally.
+8. Android stores `device_id`, `device_token`, `store_id`, device name,
+   registration metadata, app version, platform, and auto-print preference
+   locally.
 
 The Web page does not persist the raw device token. The Android native layer
 does not read WebView `localStorage` or reuse the Web bearer token.
@@ -157,11 +158,18 @@ The Local Control Panel shows pairing status:
 - Store ID
 - Device name
 - Registered at
+- App version
+- Platform
+- Auto print enabled/disabled
 - Token last 4 characters only
 
 Use `Clear Pairing / 清除配对` only when replacing or resetting the Pad. Clearing
 pairing removes the local device credentials and requires pairing again before a
 future Pad Direct worker can claim print jobs.
+
+Web logout does not clear Pad pairing. Pairing persists across Android app
+restart until explicit Clear Pairing, backend disable/revoke, app data clear, or
+uninstall.
 
 Current storage is Android `SharedPreferences` for local pilot testing. Before
 production Pad Direct worker rollout, move device token storage to

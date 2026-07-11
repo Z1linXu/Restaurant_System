@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { clearAuthTokens, getAccessToken, getRefreshToken } from '../../services/apiClient'
+import { ApiRequestError, clearAuthTokens, getAccessToken, getRefreshToken } from '../../services/apiClient'
 import { fetchCurrentUser, login as loginRequest, logout as logoutRequest, type AuthUser, type LoginResponse } from '../../services/authService'
 import { AuthContext } from './useAuth'
 
@@ -29,10 +29,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       applyAuthResponse(await fetchCurrentUser())
     } catch (exception) {
-      clearAuthTokens()
-      setUser(null)
-      setPermissions([])
-      setFeatures({})
+      if (exception instanceof ApiRequestError && exception.status === 401) {
+        clearAuthTokens()
+        setUser(null)
+        setPermissions([])
+        setFeatures({})
+      }
       setError(exception instanceof Error ? exception.message : 'Session expired')
     } finally {
       setLoading(false)

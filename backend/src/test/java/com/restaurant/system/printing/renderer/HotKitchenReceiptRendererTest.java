@@ -14,6 +14,7 @@ import com.restaurant.system.printing.dto.PrintRenderRequest;
 import com.restaurant.system.printing.semantic.HotKitchenPrintEligibilityService;
 import com.restaurant.system.printing.semantic.OptionSemanticResolver;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -31,7 +32,7 @@ class HotKitchenReceiptRendererTest {
         assertTrue(content.contains("UPDATED"));
         assertTrue(content.contains("HOT KITCHEN"));
         assertTrue(content.contains("桌号：T2"));
-        assertTrue(content.contains("大二(S) | +煎蛋 +葱 ×1"));
+        assertTrue(content.contains("大二(S) | +煎蛋 +葱 | 备注：less soup"));
         assertTrue(content.contains("备注：less soup"));
     }
 
@@ -79,7 +80,7 @@ class HotKitchenReceiptRendererTest {
 
         String content = renderer.render(request);
 
-        assertTrue(content.contains("大二(S) | +煎蛋 +葱 ×1"));
+        assertTrue(content.contains("大二(S) | +煎蛋 +葱 | 备注：less soup"));
         assertFalse(content.contains("毛豆"));
         assertFalse(content.contains("Edamame"));
         assertFalse(content.contains("土豆"));
@@ -112,11 +113,99 @@ class HotKitchenReceiptRendererTest {
     }
 
     @Test
+    void groupsTwoIdenticalHotKitchenNoodlesAsSingleBowlConfigTimesQuantity() {
+        HotKitchenReceiptRenderer renderer = renderer();
+        PrintRenderRequest request = hotNoodleRequest(
+            hotNoodle(10L, "中酸 | +蛋"),
+            hotNoodle(11L, "中酸 | +蛋")
+        );
+
+        String content = renderer.render(request);
+
+        assertTrue(content.contains("(中酸 | +蛋) ×2"));
+        assertFalse(content.contains("中酸 | +蛋 ×2"));
+    }
+
+    @Test
+    void groupsThreeIdenticalHotKitchenNoodlesAsSingleBowlConfigTimesQuantity() {
+        HotKitchenReceiptRenderer renderer = renderer();
+        PrintRenderRequest request = hotNoodleRequest(
+            hotNoodle(10L, "中酸 | +蛋"),
+            hotNoodle(11L, "中酸 | +蛋"),
+            hotNoodle(12L, "中酸 | +蛋")
+        );
+
+        String content = renderer.render(request);
+
+        assertTrue(content.contains("(中酸 | +蛋) ×3"));
+    }
+
+    @Test
+    void singleHotKitchenNoodleWithTwoEggsKeepsEggQuantityInsideConfig() {
+        HotKitchenReceiptRenderer renderer = renderer();
+        PrintRenderRequest request = hotNoodleRequest(
+            hotNoodleWithEggQuantity(10L, "中酸 | +蛋 +蛋", 2)
+        );
+
+        String content = renderer.render(request);
+
+        assertTrue(content.contains("中酸 | +蛋×2"));
+        assertFalse(content.contains("(中酸 | +蛋×2) ×1"));
+    }
+
+    @Test
+    void groupsTwoIdenticalHotKitchenNoodlesWithTwoEggsByBowlQuantity() {
+        HotKitchenReceiptRenderer renderer = renderer();
+        PrintRenderRequest request = hotNoodleRequest(
+            hotNoodleWithEggQuantity(10L, "中酸 | +蛋 +蛋", 2),
+            hotNoodleWithEggQuantity(11L, "中酸 | +蛋 +蛋", 2)
+        );
+
+        String content = renderer.render(request);
+
+        assertTrue(content.contains("(中酸 | +蛋×2) ×2"));
+    }
+
+    @Test
+    void doesNotMergeHotKitchenNoodlesWithDifferentSpicyLevels() {
+        HotKitchenReceiptRenderer renderer = renderer();
+        PrintRenderRequest request = hotNoodleRequest(
+            hotNoodle(10L, "中酸 | +蛋"),
+            hotNoodle(11L, "中辣 | +蛋")
+        );
+
+        String content = renderer.render(request);
+
+        assertTrue(content.contains("中酸 | +蛋"));
+        assertTrue(content.contains("中辣 | +蛋"));
+        assertFalse(content.contains("(中酸 | +蛋) ×2"));
+        assertFalse(content.contains("(中辣 | +蛋) ×2"));
+    }
+
+    @Test
+    void doesNotMergeHotKitchenNoodlesWithDifferentRemoveOrNotes() {
+        HotKitchenReceiptRenderer renderer = renderer();
+        PrintRenderRequest request = hotNoodleRequest(
+            hotNoodle(10L, "中酸 | +蛋", "少汤"),
+            hotNoodle(11L, "中酸 | 不要葱 | +蛋")
+        );
+
+        String content = renderer.render(request);
+
+        assertTrue(content.contains("中酸 | +蛋 | 备注：少汤"));
+        assertTrue(content.contains("中酸 | 不要葱 | +蛋"));
+        assertFalse(content.contains(") ×2"));
+    }
+
+    @Test
     void mergesIdenticalHotKitchenItemsByStableOptionsAndNotes() {
         HotKitchenReceiptRenderer renderer = renderer();
         PrintRenderRequest request = baseRequest();
         OrderItem item = request.order_items.get(0);
         item.menu_item_id = 100L;
+        item.item_name_snapshot_zh = "炸虾";
+        item.item_name_snapshot_en = "Fried Shrimp";
+        item.category_code_snapshot = "DEEPFRIED";
         item.notes = "same note";
         request.kitchen_tasks = List.of(task(20L, item.id, "DEEPFRIED", "炸虾", "炸虾", 1), task(21L, item.id, "DEEPFRIED", "炸虾", "炸虾", 2));
 
@@ -132,6 +221,9 @@ class HotKitchenReceiptRendererTest {
         PrintRenderRequest request = baseRequest();
         OrderItem firstItem = request.order_items.get(0);
         firstItem.menu_item_id = 100L;
+        firstItem.item_name_snapshot_zh = "炸虾";
+        firstItem.item_name_snapshot_en = "Fried Shrimp";
+        firstItem.category_code_snapshot = "DEEPFRIED";
 
         OrderItem secondItem = new OrderItem();
         secondItem.id = 11L;
@@ -218,6 +310,73 @@ class HotKitchenReceiptRendererTest {
         return request;
     }
 
+    private PrintRenderRequest hotNoodleRequest(HotNoodleCase... noodleCases) {
+        Order order = new Order();
+        order.id = 1L;
+        order.order_type = "dine_in";
+        order.table_no = "T2";
+        order.submitted_at = LocalDateTime.of(2026, 6, 16, 12, 23);
+
+        List<OrderItem> items = new ArrayList<>();
+        List<OrderItemOption> options = new ArrayList<>();
+        List<KitchenTask> tasks = new ArrayList<>();
+        for (HotNoodleCase noodleCase : noodleCases) {
+            OrderItem item = new OrderItem();
+            item.id = noodleCase.id();
+            item.order_id = order.id;
+            item.menu_item_id = noodleCase.menuItemId();
+            item.item_name_snapshot_zh = "酸菜牛肉面";
+            item.item_name_snapshot_en = "Pickled Cabbage Beef Noodle";
+            item.category_code_snapshot = "SOUP_NOODLE";
+            item.quantity = noodleCase.quantity();
+            item.notes = noodleCase.note();
+            items.add(item);
+
+            OrderItemOption friedEgg = new OrderItemOption();
+            friedEgg.id = noodleCase.id() * 10;
+            friedEgg.order_item_id = item.id;
+            friedEgg.option_code_snapshot = "fried_egg";
+            friedEgg.option_group_snapshot = "ADD_ON";
+            friedEgg.option_type_snapshot = "addon";
+            friedEgg.option_name_snapshot_zh = "加煎蛋";
+            friedEgg.option_name_snapshot_en = "Fried Egg";
+            friedEgg.quantity = noodleCase.eggQuantity();
+            options.add(friedEgg);
+
+            KitchenTask task = new KitchenTask();
+            task.id = 100L + noodleCase.id();
+            task.order_id = order.id;
+            task.order_item_id = item.id;
+            task.station_code = "NOODLE";
+            task.item_name_snapshot_zh = "酸菜牛肉面";
+            task.item_name_snapshot_en = "Pickled Cabbage Beef Noodle";
+            task.special_instructions_snapshot = noodleCase.specialInstructions();
+            task.status = "pending";
+            task.quantity = noodleCase.quantity();
+            tasks.add(task);
+        }
+
+        PrintRenderRequest request = new PrintRenderRequest();
+        request.order = order;
+        request.order_items = items;
+        request.order_item_options = options;
+        request.kitchen_tasks = tasks;
+        request.happened_at = LocalDateTime.now();
+        return request;
+    }
+
+    private HotNoodleCase hotNoodle(Long id, String specialInstructions) {
+        return hotNoodle(id, specialInstructions, null);
+    }
+
+    private HotNoodleCase hotNoodle(Long id, String specialInstructions, String note) {
+        return new HotNoodleCase(id, 300L, specialInstructions, note, 1, 1);
+    }
+
+    private HotNoodleCase hotNoodleWithEggQuantity(Long id, String specialInstructions, int eggQuantity) {
+        return new HotNoodleCase(id, 300L, specialInstructions, null, eggQuantity, 1);
+    }
+
     private KitchenTask task(Long id, Long orderItemId, String stationCode, String zh, String special, int quantity) {
         KitchenTask task = new KitchenTask();
         task.id = id;
@@ -240,5 +399,15 @@ class HotKitchenReceiptRendererTest {
             index += needle.length();
         }
         return count;
+    }
+
+    private record HotNoodleCase(
+        Long id,
+        Long menuItemId,
+        String specialInstructions,
+        String note,
+        int eggQuantity,
+        int quantity
+    ) {
     }
 }

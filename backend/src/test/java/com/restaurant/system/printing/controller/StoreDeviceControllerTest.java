@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -15,6 +16,7 @@ import com.restaurant.system.common.feature.FeatureFlagService;
 import com.restaurant.system.common.feature.FeaturePackage;
 import com.restaurant.system.printing.dto.DeviceRegisterRequest;
 import com.restaurant.system.printing.dto.DeviceRegisterResponse;
+import com.restaurant.system.printing.dto.StoreDeviceRenameRequest;
 import com.restaurant.system.printing.dto.StoreDeviceResponse;
 import com.restaurant.system.printing.service.StoreDeviceService;
 import java.util.List;
@@ -94,6 +96,76 @@ class StoreDeviceControllerTest {
         mockMvc.perform(get("/api/v1/admin/printing/devices").param("store_id", "1"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data[0].id").value(90));
+
+        verify(featureFlagService).requireEnabled(FeaturePackage.PRINTING);
+        verify(authorizationService).requireForStore(
+            1L,
+            Capability.ADMIN_PRINTING_MANAGE,
+            Capability.ADMIN_STORE_CONFIG
+        );
+    }
+
+    @Test
+    void renameDeviceUsesPrintingManageCapability() throws Exception {
+        StoreDeviceResponse response = new StoreDeviceResponse();
+        response.id = 90L;
+        response.store_id = 1L;
+        response.device_name = "Expo Pad";
+        when(storeDeviceService.renameDevice(1L, 90L, "Expo Pad")).thenReturn(response);
+
+        StoreDeviceRenameRequest request = new StoreDeviceRenameRequest();
+        request.device_name = "Expo Pad";
+
+        mockMvc.perform(patch("/api/v1/admin/printing/devices/90/rename")
+                .param("store_id", "1")
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.device_name").value("Expo Pad"));
+
+        verify(featureFlagService).requireEnabled(FeaturePackage.PRINTING);
+        verify(authorizationService).requireForStore(
+            1L,
+            Capability.ADMIN_PRINTING_MANAGE,
+            Capability.ADMIN_STORE_CONFIG
+        );
+    }
+
+    @Test
+    void disableDeviceUsesPrintingManageCapability() throws Exception {
+        StoreDeviceResponse response = new StoreDeviceResponse();
+        response.id = 90L;
+        response.store_id = 1L;
+        response.status = "DISABLED";
+        response.is_active = false;
+        when(storeDeviceService.disableDevice(1L, 90L)).thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/admin/printing/devices/90/disable").param("store_id", "1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.status").value("DISABLED"))
+            .andExpect(jsonPath("$.data.is_active").value(false));
+
+        verify(featureFlagService).requireEnabled(FeaturePackage.PRINTING);
+        verify(authorizationService).requireForStore(
+            1L,
+            Capability.ADMIN_PRINTING_MANAGE,
+            Capability.ADMIN_STORE_CONFIG
+        );
+    }
+
+    @Test
+    void revokeDeviceUsesPrintingManageCapability() throws Exception {
+        StoreDeviceResponse response = new StoreDeviceResponse();
+        response.id = 90L;
+        response.store_id = 1L;
+        response.status = "REVOKED";
+        response.is_active = false;
+        when(storeDeviceService.revokeDevice(1L, 90L)).thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/admin/printing/devices/90/revoke").param("store_id", "1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.status").value("REVOKED"))
+            .andExpect(jsonPath("$.data.is_active").value(false));
 
         verify(featureFlagService).requireEnabled(FeaturePackage.PRINTING);
         verify(authorizationService).requireForStore(
