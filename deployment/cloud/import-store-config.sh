@@ -4,11 +4,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${ENV_FILE:-$SCRIPT_DIR/.env}"
 COMPOSE_FILE="${COMPOSE_FILE:-$SCRIPT_DIR/docker-compose.yml}"
+POSTGRES_CLIENT_IMAGE="${POSTGRES_CLIENT_IMAGE:-postgres:18-alpine}"
 DUMP_FILE=""
 TARGET_STORE_ID=""
 DRY_RUN=false
 SELF_TEST=false
-REMOTE_DUMP=""
+NETWORK_NAME=""
+CLIENT_DUMP_PATH="/tmp/old-store-config.dump"
 BACKEND_STOPPED=false
 
 ALLOWED_TABLES=(
@@ -86,6 +88,10 @@ Required:
 
 Options:
   --dry-run   Validate target DB and dump contents without importing.
+
+Environment:
+  POSTGRES_CLIENT_IMAGE  PostgreSQL client image used for pg_restore/psql.
+                         Default: postgres:18-alpine
 USAGE
 }
 
@@ -94,14 +100,38 @@ compose() {
 }
 
 cleanup() {
-  if [[ -n "$REMOTE_DUMP" ]]; then
-    compose exec -T db rm -f "$REMOTE_DUMP" >/dev/null 2>&1 || true
-  fi
   if [[ "$BACKEND_STOPPED" == "true" ]]; then
     compose up -d backend >/dev/null 2>&1 || true
   fi
 }
 trap cleanup EXIT
+
+compose_project_name() {
+  compose config --format json | awk -F '"' '/"name"/ { print $4; exit }'
+}
+
+resolve_network_name() {
+  local project_name
+  project_name="$(compose_project_name)"
+  [[ -n "$project_name" ]] || die "Unable to resolve Docker Compose project name."
+  NETWORK_NAME="${project_name}_restaurant-pos"
+}
+
+absolute_dump_file() {
+  printf '%s/%s' "$(cd "$(dirname "$DUMP_FILE")" && pwd)" "$(basename "$DUMP_FILE")"
+}
+
+client_run() {
+  [[ -n "$NETWORK_NAME" ]] || resolve_network_name
+  "${SUDO[@]}" docker run --rm -i \
+    --network "$NETWORK_NAME" \
+    -e PGPASSWORD="$DB_PASSWORD" \
+    -e DB_USER="$DB_USER" \
+    -e DB_NAME="$DB_NAME" \
+    -e DUMP_FILE_PATH="$CLIENT_DUMP_PATH" \
+    -v "$(absolute_dump_file):$CLIENT_DUMP_PATH:ro" \
+    "$POSTGRES_CLIENT_IMAGE" "$@"
+}
 
 contains() {
   local needle="$1"
@@ -330,33 +360,22 @@ counts_sql() {
 }
 
 run_psql() {
-  compose exec -T -e PGPASSWORD="$DB_PASSWORD" db \
-    psql -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 "$@"
-}
-
-copy_dump_to_db_container() {
-  REMOTE_DUMP="/tmp/restaurant-store-config-$$.dump"
-  compose cp "$DUMP_FILE" "db:$REMOTE_DUMP" >/dev/null
+  client_run psql -h db -p 5432 -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 "$@"
 }
 
 dump_toc_text() {
-  compose exec -T db pg_restore -l "$REMOTE_DUMP"
+  client_run pg_restore -l "$CLIENT_DUMP_PATH"
 }
 
 run_import_transaction() {
-  compose exec -T \
-    -e PGPASSWORD="$DB_PASSWORD" \
-    -e DB_USER="$DB_USER" \
-    -e DB_NAME="$DB_NAME" \
-    -e DUMP_FILE_PATH="$REMOTE_DUMP" \
-    db sh -ceu "$(cat <<'SH'
+  client_run sh -ceu "$(cat <<'SH'
 {
   printf '%s\n' '\set ON_ERROR_STOP on'
   printf '%s\n' 'begin;'
   pg_restore --data-only --no-owner --no-privileges --exit-on-error "$DUMP_FILE_PATH"
   cat
   printf '%s\n' 'commit;'
-} | psql -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1
+} | psql -h db -p 5432 -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1
 SH
 )" <<SQL
 $(post_import_validation_sql)
@@ -433,7 +452,7 @@ set +a
 [[ -n "${DB_PASSWORD:-}" ]] || die "Missing required environment value: DB_PASSWORD"
 
 compose up -d db >/dev/null
-copy_dump_to_db_container
+resolve_network_name
 
 toc_text="$(dump_toc_text)"
 validate_toc_text "$toc_text"

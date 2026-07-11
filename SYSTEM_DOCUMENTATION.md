@@ -6234,6 +6234,13 @@ Deployment files:
   scripts deliberately exclude organizations, stores, users, credentials,
   memberships, orders, tokens, audit logs, analytics, print jobs, printer
   configs, printer assignments, and store device bindings.
+- The store-config importer leaves the cloud PostgreSQL server image unchanged
+  and runs `pg_restore` / `psql` through a temporary PostgreSQL client
+  container. The default `POSTGRES_CLIENT_IMAGE` is `postgres:18-alpine`, which
+  can read PostgreSQL 18 custom-format dumps such as format `1.16` and restore
+  their data into the PostgreSQL 16 `db:5432` server. The same client path is
+  used for dump listing, forbidden-table validation, dry-run checks, and the
+  formal one-transaction restore.
 - `deployment/cloud/update.sh` rebuilds and restarts backend/frontend services
   for future code updates and runs `certbot renew` when HTTPS is enabled.
 - `deployment/cloud/backup-db.sh` and `restore-db.sh` use the PostgreSQL Docker
