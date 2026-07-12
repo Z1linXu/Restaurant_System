@@ -6400,6 +6400,14 @@ Device authentication and `last_seen_at`:
   release.
 - Device auth rejects missing/bad tokens with `401`, and inactive,
   `DISABLED`, or `REVOKED` devices with `403`.
+- PAD Direct runtime APIs preserve `ResponseStatusException` HTTP statuses in
+  the global API envelope instead of converting expected device/job errors to
+  `500`. Device not found returns `404`, invalid or missing device token returns
+  `401`, store mismatch and inactive/disabled/revoked devices return `403`, and
+  claim/job conflicts return `409`. Rejections log operation, request store id
+  when available, device id, HTTP status, failure category, token presence, and
+  token last four characters only; raw device tokens, token hashes,
+  Authorization headers, and print payloads are not logged.
 - Successful device-authenticated calls update `last_seen_at` only when the
   stored value is older than 30 seconds, so rapid poll loops do not write every
   few seconds.
