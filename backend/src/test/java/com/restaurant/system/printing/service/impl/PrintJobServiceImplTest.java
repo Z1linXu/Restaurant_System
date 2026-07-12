@@ -1,5 +1,7 @@
 package com.restaurant.system.printing.service.impl;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -44,7 +46,14 @@ class PrintJobServiceImplTest {
     void padDirectPayloadUsesProvidedFontSize() {
         PrintJob job = new PrintJob();
         job.id = 1L;
+        job.status = "CLAIMED";
         job.rendered_text_snapshot = PrintMarkup.doubleHeight("牛肉面 x1");
+        job.claimedByDeviceId = 3L;
+        job.claimedAt = java.time.LocalDateTime.now();
+        job.claimExpiresAt = java.time.LocalDateTime.now().plusMinutes(5);
+        job.printedByDeviceId = 3L;
+        job.error_code = "OLD_ERROR";
+        job.error_message = "Old error";
 
         PrinterConfig printer = new PrinterConfig();
         printer.id = 10L;
@@ -57,6 +66,14 @@ class PrintJobServiceImplTest {
         PrintJob queued = service.markPadDirectQueued(job, printer, "LARGE");
         byte[] payload = Base64.getDecoder().decode(queued.escposPayloadBase64);
 
+        assertEquals("PENDING", queued.status);
+        assertEquals("PAD_DIRECT", queued.executionMode);
+        assertNull(queued.claimedByDeviceId);
+        assertNull(queued.claimedAt);
+        assertNull(queued.claimExpiresAt);
+        assertNull(queued.printedByDeviceId);
+        assertNull(queued.error_code);
+        assertNull(queued.error_message);
         assertTrue(containsBytes(payload, EscPosFontSizeMode.LARGE.activate_bytes));
     }
 
