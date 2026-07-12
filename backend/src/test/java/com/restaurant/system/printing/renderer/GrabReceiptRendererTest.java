@@ -145,7 +145,7 @@ class GrabReceiptRendererTest {
     void mergesAddOnModifierQuantitiesInsidePrimaryInstructionOnly() {
         String output = renderNoodle("中 | +蛋 +蛋x2 +煎x2");
 
-        assertTrue(output.contains("中 | +蛋×3 +煎×2"));
+        assertTrue(output.contains("中×1 | +蛋×3 +煎×2"));
         assertFalse(output.contains("+蛋 +蛋x2"));
     }
 
@@ -153,7 +153,7 @@ class GrabReceiptRendererTest {
     void supportsStarModifierQuantitySyntax() {
         String output = renderNoodle("中 | +蛋*2 +蛋");
 
-        assertTrue(output.contains("中 | +蛋×3"));
+        assertTrue(output.contains("中×1 | +蛋×3"));
     }
 
     @Test
@@ -187,10 +187,10 @@ class GrabReceiptRendererTest {
     }
 
     @Test
-    void singleNoodleWithOneEggDoesNotShowBowlQuantityAsEggQuantity() {
+    void singleNoodleShowsBowlQuantitySeparatelyFromEggQuantity() {
         String output = renderNoodle("中酸 | +蛋");
 
-        assertTrue(output.contains("中酸 | +蛋"));
+        assertTrue(output.contains("中酸×1 | +蛋"));
         assertFalse(output.contains("+蛋 x2"));
         assertFalse(output.contains("(中酸 | +蛋) ×1"));
     }
@@ -199,7 +199,7 @@ class GrabReceiptRendererTest {
     void singleNoodleWithTwoEggsKeepsEggQuantityInsideConfig() {
         String output = renderNoodle("中酸 | +蛋 +蛋");
 
-        assertTrue(output.contains("中酸 | +蛋×2"));
+        assertTrue(output.contains("中酸×1 | +蛋×2"));
         assertFalse(output.contains("(中酸 | +蛋×2) ×1"));
     }
 
@@ -220,8 +220,8 @@ class GrabReceiptRendererTest {
             noodle(2L, "中辣 | +蛋")
         );
 
-        assertTrue(output.contains("中酸 | +蛋"));
-        assertTrue(output.contains("中辣 | +蛋"));
+        assertTrue(output.contains("中酸×1 | +蛋"));
+        assertTrue(output.contains("中辣×1 | +蛋"));
         assertFalse(output.contains("(中酸 | +蛋) ×2"));
         assertFalse(output.contains("(中辣 | +蛋) ×2"));
     }
@@ -233,8 +233,8 @@ class GrabReceiptRendererTest {
             noodle(2L, "中酸 | 不要葱 | +蛋")
         );
 
-        assertTrue(output.contains("中酸 | +蛋 | 备注：少汤"));
-        assertTrue(output.contains("中酸 | 不要葱 | +蛋"));
+        assertTrue(output.contains("中酸×1 | +蛋 | 备注：少汤"));
+        assertTrue(output.contains("中酸×1 | 不要葱 | +蛋"));
         assertFalse(output.contains(") ×2"));
     }
 
