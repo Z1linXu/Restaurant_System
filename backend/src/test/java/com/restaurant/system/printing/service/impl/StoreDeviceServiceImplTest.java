@@ -85,6 +85,56 @@ class StoreDeviceServiceImplTest {
     }
 
     @Test
+    void authenticateDeviceRejectsMissingTokenWith401() {
+        ResponseStatusException exception = assertThrows(
+            ResponseStatusException.class,
+            () -> service.authenticateDevice(90L, " ")
+        );
+
+        assertEquals(401, exception.getStatusCode().value());
+    }
+
+    @Test
+    void authenticateDeviceRejectsUnknownDeviceWith404() {
+        when(storeDeviceRepository.findById(404L)).thenReturn(Optional.empty());
+
+        ResponseStatusException exception = assertThrows(
+            ResponseStatusException.class,
+            () -> service.authenticateDevice(404L, "saved-token")
+        );
+
+        assertEquals(404, exception.getStatusCode().value());
+    }
+
+    @Test
+    void authenticateDeviceRejectsInvalidTokenWith401() {
+        RegisteredDevice registered = registerDevice();
+        when(storeDeviceRepository.findById(registered.device.id)).thenReturn(Optional.of(registered.device));
+
+        ResponseStatusException exception = assertThrows(
+            ResponseStatusException.class,
+            () -> service.authenticateDevice(registered.device.id, "wrong-token")
+        );
+
+        assertEquals(401, exception.getStatusCode().value());
+    }
+
+    @Test
+    void authenticateDeviceRejectsDisabledDevice() {
+        RegisteredDevice registered = registerDevice();
+        registered.device.status = "DISABLED";
+        registered.device.isActive = false;
+        when(storeDeviceRepository.findById(registered.device.id)).thenReturn(Optional.of(registered.device));
+
+        ResponseStatusException exception = assertThrows(
+            ResponseStatusException.class,
+            () -> service.authenticateDevice(registered.device.id, registered.rawToken)
+        );
+
+        assertEquals(403, exception.getStatusCode().value());
+    }
+
+    @Test
     void renameDeviceTrimsNameWithinStore() {
         StoreDevice device = activeDevice();
         when(storeDeviceRepository.findByIdAndStoreId(device.id, device.storeId)).thenReturn(Optional.of(device));

@@ -73,6 +73,18 @@ class PadPrintJobServiceImplTest {
     }
 
     @Test
+    void listPendingJobsRejectsStoreMismatch() {
+        StoreDevice device = device();
+
+        ResponseStatusException exception = assertThrows(
+            ResponseStatusException.class,
+            () -> service.listPendingJobs(device, 2L, 25)
+        );
+
+        assertEquals(403, exception.getStatusCode().value());
+    }
+
+    @Test
     void claimJobUsesAtomicRepositoryUpdate() {
         StoreDevice device = device();
         PrintJob job = padJob(PrintJobStatus.PENDING);
