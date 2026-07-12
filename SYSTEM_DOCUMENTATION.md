@@ -5121,6 +5121,16 @@ This pass keeps existing POS/KDS/Print Center architecture intact and applies fo
 - This does not re-submit the order and does not recreate kitchen tasks.
 - Manual Print / Reprint remains a complete current-order print and does not use the update batch filter.
 
+### Completed Order GRAB Snapshot Reprint
+
+- Order Center manual `GRAB` reprint replays the newest safely reusable successful full GRAB snapshot instead of re-rendering the current `kitchen_tasks` state. This keeps completed-order reprint safe after Finish has cancelled unfinished kitchen tasks.
+- The source query requires the same `store_id` and `order_id`, `module_code = GRAB`, `receipt_type = GRAB`, `status = PRINTED`, `order_update_batch_id IS NULL`, and a nonblank `rendered_text_snapshot` or `escpos_payload_base64`. It orders by non-null `printed_at` descending, then `id` descending.
+- Failed, pending, claimed, and update-ticket jobs are never valid full-order GRAB sources. `payload_snapshot` alone is metadata and is not printable content.
+- The new reprint job always uses the current GRAB printer assignment. When a rendered-text snapshot is available, the backend attaches that exact text and regenerates the PAD_DIRECT ESC/POS payload using the current printer encoding, code page, and effective assignment font size.
+- The original successful source job is never changed. The new job starts as a fresh job with the normal retry and PAD_DIRECT claim state.
+- An ESC/POS-only historical job is not replayed by this path because `print_jobs` does not preserve a historical printer configuration snapshot needed to prove byte-payload compatibility after printer settings change. If no safely reusable text snapshot exists, the endpoint returns HTTP `409` with `NO_REPRINTABLE_SNAPSHOT: No successful full GRAB ticket is available for reprint` and creates no new job.
+- This does not restore or modify cancelled kitchen tasks, does not alter `completeOrder`, and does not change normal submit or `GRAB_UPDATE` rendering. `FRONTDESK_RECEIPT` retains its existing current-order rendering path. `HOT_KITCHEN` has the same completed-task rendering risk but is deliberately unchanged in this focused GRAB fix.
+
 ### Takeout Receipt Copies
 
 - `printer_assignments` now includes `takeout_receipt_copies`.

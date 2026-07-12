@@ -34,6 +34,7 @@ import com.restaurant.system.printing.entity.PrinterAssignment;
 import com.restaurant.system.printing.entity.PrinterConfig;
 import com.restaurant.system.printing.renderer.PrintMarkup;
 import com.restaurant.system.printing.renderer.ReceiptRenderer;
+import com.restaurant.system.printing.repository.PrintJobRepository;
 import com.restaurant.system.printing.repository.PrinterAssignmentRepository;
 import com.restaurant.system.printing.repository.PrinterConfigRepository;
 import com.restaurant.system.printing.semantic.HotKitchenPrintEligibilityService;
@@ -50,6 +51,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Arrays;
@@ -57,10 +59,12 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpStatus;
 import java.util.concurrent.Executor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class PrintDispatcherServiceImpl implements PrintDispatcherService {
@@ -81,6 +85,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
     private final Executor taskExecutor;
     private final FeatureFlagService featureFlagService;
     private final PrintJobService printJobService;
+    private final PrintJobRepository printJobRepository;
     private final CloudPrintingGuard cloudPrintingGuard;
     private final HotKitchenPrintEligibilityService hotKitchenPrintEligibilityService;
 
@@ -98,6 +103,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         @Qualifier("printTaskExecutor") Executor taskExecutor,
         FeatureFlagService featureFlagService,
         PrintJobService printJobService,
+        PrintJobRepository printJobRepository,
         CloudPrintingGuard cloudPrintingGuard,
         HotKitchenPrintEligibilityService hotKitchenPrintEligibilityService
     ) {
@@ -114,6 +120,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         this.taskExecutor = taskExecutor;
         this.featureFlagService = featureFlagService;
         this.printJobService = printJobService;
+        this.printJobRepository = printJobRepository;
         this.cloudPrintingGuard = cloudPrintingGuard;
         this.hotKitchenPrintEligibilityService = hotKitchenPrintEligibilityService;
     }
@@ -734,6 +741,9 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         }
         Store store = storeRepository.findById(order.store_id).orElseThrow(() -> new BusinessException("Store not found"));
         String moduleCode = normalizeReceiptType(request == null ? null : request.receipt_type);
+        String historicalGrabContent = PrintModuleCode.GRAB.equals(moduleCode)
+            ? requireHistoricalFullGrabSnapshot(order)
+            : null;
         if (PrintModuleCode.HOT_KITCHEN.equals(moduleCode) && !hasPrintableContent(moduleCode, order.store_id, order.id)) {
             throw new BusinessException("Order has no HOT_KITCHEN content to reprint");
         }
@@ -756,7 +766,9 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             if (!Boolean.TRUE.equals(printer.enabled)) {
                 return printJobService.toResponse(printJobService.markFailed(job, printer, "PRINTER_DISABLED", "Selected printer is disabled"));
             }
-            String content = renderOrderContent(moduleCode, order.store_id, order.id);
+            String content = historicalGrabContent == null
+                ? renderOrderContent(moduleCode, order.store_id, order.id)
+                : historicalGrabContent;
             job = printJobService.attachRenderedContent(job, printer.id, content);
             if (isPadDirectMode(order.store_id)) {
                 job = printJobService.markPadDirectQueued(job, printer, resolveEffectiveFontSize(assignment, printer));
@@ -778,6 +790,35 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             logger.error("Order reprint failed for order {} module {} print job {}", orderId, moduleCode, job.id, exception);
             return printJobService.toResponse(printJobService.markFailed(job, printer, "ORDER_REPRINT_FAILED", exception.getMessage()));
         }
+    }
+
+    private String requireHistoricalFullGrabSnapshot(Order order) {
+        List<PrintJob> candidates = printJobRepository.findReprintableFullGrabSnapshots(order.store_id, order.id);
+        return candidates.stream()
+            .filter(job -> isReusableFullGrabSnapshot(order, job))
+            .map(job -> job.rendered_text_snapshot)
+            .filter(this::hasTextContent)
+            .findFirst()
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "NO_REPRINTABLE_SNAPSHOT: No successful full GRAB ticket is available for reprint"
+            ));
+    }
+
+    private boolean isReusableFullGrabSnapshot(Order order, PrintJob job) {
+        return order != null
+            && job != null
+            && Objects.equals(order.store_id, job.store_id)
+            && Objects.equals(order.id, job.order_id)
+            && PrintModuleCode.GRAB.equals(job.module_code)
+            && PrintModuleCode.GRAB.equals(job.receipt_type)
+            && PrintJobStatus.PRINTED.equals(job.status)
+            && job.order_update_batch_id == null
+            && (hasTextContent(job.rendered_text_snapshot) || hasTextContent(job.escposPayloadBase64));
+    }
+
+    private boolean hasTextContent(String value) {
+        return value != null && !value.isBlank();
     }
 
     @Override
