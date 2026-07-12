@@ -5056,6 +5056,7 @@ GRAB Ticket v2.0 layout rules:
 - Examples: two plain `黄瓜` rows print as `黄瓜 x2`; two `黄瓜 | 走花生` rows print as `黄瓜 x2` plus `走花生`.
 - Different side-dish requirements remain separate, for example `黄瓜 | 走花生` and `黄瓜 | 加辣` print as separate `黄瓜 x1` blocks.
 - GRAB never uses a generic `小菜 xN` total because kitchen staff still need the exact side-dish name.
+- A single noodle explicitly includes its bowl quantity in the first config segment, for example `中酸×1 | +蛋`; multiple identical bowls remain `(中酸 | +蛋) ×2`.
 
 Frontdesk receipt font behavior:
 
@@ -6189,11 +6190,12 @@ Behavior:
   `(中酸 | +蛋) ×2`, so the parentheses describe one bowl and the outer quantity
   describes how many bowls share that exact config.
 - Add-on quantities stay inside the single-bowl config. A single bowl with two
-  eggs prints `中酸 | +蛋×2`; two identical bowls each with two eggs print
+  eggs prints `中酸×1 | +蛋×2`; two identical bowls each with two eggs print
   `(中酸 | +蛋×2) ×2`.
 - Different spicy levels, add-ons, removes, option metadata, notes, or station
-  values remain separate lines. Non-noodle hot items keep the existing normal
-  quantity behavior such as `炸虾 ×3`.
+  values remain separate lines. Non-noodle quantity markers remain renderer
+  specific: GRAB uses `x`, for example `炸虾 x3`, while HOT_KITCHEN uses `×`,
+  for example `炸虾 ×3`.
 - Update tickets use the same GRAB/HOT_KITCHEN renderers, so the same display
   rule applies to GRAB update tickets and HOT_KITCHEN update tickets.
 
