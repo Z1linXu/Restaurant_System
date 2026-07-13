@@ -6505,3 +6505,35 @@ combo semantics, order submission, printing, or KDS behavior.
 - Cached menu content is still advisory. Server-side validation remains the
   authority for menu availability, options, price, tax, and store scope at
   submission time.
+
+## Offline Ordering PR3: Persistent Local Drafts
+
+PR3 adds IndexedDB-backed order draft recovery without changing order pricing,
+combo semantics, order lifecycle, printing, KDS, payment, or refund behavior.
+
+- IndexedDB database `restaurant-pos-offline` is upgraded to schema version 2
+  with a `localDrafts` store. Every record is scoped by `accountId`,
+  `organizationId`, `storeId`, and a table/takeout context key, so drafts cannot
+  be restored into another account, organization, store, table, or pickup slot.
+- A local draft receives stable `localDraftId` and `clientOrderId` values when
+  first created. They remain unchanged for that draft's lifetime and are the
+  basis for the later idempotent submission/outbox stages.
+- Records preserve the complete current order-line selection, including
+  quantities, option ids, combo selections, noodle/spice selections, notes,
+  menu revision, server order snapshot/id when available, payload hash,
+  submission state, retry metadata, timestamps, and schema version.
+- Changes are persisted with a 200 ms debounce. `visibilitychange` to hidden and
+  `pagehide` force a final flush so Android WebView backgrounding, refresh, or
+  process loss can restore the latest saved draft.
+- Existing submitted orders use explicit `SERVER_ORDER_UPDATE` mode; ordinary
+  new/draft orders use `LOCAL_NEW_ORDER`. These modes are not submitted through
+  one ambiguous contract.
+- Empty inactive drafts expire after 24 hours and non-empty inactive drafts
+  after seven days. `QUEUED`, `SUBMITTING`, and `CONFLICT` records are never
+  removed by automatic cleanup.
+- Canceling a draft requires confirmation and removes its local record. The UI
+  action is labelled `保存到本机`; it does not imply that the server or kitchen
+  received the order. IndexedDB write failures remain visible to the operator.
+- PR3 preserves the existing online submit APIs. Atomic offline submission and
+  retry are introduced separately by PR4 and PR5; a locally saved draft never
+  creates kitchen tasks or print jobs by itself.

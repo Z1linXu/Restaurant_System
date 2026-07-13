@@ -19,6 +19,8 @@ import { printJobDisplayLabel, printJobOperatorDisplayMessage } from '../../util
 import { getAndroidPadDeviceBridge } from '../../types/androidPadBridge'
 import { isComboSelected, normalizeComboDraft, resolveComboUpcharge } from '../../utils/comboSelection'
 import { networkDiagnosticsDisplayEnabled, type ConnectionState } from '../../services/networkStatus'
+import { useAuth } from '../auth/useAuth'
+import { useCurrentStore } from '../store/StoreContext'
 
 interface OrderingPageProps {
   catalog: {
@@ -160,6 +162,8 @@ export function OrderingPage({
   onDraftCancelled,
   onOrderSubmitted,
 }: OrderingPageProps) {
+  const { user } = useAuth()
+  const { organizationId } = useCurrentStore()
   const {
     categories,
     items,
@@ -185,6 +189,8 @@ export function OrderingPage({
     loading: draftLoading,
     saving,
     error: draftError,
+    persistenceError,
+    lastLocalSavedAt,
     addItem,
     updateItem,
     updateItemNote,
@@ -195,7 +201,12 @@ export function OrderingPage({
     submitOrder,
     refreshOrder,
     updateHeader,
-  } = useDraftOrder(storeId, slotLabel, tableLabel, orderType, pickupLabel, items)
+    saveLocalDraftNow,
+  } = useDraftOrder(storeId, slotLabel, tableLabel, orderType, pickupLabel, items, {
+    accountId: user?.id ?? null,
+    organizationId,
+    menuRevision: catalog.catalog?.menuRevision ?? 0,
+  })
   const refreshOrderRef = useRef(refreshOrder)
 
   useEffect(() => {
@@ -348,6 +359,9 @@ export function OrderingPage({
   }
 
   const handleCancelOrder = async () => {
+    if (!window.confirm('确定要取消并删除本机草稿吗？')) {
+      return
+    }
     await cancelOrder()
     onDraftCancelled(slotLabel, tableLabel)
   }
@@ -478,9 +492,15 @@ export function OrderingPage({
           compact={isIpadLandscape}
         />
 
-        {(catalogError || draftError) ? (
+        {(catalogError || draftError || persistenceError) ? (
           <div className="rounded-[24px] bg-[rgba(97,0,0,0.06)] px-5 py-4 text-base font-medium text-[var(--primary)]">
-            {catalogError ?? draftError}
+            {catalogError ?? draftError ?? persistenceError}
+          </div>
+        ) : null}
+
+        {lastLocalSavedAt ? (
+          <div className="text-right text-xs font-semibold text-[var(--muted)]">
+            本机草稿已保存：{new Date(lastLocalSavedAt).toLocaleTimeString()}
           </div>
         ) : null}
 
@@ -552,7 +572,7 @@ export function OrderingPage({
               onEditItem={handleEditItem}
               onRemoveItem={(itemId) => void removeItem(itemId)}
               onUpdateItemNote={(itemId, notes) => void updateItemNote(itemId, notes)}
-              onSaveDraft={() => void refreshOrder()}
+              onSaveDraft={() => void saveLocalDraftNow()}
               onCancelOrder={() => void handleCancelOrder()}
               onSubmitOrder={() => void handleSubmitOrder()}
               compact={isIpadLandscape}

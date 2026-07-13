@@ -1,9 +1,10 @@
 export const OFFLINE_DATABASE_NAME = 'restaurant-pos-offline'
-export const OFFLINE_DATABASE_VERSION = 1
+export const OFFLINE_DATABASE_VERSION = 2
 
 export const OFFLINE_STORES = {
   menuHeads: 'menuHeads',
   menuSnapshots: 'menuSnapshots',
+  localDrafts: 'localDrafts',
 } as const
 
 let databasePromise: Promise<IDBDatabase> | null = null
@@ -32,6 +33,11 @@ export function openOfflineDatabase() {
       }
       if (!database.objectStoreNames.contains(OFFLINE_STORES.menuSnapshots)) {
         database.createObjectStore(OFFLINE_STORES.menuSnapshots, { keyPath: 'key' })
+      }
+      if (!database.objectStoreNames.contains(OFFLINE_STORES.localDrafts)) {
+        const drafts = database.createObjectStore(OFFLINE_STORES.localDrafts, { keyPath: 'key' })
+        drafts.createIndex('byUpdatedAt', 'updatedAt')
+        drafts.createIndex('bySubmitState', 'submitState')
       }
     }
     request.onsuccess = () => {
@@ -69,4 +75,3 @@ export function transactionComplete(transaction: IDBTransaction) {
     transaction.onabort = () => reject(transaction.error ?? new Error('IndexedDB transaction was aborted'))
   })
 }
-
