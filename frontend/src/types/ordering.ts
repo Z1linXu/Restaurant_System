@@ -56,6 +56,8 @@ export interface MenuItem {
   descriptionEn: string
   descriptionZh: string
   price: number
+  isActive?: boolean
+  soldOut?: boolean
   badge?: LocalizedText
   customization?: MenuItemCustomizationConfig
 }
@@ -110,6 +112,17 @@ export interface BackendMenuCatalogResponse {
 
 export interface BackendMenuCatalog {
   store_id: number
+  organization_id: number
+  menu_revision: number
+  generated_at: string
+  catalog_version: string
+  combo_metadata_version: string
+  content_hash: string
+  tax_policy: {
+    rate: number
+    label: string
+    version: string
+  }
   categories: BackendMenuCategory[]
 }
 
@@ -119,6 +132,7 @@ export interface BackendMenuCategory {
   name_zh: string
   name_en: string
   sort_order: number | null
+  is_active: boolean
   items: BackendMenuItem[]
 }
 
@@ -131,6 +145,7 @@ export interface BackendMenuItem {
   sku: string
   item_type: string
   base_price: number
+  is_active: boolean
   is_sold_out: boolean
   options: BackendMenuOption[]
 }
@@ -151,6 +166,11 @@ export interface BackendMenuOption {
 
 export interface OrderingCatalog {
   storeId: string
+  organizationId: string
+  menuRevision: number
+  generatedAt: string
+  contentHash: string
+  taxPolicy: BackendMenuCatalog['tax_policy']
   categories: MenuCategory[]
   items: MenuItem[]
 }
