@@ -1,0 +1,1 @@
+function e(){return typeof window>`u`?void 0:window.RestaurantPadDevice}function t(e){if(!e)return null;try{return JSON.parse(e)}catch{return null}}export{t as n,e as t};

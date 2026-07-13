@@ -49,6 +49,11 @@ export class ApiRequestError extends Error {
   }
 }
 
+export function isRefreshCredentialRejection(error: unknown) {
+  return error instanceof ApiRequestError
+    && (error.status === 401 || error.status === 403)
+}
+
 function createRequestId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID()
@@ -300,8 +305,10 @@ export async function apiRequest<T>(input: string, init: RequestInit = {}) {
         }
       } catch (refreshError) {
         authRefreshOutcome = 'FAILED'
-        clearAuthTokens()
-        window.dispatchEvent(new CustomEvent('restaurant-auth-expired'))
+        if (isRefreshCredentialRejection(refreshError)) {
+          clearAuthTokens()
+          window.dispatchEvent(new CustomEvent('restaurant-auth-expired'))
+        }
         throw refreshError
       }
     }

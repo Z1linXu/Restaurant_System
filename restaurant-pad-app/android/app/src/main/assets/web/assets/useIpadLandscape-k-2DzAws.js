@@ -1,0 +1,1 @@
+import{m as e}from"./useAuth-Bzd9XeOR.js";var t=e();function n(){if(typeof window>`u`)return!1;let e=window.innerWidth,t=window.innerHeight;return e>=1024&&e<=1400&&e>t}function r(){let[e,r]=(0,t.useState)(n);return(0,t.useEffect)(()=>{let e=()=>{r(n())};return window.addEventListener(`resize`,e),()=>window.removeEventListener(`resize`,e)},[]),e}export{r as t};

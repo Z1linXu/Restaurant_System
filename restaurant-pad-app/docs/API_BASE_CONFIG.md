@@ -38,7 +38,7 @@ testing.
 Bundled assets mode loads:
 
 ```text
-https://restaurant-pad.local/index.html
+https://restaurant-pad.local/
 ```
 
 The bundled frontend may call relative paths such as:
@@ -276,7 +276,7 @@ Production API base must be configured at runtime in a future setup/pairing flow
 Bundled assets mode serves files from:
 
 ```text
-https://restaurant-pad.local/index.html
+https://restaurant-pad.local/
 ```
 
 When serving `index.html`, the shell injects:
@@ -284,7 +284,13 @@ When serving `index.html`, the shell injects:
 ```text
 window.__RESTAURANT_API_BASE_URL__
 window.__RESTAURANT_WS_BASE_URL__
+window.__RESTAURANT_APP_CONFIG__
 ```
+
+`__RESTAURANT_APP_CONFIG__` contains the bundled build version, asset-manifest
+SHA-256, Android app version, IndexedDB schema version, loading mode, and the
+paired store id when available. It never contains bearer/device tokens or
+printer secrets.
 
 It also patches `fetch` and `WebSocket` calls that begin with `/api/` or `/ws` so the current frontend build can run without Vite proxy.
 
