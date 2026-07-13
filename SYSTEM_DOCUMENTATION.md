@@ -6448,3 +6448,26 @@ Staff profile UI:
   status, and Android print worker status when the native bridge is available.
 - In a normal browser, the modal shows that Android native device status is not
   available.
+
+## Offline Ordering PR1: Network Observability
+
+PR1 establishes shared weak-network diagnostics without changing order,
+payment, printing, or KDS business behavior.
+
+- `GET /api/v1/system/health` is a small unauthenticated reachability probe. It
+  returns only `status` and server timestamp and does not expose application or
+  database details.
+- Frontend requests record bounded in-memory metrics containing request id,
+  method, normalized endpoint, timestamps, latency, response status, timeout or
+  network classification, and auth-refresh outcome.
+- Metrics never retain request/response bodies, raw URLs with query strings,
+  passwords, Authorization headers, access/refresh tokens, print payloads, or
+  customer notes.
+- Shared connection states are `ONLINE_HEALTHY`, `ONLINE_DEGRADED`,
+  `BACKEND_UNREACHABLE`, `BROWSER_OFFLINE`, and `AUTH_REQUIRED`.
+- `navigator.onLine` is only an auxiliary browser signal. A low-frequency
+  backend probe also runs at startup, every 30 seconds while visible, after an
+  online event, and when the app returns to the foreground.
+- Menu loading and order submission emit safe stage and duration diagnostics.
+- `VITE_NETWORK_DIAGNOSTICS_ENABLED=false` hides diagnostic-facing UI/logging
+  without disabling request safety, health tracking, or business functions.

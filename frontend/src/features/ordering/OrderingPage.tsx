@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card } from '../../components/ui/Card'
 import { useIpadLandscape } from '../../hooks/useIpadLandscape'
+import { useConnectionStatus } from '../../hooks/useConnectionStatus'
 import { buildDefaultDraft, calculateTotals } from '../../hooks/useOrderSessions'
 import { useDraftOrder } from '../../hooks/useDraftOrder'
 import type { ItemCustomizationDraft, MenuItem, OrderingCatalog } from '../../types/ordering'
@@ -17,6 +18,7 @@ import type { PrintJobRecord } from '../../services/printingAdminService'
 import { printJobDisplayLabel, printJobOperatorDisplayMessage } from '../../utils/displayLabels'
 import { getAndroidPadDeviceBridge } from '../../types/androidPadBridge'
 import { isComboSelected, normalizeComboDraft, resolveComboUpcharge } from '../../utils/comboSelection'
+import { networkDiagnosticsDisplayEnabled, type ConnectionState } from '../../services/networkStatus'
 
 interface OrderingPageProps {
   catalog: {
@@ -67,6 +69,21 @@ function isQuickAddItem(item: MenuItem) {
     return !hasRequiredCustomization(item)
   }
   return false
+}
+
+function connectionWarning(state: ConnectionState) {
+  switch (state) {
+    case 'BROWSER_OFFLINE':
+      return '当前设备离线。点餐操作可能无法同步到服务器。'
+    case 'BACKEND_UNREACHABLE':
+      return '设备已连接网络，但暂时无法连接餐厅服务器。'
+    case 'AUTH_REQUIRED':
+      return '登录状态已失效，请重新登录后继续。'
+    case 'ONLINE_DEGRADED':
+      return '网络响应较慢或不稳定，请留意订单提交状态。'
+    default:
+      return null
+  }
 }
 
 function getDraftSubtotal(item: MenuItem, draft: ItemCustomizationDraft) {
@@ -146,7 +163,7 @@ export function OrderingPage({
   const [takeoutDialogOpen, setTakeoutDialogOpen] = useState(false)
   const [quickAddStates, setQuickAddStates] = useState<Record<string, 'idle' | 'adding' | 'added'>>({})
   const [printWarning, setPrintWarning] = useState<string | null>(null)
-  const [isOnline, setIsOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine))
+  const connection = useConnectionStatus()
   const {
     session,
     order,
@@ -172,26 +189,21 @@ export function OrderingPage({
 
   useEffect(() => {
     const handleOnline = () => {
-      setIsOnline(true)
       if (document.visibilityState === 'visible') {
         void refreshOrderRef.current()
       }
     }
-    const handleOffline = () => setIsOnline(false)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && navigator.onLine) {
-        setIsOnline(true)
         void refreshOrderRef.current()
       }
     }
 
     window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
       window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [])
@@ -417,9 +429,9 @@ export function OrderingPage({
           </div>
         ) : null}
 
-        {!isOnline ? (
+        {networkDiagnosticsDisplayEnabled && connectionWarning(connection.state) ? (
           <div className="rounded-[20px] border border-[rgba(151,34,34,0.25)] bg-[rgba(151,34,34,0.1)] px-5 py-4 text-[1rem] font-bold text-[rgb(116,22,22)]">
-            当前设备离线，请检查网络后重试。
+            {connectionWarning(connection.state)}
           </div>
         ) : null}
 
