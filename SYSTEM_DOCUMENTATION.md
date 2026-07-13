@@ -6686,3 +6686,31 @@ claim/printing behavior.
   start checks are documented in
   `restaurant-pad-app/docs/BUNDLED_ASSETS_PRODUCTION.md`. Network fault
   injection and long-running multi-Pad verification remain PR8 scope.
+
+## Offline Ordering Hotfix: Terminal Local Draft Lifecycle
+
+This hotfix fixes a same-table ordering regression introduced by local draft and
+outbox restore behavior. It does not change order lifecycle, payment/refund,
+`completeOrder`, printing, KDS transitions, menu pricing/combo semantics, or
+PAD_DIRECT worker behavior.
+
+- Root cause: after a table order was submitted and later finished, the next
+  `Start Order` for the same table reused the context-scoped local draft and its
+  `SUBMITTED` outbox record. `OrderingPage` interpreted that restored
+  `SUBMITTED` state as a fresh submit completion and immediately navigated back
+  to the table board.
+- The local draft opener now resolves the saved draft and related outbox state
+  before exposing either to React state. Terminal local lifecycles
+  (`SUBMITTED`, `CANCELLED_LOCAL`) are replaced with a new empty
+  `LOCAL_DRAFT` using the same account/organization/store/table context but a
+  new `localDraftId` and `clientOrderId`.
+- Active offline work remains protected. `QUEUED`, `SUBMITTING`,
+  `FAILED_RETRYABLE`, and `CONFLICT` records are not rotated or deleted, so
+  weak-network submissions and operator-review conflicts keep their original
+  idempotency keys.
+- When the outbox later reports `SUBMITTED`, the active local draft is removed
+  only if its `clientOrderId` still matches the submitted record. This avoids
+  deleting a newer same-table draft created after the old order completed.
+- The fix is frontend-only IndexedDB lifecycle handling. Backend idempotency,
+  kitchen task creation, print job creation, and finish-table behavior remain
+  unchanged.
