@@ -167,6 +167,16 @@ class IdempotentOrderSubmissionServiceImplTest {
     }
 
     @Test
+    void differentClientOrderIdsForTheSameTableCreateSeparateOrders() {
+        IdempotentOrderSubmitResponse first = service.submit(1L, request("table-T1-order-1", null), 5L);
+        IdempotentOrderSubmitResponse second = service.submit(1L, request("table-T1-order-2", null), 5L);
+
+        assertFalse(first.replayed);
+        assertFalse(second.replayed);
+        verify(orderService, times(2)).createOrReplaceDraftAndSubmit(any(), any());
+    }
+
+    @Test
     void sameKeySubmittedConcurrentlyCreatesOneOrder() throws Exception {
         IdempotentOrderSubmitRequest request = request("concurrent-order", null);
         int requestCount = 20;

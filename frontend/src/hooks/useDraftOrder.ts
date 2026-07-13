@@ -26,9 +26,10 @@ import { resolveNoodleTypeId } from '../utils/noodleTypeDefaults'
 import {
   buildDraftContextKey,
   cleanupExpiredLocalDrafts,
-  createLocalDraftRecord,
   deleteLocalDraft,
+  deleteLocalDraftIfClientMatches,
   readLocalDraft,
+  resolveLocalDraftForOpen,
   saveLocalDraft,
   type LocalDraftContext,
   type LocalDraftRecord,
@@ -365,12 +366,30 @@ export function useDraftOrder(
       if (localScope) {
         try {
           void cleanupExpiredLocalDrafts().catch(() => undefined)
-          cached = await readLocalDraft(localScope, contextKey)
-          if (!cached) {
-            cached = createLocalDraftRecord(localScope, localContext, offlineIdentity.menuRevision)
-            cached = await saveLocalDraft(cached)
+          const storedDraft = await readLocalDraft(localScope, contextKey)
+          let pendingSubmission = storedDraft
+            ? await readOrderOutboxRecord(
+                storedDraft.accountId,
+                storedDraft.organizationId,
+                storedDraft.storeId,
+                storedDraft.clientOrderId,
+              )
+            : null
+          const resolvedDraft = resolveLocalDraftForOpen(
+            localScope,
+            localContext,
+            offlineIdentity.menuRevision,
+            storedDraft,
+            pendingSubmission?.state ?? null,
+          )
+          if (resolvedDraft !== storedDraft) {
+            cached = await saveLocalDraft(resolvedDraft)
+            pendingSubmission = null
+          } else {
+            cached = storedDraft
           }
           if (!active) return
+          if (!cached) throw new Error('本机草稿初始化失败')
           localDraftRef.current = cached
           setLocalDraftId(cached.localDraftId)
           setClientOrderId(cached.clientOrderId)
@@ -378,12 +397,6 @@ export function useDraftOrder(
           setOrder(cached.serverOrderSnapshot)
           setStagedItems(cached.items)
           setLoading(false)
-          const pendingSubmission = await readOrderOutboxRecord(
-            cached.accountId,
-            cached.organizationId,
-            cached.storeId,
-            cached.clientOrderId,
-          )
           if (active) setOutboxRecord(pendingSubmission)
         } catch (storageError) {
           if (active) {
@@ -557,20 +570,35 @@ export function useDraftOrder(
       const record = (event as CustomEvent<OrderOutboxRecord>).detail
       if (!record || record.clientOrderId !== localDraftRef.current?.clientOrderId) return
       setOutboxRecord(record)
-      if (localDraftRef.current) {
-        localDraftRef.current = {
-          ...localDraftRef.current,
+      const currentDraft = localDraftRef.current
+      if (currentDraft) {
+        const updatedDraft = {
+          ...currentDraft,
           submitState: record.state,
           lastError: record.lastErrorMessage,
           nextRetryAt: record.nextRetryAt,
-          serverOrderId: record.serverOrderId ?? localDraftRef.current.serverOrderId,
+          serverOrderId: record.serverOrderId ?? currentDraft.serverOrderId,
         }
-        void saveLocalDraft(localDraftRef.current)
-          .then((saved) => {
-            localDraftRef.current = saved
-            setLastLocalSavedAt(saved.updatedAt)
-          })
-          .catch(() => undefined)
+        if (record.state === 'SUBMITTED' && localScope) {
+          if (saveTimerRef.current != null) {
+            window.clearTimeout(saveTimerRef.current)
+            saveTimerRef.current = null
+          }
+          localDraftRef.current = null
+          void deleteLocalDraftIfClientMatches(
+            localScope,
+            contextKey,
+            currentDraft.clientOrderId,
+          ).catch(() => undefined)
+        } else {
+          localDraftRef.current = updatedDraft
+          void saveLocalDraft(updatedDraft)
+            .then((saved) => {
+              localDraftRef.current = saved
+              setLastLocalSavedAt(saved.updatedAt)
+            })
+            .catch(() => undefined)
+        }
       }
       if (record.state === 'SUBMITTED' && record.serverOrderId) {
         void fetchOrderDetail(record.serverOrderId)
@@ -583,7 +611,7 @@ export function useDraftOrder(
     }
     window.addEventListener(ORDER_OUTBOX_UPDATED_EVENT, handleOutboxUpdate)
     return () => window.removeEventListener(ORDER_OUTBOX_UPDATED_EVENT, handleOutboxUpdate)
-  }, [mapServerItems])
+  }, [contextKey, localScope, mapServerItems])
 
   const isDraftOrder = !order || order.status === 'draft'
   const syncStagedItems = (updater: (items: OrderLineItem[]) => OrderLineItem[]) => {

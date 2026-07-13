@@ -58,6 +58,7 @@ export interface LocalDraftRecord extends LocalDraftScope {
 }
 
 const PROTECTED_STATES = new Set<LocalDraftSubmitState>(['QUEUED', 'SUBMITTING', 'FAILED_RETRYABLE', 'CONFLICT'])
+const TERMINAL_STATES = new Set<LocalDraftSubmitState>(['SUBMITTED', 'CANCELLED_LOCAL'])
 
 export function buildDraftContextKey(context: LocalDraftContext) {
   return context.orderType === 'pickup'
@@ -120,6 +121,33 @@ export function createLocalDraftRecord(
     nextRetryAt: null,
     schemaVersion: LOCAL_DRAFT_SCHEMA_VERSION,
   })
+}
+
+export function resolveLocalDraftForOpen(
+  scope: LocalDraftScope,
+  context: LocalDraftContext,
+  menuRevision: number,
+  existing: LocalDraftRecord | null,
+  relatedOutboxState: LocalDraftSubmitState | null,
+  now = new Date(),
+) {
+  if (!existing) {
+    return createLocalDraftRecord(scope, context, menuRevision, now)
+  }
+
+  // The outbox is authoritative while work is still queued or needs operator action.
+  // Never rotate these records, even if a stale draft snapshot claims it was submitted.
+  if (relatedOutboxState && PROTECTED_STATES.has(relatedOutboxState)) {
+    return existing
+  }
+
+  const lifecycleFinished = TERMINAL_STATES.has(relatedOutboxState ?? existing.submitState)
+    || TERMINAL_STATES.has(existing.submitState)
+  if (!lifecycleFinished) {
+    return existing
+  }
+
+  return createLocalDraftRecord(scope, context, menuRevision, now)
 }
 
 function matchesScope(record: LocalDraftRecord, scope: LocalDraftScope, contextKey: string) {
@@ -188,6 +216,32 @@ export async function deleteLocalDraft(scope: LocalDraftScope, contextKey: strin
   transaction.objectStore(OFFLINE_STORES.localDrafts).delete(localDraftKey(scope, contextKey))
   await completed
   publishLocalDraftUpdate()
+}
+
+export async function deleteLocalDraftIfClientMatches(
+  scope: LocalDraftScope,
+  contextKey: string,
+  clientOrderId: string,
+) {
+  const database = await openOfflineDatabase()
+  const transaction = database.transaction(OFFLINE_STORES.localDrafts, 'readwrite')
+  const completed = transactionComplete(transaction)
+  const drafts = transaction.objectStore(OFFLINE_STORES.localDrafts)
+  const key = localDraftKey(scope, contextKey)
+  const record = await requestResult<LocalDraftRecord | undefined>(drafts.get(key))
+  const shouldDelete = Boolean(
+    record
+    && matchesScope(record, scope, contextKey)
+    && record.clientOrderId === clientOrderId,
+  )
+  if (shouldDelete) {
+    drafts.delete(key)
+  }
+  await completed
+  if (shouldDelete) {
+    publishLocalDraftUpdate()
+  }
+  return shouldDelete
 }
 
 function publishLocalDraftUpdate() {
