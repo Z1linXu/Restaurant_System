@@ -9,6 +9,7 @@ import com.restaurant.system.menu.entity.MenuItemOption;
 import com.restaurant.system.menu.repository.MenuCategoryRepository;
 import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.menu.repository.MenuItemRepository;
+import com.restaurant.system.menu.service.MenuRevisionService;
 import com.restaurant.system.platform.dto.CreateStoreFromTemplateRequest;
 import com.restaurant.system.platform.dto.PlatformAdminOverviewResponse;
 import com.restaurant.system.platform.entity.Organization;
@@ -50,6 +51,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
     private final MenuCategoryRepository menuCategoryRepository;
     private final MenuItemRepository menuItemRepository;
     private final MenuItemOptionRepository menuItemOptionRepository;
+    private final MenuRevisionService menuRevisionService;
     private final StoreKdsDisplayConfigRepository storeKdsDisplayConfigRepository;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -66,7 +68,8 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         MenuItemOptionRepository menuItemOptionRepository,
         StoreKdsDisplayConfigRepository storeKdsDisplayConfigRepository,
         UserRepository userRepository,
-        RoleRepository roleRepository
+        RoleRepository roleRepository,
+        MenuRevisionService menuRevisionService
     ) {
         this.organizationRepository = organizationRepository;
         this.restaurantTemplateRepository = restaurantTemplateRepository;
@@ -79,6 +82,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         this.storeKdsDisplayConfigRepository = storeKdsDisplayConfigRepository;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
+        this.menuRevisionService = menuRevisionService;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -261,6 +265,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         MenuCategory target = menuCategory.id == null
             ? new MenuCategory()
             : menuCategoryRepository.findById(menuCategory.id).orElseThrow(() -> new BusinessException("Menu category not found"));
+        Long previousStoreId = target.store_id;
         target.store_id = menuCategory.store_id;
         target.code = menuCategory.code;
         target.name_zh = menuCategory.name_zh;
@@ -268,7 +273,9 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         target.sort_order = menuCategory.sort_order;
         target.is_active = menuCategory.is_active == null ? true : menuCategory.is_active;
         stamp(target, menuCategory.id == null);
-        return menuCategoryRepository.save(target);
+        MenuCategory saved = menuCategoryRepository.save(target);
+        incrementMenuRevisions(previousStoreId, saved.store_id);
+        return saved;
     }
 
     @Override
@@ -285,6 +292,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         MenuItem target = menuItem.id == null
             ? new MenuItem()
             : menuItemRepository.findById(menuItem.id).orElseThrow(() -> new BusinessException("Menu item not found"));
+        Long previousStoreId = target.store_id;
         target.store_id = menuItem.store_id;
         target.category_id = menuItem.category_id;
         target.station_id = menuItem.station_id;
@@ -297,7 +305,9 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         target.is_active = menuItem.is_active == null ? true : menuItem.is_active;
         target.is_sold_out = menuItem.is_sold_out == null ? false : menuItem.is_sold_out;
         stamp(target, menuItem.id == null);
-        return menuItemRepository.save(target);
+        MenuItem saved = menuItemRepository.save(target);
+        incrementMenuRevisions(previousStoreId, saved.store_id);
+        return saved;
     }
 
     @Override
@@ -315,6 +325,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         MenuItemOption target = menuItemOption.id == null
             ? new MenuItemOption()
             : menuItemOptionRepository.findById(menuItemOption.id).orElseThrow(() -> new BusinessException("Menu item option not found"));
+        Long previousStoreId = target.menu_item_id == null ? null : findMenuItemStoreId(target.menu_item_id);
         target.menu_item_id = menuItemOption.menu_item_id;
         target.option_type = menuItemOption.option_type;
         target.option_code = menuItemOption.option_code;
@@ -326,7 +337,22 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         target.price_delta = menuItemOption.price_delta;
         target.is_active = menuItemOption.is_active == null ? true : menuItemOption.is_active;
         stamp(target, menuItemOption.id == null);
-        return menuItemOptionRepository.save(target);
+        MenuItemOption saved = menuItemOptionRepository.save(target);
+        incrementMenuRevisions(previousStoreId, findMenuItemStoreId(saved.menu_item_id));
+        return saved;
+    }
+
+    private Long findMenuItemStoreId(Long menuItemId) {
+        return menuItemRepository.findById(menuItemId)
+            .map(item -> item.store_id)
+            .orElseThrow(() -> new BusinessException("Menu item not found: " + menuItemId));
+    }
+
+    private void incrementMenuRevisions(Long previousStoreId, Long currentStoreId) {
+        if (previousStoreId != null && !previousStoreId.equals(currentStoreId)) {
+            menuRevisionService.incrementRevision(previousStoreId);
+        }
+        menuRevisionService.incrementRevision(currentStoreId);
     }
 
     @Override

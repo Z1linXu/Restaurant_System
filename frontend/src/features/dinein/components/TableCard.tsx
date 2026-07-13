@@ -3,6 +3,7 @@ import { Card } from '../../../components/ui/Card'
 import type { TableSlot } from '../../../types/dinein'
 import { formatSplitSlotLabel } from '../../../utils/tableDisplay'
 import { TableStatusBadge } from './TableStatusBadge'
+import { offlineOrderBadgeLabel, type OfflineOrderBadge } from '../../offline/offlineOrderStatus'
 
 interface TableCardProps {
   slot: TableSlot
@@ -12,6 +13,7 @@ interface TableCardProps {
   onPrint: (slot: TableSlot) => void
   onFinish: (slot: TableSlot) => void
   compact?: boolean
+  offlineOrders?: OfflineOrderBadge[]
 }
 
 const statusAccent = {
@@ -26,7 +28,7 @@ const titleColor = {
   alert: 'text-[#b4481c]',
 } as const
 
-export function TableCard({ slot, onEntrySelect, onStart, onEdit, onPrint, onFinish, compact = false }: TableCardProps) {
+export function TableCard({ slot, onEntrySelect, onStart, onEdit, onPrint, onFinish, compact = false, offlineOrders = [] }: TableCardProps) {
   const buttonLabel = slot.action === 'edit' ? 'Edit order' : 'Start order'
   const displayLabel = formatSplitSlotLabel(slot.label)
 
@@ -46,6 +48,19 @@ export function TableCard({ slot, onEntrySelect, onStart, onEdit, onPrint, onFin
             </div>
             <TableStatusBadge status={slot.status} />
           </div>
+
+          {offlineOrders.length ? (
+            <div className="space-y-1.5" aria-label="本机未提交订单">
+              {offlineOrders.map((order) => (
+                <div
+                  key={order.clientOrderId}
+                  className="rounded-[14px] border border-[rgba(177,111,21,0.24)] bg-[rgba(220,153,54,0.13)] px-3 py-2 text-[0.74rem] font-black text-[rgb(112,65,8)]"
+                >
+                  {formatSplitSlotLabel(order.contextLabel)} · {offlineOrderBadgeLabel(order.state)} · {order.itemCount} 份
+                </div>
+              ))}
+            </div>
+          ) : null}
 
           <div className={`mt-auto ${compact ? 'space-y-2' : 'space-y-3'}`}>
             {slot.alertMessage ? (

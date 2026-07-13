@@ -40,6 +40,7 @@ import com.restaurant.system.printing.repository.PrinterConfigRepository;
 import com.restaurant.system.printing.semantic.HotKitchenPrintEligibilityService;
 import com.restaurant.system.printing.service.PrintDispatcherService;
 import com.restaurant.system.printing.service.PrintJobService;
+import com.restaurant.system.printing.service.OrderDispatchOutboxService;
 import com.restaurant.system.printing.service.PrinterConfigService;
 import com.restaurant.system.printing.transport.EscPosFontTestMode;
 import com.restaurant.system.printing.transport.PrinterTransport;
@@ -88,6 +89,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
     private final PrintJobRepository printJobRepository;
     private final CloudPrintingGuard cloudPrintingGuard;
     private final HotKitchenPrintEligibilityService hotKitchenPrintEligibilityService;
+    private final OrderDispatchOutboxService orderDispatchOutboxService;
 
     public PrintDispatcherServiceImpl(
         PrinterConfigService printerConfigService,
@@ -105,7 +107,8 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         PrintJobService printJobService,
         PrintJobRepository printJobRepository,
         CloudPrintingGuard cloudPrintingGuard,
-        HotKitchenPrintEligibilityService hotKitchenPrintEligibilityService
+        HotKitchenPrintEligibilityService hotKitchenPrintEligibilityService,
+        OrderDispatchOutboxService orderDispatchOutboxService
     ) {
         this.printerConfigService = printerConfigService;
         this.printerConfigRepository = printerConfigRepository;
@@ -123,25 +126,12 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         this.printJobRepository = printJobRepository;
         this.cloudPrintingGuard = cloudPrintingGuard;
         this.hotKitchenPrintEligibilityService = hotKitchenPrintEligibilityService;
+        this.orderDispatchOutboxService = orderDispatchOutboxService;
     }
 
     @Override
     public void dispatchAfterCommit(String moduleCode, Long storeId, Long orderId) {
-        if (!featureFlagService.isEnabled(FeaturePackage.PRINTING)) {
-            logger.info("Skipping print for module {} store {} order {} because PRINTING feature is disabled", moduleCode, storeId, orderId);
-            return;
-        }
-        Runnable dispatchTask = () -> taskExecutor.execute(() -> doDispatch(moduleCode, storeId, orderId, null));
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    dispatchTask.run();
-                }
-            });
-            return;
-        }
-        dispatchTask.run();
+        orderDispatchOutboxService.enqueue(moduleCode, storeId, orderId, null);
     }
 
     @Override
@@ -154,29 +144,22 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         if (!supportsAutomaticUpdateTicket(moduleCode)) {
             throw new BusinessException("Only GRAB, FRONTDESK_RECEIPT, and HOT_KITCHEN support automatic update tickets");
         }
+        orderDispatchOutboxService.enqueue(moduleCode, storeId, orderId, orderUpdateBatchId);
+    }
+
+    @Override
+    public void dispatchPersistedEvent(
+        String moduleCode,
+        Long storeId,
+        Long orderId,
+        Long orderUpdateBatchId,
+        String sourceKey
+    ) {
         if (!featureFlagService.isEnabled(FeaturePackage.PRINTING)) {
-            logger.info(
-                "Skipping update print for module {} store {} order {} batch {} because PRINTING feature is disabled",
-                moduleCode,
-                storeId,
-                orderId,
-                orderUpdateBatchId
-            );
+            logger.info("Skipping persisted print event {} because PRINTING is disabled", sourceKey);
             return;
         }
-        Runnable dispatchTask = () -> taskExecutor.execute(
-            () -> doDispatch(moduleCode, storeId, orderId, orderUpdateBatchId)
-        );
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    dispatchTask.run();
-                }
-            });
-            return;
-        }
-        dispatchTask.run();
+        doDispatch(moduleCode, storeId, orderId, orderUpdateBatchId, sourceKey);
     }
 
     @Override
@@ -506,15 +489,28 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
     }
 
     private void doDispatch(String moduleCode, Long storeId, Long orderId, Long orderUpdateBatchId) {
+        doDispatch(moduleCode, storeId, orderId, orderUpdateBatchId, null);
+    }
+
+    private void doDispatch(
+        String moduleCode,
+        Long storeId,
+        Long orderId,
+        Long orderUpdateBatchId,
+        String dispatchSourceKey
+    ) {
         PrintJob job = null;
         PrinterConfig printer = null;
         PrintRenderRequest renderRequest = null;
         String preRenderedContent = null;
         try {
+            if (dispatchSourceKey != null && printJobRepository.findByDispatchSourceKey(dispatchSourceKey).isPresent()) {
+                logger.info("Skipping already-dispatched persisted print event {}", dispatchSourceKey);
+                return;
+            }
             Store store = storeRepository.findById(storeId).orElse(null);
             if (store == null) {
-                logger.error("Print dispatch failed before job creation: store {} not found for module {} order {}", storeId, moduleCode, orderId);
-                return;
+                throw new BusinessException("Store not found: " + storeId);
             }
             if (PrintModuleCode.HOT_KITCHEN.equals(moduleCode)) {
                 renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId);
@@ -575,22 +571,36 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                     }
                 }
             }
-            job = printJobService.createPendingJob(
-                store.organization_id,
+            String payloadSnapshot = buildPayloadSnapshot(
+                moduleCode,
                 storeId,
                 orderId,
-                orderUpdateBatchId,
-                null,
-                moduleCode,
-                orderUpdateBatchId == null ? moduleCode : moduleCode + "_UPDATE",
-                null,
-                buildPayloadSnapshot(
-                    moduleCode,
+                orderUpdateBatchId == null ? "ORDER_SUBMIT" : "ORDER_UPDATE_BATCH"
+            );
+            job = dispatchSourceKey == null
+                ? printJobService.createPendingJob(
+                    store.organization_id,
                     storeId,
                     orderId,
-                    orderUpdateBatchId == null ? "ORDER_SUBMIT" : "ORDER_UPDATE_BATCH"
+                    orderUpdateBatchId,
+                    null,
+                    moduleCode,
+                    orderUpdateBatchId == null ? moduleCode : moduleCode + "_UPDATE",
+                    null,
+                    payloadSnapshot
                 )
-            );
+                : printJobService.createPendingJob(
+                    store.organization_id,
+                    storeId,
+                    orderId,
+                    orderUpdateBatchId,
+                    null,
+                    moduleCode,
+                    orderUpdateBatchId == null ? moduleCode : moduleCode + "_UPDATE",
+                    null,
+                    payloadSnapshot,
+                    dispatchSourceKey
+                );
             logger.info("Created print job {} for module {} store {} order {}", job.id, moduleCode, storeId, orderId);
 
             if (!printerConfigService.isPrintingEnabled(storeId)) {
@@ -694,6 +704,11 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 printJobService.markFailed(job, printer, "DISPATCH_ERROR", exception.getMessage());
             }
             logger.error("Print dispatch failed for module {} store {} order {}", moduleCode, storeId, orderId, exception);
+            if (job == null) {
+                throw exception instanceof RuntimeException runtimeException
+                    ? runtimeException
+                    : new IllegalStateException("Print dispatch failed before print job creation", exception);
+            }
         }
     }
 

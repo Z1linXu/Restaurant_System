@@ -34,6 +34,38 @@ interface FrontdeskOrderQueryInput {
   limit?: number
 }
 
+export interface IdempotentOrderItemPayload {
+  menu_item_id: number
+  quantity: number
+  combo_group_no: number | null
+  combo_role: string
+  notes: string | null
+  options: { option_id: number; quantity: number }[]
+}
+
+export interface IdempotentOrderSubmitPayload {
+  client_order_id: string
+  idempotency_key: string
+  organization_id: number
+  store_id: number
+  server_order_id: number | null
+  order_type: 'dine_in' | 'pickup'
+  table_no: string | null
+  pickup_no: string | null
+  menu_revision: number
+  expected_subtotal_amount: number
+  items: IdempotentOrderItemPayload[]
+}
+
+export interface IdempotentOrderSubmitResult {
+  client_order_id: string
+  idempotency_key: string
+  payload_hash: string
+  order_id: number
+  replayed: boolean
+  order: BackendOrderResponse
+}
+
 function buildHeaders() {
   return {
     'Content-Type': 'application/json',
@@ -260,6 +292,17 @@ export async function submitDraftOrder(orderId: number) {
   }
 
   throw lastError instanceof Error ? lastError : new Error('Failed to submit order')
+}
+
+export async function submitIdempotentOrder(payload: IdempotentOrderSubmitPayload) {
+  return request<IdempotentOrderSubmitResult>(
+    `/api/v1/stores/${payload.store_id}/orders/idempotent-submit`,
+    {
+      method: 'POST',
+      headers: buildHeaders(),
+      body: JSON.stringify(payload),
+    },
+  )
 }
 
 export async function addDraftOrderItem(orderId: number, menuItem: MenuItem, draft: ItemCustomizationDraft, notes = '') {

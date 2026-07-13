@@ -48,7 +48,7 @@ public class MainActivity extends Activity {
     private static final String TAG = "RestaurantPad";
     private static final String WORKER_TAG = "RestaurantPadWorker";
     private static final String APP_HOST = "restaurant-pad.local";
-    private static final String APP_URL = "https://" + APP_HOST + "/index.html";
+    private static final String APP_URL = "https://" + APP_HOST + "/";
     private static final String PREFS = "restaurant_pad_settings";
     private static final String KEY_API_BASE = "api_base_url";
     private static final String KEY_WEB_APP_URL = "web_app_url";
@@ -162,7 +162,12 @@ public class MainActivity extends Activity {
 
         WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
             .setDomain(APP_HOST)
-            .addPathHandler("/", new FrontendAssetPathHandler(this, this::getApiBaseUrl))
+            .addPathHandler("/", new FrontendAssetPathHandler(
+                this,
+                this::getApiBaseUrl,
+                this::getPairedStoreId,
+                this::getAppVersionName
+            ))
             .build();
 
         webView.setWebChromeClient(new WebChromeClient());
@@ -201,6 +206,20 @@ public class MainActivity extends Activity {
 
     private String getWebAppUrl() {
         return preferences.getString(KEY_WEB_APP_URL, "");
+    }
+
+    private String getPairedStoreId() {
+        return preferences.getString(KEY_DEVICE_STORE_ID, "");
+    }
+
+    private String getAppVersionName() {
+        try {
+            String versionName = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+            return versionName == null ? "unknown" : versionName;
+        } catch (Exception exception) {
+            Log.w(TAG, "Unable to read app version", exception);
+            return "unknown";
+        }
     }
 
     private boolean isDebuggable() {

@@ -11,15 +11,25 @@ import java.util.Locale;
 import java.util.Scanner;
 import java.util.function.Supplier;
 import androidx.webkit.WebViewAssetLoader;
+import org.json.JSONObject;
 
 public class FrontendAssetPathHandler implements WebViewAssetLoader.PathHandler {
     private static final String WEB_ROOT = "web/";
     private final Context context;
     private final Supplier<String> apiBaseSupplier;
+    private final Supplier<String> storeIdSupplier;
+    private final Supplier<String> appVersionSupplier;
 
-    public FrontendAssetPathHandler(Context context, Supplier<String> apiBaseSupplier) {
+    public FrontendAssetPathHandler(
+        Context context,
+        Supplier<String> apiBaseSupplier,
+        Supplier<String> storeIdSupplier,
+        Supplier<String> appVersionSupplier
+    ) {
         this.context = context.getApplicationContext();
         this.apiBaseSupplier = apiBaseSupplier;
+        this.storeIdSupplier = storeIdSupplier;
+        this.appVersionSupplier = appVersionSupplier;
     }
 
     @Override
@@ -90,12 +100,31 @@ public class FrontendAssetPathHandler implements WebViewAssetLoader.PathHandler 
     }
 
     private String injectRuntimeConfig(String html) {
-        String apiBase = apiBaseSupplier.get() == null ? "" : apiBaseSupplier.get().trim();
+        String suppliedApiBase = apiBaseSupplier.get();
+        String apiBase = suppliedApiBase == null ? "" : suppliedApiBase.trim();
+        String suppliedStoreId = storeIdSupplier.get();
+        String storeId = suppliedStoreId != null && suppliedStoreId.trim().matches("\\d+")
+            ? suppliedStoreId.trim()
+            : "null";
+        String suppliedAppVersion = appVersionSupplier.get();
+        String appVersion = suppliedAppVersion == null ? "" : suppliedAppVersion.trim();
+        JSONObject buildInfo = readBuildInfo();
+        String buildVersion = buildInfo.optString("buildVersion", "unknown");
+        String manifestHash = buildInfo.optString("assetManifestSha256", "unknown");
+        int offlineSchemaVersion = buildInfo.optInt("offlineDatabaseSchemaVersion", -1);
         String script = "\n<script>\n" +
             "(function(){\n" +
             "  var apiBase = '" + escapeJs(apiBase) + "'.replace(/\\/$/, '');\n" +
             "  window.__RESTAURANT_API_BASE_URL__ = apiBase;\n" +
             "  window.__RESTAURANT_WS_BASE_URL__ = apiBase.replace(/^http/i, 'ws');\n" +
+            "  window.__RESTAURANT_APP_CONFIG__ = {\n" +
+            "    mode: 'BUNDLED_ASSETS',\n" +
+            "    appVersion: '" + escapeJs(appVersion) + "',\n" +
+            "    buildVersion: '" + escapeJs(buildVersion) + "',\n" +
+            "    assetManifestSha256: '" + escapeJs(manifestHash) + "',\n" +
+            "    offlineDatabaseSchemaVersion: " + offlineSchemaVersion + ",\n" +
+            "    storeId: " + storeId + "\n" +
+            "  };\n" +
             "  var originalFetch = window.fetch && window.fetch.bind(window);\n" +
             "  if (originalFetch) {\n" +
             "    window.fetch = function(input, init) {\n" +
@@ -123,6 +152,14 @@ public class FrontendAssetPathHandler implements WebViewAssetLoader.PathHandler 
             return html.replace("</head>", script + "</head>");
         }
         return script + html;
+    }
+
+    private JSONObject readBuildInfo() {
+        try {
+            return new JSONObject(readAssetText(WEB_ROOT + "build-info.json"));
+        } catch (Exception ignored) {
+            return new JSONObject();
+        }
     }
 
     private String escapeJs(String value) {

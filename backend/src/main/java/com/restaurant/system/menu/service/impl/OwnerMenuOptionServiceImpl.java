@@ -9,6 +9,7 @@ import com.restaurant.system.menu.entity.MenuItemOption;
 import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.menu.repository.MenuItemRepository;
 import com.restaurant.system.menu.service.OwnerMenuOptionService;
+import com.restaurant.system.menu.service.MenuRevisionService;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -27,13 +28,16 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
 
     private final MenuItemRepository menuItemRepository;
     private final MenuItemOptionRepository menuItemOptionRepository;
+    private final MenuRevisionService menuRevisionService;
 
     public OwnerMenuOptionServiceImpl(
         MenuItemRepository menuItemRepository,
-        MenuItemOptionRepository menuItemOptionRepository
+        MenuItemOptionRepository menuItemOptionRepository,
+        MenuRevisionService menuRevisionService
     ) {
         this.menuItemRepository = menuItemRepository;
         this.menuItemOptionRepository = menuItemOptionRepository;
+        this.menuRevisionService = menuRevisionService;
     }
 
     @Override
@@ -47,36 +51,42 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
     @Override
     @Transactional
     public MenuItemOptionAdminResponse createOption(Long itemId, MenuItemOptionUpsertRequest request) {
-        loadMenuItem(itemId);
+        MenuItem menuItem = loadMenuItem(itemId);
         MenuItemOption option = new MenuItemOption();
         option.menu_item_id = itemId;
         applyRequest(option, request, true);
-        return toResponse(menuItemOptionRepository.save(option));
+        MenuItemOption saved = menuItemOptionRepository.save(option);
+        menuRevisionService.incrementRevision(menuItem.store_id);
+        return toResponse(saved);
     }
 
     @Override
     @Transactional
     public MenuItemOptionAdminResponse updateOption(Long itemId, Long optionId, MenuItemOptionUpsertRequest request) {
-        loadMenuItem(itemId);
+        MenuItem menuItem = loadMenuItem(itemId);
         MenuItemOption option = loadOption(itemId, optionId);
         applyRequest(option, request, false);
-        return toResponse(menuItemOptionRepository.save(option));
+        MenuItemOption saved = menuItemOptionRepository.save(option);
+        menuRevisionService.incrementRevision(menuItem.store_id);
+        return toResponse(saved);
     }
 
     @Override
     @Transactional
     public MenuItemOptionAdminResponse deactivateOption(Long itemId, Long optionId) {
-        loadMenuItem(itemId);
+        MenuItem menuItem = loadMenuItem(itemId);
         MenuItemOption option = loadOption(itemId, optionId);
         option.is_active = false;
         option.updated_at = LocalDateTime.now();
-        return toResponse(menuItemOptionRepository.save(option));
+        MenuItemOption saved = menuItemOptionRepository.save(option);
+        menuRevisionService.incrementRevision(menuItem.store_id);
+        return toResponse(saved);
     }
 
     @Override
     @Transactional
     public List<MenuItemOptionAdminResponse> reorderOptions(Long itemId, MenuItemOptionReorderRequest request) {
-        loadMenuItem(itemId);
+        MenuItem menuItem = loadMenuItem(itemId);
         if (request == null || request.options == null) {
             throw new BusinessException("Options reorder payload is required");
         }
@@ -95,6 +105,7 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
             option.updated_at = now;
             menuItemOptionRepository.save(option);
         }
+        menuRevisionService.incrementRevision(menuItem.store_id);
         return getOptions(itemId);
     }
 

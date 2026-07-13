@@ -1,4 +1,9 @@
 import type { BackendApiResponse } from '../types/ordering'
+import {
+  normalizeApiEndpoint,
+  recordApiRequestMetric,
+  type AuthRefreshOutcome,
+} from './networkStatus'
 
 const ACCESS_TOKEN_KEY = 'restaurant_pos_access_token'
 const REFRESH_TOKEN_KEY = 'restaurant_pos_refresh_token'
@@ -33,6 +38,7 @@ export class ApiRequestError extends Error {
   code?: string
   userMessage: string
   raw?: unknown
+  requestId?: string
 
   constructor(status: number, message: string, userMessage?: string, raw?: unknown, code?: string) {
     super(message)
@@ -41,6 +47,18 @@ export class ApiRequestError extends Error {
     this.raw = raw
     this.code = code
   }
+}
+
+export function isRefreshCredentialRejection(error: unknown) {
+  return error instanceof ApiRequestError
+    && (error.status === 401 || error.status === 403)
+}
+
+function createRequestId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `request-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -156,6 +174,12 @@ function messageFromPayload(payload: unknown) {
   return typeof message === 'string' ? message : undefined
 }
 
+function errorCodeFromPayload(payload: unknown) {
+  if (!isRecord(payload)) return undefined
+  const errorCode = payload.error_code
+  return typeof errorCode === 'string' && errorCode.trim() ? errorCode.trim() : undefined
+}
+
 export function buildApiHeaders(extraHeaders: HeadersInit = {}, includeAuth = true) {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -244,47 +268,90 @@ async function fetchWithAuth(input: string, init: RequestInit = {}) {
 }
 
 export async function apiRequest<T>(input: string, init: RequestInit = {}) {
-  let { response, payload, accessToken } = await fetchWithAuth(input, init)
+  const requestId = createRequestId()
+  const startedAtMs = Date.now()
+  const startedAt = new Date(startedAtMs).toISOString()
+  const method = (init.method ?? 'GET').toUpperCase()
+  const endpoint = normalizeApiEndpoint(input)
+  let authRefreshOutcome: AuthRefreshOutcome = 'NOT_ATTEMPTED'
 
-  if (response.status === 401 && canAttemptRefresh(input)) {
-    try {
-      if (accessToken && getAccessToken() && getAccessToken() !== accessToken) {
-        ;({ response, payload, accessToken } = await fetchWithAuth(input, init))
-      } else {
-        await refreshSessionOnce()
-        ;({ response, payload, accessToken } = await fetchWithAuth(input, init))
-      }
-    } catch (refreshError) {
-      clearAuthTokens()
-      window.dispatchEvent(new CustomEvent('restaurant-auth-expired'))
-      throw refreshError
-    }
-  }
-
-  if (!response.ok) {
-    if (response.status === 401) {
-      clearAuthTokens()
-      window.dispatchEvent(new CustomEvent('restaurant-auth-expired'))
-    }
-    const backendMessage = messageFromPayload(payload)
-    const userMessage = userMessageForStatus(response.status, backendMessage)
-    console.error('[apiRequest] request failed', {
-      input,
-      status: response.status,
-      backendMessage,
-      payload,
+  const record = (status: number, outcome: 'SUCCESS' | 'HTTP_ERROR' | 'TIMEOUT' | 'NETWORK_ERROR', errorCode: string | null) => {
+    const completedAtMs = Date.now()
+    recordApiRequestMetric({
+      requestId,
+      method,
+      endpoint,
+      startedAt,
+      completedAt: new Date(completedAtMs).toISOString(),
+      latencyMs: completedAtMs - startedAtMs,
+      status,
+      outcome,
+      errorCode,
+      authRefreshOutcome,
     })
-    throw new ApiRequestError(
-      response.status,
-      backendMessage || `Request failed (${response.status})`,
-      userMessage,
-      payload,
-    )
   }
-  const apiPayload = payload as BackendApiResponse<T>
-  if (!apiPayload.success) {
-    const backendMessage = apiPayload.message || 'Request failed'
-    throw new ApiRequestError(200, backendMessage, userMessageForStatus(400, backendMessage), apiPayload)
+
+  try {
+    let { response, payload, accessToken } = await fetchWithAuth(input, init)
+
+    if (response.status === 401 && canAttemptRefresh(input)) {
+      try {
+        if (accessToken && getAccessToken() && getAccessToken() !== accessToken) {
+          ;({ response, payload, accessToken } = await fetchWithAuth(input, init))
+        } else {
+          await refreshSessionOnce()
+          authRefreshOutcome = 'SUCCEEDED'
+          ;({ response, payload, accessToken } = await fetchWithAuth(input, init))
+        }
+      } catch (refreshError) {
+        authRefreshOutcome = 'FAILED'
+        if (isRefreshCredentialRejection(refreshError)) {
+          clearAuthTokens()
+          window.dispatchEvent(new CustomEvent('restaurant-auth-expired'))
+        }
+        throw refreshError
+      }
+    }
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        clearAuthTokens()
+        window.dispatchEvent(new CustomEvent('restaurant-auth-expired'))
+      }
+      const backendMessage = messageFromPayload(payload)
+      const userMessage = userMessageForStatus(response.status, backendMessage)
+      console.error('[apiRequest] request failed', {
+        requestId,
+        method,
+        endpoint,
+        status: response.status,
+      })
+      throw new ApiRequestError(
+        response.status,
+        backendMessage || `Request failed (${response.status})`,
+        userMessage,
+        payload,
+        errorCodeFromPayload(payload) ?? `HTTP_${response.status}`,
+      )
+    }
+    const apiPayload = payload as BackendApiResponse<T>
+    if (!apiPayload.success) {
+      const backendMessage = apiPayload.message || 'Request failed'
+      throw new ApiRequestError(200, backendMessage, userMessageForStatus(400, backendMessage), apiPayload, 'API_RESPONSE_FAILED')
+    }
+    record(response.status, 'SUCCESS', null)
+    return apiPayload.data
+  } catch (error) {
+    const apiError = error instanceof ApiRequestError
+      ? error
+      : new ApiRequestError(0, error instanceof Error ? error.message : 'Request failed', networkFailureMessage(), error, 'NETWORK_ERROR')
+    apiError.requestId = requestId
+    const outcome = apiError.code === 'REQUEST_TIMEOUT'
+      ? 'TIMEOUT'
+      : apiError.status === 0
+        ? 'NETWORK_ERROR'
+        : 'HTTP_ERROR'
+    record(apiError.status, outcome, apiError.code ?? (apiError.status ? `HTTP_${apiError.status}` : 'NETWORK_ERROR'))
+    throw apiError
   }
-  return apiPayload.data
 }

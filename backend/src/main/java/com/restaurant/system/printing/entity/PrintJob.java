@@ -31,6 +31,9 @@ public class PrintJob {
     @Column(name = "order_update_batch_id")
     public Long order_update_batch_id;
 
+    @Column(name = "dispatch_source_key")
+    public String dispatchSourceKey;
+
     @Column(name = "printer_id")
     public Long printer_id;
 

@@ -80,12 +80,47 @@ public class PrintJobServiceImpl implements PrintJobService {
         Long requestedByUserId,
         String payloadSnapshot
     ) {
+        return createPendingJob(
+            organizationId,
+            storeId,
+            orderId,
+            orderUpdateBatchId,
+            printerId,
+            moduleCode,
+            receiptType,
+            requestedByUserId,
+            payloadSnapshot,
+            null
+        );
+    }
+
+    @Override
+    @Transactional
+    public PrintJob createPendingJob(
+        Long organizationId,
+        Long storeId,
+        Long orderId,
+        Long orderUpdateBatchId,
+        Long printerId,
+        String moduleCode,
+        String receiptType,
+        Long requestedByUserId,
+        String payloadSnapshot,
+        String dispatchSourceKey
+    ) {
+        if (dispatchSourceKey != null) {
+            PrintJob existing = printJobRepository.findByDispatchSourceKey(dispatchSourceKey).orElse(null);
+            if (existing != null) {
+                return existing;
+            }
+        }
         LocalDateTime now = LocalDateTime.now();
         PrintJob job = new PrintJob();
         job.organization_id = organizationId;
         job.store_id = storeId;
         job.order_id = orderId;
         job.order_update_batch_id = orderUpdateBatchId;
+        job.dispatchSourceKey = dispatchSourceKey;
         job.printer_id = printerId;
         job.module_code = moduleCode;
         job.receipt_type = receiptType;
