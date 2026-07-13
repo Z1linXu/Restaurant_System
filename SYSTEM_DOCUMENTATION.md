@@ -1362,7 +1362,8 @@ Current option behavior in runtime seed:
   - `套餐`
   - combo egg: `套餐卤蛋` or `套餐煎蛋`
   - combo side: `套餐毛豆`, `套餐土豆丝`, `套餐拌黄瓜`
-- when the frontend user enables combo but does not manually change the combo egg or combo side dropdowns, the frontend now still submits the default combo egg and default combo side option IDs with the same order item
+- selecting a combo side is the combo trigger. It submits the existing combo option and selected side, applies the existing combo upcharge, and defaults to `走蛋` until an optional combo egg is selected.
+- regular `加卤蛋` and `加煎蛋` remain independent quantity add-ons. They may be combined or incremented (for example, three tea eggs plus one fried egg) and do not create a combo by themselves.
 - `加香菜` and `加葱` are currently seeded as zero-price add-ons and are intended to behave as one-tap garnish toggles rather than quantity-priced extras
 - soup noodles and `担担面` default to noodle type `三细`
 - `炸酱面` and `鸡丝凉面` default to noodle type `韭叶`
@@ -2630,9 +2631,8 @@ Current frontend behavior in code:
 21. Clicking a menu item opens a separate customization modal.
 22. The ordering page reads categories, items, and option groups from the backend menu catalog API and maps them into the frontend UI shape.
 23. The live menu catalog currently supports these option groups on the ordering page when present on an item:
-    - combo toggle
-    - combo egg selection
-    - combo side selection
+    - combo side selection, which derives combo state
+    - optional combo egg selection after a combo side is selected
     - size
     - soup base
     - noodle type
@@ -2862,9 +2862,9 @@ Current frontend behavior in code:
     - soup base selection
     - noodle type selection
     - spicy level selection
-    - combo toggle
-    - combo egg selection
-    - combo side selection
+    - combo side selection that derives combo state and defaults to `走蛋`
+    - optional combo egg selection after a side is selected
+    - independent multi-quantity regular egg add-ons
     - add-ons with quantity controls
 69. In iPad landscape, the customization modal uses a compact workstation layout:
     - reduced outer padding
@@ -4045,7 +4045,8 @@ Current frontdesk receipt content:
     - `Order Type: Takeout`
   - divider line
   - one order item block per line:
-    - `{中碗|大碗}{item_name} [Combo] [Regular|Large] x{quantity}`
+    - soup noodle combo: `{quantity}*combo {receipt_display_name} [Regular|Large]`
+    - other items retain `{quantity} x [Combo] {item_name} [Regular|Large]`
     - optional noodle-type line:
       - `{noodle_type}`
     - optional charged add-on lines only:
@@ -4063,11 +4064,7 @@ Current frontdesk receipt content:
   - `Submitted: ...`
 - dine-in orders intentionally do not print an order-type line
 - no order-number line or explanatory debug text is printed
-- frontdesk receipt intentionally does not print kitchen-production details such as:
-  - spicy level
-  - soup base
-  - remove/addon instructions
-  - grab shorthand
+- frontdesk receipt intentionally does not print GRAB kitchen shorthand. It does show the selected noodle type, spicy level, applicable chargeable add-ons, combo egg or `走蛋`, combo side, side requests, and item note when present.
 - combo display rule:
   - a main item is treated as combo when:
     - `order_items.combo_role = main`
@@ -5147,10 +5144,11 @@ This pass keeps existing POS/KDS/Print Center architecture intact and applies fo
 
 ### Frontdesk Receipt Combo Ordering
 
-- `FRONTDESK_RECEIPT` now prints `Combo` before the item name.
-- Example: `1 x Combo 大碗传统牛肉面 Large`.
-- Combo side dishes are printed beneath the combo main line for packing visibility, for example `小菜: 拌黄瓜` followed by side-specific requests such as `走花生`.
-- GRAB kitchen tickets are unchanged and continue to focus on production instructions.
+- A soup-noodle combo uses the receipt-only line shape `{quantity}*combo {display_name}`, for example `1*combo 牛肉面` or `2*combo 牛肉面 Large`.
+- `传统牛肉面` is shortened to `牛肉面` only in `FRONTDESK_RECEIPT` display output. The menu name, database snapshot, admin UI, KDS, GRAB, and HOT_KITCHEN output remain unchanged.
+- A selected combo side is the stable combo signal. If no `COMBO_EGG` option is present, the receipt prints `走蛋`; otherwise it prints `鸡蛋: ...` before the combo side.
+- Combo side dishes are printed beneath the combo main line for packing visibility, for example `小菜: 拌黄瓜` followed by side-specific requests such as `走花生`. Spicy level and item notes retain their existing positions and are not discarded.
+- GRAB kitchen tickets remain production-oriented. Identical `DEEPFRIED`/fried tasks are now grouped only when their stable item, station, options, instructions, combo role, and note signature all match; the grouped line uses `{quantity}*{item}`, for example `3*炸虾`.
 
 ### Frontend Cache Versioning
 
@@ -5312,7 +5310,7 @@ Owner menu option APIs use the `admin:menu_manage` capability instead of the bro
 
 ### Combo UI and Child Remove Options
 
-The ordering modal uses touch-friendly buttons for combo egg and combo side selection. Combo child remove options are shown only after their parent side is selected. Switching combo side clears previously selected child remove options to prevent stale requests.
+The ordering modal uses touch-friendly side, combo-egg, and add-on controls. A selected combo side is the source of truth for combo state; it defaults to `走蛋` until an optional combo egg is selected. Regular tea/fried egg add-ons are separate multi-quantity rows and do not create a combo on their own. Combo child remove options are shown only after their parent side is selected. Switching or clearing a combo side clears the combo egg and child remove options to prevent stale requests.
 
 Example:
 
@@ -5327,7 +5325,7 @@ Combo side remove options can be resolved from two sources:
 
 Menu Management owns the displayed side requests. The catalog includes side item remove options on combo side options so `/frontdesk/menu` can show existing side-dish requests such as `走洋葱`, `走花生`, and `走香菜` for `套餐土豆丝`. If the real side item has active `REMOVE` options, the frontend uses those options and ignores legacy child options to avoid duplicates. Legacy child options are used only when the real side item has no active remove data. When the selected side remove belongs to the real side item rather than the main dish, order save accepts it only if the matching combo side is selected, then stores the snapshot as `COMBO_SIDE_REMOVE` with the selected combo side option as its parent. This keeps GRAB/kitchen side-task instructions correct without exposing arbitrary cross-item options.
 
-The order payload includes selected combo, egg, side, and side child remove option IDs. New order option snapshots include `option_code_snapshot`, `option_group_snapshot`, and `parent_option_id_snapshot` so kitchen logic can use stable metadata for new orders. Legacy Chinese-name fallback remains only for older data.
+The order payload continues to use the existing option IDs. A combo side sends the combo option, optional combo egg, selected side, and side child remove IDs; egg-only add-ons send only their regular add-on option IDs and quantities. New order option snapshots include `option_code_snapshot`, `option_group_snapshot`, and `parent_option_id_snapshot` so kitchen logic can use stable metadata for new orders. Legacy Chinese-name fallback remains only for older data.
 
 ### Frontdesk Ordering UX and Receipt Readability
 
@@ -6268,19 +6266,24 @@ Boundaries:
 - The cloud profile still relies on Flyway for schema initialization and keeps
   production demo/default seed behavior disabled.
 
-## PR11D-14G: Ordering Combo Option Ordering
+## Ordering Combo Selection And Receipt Grouping
 
-PR11D-14G is a frontend-only ordering UI polish for Android Pad WebView and
-desktop browser ordering. It does not change backend menu models, option ids,
-option codes, option groups, parent option relationships, price calculation,
-order submit payloads, kitchen task generation, HOT_KITCHEN routing, printing
-routing, payment/refund behavior, or `completeOrder`.
+The current ordering implementation changes only the UI selection rule and uses
+the existing option IDs, option codes, option groups, parent option relationships,
+price rules, and order submit payload shape. It does not change backend menu
+models, kitchen task generation, HOT_KITCHEN routing, printer routing,
+payment/refund behavior, or `completeOrder`.
 
 Behavior:
 
 - For noodle menu items, the customization modal renders the combo / 套餐
-  section at the top of the option area before size, soup base, noodle type,
-  and spicy level.
+  section immediately below spicy level and before other add-ons and notes.
+- The modal no longer requires a manual combo toggle. Selecting a combo side
+  creates the combo with `走蛋` by default; selecting one optional combo egg
+  changes only that included egg selection. Clearing the side cancels the combo
+  and removes its combo egg/side-request selections.
+- Regular `TEA_EGG` and `FRIED_EGG` add-ons are shown as independent quantity
+  controls. They can be mixed and incremented without adding a combo charge.
 - Noodle detection uses stable category codes such as `SOUP_NOODLE`,
   `DRY_NOODLE`, `FRIED_NOODLE`, `NOODLE`, and `NOODLES`, with a structural
   legacy fallback to existing noodle customization groups when old local data

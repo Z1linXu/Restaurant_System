@@ -22,6 +22,7 @@ import type {
   OrderSession,
 } from '../types/ordering'
 import { createIdempotencyKey } from '../utils/randomId'
+import { normalizeComboDraft, resolveComboSelection, resolveComboUpcharge } from '../utils/comboSelection'
 
 function calculateDraftLineSubtotal(menuItem: MenuItem | undefined, draft: ItemCustomizationDraft) {
   if (!menuItem) {
@@ -30,7 +31,7 @@ function calculateDraftLineSubtotal(menuItem: MenuItem | undefined, draft: ItemC
   const sizeDelta = menuItem.customization?.sizes?.options.find((option) => option.id === draft.sizeId)?.priceDelta ?? 0
   const soupBaseDelta =
     menuItem.customization?.soupBases?.options.find((option) => option.id === draft.soupBaseId)?.priceDelta ?? 0
-  const comboDelta = draft.comboEnabled ? (menuItem.customization?.combo?.upcharge ?? 0) : 0
+  const comboDelta = resolveComboUpcharge(draft, menuItem.customization?.combo)
   const addOnDelta =
     menuItem.customization?.addOns
       ?.reduce((sum, option) => sum + (option.priceDelta ?? 0) * (draft.addOnQuantities[option.id] ?? 0), 0) ?? 0
@@ -77,16 +78,13 @@ function buildItemSelection(item: BackendOrderItemResponse, menuItem: MenuItem |
     const optionId = String(option.option_id)
     const comboConfig = menuItem?.customization?.combo
     if (comboConfig?.optionId === optionId) {
-      draft.comboEnabled = true
       return
     }
     if (comboConfig?.eggs.some((comboOption) => comboOption.id === optionId)) {
-      draft.comboEnabled = true
       draft.comboEggId = optionId
       return
     }
     if (comboConfig?.sides.some((comboOption) => comboOption.id === optionId)) {
-      draft.comboEnabled = true
       draft.comboSideId = optionId
       return
     }
@@ -130,14 +128,7 @@ function buildItemSelection(item: BackendOrderItemResponse, menuItem: MenuItem |
   if (!draft.spicyLevelId && menuItem?.customization?.spicyLevels?.[0]?.id) {
     draft.spicyLevelId = menuItem.customization.spicyLevels[0].id
   }
-  if (draft.comboEnabled && !draft.comboEggId && menuItem?.customization?.combo?.eggs[0]?.id) {
-    draft.comboEggId = menuItem.customization.combo.eggs[0].id
-  }
-  if (draft.comboEnabled && !draft.comboSideId && menuItem?.customization?.combo?.sides[0]?.id) {
-    draft.comboSideId = menuItem.customization.combo.sides[0].id
-  }
-
-  return draft
+  return normalizeComboDraft(draft)
 }
 
 function mapOrderItem(item: BackendOrderItemResponse, catalogItems: MenuItem[], locked = false): OrderLineItem {
@@ -202,10 +193,15 @@ function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationDraft): 
   pushOptionTag(draft.soupBaseId)
   pushOptionTag(draft.noodleTypeId)
   pushOptionTag(draft.spicyLevelId)
-  if (draft.comboEnabled) {
+  const comboSelection = resolveComboSelection(draft, menuItem.customization?.combo)
+  if (comboSelection.enabled) {
     summaryTags.push({ en: 'Combo', zh: '套餐' })
-    pushOptionTag(draft.comboEggId ?? menuItem.customization?.combo?.eggs[0]?.id)
-    pushOptionTag(draft.comboSideId ?? menuItem.customization?.combo?.sides[0]?.id)
+    if (draft.comboEggId) {
+      pushOptionTag(draft.comboEggId)
+    } else if (comboSelection.isNoEgg) {
+      summaryTags.push({ en: 'No egg', zh: '走蛋' })
+    }
+    pushOptionTag(draft.comboSideId)
     draft.comboSideRemoveIds.forEach((optionId) => pushOptionTag(optionId))
   }
   Object.entries(draft.addOnQuantities).forEach(([optionId, quantity]) => {

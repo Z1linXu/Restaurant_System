@@ -8,6 +8,7 @@ import type {
   OrderSession,
 } from '../types/ordering'
 import { calculateTax, calculateTotal } from '../utils/tax'
+import { isComboSelected, resolveComboUpcharge, resolveComboSelection } from '../utils/comboSelection'
 
 function getChoiceLabel(options: ChoiceOption[] | undefined, optionId: string | undefined): LocalizedText | null {
   if (!options || !optionId) {
@@ -51,8 +52,8 @@ export function buildDefaultDraft(menuItem: MenuItem): ItemCustomizationDraft {
     noodleTypeId: menuItem.customization?.noodleTypes?.[0]?.id,
     spicyLevelId: menuItem.customization?.spicyLevels?.[0]?.id,
     comboEnabled: false,
-    comboEggId: menuItem.customization?.combo?.eggs[0]?.id,
-    comboSideId: menuItem.customization?.combo?.sides[0]?.id,
+    comboEggId: undefined,
+    comboSideId: undefined,
     comboSideRemoveIds: [],
     addOnQuantities: {},
     removeIds: [],
@@ -84,10 +85,10 @@ function calculateUnitPrice(menuItem: MenuItem, draft: ItemCustomizationDraft) {
     menuItem.customization?.sizes?.options.find((option) => option.id === draft.sizeId)?.priceDelta ?? 0
   const soupBasePrice =
     menuItem.customization?.soupBases?.options.find((option) => option.id === draft.soupBaseId)?.priceDelta ?? 0
-  const comboPrice = draft.comboEnabled ? (menuItem.customization?.combo?.upcharge ?? 0) : 0
+  const comboPrice = resolveComboUpcharge(draft, menuItem.customization?.combo)
   const addOnPrice = sumAddOnPrice(menuItem.customization?.addOns, draft.addOnQuantities)
   const removeOptionPrice = sumPrice(menuItem.customization?.removeOptions, draft.removeIds)
-  const comboSideRemovePrice = draft.comboEnabled
+  const comboSideRemovePrice = isComboSelected(draft)
     ? sumPrice(menuItem.customization?.combo?.sideRemoveOptions, draft.comboSideRemoveIds)
     : 0
 
@@ -119,7 +120,8 @@ function buildSummaryTags(menuItem: MenuItem, draft: ItemCustomizationDraft) {
     summaryTags.push(spicyLabel)
   }
 
-  if (draft.comboEnabled) {
+  const comboSelection = resolveComboSelection(draft, customization?.combo)
+  if (comboSelection.enabled) {
     summaryTags.push({ en: 'Combo', zh: '套餐' })
 
     const eggLabel = getChoiceLabel(customization?.combo?.eggs, draft.comboEggId)
@@ -128,6 +130,8 @@ function buildSummaryTags(menuItem: MenuItem, draft: ItemCustomizationDraft) {
 
     if (eggLabel) {
       summaryTags.push(eggLabel)
+    } else if (comboSelection.isNoEgg) {
+      summaryTags.push({ en: 'No egg', zh: '走蛋' })
     }
 
     if (sideLabel) {

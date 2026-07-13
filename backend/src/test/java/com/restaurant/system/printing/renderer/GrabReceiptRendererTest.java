@@ -65,6 +65,47 @@ class GrabReceiptRendererTest {
     }
 
     @Test
+    void groupsTwoIdenticalFriedItemsWithStableFirstOccurrenceOrder() {
+        String output = renderFried(
+            fried(1L, 300L, "炸虾", null, null, null),
+            fried(2L, 300L, "炸虾", null, null, null),
+            fried(3L, 301L, "春卷", null, null, null)
+        );
+
+        assertTrue(output.contains("2*炸虾"));
+        assertTrue(output.contains("1*春卷"));
+        assertTrue(output.indexOf("2*炸虾") < output.indexOf("1*春卷"));
+        assertFalse(output.contains("1*炸虾\n\n1*炸虾"));
+    }
+
+    @Test
+    void groupsThreeIdenticalFriedItems() {
+        String output = renderFried(
+            fried(1L, 300L, "炸虾", null, null, null),
+            fried(2L, 300L, "炸虾", null, null, null),
+            fried(3L, 300L, "炸虾", null, null, null)
+        );
+
+        assertTrue(output.contains("3*炸虾"));
+        assertEquals(1, countOccurrences(output, "炸虾"));
+    }
+
+    @Test
+    void keepsFriedItemsSeparateWhenNotesOrOptionsDiffer() {
+        String output = renderFried(
+            fried(1L, 300L, "炸虾", null, null, null),
+            fried(2L, 300L, "炸虾", "不要酱", null, null),
+            fried(3L, 300L, "炸虾", null, "SPICY_LEVEL", "spicy_mild"),
+            fried(4L, 300L, "炸虾", null, "SPICY_LEVEL", "spicy_extra"),
+            fried(5L, 300L, "炸虾", null, "COMBO_EGG", "combo_tea_egg"),
+            fried(6L, 300L, "炸虾", null, "COMBO_EGG", "combo_fried_egg")
+        );
+
+        assertEquals(6, countOccurrences(output, "1*炸虾"));
+        assertTrue(output.contains("备注：不要酱"));
+    }
+
+    @Test
     void keepsSingleRemoveOnionAsRemoveOnion() {
         String output = renderNoodle("走葱");
 
@@ -280,7 +321,10 @@ class GrabReceiptRendererTest {
         assertFalse(rawOutput.contains("FRONTDESK RECEIPT"));
         assertTrue(rawOutput.startsWith(PrintMarkup.LARGE_OPEN + "桌号: T1" + PrintMarkup.LARGE_CLOSE));
         assertFalse(rawOutput.contains(PrintMarkup.LARGE_OPEN + "桌号: T1" + PrintMarkup.LARGE_OPEN));
-        assertEquals(1, countOccurrences(rawOutput, "1 x 传统牛肉面"));
+        assertEquals(1, countOccurrences(rawOutput, "1 x 牛肉面"));
+        assertFalse(rawOutput.contains("传统牛肉面"));
+        assertFalse(rawOutput.contains("*combo"));
+        assertEquals("传统牛肉面", item.item_name_snapshot_zh);
 
         String output = stripMarkup(rawOutput);
 
@@ -357,6 +401,47 @@ class GrabReceiptRendererTest {
     }
 
     @Test
+    void frontdeskReceiptFormatsSoupNoodleComboWithQuantityAndNoEgg() {
+        FrontdeskReceiptRenderer frontdeskRenderer = new FrontdeskReceiptRenderer();
+        Order order = baseOrder();
+        order.subtotal_amount = new BigDecimal("42.00");
+        order.total_amount = new BigDecimal("48.29");
+
+        OrderItem item = new OrderItem();
+        item.id = 1L;
+        item.order_id = order.id;
+        item.category_code_snapshot = "SOUP_NOODLE";
+        item.item_name_snapshot_zh = "传统牛肉面";
+        item.quantity = 2;
+        item.unit_price = new BigDecimal("21.00");
+        item.line_amount = new BigDecimal("42.00");
+        item.notes = "少汤";
+        item.status = "submitted";
+
+        OrderItemOption combo = option(1L, item.id, "addon", "COMBO", "combo", "套餐");
+        combo.price_delta = new BigDecimal("5.00");
+        OrderItemOption spicy = option(2L, item.id, "spicy_level", "SPICY_LEVEL", "spicy_mild", "少辣");
+        OrderItemOption side = option(3L, item.id, "addon", "COMBO_SIDE", "combo_edamame", "套餐毛豆");
+
+        PrintRenderRequest request = new PrintRenderRequest();
+        request.module_code = PrintModuleCode.FRONTDESK_RECEIPT;
+        request.order = order;
+        request.order_items = List.of(item);
+        request.order_item_options = List.of(combo, spicy, side);
+        request.happened_at = order.submitted_at;
+
+        String output = stripMarkup(frontdeskRenderer.render(request));
+
+        assertTrue(output.contains("2*combo 牛肉面"));
+        assertTrue(output.contains("辣度: 少辣"));
+        assertTrue(output.contains("走蛋"));
+        assertTrue(output.contains("小菜: 毛豆"));
+        assertTrue(output.contains("备注：少汤"));
+        assertFalse(output.contains("传统牛肉面"));
+        assertEquals("传统牛肉面", item.item_name_snapshot_zh);
+    }
+
+    @Test
     void frontdeskUpdateReceiptShowsOnlyAddedComboSideAndSideRemove() {
         FrontdeskReceiptRenderer frontdeskRenderer = new FrontdeskReceiptRenderer();
         Order order = baseOrder();
@@ -366,10 +451,12 @@ class GrabReceiptRendererTest {
         OrderItem addedItem = new OrderItem();
         addedItem.id = 2L;
         addedItem.order_id = order.id;
+        addedItem.category_code_snapshot = "SOUP_NOODLE";
         addedItem.item_name_snapshot_zh = "传统牛肉面";
         addedItem.quantity = 1;
         addedItem.unit_price = new BigDecimal("21.00");
         addedItem.line_amount = new BigDecimal("21.00");
+        addedItem.notes = "少汤";
         addedItem.status = "submitted";
         addedItem.order_update_batch_id = 88L;
 
@@ -393,8 +480,19 @@ class GrabReceiptRendererTest {
         combo.price_delta = new BigDecimal("5.00");
         combo.quantity = 1;
 
+        OrderItemOption comboEgg = new OrderItemOption();
+        comboEgg.id = 12L;
+        comboEgg.order_item_id = addedItem.id;
+        comboEgg.option_type_snapshot = "addon";
+        comboEgg.option_group_snapshot = "COMBO_EGG";
+        comboEgg.option_code_snapshot = "combo_fried_egg";
+        comboEgg.option_name_snapshot_zh = "套餐煎蛋";
+        comboEgg.option_name_snapshot_en = "Combo Fried Egg";
+        comboEgg.price_delta = BigDecimal.ZERO;
+        comboEgg.quantity = 1;
+
         OrderItemOption comboSide = new OrderItemOption();
-        comboSide.id = 12L;
+        comboSide.id = 13L;
         comboSide.option_id = 201L;
         comboSide.order_item_id = addedItem.id;
         comboSide.option_type_snapshot = "addon";
@@ -406,7 +504,7 @@ class GrabReceiptRendererTest {
         comboSide.quantity = 1;
 
         OrderItemOption sideRemove = new OrderItemOption();
-        sideRemove.id = 13L;
+        sideRemove.id = 14L;
         sideRemove.order_item_id = addedItem.id;
         sideRemove.option_type_snapshot = "remove";
         sideRemove.option_group_snapshot = "COMBO_SIDE_REMOVE";
@@ -420,7 +518,7 @@ class GrabReceiptRendererTest {
         request.module_code = PrintModuleCode.FRONTDESK_RECEIPT;
         request.order = order;
         request.order_items = List.of(addedItem);
-        request.order_item_options = List.of(size, combo, comboSide, sideRemove);
+        request.order_item_options = List.of(size, combo, comboEgg, comboSide, sideRemove);
         request.happened_at = order.submitted_at;
         request.is_update_ticket = true;
         request.order_update_batch_id = 88L;
@@ -429,13 +527,70 @@ class GrabReceiptRendererTest {
 
         assertTrue(output.contains("UPDATED"));
         assertTrue(output.contains("Added items only"));
-        assertTrue(output.contains("1 x Combo 传统牛肉面 Large"));
+        assertTrue(output.contains("1*combo 牛肉面 Large"));
+        assertTrue(output.contains("鸡蛋: 煎蛋"));
         assertTrue(output.contains("小菜: 拌黄瓜"));
         assertTrue(output.contains("走花生"));
+        assertTrue(output.contains("备注：少汤"));
         assertTrue(output.contains("Subtotal: $21.00"));
         assertTrue(output.contains("Tax (14.975%): $3.14"));
         assertTrue(output.contains("Total: $24.14"));
         assertFalse(output.contains("Subtotal: $100.00"));
+    }
+
+    private String renderFried(FriedCase... friedCases) {
+        Order order = baseOrder();
+        List<OrderItem> items = new ArrayList<>();
+        List<KitchenTask> tasks = new ArrayList<>();
+        List<OrderItemOption> options = new ArrayList<>();
+
+        for (FriedCase friedCase : friedCases) {
+            OrderItem item = new OrderItem();
+            item.id = friedCase.id();
+            item.order_id = order.id;
+            item.menu_item_id = friedCase.menuItemId();
+            item.item_name_snapshot_zh = friedCase.itemName();
+            item.category_code_snapshot = "FRIED";
+            item.combo_role = friedCase.comboRole();
+            item.notes = friedCase.note();
+            item.quantity = 1;
+            item.status = "submitted";
+            items.add(item);
+
+            KitchenTask task = new KitchenTask();
+            task.id = friedCase.id();
+            task.order_id = order.id;
+            task.order_item_id = item.id;
+            task.store_id = order.store_id;
+            task.station_code = "DEEPFRIED";
+            task.item_name_snapshot_zh = friedCase.itemName();
+            task.status = "pending";
+            task.quantity = 1;
+            task.created_at = LocalDateTime.of(2026, 6, 16, 12, 0).plusSeconds(friedCase.id());
+            tasks.add(task);
+
+            if (friedCase.optionCode() != null) {
+                OrderItemOption option = option(
+                    100L + friedCase.id(),
+                    item.id,
+                    "addon",
+                    friedCase.optionGroup(),
+                    friedCase.optionCode(),
+                    friedCase.optionCode()
+                );
+                option.option_id = (long) friedCase.optionCode().hashCode();
+                options.add(option);
+            }
+        }
+
+        PrintRenderRequest request = new PrintRenderRequest();
+        request.module_code = PrintModuleCode.GRAB;
+        request.order = order;
+        request.order_items = items;
+        request.order_item_options = options;
+        request.kitchen_tasks = tasks;
+        request.happened_at = order.submitted_at;
+        return stripMarkup(renderer.render(request));
     }
 
     private String renderSides(SideCase... sideCases) {
@@ -580,6 +735,38 @@ class GrabReceiptRendererTest {
         return new NoodleCase(id, 200L, specialInstructions, note, 1);
     }
 
+    private FriedCase fried(
+        Long id,
+        Long menuItemId,
+        String itemName,
+        String note,
+        String optionGroup,
+        String optionCode
+    ) {
+        return new FriedCase(id, menuItemId, itemName, note, optionGroup, optionCode, "standalone");
+    }
+
+    private OrderItemOption option(
+        Long id,
+        Long orderItemId,
+        String optionType,
+        String optionGroup,
+        String optionCode,
+        String nameZh
+    ) {
+        OrderItemOption option = new OrderItemOption();
+        option.id = id;
+        option.order_item_id = orderItemId;
+        option.option_type_snapshot = optionType;
+        option.option_group_snapshot = optionGroup;
+        option.option_code_snapshot = optionCode;
+        option.option_name_snapshot_zh = nameZh;
+        option.option_name_snapshot_en = nameZh;
+        option.price_delta = BigDecimal.ZERO;
+        option.quantity = 1;
+        return option;
+    }
+
     private String stripMarkup(String value) {
         return value
             .replace(PrintMarkup.DOUBLE_HEIGHT_OPEN, "")
@@ -607,5 +794,16 @@ class GrabReceiptRendererTest {
     }
 
     private record NoodleCase(Long id, Long menuItemId, String specialInstructions, String note, int quantity) {
+    }
+
+    private record FriedCase(
+        Long id,
+        Long menuItemId,
+        String itemName,
+        String note,
+        String optionGroup,
+        String optionCode,
+        String comboRole
+    ) {
     }
 }
