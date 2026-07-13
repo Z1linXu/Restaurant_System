@@ -6578,3 +6578,39 @@ available and their order lifecycle semantics are unchanged.
 - PR4 does not queue requests in the browser. IndexedDB order-outbox states and
   retry policy are introduced by PR5, and clients must reuse the same key after
   a timeout.
+
+## Offline Ordering PR5: Frontend Order Outbox
+
+PR5 adds a foreground IndexedDB submission outbox for new orders. Submitted
+order updates continue to use their existing online-only contract; this PR does
+not change order lifecycle, payment, printing, KDS, or combo behavior.
+
+- IndexedDB database `restaurant-pos-offline` is upgraded to schema version 3
+  with an `orderOutbox` store. Records are isolated by account, organization,
+  store, and stable `clientOrderId`, and preserve the frozen request payload,
+  payload hash, menu revision, retry metadata, server order id, safe error
+  details, timestamps, and schema version.
+- The state machine is `LOCAL_DRAFT -> QUEUED -> SUBMITTING -> SUBMITTED`, with
+  `FAILED_RETRYABLE`, `CONFLICT`, and `CANCELLED_LOCAL` terminal or operator
+  decision states. A queued payload is locked against silent edits.
+- Submission freezes item quantities, option ids, combo metadata carried by the
+  existing option payload, notes, order context, menu revision, and expected
+  subtotal. Every replay uses the same `client_order_id` and idempotency key.
+- Network errors, timeouts, and server `5xx` responses retry after 2, 5, 15,
+  30, and 60 seconds, then every five minutes. Browser-offline and hidden-page
+  states do not send requests; online, foreground, and backend-recovery events
+  wake the processor.
+- A persisted `SUBMITTING` record is immediately eligible after an app crash or
+  reload. The backend idempotency boundary determines whether it creates the
+  order or returns the already-created order. The browser marks `SUBMITTED`
+  only after receiving a server order id.
+- Stable backend `error_code` values flow through `ApiRequestError`. Business
+  and idempotency conflicts stop automatic retry and remain available for
+  explicit review. Internal stack traces and request payloads are not shown.
+- The processor is singleton-scoped to the authenticated account, serializes
+  each outbox key, and repairs its schedule after account-generation changes so
+  duplicate clicks or lifecycle races do not create parallel submissions.
+- Local drafts remain protected while queued, submitting, retryable, or in
+  conflict. Operator actions reuse the same key for immediate retry, explicitly
+  return a record to editing, or cancel the local record; none create a hidden
+  replacement key.

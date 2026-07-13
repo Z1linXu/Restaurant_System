@@ -56,7 +56,7 @@ export interface LocalDraftRecord extends LocalDraftScope {
   schemaVersion: number
 }
 
-const PROTECTED_STATES = new Set<LocalDraftSubmitState>(['QUEUED', 'SUBMITTING', 'CONFLICT'])
+const PROTECTED_STATES = new Set<LocalDraftSubmitState>(['QUEUED', 'SUBMITTING', 'FAILED_RETRYABLE', 'CONFLICT'])
 
 export function buildDraftContextKey(context: LocalDraftContext) {
   return context.orderType === 'pickup'
@@ -194,4 +194,3 @@ export async function cleanupExpiredLocalDrafts(nowMs = Date.now()) {
   }
   await completed
 }
-
