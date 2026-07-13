@@ -44,28 +44,6 @@ public interface PrintJobRepository extends JpaRepository<PrintJob, Long> {
     );
 
     @Query("""
-        select pj from PrintJob pj
-        where pj.store_id = :storeId
-          and pj.order_id = :orderId
-          and pj.module_code = 'GRAB'
-          and pj.receipt_type = 'GRAB'
-          and pj.status = 'PRINTED'
-          and pj.order_update_batch_id is null
-          and (
-            (pj.rendered_text_snapshot is not null and trim(pj.rendered_text_snapshot) <> '')
-            or (pj.escposPayloadBase64 is not null and trim(pj.escposPayloadBase64) <> '')
-          )
-        order by
-          case when pj.printed_at is null then 1 else 0 end asc,
-          pj.printed_at desc,
-          pj.id desc
-        """)
-    List<PrintJob> findReprintableFullGrabSnapshots(
-        @Param("storeId") Long storeId,
-        @Param("orderId") Long orderId
-    );
-
-    @Query("""
         select count(pj) from PrintJob pj
         where pj.store_id = :storeId
           and pj.status = 'FAILED'

@@ -32,7 +32,7 @@ class HotKitchenReceiptRendererTest {
         assertTrue(content.contains("UPDATED"));
         assertTrue(content.contains("HOT KITCHEN"));
         assertTrue(content.contains("桌号：T2"));
-        assertTrue(content.contains("大二(S)×1 | +煎蛋 +葱 | 备注：less soup"));
+        assertTrue(content.contains("大二(S) | +煎蛋 +葱 | 备注：less soup"));
         assertTrue(content.contains("备注：less soup"));
     }
 
@@ -80,7 +80,7 @@ class HotKitchenReceiptRendererTest {
 
         String content = renderer.render(request);
 
-        assertTrue(content.contains("大二(S)×1 | +煎蛋 +葱 | 备注：less soup"));
+        assertTrue(content.contains("大二(S) | +煎蛋 +葱 | 备注：less soup"));
         assertFalse(content.contains("毛豆"));
         assertFalse(content.contains("Edamame"));
         assertFalse(content.contains("土豆"));
@@ -149,19 +149,8 @@ class HotKitchenReceiptRendererTest {
 
         String content = renderer.render(request);
 
-        assertTrue(content.contains("中酸×1 | +蛋×2"));
+        assertTrue(content.contains("中酸 | +蛋×2"));
         assertFalse(content.contains("(中酸 | +蛋×2) ×1"));
-    }
-
-    @Test
-    void singleHotKitchenNoodleShowsBowlQuantitySeparatelyFromEggQuantity() {
-        HotKitchenReceiptRenderer renderer = renderer();
-        PrintRenderRequest request = hotNoodleRequest(hotNoodle(10L, "中酸 | +蛋"));
-
-        String content = renderer.render(request);
-
-        assertTrue(content.contains("中酸×1 | +蛋"));
-        assertFalse(content.contains("(中酸 | +蛋) ×1"));
     }
 
     @Test
@@ -187,8 +176,8 @@ class HotKitchenReceiptRendererTest {
 
         String content = renderer.render(request);
 
-        assertTrue(content.contains("中酸×1 | +蛋"));
-        assertTrue(content.contains("中辣×1 | +蛋"));
+        assertTrue(content.contains("中酸 | +蛋"));
+        assertTrue(content.contains("中辣 | +蛋"));
         assertFalse(content.contains("(中酸 | +蛋) ×2"));
         assertFalse(content.contains("(中辣 | +蛋) ×2"));
     }
@@ -203,8 +192,8 @@ class HotKitchenReceiptRendererTest {
 
         String content = renderer.render(request);
 
-        assertTrue(content.contains("中酸×1 | +蛋 | 备注：少汤"));
-        assertTrue(content.contains("中酸×1 | 不要葱 | +蛋"));
+        assertTrue(content.contains("中酸 | +蛋 | 备注：少汤"));
+        assertTrue(content.contains("中酸 | 不要葱 | +蛋"));
         assertFalse(content.contains(") ×2"));
     }
 

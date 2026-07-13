@@ -20,12 +20,6 @@ frontend/build/
 backend/src/main/resources/application-local.yml
 .env
 .env.*
-!.env.example
-!**/.env.example
-*.dump
-deployment/cloud/bootstrap-admin.env
-deployment/cloud/bootstrap-admin.*.env
-deployment/cloud/data/
 
 # Misc
 coverage/

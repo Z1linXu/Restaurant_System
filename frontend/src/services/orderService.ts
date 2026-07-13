@@ -10,7 +10,6 @@ import type {
 import type { RealtimeUpdateMessage } from '../types/kds'
 import type { PrintJobRecord } from './printingAdminService'
 import { apiRequest } from './apiClient'
-import { resolveComboSelection } from '../utils/comboSelection'
 
 const READ_RETRY_DELAYS_MS = [0, 250, 750]
 const pendingEditableOrderRequests = new Map<string, Promise<BackendOrderResponse>>()
@@ -96,8 +95,12 @@ export function mapOptions(draft: ItemCustomizationDraft, menuItem?: MenuItem) {
   pushOption(draft.noodleTypeId)
   pushOption(draft.spicyLevelId)
 
-  const comboSelection = resolveComboSelection(draft, menuItem?.customization?.combo)
-  comboSelection.optionIds.forEach((optionId) => pushOption(optionId))
+  if (draft.comboEnabled) {
+    pushOption(menuItem?.customization?.combo?.optionId)
+    pushOption(draft.comboEggId ?? menuItem?.customization?.combo?.eggs[0]?.id)
+    pushOption(draft.comboSideId ?? menuItem?.customization?.combo?.sides[0]?.id)
+    draft.comboSideRemoveIds.forEach((optionId) => pushOption(optionId))
+  }
 
   draft.removeIds.forEach((optionId) => pushOption(optionId))
 

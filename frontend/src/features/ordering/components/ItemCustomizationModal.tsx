@@ -2,8 +2,7 @@ import { useEffect } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import { useIpadLandscape } from '../../../hooks/useIpadLandscape'
-import type { ChoiceOption, ItemCustomizationDraft, MenuItem } from '../../../types/ordering'
-import { isComboSelected, toggleComboSide } from '../../../utils/comboSelection'
+import type { ItemCustomizationDraft, MenuItem } from '../../../types/ordering'
 
 function isToggleAddOn(labelZh: string, priceDelta?: number) {
   return (priceDelta ?? 0) === 0 && (labelZh === '加香菜' || labelZh === '加葱')
@@ -22,16 +21,6 @@ function isNoodleMenuItem(item: MenuItem) {
   }
   // Structural fallback for older local data that may not expose category codes.
   return Boolean(item.customization?.noodleTypes?.length || item.customization?.soupBases)
-}
-
-function isEggAddOn(option: ChoiceOption) {
-  const optionCode = normalizeStableCode(option.optionCode)
-  if (optionCode === 'TEA_EGG' || optionCode === 'FRIED_EGG') {
-    return true
-  }
-
-  // Legacy menu data can omit stable option codes.
-  return ['加蛋', '加卤蛋', '加煎蛋'].includes(option.labelZh.trim())
 }
 
 interface ItemCustomizationModalProps {
@@ -166,151 +155,124 @@ export function ItemCustomizationModal({
   const customization = item.customization
   const compact = useIpadLandscape()
   const toggleAddOns = customization?.addOns?.filter((option) => isToggleAddOn(option.labelZh, option.priceDelta)) ?? []
-  const allQuantityAddOns = customization?.addOns?.filter((option) => !isToggleAddOn(option.labelZh, option.priceDelta)) ?? []
+  const quantityAddOns = customization?.addOns?.filter((option) => !isToggleAddOn(option.labelZh, option.priceDelta)) ?? []
   const comboConfig = customization?.combo
   const isNoodleItem = isNoodleMenuItem(item)
-  const eggAddOns = isNoodleItem && comboConfig ? allQuantityAddOns.filter(isEggAddOn) : []
-  const quantityAddOns = allQuantityAddOns.filter((option) => !eggAddOns.some((eggOption) => eggOption.id === option.id))
-  const comboActive = isComboSelected(draft)
-  const comboSection = isNoodleItem && comboConfig ? (
+  const showComboFirst = isNoodleItem && Boolean(comboConfig)
+  const comboSection = comboConfig ? (
     <section className={`bg-[rgba(26,28,25,0.03)] ${compact ? 'space-y-3 rounded-[20px] p-4' : 'space-y-4 rounded-[28px] p-6'}`}>
       {(() => {
-        const selectedComboSideId = draft.comboSideId
+        const selectedComboSideId = draft.comboSideId ?? comboConfig.sides[0]?.id
         const sideRemoveOptions = comboConfig.sideRemoveOptions.filter(
           (option) => option.parentOptionId === selectedComboSideId,
         )
         return (
           <>
             <div className="flex items-center justify-between gap-4">
-              <div>
-                <h3 className={`${compact ? 'text-[1.05rem]' : 'text-[1.45rem]'} font-bold tracking-[-0.03em]`}>
-                  Combo / 套餐
-                </h3>
-                <p className={`${compact ? 'mt-0.5 text-[0.78rem]' : 'mt-1 text-sm'} font-medium text-[var(--muted)]`}>
-                  {comboActive
-                    ? draft.comboEggId
-                      ? '已组成套餐'
-                      : '已组成套餐（走蛋）'
-                    : '选择小菜即组成套餐，默认走蛋'}
-                </p>
-              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  onChange({
+                    ...draft,
+                    comboEnabled: !draft.comboEnabled,
+                    comboEggId: !draft.comboEnabled ? draft.comboEggId ?? comboConfig.eggs[0]?.id : draft.comboEggId,
+                    comboSideId: !draft.comboEnabled ? draft.comboSideId ?? comboConfig.sides[0]?.id : draft.comboSideId,
+                    comboSideRemoveIds: !draft.comboEnabled ? draft.comboSideRemoveIds : [],
+                  })
+                }
+                className="flex items-center gap-3 text-left"
+              >
+                <span
+                  className={`inline-flex h-8 w-8 items-center justify-center rounded-[10px] border ${
+                    draft.comboEnabled
+                      ? 'border-[var(--primary)] bg-[var(--primary)] text-[var(--on-primary)]'
+                      : 'border-[rgba(97,0,0,0.16)] bg-white'
+                  }`}
+                >
+                  {draft.comboEnabled ? '✓' : ''}
+                </span>
+                <span className={`${compact ? 'text-[1.05rem]' : 'text-[1.45rem]'} font-bold tracking-[-0.03em]`}>
+                  Make it a Combo / 设为套餐
+                </span>
+              </button>
               <span className={`${compact ? 'text-[1rem]' : 'text-[1.35rem]'} font-bold text-[var(--secondary)]`}>
                 +${comboConfig.upcharge.toFixed(2)}
               </span>
             </div>
 
-            <div className={compact ? 'space-y-3' : 'space-y-4'}>
-              <div className="space-y-2">
-                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
-                  Side Dish / 小菜
-                </span>
-                <div className={`grid md:grid-cols-3 ${compact ? 'gap-2.5' : 'gap-3'}`}>
-                  {comboConfig.sides.map((option) => (
-                    <ChoiceButton
-                      key={option.id}
-                      active={selectedComboSideId === option.id}
-                      label={option.labelEn}
-                      sublabel={option.labelZh}
-                      compact={compact}
-                      onClick={() => onChange(toggleComboSide(draft, option.id))}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {comboActive ? (
+            {draft.comboEnabled ? (
+              <div className={compact ? 'space-y-3' : 'space-y-4'}>
                 <div className="space-y-2">
                   <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
-                    Combo Egg / 套餐鸡蛋（可选）
+                    Egg / 鸡蛋
                   </span>
                   <div className={`grid md:grid-cols-2 ${compact ? 'gap-2.5' : 'gap-3'}`}>
                     {comboConfig.eggs.map((option) => (
                       <ChoiceButton
                         key={option.id}
-                        active={draft.comboEggId === option.id}
+                        active={(draft.comboEggId ?? comboConfig.eggs[0]?.id) === option.id}
                         label={option.labelEn}
                         sublabel={option.labelZh}
                         compact={compact}
-                        onClick={() => onChange({
-                          ...draft,
-                          comboEggId: draft.comboEggId === option.id ? undefined : option.id,
-                        })}
+                        onClick={() => onChange({ ...draft, comboEggId: option.id })}
                       />
                     ))}
                   </div>
                 </div>
-              ) : null}
 
-              {sideRemoveOptions.length && comboActive ? (
-                <div className="space-y-2 rounded-[18px] bg-[rgba(255,255,255,0.62)] p-3">
+                <div className="space-y-2">
                   <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
-                    Side Requests / 配菜需求
+                    Side Dish / 配菜
                   </span>
-                  {sideRemoveOptions.map((option) => {
-                    const checked = draft.comboSideRemoveIds.includes(option.id)
-                    return (
-                      <CheckboxRow
+                  <div className={`grid md:grid-cols-3 ${compact ? 'gap-2.5' : 'gap-3'}`}>
+                    {comboConfig.sides.map((option) => (
+                      <ChoiceButton
                         key={option.id}
-                        checked={checked}
+                        active={selectedComboSideId === option.id}
                         label={option.labelEn}
                         sublabel={option.labelZh}
                         compact={compact}
                         onClick={() =>
                           onChange({
                             ...draft,
-                            comboSideRemoveIds: checked
-                              ? draft.comboSideRemoveIds.filter((id) => id !== option.id)
-                              : [...draft.comboSideRemoveIds, option.id],
+                            comboSideId: option.id,
+                            comboSideRemoveIds: [],
                           })
                         }
                       />
-                    )
-                  })}
+                    ))}
+                  </div>
                 </div>
-              ) : null}
 
-              {eggAddOns.length ? (
-                <div className="space-y-2 rounded-[18px] bg-[rgba(255,255,255,0.62)] p-3">
-                  <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
-                    Extra Eggs / 加蛋（可多选）
-                  </span>
-                  <p className={`${compact ? 'text-[0.75rem]' : 'text-xs'} text-[var(--muted)]`}>
-                    只加蛋不算套餐，可分别增加卤蛋和煎蛋数量。
-                  </p>
-                  {eggAddOns.map((option) => {
-                    const quantity = draft.addOnQuantities[option.id] ?? 0
-                    return (
-                      <AddOnQuantityRow
-                        key={option.id}
-                        label={option.labelEn}
-                        sublabel={option.labelZh}
-                        priceDelta={option.priceDelta}
-                        quantity={quantity}
-                        compact={compact}
-                        onDecrement={() =>
-                          onChange({
-                            ...draft,
-                            addOnQuantities: {
-                              ...draft.addOnQuantities,
-                              [option.id]: Math.max(0, quantity - 1),
-                            },
-                          })
-                        }
-                        onIncrement={() =>
-                          onChange({
-                            ...draft,
-                            addOnQuantities: {
-                              ...draft.addOnQuantities,
-                              [option.id]: quantity + 1,
-                            },
-                          })
-                        }
-                      />
-                    )
-                  })}
-                </div>
-              ) : null}
-            </div>
+                {sideRemoveOptions.length ? (
+                  <div className="space-y-2 rounded-[18px] bg-[rgba(255,255,255,0.62)] p-3">
+                    <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+                      Side Requests / 配菜需求
+                    </span>
+                    {sideRemoveOptions.map((option) => {
+                      const checked = draft.comboSideRemoveIds.includes(option.id)
+                      return (
+                        <CheckboxRow
+                          key={option.id}
+                          checked={checked}
+                          label={option.labelEn}
+                          sublabel={option.labelZh}
+                          compact={compact}
+                          onClick={() =>
+                            onChange({
+                              ...draft,
+                              comboSideRemoveIds: checked
+                                ? draft.comboSideRemoveIds.filter((id) => id !== option.id)
+                                : [...draft.comboSideRemoveIds, option.id],
+                            })
+                          }
+                        />
+                      )
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </>
         )
       })()}
@@ -366,6 +328,8 @@ export function ItemCustomizationModal({
           </div>
 
           <div className={`${compact ? 'space-y-4 px-5 py-4' : 'space-y-6 px-8 py-7'}`}>
+            {showComboFirst ? comboSection : null}
+
             {customization?.sizes ? (
               <section className={compact ? 'space-y-3' : 'space-y-4'}>
                 <div className="flex items-center gap-3">
@@ -452,7 +416,7 @@ export function ItemCustomizationModal({
               </section>
             ) : null}
 
-            {comboSection}
+            {!showComboFirst ? comboSection : null}
 
             {(customization?.addOns?.length || customization?.removeOptions?.length) ? (
               <section className={`grid md:grid-cols-2 ${compact ? 'gap-4' : 'gap-6'}`}>

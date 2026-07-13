@@ -127,15 +127,7 @@ Pilot profile fails startup if either of these are enabled:
 - `app.seed.default-users-enabled=true`
 - `app.seed.demo-data-enabled=true`
 
-Production bootstrap is handled by the explicit one-time
-`deployment/cloud/bootstrap-admin.sh` command. Cloud/pilot deployments must not
-initialize real owner credentials through local/demo default `owner / 741xu741`
-seed behavior. The bootstrap command runs a minimal non-Web Spring context, not
-the normal servlet application context, so it does not require
-`HttpServletRequest`-scoped beans. The normal `RestaurantSystemApplication`
-component scan explicitly excludes the bootstrap application configuration so
-the bootstrap-only `@EnableJpaRepositories` and `@EntityScan` ranges cannot
-shrink the main web application's repository scan.
+Production bootstrap is intentionally not implemented in PR4. A future PR must provide an explicit one-time owner/admin initialization path. Until then, cloud/pilot deployments should initialize real owner credentials through a reviewed operational script or migration/runbook, not through the local/demo default `owner / 741xu741` flow.
 
 ## Cloud Ready PR5: Cloud Printing Guard
 
@@ -1362,12 +1354,10 @@ Current option behavior in runtime seed:
   - `套餐`
   - combo egg: `套餐卤蛋` or `套餐煎蛋`
   - combo side: `套餐毛豆`, `套餐土豆丝`, `套餐拌黄瓜`
-- selecting a combo side is the combo trigger. It submits the existing combo option and selected side, applies the existing combo upcharge, and defaults to `走蛋` until an optional combo egg is selected.
-- regular `加卤蛋` and `加煎蛋` remain independent quantity add-ons. They may be combined or incremented (for example, three tea eggs plus one fried egg) and do not create a combo by themselves.
+- when the frontend user enables combo but does not manually change the combo egg or combo side dropdowns, the frontend now still submits the default combo egg and default combo side option IDs with the same order item
 - `加香菜` and `加葱` are currently seeded as zero-price add-ons and are intended to behave as one-tap garnish toggles rather than quantity-priced extras
 - soup noodles and `担担面` default to noodle type `三细`
-- `炸酱面` defaults to noodle type `韭叶`
-- the catalog may retain its existing noodle-type display order, but the ordering UI defaults a new `鸡丝凉面` selection to stable option code `noodle_thin` (`细`); an existing order item always keeps its persisted noodle-type option
+- `炸酱面` and `鸡丝凉面` default to noodle type `韭叶`
 - spicy level order is:
   - `不辣`
   - `少辣`
@@ -2632,8 +2622,9 @@ Current frontend behavior in code:
 21. Clicking a menu item opens a separate customization modal.
 22. The ordering page reads categories, items, and option groups from the backend menu catalog API and maps them into the frontend UI shape.
 23. The live menu catalog currently supports these option groups on the ordering page when present on an item:
-    - combo side selection, which derives combo state
-    - optional combo egg selection after a combo side is selected
+    - combo toggle
+    - combo egg selection
+    - combo side selection
     - size
     - soup base
     - noodle type
@@ -2863,9 +2854,9 @@ Current frontend behavior in code:
     - soup base selection
     - noodle type selection
     - spicy level selection
-    - combo side selection that derives combo state and defaults to `走蛋`
-    - optional combo egg selection after a side is selected
-    - independent multi-quantity regular egg add-ons
+    - combo toggle
+    - combo egg selection
+    - combo side selection
     - add-ons with quantity controls
 69. In iPad landscape, the customization modal uses a compact workstation layout:
     - reduced outer padding
@@ -4046,9 +4037,7 @@ Current frontdesk receipt content:
     - `Order Type: Takeout`
   - divider line
   - one order item block per line:
-    - soup noodle combo: `{quantity}* combo {中碗|大碗}{receipt_display_name}`
-    - a single non-combo soup noodle: `{中碗|大碗}{receipt_display_name}`
-    - other items retain `{quantity} x [Combo] {item_name} [Regular|Large]`
+    - `{中碗|大碗}{item_name} [Combo] [Regular|Large] x{quantity}`
     - optional noodle-type line:
       - `{noodle_type}`
     - optional charged add-on lines only:
@@ -4066,7 +4055,11 @@ Current frontdesk receipt content:
   - `Submitted: ...`
 - dine-in orders intentionally do not print an order-type line
 - no order-number line or explanatory debug text is printed
-- frontdesk receipt intentionally does not print GRAB kitchen shorthand. It does show the selected noodle type, spicy level, applicable chargeable add-ons, combo egg or `走蛋`, combo side, side requests, and item note when present.
+- frontdesk receipt intentionally does not print kitchen-production details such as:
+  - spicy level
+  - soup base
+  - remove/addon instructions
+  - grab shorthand
 - combo display rule:
   - a main item is treated as combo when:
     - `order_items.combo_role = main`
@@ -4649,14 +4642,13 @@ Returns:
 {
   "access_token": "jwt...",
   "refresh_token": "random...",
-  "expires_in": 2592000,
+  "expires_in": 900,
   "user": {
     "id": 1,
     "username": "owner",
     "full_name": "Owner User",
     "role_code": "ADMIN",
     "store_id": 1,
-    "store_name": "Main Store",
     "organization_id": 1
   },
   "features": {
@@ -4684,13 +4676,13 @@ Access token:
 
 - JWT
 - HMAC-SHA256
-- default expiry: 30 days
+- default expiry: 15 minutes
 - contains `user_id`, `role_id`, `store_id`, `organization_id`, `role_code`, `iat`, `exp`
 
 Refresh token:
 
 - secure random string
-- default expiry: 90 days
+- default expiry: 30 days
 - database stores only SHA-256 hash
 - refresh rotates the refresh token and revokes the old token
 - logout marks the token `revoked_at`
@@ -4701,8 +4693,8 @@ Config lives in `backend/src/main/resources/application.yml`:
 app:
   auth:
     jwt-secret: dev-local-restaurant-pos-change-this-secret-please-2026
-    access-token-expiration-seconds: 2592000
-    refresh-token-expiration-days: 90
+    access-token-expiration-seconds: 900
+    refresh-token-expiration-days: 30
     x-user-id-fallback-enabled: true
 ```
 
@@ -4748,9 +4740,9 @@ Route:
 
 - `/login`
 
-The login page saves `access_token` and `refresh_token` in `localStorage`. The frontend API client automatically refreshes an expired access token with `POST /api/v1/auth/refresh`, saves the rotated tokens, and retries the original request once. Concurrent 401 responses share one refresh request to avoid rotating the same refresh token multiple times. Logout clears only the Web account tokens and revoked refresh token; it does not clear Android Pad Direct pairing credentials.
+The login page saves `access_token` and `refresh_token` in `localStorage`. The frontend API client automatically refreshes an expired access token with `POST /api/v1/auth/refresh`, saves the rotated tokens, and retries the original request once. Concurrent 401 responses share one refresh request to avoid rotating the same refresh token multiple times.
 
-Long-running pages such as `/stores/{storeId}/frontdesk` must route API calls through `frontend/src/services/apiClient.ts`. Frontdesk table polling, dining table loading, order APIs, menu catalog, Print Center, admin dashboard, reports, KDS, pickup, platform admin, and owner menu option services use the shared `apiRequest(...)` path so background 401 responses can refresh tokens instead of causing request storms. If one request refreshes tokens before another old request receives its 401, the later request detects the changed access token and retries once without rotating the refresh token again. AuthProvider listens for `restaurant-auth-updated` and `restaurant-auth-expired` events so background refreshes keep React auth state in sync. Failed refresh / true 401 clears account tokens; network errors, timeouts, and ordinary 403 responses do not erase saved tokens.
+Long-running pages such as `/stores/{storeId}/frontdesk` must route API calls through `frontend/src/services/apiClient.ts`. Frontdesk table polling, dining table loading, order APIs, menu catalog, Print Center, admin dashboard, reports, KDS, pickup, platform admin, and owner menu option services use the shared `apiRequest(...)` path so background 401 responses can refresh tokens instead of causing request storms. If one request refreshes tokens before another old request receives its 401, the later request detects the changed access token and retries once without rotating the refresh token again. AuthProvider listens for `restaurant-auth-updated` and `restaurant-auth-expired` events so background refreshes keep React auth state in sync, while failed refreshes clear tokens and allow route guards to return to `/login`.
 
 ### Next Authorization Step
 
@@ -5055,7 +5047,6 @@ GRAB Ticket v2.0 layout rules:
 - Examples: two plain `黄瓜` rows print as `黄瓜 x2`; two `黄瓜 | 走花生` rows print as `黄瓜 x2` plus `走花生`.
 - Different side-dish requirements remain separate, for example `黄瓜 | 走花生` and `黄瓜 | 加辣` print as separate `黄瓜 x1` blocks.
 - GRAB never uses a generic `小菜 xN` total because kitchen staff still need the exact side-dish name.
-- A single noodle explicitly includes its bowl quantity in the first config segment, for example `中酸×1 | +蛋`; multiple identical bowls remain `(中酸 | +蛋) ×2`.
 
 Frontdesk receipt font behavior:
 
@@ -5121,16 +5112,6 @@ This pass keeps existing POS/KDS/Print Center architecture intact and applies fo
 - This does not re-submit the order and does not recreate kitchen tasks.
 - Manual Print / Reprint remains a complete current-order print and does not use the update batch filter.
 
-### Completed Order GRAB Snapshot Reprint
-
-- Order Center manual `GRAB` reprint replays the newest safely reusable successful full GRAB snapshot instead of re-rendering the current `kitchen_tasks` state. This keeps completed-order reprint safe after Finish has cancelled unfinished kitchen tasks.
-- The source query requires the same `store_id` and `order_id`, `module_code = GRAB`, `receipt_type = GRAB`, `status = PRINTED`, `order_update_batch_id IS NULL`, and a nonblank `rendered_text_snapshot` or `escpos_payload_base64`. It orders by non-null `printed_at` descending, then `id` descending.
-- Failed, pending, claimed, and update-ticket jobs are never valid full-order GRAB sources. `payload_snapshot` alone is metadata and is not printable content.
-- The new reprint job always uses the current GRAB printer assignment. When a rendered-text snapshot is available, the backend attaches that exact text and regenerates the PAD_DIRECT ESC/POS payload using the current printer encoding, code page, and effective assignment font size.
-- The original successful source job is never changed. The new job starts as a fresh job with the normal retry and PAD_DIRECT claim state.
-- An ESC/POS-only historical job is not replayed by this path because `print_jobs` does not preserve a historical printer configuration snapshot needed to prove byte-payload compatibility after printer settings change. If no safely reusable text snapshot exists, the endpoint returns HTTP `409` with `NO_REPRINTABLE_SNAPSHOT: No successful full GRAB ticket is available for reprint` and creates no new job.
-- This does not restore or modify cancelled kitchen tasks, does not alter `completeOrder`, and does not change normal submit or `GRAB_UPDATE` rendering. `FRONTDESK_RECEIPT` retains its existing current-order rendering path. `HOT_KITCHEN` has the same completed-task rendering risk but is deliberately unchanged in this focused GRAB fix.
-
 ### Takeout Receipt Copies
 
 - `printer_assignments` now includes `takeout_receipt_copies`.
@@ -5146,12 +5127,10 @@ This pass keeps existing POS/KDS/Print Center architecture intact and applies fo
 
 ### Frontdesk Receipt Combo Ordering
 
-- A soup-noodle combo uses the receipt-only line shape `{quantity}* combo {bowl_size_zh}{display_name}`, for example `1* combo 中碗牛肉面` or `2* combo 大碗牛肉面`.
-- A non-combo soup noodle places the normalized Chinese bowl size before the receipt display name, for example `中碗牛肉面`; known `Regular`/`Large` values are not printed after the name, and an existing `中碗`/`大碗` name prefix is not duplicated.
-- `传统牛肉面` is shortened to `牛肉面` only in `FRONTDESK_RECEIPT` display output. The menu name, database snapshot, admin UI, KDS, GRAB, and HOT_KITCHEN output remain unchanged.
-- A selected combo side is the stable combo signal. If no `COMBO_EGG` option is present, the receipt prints `走蛋`; otherwise it prints `鸡蛋: ...` before the combo side.
-- Combo side dishes are printed beneath the combo main line for packing visibility, for example `小菜: 拌黄瓜` followed by side-specific requests such as `走花生`. Spicy level and item notes retain their existing positions and are not discarded.
-- GRAB kitchen tickets remain production-oriented. Identical `DEEPFRIED`/fried tasks are now grouped only when their stable item, station, options, instructions, combo role, and note signature all match; the grouped line uses `{quantity}*{item}`, for example `3*炸虾`.
+- `FRONTDESK_RECEIPT` now prints `Combo` before the item name.
+- Example: `1 x Combo 大碗传统牛肉面 Large`.
+- Combo side dishes are printed beneath the combo main line for packing visibility, for example `小菜: 拌黄瓜` followed by side-specific requests such as `走花生`.
+- GRAB kitchen tickets are unchanged and continue to focus on production instructions.
 
 ### Frontend Cache Versioning
 
@@ -5313,7 +5292,7 @@ Owner menu option APIs use the `admin:menu_manage` capability instead of the bro
 
 ### Combo UI and Child Remove Options
 
-The ordering modal uses touch-friendly side, combo-egg, and add-on controls. A selected combo side is the source of truth for combo state; it defaults to `走蛋` until an optional combo egg is selected. Regular tea/fried egg add-ons are separate multi-quantity rows and do not create a combo on their own. Combo child remove options are shown only after their parent side is selected. Switching or clearing a combo side clears the combo egg and child remove options to prevent stale requests.
+The ordering modal uses touch-friendly buttons for combo egg and combo side selection. Combo child remove options are shown only after their parent side is selected. Switching combo side clears previously selected child remove options to prevent stale requests.
 
 Example:
 
@@ -5328,7 +5307,7 @@ Combo side remove options can be resolved from two sources:
 
 Menu Management owns the displayed side requests. The catalog includes side item remove options on combo side options so `/frontdesk/menu` can show existing side-dish requests such as `走洋葱`, `走花生`, and `走香菜` for `套餐土豆丝`. If the real side item has active `REMOVE` options, the frontend uses those options and ignores legacy child options to avoid duplicates. Legacy child options are used only when the real side item has no active remove data. When the selected side remove belongs to the real side item rather than the main dish, order save accepts it only if the matching combo side is selected, then stores the snapshot as `COMBO_SIDE_REMOVE` with the selected combo side option as its parent. This keeps GRAB/kitchen side-task instructions correct without exposing arbitrary cross-item options.
 
-The order payload continues to use the existing option IDs. A combo side sends the combo option, optional combo egg, selected side, and side child remove IDs; egg-only add-ons send only their regular add-on option IDs and quantities. New order option snapshots include `option_code_snapshot`, `option_group_snapshot`, and `parent_option_id_snapshot` so kitchen logic can use stable metadata for new orders. Legacy Chinese-name fallback remains only for older data.
+The order payload includes selected combo, egg, side, and side child remove option IDs. New order option snapshots include `option_code_snapshot`, `option_group_snapshot`, and `parent_option_id_snapshot` so kitchen logic can use stable metadata for new orders. Legacy Chinese-name fallback remains only for older data.
 
 ### Frontdesk Ordering UX and Receipt Readability
 
@@ -5336,7 +5315,7 @@ The order payload continues to use the existing option IDs. A combo side sends t
 - Closing the customization modal unmounts the draft editor. Reopening an item rebuilds the draft from the selected menu item or the selected order line, so stale size/add-on/notes/quantity state is not reused.
 - The `/frontdesk/menu` current-order panel uses a fixed-height flex layout in the ordering workspace: header, independently scrollable order lines, and a footer that remains visible with item count, subtotal, tax, total, and the submit/update action.
 - `FRONTDESK_RECEIPT` no longer prints the `FRONTDESK RECEIPT` title. Its first receipt line is the table/pickup label rendered through `PrintMarkup.large(...)`, for example `[[LARGE]]桌号: 1里[[/LARGE]]`.
-- Kitchen instruction generation and kitchen-facing renderers aggregate duplicate add-on tokens inside a single item config instead of dropping or duplicating them. For example, `+蛋 +蛋x2` prints as `+蛋×3`; `+蛋 +煎x2` prints as `+蛋 +煎×2`; item quantity such as trailing `x2` is not multiplied into modifier quantity.
+- Kitchen instruction generation and GRAB rendering aggregate duplicate add-on tokens instead of dropping or duplicating them. For example, `+蛋 +蛋x2` prints as `+蛋x3`; `+蛋 +煎x2` remains `+蛋 +煎x2`; item quantity such as trailing `x2` is not multiplied into modifier quantity.
 
 ### Menu Item Deactivation
 
@@ -5552,20 +5531,17 @@ Phase 3 still does not implement Platform Admin, SaaS billing/subscription, Disp
 
 ## Cloud Ready PR8: Cloud Deployment Architecture Package
 
-PR8 originally added a cloud deployment package under `deployment/cloud/`. The
-package has since been upgraded for a single Ubuntu 22.04 Docker server while
-still avoiding business logic changes and production secrets in git.
+PR8 adds a template-only cloud deployment package under `deployment/cloud/`. It does not connect to any server, deploy any image, change runtime business behavior, or introduce production secrets.
 
 Package contents:
 
-- `README_CLOUD_DEPLOYMENT.md`: cloud deployment package summary and pointer to the full server runbook.
+- `README_CLOUD_DEPLOYMENT.md`: cloud architecture, environment setup, safety guards, printing boundary, and smoke test checklist.
 - `README_ROLLBACK.md`: application rollback, database restore, Flyway rollback cautions, and printing stabilization notes.
-- `.env.example`: deployment placeholders only; the filled `.env` must stay outside git.
-- `docker-compose.yml`: PostgreSQL, backend, Nginx/static frontend, and Certbot services for same-server Docker deployment.
-- `nginx.http.conf`: temporary HTTP/static/proxy template used for initial Let's Encrypt HTTP-01 validation.
-- `nginx.conf`: HTTPS static frontend plus `/api` and `/ws` reverse proxy template.
+- `.env.example`: blank deployment placeholders only; the filled `.env` must stay outside git.
+- `docker-compose.yml`: backend, frontend/Nginx, and optional local PostgreSQL profile for rehearsal.
+- `nginx.conf.example`: static frontend serving plus `/api` and `/ws` reverse proxy examples.
 - `application-cloud.yml.example`: documentation-only environment mapping for the cloud profile.
-- `deploy.sh`, `update.sh`, `backup-db.sh`, `restore-db.sh`, `health-check.sh`: server install/deploy, one-command update, database backup/restore, and reachability checks.
+- `deploy.sh`, `backup-db.sh`, `restore-db.sh`, `health-check.sh`: local templates for compose validation/start, database backup/restore, and reachability checks.
 
 Important boundaries:
 
@@ -5575,9 +5551,7 @@ Important boundaries:
 - Cloud servers must not directly connect to private LAN printers. Use `MOCK`, `DISABLED`, `PAD_DIRECT`, or a local print bridge for real store printing.
 - `HOT_KITCHEN` remains a printing module, but physical printer transport follows the same cloud printing boundary.
 
-The cloud deployment package does not modify backend business code, frontend app
-behavior, database migrations, Android code, payment/refund behavior,
-`completeOrder`, or printing route semantics.
+PR8 intentionally does not modify backend business code, frontend app code, database migrations, Android code, payment/refund behavior, `completeOrder`, or printing route semantics.
 
 ## Cloud Ready PR9-10: Production Bootstrap Runbook And Final Smoke Checklist
 
@@ -5585,15 +5559,13 @@ PR9-10 adds documentation-only cloud launch preparation under `deployment/cloud/
 
 New documents:
 
-- `README_PRODUCTION_BOOTSTRAP.md`: safe runbook for first cloud organization, store, owner, memberships, menu/table/printer setup, and rollback notes.
+- `README_PRODUCTION_BOOTSTRAP.md`: safe manual runbook for first cloud organization, store, owner, memberships, menu/table/printer setup, and rollback notes.
 - `FINAL_SMOKE_TEST_CHECKLIST.md`: copy-paste checklist covering pre-deploy, cloud environment, backend startup, frontend, bootstrap, POS, printing, KDS-disabled mode, admin pages, backup/restore, long-running pilot, no-go conditions, accepted pilot limitations, and monitoring.
 - `bootstrap-template.sql.example`: placeholder-only SQL skeleton for reviewed bootstrap rehearsal. It is not a production-ready script and must not contain plaintext passwords or real hashes.
 
 Important boundaries:
 
-- Production bootstrap now uses `deployment/cloud/bootstrap-admin.sh`, an
-  explicit one-time command that invokes backend code rather than SQL snippets
-  or demo seed flags.
+- PR9-10 does not implement a production bootstrap CLI/API.
 - PR9-10 does not connect to a server, deploy anything, or write secrets.
 - Cloud bootstrap must not depend on local/demo default users or RuntimeDataSeeder demo data.
 - Owner credentials must be generated securely, stored as BCrypt hashes, and handed to the owner through an out-of-band secure process.
@@ -6173,120 +6145,19 @@ Behavior:
   below add-ons/removes. The right-side order summary can still display/edit
   notes, and the submitted payload still uses the existing `notes` field.
 
-## PR11E-G: Noodle Same-Config Grouped Print Display
+## PR11D-14G: Ordering Combo Option Ordering
 
-PR11E-G is a backend renderer-only printing readability fix. It does not change
-order lifecycle, payment/refund behavior, `completeOrder`, menu/order pricing,
-order submit payloads, kitchen task generation, HOT_KITCHEN eligibility,
-PAD_DIRECT state, printer routing, or Android worker behavior.
-
-Behavior:
-
-- GRAB and HOT_KITCHEN kitchen-facing renderers group noodle tasks only when the
-  full single-bowl config is stable-identical: menu item id, noodle category,
-  station/module, kitchen instruction text, add/remove/options metadata, and
-  notes/special instructions.
-- For grouped noodles, the printed line uses `(single bowl config) ×quantity`.
-  Example: two identical medium sour noodles each with one egg print as
-  `(中酸 | +蛋) ×2`, so the parentheses describe one bowl and the outer quantity
-  describes how many bowls share that exact config.
-- Add-on quantities stay inside the single-bowl config. A single bowl with two
-  eggs prints `中酸×1 | +蛋×2`; two identical bowls each with two eggs print
-  `(中酸 | +蛋×2) ×2`.
-- Different spicy levels, add-ons, removes, option metadata, notes, or station
-  values remain separate lines. Non-noodle quantity markers remain renderer
-  specific: GRAB uses `x`, for example `炸虾 x3`, while HOT_KITCHEN uses `×`,
-  for example `炸虾 ×3`.
-- Update tickets use the same GRAB/HOT_KITCHEN renderers, so the same display
-  rule applies to GRAB update tickets and HOT_KITCHEN update tickets.
-
-## Ubuntu Docker Server Deployment
-
-The server deployment package supports a fresh Ubuntu 22.04 Tencent Cloud
-Lightweight server with Docker Compose, same-server PostgreSQL, Nginx reverse
-proxy, and Let's Encrypt HTTPS.
-
-Deployment files:
-
-- Root `README_SERVER_DEPLOY.md` is the ordered fresh-server runbook.
-- Root `README_GIT_DEPLOY_WORKFLOW.md` is the repeatable Git, PR, server
-  update, backup, and rollback workflow for future releases.
-- `backend/Dockerfile` builds the Spring Boot jar with Maven and runs it on
-  Eclipse Temurin 17 JRE.
-- `frontend/Dockerfile` builds the React/Vite app with Node 22 and serves the
-  generated static assets with Nginx.
-- `deployment/cloud/docker-compose.yml` defines `db`, `backend`, `nginx`, and
-  `certbot` services. PostgreSQL data, certificates, ACME webroot files, and
-  backups are stored under `deployment/cloud/data`.
-- `deployment/cloud/nginx.http.conf` is used only for initial HTTP validation
-  and HTTP-only public-IP deployments. In HTTP-only mode, Nginx uses
-  `server_name _`, `DOMAIN` and `LETSENCRYPT_EMAIL` may stay blank, and Certbot
-  is not executed.
-- `deployment/cloud/nginx.conf` is the HTTPS production template. It serves the
-  React app and proxies `/api/` and `/ws` to the backend service. HTTPS mode
-  requires `DOMAIN` and `LETSENCRYPT_EMAIL`.
-- `deployment/cloud/deploy.sh` installs Docker Engine and the Docker Compose
-  plugin, creates runtime directories, starts PostgreSQL, builds backend and
-  frontend images, starts the backend so Flyway initializes the schema, issues
-  or renews the Let's Encrypt certificate when HTTPS is enabled, and starts the
-  final stack. `./deploy.sh --http-only` is equivalent to
-  `ENABLE_HTTPS=false`; `./deploy.sh --https` forces HTTPS validation and
-  certificate handling.
-- `deployment/cloud/bootstrap-admin.sh` is the explicit one-time production
-  owner bootstrap command. It runs backend code with all demo/default seed flags
-  disabled, can read non-secret fields from a chmod `600`
-  `bootstrap-admin.env`, reads the owner password through hidden stdin or
-  explicit `--password-stdin`, creates the first organization/store/owner
-  credentials/memberships in one transaction, and refuses to run after an active
-  owner/admin already exists. The password is never passed through Docker
-  Compose env/config or command-line arguments.
-- `deployment/cloud/export-store-config.sh` and
-  `deployment/cloud/import-store-config.sh` support a guarded one-store legacy
-  configuration migration. The whitelist covers menu, options, stations,
-  dining tables, inventory/BOM, receipt templates, and KDS display config. The
-  scripts deliberately exclude organizations, stores, users, credentials,
-  memberships, orders, tokens, audit logs, analytics, print jobs, printer
-  configs, printer assignments, and store device bindings.
-- The store-config importer leaves the cloud PostgreSQL server image unchanged
-  and runs `pg_restore` / `psql` through a temporary PostgreSQL client
-  container. The default `POSTGRES_CLIENT_IMAGE` is `postgres:18-alpine`, which
-  can read PostgreSQL 18 custom-format dumps such as format `1.16` and restore
-  their data into the PostgreSQL 16 `db:5432` server. The same client path is
-  used for dump listing, forbidden-table validation, dry-run checks, and the
-  formal one-transaction restore.
-- `deployment/cloud/update.sh` rebuilds and restarts backend/frontend services
-  for future code updates and runs `certbot renew` when HTTPS is enabled.
-- `deployment/cloud/backup-db.sh` and `restore-db.sh` use the PostgreSQL Docker
-  container for `pg_dump` / `pg_restore`, so the server does not need a host
-  PostgreSQL client package.
-
-Boundaries:
-
-- This deployment work does not change order lifecycle, payment/refund,
-  `completeOrder`, menu/pricing, order submit payloads, kitchen task generation,
-  printer routing, Android worker behavior, or database schema/migrations.
-- A filled `.env` remains server-local and must not be committed.
-- The cloud profile still relies on Flyway for schema initialization and keeps
-  production demo/default seed behavior disabled.
-
-## Ordering Combo Selection And Receipt Grouping
-
-The current ordering implementation changes only the UI selection rule and uses
-the existing option IDs, option codes, option groups, parent option relationships,
-price rules, and order submit payload shape. It does not change backend menu
-models, kitchen task generation, HOT_KITCHEN routing, printer routing,
-payment/refund behavior, or `completeOrder`.
+PR11D-14G is a frontend-only ordering UI polish for Android Pad WebView and
+desktop browser ordering. It does not change backend menu models, option ids,
+option codes, option groups, parent option relationships, price calculation,
+order submit payloads, kitchen task generation, HOT_KITCHEN routing, printing
+routing, payment/refund behavior, or `completeOrder`.
 
 Behavior:
 
 - For noodle menu items, the customization modal renders the combo / 套餐
-  section immediately below spicy level and before other add-ons and notes.
-- The modal no longer requires a manual combo toggle. Selecting a combo side
-  creates the combo with `走蛋` by default; selecting one optional combo egg
-  changes only that included egg selection. Clearing the side cancels the combo
-  and removes its combo egg/side-request selections.
-- Regular `TEA_EGG` and `FRIED_EGG` add-ons are shown as independent quantity
-  controls. They can be mixed and incremented without adding a combo charge.
+  section at the top of the option area before size, soup base, noodle type,
+  and spicy level.
 - Noodle detection uses stable category codes such as `SOUP_NOODLE`,
   `DRY_NOODLE`, `FRIED_NOODLE`, `NOODLE`, and `NOODLES`, with a structural
   legacy fallback to existing noodle customization groups when old local data

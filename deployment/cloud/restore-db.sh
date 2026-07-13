@@ -2,33 +2,24 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="${ENV_FILE:-$SCRIPT_DIR/.env}"
-COMPOSE_FILE="${COMPOSE_FILE:-$SCRIPT_DIR/docker-compose.yml}"
-BACKUP_FILE="${1:-}"
-
-if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
-  SUDO=()
-else
-  SUDO=(sudo)
-fi
-
 cd "$SCRIPT_DIR"
 
-die() {
-  echo "ERROR: $*" >&2
-  exit 1
-}
+ENV_FILE="${ENV_FILE:-.env}"
+BACKUP_FILE="${1:-}"
 
 if [[ -z "$BACKUP_FILE" ]]; then
-  die "Usage: $0 <backup-file.dump>"
+  echo "Usage: $0 <backup-file.dump>" >&2
+  exit 1
 fi
 
 if [[ ! -f "$BACKUP_FILE" ]]; then
-  die "Backup file not found: $BACKUP_FILE"
+  echo "Backup file not found: $BACKUP_FILE" >&2
+  exit 1
 fi
 
 if [[ ! -f "$ENV_FILE" ]]; then
-  die "Missing $ENV_FILE. Copy .env.example to .env and fill database settings first."
+  echo "Missing $ENV_FILE. Copy .env.example to .env and fill database settings first." >&2
+  exit 1
 fi
 
 set -a
@@ -39,33 +30,28 @@ set +a
 require_env() {
   local name="$1"
   if [[ -z "${!name:-}" ]]; then
-    die "Missing required environment value: $name"
+    echo "Missing required environment value: $name" >&2
+    exit 1
   fi
 }
 
-compose() {
-  "${SUDO[@]}" docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
-}
-
+require_env DB_HOST
 require_env DB_NAME
 require_env DB_USER
 require_env DB_PASSWORD
 
 echo "Danger: database restore can overwrite live data."
-echo "The backend container will be stopped during restore and restarted afterwards."
+echo "Recommended: rehearse this restore against staging or a temporary database first."
 read -r -p "Type RESTORE to continue: " confirmation
 
 if [[ "$confirmation" != "RESTORE" ]]; then
-  die "Restore cancelled."
+  echo "Restore cancelled."
+  exit 1
 fi
 
-compose up -d db
-compose stop backend || true
+DB_PORT="${DB_PORT:-5432}"
+export PGPASSWORD="$DB_PASSWORD"
+pg_restore -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" --clean --if-exists -d "$DB_NAME" "$BACKUP_FILE"
+unset PGPASSWORD
 
-echo "Restoring $BACKUP_FILE into $DB_NAME..."
-compose exec -T -e PGPASSWORD="$DB_PASSWORD" db \
-  pg_restore -U "$DB_USER" -d "$DB_NAME" --clean --if-exists --no-owner --no-privileges \
-  < "$BACKUP_FILE"
-
-compose up -d backend
 echo "Restore complete."
