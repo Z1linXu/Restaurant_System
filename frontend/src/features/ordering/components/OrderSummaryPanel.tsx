@@ -104,7 +104,7 @@ export function OrderSummaryPanel({
 
         <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
           <Button variant="secondary" className={compact ? 'min-h-11 rounded-[16px] text-[0.84rem]' : 'min-h-14 rounded-[20px]'} onClick={onSaveDraft}>
-            {busy ? '保存中...' : '保存草稿'}
+            {busy ? '保存中...' : '保存到本机'}
           </Button>
           <Button variant="secondary" className={compact ? 'min-h-11 rounded-[16px] text-[0.84rem]' : 'min-h-14 rounded-[20px]'} onClick={onCancelOrder}>
             取消订单

@@ -26,6 +26,17 @@ import { ApiRequestError } from '../services/apiClient'
 import { recordAppOperation } from '../services/networkStatus'
 import { normalizeComboDraft, resolveComboSelection, resolveComboUpcharge } from '../utils/comboSelection'
 import { resolveNoodleTypeId } from '../utils/noodleTypeDefaults'
+import {
+  buildDraftContextKey,
+  cleanupExpiredLocalDrafts,
+  createLocalDraftRecord,
+  deleteLocalDraft,
+  readLocalDraft,
+  saveLocalDraft,
+  type LocalDraftContext,
+  type LocalDraftRecord,
+  type LocalDraftScope,
+} from '../offline/localDrafts'
 
 function calculateDraftLineSubtotal(menuItem: MenuItem | undefined, draft: ItemCustomizationDraft) {
   if (!menuItem) {
@@ -242,6 +253,14 @@ function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationDraft): 
   }
 }
 
+interface DraftOfflineIdentity {
+  accountId: number | null
+  organizationId: number | null
+  menuRevision: number
+}
+
+const LOCAL_DRAFT_SAVE_DEBOUNCE_MS = 200
+
 export function useDraftOrder(
   storeId: number,
   slotLabel: string,
@@ -249,21 +268,79 @@ export function useDraftOrder(
   orderType: 'dine_in' | 'pickup',
   pickupLabel: string | null,
   catalogItems: MenuItem[],
+  offlineIdentity: DraftOfflineIdentity,
 ) {
   const [order, setOrder] = useState<BackendOrderResponse | null>(null)
   const [stagedItems, setStagedItems] = useState<OrderLineItem[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [persistenceError, setPersistenceError] = useState<string | null>(null)
+  const [localDraftId, setLocalDraftId] = useState<string | null>(null)
+  const [clientOrderId, setClientOrderId] = useState<string | null>(null)
+  const [lastLocalSavedAt, setLastLocalSavedAt] = useState<string | null>(null)
   const submitInFlightRef = useRef(false)
   const updateIdempotencyKeyRef = useRef<string | null>(null)
+  const localDraftRef = useRef<LocalDraftRecord | null>(null)
+  const saveTimerRef = useRef<number | null>(null)
+  const flushLocalDraftRef = useRef<() => Promise<void>>(async () => undefined)
+
+  const localScope = useMemo<LocalDraftScope | null>(() => {
+    if (offlineIdentity.accountId == null || offlineIdentity.organizationId == null) return null
+    return {
+      accountId: offlineIdentity.accountId,
+      organizationId: offlineIdentity.organizationId,
+      storeId,
+    }
+  }, [offlineIdentity.accountId, offlineIdentity.organizationId, storeId])
+  const localContext = useMemo<LocalDraftContext>(() => ({
+    orderType,
+    slotLabel,
+    tableLabel,
+    tableNo: orderType === 'dine_in' ? slotLabel : null,
+    pickupNo: orderType === 'pickup' ? pickupLabel : null,
+  }), [orderType, pickupLabel, slotLabel, tableLabel])
+  const contextKey = useMemo(() => buildDraftContextKey(localContext), [localContext])
+
+  const mapServerItems = useCallback((nextOrder: BackendOrderResponse) => nextOrder.items.map(
+    (item) => mapOrderItem(item, catalogItems, nextOrder.status !== 'draft'),
+  ), [catalogItems])
 
   useEffect(() => {
     let active = true
+    setOrder(null)
+    setStagedItems(null)
+    setLoading(true)
+    setError(null)
+    setPersistenceError(null)
+    localDraftRef.current = null
 
     const load = async () => {
-      setLoading(true)
-      setError(null)
+      let cached: LocalDraftRecord | null = null
+      if (localScope) {
+        try {
+          void cleanupExpiredLocalDrafts().catch(() => undefined)
+          cached = await readLocalDraft(localScope, contextKey)
+          if (!cached) {
+            cached = createLocalDraftRecord(localScope, localContext, offlineIdentity.menuRevision)
+            cached = await saveLocalDraft(cached)
+          }
+          if (!active) return
+          localDraftRef.current = cached
+          setLocalDraftId(cached.localDraftId)
+          setClientOrderId(cached.clientOrderId)
+          setLastLocalSavedAt(cached.updatedAt)
+          if (cached.serverOrderSnapshot) {
+            setOrder(cached.serverOrderSnapshot)
+            setStagedItems(cached.items)
+            setLoading(false)
+          }
+        } catch (storageError) {
+          if (active) {
+            setPersistenceError(storageError instanceof Error ? storageError.message : '本机草稿存储不可用')
+          }
+        }
+      }
 
       try {
         const resolvedOrder = await ensureEditableOrder({
@@ -272,39 +349,56 @@ export function useDraftOrder(
           tableNo: orderType === 'dine_in' ? slotLabel : null,
           pickupNo: orderType === 'pickup' ? pickupLabel : null,
         })
-        if (active) {
-          setOrder(resolvedOrder)
+        if (!active) return
+        const serverUpdatedAt = new Date(resolvedOrder.updated_at).getTime()
+        const localUpdatedAt = cached ? new Date(cached.updatedAt).getTime() : 0
+        const keepLocalItems = Boolean(
+          cached
+          && cached.serverOrderId === resolvedOrder.id
+          && cached.items.length > 0
+          && (cached.mode === 'SERVER_ORDER_UPDATE' || localUpdatedAt > serverUpdatedAt),
+        )
+        const nextItems = keepLocalItems ? cached!.items : mapServerItems(resolvedOrder)
+        setOrder(resolvedOrder)
+        setStagedItems(nextItems)
+
+        if (cached) {
+          localDraftRef.current = {
+            ...cached,
+            context: localContext,
+            mode: resolvedOrder.status === 'draft' ? 'LOCAL_NEW_ORDER' : 'SERVER_ORDER_UPDATE',
+            serverOrderId: resolvedOrder.id,
+            serverOrderSnapshot: resolvedOrder,
+            items: nextItems,
+            menuRevision: offlineIdentity.menuRevision,
+            lastError: null,
+          }
+          void saveLocalDraft(localDraftRef.current)
+            .then((saved) => {
+              localDraftRef.current = saved
+              if (active) setLastLocalSavedAt(saved.updatedAt)
+            })
+            .catch((storageError) => {
+              if (active) setPersistenceError(storageError instanceof Error ? storageError.message : '本机草稿保存失败')
+            })
         }
       } catch (loadError) {
-        if (active) {
+        if (!active) return
+        if (cached?.serverOrderSnapshot) {
+          setError('网络暂不可用，已恢复本机草稿；尚未同步的内容只保存在本机。')
+        } else {
           setError(loadError instanceof Error ? loadError.message : 'Failed to open draft order')
         }
       } finally {
-        if (active) {
-          setLoading(false)
-        }
+        if (active) setLoading(false)
       }
     }
 
     void load()
-
     return () => {
       active = false
     }
-  }, [orderType, pickupLabel, slotLabel, storeId])
-
-  useEffect(() => {
-    if (!order) {
-      setStagedItems(null)
-      return
-    }
-    if (order.status === 'draft') {
-      setStagedItems(null)
-      return
-    }
-    const mappedItems = order.items.map((item) => mapOrderItem(item, catalogItems, true))
-    setStagedItems(mappedItems)
-  }, [catalogItems, order])
+  }, [contextKey, localContext, localScope, mapServerItems, offlineIdentity.menuRevision, orderType, pickupLabel, slotLabel, storeId])
 
   const runMutation = useCallback(async (operation: () => Promise<BackendOrderResponse>) => {
     setSaving(true)
@@ -312,6 +406,7 @@ export function useDraftOrder(
     try {
       const nextOrder = await operation()
       setOrder(nextOrder)
+      setStagedItems(mapServerItems(nextOrder))
       return nextOrder
     } catch (mutationError) {
       const message = mutationError instanceof Error ? mutationError.message : 'Draft order update failed'
@@ -320,30 +415,85 @@ export function useDraftOrder(
     } finally {
       setSaving(false)
     }
-  }, [])
+  }, [mapServerItems])
 
   const session = useMemo(() => {
-    if (!order) {
-      return null
-    }
+    if (!order) return null
     const baseSession = mapOrderToSession(order, slotLabel, tableLabel, catalogItems)
-    if (order.status === 'draft' || !stagedItems) {
-      return baseSession
-    }
-    const dirty = stagedItems.some((item) => item.id.startsWith('temp-'))
-
+    const effectiveItems = stagedItems ?? baseSession.items
+    const dirty = effectiveItems.some((item) => item.id.startsWith('temp-'))
     return {
       ...baseSession,
       isModifiedAfterSubmit: dirty || baseSession.isModifiedAfterSubmit,
-      items: stagedItems,
+      items: effectiveItems,
     }
   }, [catalogItems, order, slotLabel, stagedItems, tableLabel])
 
-  const isDraftOrder = order?.status === 'draft'
+  useEffect(() => {
+    if (!session || !localDraftRef.current) return
+    localDraftRef.current = {
+      ...localDraftRef.current,
+      context: localContext,
+      mode: order?.status === 'draft' ? 'LOCAL_NEW_ORDER' : 'SERVER_ORDER_UPDATE',
+      serverOrderId: order?.id ?? null,
+      serverOrderSnapshot: order,
+      items: session.items,
+      menuRevision: offlineIdentity.menuRevision,
+    }
+    if (saveTimerRef.current != null) window.clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = window.setTimeout(() => {
+      void flushLocalDraftRef.current()
+    }, LOCAL_DRAFT_SAVE_DEBOUNCE_MS)
+    return () => {
+      if (saveTimerRef.current != null) window.clearTimeout(saveTimerRef.current)
+    }
+  }, [offlineIdentity.menuRevision, localContext, order, session])
 
+  const flushLocalDraft = useCallback(async () => {
+    if (saveTimerRef.current != null) {
+      window.clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = null
+    }
+    if (!localDraftRef.current) return
+    try {
+      const saved = await saveLocalDraft(localDraftRef.current)
+      localDraftRef.current = saved
+      setLastLocalSavedAt(saved.updatedAt)
+      setPersistenceError(null)
+    } catch (storageError) {
+      const message = storageError instanceof Error ? storageError.message : '本机草稿保存失败'
+      setPersistenceError(message)
+      throw storageError
+    }
+  }, [])
+  flushLocalDraftRef.current = flushLocalDraft
+
+  useEffect(() => {
+    const flush = () => {
+      void flushLocalDraftRef.current().catch(() => undefined)
+    }
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') flush()
+    }
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      window.removeEventListener('pagehide', flush)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [])
+
+  const isDraftOrder = order?.status === 'draft'
   const syncStagedItems = (updater: (items: OrderLineItem[]) => OrderLineItem[]) => {
     setStagedItems((current) => updater(current ?? []))
     return Promise.resolve(order)
+  }
+
+  const removeLocalRecord = async () => {
+    if (!localScope) return
+    if (saveTimerRef.current != null) window.clearTimeout(saveTimerRef.current)
+    await deleteLocalDraft(localScope, contextKey)
+    localDraftRef.current = null
   }
 
   return {
@@ -352,34 +502,33 @@ export function useDraftOrder(
     loading,
     saving,
     error,
+    persistenceError,
+    localDraftId,
+    clientOrderId,
+    lastLocalSavedAt,
+    localDraftMode: localDraftRef.current?.mode ?? 'LOCAL_NEW_ORDER',
+    localSubmitState: localDraftRef.current?.submitState ?? 'LOCAL_DRAFT',
+    saveLocalDraftNow: flushLocalDraft,
     addItem: async (menuItem: MenuItem, draft: ItemCustomizationDraft) => {
-      if (!order) {
-        return null
-      }
-      if (!isDraftOrder) {
-        return syncStagedItems((items) => [...items, buildLocalLineItem(menuItem, draft)])
-      }
+      if (!order) return null
+      if (!isDraftOrder) return syncStagedItems((items) => [...items, buildLocalLineItem(menuItem, draft)])
       return runMutation(() => addDraftOrderItem(order.id, menuItem, draft, draft.notes))
     },
     updateItem: async (itemId: string | number, draft: ItemCustomizationDraft) => {
-      if (!order) {
-        return null
-      }
+      if (!order) return null
       if (!isDraftOrder) {
         return syncStagedItems((items) => items.map((item) => {
-          if (item.id !== String(itemId) || item.locked) {
-            return item
-          }
+          if (item.id !== String(itemId) || item.locked) return item
           return {
-                  ...item,
-                  quantity: draft.quantity,
-                  selection: draft,
-                  notes: draft.notes,
-                  lineSubtotal: calculateDraftLineSubtotal(
-                    catalogItems.find((catalogItem) => catalogItem.id === item.menuItemId),
-                    draft,
-                  ),
-                }
+            ...item,
+            quantity: draft.quantity,
+            selection: draft,
+            notes: draft.notes,
+            lineSubtotal: calculateDraftLineSubtotal(
+              catalogItems.find((catalogItem) => catalogItem.id === item.menuItemId),
+              draft,
+            ),
+          }
         }))
       }
       const numericItemId = Number(itemId)
@@ -388,66 +537,48 @@ export function useDraftOrder(
       return runMutation(() => updateDraftOrderItemWithMenuItem(order.id, numericItemId, menuItem, draft, draft.notes))
     },
     updateItemNote: async (itemId: string | number, notes: string) => {
-      if (!order) {
-        return null
-      }
+      if (!order) return null
       const itemKey = String(itemId)
       if (!isDraftOrder) {
-        return syncStagedItems((items) =>
-          items.map((item) => item.id === itemKey && !item.locked ? { ...item, notes, selection: { ...item.selection, notes } } : item),
-        )
+        return syncStagedItems((items) => items.map((item) => (
+          item.id === itemKey && !item.locked ? { ...item, notes, selection: { ...item.selection, notes } } : item
+        )))
       }
       const numericItemId = Number(itemId)
       const targetItem = order.items.find((item) => item.id === numericItemId)
-      if (!targetItem) {
-        return null
-      }
+      if (!targetItem) return null
       const menuItem = catalogItems.find((item) => item.id === String(targetItem.menu_item_id))
       const selection = { ...buildItemSelection(targetItem, menuItem), notes }
       return runMutation(() => updateDraftOrderItemWithMenuItem(order.id, numericItemId, menuItem, selection, notes))
     },
     incrementItem: async (itemId: string | number, currentQuantity: number) => {
-      if (!order) {
-        return null
-      }
+      if (!order) return null
       if (!isDraftOrder) {
-        return syncStagedItems((items) =>
-          items.map((item) => {
-            if (item.id !== String(itemId) || item.locked) {
-              return item
-            }
-            const nextSelection = { ...item.selection, quantity: currentQuantity + 1 }
-            return {
-              ...item,
-              quantity: currentQuantity + 1,
-              selection: nextSelection,
-              lineSubtotal: calculateDraftLineSubtotal(
-                catalogItems.find((catalogItem) => catalogItem.id === item.menuItemId),
-                nextSelection,
-              ),
-            }
-          }),
-        )
+        return syncStagedItems((items) => items.map((item) => {
+          if (item.id !== String(itemId) || item.locked) return item
+          const nextSelection = { ...item.selection, quantity: currentQuantity + 1 }
+          return {
+            ...item,
+            quantity: currentQuantity + 1,
+            selection: nextSelection,
+            lineSubtotal: calculateDraftLineSubtotal(
+              catalogItems.find((catalogItem) => catalogItem.id === item.menuItemId),
+              nextSelection,
+            ),
+          }
+        }))
       }
       return runMutation(() => updateDraftOrderItemQuantity(order.id, Number(itemId), currentQuantity + 1))
     },
     decrementItem: async (itemId: string | number, currentQuantity: number) => {
-      if (!order) {
-        return null
-      }
+      if (!order) return null
       if (!isDraftOrder) {
         return syncStagedItems((items) => {
           const target = items.find((item) => item.id === String(itemId))
-          if (target?.locked) {
-            return items
-          }
-          if (currentQuantity <= 1) {
-            return items.filter((item) => item.id !== String(itemId))
-          }
+          if (target?.locked) return items
+          if (currentQuantity <= 1) return items.filter((item) => item.id !== String(itemId))
           return items.map((item) => {
-            if (item.id !== String(itemId)) {
-              return item
-            }
+            if (item.id !== String(itemId)) return item
             const nextSelection = { ...item.selection, quantity: currentQuantity - 1 }
             return {
               ...item,
@@ -461,36 +592,27 @@ export function useDraftOrder(
           })
         })
       }
-      if (currentQuantity <= 1) {
-        return runMutation(() => removeDraftOrderItem(order.id, Number(itemId)))
-      }
+      if (currentQuantity <= 1) return runMutation(() => removeDraftOrderItem(order.id, Number(itemId)))
       return runMutation(() => updateDraftOrderItemQuantity(order.id, Number(itemId), currentQuantity - 1))
     },
     removeItem: async (itemId: string | number) => {
-      if (!order) {
-        return null
-      }
-      if (!isDraftOrder) {
-        return syncStagedItems((items) => items.filter((item) => item.id !== String(itemId) || item.locked))
-      }
+      if (!order) return null
+      if (!isDraftOrder) return syncStagedItems((items) => items.filter((item) => item.id !== String(itemId) || item.locked))
       return runMutation(() => removeDraftOrderItem(order.id, Number(itemId)))
     },
     cancelOrder: async () => {
-      if (!order) {
-        return null
-      }
-      return runMutation(() => cancelDraftOrder(order.id))
+      if (!order) return null
+      const cancelled = await runMutation(() => cancelDraftOrder(order.id))
+      await removeLocalRecord()
+      return cancelled
     },
     submitOrder: async () => {
-      if (!order) {
-        return null
-      }
-      if (submitInFlightRef.current) {
-        return order
-      }
+      if (!order) return null
+      if (submitInFlightRef.current) return order
+      await flushLocalDraft().catch(() => undefined)
       const submitStartedAtMs = Date.now()
       const submitStartedAt = new Date(submitStartedAtMs).toISOString()
-      const recordSubmit = (stage: 'STARTED' | 'SUCCEEDED' | 'FAILED', error?: unknown) => {
+      const recordSubmit = (stage: 'STARTED' | 'SUCCEEDED' | 'FAILED', submitError?: unknown) => {
         recordAppOperation({
           operation: 'ORDER_SUBMIT',
           stage,
@@ -498,11 +620,9 @@ export function useDraftOrder(
           startedAt: submitStartedAt,
           completedAt: stage === 'STARTED' ? null : new Date().toISOString(),
           latencyMs: stage === 'STARTED' ? null : Date.now() - submitStartedAtMs,
-          errorCode: error instanceof ApiRequestError
-            ? (error.code ?? `HTTP_${error.status}`)
-            : error
-              ? 'ORDER_SUBMIT_FAILED'
-              : null,
+          errorCode: submitError instanceof ApiRequestError
+            ? (submitError.code ?? `HTTP_${submitError.status}`)
+            : submitError ? 'ORDER_SUBMIT_FAILED' : null,
         })
       }
       recordSubmit('STARTED')
@@ -515,7 +635,6 @@ export function useDraftOrder(
           submitInFlightRef.current = false
           return order
         }
-
         setSaving(true)
         setError(null)
         try {
@@ -524,13 +643,12 @@ export function useDraftOrder(
           const result = await submitOrderUpdate(order.id, idempotencyKey, newItems, catalogItems)
           const refreshed = result.order
           setOrder(refreshed)
-          setStagedItems(refreshed.items.map((item) => mapOrderItem(item, catalogItems, true)))
+          setStagedItems(mapServerItems(refreshed))
           updateIdempotencyKeyRef.current = null
           recordSubmit('SUCCEEDED')
           return refreshed
         } catch (mutationError) {
-          const message = mutationError instanceof Error ? mutationError.message : 'Order update failed'
-          setError(message)
+          setError(mutationError instanceof Error ? mutationError.message : 'Order update failed')
           recordSubmit('FAILED', mutationError)
           throw mutationError
         } finally {
@@ -543,14 +661,14 @@ export function useDraftOrder(
         recordSubmit('SUCCEEDED')
         return submitted
       } catch (mutationError) {
-        if (
-          mutationError instanceof Error
-          && (mutationError.message.includes('Only draft orders can be submitted')
-            || mutationError.message.includes('already completed'))
-        ) {
+        if (mutationError instanceof Error && (
+          mutationError.message.includes('Only draft orders can be submitted')
+          || mutationError.message.includes('already completed')
+        )) {
           try {
             const refreshed = await fetchOrderDetail(order.id)
             setOrder(refreshed)
+            setStagedItems(mapServerItems(refreshed))
           } catch {
             // Keep the original submit error visible if refresh also fails.
           }
@@ -562,22 +680,16 @@ export function useDraftOrder(
       }
     },
     refreshOrder: async () => {
-      if (!order) {
-        return null
-      }
+      if (!order) return null
       return runMutation(() => fetchOrderDetail(order.id))
     },
     updateHeader: async (nextPickupLabel: string | null) => {
-      if (!order) {
-        return null
-      }
-      return runMutation(() =>
-        updateEditableOrderHeader(order.id, {
-          orderType,
-          tableNo: orderType === 'dine_in' ? slotLabel : null,
-          pickupNo: orderType === 'pickup' ? nextPickupLabel : null,
-        }),
-      )
+      if (!order) return null
+      return runMutation(() => updateEditableOrderHeader(order.id, {
+        orderType,
+        tableNo: orderType === 'dine_in' ? slotLabel : null,
+        pickupNo: orderType === 'pickup' ? nextPickupLabel : null,
+      }))
     },
   }
 }
