@@ -20,6 +20,14 @@ public interface PrintDispatcherService {
 
     void dispatchOrderUpdateAfterCommit(String moduleCode, Long storeId, Long orderId, Long orderUpdateBatchId);
 
+    void dispatchPersistedEvent(
+        String moduleCode,
+        Long storeId,
+        Long orderId,
+        Long orderUpdateBatchId,
+        String sourceKey
+    );
+
     boolean hasPrintableContent(String moduleCode, Long storeId, Long orderId);
 
     boolean hasPrintableUpdateContent(String moduleCode, Long storeId, Long orderId, Long orderUpdateBatchId);

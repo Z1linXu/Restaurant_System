@@ -6537,3 +6537,44 @@ combo semantics, order lifecycle, printing, KDS, payment, or refund behavior.
 - PR3 preserves the existing online submit APIs. Atomic offline submission and
   retry are introduced separately by PR4 and PR5; a locally saved draft never
   creates kitchen tasks or print jobs by itself.
+
+## Offline Ordering PR4: Idempotent Atomic Submission
+
+PR4 adds the server-side exactly-once boundary required by a later frontend
+order outbox. Existing online draft and submitted-order update endpoints remain
+available and their order lifecycle semantics are unchanged.
+
+- `POST /api/v1/stores/{storeId}/orders/idempotent-submit` accepts one complete
+  frozen order payload with a stable `client_order_id` / `idempotency_key`,
+  organization and store scope, table or pickup context, menu revision, items,
+  quantities, options, combo metadata, and notes.
+- Flyway migration `V3__add_idempotent_order_submission_and_dispatch_outbox.sql`
+  adds `order_submission_requests`, `order_dispatch_outbox`, and the nullable
+  `print_jobs.dispatch_source_key`. Unique constraints enforce one submission
+  per `(store_id, idempotency_key)`, one dispatch event per source key, and one
+  automatically-created print job per dispatch source.
+- The first request locks its submission record and uses the existing order
+  submit transaction to create the order, items, kitchen/production work,
+  inventory effects, and dispatch-outbox records. A concurrent or later request
+  with the same store, key, and canonical payload hash returns the original
+  order with `replayed = true`; the same key with changed content returns HTTP
+  `409` and `IDEMPOTENCY_CONFLICT`.
+- Server validation remains authoritative for store ownership, current menu
+  revision, item active/sold-out state, option ownership and active state,
+  required size/soup selections, and price calculation. Stable submission error
+  codes include `MENU_REVISION_STALE`, `ITEM_DISABLED`, `ITEM_SOLD_OUT`,
+  `OPTION_INVALID`, `REQUIRED_OPTION_MISSING`, `PRICE_CHANGED`,
+  `IDEMPOTENCY_CONFLICT`, and `STORE_MISMATCH`.
+- Automatic GRAB, FRONTDESK_RECEIPT, and HOT_KITCHEN dispatch is now recorded in
+  `order_dispatch_outbox` inside the order transaction instead of depending on
+  an in-memory after-commit executor. A scheduled consumer retries unexpected
+  pre-job failures with bounded backoff and resumes pending rows after backend
+  restart.
+- Dispatch retains all existing REAL, MOCK, DISABLED, and PAD_DIRECT behavior.
+  The source key prevents duplicate print-job creation when an outbox event is
+  retried. Physical printer delivery remains an external side effect; as before,
+  an ambiguous socket failure must be handled visibly rather than automatically
+  reprinting a ticket.
+- PR4 does not queue requests in the browser. IndexedDB order-outbox states and
+  retry policy are introduced by PR5, and clients must reuse the same key after
+  a timeout.

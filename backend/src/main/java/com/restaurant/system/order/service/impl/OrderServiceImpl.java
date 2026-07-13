@@ -433,6 +433,54 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
+    public OrderResponse createOrReplaceDraftAndSubmit(CreateOrderRequest request, Long serverOrderId) {
+        OrderResponse draft;
+        if (serverOrderId == null) {
+            Order existingOrder = findExistingEditableOrder(request.store_id, request.table_no, request.pickup_no);
+            if (existingOrder != null) {
+                throw new BusinessException(
+                    "ORDER_CONTEXT_CONFLICT: This table or pickup context already has an active server order"
+                );
+            }
+            draft = createOrder(request);
+        } else {
+            Order existingDraft = orderRepository.findByIdForUpdate(serverOrderId);
+            if (existingDraft == null) {
+                throw new BusinessException("Server draft order not found: " + serverOrderId);
+            }
+            if (!request.store_id.equals(existingDraft.store_id)) {
+                throw new BusinessException("STORE_MISMATCH: Server draft belongs to another store");
+            }
+            if (!ORDER_STATUS_DRAFT.equals(existingDraft.status)) {
+                throw new BusinessException("SERVER_ORDER_UPDATE_REQUIRED: Existing order is no longer a draft");
+            }
+
+            List<OrderItem> existingItems = orderItemRepository.findAllByOrderId(existingDraft.id);
+            for (OrderItem existingItem : existingItems) {
+                orderItemOptionRepository.deleteByOrderItemId(existingItem.id);
+            }
+            orderItemRepository.deleteAll(existingItems);
+
+            LocalDateTime now = LocalDateTime.now();
+            existingDraft.order_type = request.order_type;
+            existingDraft.table_no = request.table_no;
+            existingDraft.pickup_no = request.pickup_no;
+            if (request.created_by != null) {
+                existingDraft.created_by = request.created_by;
+            }
+            existingDraft.updated_at = now;
+            orderRepository.save(existingDraft);
+            for (CreateOrderItemRequest itemRequest : normalizeItemRequests(request.items)) {
+                addDraftOrderItemInternal(existingDraft, itemRequest, now);
+            }
+            recalculateOrderAmounts(existingDraft, now);
+            draft = loadOrderResponse(existingDraft.id);
+        }
+        return submitOrder(draft.id);
+    }
+
+    @Override
+    @Transactional
     public OrderUpdateResponse createOrderUpdate(Long id, CreateOrderUpdateRequest request, Long userId) {
         Order order = orderRepository.findByIdForUpdate(id);
         if (order == null) {
