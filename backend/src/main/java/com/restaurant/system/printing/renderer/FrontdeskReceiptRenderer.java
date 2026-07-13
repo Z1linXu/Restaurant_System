@@ -29,6 +29,11 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
     private static final String OPTION_TYPE_NOODLE_TYPE = "noodle_type";
     private static final String OPTION_TYPE_SIZE = "size";
     private static final String OPTION_TYPE_SPICY_LEVEL = "spicy_level";
+    private static final String OPTION_GROUP_COMBO = "COMBO";
+    private static final String OPTION_GROUP_COMBO_EGG = "COMBO_EGG";
+    private static final String OPTION_GROUP_COMBO_SIDE = "COMBO_SIDE";
+    private static final String OPTION_GROUP_COMBO_SIDE_REMOVE = "COMBO_SIDE_REMOVE";
+    private static final String SOUP_NOODLE_CATEGORY = "SOUP_NOODLE";
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     @Override
@@ -94,6 +99,10 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
             )) {
                 appendSizedLine(builder, comboSideLine);
             }
+            String itemNote = resolveItemNote(item);
+            if (itemNote != null) {
+                appendSizedLine(builder, "备注：" + itemNote);
+            }
             appendSizedLine(builder, formatItemMoney(item));
             builder.append("\n");
         }
@@ -130,13 +139,18 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
     }
 
     private String buildItemLine(OrderItem item, List<OrderItemOption> options) {
-        String baseName = item.item_name_snapshot_zh == null ? item.item_name_snapshot_en : item.item_name_snapshot_zh;
+        String baseName = resolveReceiptDisplayName(item);
         StringBuilder builder = new StringBuilder();
-        builder.append(item.quantity == null ? 1 : item.quantity).append(" x ");
-        if (isComboItem(item, options)) {
-            builder.append("Combo ");
+        int quantity = item.quantity == null ? 1 : item.quantity;
+        if (isSoupNoodle(item) && isComboItem(item, options)) {
+            builder.append(quantity).append("*combo ");
+        } else {
+            builder.append(quantity).append(" x ");
+            if (isComboItem(item, options)) {
+                builder.append("Combo ");
+            }
         }
-        builder.append(baseName == null ? "Item" : baseName);
+        builder.append(baseName);
         String sizeEn = resolveSizeEnLabel(options);
         if (sizeEn != null) {
             builder.append(" ").append(sizeEn);
@@ -145,12 +159,28 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
     }
 
     private boolean isComboItem(OrderItem item, List<OrderItemOption> options) {
+        if (options.stream().anyMatch(option -> isOptionGroup(option, OPTION_GROUP_COMBO))) {
+            return true;
+        }
         if (COMBO_ROLE_MAIN.equals(item.combo_role)) {
             return true;
         }
         return options.stream()
             .filter(option -> OPTION_TYPE_ADDON.equals(option.option_type_snapshot))
             .anyMatch(option -> containsComboLabel(option.option_name_snapshot_zh) || containsComboLabel(option.option_name_snapshot_en));
+    }
+
+    private boolean isSoupNoodle(OrderItem item) {
+        return item.category_code_snapshot != null
+            && SOUP_NOODLE_CATEGORY.equalsIgnoreCase(item.category_code_snapshot.trim());
+    }
+
+    private String resolveReceiptDisplayName(OrderItem item) {
+        String baseName = firstPresent(item.item_name_snapshot_zh, item.item_name_snapshot_en);
+        if ("传统牛肉面".equals(baseName)) {
+            return "牛肉面";
+        }
+        return baseName == null ? "Item" : baseName;
     }
 
     private String resolveSizeZhLabel(List<OrderItemOption> options) {
@@ -228,8 +258,10 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         return options.stream()
             .filter(option -> safeMoney(option.price_delta).compareTo(BigDecimal.ZERO) > 0)
             .filter(option -> !OPTION_TYPE_SIZE.equals(option.option_type_snapshot))
-            .filter(option -> !isOptionGroup(option, "COMBO_SIDE"))
-            .filter(option -> !isOptionGroup(option, "COMBO_SIDE_REMOVE"))
+            .filter(option -> !isOptionGroup(option, OPTION_GROUP_COMBO))
+            .filter(option -> !isOptionGroup(option, OPTION_GROUP_COMBO_EGG))
+            .filter(option -> !isOptionGroup(option, OPTION_GROUP_COMBO_SIDE))
+            .filter(option -> !isOptionGroup(option, OPTION_GROUP_COMBO_SIDE_REMOVE))
             .filter(option -> !containsComboLabel(option.option_name_snapshot_zh) && !containsComboLabel(option.option_name_snapshot_en))
             .map(this::formatChargeableOption)
             .toList();
@@ -247,13 +279,24 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         List<String> lines = new ArrayList<>();
         Set<String> seen = new HashSet<>();
 
+        List<OrderItemOption> eggOptions = options.stream()
+            .filter(option -> isOptionGroup(option, OPTION_GROUP_COMBO_EGG))
+            .toList();
+        if (eggOptions.isEmpty()) {
+            addUniqueLine(lines, seen, "走蛋");
+        } else {
+            eggOptions.stream()
+                .map(option -> cleanComboEggLabel(firstPresent(option.option_name_snapshot_zh, option.option_name_snapshot_en)))
+                .forEach(label -> addUniqueLine(lines, seen, "鸡蛋: " + label));
+        }
+
         List<OrderItemOption> sideOptions = options.stream()
             .filter(this::isComboSideOption)
             .toList();
         for (OrderItemOption sideOption : sideOptions) {
             addUniqueLine(lines, seen, "小菜: " + cleanComboSideLabel(firstPresent(sideOption.option_name_snapshot_zh, sideOption.option_name_snapshot_en)));
             options.stream()
-                .filter(option -> isOptionGroup(option, "COMBO_SIDE_REMOVE"))
+                .filter(option -> isOptionGroup(option, OPTION_GROUP_COMBO_SIDE_REMOVE))
                 .filter(option -> sideOption.option_id != null && sideOption.option_id.equals(option.parent_option_id_snapshot))
                 .map(option -> firstPresent(option.option_name_snapshot_zh, option.option_name_snapshot_en))
                 .filter(Objects::nonNull)
@@ -296,12 +339,26 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         return cleaned.isBlank() ? label.trim() : cleaned;
     }
 
+    private String cleanComboEggLabel(String label) {
+        if (label == null || label.isBlank()) {
+            return "鸡蛋";
+        }
+        String cleaned = label.trim();
+        if (cleaned.startsWith("套餐")) {
+            cleaned = cleaned.substring("套餐".length()).trim();
+        }
+        if (cleaned.toLowerCase().startsWith("combo ")) {
+            cleaned = cleaned.substring("combo ".length()).trim();
+        }
+        return cleaned.isBlank() ? label.trim() : cleaned;
+    }
+
     private boolean isOptionGroup(OrderItemOption option, String group) {
         return option.option_group_snapshot != null && group.equalsIgnoreCase(option.option_group_snapshot);
     }
 
     private boolean isComboSideOption(OrderItemOption option) {
-        if (isOptionGroup(option, "COMBO_SIDE")) {
+        if (isOptionGroup(option, OPTION_GROUP_COMBO_SIDE)) {
             return true;
         }
         if (option.option_code_snapshot == null) {
@@ -345,6 +402,13 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
             return secondary.trim();
         }
         return null;
+    }
+
+    private String resolveItemNote(OrderItem item) {
+        if (item.notes == null || item.notes.isBlank()) {
+            return null;
+        }
+        return item.notes.trim();
     }
 
     private BigDecimal safeMoney(BigDecimal value) {

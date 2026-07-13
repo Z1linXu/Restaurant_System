@@ -16,6 +16,7 @@ import { fetchOrderPrintJobs } from '../../services/orderService'
 import type { PrintJobRecord } from '../../services/printingAdminService'
 import { printJobDisplayLabel, printJobOperatorDisplayMessage } from '../../utils/displayLabels'
 import { getAndroidPadDeviceBridge } from '../../types/androidPadBridge'
+import { isComboSelected, normalizeComboDraft, resolveComboUpcharge } from '../../utils/comboSelection'
 
 interface OrderingPageProps {
   catalog: {
@@ -72,8 +73,8 @@ function getDraftSubtotal(item: MenuItem, draft: ItemCustomizationDraft) {
   const sizeDelta = item.customization?.sizes?.options.find((option) => option.id === draft.sizeId)?.priceDelta ?? 0
   const soupBaseDelta =
     item.customization?.soupBases?.options.find((option) => option.id === draft.soupBaseId)?.priceDelta ?? 0
-  const comboDelta = draft.comboEnabled ? (item.customization?.combo?.upcharge ?? 0) : 0
-  const comboSideRemoveDelta = draft.comboEnabled
+  const comboDelta = resolveComboUpcharge(draft, item.customization?.combo)
+  const comboSideRemoveDelta = isComboSelected(draft)
     ? item.customization?.combo?.sideRemoveOptions
       ?.filter((option) => draft.comboSideRemoveIds.includes(option.id))
       .reduce((sum, option) => sum + (option.priceDelta ?? 0), 0) ?? 0
@@ -312,9 +313,9 @@ export function OrderingPage({
     }
 
     if (customizationState.mode === 'edit' && customizationState.editingItemId) {
-      await updateItem(customizationState.editingItemId, customizationState.draft)
+      await updateItem(customizationState.editingItemId, normalizeComboDraft(customizationState.draft))
     } else {
-      await addItem(customizationState.item, customizationState.draft)
+      await addItem(customizationState.item, normalizeComboDraft(customizationState.draft))
     }
     closeCustomizationModal()
   }
@@ -531,7 +532,9 @@ export function OrderingPage({
           mode={customizationState.mode}
           subtotal={getDraftSubtotal(customizationState.item, customizationState.draft)}
           onClose={closeCustomizationModal}
-          onChange={(nextDraft) => setCustomizationState((current) => (current ? { ...current, draft: nextDraft } : null))}
+          onChange={(nextDraft) => setCustomizationState((current) => (
+            current ? { ...current, draft: normalizeComboDraft(nextDraft) } : null
+          ))}
           onSubmit={() => void handleModalSubmit()}
         />
       ) : null}
