@@ -9,6 +9,7 @@ import {
 import { stablePayloadHash } from './offlineHash'
 
 export const LOCAL_DRAFT_SCHEMA_VERSION = 1
+export const LOCAL_DRAFT_UPDATED_EVENT = 'restaurant-local-draft-updated'
 export const NON_EMPTY_DRAFT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000
 export const EMPTY_DRAFT_RETENTION_MS = 24 * 60 * 60 * 1000
 
@@ -160,7 +161,24 @@ export async function saveLocalDraft(record: LocalDraftRecord) {
   const completed = transactionComplete(transaction)
   transaction.objectStore(OFFLINE_STORES.localDrafts).put(normalized)
   await completed
+  publishLocalDraftUpdate()
   return normalized
+}
+
+export async function listLocalDraftsForScope(scope: LocalDraftScope) {
+  const database = await openOfflineDatabase()
+  const transaction = database.transaction(OFFLINE_STORES.localDrafts, 'readonly')
+  const completed = transactionComplete(transaction)
+  const records = await requestResult<LocalDraftRecord[]>(
+    transaction.objectStore(OFFLINE_STORES.localDrafts).getAll(),
+  )
+  await completed
+  return records.filter((record) => (
+    record.accountId === scope.accountId
+    && record.organizationId === scope.organizationId
+    && record.storeId === scope.storeId
+    && record.schemaVersion === LOCAL_DRAFT_SCHEMA_VERSION
+  ))
 }
 
 export async function deleteLocalDraft(scope: LocalDraftScope, contextKey: string) {
@@ -169,6 +187,12 @@ export async function deleteLocalDraft(scope: LocalDraftScope, contextKey: strin
   const completed = transactionComplete(transaction)
   transaction.objectStore(OFFLINE_STORES.localDrafts).delete(localDraftKey(scope, contextKey))
   await completed
+  publishLocalDraftUpdate()
+}
+
+function publishLocalDraftUpdate() {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new Event(LOCAL_DRAFT_UPDATED_EVENT))
 }
 
 export function isLocalDraftExpired(record: LocalDraftRecord, nowMs = Date.now()) {

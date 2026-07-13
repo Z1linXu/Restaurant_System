@@ -6485,3 +6485,35 @@ not change order lifecycle, payment, printing, KDS, or combo behavior.
   conflict. Operator actions reuse the same key for immediate retry, explicitly
   return a record to editing, or cancel the local record; none create a hidden
   replacement key.
+
+## Offline Ordering PR6: Weak-Network Status UI
+
+PR6 makes server-confirmation state explicit on ordering and frontdesk screens.
+It does not treat a browser-local record as an order received by the kitchen,
+and it adds no high-frequency polling.
+
+- The ordering page always shows material connectivity warnings. Offline,
+  backend-unreachable, and degraded states explain that selections remain on
+  the device until the server confirms them. The latest successful backend
+  connection time is displayed with the local submission state.
+- A cached-menu banner includes its last successful download time. Snapshots
+  older than 24 hours warn that price and sold-out state may have changed;
+  server validation remains authoritative.
+- New-order status copy is centralized and maps `LOCAL_DRAFT`, `QUEUED`,
+  `SUBMITTING`, `SUBMITTED`, `FAILED_RETRYABLE`, `CONFLICT`, and
+  `CANCELLED_LOCAL` to touch-friendly Chinese operator messages. Only
+  `SUBMITTED` says the server and kitchen received the order.
+- Queued, submitting, retryable, conflict, and submitted payloads are locked
+  against silent item edits. Available actions include immediate retry with the
+  same client id, explicit return to editing, error-code inspection, and local
+  cancellation. `SUBMITTING` cannot be cancelled while its result is unknown.
+- The frontdesk board reads current-account/current-organization/current-store
+  IndexedDB records and marks tables or takeout contexts that contain local,
+  queued, retrying, or conflicting orders. Split-table badges retain the exact
+  seat context. A board-level banner also covers takeout records that have no
+  table card.
+- IndexedDB save/outbox events refresh these badges while the board is visible.
+  The feature does not add a timer, WebSocket, or full-board API request, and
+  records from another account, organization, or store are filtered out.
+- Error details expose stable operator error codes only; backend stack traces,
+  frozen payloads, notes, tokens, and sensitive data are not rendered.

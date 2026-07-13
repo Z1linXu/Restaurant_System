@@ -129,9 +129,7 @@ async function runProcessor(generation: number) {
     processorRunning = false
     if (generation !== activeGeneration) {
       if (activeAccountId != null) scheduleProcessor(0, activeGeneration)
-      return
-    }
-    if (pendingKick) {
+    } else if (pendingKick) {
       pendingKick = false
       scheduleProcessor(0, generation)
     } else {

@@ -18,7 +18,7 @@ import type { PrintJobRecord } from '../../services/printingAdminService'
 import { printJobDisplayLabel, printJobOperatorDisplayMessage } from '../../utils/displayLabels'
 import { getAndroidPadDeviceBridge } from '../../types/androidPadBridge'
 import { isComboSelected, normalizeComboDraft, resolveComboUpcharge } from '../../utils/comboSelection'
-import { networkDiagnosticsDisplayEnabled, type ConnectionState } from '../../services/networkStatus'
+import type { ConnectionState } from '../../services/networkStatus'
 import { useAuth } from '../auth/useAuth'
 import { useCurrentStore } from '../store/StoreContext'
 
@@ -81,13 +81,13 @@ function isQuickAddItem(item: MenuItem) {
 function connectionWarning(state: ConnectionState) {
   switch (state) {
     case 'BROWSER_OFFLINE':
-      return '当前设备离线。点餐操作可能无法同步到服务器。'
+      return '当前设备离线，点餐内容会保存在本机；服务器确认前尚未进入厨房。'
     case 'BACKEND_UNREACHABLE':
-      return '设备已连接网络，但暂时无法连接餐厅服务器。'
+      return '网络不稳定，暂时无法连接餐厅服务器；点餐内容会保存在本机。'
     case 'AUTH_REQUIRED':
       return '登录状态已失效，请重新登录后继续。'
     case 'ONLINE_DEGRADED':
-      return '网络响应较慢或不稳定，请留意订单提交状态。'
+      return '网络不稳定，点餐内容会保存在本机；请留意订单提交状态。'
     default:
       return null
   }
@@ -183,6 +183,8 @@ export function OrderingPage({
   const [quickAddStates, setQuickAddStates] = useState<Record<string, 'idle' | 'adding' | 'added'>>({})
   const [printWarning, setPrintWarning] = useState<string | null>(null)
   const connection = useConnectionStatus()
+  const handledSubmittedOrderIdsRef = useRef(new Set<number>())
+  const localSubmitRequestedRef = useRef(false)
   const {
     session,
     order,
@@ -202,6 +204,11 @@ export function OrderingPage({
     refreshOrder,
     updateHeader,
     saveLocalDraftNow,
+    localSubmitState,
+    outboxRecord,
+    draftSubmissionLocked,
+    retryQueuedOrder,
+    returnQueuedOrderToDraft,
   } = useDraftOrder(storeId, slotLabel, tableLabel, orderType, pickupLabel, items, {
     accountId: user?.id ?? null,
     organizationId,
@@ -269,6 +276,7 @@ export function OrderingPage({
   )
 
   const handleSelectMenuItem = (item: MenuItem) => {
+    if (draftSubmissionLocked) return
     if (isQuickAddItem(item)) {
       void addItem(item, buildDefaultDraft(item))
       return
@@ -281,6 +289,7 @@ export function OrderingPage({
   }
 
   const handleQuickAddItem = async (item: MenuItem) => {
+    if (draftSubmissionLocked) return
     setQuickAddStates((current) => ({
       ...current,
       [item.id]: 'adding',
@@ -307,6 +316,7 @@ export function OrderingPage({
   }
 
   const handleMenuCardAdd = async (item: MenuItem) => {
+    if (draftSubmissionLocked) return
     if (isQuickAddItem(item)) {
       await handleQuickAddItem(item)
       return
@@ -346,7 +356,7 @@ export function OrderingPage({
   }
 
   const handleModalSubmit = async () => {
-    if (!customizationState) {
+    if (!customizationState || draftSubmissionLocked) {
       return
     }
 
@@ -364,6 +374,11 @@ export function OrderingPage({
     }
     await cancelOrder()
     onDraftCancelled(slotLabel, tableLabel)
+  }
+
+  const handleReturnQueuedOrderToDraft = async () => {
+    if (!window.confirm('返回修改后，必须重新检查菜单、价格和菜品状态。确定继续吗？')) return
+    await returnQueuedOrderToDraft()
   }
 
   const checkOrderPrintJobs = async (orderId: number, updateBatchId?: number | null) => {
@@ -403,16 +418,22 @@ export function OrderingPage({
   const handleSubmitOrder = async () => {
     setPrintWarning(null)
     if (session?.status === 'draft') {
-      const submittedOrder = await submitOrder()
-      if (!submittedOrder) {
-        return
+      localSubmitRequestedRef.current = true
+      try {
+        const submittedOrder = await submitOrder()
+        if (!submittedOrder) {
+          return
+        }
+        handledSubmittedOrderIdsRef.current.add(submittedOrder.id)
+        kickPadDirectPrintWorker('order-submit', submittedOrder.id, null)
+        const printOk = await checkOrderPrintJobs(submittedOrder.id)
+        if (!printOk) {
+          return
+        }
+        onOrderSubmitted(slotLabel, tableLabel, submittedOrder.id, null)
+      } finally {
+        localSubmitRequestedRef.current = false
       }
-      kickPadDirectPrintWorker('order-submit', submittedOrder.id, null)
-      const printOk = await checkOrderPrintJobs(submittedOrder.id)
-      if (!printOk) {
-        return
-      }
-      onOrderSubmitted(slotLabel, tableLabel, submittedOrder.id, null)
       return
     }
 
@@ -446,6 +467,16 @@ export function OrderingPage({
     setTakeoutDialogOpen(false)
   }
 
+  useEffect(() => {
+    const submittedOrderId = outboxRecord?.state === 'SUBMITTED' ? outboxRecord.serverOrderId : null
+    if (!submittedOrderId
+      || localSubmitRequestedRef.current
+      || handledSubmittedOrderIdsRef.current.has(submittedOrderId)) return
+    handledSubmittedOrderIdsRef.current.add(submittedOrderId)
+    kickPadDirectPrintWorker('order-outbox-submitted', submittedOrderId, null)
+    onOrderSubmitted(slotLabel, tableLabel, submittedOrderId, null)
+  }, [onOrderSubmitted, outboxRecord?.serverOrderId, outboxRecord?.state, slotLabel, tableLabel])
+
   return (
     <div className={`ordering-page-safe min-h-screen bg-[var(--surface)] ${isIpadLandscape ? 'px-3 py-3' : 'px-5 py-4 md:px-7 xl:px-8'}`}>
       <div className={`mx-auto ${isIpadLandscape ? 'max-w-none space-y-3' : 'max-w-[1720px] space-y-6'}`}>
@@ -458,7 +489,7 @@ export function OrderingPage({
           </div>
         ) : null}
 
-        {networkDiagnosticsDisplayEnabled && connectionWarning(connection.state) ? (
+        {connectionWarning(connection.state) ? (
           <div className="rounded-[20px] border border-[rgba(151,34,34,0.25)] bg-[rgba(151,34,34,0.1)] px-5 py-4 text-[1rem] font-bold text-[rgb(116,22,22)]">
             {connectionWarning(connection.state)}
           </div>
@@ -469,7 +500,7 @@ export function OrderingPage({
             当前使用本机缓存菜单
             {catalogLastUpdatedAt ? `，最后更新：${new Date(catalogLastUpdatedAt).toLocaleString()}` : ''}
             {catalogUpdating ? '；正在后台检查更新…' : ''}
-            {cacheStale ? '。缓存较旧，价格和售罄状态可能已变化。' : ''}
+            {cacheStale ? '。当前菜单数据较旧，价格和售罄状态可能已变化。' : ''}
           </div>
         ) : null}
 
@@ -542,7 +573,7 @@ export function OrderingPage({
                     onDecrement={() => handleDecrementMenuItem(item.id)}
                     quickAddState={quickAddStates[item.id] ?? 'idle'}
                     orderedQuantity={orderedQuantityByMenuItemId.get(item.id) ?? 0}
-                    canDecrement={latestMutableItemByMenuItemId.has(item.id)}
+                    canDecrement={!draftSubmissionLocked && latestMutableItemByMenuItemId.has(item.id)}
                     compact={isIpadLandscape}
                   />
                 ))}
@@ -557,6 +588,12 @@ export function OrderingPage({
               tax={tax}
               total={total}
               busy={saving}
+              localSubmitState={localSubmitState}
+              showSubmissionStatus={outboxRecord != null}
+              orderLocked={draftSubmissionLocked}
+              lastBackendSuccessAt={connection.lastSuccessAt}
+              submissionErrorCode={outboxRecord?.lastErrorCode}
+              nextRetryAt={outboxRecord?.nextRetryAt}
               onIncrementItem={(itemId) => {
                 const item = session.items.find((currentItem) => currentItem.id === itemId)
                 if (item) {
@@ -575,6 +612,8 @@ export function OrderingPage({
               onSaveDraft={() => void saveLocalDraftNow()}
               onCancelOrder={() => void handleCancelOrder()}
               onSubmitOrder={() => void handleSubmitOrder()}
+              onRetryQueuedOrder={() => void retryQueuedOrder()}
+              onReturnQueuedOrderToDraft={() => void handleReturnQueuedOrderToDraft()}
               compact={isIpadLandscape}
             />
           ) : (

@@ -4,6 +4,8 @@ import { TAX_RATE_LABEL } from '../../../utils/tax'
 import { formatSplitSlotLabel } from '../../../utils/tableDisplay'
 import { orderStatusDisplayLabel } from '../../../utils/displayLabels'
 import { OrderLineItemRow } from './OrderLineItemRow'
+import type { LocalDraftSubmitState } from '../../../offline/localDrafts'
+import { OfflineOrderStatusPanel } from '../../offline/OfflineOrderStatusPanel'
 
 interface OrderSummaryPanelProps {
   session: OrderSession
@@ -11,6 +13,12 @@ interface OrderSummaryPanelProps {
   tax: number
   total: number
   busy?: boolean
+  localSubmitState: LocalDraftSubmitState
+  showSubmissionStatus?: boolean
+  orderLocked?: boolean
+  lastBackendSuccessAt: string | null
+  submissionErrorCode?: string | null
+  nextRetryAt?: string | null
   onIncrementItem: (itemId: string) => void
   onDecrementItem: (itemId: string) => void
   onEditItem: (itemId: string) => void
@@ -19,6 +27,8 @@ interface OrderSummaryPanelProps {
   onSaveDraft: () => void
   onCancelOrder: () => void
   onSubmitOrder: () => void
+  onRetryQueuedOrder?: () => void
+  onReturnQueuedOrderToDraft?: () => void
   compact?: boolean
 }
 
@@ -28,6 +38,12 @@ export function OrderSummaryPanel({
   tax,
   total,
   busy = false,
+  localSubmitState,
+  showSubmissionStatus = false,
+  orderLocked = false,
+  lastBackendSuccessAt,
+  submissionErrorCode,
+  nextRetryAt,
   onIncrementItem,
   onDecrementItem,
   onEditItem,
@@ -36,6 +52,8 @@ export function OrderSummaryPanel({
   onSaveDraft,
   onCancelOrder,
   onSubmitOrder,
+  onRetryQueuedOrder,
+  onReturnQueuedOrderToDraft,
   compact = false,
 }: OrderSummaryPanelProps) {
   const displaySlotLabel = formatSplitSlotLabel(session.slotLabel)
@@ -43,11 +61,21 @@ export function OrderSummaryPanel({
   const isDraft = session.status === 'draft'
   const canConfirmUpdate = !isDraft && session.isModifiedAfterSubmit
   const primaryActionLabel = isDraft
-    ? '提交订单'
+    ? localSubmitState === 'QUEUED'
+      ? '等待网络提交'
+      : localSubmitState === 'SUBMITTING'
+        ? '正在提交订单...'
+        : localSubmitState === 'FAILED_RETRYABLE'
+          ? '等待自动重试'
+          : localSubmitState === 'CONFLICT'
+            ? '请检查订单'
+            : localSubmitState === 'SUBMITTED'
+              ? '已进入服务器和厨房'
+              : '提交订单'
     : canConfirmUpdate
       ? '更新订单'
       : '订单进行中'
-  const primaryActionDisabled = busy || (!isDraft && !canConfirmUpdate)
+  const primaryActionDisabled = busy || orderLocked || (!isDraft && !canConfirmUpdate)
   const itemCount = session.items.reduce((sum, item) => sum + item.quantity, 0)
 
   return (
@@ -65,6 +93,19 @@ export function OrderSummaryPanel({
         </div>
       </div>
 
+      {isDraft || showSubmissionStatus ? (
+        <OfflineOrderStatusPanel
+          state={localSubmitState}
+          lastBackendSuccessAt={lastBackendSuccessAt}
+          lastErrorCode={submissionErrorCode}
+          nextRetryAt={nextRetryAt}
+          compact={compact}
+          onRetry={onRetryQueuedOrder}
+          onReturnToDraft={onReturnQueuedOrderToDraft}
+          onCancelLocal={onCancelOrder}
+        />
+      ) : null}
+
       <div className={`order-summary-list-safe flex-1 overflow-y-auto overscroll-contain pr-1 ${compact ? 'min-h-[220px] max-h-[18rem] space-y-2.5 pb-3' : 'min-h-[280px] max-h-[30rem] space-y-4 pb-4'}`}>
         {session.items.length ? (
           session.items.map((item) => (
@@ -77,6 +118,7 @@ export function OrderSummaryPanel({
               onEdit={() => onEditItem(item.id)}
               onRemove={() => onRemoveItem(item.id)}
               onUpdateNote={(notes) => onUpdateItemNote(item.id, notes)}
+              disabled={orderLocked}
             />
           ))
         ) : (
@@ -103,10 +145,10 @@ export function OrderSummaryPanel({
         </div>
 
         <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
-          <Button variant="secondary" className={compact ? 'min-h-11 rounded-[16px] text-[0.84rem]' : 'min-h-14 rounded-[20px]'} onClick={onSaveDraft}>
+          <Button variant="secondary" className={compact ? 'min-h-11 rounded-[16px] text-[0.84rem]' : 'min-h-14 rounded-[20px]'} onClick={onSaveDraft} disabled={orderLocked}>
             {busy ? '保存中...' : '保存到本机'}
           </Button>
-          <Button variant="secondary" className={compact ? 'min-h-11 rounded-[16px] text-[0.84rem]' : 'min-h-14 rounded-[20px]'} onClick={onCancelOrder}>
+          <Button variant="secondary" className={compact ? 'min-h-11 rounded-[16px] text-[0.84rem]' : 'min-h-14 rounded-[20px]'} onClick={onCancelOrder} disabled={orderLocked}>
             取消订单
           </Button>
         </div>
