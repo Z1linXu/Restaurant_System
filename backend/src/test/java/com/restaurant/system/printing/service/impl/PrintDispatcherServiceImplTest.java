@@ -1,5 +1,8 @@
 package com.restaurant.system.printing.service.impl;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -10,6 +13,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 
+import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.common.feature.FeatureFlagService;
 import com.restaurant.system.common.feature.FeaturePackage;
 import com.restaurant.system.kitchen.entity.KitchenTask;
@@ -22,19 +26,24 @@ import com.restaurant.system.order.entity.OrderItem;
 import com.restaurant.system.printing.CloudPrintingGuard;
 import com.restaurant.system.printing.PrintJobStatus;
 import com.restaurant.system.printing.PrintModuleCode;
+import com.restaurant.system.printing.dto.OrderReprintRequest;
+import com.restaurant.system.printing.dto.PrintJobResponse;
 import com.restaurant.system.printing.dto.PrintRenderRequest;
 import com.restaurant.system.printing.entity.PrintJob;
 import com.restaurant.system.printing.entity.PrinterAssignment;
 import com.restaurant.system.printing.entity.PrinterConfig;
 import com.restaurant.system.printing.renderer.ReceiptRenderer;
+import com.restaurant.system.printing.repository.PrintJobRepository;
 import com.restaurant.system.printing.repository.PrinterAssignmentRepository;
 import com.restaurant.system.printing.repository.PrinterConfigRepository;
 import com.restaurant.system.printing.semantic.HotKitchenPrintEligibilityService;
 import com.restaurant.system.printing.service.PrintJobService;
+import com.restaurant.system.printing.service.OrderDispatchOutboxService;
 import com.restaurant.system.printing.service.PrinterConfigService;
 import com.restaurant.system.printing.transport.PrinterTransport;
 import com.restaurant.system.user.entity.Store;
 import com.restaurant.system.user.repository.StoreRepository;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,7 +51,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.mock.env.MockEnvironment;
+import org.springframework.web.server.ResponseStatusException;
 
 @ExtendWith(MockitoExtension.class)
 class PrintDispatcherServiceImplTest {
@@ -70,6 +81,8 @@ class PrintDispatcherServiceImplTest {
     @Mock
     private PrintJobService printJobService;
     @Mock
+    private PrintJobRepository printJobRepository;
+    @Mock
     private ReceiptRenderer grabRenderer;
     @Mock
     private ReceiptRenderer frontdeskRenderer;
@@ -77,6 +90,8 @@ class PrintDispatcherServiceImplTest {
     private ReceiptRenderer hotKitchenRenderer;
     @Mock
     private HotKitchenPrintEligibilityService hotKitchenPrintEligibilityService;
+    @Mock
+    private OrderDispatchOutboxService orderDispatchOutboxService;
 
     private PrintDispatcherServiceImpl service;
 
@@ -103,9 +118,145 @@ class PrintDispatcherServiceImplTest {
             Runnable::run,
             featureFlagService,
             printJobService,
+            printJobRepository,
             cloudPrintingGuard,
-            hotKitchenPrintEligibilityService
+            hotKitchenPrintEligibilityService,
+            orderDispatchOutboxService
         );
+    }
+
+    @Test
+    void orderDispatchWritesPersistentOutboxInsteadOfStartingInMemoryPrintTask() {
+        service.dispatchAfterCommit(PrintModuleCode.GRAB, 1L, 9L);
+
+        verify(orderDispatchOutboxService).enqueue(PrintModuleCode.GRAB, 1L, 9L, null);
+        verifyNoInteractions(printJobService);
+    }
+
+    @Test
+    void persistedDispatchFailureBeforeJobCreationRemainsRetryable() {
+        when(featureFlagService.isEnabled(FeaturePackage.PRINTING)).thenReturn(true);
+        when(storeRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(
+            BusinessException.class,
+            () -> service.dispatchPersistedEvent(
+                PrintModuleCode.GRAB,
+                1L,
+                9L,
+                null,
+                "submit:9:GRAB"
+            )
+        );
+
+        verifyNoInteractions(printJobService);
+    }
+
+    @Test
+    void completedOrderGrabReprintQueuesNewPadDirectJobFromHistoricalFullSnapshot() {
+        ReprintFixture fixture = configureGrabReprint("PAD_DIRECT");
+        PrintJob source = fullGrabSnapshot(15L, "\n\n桌号：5\n牛肉面 x1\n", LocalDateTime.of(2026, 7, 11, 10, 0));
+        source.printer_id = 4L;
+        when(printJobRepository.findReprintableFullGrabSnapshots(fixture.order.store_id, fixture.order.id))
+            .thenReturn(List.of(source));
+
+        PrintJobResponse response = service.reprintOrder(fixture.order.id, reprintRequest(PrintModuleCode.GRAB), 7L);
+
+        assertEquals(PrintJobStatus.PENDING, response.status);
+        assertEquals("PAD_DIRECT", response.execution_mode);
+        assertEquals(PrintJobStatus.PRINTED, source.status);
+        assertEquals("\n\n桌号：5\n牛肉面 x1\n", source.rendered_text_snapshot);
+        assertEquals(4L, source.printer_id);
+        assertEquals(PrintJobStatus.PENDING, fixture.newJob.status);
+        assertEquals("PAD_DIRECT", fixture.newJob.executionMode);
+        assertNull(fixture.newJob.claimedAt);
+        assertNull(fixture.newJob.claimExpiresAt);
+        assertNull(fixture.newJob.claimedByDeviceId);
+        assertNull(fixture.newJob.printedByDeviceId);
+        verify(printJobService).createPendingJob(
+            eq(fixture.store.organization_id),
+            eq(fixture.order.store_id),
+            eq(fixture.order.id),
+            eq(fixture.printer.id),
+            eq(PrintModuleCode.GRAB),
+            eq(PrintModuleCode.GRAB),
+            eq(7L),
+            contains("ORDER_CENTER_REPRINT")
+        );
+        verify(printJobService).attachRenderedContent(fixture.newJob, fixture.printer.id, source.rendered_text_snapshot);
+        verify(printJobService).markPadDirectQueued(fixture.newJob, fixture.printer, fixture.assignment.font_size);
+        verify(grabRenderer, never()).render(any());
+        verifyNoInteractions(kitchenTaskRepository);
+    }
+
+    @Test
+    void grabReprintSkipsFailedAndUpdateSnapshotsInFavorOfSuccessfulFullSnapshot() {
+        ReprintFixture fixture = configureGrabReprint("PAD_DIRECT");
+        PrintJob failed = fullGrabSnapshot(23L, "FAILED CONTENT", LocalDateTime.of(2026, 7, 11, 10, 5));
+        failed.status = PrintJobStatus.FAILED;
+        PrintJob update = fullGrabSnapshot(22L, "UPDATE CONTENT", LocalDateTime.of(2026, 7, 11, 10, 4));
+        update.order_update_batch_id = 9L;
+        PrintJob payloadOnly = fullGrabSnapshot(21L, null, LocalDateTime.of(2026, 7, 11, 10, 3));
+        payloadOnly.escposPayloadBase64 = "historical-payload";
+        PrintJob source = fullGrabSnapshot(15L, "FULL GRAB CONTENT", LocalDateTime.of(2026, 7, 11, 10, 0));
+        when(printJobRepository.findReprintableFullGrabSnapshots(fixture.order.store_id, fixture.order.id))
+            .thenReturn(List.of(failed, update, payloadOnly, source));
+
+        service.reprintOrder(fixture.order.id, reprintRequest(PrintModuleCode.GRAB), 7L);
+
+        verify(printJobService).attachRenderedContent(fixture.newJob, fixture.printer.id, "FULL GRAB CONTENT");
+        verify(grabRenderer, never()).render(any());
+    }
+
+    @Test
+    void grabReprintWithoutSuccessfulTextSnapshotReturnsConflictWithoutCreatingJob() {
+        Store store = new Store();
+        store.id = 1L;
+        store.organization_id = 1L;
+        Order order = new Order();
+        order.id = 123L;
+        order.store_id = store.id;
+        when(orderRepository.findExistingById(order.id)).thenReturn(order);
+        when(storeRepository.findById(store.id)).thenReturn(Optional.of(store));
+        PrintJob payloadOnly = fullGrabSnapshot(15L, null, LocalDateTime.of(2026, 7, 11, 10, 0));
+        payloadOnly.escposPayloadBase64 = "historical-payload";
+        when(printJobRepository.findReprintableFullGrabSnapshots(order.store_id, order.id))
+            .thenReturn(List.of(payloadOnly));
+
+        ResponseStatusException exception = assertThrows(
+            ResponseStatusException.class,
+            () -> service.reprintOrder(order.id, reprintRequest(PrintModuleCode.GRAB), 7L)
+        );
+
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+        assertEquals(
+            "NO_REPRINTABLE_SNAPSHOT: No successful full GRAB ticket is available for reprint",
+            exception.getReason()
+        );
+        verifyNoInteractions(printJobService);
+        verify(grabRenderer, never()).render(any());
+    }
+
+    @Test
+    void realModeGrabReprintUsesHistoricalTextWithCurrentPrinterTransport() {
+        ReprintFixture fixture = configureGrabReprint("REAL");
+        PrintJob source = fullGrabSnapshot(15L, "FULL GRAB CONTENT", LocalDateTime.of(2026, 7, 11, 10, 0));
+        when(printJobRepository.findReprintableFullGrabSnapshots(fixture.order.store_id, fixture.order.id))
+            .thenReturn(List.of(source));
+
+        PrintJobResponse response = service.reprintOrder(fixture.order.id, reprintRequest(PrintModuleCode.GRAB), 7L);
+
+        assertEquals(PrintJobStatus.PRINTED, response.status);
+        verify(printJobService).attachRenderedContent(fixture.newJob, fixture.printer.id, "FULL GRAB CONTENT");
+        verify(printJobService).markPrinting(fixture.newJob, fixture.printer);
+        verify(printerTransport).print(
+            eq(fixture.printer),
+            eq("FULL GRAB CONTENT"),
+            any(),
+            any(),
+            eq(fixture.assignment.font_size)
+        );
+        verify(printJobService, never()).markPadDirectQueued(any(), any(), any());
     }
 
     @Test
@@ -123,7 +274,7 @@ class PrintDispatcherServiceImplTest {
                 && request.order_items.get(0).id.equals(batchItem.id)
         ))).thenReturn("UPDATED ITEM ONLY");
 
-        service.dispatchOrderUpdateAfterCommit(PrintModuleCode.GRAB, 1L, fixture.order.id, 77L);
+        service.dispatchPersistedEvent(PrintModuleCode.GRAB, 1L, fixture.order.id, 77L, null);
 
         verify(grabRenderer).render(any());
         verify(frontdeskRenderer, never()).render(any());
@@ -153,7 +304,7 @@ class PrintDispatcherServiceImplTest {
         when(kitchenTaskRepository.findAllByOrderId(order.id)).thenReturn(List.of(task));
         when(hotKitchenPrintEligibilityService.hasHotKitchenContent(any(PrintRenderRequest.class))).thenReturn(false);
 
-        service.dispatchAfterCommit(PrintModuleCode.HOT_KITCHEN, store.id, order.id);
+        service.dispatchPersistedEvent(PrintModuleCode.HOT_KITCHEN, store.id, order.id, null, null);
 
         verifyNoInteractions(printJobService);
         verify(printerAssignmentRepository, never()).findByStoreIdAndModuleCode(store.id, PrintModuleCode.HOT_KITCHEN);
@@ -166,7 +317,7 @@ class PrintDispatcherServiceImplTest {
         when(hotKitchenPrintEligibilityService.hasHotKitchenContent(any(PrintRenderRequest.class))).thenReturn(true);
         when(hotKitchenRenderer.render(any())).thenReturn("HOT KITCHEN TICKET");
 
-        service.dispatchAfterCommit(PrintModuleCode.HOT_KITCHEN, 1L, fixture.order.id);
+        service.dispatchPersistedEvent(PrintModuleCode.HOT_KITCHEN, 1L, fixture.order.id, null, null);
 
         verify(hotKitchenRenderer).render(any());
         verify(printJobService).createPendingJob(
@@ -198,7 +349,7 @@ class PrintDispatcherServiceImplTest {
                 && request.order_items.get(0).id.equals(batchItem.id)
         ))).thenReturn("HOT UPDATED ITEM ONLY");
 
-        service.dispatchOrderUpdateAfterCommit(PrintModuleCode.HOT_KITCHEN, 1L, fixture.order.id, 99L);
+        service.dispatchPersistedEvent(PrintModuleCode.HOT_KITCHEN, 1L, fixture.order.id, 99L, null);
 
         verify(hotKitchenRenderer).render(any());
         verify(printJobService).createPendingJob(
@@ -229,7 +380,7 @@ class PrintDispatcherServiceImplTest {
                 && request.order_items.get(0).id.equals(batchItem.id)
         ))).thenReturn("FRONTDESK UPDATED ITEM ONLY");
 
-        service.dispatchOrderUpdateAfterCommit(PrintModuleCode.FRONTDESK_RECEIPT, 1L, fixture.order.id, 88L);
+        service.dispatchPersistedEvent(PrintModuleCode.FRONTDESK_RECEIPT, 1L, fixture.order.id, 88L, null);
 
         verify(frontdeskRenderer).render(any());
         verify(grabRenderer, never()).render(any());
@@ -269,7 +420,7 @@ class PrintDispatcherServiceImplTest {
                 && request.order_items.get(0).id.equals(drinkItem.id)
         ))).thenReturn("");
 
-        service.dispatchOrderUpdateAfterCommit(PrintModuleCode.GRAB, store.id, order.id, 77L);
+        service.dispatchPersistedEvent(PrintModuleCode.GRAB, store.id, order.id, 77L, null);
 
         verify(grabRenderer).render(any());
         verifyNoInteractions(printJobService);
@@ -288,7 +439,7 @@ class PrintDispatcherServiceImplTest {
         DispatchFixture fixture = configureSuccessfulDispatch(PrintModuleCode.FRONTDESK_RECEIPT, "pickup", 2);
         when(frontdeskRenderer.render(any())).thenReturn("TAKEOUT RECEIPT");
 
-        service.dispatchAfterCommit(PrintModuleCode.FRONTDESK_RECEIPT, 1L, fixture.order.id);
+        service.dispatchPersistedEvent(PrintModuleCode.FRONTDESK_RECEIPT, 1L, fixture.order.id, null, null);
 
         verify(printerTransport, times(2)).print(
             eq(fixture.printer),
@@ -304,7 +455,7 @@ class PrintDispatcherServiceImplTest {
         DispatchFixture fixture = configureSuccessfulDispatch(PrintModuleCode.FRONTDESK_RECEIPT, "dine_in", 2);
         when(frontdeskRenderer.render(any())).thenReturn("DINE IN RECEIPT");
 
-        service.dispatchAfterCommit(PrintModuleCode.FRONTDESK_RECEIPT, 1L, fixture.order.id);
+        service.dispatchPersistedEvent(PrintModuleCode.FRONTDESK_RECEIPT, 1L, fixture.order.id, null, null);
 
         verify(printerTransport, times(1)).print(
             eq(fixture.printer),
@@ -324,7 +475,7 @@ class PrintDispatcherServiceImplTest {
         when(printJobService.markPadDirectQueued(any(PrintJob.class), eq(fixture.printer), eq("LARGE")))
             .thenAnswer(invocation -> invocation.getArgument(0));
 
-        service.dispatchAfterCommit(PrintModuleCode.GRAB, 1L, fixture.order.id);
+        service.dispatchPersistedEvent(PrintModuleCode.GRAB, 1L, fixture.order.id, null, null);
 
         verify(printJobService).markPadDirectQueued(any(PrintJob.class), eq(fixture.printer), eq("LARGE"));
         verify(printerTransport, never()).print(
@@ -344,7 +495,7 @@ class PrintDispatcherServiceImplTest {
         DispatchFixture fixture = configureCloudBlockedDispatch();
         when(grabRenderer.render(any())).thenReturn("GRAB RECEIPT");
 
-        service.dispatchAfterCommit(PrintModuleCode.GRAB, 1L, fixture.order.id);
+        service.dispatchPersistedEvent(PrintModuleCode.GRAB, 1L, fixture.order.id, null, null);
 
         verify(printJobService).markFailed(
             any(PrintJob.class),
@@ -459,6 +610,118 @@ class PrintDispatcherServiceImplTest {
         return new DispatchFixture(order, printer, assignment);
     }
 
+    private ReprintFixture configureGrabReprint(String printingMode) {
+        Store store = new Store();
+        store.id = 1L;
+        store.organization_id = 1L;
+
+        Order order = new Order();
+        order.id = 123L;
+        order.store_id = store.id;
+        order.order_type = "dine_in";
+        order.status = "completed";
+
+        PrinterAssignment assignment = new PrinterAssignment();
+        assignment.store_id = store.id;
+        assignment.module_code = PrintModuleCode.GRAB;
+        assignment.printer_id = 10L;
+        assignment.enabled = true;
+        assignment.font_size = "LARGE";
+
+        PrinterConfig printer = new PrinterConfig();
+        printer.id = assignment.printer_id;
+        printer.store_id = store.id;
+        printer.enabled = true;
+        printer.printer_type = "ESC_POS_TCP";
+        printer.ip_address = "8.8.8.8";
+        printer.font_size = "SMALL";
+
+        PrintJob newJob = new PrintJob();
+        newJob.id = 99L;
+        newJob.store_id = store.id;
+        newJob.order_id = order.id;
+        newJob.printer_id = printer.id;
+        newJob.module_code = PrintModuleCode.GRAB;
+        newJob.receipt_type = PrintModuleCode.GRAB;
+        newJob.status = PrintJobStatus.PENDING;
+        newJob.retry_count = 0;
+        newJob.max_retry_count = 3;
+
+        when(orderRepository.findExistingById(order.id)).thenReturn(order);
+        when(storeRepository.findById(store.id)).thenReturn(Optional.of(store));
+        when(printerAssignmentRepository.findByStoreIdAndModuleCode(store.id, PrintModuleCode.GRAB)).thenReturn(Optional.of(assignment));
+        when(printerConfigRepository.findById(printer.id)).thenReturn(Optional.of(printer));
+        when(printerConfigService.getStorePrintingMode(store.id)).thenReturn(printingMode);
+        when(printJobService.createPendingJob(
+            eq(store.organization_id),
+            eq(store.id),
+            eq(order.id),
+            eq(printer.id),
+            eq(PrintModuleCode.GRAB),
+            eq(PrintModuleCode.GRAB),
+            any(),
+            anyString()
+        )).thenReturn(newJob);
+        when(printJobService.attachRenderedContent(eq(newJob), eq(printer.id), anyString())).thenReturn(newJob);
+        when(printJobService.toResponse(newJob)).thenAnswer(invocation -> toResponse(newJob));
+
+        if ("PAD_DIRECT".equals(printingMode)) {
+            when(printJobService.markPadDirectQueued(newJob, printer, assignment.font_size)).thenAnswer(invocation -> {
+                newJob.status = PrintJobStatus.PENDING;
+                newJob.executionMode = "PAD_DIRECT";
+                newJob.claimedAt = null;
+                newJob.claimExpiresAt = null;
+                newJob.claimedByDeviceId = null;
+                newJob.printedByDeviceId = null;
+                newJob.printed_at = null;
+                newJob.failed_at = null;
+                newJob.error_code = null;
+                newJob.error_message = null;
+                return newJob;
+            });
+        } else {
+            when(printerTransport.supports(printer.printer_type)).thenReturn(true);
+            when(printJobService.markPrinting(newJob, printer)).thenAnswer(invocation -> {
+                newJob.status = PrintJobStatus.PRINTING;
+                return newJob;
+            });
+            when(printJobService.markPrinted(newJob, printer)).thenAnswer(invocation -> {
+                newJob.status = PrintJobStatus.PRINTED;
+                return newJob;
+            });
+        }
+        return new ReprintFixture(store, order, printer, assignment, newJob);
+    }
+
+    private OrderReprintRequest reprintRequest(String receiptType) {
+        OrderReprintRequest request = new OrderReprintRequest();
+        request.receipt_type = receiptType;
+        request.update_ticket = false;
+        return request;
+    }
+
+    private PrintJob fullGrabSnapshot(Long id, String renderedText, LocalDateTime printedAt) {
+        PrintJob job = new PrintJob();
+        job.id = id;
+        job.store_id = 1L;
+        job.order_id = 123L;
+        job.module_code = PrintModuleCode.GRAB;
+        job.receipt_type = PrintModuleCode.GRAB;
+        job.status = PrintJobStatus.PRINTED;
+        job.rendered_text_snapshot = renderedText;
+        job.printed_at = printedAt;
+        return job;
+    }
+
+    private PrintJobResponse toResponse(PrintJob job) {
+        PrintJobResponse response = new PrintJobResponse();
+        response.id = job.id;
+        response.status = job.status;
+        response.execution_mode = job.executionMode;
+        response.printer_id = job.printer_id;
+        return response;
+    }
+
     private OrderItem item(Long id, Long batchId) {
         OrderItem item = new OrderItem();
         item.id = id;
@@ -469,6 +732,15 @@ class PrintDispatcherServiceImplTest {
     }
 
     private record DispatchFixture(Order order, PrinterConfig printer, PrinterAssignment assignment) {
+    }
+
+    private record ReprintFixture(
+        Store store,
+        Order order,
+        PrinterConfig printer,
+        PrinterAssignment assignment,
+        PrintJob newJob
+    ) {
     }
 
     @Test
@@ -489,7 +761,7 @@ class PrintDispatcherServiceImplTest {
         when(printJobService.createPendingJob(1L, 1L, 123L, null, null, PrintModuleCode.GRAB, PrintModuleCode.GRAB, null,
             "{\"source\":\"ORDER_SUBMIT\",\"module_code\":\"GRAB\",\"store_id\":1,\"order_id\":123}")).thenReturn(job);
 
-        service.dispatchAfterCommit(PrintModuleCode.GRAB, 1L, 123L);
+        service.dispatchPersistedEvent(PrintModuleCode.GRAB, 1L, 123L, null, null);
 
         verify(printJobService).markCancelled(job, null, "PRINTING_DISABLED", "Store printing is disabled");
         verify(printerAssignmentRepository, never()).findByStoreIdAndModuleCode(1L, PrintModuleCode.GRAB);

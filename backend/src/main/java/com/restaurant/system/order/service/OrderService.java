@@ -33,6 +33,8 @@ public interface OrderService {
 
     OrderResponse submitOrder(Long id);
 
+    OrderResponse createOrReplaceDraftAndSubmit(CreateOrderRequest request, Long serverOrderId);
+
     OrderUpdateResponse createOrderUpdate(Long id, CreateOrderUpdateRequest request, Long userId);
 
     List<OrderResponse> getActiveOrders(Long storeId, List<String> statuses, String orderType, String sortBy);

@@ -11,6 +11,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface PrintJobRepository extends JpaRepository<PrintJob, Long> {
 
+    java.util.Optional<PrintJob> findByDispatchSourceKey(String dispatchSourceKey);
+
     @Query("""
         select pj from PrintJob pj
         where pj.store_id = :storeId
