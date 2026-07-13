@@ -77,7 +77,7 @@ function sleep(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms))
 }
 
-function mapOptions(draft: ItemCustomizationDraft, menuItem?: MenuItem) {
+export function mapOptions(draft: ItemCustomizationDraft, menuItem?: MenuItem) {
   const optionPayloads: { option_id: number; quantity: number }[] = []
 
   const pushOption = (optionId: string | undefined, quantity = 1) => {

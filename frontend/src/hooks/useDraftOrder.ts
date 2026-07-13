@@ -21,8 +21,6 @@ import type {
 import { createIdempotencyKey } from '../utils/randomId'
 import { ApiRequestError } from '../services/apiClient'
 import { recordAppOperation } from '../services/networkStatus'
-import { normalizeComboDraft, resolveComboSelection, resolveComboUpcharge } from '../utils/comboSelection'
-import { resolveNoodleTypeId } from '../utils/noodleTypeDefaults'
 import {
   buildDraftContextKey,
   cleanupExpiredLocalDrafts,
