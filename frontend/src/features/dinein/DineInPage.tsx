@@ -23,6 +23,7 @@ import { DineInTopBar } from './components/DineInTopBar'
 import { TableGrid } from './components/TableGrid'
 import { TableStatusLegend } from './components/TableStatusLegend'
 import { useCurrentStore } from '../store/StoreContext'
+import { useAuth } from '../auth/useAuth'
 
 function buildGeneratedTakeoutLabel() {
   const stamp = Date.now().toString().slice(-4)
@@ -72,7 +73,8 @@ interface DineInPageProps {
 }
 
 export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
-  const { storeId } = useCurrentStore()
+  const { storeId, organizationId } = useCurrentStore()
+  const { user } = useAuth()
   const isIpadLandscape = useIpadLandscape()
   const workstation = inferFrontdeskWorkstation(routePath)
   const workstationLabel = workstation ? `Menu ${workstation.toUpperCase()}` : null
@@ -90,7 +92,10 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
   const [printOptions, setPrintOptions] = useState<OrderPrintOption[]>([])
   const [printBusy, setPrintBusy] = useState<string | null>(null)
   const [printError, setPrintError] = useState<string | null>(null)
-  const menuCatalog = useMenuCatalog(storeId)
+  const menuCatalog = useMenuCatalog(storeId, {
+    accountId: user?.id ?? null,
+    organizationId,
+  })
   const printCheckTimeoutsRef = useRef<number[]>([])
   const printCheckRunIdRef = useRef(0)
   const tableBoardEnabled = activeOrderingContext == null

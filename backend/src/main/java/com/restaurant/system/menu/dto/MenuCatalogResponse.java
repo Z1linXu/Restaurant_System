@@ -1,16 +1,51 @@
 package com.restaurant.system.menu.dto;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public class MenuCatalogResponse {
 
     public Long store_id;
+    public Long organization_id;
+    public Long menu_revision;
+    public LocalDateTime generated_at;
+    public String catalog_version;
+    public String combo_metadata_version;
+    public String content_hash;
+    public TaxPolicyResponse tax_policy;
     public List<CategoryResponse> categories;
 
-    public MenuCatalogResponse(Long store_id, List<CategoryResponse> categories) {
-        this.store_id = store_id;
+    public MenuCatalogResponse(
+        Long storeId,
+        Long organizationId,
+        Long menuRevision,
+        LocalDateTime generatedAt,
+        String catalogVersion,
+        String comboMetadataVersion,
+        TaxPolicyResponse taxPolicy,
+        List<CategoryResponse> categories
+    ) {
+        this.store_id = storeId;
+        this.organization_id = organizationId;
+        this.menu_revision = menuRevision;
+        this.generated_at = generatedAt;
+        this.catalog_version = catalogVersion;
+        this.combo_metadata_version = comboMetadataVersion;
+        this.tax_policy = taxPolicy;
         this.categories = categories;
+    }
+
+    public static class TaxPolicyResponse {
+        public BigDecimal rate;
+        public String label;
+        public String version;
+
+        public TaxPolicyResponse(BigDecimal rate, String label, String version) {
+            this.rate = rate;
+            this.label = label;
+            this.version = version;
+        }
     }
 
     public static class CategoryResponse {
@@ -19,21 +54,24 @@ public class MenuCatalogResponse {
         public String name_zh;
         public String name_en;
         public Integer sort_order;
+        public Boolean is_active;
         public List<ItemResponse> items;
 
         public CategoryResponse(
             Long id,
             String code,
-            String name_zh,
-            String name_en,
-            Integer sort_order,
+            String nameZh,
+            String nameEn,
+            Integer sortOrder,
+            Boolean isActive,
             List<ItemResponse> items
         ) {
             this.id = id;
             this.code = code;
-            this.name_zh = name_zh;
-            this.name_en = name_en;
-            this.sort_order = sort_order;
+            this.name_zh = nameZh;
+            this.name_en = nameEn;
+            this.sort_order = sortOrder;
+            this.is_active = isActive;
             this.items = items;
         }
     }
@@ -47,30 +85,33 @@ public class MenuCatalogResponse {
         public String sku;
         public String item_type;
         public BigDecimal base_price;
+        public Boolean is_active;
         public Boolean is_sold_out;
         public List<OptionResponse> options;
 
         public ItemResponse(
             Long id,
-            Long category_id,
-            Long station_id,
-            String name_zh,
-            String name_en,
+            Long categoryId,
+            Long stationId,
+            String nameZh,
+            String nameEn,
             String sku,
-            String item_type,
-            BigDecimal base_price,
-            Boolean is_sold_out,
+            String itemType,
+            BigDecimal basePrice,
+            Boolean isActive,
+            Boolean isSoldOut,
             List<OptionResponse> options
         ) {
             this.id = id;
-            this.category_id = category_id;
-            this.station_id = station_id;
-            this.name_zh = name_zh;
-            this.name_en = name_en;
+            this.category_id = categoryId;
+            this.station_id = stationId;
+            this.name_zh = nameZh;
+            this.name_en = nameEn;
             this.sku = sku;
-            this.item_type = item_type;
-            this.base_price = base_price;
-            this.is_sold_out = is_sold_out;
+            this.item_type = itemType;
+            this.base_price = basePrice;
+            this.is_active = isActive;
+            this.is_sold_out = isSoldOut;
             this.options = options;
         }
     }
@@ -90,26 +131,26 @@ public class MenuCatalogResponse {
 
         public OptionResponse(
             Long id,
-            String option_type,
-            String option_code,
-            String option_group,
-            Long parent_option_id,
-            Integer sort_order,
-            String name_zh,
-            String name_en,
-            BigDecimal price_delta,
-            Boolean is_active
+            String optionType,
+            String optionCode,
+            String optionGroup,
+            Long parentOptionId,
+            Integer sortOrder,
+            String nameZh,
+            String nameEn,
+            BigDecimal priceDelta,
+            Boolean isActive
         ) {
             this.id = id;
-            this.option_type = option_type;
-            this.option_code = option_code;
-            this.option_group = option_group;
-            this.parent_option_id = parent_option_id;
-            this.sort_order = sort_order;
-            this.name_zh = name_zh;
-            this.name_en = name_en;
-            this.price_delta = price_delta;
-            this.is_active = is_active;
+            this.option_type = optionType;
+            this.option_code = optionCode;
+            this.option_group = optionGroup;
+            this.parent_option_id = parentOptionId;
+            this.sort_order = sortOrder;
+            this.name_zh = nameZh;
+            this.name_en = nameEn;
+            this.price_delta = priceDelta;
+            this.is_active = isActive;
             this.side_item_remove_options = List.of();
         }
     }

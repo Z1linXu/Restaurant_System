@@ -6471,3 +6471,37 @@ payment, printing, or KDS business behavior.
 - Menu loading and order submission emit safe stage and duration diagnostics.
 - `VITE_NETWORK_DIAGNOSTICS_ENABLED=false` hides diagnostic-facing UI/logging
   without disabling request safety, health tracking, or business functions.
+
+## Offline Ordering PR2: Versioned Menu Cache
+
+PR2 adds a store-scoped, versioned menu snapshot without changing menu pricing,
+combo semantics, order submission, printing, or KDS behavior.
+
+- Flyway migration `V2__add_versioned_menu_revision.sql` adds monotonic
+  `stores.menu_revision` and `stores.menu_updated_at` columns with safe defaults
+  for existing stores.
+- Category, menu-item, sold-out, price, active-state, option, and option-order
+  management writes increment the owning store revision in the same database
+  transaction. Moving data between stores invalidates both affected stores.
+- `GET /api/v1/menu/catalog/revision?store_id={storeId}` returns the lightweight
+  store/organization revision, policy versions, update time, and ETag. The
+  endpoint uses the same store-scoped `ORDER_CREATE` authorization as the full
+  catalog.
+- The full catalog includes organization id, menu revision, generated time,
+  active/sold-out fields, stable option/combo metadata, tax policy version, and
+  a deterministic content hash. Catalog reads use a repeatable-read transaction
+  so revision and content describe one database snapshot.
+- IndexedDB database `restaurant-pos-offline` schema version 1 contains
+  `menuHeads` and `menuSnapshots`. Every key includes `accountId`,
+  `organizationId`, and `storeId`; snapshots additionally include revision.
+- The ordering UI reads and validates the active local snapshot first, renders
+  it immediately, then checks the lightweight revision endpoint. A changed ETag
+  downloads a temporary full snapshot; scope, revision, and hash must all pass
+  before one IndexedDB transaction writes the snapshot and switches the active
+  head.
+- Interrupted downloads, hash mismatch, and corrupt records never replace the
+  previous active menu. When refresh fails, the existing menu remains usable and
+  the UI shows its last download time and a stale-cache warning after 24 hours.
+- Cached menu content is still advisory. Server-side validation remains the
+  authority for menu availability, options, price, tax, and store scope at
+  submission time.

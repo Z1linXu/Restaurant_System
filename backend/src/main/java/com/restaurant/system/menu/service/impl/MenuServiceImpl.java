@@ -1,6 +1,8 @@
 package com.restaurant.system.menu.service.impl;
 
+import com.restaurant.system.common.pricing.TaxCalculator;
 import com.restaurant.system.menu.dto.MenuCatalogResponse;
+import com.restaurant.system.menu.dto.MenuRevisionResponse;
 import com.restaurant.system.menu.entity.MenuCategory;
 import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.entity.MenuItemOption;
@@ -8,6 +10,8 @@ import com.restaurant.system.menu.repository.MenuCategoryRepository;
 import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.menu.repository.MenuItemRepository;
 import com.restaurant.system.menu.service.MenuService;
+import com.restaurant.system.menu.service.MenuRevisionService;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -15,6 +19,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class MenuServiceImpl implements MenuService {
@@ -22,19 +28,27 @@ public class MenuServiceImpl implements MenuService {
     private final MenuCategoryRepository menuCategoryRepository;
     private final MenuItemRepository menuItemRepository;
     private final MenuItemOptionRepository menuItemOptionRepository;
+    private final MenuRevisionService menuRevisionService;
+    private final MenuCatalogHashService menuCatalogHashService;
 
     public MenuServiceImpl(
         MenuCategoryRepository menuCategoryRepository,
         MenuItemRepository menuItemRepository,
-        MenuItemOptionRepository menuItemOptionRepository
+        MenuItemOptionRepository menuItemOptionRepository,
+        MenuRevisionService menuRevisionService,
+        MenuCatalogHashService menuCatalogHashService
     ) {
         this.menuCategoryRepository = menuCategoryRepository;
         this.menuItemRepository = menuItemRepository;
         this.menuItemOptionRepository = menuItemOptionRepository;
+        this.menuRevisionService = menuRevisionService;
+        this.menuCatalogHashService = menuCatalogHashService;
     }
 
     @Override
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public MenuCatalogResponse getCatalog(Long storeId) {
+        MenuRevisionResponse revision = menuRevisionService.getRevision(storeId);
         List<MenuCategory> categories = menuCategoryRepository.findActiveByStoreId(storeId);
         List<MenuItem> items = menuItemRepository.findActiveByStoreId(storeId);
         List<Long> itemIds = items.stream().map(menuItem -> menuItem.id).toList();
@@ -94,6 +108,7 @@ public class MenuServiceImpl implements MenuService {
                     item.sku,
                     item.item_type,
                     item.base_price,
+                    item.is_active,
                     item.is_sold_out,
                     optionsByItemId.getOrDefault(item.id, List.of())
                 ));
@@ -109,11 +124,27 @@ public class MenuServiceImpl implements MenuService {
                 category.name_zh,
                 category.name_en,
                 category.sort_order,
+                category.is_active,
                 itemsByCategoryId.getOrDefault(category.id, List.of())
             ))
             .toList();
 
-        return new MenuCatalogResponse(storeId, categoryResponses);
+        MenuCatalogResponse response = new MenuCatalogResponse(
+            storeId,
+            revision.organization_id,
+            revision.menu_revision,
+            LocalDateTime.now(),
+            MenuRevisionService.CATALOG_VERSION,
+            "stable-option-semantics-v1",
+            new MenuCatalogResponse.TaxPolicyResponse(
+                TaxCalculator.TAX_RATE,
+                TaxCalculator.TAX_RATE_LABEL,
+                MenuRevisionService.TAX_POLICY_VERSION
+            ),
+            categoryResponses
+        );
+        response.content_hash = menuCatalogHashService.calculate(response);
+        return response;
     }
 
     private boolean isRemoveOption(MenuCatalogResponse.OptionResponse option) {

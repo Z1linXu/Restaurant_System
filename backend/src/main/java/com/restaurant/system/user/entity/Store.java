@@ -40,6 +40,12 @@ public class Store {
     @Column(name = "printing_mode")
     public String printing_mode;
 
+    @Column(name = "menu_revision", nullable = false)
+    public Long menu_revision = 1L;
+
+    @Column(name = "menu_updated_at", nullable = false)
+    public LocalDateTime menu_updated_at = LocalDateTime.now();
+
     @Column(name = "created_at")
     public LocalDateTime created_at;
 

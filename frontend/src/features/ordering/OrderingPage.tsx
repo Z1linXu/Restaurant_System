@@ -27,6 +27,11 @@ interface OrderingPageProps {
     items: OrderingCatalog['items']
     loading: boolean
     error: string | null
+    source: 'CACHE' | 'NETWORK' | null
+    lastUpdatedAt: string | null
+    updating: boolean
+    updateError: string | null
+    cacheStale: boolean
   }
   slotLabel: string
   tableLabel: string
@@ -155,7 +160,17 @@ export function OrderingPage({
   onDraftCancelled,
   onOrderSubmitted,
 }: OrderingPageProps) {
-  const { categories, items, loading: catalogLoading, error: catalogError } = catalog
+  const {
+    categories,
+    items,
+    loading: catalogLoading,
+    error: catalogError,
+    source: catalogSource,
+    lastUpdatedAt: catalogLastUpdatedAt,
+    updating: catalogUpdating,
+    updateError: catalogUpdateError,
+    cacheStale,
+  } = catalog
   const isIpadLandscape = useIpadLandscape()
   const [activeCategoryId, setActiveCategoryId] = useState('')
   const [menuSearch, setMenuSearch] = useState('')
@@ -432,6 +447,21 @@ export function OrderingPage({
         {networkDiagnosticsDisplayEnabled && connectionWarning(connection.state) ? (
           <div className="rounded-[20px] border border-[rgba(151,34,34,0.25)] bg-[rgba(151,34,34,0.1)] px-5 py-4 text-[1rem] font-bold text-[rgb(116,22,22)]">
             {connectionWarning(connection.state)}
+          </div>
+        ) : null}
+
+        {catalogSource === 'CACHE' ? (
+          <div className={`rounded-[20px] border px-5 py-3 text-[0.95rem] font-bold ${cacheStale ? 'border-[rgba(151,34,34,0.3)] bg-[rgba(151,34,34,0.1)] text-[rgb(116,22,22)]' : 'border-[rgba(92,106,69,0.28)] bg-[rgba(92,106,69,0.1)] text-[rgb(59,73,40)]'}`}>
+            当前使用本机缓存菜单
+            {catalogLastUpdatedAt ? `，最后更新：${new Date(catalogLastUpdatedAt).toLocaleString()}` : ''}
+            {catalogUpdating ? '；正在后台检查更新…' : ''}
+            {cacheStale ? '。缓存较旧，价格和售罄状态可能已变化。' : ''}
+          </div>
+        ) : null}
+
+        {catalogUpdateError ? (
+          <div className="rounded-[20px] border border-[rgba(151,34,34,0.22)] bg-[rgba(151,34,34,0.08)] px-5 py-3 text-[0.95rem] font-bold text-[rgb(116,22,22)]">
+            {catalogUpdateError}
           </div>
         ) : null}
 
