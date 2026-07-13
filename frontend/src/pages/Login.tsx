@@ -12,8 +12,8 @@ function navigateTo(path: string) {
 
 export default function Login() {
   const { signIn } = useAuth()
-  const [loginIdentifier, setLoginIdentifier] = useState('owner')
-  const [password, setPassword] = useState('741xu741')
+  const [loginIdentifier, setLoginIdentifier] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -28,7 +28,7 @@ export default function Login() {
         }
         throw exception
       })
-      const workspaces = await fetchWorkspaces().catch((exception) => {
+      const workspaces = await fetchWorkspaces(response.user.id).catch((exception) => {
         console.error('[Login] workspace loading failed after successful login', exception)
         throw new Error('登录成功，但门店权限加载失败，请联系管理员检查门店权限。')
       })

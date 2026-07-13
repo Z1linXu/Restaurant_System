@@ -7,13 +7,13 @@ import { useAuth } from '../auth/useAuth'
 
 export function StoreSwitcher({ compact = false }: { compact?: boolean }) {
   const currentStore = useOptionalCurrentStore()
-  const { isOwner, isManager } = useAuth()
+  const { isOwner, isManager, isOfflineRestricted, user } = useAuth()
   const [stores, setStores] = useState<WorkspaceStore[]>([])
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
-    fetchWorkspaces()
+    fetchWorkspaces(user?.id, { preferOfflineSnapshot: isOfflineRestricted })
       .then((response) => {
         if (!active) return
         setStores(response.stores ?? [])
@@ -26,7 +26,7 @@ export function StoreSwitcher({ compact = false }: { compact?: boolean }) {
     return () => {
       active = false
     }
-  }, [])
+  }, [isOfflineRestricted, user?.id])
 
   const selectedStoreId = currentStore?.storeId ?? stores[0]?.id ?? ''
   const label = useMemo(() => {
@@ -66,7 +66,7 @@ export function StoreSwitcher({ compact = false }: { compact?: boolean }) {
           ))}
         </select>
       </label>
-      {(isOwner || isManager) ? (
+      {(isOwner || isManager) && !isOfflineRestricted ? (
         <button
           type="button"
           onClick={() => navigateTo('/owner/dashboard')}

@@ -271,7 +271,7 @@ single print is in progress, and does not silently retry forever.
 If you leave Web App URL empty, the shell loads Android bundled assets from:
 
 ```text
-https://restaurant-pad.local/index.html
+https://restaurant-pad.local/
 ```
 
 Then configure API Base URL to the development computer LAN backend address:
@@ -281,6 +281,17 @@ http://{developer-lan-ip}:8080
 ```
 
 Bundled assets mode is useful when testing the copied frontend artifact, but local preview mode is simpler for day-to-day LAN testing because `/api` and `/ws` go through Vite preview proxy.
+
+Do not manually copy `frontend/dist` into the Android project. Build and verify
+the complete bundled artifact with:
+
+```bash
+restaurant-pad-app/scripts/build-bundled-apk.sh debug
+```
+
+The command rebuilds the frontend, removes old bundled chunks, copies the new
+dist, writes and verifies SHA-256 metadata, then runs Gradle. See
+`docs/BUNDLED_ASSETS_PRODUCTION.md` for the production checklist.
 
 Do not use Android's own `localhost` or `127.0.0.1` to mean the development computer. Inside Android, `localhost` points back to the Android device itself.
 

@@ -1,0 +1,261 @@
+{
+  "manifestVersion": 1,
+  "buildVersion": "offline-pr7-20260713",
+  "generatedAt": "2026-07-13T19:10:00.540Z",
+  "offlineDatabaseSchemaVersion": 4,
+  "entrypoints": {
+    "scripts": [
+      "assets/index-vygNTKF3.js"
+    ],
+    "styles": [
+      "assets/index-CjW2RX4m.css"
+    ]
+  },
+  "assets": [
+    {
+      "path": "assets/AdminAuditLogs-DBPRDDY1.js",
+      "bytes": 3700,
+      "sha256": "f1bcc70056b0009b6d71cd9c3b506d1a67979100d66d32924e946784deae8d24"
+    },
+    {
+      "path": "assets/AdminDashboard-CBV7JVux.js",
+      "bytes": 15279,
+      "sha256": "3e695794c1bce50d8d93f645f14c981a01a38228154c3a6cae05b7b4c1c81e4b"
+    },
+    {
+      "path": "assets/AdminDiningTables-DnBiaZ-t.js",
+      "bytes": 12198,
+      "sha256": "64657181ec3e41eba8c532aeffb171ffabcf6534b2e151526e1bdbc26bcc5c02"
+    },
+    {
+      "path": "assets/AdminMenuItems-sBkZ3gNX.js",
+      "bytes": 29751,
+      "sha256": "9bcce985b77fa18bad52c7b6cf1f77161ff9c1501f1ef32de1bf0e33f0981842"
+    },
+    {
+      "path": "assets/AdminPlatform-D9fHcNMo.js",
+      "bytes": 11493,
+      "sha256": "42e98da494026dcddf6d0e6d301eb43d70247154faf4977dd043f86db9196794"
+    },
+    {
+      "path": "assets/AdminPrintingSettings-DMpkD4Dg.js",
+      "bytes": 52479,
+      "sha256": "439aec9f21a239715d2ccf66a01699e8cc09fb4da364d51fb38e64c0dab4fd2d"
+    },
+    {
+      "path": "assets/AdminReportsItems-BlPexRg3.js",
+      "bytes": 4536,
+      "sha256": "fa70870d085bdbe92d4bfd2ac320f8c5b94a04214e1f21d6dbd7e31c931646fe"
+    },
+    {
+      "path": "assets/AdminReportsProfit-DPlzsxtw.js",
+      "bytes": 6744,
+      "sha256": "5601683f348f92b46b6c6648e859761094e05188daf0d45842e6969a1a343297"
+    },
+    {
+      "path": "assets/AdminReportsSales-Cr6loAOY.js",
+      "bytes": 5482,
+      "sha256": "cecf13834e4c1e3611b7322a134da08f24a2c9b3e603009d9db0d449b9bd7c7a"
+    },
+    {
+      "path": "assets/AdminReportsStores-eQ3qlMYi.js",
+      "bytes": 4151,
+      "sha256": "d0e5916c922b86d907ef689df26201e1e578332d36bb536da88fbca6b8b7c0a3"
+    },
+    {
+      "path": "assets/AdminStaff-BRw8pgBq.js",
+      "bytes": 6815,
+      "sha256": "5c9994ddd42dd31ae3b683597a1ea9a54493a4922202ce36b1eb79224fcfcb8f"
+    },
+    {
+      "path": "assets/Badge-cyIi1CXX.js",
+      "bytes": 533,
+      "sha256": "ebe1a1900224697a3237b818dfb3ec03dbb71e66b4ca04400ebcdb1e3302182f"
+    },
+    {
+      "path": "assets/Button-DSU7XJR7.js",
+      "bytes": 1059,
+      "sha256": "cf33ca9ff0316cd6b53ab947d610f7032eb2283465a048b9fe348f634db75ec0"
+    },
+    {
+      "path": "assets/Card-CR4tusG_.js",
+      "bytes": 409,
+      "sha256": "93e006861757942f92ce9dbb660f7e17e25c256d9bdcac1cbdf1aec7cc898fc3"
+    },
+    {
+      "path": "assets/DineIn-B9WedHTg.js",
+      "bytes": 105389,
+      "sha256": "079339825a5eede15c017c5a93bd6438abcd451b639ad30564b834be529bc6f1"
+    },
+    {
+      "path": "assets/FrontdeskTopNav-BnpSKf1Q.js",
+      "bytes": 11246,
+      "sha256": "42a26b3962dba97dea60276e3534a147f6acab66f43d5e46406d7622c2ba6677"
+    },
+    {
+      "path": "assets/Home-D34SGm4x.js",
+      "bytes": 3276,
+      "sha256": "6825e3e667c08d69a7f843a8b65467e07a97889ea30a0e56623fc9b82f231344"
+    },
+    {
+      "path": "assets/KdsHistory-DoSURrpb.js",
+      "bytes": 5603,
+      "sha256": "70d71ddbc41de4aaf911d822de84874652d60323429597a81ddeb4b03a8aff53"
+    },
+    {
+      "path": "assets/KdsHotKitchen-C3X4tN_J.js",
+      "bytes": 9528,
+      "sha256": "ed028c918a826fc5aa182139e8dacc148f6897bd0690e8d92377f74761986c50"
+    },
+    {
+      "path": "assets/KdsNoodle-Dy2PPEHz.js",
+      "bytes": 13831,
+      "sha256": "b2cdebb5cfd711fc0deb52a6fd5b0bc2893a7f709dac165f58792c05d88b992e"
+    },
+    {
+      "path": "assets/KdsRamen-BQCZFfBi.js",
+      "bytes": 6618,
+      "sha256": "8f04c4b283d2784a290ad33ebe2ecf1870ef2abfc8bab487935fff0249a573cb"
+    },
+    {
+      "path": "assets/KdsSidebar-BV0iSKXH.js",
+      "bytes": 1441,
+      "sha256": "0674885f794a9330a041695a64bcd38ff03f87f1ebd26e3b70a75bef07158257"
+    },
+    {
+      "path": "assets/KdsTopBar-CYF-MjJr.js",
+      "bytes": 2980,
+      "sha256": "c3f2243fde9c64708076fa88b1e084e724e9f70ddb9f891501e19351aa24542e"
+    },
+    {
+      "path": "assets/Login-gzWa0nWX.js",
+      "bytes": 3707,
+      "sha256": "ab7aa5139dd1eff8a4cb7bebedea8ff90a8b9f5956c70e5803b91b32c70cec70"
+    },
+    {
+      "path": "assets/Orders-CZwgGfpG.js",
+      "bytes": 10287,
+      "sha256": "ad8163baa379cd5458f0498ef3d3bcedac415ae52963afa35a5c3aba6a65874f"
+    },
+    {
+      "path": "assets/OwnerDashboard-gl9otVZ0.js",
+      "bytes": 8096,
+      "sha256": "c937a2e405f807b464f24e4ef036bfa42af4cecf95ca6548d27da19dab5b41de"
+    },
+    {
+      "path": "assets/PickupBoard-CxJbISsu.js",
+      "bytes": 9632,
+      "sha256": "0e2022cc05a5942d1226c7e049600be7fa60a0d0d129393f947993d872802b79"
+    },
+    {
+      "path": "assets/ReportMetricCard-BDx4wcBF.js",
+      "bytes": 862,
+      "sha256": "47705190b8ddc4dce8347d7b6948658ec31d4dcd9821f3e1d4d776a988b871af"
+    },
+    {
+      "path": "assets/ReportTrendChart-CS8gtvEM.js",
+      "bytes": 1753,
+      "sha256": "6e4bc8b531799b1d6c689bcd90412960518d09cb94b56d994717dac59b37edcb"
+    },
+    {
+      "path": "assets/androidPadBridge-BXJAUbiK.js",
+      "bytes": 170,
+      "sha256": "0340ec9d50061b457a3cf97e82d2af5b78e37bc6e28dd1de59d626fd1bdc62ea"
+    },
+    {
+      "path": "assets/chunk-B3K2TuZy.js",
+      "bytes": 558,
+      "sha256": "03a76345c69f8bd751dac18894f65c0918f1690fbbb661f38052819cd5ae8209"
+    },
+    {
+      "path": "assets/displayLabels-DItISP9V.js",
+      "bytes": 3782,
+      "sha256": "aa17e2ec028df9363c70179b5a7f6699492900c8d8402bc1c9c0db1cd8147c47"
+    },
+    {
+      "path": "assets/entry-2dc4Wj1q.js",
+      "bytes": 44081,
+      "sha256": "886753205dac5547049b49103cc8c197480e6cbb1e89c8f751c57483c86e6d75"
+    },
+    {
+      "path": "assets/index-CjW2RX4m.css",
+      "bytes": 73855,
+      "sha256": "b7818da684b963be3c696b4e555f38868bc994d27359954b10f87368c1c8ec70"
+    },
+    {
+      "path": "assets/index-vygNTKF3.js",
+      "bytes": 218953,
+      "sha256": "c9c1afa0fc240ccb7f410ac3e1c1990da9c357724f0defe0d1e86c659d9c362a"
+    },
+    {
+      "path": "assets/jsx-runtime-Dq3xGvJb.js",
+      "bytes": 424,
+      "sha256": "0409cf7b6f815204cfce6cfaa7e3bc8d8367571b7a2f8b718a13d70d4abde527"
+    },
+    {
+      "path": "assets/kdsService-DpEbuy7K.js",
+      "bytes": 1300,
+      "sha256": "9343c4e3d4b11ad70f0f9a55247c03dea69211dc596d146e0a7ad9cb792732e2"
+    },
+    {
+      "path": "assets/orderService-DFu2-Wtv.js",
+      "bytes": 4027,
+      "sha256": "12da11e6a61df0a6f25eba1175d84a674723b04ae18076b1445832623bddd120"
+    },
+    {
+      "path": "assets/platformAdminService-CIIzn7Tm.js",
+      "bytes": 962,
+      "sha256": "2a640acf4af19ca4c1d35d4b471ed37281666b2f6b4b3693760bc7689ccbd0f3"
+    },
+    {
+      "path": "assets/preload-helper-ca-nBW7U.js",
+      "bytes": 1193,
+      "sha256": "0c88c6aaef07b19239a2eac9faef82584f9e733114f85dc190e98dcea60b1753"
+    },
+    {
+      "path": "assets/staffAdminService-BFT1vfNl.js",
+      "bytes": 665,
+      "sha256": "b3e92aad3dab568f85a9b8259409279f5c4adf655b48b5f148c4ec0cbbca78d1"
+    },
+    {
+      "path": "assets/stomp.umd-NH7K-0sK.js",
+      "bytes": 22575,
+      "sha256": "8b096b0ec0deba0aace08f1359d548702ce1deb4afaaf291c45e18debea5aab1"
+    },
+    {
+      "path": "assets/storeWorkspaceService-PM8a6zmp.js",
+      "bytes": 5404,
+      "sha256": "ce4402fddb5e8062a974ad31af1107f7930f62935a21afced9ad513976dab796"
+    },
+    {
+      "path": "assets/useAnalyticsReports-DvY53zfk.js",
+      "bytes": 10905,
+      "sha256": "aaa5b9fee2ca6ac70b85fc47b14187cf6779ee0bcd1bacf0e42486691c32d9c1"
+    },
+    {
+      "path": "assets/useAuth-Bzd9XeOR.js",
+      "bytes": 14931,
+      "sha256": "49f2be7977cf8d03bfe210cf70952a8a7a6b474795c68e243676429c5641727d"
+    },
+    {
+      "path": "assets/useIpadLandscape-k-2DzAws.js",
+      "bytes": 363,
+      "sha256": "b42a82373e616107fce268b2ced4d916baac881161ee0a52ef6b345ada4db474"
+    },
+    {
+      "path": "favicon.svg",
+      "bytes": 9522,
+      "sha256": "61bc9a161de58248288e6905425d7180f0624c2865007b97d763fdac12043a66"
+    },
+    {
+      "path": "icons.svg",
+      "bytes": 5031,
+      "sha256": "b45fa506195cfcdef406ba9f0c77b36ddc1a7c224040926ec70abc2fdea7b93a"
+    },
+    {
+      "path": "index.html",
+      "bytes": 954,
+      "sha256": "6d76ff6a1fd9244c3894a10db66d0df4af01bc0796470644fdd29e41d5a8b4d5"
+    }
+  ]
+}

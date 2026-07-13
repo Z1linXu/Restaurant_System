@@ -1,11 +1,12 @@
 export const OFFLINE_DATABASE_NAME = 'restaurant-pos-offline'
-export const OFFLINE_DATABASE_VERSION = 3
+export const OFFLINE_DATABASE_VERSION = 4
 
 export const OFFLINE_STORES = {
   menuHeads: 'menuHeads',
   menuSnapshots: 'menuSnapshots',
   localDrafts: 'localDrafts',
   orderOutbox: 'orderOutbox',
+  workspaceSnapshots: 'workspaceSnapshots',
 } as const
 
 let databasePromise: Promise<IDBDatabase> | null = null
@@ -45,6 +46,9 @@ export function openOfflineDatabase() {
         outbox.createIndex('byAccountId', 'accountId')
         outbox.createIndex('byState', 'state')
         outbox.createIndex('byNextRetryAt', 'nextRetryAt')
+      }
+      if (!database.objectStoreNames.contains(OFFLINE_STORES.workspaceSnapshots)) {
+        database.createObjectStore(OFFLINE_STORES.workspaceSnapshots, { keyPath: 'key' })
       }
     }
     request.onsuccess = () => {

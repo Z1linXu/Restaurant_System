@@ -6646,3 +6646,43 @@ and it adds no high-frequency polling.
   records from another account, organization, or store are filtered out.
 - Error details expose stable operator error codes only; backend stack traces,
   frozen payloads, notes, tokens, and sensitive data are not rendered.
+
+## Offline Ordering PR7: Android Bundled Assets Production Mode
+
+PR7 packages the current React frontend into the Android APK through a verified
+build pipeline. It does not change order lifecycle, payment/refund,
+`completeOrder`, menu pricing/combo semantics, KDS transitions, or PAD_DIRECT
+claim/printing behavior.
+
+- `restaurant-pad-app/scripts/build-bundled-apk.sh` creates one frontend build
+  version, runs the Vite production build, removes all old Android assets,
+  copies the complete new dist, creates SHA-256 `asset-manifest.json` and
+  `build-info.json`, verifies entry JS/CSS and every file hash, then invokes
+  Gradle. Android `preBuild` independently runs the verifier and fails on stale,
+  missing, modified, or untracked assets.
+- Bundled mode now starts at `https://restaurant-pad.local/`; the existing SPA
+  asset handler still falls back to `index.html` for store routes. Android
+  injects runtime API base, WebSocket base, paired store id, app/build version,
+  asset-manifest hash, and IndexedDB schema version before React starts. Tokens,
+  domain/IP, printer endpoints, and secrets are not compiled into that config.
+- IndexedDB `restaurant-pos-offline` advances additively from schema version 3
+  to 4 with `workspaceSnapshots`. Existing menu snapshots, local drafts, and
+  `orderOutbox` records are not deleted or recreated, so APK upgrades preserve
+  queued submissions and their stable idempotency keys.
+- Offline cold start may use only a locally present token plus an auth snapshot
+  validated online within the previous 24 hours. The cached workspace exposes
+  only the last online-validated store. While that snapshot is active, routes
+  are restricted to frontdesk ordering; login/account switching, cross-store,
+  owner/platform/admin, KDS/Pickup, and payment access are blocked.
+- Cached auth/store data is used only for network errors, timeouts, and temporary
+  server `5xx`. `401` and `403` never fall back. Browser `online` and foreground
+  recovery re-run `/auth/me` and store context requests so session, role, and
+  membership changes replace or invalidate the snapshot.
+- The Local Preview Web App URL remains a diagnostic/rollback path. Bundled mode
+  installs no Service Worker and does not cache authentication responses,
+  mutating API calls, or order submissions as HTTP responses. The bundled login
+  form does not compile a default account name or password into the APK.
+- Full build, security boundary, upgrade-preservation, and real-device cold
+  start checks are documented in
+  `restaurant-pad-app/docs/BUNDLED_ASSETS_PRODUCTION.md`. Network fault
+  injection and long-running multi-Pad verification remain PR8 scope.
