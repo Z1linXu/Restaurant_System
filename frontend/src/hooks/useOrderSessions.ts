@@ -9,6 +9,7 @@ import type {
 } from '../types/ordering'
 import { calculateTax, calculateTotal } from '../utils/tax'
 import { isComboSelected, resolveComboUpcharge, resolveComboSelection } from '../utils/comboSelection'
+import { resolveDefaultNoodleTypeId } from '../utils/noodleTypeDefaults'
 
 function getChoiceLabel(options: ChoiceOption[] | undefined, optionId: string | undefined): LocalizedText | null {
   if (!options || !optionId) {
@@ -49,7 +50,7 @@ export function buildDefaultDraft(menuItem: MenuItem): ItemCustomizationDraft {
   return {
     sizeId: menuItem.customization?.sizes?.options[0]?.id,
     soupBaseId: menuItem.customization?.soupBases?.options[0]?.id,
-    noodleTypeId: menuItem.customization?.noodleTypes?.[0]?.id,
+    noodleTypeId: resolveDefaultNoodleTypeId(menuItem),
     spicyLevelId: menuItem.customization?.spicyLevels?.[0]?.id,
     comboEnabled: false,
     comboEggId: undefined,

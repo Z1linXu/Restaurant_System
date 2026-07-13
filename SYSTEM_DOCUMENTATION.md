@@ -1366,7 +1366,8 @@ Current option behavior in runtime seed:
 - regular `加卤蛋` and `加煎蛋` remain independent quantity add-ons. They may be combined or incremented (for example, three tea eggs plus one fried egg) and do not create a combo by themselves.
 - `加香菜` and `加葱` are currently seeded as zero-price add-ons and are intended to behave as one-tap garnish toggles rather than quantity-priced extras
 - soup noodles and `担担面` default to noodle type `三细`
-- `炸酱面` and `鸡丝凉面` default to noodle type `韭叶`
+- `炸酱面` defaults to noodle type `韭叶`
+- the catalog may retain its existing noodle-type display order, but the ordering UI defaults a new `鸡丝凉面` selection to stable option code `noodle_thin` (`细`); an existing order item always keeps its persisted noodle-type option
 - spicy level order is:
   - `不辣`
   - `少辣`
@@ -4045,7 +4046,8 @@ Current frontdesk receipt content:
     - `Order Type: Takeout`
   - divider line
   - one order item block per line:
-    - soup noodle combo: `{quantity}*combo {receipt_display_name} [Regular|Large]`
+    - soup noodle combo: `{quantity}* combo {中碗|大碗}{receipt_display_name}`
+    - a single non-combo soup noodle: `{中碗|大碗}{receipt_display_name}`
     - other items retain `{quantity} x [Combo] {item_name} [Regular|Large]`
     - optional noodle-type line:
       - `{noodle_type}`
@@ -5144,7 +5146,8 @@ This pass keeps existing POS/KDS/Print Center architecture intact and applies fo
 
 ### Frontdesk Receipt Combo Ordering
 
-- A soup-noodle combo uses the receipt-only line shape `{quantity}*combo {display_name}`, for example `1*combo 牛肉面` or `2*combo 牛肉面 Large`.
+- A soup-noodle combo uses the receipt-only line shape `{quantity}* combo {bowl_size_zh}{display_name}`, for example `1* combo 中碗牛肉面` or `2* combo 大碗牛肉面`.
+- A non-combo soup noodle places the normalized Chinese bowl size before the receipt display name, for example `中碗牛肉面`; known `Regular`/`Large` values are not printed after the name, and an existing `中碗`/`大碗` name prefix is not duplicated.
 - `传统牛肉面` is shortened to `牛肉面` only in `FRONTDESK_RECEIPT` display output. The menu name, database snapshot, admin UI, KDS, GRAB, and HOT_KITCHEN output remain unchanged.
 - A selected combo side is the stable combo signal. If no `COMBO_EGG` option is present, the receipt prints `走蛋`; otherwise it prints `鸡蛋: ...` before the combo side.
 - Combo side dishes are printed beneath the combo main line for packing visibility, for example `小菜: 拌黄瓜` followed by side-specific requests such as `走花生`. Spicy level and item notes retain their existing positions and are not discarded.
