@@ -6222,3 +6222,123 @@ PR11C hotfix notes:
 - Printing Settings falls back to current store context when `FRONTDESK` cannot
   load platform overview data; this does not grant Platform Admin, Staff, or
   Audit access.
+
+## PR11E-C: Staff Long Login, Permanent Pad Binding, Device Management
+
+PR11E-C keeps the existing POS/order, payment/refund, menu/pricing,
+PrintDispatcher routing, and PAD_DIRECT print-job state semantics unchanged. It
+adds longer staff Web sessions, clearer separation between Web account logout
+and Android Pad pairing, store-scoped device management, and a frontdesk staff
+profile modal.
+
+Staff login/session policy:
+
+- `app.auth.access-token-expiration-seconds` is now `2592000` (30 days) in
+  local, cloud, pilot, and example backend configs.
+- `app.auth.refresh-token-expiration-days` is now `90`; refresh tokens are still
+  stored server-side as SHA-256 hashes and rotate on refresh.
+- `/api/v1/auth/me` now returns `user.store_name` when the authenticated user's
+  default store can be resolved.
+- Frontend logout still calls `/api/v1/auth/logout` and clears only
+  `restaurant_pos_access_token` / `restaurant_pos_refresh_token`.
+- Frontend auth bootstrap clears saved Web account tokens only on true `401`.
+  Network errors, timeouts, and ordinary `403` responses no longer erase saved
+  tokens.
+- Android WebView still has DOM storage enabled and does not clear Web
+  localStorage/cookies on app restart.
+
+Permanent Pad binding:
+
+- Android stores Pad Direct `device_id`, `device_token`, `store_id`,
+  `device_name`, `registered_at`, `app_version`, `platform`, and
+  `pad_direct_auto_enabled` in native `SharedPreferences`.
+- Web logout does not call `RestaurantPadDevice.clearDeviceCredentials()` and
+  therefore does not remove device pairing.
+- Pairing is removed only by explicit `Clear Pairing / 清除配对`, backend
+  disable/revoke causing device auth failure until re-pair, Android app data
+  clear, or uninstall.
+- `RestaurantPadDevice.getDeviceStatus()` returns pairing state, `device_id`,
+  `store_id` / `device_store_id`, `device_name`, `registered_at`,
+  `app_version`, `platform`, `auto_print_enabled`, and token last four
+  characters only.
+- Print Center detects current Android pairing via the bridge. A same-store
+  paired Pad shows `本机已配对`; re-registering still requires confirmation.
+  Cross-store pairing shows a warning and also requires confirmation before
+  overwriting native credentials.
+
+Device management API:
+
+- `GET /api/v1/admin/printing/devices?store_id={storeId}` returns registered
+  devices with `id`, `device_name`, `store_id`, `organization_id`, `device_type`,
+  `platform`, `app_version`, `status`, `is_active`, `last_seen_at`,
+  `created_at`, and `updated_at`. It never returns raw device tokens or token
+  hashes.
+- `PATCH /api/v1/admin/printing/devices/{deviceId}/rename?store_id={storeId}`
+  updates `device_name`.
+- `POST /api/v1/admin/printing/devices/{deviceId}/disable?store_id={storeId}`
+  soft-disables a device with `status = DISABLED` and `is_active = false`.
+- `POST /api/v1/admin/printing/devices/{deviceId}/revoke?store_id={storeId}`
+  soft-revokes a device with `status = REVOKED` and `is_active = false`.
+- All management endpoints require the existing store-scoped printing/admin
+  capabilities and do not hard-delete `store_devices`.
+
+Device authentication and `last_seen_at`:
+
+- `StoreDeviceService.authenticateDevice(...)` remains the shared gate for
+  heartbeat, pending poll, claim, start-print, payload, complete, fail, and
+  release.
+- Device auth rejects missing/bad tokens with `401`, and inactive,
+  `DISABLED`, or `REVOKED` devices with `403`.
+- PAD Direct runtime APIs preserve `ResponseStatusException` HTTP statuses in
+  the global API envelope instead of converting expected device/job errors to
+  `500`. Device not found returns `404`, invalid or missing device token returns
+  `401`, store mismatch and inactive/disabled/revoked devices return `403`, and
+  claim/job conflicts return `409`. Rejections log operation, request store id
+  when available, device id, HTTP status, failure category, token presence, and
+  token last four characters only; raw device tokens, token hashes,
+  Authorization headers, and print payloads are not logged.
+- Successful device-authenticated calls update `last_seen_at` only when the
+  stored value is older than 30 seconds, so rapid poll loops do not write every
+  few seconds.
+- Heartbeat also refreshes `app_version` and `platform` when those values
+  change, without exposing the raw token.
+
+Print Center UI:
+
+- The Pad Direct device table shows device/store/org/status/app/platform,
+  recent/ago/very-old activity, and marks the current Android Pad, old devices,
+  and likely duplicate active device names.
+- Device actions are `改名`, `停用`, and `吊销`, all routed through the new
+  store-scoped backend APIs with confirmation for destructive actions.
+
+Staff profile UI:
+
+- The frontdesk round avatar menu now includes `个人信息 / Profile`.
+- The modal shows user id, username, full name, role, store id/name,
+  organization id, capabilities, enabled feature flags, Android Pad device
+  status, and Android print worker status when the native bridge is available.
+- In a normal browser, the modal shows that Android native device status is not
+  available.
+
+## Offline Ordering PR1: Network Observability
+
+PR1 establishes shared weak-network diagnostics without changing order,
+payment, printing, or KDS business behavior.
+
+- `GET /api/v1/system/health` is a small unauthenticated reachability probe. It
+  returns only `status` and server timestamp and does not expose application or
+  database details.
+- Frontend requests record bounded in-memory metrics containing request id,
+  method, normalized endpoint, timestamps, latency, response status, timeout or
+  network classification, and auth-refresh outcome.
+- Metrics never retain request/response bodies, raw URLs with query strings,
+  passwords, Authorization headers, access/refresh tokens, print payloads, or
+  customer notes.
+- Shared connection states are `ONLINE_HEALTHY`, `ONLINE_DEGRADED`,
+  `BACKEND_UNREACHABLE`, `BROWSER_OFFLINE`, and `AUTH_REQUIRED`.
+- `navigator.onLine` is only an auxiliary browser signal. A low-frequency
+  backend probe also runs at startup, every 30 seconds while visible, after an
+  online event, and when the app returns to the foreground.
+- Menu loading and order submission emit safe stage and duration diagnostics.
+- `VITE_NETWORK_DIAGNOSTICS_ENABLED=false` hides diagnostic-facing UI/logging
+  without disabling request safety, health tracking, or business functions.

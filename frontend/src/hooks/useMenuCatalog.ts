@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchMenuCatalog } from '../services/menuService'
+import { ApiRequestError } from '../services/apiClient'
+import { recordAppOperation } from '../services/networkStatus'
 import type { BackendMenuCatalog, BackendMenuItem, ChoiceOption, MenuItem, OrderingCatalog } from '../types/ordering'
 
 function formatCategoryLabel(code: string) {
@@ -198,8 +200,19 @@ export function useMenuCatalog(storeId: number) {
     let active = true
 
     const loadCatalog = async () => {
+      const startedAtMs = Date.now()
+      const startedAt = new Date(startedAtMs).toISOString()
       setLoading(true)
       setError(null)
+      recordAppOperation({
+        operation: 'MENU_LOAD',
+        stage: 'STARTED',
+        storeId,
+        startedAt,
+        completedAt: null,
+        latencyMs: null,
+        errorCode: null,
+      })
 
       try {
         const payload = await fetchMenuCatalog(storeId)
@@ -207,11 +220,29 @@ export function useMenuCatalog(storeId: number) {
           return
         }
         setCatalog(mapCatalog(payload))
+        recordAppOperation({
+          operation: 'MENU_LOAD',
+          stage: 'SUCCEEDED',
+          storeId,
+          startedAt,
+          completedAt: new Date().toISOString(),
+          latencyMs: Date.now() - startedAtMs,
+          errorCode: null,
+        })
       } catch (loadError) {
         if (!active) {
           return
         }
         setError(loadError instanceof Error ? loadError.message : 'Failed to load menu catalog')
+        recordAppOperation({
+          operation: 'MENU_LOAD',
+          stage: 'FAILED',
+          storeId,
+          startedAt,
+          completedAt: new Date().toISOString(),
+          latencyMs: Date.now() - startedAtMs,
+          errorCode: loadError instanceof ApiRequestError ? (loadError.code ?? `HTTP_${loadError.status}`) : 'MENU_LOAD_FAILED',
+        })
       } finally {
         if (active) {
           setLoading(false)

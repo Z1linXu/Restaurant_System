@@ -22,6 +22,10 @@ import type {
   OrderSession,
 } from '../types/ordering'
 import { createIdempotencyKey } from '../utils/randomId'
+import { ApiRequestError } from '../services/apiClient'
+import { recordAppOperation } from '../services/networkStatus'
+import { normalizeComboDraft, resolveComboSelection, resolveComboUpcharge } from '../utils/comboSelection'
+import { resolveNoodleTypeId } from '../utils/noodleTypeDefaults'
 
 function calculateDraftLineSubtotal(menuItem: MenuItem | undefined, draft: ItemCustomizationDraft) {
   if (!menuItem) {
@@ -484,11 +488,30 @@ export function useDraftOrder(
       if (submitInFlightRef.current) {
         return order
       }
+      const submitStartedAtMs = Date.now()
+      const submitStartedAt = new Date(submitStartedAtMs).toISOString()
+      const recordSubmit = (stage: 'STARTED' | 'SUCCEEDED' | 'FAILED', error?: unknown) => {
+        recordAppOperation({
+          operation: 'ORDER_SUBMIT',
+          stage,
+          storeId,
+          startedAt: submitStartedAt,
+          completedAt: stage === 'STARTED' ? null : new Date().toISOString(),
+          latencyMs: stage === 'STARTED' ? null : Date.now() - submitStartedAtMs,
+          errorCode: error instanceof ApiRequestError
+            ? (error.code ?? `HTTP_${error.status}`)
+            : error
+              ? 'ORDER_SUBMIT_FAILED'
+              : null,
+        })
+      }
+      recordSubmit('STARTED')
       submitInFlightRef.current = true
       if (!isDraftOrder) {
         const newItems = (stagedItems ?? []).filter((item) => item.id.startsWith('temp-'))
         if (!newItems.length) {
           setError('No new items to update')
+          recordSubmit('FAILED', new Error('No new items to update'))
           submitInFlightRef.current = false
           return order
         }
@@ -503,10 +526,12 @@ export function useDraftOrder(
           setOrder(refreshed)
           setStagedItems(refreshed.items.map((item) => mapOrderItem(item, catalogItems, true)))
           updateIdempotencyKeyRef.current = null
+          recordSubmit('SUCCEEDED')
           return refreshed
         } catch (mutationError) {
           const message = mutationError instanceof Error ? mutationError.message : 'Order update failed'
           setError(message)
+          recordSubmit('FAILED', mutationError)
           throw mutationError
         } finally {
           setSaving(false)
@@ -514,7 +539,9 @@ export function useDraftOrder(
         }
       }
       try {
-        return await runMutation(() => submitDraftOrder(order.id))
+        const submitted = await runMutation(() => submitDraftOrder(order.id))
+        recordSubmit('SUCCEEDED')
+        return submitted
       } catch (mutationError) {
         if (
           mutationError instanceof Error
@@ -528,6 +555,7 @@ export function useDraftOrder(
             // Keep the original submit error visible if refresh also fails.
           }
         }
+        recordSubmit('FAILED', mutationError)
         throw mutationError
       } finally {
         submitInFlightRef.current = false
