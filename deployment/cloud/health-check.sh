@@ -13,10 +13,8 @@ if [[ -f "$ENV_FILE" ]]; then
   set +a
 fi
 
-if [[ -n "${DOMAIN:-}" && "${ENABLE_HTTPS:-true}" == "true" ]]; then
+if [[ -n "${DOMAIN:-}" ]]; then
   FRONTEND_URL="${FRONTEND_URL:-https://${DOMAIN}}"
-elif [[ -n "${DOMAIN:-}" ]]; then
-  FRONTEND_URL="${FRONTEND_URL:-http://${DOMAIN}}"
 else
   FRONTEND_URL="${FRONTEND_URL:-http://localhost:${HTTP_PORT:-80}}"
 fi
@@ -30,10 +28,10 @@ else
   exit 1
 fi
 
-auth_url="${FRONTEND_URL%/}/api/v1/menu/health"
+auth_url="${FRONTEND_URL%/}/api/v1/auth/me"
 echo "Checking backend through reverse proxy: $auth_url"
 backend_code="$(curl -ksS -o /dev/null -w "%{http_code}" "$auth_url" || true)"
-if [[ "$backend_code" == "200" ]]; then
+if [[ "$backend_code" == "200" || "$backend_code" == "401" ]]; then
   echo "Backend reachable: HTTP $backend_code"
 else
   echo "Backend check failed or unexpected: HTTP $backend_code" >&2

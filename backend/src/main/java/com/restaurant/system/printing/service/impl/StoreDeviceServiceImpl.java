@@ -73,12 +73,12 @@ public class StoreDeviceServiceImpl implements StoreDeviceService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Device credentials are required");
         }
         StoreDevice device = storeDeviceRepository.findById(deviceId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Device not found"));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid device credentials"));
         if (!Boolean.TRUE.equals(device.isActive) || !"ACTIVE".equals(device.status)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Device is not active");
         }
         if (!hashToken(rawDeviceToken).equals(device.deviceTokenHash)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid device token");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid device credentials");
         }
         touchLastSeenIfStale(device, LocalDateTime.now());
         return device;

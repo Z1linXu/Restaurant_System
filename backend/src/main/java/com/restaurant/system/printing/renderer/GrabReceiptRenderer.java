@@ -13,7 +13,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -79,8 +78,6 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
         Set<SideGroupKey> printedSideGroups = new LinkedHashSet<>();
         Map<KitchenNoodlePrintFormatter.NoodleGroupKey, NoodleGroup> noodleGroups = buildNoodleGroups(tasks, orderItemById, optionsByItemId);
         Set<KitchenNoodlePrintFormatter.NoodleGroupKey> printedNoodleGroups = new LinkedHashSet<>();
-        Map<FriedGroupKey, FriedGroup> friedGroups = buildFriedGroups(tasks, orderItemById, optionsByItemId);
-        Set<FriedGroupKey> printedFriedGroups = new LinkedHashSet<>();
 
         for (KitchenTask task : tasks) {
             OrderItem orderItem = orderItemById.get(task.order_item_id);
@@ -91,19 +88,6 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
                 }
                 SideGroup sideGroup = sideGroups.get(key);
                 appendPrintLines(builder, sideGroup.toPrintLines());
-                continue;
-            }
-            if (isFriedTask(task, orderItem)) {
-                FriedGroupKey key = buildFriedGroupKey(
-                    task,
-                    orderItem,
-                    optionsByItemId.getOrDefault(task.order_item_id, List.of())
-                );
-                if (!printedFriedGroups.add(key)) {
-                    continue;
-                }
-                FriedGroup friedGroup = friedGroups.get(key);
-                appendPrintLines(builder, simplifyGreenOptions(buildFriedItemLines(friedGroup)));
                 continue;
             }
             if (KitchenNoodlePrintFormatter.isNoodleTask(task, orderItem)) {
@@ -221,41 +205,11 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
         return lines;
     }
 
-    private List<String> buildFriedItemLines(FriedGroup friedGroup) {
-        KitchenTask task = friedGroup.task();
-        OrderItem orderItem = friedGroup.orderItem();
-        List<String> lines = new ArrayList<>();
-        lines.add(resolveFriedPrimaryKitchenLine(task, friedGroup.quantity()));
-        String secondary = resolveSecondaryKitchenLine(task);
-        if (secondary != null) {
-            lines.add(secondary);
-        }
-        String itemNote = resolveItemNote(orderItem);
-        if (itemNote != null) {
-            lines.add("备注：" + itemNote);
-        }
-        return lines;
-    }
-
-    private String resolveFriedPrimaryKitchenLine(KitchenTask task, int quantity) {
-        String itemName = fallback(task.item_name_snapshot_zh, task.item_name_snapshot_en, "Item");
-        String special = normalize(task.special_instructions_snapshot);
-        String displayName = special != null && shouldUseSpecialAsPrimary(itemName, special) ? special : itemName;
-        return quantity + "*" + displayName;
-    }
-
     private boolean isSideTask(KitchenTask task, OrderItem orderItem) {
         if ("COLD".equals(task.station_code)) {
             return true;
         }
         return orderItem != null && ("SIDE".equals(orderItem.category_code_snapshot) || "COLD_APPETIZER".equals(orderItem.category_code_snapshot));
-    }
-
-    private boolean isFriedTask(KitchenTask task, OrderItem orderItem) {
-        if ("DEEPFRIED".equals(task.station_code)) {
-            return true;
-        }
-        return orderItem != null && ("FRIED".equals(orderItem.category_code_snapshot) || "DEEPFRIED".equals(orderItem.category_code_snapshot));
     }
 
     private void appendPrintLines(StringBuilder builder, List<String> lines) {
@@ -306,79 +260,6 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
             });
         }
         return groups;
-    }
-
-    private Map<FriedGroupKey, FriedGroup> buildFriedGroups(
-        List<KitchenTask> tasks,
-        Map<Long, OrderItem> orderItemById,
-        Map<Long, List<OrderItemOption>> optionsByItemId
-    ) {
-        Map<FriedGroupKey, FriedGroup> groups = new LinkedHashMap<>();
-        for (KitchenTask task : tasks) {
-            OrderItem orderItem = orderItemById.get(task.order_item_id);
-            if (!isFriedTask(task, orderItem)) {
-                continue;
-            }
-            FriedGroupKey key = buildFriedGroupKey(
-                task,
-                orderItem,
-                optionsByItemId.getOrDefault(task.order_item_id, List.of())
-            );
-            groups.compute(key, (ignored, existing) -> {
-                int quantity = task.quantity == null ? 1 : task.quantity;
-                if (existing == null) {
-                    return new FriedGroup(task, orderItem, quantity);
-                }
-                return existing.addQuantity(quantity);
-            });
-        }
-        return groups;
-    }
-
-    private FriedGroupKey buildFriedGroupKey(KitchenTask task, OrderItem orderItem, List<OrderItemOption> options) {
-        List<String> optionSignatures = options.stream()
-            .filter(Objects::nonNull)
-            .sorted(this::compareOptions)
-            .map(this::buildOptionSignature)
-            .toList();
-        return new FriedGroupKey(
-            orderItem == null ? null : orderItem.menu_item_id,
-            stable(orderItem == null ? null : orderItem.category_code_snapshot),
-            stable(task.station_code),
-            stable(fallback(task.item_name_snapshot_zh, task.item_name_snapshot_en, "Item")),
-            stable(task.special_instructions_snapshot),
-            stable(orderItem == null ? null : orderItem.notes),
-            stable(orderItem == null ? null : orderItem.combo_role),
-            optionSignatures
-        );
-    }
-
-    private int compareOptions(OrderItemOption left, OrderItemOption right) {
-        int result = stable(left.option_group_snapshot).compareTo(stable(right.option_group_snapshot));
-        if (result != 0) {
-            return result;
-        }
-        result = stable(left.option_type_snapshot).compareTo(stable(right.option_type_snapshot));
-        if (result != 0) {
-            return result;
-        }
-        result = stable(left.option_code_snapshot).compareTo(stable(right.option_code_snapshot));
-        if (result != 0) {
-            return result;
-        }
-        return Long.compare(left.option_id == null ? Long.MAX_VALUE : left.option_id, right.option_id == null ? Long.MAX_VALUE : right.option_id);
-    }
-
-    private String buildOptionSignature(OrderItemOption option) {
-        return String.join("|",
-            stable(option.option_group_snapshot),
-            stable(option.option_type_snapshot),
-            stable(option.option_code_snapshot),
-            String.valueOf(option.option_id),
-            String.valueOf(option.parent_option_id_snapshot),
-            String.valueOf(option.quantity == null ? 1 : option.quantity),
-            option.price_delta == null ? "0" : option.price_delta.stripTrailingZeros().toPlainString()
-        );
     }
 
     private SideGroupKey buildSideGroupKey(KitchenTask task, OrderItem orderItem) {
@@ -679,10 +560,6 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
         return trimmed.isBlank() ? null : trimmed;
     }
 
-    private String stable(String value) {
-        return value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
-    }
-
     private String resolveItemNote(OrderItem orderItem) {
         if (orderItem == null) {
             return null;
@@ -705,24 +582,6 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
     private record NoodleGroup(KitchenNoodlePrintFormatter.NoodleConfig config, int quantity) {
         NoodleGroup addQuantity(int delta) {
             return new NoodleGroup(config, quantity + delta);
-        }
-    }
-
-    private record FriedGroupKey(
-        Long menuItemId,
-        String categoryCode,
-        String stationCode,
-        String itemName,
-        String specialInstructions,
-        String itemNotes,
-        String comboRole,
-        List<String> optionSignatures
-    ) {
-    }
-
-    private record FriedGroup(KitchenTask task, OrderItem orderItem, int quantity) {
-        FriedGroup addQuantity(int delta) {
-            return new FriedGroup(task, orderItem, quantity + delta);
         }
     }
 
