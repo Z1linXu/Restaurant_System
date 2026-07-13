@@ -63,6 +63,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('restaurant-auth-updated', handleAuthUpdated)
   }, [refreshMe])
 
+  useEffect(() => {
+    const recoverSession = () => {
+      if (!user && (getAccessToken() || getRefreshToken())) {
+        void refreshMe()
+      }
+    }
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) recoverSession()
+    }
+    window.addEventListener('online', recoverSession)
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      window.removeEventListener('online', recoverSession)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [refreshMe, user])
+
   const signIn = useCallback(
     async (loginIdentifier: string, password: string) => {
       const response = await loginRequest(loginIdentifier, password)

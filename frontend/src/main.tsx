@@ -5,13 +5,16 @@ import App from './App'
 import { prepareAppCacheVersion } from './utils/appCacheVersion'
 import { AuthProvider } from './features/auth/AuthProvider'
 import { ConnectionHealthProvider } from './features/network/ConnectionHealthProvider'
+import { OrderOutboxProvider } from './features/offline/OrderOutboxProvider'
 
 if (prepareAppCacheVersion()) {
   createRoot(document.getElementById('root')!).render(
       <StrictMode>
         <ConnectionHealthProvider>
           <AuthProvider>
-            <App />
+            <OrderOutboxProvider>
+              <App />
+            </OrderOutboxProvider>
           </AuthProvider>
         </ConnectionHealthProvider>
       </StrictMode>,

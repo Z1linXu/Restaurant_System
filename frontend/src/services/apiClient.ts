@@ -169,6 +169,12 @@ function messageFromPayload(payload: unknown) {
   return typeof message === 'string' ? message : undefined
 }
 
+function errorCodeFromPayload(payload: unknown) {
+  if (!isRecord(payload)) return undefined
+  const errorCode = payload.error_code
+  return typeof errorCode === 'string' && errorCode.trim() ? errorCode.trim() : undefined
+}
+
 export function buildApiHeaders(extraHeaders: HeadersInit = {}, includeAuth = true) {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -318,7 +324,7 @@ export async function apiRequest<T>(input: string, init: RequestInit = {}) {
         backendMessage || `Request failed (${response.status})`,
         userMessage,
         payload,
-        `HTTP_${response.status}`,
+        errorCodeFromPayload(payload) ?? `HTTP_${response.status}`,
       )
     }
     const apiPayload = payload as BackendApiResponse<T>
