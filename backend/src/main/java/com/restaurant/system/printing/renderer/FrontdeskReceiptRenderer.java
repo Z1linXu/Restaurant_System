@@ -142,18 +142,27 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         String baseName = resolveReceiptDisplayName(item);
         StringBuilder builder = new StringBuilder();
         int quantity = item.quantity == null ? 1 : item.quantity;
-        if (isSoupNoodle(item) && isComboItem(item, options)) {
-            builder.append(quantity).append("*combo ");
+        boolean soupNoodle = isSoupNoodle(item);
+        boolean combo = isComboItem(item, options);
+        if (soupNoodle) {
+            baseName = prependBowlSize(baseName, resolveSizeZhLabel(options));
+        }
+        if (soupNoodle && combo) {
+            builder.append(quantity).append("* combo ");
+        } else if (soupNoodle && quantity == 1) {
+            // A single bowl reads more naturally without a redundant quantity prefix.
         } else {
             builder.append(quantity).append(" x ");
-            if (isComboItem(item, options)) {
+            if (combo) {
                 builder.append("Combo ");
             }
         }
         builder.append(baseName);
-        String sizeEn = resolveSizeEnLabel(options);
-        if (sizeEn != null) {
-            builder.append(" ").append(sizeEn);
+        if (!soupNoodle) {
+            String sizeEn = resolveSizeEnLabel(options);
+            if (sizeEn != null) {
+                builder.append(" ").append(sizeEn);
+            }
         }
         return builder.toString();
     }
@@ -177,10 +186,20 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
 
     private String resolveReceiptDisplayName(OrderItem item) {
         String baseName = firstPresent(item.item_name_snapshot_zh, item.item_name_snapshot_en);
-        if ("传统牛肉面".equals(baseName)) {
-            return "牛肉面";
+        if (baseName != null && baseName.contains("传统牛肉面")) {
+            return baseName.replace("传统牛肉面", "牛肉面");
         }
         return baseName == null ? "Item" : baseName;
+    }
+
+    private String prependBowlSize(String baseName, String sizeLabel) {
+        if (sizeLabel == null || sizeLabel.isBlank()) {
+            return baseName;
+        }
+        if (baseName.startsWith("中碗") || baseName.startsWith("大碗")) {
+            return baseName;
+        }
+        return sizeLabel + baseName;
     }
 
     private String resolveSizeZhLabel(List<OrderItemOption> options) {
@@ -203,11 +222,16 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
 
     private String mapSizeZh(String optionZh, String optionEn) {
         String zh = optionZh == null ? "" : optionZh.trim();
-        String en = optionEn == null ? "" : optionEn.trim().toLowerCase();
-        if (zh.contains("大") || en.contains("large")) {
+        String en = optionEn == null ? "" : optionEn.trim();
+        if ("大".equals(zh) || "大碗".equals(zh) || "large".equalsIgnoreCase(en)) {
             return "大碗";
         }
-        if (zh.contains("中") || zh.contains("标") || en.contains("regular") || en.contains("standard")) {
+        if ("中".equals(zh)
+            || "中碗".equals(zh)
+            || "标准".equals(zh)
+            || "标准碗".equals(zh)
+            || "regular".equalsIgnoreCase(en)
+            || "standard".equalsIgnoreCase(en)) {
             return "中碗";
         }
         return null;

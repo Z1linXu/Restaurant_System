@@ -295,6 +295,7 @@ class GrabReceiptRendererTest {
         OrderItem item = new OrderItem();
         item.id = 1L;
         item.order_id = order.id;
+        item.category_code_snapshot = "SOUP_NOODLE";
         item.item_name_snapshot_zh = "传统牛肉面";
         item.quantity = 1;
         item.unit_price = new BigDecimal("12.00");
@@ -310,18 +311,22 @@ class GrabReceiptRendererTest {
         removeOnion.price_delta = BigDecimal.ZERO;
         removeOnion.quantity = 1;
 
+        OrderItemOption size = option(2L, item.id, "size", "SIZE", "size_regular", "中碗");
+        size.option_name_snapshot_en = "regular";
+
         PrintRenderRequest request = new PrintRenderRequest();
         request.module_code = PrintModuleCode.FRONTDESK_RECEIPT;
         request.order = order;
         request.order_items = List.of(item);
-        request.order_item_options = List.of(removeOnion);
+        request.order_item_options = List.of(removeOnion, size);
         request.happened_at = order.submitted_at;
 
         String rawOutput = frontdeskRenderer.render(request);
         assertFalse(rawOutput.contains("FRONTDESK RECEIPT"));
         assertTrue(rawOutput.startsWith(PrintMarkup.LARGE_OPEN + "桌号: T1" + PrintMarkup.LARGE_CLOSE));
         assertFalse(rawOutput.contains(PrintMarkup.LARGE_OPEN + "桌号: T1" + PrintMarkup.LARGE_OPEN));
-        assertEquals(1, countOccurrences(rawOutput, "1 x 牛肉面"));
+        assertEquals(1, countOccurrences(rawOutput, "中碗牛肉面"));
+        assertFalse(rawOutput.toLowerCase().contains("regular"));
         assertFalse(rawOutput.contains("传统牛肉面"));
         assertFalse(rawOutput.contains("*combo"));
         assertEquals("传统牛肉面", item.item_name_snapshot_zh);
@@ -422,17 +427,20 @@ class GrabReceiptRendererTest {
         combo.price_delta = new BigDecimal("5.00");
         OrderItemOption spicy = option(2L, item.id, "spicy_level", "SPICY_LEVEL", "spicy_mild", "少辣");
         OrderItemOption side = option(3L, item.id, "addon", "COMBO_SIDE", "combo_edamame", "套餐毛豆");
+        OrderItemOption size = option(4L, item.id, "size", "SIZE", "size_regular", "中碗");
+        size.option_name_snapshot_en = "REGULAR";
 
         PrintRenderRequest request = new PrintRenderRequest();
         request.module_code = PrintModuleCode.FRONTDESK_RECEIPT;
         request.order = order;
         request.order_items = List.of(item);
-        request.order_item_options = List.of(combo, spicy, side);
+        request.order_item_options = List.of(combo, spicy, side, size);
         request.happened_at = order.submitted_at;
 
         String output = stripMarkup(frontdeskRenderer.render(request));
 
-        assertTrue(output.contains("2*combo 牛肉面"));
+        assertTrue(output.contains("2* combo 中碗牛肉面"));
+        assertFalse(output.toLowerCase().contains("regular"));
         assertTrue(output.contains("辣度: 少辣"));
         assertTrue(output.contains("走蛋"));
         assertTrue(output.contains("小菜: 毛豆"));
@@ -527,7 +535,8 @@ class GrabReceiptRendererTest {
 
         assertTrue(output.contains("UPDATED"));
         assertTrue(output.contains("Added items only"));
-        assertTrue(output.contains("1*combo 牛肉面 Large"));
+        assertTrue(output.contains("1* combo 大碗牛肉面"));
+        assertFalse(output.toLowerCase().contains("large"));
         assertTrue(output.contains("鸡蛋: 煎蛋"));
         assertTrue(output.contains("小菜: 拌黄瓜"));
         assertTrue(output.contains("走花生"));
@@ -536,6 +545,90 @@ class GrabReceiptRendererTest {
         assertTrue(output.contains("Tax (14.975%): $3.14"));
         assertTrue(output.contains("Total: $24.14"));
         assertFalse(output.contains("Subtotal: $100.00"));
+    }
+
+    @Test
+    void frontdeskReceiptDoesNotDuplicateBowlSizeAlreadyInSoupNoodleName() {
+        FrontdeskReceiptRenderer frontdeskRenderer = new FrontdeskReceiptRenderer();
+        Order order = baseOrder();
+        order.subtotal_amount = new BigDecimal("12.00");
+        order.total_amount = new BigDecimal("13.80");
+
+        OrderItem item = new OrderItem();
+        item.id = 1L;
+        item.order_id = order.id;
+        item.category_code_snapshot = "SOUP_NOODLE";
+        item.item_name_snapshot_zh = "中碗传统牛肉面";
+        item.quantity = 1;
+        item.unit_price = new BigDecimal("12.00");
+        item.line_amount = new BigDecimal("12.00");
+        item.status = "submitted";
+
+        OrderItemOption size = option(1L, item.id, "size", "SIZE", "size_regular", "中碗");
+        size.option_name_snapshot_en = "Regular";
+
+        PrintRenderRequest request = new PrintRenderRequest();
+        request.module_code = PrintModuleCode.FRONTDESK_RECEIPT;
+        request.order = order;
+        request.order_items = List.of(item);
+        request.order_item_options = List.of(size);
+        request.happened_at = order.submitted_at;
+
+        String output = stripMarkup(frontdeskRenderer.render(request));
+
+        assertTrue(output.contains("中碗牛肉面"));
+        assertFalse(output.contains("中碗中碗"));
+        assertFalse(output.contains("传统牛肉面"));
+    }
+
+    @Test
+    void frontdeskReceiptFormatsRegularAndLargeBeefNoodleLinesWithExactComboPrefixes() {
+        FrontdeskReceiptRenderer frontdeskRenderer = new FrontdeskReceiptRenderer();
+        Order order = baseOrder();
+        order.subtotal_amount = new BigDecimal("96.00");
+        order.total_amount = new BigDecimal("110.38");
+
+        OrderItem regular = frontdeskSoupNoodleItem(1L, 1, "传统牛肉面");
+        OrderItem large = frontdeskSoupNoodleItem(2L, 1, "传统牛肉面");
+        OrderItem regularCombo = frontdeskSoupNoodleItem(3L, 1, "传统牛肉面");
+        OrderItem largeCombo = frontdeskSoupNoodleItem(4L, 2, "传统牛肉面");
+
+        List<OrderItemOption> options = List.of(
+            option(1L, regular.id, "size", "SIZE", "size_regular", "中碗"),
+            option(2L, large.id, "size", "SIZE", "size_large", "大碗"),
+            option(3L, regularCombo.id, "size", "SIZE", "size_regular", "中碗"),
+            option(4L, regularCombo.id, "addon", "COMBO", "combo", "套餐"),
+            option(5L, largeCombo.id, "size", "SIZE", "size_large", "大碗"),
+            option(6L, largeCombo.id, "addon", "COMBO", "combo", "套餐")
+        );
+
+        PrintRenderRequest request = new PrintRenderRequest();
+        request.module_code = PrintModuleCode.FRONTDESK_RECEIPT;
+        request.order = order;
+        request.order_items = List.of(regular, large, regularCombo, largeCombo);
+        request.order_item_options = options;
+        request.happened_at = order.submitted_at;
+
+        List<String> outputLines = stripMarkup(frontdeskRenderer.render(request)).lines().toList();
+
+        assertTrue(outputLines.contains("中碗牛肉面"));
+        assertTrue(outputLines.contains("大碗牛肉面"));
+        assertTrue(outputLines.contains("1* combo 中碗牛肉面"));
+        assertTrue(outputLines.contains("2* combo 大碗牛肉面"));
+        assertFalse(outputLines.stream().anyMatch(line -> line.toLowerCase().contains("regular") || line.toLowerCase().contains("large")));
+    }
+
+    private OrderItem frontdeskSoupNoodleItem(Long id, int quantity, String nameZh) {
+        OrderItem item = new OrderItem();
+        item.id = id;
+        item.order_id = 100L;
+        item.category_code_snapshot = "SOUP_NOODLE";
+        item.item_name_snapshot_zh = nameZh;
+        item.quantity = quantity;
+        item.unit_price = new BigDecimal("12.00");
+        item.line_amount = new BigDecimal("12.00").multiply(BigDecimal.valueOf(quantity));
+        item.status = "submitted";
+        return item;
     }
 
     private String renderFried(FriedCase... friedCases) {

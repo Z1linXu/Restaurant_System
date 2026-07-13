@@ -23,6 +23,7 @@ import type {
 } from '../types/ordering'
 import { createIdempotencyKey } from '../utils/randomId'
 import { normalizeComboDraft, resolveComboSelection, resolveComboUpcharge } from '../utils/comboSelection'
+import { resolveNoodleTypeId } from '../utils/noodleTypeDefaults'
 
 function calculateDraftLineSubtotal(menuItem: MenuItem | undefined, draft: ItemCustomizationDraft) {
   if (!menuItem) {
@@ -122,9 +123,7 @@ function buildItemSelection(item: BackendOrderItemResponse, menuItem: MenuItem |
   if (!draft.soupBaseId && menuItem?.customization?.soupBases?.options[0]?.id) {
     draft.soupBaseId = menuItem.customization.soupBases.options[0].id
   }
-  if (!draft.noodleTypeId && menuItem?.customization?.noodleTypes?.[0]?.id) {
-    draft.noodleTypeId = menuItem.customization.noodleTypes[0].id
-  }
+  draft.noodleTypeId = resolveNoodleTypeId(menuItem, draft.noodleTypeId)
   if (!draft.spicyLevelId && menuItem?.customization?.spicyLevels?.[0]?.id) {
     draft.spicyLevelId = menuItem.customization.spicyLevels[0].id
   }
