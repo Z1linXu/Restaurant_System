@@ -5,7 +5,7 @@ import { getRequiredFeatureForPath, isFeatureEnabled } from './features/feature-
 import { OwnerAdminShell } from './features/owner-admin/OwnerAdminShell'
 import { DevRoleSwitcher } from './features/dev/DevRoleSwitcher'
 import { StoreContextProvider, RequireStoreAccess } from './features/store/StoreContext'
-import { chooseDefaultStore, defaultWorkspacePathForRole, mapLegacyPathToStorePath, stripStorePrefix } from './features/store/storeRoutes'
+import { buildStorePath, chooseDefaultStore, defaultWorkspacePathForRole, mapLegacyPathToStorePath, stripStorePrefix } from './features/store/storeRoutes'
 import { fetchWorkspaces } from './services/storeWorkspaceService'
 import { navigateTo } from './features/frontdesk/navigation'
 import { useAuth } from './features/auth/useAuth'
@@ -76,12 +76,12 @@ function storePage(storeId: number, children: React.ReactNode, allowedRoles: App
 }
 
 function LegacyStoreRedirect({ pathname }: { pathname: string }) {
-  const { user } = useAuth()
+  const { isOfflineRestricted, user } = useAuth()
   const [message, setMessage] = useState('Opening your store workspace...')
 
   useEffect(() => {
     let active = true
-    fetchWorkspaces()
+    fetchWorkspaces(user?.id, { preferOfflineSnapshot: isOfflineRestricted })
       .then((workspaces) => {
         if (!active) return
         const store = chooseDefaultStore(workspaces)
@@ -89,8 +89,9 @@ function LegacyStoreRedirect({ pathname }: { pathname: string }) {
           setMessage('No store workspace is assigned to this account.')
           return
         }
-        const target =
-          pathname === '/' || pathname === ''
+        const target = isOfflineRestricted
+          ? buildStorePath(store.id, '/frontdesk')
+          : pathname === '/' || pathname === ''
             ? defaultWorkspacePathForRole(user?.role_code, workspaces)
             : mapLegacyPathToStorePath(pathname, store.id)
         if (!target) {
@@ -106,7 +107,7 @@ function LegacyStoreRedirect({ pathname }: { pathname: string }) {
     return () => {
       active = false
     }
-  }, [pathname, user?.role_code])
+  }, [isOfflineRestricted, pathname, user?.id, user?.role_code])
 
   return (
     <div className="min-h-screen bg-[var(--surface)] px-6 py-8 text-[var(--on-surface)]">
@@ -117,8 +118,39 @@ function LegacyStoreRedirect({ pathname }: { pathname: string }) {
   )
 }
 
+function isOfflineOrderingPath(pathname: string) {
+  if (pathname === '/' || pathname === '') {
+    return true
+  }
+  const routePath = stripStorePrefix(pathname).path
+  return routePath === '/frontdesk'
+    || routePath === '/frontdesk/'
+    || routePath.startsWith('/frontdesk/menu')
+}
+
+function OfflineRestrictedPage() {
+  return (
+    <div className="min-h-screen bg-[var(--surface)] px-6 py-8 text-[var(--on-surface)]">
+      <div className="mx-auto max-w-[760px] rounded-[30px] bg-white px-7 py-8 shadow-[0_22px_54px_rgba(26,28,25,0.1)]">
+        <div className="text-[1.8rem] font-black tracking-[-0.05em]">离线访问受限</div>
+        <div className="mt-3 text-[0.98rem] font-semibold leading-7 text-[var(--muted)]">
+          当前仅允许进入最近在线验证的门店点单区。管理、跨店和账号切换需要恢复网络并重新验证权限。
+        </div>
+        <button
+          type="button"
+          onClick={() => navigateTo('/')}
+          className="mt-6 min-h-12 rounded-[16px] bg-[var(--primary)] px-5 py-3 text-[0.95rem] font-black text-white"
+        >
+          返回离线点单区
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function App() {
   const [pathname, setPathname] = useState(window.location.pathname)
+  const { isOfflineRestricted } = useAuth()
 
   useEffect(() => {
     const handlePopState = () => setPathname(window.location.pathname)
@@ -131,6 +163,14 @@ function App() {
     return (
       <AppShell>
         <FeatureDisabledPage feature={requiredFeature} />
+      </AppShell>
+    )
+  }
+
+  if (isOfflineRestricted && !isOfflineOrderingPath(pathname)) {
+    return (
+      <AppShell>
+        <OfflineRestrictedPage />
       </AppShell>
     )
   }

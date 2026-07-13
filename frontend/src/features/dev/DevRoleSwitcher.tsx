@@ -46,7 +46,7 @@ export function DevRoleSwitcher() {
     setError(null)
     try {
       const response = await switchDevUser(loginIdentifier)
-      const workspaces = await fetchWorkspaces()
+      const workspaces = await fetchWorkspaces(response.user.id)
       const targetPath = defaultWorkspacePathForRole(response.user.role_code, workspaces)
       if (targetPath) {
         navigateTo(targetPath)

@@ -28,6 +28,19 @@ public interface PrintJobService {
         String moduleCode,
         String receiptType,
         Long requestedByUserId,
+        String payloadSnapshot,
+        String dispatchSourceKey
+    );
+
+    PrintJob createPendingJob(
+        Long organizationId,
+        Long storeId,
+        Long orderId,
+        Long orderUpdateBatchId,
+        Long printerId,
+        String moduleCode,
+        String receiptType,
+        Long requestedByUserId,
         String payloadSnapshot
     );
 

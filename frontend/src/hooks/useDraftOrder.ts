@@ -1,15 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  addDraftOrderItem,
   cancelDraftOrder,
-  ensureEditableOrder,
   fetchOrderDetail,
-  removeDraftOrderItem,
-  submitDraftOrder,
+  findEditableOrderByContext,
+  mapOptions,
   submitOrderUpdate,
   updateEditableOrderHeader,
-  updateDraftOrderItemWithMenuItem,
-  updateDraftOrderItemQuantity,
+  type IdempotentOrderSubmitPayload,
 } from '../services/orderService'
 import type {
   BackendOrderItemOptionResponse,
@@ -22,6 +19,31 @@ import type {
   OrderSession,
 } from '../types/ordering'
 import { createIdempotencyKey } from '../utils/randomId'
+import { ApiRequestError } from '../services/apiClient'
+import { recordAppOperation } from '../services/networkStatus'
+import {
+  buildDraftContextKey,
+  cleanupExpiredLocalDrafts,
+  deleteLocalDraft,
+  deleteLocalDraftIfClientMatches,
+  readLocalDraft,
+  resolveLocalDraftForOpen,
+  saveLocalDraft,
+  type LocalDraftContext,
+  type LocalDraftRecord,
+  type LocalDraftScope,
+} from '../offline/localDrafts'
+import {
+  ORDER_OUTBOX_UPDATED_EVENT,
+  createOrderOutboxRecord,
+  readOrderOutboxRecord,
+  saveOrderOutboxRecord,
+  type OrderOutboxRecord,
+} from '../offline/orderOutbox'
+import {
+  kickOrderOutboxProcessor,
+  processOrderOutboxRecord,
+} from '../services/orderOutboxProcessor'
 
 function calculateDraftLineSubtotal(menuItem: MenuItem | undefined, draft: ItemCustomizationDraft) {
   if (!menuItem) {
@@ -238,6 +260,49 @@ function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationDraft): 
   }
 }
 
+interface DraftOfflineIdentity {
+  accountId: number | null
+  organizationId: number | null
+  menuRevision: number
+}
+
+function buildFrozenSubmitPayload(
+  record: LocalDraftRecord,
+  items: OrderLineItem[],
+  catalogItems: MenuItem[],
+): IdempotentOrderSubmitPayload {
+  return {
+    client_order_id: record.clientOrderId,
+    idempotency_key: record.clientOrderId,
+    organization_id: record.organizationId,
+    store_id: record.storeId,
+    server_order_id: record.serverOrderId,
+    order_type: record.context.orderType,
+    table_no: record.context.orderType === 'dine_in' ? record.context.tableNo : null,
+    pickup_no: record.context.orderType === 'pickup' ? record.context.pickupNo : null,
+    menu_revision: record.menuRevision,
+    expected_subtotal_amount: Number(
+      items.reduce((total, item) => total + item.lineSubtotal, 0).toFixed(2),
+    ),
+    items: items.map((item) => {
+      const menuItem = catalogItems.find((candidate) => candidate.id === item.menuItemId)
+      if (!menuItem) {
+        throw new Error(`菜单缓存缺少菜品 ${item.menuItemId}，请刷新菜单后检查订单。`)
+      }
+      return {
+        menu_item_id: Number(item.menuItemId),
+        quantity: item.quantity,
+        combo_group_no: null,
+        combo_role: 'standalone',
+        notes: item.notes.trim() || null,
+        options: mapOptions(item.selection, menuItem),
+      }
+    }),
+  }
+}
+
+const LOCAL_DRAFT_SAVE_DEBOUNCE_MS = 200
+
 export function useDraftOrder(
   storeId: number,
   slotLabel: string,
@@ -245,62 +310,164 @@ export function useDraftOrder(
   orderType: 'dine_in' | 'pickup',
   pickupLabel: string | null,
   catalogItems: MenuItem[],
+  offlineIdentity: DraftOfflineIdentity,
 ) {
   const [order, setOrder] = useState<BackendOrderResponse | null>(null)
   const [stagedItems, setStagedItems] = useState<OrderLineItem[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [persistenceError, setPersistenceError] = useState<string | null>(null)
+  const [localDraftId, setLocalDraftId] = useState<string | null>(null)
+  const [clientOrderId, setClientOrderId] = useState<string | null>(null)
+  const [lastLocalSavedAt, setLastLocalSavedAt] = useState<string | null>(null)
+  const [outboxRecord, setOutboxRecord] = useState<OrderOutboxRecord | null>(null)
   const submitInFlightRef = useRef(false)
   const updateIdempotencyKeyRef = useRef<string | null>(null)
+  const localDraftRef = useRef<LocalDraftRecord | null>(null)
+  const saveTimerRef = useRef<number | null>(null)
+  const flushLocalDraftRef = useRef<() => Promise<void>>(async () => undefined)
+
+  const localScope = useMemo<LocalDraftScope | null>(() => {
+    if (offlineIdentity.accountId == null || offlineIdentity.organizationId == null) return null
+    return {
+      accountId: offlineIdentity.accountId,
+      organizationId: offlineIdentity.organizationId,
+      storeId,
+    }
+  }, [offlineIdentity.accountId, offlineIdentity.organizationId, storeId])
+  const localContext = useMemo<LocalDraftContext>(() => ({
+    orderType,
+    slotLabel,
+    tableLabel,
+    tableNo: orderType === 'dine_in' ? slotLabel : null,
+    pickupNo: orderType === 'pickup' ? (pickupLabel ?? slotLabel) : null,
+  }), [orderType, pickupLabel, slotLabel, tableLabel])
+  const contextKey = useMemo(() => buildDraftContextKey(localContext), [localContext])
+
+  const mapServerItems = useCallback((nextOrder: BackendOrderResponse) => nextOrder.items.map(
+    (item) => mapOrderItem(item, catalogItems, nextOrder.status !== 'draft'),
+  ), [catalogItems])
 
   useEffect(() => {
     let active = true
+    setOrder(null)
+    setStagedItems(null)
+    setLoading(true)
+    setError(null)
+    setPersistenceError(null)
+    setOutboxRecord(null)
+    localDraftRef.current = null
 
     const load = async () => {
-      setLoading(true)
-      setError(null)
+      let cached: LocalDraftRecord | null = null
+      if (localScope) {
+        try {
+          void cleanupExpiredLocalDrafts().catch(() => undefined)
+          const storedDraft = await readLocalDraft(localScope, contextKey)
+          let pendingSubmission = storedDraft
+            ? await readOrderOutboxRecord(
+                storedDraft.accountId,
+                storedDraft.organizationId,
+                storedDraft.storeId,
+                storedDraft.clientOrderId,
+              )
+            : null
+          const resolvedDraft = resolveLocalDraftForOpen(
+            localScope,
+            localContext,
+            offlineIdentity.menuRevision,
+            storedDraft,
+            pendingSubmission?.state ?? null,
+          )
+          if (resolvedDraft !== storedDraft) {
+            cached = await saveLocalDraft(resolvedDraft)
+            pendingSubmission = null
+          } else {
+            cached = storedDraft
+          }
+          if (!active) return
+          if (!cached) throw new Error('本机草稿初始化失败')
+          localDraftRef.current = cached
+          setLocalDraftId(cached.localDraftId)
+          setClientOrderId(cached.clientOrderId)
+          setLastLocalSavedAt(cached.updatedAt)
+          setOrder(cached.serverOrderSnapshot)
+          setStagedItems(cached.items)
+          setLoading(false)
+          if (active) setOutboxRecord(pendingSubmission)
+        } catch (storageError) {
+          if (active) {
+            setPersistenceError(storageError instanceof Error ? storageError.message : '本机草稿存储不可用')
+          }
+        }
+      }
 
       try {
-        const resolvedOrder = await ensureEditableOrder({
+        const resolvedOrder = await findEditableOrderByContext({
           storeId,
           orderType,
           tableNo: orderType === 'dine_in' ? slotLabel : null,
-          pickupNo: orderType === 'pickup' ? pickupLabel : null,
+          pickupNo: orderType === 'pickup' ? (pickupLabel ?? slotLabel) : null,
         })
-        if (active) {
-          setOrder(resolvedOrder)
+        if (!active) return
+        if (!resolvedOrder) {
+          setOrder(null)
+          setStagedItems(cached?.items ?? [])
+          return
+        }
+        const serverUpdatedAt = new Date(resolvedOrder.updated_at).getTime()
+        const localUpdatedAt = cached ? new Date(cached.updatedAt).getTime() : 0
+        const keepLocalItems = Boolean(
+          cached
+          && cached.serverOrderId === resolvedOrder.id
+          && cached.items.length > 0
+          && (cached.mode === 'SERVER_ORDER_UPDATE' || localUpdatedAt > serverUpdatedAt),
+        )
+        const nextItems = keepLocalItems ? cached!.items : mapServerItems(resolvedOrder)
+        setOrder(resolvedOrder)
+        setStagedItems(nextItems)
+        if (resolvedOrder.status !== 'draft') setOutboxRecord(null)
+
+        if (cached) {
+          localDraftRef.current = {
+            ...cached,
+            context: localContext,
+            mode: resolvedOrder.status === 'draft' ? 'LOCAL_NEW_ORDER' : 'SERVER_ORDER_UPDATE',
+            serverOrderId: resolvedOrder.id,
+            serverOrderSnapshot: resolvedOrder,
+            items: nextItems,
+            menuRevision: offlineIdentity.menuRevision,
+            lastError: null,
+          }
+          void saveLocalDraft(localDraftRef.current)
+            .then((saved) => {
+              localDraftRef.current = saved
+              if (active) setLastLocalSavedAt(saved.updatedAt)
+            })
+            .catch((storageError) => {
+              if (active) setPersistenceError(storageError instanceof Error ? storageError.message : '本机草稿保存失败')
+            })
         }
       } catch (loadError) {
-        if (active) {
+        if (!active) return
+        if (cached) {
+          setOrder(cached.serverOrderSnapshot)
+          setStagedItems(cached.items)
+          setError('网络暂不可用，已恢复本机草稿；尚未同步的内容只保存在本机。')
+        } else {
           setError(loadError instanceof Error ? loadError.message : 'Failed to open draft order')
         }
       } finally {
-        if (active) {
-          setLoading(false)
-        }
+        if (active) setLoading(false)
       }
     }
 
     void load()
-
     return () => {
       active = false
     }
-  }, [orderType, pickupLabel, slotLabel, storeId])
-
-  useEffect(() => {
-    if (!order) {
-      setStagedItems(null)
-      return
-    }
-    if (order.status === 'draft') {
-      setStagedItems(null)
-      return
-    }
-    const mappedItems = order.items.map((item) => mapOrderItem(item, catalogItems, true))
-    setStagedItems(mappedItems)
-  }, [catalogItems, order])
+  }, [contextKey, localContext, localScope, mapServerItems, offlineIdentity.menuRevision, orderType, pickupLabel, slotLabel, storeId])
 
   const runMutation = useCallback(async (operation: () => Promise<BackendOrderResponse>) => {
     setSaving(true)
@@ -308,6 +475,7 @@ export function useDraftOrder(
     try {
       const nextOrder = await operation()
       setOrder(nextOrder)
+      setStagedItems(mapServerItems(nextOrder))
       return nextOrder
     } catch (mutationError) {
       const message = mutationError instanceof Error ? mutationError.message : 'Draft order update failed'
@@ -316,30 +484,156 @@ export function useDraftOrder(
     } finally {
       setSaving(false)
     }
-  }, [])
+  }, [mapServerItems])
 
   const session = useMemo(() => {
-    if (!order) {
-      return null
-    }
-    const baseSession = mapOrderToSession(order, slotLabel, tableLabel, catalogItems)
-    if (order.status === 'draft' || !stagedItems) {
-      return baseSession
-    }
-    const dirty = stagedItems.some((item) => item.id.startsWith('temp-'))
-
+    const baseSession = order
+      ? mapOrderToSession(order, slotLabel, tableLabel, catalogItems)
+      : localDraftId
+        ? {
+            orderId: localDraftId,
+            slotLabel,
+            tableLabel,
+            status: 'draft' as const,
+            isModifiedAfterSubmit: false,
+            items: [] as OrderLineItem[],
+          }
+        : null
+    if (!baseSession) return null
+    const effectiveItems = stagedItems ?? baseSession.items
+    const dirty = effectiveItems.some((item) => item.id.startsWith('temp-'))
     return {
       ...baseSession,
       isModifiedAfterSubmit: dirty || baseSession.isModifiedAfterSubmit,
-      items: stagedItems,
+      items: effectiveItems,
     }
-  }, [catalogItems, order, slotLabel, stagedItems, tableLabel])
+  }, [catalogItems, localDraftId, order, slotLabel, stagedItems, tableLabel])
 
-  const isDraftOrder = order?.status === 'draft'
+  useEffect(() => {
+    if (!session || !localDraftRef.current) return
+    localDraftRef.current = {
+      ...localDraftRef.current,
+      context: localContext,
+      mode: !order || order.status === 'draft' ? 'LOCAL_NEW_ORDER' : 'SERVER_ORDER_UPDATE',
+      serverOrderId: order?.id ?? null,
+      serverOrderSnapshot: order,
+      items: session.items,
+      menuRevision: offlineIdentity.menuRevision,
+    }
+    if (saveTimerRef.current != null) window.clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = window.setTimeout(() => {
+      void flushLocalDraftRef.current()
+    }, LOCAL_DRAFT_SAVE_DEBOUNCE_MS)
+    return () => {
+      if (saveTimerRef.current != null) window.clearTimeout(saveTimerRef.current)
+    }
+  }, [offlineIdentity.menuRevision, localContext, order, session])
 
+  const flushLocalDraft = useCallback(async () => {
+    if (saveTimerRef.current != null) {
+      window.clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = null
+    }
+    if (!localDraftRef.current) return
+    try {
+      const saved = await saveLocalDraft(localDraftRef.current)
+      localDraftRef.current = saved
+      setLastLocalSavedAt(saved.updatedAt)
+      setPersistenceError(null)
+    } catch (storageError) {
+      const message = storageError instanceof Error ? storageError.message : '本机草稿保存失败'
+      setPersistenceError(message)
+      throw storageError
+    }
+  }, [])
+  flushLocalDraftRef.current = flushLocalDraft
+
+  useEffect(() => {
+    const flush = () => {
+      void flushLocalDraftRef.current().catch(() => undefined)
+    }
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') flush()
+    }
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      window.removeEventListener('pagehide', flush)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleOutboxUpdate = (event: Event) => {
+      const record = (event as CustomEvent<OrderOutboxRecord>).detail
+      if (!record || record.clientOrderId !== localDraftRef.current?.clientOrderId) return
+      setOutboxRecord(record)
+      const currentDraft = localDraftRef.current
+      if (currentDraft) {
+        const updatedDraft = {
+          ...currentDraft,
+          submitState: record.state,
+          lastError: record.lastErrorMessage,
+          nextRetryAt: record.nextRetryAt,
+          serverOrderId: record.serverOrderId ?? currentDraft.serverOrderId,
+        }
+        if (record.state === 'SUBMITTED' && localScope) {
+          if (saveTimerRef.current != null) {
+            window.clearTimeout(saveTimerRef.current)
+            saveTimerRef.current = null
+          }
+          localDraftRef.current = null
+          void deleteLocalDraftIfClientMatches(
+            localScope,
+            contextKey,
+            currentDraft.clientOrderId,
+          ).catch(() => undefined)
+        } else {
+          localDraftRef.current = updatedDraft
+          void saveLocalDraft(updatedDraft)
+            .then((saved) => {
+              localDraftRef.current = saved
+              setLastLocalSavedAt(saved.updatedAt)
+            })
+            .catch(() => undefined)
+        }
+      }
+      if (record.state === 'SUBMITTED' && record.serverOrderId) {
+        void fetchOrderDetail(record.serverOrderId)
+          .then((submittedOrder) => {
+            setOrder(submittedOrder)
+            setStagedItems(mapServerItems(submittedOrder))
+          })
+          .catch(() => undefined)
+      }
+    }
+    window.addEventListener(ORDER_OUTBOX_UPDATED_EVENT, handleOutboxUpdate)
+    return () => window.removeEventListener(ORDER_OUTBOX_UPDATED_EVENT, handleOutboxUpdate)
+  }, [contextKey, localScope, mapServerItems])
+
+  const isDraftOrder = !order || order.status === 'draft'
   const syncStagedItems = (updater: (items: OrderLineItem[]) => OrderLineItem[]) => {
     setStagedItems((current) => updater(current ?? []))
     return Promise.resolve(order)
+  }
+
+  const draftSubmissionLocked = Boolean(isDraftOrder && outboxRecord && ![
+    'LOCAL_DRAFT',
+    'CANCELLED_LOCAL',
+  ].includes(outboxRecord.state))
+
+  const requireLocalDraftEditable = () => {
+    if (!draftSubmissionLocked) return
+    const message = '订单已进入待提交队列。如需修改，请先选择“返回修改”。'
+    setError(message)
+    throw new Error(message)
+  }
+
+  const removeLocalRecord = async () => {
+    if (!localScope) return
+    if (saveTimerRef.current != null) window.clearTimeout(saveTimerRef.current)
+    await deleteLocalDraft(localScope, contextKey)
+    localDraftRef.current = null
   }
 
   return {
@@ -348,151 +642,133 @@ export function useDraftOrder(
     loading,
     saving,
     error,
+    persistenceError,
+    localDraftId,
+    clientOrderId,
+    lastLocalSavedAt,
+    localDraftMode: localDraftRef.current?.mode ?? 'LOCAL_NEW_ORDER',
+    localSubmitState: outboxRecord?.state ?? localDraftRef.current?.submitState ?? 'LOCAL_DRAFT',
+    outboxRecord,
+    draftSubmissionLocked,
+    saveLocalDraftNow: flushLocalDraft,
     addItem: async (menuItem: MenuItem, draft: ItemCustomizationDraft) => {
-      if (!order) {
-        return null
-      }
-      if (!isDraftOrder) {
-        return syncStagedItems((items) => [...items, buildLocalLineItem(menuItem, draft)])
-      }
-      return runMutation(() => addDraftOrderItem(order.id, menuItem, draft, draft.notes))
+      requireLocalDraftEditable()
+      if (isDraftOrder) return syncStagedItems((items) => [...items, buildLocalLineItem(menuItem, draft)])
+      return syncStagedItems((items) => [...items, buildLocalLineItem(menuItem, draft)])
     },
     updateItem: async (itemId: string | number, draft: ItemCustomizationDraft) => {
-      if (!order) {
-        return null
-      }
-      if (!isDraftOrder) {
-        return syncStagedItems((items) => items.map((item) => {
-          if (item.id !== String(itemId) || item.locked) {
-            return item
-          }
-          return {
-                  ...item,
-                  quantity: draft.quantity,
-                  selection: draft,
-                  notes: draft.notes,
-                  lineSubtotal: calculateDraftLineSubtotal(
-                    catalogItems.find((catalogItem) => catalogItem.id === item.menuItemId),
-                    draft,
-                  ),
-                }
-        }))
-      }
-      const numericItemId = Number(itemId)
-      const targetItem = order.items.find((item) => item.id === numericItemId)
-      const menuItem = catalogItems.find((item) => item.id === String(targetItem?.menu_item_id))
-      return runMutation(() => updateDraftOrderItemWithMenuItem(order.id, numericItemId, menuItem, draft, draft.notes))
+      requireLocalDraftEditable()
+      return syncStagedItems((items) => items.map((item) => {
+        if (item.id !== String(itemId) || item.locked) return item
+        const menuItem = catalogItems.find((candidate) => candidate.id === item.menuItemId)
+        if (!menuItem) return item
+        return { ...buildLocalLineItem(menuItem, draft), id: item.id }
+      }))
     },
     updateItemNote: async (itemId: string | number, notes: string) => {
-      if (!order) {
-        return null
-      }
+      requireLocalDraftEditable()
       const itemKey = String(itemId)
-      if (!isDraftOrder) {
-        return syncStagedItems((items) =>
-          items.map((item) => item.id === itemKey && !item.locked ? { ...item, notes, selection: { ...item.selection, notes } } : item),
-        )
-      }
-      const numericItemId = Number(itemId)
-      const targetItem = order.items.find((item) => item.id === numericItemId)
-      if (!targetItem) {
-        return null
-      }
-      const menuItem = catalogItems.find((item) => item.id === String(targetItem.menu_item_id))
-      const selection = { ...buildItemSelection(targetItem, menuItem), notes }
-      return runMutation(() => updateDraftOrderItemWithMenuItem(order.id, numericItemId, menuItem, selection, notes))
+      return syncStagedItems((items) => items.map((item) => (
+        item.id === itemKey && !item.locked ? { ...item, notes, selection: { ...item.selection, notes } } : item
+      )))
     },
     incrementItem: async (itemId: string | number, currentQuantity: number) => {
-      if (!order) {
-        return null
-      }
-      if (!isDraftOrder) {
-        return syncStagedItems((items) =>
-          items.map((item) => {
-            if (item.id !== String(itemId) || item.locked) {
-              return item
-            }
-            const nextSelection = { ...item.selection, quantity: currentQuantity + 1 }
-            return {
-              ...item,
-              quantity: currentQuantity + 1,
-              selection: nextSelection,
-              lineSubtotal: calculateDraftLineSubtotal(
-                catalogItems.find((catalogItem) => catalogItem.id === item.menuItemId),
-                nextSelection,
-              ),
-            }
-          }),
-        )
-      }
-      return runMutation(() => updateDraftOrderItemQuantity(order.id, Number(itemId), currentQuantity + 1))
+      requireLocalDraftEditable()
+      return syncStagedItems((items) => items.map((item) => {
+        if (item.id !== String(itemId) || item.locked) return item
+        const nextSelection = { ...item.selection, quantity: currentQuantity + 1 }
+        return {
+          ...item,
+          quantity: currentQuantity + 1,
+          selection: nextSelection,
+          lineSubtotal: calculateDraftLineSubtotal(
+            catalogItems.find((catalogItem) => catalogItem.id === item.menuItemId),
+            nextSelection,
+          ),
+        }
+      }))
     },
     decrementItem: async (itemId: string | number, currentQuantity: number) => {
-      if (!order) {
-        return null
-      }
-      if (!isDraftOrder) {
-        return syncStagedItems((items) => {
-          const target = items.find((item) => item.id === String(itemId))
-          if (target?.locked) {
-            return items
+      requireLocalDraftEditable()
+      return syncStagedItems((items) => {
+        const target = items.find((item) => item.id === String(itemId))
+        if (target?.locked) return items
+        if (currentQuantity <= 1) return items.filter((item) => item.id !== String(itemId))
+        return items.map((item) => {
+          if (item.id !== String(itemId)) return item
+          const nextSelection = { ...item.selection, quantity: currentQuantity - 1 }
+          return {
+            ...item,
+            quantity: currentQuantity - 1,
+            selection: nextSelection,
+            lineSubtotal: calculateDraftLineSubtotal(
+              catalogItems.find((catalogItem) => catalogItem.id === item.menuItemId),
+              nextSelection,
+            ),
           }
-          if (currentQuantity <= 1) {
-            return items.filter((item) => item.id !== String(itemId))
-          }
-          return items.map((item) => {
-            if (item.id !== String(itemId)) {
-              return item
-            }
-            const nextSelection = { ...item.selection, quantity: currentQuantity - 1 }
-            return {
-              ...item,
-              quantity: currentQuantity - 1,
-              selection: nextSelection,
-              lineSubtotal: calculateDraftLineSubtotal(
-                catalogItems.find((catalogItem) => catalogItem.id === item.menuItemId),
-                nextSelection,
-              ),
-            }
-          })
         })
-      }
-      if (currentQuantity <= 1) {
-        return runMutation(() => removeDraftOrderItem(order.id, Number(itemId)))
-      }
-      return runMutation(() => updateDraftOrderItemQuantity(order.id, Number(itemId), currentQuantity - 1))
+      })
     },
     removeItem: async (itemId: string | number) => {
-      if (!order) {
-        return null
-      }
-      if (!isDraftOrder) {
-        return syncStagedItems((items) => items.filter((item) => item.id !== String(itemId) || item.locked))
-      }
-      return runMutation(() => removeDraftOrderItem(order.id, Number(itemId)))
+      requireLocalDraftEditable()
+      return syncStagedItems((items) => items.filter((item) => item.id !== String(itemId) || item.locked))
     },
     cancelOrder: async () => {
-      if (!order) {
-        return null
+      if (outboxRecord?.state === 'SUBMITTING') {
+        const message = '订单正在提交，暂时不能取消本机记录。请等待服务器确认。'
+        setError(message)
+        throw new Error(message)
       }
-      return runMutation(() => cancelDraftOrder(order.id))
+      if (outboxRecord) {
+        await saveOrderOutboxRecord({
+          ...outboxRecord,
+          state: 'CANCELLED_LOCAL',
+          nextRetryAt: null,
+        })
+      }
+      if (order?.status === 'draft') {
+        await cancelDraftOrder(order.id).catch(() => undefined)
+      }
+      await removeLocalRecord()
+      setStagedItems([])
+      setOutboxRecord(null)
+      return order
     },
     submitOrder: async () => {
-      if (!order) {
+      if (submitInFlightRef.current) return null
+      if (!session?.items.length) {
+        setError('订单至少需要一个菜品。')
         return null
       }
-      if (submitInFlightRef.current) {
-        return order
+      if (localDraftRef.current) {
+        localDraftRef.current = { ...localDraftRef.current, items: session.items }
       }
+      await flushLocalDraft().catch(() => undefined)
+      const submitStartedAtMs = Date.now()
+      const submitStartedAt = new Date(submitStartedAtMs).toISOString()
+      const recordSubmit = (stage: 'STARTED' | 'SUCCEEDED' | 'FAILED', submitError?: unknown) => {
+        recordAppOperation({
+          operation: 'ORDER_SUBMIT',
+          stage,
+          storeId,
+          startedAt: submitStartedAt,
+          completedAt: stage === 'STARTED' ? null : new Date().toISOString(),
+          latencyMs: stage === 'STARTED' ? null : Date.now() - submitStartedAtMs,
+          errorCode: submitError instanceof ApiRequestError
+            ? (submitError.code ?? `HTTP_${submitError.status}`)
+            : submitError ? 'ORDER_SUBMIT_FAILED' : null,
+        })
+      }
+      recordSubmit('STARTED')
       submitInFlightRef.current = true
       if (!isDraftOrder) {
         const newItems = (stagedItems ?? []).filter((item) => item.id.startsWith('temp-'))
         if (!newItems.length) {
           setError('No new items to update')
+          recordSubmit('FAILED', new Error('No new items to update'))
           submitInFlightRef.current = false
           return order
         }
-
         setSaving(true)
         setError(null)
         try {
@@ -501,55 +777,144 @@ export function useDraftOrder(
           const result = await submitOrderUpdate(order.id, idempotencyKey, newItems, catalogItems)
           const refreshed = result.order
           setOrder(refreshed)
-          setStagedItems(refreshed.items.map((item) => mapOrderItem(item, catalogItems, true)))
+          setStagedItems(mapServerItems(refreshed))
           updateIdempotencyKeyRef.current = null
+          recordSubmit('SUCCEEDED')
           return refreshed
         } catch (mutationError) {
-          const message = mutationError instanceof Error ? mutationError.message : 'Order update failed'
-          setError(message)
+          setError(mutationError instanceof Error ? mutationError.message : 'Order update failed')
+          recordSubmit('FAILED', mutationError)
           throw mutationError
         } finally {
           setSaving(false)
           submitInFlightRef.current = false
         }
       }
+      setSaving(true)
+      setError(null)
       try {
-        return await runMutation(() => submitDraftOrder(order.id))
-      } catch (mutationError) {
-        if (
-          mutationError instanceof Error
-          && (mutationError.message.includes('Only draft orders can be submitted')
-            || mutationError.message.includes('already completed'))
-        ) {
-          try {
-            const refreshed = await fetchOrderDetail(order.id)
-            setOrder(refreshed)
-          } catch {
-            // Keep the original submit error visible if refresh also fails.
-          }
+        const draft = localDraftRef.current
+        if (!draft) throw new Error('本机草稿尚未准备完成，请稍后重试。')
+        if (draft.menuRevision <= 0) throw new Error('菜单版本不可用，请先重新加载菜单。')
+
+        let queued = await readOrderOutboxRecord(
+          draft.accountId,
+          draft.organizationId,
+          draft.storeId,
+          draft.clientOrderId,
+        )
+        if (queued?.state === 'SUBMITTED' && queued.serverOrderId) {
+          const submittedOrder = await fetchOrderDetail(queued.serverOrderId)
+          setOrder(submittedOrder)
+          setStagedItems(mapServerItems(submittedOrder))
+          recordSubmit('SUCCEEDED')
+          return submittedOrder
         }
+        if (queued?.state === 'CONFLICT') {
+          setOutboxRecord(queued)
+          setError(queued.lastErrorMessage ?? '订单提交冲突，请返回修改并重新检查。')
+          recordSubmit('FAILED', new Error(queued.lastErrorCode ?? 'ORDER_SUBMIT_CONFLICT'))
+          return null
+        }
+        if (!queued || queued.state === 'CANCELLED_LOCAL' || queued.state === 'LOCAL_DRAFT') {
+          queued = createOrderOutboxRecord(
+            draft,
+            buildFrozenSubmitPayload(draft, session.items, catalogItems),
+          )
+        }
+        localDraftRef.current = await saveLocalDraft({
+          ...draft,
+          items: session.items,
+          submitState: 'QUEUED',
+          payloadHash: queued.payloadHash,
+          lastError: null,
+          nextRetryAt: queued.nextRetryAt,
+        })
+        queued = await saveOrderOutboxRecord(queued)
+        setOutboxRecord(queued)
+
+        const result = await processOrderOutboxRecord(queued)
+        if (result.record) setOutboxRecord(result.record)
+        if (result.order) {
+          setOrder(result.order)
+          setStagedItems(mapServerItems(result.order))
+          recordSubmit('SUCCEEDED')
+          return result.order
+        }
+        kickOrderOutboxProcessor()
+        if (result.record?.state === 'CONFLICT') {
+          setError(result.record.lastErrorMessage ?? '订单提交冲突，请人工检查。')
+          recordSubmit('FAILED', new Error(result.record.lastErrorCode ?? 'ORDER_SUBMIT_CONFLICT'))
+        } else {
+          recordSubmit('FAILED', new Error(result.record?.lastErrorCode ?? 'ORDER_QUEUED'))
+        }
+        return null
+      } catch (mutationError) {
+        setError(mutationError instanceof Error ? mutationError.message : '订单加入本机提交队列失败')
+        recordSubmit('FAILED', mutationError)
         throw mutationError
       } finally {
+        setSaving(false)
         submitInFlightRef.current = false
       }
     },
+    retryQueuedOrder: async () => {
+      if (!outboxRecord || outboxRecord.state === 'SUBMITTED') return outboxRecord
+      const queued = await saveOrderOutboxRecord({
+        ...outboxRecord,
+        state: 'QUEUED',
+        nextRetryAt: new Date().toISOString(),
+        lastErrorCode: null,
+        lastErrorMessage: null,
+      })
+      setOutboxRecord(queued)
+      kickOrderOutboxProcessor()
+      return queued
+    },
+    returnQueuedOrderToDraft: async () => {
+      if (!outboxRecord || !localDraftRef.current) return
+      const cancelled = await saveOrderOutboxRecord({
+        ...outboxRecord,
+        state: 'CANCELLED_LOCAL',
+        nextRetryAt: null,
+      })
+      setOutboxRecord(cancelled)
+      localDraftRef.current = await saveLocalDraft({
+        ...localDraftRef.current,
+        submitState: 'LOCAL_DRAFT',
+        lastError: null,
+        nextRetryAt: null,
+      })
+      setError(null)
+    },
     refreshOrder: async () => {
       if (!order) {
+        kickOrderOutboxProcessor()
         return null
       }
       return runMutation(() => fetchOrderDetail(order.id))
     },
     updateHeader: async (nextPickupLabel: string | null) => {
-      if (!order) {
-        return null
+      if (isDraftOrder) {
+        requireLocalDraftEditable()
+        if (localDraftRef.current) {
+          localDraftRef.current = {
+            ...localDraftRef.current,
+            context: {
+              ...localDraftRef.current.context,
+              pickupNo: orderType === 'pickup' ? nextPickupLabel : null,
+            },
+          }
+          await flushLocalDraft()
+        }
+        return order
       }
-      return runMutation(() =>
-        updateEditableOrderHeader(order.id, {
-          orderType,
-          tableNo: orderType === 'dine_in' ? slotLabel : null,
-          pickupNo: orderType === 'pickup' ? nextPickupLabel : null,
-        }),
-      )
+      if (!order) return null
+      return runMutation(() => updateEditableOrderHeader(order.id, {
+        orderType,
+        tableNo: orderType === 'dine_in' ? slotLabel : null,
+        pickupNo: orderType === 'pickup' ? nextPickupLabel : null,
+      }))
     },
   }
 }

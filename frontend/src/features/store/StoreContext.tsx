@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { fetchStoreContext, type StoreContextResponse } from '../../services/storeWorkspaceService'
 import { getApiUserMessage } from '../../services/apiClient'
+import { useAuth } from '../auth/useAuth'
 
 interface StoreContextValue {
   storeId: number
@@ -29,31 +30,41 @@ function mapStoreContext(storeId: number, data: StoreContextResponse | null, loa
 }
 
 export function StoreContextProvider({ storeId, children }: { storeId: number; children: React.ReactNode }) {
+  const { isOfflineRestricted, user } = useAuth()
   const [data, setData] = useState<StoreContextResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
-    setLoading(true)
-    setError(null)
-    fetchStoreContext(storeId)
-      .then((response) => {
-        if (!active) return
-        setData(response)
-      })
-      .catch((exception) => {
-        if (!active) return
-        setData(null)
-        setError(getApiUserMessage(exception, '你没有权限访问这家门店。'))
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
+    const loadContext = (showLoading: boolean, preferOfflineSnapshot: boolean) => {
+      if (showLoading) {
+        setLoading(true)
+      }
+      setError(null)
+      fetchStoreContext(storeId, user?.id, { preferOfflineSnapshot })
+        .then((response) => {
+          if (!active) return
+          setData(response)
+        })
+        .catch((exception) => {
+          if (!active) return
+          setData(null)
+          setError(getApiUserMessage(exception, '你没有权限访问这家门店。'))
+        })
+        .finally(() => {
+          if (active) setLoading(false)
+        })
+    }
+
+    loadContext(true, isOfflineRestricted)
+    const handleOnline = () => loadContext(false, false)
+    window.addEventListener('online', handleOnline)
     return () => {
       active = false
+      window.removeEventListener('online', handleOnline)
     }
-  }, [storeId])
+  }, [isOfflineRestricted, storeId, user?.id])
 
   const value = useMemo(() => mapStoreContext(storeId, data, loading, error), [data, error, loading, storeId])
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>

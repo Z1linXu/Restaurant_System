@@ -23,6 +23,9 @@ import { DineInTopBar } from './components/DineInTopBar'
 import { TableGrid } from './components/TableGrid'
 import { TableStatusLegend } from './components/TableStatusLegend'
 import { useCurrentStore } from '../store/StoreContext'
+import { useAuth } from '../auth/useAuth'
+import { useStoreOfflineOrders } from '../offline/useStoreOfflineOrders'
+import { offlineOrderBadgeLabel, type OfflineOrderBadge } from '../offline/offlineOrderStatus'
 
 function buildGeneratedTakeoutLabel() {
   const stamp = Date.now().toString().slice(-4)
@@ -66,13 +69,32 @@ function buildPostSubmitPrintAttentionMessage(jobs: PrintJobRecord[]) {
   return `Printing needs attention. ${details} Reprint immediately from Print Center or Order Center.`
 }
 
+function OfflineOrdersBanner({ orders, compact = false }: { orders: OfflineOrderBadge[]; compact?: boolean }) {
+  if (!orders.length) return null
+  return (
+    <section className={`rounded-[20px] border border-[rgba(177,111,21,0.28)] bg-[rgba(220,153,54,0.13)] text-[rgb(112,65,8)] ${compact ? 'px-4 py-3' : 'px-5 py-4'}`}>
+      <p className={`${compact ? 'text-[0.9rem]' : 'text-base'} font-black`}>
+        本机有 {orders.length} 个订单尚未确认进入厨房
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {orders.map((order) => (
+          <span key={order.clientOrderId} className="rounded-full bg-white/65 px-3 py-1.5 text-xs font-bold">
+            {formatSplitSlotLabel(order.contextLabel)} · {offlineOrderBadgeLabel(order.state)} · {order.itemCount} 份
+          </span>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 interface DineInPageProps {
   routePath: string
   routeSearch: string
 }
 
 export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
-  const { storeId } = useCurrentStore()
+  const { storeId, organizationId } = useCurrentStore()
+  const { user } = useAuth()
   const isIpadLandscape = useIpadLandscape()
   const workstation = inferFrontdeskWorkstation(routePath)
   const workstationLabel = workstation ? `Menu ${workstation.toUpperCase()}` : null
@@ -90,10 +112,19 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
   const [printOptions, setPrintOptions] = useState<OrderPrintOption[]>([])
   const [printBusy, setPrintBusy] = useState<string | null>(null)
   const [printError, setPrintError] = useState<string | null>(null)
-  const menuCatalog = useMenuCatalog(storeId)
+  const menuCatalog = useMenuCatalog(storeId, {
+    accountId: user?.id ?? null,
+    organizationId,
+  })
   const printCheckTimeoutsRef = useRef<number[]>([])
   const printCheckRunIdRef = useRef(0)
   const tableBoardEnabled = activeOrderingContext == null
+  const offlineOrderScope = useMemo(() => (
+    user?.id && organizationId
+      ? { accountId: user.id, organizationId, storeId }
+      : null
+  ), [organizationId, storeId, user?.id])
+  const offlineOrders = useStoreOfflineOrders(offlineOrderScope, tableBoardEnabled)
   const { tableSlots, statusCounts, syncError, isOnline, startOrder, editOrder, endOrder, refreshFromBackend, refreshTableAfterFinish } = useTableBoard({
     enabled: tableBoardEnabled,
     storeId,
@@ -385,6 +416,8 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
               </div>
             ) : null}
 
+            <OfflineOrdersBanner orders={offlineOrders} compact={workstationCompact} />
+
             <Card tone="base" className={`bg-[rgba(255,255,255,0.36)] shadow-none ring-0 ${workstationCompact ? 'space-y-3 rounded-[24px] p-3.5' : 'space-y-5 rounded-[30px] p-4 md:p-5 xl:p-5'}`}>
               <TableStatusLegend counts={statusCounts} compact={workstationCompact} />
               <TableGrid
@@ -395,6 +428,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
                 onPrint={(slot) => void handlePrint(slot)}
                 onFinish={(slot) => void handleFinish(slot)}
                 compact={workstationCompact}
+                offlineOrders={offlineOrders}
               />
             </Card>
           </div>
@@ -442,6 +476,8 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
                 </div>
               ) : null}
 
+              <OfflineOrdersBanner orders={offlineOrders} />
+
               <Card tone="base" className="space-y-5 rounded-[30px] bg-[rgba(255,255,255,0.36)] p-4 md:p-5 xl:p-5 shadow-none ring-0">
                 <TableStatusLegend counts={statusCounts} />
                 <TableGrid
@@ -451,6 +487,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
                   onEdit={handleEdit}
                   onPrint={(slot) => void handlePrint(slot)}
                   onFinish={(slot) => void handleFinish(slot)}
+                  offlineOrders={offlineOrders}
                 />
               </Card>
             </div>

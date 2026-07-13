@@ -1,5 +1,6 @@
 import type { TableSlot } from '../../../types/dinein'
 import { TableCard } from './TableCard'
+import { offlineOrderMatchesTable, type OfflineOrderBadge } from '../../offline/offlineOrderStatus'
 
 interface TableGridProps {
   slots: TableSlot[]
@@ -9,9 +10,10 @@ interface TableGridProps {
   onPrint: (slot: TableSlot) => void
   onFinish: (slot: TableSlot) => void
   compact?: boolean
+  offlineOrders?: OfflineOrderBadge[]
 }
 
-export function TableGrid({ slots, onEntrySelect, onStart, onEdit, onPrint, onFinish, compact = false }: TableGridProps) {
+export function TableGrid({ slots, onEntrySelect, onStart, onEdit, onPrint, onFinish, compact = false, offlineOrders = [] }: TableGridProps) {
   return (
     <div
       className={
@@ -30,6 +32,7 @@ export function TableGrid({ slots, onEntrySelect, onStart, onEdit, onPrint, onFi
           onPrint={onPrint}
           onFinish={onFinish}
           compact={compact}
+          offlineOrders={offlineOrders.filter((order) => offlineOrderMatchesTable(order, slot))}
         />
       ))}
     </div>

@@ -4,6 +4,7 @@ import com.restaurant.system.common.auth.ForbiddenException;
 import com.restaurant.system.common.auth.UnauthorizedException;
 import com.restaurant.system.common.feature.FeatureDisabledException;
 import com.restaurant.system.common.response.ApiResponse;
+import com.restaurant.system.order.exception.OrderSubmissionException;
 import jakarta.validation.ConstraintViolationException;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException ex) {
         return ResponseEntity.badRequest().body(ApiResponse.failure(ex.getMessage()));
+    }
+
+    @ExceptionHandler(OrderSubmissionException.class)
+    public ResponseEntity<ApiResponse<Void>> handleOrderSubmissionException(OrderSubmissionException ex) {
+        return ResponseEntity.status(ex.getStatus()).body(ApiResponse.failure(ex.getErrorCode(), ex.getMessage()));
     }
 
     @ExceptionHandler(UnauthorizedException.class)

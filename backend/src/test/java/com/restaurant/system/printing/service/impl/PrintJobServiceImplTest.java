@@ -1,8 +1,11 @@
 package com.restaurant.system.printing.service.impl;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import com.restaurant.system.printing.entity.PrintJob;
 import com.restaurant.system.printing.entity.PrinterConfig;
@@ -58,6 +61,30 @@ class PrintJobServiceImplTest {
         byte[] payload = Base64.getDecoder().decode(queued.escposPayloadBase64);
 
         assertTrue(containsBytes(payload, EscPosFontSizeMode.LARGE.activate_bytes));
+    }
+
+    @Test
+    void persistedDispatchSourceReturnsExistingJobWithoutCreatingDuplicate() {
+        PrintJob existing = new PrintJob();
+        existing.id = 81L;
+        existing.dispatchSourceKey = "submit:9:GRAB";
+        when(printJobRepository.findByDispatchSourceKey(existing.dispatchSourceKey)).thenReturn(Optional.of(existing));
+
+        PrintJob result = service.createPendingJob(
+            7L,
+            1L,
+            9L,
+            null,
+            null,
+            "GRAB",
+            "GRAB",
+            null,
+            "{}",
+            existing.dispatchSourceKey
+        );
+
+        assertEquals(existing, result);
+        verify(printJobRepository, never()).save(any(PrintJob.class));
     }
 
     private boolean containsBytes(byte[] payload, byte[] expected) {

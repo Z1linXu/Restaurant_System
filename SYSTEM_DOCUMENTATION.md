@@ -6222,3 +6222,366 @@ PR11C hotfix notes:
 - Printing Settings falls back to current store context when `FRONTDESK` cannot
   load platform overview data; this does not grant Platform Admin, Staff, or
   Audit access.
+
+## PR11E-C: Staff Long Login, Permanent Pad Binding, Device Management
+
+PR11E-C keeps the existing POS/order, payment/refund, menu/pricing,
+PrintDispatcher routing, and PAD_DIRECT print-job state semantics unchanged. It
+adds longer staff Web sessions, clearer separation between Web account logout
+and Android Pad pairing, store-scoped device management, and a frontdesk staff
+profile modal.
+
+Staff login/session policy:
+
+- `app.auth.access-token-expiration-seconds` is now `2592000` (30 days) in
+  local, cloud, pilot, and example backend configs.
+- `app.auth.refresh-token-expiration-days` is now `90`; refresh tokens are still
+  stored server-side as SHA-256 hashes and rotate on refresh.
+- `/api/v1/auth/me` now returns `user.store_name` when the authenticated user's
+  default store can be resolved.
+- Frontend logout still calls `/api/v1/auth/logout` and clears only
+  `restaurant_pos_access_token` / `restaurant_pos_refresh_token`.
+- Frontend auth bootstrap clears saved Web account tokens only on true `401`.
+  Network errors, timeouts, and ordinary `403` responses no longer erase saved
+  tokens.
+- Android WebView still has DOM storage enabled and does not clear Web
+  localStorage/cookies on app restart.
+
+Permanent Pad binding:
+
+- Android stores Pad Direct `device_id`, `device_token`, `store_id`,
+  `device_name`, `registered_at`, `app_version`, `platform`, and
+  `pad_direct_auto_enabled` in native `SharedPreferences`.
+- Web logout does not call `RestaurantPadDevice.clearDeviceCredentials()` and
+  therefore does not remove device pairing.
+- Pairing is removed only by explicit `Clear Pairing / 清除配对`, backend
+  disable/revoke causing device auth failure until re-pair, Android app data
+  clear, or uninstall.
+- `RestaurantPadDevice.getDeviceStatus()` returns pairing state, `device_id`,
+  `store_id` / `device_store_id`, `device_name`, `registered_at`,
+  `app_version`, `platform`, `auto_print_enabled`, and token last four
+  characters only.
+- Print Center detects current Android pairing via the bridge. A same-store
+  paired Pad shows `本机已配对`; re-registering still requires confirmation.
+  Cross-store pairing shows a warning and also requires confirmation before
+  overwriting native credentials.
+
+Device management API:
+
+- `GET /api/v1/admin/printing/devices?store_id={storeId}` returns registered
+  devices with `id`, `device_name`, `store_id`, `organization_id`, `device_type`,
+  `platform`, `app_version`, `status`, `is_active`, `last_seen_at`,
+  `created_at`, and `updated_at`. It never returns raw device tokens or token
+  hashes.
+- `PATCH /api/v1/admin/printing/devices/{deviceId}/rename?store_id={storeId}`
+  updates `device_name`.
+- `POST /api/v1/admin/printing/devices/{deviceId}/disable?store_id={storeId}`
+  soft-disables a device with `status = DISABLED` and `is_active = false`.
+- `POST /api/v1/admin/printing/devices/{deviceId}/revoke?store_id={storeId}`
+  soft-revokes a device with `status = REVOKED` and `is_active = false`.
+- All management endpoints require the existing store-scoped printing/admin
+  capabilities and do not hard-delete `store_devices`.
+
+Device authentication and `last_seen_at`:
+
+- `StoreDeviceService.authenticateDevice(...)` remains the shared gate for
+  heartbeat, pending poll, claim, start-print, payload, complete, fail, and
+  release.
+- Device auth rejects missing/bad tokens with `401`, and inactive,
+  `DISABLED`, or `REVOKED` devices with `403`.
+- PAD Direct runtime APIs preserve `ResponseStatusException` HTTP statuses in
+  the global API envelope instead of converting expected device/job errors to
+  `500`. Device not found returns `404`, invalid or missing device token returns
+  `401`, store mismatch and inactive/disabled/revoked devices return `403`, and
+  claim/job conflicts return `409`. Rejections log operation, request store id
+  when available, device id, HTTP status, failure category, token presence, and
+  token last four characters only; raw device tokens, token hashes,
+  Authorization headers, and print payloads are not logged.
+- Successful device-authenticated calls update `last_seen_at` only when the
+  stored value is older than 30 seconds, so rapid poll loops do not write every
+  few seconds.
+- Heartbeat also refreshes `app_version` and `platform` when those values
+  change, without exposing the raw token.
+
+Print Center UI:
+
+- The Pad Direct device table shows device/store/org/status/app/platform,
+  recent/ago/very-old activity, and marks the current Android Pad, old devices,
+  and likely duplicate active device names.
+- Device actions are `改名`, `停用`, and `吊销`, all routed through the new
+  store-scoped backend APIs with confirmation for destructive actions.
+
+Staff profile UI:
+
+- The frontdesk round avatar menu now includes `个人信息 / Profile`.
+- The modal shows user id, username, full name, role, store id/name,
+  organization id, capabilities, enabled feature flags, Android Pad device
+  status, and Android print worker status when the native bridge is available.
+- In a normal browser, the modal shows that Android native device status is not
+  available.
+
+## Offline Ordering PR1: Network Observability
+
+PR1 establishes shared weak-network diagnostics without changing order,
+payment, printing, or KDS business behavior.
+
+- `GET /api/v1/system/health` is a small unauthenticated reachability probe. It
+  returns only `status` and server timestamp and does not expose application or
+  database details.
+- Frontend requests record bounded in-memory metrics containing request id,
+  method, normalized endpoint, timestamps, latency, response status, timeout or
+  network classification, and auth-refresh outcome.
+- Metrics never retain request/response bodies, raw URLs with query strings,
+  passwords, Authorization headers, access/refresh tokens, print payloads, or
+  customer notes.
+- Shared connection states are `ONLINE_HEALTHY`, `ONLINE_DEGRADED`,
+  `BACKEND_UNREACHABLE`, `BROWSER_OFFLINE`, and `AUTH_REQUIRED`.
+- `navigator.onLine` is only an auxiliary browser signal. A low-frequency
+  backend probe also runs at startup, every 30 seconds while visible, after an
+  online event, and when the app returns to the foreground.
+- Menu loading and order submission emit safe stage and duration diagnostics.
+- `VITE_NETWORK_DIAGNOSTICS_ENABLED=false` hides diagnostic-facing UI/logging
+  without disabling request safety, health tracking, or business functions.
+
+## Offline Ordering PR2: Versioned Menu Cache
+
+PR2 adds a store-scoped, versioned menu snapshot without changing menu pricing,
+combo semantics, order submission, printing, or KDS behavior.
+
+- Flyway migration `V2__add_versioned_menu_revision.sql` adds monotonic
+  `stores.menu_revision` and `stores.menu_updated_at` columns with safe defaults
+  for existing stores.
+- Category, menu-item, sold-out, price, active-state, option, and option-order
+  management writes increment the owning store revision in the same database
+  transaction. Moving data between stores invalidates both affected stores.
+- `GET /api/v1/menu/catalog/revision?store_id={storeId}` returns the lightweight
+  store/organization revision, policy versions, update time, and ETag. The
+  endpoint uses the same store-scoped `ORDER_CREATE` authorization as the full
+  catalog.
+- The full catalog includes organization id, menu revision, generated time,
+  active/sold-out fields, stable option/combo metadata, tax policy version, and
+  a deterministic content hash. Catalog reads use a repeatable-read transaction
+  so revision and content describe one database snapshot.
+- IndexedDB database `restaurant-pos-offline` schema version 1 contains
+  `menuHeads` and `menuSnapshots`. Every key includes `accountId`,
+  `organizationId`, and `storeId`; snapshots additionally include revision.
+- The ordering UI reads and validates the active local snapshot first, renders
+  it immediately, then checks the lightweight revision endpoint. A changed ETag
+  downloads a temporary full snapshot; scope, revision, and hash must all pass
+  before one IndexedDB transaction writes the snapshot and switches the active
+  head.
+- Interrupted downloads, hash mismatch, and corrupt records never replace the
+  previous active menu. When refresh fails, the existing menu remains usable and
+  the UI shows its last download time and a stale-cache warning after 24 hours.
+- Cached menu content is still advisory. Server-side validation remains the
+  authority for menu availability, options, price, tax, and store scope at
+  submission time.
+
+## Offline Ordering PR3: Persistent Local Drafts
+
+PR3 adds IndexedDB-backed order draft recovery without changing order pricing,
+combo semantics, order lifecycle, printing, KDS, payment, or refund behavior.
+
+- IndexedDB database `restaurant-pos-offline` is upgraded to schema version 2
+  with a `localDrafts` store. Every record is scoped by `accountId`,
+  `organizationId`, `storeId`, and a table/takeout context key, so drafts cannot
+  be restored into another account, organization, store, table, or pickup slot.
+- A local draft receives stable `localDraftId` and `clientOrderId` values when
+  first created. They remain unchanged for that draft's lifetime and are the
+  basis for the later idempotent submission/outbox stages.
+- Records preserve the complete current order-line selection, including
+  quantities, option ids, combo selections, noodle/spice selections, notes,
+  menu revision, server order snapshot/id when available, payload hash,
+  submission state, retry metadata, timestamps, and schema version.
+- Changes are persisted with a 200 ms debounce. `visibilitychange` to hidden and
+  `pagehide` force a final flush so Android WebView backgrounding, refresh, or
+  process loss can restore the latest saved draft.
+- Existing submitted orders use explicit `SERVER_ORDER_UPDATE` mode; ordinary
+  new/draft orders use `LOCAL_NEW_ORDER`. These modes are not submitted through
+  one ambiguous contract.
+- Empty inactive drafts expire after 24 hours and non-empty inactive drafts
+  after seven days. `QUEUED`, `SUBMITTING`, and `CONFLICT` records are never
+  removed by automatic cleanup.
+- Canceling a draft requires confirmation and removes its local record. The UI
+  action is labelled `保存到本机`; it does not imply that the server or kitchen
+  received the order. IndexedDB write failures remain visible to the operator.
+- PR3 preserves the existing online submit APIs. Atomic offline submission and
+  retry are introduced separately by PR4 and PR5; a locally saved draft never
+  creates kitchen tasks or print jobs by itself.
+
+## Offline Ordering PR4: Idempotent Atomic Submission
+
+PR4 adds the server-side exactly-once boundary required by a later frontend
+order outbox. Existing online draft and submitted-order update endpoints remain
+available and their order lifecycle semantics are unchanged.
+
+- `POST /api/v1/stores/{storeId}/orders/idempotent-submit` accepts one complete
+  frozen order payload with a stable `client_order_id` / `idempotency_key`,
+  organization and store scope, table or pickup context, menu revision, items,
+  quantities, options, combo metadata, and notes.
+- Flyway migration `V3__add_idempotent_order_submission_and_dispatch_outbox.sql`
+  adds `order_submission_requests`, `order_dispatch_outbox`, and the nullable
+  `print_jobs.dispatch_source_key`. Unique constraints enforce one submission
+  per `(store_id, idempotency_key)`, one dispatch event per source key, and one
+  automatically-created print job per dispatch source.
+- The first request locks its submission record and uses the existing order
+  submit transaction to create the order, items, kitchen/production work,
+  inventory effects, and dispatch-outbox records. A concurrent or later request
+  with the same store, key, and canonical payload hash returns the original
+  order with `replayed = true`; the same key with changed content returns HTTP
+  `409` and `IDEMPOTENCY_CONFLICT`.
+- Server validation remains authoritative for store ownership, current menu
+  revision, item active/sold-out state, option ownership and active state,
+  required size/soup selections, and price calculation. Stable submission error
+  codes include `MENU_REVISION_STALE`, `ITEM_DISABLED`, `ITEM_SOLD_OUT`,
+  `OPTION_INVALID`, `REQUIRED_OPTION_MISSING`, `PRICE_CHANGED`,
+  `IDEMPOTENCY_CONFLICT`, and `STORE_MISMATCH`.
+- Automatic GRAB, FRONTDESK_RECEIPT, and HOT_KITCHEN dispatch is now recorded in
+  `order_dispatch_outbox` inside the order transaction instead of depending on
+  an in-memory after-commit executor. A scheduled consumer retries unexpected
+  pre-job failures with bounded backoff and resumes pending rows after backend
+  restart.
+- Dispatch retains all existing REAL, MOCK, DISABLED, and PAD_DIRECT behavior.
+  The source key prevents duplicate print-job creation when an outbox event is
+  retried. Physical printer delivery remains an external side effect; as before,
+  an ambiguous socket failure must be handled visibly rather than automatically
+  reprinting a ticket.
+- PR4 does not queue requests in the browser. IndexedDB order-outbox states and
+  retry policy are introduced by PR5, and clients must reuse the same key after
+  a timeout.
+
+## Offline Ordering PR5: Frontend Order Outbox
+
+PR5 adds a foreground IndexedDB submission outbox for new orders. Submitted
+order updates continue to use their existing online-only contract; this PR does
+not change order lifecycle, payment, printing, KDS, or combo behavior.
+
+- IndexedDB database `restaurant-pos-offline` is upgraded to schema version 3
+  with an `orderOutbox` store. Records are isolated by account, organization,
+  store, and stable `clientOrderId`, and preserve the frozen request payload,
+  payload hash, menu revision, retry metadata, server order id, safe error
+  details, timestamps, and schema version.
+- The state machine is `LOCAL_DRAFT -> QUEUED -> SUBMITTING -> SUBMITTED`, with
+  `FAILED_RETRYABLE`, `CONFLICT`, and `CANCELLED_LOCAL` terminal or operator
+  decision states. A queued payload is locked against silent edits.
+- Submission freezes item quantities, option ids, combo metadata carried by the
+  existing option payload, notes, order context, menu revision, and expected
+  subtotal. Every replay uses the same `client_order_id` and idempotency key.
+- Network errors, timeouts, and server `5xx` responses retry after 2, 5, 15,
+  30, and 60 seconds, then every five minutes. Browser-offline and hidden-page
+  states do not send requests; online, foreground, and backend-recovery events
+  wake the processor.
+- A persisted `SUBMITTING` record is immediately eligible after an app crash or
+  reload. The backend idempotency boundary determines whether it creates the
+  order or returns the already-created order. The browser marks `SUBMITTED`
+  only after receiving a server order id.
+- Stable backend `error_code` values flow through `ApiRequestError`. Business
+  and idempotency conflicts stop automatic retry and remain available for
+  explicit review. Internal stack traces and request payloads are not shown.
+- The processor is singleton-scoped to the authenticated account, serializes
+  each outbox key, and repairs its schedule after account-generation changes so
+  duplicate clicks or lifecycle races do not create parallel submissions.
+- Local drafts remain protected while queued, submitting, retryable, or in
+  conflict. Operator actions reuse the same key for immediate retry, explicitly
+  return a record to editing, or cancel the local record; none create a hidden
+  replacement key.
+
+## Offline Ordering PR6: Weak-Network Status UI
+
+PR6 makes server-confirmation state explicit on ordering and frontdesk screens.
+It does not treat a browser-local record as an order received by the kitchen,
+and it adds no high-frequency polling.
+
+- The ordering page always shows material connectivity warnings. Offline,
+  backend-unreachable, and degraded states explain that selections remain on
+  the device until the server confirms them. The latest successful backend
+  connection time is displayed with the local submission state.
+- A cached-menu banner includes its last successful download time. Snapshots
+  older than 24 hours warn that price and sold-out state may have changed;
+  server validation remains authoritative.
+- New-order status copy is centralized and maps `LOCAL_DRAFT`, `QUEUED`,
+  `SUBMITTING`, `SUBMITTED`, `FAILED_RETRYABLE`, `CONFLICT`, and
+  `CANCELLED_LOCAL` to touch-friendly Chinese operator messages. Only
+  `SUBMITTED` says the server and kitchen received the order.
+- Queued, submitting, retryable, conflict, and submitted payloads are locked
+  against silent item edits. Available actions include immediate retry with the
+  same client id, explicit return to editing, error-code inspection, and local
+  cancellation. `SUBMITTING` cannot be cancelled while its result is unknown.
+- The frontdesk board reads current-account/current-organization/current-store
+  IndexedDB records and marks tables or takeout contexts that contain local,
+  queued, retrying, or conflicting orders. Split-table badges retain the exact
+  seat context. A board-level banner also covers takeout records that have no
+  table card.
+- IndexedDB save/outbox events refresh these badges while the board is visible.
+  The feature does not add a timer, WebSocket, or full-board API request, and
+  records from another account, organization, or store are filtered out.
+- Error details expose stable operator error codes only; backend stack traces,
+  frozen payloads, notes, tokens, and sensitive data are not rendered.
+
+## Offline Ordering PR7: Android Bundled Assets Production Mode
+
+PR7 packages the current React frontend into the Android APK through a verified
+build pipeline. It does not change order lifecycle, payment/refund,
+`completeOrder`, menu pricing/combo semantics, KDS transitions, or PAD_DIRECT
+claim/printing behavior.
+
+- `restaurant-pad-app/scripts/build-bundled-apk.sh` creates one frontend build
+  version, runs the Vite production build, removes all old Android assets,
+  copies the complete new dist, creates SHA-256 `asset-manifest.json` and
+  `build-info.json`, verifies entry JS/CSS and every file hash, then invokes
+  Gradle. Android `preBuild` independently runs the verifier and fails on stale,
+  missing, modified, or untracked assets.
+- Bundled mode now starts at `https://restaurant-pad.local/`; the existing SPA
+  asset handler still falls back to `index.html` for store routes. Android
+  injects runtime API base, WebSocket base, paired store id, app/build version,
+  asset-manifest hash, and IndexedDB schema version before React starts. Tokens,
+  domain/IP, printer endpoints, and secrets are not compiled into that config.
+- IndexedDB `restaurant-pos-offline` advances additively from schema version 3
+  to 4 with `workspaceSnapshots`. Existing menu snapshots, local drafts, and
+  `orderOutbox` records are not deleted or recreated, so APK upgrades preserve
+  queued submissions and their stable idempotency keys.
+- Offline cold start may use only a locally present token plus an auth snapshot
+  validated online within the previous 24 hours. The cached workspace exposes
+  only the last online-validated store. While that snapshot is active, routes
+  are restricted to frontdesk ordering; login/account switching, cross-store,
+  owner/platform/admin, KDS/Pickup, and payment access are blocked.
+- Cached auth/store data is used only for network errors, timeouts, and temporary
+  server `5xx`. `401` and `403` never fall back. Browser `online` and foreground
+  recovery re-run `/auth/me` and store context requests so session, role, and
+  membership changes replace or invalidate the snapshot.
+- The Local Preview Web App URL remains a diagnostic/rollback path. Bundled mode
+  installs no Service Worker and does not cache authentication responses,
+  mutating API calls, or order submissions as HTTP responses. The bundled login
+  form does not compile a default account name or password into the APK.
+- Full build, security boundary, upgrade-preservation, and real-device cold
+  start checks are documented in
+  `restaurant-pad-app/docs/BUNDLED_ASSETS_PRODUCTION.md`. Network fault
+  injection and long-running multi-Pad verification remain PR8 scope.
+
+## Offline Ordering Hotfix: Terminal Local Draft Lifecycle
+
+This hotfix fixes a same-table ordering regression introduced by local draft and
+outbox restore behavior. It does not change order lifecycle, payment/refund,
+`completeOrder`, printing, KDS transitions, menu pricing/combo semantics, or
+PAD_DIRECT worker behavior.
+
+- Root cause: after a table order was submitted and later finished, the next
+  `Start Order` for the same table reused the context-scoped local draft and its
+  `SUBMITTED` outbox record. `OrderingPage` interpreted that restored
+  `SUBMITTED` state as a fresh submit completion and immediately navigated back
+  to the table board.
+- The local draft opener now resolves the saved draft and related outbox state
+  before exposing either to React state. Terminal local lifecycles
+  (`SUBMITTED`, `CANCELLED_LOCAL`) are replaced with a new empty
+  `LOCAL_DRAFT` using the same account/organization/store/table context but a
+  new `localDraftId` and `clientOrderId`.
+- Active offline work remains protected. `QUEUED`, `SUBMITTING`,
+  `FAILED_RETRYABLE`, and `CONFLICT` records are not rotated or deleted, so
+  weak-network submissions and operator-review conflicts keep their original
+  idempotency keys.
+- When the outbox later reports `SUBMITTED`, the active local draft is removed
+  only if its `clientOrderId` still matches the submitted record. This avoids
+  deleting a newer same-table draft created after the old order completed.
+- The fix is frontend-only IndexedDB lifecycle handling. Backend idempotency,
+  kitchen task creation, print job creation, and finish-table behavior remain
+  unchanged.
