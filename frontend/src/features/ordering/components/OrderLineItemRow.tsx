@@ -10,6 +10,7 @@ interface OrderLineItemRowProps {
   onRemove: () => void
   onUpdateNote: (notes: string) => void
   compact?: boolean
+  disabled?: boolean
 }
 
 export function OrderLineItemRow({
@@ -20,15 +21,17 @@ export function OrderLineItemRow({
   onRemove,
   onUpdateNote,
   compact = false,
+  disabled = false,
 }: OrderLineItemRowProps) {
   const [noteValue, setNoteValue] = useState(item.notes)
+  const editingDisabled = item.locked || disabled
 
   useEffect(() => {
     setNoteValue(item.notes)
   }, [item.notes])
 
   useEffect(() => {
-    if (item.locked) {
+    if (editingDisabled) {
       return undefined
     }
     if (noteValue === item.notes) {
@@ -38,7 +41,7 @@ export function OrderLineItemRow({
       onUpdateNote(noteValue)
     }, 450)
     return () => window.clearTimeout(timeoutId)
-  }, [item.locked, item.notes, noteValue, onUpdateNote])
+  }, [editingDisabled, item.notes, noteValue, onUpdateNote])
 
   return (
     <div className={`bg-[var(--surface-container-lowest)] shadow-[0_12px_30px_rgba(26,28,25,0.05)] ${compact ? 'rounded-[20px] p-3.5' : 'rounded-[26px] p-5'}`}>
@@ -46,9 +49,9 @@ export function OrderLineItemRow({
         <div className="space-y-1">
           <h4 className={`${compact ? 'text-[1.15rem]' : 'text-[1.55rem]'} font-bold tracking-[-0.04em] text-[var(--on-surface)]`}>{item.nameEn}</h4>
           <p className={`${compact ? 'text-[0.86rem]' : 'text-base'} font-medium text-[var(--muted)]`}>{item.nameZh}</p>
-          {item.locked ? (
+          {editingDisabled ? (
             <span className="inline-flex rounded-full bg-[rgba(92,82,74,0.10)] px-2.5 py-1 text-[0.72rem] font-bold text-[var(--muted)]">
-              Locked / 已出单
+              {item.locked ? 'Locked / 已出单' : '待提交锁定'}
             </span>
           ) : null}
         </div>
@@ -56,7 +59,7 @@ export function OrderLineItemRow({
           <div className={`${compact ? 'text-[1.3rem]' : 'text-[1.65rem]'} font-extrabold tracking-[-0.04em] text-[var(--primary)]`}>
             ${item.lineSubtotal.toFixed(2)}
           </div>
-          {!item.locked ? <button
+          {!editingDisabled ? <button
             type="button"
             className={`${compact ? 'mt-1 text-[0.74rem]' : 'mt-2 text-sm'} font-semibold text-[var(--muted)] hover:text-[var(--primary)]`}
             onClick={onRemove}
@@ -86,14 +89,14 @@ export function OrderLineItemRow({
         <textarea
           value={noteValue}
           onChange={(event) => setNoteValue(event.target.value)}
-          disabled={item.locked}
+          disabled={editingDisabled}
           placeholder="备注 / Special note"
           rows={compact ? 1 : 2}
           className={`mt-1 w-full resize-none rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-[rgba(255,255,255,0.78)] px-3 py-2 font-medium text-[var(--on-surface)] outline-none focus:border-[rgba(97,0,0,0.38)] ${compact ? 'text-[0.82rem]' : 'text-[0.92rem]'}`}
         />
       </label>
 
-      {!item.locked ? <div className={`${compact ? 'mt-3' : 'mt-4'} flex items-center justify-between gap-4`}>
+      {!editingDisabled ? <div className={`${compact ? 'mt-3' : 'mt-4'} flex items-center justify-between gap-4`}>
         <div className={`inline-flex items-center bg-[var(--surface-container-low)] p-1 ${compact ? 'rounded-[16px]' : 'rounded-[20px]'}`}>
           <button
             type="button"
