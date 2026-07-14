@@ -11,8 +11,9 @@ Recommended cloud shape:
 - Backend: Spring Boot jar packaged into a backend container image.
 - Frontend: React static build served by Nginx.
 - Reverse proxy: Nginx proxies `/api` and `/ws` to the backend service.
-- Database: managed PostgreSQL preferred. The compose file includes an optional
-  local PostgreSQL profile for staging or pilot rehearsals only.
+- Database: PostgreSQL 16 container for the current single-server production
+  deployment. Keep the existing `deployment/cloud/data/postgres` directory; do
+  not remove it during application updates.
 - TLS: terminate HTTPS with Nginx and certificates from a real certificate
   provider.
 - Backups: use `backup-db.sh` with `pg_dump -Fc`.
@@ -21,8 +22,10 @@ Recommended cloud shape:
 ## Files
 
 - `.env.example`: blank placeholders for deployment configuration.
-- `docker-compose.yml`: backend, frontend/Nginx, and optional local Postgres.
-- `nginx.conf.example`: static frontend, REST proxy, and WebSocket proxy.
+- `docker-compose.yml`: `db`, `backend`, and `nginx` services.
+- `nginx.http.conf.template`: HTTP static frontend, REST proxy, and WebSocket proxy.
+- `nginx.https.conf.template`: HTTPS/Let's Encrypt production template.
+- `nginx.conf.example`: reference-only Nginx example.
 - `application-cloud.yml.example`: environment mapping reference for cloud.
 - `deploy.sh`: compose validation and start template.
 - `backup-db.sh`: custom-format PostgreSQL backup.
@@ -41,14 +44,15 @@ the filled `.env` file.
 Required values:
 
 - `DOMAIN`
-- `BACKEND_IMAGE`
-- `FRONTEND_IMAGE`
-- `DB_HOST`
-- `DB_PORT`
 - `DB_NAME`
 - `DB_USER`
 - `DB_PASSWORD`
 - `JWT_SECRET`
+
+Optional image names default to local build tags:
+
+- `BACKEND_IMAGE=restaurant-pos-backend:local`
+- `FRONTEND_IMAGE=restaurant-pos-frontend:local`
 
 The JWT secret must be generated as a strong production secret. Do not reuse any
 development value.
@@ -70,8 +74,17 @@ certificates are installed and paths are configured.
 
 ## Database Initialization
 
-Use managed PostgreSQL when possible. Create an empty database and user before
-starting the backend.
+The current single-server compose deployment runs PostgreSQL as service `db`
+and persists data under `deployment/cloud/data/postgres`.
+
+Do not run:
+
+```bash
+docker compose down -v
+rm -rf deployment/cloud/data/postgres
+```
+
+Those commands can remove production data.
 
 Startup expectations:
 
@@ -124,21 +137,54 @@ must follow the same cloud boundary.
 
 ## Build and Start
 
-Typical local packaging before copying artifacts:
+The production compose file is designed to build the backend and frontend images
+on the server from the checked-out repository. It does not rely on a host
+`frontend/dist` bind mount.
+
+Validate only:
 
 ```bash
-cd backend && mvn -q -DskipTests package
-cd ../frontend && npm run build
+cd deployment/cloud
+./deploy.sh --validate
 ```
 
-On the cloud host:
+HTTP mode deployment:
 
 ```bash
 cd deployment/cloud
 cp .env.example .env
 # Fill .env with real deployment values.
-./deploy.sh
+./deploy.sh --http
 ./health-check.sh
+```
+
+HTTPS mode deployment after certificates exist under `data/letsencrypt`:
+
+```bash
+cd deployment/cloud
+./deploy.sh --https
+./health-check.sh
+```
+
+`deploy.sh --help` prints help only. It does not pull, build, or start services.
+By default, `deploy.sh` runs:
+
+```bash
+docker compose --env-file .env -f docker-compose.yml config
+docker compose --env-file .env -f docker-compose.yml build backend nginx
+docker compose --env-file .env -f docker-compose.yml up -d
+```
+
+Use `--pull-images` only for an explicit remote-image workflow. Do not use it
+with the default `restaurant-pos-*:local` images.
+
+Expected services:
+
+```bash
+docker compose --env-file .env -f docker-compose.yml config --services
+# db
+# backend
+# nginx
 ```
 
 ## Smoke Test Checklist
@@ -160,3 +206,27 @@ At minimum, validate:
 
 The Windows pilot package remains separate under `deployment/windows-pilot`.
 Do not mix Windows local-server scripts with this cloud deployment package.
+
+## 943ed07 Deployment Regression Note
+
+Commit `943ed07` promoted the foundation snapshot to `main` and accidentally
+replaced the production cloud compose package with a template that used
+`frontend` instead of `nginx`, removed build definitions, made Postgres profile
+only, and bind-mounted `frontend/dist`. This broke the server's existing update
+flow:
+
+```bash
+docker compose build backend nginx
+docker compose up -d
+```
+
+The current package restores the production service names and local build flow:
+
+- `db`: PostgreSQL 16 with healthcheck and persistent `./data/postgres`.
+- `backend`: built from `../../backend/Dockerfile`.
+- `nginx`: built from `../../frontend/Dockerfile` and configured through
+  `./data/nginx/default.conf.template`.
+
+The next `docker compose up -d --build` from project `cloud` will manage the
+existing `cloud-db-1`, `cloud-backend-1`, and `cloud-nginx-1` containers instead
+of creating a new `frontend` orphan.

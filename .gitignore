@@ -20,6 +20,7 @@ frontend/build/
 backend/src/main/resources/application-local.yml
 .env
 .env.*
+!deployment/cloud/.env.example
 
 # Misc
 coverage/
