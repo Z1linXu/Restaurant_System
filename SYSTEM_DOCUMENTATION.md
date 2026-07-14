@@ -7,6 +7,51 @@ Additional maintainable architecture document:
 - `doc/PAD_APP_ARCHITECTURE.md`
 - `doc/PAD_APP_PR_PROMPTS.md`
 
+## Cloud Deployment Regression Fix After 943ed07
+
+Commit `943ed07` promoted the foundation snapshot to `main` and accidentally
+regressed the production cloud deployment package. The regression replaced the
+server's stable `db/backend/nginx` compose structure with a template-oriented
+`backend/frontend` shape, removed local build definitions, made PostgreSQL
+profile-only, and expected a host `frontend/dist` bind mount. That broke the
+server update path that used:
+
+```bash
+docker compose build backend nginx
+docker compose up -d
+```
+
+The deployment package now restores the production shape without reverting any
+business code, offline ordering work, hotfixes, or migrations:
+
+- `deployment/cloud/docker-compose.yml` defines exactly `db`, `backend`, and
+  `nginx` services.
+- `backend` builds from `backend/Dockerfile` and uses the `cloud` Spring profile.
+- `nginx` builds from `frontend/Dockerfile`, serves the React build, and proxies
+  `/api` and `/ws` to the backend.
+- `db` uses `postgres:16-alpine`, a healthcheck, and persistent
+  `deployment/cloud/data/postgres`.
+- `deployment/cloud/deploy.sh --help` prints help only.
+- Default deployment validates compose, builds `backend` and `nginx`, then runs
+  `docker compose up -d`.
+- `deploy.sh` does not pull default `restaurant-pos-*:local` images unless
+  `--pull-images` is explicitly requested.
+
+Production update command:
+
+```bash
+cd deployment/cloud
+./deploy.sh --validate
+./deploy.sh --http
+./health-check.sh
+```
+
+Use `./deploy.sh --https` only after certificates are present under
+`deployment/cloud/data/letsencrypt`.
+
+Do not run `docker compose down -v` or delete `deployment/cloud/data/postgres`
+during normal application updates.
+
 ## Cloud Ready PR2: Flyway Migration Baseline
 
 PR2 introduces Flyway as the versioned schema migration mechanism for pilot/cloud profiles while preserving local development convenience.
