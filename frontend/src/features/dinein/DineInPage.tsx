@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMenuCatalog } from '../../hooks/useMenuCatalog'
 import { Card } from '../../components/ui/Card'
 import { useIpadLandscape } from '../../hooks/useIpadLandscape'
@@ -26,6 +26,7 @@ import { useCurrentStore } from '../store/StoreContext'
 import { useAuth } from '../auth/useAuth'
 import { useStoreOfflineOrders } from '../offline/useStoreOfflineOrders'
 import { offlineOrderBadgeLabel, type OfflineOrderBadge } from '../offline/offlineOrderStatus'
+import { finalizeOfflineOrderRecords } from '../../offline/orderLifecycle'
 
 function buildGeneratedTakeoutLabel() {
   const stamp = Date.now().toString().slice(-4)
@@ -125,9 +126,18 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
       : null
   ), [organizationId, storeId, user?.id])
   const offlineOrders = useStoreOfflineOrders(offlineOrderScope, tableBoardEnabled)
+  const finalizeTerminalOrder = useCallback(async (orderId: number, status: string) => {
+    if (!offlineOrderScope) return
+    try {
+      await finalizeOfflineOrderRecords(offlineOrderScope, orderId, status)
+    } catch (storageError) {
+      console.error('Unable to finalize local offline order records', orderId, storageError)
+    }
+  }, [offlineOrderScope])
   const { tableSlots, statusCounts, syncError, isOnline, startOrder, editOrder, endOrder, refreshFromBackend, refreshTableAfterFinish } = useTableBoard({
     enabled: tableBoardEnabled,
     storeId,
+    onOrderTerminal: finalizeTerminalOrder,
   })
   const workstationCompact = isIpadLandscape
   const boardPath = buildFrontdeskBoardPath(workstation, storeId)
@@ -137,13 +147,13 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     printCheckTimeoutsRef.current = []
   }
 
-  const updateActiveOrderingContext = (
+  const updateActiveOrderingContext = useCallback((
     nextContext: typeof activeOrderingContext,
     reason: string,
   ) => {
     void reason
     setActiveOrderingContext(nextContext)
-  }
+  }, [])
 
   useEffect(() => {
     setSidebarCollapsed(isIpadLandscape)
@@ -157,7 +167,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
   useEffect(() => {
     const routeContext = parseMenuRoute(routePath, routeSearch)
     updateActiveOrderingContext(routeContext, 'route parsing effect')
-  }, [routePath, routeSearch])
+  }, [routePath, routeSearch, updateActiveOrderingContext])
 
   const visibleSlots = useMemo(() => tableSlots, [tableSlots])
 
@@ -299,7 +309,8 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     }
 
     try {
-      await completeOrder(slot.orderDbId)
+      const completedOrder = await completeOrder(slot.orderDbId)
+      await finalizeTerminalOrder(completedOrder.id, completedOrder.status)
       setSubmissionMessage(`Order completed for ${formatSplitSlotLabel(slot.label)}.`)
       await refreshTableAfterFinish(slot.baseTableLabel)
 

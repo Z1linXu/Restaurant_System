@@ -138,6 +138,20 @@ describe('order outbox state machine', () => {
     expect(submitted.serverReplayed).toBe(true)
   })
 
+  it('does not let submitted or retryable writes overwrite a completed server lifecycle', () => {
+    const submitting = beginOrderOutboxAttempt(createOrderOutboxRecord(draft, payload))
+    const submitted = completeOrderOutboxAttempt(submitting, 491)
+    const completed = { ...submitted, state: 'COMPLETED' as const }
+
+    expect(resolveOrderOutboxWrite(completed, submitted)).toBe(completed)
+    expect(resolveOrderOutboxWrite(completed, failOrderOutboxAttempt(
+      submitting,
+      0,
+      'NETWORK_ERROR',
+      'late network callback',
+    ))).toBe(completed)
+  })
+
   it('marks success only after receiving the server order id', () => {
     const submitting = beginOrderOutboxAttempt(createOrderOutboxRecord(draft, payload))
     const submitted = completeOrderOutboxAttempt(submitting, 491)

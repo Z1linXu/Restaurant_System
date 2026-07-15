@@ -23,6 +23,8 @@ export type LocalDraftSubmitState =
   | 'FAILED_VALIDATION'
   | 'CONFLICT'
   | 'CANCELLED_LOCAL'
+  | 'COMPLETED'
+  | 'CANCELLED'
 
 export interface LocalDraftScope {
   accountId: number
@@ -65,7 +67,15 @@ const PROTECTED_STATES = new Set<LocalDraftSubmitState>([
   'FAILED_VALIDATION',
   'CONFLICT',
 ])
-const TERMINAL_STATES = new Set<LocalDraftSubmitState>(['SUBMITTED', 'CANCELLED_LOCAL'])
+const SERVER_TERMINAL_STATES = new Set<LocalDraftSubmitState>(['COMPLETED', 'CANCELLED'])
+const TERMINAL_STATES = new Set<LocalDraftSubmitState>([
+  'CANCELLED_LOCAL',
+  ...SERVER_TERMINAL_STATES,
+])
+
+export function isServerTerminalLocalState(state: LocalDraftSubmitState) {
+  return SERVER_TERMINAL_STATES.has(state)
+}
 
 export function buildDraftContextKey(context: LocalDraftContext) {
   return context.orderType === 'pickup'
@@ -142,8 +152,13 @@ export function resolveLocalDraftForOpen(
     return createLocalDraftRecord(scope, context, menuRevision, now)
   }
 
-  // The outbox is authoritative while work is still queued or needs operator action.
-  // Never rotate these records, even if a stale draft snapshot claims it was submitted.
+  // A confirmed server terminal state wins over stale queued/submitting snapshots.
+  if (isServerTerminalLocalState(existing.submitState)
+    || (relatedOutboxState != null && isServerTerminalLocalState(relatedOutboxState))) {
+    return createLocalDraftRecord(scope, context, menuRevision, now)
+  }
+
+  // The outbox is authoritative while non-terminal work is queued or needs operator action.
   if (relatedOutboxState && PROTECTED_STATES.has(relatedOutboxState)) {
     return existing
   }
@@ -155,6 +170,20 @@ export function resolveLocalDraftForOpen(
   }
 
   return createLocalDraftRecord(scope, context, menuRevision, now)
+}
+
+export function resolveLocalDraftWrite(
+  current: LocalDraftRecord | null,
+  incoming: LocalDraftRecord,
+) {
+  if (!current) return incoming
+  if (current.key !== incoming.key) throw new Error('LOCAL_DRAFT_KEY_MISMATCH')
+  if (current.clientOrderId !== incoming.clientOrderId) return incoming
+  if (isServerTerminalLocalState(incoming.submitState)) return incoming
+  if (isServerTerminalLocalState(current.submitState)) return current
+  if (incoming.submitState === 'SUBMITTED' || incoming.submitState === 'CANCELLED_LOCAL') return incoming
+  if (current.submitState === 'SUBMITTED' || current.submitState === 'CANCELLED_LOCAL') return current
+  return incoming
 }
 
 export function reopenRejectedLocalDraft(record: LocalDraftRecord, now = new Date()) {
@@ -211,10 +240,13 @@ export async function saveLocalDraft(record: LocalDraftRecord) {
   const database = await openOfflineDatabase()
   const transaction = database.transaction(OFFLINE_STORES.localDrafts, 'readwrite')
   const completed = transactionComplete(transaction)
-  transaction.objectStore(OFFLINE_STORES.localDrafts).put(normalized)
+  const drafts = transaction.objectStore(OFFLINE_STORES.localDrafts)
+  const current = await requestResult<LocalDraftRecord | undefined>(drafts.get(expectedKey))
+  const resolved = resolveLocalDraftWrite(current ?? null, normalized)
+  if (resolved === normalized) drafts.put(normalized)
   await completed
-  publishLocalDraftUpdate()
-  return normalized
+  if (resolved === normalized) publishLocalDraftUpdate()
+  return resolved
 }
 
 export async function saveLocalDraftIfClientMatches(
@@ -236,10 +268,11 @@ export async function saveLocalDraftIfClientMatches(
   const drafts = transaction.objectStore(OFFLINE_STORES.localDrafts)
   const current = await requestResult<LocalDraftRecord | undefined>(drafts.get(expectedKey))
   const shouldSave = Boolean(current && current.clientOrderId === expectedClientOrderId)
-  if (shouldSave) drafts.put(normalized)
+  const resolved = shouldSave ? resolveLocalDraftWrite(current ?? null, normalized) : null
+  if (resolved === normalized) drafts.put(normalized)
   await completed
-  if (shouldSave) publishLocalDraftUpdate()
-  return shouldSave ? normalized : null
+  if (resolved === normalized) publishLocalDraftUpdate()
+  return resolved
 }
 
 export async function listLocalDraftsForScope(scope: LocalDraftScope) {
@@ -293,7 +326,7 @@ export async function deleteLocalDraftIfClientMatches(
   return shouldDelete
 }
 
-function publishLocalDraftUpdate() {
+export function publishLocalDraftUpdate() {
   if (typeof window === 'undefined') return
   window.dispatchEvent(new Event(LOCAL_DRAFT_UPDATED_EVENT))
 }

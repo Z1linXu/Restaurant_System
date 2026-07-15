@@ -102,6 +102,7 @@ function orderPriority(order: Awaited<ReturnType<typeof fetchActiveOrderBoardFor
 interface UseTableBoardOptions {
   enabled?: boolean
   storeId: number
+  onOrderTerminal?: (orderId: number, status: string) => void | Promise<void>
 }
 
 export function useTableBoard(options: UseTableBoardOptions) {
@@ -114,6 +115,11 @@ export function useTableBoard(options: UseTableBoardOptions) {
   const syncPendingRef = useRef(false)
   const wsRefreshTimeoutRef = useRef<number | null>(null)
   const enabledRef = useRef(enabled)
+  const onOrderTerminalRef = useRef(options.onOrderTerminal)
+
+  useEffect(() => {
+    onOrderTerminalRef.current = options.onOrderTerminal
+  }, [options.onOrderTerminal])
 
   useEffect(() => {
     enabledRef.current = enabled
@@ -133,7 +139,7 @@ export function useTableBoard(options: UseTableBoardOptions) {
         return createBaseTables()
       }
       return diningTables.map(mapBackendDiningTable)
-    } catch (_error) {
+    } catch {
       return createBaseTables()
     }
   }, [storeId])
@@ -292,7 +298,15 @@ export function useTableBoard(options: UseTableBoardOptions) {
 
     const unsubscribe = subscribeToFrontdeskOrders(storeId, (message) => {
       const eventType = (message.event_type ?? '').toLowerCase()
-      const isFinishEvent = eventType === 'order.completed' || eventType === 'order.cancelled' || message.order_status === 'completed'
+      const terminalStatus = message.order_status?.toLowerCase()
+        ?? (eventType === 'order.completed' ? 'completed' : eventType === 'order.cancelled' ? 'cancelled' : null)
+      const isFinishEvent = eventType === 'order.completed'
+        || eventType === 'order.cancelled'
+        || terminalStatus === 'completed'
+        || terminalStatus === 'cancelled'
+      if (isFinishEvent && message.order_id != null && terminalStatus) {
+        void onOrderTerminalRef.current?.(message.order_id, terminalStatus)
+      }
       scheduleWebSocketRefresh(isFinishEvent)
     })
 
@@ -402,6 +416,8 @@ export function useTableBoard(options: UseTableBoardOptions) {
   }
 
   const endOrder = (_tableLabel: string, _target: 'full' | TableSeatCode) => {
+    void _tableLabel
+    void _target
     setTables((currentTables) => currentTables)
   }
 

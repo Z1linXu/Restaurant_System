@@ -13,6 +13,12 @@ import {
   isActiveOfflineOrderState,
   type OfflineOrderBadge,
 } from './offlineOrderStatus'
+import { fetchOrderDetail } from '../../services/orderService'
+import {
+  collectServerOrderIds,
+  finalizeOfflineOrderRecords,
+  terminalLocalStateForServerStatus,
+} from '../../offline/orderLifecycle'
 
 function itemCount(items: Array<{ quantity: number }>) {
   return items.reduce((total, item) => total + item.quantity, 0)
@@ -32,10 +38,34 @@ export function useStoreOfflineOrders(scope: LocalDraftScope | null, enabled = t
     let reloadTimer: number | null = null
     const load = async () => {
       try {
-        const [drafts, accountOutbox] = await Promise.all([
+        let [drafts, accountOutbox] = await Promise.all([
           listLocalDraftsForScope(activeScope),
           listOrderOutboxForAccount(activeScope.accountId),
         ])
+        if (!active) return
+        const scopedOutbox = accountOutbox.filter((record) => (
+          record.organizationId === activeScope.organizationId && record.storeId === activeScope.storeId
+        ))
+        if (typeof navigator === 'undefined' || navigator.onLine) {
+          let terminalRecordChanged = false
+          const serverOrderIds = collectServerOrderIds(drafts, scopedOutbox)
+          await Promise.all(serverOrderIds.map(async (serverOrderId) => {
+            try {
+              const serverOrder = await fetchOrderDetail(serverOrderId)
+              if (!terminalLocalStateForServerStatus(serverOrder.status)) return
+              const finalized = await finalizeOfflineOrderRecords(activeScope, serverOrder.id, serverOrder.status)
+              terminalRecordChanged ||= finalized.drafts > 0 || finalized.outbox > 0
+            } catch {
+              // Reconciliation is best effort; offline records remain protected until the server is reachable.
+            }
+          }))
+          if (terminalRecordChanged) {
+            ;[drafts, accountOutbox] = await Promise.all([
+              listLocalDraftsForScope(activeScope),
+              listOrderOutboxForAccount(activeScope.accountId),
+            ])
+          }
+        }
         if (!active) return
         const outboxByClientId = new Map(
           accountOutbox
@@ -93,11 +123,18 @@ export function useStoreOfflineOrders(scope: LocalDraftScope | null, enabled = t
     void load()
     window.addEventListener(LOCAL_DRAFT_UPDATED_EVENT, scheduleLoad)
     window.addEventListener(ORDER_OUTBOX_UPDATED_EVENT, scheduleLoad)
+    window.addEventListener('online', scheduleLoad)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') scheduleLoad()
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => {
       active = false
       if (reloadTimer != null) window.clearTimeout(reloadTimer)
       window.removeEventListener(LOCAL_DRAFT_UPDATED_EVENT, scheduleLoad)
       window.removeEventListener(ORDER_OUTBOX_UPDATED_EVENT, scheduleLoad)
+      window.removeEventListener('online', scheduleLoad)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [accountId, enabled, organizationId, storeId])
 

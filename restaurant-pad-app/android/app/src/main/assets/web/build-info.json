@@ -1,6 +1,6 @@
 {
-  "buildVersion": "offline-foundation-integration-20260713",
-  "generatedAt": "2026-07-13T21:43:30.400Z",
+  "buildVersion": "pilot-reliability-2-20260715",
+  "generatedAt": "2026-07-15T16:56:05.207Z",
   "offlineDatabaseSchemaVersion": 4,
-  "assetManifestSha256": "a71fff9071b0a61b37ccdc48f238288b91f5b6f48ceafca49521673c95afdf79"
+  "assetManifestSha256": "e799f8f92dfea30ff651efb5e71be24f6820c888c7b0d9684d945de1b8dcd926"
 }

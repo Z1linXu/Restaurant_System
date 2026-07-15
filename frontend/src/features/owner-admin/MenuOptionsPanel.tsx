@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   createOwnerMenuItemOption,
   fetchOwnerMenuItemOptions,
@@ -7,12 +7,18 @@ import {
   type MenuItemOptionAdminRecord,
   type MenuItemOptionPayload,
 } from '../../services/ownerMenuOptionService'
+import {
+  buildDefaultNoodleTypeOrder,
+  defaultNoodleTypeOptionId,
+} from './menuOptionDefaults'
 
-type SimpleOptionGroup = 'REMOVE' | 'ADD_ON'
+type EditableOptionGroup = 'REMOVE' | 'ADD_ON'
+type DisplayOptionGroup = EditableOptionGroup | 'NOODLE_TYPE'
 
-const SIMPLE_GROUPS: SimpleOptionGroup[] = ['REMOVE', 'ADD_ON']
+const DISPLAY_GROUPS: DisplayOptionGroup[] = ['NOODLE_TYPE', 'REMOVE', 'ADD_ON']
 
-const GROUP_LABELS: Record<SimpleOptionGroup, string> = {
+const GROUP_LABELS: Record<DisplayOptionGroup, string> = {
+  NOODLE_TYPE: '面型 / Noodle Type',
   REMOVE: 'Remove',
   ADD_ON: 'Add-on',
 }
@@ -34,13 +40,13 @@ interface MenuOptionsPanelProps {
   itemName: string
 }
 
-function optionTypeForGroup(group: SimpleOptionGroup) {
+function optionTypeForGroup(group: EditableOptionGroup) {
   return group === 'REMOVE' ? 'remove' : 'addon'
 }
 
-function normalizeGroup(option: MenuItemOptionAdminRecord): SimpleOptionGroup | null {
+function normalizeGroup(option: MenuItemOptionAdminRecord): DisplayOptionGroup | null {
   const optionGroup = option.option_group?.toUpperCase()
-  if (optionGroup === 'REMOVE' || optionGroup === 'ADD_ON') {
+  if (optionGroup === 'REMOVE' || optionGroup === 'ADD_ON' || optionGroup === 'NOODLE_TYPE') {
     return optionGroup
   }
 
@@ -49,6 +55,9 @@ function normalizeGroup(option: MenuItemOptionAdminRecord): SimpleOptionGroup | 
   }
 
   const optionType = option.option_type?.toLowerCase()
+  if (optionType === 'noodle_type') {
+    return 'NOODLE_TYPE'
+  }
   if (optionType === 'remove') {
     return 'REMOVE'
   }
@@ -70,12 +79,11 @@ function sortOptions(left: MenuItemOptionAdminRecord, right: MenuItemOptionAdmin
 }
 
 function toPayload(option: MenuItemOptionAdminRecord): MenuItemOptionPayload {
-  const group = normalizeGroup(option) ?? 'ADD_ON'
   return {
-    option_type: optionTypeForGroup(group),
+    option_type: option.option_type,
     option_code: option.option_code ?? '',
-    option_group: group,
-    parent_option_id: null,
+    option_group: option.option_group,
+    parent_option_id: option.parent_option_id,
     sort_order: option.sort_order,
     name_zh: option.name_zh,
     name_en: option.name_en,
@@ -84,7 +92,7 @@ function toPayload(option: MenuItemOptionAdminRecord): MenuItemOptionPayload {
   }
 }
 
-function nextSortOrder(options: MenuItemOptionAdminRecord[], group: SimpleOptionGroup) {
+function nextSortOrder(options: MenuItemOptionAdminRecord[], group: EditableOptionGroup) {
   const groupOptions = options.filter((option) => normalizeGroup(option) === group)
   const maxSort = groupOptions.reduce((max, option) => Math.max(max, option.sort_order ?? 0), 0)
   return maxSort + 10
@@ -99,7 +107,7 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [formOpen, setFormOpen] = useState(false)
 
-  const loadOptions = async () => {
+  const loadOptions = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
@@ -109,18 +117,18 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [itemId])
 
   useEffect(() => {
     setDraft(DEFAULT_DRAFT)
     setEditingId(null)
     setFormOpen(false)
     void loadOptions()
-  }, [itemId])
+  }, [itemId, loadOptions])
 
   const groupedOptions = useMemo(
     () =>
-      SIMPLE_GROUPS.map((group) => ({
+      DISPLAY_GROUPS.map((group) => ({
         group,
         options: options
           .filter((option) => normalizeGroup(option) === group)
@@ -128,6 +136,7 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
       })),
     [options],
   )
+  const defaultNoodleTypeId = useMemo(() => defaultNoodleTypeOptionId(options), [options])
 
   const beginCreate = () => {
     setEditingId(null)
@@ -237,6 +246,21 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
     }
   }
 
+  const setDefaultNoodleType = async (option: MenuItemOptionAdminRecord) => {
+    const reorderPayload = buildDefaultNoodleTypeOrder(options, option.id)
+    if (!reorderPayload) return
+    try {
+      setSaving(true)
+      setError(null)
+      await reorderOwnerMenuItemOptions(itemId, reorderPayload)
+      await loadOptions()
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Failed to set default noodle type')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
       <div className="flex items-start justify-between gap-3">
@@ -267,7 +291,7 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
               <select
                 value={draft.option_group === 'REMOVE' ? 'REMOVE' : 'ADD_ON'}
                 onChange={(event) => {
-                  const group = event.target.value as SimpleOptionGroup
+                  const group = event.target.value as EditableOptionGroup
                   setDraft({
                     ...draft,
                     option_group: group,
@@ -358,37 +382,62 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
           {groupedOptions.map(({ group, options: groupOptions }) => (
             <section key={group} className="rounded-[18px] border border-[rgba(26,28,25,0.06)] bg-white/70 p-3">
               <div className="text-[0.82rem] font-black uppercase tracking-[0.12em] text-[var(--primary)]">{GROUP_LABELS[group]}</div>
+              {group === 'NOODLE_TYPE' ? (
+                <div className="mt-1 text-[0.76rem] text-[var(--muted)]">
+                  第一个启用的面型是新点单默认值。点击“设为默认”会保存排序并刷新菜单版本。
+                </div>
+              ) : null}
               <div className="mt-2 space-y-2">
-                {groupOptions.length ? groupOptions.map((option) => (
-                  <div
-                    key={option.id}
-                    className={`rounded-[14px] px-3 py-2 ${option.is_active ? 'bg-[rgba(26,28,25,0.035)]' : 'bg-[rgba(26,28,25,0.08)] opacity-70'}`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="font-semibold text-[var(--on-surface)]">
-                          {option.name_zh} <span className="text-[0.76rem] font-normal text-[var(--muted)]">/ {option.name_en || '-'}</span>
+                {groupOptions.length ? groupOptions.map((option, optionIndex) => {
+                  const isDefaultNoodleType = group === 'NOODLE_TYPE' && option.id === defaultNoodleTypeId
+                  return (
+                    <div
+                      key={option.id}
+                      className={`rounded-[14px] px-3 py-2 ${option.is_active ? 'bg-[rgba(26,28,25,0.035)]' : 'bg-[rgba(26,28,25,0.08)] opacity-70'}`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 font-semibold text-[var(--on-surface)]">
+                            <span>{option.name_zh} <span className="text-[0.76rem] font-normal text-[var(--muted)]">/ {option.name_en || '-'}</span></span>
+                            {isDefaultNoodleType ? (
+                              <span className="rounded-full bg-[rgba(64,124,73,0.14)] px-2 py-1 text-[0.68rem] font-black text-[rgb(48,96,56)]">
+                                默认
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="mt-0.5 text-[0.72rem] text-[var(--muted)]">
+                            {option.option_code || 'no code'} · ${Number(option.price_delta ?? 0).toFixed(2)} · {option.is_active ? 'active' : 'inactive'}
+                          </div>
                         </div>
-                        <div className="mt-0.5 text-[0.72rem] text-[var(--muted)]">
-                          {option.option_code || 'no code'} · ${Number(option.price_delta ?? 0).toFixed(2)} · {option.is_active ? 'active' : 'inactive'}
+                        <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                          {group === 'NOODLE_TYPE' && option.is_active && !isDefaultNoodleType ? (
+                            <button
+                              type="button"
+                              onClick={() => void setDefaultNoodleType(option)}
+                              disabled={saving}
+                              className="min-h-10 rounded-full bg-[var(--primary)] px-3 py-1 text-[0.72rem] font-semibold text-white disabled:opacity-50"
+                            >
+                              设为默认
+                            </button>
+                          ) : null}
+                          <button type="button" aria-label={`上移 ${option.name_zh}`} onClick={() => void moveOption(option, -1)} disabled={saving || optionIndex === 0} className="min-h-10 rounded-full bg-white px-3 py-1 text-[0.72rem] font-semibold disabled:opacity-35">Up</button>
+                          <button type="button" aria-label={`下移 ${option.name_zh}`} onClick={() => void moveOption(option, 1)} disabled={saving || optionIndex === groupOptions.length - 1} className="min-h-10 rounded-full bg-white px-3 py-1 text-[0.72rem] font-semibold disabled:opacity-35">Down</button>
+                          {group !== 'NOODLE_TYPE' ? (
+                            <button type="button" onClick={() => beginEdit(option)} disabled={saving} className="min-h-10 rounded-full bg-white px-3 py-1 text-[0.72rem] font-semibold disabled:opacity-50">Edit</button>
+                          ) : null}
+                          <button
+                            type="button"
+                            onClick={() => void setOptionActive(option, !option.is_active)}
+                            disabled={saving}
+                            className="min-h-10 rounded-full bg-[rgba(97,0,0,0.08)] px-3 py-1 text-[0.72rem] font-semibold text-[var(--primary)] disabled:opacity-50"
+                          >
+                            {option.is_active ? 'Deactivate' : 'Reactivate'}
+                          </button>
                         </div>
-                      </div>
-                      <div className="flex shrink-0 flex-wrap justify-end gap-1">
-                        <button type="button" onClick={() => moveOption(option, -1)} disabled={saving} className="rounded-full bg-white px-2 py-1 text-[0.72rem] font-semibold disabled:opacity-50">Up</button>
-                        <button type="button" onClick={() => moveOption(option, 1)} disabled={saving} className="rounded-full bg-white px-2 py-1 text-[0.72rem] font-semibold disabled:opacity-50">Down</button>
-                        <button type="button" onClick={() => beginEdit(option)} disabled={saving} className="rounded-full bg-white px-2 py-1 text-[0.72rem] font-semibold disabled:opacity-50">Edit</button>
-                        <button
-                          type="button"
-                          onClick={() => setOptionActive(option, !option.is_active)}
-                          disabled={saving}
-                          className="rounded-full bg-[rgba(97,0,0,0.08)] px-2 py-1 text-[0.72rem] font-semibold text-[var(--primary)] disabled:opacity-50"
-                        >
-                          {option.is_active ? 'Deactivate' : 'Reactivate'}
-                        </button>
                       </div>
                     </div>
-                  </div>
-                )) : (
+                  )
+                }) : (
                   <div className="rounded-[12px] bg-[rgba(26,28,25,0.035)] px-3 py-2 text-[0.8rem] text-[var(--muted)]">
                     No {GROUP_LABELS[group].toLowerCase()} options.
                   </div>

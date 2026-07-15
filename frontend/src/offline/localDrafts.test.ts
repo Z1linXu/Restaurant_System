@@ -6,6 +6,7 @@ import {
   isLocalDraftExpired,
   localDraftKey,
   resolveLocalDraftForOpen,
+  resolveLocalDraftWrite,
   reopenRejectedLocalDraft,
   withDraftPayloadHash,
 } from './localDrafts'
@@ -76,7 +77,7 @@ describe('local draft records', () => {
     expect(isLocalDraftExpired({ ...nonEmpty, submitState: 'CONFLICT' }, now)).toBe(false)
   })
 
-  it('starts a new lifecycle for the same table after the prior order was submitted', () => {
+  it('keeps a confirmed submitted lifecycle until the server reports a terminal status', () => {
     const first = createLocalDraftRecord(scope, tableContext, 12, new Date('2026-07-13T10:00:00Z'))
     const submitted = {
       ...first,
@@ -85,7 +86,7 @@ describe('local draft records', () => {
       items: [{ id: 'submitted-item' } as never],
     }
 
-    const second = resolveLocalDraftForOpen(
+    const reopened = resolveLocalDraftForOpen(
       scope,
       tableContext,
       13,
@@ -94,20 +95,56 @@ describe('local draft records', () => {
       new Date('2026-07-13T11:00:00Z'),
     )
 
-    expect(second.contextKey).toBe(first.contextKey)
-    expect(second.localDraftId).not.toBe(first.localDraftId)
-    expect(second.clientOrderId).not.toBe(first.clientOrderId)
-    expect(second.serverOrderId).toBeNull()
-    expect(second.submitState).toBe('LOCAL_DRAFT')
-    expect(second.items).toEqual([])
+    expect(reopened).toBe(submitted)
+    expect(reopened.serverOrderId).toBe(491)
+    expect(reopened.submitState).toBe('SUBMITTED')
   })
 
-  it('repairs a stale local state when the related outbox is already submitted', () => {
+  it('does not downgrade a locally cached order when the related outbox is submitted', () => {
     const first = createLocalDraftRecord(scope, tableContext, 12)
-    const second = resolveLocalDraftForOpen(scope, tableContext, 12, first, 'SUBMITTED')
+    const reopened = resolveLocalDraftForOpen(scope, tableContext, 12, first, 'SUBMITTED')
 
-    expect(second.localDraftId).not.toBe(first.localDraftId)
-    expect(second.clientOrderId).not.toBe(first.clientOrderId)
+    expect(reopened).toBe(first)
+  })
+
+  it.each(['COMPLETED', 'CANCELLED'] as const)(
+    'starts a blank lifecycle when the server order is %s even if an old outbox write is retryable',
+    (terminalState) => {
+      const terminal = {
+        ...createLocalDraftRecord(scope, tableContext, 12),
+        submitState: terminalState,
+        serverOrderId: 491,
+        items: [{ id: 'old-server-item' } as never],
+      }
+
+      const next = resolveLocalDraftForOpen(scope, tableContext, 13, terminal, 'FAILED_RETRYABLE')
+
+      expect(next.clientOrderId).not.toBe(terminal.clientOrderId)
+      expect(next.serverOrderId).toBeNull()
+      expect(next.items).toEqual([])
+    },
+  )
+
+  it('does not let a stale queued write overwrite a completed lifecycle with the same client id', () => {
+    const queued = {
+      ...createLocalDraftRecord(scope, tableContext, 12),
+      submitState: 'QUEUED' as const,
+      items: [{ id: 'queued-item' } as never],
+    }
+    const completed = { ...queued, submitState: 'COMPLETED' as const, items: [] }
+
+    expect(resolveLocalDraftWrite(completed, queued)).toBe(completed)
+  })
+
+  it('allows a new same-table client identity to replace a prior completed lifecycle', () => {
+    const completed = {
+      ...createLocalDraftRecord(scope, tableContext, 12),
+      submitState: 'COMPLETED' as const,
+      serverOrderId: 491,
+    }
+    const next = createLocalDraftRecord(scope, tableContext, 13)
+
+    expect(resolveLocalDraftWrite(completed, next)).toBe(next)
   })
 
   it.each(['QUEUED', 'SUBMITTING', 'FAILED_RETRYABLE', 'CONFLICT'] as const)(

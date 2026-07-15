@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyCategoryItemOrder,
+  enterMenuItemReorderMode,
+  isMenuItemMoveDisabled,
   moveMenuItemWithinCategory,
   sortMenuItemsByDisplayOrder,
   type SortableMenuItem,
@@ -28,5 +30,34 @@ describe('menu item display ordering', () => {
     expect(reordered.filter((item) => item.category_id === 2).map((item) => [item.id, item.sort_order]))
       .toEqual([[12, 10], [11, 20]])
     expect(reordered.find((item) => item.id === 21)?.sort_order).toBe(10)
+  })
+
+  it('temporarily clears unrelated filters when entering reorder mode', () => {
+    const mode = enterMenuItemReorderMode({
+      searchTerm: 'tea',
+      stationFilter: '4',
+      statusFilter: 'active',
+    })
+
+    expect(mode.active).toEqual({
+      searchTerm: '',
+      stationFilter: 'all',
+      statusFilter: 'all',
+    })
+    expect(mode.previous).toEqual({
+      searchTerm: 'tea',
+      stationFilter: '4',
+      statusFilter: 'active',
+    })
+  })
+
+  it('only disables the unavailable direction at category boundaries', () => {
+    expect(isMenuItemMoveDisabled(0, 3, 'up')).toBe(true)
+    expect(isMenuItemMoveDisabled(0, 3, 'down')).toBe(false)
+    expect(isMenuItemMoveDisabled(1, 3, 'up')).toBe(false)
+    expect(isMenuItemMoveDisabled(1, 3, 'down')).toBe(false)
+    expect(isMenuItemMoveDisabled(2, 3, 'up')).toBe(false)
+    expect(isMenuItemMoveDisabled(2, 3, 'down')).toBe(true)
+    expect(isMenuItemMoveDisabled(0, 1, 'down')).toBe(true)
   })
 })

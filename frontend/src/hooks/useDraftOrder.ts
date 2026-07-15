@@ -24,6 +24,7 @@ import { recordAppOperation } from '../services/networkStatus'
 import {
   buildDraftContextKey,
   cleanupExpiredLocalDrafts,
+  createLocalDraftRecord,
   deleteLocalDraft,
   deleteLocalDraftIfClientMatches,
   readLocalDraft,
@@ -42,6 +43,10 @@ import {
   saveOrderOutboxRecord,
   type OrderOutboxRecord,
 } from '../offline/orderOutbox'
+import {
+  finalizeOfflineOrderRecords,
+  terminalLocalStateForServerStatus,
+} from '../offline/orderLifecycle'
 import {
   kickOrderOutboxProcessor,
   processOrderOutboxRecord,
@@ -406,16 +411,39 @@ export function useDraftOrder(
       }
 
       try {
-        const resolvedOrder = await findEditableOrderByContext({
+        let resolvedOrder = await findEditableOrderByContext({
           storeId,
           orderType,
           tableNo: orderType === 'dine_in' ? slotLabel : null,
           pickupNo: orderType === 'pickup' ? (pickupLabel ?? slotLabel) : null,
         })
         if (!active) return
+        if (!resolvedOrder && cached?.serverOrderId && localScope) {
+          const linkedOrder = await fetchOrderDetail(cached.serverOrderId)
+          const terminalState = terminalLocalStateForServerStatus(linkedOrder.status)
+          if (terminalState) {
+            await finalizeOfflineOrderRecords(localScope, linkedOrder.id, linkedOrder.status)
+            const freshDraft = createLocalDraftRecord(
+              localScope,
+              localContext,
+              offlineIdentity.menuRevision,
+            )
+            cached = await saveLocalDraft(freshDraft)
+            if (!active) return
+            localDraftRef.current = cached
+            setLocalDraftId(cached.localDraftId)
+            setClientOrderId(cached.clientOrderId)
+            setLastLocalSavedAt(cached.updatedAt)
+            setOutboxRecord(null)
+            setOrder(null)
+            setStagedItems([])
+            return
+          }
+          resolvedOrder = linkedOrder
+        }
         if (!resolvedOrder) {
           setOrder(null)
-          setStagedItems(cached?.items ?? [])
+          setStagedItems(cached?.mode === 'LOCAL_NEW_ORDER' ? cached.items : [])
           return
         }
         const serverUpdatedAt = new Date(resolvedOrder.updated_at).getTime()
@@ -456,7 +484,9 @@ export function useDraftOrder(
         if (cached) {
           setOrder(cached.serverOrderSnapshot)
           setStagedItems(cached.items)
-          setError('网络暂不可用，已恢复本机草稿；尚未同步的内容只保存在本机。')
+          setError(cached.mode === 'SERVER_ORDER_UPDATE'
+            ? '网络暂不可用，暂时显示最近确认的服务器订单；不会将其降级为本机新订单。'
+            : '网络暂不可用，已恢复本机草稿；尚未同步的内容只保存在本机。')
         } else {
           setError(loadError instanceof Error ? loadError.message : 'Failed to open draft order')
         }
@@ -652,7 +682,11 @@ export function useDraftOrder(
     clientOrderId,
     lastLocalSavedAt,
     localDraftMode: localDraftRef.current?.mode ?? 'LOCAL_NEW_ORDER',
-    localSubmitState: outboxRecord?.state ?? localDraftRef.current?.submitState ?? 'LOCAL_DRAFT',
+    localSubmitState: outboxRecord?.state
+      ?? (localDraftRef.current?.mode === 'SERVER_ORDER_UPDATE'
+        ? 'SUBMITTED'
+        : localDraftRef.current?.submitState)
+      ?? 'LOCAL_DRAFT',
     outboxRecord,
     draftSubmissionLocked,
     saveLocalDraftNow: flushLocalDraft,

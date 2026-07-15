@@ -1,5 +1,9 @@
 import type { IdempotentOrderSubmitPayload } from '../services/orderService'
-import type { LocalDraftRecord, LocalDraftSubmitState } from './localDrafts'
+import {
+  isServerTerminalLocalState,
+  type LocalDraftRecord,
+  type LocalDraftSubmitState,
+} from './localDrafts'
 import {
   OFFLINE_STORES,
   openOfflineDatabase,
@@ -103,6 +107,8 @@ export function resolveOrderOutboxWrite(
 ) {
   if (!current) return incoming
   if (current.key !== incoming.key) throw new Error('ORDER_OUTBOX_KEY_MISMATCH')
+  if (isServerTerminalLocalState(incoming.state)) return incoming
+  if (isServerTerminalLocalState(current.state)) return current
   if (incoming.state === 'SUBMITTED') return incoming
   if (current.state === 'SUBMITTED') return current
   if (incoming.attemptCount < current.attemptCount) return current

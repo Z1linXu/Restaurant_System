@@ -130,6 +130,7 @@ export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
           groups[option.option_type] = [...(groups[option.option_type] ?? []), mapped]
           return groups
         }, {})
+        Object.values(optionsByType).forEach((options) => options.sort(sortChoiceOptions))
         const allOptions = item.options.map(mapOption)
 
       const customization =
