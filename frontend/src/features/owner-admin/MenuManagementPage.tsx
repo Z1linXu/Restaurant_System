@@ -15,8 +15,12 @@ import { useAuth } from '../auth/useAuth'
 import { useCurrentStore } from '../store/StoreContext'
 import {
   applyCategoryItemOrder,
+  enterMenuItemReorderMode,
+  isMenuItemMoveDisabled,
   moveMenuItemWithinCategory,
   sortMenuItemsByDisplayOrder,
+  type MenuItemMoveDirection,
+  type MenuItemReorderFilters,
 } from './menuItemOrdering'
 
 interface MenuItemEditorState {
@@ -134,6 +138,8 @@ export function MenuManagementPage() {
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [stationFilter, setStationFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [reorderMode, setReorderMode] = useState(false)
+  const [filtersBeforeReorder, setFiltersBeforeReorder] = useState<MenuItemReorderFilters | null>(null)
   const [rebuildDate, setRebuildDate] = useState(new Date().toISOString().slice(0, 10))
 
   const loadOverview = async (storeId: number) => {
@@ -170,6 +176,11 @@ export function MenuManagementPage() {
 
   useEffect(() => {
     void loadOverview(Number(selectedStoreId))
+  }, [selectedStoreId])
+
+  useEffect(() => {
+    setReorderMode(false)
+    setFiltersBeforeReorder(null)
   }, [selectedStoreId])
 
   const stores = useMemo(
@@ -247,10 +258,10 @@ export function MenuManagementPage() {
     })
   }, [categoryFilter, menuItems, searchTerm, stationFilter, statusFilter])
 
-  const canReorder = categoryFilter !== 'all'
-    && searchTerm.trim() === ''
-    && stationFilter === 'all'
-    && statusFilter === 'all'
+  const canReorder = reorderMode && categoryFilter !== 'all'
+  const selectedCategoryLabel = categoryFilter === 'all'
+    ? null
+    : categoryNameById.get(Number(categoryFilter)) ?? '当前分类'
 
   const categoryOrder = useMemo(
     () => categoryFilter === 'all'
@@ -293,7 +304,29 @@ export function MenuManagementPage() {
     return normalized
   }
 
-  const handleReorder = async (item: MenuItemEditorState, direction: 'up' | 'down') => {
+  const handleStartReorder = () => {
+    if (categoryFilter === 'all') {
+      return
+    }
+    const mode = enterMenuItemReorderMode({ searchTerm, stationFilter, statusFilter })
+    setFiltersBeforeReorder(mode.previous)
+    setSearchTerm(mode.active.searchTerm)
+    setStationFilter(mode.active.stationFilter)
+    setStatusFilter(mode.active.statusFilter as StatusFilter)
+    setReorderMode(true)
+  }
+
+  const handleExitReorder = () => {
+    if (filtersBeforeReorder) {
+      setSearchTerm(filtersBeforeReorder.searchTerm)
+      setStationFilter(filtersBeforeReorder.stationFilter)
+      setStatusFilter(filtersBeforeReorder.statusFilter as StatusFilter)
+    }
+    setFiltersBeforeReorder(null)
+    setReorderMode(false)
+  }
+
+  const handleReorder = async (item: MenuItemEditorState, direction: MenuItemMoveDirection) => {
     if (!canReorder || item.id == null) {
       return
     }
@@ -584,14 +617,16 @@ export function MenuManagementPage() {
                   <input
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
+                    disabled={reorderMode}
                     placeholder="Search name or SKU"
-                    className="rounded-[16px] border border-[rgba(26,28,25,0.08)] bg-white px-4 py-3 text-[0.92rem] outline-none"
+                    className="rounded-[16px] border border-[rgba(26,28,25,0.08)] bg-white px-4 py-3 text-[0.92rem] outline-none disabled:cursor-not-allowed disabled:opacity-55"
                   />
 
                   <select
                     value={categoryFilter}
                     onChange={(event) => setCategoryFilter(event.target.value)}
-                    className="rounded-[16px] border border-[rgba(26,28,25,0.08)] bg-white px-4 py-3 text-[0.92rem] outline-none"
+                    disabled={reorderMode}
+                    className="rounded-[16px] border border-[rgba(26,28,25,0.08)] bg-white px-4 py-3 text-[0.92rem] outline-none disabled:cursor-not-allowed disabled:opacity-55"
                   >
                     <option value="all">All Categories</option>
                     {categories.map((category) => (
@@ -604,7 +639,8 @@ export function MenuManagementPage() {
                   <select
                     value={stationFilter}
                     onChange={(event) => setStationFilter(event.target.value)}
-                    className="rounded-[16px] border border-[rgba(26,28,25,0.08)] bg-white px-4 py-3 text-[0.92rem] outline-none"
+                    disabled={reorderMode}
+                    className="rounded-[16px] border border-[rgba(26,28,25,0.08)] bg-white px-4 py-3 text-[0.92rem] outline-none disabled:cursor-not-allowed disabled:opacity-55"
                   >
                     <option value="all">All Stations</option>
                     {stations.map((station) => (
@@ -617,7 +653,8 @@ export function MenuManagementPage() {
                   <select
                     value={statusFilter}
                     onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
-                    className="rounded-[16px] border border-[rgba(26,28,25,0.08)] bg-white px-4 py-3 text-[0.92rem] outline-none"
+                    disabled={reorderMode}
+                    className="rounded-[16px] border border-[rgba(26,28,25,0.08)] bg-white px-4 py-3 text-[0.92rem] outline-none disabled:cursor-not-allowed disabled:opacity-55"
                   >
                     <option value="all">All Status</option>
                     <option value="active">Active</option>
@@ -627,10 +664,38 @@ export function MenuManagementPage() {
                   </select>
                 </div>
 
-                <div className="mt-3 rounded-[16px] bg-[rgba(26,28,25,0.04)] px-4 py-3 text-[0.82rem] text-[var(--muted)]">
-                  {canReorder
-                    ? '使用每行的上移/下移按钮调整当前分类的点餐显示顺序，保存后菜单缓存会在下一次同步时更新。'
-                    : '如需调整顺序，请选择单一分类，并清空搜索及其他筛选条件。'}
+                <div className={`mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[16px] px-4 py-3 text-[0.86rem] ${
+                  reorderMode
+                    ? 'border border-[rgba(97,0,0,0.22)] bg-[rgba(97,0,0,0.07)] text-[var(--on-surface)]'
+                    : 'bg-[rgba(26,28,25,0.04)] text-[var(--muted)]'
+                }`}>
+                  <div>
+                    {reorderMode
+                      ? `正在排序「${selectedCategoryLabel}」。使用上移/下移按钮调整完整分类顺序，每次移动都会立即保存。`
+                      : categoryFilter === 'all'
+                        ? '请先选择一个具体分类，再开始调整菜品顺序。'
+                        : `已选择「${selectedCategoryLabel}」。开始排序后会暂时清空搜索、站点和状态筛选。`}
+                  </div>
+                  {reorderMode ? (
+                    <button
+                      type="button"
+                      onClick={handleExitReorder}
+                      disabled={reordering}
+                      className="min-h-11 rounded-[14px] border border-[rgba(97,0,0,0.24)] bg-white px-4 font-semibold text-[var(--primary)] shadow-sm transition hover:bg-[rgba(97,0,0,0.05)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      退出排序
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleStartReorder}
+                      disabled={categoryFilter === 'all' || loading}
+                      title={categoryFilter === 'all' ? '请先选择一个具体分类' : '显示该分类全部菜品并开始排序'}
+                      className="min-h-11 rounded-[14px] bg-[var(--primary)] px-4 font-semibold text-white shadow-sm transition hover:brightness-110 active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] disabled:cursor-not-allowed disabled:bg-[rgba(26,28,25,0.12)] disabled:text-[var(--muted)] disabled:shadow-none"
+                    >
+                      开始排序
+                    </button>
+                  )}
                 </div>
 
                 {loading ? (
@@ -699,9 +764,13 @@ export function MenuManagementPage() {
                                   disabled={
                                     !canReorder
                                       || reordering
-                                      || categoryPositionByItemId.get(item.id) === 0
+                                      || isMenuItemMoveDisabled(
+                                        categoryPositionByItemId.get(item.id),
+                                        categoryOrder.length,
+                                        'up',
+                                      )
                                   }
-                                  className="min-h-11 min-w-11 rounded-[14px] bg-[rgba(26,28,25,0.06)] px-3 font-bold text-[var(--on-surface)] disabled:cursor-not-allowed disabled:opacity-35"
+                                  className="min-h-11 min-w-11 rounded-[14px] border border-[rgba(97,0,0,0.24)] bg-[var(--primary)] px-3 text-lg font-bold text-white shadow-sm transition hover:brightness-110 active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] disabled:cursor-not-allowed disabled:border-transparent disabled:bg-[rgba(26,28,25,0.07)] disabled:text-[rgba(26,28,25,0.3)] disabled:shadow-none"
                                 >
                                   ↑
                                 </button>
@@ -713,9 +782,13 @@ export function MenuManagementPage() {
                                   disabled={
                                     !canReorder
                                       || reordering
-                                      || categoryPositionByItemId.get(item.id) === categoryOrder.length - 1
+                                      || isMenuItemMoveDisabled(
+                                        categoryPositionByItemId.get(item.id),
+                                        categoryOrder.length,
+                                        'down',
+                                      )
                                   }
-                                  className="min-h-11 min-w-11 rounded-[14px] bg-[rgba(26,28,25,0.06)] px-3 font-bold text-[var(--on-surface)] disabled:cursor-not-allowed disabled:opacity-35"
+                                  className="min-h-11 min-w-11 rounded-[14px] border border-[rgba(97,0,0,0.24)] bg-[var(--primary)] px-3 text-lg font-bold text-white shadow-sm transition hover:brightness-110 active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] disabled:cursor-not-allowed disabled:border-transparent disabled:bg-[rgba(26,28,25,0.07)] disabled:text-[rgba(26,28,25,0.3)] disabled:shadow-none"
                                 >
                                   ↓
                                 </button>

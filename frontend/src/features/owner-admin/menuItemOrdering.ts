@@ -5,6 +5,36 @@ export interface SortableMenuItem {
   name_zh?: string
 }
 
+export type MenuItemMoveDirection = 'up' | 'down'
+
+export interface MenuItemReorderFilters {
+  searchTerm: string
+  stationFilter: string
+  statusFilter: string
+}
+
+export function enterMenuItemReorderMode(filters: MenuItemReorderFilters) {
+  return {
+    previous: { ...filters },
+    active: {
+      searchTerm: '',
+      stationFilter: 'all',
+      statusFilter: 'all',
+    },
+  }
+}
+
+export function isMenuItemMoveDisabled(
+  index: number | undefined,
+  itemCount: number,
+  direction: MenuItemMoveDirection,
+) {
+  if (index == null || index < 0 || itemCount <= 1) {
+    return true
+  }
+  return direction === 'up' ? index === 0 : index === itemCount - 1
+}
+
 export function sortMenuItemsByDisplayOrder<T extends SortableMenuItem>(items: T[]) {
   return [...items].sort((left, right) =>
     left.category_id - right.category_id
@@ -18,7 +48,7 @@ export function moveMenuItemWithinCategory<T extends SortableMenuItem>(
   items: T[],
   categoryId: number,
   itemId: number,
-  direction: 'up' | 'down',
+  direction: MenuItemMoveDirection,
 ) {
   const categoryItems = sortMenuItemsByDisplayOrder(
     items.filter((item) => item.category_id === categoryId && item.id != null),
