@@ -682,7 +682,7 @@ public class RuntimeDataSeeder implements ApplicationRunner {
     private List<OptionSeed> buildColdChickenOptions() {
         List<OptionSeed> seeds = new ArrayList<>();
         seeds.addAll(buildComboOptions(false));
-        seeds.addAll(buildNoodleTypeOptions("leek_leaf"));
+        seeds.addAll(buildNoodleTypeOptions("thin"));
         seeds.addAll(buildSpicyOptions());
         seeds.addAll(optionSeeds(
             optionSeed("addon", "加面", "Extra Noodle", "3.99"),
