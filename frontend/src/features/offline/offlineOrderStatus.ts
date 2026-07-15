@@ -96,6 +96,24 @@ const STATUS_VIEWS: Record<LocalDraftSubmitState, OfflineOrderStatusView> = {
     canReturnToDraft: false,
     canCancelLocal: false,
   },
+  COMPLETED: {
+    title: '订单已完成',
+    description: '服务器已完成该订单，本机记录不会再恢复为草稿。',
+    tone: 'success',
+    serverConfirmed: true,
+    canRetry: false,
+    canReturnToDraft: false,
+    canCancelLocal: false,
+  },
+  CANCELLED: {
+    title: '订单已取消',
+    description: '服务器已取消该订单，本机记录不会再恢复为草稿。',
+    tone: 'neutral',
+    serverConfirmed: true,
+    canRetry: false,
+    canReturnToDraft: false,
+    canCancelLocal: false,
+  },
 }
 
 export function offlineOrderStatusView(state: LocalDraftSubmitState) {
@@ -103,7 +121,10 @@ export function offlineOrderStatusView(state: LocalDraftSubmitState) {
 }
 
 export function isActiveOfflineOrderState(state: LocalDraftSubmitState) {
-  return state !== 'SUBMITTED' && state !== 'CANCELLED_LOCAL'
+  return state === 'QUEUED'
+    || state === 'SUBMITTING'
+    || state === 'FAILED_RETRYABLE'
+    || state === 'CONFLICT'
 }
 
 export function offlineOrderBadgeLabel(state: LocalDraftSubmitState) {

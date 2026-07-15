@@ -8,12 +8,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.restaurant.system.inventory.entity.InventoryTransaction;
 import com.restaurant.system.inventory.repository.InventoryItemRepository;
 import com.restaurant.system.inventory.repository.InventoryTransactionRepository;
 import com.restaurant.system.common.realtime.RealtimeEventPublisher;
+import com.restaurant.system.common.realtime.RealtimeUpdateMessage;
 import com.restaurant.system.kitchen.entity.KitchenTask;
 import com.restaurant.system.kitchen.repository.KitchenTaskRepository;
 import com.restaurant.system.kitchen.service.impl.KitchenServiceImpl;
@@ -62,6 +65,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -374,6 +378,16 @@ class OrderServiceImplTest {
         OrderResponse completedOrder = orderService.completeOrder(readyOrder.id);
         assertEquals("completed", completedOrder.status);
         assertNotNull(completedOrder.completed_at);
+
+        ArgumentCaptor<RealtimeUpdateMessage> eventCaptor = ArgumentCaptor.forClass(RealtimeUpdateMessage.class);
+        verify(realtimeEventPublisher, atLeastOnce()).publish(eventCaptor.capture(), anyList());
+        RealtimeUpdateMessage completedEvent = eventCaptor.getAllValues().stream()
+            .filter(event -> "order.completed".equals(event.event_type))
+            .findFirst()
+            .orElseThrow();
+        assertEquals(completedOrder.id, completedEvent.order_id);
+        assertEquals(completedOrder.store_id, completedEvent.store_id);
+        assertEquals("completed", completedEvent.order_status);
     }
 
     @Test

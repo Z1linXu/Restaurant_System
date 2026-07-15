@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   offlineOrderMatchesTable,
+  isActiveOfflineOrderState,
   offlineOrderStatusView,
   type OfflineOrderBadge,
 } from './offlineOrderStatus'
@@ -14,10 +15,21 @@ describe('offline ordering operator status', () => {
     ['FAILED_RETRYABLE', '提交暂时失败，将在网络恢复后自动重试。', false],
     ['FAILED_VALIDATION', '服务器未接受该订单。请检查提示后返回修改，本机菜品仍然保留。', false],
     ['CONFLICT', '订单状态存在冲突，请确认当前桌台订单后再继续。', false],
+    ['COMPLETED', '服务器已完成该订单，本机记录不会再恢复为草稿。', true],
+    ['CANCELLED', '服务器已取消该订单，本机记录不会再恢复为草稿。', true],
   ] as const)('maps %s to an unambiguous kitchen-confirmation message', (state, message, confirmed) => {
     const view = offlineOrderStatusView(state)
     expect(view.description).toBe(message)
     expect(view.serverConfirmed).toBe(confirmed)
+  })
+
+  it('only counts records whose kitchen confirmation is unresolved', () => {
+    expect(['QUEUED', 'SUBMITTING', 'FAILED_RETRYABLE', 'CONFLICT'].filter(
+      (state) => isActiveOfflineOrderState(state as never),
+    )).toEqual(['QUEUED', 'SUBMITTING', 'FAILED_RETRYABLE', 'CONFLICT'])
+    expect(['LOCAL_DRAFT', 'SUBMITTED', 'FAILED_VALIDATION', 'COMPLETED', 'CANCELLED', 'CANCELLED_LOCAL'].some(
+      (state) => isActiveOfflineOrderState(state as never),
+    )).toBe(false)
   })
 
   it('matches split-table drafts only to their own seat and to an empty table entry card', () => {
