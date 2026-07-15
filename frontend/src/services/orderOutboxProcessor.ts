@@ -19,7 +19,12 @@ import {
 
 const IDLE_CHECK_MS = 30_000
 const MAX_BATCH_SIZE = 10
-const inFlightKeys = new Set<string>()
+type OutboxProcessResult = {
+  record: OrderOutboxRecord | null
+  order: BackendOrderResponse | null
+}
+
+const inFlightRequests = new Map<string, Promise<OutboxProcessResult>>()
 
 let activeAccountId: number | null = null
 let activeGeneration = 0
@@ -35,23 +40,45 @@ function safeErrorMessage(error: unknown) {
   return getApiUserMessage(error, '订单提交失败，将在网络恢复后重试。').slice(0, 500)
 }
 
-export async function processOrderOutboxRecord(record: OrderOutboxRecord) {
-  if (inFlightKeys.has(record.key)) {
-    return {
-      record: await readOrderOutboxRecord(record.accountId, record.organizationId, record.storeId, record.clientOrderId),
-      order: null,
-    }
+function submissionTrace(record: OrderOutboxRecord) {
+  return {
+    localDraftId: record.localDraftId,
+    outboxKey: record.key.slice(-16),
+    idempotencyKey: record.clientOrderId.slice(-12),
+    storeId: record.storeId,
+    attempt: record.attemptCount,
   }
+}
+
+async function executeOrderOutboxRecord(record: OrderOutboxRecord): Promise<OutboxProcessResult> {
   if (!browserCanSubmit()) {
     return { record, order: null }
   }
 
-  inFlightKeys.add(record.key)
+  const current = await readOrderOutboxRecord(
+    record.accountId,
+    record.organizationId,
+    record.storeId,
+    record.clientOrderId,
+  )
+  if (!current || current.state === 'SUBMITTED' || current.state === 'CONFLICT'
+    || current.state === 'FAILED_VALIDATION' || current.state === 'CANCELLED_LOCAL') {
+    return { record: current, order: null }
+  }
+
   const attemptStartedAt = new Date().toISOString()
-  let submitting = await saveOrderOutboxRecord(beginOrderOutboxAttempt(record, new Date(attemptStartedAt)))
+  let submitting = await saveOrderOutboxRecord(beginOrderOutboxAttempt(current, new Date(attemptStartedAt)))
+  console.info('[order-outbox] submission started', submissionTrace(submitting))
   try {
     const result = await submitIdempotentOrder(submitting.frozenPayload)
-    submitting = await saveOrderOutboxRecord(completeOrderOutboxAttempt(submitting, result.order_id))
+    submitting = await saveOrderOutboxRecord(
+      completeOrderOutboxAttempt(submitting, result.order_id, result.replayed),
+    )
+    console.info('[order-outbox] submission confirmed', {
+      ...submissionTrace(submitting),
+      orderId: result.order_id,
+      replayed: result.replayed,
+    })
     return { record: submitting, order: result.order as BackendOrderResponse }
   } catch (error) {
     const status = error instanceof ApiRequestError ? error.status : 0
@@ -62,10 +89,25 @@ export async function processOrderOutboxRecord(record: OrderOutboxRecord) {
       errorCode,
       safeErrorMessage(error),
     ))
+    console.warn('[order-outbox] submission not confirmed', {
+      ...submissionTrace(submitting),
+      status,
+      errorCode,
+      resolution: submitting.state,
+    })
     return { record: submitting, order: null }
-  } finally {
-    inFlightKeys.delete(record.key)
   }
+}
+
+export function processOrderOutboxRecord(record: OrderOutboxRecord): Promise<OutboxProcessResult> {
+  const existing = inFlightRequests.get(record.key)
+  if (existing) return existing
+
+  const request = executeOrderOutboxRecord(record).finally(() => {
+    if (inFlightRequests.get(record.key) === request) inFlightRequests.delete(record.key)
+  })
+  inFlightRequests.set(record.key, request)
+  return request
 }
 
 function clearScheduledTimer() {
@@ -86,7 +128,7 @@ function scheduleProcessor(delayMs: number, generation = activeGeneration) {
 
 async function nextProcessorDelay(accountId: number) {
   const records = (await listOrderOutboxForAccount(accountId)).filter((record) => (
-    !inFlightKeys.has(record.key)
+    !inFlightRequests.has(record.key)
     && (record.state === 'QUEUED'
       || record.state === 'SUBMITTING'
       || record.state === 'FAILED_RETRYABLE')
@@ -117,7 +159,7 @@ async function runProcessor(generation: number) {
   processorRunning = true
   try {
     const records = (await listDueOrderOutboxRecords(accountId))
-      .filter((record) => !inFlightKeys.has(record.key))
+      .filter((record) => !inFlightRequests.has(record.key))
       .slice(0, MAX_BATCH_SIZE)
     for (const record of records) {
       if (generation !== activeGeneration || !browserCanSubmit()) break

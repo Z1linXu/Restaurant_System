@@ -40,6 +40,7 @@ import com.restaurant.system.order.entity.Order;
 import com.restaurant.system.order.entity.OrderItem;
 import com.restaurant.system.order.entity.OrderItemOption;
 import com.restaurant.system.order.entity.OrderUpdateBatch;
+import com.restaurant.system.order.exception.OrderSubmissionException;
 import com.restaurant.system.order.repository.OrderItemOptionRepository;
 import com.restaurant.system.order.repository.OrderItemRepository;
 import com.restaurant.system.order.repository.OrderRepository;
@@ -68,6 +69,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.PageRequest;
 
 @Service
@@ -438,8 +440,10 @@ public class OrderServiceImpl implements OrderService {
         if (serverOrderId == null) {
             Order existingOrder = findExistingEditableOrder(request.store_id, request.table_no, request.pickup_no);
             if (existingOrder != null) {
-                throw new BusinessException(
-                    "ORDER_CONTEXT_CONFLICT: This table or pickup context already has an active server order"
+                throw new OrderSubmissionException(
+                    "ORDER_CONTEXT_CONFLICT",
+                    HttpStatus.CONFLICT,
+                    "This table or pickup context already has active order " + existingOrder.id
                 );
             }
             draft = createOrder(request);
@@ -452,7 +456,11 @@ public class OrderServiceImpl implements OrderService {
                 throw new BusinessException("STORE_MISMATCH: Server draft belongs to another store");
             }
             if (!ORDER_STATUS_DRAFT.equals(existingDraft.status)) {
-                throw new BusinessException("SERVER_ORDER_UPDATE_REQUIRED: Existing order is no longer a draft");
+                throw new OrderSubmissionException(
+                    "SERVER_ORDER_UPDATE_REQUIRED",
+                    HttpStatus.CONFLICT,
+                    "Existing server order is no longer a draft; refresh before continuing"
+                );
             }
 
             List<OrderItem> existingItems = orderItemRepository.findAllByOrderId(existingDraft.id);

@@ -12,7 +12,8 @@ describe('offline ordering operator status', () => {
     ['SUBMITTING', '正在提交订单，请等待服务器确认。', false],
     ['SUBMITTED', '订单已成功进入服务器和厨房。', true],
     ['FAILED_RETRYABLE', '提交暂时失败，将在网络恢复后自动重试。', false],
-    ['CONFLICT', '菜单、价格或菜品状态已变化，请检查订单。', false],
+    ['FAILED_VALIDATION', '服务器未接受该订单。请检查提示后返回修改，本机菜品仍然保留。', false],
+    ['CONFLICT', '订单状态存在冲突，请确认当前桌台订单后再继续。', false],
   ] as const)('maps %s to an unambiguous kitchen-confirmation message', (state, message, confirmed) => {
     const view = offlineOrderStatusView(state)
     expect(view.description).toBe(message)

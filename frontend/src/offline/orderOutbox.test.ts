@@ -9,6 +9,7 @@ import {
   failOrderOutboxAttempt,
   isOrderOutboxRecordDue,
   retryDelayMs,
+  resolveOrderOutboxWrite,
 } from './orderOutbox'
 import type { IdempotentOrderSubmitPayload } from '../services/orderService'
 
@@ -116,6 +117,25 @@ describe('order outbox state machine', () => {
     expect(isOrderOutboxRecordDue(conflict)).toBe(false)
     expect(classifySubmissionFailure(409, 'MENU_REVISION_STALE')).toBe('CONFLICT')
     expect(classifySubmissionFailure(409, 'PRICE_CHANGED')).toBe('CONFLICT')
+  })
+
+  it('separates non-retryable 400 validation failures from 409 state conflicts', () => {
+    expect(classifySubmissionFailure(400, 'ORDER_EMPTY')).toBe('FAILED_VALIDATION')
+    expect(classifySubmissionFailure(409, 'ORDER_CONTEXT_CONFLICT')).toBe('CONFLICT')
+  })
+
+  it('does not let a stale queued or failed write replace a confirmed server result', () => {
+    const submitting = beginOrderOutboxAttempt(createOrderOutboxRecord(draft, payload))
+    const submitted = completeOrderOutboxAttempt(submitting, 491, true)
+
+    expect(resolveOrderOutboxWrite(submitted, createOrderOutboxRecord(draft, payload))).toBe(submitted)
+    expect(resolveOrderOutboxWrite(submitted, failOrderOutboxAttempt(
+      submitting,
+      0,
+      'NETWORK_ERROR',
+      'response lost',
+    ))).toBe(submitted)
+    expect(submitted.serverReplayed).toBe(true)
   })
 
   it('marks success only after receiving the server order id', () => {

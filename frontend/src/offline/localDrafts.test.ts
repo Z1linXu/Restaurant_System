@@ -6,6 +6,7 @@ import {
   isLocalDraftExpired,
   localDraftKey,
   resolveLocalDraftForOpen,
+  reopenRejectedLocalDraft,
   withDraftPayloadHash,
 } from './localDrafts'
 
@@ -139,5 +140,21 @@ describe('local draft records', () => {
 
     expect(resolveLocalDraftForOpen(scope, otherTable, 12, otherTableDraft, null)).toBe(otherTableDraft)
     expect(otherTableDraft.contextKey).not.toBe(firstTableDraft.contextKey)
+  })
+
+  it('preserves items but rotates submission identity after a rejected payload is returned for editing', () => {
+    const rejected = {
+      ...createLocalDraftRecord(scope, tableContext, 12),
+      submitState: 'CONFLICT' as const,
+      items: [{ id: 'offline-item' } as never],
+    }
+
+    const reopened = reopenRejectedLocalDraft(rejected, new Date('2026-07-13T12:00:00Z'))
+
+    expect(reopened.items).toEqual(rejected.items)
+    expect(reopened.contextKey).toBe(rejected.contextKey)
+    expect(reopened.localDraftId).not.toBe(rejected.localDraftId)
+    expect(reopened.clientOrderId).not.toBe(rejected.clientOrderId)
+    expect(reopened.submitState).toBe('LOCAL_DRAFT')
   })
 })

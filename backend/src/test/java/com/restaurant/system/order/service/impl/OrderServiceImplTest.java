@@ -38,6 +38,7 @@ import com.restaurant.system.order.entity.Order;
 import com.restaurant.system.order.entity.OrderItem;
 import com.restaurant.system.order.entity.OrderItemOption;
 import com.restaurant.system.order.entity.OrderUpdateBatch;
+import com.restaurant.system.order.exception.OrderSubmissionException;
 import com.restaurant.system.order.repository.FrontdeskBeverageItemRepository;
 import com.restaurant.system.order.repository.OrderItemOptionRepository;
 import com.restaurant.system.order.repository.OrderItemRepository;
@@ -528,7 +529,18 @@ class OrderServiceImplTest {
         assertEquals(1, preparingDrinkOrder.beverage_pending_count);
 
         orderService.completeOrder(kitchenOrder.id);
-        orderService.cancelOrder(orderService.createOrder(dineIn).id);
+        OrderResponse cancelledOrder = orderService.cancelOrder(orderService.createOrder(dineIn).id);
+
+        List<FrontdeskOrderBoardResponse> refreshedActiveBoard = orderService.getFrontdeskOrderBoard(
+            store.id,
+            List.of("draft", "submitted", "preparing", "ready"),
+            null,
+            null,
+            null,
+            null
+        );
+        assertFalse(refreshedActiveBoard.stream().anyMatch(row -> row.order_id.equals(kitchenOrder.id)));
+        assertFalse(refreshedActiveBoard.stream().anyMatch(row -> row.order_id.equals(cancelledOrder.id)));
 
         List<FrontdeskOrderBoardResponse> history = orderService.getFrontdeskOrderHistory(
             store.id,
@@ -552,6 +564,30 @@ class OrderServiceImplTest {
         );
         assertEquals(1, searchByPickup.size());
         assertEquals(beverageOrder.id, searchByPickup.get(0).order_id);
+    }
+
+    @Test
+    void idempotentNewOrderReportsStableConflictWhenContextStillHasActiveOrder() {
+        Order activeOrder = new Order();
+        activeOrder.id = 88L;
+        activeOrder.store_id = store.id;
+        activeOrder.table_no = "T10";
+        activeOrder.status = "preparing";
+        when(orderRepository.findLatestEditableByStoreIdAndTableNo(store.id, "T10")).thenReturn(activeOrder);
+
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.store_id = store.id;
+        request.created_by = 1L;
+        request.order_type = "dine_in";
+        request.table_no = "T10";
+
+        OrderSubmissionException exception = assertThrows(
+            OrderSubmissionException.class,
+            () -> orderService.createOrReplaceDraftAndSubmit(request, null)
+        );
+
+        assertEquals("ORDER_CONTEXT_CONFLICT", exception.getErrorCode());
+        assertEquals(409, exception.getStatus().value());
     }
 
     @Test

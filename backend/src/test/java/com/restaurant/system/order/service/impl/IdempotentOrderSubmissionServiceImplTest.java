@@ -167,6 +167,19 @@ class IdempotentOrderSubmissionServiceImplTest {
     }
 
     @Test
+    void serverSuccessIsReturnedWhenClientRetriesAfterLosingTheFirstResponse() {
+        IdempotentOrderSubmitRequest request = request("lost-response-order", null);
+
+        IdempotentOrderSubmitResponse firstResponse = service.submit(1L, request, 5L);
+        IdempotentOrderSubmitResponse retryResponse = service.submit(1L, request, 5L);
+
+        assertFalse(firstResponse.replayed);
+        assertTrue(retryResponse.replayed);
+        assertEquals(firstResponse.order_id, retryResponse.order_id);
+        verify(orderService, times(1)).createOrReplaceDraftAndSubmit(any(), any());
+    }
+
+    @Test
     void differentClientOrderIdsForTheSameTableCreateSeparateOrders() {
         IdempotentOrderSubmitResponse first = service.submit(1L, request("table-T1-order-1", null), 5L);
         IdempotentOrderSubmitResponse second = service.submit(1L, request("table-T1-order-2", null), 5L);

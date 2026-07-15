@@ -20,6 +20,7 @@ export type LocalDraftSubmitState =
   | 'SUBMITTING'
   | 'SUBMITTED'
   | 'FAILED_RETRYABLE'
+  | 'FAILED_VALIDATION'
   | 'CONFLICT'
   | 'CANCELLED_LOCAL'
 
@@ -57,7 +58,13 @@ export interface LocalDraftRecord extends LocalDraftScope {
   schemaVersion: number
 }
 
-const PROTECTED_STATES = new Set<LocalDraftSubmitState>(['QUEUED', 'SUBMITTING', 'FAILED_RETRYABLE', 'CONFLICT'])
+const PROTECTED_STATES = new Set<LocalDraftSubmitState>([
+  'QUEUED',
+  'SUBMITTING',
+  'FAILED_RETRYABLE',
+  'FAILED_VALIDATION',
+  'CONFLICT',
+])
 const TERMINAL_STATES = new Set<LocalDraftSubmitState>(['SUBMITTED', 'CANCELLED_LOCAL'])
 
 export function buildDraftContextKey(context: LocalDraftContext) {
@@ -150,6 +157,23 @@ export function resolveLocalDraftForOpen(
   return createLocalDraftRecord(scope, context, menuRevision, now)
 }
 
+export function reopenRejectedLocalDraft(record: LocalDraftRecord, now = new Date()) {
+  const next = createLocalDraftRecord(
+    {
+      accountId: record.accountId,
+      organizationId: record.organizationId,
+      storeId: record.storeId,
+    },
+    record.context,
+    record.menuRevision,
+    now,
+  )
+  return withDraftPayloadHash({
+    ...next,
+    items: record.items,
+  })
+}
+
 function matchesScope(record: LocalDraftRecord, scope: LocalDraftScope, contextKey: string) {
   return record.accountId === scope.accountId
     && record.organizationId === scope.organizationId
@@ -191,6 +215,31 @@ export async function saveLocalDraft(record: LocalDraftRecord) {
   await completed
   publishLocalDraftUpdate()
   return normalized
+}
+
+export async function saveLocalDraftIfClientMatches(
+  record: LocalDraftRecord,
+  expectedClientOrderId: string,
+) {
+  const normalized = withDraftPayloadHash({
+    ...record,
+    updatedAt: new Date().toISOString(),
+    schemaVersion: LOCAL_DRAFT_SCHEMA_VERSION,
+  })
+  const expectedKey = localDraftKey(normalized, normalized.contextKey)
+  if (normalized.key !== expectedKey || normalized.clientOrderId !== expectedClientOrderId) {
+    throw new Error('LOCAL_DRAFT_SCOPE_MISMATCH')
+  }
+  const database = await openOfflineDatabase()
+  const transaction = database.transaction(OFFLINE_STORES.localDrafts, 'readwrite')
+  const completed = transactionComplete(transaction)
+  const drafts = transaction.objectStore(OFFLINE_STORES.localDrafts)
+  const current = await requestResult<LocalDraftRecord | undefined>(drafts.get(expectedKey))
+  const shouldSave = Boolean(current && current.clientOrderId === expectedClientOrderId)
+  if (shouldSave) drafts.put(normalized)
+  await completed
+  if (shouldSave) publishLocalDraftUpdate()
+  return shouldSave ? normalized : null
 }
 
 export async function listLocalDraftsForScope(scope: LocalDraftScope) {
