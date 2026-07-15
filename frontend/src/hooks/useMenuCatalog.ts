@@ -119,13 +119,18 @@ export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
   }))
 
   const items: MenuItem[] = data.categories.flatMap((category) =>
-    category.items.map((item) => {
-      const optionsByType = item.options.reduce<Record<string, ChoiceOption[]>>((groups, option) => {
-        const mapped = mapOption(option)
-        groups[option.option_type] = [...(groups[option.option_type] ?? []), mapped]
-        return groups
-      }, {})
-      const allOptions = item.options.map(mapOption)
+    [...category.items]
+      .sort((left, right) =>
+        (left.sort_order ?? Number.MAX_SAFE_INTEGER) - (right.sort_order ?? Number.MAX_SAFE_INTEGER)
+          || left.id - right.id,
+      )
+      .map((item) => {
+        const optionsByType = item.options.reduce<Record<string, ChoiceOption[]>>((groups, option) => {
+          const mapped = mapOption(option)
+          groups[option.option_type] = [...(groups[option.option_type] ?? []), mapped]
+          return groups
+        }, {})
+        const allOptions = item.options.map(mapOption)
 
       const customization =
         item.options.length > 0
@@ -177,6 +182,7 @@ export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
       return {
         id: String(item.id),
         sku: item.sku,
+        sortOrder: item.sort_order,
         categoryId: String(category.id),
         categoryCode: category.code,
         itemType: item.item_type,
@@ -189,7 +195,7 @@ export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
         soldOut: item.is_sold_out,
         customization,
       }
-    }),
+      }),
   )
 
   return {
@@ -227,6 +233,7 @@ function errorMessage(error: unknown, fallback: string) {
 }
 
 export function useMenuCatalog(storeId: number, identity: MenuCatalogIdentity) {
+  const { accountId, organizationId } = identity
   const [catalog, setCatalog] = useState<OrderingCatalog | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -247,7 +254,7 @@ export function useMenuCatalog(storeId: number, identity: MenuCatalogIdentity) {
       setLoading(true)
       setError(null)
       setUpdateError(null)
-      const scope = buildScope(storeId, identity)
+      const scope = buildScope(storeId, { accountId, organizationId })
       let cached: ActiveMenuSnapshot | null = null
       recordAppOperation({
         operation: 'MENU_LOAD',
@@ -343,7 +350,7 @@ export function useMenuCatalog(storeId: number, identity: MenuCatalogIdentity) {
     return () => {
       active = false
     }
-  }, [identity.accountId, identity.organizationId, storeId])
+  }, [accountId, organizationId, storeId])
 
   const categories = useMemo(() => catalog?.categories ?? [], [catalog])
   const items = useMemo(() => catalog?.items ?? [], [catalog])

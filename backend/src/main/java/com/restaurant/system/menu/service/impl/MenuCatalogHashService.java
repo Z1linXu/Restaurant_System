@@ -46,6 +46,7 @@ public class MenuCatalogHashService {
                 append(target, item.base_price);
                 append(target, item.is_active);
                 append(target, item.is_sold_out);
+                append(target, item.sort_order);
                 appendOptions(target, item.options);
             }
         }

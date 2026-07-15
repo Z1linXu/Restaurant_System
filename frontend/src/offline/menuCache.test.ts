@@ -20,7 +20,7 @@ function catalog(): BackendMenuCatalog {
     organization_id: 9,
     menu_revision: 7,
     generated_at: '2026-07-13T10:00:00',
-    catalog_version: 'menu-catalog-v2',
+    catalog_version: 'menu-catalog-v3',
     combo_metadata_version: 'stable-option-semantics-v1',
     content_hash: '',
     tax_policy: {
@@ -46,6 +46,7 @@ function catalog(): BackendMenuCatalog {
         base_price: 16,
         is_active: true,
         is_sold_out: false,
+        sort_order: 10,
         options: [{
           id: 31,
           option_type: 'spicy_level',
@@ -75,7 +76,7 @@ describe('versioned menu cache identity and integrity', () => {
   })
 
   it('matches the backend deterministic hash fixture', () => {
-    expect(catalog().content_hash).toBe('fnv1a32:6b4cec40')
+    expect(catalog().content_hash).toBe('fnv1a32:de151892')
   })
 
   it('rejects scope, revision, and content corruption', () => {
@@ -93,5 +94,18 @@ describe('versioned menu cache identity and integrity', () => {
     const second = catalog()
     second.generated_at = '2030-01-01T00:00:00'
     expect(calculateMenuContentHash(second)).toBe(first.content_hash)
+  })
+
+  it('includes menu item display order in the content hash', () => {
+    const first = catalog()
+    const reordered = catalog()
+    reordered.categories[0].items[0].sort_order = 20
+    expect(calculateMenuContentHash(reordered)).not.toBe(first.content_hash)
+  })
+
+  it('keeps validating legacy v2 snapshots before the next network refresh', () => {
+    const legacy = catalog()
+    legacy.catalog_version = 'menu-catalog-v2'
+    expect(calculateMenuContentHash(legacy)).toBe('fnv1a32:6b4cec40')
   })
 })

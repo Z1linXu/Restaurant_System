@@ -1077,6 +1077,7 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         item.base_price = new BigDecimal(basePrice);
         item.is_active = true;
         item.is_sold_out = false;
+        item.sort_order = nextMenuItemSortOrder(storeId, categoryId);
         item.created_at = now();
         item.updated_at = now();
         return item;
@@ -1114,11 +1115,19 @@ public class RuntimeDataSeeder implements ApplicationRunner {
         target.base_price = new BigDecimal(basePrice);
         target.is_active = true;
         target.is_sold_out = false;
+        if (target.sort_order == null) {
+            target.sort_order = nextMenuItemSortOrder(storeId, categoryId);
+        }
         target.updated_at = now();
         if (target.created_at == null) {
             target.created_at = now();
         }
         menuItemRepository.save(target);
+    }
+
+    private Integer nextMenuItemSortOrder(Long storeId, Long categoryId) {
+        Integer currentMax = menuItemRepository.findMaxSortOrder(storeId, categoryId);
+        return (currentMax == null ? 0 : currentMax) + 10;
     }
 
     private MenuItemOption option(Long menuItemId, String optionType, String nameZh, String nameEn, String priceDelta) {

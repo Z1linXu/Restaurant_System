@@ -90,6 +90,7 @@ export interface MenuItemAdminRecord {
   cost_per_item: number | null
   is_active: boolean
   is_sold_out: boolean
+  sort_order: number
   created_at?: string
   updated_at?: string
 }
@@ -115,6 +116,17 @@ export async function fetchMenuManagementContext(storeId: number) {
 export async function fetchAdminMenuItems(storeId: number) {
   const params = new URLSearchParams({ store_id: String(storeId) })
   return request<MenuItemAdminRecord[]>(`/api/v1/admin/platform/menu/items?${params.toString()}`)
+}
+
+export async function reorderAdminMenuItems(storeId: number, categoryId: number, itemIds: number[]) {
+  return request<MenuItemAdminRecord[]>(`/api/v1/admin/menu/categories/${categoryId}/items/reorder`, {
+    method: 'PUT',
+    headers: buildHeaders(),
+    body: JSON.stringify({
+      store_id: storeId,
+      item_ids: itemIds,
+    }),
+  })
 }
 
 export async function savePlatformEntity(path: string, payload: Record<string, unknown>, id?: number) {

@@ -21,7 +21,7 @@ class MenuCatalogHashServiceTest {
         catalog.generated_at = catalog.generated_at.plusHours(2);
 
         assertEquals(first, service.calculate(catalog));
-        assertEquals("fnv1a32:6b4cec40", first);
+        assertEquals("fnv1a32:de151892", first);
     }
 
     @Test
@@ -58,6 +58,7 @@ class MenuCatalogHashServiceTest {
             new BigDecimal("16.00"),
             true,
             false,
+            10,
             List.of(option)
         );
         MenuCatalogResponse.CategoryResponse category = new MenuCatalogResponse.CategoryResponse(
@@ -74,7 +75,7 @@ class MenuCatalogHashServiceTest {
             9L,
             7L,
             LocalDateTime.of(2026, 7, 13, 10, 0),
-            "menu-catalog-v2",
+            "menu-catalog-v3",
             "stable-option-semantics-v1",
             new MenuCatalogResponse.TaxPolicyResponse(
                 new BigDecimal("0.14975"),
