@@ -29,6 +29,7 @@ export interface OrderOutboxRecord {
   lastAttemptAt: string | null
   nextRetryAt: string | null
   serverOrderId: number | null
+  serverReplayed?: boolean
   lastErrorCode: string | null
   lastErrorMessage: string | null
   createdAt: string
@@ -96,15 +97,40 @@ function normalizeRecord(record: OrderOutboxRecord): OrderOutboxRecord {
   }
 }
 
+export function resolveOrderOutboxWrite(
+  current: OrderOutboxRecord | null,
+  incoming: OrderOutboxRecord,
+) {
+  if (!current) return incoming
+  if (current.key !== incoming.key) throw new Error('ORDER_OUTBOX_KEY_MISMATCH')
+  if (incoming.state === 'SUBMITTED') return incoming
+  if (current.state === 'SUBMITTED') return current
+  if (incoming.attemptCount < current.attemptCount) return current
+  if (current.state === 'SUBMITTING' && incoming.state === 'QUEUED') return current
+  if (
+    (current.state === 'CONFLICT' || current.state === 'FAILED_VALIDATION')
+    && incoming.state !== 'CANCELLED_LOCAL'
+    && incoming.attemptCount <= current.attemptCount
+  ) {
+    return current
+  }
+  return incoming
+}
+
 export async function saveOrderOutboxRecord(record: OrderOutboxRecord) {
-  const normalized = normalizeRecord(record)
+  const incoming = normalizeRecord(record)
   const database = await openOfflineDatabase()
   const transaction = database.transaction(OFFLINE_STORES.orderOutbox, 'readwrite')
   const completed = transactionComplete(transaction)
-  transaction.objectStore(OFFLINE_STORES.orderOutbox).put(normalized)
+  const records = transaction.objectStore(OFFLINE_STORES.orderOutbox)
+  const current = await requestResult<OrderOutboxRecord | undefined>(records.get(incoming.key))
+  const resolved = resolveOrderOutboxWrite(current ?? null, incoming)
+  if (resolved === incoming) {
+    records.put(incoming)
+  }
   await completed
-  publishOrderOutboxUpdate(normalized)
-  return normalized
+  if (resolved === incoming) publishOrderOutboxUpdate(incoming)
+  return resolved
 }
 
 export async function readOrderOutboxRecord(
@@ -172,11 +198,16 @@ export function beginOrderOutboxAttempt(record: OrderOutboxRecord, now = new Dat
   }
 }
 
-export function completeOrderOutboxAttempt(record: OrderOutboxRecord, serverOrderId: number): OrderOutboxRecord {
+export function completeOrderOutboxAttempt(
+  record: OrderOutboxRecord,
+  serverOrderId: number,
+  serverReplayed = false,
+): OrderOutboxRecord {
   return {
     ...record,
     state: 'SUBMITTED',
     serverOrderId,
+    serverReplayed,
     nextRetryAt: null,
     lastErrorCode: null,
     lastErrorMessage: null,
@@ -204,6 +235,7 @@ export function classifySubmissionFailure(status: number, errorCode?: string | n
   if (status === 0 || status >= 500 || errorCode === 'REQUEST_TIMEOUT' || errorCode === 'NETWORK_ERROR') {
     return 'FAILED_RETRYABLE' as const
   }
+  if (status === 400) return 'FAILED_VALIDATION' as const
   return 'CONFLICT' as const
 }
 

@@ -48,6 +48,7 @@ export interface MenuItemCustomizationConfig {
 export interface MenuItem {
   id: string
   sku?: string
+  sortOrder?: number | null
   categoryId: string
   categoryCode?: string
   itemType?: string
@@ -147,6 +148,7 @@ export interface BackendMenuItem {
   base_price: number
   is_active: boolean
   is_sold_out: boolean
+  sort_order: number | null
   options: BackendMenuOption[]
 }
 

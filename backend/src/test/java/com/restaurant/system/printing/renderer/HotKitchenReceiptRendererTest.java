@@ -32,7 +32,7 @@ class HotKitchenReceiptRendererTest {
         assertTrue(content.contains("UPDATED"));
         assertTrue(content.contains("HOT KITCHEN"));
         assertTrue(content.contains("桌号：T2"));
-        assertTrue(content.contains("大二(S) | +煎蛋 +葱 | 备注：less soup"));
+        assertTrue(content.contains("大二(S)×1 | +煎蛋 +葱 | 备注：less soup"));
         assertTrue(content.contains("备注：less soup"));
     }
 
@@ -80,7 +80,7 @@ class HotKitchenReceiptRendererTest {
 
         String content = renderer.render(request);
 
-        assertTrue(content.contains("大二(S) | +煎蛋 +葱 | 备注：less soup"));
+        assertTrue(content.contains("大二(S)×1 | +煎蛋 +葱 | 备注：less soup"));
         assertFalse(content.contains("毛豆"));
         assertFalse(content.contains("Edamame"));
         assertFalse(content.contains("土豆"));
@@ -149,8 +149,19 @@ class HotKitchenReceiptRendererTest {
 
         String content = renderer.render(request);
 
-        assertTrue(content.contains("中酸 | +蛋×2"));
+        assertTrue(content.contains("中酸×1 | +蛋×2"));
         assertFalse(content.contains("(中酸 | +蛋×2) ×1"));
+    }
+
+    @Test
+    void singleHotKitchenNoodleShowsBowlQuantitySeparatelyFromEggQuantity() {
+        HotKitchenReceiptRenderer renderer = renderer();
+        PrintRenderRequest request = hotNoodleRequest(hotNoodle(10L, "中酸 | +蛋"));
+
+        String content = renderer.render(request);
+
+        assertTrue(content.contains("中酸×1 | +蛋"));
+        assertFalse(content.contains("(中酸 | +蛋) ×1"));
     }
 
     @Test
@@ -176,8 +187,8 @@ class HotKitchenReceiptRendererTest {
 
         String content = renderer.render(request);
 
-        assertTrue(content.contains("中酸 | +蛋"));
-        assertTrue(content.contains("中辣 | +蛋"));
+        assertTrue(content.contains("中酸×1 | +蛋"));
+        assertTrue(content.contains("中辣×1 | +蛋"));
         assertFalse(content.contains("(中酸 | +蛋) ×2"));
         assertFalse(content.contains("(中辣 | +蛋) ×2"));
     }
@@ -192,8 +203,8 @@ class HotKitchenReceiptRendererTest {
 
         String content = renderer.render(request);
 
-        assertTrue(content.contains("中酸 | +蛋 | 备注：少汤"));
-        assertTrue(content.contains("中酸 | 不要葱 | +蛋"));
+        assertTrue(content.contains("中酸×1 | +蛋 | 备注：少汤"));
+        assertTrue(content.contains("中酸×1 | 不要葱 | +蛋"));
         assertFalse(content.contains(") ×2"));
     }
 
@@ -253,6 +264,39 @@ class HotKitchenReceiptRendererTest {
         String content = renderer.render(request);
 
         assertEquals(2, countOccurrences(content, "炸虾 ×1"));
+        assertFalse(content.contains("炸虾 ×2"));
+    }
+
+    @Test
+    void doesNotMergeHotKitchenItemsWhenNotesDiffer() {
+        HotKitchenReceiptRenderer renderer = renderer();
+        PrintRenderRequest request = baseRequest();
+        OrderItem firstItem = request.order_items.get(0);
+        firstItem.menu_item_id = 100L;
+        firstItem.item_name_snapshot_zh = "炸虾";
+        firstItem.category_code_snapshot = "DEEPFRIED";
+        firstItem.notes = null;
+
+        OrderItem secondItem = new OrderItem();
+        secondItem.id = 11L;
+        secondItem.order_id = request.order.id;
+        secondItem.menu_item_id = 100L;
+        secondItem.item_name_snapshot_zh = "炸虾";
+        secondItem.category_code_snapshot = "DEEPFRIED";
+        secondItem.notes = "不要酱";
+        secondItem.quantity = 1;
+
+        request.order_items = List.of(firstItem, secondItem);
+        request.order_item_options = List.of();
+        request.kitchen_tasks = List.of(
+            task(20L, firstItem.id, "DEEPFRIED", "炸虾", "炸虾", 1),
+            task(21L, secondItem.id, "DEEPFRIED", "炸虾", "炸虾", 1)
+        );
+
+        String content = renderer.render(request);
+
+        assertEquals(2, countOccurrences(content, "炸虾 ×1"));
+        assertTrue(content.contains("备注：不要酱"));
         assertFalse(content.contains("炸虾 ×2"));
     }
 

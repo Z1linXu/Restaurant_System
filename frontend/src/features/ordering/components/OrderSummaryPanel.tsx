@@ -67,7 +67,7 @@ export function OrderSummaryPanel({
         ? '正在提交订单...'
         : localSubmitState === 'FAILED_RETRYABLE'
           ? '等待自动重试'
-          : localSubmitState === 'CONFLICT'
+          : localSubmitState === 'CONFLICT' || localSubmitState === 'FAILED_VALIDATION'
             ? '请检查订单'
             : localSubmitState === 'SUBMITTED'
               ? '已进入服务器和厨房'

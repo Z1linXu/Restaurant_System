@@ -43,7 +43,7 @@ class MenuRevisionServiceImplTest {
         assertEquals(4L, response.store_id);
         assertEquals(8L, response.organization_id);
         assertEquals(12L, response.menu_revision);
-        assertEquals("menu-4-12-menu-catalog-v2-ca-qc-tax-2026-01", response.etag);
+        assertEquals("menu-4-12-menu-catalog-v3-ca-qc-tax-2026-01", response.etag);
     }
 
     @Test

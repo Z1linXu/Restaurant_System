@@ -87,6 +87,7 @@ public class MenuCatalogResponse {
         public BigDecimal base_price;
         public Boolean is_active;
         public Boolean is_sold_out;
+        public Integer sort_order;
         public List<OptionResponse> options;
 
         public ItemResponse(
@@ -100,6 +101,7 @@ public class MenuCatalogResponse {
             BigDecimal basePrice,
             Boolean isActive,
             Boolean isSoldOut,
+            Integer sortOrder,
             List<OptionResponse> options
         ) {
             this.id = id;
@@ -112,6 +114,7 @@ public class MenuCatalogResponse {
             this.base_price = basePrice;
             this.is_active = isActive;
             this.is_sold_out = isSoldOut;
+            this.sort_order = sortOrder;
             this.options = options;
         }
     }

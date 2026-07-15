@@ -55,6 +55,9 @@ public class MenuItem {
     @Column(name = "is_sold_out")
     public Boolean is_sold_out;
 
+    @Column(name = "sort_order")
+    public Integer sort_order;
+
     @Column(name = "created_at")
     public LocalDateTime created_at;
 

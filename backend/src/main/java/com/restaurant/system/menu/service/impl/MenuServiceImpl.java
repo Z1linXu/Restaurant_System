@@ -110,6 +110,7 @@ public class MenuServiceImpl implements MenuService {
                     item.base_price,
                     item.is_active,
                     item.is_sold_out,
+                    item.sort_order,
                     optionsByItemId.getOrDefault(item.id, List.of())
                 ));
         }

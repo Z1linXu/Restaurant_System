@@ -82,7 +82,7 @@ function appendOptions(parts: string[], options: BackendMenuOption[] | undefined
   })
 }
 
-function appendCategories(parts: string[], categories: BackendMenuCategory[]) {
+function appendCategories(parts: string[], categories: BackendMenuCategory[], includeItemSortOrder: boolean) {
   appendValue(parts, categories.length)
   categories.forEach((category) => {
     appendValue(parts, category.id)
@@ -103,6 +103,9 @@ function appendCategories(parts: string[], categories: BackendMenuCategory[]) {
       appendValue(parts, item.base_price)
       appendValue(parts, item.is_active)
       appendValue(parts, item.is_sold_out)
+      if (includeItemSortOrder) {
+        appendValue(parts, item.sort_order)
+      }
       appendOptions(parts, item.options)
     })
   })
@@ -127,7 +130,7 @@ export function calculateMenuContentHash(catalog: BackendMenuCatalog) {
   appendValue(parts, catalog.tax_policy?.rate)
   appendValue(parts, catalog.tax_policy?.label)
   appendValue(parts, catalog.tax_policy?.version)
-  appendCategories(parts, catalog.categories)
+  appendCategories(parts, catalog.categories, catalog.catalog_version !== 'menu-catalog-v2')
   return `fnv1a32:${fnv1a32(parts.join(''))}`
 }
 

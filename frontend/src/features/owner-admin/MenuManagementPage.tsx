@@ -4,6 +4,7 @@ import {
   fetchMenuManagementContext,
   fetchPlatformOverview,
   rebuildAnalyticsForDate,
+  reorderAdminMenuItems,
   savePlatformEntity,
   type MenuItemAdminRecord,
   type PlatformAdminOverview,
@@ -12,6 +13,11 @@ import { ApiRequestError } from '../../services/apiClient'
 import { MenuOptionsPanel } from './MenuOptionsPanel'
 import { useAuth } from '../auth/useAuth'
 import { useCurrentStore } from '../store/StoreContext'
+import {
+  applyCategoryItemOrder,
+  moveMenuItemWithinCategory,
+  sortMenuItemsByDisplayOrder,
+} from './menuItemOrdering'
 
 interface MenuItemEditorState {
   id?: number
@@ -26,6 +32,7 @@ interface MenuItemEditorState {
   cost_per_item: number
   is_active: boolean
   is_sold_out: boolean
+  sort_order: number
 }
 
 type ToastState =
@@ -75,6 +82,7 @@ function buildDraft(overview: PlatformAdminOverview, storeId: number): MenuItemE
     cost_per_item: 0,
     is_active: true,
     is_sold_out: false,
+    sort_order: 0,
   }
 }
 
@@ -92,6 +100,7 @@ function toEditorState(record: Record<string, unknown> | MenuItemAdminRecord, fa
     cost_per_item: asNumber(record.cost_per_item, 0),
     is_active: asBoolean(record.is_active, true),
     is_sold_out: asBoolean(record.is_sold_out, false),
+    sort_order: asNumber(record.sort_order, Number.MAX_SAFE_INTEGER),
   }
 }
 
@@ -115,6 +124,7 @@ export function MenuManagementPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [rebuilding, setRebuilding] = useState(false)
+  const [reordering, setReordering] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [editor, setEditor] = useState<MenuItemEditorState | null>(null)
   const [optionsItem, setOptionsItem] = useState<MenuItemEditorState | null>(null)
@@ -145,9 +155,7 @@ export function MenuManagementPage() {
       ])
       setOverview(nextOverview)
       setMenuItems(
-        nextMenuItems
-          .map((record) => toEditorState(record, storeId))
-          .sort((left, right) => left.name_zh.localeCompare(right.name_zh, 'zh-Hans')),
+        sortMenuItemsByDisplayOrder(nextMenuItems.map((record) => toEditorState(record, storeId))),
       )
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Failed to load menu management data')
@@ -239,6 +247,25 @@ export function MenuManagementPage() {
     })
   }, [categoryFilter, menuItems, searchTerm, stationFilter, statusFilter])
 
+  const canReorder = categoryFilter !== 'all'
+    && searchTerm.trim() === ''
+    && stationFilter === 'all'
+    && statusFilter === 'all'
+
+  const categoryOrder = useMemo(
+    () => categoryFilter === 'all'
+      ? []
+      : sortMenuItemsByDisplayOrder(
+        menuItems.filter((item) => String(item.category_id) === categoryFilter && item.id != null),
+      ),
+    [categoryFilter, menuItems],
+  )
+
+  const categoryPositionByItemId = useMemo(
+    () => new Map(categoryOrder.map((item, index) => [item.id, index])),
+    [categoryOrder],
+  )
+
   const openCreate = () => {
     if (!overview) {
       return
@@ -259,11 +286,39 @@ export function MenuManagementPage() {
 
   const refreshMenuItems = async (storeId: number) => {
     const nextMenuItems = await fetchAdminMenuItems(storeId)
-    const normalized = nextMenuItems
-      .map((record) => toEditorState(record, storeId))
-      .sort((left, right) => left.name_zh.localeCompare(right.name_zh, 'zh-Hans'))
+    const normalized = sortMenuItemsByDisplayOrder(
+      nextMenuItems.map((record) => toEditorState(record, storeId)),
+    )
     setMenuItems(normalized)
     return normalized
+  }
+
+  const handleReorder = async (item: MenuItemEditorState, direction: 'up' | 'down') => {
+    if (!canReorder || item.id == null) {
+      return
+    }
+    const itemIds = moveMenuItemWithinCategory(menuItems, item.category_id, item.id, direction)
+    if (!itemIds) {
+      return
+    }
+
+    const previousItems = menuItems
+    try {
+      setReordering(true)
+      setToast(null)
+      setMenuItems(applyCategoryItemOrder(menuItems, item.category_id, itemIds))
+      await reorderAdminMenuItems(Number(selectedStoreId), item.category_id, itemIds)
+      await refreshMenuItems(Number(selectedStoreId))
+      setToast({ kind: 'success', message: '菜品显示顺序已保存。' })
+    } catch (reorderError) {
+      setMenuItems(previousItems)
+      setToast({
+        kind: 'error',
+        message: reorderError instanceof Error ? reorderError.message : '保存菜品顺序失败',
+      })
+    } finally {
+      setReordering(false)
+    }
   }
 
   const handleSave = async () => {
@@ -572,6 +627,12 @@ export function MenuManagementPage() {
                   </select>
                 </div>
 
+                <div className="mt-3 rounded-[16px] bg-[rgba(26,28,25,0.04)] px-4 py-3 text-[0.82rem] text-[var(--muted)]">
+                  {canReorder
+                    ? '使用每行的上移/下移按钮调整当前分类的点餐显示顺序，保存后菜单缓存会在下一次同步时更新。'
+                    : '如需调整顺序，请选择单一分类，并清空搜索及其他筛选条件。'}
+                </div>
+
                 {loading ? (
                   <div className="mt-5 rounded-[18px] bg-[rgba(26,28,25,0.04)] px-4 py-5 text-[0.9rem] text-[var(--muted)]">
                     Loading menu items...
@@ -587,6 +648,7 @@ export function MenuManagementPage() {
                           <th className="px-4 py-3">Price</th>
                           <th className="px-4 py-3">Cost</th>
                           <th className="px-4 py-3">Status</th>
+                          <th className="px-4 py-3">顺序</th>
                           <th className="px-4 py-3"></th>
                         </tr>
                       </thead>
@@ -624,6 +686,38 @@ export function MenuManagementPage() {
                                   }`}
                                 >
                                   {item.is_sold_out ? 'Sold Out' : 'Available'}
+                                </button>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex min-w-[104px] gap-2">
+                                <button
+                                  type="button"
+                                  aria-label={`上移 ${item.name_zh}`}
+                                  title="上移"
+                                  onClick={() => void handleReorder(item, 'up')}
+                                  disabled={
+                                    !canReorder
+                                      || reordering
+                                      || categoryPositionByItemId.get(item.id) === 0
+                                  }
+                                  className="min-h-11 min-w-11 rounded-[14px] bg-[rgba(26,28,25,0.06)] px-3 font-bold text-[var(--on-surface)] disabled:cursor-not-allowed disabled:opacity-35"
+                                >
+                                  ↑
+                                </button>
+                                <button
+                                  type="button"
+                                  aria-label={`下移 ${item.name_zh}`}
+                                  title="下移"
+                                  onClick={() => void handleReorder(item, 'down')}
+                                  disabled={
+                                    !canReorder
+                                      || reordering
+                                      || categoryPositionByItemId.get(item.id) === categoryOrder.length - 1
+                                  }
+                                  className="min-h-11 min-w-11 rounded-[14px] bg-[rgba(26,28,25,0.06)] px-3 font-bold text-[var(--on-surface)] disabled:cursor-not-allowed disabled:opacity-35"
+                                >
+                                  ↓
                                 </button>
                               </div>
                             </td>

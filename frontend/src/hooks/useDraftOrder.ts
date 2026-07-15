@@ -27,8 +27,10 @@ import {
   deleteLocalDraft,
   deleteLocalDraftIfClientMatches,
   readLocalDraft,
+  reopenRejectedLocalDraft,
   resolveLocalDraftForOpen,
   saveLocalDraft,
+  saveLocalDraftIfClientMatches,
   type LocalDraftContext,
   type LocalDraftRecord,
   type LocalDraftScope,
@@ -535,8 +537,10 @@ export function useDraftOrder(
       saveTimerRef.current = null
     }
     if (!localDraftRef.current) return
+    const draftToSave = localDraftRef.current
     try {
-      const saved = await saveLocalDraft(localDraftRef.current)
+      const saved = await saveLocalDraftIfClientMatches(draftToSave, draftToSave.clientOrderId)
+      if (!saved || localDraftRef.current?.clientOrderId !== draftToSave.clientOrderId) return
       localDraftRef.current = saved
       setLastLocalSavedAt(saved.updatedAt)
       setPersistenceError(null)
@@ -590,8 +594,9 @@ export function useDraftOrder(
           ).catch(() => undefined)
         } else {
           localDraftRef.current = updatedDraft
-          void saveLocalDraft(updatedDraft)
+          void saveLocalDraftIfClientMatches(updatedDraft, currentDraft.clientOrderId)
             .then((saved) => {
+              if (!saved || localDraftRef.current?.clientOrderId !== currentDraft.clientOrderId) return
               localDraftRef.current = saved
               setLastLocalSavedAt(saved.updatedAt)
             })
@@ -810,9 +815,9 @@ export function useDraftOrder(
           recordSubmit('SUCCEEDED')
           return submittedOrder
         }
-        if (queued?.state === 'CONFLICT') {
+        if (queued?.state === 'CONFLICT' || queued?.state === 'FAILED_VALIDATION') {
           setOutboxRecord(queued)
-          setError(queued.lastErrorMessage ?? '订单提交冲突，请返回修改并重新检查。')
+          setError(queued.lastErrorMessage ?? '服务器未接受该订单，请返回修改并重新检查。')
           recordSubmit('FAILED', new Error(queued.lastErrorCode ?? 'ORDER_SUBMIT_CONFLICT'))
           return null
         }
@@ -842,8 +847,8 @@ export function useDraftOrder(
           return result.order
         }
         kickOrderOutboxProcessor()
-        if (result.record?.state === 'CONFLICT') {
-          setError(result.record.lastErrorMessage ?? '订单提交冲突，请人工检查。')
+        if (result.record?.state === 'CONFLICT' || result.record?.state === 'FAILED_VALIDATION') {
+          setError(result.record.lastErrorMessage ?? '订单未被服务器接受，请人工检查。')
           recordSubmit('FAILED', new Error(result.record.lastErrorCode ?? 'ORDER_SUBMIT_CONFLICT'))
         } else {
           recordSubmit('FAILED', new Error(result.record?.lastErrorCode ?? 'ORDER_QUEUED'))
@@ -873,18 +878,37 @@ export function useDraftOrder(
     },
     returnQueuedOrderToDraft: async () => {
       if (!outboxRecord || !localDraftRef.current) return
+      const latest = await readOrderOutboxRecord(
+        outboxRecord.accountId,
+        outboxRecord.organizationId,
+        outboxRecord.storeId,
+        outboxRecord.clientOrderId,
+      )
+      if (!latest) return
+      if (latest.state === 'SUBMITTING' || latest.state === 'FAILED_RETRYABLE') {
+        const message = '服务器是否已接单尚未确认，不能修改或取消。请先立即重试以确认原订单。'
+        setError(message)
+        throw new Error(message)
+      }
       const cancelled = await saveOrderOutboxRecord({
-        ...outboxRecord,
+        ...latest,
         state: 'CANCELLED_LOCAL',
         nextRetryAt: null,
       })
       setOutboxRecord(cancelled)
-      localDraftRef.current = await saveLocalDraft({
-        ...localDraftRef.current,
-        submitState: 'LOCAL_DRAFT',
-        lastError: null,
-        nextRetryAt: null,
-      })
+      const shouldRotateIdentity = latest.state === 'CONFLICT' || latest.state === 'FAILED_VALIDATION'
+      const editableDraft = shouldRotateIdentity
+        ? reopenRejectedLocalDraft(localDraftRef.current)
+        : {
+            ...localDraftRef.current,
+            submitState: 'LOCAL_DRAFT' as const,
+            lastError: null,
+            nextRetryAt: null,
+          }
+      localDraftRef.current = await saveLocalDraft(editableDraft)
+      setLocalDraftId(localDraftRef.current.localDraftId)
+      setClientOrderId(localDraftRef.current.clientOrderId)
+      if (shouldRotateIdentity) setOutboxRecord(null)
       setError(null)
     },
     refreshOrder: async () => {

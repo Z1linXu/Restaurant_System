@@ -6630,3 +6630,98 @@ PAD_DIRECT worker behavior.
 - The fix is frontend-only IndexedDB lifecycle handling. Backend idempotency,
   kitchen task creation, print job creation, and finish-table behavior remain
   unchanged.
+
+## Pilot Reliability: Weak-Network Submission Consistency
+
+The `PR-PILOT-RELIABILITY-1` weak-network fix keeps one submission identity and
+one in-flight request for each local order. It does not change the order
+lifecycle, payment/refund, `completeOrder`, printing dispatch, KDS, or inventory
+behavior.
+
+- Root cause: automatic outbox replay and a manual submit could observe the same
+  outbox record while only one caller owned the network result. In addition,
+  unconditional IndexedDB writes allowed an older `QUEUED` or `SUBMITTING`
+  snapshot to overwrite a newer `SUBMITTED` record, and a delayed same-table
+  draft save could overwrite the next order lifecycle.
+- `processOrderOutboxRecord(...)` now shares one Promise per outbox key. Manual
+  submit and foreground replay therefore await the same request and the same
+  returned order id. Every retry continues to use the original
+  `client_order_id` / idempotency key.
+- IndexedDB outbox writes preserve confirmed `SUBMITTED` state, reject stale
+  attempt counters, and distinguish `FAILED_VALIDATION` from retryable network
+  failures and `CONFLICT`. Same-table draft saves use a client-order compare and
+  set guard so an old async write cannot replace a newly rotated draft.
+- A lost response after a successful server commit is safe: replaying the same
+  store, key, and payload returns the original order with `replayed = true`, then
+  the client records `SUBMITTED`. A changed payload under the same key remains a
+  non-retryable HTTP `409 IDEMPOTENCY_CONFLICT`.
+- The former generic HTTP `400` for an existing active table/pickup order came
+  from `OrderServiceImpl.createOrReplaceDraftAndSubmit(...)`. It now returns
+  HTTP `409 ORDER_CONTEXT_CONFLICT`; a stale server draft similarly returns
+  `409 SERVER_ORDER_UPDATE_REQUIRED`.
+- Completed and cancelled orders were not found in the editable-order query;
+  the query remains limited to `draft`, `submitted`, `preparing`, and `ready`.
+  The observed previous-order symptom was instead consistent with restoring a
+  terminal local draft/outbox lifecycle, which is now rotated before a new
+  same-table order opens.
+- Logs include only safe, truncated submission identifiers, store id, attempt,
+  HTTP status, resolution, replay result, and returned order id. Tokens, full
+  payloads, notes, and customer data are not logged.
+
+## Pilot Reliability: Receipt Formatting Rules
+
+Receipt formatting restored in this batch was recovered from historical commits
+`19c2e2b` and `3e43593`; it had been overwritten by the foundation snapshot in
+`943ed07`.
+
+- GRAB fried-item rows aggregate only when stable item identity, station,
+  options/modifiers, combo role, and notes all match. Examples are `2*炸虾` and
+  `1*春卷`. Different notes or options remain separate rows in first-occurrence
+  order.
+- GRAB noodle rows always show a single-bowl quantity, for example
+  `中酸×1 | +蛋×2 | 备注：少汤`. Identical multi-bowl output keeps the established
+  grouped format.
+- HOT_KITCHEN keeps its renderer-specific multiplication mark and aggregation,
+  for example `炸虾 ×3`. Different options or notes remain separate
+  `炸虾 ×1` rows. A single noodle also prints `中酸×1 | +蛋`.
+- FRONTDESK_RECEIPT uses customer-facing Chinese labels. Examples include
+  `中碗牛肉面` and `1* combo 大碗牛肉面`; it does not expose `传统牛肉面`,
+  `regular`, or `large`. Egg, side, spice, options, and notes retain their
+  existing order.
+- GRAB, HOT_KITCHEN, and FRONTDESK_RECEIPT intentionally retain separate
+  display syntax. This batch does not unify their renderer output or change
+  dispatch/routing behavior.
+
+## Pilot Reliability: Menu Item Display Ordering
+
+Flyway migration `V4__add_menu_item_sort_order.sql` adds the first persistent
+item-level order to `menu_items`.
+
+- Existing items are backfilled per `(store_id, category_id)` in stable id order
+  using positions `10, 20, ...`. `sort_order` is non-null and indexed by
+  `(store_id, category_id, sort_order, id)`.
+- `PUT /api/v1/admin/menu/categories/{categoryId}/items/reorder` accepts
+  `store_id` and the complete ordered `item_ids` for one category. The service
+  locks that category's rows, rejects duplicate, missing, cross-category, and
+  cross-store ids, renumbers the full category in one transaction, and advances
+  the store menu revision once.
+- Menu Management exposes 44 px up/down controls after the operator selects one
+  category and clears other filters. It optimistically updates the list, blocks
+  duplicate operations while saving, restores the old order on failure, and
+  reloads the persisted order after success.
+- New items append at the category maximum plus ten. Moving an item to another
+  category also appends it to the new category; disabling or re-enabling an item
+  preserves its position.
+- Catalog version `menu-catalog-v3` includes item `sort_order` in the response
+  and deterministic content hash. Ordering sorts by position with item id as a
+  stable fallback. The version/revision change refreshes IndexedDB atomically;
+  legacy v2 snapshots remain hash-readable until a network refresh succeeds.
+
+## Current Restaurant Pilot Boundary
+
+The concise enabled/disabled matrix for this reliability batch is maintained in
+`docs/CURRENT_PILOT_SCOPE.md`. The current pilot includes authenticated,
+store-scoped ordering, weak-network drafts/outbox, printer restaurant mode,
+PAD_DIRECT, menu management, item ordering, and cloud deployment. This batch
+does not enable or modify KDS, Pickup, Inventory, Platform Admin, Redis,
+Payment, refund, or `completeOrder` behavior.

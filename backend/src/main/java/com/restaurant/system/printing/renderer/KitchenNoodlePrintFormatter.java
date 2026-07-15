@@ -78,9 +78,17 @@ final class KitchenNoodlePrintFormatter {
     static String formatLine(NoodleConfig config, int quantity) {
         String display = config == null ? "Item" : config.displayText();
         if (quantity <= 1) {
-            return display;
+            return appendSingleBowlQuantity(display);
         }
         return "(" + display + ") ×" + quantity;
+    }
+
+    private static String appendSingleBowlQuantity(String display) {
+        int firstSeparator = display.indexOf(" | ");
+        if (firstSeparator < 0) {
+            return display + "×1";
+        }
+        return display.substring(0, firstSeparator) + "×1" + display.substring(firstSeparator);
     }
 
     static NoodleGroupKey buildGroupKey(

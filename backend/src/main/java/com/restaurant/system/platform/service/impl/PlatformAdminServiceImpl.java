@@ -282,7 +282,10 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
     public List<MenuItem> getMenuItems(Long storeId) {
         return menuItemRepository.findAll().stream()
             .filter(item -> storeId.equals(item.store_id))
-            .sorted(Comparator.comparing(item -> item.id))
+            .sorted(Comparator
+                .comparing((MenuItem item) -> item.category_id == null ? Long.MAX_VALUE : item.category_id)
+                .thenComparing(item -> item.sort_order == null ? Integer.MAX_VALUE : item.sort_order)
+                .thenComparing(item -> item.id == null ? Long.MAX_VALUE : item.id))
             .toList();
     }
 
@@ -293,6 +296,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
             ? new MenuItem()
             : menuItemRepository.findById(menuItem.id).orElseThrow(() -> new BusinessException("Menu item not found"));
         Long previousStoreId = target.store_id;
+        Long previousCategoryId = target.category_id;
         target.store_id = menuItem.store_id;
         target.category_id = menuItem.category_id;
         target.station_id = menuItem.station_id;
@@ -304,10 +308,20 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         target.cost_per_item = menuItem.cost_per_item;
         target.is_active = menuItem.is_active == null ? true : menuItem.is_active;
         target.is_sold_out = menuItem.is_sold_out == null ? false : menuItem.is_sold_out;
+        if (target.sort_order == null
+            || !java.util.Objects.equals(previousStoreId, target.store_id)
+            || !java.util.Objects.equals(previousCategoryId, target.category_id)) {
+            target.sort_order = nextMenuItemSortOrder(target.store_id, target.category_id);
+        }
         stamp(target, menuItem.id == null);
         MenuItem saved = menuItemRepository.save(target);
         incrementMenuRevisions(previousStoreId, saved.store_id);
         return saved;
+    }
+
+    private Integer nextMenuItemSortOrder(Long storeId, Long categoryId) {
+        Integer currentMax = menuItemRepository.findMaxSortOrder(storeId, categoryId);
+        return (currentMax == null ? 0 : currentMax) + 10;
     }
 
     @Override
