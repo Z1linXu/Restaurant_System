@@ -6615,11 +6615,13 @@ PAD_DIRECT worker behavior.
   `SUBMITTED` outbox record. `OrderingPage` interpreted that restored
   `SUBMITTED` state as a fresh submit completion and immediately navigated back
   to the table board.
-- The local draft opener now resolves the saved draft and related outbox state
-  before exposing either to React state. Terminal local lifecycles
-  (`SUBMITTED`, `CANCELLED_LOCAL`) are replaced with a new empty
-  `LOCAL_DRAFT` using the same account/organization/store/table context but a
-  new `localDraftId` and `clientOrderId`.
+- The local draft opener resolves the saved draft and related outbox state
+  before exposing either to React state. `CANCELLED_LOCAL` and confirmed server
+  terminal states (`COMPLETED`, `CANCELLED`) start a new empty `LOCAL_DRAFT`
+  using the same account/organization/store/table context but new
+  `localDraftId` and `clientOrderId` values. `SUBMITTED` is server-confirmed but
+  not terminal; it remains linked until the server reports whether the order is
+  active or complete.
 - Active offline work remains protected. `QUEUED`, `SUBMITTING`,
   `FAILED_RETRYABLE`, and `CONFLICT` records are not rotated or deleted, so
   weak-network submissions and operator-review conflicts keep their original
@@ -6716,6 +6718,44 @@ item-level order to `menu_items`.
   and deterministic content hash. Ordering sorts by position with item id as a
   stable fallback. The version/revision change refreshes IndexedDB atomically;
   legacy v2 snapshots remain hash-readable until a network refresh succeeds.
+
+## Pilot Reliability 2: Terminal Drafts, Noodle Default, And Reorder UX
+
+`PR-PILOT-RELIABILITY-2` addresses three restaurant-pilot issues without
+changing order completion semantics, payment/refund, printing state, KDS,
+Pickup, Inventory, Platform Admin, or Redis.
+
+- IndexedDB `localDrafts.submitState` and `orderOutbox.state` now recognize
+  server terminal values `COMPLETED` and `CANCELLED`. Terminal writes take
+  precedence over late queued/submitting callbacks. Matching records are
+  finalized only by account, organization, store, and exact `serverOrderId`;
+  old displayed items are cleared without deleting a newer same-table draft.
+- A successful finish response and `order.completed`/`order.cancelled`
+  frontdesk events finalize matching local records immediately. On app resume,
+  board load, or network recovery, known `serverOrderId` values are reconciled
+  with the server. If the linked order is still active it opens as the server
+  order; if it is terminal, opening the table creates a blank draft with new
+  local and idempotency identities. Network failure never downgrades a known
+  server-order snapshot into a local new order.
+- The board warning counts only `QUEUED`, `SUBMITTING`, `FAILED_RETRYABLE`, and
+  `CONFLICT`. It excludes `LOCAL_DRAFT`, confirmed `SUBMITTED`, validation
+  failures, local cancellations, and server terminal records. Workspace
+  snapshots contain auth/store context only and therefore require no order
+  cleanup.
+- Chicken shredded cold noodle uses stable SKU
+  `cold_noodle_shredded_chicken`. Its first active `NOODLE_TYPE` option is the
+  new-order default; stable code `noodle_thin` is moved first by Flyway
+  `V5__set_cold_chicken_noodle_default_type.sql`. The migration is scoped to
+  that SKU, advances affected store menu revisions, and leaves every other
+  noodle item unchanged. Menu Management displays noodle types and supports a
+  one-touch `设为默认` action through the existing option reorder API.
+- Menu item ordering now has an explicit category-scoped sorting mode. The
+  operator selects one category and taps `开始排序`; search, station, and status
+  filters are temporarily cleared so the complete category is visible, then
+  restored on exit. Enabled arrows use high-contrast 44 px controls, while only
+  unavailable boundary directions or an in-flight save are disabled. Each move
+  keeps the existing transactional API, optimistic rollback, persisted reload,
+  and menu-revision cache refresh behavior.
 
 ## Current Restaurant Pilot Boundary
 
