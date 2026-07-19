@@ -9,6 +9,8 @@ public class OrderItemResponse {
     public Long id;
     public Long menu_item_id;
     public String category_code_snapshot;
+    public Long station_id_snapshot;
+    public String item_sku_snapshot;
     public String item_name_snapshot_zh;
     public String item_name_snapshot_en;
     public Integer quantity;

@@ -23,7 +23,10 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +36,7 @@ public class IdempotentOrderSubmissionServiceImpl implements IdempotentOrderSubm
 
     private static final String STATUS_COMPLETED = "COMPLETED";
     private static final Set<String> REQUIRED_OPTION_TYPES = Set.of("size", "soup_base");
+    private static final Logger log = LoggerFactory.getLogger(IdempotentOrderSubmissionServiceImpl.class);
 
     private final OrderSubmissionRequestRepository submissionRepository;
     private final StoreRepository storeRepository;
@@ -79,7 +83,8 @@ public class IdempotentOrderSubmissionServiceImpl implements IdempotentOrderSubm
         OrderSubmissionRequest submission = submissionRepository.findForUpdate(request.store_id, idempotencyKey)
             .orElseThrow(() -> new IllegalStateException("Idempotency record was not created"));
 
-        if (!payloadHash.equals(submission.payloadHash)) {
+        if (!payloadHash.equals(submission.payloadHash)
+            && !hashService.legacyHash(request).equals(submission.payloadHash)) {
             throw conflict(
                 "IDEMPOTENCY_CONFLICT",
                 "This idempotency key was already used with different order content"
@@ -89,8 +94,8 @@ public class IdempotentOrderSubmissionServiceImpl implements IdempotentOrderSubm
             return response(submission, orderService.getOrderDetail(submission.orderId), true);
         }
 
-        Store store = validateStoreAndMenuRevision(request);
-        validateMenuAndPrice(request);
+        Store store = validateStore(request);
+        validateSnapshotsAndLogMenuDrift(request, store);
 
         CreateOrderRequest createRequest = new CreateOrderRequest();
         createRequest.store_id = request.store_id;
@@ -130,51 +135,51 @@ public class IdempotentOrderSubmissionServiceImpl implements IdempotentOrderSubm
         }
     }
 
-    private Store validateStoreAndMenuRevision(IdempotentOrderSubmitRequest request) {
+    private Store validateStore(IdempotentOrderSubmitRequest request) {
         Store store = storeRepository.findById(request.store_id)
             .orElseThrow(() -> badRequest("STORE_MISMATCH", "Store does not exist"));
         if (!request.organization_id.equals(store.organization_id)) {
             throw conflict("STORE_MISMATCH", "Organization does not own this store");
         }
-        if (!request.menu_revision.equals(store.menu_revision)) {
-            throw conflict(
-                "MENU_REVISION_STALE",
-                "Menu changed since this order was prepared; refresh and review the order"
-            );
-        }
         return store;
     }
 
-    private void validateMenuAndPrice(IdempotentOrderSubmitRequest request) {
-        BigDecimal subtotal = BigDecimal.ZERO;
+    private void validateSnapshotsAndLogMenuDrift(IdempotentOrderSubmitRequest request, Store store) {
+        boolean currentMenuRevision = Objects.equals(request.menu_revision, store.menu_revision);
+        if (!currentMenuRevision) {
+            logMenuDrift(request, null, "MENU_REVISION_MISMATCH", null, null, store.menu_revision);
+        }
         for (CreateOrderItemRequest itemRequest : request.items) {
-            MenuItem item = menuItemRepository.findById(itemRequest.menu_item_id)
-                .orElseThrow(() -> badRequest("ITEM_DISABLED", "Menu item is no longer available"));
-            if (!request.store_id.equals(item.store_id)) {
-                throw conflict("STORE_MISMATCH", "Menu item belongs to another store");
-            }
-            if (!Boolean.TRUE.equals(item.is_active)) {
-                throw conflict("ITEM_DISABLED", "Menu item is disabled: " + item.id);
-            }
-            if (Boolean.TRUE.equals(item.is_sold_out)) {
-                throw conflict("ITEM_SOLD_OUT", "Menu item is sold out: " + item.id);
-            }
             if (itemRequest.quantity == null || itemRequest.quantity < 1) {
                 throw badRequest("ITEM_QUANTITY_INVALID", "Item quantity must be at least one");
             }
-
-            List<MenuItemOption> availableOptions = menuItemOptionRepository.findAllByMenuItemIdOrdered(item.id);
-            Set<String> requiredTypes = new HashSet<>();
-            for (MenuItemOption option : availableOptions) {
-                if (Boolean.TRUE.equals(option.is_active) && option.option_type != null) {
-                    String optionType = option.option_type.toLowerCase(Locale.ROOT);
-                    if (REQUIRED_OPTION_TYPES.contains(optionType)) requiredTypes.add(optionType);
+            MenuItem item = menuItemRepository.findById(itemRequest.menu_item_id).orElse(null);
+            if (item != null && !request.store_id.equals(item.store_id)) {
+                throw conflict("STORE_MISMATCH", "Menu item belongs to another store");
+            }
+            if (item == null) {
+                requireItemSnapshot(itemRequest);
+                logMenuDrift(request, itemRequest, "MENU_ITEM_MISSING", null, null, store.menu_revision);
+            } else {
+                if (!Boolean.TRUE.equals(item.is_active)) {
+                    logMenuDrift(request, itemRequest, "MENU_ITEM_DISABLED", item.name_zh, item.base_price, store.menu_revision);
+                }
+                if (Boolean.TRUE.equals(item.is_sold_out)) {
+                    logMenuDrift(request, itemRequest, "MENU_ITEM_SOLD_OUT", item.name_zh, item.base_price, store.menu_revision);
+                }
+                if ((trimToNull(itemRequest.item_name_snapshot_zh) != null
+                    && !sameText(itemRequest.item_name_snapshot_zh, item.name_zh))
+                    || (trimToNull(itemRequest.item_name_snapshot_en) != null
+                    && !sameText(itemRequest.item_name_snapshot_en, item.name_en))) {
+                    logMenuDrift(request, itemRequest, "MENU_ITEM_NAME_CHANGED", item.name_zh, item.base_price, store.menu_revision);
+                }
+                if (itemRequest.unit_price_snapshot != null
+                    && defaultAmount(item.base_price).compareTo(itemRequest.unit_price_snapshot) != 0) {
+                    logMenuDrift(request, itemRequest, "MENU_ITEM_PRICE_CHANGED", item.name_zh, item.base_price, store.menu_revision);
                 }
             }
-
-            BigDecimal lineAmount = defaultAmount(item.base_price).multiply(BigDecimal.valueOf(itemRequest.quantity));
-            Set<String> selectedTypes = new HashSet<>();
             Set<Long> selectedOptionIds = new HashSet<>();
+            Set<String> selectedOptionTypes = new HashSet<>();
             for (CreateOrderItemOptionRequest optionRequest : safeOptions(itemRequest)) {
                 if (optionRequest.option_id == null || optionRequest.quantity == null || optionRequest.quantity < 1) {
                     throw badRequest("OPTION_INVALID", "Option id and positive quantity are required");
@@ -182,28 +187,91 @@ public class IdempotentOrderSubmissionServiceImpl implements IdempotentOrderSubm
                 if (!selectedOptionIds.add(optionRequest.option_id)) {
                     throw badRequest("OPTION_INVALID", "Duplicate option id: " + optionRequest.option_id);
                 }
-                MenuItemOption option = menuItemOptionRepository.findById(optionRequest.option_id)
-                    .orElseThrow(() -> badRequest("OPTION_INVALID", "Option does not exist: " + optionRequest.option_id));
+                MenuItemOption option = menuItemOptionRepository.findById(optionRequest.option_id).orElse(null);
+                if (option == null) {
+                    requireOptionSnapshot(optionRequest);
+                    logMenuDrift(request, itemRequest, "MENU_OPTION_MISSING", null, null, store.menu_revision);
+                    continue;
+                }
+                if (item != null && !item.id.equals(option.menu_item_id)
+                    && !"remove".equalsIgnoreCase(option.option_type)) {
+                    throw badRequest("OPTION_REQUEST_INVALID", "Option does not belong to menu item: " + option.id);
+                }
+                if (option.option_type != null) {
+                    selectedOptionTypes.add(option.option_type.toLowerCase(Locale.ROOT));
+                }
                 if (!Boolean.TRUE.equals(option.is_active)) {
-                    throw conflict("OPTION_INVALID", "Option is disabled: " + option.id);
+                    logMenuDrift(request, itemRequest, "MENU_OPTION_DISABLED", option.name_zh, option.price_delta, store.menu_revision);
                 }
-                if (!item.id.equals(option.menu_item_id) && !"remove".equalsIgnoreCase(option.option_type)) {
-                    throw badRequest("OPTION_INVALID", "Option does not belong to menu item: " + option.id);
+                if ((trimToNull(optionRequest.option_name_snapshot_zh) != null
+                    && !sameText(optionRequest.option_name_snapshot_zh, option.name_zh))
+                    || (trimToNull(optionRequest.option_name_snapshot_en) != null
+                    && !sameText(optionRequest.option_name_snapshot_en, option.name_en))) {
+                    logMenuDrift(request, itemRequest, "MENU_OPTION_NAME_CHANGED", option.name_zh, option.price_delta, store.menu_revision);
                 }
-                if (option.option_type != null) selectedTypes.add(option.option_type.toLowerCase(Locale.ROOT));
-                lineAmount = lineAmount.add(
-                    defaultAmount(option.price_delta).multiply(BigDecimal.valueOf(optionRequest.quantity))
-                );
+                if (optionRequest.option_price_snapshot != null
+                    && defaultAmount(option.price_delta).compareTo(optionRequest.option_price_snapshot) != 0) {
+                    logMenuDrift(request, itemRequest, "MENU_OPTION_PRICE_CHANGED", option.name_zh, option.price_delta, store.menu_revision);
+                }
             }
-            if (!selectedTypes.containsAll(requiredTypes)) {
-                throw conflict("REQUIRED_OPTION_MISSING", "A required size or soup option is missing");
+            if (currentMenuRevision && item != null) {
+                Set<String> requiredOptionTypes = menuItemOptionRepository.findAllByMenuItemIdOrdered(item.id).stream()
+                    .filter(option -> Boolean.TRUE.equals(option.is_active) && option.option_type != null)
+                    .map(option -> option.option_type.toLowerCase(Locale.ROOT))
+                    .filter(REQUIRED_OPTION_TYPES::contains)
+                    .collect(java.util.stream.Collectors.toSet());
+                if (!selectedOptionTypes.containsAll(requiredOptionTypes)) {
+                    throw badRequest("ORDER_OPTION_REQUIRED", "A required size or soup option is missing");
+                }
             }
-            subtotal = subtotal.add(lineAmount);
         }
-        if (request.expected_subtotal_amount != null
-            && request.expected_subtotal_amount.compareTo(subtotal) != 0) {
-            throw conflict("PRICE_CHANGED", "Menu price changed; refresh and review the order");
+    }
+
+    private void requireItemSnapshot(CreateOrderItemRequest item) {
+        if (item.unit_price_snapshot == null || item.station_id_snapshot == null
+            || trimToNull(item.category_code_snapshot) == null
+            || (trimToNull(item.item_name_snapshot_zh) == null && trimToNull(item.item_name_snapshot_en) == null)) {
+            throw badRequest("ITEM_SNAPSHOT_INCOMPLETE", "Cached menu item snapshot is incomplete: " + item.menu_item_id);
         }
+    }
+
+    private void requireOptionSnapshot(CreateOrderItemOptionRequest option) {
+        if (option.option_price_snapshot == null
+            || (trimToNull(option.option_name_snapshot_zh) == null && trimToNull(option.option_name_snapshot_en) == null)) {
+            throw badRequest("OPTION_SNAPSHOT_INCOMPLETE", "Cached menu option snapshot is incomplete: " + option.option_id);
+        }
+    }
+
+    private boolean sameText(String submitted, String current) {
+        return Objects.equals(trimToNull(submitted), trimToNull(current));
+    }
+
+    private void logMenuDrift(
+        IdempotentOrderSubmitRequest request,
+        CreateOrderItemRequest item,
+        String mismatchType,
+        String serverName,
+        BigDecimal serverPrice,
+        Long serverMenuVersion
+    ) {
+        log.warn(
+            "menu_snapshot_drift storeId={} deviceId={} tableId={} localDraftId={} serverOrderId={} "
+                + "localMenuVersion={} serverMenuVersion={} menuItemId={} mismatchType={} "
+                + "submittedSnapshotName={} submittedSnapshotPrice={} serverName={} serverPrice={}",
+            request.store_id,
+            trimToNull(request.device_id),
+            trimToNull(request.table_no),
+            trimToNull(request.local_draft_id),
+            request.server_order_id,
+            request.menu_revision,
+            serverMenuVersion,
+            item == null ? null : item.menu_item_id,
+            mismatchType,
+            item == null ? null : trimToNull(item.item_name_snapshot_zh),
+            item == null ? null : item.unit_price_snapshot,
+            serverName,
+            serverPrice
+        );
     }
 
     private List<CreateOrderItemOptionRequest> safeOptions(CreateOrderItemRequest item) {

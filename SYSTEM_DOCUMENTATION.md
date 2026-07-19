@@ -6757,6 +6757,47 @@ Pickup, Inventory, Platform Admin, or Redis.
   keeps the existing transactional API, optimistic rollback, persisted reload,
   and menu-revision cache refresh behavior.
 
+## Pad Cached Menu Submission Compatibility
+
+Pad ordering is cache-first so a temporarily stale menu is an expected weak-
+network condition, not an order concurrency conflict.
+
+- A menu revision, display name, category, price, sold-out/active flag, or
+  option change produces a structured `menu_snapshot_drift` warning. It does
+  not return `MENU_REVISION_STALE`, `PRICE_CHANGED`, `ITEM_DISABLED`, or
+  `OPTION_INVALID` as an order conflict.
+- A line captures immutable item and selected-option snapshots when it is added
+  to the local draft. A later background menu refresh affects only newly added
+  lines; it does not rename, reprice, or remove existing draft lines.
+- The idempotent submit payload carries item/option names, prices, stable codes,
+  category, station, SKU, `local_draft_id`, and the diagnostic
+  `menu_revision`. The server persists those submitted snapshots and does not
+  reprice the order from the current menu.
+- Flyway `V6__add_order_item_routing_snapshots.sql` adds nullable
+  `station_id_snapshot` and `item_sku_snapshot` columns and backfills existing
+  rows from `menu_items`. This is additive and preserves existing orders.
+- A missing or deactivated menu item/option can still be submitted from an
+  already-created draft when its snapshot is complete. Current catalog refresh
+  prevents new selection of records that are no longer active.
+- Existing local outbox records incorrectly stopped by a menu-only
+  `CONFLICT`/`FAILED_VALIDATION` are upgraded in place to `QUEUED` with the
+  same `localDraftId` and `clientOrderId`. When an older draft predates line
+  option snapshots, recovery uses its retained revision-specific IndexedDB
+  menu snapshot if available. No draft or order items are deleted.
+- `menu_revision` is diagnostic and excluded from the current idempotency hash;
+  the backend still accepts legacy hashes for in-flight pre-upgrade requests.
+  Snapshot prices and all actual order content remain hash-protected.
+- Genuine server concurrency remains unchanged: a reused key with different
+  order content returns `IDEMPOTENCY_CONFLICT`; occupied table/context and
+  non-editable server-order states continue to return their existing 409
+  conflicts.
+
+The structured warning records `storeId`, optional `deviceId`, table,
+`localDraftId`, `serverOrderId`, local/server menu versions, `menuItemId`,
+mismatch type, and submitted/server names and prices. The normal Web order API
+does not currently expose a native Android device id, so that field is null
+unless a client explicitly supplies the optional diagnostic value.
+
 ## Current Restaurant Pilot Boundary
 
 The concise enabled/disabled matrix for this reliability batch is maintained in

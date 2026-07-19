@@ -888,20 +888,32 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private OrderItem addDraftOrderItemInternal(Order order, CreateOrderItemRequest itemRequest, LocalDateTime now) {
-        MenuItem menuItem = menuItemRepository.findById(itemRequest.menu_item_id)
-            .orElseThrow(() -> new BusinessException("Menu item not found: " + itemRequest.menu_item_id));
-
-        validateMenuItemBelongsToStore(menuItem, order.store_id);
-        MenuCategory menuCategory = findMenuCategory(menuItem);
+        MenuItem menuItem = menuItemRepository.findById(itemRequest.menu_item_id).orElse(null);
+        if (menuItem != null) {
+            validateMenuItemBelongsToStore(menuItem, order.store_id);
+        } else if (itemRequest.station_id_snapshot == null || itemRequest.category_code_snapshot == null
+            || itemRequest.unit_price_snapshot == null) {
+            throw new BusinessException("Cached menu item snapshot is incomplete: " + itemRequest.menu_item_id);
+        }
+        String categoryCode = itemRequest.category_code_snapshot;
+        if (categoryCode == null || categoryCode.isBlank()) {
+            categoryCode = findMenuCategory(menuItem).code;
+        }
 
         OrderItem orderItem = new OrderItem();
         orderItem.order_id = order.id;
-        orderItem.menu_item_id = menuItem.id;
-        orderItem.category_code_snapshot = menuCategory.code;
-        orderItem.item_name_snapshot_zh = menuItem.name_zh;
-        orderItem.item_name_snapshot_en = menuItem.name_en;
+        orderItem.menu_item_id = itemRequest.menu_item_id;
+        orderItem.category_code_snapshot = categoryCode;
+        orderItem.station_id_snapshot = itemRequest.station_id_snapshot != null
+            ? itemRequest.station_id_snapshot
+            : menuItem.station_id;
+        orderItem.item_sku_snapshot = firstNonBlank(itemRequest.item_sku_snapshot, menuItem == null ? null : menuItem.sku);
+        orderItem.item_name_snapshot_zh = firstNonBlank(itemRequest.item_name_snapshot_zh, menuItem == null ? null : menuItem.name_zh);
+        orderItem.item_name_snapshot_en = firstNonBlank(itemRequest.item_name_snapshot_en, menuItem == null ? null : menuItem.name_en);
         orderItem.quantity = itemRequest.quantity;
-        orderItem.unit_price = defaultIfNull(menuItem.base_price);
+        orderItem.unit_price = itemRequest.unit_price_snapshot != null
+            ? itemRequest.unit_price_snapshot
+            : defaultIfNull(menuItem.base_price);
         orderItem.combo_role = normalizeComboRole(itemRequest.combo_role);
         orderItem.combo_group_no = normalizeComboGroupNo(orderItem.combo_role, itemRequest.combo_group_no);
         orderItem.status = null;
@@ -915,7 +927,7 @@ public class OrderServiceImpl implements OrderService {
         OrderItem savedOrderItem = orderItemRepository.save(orderItem);
         List<OrderItemOption> savedOptions = createOrderItemOptions(
             savedOrderItem,
-            menuItem.id,
+            itemRequest.menu_item_id,
             normalizeOptionRequests(itemRequest.options),
             now
         );
@@ -935,31 +947,55 @@ public class OrderServiceImpl implements OrderService {
         List<CreateOrderItemOptionRequest> optionRequests,
         LocalDateTime now
     ) {
-        MenuItem mainMenuItem = menuItemRepository.findById(menuItemId)
-            .orElseThrow(() -> new BusinessException("Menu item not found: " + menuItemId));
+        MenuItem mainMenuItem = menuItemRepository.findById(menuItemId).orElse(null);
         Map<Long, MenuItemOption> requestedOptionsById = loadRequestedMenuItemOptions(optionRequests);
-        Map<Long, Long> comboSideRemoveParentByOptionId = buildComboSideRemoveParentMap(mainMenuItem, requestedOptionsById);
+        Map<Long, Long> comboSideRemoveParentByOptionId = mainMenuItem == null
+            ? Map.of()
+            : buildComboSideRemoveParentMap(mainMenuItem, requestedOptionsById);
 
         List<OrderItemOption> savedOptions = new ArrayList<>();
         for (CreateOrderItemOptionRequest optionRequest : optionRequests) {
             MenuItemOption menuItemOption = requestedOptionsById.get(optionRequest.option_id);
-            if (menuItemOption == null) {
-                throw new BusinessException("Menu item option not found: " + optionRequest.option_id);
+            Long comboSideParentOptionId = optionRequest.parent_option_id_snapshot != null
+                ? optionRequest.parent_option_id_snapshot
+                : comboSideRemoveParentByOptionId.get(optionRequest.option_id);
+            if (menuItemOption != null && mainMenuItem != null) {
+                validateOptionBelongsToMenuItem(menuItemOption, menuItemId, comboSideParentOptionId != null);
+            } else if (optionRequest.option_price_snapshot == null
+                || (firstNonBlank(optionRequest.option_name_snapshot_zh, optionRequest.option_name_snapshot_en) == null)) {
+                throw new BusinessException("Cached menu item option snapshot is incomplete: " + optionRequest.option_id);
             }
-
-            Long comboSideParentOptionId = comboSideRemoveParentByOptionId.get(menuItemOption.id);
-            validateOptionBelongsToMenuItem(menuItemOption, menuItemId, comboSideParentOptionId != null);
 
             OrderItemOption orderItemOption = new OrderItemOption();
             orderItemOption.order_item_id = orderItem.id;
-            orderItemOption.option_id = menuItemOption.id;
-            orderItemOption.option_type_snapshot = menuItemOption.option_type;
-            orderItemOption.option_code_snapshot = menuItemOption.option_code;
-            orderItemOption.option_group_snapshot = comboSideParentOptionId == null ? menuItemOption.option_group : "COMBO_SIDE_REMOVE";
-            orderItemOption.parent_option_id_snapshot = comboSideParentOptionId == null ? menuItemOption.parent_option_id : comboSideParentOptionId;
-            orderItemOption.option_name_snapshot_zh = menuItemOption.name_zh;
-            orderItemOption.option_name_snapshot_en = menuItemOption.name_en;
-            orderItemOption.price_delta = defaultIfNull(menuItemOption.price_delta);
+            orderItemOption.option_id = optionRequest.option_id;
+            orderItemOption.option_type_snapshot = firstNonBlank(
+                optionRequest.option_type_snapshot,
+                menuItemOption == null ? null : menuItemOption.option_type
+            );
+            orderItemOption.option_code_snapshot = firstNonBlank(
+                optionRequest.option_code_snapshot,
+                menuItemOption == null ? null : menuItemOption.option_code
+            );
+            orderItemOption.option_group_snapshot = comboSideParentOptionId == null
+                ? firstNonBlank(optionRequest.option_group_snapshot, menuItemOption == null ? null : menuItemOption.option_group)
+                : "COMBO_SIDE_REMOVE";
+            orderItemOption.parent_option_id_snapshot = comboSideParentOptionId == null
+                ? (optionRequest.parent_option_id_snapshot != null
+                    ? optionRequest.parent_option_id_snapshot
+                    : menuItemOption == null ? null : menuItemOption.parent_option_id)
+                : comboSideParentOptionId;
+            orderItemOption.option_name_snapshot_zh = firstNonBlank(
+                optionRequest.option_name_snapshot_zh,
+                menuItemOption == null ? null : menuItemOption.name_zh
+            );
+            orderItemOption.option_name_snapshot_en = firstNonBlank(
+                optionRequest.option_name_snapshot_en,
+                menuItemOption == null ? null : menuItemOption.name_en
+            );
+            orderItemOption.price_delta = optionRequest.option_price_snapshot != null
+                ? optionRequest.option_price_snapshot
+                : defaultIfNull(menuItemOption.price_delta);
             orderItemOption.quantity = optionRequest.quantity;
             orderItemOption.created_at = now;
             savedOptions.add(orderItemOptionRepository.save(orderItemOption));
@@ -976,9 +1012,8 @@ public class OrderServiceImpl implements OrderService {
             if (optionsById.containsKey(optionRequest.option_id)) {
                 continue;
             }
-            MenuItemOption option = menuItemOptionRepository.findById(optionRequest.option_id)
-                .orElseThrow(() -> new BusinessException("Menu item option not found: " + optionRequest.option_id));
-            optionsById.put(option.id, option);
+            menuItemOptionRepository.findById(optionRequest.option_id)
+                .ifPresent(option -> optionsById.put(option.id, option));
         }
         return optionsById;
     }
@@ -1141,8 +1176,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         KitchenTask kitchenTask = findKitchenTaskByOrderItemId(order.id, orderItem.id);
-        MenuItem menuItem = menuItemRepository.findById(orderItem.menu_item_id)
-            .orElseThrow(() -> new BusinessException("Menu item not found for kitchen task: " + orderItem.menu_item_id));
+        MenuItem menuItem = resolveMenuItemSnapshot(orderItem, order.store_id);
         if (kitchenTask == null) {
             kitchenTask = createKitchenTaskForOrderItem(order, orderItem, orderItemOptions, menuItem, now);
         } else {
@@ -1339,13 +1373,13 @@ public class OrderServiceImpl implements OrderService {
     ) {
         Map<Long, List<OrderItemOption>> optionsByOrderItemId = groupOptionsByOrderItemId(orderItemOptions);
         List<KitchenTask> kitchenTasks = new ArrayList<>();
+        Store store = loadStore(order.store_id);
 
         for (OrderItem orderItem : orderItems) {
-            MenuItem menuItem = menuItemRepository.findById(orderItem.menu_item_id)
-                .orElseThrow(() -> new BusinessException("Menu item not found for kitchen task: " + orderItem.menu_item_id));
-            if (isDirectServe(menuItem, order.store_id)) {
+            if (isDirectServe(orderItem.category_code_snapshot, store)) {
                 continue;
             }
+            MenuItem menuItem = resolveMenuItemSnapshot(orderItem, order.store_id);
             if (menuItem.station_id == null) {
                 throw new BusinessException("menu_items.station_id is required for kitchen task assignment: " + menuItem.id);
             }
@@ -1511,6 +1545,8 @@ public class OrderServiceImpl implements OrderService {
             response.id = orderItem.id;
             response.menu_item_id = orderItem.menu_item_id;
             response.category_code_snapshot = orderItem.category_code_snapshot;
+            response.station_id_snapshot = orderItem.station_id_snapshot;
+            response.item_sku_snapshot = orderItem.item_sku_snapshot;
             response.item_name_snapshot_zh = orderItem.item_name_snapshot_zh;
             response.item_name_snapshot_en = orderItem.item_name_snapshot_en;
             response.quantity = orderItem.quantity;
@@ -1574,6 +1610,12 @@ public class OrderServiceImpl implements OrderService {
         return value == null ? BigDecimal.ZERO : value;
     }
 
+    private String firstNonBlank(String preferred, String fallback) {
+        if (preferred != null && !preferred.isBlank()) return preferred;
+        if (fallback != null && !fallback.isBlank()) return fallback;
+        return null;
+    }
+
     private String normalizeComboRole(String comboRole) {
         if (comboRole == null || comboRole.isBlank()) {
             return COMBO_ROLE_STANDALONE;
@@ -1594,8 +1636,26 @@ public class OrderServiceImpl implements OrderService {
         return comboGroupNo;
     }
 
-    private boolean isDirectServe(MenuItem menuItem, Long storeId) {
-        return isDirectServe(findMenuCategory(menuItem).code, loadStore(storeId));
+    private MenuItem resolveMenuItemSnapshot(OrderItem orderItem, Long storeId) {
+        MenuItem live = menuItemRepository.findById(orderItem.menu_item_id).orElse(null);
+        if (live != null) {
+            validateMenuItemBelongsToStore(live, storeId);
+        }
+        Long stationId = orderItem.station_id_snapshot != null
+            ? orderItem.station_id_snapshot
+            : live == null ? null : live.station_id;
+        if (stationId == null) {
+            throw new BusinessException("Cached menu item routing snapshot is incomplete: " + orderItem.menu_item_id);
+        }
+        MenuItem snapshot = new MenuItem();
+        snapshot.id = orderItem.menu_item_id;
+        snapshot.store_id = storeId;
+        snapshot.station_id = stationId;
+        snapshot.sku = firstNonBlank(orderItem.item_sku_snapshot, live == null ? null : live.sku);
+        snapshot.name_zh = orderItem.item_name_snapshot_zh;
+        snapshot.name_en = orderItem.item_name_snapshot_en;
+        snapshot.base_price = orderItem.unit_price;
+        return snapshot;
     }
 
     private boolean isDirectServe(String categoryCode, Store store) {
@@ -1751,6 +1811,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private String buildKitchenDisplayNameZh(MenuItem menuItem, OrderItem orderItem) {
+        if (menuItem.sku == null) return orderItem.item_name_snapshot_zh;
         return switch (menuItem.sku) {
             case "beef_chow_mein" -> "牛炒";
             case "chicken_chow_mein" -> "鸡炒";
@@ -1795,6 +1856,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private String mapItemBaseCode(String sku) {
+        if (sku == null) return null;
         return switch (sku) {
             case "braised_beef_tendon_noodle" -> "红";
             case "pickled_vegetable_beef_noodle" -> "酸";
@@ -1879,6 +1941,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private boolean isDefaultNoodleType(String sku, String noodleZh) {
+        if (sku == null) return false;
         return switch (sku) {
             case "traditional_beef_noodle",
                  "braised_beef_tendon_noodle",

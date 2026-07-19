@@ -15,6 +15,10 @@ public class IdempotentOrderSubmitRequest {
 
     public String idempotency_key;
 
+    public String local_draft_id;
+
+    public String device_id;
+
     @NotNull
     public Long organization_id;
 

@@ -98,6 +98,7 @@ describe('local draft records', () => {
     expect(reopened).toBe(submitted)
     expect(reopened.serverOrderId).toBe(491)
     expect(reopened.submitState).toBe('SUBMITTED')
+    expect(reopened.menuRevision).toBe(12)
   })
 
   it('does not downgrade a locally cached order when the related outbox is submitted', () => {

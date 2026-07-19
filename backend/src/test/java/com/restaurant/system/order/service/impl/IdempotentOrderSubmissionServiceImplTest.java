@@ -12,9 +12,12 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.restaurant.system.menu.entity.MenuItem;
+import com.restaurant.system.menu.entity.MenuItemOption;
 import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.menu.repository.MenuItemRepository;
 import com.restaurant.system.order.dto.CreateOrderItemRequest;
+import com.restaurant.system.order.dto.CreateOrderItemOptionRequest;
+import com.restaurant.system.order.dto.CreateOrderRequest;
 import com.restaurant.system.order.dto.IdempotentOrderSubmitRequest;
 import com.restaurant.system.order.dto.IdempotentOrderSubmitResponse;
 import com.restaurant.system.order.dto.OrderResponse;
@@ -39,6 +42,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -90,6 +94,10 @@ class IdempotentOrderSubmissionServiceImplTest {
         item.id = 20L;
         item.store_id = 1L;
         item.base_price = new BigDecimal("12.50");
+        item.name_zh = "牛肉面";
+        item.name_en = "Beef Noodle";
+        item.station_id = 3L;
+        item.sku = "traditional_beef_noodle";
         item.is_active = true;
         item.is_sold_out = false;
         when(menuItemRepository.findById(20L)).thenReturn(Optional.of(item));
@@ -229,36 +237,116 @@ class IdempotentOrderSubmissionServiceImplTest {
     }
 
     @Test
-    void staleMenuAndSoldOutItemAreConflictsBeforeOrderCreation() {
+    void staleMenuDisabledAndSoldOutItemsUseSubmittedSnapshotsInsteadOfConflict() {
         IdempotentOrderSubmitRequest stale = request("stale-key", null);
         stale.menu_revision = 3L;
-        OrderSubmissionException staleException = assertThrows(
-            OrderSubmissionException.class,
-            () -> service.submit(1L, stale, 5L)
-        );
-        assertEquals("MENU_REVISION_STALE", staleException.getErrorCode());
+        service.submit(1L, stale, 5L);
 
+        item.is_active = false;
+        service.submit(1L, request("disabled-key", null), 5L);
+        item.is_active = true;
         item.is_sold_out = true;
-        OrderSubmissionException soldOutException = assertThrows(
-            OrderSubmissionException.class,
-            () -> service.submit(1L, request("sold-out-key", null), 5L)
-        );
-        assertEquals("ITEM_SOLD_OUT", soldOutException.getErrorCode());
-        verify(orderService, times(0)).createOrReplaceDraftAndSubmit(any(), any());
+        service.submit(1L, request("sold-out-key", null), 5L);
+
+        verify(orderService, times(3)).createOrReplaceDraftAndSubmit(any(), any());
     }
 
     @Test
-    void changedPriceReturnsStableConflictCode() {
+    void changedCurrentPriceDoesNotReplaceSubmittedSnapshotPrice() {
         IdempotentOrderSubmitRequest request = request("price-key", null);
-        request.expected_subtotal_amount = new BigDecimal("11.00");
+        item.base_price = new BigDecimal("12.00");
+
+        service.submit(1L, request, 5L);
+
+        ArgumentCaptor<CreateOrderRequest> captor = ArgumentCaptor.forClass(CreateOrderRequest.class);
+        verify(orderService).createOrReplaceDraftAndSubmit(captor.capture(), any());
+        assertEquals(new BigDecimal("12.50"), captor.getValue().items.get(0).unit_price_snapshot);
+    }
+
+    @Test
+    void missingMenuItemAndOptionAreAcceptedWhenImmutableSnapshotsArePresent() {
+        when(menuItemRepository.findById(20L)).thenReturn(Optional.empty());
+        IdempotentOrderSubmitRequest request = request("missing-menu-key", null);
+        CreateOrderItemOptionRequest option = new CreateOrderItemOptionRequest();
+        option.option_id = 30L;
+        option.quantity = 1;
+        option.option_type_snapshot = "addon";
+        option.option_code_snapshot = "broccoli";
+        option.option_group_snapshot = "ADDON";
+        option.option_name_snapshot_zh = "加西兰花";
+        option.option_name_snapshot_en = "Broccoli";
+        option.option_price_snapshot = new BigDecimal("2.00");
+        request.items.get(0).options = List.of(option);
+
+        service.submit(1L, request, 5L);
+
+        verify(orderService).createOrReplaceDraftAndSubmit(any(), any());
+    }
+
+    @Test
+    void changedOrDisabledCurrentOptionDoesNotReplaceSubmittedOptionSnapshot() {
+        MenuItemOption currentOption = new MenuItemOption();
+        currentOption.id = 30L;
+        currentOption.menu_item_id = 20L;
+        currentOption.name_zh = "新西兰花";
+        currentOption.name_en = "New Broccoli";
+        currentOption.price_delta = new BigDecimal("3.00");
+        currentOption.is_active = false;
+        when(menuItemOptionRepository.findById(30L)).thenReturn(Optional.of(currentOption));
+
+        IdempotentOrderSubmitRequest request = request("changed-option-key", null);
+        CreateOrderItemOptionRequest option = new CreateOrderItemOptionRequest();
+        option.option_id = 30L;
+        option.quantity = 1;
+        option.option_type_snapshot = "addon";
+        option.option_code_snapshot = "broccoli";
+        option.option_group_snapshot = "ADDON";
+        option.option_name_snapshot_zh = "加西兰花";
+        option.option_name_snapshot_en = "Broccoli";
+        option.option_price_snapshot = new BigDecimal("2.00");
+        request.items.get(0).options = List.of(option);
+
+        service.submit(1L, request, 5L);
+
+        ArgumentCaptor<CreateOrderRequest> captor = ArgumentCaptor.forClass(CreateOrderRequest.class);
+        verify(orderService).createOrReplaceDraftAndSubmit(captor.capture(), any());
+        CreateOrderItemOptionRequest submitted = captor.getValue().items.get(0).options.get(0);
+        assertEquals("加西兰花", submitted.option_name_snapshot_zh);
+        assertEquals(new BigDecimal("2.00"), submitted.option_price_snapshot);
+    }
+
+    @Test
+    void currentMenuStillRejectsARequestMissingItsRequiredOption() {
+        MenuItemOption requiredSize = new MenuItemOption();
+        requiredSize.id = 31L;
+        requiredSize.menu_item_id = 20L;
+        requiredSize.option_type = "size";
+        requiredSize.is_active = true;
+        when(menuItemOptionRepository.findAllByMenuItemIdOrdered(20L)).thenReturn(List.of(requiredSize));
 
         OrderSubmissionException exception = assertThrows(
             OrderSubmissionException.class,
-            () -> service.submit(1L, request, 5L)
+            () -> service.submit(1L, request("missing-required-option", null), 5L)
         );
 
-        assertEquals("PRICE_CHANGED", exception.getErrorCode());
-        verify(orderService, times(0)).createOrReplaceDraftAndSubmit(any(), any());
+        assertEquals("ORDER_OPTION_REQUIRED", exception.getErrorCode());
+        assertEquals(400, exception.getStatus().value());
+    }
+
+    @Test
+    void genuineServerOrderContextConflictIsStillReturned() {
+        when(orderService.createOrReplaceDraftAndSubmit(any(), any())).thenThrow(new OrderSubmissionException(
+            "ORDER_CONTEXT_CONFLICT",
+            org.springframework.http.HttpStatus.CONFLICT,
+            "table already has another active order"
+        ));
+
+        OrderSubmissionException exception = assertThrows(
+            OrderSubmissionException.class,
+            () -> service.submit(1L, request("real-conflict-key", null), 5L)
+        );
+
+        assertEquals("ORDER_CONTEXT_CONFLICT", exception.getErrorCode());
     }
 
     @Test
@@ -276,6 +364,13 @@ class IdempotentOrderSubmissionServiceImplTest {
     private IdempotentOrderSubmitRequest request(String clientOrderId, String notes) {
         CreateOrderItemRequest orderItem = new CreateOrderItemRequest();
         orderItem.menu_item_id = 20L;
+        orderItem.item_name_snapshot_zh = "牛肉面";
+        orderItem.item_name_snapshot_en = "Beef Noodle";
+        orderItem.unit_price_snapshot = new BigDecimal("12.50");
+        orderItem.category_code_snapshot = "SOUP_NOODLE";
+        orderItem.station_id_snapshot = 3L;
+        orderItem.item_sku_snapshot = "traditional_beef_noodle";
+        orderItem.item_type_snapshot = "NOODLE";
         orderItem.quantity = 1;
         orderItem.combo_role = "standalone";
         orderItem.notes = notes;

@@ -391,6 +391,47 @@ class OrderServiceImplTest {
     }
 
     @Test
+    void cachedSnapshotsSubmitAfterMenuItemAndOptionAreMissing() {
+        when(menuItemRepository.findById(menuItem.id)).thenReturn(Optional.empty());
+
+        CreateOrderItemOptionRequest option = new CreateOrderItemOptionRequest();
+        option.option_id = 88L;
+        option.quantity = 1;
+        option.option_type_snapshot = "addon";
+        option.option_code_snapshot = "broccoli";
+        option.option_group_snapshot = "ADDON";
+        option.option_name_snapshot_zh = "加西兰花";
+        option.option_name_snapshot_en = "Broccoli";
+        option.option_price_snapshot = new BigDecimal("2.00");
+
+        CreateOrderItemRequest itemRequest = new CreateOrderItemRequest();
+        itemRequest.menu_item_id = menuItem.id;
+        itemRequest.item_name_snapshot_zh = "旧牛肉面";
+        itemRequest.item_name_snapshot_en = "Cached Beef Noodle";
+        itemRequest.unit_price_snapshot = new BigDecimal("10.00");
+        itemRequest.category_code_snapshot = "SOUP_NOODLE";
+        itemRequest.station_id_snapshot = station.id;
+        itemRequest.item_sku_snapshot = menuItem.sku;
+        itemRequest.quantity = 1;
+        itemRequest.options = List.of(option);
+
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.store_id = store.id;
+        request.created_by = 1L;
+        request.order_type = "dine_in";
+        request.table_no = "T-snapshot";
+        request.items = List.of(itemRequest);
+
+        OrderResponse submitted = orderService.submitOrder(orderService.createOrder(request).id);
+
+        assertEquals(new BigDecimal("10.00"), submitted.items.get(0).unit_price);
+        assertEquals(new BigDecimal("12.00"), submitted.items.get(0).line_amount);
+        assertEquals("旧牛肉面", submitted.items.get(0).item_name_snapshot_zh);
+        assertEquals("加西兰花", submitted.items.get(0).options.get(0).option_name_snapshot_zh);
+        assertEquals("NOODLE", submitted.items.get(0).station_code);
+    }
+
+    @Test
     void submitDispatchesHotKitchenWhenPrintableContentExists() {
         when(printDispatcherService.hasPrintableContent(
             org.mockito.ArgumentMatchers.eq(PrintModuleCode.HOT_KITCHEN),

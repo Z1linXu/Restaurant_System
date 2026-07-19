@@ -43,6 +43,12 @@ public class OrderItem {
     @Column(name = "category_code_snapshot")
     public String category_code_snapshot;
 
+    @Column(name = "station_id_snapshot")
+    public Long station_id_snapshot;
+
+    @Column(name = "item_sku_snapshot")
+    public String item_sku_snapshot;
+
     @Column(name = "item_name_snapshot_zh")
     public String item_name_snapshot_zh;
 

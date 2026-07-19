@@ -16,6 +16,7 @@ import type {
   LocalizedText,
   MenuItem,
   OrderLineItem,
+  OrderLineOptionSnapshot,
   OrderSession,
 } from '../types/ordering'
 import { createIdempotencyKey } from '../utils/randomId'
@@ -39,7 +40,9 @@ import {
 import {
   ORDER_OUTBOX_UPDATED_EVENT,
   createOrderOutboxRecord,
+  isMenuCompatibilityFailure,
   readOrderOutboxRecord,
+  recoverMenuCompatibilityOutboxRecord,
   saveOrderOutboxRecord,
   type OrderOutboxRecord,
 } from '../offline/orderOutbox'
@@ -51,6 +54,8 @@ import {
   kickOrderOutboxProcessor,
   processOrderOutboxRecord,
 } from '../services/orderOutboxProcessor'
+import { readMenuSnapshot } from '../offline/menuCache'
+import { mapCatalog } from './useMenuCatalog'
 
 function calculateDraftLineSubtotal(menuItem: MenuItem | undefined, draft: ItemCustomizationDraft) {
   if (!menuItem) {
@@ -83,6 +88,41 @@ function optionTag(option: BackendOrderItemOptionResponse): LocalizedText {
     en: option.option_name_snapshot_en,
     zh: option.option_name_snapshot_zh,
   }
+}
+
+function menuItemOptions(menuItem: MenuItem) {
+  const options = [
+    ...(menuItem.customization?.sizes?.options ?? []),
+    ...(menuItem.customization?.soupBases?.options ?? []),
+    ...(menuItem.customization?.noodleTypes ?? []),
+    ...(menuItem.customization?.spicyLevels ?? []),
+    ...(menuItem.customization?.combo?.option ? [menuItem.customization.combo.option] : []),
+    ...(menuItem.customization?.combo?.eggs ?? []),
+    ...(menuItem.customization?.combo?.sides ?? []),
+    ...(menuItem.customization?.combo?.sideRemoveOptions ?? []),
+    ...(menuItem.customization?.addOns ?? []),
+    ...(menuItem.customization?.removeOptions ?? []),
+  ]
+  return new Map(options.map((option) => [option.id, option]))
+}
+
+function buildOptionSnapshots(menuItem: MenuItem, draft: ItemCustomizationDraft): OrderLineOptionSnapshot[] {
+  const optionsById = menuItemOptions(menuItem)
+  return mapOptions(draft, menuItem).map(({ option_id, quantity }) => {
+    const option = optionsById.get(String(option_id))
+    if (!option) throw new Error(`菜单缓存缺少选项 ${option_id}，请重新选择该菜品。`)
+    return {
+      optionId: option.id,
+      optionType: option.optionType ?? null,
+      optionCode: option.optionCode ?? null,
+      optionGroup: option.optionGroup ?? null,
+      parentOptionId: option.parentOptionId ?? null,
+      nameEn: option.labelEn,
+      nameZh: option.labelZh,
+      priceDelta: option.priceDelta ?? 0,
+      quantity,
+    }
+  })
 }
 
 function buildItemSelection(item: BackendOrderItemResponse, menuItem: MenuItem | undefined): ItemCustomizationDraft {
@@ -180,6 +220,21 @@ function mapOrderItem(item: BackendOrderItemResponse, catalogItems: MenuItem[], 
     quantity: item.quantity,
     unitPrice: Number(item.unit_price),
     lineSubtotal: Number(item.line_amount),
+    categoryCodeSnapshot: item.category_code_snapshot,
+    stationIdSnapshot: item.station_id_snapshot == null ? null : String(item.station_id_snapshot),
+    skuSnapshot: item.item_sku_snapshot ?? menuItem?.sku ?? null,
+    itemTypeSnapshot: menuItem?.itemType ?? null,
+    optionSnapshots: item.options.map((option) => ({
+      optionId: String(option.option_id),
+      optionType: option.option_type_snapshot ?? null,
+      optionCode: option.option_code_snapshot,
+      optionGroup: option.option_group_snapshot,
+      parentOptionId: option.parent_option_id_snapshot == null ? null : String(option.parent_option_id_snapshot),
+      nameEn: option.option_name_snapshot_en,
+      nameZh: option.option_name_snapshot_zh,
+      priceDelta: Number(option.price_delta),
+      quantity: option.quantity,
+    })),
     selection: buildItemSelection(item, menuItem),
     summaryTags: item.options.map(optionTag),
     notes: item.notes ?? '',
@@ -203,7 +258,7 @@ function mapOrderToSession(order: BackendOrderResponse, slotLabel: string, table
   }
 }
 
-function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationDraft): OrderLineItem {
+export function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationDraft): OrderLineItem {
   const summaryTags: LocalizedText[] = []
 
   const pushOptionTag = (optionId: string | undefined) => {
@@ -260,6 +315,11 @@ function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationDraft): 
     quantity: draft.quantity,
     unitPrice: menuItem.price,
     lineSubtotal: calculateDraftLineSubtotal(menuItem, draft),
+    categoryCodeSnapshot: menuItem.categoryCode ?? null,
+    stationIdSnapshot: menuItem.stationId ?? null,
+    skuSnapshot: menuItem.sku ?? null,
+    itemTypeSnapshot: menuItem.itemType ?? null,
+    optionSnapshots: buildOptionSnapshots(menuItem, draft),
     selection: draft,
     summaryTags,
     notes: draft.notes,
@@ -273,7 +333,7 @@ interface DraftOfflineIdentity {
   menuRevision: number
 }
 
-function buildFrozenSubmitPayload(
+export function buildFrozenSubmitPayload(
   record: LocalDraftRecord,
   items: OrderLineItem[],
   catalogItems: MenuItem[],
@@ -281,6 +341,7 @@ function buildFrozenSubmitPayload(
   return {
     client_order_id: record.clientOrderId,
     idempotency_key: record.clientOrderId,
+    local_draft_id: record.localDraftId,
     organization_id: record.organizationId,
     store_id: record.storeId,
     server_order_id: record.serverOrderId,
@@ -293,19 +354,58 @@ function buildFrozenSubmitPayload(
     ),
     items: items.map((item) => {
       const menuItem = catalogItems.find((candidate) => candidate.id === item.menuItemId)
-      if (!menuItem) {
-        throw new Error(`菜单缓存缺少菜品 ${item.menuItemId}，请刷新菜单后检查订单。`)
-      }
+      const optionSnapshots = item.optionSnapshots
+        ?? (menuItem ? buildOptionSnapshots(menuItem, item.selection) : null)
+      if (!optionSnapshots) throw new Error(`本机草稿缺少菜品 ${item.menuItemId} 的提交快照。`)
       return {
         menu_item_id: Number(item.menuItemId),
+        item_name_snapshot_zh: item.nameZh,
+        item_name_snapshot_en: item.nameEn,
+        unit_price_snapshot: item.unitPrice,
+        category_code_snapshot: item.categoryCodeSnapshot ?? menuItem?.categoryCode ?? null,
+        station_id_snapshot: item.stationIdSnapshot == null
+          ? (menuItem?.stationId == null ? null : Number(menuItem.stationId))
+          : Number(item.stationIdSnapshot),
+        item_sku_snapshot: item.skuSnapshot ?? menuItem?.sku ?? null,
+        item_type_snapshot: item.itemTypeSnapshot ?? menuItem?.itemType ?? null,
         quantity: item.quantity,
         combo_group_no: null,
         combo_role: 'standalone',
         notes: item.notes.trim() || null,
-        options: mapOptions(item.selection, menuItem),
+        options: optionSnapshots.map((option) => ({
+          option_id: Number(option.optionId),
+          option_type_snapshot: option.optionType,
+          option_code_snapshot: option.optionCode,
+          option_group_snapshot: option.optionGroup,
+          parent_option_id_snapshot: option.parentOptionId == null ? null : Number(option.parentOptionId),
+          option_name_snapshot_zh: option.nameZh,
+          option_name_snapshot_en: option.nameEn,
+          option_price_snapshot: option.priceDelta,
+          quantity: option.quantity,
+        })),
       }
     }),
   }
+}
+
+async function buildRecoverySubmitPayload(
+  record: LocalDraftRecord,
+  items: OrderLineItem[],
+  catalogItems: MenuItem[],
+  localScope: LocalDraftScope,
+) {
+  try {
+    return buildFrozenSubmitPayload(record, items, catalogItems)
+  } catch (currentCatalogError) {
+    const historicalSnapshot = await readMenuSnapshot(localScope, record.menuRevision).catch(() => null)
+    if (!historicalSnapshot) throw currentCatalogError
+    return buildFrozenSubmitPayload(record, items, mapCatalog(historicalSnapshot.catalog).items)
+  }
+}
+
+function resizeSnapshotLineSubtotal(item: OrderLineItem, nextQuantity: number) {
+  const currentQuantity = Math.max(1, item.quantity)
+  return Number(((item.lineSubtotal / currentQuantity) * nextQuantity).toFixed(2))
 }
 
 const LOCAL_DRAFT_SAVE_DEBOUNCE_MS = 200
@@ -371,7 +471,7 @@ export function useDraftOrder(
       if (localScope) {
         try {
           void cleanupExpiredLocalDrafts().catch(() => undefined)
-          const storedDraft = await readLocalDraft(localScope, contextKey)
+          let storedDraft = await readLocalDraft(localScope, contextKey)
           let pendingSubmission = storedDraft
             ? await readOrderOutboxRecord(
                 storedDraft.accountId,
@@ -380,6 +480,25 @@ export function useDraftOrder(
                 storedDraft.clientOrderId,
               )
             : null
+          if (storedDraft && pendingSubmission && isMenuCompatibilityFailure(pendingSubmission.lastErrorCode)) {
+            const recoveredPayload = await buildRecoverySubmitPayload(
+              storedDraft,
+              storedDraft.items,
+              catalogItems,
+              localScope,
+            )
+            pendingSubmission = await saveOrderOutboxRecord(
+              recoverMenuCompatibilityOutboxRecord(pendingSubmission, recoveredPayload),
+            )
+            storedDraft = await saveLocalDraft({
+              ...storedDraft,
+              submitState: 'QUEUED',
+              payloadHash: pendingSubmission.payloadHash,
+              lastError: null,
+              nextRetryAt: pendingSubmission.nextRetryAt,
+            })
+            kickOrderOutboxProcessor()
+          }
           const resolvedDraft = resolveLocalDraftForOpen(
             localScope,
             localContext,
@@ -550,7 +669,10 @@ export function useDraftOrder(
       serverOrderId: order?.id ?? null,
       serverOrderSnapshot: order,
       items: session.items,
-      menuRevision: offlineIdentity.menuRevision,
+      menuRevision: localDraftRef.current.items.length === 0
+        && localDraftRef.current.submitState === 'LOCAL_DRAFT'
+        ? offlineIdentity.menuRevision
+        : localDraftRef.current.menuRevision,
     }
     if (saveTimerRef.current != null) window.clearTimeout(saveTimerRef.current)
     saveTimerRef.current = window.setTimeout(() => {
@@ -720,10 +842,7 @@ export function useDraftOrder(
           ...item,
           quantity: currentQuantity + 1,
           selection: nextSelection,
-          lineSubtotal: calculateDraftLineSubtotal(
-            catalogItems.find((catalogItem) => catalogItem.id === item.menuItemId),
-            nextSelection,
-          ),
+          lineSubtotal: resizeSnapshotLineSubtotal(item, currentQuantity + 1),
         }
       }))
     },
@@ -740,10 +859,7 @@ export function useDraftOrder(
             ...item,
             quantity: currentQuantity - 1,
             selection: nextSelection,
-            lineSubtotal: calculateDraftLineSubtotal(
-              catalogItems.find((catalogItem) => catalogItem.id === item.menuItemId),
-              nextSelection,
-            ),
+            lineSubtotal: resizeSnapshotLineSubtotal(item, currentQuantity - 1),
           }
         })
       })
@@ -842,6 +958,16 @@ export function useDraftOrder(
           draft.storeId,
           draft.clientOrderId,
         )
+        if (queued && isMenuCompatibilityFailure(queued.lastErrorCode)) {
+          queued = recoverMenuCompatibilityOutboxRecord(
+            queued,
+            await buildRecoverySubmitPayload(draft, session.items, catalogItems, {
+              accountId: draft.accountId,
+              organizationId: draft.organizationId,
+              storeId: draft.storeId,
+            }),
+          )
+        }
         if (queued?.state === 'SUBMITTED' && queued.serverOrderId) {
           const submittedOrder = await fetchOrderDetail(queued.serverOrderId)
           setOrder(submittedOrder)

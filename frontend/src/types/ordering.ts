@@ -35,6 +35,7 @@ export interface MenuItemCustomizationConfig {
   noodleTypes?: ChoiceOption[]
   spicyLevels?: ChoiceOption[]
   combo?: {
+    option?: ChoiceOption
     optionId?: string
     upcharge: number
     eggs: ChoiceOption[]
@@ -51,6 +52,7 @@ export interface MenuItem {
   sortOrder?: number | null
   categoryId: string
   categoryCode?: string
+  stationId?: string
   itemType?: string
   nameEn: string
   nameZh: string
@@ -61,6 +63,18 @@ export interface MenuItem {
   soldOut?: boolean
   badge?: LocalizedText
   customization?: MenuItemCustomizationConfig
+}
+
+export interface OrderLineOptionSnapshot {
+  optionId: string
+  optionType: string | null
+  optionCode: string | null
+  optionGroup: string | null
+  parentOptionId: string | null
+  nameEn: string
+  nameZh: string
+  priceDelta: number
+  quantity: number
 }
 
 export interface ItemSelectionState {
@@ -86,6 +100,11 @@ export interface OrderLineItem {
   quantity: number
   unitPrice: number
   lineSubtotal: number
+  categoryCodeSnapshot?: string | null
+  stationIdSnapshot?: string | null
+  skuSnapshot?: string | null
+  itemTypeSnapshot?: string | null
+  optionSnapshots?: OrderLineOptionSnapshot[]
   selection: ItemSelectionState
   summaryTags: LocalizedText[]
   notes: string
@@ -232,6 +251,8 @@ export interface BackendOrderItemResponse {
   id: number
   menu_item_id: number
   category_code_snapshot: string | null
+  station_id_snapshot?: number | null
+  item_sku_snapshot?: string | null
   item_name_snapshot_zh: string
   item_name_snapshot_en: string
   quantity: number

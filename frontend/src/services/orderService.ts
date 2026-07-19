@@ -35,16 +35,34 @@ interface FrontdeskOrderQueryInput {
 
 export interface IdempotentOrderItemPayload {
   menu_item_id: number
+  item_name_snapshot_zh: string
+  item_name_snapshot_en: string
+  unit_price_snapshot: number
+  category_code_snapshot: string | null
+  station_id_snapshot: number | null
+  item_sku_snapshot: string | null
+  item_type_snapshot: string | null
   quantity: number
   combo_group_no: number | null
   combo_role: string
   notes: string | null
-  options: { option_id: number; quantity: number }[]
+  options: {
+    option_id: number
+    option_type_snapshot: string | null
+    option_code_snapshot: string | null
+    option_group_snapshot: string | null
+    parent_option_id_snapshot: number | null
+    option_name_snapshot_zh: string
+    option_name_snapshot_en: string
+    option_price_snapshot: number
+    quantity: number
+  }[]
 }
 
 export interface IdempotentOrderSubmitPayload {
   client_order_id: string
   idempotency_key: string
+  local_draft_id?: string | null
   organization_id: number
   store_id: number
   server_order_id: number | null
