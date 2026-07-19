@@ -17,6 +17,14 @@ export const ORDER_OUTBOX_UPDATED_EVENT = 'restaurant-order-outbox-updated'
 
 export const ORDER_OUTBOX_RETRY_DELAYS_MS = [2_000, 5_000, 15_000, 30_000, 60_000] as const
 const LATER_RETRY_DELAY_MS = 5 * 60_000
+const MENU_COMPATIBILITY_FAILURE_CODES = new Set([
+  'MENU_REVISION_STALE',
+  'PRICE_CHANGED',
+  'ITEM_DISABLED',
+  'ITEM_SOLD_OUT',
+  'OPTION_INVALID',
+  'REQUIRED_OPTION_MISSING',
+])
 
 export interface OrderOutboxRecord {
   key: string
@@ -111,6 +119,7 @@ export function resolveOrderOutboxWrite(
   if (isServerTerminalLocalState(current.state)) return current
   if (incoming.state === 'SUBMITTED') return incoming
   if (current.state === 'SUBMITTED') return current
+  if (isMenuCompatibilityFailure(current.lastErrorCode) && incoming.state === 'QUEUED') return incoming
   if (incoming.attemptCount < current.attemptCount) return current
   if (current.state === 'SUBMITTING' && incoming.state === 'QUEUED') return current
   if (
@@ -237,7 +246,29 @@ export function failOrderOutboxAttempt(
   }
 }
 
+export function isMenuCompatibilityFailure(errorCode?: string | null) {
+  return errorCode != null && MENU_COMPATIBILITY_FAILURE_CODES.has(errorCode)
+}
+
+export function recoverMenuCompatibilityOutboxRecord(
+  record: OrderOutboxRecord,
+  frozenPayload: IdempotentOrderSubmitPayload,
+  now = new Date(),
+): OrderOutboxRecord {
+  if (!isMenuCompatibilityFailure(record.lastErrorCode)) return record
+  return {
+    ...record,
+    frozenPayload,
+    payloadHash: stablePayloadHash(frozenPayload),
+    state: 'QUEUED',
+    nextRetryAt: now.toISOString(),
+    lastErrorCode: null,
+    lastErrorMessage: null,
+  }
+}
+
 export function classifySubmissionFailure(status: number, errorCode?: string | null) {
+  if (isMenuCompatibilityFailure(errorCode)) return 'FAILED_RETRYABLE' as const
   if (status === 0 || status >= 500 || errorCode === 'REQUEST_TIMEOUT' || errorCode === 'NETWORK_ERROR') {
     return 'FAILED_RETRYABLE' as const
   }

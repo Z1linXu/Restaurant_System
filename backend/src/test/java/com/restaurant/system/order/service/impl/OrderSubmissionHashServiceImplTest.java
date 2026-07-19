@@ -22,11 +22,30 @@ class OrderSubmissionHashServiceImplTest {
         assertNotEquals(service.hash(request), service.hash(request("extra soup")));
     }
 
+    @Test
+    void menuRevisionIsDiagnosticButSnapshotPriceRemainsPartOfIdempotentContent() {
+        IdempotentOrderSubmitRequest original = request(null);
+        IdempotentOrderSubmitRequest newerRevision = request(null);
+        newerRevision.menu_revision = 99L;
+        IdempotentOrderSubmitRequest differentPrice = request(null);
+        differentPrice.items.get(0).unit_price_snapshot = new BigDecimal("13.00");
+
+        assertEquals(service.hash(original), service.hash(newerRevision));
+        assertNotEquals(service.hash(original), service.hash(differentPrice));
+        assertNotEquals(service.legacyHash(original), service.legacyHash(newerRevision));
+    }
+
     private IdempotentOrderSubmitRequest request(String notes) {
         CreateOrderItemRequest item = new CreateOrderItemRequest();
         item.menu_item_id = 20L;
         item.quantity = 1;
         item.combo_role = "standalone";
+        item.item_name_snapshot_zh = "牛肉面";
+        item.item_name_snapshot_en = "Beef Noodle";
+        item.unit_price_snapshot = new BigDecimal("12.50");
+        item.category_code_snapshot = "SOUP_NOODLE";
+        item.station_id_snapshot = 3L;
+        item.item_sku_snapshot = "traditional_beef_noodle";
         item.notes = notes;
         item.options = List.of();
 

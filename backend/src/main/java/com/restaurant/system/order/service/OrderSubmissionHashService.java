@@ -5,4 +5,6 @@ import com.restaurant.system.order.dto.IdempotentOrderSubmitRequest;
 public interface OrderSubmissionHashService {
 
     String hash(IdempotentOrderSubmitRequest request);
+
+    String legacyHash(IdempotentOrderSubmitRequest request);
 }

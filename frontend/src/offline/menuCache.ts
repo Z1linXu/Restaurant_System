@@ -195,6 +195,31 @@ export async function readActiveMenuSnapshot(scope: MenuCacheScope): Promise<Act
   return { head, snapshot }
 }
 
+export async function readMenuSnapshot(
+  scope: MenuCacheScope,
+  revision: number,
+): Promise<MenuSnapshotRecord | null> {
+  const database = await openOfflineDatabase()
+  const transaction = database.transaction(OFFLINE_STORES.menuSnapshots, 'readonly')
+  const completed = transactionComplete(transaction)
+  const snapshot = await requestResult<MenuSnapshotRecord | undefined>(
+    transaction.objectStore(OFFLINE_STORES.menuSnapshots).get(menuSnapshotKey(scope, revision)),
+  )
+  await completed
+  if (!snapshot
+    || snapshot.schemaVersion !== MENU_CACHE_SCHEMA_VERSION
+    || !recordMatchesScope(snapshot, scope)
+    || snapshot.revision !== revision) {
+    return null
+  }
+  try {
+    validateMenuCatalog(snapshot.catalog, scope, revision)
+  } catch {
+    return null
+  }
+  return snapshot
+}
+
 export async function replaceActiveMenuSnapshot(
   scope: MenuCacheScope,
   catalog: BackendMenuCatalog,

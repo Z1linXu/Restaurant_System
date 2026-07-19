@@ -181,9 +181,11 @@ export function OrderingPage({
   const [takeoutDialogOpen, setTakeoutDialogOpen] = useState(false)
   const [quickAddStates, setQuickAddStates] = useState<Record<string, 'idle' | 'adding' | 'added'>>({})
   const [printWarning, setPrintWarning] = useState<string | null>(null)
+  const [menuUpdateNotice, setMenuUpdateNotice] = useState<string | null>(null)
   const connection = useConnectionStatus()
   const handledSubmittedOrderIdsRef = useRef(new Set<number>())
   const localSubmitRequestedRef = useRef(false)
+  const previousMenuRevisionRef = useRef<number | null>(null)
   const {
     session,
     order,
@@ -239,6 +241,15 @@ export function OrderingPage({
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [])
+
+  useEffect(() => {
+    const revision = catalog.catalog?.menuRevision ?? null
+    const previous = previousMenuRevisionRef.current
+    if (revision != null && previous != null && revision !== previous && catalogSource === 'NETWORK') {
+      setMenuUpdateNotice('菜单已更新，新添加菜品将使用最新菜单；当前草稿中的菜品保持原价格和选项。')
+    }
+    if (revision != null) previousMenuRevisionRef.current = revision
+  }, [catalog.catalog?.menuRevision, catalogSource])
 
   useEffect(() => {
     if (!activeCategoryId && categories[0]?.id) {
@@ -506,6 +517,11 @@ export function OrderingPage({
         {catalogUpdateError ? (
           <div className="rounded-[20px] border border-[rgba(151,34,34,0.22)] bg-[rgba(151,34,34,0.08)] px-5 py-3 text-[0.95rem] font-bold text-[rgb(116,22,22)]">
             {catalogUpdateError}
+          </div>
+        ) : null}
+        {menuUpdateNotice ? (
+          <div className="rounded-[20px] border border-[rgba(92,106,69,0.28)] bg-[rgba(92,106,69,0.1)] px-5 py-3 text-[0.95rem] font-bold text-[rgb(59,73,40)]">
+            {menuUpdateNotice}
           </div>
         ) : null}
 

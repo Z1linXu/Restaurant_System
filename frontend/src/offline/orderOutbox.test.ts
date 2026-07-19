@@ -7,7 +7,9 @@ import {
   completeOrderOutboxAttempt,
   createOrderOutboxRecord,
   failOrderOutboxAttempt,
+  isMenuCompatibilityFailure,
   isOrderOutboxRecordDue,
+  recoverMenuCompatibilityOutboxRecord,
   retryDelayMs,
   resolveOrderOutboxWrite,
 } from './orderOutbox'
@@ -55,11 +57,28 @@ const payload: IdempotentOrderSubmitPayload = {
   expected_subtotal_amount: 12.5,
   items: [{
     menu_item_id: 20,
+    item_name_snapshot_zh: '牛肉面',
+    item_name_snapshot_en: 'Beef Noodle',
+    unit_price_snapshot: 12.5,
+    category_code_snapshot: 'SOUP_NOODLE',
+    station_id_snapshot: 3,
+    item_sku_snapshot: 'traditional_beef_noodle',
+    item_type_snapshot: 'NOODLE',
     quantity: 1,
     combo_group_no: null,
     combo_role: 'standalone',
     notes: null,
-    options: [{ option_id: 30, quantity: 1 }],
+    options: [{
+      option_id: 30,
+      option_type_snapshot: 'size',
+      option_code_snapshot: 'regular',
+      option_group_snapshot: 'SIZE',
+      parent_option_id_snapshot: null,
+      option_name_snapshot_zh: '中碗',
+      option_name_snapshot_en: 'Regular',
+      option_price_snapshot: 0,
+      quantity: 1,
+    }],
   }],
 }
 
@@ -103,7 +122,7 @@ describe('order outbox state machine', () => {
     expect(failed.nextRetryAt).toBe('2026-07-13T10:00:02.000Z')
   })
 
-  it('stops automatic retries for 409 menu and idempotency conflicts', () => {
+  it('keeps real idempotency conflicts stopped but treats menu drift as recoverable', () => {
     const submitting = beginOrderOutboxAttempt(createOrderOutboxRecord(draft, payload))
     const conflict = failOrderOutboxAttempt(
       submitting,
@@ -115,8 +134,29 @@ describe('order outbox state machine', () => {
     expect(conflict.state).toBe('CONFLICT')
     expect(conflict.nextRetryAt).toBeNull()
     expect(isOrderOutboxRecordDue(conflict)).toBe(false)
-    expect(classifySubmissionFailure(409, 'MENU_REVISION_STALE')).toBe('CONFLICT')
-    expect(classifySubmissionFailure(409, 'PRICE_CHANGED')).toBe('CONFLICT')
+    expect(classifySubmissionFailure(409, 'MENU_REVISION_STALE')).toBe('FAILED_RETRYABLE')
+    expect(classifySubmissionFailure(409, 'PRICE_CHANGED')).toBe('FAILED_RETRYABLE')
+    expect(isMenuCompatibilityFailure('OPTION_INVALID')).toBe(true)
+  })
+
+  it('recovers a legacy menu conflict without deleting or rotating the draft identity', () => {
+    const failed = {
+      ...createOrderOutboxRecord(draft, payload),
+      state: 'CONFLICT' as const,
+      attemptCount: 1,
+      lastErrorCode: 'MENU_REVISION_STALE',
+      lastErrorMessage: 'stale menu',
+    }
+    const refreshedPayload = { ...payload, menu_revision: 13 }
+
+    const recovered = recoverMenuCompatibilityOutboxRecord(failed, refreshedPayload)
+
+    expect(recovered.state).toBe('QUEUED')
+    expect(recovered.clientOrderId).toBe(failed.clientOrderId)
+    expect(recovered.localDraftId).toBe(failed.localDraftId)
+    expect(recovered.frozenPayload).toBe(refreshedPayload)
+    expect(recovered.lastErrorCode).toBeNull()
+    expect(resolveOrderOutboxWrite(failed, recovered)).toBe(recovered)
   })
 
   it('separates non-retryable 400 validation failures from 409 state conflicts', () => {

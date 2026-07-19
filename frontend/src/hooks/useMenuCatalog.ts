@@ -145,6 +145,7 @@ export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
                   return undefined
                 }
                 return {
+                  option: comboUpcharge,
                   optionId: comboUpcharge.id,
                   upcharge: comboUpcharge.priceDelta ?? 0,
                   eggs: comboEggs,
@@ -186,6 +187,7 @@ export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
         sortOrder: item.sort_order,
         categoryId: String(category.id),
         categoryCode: category.code,
+        stationId: item.station_id == null ? undefined : String(item.station_id),
         itemType: item.item_type,
         nameEn: item.name_en,
         nameZh: item.name_zh,
