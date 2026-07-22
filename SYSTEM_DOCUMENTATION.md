@@ -6867,3 +6867,31 @@ store-scoped ordering, weak-network drafts/outbox, printer restaurant mode,
 PAD_DIRECT, menu management, item ordering, and cloud deployment. This batch
 does not enable or modify KDS, Pickup, Inventory, Platform Admin, Redis,
 Payment, refund, or `completeOrder` behavior.
+
+## Pilot Reliability Batch Delivery
+
+The current branch `codex/pilot-site-reliability-batch` contains one controlled
+现场可靠性批次 split into five independently reviewable commits. The commits
+are intentionally not merged into `main` by the development workflow:
+
+1. PAD_DIRECT worker deterministic recovery, generation-safe callbacks,
+   lifecycle handling, persisted high-risk stop state, and health visibility.
+2. Actionable local order outbox entries for drafts that are not yet confirmed
+   by the server. Retry keeps the original client order id; editing is allowed
+   only for locally safe states, while `SUBMITTING` and uncertain retryable
+   results remain protected.
+3. Store-scoped print-job attention acknowledgement with additive Flyway V7
+   snapshot columns. Acknowledgement never changes status, retry count,
+   printed time, error code, or reprint semantics.
+4. Non-destructive menu-cache refresh, revision-scoped dismissal, and explicit
+   cache refresh status. Existing draft lines, option snapshots, prices,
+   outbox records, and client order identities are never replaced by a refresh.
+5. Regression tests, pilot scope documentation, and the operational runbook
+   for validating and rolling back the batch.
+
+This batch does not add automatic reprint, a background daemon, payment or
+refund behavior, `completeOrder` changes, KDS/Pickup work, or a database data
+cleanup. V7 is additive and must be migrated before enabling the acknowledgement
+API on a database that has not yet applied it. The Android worker remains a
+foreground/semi-auto pilot component and still requires real-device testing
+after APK installation.

@@ -30,6 +30,7 @@ import { finalizeOfflineOrderRecords } from '../../offline/orderLifecycle'
 import {
   cancelOfflineOrder,
   readOfflineOrderState,
+  returnOfflineOrderToDraft,
   retryOfflineOrder,
 } from '../../offline/offlineOrderActions'
 
@@ -119,10 +120,15 @@ function OfflineOrdersBanner({
                     检查状态
                   </button>
                 ) : null}
-                {!isSubmitting ? (
+                {order.state === 'LOCAL_DRAFT' || order.state === 'QUEUED' || order.state === 'CONFLICT' || order.state === 'FAILED_VALIDATION' ? (
                   <button type="button" disabled={Boolean(busyClientOrderId)} className="min-h-10 rounded-full bg-[var(--primary)] px-3 py-1.5 text-xs font-black text-white disabled:opacity-50" onClick={() => onOpen(order)}>
                     {order.state === 'LOCAL_DRAFT' ? '继续处理' : '返回修改'}
                   </button>
+                ) : null}
+                {order.state === 'FAILED_RETRYABLE' ? (
+                  <span className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black">
+                    服务器结果未确认，请先立即重试
+                  </span>
                 ) : null}
                 {canRetry ? (
                   <button type="button" disabled={busy} className="min-h-10 rounded-full bg-white px-3 py-1.5 text-xs font-black disabled:opacity-50" onClick={() => onRetry(order)}>
@@ -210,9 +216,16 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     }
   }, [workstation])
 
-  const handleOfflineOpen = useCallback((order: OfflineOrderBadge) => {
-    navigateTo(buildMenuPath(offlineOrderContext(order), storeId))
-  }, [offlineOrderContext, storeId])
+  const handleOfflineOpen = useCallback(async (order: OfflineOrderBadge) => {
+    try {
+      if (offlineOrderScope && order.state !== 'LOCAL_DRAFT') {
+        await returnOfflineOrderToDraft(offlineOrderScope, order.clientOrderId)
+      }
+      navigateTo(buildMenuPath(offlineOrderContext(order), storeId))
+    } catch (error) {
+      setSubmissionMessage(error instanceof Error ? error.message : '本机订单暂时不能返回修改。')
+    }
+  }, [offlineOrderContext, offlineOrderScope, storeId])
 
   const handleOfflineRetry = useCallback(async (order: OfflineOrderBadge) => {
     if (!offlineOrderScope) return

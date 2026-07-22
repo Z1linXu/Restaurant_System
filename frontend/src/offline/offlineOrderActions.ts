@@ -1,7 +1,9 @@
 import {
   listLocalDraftsForScope,
+  reopenRejectedLocalDraft,
   saveLocalDraft,
   type LocalDraftScope,
+  type LocalDraftRecord,
   type LocalDraftSubmitState,
 } from './localDrafts'
 import {
@@ -88,6 +90,50 @@ export async function cancelOfflineOrder(
       lastError: null,
     })
   }
+}
+
+export function canReturnOfflineOrderToDraft(state: LocalDraftSubmitState) {
+  return state === 'QUEUED'
+    || state === 'CONFLICT'
+    || state === 'FAILED_VALIDATION'
+}
+
+export async function returnOfflineOrderToDraft(
+  scope: LocalDraftScope,
+  clientOrderId: string,
+) {
+  const record = await readOrderOutboxRecord(
+    scope.accountId,
+    scope.organizationId,
+    scope.storeId,
+    clientOrderId,
+  )
+  if (!record) return null
+  if (record.state === 'SUBMITTING' || record.state === 'FAILED_RETRYABLE') {
+    throw new Error('服务器是否已接单尚未确认，不能修改或取消。请先立即重试以确认原订单。')
+  }
+  if (!canReturnOfflineOrderToDraft(record.state)) return null
+
+  const drafts = await listLocalDraftsForScope(scope)
+  const draft = drafts.find((candidate) => candidate.clientOrderId === clientOrderId)
+  if (!draft) throw new Error('本机草稿不存在，请先检查本机订单记录。')
+
+  await saveOrderOutboxRecord({
+    ...record,
+    state: 'CANCELLED_LOCAL',
+    nextRetryAt: null,
+    lastErrorCode: null,
+    lastErrorMessage: null,
+  })
+  const editableDraft: LocalDraftRecord = record.state === 'CONFLICT' || record.state === 'FAILED_VALIDATION'
+    ? reopenRejectedLocalDraft(draft)
+    : {
+        ...draft,
+        submitState: 'LOCAL_DRAFT',
+        lastError: null,
+        nextRetryAt: null,
+      }
+  return saveLocalDraft(editableDraft)
 }
 
 function isLocalCancellationAllowed(state: LocalDraftSubmitState) {
