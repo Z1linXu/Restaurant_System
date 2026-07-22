@@ -27,6 +27,11 @@ import { useAuth } from '../auth/useAuth'
 import { useStoreOfflineOrders } from '../offline/useStoreOfflineOrders'
 import { offlineOrderBadgeLabel, type OfflineOrderBadge } from '../offline/offlineOrderStatus'
 import { finalizeOfflineOrderRecords } from '../../offline/orderLifecycle'
+import {
+  cancelOfflineOrder,
+  readOfflineOrderState,
+  retryOfflineOrder,
+} from '../../offline/offlineOrderActions'
 
 function buildGeneratedTakeoutLabel() {
   const stamp = Date.now().toString().slice(-4)
@@ -70,19 +75,69 @@ function buildPostSubmitPrintAttentionMessage(jobs: PrintJobRecord[]) {
   return `Printing needs attention. ${details} Reprint immediately from Print Center or Order Center.`
 }
 
-function OfflineOrdersBanner({ orders, compact = false }: { orders: OfflineOrderBadge[]; compact?: boolean }) {
+function OfflineOrdersBanner({
+  orders,
+  compact = false,
+  onOpen,
+  onRetry,
+  onCheckStatus,
+  onCancel,
+  busyClientOrderId,
+}: {
+  orders: OfflineOrderBadge[]
+  compact?: boolean
+  onOpen: (order: OfflineOrderBadge) => void
+  onRetry: (order: OfflineOrderBadge) => void
+  onCheckStatus: (order: OfflineOrderBadge) => void
+  onCancel: (order: OfflineOrderBadge) => void
+  busyClientOrderId: string | null
+}) {
   if (!orders.length) return null
   return (
     <section className={`rounded-[20px] border border-[rgba(177,111,21,0.28)] bg-[rgba(220,153,54,0.13)] text-[rgb(112,65,8)] ${compact ? 'px-4 py-3' : 'px-5 py-4'}`}>
       <p className={`${compact ? 'text-[0.9rem]' : 'text-base'} font-black`}>
         本机有 {orders.length} 个订单尚未确认进入厨房
       </p>
-      <div className="mt-2 flex flex-wrap gap-2">
-        {orders.map((order) => (
-          <span key={order.clientOrderId} className="rounded-full bg-white/65 px-3 py-1.5 text-xs font-bold">
-            {formatSplitSlotLabel(order.contextLabel)} · {offlineOrderBadgeLabel(order.state)} · {order.itemCount} 份
-          </span>
-        ))}
+      <div className="mt-3 space-y-2">
+        {orders.map((order) => {
+          const isSubmitting = order.state === 'SUBMITTING'
+          const canRetry = order.state === 'QUEUED' || order.state === 'FAILED_RETRYABLE'
+          const canCancel = order.state === 'LOCAL_DRAFT' || order.state === 'QUEUED'
+            || order.state === 'CONFLICT' || order.state === 'FAILED_VALIDATION'
+          const busy = busyClientOrderId === order.clientOrderId
+          return (
+            <div key={order.clientOrderId} className="rounded-[16px] bg-white/65 px-3 py-2.5">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-bold">
+                <span>{formatSplitSlotLabel(order.contextLabel)}</span>
+                <span>· {offlineOrderBadgeLabel(order.state)}</span>
+                <span>· {order.itemCount} 份</span>
+                {order.lastErrorCode ? <span className="font-semibold">· {order.lastErrorCode}</span> : null}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {isSubmitting ? (
+                  <button type="button" disabled={busy} className="min-h-10 rounded-full bg-white px-3 py-1.5 text-xs font-black disabled:opacity-50" onClick={() => onCheckStatus(order)}>
+                    检查状态
+                  </button>
+                ) : null}
+                {!isSubmitting ? (
+                  <button type="button" disabled={Boolean(busyClientOrderId)} className="min-h-10 rounded-full bg-[var(--primary)] px-3 py-1.5 text-xs font-black text-white disabled:opacity-50" onClick={() => onOpen(order)}>
+                    {order.state === 'LOCAL_DRAFT' ? '继续处理' : '返回修改'}
+                  </button>
+                ) : null}
+                {canRetry ? (
+                  <button type="button" disabled={busy} className="min-h-10 rounded-full bg-white px-3 py-1.5 text-xs font-black disabled:opacity-50" onClick={() => onRetry(order)}>
+                    立即重试
+                  </button>
+                ) : null}
+                {canCancel ? (
+                  <button type="button" disabled={busy} className="min-h-10 rounded-full px-3 py-1.5 text-xs font-black underline disabled:opacity-50" onClick={() => onCancel(order)}>
+                    取消本机订单
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          )
+        })}
       </div>
     </section>
   )
@@ -113,6 +168,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
   const [printOptions, setPrintOptions] = useState<OrderPrintOption[]>([])
   const [printBusy, setPrintBusy] = useState<string | null>(null)
   const [printError, setPrintError] = useState<string | null>(null)
+  const [offlineActionBusy, setOfflineActionBusy] = useState<string | null>(null)
   const menuCatalog = useMenuCatalog(storeId, {
     accountId: user?.id ?? null,
     organizationId,
@@ -141,6 +197,62 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
   })
   const workstationCompact = isIpadLandscape
   const boardPath = buildFrontdeskBoardPath(workstation, storeId)
+
+  const offlineOrderContext = useCallback((order: OfflineOrderBadge) => {
+    const slotLabel = order.pickupNo ?? order.tableNo ?? order.contextLabel
+    const isPickup = Boolean(order.pickupNo)
+    return {
+      slotLabel,
+      tableLabel: isPickup ? 'Takeout' : slotLabel.split('-')[0] ?? slotLabel,
+      orderType: isPickup ? 'pickup' as const : 'dine_in' as const,
+      pickupLabel: isPickup ? slotLabel : null,
+      workstation,
+    }
+  }, [workstation])
+
+  const handleOfflineOpen = useCallback((order: OfflineOrderBadge) => {
+    navigateTo(buildMenuPath(offlineOrderContext(order), storeId))
+  }, [offlineOrderContext, storeId])
+
+  const handleOfflineRetry = useCallback(async (order: OfflineOrderBadge) => {
+    if (!offlineOrderScope) return
+    setOfflineActionBusy(order.clientOrderId)
+    try {
+      await retryOfflineOrder(offlineOrderScope, order.clientOrderId)
+      await refreshFromBackend({ force: true })
+    } catch (error) {
+      setSubmissionMessage(error instanceof Error ? error.message : '订单重试失败，请稍后再试。')
+    } finally {
+      setOfflineActionBusy(null)
+    }
+  }, [offlineOrderScope, refreshFromBackend])
+
+  const handleOfflineCheckStatus = useCallback(async (order: OfflineOrderBadge) => {
+    if (!offlineOrderScope) return
+    setOfflineActionBusy(order.clientOrderId)
+    try {
+      const state = await readOfflineOrderState(offlineOrderScope, order.clientOrderId)
+      setSubmissionMessage(state === 'SUBMITTING'
+        ? '订单仍在确认服务器结果，请不要重复提交。'
+        : `订单当前状态：${state ?? '未找到本机记录'}。`)
+    } finally {
+      setOfflineActionBusy(null)
+    }
+  }, [offlineOrderScope])
+
+  const handleOfflineCancel = useCallback(async (order: OfflineOrderBadge) => {
+    if (!offlineOrderScope || !window.confirm(`确定取消 ${formatSplitSlotLabel(order.contextLabel)} 的本机订单吗？`)) return
+    setOfflineActionBusy(order.clientOrderId)
+    try {
+      await cancelOfflineOrder(offlineOrderScope, order.clientOrderId)
+      setSubmissionMessage('本机订单已取消，未标记为已进入厨房。')
+      await refreshFromBackend({ force: true })
+    } catch (error) {
+      setSubmissionMessage(error instanceof Error ? error.message : '本机订单取消失败。')
+    } finally {
+      setOfflineActionBusy(null)
+    }
+  }, [offlineOrderScope, refreshFromBackend])
 
   const clearPrintCheckTimeouts = () => {
     printCheckTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId))
@@ -427,7 +539,15 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
               </div>
             ) : null}
 
-            <OfflineOrdersBanner orders={offlineOrders} compact={workstationCompact} />
+            <OfflineOrdersBanner
+              orders={offlineOrders}
+              compact={workstationCompact}
+              onOpen={handleOfflineOpen}
+              onRetry={(order) => void handleOfflineRetry(order)}
+              onCheckStatus={(order) => void handleOfflineCheckStatus(order)}
+              onCancel={(order) => void handleOfflineCancel(order)}
+              busyClientOrderId={offlineActionBusy}
+            />
 
             <Card tone="base" className={`bg-[rgba(255,255,255,0.36)] shadow-none ring-0 ${workstationCompact ? 'space-y-3 rounded-[24px] p-3.5' : 'space-y-5 rounded-[30px] p-4 md:p-5 xl:p-5'}`}>
               <TableStatusLegend counts={statusCounts} compact={workstationCompact} />
@@ -487,7 +607,14 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
                 </div>
               ) : null}
 
-              <OfflineOrdersBanner orders={offlineOrders} />
+              <OfflineOrdersBanner
+                orders={offlineOrders}
+                onOpen={handleOfflineOpen}
+                onRetry={(order) => void handleOfflineRetry(order)}
+                onCheckStatus={(order) => void handleOfflineCheckStatus(order)}
+                onCancel={(order) => void handleOfflineCancel(order)}
+                busyClientOrderId={offlineActionBusy}
+              />
 
               <Card tone="base" className="space-y-5 rounded-[30px] bg-[rgba(255,255,255,0.36)] p-4 md:p-5 xl:p-5 shadow-none ring-0">
                 <TableStatusLegend counts={statusCounts} />

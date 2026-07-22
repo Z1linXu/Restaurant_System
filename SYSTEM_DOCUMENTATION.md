@@ -6759,11 +6759,13 @@ Pickup, Inventory, Platform Admin, or Redis.
   order; if it is terminal, opening the table creates a blank draft with new
   local and idempotency identities. Network failure never downgrades a known
   server-order snapshot into a local new order.
-- The board warning counts only `QUEUED`, `SUBMITTING`, `FAILED_RETRYABLE`, and
-  `CONFLICT`. It excludes `LOCAL_DRAFT`, confirmed `SUBMITTED`, validation
-  failures, local cancellations, and server terminal records. Workspace
-  snapshots contain auth/store context only and therefore require no order
-  cleanup.
+- The board warning counts `LOCAL_DRAFT`, `QUEUED`, `SUBMITTING`,
+  `FAILED_RETRYABLE`, and `CONFLICT`. It provides an explicit processing entry
+  for each local record: continue/edit, retry with the same client order id,
+  check a submitting result, or cancel only when the state is safely local.
+  It excludes confirmed `SUBMITTED`, validation failures that are not active,
+  local cancellations, and server terminal records. Workspace snapshots
+  contain auth/store context only and therefore require no order cleanup.
 - Chicken shredded cold noodle uses stable SKU
   `cold_noodle_shredded_chicken`. Its first active `NOODLE_TYPE` option is the
   new-order default; stable code `noodle_thin` is moved first by Flyway

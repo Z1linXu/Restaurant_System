@@ -24,10 +24,10 @@ describe('offline ordering operator status', () => {
   })
 
   it('only counts records whose kitchen confirmation is unresolved', () => {
-    expect(['QUEUED', 'SUBMITTING', 'FAILED_RETRYABLE', 'CONFLICT'].filter(
+    expect(['LOCAL_DRAFT', 'QUEUED', 'SUBMITTING', 'FAILED_RETRYABLE', 'CONFLICT'].filter(
       (state) => isActiveOfflineOrderState(state as never),
-    )).toEqual(['QUEUED', 'SUBMITTING', 'FAILED_RETRYABLE', 'CONFLICT'])
-    expect(['LOCAL_DRAFT', 'SUBMITTED', 'FAILED_VALIDATION', 'COMPLETED', 'CANCELLED', 'CANCELLED_LOCAL'].some(
+    )).toEqual(['LOCAL_DRAFT', 'QUEUED', 'SUBMITTING', 'FAILED_RETRYABLE', 'CONFLICT'])
+    expect(['SUBMITTED', 'FAILED_VALIDATION', 'COMPLETED', 'CANCELLED', 'CANCELLED_LOCAL'].some(
       (state) => isActiveOfflineOrderState(state as never),
     )).toBe(false)
   })
