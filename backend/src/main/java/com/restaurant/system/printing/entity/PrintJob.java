@@ -102,4 +102,22 @@ public class PrintJob {
 
     @Column(name = "last_attempt_at")
     public LocalDateTime last_attempt_at;
+
+    @Column(name = "attention_acknowledged_at")
+    public LocalDateTime attentionAcknowledgedAt;
+
+    @Column(name = "attention_acknowledged_by")
+    public Long attentionAcknowledgedBy;
+
+    @Column(name = "attention_acknowledgement_note", length = 500)
+    public String attentionAcknowledgementNote;
+
+    @Column(name = "attention_acknowledged_status", length = 32)
+    public String attentionAcknowledgedStatus;
+
+    @Column(name = "attention_acknowledged_retry_count")
+    public Integer attentionAcknowledgedRetryCount;
+
+    @Column(name = "attention_acknowledged_error_code", length = 128)
+    public String attentionAcknowledgedErrorCode;
 }

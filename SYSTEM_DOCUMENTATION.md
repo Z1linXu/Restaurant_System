@@ -6822,6 +6822,26 @@ mismatch type, and submitted/server names and prices. The normal Web order API
 does not currently expose a native Android device id, so that field is null
 unless a client explicitly supplies the optional diagnostic value.
 
+## Pilot Reliability: Print Attention Acknowledgement
+
+Flyway migration `V7__add_print_job_attention_acknowledgement.sql` adds an
+additive acknowledgement snapshot to `print_jobs`. The Print Center can mark a
+job as handled without changing its `status`, `error_code`, `error_message`,
+`retry_count`, `printed_at`, or reprint behavior.
+
+- `POST /api/v1/admin/printing/jobs/{jobId}/acknowledge` is store-scoped and
+  uses the existing `admin:printing_manage` / `admin:store_config` access
+  check. The optional note and job/module/status metadata are written to the
+  existing audit log; ticket payloads are not logged.
+- The response carries the acknowledgement timestamp, actor, note, and the
+  status/retry/error snapshot captured at acknowledgement time. A job is quiet
+  only while all of those state fields still match. A later retry, error-code
+  change, or status change makes the job visible for attention again.
+- The Print Center removes currently acknowledged jobs from the attention
+  counter but retains them in recent history with an `已人工处理` marker. The
+  existing job-snapshot reprint endpoint remains unchanged; uncertain
+  `PRINTING`/write-flush cases still require operator judgment before reprint.
+
 ## Current Restaurant Pilot Boundary
 
 The concise enabled/disabled matrix for this reliability batch is maintained in

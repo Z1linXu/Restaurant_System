@@ -17,12 +17,14 @@ import com.restaurant.system.common.auth.Capability;
 import com.restaurant.system.common.feature.FeatureFlagService;
 import com.restaurant.system.common.feature.FeaturePackage;
 import com.restaurant.system.printing.dto.PrintCenterOverviewResponse;
+import com.restaurant.system.printing.dto.PrintJobResponse;
 import com.restaurant.system.printing.dto.PrinterAssignmentUpdateRequest;
 import com.restaurant.system.printing.dto.PrinterConnectionTestResponse;
 import com.restaurant.system.printing.dto.PrinterTestResponse;
 import com.restaurant.system.printing.dto.StorePrintingStatusRequest;
 import com.restaurant.system.printing.entity.PrinterAssignment;
 import com.restaurant.system.printing.entity.PrinterConfig;
+import com.restaurant.system.printing.entity.PrintJob;
 import com.restaurant.system.printing.service.PrintDispatcherService;
 import com.restaurant.system.printing.service.PrintJobService;
 import com.restaurant.system.printing.service.PrinterAssignmentService;
@@ -114,6 +116,28 @@ class OwnerPrintingControllerDisabledStateTest {
         mockMvc.perform(get("/api/v1/admin/printing/jobs").param("store_id", "1"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
+    @Test
+    void acknowledgePrintJobKeepsTheJobStateAndReturnsSnapshot() throws Exception {
+        PrintJob job = new PrintJob();
+        job.id = 91L;
+        job.store_id = 1L;
+        job.status = "FAILED";
+        job.module_code = "GRAB";
+        when(printJobService.requireJob(91L)).thenReturn(job);
+        when(printJobService.acknowledgeAttention(91L, 2L, "已人工通知厨房")).thenReturn(job);
+        PrintJobResponse response = new PrintJobResponse();
+        response.id = 91L;
+        response.status = "FAILED";
+        when(printJobService.toResponse(job)).thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/admin/printing/jobs/91/acknowledge")
+                .contentType("application/json")
+                .content("{\"note\":\"已人工通知厨房\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.id").value(91))
+            .andExpect(jsonPath("$.data.status").value("FAILED"));
     }
 
     @Test

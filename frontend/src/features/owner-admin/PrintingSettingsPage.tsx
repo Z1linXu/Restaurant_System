@@ -6,6 +6,7 @@ import { ApiRequestError } from '../../services/apiClient'
 import {
   deletePrinterConfig,
   disableStoreDevice,
+  acknowledgePrintJob,
   fetchPrintJobs,
   fetchPrintCenterOverview,
   fetchStoreDevices,
@@ -327,6 +328,9 @@ function padDirectNoticeToneClass(tone: 'warning' | 'danger' | 'info') {
 }
 
 function printJobNeedsAttention(job: PrintJobRecord) {
+  if (isPrintJobAcknowledged(job)) {
+    return false
+  }
   const padNotice = padDirectClaimNotice(job)
   const pendingNotice = pendingAgeNotice(job)
   return job.status === 'FAILED'
@@ -335,6 +339,18 @@ function printJobNeedsAttention(job: PrintJobRecord) {
     || padNotice?.tone === 'warning'
     || pendingNotice?.tone === 'danger'
     || pendingNotice?.tone === 'warning'
+}
+
+function isPrintJobAcknowledged(job: PrintJobRecord) {
+  if (job.attention_acknowledged === true) {
+    return true
+  }
+  if (!job.attention_acknowledged_at) {
+    return false
+  }
+  return job.attention_acknowledged_status === job.status
+    && (job.attention_acknowledged_retry_count ?? null) === (job.retry_count ?? null)
+    && (job.attention_acknowledged_error_code ?? null) === (job.error_code ?? null)
 }
 
 function printJobOperatorMessage(job: PrintJobRecord) {
@@ -741,6 +757,21 @@ export function PrintingSettingsPage() {
       })
     } catch (reprintError) {
       setToast({ kind: 'error', message: reprintError instanceof Error ? reprintError.message : '重打失败' })
+    }
+  }
+
+  const handleAcknowledgePrintJob = async (job: PrintJobRecord) => {
+    const note = window.prompt('处理备注（可选）', '已人工通知厨房')
+    if (note === null) {
+      return
+    }
+    try {
+      setToast(null)
+      await acknowledgePrintJob(job.id, note)
+      await refreshJobs()
+      setToast({ kind: 'success', message: `打印任务 #${job.id} 已标记为人工处理。` })
+    } catch (acknowledgeError) {
+      setToast({ kind: 'error', message: acknowledgeError instanceof Error ? acknowledgeError.message : '标记打印任务失败' })
     }
   }
 
@@ -1316,7 +1347,13 @@ export function PrintingSettingsPage() {
                   {jobsLoading ? '刷新中...' : '刷新任务'}
                 </button>
               </div>
-              <PrintJobsTable jobs={attentionPrintJobs} emptyText="今天没有失败、取消或 Pad Direct 过期任务。" onReprint={handleReprintJob} onPreview={setPreviewJob} />
+              <PrintJobsTable
+                jobs={attentionPrintJobs}
+                emptyText="今天没有失败、取消或 Pad Direct 过期任务。"
+                onReprint={handleReprintJob}
+                onAcknowledge={handleAcknowledgePrintJob}
+                onPreview={setPreviewJob}
+              />
               {jobsError ? (
                 <div className="mt-3 rounded-[16px] bg-[rgba(97,0,0,0.08)] px-4 py-3 text-[0.86rem] font-medium text-[var(--primary)]">
                   打印任务加载失败：{jobsError}
@@ -1329,7 +1366,13 @@ export function PrintingSettingsPage() {
               <div className="mt-1 text-[0.86rem] text-[var(--muted)]">
                 查看今天厨房总票、前台小票和热厨票的打印状态。
               </div>
-              <PrintJobsTable jobs={printJobs.slice(0, 12)} emptyText="今天还没有打印任务。" onReprint={handleReprintJob} onPreview={setPreviewJob} />
+              <PrintJobsTable
+                jobs={printJobs.slice(0, 12)}
+                emptyText="今天还没有打印任务。"
+                onReprint={handleReprintJob}
+                onAcknowledge={handleAcknowledgePrintJob}
+                onPreview={setPreviewJob}
+              />
               {jobsError ? (
                 <div className="mt-3 rounded-[16px] bg-[rgba(97,0,0,0.08)] px-4 py-3 text-[0.86rem] font-medium text-[var(--primary)]">
                   最近打印任务暂时不可用。上方打印机设置仍可编辑。
@@ -1553,11 +1596,13 @@ function PrintJobsTable({
   jobs,
   emptyText,
   onReprint,
+  onAcknowledge,
   onPreview,
 }: {
   jobs: PrintJobRecord[]
   emptyText: string
   onReprint: (jobId: number) => void
+  onAcknowledge?: (job: PrintJobRecord) => void
   onPreview: (job: PrintJobRecord) => void
 }) {
   if (!jobs.length) {
@@ -1590,6 +1635,7 @@ function PrintJobsTable({
             const padNotice = padDirectClaimNotice(job)
             const pendingNotice = pendingAgeNotice(job)
             const nativeDiagnostics = printJobNativeDiagnostics(job)
+            const acknowledged = isPrintJobAcknowledged(job)
             return (
               <tr key={job.id} className="border-t border-[rgba(26,28,25,0.06)]">
                 <td className="px-3 py-3 font-medium text-[var(--on-surface)]">{formatDateTime(job.created_at)}</td>
@@ -1646,6 +1692,11 @@ function PrintJobsTable({
                 </td>
                 <td className="px-3 py-3 text-[var(--muted)]">{job.retry_count ?? 0}/{job.max_retry_count ?? 0}</td>
                 <td className="max-w-[20rem] px-3 py-3 text-[var(--muted)]" title={job.error_message ?? ''}>
+                  {acknowledged ? (
+                    <div className="mb-2 rounded-[12px] bg-[rgba(18,141,77,0.1)] px-2.5 py-1.5 text-[0.72rem] font-semibold text-[rgb(25,112,69)]">
+                      已人工处理{job.attention_acknowledgement_note ? `：${job.attention_acknowledgement_note}` : ''}
+                    </div>
+                  ) : null}
                   {job.error_code ? (
                     <div className={`mb-1 inline-flex rounded-full px-2 py-0.5 text-[0.68rem] font-black ${
                       job.error_code === CLOUD_PRIVATE_PRINTER_BLOCKED
@@ -1705,6 +1756,15 @@ function PrintJobsTable({
                     >
                       重新打印
                     </button>
+                    {onAcknowledge && !acknowledged && printJobNeedsAttention(job) ? (
+                      <button
+                        type="button"
+                        onClick={() => onAcknowledge(job)}
+                        className="rounded-full bg-[rgba(118,77,21,0.14)] px-3 py-1.5 text-[0.78rem] font-semibold text-[rgb(118,77,21)]"
+                      >
+                        标记已处理
+                      </button>
+                    ) : null}
                   </div>
                 </td>
               </tr>
