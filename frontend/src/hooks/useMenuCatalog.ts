@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchMenuCatalog, fetchMenuRevision } from '../services/menuService'
 import { ApiRequestError } from '../services/apiClient'
 import { recordAppOperation } from '../services/networkStatus'
@@ -218,6 +218,15 @@ interface MenuCatalogIdentity {
   organizationId: number | null
 }
 
+export type MenuRefreshStatus =
+  | 'IDLE'
+  | 'CHECKING'
+  | 'UPDATED'
+  | 'CURRENT'
+  | 'FAILED'
+  | 'BACKEND_UNREACHABLE'
+  | 'AUTH_REQUIRED'
+
 const CACHE_STALE_AFTER_MS = 24 * 60 * 60 * 1000
 
 function buildScope(storeId: number, identity: MenuCatalogIdentity): MenuCacheScope | null {
@@ -244,17 +253,37 @@ export function useMenuCatalog(storeId: number, identity: MenuCatalogIdentity) {
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null)
   const [updating, setUpdating] = useState(false)
   const [updateError, setUpdateError] = useState<string | null>(null)
+  const [refreshRequest, setRefreshRequest] = useState(0)
+  const [refreshStatus, setRefreshStatus] = useState<MenuRefreshStatus>('IDLE')
+  const loadedCatalogScopeRef = useRef<string | null>(null)
+  const catalogAvailableRef = useRef(false)
+  const scopeKey = `${accountId ?? 'anonymous'}:${organizationId ?? 'unknown'}:${storeId}`
 
   useEffect(() => {
     let active = true
+    const explicitRefresh = refreshRequest > 0
+    const scopeChanged = loadedCatalogScopeRef.current !== scopeKey
+    if (scopeChanged) {
+      loadedCatalogScopeRef.current = scopeKey
+      catalogAvailableRef.current = false
+      setCatalog(null)
+      setSource(null)
+      setLastUpdatedAt(null)
+    }
+    const hadCatalog = !scopeChanged && catalogAvailableRef.current
+
+    if (explicitRefresh) {
+      setRefreshStatus('CHECKING')
+    } else {
+      setRefreshStatus('IDLE')
+    }
 
     const loadCatalog = async () => {
       const startedAtMs = Date.now()
       const startedAt = new Date(startedAtMs).toISOString()
-      setCatalog(null)
-      setSource(null)
-      setLastUpdatedAt(null)
-      setLoading(true)
+      if (!hadCatalog) {
+        setLoading(true)
+      }
       setError(null)
       setUpdateError(null)
       const scope = buildScope(storeId, { accountId, organizationId })
@@ -280,6 +309,7 @@ export function useMenuCatalog(storeId: number, identity: MenuCatalogIdentity) {
           }
           if (active && cached) {
             setCatalog(mapCatalog(cached.snapshot.catalog))
+            catalogAvailableRef.current = true
             setSource('CACHE')
             setLastUpdatedAt(cached.head.lastUpdatedAt)
             setLoading(false)
@@ -308,7 +338,11 @@ export function useMenuCatalog(storeId: number, identity: MenuCatalogIdentity) {
           }
           if (!active) return
           setCatalog(mapCatalog(payload))
+          catalogAvailableRef.current = true
           setSource('NETWORK')
+          setRefreshStatus('UPDATED')
+        } else if (explicitRefresh) {
+          setRefreshStatus('CURRENT')
         }
         if (!active) return
         setError(null)
@@ -330,6 +364,13 @@ export function useMenuCatalog(storeId: number, identity: MenuCatalogIdentity) {
           setUpdateError(`菜单更新失败，继续使用本机版本：${message}`)
         } else {
           setError(message)
+        }
+        if (loadError instanceof ApiRequestError && (loadError.status === 401 || loadError.status === 403)) {
+          setRefreshStatus('AUTH_REQUIRED')
+        } else if (loadError instanceof ApiRequestError && (loadError.code === 'NETWORK_ERROR' || loadError.code === 'REQUEST_TIMEOUT')) {
+          setRefreshStatus('BACKEND_UNREACHABLE')
+        } else {
+          setRefreshStatus('FAILED')
         }
         recordAppOperation({
           operation: 'MENU_LOAD',
@@ -353,7 +394,7 @@ export function useMenuCatalog(storeId: number, identity: MenuCatalogIdentity) {
     return () => {
       active = false
     }
-  }, [accountId, organizationId, storeId])
+  }, [accountId, organizationId, refreshRequest, scopeKey, storeId])
 
   const categories = useMemo(() => catalog?.categories ?? [], [catalog])
   const items = useMemo(() => catalog?.items ?? [], [catalog])
@@ -368,6 +409,8 @@ export function useMenuCatalog(storeId: number, identity: MenuCatalogIdentity) {
     lastUpdatedAt,
     updating,
     updateError,
+    refreshStatus,
+    refreshCatalog: () => setRefreshRequest((current) => current + 1),
     cacheStale: source === 'CACHE'
       && lastUpdatedAt != null
       && Date.now() - new Date(lastUpdatedAt).getTime() > CACHE_STALE_AFTER_MS,

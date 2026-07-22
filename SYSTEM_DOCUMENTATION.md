@@ -6840,7 +6840,24 @@ job as handled without changing its `status`, `error_code`, `error_message`,
 - The Print Center removes currently acknowledged jobs from the attention
   counter but retains them in recent history with an `已人工处理` marker. The
   existing job-snapshot reprint endpoint remains unchanged; uncertain
-  `PRINTING`/write-flush cases still require operator judgment before reprint.
+`PRINTING`/write-flush cases still require operator judgment before reprint.
+
+## Pilot Reliability: Menu Cache Notice And Refresh
+
+The ordering screen continues to load a valid store-scoped IndexedDB menu
+snapshot first and checks the server revision in the background. The refresh
+action is non-destructive: it never clears current order lines, frozen item or
+option snapshots, local drafts, outbox records, or client order identities.
+
+- Refresh results are explicit: updated, already current, failed while keeping
+  the local cache, backend unreachable, or authentication required.
+- Cache notices use a session-only dismissal key scoped by account,
+  organization, store, and menu revision. A later revision or store/account
+  change therefore shows the full notice again. The collapsed state still
+  shows cache age and a refresh button; global connection warnings are not
+  hidden by dismissal.
+- A successful menu refresh affects only items added after the refresh.
+  Existing draft lines retain their captured price, name, options, and notes.
 
 ## Current Restaurant Pilot Boundary
 
