@@ -6162,6 +6162,28 @@ Frontdesk visibility:
   workers, triggers a recovery poll, queues a pending kick if a job is already
   running, and asks for confirmation before recovering an error-stopped worker.
 
+### PAD_DIRECT Worker Deterministic Recovery Addendum
+
+The pilot worker now associates asynchronous poll, recovery, watchdog, and job
+callbacks with a monotonically increasing worker generation. A callback from an
+older generation is logged as `stale callback ignored` and cannot change the
+current worker state, schedule a new poll, clear the current job, or overwrite
+the current error.
+
+The worker keeps one concrete poll runnable, one recovery runnable, and one
+watchdog runnable. Their scheduled timestamps are exposed in the Control Panel
+status so `pollScheduled` is not treated as proof that a runnable still exists.
+When a claim has succeeded, temporary API failures resume the same job using the
+same client attempt token and phase instead of returning it to the pending queue.
+
+Lifecycle pause stops new claims but does not pretend that an in-flight native
+print is finished. Returning to the foreground resumes only after the previous
+generation settles and only when the user preference still enables automatic
+processing. High-risk stop metadata is persisted locally so an Activity restart
+cannot silently continue an ambiguous print; operator confirmation is required
+to clear that state. This remains a foreground/semi-auto pilot worker and does
+not add a background daemon, automatic reprint, or FAILED-job requeue.
+
 ## PR11E-BF: Frontdesk Sync, Receipt Routing, And Ordering UI Fixes
 
 This patch keeps the existing order lifecycle, payment/refund behavior,
