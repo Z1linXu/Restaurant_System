@@ -6162,6 +6162,28 @@ Frontdesk visibility:
   workers, triggers a recovery poll, queues a pending kick if a job is already
   running, and asks for confirmation before recovering an error-stopped worker.
 
+### PAD_DIRECT Worker Deterministic Recovery Addendum
+
+The pilot worker now associates asynchronous poll, recovery, watchdog, and job
+callbacks with a monotonically increasing worker generation. A callback from an
+older generation is logged as `stale callback ignored` and cannot change the
+current worker state, schedule a new poll, clear the current job, or overwrite
+the current error.
+
+The worker keeps one concrete poll runnable, one recovery runnable, and one
+watchdog runnable. Their scheduled timestamps are exposed in the Control Panel
+status so `pollScheduled` is not treated as proof that a runnable still exists.
+When a claim has succeeded, temporary API failures resume the same job using the
+same client attempt token and phase instead of returning it to the pending queue.
+
+Lifecycle pause stops new claims but does not pretend that an in-flight native
+print is finished. Returning to the foreground resumes only after the previous
+generation settles and only when the user preference still enables automatic
+processing. High-risk stop metadata is persisted locally so an Activity restart
+cannot silently continue an ambiguous print; operator confirmation is required
+to clear that state. This remains a foreground/semi-auto pilot worker and does
+not add a background daemon, automatic reprint, or FAILED-job requeue.
+
 ## PR11E-BF: Frontdesk Sync, Receipt Routing, And Ordering UI Fixes
 
 This patch keeps the existing order lifecycle, payment/refund behavior,
@@ -6737,11 +6759,13 @@ Pickup, Inventory, Platform Admin, or Redis.
   order; if it is terminal, opening the table creates a blank draft with new
   local and idempotency identities. Network failure never downgrades a known
   server-order snapshot into a local new order.
-- The board warning counts only `QUEUED`, `SUBMITTING`, `FAILED_RETRYABLE`, and
-  `CONFLICT`. It excludes `LOCAL_DRAFT`, confirmed `SUBMITTED`, validation
-  failures, local cancellations, and server terminal records. Workspace
-  snapshots contain auth/store context only and therefore require no order
-  cleanup.
+- The board warning counts `LOCAL_DRAFT`, `QUEUED`, `SUBMITTING`,
+  `FAILED_RETRYABLE`, and `CONFLICT`. It provides an explicit processing entry
+  for each local record: continue/edit, retry with the same client order id,
+  check a submitting result, or cancel only when the state is safely local.
+  It excludes confirmed `SUBMITTED`, validation failures that are not active,
+  local cancellations, and server terminal records. Workspace snapshots
+  contain auth/store context only and therefore require no order cleanup.
 - Chicken shredded cold noodle uses stable SKU
   `cold_noodle_shredded_chicken`. Its first active `NOODLE_TYPE` option is the
   new-order default; stable code `noodle_thin` is moved first by Flyway
@@ -6798,6 +6822,43 @@ mismatch type, and submitted/server names and prices. The normal Web order API
 does not currently expose a native Android device id, so that field is null
 unless a client explicitly supplies the optional diagnostic value.
 
+## Pilot Reliability: Print Attention Acknowledgement
+
+Flyway migration `V7__add_print_job_attention_acknowledgement.sql` adds an
+additive acknowledgement snapshot to `print_jobs`. The Print Center can mark a
+job as handled without changing its `status`, `error_code`, `error_message`,
+`retry_count`, `printed_at`, or reprint behavior.
+
+- `POST /api/v1/admin/printing/jobs/{jobId}/acknowledge` is store-scoped and
+  uses the existing `admin:printing_manage` / `admin:store_config` access
+  check. The optional note and job/module/status metadata are written to the
+  existing audit log; ticket payloads are not logged.
+- The response carries the acknowledgement timestamp, actor, note, and the
+  status/retry/error snapshot captured at acknowledgement time. A job is quiet
+  only while all of those state fields still match. A later retry, error-code
+  change, or status change makes the job visible for attention again.
+- The Print Center removes currently acknowledged jobs from the attention
+  counter but retains them in recent history with an `已人工处理` marker. The
+  existing job-snapshot reprint endpoint remains unchanged; uncertain
+`PRINTING`/write-flush cases still require operator judgment before reprint.
+
+## Pilot Reliability: Menu Cache Notice And Refresh
+
+The ordering screen continues to load a valid store-scoped IndexedDB menu
+snapshot first and checks the server revision in the background. The refresh
+action is non-destructive: it never clears current order lines, frozen item or
+option snapshots, local drafts, outbox records, or client order identities.
+
+- Refresh results are explicit: updated, already current, failed while keeping
+  the local cache, backend unreachable, or authentication required.
+- Cache notices use a session-only dismissal key scoped by account,
+  organization, store, and menu revision. A later revision or store/account
+  change therefore shows the full notice again. The collapsed state still
+  shows cache age and a refresh button; global connection warnings are not
+  hidden by dismissal.
+- A successful menu refresh affects only items added after the refresh.
+  Existing draft lines retain their captured price, name, options, and notes.
+
 ## Current Restaurant Pilot Boundary
 
 The concise enabled/disabled matrix for this reliability batch is maintained in
@@ -6806,3 +6867,31 @@ store-scoped ordering, weak-network drafts/outbox, printer restaurant mode,
 PAD_DIRECT, menu management, item ordering, and cloud deployment. This batch
 does not enable or modify KDS, Pickup, Inventory, Platform Admin, Redis,
 Payment, refund, or `completeOrder` behavior.
+
+## Pilot Reliability Batch Delivery
+
+The current branch `codex/pilot-site-reliability-batch` contains one controlled
+现场可靠性批次 split into five independently reviewable commits. The commits
+are intentionally not merged into `main` by the development workflow:
+
+1. PAD_DIRECT worker deterministic recovery, generation-safe callbacks,
+   lifecycle handling, persisted high-risk stop state, and health visibility.
+2. Actionable local order outbox entries for drafts that are not yet confirmed
+   by the server. Retry keeps the original client order id; editing is allowed
+   only for locally safe states, while `SUBMITTING` and uncertain retryable
+   results remain protected.
+3. Store-scoped print-job attention acknowledgement with additive Flyway V7
+   snapshot columns. Acknowledgement never changes status, retry count,
+   printed time, error code, or reprint semantics.
+4. Non-destructive menu-cache refresh, revision-scoped dismissal, and explicit
+   cache refresh status. Existing draft lines, option snapshots, prices,
+   outbox records, and client order identities are never replaced by a refresh.
+5. Regression tests, pilot scope documentation, and the operational runbook
+   for validating and rolling back the batch.
+
+This batch does not add automatic reprint, a background daemon, payment or
+refund behavior, `completeOrder` changes, KDS/Pickup work, or a database data
+cleanup. V7 is additive and must be migrated before enabling the acknowledgement
+API on a database that has not yet applied it. The Android worker remains a
+foreground/semi-auto pilot component and still requires real-device testing
+after APK installation.

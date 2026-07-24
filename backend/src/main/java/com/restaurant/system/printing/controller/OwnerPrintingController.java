@@ -8,6 +8,7 @@ import com.restaurant.system.common.feature.FeaturePackage;
 import com.restaurant.system.common.response.ApiResponse;
 import com.restaurant.system.printing.dto.PrintCenterOverviewResponse;
 import com.restaurant.system.printing.dto.PrintJobResponse;
+import com.restaurant.system.printing.dto.PrintJobAttentionAcknowledgeRequest;
 import com.restaurant.system.printing.dto.GrabFontTestRequest;
 import com.restaurant.system.printing.dto.GrabFontTestResponse;
 import com.restaurant.system.printing.dto.PrinterConnectionTestRequest;
@@ -21,6 +22,7 @@ import com.restaurant.system.printing.dto.StorePrintingStatusRequest;
 import com.restaurant.system.printing.dto.ModuleAssignmentTestRequest;
 import com.restaurant.system.printing.entity.PrinterAssignment;
 import com.restaurant.system.printing.entity.PrinterConfig;
+import com.restaurant.system.printing.entity.PrintJob;
 import com.restaurant.system.printing.service.PrintDispatcherService;
 import com.restaurant.system.printing.service.PrintJobService;
 import com.restaurant.system.printing.service.PrinterAssignmentService;
@@ -197,6 +199,37 @@ public class OwnerPrintingController {
         PrintJobResponse response = printDispatcherService.reprintJob(jobId, user.userId());
         recordAudit(job.store_id, user, "PRINT_JOB_REPRINTED", "PRINT_JOB", jobId, "Print job reprint requested", Map.of("module_code", job.module_code), servletRequest);
         return ApiResponse.success("Reprint requested", response);
+    }
+
+    @PostMapping("/jobs/{jobId}/acknowledge")
+    public ApiResponse<PrintJobResponse> acknowledgePrintJob(
+        @PathVariable Long jobId,
+        @RequestBody(required = false) PrintJobAttentionAcknowledgeRequest request,
+        HttpServletRequest servletRequest
+    ) {
+        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
+        var job = printJobService.requireJob(jobId);
+        var user = requirePrintingAccess(job.store_id);
+        String note = request == null ? null : request.note;
+        PrintJob acknowledged = printJobService.acknowledgeAttention(jobId, user.userId(), note);
+        Map<String, Object> metadata = new java.util.LinkedHashMap<>();
+        metadata.put("order_id", acknowledged.order_id);
+        metadata.put("module_code", acknowledged.module_code);
+        metadata.put("status", acknowledged.status);
+        if (note != null && !note.isBlank()) {
+            metadata.put("note", note.trim());
+        }
+        recordAudit(
+            acknowledged.store_id,
+            user,
+            "PRINT_JOB_ATTENTION_ACKNOWLEDGED",
+            "PRINT_JOB",
+            acknowledged.id,
+            "Print job attention acknowledged",
+            metadata,
+            servletRequest
+        );
+        return ApiResponse.success("Print job marked as handled", printJobService.toResponse(acknowledged));
     }
 
     private void recordAudit(

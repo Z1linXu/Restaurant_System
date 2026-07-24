@@ -18,6 +18,7 @@ import type { PrintJobRecord } from '../../services/printingAdminService'
 import { printJobDisplayLabel, printJobOperatorDisplayMessage } from '../../utils/displayLabels'
 import { getAndroidPadDeviceBridge } from '../../types/androidPadBridge'
 import type { ConnectionState } from '../../services/networkStatus'
+import { menuCacheNoticeDismissalKey } from '../../offline/menuCacheNotice'
 import { useAuth } from '../auth/useAuth'
 import { useCurrentStore } from '../store/StoreContext'
 
@@ -32,6 +33,8 @@ interface OrderingPageProps {
     lastUpdatedAt: string | null
     updating: boolean
     updateError: string | null
+    refreshStatus: import('../../hooks/useMenuCatalog').MenuRefreshStatus
+    refreshCatalog: () => void
     cacheStale: boolean
   }
   slotLabel: string
@@ -172,6 +175,8 @@ export function OrderingPage({
     lastUpdatedAt: catalogLastUpdatedAt,
     updating: catalogUpdating,
     updateError: catalogUpdateError,
+    refreshStatus: catalogRefreshStatus,
+    refreshCatalog,
     cacheStale,
   } = catalog
   const isIpadLandscape = useIpadLandscape()
@@ -182,6 +187,7 @@ export function OrderingPage({
   const [quickAddStates, setQuickAddStates] = useState<Record<string, 'idle' | 'adding' | 'added'>>({})
   const [printWarning, setPrintWarning] = useState<string | null>(null)
   const [menuUpdateNotice, setMenuUpdateNotice] = useState<string | null>(null)
+  const [menuNoticeCollapsed, setMenuNoticeCollapsed] = useState(false)
   const connection = useConnectionStatus()
   const handledSubmittedOrderIdsRef = useRef(new Set<number>())
   const localSubmitRequestedRef = useRef(false)
@@ -247,9 +253,49 @@ export function OrderingPage({
     const previous = previousMenuRevisionRef.current
     if (revision != null && previous != null && revision !== previous && catalogSource === 'NETWORK') {
       setMenuUpdateNotice('菜单已更新，新添加菜品将使用最新菜单；当前草稿中的菜品保持原价格和选项。')
+      setMenuNoticeCollapsed(false)
     }
     if (revision != null) previousMenuRevisionRef.current = revision
   }, [catalog.catalog?.menuRevision, catalogSource])
+
+  const menuNoticeKey = menuCacheNoticeDismissalKey(
+    { accountId: user?.id ?? null, organizationId: organizationId ?? null, storeId },
+    catalog.catalog?.menuRevision ?? null,
+  )
+
+  useEffect(() => {
+    if (!menuUpdateNotice && !cacheStale) {
+      return
+    }
+    try {
+      setMenuNoticeCollapsed(window.sessionStorage.getItem(menuNoticeKey) === '1')
+    } catch {
+      setMenuNoticeCollapsed(false)
+    }
+  }, [cacheStale, menuNoticeKey, menuUpdateNotice])
+
+  const dismissMenuNotice = () => {
+    try {
+      window.sessionStorage.setItem(menuNoticeKey, '1')
+    } catch {
+      // Session storage is optional; the full warning remains available in memory.
+    }
+    setMenuNoticeCollapsed(true)
+  }
+
+  const menuRefreshStatusLabel = catalogRefreshStatus === 'CHECKING'
+    ? '正在检查菜单更新…'
+    : catalogRefreshStatus === 'UPDATED'
+      ? '菜单刷新成功，新添加菜品将使用最新菜单。'
+      : catalogRefreshStatus === 'CURRENT'
+        ? '菜单已是最新版本。'
+        : catalogRefreshStatus === 'AUTH_REQUIRED'
+          ? '菜单刷新需要重新登录。'
+          : catalogRefreshStatus === 'BACKEND_UNREACHABLE'
+            ? '后端暂时不可达，继续使用本机缓存菜单。'
+            : catalogRefreshStatus === 'FAILED'
+              ? '菜单刷新失败，继续使用本机缓存菜单。'
+              : null
 
   useEffect(() => {
     if (!activeCategoryId && categories[0]?.id) {
@@ -506,22 +552,87 @@ export function OrderingPage({
         ) : null}
 
         {catalogSource === 'CACHE' ? (
-          <div className={`rounded-[20px] border px-5 py-3 text-[0.95rem] font-bold ${cacheStale ? 'border-[rgba(151,34,34,0.3)] bg-[rgba(151,34,34,0.1)] text-[rgb(116,22,22)]' : 'border-[rgba(92,106,69,0.28)] bg-[rgba(92,106,69,0.1)] text-[rgb(59,73,40)]'}`}>
-            当前使用本机缓存菜单
-            {catalogLastUpdatedAt ? `，最后更新：${new Date(catalogLastUpdatedAt).toLocaleString()}` : ''}
-            {catalogUpdating ? '；正在后台检查更新…' : ''}
-            {cacheStale ? '。当前菜单数据较旧，价格和售罄状态可能已变化。' : ''}
-          </div>
+          menuNoticeCollapsed && !catalogUpdateError ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-[rgba(92,106,69,0.28)] bg-[rgba(92,106,69,0.1)] px-4 py-2.5 text-[0.86rem] font-bold text-[rgb(59,73,40)]">
+              <span>
+                正在使用缓存菜单
+                {catalogLastUpdatedAt ? ` · 最后更新 ${new Date(catalogLastUpdatedAt).toLocaleString()}` : ''}
+              </span>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => setMenuNoticeCollapsed(false)} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black">
+                  展开
+                </button>
+                <button type="button" onClick={() => refreshCatalog()} disabled={catalogUpdating} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black disabled:opacity-50">
+                  {catalogUpdating ? '刷新中…' : '刷新菜单'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className={`rounded-[20px] border px-5 py-3 text-[0.95rem] font-bold ${cacheStale ? 'border-[rgba(151,34,34,0.3)] bg-[rgba(151,34,34,0.1)] text-[rgb(116,22,22)]' : 'border-[rgba(92,106,69,0.28)] bg-[rgba(92,106,69,0.1)] text-[rgb(59,73,40)]'}`}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span>
+                  当前使用本机缓存菜单
+                  {catalogLastUpdatedAt ? `，最后更新：${new Date(catalogLastUpdatedAt).toLocaleString()}` : ''}
+                  {catalogUpdating ? '；正在后台检查更新…' : ''}
+                  {cacheStale ? '。当前菜单数据较旧，价格和售罄状态可能已变化。' : ''}
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => refreshCatalog()} disabled={catalogUpdating} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black disabled:opacity-50">
+                    {catalogUpdating ? '刷新中…' : '刷新菜单'}
+                  </button>
+                  {!catalogUpdateError ? (
+                    <button type="button" onClick={dismissMenuNotice} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black">
+                      收起提示
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          )
         ) : null}
 
         {catalogUpdateError ? (
-          <div className="rounded-[20px] border border-[rgba(151,34,34,0.22)] bg-[rgba(151,34,34,0.08)] px-5 py-3 text-[0.95rem] font-bold text-[rgb(116,22,22)]">
-            {catalogUpdateError}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-[rgba(151,34,34,0.22)] bg-[rgba(151,34,34,0.08)] px-5 py-3 text-[0.95rem] font-bold text-[rgb(116,22,22)]">
+            <span>{catalogUpdateError}</span>
+            <button type="button" onClick={() => refreshCatalog()} disabled={catalogUpdating} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black disabled:opacity-50">
+              {catalogUpdating ? '刷新中…' : '重试刷新'}
+            </button>
           </div>
         ) : null}
         {menuUpdateNotice ? (
-          <div className="rounded-[20px] border border-[rgba(92,106,69,0.28)] bg-[rgba(92,106,69,0.1)] px-5 py-3 text-[0.95rem] font-bold text-[rgb(59,73,40)]">
-            {menuUpdateNotice}
+          menuNoticeCollapsed ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-[rgba(92,106,69,0.28)] bg-[rgba(92,106,69,0.1)] px-4 py-2.5 text-[0.86rem] font-bold text-[rgb(59,73,40)]">
+              <span>菜单已更新 · 新添加菜品使用最新菜单</span>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => setMenuNoticeCollapsed(false)} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black">
+                  展开
+                </button>
+                <button type="button" onClick={() => refreshCatalog()} disabled={catalogUpdating} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black disabled:opacity-50">
+                  {catalogUpdating ? '刷新中…' : '刷新菜单'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-[20px] border border-[rgba(92,106,69,0.28)] bg-[rgba(92,106,69,0.1)] px-5 py-3 text-[0.95rem] font-bold text-[rgb(59,73,40)]">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span>{menuUpdateNotice}</span>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => refreshCatalog()} disabled={catalogUpdating} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black disabled:opacity-50">
+                    {catalogUpdating ? '刷新中…' : '刷新菜单'}
+                  </button>
+                  <button type="button" onClick={dismissMenuNotice} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black">
+                    收起提示
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        ) : null}
+
+        {menuRefreshStatusLabel ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[16px] bg-[rgba(26,28,25,0.05)] px-4 py-2.5 text-[0.84rem] font-semibold text-[var(--muted)]">
+            <span>{menuRefreshStatusLabel}</span>
+            {catalogRefreshStatus === 'AUTH_REQUIRED' ? <span className="font-black text-[var(--primary)]">请重新登录</span> : null}
           </div>
         ) : null}
 

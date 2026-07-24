@@ -88,6 +88,13 @@ export interface PrintJobRecord {
   printed_at?: string | null
   failed_at?: string | null
   last_attempt_at?: string | null
+  attention_acknowledged_at?: string | null
+  attention_acknowledged_by?: number | null
+  attention_acknowledgement_note?: string | null
+  attention_acknowledged_status?: string | null
+  attention_acknowledged_retry_count?: number | null
+  attention_acknowledged_error_code?: string | null
+  attention_acknowledged?: boolean
 }
 
 export interface StoreDeviceRecord {
@@ -313,6 +320,14 @@ export async function reprintPrintJob(jobId: number) {
   return request<PrintJobRecord>(`/api/v1/admin/printing/jobs/${jobId}/reprint`, {
     method: 'POST',
     headers: buildHeaders(),
+  })
+}
+
+export async function acknowledgePrintJob(jobId: number, note?: string) {
+  return request<PrintJobRecord>(`/api/v1/admin/printing/jobs/${jobId}/acknowledge`, {
+    method: 'POST',
+    headers: buildHeaders(),
+    body: JSON.stringify({ note: note?.trim() || null }),
   })
 }
 

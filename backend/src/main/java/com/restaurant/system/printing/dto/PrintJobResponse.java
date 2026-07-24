@@ -35,6 +35,13 @@ public class PrintJobResponse {
     public LocalDateTime printed_at;
     public LocalDateTime failed_at;
     public LocalDateTime last_attempt_at;
+    public LocalDateTime attention_acknowledged_at;
+    public Long attention_acknowledged_by;
+    public String attention_acknowledgement_note;
+    public String attention_acknowledged_status;
+    public Integer attention_acknowledged_retry_count;
+    public String attention_acknowledged_error_code;
+    public boolean attention_acknowledged;
 
     public static PrintJobResponse from(PrintJob job, String printerName, String printerEndpoint) {
         PrintJobResponse response = new PrintJobResponse();
@@ -68,7 +75,25 @@ public class PrintJobResponse {
         response.printed_at = job.printed_at;
         response.failed_at = job.failed_at;
         response.last_attempt_at = job.last_attempt_at;
+        response.attention_acknowledged_at = job.attentionAcknowledgedAt;
+        response.attention_acknowledged_by = job.attentionAcknowledgedBy;
+        response.attention_acknowledgement_note = job.attentionAcknowledgementNote;
+        response.attention_acknowledged_status = job.attentionAcknowledgedStatus;
+        response.attention_acknowledged_retry_count = job.attentionAcknowledgedRetryCount;
+        response.attention_acknowledged_error_code = job.attentionAcknowledgedErrorCode;
+        response.attention_acknowledged = isAcknowledgedForCurrentState(job);
         return response;
+    }
+
+    private static boolean isAcknowledgedForCurrentState(PrintJob job) {
+        return job.attentionAcknowledgedAt != null
+            && equalsNormalized(job.attentionAcknowledgedStatus, job.status)
+            && java.util.Objects.equals(job.attentionAcknowledgedRetryCount, job.retry_count)
+            && equalsNormalized(job.attentionAcknowledgedErrorCode, job.error_code);
+    }
+
+    private static boolean equalsNormalized(String left, String right) {
+        return normalize(left).equals(normalize(right));
     }
 
     private static String operatorMessage(PrintJob job) {

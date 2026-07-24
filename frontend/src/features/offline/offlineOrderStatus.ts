@@ -121,7 +121,8 @@ export function offlineOrderStatusView(state: LocalDraftSubmitState) {
 }
 
 export function isActiveOfflineOrderState(state: LocalDraftSubmitState) {
-  return state === 'QUEUED'
+  return state === 'LOCAL_DRAFT'
+    || state === 'QUEUED'
     || state === 'SUBMITTING'
     || state === 'FAILED_RETRYABLE'
     || state === 'CONFLICT'

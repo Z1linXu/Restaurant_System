@@ -1,6 +1,7 @@
 package com.restaurant.system.printing.dto;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -61,6 +62,23 @@ class PrintJobResponseTest {
         PrintJobResponse response = PrintJobResponse.from(job("BAR", "BAR", "FAILED", "SOMETHING_NEW"), null, null);
 
         assertTrue(response.operator_message.contains("BAR failed to print"));
+    }
+
+    @Test
+    void acknowledgedJobIsOnlyQuietForTheAcknowledgedStateSnapshot() {
+        PrintJob job = job("GRAB", "GRAB", "FAILED", "DISPATCH_ERROR");
+        job.retry_count = 1;
+        job.attentionAcknowledgedAt = java.time.LocalDateTime.now();
+        job.attentionAcknowledgedStatus = "FAILED";
+        job.attentionAcknowledgedRetryCount = 1;
+        job.attentionAcknowledgedErrorCode = "DISPATCH_ERROR";
+
+        PrintJobResponse acknowledged = PrintJobResponse.from(job, null, null);
+        assertTrue(acknowledged.attention_acknowledged);
+
+        job.retry_count = 2;
+        PrintJobResponse changedRetry = PrintJobResponse.from(job, null, null);
+        assertFalse(changedRetry.attention_acknowledged);
     }
 
     private PrintJob job(String moduleCode, String receiptType, String status, String errorCode) {

@@ -300,6 +300,20 @@ public class PrintJobServiceImpl implements PrintJobService {
     }
 
     @Override
+    @Transactional
+    public PrintJob acknowledgeAttention(Long jobId, Long actorUserId, String note) {
+        PrintJob target = requireJob(jobId);
+        target.attentionAcknowledgedAt = LocalDateTime.now();
+        target.attentionAcknowledgedBy = actorUserId;
+        target.attentionAcknowledgementNote = truncate(note == null || note.isBlank() ? null : note.trim(), 500);
+        target.attentionAcknowledgedStatus = target.status;
+        target.attentionAcknowledgedRetryCount = target.retry_count;
+        target.attentionAcknowledgedErrorCode = truncate(target.error_code, 128);
+        target.updated_at = LocalDateTime.now();
+        return printJobRepository.save(target);
+    }
+
+    @Override
     public PrintJobResponse toResponse(PrintJob job) {
         String printerName = null;
         String printerEndpoint = null;

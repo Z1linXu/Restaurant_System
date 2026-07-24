@@ -87,6 +87,28 @@ class PrintJobServiceImplTest {
         verify(printJobRepository, never()).save(any(PrintJob.class));
     }
 
+    @Test
+    void acknowledgeAttentionStoresCurrentStateWithoutChangingPrintStatus() {
+        PrintJob job = new PrintJob();
+        job.id = 91L;
+        job.status = "FAILED";
+        job.retry_count = 1;
+        job.error_code = "DISPATCH_ERROR";
+        when(printJobRepository.findById(job.id)).thenReturn(Optional.of(job));
+        when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        PrintJob acknowledged = service.acknowledgeAttention(job.id, 7L, "已人工通知厨房");
+
+        assertEquals("FAILED", acknowledged.status);
+        assertEquals("DISPATCH_ERROR", acknowledged.error_code);
+        assertEquals(7L, acknowledged.attentionAcknowledgedBy);
+        assertEquals("FAILED", acknowledged.attentionAcknowledgedStatus);
+        assertEquals(1, acknowledged.attentionAcknowledgedRetryCount);
+        assertEquals("DISPATCH_ERROR", acknowledged.attentionAcknowledgedErrorCode);
+        assertEquals("已人工通知厨房", acknowledged.attentionAcknowledgementNote);
+        verify(printJobRepository).save(job);
+    }
+
     private boolean containsBytes(byte[] payload, byte[] expected) {
         for (int index = 0; index <= payload.length - expected.length; index += 1) {
             boolean matches = true;

@@ -72,6 +72,8 @@ public interface PrintJobService {
 
     PrintJob requireJob(Long jobId);
 
+    PrintJob acknowledgeAttention(Long jobId, Long actorUserId, String note);
+
     PrintJobResponse toResponse(PrintJob job);
 
     List<PrintJobResponse> listOrderJobs(Long storeId, Long orderId);
