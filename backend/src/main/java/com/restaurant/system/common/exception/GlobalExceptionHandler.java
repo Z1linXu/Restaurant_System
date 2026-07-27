@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -31,6 +32,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(OwnerStoreOnboardingException.class)
     public ResponseEntity<ApiResponse<Void>> handleOwnerStoreOnboardingException(OwnerStoreOnboardingException ex) {
         return ResponseEntity.status(ex.getStatus()).body(ApiResponse.failure(ex.getErrorCode(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissingRequestHeader(MissingRequestHeaderException ex) {
+        return ResponseEntity.badRequest().body(ApiResponse.failure(
+            "REQUEST_HEADER_REQUIRED",
+            "Required request header: " + ex.getHeaderName()
+        ));
     }
 
     @ExceptionHandler(UnauthorizedException.class)

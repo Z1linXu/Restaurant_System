@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -89,6 +90,18 @@ class OwnerStoreOnboardingControllerTest {
             eq(owner)
         );
         assertThat(requestCaptor.getValue().toString()).doesNotContain(syntheticPassword);
+    }
+
+    @Test
+    void missingIdempotencyKeyReturnsBadRequestWithoutCallingOnboardingService() throws Exception {
+        mockMvc.perform(post("/api/v1/owner/organizations/{organizationId}/stores/onboard", ORGANIZATION_ID)
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(request())))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error_code").value("REQUEST_HEADER_REQUIRED"));
+
+        verifyNoInteractions(authorizationService, onboardingService);
     }
 
     private OwnerStoreOnboardingRequest request() {

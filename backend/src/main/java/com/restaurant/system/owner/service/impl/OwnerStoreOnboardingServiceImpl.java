@@ -275,23 +275,22 @@ public class OwnerStoreOnboardingServiceImpl implements OwnerStoreOnboardingServ
 
     private String fingerprint(Long organizationId, OwnerStoreOnboardingRequest request) {
         List<String> staff = request.staff.stream()
-            .map(staffRequest -> String.join(
-                "|",
-                normalizeText(staffRequest.login_identifier),
-                normalizeText(staffRequest.full_name) == null ? "" : normalizeText(staffRequest.full_name),
-                normalizeRole(staffRequest.role_code)
-            ))
+            .map(staffRequest -> canonicalValue(normalizeText(staffRequest.login_identifier))
+                + canonicalValue(normalizeText(staffRequest.full_name))
+                + canonicalValue(normalizeRole(staffRequest.role_code)))
             .sorted(Comparator.naturalOrder())
             .toList();
-        String canonical = String.join(
-            "\n",
-            "organization=" + organizationId,
-            "sourceStore=" + request.source_store_id,
-            "storeName=" + normalizeText(request.store_name),
-            "storeCode=" + normalizeCode(request.store_code),
-            "staff=" + String.join(";", staff)
-        );
+        String canonical = canonicalValue("organization") + canonicalValue(String.valueOf(organizationId))
+            + canonicalValue("sourceStore") + canonicalValue(String.valueOf(request.source_store_id))
+            + canonicalValue("storeName") + canonicalValue(normalizeText(request.store_name))
+            + canonicalValue("storeCode") + canonicalValue(normalizeCode(request.store_code))
+            + canonicalValue("staff") + canonicalValue(String.join("", staff));
         return sha256(canonical);
+    }
+
+    private String canonicalValue(String value) {
+        String normalized = value == null ? "" : value;
+        return normalized.length() + ":" + normalized;
     }
 
     private String sha256(String value) {
