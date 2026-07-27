@@ -1,5 +1,28 @@
 # SYSTEM DOCUMENTATION
 
+## Current Governance Index
+
+The current runtime and delivery-governance entry points are intentionally kept
+separate from historical evidence snapshots and business implementation details:
+
+- [Alive Runtime Planbook](docs/governance/runtime/ALIVE_RUNTIME_PLANBOOK.md)
+  is the living current-status, approval-boundary, and deployment-entry index.
+- [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
+  authority for current issue triage and closure status.
+- [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
+  approved feature requirements and current feature selection.
+- [Agile Loop Operating Model](docs/governance/AGILE_LOOP_OPERATING_MODEL.md)
+  defines the required observe-to-close workflow and owner approval gates.
+- [AL-001 Owner Store Onboarding technical plan](docs/governance/agile/AL-001_OWNER_STORE_ONBOARDING_CHINATOWN_TECHNICAL_PLAN.md)
+  records the Chinatown planning boundary. It does not authorize production
+  provisioning.
+- [Frontdesk/GRAB item-name rules](docs/operations/FRONTDESK_GRAB_ITEM_NAME_RULES.md)
+  remains the operational display-rule source; do not duplicate its item table
+  here.
+
+Historical Phase 3 runtime evidence remains under `docs/governance/runtime/`.
+It must not be rewritten as a living deployment manifest.
+
 Generated from the current codebase only. If a detail is not explicit in code, it is marked as `UNKNOWN`.
 
 Additional maintainable architecture document:
