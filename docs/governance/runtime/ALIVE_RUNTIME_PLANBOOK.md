@@ -64,14 +64,24 @@ snapshots. Do not copy those reports into this planbook.
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `AL-002 Owner-Scoped Store Onboarding Backend` |
 | Loop type | `FEATURE_IMPLEMENTATION` |
-| Loop status | `IMPLEMENTATION_AUTHORIZED` |
+| Loop status | `AL-002_WAITING_FOR_OWNER_REVIEW` |
 | AL-001 state | `PLAN_COMPLETE` |
-| Current permitted work | Implement and verify only owner-scoped onboarding authorization, durable organization-scoped idempotency, staff credential/membership provisioning, and safe existing Store-default handling on an independent review branch. |
+| Current permitted work | Owner review of the completed AL-002 review branch. No further implementation or production action is authorized until the owner explicitly approves the reviewed change. |
 | Explicitly not permitted in AL-002 | Production Chinatown provisioning, real accounts or passwords, menu clone/WOK exclusion/print-module policy (`AL-003`), Owner UI/All Stores UX (`AL-004`), automatic pairing (`AL-005`), deployment, or production migration execution. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 [AGILE_LOOP_OPERATING_MODEL.md](../AGILE_LOOP_OPERATING_MODEL.md), and
 [AL-001 technical plan](../agile/AL-001_OWNER_STORE_ONBOARDING_CHINATOWN_TECHNICAL_PLAN.md).
+
+### AL-002 implementation record
+
+- Review branch: `codex/al-002-owner-store-onboarding-backend`.
+- Scope completed locally: exact-Organization Owner authorization, durable
+  Organization-scoped idempotency record, BCrypt-backed target-Store-only staff
+  membership provisioning, and inactive/printing-disabled Store defaults.
+- Local verification completed: focused onboarding/security tests and the full
+  backend Maven suite. This is code verification only, not owner approval,
+  merge, migration execution, deployment, or production provisioning.
 
 ## 6. Next deployment entry conditions
 

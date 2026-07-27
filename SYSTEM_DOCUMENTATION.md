@@ -25,9 +25,10 @@ It must not be rewritten as a living deployment manifest.
 
 ## AL-002 Owner Store Onboarding Backend Foundation
 
-AL-002 adds the review-only backend foundation for a future owner-scoped Store
-onboarding workflow. It does not provision a production Store, copy a menu,
-create printers or devices, or provide an Owner UI.
+AL-002 adds the locally verified backend foundation for a future owner-scoped
+Store onboarding workflow. It is awaiting owner review and does not provision
+a production Store, copy a menu, create printers or devices, or provide an
+Owner UI.
 
 - `POST /api/v1/owner/organizations/{organizationId}/stores/onboard` requires
   an authenticated `OWNER`, an active membership in that exact Organization,
