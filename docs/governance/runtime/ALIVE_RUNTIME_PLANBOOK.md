@@ -26,7 +26,7 @@
 | Environment | `restaurant-prod` | `OPERATOR_CONFIRMED` | Environment label only; no host or secret is recorded. |
 | `RUNTIME_COMMIT` | `4667f3c` | `OPERATOR_CONFIRMED` | Reported deployed commit, not a formal release approval. |
 | Production branch | `main` | `OPERATOR_CONFIRMED` | Branch relationship is not a deployment approval record. |
-| `DOCUMENTATION_COMMIT` | `PENDING_UNCOMMITTED` | `MACHINE_VERIFIED` locally | The last committed documentation baseline is `f4159d0`; this planbook and its companion governance records are currently uncommitted and are not the runtime commit. |
+| `DOCUMENTATION_COMMIT` | `4c01d81` | `MACHINE_VERIFIED` locally | This is the committed governance-document baseline. It is not the runtime commit and is not deployed by this record. |
 | Deployment mode | HTTP | `OPERATOR_CONFIRMED` | HTTPS/certificate posture is outside this record. |
 | Compose services | `db`, `backend`, `nginx` | `OPERATOR_CONFIRMED` | No new container inspection was run for this planbook. |
 | Database schema | Flyway V7, including `V7__add_print_job_attention_acknowledgement.sql` | `OPERATOR_CONFIRMED` | Not a restore or schema-integrity rehearsal. |
@@ -62,11 +62,12 @@ snapshots. Do not copy those reports into this planbook.
 | Item | Current state |
 |---|---|
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `AL-001 Owner Store Onboarding / Chinatown Requirements and Technical Plan` |
-| Loop type | `FEATURE_DISCOVERY_AND_PLAN` |
-| Loop status | `REQUIREMENTS_CONFIRMED`; `READY_FOR_TECHNICAL_PLAN` |
-| Current permitted work | Read-only technical discovery and documentation planning. |
-| Explicitly not permitted in AL-001 | Creating Chinatown, user accounts, credentials, devices, print jobs, migrations, seed data, deployment changes, or production data. |
+| Current Agile Loop | `AL-002 Owner-Scoped Store Onboarding Backend` |
+| Loop type | `FEATURE_IMPLEMENTATION` |
+| Loop status | `IMPLEMENTATION_AUTHORIZED` |
+| AL-001 state | `PLAN_COMPLETE` |
+| Current permitted work | Implement and verify only owner-scoped onboarding authorization, durable organization-scoped idempotency, staff credential/membership provisioning, and safe existing Store-default handling on an independent review branch. |
+| Explicitly not permitted in AL-002 | Production Chinatown provisioning, real accounts or passwords, menu clone/WOK exclusion/print-module policy (`AL-003`), Owner UI/All Stores UX (`AL-004`), automatic pairing (`AL-005`), deployment, or production migration execution. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 [AGILE_LOOP_OPERATING_MODEL.md](../AGILE_LOOP_OPERATING_MODEL.md), and

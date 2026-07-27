@@ -14,9 +14,9 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `REQUIREMENTS_CONFIRMED` |
-| target_loop | `AL-001` |
-| implementation status | Planning only; no Store, account, menu, device, migration, or production data has been created by this feature record. |
+| status | `IMPLEMENTATION_IN_PROGRESS` |
+| target_loop | `AL-002` |
+| implementation status | AL-002 is authorized only for owner-scoped onboarding backend foundations: authorization, durable idempotency, secure staff credential/membership provisioning, and safe existing Store-default handling. No production Store, account, menu clone, device, migration execution, or production data is created by this feature record. |
 | authority | [AL-001 technical plan](agile/AL-001_OWNER_STORE_ONBOARDING_CHINATOWN_TECHNICAL_PLAN.md) |
 
 ### Goal
