@@ -23,6 +23,30 @@ separate from historical evidence snapshots and business implementation details:
 Historical Phase 3 runtime evidence remains under `docs/governance/runtime/`.
 It must not be rewritten as a living deployment manifest.
 
+## AL-002 Owner Store Onboarding Backend Foundation
+
+AL-002 adds the review-only backend foundation for a future owner-scoped Store
+onboarding workflow. It does not provision a production Store, copy a menu,
+create printers or devices, or provide an Owner UI.
+
+- `POST /api/v1/owner/organizations/{organizationId}/stores/onboard` requires
+  an authenticated `OWNER`, an active membership in that exact Organization,
+  and an `Idempotency-Key` request header.
+- The selected source Store must belong to the same Organization. Platform
+  Admin access is not an implicit bypass for this owner-only endpoint.
+- The durable onboarding request record is unique by Organization plus
+  idempotency key and stores only a request fingerprint and safe state/result
+  metadata. It never stores raw request bodies, passwords, tokens, or printer
+  endpoints.
+- The onboarding transaction creates an initially inactive Store with printing
+  disabled, then creates BCrypt-backed staff credentials and target-Store-only
+  memberships. Menu clone, WOK exclusion, print policy, printer configuration,
+  and Pad pairing remain outside AL-002.
+- Timezone, tax, and language are currently global application behavior rather
+  than proven Store-scoped defaults, so AL-002 does not invent or copy those
+  settings. Existing receipt configuration is Store scoped but is configured
+  later through Print Center without copying endpoints.
+
 Generated from the current codebase only. If a detail is not explicit in code, it is marked as `UNKNOWN`.
 
 Additional maintainable architecture document:
