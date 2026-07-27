@@ -6895,3 +6895,14 @@ cleanup. V7 is additive and must be migrated before enabling the acknowledgement
 API on a database that has not yet applied it. The Android worker remains a
 foreground/semi-auto pilot component and still requires real-device testing
 after APK installation.
+
+## Operational Display Rule Sources
+
+The authoritative operational reference for the intentionally different
+frontdesk customer-facing names and GRAB kitchen-production names is
+`docs/operations/FRONTDESK_GRAB_ITEM_NAME_RULES.md`
+(`OPERATIONAL_DISPLAY_RULE_SOURCE`). It records stable SKU and option-code
+mapping rules, kitchen-task snapshot precedence, grouping/quantity formats,
+fallback behavior, and the required GRAB regression coverage. This system
+document keeps only this summary and link; it must not duplicate the full
+per-item mapping table.
