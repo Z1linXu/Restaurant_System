@@ -10,9 +10,9 @@ ISOLATED_BIN="$TMP_DIR/isolated-bin"
 FAKE_BIN="$TMP_DIR/fake-bin"
 
 cleanup() {
-  if [[ -n "${FAKE_RELEASE_DIR:-}" && -e "$FAKE_RELEASE_DIR" ]]; then
-    git -C "$REPOSITORY_ROOT" worktree remove --force "$FAKE_RELEASE_DIR" >/dev/null 2>&1 || true
-  fi
+  while IFS= read -r release; do
+    git -C "$REPOSITORY_ROOT" worktree remove --force "$release" >/dev/null 2>&1 || true
+  done < <(find "$TMP_DIR" -type d -path '*/restaurant-pos/staging/releases/[0-9a-f]*' -print 2>/dev/null || true)
   rm -rf "$TMP_DIR"
 }
 trap cleanup EXIT
