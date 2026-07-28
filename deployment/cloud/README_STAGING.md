@@ -140,12 +140,22 @@ start containers. It may validate a local `MOCK` input shape only; it cannot
 exercise actual mock printing. It exists only to test the package before server
 use and does not weaken the default/server root guard.
 
-After Owner approval of the exact SHA and successful validation, start Staging:
+After Owner approval of the exact SHA, a successful STG-004 preflight, and a
+separate Owner approval for the state-changing action, start Staging only with
+the explicit gate:
 
 ```bash
 /srv/restaurant-pos/staging/releases/<full-sha>/deployment/cloud/staging-deploy.sh \
+  --execute-start \
+  --approved-sha <full-sha> \
+  --preflight-evidence /srv/restaurant-pos/staging/evidence/<passed-preflight-file> \
   --env-file /srv/restaurant-pos/staging/config/.env.staging
 ```
+
+Running the helper with only `--env-file`, `--validate`, or `--dry-run` never
+builds or starts containers. See
+[Same-Host Staging Preflight (STG-004)](README_STAGING_SERVER_PREFLIGHT.md)
+for the required preflight evidence and plan-only stop/rollback boundaries.
 
 Run the loopback health check after services are ready:
 
