@@ -32,6 +32,8 @@ container environment, printer endpoints, customer data, or tokens.
 | Check | Result | Evidence classification | Notes |
 |---|---|---|---|
 | Exact clean approved release | `<not recorded>` | `EVIDENCE_PENDING` | |
+| Evidence file SHA-256 | `<not recorded>` | `EVIDENCE_PENDING` | Owner reviews this exact digest before any start approval. |
+| Staging environment SHA-256 | `<not recorded>` | `EVIDENCE_PENDING` | Digest only; never include environment contents. |
 | Independent root/database path | `<not recorded>` | `EVIDENCE_PENDING` | |
 | Loopback port `127.0.0.1:18080` | `<not recorded>` | `EVIDENCE_PENDING` | |
 | Owner-supplied disk threshold | `<not recorded>` | `EVIDENCE_PENDING` | |

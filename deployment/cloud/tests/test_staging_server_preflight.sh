@@ -14,6 +14,13 @@ trap cleanup EXIT
 fail() { echo "FAIL: $*" >&2; exit 1; }
 assert_contains() { grep -Fq -- "$1" "$2" || fail "missing '$1' in $2"; }
 assert_not_contains() { ! grep -Fq -- "$1" "$2" || fail "unexpected '$1' in $2"; }
+digest() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  else
+    shasum -a 256 "$1" | awk '{print $1}'
+  fi
+}
 expect_failure() {
   local label="$1"
   shift
@@ -35,6 +42,8 @@ if [[ "${1:-}" == "context" ]]; then
   printf 'unix:///tmp/stg004-fake.sock\n'
   exit 0
 fi
+[[ "${1:-}" == "--context" && "${2:-}" == "default" ]] || exit 92
+shift 2
 if [[ "${1:-}" == "image" && "${2:-}" == "inspect" ]]; then
   printf 'sha256:stg004fakeimage\n'
   exit 0
@@ -43,8 +52,8 @@ if [[ "${1:-}" == "inspect" ]]; then
   printf 'name=/stg004 status=running health=healthy image=sha256:stg004fake\n'
   exit 0
 fi
-[[ "${1:-}" == "--context" && "${2:-}" == "default" && "${3:-}" == "compose" ]] || exit 92
-shift 3
+[[ "${1:-}" == "compose" ]] || exit 92
+shift
 env_file=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -90,6 +99,8 @@ services:
 EOF
     ;;
   ps) : ;;
+  build) printf 'fake build complete\n' ;;
+  up) printf 'fake up complete\n' ;;
   *) exit 94 ;;
 esac
 DOCKER
@@ -164,6 +175,9 @@ STAGING_LOG_MAX_SIZE=10m
 STAGING_LOG_MAX_FILE=3
 EOF
 chmod 600 "$ENV_FILE"
+BASE_ENV="$TMP_DIR/base.env"
+cp "$ENV_FILE" "$BASE_ENV"
+reset_env() { cp "$BASE_ENV" "$ENV_FILE"; chmod 600 "$ENV_FILE"; }
 
 RUNNER="$RELEASE/deployment/cloud/staging-server-preflight.sh"
 run_preflight() {
@@ -223,5 +237,88 @@ mv "$ENV_FILE.next" "$ENV_FILE"
 expect_failure printing_mode run_preflight
 assert_contains 'NO_GO' "$TMP_DIR/printing_mode.out"
 assert_not_contains 'PAD_DIRECT' "$TMP_DIR/printing_mode.out"
+reset_env
+
+cat >"$FAKE_BIN/ss" <<'SS_FAILED'
+#!/usr/bin/env bash
+exit 42
+SS_FAILED
+chmod +x "$FAKE_BIN/ss"
+expect_failure ss_failed run_preflight
+assert_contains 'CHECK|PORT_18080|EVIDENCE_PENDING|' "$TMP_DIR/ss_failed.out"
+assert_not_contains 'CHECK|PORT_18080|PASS|' "$TMP_DIR/ss_failed.out"
+
+cat >"$FAKE_BIN/ss" <<'SS_CLEAR_AGAIN'
+#!/usr/bin/env bash
+exit 0
+SS_CLEAR_AGAIN
+chmod +x "$FAKE_BIN/ss"
+
+EVIDENCE_DIR="$FAKE_ROOT/evidence"
+EVIDENCE_FILE="$EVIDENCE_DIR/approved-preflight.txt"
+mkdir -p "$EVIDENCE_DIR"
+chmod 700 "$EVIDENCE_DIR"
+ENV_DIGEST="$(digest "$ENV_FILE")"
+cat >"$EVIDENCE_FILE" <<EOF
+EVIDENCE|APPROVED_SHA|$SHA
+EVIDENCE|STAGING_ROOT|$FAKE_ROOT
+EVIDENCE|COMPOSE_PROJECT|restaurant-pos-staging
+EVIDENCE|ENV_SHA256|$ENV_DIGEST
+EVIDENCE|RESOURCE_THRESHOLDS|min_free_bytes=1048576;max_used_percent=80;min_available_memory_kb=1024;min_cpu_count=1
+SUMMARY|PASS|same-host Staging preflight passed without state changes
+EOF
+chmod 600 "$EVIDENCE_FILE"
+EVIDENCE_DIGEST="$(digest "$EVIDENCE_FILE")"
+DEPLOY_RUNNER="$RELEASE/deployment/cloud/staging-deploy.sh"
+
+: >"$FAKE_BIN/docker.calls"
+PATH="$FAKE_BIN:$PATH" "$DEPLOY_RUNNER" \
+  --execute-start \
+  --approved-sha "$SHA" \
+  --preflight-evidence "$EVIDENCE_FILE" \
+  --preflight-evidence-sha256 "$EVIDENCE_DIGEST" \
+  --env-file "$ENV_FILE" >"$TMP_DIR/approved-start.out"
+assert_contains ' build ' "$FAKE_BIN/docker.calls"
+assert_contains ' up ' "$FAKE_BIN/docker.calls"
+
+: >"$FAKE_BIN/docker.calls"
+expect_failure local_before_start env PATH="$FAKE_BIN:$PATH" "$DEPLOY_RUNNER" \
+  --local-validate --execute-start --approved-sha "$SHA" \
+  --preflight-evidence "$EVIDENCE_FILE" --preflight-evidence-sha256 "$EVIDENCE_DIGEST" \
+  --env-file "$ENV_FILE"
+assert_not_contains ' build ' "$FAKE_BIN/docker.calls"
+assert_not_contains ' up ' "$FAKE_BIN/docker.calls"
+
+expect_failure local_after_start env PATH="$FAKE_BIN:$PATH" "$DEPLOY_RUNNER" \
+  --execute-start --local-validate --approved-sha "$SHA" \
+  --preflight-evidence "$EVIDENCE_FILE" --preflight-evidence-sha256 "$EVIDENCE_DIGEST" \
+  --env-file "$ENV_FILE"
+
+FORGED_EVIDENCE="$EVIDENCE_DIR/forged.txt"
+printf 'SUMMARY|PASS|same-host Staging preflight passed without state changes\n' >"$FORGED_EVIDENCE"
+chmod 600 "$FORGED_EVIDENCE"
+FORGED_DIGEST="$(digest "$FORGED_EVIDENCE")"
+expect_failure forged_evidence env PATH="$FAKE_BIN:$PATH" "$DEPLOY_RUNNER" \
+  --execute-start --approved-sha "$SHA" \
+  --preflight-evidence "$FORGED_EVIDENCE" --preflight-evidence-sha256 "$FORGED_DIGEST" \
+  --env-file "$ENV_FILE"
+assert_contains 'not bound to the approved SHA' "$TMP_DIR/forged_evidence.out"
+
+chmod 666 "$EVIDENCE_FILE"
+expect_failure writable_evidence env PATH="$FAKE_BIN:$PATH" "$DEPLOY_RUNNER" \
+  --execute-start --approved-sha "$SHA" \
+  --preflight-evidence "$EVIDENCE_FILE" --preflight-evidence-sha256 "$EVIDENCE_DIGEST" \
+  --env-file "$ENV_FILE"
+assert_contains 'mode 0600' "$TMP_DIR/writable_evidence.out"
+chmod 600 "$EVIDENCE_FILE"
+
+printf '\n' >>"$EVIDENCE_FILE"
+expect_failure tampered_evidence env PATH="$FAKE_BIN:$PATH" "$DEPLOY_RUNNER" \
+  --execute-start --approved-sha "$SHA" \
+  --preflight-evidence "$EVIDENCE_FILE" --preflight-evidence-sha256 "$EVIDENCE_DIGEST" \
+  --env-file "$ENV_FILE"
+assert_contains 'does not match the exact evidence file' "$TMP_DIR/tampered_evidence.out"
+git -C "$RELEASE" status --short | grep -q . &&
+  fail 'evidence tests unexpectedly changed the release checkout'
 
 echo 'PASS: STG-004 preflight uses isolated fake tools, rejects unsafe isolation and printing input, and never executes a Docker lifecycle action.'

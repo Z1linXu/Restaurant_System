@@ -50,10 +50,11 @@ SUMMARY|NO_GO|failed_checks_present
 ```
 
 Exit status `0` means all blocking checks passed. Exit `2` is `NO_GO`; exit
-`3` means runtime evidence required for a required check; exit `4` is reserved
-for an execution/tooling failure. `PENDING_PREBUILD` and no existing Staging
-containers are expected before a first approved build and are reported without
-claiming that images or runtime health have been verified.
+`3` means runtime evidence is still required for a required check. Unexpected
+tooling failures preserve their non-zero shell status and must not be treated
+as PASS. `PENDING_PREBUILD` and no existing Staging containers are expected
+before a first approved build and are reported without claiming that images or
+runtime health have been verified.
 
 ## Start gate
 
@@ -63,10 +64,16 @@ of the following:
 1. `--execute-start`;
 2. `--approved-sha` that exactly matches the release and `.env.staging` SHA;
 3. an existing non-symlink preflight evidence file under the Staging evidence
-   directory containing the exact passed STG-004 summary.
+   directory, owned by the invoking user with mode `0600`;
+4. `--preflight-evidence-sha256` matching the exact Owner-reviewed evidence
+   file; and
+5. evidence lines binding the result to the approved SHA, Staging root,
+   Compose project, and current `.env.staging` SHA-256.
 
-The evidence capture itself is an Owner action. Do not put secrets, resolved
-Compose output, full image IDs, or production paths in a shared report.
+Create the private evidence directory with mode `0700`, capture the preflight
+with a restrictive umask, and review its SHA-256 before approving a start. The
+evidence capture itself is an Owner action. Do not put secrets, resolved Compose
+output, full image IDs, or production paths in a shared report.
 
 ## Owner checkpoints
 
