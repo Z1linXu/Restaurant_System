@@ -2,7 +2,7 @@
 
 > Status: `ACTIVE_GOVERNANCE_RECORD`
 >
-> Last updated: 2026-07-27, America/Toronto
+> Last updated: 2026-07-28, America/Toronto
 >
 > Scope: current operating baseline, active work, deployment entry conditions,
 > and approval boundaries. This is a living index, not a replacement for the
@@ -64,9 +64,9 @@ snapshots. Do not copy those reports into this planbook.
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `AL-002 Owner-Scoped Store Onboarding Backend` |
 | Loop type | `FEATURE_IMPLEMENTATION` |
-| Loop status | `AL-002_WAITING_FOR_OWNER_REVIEW` |
+| Loop status | `AL-002_WAITING_FOR_OWNER_APPROVAL` |
 | AL-001 state | `PLAN_COMPLETE` |
-| Current permitted work | Owner review of the completed AL-002 review branch. No further implementation or production action is authorized until the owner explicitly approves the reviewed change. |
+| Current permitted work | Owner approval of the completed AL-002 verification branch. No further implementation, merge, or production action is authorized until the owner explicitly approves the reviewed change. |
 | Explicitly not permitted in AL-002 | Production Chinatown provisioning, real accounts or passwords, menu clone/WOK exclusion/print-module policy (`AL-003`), Owner UI/All Stores UX (`AL-004`), automatic pairing (`AL-005`), deployment, or production migration execution. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
@@ -82,6 +82,13 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 - Local verification completed: focused onboarding/security tests and the full
   backend Maven suite. This is code verification only, not owner approval,
   merge, migration execution, deployment, or production provisioning.
+- Local PostgreSQL/Flyway verification completed against an isolated PostgreSQL
+  16.14 database using the cloud profile: V1-V8 applied successfully, V8's
+  table/unique constraint/index were verified, and a second startup validated
+  the schema without reapplying V8. See
+  [AL-002 PostgreSQL and Flyway V8 Local Verification](AL-002_POSTGRES_FLYWAY_V8_VERIFICATION.md).
+- The populated staging/production Store Code duplicate risk, deployment, and
+  production migration remain `EVIDENCE_PENDING` and owner-gated.
 
 ## 6. Next deployment entry conditions
 

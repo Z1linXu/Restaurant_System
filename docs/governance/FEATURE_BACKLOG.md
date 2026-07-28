@@ -2,7 +2,7 @@
 
 > Status: `ACTIVE_GOVERNANCE_BACKLOG`
 >
-> Last updated: 2026-07-27, America/Toronto
+> Last updated: 2026-07-28, America/Toronto
 >
 > Features are not incidents. A feature may be requirements-confirmed without
 > being authorized for implementation or production provisioning.
@@ -14,9 +14,9 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `WAITING_FOR_OWNER_REVIEW` |
+| status | `WAITING_FOR_OWNER_APPROVAL` |
 | target_loop | `AL-002` |
-| implementation status | AL-002 backend foundations are implemented and locally verified on an independent review branch. Owner review is required before merge, deployment, migration execution, or any production Store/account/menu/device data action. AL-003 menu clone/print policy and AL-004 Owner UI remain unimplemented. |
+| implementation status | AL-002 backend foundations are implemented and locally verified on an independent branch, including a clean PostgreSQL 16 cloud-profile Flyway V1-V8 verification. Owner approval is required before merge, deployment, migration execution, or any production Store/account/menu/device data action. AL-003 menu clone/print policy and AL-004 Owner UI remain unimplemented. |
 | authority | [AL-001 technical plan](agile/AL-001_OWNER_STORE_ONBOARDING_CHINATOWN_TECHNICAL_PLAN.md) |
 
 ### Goal
