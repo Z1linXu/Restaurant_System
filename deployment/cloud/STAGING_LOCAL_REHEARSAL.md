@@ -66,6 +66,10 @@ restore, or a remote Docker context. Delete local rehearsal data only through a
 separate owner-approved local maintenance action after preserving needed test
 evidence.
 
+If a root contains more than one rehearsal release, cleanup requires the exact
+release SHA: append `--commit <full-sha>`. This prevents an ambiguous cleanup
+from targeting the wrong local worktree.
+
 ## Current Machine Limitation
 
 At the time of this STG-003 implementation, the development machine has no

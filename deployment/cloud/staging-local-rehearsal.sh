@@ -11,6 +11,7 @@ PROJECT_NAME="restaurant-pos-staging"
 LOCAL_PORT="18080"
 MODE="plan"
 COMMIT_SHA=""
+COMMIT_WAS_EXPLICIT="false"
 LOCAL_ROOT="${TMPDIR:-/tmp}"
 LOCAL_ROOT="${LOCAL_ROOT%/}/restaurant-pos/staging"
 EVIDENCE_FILE=""
@@ -285,7 +286,7 @@ while [[ $# -gt 0 ]]; do
     --run) MODE="run" ;;
     --cleanup) MODE="cleanup" ;;
     --confirm-local-container-start) CONFIRMED="true" ;;
-    --commit) [[ $# -ge 2 ]] || die "--commit needs a SHA"; COMMIT_SHA="$2"; shift ;;
+    --commit) [[ $# -ge 2 ]] || die "--commit needs a SHA"; COMMIT_SHA="$2"; COMMIT_WAS_EXPLICIT="true"; shift ;;
     --root) [[ $# -ge 2 ]] || die "--root needs an absolute path"; LOCAL_ROOT="$2"; shift ;;
     --evidence-file) [[ $# -ge 2 ]] || die "--evidence-file needs an absolute path"; EVIDENCE_FILE="$2"; shift ;;
     --help|-h) usage; exit 0 ;;
@@ -294,12 +295,23 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-COMMIT_SHA="${COMMIT_SHA:-$(git -C "$REPOSITORY_ROOT" rev-parse HEAD)}"
-assert_clean_checkout
-assert_commit
 LOCAL_ROOT="$(canonical_file_or_future "$LOCAL_ROOT")" || die "cannot canonicalize local root parent"
 is_local_root "$LOCAL_ROOT" || die "local root must be a non-production absolute path ending in /restaurant-pos/staging"
 [[ -z "$EVIDENCE_FILE" || "$EVIDENCE_FILE" == "$LOCAL_ROOT"/* ]] || die "evidence file must remain under the local rehearsal root"
+
+if [[ "$MODE" == "cleanup" && "$COMMIT_WAS_EXPLICIT" == "false" ]]; then
+  local_releases=()
+  while IFS= read -r local_release; do
+    local_releases+=("$local_release")
+  done < <(find "$LOCAL_ROOT/releases" -mindepth 1 -maxdepth 1 -type d -name '[0-9a-f]*' -print 2>/dev/null || true)
+  [[ ${#local_releases[@]} -eq 1 ]] || die "cleanup requires exactly one local rehearsal release or an explicit --commit"
+  COMMIT_SHA="$(basename -- "${local_releases[0]}")"
+else
+  COMMIT_SHA="${COMMIT_SHA:-$(git -C "$REPOSITORY_ROOT" rev-parse HEAD)}"
+  assert_clean_checkout
+  assert_commit
+fi
+[[ "$COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]] || die "local rehearsal commit must be a full lowercase 40-character Git SHA"
 
 case "$MODE" in
   plan)
