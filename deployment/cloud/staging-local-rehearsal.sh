@@ -86,7 +86,7 @@ canonical_future_dir_no_symlink() {
     [[ -n "$part" && "$part" != . && "$part" != .. ]] || return 1
     probe="$probe/$part"
   done
-  printf '%s\n' "$probe"
+  normalize_absolute_path "$probe"
 }
 
 is_nonproduction_root() {
