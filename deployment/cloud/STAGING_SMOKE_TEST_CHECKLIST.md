@@ -55,10 +55,9 @@ and results outside Git.
 
 - [ ] Every synthetic Store begins with actual Store `printing_mode=DISABLED`.
 - [ ] No printer config includes a real endpoint.
-- [ ] `REAL` and `PAD_DIRECT` are never selected.
-- [ ] If Print Job visibility is needed, change one synthetic Store to `MOCK` only for the bounded test.
-- [ ] Verify GRAB, FRONTDESK_RECEIPT, and HOT_KITCHEN jobs are visible as mock-only behavior.
-- [ ] Restore the synthetic Store to `DISABLED` after the mock test.
+- [ ] `APP_FEATURES_PRINTING=false` is present in the resolved backend configuration.
+- [ ] `REAL`, `PAD_DIRECT`, and server-side `MOCK` execution are never selected.
+- [ ] Print Job mock execution is recorded as deferred until a reviewed application-level allowlist exists.
 - [ ] No physical printer, Android Pad pairing, claim, payload fetch, or native TCP printing is performed.
 
 ## F. Android boundary

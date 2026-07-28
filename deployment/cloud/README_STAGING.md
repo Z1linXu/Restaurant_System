@@ -13,7 +13,7 @@ Staging is designed for a future same-host deployment with these fixed defaults:
 - HTTP: `127.0.0.1:18080` only;
 - database: an independent PostgreSQL 16 data directory;
 - images: SHA-specific `staging-<full-sha>` tags;
-- initial printing: `DISABLED`; a bounded synthetic smoke test may use `MOCK`;
+- initial printing: application-level `DISABLED` only;
 - data: empty or synthetic only.
 
 Do not use production credentials, production database data, a production
@@ -63,13 +63,13 @@ Required properties include:
 - database name and user containing `staging`;
 - unique database password and JWT secret, at least 16 and 32 characters;
 - SHA-specific backend/frontend image tags and frontend build version;
-- `STAGING_PRINT_MODE=DISABLED` or, only for a bounded synthetic test, `MOCK`.
+- `STAGING_PRINT_MODE=DISABLED` and `STAGING_PRINTING_FEATURE_ENABLED=false`.
 
 The guard rejects blank SHA values, `:local` tags, ports 80/443, public binds,
 relative or symlinked PostgreSQL paths, production-like database defaults,
 placeholder secrets, `REAL`, `PAD_DIRECT`, and any configured printer endpoint.
 
-For `STAGING_PRINT_MODE=DISABLED`, the package also sets the actual backend
+For `STAGING_PRINT_MODE=DISABLED`, the package sets the actual backend
 property `APP_FEATURES_PRINTING=false`. The resolved Compose configuration is
 checked for that exact value before any build or start. This disables printing
 at the application Feature Flag layer, including when a synthetic Store was
@@ -77,11 +77,24 @@ mistakenly created with an enabled Store mode.
 
 `STAGING_PRINT_MODE` does not create or modify Store database rows. Any
 synthetic Store created for Staging must have its actual `printing_mode` set to
-`DISABLED` before normal smoke tests. A `MOCK` run requires all of the following
-explicit Owner-approved changes: set `STAGING_PRINT_MODE=MOCK`, set
-`STAGING_PRINTING_FEATURE_ENABLED=true`, confirm the synthetic Store row is
-`MOCK`, and confirm no printer endpoint exists. The guard continues to reject
-`REAL`, `PAD_DIRECT`, and `STAGING_PRINTER_ENDPOINT` in both modes.
+`DISABLED` before normal smoke tests. Server/default Staging does not permit
+`MOCK`, because STG-002 has no application-level allowlist proving that a Store
+or API cannot be changed to `REAL` or `PAD_DIRECT`. `MOCK` is accepted only by
+the no-deploy `--local-validate` rehearsal path, which validates package input
+and does not start a backend. Actual mock Print Job execution is deferred to a
+future reviewed allowlist implementation. The guard rejects `REAL`,
+`PAD_DIRECT`, and any `STAGING_PRINTER_ENDPOINT` declaration.
+
+The dotenv parser accepts only unambiguous `KEY=value` or fully quoted values.
+It rejects duplicate keys, inline comments, whitespace in unquoted values, and
+dotenv interpolation. The deployment process rejects ambient Docker/Compose and
+Compose interpolation variables, then invokes Compose through `env -i` with
+`docker --context default`. The config file must be owned by the deploying user
+with mode `0600`, and the config directory must be mode `0700` in server mode.
+The wrapper caps Staging at 2.00 CPUs and 1408m total container memory
+(PostgreSQL 0.75/512m, backend 1.00/768m, Nginx 0.25/128m), backend JVM heap at
+512m, and each local log at 10m with at most three files. These ceilings leave
+headroom for the same-host production workload; Staging is not for load tests.
 
 ## Commands
 
@@ -103,11 +116,18 @@ never run `build`, `up`, `pull`, restore, Flyway clean, or a destructive command
 The resolved Compose output is inspected privately for guards and is never
 printed because it may contain secrets.
 
+Before a deployment, the wrapper copies the validated mode-`0600` environment
+file to a private mode-`0600` snapshot under the Staging state root. Compose
+uses that snapshot, not inherited caller variables. The wrapper rechecks the
+release Git cleanliness, exact SHA, and source/snapshot digest before `build`
+and `up`.
+
 For STG-003 local package rehearsal only, an operator may use
 `--local-validate` with a temporary physical root ending in
 `/restaurant-pos/staging`. This forces validation mode and cannot build or
-start containers. It exists only to test the package before server use; it does
-not weaken the default/server root guard.
+start containers. It may validate a local `MOCK` input shape only; it cannot
+exercise actual mock printing. It exists only to test the package before server
+use and does not weaken the default/server root guard.
 
 After Owner approval of the exact SHA and successful validation, start Staging:
 

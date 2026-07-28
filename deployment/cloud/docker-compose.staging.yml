@@ -47,8 +47,8 @@ services:
       APP_SEED_DEMO_DATA_ENABLED: "false"
       APP_SEED_MEMBERSHIP_SUPPLEMENT_ENABLED: "false"
       APP_SEED_PRODUCTION_BOOTSTRAP_ENABLED: "false"
-      # DISABLED is enforced by the staging wrapper as false. MOCK is an
-      # explicitly approved synthetic-only exception with this value true.
+      # Server/default staging validation requires this to resolve to false.
+      # Local MOCK shape validation never starts this Compose service.
       APP_FEATURES_PRINTING: ${STAGING_PRINTING_FEATURE_ENABLED:?STAGING_PRINTING_FEATURE_ENABLED is required}
     expose:
       - "8080"

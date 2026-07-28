@@ -4,11 +4,9 @@ set -euo pipefail
 TEST_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPOSITORY_ROOT="$(cd -P "$TEST_DIR/../../.." && pwd)"
 SOURCE_CLOUD_DIR="$REPOSITORY_ROOT/deployment/cloud"
-# macOS commonly maps /var through a symlink. The production guard correctly
-# rejects that shape, so use a physical local path for this positive fixture.
-TMP_DIR="$(mktemp -d /private/tmp/restaurant-pos-staging-guard.XXXXXX)"
+TMP_PARENT="$(cd -P "${TMPDIR:-/tmp}" && pwd)"
+TMP_DIR="$(mktemp -d "$TMP_PARENT/restaurant-pos-staging-guard.XXXXXX")"
 FAKE_BIN="$TMP_DIR/bin"
-CALL_LOG="$TMP_DIR/docker.calls"
 
 cleanup() {
   [[ "${KEEP_STAGING_GUARD_TMP:-false}" == "true" ]] && return
@@ -54,9 +52,11 @@ cat >"$FAKE_BIN/docker" <<'DOCKER'
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "$*" >>"${FAKE_DOCKER_LOG:?}"
+[[ "$1" == "--context" && "$2" == "default" ]] || exit 63
+shift 2
 [[ "$1" == "compose" ]] || exit 64
 shift
+original_args="$*"
 
 env_file=""
 while [[ $# -gt 0 ]]; do
@@ -79,8 +79,13 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ -n "$env_file" ]] || exit 65
+log_file="$(dirname "$env_file")/docker.calls"
+printf 'args=%s\n' "$original_args" >>"$log_file"
+printf 'ambient DB_NAME=%s DOCKER_HOST=%s DOCKER_CONTEXT=%s COMPOSE_FILE=%s\n' \
+  "${DB_NAME-unset}" "${DOCKER_HOST-unset}" "${DOCKER_CONTEXT-unset}" "${COMPOSE_FILE-unset}" >>"$log_file"
+
 value() {
-  grep -E "^$1=" "$env_file" | tail -n 1 | sed "s/^$1=//"
+  grep -E "^$1=" "$env_file" | tail -n 1 | sed "s/^$1=//; s/^\"//; s/\"$//"
 }
 
 if [[ "${1:-}" == "--services" ]]; then
@@ -92,33 +97,50 @@ printf 'services:\n'
 printf '  db:\n    image: postgres:%s\n' "$(value POSTGRES_IMAGE_TAG)"
 printf '    source: %s\n' "$(value STAGING_POSTGRES_DATA_DIR)"
 printf '  backend:\n    image: %s\n' "$(value BACKEND_IMAGE)"
+printf '    SPRING_PROFILES_ACTIVE: %s\n' "$(value SPRING_PROFILES_ACTIVE)"
+printf '    DB_NAME: %s\n' "$(value DB_NAME)"
+printf '    DB_USER: %s\n' "$(value DB_USER)"
 printf '    APP_FEATURES_PRINTING: "%s"\n' "$(value STAGING_PRINTING_FEATURE_ENABLED)"
+printf '    cpus: %s\n' "$(value STAGING_BACKEND_CPU_LIMIT)"
+printf '    mem_limit: %s\n' "$(value STAGING_BACKEND_MEMORY_LIMIT)"
 printf '  nginx:\n    image: %s\n' "$(value FRONTEND_IMAGE)"
+printf '    VITE_APP_BUILD_VERSION: %s\n' "$(value VITE_APP_BUILD_VERSION)"
 printf '    ports:\n      - 127.0.0.1:18080:80\n'
+for key in STAGING_DB_CPU_LIMIT STAGING_NGINX_CPU_LIMIT STAGING_DB_MEMORY_LIMIT STAGING_NGINX_MEMORY_LIMIT STAGING_LOG_MAX_SIZE STAGING_LOG_MAX_FILE; do
+  printf '    %s\n' "$(value "$key")"
+done
 DOCKER
 chmod +x "$FAKE_BIN/docker"
 
-SHA="$(git -C "$REPOSITORY_ROOT" rev-parse HEAD)"
-STAGING_ROOT="$TMP_DIR/restaurant-pos/staging"
-RELEASE_DIR="$STAGING_ROOT/releases/$SHA"
-CONFIG_DIR="$STAGING_ROOT/config"
-POSTGRES_DIR="$STAGING_ROOT/state/postgres"
-mkdir -p "$(dirname "$RELEASE_DIR")" "$CONFIG_DIR" "$POSTGRES_DIR"
-git clone --quiet "$REPOSITORY_ROOT" "$RELEASE_DIR"
+SEED_RELEASE="$TMP_DIR/release-seed"
+git clone --quiet "$REPOSITORY_ROOT" "$SEED_RELEASE"
+cp "$SOURCE_CLOUD_DIR/docker-compose.staging.yml" "$SEED_RELEASE/deployment/cloud/"
+cp "$SOURCE_CLOUD_DIR/.env.staging.example" "$SEED_RELEASE/deployment/cloud/"
+cp "$SOURCE_CLOUD_DIR/staging-deploy.sh" "$SEED_RELEASE/deployment/cloud/"
+cp "$SOURCE_CLOUD_DIR/staging-health-check.sh" "$SEED_RELEASE/deployment/cloud/"
+chmod +x "$SEED_RELEASE/deployment/cloud/staging-deploy.sh" "$SEED_RELEASE/deployment/cloud/staging-health-check.sh"
+git -C "$SEED_RELEASE" add -f \
+  deployment/cloud/docker-compose.staging.yml \
+  deployment/cloud/.env.staging.example \
+  deployment/cloud/staging-deploy.sh \
+  deployment/cloud/staging-health-check.sh
+git -C "$SEED_RELEASE" -c user.name=staging-guard-test -c user.email=staging-guard-test@example.invalid \
+  commit --quiet -m "test fixture staging package"
 
-# The detached test checkout has the committed base; copy only the package under
-# test so the script can validate its own physical release path and Git HEAD.
-cp "$SOURCE_CLOUD_DIR/docker-compose.staging.yml" "$RELEASE_DIR/deployment/cloud/"
-cp "$SOURCE_CLOUD_DIR/.env.staging.example" "$RELEASE_DIR/deployment/cloud/"
-cp "$SOURCE_CLOUD_DIR/staging-deploy.sh" "$RELEASE_DIR/deployment/cloud/"
-cp "$SOURCE_CLOUD_DIR/staging-health-check.sh" "$RELEASE_DIR/deployment/cloud/"
-chmod +x "$RELEASE_DIR/deployment/cloud/staging-deploy.sh"
+SHA="$(git -C "$SEED_RELEASE" rev-parse HEAD)"
+FIXTURE_STAGING_ROOT="$TMP_DIR/restaurant-pos/staging"
+RELEASE_DIR="$FIXTURE_STAGING_ROOT/releases/$SHA"
+CONFIG_DIR="$FIXTURE_STAGING_ROOT/config"
+POSTGRES_DIR="$FIXTURE_STAGING_ROOT/state/postgres"
+mkdir -p "$(dirname "$RELEASE_DIR")" "$CONFIG_DIR" "$POSTGRES_DIR"
+mv "$SEED_RELEASE" "$RELEASE_DIR"
 
 ENV_FILE="$CONFIG_DIR/.env.staging"
+CALL_LOG="$CONFIG_DIR/docker.calls"
 BASE_ENV="$TMP_DIR/base.env"
 cat >"$BASE_ENV" <<EOF
 COMPOSE_PROJECT_NAME=restaurant-pos-staging
-STAGING_ROOT=$STAGING_ROOT
+STAGING_ROOT=$FIXTURE_STAGING_ROOT
 STAGING_COMMIT_SHA=$SHA
 STAGING_POSTGRES_DATA_DIR=$POSTGRES_DIR
 HTTP_BIND_ADDRESS=127.0.0.1
@@ -131,16 +153,41 @@ DB_USER=restaurant_pos_staging
 DB_PASSWORD=staging-db-value-12345
 JWT_SECRET=staging-jwt-value-12345678901234567890
 SPRING_PROFILES_ACTIVE=cloud
-JAVA_OPTS=-Xms128m -Xmx512m
+JAVA_OPTS="-Xms128m -Xmx512m"
 BACKEND_IMAGE=restaurant-pos-backend:staging-$SHA
 FRONTEND_IMAGE=restaurant-pos-frontend:staging-$SHA
 VITE_APP_BUILD_VERSION=staging-$SHA
 STAGING_PRINT_MODE=DISABLED
 STAGING_PRINTING_FEATURE_ENABLED=false
+STAGING_DB_CPU_LIMIT=0.75
+STAGING_DB_MEMORY_LIMIT=512m
+STAGING_BACKEND_CPU_LIMIT=1.00
+STAGING_BACKEND_MEMORY_LIMIT=768m
+STAGING_NGINX_CPU_LIMIT=0.25
+STAGING_NGINX_MEMORY_LIMIT=128m
+STAGING_LOG_MAX_SIZE=10m
+STAGING_LOG_MAX_FILE=3
 EOF
 
+for key in \
+  DOCKER_HOST DOCKER_CONTEXT DOCKER_CONFIG DOCKER_CERT_PATH DOCKER_TLS_VERIFY \
+  DOCKER_API_VERSION DOCKER_DEFAULT_PLATFORM DOCKER_BUILDKIT \
+  COMPOSE_FILE COMPOSE_PROJECT_NAME COMPOSE_ENV_FILES COMPOSE_PATH_SEPARATOR COMPOSE_PROFILES \
+  STAGING_ROOT STAGING_COMMIT_SHA STAGING_POSTGRES_DATA_DIR \
+  HTTP_BIND_ADDRESS HTTP_PORT NGINX_SERVER_NAME TZ POSTGRES_IMAGE_TAG \
+  DB_NAME DB_USER DB_PASSWORD JWT_SECRET SPRING_PROFILES_ACTIVE JAVA_OPTS \
+  BACKEND_IMAGE FRONTEND_IMAGE VITE_APP_BUILD_VERSION \
+  STAGING_PRINT_MODE STAGING_PRINTING_FEATURE_ENABLED STAGING_PRINTER_ENDPOINT \
+  STAGING_DB_CPU_LIMIT STAGING_DB_MEMORY_LIMIT STAGING_BACKEND_CPU_LIMIT \
+  STAGING_BACKEND_MEMORY_LIMIT STAGING_NGINX_CPU_LIMIT STAGING_NGINX_MEMORY_LIMIT \
+  STAGING_LOG_MAX_SIZE STAGING_LOG_MAX_FILE APP_FEATURES_PRINTING \
+  APP_AUTH_X_USER_ID_FALLBACK_ENABLED \
+  APP_DEV_TOOLS_ROLE_SWITCHER_ENABLED APP_SEED_DEFAULT_USERS_ENABLED APP_SEED_DEMO_DATA_ENABLED; do
+  unset "$key" || true
+done
+
 run_validate() {
-  PATH="$FAKE_BIN:$PATH" FAKE_DOCKER_LOG="$CALL_LOG" \
+  PATH="$FAKE_BIN:$PATH" \
     "$RELEASE_DIR/deployment/cloud/staging-deploy.sh" --env-file "$ENV_FILE" --local-validate
 }
 
@@ -156,7 +203,7 @@ if ! run_validate >"$TMP_DIR/positive.out" 2>"$TMP_DIR/positive.err"; then
 fi
 assert_contains "Staging validation passed" "$TMP_DIR/positive.out"
 assert_contains "--project-name restaurant-pos-staging" "$CALL_LOG"
-assert_contains "config" "$CALL_LOG"
+assert_contains "ambient DB_NAME=unset DOCKER_HOST=unset DOCKER_CONTEXT=unset COMPOSE_FILE=unset" "$CALL_LOG"
 if grep -Eq '( build | up )' "$CALL_LOG"; then
   fail "validate invoked build or up"
 fi
@@ -164,6 +211,30 @@ fi
 reset_env
 expect_failure arbitrary_server_root \
   "$RELEASE_DIR/deployment/cloud/staging-deploy.sh" --env-file "$ENV_FILE" --validate
+
+reset_env
+expect_failure ambient_db env DB_NAME=caller-value PATH="$FAKE_BIN:$PATH" \
+  "$RELEASE_DIR/deployment/cloud/staging-deploy.sh" --env-file "$ENV_FILE" --local-validate
+
+reset_env
+expect_failure ambient_printing_feature env APP_FEATURES_PRINTING=true PATH="$FAKE_BIN:$PATH" \
+  "$RELEASE_DIR/deployment/cloud/staging-deploy.sh" --env-file "$ENV_FILE" --local-validate
+
+reset_env
+expect_failure ambient_docker_host env DOCKER_HOST=tcp://forbidden.invalid:2375 PATH="$FAKE_BIN:$PATH" \
+  "$RELEASE_DIR/deployment/cloud/staging-deploy.sh" --env-file "$ENV_FILE" --local-validate
+
+reset_env
+expect_failure ambient_docker_context env DOCKER_CONTEXT=forbidden-context PATH="$FAKE_BIN:$PATH" \
+  "$RELEASE_DIR/deployment/cloud/staging-deploy.sh" --env-file "$ENV_FILE" --local-validate
+
+reset_env
+expect_failure ambient_compose_profiles env COMPOSE_PROFILES=forbidden-profile PATH="$FAKE_BIN:$PATH" \
+  "$RELEASE_DIR/deployment/cloud/staging-deploy.sh" --env-file "$ENV_FILE" --local-validate
+
+reset_env
+expect_failure ambient_compose_file env COMPOSE_FILE=forbidden.yml PATH="$FAKE_BIN:$PATH" \
+  "$RELEASE_DIR/deployment/cloud/staging-deploy.sh" --env-file "$ENV_FILE" --local-validate
 
 reset_env
 set_env COMPOSE_PROJECT_NAME cloud "$ENV_FILE"
@@ -198,7 +269,7 @@ set_env STAGING_POSTGRES_DATA_DIR relative/postgres "$ENV_FILE"
 expect_failure relative_data_path run_validate
 
 reset_env
-set_env STAGING_POSTGRES_DATA_DIR "$STAGING_ROOT/state/../postgres" "$ENV_FILE"
+set_env STAGING_POSTGRES_DATA_DIR "$FIXTURE_STAGING_ROOT/state/../postgres" "$ENV_FILE"
 expect_failure traversal_data_path run_validate
 
 reset_env
@@ -240,11 +311,11 @@ expect_failure mock_without_feature run_validate
 reset_env
 set_env STAGING_PRINT_MODE MOCK "$ENV_FILE"
 set_env STAGING_PRINTING_FEATURE_ENABLED true "$ENV_FILE"
-run_validate >"$TMP_DIR/mock.out"
-assert_contains "Staging validation passed" "$TMP_DIR/mock.out"
+run_validate >"$TMP_DIR/local_mock.out"
+assert_contains "Staging validation passed" "$TMP_DIR/local_mock.out"
 
 reset_env
-set_env STAGING_PRINTER_ENDPOINT 192.168.1.10:9100 "$ENV_FILE"
+set_env STAGING_PRINTER_ENDPOINT PRINTER_ENDPOINT_FORBIDDEN "$ENV_FILE"
 expect_failure printer_endpoint run_validate
 
 reset_env
@@ -256,6 +327,48 @@ set_env APP_SEED_DEMO_DATA_ENABLED true "$ENV_FILE"
 expect_failure unsafe_seed run_validate
 
 reset_env
+printf '\nDB_NAME=restaurant_pos_staging\n' >>"$ENV_FILE"
+expect_failure duplicate_key run_validate
+
+reset_env
+set_env DB_NAME 'restaurant_pos_staging # inline' "$ENV_FILE"
+expect_failure inline_comment run_validate
+
+reset_env
+set_env DB_NAME '"restaurant_pos_staging' "$ENV_FILE"
+expect_failure ambiguous_quote run_validate
+
+reset_env
+set_env STAGING_BACKEND_CPU_LIMIT 1.01 "$ENV_FILE"
+expect_failure excessive_cpu run_validate
+
+reset_env
+set_env STAGING_BACKEND_MEMORY_LIMIT 769m "$ENV_FILE"
+expect_failure excessive_memory run_validate
+
+reset_env
+set_env JAVA_OPTS '"-Xms128m -Xmx513m"' "$ENV_FILE"
+expect_failure excessive_jvm_heap run_validate
+
+reset_env
+set_env STAGING_LOG_MAX_SIZE 11m "$ENV_FILE"
+expect_failure excessive_log_size run_validate
+
+reset_env
+set_env STAGING_LOG_MAX_FILE 4 "$ENV_FILE"
+expect_failure excessive_log_count run_validate
+
+reset_env
+printf '\n# tracked dirty fixture\n' >>"$RELEASE_DIR/AGENTS.md"
+expect_failure tracked_dirty run_validate
+git -C "$RELEASE_DIR" checkout -- AGENTS.md
+
+reset_env
+touch "$RELEASE_DIR/untracked-build-input.txt"
+expect_failure untracked_build_input run_validate
+rm "$RELEASE_DIR/untracked-build-input.txt"
+
+reset_env
 rm -rf "$POSTGRES_DIR"
 mkdir -p "$TMP_DIR/outside-postgres"
 ln -s "$TMP_DIR/outside-postgres" "$POSTGRES_DIR"
@@ -264,8 +377,8 @@ rm "$POSTGRES_DIR"
 mkdir -p "$POSTGRES_DIR"
 
 reset_env
-PATH="$FAKE_BIN:$PATH" FAKE_DOCKER_LOG="$CALL_LOG" \
+PATH="$FAKE_BIN:$PATH" \
   "$RELEASE_DIR/deployment/cloud/staging-health-check.sh" --env-file "$ENV_FILE" --local-validate >"$TMP_DIR/health.out"
 assert_contains "configuration passed" "$TMP_DIR/health.out"
 
-echo "PASS: staging guard rejects unsafe project, SHA, image, network, path, credential, printing, profile, seed, and symlink configurations."
+echo "PASS: staging guard rejects ambient overrides, unsafe dotenv input, dirty Git inputs, unsafe printing, and unsafe resource/network/path configuration."
