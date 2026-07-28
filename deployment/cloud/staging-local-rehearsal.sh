@@ -82,10 +82,12 @@ canonical_future_dir_no_symlink() {
   done
   [[ -d "$probe" ]] || return 1
   probe="$(canonical_existing_dir_no_symlink "$probe")" || return 1
-  for part in "${suffix[@]}"; do
-    [[ -n "$part" && "$part" != . && "$part" != .. ]] || return 1
-    probe="$probe/$part"
-  done
+  if [[ ${#suffix[@]} -gt 0 ]]; then
+    for part in "${suffix[@]}"; do
+      [[ -n "$part" && "$part" != . && "$part" != .. ]] || return 1
+      probe="$probe/$part"
+    done
+  fi
   normalize_absolute_path "$probe"
 }
 
