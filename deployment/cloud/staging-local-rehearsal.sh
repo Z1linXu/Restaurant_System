@@ -17,6 +17,12 @@ LOCAL_TMP_BASE="$(cd -P -- "${TMPDIR:-/tmp}" && pwd)"
 LOCAL_ROOT="$LOCAL_TMP_BASE"
 LOCAL_ROOT="${LOCAL_ROOT%/}/restaurant-pos/staging"
 DOCKER_BIN=""
+PRIVATE_RESOLVED_CONFIG=""
+
+cleanup_private_config() {
+  [[ -n "$PRIVATE_RESOLVED_CONFIG" ]] && rm -f -- "$PRIVATE_RESOLVED_CONFIG"
+}
+trap cleanup_private_config EXIT
 
 usage() {
   cat <<'EOF'
@@ -257,6 +263,7 @@ assert_resolved_compose() {
   assert_env_identity "$env_file"
   resolved="$LOCAL_ROOT/evidence/resolved-compose.private.yml"
   [[ ! -e "$resolved" ]] || die "private resolved Compose file already exists"
+  PRIVATE_RESOLVED_CONFIG="$resolved"
   umask 077
   local_compose "$env_file" "$compose_file" config >"$resolved" || die "Compose config validation failed"
   chmod 600 "$resolved"
@@ -278,6 +285,7 @@ assert_resolved_compose() {
   [[ "$source_count" -eq 2 ]] || die "resolved Compose has unexpected mounts"
   ! grep -Eqi 'docker\.sock|privileged:[[:space:]]*true|network_mode:[[:space:]]*host|pid:[[:space:]]*host|:80:80|:443:443|0\.0\.0\.0|/srv/|/home/ubuntu/' "$resolved" || die "resolved Compose contains forbidden privileged, host, socket, or server configuration"
   rm -f "$resolved"
+  PRIVATE_RESOLVED_CONFIG=""
   revalidate_created_root
   assert_release_identity
   assert_env_identity "$env_file"
