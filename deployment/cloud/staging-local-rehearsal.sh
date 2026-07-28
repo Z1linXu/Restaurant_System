@@ -20,7 +20,10 @@ DOCKER_BIN=""
 PRIVATE_RESOLVED_CONFIG=""
 
 cleanup_private_config() {
-  [[ -n "$PRIVATE_RESOLVED_CONFIG" ]] && rm -f -- "$PRIVATE_RESOLVED_CONFIG"
+  if [[ -n "$PRIVATE_RESOLVED_CONFIG" ]]; then
+    rm -f -- "$PRIVATE_RESOLVED_CONFIG"
+  fi
+  return 0
 }
 trap cleanup_private_config EXIT
 
