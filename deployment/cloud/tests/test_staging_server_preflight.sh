@@ -281,6 +281,53 @@ PATH="$FAKE_BIN:$PATH" "$DEPLOY_RUNNER" \
 assert_contains ' build ' "$FAKE_BIN/docker.calls"
 assert_contains ' up ' "$FAKE_BIN/docker.calls"
 
+# Authorization must remain bound to the environment snapshot that build/up
+# actually consume, even if the original env file changes afterwards.
+(
+  source "$DEPLOY_RUNNER"
+  EXECUTE_START="true"
+  STAGING_COMMIT_SHA="$SHA"
+  APPROVED_SHA="$SHA"
+  STAGING_ROOT="$FAKE_ROOT"
+  PREFLIGHT_EVIDENCE="$EVIDENCE_FILE"
+  PREFLIGHT_EVIDENCE_SHA256="$EVIDENCE_DIGEST"
+  ORIGINAL_ENV_FILE="$ENV_FILE"
+  ENV_SNAPSHOT_DIGEST="$ENV_DIGEST"
+  printf '\n# changed after environment snapshot\n' >>"$ORIGINAL_ENV_FILE"
+  validate_start_authorization
+  grep -Fxq "EVIDENCE|ENV_SHA256|$ENV_DIGEST" "$PREFLIGHT_EVIDENCE_SNAPSHOT"
+  cleanup
+) || fail 'authorization was not bound to the deployed environment snapshot'
+reset_env
+
+# If the source evidence changes immediately after copy, all hash and field
+# checks still read the same private snapshot.
+RACE_EVIDENCE="$EVIDENCE_DIR/race-evidence.txt"
+cp "$EVIDENCE_FILE" "$RACE_EVIDENCE"
+chmod 600 "$RACE_EVIDENCE"
+RACE_DIGEST="$(digest "$RACE_EVIDENCE")"
+(
+  source "$DEPLOY_RUNNER"
+  EXECUTE_START="true"
+  STAGING_COMMIT_SHA="$SHA"
+  APPROVED_SHA="$SHA"
+  STAGING_ROOT="$FAKE_ROOT"
+  PREFLIGHT_EVIDENCE="$RACE_EVIDENCE"
+  PREFLIGHT_EVIDENCE_SHA256="$RACE_DIGEST"
+  ORIGINAL_ENV_FILE="$ENV_FILE"
+  ENV_SNAPSHOT_DIGEST="$ENV_DIGEST"
+  cp() {
+    command cp "$@"
+    if [[ "$1" == "$PREFLIGHT_EVIDENCE" ]]; then
+      printf 'FORGED_AFTER_COPY\n' >"$PREFLIGHT_EVIDENCE"
+    fi
+  }
+  validate_start_authorization
+  grep -Fxq "EVIDENCE|APPROVED_SHA|$SHA" "$PREFLIGHT_EVIDENCE_SNAPSHOT"
+  ! grep -Fq 'FORGED_AFTER_COPY' "$PREFLIGHT_EVIDENCE_SNAPSHOT"
+  cleanup
+) || fail 'evidence authorization did not use one immutable private snapshot'
+
 : >"$FAKE_BIN/docker.calls"
 expect_failure local_before_start env PATH="$FAKE_BIN:$PATH" "$DEPLOY_RUNNER" \
   --local-validate --execute-start --approved-sha "$SHA" \
