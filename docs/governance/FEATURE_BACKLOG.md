@@ -14,9 +14,9 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `REQUIREMENTS_CONFIRMED` |
-| target_loop | `AL-001` |
-| implementation status | Planning only; no Store, account, menu, device, migration, or production data has been created by this feature record. |
+| status | `WAITING_FOR_OWNER_REVIEW` |
+| target_loop | `AL-002` |
+| implementation status | AL-002 backend foundations are implemented and locally verified on an independent review branch. Owner review is required before merge, deployment, migration execution, or any production Store/account/menu/device data action. AL-003 menu clone/print policy and AL-004 Owner UI remain unimplemented. |
 | authority | [AL-001 technical plan](agile/AL-001_OWNER_STORE_ONBOARDING_CHINATOWN_TECHNICAL_PLAN.md) |
 
 ### Goal

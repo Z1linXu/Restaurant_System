@@ -5,12 +5,14 @@ import com.restaurant.system.common.auth.UnauthorizedException;
 import com.restaurant.system.common.feature.FeatureDisabledException;
 import com.restaurant.system.common.response.ApiResponse;
 import com.restaurant.system.order.exception.OrderSubmissionException;
+import com.restaurant.system.owner.exception.OwnerStoreOnboardingException;
 import jakarta.validation.ConstraintViolationException;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -25,6 +27,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(OrderSubmissionException.class)
     public ResponseEntity<ApiResponse<Void>> handleOrderSubmissionException(OrderSubmissionException ex) {
         return ResponseEntity.status(ex.getStatus()).body(ApiResponse.failure(ex.getErrorCode(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(OwnerStoreOnboardingException.class)
+    public ResponseEntity<ApiResponse<Void>> handleOwnerStoreOnboardingException(OwnerStoreOnboardingException ex) {
+        return ResponseEntity.status(ex.getStatus()).body(ApiResponse.failure(ex.getErrorCode(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissingRequestHeader(MissingRequestHeaderException ex) {
+        return ResponseEntity.badRequest().body(ApiResponse.failure(
+            "REQUEST_HEADER_REQUIRED",
+            "Required request header: " + ex.getHeaderName()
+        ));
     }
 
     @ExceptionHandler(UnauthorizedException.class)

@@ -4,13 +4,14 @@
 >
 > Type: `FEATURE_DISCOVERY_AND_PLAN`
 >
-> Status: `REQUIREMENTS_CONFIRMED`; `READY_FOR_TECHNICAL_PLAN`
+> Status: `PLAN_COMPLETE`
 >
 > Last updated: 2026-07-27, America/Toronto
 >
-> Boundary: read-only repository discovery and planning only. This document does
-> not authorize creating Chinatown, accounts, credentials, devices, printer
-> configuration, migrations, or production data.
+> Boundary: historical read-only repository discovery and planning record. Its
+> approved implementation successor is `AL-002`, limited to backend onboarding
+> foundations. This plan does not authorize creating Chinatown, accounts,
+> credentials, devices, printer configuration, or production data.
 
 ## 1. Decision summary
 

@@ -76,6 +76,10 @@ with an explicit recorded transition:
 
 ## 6. Current application
 
-`AL-001` is a `FEATURE_DISCOVERY_AND_PLAN` loop for `FT-001`. It is permitted
-to read code and publish a technical plan only. Any implementation is a later,
-owner-approved loop/PR split.
+`AL-001` is `PLAN_COMPLETE` for `FT-001`. `AL-002` completed local
+implementation and verification and is now `AL-002_WAITING_FOR_OWNER_REVIEW`.
+Its scope was limited to owner-scoped onboarding authorization, durable
+idempotency, secure staff credential/membership provisioning, and safe
+Store-default handling on an independent review branch. `AL-003` (menu
+clone/print policy), `AL-004` (Owner UI), and `AL-005` (production
+provisioning) are not authorized to enter implementation.
