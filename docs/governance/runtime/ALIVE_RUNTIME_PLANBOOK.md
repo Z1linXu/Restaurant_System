@@ -96,10 +96,10 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
   STG-003 environment did not succeed, so the stage was not started:
   `NOT_STARTED_BLOCKED_BY_STG-003_RUNTIME_GATE`.
 - STG-006 operations preparation is on
-  `codex/stg-006-operational-hardening`. Its read-only inventory, disk,
-  image-compatibility, evidence, and backup metadata planning guards passed an
-  independent security review. Runtime hardening and synthetic rebuild remain
-  blocked on STG-003 and STG-005:
+  `codex/stg-006-operational-hardening`, Draft PR #34. Its read-only inventory,
+  disk, image-compatibility, evidence, and backup metadata planning guards
+  passed an independent security review. Runtime hardening and synthetic
+  rebuild remain blocked on STG-003 and STG-005:
   `STG-006_PREPARATION_ONLY_BLOCKED_ON_STG-003_STG-005`.
 
 The shared architecture remains exact-SHA, explicit project

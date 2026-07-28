@@ -75,7 +75,7 @@ Current review chain:
 | STG-003 | `codex/stg-003-local-isolated-rehearsal`, Draft PR #32 | Rehearsal harness and fake-Docker lifecycle tests; isolated PostgreSQL 16.14/Flyway V1-V8 startup evidence | `STG-003_IMPLEMENTATION_READY_RUNTIME_REHEARSAL_BLOCKED_LOCAL_DOCKER` |
 | STG-004 | `codex/stg-004-first-deploy-preflight`, Draft PR #33 | Server preflight and owner-action planning scripts; no server command was run | `STG-004_PREFLIGHT_READY_SERVER_DEPLOYMENT_BLOCKED` |
 | STG-005 | no branch or PR | Docker-backed synthetic business acceptance was not started because the STG-003 runtime gate is unmet | `NOT_STARTED_BLOCKED_BY_STG-003_RUNTIME_GATE` |
-| STG-006 | `codex/stg-006-operational-hardening` | Read-only inventory/disk/image planning, evidence structure, backup metadata planning, and restore rehearsal documentation | `STG-006_PREPARATION_ONLY_BLOCKED_ON_STG-003_STG-005` |
+| STG-006 | `codex/stg-006-operational-hardening`, Draft PR #34 | Read-only inventory/disk/image planning, evidence structure, backup metadata planning, and restore rehearsal documentation | `STG-006_PREPARATION_ONLY_BLOCKED_ON_STG-003_STG-005` |
 
 No stage in this chain authorizes merge, SSH, server Docker/Flyway execution,
 production or Staging deployment, real data, real printing, restore, or
