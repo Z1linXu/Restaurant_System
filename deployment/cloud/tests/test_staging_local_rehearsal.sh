@@ -6,6 +6,7 @@ REPOSITORY_ROOT="$(cd -P "$TEST_DIR/../../.." && pwd)"
 RUNNER="$REPOSITORY_ROOT/deployment/cloud/staging-local-rehearsal.sh"
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/restaurant-pos-stg003-test.XXXXXX")"
 TMP_DIR="$(cd -P -- "$TMP_DIR" && pwd)"
+LOCAL_TMP_BASE="$(cd -P -- "${TMPDIR:-/tmp}" && pwd)"
 ISOLATED_BIN="$TMP_DIR/isolated-bin"
 FAKE_BIN="$TMP_DIR/fake-bin"
 
@@ -31,7 +32,7 @@ assert_not_contains() { ! grep -Fq -- "$1" "$2" || fail "unexpected '$1' in $2";
 make_isolated_path() {
   local command_path command_name
   mkdir -p "$ISOLATED_BIN" "$FAKE_BIN"
-  for command_name in bash basename cat chmod cp cut dirname env find git grep head mkdir od openssl pwd rm sed seq sleep stat tail tr; do
+  for command_name in bash basename cat chmod cp cut dirname env find git grep head jq mkdir od openssl pwd rm sed seq sleep stat tail tr; do
     command_path="$(command -v "$command_name")" || fail "missing local test prerequisite: $command_name"
     ln -s "$command_path" "$ISOLATED_BIN/$command_name"
   done
@@ -42,26 +43,29 @@ make_isolated_path
 bash -n "$RUNNER"
 
 # --plan is a pure no-op. Its PATH deliberately has no Docker binary.
-PATH="$ISOLATED_BIN" "$RUNNER" --plan --root "$TMP_DIR/plan/restaurant-pos/staging" >"$TMP_DIR/plan.out"
+SAFE_ROOT="$TMP_DIR/restaurant-pos/staging"
+PATH="$ISOLATED_BIN" "$RUNNER" --plan --root "$SAFE_ROOT" >"$TMP_DIR/plan.out"
 assert_contains 'STG-003 LOCAL-ONLY REHEARSAL PLAN' "$TMP_DIR/plan.out"
 assert_contains 'printing=DISABLED' "$TMP_DIR/plan.out"
 assert_not_contains 'docker_context=' "$TMP_DIR/plan.out"
 
 # --run fails before root creation when the isolated PATH does not contain Docker.
-PATH="$ISOLATED_BIN" expect_failure no_docker "$RUNNER" --run --confirm-local-container-start --root "$TMP_DIR/no-docker/restaurant-pos/staging"
+PATH="$ISOLATED_BIN" expect_failure no_docker "$RUNNER" --run --confirm-local-container-start --root "$SAFE_ROOT"
 assert_contains 'BLOCKED_LOCAL_DOCKER_RUNTIME_UNAVAILABLE' "$TMP_DIR/no_docker.err"
-[[ ! -e "$TMP_DIR/no-docker" ]] || fail 'Docker-unavailable run created local state'
+[[ ! -e "$TMP_DIR/restaurant-pos" ]] || fail 'Docker-unavailable run created local state'
 
 PATH="$ISOLATED_BIN" expect_failure srv_root "$RUNNER" --plan --root /srv/restaurant-pos/staging
-assert_contains 'non-production absolute path' "$TMP_DIR/srv_root.err"
+assert_contains 'allowed STG-003 namespace' "$TMP_DIR/srv_root.err"
 PATH="$ISOLATED_BIN" expect_failure repository_root "$RUNNER" --plan --root "$REPOSITORY_ROOT/restaurant-pos/staging"
-assert_contains 'non-production absolute path' "$TMP_DIR/repository_root.err"
+assert_contains 'allowed STG-003 namespace' "$TMP_DIR/repository_root.err"
+PATH="$ISOLATED_BIN" expect_failure arbitrary_root "$RUNNER" --plan --root "$LOCAL_TMP_BASE/arbitrary/restaurant-pos/staging"
+assert_contains 'allowed STG-003 namespace' "$TMP_DIR/arbitrary_root.err"
 PATH="$ISOLATED_BIN" expect_failure evidence_option "$RUNNER" --plan --evidence-file "$TMP_DIR/anywhere"
 assert_contains 'unsupported option' "$TMP_DIR/evidence_option.err"
 
-mkdir -p "$TMP_DIR/symlink-target/restaurant-pos"
-ln -s "$TMP_DIR/symlink-target" "$TMP_DIR/symlink-root"
-PATH="$ISOLATED_BIN" expect_failure symlink_root "$RUNNER" --plan --root "$TMP_DIR/symlink-root/restaurant-pos/staging"
+SYMLINK_NAMESPACE="${TMP_DIR/restaurant-pos-stg003-test/restaurant-pos-stg003-symlink}"
+ln -s "$TMP_DIR" "$SYMLINK_NAMESPACE"
+PATH="$ISOLATED_BIN" expect_failure symlink_root "$RUNNER" --plan --root "$SYMLINK_NAMESPACE/restaurant-pos/staging"
 assert_contains 'symlink' "$TMP_DIR/symlink_root.err"
 
 cat >"$FAKE_BIN/docker" <<'DOCKER'
@@ -87,12 +91,18 @@ while [[ $# -gt 0 ]]; do
 done
 [[ "$project" == "restaurant-pos-staging" && -f "$env_file" && -f "$compose_file" ]] || exit 93
 action="${1:-}"; shift || true
-printf 'action=%s\n' "$action" >>"$LOG"
+printf 'action=%s remaining=%s\n' "$action" "$*" >>"$LOG"
 value() { grep -E "^$1=" "$env_file" | tail -n 1 | sed "s/^$1=//; s/^\"//; s/\"$//"; }
 root="$(value STAGING_ROOT)"; sha="$(value STAGING_COMMIT_SHA)"
 case "$action" in
   config)
     if [[ "${1:-}" == "--services" ]]; then printf 'db\nbackend\nnginx\n'; exit 0; fi
+    if [[ "${1:-}" == "--format" && "${2:-}" == "json" ]]; then
+      cat <<EOF
+{"services":{"db":{"ports":[]},"backend":{"ports":[]},"nginx":{"ports":[{"host_ip":"127.0.0.1","published":"18080","target":80,"protocol":"tcp"}]}}}
+EOF
+      exit 0
+    fi
     cat <<EOF
 services:
   db:
@@ -152,22 +162,23 @@ chmod +x "$FAKE_BIN/curl"
 
 # This full fake run proves the fixed context/project and lifecycle command
 # plan without resolving any host Docker binary or starting any container.
-FAKE_ROOT="$TMP_DIR/fake/restaurant-pos/staging"
+FAKE_ROOT="$SAFE_ROOT"
 PATH="$FAKE_BIN:$ISOLATED_BIN" "$RUNNER" --run --confirm-local-container-start --root "$FAKE_ROOT" >"$TMP_DIR/fake-run.out"
 FAKE_SHA="$(git -C "$REPOSITORY_ROOT" rev-parse HEAD)"
 FAKE_RELEASE_DIR="$FAKE_ROOT/releases/$FAKE_SHA"
 [[ -f "$FAKE_ROOT/evidence/stg-003-local-rehearsal.md" ]] || fail 'fixed evidence file was not created'
 [[ "$(stat -f '%Lp' "$FAKE_ROOT/config/.env.staging" 2>/dev/null || stat -c '%a' "$FAKE_ROOT/config/.env.staging")" == "600" ]] || fail 'synthetic env is not mode 0600'
-assert_contains 'action=build' "$FAKE_BIN/docker.calls"
-assert_contains 'action=up' "$FAKE_BIN/docker.calls"
-assert_contains 'action=stop' "$FAKE_BIN/docker.calls"
+assert_contains 'action=build remaining=backend nginx' "$FAKE_BIN/docker.calls"
+assert_contains 'action=up remaining=-d' "$FAKE_BIN/docker.calls"
+assert_contains 'action=stop remaining=' "$FAKE_BIN/docker.calls"
 assert_contains '--context default compose --project-name restaurant-pos-staging' "$FAKE_BIN/docker.calls"
 assert_not_contains 'down -v' "$FAKE_BIN/docker.calls"
 assert_not_contains 'Flyway clean' "$FAKE_BIN/docker.calls"
 assert_not_contains '/srv/' "$FAKE_BIN/docker.calls"
 
 PATH="$FAKE_BIN:$ISOLATED_BIN" "$RUNNER" --cleanup --confirm-local-container-start --root "$FAKE_ROOT" >"$TMP_DIR/fake-cleanup.out"
-assert_contains 'action=down' "$FAKE_BIN/docker.calls"
+assert_contains 'action=down remaining=' "$FAKE_BIN/docker.calls"
 assert_not_contains 'down -v' "$FAKE_BIN/docker.calls"
+assert_not_contains 'down --volumes' "$FAKE_BIN/docker.calls"
 
 echo 'PASS: STG-003 uses pure planning, symlink-safe local roots, fixed evidence, isolated fake Docker lifecycle coverage, and no destructive cleanup.'
