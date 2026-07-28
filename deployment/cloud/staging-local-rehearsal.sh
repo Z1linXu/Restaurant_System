@@ -303,6 +303,13 @@ is_local_root "$LOCAL_ROOT" || die "local root must be a non-production absolute
 
 case "$MODE" in
   plan)
+    if command -v docker >/dev/null 2>&1; then
+      # This is an inspection-only context guard. --plan never calls Compose.
+      assert_local_docker
+      echo "docker_context=default (local endpoint verified)"
+    else
+      echo "docker_context=unavailable (runtime rehearsal remains blocked)"
+    fi
     print_plan
     ;;
   run)

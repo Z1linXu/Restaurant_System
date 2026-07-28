@@ -47,6 +47,8 @@ mkdir -p "$FAKE_BIN"
 cat >"$FAKE_BIN/docker" <<'DOCKER'
 #!/usr/bin/env bash
 set -euo pipefail
+printf 'argv=%s\n' "$*" >>"$(dirname "$0")/docker.calls"
+printf 'docker_host=%s docker_context=%s\n' "${DOCKER_HOST-unset}" "${DOCKER_CONTEXT-unset}" >>"$(dirname "$0")/docker.calls"
 [[ "${1:-}" == "context" && "${2:-}" == "inspect" && "${3:-}" == "default" ]] || exit 81
 if [[ "${4:-}" == "--format" ]]; then
   printf 'unix:///tmp/fake-docker.sock\n'
@@ -56,5 +58,12 @@ chmod +x "$FAKE_BIN/docker"
 
 PATH="$FAKE_BIN:/usr/bin:/bin" "$RUNNER" --plan --root "$TMP_DIR/fake/restaurant-pos/staging" >"$TMP_DIR/fake-plan.out"
 assert_contains '127.0.0.1:18080' "$TMP_DIR/fake-plan.out"
+assert_contains 'docker_context=default (local endpoint verified)' "$TMP_DIR/fake-plan.out"
+assert_contains 'argv=context inspect default' "$FAKE_BIN/docker.calls"
+assert_contains 'docker_host=unset docker_context=unset' "$FAKE_BIN/docker.calls"
+
+DOCKER_HOST='tcp://forbidden.invalid:2375' PATH="$FAKE_BIN:/usr/bin:/bin" \
+  expect_failure ambient_docker "$RUNNER" --plan --root "$TMP_DIR/ambient/restaurant-pos/staging"
+assert_contains 'ambient Docker overrides are forbidden' "$TMP_DIR/ambient_docker.err"
 
 echo 'PASS: STG-003 local rehearsal plan is local-only, Docker fail-closed, and rejects production/repository roots.'
