@@ -13,9 +13,10 @@ EVIDENCE_RELATIVE_PATH="evidence/stg-003-local-rehearsal.md"
 MODE="plan"
 COMMIT_SHA=""
 COMMIT_WAS_EXPLICIT="false"
-LOCAL_TMP_BASE="$(cd -P -- "${TMPDIR:-/tmp}" && pwd)"
-LOCAL_ROOT="$LOCAL_TMP_BASE"
-LOCAL_ROOT="${LOCAL_ROOT%/}/restaurant-pos/staging"
+LOCAL_TMP_CANDIDATE="${TMPDIR:-/tmp}"
+LOCAL_TMP_BASE=""
+LOCAL_ROOT=""
+LOCAL_ROOT_WAS_EXPLICIT="false"
 DOCKER_BIN=""
 PRIVATE_RESOLVED_CONFIG=""
 PRIVATE_RESOLVED_PORTS=""
@@ -130,7 +131,15 @@ is_safe_local_tmp_base() {
 }
 
 resolve_local_root() {
+  LOCAL_TMP_CANDIDATE="$(normalize_absolute_path "$LOCAL_TMP_CANDIDATE")" || die "TMPDIR must be an absolute path without traversal"
+  [[ "$LOCAL_TMP_CANDIDATE" != /srv && "$LOCAL_TMP_CANDIDATE" != /srv/* && "$LOCAL_TMP_CANDIDATE" != /home/ubuntu && "$LOCAL_TMP_CANDIDATE" != /home/ubuntu/* ]] || die "LOCAL_TMP_BASE must resolve to an approved local temporary directory"
+  [[ "$LOCAL_TMP_CANDIDATE" != "$REPOSITORY_ROOT" && "$LOCAL_TMP_CANDIDATE" != "$REPOSITORY_ROOT"/* ]] || die "LOCAL_TMP_BASE must resolve to an approved local temporary directory"
+  [[ "$LOCAL_TMP_CANDIDATE" != *'/deployment/cloud'* && "$LOCAL_TMP_CANDIDATE" != *'/data/postgres'* ]] || die "LOCAL_TMP_BASE must resolve to an approved local temporary directory"
+  LOCAL_TMP_BASE="$(canonical_existing_dir_no_symlink "$LOCAL_TMP_CANDIDATE")" || die "LOCAL_TMP_BASE must resolve to an approved local temporary directory"
   is_safe_local_tmp_base "$LOCAL_TMP_BASE" || die "LOCAL_TMP_BASE must resolve to an approved local temporary directory"
+  if [[ "$LOCAL_ROOT_WAS_EXPLICIT" == "false" ]]; then
+    LOCAL_ROOT="$LOCAL_TMP_BASE/restaurant-pos/staging"
+  fi
   LOCAL_ROOT="$(canonical_future_dir_no_symlink "$LOCAL_ROOT")" || die "local root contains traversal, a symlink, or an invalid ancestor"
   is_allowed_local_root "$LOCAL_ROOT" || die "local root must be the default or an allowed STG-003 namespace under LOCAL_TMP_BASE"
 }
@@ -412,7 +421,7 @@ while [[ $# -gt 0 ]]; do
     --cleanup) MODE="cleanup" ;;
     --confirm-local-container-start) CONFIRMED="true" ;;
     --commit) [[ $# -ge 2 ]] || die "--commit needs a SHA"; COMMIT_SHA="$2"; COMMIT_WAS_EXPLICIT="true"; shift ;;
-    --root) [[ $# -ge 2 ]] || die "--root needs an absolute path"; LOCAL_ROOT="$2"; shift ;;
+    --root) [[ $# -ge 2 ]] || die "--root needs an absolute path"; LOCAL_ROOT="$2"; LOCAL_ROOT_WAS_EXPLICIT="true"; shift ;;
     --help|-h) usage; exit 0 ;;
     *) die "unsupported option: $1" ;;
   esac
