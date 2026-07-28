@@ -143,7 +143,7 @@ dotenv_validate_syntax() {
     if [[ "$raw_value" == \"* ]]; then
       [[ ${#raw_value} -ge 2 && "${raw_value: -1}" == '"' ]] || die "ambiguous double quote in dotenv value: $key"
       inner="${raw_value:1:${#raw_value}-2}"
-      [[ "$inner" != *'"'* && "$inner" != *'$'* ]] || die "ambiguous double-quoted dotenv value: $key"
+      [[ "$inner" != *'"'* && "$inner" != *'$'* && "$inner" != *$'\\'* ]] || die "ambiguous double-quoted dotenv value: $key"
     elif [[ "$raw_value" == \'* ]]; then
       [[ ${#raw_value} -ge 2 && "${raw_value: -1}" == "'" ]] || die "ambiguous single quote in dotenv value: $key"
       inner="${raw_value:1:${#raw_value}-2}"
@@ -195,6 +195,10 @@ decimal_lte() {
   awk -v value="$1" -v limit="$2" 'BEGIN { exit !(value <= limit) }'
 }
 
+decimal_gt_zero() {
+  awk -v value="$1" 'BEGIN { exit !(value > 0) }'
+}
+
 memory_megabytes() {
   [[ "$1" =~ ^([1-9][0-9]*)[mM]$ ]] || return 1
   printf '%s' "${BASH_REMATCH[1]}"
@@ -206,6 +210,7 @@ validate_resource_limits() {
   STAGING_NGINX_CPU_LIMIT="$(require_value STAGING_NGINX_CPU_LIMIT)"
   for value in "$STAGING_DB_CPU_LIMIT" "$STAGING_BACKEND_CPU_LIMIT" "$STAGING_NGINX_CPU_LIMIT"; do
     is_decimal "$value" || die "CPU limits must be decimal numbers"
+    decimal_gt_zero "$value" || die "CPU limits must be greater than zero"
   done
   decimal_lte "$STAGING_DB_CPU_LIMIT" 0.75 || die "STAGING_DB_CPU_LIMIT exceeds 0.75"
   decimal_lte "$STAGING_BACKEND_CPU_LIMIT" 1.00 || die "STAGING_BACKEND_CPU_LIMIT exceeds 1.00"
@@ -225,8 +230,10 @@ validate_resource_limits() {
   [[ $((db_memory + backend_memory + nginx_memory)) -le 1408 ]] || die "total staging memory limit exceeds 1408m"
 
   JAVA_OPTS="$(require_value JAVA_OPTS)"
-  [[ "$JAVA_OPTS" =~ (^|[[:space:]])-Xmx([1-9][0-9]*)[mM]($|[[:space:]]) ]] || die "JAVA_OPTS must include a whole-megabyte -Xmx value"
+  [[ "$JAVA_OPTS" =~ ^-Xms([1-9][0-9]*)[mM][[:space:]]+-Xmx([1-9][0-9]*)[mM]$ ]] || die "JAVA_OPTS must be exactly '-Xms<whole-m> -Xmx<whole-m>'"
+  java_xms="${BASH_REMATCH[1]}"
   java_xmx="${BASH_REMATCH[2]}"
+  [[ "$java_xms" -le "$java_xmx" ]] || die "JAVA_OPTS -Xms must not exceed -Xmx"
   [[ "$java_xmx" -le 512 ]] || die "JAVA_OPTS -Xmx exceeds 512m"
   [[ "$java_xmx" -le "$backend_memory" ]] || die "JAVA_OPTS -Xmx exceeds backend memory limit"
 
@@ -247,13 +254,15 @@ assert_no_ambient_overrides() {
 }
 
 assert_clean_release() {
-  local status line submodules
+  local status line submodules ignored_build_inputs
   [[ "$RELEASE_DIR" == "$STAGING_ROOT/releases/$STAGING_COMMIT_SHA" ]] || die "release path no longer matches STAGING_COMMIT_SHA"
   [[ "$(git -C "$RELEASE_DIR" rev-parse HEAD 2>/dev/null || true)" == "$STAGING_COMMIT_SHA" ]] || die "release Git HEAD no longer matches STAGING_COMMIT_SHA"
   git -C "$RELEASE_DIR" diff --quiet || die "staging release has tracked working-tree changes"
   git -C "$RELEASE_DIR" diff --cached --quiet || die "staging release has staged changes"
   status="$(git -C "$RELEASE_DIR" status --porcelain=v1 --untracked-files=all)"
   [[ -z "$status" ]] || die "staging release must have no tracked or untracked files"
+  ignored_build_inputs="$(git -C "$RELEASE_DIR" ls-files --others --ignored --exclude-standard -- backend frontend)"
+  [[ -z "$ignored_build_inputs" ]] || die "staging release contains ignored backend or frontend build inputs"
   submodules="$(git -C "$RELEASE_DIR" submodule status --recursive 2>/dev/null || true)"
   while IFS= read -r line; do
     [[ -z "$line" ]] && continue
@@ -366,29 +375,35 @@ controlled_compose() {
 
 assert_resolved_compose() {
   local active_env_file="$1"
-  RESOLVED_CONFIG="$(mktemp /tmp/restaurant-pos-staging-config.XXXXXX)"
-  chmod 600 "$RESOLVED_CONFIG"
-  controlled_compose "$active_env_file" config >"$RESOLVED_CONFIG" || die "Compose config validation failed"
+  local temporary_dir resolved_config services
+  temporary_dir="$(canonical_dir "${TMPDIR:-/tmp}")" || die "cannot canonicalize temporary directory"
+  [[ -d "$temporary_dir" ]] || die "temporary directory does not exist"
+  resolved_config="$(mktemp "$temporary_dir/restaurant-pos-staging-config.XXXXXX")"
+  RESOLVED_CONFIG="$resolved_config"
+  chmod 600 "$resolved_config"
+  controlled_compose "$active_env_file" config >"$resolved_config" || die "Compose config validation failed"
   services="$(controlled_compose "$active_env_file" config --services)" || die "Compose service validation failed"
   [[ "$services" == $'db\nbackend\nnginx' ]] || die "resolved Compose services must be exactly db, backend, nginx"
 
   # The resolved file can contain secret values, so it is never printed.
-  grep -Fq "postgres:$POSTGRES_IMAGE_TAG" "$RESOLVED_CONFIG" || die "resolved Compose PostgreSQL image differs from the validated tag"
-  grep -Fq "$BACKEND_IMAGE" "$RESOLVED_CONFIG" || die "resolved Compose backend image is not the validated staging image"
-  grep -Fq "$FRONTEND_IMAGE" "$RESOLVED_CONFIG" || die "resolved Compose frontend image is not the validated staging image"
-  grep -Fq "$POSTGRES_DATA_DIR" "$RESOLVED_CONFIG" || die "resolved Compose PostgreSQL source path is not the validated staging path"
-  grep -Eq "SPRING_PROFILES_ACTIVE: [\"']?${SPRING_PROFILES_ACTIVE}" "$RESOLVED_CONFIG" || die "resolved Compose profile differs from the validated profile"
-  grep -Eq "DB_NAME: [\"']?${DB_NAME}" "$RESOLVED_CONFIG" || die "resolved Compose DB_NAME differs from the validated identity"
-  grep -Eq "DB_USER: [\"']?${DB_USER}" "$RESOLVED_CONFIG" || die "resolved Compose DB_USER differs from the validated identity"
-  grep -Fq "VITE_APP_BUILD_VERSION: staging-$STAGING_COMMIT_SHA" "$RESOLVED_CONFIG" || die "resolved Compose frontend build version differs from the validated SHA"
-  grep -Eq "APP_FEATURES_PRINTING: [\"']?${STAGING_PRINTING_FEATURE_ENABLED}" "$RESOLVED_CONFIG" || die "resolved backend printing feature does not match the validated staging mode"
-  grep -Eq '(127\.0\.0\.1:18080:80|published: "18080")' "$RESOLVED_CONFIG" || die "resolved Compose does not expose the required loopback staging HTTP port"
+  grep -Fq "postgres:$POSTGRES_IMAGE_TAG" "$resolved_config" || die "resolved Compose PostgreSQL image differs from the validated tag"
+  grep -Fq "$BACKEND_IMAGE" "$resolved_config" || die "resolved Compose backend image is not the validated staging image"
+  grep -Fq "$FRONTEND_IMAGE" "$resolved_config" || die "resolved Compose frontend image is not the validated staging image"
+  grep -Fq "$POSTGRES_DATA_DIR" "$resolved_config" || die "resolved Compose PostgreSQL source path is not the validated staging path"
+  grep -Eq "SPRING_PROFILES_ACTIVE: [\"']?${SPRING_PROFILES_ACTIVE}" "$resolved_config" || die "resolved Compose profile differs from the validated profile"
+  grep -Eq "DB_NAME: [\"']?${DB_NAME}" "$resolved_config" || die "resolved Compose DB_NAME differs from the validated identity"
+  grep -Eq "DB_USER: [\"']?${DB_USER}" "$resolved_config" || die "resolved Compose DB_USER differs from the validated identity"
+  grep -Fq "VITE_APP_BUILD_VERSION: staging-$STAGING_COMMIT_SHA" "$resolved_config" || die "resolved Compose frontend build version differs from the validated SHA"
+  grep -Eq "APP_FEATURES_PRINTING: [\"']?${STAGING_PRINTING_FEATURE_ENABLED}" "$resolved_config" || die "resolved backend printing feature does not match the validated staging mode"
+  grep -Eq '(127\.0\.0\.1:18080:80|published: "18080")' "$resolved_config" || die "resolved Compose does not expose the required loopback staging HTTP port"
   for value in "$STAGING_DB_CPU_LIMIT" "$STAGING_BACKEND_CPU_LIMIT" "$STAGING_NGINX_CPU_LIMIT" "$STAGING_DB_MEMORY_LIMIT" "$STAGING_BACKEND_MEMORY_LIMIT" "$STAGING_NGINX_MEMORY_LIMIT" "$STAGING_LOG_MAX_SIZE" "$STAGING_LOG_MAX_FILE"; do
-    grep -Fq "$value" "$RESOLVED_CONFIG" || die "resolved Compose is missing a validated resource or log limit"
+    grep -Fq "$value" "$resolved_config" || die "resolved Compose is missing a validated resource or log limit"
   done
-  if grep -Eq '(:local|0\.0\.0\.0|:80:80|:443:443|/home/ubuntu/Restaurant_System/deployment/cloud/data/postgres)' "$RESOLVED_CONFIG"; then
+  if grep -Eq '(:local|0\.0\.0\.0|:80:80|:443:443|/home/ubuntu/Restaurant_System/deployment/cloud/data/postgres)' "$resolved_config"; then
     die "resolved Compose contains a forbidden production-like value"
   fi
+  rm -f "$resolved_config"
+  RESOLVED_CONFIG=""
 }
 
 create_env_snapshot() {

@@ -95,6 +95,12 @@ The wrapper caps Staging at 2.00 CPUs and 1408m total container memory
 (PostgreSQL 0.75/512m, backend 1.00/768m, Nginx 0.25/128m), backend JVM heap at
 512m, and each local log at 10m with at most three files. These ceilings leave
 headroom for the same-host production workload; Staging is not for load tests.
+`JAVA_OPTS` is intentionally limited to exactly `-Xms<whole-m> -Xmx<whole-m>`;
+both values must be positive and `Xms <= Xmx <= 512m` within the backend memory
+cap. Before Compose resolution and again before build/start, the release must
+have no tracked, untracked, submodule, or Git-ignored files under `backend/` or
+`frontend/`. This prevents ignored local build inputs such as frontend env files
+or backend local configuration from changing the approved SHA artifact.
 
 ## Commands
 

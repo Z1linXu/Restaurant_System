@@ -3,10 +3,10 @@ set -euo pipefail
 
 TEST_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPOSITORY_ROOT="$(cd -P "$TEST_DIR/../../.." && pwd)"
-SOURCE_CLOUD_DIR="$REPOSITORY_ROOT/deployment/cloud"
 TMP_PARENT="$(cd -P "${TMPDIR:-/tmp}" && pwd)"
 TMP_DIR="$(mktemp -d "$TMP_PARENT/restaurant-pos-staging-guard.XXXXXX")"
 FAKE_BIN="$TMP_DIR/bin"
+COMPOSE_TEMP_DIR="$TMP_DIR/compose-temp"
 
 cleanup() {
   [[ "${KEEP_STAGING_GUARD_TMP:-false}" == "true" ]] && return
@@ -25,6 +25,11 @@ assert_contains() {
   grep -Fq -- "$needle" "$file" || fail "expected '$needle' in $file"
 }
 
+assert_empty_directory() {
+  local directory="$1"
+  [[ -z "$(find "$directory" -mindepth 1 -maxdepth 1 -print -quit)" ]] || fail "expected no temporary files in $directory"
+}
+
 set_env() {
   local key="$1"
   local value="$2"
@@ -35,6 +40,16 @@ set_env() {
     { print }
     END { if (!found) print key "=" value }
   ' "$file" >"$next"
+  mv "$next" "$file"
+}
+
+set_env_literal() {
+  local key="$1"
+  local value="$2"
+  local file="$3"
+  local next="$file.next"
+  grep -v "^${key}=" "$file" >"$next"
+  printf '%s=%s\n' "$key" "$value" >>"$next"
   mv "$next" "$file"
 }
 
@@ -88,6 +103,10 @@ value() {
   grep -E "^$1=" "$env_file" | tail -n 1 | sed "s/^$1=//; s/^\"//; s/\"$//"
 }
 
+if [[ "$(value DB_NAME)" == "restaurant_pos_staging_fake_config_failure" ]]; then
+  exit 66
+fi
+
 if [[ "${1:-}" == "--services" ]]; then
   printf 'db\nbackend\nnginx\n'
   exit 0
@@ -114,25 +133,25 @@ chmod +x "$FAKE_BIN/docker"
 
 SEED_RELEASE="$TMP_DIR/release-seed"
 git clone --quiet "$REPOSITORY_ROOT" "$SEED_RELEASE"
-cp "$SOURCE_CLOUD_DIR/docker-compose.staging.yml" "$SEED_RELEASE/deployment/cloud/"
-cp "$SOURCE_CLOUD_DIR/.env.staging.example" "$SEED_RELEASE/deployment/cloud/"
-cp "$SOURCE_CLOUD_DIR/staging-deploy.sh" "$SEED_RELEASE/deployment/cloud/"
-cp "$SOURCE_CLOUD_DIR/staging-health-check.sh" "$SEED_RELEASE/deployment/cloud/"
-chmod +x "$SEED_RELEASE/deployment/cloud/staging-deploy.sh" "$SEED_RELEASE/deployment/cloud/staging-health-check.sh"
-git -C "$SEED_RELEASE" add -f \
-  deployment/cloud/docker-compose.staging.yml \
-  deployment/cloud/.env.staging.example \
-  deployment/cloud/staging-deploy.sh \
-  deployment/cloud/staging-health-check.sh
-git -C "$SEED_RELEASE" -c user.name=staging-guard-test -c user.email=staging-guard-test@example.invalid \
-  commit --quiet -m "test fixture staging package"
+SOURCE_HEAD="$(git -C "$REPOSITORY_ROOT" rev-parse HEAD)"
+if ! git -C "$REPOSITORY_ROOT" diff --cached --quiet; then
+  git -C "$REPOSITORY_ROOT" diff --cached --binary | git -C "$SEED_RELEASE" apply --index
+  git -C "$SEED_RELEASE" -c user.name=staging-guard-test -c user.email=staging-guard-test@example.invalid \
+    commit --quiet -m "test fixture staged candidate"
+fi
 
 SHA="$(git -C "$SEED_RELEASE" rev-parse HEAD)"
+if git -C "$REPOSITORY_ROOT" diff --cached --quiet; then
+  [[ "$SHA" == "$SOURCE_HEAD" ]] || fail "fixture must execute cloned committed HEAD when no staged changes exist"
+else
+  [[ "$SHA" != "$SOURCE_HEAD" ]] || fail "fixture did not include the staged candidate"
+fi
 FIXTURE_STAGING_ROOT="$TMP_DIR/restaurant-pos/staging"
 RELEASE_DIR="$FIXTURE_STAGING_ROOT/releases/$SHA"
 CONFIG_DIR="$FIXTURE_STAGING_ROOT/config"
 POSTGRES_DIR="$FIXTURE_STAGING_ROOT/state/postgres"
 mkdir -p "$(dirname "$RELEASE_DIR")" "$CONFIG_DIR" "$POSTGRES_DIR"
+mkdir -p "$COMPOSE_TEMP_DIR"
 mv "$SEED_RELEASE" "$RELEASE_DIR"
 
 ENV_FILE="$CONFIG_DIR/.env.staging"
@@ -187,7 +206,7 @@ for key in \
 done
 
 run_validate() {
-  PATH="$FAKE_BIN:$PATH" \
+  TMPDIR="$COMPOSE_TEMP_DIR" PATH="$FAKE_BIN:$PATH" \
     "$RELEASE_DIR/deployment/cloud/staging-deploy.sh" --env-file "$ENV_FILE" --local-validate
 }
 
@@ -204,9 +223,20 @@ fi
 assert_contains "Staging validation passed" "$TMP_DIR/positive.out"
 assert_contains "--project-name restaurant-pos-staging" "$CALL_LOG"
 assert_contains "ambient DB_NAME=unset DOCKER_HOST=unset DOCKER_CONTEXT=unset COMPOSE_FILE=unset" "$CALL_LOG"
+assert_empty_directory "$COMPOSE_TEMP_DIR"
 if grep -Eq '( build | up )' "$CALL_LOG"; then
   fail "validate invoked build or up"
 fi
+
+reset_env
+run_validate >"$TMP_DIR/repeated.out" 2>"$TMP_DIR/repeated.err"
+assert_contains "Staging validation passed" "$TMP_DIR/repeated.out"
+assert_empty_directory "$COMPOSE_TEMP_DIR"
+
+reset_env
+set_env DB_NAME restaurant_pos_staging_fake_config_failure "$ENV_FILE"
+expect_failure resolved_config_failure run_validate
+assert_empty_directory "$COMPOSE_TEMP_DIR"
 
 reset_env
 expect_failure arbitrary_server_root \
@@ -339,8 +369,24 @@ set_env DB_NAME '"restaurant_pos_staging' "$ENV_FILE"
 expect_failure ambiguous_quote run_validate
 
 reset_env
+set_env_literal DB_PASSWORD '"staging-db-value-12345\escaped"' "$ENV_FILE"
+expect_failure escaped_secret run_validate
+
+reset_env
 set_env STAGING_BACKEND_CPU_LIMIT 1.01 "$ENV_FILE"
 expect_failure excessive_cpu run_validate
+
+reset_env
+set_env STAGING_DB_CPU_LIMIT 0 "$ENV_FILE"
+expect_failure zero_db_cpu run_validate
+
+reset_env
+set_env STAGING_BACKEND_CPU_LIMIT 0 "$ENV_FILE"
+expect_failure zero_backend_cpu run_validate
+
+reset_env
+set_env STAGING_NGINX_CPU_LIMIT 0 "$ENV_FILE"
+expect_failure zero_nginx_cpu run_validate
 
 reset_env
 set_env STAGING_BACKEND_MEMORY_LIMIT 769m "$ENV_FILE"
@@ -349,6 +395,18 @@ expect_failure excessive_memory run_validate
 reset_env
 set_env JAVA_OPTS '"-Xms128m -Xmx513m"' "$ENV_FILE"
 expect_failure excessive_jvm_heap run_validate
+
+reset_env
+set_env JAVA_OPTS '"-Xms512m -Xmx128m"' "$ENV_FILE"
+expect_failure inverted_jvm_heap run_validate
+
+reset_env
+set_env JAVA_OPTS '"-Xms128m -Xmx512m -Xmx513m"' "$ENV_FILE"
+expect_failure duplicate_late_jvm_heap run_validate
+
+reset_env
+set_env JAVA_OPTS '"-Xms128m -Xmx512m -Dunsafe=true"' "$ENV_FILE"
+expect_failure injected_jvm_flag run_validate
 
 reset_env
 set_env STAGING_LOG_MAX_SIZE 11m "$ENV_FILE"
@@ -367,6 +425,18 @@ reset_env
 touch "$RELEASE_DIR/untracked-build-input.txt"
 expect_failure untracked_build_input run_validate
 rm "$RELEASE_DIR/untracked-build-input.txt"
+
+reset_env
+printf 'ignored frontend input\n' >"$RELEASE_DIR/frontend/.env.production"
+git -C "$RELEASE_DIR" check-ignore -q frontend/.env.production || fail "frontend ignored build-input fixture is not ignored"
+expect_failure ignored_frontend_build_input run_validate
+rm "$RELEASE_DIR/frontend/.env.production"
+
+reset_env
+printf 'ignored backend input\n' >"$RELEASE_DIR/backend/src/main/resources/application-local.yml"
+git -C "$RELEASE_DIR" check-ignore -q backend/src/main/resources/application-local.yml || fail "backend ignored build-input fixture is not ignored"
+expect_failure ignored_backend_build_input run_validate
+rm "$RELEASE_DIR/backend/src/main/resources/application-local.yml"
 
 reset_env
 rm -rf "$POSTGRES_DIR"
