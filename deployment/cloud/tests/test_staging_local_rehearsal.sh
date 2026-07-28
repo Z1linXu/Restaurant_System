@@ -87,6 +87,7 @@ while [[ $# -gt 0 ]]; do
 done
 [[ "$project" == "restaurant-pos-staging" && -f "$env_file" && -f "$compose_file" ]] || exit 93
 action="${1:-}"; shift || true
+printf 'action=%s\n' "$action" >>"$LOG"
 value() { grep -E "^$1=" "$env_file" | tail -n 1 | sed "s/^$1=//; s/^\"//; s/\"$//"; }
 root="$(value STAGING_ROOT)"; sha="$(value STAGING_COMMIT_SHA)"
 case "$action" in
