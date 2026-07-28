@@ -33,3 +33,6 @@ Open risks:
 
 Do not include secrets, complete environment files, tokens, resolved Compose
 output, customer data, raw print data, or real printer endpoint details.
+Backup inventory records only a SHA-256 of each filename string plus filesystem
+size and modification metadata. It does not record raw filenames or hash backup
+contents.

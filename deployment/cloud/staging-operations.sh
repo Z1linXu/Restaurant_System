@@ -8,6 +8,7 @@ EXPECTED_PROJECT="restaurant-pos-staging"
 EXPECTED_ROOT="/srv/restaurant-pos/staging"
 SAFE_PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 ACTION="help"
+ACTION_SELECTED="false"
 ENV_FILE=""
 STAGING_ROOT=""
 COMMIT_SHA=""
@@ -176,6 +177,15 @@ assert_docker_available() {
   printf '%s' "$binary"
 }
 
+assert_staging_package() {
+  local helper
+  helper="$(dirname -- "$COMPOSE_FILE")/staging-deploy.sh"
+  [[ -f "$helper" && ! -L "$helper" ]] || die "exact release staging-deploy.sh is missing or unsafe"
+  has_symlink_component "$helper" && die "exact release staging-deploy.sh must not traverse a symlink"
+  "$helper" --env-file "$ENV_FILE" --validate >/dev/null 2>&1 ||
+    die "exact release staging package validation failed"
+}
+
 assert_compose_identity() {
   local binary="$1" services images
   services="$(compose_read "$binary" config --services 2>/dev/null || true)"
@@ -188,6 +198,7 @@ assert_compose_identity() {
 validate_action() {
   local binary
   assert_identity
+  assert_staging_package
   binary="$(assert_docker_available)"
   assert_compose_identity "$binary"
   printf 'RESULT|VALIDATE|PASS|exact staging identity and read-only Compose metadata verified\n'
@@ -196,6 +207,7 @@ validate_action() {
 inventory_action() {
   local binary containers container
   assert_identity
+  assert_staging_package
   binary="$(assert_docker_available)"
   assert_compose_identity "$binary"
   containers="$(compose_read "$binary" ps -q 2>/dev/null || true)"
@@ -212,6 +224,7 @@ inventory_action() {
 disk_check_action() {
   local available_kb total_kb used_percent free_bytes
   assert_identity
+  assert_staging_package
   require_value "--min-free-bytes" "$MIN_FREE_BYTES"
   require_value "--max-used-percent" "$MAX_USED_PERCENT"
   [[ "$MIN_FREE_BYTES" =~ ^[0-9]+$ && "$MAX_USED_PERCENT" =~ ^[0-9]+$ && "$MAX_USED_PERCENT" -ge 1 && "$MAX_USED_PERCENT" -le 99 ]] || die "disk thresholds must be explicit positive integers"
@@ -227,8 +240,9 @@ disk_check_action() {
 
 image_compatibility_action() {
   local binary current_image_id current_frontend_id previous_backend previous_frontend previous_release current_release
-  local current_migrations previous_migrations
+  local current_migrations previous_migrations previous_migration
   assert_identity
+  assert_staging_package
   require_value "--previous-sha" "$PREVIOUS_SHA"
   is_full_sha "$PREVIOUS_SHA" || die "--previous-sha must be a lowercase full 40-character SHA"
   [[ "$PREVIOUS_SHA" != "$COMMIT_SHA" ]] || die "--previous-sha must differ from --commit"
@@ -242,6 +256,13 @@ image_compatibility_action() {
   current_migrations="$(git -C "$current_release" ls-tree -r "$COMMIT_SHA" -- backend/src/main/resources/db/migration 2>/dev/null | awk '{print $3 " " $4}')"
   previous_migrations="$(git -C "$previous_release" ls-tree -r "$PREVIOUS_SHA" -- backend/src/main/resources/db/migration 2>/dev/null | awk '{print $3 " " $4}')"
   [[ -n "$current_migrations" && -n "$previous_migrations" ]] || pending "IMAGE_COMPATIBILITY" "migration lists cannot be read from both releases"
+  while IFS= read -r previous_migration; do
+    [[ -n "$previous_migration" ]] || continue
+    if ! grep -Fxq -- "$previous_migration" <<<"$current_migrations"; then
+      printf 'RESULT|IMAGE_COMPATIBILITY|NO_GO|historical_migration_missing_or_changed=true\n'
+      return 2
+    fi
+  done <<<"$previous_migrations"
   binary="$(assert_docker_available)"
   assert_compose_identity "$binary"
   previous_backend="restaurant-pos-backend:staging-$PREVIOUS_SHA"
@@ -252,15 +273,27 @@ image_compatibility_action() {
   [[ -n "$current_frontend_id" ]] || pending "IMAGE_FRONTEND" "current frontend image is not present"
   docker_read "$binary" image inspect --format '{{.Id}}' "$previous_backend" >/dev/null 2>&1 || pending "IMAGE_COMPATIBILITY" "previous backend image is not present"
   docker_read "$binary" image inspect --format '{{.Id}}' "$previous_frontend" >/dev/null 2>&1 || pending "IMAGE_COMPATIBILITY" "previous frontend image is not present"
-  printf 'RESULT|IMAGE_COMPATIBILITY|STATIC_CHECK_ONLY_RUNTIME_PENDING|sha_ancestry=true; migration_lists_and_checksums_compared=true; sha_bound_images_present=true; schema compatibility requires owner-approved runtime evidence\n'
+  printf 'RESULT|IMAGE_COMPATIBILITY|STATIC_CHECK_ONLY_RUNTIME_PENDING|sha_ancestry=true; historical_migration_blobs_unchanged=true; sha_bound_images_present=true; schema compatibility requires owner-approved runtime evidence\n'
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --validate|--dry-run) ACTION="validate" ;;
-    --inventory) ACTION="inventory" ;;
-    --disk-check) ACTION="disk-check" ;;
-    --image-compatibility) ACTION="image-compatibility" ;;
+    --validate|--dry-run)
+      [[ "$ACTION_SELECTED" == "false" ]] || die "choose exactly one action"
+      ACTION="validate"; ACTION_SELECTED="true"
+      ;;
+    --inventory)
+      [[ "$ACTION_SELECTED" == "false" ]] || die "choose exactly one action"
+      ACTION="inventory"; ACTION_SELECTED="true"
+      ;;
+    --disk-check)
+      [[ "$ACTION_SELECTED" == "false" ]] || die "choose exactly one action"
+      ACTION="disk-check"; ACTION_SELECTED="true"
+      ;;
+    --image-compatibility)
+      [[ "$ACTION_SELECTED" == "false" ]] || die "choose exactly one action"
+      ACTION="image-compatibility"; ACTION_SELECTED="true"
+      ;;
     --env-file|--root|--commit|--compose-file|--backend-image|--frontend-image|--min-free-bytes|--max-used-percent|--previous-sha)
       [[ $# -ge 2 ]] || die "$1 requires a value"
       case "$1" in

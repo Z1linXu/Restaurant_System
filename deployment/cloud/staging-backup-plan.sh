@@ -5,6 +5,7 @@ set -euo pipefail
 
 EXPECTED_ROOT="/srv/restaurant-pos/staging"
 ACTION="help"
+ACTION_SELECTED="false"
 STAGING_ROOT=""
 BACKUP_DIR=""
 
@@ -22,6 +23,14 @@ EOF
 }
 
 die() { printf 'ERROR|%s\n' "$*" >&2; exit 2; }
+
+string_digest() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    printf '%s' "$1" | sha256sum | awk '{print $1}'
+  else
+    printf '%s' "$1" | shasum -a 256 | awk '{print $1}'
+  fi
+}
 
 absolute_without_traversal() {
   [[ "$1" == /* && "$1" != *$'\n'* && "$1" != *'/./'* && "$1" != *'/../'* && "$1" != *'..' ]]
@@ -62,7 +71,7 @@ dry_run() {
 }
 
 inspect_existing() {
-  local entry size modified count=0
+  local entry size modified basename_digest count=0
   assert_paths
   if [[ ! -d "$BACKUP_DIR" ]]; then
     printf 'RESULT|BACKUP_METADATA|PENDING|staging backup directory does not exist\n'
@@ -74,7 +83,8 @@ inspect_existing() {
     [[ -f "$entry" && ! -L "$entry" ]] || continue
     size="$(stat -c '%s' "$entry" 2>/dev/null || stat -f '%z' "$entry")"
     modified="$(stat -c '%y' "$entry" 2>/dev/null || stat -f '%Sm' -t '%Y-%m-%dT%H:%M:%SZ' "$entry")"
-    printf 'BACKUP_METADATA|basename=%s|size_bytes=%s|modified_at=%s\n' "$(basename -- "$entry")" "$size" "$modified"
+    basename_digest="$(string_digest "$(basename -- "$entry")")"
+    printf 'BACKUP_METADATA|basename_sha256=%s|size_bytes=%s|modified_at=%s\n' "$basename_digest" "$size" "$modified"
     count=$((count + 1))
   done
   printf 'BACKUP_ACTION=NOT_EXECUTED\n'
@@ -84,8 +94,14 @@ inspect_existing() {
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --dry-run) ACTION="dry-run" ;;
-    --inspect-existing) ACTION="inspect-existing" ;;
+    --dry-run)
+      [[ "$ACTION_SELECTED" == "false" ]] || die "choose exactly one action"
+      ACTION="dry-run"; ACTION_SELECTED="true"
+      ;;
+    --inspect-existing)
+      [[ "$ACTION_SELECTED" == "false" ]] || die "choose exactly one action"
+      ACTION="inspect-existing"; ACTION_SELECTED="true"
+      ;;
     --root|--backup-dir)
       [[ $# -ge 2 ]] || die "$1 requires a value"
       [[ "$1" == "--root" ]] && STAGING_ROOT="$2" || BACKUP_DIR="$2"

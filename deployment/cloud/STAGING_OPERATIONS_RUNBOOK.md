@@ -48,9 +48,12 @@ deployment/cloud/staging-operations.sh --validate \
   --frontend-image restaurant-pos-frontend:staging-<full-40-character-sha>
 ```
 
-`--dry-run` is an alias for `--validate`. It uses only `docker compose config
---services`, `docker compose config --images`, and a local Docker-context
-check. The resolved Compose file is never printed.
+`--dry-run` is an alias for `--validate`. Every operation first runs the exact
+release's existing `staging-deploy.sh --validate` guard, then uses only
+read-only Compose/image metadata operations. This rechecks the Git release,
+PostgreSQL path, loopback binding, database identity, cloud profile, printing
+disablement, resource limits, log rotation, and private resolved Compose
+configuration. The resolved Compose file is never printed.
 
 ```bash
 deployment/cloud/staging-operations.sh --inventory <same identity options>
@@ -66,8 +69,10 @@ deployment/cloud/staging-operations.sh --image-compatibility \
 Inventory is project-scoped and uses only `docker compose ps -q` followed by a
 formatted `docker inspect`. It does not read container environment variables,
 labels, commands, mounts, or application data. Disk checking reads filesystem
-metadata for the Staging root only. Image compatibility proves only that
-SHA-specific images exist; it must report
+metadata for the Staging root only. Backup metadata reports a SHA-256 of each
+basename rather than the filename itself and never hashes backup contents.
+Image compatibility verifies that every historical migration Git blob remains
+unchanged and that SHA-specific images exist; it must report
 `STATIC_CHECK_ONLY_RUNTIME_PENDING` until a separately approved runtime/schema
 compatibility rehearsal exists.
 
