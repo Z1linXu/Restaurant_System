@@ -56,7 +56,10 @@ canonical_file_or_future() {
   local path="$1"
   # --plan must not create its future temporary root. Restrict the lexical
   # form instead of resolving a parent which may not exist yet.
-  [[ "$path" == /* && "$path" != *"//"* && "$path" != *"/./"* && "$path" != *"/../"* && "$path" != *".." ]] || return 1
+  while [[ "$path" == *'//'* ]]; do
+    path="${path//\/\//\/}"
+  done
+  [[ "$path" == /* && "$path" != *"/./"* && "$path" != *"/../"* && "$path" != *".." ]] || return 1
   printf '%s\n' "${path%/}"
 }
 
