@@ -135,7 +135,7 @@ resolve_local_root() {
   [[ "$LOCAL_TMP_CANDIDATE" != /srv && "$LOCAL_TMP_CANDIDATE" != /srv/* && "$LOCAL_TMP_CANDIDATE" != /home/ubuntu && "$LOCAL_TMP_CANDIDATE" != /home/ubuntu/* ]] || die "LOCAL_TMP_BASE must resolve to an approved local temporary directory"
   [[ "$LOCAL_TMP_CANDIDATE" != "$REPOSITORY_ROOT" && "$LOCAL_TMP_CANDIDATE" != "$REPOSITORY_ROOT"/* ]] || die "LOCAL_TMP_BASE must resolve to an approved local temporary directory"
   [[ "$LOCAL_TMP_CANDIDATE" != *'/deployment/cloud'* && "$LOCAL_TMP_CANDIDATE" != *'/data/postgres'* ]] || die "LOCAL_TMP_BASE must resolve to an approved local temporary directory"
-  LOCAL_TMP_BASE="$(canonical_existing_dir_no_symlink "$LOCAL_TMP_CANDIDATE")" || die "LOCAL_TMP_BASE must resolve to an approved local temporary directory"
+  LOCAL_TMP_BASE="$(cd -P -- "$LOCAL_TMP_CANDIDATE" 2>/dev/null && pwd)" || die "LOCAL_TMP_BASE must resolve to an approved local temporary directory"
   is_safe_local_tmp_base "$LOCAL_TMP_BASE" || die "LOCAL_TMP_BASE must resolve to an approved local temporary directory"
   if [[ "$LOCAL_ROOT_WAS_EXPLICIT" == "false" ]]; then
     LOCAL_ROOT="$LOCAL_TMP_BASE/restaurant-pos/staging"
