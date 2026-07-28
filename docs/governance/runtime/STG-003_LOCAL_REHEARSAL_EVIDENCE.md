@@ -18,7 +18,7 @@ connect to real printers, start PAD_DIRECT, submit orders, restore data, or run
 | Check | Result | Evidence |
 | --- | --- | --- |
 | Exact clean SHA guard | `MACHINE_VERIFIED` | Runner requires full SHA equal to clean local `HEAD`. |
-| Local root and evidence isolation guard | `MACHINE_VERIFIED` | Canonicalizes the nearest existing ancestor, rejects symlink traversal and forbidden canonical targets, revalidates after creation/before Compose, and writes evidence only to the fixed `<root>/evidence/stg-003-local-rehearsal.md` path. |
+| Local root and evidence isolation guard | `MACHINE_VERIFIED` | Requires canonical `TMPDIR` to be an approved local temporary base, canonicalizes the nearest existing ancestor, rejects symlink traversal and forbidden targets, revalidates after creation/before Compose, and writes evidence only to the fixed `<root>/evidence/stg-003-local-rehearsal.md` path. |
 | Local Docker guard | `MACHINE_VERIFIED` | `--run` and `--cleanup` require local Docker context `default` with a Unix/npipe endpoint. |
 | Docker unavailable fail-closed | `MACHINE_VERIFIED` | Test verifies no local state is created before `BLOCKED_LOCAL_DOCKER_RUNTIME_UNAVAILABLE`. |
 | Synthetic-only configuration | `MACHINE_VERIFIED` | Runner generates mode-0600 local DB/JWT values and rejects real printing configuration. |

@@ -60,6 +60,10 @@ PATH="$ISOLATED_BIN" expect_failure repository_root "$RUNNER" --plan --root "$RE
 assert_contains 'allowed STG-003 namespace' "$TMP_DIR/repository_root.err"
 PATH="$ISOLATED_BIN" expect_failure arbitrary_root "$RUNNER" --plan --root "$LOCAL_TMP_BASE/arbitrary/restaurant-pos/staging"
 assert_contains 'allowed STG-003 namespace' "$TMP_DIR/arbitrary_root.err"
+TMPDIR=/srv PATH="$ISOLATED_BIN" expect_failure unsafe_tmpdir_srv "$RUNNER" --plan
+assert_contains 'LOCAL_TMP_BASE must resolve to an approved local temporary directory' "$TMP_DIR/unsafe_tmpdir_srv.err"
+TMPDIR=/private PATH="$ISOLATED_BIN" expect_failure unsafe_tmpdir_private "$RUNNER" --plan
+assert_contains 'LOCAL_TMP_BASE must resolve to an approved local temporary directory' "$TMP_DIR/unsafe_tmpdir_private.err"
 PATH="$ISOLATED_BIN" expect_failure evidence_option "$RUNNER" --plan --evidence-file "$TMP_DIR/anywhere"
 assert_contains 'unsupported option' "$TMP_DIR/evidence_option.err"
 

@@ -114,7 +114,23 @@ is_allowed_local_root() {
   [[ "$namespace" != */* && "$namespace" =~ ^restaurant-pos-stg003-[A-Za-z0-9._-]+$ ]]
 }
 
+is_safe_local_tmp_base() {
+  local base="$1"
+  [[ "$base" != /srv && "$base" != /srv/* && "$base" != /home/ubuntu && "$base" != /home/ubuntu/* ]] || return 1
+  [[ "$base" != "$REPOSITORY_ROOT" && "$base" != "$REPOSITORY_ROOT"/* ]] || return 1
+  [[ "$base" != *'/deployment/cloud'* && "$base" != *'/data/postgres'* ]] || return 1
+  case "$base" in
+    /tmp|/tmp/*|/private/tmp|/private/tmp/*|/private/var/folders/*|/private/var/tmp|/private/var/tmp/*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 resolve_local_root() {
+  is_safe_local_tmp_base "$LOCAL_TMP_BASE" || die "LOCAL_TMP_BASE must resolve to an approved local temporary directory"
   LOCAL_ROOT="$(canonical_future_dir_no_symlink "$LOCAL_ROOT")" || die "local root contains traversal, a symlink, or an invalid ancestor"
   is_allowed_local_root "$LOCAL_ROOT" || die "local root must be the default or an allowed STG-003 namespace under LOCAL_TMP_BASE"
 }
