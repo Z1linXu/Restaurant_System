@@ -149,6 +149,7 @@ the explicit gate:
   --execute-start \
   --approved-sha <full-sha> \
   --preflight-evidence /srv/restaurant-pos/staging/evidence/<passed-preflight-file> \
+  --preflight-evidence-sha256 <owner-reviewed-evidence-sha256> \
   --env-file /srv/restaurant-pos/staging/config/.env.staging
 ```
 

@@ -21,6 +21,7 @@ ENV_SNAPSHOT=""
 ENV_SNAPSHOT_DIGEST=""
 APPROVED_SHA=""
 PREFLIGHT_EVIDENCE=""
+PREFLIGHT_EVIDENCE_SHA256=""
 
 INTERPOLATION_KEYS="
 DOCKER_HOST DOCKER_CONTEXT DOCKER_CONFIG DOCKER_CERT_PATH DOCKER_TLS_VERIFY
@@ -48,6 +49,7 @@ Usage:
   ./staging-deploy.sh --env-file /srv/restaurant-pos/staging/config/.env.staging [--validate|--dry-run]
   ./staging-deploy.sh --execute-start --approved-sha <full-40-character-sha> \
     --preflight-evidence /srv/restaurant-pos/staging/evidence/<approved-preflight-file> \
+    --preflight-evidence-sha256 <owner-reviewed-evidence-sha256> \
     --env-file /srv/restaurant-pos/staging/config/.env.staging
   ./staging-deploy.sh --help
 
@@ -64,6 +66,8 @@ Options:
   --approved-sha   Exact full SHA that the Owner approved for this start.
   --preflight-evidence PATH
                     Existing passed STG-004 preflight evidence under Staging root.
+  --preflight-evidence-sha256 SHA256
+                    Owner-reviewed SHA-256 of the exact evidence file.
   --local-validate Allow a non-/srv temporary root for local validation only.
   --help           Print this help text only.
 EOF
@@ -295,7 +299,7 @@ validate_source_env_permissions() {
 }
 
 validate_start_authorization() {
-  local evidence_parent evidence_canonical
+  local evidence_parent evidence_canonical environment_digest
   [[ "$EXECUTE_START" == "true" ]] || return 0
   [[ "$APPROVED_SHA" == "$STAGING_COMMIT_SHA" ]] || die "--approved-sha must exactly match STAGING_COMMIT_SHA"
   [[ "$PREFLIGHT_EVIDENCE" == "$STAGING_ROOT/evidence/"* ]] || die "--preflight-evidence must be under the exact Staging evidence directory"
@@ -304,6 +308,22 @@ validate_start_authorization() {
   evidence_parent="$(canonical_dir "$(dirname -- "$PREFLIGHT_EVIDENCE")")" || die "cannot canonicalize preflight evidence directory"
   evidence_canonical="$evidence_parent/$(basename -- "$PREFLIGHT_EVIDENCE")"
   [[ "$evidence_canonical" == "$PREFLIGHT_EVIDENCE" ]] || die "--preflight-evidence canonical path changed"
+  [[ "$evidence_parent" == "$STAGING_ROOT/evidence" ]] || die "--preflight-evidence must be directly under the exact Staging evidence directory"
+  [[ "$(file_owner "$evidence_parent")" == "$(id -u)" && "$(file_mode "$evidence_parent")" == "700" ]] ||
+    die "Staging evidence directory must be owned by the invoking user with mode 0700"
+  [[ "$(file_owner "$PREFLIGHT_EVIDENCE")" == "$(id -u)" && "$(file_mode "$PREFLIGHT_EVIDENCE")" == "600" ]] ||
+    die "preflight evidence must be owned by the invoking user with mode 0600"
+  [[ "$(file_digest "$PREFLIGHT_EVIDENCE")" == "$PREFLIGHT_EVIDENCE_SHA256" ]] ||
+    die "--preflight-evidence-sha256 does not match the exact evidence file"
+  environment_digest="$(file_digest "$ORIGINAL_ENV_FILE")"
+  grep -Fxq "EVIDENCE|APPROVED_SHA|$STAGING_COMMIT_SHA" "$PREFLIGHT_EVIDENCE" ||
+    die "preflight evidence is not bound to the approved SHA"
+  grep -Fxq "EVIDENCE|STAGING_ROOT|$STAGING_ROOT" "$PREFLIGHT_EVIDENCE" ||
+    die "preflight evidence is not bound to the exact Staging root"
+  grep -Fxq "EVIDENCE|COMPOSE_PROJECT|$EXPECTED_PROJECT" "$PREFLIGHT_EVIDENCE" ||
+    die "preflight evidence is not bound to the exact Staging project"
+  grep -Fxq "EVIDENCE|ENV_SHA256|$environment_digest" "$PREFLIGHT_EVIDENCE" ||
+    die "preflight evidence is not bound to the current Staging environment"
   grep -Fxq 'SUMMARY|PASS|same-host Staging preflight passed without state changes' "$PREFLIGHT_EVIDENCE" || die "--preflight-evidence does not show a passed STG-004 preflight"
 }
 
@@ -519,6 +539,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --execute-start)
       [[ "$ACTION" == "validate" && "$EXECUTE_START" == "false" ]] || die "--execute-start cannot be combined with another action"
+      [[ "$LOCAL_VALIDATE_MODE" == "false" ]] || die "--execute-start cannot be combined with --local-validate"
       ACTION="deploy"
       EXECUTE_START="true"
       ;;
@@ -530,6 +551,11 @@ while [[ $# -gt 0 ]]; do
     --preflight-evidence)
       [[ $# -ge 2 ]] || die "--preflight-evidence requires a path"
       PREFLIGHT_EVIDENCE="$2"
+      shift
+      ;;
+    --preflight-evidence-sha256)
+      [[ $# -ge 2 ]] || die "--preflight-evidence-sha256 requires a SHA-256"
+      PREFLIGHT_EVIDENCE_SHA256="$2"
       shift
       ;;
     --local-validate)
@@ -555,8 +581,12 @@ done
 if [[ "$EXECUTE_START" == "true" ]]; then
   [[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]] || die "--approved-sha must be a full lowercase 40-character Git SHA"
   [[ -n "$PREFLIGHT_EVIDENCE" ]] || die "--execute-start requires --preflight-evidence"
+  [[ "$PREFLIGHT_EVIDENCE_SHA256" =~ ^[0-9a-f]{64}$ ]] ||
+    die "--execute-start requires a lowercase 64-character --preflight-evidence-sha256"
+  [[ "$LOCAL_VALIDATE_MODE" == "false" ]] || die "--execute-start cannot use local validation mode"
 else
-  [[ -z "$APPROVED_SHA" && -z "$PREFLIGHT_EVIDENCE" ]] || die "approval inputs are only valid with --execute-start"
+  [[ -z "$APPROVED_SHA" && -z "$PREFLIGHT_EVIDENCE" && -z "$PREFLIGHT_EVIDENCE_SHA256" ]] ||
+    die "approval inputs are only valid with --execute-start"
 fi
 [[ "$SOURCE_ENV_FILE" == /* ]] || die "--env-file must be an absolute path"
 [[ -f "$SOURCE_ENV_FILE" ]] || die "environment file does not exist"

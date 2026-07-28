@@ -88,6 +88,14 @@ file_owner() {
   if stat -c '%u' "$1" >/dev/null 2>&1; then stat -c '%u' "$1"; else stat -f '%u' "$1"; fi
 }
 
+file_digest() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  else
+    shasum -a 256 "$1" | awk '{print $1}'
+  fi
+}
+
 assert_clean_release() {
   local release="$EXPECTED_STAGING_ROOT/releases/$APPROVED_SHA" ignored submodule line
   if [[ ! -d "$release/.git" && ! -f "$release/.git" ]]; then
@@ -169,7 +177,10 @@ assert_port_free() {
     check_pending "PORT_18080" "ss is unavailable; loopback port ownership is unverified"
     return
   fi
-  listeners="$(ss -ltn '( sport = :18080 )' 2>/dev/null || true)"
+  if ! listeners="$(ss -ltn '( sport = :18080 )' 2>/dev/null)"; then
+    check_pending "PORT_18080" "ss failed; loopback port ownership is unverified"
+    return
+  fi
   if grep -Eq "(127\.0\.0\.1|\[::1\]|0\.0\.0\.0|\*)[:.]18080" <<<"$listeners"; then
     check_no_go "PORT_18080" "isolated Staging port 18080 is already listening"
   else
@@ -231,7 +242,7 @@ assert_compose_and_images() {
   backend_image="restaurant-pos-backend:staging-$APPROVED_SHA"
   frontend_image="restaurant-pos-frontend:staging-$APPROVED_SHA"
   for image in "$backend_image" "$frontend_image"; do
-    image_id="$(docker image inspect --format '{{.Id}}' "$image" 2>/dev/null || true)"
+    image_id="$(docker --context default image inspect --format '{{.Id}}' "$image" 2>/dev/null || true)"
     if [[ -n "$image_id" ]]; then
       check_pass "IMAGE_${image%%:*}" "SHA-specific image exists (ID recorded privately by operator)"
     else
@@ -250,7 +261,7 @@ assert_project_scoped_container_metadata() {
   fi
   while IFS= read -r id; do
     [[ -z "$id" ]] && continue
-    docker inspect --format 'name={{.Name}} status={{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}NO_HEALTHCHECK{{end}} image={{.Image}}' "$id" >/dev/null 2>&1 || {
+    docker --context default inspect --format 'name={{.Name}} status={{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}NO_HEALTHCHECK{{end}} image={{.Image}}' "$id" >/dev/null 2>&1 || {
       check_no_go "CONTAINER_METADATA" "project-scoped container metadata could not be read"; return;
     }
   done <<<"$ids"
@@ -300,6 +311,12 @@ main() {
     printf 'SUMMARY|EVIDENCE_PENDING|owner action or prebuild evidence required\n'
     exit 3
   fi
+  printf 'EVIDENCE|APPROVED_SHA|%s\n' "$APPROVED_SHA"
+  printf 'EVIDENCE|STAGING_ROOT|%s\n' "$EXPECTED_STAGING_ROOT"
+  printf 'EVIDENCE|COMPOSE_PROJECT|%s\n' "$EXPECTED_PROJECT"
+  printf 'EVIDENCE|ENV_SHA256|%s\n' "$(file_digest "$ENV_FILE")"
+  printf 'EVIDENCE|RESOURCE_THRESHOLDS|min_free_bytes=%s;max_used_percent=%s;min_available_memory_kb=%s;min_cpu_count=%s\n' \
+    "$MIN_FREE_BYTES" "$MAX_USED_PERCENT" "$MIN_AVAILABLE_MEMORY_KB" "$MIN_CPU_COUNT"
   printf 'SUMMARY|PASS|same-host Staging preflight passed without state changes\n'
 }
 
