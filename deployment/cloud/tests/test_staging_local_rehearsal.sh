@@ -5,6 +5,7 @@ TEST_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPOSITORY_ROOT="$(cd -P "$TEST_DIR/../../.." && pwd)"
 RUNNER="$REPOSITORY_ROOT/deployment/cloud/staging-local-rehearsal.sh"
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/restaurant-pos-stg003-test.XXXXXX")"
+TMP_DIR="$(cd -P -- "$TMP_DIR" && pwd)"
 ISOLATED_BIN="$TMP_DIR/isolated-bin"
 FAKE_BIN="$TMP_DIR/fake-bin"
 
