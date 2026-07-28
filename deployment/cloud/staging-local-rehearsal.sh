@@ -284,8 +284,12 @@ assert_resolved_compose() {
 }
 
 run_rehearsal() {
-  local release_dir="$LOCAL_ROOT/releases/$COMMIT_SHA" config_dir="$LOCAL_ROOT/config" state_dir="$LOCAL_ROOT/state"
-  local env_file="$config_dir/.env.staging" compose_file="$release_dir/$COMPOSE_RELATIVE_PATH" evidence_file
+  local release_dir config_dir state_dir env_file compose_file evidence_file
+  release_dir="$LOCAL_ROOT/releases/$COMMIT_SHA"
+  config_dir="$LOCAL_ROOT/config"
+  state_dir="$LOCAL_ROOT/state"
+  env_file="$config_dir/.env.staging"
+  compose_file="$release_dir/$COMPOSE_RELATIVE_PATH"
   [[ ! -e "$release_dir" && ! -e "$config_dir" && ! -e "$state_dir" ]] || die "local root already contains release/config/state; refusing to overwrite it"
   mkdir -p "$LOCAL_ROOT/releases" "$config_dir" "$state_dir/postgres"
   chmod 700 "$config_dir" "$state_dir"
@@ -319,7 +323,10 @@ run_rehearsal() {
 }
 
 cleanup_local_project() {
-  local env_file="$LOCAL_ROOT/config/.env.staging" release_dir="$LOCAL_ROOT/releases/$COMMIT_SHA" compose_file="$release_dir/$COMPOSE_RELATIVE_PATH"
+  local env_file release_dir compose_file
+  env_file="$LOCAL_ROOT/config/.env.staging"
+  release_dir="$LOCAL_ROOT/releases/$COMMIT_SHA"
+  compose_file="$release_dir/$COMPOSE_RELATIVE_PATH"
   revalidate_created_root
   assert_release_identity
   assert_env_identity "$env_file"
