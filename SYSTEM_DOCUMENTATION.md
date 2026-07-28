@@ -16,6 +16,9 @@ separate from historical evidence snapshots and business implementation details:
 - [AL-001 Owner Store Onboarding technical plan](docs/governance/agile/AL-001_OWNER_STORE_ONBOARDING_CHINATOWN_TECHNICAL_PLAN.md)
   records the Chinatown planning boundary. It does not authorize production
   provisioning.
+- [AL-002 PostgreSQL and Flyway V8 local verification](docs/governance/runtime/AL-002_POSTGRES_FLYWAY_V8_VERIFICATION.md)
+  records bounded PostgreSQL 16/Flyway evidence only. It is not a staging or
+  production migration record.
 - [Frontdesk/GRAB item-name rules](docs/operations/FRONTDESK_GRAB_ITEM_NAME_RULES.md)
   remains the operational display-rule source; do not duplicate its item table
   here.
@@ -26,7 +29,7 @@ It must not be rewritten as a living deployment manifest.
 ## AL-002 Owner Store Onboarding Backend Foundation
 
 AL-002 adds the locally verified backend foundation for a future owner-scoped
-Store onboarding workflow. It is awaiting owner review and does not provision
+Store onboarding workflow. It is awaiting owner approval and does not provision
 a production Store, copy a menu, create printers or devices, or provide an
 Owner UI.
 
@@ -47,6 +50,11 @@ Owner UI.
   than proven Store-scoped defaults, so AL-002 does not invent or copy those
   settings. Existing receipt configuration is Store scoped but is configured
   later through Print Center without copying endpoints.
+- An isolated PostgreSQL 16.14 cloud-profile verification applied and validated
+  Flyway V1-V8, including the V8 onboarding-request table, Organization/idempotency
+  unique constraint, and Store lookup index. A second backend startup made no
+  repeat migration. This is local machine evidence only; production/staging
+  migration status and populated Store Code duplicate risk remain pending.
 
 Generated from the current codebase only. If a detail is not explicit in code, it is marked as `UNKNOWN`.
 
