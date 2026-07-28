@@ -16,6 +16,7 @@ and results outside Git.
 - [ ] PostgreSQL has no host port.
 - [ ] Staging PostgreSQL data is `/srv/restaurant-pos/staging/state/postgres`.
 - [ ] The PostgreSQL bind path is non-symlinked and passes the deploy guard immediately before start.
+- [ ] Existing `postgres:16-alpine` data is owned only by the deploy user or UID `70`, and is not group/other writable.
 - [ ] No path, volume, secret, account, cookie, device credential, or data was copied from production.
 - [ ] Staging image tags include the exact SHA and are not `:local`.
 - [ ] Resource caps and log rotation are configured.

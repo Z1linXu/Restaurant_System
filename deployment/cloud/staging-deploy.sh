@@ -54,6 +54,7 @@ Options:
   --validate       Validate paths, guards, and resolved Compose only.
   --dry-run        Alias for --validate.
   --local-validate Allow a non-/srv temporary root for local validation only.
+  --local-rehearsal Run the same guarded deployment sequence only against a local rehearsal root.
   --help           Print this help text only.
 EOF
 }
@@ -311,7 +312,7 @@ validate_postgres_data_path() {
     path_is_not_group_or_other_writable "$path" || die "staging PostgreSQL path must not be group or other writable: $path"
   done
   data_owner="$(file_owner "$POSTGRES_DATA_DIR")"
-  [[ "$data_owner" == "$(id -u)" || "$data_owner" == "999" ]] || die "staging PostgreSQL data directory owner must be the deploy user or official postgres UID 999"
+  [[ "$data_owner" == "$(id -u)" || "$data_owner" == "70" ]] || die "staging PostgreSQL data directory owner must be the deploy user or postgres:16-alpine UID 70"
 }
 
 validate_inputs() {
@@ -377,7 +378,7 @@ validate_inputs() {
 
   STAGING_PRINT_MODE="$(require_value STAGING_PRINT_MODE)"
   STAGING_PRINTING_FEATURE_ENABLED="$(require_value STAGING_PRINTING_FEATURE_ENABLED)"
-  if [[ "$LOCAL_VALIDATE_MODE" == "true" && "$STAGING_PRINT_MODE" == "MOCK" ]]; then
+  if [[ "$LOCAL_VALIDATE_MODE" == "true" && "$ACTION" == "validate" && "$STAGING_PRINT_MODE" == "MOCK" ]]; then
     [[ "$STAGING_PRINTING_FEATURE_ENABLED" == "true" ]] || die "local MOCK validation requires STAGING_PRINTING_FEATURE_ENABLED=true"
   else
     [[ "$STAGING_PRINT_MODE" == "DISABLED" ]] || die "server and default staging must use STAGING_PRINT_MODE=DISABLED"
@@ -476,6 +477,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --local-validate)
       ACTION="validate"
+      LOCAL_VALIDATE_MODE="true"
+      ;;
+    --local-rehearsal)
+      ACTION="deploy"
       LOCAL_VALIDATE_MODE="true"
       ;;
     --help|-h)

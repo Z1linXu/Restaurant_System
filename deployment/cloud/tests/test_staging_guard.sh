@@ -82,6 +82,7 @@ shift
 original_args="$*"
 
 env_file=""
+compose_action=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --env-file)
@@ -92,6 +93,12 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     config)
+      compose_action="config"
+      shift
+      break
+      ;;
+    build|up)
+      compose_action="$1"
       shift
       break
       ;;
@@ -113,6 +120,21 @@ value() {
 
 if [[ "$(value DB_NAME)" == "restaurant_pos_staging_fake_config_failure" ]]; then
   exit 66
+fi
+
+if [[ "$compose_action" == "build" ]]; then
+  if [[ "$(value DB_NAME)" == "restaurant_pos_staging_fake_postgres_swap_after_build" ]]; then
+    postgres_path="$(value STAGING_POSTGRES_DATA_DIR)"
+    mv "$postgres_path" "$postgres_path.real"
+    ln -s "$postgres_path.real" "$postgres_path"
+  fi
+  printf 'fake build complete\n'
+  exit 0
+fi
+
+if [[ "$compose_action" == "up" ]]; then
+  printf 'fake up complete\n'
+  exit 0
 fi
 
 if [[ "${1:-}" == "--services" ]]; then
@@ -168,6 +190,9 @@ POSTGRES_DIR="$FIXTURE_STAGING_ROOT/state/postgres"
 mkdir -p "$(dirname "$RELEASE_DIR")" "$CONFIG_DIR" "$POSTGRES_DIR"
 mkdir -p "$COMPOSE_TEMP_DIR"
 mv "$SEED_RELEASE" "$RELEASE_DIR"
+
+assert_contains 'postgres:16-alpine UID 70' "$RELEASE_DIR/deployment/cloud/staging-deploy.sh"
+assert_not_contains 'postgres UID 999' "$RELEASE_DIR/deployment/cloud/staging-deploy.sh"
 
 ENV_FILE="$CONFIG_DIR/.env.staging"
 CALL_LOG="$FAKE_BIN/docker.calls"
@@ -257,6 +282,19 @@ assert_empty_directory "$COMPOSE_TEMP_DIR"
 reset_env
 set_env DB_NAME restaurant_pos_staging_fake_postgres_swap "$ENV_FILE"
 expect_failure postgres_path_swap_after_config run_validate
+assert_empty_directory "$COMPOSE_TEMP_DIR"
+rm "$POSTGRES_DIR"
+mv "$POSTGRES_DIR.real" "$POSTGRES_DIR"
+
+reset_env
+set_env DB_NAME restaurant_pos_staging_fake_postgres_swap_after_build "$ENV_FILE"
+TMPDIR="$COMPOSE_TEMP_DIR" PATH="$FAKE_BIN:$PATH" \
+  "$RELEASE_DIR/deployment/cloud/staging-deploy.sh" --env-file "$ENV_FILE" --local-rehearsal \
+  >"$TMP_DIR/postgres_path_swap_after_build.out" 2>"$TMP_DIR/postgres_path_swap_after_build.err" && \
+  fail "postgres_path_swap_after_build unexpectedly passed"
+assert_contains "staging guard:" "$TMP_DIR/postgres_path_swap_after_build.err"
+assert_contains "build backend nginx" "$CALL_LOG"
+assert_not_contains "up -d" "$CALL_LOG"
 assert_empty_directory "$COMPOSE_TEMP_DIR"
 rm "$POSTGRES_DIR"
 mv "$POSTGRES_DIR.real" "$POSTGRES_DIR"
