@@ -191,13 +191,19 @@ assert_release_integrity() {
     die "exact release has untracked files"
   ignored="$(git -C "$release" ls-files --others --ignored --exclude-standard -- backend frontend)"
   [[ -z "$ignored" ]] || die "exact release has ignored backend or frontend build inputs"
-  submodule="$(git -C "$release" submodule status --recursive 2>/dev/null || true)"
+  if ! submodule="$(git -C "$release" submodule status --recursive 2>/dev/null)"; then
+    die "exact release submodule status could not be verified"
+  fi
   while IFS= read -r line; do
     [[ -z "$line" ]] && continue
     case "${line:0:1}" in
       -|+|U) die "exact release has an unclean submodule" ;;
     esac
   done <<<"$submodule"
+  git -C "$release" submodule foreach --quiet --recursive '
+    test "$(git rev-parse HEAD)" = "$sha1" &&
+    test -z "$(git status --porcelain=v1 --untracked-files=all)"
+  ' >/dev/null 2>&1 || die "exact release submodule worktree could not be verified"
   [[ -f "$helper" && ! -L "$helper" ]] || die "exact release staging-deploy.sh is missing or unsafe"
   expected_blob="$(git -C "$release" rev-parse "$COMMIT_SHA:deployment/cloud/staging-deploy.sh" 2>/dev/null || true)"
   actual_blob="$(git -C "$release" hash-object "$helper" 2>/dev/null || true)"

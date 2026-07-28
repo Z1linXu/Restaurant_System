@@ -263,6 +263,19 @@ assert_contains 'exact release has tracked or staged changes' "$TMP_DIR/validato
 git -C "$RELEASE" show "HEAD:deployment/cloud/staging-deploy.sh" >"$VALIDATOR"
 chmod +x "$VALIDATOR"
 
+REAL_GIT="$(command -v git)"
+cat >"$FAKE_BIN/git" <<EOF
+#!/usr/bin/env bash
+if [[ "\$*" == *" submodule status --recursive"* ]]; then
+  exit 42
+fi
+exec "$REAL_GIT" "\$@"
+EOF
+chmod +x "$FAKE_BIN/git"
+expect_failure submodule_status env PATH="$FAKE_BIN:$PATH" "$RUNNER" --validate "${COMMON[@]}"
+assert_contains 'submodule status could not be verified' "$TMP_DIR/submodule_status.out"
+rm "$FAKE_BIN/git"
+
 expect_failure duplicate_action env PATH="$FAKE_BIN:$PATH" "$RUNNER" --validate --inventory "${COMMON[@]}"
 assert_contains 'choose exactly one action' "$TMP_DIR/duplicate_action.out"
 
