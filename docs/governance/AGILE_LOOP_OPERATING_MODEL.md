@@ -84,8 +84,21 @@ Store-default handling on an independent review branch. `AL-003` (menu
 clone/print policy), `AL-004` (Owner UI), and `AL-005` (production
 provisioning) are not authorized to enter implementation.
 
-`STG-001` is the current delivery-governance loop in `DISCOVER -> PLAN`. Its
-isolated Staging plan is `PLAN_COMPLETE_WAITING_FOR_OWNER_APPROVAL`. It does
-not change the AL-002 approval state and does not authorize STG-002
-implementation, server access, Docker/Flyway execution, merge, deployment, or
-AL-003 implementation.
+`STG-001` entered `main` as the isolated Staging plan. The current stacked
+delivery-governance work is `STG-002` through `STG-006` and is
+`PARTIAL_COMPLETE_BLOCKED_WAITING_FOR_OWNER`:
+
+- STG-002 is implementation-complete and waiting for Owner review.
+- STG-003 has local guard, fake-Docker lifecycle, PostgreSQL/Flyway, backend,
+  and frontend evidence, but its required real Docker Compose rehearsal is
+  blocked because no compatible local Docker runtime is installed.
+- STG-004 preflight preparation is ready, but server deployment remains
+  blocked and owner-gated.
+- STG-005 was not started because the STG-003 Docker-backed runtime gate is
+  unmet.
+- STG-006 is preparation-only; real operational hardening and synthetic-data
+  rebuild remain blocked on STG-003 and STG-005.
+
+This chain does not change AL-002's approval state and does not authorize PR
+merge, server access, server Docker/Flyway execution, production or Staging
+deployment, restore, real data/devices/printers, or AL-003 implementation.

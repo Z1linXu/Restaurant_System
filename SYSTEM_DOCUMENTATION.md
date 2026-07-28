@@ -21,8 +21,11 @@ separate from historical evidence snapshots and business implementation details:
   production migration record.
 - [STG-001 isolated Staging environment plan](docs/governance/agile/STG-001_STAGING_ENVIRONMENT_PLAN.md)
   defines the proposed exact-SHA, Compose-project, image, port, credential, and
-  PostgreSQL isolation model. It is a plan awaiting Owner approval and does not
-  authorize server access or deployment.
+  PostgreSQL isolation model.
+- [Staging package and safety runbook](deployment/cloud/README_STAGING.md)
+  indexes the local-only STG-002 package, STG-003 rehearsal harness, STG-004
+  same-host preflight, and STG-006 operations preparation. None of these files
+  authorizes server access, merge, migration, or deployment.
 - [Frontdesk/GRAB item-name rules](docs/operations/FRONTDESK_GRAB_ITEM_NAME_RULES.md)
   remains the operational display-rule source; do not duplicate its item table
   here.
@@ -30,7 +33,7 @@ separate from historical evidence snapshots and business implementation details:
 Historical Phase 3 runtime evidence remains under `docs/governance/runtime/`.
 It must not be rewritten as a living deployment manifest.
 
-## STG-001 Isolated Staging Environment Plan
+## STG-001 through STG-006 Isolated Staging Workstream
 
 STG-001 documents a repeatable Staging design without changing runtime
 configuration or application behavior. The current production-shaped Compose
@@ -61,8 +64,23 @@ The implementation files, migration procedure, synthetic AL-002 checks,
 acceptance criteria, release gates, rollback constraints, NO-GO conditions,
 and Owner decisions are maintained in
 `docs/governance/agile/STG-001_STAGING_ENVIRONMENT_PLAN.md`.
-STG-001 is `PLAN_COMPLETE_WAITING_FOR_OWNER_APPROVAL`; STG-002 implementation,
-server access, migration execution, merge, and deployment are not authorized.
+STG-001 entered `main` through PR #30 and is the planning baseline for the
+stacked local-only implementation work.
+
+Current review chain:
+
+| Stage | Branch / review | Verified scope | Current state |
+|---|---|---|---|
+| STG-002 | `codex/stg-002-local-staging-package`, Draft PR #31 | Isolated Compose package, exact-SHA images, loopback binding, printing and production-path guards | `STG-002_IMPLEMENT_COMPLETE_WAITING_FOR_OWNER_REVIEW` |
+| STG-003 | `codex/stg-003-local-isolated-rehearsal`, Draft PR #32 | Rehearsal harness and fake-Docker lifecycle tests; isolated PostgreSQL 16.14/Flyway V1-V8 startup evidence | `STG-003_IMPLEMENTATION_READY_RUNTIME_REHEARSAL_BLOCKED_LOCAL_DOCKER` |
+| STG-004 | `codex/stg-004-first-deploy-preflight`, Draft PR #33 | Server preflight and owner-action planning scripts; no server command was run | `STG-004_PREFLIGHT_READY_SERVER_DEPLOYMENT_BLOCKED` |
+| STG-005 | no branch or PR | Docker-backed synthetic business acceptance was not started because the STG-003 runtime gate is unmet | `NOT_STARTED_BLOCKED_BY_STG-003_RUNTIME_GATE` |
+| STG-006 | `codex/stg-006-operational-hardening` | Read-only inventory/disk/image planning, evidence structure, backup metadata planning, and restore rehearsal documentation | `STG-006_PREPARATION_ONLY_BLOCKED_ON_STG-003_STG-005` |
+
+No stage in this chain authorizes merge, SSH, server Docker/Flyway execution,
+production or Staging deployment, real data, real printing, restore, or
+destructive cleanup. The current overall state is
+`PARTIAL_COMPLETE_BLOCKED_WAITING_FOR_OWNER`.
 
 ## AL-002 Owner Store Onboarding Backend Foundation
 
