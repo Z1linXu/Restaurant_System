@@ -72,7 +72,11 @@ canonical_future_dir_no_symlink() {
   probe="$requested"
   while [[ ! -e "$probe" ]]; do
     part="$(basename -- "$probe")"
-    suffix=("$part" "${suffix[@]}")
+    if [[ ${#suffix[@]} -eq 0 ]]; then
+      suffix=("$part")
+    else
+      suffix=("$part" "${suffix[@]}")
+    fi
     probe="$(dirname -- "$probe")"
   done
   [[ -d "$probe" ]] || return 1
