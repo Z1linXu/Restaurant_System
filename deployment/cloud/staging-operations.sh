@@ -177,10 +177,38 @@ assert_docker_available() {
   printf '%s' "$binary"
 }
 
+assert_release_integrity() {
+  local release helper expected_blob actual_blob ignored submodule line
+  release="$STAGING_ROOT/releases/$COMMIT_SHA"
+  helper="$release/deployment/cloud/staging-deploy.sh"
+  [[ -d "$release" && ( -d "$release/.git" || -f "$release/.git" ) ]] ||
+    die "exact release is not a Git checkout"
+  [[ "$(git -C "$release" rev-parse HEAD 2>/dev/null || true)" == "$COMMIT_SHA" ]] ||
+    die "exact release HEAD does not match --commit"
+  git -C "$release" diff --quiet && git -C "$release" diff --cached --quiet ||
+    die "exact release has tracked or staged changes"
+  [[ -z "$(git -C "$release" status --porcelain=v1 --untracked-files=all)" ]] ||
+    die "exact release has untracked files"
+  ignored="$(git -C "$release" ls-files --others --ignored --exclude-standard -- backend frontend)"
+  [[ -z "$ignored" ]] || die "exact release has ignored backend or frontend build inputs"
+  submodule="$(git -C "$release" submodule status --recursive 2>/dev/null || true)"
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    case "${line:0:1}" in
+      -|+|U) die "exact release has an unclean submodule" ;;
+    esac
+  done <<<"$submodule"
+  [[ -f "$helper" && ! -L "$helper" ]] || die "exact release staging-deploy.sh is missing or unsafe"
+  expected_blob="$(git -C "$release" rev-parse "$COMMIT_SHA:deployment/cloud/staging-deploy.sh" 2>/dev/null || true)"
+  actual_blob="$(git -C "$release" hash-object "$helper" 2>/dev/null || true)"
+  [[ -n "$expected_blob" && "$actual_blob" == "$expected_blob" ]] ||
+    die "exact release staging-deploy.sh differs from the approved Git blob"
+}
+
 assert_staging_package() {
   local helper
   helper="$(dirname -- "$COMPOSE_FILE")/staging-deploy.sh"
-  [[ -f "$helper" && ! -L "$helper" ]] || die "exact release staging-deploy.sh is missing or unsafe"
+  assert_release_integrity
   has_symlink_component "$helper" && die "exact release staging-deploy.sh must not traverse a symlink"
   "$helper" --env-file "$ENV_FILE" --validate >/dev/null 2>&1 ||
     die "exact release staging package validation failed"

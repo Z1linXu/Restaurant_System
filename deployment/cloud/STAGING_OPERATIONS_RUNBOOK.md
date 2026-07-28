@@ -53,7 +53,9 @@ release's existing `staging-deploy.sh --validate` guard, then uses only
 read-only Compose/image metadata operations. This rechecks the Git release,
 PostgreSQL path, loopback binding, database identity, cloud profile, printing
 disablement, resource limits, log rotation, and private resolved Compose
-configuration. The resolved Compose file is never printed.
+configuration. Before executing that validator, the operations helper
+independently checks the exact release HEAD, clean tree, ignored build inputs,
+submodules, and validator Git blob. The resolved Compose file is never printed.
 
 ```bash
 deployment/cloud/staging-operations.sh --inventory <same identity options>

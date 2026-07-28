@@ -246,8 +246,22 @@ reset_env
 
 printf '\n# unapproved compose mutation\n' >>"$COMPOSE_FILE"
 expect_failure compose_tamper env PATH="$FAKE_BIN:$PATH" "$RUNNER" --validate "${COMMON[@]}"
-assert_contains 'exact release staging package validation failed' "$TMP_DIR/compose_tamper.out"
+assert_contains 'exact release has tracked or staged changes' "$TMP_DIR/compose_tamper.out"
 git -C "$RELEASE" show "HEAD:deployment/cloud/docker-compose.staging.yml" >"$COMPOSE_FILE"
+
+VALIDATOR="$RELEASE/deployment/cloud/staging-deploy.sh"
+MALICIOUS_MARKER="$TMP_DIR/malicious-validator-executed"
+cat >"$VALIDATOR" <<EOF
+#!/usr/bin/env bash
+printf 'unsafe\n' >"$MALICIOUS_MARKER"
+exit 0
+EOF
+chmod +x "$VALIDATOR"
+expect_failure validator_tamper env PATH="$FAKE_BIN:$PATH" "$RUNNER" --validate "${COMMON[@]}"
+assert_contains 'exact release has tracked or staged changes' "$TMP_DIR/validator_tamper.out"
+[[ ! -e "$MALICIOUS_MARKER" ]] || fail "tampered release validator executed before integrity verification"
+git -C "$RELEASE" show "HEAD:deployment/cloud/staging-deploy.sh" >"$VALIDATOR"
+chmod +x "$VALIDATOR"
 
 expect_failure duplicate_action env PATH="$FAKE_BIN:$PATH" "$RUNNER" --validate --inventory "${COMMON[@]}"
 assert_contains 'choose exactly one action' "$TMP_DIR/duplicate_action.out"
