@@ -19,6 +19,7 @@ SAFE_PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 RESOLVED_CONFIG=""
 ENV_SNAPSHOT=""
 ENV_SNAPSHOT_DIGEST=""
+PREFLIGHT_EVIDENCE_SNAPSHOT=""
 APPROVED_SHA=""
 PREFLIGHT_EVIDENCE=""
 PREFLIGHT_EVIDENCE_SHA256=""
@@ -81,6 +82,7 @@ die() {
 cleanup() {
   [[ -n "$RESOLVED_CONFIG" ]] && rm -f "$RESOLVED_CONFIG"
   [[ -n "$ENV_SNAPSHOT" ]] && rm -f "$ENV_SNAPSHOT"
+  [[ -n "$PREFLIGHT_EVIDENCE_SNAPSHOT" ]] && rm -f "$PREFLIGHT_EVIDENCE_SNAPSHOT"
   return 0
 }
 canonical_dir() {
@@ -299,7 +301,7 @@ validate_source_env_permissions() {
 }
 
 validate_start_authorization() {
-  local evidence_parent evidence_canonical environment_digest
+  local evidence_parent evidence_canonical source_digest snapshot_digest temporary_dir
   [[ "$EXECUTE_START" == "true" ]] || return 0
   [[ "$APPROVED_SHA" == "$STAGING_COMMIT_SHA" ]] || die "--approved-sha must exactly match STAGING_COMMIT_SHA"
   [[ "$PREFLIGHT_EVIDENCE" == "$STAGING_ROOT/evidence/"* ]] || die "--preflight-evidence must be under the exact Staging evidence directory"
@@ -313,18 +315,27 @@ validate_start_authorization() {
     die "Staging evidence directory must be owned by the invoking user with mode 0700"
   [[ "$(file_owner "$PREFLIGHT_EVIDENCE")" == "$(id -u)" && "$(file_mode "$PREFLIGHT_EVIDENCE")" == "600" ]] ||
     die "preflight evidence must be owned by the invoking user with mode 0600"
-  [[ "$(file_digest "$PREFLIGHT_EVIDENCE")" == "$PREFLIGHT_EVIDENCE_SHA256" ]] ||
+  temporary_dir="$(canonical_dir "${TMPDIR:-/tmp}")" || die "cannot canonicalize temporary directory"
+  source_digest="$(file_digest "$PREFLIGHT_EVIDENCE")"
+  umask 077
+  PREFLIGHT_EVIDENCE_SNAPSHOT="$(mktemp "$temporary_dir/restaurant-pos-staging-preflight.XXXXXX")"
+  cp "$PREFLIGHT_EVIDENCE" "$PREFLIGHT_EVIDENCE_SNAPSHOT"
+  chmod 600 "$PREFLIGHT_EVIDENCE_SNAPSHOT"
+  snapshot_digest="$(file_digest "$PREFLIGHT_EVIDENCE_SNAPSHOT")"
+  [[ "$source_digest" == "$snapshot_digest" ]] ||
+    die "preflight evidence changed while creating the private snapshot"
+  [[ "$snapshot_digest" == "$PREFLIGHT_EVIDENCE_SHA256" ]] ||
     die "--preflight-evidence-sha256 does not match the exact evidence file"
-  environment_digest="$(file_digest "$ORIGINAL_ENV_FILE")"
-  grep -Fxq "EVIDENCE|APPROVED_SHA|$STAGING_COMMIT_SHA" "$PREFLIGHT_EVIDENCE" ||
+  grep -Fxq "EVIDENCE|APPROVED_SHA|$STAGING_COMMIT_SHA" "$PREFLIGHT_EVIDENCE_SNAPSHOT" ||
     die "preflight evidence is not bound to the approved SHA"
-  grep -Fxq "EVIDENCE|STAGING_ROOT|$STAGING_ROOT" "$PREFLIGHT_EVIDENCE" ||
+  grep -Fxq "EVIDENCE|STAGING_ROOT|$STAGING_ROOT" "$PREFLIGHT_EVIDENCE_SNAPSHOT" ||
     die "preflight evidence is not bound to the exact Staging root"
-  grep -Fxq "EVIDENCE|COMPOSE_PROJECT|$EXPECTED_PROJECT" "$PREFLIGHT_EVIDENCE" ||
+  grep -Fxq "EVIDENCE|COMPOSE_PROJECT|$EXPECTED_PROJECT" "$PREFLIGHT_EVIDENCE_SNAPSHOT" ||
     die "preflight evidence is not bound to the exact Staging project"
-  grep -Fxq "EVIDENCE|ENV_SHA256|$environment_digest" "$PREFLIGHT_EVIDENCE" ||
-    die "preflight evidence is not bound to the current Staging environment"
-  grep -Fxq 'SUMMARY|PASS|same-host Staging preflight passed without state changes' "$PREFLIGHT_EVIDENCE" || die "--preflight-evidence does not show a passed STG-004 preflight"
+  grep -Fxq "EVIDENCE|ENV_SHA256|$ENV_SNAPSHOT_DIGEST" "$PREFLIGHT_EVIDENCE_SNAPSHOT" ||
+    die "preflight evidence is not bound to the deployed Staging environment snapshot"
+  grep -Fxq 'SUMMARY|PASS|same-host Staging preflight passed without state changes' "$PREFLIGHT_EVIDENCE_SNAPSHOT" ||
+    die "--preflight-evidence does not show a passed STG-004 preflight"
 }
 
 path_is_not_group_or_other_writable() {
