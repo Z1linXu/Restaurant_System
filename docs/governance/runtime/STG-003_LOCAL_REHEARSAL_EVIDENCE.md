@@ -18,12 +18,12 @@ connect to real printers, start PAD_DIRECT, submit orders, restore data, or run
 | Check | Result | Evidence |
 | --- | --- | --- |
 | Exact clean SHA guard | `MACHINE_VERIFIED` | Runner requires full SHA equal to clean local `HEAD`. |
-| Local root isolation guard | `MACHINE_VERIFIED` | Rejects `/srv`, `/home/ubuntu`, repository paths, production-like data paths, and roots without `/restaurant-pos/staging`. |
+| Local root and evidence isolation guard | `MACHINE_VERIFIED` | Canonicalizes the nearest existing ancestor, rejects symlink traversal and forbidden canonical targets, revalidates after creation/before Compose, and writes evidence only to the fixed `<root>/evidence/stg-003-local-rehearsal.md` path. |
 | Local Docker guard | `MACHINE_VERIFIED` | `--run` and `--cleanup` require local Docker context `default` with a Unix/npipe endpoint. |
 | Docker unavailable fail-closed | `MACHINE_VERIFIED` | Test verifies no local state is created before `BLOCKED_LOCAL_DOCKER_RUNTIME_UNAVAILABLE`. |
 | Synthetic-only configuration | `MACHINE_VERIFIED` | Runner generates mode-0600 local DB/JWT values and rejects real printing configuration. |
 | Print safety | `MACHINE_VERIFIED` | `STAGING_PRINT_MODE=DISABLED` and `STAGING_PRINTING_FEATURE_ENABLED=false` are asserted. |
-| Fake-Docker command-plan coverage | `MACHINE_VERIFIED` | Test validates plan behavior without a Docker runtime. |
+| Fake-Docker lifecycle command-plan coverage | `MACHINE_VERIFIED` | Tests use an isolated PATH and fake Docker for `run`/`cleanup`, proving the default context/project and `build`, `up`, `stop`, and non-volume `down` command plan without resolving host Docker. |
 
 ## Supplemental Local PostgreSQL Evidence
 
