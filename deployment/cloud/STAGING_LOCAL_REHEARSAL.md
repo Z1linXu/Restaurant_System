@@ -6,8 +6,9 @@ This procedure is a local-only rehearsal for the standalone STG-002 staging
 Compose package. It is not a server deployment path and must not be used on a
 production host.
 
-It pins one clean local Git SHA, uses a separate temporary root ending in
-`/restaurant-pos/staging`, binds only `127.0.0.1:18080`, generates synthetic
+It pins one clean local Git SHA, uses either the default temporary root or a
+single `restaurant-pos-stg003-*` namespace directly under the canonical local
+temporary directory, binds only `127.0.0.1:18080`, generates synthetic
 credentials locally, and keeps printing disabled. The runner rejects `/srv`,
 production-like paths, repository paths, remote Docker configuration, real
 printer configuration, and dirty checkouts.

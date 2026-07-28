@@ -18,10 +18,14 @@ LOCAL_ROOT="$LOCAL_TMP_BASE"
 LOCAL_ROOT="${LOCAL_ROOT%/}/restaurant-pos/staging"
 DOCKER_BIN=""
 PRIVATE_RESOLVED_CONFIG=""
+PRIVATE_RESOLVED_PORTS=""
 
 cleanup_private_config() {
   if [[ -n "$PRIVATE_RESOLVED_CONFIG" ]]; then
     rm -f -- "$PRIVATE_RESOLVED_CONFIG"
+  fi
+  if [[ -n "$PRIVATE_RESOLVED_PORTS" ]]; then
+    rm -f -- "$PRIVATE_RESOLVED_PORTS"
   fi
   return 0
 }
@@ -100,23 +104,26 @@ canonical_future_dir_no_symlink() {
   normalize_absolute_path "$probe"
 }
 
-is_nonproduction_root() {
+is_allowed_local_root() {
   local root="$1"
-  [[ "$root" == /*/restaurant-pos/staging ]] || return 1
-  [[ "$root" != /srv/* && "$root" != /home/ubuntu/* && "$root" != "$REPOSITORY_ROOT"* ]] || return 1
-  [[ "$root" != *'/deployment/cloud'* && "$root" != *'/data/postgres'* ]] || return 1
+  local relative namespace
+  [[ "$root" == "$LOCAL_TMP_BASE/restaurant-pos/staging" ]] && return 0
+  [[ "$root" == "$LOCAL_TMP_BASE/restaurant-pos-stg003-"*/restaurant-pos/staging ]] || return 1
+  relative="${root#"$LOCAL_TMP_BASE/"}"
+  namespace="${relative%/restaurant-pos/staging}"
+  [[ "$namespace" != */* && "$namespace" =~ ^restaurant-pos-stg003-[A-Za-z0-9._-]+$ ]]
 }
 
 resolve_local_root() {
   LOCAL_ROOT="$(canonical_future_dir_no_symlink "$LOCAL_ROOT")" || die "local root contains traversal, a symlink, or an invalid ancestor"
-  is_nonproduction_root "$LOCAL_ROOT" || die "local root must canonically be a non-production absolute path ending in /restaurant-pos/staging"
+  is_allowed_local_root "$LOCAL_ROOT" || die "local root must be the default or an allowed STG-003 namespace under LOCAL_TMP_BASE"
 }
 
 revalidate_created_root() {
   local resolved
   resolved="$(canonical_existing_dir_no_symlink "$LOCAL_ROOT")" || die "local root must exist without symlink traversal"
   [[ "$resolved" == "$LOCAL_ROOT" ]] || die "local root canonical target changed after creation"
-  is_nonproduction_root "$resolved" || die "local root resolved to a forbidden target"
+  is_allowed_local_root "$resolved" || die "local root resolved outside the allowed STG-003 local namespace"
 }
 
 assert_clean_checkout() {
@@ -260,16 +267,30 @@ wait_for_http() {
 }
 
 assert_resolved_compose() {
-  local env_file="$1" compose_file="$2" resolved services source_count
+  local env_file="$1" compose_file="$2" resolved ports_json services source_count
   revalidate_created_root
   assert_release_identity
   assert_env_identity "$env_file"
   resolved="$LOCAL_ROOT/evidence/resolved-compose.private.yml"
+  ports_json="$LOCAL_ROOT/evidence/resolved-compose-ports.private.json"
   [[ ! -e "$resolved" ]] || die "private resolved Compose file already exists"
+  [[ ! -e "$ports_json" ]] || die "private resolved Compose ports file already exists"
   PRIVATE_RESOLVED_CONFIG="$resolved"
+  PRIVATE_RESOLVED_PORTS="$ports_json"
   umask 077
   local_compose "$env_file" "$compose_file" config >"$resolved" || die "Compose config validation failed"
   chmod 600 "$resolved"
+  command -v jq >/dev/null 2>&1 || die "jq is required to validate resolved Compose published ports"
+  local_compose "$env_file" "$compose_file" config --format json >"$ports_json" || die "Compose JSON config validation failed"
+  chmod 600 "$ports_json"
+  jq -e '
+    [.services[]? | .ports[]?] as $ports
+    | ($ports | length == 1)
+    and ($ports[0].host_ip == "127.0.0.1")
+    and (($ports[0].published | tostring) == "18080")
+    and (($ports[0].target | tostring) == "80")
+    and ($ports[0].protocol == "tcp")
+  ' "$ports_json" >/dev/null || die "resolved Compose must publish exactly 127.0.0.1:18080->80/tcp and no other ports"
   services="$(local_compose "$env_file" "$compose_file" config --services)" || die "Compose services validation failed"
   [[ "$services" == $'db\nbackend\nnginx' ]] || die "resolved Compose services must exactly be db, backend, nginx"
   grep -Fq "postgres:16-alpine" "$resolved" || die "resolved Compose PostgreSQL image differs"
@@ -279,7 +300,6 @@ assert_resolved_compose() {
   grep -Fq 'target: /var/lib/postgresql/data' "$resolved" || die "resolved PostgreSQL bind target differs"
   grep -Fq 'nginx.http.conf.template' "$resolved" || die "resolved Nginx template mount differs"
   grep -Fq 'target: /etc/nginx/templates/default.conf.template' "$resolved" || die "resolved Nginx template target differs"
-  grep -Eq '(127\.0\.0\.1:18080:80|host_ip: 127\.0\.0\.1)' "$resolved" || die "resolved Compose lacks loopback port 18080"
   grep -Fq 'SPRING_PROFILES_ACTIVE: cloud' "$resolved" || die "resolved Spring profile differs"
   grep -Eq "APP_FEATURES_PRINTING: [\\\"']?false" "$resolved" || die "resolved printing feature differs"
   grep -Fq 'STAGING_PRINT_MODE=DISABLED' "$env_file" || die "printing mode must remain disabled"
@@ -288,7 +308,9 @@ assert_resolved_compose() {
   [[ "$source_count" -eq 2 ]] || die "resolved Compose has unexpected mounts"
   ! grep -Eqi 'docker\.sock|privileged:[[:space:]]*true|network_mode:[[:space:]]*host|pid:[[:space:]]*host|:80:80|:443:443|0\.0\.0\.0|/srv/|/home/ubuntu/' "$resolved" || die "resolved Compose contains forbidden privileged, host, socket, or server configuration"
   rm -f "$resolved"
+  rm -f "$ports_json"
   PRIVATE_RESOLVED_CONFIG=""
+  PRIVATE_RESOLVED_PORTS=""
   revalidate_created_root
   assert_release_identity
   assert_env_identity "$env_file"
