@@ -31,7 +31,7 @@ assert_not_contains() { ! grep -Fq -- "$1" "$2" || fail "unexpected '$1' in $2";
 make_isolated_path() {
   local command_path command_name
   mkdir -p "$ISOLATED_BIN" "$FAKE_BIN"
-  for command_name in bash basename cat chmod cp cut dirname env find git grep head mkdir od openssl pwd rm sed sleep stat tail tr; do
+  for command_name in bash basename cat chmod cp cut dirname env find git grep head mkdir od openssl pwd rm sed seq sleep stat tail tr; do
     command_path="$(command -v "$command_name")" || fail "missing local test prerequisite: $command_name"
     ln -s "$command_path" "$ISOLATED_BIN/$command_name"
   done
