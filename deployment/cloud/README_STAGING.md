@@ -140,12 +140,6 @@ start containers. It may validate a local `MOCK` input shape only; it cannot
 exercise actual mock printing. It exists only to test the package before server
 use and does not weaken the default/server root guard.
 
-`--local-rehearsal` is an explicit local-only deployment-sequence path for
-synthetic test environments. It still requires the isolated project, SHA,
-snapshot, resource, path, and printing guards, and it requires
-`STAGING_PRINT_MODE=DISABLED`; it is not a substitute for the server deploy
-command and must not be used with production Docker resources.
-
 After Owner approval of the exact SHA and successful validation, start Staging:
 
 ```bash

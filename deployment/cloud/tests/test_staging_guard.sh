@@ -123,11 +123,6 @@ if [[ "$(value DB_NAME)" == "restaurant_pos_staging_fake_config_failure" ]]; the
 fi
 
 if [[ "$compose_action" == "build" ]]; then
-  if [[ "$(value DB_NAME)" == "restaurant_pos_staging_fake_postgres_swap_after_build" ]]; then
-    postgres_path="$(value STAGING_POSTGRES_DATA_DIR)"
-    mv "$postgres_path" "$postgres_path.real"
-    ln -s "$postgres_path.real" "$postgres_path"
-  fi
   printf 'fake build complete\n'
   exit 0
 fi
@@ -287,15 +282,47 @@ rm "$POSTGRES_DIR"
 mv "$POSTGRES_DIR.real" "$POSTGRES_DIR"
 
 reset_env
-set_env DB_NAME restaurant_pos_staging_fake_postgres_swap_after_build "$ENV_FILE"
-TMPDIR="$COMPOSE_TEMP_DIR" PATH="$FAKE_BIN:$PATH" \
-  "$RELEASE_DIR/deployment/cloud/staging-deploy.sh" --env-file "$ENV_FILE" --local-rehearsal \
-  >"$TMP_DIR/postgres_path_swap_after_build.out" 2>"$TMP_DIR/postgres_path_swap_after_build.err" && \
-  fail "postgres_path_swap_after_build unexpectedly passed"
-assert_contains "staging guard:" "$TMP_DIR/postgres_path_swap_after_build.err"
-assert_contains "build backend nginx" "$CALL_LOG"
-assert_not_contains "up -d" "$CALL_LOG"
-assert_empty_directory "$COMPOSE_TEMP_DIR"
+chmod 600 "$ENV_FILE"
+chmod 700 "$FIXTURE_STAGING_ROOT" "$FIXTURE_STAGING_ROOT/state" "$POSTGRES_DIR"
+HARNESS_LOG="$TMP_DIR/post_build_swap_harness.calls"
+: >"$HARNESS_LOG"
+if (
+  # Source only function definitions. The guarded main does not run when sourced.
+  source "$RELEASE_DIR/deployment/cloud/staging-deploy.sh"
+  ACTIVE_ENV_FILE="$ENV_FILE"
+  ENV_SNAPSHOT="$ENV_FILE"
+  ENV_SNAPSHOT_DIGEST="$(file_digest "$ENV_FILE")"
+  STAGING_ROOT="$FIXTURE_STAGING_ROOT"
+  STAGING_COMMIT_SHA="$SHA"
+  POSTGRES_DATA_DIR="$POSTGRES_DIR"
+  LOCAL_VALIDATE_MODE=false
+  assert_clean_release() { :; }
+  assert_resolved_compose() { :; }
+  controlled_compose() {
+    local active_env_file="$1"
+    shift
+    case "$1" in
+      build)
+        printf 'build %s\n' "$*" >>"$HARNESS_LOG"
+        mv "$POSTGRES_DIR" "$POSTGRES_DIR.real"
+        ln -s "$POSTGRES_DIR.real" "$POSTGRES_DIR"
+        ;;
+      up)
+        printf 'up %s\n' "$*" >>"$HARNESS_LOG"
+        ;;
+      *)
+        printf 'unexpected compose action: %s\n' "$1" >&2
+        return 97
+        ;;
+    esac
+  }
+  run_deploy_sequence
+) >"$TMP_DIR/post_build_swap_harness.out" 2>"$TMP_DIR/post_build_swap_harness.err"; then
+  fail "post_build_swap_harness unexpectedly passed"
+fi
+assert_contains "staging guard:" "$TMP_DIR/post_build_swap_harness.err"
+assert_contains "build backend nginx" "$HARNESS_LOG"
+assert_not_contains "up -d" "$HARNESS_LOG"
 rm "$POSTGRES_DIR"
 mv "$POSTGRES_DIR.real" "$POSTGRES_DIR"
 

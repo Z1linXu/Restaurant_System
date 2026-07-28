@@ -54,7 +54,6 @@ Options:
   --validate       Validate paths, guards, and resolved Compose only.
   --dry-run        Alias for --validate.
   --local-validate Allow a non-/srv temporary root for local validation only.
-  --local-rehearsal Run the same guarded deployment sequence only against a local rehearsal root.
   --help           Print this help text only.
 EOF
 }
@@ -69,8 +68,6 @@ cleanup() {
   [[ -n "$ENV_SNAPSHOT" ]] && rm -f "$ENV_SNAPSHOT"
   return 0
 }
-trap cleanup EXIT
-
 canonical_dir() {
   (cd -P -- "$1" 2>/dev/null && pwd)
 }
@@ -465,6 +462,26 @@ assert_resolved_compose() {
   RESOLVED_CONFIG=""
 }
 
+run_deploy_sequence() {
+  assert_snapshot_integrity
+  validate_postgres_data_path
+  assert_clean_release
+  assert_resolved_compose "$ACTIVE_ENV_FILE"
+  assert_snapshot_integrity
+  validate_postgres_data_path
+  assert_clean_release
+
+  echo "Building isolated staging images for $STAGING_COMMIT_SHA..."
+  controlled_compose "$ACTIVE_ENV_FILE" build backend nginx
+  assert_snapshot_integrity
+  validate_postgres_data_path
+  assert_clean_release
+  echo "Starting only the $COMPOSE_PROJECT_NAME project..."
+  controlled_compose "$ACTIVE_ENV_FILE" up -d
+  echo "Staging deployment started. Run staging-health-check.sh with the same --env-file."
+}
+
+main() {
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --env-file)
@@ -477,10 +494,6 @@ while [[ $# -gt 0 ]]; do
       ;;
     --local-validate)
       ACTION="validate"
-      LOCAL_VALIDATE_MODE="true"
-      ;;
-    --local-rehearsal)
-      ACTION="deploy"
       LOCAL_VALIDATE_MODE="true"
       ;;
     --help|-h)
@@ -523,19 +536,10 @@ if [[ "$ACTION" == "validate" ]]; then
   exit 0
 fi
 
-assert_snapshot_integrity
-validate_postgres_data_path
-assert_clean_release
-assert_resolved_compose "$ACTIVE_ENV_FILE"
-assert_snapshot_integrity
-validate_postgres_data_path
-assert_clean_release
+run_deploy_sequence
+}
 
-echo "Building isolated staging images for $STAGING_COMMIT_SHA..."
-controlled_compose "$ACTIVE_ENV_FILE" build backend nginx
-assert_snapshot_integrity
-validate_postgres_data_path
-assert_clean_release
-echo "Starting only the $COMPOSE_PROJECT_NAME project..."
-controlled_compose "$ACTIVE_ENV_FILE" up -d
-echo "Staging deployment started. Run staging-health-check.sh with the same --env-file."
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  trap cleanup EXIT
+  main "$@"
+fi
