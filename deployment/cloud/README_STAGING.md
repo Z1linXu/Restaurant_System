@@ -122,11 +122,13 @@ never run `build`, `up`, `pull`, restore, Flyway clean, or a destructive command
 The resolved Compose output is inspected privately for guards and is never
 printed because it may contain secrets.
 
-Before a deployment, the wrapper copies the validated mode-`0600` environment
-file to a private mode-`0600` snapshot under the Staging state root. Compose
-uses that snapshot, not inherited caller variables. The wrapper rechecks the
-release Git cleanliness, exact SHA, and source/snapshot digest before `build`
-and `up`.
+Before any dotenv parsing, the wrapper copies the source environment file to a
+private mode-`0600` runtime snapshot. Compose, validation, resolution, build,
+and start use that snapshot only; the mutable source file is not reread. The
+snapshot digest is checked before every critical Compose phase. The wrapper
+also revalidates the exact PostgreSQL bind path immediately before `up`: it
+must remain a non-symlink under the Staging root and, in server mode, satisfy
+the trusted owner and non-group/other-writable permission checks.
 
 For STG-003 local package rehearsal only, an operator may use
 `--local-validate` with a temporary physical root ending in

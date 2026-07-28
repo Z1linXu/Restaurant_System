@@ -12,8 +12,10 @@ and results outside Git.
 - [ ] `COMPOSE_PROJECT_NAME=restaurant-pos-staging`.
 - [ ] `staging-deploy.sh --validate` passed.
 - [ ] Only `127.0.0.1:18080` is published.
+- [ ] `NGINX_SERVER_NAME=localhost` is present in the resolved configuration.
 - [ ] PostgreSQL has no host port.
 - [ ] Staging PostgreSQL data is `/srv/restaurant-pos/staging/state/postgres`.
+- [ ] The PostgreSQL bind path is non-symlinked and passes the deploy guard immediately before start.
 - [ ] No path, volume, secret, account, cookie, device credential, or data was copied from production.
 - [ ] Staging image tags include the exact SHA and are not `:local`.
 - [ ] Resource caps and log rotation are configured.

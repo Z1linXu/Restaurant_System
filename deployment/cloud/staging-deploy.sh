@@ -8,12 +8,16 @@ SCRIPT_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STAGING_COMPOSE_FILE="$SCRIPT_DIR/docker-compose.staging.yml"
 ACTION="deploy"
 SOURCE_ENV_FILE=""
+ORIGINAL_ENV_FILE=""
+ORIGINAL_CONFIG_DIR=""
+ACTIVE_ENV_FILE=""
 EXPECTED_PROJECT="restaurant-pos-staging"
 SERVER_STAGING_ROOT="/srv/restaurant-pos/staging"
 LOCAL_VALIDATE_MODE="false"
 SAFE_PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 RESOLVED_CONFIG=""
 ENV_SNAPSHOT=""
+ENV_SNAPSHOT_DIGEST=""
 
 INTERPOLATION_KEYS="
 DOCKER_HOST DOCKER_CONTEXT DOCKER_CONFIG DOCKER_CERT_PATH DOCKER_TLS_VERIFY
@@ -158,7 +162,7 @@ dotenv_validate_syntax() {
 dotenv_value() {
   local key="$1"
   local line value
-  line="$(grep -E "^${key}=" "$SOURCE_ENV_FILE" || true)"
+  line="$(grep -E "^${key}=" "$ACTIVE_ENV_FILE" || true)"
   [[ -n "$line" ]] || return 1
   value="${line#*=}"
   if [[ "$value" == \"* ]]; then
@@ -170,7 +174,7 @@ dotenv_value() {
 }
 
 dotenv_present() {
-  grep -Eq "^${1}=" "$SOURCE_ENV_FILE"
+  grep -Eq "^${1}=" "$ACTIVE_ENV_FILE"
 }
 
 require_value() {
@@ -272,16 +276,46 @@ assert_clean_release() {
   done <<<"$submodules"
 }
 
-validate_server_permissions() {
+validate_source_env_permissions() {
   [[ "$LOCAL_VALIDATE_MODE" == "true" ]] && return 0
-  [[ "$(file_owner "$STAGING_ROOT/config")" == "$(id -u)" ]] || die "staging config directory must be owned by the invoking user"
-  [[ "$(file_mode "$STAGING_ROOT/config")" == "700" ]] || die "staging config directory mode must be 0700"
-  [[ "$(file_owner "$SOURCE_ENV_FILE")" == "$(id -u)" ]] || die "staging environment file must be owned by the invoking user"
-  [[ "$(file_mode "$SOURCE_ENV_FILE")" == "600" ]] || die "staging environment file mode must be 0600"
+  ORIGINAL_CONFIG_DIR="$(canonical_dir "$(dirname "$ORIGINAL_ENV_FILE")")" || die "cannot canonicalize staging config directory"
+  [[ "$(file_owner "$ORIGINAL_CONFIG_DIR")" == "$(id -u)" ]] || die "staging config directory must be owned by the invoking user"
+  [[ "$(file_mode "$ORIGINAL_CONFIG_DIR")" == "700" ]] || die "staging config directory mode must be 0700"
+  [[ "$(file_owner "$ORIGINAL_ENV_FILE")" == "$(id -u)" ]] || die "staging environment file must be owned by the invoking user"
+  [[ "$(file_mode "$ORIGINAL_ENV_FILE")" == "600" ]] || die "staging environment file mode must be 0600"
+}
+
+path_is_not_group_or_other_writable() {
+  local path="$1"
+  local mode permissions group other
+  mode="$(file_mode "$path")"
+  [[ "$mode" =~ ^[0-7]{3,4}$ ]] || return 1
+  permissions="${mode: -3}"
+  group="${permissions:1:1}"
+  other="${permissions:2:1}"
+  (( (group & 2) == 0 && (other & 2) == 0 ))
+}
+
+validate_postgres_data_path() {
+  local expected_data_dir data_owner
+  POSTGRES_DATA_DIR="$(require_value STAGING_POSTGRES_DATA_DIR)"
+  validate_no_symlink_path "STAGING_POSTGRES_DATA_DIR" "$POSTGRES_DATA_DIR"
+  POSTGRES_DATA_DIR="$(canonical_dir "$POSTGRES_DATA_DIR")" || die "cannot canonicalize STAGING_POSTGRES_DATA_DIR"
+  expected_data_dir="$STAGING_ROOT/state/postgres"
+  [[ "$POSTGRES_DATA_DIR" == "$expected_data_dir" ]] || die "STAGING_POSTGRES_DATA_DIR must be $expected_data_dir"
+  [[ "$POSTGRES_DATA_DIR" != /home/ubuntu/Restaurant_System/* && "$POSTGRES_DATA_DIR" != */deployment/cloud/data/postgres* ]] || die "production PostgreSQL data paths are forbidden"
+
+  [[ "$LOCAL_VALIDATE_MODE" == "true" ]] && return 0
+  validate_no_symlink_path "STAGING_STATE_DIR" "$STAGING_ROOT/state"
+  for path in "$STAGING_ROOT" "$STAGING_ROOT/state" "$POSTGRES_DATA_DIR"; do
+    path_is_not_group_or_other_writable "$path" || die "staging PostgreSQL path must not be group or other writable: $path"
+  done
+  data_owner="$(file_owner "$POSTGRES_DATA_DIR")"
+  [[ "$data_owner" == "$(id -u)" || "$data_owner" == "999" ]] || die "staging PostgreSQL data directory owner must be the deploy user or official postgres UID 999"
 }
 
 validate_inputs() {
-  dotenv_validate_syntax "$SOURCE_ENV_FILE"
+  dotenv_validate_syntax "$ACTIVE_ENV_FILE"
   COMPOSE_PROJECT_NAME="$(require_value COMPOSE_PROJECT_NAME)"
   [[ "$COMPOSE_PROJECT_NAME" == "$EXPECTED_PROJECT" ]] || die "COMPOSE_PROJECT_NAME must be $EXPECTED_PROJECT"
 
@@ -293,8 +327,8 @@ validate_inputs() {
   else
     [[ "$STAGING_ROOT" == "$SERVER_STAGING_ROOT" ]] || die "server STAGING_ROOT must be exactly $SERVER_STAGING_ROOT"
   fi
-  [[ "$SOURCE_ENV_FILE" == "$STAGING_ROOT/config/.env.staging" ]] || die "environment file must be $STAGING_ROOT/config/.env.staging"
-  validate_server_permissions
+  [[ "$ORIGINAL_ENV_FILE" == "$STAGING_ROOT/config/.env.staging" ]] || die "environment file must be $STAGING_ROOT/config/.env.staging"
+  [[ "$LOCAL_VALIDATE_MODE" == "true" || "$ORIGINAL_CONFIG_DIR" == "$STAGING_ROOT/config" ]] || die "staging config directory no longer matches the validated root"
 
   STAGING_COMMIT_SHA="$(require_value STAGING_COMMIT_SHA)"
   [[ "$STAGING_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]] || die "STAGING_COMMIT_SHA must be a full lowercase 40-character Git SHA"
@@ -306,16 +340,14 @@ validate_inputs() {
   [[ "$(git -C "$RELEASE_DIR" rev-parse HEAD 2>/dev/null || true)" == "$STAGING_COMMIT_SHA" ]] || die "release Git HEAD does not match STAGING_COMMIT_SHA"
   assert_clean_release
 
-  POSTGRES_DATA_DIR="$(require_value STAGING_POSTGRES_DATA_DIR)"
-  validate_no_symlink_path "STAGING_POSTGRES_DATA_DIR" "$POSTGRES_DATA_DIR"
-  POSTGRES_DATA_DIR="$(canonical_dir "$POSTGRES_DATA_DIR")" || die "cannot canonicalize STAGING_POSTGRES_DATA_DIR"
-  [[ "$POSTGRES_DATA_DIR" == "$STAGING_ROOT/state/postgres" ]] || die "STAGING_POSTGRES_DATA_DIR must be $STAGING_ROOT/state/postgres"
-  [[ "$POSTGRES_DATA_DIR" != /home/ubuntu/Restaurant_System/* && "$POSTGRES_DATA_DIR" != */deployment/cloud/data/postgres* ]] || die "production PostgreSQL data paths are forbidden"
+  validate_postgres_data_path
 
   HTTP_BIND_ADDRESS="$(require_value HTTP_BIND_ADDRESS)"
   HTTP_PORT="$(require_value HTTP_PORT)"
+  NGINX_SERVER_NAME="$(require_value NGINX_SERVER_NAME)"
   [[ "$HTTP_BIND_ADDRESS" == "127.0.0.1" ]] || die "HTTP_BIND_ADDRESS must be 127.0.0.1"
   [[ "$HTTP_PORT" == "18080" ]] || die "HTTP_PORT must be the isolated staging port 18080"
+  [[ "$NGINX_SERVER_NAME" == "localhost" ]] || die "NGINX_SERVER_NAME must be localhost"
 
   POSTGRES_IMAGE_TAG="$(require_value POSTGRES_IMAGE_TAG)"
   [[ "$POSTGRES_IMAGE_TAG" == "16-alpine" ]] || die "POSTGRES_IMAGE_TAG must be 16-alpine"
@@ -360,6 +392,27 @@ validate_inputs() {
   validate_resource_limits
 }
 
+create_env_snapshot() {
+  local temporary_dir source_digest snapshot_digest
+  temporary_dir="$(canonical_dir "${TMPDIR:-/tmp}")" || die "cannot canonicalize temporary directory"
+  [[ -d "$temporary_dir" ]] || die "temporary directory does not exist"
+  source_digest="$(file_digest "$ORIGINAL_ENV_FILE")"
+  umask 077
+  ENV_SNAPSHOT="$(mktemp "$temporary_dir/restaurant-pos-staging-env.XXXXXX")"
+  cp "$ORIGINAL_ENV_FILE" "$ENV_SNAPSHOT"
+  chmod 600 "$ENV_SNAPSHOT"
+  snapshot_digest="$(file_digest "$ENV_SNAPSHOT")"
+  [[ "$source_digest" == "$snapshot_digest" ]] || die "staging environment changed while creating the private snapshot"
+  ENV_SNAPSHOT_DIGEST="$snapshot_digest"
+  ACTIVE_ENV_FILE="$ENV_SNAPSHOT"
+}
+
+assert_snapshot_integrity() {
+  [[ -n "$ENV_SNAPSHOT" && -n "$ENV_SNAPSHOT_DIGEST" && -f "$ENV_SNAPSHOT" ]] || die "private staging environment snapshot is unavailable"
+  [[ "$(file_mode "$ENV_SNAPSHOT")" == "600" ]] || die "private staging environment snapshot mode must be 0600"
+  [[ "$(file_digest "$ENV_SNAPSHOT")" == "$ENV_SNAPSHOT_DIGEST" ]] || die "private staging environment snapshot changed during deployment"
+}
+
 controlled_compose() {
   local active_env_file="$1"
   shift
@@ -376,12 +429,16 @@ controlled_compose() {
 assert_resolved_compose() {
   local active_env_file="$1"
   local temporary_dir resolved_config services
+  assert_snapshot_integrity
+  validate_postgres_data_path
   temporary_dir="$(canonical_dir "${TMPDIR:-/tmp}")" || die "cannot canonicalize temporary directory"
   [[ -d "$temporary_dir" ]] || die "temporary directory does not exist"
   resolved_config="$(mktemp "$temporary_dir/restaurant-pos-staging-config.XXXXXX")"
   RESOLVED_CONFIG="$resolved_config"
   chmod 600 "$resolved_config"
   controlled_compose "$active_env_file" config >"$resolved_config" || die "Compose config validation failed"
+  assert_snapshot_integrity
+  validate_postgres_data_path
   services="$(controlled_compose "$active_env_file" config --services)" || die "Compose service validation failed"
   [[ "$services" == $'db\nbackend\nnginx' ]] || die "resolved Compose services must be exactly db, backend, nginx"
 
@@ -393,6 +450,7 @@ assert_resolved_compose() {
   grep -Eq "SPRING_PROFILES_ACTIVE: [\"']?${SPRING_PROFILES_ACTIVE}" "$resolved_config" || die "resolved Compose profile differs from the validated profile"
   grep -Eq "DB_NAME: [\"']?${DB_NAME}" "$resolved_config" || die "resolved Compose DB_NAME differs from the validated identity"
   grep -Eq "DB_USER: [\"']?${DB_USER}" "$resolved_config" || die "resolved Compose DB_USER differs from the validated identity"
+  grep -Eq "NGINX_SERVER_NAME: [\"']?${NGINX_SERVER_NAME}" "$resolved_config" || die "resolved Compose NGINX server name differs from the validated value"
   grep -Fq "VITE_APP_BUILD_VERSION: staging-$STAGING_COMMIT_SHA" "$resolved_config" || die "resolved Compose frontend build version differs from the validated SHA"
   grep -Eq "APP_FEATURES_PRINTING: [\"']?${STAGING_PRINTING_FEATURE_ENABLED}" "$resolved_config" || die "resolved backend printing feature does not match the validated staging mode"
   grep -Eq '(127\.0\.0\.1:18080:80|published: "18080")' "$resolved_config" || die "resolved Compose does not expose the required loopback staging HTTP port"
@@ -404,27 +462,6 @@ assert_resolved_compose() {
   fi
   rm -f "$resolved_config"
   RESOLVED_CONFIG=""
-}
-
-create_env_snapshot() {
-  local snapshot_dir source_digest snapshot_digest
-  validate_no_symlink_path "STAGING_STATE_DIR" "$STAGING_ROOT/state"
-  snapshot_dir="$STAGING_ROOT/state/runtime-env"
-  if [[ -e "$snapshot_dir" ]]; then
-    validate_no_symlink_path "STAGING_RUNTIME_ENV_DIR" "$snapshot_dir"
-  else
-    umask 077
-    mkdir "$snapshot_dir" || die "cannot create staging runtime environment directory"
-    chmod 700 "$snapshot_dir"
-  fi
-  [[ "$(file_mode "$snapshot_dir")" == "700" ]] || die "staging runtime environment directory mode must be 0700"
-  source_digest="$(file_digest "$SOURCE_ENV_FILE")"
-  umask 077
-  ENV_SNAPSHOT="$(mktemp "$snapshot_dir/.env.staging.XXXXXX")"
-  cp "$SOURCE_ENV_FILE" "$ENV_SNAPSHOT"
-  chmod 600 "$ENV_SNAPSHOT"
-  snapshot_digest="$(file_digest "$ENV_SNAPSHOT")"
-  [[ "$source_digest" == "$snapshot_digest" ]] || die "staging environment changed while creating the Compose snapshot"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -460,30 +497,40 @@ done
 [[ -f "$SOURCE_ENV_FILE" ]] || die "environment file does not exist"
 SOURCE_ENV_FILE="$(canonical_file "$SOURCE_ENV_FILE")" || die "cannot canonicalize environment file"
 path_has_symlink "$SOURCE_ENV_FILE" && die "environment file must not traverse a symlink"
+ORIGINAL_ENV_FILE="$SOURCE_ENV_FILE"
 [[ -f "$STAGING_COMPOSE_FILE" ]] || die "missing standalone staging Compose file"
 [[ -f "$SCRIPT_DIR/nginx.http.conf.template" ]] || die "missing HTTP Nginx template"
 assert_no_ambient_overrides
+validate_source_env_permissions
+create_env_snapshot
 DOCKER_BIN="$(command -v docker || true)"
 [[ "$DOCKER_BIN" == /* && -x "$DOCKER_BIN" ]] || die "docker CLI is required"
 
+assert_snapshot_integrity
 validate_inputs
-assert_resolved_compose "$SOURCE_ENV_FILE"
+assert_snapshot_integrity
+assert_resolved_compose "$ACTIVE_ENV_FILE"
 
 if [[ "$ACTION" == "validate" ]]; then
   echo "Staging validation passed for $STAGING_COMMIT_SHA. No directories, images, or containers were changed."
-  controlled_compose "$SOURCE_ENV_FILE" config --services
+  assert_snapshot_integrity
+  controlled_compose "$ACTIVE_ENV_FILE" config --services
   exit 0
 fi
 
-create_env_snapshot
+assert_snapshot_integrity
+validate_postgres_data_path
 assert_clean_release
-[[ "$(file_digest "$SOURCE_ENV_FILE")" == "$(file_digest "$ENV_SNAPSHOT")" ]] || die "staging environment changed before build/up"
-assert_resolved_compose "$ENV_SNAPSHOT"
+assert_resolved_compose "$ACTIVE_ENV_FILE"
+assert_snapshot_integrity
+validate_postgres_data_path
 assert_clean_release
 
 echo "Building isolated staging images for $STAGING_COMMIT_SHA..."
-controlled_compose "$ENV_SNAPSHOT" build backend nginx
+controlled_compose "$ACTIVE_ENV_FILE" build backend nginx
+assert_snapshot_integrity
+validate_postgres_data_path
 assert_clean_release
 echo "Starting only the $COMPOSE_PROJECT_NAME project..."
-controlled_compose "$ENV_SNAPSHOT" up -d
+controlled_compose "$ACTIVE_ENV_FILE" up -d
 echo "Staging deployment started. Run staging-health-check.sh with the same --env-file."

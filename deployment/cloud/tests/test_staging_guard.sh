@@ -25,6 +25,14 @@ assert_contains() {
   grep -Fq -- "$needle" "$file" || fail "expected '$needle' in $file"
 }
 
+assert_not_contains() {
+  local needle="$1"
+  local file="$2"
+  if grep -Fq -- "$needle" "$file"; then
+    fail "did not expect '$needle' in $file"
+  fi
+}
+
 assert_empty_directory() {
   local directory="$1"
   [[ -z "$(find "$directory" -mindepth 1 -maxdepth 1 -print -quit)" ]] || fail "expected no temporary files in $directory"
@@ -94,7 +102,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ -n "$env_file" ]] || exit 65
-log_file="$(dirname "$env_file")/docker.calls"
+log_file="$(dirname "$0")/docker.calls"
 printf 'args=%s\n' "$original_args" >>"$log_file"
 printf 'ambient DB_NAME=%s DOCKER_HOST=%s DOCKER_CONTEXT=%s COMPOSE_FILE=%s\n' \
   "${DB_NAME-unset}" "${DOCKER_HOST-unset}" "${DOCKER_CONTEXT-unset}" "${COMPOSE_FILE-unset}" >>"$log_file"
@@ -124,10 +132,17 @@ printf '    cpus: %s\n' "$(value STAGING_BACKEND_CPU_LIMIT)"
 printf '    mem_limit: %s\n' "$(value STAGING_BACKEND_MEMORY_LIMIT)"
 printf '  nginx:\n    image: %s\n' "$(value FRONTEND_IMAGE)"
 printf '    VITE_APP_BUILD_VERSION: %s\n' "$(value VITE_APP_BUILD_VERSION)"
+printf '    NGINX_SERVER_NAME: %s\n' "$(value NGINX_SERVER_NAME)"
 printf '    ports:\n      - 127.0.0.1:18080:80\n'
 for key in STAGING_DB_CPU_LIMIT STAGING_NGINX_CPU_LIMIT STAGING_DB_MEMORY_LIMIT STAGING_NGINX_MEMORY_LIMIT STAGING_LOG_MAX_SIZE STAGING_LOG_MAX_FILE; do
   printf '    %s\n' "$(value "$key")"
 done
+
+if [[ "$(value DB_NAME)" == "restaurant_pos_staging_fake_postgres_swap" ]]; then
+  postgres_path="$(value STAGING_POSTGRES_DATA_DIR)"
+  mv "$postgres_path" "$postgres_path.real"
+  ln -s "$postgres_path.real" "$postgres_path"
+fi
 DOCKER
 chmod +x "$FAKE_BIN/docker"
 
@@ -155,7 +170,7 @@ mkdir -p "$COMPOSE_TEMP_DIR"
 mv "$SEED_RELEASE" "$RELEASE_DIR"
 
 ENV_FILE="$CONFIG_DIR/.env.staging"
-CALL_LOG="$CONFIG_DIR/docker.calls"
+CALL_LOG="$FAKE_BIN/docker.calls"
 BASE_ENV="$TMP_DIR/base.env"
 cat >"$BASE_ENV" <<EOF
 COMPOSE_PROJECT_NAME=restaurant-pos-staging
@@ -223,6 +238,7 @@ fi
 assert_contains "Staging validation passed" "$TMP_DIR/positive.out"
 assert_contains "--project-name restaurant-pos-staging" "$CALL_LOG"
 assert_contains "ambient DB_NAME=unset DOCKER_HOST=unset DOCKER_CONTEXT=unset COMPOSE_FILE=unset" "$CALL_LOG"
+assert_not_contains "$ENV_FILE" "$CALL_LOG"
 assert_empty_directory "$COMPOSE_TEMP_DIR"
 if grep -Eq '( build | up )' "$CALL_LOG"; then
   fail "validate invoked build or up"
@@ -237,6 +253,13 @@ reset_env
 set_env DB_NAME restaurant_pos_staging_fake_config_failure "$ENV_FILE"
 expect_failure resolved_config_failure run_validate
 assert_empty_directory "$COMPOSE_TEMP_DIR"
+
+reset_env
+set_env DB_NAME restaurant_pos_staging_fake_postgres_swap "$ENV_FILE"
+expect_failure postgres_path_swap_after_config run_validate
+assert_empty_directory "$COMPOSE_TEMP_DIR"
+rm "$POSTGRES_DIR"
+mv "$POSTGRES_DIR.real" "$POSTGRES_DIR"
 
 reset_env
 expect_failure arbitrary_server_root \
@@ -293,6 +316,10 @@ expect_failure tls_port run_validate
 reset_env
 set_env HTTP_BIND_ADDRESS 0.0.0.0 "$ENV_FILE"
 expect_failure public_bind run_validate
+
+reset_env
+set_env_literal NGINX_SERVER_NAME '"localhost; injected"' "$ENV_FILE"
+expect_failure nginx_server_name_injection run_validate
 
 reset_env
 set_env STAGING_POSTGRES_DATA_DIR relative/postgres "$ENV_FILE"
