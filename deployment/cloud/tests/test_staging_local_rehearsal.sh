@@ -177,8 +177,9 @@ assert_not_contains 'Flyway clean' "$FAKE_BIN/docker.calls"
 assert_not_contains '/srv/' "$FAKE_BIN/docker.calls"
 
 PATH="$FAKE_BIN:$ISOLATED_BIN" "$RUNNER" --cleanup --confirm-local-container-start --root "$FAKE_ROOT" >"$TMP_DIR/fake-cleanup.out"
-assert_contains 'action=down remaining=' "$FAKE_BIN/docker.calls"
-assert_not_contains 'down -v' "$FAKE_BIN/docker.calls"
-assert_not_contains 'down --volumes' "$FAKE_BIN/docker.calls"
+down_actions="$(grep '^action=down ' "$FAKE_BIN/docker.calls" || true)"
+[[ "$down_actions" == 'action=down remaining=' ]] || fail 'cleanup must issue exactly one plain down action with no flags or services'
+assert_not_contains '-v' "$FAKE_BIN/docker.calls"
+assert_not_contains '--volumes' "$FAKE_BIN/docker.calls"
 
 echo 'PASS: STG-003 uses pure planning, symlink-safe local roots, fixed evidence, isolated fake Docker lifecycle coverage, and no destructive cleanup.'
