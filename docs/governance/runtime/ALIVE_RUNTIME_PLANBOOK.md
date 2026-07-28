@@ -62,16 +62,34 @@ snapshots. Do not copy those reports into this planbook.
 | Item | Current state |
 |---|---|
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `AL-002 Owner-Scoped Store Onboarding Backend` |
-| Loop type | `FEATURE_IMPLEMENTATION` |
-| Loop status | `AL-002_WAITING_FOR_OWNER_APPROVAL` |
+| Current Agile Loop | `STG-001 Isolated Staging Environment` |
+| Loop type | `DELIVERY_GOVERNANCE_PLAN` |
+| Loop status | `PLAN_COMPLETE_WAITING_FOR_OWNER_APPROVAL` |
 | AL-001 state | `PLAN_COMPLETE` |
-| Current permitted work | Owner approval of the completed AL-002 verification branch. No further implementation, merge, or production action is authorized until the owner explicitly approves the reviewed change. |
-| Explicitly not permitted in AL-002 | Production Chinatown provisioning, real accounts or passwords, menu clone/WOK exclusion/print-module policy (`AL-003`), Owner UI/All Stores UX (`AL-004`), automatic pairing (`AL-005`), deployment, or production migration execution. |
+| AL-002 state | `AL-002_WAITING_FOR_OWNER_APPROVAL`; the Staging plan does not approve, merge, deploy, or supersede it. |
+| Current permitted work | Owner review of the STG-001 plan and explicit decisions on host, access, state root, and resource budget. No Staging implementation or runtime action is authorized. |
+| Explicitly not permitted in STG-001 | SSH, Docker/Flyway execution, server/env/firewall/Nginx changes, production database access/copy, real accounts/devices/printers, AL-003 implementation, merge, or deployment. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 [AGILE_LOOP_OPERATING_MODEL.md](../AGILE_LOOP_OPERATING_MODEL.md), and
 [AL-001 technical plan](../agile/AL-001_OWNER_STORE_ONBOARDING_CHINATOWN_TECHNICAL_PLAN.md).
+
+### STG-001 planning record
+
+- Planning branch: `codex/stg-001-staging-environment-plan`.
+- Planning baseline: `origin/main` commit
+  `eadf100295c351a5f14a80fb2fb6eea351c2931b`.
+- The recommended architecture uses an exact-SHA detached Staging worktree,
+  explicit Compose project name, SHA-specific images, loopback-only ports, and
+  a dedicated PostgreSQL state root.
+- Initial Staging data is empty or synthetic only. Printing defaults to
+  `DISABLED` and may use `MOCK` for bounded acceptance; it must not connect to
+  a real printer or production Pad.
+- See
+  [STG-001 Isolated Staging Environment Plan](../agile/STG-001_STAGING_ENVIRONMENT_PLAN.md).
+- Status: `PLAN_COMPLETE_WAITING_FOR_OWNER_APPROVAL`. STG-002 implementation,
+  server access, migration execution, merge, and deployment remain
+  independently owner-gated.
 
 ### AL-002 implementation record
 

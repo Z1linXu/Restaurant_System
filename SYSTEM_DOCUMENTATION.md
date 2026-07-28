@@ -19,12 +19,50 @@ separate from historical evidence snapshots and business implementation details:
 - [AL-002 PostgreSQL and Flyway V8 local verification](docs/governance/runtime/AL-002_POSTGRES_FLYWAY_V8_VERIFICATION.md)
   records bounded PostgreSQL 16/Flyway evidence only. It is not a staging or
   production migration record.
+- [STG-001 isolated Staging environment plan](docs/governance/agile/STG-001_STAGING_ENVIRONMENT_PLAN.md)
+  defines the proposed exact-SHA, Compose-project, image, port, credential, and
+  PostgreSQL isolation model. It is a plan awaiting Owner approval and does not
+  authorize server access or deployment.
 - [Frontdesk/GRAB item-name rules](docs/operations/FRONTDESK_GRAB_ITEM_NAME_RULES.md)
   remains the operational display-rule source; do not duplicate its item table
   here.
 
 Historical Phase 3 runtime evidence remains under `docs/governance/runtime/`.
 It must not be rewritten as a living deployment manifest.
+
+## STG-001 Isolated Staging Environment Plan
+
+STG-001 documents a repeatable Staging design without changing runtime
+configuration or application behavior. The current production-shaped Compose
+package cannot safely be reused as a second checkout with defaults because the
+Compose project defaults to the directory name, image tags default to shared
+host-wide `:local` tags, ports default to 80/443, and persistent paths are
+relative to the checkout.
+
+The proposed Staging architecture therefore requires:
+
+- a detached worktree for the exact approved commit SHA outside the production
+  checkout;
+- explicit Compose project `restaurant-pos-staging`;
+- SHA-specific Staging backend/frontend image tags;
+- loopback-only initial access on non-production ports;
+- a dedicated Staging PostgreSQL 16 container, database credentials, and
+  persistent state root that cannot resolve to production data;
+- an independent JWT secret and cloud safety settings with unsafe seeding,
+  auth fallback, and developer tooling disabled;
+- Store printing `DISABLED` by default, with bounded `MOCK` tests only and no
+  real printer or production Pad identity;
+- empty-database and synthetic-data Flyway/startup verification, including a
+  second startup and exact migration history;
+- shared-host resource limits, log rotation, disk thresholds, and no load
+  testing.
+
+The implementation files, migration procedure, synthetic AL-002 checks,
+acceptance criteria, release gates, rollback constraints, NO-GO conditions,
+and Owner decisions are maintained in
+`docs/governance/agile/STG-001_STAGING_ENVIRONMENT_PLAN.md`.
+STG-001 is `PLAN_COMPLETE_WAITING_FOR_OWNER_APPROVAL`; STG-002 implementation,
+server access, migration execution, merge, and deployment are not authorized.
 
 ## AL-002 Owner Store Onboarding Backend Foundation
 

@@ -83,3 +83,9 @@ idempotency, secure staff credential/membership provisioning, and safe
 Store-default handling on an independent review branch. `AL-003` (menu
 clone/print policy), `AL-004` (Owner UI), and `AL-005` (production
 provisioning) are not authorized to enter implementation.
+
+`STG-001` is the current delivery-governance loop in `DISCOVER -> PLAN`. Its
+isolated Staging plan is `PLAN_COMPLETE_WAITING_FOR_OWNER_APPROVAL`. It does
+not change the AL-002 approval state and does not authorize STG-002
+implementation, server access, Docker/Flyway execution, merge, deployment, or
+AL-003 implementation.
