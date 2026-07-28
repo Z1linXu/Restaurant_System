@@ -1,5 +1,53 @@
 # SYSTEM DOCUMENTATION
 
+## Current Governance Index
+
+The current runtime and delivery-governance entry points are intentionally kept
+separate from historical evidence snapshots and business implementation details:
+
+- [Alive Runtime Planbook](docs/governance/runtime/ALIVE_RUNTIME_PLANBOOK.md)
+  is the living current-status, approval-boundary, and deployment-entry index.
+- [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
+  authority for current issue triage and closure status.
+- [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
+  approved feature requirements and current feature selection.
+- [Agile Loop Operating Model](docs/governance/AGILE_LOOP_OPERATING_MODEL.md)
+  defines the required observe-to-close workflow and owner approval gates.
+- [AL-001 Owner Store Onboarding technical plan](docs/governance/agile/AL-001_OWNER_STORE_ONBOARDING_CHINATOWN_TECHNICAL_PLAN.md)
+  records the Chinatown planning boundary. It does not authorize production
+  provisioning.
+- [Frontdesk/GRAB item-name rules](docs/operations/FRONTDESK_GRAB_ITEM_NAME_RULES.md)
+  remains the operational display-rule source; do not duplicate its item table
+  here.
+
+Historical Phase 3 runtime evidence remains under `docs/governance/runtime/`.
+It must not be rewritten as a living deployment manifest.
+
+## AL-002 Owner Store Onboarding Backend Foundation
+
+AL-002 adds the locally verified backend foundation for a future owner-scoped
+Store onboarding workflow. It is awaiting owner review and does not provision
+a production Store, copy a menu, create printers or devices, or provide an
+Owner UI.
+
+- `POST /api/v1/owner/organizations/{organizationId}/stores/onboard` requires
+  an authenticated `OWNER`, an active membership in that exact Organization,
+  and an `Idempotency-Key` request header.
+- The selected source Store must belong to the same Organization. Platform
+  Admin access is not an implicit bypass for this owner-only endpoint.
+- The durable onboarding request record is unique by Organization plus
+  idempotency key and stores only a request fingerprint and safe state/result
+  metadata. It never stores raw request bodies, passwords, tokens, or printer
+  endpoints.
+- The onboarding transaction creates an initially inactive Store with printing
+  disabled, then creates BCrypt-backed staff credentials and target-Store-only
+  memberships. Menu clone, WOK exclusion, print policy, printer configuration,
+  and Pad pairing remain outside AL-002.
+- Timezone, tax, and language are currently global application behavior rather
+  than proven Store-scoped defaults, so AL-002 does not invent or copy those
+  settings. Existing receipt configuration is Store scoped but is configured
+  later through Print Center without copying endpoints.
+
 Generated from the current codebase only. If a detail is not explicit in code, it is marked as `UNKNOWN`.
 
 Additional maintainable architecture document:
@@ -6895,3 +6943,14 @@ cleanup. V7 is additive and must be migrated before enabling the acknowledgement
 API on a database that has not yet applied it. The Android worker remains a
 foreground/semi-auto pilot component and still requires real-device testing
 after APK installation.
+
+## Operational Display Rule Sources
+
+The authoritative operational reference for the intentionally different
+frontdesk customer-facing names and GRAB kitchen-production names is
+`docs/operations/FRONTDESK_GRAB_ITEM_NAME_RULES.md`
+(`OPERATIONAL_DISPLAY_RULE_SOURCE`). It records stable SKU and option-code
+mapping rules, kitchen-task snapshot precedence, grouping/quantity formats,
+fallback behavior, and the required GRAB regression coverage. This system
+document keeps only this summary and link; it must not duplicate the full
+per-item mapping table.
