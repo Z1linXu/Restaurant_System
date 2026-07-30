@@ -316,6 +316,17 @@ assert_resolved_compose() {
     and (($ports[0].target | tostring) == "80")
     and ($ports[0].protocol == "tcp")
   ' "$ports_json" >/dev/null || die "resolved Compose must publish exactly 127.0.0.1:18080->80/tcp and no other ports"
+  jq -e '
+    def bounded($service; $cpus; $memory):
+      ((.services[$service].cpus | tonumber) == $cpus)
+      and ((.services[$service].mem_limit | tonumber) == $memory)
+      and (.services[$service].logging.driver == "local")
+      and (.services[$service].logging.options["max-size"] == "10m")
+      and ((.services[$service].logging.options["max-file"] | tostring) == "3");
+    bounded("db"; 0.75; 536870912)
+    and bounded("backend"; 1; 805306368)
+    and bounded("nginx"; 0.25; 134217728)
+  ' "$ports_json" >/dev/null || die "resolved Compose resource or log limits differ from the bounded staging values"
   services="$(local_compose "$env_file" "$compose_file" config --services)" || die "Compose services validation failed"
   [[ "$services" == $'db\nbackend\nnginx' ]] || die "resolved Compose services must exactly be db, backend, nginx"
   grep -Fq "postgres:16-alpine" "$resolved" || die "resolved Compose PostgreSQL image differs"
@@ -328,7 +339,6 @@ assert_resolved_compose() {
   grep -Fq 'SPRING_PROFILES_ACTIVE: cloud' "$resolved" || die "resolved Spring profile differs"
   grep -Eq "APP_FEATURES_PRINTING: [\\\"']?false" "$resolved" || die "resolved printing feature differs"
   grep -Fq 'STAGING_PRINT_MODE=DISABLED' "$env_file" || die "printing mode must remain disabled"
-  for value in 0.75 512m 1.00 768m 0.25 128m 10m 3; do grep -Fq "$value" "$resolved" || die "resolved Compose misses bounded resource/log value $value"; done
   source_count="$(grep -Ec '^[[:space:]]*source:' "$resolved" || true)"
   [[ "$source_count" -eq 2 ]] || die "resolved Compose has unexpected mounts"
   ! grep -Eqi 'docker\.sock|privileged:[[:space:]]*true|network_mode:[[:space:]]*host|pid:[[:space:]]*host|:80:80|:443:443|0\.0\.0\.0|/srv/|/home/ubuntu/' "$resolved" || die "resolved Compose contains forbidden privileged, host, socket, or server configuration"

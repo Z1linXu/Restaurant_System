@@ -103,7 +103,7 @@ case "$action" in
     if [[ "${1:-}" == "--services" ]]; then printf 'db\nbackend\nnginx\n'; exit 0; fi
     if [[ "${1:-}" == "--format" && "${2:-}" == "json" ]]; then
       cat <<EOF
-{"services":{"db":{"ports":[]},"backend":{"ports":[]},"nginx":{"ports":[{"host_ip":"127.0.0.1","published":"18080","target":80,"protocol":"tcp"}]}}}
+{"services":{"db":{"cpus":0.75,"mem_limit":"536870912","logging":{"driver":"local","options":{"max-size":"10m","max-file":"3"}},"ports":[]},"backend":{"cpus":1,"mem_limit":"805306368","logging":{"driver":"local","options":{"max-size":"10m","max-file":"3"}},"ports":[]},"nginx":{"cpus":0.25,"mem_limit":"134217728","logging":{"driver":"local","options":{"max-size":"10m","max-file":"3"}},"ports":[{"host_ip":"127.0.0.1","published":"18080","target":80,"protocol":"tcp"}]}}}
 EOF
       exit 0
     fi
@@ -111,6 +111,13 @@ EOF
 services:
   db:
     image: postgres:16-alpine
+    cpus: 0.75
+    mem_limit: "536870912"
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "3"
     volumes:
       - type: bind
         source: $root/state/postgres
@@ -126,8 +133,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: cloud
       APP_FEATURES_PRINTING: "false"
-    cpus: 1.00
-    mem_limit: 768m
+    cpus: 1
+    mem_limit: "805306368"
     logging:
       options:
         max-size: 10m
@@ -143,7 +150,7 @@ services:
         source: $root/releases/$sha/deployment/cloud/nginx.http.conf.template
         target: /etc/nginx/templates/default.conf.template
     cpus: 0.25
-    mem_limit: 128m
+    mem_limit: "134217728"
     logging:
       options:
         max-size: 10m

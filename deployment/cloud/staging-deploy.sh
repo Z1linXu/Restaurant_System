@@ -206,6 +206,31 @@ memory_megabytes() {
   printf '%s' "${BASH_REMATCH[1]}"
 }
 
+normalize_decimal() {
+  awk -v value="$1" 'BEGIN { printf "%.12g", value }'
+}
+
+require_resolved_service_scalar() {
+  local file="$1" service="$2" key="$3" expected="$4" description="$5"
+  awk -v service="$service" -v key="$key" -v expected="$expected" '
+    $0 == "  " service ":" {
+      in_service = 1
+      next
+    }
+    in_service && /^  [^ ]/ {
+      in_service = 0
+    }
+    in_service && $1 == key ":" {
+      value = $2
+      gsub(/["\047]/, "", value)
+      if (value == expected) {
+        found = 1
+      }
+    }
+    END { exit !found }
+  ' "$file" || die "resolved Compose is missing the validated $description"
+}
+
 validate_resource_limits() {
   STAGING_DB_CPU_LIMIT="$(require_value STAGING_DB_CPU_LIMIT)"
   STAGING_BACKEND_CPU_LIMIT="$(require_value STAGING_BACKEND_CPU_LIMIT)"
@@ -230,6 +255,12 @@ validate_resource_limits() {
   [[ "$backend_memory" -le 768 ]] || die "STAGING_BACKEND_MEMORY_LIMIT exceeds 768m"
   [[ "$nginx_memory" -le 128 ]] || die "STAGING_NGINX_MEMORY_LIMIT exceeds 128m"
   [[ $((db_memory + backend_memory + nginx_memory)) -le 1408 ]] || die "total staging memory limit exceeds 1408m"
+  STAGING_DB_CPU_NORMALIZED="$(normalize_decimal "$STAGING_DB_CPU_LIMIT")"
+  STAGING_BACKEND_CPU_NORMALIZED="$(normalize_decimal "$STAGING_BACKEND_CPU_LIMIT")"
+  STAGING_NGINX_CPU_NORMALIZED="$(normalize_decimal "$STAGING_NGINX_CPU_LIMIT")"
+  STAGING_DB_MEMORY_BYTES="$((db_memory * 1024 * 1024))"
+  STAGING_BACKEND_MEMORY_BYTES="$((backend_memory * 1024 * 1024))"
+  STAGING_NGINX_MEMORY_BYTES="$((nginx_memory * 1024 * 1024))"
 
   JAVA_OPTS="$(require_value JAVA_OPTS)"
   [[ "$JAVA_OPTS" =~ ^-Xms([1-9][0-9]*)[mM][[:space:]]+-Xmx([1-9][0-9]*)[mM]$ ]] || die "JAVA_OPTS must be exactly '-Xms<whole-m> -Xmx<whole-m>'"
@@ -452,8 +483,16 @@ assert_resolved_compose() {
   grep -Fq "VITE_APP_BUILD_VERSION: staging-$STAGING_COMMIT_SHA" "$resolved_config" || die "resolved Compose frontend build version differs from the validated SHA"
   grep -Eq "APP_FEATURES_PRINTING: [\"']?${STAGING_PRINTING_FEATURE_ENABLED}" "$resolved_config" || die "resolved backend printing feature does not match the validated staging mode"
   grep -Eq '(127\.0\.0\.1:18080:80|published: "18080")' "$resolved_config" || die "resolved Compose does not expose the required loopback staging HTTP port"
-  for value in "$STAGING_DB_CPU_LIMIT" "$STAGING_BACKEND_CPU_LIMIT" "$STAGING_NGINX_CPU_LIMIT" "$STAGING_DB_MEMORY_LIMIT" "$STAGING_BACKEND_MEMORY_LIMIT" "$STAGING_NGINX_MEMORY_LIMIT" "$STAGING_LOG_MAX_SIZE" "$STAGING_LOG_MAX_FILE"; do
-    grep -Fq "$value" "$resolved_config" || die "resolved Compose is missing a validated resource or log limit"
+  # Compose normalizes values such as 1.00 to 1 and 512m to bytes.
+  require_resolved_service_scalar "$resolved_config" db cpus "$STAGING_DB_CPU_NORMALIZED" "database CPU limit"
+  require_resolved_service_scalar "$resolved_config" backend cpus "$STAGING_BACKEND_CPU_NORMALIZED" "backend CPU limit"
+  require_resolved_service_scalar "$resolved_config" nginx cpus "$STAGING_NGINX_CPU_NORMALIZED" "nginx CPU limit"
+  require_resolved_service_scalar "$resolved_config" db mem_limit "$STAGING_DB_MEMORY_BYTES" "database memory limit"
+  require_resolved_service_scalar "$resolved_config" backend mem_limit "$STAGING_BACKEND_MEMORY_BYTES" "backend memory limit"
+  require_resolved_service_scalar "$resolved_config" nginx mem_limit "$STAGING_NGINX_MEMORY_BYTES" "nginx memory limit"
+  for service in db backend nginx; do
+    require_resolved_service_scalar "$resolved_config" "$service" max-size "$STAGING_LOG_MAX_SIZE" "$service log size limit"
+    require_resolved_service_scalar "$resolved_config" "$service" max-file "$STAGING_LOG_MAX_FILE" "$service log file limit"
   done
   if grep -Eq '(:local|0\.0\.0\.0|:80:80|:443:443|/home/ubuntu/Restaurant_System/deployment/cloud/data/postgres)' "$resolved_config"; then
     die "resolved Compose contains a forbidden production-like value"
