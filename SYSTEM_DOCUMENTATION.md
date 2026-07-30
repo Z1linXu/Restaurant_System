@@ -20,9 +20,11 @@ separate from historical evidence snapshots and business implementation details:
   records bounded PostgreSQL 16/Flyway evidence only. It is not a staging or
   production migration record.
 - [STG-001 isolated Staging environment plan](docs/governance/agile/STG-001_STAGING_ENVIRONMENT_PLAN.md)
-  defines the proposed exact-SHA, Compose-project, image, port, credential, and
-  PostgreSQL isolation model. It is a plan awaiting Owner approval and does not
-  authorize server access or deployment.
+  defines the exact-SHA, Compose-project, image, port, credential, and
+  PostgreSQL isolation model.
+- [STG-003 local rehearsal evidence](docs/governance/runtime/STG-003_LOCAL_REHEARSAL_EVIDENCE.md)
+  records the real local Docker/Flyway V1-V8 verification. It does not prove or
+  authorize a server Staging deployment.
 - [Frontdesk/GRAB item-name rules](docs/operations/FRONTDESK_GRAB_ITEM_NAME_RULES.md)
   remains the operational display-rule source; do not duplicate its item table
   here.
@@ -30,7 +32,7 @@ separate from historical evidence snapshots and business implementation details:
 Historical Phase 3 runtime evidence remains under `docs/governance/runtime/`.
 It must not be rewritten as a living deployment manifest.
 
-## STG-001 Isolated Staging Environment Plan
+## STG-001 to STG-003 Isolated Staging Verification
 
 STG-001 documents a repeatable Staging design without changing runtime
 configuration or application behavior. The current production-shaped Compose
@@ -61,8 +63,31 @@ The implementation files, migration procedure, synthetic AL-002 checks,
 acceptance criteria, release gates, rollback constraints, NO-GO conditions,
 and Owner decisions are maintained in
 `docs/governance/agile/STG-001_STAGING_ENVIRONMENT_PLAN.md`.
-STG-001 is `PLAN_COMPLETE_WAITING_FOR_OWNER_APPROVAL`; STG-002 implementation,
-server access, migration execution, merge, and deployment are not authorized.
+
+PR #31 merged the standalone STG-002 deployment package into `main`. STG-003
+then completed a real local Docker Desktop rehearsal at exact commit
+`b17ffa9a397bef62d474a58b649f1e55467a974f`:
+
+- Compose project `restaurant-pos-staging` contained exactly `db`, `backend`,
+  and `nginx`;
+- only `127.0.0.1:18080` was published;
+- backend/frontend images used `staging-<full-sha>` tags;
+- PostgreSQL 16.14 used an isolated temporary bind mount and applied Flyway
+  V1-V8;
+- a second startup reported schema version 8 and no migration necessary;
+- cloud-profile JPA schema validation and backend startup passed;
+- frontend root, backend health through `/api`, and SockJS `/ws/info` returned
+  HTTP 200;
+- printing remained `DISABLED`, business table counts remained zero, and no
+  real account, printer, Pad, order, or customer data was created;
+- cleanup removed only local Staging containers/network and preserved the
+  PostgreSQL state directory.
+
+The evidence is maintained in
+`docs/governance/runtime/STG-003_LOCAL_REHEARSAL_EVIDENCE.md`.
+Status is `STG-003_LOCAL_REHEARSAL_COMPLETE_WAITING_FOR_OWNER_REVIEW`.
+STG-005, server access/deployment, production data, and AL-003 remain
+unauthorized and unstarted.
 
 ## AL-002 Owner Store Onboarding Backend Foundation
 

@@ -71,9 +71,28 @@ If a root contains more than one rehearsal release, cleanup requires the exact
 release SHA: append `--commit <full-sha>`. This prevents an ambiguous cleanup
 from targeting the wrong local worktree.
 
-## Current Machine Limitation
+## Verified Local Execution
 
-At the time of this STG-003 implementation, the development machine has no
-Docker CLI/runtime. `--plan` and the fake-Docker safety test are available, but
-`--run` intentionally fails before creating local state. Runtime claims remain
-evidence pending until an owner-approved local Docker execution is captured.
+An Owner-authorized local Docker Desktop rehearsal completed on 2026-07-30 for
+exact commit `b17ffa9a397bef62d474a58b649f1e55467a974f`.
+
+- Docker Engine 29.6.2 and Compose v5.3.1 built and started `db`, `backend`,
+  and `nginx` under project `restaurant-pos-staging`.
+- Only `127.0.0.1:18080` was published.
+- PostgreSQL 16.14 applied Flyway V1-V8 on the first startup and retained the
+  same eight successful history rows on the second startup.
+- Backend health, frontend root, `/api`, and SockJS `/ws/info` checks passed.
+- Printing stayed `DISABLED`, and no business records were created.
+- Cleanup removed only the local containers and network; the isolated
+  PostgreSQL state directory was preserved.
+
+Docker Compose v5 normalizes CPU and memory values in resolved configuration.
+The guards validate normalized values per service. The local runner also uses a
+generated credential-free Docker CLI configuration that exposes only the
+verified Compose plugin directory; it does not depend on or copy a developer's
+registry credentials.
+
+The complete machine evidence, including bounded failed attempts and test
+results, is maintained in
+`docs/governance/runtime/STG-003_LOCAL_REHEARSAL_EVIDENCE.md`. This local result
+does not authorize or prove a server Staging deployment.
