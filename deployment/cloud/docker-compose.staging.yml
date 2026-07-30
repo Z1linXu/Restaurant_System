@@ -1,0 +1,97 @@
+services:
+  db:
+    image: postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG is required}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:?DB_NAME is required}
+      POSTGRES_USER: ${DB_USER:?DB_USER is required}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      TZ: ${TZ:-America/Toronto}
+    volumes:
+      - ${STAGING_POSTGRES_DATA_DIR:?STAGING_POSTGRES_DATA_DIR is required}:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    cpus: "${STAGING_DB_CPU_LIMIT:-0.75}"
+    mem_limit: ${STAGING_DB_MEMORY_LIMIT:-512m}
+    logging:
+      driver: local
+      options:
+        max-size: ${STAGING_LOG_MAX_SIZE:-10m}
+        max-file: "${STAGING_LOG_MAX_FILE:-3}"
+    networks:
+      - restaurant-pos
+
+  backend:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    image: ${BACKEND_IMAGE:?BACKEND_IMAGE is required}
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:?SPRING_PROFILES_ACTIVE is required}
+      SERVER_PORT: 8080
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:?DB_NAME is required}
+      DB_USER: ${DB_USER:?DB_USER is required}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JAVA_OPTS: ${JAVA_OPTS:-}
+      TZ: ${TZ:-America/Toronto}
+      APP_AUTH_X_USER_ID_FALLBACK_ENABLED: "false"
+      APP_DEV_TOOLS_ROLE_SWITCHER_ENABLED: "false"
+      APP_SEED_DEFAULT_USERS_ENABLED: "false"
+      APP_SEED_DEMO_DATA_ENABLED: "false"
+      APP_SEED_MEMBERSHIP_SUPPLEMENT_ENABLED: "false"
+      APP_SEED_PRODUCTION_BOOTSTRAP_ENABLED: "false"
+      # Server/default staging validation requires this to resolve to false.
+      # Local MOCK shape validation never starts this Compose service.
+      APP_FEATURES_PRINTING: ${STAGING_PRINTING_FEATURE_ENABLED:?STAGING_PRINTING_FEATURE_ENABLED is required}
+    expose:
+      - "8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    cpus: "${STAGING_BACKEND_CPU_LIMIT:-1.00}"
+    mem_limit: ${STAGING_BACKEND_MEMORY_LIMIT:-768m}
+    logging:
+      driver: local
+      options:
+        max-size: ${STAGING_LOG_MAX_SIZE:-10m}
+        max-file: "${STAGING_LOG_MAX_FILE:-3}"
+    networks:
+      - restaurant-pos
+
+  nginx:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_APP_BUILD_VERSION: ${VITE_APP_BUILD_VERSION:?VITE_APP_BUILD_VERSION is required}
+    image: ${FRONTEND_IMAGE:?FRONTEND_IMAGE is required}
+    restart: unless-stopped
+    environment:
+      NGINX_SERVER_NAME: ${NGINX_SERVER_NAME:-localhost}
+      TZ: ${TZ:-America/Toronto}
+    ports:
+      - "${HTTP_BIND_ADDRESS:?HTTP_BIND_ADDRESS is required}:${HTTP_PORT:?HTTP_PORT is required}:80"
+    depends_on:
+      - backend
+    volumes:
+      - ./nginx.http.conf.template:/etc/nginx/templates/default.conf.template:ro
+    cpus: "${STAGING_NGINX_CPU_LIMIT:-0.25}"
+    mem_limit: ${STAGING_NGINX_MEMORY_LIMIT:-128m}
+    logging:
+      driver: local
+      options:
+        max-size: ${STAGING_LOG_MAX_SIZE:-10m}
+        max-file: "${STAGING_LOG_MAX_FILE:-3}"
+    networks:
+      - restaurant-pos
+
+networks:
+  restaurant-pos:
+    driver: bridge
