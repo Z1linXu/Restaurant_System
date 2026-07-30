@@ -177,6 +177,7 @@ local_compose() {
   local env_file="$1" compose_file="$2"
   shift 2
   env -i PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" HOME="${HOME:-/tmp}" \
+    DOCKER_CONFIG="/nonexistent" \
     "$DOCKER_BIN" --context default compose --project-name "$PROJECT_NAME" \
     --env-file "$env_file" -f "$compose_file" "$@"
 }

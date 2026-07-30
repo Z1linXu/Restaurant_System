@@ -77,6 +77,7 @@ cat >"$FAKE_BIN/docker" <<'DOCKER'
 set -euo pipefail
 LOG="$(dirname "$0")/docker.calls"
 printf 'argv=%s\n' "$*" >>"$LOG"
+printf 'docker_config=%s\n' "${DOCKER_CONFIG-unset}" >>"$LOG"
 if [[ "${1:-}" == "context" ]]; then
   [[ "${2:-}" == "inspect" && "${3:-}" == "default" ]] || exit 91
   if [[ "${4:-}" == "--format" ]]; then printf 'unix:///tmp/stg003-fake.sock\n'; fi
@@ -183,6 +184,7 @@ assert_contains 'action=build remaining=backend nginx' "$FAKE_BIN/docker.calls"
 assert_contains 'action=up remaining=-d' "$FAKE_BIN/docker.calls"
 assert_contains 'action=stop remaining=' "$FAKE_BIN/docker.calls"
 assert_contains '--context default compose --project-name restaurant-pos-staging' "$FAKE_BIN/docker.calls"
+assert_contains 'docker_config=/nonexistent' "$FAKE_BIN/docker.calls"
 assert_not_contains 'down -v' "$FAKE_BIN/docker.calls"
 assert_not_contains 'Flyway clean' "$FAKE_BIN/docker.calls"
 assert_not_contains '/srv/' "$FAKE_BIN/docker.calls"
