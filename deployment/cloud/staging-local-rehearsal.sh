@@ -18,6 +18,8 @@ LOCAL_TMP_BASE=""
 LOCAL_ROOT=""
 LOCAL_ROOT_WAS_EXPLICIT="false"
 DOCKER_BIN=""
+DOCKER_CLI_CONFIG=""
+DOCKER_COMPOSE_PLUGIN_DIR=""
 PRIVATE_RESOLVED_CONFIG=""
 PRIVATE_RESOLVED_PORTS=""
 
@@ -171,13 +173,39 @@ assert_local_docker() {
   local endpoint
   endpoint="$($DOCKER_BIN context inspect default --format '{{.Endpoints.docker.Host}}' 2>/dev/null || true)"
   case "$endpoint" in unix://*|npipe://*) ;; *) die "Docker context 'default' must use a local unix or npipe endpoint" ;; esac
+  local compose_plugin
+  compose_plugin="$($DOCKER_BIN info --format '{{range .ClientInfo.Plugins}}{{if eq .Name "compose"}}{{.Path}}{{end}}{{end}}' 2>/dev/null || true)"
+  [[ "$compose_plugin" == /* && -x "$compose_plugin" ]] || die "Docker Compose plugin path could not be verified"
+  DOCKER_COMPOSE_PLUGIN_DIR="$(cd -P -- "$(dirname -- "$compose_plugin")" && pwd)" || die "Docker Compose plugin directory could not be resolved"
+}
+
+configure_isolated_docker_cli() {
+  local config_dir="$1" mode="$2" config_file
+  DOCKER_CLI_CONFIG="$config_dir/docker-cli"
+  config_file="$DOCKER_CLI_CONFIG/config.json"
+  if [[ "$mode" == "create" ]]; then
+    [[ ! -e "$DOCKER_CLI_CONFIG" ]] || die "isolated Docker CLI configuration already exists"
+    mkdir -p "$DOCKER_CLI_CONFIG"
+    chmod 700 "$DOCKER_CLI_CONFIG"
+    jq -n --arg plugin_dir "$DOCKER_COMPOSE_PLUGIN_DIR" \
+      '{auths: {}, cliPluginsExtraDirs: [$plugin_dir]}' >"$config_file"
+    chmod 600 "$config_file"
+  fi
+  [[ -d "$DOCKER_CLI_CONFIG" && ! -L "$DOCKER_CLI_CONFIG" ]] || die "isolated Docker CLI configuration is missing or unsafe"
+  [[ -f "$config_file" && ! -L "$config_file" && "$(file_mode "$config_file")" == "600" ]] || die "isolated Docker CLI config file is missing or unsafe"
+  jq -e --arg plugin_dir "$DOCKER_COMPOSE_PLUGIN_DIR" '
+    (.auths == {})
+    and (.cliPluginsExtraDirs == [$plugin_dir])
+    and ((keys | sort) == ["auths", "cliPluginsExtraDirs"])
+  ' "$config_file" >/dev/null || die "isolated Docker CLI config contains unexpected settings"
 }
 
 local_compose() {
   local env_file="$1" compose_file="$2"
   shift 2
+  [[ -n "$DOCKER_CLI_CONFIG" ]] || die "isolated Docker CLI configuration is unavailable"
   env -i PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" HOME="${HOME:-/tmp}" \
-    DOCKER_CONFIG="/nonexistent" \
+    DOCKER_CONFIG="$DOCKER_CLI_CONFIG" \
     "$DOCKER_BIN" --context default compose --project-name "$PROJECT_NAME" \
     --env-file "$env_file" -f "$compose_file" "$@"
 }
@@ -362,6 +390,7 @@ run_rehearsal() {
   [[ ! -e "$release_dir" && ! -e "$config_dir" && ! -e "$state_dir" ]] || die "local root already contains release/config/state; refusing to overwrite it"
   mkdir -p "$LOCAL_ROOT/releases" "$config_dir" "$state_dir/postgres"
   chmod 700 "$config_dir" "$state_dir"
+  configure_isolated_docker_cli "$config_dir" create
   revalidate_created_root
   git -C "$REPOSITORY_ROOT" worktree add --detach "$release_dir" "$COMMIT_SHA" >/dev/null
   assert_release_identity
@@ -397,6 +426,7 @@ cleanup_local_project() {
   release_dir="$LOCAL_ROOT/releases/$COMMIT_SHA"
   compose_file="$release_dir/$COMPOSE_RELATIVE_PATH"
   revalidate_created_root
+  configure_isolated_docker_cli "$LOCAL_ROOT/config" existing
   assert_release_identity
   assert_env_identity "$env_file"
   assert_resolved_compose "$env_file" "$compose_file"

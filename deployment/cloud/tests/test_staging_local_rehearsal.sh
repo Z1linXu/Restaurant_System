@@ -83,6 +83,11 @@ if [[ "${1:-}" == "context" ]]; then
   if [[ "${4:-}" == "--format" ]]; then printf 'unix:///tmp/stg003-fake.sock\n'; fi
   exit 0
 fi
+if [[ "${1:-}" == "info" ]]; then
+  [[ "${2:-}" == "--format" ]] || exit 95
+  printf '%s/docker-compose\n' "$(dirname "$0")"
+  exit 0
+fi
 [[ "${1:-}" == "--context" && "${2:-}" == "default" && "${3:-}" == "compose" ]] || exit 92
 shift 3
 project=""; env_file=""; compose_file=""
@@ -164,6 +169,7 @@ EOF
 esac
 DOCKER
 chmod +x "$FAKE_BIN/docker"
+ln -s "$FAKE_BIN/docker" "$FAKE_BIN/docker-compose"
 
 cat >"$FAKE_BIN/curl" <<'CURL'
 #!/usr/bin/env bash
@@ -184,7 +190,7 @@ assert_contains 'action=build remaining=backend nginx' "$FAKE_BIN/docker.calls"
 assert_contains 'action=up remaining=-d' "$FAKE_BIN/docker.calls"
 assert_contains 'action=stop remaining=' "$FAKE_BIN/docker.calls"
 assert_contains '--context default compose --project-name restaurant-pos-staging' "$FAKE_BIN/docker.calls"
-assert_contains 'docker_config=/nonexistent' "$FAKE_BIN/docker.calls"
+assert_contains "docker_config=$FAKE_ROOT/config/docker-cli" "$FAKE_BIN/docker.calls"
 assert_not_contains 'down -v' "$FAKE_BIN/docker.calls"
 assert_not_contains 'Flyway clean' "$FAKE_BIN/docker.calls"
 assert_not_contains '/srv/' "$FAKE_BIN/docker.calls"
