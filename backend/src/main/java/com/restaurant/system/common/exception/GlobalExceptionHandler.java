@@ -5,6 +5,7 @@ import com.restaurant.system.common.auth.UnauthorizedException;
 import com.restaurant.system.common.feature.FeatureDisabledException;
 import com.restaurant.system.common.response.ApiResponse;
 import com.restaurant.system.order.exception.OrderSubmissionException;
+import com.restaurant.system.owner.exception.OwnerStoreMenuCloneException;
 import com.restaurant.system.owner.exception.OwnerStoreOnboardingException;
 import jakarta.validation.ConstraintViolationException;
 import java.util.stream.Collectors;
@@ -31,6 +32,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(OwnerStoreOnboardingException.class)
     public ResponseEntity<ApiResponse<Void>> handleOwnerStoreOnboardingException(OwnerStoreOnboardingException ex) {
+        return ResponseEntity.status(ex.getStatus()).body(ApiResponse.failure(ex.getErrorCode(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(OwnerStoreMenuCloneException.class)
+    public ResponseEntity<ApiResponse<Void>> handleOwnerStoreMenuCloneException(OwnerStoreMenuCloneException ex) {
         return ResponseEntity.status(ex.getStatus()).body(ApiResponse.failure(ex.getErrorCode(), ex.getMessage()));
     }
 
