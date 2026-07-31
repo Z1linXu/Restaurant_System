@@ -62,16 +62,17 @@ snapshots. Do not copy those reports into this planbook.
 | Item | Current state |
 |---|---|
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `STG-004 First Same-Host Staging Deployment Preflight` |
-| Loop type | `DELIVERY_GOVERNANCE_VERIFY` |
-| Loop status | `STG-004_SERVER_STAGING_RUNNING_WAITING_FOR_OWNER_VALIDATION` |
+| Current Agile Loop | `STG-005 Synthetic Business Acceptance` |
+| Loop type | `DELIVERY_GOVERNANCE_PLAN` |
+| Loop status | `STG-005_PLAN_COMPLETE_WAITING_FOR_OWNER_REVIEW` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | `AL-002_WAITING_FOR_OWNER_APPROVAL`; the Staging plan does not approve, merge, deploy, or supersede it. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
 | STG-003 state | PR #35 merged the completed real local Docker rehearsal into `main`; final runtime Head `74dd6a628002f96e4f2b4fbe3cf479fb23ed8e01` is `FINAL_HEAD_REHEARSAL_PASS`. |
-| STG-004 state | PR #37 merged the isolated Docker CLI-state fix. Exact SHA `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` passed PLAN, fresh PREFLIGHT, serial build/start, runtime verification, and isolated stop/start recovery. Server Staging remains running for Owner validation. |
-| Current permitted work | Owner validation of the running STG-004 environment and review of the recorded evidence only. |
-| Explicitly not permitted | Production checkout/environment/project changes, old SHA or digest reuse, parallel builds, destructive Docker/Flyway/restore operations, STG-005, STG-006, AL-003, or unrelated backlog work. |
+| STG-004 state | PR #38 merged the STG-004 runtime evidence. Exact SHA `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` passed PLAN, fresh PREFLIGHT, serial build/start, runtime verification, and isolated stop/start recovery. Server Staging remains running; Production remained unchanged. |
+| STG-005 state | PLAN complete on branch `codex/stg-005-synthetic-acceptance-plan`. No runtime command or synthetic write was executed. Execution is blocked on an approved synthetic Owner/Organization/source Store bootstrap and an Owner decision about the currently disabled KDS/Assembling surfaces. |
+| Current permitted work | Owner review of the STG-005 synthetic acceptance plan only. |
+| Explicitly not permitted | STG-005 execution, SSH, API/database writes, account/Store/order creation, Docker or Staging restart, Production changes, STG-006, AL-003, merge, deployment, or unrelated backlog work. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 [AGILE_LOOP_OPERATING_MODEL.md](../AGILE_LOOP_OPERATING_MODEL.md), and
@@ -247,6 +248,34 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
   login/onboarding, real STOMP, Android, restore, load, or soak validation.
 - Next state:
   `STG-004_SERVER_STAGING_RUNNING_WAITING_FOR_OWNER_VALIDATION`.
+
+### STG-005 synthetic acceptance planning record
+
+- Planning branch: `codex/stg-005-synthetic-acceptance-plan`.
+- Planning baseline: `origin/main` commit
+  `2e6be1ac44f59cd6e005e68e61f8c567ea80022e`.
+- Planned runtime remains exact STG-004 SHA
+  `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c`, Compose project
+  `restaurant-pos-staging`, SSH-tunnel-only access, and printing `DISABLED`.
+- Command categories executed in PLAN: local governance/source reads and local
+  Git baseline inspection only. No SSH, API, database, Docker, migration,
+  restart, account, Store, menu, table, or order write occurred.
+- Evidence:
+  [STG-005 Synthetic Business Acceptance Plan](STG-005_SYNTHETIC_ACCEPTANCE_PLAN.md).
+- Gate result: the empty Staging runtime has no confirmed formal first
+  Owner/Organization/source Store bootstrap path. AL-002 requires all three,
+  and the current staging configuration disables default/demo/bootstrap users,
+  developer switching, and Platform Admin entry.
+- Additional boundary: current backend and frontend feature configuration
+  disables KDS, so positive Kitchen/Assembling workflow acceptance requires a
+  separate Owner decision and exact-SHA authorization.
+- Current resource state: no new observation was performed in PLAN; use the
+  immutable STG-004 evidence and do not infer current runtime health from this
+  documentation commit.
+- Unresolved risks: synthetic bootstrap provenance, KDS/Assembling acceptance
+  scope, and final Organization/Store cleanup through supported APIs.
+- Next state:
+  `STG-005_PLAN_COMPLETE_WAITING_FOR_OWNER_REVIEW`.
 
 ### AL-002 implementation record
 
