@@ -54,6 +54,12 @@ if [[ "${1:-}" == "inspect" ]]; then
 fi
 [[ "${1:-}" == "compose" ]] || exit 92
 shift
+if [[ "${1:-}" == "version" ]]; then
+  [[ "$HOME" == */restaurant-pos-staging-docker-cli.*/home ]] || exit 95
+  [[ "$DOCKER_CONFIG" == */restaurant-pos-staging-docker-cli.*/docker-config ]] || exit 96
+  printf 'Docker Compose version fake\n'
+  exit 0
+fi
 env_file=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
