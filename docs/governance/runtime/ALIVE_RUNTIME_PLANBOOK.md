@@ -182,7 +182,9 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 - Current Git baseline for the candidate is parent SHA
   `3c1b117e137cc90b984bb392cb3f9e4b7a7f149f` on branch
   `codex/stg-004-serial-build-fix`; the resulting review commit and PR are
-  recorded by the Git review workflow, not predicted in this document.
+  implementation commit
+  `67f183ba998b88810e03db4b77b7c433ac5c3cf1` and draft PR #36 with base
+  `main`.
 - Next state: `STG-004_SERIAL_BUILD_FIX_WAITING_FOR_OWNER_REVIEW`.
 
 ### AL-002 implementation record
