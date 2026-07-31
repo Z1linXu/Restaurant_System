@@ -20,6 +20,10 @@ Do not use production credentials, production database data, a production
 PostgreSQL data path, real accounts, device credentials, printer endpoints, or
 `REAL`/`PAD_DIRECT` printing in Staging.
 
+The separately reviewed one-shot prerequisite command is documented in
+[STG-005A Synthetic Bootstrap](README_STG005_SYNTHETIC_BOOTSTRAP.md). That
+runbook does not authorize applying its migration or executing the command.
+
 ## Release layout
 
 The Staging wrapper validates that its checkout is exactly:

@@ -1,0 +1,18 @@
+spring:
+  main:
+    web-application-type: none
+  flyway:
+    enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+app:
+  features:
+    printing: false
+  seed:
+    runtime-enabled: false
+
+stg005:
+  bootstrap:
+    command-enabled: false
