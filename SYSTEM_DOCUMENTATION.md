@@ -28,6 +28,10 @@ separate from historical evidence snapshots and business implementation details:
 - [STG-004 same-host preflight](deployment/cloud/README_STAGING_SERVER_PREFLIGHT.md)
   defines the read-only preflight, explicit Owner start gate, and plan-only
   controls. It does not authorize SSH or deployment.
+- [STG-005 synthetic business acceptance plan](docs/governance/runtime/STG-005_SYNTHETIC_ACCEPTANCE_PLAN.md)
+  defines the synthetic naming, onboarding/idempotency, Store-isolation,
+  ordering, realtime, disabled-printing, persistence, evidence, and cleanup
+  gates. It is a plan only and authorizes no runtime write.
 - [Frontdesk/GRAB item-name rules](docs/operations/FRONTDESK_GRAB_ITEM_NAME_RULES.md)
   remains the operational display-rule source; do not duplicate its item table
   here.
@@ -128,9 +132,23 @@ version 8, and healthy frontend, backend, and SockJS entry checks. Production
 project `cloud` container identity, start time, and restart counts remained
 unchanged. Full evidence is in
 [STG-004 Same-Host Server Staging Evidence](docs/governance/runtime/STG-004_SERVER_STAGING_EVIDENCE.md).
-Status:
-`STG-004_SERVER_STAGING_RUNNING_WAITING_FOR_OWNER_VALIDATION`. STG-005,
-STG-006, and AL-003 remain unauthorized and unstarted.
+At the close of STG-004, its status was
+`STG-004_SERVER_STAGING_RUNNING_WAITING_FOR_OWNER_VALIDATION`; STG-005,
+STG-006, and AL-003 were then unauthorized and unstarted.
+
+After PR #38 merged the STG-004 evidence, the Owner authorized STG-005 planning
+only. The plan is maintained in
+[STG-005 Synthetic Business Acceptance Plan](docs/governance/runtime/STG-005_SYNTHETIC_ACCEPTANCE_PLAN.md).
+Repository inspection found no currently verified formal path for bootstrapping
+the first synthetic Owner, Organization, and source Store into the empty
+Staging runtime: AL-002 requires those prerequisites, while Staging disables
+default/demo/bootstrap users, developer switching, and Platform Admin entry.
+The current backend and frontend also disable KDS, so positive Kitchen and
+Assembling acceptance is separately Owner-gated. No SSH, API/database write,
+Docker operation, account, Store, menu, table, order, restart, or Production
+change was performed during planning. Current status is
+`STG-005_PLAN_COMPLETE_WAITING_FOR_OWNER_REVIEW`; STG-005 execution, STG-006,
+and AL-003 remain unauthorized.
 
 ## AL-002 Owner Store Onboarding Backend Foundation
 
