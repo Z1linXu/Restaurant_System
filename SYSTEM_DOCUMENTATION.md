@@ -108,6 +108,20 @@ approval. No new server deployment, Docker build/start/stop, Flyway execution,
 or Staging environment creation occurred. Production remains outside the
 Staging scope. STG-005, STG-006, and AL-003 remain unauthorized and unstarted.
 
+PR #36 merged that serial-build correction as
+`35033645b5414f0804cc0aba92a8b8bb832bb074`. Its next Owner-approved isolated
+server run passed formal PREFLIGHT but stopped before backend image creation
+because the wrapper's `HOME=/nonexistent` and
+`DOCKER_CONFIG=/nonexistent` isolation did not provide writable BuildKit/buildx
+CLI state. The bounded follow-up uses an owner-only `mktemp` root containing
+mode-`0700` `home` and `docker-config` directories, verifies the Compose plugin
+under context `default`, rejects symlink replacement, and cleans temporary
+state on success, error, interrupt, or termination. It does not read
+`~/.docker`, change Compose topology or image names, or weaken the existing
+approval, evidence, environment, project, path, printing, or sequential-build
+gates. Status: `STG-004_DOCKER_CLI_STATE_FIX_WAITING_FOR_OWNER_REVIEW`; this
+review branch does not authorize SSH or deployment.
+
 ## AL-002 Owner Store Onboarding Backend Foundation
 
 AL-002 adds the locally verified backend foundation for a future owner-scoped

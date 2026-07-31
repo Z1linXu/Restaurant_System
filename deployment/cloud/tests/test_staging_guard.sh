@@ -91,6 +91,27 @@ shift 2
 [[ "$1" == "compose" ]] || exit 64
 shift
 original_args="$*"
+log_file="$(dirname "$0")/docker.calls"
+state_root="${HOME%/home}"
+mode() {
+  stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1"
+}
+[[ "$state_root" == */restaurant-pos-staging-docker-cli.* ]] || exit 67
+[[ "$HOME" == "$state_root/home" && "$DOCKER_CONFIG" == "$state_root/docker-config" ]] || exit 68
+[[ "$HOME" != "/nonexistent" && "$DOCKER_CONFIG" != "/nonexistent" ]] || exit 69
+[[ -d "$state_root" && -d "$HOME" && -d "$DOCKER_CONFIG" ]] || exit 70
+[[ ! -L "$state_root" && ! -L "$HOME" && ! -L "$DOCKER_CONFIG" ]] || exit 71
+[[ "$(mode "$state_root")" == "700" && "$(mode "$HOME")" == "700" && "$(mode "$DOCKER_CONFIG")" == "700" ]] || exit 72
+[[ -w "$state_root" && -w "$HOME" && -w "$DOCKER_CONFIG" ]] || exit 73
+printf 'cli_state_root=%s home=%s docker_config=%s modes=%s,%s,%s\n' \
+  "$state_root" "$HOME" "$DOCKER_CONFIG" \
+  "$(mode "$state_root")" "$(mode "$HOME")" "$(mode "$DOCKER_CONFIG")" >>"$log_file"
+
+if [[ "${1:-}" == "version" ]]; then
+  printf 'compose_plugin=available context=default\n' >>"$log_file"
+  printf 'Docker Compose version fake\n'
+  exit 0
+fi
 
 env_file=""
 compose_action=""
@@ -120,7 +141,6 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ -n "$env_file" ]] || exit 65
-log_file="$(dirname "$0")/docker.calls"
 printf 'args=%s\n' "$original_args" >>"$log_file"
 printf 'ambient DB_NAME=%s DOCKER_HOST=%s DOCKER_CONTEXT=%s COMPOSE_FILE=%s\n' \
   "${DB_NAME-unset}" "${DOCKER_HOST-unset}" "${DOCKER_CONTEXT-unset}" "${COMPOSE_FILE-unset}" >>"$log_file"
@@ -288,6 +308,10 @@ fi
 assert_contains "Staging validation passed" "$TMP_DIR/positive.out"
 assert_contains "--project-name restaurant-pos-staging" "$CALL_LOG"
 assert_contains "ambient DB_NAME=unset DOCKER_HOST=unset DOCKER_CONTEXT=unset COMPOSE_FILE=unset" "$CALL_LOG"
+assert_contains "compose_plugin=available context=default" "$CALL_LOG"
+assert_contains "cli_state_root=$COMPOSE_TEMP_DIR/restaurant-pos-staging-docker-cli." "$CALL_LOG"
+assert_contains "modes=700,700,700" "$CALL_LOG"
+assert_not_contains "/nonexistent" "$CALL_LOG"
 assert_not_contains "$ENV_FILE" "$CALL_LOG"
 assert_empty_directory "$COMPOSE_TEMP_DIR"
 if grep -Eq '( build | up )' "$CALL_LOG"; then

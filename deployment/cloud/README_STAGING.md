@@ -91,6 +91,12 @@ dotenv interpolation. The deployment process rejects ambient Docker/Compose and
 Compose interpolation variables, then invokes Compose through `env -i` with
 `docker --context default`. The config file must be owned by the deploying user
 with mode `0600`, and the config directory must be mode `0700` in server mode.
+The deploy wrapper also creates a fresh private Docker CLI state root with
+`mktemp`. Its isolated `HOME` and `DOCKER_CONFIG` directories are owned by the
+invoking user, mode `0700`, writable, and checked for symlink replacement
+before every Compose call. The wrapper does not read `~/.docker`; it verifies
+the system Compose plugin with `docker --context default compose version` and
+removes the private state on normal exit, error, interrupt, or termination.
 The wrapper caps Staging at 2.00 CPUs and 1408m total container memory
 (PostgreSQL 0.75/512m, backend 1.00/768m, Nginx 0.25/128m), backend JVM heap at
 512m, and each local log at 10m with at most three files. These ceilings leave

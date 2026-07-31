@@ -64,14 +64,14 @@ snapshots. Do not copy those reports into this planbook.
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `STG-004 First Same-Host Staging Deployment Preflight` |
 | Loop type | `DELIVERY_GOVERNANCE_VERIFY` |
-| Loop status | `STG-004_SERIAL_BUILD_FIX_WAITING_FOR_OWNER_REVIEW` |
+| Loop status | `STG-004_DOCKER_CLI_STATE_FIX_WAITING_FOR_OWNER_REVIEW` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | `AL-002_WAITING_FOR_OWNER_APPROVAL`; the Staging plan does not approve, merge, deploy, or supersede it. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
 | STG-003 state | PR #35 merged the completed real local Docker rehearsal into `main`; final runtime Head `74dd6a628002f96e4f2b4fbe3cf479fb23ed8e01` is `FINAL_HEAD_REHEARSAL_PASS`. |
-| STG-004 state | PLAN found the approved wrapper did not guarantee sequential backend/frontend builds. Owner selected a minimal script-and-test correction; that correction is awaiting review and a new exact-SHA approval. No deployment command was executed. |
-| Current permitted work | Review the minimal STG-004 serial-build fix only. |
-| Explicitly not permitted | Server PREFLIGHT/EXECUTE before the fix is merged and a new exact SHA is approved; STG-005, STG-006, AL-003, production checkout/data/config/container changes, real accounts/devices/printers, or unrelated backlog work. |
+| STG-004 state | PR #36 merged the serial-build fix. The next approved run passed formal PREFLIGHT but stopped before image creation because BuildKit could not write Docker CLI state under `/nonexistent`. A minimal isolated writable CLI-state fix is waiting for Owner review. |
+| Current permitted work | Review the minimal STG-004 Docker CLI state fix only. |
+| Explicitly not permitted | SSH, server Docker, deployment, Production changes, or another server PREFLIGHT/EXECUTE before this fix is merged and a new exact SHA is approved; STG-005, STG-006, AL-003, real accounts/devices/printers, or unrelated backlog work. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 [AGILE_LOOP_OPERATING_MODEL.md](../AGILE_LOOP_OPERATING_MODEL.md), and
@@ -185,7 +185,23 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
   implementation commit
   `67f183ba998b88810e03db4b77b7c433ac5c3cf1` and draft PR #36 with base
   `main`.
-- Next state: `STG-004_SERIAL_BUILD_FIX_WAITING_FOR_OWNER_REVIEW`.
+- PR #36 merged as
+  `35033645b5414f0804cc0aba92a8b8bb832bb074`. Its next Owner-approved
+  isolated server run passed formal PREFLIGHT but stopped before backend image
+  creation with `mkdir /nonexistent: permission denied`.
+- Root cause: the wrapper removed ambient Docker configuration but set both
+  `HOME` and `DOCKER_CONFIG` to non-writable `/nonexistent`. Read-only Compose
+  validation did not need persistent CLI state, while BuildKit/buildx did.
+- The bounded correction creates a `mktemp` state root with mode `0700`, uses
+  child `home` and `docker-config` directories, rejects symlink replacement,
+  checks `docker --context default compose version`, and removes the state on
+  `EXIT`, `ERR`, `INT`, and `TERM`.
+- Existing exact-SHA, preflight-evidence, environment-digest, project/root,
+  printing-disabled, and sequential backend-then-nginx-then-up gates remain
+  unchanged.
+- Review branch: `codex/stg-004-docker-cli-state-fix`. Verification is local
+  and uses fake Docker fixtures only; it does not authorize SSH or deployment.
+- Next state: `STG-004_DOCKER_CLI_STATE_FIX_WAITING_FOR_OWNER_REVIEW`.
 
 ### AL-002 implementation record
 

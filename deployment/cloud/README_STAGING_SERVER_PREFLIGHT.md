@@ -86,6 +86,11 @@ the nginx/frontend image build only after the backend build succeeds. A failed
 backend build stops the sequence before nginx or `up -d`; the wrapper never
 uses a combined `docker compose build backend nginx` command.
 
+Docker build execution remains isolated from the invoking user's Docker
+credentials. The wrapper creates an owner-only temporary `HOME` and
+`DOCKER_CONFIG`, verifies the system Compose plugin under context `default`,
+and cleans that state on every exit path.
+
 Create the private evidence directory with mode `0700`, capture the preflight
 with a restrictive umask, and review its SHA-256 before approving a start. The
 evidence capture itself is an Owner action. Do not put secrets, resolved Compose

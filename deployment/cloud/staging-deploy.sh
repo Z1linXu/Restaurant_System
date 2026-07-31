@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
 # This wrapper intentionally has no production fallback. It uses a standalone
 # Compose file, a fixed project name, and a controlled process environment.
@@ -23,6 +23,10 @@ PREFLIGHT_EVIDENCE_SNAPSHOT=""
 APPROVED_SHA=""
 PREFLIGHT_EVIDENCE=""
 PREFLIGHT_EVIDENCE_SHA256=""
+DOCKER_CLI_STATE_PARENT=""
+DOCKER_CLI_STATE_ROOT=""
+DOCKER_CLI_HOME=""
+DOCKER_CLI_CONFIG=""
 
 INTERPOLATION_KEYS="
 DOCKER_HOST DOCKER_CONTEXT DOCKER_CONFIG DOCKER_CERT_PATH DOCKER_TLS_VERIFY
@@ -80,10 +84,35 @@ die() {
 }
 
 cleanup() {
+  local status=$?
+  trap - ERR INT TERM
   [[ -n "$RESOLVED_CONFIG" ]] && rm -f "$RESOLVED_CONFIG"
   [[ -n "$ENV_SNAPSHOT" ]] && rm -f "$ENV_SNAPSHOT"
   [[ -n "$PREFLIGHT_EVIDENCE_SNAPSHOT" ]] && rm -f "$PREFLIGHT_EVIDENCE_SNAPSHOT"
-  return 0
+  if [[ -n "$DOCKER_CLI_STATE_ROOT" ]]; then
+    case "$DOCKER_CLI_STATE_ROOT" in
+      "$DOCKER_CLI_STATE_PARENT"/restaurant-pos-staging-docker-cli.*)
+        rm -rf -- "$DOCKER_CLI_STATE_ROOT"
+        ;;
+    esac
+  fi
+  RESOLVED_CONFIG=""
+  ENV_SNAPSHOT=""
+  PREFLIGHT_EVIDENCE_SNAPSHOT=""
+  DOCKER_CLI_STATE_ROOT=""
+  DOCKER_CLI_HOME=""
+  DOCKER_CLI_CONFIG=""
+  return "$status"
+}
+
+handle_interrupt() {
+  cleanup || true
+  exit 130
+}
+
+handle_terminate() {
+  cleanup || true
+  exit 143
 }
 canonical_dir() {
   (cd -P -- "$1" 2>/dev/null && pwd)
@@ -380,6 +409,62 @@ path_is_not_group_or_other_writable() {
   (( (group & 2) == 0 && (other & 2) == 0 ))
 }
 
+validate_private_docker_cli_directory() {
+  local description="$1"
+  local path="$2"
+  [[ -d "$path" && ! -L "$path" ]] || die "$description must be a real directory"
+  [[ "$(canonical_dir "$path")" == "$path" ]] || die "$description canonical path changed"
+  [[ "$(file_owner "$path")" == "$(id -u)" ]] || die "$description must be owned by the invoking user"
+  [[ "$(file_mode "$path")" == "700" ]] || die "$description mode must be 0700"
+  [[ -w "$path" ]] || die "$description must be writable"
+}
+
+validate_docker_cli_state() {
+  [[ -n "$DOCKER_CLI_STATE_PARENT" && -n "$DOCKER_CLI_STATE_ROOT" ]] ||
+    die "private Docker CLI state is not initialized"
+  [[ "$DOCKER_CLI_STATE_ROOT" == "$DOCKER_CLI_STATE_PARENT"/restaurant-pos-staging-docker-cli.* ]] ||
+    die "private Docker CLI state escaped its temporary parent"
+  [[ "$DOCKER_CLI_HOME" == "$DOCKER_CLI_STATE_ROOT/home" ]] ||
+    die "private Docker HOME path changed"
+  [[ "$DOCKER_CLI_CONFIG" == "$DOCKER_CLI_STATE_ROOT/docker-config" ]] ||
+    die "private DOCKER_CONFIG path changed"
+  validate_private_docker_cli_directory "private Docker CLI state root" "$DOCKER_CLI_STATE_ROOT"
+  validate_private_docker_cli_directory "private Docker HOME" "$DOCKER_CLI_HOME"
+  validate_private_docker_cli_directory "private DOCKER_CONFIG" "$DOCKER_CLI_CONFIG"
+}
+
+initialize_docker_cli_state() {
+  local temporary_dir
+  if [[ -n "$DOCKER_CLI_STATE_ROOT" ]]; then
+    validate_docker_cli_state
+    return
+  fi
+
+  temporary_dir="$(canonical_dir "${TMPDIR:-/tmp}")" ||
+    die "cannot canonicalize temporary directory for Docker CLI state"
+  [[ -d "$temporary_dir" && -w "$temporary_dir" ]] ||
+    die "temporary directory for Docker CLI state must be writable"
+  DOCKER_CLI_STATE_PARENT="$temporary_dir"
+
+  umask 077
+  DOCKER_CLI_STATE_ROOT="$(mktemp -d "$temporary_dir/restaurant-pos-staging-docker-cli.XXXXXX")" ||
+    die "cannot create private Docker CLI state root"
+  chmod 700 "$DOCKER_CLI_STATE_ROOT"
+  DOCKER_CLI_STATE_ROOT="$(canonical_dir "$DOCKER_CLI_STATE_ROOT")" ||
+    die "cannot canonicalize private Docker CLI state root"
+  DOCKER_CLI_HOME="$DOCKER_CLI_STATE_ROOT/home"
+  DOCKER_CLI_CONFIG="$DOCKER_CLI_STATE_ROOT/docker-config"
+  mkdir -m 700 "$DOCKER_CLI_HOME" "$DOCKER_CLI_CONFIG"
+  validate_docker_cli_state
+
+  env -i \
+    PATH="$SAFE_PATH" \
+    HOME="$DOCKER_CLI_HOME" \
+    DOCKER_CONFIG="$DOCKER_CLI_CONFIG" \
+    "$DOCKER_BIN" --context default compose version >/dev/null ||
+    die "Docker Compose plugin is unavailable in the private CLI environment"
+}
+
 validate_postgres_data_path() {
   local expected_data_dir data_owner
   POSTGRES_DATA_DIR="$(require_value STAGING_POSTGRES_DATA_DIR)"
@@ -500,10 +585,12 @@ assert_snapshot_integrity() {
 controlled_compose() {
   local active_env_file="$1"
   shift
+  initialize_docker_cli_state
+  validate_docker_cli_state
   env -i \
     PATH="$SAFE_PATH" \
-    HOME="/nonexistent" \
-    DOCKER_CONFIG="/nonexistent" \
+    HOME="$DOCKER_CLI_HOME" \
+    DOCKER_CONFIG="$DOCKER_CLI_CONFIG" \
     "$DOCKER_BIN" --context default compose \
     --project-name "$COMPOSE_PROJECT_NAME" \
     --env-file "$active_env_file" \
@@ -676,5 +763,8 @@ run_deploy_sequence
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
   trap cleanup EXIT
+  trap cleanup ERR
+  trap handle_interrupt INT
+  trap handle_terminate TERM
   main "$@"
 fi
