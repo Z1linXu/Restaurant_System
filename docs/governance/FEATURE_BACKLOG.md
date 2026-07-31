@@ -2,7 +2,7 @@
 
 > Status: `ACTIVE_GOVERNANCE_BACKLOG`
 >
-> Last updated: 2026-07-28, America/Toronto
+> Last updated: 2026-07-31, America/Toronto
 >
 > Features are not incidents. A feature may be requirements-confirmed without
 > being authorized for implementation or production provisioning.
@@ -14,10 +14,10 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `WAITING_FOR_OWNER_APPROVAL` |
-| target_loop | `AL-002` |
-| implementation status | AL-002 backend foundations are implemented and locally verified on an independent branch, including a clean PostgreSQL 16 cloud-profile Flyway V1-V8 verification. Owner approval is required before merge, deployment, migration execution, or any production Store/account/menu/device data action. AL-003 menu clone/print policy and AL-004 Owner UI remain unimplemented. |
-| authority | [AL-001 technical plan](agile/AL-001_OWNER_STORE_ONBOARDING_CHINATOWN_TECHNICAL_PLAN.md) |
+| status | `AL-003_PR_A_WAITING_FOR_OWNER_REVIEW` |
+| target_loop | `AL-003` |
+| implementation status | PR #40 merged STG-005A and its append-only V9 into `main`. AL-003 PR-A now freezes only the Store 1 live-menu clone contract and plans a separate append-only V10 request/evidence table. No V10 file, clone implementation, Store 1 read, runtime clone, print configuration, or deployment is included. |
+| authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
 
 ### Goal
 
@@ -62,23 +62,28 @@ Create these exact runtime login identifiers only after owner approval:
 
 #### Live menu clone
 
-At execution time, clone the **current production** St-Denis menu from the
-production database within the approved onboarding transaction. Do not use a
-Seeder, static documentation, `menuImportSeed`, or an old snapshot.
+At an independently approved execution phase, clone from the current live menu
+of St-Denis, Store ID `1`. `RuntimeDataSeeder`, `menuImportSeed.ts`, and other
+repository seed data are historical reference only and must never supply clone
+rows or fill missing live data.
 
-Copy active categories, items, options, SKU, option code/group, parent-option
-relations, station relation, names, price, cost, ordering, combo metadata, and
-stable kitchen metadata to new IDs. Do not copy temporary sold-out state;
-copied active items are active and not sold out.
+The target profile is `CHINATOWN_MENU_2026_02_02`. It creates only
+`SOUP_NOODLE`, `DRY_NOODLE`, `SIDE_DISHES`, and `DRINK`, in that order, and
+uses the Chinatown PDF prices instead of the superseded Small-13.99 backlog
+rule. Dry noodles are ordered Dan Dan then Zha Jiang. Side dishes are ordered
+Braised Beef Shank, Spicy Cucumber, Edamame, Seaweed Potato, Sichuan Pepper
+Chicken, then Tea Egg.
 
-Chinatown excludes WOK entirely: no WOK station, `FRIED_NOODLE` category, WOK
-items, four Chow Mein SKUs, WOK tasks, KDS routing, printer assignments, or
-WOK-specific flow. St-Denis remains unchanged.
+The new target SKUs are `sichuan_pepper_chicken`, `tea_egg`, `seven_up`, and
+`ginger_ale`. Combo 1-4 apply only to their mapped main dishes; Combo 3 includes
+a side and tea egg. All five target noodles receive all seven noodle types, and
+all active Store 1 add/remove options for reused items are preserved. Tea egg
+exists as both a standalone target item and an add-on option. No automatic
+schedule or French localization is added.
 
-For `traditional_beef_noodle`, `dan_dan_noodle`, and `vegetable_noodle`, add a
-Chinatown-only Small size at 13.99. The stable `option_code` convention must be
-confirmed from the production source menu during implementation; Medium and
-Large remain exactly as copied.
+St-Denis remains unchanged. AL-003 does not clone printers, printer
+assignments, devices, staff, tables, orders, payments, credentials, inventory,
+analytics, KDS configuration, or production data.
 
 #### Tables
 
@@ -88,26 +93,21 @@ within Chinatown only.
 
 #### Printing and Pads
 
-- Chinatown operates in `PAD_DIRECT` with two physical printers configured
-  on-site through Print Center: GRAB and FRONTDESK_RECEIPT.
-- Only `GRAB` and `FRONTDESK_RECEIPT` are enabled. No `HOT_KITCHEN`,
-  `COLD_KITCHEN`, `BAR`, `TAKEOUT_RECEIPT`, or WOK printing is enabled.
-- GRAB includes real Chinatown kitchen work from NOODLE, COLD, and DEEPFRIED.
-  Fried items and combo eggs must not cause a HOT_KITCHEN failure, cancellation,
-  or missing-assignment job.
-- Printer IP/port values are on-site runtime configuration and must never enter
-  Git.
-- Four Pads use the same APK but independent device identities. Each is paired
-  to Chinatown only; its pending/claim scope must not cross Store boundaries.
-- Any Chinatown Pad may claim GRAB or receipt work. Atomic claim remains the
-  duplicate-print protection; at least one Pad must have auto processing enabled.
+- AL-003 neither clones nor configures printing or Pads. The target remains
+  printing-disabled until a separate Owner-approved provisioning loop.
+- Any future Chinatown printer endpoint remains on-site runtime configuration
+  and must never enter Git or the clone request/evidence record.
+- Future Pad pairing, module assignments, and physical print acceptance are
+  separate from the menu-clone transaction and cannot be inferred from PR-A.
 
 #### Acceptance boundaries
 
-The feature is accepted only after owner, staff isolation, menu clone, WOK
-exclusion, Chinatown-only size price, tables, print routing, PAD device scope,
-real-time Store visibility, and St-Denis non-regression checks pass according
-to the AL-001 field checklist. It is not accepted by creating a seed/demo Store.
+AL-003 is accepted only after the exact Store 1 live-source validation, target
+mapping, PDF price/size/Combo rules, transaction rollback, idempotency,
+Organization isolation, source invariance, and explicit side-effect exclusions
+pass. The broader FT-001 feature still requires separately approved table,
+printing, Pad, UI, and field acceptance; it is never accepted by creating a
+seed/demo Store.
 
 ### Explicit non-goals
 

@@ -37,6 +37,12 @@ separate from historical evidence snapshots and business implementation details:
   idempotency, transaction, evidence, and approval contract for the minimum
   synthetic prerequisite topology. It does not authorize executing the
   bootstrap.
+- [AL-003A final menu comparison](docs/governance/agile/AL-003A_FINAL_MENU_COMPARISON.md)
+  is the single product-mapping authority for the Store 1 to Chinatown target
+  menu. Repository seed data is historical reference only.
+- [AL-003 Store menu clone technical plan](docs/governance/agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md)
+  freezes the planned Owner API, transaction, idempotency, profile, validation,
+  and PR boundaries. It authorizes no implementation or runtime clone.
 - [Frontdesk/GRAB item-name rules](docs/operations/FRONTDESK_GRAB_ITEM_NAME_RULES.md)
   remains the operational display-rule source; do not duplicate its item table
   here.
@@ -183,9 +189,33 @@ password, password hash, token, printer endpoint, or full request payload. V9
 in the repository is schema intent only: this loop does not apply it to the
 server, and the current retained Staging runtime evidence remains Flyway V8.
 Runtime migration and bootstrap execution each require later, separate Owner
-approval. Current loop state is
-`STG-005A_BOOTSTRAP_IMPLEMENTED_WAITING_FOR_OWNER_REVIEW`; STG-005 execution,
-STG-006, AL-003, SSH, deployment, and KDS enablement remain prohibited.
+approval. PR #40 subsequently merged the STG-005A implementation into `main`,
+thereby reserving V9 for this bootstrap request table; the merge does not prove
+the migration or command ran against server Staging.
+
+## AL-003 Store 1 Live Menu Clone Plan
+
+AL-003 PR-A is a documentation-only contract based on `origin/main`
+`2613344d403365d61283ae440de16edffaaad788` after PR #40. The only source for a
+future approved clone is the current live menu of St-Denis, Store ID `1`.
+`RuntimeDataSeeder`, `menuImportSeed.ts`, and other repository seed content are
+historical reference and cannot supply or repair clone rows.
+
+The fixed target profile is `CHINATOWN_MENU_2026_02_02`. Product mapping,
+prices, categories, ordering, size, Combo, noodle-type, add/remove, language,
+and new-SKU rules are maintained only in
+[AL-003A final menu comparison](docs/governance/agile/AL-003A_FINAL_MENU_COMPARISON.md).
+The transaction/API/idempotency/source-invariance design and reviewable PR
+sequence are maintained in
+[AL-003 technical plan](docs/governance/agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md).
+
+STG-005A already owns `V9__add_staging_synthetic_bootstrap_requests.sql`.
+AL-003 therefore plans only the future append-only
+`V10__add_owner_store_menu_clone_requests.sql`, with PostgreSQL verification
+through V1-V10. PR-A does not create V10, entity/repository/service/controller
+code, or target menu data. It performs no Store 1 read, SSH, Docker, Flyway,
+database query/write, clone, merge, or deployment. Current state is
+`AL-003_PR_A_WAITING_FOR_OWNER_REVIEW`.
 
 ## AL-002 Owner Store Onboarding Backend Foundation
 
