@@ -118,6 +118,15 @@ value() {
   grep -E "^$1=" "$env_file" | tail -n 1 | sed "s/^$1=//; s/^\"//; s/\"$//"
 }
 
+normalized_cpu() {
+  awk -v value="$1" 'BEGIN { printf "%.12g", value }'
+}
+
+memory_bytes() {
+  local value="${1%[mM]}"
+  printf '%s' "$((value * 1024 * 1024))"
+}
+
 if [[ "$(value DB_NAME)" == "restaurant_pos_staging_fake_config_failure" ]]; then
   exit 66
 fi
@@ -140,20 +149,27 @@ fi
 printf 'services:\n'
 printf '  db:\n    image: postgres:%s\n' "$(value POSTGRES_IMAGE_TAG)"
 printf '    source: %s\n' "$(value STAGING_POSTGRES_DATA_DIR)"
+printf '    cpus: %s\n' "$(normalized_cpu "$(value STAGING_DB_CPU_LIMIT)")"
+printf '    mem_limit: "%s"\n' "$(memory_bytes "$(value STAGING_DB_MEMORY_LIMIT)")"
+printf '    max-size: %s\n' "$(value STAGING_LOG_MAX_SIZE)"
+printf '    max-file: "%s"\n' "$(value STAGING_LOG_MAX_FILE)"
 printf '  backend:\n    image: %s\n' "$(value BACKEND_IMAGE)"
 printf '    SPRING_PROFILES_ACTIVE: %s\n' "$(value SPRING_PROFILES_ACTIVE)"
 printf '    DB_NAME: %s\n' "$(value DB_NAME)"
 printf '    DB_USER: %s\n' "$(value DB_USER)"
 printf '    APP_FEATURES_PRINTING: "%s"\n' "$(value STAGING_PRINTING_FEATURE_ENABLED)"
-printf '    cpus: %s\n' "$(value STAGING_BACKEND_CPU_LIMIT)"
-printf '    mem_limit: %s\n' "$(value STAGING_BACKEND_MEMORY_LIMIT)"
+printf '    cpus: %s\n' "$(normalized_cpu "$(value STAGING_BACKEND_CPU_LIMIT)")"
+printf '    mem_limit: "%s"\n' "$(memory_bytes "$(value STAGING_BACKEND_MEMORY_LIMIT)")"
+printf '    max-size: %s\n' "$(value STAGING_LOG_MAX_SIZE)"
+printf '    max-file: "%s"\n' "$(value STAGING_LOG_MAX_FILE)"
 printf '  nginx:\n    image: %s\n' "$(value FRONTEND_IMAGE)"
 printf '    VITE_APP_BUILD_VERSION: %s\n' "$(value VITE_APP_BUILD_VERSION)"
 printf '    NGINX_SERVER_NAME: %s\n' "$(value NGINX_SERVER_NAME)"
 printf '    ports:\n      - 127.0.0.1:18080:80\n'
-for key in STAGING_DB_CPU_LIMIT STAGING_NGINX_CPU_LIMIT STAGING_DB_MEMORY_LIMIT STAGING_NGINX_MEMORY_LIMIT STAGING_LOG_MAX_SIZE STAGING_LOG_MAX_FILE; do
-  printf '    %s\n' "$(value "$key")"
-done
+printf '    cpus: %s\n' "$(normalized_cpu "$(value STAGING_NGINX_CPU_LIMIT)")"
+printf '    mem_limit: "%s"\n' "$(memory_bytes "$(value STAGING_NGINX_MEMORY_LIMIT)")"
+printf '    max-size: %s\n' "$(value STAGING_LOG_MAX_SIZE)"
+printf '    max-file: "%s"\n' "$(value STAGING_LOG_MAX_FILE)"
 
 if [[ "$(value DB_NAME)" == "restaurant_pos_staging_fake_postgres_swap" ]]; then
   postgres_path="$(value STAGING_POSTGRES_DATA_DIR)"

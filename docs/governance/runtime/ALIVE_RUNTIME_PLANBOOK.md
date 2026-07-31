@@ -2,7 +2,7 @@
 
 > Status: `ACTIVE_GOVERNANCE_RECORD`
 >
-> Last updated: 2026-07-28, America/Toronto
+> Last updated: 2026-07-30, America/Toronto
 >
 > Scope: current operating baseline, active work, deployment entry conditions,
 > and approval boundaries. This is a living index, not a replacement for the
@@ -62,13 +62,15 @@ snapshots. Do not copy those reports into this planbook.
 | Item | Current state |
 |---|---|
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `STG-001 Isolated Staging Environment` |
-| Loop type | `DELIVERY_GOVERNANCE_PLAN` |
-| Loop status | `PLAN_COMPLETE_WAITING_FOR_OWNER_APPROVAL` |
+| Current Agile Loop | `STG-003 Local Isolated Rehearsal` |
+| Loop type | `DELIVERY_GOVERNANCE_VERIFY` |
+| Loop status | `STG-003_LOCAL_REHEARSAL_COMPLETE_WAITING_FOR_OWNER_REVIEW` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | `AL-002_WAITING_FOR_OWNER_APPROVAL`; the Staging plan does not approve, merge, deploy, or supersede it. |
-| Current permitted work | Owner review of the STG-001 plan and explicit decisions on host, access, state root, and resource budget. No Staging implementation or runtime action is authorized. |
-| Explicitly not permitted in STG-001 | SSH, Docker/Flyway execution, server/env/firewall/Nginx changes, production database access/copy, real accounts/devices/printers, AL-003 implementation, merge, or deployment. |
+| STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
+| STG-003 state | Real local Docker rehearsal passed for exact SHA `b17ffa9a397bef62d474a58b649f1e55467a974f`; continuation review is required because historical PR #32 is already merged. |
+| Current permitted work | Owner review of the STG-003 continuation PR and its local machine evidence. |
+| Explicitly not permitted | STG-005, AL-003, SSH/server changes, production database access/copy, real accounts/devices/printers, PR merge, or deployment. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 [AGILE_LOOP_OPERATING_MODEL.md](../AGILE_LOOP_OPERATING_MODEL.md), and
@@ -87,9 +89,38 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
   a real printer or production Pad.
 - See
   [STG-001 Isolated Staging Environment Plan](../agile/STG-001_STAGING_ENVIRONMENT_PLAN.md).
-- Status: `PLAN_COMPLETE_WAITING_FOR_OWNER_APPROVAL`. STG-002 implementation,
-  server access, migration execution, merge, and deployment remain
-  independently owner-gated.
+- Historical planning status: `PLAN_COMPLETE_WAITING_FOR_OWNER_APPROVAL`.
+  STG-002 is now merged as a package; server access, migration execution, and
+  deployment remain independently owner-gated.
+
+### STG-002 and STG-003 verification record
+
+- PR #31 merged the isolated STG-002 deployment package into `main`.
+- Historical PR #32 was merged into the STG-002 branch before PR #31 reached
+  `main`; it remains an immutable record and cannot receive the final local
+  Docker evidence.
+- The continuation branch `codex/stg-003-docker-rehearsal` was safely rebased
+  onto `origin/main` commit
+  `4ac1d10cde169bf7ebc807aac3624b0323e3c440`.
+- A real local Docker Desktop rehearsal passed at exact commit
+  `b17ffa9a397bef62d474a58b649f1e55467a974f`.
+- The rehearsal built and started exactly `db`, `backend`, and `nginx` under
+  project `restaurant-pos-staging`, exposed only `127.0.0.1:18080`, used an
+  isolated PostgreSQL path, and kept printing `DISABLED`.
+- PostgreSQL 16.14 applied Flyway V1-V8 on the first startup. The second
+  startup validated schema version 8 with no migration necessary, and V8's
+  table, Organization/idempotency unique constraint, and Store lookup index
+  were verified.
+- Backend health, frontend root, `/api`, and SockJS `/ws/info` returned HTTP
+  200. An ordinary `/ws` GET returned 400 because it was not a WebSocket
+  Upgrade; no STOMP session was attempted.
+- Cleanup removed only local Staging containers and network. The isolated
+  PostgreSQL state was retained; no volume deletion occurred.
+- Full evidence is in
+  [STG-003 Local Isolated Rehearsal Evidence](STG-003_LOCAL_REHEARSAL_EVIDENCE.md).
+- Status: `STG-003_LOCAL_REHEARSAL_COMPLETE_WAITING_FOR_OWNER_REVIEW`.
+  STG-005, server Staging, merge, and deployment remain owner-gated and have
+  not started.
 
 ### AL-002 implementation record
 
