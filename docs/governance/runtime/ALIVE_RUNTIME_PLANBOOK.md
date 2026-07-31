@@ -64,14 +64,14 @@ snapshots. Do not copy those reports into this planbook.
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `STG-004 First Same-Host Staging Deployment Preflight` |
 | Loop type | `DELIVERY_GOVERNANCE_VERIFY` |
-| Loop status | `STG-004_DOCKER_CLI_STATE_FIX_WAITING_FOR_OWNER_REVIEW` |
+| Loop status | `STG-004_SERVER_STAGING_RUNNING_WAITING_FOR_OWNER_VALIDATION` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | `AL-002_WAITING_FOR_OWNER_APPROVAL`; the Staging plan does not approve, merge, deploy, or supersede it. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
 | STG-003 state | PR #35 merged the completed real local Docker rehearsal into `main`; final runtime Head `74dd6a628002f96e4f2b4fbe3cf479fb23ed8e01` is `FINAL_HEAD_REHEARSAL_PASS`. |
-| STG-004 state | PR #36 merged the serial-build fix. The next approved run passed formal PREFLIGHT but stopped before image creation because BuildKit could not write Docker CLI state under `/nonexistent`. A minimal isolated writable CLI-state fix is waiting for Owner review. |
-| Current permitted work | Review the minimal STG-004 Docker CLI state fix only. |
-| Explicitly not permitted | SSH, server Docker, deployment, Production changes, or another server PREFLIGHT/EXECUTE before this fix is merged and a new exact SHA is approved; STG-005, STG-006, AL-003, real accounts/devices/printers, or unrelated backlog work. |
+| STG-004 state | PR #37 merged the isolated Docker CLI-state fix. Exact SHA `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` passed PLAN, fresh PREFLIGHT, serial build/start, runtime verification, and isolated stop/start recovery. Server Staging remains running for Owner validation. |
+| Current permitted work | Owner validation of the running STG-004 environment and review of the recorded evidence only. |
+| Explicitly not permitted | Production checkout/environment/project changes, old SHA or digest reuse, parallel builds, destructive Docker/Flyway/restore operations, STG-005, STG-006, AL-003, or unrelated backlog work. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 [AGILE_LOOP_OPERATING_MODEL.md](../AGILE_LOOP_OPERATING_MODEL.md), and
@@ -201,7 +201,52 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
   unchanged.
 - Review branch: `codex/stg-004-docker-cli-state-fix`. Verification is local
   and uses fake Docker fixtures only; it does not authorize SSH or deployment.
-- Next state: `STG-004_DOCKER_CLI_STATE_FIX_WAITING_FOR_OWNER_REVIEW`.
+- PR #37 merged the Docker CLI-state correction. The Owner then approved exact
+  SHA `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c`; the former SHA
+  `35033645b5414f0804cc0aba92a8b8bb832bb074` and all earlier environment and
+  evidence digests are invalid for this run.
+- PLAN command categories: local governance/Git inspection and server
+  read-only resource, Production-continuity, port, and Staging-state checks.
+  Result: `PASS`. The host reported 2 CPUs, about 2.2 GiB available memory,
+  44 GiB free disk, no listener on port `18080`, no existing Staging
+  container/network, and no leftover isolated Docker CLI-state directory.
+  Production `cloud` services `db`, `backend`, and `nginx` were running with
+  unchanged baseline IDs, start times, and zero restarts.
+- PREFLIGHT command categories: fetch into the independent Staging bare
+  repository, create an exact detached release, update only the private
+  Staging identity fields, and run the formal read-only preflight. The release
+  is clean at the approved SHA, the environment remains owner `ubuntu` mode
+  `0600`, and printing is `DISABLED`.
+- Fresh environment SHA-256:
+  `926a075e482215b1e8c0917a96db483f342dfed895adfe122f1c9cccb63fa94c`.
+  Fresh evidence:
+  `/srv/restaurant-pos/staging/evidence/stg-004-preflight-4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c.txt`
+  with SHA-256
+  `01fca943915a922a389c3d00d6e38bb5dcbcae3dc5bed5e1718daf1d875f1707`.
+  Every formal gate passed; both exact-SHA images were
+  `PENDING_PREBUILD`, the expected first-build state.
+- EXECUTE command category: the approved release's guarded
+  `staging-deploy.sh --execute-start` path. It revalidated the exact release,
+  environment and evidence digests, then built backend first, built nginx only
+  after backend success, and started only project `restaurant-pos-staging`.
+  Both exact-SHA images built successfully; the isolated Docker CLI state
+  count was zero before and after the command.
+- VERIFY command categories: project-scoped formatted Docker inspection,
+  loopback HTTP/SockJS checks, read-only PostgreSQL/Flyway queries, filtered
+  backend logs, resource observation, and an Owner-approved stop/start of only
+  `restaurant-pos-staging`. PostgreSQL 16.14 retained exactly eight successful
+  migrations through schema version 8; second startup ran no migration, and
+  JPA/application startup succeeded.
+- Final Staging services are running with only `127.0.0.1:18080`; printing is
+  `DISABLED`. Production `cloud` container IDs, start times, running states,
+  and zero restart counts remained unchanged. All deploy/verify/restart Docker
+  CLI temporary state roots were removed.
+- Evidence:
+  [STG-004 Same-Host Server Staging Evidence](STG-004_SERVER_STAGING_EVIDENCE.md).
+- Unresolved risks: frontend dependency audit findings; no synthetic
+  login/onboarding, real STOMP, Android, restore, load, or soak validation.
+- Next state:
+  `STG-004_SERVER_STAGING_RUNNING_WAITING_FOR_OWNER_VALIDATION`.
 
 ### AL-002 implementation record
 

@@ -119,8 +119,18 @@ under context `default`, rejects symlink replacement, and cleans temporary
 state on success, error, interrupt, or termination. It does not read
 `~/.docker`, change Compose topology or image names, or weaken the existing
 approval, evidence, environment, project, path, printing, or sequential-build
-gates. Status: `STG-004_DOCKER_CLI_STATE_FIX_WAITING_FOR_OWNER_REVIEW`; this
-review branch does not authorize SSH or deployment.
+gates. PR #37 merged this correction. Exact Owner-approved SHA
+`4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` passed PLAN, a fresh formal
+PREFLIGHT, serial backend/nginx builds, isolated startup, and stop/start
+recovery on the server. Project `restaurant-pos-staging` remains running with
+only `127.0.0.1:18080`, printing `DISABLED`, PostgreSQL 16.14/Flyway schema
+version 8, and healthy frontend, backend, and SockJS entry checks. Production
+project `cloud` container identity, start time, and restart counts remained
+unchanged. Full evidence is in
+[STG-004 Same-Host Server Staging Evidence](docs/governance/runtime/STG-004_SERVER_STAGING_EVIDENCE.md).
+Status:
+`STG-004_SERVER_STAGING_RUNNING_WAITING_FOR_OWNER_VALIDATION`. STG-005,
+STG-006, and AL-003 remain unauthorized and unstarted.
 
 ## AL-002 Owner Store Onboarding Backend Foundation
 
