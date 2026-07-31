@@ -226,3 +226,50 @@ Still not verified or authorized:
 
 STG-005 and AL-003 have not started. The next action is Owner review of this
 branch/PR, not merge or deployment.
+
+## 12. Final PR Head binding
+
+Status: `FINAL_HEAD_REHEARSAL_PASS`
+
+The concise binding regression was executed against the exact PR #35 runtime
+Head `74dd6a628002f96e4f2b4fbe3cf479fb23ed8e01`. The checkout and remote branch
+both resolved to that SHA, and the worktree was clean before the run.
+
+| Check | Final Head result |
+| --- | --- |
+| Staging shell `bash -n` | PASS for all five Staging shell and test scripts |
+| Staging guard test | PASS |
+| Local rehearsal static test | PASS |
+| Real `docker compose config` | PASS; exactly `db`, `backend`, `nginx` |
+| Compose project | `restaurant-pos-staging` |
+| Published host binding | Only `127.0.0.1:18080->80/tcp` |
+| Frontend `/` | HTTP 200 |
+| Backend `/api/v1/system/health` | HTTP 200 |
+| SockJS `/ws/info` | HTTP 200 |
+| PostgreSQL | 16.14 |
+| First startup | Flyway V1-V8 applied; schema reached version 8 |
+| Second startup | Eight migrations validated; schema version 8; no migration necessary |
+| Restart persistence | Health returned 200 after the stop/start cycle; one successful V8 row remained |
+| Printing | `DISABLED` |
+| Cleanup | Project containers 0, project networks 0, port 18080 listeners 0 |
+| Retained state | PostgreSQL state retained at the isolated final-Head rehearsal root, approximately 48MiB |
+
+Exact final-Head image evidence:
+
+- backend tag:
+  `restaurant-pos-backend:staging-74dd6a628002f96e4f2b4fbe3cf479fb23ed8e01`
+- backend image ID:
+  `sha256:f677faa36da35b811f8c552bf3f0a72b9013b07e9f95da970b5eaf94db83306b`
+- frontend tag:
+  `restaurant-pos-frontend:staging-74dd6a628002f96e4f2b4fbe3cf479fb23ed8e01`
+- frontend image ID:
+  `sha256:af493cc0f163a9877ff590c50b3e5dd628cde62b2acc197132f01e224cb16c34`
+
+Runtime tree identities at the tested SHA were:
+
+- `backend`: `d10df0f9393e1029dc01cd6ead18b13a0e01789d`
+- `frontend`: `2c0cf85ee0b93e1e5dc960f3c50bdb2b76c67b6c`
+- `deployment/cloud`: `97f0982457cbddf5204b99a00187bde61c8e053b`
+
+Any commit made solely to record this evidence must preserve those three tree
+identities. No runtime-related file may change after this passing rehearsal.
