@@ -92,11 +92,21 @@ PR #35 repeated the concise regression against final runtime Head
 `74dd6a628002f96e4f2b4fbe3cf479fb23ed8e01`, recorded
 `FINAL_HEAD_REHEARSAL_PASS`, and merged STG-003 into `main`.
 
-STG-004 prepares a read-only same-host server preflight and explicit
-Owner-controlled start gate in PR #33. Its current status is
-`STG-004_PREFLIGHT_READY_WAITING_FOR_OWNER_REVIEW`. No SSH, server Docker,
-Flyway execution, deployment, production data, or environment change has been
-performed. STG-005 and AL-003 remain unauthorized and unstarted.
+STG-004 prepared a read-only same-host server preflight and explicit
+Owner-controlled start gate in PR #33. The Owner subsequently approved one
+exact-SHA Staging start for
+`3c1b117e137cc90b984bb392cb3f9e4b7a7f149f`, but its PLAN gate stopped at
+`STG-004_PLAN_NO_GO_WAITING_FOR_OWNER`: the approved deploy wrapper issued a
+combined `docker compose build backend nginx` and did not guarantee the
+required sequential backend/frontend build. The Owner selected a minimal
+follow-up that performs `build backend` and then `build nginx`; backend failure
+prevents the nginx build and project start. Existing exact-SHA,
+preflight-evidence, environment-digest, project/root, and `--execute-start`
+gates remain unchanged. The fix is
+`STG-004_SERIAL_BUILD_FIX_WAITING_FOR_OWNER_REVIEW`; it is not a new deployment
+approval. No new server deployment, Docker build/start/stop, Flyway execution,
+or Staging environment creation occurred. Production remains outside the
+Staging scope. STG-005, STG-006, and AL-003 remain unauthorized and unstarted.
 
 ## AL-002 Owner Store Onboarding Backend Foundation
 

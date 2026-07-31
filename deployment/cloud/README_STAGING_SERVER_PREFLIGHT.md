@@ -81,6 +81,11 @@ of the following:
 5. evidence lines binding the result to the approved SHA, Staging root,
    Compose project, and current `.env.staging` SHA-256.
 
+After those gates pass, the wrapper builds the backend image first and starts
+the nginx/frontend image build only after the backend build succeeds. A failed
+backend build stops the sequence before nginx or `up -d`; the wrapper never
+uses a combined `docker compose build backend nginx` command.
+
 Create the private evidence directory with mode `0700`, capture the preflight
 with a restrictive umask, and review its SHA-256 before approving a start. The
 evidence capture itself is an Owner action. Do not put secrets, resolved Compose
