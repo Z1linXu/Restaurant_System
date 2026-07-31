@@ -96,3 +96,8 @@ The complete machine evidence, including bounded failed attempts and test
 results, is maintained in
 `docs/governance/runtime/STG-003_LOCAL_REHEARSAL_EVIDENCE.md`. This local result
 does not authorize or prove a server Staging deployment.
+
+PR #35 subsequently bound the same runtime trees to final tested runtime Head
+`74dd6a628002f96e4f2b4fbe3cf479fb23ed8e01` with status
+`FINAL_HEAD_REHEARSAL_PASS`, then merged the completed STG-003 work into
+`main`. The final binding does not change the server-deployment boundary.

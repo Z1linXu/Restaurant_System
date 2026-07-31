@@ -1,8 +1,19 @@
 # Same-Host Staging Preflight (STG-004)
 
-Status: `PREPARATION_ONLY`. This document defines a future Owner-approved
-same-host check. It does not authorize a server connection, deployment, or
-container action.
+Status: `STG-004_PREFLIGHT_READY_WAITING_FOR_OWNER_REVIEW`. This document
+defines a future Owner-approved same-host check. It does not authorize a server
+connection, deployment, or container action.
+
+## Completed prerequisite
+
+STG-003 completed its real local Docker rehearsal and was merged to `main`
+through [PR #35](https://github.com/Z1linXu/Restaurant_System/pull/35).
+The final runtime Head
+`74dd6a628002f96e4f2b4fbe3cf479fb23ed8e01` is recorded as
+`FINAL_HEAD_REHEARSAL_PASS` in
+[`STG-003_LOCAL_REHEARSAL_EVIDENCE.md`](../../docs/governance/runtime/STG-003_LOCAL_REHEARSAL_EVIDENCE.md).
+That evidence satisfies the local rehearsal prerequisite only. It does not
+prove server isolation, authorize SSH, or approve a Staging deployment.
 
 ## Boundary
 

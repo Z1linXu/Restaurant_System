@@ -77,15 +77,19 @@ services:
     image: postgres:16-alpine
     source: $(value STAGING_POSTGRES_DATA_DIR)
     cpus: 0.75
-    mem_limit: 512m
+    mem_limit: 536870912
+    max-size: 10m
+    max-file: "3"
   backend:
     image: $(value BACKEND_IMAGE)
     SPRING_PROFILES_ACTIVE: cloud
     DB_NAME: $(value DB_NAME)
     DB_USER: $(value DB_USER)
     APP_FEATURES_PRINTING: "false"
-    cpus: 1.00
-    mem_limit: 768m
+    cpus: 1
+    mem_limit: 805306368
+    max-size: 10m
+    max-file: "3"
   nginx:
     image: $(value FRONTEND_IMAGE)
     VITE_APP_BUILD_VERSION: $(value VITE_APP_BUILD_VERSION)
@@ -93,7 +97,7 @@ services:
     ports:
       - 127.0.0.1:18080:80
     cpus: 0.25
-    mem_limit: 128m
+    mem_limit: 134217728
     max-size: 10m
     max-file: "3"
 EOF

@@ -62,15 +62,16 @@ snapshots. Do not copy those reports into this planbook.
 | Item | Current state |
 |---|---|
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `STG-003 Local Isolated Rehearsal` |
+| Current Agile Loop | `STG-004 First Same-Host Staging Deployment Preflight` |
 | Loop type | `DELIVERY_GOVERNANCE_VERIFY` |
-| Loop status | `STG-003_LOCAL_REHEARSAL_COMPLETE_WAITING_FOR_OWNER_REVIEW` |
+| Loop status | `STG-004_PREFLIGHT_READY_WAITING_FOR_OWNER_REVIEW` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | `AL-002_WAITING_FOR_OWNER_APPROVAL`; the Staging plan does not approve, merge, deploy, or supersede it. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
-| STG-003 state | Real local Docker rehearsal passed for exact SHA `b17ffa9a397bef62d474a58b649f1e55467a974f`; continuation review is required because historical PR #32 is already merged. |
-| Current permitted work | Owner review of the STG-003 continuation PR and its local machine evidence. |
-| Explicitly not permitted | STG-005, AL-003, SSH/server changes, production database access/copy, real accounts/devices/printers, PR merge, or deployment. |
+| STG-003 state | PR #35 merged the completed real local Docker rehearsal into `main`; final runtime Head `74dd6a628002f96e4f2b4fbe3cf479fb23ed8e01` is `FINAL_HEAD_REHEARSAL_PASS`. |
+| STG-004 state | PR #33 is synchronized to `main` for Owner review of preflight, validation-only deploy gates, and plan-only server controls. |
+| Current permitted work | Local review and testing of PR #33 only. |
+| Explicitly not permitted | STG-005, AL-003, SSH/server operations, production database access/copy, real accounts/devices/printers, PR merge, or deployment. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 [AGILE_LOOP_OPERATING_MODEL.md](../AGILE_LOOP_OPERATING_MODEL.md), and
@@ -118,9 +119,23 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
   PostgreSQL state was retained; no volume deletion occurred.
 - Full evidence is in
   [STG-003 Local Isolated Rehearsal Evidence](STG-003_LOCAL_REHEARSAL_EVIDENCE.md).
-- Status: `STG-003_LOCAL_REHEARSAL_COMPLETE_WAITING_FOR_OWNER_REVIEW`.
-  STG-005, server Staging, merge, and deployment remain owner-gated and have
-  not started.
+- PR #35 repeated the concise real Docker regression against final runtime Head
+  `74dd6a628002f96e4f2b4fbe3cf479fb23ed8e01`, recorded
+  `FINAL_HEAD_REHEARSAL_PASS`, and merged the completed STG-003 work into
+  `main`.
+- Status: `STG-003_LOCAL_REHEARSAL_COMPLETE`. Server Staging and deployment
+  remain separately Owner-gated.
+
+### STG-004 preflight review record
+
+- Review branch: `codex/stg-004-first-deploy-preflight`.
+- PR #33 is based on `main` after the PR #35 merge.
+- Scope is limited to a read-only same-host preflight, validation-only default
+  deploy wrapper, explicit Owner start gate, and plan-only stop/rollback
+  controls.
+- No SSH, server Docker, Flyway execution, production configuration change, or
+  deployment is part of the current review.
+- Status: `STG-004_PREFLIGHT_READY_WAITING_FOR_OWNER_REVIEW`.
 
 ### AL-002 implementation record
 
