@@ -33,6 +33,17 @@ assert_not_contains() {
   fi
 }
 
+assert_line_order() {
+  local first="$1"
+  local second="$2"
+  local file="$3"
+  local first_line second_line
+  first_line="$(grep -nFx -- "$first" "$file" | head -n 1 | cut -d: -f1)"
+  second_line="$(grep -nFx -- "$second" "$file" | head -n 1 | cut -d: -f1)"
+  [[ -n "$first_line" && -n "$second_line" && "$first_line" -lt "$second_line" ]] ||
+    fail "expected '$first' before '$second' in $file"
+}
+
 assert_empty_directory() {
   local directory="$1"
   [[ -z "$(find "$directory" -mindepth 1 -maxdepth 1 -print -quit)" ]] || fail "expected no temporary files in $directory"
@@ -204,6 +215,9 @@ mv "$SEED_RELEASE" "$RELEASE_DIR"
 
 assert_contains 'postgres:16-alpine UID 70' "$RELEASE_DIR/deployment/cloud/staging-deploy.sh"
 assert_not_contains 'postgres UID 999' "$RELEASE_DIR/deployment/cloud/staging-deploy.sh"
+assert_contains 'build backend' "$RELEASE_DIR/deployment/cloud/staging-deploy.sh"
+assert_contains 'build nginx' "$RELEASE_DIR/deployment/cloud/staging-deploy.sh"
+assert_not_contains 'build backend nginx' "$RELEASE_DIR/deployment/cloud/staging-deploy.sh"
 
 ENV_FILE="$CONFIG_DIR/.env.staging"
 CALL_LOG="$FAKE_BIN/docker.calls"
@@ -300,6 +314,69 @@ mv "$POSTGRES_DIR.real" "$POSTGRES_DIR"
 reset_env
 chmod 600 "$ENV_FILE"
 chmod 700 "$FIXTURE_STAGING_ROOT" "$FIXTURE_STAGING_ROOT/state" "$POSTGRES_DIR"
+HARNESS_LOG="$TMP_DIR/serial_build_success_harness.calls"
+: >"$HARNESS_LOG"
+if ! (
+  # Source only function definitions. The guarded main does not run when sourced.
+  source "$RELEASE_DIR/deployment/cloud/staging-deploy.sh"
+  ACTIVE_ENV_FILE="$ENV_FILE"
+  ENV_SNAPSHOT="$ENV_FILE"
+  ENV_SNAPSHOT_DIGEST="$(file_digest "$ENV_FILE")"
+  STAGING_ROOT="$FIXTURE_STAGING_ROOT"
+  STAGING_COMMIT_SHA="$SHA"
+  POSTGRES_DATA_DIR="$POSTGRES_DIR"
+  COMPOSE_PROJECT_NAME="restaurant-pos-staging"
+  LOCAL_VALIDATE_MODE=false
+  assert_clean_release() { :; }
+  assert_resolved_compose() { :; }
+  controlled_compose() {
+    local active_env_file="$1"
+    shift
+    printf '%s\n' "$*" >>"$HARNESS_LOG"
+  }
+  run_deploy_sequence
+) >"$TMP_DIR/serial_build_success_harness.out" 2>"$TMP_DIR/serial_build_success_harness.err"; then
+  cat "$TMP_DIR/serial_build_success_harness.err" >&2
+  fail "serial_build_success_harness failed"
+fi
+assert_contains "build backend" "$HARNESS_LOG"
+assert_contains "build nginx" "$HARNESS_LOG"
+assert_contains "up -d" "$HARNESS_LOG"
+assert_not_contains "build backend nginx" "$HARNESS_LOG"
+assert_line_order "build backend" "build nginx" "$HARNESS_LOG"
+assert_line_order "build nginx" "up -d" "$HARNESS_LOG"
+
+HARNESS_LOG="$TMP_DIR/backend_build_failure_harness.calls"
+: >"$HARNESS_LOG"
+if (
+  # Source only function definitions. The guarded main does not run when sourced.
+  source "$RELEASE_DIR/deployment/cloud/staging-deploy.sh"
+  ACTIVE_ENV_FILE="$ENV_FILE"
+  ENV_SNAPSHOT="$ENV_FILE"
+  ENV_SNAPSHOT_DIGEST="$(file_digest "$ENV_FILE")"
+  STAGING_ROOT="$FIXTURE_STAGING_ROOT"
+  STAGING_COMMIT_SHA="$SHA"
+  POSTGRES_DATA_DIR="$POSTGRES_DIR"
+  COMPOSE_PROJECT_NAME="restaurant-pos-staging"
+  LOCAL_VALIDATE_MODE=false
+  assert_clean_release() { :; }
+  assert_resolved_compose() { :; }
+  controlled_compose() {
+    local active_env_file="$1"
+    shift
+    printf '%s\n' "$*" >>"$HARNESS_LOG"
+    [[ "$*" != "build backend" ]]
+  }
+  run_deploy_sequence
+) >"$TMP_DIR/backend_build_failure_harness.out" 2>"$TMP_DIR/backend_build_failure_harness.err"; then
+  fail "backend_build_failure_harness unexpectedly passed"
+fi
+assert_contains "isolated staging backend image build failed" "$TMP_DIR/backend_build_failure_harness.err"
+assert_contains "build backend" "$HARNESS_LOG"
+assert_not_contains "build nginx" "$HARNESS_LOG"
+assert_not_contains "build backend nginx" "$HARNESS_LOG"
+assert_not_contains "up -d" "$HARNESS_LOG"
+
 HARNESS_LOG="$TMP_DIR/post_build_swap_harness.calls"
 : >"$HARNESS_LOG"
 if (
@@ -337,7 +414,9 @@ if (
   fail "post_build_swap_harness unexpectedly passed"
 fi
 assert_contains "staging guard:" "$TMP_DIR/post_build_swap_harness.err"
-assert_contains "build backend nginx" "$HARNESS_LOG"
+assert_contains "build backend" "$HARNESS_LOG"
+assert_not_contains "build nginx" "$HARNESS_LOG"
+assert_not_contains "build backend nginx" "$HARNESS_LOG"
 assert_not_contains "up -d" "$HARNESS_LOG"
 rm "$POSTGRES_DIR"
 mv "$POSTGRES_DIR.real" "$POSTGRES_DIR"

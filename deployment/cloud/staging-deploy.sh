@@ -565,8 +565,15 @@ run_deploy_sequence() {
   validate_postgres_data_path
   assert_clean_release
 
-  echo "Building isolated staging images for $STAGING_COMMIT_SHA..."
-  controlled_compose "$ACTIVE_ENV_FILE" build backend nginx
+  echo "Building isolated staging backend image for $STAGING_COMMIT_SHA..."
+  controlled_compose "$ACTIVE_ENV_FILE" build backend ||
+    die "isolated staging backend image build failed"
+  assert_snapshot_integrity
+  validate_postgres_data_path
+  assert_clean_release
+  echo "Building isolated staging frontend image for $STAGING_COMMIT_SHA..."
+  controlled_compose "$ACTIVE_ENV_FILE" build nginx ||
+    die "isolated staging frontend image build failed"
   assert_snapshot_integrity
   validate_postgres_data_path
   assert_clean_release

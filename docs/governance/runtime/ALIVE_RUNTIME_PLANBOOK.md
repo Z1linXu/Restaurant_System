@@ -64,14 +64,14 @@ snapshots. Do not copy those reports into this planbook.
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `STG-004 First Same-Host Staging Deployment Preflight` |
 | Loop type | `DELIVERY_GOVERNANCE_VERIFY` |
-| Loop status | `STG-004_PREFLIGHT_READY_WAITING_FOR_OWNER_REVIEW` |
+| Loop status | `STG-004_SERIAL_BUILD_FIX_WAITING_FOR_OWNER_REVIEW` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | `AL-002_WAITING_FOR_OWNER_APPROVAL`; the Staging plan does not approve, merge, deploy, or supersede it. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
 | STG-003 state | PR #35 merged the completed real local Docker rehearsal into `main`; final runtime Head `74dd6a628002f96e4f2b4fbe3cf479fb23ed8e01` is `FINAL_HEAD_REHEARSAL_PASS`. |
-| STG-004 state | PR #33 is synchronized to `main` for Owner review of preflight, validation-only deploy gates, and plan-only server controls. |
-| Current permitted work | Local review and testing of PR #33 only. |
-| Explicitly not permitted | STG-005, AL-003, SSH/server operations, production database access/copy, real accounts/devices/printers, PR merge, or deployment. |
+| STG-004 state | PLAN found the approved wrapper did not guarantee sequential backend/frontend builds. Owner selected a minimal script-and-test correction; that correction is awaiting review and a new exact-SHA approval. No deployment command was executed. |
+| Current permitted work | Review the minimal STG-004 serial-build fix only. |
+| Explicitly not permitted | Server PREFLIGHT/EXECUTE before the fix is merged and a new exact SHA is approved; STG-005, STG-006, AL-003, production checkout/data/config/container changes, real accounts/devices/printers, or unrelated backlog work. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 [AGILE_LOOP_OPERATING_MODEL.md](../AGILE_LOOP_OPERATING_MODEL.md), and
@@ -133,9 +133,57 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 - Scope is limited to a read-only same-host preflight, validation-only default
   deploy wrapper, explicit Owner start gate, and plan-only stop/rollback
   controls.
-- No SSH, server Docker, Flyway execution, production configuration change, or
-  deployment is part of the current review.
-- Status: `STG-004_PREFLIGHT_READY_WAITING_FOR_OWNER_REVIEW`.
+- The Owner later approved one STG-004 server run for exact SHA
+  `3c1b117e137cc90b984bb392cb3f9e4b7a7f149f`, isolated under
+  `/srv/restaurant-pos/staging`, with project `restaurant-pos-staging`,
+  loopback bind `127.0.0.1:18080`, and printing `DISABLED`.
+- PLAN command categories were local governance reads and local Git
+  baseline/source inspection only. The current Git branch, local HEAD, and
+  `origin/main` were all `main` /
+  `3c1b117e137cc90b984bb392cb3f9e4b7a7f149f`; the local worktree was clean.
+- Prior read-only server evidence recorded 2 CPUs, 2.1 GiB available memory,
+  44 GiB free disk, an unused port `18080`, and continuously running production
+  project `cloud`. Those observations are pre-PLAN context, not fresh deploy
+  evidence.
+- PLAN result: `NO_GO`. The approved
+  `deployment/cloud/staging-deploy.sh` start path invokes one
+  `docker compose build backend nginx` command and does not enforce
+  `--parallel 1` or an equivalent sequential-build control. That conflicts
+  with the Owner's explicit requirement that backend and frontend builds run
+  sequentially. The exact approved release cannot be modified in place or
+  bypassed.
+- No new SSH command, server file write, Docker build/start/stop, Flyway
+  execution, environment creation, or deployment occurred after this gate was
+  identified.
+- Evidence paths:
+  `deployment/cloud/staging-deploy.sh`,
+  `deployment/cloud/staging-server-preflight.sh`,
+  `deployment/cloud/docker-compose.staging.yml`, and this checkpoint.
+- Unresolved risk: a combined Compose build may run services concurrently and
+  exceed the shared-host resource envelope. The separate no-Swap observation
+  increases the consequence of that uncertainty.
+- Owner decision: use a minimal review branch to replace the combined build
+  with `build backend` followed by `build nginx`, preserving every existing
+  exact-SHA, preflight-evidence, environment-digest, project/root, and
+  `--execute-start` gate.
+- The regression harness requires backend success before nginx starts, proves
+  backend failure prevents nginx and `up`, and rejects any combined
+  `build backend nginx` command.
+- VERIFY command categories were local shell syntax checks and isolated
+  fake-Docker guard/preflight/control tests only. All Staging scripts passed
+  `bash -n`; `test_staging_guard.sh`,
+  `test_staging_server_preflight.sh`, and
+  `test_staging_server_control.sh` passed. No SSH, real Docker lifecycle
+  command, Flyway execution, or server operation was part of this verification.
+- Verification evidence paths:
+  `deployment/cloud/tests/test_staging_guard.sh`,
+  `deployment/cloud/tests/test_staging_server_preflight.sh`, and
+  `deployment/cloud/tests/test_staging_server_control.sh`.
+- Current Git baseline for the candidate is parent SHA
+  `3c1b117e137cc90b984bb392cb3f9e4b7a7f149f` on branch
+  `codex/stg-004-serial-build-fix`; the resulting review commit and PR are
+  recorded by the Git review workflow, not predicted in this document.
+- Next state: `STG-004_SERIAL_BUILD_FIX_WAITING_FOR_OWNER_REVIEW`.
 
 ### AL-002 implementation record
 
