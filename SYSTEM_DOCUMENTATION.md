@@ -25,6 +25,9 @@ separate from historical evidence snapshots and business implementation details:
 - [STG-003 local rehearsal evidence](docs/governance/runtime/STG-003_LOCAL_REHEARSAL_EVIDENCE.md)
   records the real local Docker/Flyway V1-V8 verification. It does not prove or
   authorize a server Staging deployment.
+- [STG-004 same-host preflight](deployment/cloud/README_STAGING_SERVER_PREFLIGHT.md)
+  defines the read-only preflight, explicit Owner start gate, and plan-only
+  controls. It does not authorize SSH or deployment.
 - [Frontdesk/GRAB item-name rules](docs/operations/FRONTDESK_GRAB_ITEM_NAME_RULES.md)
   remains the operational display-rule source; do not duplicate its item table
   here.
@@ -32,7 +35,7 @@ separate from historical evidence snapshots and business implementation details:
 Historical Phase 3 runtime evidence remains under `docs/governance/runtime/`.
 It must not be rewritten as a living deployment manifest.
 
-## STG-001 to STG-003 Isolated Staging Verification
+## STG-001 to STG-004 Isolated Staging Verification
 
 STG-001 documents a repeatable Staging design without changing runtime
 configuration or application behavior. The current production-shaped Compose
@@ -85,9 +88,15 @@ then completed a real local Docker Desktop rehearsal at exact commit
 
 The evidence is maintained in
 `docs/governance/runtime/STG-003_LOCAL_REHEARSAL_EVIDENCE.md`.
-Status is `STG-003_LOCAL_REHEARSAL_COMPLETE_WAITING_FOR_OWNER_REVIEW`.
-STG-005, server access/deployment, production data, and AL-003 remain
-unauthorized and unstarted.
+PR #35 repeated the concise regression against final runtime Head
+`74dd6a628002f96e4f2b4fbe3cf479fb23ed8e01`, recorded
+`FINAL_HEAD_REHEARSAL_PASS`, and merged STG-003 into `main`.
+
+STG-004 prepares a read-only same-host server preflight and explicit
+Owner-controlled start gate in PR #33. Its current status is
+`STG-004_PREFLIGHT_READY_WAITING_FOR_OWNER_REVIEW`. No SSH, server Docker,
+Flyway execution, deployment, production data, or environment change has been
+performed. STG-005 and AL-003 remain unauthorized and unstarted.
 
 ## AL-002 Owner Store Onboarding Backend Foundation
 
