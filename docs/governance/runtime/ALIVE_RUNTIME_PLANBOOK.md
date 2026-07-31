@@ -2,7 +2,7 @@
 
 > Status: `ACTIVE_GOVERNANCE_RECORD`
 >
-> Last updated: 2026-07-30, America/Toronto
+> Last updated: 2026-07-31, America/Toronto
 >
 > Scope: current operating baseline, active work, deployment entry conditions,
 > and approval boundaries. This is a living index, not a replacement for the
@@ -62,18 +62,19 @@ snapshots. Do not copy those reports into this planbook.
 | Item | Current state |
 |---|---|
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `STG-005A Staging Synthetic Bootstrap` |
-| Loop type | `IMPLEMENTATION` |
-| Loop status | `STG-005A_BOOTSTRAP_IMPLEMENTED_WAITING_FOR_OWNER_REVIEW` |
+| Current Agile Loop | `AL-003 Store 1 -> Chinatown Live Menu Clone` |
+| Loop type | `PLAN_CONTRACT` |
+| Loop status | `AL-003_PR_A_WAITING_FOR_OWNER_REVIEW` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | `AL-002_WAITING_FOR_OWNER_APPROVAL`; the Staging plan does not approve, merge, deploy, or supersede it. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
 | STG-003 state | PR #35 merged the completed real local Docker rehearsal into `main`; final runtime Head `74dd6a628002f96e4f2b4fbe3cf479fb23ed8e01` is `FINAL_HEAD_REHEARSAL_PASS`. |
 | STG-004 state | PR #38 merged the STG-004 runtime evidence. Exact SHA `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` passed PLAN, fresh PREFLIGHT, serial build/start, runtime verification, and isolated stop/start recovery. Server Staging remains running; Production remained unchanged. |
 | STG-005 state | PLAN complete. The Owner approved CP-0 as a separate minimal Staging-only bootstrap implementation and accepted CP-4 as a feature-disabled KDS/Assembling boundary. Positive Kitchen/Assembling workflow remains `EVIDENCE_PENDING`. |
-| STG-005A state | The profile-gated synthetic bootstrap, append-only V9 request record, tests, and runbook are implemented locally on branch `codex/stg-005a-staging-synthetic-bootstrap`. Nothing was executed against server Staging. |
-| Current permitted work | Owner review of the STG-005A implementation and Draft PR only. |
-| Explicitly not permitted | SSH, V9 runtime migration, bootstrap execution, synthetic runtime writes, full STG-005 execution, KDS enablement, Docker or Staging restart, Production changes, STG-006, AL-003, merge, deployment, or unrelated backlog work. |
+| STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
+| AL-003 state | PR-A freezes the comparison and technical contract only. It plans `V10__add_owner_store_menu_clone_requests.sql`; no V10 file or clone implementation exists in this package. |
+| Current permitted work | Owner review of the AL-003 PR-A documentation contract and Draft PR only. |
+| Explicitly not permitted | Implementation agents, V10 creation, Store 1 runtime read, SSH, Docker, Flyway execution, database query/write, Staging or Production mutation, real clone, merge, deployment, STG-006, or unrelated backlog work. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 [AGILE_LOOP_OPERATING_MODEL.md](../AGILE_LOOP_OPERATING_MODEL.md), and
@@ -284,8 +285,10 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
   CP-4 accepts the current KDS/Assembling feature-disabled boundary. No KDS
   enablement is included.
 - Implementation branch:
-  `codex/stg-005a-staging-synthetic-bootstrap`, based on `origin/main`
-  `22ddc96728057056c194a453825d1c36884f7a92`.
+  `codex/stg-005a-staging-synthetic-bootstrap`, based on historical
+  `origin/main` `22ddc96728057056c194a453825d1c36884f7a92`; PR #40 is now merged into
+  `main` at the AL-003 PR-A base
+  `2613344d403365d61283ae440de16edffaaad788`.
 - The one-shot Spring command exists only under the exact
   `cloud,staging-synthetic-bootstrap` profiles and a separate explicit enable
   property. Default mode validates only; write mode requires both `--execute`
@@ -310,8 +313,27 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
   [STG-005A Synthetic Bootstrap](../../../deployment/cloud/README_STG005_SYNTHETIC_BOOTSTRAP.md).
 - No SSH, Docker, Flyway, server command, bootstrap execution, synthetic
   runtime write, Production change, or KDS change occurred.
-- Next state:
-  `STG-005A_BOOTSTRAP_IMPLEMENTED_WAITING_FOR_OWNER_REVIEW`.
+- Merge state: PR #40 merged the implementation and reserved migration V9 for
+  `V9__add_staging_synthetic_bootstrap_requests.sql`. Runtime execution remains
+  separately gated and unproven by the merge.
+
+### AL-003 PR-A menu-clone contract record
+
+- Branch: `codex/al-003-pr-a-plan-contract`, based on `origin/main`
+  `2613344d403365d61283ae440de16edffaaad788` after PR #40.
+- Product authority:
+  [AL-003A Final Menu Comparison](../agile/AL-003A_FINAL_MENU_COMPARISON.md).
+- Technical authority:
+  [AL-003 Store Menu Clone Technical Plan](../agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md).
+- The unique source is the current live menu of St-Denis, Store ID `1`.
+  Repository seed data is historical reference only and cannot populate the
+  clone.
+- V9 is already occupied by STG-005A. AL-003 plans the append-only
+  `V10__add_owner_store_menu_clone_requests.sql`; PR-A creates no migration or
+  business implementation.
+- No Store 1 query, SSH, Docker, Flyway execution, database access, runtime
+  clone, Staging/Production write, merge, or deployment occurred.
+- Next state: `AL-003_PR_A_WAITING_FOR_OWNER_REVIEW`.
 
 ### AL-002 implementation record
 
