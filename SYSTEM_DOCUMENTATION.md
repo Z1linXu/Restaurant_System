@@ -32,6 +32,11 @@ separate from historical evidence snapshots and business implementation details:
   defines the synthetic naming, onboarding/idempotency, Store-isolation,
   ordering, realtime, disabled-printing, persistence, evidence, and cleanup
   gates. It is a plan only and authorizes no runtime write.
+- [STG-005A synthetic bootstrap runbook](deployment/cloud/README_STG005_SYNTHETIC_BOOTSTRAP.md)
+  defines the profile, exact-environment guards, stdin credential handling,
+  idempotency, transaction, evidence, and approval contract for the minimum
+  synthetic prerequisite topology. It does not authorize executing the
+  bootstrap.
 - [Frontdesk/GRAB item-name rules](docs/operations/FRONTDESK_GRAB_ITEM_NAME_RULES.md)
   remains the operational display-rule source; do not duplicate its item table
   here.
@@ -149,6 +154,38 @@ Docker operation, account, Store, menu, table, order, restart, or Production
 change was performed during planning. Current status is
 `STG-005_PLAN_COMPLETE_WAITING_FOR_OWNER_REVIEW`; STG-005 execution, STG-006,
 and AL-003 remain unauthorized.
+
+The Owner subsequently authorized the bounded
+`STG-005A_STAGING_SYNTHETIC_BOOTSTRAP` implementation and accepted the current
+feature-disabled KDS/Assembling boundary for STG-005. Positive
+Kitchen/Assembling workflow remains `EVIDENCE_PENDING`.
+
+STG-005A introduces a one-shot, non-web Spring command that is present only
+under the exact `cloud,staging-synthetic-bootstrap` profiles and requires an
+explicit command-enable property. It defaults to validation and cannot write
+unless both `--execute` and `--password-stdin` are present. Guards require
+Compose project `restaurant-pos-staging`, root
+`/srv/restaurant-pos/staging`, matching full runtime SHAs, a full reviewed tool
+SHA, the isolated Staging database name/user, and printing `DISABLED`.
+
+The transactional service reuses the formal BCrypt staff provisioning flow and
+creates only an active synthetic Organization, disabled-printing source Store,
+Owner user/credential, active Organization membership, and source-Store
+membership. It creates no menu, table, order, printer, Pad, customer, or
+Production data. Exact run replay returns the same IDs; changed content or
+password conflicts; any transaction failure leaves no partial topology.
+
+Flyway
+`V9__add_staging_synthetic_bootstrap_requests.sql` is append-only and contains
+no seed data. It stores only a run ID, request fingerprint, safe status/result
+metadata, runtime/tool SHAs, and resulting synthetic IDs. It never stores a
+password, password hash, token, printer endpoint, or full request payload. V9
+in the repository is schema intent only: this loop does not apply it to the
+server, and the current retained Staging runtime evidence remains Flyway V8.
+Runtime migration and bootstrap execution each require later, separate Owner
+approval. Current loop state is
+`STG-005A_BOOTSTRAP_IMPLEMENTED_WAITING_FOR_OWNER_REVIEW`; STG-005 execution,
+STG-006, AL-003, SSH, deployment, and KDS enablement remain prohibited.
 
 ## AL-002 Owner Store Onboarding Backend Foundation
 

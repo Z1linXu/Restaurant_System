@@ -7,12 +7,14 @@ import java.time.LocalDateTime;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
+@Profile("!staging-synthetic-bootstrap")
 public class OrderDispatchOutboxProcessor {
 
     private static final Logger logger = LoggerFactory.getLogger(OrderDispatchOutboxProcessor.class);

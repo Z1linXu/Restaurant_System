@@ -62,17 +62,18 @@ snapshots. Do not copy those reports into this planbook.
 | Item | Current state |
 |---|---|
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `STG-005 Synthetic Business Acceptance` |
-| Loop type | `DELIVERY_GOVERNANCE_PLAN` |
-| Loop status | `STG-005_PLAN_COMPLETE_WAITING_FOR_OWNER_REVIEW` |
+| Current Agile Loop | `STG-005A Staging Synthetic Bootstrap` |
+| Loop type | `IMPLEMENTATION` |
+| Loop status | `STG-005A_BOOTSTRAP_IMPLEMENTED_WAITING_FOR_OWNER_REVIEW` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | `AL-002_WAITING_FOR_OWNER_APPROVAL`; the Staging plan does not approve, merge, deploy, or supersede it. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
 | STG-003 state | PR #35 merged the completed real local Docker rehearsal into `main`; final runtime Head `74dd6a628002f96e4f2b4fbe3cf479fb23ed8e01` is `FINAL_HEAD_REHEARSAL_PASS`. |
 | STG-004 state | PR #38 merged the STG-004 runtime evidence. Exact SHA `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` passed PLAN, fresh PREFLIGHT, serial build/start, runtime verification, and isolated stop/start recovery. Server Staging remains running; Production remained unchanged. |
-| STG-005 state | PLAN complete on branch `codex/stg-005-synthetic-acceptance-plan`. No runtime command or synthetic write was executed. Execution is blocked on an approved synthetic Owner/Organization/source Store bootstrap and an Owner decision about the currently disabled KDS/Assembling surfaces. |
-| Current permitted work | Owner review of the STG-005 synthetic acceptance plan only. |
-| Explicitly not permitted | STG-005 execution, SSH, API/database writes, account/Store/order creation, Docker or Staging restart, Production changes, STG-006, AL-003, merge, deployment, or unrelated backlog work. |
+| STG-005 state | PLAN complete. The Owner approved CP-0 as a separate minimal Staging-only bootstrap implementation and accepted CP-4 as a feature-disabled KDS/Assembling boundary. Positive Kitchen/Assembling workflow remains `EVIDENCE_PENDING`. |
+| STG-005A state | The profile-gated synthetic bootstrap, append-only V9 request record, tests, and runbook are implemented locally on branch `codex/stg-005a-staging-synthetic-bootstrap`. Nothing was executed against server Staging. |
+| Current permitted work | Owner review of the STG-005A implementation and Draft PR only. |
+| Explicitly not permitted | SSH, V9 runtime migration, bootstrap execution, synthetic runtime writes, full STG-005 execution, KDS enablement, Docker or Staging restart, Production changes, STG-006, AL-003, merge, deployment, or unrelated backlog work. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 [AGILE_LOOP_OPERATING_MODEL.md](../AGILE_LOOP_OPERATING_MODEL.md), and
@@ -276,6 +277,41 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
   scope, and final Organization/Store cleanup through supported APIs.
 - Next state:
   `STG-005_PLAN_COMPLETE_WAITING_FOR_OWNER_REVIEW`.
+
+### STG-005A synthetic bootstrap implementation record
+
+- Owner decisions: CP-0 authorized a minimal isolated-Staging bootstrap;
+  CP-4 accepts the current KDS/Assembling feature-disabled boundary. No KDS
+  enablement is included.
+- Implementation branch:
+  `codex/stg-005a-staging-synthetic-bootstrap`, based on `origin/main`
+  `22ddc96728057056c194a453825d1c36884f7a92`.
+- The one-shot Spring command exists only under the exact
+  `cloud,staging-synthetic-bootstrap` profiles and a separate explicit enable
+  property. Default mode validates only; write mode requires both `--execute`
+  and `--password-stdin`.
+- Guards bind the request to project `restaurant-pos-staging`, root
+  `/srv/restaurant-pos/staging`, exact runtime/tool SHAs, the isolated Staging
+  database identity, non-web mode, and printing `DISABLED`.
+- The transaction creates only the synthetic Organization, source Store,
+  BCrypt Owner identity, active Owner Organization membership, and active
+  source-Store membership. It does not create menu, table, order, printer, Pad,
+  or customer data.
+- Flyway V9 adds only an idempotency/audit request table. It contains no seed
+  data and has not been applied to the server by this loop. The running
+  Staging evidence remains Flyway V8 until a separately approved migration.
+- Exact replay returns the same IDs; changed content/password conflicts; a
+  forced membership failure rolls back the request and all topology records.
+  Evidence output contains only synthetic IDs, status, and SHAs.
+- Verification is local only: focused guard, command, idempotency, credential,
+  and rollback tests plus the full backend suite and compile are required
+  before the Draft PR is published.
+- Runbook:
+  [STG-005A Synthetic Bootstrap](../../../deployment/cloud/README_STG005_SYNTHETIC_BOOTSTRAP.md).
+- No SSH, Docker, Flyway, server command, bootstrap execution, synthetic
+  runtime write, Production change, or KDS change occurred.
+- Next state:
+  `STG-005A_BOOTSTRAP_IMPLEMENTED_WAITING_FOR_OWNER_REVIEW`.
 
 ### AL-002 implementation record
 

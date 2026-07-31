@@ -1,9 +1,11 @@
 package com.restaurant.system.analytics.service;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
+@Profile("!staging-synthetic-bootstrap")
 public class AnalyticsAggregationScheduler {
 
     private final AnalyticsAggregationService analyticsAggregationService;
