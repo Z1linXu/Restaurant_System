@@ -280,8 +280,16 @@ legacy `COMBO_SIDE_REMOVE` child rows. See
 PR-F preparation also identified a missing shared read-only validation/planning
 boundary. The execute transaction cannot be reused for `/validate` because it
 writes the target graph and revision even if later rolled back. The Dependency
-Repair Gate therefore blocks the public validate endpoint until a minimal
-read-only planning contract is reviewed and merged.
+Repair Gate therefore blocks the public validate endpoint until the minimal
+PR-F0 planning contract is reviewed and merged. PR-F0 makes composers produce a
+transaction-local logical option plan. Validation uses virtual target IDs and
+the same ordered composers without Store/revision locks or writes; execution
+persists that plan only after acquiring the existing locks and repeating all
+checks. Validation rejects source or target revision drift after composition,
+and execution verifies persisted option fields and parent links against the
+logical plan before advancing the target revision. It introduces no public
+endpoint or migration. See
+[AL-003 PR-F0 read-only planning boundary](docs/governance/agile/AL-003_PR_F0_READ_ONLY_PLANNING_BOUNDARY.md).
 
 STG-005A owns `V9__add_staging_synthetic_bootstrap_requests.sql`. PR-B adds the
 separate append-only `V10__add_owner_store_menu_clone_requests.sql`. V10 creates

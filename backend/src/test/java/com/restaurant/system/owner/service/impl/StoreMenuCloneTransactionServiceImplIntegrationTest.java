@@ -30,11 +30,13 @@ import com.restaurant.system.owner.menu.StoreMenuCloneBaseGraphProfile.StationSe
 import com.restaurant.system.owner.menu.StoreMenuCloneBaseGraphProfile.StationSourcePolicy;
 import com.restaurant.system.owner.menu.StoreMenuCloneCompositionContext;
 import com.restaurant.system.owner.menu.StoreMenuCloneGraphComposer;
+import com.restaurant.system.owner.menu.StoreMenuClonePlannedOption;
 import com.restaurant.system.owner.menu.StoreMenuCloneProfileRegistry;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneRequestCoordinator;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneSuccessEvidence;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneTransactionCommand;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneTransactionResult;
+import com.restaurant.system.owner.service.OwnerStoreMenuCloneValidationCommand;
 import com.restaurant.system.station.entity.Station;
 import com.restaurant.system.station.repository.StationRepository;
 import com.restaurant.system.user.entity.Store;
@@ -477,6 +479,82 @@ class StoreMenuCloneTransactionServiceImplIntegrationTest {
     }
 
     @Test
+    void plannedOptionCannotReferenceItselfAsParent() {
+        Fixture fixture = fixture();
+        StoreMenuCloneGraphComposer selfParent = composer(
+            "self-parent",
+            StoreMenuCloneGraphComposer.Phase.SOURCE_OPTIONS,
+            10,
+            PROFILE_CODE,
+            context -> {
+                Long alphaId = context.baseGraph().targetItemIdByTargetSku().get("target_alpha");
+                context.addOption(plannedOption(alphaId, "SELF", "SELF", 1));
+                return 1;
+            }
+        );
+
+        assertCloneError(
+            () -> execute(
+                service(defaultProfile(fixture.source().id), List.of(selfParent)),
+                command(fixture, PROFILE_CODE)
+            ),
+            "TARGET_MENU_VALIDATION_FAILED"
+        );
+        assertTargetRolledBack(fixture);
+    }
+
+    @Test
+    void plannedOptionParentMustExist() {
+        Fixture fixture = fixture();
+        StoreMenuCloneGraphComposer missingParent = composer(
+            "missing-parent",
+            StoreMenuCloneGraphComposer.Phase.SOURCE_OPTIONS,
+            10,
+            PROFILE_CODE,
+            context -> {
+                Long alphaId = context.baseGraph().targetItemIdByTargetSku().get("target_alpha");
+                context.addOption(plannedOption(alphaId, "CHILD", "MISSING", 1));
+                return 1;
+            }
+        );
+
+        assertCloneError(
+            () -> execute(
+                service(defaultProfile(fixture.source().id), List.of(missingParent)),
+                command(fixture, PROFILE_CODE)
+            ),
+            "TARGET_MENU_VALIDATION_FAILED"
+        );
+        assertTargetRolledBack(fixture);
+    }
+
+    @Test
+    void plannedOptionParentGraphMustBeAcyclic() {
+        Fixture fixture = fixture();
+        StoreMenuCloneGraphComposer cycle = composer(
+            "parent-cycle",
+            StoreMenuCloneGraphComposer.Phase.SOURCE_OPTIONS,
+            10,
+            PROFILE_CODE,
+            context -> {
+                Long alphaId = context.baseGraph().targetItemIdByTargetSku().get("target_alpha");
+                context.addOption(plannedOption(alphaId, "FIRST", "SECOND", 1));
+                context.addOption(plannedOption(alphaId, "SECOND", "FIRST", 2));
+                return 2;
+            }
+        );
+
+        assertCloneError(
+            () -> execute(
+                service(defaultProfile(fixture.source().id), List.of(cycle)),
+                command(fixture, PROFILE_CODE)
+            ),
+            "TARGET_MENU_VALIDATION_FAILED"
+        );
+        assertTargetRolledBack(fixture);
+    }
+
+    @Test
     void optionCountAndTargetStoreOwnershipAreValidated() {
         Fixture validFixture = fixture();
         StoreMenuCloneGraphComposer validOptions = composer(
@@ -485,11 +563,9 @@ class StoreMenuCloneTransactionServiceImplIntegrationTest {
             10,
             PROFILE_CODE,
             context -> {
-                MenuItem alpha = itemRepository.findById(
-                    context.baseGraph().targetItemIdByTargetSku().get("target_alpha")
-                ).orElseThrow();
-                MenuItemOption parent = option(alpha, "TARGET_PARENT", null, true, 1);
-                option(alpha, "TARGET_CHILD", parent.id, true, 2);
+                Long alphaId = context.baseGraph().targetItemIdByTargetSku().get("target_alpha");
+                context.addOption(plannedOption(alphaId, "TARGET_PARENT", null, 1));
+                context.addOption(plannedOption(alphaId, "TARGET_CHILD", "TARGET_PARENT", 2));
                 return 2;
             }
         );
@@ -499,6 +575,34 @@ class StoreMenuCloneTransactionServiceImplIntegrationTest {
             command(validFixture, PROFILE_CODE)
         );
         assertThat(result.evidence().createdOptionCount()).isEqualTo(2);
+        MenuItem targetAlpha = itemRepository.findAllByStoreIdOrderByIdAsc(validFixture.target().id).stream()
+            .filter(item -> "target_alpha".equals(item.sku))
+            .findFirst()
+            .orElseThrow();
+        List<MenuItemOption> persisted = optionRepository.findAllByStoreIdAndMenuItemIdsOrdered(
+            validFixture.target().id,
+            List.of(targetAlpha.id)
+        );
+        MenuItemOption parent = persisted.stream()
+            .filter(option -> "TARGET_PARENT".equals(option.option_code))
+            .findFirst()
+            .orElseThrow();
+        MenuItemOption child = persisted.stream()
+            .filter(option -> "TARGET_CHILD".equals(option.option_code))
+            .findFirst()
+            .orElseThrow();
+        assertThat(persisted).allSatisfy(option -> {
+            assertThat(option.option_type).isEqualTo("addon");
+            assertThat(option.option_group).isEqualTo("ADD_ON");
+            assertThat(option.name_zh).isEqualTo(option.option_code);
+            assertThat(option.name_en).isEqualTo(option.option_code);
+            assertThat(option.price_delta).isEqualByComparingTo(BigDecimal.ZERO);
+            assertThat(option.is_active).isTrue();
+        });
+        assertThat(parent.sort_order).isEqualTo(1);
+        assertThat(parent.parent_option_id).isNull();
+        assertThat(child.sort_order).isEqualTo(2);
+        assertThat(child.parent_option_id).isEqualTo(parent.id);
 
         cleanDatabase();
         Fixture wrongStoreFixture = fixture();
@@ -508,7 +612,12 @@ class StoreMenuCloneTransactionServiceImplIntegrationTest {
             10,
             PROFILE_CODE,
             context -> {
-                option(wrongStoreFixture.alpha(), "SOURCE_SIDE_EFFECT", null, true, 4);
+                context.addOption(plannedOption(
+                    wrongStoreFixture.alpha().id,
+                    "SOURCE_SIDE_EFFECT",
+                    null,
+                    4
+                ));
                 return 1;
             }
         );
@@ -523,6 +632,89 @@ class StoreMenuCloneTransactionServiceImplIntegrationTest {
         assertThat(optionRepository.findAllByMenuItemIdsOrdered(List.of(wrongStoreFixture.alpha().id)))
             .extracting(option -> option.option_code)
             .doesNotContain("SOURCE_SIDE_EFFECT");
+    }
+
+    @Test
+    void validationRejectsARevisionChangeDuringComposition() {
+        Fixture fixture = fixture();
+        SyntheticProfile profile = defaultProfile(fixture.source().id);
+        StoreMenuCloneGraphComposer concurrentMutation = composer(
+            "concurrent-source-mutation",
+            StoreMenuCloneGraphComposer.Phase.SOURCE_OPTIONS,
+            10,
+            PROFILE_CODE,
+            context -> {
+                menuRevisionService.incrementRevision(fixture.source().id);
+                return 0;
+            }
+        );
+        StoreMenuCloneTransactionServiceImpl service = service(profile, List.of(concurrentMutation));
+
+        assertCloneError(
+            () -> transaction().execute(status -> service.validate(new OwnerStoreMenuCloneValidationCommand(
+                ORGANIZATION_ID,
+                fixture.source().id,
+                fixture.target().id,
+                PROFILE_CODE
+            ))),
+            "SOURCE_MENU_CHANGED"
+        );
+
+        assertThat(storeRepository.findMenuRevisionById(fixture.source().id)).isEqualTo(1L);
+        assertTargetRolledBack(fixture);
+        verify(coordinator, never()).complete(any());
+    }
+
+    @Test
+    void validationRejectsATargetRevisionChangeDuringComposition() {
+        Fixture fixture = fixture();
+        SyntheticProfile profile = defaultProfile(fixture.source().id);
+        StoreMenuCloneGraphComposer concurrentMutation = composer(
+            "concurrent-target-mutation",
+            StoreMenuCloneGraphComposer.Phase.SOURCE_OPTIONS,
+            10,
+            PROFILE_CODE,
+            context -> {
+                menuRevisionService.incrementRevision(fixture.target().id);
+                return 0;
+            }
+        );
+        StoreMenuCloneTransactionServiceImpl service = service(profile, List.of(concurrentMutation));
+
+        assertCloneError(
+            () -> transaction().execute(status -> service.validate(new OwnerStoreMenuCloneValidationCommand(
+                ORGANIZATION_ID,
+                fixture.source().id,
+                fixture.target().id,
+                PROFILE_CODE
+            ))),
+            "TARGET_MENU_CHANGED"
+        );
+
+        assertThat(storeRepository.findMenuRevisionById(fixture.target().id)).isEqualTo(1L);
+        assertTargetRolledBack(fixture);
+        verify(coordinator, never()).complete(any());
+    }
+
+    private StoreMenuClonePlannedOption plannedOption(
+        Long targetItemId,
+        String code,
+        String parentCode,
+        int sortOrder
+    ) {
+        return new StoreMenuClonePlannedOption(
+            targetItemId,
+            null,
+            "addon",
+            code,
+            "ADD_ON",
+            parentCode,
+            sortOrder,
+            code,
+            code,
+            BigDecimal.ZERO,
+            true
+        );
     }
 
     private StoreMenuCloneTransactionServiceImpl service(

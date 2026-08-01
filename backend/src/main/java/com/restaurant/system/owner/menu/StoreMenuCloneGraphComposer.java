@@ -1,8 +1,6 @@
 package com.restaurant.system.owner.menu;
 
-/**
- * Internal extension point invoked inside the clone transaction while both Store locks are held.
- */
+/** Internal extension point shared by read-only planning and locked clone execution. */
 public interface StoreMenuCloneGraphComposer {
 
     String identity();

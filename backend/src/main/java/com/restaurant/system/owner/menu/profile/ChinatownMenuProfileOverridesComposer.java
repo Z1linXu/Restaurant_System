@@ -1,7 +1,5 @@
 package com.restaurant.system.owner.menu.profile;
 
-import com.restaurant.system.menu.entity.MenuItemOption;
-import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.owner.exception.OwnerStoreMenuCloneException;
 import com.restaurant.system.owner.menu.ChinatownMenuCloneProfile;
 import com.restaurant.system.owner.menu.ChinatownMenuCloneProfile.ComboRule;
@@ -10,10 +8,10 @@ import com.restaurant.system.owner.menu.ChinatownMenuCloneProfile.GeneratedOptio
 import com.restaurant.system.owner.menu.ChinatownMenuCloneProfile.SizeRule;
 import com.restaurant.system.owner.menu.StoreMenuCloneCompositionContext;
 import com.restaurant.system.owner.menu.StoreMenuCloneGraphComposer;
+import com.restaurant.system.owner.menu.StoreMenuClonePlannedOption;
 import com.restaurant.system.owner.menu.StoreMenuCloneSnapshot.SourceItem;
 import com.restaurant.system.owner.menu.StoreMenuCloneSnapshot.SourceOption;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -35,12 +33,6 @@ public final class ChinatownMenuProfileOverridesComposer implements StoreMenuClo
 
     public static final String IDENTITY = "chinatown-profile-overrides";
     public static final int ORDER = 100;
-
-    private final MenuItemOptionRepository optionRepository;
-
-    public ChinatownMenuProfileOverridesComposer(MenuItemOptionRepository optionRepository) {
-        this.optionRepository = optionRepository;
-    }
 
     @Override
     public String identity() {
@@ -67,10 +59,10 @@ public final class ChinatownMenuProfileOverridesComposer implements StoreMenuClo
         ChinatownMenuCloneProfile profile = requireProfile(context);
         Map<String, Long> targetIds = requireTargetItems(profile, context.baseGraph().targetItemIdByTargetSku());
         List<Long> targetItemIds = targetIds.values().stream().sorted().toList();
-        List<MenuItemOption> existing = optionRepository.findAllByMenuItemIdsOrdered(targetItemIds);
+        List<StoreMenuClonePlannedOption> existing = context.options();
         ExistingOptions existingOptions = indexExisting(existing, targetItemIds);
         List<PlannedOption> plan = new ArrayList<>();
-        List<MenuItemOption> updates = new ArrayList<>();
+        List<StoreMenuClonePlannedOption> updates = new ArrayList<>();
 
         Map<String, NoodleDefinition> noodleDefinitions = resolveNoodleDefinitions(profile, context);
         for (String targetSku : noodleTargetSkus(profile)) {
@@ -104,17 +96,8 @@ public final class ChinatownMenuProfileOverridesComposer implements StoreMenuClo
         }
 
         validateCompleteProfileGraph(profile, targetIds, existingOptions, plan, updates);
-        if (!updates.isEmpty()) {
-            optionRepository.saveAllAndFlush(updates);
-        }
-        if (!plan.isEmpty()) {
-            LocalDateTime now = LocalDateTime.now();
-            List<MenuItemOption> generated = plan.stream().map(option -> option.toEntity(now)).toList();
-            optionRepository.saveAllAndFlush(generated);
-            if (generated.stream().anyMatch(option -> option.id == null)) {
-                throw invalidTarget("Generated profile options did not receive IDs");
-            }
-        }
+        updates.forEach(context::replaceOption);
+        plan.stream().map(PlannedOption::toOptionPlan).forEach(context::addOption);
         return plan.size();
     }
 
@@ -147,14 +130,14 @@ public final class ChinatownMenuProfileOverridesComposer implements StoreMenuClo
         return Map.copyOf(resolved);
     }
 
-    private ExistingOptions indexExisting(List<MenuItemOption> options, List<Long> targetItemIds) {
+    private ExistingOptions indexExisting(List<StoreMenuClonePlannedOption> options, List<Long> targetItemIds) {
         Set<Long> allowed = Set.copyOf(targetItemIds);
-        Map<OptionKey, MenuItemOption> byCode = new LinkedHashMap<>();
-        for (MenuItemOption option : options) {
-            if (option == null || !allowed.contains(option.menu_item_id) || !exact(option.option_code)) {
+        Map<OptionKey, StoreMenuClonePlannedOption> byCode = new LinkedHashMap<>();
+        for (StoreMenuClonePlannedOption option : options) {
+            if (option == null || !allowed.contains(option.targetItemId()) || !exact(option.optionCode())) {
                 throw invalidTarget("Existing target option evidence is incomplete");
             }
-            OptionKey key = new OptionKey(option.menu_item_id, normalizeCode(option.option_code));
+            OptionKey key = new OptionKey(option.targetItemId(), normalizeCode(option.optionCode()));
             if (byCode.putIfAbsent(key, option) != null) {
                 throw invalidTarget("Existing target option codes are duplicated");
             }
@@ -218,26 +201,32 @@ public final class ChinatownMenuProfileOverridesComposer implements StoreMenuClo
         GeneratedOptionRule rule,
         ExistingOptions existing,
         List<PlannedOption> plan,
-        List<MenuItemOption> updates,
+        List<StoreMenuClonePlannedOption> updates,
         Long targetItemId
     ) {
-        MenuItemOption current = existing.get(targetItemId, rule.optionCode());
+        StoreMenuClonePlannedOption current = existing.get(targetItemId, rule.optionCode());
         if (current == null) {
             add(plan, existing, targetItemId, rule);
             return;
         }
-        if (!"addon".equals(normalizeType(current.option_type))
-            || !"ADD_ON".equals(normalizeGroup(current.option_group))
-            || current.parent_option_id != null) {
+        if (!"addon".equals(normalizeType(current.optionType()))
+            || !"ADD_ON".equals(normalizeGroup(current.optionGroup()))
+            || current.parentOptionCode() != null) {
             throw invalidTarget("Reviewed add-on conflicts with a copied target option");
         }
-        current.name_zh = rule.nameZh();
-        current.name_en = rule.nameEn();
-        current.price_delta = rule.priceDelta();
-        current.sort_order = rule.sortOrder();
-        current.is_active = true;
-        current.updated_at = LocalDateTime.now();
-        updates.add(current);
+        updates.add(new StoreMenuClonePlannedOption(
+            targetItemId,
+            current.sourceOptionId(),
+            rule.optionType(),
+            rule.optionCode(),
+            rule.optionGroup(),
+            null,
+            rule.sortOrder(),
+            rule.nameZh(),
+            rule.nameEn(),
+            rule.priceDelta(),
+            true
+        ));
     }
 
     private void add(
@@ -268,11 +257,11 @@ public final class ChinatownMenuProfileOverridesComposer implements StoreMenuClo
         Map<String, Long> targetIds,
         ExistingOptions existing,
         List<PlannedOption> plan,
-        List<MenuItemOption> updates
+        List<StoreMenuClonePlannedOption> updates
     ) {
         Set<OptionKey> effective = new LinkedHashSet<>(existing.byCode().keySet());
         plan.stream().map(PlannedOption::key).forEach(effective::add);
-        updates.forEach(option -> effective.add(new OptionKey(option.menu_item_id, normalizeCode(option.option_code))));
+        updates.forEach(option -> effective.add(new OptionKey(option.targetItemId(), normalizeCode(option.optionCode()))));
         for (String noodleSku : noodleTargetSkus(profile)) {
             Long itemId = targetIds.get(noodleSku);
             profile.noodleTypeCodes().forEach(code -> requireKey(effective, itemId, code));
@@ -348,8 +337,8 @@ public final class ChinatownMenuProfileOverridesComposer implements StoreMenuClo
     private record OptionKey(Long targetItemId, String optionCode) {
     }
 
-    private record ExistingOptions(Map<OptionKey, MenuItemOption> byCode) {
-        private MenuItemOption get(Long targetItemId, String optionCode) {
+    private record ExistingOptions(Map<OptionKey, StoreMenuClonePlannedOption> byCode) {
+        private StoreMenuClonePlannedOption get(Long targetItemId, String optionCode) {
             return byCode.get(new OptionKey(targetItemId, optionCode.toLowerCase(Locale.ROOT)));
         }
     }
@@ -365,21 +354,20 @@ public final class ChinatownMenuProfileOverridesComposer implements StoreMenuClo
     }
 
     private record PlannedOption(OptionKey key, GeneratedOptionRule rule) {
-        private MenuItemOption toEntity(LocalDateTime now) {
-            MenuItemOption option = new MenuItemOption();
-            option.menu_item_id = key.targetItemId();
-            option.option_type = rule.optionType();
-            option.option_group = rule.optionGroup();
-            option.option_code = rule.optionCode();
-            option.parent_option_id = null;
-            option.sort_order = rule.sortOrder();
-            option.name_zh = rule.nameZh();
-            option.name_en = rule.nameEn();
-            option.price_delta = rule.priceDelta();
-            option.is_active = true;
-            option.created_at = now;
-            option.updated_at = now;
-            return option;
+        private StoreMenuClonePlannedOption toOptionPlan() {
+            return new StoreMenuClonePlannedOption(
+                key.targetItemId(),
+                null,
+                rule.optionType(),
+                rule.optionCode(),
+                rule.optionGroup(),
+                null,
+                rule.sortOrder(),
+                rule.nameZh(),
+                rule.nameEn(),
+                rule.priceDelta(),
+                true
+            );
         }
     }
 }

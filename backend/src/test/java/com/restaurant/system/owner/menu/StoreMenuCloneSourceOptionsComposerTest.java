@@ -77,29 +77,28 @@ class StoreMenuCloneSourceOptionsComposerTest {
             SIZE_OVERRIDE
         )));
 
-        int count = composer(profile).compose(context(
+        StoreMenuCloneCompositionContext context = context(
             profile,
             List.of(source),
             List.of(parent, child, inactive, profileOverride),
             Map.of("target_noodle", 501L)
-        ));
+        );
+        int count = composer(profile).compose(context);
 
         assertThat(count).isEqualTo(2);
-        assertThat(persistedCalls).hasSize(2);
-        assertThat(persistedCalls.get(0))
-            .extracting(OptionRow::optionCode)
+        assertThat(context.options())
+            .extracting(StoreMenuClonePlannedOption::optionCode)
             .containsExactly("no_sauce", "extra_meat");
-        assertThat(persistedCalls.get(0)).allSatisfy(option -> assertThat(option.parentOptionId()).isNull());
-        OptionRow persistedChild = persistedCalls.get(1).get(0);
-        OptionRow persistedParent = persistedCalls.get(1).get(1);
-        assertThat(persistedChild.parentOptionId()).isEqualTo(persistedParent.id());
-        assertThat(persistedChild.menuItemId()).isEqualTo(501L);
-        assertThat(persistedChild.optionType()).isEqualTo(child.optionType());
-        assertThat(persistedChild.optionGroup()).isEqualTo(child.optionGroup());
-        assertThat(persistedChild.nameZh()).isEqualTo(child.nameZh());
-        assertThat(persistedChild.nameEn()).isEqualTo(child.nameEn());
-        assertThat(persistedChild.priceDelta()).isEqualByComparingTo(child.priceDelta());
-        assertThat(persistedChild.active()).isTrue();
+        StoreMenuClonePlannedOption plannedChild = context.options().get(0);
+        assertThat(plannedChild.parentOptionCode()).isEqualTo("extra_meat");
+        assertThat(plannedChild.targetItemId()).isEqualTo(501L);
+        assertThat(plannedChild.optionType()).isEqualTo(child.optionType());
+        assertThat(plannedChild.optionGroup()).isEqualTo(child.optionGroup());
+        assertThat(plannedChild.nameZh()).isEqualTo(child.nameZh());
+        assertThat(plannedChild.nameEn()).isEqualTo(child.nameEn());
+        assertThat(plannedChild.priceDelta()).isEqualByComparingTo(child.priceDelta());
+        assertThat(plannedChild.active()).isTrue();
+        verify(optionRepository, never()).saveAllAndFlush(anyList());
     }
 
     @Test
@@ -112,24 +111,25 @@ class StoreMenuCloneSourceOptionsComposerTest {
             application("source_noodle", "target_a", ADD_ON, REMOVE)
         ));
 
-        int count = composer(profile).compose(context(
+        StoreMenuCloneCompositionContext context = context(
             profile,
             List.of(source, source),
             List.of(child, parent),
             Map.of("target_b", 502L, "target_a", 501L)
-        ));
+        );
+        int count = composer(profile).compose(context);
 
         assertThat(count).isEqualTo(4);
-        assertThat(persistedCalls.get(0))
-            .extracting(OptionRow::menuItemId, OptionRow::optionCode)
+        assertThat(context.options())
+            .extracting(StoreMenuClonePlannedOption::targetItemId, StoreMenuClonePlannedOption::optionCode)
             .containsExactly(
                 org.assertj.core.groups.Tuple.tuple(501L, "parent"),
                 org.assertj.core.groups.Tuple.tuple(501L, "child"),
                 org.assertj.core.groups.Tuple.tuple(502L, "parent"),
                 org.assertj.core.groups.Tuple.tuple(502L, "child")
             );
-        assertThat(persistedCalls.get(1).get(1).parentOptionId()).isEqualTo(persistedCalls.get(1).get(0).id());
-        assertThat(persistedCalls.get(1).get(3).parentOptionId()).isEqualTo(persistedCalls.get(1).get(2).id());
+        assertThat(context.options().get(1).parentOptionCode()).isEqualTo("parent");
+        assertThat(context.options().get(3).parentOptionCode()).isEqualTo("parent");
     }
 
     @Test
@@ -179,16 +179,16 @@ class StoreMenuCloneSourceOptionsComposerTest {
             SIZE_OVERRIDE
         )));
 
-        int count = composer(profile).compose(context(
+        StoreMenuCloneCompositionContext context = context(
             profile,
             List.of(source),
             List.of(overridden, inactive, selected),
             Map.of("target_noodle", 501L)
-        ));
+        );
+        int count = composer(profile).compose(context);
 
         assertThat(count).isOne();
-        assertThat(persistedCalls).hasSize(1);
-        assertThat(persistedCalls.get(0)).extracting(OptionRow::optionCode).containsExactly("selected");
+        assertThat(context.options()).extracting(StoreMenuClonePlannedOption::optionCode).containsExactly("selected");
     }
 
     @Test
@@ -225,17 +225,17 @@ class StoreMenuCloneSourceOptionsComposerTest {
 
         SourceItem source = sourceItem(101L, "optional_side");
         SourceOption option = option(3_151L, source.id(), "addon", "extra", "ADD_ON", null, 1, true);
-        int presentCount = composer(profile).compose(context(
+        StoreMenuCloneCompositionContext presentContext = context(
             profile,
             List.of(source),
             List.of(option),
             Map.of("target_a", 501L)
-        ));
+        );
+        int presentCount = composer(profile).compose(presentContext);
 
         assertThat(absentCount).isZero();
         assertThat(presentCount).isOne();
-        assertThat(persistedCalls).hasSize(1);
-        assertThat(persistedCalls.get(0)).extracting(OptionRow::optionCode).containsExactly("extra");
+        assertThat(presentContext.options()).extracting(StoreMenuClonePlannedOption::optionCode).containsExactly("extra");
     }
 
     @Test
@@ -419,7 +419,6 @@ class StoreMenuCloneSourceOptionsComposerTest {
 
     private StoreMenuCloneSourceOptionsComposer composer(TestProfile profile) {
         return new StoreMenuCloneSourceOptionsComposer(
-            optionRepository,
             new StoreMenuCloneProfileRegistry(List.of(profile))
         );
     }
