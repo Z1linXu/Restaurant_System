@@ -223,6 +223,12 @@ rules remain in the first versioned Store Profile. Future generic profile,
 printing, staff/table, device, and activation modules are not implemented by
 this prerequisite.
 
+The same governance source defines the permanent Dependency Repair Gate and
+Store Profile Principle. Dependent packages stop on a prerequisite mismatch and
+resume only after the smallest repair is merged into `main`; shared services
+must remain Store-neutral, with reviewed versioned profiles carrying all
+Store-specific behavior.
+
 STG-005A owns `V9__add_staging_synthetic_bootstrap_requests.sql`. PR-B adds the
 separate append-only `V10__add_owner_store_menu_clone_requests.sql`. V10 creates
 only the durable clone request/evidence table, the composite uniqueness scope

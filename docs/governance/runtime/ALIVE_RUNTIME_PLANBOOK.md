@@ -64,7 +64,7 @@ snapshots. Do not copy those reports into this planbook.
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `AL-003 Store 1 -> Chinatown Live Menu Clone` |
 | Loop type | `IMPLEMENTATION_FOUNDATION` |
-| Loop status | `AL-003_PR_B2_WAITING_FOR_OWNER_REVIEW` |
+| Loop status | `AL-003_PR_C_IMPLEMENTATION_IN_PROGRESS` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | `AL-002_WAITING_FOR_OWNER_APPROVAL`; the Staging plan does not approve, merge, deploy, or supersede it. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -72,9 +72,9 @@ snapshots. Do not copy those reports into this planbook.
 | STG-004 state | PR #38 merged the STG-004 runtime evidence. Exact SHA `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` passed PLAN, fresh PREFLIGHT, serial build/start, runtime verification, and isolated stop/start recovery. Server Staging remains running; Production remained unchanged. |
 | STG-005 state | PLAN complete. The Owner approved CP-0 as a separate minimal Staging-only bootstrap implementation and accepted CP-4 as a feature-disabled KDS/Assembling boundary. Positive Kitchen/Assembling workflow remains `EVIDENCE_PENDING`. |
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
-| AL-003 state | PR #41 merged PR-A. PR-B adds V10 and the local idempotency/transaction foundation only; it has no menu graph clone implementation or public Controller. |
-| Current permitted work | Owner review of the AL-003 prerequisite Draft PRs only; graph clone and runtime execution remain prohibited. |
-| Explicitly not permitted | Category/station/item/option clone, Chinatown overrides, Combo, Store 1 runtime read, public clone endpoint, SSH, Staging or Production mutation, real clone, merge, deployment, STG-006, or unrelated backlog work. |
+| AL-003 state | PR #41 merged PR-A, PR #42 merged PR-B, and PRs #43/#44 merged the replay/FAILED and menu-revision lock prerequisites. PR-C local implementation is authorized; no runtime clone or public Controller is authorized. |
+| Current permitted work | The local C -> D -> E -> F stacked Draft PR pipeline, with each dependent implementation starting only from its predecessor's fixed contract SHA. |
+| Explicitly not permitted | Store 1 runtime access, real clone, SSH, Staging or Production mutation, automatic merge, deployment, STG-006, or unrelated backlog work. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 [AGILE_LOOP_OPERATING_MODEL.md](../AGILE_LOOP_OPERATING_MODEL.md), and
@@ -369,6 +369,9 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 Architecture anchor: shared provisioning infrastructure remains generic while
 Chinatown differences stay in the first versioned Store Profile; future profile,
 printing, activation, staff/table, and device modules are direction only.
+
+Dependency repair and Store Profile governance are authoritative in
+[AGILE_LOOP_OPERATING_MODEL.md](../AGILE_LOOP_OPERATING_MODEL.md).
 
 ### AL-002 implementation record
 
