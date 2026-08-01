@@ -1,9 +1,12 @@
 package com.restaurant.system.user.repository;
 
 import com.restaurant.system.user.entity.Store;
+import jakarta.persistence.LockModeType;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +19,10 @@ public interface StoreRepository extends JpaRepository<Store, Long> {
 
     @Query("select s from Store s where s.organization_id = :organizationId order by s.id asc")
     List<Store> findAllByOrganizationIdOrderByIdAsc(@Param("organizationId") Long organizationId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from Store s where s.id in :storeIds order by s.id asc")
+    List<Store> findAllByIdInForUpdateOrderByIdAsc(@Param("storeIds") Collection<Long> storeIds);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional

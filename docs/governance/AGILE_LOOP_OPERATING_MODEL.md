@@ -89,3 +89,22 @@ isolated Staging plan is `PLAN_COMPLETE_WAITING_FOR_OWNER_APPROVAL`. It does
 not change the AL-002 approval state and does not authorize STG-002
 implementation, server access, Docker/Flyway execution, merge, deployment, or
 AL-003 implementation.
+
+## 7. Reusable Store-profile architecture
+
+Store onboarding and provisioning work must treat each restaurant configuration
+as a versioned Store Profile consumed by shared services, repositories,
+transactions, and idempotency controls. A profile may define Store-specific
+catalog, pricing, ordering, and provisioning inputs, but shared implementation
+must not branch on a restaurant name or a hard-coded target Store ID. Store 1 is
+the reviewed source input for the current AL-003 profile, not a permanent engine
+restriction, and `ChinatownMenuCloneProfile` is the first profile rather than
+the only supported profile.
+
+Future design direction includes a Generic Store Provisioning Engine, Store
+Profile Framework, Printing Provisioning Module, Staff/Table Provisioning
+Module, Device/Pad Provisioning Module, and Store Activation Workflow. Candidate
+loops are `AL-004_GENERIC_STORE_PROFILE_FRAMEWORK`,
+`AL-005_PRINTING_PROVISIONING_TEMPLATE`, and
+`AL-006_STORE_ACTIVATION_WORKFLOW`; naming them here does not authorize or start
+their implementation.

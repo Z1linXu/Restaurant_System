@@ -212,6 +212,17 @@ The transaction/API/idempotency/source-invariance design and reviewable PR
 sequence are maintained in
 [AL-003 technical plan](docs/governance/agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md).
 
+AL-003 PR-B2 adds the shared Store-row locking boundary used by menu revisions:
+formal Station writes now advance `menu_revision`, Store-template Station and
+Category writes advance only the new target Store once, and multi-Store menu
+revision locks are acquired in ascending Store ID order. The reusable profile
+architecture is defined in the technical plan and
+[Agile Loop Operating Model](docs/governance/AGILE_LOOP_OPERATING_MODEL.md):
+shared provisioning code remains restaurant-neutral, while Chinatown-specific
+rules remain in the first versioned Store Profile. Future generic profile,
+printing, staff/table, device, and activation modules are not implemented by
+this prerequisite.
+
 STG-005A owns `V9__add_staging_synthetic_bootstrap_requests.sql`. PR-B adds the
 separate append-only `V10__add_owner_store_menu_clone_requests.sql`. V10 creates
 only the durable clone request/evidence table, the composite uniqueness scope
