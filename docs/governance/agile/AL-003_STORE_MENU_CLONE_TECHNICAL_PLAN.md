@@ -250,10 +250,11 @@ merge into or overwrite an independently edited target menu.
 ## 6. Consistent live source snapshot
 
 The clone transaction locks source and target Store rows in ascending Store ID
-order to avoid deadlocks. Use a shared/pessimistic read lock for source and a
-pessimistic write lock for target. Menu mutation services must update the Store
-revision while honoring the Store row lock; this invariant must be verified in
-PR-B before implementation proceeds.
+order to avoid deadlocks. The shared menu-revision lock contract uses
+pessimistic Store-row locks for both source and target so formal menu mutations
+serialize with the snapshot transaction. Menu mutation services update the Store
+revision in the same transaction while honoring that lock. PR-B2 establishes
+this prerequisite before graph-clone implementation proceeds.
 
 Within the clone transaction:
 
@@ -266,6 +267,21 @@ Within the clone transaction:
 
 No source entity is passed to `save`, mutated in place, or reused as a target
 entity. Every target object is a new instance with a null ID.
+
+### 6.1 Reusable profile boundary
+
+The clone transaction, repository queries, revision locking, idempotency, and
+evidence handling are shared infrastructure. Chinatown-specific names, prices,
+ordering, Combo definitions, and option rules belong only to the versioned
+`ChinatownMenuCloneProfile`. Shared code must not contain `if store ==
+Chinatown`, `if store_id == 2`, St-Denis-only catalog branches, or
+Chinatown-only printing branches. Store 1 is this profile's current reviewed
+source input, not a permanent restriction of the future provisioning engine.
+
+This first profile is intended to feed a later Generic Store Provisioning
+Engine and Store Profile Framework. Printing, staff/table, device/Pad, and Store
+activation provisioning remain separate future modules and are not implemented
+by AL-003 PR-B2.
 
 ## 7. Category clone contract
 

@@ -6,6 +6,8 @@ import com.restaurant.system.menu.service.MenuRevisionService;
 import com.restaurant.system.user.entity.Store;
 import com.restaurant.system.user.repository.StoreRepository;
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,9 +42,33 @@ public class MenuRevisionServiceImpl implements MenuRevisionService {
     @Override
     @Transactional
     public void incrementRevision(Long storeId) {
-        if (storeId == null || storeRepository.incrementMenuRevision(storeId) != 1) {
-            throw new BusinessException("Store not found for menu revision: " + storeId);
+        incrementRevisionsInOrder(List.of(requireStoreId(storeId)));
+    }
+
+    @Override
+    @Transactional
+    public void incrementRevisionsInOrder(Collection<Long> storeIds) {
+        List<Store> stores = lockStoresInOrder(storeIds);
+        for (Store store : stores) {
+            if (storeRepository.incrementMenuRevision(store.id) != 1) {
+                throw new BusinessException("Store not found for menu revision: " + store.id);
+            }
         }
+    }
+
+    @Override
+    @Transactional
+    public List<Store> lockStoresInOrder(Collection<Long> storeIds) {
+        if (storeIds == null || storeIds.isEmpty() || storeIds.stream().anyMatch(id -> id == null)) {
+            throw new BusinessException("Store ids are required for menu mutation lock");
+        }
+        List<Long> orderedIds = storeIds.stream().distinct().sorted().toList();
+        List<Store> stores = storeRepository.findAllByIdInForUpdateOrderByIdAsc(orderedIds);
+        if (stores.size() != orderedIds.size()
+            || !stores.stream().map(store -> store.id).toList().equals(orderedIds)) {
+            throw new BusinessException("Store not found for menu mutation lock");
+        }
+        return stores;
     }
 
     private Store loadStore(Long storeId) {
@@ -51,6 +77,13 @@ public class MenuRevisionServiceImpl implements MenuRevisionService {
         }
         return storeRepository.findById(storeId)
             .orElseThrow(() -> new BusinessException("Store not found: " + storeId));
+    }
+
+    private Long requireStoreId(Long storeId) {
+        if (storeId == null) {
+            throw new BusinessException("Store id is required for menu revision");
+        }
+        return storeId;
     }
 
     private String buildEtag(Long storeId, long revision) {

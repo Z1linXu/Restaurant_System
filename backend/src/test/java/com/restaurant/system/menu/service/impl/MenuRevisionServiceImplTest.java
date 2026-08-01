@@ -9,6 +9,7 @@ import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.user.entity.Store;
 import com.restaurant.system.user.repository.StoreRepository;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,6 +49,8 @@ class MenuRevisionServiceImplTest {
 
     @Test
     void incrementsRevisionAtomically() {
+        Store store = store(4L);
+        when(storeRepository.findAllByIdInForUpdateOrderByIdAsc(List.of(4L))).thenReturn(List.of(store));
         when(storeRepository.incrementMenuRevision(4L)).thenReturn(1);
 
         service.incrementRevision(4L);
@@ -57,8 +60,31 @@ class MenuRevisionServiceImplTest {
 
     @Test
     void rejectsMissingStoreDuringIncrement() {
-        when(storeRepository.incrementMenuRevision(404L)).thenReturn(0);
+        when(storeRepository.findAllByIdInForUpdateOrderByIdAsc(List.of(404L))).thenReturn(List.of());
 
         assertThrows(BusinessException.class, () -> service.incrementRevision(404L));
+    }
+
+    @Test
+    void locksAndIncrementsMultipleStoresInAscendingOrder() {
+        Store first = store(2L);
+        Store second = store(9L);
+        when(storeRepository.findAllByIdInForUpdateOrderByIdAsc(List.of(2L, 9L)))
+            .thenReturn(List.of(first, second));
+        when(storeRepository.incrementMenuRevision(2L)).thenReturn(1);
+        when(storeRepository.incrementMenuRevision(9L)).thenReturn(1);
+
+        service.incrementRevisionsInOrder(List.of(9L, 2L, 9L));
+
+        var inOrder = org.mockito.Mockito.inOrder(storeRepository);
+        inOrder.verify(storeRepository).findAllByIdInForUpdateOrderByIdAsc(List.of(2L, 9L));
+        inOrder.verify(storeRepository).incrementMenuRevision(2L);
+        inOrder.verify(storeRepository).incrementMenuRevision(9L);
+    }
+
+    private Store store(Long id) {
+        Store store = new Store();
+        store.id = id;
+        return store;
     }
 }

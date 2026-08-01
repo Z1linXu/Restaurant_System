@@ -188,10 +188,15 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         RestaurantTemplate template = restaurantTemplateRepository.findById(request.template_id)
             .orElseThrow(() -> new BusinessException("Template not found"));
 
-        copyStationsFromTemplate(savedStore.id, template.default_station_setup_json);
+        boolean copiedStations = copyStationsFromTemplate(savedStore.id, template.default_station_setup_json);
         copyDiningTablesFromTemplate(savedStore.id, template.default_dining_table_layout_rules_json);
-        copyMenuCategoriesFromTemplate(savedStore.id, template.default_menu_category_structure_json);
+        boolean copiedCategories = copyMenuCategoriesFromTemplate(savedStore.id, template.default_menu_category_structure_json);
         copyKdsConfigsFromTemplate(savedStore.id, template.default_kds_display_rules_json);
+        if (copiedStations || copiedCategories) {
+            menuRevisionService.incrementRevision(savedStore.id);
+            return storeRepository.findById(savedStore.id)
+                .orElseThrow(() -> new BusinessException("Store not found after template menu revision"));
+        }
 
         return savedStore;
     }
@@ -210,13 +215,16 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         Station target = station.id == null
             ? new Station()
             : stationRepository.findById(station.id).orElseThrow(() -> new BusinessException("Station not found"));
+        Long previousStoreId = target.store_id;
         target.store_id = station.store_id;
         target.name = station.name;
         target.code = station.code;
         target.sort_order = station.sort_order;
         target.is_active = station.is_active == null ? true : station.is_active;
         stamp(target, station.id == null);
-        return stationRepository.save(target);
+        Station saved = stationRepository.save(target);
+        incrementMenuRevisions(previousStoreId, saved.store_id);
+        return saved;
     }
 
     @Override
@@ -364,7 +372,8 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
 
     private void incrementMenuRevisions(Long previousStoreId, Long currentStoreId) {
         if (previousStoreId != null && !previousStoreId.equals(currentStoreId)) {
-            menuRevisionService.incrementRevision(previousStoreId);
+            menuRevisionService.incrementRevisionsInOrder(List.of(previousStoreId, currentStoreId));
+            return;
         }
         menuRevisionService.incrementRevision(currentStoreId);
     }
@@ -431,9 +440,9 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         return roleRepository.save(target);
     }
 
-    private void copyStationsFromTemplate(Long storeId, String stationJson) {
+    private boolean copyStationsFromTemplate(Long storeId, String stationJson) {
         if (stationJson == null || stationJson.isBlank()) {
-            return;
+            return false;
         }
         try {
             List<TemplateStationSeed> seeds = objectMapper.readValue(stationJson, new TypeReference<>() {});
@@ -447,6 +456,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
                 stamp(station, true);
                 stationRepository.save(station);
             }
+            return !seeds.isEmpty();
         } catch (Exception exception) {
             throw new BusinessException("Failed to copy station template: " + exception.getMessage());
         }
@@ -477,9 +487,9 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         }
     }
 
-    private void copyMenuCategoriesFromTemplate(Long storeId, String categoryJson) {
+    private boolean copyMenuCategoriesFromTemplate(Long storeId, String categoryJson) {
         if (categoryJson == null || categoryJson.isBlank()) {
-            return;
+            return false;
         }
         try {
             List<TemplateCategorySeed> seeds = objectMapper.readValue(categoryJson, new TypeReference<>() {});
@@ -494,6 +504,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
                 stamp(category, true);
                 menuCategoryRepository.save(category);
             }
+            return !seeds.isEmpty();
         } catch (Exception exception) {
             throw new BusinessException("Failed to copy menu category template: " + exception.getMessage());
         }
