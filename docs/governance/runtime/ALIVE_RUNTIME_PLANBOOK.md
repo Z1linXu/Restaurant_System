@@ -347,6 +347,10 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
   completed replay, fingerprint conflict, in-progress rejection, and bounded
   sanitized completion/failure evidence. It never stores a full menu request,
   credential, token, printer endpoint, or raw failure text.
+- Owner-approved contract correction: replay exposes only durable scope,
+  revision, count, result-code, and safe-warning summary; it exposes no menu ID
+  maps. `FAILED` is terminal for its key, and any revalidated retry uses a new
+  idempotency key.
 - DTO, profile, exception, and transaction interfaces are compile-time
   foundations only. No Controller is registered and no menu graph clone,
   Store 1 read, Chinatown override, revision mutation, or runtime action is

@@ -92,6 +92,7 @@ class OwnerStoreMenuCloneRequestCoordinatorImplTest {
         assertThat(reservation.replayed()).isTrue();
         assertThat(reservation.requestId()).isEqualTo(request.id);
         assertThat(reservation.targetRevisionAfter()).isEqualTo(2L);
+        assertThat(reservation.resultCode()).isEqualTo("MENU_CLONE_COMPLETED");
     }
 
     @Test
@@ -135,6 +136,53 @@ class OwnerStoreMenuCloneRequestCoordinatorImplTest {
                 OwnerStoreMenuCloneException.class,
                 exception -> assertThat(exception.getErrorCode()).isEqualTo("MENU_CLONE_IN_PROGRESS")
             );
+    }
+
+    @Test
+    void failedRequestIsTerminalForTheSameIdempotencyKey() {
+        OwnerStoreMenuCloneReservationCommand command = command();
+        OwnerStoreMenuCloneRequest request = processingRequest(command, fingerprintService.fingerprint(command));
+        request.status = "FAILED";
+        request.errorCode = "MENU_CLONE_FAILED";
+        when(requestRepository.insertIfAbsent(
+            anyLong(), anyLong(), anyLong(), anyString(), anyString(), anyString(), anyLong(), any(LocalDateTime.class)
+        )).thenReturn(0);
+        when(requestRepository.findForUpdate(
+            ORGANIZATION_ID,
+            ChinatownMenuCloneProfile.SOURCE_STORE_ID,
+            TARGET_STORE_ID,
+            IDEMPOTENCY_KEY
+        )).thenReturn(Optional.of(request));
+
+        assertThatThrownBy(() -> coordinator.reserve(command))
+            .isInstanceOfSatisfying(
+                OwnerStoreMenuCloneException.class,
+                exception -> assertThat(exception.getErrorCode())
+                    .isEqualTo("MENU_CLONE_RETRY_REQUIRES_VALIDATION")
+            );
+        verify(requestRepository, never()).save(any(OwnerStoreMenuCloneRequest.class));
+    }
+
+    @Test
+    void revalidatedRetryUsesANewIdempotencyKeyAndCreatesANewReservation() {
+        String newKey = "al003-revalidated-request-key";
+        OwnerStoreMenuCloneReservationCommand command = command(newKey);
+        OwnerStoreMenuCloneRequest request = processingRequest(command, fingerprintService.fingerprint(command));
+        when(requestRepository.insertIfAbsent(
+            anyLong(), anyLong(), anyLong(), anyString(), anyString(), anyString(), anyLong(), any(LocalDateTime.class)
+        )).thenReturn(1);
+        when(requestRepository.findForUpdate(
+            ORGANIZATION_ID,
+            ChinatownMenuCloneProfile.SOURCE_STORE_ID,
+            TARGET_STORE_ID,
+            newKey
+        )).thenReturn(Optional.of(request));
+
+        OwnerStoreMenuCloneReservation reservation = coordinator.reserve(command);
+
+        assertThat(reservation.status()).isEqualTo("PROCESSING");
+        assertThat(reservation.replayed()).isFalse();
+        assertThat(request.idempotencyKey).isEqualTo(newKey);
     }
 
     @Test
@@ -215,11 +263,15 @@ class OwnerStoreMenuCloneRequestCoordinatorImplTest {
     }
 
     private OwnerStoreMenuCloneReservationCommand command() {
+        return command(IDEMPOTENCY_KEY);
+    }
+
+    private OwnerStoreMenuCloneReservationCommand command(String idempotencyKey) {
         return new OwnerStoreMenuCloneReservationCommand(
             ORGANIZATION_ID,
             ChinatownMenuCloneProfile.SOURCE_STORE_ID,
             TARGET_STORE_ID,
-            IDEMPOTENCY_KEY,
+            idempotencyKey,
             ChinatownMenuCloneProfile.PROFILE_CODE,
             ACTOR_USER_ID
         );
@@ -234,7 +286,7 @@ class OwnerStoreMenuCloneRequestCoordinatorImplTest {
         request.organizationId = command.organizationId();
         request.sourceStoreId = command.sourceStoreId();
         request.targetStoreId = command.targetStoreId();
-        request.idempotencyKey = IDEMPOTENCY_KEY;
+        request.idempotencyKey = command.idempotencyKey();
         request.requestFingerprint = fingerprint;
         request.profileCode = command.profileCode();
         request.status = "PROCESSING";

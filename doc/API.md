@@ -477,13 +477,23 @@ Current internal request states are `PROCESSING`, `COMPLETED`, and `FAILED`.
 The foundation behavior is:
 
 - same scope/key/fingerprint after completion returns the stored result as a
-  replay;
+  replay containing only request/scope IDs, revisions, status, created counts,
+  safe `result_code`, and deterministic safe warning codes;
+- replay does not return category, station, item, or option ID maps;
 - same scope/key with a different fingerprint returns
   `IDEMPOTENCY_CONFLICT`;
 - an existing processing request returns `MENU_CLONE_IN_PROGRESS`;
+- `FAILED` is terminal for that idempotency key; after revalidation, a retry
+  must use a new key and must not transition the failed request back to
+  `PROCESSING`;
 - failure evidence stores only a normalized error code and bounded revision
   context, never a menu payload, credential, token, printer endpoint, or raw
   exception message.
+
+V10 has no warning payload column. Any future response `warnings` are therefore
+bounded stable codes derived from durable result evidence (or an empty list),
+not replayed execution detail. The public response DTO includes `result_code`
+and intentionally excludes internal source-to-target ID maps.
 
 PR-B does not read Store 1, clone menu rows, change a Store menu revision,
 authorize Owner access, or expose these contracts through HTTP. Those remain

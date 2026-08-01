@@ -1,7 +1,6 @@
 package com.restaurant.system.owner.dto;
 
 import java.util.List;
-import java.util.Map;
 
 public class OwnerStoreMenuCloneResponse {
 
@@ -16,8 +15,6 @@ public class OwnerStoreMenuCloneResponse {
     public String status;
     public boolean replayed;
     public OwnerStoreMenuCloneCreatedCounts created;
-    public Map<String, Long> category_ids_by_code;
-    public Map<String, Long> station_ids_by_code;
-    public Map<String, Long> item_ids_by_sku;
+    public String result_code;
     public List<String> warnings;
 }
