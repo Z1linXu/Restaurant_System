@@ -8,6 +8,12 @@ import org.springframework.data.repository.query.Param;
 
 public interface StationRepository extends JpaRepository<Station, Long> {
 
+    @Query("select s from Station s where s.store_id = :storeId order by s.id asc")
+    List<Station> findAllByStoreIdOrderByIdAsc(@Param("storeId") Long storeId);
+
+    @Query("select count(s) from Station s where s.store_id = :storeId")
+    long countAllByStoreId(@Param("storeId") Long storeId);
+
     @Query("""
         select s from Station s
         where s.store_id = :storeId and s.is_active = true

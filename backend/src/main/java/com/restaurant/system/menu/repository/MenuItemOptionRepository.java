@@ -9,6 +9,30 @@ import org.springframework.data.repository.query.Param;
 public interface MenuItemOptionRepository extends JpaRepository<MenuItemOption, Long> {
 
     @Query("""
+        select o from MenuItemOption o join MenuItem i on i.id = o.menu_item_id
+        where i.store_id = :storeId and o.menu_item_id in :menuItemIds
+        order by
+            o.menu_item_id asc,
+            case when o.sort_order is null then 1 else 0 end asc,
+            o.sort_order asc,
+            o.id asc
+        """)
+    List<MenuItemOption> findAllByStoreIdAndMenuItemIdsOrdered(
+        @Param("storeId") Long storeId,
+        @Param("menuItemIds") List<Long> menuItemIds
+    );
+
+    @Query("""
+        select o from MenuItemOption o join MenuItem i on i.id = o.menu_item_id
+        where i.store_id = :storeId and o.id in :optionIds
+        order by o.id asc
+        """)
+    List<MenuItemOption> findAllByStoreIdAndIdInOrderByIdAsc(
+        @Param("storeId") Long storeId,
+        @Param("optionIds") List<Long> optionIds
+    );
+
+    @Query("""
         select o from MenuItemOption o
         where o.menu_item_id in :menuItemIds and o.is_active = true
         order by

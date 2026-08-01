@@ -10,6 +10,12 @@ import jakarta.persistence.LockModeType;
 
 public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
 
+    @Query("select i from MenuItem i where i.store_id = :storeId order by i.id asc")
+    List<MenuItem> findAllByStoreIdOrderByIdAsc(@Param("storeId") Long storeId);
+
+    @Query("select count(i) from MenuItem i where i.store_id = :storeId")
+    long countAllByStoreId(@Param("storeId") Long storeId);
+
     @Query("""
         select i from MenuItem i
         where i.store_id = :storeId and i.is_active = true
