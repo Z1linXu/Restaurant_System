@@ -90,7 +90,22 @@ not change the AL-002 approval state and does not authorize STG-002
 implementation, server access, Docker/Flyway execution, merge, deployment, or
 AL-003 implementation.
 
-## 7. Reusable Store-profile architecture
+## 7. Dependency Repair Gate
+
+When a prerequisite or contract inconsistency is discovered:
+
+1. Stop all downstream implementation packages.
+2. Create the smallest prerequisite repair package.
+3. Do not continue dependent PRs against an unresolved contract.
+4. Resume only after the Owner merges the prerequisite repair.
+5. Rebase or rebuild downstream stacked PRs from the new `main`.
+
+## 8. Store Profile Principle
+
+Shared implementation must remain generic. Store-specific behavior must never
+be implemented inside shared services by branching on Store IDs or Store names.
+Every Store-specific behavior must be represented by a reviewed, versioned
+Store Profile.
 
 Store onboarding and provisioning work must treat each restaurant configuration
 as a versioned Store Profile consumed by shared services, repositories,
@@ -99,7 +114,12 @@ catalog, pricing, ordering, and provisioning inputs, but shared implementation
 must not branch on a restaurant name or a hard-coded target Store ID. Store 1 is
 the reviewed source input for the current AL-003 profile, not a permanent engine
 restriction, and `ChinatownMenuCloneProfile` is the first profile rather than
-the only supported profile.
+the only supported profile or a special-case implementation.
+
+The long-term architecture target is a Generic Store Provisioning Engine plus
+Versioned Store Profiles plus Reusable Provisioning Modules, capable of
+provisioning an arbitrary number of Stores without modifying shared business
+logic.
 
 Future design direction includes a Generic Store Provisioning Engine, Store
 Profile Framework, Printing Provisioning Module, Staff/Table Provisioning

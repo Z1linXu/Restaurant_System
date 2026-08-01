@@ -1,6 +1,7 @@
 package com.restaurant.system.owner.service.impl;
 
-import com.restaurant.system.owner.menu.ChinatownMenuCloneProfile;
+import com.restaurant.system.owner.menu.StoreMenuCloneProfileDescriptor;
+import com.restaurant.system.owner.menu.StoreMenuCloneProfileRegistry;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneReservationCommand;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -10,8 +11,16 @@ import org.springframework.stereotype.Component;
 @Component
 public class OwnerStoreMenuCloneFingerprint {
 
+    private final StoreMenuCloneProfileRegistry profileRegistry;
+
+    public OwnerStoreMenuCloneFingerprint(StoreMenuCloneProfileRegistry profileRegistry) {
+        this.profileRegistry = profileRegistry;
+    }
+
     public String fingerprint(OwnerStoreMenuCloneReservationCommand command) {
-        String canonical = value("contract") + value(ChinatownMenuCloneProfile.CONTRACT_VERSION)
+        StoreMenuCloneProfileDescriptor profile = profileRegistry.find(command.profileCode())
+            .orElseThrow(() -> new IllegalArgumentException("Unsupported Store menu clone profile"));
+        String canonical = value("profileFingerprint") + value(profile.profileFingerprint())
             + value("organization") + value(String.valueOf(command.organizationId()))
             + value("sourceStore") + value(String.valueOf(command.sourceStoreId()))
             + value("targetStore") + value(String.valueOf(command.targetStoreId()))

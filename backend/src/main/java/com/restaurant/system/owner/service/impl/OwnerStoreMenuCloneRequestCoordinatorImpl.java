@@ -1,7 +1,8 @@
 package com.restaurant.system.owner.service.impl;
 
 import com.restaurant.system.owner.exception.OwnerStoreMenuCloneException;
-import com.restaurant.system.owner.menu.ChinatownMenuCloneProfile;
+import com.restaurant.system.owner.menu.StoreMenuCloneProfileDescriptor;
+import com.restaurant.system.owner.menu.StoreMenuCloneProfileRegistry;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneFailureEvidence;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneRequestCoordinator;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneReservation;
@@ -28,13 +29,16 @@ public class OwnerStoreMenuCloneRequestCoordinatorImpl implements OwnerStoreMenu
 
     private final OwnerStoreMenuCloneRequestRepository requestRepository;
     private final OwnerStoreMenuCloneFingerprint fingerprintService;
+    private final StoreMenuCloneProfileRegistry profileRegistry;
 
     public OwnerStoreMenuCloneRequestCoordinatorImpl(
         OwnerStoreMenuCloneRequestRepository requestRepository,
-        OwnerStoreMenuCloneFingerprint fingerprintService
+        OwnerStoreMenuCloneFingerprint fingerprintService,
+        StoreMenuCloneProfileRegistry profileRegistry
     ) {
         this.requestRepository = requestRepository;
         this.fingerprintService = fingerprintService;
+        this.profileRegistry = profileRegistry;
     }
 
     @Override
@@ -149,13 +153,11 @@ public class OwnerStoreMenuCloneRequestCoordinatorImpl implements OwnerStoreMenu
             || command.actorUserId() == null) {
             throw badRequest("MENU_CLONE_REQUEST_INVALID", "Menu clone scope and actor are required");
         }
-        if (!ChinatownMenuCloneProfile.SOURCE_STORE_ID.equals(command.sourceStoreId())) {
-            throw badRequest("MENU_CLONE_REQUEST_INVALID", "The reviewed profile requires source Store 1");
-        }
         if (command.sourceStoreId().equals(command.targetStoreId())) {
             throw conflict("SOURCE_TARGET_SAME_STORE", "Source and target stores must differ");
         }
-        if (!ChinatownMenuCloneProfile.PROFILE_CODE.equals(command.profileCode())) {
+        StoreMenuCloneProfileDescriptor profile = profileRegistry.find(command.profileCode()).orElse(null);
+        if (profile == null || !profile.sourceStoreId().equals(command.sourceStoreId())) {
             throw badRequest("MENU_CLONE_REQUEST_INVALID", "Unsupported menu clone profile");
         }
     }
