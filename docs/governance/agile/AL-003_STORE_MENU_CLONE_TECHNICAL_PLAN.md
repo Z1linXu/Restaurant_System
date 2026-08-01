@@ -284,6 +284,12 @@ Chinatown`, `if store_id == 2`, St-Denis-only catalog branches, or
 Chinatown-only printing branches. Store 1 is this profile's current reviewed
 source input, not a permanent restriction of the future provisioning engine.
 
+Shared request coordination resolves a reviewed profile through a generic
+`StoreMenuCloneProfileRegistry`. The profile descriptor owns its code, reviewed
+source Store policy, and profile fingerprint. Shared coordinator and fingerprint
+services must not import or branch on `ChinatownMenuCloneProfile`; the Chinatown
+descriptor is only the first registry entry.
+
 This first profile is intended to feed a later Generic Store Provisioning
 Engine and Store Profile Framework. Printing, staff/table, device/Pad, and Store
 activation provisioning remain separate future modules and are not implemented
@@ -499,8 +505,9 @@ target Store lock and empty-target validation protect this operation.
 ### 12.2 Fingerprint and replay
 
 The SHA-256 fingerprint covers normalized Organization/source/target IDs,
-profile code, and contract version. It excludes actor display name and runtime
-source revision. It stores no full request payload.
+profile code, and the profile-supplied fingerprint. The supplied fingerprint
+must change whenever the reviewed profile content changes. It excludes actor
+display name and runtime source revision. It stores no full request payload.
 
 - Same key + same fingerprint + `COMPLETED`: return the original durable
   request/scope/revision/count/result summary with `replayed=true`; do not

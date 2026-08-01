@@ -229,6 +229,13 @@ resume only after the smallest repair is merged into `main`; shared services
 must remain Store-neutral, with reviewed versioned profiles carrying all
 Store-specific behavior.
 
+The first application of that gate is the AL-003 PR-B3 prerequisite: independent
+review found that the merged PR-B coordinator and fingerprint still imported
+Chinatown constants. PR-B3 replaces that coupling with a generic profile
+descriptor/registry and binds the idempotency fingerprint to the reviewed
+profile fingerprint. It changes no migration, public response, replay state, or
+menu graph behavior; PR-C remains paused until the Owner merges the repair.
+
 STG-005A owns `V9__add_staging_synthetic_bootstrap_requests.sql`. PR-B adds the
 separate append-only `V10__add_owner_store_menu_clone_requests.sql`. V10 creates
 only the durable clone request/evidence table, the composite uniqueness scope

@@ -11,6 +11,8 @@ import static org.mockito.Mockito.when;
 
 import com.restaurant.system.owner.exception.OwnerStoreMenuCloneException;
 import com.restaurant.system.owner.menu.ChinatownMenuCloneProfile;
+import com.restaurant.system.owner.menu.StoreMenuCloneProfileDescriptor;
+import com.restaurant.system.owner.menu.StoreMenuCloneProfileRegistry;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneFailureEvidence;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneReservation;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneReservationCommand;
@@ -18,6 +20,7 @@ import com.restaurant.system.owner.service.OwnerStoreMenuCloneSuccessEvidence;
 import com.restaurant.system.platform.entity.OwnerStoreMenuCloneRequest;
 import com.restaurant.system.platform.repository.OwnerStoreMenuCloneRequestRepository;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,11 +42,17 @@ class OwnerStoreMenuCloneRequestCoordinatorImplTest {
 
     private OwnerStoreMenuCloneFingerprint fingerprintService;
     private OwnerStoreMenuCloneRequestCoordinatorImpl coordinator;
+    private StoreMenuCloneProfileRegistry profileRegistry;
 
     @BeforeEach
     void setUp() {
-        fingerprintService = new OwnerStoreMenuCloneFingerprint();
-        coordinator = new OwnerStoreMenuCloneRequestCoordinatorImpl(requestRepository, fingerprintService);
+        profileRegistry = new StoreMenuCloneProfileRegistry(List.of(new ChinatownMenuCloneProfile()));
+        fingerprintService = new OwnerStoreMenuCloneFingerprint(profileRegistry);
+        coordinator = new OwnerStoreMenuCloneRequestCoordinatorImpl(
+            requestRepository,
+            fingerprintService,
+            profileRegistry
+        );
     }
 
     @Test
@@ -260,6 +269,79 @@ class OwnerStoreMenuCloneRequestCoordinatorImplTest {
         verify(requestRepository, never()).insertIfAbsent(
             anyLong(), anyLong(), anyLong(), anyString(), anyString(), anyString(), anyLong(), any(LocalDateTime.class)
         );
+    }
+
+    @Test
+    void sharedCoordinatorAcceptsAnotherReviewedProfileWithoutStoreSpecificBranching() {
+        StoreMenuCloneProfileDescriptor genericProfile = profile(
+            "GENERIC_STORE_PROFILE_V1",
+            77L,
+            "generic-profile-fingerprint-v1"
+        );
+        StoreMenuCloneProfileRegistry genericRegistry = new StoreMenuCloneProfileRegistry(List.of(genericProfile));
+        OwnerStoreMenuCloneFingerprint genericFingerprint = new OwnerStoreMenuCloneFingerprint(genericRegistry);
+        OwnerStoreMenuCloneRequestCoordinatorImpl genericCoordinator = new OwnerStoreMenuCloneRequestCoordinatorImpl(
+            requestRepository,
+            genericFingerprint,
+            genericRegistry
+        );
+        OwnerStoreMenuCloneReservationCommand command = new OwnerStoreMenuCloneReservationCommand(
+            ORGANIZATION_ID,
+            77L,
+            TARGET_STORE_ID,
+            IDEMPOTENCY_KEY,
+            "GENERIC_STORE_PROFILE_V1",
+            ACTOR_USER_ID
+        );
+        OwnerStoreMenuCloneRequest request = processingRequest(command, genericFingerprint.fingerprint(command));
+        when(requestRepository.insertIfAbsent(
+            anyLong(), anyLong(), anyLong(), anyString(), anyString(), anyString(), anyLong(), any(LocalDateTime.class)
+        )).thenReturn(1);
+        when(requestRepository.findForUpdate(
+            ORGANIZATION_ID,
+            77L,
+            TARGET_STORE_ID,
+            IDEMPOTENCY_KEY
+        )).thenReturn(Optional.of(request));
+
+        OwnerStoreMenuCloneReservation reservation = genericCoordinator.reserve(command);
+
+        assertThat(reservation.status()).isEqualTo("PROCESSING");
+        assertThat(reservation.sourceStoreId()).isEqualTo(77L);
+    }
+
+    @Test
+    void profileFingerprintIsPartOfTheIdempotencyFingerprint() {
+        OwnerStoreMenuCloneReservationCommand command = command();
+        StoreMenuCloneProfileDescriptor changedProfile = profile(
+            ChinatownMenuCloneProfile.PROFILE_CODE,
+            ChinatownMenuCloneProfile.SOURCE_STORE_ID,
+            "AL003_V1_CHANGED_PROFILE_CONTENT"
+        );
+        OwnerStoreMenuCloneFingerprint changedFingerprint = new OwnerStoreMenuCloneFingerprint(
+            new StoreMenuCloneProfileRegistry(List.of(changedProfile))
+        );
+
+        assertThat(changedFingerprint.fingerprint(command)).isNotEqualTo(fingerprintService.fingerprint(command));
+    }
+
+    private StoreMenuCloneProfileDescriptor profile(String code, Long sourceStoreId, String fingerprint) {
+        return new StoreMenuCloneProfileDescriptor() {
+            @Override
+            public String profileCode() {
+                return code;
+            }
+
+            @Override
+            public Long sourceStoreId() {
+                return sourceStoreId;
+            }
+
+            @Override
+            public String profileFingerprint() {
+                return fingerprint;
+            }
+        };
     }
 
     private OwnerStoreMenuCloneReservationCommand command() {
