@@ -64,7 +64,7 @@ snapshots. Do not copy those reports into this planbook.
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `AL-003 Store 1 -> Chinatown Live Menu Clone` |
 | Loop type | `IMPLEMENTATION` |
-| Loop status | `AL-003_PR_D_WAITING_FOR_OWNER_REVIEW` |
+| Loop status | `AL-003_PR_E_WAITING_FOR_OWNER_REVIEW` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | `AL-002_WAITING_FOR_OWNER_APPROVAL`; the Staging plan does not approve, merge, deploy, or supersede it. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -72,8 +72,8 @@ snapshots. Do not copy those reports into this planbook.
 | STG-004 state | PR #38 merged the STG-004 runtime evidence. Exact SHA `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` passed PLAN, fresh PREFLIGHT, serial build/start, runtime verification, and isolated stop/start recovery. Server Staging remains running; Production remained unchanged. |
 | STG-005 state | PLAN complete. The Owner approved CP-0 as a separate minimal Staging-only bootstrap implementation and accepted CP-4 as a feature-disabled KDS/Assembling boundary. Positive Kitchen/Assembling workflow remains `EVIDENCE_PENDING`. |
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
-| AL-003 state | PR #46 merged the exact, case-sensitive profile-code identity repair. Stable PR-C contract `d309da55b31b14e036f2219ae383cab4a1ba26ca` contains implementation `e599127eaba32afbc3848eae5bd85e49ffdd7e49`. PR-D supplies the generic `SOURCE_OPTIONS` composer, requires reviewed `COPY` or `PROFILE_OVERRIDE` classification for every active source option group, and has passed Coordinator and independent review. |
-| Current permitted work | Create the bounded PR-D Draft PR and continue PR-E as a stacked package against its exact contract SHA. PR-F remains dependency-bound; no package may merge automatically. |
+| AL-003 state | PR #46 merged the exact, case-sensitive profile-code identity repair. PR-C Draft #47 is the generic base graph. PR-D Draft #48 at `5a0dc09944b4b0945fe95027d7f12647212ea559` is independently reviewed and supplies generic `SOURCE_OPTIONS`. PR-E is implementing the concrete Chinatown Profile and target overrides against that exact PR-D contract. PR-F preparation found no safe read-only validation/planning boundary, so the Dependency Repair Gate blocks its endpoint implementation. |
+| Current permitted work | Complete and review the bounded stacked PR-E package, then create the smallest read-only validation/planning prerequisite repair package. PR-F stays prepared but blocked until Owner merge of that prerequisite; no package may merge automatically. |
 | Explicitly not permitted | Store 1 runtime access, real clone, SSH, Staging or Production mutation, automatic merge, deployment, STG-006, or unrelated backlog work. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),

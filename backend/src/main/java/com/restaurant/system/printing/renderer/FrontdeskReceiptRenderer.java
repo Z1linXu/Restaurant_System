@@ -196,7 +196,7 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         if (sizeLabel == null || sizeLabel.isBlank()) {
             return baseName;
         }
-        if (baseName.startsWith("中碗") || baseName.startsWith("大碗")) {
+        if (baseName.startsWith("小碗") || baseName.startsWith("中碗") || baseName.startsWith("大碗")) {
             return baseName;
         }
         return sizeLabel + baseName;
@@ -226,6 +226,9 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         if ("大".equals(zh) || "大碗".equals(zh) || "large".equalsIgnoreCase(en)) {
             return "大碗";
         }
+        if ("小".equals(zh) || "小碗".equals(zh) || "small".equalsIgnoreCase(en)) {
+            return "小碗";
+        }
         if ("中".equals(zh)
             || "中碗".equals(zh)
             || "标准".equals(zh)
@@ -242,6 +245,9 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         String en = optionEn == null ? "" : optionEn.trim().toLowerCase();
         if (zh.contains("大") || en.contains("large")) {
             return "Large";
+        }
+        if (zh.contains("小") || en.contains("small")) {
+            return "Small";
         }
         if (zh.contains("中") || zh.contains("标") || en.contains("regular") || en.contains("standard")) {
             return "Regular";

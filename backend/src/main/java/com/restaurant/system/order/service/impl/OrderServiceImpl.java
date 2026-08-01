@@ -1918,6 +1918,9 @@ public class OrderServiceImpl implements OrderService {
         if (sizeZh.contains("大")) {
             return "大";
         }
+        if (sizeZh.contains("小")) {
+            return "小";
+        }
         return "中";
     }
 

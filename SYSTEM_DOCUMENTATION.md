@@ -267,6 +267,22 @@ count. Chinatown option selections, seven noodle types, Combo, and target
 overrides remain PR-E Profile scope. See
 [AL-003 PR-D source option clone](docs/governance/agile/AL-003_PR_D_SOURCE_OPTION_CLONE.md).
 
+AL-003 PR-E provides the first concrete, versioned Store Profile. It contains
+the reviewed Chinatown-only category, station, 17-item, bilingual name, PDF
+price, order, seven-noodle-type, size, Combo, and tea egg rules while shared
+clone services remain profile-agnostic. The profile override composer runs in
+the existing locked transaction after generic source-option copying and creates
+only fresh target options. Current catalog/order code derives Combo-side remove
+choices from the referenced standalone side items, so PR-E does not duplicate
+legacy `COMBO_SIDE_REMOVE` child rows. See
+[AL-003 PR-E Chinatown profile overrides](docs/governance/agile/AL-003_PR_E_CHINATOWN_PROFILE_OVERRIDES.md).
+
+PR-F preparation also identified a missing shared read-only validation/planning
+boundary. The execute transaction cannot be reused for `/validate` because it
+writes the target graph and revision even if later rolled back. The Dependency
+Repair Gate therefore blocks the public validate endpoint until a minimal
+read-only planning contract is reviewed and merged.
+
 STG-005A owns `V9__add_staging_synthetic_bootstrap_requests.sql`. PR-B adds the
 separate append-only `V10__add_owner_store_menu_clone_requests.sql`. V10 creates
 only the durable clone request/evidence table, the composite uniqueness scope

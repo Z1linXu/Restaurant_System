@@ -760,6 +760,33 @@ class OrderServiceImplTest {
     }
 
     @Test
+    void smallSizeRemainsDistinctFromMediumInKitchenInstructions() {
+        MenuItemOption small = menuOption(
+            104L, "size", "size_small", "SIZE", "小碗", "Small", BigDecimal.ZERO
+        );
+        when(menuItemOptionRepository.findById(small.id)).thenReturn(Optional.of(small));
+
+        CreateOrderItemRequest itemRequest = new CreateOrderItemRequest();
+        itemRequest.menu_item_id = menuItem.id;
+        itemRequest.quantity = 1;
+        itemRequest.options = List.of(optionRequest(small.id, 1));
+
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.store_id = store.id;
+        request.created_by = 1L;
+        request.order_type = "dine_in";
+        request.table_no = "T-SMALL";
+        request.items = List.of(itemRequest);
+
+        OrderResponse submittedOrder = orderService.submitOrder(orderService.createOrder(request).id);
+        List<KitchenTask> tasks = kitchenTaskRepository.findAllByOrderId(submittedOrder.id);
+
+        assertEquals(1, tasks.size());
+        assertTrue(tasks.get(0).special_instructions_snapshot.contains("小"));
+        assertFalse(tasks.get(0).special_instructions_snapshot.contains("中"));
+    }
+
+    @Test
     void extraBokChoyKeepsFullKitchenInstructionName() {
         MenuItemOption bokChoy = menuOption(103L, "addon", "bok_choy", "ADD_ON", "加上海青", "Extra Bok Choy", new BigDecimal("3.00"));
         when(menuItemOptionRepository.findById(anyLong())).thenAnswer(invocation -> {
