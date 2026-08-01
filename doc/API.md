@@ -444,6 +444,51 @@ Response behavior:
 
 ## Owner Workspace
 
+### Owner Store Menu Clone Foundation (AL-003 PR-B)
+
+AL-003 PR-B provides the internal persistence, idempotency, and transaction
+contracts for the reviewed Store 1 to Chinatown menu clone. It does **not**
+register a Controller or expose a callable HTTP endpoint. The protected Owner
+routes planned by PR-A remain future PR-F work:
+
+```http
+POST /api/v1/owner/organizations/{organizationId}/stores/{targetStoreId}/menu-clone/validate
+POST /api/v1/owner/organizations/{organizationId}/stores/{targetStoreId}/menu-clone
+```
+
+The frozen request contract is:
+
+```json
+{
+  "source_store_id": 1,
+  "profile_code": "CHINATOWN_MENU_2026_02_02"
+}
+```
+
+When the execute route is added in a later reviewed package, it must require a
+bounded `Idempotency-Key` header. V10 stores a SHA-256 request fingerprint and
+safe execution evidence under this composite uniqueness scope:
+
+```text
+(organization_id, source_store_id, target_store_id, idempotency_key)
+```
+
+Current internal request states are `PROCESSING`, `COMPLETED`, and `FAILED`.
+The foundation behavior is:
+
+- same scope/key/fingerprint after completion returns the stored result as a
+  replay;
+- same scope/key with a different fingerprint returns
+  `IDEMPOTENCY_CONFLICT`;
+- an existing processing request returns `MENU_CLONE_IN_PROGRESS`;
+- failure evidence stores only a normalized error code and bounded revision
+  context, never a menu payload, credential, token, printer endpoint, or raw
+  exception message.
+
+PR-B does not read Store 1, clone menu rows, change a Store menu revision,
+authorize Owner access, or expose these contracts through HTTP. Those remain
+separate reviewed packages in the AL-003 technical plan.
+
 ### Owner Multi-Store Overview
 GET `/api/v1/owner/overview`
 

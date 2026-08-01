@@ -42,7 +42,10 @@ separate from historical evidence snapshots and business implementation details:
   menu. Repository seed data is historical reference only.
 - [AL-003 Store menu clone technical plan](docs/governance/agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md)
   freezes the planned Owner API, transaction, idempotency, profile, validation,
-  and PR boundaries. It authorizes no implementation or runtime clone.
+  and PR boundaries. It authorizes no runtime clone.
+- [AL-003 PR-B PostgreSQL/Flyway V10 verification](docs/governance/runtime/AL-003_PR_B_POSTGRES_FLYWAY_V10_VERIFICATION.md)
+  records local PostgreSQL 16 evidence for the idempotency/transaction
+  foundation. It is not Staging or Production migration evidence.
 - [Frontdesk/GRAB item-name rules](docs/operations/FRONTDESK_GRAB_ITEM_NAME_RULES.md)
   remains the operational display-rule source; do not duplicate its item table
   here.
@@ -193,11 +196,11 @@ approval. PR #40 subsequently merged the STG-005A implementation into `main`,
 thereby reserving V9 for this bootstrap request table; the merge does not prove
 the migration or command ran against server Staging.
 
-## AL-003 Store 1 Live Menu Clone Plan
+## AL-003 Store 1 Live Menu Clone Foundation
 
-AL-003 PR-A is a documentation-only contract based on `origin/main`
-`2613344d403365d61283ae440de16edffaaad788` after PR #40. The only source for a
-future approved clone is the current live menu of St-Denis, Store ID `1`.
+PR #41 merged the AL-003 PR-A documentation contract. PR-B is based on
+`origin/main` `11be5c94f9b73e3beb8ec1f84b4a5a3c586c9d34`. The only source for a future
+approved clone is the current live menu of St-Denis, Store ID `1`.
 `RuntimeDataSeeder`, `menuImportSeed.ts`, and other repository seed content are
 historical reference and cannot supply or repair clone rows.
 
@@ -209,13 +212,35 @@ The transaction/API/idempotency/source-invariance design and reviewable PR
 sequence are maintained in
 [AL-003 technical plan](docs/governance/agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md).
 
-STG-005A already owns `V9__add_staging_synthetic_bootstrap_requests.sql`.
-AL-003 therefore plans only the future append-only
-`V10__add_owner_store_menu_clone_requests.sql`, with PostgreSQL verification
-through V1-V10. PR-A does not create V10, entity/repository/service/controller
-code, or target menu data. It performs no Store 1 read, SSH, Docker, Flyway,
-database query/write, clone, merge, or deployment. Current state is
-`AL-003_PR_A_WAITING_FOR_OWNER_REVIEW`.
+STG-005A owns `V9__add_staging_synthetic_bootstrap_requests.sql`. PR-B adds the
+separate append-only `V10__add_owner_store_menu_clone_requests.sql`. V10 creates
+only the durable clone request/evidence table, the composite uniqueness scope
+`(organization_id, source_store_id, target_store_id, idempotency_key)`, a
+`target_store_id` lookup index, and a bounded status constraint. It does not
+seed or clone menu data.
+
+The PR-B coordinator uses PostgreSQL insert-if-absent plus pessimistic row
+locking. It distinguishes completed replay, changed-fingerprint conflict, and
+in-progress execution. Success evidence is limited to revisions, created-row
+counts, and a safe result code. Failure evidence is limited to revisions and a
+normalized error code; raw requests, menu payloads, exception messages,
+credentials, tokens, and printer endpoints are not persisted or returned.
+
+PR-B also supplies compile-time DTO, error, profile, and transaction-service
+interfaces for later packages. It deliberately has no menu graph clone
+implementation and no Controller/public endpoint. It does not read Store 1,
+create or update categories/stations/items/options, apply Chinatown overrides,
+increment a live menu revision, or perform a runtime clone.
+
+Local PostgreSQL 16.14 verification applied V1-V10 to an empty isolated
+database, verified V10's exact table/constraint/index, and started the cloud
+profile with JPA schema validation. A second startup validated ten migrations,
+reported schema version 10, and performed no migration. Focused,
+concurrency/replay, full backend, and compile checks passed. See
+[AL-003 PR-B PostgreSQL/Flyway V10 verification](docs/governance/runtime/AL-003_PR_B_POSTGRES_FLYWAY_V10_VERIFICATION.md).
+This is local repository evidence only; no SSH, Store 1 runtime read, Staging
+or Production migration, clone, merge, or deployment occurred. Current state
+is `AL-003_PR_B_WAITING_FOR_OWNER_REVIEW`.
 
 ## AL-002 Owner Store Onboarding Backend Foundation
 

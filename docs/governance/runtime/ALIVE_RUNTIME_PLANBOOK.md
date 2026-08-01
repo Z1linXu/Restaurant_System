@@ -63,8 +63,8 @@ snapshots. Do not copy those reports into this planbook.
 |---|---|
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `AL-003 Store 1 -> Chinatown Live Menu Clone` |
-| Loop type | `PLAN_CONTRACT` |
-| Loop status | `AL-003_PR_A_WAITING_FOR_OWNER_REVIEW` |
+| Loop type | `IMPLEMENTATION_FOUNDATION` |
+| Loop status | `AL-003_PR_B_WAITING_FOR_OWNER_REVIEW` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | `AL-002_WAITING_FOR_OWNER_APPROVAL`; the Staging plan does not approve, merge, deploy, or supersede it. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -72,9 +72,9 @@ snapshots. Do not copy those reports into this planbook.
 | STG-004 state | PR #38 merged the STG-004 runtime evidence. Exact SHA `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` passed PLAN, fresh PREFLIGHT, serial build/start, runtime verification, and isolated stop/start recovery. Server Staging remains running; Production remained unchanged. |
 | STG-005 state | PLAN complete. The Owner approved CP-0 as a separate minimal Staging-only bootstrap implementation and accepted CP-4 as a feature-disabled KDS/Assembling boundary. Positive Kitchen/Assembling workflow remains `EVIDENCE_PENDING`. |
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
-| AL-003 state | PR-A freezes the comparison and technical contract only. It plans `V10__add_owner_store_menu_clone_requests.sql`; no V10 file or clone implementation exists in this package. |
-| Current permitted work | Owner review of the AL-003 PR-A documentation contract and Draft PR only. |
-| Explicitly not permitted | Implementation agents, V10 creation, Store 1 runtime read, SSH, Docker, Flyway execution, database query/write, Staging or Production mutation, real clone, merge, deployment, STG-006, or unrelated backlog work. |
+| AL-003 state | PR #41 merged PR-A. PR-B adds V10 and the local idempotency/transaction foundation only; it has no menu graph clone implementation or public Controller. |
+| Current permitted work | Owner review of the AL-003 PR-B Draft PR and its local PostgreSQL evidence only. |
+| Explicitly not permitted | Category/station/item/option clone, Chinatown overrides, Combo, Store 1 runtime read, public clone endpoint, SSH, Staging or Production mutation, real clone, merge, deployment, STG-006, or unrelated backlog work. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 [AGILE_LOOP_OPERATING_MODEL.md](../AGILE_LOOP_OPERATING_MODEL.md), and
@@ -333,7 +333,34 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
   business implementation.
 - No Store 1 query, SSH, Docker, Flyway execution, database access, runtime
   clone, Staging/Production write, merge, or deployment occurred.
-- Next state: `AL-003_PR_A_WAITING_FOR_OWNER_REVIEW`.
+- PR #41 merged this contract into `main`; PR-B is the only authorized
+  implementation package after that merge.
+
+### AL-003 PR-B idempotency and transaction foundation record
+
+- Branch: `codex/al-003-pr-b-idempotency-foundation`, based on `origin/main`
+  `11be5c94f9b73e3beb8ec1f84b4a5a3c586c9d34` after PR #41.
+- V9 remains owned by STG-005A. PR-B adds only the append-only
+  `V10__add_owner_store_menu_clone_requests.sql` for durable request/evidence
+  state, a four-column scope/key unique constraint, and a target-Store index.
+- The coordinator implements insert-if-absent, pessimistic row locking,
+  completed replay, fingerprint conflict, in-progress rejection, and bounded
+  sanitized completion/failure evidence. It never stores a full menu request,
+  credential, token, printer endpoint, or raw failure text.
+- DTO, profile, exception, and transaction interfaces are compile-time
+  foundations only. No Controller is registered and no menu graph clone,
+  Store 1 read, Chinatown override, revision mutation, or runtime action is
+  included.
+- An isolated PostgreSQL 16.14 run applied V1-V10, verified V10's exact
+  table/constraint/index, passed cloud-profile JPA validation and health, then
+  restarted against the same database with schema 10 and no migration needed.
+  Focused, concurrency/replay, full backend, compile, diff, and secret checks
+  are the PR exit evidence.
+- Evidence:
+  [AL-003 PR-B PostgreSQL/Flyway V10 verification](AL-003_PR_B_POSTGRES_FLYWAY_V10_VERIFICATION.md).
+- No SSH, Staging/Production access, Store 1 query, real menu clone, merge, or
+  deployment occurred.
+- Next state: `AL-003_PR_B_WAITING_FOR_OWNER_REVIEW`.
 
 ### AL-002 implementation record
 
