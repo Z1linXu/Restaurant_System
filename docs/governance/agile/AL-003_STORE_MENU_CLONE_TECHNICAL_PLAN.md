@@ -60,7 +60,7 @@ Repository seed data remains historical evidence only.
 
 | Concern | Current executable evidence | Planning consequence |
 |---|---|---|
-| Store-scoped menu | `MenuCategory`, `Station`, `MenuItem`, and `MenuItemOption` contain Store/item ownership fields and generated IDs. | Clone creates fresh rows and explicit source-to-target ID maps. |
+| Store-scoped menu | `MenuCategory`, `Station`, `MenuItem`, and `MenuItemOption` contain Store/item ownership fields and generated IDs. | Clone creates fresh rows and may use transient source-to-target ID maps inside the transaction. Those maps are not part of the durable request or public replay contract. |
 | Stable identifiers | `MenuItem.sku`, `MenuItemOption.option_code`, and `option_group` are persisted and catalogued. | Match by normalized stable code, never by Chinese name alone. |
 | Parent options | `MenuItemOption.parent_option_id` is persisted. | Clone parents after all target option IDs exist. |
 | Menu revision | `Store.menu_revision`, `Store.menu_updated_at`, and `MenuRevisionService.incrementRevision`. | Increment target once after all validation; never increment source. |
@@ -169,17 +169,23 @@ Proposed `OwnerStoreMenuCloneResponse`:
     "items": 17,
     "options": 0
   },
-  "category_ids_by_code": {},
-  "station_ids_by_code": {},
-  "item_ids_by_sku": {},
+  "result_code": "MENU_CLONE_COMPLETED",
   "warnings": []
 }
 ```
 
 `options` is computed from the live snapshot and normalized profile, so the
-plan does not invent a count. Replay returns the original IDs and summary.
-Responses never include source option payloads, credentials, endpoints, or
-secrets.
+plan does not invent a count. Replay returns the original durable request ID,
+scope, revisions, status, created counts, safe result code, and deterministic
+safe warnings; it does not return category, station, item, or option ID maps.
+Internal transaction code may maintain temporary source-to-target ID maps while
+building the graph, but those maps are neither persisted nor exposed.
+
+`warnings` contains bounded stable warning codes only. Because V10 deliberately
+stores no warning payload, replay warnings must be derivable solely from the
+durable result summary and result code; execution-only detail is not replayed,
+and an empty list is valid. Responses never include source option payloads,
+credentials, endpoints, raw exceptions, or secrets.
 
 ### 4.4 Service contracts
 
@@ -480,8 +486,10 @@ The SHA-256 fingerprint covers normalized Organization/source/target IDs,
 profile code, and contract version. It excludes actor display name and runtime
 source revision. It stores no full request payload.
 
-- Same key + same fingerprint + `COMPLETED`: return original IDs/counts and
-  `replayed=true`; do not read/clone again or increment revision.
+- Same key + same fingerprint + `COMPLETED`: return the original durable
+  request/scope/revision/count/result summary with `replayed=true`; do not
+  read/clone again or increment revision, and do not reconstruct or expose ID
+  maps.
 - Same key + different fingerprint: HTTP 409 `IDEMPOTENCY_CONFLICT`.
 - Same key while `PROCESSING`: HTTP 409 `MENU_CLONE_IN_PROGRESS`.
 - Concurrent same requests: PostgreSQL unique insert chooses one owner; the
@@ -494,9 +502,10 @@ source revision. It stores no full request payload.
 Reserve the idempotency request in a small coordinator transaction. Perform all
 menu writes, target revision increment, success result, and success evidence in
 one clone transaction. On rollback, a separate bounded transaction marks the
-request `FAILED` with a sanitized error code only. A same-key/same-fingerprint
-retry may transition `FAILED -> PROCESSING` only when target emptiness and
-revision-before checks still prove no partial clone. Otherwise it fails closed.
+request `FAILED` with a sanitized error code only. `FAILED` is terminal in the
+first contract: the same idempotency key must never transition back to
+`PROCESSING`. After an operator revalidates the target and source, a retry must
+use a new `Idempotency-Key` and create a new request.
 
 This design preserves durable failure evidence without retaining partial menu
 data.
@@ -507,7 +516,8 @@ data.
 
 The transaction includes target stations, categories, items, options, parent
 links, final validation, target revision increment, clone-request completion,
-and canonical result counts/IDs. It excludes validation-only requests.
+and canonical result counts and safe result code. It excludes validation-only
+requests. Generated ID maps are transient transaction state only.
 
 Repository `saveAndFlush` checkpoints may expose generated IDs inside the same
 transaction but do not commit partial work.
@@ -551,6 +561,7 @@ message. Initial codes:
 | 404 | `TARGET_STORE_NOT_FOUND` | Authorized target does not exist. |
 | 409 | `IDEMPOTENCY_CONFLICT` | Key reused with different normalized request. |
 | 409 | `MENU_CLONE_IN_PROGRESS` | Same request is currently executing. |
+| 409 | `MENU_CLONE_RETRY_REQUIRES_VALIDATION` | A prior attempt with this key is terminal `FAILED`; revalidate and retry with a new key. |
 | 409 | `SOURCE_TARGET_SAME_STORE` | Source and target IDs match. |
 | 409 | `TARGET_STORE_NOT_READY` | Status or printing guard failed. |
 | 409 | `TARGET_MENU_NOT_EMPTY` | Target already has menu/station rows. |
@@ -653,14 +664,16 @@ execute repeats all validation inside its transaction.
 
 ### 17.5 Idempotency, concurrency, and rollback
 
-30. Same key/same request returns the same IDs and no duplicate rows/revision.
+30. Same key/same request returns the same durable summary and no duplicate
+    rows/revision; no public ID map is returned.
 31. Same key/different payload returns 409.
 32. Concurrent same-key requests create one graph.
 33. Concurrent different-key requests against one empty target create one graph
     and one `TARGET_MENU_NOT_EMPTY` result.
 34. Failure at category, station, item, option-parent, final-validation, and
     revision checkpoints leaves no partial target rows.
-35. Failed request evidence is sanitized and retry rules are deterministic.
+35. Failed request evidence is sanitized, `FAILED` remains terminal for that
+    key, and a revalidated retry succeeds only under a new key.
 
 ### 17.6 Invariance and side effects
 
@@ -744,7 +757,7 @@ Agents are not started by this planning turn. After Owner approval:
 | Agent | Ownership | Prohibited overlap |
 |---|---|---|
 | Agent 1 - architecture/data | DTO contracts, request entity/repository, V10, idempotency, audit/evidence, transaction interfaces. | No item/option business mapping. |
-| Agent 2 - category/station/item | Source snapshot validation, Store locks, ID maps, category/station/item clone, source invariants. | No V10 or option implementation. |
+| Agent 2 - category/station/item | Source snapshot validation, Store locks, transient transaction ID maps, category/station/item clone, source invariants. | No V10 or option implementation; no ID map persistence or public response fields. |
 | Agent 3 - options | Active add/remove, noodle types, parent maps, option conflicts. | No target price/name/Combo policy. |
 | Agent 4 - Chinatown override | Names, PDF prices, sizes, new items, exclusions, ordering, Combo 1-4, tea egg dual identity. | No authorization/idempotency infrastructure. |
 | Agent 5 - API/integration | Owner endpoint, Organization/target scope, validation endpoint, API docs, integration tests. | No repository schema ownership. |

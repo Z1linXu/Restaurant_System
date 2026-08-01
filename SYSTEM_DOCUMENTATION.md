@@ -226,6 +226,15 @@ counts, and a safe result code. Failure evidence is limited to revisions and a
 normalized error code; raw requests, menu payloads, exception messages,
 credentials, tokens, and printer endpoints are not persisted or returned.
 
+The first public/replay contract returns only the durable clone request and
+Store scope IDs, profile, revisions, status, replay marker, created counts, safe
+result code, and deterministic safe warning codes. Category, station, item, and
+option ID maps may exist transiently inside the clone transaction but are not
+persisted or exposed. V10 stores no warning payload; non-durable execution
+detail cannot appear on replay. `FAILED` is terminal for its idempotency key.
+After revalidation, an operator must retry with a new key; automatic retry and
+`FAILED -> PROCESSING` are not supported.
+
 PR-B also supplies compile-time DTO, error, profile, and transaction-service
 interfaces for later packages. It deliberately has no menu graph clone
 implementation and no Controller/public endpoint. It does not read Store 1,
