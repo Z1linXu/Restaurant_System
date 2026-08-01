@@ -64,7 +64,7 @@ snapshots. Do not copy those reports into this planbook.
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `AL-003 Store 1 -> Chinatown Live Menu Clone` |
 | Loop type | `DEPENDENCY_REPAIR` |
-| Loop status | `AL-003_PR_B3_PROFILE_REGISTRY_FIX_WAITING_FOR_OWNER_REVIEW` |
+| Loop status | `AL-003_PR_B4_PROFILE_CODE_CANONICALIZATION_WAITING_FOR_OWNER_REVIEW` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | `AL-002_WAITING_FOR_OWNER_APPROVAL`; the Staging plan does not approve, merge, deploy, or supersede it. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -72,8 +72,8 @@ snapshots. Do not copy those reports into this planbook.
 | STG-004 state | PR #38 merged the STG-004 runtime evidence. Exact SHA `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` passed PLAN, fresh PREFLIGHT, serial build/start, runtime verification, and isolated stop/start recovery. Server Staging remains running; Production remained unchanged. |
 | STG-005 state | PLAN complete. The Owner approved CP-0 as a separate minimal Staging-only bootstrap implementation and accepted CP-4 as a feature-disabled KDS/Assembling boundary. Positive Kitchen/Assembling workflow remains `EVIDENCE_PENDING`. |
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
-| AL-003 state | PR #41 merged PR-A, PR #42 merged PR-B, and PRs #43/#44 merged the replay/FAILED and menu-revision lock prerequisites. Independent review then found that the merged PR-B coordinator and fingerprint still depended directly on Chinatown constants, so the permanent Dependency Repair Gate stopped PR-C before publication. |
-| Current permitted work | Only the minimal PR-B3 generic profile descriptor/registry and profile-fingerprint repair. PR-C preparation is preserved in an isolated branch and cannot resume until the Owner merges this prerequisite into `main`. |
+| AL-003 state | PR #45 merged the generic profile descriptor/registry repair. During the required PR-C compatibility audit, independent review found that the registry accepted normalized profile-code variants while V10 persistence and fingerprinting retained the raw request code. The Dependency Repair Gate stopped PR-C again before publication. |
+| Current permitted work | Only the minimal PR-B4 exact profile-code identity repair. PR-C preparation remains preserved in an isolated branch and cannot resume until the Owner merges this prerequisite into `main`. |
 | Explicitly not permitted | Store 1 runtime access, real clone, SSH, Staging or Production mutation, automatic merge, deployment, STG-006, or unrelated backlog work. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
