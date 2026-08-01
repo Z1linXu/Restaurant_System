@@ -1,19 +1,19 @@
 # AL-003 Store 1 -> Chinatown Live Menu Clone Technical Plan
 
-> Status: `AL-003_PR_A_WAITING_FOR_OWNER_REVIEW`
+> Status: `AL-003_PR_C_WAITING_FOR_OWNER_REVIEW`
 >
 > Prepared: 2026-07-31, America/Toronto
 >
-> Phase: `PLAN` only
+> Phase: `IMPLEMENT / REVIEW`
 >
-> Repository base: `2613344d403365d61283ae440de16edffaaad788`
+> PR-C repository base: `ae019bf6460cbbbd69153a046d0fbda1fe707eb0`
 >
 > Migration baseline: PR #40 is merged and STG-005A owns
 > `V9__add_staging_synthetic_bootstrap_requests.sql`; AL-003 plans V10 only
 >
 > Runtime access: not performed
 >
-> Implementation, migration, clone execution, merge, and deployment: not authorized
+> Real clone execution, merge, and deployment: not authorized
 
 ## 1. Plan discovery result
 
@@ -21,10 +21,15 @@
 |---|---|
 | `AL003_PLAN_FOUND` | `false` before this document was created |
 | `PLAN_PATH` | `docs/governance/agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md` |
-| `PLAN_STATUS` | `AL-003_PR_A_WAITING_FOR_OWNER_REVIEW` |
+| `PLAN_STATUS` | `AL-003_PR_C_WAITING_FOR_OWNER_REVIEW` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | Owner review this plan, then authorize only PR-A. Do not start implementation packages before that review. |
+| `RECOMMENDED_ACTION` | Owner review PR-C. Keep PR-D, PR-E, and PR-F dependency-bound and independently reviewable. |
+
+PR-A, PR-B, and prerequisite repairs PR-B2 through PR-B4 are now merged. PR-C
+implements only the generic locked source snapshot and Category/Station/Item
+base graph. Option copying, the concrete Chinatown profile overrides, and the
+public Owner API remain isolated to PR-D, PR-E, and PR-F respectively.
 
 This plan is the implementation contract for AL-003. The product mapping is
 owned by

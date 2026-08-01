@@ -240,8 +240,17 @@ The subsequent PR-C compatibility audit found one narrower prerequisite:
 registry normalization accepted case/whitespace profile-code aliases while V10
 and fingerprinting retained the raw request value. PR-B4 therefore makes
 profile codes exact, case-sensitive version identifiers and rejects aliases
-before reservation writes. It changes no migration or clone behavior; PR-C is
-paused until Owner review and merge.
+before reservation writes. PR #46 merged that repair.
+
+AL-003 PR-C adds the generic clone base transaction. It locks source and target
+Stores in ascending ID order, validates an exact registered profile, captures a
+Store-scoped source snapshot, creates fresh Category/Station/Item rows in an
+inactive target with printing disabled, runs deterministic staged graph
+composers, rechecks the source revision, and advances the target menu revision
+exactly once. Completion evidence is bound to the reserved Organization,
+source Store, target Store, and exact profile code. The shared implementation
+contains no Chinatown or Store-ID branch; option copying, concrete profile
+overrides, and the public Owner endpoint remain PR-D, PR-E, and PR-F scope.
 
 STG-005A owns `V9__add_staging_synthetic_bootstrap_requests.sql`. PR-B adds the
 separate append-only `V10__add_owner_store_menu_clone_requests.sql`. V10 creates
