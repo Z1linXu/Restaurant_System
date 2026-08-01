@@ -508,6 +508,9 @@ The SHA-256 fingerprint covers normalized Organization/source/target IDs,
 profile code, and the profile-supplied fingerprint. The supplied fingerprint
 must change whenever the reviewed profile content changes. It excludes actor
 display name and runtime source revision. It stores no full request payload.
+Profile codes are exact, case-sensitive version identifiers: surrounding
+whitespace or case variants are invalid rather than aliases. This keeps registry
+resolution, persisted `profile_code`, and request fingerprint identity aligned.
 
 - Same key + same fingerprint + `COMPLETED`: return the original durable
   request/scope/revision/count/result summary with `replayed=true`; do not

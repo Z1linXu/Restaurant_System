@@ -1,6 +1,7 @@
 package com.restaurant.system.owner.menu;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
@@ -9,22 +10,29 @@ import org.junit.jupiter.api.Test;
 class StoreMenuCloneProfileRegistryTest {
 
     @Test
-    void resolvesReviewedProfilesWithoutSharedStoreSpecificBranches() {
+    void resolvesOnlyTheExactReviewedProfileCode() {
         StoreMenuCloneProfileDescriptor profile = profile("GENERIC_PROFILE_V1", 7L, "fingerprint-v1");
         StoreMenuCloneProfileRegistry registry = new StoreMenuCloneProfileRegistry(List.of(profile));
 
-        assertThat(registry.find(" generic_profile_v1 ")).containsSame(profile);
+        assertThat(registry.find("GENERIC_PROFILE_V1")).containsSame(profile);
+        assertThat(registry.find("generic_profile_v1")).isEmpty();
+        assertThat(registry.find(" GENERIC_PROFILE_V1 ")).isEmpty();
         assertThat(registry.find("UNKNOWN_PROFILE")).isEmpty();
     }
 
     @Test
     void rejectsDuplicateOrIncompleteDescriptors() {
         StoreMenuCloneProfileDescriptor first = profile("DUPLICATE", 1L, "fingerprint-a");
-        StoreMenuCloneProfileDescriptor second = profile("duplicate", 2L, "fingerprint-b");
+        StoreMenuCloneProfileDescriptor exactDuplicate = profile("DUPLICATE", 2L, "fingerprint-b");
+        StoreMenuCloneProfileDescriptor differentlyCased = profile("duplicate", 2L, "fingerprint-b");
 
-        assertThatThrownBy(() -> new StoreMenuCloneProfileRegistry(List.of(first, second)))
+        assertThatThrownBy(() -> new StoreMenuCloneProfileRegistry(List.of(first, exactDuplicate)))
             .isInstanceOf(IllegalStateException.class);
+        assertThatCode(() -> new StoreMenuCloneProfileRegistry(List.of(first, differentlyCased)))
+            .doesNotThrowAnyException();
         assertThatThrownBy(() -> new StoreMenuCloneProfileRegistry(List.of(profile(" ", 1L, "value"))))
+            .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> new StoreMenuCloneProfileRegistry(List.of(profile(" PADDED ", 1L, "value"))))
             .isInstanceOf(IllegalStateException.class);
     }
 

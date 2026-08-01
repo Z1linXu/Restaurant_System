@@ -272,6 +272,27 @@ class OwnerStoreMenuCloneRequestCoordinatorImplTest {
     }
 
     @Test
+    void profileCodeMustExactlyMatchBeforeAnyReservationWrite() {
+        OwnerStoreMenuCloneReservationCommand invalid = new OwnerStoreMenuCloneReservationCommand(
+            ORGANIZATION_ID,
+            ChinatownMenuCloneProfile.SOURCE_STORE_ID,
+            TARGET_STORE_ID,
+            IDEMPOTENCY_KEY,
+            ChinatownMenuCloneProfile.PROFILE_CODE.toLowerCase(),
+            ACTOR_USER_ID
+        );
+
+        assertThatThrownBy(() -> coordinator.reserve(invalid))
+            .isInstanceOfSatisfying(
+                OwnerStoreMenuCloneException.class,
+                exception -> assertThat(exception.getErrorCode()).isEqualTo("MENU_CLONE_REQUEST_INVALID")
+            );
+        verify(requestRepository, never()).insertIfAbsent(
+            anyLong(), anyLong(), anyLong(), anyString(), anyString(), anyString(), anyLong(), any(LocalDateTime.class)
+        );
+    }
+
+    @Test
     void sharedCoordinatorAcceptsAnotherReviewedProfileWithoutStoreSpecificBranching() {
         StoreMenuCloneProfileDescriptor genericProfile = profile(
             "GENERIC_STORE_PROFILE_V1",

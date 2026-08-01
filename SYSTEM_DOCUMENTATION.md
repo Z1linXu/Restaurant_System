@@ -234,7 +234,14 @@ review found that the merged PR-B coordinator and fingerprint still imported
 Chinatown constants. PR-B3 replaces that coupling with a generic profile
 descriptor/registry and binds the idempotency fingerprint to the reviewed
 profile fingerprint. It changes no migration, public response, replay state, or
-menu graph behavior; PR-C remains paused until the Owner merges the repair.
+menu graph behavior. PR #45 merged that repair.
+
+The subsequent PR-C compatibility audit found one narrower prerequisite:
+registry normalization accepted case/whitespace profile-code aliases while V10
+and fingerprinting retained the raw request value. PR-B4 therefore makes
+profile codes exact, case-sensitive version identifiers and rejects aliases
+before reservation writes. It changes no migration or clone behavior; PR-C is
+paused until Owner review and merge.
 
 STG-005A owns `V9__add_staging_synthetic_bootstrap_requests.sql`. PR-B adds the
 separate append-only `V10__add_owner_store_menu_clone_requests.sql`. V10 creates
