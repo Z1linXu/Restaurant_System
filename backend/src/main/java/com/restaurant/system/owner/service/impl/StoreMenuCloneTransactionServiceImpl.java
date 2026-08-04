@@ -19,6 +19,7 @@ import com.restaurant.system.owner.menu.StoreMenuCloneBaseGraphProfile.StationSo
 import com.restaurant.system.owner.menu.StoreMenuCloneBaseGraphResult;
 import com.restaurant.system.owner.menu.StoreMenuCloneCompositionContext;
 import com.restaurant.system.owner.menu.StoreMenuCloneGraphComposer;
+import com.restaurant.system.owner.menu.StoreMenuClonePlannedOption;
 import com.restaurant.system.owner.menu.StoreMenuCloneProfileDescriptor;
 import com.restaurant.system.owner.menu.StoreMenuCloneProfileRegistry;
 import com.restaurant.system.owner.menu.StoreMenuCloneSnapshot;
@@ -30,11 +31,14 @@ import com.restaurant.system.owner.service.OwnerStoreMenuCloneRequestCoordinator
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneSuccessEvidence;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneTransactionCommand;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneTransactionResult;
+import com.restaurant.system.owner.service.OwnerStoreMenuCloneValidationCommand;
+import com.restaurant.system.owner.service.OwnerStoreMenuCloneValidationResult;
 import com.restaurant.system.owner.service.StoreMenuCloneTransactionService;
 import com.restaurant.system.station.entity.Station;
 import com.restaurant.system.station.repository.StationRepository;
 import com.restaurant.system.user.entity.Store;
 import com.restaurant.system.user.repository.StoreRepository;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -92,23 +96,73 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public OwnerStoreMenuCloneValidationResult validate(OwnerStoreMenuCloneValidationCommand command) {
+        validateValidationCommand(command);
+        StoreMenuCloneBaseGraphProfile profile = requireBaseGraphProfile(
+            command.sourceStoreId(),
+            command.profileCode()
+        );
+        validateProfile(profile);
+
+        LockedStores stores = loadStores(command.sourceStoreId(), command.targetStoreId());
+        validateStoreScope(command.organizationId(), stores);
+        requireTargetSafeAndEmpty(stores.target());
+
+        long sourceRevision = requireRevision(stores.source(), "source");
+        long targetRevision = requireRevision(stores.target(), "target");
+        ResolvedBaseGraph resolved = resolveBaseGraph(stores.source(), profile);
+        StoreMenuCloneBaseGraphResult virtualBaseGraph = virtualBaseGraph(resolved);
+        List<StoreMenuClonePlannedOption> optionPlan = composeGraph(profile, stores, virtualBaseGraph);
+        requireTargetSafeAndEmpty(stores.target());
+        requireUnchangedRevision(
+            storeRepository.findMenuRevisionById(command.sourceStoreId()),
+            sourceRevision,
+            "SOURCE_MENU_CHANGED",
+            "Source menu revision changed during validation"
+        );
+        requireUnchangedRevision(
+            storeRepository.findMenuRevisionById(command.targetStoreId()),
+            targetRevision,
+            "TARGET_MENU_CHANGED",
+            "Target menu revision changed during validation"
+        );
+
+        return new OwnerStoreMenuCloneValidationResult(
+            true,
+            profile.profileCode(),
+            sourceRevision,
+            targetRevision,
+            profile.stations().size(),
+            profile.categories().size(),
+            profile.items().size(),
+            optionPlan.size(),
+            List.of(),
+            List.of(),
+            List.of()
+        );
+    }
+
+    @Override
     @Transactional
     public OwnerStoreMenuCloneTransactionResult execute(OwnerStoreMenuCloneTransactionCommand command) {
         validateCommand(command);
-        StoreMenuCloneBaseGraphProfile profile = requireBaseGraphProfile(command);
+        StoreMenuCloneBaseGraphProfile profile = requireBaseGraphProfile(command.sourceStoreId(), command.profileCode());
         validateProfile(profile);
 
         LockedStores stores = lockStores(command.sourceStoreId(), command.targetStoreId());
-        validateStoreScope(command, stores);
+        validateStoreScope(command.organizationId(), stores);
         requireTargetSafeAndEmpty(stores.target());
 
         long sourceRevision = requireRevision(stores.source(), "source");
         long targetRevisionBefore = requireRevision(stores.target(), "target");
         ResolvedBaseGraph resolved = resolveBaseGraph(stores.source(), profile);
         StoreMenuCloneBaseGraphResult baseGraph = persistBaseGraph(stores.target().id, resolved);
-        int createdOptionCount = composeGraph(profile, stores, baseGraph);
+        List<StoreMenuClonePlannedOption> optionPlan = composeGraph(profile, stores, baseGraph);
+        persistOptionPlan(optionPlan);
+        int createdOptionCount = optionPlan.size();
 
-        validatePersistedGraph(stores.target().id, resolved, baseGraph, createdOptionCount);
+        validatePersistedGraph(stores.target().id, resolved, baseGraph, optionPlan);
         recheckSourceRevision(resolved.snapshot());
         menuRevisionService.incrementRevision(stores.target().id);
 
@@ -137,6 +191,19 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
         return new OwnerStoreMenuCloneTransactionResult(evidence);
     }
 
+    private void validateValidationCommand(OwnerStoreMenuCloneValidationCommand command) {
+        if (command == null
+            || command.organizationId() == null
+            || command.sourceStoreId() == null
+            || command.targetStoreId() == null
+            || !isExactNonBlank(command.profileCode())) {
+            throw badRequest("MENU_CLONE_REQUEST_INVALID", "Complete menu clone validation scope is required");
+        }
+        if (command.sourceStoreId().equals(command.targetStoreId())) {
+            throw conflict("SOURCE_TARGET_SAME_STORE", "Source and target Stores must differ");
+        }
+    }
+
     private void validateCommand(OwnerStoreMenuCloneTransactionCommand command) {
         if (command == null
             || command.requestId() == null
@@ -152,11 +219,11 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
         }
     }
 
-    private StoreMenuCloneBaseGraphProfile requireBaseGraphProfile(OwnerStoreMenuCloneTransactionCommand command) {
-        StoreMenuCloneProfileDescriptor descriptor = profileRegistry.find(command.profileCode())
+    private StoreMenuCloneBaseGraphProfile requireBaseGraphProfile(Long sourceStoreId, String profileCode) {
+        StoreMenuCloneProfileDescriptor descriptor = profileRegistry.find(profileCode)
             .orElseThrow(() -> badRequest("MENU_CLONE_REQUEST_INVALID", "Unsupported menu clone profile"));
         if (!(descriptor instanceof StoreMenuCloneBaseGraphProfile profile)
-            || !Objects.equals(profile.sourceStoreId(), command.sourceStoreId())) {
+            || !Objects.equals(profile.sourceStoreId(), sourceStoreId)) {
             throw badRequest("MENU_CLONE_REQUEST_INVALID", "Unsupported menu clone profile");
         }
         return profile;
@@ -319,9 +386,18 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
         return new LockedStores(source, target);
     }
 
-    private void validateStoreScope(OwnerStoreMenuCloneTransactionCommand command, LockedStores stores) {
-        if (!Objects.equals(command.organizationId(), stores.source().organization_id)
-            || !Objects.equals(command.organizationId(), stores.target().organization_id)) {
+    private LockedStores loadStores(Long sourceStoreId, Long targetStoreId) {
+        Store source = storeRepository.findById(sourceStoreId).orElse(null);
+        Store target = storeRepository.findById(targetStoreId).orElse(null);
+        if (source == null || target == null) {
+            throw forbidden("MENU_CLONE_FORBIDDEN", "Source or target Store is outside the clone scope");
+        }
+        return new LockedStores(source, target);
+    }
+
+    private void validateStoreScope(Long organizationId, LockedStores stores) {
+        if (!Objects.equals(organizationId, stores.source().organization_id)
+            || !Objects.equals(organizationId, stores.target().organization_id)) {
             throw forbidden("MENU_CLONE_FORBIDDEN", "Source and target Stores must belong to the Organization");
         }
     }
@@ -346,6 +422,12 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
             throw conflict("SOURCE_MENU_CHANGED", label + " menu revision is unavailable");
         }
         return store.menu_revision;
+    }
+
+    private void requireUnchangedRevision(Long actual, long expected, String code, String message) {
+        if (!Objects.equals(expected, actual)) {
+            throw conflict(code, message);
+        }
     }
 
     private ResolvedBaseGraph resolveBaseGraph(Store source, StoreMenuCloneBaseGraphProfile profile) {
@@ -588,6 +670,46 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
         }
     }
 
+    private StoreMenuCloneBaseGraphResult virtualBaseGraph(ResolvedBaseGraph graph) {
+        long nextVirtualId = -1L;
+        Map<Long, Long> categoriesBySourceId = new LinkedHashMap<>();
+        for (CategorySelection selection : graph.profile().categories()) {
+            SourceCategory source = graph.sourceCategoryByTargetCode().get(normalizeCode(selection.targetCode()));
+            long targetId = nextVirtualId--;
+            if (source != null) {
+                categoriesBySourceId.put(source.id(), targetId);
+            }
+        }
+
+        Map<Long, Long> stationsBySourceId = new LinkedHashMap<>();
+        for (StationSelection selection : graph.profile().stations()) {
+            SourceStation source = graph.sourceStationByTargetCode().get(normalizeCode(selection.targetCode()));
+            stationsBySourceId.put(source.id(), nextVirtualId--);
+        }
+
+        Map<Long, Long> itemsBySourceId = new LinkedHashMap<>();
+        Map<String, Long> itemsByTargetSku = new LinkedHashMap<>();
+        Map<Long, Set<ItemRole>> rolesByTargetId = new LinkedHashMap<>();
+        for (ItemSelection selection : graph.profile().items()) {
+            long targetId = nextVirtualId--;
+            SourceItem source = graph.sourceItemByTargetSku().get(normalizeSku(selection.targetSku()));
+            if (source != null) {
+                itemsBySourceId.put(source.id(), targetId);
+            }
+            itemsByTargetSku.put(normalizeSku(selection.targetSku()), targetId);
+            rolesByTargetId.put(targetId, selection.roles());
+        }
+
+        return new StoreMenuCloneBaseGraphResult(
+            graph.snapshot(),
+            categoriesBySourceId,
+            stationsBySourceId,
+            itemsBySourceId,
+            itemsByTargetSku,
+            rolesByTargetId
+        );
+    }
+
     private StoreMenuCloneBaseGraphResult persistBaseGraph(Long targetStoreId, ResolvedBaseGraph graph) {
         LocalDateTime now = LocalDateTime.now();
         PersistedCategories categories = createCategories(targetStoreId, graph, now);
@@ -694,7 +816,7 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
         return new PersistedItems(targetIdBySourceId, targetIdByTargetSku, rolesByTargetItemId);
     }
 
-    private int composeGraph(
+    private List<StoreMenuClonePlannedOption> composeGraph(
         StoreMenuCloneBaseGraphProfile profile,
         LockedStores stores,
         StoreMenuCloneBaseGraphResult baseGraph
@@ -728,22 +850,140 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
             stores.target().id,
             baseGraph
         );
-        int createdOptionCount = 0;
         for (StoreMenuCloneGraphComposer composer : matching) {
+            int optionCountBefore = context.options().size();
             int contribution = composer.compose(context);
             if (contribution < 0) {
                 throw invalidProfile("Store menu clone composer returned a negative created count");
             }
-            createdOptionCount = Math.addExact(createdOptionCount, contribution);
+            if (contribution != context.options().size() - optionCountBefore) {
+                throw invalidProfile("Store menu clone composer count does not match its planned options");
+            }
         }
-        return createdOptionCount;
+        List<StoreMenuClonePlannedOption> plan = context.options();
+        Set<Long> allowedTargetItemIds = Set.copyOf(baseGraph.targetItemIdByTargetSku().values());
+        if (plan.stream().anyMatch(option -> !allowedTargetItemIds.contains(option.targetItemId()))) {
+            throw invalidTarget("Target option plan references an item outside the target graph");
+        }
+        validatePlannedParentGraph(plan);
+        return plan;
+    }
+
+    private void validatePlannedParentGraph(List<StoreMenuClonePlannedOption> plan) {
+        Map<OptionKey, StoreMenuClonePlannedOption> byKey = new LinkedHashMap<>();
+        for (StoreMenuClonePlannedOption option : plan) {
+            OptionKey key = new OptionKey(option.targetItemId(), normalizeSku(option.optionCode()));
+            if (key.optionCode() == null || byKey.putIfAbsent(key, option) != null) {
+                throw invalidTarget("Target option plan codes are incomplete or duplicated");
+            }
+        }
+
+        Set<OptionKey> visiting = new LinkedHashSet<>();
+        Set<OptionKey> visited = new LinkedHashSet<>();
+        for (OptionKey key : byKey.keySet()) {
+            visitPlannedParent(key, byKey, visiting, visited);
+        }
+    }
+
+    private void visitPlannedParent(
+        OptionKey key,
+        Map<OptionKey, StoreMenuClonePlannedOption> byKey,
+        Set<OptionKey> visiting,
+        Set<OptionKey> visited
+    ) {
+        if (visited.contains(key)) {
+            return;
+        }
+        if (!visiting.add(key)) {
+            throw invalidTarget("Target option plan parent graph contains a cycle");
+        }
+        StoreMenuClonePlannedOption option = byKey.get(key);
+        if (option.parentOptionCode() != null) {
+            OptionKey parentKey = new OptionKey(
+                option.targetItemId(),
+                normalizeSku(option.parentOptionCode())
+            );
+            if (parentKey.optionCode() == null || !byKey.containsKey(parentKey)) {
+                throw invalidTarget("Target option plan parent mapping is incomplete");
+            }
+            visitPlannedParent(parentKey, byKey, visiting, visited);
+        }
+        visiting.remove(key);
+        visited.add(key);
+    }
+
+    private void persistOptionPlan(List<StoreMenuClonePlannedOption> plan) {
+        if (plan.isEmpty()) {
+            return;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        List<MenuItemOption> entities = new ArrayList<>();
+        Map<OptionKey, MenuItemOption> entitiesByKey = new LinkedHashMap<>();
+        for (StoreMenuClonePlannedOption planned : plan) {
+            if (!isExactNonBlank(planned.optionType())
+                || !isExactNonBlank(planned.optionCode())
+                || !isExactNonBlank(planned.optionGroup())
+                || planned.sortOrder() == null
+                || planned.sortOrder() < 1
+                || planned.priceDelta() == null
+                || planned.active() == null) {
+                throw invalidTarget("Target option plan is incomplete");
+            }
+            MenuItemOption entity = new MenuItemOption();
+            entity.menu_item_id = planned.targetItemId();
+            entity.option_type = planned.optionType();
+            entity.option_code = planned.optionCode();
+            entity.option_group = planned.optionGroup();
+            entity.parent_option_id = null;
+            entity.sort_order = planned.sortOrder();
+            entity.name_zh = planned.nameZh();
+            entity.name_en = planned.nameEn();
+            entity.price_delta = planned.priceDelta();
+            entity.is_active = planned.active();
+            entity.created_at = now;
+            entity.updated_at = now;
+            OptionKey key = new OptionKey(planned.targetItemId(), normalizeSku(planned.optionCode()));
+            if (entitiesByKey.putIfAbsent(key, entity) != null) {
+                throw invalidTarget("Target option plan contains duplicate option codes");
+            }
+            entities.add(entity);
+        }
+
+        optionRepository.saveAllAndFlush(entities);
+        for (int index = 0; index < plan.size(); index++) {
+            StoreMenuClonePlannedOption planned = plan.get(index);
+            MenuItemOption entity = entities.get(index);
+            if (entity.id == null || Objects.equals(entity.id, planned.sourceOptionId())) {
+                throw invalidTarget("Target option did not receive a fresh ID");
+            }
+        }
+
+        boolean hasParents = false;
+        for (int index = 0; index < plan.size(); index++) {
+            StoreMenuClonePlannedOption planned = plan.get(index);
+            if (planned.parentOptionCode() == null) {
+                continue;
+            }
+            MenuItemOption parent = entitiesByKey.get(new OptionKey(
+                planned.targetItemId(),
+                normalizeSku(planned.parentOptionCode())
+            ));
+            if (parent == null || parent.id == null) {
+                throw invalidTarget("Target option parent mapping is incomplete");
+            }
+            entities.get(index).parent_option_id = parent.id;
+            hasParents = true;
+        }
+        if (hasParents) {
+            optionRepository.saveAllAndFlush(entities);
+        }
     }
 
     private void validatePersistedGraph(
         Long targetStoreId,
         ResolvedBaseGraph resolved,
         StoreMenuCloneBaseGraphResult result,
-        int createdOptionCount
+        List<StoreMenuClonePlannedOption> optionPlan
     ) {
         List<MenuCategory> categories = categoryRepository.findAllByStoreIdOrderByIdAsc(targetStoreId);
         List<Station> stations = stationRepository.findAllByStoreIdOrderByIdAsc(targetStoreId);
@@ -808,7 +1048,7 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
             targetStoreId,
             targetItemIds
         );
-        if (targetOptions.size() != createdOptionCount) {
+        if (targetOptions.size() != optionPlan.size()) {
             throw invalidTarget("Target option count does not match composer evidence");
         }
         Set<Long> targetIds = Set.copyOf(targetItemIds);
@@ -816,6 +1056,7 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
             option -> option.id,
             Function.identity()
         ));
+        Map<OptionKey, MenuItemOption> optionByKey = new LinkedHashMap<>();
         for (MenuItemOption option : targetOptions) {
             MenuItemOption parent = option.parent_option_id == null ? null : optionById.get(option.parent_option_id);
             if (!targetIds.contains(option.menu_item_id)
@@ -823,7 +1064,41 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
                     && (parent == null || !Objects.equals(option.menu_item_id, parent.menu_item_id)))) {
                 throw invalidTarget("Target option ownership or parent mapping is invalid");
             }
+            OptionKey key = new OptionKey(option.menu_item_id, normalizeSku(option.option_code));
+            if (key.optionCode() == null || optionByKey.putIfAbsent(key, option) != null) {
+                throw invalidTarget("Target option codes are incomplete or duplicated");
+            }
         }
+        for (StoreMenuClonePlannedOption planned : optionPlan) {
+            OptionKey key = new OptionKey(planned.targetItemId(), normalizeSku(planned.optionCode()));
+            MenuItemOption option = optionByKey.get(key);
+            MenuItemOption expectedParent = planned.parentOptionCode() == null
+                ? null
+                : optionByKey.get(new OptionKey(
+                    planned.targetItemId(),
+                    normalizeSku(planned.parentOptionCode())
+                ));
+            if (planned.parentOptionCode() != null && expectedParent == null) {
+                throw invalidTarget("Persisted target option parent does not match its logical plan");
+            }
+            Long expectedParentId = expectedParent == null ? null : expectedParent.id;
+            if (option == null
+                || !Objects.equals(planned.optionType(), option.option_type)
+                || !Objects.equals(planned.optionCode(), option.option_code)
+                || !Objects.equals(planned.optionGroup(), option.option_group)
+                || !Objects.equals(expectedParentId, option.parent_option_id)
+                || !Objects.equals(planned.sortOrder(), option.sort_order)
+                || !Objects.equals(planned.nameZh(), option.name_zh)
+                || !Objects.equals(planned.nameEn(), option.name_en)
+                || !sameAmount(planned.priceDelta(), option.price_delta)
+                || !Objects.equals(planned.active(), option.is_active)) {
+                throw invalidTarget("Persisted target option does not match its logical plan");
+            }
+        }
+    }
+
+    private boolean sameAmount(BigDecimal expected, BigDecimal actual) {
+        return expected == null ? actual == null : actual != null && expected.compareTo(actual) == 0;
     }
 
     private void recheckSourceRevision(StoreMenuCloneSnapshot snapshot) {
@@ -1019,5 +1294,8 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
         Map<String, Long> targetIdByTargetSku,
         Map<Long, Set<ItemRole>> rolesByTargetItemId
     ) {
+    }
+
+    private record OptionKey(Long targetItemId, String optionCode) {
     }
 }

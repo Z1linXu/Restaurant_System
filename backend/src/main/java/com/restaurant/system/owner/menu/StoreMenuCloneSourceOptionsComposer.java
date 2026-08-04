@@ -1,7 +1,5 @@
 package com.restaurant.system.owner.menu;
 
-import com.restaurant.system.menu.entity.MenuItemOption;
-import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.owner.exception.OwnerStoreMenuCloneException;
 import com.restaurant.system.owner.menu.StoreMenuCloneBaseGraphProfile.ItemSelection;
 import com.restaurant.system.owner.menu.StoreMenuCloneBaseGraphProfile.SourcePolicy;
@@ -10,7 +8,6 @@ import com.restaurant.system.owner.menu.StoreMenuCloneSnapshot.SourceOption;
 import com.restaurant.system.owner.menu.StoreMenuCloneSourceOptionsProfile.SourceOptionApplication;
 import com.restaurant.system.owner.menu.StoreMenuCloneSourceOptionsProfile.SourceOptionDisposition;
 import com.restaurant.system.owner.menu.StoreMenuCloneSourceOptionsProfile.SourceOptionRule;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -27,23 +24,16 @@ import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
-/**
- * Copies profile-selected source options while the enclosing clone transaction holds both Store locks.
- */
+/** Adds profile-selected source options to the transaction-local clone plan. */
 @Component
 public final class StoreMenuCloneSourceOptionsComposer implements StoreMenuCloneGraphComposer {
 
     public static final String IDENTITY = "source-options";
     public static final int ORDER = 100;
 
-    private final MenuItemOptionRepository optionRepository;
     private final StoreMenuCloneProfileRegistry profileRegistry;
 
-    public StoreMenuCloneSourceOptionsComposer(
-        MenuItemOptionRepository optionRepository,
-        StoreMenuCloneProfileRegistry profileRegistry
-    ) {
-        this.optionRepository = optionRepository;
+    public StoreMenuCloneSourceOptionsComposer(StoreMenuCloneProfileRegistry profileRegistry) {
         this.profileRegistry = profileRegistry;
     }
 
@@ -76,10 +66,7 @@ public final class StoreMenuCloneSourceOptionsComposer implements StoreMenuClone
         }
         validateContext(context);
         List<PlannedOption> plan = buildPlan(context, profile);
-        if (plan.isEmpty()) {
-            return 0;
-        }
-        persistPlan(plan);
+        plan.stream().map(PlannedOption::toOptionPlan).forEach(context::addOption);
         return plan.size();
     }
 
@@ -161,13 +148,13 @@ public final class StoreMenuCloneSourceOptionsComposer implements StoreMenuClone
                 .sorted(sourceOptionOrder())
                 .forEach(option -> {
                     LogicalKey key = new LogicalKey(application.targetItemId(), option.id());
-                    LogicalKey parentKey = option.parentOptionId() == null
+                    String parentOptionCode = option.parentOptionId() == null
                         ? null
-                        : new LogicalKey(application.targetItemId(), option.parentOptionId());
+                        : optionsById.get(option.parentOptionId()).optionCode();
                     if (!logicalKeys.add(key)) {
                         throw invalidProfile("Source option profile creates a duplicate target application");
                     }
-                    plan.add(new PlannedOption(key, parentKey, option, null));
+                    plan.add(new PlannedOption(key, parentOptionCode, option));
                 });
         }
         return List.copyOf(plan);
@@ -384,54 +371,6 @@ public final class StoreMenuCloneSourceOptionsComposer implements StoreMenuClone
         states.put(optionId, VisitState.VISITED);
     }
 
-    private void persistPlan(List<PlannedOption> plan) {
-        LocalDateTime now = LocalDateTime.now();
-        for (PlannedOption planned : plan) {
-            SourceOption source = planned.source();
-            MenuItemOption target = new MenuItemOption();
-            target.menu_item_id = planned.key().targetItemId();
-            target.option_type = source.optionType();
-            target.option_code = source.optionCode();
-            target.option_group = source.optionGroup();
-            target.parent_option_id = null;
-            target.sort_order = source.sortOrder();
-            target.name_zh = source.nameZh();
-            target.name_en = source.nameEn();
-            target.price_delta = source.priceDelta();
-            target.is_active = source.active();
-            target.created_at = now;
-            target.updated_at = now;
-            planned.target(target);
-        }
-
-        optionRepository.saveAllAndFlush(plan.stream().map(PlannedOption::target).toList());
-        Map<LogicalKey, Long> targetIdByLogicalKey = new LinkedHashMap<>();
-        for (PlannedOption planned : plan) {
-            Long targetId = planned.target().id;
-            if (targetId == null
-                || Objects.equals(targetId, planned.source().id())
-                || targetIdByLogicalKey.putIfAbsent(planned.key(), targetId) != null) {
-                throw invalidTarget("Target options did not receive unique fresh IDs");
-            }
-        }
-
-        boolean hasParents = false;
-        for (PlannedOption planned : plan) {
-            if (planned.parentKey() == null) {
-                continue;
-            }
-            Long targetParentId = targetIdByLogicalKey.get(planned.parentKey());
-            if (targetParentId == null) {
-                throw invalidTarget("Target option parent mapping is incomplete");
-            }
-            planned.target().parent_option_id = targetParentId;
-            hasParents = true;
-        }
-        if (hasParents) {
-            optionRepository.saveAllAndFlush(plan.stream().map(PlannedOption::target).toList());
-        }
-    }
-
     private void validateTargetMappings(Map<String, Long> targetIdsBySku) {
         if (targetIdsBySku == null || targetIdsBySku.isEmpty()) {
             throw invalidTarget("Target item mapping is unavailable");
@@ -559,38 +498,22 @@ public final class StoreMenuCloneSourceOptionsComposer implements StoreMenuClone
     private record LogicalKey(Long targetItemId, Long sourceOptionId) {
     }
 
-    private static final class PlannedOption {
+    private record PlannedOption(LogicalKey key, String parentOptionCode, SourceOption source) {
 
-        private final LogicalKey key;
-        private final LogicalKey parentKey;
-        private final SourceOption source;
-        private MenuItemOption target;
-
-        private PlannedOption(LogicalKey key, LogicalKey parentKey, SourceOption source, MenuItemOption target) {
-            this.key = key;
-            this.parentKey = parentKey;
-            this.source = source;
-            this.target = target;
-        }
-
-        private LogicalKey key() {
-            return key;
-        }
-
-        private LogicalKey parentKey() {
-            return parentKey;
-        }
-
-        private SourceOption source() {
-            return source;
-        }
-
-        private MenuItemOption target() {
-            return target;
-        }
-
-        private void target(MenuItemOption target) {
-            this.target = target;
+        private StoreMenuClonePlannedOption toOptionPlan() {
+            return new StoreMenuClonePlannedOption(
+                key.targetItemId(),
+                source.id(),
+                source.optionType(),
+                source.optionCode(),
+                source.optionGroup(),
+                parentOptionCode,
+                source.sortOrder(),
+                source.nameZh(),
+                source.nameEn(),
+                source.priceDelta(),
+                source.active()
+            );
         }
     }
 

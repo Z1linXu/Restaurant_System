@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -17,6 +18,7 @@ import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.menu.repository.MenuItemRepository;
 import com.restaurant.system.menu.service.MenuRevisionService;
 import com.restaurant.system.menu.service.impl.MenuRevisionServiceImpl;
+import com.restaurant.system.owner.exception.OwnerStoreMenuCloneException;
 import com.restaurant.system.owner.menu.ChinatownMenuCloneProfile;
 import com.restaurant.system.owner.menu.StoreMenuCloneCompositionContext;
 import com.restaurant.system.owner.menu.StoreMenuCloneGraphComposer;
@@ -26,6 +28,9 @@ import com.restaurant.system.owner.service.OwnerStoreMenuCloneRequestCoordinator
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneSuccessEvidence;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneTransactionCommand;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneTransactionResult;
+import com.restaurant.system.owner.service.OwnerStoreMenuCloneValidationCommand;
+import com.restaurant.system.owner.service.OwnerStoreMenuCloneValidationResult;
+import com.restaurant.system.owner.service.StoreMenuCloneTransactionService;
 import com.restaurant.system.owner.service.impl.StoreMenuCloneTransactionServiceImpl;
 import com.restaurant.system.station.entity.Station;
 import com.restaurant.system.station.repository.StationRepository;
@@ -35,6 +40,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,8 +49,10 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
@@ -57,7 +65,14 @@ import org.springframework.transaction.support.TransactionTemplate;
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 @ContextConfiguration(classes = ChinatownMenuCloneTransactionIntegrationTest.JpaSliceConfiguration.class)
-@Import(MenuRevisionServiceImpl.class)
+@Import({
+    MenuRevisionServiceImpl.class,
+    ChinatownMenuCloneProfile.class,
+    StoreMenuCloneProfileRegistry.class,
+    StoreMenuCloneSourceOptionsComposer.class,
+    ChinatownMenuProfileOverridesComposer.class,
+    StoreMenuCloneTransactionServiceImpl.class
+})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class ChinatownMenuCloneTransactionIntegrationTest {
 
@@ -68,6 +83,11 @@ class ChinatownMenuCloneTransactionIntegrationTest {
     @EntityScan(basePackages = "com.restaurant.system")
     @EnableJpaRepositories(basePackages = "com.restaurant.system")
     static class JpaSliceConfiguration {
+
+        @Bean
+        OwnerStoreMenuCloneRequestCoordinator ownerStoreMenuCloneRequestCoordinator() {
+            return mock(OwnerStoreMenuCloneRequestCoordinator.class);
+        }
     }
 
     @Autowired private StoreRepository storeRepository;
@@ -77,20 +97,82 @@ class ChinatownMenuCloneTransactionIntegrationTest {
     @Autowired private MenuItemOptionRepository optionRepository;
     @Autowired private MenuRevisionService menuRevisionService;
     @Autowired private PlatformTransactionManager transactionManager;
-
-    private final OwnerStoreMenuCloneRequestCoordinator coordinator = mock(
-        OwnerStoreMenuCloneRequestCoordinator.class
-    );
+    @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private OwnerStoreMenuCloneRequestCoordinator coordinator;
+    @Autowired private StoreMenuCloneTransactionService transactionService;
 
     @BeforeEach
     void cleanDatabase() {
+        clearInvocations(coordinator);
         transaction().executeWithoutResult(status -> {
             optionRepository.deleteAll();
             itemRepository.deleteAll();
             categoryRepository.deleteAll();
             stationRepository.deleteAll();
             storeRepository.deleteAll();
+            jdbcTemplate.execute("ALTER TABLE stores ALTER COLUMN id RESTART WITH 1");
         });
+    }
+
+    @Test
+    void validationRejectsProfileCodeAliasesWithoutWritingTargetState() {
+        SourceFixture fixture = sourceFixture();
+        ChinatownMenuCloneProfile profile = new ChinatownMenuCloneProfile();
+
+        for (String alias : List.of(
+            ChinatownMenuCloneProfile.PROFILE_CODE.toLowerCase(Locale.ROOT),
+            " " + ChinatownMenuCloneProfile.PROFILE_CODE
+        )) {
+            assertThatThrownBy(() -> transactionService.validate(new OwnerStoreMenuCloneValidationCommand(
+                ORGANIZATION_ID,
+                fixture.source().id,
+                fixture.successTarget().id,
+                alias
+            )))
+                .isInstanceOfSatisfying(OwnerStoreMenuCloneException.class, error ->
+                    assertThat(error.getErrorCode()).isEqualTo("MENU_CLONE_REQUEST_INVALID")
+                );
+        }
+
+        assertThat(categoryRepository.countAllByStoreId(fixture.successTarget().id)).isZero();
+        assertThat(stationRepository.countAllByStoreId(fixture.successTarget().id)).isZero();
+        assertThat(itemRepository.countAllByStoreId(fixture.successTarget().id)).isZero();
+        assertThat(storeRepository.findMenuRevisionById(fixture.successTarget().id)).isEqualTo(1L);
+        verify(coordinator, never()).complete(any());
+    }
+
+    @Test
+    void validatesTheExactChinatownPlanWithoutWritingTargetState() {
+        SourceFixture fixture = sourceFixture();
+        SourceState sourceBefore = sourceState(fixture.source().id);
+
+        OwnerStoreMenuCloneValidationResult result = transactionService.validate(
+            new OwnerStoreMenuCloneValidationCommand(
+                ORGANIZATION_ID,
+                fixture.source().id,
+                fixture.successTarget().id,
+                ChinatownMenuCloneProfile.PROFILE_CODE
+            )
+        );
+
+        assertThat(result.valid()).isTrue();
+        assertThat(result.profileCode()).isEqualTo(ChinatownMenuCloneProfile.PROFILE_CODE);
+        assertThat(result.sourceMenuRevision()).isEqualTo(12L);
+        assertThat(result.targetMenuRevision()).isEqualTo(1L);
+        assertThat(result.expectedCategoryCount()).isEqualTo(4);
+        assertThat(result.expectedStationCount()).isEqualTo(3);
+        assertThat(result.expectedItemCount()).isEqualTo(17);
+        assertThat(result.expectedOptionCount()).isEqualTo(74);
+        assertThat(result.missingCodes()).isEmpty();
+        assertThat(result.duplicateCodes()).isEmpty();
+        assertThat(result.warnings()).isEmpty();
+
+        assertThat(categoryRepository.countAllByStoreId(fixture.successTarget().id)).isZero();
+        assertThat(stationRepository.countAllByStoreId(fixture.successTarget().id)).isZero();
+        assertThat(itemRepository.countAllByStoreId(fixture.successTarget().id)).isZero();
+        assertThat(storeRepository.findMenuRevisionById(fixture.successTarget().id)).isEqualTo(1L);
+        assertThat(sourceState(fixture.source().id)).isEqualTo(sourceBefore);
+        verify(coordinator, never()).complete(any());
     }
 
     @Test
@@ -195,8 +277,8 @@ class ChinatownMenuCloneTransactionIntegrationTest {
     private List<StoreMenuCloneGraphComposer> standardComposers(ChinatownMenuCloneProfile profile) {
         StoreMenuCloneProfileRegistry registry = new StoreMenuCloneProfileRegistry(List.of(profile));
         return List.of(
-            new StoreMenuCloneSourceOptionsComposer(optionRepository, registry),
-            new ChinatownMenuProfileOverridesComposer(optionRepository)
+            new StoreMenuCloneSourceOptionsComposer(registry),
+            new ChinatownMenuProfileOverridesComposer()
         );
     }
 
@@ -204,13 +286,21 @@ class ChinatownMenuCloneTransactionIntegrationTest {
         ChinatownMenuCloneProfile profile,
         List<StoreMenuCloneGraphComposer> composers
     ) {
+        return service(profile, composers, menuRevisionService);
+    }
+
+    private StoreMenuCloneTransactionServiceImpl service(
+        ChinatownMenuCloneProfile profile,
+        List<StoreMenuCloneGraphComposer> composers,
+        MenuRevisionService revisionService
+    ) {
         return new StoreMenuCloneTransactionServiceImpl(
             storeRepository,
             categoryRepository,
             stationRepository,
             itemRepository,
             optionRepository,
-            menuRevisionService,
+            revisionService,
             coordinator,
             new StoreMenuCloneProfileRegistry(List.of(profile)),
             composers

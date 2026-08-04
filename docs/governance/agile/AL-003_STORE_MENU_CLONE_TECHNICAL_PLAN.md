@@ -1,6 +1,6 @@
 # AL-003 Store 1 -> Chinatown Live Menu Clone Technical Plan
 
-> Status: `AL-003_PR_C_WAITING_FOR_OWNER_REVIEW`
+> Status: `AL-003_PR_F0_READ_ONLY_PLANNING_WAITING_FOR_OWNER_REVIEW`
 >
 > Prepared: 2026-07-31, America/Toronto
 >
@@ -21,10 +21,10 @@
 |---|---|
 | `AL003_PLAN_FOUND` | `false` before this document was created |
 | `PLAN_PATH` | `docs/governance/agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md` |
-| `PLAN_STATUS` | `AL-003_PR_C_WAITING_FOR_OWNER_REVIEW` |
+| `PLAN_STATUS` | `AL-003_PR_F0_READ_ONLY_PLANNING_WAITING_FOR_OWNER_REVIEW` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | Owner review PR-C. Keep PR-D, PR-E, and PR-F dependency-bound and independently reviewable. |
+| `RECOMMENDED_ACTION` | Owner review the bounded PR-C, PR-D, and PR-E Drafts plus the PR-F0 read-only planning prerequisite. Keep PR-F blocked until PR-F0 merges. |
 
 PR-A, PR-B, and prerequisite repairs PR-B2 through PR-B4 are now merged. PR-C
 implements only the generic locked source snapshot and Category/Station/Item
@@ -601,6 +601,7 @@ message. Initial codes:
 | 409 | `SOURCE_SKU_DUPLICATE` | Required live SKU is ambiguous. |
 | 409 | `SOURCE_OPTION_AMBIGUOUS` | Required option semantics cannot be proven. |
 | 409 | `SOURCE_MENU_CHANGED` | Source revision/snapshot changed during execution. |
+| 409 | `TARGET_MENU_CHANGED` | Target revision changed during read-only validation. |
 | 422 | `TARGET_MENU_VALIDATION_FAILED` | Built graph does not match the reviewed profile. |
 | 500 | `MENU_CLONE_FAILED` | Sanitized unexpected failure; no internal payload exposed. |
 
@@ -642,9 +643,15 @@ expected result counts. It returns:
 - profile code.
 
 It writes no idempotency row, menu row, audit row, or revision and obtains no
-write lock longer than required. A successful validate response is not an
-execution authorization and does not guarantee the source remains unchanged;
-execute repeats all validation inside its transaction.
+write lock. Validation builds the exact logical graph in memory with
+transaction-local virtual target IDs and the same ordered composers used by
+execution. It rechecks target emptiness and queries both current menu revisions
+after composition, rejecting source or target drift. Execution repeats all
+validation and composition after
+acquiring the source and target Store locks, persists the plan, and verifies
+the stored option fields and parent links against it. A successful validate
+response is not an execution authorization and does not guarantee the source
+remains unchanged.
 
 ## 17. Automated test strategy
 
@@ -776,7 +783,8 @@ inventory, or production configuration file is planned.
 | PR-C | Store locks, source snapshot validation, category/station/item creation and source invariants. | PR-B | Selected graph/new-ID/order/exclusion/rollback tests pass. |
 | PR-D | Active option copy, seven noodle types, parent mapping, conflict validation. | PR-C | Option and cross-Store parent tests pass. |
 | PR-E | Chinatown names/prices/sizes/new items/Combo 1-4/order and bounded Small display compatibility. | PR-D | Exact AL-003A target and pricing tests pass. |
-| PR-F | Protected Owner API, validate-only endpoint, integration/concurrency/full suites, API/system docs. | PR-E | Full local verification and secret/diff review pass; Draft PR chain ready. |
+| PR-F0 | Shared read-only logical planning boundary and execution-only persistence. | PR-E | Exact validation plan performs no writes or Store/revision locks; execution and rollback tests remain green. |
+| PR-F | Protected Owner API, validate-only endpoint, integration/concurrency/full suites, API/system docs. | PR-F0 | Full local verification and secret/diff review pass; Draft PR chain ready. |
 
 Each package is independently reviewable and must not pull later package scope
 forward. No package may merge or deploy automatically.
