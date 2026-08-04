@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `AL-003_STACK_PROMOTION_PLAN_WAITING_FOR_OWNER_REVIEW` |
+| status | `AL-003_PR_D_PROMOTION_WAITING_FOR_OWNER_REVIEW` |
 | target_loop | `AL-003` |
-| implementation status | PR-A, PR-B, PR-B2, PR-B3, PR-B4, and PR-C are in `main`. PR-D, PR-E, and PR-F0 were merged only into stacked base branches and are not in `main`. PR-F is not implemented. No Store 1 runtime read, real clone, print configuration, Staging/Production migration, or deployment is established. |
+| implementation status | PR-A, PR-B, PR-B2, PR-B3, PR-B4, and PR-C are in `main`. A latest-main PR-D promotion candidate adds only generic source-option cloning and remains outside `main` pending Owner review. PR-E and PR-F0 remain stacked-only; PR-F is not implemented. No Store 1 runtime read, real clone, print configuration, Staging/Production migration, or deployment is established. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Owner reviews the stack-promotion plan; after approval, prepare PR-D promotion from the then-latest `main`. This documentation update does not create that promotion. |
+| next action | Owner reviews the PR-D promotion. If merged, rebuild PR-E from the new latest `main`; until then, PR-E may advance only through dependency-safe preparation. |
 
 ### Current AL-003 delivery state
 
@@ -30,7 +30,7 @@
 | PR-B3 | `IN_MAIN` |
 | PR-B4 | `IN_MAIN` |
 | PR-C | `IN_MAIN` |
-| PR-D | `STACKED_ONLY` / `NOT_IN_MAIN` |
+| PR-D | `PROMOTION_CANDIDATE_WAITING_FOR_OWNER_REVIEW` / `NOT_IN_MAIN` |
 | PR-E | `STACKED_ONLY` / `NOT_IN_MAIN` |
 | PR-F0 | `STACKED_ONLY` / `NOT_IN_MAIN` |
 | PR-F | `NOT_IMPLEMENTED` |

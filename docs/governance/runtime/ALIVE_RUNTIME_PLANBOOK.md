@@ -64,7 +64,7 @@ snapshots. Do not copy those reports into this planbook.
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `AL-003 Store 1 -> Chinatown Live Menu Clone` |
 | Loop type | `IMPLEMENTATION` |
-| Loop status | `AL-003_STACK_PROMOTION_PLAN_WAITING_FOR_OWNER_REVIEW` |
+| Loop status | `AL-003_PR_D_PROMOTION_WAITING_FOR_OWNER_REVIEW` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | PR #27 merged the backend foundation into `main`; Production remains on the older runtime and no production onboarding is established by that merge. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -72,9 +72,9 @@ snapshots. Do not copy those reports into this planbook.
 | STG-004 state | PR #38 merged the STG-004 runtime evidence. Exact SHA `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` passed PLAN, fresh PREFLIGHT, serial build/start, runtime verification, and isolated stop/start recovery. Server Staging remains running; Production remained unchanged. |
 | STG-005 state | PLAN complete. The Owner approved CP-0 as a separate minimal Staging-only bootstrap implementation and accepted CP-4 as a feature-disabled KDS/Assembling boundary. Positive Kitchen/Assembling workflow remains `EVIDENCE_PENDING`. |
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
-| AL-003 state | PR #47 merged the generic locked source snapshot and Category/Station/Item base-graph transaction into `main` at `ba169ed8b689ddef8dffe94deee82fea191cdcfb`. PR #48, #49, and #50 were merged only into stacked base branches and are not in `main`. |
-| Current permitted work | Owner review of the stack-promotion plan only. After approval, promote PR-D, then PR-E, then PR-F0 as separate latest-`main` packages with fresh tests and Owner review. |
-| Explicitly not permitted | Starting PR-F, combining PR-D/E/F0, using stacked merge commits as main promotions, Store 1 runtime access, real clone, SSH, Flyway, Staging or Production mutation, automatic merge, deployment, STG-006, or unrelated backlog work. |
+| AL-003 state | PR #47 merged the generic locked source snapshot and Category/Station/Item base-graph transaction into `main` at `ba169ed8b689ddef8dffe94deee82fea191cdcfb`. PR #51 then synchronized governance at `e6b41dd644c50b847d27947b5b0d27e1d4449c09`. The PR-D promotion candidate is isolated on `codex/al-003-pr-d-promotion`; it is not in `main`. PR #49 and #50 remain stacked-only. |
+| Current permitted work | Owner review of the independently verified PR-D promotion candidate. While PR-D is not in `main`, only dependency-safe PR-E/PR-F0 preparation, PR-F audit, and release/acceptance planning may continue. |
+| Explicitly not permitted | Treating the PR-D candidate as `IN_MAIN`, starting final PR-E/PR-F0 promotion or PR-F implementation, combining layers, using stacked merge commits as promotions, Store 1 runtime access, real clone, SSH, Flyway, Staging or Production mutation, automatic merge, deployment, STG-006, or unrelated backlog work. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 [AGILE_LOOP_OPERATING_MODEL.md](../AGILE_LOOP_OPERATING_MODEL.md), and
@@ -86,20 +86,29 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 |---|---|---|
 | PR-A, PR-B, PR-B2, PR-B3, PR-B4 | `IN_MAIN` | Contract, V10/idempotency foundation, revision/lock consistency, generic profile registry, and exact profile identity. |
 | PR-C / PR #47 | `IN_MAIN` at `ba169ed8b689ddef8dffe94deee82fea191cdcfb` | Generic Category/Station/Item base transaction only. |
-| PR-D / PR #48 | `MERGED_ON_GITHUB`, `STACKED_ONLY`, `NOT_IN_MAIN` | Source option clone exists only on its stacked branch. |
+| PR-D / PR #48 | `MERGED_ON_GITHUB`, `STACKED_ONLY`, `NOT_IN_MAIN`; latest-main promotion candidate under review | Generic source-option clone has been semantically promoted from implementation commit `5a0dc09944b4b0945fe95027d7f12647212ea559` onto base `e6b41dd644c50b847d27947b5b0d27e1d4449c09`; it remains outside `main` until Owner merge. |
 | PR-E / PR #49 | `MERGED_ON_GITHUB`, `STACKED_ONLY`, `NOT_IN_MAIN` | Complete Chinatown profile overrides exist only on its stacked branch. |
 | PR-F0 / PR #50 | `MERGED_ON_GITHUB`, `STACKED_ONLY`, `NOT_IN_MAIN` | Read-only planning boundary exists only on its stacked branch. |
 | PR-F | `NOT_IMPLEMENTED` | No public Owner validate/execute Controller or HTTP API exists. |
 
+PR-D promotion evidence: base
+`e6b41dd644c50b847d27947b5b0d27e1d4449c09`; semantic source
+`5a0dc09944b4b0945fe95027d7f12647212ea559`; focused composer/repository and
+transaction integration tests, full backend tests, compile, diff, migration,
+secret, scope, and Store-specific shared-code scans passed. Agent 6 independent
+review result: `PASS`. Draft PR creation is pending this candidate commit. No
+Migration, HTTP endpoint, runtime access, deployment, or real clone was added
+or executed.
+
 Current `main` cannot execute a real menu clone over HTTP. Its registered
 Chinatown profile remains an internal descriptor rather than the complete
-target profile. Production remains separately reported at `4667f3c`, 84
-commits behind `ba169ed`; current-main capability is not production capability
+target profile. Production remains separately reported at `4667f3c`, 86
+commits behind `e6b41dd`; current-main capability is not production capability
 or release approval. Production bug fixes continue through a separately
 reviewed hotfix/release path.
 
 The unique stop state for this loop is
-`AL-003_STACK_PROMOTION_PLAN_WAITING_FOR_OWNER_REVIEW`.
+`AL-003_PR_D_PROMOTION_WAITING_FOR_OWNER_REVIEW`.
 
 Git ground truth must always distinguish `MERGED_ON_GITHUB`, `IN_MAIN`,
 `DEPLOYED_TO_STAGING`, and `DEPLOYED_TO_PRODUCTION`. A stacked PR merged into a

@@ -1,12 +1,12 @@
 # AL-003 Store 1 -> Chinatown Live Menu Clone Technical Plan
 
-> Status: `AL-003_STACK_PROMOTION_PLAN_WAITING_FOR_OWNER_REVIEW`
+> Status: `AL-003_PR_D_PROMOTION_WAITING_FOR_OWNER_REVIEW`
 >
 > Prepared: 2026-07-31, America/Toronto
 >
 > Ground truth updated: 2026-08-04, America/Toronto
 >
-> Phase: `STACK PROMOTION PLAN / OWNER REVIEW`
+> Phase: `PR-D PROMOTION / OWNER REVIEW`
 >
 > Historical PR-C repository base: `ae019bf6460cbbbd69153a046d0fbda1fe707eb0`
 >
@@ -23,10 +23,10 @@
 |---|---|
 | `AL003_PLAN_FOUND` | `false` before this document was created |
 | `PLAN_PATH` | `docs/governance/agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md` |
-| `PLAN_STATUS` | `AL-003_STACK_PROMOTION_PLAN_WAITING_FOR_OWNER_REVIEW` |
+| `PLAN_STATUS` | `AL-003_PR_D_PROMOTION_WAITING_FOR_OWNER_REVIEW` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | Owner reviews the stack-promotion plan. After approval, promote PR-D, PR-E, and PR-F0 independently and in order from the then-latest `main`; PR-F remains paused. |
+| `RECOMMENDED_ACTION` | Owner reviews the latest-main PR-D promotion candidate. After merge, rebuild and verify PR-E from the new `main`; PR-F0 and PR-F remain dependency-gated. |
 
 PR-A, PR-B, prerequisite repairs PR-B2 through PR-B4, and PR-C are in `main`.
 PR-C supplies only the generic locked source snapshot and
@@ -36,20 +36,23 @@ heads; the public Owner API remains unimplemented.
 
 ### 1.1 Current Git ground truth
 
-| Package | Commit | State relative to `main` `ba169ed8b689ddef8dffe94deee82fea191cdcfb` |
+| Package | Commit | State relative to `main` `e6b41dd644c50b847d27947b5b0d27e1d4449c09` |
 |---|---|---|
 | PR-C / PR #47 | merge `ba169ed8b689ddef8dffe94deee82fea191cdcfb` | `IN_MAIN` |
-| PR-D / PR #48 | head `5a0dc09944b4b0945fe95027d7f12647212ea559` | `MERGED_ON_GITHUB`, `STACKED_ONLY`, `NOT_IN_MAIN` |
+| Governance / PR #51 | merge `e6b41dd644c50b847d27947b5b0d27e1d4449c09` | `IN_MAIN`; promotion base |
+| PR-D / PR #48 | source head `5a0dc09944b4b0945fe95027d7f12647212ea559` | Semantically migrated as one latest-main promotion candidate; `NOT_IN_MAIN` until Owner merge |
 | PR-E / PR #49 | head `972802e701cb9cb2623b647132e4430a7b338e32` | `MERGED_ON_GITHUB`, `STACKED_ONLY`, `NOT_IN_MAIN` |
 | PR-F0 / PR #50 | head `e74f285965c4f3ec1f969e7d62112ec1adc9b6dc` | `MERGED_ON_GITHUB`, `STACKED_ONLY`, `NOT_IN_MAIN` |
 | PR-F | none | `NOT_IMPLEMENTED` |
 
 This document describes the complete reviewed target architecture. A section
 in this plan is not evidence that its implementation is in `main`, Staging, or
-Production. The PR-D, PR-E, and PR-F0 implementation records exist only on
-their stacked heads until promoted. Every promotion must be rebuilt or
-semantically migrated from the latest `main` and fully reverified because its
-base has changed. Stacked merge commits are not main merge commits.
+Production. The historical PR-D, PR-E, and PR-F0 implementation records exist
+only on their stacked heads. PR-D is now represented by a single latest-main
+promotion candidate, but is still not main authority before Owner merge. PR-E
+and PR-F0 must be rebuilt or semantically migrated only after their direct
+upstream layer enters `main`, then fully reverified. Stacked merge commits are
+not main merge commits.
 
 This plan is the implementation contract for AL-003. The product mapping is
 owned by
@@ -873,9 +876,10 @@ Stop and return to Owner if:
 
 ## Final state
 
-`AL-003_STACK_PROMOTION_PLAN_WAITING_FOR_OWNER_REVIEW`
+`AL-003_PR_D_PROMOTION_WAITING_FOR_OWNER_REVIEW`
 
-The next allowed action is Owner review of the promotion plan. After approval,
-PR-D, PR-E, and PR-F0 may be promoted one layer at a time with fresh testing and
-review. PR-F, Store 1 runtime access, Flyway execution, any real clone, and any
-Staging or Production action remain unauthorized.
+The next allowed action is Owner review of PR-D promotion. PR-E may remain in
+preparation but cannot become a final promotion until PR-D enters `main`.
+PR-F0 and PR-F remain dependency-gated. Store 1 runtime access, Flyway
+execution, any real clone, and any Staging or Production action remain
+unauthorized.

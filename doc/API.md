@@ -498,6 +498,12 @@ planning boundary. Those changes exist only in PR-D, PR-E, and PR-F0 stacked
 branches and are `NOT_IN_MAIN`. PR-F remains `NOT_IMPLEMENTED`; authorization,
 HTTP validation/execution mapping, and public request handling do not exist.
 
+The current PR-D promotion candidate adds an internal, generic
+`SOURCE_OPTIONS` graph composer on top of latest `main`. It does not change the
+request or response DTO, register a Controller, or make either proposed route
+callable. Until Owner merge, the composer is candidate behavior rather than a
+current-main API capability.
+
 ### Owner Multi-Store Overview
 GET `/api/v1/owner/overview`
 
