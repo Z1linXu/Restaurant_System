@@ -8,6 +8,12 @@ import org.springframework.data.repository.query.Param;
 
 public interface MenuCategoryRepository extends JpaRepository<MenuCategory, Long> {
 
+    @Query("select c from MenuCategory c where c.store_id = :storeId order by c.id asc")
+    List<MenuCategory> findAllByStoreIdOrderByIdAsc(@Param("storeId") Long storeId);
+
+    @Query("select count(c) from MenuCategory c where c.store_id = :storeId")
+    long countAllByStoreId(@Param("storeId") Long storeId);
+
     @Query("""
         select c from MenuCategory c
         where c.store_id = :storeId and c.is_active = true

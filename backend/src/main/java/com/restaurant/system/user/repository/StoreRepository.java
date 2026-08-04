@@ -17,6 +17,9 @@ public interface StoreRepository extends JpaRepository<Store, Long> {
 
     List<Store> findAllByCodeIgnoreCase(String code);
 
+    @Query("select s.menu_revision from Store s where s.id = :storeId")
+    Long findMenuRevisionById(@Param("storeId") Long storeId);
+
     @Query("select s from Store s where s.organization_id = :organizationId order by s.id asc")
     List<Store> findAllByOrganizationIdOrderByIdAsc(@Param("organizationId") Long organizationId);
 

@@ -11,6 +11,7 @@ import com.restaurant.system.owner.service.OwnerStoreMenuCloneSuccessEvidence;
 import com.restaurant.system.platform.entity.OwnerStoreMenuCloneRequest;
 import com.restaurant.system.platform.repository.OwnerStoreMenuCloneRequestRepository;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -96,6 +97,12 @@ public class OwnerStoreMenuCloneRequestCoordinatorImpl implements OwnerStoreMenu
         if (!STATUS_PROCESSING.equals(request.status)) {
             throw conflict("MENU_CLONE_STATE_INVALID", "Menu clone request is not processing");
         }
+        if (!Objects.equals(request.organizationId, evidence.organizationId())
+            || !Objects.equals(request.sourceStoreId, evidence.sourceStoreId())
+            || !Objects.equals(request.targetStoreId, evidence.targetStoreId())
+            || !Objects.equals(request.profileCode, evidence.profileCode())) {
+            throw conflict("MENU_CLONE_STATE_INVALID", "Menu clone completion scope does not match its reservation");
+        }
 
         LocalDateTime now = LocalDateTime.now();
         request.status = STATUS_COMPLETED;
@@ -165,6 +172,10 @@ public class OwnerStoreMenuCloneRequestCoordinatorImpl implements OwnerStoreMenu
     private void validateSuccessEvidence(OwnerStoreMenuCloneSuccessEvidence evidence) {
         if (evidence == null
             || evidence.requestId() == null
+            || evidence.organizationId() == null
+            || evidence.sourceStoreId() == null
+            || evidence.targetStoreId() == null
+            || !isExactValue(evidence.profileCode())
             || evidence.sourceMenuRevision() == null
             || evidence.targetRevisionBefore() == null
             || evidence.targetRevisionAfter() == null) {
@@ -177,6 +188,10 @@ public class OwnerStoreMenuCloneRequestCoordinatorImpl implements OwnerStoreMenu
         requireNonNegative(evidence.createdCategoryCount(), "category");
         requireNonNegative(evidence.createdItemCount(), "item");
         requireNonNegative(evidence.createdOptionCount(), "option");
+    }
+
+    private boolean isExactValue(String value) {
+        return value != null && !value.isBlank() && value.equals(value.trim());
     }
 
     private void requireNonNegative(int value, String label) {

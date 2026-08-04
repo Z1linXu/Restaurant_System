@@ -202,6 +202,10 @@ class OwnerStoreMenuCloneRequestCoordinatorImplTest {
 
         OwnerStoreMenuCloneReservation reservation = coordinator.complete(new OwnerStoreMenuCloneSuccessEvidence(
             request.id,
+            ORGANIZATION_ID,
+            ChinatownMenuCloneProfile.SOURCE_STORE_ID,
+            TARGET_STORE_ID,
+            ChinatownMenuCloneProfile.PROFILE_CODE,
             12L,
             3L,
             4L,
@@ -217,6 +221,34 @@ class OwnerStoreMenuCloneRequestCoordinatorImplTest {
         assertThat(request.errorCode).isNull();
         assertThat(request.createdItemCount).isEqualTo(17);
         verify(requestRepository).save(request);
+    }
+
+    @Test
+    void completionRejectsEvidenceFromAnotherReservedScope() {
+        OwnerStoreMenuCloneRequest request = processingRequest(command(), fingerprintService.fingerprint(command()));
+        when(requestRepository.findByIdForUpdate(request.id)).thenReturn(Optional.of(request));
+
+        assertThatThrownBy(() -> coordinator.complete(new OwnerStoreMenuCloneSuccessEvidence(
+            request.id,
+            ORGANIZATION_ID,
+            ChinatownMenuCloneProfile.SOURCE_STORE_ID,
+            TARGET_STORE_ID + 1,
+            ChinatownMenuCloneProfile.PROFILE_CODE,
+            12L,
+            3L,
+            4L,
+            3,
+            4,
+            17,
+            120,
+            "MENU_CLONE_COMPLETED"
+        )))
+            .isInstanceOfSatisfying(
+                OwnerStoreMenuCloneException.class,
+                exception -> assertThat(exception.getErrorCode()).isEqualTo("MENU_CLONE_STATE_INVALID")
+            );
+        assertThat(request.status).isEqualTo("PROCESSING");
+        verify(requestRepository, never()).save(any());
     }
 
     @Test

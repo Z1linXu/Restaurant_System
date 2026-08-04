@@ -122,7 +122,21 @@ class OwnerStoreMenuClonePostgresIntegrationTest {
         OwnerStoreMenuCloneReservation first = coordinator.reserve(command);
 
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> coordinator.complete(
-            new OwnerStoreMenuCloneSuccessEvidence(first.requestId(), 5L, 1L, 2L, 3, 4, 17, 100, "MENU_CLONE_COMPLETED")
+            new OwnerStoreMenuCloneSuccessEvidence(
+                first.requestId(),
+                10L,
+                ChinatownMenuCloneProfile.SOURCE_STORE_ID,
+                20L,
+                ChinatownMenuCloneProfile.PROFILE_CODE,
+                5L,
+                1L,
+                2L,
+                3,
+                4,
+                17,
+                100,
+                "MENU_CLONE_COMPLETED"
+            )
         ));
 
         OwnerStoreMenuCloneReservation replay = coordinator.reserve(command);
