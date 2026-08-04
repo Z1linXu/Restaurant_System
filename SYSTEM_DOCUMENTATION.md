@@ -252,6 +252,21 @@ source Store, target Store, and exact profile code. The shared implementation
 contains no Chinatown or Store-ID branch; option copying, concrete profile
 overrides, and the public Owner endpoint remain PR-D, PR-E, and PR-F scope.
 
+AL-003 PR-D supplies the generic `SOURCE_OPTIONS` composer and the optional
+profile capability that classifies every active source option group as `COPY`
+or `PROFILE_OVERRIDE` by stable source SKU, target SKU, option type, and option
+group. Unclassified active options fail closed rather than disappearing. It
+also rejects missing reused-item applications, null active-state evidence, and
+blank or duplicate copied option codes. It validates Store/item ownership and
+complete copied parent graphs before writing, then inserts fresh options with
+null parents and maps only the generated target IDs in a second flush.
+`CLONE_IF_ACTIVE_OR_CREATE` applications contribute zero options when the
+source item is absent and classify/copy normally when it exists. The composer
+participates in the enclosing PR-C transaction and exposes only a created-row
+count. Chinatown option selections, seven noodle types, Combo, and target
+overrides remain PR-E Profile scope. See
+[AL-003 PR-D source option clone](docs/governance/agile/AL-003_PR_D_SOURCE_OPTION_CLONE.md).
+
 STG-005A owns `V9__add_staging_synthetic_bootstrap_requests.sql`. PR-B adds the
 separate append-only `V10__add_owner_store_menu_clone_requests.sql`. V10 creates
 only the durable clone request/evidence table, the composite uniqueness scope
