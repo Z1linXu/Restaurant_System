@@ -1,12 +1,14 @@
 # AL-003 Store 1 -> Chinatown Live Menu Clone Technical Plan
 
-> Status: `AL-003_PR_C_WAITING_FOR_OWNER_REVIEW`
+> Status: `AL-003_STACK_PROMOTION_PLAN_WAITING_FOR_OWNER_REVIEW`
 >
 > Prepared: 2026-07-31, America/Toronto
 >
-> Phase: `IMPLEMENT / REVIEW`
+> Ground truth updated: 2026-08-04, America/Toronto
 >
-> PR-C repository base: `ae019bf6460cbbbd69153a046d0fbda1fe707eb0`
+> Phase: `STACK PROMOTION PLAN / OWNER REVIEW`
+>
+> Historical PR-C repository base: `ae019bf6460cbbbd69153a046d0fbda1fe707eb0`
 >
 > Migration baseline: PR #40 is merged and STG-005A owns
 > `V9__add_staging_synthetic_bootstrap_requests.sql`; AL-003 plans V10 only
@@ -21,15 +23,33 @@
 |---|---|
 | `AL003_PLAN_FOUND` | `false` before this document was created |
 | `PLAN_PATH` | `docs/governance/agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md` |
-| `PLAN_STATUS` | `AL-003_PR_C_WAITING_FOR_OWNER_REVIEW` |
+| `PLAN_STATUS` | `AL-003_STACK_PROMOTION_PLAN_WAITING_FOR_OWNER_REVIEW` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | Owner review PR-C. Keep PR-D, PR-E, and PR-F dependency-bound and independently reviewable. |
+| `RECOMMENDED_ACTION` | Owner reviews the stack-promotion plan. After approval, promote PR-D, PR-E, and PR-F0 independently and in order from the then-latest `main`; PR-F remains paused. |
 
-PR-A, PR-B, and prerequisite repairs PR-B2 through PR-B4 are now merged. PR-C
-implements only the generic locked source snapshot and Category/Station/Item
-base graph. Option copying, the concrete Chinatown profile overrides, and the
-public Owner API remain isolated to PR-D, PR-E, and PR-F respectively.
+PR-A, PR-B, prerequisite repairs PR-B2 through PR-B4, and PR-C are in `main`.
+PR-C supplies only the generic locked source snapshot and
+Category/Station/Item base graph. Option copying, concrete Chinatown profile
+overrides, and the read-only planning boundary are present only on stacked
+heads; the public Owner API remains unimplemented.
+
+### 1.1 Current Git ground truth
+
+| Package | Commit | State relative to `main` `ba169ed8b689ddef8dffe94deee82fea191cdcfb` |
+|---|---|---|
+| PR-C / PR #47 | merge `ba169ed8b689ddef8dffe94deee82fea191cdcfb` | `IN_MAIN` |
+| PR-D / PR #48 | head `5a0dc09944b4b0945fe95027d7f12647212ea559` | `MERGED_ON_GITHUB`, `STACKED_ONLY`, `NOT_IN_MAIN` |
+| PR-E / PR #49 | head `972802e701cb9cb2623b647132e4430a7b338e32` | `MERGED_ON_GITHUB`, `STACKED_ONLY`, `NOT_IN_MAIN` |
+| PR-F0 / PR #50 | head `e74f285965c4f3ec1f969e7d62112ec1adc9b6dc` | `MERGED_ON_GITHUB`, `STACKED_ONLY`, `NOT_IN_MAIN` |
+| PR-F | none | `NOT_IMPLEMENTED` |
+
+This document describes the complete reviewed target architecture. A section
+in this plan is not evidence that its implementation is in `main`, Staging, or
+Production. The PR-D, PR-E, and PR-F0 implementation records exist only on
+their stacked heads until promoted. Every promotion must be rebuilt or
+semantically migrated from the latest `main` and fully reverified because its
+base has changed. Stacked merge commits are not main merge commits.
 
 This plan is the implementation contract for AL-003. The product mapping is
 owned by
@@ -774,16 +794,18 @@ inventory, or production configuration file is planned.
 | PR-A | This technical plan, frozen DTO/API/error/profile contracts, stale-governance correction. | AL-003A final input | Owner approves plan and stable codes. |
 | PR-B | Request entity/repository, V10, idempotency coordinator, sanitized evidence, transaction skeleton. | PR-A | PostgreSQL V1-V10, replay/conflict/concurrency foundation tests pass. |
 | PR-C | Store locks, source snapshot validation, category/station/item creation and source invariants. | PR-B | Selected graph/new-ID/order/exclusion/rollback tests pass. |
-| PR-D | Active option copy, seven noodle types, parent mapping, conflict validation. | PR-C | Option and cross-Store parent tests pass. |
-| PR-E | Chinatown names/prices/sizes/new items/Combo 1-4/order and bounded Small display compatibility. | PR-D | Exact AL-003A target and pricing tests pass. |
-| PR-F | Protected Owner API, validate-only endpoint, integration/concurrency/full suites, API/system docs. | PR-E | Full local verification and secret/diff review pass; Draft PR chain ready. |
+| PR-D | Generic reviewed active source-option copy, parent mapping, and fail-closed conflict validation. | PR-C | Promote from latest `main`; option and cross-Store parent tests pass again. |
+| PR-E | Chinatown names/prices/sizes/seven noodle types/new items/Combo 1-4/order and bounded Small display compatibility. | Promoted PR-D | Promote from latest `main`; exact AL-003A target and pricing tests pass again. |
+| PR-F0 | Shared read-only logical planning boundary; no public API. | Promoted PR-E | Promote from latest `main`; read-only/no-write and full backend tests pass again. |
+| PR-F | Protected Owner API, validate/execute endpoints, authorization, integration/concurrency/full suites, API/system docs. | Promoted PR-F0 | Not started until all prior layers are in `main`; full local verification and secret/diff review pass. |
 
 Each package is independently reviewable and must not pull later package scope
 forward. No package may merge or deploy automatically.
 
 ## 21. Multi-agent implementation split
 
-Agents are not started by this planning turn. After Owner approval:
+The table below records package ownership boundaries used by implementation.
+It does not establish that an agent result or stacked branch is in `main`:
 
 | Agent | Ownership | Prohibited overlap |
 |---|---|---|
@@ -834,7 +856,7 @@ Stop and return to Owner if:
 - runtime access is required before the separately approved execution phase;
 - agent contracts conflict in a way the plan cannot resolve safely.
 
-## 24. Acceptance criteria for PLAN
+## 24. Historical acceptance criteria for the original plan
 
 - The source, target profile, exclusions, and current-code constraints are
   explicit.
@@ -845,12 +867,15 @@ Stop and return to Owner if:
 - Source invariance and prohibited side effects are testable.
 - V10 is additive and isolated from menu data.
 - PR and agent ownership are bounded.
-- No implementation, runtime read, clone, merge, or deployment occurred.
+- The original planning package performed no implementation, runtime read,
+  clone, merge, or deployment. Later package states are governed by Section
+  1.1 and do not rewrite that historical fact.
 
 ## Final state
 
-`AL-003_PR_A_WAITING_FOR_OWNER_REVIEW`
+`AL-003_STACK_PROMOTION_PLAN_WAITING_FOR_OWNER_REVIEW`
 
-The next allowed action is Owner review of PR-A scope. Multi-agent
-implementation, migration creation, Store 1 access, and any real clone remain
-unauthorized.
+The next allowed action is Owner review of the promotion plan. After approval,
+PR-D, PR-E, and PR-F0 may be promoted one layer at a time with fresh testing and
+review. PR-F, Store 1 runtime access, Flyway execution, any real clone, and any
+Staging or Production action remain unauthorized.
