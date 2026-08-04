@@ -2,7 +2,7 @@
 
 > Status: `ACTIVE_GOVERNANCE_PROCESS`
 >
-> Last updated: 2026-07-28, America/Toronto
+> Last updated: 2026-08-04, America/Toronto
 
 ## 1. Required lifecycle
 
@@ -76,19 +76,16 @@ with an explicit recorded transition:
 
 ## 6. Current application
 
-`AL-001` is `PLAN_COMPLETE` for `FT-001`. `AL-002` completed local
-implementation and verification and is now `AL-002_WAITING_FOR_OWNER_APPROVAL`.
-Its scope was limited to owner-scoped onboarding authorization, durable
-idempotency, secure staff credential/membership provisioning, and safe
-Store-default handling on an independent review branch. `AL-003` (menu
-clone/print policy), `AL-004` (Owner UI), and `AL-005` (production
-provisioning) are not authorized to enter implementation.
+`AL-001` is `PLAN_COMPLETE` for `FT-001`. AL-002's backend foundation was
+merged into `main` by PR #27 but is not thereby deployed or production-ready.
+The current feature loop is AL-003. PR-A through PR-C are in `main`; PR-D,
+PR-E, and PR-F0 are stacked-only, and PR-F is not implemented. Its unique stop
+state is `AL-003_STACK_PROMOTION_PLAN_WAITING_FOR_OWNER_REVIEW`.
 
-`STG-001` is the current delivery-governance loop in `DISCOVER -> PLAN`. Its
-isolated Staging plan is `PLAN_COMPLETE_WAITING_FOR_OWNER_APPROVAL`. It does
-not change the AL-002 approval state and does not authorize STG-002
-implementation, server access, Docker/Flyway execution, merge, deployment, or
-AL-003 implementation.
+The next possible implementation action remains Owner-gated: promote PR-D,
+PR-E, and PR-F0 one layer at a time from the then-latest `main`, with fresh
+verification and review at every layer. No current statement authorizes PR-F,
+server access, Flyway execution, a runtime clone, merge, or deployment.
 
 ## 7. Dependency Repair Gate
 
@@ -128,3 +125,51 @@ loops are `AL-004_GENERIC_STORE_PROFILE_FRAMEWORK`,
 `AL-005_PRINTING_PROVISIONING_TEMPLATE`, and
 `AL-006_STORE_ACTIVATION_WORKFLOW`; naming them here does not authorize or start
 their implementation.
+
+## 9. Git ground truth and stacked PR rules
+
+Every status decision must distinguish these states explicitly:
+
+- `MERGED_ON_GITHUB`: GitHub reports a PR merged into its configured base.
+- `IN_MAIN`: the relevant head or reviewed equivalent is an ancestor of the
+  current `origin/main`.
+- `DEPLOYED_TO_STAGING`: retained runtime evidence identifies the exact Staging
+  commit and environment.
+- `DEPLOYED_TO_PRODUCTION`: retained production evidence identifies the exact
+  production commit and environment.
+
+A GitHub `Merged` badge does not imply `IN_MAIN`. For a stacked PR whose base
+is not `main`, merge means only that its changes entered that base branch.
+Promotion must proceed one dependency layer at a time from the then-latest
+`main`; each layer receives fresh diff review, tests, Owner review, and its own
+merge decision. Stacked merge commits must not be treated as main merge SHAs or
+used to collapse multiple layers into one unreviewable promotion.
+
+Every loop ends with exactly one stop state in the Alive Runtime Planbook.
+Production runtime, current `main`, stacked-only development, and unimplemented
+work must remain separate in every governance record.
+
+## 10. Mandatory governance sync
+
+Every code iteration must synchronize governance before it ends. This applies
+to features, bug fixes, refactors, promotions, migrations, test-only changes,
+and every other non-documentation code change. Governance updates may not be
+deferred and accumulated across later iterations.
+
+Before commit and again before the review gate, inspect and update as needed:
+
+- `docs/governance/runtime/ALIVE_RUNTIME_PLANBOOK.md`;
+- `docs/governance/FEATURE_BACKLOG.md`;
+- this operating model;
+- `SYSTEM_DOCUMENTATION.md`;
+- `doc/API.md`;
+- for AL-003 work,
+  `docs/governance/agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md`.
+
+The synchronization must verify that the current loop, stop state, permitted
+and prohibited work, main capability, API surface, and deployment state match
+Git ground truth. It must correct within the same iteration any completed work
+still marked waiting, main change missing from the Planbook, stacked-only work
+described as main, unimplemented API described as callable, or code/document
+contract mismatch. Every code commit therefore carries the governance changes
+needed to describe that exact reviewed scope.

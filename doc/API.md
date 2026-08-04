@@ -444,19 +444,16 @@ Response behavior:
 
 ## Owner Workspace
 
-### Owner Store Menu Clone Foundation (AL-003 PR-B)
+### Owner Store Menu Clone Internal Contract (AL-003 current main)
 
-AL-003 PR-B provides the internal persistence, idempotency, and transaction
-contracts for the reviewed Store 1 to Chinatown menu clone. It does **not**
-register a Controller or expose a callable HTTP endpoint. The protected Owner
-routes planned by PR-A remain future PR-F work:
+Current `main` contains internal persistence/idempotency DTOs and the generic
+Category/Station/Item base-transaction service for the reviewed Store 1 to
+Chinatown clone. It does **not** register a menu-clone Controller or expose a
+callable HTTP endpoint. Consequently this section is an internal contract
+boundary, not an API clients can call. Proposed route shapes remain only in the
+AL-003 technical plan until PR-F is implemented and merged.
 
-```http
-POST /api/v1/owner/organizations/{organizationId}/stores/{targetStoreId}/menu-clone/validate
-POST /api/v1/owner/organizations/{organizationId}/stores/{targetStoreId}/menu-clone
-```
-
-The frozen request contract is:
+The current internal request DTO shape is:
 
 ```json
 {
@@ -465,16 +462,16 @@ The frozen request contract is:
 }
 ```
 
-When the execute route is added in a later reviewed package, it must require a
-bounded `Idempotency-Key` header. V10 stores a SHA-256 request fingerprint and
-safe execution evidence under this composite uniqueness scope:
+The internal reservation contract binds a bounded idempotency key to a SHA-256
+request fingerprint and safe execution evidence under this composite
+uniqueness scope:
 
 ```text
 (organization_id, source_store_id, target_store_id, idempotency_key)
 ```
 
 Current internal request states are `PROCESSING`, `COMPLETED`, and `FAILED`.
-The foundation behavior is:
+The internal foundation behavior is:
 
 - same scope/key/fingerprint after completion returns the stored result as a
   replay containing only request/scope IDs, revisions, status, created counts,
@@ -490,14 +487,16 @@ The foundation behavior is:
   context, never a menu payload, credential, token, printer endpoint, or raw
   exception message.
 
-V10 has no warning payload column. Any future response `warnings` are therefore
+V10 has no warning payload column. Response DTO `warnings` are therefore
 bounded stable codes derived from durable result evidence (or an empty list),
-not replayed execution detail. The public response DTO includes `result_code`
+not replayed execution detail. The response DTO includes `result_code`
 and intentionally excludes internal source-to-target ID maps.
 
-PR-B does not read Store 1, clone menu rows, change a Store menu revision,
-authorize Owner access, or expose these contracts through HTTP. Those remain
-separate reviewed packages in the AL-003 technical plan.
+Current main includes PR-C's generic base-graph transaction but still lacks
+source option cloning, complete Chinatown profile overrides, and the read-only
+planning boundary. Those changes exist only in PR-D, PR-E, and PR-F0 stacked
+branches and are `NOT_IN_MAIN`. PR-F remains `NOT_IMPLEMENTED`; authorization,
+HTTP validation/execution mapping, and public request handling do not exist.
 
 ### Owner Multi-Store Overview
 GET `/api/v1/owner/overview`

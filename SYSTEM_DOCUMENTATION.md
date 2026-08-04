@@ -53,6 +53,12 @@ separate from historical evidence snapshots and business implementation details:
 Historical Phase 3 runtime evidence remains under `docs/governance/runtime/`.
 It must not be rewritten as a living deployment manifest.
 
+Every code iteration must complete the mandatory governance sync defined by
+the [Agile Loop Operating Model](docs/governance/AGILE_LOOP_OPERATING_MODEL.md)
+before its review gate. GitHub-merged, main, Staging, and Production states are
+distinct; documentation must describe the exact state supported by Git and
+runtime evidence rather than carrying an earlier plan state forward.
+
 ## STG-001 to STG-004 Isolated Staging Verification
 
 STG-001 documents a repeatable Staging design without changing runtime
@@ -252,6 +258,21 @@ source Store, target Store, and exact profile code. The shared implementation
 contains no Chinatown or Store-ID branch; option copying, concrete profile
 overrides, and the public Owner endpoint remain PR-D, PR-E, and PR-F scope.
 
+PR #47 merged PR-C into `main` at
+`ba169ed8b689ddef8dffe94deee82fea191cdcfb`. Current main therefore contains
+the idempotency foundation, revision/lock consistency, generic profile
+registry, exact profile identity, and generic Category/Station/Item base
+transaction. It does not contain source option cloning, the complete Chinatown
+profile overrides, or the read-only planning boundary: PR #48, #49, and #50
+were merged only into stacked base branches and are `NOT_IN_MAIN`. PR-F is not
+implemented, so no public Owner menu-clone Controller or HTTP endpoint exists,
+and current main cannot execute a real menu clone over HTTP.
+
+The reported Production runtime remains `4667f3c`, while current main is
+`ba169ed`. Their 84-commit difference is neither a release approval nor proof
+of deployment. Stacked-only implementation and current-main capability must
+not be described as Production behavior.
+
 STG-005A owns `V9__add_staging_synthetic_bootstrap_requests.sql`. PR-B adds the
 separate append-only `V10__add_owner_store_menu_clone_requests.sql`. V10 creates
 only the durable clone request/evidence table, the composite uniqueness scope
@@ -266,12 +287,13 @@ counts, and a safe result code. Failure evidence is limited to revisions and a
 normalized error code; raw requests, menu payloads, exception messages,
 credentials, tokens, and printer endpoints are not persisted or returned.
 
-The first public/replay contract returns only the durable clone request and
-Store scope IDs, profile, revisions, status, replay marker, created counts, safe
-result code, and deterministic safe warning codes. Category, station, item, and
-option ID maps may exist transiently inside the clone transaction but are not
-persisted or exposed. V10 stores no warning payload; non-durable execution
-detail cannot appear on replay. `FAILED` is terminal for its idempotency key.
+The compile-time DTO for the planned future public/replay contract returns only
+the durable clone request and Store scope IDs, profile, revisions, status,
+replay marker, created counts, safe result code, and deterministic safe warning
+codes. Category, station, item, and option ID maps may exist transiently inside
+the clone transaction but are not persisted or exposed. V10 stores no warning
+payload; non-durable execution detail cannot appear on replay. `FAILED` is
+terminal for its idempotency key.
 After revalidation, an operator must retry with a new key; automatic retry and
 `FAILED -> PROCESSING` are not supported.
 
@@ -288,15 +310,16 @@ reported schema version 10, and performed no migration. Focused,
 concurrency/replay, full backend, and compile checks passed. See
 [AL-003 PR-B PostgreSQL/Flyway V10 verification](docs/governance/runtime/AL-003_PR_B_POSTGRES_FLYWAY_V10_VERIFICATION.md).
 This is local repository evidence only; no SSH, Store 1 runtime read, Staging
-or Production migration, clone, merge, or deployment occurred. Current state
-is `AL-003_PR_B_WAITING_FOR_OWNER_REVIEW`.
+or Production migration, clone, or deployment occurred. PR #42 subsequently
+merged PR-B into `main`; the current AL-003 stop state is maintained in the
+Alive Runtime Planbook rather than this historical verification paragraph.
 
 ## AL-002 Owner Store Onboarding Backend Foundation
 
 AL-002 adds the locally verified backend foundation for a future owner-scoped
-Store onboarding workflow. It is awaiting owner approval and does not provision
-a production Store, copy a menu, create printers or devices, or provide an
-Owner UI.
+Store onboarding workflow. PR #27 merged it into `main`; that merge does not
+provision a production Store or prove a Production deployment. It does not copy
+a menu, create printers or devices, or provide an Owner UI.
 
 - `POST /api/v1/owner/organizations/{organizationId}/stores/onboard` requires
   an authenticated `OWNER`, an active membership in that exact Organization,

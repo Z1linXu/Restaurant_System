@@ -2,7 +2,7 @@
 
 > Status: `ACTIVE_GOVERNANCE_BACKLOG`
 >
-> Last updated: 2026-07-31, America/Toronto
+> Last updated: 2026-08-04, America/Toronto
 >
 > Features are not incidents. A feature may be requirements-confirmed without
 > being authorized for implementation or production provisioning.
@@ -14,10 +14,30 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `AL-003_PR_A_WAITING_FOR_OWNER_REVIEW` |
+| status | `AL-003_STACK_PROMOTION_PLAN_WAITING_FOR_OWNER_REVIEW` |
 | target_loop | `AL-003` |
-| implementation status | PR #40 merged STG-005A and its append-only V9 into `main`. AL-003 PR-A now freezes only the Store 1 live-menu clone contract and plans a separate append-only V10 request/evidence table. No V10 file, clone implementation, Store 1 read, runtime clone, print configuration, or deployment is included. |
+| implementation status | PR-A, PR-B, PR-B2, PR-B3, PR-B4, and PR-C are in `main`. PR-D, PR-E, and PR-F0 were merged only into stacked base branches and are not in `main`. PR-F is not implemented. No Store 1 runtime read, real clone, print configuration, Staging/Production migration, or deployment is established. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
+| next action | Owner reviews the stack-promotion plan; after approval, prepare PR-D promotion from the then-latest `main`. This documentation update does not create that promotion. |
+
+### Current AL-003 delivery state
+
+| Package | State |
+|---|---|
+| PR-A | `IN_MAIN` |
+| PR-B | `IN_MAIN` |
+| PR-B2 | `IN_MAIN` |
+| PR-B3 | `IN_MAIN` |
+| PR-B4 | `IN_MAIN` |
+| PR-C | `IN_MAIN` |
+| PR-D | `STACKED_ONLY` / `NOT_IN_MAIN` |
+| PR-E | `STACKED_ONLY` / `NOT_IN_MAIN` |
+| PR-F0 | `STACKED_ONLY` / `NOT_IN_MAIN` |
+| PR-F | `NOT_IMPLEMENTED` |
+
+`MERGED_ON_GITHUB` is not sufficient evidence for `IN_MAIN` when a PR's base
+is another feature branch. Each stacked layer requires a latest-`main`
+promotion, fresh verification, and Owner review in dependency order.
 
 ### Goal
 
