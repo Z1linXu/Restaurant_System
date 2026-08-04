@@ -86,7 +86,7 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 |---|---|---|
 | PR-A, PR-B, PR-B2, PR-B3, PR-B4 | `IN_MAIN` | Contract, V10/idempotency foundation, revision/lock consistency, generic profile registry, and exact profile identity. |
 | PR-C / PR #47 | `IN_MAIN` at `ba169ed8b689ddef8dffe94deee82fea191cdcfb` | Generic Category/Station/Item base transaction only. |
-| PR-D / PR #48 | `MERGED_ON_GITHUB`, `STACKED_ONLY`, `NOT_IN_MAIN`; latest-main promotion candidate under review | Generic source-option clone has been semantically promoted from implementation commit `5a0dc09944b4b0945fe95027d7f12647212ea559` onto base `e6b41dd644c50b847d27947b5b0d27e1d4449c09`; it remains outside `main` until Owner merge. |
+| PR-D / PR #48 | `MERGED_ON_GITHUB`, `STACKED_ONLY`, `NOT_IN_MAIN`; Draft promotion PR #52 under Owner review | Generic source-option clone has been semantically promoted from implementation commit `5a0dc09944b4b0945fe95027d7f12647212ea559` onto base `e6b41dd644c50b847d27947b5b0d27e1d4449c09`; Draft PR #52 remains outside `main` until Owner merge. |
 | PR-E / PR #49 | `MERGED_ON_GITHUB`, `STACKED_ONLY`, `NOT_IN_MAIN` | Complete Chinatown profile overrides exist only on its stacked branch. |
 | PR-F0 / PR #50 | `MERGED_ON_GITHUB`, `STACKED_ONLY`, `NOT_IN_MAIN` | Read-only planning boundary exists only on its stacked branch. |
 | PR-F | `NOT_IMPLEMENTED` | No public Owner validate/execute Controller or HTTP API exists. |
@@ -96,9 +96,9 @@ PR-D promotion evidence: base
 `5a0dc09944b4b0945fe95027d7f12647212ea559`; focused composer/repository and
 transaction integration tests, full backend tests, compile, diff, migration,
 secret, scope, and Store-specific shared-code scans passed. Agent 6 independent
-review result: `PASS`. Draft PR creation is pending this candidate commit. No
-Migration, HTTP endpoint, runtime access, deployment, or real clone was added
-or executed.
+review result: `PASS`. Draft PR #52 was created from head
+`fbb8bb4098839fc87e48582ce49814ffc40ae720` and targets `main`. No Migration,
+HTTP endpoint, runtime access, deployment, or real clone was added or executed.
 
 Current `main` cannot execute a real menu clone over HTTP. Its registered
 Chinatown profile remains an internal descriptor rather than the complete

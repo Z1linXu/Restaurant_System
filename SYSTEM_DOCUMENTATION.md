@@ -268,14 +268,17 @@ were merged only into stacked base branches and are `NOT_IN_MAIN`. PR-F is not
 implemented, so no public Owner menu-clone Controller or HTTP endpoint exists,
 and current main cannot execute a real menu clone over HTTP.
 
-The PR-D promotion candidate on `codex/al-003-pr-d-promotion` is based on
+The PR-D promotion candidate in Draft PR #52 on
+`codex/al-003-pr-d-promotion` is based on
 `e6b41dd644c50b847d27947b5b0d27e1d4449c09` and semantically carries only the
 generic reviewed source-option clone from historical implementation commit
 `5a0dc09944b4b0945fe95027d7f12647212ea559`. It copies active, explicitly
 classified source option graphs with fresh target IDs and target-local parent
 mapping inside the existing locked transaction. It contains no Chinatown
 profile rules, Store-ID branch, Controller, endpoint, migration, runtime read,
-or real clone. This candidate remains `NOT_IN_MAIN` until Owner merge.
+or real clone. The first reviewed head was
+`fbb8bb4098839fc87e48582ce49814ffc40ae720`; the candidate remains
+`NOT_IN_MAIN` until Owner merge.
 
 The reported Production runtime remains `4667f3c`, while current main is
 `e6b41dd`. Their 86-commit difference is neither a release approval nor proof

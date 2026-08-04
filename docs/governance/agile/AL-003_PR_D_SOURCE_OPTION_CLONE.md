@@ -6,6 +6,9 @@
 >
 > Semantic source commit: `5a0dc09944b4b0945fe95027d7f12647212ea559`
 >
+> Draft PR: [#52](https://github.com/Z1linXu/Restaurant_System/pull/52), head
+> `fbb8bb4098839fc87e48582ce49814ffc40ae720`
+>
 > Runtime/deployment: `NOT_EXECUTED`
 
 ## Scope
