@@ -274,7 +274,13 @@ Store-neutral. The PR-F0 candidate adds only the internal read-only planning
 boundary: a virtual target option plan, one shared validate/execute validator,
 and bounded safe diagnostics. It adds no Migration, public endpoint,
 authorization, runtime query, real clone, print routing/state change, or
-deployment. See [AL-003 PR-F0 Read-only Planning Boundary](docs/governance/agile/AL-003_PR_F0_READ_ONLY_PLANNING_BOUNDARY.md).
+deployment. PR #55 subsequently merged that PR-F0 boundary into `main`.
+The PR-F Draft candidate adds a protected Owner API facade only: it maps the
+reviewed validate and execute routes onto the existing read-only planner,
+shared option-plan validator, V10 idempotency/replay/terminal-FAILED
+coordinator, and lock-owning transaction. It neither creates a second clone
+engine nor performs a runtime clone. The candidate remains neither merged nor
+deployed. See [AL-003 PR-F0 Read-only Planning Boundary](docs/governance/agile/AL-003_PR_F0_READ_ONLY_PLANNING_BOUNDARY.md).
 
 The reported Production runtime remains `4667f3c`. Its difference from current
 main and the PR-E candidate is neither a release approval nor proof of

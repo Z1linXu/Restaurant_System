@@ -444,15 +444,14 @@ Response behavior:
 
 ## Owner Workspace
 
-### Owner Store Menu Clone Internal Contract (AL-003 current main)
+### Owner Store Menu Clone API (AL-003 PR-F candidate)
 
 Current `main` contains internal persistence/idempotency DTOs, the generic
 Category/Station/Item transaction, generic source-option cloning, and the
-versioned Chinatown Profile for the reviewed Store 1 to Chinatown clone. It does
-**not** register a menu-clone Controller or expose a
-callable HTTP endpoint. Consequently this section is an internal contract
-boundary, not an API clients can call. Proposed route shapes remain only in the
-AL-003 technical plan until PR-F is implemented and merged.
+versioned Chinatown Profile, plus PR-F0's shared read-only option planner and
+structured diagnostics. PR-F adds the following Owner-only routes in this
+review candidate. They are not in `main`, deployed, or callable until the Owner
+merges its Draft PR.
 
 The current internal request DTO shape is:
 
@@ -500,8 +499,24 @@ candidate adds an internal `validate` contract only: it composes a virtual
 target option plan, invokes the same complete validator used by execute, and
 returns bounded `missingCodes`, `duplicateCodes`, and safe `warnings`. It is not
 an HTTP contract and performs no menu, revision, request, or audit write.
-PR-F remains `NOT_IMPLEMENTED`; authorization, HTTP validation/execution
-mapping, and public request handling do not exist.
+PR-F reuses those exact internal paths rather than implementing a second clone
+engine:
+
+- `POST /api/v1/owner/organizations/{organizationId}/stores/{targetStoreId}/menu-clone/validate`
+  is read-only, needs no idempotency key, and returns `valid`, revisions,
+  expected counts, and bounded `missing_codes`, `duplicate_codes`, and
+  `warnings`.
+- `POST /api/v1/owner/organizations/{organizationId}/stores/{targetStoreId}/menu-clone`
+  requires `Idempotency-Key` and returns the existing sanitized durable clone
+  response. Completed same-key replays return `replayed=true`; `FAILED` is
+  terminal and returns `MENU_CLONE_RETRY_REQUIRES_VALIDATION` for that key.
+- Both routes require an active `OWNER` membership in the exact Organization.
+  Platform `ADMIN` has no implicit bypass. Source or cross-Organization target
+  failures return `MENU_CLONE_FORBIDDEN`; an authorized missing target returns
+  `TARGET_STORE_NOT_FOUND`.
+- Fixed request-field errors return `MENU_CLONE_REQUEST_INVALID`. No response
+  exposes source-to-target ID maps, source menu payloads, credentials, tokens,
+  endpoints, or raw exceptions.
 
 ### Owner Multi-Store Overview
 GET `/api/v1/owner/overview`

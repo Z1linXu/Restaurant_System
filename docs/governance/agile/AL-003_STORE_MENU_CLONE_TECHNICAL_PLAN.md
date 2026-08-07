@@ -804,7 +804,7 @@ inventory, or production configuration file is planned.
 | PR-D | Generic reviewed active source-option copy, parent mapping, and fail-closed conflict validation. | PR-C | Promote from latest `main`; option and cross-Store parent tests pass again. |
 | PR-E | Chinatown names/prices/sizes/seven noodle types/new items/Combo 1-4/order and bounded Small display compatibility. | Promoted PR-D | Promote from latest `main`; exact AL-003A target and pricing tests pass again. |
 | PR-F0 | Shared read-only logical planning boundary; no public API. | Promoted PR-E | Promote from latest `main`; read-only/no-write and full backend tests pass again. |
-| PR-F | Protected Owner API, validate/execute endpoints, authorization, integration/concurrency/full suites, API/system docs. | Promoted PR-F0 | Not started until all prior layers are in `main`; full local verification and secret/diff review pass. |
+| PR-F | Protected Owner API, validate/execute endpoints, authorization, integration/concurrency/full suites, API/system docs. | Promoted PR-F0 | PR-F candidate reuses the existing read-only planner, shared option-plan validator, V10 coordinator, and lock-owning execute transaction; it must pass full local verification and secret/diff review before Owner review. |
 
 Each package is independently reviewable and must not pull later package scope
 forward. No package may merge or deploy automatically.
@@ -880,9 +880,9 @@ Stop and return to Owner if:
 
 ## Final state
 
-`AL-003_PR_F0_PROMOTION_WAITING_FOR_OWNER_REVIEW`
+`AL-003_PR_F_WAITING_FOR_OWNER_REVIEW`
 
-The next allowed action is Owner review of PR-F0 promotion. PR-F remains
-dependency-gated. Store 1 runtime access, Flyway
-execution, any real clone, and any Staging or Production action remain
-unauthorized.
+PR-F0 entered `main` through PR #55. This PR-F candidate exposes the reviewed
+Owner validate/execute contract without changing V10, clone graph rules, or
+runtime data. Store 1 runtime access, Flyway execution, any real clone, and any
+Staging or Production action remain unauthorized.
