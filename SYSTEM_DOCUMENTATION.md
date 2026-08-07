@@ -266,15 +266,15 @@ with fresh target IDs and target-local parent mapping. It still has no public
 Owner menu-clone Controller or HTTP endpoint and cannot execute a real clone
 over HTTP.
 
-The PR-E promotion candidate on `codex/al-003-pr-e-promotion` is based on exact
-main `4265d66ed9246738ab3baea8b4853a2c8cad4c20`. It adds only the first complete
-versioned Chinatown Profile, its target override composer, and bounded Small
-order/receipt label compatibility. The concrete Profile owns Store 1, PDF
-prices, four categories, 17 target items, ordering, size sets, seven noodle
+PR #54 placed the first complete versioned Chinatown Profile in `main` at
+`82b8059f6af1c7dff4eeb1648ca47bec039b5e52`. The concrete Profile owns Store 1,
+PDF prices, four categories, 17 target items, ordering, size sets, seven noodle
 types, four Combo definitions, and new target SKUs; shared clone services remain
-Store-neutral. This candidate adds no Migration, public endpoint, authorization,
-runtime query, real clone, print routing/state change, or deployment. See
-[AL-003 PR-E Chinatown Profile Overrides](docs/governance/agile/AL-003_PR_E_CHINATOWN_PROFILE_OVERRIDES.md).
+Store-neutral. The PR-F0 candidate adds only the internal read-only planning
+boundary: a virtual target option plan, one shared validate/execute validator,
+and bounded safe diagnostics. It adds no Migration, public endpoint,
+authorization, runtime query, real clone, print routing/state change, or
+deployment. See [AL-003 PR-F0 Read-only Planning Boundary](docs/governance/agile/AL-003_PR_F0_READ_ONLY_PLANNING_BOUNDARY.md).
 
 The reported Production runtime remains `4667f3c`. Its difference from current
 main and the PR-E candidate is neither a release approval nor proof of

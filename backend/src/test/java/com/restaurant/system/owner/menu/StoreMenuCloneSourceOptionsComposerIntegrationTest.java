@@ -67,30 +67,28 @@ class StoreMenuCloneSourceOptionsComposerIntegrationTest {
     }
 
     @Test
-    void persistsFreshSameItemParentIdsAcrossTwoPasses() {
+    void createsAReadOnlySameItemParentPlan() {
         Long targetItemId = createTargetItem("target_noodle");
         TestProfile profile = profile();
         StoreMenuCloneCompositionContext context = context(profile, targetItemId);
 
         Integer count = requiresNew.execute(status -> composer(profile).compose(context));
 
-        List<MenuItemOption> persisted = requiresNew.execute(status ->
-            optionRepository.findAllByStoreIdAndMenuItemIdsOrdered(TARGET_STORE_ID, List.of(targetItemId))
-        );
         assertThat(count).isEqualTo(2);
-        assertThat(persisted).hasSize(2);
-        MenuItemOption parent = persisted.stream()
-            .filter(option -> "parent".equals(option.option_code))
+        assertThat(context.options()).hasSize(2);
+        StoreMenuClonePlannedOption parent = context.options().stream()
+            .filter(option -> "parent".equals(option.optionCode()))
             .findFirst()
             .orElseThrow();
-        MenuItemOption child = persisted.stream()
-            .filter(option -> "child".equals(option.option_code))
+        StoreMenuClonePlannedOption child = context.options().stream()
+            .filter(option -> "child".equals(option.optionCode()))
             .findFirst()
             .orElseThrow();
-        assertThat(parent.id).isNotEqualTo(7_001L);
-        assertThat(child.id).isNotEqualTo(7_002L);
-        assertThat(child.parent_option_id).isEqualTo(parent.id);
-        assertThat(child.menu_item_id).isEqualTo(parent.menu_item_id).isEqualTo(targetItemId);
+        assertThat(parent.sourceOptionId()).isEqualTo(7_001L);
+        assertThat(child.sourceOptionId()).isEqualTo(7_002L);
+        assertThat(child.parentOptionCode()).isEqualTo(parent.optionCode());
+        assertThat(child.targetItemId()).isEqualTo(parent.targetItemId()).isEqualTo(targetItemId);
+        assertThat(optionRepository.count()).isZero();
     }
 
     @Test
@@ -111,10 +109,7 @@ class StoreMenuCloneSourceOptionsComposerIntegrationTest {
     }
 
     private StoreMenuCloneSourceOptionsComposer composer(TestProfile profile) {
-        return new StoreMenuCloneSourceOptionsComposer(
-            optionRepository,
-            new StoreMenuCloneProfileRegistry(List.of(profile))
-        );
+        return new StoreMenuCloneSourceOptionsComposer(new StoreMenuCloneProfileRegistry(List.of(profile)));
     }
 
     private Long createTargetItem(String sku) {

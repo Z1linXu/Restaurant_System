@@ -26,11 +26,14 @@ import com.restaurant.system.owner.service.OwnerStoreMenuCloneRequestCoordinator
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneSuccessEvidence;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneTransactionCommand;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneTransactionResult;
+import com.restaurant.system.owner.service.OwnerStoreMenuCloneValidationCommand;
+import com.restaurant.system.owner.service.OwnerStoreMenuCloneValidationResult;
 import com.restaurant.system.owner.service.impl.StoreMenuCloneTransactionServiceImpl;
 import com.restaurant.system.station.entity.Station;
 import com.restaurant.system.station.repository.StationRepository;
 import com.restaurant.system.user.entity.Store;
 import com.restaurant.system.user.repository.StoreRepository;
+import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -77,6 +80,7 @@ class ChinatownMenuCloneTransactionIntegrationTest {
     @Autowired private MenuItemOptionRepository optionRepository;
     @Autowired private MenuRevisionService menuRevisionService;
     @Autowired private PlatformTransactionManager transactionManager;
+    @Autowired private EntityManager entityManager;
 
     private final OwnerStoreMenuCloneRequestCoordinator coordinator = mock(
         OwnerStoreMenuCloneRequestCoordinator.class
@@ -90,7 +94,38 @@ class ChinatownMenuCloneTransactionIntegrationTest {
             categoryRepository.deleteAll();
             stationRepository.deleteAll();
             storeRepository.deleteAll();
+            entityManager.createNativeQuery("ALTER TABLE stores ALTER COLUMN id RESTART WITH 1").executeUpdate();
         });
+    }
+
+    @Test
+    void validatesTheCompleteChinatownPlanWithoutWrites() {
+        SourceFixture fixture = sourceFixture();
+        ChinatownMenuCloneProfile profile = new ChinatownMenuCloneProfile();
+        StoreMenuCloneTransactionServiceImpl service = service(profile, standardComposers(profile));
+
+        OwnerStoreMenuCloneValidationResult result = transaction().execute(status -> service.validate(
+            new OwnerStoreMenuCloneValidationCommand(
+                ORGANIZATION_ID,
+                fixture.source().id,
+                fixture.successTarget().id,
+                ChinatownMenuCloneProfile.PROFILE_CODE
+            )
+        ));
+
+        assertThat(result.valid()).isTrue();
+        assertThat(result.expectedStationCount()).isEqualTo(3);
+        assertThat(result.expectedCategoryCount()).isEqualTo(4);
+        assertThat(result.expectedItemCount()).isEqualTo(17);
+        assertThat(result.expectedOptionCount()).isEqualTo(74);
+        assertThat(result.missingCodes()).isEmpty();
+        assertThat(result.duplicateCodes()).isEmpty();
+        assertThat(result.warnings()).isEmpty();
+        assertThat(categoryRepository.countAllByStoreId(fixture.successTarget().id)).isZero();
+        assertThat(stationRepository.countAllByStoreId(fixture.successTarget().id)).isZero();
+        assertThat(itemRepository.countAllByStoreId(fixture.successTarget().id)).isZero();
+        assertThat(storeRepository.findMenuRevisionById(fixture.successTarget().id)).isEqualTo(1L);
+        verify(coordinator, never()).complete(any());
     }
 
     @Test
@@ -197,8 +232,8 @@ class ChinatownMenuCloneTransactionIntegrationTest {
     private List<StoreMenuCloneGraphComposer> standardComposers(ChinatownMenuCloneProfile profile) {
         StoreMenuCloneProfileRegistry registry = new StoreMenuCloneProfileRegistry(List.of(profile));
         return List.of(
-            new StoreMenuCloneSourceOptionsComposer(optionRepository, registry),
-            new ChinatownMenuProfileOverridesComposer(optionRepository)
+            new StoreMenuCloneSourceOptionsComposer(registry),
+            new ChinatownMenuProfileOverridesComposer()
         );
     }
 
@@ -215,7 +250,8 @@ class ChinatownMenuCloneTransactionIntegrationTest {
             menuRevisionService,
             coordinator,
             new StoreMenuCloneProfileRegistry(List.of(profile)),
-            composers
+            composers,
+            new com.restaurant.system.owner.menu.StoreMenuCloneOptionPlanValidator()
         );
     }
 

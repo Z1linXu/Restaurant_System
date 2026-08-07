@@ -446,10 +446,10 @@ Response behavior:
 
 ### Owner Store Menu Clone Internal Contract (AL-003 current main)
 
-The PR-E promotion base `main` contains internal persistence/idempotency DTOs,
-the generic Category/Station/Item base transaction, and generic source-option
-cloning for the reviewed Store 1 to Chinatown clone. It does **not** register a
-menu-clone Controller or expose a
+Current `main` contains internal persistence/idempotency DTOs, the generic
+Category/Station/Item transaction, generic source-option cloning, and the
+versioned Chinatown Profile for the reviewed Store 1 to Chinatown clone. It does
+**not** register a menu-clone Controller or expose a
 callable HTTP endpoint. Consequently this section is an internal contract
 boundary, not an API clients can call. Proposed route shapes remain only in the
 AL-003 technical plan until PR-F is implemented and merged.
@@ -493,13 +493,15 @@ bounded stable codes derived from durable result evidence (or an empty list),
 not replayed execution detail. The response DTO includes `result_code`
 and intentionally excludes internal source-to-target ID maps.
 
-PR #52 placed the internal, generic `SOURCE_OPTIONS` graph composer in `main`.
-The PR-E promotion candidate adds the concrete Chinatown Profile and target
-override composer without changing the request/response DTO or registering a
-Controller. Complete profile behavior remains candidate-only until Owner
-merge. The read-only planning boundary remains stacked-only, PR-F remains
-`NOT_IMPLEMENTED`, and authorization, HTTP validation/execution mapping, and
-public request handling do not exist.
+PR #52 placed the internal, generic `SOURCE_OPTIONS` graph composer in `main`;
+PR #54 added the concrete Chinatown Profile and target override composer without
+changing the request/response DTO or registering a Controller. The PR-F0
+candidate adds an internal `validate` contract only: it composes a virtual
+target option plan, invokes the same complete validator used by execute, and
+returns bounded `missingCodes`, `duplicateCodes`, and safe `warnings`. It is not
+an HTTP contract and performs no menu, revision, request, or audit write.
+PR-F remains `NOT_IMPLEMENTED`; authorization, HTTP validation/execution
+mapping, and public request handling do not exist.
 
 ### Owner Multi-Store Overview
 GET `/api/v1/owner/overview`

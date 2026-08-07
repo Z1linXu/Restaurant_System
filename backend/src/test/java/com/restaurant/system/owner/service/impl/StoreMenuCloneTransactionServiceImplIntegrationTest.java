@@ -30,11 +30,14 @@ import com.restaurant.system.owner.menu.StoreMenuCloneBaseGraphProfile.StationSe
 import com.restaurant.system.owner.menu.StoreMenuCloneBaseGraphProfile.StationSourcePolicy;
 import com.restaurant.system.owner.menu.StoreMenuCloneCompositionContext;
 import com.restaurant.system.owner.menu.StoreMenuCloneGraphComposer;
+import com.restaurant.system.owner.menu.StoreMenuClonePlannedOption;
 import com.restaurant.system.owner.menu.StoreMenuCloneProfileRegistry;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneRequestCoordinator;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneSuccessEvidence;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneTransactionCommand;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneTransactionResult;
+import com.restaurant.system.owner.service.OwnerStoreMenuCloneValidationCommand;
+import com.restaurant.system.owner.service.OwnerStoreMenuCloneValidationResult;
 import com.restaurant.system.station.entity.Station;
 import com.restaurant.system.station.repository.StationRepository;
 import com.restaurant.system.user.entity.Store;
@@ -485,11 +488,9 @@ class StoreMenuCloneTransactionServiceImplIntegrationTest {
             10,
             PROFILE_CODE,
             context -> {
-                MenuItem alpha = itemRepository.findById(
-                    context.baseGraph().targetItemIdByTargetSku().get("target_alpha")
-                ).orElseThrow();
-                MenuItemOption parent = option(alpha, "TARGET_PARENT", null, true, 1);
-                option(alpha, "TARGET_CHILD", parent.id, true, 2);
+                Long alphaId = context.baseGraph().targetItemIdByTargetSku().get("target_alpha");
+                context.addOption(plannedOption(alphaId, "TARGET_PARENT", null, 1));
+                context.addOption(plannedOption(alphaId, "TARGET_CHILD", "TARGET_PARENT", 2));
                 return 2;
             }
         );
@@ -499,6 +500,22 @@ class StoreMenuCloneTransactionServiceImplIntegrationTest {
             command(validFixture, PROFILE_CODE)
         );
         assertThat(result.evidence().createdOptionCount()).isEqualTo(2);
+        MenuItem targetAlpha = itemRepository.findAllByStoreIdOrderByIdAsc(validFixture.target().id).stream()
+            .filter(item -> "target_alpha".equals(item.sku))
+            .findFirst()
+            .orElseThrow();
+        List<MenuItemOption> persisted = optionRepository.findAllByStoreIdAndMenuItemIdsOrdered(
+            validFixture.target().id, List.of(targetAlpha.id)
+        );
+        MenuItemOption parent = persisted.stream()
+            .filter(option -> "TARGET_PARENT".equals(option.option_code))
+            .findFirst()
+            .orElseThrow();
+        MenuItemOption child = persisted.stream()
+            .filter(option -> "TARGET_CHILD".equals(option.option_code))
+            .findFirst()
+            .orElseThrow();
+        assertThat(child.parent_option_id).isEqualTo(parent.id);
 
         cleanDatabase();
         Fixture wrongStoreFixture = fixture();
@@ -508,7 +525,7 @@ class StoreMenuCloneTransactionServiceImplIntegrationTest {
             10,
             PROFILE_CODE,
             context -> {
-                option(wrongStoreFixture.alpha(), "SOURCE_SIDE_EFFECT", null, true, 4);
+                context.addOption(plannedOption(wrongStoreFixture.alpha().id, "SOURCE_SIDE_EFFECT", null, 4));
                 return 1;
             }
         );
@@ -525,9 +542,66 @@ class StoreMenuCloneTransactionServiceImplIntegrationTest {
             .doesNotContain("SOURCE_SIDE_EFFECT");
     }
 
+    @Test
+    void validationReturnsCompleteDiagnosticsWithoutLocksOrWritesAndExecuteUsesTheSameSafeCode() {
+        Fixture fixture = fixture();
+        StoreMenuCloneGraphComposer malformed = composer(
+            "malformed-option",
+            StoreMenuCloneGraphComposer.Phase.SOURCE_OPTIONS,
+            10,
+            PROFILE_CODE,
+            context -> {
+                Long alphaId = context.baseGraph().targetItemIdByTargetSku().get("target_alpha");
+                context.addOption(plannedOption(alphaId, " CHILD ", "missing_parent", 1));
+                context.addOption(plannedOption(alphaId, "child", null, 2));
+                context.addOption(plannedOption(fixture.alpha().id, "outside", null, 0));
+                return 3;
+            }
+        );
+        MenuRevisionService readOnlyRevisionService = mock(MenuRevisionService.class);
+        StoreMenuCloneTransactionServiceImpl cloneService = service(
+            defaultProfile(fixture.source().id), List.of(malformed), readOnlyRevisionService
+        );
+        StoreMenuCloneTransactionServiceImpl executeService = service(
+            defaultProfile(fixture.source().id), List.of(malformed)
+        );
+
+        OwnerStoreMenuCloneValidationResult validation = transaction().execute(status -> cloneService.validate(
+            new OwnerStoreMenuCloneValidationCommand(
+                ORGANIZATION_ID, fixture.source().id, fixture.target().id, PROFILE_CODE
+            )
+        ));
+
+        assertThat(validation.valid()).isFalse();
+        assertThat(validation.missingCodes()).containsExactly("missing_parent");
+        assertThat(validation.duplicateCodes()).containsExactly("child");
+        assertThat(validation.warnings()).containsExactly(
+            "OPTION_PLAN_FIELD_INVALID",
+            "OPTION_PLAN_TARGET_SCOPE_INVALID"
+        );
+        verify(readOnlyRevisionService, never()).lockStoresInOrder(any());
+        verify(readOnlyRevisionService, never()).incrementRevision(any());
+        verify(coordinator, never()).complete(any());
+        verify(coordinator, never()).fail(any());
+        assertTargetRolledBack(fixture);
+        assertCloneError(
+            () -> execute(executeService, command(fixture, PROFILE_CODE)),
+            "TARGET_MENU_VALIDATION_FAILED"
+        );
+        assertTargetRolledBack(fixture);
+    }
+
     private StoreMenuCloneTransactionServiceImpl service(
         StoreMenuCloneBaseGraphProfile profile,
         List<StoreMenuCloneGraphComposer> composers
+    ) {
+        return service(profile, composers, menuRevisionService);
+    }
+
+    private StoreMenuCloneTransactionServiceImpl service(
+        StoreMenuCloneBaseGraphProfile profile,
+        List<StoreMenuCloneGraphComposer> composers,
+        MenuRevisionService revisionService
     ) {
         return new StoreMenuCloneTransactionServiceImpl(
             storeRepository,
@@ -535,10 +609,22 @@ class StoreMenuCloneTransactionServiceImplIntegrationTest {
             stationRepository,
             itemRepository,
             optionRepository,
-            menuRevisionService,
+            revisionService,
             coordinator,
             new StoreMenuCloneProfileRegistry(List.of(profile)),
-            composers
+            composers,
+            new com.restaurant.system.owner.menu.StoreMenuCloneOptionPlanValidator()
+        );
+    }
+
+    private StoreMenuClonePlannedOption plannedOption(
+        Long targetItemId,
+        String code,
+        String parentCode,
+        int sortOrder
+    ) {
+        return new StoreMenuClonePlannedOption(
+            targetItemId, null, "addon", code, "ADD_ON", parentCode, sortOrder, code, code, BigDecimal.ZERO, true
         );
     }
 
