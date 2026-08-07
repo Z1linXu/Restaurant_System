@@ -2,20 +2,14 @@ package com.restaurant.system.owner.menu.profile;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import com.restaurant.system.menu.entity.MenuItemOption;
-import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.owner.exception.OwnerStoreMenuCloneException;
 import com.restaurant.system.owner.menu.ChinatownMenuCloneProfile;
 import com.restaurant.system.owner.menu.StoreMenuCloneBaseGraphProfile.ItemRole;
 import com.restaurant.system.owner.menu.StoreMenuCloneBaseGraphResult;
 import com.restaurant.system.owner.menu.StoreMenuCloneCompositionContext;
+import com.restaurant.system.owner.menu.StoreMenuClonePlannedOption;
 import com.restaurant.system.owner.menu.StoreMenuCloneSnapshot;
 import com.restaurant.system.owner.menu.StoreMenuCloneSnapshot.SourceItem;
 import com.restaurant.system.owner.menu.StoreMenuCloneSnapshot.SourceOption;
@@ -27,66 +21,47 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class ChinatownMenuProfileOverridesComposerTest {
 
     private static final long TARGET_STORE_ID = 91L;
 
-    private MenuItemOptionRepository repository;
     private ChinatownMenuCloneProfile profile;
-    private List<MenuItemOption> saved;
-    private AtomicLong generatedId;
 
-    @BeforeEach
-    void setUp() {
-        repository = mock(MenuItemOptionRepository.class);
+    ChinatownMenuProfileOverridesComposerTest() {
         profile = new ChinatownMenuCloneProfile();
-        saved = new ArrayList<>();
-        generatedId = new AtomicLong(50_000L);
-        when(repository.findAllByMenuItemIdsOrdered(anyList())).thenReturn(List.of());
-        doAnswer(invocation -> {
-            List<MenuItemOption> options = invocation.getArgument(0);
-            options.forEach(option -> {
-                if (option.id == null) {
-                    option.id = generatedId.getAndIncrement();
-                }
-            });
-            saved.addAll(options);
-            return options;
-        }).when(repository).saveAllAndFlush(anyList());
     }
 
     @Test
     void createsExactNoodleSizeComboAndTeaEggGraph() {
         ChinatownMenuProfileOverridesComposer composer = composer();
 
-        int count = composer.compose(context(consistentNoodleOptions()));
+        StoreMenuCloneCompositionContext context = context(consistentNoodleOptions());
+        int count = composer.compose(context);
 
         assertThat(count).isEqualTo(73);
-        assertThat(saved).hasSize(73);
-        assertThat(saved).allSatisfy(option -> {
-            assertThat(option.id).isNotNull();
-            assertThat(option.is_active).isTrue();
-            assertThat(option.parent_option_id).isNull();
+        assertThat(context.options()).hasSize(73);
+        assertThat(context.options()).allSatisfy(option -> {
+            assertThat(option.active()).isTrue();
+            assertThat(option.parentOptionCode()).isNull();
         });
-        assertThat(saved.stream().filter(option -> "NOODLE_TYPE".equals(option.option_group))).hasSize(35);
-        assertThat(saved.stream().filter(option -> "SIZE".equals(option.option_group))).hasSize(8);
-        assertThat(saved.stream().filter(option -> "COMBO".equals(option.option_group))).hasSize(4);
-        assertThat(saved.stream().filter(option -> "COMBO_EGG".equals(option.option_group))).hasSize(4);
-        assertThat(saved.stream().filter(option -> "COMBO_SIDE".equals(option.option_group))).hasSize(12);
+        assertThat(context.options().stream().filter(option -> "NOODLE_TYPE".equals(option.optionGroup()))).hasSize(35);
+        assertThat(context.options().stream().filter(option -> "SIZE".equals(option.optionGroup()))).hasSize(8);
+        assertThat(context.options().stream().filter(option -> "COMBO".equals(option.optionGroup()))).hasSize(4);
+        assertThat(context.options().stream().filter(option -> "COMBO_EGG".equals(option.optionGroup()))).hasSize(4);
+        assertThat(context.options().stream().filter(option -> "COMBO_SIDE".equals(option.optionGroup()))).hasSize(12);
         // Current catalog/order contracts derive side removals from each referenced
         // standalone side item; PR-E does not recreate legacy child rows.
-        assertThat(saved).noneMatch(option -> "COMBO_SIDE_REMOVE".equals(option.option_group));
-        assertThat(saved.stream().filter(option -> "tea_egg".equals(option.option_code)
-            && "ADD_ON".equals(option.option_group))).hasSize(5);
-        assertThat(saved.stream().filter(option -> "extra_meat".equals(option.option_code)
-            && "ADD_ON".equals(option.option_group))).hasSize(5);
+        assertThat(context.options()).noneMatch(option -> "COMBO_SIDE_REMOVE".equals(option.optionGroup()));
+        assertThat(context.options().stream().filter(option -> "tea_egg".equals(option.optionCode())
+            && "ADD_ON".equals(option.optionGroup()))).hasSize(5);
+        assertThat(context.options().stream().filter(option -> "extra_meat".equals(option.optionCode())
+            && "ADD_ON".equals(option.optionGroup()))).hasSize(5);
 
         Long tendonId = targetIds().get("braised_beef_tendon_noodle");
-        assertThat(saved).noneMatch(option -> option.menu_item_id.equals(tendonId)
-            && ("SIZE".equals(option.option_group) || "COMBO".equals(option.option_group)));
+        assertThat(context.options()).noneMatch(option -> option.targetItemId().equals(tendonId)
+            && ("SIZE".equals(option.optionGroup()) || "COMBO".equals(option.optionGroup())));
     }
 
     @Test
@@ -98,22 +73,22 @@ class ChinatownMenuProfileOverridesComposerTest {
             traditionalId, "addon", "extra_meat", "ADD_ON", "旧肉", "Old Meat", "4.25", 6
         );
         copiedMeat.id = 701L;
-        when(repository.findAllByMenuItemIdsOrdered(anyList())).thenReturn(List.of(copied, copiedMeat));
-
-        int count = composer().compose(context(consistentNoodleOptions()));
+        StoreMenuCloneCompositionContext context = context(consistentNoodleOptions(), List.of(copied, copiedMeat));
+        int count = composer().compose(context);
 
         assertThat(count).isEqualTo(71);
-        assertThat(copied.name_zh).isEqualTo("加卤蛋");
-        assertThat(copied.name_en).isEqualTo("Extra Tea Egg");
-        assertThat(copied.price_delta).isEqualByComparingTo("1.99");
-        assertThat(saved).contains(copied);
-        assertThat(saved.stream().filter(option -> option.menu_item_id.equals(traditionalId)
-            && "tea_egg".equals(option.option_code))).hasSize(1);
-        assertThat(copiedMeat.name_zh).isEqualTo("加肉");
-        assertThat(copiedMeat.name_en).isEqualTo("Extra Meat");
-        assertThat(copiedMeat.price_delta).isEqualByComparingTo("6.99");
-        assertThat(saved.stream().filter(option -> option.menu_item_id.equals(traditionalId)
-            && "extra_meat".equals(option.option_code))).hasSize(1);
+        StoreMenuClonePlannedOption teaEgg = context.findOption(traditionalId, "tea_egg").orElseThrow();
+        assertThat(teaEgg.nameZh()).isEqualTo("加卤蛋");
+        assertThat(teaEgg.nameEn()).isEqualTo("Extra Tea Egg");
+        assertThat(teaEgg.priceDelta()).isEqualByComparingTo("1.99");
+        assertThat(context.options().stream().filter(option -> option.targetItemId().equals(traditionalId)
+            && "tea_egg".equals(option.optionCode()))).hasSize(1);
+        StoreMenuClonePlannedOption extraMeat = context.findOption(traditionalId, "extra_meat").orElseThrow();
+        assertThat(extraMeat.nameZh()).isEqualTo("加肉");
+        assertThat(extraMeat.nameEn()).isEqualTo("Extra Meat");
+        assertThat(extraMeat.priceDelta()).isEqualByComparingTo("6.99");
+        assertThat(context.options().stream().filter(option -> option.targetItemId().equals(traditionalId)
+            && "extra_meat".equals(option.optionCode()))).hasSize(1);
     }
 
     @Test
@@ -124,7 +99,6 @@ class ChinatownMenuProfileOverridesComposerTest {
         assertThatThrownBy(() -> composer().compose(context(missing)))
             .isInstanceOf(OwnerStoreMenuCloneException.class)
             .hasMessageContaining("missing");
-        verify(repository, never()).saveAllAndFlush(anyList());
 
         SourceOption conflicting = sourceOption(999L, 102L, "noodle_thin", "细", "Different", "0.00");
         List<SourceOption> inconsistent = new ArrayList<>(consistentNoodleOptions());
@@ -141,12 +115,10 @@ class ChinatownMenuProfileOverridesComposerTest {
             traditionalId, "addon", "combo", "ADD_ON", "冲突", "Conflict", "0.00", 1
         );
         conflict.id = 701L;
-        when(repository.findAllByMenuItemIdsOrdered(anyList())).thenReturn(List.of(conflict));
-
-        assertThatThrownBy(() -> composer().compose(context(consistentNoodleOptions())))
+        StoreMenuCloneCompositionContext context = context(consistentNoodleOptions(), List.of(conflict));
+        assertThatThrownBy(() -> composer().compose(context))
             .isInstanceOf(OwnerStoreMenuCloneException.class)
             .hasMessageContaining("conflicts");
-        verify(repository, never()).saveAllAndFlush(anyList());
     }
 
     @Test
@@ -160,10 +132,17 @@ class ChinatownMenuProfileOverridesComposerTest {
     }
 
     private ChinatownMenuProfileOverridesComposer composer() {
-        return new ChinatownMenuProfileOverridesComposer(repository);
+        return new ChinatownMenuProfileOverridesComposer();
     }
 
     private StoreMenuCloneCompositionContext context(List<SourceOption> sourceOptions) {
+        return context(sourceOptions, List.of());
+    }
+
+    private StoreMenuCloneCompositionContext context(
+        List<SourceOption> sourceOptions,
+        List<MenuItemOption> existingOptions
+    ) {
         List<SourceItem> sourceItems = sourceNoodleItems();
         Map<String, Long> targetIds = targetIds();
         Map<Long, Set<ItemRole>> roles = new LinkedHashMap<>();
@@ -186,12 +165,17 @@ class ChinatownMenuProfileOverridesComposerTest {
             targetIds,
             roles
         );
-        return new StoreMenuCloneCompositionContext(
+        StoreMenuCloneCompositionContext context = new StoreMenuCloneCompositionContext(
             profile,
             ChinatownMenuCloneProfile.SOURCE_STORE_ID,
             TARGET_STORE_ID,
             graph
         );
+        existingOptions.forEach(option -> context.addOption(new StoreMenuClonePlannedOption(
+            option.menu_item_id, option.id, option.option_type, option.option_code, option.option_group, null,
+            option.sort_order, option.name_zh, option.name_en, option.price_delta, option.is_active
+        )));
+        return context;
     }
 
     private List<SourceItem> sourceNoodleItems() {

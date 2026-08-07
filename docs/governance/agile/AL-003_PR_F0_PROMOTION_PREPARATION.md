@@ -1,17 +1,18 @@
 # AL-003 PR-F0 Promotion Preparation
 
-> Status: `DEPENDENCY_REPAIR_REQUIRED_AFTER_PR_E`
+> Status: `AL-003_PR_F0_PROMOTION_WAITING_FOR_OWNER_REVIEW`
 >
-> Audit base: `e6b41dd644c50b847d27947b5b0d27e1d4449c09`
+> Promotion base: `82b8059f6af1c7dff4eeb1648ca47bec039b5e52`
 >
 > Historical single-layer source: `e74f285965c4f3ec1f969e7d62112ec1adc9b6dc`
 >
-> Required upstream: PR-D and PR-E must first enter `origin/main`
+> Upstream status: PR-D and PR-E are in `main`; PR-E entered through PR #54
 
 ## Boundary
 
-This document records a read-only audit. Historical PR-F0 is stacked on the
-historical PR-E and cannot be promoted or treated as current capability.
+This document records the historical audit and its resolved promotion outcome.
+Historical PR-F0 was stacked on historical PR-E and is not current authority.
+The current PR-F0 candidate is rebuilt from the PR #54 main merge.
 
 ## Valid design to migrate
 
@@ -30,23 +31,23 @@ historical PR-E and cannot be promoted or treated as current capability.
 
 ## Dependency Repair Gate
 
-Historical PR-F0 does not yet guarantee validate/execute parity. Logical
+Historical PR-F0 did not guarantee validate/execute parity. Logical
 composition validates option ownership, duplicate stable codes, and the parent
 graph, while exact `optionType`, `optionCode`, `optionGroup`, and positive sort
 order checks occur only on the execute persistence path. An invalid custom
 composer could therefore pass validate and fail execute.
 
-The future PR-F0 must extract one shared option-plan validator and run it in
+The promoted PR-F0 extracts one shared option-plan validator and runs it in
 both validate and execute before `persistOptionPlan()`. Execution may already
 have written the base graph inside the same transaction; any option-plan
 failure must roll that transaction back. Requiring all composition before any
 base-graph persistence would be a larger redesign and is not part of this
 minimal repair.
 
-The approved technical plan already freezes structured validation diagnostics:
+The approved technical plan freezes structured validation diagnostics:
 `missingCodes`, `duplicateCodes`, and safe `warnings`. Historical PR-F0 builds
 only a successful result with empty lists while failures use safe exceptions.
-The future PR-F0 must implement the frozen structured diagnostics contract; a
+The promoted PR-F0 implements the frozen structured diagnostics contract. A
 proposal to remove those fields or replace them with typed-errors-only behavior
 would be a new Owner decision and a separate contract repair.
 
@@ -72,6 +73,6 @@ Order, Payment, or KDS change.
 
 ## Promotion order
 
-Owner merge of PR-D -> rebuilt PR-E promotion and Owner merge -> rebuilt PR-F0
-with the parity repair and approved diagnostics contract -> Owner review. PR-F
-cannot begin implementation before PR-F0 enters `origin/main`.
+PR-D and PR-E entered `main`; PR-F0 is rebuilt with the parity repair and
+approved diagnostics contract and awaits Owner review. PR-F cannot begin
+implementation before PR-F0 enters `origin/main`.

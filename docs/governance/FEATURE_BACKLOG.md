@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `AL-003_PR_E_PROMOTION_WAITING_FOR_OWNER_REVIEW` |
+| status | `AL-003_PR_F0_PROMOTION_WAITING_FOR_OWNER_REVIEW` |
 | target_loop | `AL-003` |
-| implementation status | PR-A through PR-D are in `main`; PR-D entered through PR #52. The latest-main PR-E promotion candidate adds the concrete versioned Chinatown Profile, target option overrides, and bounded Small display compatibility, but remains outside `main` pending Owner review. PR-F0 remains stacked-only and PR-F is not implemented. No Store 1 runtime read, real clone, print configuration, Staging/Production migration, or deployment is established. |
+| implementation status | PR-A through PR-E are in `main`; PR-E entered through PR #54 at `82b8059f6af1c7dff4eeb1648ca47bec039b5e52`. The latest-main PR-F0 candidate adds only internal read-only option-plan validation and execute-parity diagnostics. PR-F is not implemented. No Store 1 runtime read, real clone, print configuration, Staging/Production migration, or deployment is established. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Owner reviews the independently verified PR-E promotion candidate. PR-F0 must not start promotion until PR-E enters `main`. |
+| next action | Owner reviews the independently verified PR-F0 promotion candidate. PR-F must not start implementation until PR-F0 enters `main`. |
 
 ### Current AL-003 delivery state
 
@@ -31,8 +31,8 @@
 | PR-B4 | `IN_MAIN` |
 | PR-C | `IN_MAIN` |
 | PR-D | `IN_MAIN` via PR #52 |
-| PR-E | `PROMOTION_CANDIDATE_WAITING_FOR_OWNER_REVIEW` / `NOT_IN_MAIN` |
-| PR-F0 | `STACKED_ONLY` / `NOT_IN_MAIN` |
+| PR-E | `IN_MAIN` via PR #54 |
+| PR-F0 | `PROMOTION_CANDIDATE_WAITING_FOR_OWNER_REVIEW` / `NOT_IN_MAIN` |
 | PR-F | `NOT_IMPLEMENTED` |
 
 `MERGED_ON_GITHUB` is not sufficient evidence for `IN_MAIN` when a PR's base

@@ -64,7 +64,7 @@ snapshots. Do not copy those reports into this planbook.
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `AL-003 Store 1 -> Chinatown Live Menu Clone` |
 | Loop type | `IMPLEMENTATION` |
-| Loop status | `AL-003_PR_E_PROMOTION_WAITING_FOR_OWNER_REVIEW` |
+| Loop status | `AL-003_PR_F0_PROMOTION_WAITING_FOR_OWNER_REVIEW` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | PR #27 merged the backend foundation into `main`; Production remains on the older runtime and no production onboarding is established by that merge. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -72,9 +72,9 @@ snapshots. Do not copy those reports into this planbook.
 | STG-004 state | PR #38 merged the STG-004 runtime evidence. Exact SHA `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` passed PLAN, fresh PREFLIGHT, serial build/start, runtime verification, and isolated stop/start recovery. Server Staging remains running; Production remained unchanged. |
 | STG-005 state | PLAN complete. The Owner approved CP-0 as a separate minimal Staging-only bootstrap implementation and accepted CP-4 as a feature-disabled KDS/Assembling boundary. Positive Kitchen/Assembling workflow remains `EVIDENCE_PENDING`. |
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
-| AL-003 state | PR #52 merged the generic PR-D source-option promotion into `main` at merge commit `13f26f1`; PR #53 then merged downstream preparation at current base `4265d66ed9246738ab3baea8b4853a2c8cad4c20`. PR-E has been semantically rebuilt as a single latest-main promotion candidate on `codex/al-003-pr-e-promotion`; it remains outside `main` until Owner merge. PR-F0 remains stacked-only and PR-F remains unimplemented. |
-| Current permitted work | Owner review of the independently verified PR-E promotion candidate only. |
-| Explicitly not permitted | Treating the PR-E candidate as `IN_MAIN`, starting PR-F0 promotion or PR-F implementation, combining layers, Store 1 runtime access, real clone, SSH, Flyway, Staging or Production mutation, automatic merge, deployment, STG-006, or unrelated backlog work. |
+| AL-003 state | PR #54 merged the concrete, versioned Chinatown Profile promotion into `main` at `82b8059f6af1c7dff4eeb1648ca47bec039b5e52`. PR-F0 is the independently rebuilt, single-layer read-only planning candidate with the resolved option-plan validator/diagnostics repair; PR-F remains unimplemented. |
+| Current permitted work | Owner review of the independently verified PR-F0 promotion candidate only. |
+| Explicitly not permitted | Treating the PR-F0 candidate as `IN_MAIN`, starting PR-F implementation, combining layers, Store 1 runtime access, real clone, SSH, Flyway, Staging or Production mutation, automatic merge, deployment, STG-006, or unrelated backlog work. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 [AGILE_LOOP_OPERATING_MODEL.md](../AGILE_LOOP_OPERATING_MODEL.md), and
@@ -87,28 +87,27 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 | PR-A, PR-B, PR-B2, PR-B3, PR-B4 | `IN_MAIN` | Contract, V10/idempotency foundation, revision/lock consistency, generic profile registry, and exact profile identity. |
 | PR-C / PR #47 | `IN_MAIN` at `ba169ed8b689ddef8dffe94deee82fea191cdcfb` | Generic Category/Station/Item base transaction only. |
 | PR-D / PR #52 | `IN_MAIN` via merge `13f26f1` | Generic source-option cloning and parent mapping are current-main capability. |
-| PR-E / historical PR #49 | `PROMOTION_CANDIDATE_WAITING_FOR_OWNER_REVIEW`, `NOT_IN_MAIN` | The single-layer candidate contains the concrete versioned Chinatown Profile, target override composer, bounded Small label compatibility, and focused frontend/backend tests. |
-| PR-F0 / PR #50 | `MERGED_ON_GITHUB`, `STACKED_ONLY`, `NOT_IN_MAIN` | Read-only planning boundary exists only on its stacked branch. |
+| PR-E / PR #54 | `IN_MAIN` via `82b8059f6af1c7dff4eeb1648ca47bec039b5e52` | Concrete versioned Chinatown Profile, target override composer, and bounded Small label compatibility are current-main capability. |
+| PR-F0 | `PROMOTION_CANDIDATE_WAITING_FOR_OWNER_REVIEW`, `NOT_IN_MAIN` | Internal read-only option-plan composition/validation, shared execute parity validation, and bounded structured diagnostics only. |
 | PR-F | `NOT_IMPLEMENTED` | No public Owner validate/execute Controller or HTTP API exists. |
 
 PR-D promotion evidence is now historical main evidence: semantic source
 `5a0dc09944b4b0945fe95027d7f12647212ea559`, reviewed promotion head
 `5f6438ad1ffe1379eb3740a3db64180ce2433bfa`, and merge `13f26f1`.
-PR-E is based on exact main `4265d66ed9246738ab3baea8b4853a2c8cad4c20`
-and semantically migrates only the historical single-layer implementation
-`972802e701cb9cb2623b647132e4430a7b338e32`. Its verification record is
-[AL-003 PR-E Chinatown Profile Overrides](../agile/AL-003_PR_E_CHINATOWN_PROFILE_OVERRIDES.md).
-The complete backend/frontend suites, compile/build, scope checks, and
-independent Agent 6 review passed after all review findings were resolved.
+PR-E entered `main` through PR #54 at
+`82b8059f6af1c7dff4eeb1648ca47bec039b5e52`.
+PR-F0 is rebuilt from that main commit, rather than promoted from its historical
+stacked branch. Its evidence is
+[AL-003 PR-F0 Read-only Planning Boundary](../agile/AL-003_PR_F0_READ_ONLY_PLANNING_BOUNDARY.md).
 
-Current `main` cannot execute a real menu clone over HTTP. It contains the
-generic clone transaction and source-option layer, while the complete Chinatown
-Profile remains only in the PR-E candidate. Production remains separately
-reported at `4667f3c`; current-main and candidate capability are not production
-capability or release approval.
+Current `main` contains the generic clone transaction, source-option layer, and
+the complete Chinatown Profile, but cannot execute a real menu clone over HTTP.
+PR-F0 remains candidate-only. Production remains separately reported at
+`4667f3c`; current-main and candidate capability are not production capability
+or release approval.
 
 The unique stop state for this loop is
-`AL-003_PR_E_PROMOTION_WAITING_FOR_OWNER_REVIEW`.
+`AL-003_PR_F0_PROMOTION_WAITING_FOR_OWNER_REVIEW`.
 
 Git ground truth must always distinguish `MERGED_ON_GITHUB`, `IN_MAIN`,
 `DEPLOYED_TO_STAGING`, and `DEPLOYED_TO_PRODUCTION`. A stacked PR merged into a
