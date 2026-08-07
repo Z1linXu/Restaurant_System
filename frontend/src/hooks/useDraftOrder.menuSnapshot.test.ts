@@ -100,4 +100,74 @@ describe('offline order menu snapshots', () => {
     expect(payload.items[0].menu_item_id).toBe(20)
     expect(payload.items[0].options).toHaveLength(2)
   })
+
+  it('keeps the default Chinatown Small price and option snapshot through submit', () => {
+    const chinatownItem: MenuItem = {
+      ...menuItem,
+      price: 14.99,
+      customization: {
+        ...menuItem.customization,
+        sizes: {
+          required: true,
+          options: [
+            {
+              id: '51',
+              labelEn: 'Small',
+              labelZh: '小碗',
+              priceDelta: 0,
+              optionType: 'size',
+              optionCode: 'size_small',
+              optionGroup: 'SIZE',
+              sortOrder: 1,
+            },
+            {
+              id: '52',
+              labelEn: 'Medium',
+              labelZh: '中碗',
+              priceDelta: 2,
+              optionType: 'size',
+              optionCode: 'size_medium',
+              optionGroup: 'SIZE',
+              sortOrder: 2,
+            },
+          ],
+        },
+      },
+    }
+    const smallDraft: ItemCustomizationDraft = {
+      ...draft,
+      sizeId: '51',
+      addOnQuantities: {},
+      notes: '',
+    }
+    const line = buildLocalLineItem(chinatownItem, smallDraft)
+    const record = createLocalDraftRecord(
+      { accountId: 7, organizationId: 9, storeId: 1 },
+      {
+        orderType: 'dine_in',
+        slotLabel: 'T1',
+        tableLabel: 'T1',
+        tableNo: 'T1',
+        pickupNo: null,
+      },
+      10,
+    )
+
+    const payload = buildFrozenSubmitPayload(record, [line], [chinatownItem])
+
+    expect(line.lineSubtotal).toBe(14.99)
+    expect(payload.expected_subtotal_amount).toBe(14.99)
+    expect(payload.items[0]).toMatchObject({
+      unit_price_snapshot: 14.99,
+      item_sku_snapshot: 'traditional_beef_noodle',
+    })
+    expect(payload.items[0].options).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        option_id: 51,
+        option_code_snapshot: 'size_small',
+        option_name_snapshot_zh: '小碗',
+        option_price_snapshot: 0,
+      }),
+    ]))
+  })
 })

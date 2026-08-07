@@ -1,12 +1,12 @@
 # AL-003 Store 1 -> Chinatown Live Menu Clone Technical Plan
 
-> Status: `AL-003_PR_D_PROMOTION_WAITING_FOR_OWNER_REVIEW`
+> Status: `AL-003_PR_E_PROMOTION_WAITING_FOR_OWNER_REVIEW`
 >
 > Prepared: 2026-07-31, America/Toronto
 >
-> Ground truth updated: 2026-08-04, America/Toronto
+> Ground truth updated: 2026-08-07, America/Toronto
 >
-> Phase: `PR-D PROMOTION / OWNER REVIEW`
+> Phase: `PR-E PROMOTION / OWNER REVIEW`
 >
 > Historical PR-C repository base: `ae019bf6460cbbbd69153a046d0fbda1fe707eb0`
 >
@@ -23,36 +23,34 @@
 |---|---|
 | `AL003_PLAN_FOUND` | `false` before this document was created |
 | `PLAN_PATH` | `docs/governance/agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md` |
-| `PLAN_STATUS` | `AL-003_PR_D_PROMOTION_WAITING_FOR_OWNER_REVIEW` |
+| `PLAN_STATUS` | `AL-003_PR_E_PROMOTION_WAITING_FOR_OWNER_REVIEW` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | Owner reviews the latest-main PR-D promotion candidate. After merge, rebuild and verify PR-E from the new `main`; PR-F0 and PR-F remain dependency-gated. |
+| `RECOMMENDED_ACTION` | Owner reviews the latest-main PR-E promotion candidate. PR-F0 and PR-F remain dependency-gated. |
 
-PR-A, PR-B, prerequisite repairs PR-B2 through PR-B4, and PR-C are in `main`.
-PR-C supplies only the generic locked source snapshot and
-Category/Station/Item base graph. Option copying, concrete Chinatown profile
-overrides, and the read-only planning boundary are present only on stacked
-heads; the public Owner API remains unimplemented.
+PR-A through PR-D are in `main`. PR-D supplies generic source-option copying
+and target-local parent mapping. The concrete Chinatown profile is represented
+by the current PR-E promotion candidate; the read-only planning boundary remains
+stacked-only and the public Owner API remains unimplemented.
 
 ### 1.1 Current Git ground truth
 
-| Package | Commit | State relative to `main` `e6b41dd644c50b847d27947b5b0d27e1d4449c09` |
+| Package | Commit | State relative to `main` `4265d66ed9246738ab3baea8b4853a2c8cad4c20` |
 |---|---|---|
 | PR-C / PR #47 | merge `ba169ed8b689ddef8dffe94deee82fea191cdcfb` | `IN_MAIN` |
-| Governance / PR #51 | merge `e6b41dd644c50b847d27947b5b0d27e1d4449c09` | `IN_MAIN`; promotion base |
-| PR-D / PR #48 | source head `5a0dc09944b4b0945fe95027d7f12647212ea559` | Semantically migrated as one latest-main promotion candidate; `NOT_IN_MAIN` until Owner merge |
-| PR-E / PR #49 | head `972802e701cb9cb2623b647132e4430a7b338e32` | `MERGED_ON_GITHUB`, `STACKED_ONLY`, `NOT_IN_MAIN` |
+| Governance / PR #53 | merge `4265d66ed9246738ab3baea8b4853a2c8cad4c20` | `IN_MAIN`; PR-E promotion base |
+| PR-D / PR #52 | promotion head `5f6438ad1ffe1379eb3740a3db64180ce2433bfa`, merge `13f26f1` | `IN_MAIN` |
+| PR-E / historical PR #49 | semantic source `972802e701cb9cb2623b647132e4430a7b338e32` | Rebuilt as one latest-main promotion candidate; `NOT_IN_MAIN` until Owner merge |
 | PR-F0 / PR #50 | head `e74f285965c4f3ec1f969e7d62112ec1adc9b6dc` | `MERGED_ON_GITHUB`, `STACKED_ONLY`, `NOT_IN_MAIN` |
 | PR-F | none | `NOT_IMPLEMENTED` |
 
 This document describes the complete reviewed target architecture. A section
 in this plan is not evidence that its implementation is in `main`, Staging, or
-Production. The historical PR-D, PR-E, and PR-F0 implementation records exist
-only on their stacked heads. PR-D is now represented by a single latest-main
-promotion candidate, but is still not main authority before Owner merge. PR-E
-and PR-F0 must be rebuilt or semantically migrated only after their direct
-upstream layer enters `main`, then fully reverified. Stacked merge commits are
-not main merge commits.
+Production. Historical PR-E and PR-F0 implementation records exist only on
+their stacked heads. PR-D is current-main authority after PR #52. PR-E has been
+semantically rebuilt as one latest-main candidate and fully reverified; it is
+not main authority before Owner merge. PR-F0 remains dependency-gated. Stacked
+merge commits are not main merge commits.
 
 This plan is the implementation contract for AL-003. The product mapping is
 owned by
@@ -373,7 +371,7 @@ assignments are not copied.
 | SIDE 3 | `edamame` | required unique active source SKU | 雪菜毛豆 / Edamame With Preserved Vegetable | 4.99 |
 | SIDE 4 | `shredded_potato` | required unique active source SKU | 海菜土豆丝 / Seaweed Potato Salad | 4.99 |
 | SIDE 5 | `sichuan_pepper_chicken` | clone exact live SKU if present; otherwise profile creates this stable SKU | 椒麻鸡 / Sichuan Pepper Chicken | 9.99 |
-| SIDE 6 | `tea_egg` | clone exact live SKU if present; otherwise profile creates this stable SKU | 茶叶卤蛋 / Tea Egg | 1.99 |
+| SIDE 6 | `tea_egg` | clone exact live SKU if present; otherwise profile creates this stable SKU | 茶叶卤蛋 / Tea Boil Egg | 1.99 |
 | DRINK 1 | `coke` | required unique active source SKU | 可乐 / Coke | 3.00 |
 | DRINK 2 | `diet_coke` | required unique active source SKU | 健怡可乐 / Diet Coke | 3.00 |
 | DRINK 3 | `seven_up` | profile-created item | 七喜 / 7 Up | 3.00 |
@@ -483,9 +481,11 @@ data and not a database migration. It contains only:
 - tea egg dual identity;
 - expected option semantics.
 
-It contains no source IDs, target Store ID, runtime prices, credentials,
-printer data, or copied menu payload. Changing the profile requires a reviewed
-code change and a new profile code/fingerprint version.
+It contains the reviewed Store 1 source constraint for this concrete Profile,
+but no target Store ID, runtime-generated IDs, credentials, printer data, or
+copied menu payload. Shared clone services must not import that constraint.
+Changing the Profile requires a reviewed code change and a new profile
+code/fingerprint version.
 
 ## 12. Idempotency and concurrency
 
@@ -876,10 +876,9 @@ Stop and return to Owner if:
 
 ## Final state
 
-`AL-003_PR_D_PROMOTION_WAITING_FOR_OWNER_REVIEW`
+`AL-003_PR_E_PROMOTION_WAITING_FOR_OWNER_REVIEW`
 
-The next allowed action is Owner review of PR-D promotion. PR-E may remain in
-preparation but cannot become a final promotion until PR-D enters `main`.
-PR-F0 and PR-F remain dependency-gated. Store 1 runtime access, Flyway
+The next allowed action is Owner review of PR-E promotion. PR-F0 and PR-F
+remain dependency-gated. Store 1 runtime access, Flyway
 execution, any real clone, and any Staging or Production action remain
 unauthorized.

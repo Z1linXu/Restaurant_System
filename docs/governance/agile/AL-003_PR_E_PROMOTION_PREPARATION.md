@@ -1,19 +1,19 @@
 # AL-003 PR-E Promotion Preparation
 
-> Status: `PREPARED_WAITING_FOR_PR_D_DEPENDENCY`
+> Status: `PROMOTED_AS_CANDIDATE_WAITING_FOR_OWNER_REVIEW`
 >
-> Audit base: `e6b41dd644c50b847d27947b5b0d27e1d4449c09`
+> Promotion base: `4265d66ed9246738ab3baea8b4853a2c8cad4c20`
 >
-> Required upstream: Draft PR #52 must first enter `origin/main`
+> Required upstream: satisfied by merged PR #52 (`13f26f1`)
 >
 > Historical single-layer source: `972802e701cb9cb2623b647132e4430a7b338e32`
 
 ## Boundary
 
-This is a preparation record, not a promotion and not evidence of capability in
-`main`. The future PR-E must be rebuilt from the post-PR-D `origin/main`; it
-must not cherry-pick the historical stacked merge or copy historical shared
-governance files over newer content.
+This preparation record is now closed by the latest-main PR-E promotion
+candidate. The candidate was rebuilt from post-PR-D `origin/main`; it did not
+cherry-pick the historical stacked merge or copy historical shared governance
+files over newer content. It remains outside `main` until Owner merge.
 
 ## Audited single-layer scope
 
@@ -77,5 +77,7 @@ routing/state change, Payment, Order lifecycle, or KDS change.
 
 ## Promotion gate
 
-PR-E may start only after PR #52 is merged and a fresh `origin/main` SHA is
-recorded. No new prerequisite conflict was found in the PR-E layer itself.
+PR #52 is merged, exact base `4265d66ed9246738ab3baea8b4853a2c8cad4c20`
+was recorded, and no new prerequisite conflict was found. Promotion evidence is
+maintained in
+[AL-003_PR_E_CHINATOWN_PROFILE_OVERRIDES.md](AL-003_PR_E_CHINATOWN_PROFILE_OVERRIDES.md).

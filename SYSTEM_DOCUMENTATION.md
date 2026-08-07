@@ -255,35 +255,31 @@ inactive target with printing disabled, runs deterministic staged graph
 composers, rechecks the source revision, and advances the target menu revision
 exactly once. Completion evidence is bound to the reserved Organization,
 source Store, target Store, and exact profile code. The shared implementation
-contains no Chinatown or Store-ID branch; option copying, concrete profile
-overrides, and the public Owner endpoint remain PR-D, PR-E, and PR-F scope.
+contains no Chinatown or Store-ID branch.
 
 PR #47 merged PR-C into `main` at
-`ba169ed8b689ddef8dffe94deee82fea191cdcfb`. Current main therefore contains
-the idempotency foundation, revision/lock consistency, generic profile
-registry, exact profile identity, and generic Category/Station/Item base
-transaction. It does not contain source option cloning, the complete Chinatown
-profile overrides, or the read-only planning boundary: PR #48, #49, and #50
-were merged only into stacked base branches and are `NOT_IN_MAIN`. PR-F is not
-implemented, so no public Owner menu-clone Controller or HTTP endpoint exists,
-and current main cannot execute a real menu clone over HTTP.
+`ba169ed8b689ddef8dffe94deee82fea191cdcfb`. PR #52 then merged PR-D's generic
+reviewed source-option clone into `main` through merge commit `13f26f1`.
+Current main therefore includes idempotency, revision/lock consistency, exact
+profile identity, Category/Station/Item creation, and active source-option copy
+with fresh target IDs and target-local parent mapping. It still has no public
+Owner menu-clone Controller or HTTP endpoint and cannot execute a real clone
+over HTTP.
 
-The PR-D promotion candidate in Draft PR #52 on
-`codex/al-003-pr-d-promotion` is based on
-`e6b41dd644c50b847d27947b5b0d27e1d4449c09` and semantically carries only the
-generic reviewed source-option clone from historical implementation commit
-`5a0dc09944b4b0945fe95027d7f12647212ea559`. It copies active, explicitly
-classified source option graphs with fresh target IDs and target-local parent
-mapping inside the existing locked transaction. It contains no Chinatown
-profile rules, Store-ID branch, Controller, endpoint, migration, runtime read,
-or real clone. The first reviewed head was
-`fbb8bb4098839fc87e48582ce49814ffc40ae720`; the candidate remains
-`NOT_IN_MAIN` until Owner merge.
+The PR-E promotion candidate on `codex/al-003-pr-e-promotion` is based on exact
+main `4265d66ed9246738ab3baea8b4853a2c8cad4c20`. It adds only the first complete
+versioned Chinatown Profile, its target override composer, and bounded Small
+order/receipt label compatibility. The concrete Profile owns Store 1, PDF
+prices, four categories, 17 target items, ordering, size sets, seven noodle
+types, four Combo definitions, and new target SKUs; shared clone services remain
+Store-neutral. This candidate adds no Migration, public endpoint, authorization,
+runtime query, real clone, print routing/state change, or deployment. See
+[AL-003 PR-E Chinatown Profile Overrides](docs/governance/agile/AL-003_PR_E_CHINATOWN_PROFILE_OVERRIDES.md).
 
-The reported Production runtime remains `4667f3c`, while current main is
-`e6b41dd`. Their 86-commit difference is neither a release approval nor proof
-of deployment. Stacked-only implementation and current-main capability must
-not be described as Production behavior.
+The reported Production runtime remains `4667f3c`. Its difference from current
+main and the PR-E candidate is neither a release approval nor proof of
+deployment. Candidate and current-main capability must not be described as
+Production behavior.
 
 STG-005A owns `V9__add_staging_synthetic_bootstrap_requests.sql`. PR-B adds the
 separate append-only `V10__add_owner_store_menu_clone_requests.sql`. V10 creates
