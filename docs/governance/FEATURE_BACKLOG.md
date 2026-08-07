@@ -2,7 +2,7 @@
 
 > Status: `ACTIVE_GOVERNANCE_BACKLOG`
 >
-> Last updated: 2026-08-04, America/Toronto
+> Last updated: 2026-08-07, America/Toronto
 >
 > Features are not incidents. A feature may be requirements-confirmed without
 > being authorized for implementation or production provisioning.
@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `AL-003_PR_D_PROMOTION_WAITING_FOR_OWNER_REVIEW` |
+| status | `AL-003_PR_E_PROMOTION_WAITING_FOR_OWNER_REVIEW` |
 | target_loop | `AL-003` |
-| implementation status | PR-A, PR-B, PR-B2, PR-B3, PR-B4, and PR-C are in `main`. A latest-main PR-D promotion candidate adds only generic source-option cloning and remains outside `main` pending Owner review. PR-E and PR-F0 remain stacked-only; PR-F is not implemented. No Store 1 runtime read, real clone, print configuration, Staging/Production migration, or deployment is established. |
+| implementation status | PR-A through PR-D are in `main`; PR-D entered through PR #52. The latest-main PR-E promotion candidate adds the concrete versioned Chinatown Profile, target option overrides, and bounded Small display compatibility, but remains outside `main` pending Owner review. PR-F0 remains stacked-only and PR-F is not implemented. No Store 1 runtime read, real clone, print configuration, Staging/Production migration, or deployment is established. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Owner reviews the PR-D promotion. If merged, rebuild PR-E from the new latest `main`; until then, PR-E may advance only through dependency-safe preparation. |
+| next action | Owner reviews the independently verified PR-E promotion candidate. PR-F0 must not start promotion until PR-E enters `main`. |
 
 ### Current AL-003 delivery state
 
@@ -30,8 +30,8 @@
 | PR-B3 | `IN_MAIN` |
 | PR-B4 | `IN_MAIN` |
 | PR-C | `IN_MAIN` |
-| PR-D | `PROMOTION_CANDIDATE_WAITING_FOR_OWNER_REVIEW` / `NOT_IN_MAIN` |
-| PR-E | `STACKED_ONLY` / `NOT_IN_MAIN` |
+| PR-D | `IN_MAIN` via PR #52 |
+| PR-E | `PROMOTION_CANDIDATE_WAITING_FOR_OWNER_REVIEW` / `NOT_IN_MAIN` |
 | PR-F0 | `STACKED_ONLY` / `NOT_IN_MAIN` |
 | PR-F | `NOT_IMPLEMENTED` |
 

@@ -438,6 +438,31 @@ class GrabReceiptRendererTest {
     }
 
     @Test
+    void frontdeskReceiptKeepsSmallDistinctFromMedium() {
+        FrontdeskReceiptRenderer frontdeskRenderer = new FrontdeskReceiptRenderer();
+        Order order = baseOrder();
+        order.subtotal_amount = new BigDecimal("14.99");
+        order.total_amount = new BigDecimal("17.24");
+
+        OrderItem item = frontdeskSoupNoodleItem(1L, 1, "传统牛肉面");
+        OrderItemOption size = option(1L, item.id, "size", "SIZE", "size_small", "小碗");
+        size.option_name_snapshot_en = "Small";
+
+        PrintRenderRequest request = new PrintRenderRequest();
+        request.module_code = PrintModuleCode.FRONTDESK_RECEIPT;
+        request.order = order;
+        request.order_items = List.of(item);
+        request.order_item_options = List.of(size);
+        request.happened_at = order.submitted_at;
+
+        String output = stripMarkup(frontdeskRenderer.render(request));
+
+        assertTrue(output.contains("小碗牛肉面"));
+        assertFalse(output.contains("中碗牛肉面"));
+        assertFalse(output.toLowerCase().contains("small"));
+    }
+
+    @Test
     void frontdeskReceiptKeepsNonComboSoupNoodleFreeOfComboLabelAndUsesEnglishFallback() {
         FrontdeskReceiptRenderer frontdeskRenderer = new FrontdeskReceiptRenderer();
         Order order = baseOrder();

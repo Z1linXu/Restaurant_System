@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { BackendMenuCatalog } from '../types/ordering'
+import { createLocalDraftRecord } from '../offline/localDrafts'
+import { buildFrozenSubmitPayload, buildLocalLineItem } from './useDraftOrder'
 import { mapCatalog } from './useMenuCatalog'
 import { buildDefaultDraft } from './useOrderSessions'
 
@@ -102,5 +104,126 @@ describe('ordering menu item display order', () => {
     expect(item.customization?.noodleTypes?.map((option) => option.optionCode))
       .toEqual(['noodle_thin', 'noodle_leek_leaf'])
     expect(buildDefaultDraft(item).noodleTypeId).toBe('301')
+  })
+
+  it('uses the Chinatown Small size as the default when persisted first', () => {
+    const data = catalog()
+    data.categories[0].items = [{
+      ...data.categories[0].items[0],
+      id: 41,
+      sku: 'traditional_beef_noodle',
+      name_zh: '兰州牛肉面',
+      name_en: 'Traditional LanZhou Hand-pull Beef Noodle',
+      base_price: 14.99,
+      options: [
+        {
+          id: 403,
+          option_type: 'size',
+          option_code: 'size_large',
+          option_group: 'SIZE',
+          parent_option_id: null,
+          sort_order: 3,
+          name_zh: '大碗',
+          name_en: 'Large',
+          price_delta: 4,
+          is_active: true,
+        },
+        {
+          id: 401,
+          option_type: 'size',
+          option_code: 'size_small',
+          option_group: 'SIZE',
+          parent_option_id: null,
+          sort_order: 1,
+          name_zh: '小碗',
+          name_en: 'Small',
+          price_delta: 0,
+          is_active: true,
+        },
+        {
+          id: 402,
+          option_type: 'size',
+          option_code: 'size_medium',
+          option_group: 'SIZE',
+          parent_option_id: null,
+          sort_order: 2,
+          name_zh: '中碗',
+          name_en: 'Medium',
+          price_delta: 2,
+          is_active: true,
+        },
+      ],
+    }]
+
+    const item = mapCatalog(data).items[0]
+
+    expect(item.customization?.sizes?.options.map((option) => option.optionCode))
+      .toEqual(['size_small', 'size_medium', 'size_large'])
+    expect(buildDefaultDraft(item).sizeId).toBe('401')
+  })
+
+  it('keeps the mapped Chinatown Small default through the frozen submit payload', () => {
+    const data = catalog()
+    data.categories[0].items = [{
+      ...data.categories[0].items[0],
+      id: 41,
+      sku: 'traditional_beef_noodle',
+      name_zh: '兰州牛肉面',
+      name_en: 'Traditional LanZhou Hand-pull Beef Noodle',
+      base_price: 14.99,
+      options: [
+        {
+          id: 402,
+          option_type: 'size',
+          option_code: 'size_medium',
+          option_group: 'SIZE',
+          parent_option_id: null,
+          sort_order: 2,
+          name_zh: '中碗',
+          name_en: 'Medium',
+          price_delta: 2,
+          is_active: true,
+        },
+        {
+          id: 401,
+          option_type: 'size',
+          option_code: 'size_small',
+          option_group: 'SIZE',
+          parent_option_id: null,
+          sort_order: 1,
+          name_zh: '小碗',
+          name_en: 'Small',
+          price_delta: 0,
+          is_active: true,
+        },
+      ],
+    }]
+
+    const item = mapCatalog(data).items[0]
+    const line = buildLocalLineItem(item, buildDefaultDraft(item))
+    const record = createLocalDraftRecord(
+      { accountId: 7, organizationId: 9, storeId: 1 },
+      {
+        orderType: 'dine_in',
+        slotLabel: 'T1',
+        tableLabel: 'T1',
+        tableNo: 'T1',
+        pickupNo: null,
+      },
+      data.menu_revision,
+    )
+    const payload = buildFrozenSubmitPayload(record, [line], [item])
+
+    expect(line.lineSubtotal).toBe(14.99)
+    expect(payload.expected_subtotal_amount).toBe(14.99)
+    expect(payload.items[0].unit_price_snapshot).toBe(14.99)
+    expect(payload.items[0].options).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        option_id: 401,
+        option_code_snapshot: 'size_small',
+        option_name_snapshot_zh: '小碗',
+        option_price_snapshot: 0,
+      }),
+    ]))
   })
 })

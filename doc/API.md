@@ -446,9 +446,10 @@ Response behavior:
 
 ### Owner Store Menu Clone Internal Contract (AL-003 current main)
 
-Current `main` contains internal persistence/idempotency DTOs and the generic
-Category/Station/Item base-transaction service for the reviewed Store 1 to
-Chinatown clone. It does **not** register a menu-clone Controller or expose a
+The PR-E promotion base `main` contains internal persistence/idempotency DTOs,
+the generic Category/Station/Item base transaction, and generic source-option
+cloning for the reviewed Store 1 to Chinatown clone. It does **not** register a
+menu-clone Controller or expose a
 callable HTTP endpoint. Consequently this section is an internal contract
 boundary, not an API clients can call. Proposed route shapes remain only in the
 AL-003 technical plan until PR-F is implemented and merged.
@@ -492,17 +493,13 @@ bounded stable codes derived from durable result evidence (or an empty list),
 not replayed execution detail. The response DTO includes `result_code`
 and intentionally excludes internal source-to-target ID maps.
 
-Current main includes PR-C's generic base-graph transaction but still lacks
-source option cloning, complete Chinatown profile overrides, and the read-only
-planning boundary. Those changes exist only in PR-D, PR-E, and PR-F0 stacked
-branches and are `NOT_IN_MAIN`. PR-F remains `NOT_IMPLEMENTED`; authorization,
-HTTP validation/execution mapping, and public request handling do not exist.
-
-The current PR-D promotion candidate adds an internal, generic
-`SOURCE_OPTIONS` graph composer on top of latest `main`. It does not change the
-request or response DTO, register a Controller, or make either proposed route
-callable. Until Owner merge, the composer is candidate behavior rather than a
-current-main API capability.
+PR #52 placed the internal, generic `SOURCE_OPTIONS` graph composer in `main`.
+The PR-E promotion candidate adds the concrete Chinatown Profile and target
+override composer without changing the request/response DTO or registering a
+Controller. Complete profile behavior remains candidate-only until Owner
+merge. The read-only planning boundary remains stacked-only, PR-F remains
+`NOT_IMPLEMENTED`, and authorization, HTTP validation/execution mapping, and
+public request handling do not exist.
 
 ### Owner Multi-Store Overview
 GET `/api/v1/owner/overview`
