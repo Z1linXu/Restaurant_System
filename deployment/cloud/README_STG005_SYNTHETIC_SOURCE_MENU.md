@@ -77,15 +77,18 @@ Write mode requires the explicit flag:
 --execute
 ```
 
-No server launcher is added by this package. A later Owner-approved AL-003S
-runtime package must publish and bind the exact one-shot container or JAR
-command before either mode runs.
+The dependency-bound AL-003S preparation adds the guarded launcher at
+`staging-synthetic-acceptance.sh`. A later Owner-approved runtime package must
+still bind its exact release/env/preflight inputs and approve the selected
+plan/write action before either mode runs. The launcher also requires fresh
+resource and Staging/Production fingerprint evidence, an action/identity-bound
+Owner approval artifact, and the immutable image ID of the running backend.
 
-The command-line project/root/SHA/mode values are guarded request inputs, not
-independent observations of the host or release. The later launcher must derive
-the observed release SHA, Compose project, Staging root, printing state, and
-evidence digest independently. If it cannot do so, runtime execution is
-`NO_GO`; matching caller-supplied literals alone are insufficient evidence.
+The command-line project/root/SHA/mode values remain guarded request inputs, not
+independent observations by themselves. The AL-003S launcher derives and
+checks release HEAD, private env/preflight digests, project, root, printing,
+running image, loopback binding, and health before forwarding those values.
+Matching caller-supplied literals alone remain insufficient evidence.
 
 Every invocation supplies exactly one value for:
 
@@ -134,7 +137,8 @@ connection strings, endpoints, customers, orders, payments, or raw exceptions.
 1. Merge the architecture package and this dependency-bound implementation in
    order.
 2. Select a fresh exact merged-main release SHA and tool SHA.
-3. Obtain explicit Owner approval for the AL-003S Staging mutation sequence.
+3. Collect fresh AL-003S readiness evidence and obtain explicit, action-bound
+   Owner approval for the Staging mutation sequence.
 4. Deploy and verify the isolated Staging release and V9/V10 separately.
 5. Execute STG-005A and prove the synthetic source Store is ID `1`.
 6. Review the exact STG-005B launcher and run default planning mode.

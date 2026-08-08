@@ -1,14 +1,14 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Capability state: `AL-003S_WAITING_FOR_STG-005B_MERGE_AND_OWNER_RUNTIME_APPROVAL`
+> Capability state: `AL-003S_DRAFT_PR_WAITING_FOR_OWNER_REVIEW_AND_RUNTIME_APPROVAL`
 >
 > Historical failed candidate: `8f909525781804f61d1da388882f530da358c3c4`
 >
-> Current main: `bbb1af9520c188b6ef6362e783284ba4001a7e63` (`IN_MAIN`, not deployed)
+> Current main: `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b` (`IN_MAIN`, not deployed)
 >
-> Governance packages: PR #60, PR #71, and PR #61, `IN_MAIN`; none is runtime evidence
+> Governance packages: PR #60, PR #71, PR #61, and PR #62 are `IN_MAIN`; none is runtime evidence
 >
-> Next candidate SHA: `EVIDENCE_PENDING` after STG-005B dependency completion and fresh Owner approval
+> Next candidate SHA: `EVIDENCE_PENDING` after AL-003S review/merge and fresh Owner approval
 
 ## Authorization boundary
 
@@ -71,11 +71,12 @@ runtime until a new exact-SHA deployment is separately approved.
 - The synthetic source Store must be created as ID `1` because the reviewed
   Chinatown Profile binds source Store ID `1`; stop if runtime allocation does
   not match rather than changing IDs manually.
-- Its complete synthetic St-Denis menu contract must be built from a reviewed,
-  synthetic-only manifest through supported application APIs. Repository seed
-  rows and Production database copies are not acceptable substitutes.
-- Build source categories, stations, items, and options only through supported
-  application APIs. The bootstrap does not create a source menu.
+- Its complete synthetic St-Denis menu contract must be built from the reviewed
+  STG-005B synthetic-only manifest through the guarded non-web application
+  service. Repository seed rows, ad-hoc row-by-row API calls, raw SQL, and
+  Production database copies are not acceptable substitutes.
+- STG-005A creates identity/access topology only. STG-005B creates the source
+  menu in one application transaction after its independent write checkpoint.
 - Keep target printing disabled and verify no printer/device/table/order data.
 
 ### Staging Owner login prerequisite
@@ -160,10 +161,16 @@ before any of these steps execute:
    persisted topology/menu, login/access, and replay. Production remains
    untouched.
 
-The reusable Synthetic St-Denis manifest/application path is prepared in
-dependency-bound Draft PR #62. It is not available to runtime until
-its architecture and implementation dependencies enter `main`, a fresh exact
-SHA is selected, and the Owner separately approves the mutation sequence.
+The reusable Synthetic St-Denis manifest/application path entered `main` via
+PR #62. It remains repository capability only: it is not available to runtime
+until a fresh exact SHA is selected and the Owner separately approves the
+mutation sequence.
+
+The main-based Draft AL-003S package adds the missing guarded one-shot launcher and
+publishes the exact command, evidence, and rollback plan in
+[AL-003S Staging Acceptance Preparation](AL-003S_STAGING_ACCEPTANCE_PREPARATION.md).
+It defaults to validation and requires explicit runtime and write gates. This
+does not satisfy the dependency merge or Owner runtime-approval conditions.
 
 ## Acceptance sequence
 
@@ -190,7 +197,8 @@ fault-injection plan.
 
 Record exact SHA, image IDs, container names, network/private bind, PostgreSQL
 version, Flyway V1-V10, JPA/health results, before/after counts and revisions,
-sanitized HTTP outcomes, audit action, resources, and Production continuity.
+sanitized HTTP outcomes, canonical V9/V10 request evidence, supplementary
+audit action when available, resources, and Production continuity.
 Never record secrets, raw idempotency keys, credentials, tokens, complete menu
 payloads, or customer data.
 
@@ -219,4 +227,4 @@ payloads, or customer data.
 
 ## Capability dependency state
 
-`AL-003S_WAITING_FOR_STG-005B_MERGE_AND_OWNER_RUNTIME_APPROVAL`
+`AL-003S_DRAFT_PR_WAITING_FOR_OWNER_REVIEW_AND_RUNTIME_APPROVAL`

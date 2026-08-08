@@ -16,9 +16,9 @@
 | priority | `HIGH` |
 | status | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` |
 | target_loop | `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE` |
-| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, PR #60's Owner decisions, PR #71's handoff navigation, and PR #61's Modular Architecture Foundation are `IN_MAIN` at `bbb1af9520c188b6ef6362e783284ba4001a7e63`. Draft PR #62 supplies the guarded Synthetic St-Denis baseline; PRs #63-#65 and #67-#70 remain dependency-bound and not in main. PR #66 is an independent main-based Draft repair. No Draft establishes Staging or Production state. |
+| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, PR #60's Owner decisions, PR #71's handoff navigation, PR #61's Modular Architecture Foundation, and PR #62's Synthetic St-Denis baseline are `IN_MAIN` at `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b`. Draft PR #63 supplies guarded AL-003S acceptance preparation; PRs #64-#65 and #67-#70 remain dependency-bound and not in main. PR #66 is an independent main-based Draft repair. No Draft establishes Staging or Production state. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Review #62, then rebuild #63 from latest main after #62 enters main. Review #66 independently before executable Printing provisioning. Runtime acceptance and Production actions remain separately Owner-gated. |
+| next action | Review #63, then rebuild #64 from latest main after #63 enters main. Review #66 independently before executable Printing provisioning. Runtime acceptance and Production actions remain separately Owner-gated. |
 
 ### Current AL-003 delivery state
 
@@ -39,8 +39,8 @@
 | Owner decisions governance sync / PR #60 | `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; documentation only, no runtime action |
 | Current project handoff / PR #71 | `IN_MAIN` at `5baada03935e004d80af1e7a36fb7db39bd6abbb`; navigation only, no runtime action |
 | Modular architecture / PR #61 | `IN_MAIN` at `bbb1af9520c188b6ef6362e783284ba4001a7e63`; Generic Store Provisioning Engine + Versioned Store Profiles + Reusable Provisioning Modules, architecture only |
-| STG-005B Synthetic St-Denis baseline / PR #62 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`; guarded, versioned, transactional empty-or-exact source baseline with focused/regression tests; no migration, public API, SSH, runtime write, or clone execution |
-| AL-003S Staging acceptance preparation / PR #63 | `STACKED_ONLY` on #62; runtime use not authorized |
+| STG-005B Synthetic St-Denis baseline / PR #62 | `IN_MAIN` at `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b`; guarded, versioned, transactional source baseline; no runtime execution implied |
+| AL-003S Staging acceptance preparation / PR #63 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`; guarded launcher, passive evidence, approval/identity binding, immutable image pin, command plan, acceptance template, and rollback boundary only; no runtime action |
 | AL-004 Generic Store Profile contract / PR #64 | `STACKED_ONLY` on #63; declarative only |
 | AL-005A Staff/Table plan / PR #65 | `STACKED_ONLY` on #64; no writer |
 | Printer Store-isolation repair / PR #66 | independent main-based `DRAFT_PR`; required before executable Printing provisioning |
@@ -59,6 +59,13 @@ runtime. Separate Owner-approved runtime evidence must still prove the
 synthetic credential, login, workspace access, target onboarding, and
 authenticated validate/execute calls. No Production credential, raw SQL,
 authorization bypass, or real business data may supply that evidence.
+
+The AL-003S preparation closes the reviewed non-web launcher gap for
+STG-005A/STG-005B and adds a bounded passive resource plus
+Staging/Production-continuity fingerprint collector. Runtime collection remains
+unexecuted. Secret-safe release/env rotation, same-image restart/Flyway
+evidence, and secret-safe Owner/API calls remain explicit runtime prerequisites
+rather than inferred capabilities.
 
 `MERGED_ON_GITHUB` is not sufficient evidence for `IN_MAIN` when a PR's base
 is another feature branch. Each stacked layer requires a latest-`main`

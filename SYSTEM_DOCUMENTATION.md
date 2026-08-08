@@ -44,12 +44,19 @@ separate from historical evidence snapshots and business implementation details:
 - [STG-005B Synthetic St-Denis source-menu runbook](deployment/cloud/README_STG005_SYNTHETIC_SOURCE_MENU.md)
   defines the versioned synthetic manifest, default read-only plan, explicit
   execution gate, empty-or-exact transaction/replay behavior, and sanitized
-  evidence contract. The implementation is stacked Draft PR #62; it authorizes
-  no runtime command or Production source substitution.
+  evidence contract. PR #62 is `IN_MAIN`; it authorizes no runtime command or
+  Production source substitution.
 - [STG-005B local implementation evidence](docs/governance/runtime/STG-005B_SYNTHETIC_ST_DENIS_BASELINE_EVIDENCE.md)
   records focused/full backend tests, transaction/replay/concurrency evidence,
   scope scans, and the remaining merge/runtime gates. It is not Staging
   execution evidence.
+- [AL-003S guarded Staging acceptance command runbook](deployment/cloud/README_AL003S_STAGING_ACCEPTANCE.md),
+  [preparation plan](docs/governance/agile/AL-003S_STAGING_ACCEPTANCE_PREPARATION.md),
+  [local preparation evidence](docs/governance/runtime/AL-003S_STAGING_ACCEPTANCE_PREPARATION_EVIDENCE.md),
+  and [runtime evidence template](docs/governance/runtime/AL-003S_STAGING_ACCEPTANCE_EVIDENCE_TEMPLATE.md)
+  bind the non-web command entry, exact evidence, secret-redaction, and rollback
+  boundaries. They authorize no SSH, container action, Flyway, bootstrap,
+  login, API call, or clone.
 - [AL-003A final menu comparison](docs/governance/agile/AL-003A_FINAL_MENU_COMPARISON.md)
   is the single product-mapping authority for the Store 1 to Chinatown target
   menu. Repository seed data is historical reference only.
@@ -385,7 +392,9 @@ PR #60 merged the 2026-08-08 Owner direction into `main` at
 `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; PR #71 then merged the Current
 Project Handoff navigation at `5baada03935e004d80af1e7a36fb7db39bd6abbb`; PR
 #61 then merged the modular architecture foundation at
-`bbb1af9520c188b6ef6362e783284ba4001a7e63`. None is runtime evidence. The
+`bbb1af9520c188b6ef6362e783284ba4001a7e63`; PR #62 then merged the guarded
+Synthetic St-Denis baseline at `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b`.
+None is runtime evidence. The
 modular target is a Generic
 Store Provisioning Engine consuming Versioned Store Profiles and Reusable
 Provisioning Modules. Shared implementation must remain Store-neutral;
@@ -402,6 +411,20 @@ stations, 17 items, and 74 options. It adds no migration or HTTP endpoint.
 Synthetic display/topology identity uses `STG005_`; stable menu technical codes
 remain the exact AL-003 semantic identifiers. The implementation is not in
 `main` and has not been run on Staging or Production.
+
+The dependency-bound AL-003S preparation adds a guarded operational launcher
+for the existing STG-005A/STG-005B non-web commands. It defaults to validation,
+requires exact release/env/preflight binding, isolates Docker CLI state, and
+separates plan from explicit write actions. One-shot actions additionally
+require a fresh bounded resource plus Staging/Production fingerprint record,
+an exact action/identity-bound Owner approval artifact, and an immutable
+running backend image ID. Actions are serialized, time-bounded, scoped for
+interrupt cleanup, and followed by the same continuity/resource checks. The
+approval artifact is a procedural binding to an external Owner review, not a
+cryptographic authorization mechanism. This repository tooling is not
+runtime authorization or runtime evidence. Owner login, target onboarding,
+menu-clone API calls, restart persistence, and runtime execution remain
+separately gated and must not be inferred from launcher tests.
 
 STG-005A owns `V9__add_staging_synthetic_bootstrap_requests.sql`. PR-B adds the
 separate append-only `V10__add_owner_store_menu_clone_requests.sql`. V10 creates

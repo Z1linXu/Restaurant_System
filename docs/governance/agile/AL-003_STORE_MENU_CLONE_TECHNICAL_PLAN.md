@@ -1,6 +1,6 @@
 # AL-003 Store 1 -> Chinatown Live Menu Clone Technical Plan
 
-> Status: `IN_MAIN_AWAITING_STG-005B_AND_STAGING_ACCEPTANCE`
+> Status: `IN_MAIN_AWAITING_AL-003S_REVIEW_AND_STAGING_ACCEPTANCE`; AL-003S preparation is a main-based Draft PR awaiting Owner review
 >
 > Prepared: 2026-07-31, America/Toronto
 >
@@ -26,7 +26,7 @@
 | `PLAN_STATUS` | `IN_MAIN_AWAITING_STG-005B_AND_STAGING_ACCEPTANCE` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | PR #60, PR #71, and PR #61 are `IN_MAIN`. Complete the STG-005B synthetic-source package review before requesting a separately approved exact-SHA Staging deployment/bootstrap/login/clone acceptance sequence. |
+| `RECOMMENDED_ACTION` | PR #60, PR #71, PR #61, and PR #62 are `IN_MAIN`. Complete the guarded AL-003S preparation review before requesting a separately approved exact-SHA Staging deployment/bootstrap/login/clone acceptance sequence. |
 
 PR-A through PR-F are in `main`. PR-D supplies generic source-option copying
 and target-local parent mapping; PR #54 placed the concrete Chinatown Profile
@@ -70,7 +70,7 @@ These are authoritative product inputs, not open questions:
 
 ### 1.2 Current Git ground truth
 
-| Package | Commit | State relative to `origin/main` `bbb1af9520c188b6ef6362e783284ba4001a7e63` |
+| Package | Commit | State relative to `origin/main` `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b` |
 |---|---|---|
 | PR-C / PR #47 | merge `ba169ed8b689ddef8dffe94deee82fea191cdcfb` | `IN_MAIN` |
 | PR-E / PR #54 | merge `82b8059f6af1c7dff4eeb1648ca47bec039b5e52` | `IN_MAIN`; PR-F0 promotion base |
@@ -83,6 +83,7 @@ These are authoritative product inputs, not open questions:
 | Owner decisions governance sync / PR #60 | merge `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d` | `IN_MAIN`; documentation only |
 | Current project handoff / PR #71 | merge `5baada03935e004d80af1e7a36fb7db39bd6abbb` | `IN_MAIN`; navigation only |
 | Modular architecture / PR #61 | merge `bbb1af9520c188b6ef6362e783284ba4001a7e63` | `IN_MAIN`; architecture only |
+| Synthetic St-Denis baseline / PR #62 | merge `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b` | `IN_MAIN`; repository capability only |
 
 This document describes the complete reviewed target architecture. A section
 in this plan is not evidence that its implementation is in `main`, Staging, or
@@ -690,6 +691,10 @@ current audit service is best-effort, audit-log failure does not make a
 successful clone appear failed; the completed clone-request row remains the
 authority.
 
+For runtime acceptance, the V10 request row and response/revision/count
+evidence are canonical. Audit-log presence is supplementary and must not be a
+mandatory acceptance condition because `AuditLogService` is best-effort.
+
 ## 16. Validation-only design
 
 `/validate` executes authorization, Store guards, source snapshot resolution,
@@ -923,9 +928,9 @@ Stop and return to Owner if:
 
 ## Current capability state
 
-`IN_MAIN_AWAITING_STG-005B_AND_STAGING_ACCEPTANCE`
+`IN_MAIN_AWAITING_AL-003S_REVIEW_AND_STAGING_ACCEPTANCE`
 
-Dependency-bound STG-005B Draft PR #62 prepares an immutable synthetic source
+STG-005B entered `main` through PR #62 and provides an immutable synthetic source
 graph and a guarded non-web empty-or-exact application path. It does not change
 the public clone API, V10 contract, Chinatown target profile, or Production
 source authority. Local integration verifies that its 4-category, 3-station,
@@ -963,3 +968,10 @@ The synthetic credential, login, workspace, source-menu baseline, target
 onboarding, and authenticated validate/execute calls still require later
 approved runtime evidence. Deployment success alone cannot close that
 prerequisite or authorize validate/execute.
+
+The stacked
+[AL-003S Staging Acceptance Preparation](AL-003S_STAGING_ACCEPTANCE_PREPARATION.md)
+supplies a guarded launcher for the existing STG-005A/STG-005B non-web commands
+and a sanitized evidence template. It adds no clone behavior and performs no
+runtime action. Its independent review findings remain hard gates for a future
+exact-SHA Owner runtime approval.

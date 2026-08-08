@@ -578,6 +578,17 @@ must continue to use the existing Owner `/menu-clone/validate` and
 `/menu-clone` contracts; the synthetic manifest, fingerprint payload, and
 internal database IDs are not API responses.
 
+The dependency-bound AL-003S guarded one-shot launcher is operational Staging
+tooling, not a public HTTP endpoint. It does not alter authentication, DTO,
+idempotency, replay, terminal-`FAILED`, authorization, or error contracts. Its
+future use still requires an exact-SHA Owner runtime approval, and it never
+handles bearer tokens or menu-clone idempotency keys. Before any one-shot it
+requires fresh resource and Staging/Production container fingerprints, an
+action/identity-bound approval digest, and an immutable backend image ID; these
+operational bindings do not alter any HTTP API contract. The one-shot is
+serialized, time-bounded, and post-checked; the approval artifact is procedural
+evidence binding rather than a cryptographic API authorization credential.
+
 ### Owner Multi-Store Overview
 GET `/api/v1/owner/overview`
 
