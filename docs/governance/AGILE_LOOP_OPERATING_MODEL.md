@@ -78,20 +78,42 @@ with an explicit recorded transition:
 
 `AL-001` is `PLAN_COMPLETE` for `FT-001`. AL-002's backend foundation was
 merged into `main` by PR #27 but is not thereby deployed or production-ready.
-The current feature loop is AL-003. PR-A through PR-F are in `main`; that is
-repository capability only and is not Staging or Production acceptance.
+AL-003 PR-A through PR-F are in `main`; that is repository capability only and
+is not Staging or Production acceptance. Current dependency-bound preparation
+culminates in `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE`.
 
-PR #59's bounded PostgreSQL private-leaf repair is now `IN_MAIN` at
-`c3956592da8a33092ab745c7cc6aac05e9babfa7`; this does not prove a new Staging
-deployment. The current package synchronizes the 2026-08-08 Owner decisions and
-is under Owner review in Draft PR #60. It stops at
-`AL-003_OWNER_DECISIONS_GOVERNANCE_SYNC_WAITING_FOR_OWNER_REVIEW`.
+PR #59's bounded PostgreSQL private-leaf repair is now `IN_MAIN`, and PR #60's
+2026-08-08 Owner decisions are `IN_MAIN` at
+`2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; neither proves a new Staging
+deployment. PR #71's handoff navigation, PR #61's modular architecture, PR
+#62's Synthetic St-Denis baseline, PR #63's guarded acceptance preparation,
+and PR #64's Generic Store Profile contract are `IN_MAIN` at
+`54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6`; none changes runtime state.
+PR #65's Staff/Access and Table planning package is `IN_MAIN`; PRs #67-#70
+remain dependency-bound. PR #66 is an independent
+main-based prerequisite repair. The current
+feature stop state is
+`REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL`.
+PR #61 is the architecture/governance foundation: it defines the Generic
+Store Provisioning Engine, Versioned Store Profiles, and Reusable Provisioning
+Modules without adding runtime behavior. PR #62 provides the guarded Synthetic
+St-Denis baseline, PR #63 provides guarded acceptance preparation, and PR #64
+supplies the generic version/profile identity, module-reference, and
+canonical-fingerprint contract as repository capability, not runtime evidence.
+PR #65 supplies reusable Staff/Access and Table planning boundaries as
+repository capability only.
 No current statement authorizes server access, Flyway execution, synthetic
 bootstrap, credential creation, login, source-menu writes, validate, execute,
 a runtime clone, merge, or deployment. Staging acceptance retains the distinct
 prerequisite
 `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING` until synthetic-only runtime
 evidence proves the complete Owner login topology.
+
+The architecture authority for future provisioning packages is
+[STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md](agile/STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md).
+It classifies each Store-related change as shared capability, Store Profile,
+reusable module, runtime-only configuration, or operational evidence before
+implementation.
 
 ## 7. Dependency Repair Gate and Auto-Loop
 
@@ -279,6 +301,11 @@ ground truth, and, only when separately authorized, verifying runtime ground
 truth. The Agent must identify the current loop, unique stop state, allowed
 actions, prohibited actions, unresolved risks, and exact evidence authority.
 Conversation history is not a substitute for this check.
+
+The concise [Current Project Handoff](runtime/CURRENT_HANDOFF.md) may accelerate
+conversation transfer, but it is navigation only and never overrides this
+model, the Planbook, Feature Backlog, technical plans, Git, or verified runtime
+evidence.
 
 When Git or authorized runtime evidence conflicts with the Planbook, ground
 truth wins and governance drift is repaired in the same iteration. Work must

@@ -2,7 +2,7 @@
 
 > Status: `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` in PR #66
 >
-> Base: `origin/main@2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`
+> Base: `origin/main@8f58bcbfca253c1598b967f4d17c04c0be1cce5b` (PR #65 `IN_MAIN`)
 >
 > Runtime effect: none until merged and deployed
 
@@ -64,8 +64,8 @@ boundary itself was enforced.
 
 ## Promotion boundary
 
-Draft PR #66 is independent of Draft PRs #61-#65 and targets `main`. It must be
-merged before any AL-005 executable printer provisioning adapter is promoted.
+Draft PR #66 is independent of the #61-#65 mainline stack and targets `main`.
+It must be merged before any AL-005 executable printer provisioning adapter is promoted.
 It does not make AL-005 implemented and does not authorize runtime printing.
 
 ## Stop state

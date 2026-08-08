@@ -7,6 +7,10 @@ separate from historical evidence snapshots and business implementation details:
 
 - [Alive Runtime Planbook](docs/governance/runtime/ALIVE_RUNTIME_PLANBOOK.md)
   is the living current-status, approval-boundary, and deployment-entry index.
+- [Current Project Handoff](docs/governance/runtime/CURRENT_HANDOFF.md) is a
+  concise conversation-transfer snapshot. It is navigation only and never
+  overrides Git, the Planbook, backlogs, operating model, technical plans, or
+  verified runtime evidence.
 - [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
   authority for current issue triage and closure status.
 - [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
@@ -37,6 +41,31 @@ separate from historical evidence snapshots and business implementation details:
   idempotency, transaction, evidence, and approval contract for the minimum
   synthetic prerequisite topology. It does not authorize executing the
   bootstrap.
+- [STG-005B Synthetic St-Denis source-menu runbook](deployment/cloud/README_STG005_SYNTHETIC_SOURCE_MENU.md)
+  defines the versioned synthetic manifest, default read-only plan, explicit
+  execution gate, empty-or-exact transaction/replay behavior, and sanitized
+  evidence contract. PR #62 is `IN_MAIN`; it authorizes no runtime command or
+  Production source substitution.
+- [STG-005B local implementation evidence](docs/governance/runtime/STG-005B_SYNTHETIC_ST_DENIS_BASELINE_EVIDENCE.md)
+  records focused/full backend tests, transaction/replay/concurrency evidence,
+  scope scans, and the remaining merge/runtime gates. It is not Staging
+  execution evidence.
+- [AL-003S guarded Staging acceptance command runbook](deployment/cloud/README_AL003S_STAGING_ACCEPTANCE.md),
+  [preparation plan](docs/governance/agile/AL-003S_STAGING_ACCEPTANCE_PREPARATION.md),
+  [local preparation evidence](docs/governance/runtime/AL-003S_STAGING_ACCEPTANCE_PREPARATION_EVIDENCE.md),
+  and [runtime evidence template](docs/governance/runtime/AL-003S_STAGING_ACCEPTANCE_EVIDENCE_TEMPLATE.md)
+  bind the non-web command entry, exact evidence, secret-redaction, and rollback
+  boundaries. They authorize no SSH, container action, Flyway, bootstrap,
+  login, API call, or clone.
+- [AL-004 Generic Store Profile Contract](docs/governance/agile/AL-004_GENERIC_STORE_PROFILE_CONTRACT.md)
+  defines the first declarative Store-level identity/composition slice. It
+  registers no concrete profile and has no public endpoint, migration, UI, or
+  executable provisioning workflow.
+- [AL-005A Staff and Table Provisioning Module Plan](docs/governance/agile/AL-005A_STAFF_TABLE_PROVISIONING_MODULE_PLAN.md)
+  records the existing credential/membership and dining-table authorities,
+  reusable module boundaries, security/schema gaps, and implementation gates.
+  PR #65 is `IN_MAIN` repository preparation and adds no writer, API,
+  migration, credential, table, or runtime behavior.
 - [AL-003A final menu comparison](docs/governance/agile/AL-003A_FINAL_MENU_COMPARISON.md)
   is the single product-mapping authority for the Store 1 to Chinatown target
   menu. Repository seed data is historical reference only.
@@ -367,6 +396,71 @@ The reported Production runtime remains `4667f3c`. Its difference from current
 main is neither a release approval nor proof of deployment. Current-main
 capability must not be described as
 Production behavior.
+
+PR #60 merged the 2026-08-08 Owner direction into `main` at
+`2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; PR #71 then merged the Current
+Project Handoff navigation at `5baada03935e004d80af1e7a36fb7db39bd6abbb`; PR
+#61 then merged the modular architecture foundation at
+`bbb1af9520c188b6ef6362e783284ba4001a7e63`; PR #62 then merged the guarded
+Synthetic St-Denis baseline at `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b`,
+and PR #63 then merged guarded AL-003S acceptance preparation at
+`732d77c89ff067982702426ff918d5e097e1d0fb`; PR #64 then merged the declarative
+Generic Store Profile contract at `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6`.
+None is runtime evidence. The
+modular target is a Generic
+Store Provisioning Engine consuming Versioned Store Profiles and Reusable
+Provisioning Modules. Shared implementation must remain Store-neutral;
+Store-specific desired state belongs in a reviewed profile, physical
+endpoints/secrets remain runtime-only, and accepted actions are retained as
+sanitized evidence. The architecture authority is
+[STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md](docs/governance/agile/STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md).
+
+The `IN_MAIN` AL-004 contract introduces a Store-neutral registry above the
+existing menu-profile registry. It validates exact code/version identities,
+unique module references carrying reviewed expected fingerprints, applicable activation
+requirements, and a deterministic canonical fingerprint. It intentionally
+registers no concrete Chinatown or St-Denis Store Profile: Store-level
+timezone, language, tax, receipt defaults, and complete module references must
+not be guessed from repository seed data. This repository-only contract does
+not provision a Store and does not register an Owner API or UI.
+It does not yet verify a referenced module/configuration against a module
+registry or deployed runtime; that compatibility gate remains a later engine
+capability.
+
+The AL-005A audit confirms that `OnboardingStaffProvisioningService` is the
+existing internal authority for transactionally creating a Store-scoped user,
+BCrypt credential, and explicit Store membership. It must remain subordinate
+to a parent authorization/idempotency transaction, and Organization Owners do
+not receive redundant target-Store memberships. The current Platform Admin
+dining-table path is not a safe provisioning upsert: table-code uniqueness,
+loaded-row Store ownership, immutable template identity, normalization, replay,
+and update/deactivation semantics are unresolved. Chinatown retains the
+approved blank-table/manual-setup policy. AL-005A therefore plans only
+versioned non-secret contracts and a read-only table planner before any
+separately reviewed predefined-table writer or migration.
+
+STG-005B prepares a Staging-only, non-web source-menu fixture around the
+existing menu entities, Store lock, and revision service. Its source graph has
+4 categories, 3 stations, 13 items, and 38 options and is proven locally to
+produce the existing Chinatown read-only target plan of 4 categories, 3
+stations, 17 items, and 74 options. It adds no migration or HTTP endpoint.
+Synthetic display/topology identity uses `STG005_`; stable menu technical codes
+remain the exact AL-003 semantic identifiers. The implementation is in `main`
+via PR #62 and has not been run on Staging or Production.
+
+The dependency-bound AL-003S preparation adds a guarded operational launcher
+for the existing STG-005A/STG-005B non-web commands. It defaults to validation,
+requires exact release/env/preflight binding, isolates Docker CLI state, and
+separates plan from explicit write actions. One-shot actions additionally
+require a fresh bounded resource plus Staging/Production fingerprint record,
+an exact action/identity-bound Owner approval artifact, and an immutable
+running backend image ID. Actions are serialized, time-bounded, scoped for
+interrupt cleanup, and followed by the same continuity/resource checks. The
+approval artifact is a procedural binding to an external Owner review, not a
+cryptographic authorization mechanism. This repository tooling is not
+runtime authorization or runtime evidence. Owner login, target onboarding,
+menu-clone API calls, restart persistence, and runtime execution remain
+separately gated and must not be inferred from launcher tests.
 
 STG-005A owns `V9__add_staging_synthetic_bootstrap_requests.sql`. PR-B adds the
 separate append-only `V10__add_owner_store_menu_clone_requests.sql`. V10 creates

@@ -582,6 +582,42 @@ a second clone engine:
   exposes source-to-target ID maps, source menu payloads, credentials, tokens,
   endpoints, or raw exceptions.
 
+STG-005B does not add another menu endpoint. Its Synthetic St-Denis manifest
+planner/applier is a disabled-by-default, non-web Staging command used only to
+prepare AL-003 acceptance data after separate runtime approval. Public clients
+must continue to use the existing Owner `/menu-clone/validate` and
+`/menu-clone` contracts; the synthetic manifest, fingerprint payload, and
+internal database IDs are not API responses.
+
+The dependency-bound AL-003S guarded one-shot launcher is operational Staging
+tooling, not a public HTTP endpoint. It does not alter authentication, DTO,
+idempotency, replay, terminal-`FAILED`, authorization, or error contracts. Its
+future use still requires an exact-SHA Owner runtime approval, and it never
+handles bearer tokens or menu-clone idempotency keys. Before any one-shot it
+requires fresh resource and Staging/Production container fingerprints, an
+action/identity-bound approval digest, and an immutable backend image ID; these
+operational bindings do not alter any HTTP API contract. The one-shot is
+serialized, time-bounded, and post-checked; the approval artifact is procedural
+evidence binding rather than a cryptographic API authorization credential.
+
+The `IN_MAIN` AL-004 Store Profile contract does not add an HTTP endpoint. Its
+registry and safe summary are internal declarative contracts only. Owner
+template discovery/selection, Store provisioning execution, and concrete
+Chinatown/St-Denis Store Profiles remain unimplemented and must not be inferred
+from these internal types.
+
+The AL-005A Staff/Table preparation adds no HTTP endpoint or DTO. The existing
+Owner onboarding transaction and the guarded STG-005A synthetic-bootstrap
+transaction are the two controlled parent paths that currently invoke
+`OnboardingStaffProvisioningService`; the internal staff service is not an
+independently idempotent public API. It currently creates a Store membership for
+every supplied role, so a future Store-scoped staff adapter must not use it to
+create Organization Owners. No Owner table-provisioning endpoint, table
+template API, replay contract, or activation API exists. Existing Platform
+Admin dining-table endpoints must not be treated as a generic Store
+provisioning writer until Store ownership and table-code idempotency constraints
+are separately reviewed.
+
 ### Owner Multi-Store Overview
 GET `/api/v1/owner/overview`
 

@@ -116,11 +116,14 @@ The launcher must pipe the password directly to standard input without
 printing it. The command converts it only for the existing BCrypt provisioning
 service and clears its mutable input buffer after use.
 
-This PR intentionally does not add a server launcher. A future execution
-approval must publish the exact one-shot container or JAR command, bind it to
-the approved runtime/tool SHAs and V9 evidence, and review that command before
-it runs. Do not improvise with the production checkout, production `.env`,
-raw SQL, `RuntimeDataSeeder`, or developer role switching.
+The dependency-bound AL-003S preparation adds the reviewed guarded launcher at
+`staging-synthetic-acceptance.sh`. It independently binds the exact release,
+private environment digest, formal preflight evidence, Compose project,
+printing mode, fresh Staging/Production readiness fingerprints, action-specific
+Owner approval, immutable running backend image ID, loopback binding, and
+health before a one-shot command. Its presence is not runtime approval. Do not improvise with
+the production checkout, production `.env`, raw SQL, `RuntimeDataSeeder`, or
+developer role switching.
 
 ## Idempotency and transaction behavior
 
@@ -160,10 +163,12 @@ STG-005.
    database.
 4. Verify V9 and JPA validation without changing Production.
 5. Run validate mode and retain only sanitized output.
-6. Obtain a separate Owner approval for write mode and the exact launcher.
-7. Run write mode once, then exact replay once.
-8. Verify only the synthetic IDs and Store/Organization membership boundaries.
-9. Stop for Owner review before any menu, table, order, restart, or other
+6. Collect fresh bounded readiness evidence and obtain a digest-bound Owner
+   approval for the exact action and synthetic identity fingerprint.
+7. Obtain a separate Owner approval for write mode and the exact launcher.
+8. Run write mode once, then exact replay once.
+9. Verify only the synthetic IDs and Store/Organization membership boundaries.
+10. Stop for Owner review before any menu, table, order, restart, or other
    STG-005 acceptance step.
 
 No SSH, migration, bootstrap execution, or server write was performed while
