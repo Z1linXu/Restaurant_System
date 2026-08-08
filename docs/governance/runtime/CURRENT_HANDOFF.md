@@ -63,7 +63,7 @@ GitHub state was read on 2026-08-08. Every PR below was open and Draft.
 | #65 | AL-005A Staff/Table plan | `main` | merge `8f58bcbfca253c1598b967f4d17c04c0be1cce5b` | `IN_MAIN` | #64/main | Yes | Repository planning only |
 | #66 | Printer Store-isolation repair | `main` | merge `f483a4640503c20f6eec1e2e9ae1d198bf23d1f3` | `IN_MAIN` | #65/main | Yes | Security foundation; no runtime behavior |
 | #67 | AL-005 Printing provisioning plan | `main` | merge `65e3d3ced2b5b05eb36d56ce67e475768ad19dff` | `IN_MAIN` | #65/main; #66 IN_MAIN | Yes | Repository planning only |
-| #68 | AL-005B Device/Pad plan | `main` | `c60682e77a4ac42beff7d299e6d3a940d302897f` (rebuild pending) | `DRAFT_PR` | #67/main | No | Owner review; do not begin #69 |
+| #68 | AL-005B Device/Pad plan | `main` | `eda55fd66296c7cbd9f7622cae38e7dc3e751fd6` | `DRAFT_PR` | #67/main | No | Owner review; do not begin #69 |
 | #69 | AL-006 Activation workflow plan | PR #68 branch | `82f71b1a4f8fbc443b2e7515c9c2ce17e0f474f5` | `STACKED_ONLY` | #68 | No | Rebuild after #68 |
 | #70 | REL-001 Production RC plan | PR #69 branch | `59246ae758716c1d457be465eb34fd4e757f02ec` | `STACKED_ONLY` | #69 | No | Rebuild after #69; no runtime approval implied |
 
