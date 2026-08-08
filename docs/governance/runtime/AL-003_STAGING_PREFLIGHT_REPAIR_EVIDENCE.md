@@ -7,6 +7,8 @@
 > Base: `origin/main` at `1482cddf4f10478ed571e4d7422100dc40006f6b`
 >
 > Branch: `codex/al-003-staging-preflight-private-leaf-repair`
+>
+> Review gate: Draft PR #59, base `main`
 
 ## Scope and retained runtime boundary
 

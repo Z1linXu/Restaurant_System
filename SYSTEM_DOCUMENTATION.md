@@ -323,8 +323,9 @@ gate. The exact leaf must remain a real non-symlink directory named
 `state/postgres`, owned by the deploy user before initialization or
 `postgres:16-alpine` UID 70 afterward, with mode `0700`. The repair neither
 enters the leaf nor changes its permissions. Missing, symlinked, or unexpected
-topology/metadata remains fail-closed. This repository change has not been
-merged or deployed; the old exact-SHA approval cannot be reused.
+topology/metadata remains fail-closed. The repository change is under review in
+Draft PR #59 and has not been merged or deployed; the old exact-SHA approval
+cannot be reused.
 
 AL-003 Staging acceptance also has the independent prerequisite
 `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`. Retained evidence shows that

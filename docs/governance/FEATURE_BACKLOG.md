@@ -16,7 +16,7 @@
 | priority | `HIGH` |
 | status | `AL-003_STAGING_PREFLIGHT_REPAIR_WAITING_FOR_OWNER_REVIEW` |
 | target_loop | `AL-003` |
-| implementation status | PR-A through PR-F and PR #58 evidence are in `main`. The bounded repair now validates the initialized PostgreSQL private leaf without entering or weakening it and includes focused regressions; the repair is review-only and has not changed Staging. |
+| implementation status | PR-A through PR-F and PR #58 evidence are in `main`. Draft PR #59 validates the initialized PostgreSQL private leaf without entering or weakening it and includes focused regressions; it is review-only and has not changed Staging. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
 | next action | Owner reviews the private-leaf repair. After merge, deployment requires a new exact SHA and fresh approval; Staging acceptance separately remains `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`. |
 
@@ -35,7 +35,7 @@
 | PR-F0 | `IN_MAIN` via PR #55 |
 | PR-F | `IN_MAIN` via PR #56 |
 | PR #58 attempt evidence | `IN_MAIN` |
-| Private-leaf preflight repair | `IMPLEMENTED_IN_WORKTREE`; Draft PR is the next gate |
+| Private-leaf preflight repair / PR #59 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` |
 
 The Owner-login acceptance prerequisite is not satisfied by repository code or
 deployment alone. STG-005A has not run on the evidenced Staging runtime and its

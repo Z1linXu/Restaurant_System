@@ -26,7 +26,7 @@
 | `PLAN_STATUS` | `AL-003_STAGING_PREFLIGHT_REPAIR_WAITING_FOR_OWNER_REVIEW` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | Owner reviews the protected PostgreSQL-leaf preflight repair; after merge, select a new exact SHA and retain the independent Owner-login prerequisite before acceptance. |
+| `RECOMMENDED_ACTION` | Owner reviews protected PostgreSQL-leaf repair Draft PR #59; after merge, select a new exact SHA and retain the independent Owner-login prerequisite before acceptance. |
 
 PR-A through PR-F are in `main`. PR-D supplies generic source-option copying
 and target-local parent mapping; PR #54 placed the concrete Chinatown Profile

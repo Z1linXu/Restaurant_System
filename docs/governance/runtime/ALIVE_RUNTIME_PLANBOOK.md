@@ -72,9 +72,9 @@ snapshots. Do not copy those reports into this planbook.
 | STG-004 state | PR #38 merged the STG-004 runtime evidence. Exact SHA `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` passed PLAN, fresh PREFLIGHT, serial build/start, runtime verification, and isolated stop/start recovery. Server Staging remains running; Production remained unchanged. |
 | STG-005 state | PLAN complete. The Owner approved CP-0 as a separate minimal Staging-only bootstrap implementation and accepted CP-4 as a feature-disabled KDS/Assembling boundary. Positive Kitchen/Assembling workflow remains `EVIDENCE_PENDING`. |
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
-| AL-003 state | PR #58 entered `main` and preserved the failed-attempt evidence. The bounded repair now validates the PostgreSQL UID-70/mode-0700 private leaf from its canonical parent and metadata, with focused regression coverage; it has not been merged or deployed. |
+| AL-003 state | PR #58 entered `main` and preserved the failed-attempt evidence. Draft PR #59 contains the bounded PostgreSQL UID-70/mode-0700 private-leaf repair and focused regression coverage; it has not been merged or deployed. |
 | Staging Owner login prerequisite | `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`; STG-005A is in `main` but has not run on the evidenced Staging runtime, and no retained evidence proves target Store access or a successful Owner login. |
-| Current permitted work | Finish independent review, create the bounded repair Draft PR, then wait for Owner review. |
+| Current permitted work | Owner review of bounded repair Draft PR #59 only. |
 | Explicitly not permitted | Reusing failed evidence or the old SHA approval, weakening PostgreSQL permissions, editing a release, SSH/runtime mutation, deployment, Flyway execution, bootstrap, login, validate/execute, real clone, Store 1 access, Production mutation, STG-006, or unrelated work. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
@@ -92,7 +92,7 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 | PR-F0 / PR #55 | `IN_MAIN` via merge `6773fd0b78d7b3b33ee0d2a8b1d593a7b8c6af2` | Internal read-only option-plan composition/validation, shared execute parity validation, and bounded structured diagnostics. |
 | PR-F / PR #56 | `IN_MAIN` via merge `8f909525781804f61d1da388882f530da358c3c4` | Protected Owner validate/execute API facade reusing the internal planner, V10 coordinator, and lock-owning transaction without a second clone engine. |
 | Attempt evidence / PR #58 | `IN_MAIN` via merge `1482cddf4f10478ed571e4d7422100dc40006f6b` | Immutable record of the failed exact-SHA preflight and safe V8 runtime recovery. |
-| Private-leaf repair | `IMPLEMENTED_IN_WORKTREE`; Draft PR is the next gate | Staging-only path-validation correction and governance rules; no runtime action or business/API change. |
+| Private-leaf repair / Draft PR #59 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | Staging-only path-validation correction and governance rules; no runtime action or business/API change. |
 
 PR-D promotion evidence is now historical main evidence: semantic source
 `5a0dc09944b4b0945fe95027d7f12647212ea559`, reviewed promotion head
