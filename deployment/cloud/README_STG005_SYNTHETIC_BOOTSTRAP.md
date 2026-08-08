@@ -42,6 +42,15 @@ One successful first execution creates exactly:
 - one active Owner Organization membership;
 - one sanitized bootstrap request record.
 
+It does not create a target Store or an Owner membership for a target Store.
+The Owner Organization membership and source-Store membership are sufficient
+only for the bounded source bootstrap contract. They do not by themselves
+prove that AL-003 Staging acceptance can log in, create or access a target
+Store, or call the clone APIs. Those prerequisites require separate runtime
+evidence and the approved application flow; they must not be supplied with raw
+SQL, copied Production credentials, authorization bypasses, or developer login
+switching.
+
 The Store is created with `printing_enabled=false`,
 `printing_mode=DISABLED`, and bar/KDS task generation disabled. The command
 does not create menu data, tables, orders, printers, Pad devices, customer

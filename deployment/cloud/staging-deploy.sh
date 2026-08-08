@@ -466,21 +466,31 @@ initialize_docker_cli_state() {
 }
 
 validate_postgres_data_path() {
-  local expected_data_dir data_owner
+  local expected_data_dir expected_parent local_canonical data_owner data_mode
   POSTGRES_DATA_DIR="$(require_value STAGING_POSTGRES_DATA_DIR)"
-  validate_no_symlink_path "STAGING_POSTGRES_DATA_DIR" "$POSTGRES_DATA_DIR"
-  POSTGRES_DATA_DIR="$(canonical_dir "$POSTGRES_DATA_DIR")" || die "cannot canonicalize STAGING_POSTGRES_DATA_DIR"
   expected_data_dir="$STAGING_ROOT/state/postgres"
   [[ "$POSTGRES_DATA_DIR" == "$expected_data_dir" ]] || die "STAGING_POSTGRES_DATA_DIR must be $expected_data_dir"
   [[ "$POSTGRES_DATA_DIR" != /home/ubuntu/Restaurant_System/* && "$POSTGRES_DATA_DIR" != */deployment/cloud/data/postgres* ]] || die "production PostgreSQL data paths are forbidden"
+  validate_no_symlink_path "STAGING_POSTGRES_DATA_DIR" "$POSTGRES_DATA_DIR"
+  [[ -d "$POSTGRES_DATA_DIR" && ! -L "$POSTGRES_DATA_DIR" ]] || die "staging PostgreSQL data path must be a real directory"
 
-  [[ "$LOCAL_VALIDATE_MODE" == "true" ]] && return 0
+  if [[ "$LOCAL_VALIDATE_MODE" == "true" ]]; then
+    local_canonical="$(canonical_dir "$POSTGRES_DATA_DIR")" || die "cannot canonicalize local STAGING_POSTGRES_DATA_DIR"
+    [[ "$local_canonical" == "$expected_data_dir" ]] || die "local staging PostgreSQL data directory has unexpected topology"
+    return 0
+  fi
   validate_no_symlink_path "STAGING_STATE_DIR" "$STAGING_ROOT/state"
+  expected_parent="$(canonical_dir "$STAGING_ROOT/state")" || die "cannot canonicalize Staging state directory"
+  [[ "$expected_parent" == "$STAGING_ROOT/state" ]] || die "Staging state directory must be the exact expected path"
+  [[ "$(dirname -- "$POSTGRES_DATA_DIR")" == "$expected_parent" ]] || die "staging PostgreSQL data directory has unexpected topology"
+  [[ "$(basename -- "$POSTGRES_DATA_DIR")" == "postgres" ]] || die "staging PostgreSQL data directory has unexpected identity"
   for path in "$STAGING_ROOT" "$STAGING_ROOT/state" "$POSTGRES_DATA_DIR"; do
     path_is_not_group_or_other_writable "$path" || die "staging PostgreSQL path must not be group or other writable: $path"
   done
   data_owner="$(file_owner "$POSTGRES_DATA_DIR")"
   [[ "$data_owner" == "$(id -u)" || "$data_owner" == "70" ]] || die "staging PostgreSQL data directory owner must be the deploy user or postgres:16-alpine UID 70"
+  data_mode="$(file_mode "$POSTGRES_DATA_DIR")"
+  [[ "$data_mode" == "700" ]] || die "staging PostgreSQL data directory mode must be 0700"
 }
 
 validate_inputs() {

@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `AL-003_STAGING_RELEASE_NO_GO_WAITING_FOR_OWNER_REPAIR_APPROVAL` |
+| status | `AL-003_STAGING_PREFLIGHT_REPAIR_WAITING_FOR_OWNER_REVIEW` |
 | target_loop | `AL-003` |
-| implementation status | PR-A through PR-F are in `main`. The Owner-approved exact-SHA Staging attempt stopped at formal preflight: the guard cannot traverse the initialized PostgreSQL mode-0700 data leaf. Automatic pre-migration recovery restored Staging at `4397f995...` / Flyway V8; no candidate build, migration, bootstrap, or clone occurred. |
+| implementation status | PR-A through PR-F and PR #58 evidence are in `main`. Draft PR #59 validates the initialized PostgreSQL private leaf without entering or weakening it and includes focused regressions; it is review-only and has not changed Staging. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Owner reviews a smallest preflight-only Dependency Repair package; deployment requires a new merged SHA and fresh exact-SHA approval. |
+| next action | Owner reviews the private-leaf repair. After merge, deployment requires a new exact SHA and fresh approval; Staging acceptance separately remains `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`. |
 
 ### Current AL-003 delivery state
 
@@ -34,6 +34,16 @@
 | PR-E | `IN_MAIN` via PR #54 |
 | PR-F0 | `IN_MAIN` via PR #55 |
 | PR-F | `IN_MAIN` via PR #56 |
+| PR #58 attempt evidence | `IN_MAIN` |
+| Private-leaf preflight repair / PR #59 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` |
+
+The Owner-login acceptance prerequisite is not satisfied by repository code or
+deployment alone. STG-005A has not run on the evidenced Staging runtime and its
+reviewed scope creates only the synthetic source topology. Before AL-003 can be
+accepted, separate Owner-approved synthetic runtime evidence must prove target
+Store access, safe Owner login, and authenticated validate/execute calls. No
+Production credential, raw SQL membership insert, authorization bypass, or
+real business data may supply that topology.
 
 `MERGED_ON_GITHUB` is not sufficient evidence for `IN_MAIN` when a PR's base
 is another feature branch. Each stacked layer requires a latest-`main`

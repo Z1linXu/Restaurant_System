@@ -33,6 +33,15 @@ resource metadata, and the external environment file through the existing
 secret-safe STG-002 validation wrapper. It never prints environment values or
 resolved Compose content.
 
+An initialized PostgreSQL bind source is a protected leaf. With
+`postgres:16-alpine`, it may be owned by UID `70` with mode `0700`, so the
+deployment user is not expected to enter it. The preflight canonicalizes the
+traversable Staging root and `state` parent, then validates the exact
+`state/postgres` directory entry, non-symlink topology, owner, and mode using
+metadata from the parent. It never weakens permissions or treats the inability
+to `cd` into that private leaf as a database failure. A missing leaf, symlinked
+leaf or parent, unexpected owner, or mode other than `0700` remains `NO_GO`.
+
 ## Owner-approved future preflight
 
 The following is a future, state-preserving command. It is not run by this
