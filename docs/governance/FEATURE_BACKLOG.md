@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `STG-005B_STACKED_IMPLEMENTATION_WAITING_FOR_OWNER_REVIEW` |
+| status | `AL-003S_STACKED_PREPARATION_WAITING_FOR_DEPENDENCIES_AND_OWNER_RUNTIME_APPROVAL` |
 | target_loop | `AL-003` |
 | implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, and PR #60's Owner decisions are `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. The modular provisioning architecture package is under review in Draft PR #61. Staging remains on the separately evidenced older runtime; no V9/V10/bootstrap/clone execution is implied. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Review Draft PR #61 first, then dependency-bound Draft PR #62. After both enter `main`, prepare a fresh exact-SHA AL-003S runtime package for separate Owner approval. |
+| next action | Review Draft PR #61, then dependency-bound Draft PR #62, then independently promote/review the stacked AL-003S preparation. Only after all dependencies enter `main` may a fresh exact-SHA runtime request be submitted for separate Owner approval. |
 
 ### Current AL-003 delivery state
 
@@ -39,6 +39,7 @@
 | Owner decisions governance sync / PR #60 | `IN_MAIN` via merge `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; documentation only, no runtime action |
 | Modular Store provisioning architecture / PR #61 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`; documentation only, no runtime action |
 | STG-005B Synthetic St-Denis baseline / PR #62 | `STACKED_DRAFT_WAITING_FOR_OWNER_REVIEW`; no migration, public API, SSH, runtime write, or clone execution |
+| AL-003S Staging acceptance preparation | `STACKED_PREPARATION_WAITING_FOR_DEPENDENCIES_AND_OWNER_RUNTIME_APPROVAL`; guarded launcher/tests and command/evidence/rollback documents only; no runtime action |
 
 The Owner-login acceptance prerequisite is not satisfied by repository code or
 deployment alone. Read-only code audit confirms that an active Organization
@@ -50,6 +51,13 @@ runtime. Separate Owner-approved runtime evidence must still prove the
 synthetic credential, login, workspace access, target onboarding, and
 authenticated validate/execute calls. No Production credential, raw SQL,
 authorization bypass, or real business data may supply that evidence.
+
+The AL-003S preparation closes the reviewed non-web launcher gap for
+STG-005A/STG-005B and adds a bounded passive resource plus
+Staging/Production-continuity fingerprint collector. Runtime collection remains
+unexecuted. Secret-safe release/env rotation, same-image restart/Flyway
+evidence, and secret-safe Owner/API calls remain explicit runtime prerequisites
+rather than inferred capabilities.
 
 `MERGED_ON_GITHUB` is not sufficient evidence for `IN_MAIN` when a PR's base
 is another feature branch. Each stacked layer requires a latest-`main`

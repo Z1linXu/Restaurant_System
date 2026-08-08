@@ -1,6 +1,6 @@
 # AL-003 Store 1 -> Chinatown Live Menu Clone Technical Plan
 
-> Status: `IN_MAIN_AWAITING_STG-005B_AND_STAGING_ACCEPTANCE`
+> Status: `IN_MAIN_AWAITING_STG-005B_AND_STAGING_ACCEPTANCE`; AL-003S preparation is stacked-only
 >
 > Prepared: 2026-07-31, America/Toronto
 >
@@ -26,7 +26,7 @@
 | `PLAN_STATUS` | `IN_MAIN_AWAITING_STG-005B_AND_STAGING_ACCEPTANCE` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | PR #60 is `IN_MAIN`. Complete the modular architecture review and STG-005B synthetic-source package before requesting a separately approved exact-SHA Staging deployment/bootstrap/login/clone acceptance sequence. |
+| `RECOMMENDED_ACTION` | PR #60 is `IN_MAIN`. Review the modular architecture package, STG-005B synthetic-source package, and stacked AL-003S guarded command/evidence preparation in dependency order before requesting a separately approved exact-SHA Staging deployment/bootstrap/login/clone acceptance sequence. |
 
 PR-A through PR-F are in `main`. PR-D supplies generic source-option copying
 and target-local parent mapping; PR #54 placed the concrete Chinatown Profile
@@ -688,6 +688,10 @@ current audit service is best-effort, audit-log failure does not make a
 successful clone appear failed; the completed clone-request row remains the
 authority.
 
+For runtime acceptance, the V10 request row and response/revision/count
+evidence are canonical. Audit-log presence is supplementary and must not be a
+mandatory acceptance condition because `AuditLogService` is best-effort.
+
 ## 16. Validation-only design
 
 `/validate` executes authorization, Store guards, source snapshot resolution,
@@ -961,3 +965,10 @@ The synthetic credential, login, workspace, source-menu baseline, target
 onboarding, and authenticated validate/execute calls still require later
 approved runtime evidence. Deployment success alone cannot close that
 prerequisite or authorize validate/execute.
+
+The stacked
+[AL-003S Staging Acceptance Preparation](AL-003S_STAGING_ACCEPTANCE_PREPARATION.md)
+supplies a guarded launcher for the existing STG-005A/STG-005B non-web commands
+and a sanitized evidence template. It adds no clone behavior and performs no
+runtime action. Its independent review findings remain hard gates for a future
+exact-SHA Owner runtime approval.

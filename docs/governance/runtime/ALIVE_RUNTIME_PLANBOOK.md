@@ -64,7 +64,7 @@ snapshots. Do not copy those reports into this planbook.
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `AL-003 Store 1 -> Chinatown Live Menu Clone` |
 | Loop type | `IMPLEMENTATION` |
-| Loop status | `STG-005B_STACKED_IMPLEMENTATION_WAITING_FOR_OWNER_REVIEW` |
+| Loop status | `AL-003S_STACKED_PREPARATION_WAITING_FOR_DEPENDENCIES_AND_OWNER_RUNTIME_APPROVAL` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | PR #27 merged the backend foundation into `main`; Production remains on the older runtime and no production onboarding is established by that merge. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -74,7 +74,7 @@ snapshots. Do not copy those reports into this planbook.
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
 | AL-003 state | PR #58 preserves the failed-attempt evidence and PR #59's bounded PostgreSQL UID-70/mode-0700 private-leaf repair is `IN_MAIN` at `c3956592da8a33092ab745c7cc6aac05e9babfa7`. Neither record proves a new Staging deployment. |
 | Staging Owner login prerequisite | `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`; code audit proves an Organization Owner naturally accesses every same-Organization Store, so no explicit target Owner Store membership is required. Runtime bootstrap, credential, login, workspace, target onboarding, and API evidence remain pending. |
-| Current permitted work | Complete and review the dependency-bound STG-005B implementation/Draft PR, prepare AL-003S command/evidence/rollback documentation, and perform bounded downstream scope audits. Runtime mutation remains prohibited. |
+| Current permitted work | Review Draft PR #61 and dependency-bound Draft PR #62; review the stacked AL-003S guarded launcher, command/evidence/rollback preparation, and bounded downstream scope audits. Runtime mutation remains prohibited. |
 | Explicitly not permitted | Reusing old SHA approval/evidence; SSH/runtime mutation; deployment; Flyway; bootstrap; credential creation; login; source-menu writes; validate/execute; real clone; Production Store 1 access/mutation; or implementation outside the selected architecture/STG-005B package and explicitly bounded downstream preparation. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
@@ -102,6 +102,7 @@ packages without that mapping.
 | STG-005B Synthetic St-Denis baseline / PR #62 | `STACKED_DRAFT_WAITING_FOR_OWNER_REVIEW` | [Local evidence](STG-005B_SYNTHETIC_ST_DENIS_BASELINE_EVIDENCE.md) covers the guarded non-web planner/applier, 4/3/13/38 source graph, 4/3/17/74 target-plan compatibility, rollback, concurrency, and full backend regression. No runtime execution. |
 | Owner decisions governance sync / PR #60 | `IN_MAIN` via merge `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d` | Documentation-only alignment of product direction, access semantics, FT-001 gaps, and runtime gates. |
 | Modular Store provisioning architecture / PR #61 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | Defines Generic Engine + Versioned Profiles + Reusable Modules; no API/runtime behavior. |
+| AL-003S Staging acceptance preparation | `STACKED_PREPARATION_WAITING_FOR_DEPENDENCIES_AND_OWNER_RUNTIME_APPROVAL` | Adds a default-validation guarded STG-005A/STG-005B launcher, fresh passive resource/Production-continuity evidence collector, action/identity-bound approval gate, immutable image pin, exact command plan, evidence template, and rollback boundary. It performs no SSH, Docker runtime action, Flyway, bootstrap, login, API call, or clone. |
 
 PR-D promotion evidence is now historical main evidence: semantic source
 `5a0dc09944b4b0945fe95027d7f12647212ea559`, reviewed promotion head
@@ -123,6 +124,16 @@ The architecture package remains in Draft PR #61. Dependency-bound STG-005B
 Draft PR #62 is stacked above it and is not `IN_MAIN`. The separate
 runtime acceptance prerequisite remains
 `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`.
+
+The next stacked preparation is documented in
+[AL-003S Staging Acceptance Preparation](../agile/AL-003S_STAGING_ACCEPTANCE_PREPARATION.md).
+Its launcher closes the bounded non-web command-entry gap but does not authorize
+runtime use. The package now provides a passive Production-continuity/resource
+collector, but no runtime evidence has been collected. Independent review still
+requires secret-safe release/environment rotation, same-image restart/Flyway
+evidence, and a secret-safe Owner/API client before acceptance can be ready.
+Local checks and explicit pending gates are retained in
+[AL-003S Preparation Evidence](AL-003S_STAGING_ACCEPTANCE_PREPARATION_EVIDENCE.md).
 
 Git ground truth must always distinguish `MERGED_ON_GITHUB`, `IN_MAIN`,
 `DEPLOYED_TO_STAGING`, and `DEPLOYED_TO_PRODUCTION`. A stacked PR merged into a

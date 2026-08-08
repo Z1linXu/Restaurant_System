@@ -46,6 +46,13 @@ separate from historical evidence snapshots and business implementation details:
   records focused/full backend tests, transaction/replay/concurrency evidence,
   scope scans, and the remaining merge/runtime gates. It is not Staging
   execution evidence.
+- [AL-003S guarded Staging acceptance command runbook](deployment/cloud/README_AL003S_STAGING_ACCEPTANCE.md),
+  [preparation plan](docs/governance/agile/AL-003S_STAGING_ACCEPTANCE_PREPARATION.md),
+  [local preparation evidence](docs/governance/runtime/AL-003S_STAGING_ACCEPTANCE_PREPARATION_EVIDENCE.md),
+  and [runtime evidence template](docs/governance/runtime/AL-003S_STAGING_ACCEPTANCE_EVIDENCE_TEMPLATE.md)
+  bind the non-web command entry, exact evidence, secret-redaction, and rollback
+  boundaries. They authorize no SSH, container action, Flyway, bootstrap,
+  login, API call, or clone.
 - [AL-003A final menu comparison](docs/governance/agile/AL-003A_FINAL_MENU_COMPARISON.md)
   is the single product-mapping authority for the Store 1 to Chinatown target
   menu. Repository seed data is historical reference only.
@@ -394,6 +401,20 @@ stations, 17 items, and 74 options. It adds no migration or HTTP endpoint.
 Synthetic display/topology identity uses `STG005_`; stable menu technical codes
 remain the exact AL-003 semantic identifiers. The implementation is not in
 `main` and has not been run on Staging or Production.
+
+The dependency-bound AL-003S preparation adds a guarded operational launcher
+for the existing STG-005A/STG-005B non-web commands. It defaults to validation,
+requires exact release/env/preflight binding, isolates Docker CLI state, and
+separates plan from explicit write actions. One-shot actions additionally
+require a fresh bounded resource plus Staging/Production fingerprint record,
+an exact action/identity-bound Owner approval artifact, and an immutable
+running backend image ID. Actions are serialized, time-bounded, scoped for
+interrupt cleanup, and followed by the same continuity/resource checks. The
+approval artifact is a procedural binding to an external Owner review, not a
+cryptographic authorization mechanism. This repository tooling is not
+runtime authorization or runtime evidence. Owner login, target onboarding,
+menu-clone API calls, restart persistence, and runtime execution remain
+separately gated and must not be inferred from launcher tests.
 
 STG-005A owns `V9__add_staging_synthetic_bootstrap_requests.sql`. PR-B adds the
 separate append-only `V10__add_owner_store_menu_clone_requests.sql`. V10 creates
