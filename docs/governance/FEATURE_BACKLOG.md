@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `STG-005B_STACKED_IMPLEMENTATION_WAITING_FOR_OWNER_REVIEW` |
-| target_loop | `AL-003` |
-| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, and PR #60's Owner decisions are `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. The modular provisioning architecture package is under review in Draft PR #61. Staging remains on the separately evidenced older runtime; no V9/V10/bootstrap/clone execution is implied. |
+| status | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` |
+| target_loop | `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE` |
+| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, PR #60's Owner decisions, PR #71's handoff navigation, and PR #61's Modular Architecture Foundation are `IN_MAIN` at `bbb1af9520c188b6ef6362e783284ba4001a7e63`. Draft PR #62 supplies the guarded Synthetic St-Denis baseline; PRs #63-#65 and #67-#70 remain dependency-bound and not in main. PR #66 is an independent main-based Draft repair. No Draft establishes Staging or Production state. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Review Draft PR #61 first, then dependency-bound Draft PR #62. After both enter `main`, prepare a fresh exact-SHA AL-003S runtime package for separate Owner approval. |
+| next action | Review #62, then rebuild #63 from latest main after #62 enters main. Review #66 independently before executable Printing provisioning. Runtime acceptance and Production actions remain separately Owner-gated. |
 
 ### Current AL-003 delivery state
 
@@ -36,9 +36,18 @@
 | PR-F | `IN_MAIN` via PR #56 |
 | PR #58 attempt evidence | `IN_MAIN` |
 | Private-leaf preflight repair / PR #59 | `IN_MAIN` via merge `c3956592da8a33092ab745c7cc6aac05e9babfa7` |
-| Owner decisions governance sync / PR #60 | `IN_MAIN` via merge `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; documentation only, no runtime action |
-| Modular Store provisioning architecture / PR #61 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`; documentation only, no runtime action |
-| STG-005B Synthetic St-Denis baseline / PR #62 | `STACKED_DRAFT_WAITING_FOR_OWNER_REVIEW`; no migration, public API, SSH, runtime write, or clone execution |
+| Owner decisions governance sync / PR #60 | `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; documentation only, no runtime action |
+| Current project handoff / PR #71 | `IN_MAIN` at `5baada03935e004d80af1e7a36fb7db39bd6abbb`; navigation only, no runtime action |
+| Modular architecture / PR #61 | `IN_MAIN` at `bbb1af9520c188b6ef6362e783284ba4001a7e63`; Generic Store Provisioning Engine + Versioned Store Profiles + Reusable Provisioning Modules, architecture only |
+| STG-005B Synthetic St-Denis baseline / PR #62 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`; guarded, versioned, transactional empty-or-exact source baseline with focused/regression tests; no migration, public API, SSH, runtime write, or clone execution |
+| AL-003S Staging acceptance preparation / PR #63 | `STACKED_ONLY` on #62; runtime use not authorized |
+| AL-004 Generic Store Profile contract / PR #64 | `STACKED_ONLY` on #63; declarative only |
+| AL-005A Staff/Table plan / PR #65 | `STACKED_ONLY` on #64; no writer |
+| Printer Store-isolation repair / PR #66 | independent main-based `DRAFT_PR`; required before executable Printing provisioning |
+| AL-005 Printing plan / PR #67 | `STACKED_ONLY` on #65; no runtime mutation |
+| AL-005B Device/Pad plan / PR #68 | `STACKED_ONLY` on #67; no pairing/Worker mutation |
+| AL-006 Activation plan / PR #69 | `STACKED_ONLY` on #68; no activation writer |
+| REL-001 Production RC plan / PR #70 | `STACKED_ONLY` on #69; no selected candidate or runtime action |
 
 The Owner-login acceptance prerequisite is not satisfied by repository code or
 deployment alone. Read-only code audit confirms that an active Organization
@@ -186,16 +195,18 @@ seed/demo Store.
 | Synthetic Organization/source/Owner bootstrap | `STAGING_PENDING` | STG-005A is in main but has not executed on evidenced Staging. |
 | Synthetic target onboarding and Owner target access | `STAGING_PENDING` | Existing onboarding plus Organization Owner access is sufficient; runtime evidence is missing. |
 | Synthetic Owner login/workspace/Owner API authorization | `STAGING_PENDING` | Credential must be supplied at runtime and never retained in Git/evidence. |
-| Reproducible Synthetic St-Denis source-menu baseline | `STACKED_DRAFT_PR_62` | A guarded, versioned, transactional empty-or-exact implementation is prepared above Draft PR #61. It is not in `main` and has not run on Staging. |
+| Reproducible Synthetic St-Denis source-menu baseline | `DRAFT_PR_62` | Guarded, versioned, transactional empty-or-exact implementation and local evidence are ready for review; it is not in `main` and has not run on Staging. |
 | AL-003 validate/execute/replay/restart acceptance | `STAGING_PENDING` | Requires the full synthetic topology and source-menu contract first. |
 | Production Store 1 read-only source capture/drift review | `PRODUCTION_PENDING` | Separate Owner Runtime Gate; only menu-related evidence may be read. |
 | Production Chinatown Store/staff/menu provisioning | `PRODUCTION_PENDING` | Exact-SHA Release Candidate and production approval required. |
 | Owner Create Store / Choose Menu Template UI | `NOT_IMPLEMENTED` | Existing Platform Admin template UI is not the approved Owner workflow. |
-| Versioned St-Denis profile | `NEEDS_NEW_LOOP` | Historical planning calls the menu-only candidate `ST_DENIS_MENU`; the strict identity for a complete Store Profile is not finalized. It must reuse the generic profile registry/clone engine with no Store ID 3 branch. |
-| Table provisioning module | `NEEDS_NEW_LOOP` | Existing Store-scoped table APIs can be reused; activation orchestration is absent. |
-| Printing provisioning module | `NEEDS_NEW_LOOP` | No printer/assignment clone; runtime endpoints and physical tests remain separately gated. |
-| Device/Pad provisioning module | `NEEDS_NEW_LOOP` | Pairing exists, but Store activation orchestration and Chinatown field evidence do not. |
-| Store activation validation/workflow | `NEEDS_NEW_LOOP` | Must gate activation on access, menu, tables, printing, devices, login, and order acceptance. |
+| Generic Store Profile contract | `STACKED_DRAFT_PR_64` | Declarative identity/composition contract only; no Owner UI or provisioning execution. |
+| Versioned `ST_DENIS_MENU` profile | `NEEDS_NEW_LOOP` | The strict identity for a complete Store Profile is not finalized; it must reuse the generic profile registry/clone engine with no Store ID 3 branch. |
+| Table provisioning module | `PREPARED_DRAFT_PR_65` | Authority/contract plan only; no table writer. |
+| Printing provisioning module | `PREPARED_DRAFT_PR_67` | Plan only; independent Store-isolation repair #66 is required before an executable writer. |
+| Device/Pad provisioning module | `PREPARED_DRAFT_PR_68` | Plan only; pairing, tokens and Worker behavior remain runtime-gated. |
+| Store activation validation/workflow | `PREPARED_DRAFT_PR_69` | Fail-closed plan only; no status transition or activation writer. |
+| Chinatown Production Release Candidate | `PREPARED_DRAFT_PR_70` | Exact-SHA/migration/backup/rollback gates only; no selected candidate or runtime action. |
 | Chinatown end-to-end field acceptance | `PRODUCTION_PENDING` | Owner/staff login, dine-in order, update, expected tickets, and operational completion remain required. |
 
 ### Proposed bounded loop order
