@@ -187,21 +187,61 @@ assert_env_metadata() {
   [[ "$FAILED" -eq 0 ]] && check_pass "ENV_PERMISSIONS" "Staging environment metadata is owner-only"
 }
 
-assert_port_free() {
-  local listeners
+assert_port_available_or_owned_by_staging() {
+  local listeners listener_count nginx_ids nginx_count nginx_id ownership expected_ownership
   if ! command -v ss >/dev/null 2>&1; then
     check_pending "PORT_18080" "ss is unavailable; loopback port ownership is unverified"
     return
   fi
-  if ! listeners="$(ss -ltn '( sport = :18080 )' 2>/dev/null)"; then
+  if ! listeners="$(ss -H -ltn "sport = :$EXPECTED_PORT" 2>/dev/null)"; then
     check_pending "PORT_18080" "ss failed; loopback port ownership is unverified"
     return
   fi
-  if grep -Eq "(127\.0\.0\.1|\[::1\]|0\.0\.0\.0|\*)[:.]18080" <<<"$listeners"; then
-    check_no_go "PORT_18080" "isolated Staging port 18080 is already listening"
-  else
+  if [[ -z "${listeners//[[:space:]]/}" ]]; then
     check_pass "PORT_18080" "loopback Staging port 18080 is free"
+    return
   fi
+
+  listener_count="$(awk 'NF { count++ } END { print count + 0 }' <<<"$listeners")"
+  if [[ "$listener_count" != "1" ]]; then
+    check_no_go "PORT_18080" "port 18080 is not owned by exactly one listener"
+    return
+  fi
+  if ! awk -v expected="$EXPECTED_BIND:$EXPECTED_PORT" 'NF && $4 != expected { invalid=1 } END { exit invalid }' <<<"$listeners"; then
+    check_no_go "PORT_18080" "port 18080 has a public or unexpected listener"
+    return
+  fi
+  if ! command -v docker >/dev/null 2>&1; then
+    check_no_go "PORT_18080" "loopback listener ownership cannot be verified without Docker"
+    return
+  fi
+  if ! nginx_ids="$(compose_read ps -q nginx 2>/dev/null)"; then
+    check_no_go "PORT_18080" "expected Staging nginx ownership could not be queried"
+    return
+  fi
+  nginx_count="$(awk 'NF { count++ } END { print count + 0 }' <<<"$nginx_ids")"
+  if [[ "$nginx_count" != "1" ]]; then
+    check_no_go "PORT_18080" "loopback listener is not owned by exactly one expected Staging nginx container"
+    return
+  fi
+  nginx_id="$(awk 'NF { print; exit }' <<<"$nginx_ids")"
+  if ! ownership="$(docker --context default inspect --format 'project={{index .Config.Labels "com.docker.compose.project"}}
+service={{index .Config.Labels "com.docker.compose.service"}}
+state={{.State.Status}}
+{{range $port, $bindings := .NetworkSettings.Ports}}{{range $bindings}}binding={{$port}}|{{.HostIp}}|{{.HostPort}}
+{{end}}{{end}}' "$nginx_id" 2>/dev/null)"; then
+    check_no_go "PORT_18080" "expected Staging nginx metadata could not be inspected"
+    return
+  fi
+  expected_ownership="project=$EXPECTED_PROJECT
+service=nginx
+state=running
+binding=80/tcp|$EXPECTED_BIND|$EXPECTED_PORT"
+  if [[ "$ownership" != "$expected_ownership" ]]; then
+    check_no_go "PORT_18080" "loopback listener does not match the exact expected Staging nginx ownership and binding"
+    return
+  fi
+  check_pass "PORT_18080" "retained expected Staging nginx owns the exact loopback port binding"
 }
 
 assert_host_resources() {
@@ -314,7 +354,7 @@ main() {
   assert_paths
   assert_env_metadata
   assert_clean_release
-  assert_port_free
+  assert_port_available_or_owned_by_staging
   assert_host_resources
   assert_compose_and_images
   assert_project_scoped_container_metadata

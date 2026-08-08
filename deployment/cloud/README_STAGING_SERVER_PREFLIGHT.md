@@ -26,9 +26,15 @@ The only permitted Staging identity is:
 - printing: application-level `DISABLED` with no printer endpoint.
 
 The preflight rejects a root that overlaps the explicitly supplied production
-root, a public bind, a busy port, a non-clean release, unsafe config metadata,
-unsafe printing input, or missing resource headroom. It reads only the
-Staging-scoped Compose service list, formatted image/container metadata, host
+root, a public or unowned bind, a non-clean release, unsafe config metadata,
+unsafe printing input, or missing resource headroom. A free port passes for a
+first deployment. For an upgrade, an occupied port passes only when `ss` and
+Docker metadata agree that exactly one running
+`restaurant-pos-staging/nginx` container owns the sole
+`80/tcp -> 127.0.0.1:18080` mapping. A missing, public, multiple, stopped,
+wrong-project, wrong-service, or differently mapped owner remains `NO_GO`.
+The retained container is not stopped or changed by this check. It reads only
+the Staging-scoped Compose service list, formatted image/container metadata, host
 resource metadata, and the external environment file through the existing
 secret-safe STG-002 validation wrapper. It never prints environment values or
 resolved Compose content.
@@ -64,9 +70,9 @@ Output is stable and sanitized:
 
 ```text
 CHECK|RELEASE_SHA|PASS|approved SHA matches release HEAD
-CHECK|PORT_18080|NO_GO|isolated Staging port 18080 is already listening
+CHECK|PORT_18080|PASS|retained expected Staging nginx owns the exact loopback port binding
 CHECK|IMAGE_restaurant-pos-backend|PENDING_PREBUILD|SHA-specific image is not built yet
-SUMMARY|NO_GO|failed_checks_present
+SUMMARY|PASS|same-host Staging preflight passed without state changes
 ```
 
 Exit status `0` means all blocking checks passed. Exit `2` is `NO_GO`; exit

@@ -8,9 +8,10 @@
 >
 > Snapshot date: 2026-08-08, America/Toronto
 >
-> Runtime freshness: STG-006 completed one Owner-authorized passive Staging
-> observation and minimum Production-continuity observation at 2026-08-08
-> 18:15 UTC. No runtime mutation or business-data read was performed.
+> Runtime freshness: STG-007 began with a bounded read-only identity check of
+> the retained Staging listener after OPS-001 entered main. No environment,
+> release, container, Flyway, credential, business-data, or Production mutation
+> occurred; execution stopped at the formal-preflight upgrade guard defect.
 
 ## 1. Project mission
 
@@ -29,9 +30,9 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| `origin/main` before OPS-001 | `85d97b7327b2e15aa561ed28a5788b92cedf6f5b` | `IN_MAIN`; merge of PR #73 |
+| `origin/main` before this STG-007 dependency repair | `362c954a8753204476ddf1415ea86050589760dd` | `IN_MAIN`; merge of OPS-001 PR #74 |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
-| Current delivery branch | `codex/ops-001-staging-secret-safe-tooling` | OPS-001 repository tooling/tests/governance only; no runtime access or mutation |
+| Current delivery branch | `codex/stg-007-exact-sha-deploy-evidence` | STG-007 preflight upgrade-port guard repair only; runtime execution stopped before Batch A mutation |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
 
 `IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
@@ -101,29 +102,30 @@ V10 ran on Staging or Production.
 | Field | Current value |
 |---|---|
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `OPS-001_STAGING_SECRET_SAFE_TOOLING_REPAIR` |
-| Current package | Fail-closed release/env, runtime/Flyway restart evidence, and Owner/API client tooling |
-| Feature stop state | `OPS-001_REPOSITORY_COMPLETE_STG-007_WAITING_FOR_OWNER_RUNTIME_APPROVAL` after repository merge |
+| Current Agile Loop | `STG-007_PREFLIGHT_UPGRADE_PORT_GUARD_REPAIR` |
+| Current package | Fail-closed formal-preflight upgrade-port ownership correction, tests, and governance only |
+| Feature stop state | `STG-007_BATCH_A_BLOCKED_BY_PREFLIGHT_UPGRADE_PORT_GUARD_REPAIR` until the repair is verified and merged |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | After OPS-001 enters main, review the exact merged-main STG-007 deploy/Flyway runtime batch; no runtime action is pre-approved |
+| Current Owner gate | Repair publication uses the Owner's Dependency Repair Auto-Loop policy. After merge, the old exact-SHA approval expires and Batch A must restart from the new merged main. |
 
 ### Permitted work
 
 - Fetch and verify Git/GitHub ground truth.
 - Review the post-stack capability audit and bounded next-loop ordering.
-- Run OPS-001 local/mock tests, independent review, publication gates and
-  mandatory governance sync.
-- Prepare a later STG-007 exact-SHA runtime plan after merge, without executing
-  it.
+- Implement and verify only the bounded preflight upgrade-port ownership repair.
+- Run focused/mock regressions, Agent 6 review, publication gates, and mandatory
+  governance sync; auto-merge only if every permanent repository gate passes.
 
 ### Prohibited work without new approval
 
-- Further SSH, Staging or Production deployment, runtime Docker lifecycle operations.
+- Further SSH or any Staging/Production mutation while the dependency repair is
+  under review; Staging/Production deployment and runtime Docker lifecycle operations.
 - Runtime Flyway, bootstrap, credential creation, login, validate/execute, or
   real menu clone.
 - Production Store 1 read or mutation.
 - Printer configuration, test print, Pad pairing, or device/Worker mutation.
-- Any OPS-001 helper against a real runtime, or any STG-007 runtime command.
+- Any OPS-001 helper against a real runtime, or resumption of STG-007 Batch A/B
+  before the repair enters main and Batch A restarts from the new exact SHA.
 - Repository merge that fails Operating Model section 16's permanent
   auto-merge gate, Production activation, restore, or destructive database/Git
   commands.
