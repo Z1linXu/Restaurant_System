@@ -65,7 +65,7 @@ GitHub state was read on 2026-08-08. Every PR below was open and Draft.
 | #67 | AL-005 Printing provisioning plan | `main` | merge `65e3d3ced2b5b05eb36d56ce67e475768ad19dff` | `IN_MAIN` | #65/main; #66 IN_MAIN | Yes | Repository planning only |
 | #68 | AL-005B Device/Pad plan | `main` | `80839d454e8f88391b16e8ba502d3e4bcccd4fb6` | `IN_MAIN` | #67/main | Yes | Main capability; no runtime behavior |
 | #69 | AL-006 Activation workflow plan | `main` | `b38d3188edc0555bea7e54dafc4868a7c4726005` | `IN_MAIN` | #68/main | Yes | Main capability; no runtime behavior |
-| #70 | REL-001 Production RC plan | `main` | `59246ae758716c1d457be465eb34fd4e757f02ec` (rebuild pending) | `DRAFT_PR` | #69/main | No | Owner review; no ACT-001 or runtime action |
+| #70 | REL-001 Production RC plan | `main` | `4e69a04195c8b58b37d778ef8d83c5eb7715a501` | `DRAFT_PR` | #69/main | No | Owner review; no ACT-001 or runtime action |
 
 Main stack review order:
 
