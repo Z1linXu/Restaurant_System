@@ -1,6 +1,6 @@
 # AL-003S Staging Acceptance Preparation
 
-> Package state: `DRAFT_PR_63_WAITING_FOR_OWNER_REVIEW_AND_RUNTIME_APPROVAL`
+> Package state: `IN_MAIN_WAITING_FOR_RUNTIME_APPROVAL`
 >
 > Prepared against: STG-005B checkpoint `0aba8377a3b7acec047c6ffd025f774d8a4d5e87`
 >
@@ -29,7 +29,8 @@ call an API, or execute a clone.
 The runtime sequence is `NO_GO` until all of the following are true:
 
 1. Modular architecture PR #61 and STG-005B PR #62 are `IN_MAIN`.
-2. AL-003S Draft PR #63 is independently reviewed and merged.
+2. Guarded AL-003S preparation PR #63 is `IN_MAIN` at
+   `732d77c89ff067982702426ff918d5e097e1d0fb`.
 3. A new full 40-character merged-main candidate SHA is selected.
 4. The Owner approves that exact SHA and each bounded runtime-mutation batch.
 5. A fresh release, private Staging environment digest, formal preflight PASS
@@ -304,4 +305,4 @@ Passing the package does not authorize or prove runtime acceptance.
 
 Stop state:
 
-`AL-003S_DRAFT_PR_WAITING_FOR_OWNER_REVIEW_AND_RUNTIME_APPROVAL`
+`AL-003S_IN_MAIN_WAITING_FOR_RUNTIME_APPROVAL`

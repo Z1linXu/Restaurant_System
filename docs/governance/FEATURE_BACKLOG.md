@@ -16,9 +16,9 @@
 | priority | `HIGH` |
 | status | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` |
 | target_loop | `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE` |
-| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, PR #60's Owner decisions, PR #71's handoff navigation, PR #61's Modular Architecture Foundation, and PR #62's Synthetic St-Denis baseline are `IN_MAIN` at `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b`. Draft PR #63 supplies guarded AL-003S acceptance preparation; PRs #64-#65 and #67-#70 remain dependency-bound and not in main. PR #66 is an independent main-based Draft repair. No Draft establishes Staging or Production state. |
+| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, PR #60's Owner decisions, PR #71's handoff navigation, PR #61's Modular Architecture Foundation, PR #62's Synthetic St-Denis baseline, and PR #63's guarded AL-003S acceptance preparation are `IN_MAIN` at `732d77c89ff067982702426ff918d5e097e1d0fb`. Draft PR #64 supplies the declarative Generic Store Profile contract; PRs #65 and #67-#70 remain dependency-bound and not in main. PR #66 is an independent main-based Draft repair. No Draft establishes Staging or Production state. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Review #63, then rebuild #64 from latest main after #63 enters main. Review #66 independently before executable Printing provisioning. Runtime acceptance and Production actions remain separately Owner-gated. |
+| next action | Review #64, then rebuild #65 from latest main after #64 enters main. Review #66 independently before executable Printing provisioning. Runtime acceptance and Production actions remain separately Owner-gated. |
 
 ### Current AL-003 delivery state
 
@@ -40,8 +40,8 @@
 | Current project handoff / PR #71 | `IN_MAIN` at `5baada03935e004d80af1e7a36fb7db39bd6abbb`; navigation only, no runtime action |
 | Modular architecture / PR #61 | `IN_MAIN` at `bbb1af9520c188b6ef6362e783284ba4001a7e63`; Generic Store Provisioning Engine + Versioned Store Profiles + Reusable Provisioning Modules, architecture only |
 | STG-005B Synthetic St-Denis baseline / PR #62 | `IN_MAIN` at `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b`; guarded, versioned, transactional source baseline; no runtime execution implied |
-| AL-003S Staging acceptance preparation / PR #63 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`; guarded launcher, passive evidence, approval/identity binding, immutable image pin, command plan, acceptance template, and rollback boundary only; no runtime action |
-| AL-004 Generic Store Profile contract / PR #64 | `STACKED_ONLY` on #63; declarative only |
+| AL-003S Staging acceptance preparation / PR #63 | `IN_MAIN` at `732d77c89ff067982702426ff918d5e097e1d0fb`; guarded launcher, passive evidence, approval/identity binding, immutable image pin, command plan, acceptance template, and rollback boundary only; no runtime action |
+| AL-004 Generic Store Profile contract / PR #64 | main-based `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`; declarative version/profile identity, module-reference, canonical fingerprint, and safe-summary contract only; no concrete profile, API, migration, UI, or provisioning execution |
 | AL-005A Staff/Table plan / PR #65 | `STACKED_ONLY` on #64; no writer |
 | Printer Store-isolation repair / PR #66 | independent main-based `DRAFT_PR`; required before executable Printing provisioning |
 | AL-005 Printing plan / PR #67 | `STACKED_ONLY` on #65; no runtime mutation |
@@ -202,12 +202,13 @@ seed/demo Store.
 | Synthetic Organization/source/Owner bootstrap | `STAGING_PENDING` | STG-005A is in main but has not executed on evidenced Staging. |
 | Synthetic target onboarding and Owner target access | `STAGING_PENDING` | Existing onboarding plus Organization Owner access is sufficient; runtime evidence is missing. |
 | Synthetic Owner login/workspace/Owner API authorization | `STAGING_PENDING` | Credential must be supplied at runtime and never retained in Git/evidence. |
-| Reproducible Synthetic St-Denis source-menu baseline | `DRAFT_PR_62` | Guarded, versioned, transactional empty-or-exact implementation and local evidence are ready for review; it is not in `main` and has not run on Staging. |
+| Reproducible Synthetic St-Denis source-menu baseline | `IN_MAIN` via PR #62 | Guarded, versioned, transactional empty-or-exact implementation is repository capability only and has not run on Staging. |
 | AL-003 validate/execute/replay/restart acceptance | `STAGING_PENDING` | Requires the full synthetic topology and source-menu contract first. |
 | Production Store 1 read-only source capture/drift review | `PRODUCTION_PENDING` | Separate Owner Runtime Gate; only menu-related evidence may be read. |
 | Production Chinatown Store/staff/menu provisioning | `PRODUCTION_PENDING` | Exact-SHA Release Candidate and production approval required. |
+| Generic Store Profile identity/composition contract | `DRAFT_PR_64_WAITING_FOR_OWNER_REVIEW` | Exact versioned identity, module references with reviewed expected fingerprints, activation requirements, canonical fingerprint, and safe summaries are under review; no concrete Store Profile or callable workflow is implied. |
 | Owner Create Store / Choose Menu Template UI | `NOT_IMPLEMENTED` | Existing Platform Admin template UI is not the approved Owner workflow. |
-| Generic Store Profile contract | `STACKED_DRAFT_PR_64` | Declarative identity/composition contract only; no Owner UI or provisioning execution. |
+| Generic Store Profile contract | `DRAFT_PR_64_WAITING_FOR_OWNER_REVIEW` | Declarative identity/composition contract only; no Owner UI or provisioning execution. |
 | Versioned `ST_DENIS_MENU` profile | `NEEDS_NEW_LOOP` | The strict identity for a complete Store Profile is not finalized; it must reuse the generic profile registry/clone engine with no Store ID 3 branch. |
 | Table provisioning module | `PREPARED_DRAFT_PR_65` | Authority/contract plan only; no table writer. |
 | Printing provisioning module | `PREPARED_DRAFT_PR_67` | Plan only; independent Store-isolation repair #66 is required before an executable writer. |

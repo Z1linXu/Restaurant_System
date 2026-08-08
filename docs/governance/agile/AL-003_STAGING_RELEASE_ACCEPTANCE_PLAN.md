@@ -1,14 +1,14 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Capability state: `AL-003S_DRAFT_PR_WAITING_FOR_OWNER_REVIEW_AND_RUNTIME_APPROVAL`
+> Capability state: `AL-003S_IN_MAIN_WAITING_FOR_RUNTIME_APPROVAL`
 >
 > Historical failed candidate: `8f909525781804f61d1da388882f530da358c3c4`
 >
-> Current main: `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b` (`IN_MAIN`, not deployed)
+> Current main: `732d77c89ff067982702426ff918d5e097e1d0fb` (`IN_MAIN`, not deployed)
 >
-> Governance packages: PR #60, PR #71, PR #61, and PR #62 are `IN_MAIN`; none is runtime evidence
+> Governance packages: PR #60, PR #71, PR #61, PR #62, and PR #63 are `IN_MAIN`; none is runtime evidence
 >
-> Next candidate SHA: `EVIDENCE_PENDING` after AL-003S review/merge and fresh Owner approval
+> Next candidate SHA: `EVIDENCE_PENDING` after fresh Owner runtime approval
 
 ## Authorization boundary
 
@@ -166,7 +166,7 @@ PR #62. It remains repository capability only: it is not available to runtime
 until a fresh exact SHA is selected and the Owner separately approves the
 mutation sequence.
 
-The main-based Draft AL-003S package adds the missing guarded one-shot launcher and
+The `IN_MAIN` AL-003S package adds the missing guarded one-shot launcher and
 publishes the exact command, evidence, and rollback plan in
 [AL-003S Staging Acceptance Preparation](AL-003S_STAGING_ACCEPTANCE_PREPARATION.md).
 It defaults to validation and requires explicit runtime and write gates. This
@@ -227,4 +227,4 @@ payloads, or customer data.
 
 ## Capability dependency state
 
-`AL-003S_DRAFT_PR_WAITING_FOR_OWNER_REVIEW_AND_RUNTIME_APPROVAL`
+`AL-003S_IN_MAIN_WAITING_FOR_RUNTIME_APPROVAL`

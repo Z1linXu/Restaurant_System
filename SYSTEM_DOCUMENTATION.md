@@ -57,6 +57,10 @@ separate from historical evidence snapshots and business implementation details:
   bind the non-web command entry, exact evidence, secret-redaction, and rollback
   boundaries. They authorize no SSH, container action, Flyway, bootstrap,
   login, API call, or clone.
+- [AL-004 Generic Store Profile Contract](docs/governance/agile/AL-004_GENERIC_STORE_PROFILE_CONTRACT.md)
+  defines the first declarative Store-level identity/composition slice. It
+  registers no concrete profile and has no public endpoint, migration, UI, or
+  executable provisioning workflow.
 - [AL-003A final menu comparison](docs/governance/agile/AL-003A_FINAL_MENU_COMPARISON.md)
   is the single product-mapping authority for the Store 1 to Chinatown target
   menu. Repository seed data is historical reference only.
@@ -393,8 +397,9 @@ PR #60 merged the 2026-08-08 Owner direction into `main` at
 Project Handoff navigation at `5baada03935e004d80af1e7a36fb7db39bd6abbb`; PR
 #61 then merged the modular architecture foundation at
 `bbb1af9520c188b6ef6362e783284ba4001a7e63`; PR #62 then merged the guarded
-Synthetic St-Denis baseline at `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b`.
-None is runtime evidence. The
+Synthetic St-Denis baseline at `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b`,
+and PR #63 then merged guarded AL-003S acceptance preparation at
+`732d77c89ff067982702426ff918d5e097e1d0fb`. None is runtime evidence. The
 modular target is a Generic
 Store Provisioning Engine consuming Versioned Store Profiles and Reusable
 Provisioning Modules. Shared implementation must remain Store-neutral;
@@ -403,14 +408,26 @@ endpoints/secrets remain runtime-only, and accepted actions are retained as
 sanitized evidence. The architecture authority is
 [STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md](docs/governance/agile/STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md).
 
+The main-based Draft AL-004 contract introduces a Store-neutral registry above the
+existing menu-profile registry. It validates exact code/version identities,
+unique module references carrying reviewed expected fingerprints, applicable activation
+requirements, and a deterministic canonical fingerprint. It intentionally
+registers no concrete Chinatown or St-Denis Store Profile: Store-level
+timezone, language, tax, receipt defaults, and complete module references must
+not be guessed from repository seed data. This repository-only contract does
+not provision a Store and does not register an Owner API or UI.
+It does not yet verify a referenced module/configuration against a module
+registry or deployed runtime; that compatibility gate remains a later engine
+capability.
+
 STG-005B prepares a Staging-only, non-web source-menu fixture around the
 existing menu entities, Store lock, and revision service. Its source graph has
 4 categories, 3 stations, 13 items, and 38 options and is proven locally to
 produce the existing Chinatown read-only target plan of 4 categories, 3
 stations, 17 items, and 74 options. It adds no migration or HTTP endpoint.
 Synthetic display/topology identity uses `STG005_`; stable menu technical codes
-remain the exact AL-003 semantic identifiers. The implementation is not in
-`main` and has not been run on Staging or Production.
+remain the exact AL-003 semantic identifiers. The implementation is in `main`
+via PR #62 and has not been run on Staging or Production.
 
 The dependency-bound AL-003S preparation adds a guarded operational launcher
 for the existing STG-005A/STG-005B non-web commands. It defaults to validation,

@@ -122,6 +122,7 @@ reviewed policy such as `manual_after_creation` or `not_applicable`.
 | Profile | State | Boundary |
 |---|---|---|
 | `CHINATOWN_MENU_2026_02_02` | `IN_MAIN` menu-clone profile | Frozen initial Chinatown menu target; not a complete Store Profile yet. |
+| Generic Store Profile contract | `DRAFT_PR_64_WAITING_FOR_OWNER_REVIEW` | Exact identity/version, module references with reviewed expected fingerprints, activation requirements, and safe registry summaries only; no concrete Store Profile or workflow is registered. |
 | Complete St-Denis Store Profile | `PLANNED_IDENTITY_NOT_FINAL` | Production-like Store template; no current registry entry or public API. Historical documents use `ST_DENIS_MENU` for a menu-only candidate, while `ST_DENIS_PROFILE_V1` is an architecture placeholder for the future complete Store Profile. The implementing loop must select one strict, case-sensitive identity before code is written. |
 | Synthetic St-Denis baseline | `IN_MAIN` via PR #62 | Versioned empty-or-exact synthetic fixture/application capability; not executed and not Production source evidence. |
 
@@ -289,7 +290,7 @@ Store 1 contents, and cannot replace the Production read-only source gate.
 |---|---|---|---|
 | 1 | `STG-005B_SYNTHETIC_ST_DENIS_BASELINE` | Reviewed synthetic source manifest/application path and tests | No SSH/runtime mutation or Production source read |
 | 2 | `AL-003S_STAGING_CLONE_ACCEPTANCE` | Exact-SHA Staging plan/evidence and, only after approval, acceptance | No Production action |
-| 3 | `AL-004_GENERIC_STORE_PROFILE_FRAMEWORK` | Store-level profile identity/composition/module references and Owner template contract | No all-module rewrite |
+| 3 | `AL-004_GENERIC_STORE_PROFILE_FRAMEWORK` | Store-level profile identity/composition/module references, followed by separately reviewed concrete profiles and Owner template contract | No all-module rewrite or implicit executable workflow |
 | 4 | `AL-005A_STAFF_TABLE_PROVISIONING_MODULES` | Reusable staff/access and table adapters | No order/table runtime-engine rewrite |
 | 5 | `AL-005_PRINTING_PROVISIONING_TEMPLATE` | Runtime-safe printer-role/assignment provisioning contract | No endpoints in Git; no print engine V2 |
 | 6 | `AL-005B_DEVICE_PAD_PROVISIONING_MODULE` | Pair/bind/assign/health provisioning contract | No Android Worker rewrite |
@@ -358,13 +359,15 @@ runtime evidence and cannot be replaced by unit tests.
 
 ## 14. Current review boundary
 
-This architecture package may be reviewed and merged independently. While it
-is unmerged, STG-005B implementation may be prepared only as explicitly
-`STACKED_ONLY` work and must be rebuilt or promoted from latest `main` after
-Owner merge. No runtime operation is authorized.
+PR #61 established this architecture in `main`; PR #62 established the
+Synthetic St-Denis repository baseline, and PR #63 established guarded Staging
+acceptance preparation. The first AL-004 contract slice is now rebuilt as a
+main-based Draft and still registers no concrete Store Profile, exposes no
+public template endpoint, and adds no executable provisioning workflow. No
+runtime operation is authorized. Downstream #65 and later packages remain
+`STACKED_ONLY` until this contract enters `main` and they are rebuilt.
 
-The prepared STG-005B stacked package adds no migration or HTTP endpoint. It
+The `IN_MAIN` STG-005B package adds no migration or HTTP endpoint. It
 uses the existing Staging profile/guards, an immutable 4/3/13/38 source
 manifest, a single-transaction empty-or-exact applier, one revision increment,
-and sanitized evidence. It remains dependency-bound to this architecture
-review and separately Owner-gated for runtime use.
+and sanitized evidence. It remains separately Owner-gated for runtime use.

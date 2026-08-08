@@ -1,6 +1,6 @@
 # AL-003 Store 1 -> Chinatown Live Menu Clone Technical Plan
 
-> Status: `IN_MAIN_AWAITING_AL-003S_REVIEW_AND_STAGING_ACCEPTANCE`; AL-003S preparation is a main-based Draft PR awaiting Owner review
+> Status: `IN_MAIN_AWAITING_STAGING_ACCEPTANCE`; AL-003S preparation is `IN_MAIN` and remains separately runtime-gated
 >
 > Prepared: 2026-07-31, America/Toronto
 >
@@ -70,7 +70,7 @@ These are authoritative product inputs, not open questions:
 
 ### 1.2 Current Git ground truth
 
-| Package | Commit | State relative to `origin/main` `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b` |
+| Package | Commit | State relative to `origin/main` `732d77c89ff067982702426ff918d5e097e1d0fb` |
 |---|---|---|
 | PR-C / PR #47 | merge `ba169ed8b689ddef8dffe94deee82fea191cdcfb` | `IN_MAIN` |
 | PR-E / PR #54 | merge `82b8059f6af1c7dff4eeb1648ca47bec039b5e52` | `IN_MAIN`; PR-F0 promotion base |
@@ -84,6 +84,7 @@ These are authoritative product inputs, not open questions:
 | Current project handoff / PR #71 | merge `5baada03935e004d80af1e7a36fb7db39bd6abbb` | `IN_MAIN`; navigation only |
 | Modular architecture / PR #61 | merge `bbb1af9520c188b6ef6362e783284ba4001a7e63` | `IN_MAIN`; architecture only |
 | Synthetic St-Denis baseline / PR #62 | merge `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b` | `IN_MAIN`; repository capability only |
+| AL-003S Staging acceptance preparation / PR #63 | merge `732d77c89ff067982702426ff918d5e097e1d0fb` | `IN_MAIN`; repository-only guarded preparation, no runtime execution |
 
 This document describes the complete reviewed target architecture. A section
 in this plan is not evidence that its implementation is in `main`, Staging, or

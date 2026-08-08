@@ -1,6 +1,10 @@
 # STG-005B Synthetic St-Denis Baseline Evidence
 
-> Package state: `DRAFT_PR_62_WAITING_FOR_OWNER_REVIEW`
+> Historical package state at local verification: `DRAFT_PR_62_WAITING_FOR_OWNER_REVIEW`
+>
+> Current Git state: `IN_MAIN` via PR #62 merge
+> `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b`; this remains repository-only
+> capability, not runtime evidence.
 >
 > Verification time: `2026-08-08T00:54:21-0400`
 >
@@ -23,8 +27,9 @@ that mainline commit for renewed review; the historical rows above retain the
 original package-base evidence and do not classify the current Draft as
 `IN_MAIN`.
 
-This evidence does not classify either package as `IN_MAIN`. Promotion must be
-reviewed again from the then-current `main` after its dependency is merged.
+At the time of this local evidence neither package was `IN_MAIN`. Subsequent
+promotion placed PR #62 in `main`; this historical record does not imply a
+Staging or Production runtime action.
 
 ## 2. Implemented boundary
 
