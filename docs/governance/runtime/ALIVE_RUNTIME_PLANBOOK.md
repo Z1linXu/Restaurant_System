@@ -103,7 +103,7 @@ packages without that mapping.
 | Owner decisions governance sync / PR #60 | `IN_MAIN` via merge `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d` | Documentation-only alignment of product direction, access semantics, FT-001 gaps, and runtime gates. |
 | Modular Store provisioning architecture / PR #61 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | Defines Generic Engine + Versioned Profiles + Reusable Modules; no API/runtime behavior. |
 | AL-003S Staging acceptance preparation / PR #63 | `STACKED_DRAFT_WAITING_FOR_OWNER_REVIEW_AND_RUNTIME_APPROVAL` | Adds a default-validation guarded STG-005A/STG-005B launcher, fresh passive resource/Production-continuity evidence collector, action/identity-bound approval gate, immutable image pin, exact command plan, evidence template, and rollback boundary. It performs no SSH, Docker runtime action, Flyway, bootstrap, login, API call, or clone. |
-| AL-004 generic Store Profile contract | `STACKED_ONLY_WAITING_FOR_OWNER_REVIEW` | Adds exact Store-profile identity/version/composition, module policies, activation requirements, canonical fingerprinting, and safe summaries. It registers no concrete profile and has no endpoint, migration, provisioning engine, UI, or runtime action. |
+| AL-004 generic Store Profile contract / PR #64 | `STACKED_ONLY_WAITING_FOR_OWNER_REVIEW` | Adds exact Store-profile identity/version/composition, module policies, activation requirements, canonical fingerprinting, and safe summaries. It registers no concrete profile and has no endpoint, migration, provisioning engine, UI, or runtime action. |
 
 PR-D promotion evidence is now historical main evidence: semantic source
 `5a0dc09944b4b0945fe95027d7f12647212ea559`, reviewed promotion head

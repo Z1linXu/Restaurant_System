@@ -4,6 +4,8 @@
 >
 > Parent: stacked AL-003S preparation Head `880795f9fa6101116f9fd1f370caeb0bdf16b647`
 >
+> Review: Draft PR #64, base Draft PR #63 branch
+>
 > Runtime access: not performed
 
 ## 1. Bounded purpose
