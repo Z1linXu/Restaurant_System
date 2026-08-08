@@ -1,14 +1,14 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Status: `AL-003_OWNER_DECISIONS_GOVERNANCE_SYNC_WAITING_FOR_OWNER_REVIEW`
+> Status: `AL-003S_WAITING_FOR_STG-005B_AND_OWNER_RUNTIME_APPROVAL`
 >
 > Historical failed candidate: `8f909525781804f61d1da388882f530da358c3c4`
 >
-> Current main: `c3956592da8a33092ab745c7cc6aac05e9babfa7` (`IN_MAIN`, not deployed)
+> Current main: `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d` (`IN_MAIN`, not deployed)
 >
-> Governance package: Draft PR #60, `WAITING_FOR_OWNER_REVIEW`
+> Governance package: PR #60, `IN_MAIN`
 >
-> Next candidate SHA: `EVIDENCE_PENDING` after PR #60 merges and receives fresh Owner approval
+> Next candidate SHA: `EVIDENCE_PENDING` after STG-005B dependency completion and fresh Owner approval
 
 ## Authorization boundary
 
@@ -216,4 +216,4 @@ payloads, or customer data.
 
 ## Current stop state
 
-`AL-003_OWNER_DECISIONS_GOVERNANCE_SYNC_WAITING_FOR_OWNER_REVIEW`
+`AL-003S_WAITING_FOR_STG-005B_AND_OWNER_RUNTIME_APPROVAL`

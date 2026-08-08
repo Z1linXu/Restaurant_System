@@ -81,17 +81,24 @@ merged into `main` by PR #27 but is not thereby deployed or production-ready.
 The current feature loop is AL-003. PR-A through PR-F are in `main`; that is
 repository capability only and is not Staging or Production acceptance.
 
-PR #59's bounded PostgreSQL private-leaf repair is now `IN_MAIN` at
-`c3956592da8a33092ab745c7cc6aac05e9babfa7`; this does not prove a new Staging
-deployment. The current package synchronizes the 2026-08-08 Owner decisions and
-is under Owner review in Draft PR #60. It stops at
-`AL-003_OWNER_DECISIONS_GOVERNANCE_SYNC_WAITING_FOR_OWNER_REVIEW`.
+PR #59's bounded PostgreSQL private-leaf repair and PR #60's Owner-decision
+governance sync are `IN_MAIN` at
+`2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; this does not prove a new Staging
+deployment. The current package records the modular Store provisioning
+architecture before STG-005B implementation. Its review state is
+`STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN_WAITING_FOR_OWNER_REVIEW`.
 No current statement authorizes server access, Flyway execution, synthetic
 bootstrap, credential creation, login, source-menu writes, validate, execute,
 a runtime clone, merge, or deployment. Staging acceptance retains the distinct
 prerequisite
 `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING` until synthetic-only runtime
 evidence proves the complete Owner login topology.
+
+The architecture authority for future provisioning packages is
+[STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md](agile/STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md).
+It classifies each Store-related change as shared capability, Store Profile,
+reusable module, runtime-only configuration, or operational evidence before
+implementation.
 
 ## 7. Dependency Repair Gate and Auto-Loop
 
