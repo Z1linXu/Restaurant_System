@@ -97,7 +97,7 @@ validate_flyway_rows() {
   expected="$(expected_flyway_manifest)"
   [[ -n "$expected" ]] || die "repository migration manifest is empty"
   while IFS='|' read -r rank version script success checksum; do
-    [[ "$rank" =~ ^[1-9][0-9]*$ && "$version" =~ ^[1-9][0-9]*$ && "$script" =~ ^V[1-9][0-9]*__[A-Za-z0-9_]+\.sql$ && "$success" == "t" && "$checksum" =~ ^-?[0-9]+$ ]] ||
+    [[ "$rank" =~ ^[1-9][0-9]*$ && "$version" =~ ^[1-9][0-9]*$ && "$script" =~ ^V[1-9][0-9]*__[A-Za-z0-9_]+\.sql$ && "$success" == "true" && "$checksum" =~ ^-?[0-9]+$ ]] ||
       die "Flyway history contains an invalid or failed row"
     (( rank > previous_rank )) || die "Flyway installed ranks are duplicated or unordered"
     previous_rank="$rank"

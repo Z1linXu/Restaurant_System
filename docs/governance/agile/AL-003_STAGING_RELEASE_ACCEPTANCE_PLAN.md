@@ -1,20 +1,22 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Capability state: `OPS-001_REPOSITORY_COMPLETE_STG-007_WAITING_FOR_OWNER_RUNTIME_APPROVAL` after reviewed repository merge
+> Capability state: `STG-007_RUNTIME_COLLECTION_BLOCKED_BY_FLYWAY_SUCCESS_TOKEN_REPAIR`
 >
 > Historical failed candidate: `8f909525781804f61d1da388882f530da358c3c4`
 >
-> Current audited main / STG-006 candidate: `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` (`IN_MAIN`, not deployed)
+> Current exact main and deployed Staging SHA before this repair: `39fa284b7bccd64d650c396f2c7532b0a0858b4b`
 >
 > Governance packages: PR #72 and PRs #60-#71 are `IN_MAIN`; repository merge is not runtime evidence
 >
-> Passive preflight: `STG-006_PASS`; deployment and acceptance remain pending
+> Runtime checkpoint: V10-to-V10 deploy and repaired readiness `PASS`; runtime collection and same-image restart pending
 
 ## Authorization boundary
 
-This template does not approve SSH, deployment, Flyway execution, Store 1
-access, synthetic bootstrap execution, or a real clone. A later Owner approval
-must bind one full 40-character merged-main SHA and each runtime command batch.
+This template does not approve Store 1 access, synthetic bootstrap execution,
+credentials, login or a real clone. The Owner separately approved a bounded
+V10-aware STG-007 continuation through exact redeploy, runtime collection and
+same-image restart. That authority remains exact-SHA/action-bound and does not
+extend to STG-008, acceptance data writes or Production mutation.
 
 Historically, PR #56 entered `main` and the fixed release candidate was
 `8f909525781804f61d1da388882f530da358c3c4`. The read-only preflight is recorded
@@ -43,12 +45,15 @@ absent and no environment rotation, image build, container lifecycle, Flyway,
 login, or data action occurred. See
 [STG-006 Exact-Main Passive Preflight Evidence](../runtime/STG-006_EXACT_MAIN_PREFLIGHT_EVIDENCE.md).
 
-OPS-001 supplies the reviewed repository helpers before STG-007: exact detached
+OPS-001 supplies the reviewed repository helpers for STG-007: exact detached
 release/four-field private-env rotation, same-container restart plus sanitized
 Flyway evidence, and a secret-FD Owner/API acceptance client. They preserve the
 existing exact-SHA, approval, lock, redaction and runtime boundaries. No helper
-has run on Staging; every action requires a distinct exact-SHA/environment/
-action-bound Owner approval.
+may infer its own runtime authority; every action requires a distinct exact-SHA/
+environment/action-bound Owner approval. Runtime use through PR #80's exact
+`39fa284b...` redeploy and repaired readiness passed, but the read-only Flyway
+collector stopped before PASS on the canonical `true` versus mock-`t` token
+mismatch. No same-image restart or acceptance action followed.
 
 PR #59 merged the bounded repair at
 `c3956592da8a33092ab745c7cc6aac05e9babfa7`. It validates the initialized
@@ -101,12 +106,12 @@ The acceptance prerequisite state is
 `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`. Application deployment alone
 must never be reported as `AL-003_STAGING_ACCEPTANCE_READY`.
 
-Retained runtime evidence proves that Staging is still on Flyway V8 and that
+Current runtime evidence proves that Staging is on exact Flyway V10 and that
 the STG-005A bootstrap has never been executed there. Therefore no V9 bootstrap
 request or idempotency evidence from that mechanism exists in the evidenced
-runtime. This repair performed no database query, so the precise row-level
-reason that Owner login is unavailable remains `EVIDENCE_PENDING`: the reports
-do not prove whether unrelated synthetic user or membership rows exist.
+runtime. No business-data query was performed, so the precise row-level reason
+that Owner login is unavailable remains `EVIDENCE_PENDING`: the reports do not
+prove whether unrelated synthetic user or membership rows exist.
 
 Repository code and the reviewed runbook establish these exact capability
 boundaries:
@@ -243,4 +248,4 @@ payloads, or customer data.
 
 ## Capability dependency state
 
-`OPS-001_REPOSITORY_COMPLETE_STG-007_WAITING_FOR_OWNER_RUNTIME_APPROVAL`
+`STG-007_RUNTIME_COLLECTION_BLOCKED_BY_FLYWAY_SUCCESS_TOKEN_REPAIR`

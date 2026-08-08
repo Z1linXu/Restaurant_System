@@ -8,12 +8,13 @@
 >
 > Snapshot date: 2026-08-08, America/Toronto
 >
-> Runtime freshness: PR #79 entered main at `868e229f...`. STG-007 Batch A then
-> passed release/env rotation and formal preflight. Conditional Batch B deployed
-> that exact SHA and applied V9/V10; Staging is healthy at Flyway V10 with
-> printing disabled and Production continuity unchanged. Passive readiness
-> stopped before PASS evidence on the optional Docker health-field fingerprint
-> bug; no collect-evidence or same-image restart followed.
+> Runtime freshness: PR #80 entered main at `39fa284b...`. A new explicitly
+> V10-aware STG-007 continuation reconfirmed retained `868e229f...` / V10,
+> created fresh exact release/env and formal preflight bindings, and redeployed
+> exact `39fa284b...` V10-to-V10. Repaired readiness passed. Read-only runtime
+> collection then stopped before PASS on a PostgreSQL `success::text=true`
+> versus mock-`t` validator mismatch; no same-image restart followed. Printing,
+> isolation and Production continuity remain unchanged.
 
 ## 1. Project mission
 
@@ -32,9 +33,9 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| `origin/main` before this STG-007 dependency repair | `868e229f1b5afd28163e5031ad8fabffaad651f6` | `IN_MAIN`; merge of rotation state-root repair PR #79 |
+| `origin/main` before this STG-007 dependency repair | `39fa284b7bccd64d650c396f2c7532b0a0858b4b` | `IN_MAIN`; merge of readiness health fingerprint repair PR #80 |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
-| Current delivery branch | `codex/ops001-readiness-health-fingerprint-repair` | missing-health-safe project fingerprint repair only; runtime access is stopped |
+| Current delivery branch | `codex/ops001-flyway-success-token-repair` | exact Flyway success-token repair only; runtime access is stopped until repair merge |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
 
 `IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
@@ -51,6 +52,7 @@ GitHub Merged badge into a non-main base is not evidence that work entered
 | `/private/tmp/restaurant-ops001-tooling` | `codex/ops-001-staging-secret-safe-tooling` | Current OPS-001 isolated repository worktree |
 | `/private/tmp/restaurant-post-stack-audit` | `codex/post-stack-ground-truth-audit` | Retained historical PR #72 worktree |
 | `/private/tmp/restaurant-current-handoff` | `codex/current-project-handoff` | Retained historical PR #71 worktree |
+| `/private/tmp/restaurant-stg007-execution` | `codex/ops001-flyway-success-token-repair` | Current isolated Dependency Repair worktree; Owner workspace untouched |
 | `/private/tmp/restaurant-pr61-rebuild` through `/private/tmp/restaurant-pr65-rebuild` | merged #61-#65 branch worktrees | Retained historical worktrees; not current delivery inputs |
 
 No registered #69/#70 rebuild worktree remains. Historical worktrees were not
@@ -82,6 +84,7 @@ closed, merged, and `IN_MAIN`.
 | #77 | STG-007 state-parent mode guard repair | `main` | merge `5c6d8bb70d74756cc7fe3f76b2d43cb07c6e6f33` | `IN_MAIN` | #76/main | Yes | Trust-root guard repair only; no release/env, deploy or Flyway action |
 | #78 | STG-007 releases-parent mode guard repair | `main` | merge `35ccf5cb823bb22b449d8b82baa2f22db2e242df` | `IN_MAIN` | #77/main | Yes | Trust-root guard repair only; no release/env, deploy or Flyway action |
 | #79 | STG-007 rotation state-root mode guard repair | `main` | merge `868e229f1b5afd28163e5031ad8fabffaad651f6` | `IN_MAIN` | #78/main | Yes | Guard/test/governance repair; later runtime use was separately authorized |
+| #80 | STG-007 readiness health fingerprint repair | `main` | merge `39fa284b7bccd64d650c396f2c7532b0a0858b4b` | `IN_MAIN` | #79/main | Yes | Runtime fingerprint repair; later V10 continuation and readiness were separately authorized |
 
 Main stack review order:
 
@@ -98,43 +101,44 @@ STG-006 freshly observed only the bounded runtime identity below.
 | Environment | Retained evidence | Classification and boundary |
 |---|---|---|
 | Production | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`; Compose `cloud` `db/backend/nginx`; unchanged IDs/start times/restart `0`; health 200 | `MACHINE_VERIFIED_READ_ONLY` continuity only; Flyway/business state not queried |
-| Staging | `868e229f1b5afd28163e5031ad8fabffaad651f6`; Flyway V10; `db/backend/nginx` running; health 200/200/200 | `DEPLOYED_TO_STAGING`; readiness collection and same-image restart remain incomplete |
+| Staging | `39fa284b7bccd64d650c396f2c7532b0a0858b4b`; Flyway V10 with no pending migration; `db/backend/nginx` running; health 200/200/200 | `DEPLOYED_TO_STAGING`; repaired readiness PASS, runtime collection and same-image restart incomplete |
 | Staging isolation | project `restaurant-pos-staging`; only `127.0.0.1:18080`; separate state/network/mounts; private leaf UID 70/mode 0700 | `MACHINE_VERIFIED_READ_ONLY` |
 | Staging printing | `STAGING_PRINT_MODE=DISABLED`; feature flag `false` | `MACHINE_VERIFIED_READ_ONLY` |
 
-Repository migrations V1-V10 exist in current main. That does not prove V9 or
-V10 ran on Staging or Production.
+Repository migrations are exactly V1-V10. Machine evidence proves Staging is
+V10; it does not prove V8-V10 ran on Production.
 
 ## 5. Current feature and loop
 
 | Field | Current value |
 |---|---|
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `STG-007_READINESS_HEALTH_FINGERPRINT_REPAIR` |
-| Current package | Missing-health-safe shared project fingerprint; tests and governance only |
-| Feature stop state | `STG-007_BATCH_B_BLOCKED_BY_READINESS_FINGERPRINT_REPAIR` until the repair is verified and merged |
+| Current Agile Loop | `STG-007_FLYWAY_SUCCESS_TOKEN_REPAIR` |
+| Current package | Exact PostgreSQL `success::text=true` runtime collector validation; tests and governance only |
+| Feature stop state | `STG-007_RUNTIME_COLLECTION_BLOCKED_BY_FLYWAY_SUCCESS_TOKEN_REPAIR` until the repair is verified and merged |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | Repair publication uses the Owner's Dependency Repair Auto-Loop policy. After merge, exact-main Ground Truth evaluation must restart, but the original V8-only conditional Batch B authority cannot be reused or generalized to redeploy a new-main candidate over the now-V10 Staging runtime. |
+| Current Owner gate | Repair publication uses the Owner's Dependency Repair Auto-Loop policy. After merge, the Owner's new bounded V10-aware continuation remains the runtime authority, but every release/env/preflight/readiness/approval binding must restart from the new exact main. |
 
 ### Permitted work
 
 - Fetch and verify Git/GitHub ground truth.
 - Review the post-stack capability audit and bounded next-loop ordering.
-- Implement and verify only the missing-health-safe project fingerprint repair
-  without weakening service, running-state or unhealthy-state checks.
+- Implement and verify only the Flyway success-token repair without changing
+  the query, checksum manifest, lifecycle, approval, deployment or product contract.
 - Run focused/mock regressions, Agent 6 review, publication gates, and mandatory
   governance sync; auto-merge only if every permanent repository gate passes.
 
 ### Prohibited work without new approval
 
 - Further SSH or any Staging/Production access while the dependency repair is
-  under review; Staging/Production deployment and runtime Docker lifecycle operations.
+  under review; reuse of the consumed approval/failed collection evidence;
+  same-image restart under the expired candidate chain.
 - Runtime Flyway, bootstrap, credential creation, login, validate/execute, or
   real menu clone.
 - Production Store 1 read or mutation.
 - Printer configuration, test print, Pad pairing, or device/Worker mutation.
-- Any OPS-001 helper against a real runtime, or resumption of STG-007 Batch A/B
-  before the repair enters main and Batch A restarts from the new exact SHA.
+- Any OPS-001 helper against a real runtime before the repair enters main and
+  the V10-aware continuation restarts from fresh exact-main bindings.
 - Repository merge that fails Operating Model section 16's permanent
   auto-merge gate, Production activation, restore, or destructive database/Git
   commands.
@@ -194,6 +198,11 @@ V10 ran on Staging or Production.
   Batch A, deployed that exact SHA and applied V9/V10, then stopped before
   readiness PASS or restart at the optional-health fingerprint bug now under
   bounded repair.
+- PR #80 entered `main` at `39fa284b7bccd64d650c396f2c7532b0a0858b4b`.
+  The new V10-aware continuation deployed that exact SHA, retained V10 and
+  passed repaired readiness. Runtime collection then exposed the canonical
+  `true` versus mock-`t` validator mismatch before PASS evidence; no restart
+  followed.
 
 ## 7. AL-003 repository capability
 
@@ -211,10 +220,10 @@ Current main includes:
 Repository capability is not Staging acceptance and is not Production
 deployment. No real Chinatown clone has been evidenced.
 
-Still missing are the exact-SHA V9/V10 Staging deployment, Synthetic St-Denis
-and Owner topology, login/target onboarding, validate/execute/replay/restart
-evidence, and the separate Production source, RC, deployment, provisioning and
-field-acceptance gates.
+Still missing are repaired runtime collection and same-image restart evidence,
+Synthetic St-Denis and Owner topology, login/target onboarding,
+validate/execute/replay evidence, and the separate Production source, RC,
+deployment, provisioning and field-acceptance gates.
 
 ## 8. Owner product decisions that are settled
 
@@ -264,8 +273,8 @@ is the first Store Profile sample, not a shared-service special case.
 | REL-001 / #70 | Formal Chinatown Production RC plan | `IN_MAIN` at `645d4909625f70fc241d5468382d66a30a030fb1` | planning only; no candidate, deployment, or activation |
 | ACT-001 | Production provisioning and field acceptance | `NOT_STARTED_OWNER_GATED` | Accepted RC and explicit Production activation approval |
 | STG-006 | Exact-main passive preflight | `PASS` for candidate `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | Evidence only; no release/deploy/migration approval |
-| OPS-001 | Secret-safe Staging tooling repair | `REPOSITORY_COMPLETE` through PR #74 plus control-path repairs #75-#78 | Every helper remains exact-action Owner-gated for runtime use |
-| STG-007 | Exact-SHA deploy and V9/V10 migration | `WAITING_FOR_OWNER_RUNTIME_APPROVAL` after OPS-001 main verification | Bind the new merged-main SHA and approve release/env plus deploy/Flyway as distinct batches |
+| OPS-001 | Secret-safe Staging tooling repair | `DEPENDENCY_REPAIR_IN_PROGRESS` after PR #80 runtime use exposed the Flyway success-token mismatch | Publish only after focused checks, Agent 6 and permanent auto-merge gates |
+| STG-007 | Exact-SHA V10-aware continuation | `DEPLOYED_TO_STAGING_READINESS_PASS_COLLECTION_BLOCKED` at `39fa284b...` | After repair merge, restart fresh exact-main bindings; runtime collection and same-image restart only |
 
 The authoritative post-stack capability matrix, Staging decision, and next
 bounded loops are in [Post-Stack Ground Truth Audit](POST_STACK_GROUND_TRUTH_AUDIT.md).
@@ -282,10 +291,10 @@ from current main.
 
 ## 12. Known blockers and risks
 
-- STG-006 passive evidence passed; exact-SHA release/deployment approval and
-  full Staging acceptance remain pending.
-- OPS-001 repository tooling must be verified `IN_MAIN`; its existence does not
-  create the runtime release/env, action approvals or STG-007 evidence.
+- STG-006 passive evidence passed; the later exact `39fa284b...` V10-aware
+  redeploy/readiness passed, but runtime collection and restart remain pending.
+- OPS-001 Flyway success-token repair must enter main before another runtime
+  collection; repository existence alone does not create fresh bindings.
 - Synthetic bootstrap, Owner login, validate/execute/replay/restart evidence is
   pending.
 - Production and repository main have an unreviewed runtime gap.
@@ -314,14 +323,15 @@ from current main.
    `AGILE_LOOP_OPERATING_MODEL.md`, `FEATURE_BACKLOG.md`, and the applicable
    technical plan.
 3. Verify current `origin/main`; do not trust the Owner workspace branch tip.
-4. Verify GitHub PR #61 through #72 and independent PR #66 semantics.
+4. Verify GitHub PR #61 through #80 and independent PR #66 semantics.
 5. Distinguish main, stacked Draft, Staging, and Production state.
 6. Report the completed main stack and the next Staging Owner Gate.
 7. Do not recreate or redesign packages #61-#70.
 8. Do not infer implementation from the planning packages.
-9. Read STG-006 and OPS-001 evidence; do not repeat runtime observation or run
-   STG-007. After OPS-001 is `IN_MAIN`, stop at the exact-SHA STG-007 Owner
-   Runtime Gate.
+9. Read STG-006, OPS-001 and both latest STG-007 repair evidence records. While
+   the Flyway token repair is unmerged, perform no runtime action. After a
+   clean auto-merge, restart the explicitly authorized V10-aware continuation
+   from fresh exact-main bindings; never reuse `39fa284b...` evidence/approval.
 10. Stop at runtime/product/operations Owner Gates; otherwise continue the
     bounded Agile Loop and Dependency Repair Auto-Loop.
 
@@ -365,6 +375,7 @@ Primary authorities:
 - [AL-003 Staging acceptance plan](../agile/AL-003_STAGING_RELEASE_ACCEPTANCE_PLAN.md)
 - [STG-006 exact-main preflight evidence](STG-006_EXACT_MAIN_PREFLIGHT_EVIDENCE.md)
 - [OPS-001 local tooling evidence](OPS-001_STAGING_SECRET_SAFE_TOOLING_EVIDENCE.md)
+- [STG-007 Flyway success-token repair evidence](STG-007_FLYWAY_SUCCESS_TOKEN_REPAIR_EVIDENCE.md)
 - [OPS-001 secret-safe tooling runbook](../../../deployment/cloud/README_OPS001_STAGING_SECRET_SAFE_TOOLING.md)
 - [System Documentation](../../../SYSTEM_DOCUMENTATION.md)
 - [API contract](../../../doc/API.md)
