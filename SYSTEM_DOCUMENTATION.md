@@ -51,6 +51,9 @@ separate from historical evidence snapshots and business implementation details:
   [read-only preflight evidence](docs/governance/runtime/AL-003_STAGING_RELEASE_PREFLIGHT_EVIDENCE.md)
   bind the merged PR-F candidate, current runtime gap, rollback limits, and
   Owner approval gate. They authorize no deployment or clone.
+- [AL-003 Staging preflight private-leaf repair evidence](docs/governance/runtime/AL-003_STAGING_PREFLIGHT_REPAIR_EVIDENCE.md)
+  records the local-only fix and regressions for the PostgreSQL UID-70/mode-0700
+  upgrade path. It is not deployment or migration evidence.
 - [Frontdesk/GRAB item-name rules](docs/operations/FRONTDESK_GRAB_ITEM_NAME_RULES.md)
   remains the operational display-rule source; do not duplicate its item table
   here.
@@ -63,6 +66,11 @@ the [Agile Loop Operating Model](docs/governance/AGILE_LOOP_OPERATING_MODEL.md)
 before its review gate. GitHub-merged, main, Staging, and Production states are
 distinct; documentation must describe the exact state supported by Git and
 runtime evidence rather than carrying an earlier plan state forward.
+The same authority defines the Dependency Repair Auto-Loop, Owner Gate
+classification, Planbook ground-truth rule, continuous-next-action rule, and
+state-layer separation. A bounded, reproducible engineering blocker must be
+repaired and reviewed without discarding its original evidence; it must not be
+mistaken for authorization to merge or mutate a runtime.
 
 ## STG-001 to STG-004 Isolated Staging Verification
 
@@ -308,6 +316,28 @@ was unchanged. The guard must receive a bounded upgrade-path repair and a new
 merged-SHA approval. Do not loosen database-directory permissions or bypass the
 evidence gate. See
 [AL-003 Staging Release Attempt Evidence](docs/governance/runtime/AL-003_STAGING_RELEASE_ATTEMPT_EVIDENCE.md).
+
+The bounded repair replaces leaf traversal with parent-anchored metadata
+validation in both the formal preflight and the deployment wrapper's input
+gate. The exact leaf must remain a real non-symlink directory named
+`state/postgres`, owned by the deploy user before initialization or
+`postgres:16-alpine` UID 70 afterward, with mode `0700`. The repair neither
+enters the leaf nor changes its permissions. Missing, symlinked, or unexpected
+topology/metadata remains fail-closed. This repository change has not been
+merged or deployed; the old exact-SHA approval cannot be reused.
+
+AL-003 Staging acceptance also has the independent prerequisite
+`AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`. Retained evidence shows that
+STG-005A has not run on the current V8 Staging runtime, but this repair did not
+query runtime tables and therefore does not infer that every synthetic user or
+membership row is absent. Repository code proves only that STG-005A can create
+the synthetic Organization, source Store, Owner credential, active
+Organization membership, and source-Store membership. It does not create a
+target Store or Owner target-Store membership, and no retained evidence proves
+a safe Owner login or authenticated validate/execute call. A future
+Owner-approved synthetic-only preparation must close those gates without
+Production credentials, raw SQL, authorization bypasses, or real business
+data. Deployment success alone is not Staging acceptance readiness.
 
 The reported Production runtime remains `4667f3c`. Its difference from current
 main is neither a release approval nor proof of deployment. Current-main

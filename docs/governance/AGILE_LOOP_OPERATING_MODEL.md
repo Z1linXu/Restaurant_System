@@ -2,7 +2,7 @@
 
 > Status: `ACTIVE_GOVERNANCE_PROCESS`
 >
-> Last updated: 2026-08-04, America/Toronto
+> Last updated: 2026-08-07, America/Toronto
 
 ## 1. Required lifecycle
 
@@ -78,24 +78,58 @@ with an explicit recorded transition:
 
 `AL-001` is `PLAN_COMPLETE` for `FT-001`. AL-002's backend foundation was
 merged into `main` by PR #27 but is not thereby deployed or production-ready.
-The current feature loop is AL-003. PR-A through PR-C are in `main`; PR-D,
-PR-E, and PR-F0 are stacked-only, and PR-F is not implemented. Its unique stop
-state is `AL-003_STACK_PROMOTION_PLAN_WAITING_FOR_OWNER_REVIEW`.
+The current feature loop is AL-003. PR-A through PR-F are in `main`; that is
+repository capability only and is not Staging or Production acceptance.
 
-The next possible implementation action remains Owner-gated: promote PR-D,
-PR-E, and PR-F0 one layer at a time from the then-latest `main`, with fresh
-verification and review at every layer. No current statement authorizes PR-F,
-server access, Flyway execution, a runtime clone, merge, or deployment.
+The current package is the bounded PostgreSQL private-leaf preflight repair.
+Its review stop state is
+`AL-003_STAGING_PREFLIGHT_REPAIR_WAITING_FOR_OWNER_REVIEW`. No current statement
+authorizes server access, Flyway execution, synthetic bootstrap, validate,
+execute, a runtime clone, merge, or deployment. A future Staging acceptance
+also retains the distinct prerequisite
+`AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING` until synthetic-only runtime
+evidence proves the complete Owner login topology.
 
-## 7. Dependency Repair Gate
+## 7. Dependency Repair Gate and Auto-Loop
 
-When a prerequisite or contract inconsistency is discovered:
+When `PLAN`, `PREFLIGHT`, `IMPLEMENT`, `VERIFY`, or Staging acceptance discovers
+a blocker or `NO_GO`, preserve the immutable evidence and classify the root
+cause before choosing the next state:
 
-1. Stop all downstream implementation packages.
-2. Create the smallest prerequisite repair package.
-3. Do not continue dependent PRs against an unresolved contract.
-4. Resume only after the Owner merges the prerequisite repair.
-5. Rebase or rebuild downstream stacked PRs from the new `main`.
+`DETECT BLOCKER -> CLASSIFY ROOT CAUSE -> CHECK AUTHORIZED BOUNDARY -> BOUNDED DEPENDENCY REPAIR -> MINIMAL FIX -> FOCUSED TESTS -> REGRESSION -> INDEPENDENT REVIEW -> GOVERNANCE SYNC -> DRAFT PR -> OWNER REVIEW`
+
+The Agent must automatically enter that bounded repair sub-loop when the root
+cause and minimal correction are clear, the correction remains inside the
+authorized package, and it does not change an approved product contract,
+expand business scope, reduce a safety boundary, require Production mutation,
+write real business data, perform an irreversible action, or require a new
+Owner decision. A reproducible `NO_GO`, test failure, compilation failure, or
+infrastructure guard defect is not by itself a reason to abandon the loop.
+
+The following sequence is prohibited for an in-boundary repairable blocker:
+`record evidence -> update Planbook -> stop without repair`. The required
+sequence is `preserve evidence -> repair -> test -> review -> governance sync ->
+Draft PR`. Evidence retention and continued bounded repair are complementary.
+
+Stop at `WAITING_FOR_OWNER_DECISION` only when one of these gates applies:
+
+- **Contract Gate:** product behavior, API contract, Store Profile rules,
+  pricing, ordering, authorization, payment/refund, or printing semantics must
+  change.
+- **Safety Gate:** the proposed path weakens permissions, bypasses a guard,
+  disables validation, or changes Production firewall/environment/security.
+- **Runtime Mutation Gate:** any Staging or Production deployment, migration,
+  bootstrap, clone, account/data write, container lifecycle change, or other
+  runtime mutation requires explicit Owner authorization; Production writes,
+  destructive or irreversible database work, restore, and real business-data
+  mutation remain independently gated.
+- **Scope Gate:** the repair is materially outside the selected package.
+- **Ambiguity Gate:** materially different safe options require an Owner
+  product or operations decision.
+
+Downstream packages remain paused until the Owner merges the repair. They must
+then be rebased or rebuilt from the new `main`; old exact-SHA approvals and
+runtime evidence cannot authorize a changed commit.
 
 ## 8. Store Profile Principle
 
@@ -149,12 +183,22 @@ Every loop ends with exactly one stop state in the Alive Runtime Planbook.
 Production runtime, current `main`, stacked-only development, and unimplemented
 work must remain separate in every governance record.
 
+Status reporting must keep these layers distinct:
+
+`IMPLEMENTED_IN_WORKTREE`, `DRAFT_PR`, `MERGED_TO_STACKED_BASE`, `IN_MAIN`,
+`STAGING_RELEASE_CANDIDATE`, `DEPLOYED_TO_STAGING`, `STAGING_ACCEPTED`,
+`PRODUCTION_RELEASE_CANDIDATE`, `DEPLOYED_TO_PRODUCTION`,
+`OPERATOR_CONFIRMED`, and `MACHINE_VERIFIED`.
+
+In particular, a GitHub merge is not automatically `IN_MAIN`; `IN_MAIN` is not
+deployment; and Staging evidence is not Production evidence.
+
 ## 10. Mandatory governance sync
 
-Every code iteration must synchronize governance before it ends. This applies
-to features, bug fixes, refactors, promotions, migrations, test-only changes,
-and every other non-documentation code change. Governance updates may not be
-deferred and accumulated across later iterations.
+Every completed feature, bug fix, refactor, promotion, dependency repair,
+migration, test package, Staging gate, deployment, acceptance, or rollback must
+synchronize governance before it ends. Governance updates may not be deferred
+and accumulated across later iterations.
 
 Before commit and again before the review gate, inspect and update as needed:
 
@@ -163,8 +207,13 @@ Before commit and again before the review gate, inspect and update as needed:
 - this operating model;
 - `SYSTEM_DOCUMENTATION.md`;
 - `doc/API.md`;
+- `docs/governance/KNOWN_ISSUES_BACKLOG.md` when the change affects an issue;
 - for AL-003 work,
   `docs/governance/agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md`.
+
+Every listed authority must be checked, but a file should receive a diff only
+when its facts or navigation need to change. Do not manufacture documentation
+churn merely to prove that it was inspected.
 
 The synchronization must verify that the current loop, stop state, permitted
 and prohibited work, main capability, API surface, and deployment state match
@@ -173,3 +222,30 @@ still marked waiting, main change missing from the Planbook, stacked-only work
 described as main, unimplemented API described as callable, or code/document
 contract mismatch. Every code commit therefore carries the governance changes
 needed to describe that exact reviewed scope.
+
+## 11. Planbook ground-truth rule
+
+Every iteration starts by reading the Alive Runtime Planbook, verifying Git
+ground truth, and, only when separately authorized, verifying runtime ground
+truth. The Agent must identify the current loop, unique stop state, allowed
+actions, prohibited actions, unresolved risks, and exact evidence authority.
+Conversation history is not a substitute for this check.
+
+When Git or authorized runtime evidence conflicts with the Planbook, ground
+truth wins and governance drift is repaired in the same iteration. Work must
+not continue on a Planbook already known to be stale.
+
+## 12. Continuous Agile Loop rule
+
+After a package is complete, read the Planbook again and identify the next
+allowed action. Continue automatically when that action is inside the current
+authorization and needs no new Owner decision. Preparation for a dependent
+package may continue without pretending that an unmerged dependency is
+satisfied. Stop when an Owner merge, runtime authorization, product decision,
+or another gate in section 7 is genuinely required.
+
+Agents may create isolated worktrees and branches, edit the authorized scope,
+test, commit, push, open Draft PRs, perform independent review, and synchronize
+governance. They may not merge Owner-gated PRs, enable auto-merge, force-push a
+reviewed branch over others, deploy or mutate Production, perform a real clone,
+or bypass a runtime gate.

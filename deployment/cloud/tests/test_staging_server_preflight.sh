@@ -129,7 +129,19 @@ cat >"$FAKE_BIN/getconf" <<'GETCONF'
 #!/usr/bin/env bash
 printf '8\n'
 GETCONF
-chmod +x "$FAKE_BIN/ss" "$FAKE_BIN/df" "$FAKE_BIN/getconf"
+REAL_STAT_BIN="$(command -v stat)"
+cat >"$FAKE_BIN/stat" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ -n "\${FAKE_POSTGRES_STAT_PATH:-}" && "\${@: -1}" == "\$FAKE_POSTGRES_STAT_PATH" ]]; then
+  case "\${1:-}:\${2:-}" in
+    -c:%a|-f:%Lp) printf '%s\n' "\${FAKE_POSTGRES_STAT_MODE:-700}"; exit 0 ;;
+    -c:%u|-f:%u) printf '%s\n' "\${FAKE_POSTGRES_STAT_OWNER:-70}"; exit 0 ;;
+  esac
+fi
+exec "$REAL_STAT_BIN" "\$@"
+EOF
+chmod +x "$FAKE_BIN/ss" "$FAKE_BIN/df" "$FAKE_BIN/getconf" "$FAKE_BIN/stat"
 
 SEED="$TMP_DIR/release-seed"
 git clone --quiet "$REPOSITORY_ROOT" "$SEED"
@@ -150,7 +162,7 @@ git -C "$SEED" -c user.name=stg004-test -c user.email=stg004-test@example.invali
 SHA="$(git -C "$SEED" rev-parse HEAD)"
 RELEASE="$FAKE_ROOT/releases/$SHA"
 mkdir -p "$FAKE_ROOT/releases" "$FAKE_ROOT/config" "$FAKE_ROOT/state/postgres"
-chmod 700 "$FAKE_ROOT/config"
+chmod 700 "$FAKE_ROOT/config" "$FAKE_ROOT/state" "$FAKE_ROOT/state/postgres"
 mv "$SEED" "$RELEASE"
 
 ENV_FILE="$FAKE_ROOT/config/.env.staging"
@@ -190,10 +202,22 @@ cp "$ENV_FILE" "$BASE_ENV"
 reset_env() { cp "$BASE_ENV" "$ENV_FILE"; chmod 600 "$ENV_FILE"; }
 
 RUNNER="$RELEASE/deployment/cloud/staging-server-preflight.sh"
+DEPLOY_RUNNER="$RELEASE/deployment/cloud/staging-deploy.sh"
 run_preflight() {
-  PATH="$FAKE_BIN:$PATH" "$RUNNER" --validate --env-file "$ENV_FILE" \
+  env PATH="$FAKE_BIN:$PATH" \
+    FAKE_POSTGRES_STAT_PATH="${FAKE_POSTGRES_STAT_PATH:-}" \
+    FAKE_POSTGRES_STAT_OWNER="${FAKE_POSTGRES_STAT_OWNER:-}" \
+    FAKE_POSTGRES_STAT_MODE="${FAKE_POSTGRES_STAT_MODE:-}" \
+    "$RUNNER" --validate --env-file "$ENV_FILE" \
     --approved-sha "$SHA" --production-project cloud --production-root "$PRODUCTION_ROOT" \
     --min-free-bytes 1048576 --max-used-percent 80 --min-available-memory-kb 1024 --min-cpu-count 1
+}
+run_deploy_validate() {
+  env PATH="$FAKE_BIN:$PATH" \
+    FAKE_POSTGRES_STAT_PATH="${FAKE_POSTGRES_STAT_PATH:-}" \
+    FAKE_POSTGRES_STAT_OWNER="${FAKE_POSTGRES_STAT_OWNER:-}" \
+    FAKE_POSTGRES_STAT_MODE="${FAKE_POSTGRES_STAT_MODE:-}" \
+    "$DEPLOY_RUNNER" --env-file "$ENV_FILE" --validate
 }
 
 bash -n "$RUNNER"
@@ -220,6 +244,75 @@ assert_not_contains ' up ' "$FAKE_BIN/docker.calls"
 assert_not_contains 'pull' "$FAKE_BIN/docker.calls"
 assert_not_contains 'stop' "$FAKE_BIN/docker.calls"
 assert_not_contains 'down' "$FAKE_BIN/docker.calls"
+
+# An initialized postgres:16-alpine data leaf is intentionally opaque to the
+# deploy user. The preflight must validate it from the traversable parent and
+# metadata without entering the leaf.
+chmod 000 "$FAKE_ROOT/state/postgres"
+if (cd "$FAKE_ROOT/state/postgres") 2>/dev/null; then
+  fail 'protected PostgreSQL fixture remained traversable'
+fi
+set +e
+FAKE_POSTGRES_STAT_PATH="$FAKE_ROOT/state/postgres" \
+FAKE_POSTGRES_STAT_OWNER=70 \
+FAKE_POSTGRES_STAT_MODE=700 \
+  run_preflight >"$TMP_DIR/private_leaf.out"
+status=$?
+set -e
+if [[ "$status" -ne 0 && "$status" -ne 3 ]]; then
+  cat "$TMP_DIR/private_leaf.out" >&2
+  fail 'protected PostgreSQL leaf preflight did not pass'
+fi
+assert_contains 'CHECK|PATHS|PASS|Staging paths are isolated and the protected PostgreSQL leaf metadata is valid' "$TMP_DIR/private_leaf.out"
+assert_contains 'CHECK|STAGING_INPUTS|PASS|' "$TMP_DIR/private_leaf.out"
+FAKE_POSTGRES_STAT_PATH="$FAKE_ROOT/state/postgres" \
+FAKE_POSTGRES_STAT_OWNER=70 \
+FAKE_POSTGRES_STAT_MODE=700 \
+  run_deploy_validate >"$TMP_DIR/private_leaf_deploy.out"
+assert_contains 'Staging validation passed' "$TMP_DIR/private_leaf_deploy.out"
+chmod 700 "$FAKE_ROOT/state/postgres"
+
+mv "$FAKE_ROOT/state/postgres" "$FAKE_ROOT/state/postgres.real"
+ln -s postgres.real "$FAKE_ROOT/state/postgres"
+expect_failure postgres_leaf_symlink run_preflight
+assert_contains 'CHECK|PATHS|NO_GO|' "$TMP_DIR/postgres_leaf_symlink.out"
+expect_failure postgres_leaf_symlink_deploy run_deploy_validate
+rm "$FAKE_ROOT/state/postgres"
+mv "$FAKE_ROOT/state/postgres.real" "$FAKE_ROOT/state/postgres"
+
+mv "$FAKE_ROOT/state" "$FAKE_ROOT/state.real"
+ln -s state.real "$FAKE_ROOT/state"
+expect_failure state_root_symlink run_preflight
+assert_contains 'CHECK|PATHS|NO_GO|' "$TMP_DIR/state_root_symlink.out"
+expect_failure state_root_symlink_deploy run_deploy_validate
+rm "$FAKE_ROOT/state"
+mv "$FAKE_ROOT/state.real" "$FAKE_ROOT/state"
+
+mv "$FAKE_ROOT/state/postgres" "$FAKE_ROOT/state/postgres.missing"
+expect_failure postgres_leaf_missing run_preflight
+assert_contains 'CHECK|PATHS|NO_GO|' "$TMP_DIR/postgres_leaf_missing.out"
+expect_failure postgres_leaf_missing_deploy run_deploy_validate
+mv "$FAKE_ROOT/state/postgres.missing" "$FAKE_ROOT/state/postgres"
+
+FAKE_POSTGRES_STAT_PATH="$FAKE_ROOT/state/postgres" \
+FAKE_POSTGRES_STAT_OWNER=999 \
+FAKE_POSTGRES_STAT_MODE=700 \
+  expect_failure postgres_leaf_owner run_preflight
+assert_contains 'CHECK|PATHS|NO_GO|' "$TMP_DIR/postgres_leaf_owner.out"
+FAKE_POSTGRES_STAT_PATH="$FAKE_ROOT/state/postgres" \
+FAKE_POSTGRES_STAT_OWNER=999 \
+FAKE_POSTGRES_STAT_MODE=700 \
+  expect_failure postgres_leaf_owner_deploy run_deploy_validate
+
+FAKE_POSTGRES_STAT_PATH="$FAKE_ROOT/state/postgres" \
+FAKE_POSTGRES_STAT_OWNER=70 \
+FAKE_POSTGRES_STAT_MODE=755 \
+  expect_failure postgres_leaf_mode run_preflight
+assert_contains 'CHECK|PATHS|NO_GO|' "$TMP_DIR/postgres_leaf_mode.out"
+FAKE_POSTGRES_STAT_PATH="$FAKE_ROOT/state/postgres" \
+FAKE_POSTGRES_STAT_OWNER=70 \
+FAKE_POSTGRES_STAT_MODE=755 \
+  expect_failure postgres_leaf_mode_deploy run_deploy_validate
 
 expect_failure no_action env PATH="$FAKE_BIN:$PATH" "$RUNNER"
 assert_contains 'Usage:' "$TMP_DIR/no_action.out"
@@ -279,8 +372,6 @@ SUMMARY|PASS|same-host Staging preflight passed without state changes
 EOF
 chmod 600 "$EVIDENCE_FILE"
 EVIDENCE_DIGEST="$(digest "$EVIDENCE_FILE")"
-DEPLOY_RUNNER="$RELEASE/deployment/cloud/staging-deploy.sh"
-
 : >"$FAKE_BIN/docker.calls"
 PATH="$FAKE_BIN:$PATH" "$DEPLOY_RUNNER" \
   --execute-start \

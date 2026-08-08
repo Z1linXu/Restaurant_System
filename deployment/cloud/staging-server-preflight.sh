@@ -80,6 +80,19 @@ canonical_existing_file() {
   printf '%s/%s\n' "$parent" "$(basename -- "$path")"
 }
 
+validate_protected_postgres_leaf() {
+  local path="$1" expected_parent="$2" parent_canonical owner mode
+  [[ "$(dirname -- "$path")" == "$expected_parent" && "$(basename -- "$path")" == "postgres" ]] || return 1
+  parent_canonical="$(canonical_existing_dir "$expected_parent")" || return 1
+  [[ "$parent_canonical/postgres" == "$path" ]] || return 1
+  [[ -d "$path" && ! -L "$path" ]] || return 1
+  path_has_symlink "$path" && return 1
+  owner="$(file_owner "$path" 2>/dev/null || true)"
+  mode="$(file_mode "$path" 2>/dev/null || true)"
+  [[ "$owner" == "$(id -u)" || "$owner" == "70" ]] || return 1
+  [[ "$mode" == "700" ]] || return 1
+}
+
 file_mode() {
   if stat -c '%a' "$1" >/dev/null 2>&1; then stat -c '%a' "$1"; else stat -f '%Lp' "$1"; fi
 }
@@ -135,16 +148,19 @@ assert_paths() {
   config="$EXPECTED_STAGING_ROOT/config"
   state="$EXPECTED_STAGING_ROOT/state"
   postgres="$state/postgres"
-  for path in "$EXPECTED_STAGING_ROOT" "$release" "$config" "$state" "$postgres"; do
+  for path in "$EXPECTED_STAGING_ROOT" "$release" "$config" "$state"; do
     if ! canonical_existing_dir "$path" >/dev/null; then
       check_no_go "PATHS" "required Staging path is missing or traverses a symlink"
       return
     fi
   done
+  if ! validate_protected_postgres_leaf "$postgres" "$state"; then
+    check_no_go "PATHS" "protected PostgreSQL leaf has invalid topology, type, owner, mode, or symlink metadata"
+    return
+  fi
   staging_canonical="$(canonical_existing_dir "$EXPECTED_STAGING_ROOT")"
   [[ "$staging_canonical" == "$EXPECTED_STAGING_ROOT" ]] || { check_no_go "STAGING_ROOT" "Staging root is not the exact approved path"; return; }
   [[ "$(canonical_existing_dir "$release")" == "$release" ]] || { check_no_go "RELEASE_PATH" "release path is not exact"; return; }
-  [[ "$(canonical_existing_dir "$postgres")" == "$postgres" ]] || { check_no_go "POSTGRES_PATH" "PostgreSQL path is not exact"; return; }
   [[ "$ENV_FILE" == "$config/.env.staging" ]] || { check_no_go "ENV_PATH" "environment file is outside exact Staging config path"; return; }
   env_canonical="$(canonical_existing_file "$ENV_FILE" || true)"
   [[ "$env_canonical" == "$ENV_FILE" ]] || { check_no_go "ENV_PATH" "environment file is missing or traverses a symlink"; return; }
@@ -157,7 +173,7 @@ assert_paths() {
     check_no_go "PATH_ISOLATION" "Staging root overlaps the explicit production root"; return;
   }
   [[ "$postgres" != "$production_canonical"/* ]] || { check_no_go "POSTGRES_ISOLATION" "Staging PostgreSQL path is inside production root"; return; }
-  check_pass "PATHS" "Staging release, config, state, and PostgreSQL paths are isolated"
+  check_pass "PATHS" "Staging paths are isolated and the protected PostgreSQL leaf metadata is valid"
 }
 
 assert_env_metadata() {

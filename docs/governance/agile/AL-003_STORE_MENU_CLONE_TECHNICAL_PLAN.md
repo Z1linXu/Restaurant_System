@@ -1,12 +1,12 @@
 # AL-003 Store 1 -> Chinatown Live Menu Clone Technical Plan
 
-> Status: `AL-003_STAGING_RELEASE_NO_GO_WAITING_FOR_OWNER_REPAIR_APPROVAL`
+> Status: `AL-003_STAGING_PREFLIGHT_REPAIR_WAITING_FOR_OWNER_REVIEW`
 >
 > Prepared: 2026-07-31, America/Toronto
 >
 > Ground truth updated: 2026-08-07, America/Toronto
 >
-> Phase: `EXACT-SHA STAGING RELEASE GATE / OWNER APPROVAL`
+> Phase: `BOUNDED DEPENDENCY REPAIR / OWNER REVIEW`
 >
 > Historical PR-C repository base: `ae019bf6460cbbbd69153a046d0fbda1fe707eb0`
 >
@@ -23,10 +23,10 @@
 |---|---|
 | `AL003_PLAN_FOUND` | `false` before this document was created |
 | `PLAN_PATH` | `docs/governance/agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md` |
-| `PLAN_STATUS` | `AL-003_STAGING_RELEASE_NO_GO_WAITING_FOR_OWNER_REPAIR_APPROVAL` |
+| `PLAN_STATUS` | `AL-003_STAGING_PREFLIGHT_REPAIR_WAITING_FOR_OWNER_REVIEW` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | Owner reviews the smallest preflight upgrade-path repair; the prior exact-SHA approval and failed evidence cannot be reused. |
+| `RECOMMENDED_ACTION` | Owner reviews the protected PostgreSQL-leaf preflight repair; after merge, select a new exact SHA and retain the independent Owner-login prerequisite before acceptance. |
 
 PR-A through PR-F are in `main`. PR-D supplies generic source-option copying
 and target-local parent mapping; PR #54 placed the concrete Chinatown Profile
@@ -35,14 +35,15 @@ protected Owner validate/execute API. No runtime clone or deployment has run.
 
 ### 1.1 Current Git ground truth
 
-| Package | Commit | State relative to `main` `82b8059f6af1c7dff4eeb1648ca47bec039b5e52` |
+| Package | Commit | State relative to `origin/main` `1482cddf4f10478ed571e4d7422100dc40006f6b` |
 |---|---|---|
 | PR-C / PR #47 | merge `ba169ed8b689ddef8dffe94deee82fea191cdcfb` | `IN_MAIN` |
 | PR-E / PR #54 | merge `82b8059f6af1c7dff4eeb1648ca47bec039b5e52` | `IN_MAIN`; PR-F0 promotion base |
 | PR-D / PR #52 | promotion head `5f6438ad1ffe1379eb3740a3db64180ce2433bfa`, merge `13f26f1` | `IN_MAIN` |
 | PR-E / historical PR #49 | semantic source `972802e701cb9cb2623b647132e4430a7b338e32` | Superseded by PR #54 `IN_MAIN` promotion |
 | PR-F0 / PR #55 | merge `6773fd0b78d7b3b33ee0d2a8b1d593a7b8c6af2` | `IN_MAIN` |
-| PR-F / PR #56 | merge `8f909525781804f61d1da388882f530da358c3c4` | `IN_MAIN`; exact-SHA Staging release candidate |
+| PR-F / PR #56 | merge `8f909525781804f61d1da388882f530da358c3c4` | `IN_MAIN`; historical failed release candidate, no longer authorized |
+| Attempt evidence / PR #58 | merge `1482cddf4f10478ed571e4d7422100dc40006f6b` | `IN_MAIN`; records preflight `NO_GO` and pre-migration recovery |
 
 This document describes the complete reviewed target architecture. A section
 in this plan is not evidence that its implementation is in `main`, Staging, or
@@ -879,7 +880,7 @@ Stop and return to Owner if:
 
 ## Final state
 
-`AL-003_STAGING_RELEASE_NO_GO_WAITING_FOR_OWNER_REPAIR_APPROVAL`
+`AL-003_STAGING_PREFLIGHT_REPAIR_WAITING_FOR_OWNER_REVIEW`
 
 PR-F entered `main` through PR #56 at
 `8f909525781804f61d1da388882f530da358c3c4`. The reviewed Owner
@@ -892,6 +893,16 @@ clone, or deployment occurred. Exact-SHA deployment remains Owner-gated by
 The approved deployment attempt later stopped before build because the formal
 preflight cannot traverse the initialized PostgreSQL mode-0700 data leaf as the
 deployment user. Recovery restored Staging to V8. The next package is a bounded
-preflight-only Dependency Repair, followed by a new merged SHA and approval;
+Dependency Repair that validates the leaf from its canonical parent and secure
+metadata without entering or weakening it. After merge, a new exact SHA and
+fresh approval are required;
 see
 [the attempt evidence](../runtime/AL-003_STAGING_RELEASE_ATTEMPT_EVIDENCE.md).
+
+Staging acceptance separately remains
+`AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`. STG-005A is implemented in
+the repository but has not run on the evidenced V8 Staging runtime. It creates
+only the synthetic Organization, source Store, Owner credential, Organization
+membership, and source-Store membership; target Store/access and successful
+Owner login require later approved synthetic-only runtime evidence. Deployment
+success alone cannot close that prerequisite or authorize validate/execute.
