@@ -2,7 +2,7 @@
 
 > Evidence class: `LOCAL_REPOSITORY_VERIFICATION`
 >
-> Package state: `STACKED_ONLY_WAITING_FOR_DEPENDENCIES_AND_OWNER_RUNTIME_APPROVAL`
+> Package state: `IN_MAIN_WAITING_FOR_RUNTIME_APPROVAL`
 >
 > Runtime execution: `NOT_RUN_BY_POLICY`
 
@@ -18,12 +18,12 @@ Production continuity.
 
 | Field | Value |
 |---|---|
-| Parent STG-005B checkpoint | `0aba8377a3b7acec047c6ffd025f774d8a4d5e87` |
+| Historical parent STG-005B checkpoint | `0aba8377a3b7acec047c6ffd025f774d8a4d5e87` |
 | Branch | `codex/al-003s-staging-acceptance-preparation` |
 | Package implementation commit | `47902430313117ac51a1f054a267ec7371267218` |
-| Final evidence/PR-binding commit | This document's commit; resolve from Draft PR #63 Head metadata |
-| PR | Draft PR #63 (`STACKED_ONLY`) |
-| Dependency state | Draft PR #61 -> stacked Draft PR #62 -> stacked Draft PR #63 |
+| Final evidence/PR-binding commit | PR #63 merge `732d77c89ff067982702426ff918d5e097e1d0fb` |
+| PR | PR #63 (`IN_MAIN`) |
+| Current dependency state | PRs #61, #62, and #63 are `IN_MAIN`; runtime approval remains separate |
 
 ## Local verification
 
@@ -102,7 +102,8 @@ not locally machine-verified outcomes.
 
 ## Remaining gates
 
-- architecture PR #61 and STG-005B PR #62 are not `IN_MAIN`;
+- architecture PR #61, STG-005B PR #62, and guarded preparation PR #63 are
+  `IN_MAIN`; runtime approval remains separate;
 - a fresh merged-main candidate SHA and new Owner command-batch approvals do not
   exist;
 - no secret-safe release/env rotation helper is published;

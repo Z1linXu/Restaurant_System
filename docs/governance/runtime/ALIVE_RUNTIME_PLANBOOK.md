@@ -26,7 +26,7 @@
 | Environment | `restaurant-prod` | `OPERATOR_CONFIRMED` | Environment label only; no host or secret is recorded. |
 | `RUNTIME_COMMIT` | `4667f3c` | `OPERATOR_CONFIRMED` | Reported deployed commit, not a formal release approval. |
 | Production branch | `main` | `OPERATOR_CONFIRMED` | Branch relationship is not a deployment approval record. |
-| Last merged `DOCUMENTATION_COMMIT` | `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d` | `MACHINE_VERIFIED` from `origin/main` | PR #60 is `IN_MAIN`. This does not make that commit a Staging or Production runtime. |
+| Last merged `DOCUMENTATION_COMMIT` | `65e3d3ced2b5b05eb36d56ce67e475768ad19dff` | `MACHINE_VERIFIED` from `origin/main` | PR #67 is `IN_MAIN`; this does not make that commit a Staging or Production runtime. |
 | Deployment mode | HTTP | `OPERATOR_CONFIRMED` | HTTPS/certificate posture is outside this record. |
 | Compose services | `db`, `backend`, `nginx` | `OPERATOR_CONFIRMED` | No new container inspection was run for this planbook. |
 | Database schema | Flyway V7, including `V7__add_print_job_attention_acknowledgement.sql` | `OPERATOR_CONFIRMED` | Not a restore or schema-integrity rehearsal. |
@@ -62,9 +62,9 @@ snapshots. Do not copy those reports into this planbook.
 | Item | Current state |
 |---|---|
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `AL-005_PRINTING_PROVISIONING_TEMPLATE` |
+| Current Agile Loop | `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE` |
 | Loop type | `DEPENDENCY_BOUND_PREPARATION` |
-| Loop status | `AL-005_PRINTING_PREPARED_WAITING_FOR_DEPENDENCIES` |
+| Loop status | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | PR #27 merged the backend foundation into `main`; Production remains on the older runtime and no production onboarding is established by that merge. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -72,14 +72,23 @@ snapshots. Do not copy those reports into this planbook.
 | STG-004 state | PR #38 merged the STG-004 runtime evidence. Exact SHA `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` passed PLAN, fresh PREFLIGHT, serial build/start, runtime verification, and isolated stop/start recovery. Server Staging remains running; Production remained unchanged. |
 | STG-005 state | PLAN complete. The Owner approved CP-0 as a separate minimal Staging-only bootstrap implementation and accepted CP-4 as a feature-disabled KDS/Assembling boundary. Positive Kitchen/Assembling workflow remains `EVIDENCE_PENDING`. |
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
-| AL-003 state | PR #58 preserves the failed-attempt evidence and PR #59's bounded PostgreSQL UID-70/mode-0700 private-leaf repair is `IN_MAIN` at `c3956592da8a33092ab745c7cc6aac05e9babfa7`. Neither record proves a new Staging deployment. |
+| AL-003 state | PR #58 preserves the failed-attempt evidence; PR #59's bounded PostgreSQL UID-70/mode-0700 private-leaf repair, PR #60's Owner decisions, PR #71's handoff navigation, PR #61's modular architecture, PR #62's Synthetic St-Denis baseline, PR #63's guarded Staging acceptance preparation, PR #64's Generic Store Profile contract, PR #65's Staff/Table planning, PR #66's Printer Store-isolation repair, and PR #67's Printing Provisioning plan are `IN_MAIN` at `65e3d3ced2b5b05eb36d56ce67e475768ad19dff`. None proves a new Staging deployment. |
 | Staging Owner login prerequisite | `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`; code audit proves an Organization Owner naturally accesses every same-Organization Store, so no explicit target Owner Store membership is required. Runtime bootstrap, credential, login, workspace, target onboarding, and API evidence remain pending. |
-| Current permitted work | Review Draft PRs #61-#65 and #67 in dependency order. Independently review printer Store-isolation repair PR #66. Bounded downstream scope audits may continue; executable AL-005 work waits for dependency promotion and explicit prerequisite decisions. Runtime mutation remains prohibited. |
-| Explicitly not permitted | Reusing old SHA approval/evidence; SSH/runtime mutation; deployment; Flyway; bootstrap; credential creation; login; source-menu writes; validate/execute; real clone; Production Store 1 access/mutation; or implementation outside the selected architecture/STG-005B package and explicitly bounded downstream preparation. |
+| Current permitted work | Review the rebuilt main-based Draft PR #68 Device/Pad Provisioning plan as a single layer. Run local planning checks, independent review, governance sync, and bounded cleanup audit; runtime mutation remains prohibited. |
+| Explicitly not permitted | Reusing old SHA approval/evidence; SSH/runtime mutation; deployment; Flyway; bootstrap; credential creation; login; source-menu writes; validate/execute; real clone; Pad pairing; device credential creation; Production Store 1 access/mutation; PR merge; #69 work; or duplicate implementation of the prepared Draft queue. |
+
+Agent and worker execution is ephemeral. After a bounded task, the result and
+evidence must be returned and persisted, the active session/process terminated,
+and only known safe task-owned temporary resources cleaned. Unknown, shared,
+unmerged, active, runtime, database, backup, and evidence resources remain and
+are reported. Each loop reports its Agent and worktree accounting before
+stopping.
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 [AGILE_LOOP_OPERATING_MODEL.md](../AGILE_LOOP_OPERATING_MODEL.md), and
 [AL-001 technical plan](../agile/AL-001_OWNER_STORE_ONBOARDING_CHINATOWN_TECHNICAL_PLAN.md).
+The concise [Current Project Handoff](CURRENT_HANDOFF.md) is navigation only;
+these authorities and Git/runtime evidence win if it drifts.
 
 The current fully qualified modular Loop identifiers and their legacy-label
 mapping are authoritative in
@@ -99,15 +108,18 @@ packages without that mapping.
 | PR-F / PR #56 | `IN_MAIN` via merge `8f909525781804f61d1da388882f530da358c3c4` | Protected Owner validate/execute API facade reusing the internal planner, V10 coordinator, and lock-owning transaction without a second clone engine. |
 | Attempt evidence / PR #58 | `IN_MAIN` via merge `1482cddf4f10478ed571e4d7422100dc40006f6b` | Immutable record of the failed exact-SHA preflight and safe V8 runtime recovery. |
 | Private-leaf repair / PR #59 | `IN_MAIN` via merge `c3956592da8a33092ab745c7cc6aac05e9babfa7` | Staging-only path-validation correction and governance rules; no runtime action or business/API change. |
-| STG-005B Synthetic St-Denis baseline / PR #62 | `STACKED_DRAFT_WAITING_FOR_OWNER_REVIEW` | [Local evidence](STG-005B_SYNTHETIC_ST_DENIS_BASELINE_EVIDENCE.md) covers the guarded non-web planner/applier, 4/3/13/38 source graph, 4/3/17/74 target-plan compatibility, rollback, concurrency, and full backend regression. No runtime execution. |
-| Owner decisions governance sync / PR #60 | `IN_MAIN` via merge `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d` | Documentation-only alignment of product direction, access semantics, FT-001 gaps, and runtime gates. |
-| Modular Store provisioning architecture / PR #61 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | Defines Generic Engine + Versioned Profiles + Reusable Modules; no API/runtime behavior. |
-| AL-003S Staging acceptance preparation / PR #63 | `STACKED_DRAFT_WAITING_FOR_OWNER_REVIEW_AND_RUNTIME_APPROVAL` | Adds a default-validation guarded STG-005A/STG-005B launcher, fresh passive resource/Production-continuity evidence collector, action/identity-bound approval gate, immutable image pin, exact command plan, evidence template, and rollback boundary. It performs no SSH, Docker runtime action, Flyway, bootstrap, login, API call, or clone. |
-| AL-004 generic Store Profile contract / PR #64 | `STACKED_ONLY_WAITING_FOR_OWNER_REVIEW` | Adds exact Store-profile identity/version/composition, module policies, activation requirements, canonical fingerprinting, and safe summaries. It registers no concrete profile and has no endpoint, migration, provisioning engine, UI, or runtime action. |
-| AL-005A Staff/Table module preparation / PR #65 | `AL-005A_PREPARED_WAITING_FOR_AL-004` (`STACKED_ONLY` Git classification) | Records the existing staff/access and dining-table authorities, reusable module contracts, security gaps, test gates, and Owner/schema decisions. It adds no writer, endpoint, migration, credential, table, or runtime action. |
-| AL-005 Printing provisioning preparation / PR #67 | `AL-005_PRINTING_PREPARED_WAITING_FOR_DEPENDENCIES` (`STACKED_ONLY` Git classification) | Records existing printing authorities, profile/runtime boundaries, fixed Chinatown policy, prerequisite defects, staged contracts, and test gates. It adds no writer, endpoint, migration, printer, assignment, device, mode change, test print, or runtime action. |
-| AL-005B Device/Pad provisioning preparation / PR #68 | `AL-005B_DEVICE_PREPARED_WAITING_FOR_DEPENDENCIES` (`STACKED_ONLY` Git classification) | Records pairing/auth/heartbeat/Store-wide queue authorities, profile/runtime boundaries, four-Pad Chinatown policy, prerequisite gaps, and readiness gates. It adds no writer, endpoint, migration, device, token, pairing, Worker change, or runtime action. |
-| Printer Store-isolation repair / PR #66 | independent `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | Main-based prerequisite; not included in this stack. It must merge before an executable printing writer is promoted. |
+| Owner decisions governance sync / PR #60 | `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d` | Documentation-only alignment of product direction, access semantics, FT-001 gaps, and runtime gates. |
+| Current project handoff / PR #71 | `IN_MAIN` at `5baada03935e004d80af1e7a36fb7db39bd6abbb` | Navigation snapshot only; no runtime action or capability change. |
+| Modular architecture / PR #61 | `IN_MAIN` at `bbb1af9520c188b6ef6362e783284ba4001a7e63` | Defines the Generic Store Provisioning Engine, Versioned Store Profiles, Reusable Provisioning Modules, and anti-hardcode boundary; no API/runtime behavior. |
+| STG-005B Synthetic St-Denis baseline / PR #62 | `IN_MAIN` at `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b` | Guarded source baseline entered repository main; it is not runtime execution evidence. |
+| AL-003S Staging acceptance preparation / PR #63 | `IN_MAIN` at `732d77c89ff067982702426ff918d5e097e1d0fb` | Guarded launcher, passive evidence, approval/identity binding, immutable image pin, command plan, acceptance template, and rollback boundary only; no runtime action. |
+| AL-004 Generic Store Profile contract / PR #64 | `IN_MAIN` at `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6` | Exact identity/version/composition, module policies, activation requirements, canonical fingerprinting, and safe summaries; no concrete profile, endpoint, migration, provisioning engine, UI, or runtime action. |
+| AL-005A Staff/Table plan / PR #65 | `IN_MAIN` at `8f58bcbfca253c1598b967f4d17c04c0be1cce5b` | Planning only; no writer, endpoint, migration, credential, table, or runtime action. |
+| Printer Store-isolation repair / PR #66 | `IN_MAIN` at `f483a4640503c20f6eec1e2e9ae1d198bf23d1f3` | Rejects cross-Store printer config updates, cross-Store automatic dispatch, and PAD_DIRECT printer-health updates; no migration, endpoint shape, transport, Android, or runtime action. |
+| AL-005 Printing plan / PR #67 | `IN_MAIN` at `65e3d3ced2b5b05eb36d56ce67e475768ad19dff` | Reusable Store-scoped Printing Provisioning plan only; no writer, endpoint, migration, printer, assignment, mode change, test print, or runtime mutation. |
+| AL-005B Device/Pad plan / PR #68 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` based on latest `main` | Reusable Store-scoped Device/Pad Provisioning plan only; no endpoint, migration, device, token, pairing, Worker change, or runtime mutation. |
+| AL-006 Activation plan / PR #69 | `STACKED_ONLY` on #68 | Fail-closed workflow plan only; no Store status transition. |
+| REL-001 Production RC plan / PR #70 | `STACKED_ONLY` on #69 | Exact-SHA release gates only; no candidate or runtime action. |
 
 PR-D promotion evidence is now historical main evidence: semantic source
 `5a0dc09944b4b0945fe95027d7f12647212ea559`, reviewed promotion head
@@ -125,12 +137,13 @@ runtime evidence snapshots record Staging at `4397f995...` / Flyway V8 and
 Production at `4667f3c` / Flyway V7; this package performed no fresh runtime
 inspection and does not assert that those environments remain unchanged.
 
-The architecture package remains in Draft PR #61. Dependency-bound STG-005B
-Draft PR #62 is stacked above it and is not `IN_MAIN`. The separate
-runtime acceptance prerequisite remains
+The unique feature stop state is
+`REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL`.
+PRs #61 through #67 are `IN_MAIN`; their repository-only preparation is not
+Staging or Production evidence. The separate runtime acceptance prerequisite remains
 `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`.
 
-The next stacked preparation is documented in
+The `IN_MAIN` acceptance preparation is documented in
 [AL-003S Staging Acceptance Preparation](../agile/AL-003S_STAGING_ACCEPTANCE_PREPARATION.md).
 Its launcher closes the bounded non-web command-entry gap but does not authorize
 runtime use. The package now provides a passive Production-continuity/resource
@@ -140,20 +153,12 @@ evidence, and a secret-safe Owner/API client before acceptance can be ready.
 Local checks and explicit pending gates are retained in
 [AL-003S Preparation Evidence](AL-003S_STAGING_ACCEPTANCE_PREPARATION_EVIDENCE.md).
 
-The next dependency-bound code slice is documented in
-[AL-004 Generic Store Profile Contract](../agile/AL-004_GENERIC_STORE_PROFILE_CONTRACT.md).
-It is declarative only. No concrete Chinatown or St-Denis Store Profile is
-registered, and no Store Profile can yet be selected or executed through an
-Owner API.
-
-The bounded downstream Staff/Table audit is documented in
-[AL-005A Staff and Table Provisioning Module Plan](../agile/AL-005A_STAFF_TABLE_PROVISIONING_MODULE_PLAN.md).
-It confirms that AL-002's internal onboarding staff service is the credential
-and membership authority, while the current Platform Admin dining-table writer
-is not safe as a provisioning upsert. AL-005A therefore remains a contract and
-read-only-planner preparation until AL-004 is merged. Chinatown's existing
-blank-table/manual-setup decision is retained; table-code, replay, and schema
-gates apply only before a future predefined-table writer.
+The independent printer Store-isolation repair is documented in
+[AL-005 Printer Store Isolation Dependency Repair](../agile/AL-005_DEPENDENCY_REPAIR_PRINTER_STORE_ISOLATION.md).
+It is `IN_MAIN` at PR #66's merge and remains limited to Store-bound config
+update, automatic dispatch, and PAD_DIRECT printer-health guards; it does not
+authorize printing provisioning, printer configuration, a test print, or any
+runtime action.
 
 The downstream Printing audit is documented in
 [AL-005 Printing Provisioning Module Plan](../agile/AL-005_PRINTING_PROVISIONING_MODULE_PLAN.md).
@@ -163,12 +168,13 @@ gate, role/assignment integrity, and idempotency as inactive-writer gates.
 AL-005B device readiness is a later runtime-binding/activation gate, not a gate
 for creating inactive logical configuration.
 
-The dependent Device/Pad audit is documented in
+The main-based Draft Device/Pad audit is documented in
 [AL-005B Device and Pad Provisioning Module Plan](../agile/AL-005B_DEVICE_PAD_PROVISIONING_MODULE_PLAN.md).
 It preserves the current Store-wide PAD_DIRECT queue with no per-device module
 assignment and keeps identities, tokens, pairing, auto-print, and Worker health
-outside versioned profiles. Executable work remains blocked by AL-005 and the
-documented credential, idempotency, integrity, and runtime-evidence gates.
+outside versioned profiles. It adds no endpoint, migration, pairing, credential,
+Worker, or runtime behavior. Executable work remains blocked by the documented
+credential, idempotency, integrity, and runtime-evidence gates.
 
 Git ground truth must always distinguish `MERGED_ON_GITHUB`, `IN_MAIN`,
 `DEPLOYED_TO_STAGING`, and `DEPLOYED_TO_PRODUCTION`. A stacked PR merged into a

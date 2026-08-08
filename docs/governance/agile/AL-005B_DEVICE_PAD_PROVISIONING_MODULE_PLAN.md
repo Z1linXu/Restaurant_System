@@ -1,14 +1,14 @@
 # AL-005B Device and Pad Provisioning Module Plan
 
-> Status: `AL-005B_DEVICE_PREPARED_WAITING_FOR_DEPENDENCIES` in Draft PR #68
+> Status: `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` in Draft PR #68
 >
 > Package: `AL-005B_DEVICE_PAD_PROVISIONING_MODULE`
 >
-> Git classification: `STACKED_ONLY`
+> Git classification: `DRAFT_PR` based on latest `main`
 >
-> Base: AL-005 Printing Provisioning Draft PR #67 head
+> Base: `origin/main@65e3d3ced2b5b05eb36d56ce67e475768ad19dff` (PR #67 IN_MAIN)
 >
-> Draft PR: #68 (`STACKED_ONLY`)
+> Draft PR: #68 (`base=main`)
 >
 > Runtime access: not performed
 
@@ -172,9 +172,10 @@ Executable provisioning remains blocked by the following verified gaps:
    heartbeat authority;
 10. test coverage does not yet prove parent replay, concurrent registration,
     credential redaction, or activation evidence expiry;
-11. the AL-005P1 enabled-module contract must be stable before the AL-005B
-    planner validates module dependencies. AL-005's inactive P3 writer does not
-    wait for AL-005B; AL-005P4 runtime binding and AL-006 activation do.
+11. the AL-005P1 enabled-module contract is now in `main` via PR #67 and must
+    remain stable while the AL-005B planner validates module dependencies.
+    AL-005's inactive P3 writer does not wait for AL-005B; AL-005P4 runtime
+    binding and AL-006 activation do.
 
 These gaps are not repaired in this documentation package. Any prerequisite
 repair follows the Dependency Repair Gate and receives its own reviewed PR.
@@ -239,7 +240,8 @@ or PAD_DIRECT path.
 
 ## 11. Stop state
 
-`AL-005B_DEVICE_PREPARED_WAITING_FOR_DEPENDENCIES`
+`DRAFT_PR_WAITING_FOR_OWNER_REVIEW`
 
 The next executable step is not authorized. Owner review must first resolve the
-stacked dependency chain and the identified security/integrity/evidence gates.
+identified security/integrity/evidence gates; no pairing, credential creation,
+Worker mutation, or runtime operation is implied.

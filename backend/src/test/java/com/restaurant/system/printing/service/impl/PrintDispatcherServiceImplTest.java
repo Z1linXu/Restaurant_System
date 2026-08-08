@@ -398,6 +398,57 @@ class PrintDispatcherServiceImplTest {
         );
     }
 
+    @Test
+    void automaticDispatchRejectsAssignedPrinterFromAnotherStore() {
+        Store store = new Store();
+        store.id = 1L;
+        store.organization_id = 1L;
+        PrinterAssignment assignment = new PrinterAssignment();
+        assignment.store_id = store.id;
+        assignment.module_code = PrintModuleCode.GRAB;
+        assignment.printer_id = 10L;
+        assignment.enabled = true;
+        PrinterConfig printer = new PrinterConfig();
+        printer.id = assignment.printer_id;
+        printer.store_id = 2L;
+        printer.enabled = true;
+        PrintJob job = new PrintJob();
+        job.id = 99L;
+        job.store_id = store.id;
+        job.order_id = 123L;
+        job.module_code = PrintModuleCode.GRAB;
+        job.status = PrintJobStatus.PENDING;
+
+        when(featureFlagService.isEnabled(FeaturePackage.PRINTING)).thenReturn(true);
+        when(storeRepository.findById(store.id)).thenReturn(Optional.of(store));
+        when(printJobService.createPendingJob(
+            eq(store.organization_id),
+            eq(store.id),
+            eq(job.order_id),
+            any(),
+            any(),
+            eq(PrintModuleCode.GRAB),
+            anyString(),
+            any(),
+            anyString()
+        )).thenReturn(job);
+        when(printerConfigService.isPrintingEnabled(store.id)).thenReturn(true);
+        when(printerAssignmentRepository.findByStoreIdAndModuleCode(store.id, PrintModuleCode.GRAB))
+            .thenReturn(Optional.of(assignment));
+        when(printerConfigRepository.findById(printer.id)).thenReturn(Optional.of(printer));
+
+        service.dispatchPersistedEvent(PrintModuleCode.GRAB, store.id, job.order_id, null, null);
+
+        verify(printJobService).markFailed(
+            job,
+            null,
+            "DISPATCH_ERROR",
+            "Printer does not belong to store"
+        );
+        verify(grabRenderer, never()).render(any());
+        verifyNoInteractions(printerTransport);
+    }
+
     private DispatchFixture configureCloudBlockedDispatch() {
         Store store = new Store();
         store.id = 1L;

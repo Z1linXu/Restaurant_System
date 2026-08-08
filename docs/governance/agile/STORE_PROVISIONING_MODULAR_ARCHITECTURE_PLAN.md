@@ -1,12 +1,12 @@
 # Store Provisioning Modular Architecture Plan
 
-> Capability state: `DRAFT_PR_61`
+> Capability state: `IN_MAIN`
 >
 > Prepared: 2026-08-08, America/Toronto
 >
-> Repository base: `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`
+> Repository base: `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b`
 >
-> Review: Draft PR #61, base `main`
+> Review: PR #61 merged to `main`
 >
 > Runtime access: not performed
 
@@ -122,15 +122,15 @@ reviewed policy such as `manual_after_creation` or `not_applicable`.
 | Profile | State | Boundary |
 |---|---|---|
 | `CHINATOWN_MENU_2026_02_02` | `IN_MAIN` menu-clone profile | Frozen initial Chinatown menu target; not a complete Store Profile yet. |
-| Generic Store Profile contract | `STACKED_CONTRACT_WAITING_FOR_OWNER_REVIEW` | Exact identity/version, module references with reviewed expected fingerprints, activation requirements, and safe registry summaries only; no concrete Store Profile or workflow is registered. |
+| Generic Store Profile contract | `IN_MAIN` via PR #64 | Exact identity/version, module references with reviewed expected fingerprints, activation requirements, and safe registry summaries only; no concrete Store Profile or workflow is registered. |
 | Complete St-Denis Store Profile | `PLANNED_IDENTITY_NOT_FINAL` | Production-like Store template; no current registry entry or public API. Historical documents use `ST_DENIS_MENU` for a menu-only candidate, while `ST_DENIS_PROFILE_V1` is an architecture placeholder for the future complete Store Profile. The implementing loop must select one strict, case-sensitive identity before code is written. |
-| Synthetic St-Denis baseline | `STG-005B_STACKED_DRAFT_PR_62` | Versioned empty-or-exact synthetic fixture/application package; not in `main`, not executed, and not Production source evidence. |
+| Synthetic St-Denis baseline | `IN_MAIN` via PR #62 | Versioned empty-or-exact synthetic fixture/application capability; not executed and not Production source evidence. |
 
 Production Store 1 is the Owner-approved live source for the Chinatown
 Production clone. That source identity/evidence requirement is a profile input
 boundary, not permission to hard-code Store 1 inside the generic engine.
 
-## 5. Generic provisioning engine
+## 5. Generic Store Provisioning Engine
 
 The future engine coordinates module contracts but does not implement domain
 business rules itself. Its responsibilities are limited to:
@@ -383,15 +383,17 @@ runtime evidence and cannot be replaced by unit tests.
 
 ## 14. Current review boundary
 
-This architecture package may be reviewed and merged independently. While it
-is unmerged, STG-005B, AL-003S, and the first AL-004 contract slice may be
-prepared only as explicitly `STACKED_ONLY` work and must be rebuilt or promoted
-from latest `main` after Owner merge. The AL-004 slice registers no concrete
-Store Profile and adds no public template endpoint or executable provisioning
-workflow. No runtime operation is authorized.
+PR #61 established this architecture in `main`; PR #62 established the
+Synthetic St-Denis repository baseline, and PR #63 established guarded Staging
+acceptance preparation. The AL-004 contract entered `main` via PR #64 and still
+registers no concrete Store Profile, exposes no public template endpoint, and
+adds no executable provisioning workflow. No runtime operation is authorized.
+The #65 Staff/Table package, independent #66 Printer Store-isolation repair,
+and #67 Printing Provisioning plan are `IN_MAIN`; #68 is now a main-based Draft
+Device/Pad Provisioning plan, while #69-#70 remain `STACKED_ONLY` until their
+direct dependency enters `main`.
 
-The prepared STG-005B stacked package adds no migration or HTTP endpoint. It
+The `IN_MAIN` STG-005B package adds no migration or HTTP endpoint. It
 uses the existing Staging profile/guards, an immutable 4/3/13/38 source
 manifest, a single-transaction empty-or-exact applier, one revision increment,
-and sanitized evidence. It remains dependency-bound to this architecture
-review and separately Owner-gated for runtime use.
+and sanitized evidence. It remains separately Owner-gated for runtime use.
