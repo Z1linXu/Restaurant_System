@@ -26,7 +26,7 @@
 | Environment | `restaurant-prod` | `OPERATOR_CONFIRMED` | Environment label only; no host or secret is recorded. |
 | `RUNTIME_COMMIT` | `4667f3c` | `OPERATOR_CONFIRMED` | Reported deployed commit, not a formal release approval. |
 | Production branch | `main` | `OPERATOR_CONFIRMED` | Branch relationship is not a deployment approval record. |
-| Last merged `DOCUMENTATION_COMMIT` | `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d` | `MACHINE_VERIFIED` from `origin/main` | PR #60 is `IN_MAIN`. This does not make that commit a Staging or Production runtime. |
+| Last merged `DOCUMENTATION_COMMIT` | `5baada03935e004d80af1e7a36fb7db39bd6abbb` | `MACHINE_VERIFIED` from `origin/main` | PR #71 is `IN_MAIN`. This does not make that commit a Staging or Production runtime. |
 | Deployment mode | HTTP | `OPERATOR_CONFIRMED` | HTTPS/certificate posture is outside this record. |
 | Compose services | `db`, `backend`, `nginx` | `OPERATOR_CONFIRMED` | No new container inspection was run for this planbook. |
 | Database schema | Flyway V7, including `V7__add_print_job_attention_acknowledgement.sql` | `OPERATOR_CONFIRMED` | Not a restore or schema-integrity rehearsal. |
@@ -72,7 +72,7 @@ snapshots. Do not copy those reports into this planbook.
 | STG-004 state | PR #38 merged the STG-004 runtime evidence. Exact SHA `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` passed PLAN, fresh PREFLIGHT, serial build/start, runtime verification, and isolated stop/start recovery. Server Staging remains running; Production remained unchanged. |
 | STG-005 state | PLAN complete. The Owner approved CP-0 as a separate minimal Staging-only bootstrap implementation and accepted CP-4 as a feature-disabled KDS/Assembling boundary. Positive Kitchen/Assembling workflow remains `EVIDENCE_PENDING`. |
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
-| AL-003 state | PR #58 preserves the failed-attempt evidence, PR #59's bounded PostgreSQL UID-70/mode-0700 private-leaf repair is `IN_MAIN`, and PR #60's Owner decisions are `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. None proves a new Staging deployment. |
+| AL-003 state | PR #58 preserves the failed-attempt evidence; PR #59's bounded PostgreSQL UID-70/mode-0700 private-leaf repair, PR #60's Owner decisions, and PR #71's handoff navigation are `IN_MAIN` at `5baada03935e004d80af1e7a36fb7db39bd6abbb`. None proves a new Staging deployment. |
 | Staging Owner login prerequisite | `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`; code audit proves an Organization Owner naturally accesses every same-Organization Store, so no explicit target Owner Store membership is required. Runtime bootstrap, credential, login, workspace, target onboarding, and API evidence remain pending. |
 | Current permitted work | Review the stacked Draft PR queue #61-#65 and #67-#70 in dependency order. Review printer Store-isolation repair PR #66 independently. Rebuild only the next layer from latest main after its dependency enters main. |
 | Explicitly not permitted | Reusing old SHA approval/evidence; SSH/runtime mutation; deployment; Flyway; bootstrap; credential creation; login; source-menu writes; validate/execute; real clone; Production Store 1 access/mutation; PR merge; or duplicate implementation of the prepared Draft queue. |
@@ -82,6 +82,12 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 [AL-001 technical plan](../agile/AL-001_OWNER_STORE_ONBOARDING_CHINATOWN_TECHNICAL_PLAN.md).
 The concise [Current Project Handoff](CURRENT_HANDOFF.md) is navigation only;
 these authorities and Git/runtime evidence win if it drifts.
+
+The current fully qualified modular Loop identifiers and their legacy-label
+mapping are authoritative in
+[STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md](../agile/STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md);
+historical short `AL-004`/`AL-005` labels must not be interpreted as the new
+packages without that mapping.
 
 ### Current AL-003 Git ground truth
 
@@ -96,7 +102,8 @@ these authorities and Git/runtime evidence win if it drifts.
 | Attempt evidence / PR #58 | `IN_MAIN` via merge `1482cddf4f10478ed571e4d7422100dc40006f6b` | Immutable record of the failed exact-SHA preflight and safe V8 runtime recovery. |
 | Private-leaf repair / PR #59 | `IN_MAIN` via merge `c3956592da8a33092ab745c7cc6aac05e9babfa7` | Staging-only path-validation correction and governance rules; no runtime action or business/API change. |
 | Owner decisions governance sync / PR #60 | `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d` | Documentation-only alignment of product direction, access semantics, FT-001 gaps, and runtime gates. |
-| Modular architecture / PR #61 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | Architecture/governance only; no runtime behavior. |
+| Current project handoff / PR #71 | `IN_MAIN` at `5baada03935e004d80af1e7a36fb7db39bd6abbb` | Navigation snapshot only; no runtime action or capability change. |
+| Modular architecture / PR #61 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | Defines the Generic Store Provisioning Engine, Versioned Store Profiles, Reusable Provisioning Modules, and anti-hardcode boundary; no API/runtime behavior. |
 | STG-005B Synthetic St-Denis baseline / PR #62 | `STACKED_ONLY` on #61 | Guarded synthetic source-menu capability; no runtime execution. |
 | AL-003S Staging acceptance preparation / PR #63 | `STACKED_ONLY` on #62 | Guarded tooling/plan only; runtime approval remains separate. |
 | AL-004 Generic Store Profile contract / PR #64 | `STACKED_ONLY` on #63 | Declarative contract only; no public execution. |
@@ -570,6 +577,8 @@ Dependency repair and Store Profile governance are authoritative in
 - The complete gap matrix and bounded loop order are maintained in
   [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md). Recording those loops does not
   authorize their implementation or any runtime mutation.
+- The modular target and classification gate are maintained in
+  [STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md](../agile/STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md).
 
 ### AL-002 implementation record
 

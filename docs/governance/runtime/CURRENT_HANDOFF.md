@@ -28,10 +28,10 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| `origin/main` | `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d` | `IN_MAIN`; merge of PR #60 |
+| `origin/main` | `5baada03935e004d80af1e7a36fb7db39bd6abbb` | `IN_MAIN`; merge of PR #71 |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, clean | Local checkout is behind `origin/main`; it was not modified by this handoff |
-| Handoff branch | `codex/current-project-handoff` | Documentation-only, based on the exact `origin/main` above |
-| Handoff PR | [Draft PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | Base is `main`; exact current head is authoritative in GitHub PR metadata |
+| Handoff branch | `codex/current-project-handoff` | Documentation-only snapshot; PR #71 is already represented by the exact `origin/main` above |
+| Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
 
 `IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
 `DEPLOYED_TO_STAGING`, and `DEPLOYED_TO_PRODUCTION` are distinct states. A
@@ -56,7 +56,7 @@ GitHub state was read on 2026-08-08. Every PR below was open and Draft.
 
 | PR | Package | Base | Head | State | Depends on | In main? | Owner action |
 |---|---|---|---|---|---|---|---|
-| #61 | Modular architecture foundation | `main` | `61b8feabecac3444b345a9261af4f2bed76b9ccc` | `DRAFT_PR` | PR #60/main | No | Review first; merge only if approved |
+| #61 | Modular architecture foundation | `main` | Rebuilt from `origin/main@5baada03935e004d80af1e7a36fb7db39bd6abbb`; exact head is GitHub PR metadata | `DRAFT_PR` | PR #71/main | No | Review first; merge only if approved |
 | #62 | STG-005B Synthetic St-Denis baseline | PR #61 branch | `0aba8377a3b7acec047c6ffd025f774d8a4d5e87` | `STACKED_ONLY` | #61 | No | Rebuild onto latest main after #61 enters main |
 | #63 | AL-003S Staging acceptance preparation | PR #62 branch | `880795f9fa6101116f9fd1f370caeb0bdf16b647` | `STACKED_ONLY` | #62 | No | Rebuild after #62; runtime use remains separately gated |
 | #64 | AL-004 Generic Store Profile contract | PR #63 branch | `136c297dd789744fecc45e7b8a3f810d96aae56a` | `STACKED_ONLY` | #63 | No | Rebuild after #63 and re-review contract |
@@ -97,7 +97,7 @@ V10 ran on Staging or Production.
 | Current Agile Loop | `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE` |
 | Current package | Project handoff over the prepared Draft queue |
 | Feature stop state | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` |
-| Handoff stop state | `PROJECT_HANDOFF_DRAFT_WAITING_FOR_OWNER_REVIEW` |
+| Handoff stop state | `PROJECT_HANDOFF_IN_MAIN` |
 | Current Owner gate | Review #61-#70 and #66; separately approve any runtime or Production action |
 
 ### Permitted work
@@ -131,6 +131,8 @@ V10 ran on Staging or Production.
 - PR #59 fixed the bounded PostgreSQL UID-70/mode-0700 preflight defect in main.
 - PR #60 merged Owner product decisions and governance alignment into main at
   `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`.
+- PR #71 merged this navigation handoff into main at
+  `5baada03935e004d80af1e7a36fb7db39bd6abbb`.
 - PRs #61-#70 and independent #66 are prepared Drafts, not main capability.
 
 ## 7. AL-003 repository capability

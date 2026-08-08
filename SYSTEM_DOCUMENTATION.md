@@ -372,6 +372,17 @@ main is neither a release approval nor proof of deployment. Current-main
 capability must not be described as
 Production behavior.
 
+PR #60 merged the 2026-08-08 Owner direction into `main` at
+`2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; PR #71 then merged the Current
+Project Handoff navigation at `5baada03935e004d80af1e7a36fb7db39bd6abbb`.
+Neither is runtime evidence. The modular target is a Generic
+Store Provisioning Engine consuming Versioned Store Profiles and Reusable
+Provisioning Modules. Shared implementation must remain Store-neutral;
+Store-specific desired state belongs in a reviewed profile, physical
+endpoints/secrets remain runtime-only, and accepted actions are retained as
+sanitized evidence. The architecture authority is
+[STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md](docs/governance/agile/STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md).
+
 STG-005A owns `V9__add_staging_synthetic_bootstrap_requests.sql`. PR-B adds the
 separate append-only `V10__add_owner_store_menu_clone_requests.sql`. V10 creates
 only the durable clone request/evidence table, the composite uniqueness scope

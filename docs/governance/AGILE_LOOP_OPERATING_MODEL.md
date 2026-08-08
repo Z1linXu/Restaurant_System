@@ -85,16 +85,27 @@ culminates in `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE`.
 PR #59's bounded PostgreSQL private-leaf repair is now `IN_MAIN`, and PR #60's
 2026-08-08 Owner decisions are `IN_MAIN` at
 `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; neither proves a new Staging
-deployment. Draft PRs #61-#65 and #67-#70 form a dependency-bound preparation
+deployment. PR #71's handoff navigation is `IN_MAIN` at
+`5baada03935e004d80af1e7a36fb7db39bd6abbb`; it does not change runtime state.
+Draft PRs #61-#65 and #67-#70 form a dependency-bound preparation
 stack. PR #66 is an independent main-based prerequisite repair. The current
 feature stop state is
 `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL`.
+Draft PR #61 is the architecture/governance foundation: it defines the Generic
+Store Provisioning Engine, Versioned Store Profiles, and Reusable Provisioning
+Modules without adding runtime behavior or advancing a downstream package.
 No current statement authorizes server access, Flyway execution, synthetic
 bootstrap, credential creation, login, source-menu writes, validate, execute,
 a runtime clone, merge, or deployment. Staging acceptance retains the distinct
 prerequisite
 `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING` until synthetic-only runtime
 evidence proves the complete Owner login topology.
+
+The architecture authority for future provisioning packages is
+[STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md](agile/STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md).
+It classifies each Store-related change as shared capability, Store Profile,
+reusable module, runtime-only configuration, or operational evidence before
+implementation.
 
 ## 7. Dependency Repair Gate and Auto-Loop
 

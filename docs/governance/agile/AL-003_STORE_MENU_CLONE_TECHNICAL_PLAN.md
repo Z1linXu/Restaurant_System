@@ -1,6 +1,6 @@
 # AL-003 Store 1 -> Chinatown Live Menu Clone Technical Plan
 
-> Status: `AL-003_OWNER_DECISIONS_GOVERNANCE_SYNC_WAITING_FOR_OWNER_REVIEW`
+> Status: `IN_MAIN_AWAITING_STG-005B_AND_STAGING_ACCEPTANCE`
 >
 > Prepared: 2026-07-31, America/Toronto
 >
@@ -23,10 +23,10 @@
 |---|---|
 | `AL003_PLAN_FOUND` | `false` before this document was created |
 | `PLAN_PATH` | `docs/governance/agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md` |
-| `PLAN_STATUS` | `AL-003_OWNER_DECISIONS_GOVERNANCE_SYNC_WAITING_FOR_OWNER_REVIEW` |
+| `PLAN_STATUS` | `IN_MAIN_AWAITING_STG-005B_AND_STAGING_ACCEPTANCE` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | PR #59 is `IN_MAIN`. Owner reviews governance Draft PR #60; after merge, select the new exact SHA and approve the bounded Staging deployment/bootstrap/login/clone acceptance sequence separately. |
+| `RECOMMENDED_ACTION` | PR #60 and PR #71 are `IN_MAIN`. Complete the modular architecture review and STG-005B synthetic-source package before requesting a separately approved exact-SHA Staging deployment/bootstrap/login/clone acceptance sequence. |
 
 PR-A through PR-F are in `main`. PR-D supplies generic source-option copying
 and target-local parent mapping; PR #54 placed the concrete Chinatown Profile
@@ -70,7 +70,7 @@ These are authoritative product inputs, not open questions:
 
 ### 1.2 Current Git ground truth
 
-| Package | Commit | State relative to `origin/main` `c3956592da8a33092ab745c7cc6aac05e9babfa7` |
+| Package | Commit | State relative to `origin/main` `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
 |---|---|---|
 | PR-C / PR #47 | merge `ba169ed8b689ddef8dffe94deee82fea191cdcfb` | `IN_MAIN` |
 | PR-E / PR #54 | merge `82b8059f6af1c7dff4eeb1648ca47bec039b5e52` | `IN_MAIN`; PR-F0 promotion base |
@@ -80,7 +80,8 @@ These are authoritative product inputs, not open questions:
 | PR-F / PR #56 | merge `8f909525781804f61d1da388882f530da358c3c4` | `IN_MAIN`; historical failed release candidate, no longer authorized |
 | Attempt evidence / PR #58 | merge `1482cddf4f10478ed571e4d7422100dc40006f6b` | `IN_MAIN`; immutable failed-attempt/runtime recovery evidence |
 | Private-leaf repair / PR #59 | merge `c3956592da8a33092ab745c7cc6aac05e9babfa7` | `IN_MAIN`; no Staging or Production deployment implied |
-| Owner decisions governance sync / PR #60 | head branch `codex/al-003-owner-decisions-governance-sync` | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`; documentation only |
+| Owner decisions governance sync / PR #60 | merge `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d` | `IN_MAIN`; documentation only |
+| Current project handoff / PR #71 | merge `5baada03935e004d80af1e7a36fb7db39bd6abbb` | `IN_MAIN`; navigation only |
 
 This document describes the complete reviewed target architecture. A section
 in this plan is not evidence that its implementation is in `main`, Staging, or
@@ -921,7 +922,7 @@ Stop and return to Owner if:
 
 ## Final state
 
-`AL-003_OWNER_DECISIONS_GOVERNANCE_SYNC_WAITING_FOR_OWNER_REVIEW`
+`IN_MAIN_AWAITING_STG-005B_AND_STAGING_ACCEPTANCE`
 
 PR-F entered `main` through PR #56 at
 `8f909525781804f61d1da388882f530da358c3c4`. The reviewed Owner
