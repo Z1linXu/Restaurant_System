@@ -57,6 +57,11 @@ separate from historical evidence snapshots and business implementation details:
   defines the first declarative Store-level identity/composition slice. It
   registers no concrete profile and has no public endpoint, migration, UI, or
   executable provisioning workflow.
+- [AL-005A Staff and Table Provisioning Module Plan](docs/governance/agile/AL-005A_STAFF_TABLE_PROVISIONING_MODULE_PLAN.md)
+  records the existing credential/membership and dining-table authorities,
+  reusable module boundaries, security/schema gaps, and implementation gates.
+  It is a dependency-bound preparation package and adds no writer, API,
+  migration, credential, table, or runtime behavior.
 - [AL-003A final menu comparison](docs/governance/agile/AL-003A_FINAL_MENU_COMPARISON.md)
   is the single product-mapping authority for the Store 1 to Chinatown target
   menu. Repository seed data is historical reference only.
@@ -408,6 +413,18 @@ not provision a Store and does not register an Owner API or UI.
 It does not yet verify a referenced module/configuration against a module
 registry or deployed runtime; that compatibility gate remains a later engine
 capability.
+
+The AL-005A audit confirms that `OnboardingStaffProvisioningService` is the
+existing internal authority for transactionally creating a Store-scoped user,
+BCrypt credential, and explicit Store membership. It must remain subordinate
+to a parent authorization/idempotency transaction, and Organization Owners do
+not receive redundant target-Store memberships. The current Platform Admin
+dining-table path is not a safe provisioning upsert: table-code uniqueness,
+loaded-row Store ownership, immutable template identity, normalization, replay,
+and update/deactivation semantics are unresolved. Chinatown retains the
+approved blank-table/manual-setup policy. AL-005A therefore plans only
+versioned non-secret contracts and a read-only table planner before any
+separately reviewed predefined-table writer or migration.
 
 STG-005B prepares a Staging-only, non-web source-menu fixture around the
 existing menu entities, Store lock, and revision service. Its source graph has

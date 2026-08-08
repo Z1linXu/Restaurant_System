@@ -62,9 +62,9 @@ snapshots. Do not copy those reports into this planbook.
 | Item | Current state |
 |---|---|
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `AL-004_GENERIC_STORE_PROFILE_FRAMEWORK` |
-| Loop type | `IMPLEMENTATION` |
-| Loop status | `AL-004_STACKED_PROFILE_CONTRACT_WAITING_FOR_OWNER_REVIEW` |
+| Current Agile Loop | `AL-005A_STAFF_TABLE_PROVISIONING_MODULES` |
+| Loop type | `DEPENDENCY_BOUND_PREPARATION` |
+| Loop status | `AL-005A_PREPARED_WAITING_FOR_AL-004` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | PR #27 merged the backend foundation into `main`; Production remains on the older runtime and no production onboarding is established by that merge. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -74,7 +74,7 @@ snapshots. Do not copy those reports into this planbook.
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
 | AL-003 state | PR #58 preserves the failed-attempt evidence and PR #59's bounded PostgreSQL UID-70/mode-0700 private-leaf repair is `IN_MAIN` at `c3956592da8a33092ab745c7cc6aac05e9babfa7`. Neither record proves a new Staging deployment. |
 | Staging Owner login prerequisite | `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`; code audit proves an Organization Owner naturally accesses every same-Organization Store, so no explicit target Owner Store membership is required. Runtime bootstrap, credential, login, workspace, target onboarding, and API evidence remain pending. |
-| Current permitted work | Review Draft PR #61, dependency-bound Draft PRs #62 and #63, and the stacked AL-004 declarative profile-contract slice. Bounded downstream scope audits may continue. Runtime mutation remains prohibited. |
+| Current permitted work | Review Draft PR #61, dependency-bound Draft PRs #62 and #63, the stacked AL-004 declarative profile-contract slice, and the AL-005A Staff/Table contract preparation. Bounded downstream scope audits may continue. Runtime mutation remains prohibited. |
 | Explicitly not permitted | Reusing old SHA approval/evidence; SSH/runtime mutation; deployment; Flyway; bootstrap; credential creation; login; source-menu writes; validate/execute; real clone; Production Store 1 access/mutation; or implementation outside the selected architecture/STG-005B package and explicitly bounded downstream preparation. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
@@ -104,6 +104,7 @@ packages without that mapping.
 | Modular Store provisioning architecture / PR #61 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | Defines Generic Engine + Versioned Profiles + Reusable Modules; no API/runtime behavior. |
 | AL-003S Staging acceptance preparation / PR #63 | `STACKED_DRAFT_WAITING_FOR_OWNER_REVIEW_AND_RUNTIME_APPROVAL` | Adds a default-validation guarded STG-005A/STG-005B launcher, fresh passive resource/Production-continuity evidence collector, action/identity-bound approval gate, immutable image pin, exact command plan, evidence template, and rollback boundary. It performs no SSH, Docker runtime action, Flyway, bootstrap, login, API call, or clone. |
 | AL-004 generic Store Profile contract / PR #64 | `STACKED_ONLY_WAITING_FOR_OWNER_REVIEW` | Adds exact Store-profile identity/version/composition, module policies, activation requirements, canonical fingerprinting, and safe summaries. It registers no concrete profile and has no endpoint, migration, provisioning engine, UI, or runtime action. |
+| AL-005A Staff/Table module preparation | `AL-005A_PREPARED_WAITING_FOR_AL-004` (`STACKED_ONLY` Git classification) | Records the existing staff/access and dining-table authorities, reusable module contracts, security gaps, test gates, and Owner/schema decisions. It adds no writer, endpoint, migration, credential, table, or runtime action. |
 
 PR-D promotion evidence is now historical main evidence: semantic source
 `5a0dc09944b4b0945fe95027d7f12647212ea559`, reviewed promotion head
@@ -141,6 +142,15 @@ The next dependency-bound code slice is documented in
 It is declarative only. No concrete Chinatown or St-Denis Store Profile is
 registered, and no Store Profile can yet be selected or executed through an
 Owner API.
+
+The bounded downstream Staff/Table audit is documented in
+[AL-005A Staff and Table Provisioning Module Plan](../agile/AL-005A_STAFF_TABLE_PROVISIONING_MODULE_PLAN.md).
+It confirms that AL-002's internal onboarding staff service is the credential
+and membership authority, while the current Platform Admin dining-table writer
+is not safe as a provisioning upsert. AL-005A therefore remains a contract and
+read-only-planner preparation until AL-004 is merged. Chinatown's existing
+blank-table/manual-setup decision is retained; table-code, replay, and schema
+gates apply only before a future predefined-table writer.
 
 Git ground truth must always distinguish `MERGED_ON_GITHUB`, `IN_MAIN`,
 `DEPLOYED_TO_STAGING`, and `DEPLOYED_TO_PRODUCTION`. A stacked PR merged into a

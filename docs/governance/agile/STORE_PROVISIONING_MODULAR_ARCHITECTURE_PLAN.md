@@ -298,6 +298,13 @@ Store 1 contents, and cannot replace the Production read-only source gate.
 | 8 | `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE` | Production gap/migration/backup/rollback/compatibility package | No deployment without approval |
 | 9 | `ACT-001_CHINATOWN_PRODUCTION_ACTIVATION` | Approved runtime provisioning and field acceptance | No unauthorized Production mutation |
 
+The bounded AL-005A authority/risk audit and staged contract are maintained in
+[AL-005A Staff and Table Provisioning Module Plan](AL-005A_STAFF_TABLE_PROVISIONING_MODULE_PLAN.md).
+It preserves AL-002's credential/membership authority, rejects the current
+Platform Admin table writer as a provisioning upsert, and keeps table writing
+behind explicit normalization, uniqueness, ownership, replay, and immutable
+template gates.
+
 ### 10.1 Historical label mapping
 
 Earlier plans used short labels before the modular roadmap was approved. Those

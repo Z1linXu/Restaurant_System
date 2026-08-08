@@ -595,6 +595,18 @@ template discovery/selection, Store provisioning execution, and concrete
 Chinatown/St-Denis Store Profiles remain unimplemented and must not be inferred
 from these internal types.
 
+The AL-005A Staff/Table preparation adds no HTTP endpoint or DTO. The existing
+Owner onboarding transaction and the guarded STG-005A synthetic-bootstrap
+transaction are the two controlled parent paths that currently invoke
+`OnboardingStaffProvisioningService`; the internal staff service is not an
+independently idempotent public API. It currently creates a Store membership for
+every supplied role, so a future Store-scoped staff adapter must not use it to
+create Organization Owners. No Owner table-provisioning endpoint, table
+template API, replay contract, or activation API exists. Existing Platform
+Admin dining-table endpoints must not be treated as a generic Store
+provisioning writer until Store ownership and table-code idempotency constraints
+are separately reviewed.
+
 ### Owner Multi-Store Overview
 GET `/api/v1/owner/overview`
 

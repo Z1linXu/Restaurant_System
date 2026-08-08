@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `AL-004_STACKED_PROFILE_CONTRACT_WAITING_FOR_OWNER_REVIEW` |
-| target_loop | `AL-004_GENERIC_STORE_PROFILE_FRAMEWORK` |
-| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, and PR #60's Owner decisions are `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. Draft PRs #61-#63 remain dependency-bound and are not in `main`. The stacked AL-004 package adds only a declarative Store-profile contract. Staging remains on the separately evidenced older runtime; no V9/V10/bootstrap/clone/provisioning execution is implied. |
+| status | `AL-005A_PREPARED_WAITING_FOR_AL-004` |
+| target_loop | `AL-005A_STAFF_TABLE_PROVISIONING_MODULES` |
+| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, and PR #60's Owner decisions are `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. Draft PRs #61-#64 remain dependency-bound and are not in `main`. AL-005A has only a Staff/Table contract and risk-audit preparation; it adds no writer, endpoint, migration, credential, table, or runtime execution. Staging remains on the separately evidenced older runtime. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Review Draft PR #61, then dependency-bound Draft PRs #62 and #63, then the stacked AL-004 contract package. Runtime acceptance still needs a fresh exact-SHA request and separate Owner approval after its dependencies enter `main`. |
+| next action | Review Draft PR #61, then dependency-bound Draft PRs #62 and #63, then PR #64 and the AL-005A preparation package. AL-005A1 implementation requires AL-004 in `main`; Chinatown keeps the approved blank-table/manual-setup policy. Any future predefined-table writer needs separate schema evidence and normalization/replay decisions. Runtime acceptance still needs a fresh exact-SHA request and separate Owner approval. |
 
 ### Current AL-003 delivery state
 
@@ -41,6 +41,7 @@
 | STG-005B Synthetic St-Denis baseline / PR #62 | `STACKED_DRAFT_WAITING_FOR_OWNER_REVIEW`; no migration, public API, SSH, runtime write, or clone execution |
 | AL-003S Staging acceptance preparation / PR #63 | `STACKED_DRAFT_WAITING_FOR_OWNER_REVIEW_AND_RUNTIME_APPROVAL`; guarded launcher/tests and command/evidence/rollback documents only; no runtime action |
 | AL-004 generic Store Profile contract / PR #64 | `STACKED_ONLY_WAITING_FOR_OWNER_REVIEW`; exact identity/version/composition/fingerprint contract only; no concrete profile, API, migration, UI, or provisioning execution |
+| AL-005A Staff/Table module preparation | `AL-005A_PREPARED_WAITING_FOR_AL-004` (`STACKED_ONLY` Git classification); existing-authority audit and implementation contract only; no writer, endpoint, migration, credential, table, or runtime execution |
 
 The Owner-login acceptance prerequisite is not satisfied by repository code or
 deployment alone. Read-only code audit confirms that an active Organization
@@ -202,7 +203,7 @@ seed/demo Store.
 | Generic Store Profile identity/composition contract | `STACKED_ONLY` | Exact versioned identity, module references with reviewed expected fingerprints, activation requirements, canonical fingerprint, and safe summaries are under review; no concrete Store Profile or callable workflow is implied. |
 | Owner Create Store / Choose Menu Template UI | `NOT_IMPLEMENTED` | Existing Platform Admin template UI is not the approved Owner workflow. |
 | Versioned St-Denis profile | `NEEDS_NEW_LOOP` | Historical planning calls the menu-only candidate `ST_DENIS_MENU`; the strict identity for a complete Store Profile is not finalized. It must reuse the generic profile registry/clone engine with no Store ID 3 branch. |
-| Table provisioning module | `NEEDS_NEW_LOOP` | Existing Store-scoped table APIs can be reused; activation orchestration is absent. |
+| Staff/Table provisioning module | `PREPARED_WAITING_FOR_DEPENDENCY` | AL-002 staff/credential authority is reusable only under a parent transaction. Chinatown uses the approved blank-table/manual-setup policy. The existing Platform Admin table writer cannot be reused as a future predefined-template upsert; table uniqueness, Store ownership, normalization, replay, and immutable-template decisions remain gated. |
 | Printing provisioning module | `NEEDS_NEW_LOOP` | No printer/assignment clone; runtime endpoints and physical tests remain separately gated. |
 | Device/Pad provisioning module | `NEEDS_NEW_LOOP` | Pairing exists, but Store activation orchestration and Chinatown field evidence do not. |
 | Store activation validation/workflow | `NEEDS_NEW_LOOP` | Must gate activation on access, menu, tables, printing, devices, login, and order acceptance. |
@@ -220,7 +221,9 @@ seed/demo Store.
    template selection, and the future `ST_DENIS_MENU` profile without a second
    clone engine.
 4. `AL-005A_STAFF_TABLE_PROVISIONING_MODULES`: reusable staff/access and table
-   provisioning inputs around the existing onboarding and table APIs.
+   provisioning inputs around the existing onboarding authority and a new
+   Store-safe table planner/provisioner boundary. The preparation contract is
+   [AL-005A Staff and Table Provisioning Module Plan](agile/AL-005A_STAFF_TABLE_PROVISIONING_MODULE_PLAN.md).
 5. `AL-005_PRINTING_PROVISIONING_TEMPLATE`: Store-scoped printer/module
    assignment inputs and safe physical-print acceptance gates.
 6. `AL-005B_DEVICE_PAD_PROVISIONING_MODULE`: reusable Store device binding and
