@@ -7,10 +7,12 @@
 > Runtime execution in this package: `NOT_AUTHORIZED`
 
 > Current runtime checkpoint: separate Owner authorization deployed exact
-> `39fa284b7bccd64d650c396f2c7532b0a0858b4b` V10-to-V10 and repaired
-> readiness passed. OPS-001 runtime collection stopped before PASS on the
-> PostgreSQL `success::text=true` versus mock-`t` validator mismatch; no
-> same-image restart or synthetic acceptance action followed.
+> `63600b13b10a5549d9095a03c94e69a9f880af9f` V10-to-V10; repaired readiness
+> and sanitized runtime/Flyway collection passed. Same-image restart retained
+> exact container/image identities but returned `NO_GO` when an immediate
+> health probe raced Spring startup. Runtime recovered at the same V10
+> identities, but no PASS evidence or required blocked marker was emitted; no
+> synthetic acceptance action followed.
 
 ## 1. Purpose and classification
 
@@ -102,6 +104,13 @@ Future actions fail closed until a separately approved Owner recovery confirms
 container absence, transaction/idempotency state, and continuity, then removes
 every blocked record that actually exists. The launcher rechecks blocked state
 after locking and never auto-clears it.
+
+OPS-001 same-image restart uses the same fail-closed model. Container
+`running|NO_HEALTHCHECK` is not application readiness: after ordered starts it
+requires bounded HTTP-200 convergence for backend health, frontend root and
+`/ws/info`, followed by exact container/image/Flyway/project invariance. Every
+nonzero exit after stop begins must persist blocked state before cleanup,
+including explicit `die`, timeout, signal and evidence-emission failure.
 
 The launcher does not accept a password or token argument. `bootstrap-execute`
 inherits only a non-interactive stdin stream so the existing Java secret reader
@@ -295,8 +304,10 @@ tooling gaps while preserving these remaining runtime gates:
 2. OPS-001 now publishes the approval-bound same-container restart/Flyway
    evidence collector;
 3. OPS-001 now publishes the secret-FD Owner/API acceptance client;
-4. all three remain runtime-unused and require distinct exact-action Owner
-   approvals;
+4. runtime use has separately proved release/env rotation, V10 redeploy,
+   readiness and sanitized collection; valid same-image restart PASS evidence
+   remains pending and every future action still requires a distinct exact
+   approval;
 5. PostgreSQL 16 concurrency remains runtime evidence pending; local source
    graph concurrency uses H2;
 6. STG-006 freshly observed the retained runtime SHAs/Flyway boundary, but did
@@ -314,4 +325,4 @@ Passing the package does not authorize or prove runtime acceptance.
 
 Stop state:
 
-`OPS-001_REPOSITORY_COMPLETE_STG-007_WAITING_FOR_OWNER_RUNTIME_APPROVAL`
+`STG-007_RUNTIME_RECOVERED_RESTART_EVIDENCE_BLOCKED_BY_READINESS_FAIL_CLOSED_REPAIR_WAITING_FOR_OWNER_REVIEW`

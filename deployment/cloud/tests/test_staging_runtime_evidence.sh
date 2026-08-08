@@ -20,6 +20,7 @@ assert_contains 'exact SHA, environment, and preflight bindings are required' "$
 
 # shellcheck source=../staging-runtime-evidence.sh
 source "$SCRIPT"
+eval "$(declare -f mark_action_blocked | sed '1s/mark_action_blocked/real_mark_action_blocked/')"
 EXPECTED_ROOT="$TMP_DIR/staging"
 OPS001_EXPECTED_ROOT="$EXPECTED_ROOT"
 mkdir -p "$EXPECTED_ROOT/state"; chmod 700 "$EXPECTED_ROOT/state"
@@ -58,8 +59,22 @@ validate_readiness_evidence() { printf 'readiness\n' >>"$CALLS"; }
 validate_runtime_approval() { printf 'approval\n' >>"$CALLS"; }
 mark_action_blocked() { printf 'blocked:%s\n' "$1" >>"$CALLS"; }
 CURL_BIN="$TMP_DIR/curl"
+CURL_CALLS="$TMP_DIR/curl-calls"
+export CURL_CALLS
 cat >"$CURL_BIN" <<'EOF'
 #!/usr/bin/env bash
+printf '%s\n' "$*" >>"$CURL_CALLS"
+if [[ -n "${CURL_FAIL_ONCE_FILE:-}" && ! -e "${CURL_FAIL_ONCE_FILE}.consumed" ]]; then
+  : >"${CURL_FAIL_ONCE_FILE}.consumed"
+  printf '%s' "${CURL_FAIL_ONCE_CODE:-502}"
+  [[ "${CURL_FAIL_ONCE_CODE:-502}" != 000 ]]
+  exit
+fi
+if [[ -n "${CURL_ALWAYS_CODE:-}" ]]; then
+  printf '%s' "$CURL_ALWAYS_CODE"
+  [[ "$CURL_ALWAYS_CODE" != 000 ]]
+  exit
+fi
 printf '200'
 EOF
 chmod +x "$CURL_BIN"
@@ -89,9 +104,42 @@ assert_contains 'stop nginx backend db' "$CALLS"
 assert_contains 'start db' "$CALLS"
 assert_contains 'start backend' "$CALLS"
 assert_contains 'start nginx' "$CALLS"
+assert_contains 'http://127.0.0.1:18080/api/v1/system/health' "$CURL_CALLS"
+assert_contains 'http://127.0.0.1:18080/' "$CURL_CALLS"
+assert_contains 'http://127.0.0.1:18080/ws/info' "$CURL_CALLS"
 [[ "$(rg -c '^(snapshot|release|running-identity|readiness|approval)$' "$CALLS")" -ge 7 ]] || fail 'post-lock integrity rechecks are missing'
 assert_contains 'OPS001_RUNTIME|AFTER_RESTART|STATUS|PASS' "$TMP_DIR/restart-evidence"
 [[ "$RESTART_MUTATION_STARTED" == false ]] || fail 'restart mutation flag was not cleared'
+
+: >"$CURL_CALLS"
+export CURL_FAIL_ONCE_FILE="$TMP_DIR/curl-fail-once"
+sleep() { printf 'sleep:%s\n' "$1" >>"$CALLS"; }
+wait_http_200 "backend health" "http://127.0.0.1:18080/api/v1/system/health"
+[[ "$(wc -l <"$CURL_CALLS" | tr -d ' ')" == 2 ]] || fail 'HTTP readiness did not retry an initial 502'
+assert_contains 'sleep:2' "$CALLS"
+unset CURL_FAIL_ONCE_FILE
+
+: >"$CURL_CALLS"
+export CURL_FAIL_ONCE_FILE="$TMP_DIR/curl-transport-fail-once"
+export CURL_FAIL_ONCE_CODE=000
+wait_http_200 "backend health" "http://127.0.0.1:18080/api/v1/system/health"
+[[ "$(wc -l <"$CURL_CALLS" | tr -d ' ')" == 2 ]] || fail 'HTTP readiness did not retry an initial transport failure'
+unset CURL_FAIL_ONCE_FILE CURL_FAIL_ONCE_CODE
+
+: >"$CURL_CALLS"
+export CURL_ALWAYS_CODE=502
+HTTP_READINESS_ATTEMPTS=2
+expect_failure persistent_502 wait_http_200 "backend health" "http://127.0.0.1:18080/api/v1/system/health"
+assert_contains 'did not return HTTP 200 within 90 seconds' "$TMP_DIR/persistent_502.err"
+[[ "$(wc -l <"$CURL_CALLS" | tr -d ' ')" == 2 ]] || fail 'persistent 502 was not bounded by the configured attempts'
+
+: >"$CURL_CALLS"
+export CURL_ALWAYS_CODE=404
+HTTP_READINESS_ATTEMPTS=30
+expect_failure non_transient_404 wait_http_200 "SockJS info" "http://127.0.0.1:18080/ws/info"
+assert_contains 'returned non-transient HTTP 404' "$TMP_DIR/non_transient_404.err"
+[[ "$(wc -l <"$CURL_CALLS" | tr -d ' ')" == 1 ]] || fail 'non-transient HTTP failure was retried'
+unset CURL_ALWAYS_CODE
 
 VALID_FLYWAY_ROWS="$FLYWAY_ROWS"
 FLYWAY_ROWS="$(printf '%s\n' "$VALID_FLYWAY_ROWS" | sed '2s/|true|/|false|/')"
@@ -124,8 +172,35 @@ capture_before_restart() { BEFORE_PROJECT_FINGERPRINT="$(project_fingerprint)"; 
 expect_failure identity_drift same_image_restart
 assert_contains 'container or image identity changed' "$TMP_DIR/identity_drift.err"
 
+# Explicit die/exit after mutation must still persist blocked state. ERR traps
+# do not fire for an explicit exit, so the executable uses a nonzero EXIT trap.
+trigger_explicit_restart_failure() {
+  local marker="$TMP_DIR/restart.blocked" lock_record="$TMP_DIR/restart.lock"
+  RESTART_MUTATION_STARTED=true
+  ACTION_BLOCKED_MARKER="$marker"
+  ACTION_LOCK_FD=9
+  umask 077
+  exec 9>"$lock_record"
+  chmod 600 "$lock_record"
+  mark_action_blocked() { printf 'mark\n' >>"$CALLS"; real_mark_action_blocked "$@"; }
+  cleanup() { printf 'cleanup\n' >>"$CALLS"; exec 9>&-; }
+  trap runtime_exit EXIT
+  die 'forced post-mutation failure'
+}
+: >"$CALLS"
+expect_failure explicit_restart_exit trigger_explicit_restart_failure
+assert_contains 'AL003S_BLOCKED|OPS001_RUNTIME_RESTART_FAILED' "$TMP_DIR/restart.blocked"
+assert_contains 'AL003S_BLOCKED|OPS001_RUNTIME_RESTART_FAILED' "$TMP_DIR/restart.lock"
+[[ "$(rg -c '^AL003S_BLOCKED\|OPS001_RUNTIME_RESTART_FAILED$' "$TMP_DIR/restart.blocked")" == 1 ]] || fail 'restart blocked marker was not recorded exactly once'
+[[ "$(file_mode "$TMP_DIR/restart.blocked")" == 600 ]] || fail 'restart blocked marker is not mode 0600'
+[[ "$(file_mode "$TMP_DIR/restart.lock")" == 600 ]] || fail 'restart action lock is not mode 0600'
+assert_contains 'cleanup' "$CALLS"
+[[ "$(sed -n '1p' "$CALLS")" == mark && "$(sed -n '2p' "$CALLS")" == cleanup ]] || fail 'restart blocked state was not persisted before cleanup'
+
 grep -Fq 'controlled_compose stop nginx backend db' "$SCRIPT" || fail 'ordered stop is missing'
 grep -Fq 'controlled_compose start db' "$SCRIPT" || fail 'same-container start is missing'
+grep -Fq 'trap runtime_exit EXIT' "$SCRIPT" || fail 'nonzero EXIT fail-closed trap is missing'
+[[ "$(rg -n 'emit_evidence AFTER_RESTART|RESTART_MUTATION_STARTED="false"' "$SCRIPT" | tail -n 2 | head -n 1 | cut -d: -f2-)" == *'emit_evidence AFTER_RESTART'* ]] || fail 'restart mutation flag clears before PASS evidence emission'
 grep -Fq 'success::text' "$SCRIPT" || fail 'runtime query no longer emits PostgreSQL canonical boolean text'
 lock_line="$(rg -n '^  acquire_action_lock$' "$SCRIPT" | tail -n 1 | cut -d: -f1)"
 consume_line="$(rg -n '^  ops001_consume_approval$' "$SCRIPT" | cut -d: -f1)"

@@ -249,10 +249,20 @@ start backend
 start nginx
 ```
 
-It requires the same container IDs, image IDs, Flyway digest, loopback health
-and project fingerprint afterward. Failure after stop begins writes the shared
-blocked state and requires Owner-reviewed recovery. There is no `up`, `down`,
-`rm`, image pull/build, Flyway command, volume action or Production command.
+Container `running` without a configured Docker healthcheck is only a lifecycle
+signal; it is not application readiness. After the ordered starts, the helper
+uses a fixed bounded loopback window and requires HTTP 200 from backend health,
+frontend root and `/ws/info`. Transport failure plus 502/503/504 may retry
+inside that window; redirects, authorization errors, missing routes and all
+other statuses fail immediately. It then requires the same container IDs,
+image IDs, Flyway digest and project fingerprint. The post-mutation flag is
+cleared only after complete PASS evidence is emitted.
+
+Every nonzero process exit after stop begins, including an explicit fail-closed
+`die`, health timeout, identity/Flyway/project drift, signal or evidence-write
+failure, writes the shared blocked state before cleanup releases the action
+lock. There is no `up`, `down`, `rm`, image pull/build, Flyway command, volume
+action or Production command.
 
 ## Owner/API secret boundary
 
