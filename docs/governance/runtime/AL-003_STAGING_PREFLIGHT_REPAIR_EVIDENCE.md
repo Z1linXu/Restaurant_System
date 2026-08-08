@@ -73,13 +73,13 @@ Local checks completed:
 | `deployment/cloud/tests/test_staging_server_preflight.sh` | `PASS` |
 | `deployment/cloud/tests/test_staging_server_control.sh` | `PASS` |
 | `deployment/cloud/tests/test_staging_deploy_cli_state.sh` | `PASS` |
+| `deployment/cloud/tests/test_staging_local_rehearsal.sh` | `PASS` on clean candidate commit `2909c053cf710f7279e8671c1ce16b7684fb6222` |
 | Java/backend/frontend suites | `NOT_RUN_BY_SCOPE`; no application source or contract changed |
 | Runtime command | `NOT_RUN_BY_POLICY`; no SSH, Docker lifecycle, Flyway, bootstrap, or clone |
 
 The local-rehearsal harness intentionally rejects a dirty repository. Its first
-pre-commit invocation therefore stopped before fixture execution; it is rerun
-only after the exact candidate commit is clean and is reported in the PR
-verification result.
+pre-commit invocation therefore stopped before fixture execution. The required
+rerun against the clean candidate commit completed successfully.
 
 ## Independent review
 
