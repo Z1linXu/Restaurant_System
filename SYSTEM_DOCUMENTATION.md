@@ -7,6 +7,10 @@ separate from historical evidence snapshots and business implementation details:
 
 - [Alive Runtime Planbook](docs/governance/runtime/ALIVE_RUNTIME_PLANBOOK.md)
   is the living current-status, approval-boundary, and deployment-entry index.
+- [Current Project Handoff](docs/governance/runtime/CURRENT_HANDOFF.md) is a
+  concise conversation-transfer snapshot. It is navigation only and never
+  overrides Git, the Planbook, backlogs, operating model, technical plans, or
+  verified runtime evidence.
 - [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
   authority for current issue triage and closure status.
 - [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
@@ -40,8 +44,8 @@ separate from historical evidence snapshots and business implementation details:
 - [STG-005B Synthetic St-Denis source-menu runbook](deployment/cloud/README_STG005_SYNTHETIC_SOURCE_MENU.md)
   defines the versioned synthetic manifest, default read-only plan, explicit
   execution gate, empty-or-exact transaction/replay behavior, and sanitized
-  evidence contract. The implementation is stacked Draft PR #62; it authorizes
-  no runtime command or Production source substitution.
+  evidence contract. PR #62 is `IN_MAIN`; it authorizes no runtime command or
+  Production source substitution.
 - [STG-005B local implementation evidence](docs/governance/runtime/STG-005B_SYNTHETIC_ST_DENIS_BASELINE_EVIDENCE.md)
   records focused/full backend tests, transaction/replay/concurrency evidence,
   scope scans, and the remaining merge/runtime gates. It is not Staging
@@ -385,7 +389,13 @@ capability must not be described as
 Production behavior.
 
 PR #60 merged the 2026-08-08 Owner direction into `main` at
-`2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. The modular target is a Generic
+`2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; PR #71 then merged the Current
+Project Handoff navigation at `5baada03935e004d80af1e7a36fb7db39bd6abbb`; PR
+#61 then merged the modular architecture foundation at
+`bbb1af9520c188b6ef6362e783284ba4001a7e63`; PR #62 then merged the guarded
+Synthetic St-Denis baseline at `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b`.
+None is runtime evidence. The
+modular target is a Generic
 Store Provisioning Engine consuming Versioned Store Profiles and Reusable
 Provisioning Modules. Shared implementation must remain Store-neutral;
 Store-specific desired state belongs in a reviewed profile, physical

@@ -1,12 +1,12 @@
 # Store Provisioning Modular Architecture Plan
 
-> Capability state: `DRAFT_PR_61`
+> Capability state: `IN_MAIN`
 >
 > Prepared: 2026-08-08, America/Toronto
 >
-> Repository base: `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`
+> Repository base: `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b`
 >
-> Review: Draft PR #61, base `main`
+> Review: PR #61 merged to `main`
 >
 > Runtime access: not performed
 
@@ -123,13 +123,13 @@ reviewed policy such as `manual_after_creation` or `not_applicable`.
 |---|---|---|
 | `CHINATOWN_MENU_2026_02_02` | `IN_MAIN` menu-clone profile | Frozen initial Chinatown menu target; not a complete Store Profile yet. |
 | Complete St-Denis Store Profile | `PLANNED_IDENTITY_NOT_FINAL` | Production-like Store template; no current registry entry or public API. Historical documents use `ST_DENIS_MENU` for a menu-only candidate, while `ST_DENIS_PROFILE_V1` is an architecture placeholder for the future complete Store Profile. The implementing loop must select one strict, case-sensitive identity before code is written. |
-| Synthetic St-Denis baseline | `STG-005B_STACKED_DRAFT_PR_62` | Versioned empty-or-exact synthetic fixture/application package; not in `main`, not executed, and not Production source evidence. |
+| Synthetic St-Denis baseline | `IN_MAIN` via PR #62 | Versioned empty-or-exact synthetic fixture/application capability; not executed and not Production source evidence. |
 
 Production Store 1 is the Owner-approved live source for the Chinatown
 Production clone. That source identity/evidence requirement is a profile input
 boundary, not permission to hard-code Store 1 inside the generic engine.
 
-## 5. Generic provisioning engine
+## 5. Generic Store Provisioning Engine
 
 The future engine coordinates module contracts but does not implement domain
 business rules itself. Its responsibilities are limited to:
