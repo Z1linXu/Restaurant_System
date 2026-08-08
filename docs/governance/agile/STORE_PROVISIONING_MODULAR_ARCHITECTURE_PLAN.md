@@ -1,12 +1,12 @@
 # Store Provisioning Modular Architecture Plan
 
-> Capability state: `DRAFT_PR_61`
+> Capability state: `IN_MAIN`
 >
 > Prepared: 2026-08-08, America/Toronto
 >
-> Repository base: `5baada03935e004d80af1e7a36fb7db39bd6abbb`
+> Repository base: `bbb1af9520c188b6ef6362e783284ba4001a7e63`
 >
-> Review: Draft PR #61, base `main`
+> Review: PR #61 merged to `main`
 >
 > Runtime access: not performed
 
@@ -123,7 +123,7 @@ reviewed policy such as `manual_after_creation` or `not_applicable`.
 |---|---|---|
 | `CHINATOWN_MENU_2026_02_02` | `IN_MAIN` menu-clone profile | Frozen initial Chinatown menu target; not a complete Store Profile yet. |
 | Complete St-Denis Store Profile | `PLANNED_IDENTITY_NOT_FINAL` | Production-like Store template; no current registry entry or public API. Historical documents use `ST_DENIS_MENU` for a menu-only candidate, while `ST_DENIS_PROFILE_V1` is an architecture placeholder for the future complete Store Profile. The implementing loop must select one strict, case-sensitive identity before code is written. |
-| Synthetic St-Denis baseline | `STG-005B_PLANNED` | Synthetic-only acceptance fixture/manifest; not Production source evidence. |
+| Synthetic St-Denis baseline | `STG-005B_STACKED_DRAFT_PR_62` | Versioned empty-or-exact synthetic fixture/application package; not in `main`, not executed, and not Production source evidence. |
 
 Production Store 1 is the Owner-approved live source for the Chinatown
 Production clone. That source identity/evidence requirement is a profile input
@@ -362,3 +362,9 @@ This architecture package may be reviewed and merged independently. While it
 is unmerged, STG-005B implementation may be prepared only as explicitly
 `STACKED_ONLY` work and must be rebuilt or promoted from latest `main` after
 Owner merge. No runtime operation is authorized.
+
+The prepared STG-005B stacked package adds no migration or HTTP endpoint. It
+uses the existing Staging profile/guards, an immutable 4/3/13/38 source
+manifest, a single-transaction empty-or-exact applier, one revision increment,
+and sanitized evidence. It remains dependency-bound to this architecture
+review and separately Owner-gated for runtime use.

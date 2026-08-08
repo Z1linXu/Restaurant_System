@@ -2,6 +2,7 @@ package com.restaurant.system.staging.bootstrap.repository;
 
 import com.restaurant.system.staging.bootstrap.entity.StagingSyntheticBootstrapRequest;
 import jakarta.persistence.LockModeType;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -17,4 +18,9 @@ public interface StagingSyntheticBootstrapRequestRepository
         where request.runId = :runId
         """)
     Optional<StagingSyntheticBootstrapRequest> findForUpdate(@Param("runId") String runId);
+
+    List<StagingSyntheticBootstrapRequest> findAllBySourceStoreIdAndStatusOrderByIdAsc(
+        Long sourceStoreId,
+        String status
+    );
 }

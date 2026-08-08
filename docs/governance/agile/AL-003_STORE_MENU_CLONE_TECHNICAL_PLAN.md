@@ -26,7 +26,7 @@
 | `PLAN_STATUS` | `IN_MAIN_AWAITING_STG-005B_AND_STAGING_ACCEPTANCE` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | PR #60 and PR #71 are `IN_MAIN`. Complete the modular architecture review and STG-005B synthetic-source package before requesting a separately approved exact-SHA Staging deployment/bootstrap/login/clone acceptance sequence. |
+| `RECOMMENDED_ACTION` | PR #60, PR #71, and PR #61 are `IN_MAIN`. Complete the STG-005B synthetic-source package review before requesting a separately approved exact-SHA Staging deployment/bootstrap/login/clone acceptance sequence. |
 
 PR-A through PR-F are in `main`. PR-D supplies generic source-option copying
 and target-local parent mapping; PR #54 placed the concrete Chinatown Profile
@@ -70,7 +70,7 @@ These are authoritative product inputs, not open questions:
 
 ### 1.2 Current Git ground truth
 
-| Package | Commit | State relative to `origin/main` `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
+| Package | Commit | State relative to `origin/main` `bbb1af9520c188b6ef6362e783284ba4001a7e63` |
 |---|---|---|
 | PR-C / PR #47 | merge `ba169ed8b689ddef8dffe94deee82fea191cdcfb` | `IN_MAIN` |
 | PR-E / PR #54 | merge `82b8059f6af1c7dff4eeb1648ca47bec039b5e52` | `IN_MAIN`; PR-F0 promotion base |
@@ -82,6 +82,7 @@ These are authoritative product inputs, not open questions:
 | Private-leaf repair / PR #59 | merge `c3956592da8a33092ab745c7cc6aac05e9babfa7` | `IN_MAIN`; no Staging or Production deployment implied |
 | Owner decisions governance sync / PR #60 | merge `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d` | `IN_MAIN`; documentation only |
 | Current project handoff / PR #71 | merge `5baada03935e004d80af1e7a36fb7db39bd6abbb` | `IN_MAIN`; navigation only |
+| Modular architecture / PR #61 | merge `bbb1af9520c188b6ef6362e783284ba4001a7e63` | `IN_MAIN`; architecture only |
 
 This document describes the complete reviewed target architecture. A section
 in this plan is not evidence that its implementation is in `main`, Staging, or
@@ -920,9 +921,18 @@ Stop and return to Owner if:
   clone, merge, or deployment. Later package states are governed by Section
   1.1 and do not rewrite that historical fact.
 
-## Final state
+## Current capability state
 
 `IN_MAIN_AWAITING_STG-005B_AND_STAGING_ACCEPTANCE`
+
+Dependency-bound STG-005B Draft PR #62 prepares an immutable synthetic source
+graph and a guarded non-web empty-or-exact application path. It does not change
+the public clone API, V10 contract, Chinatown target profile, or Production
+source authority. Local integration verifies that its 4-category, 3-station,
+13-item, 38-option source graph passes the existing read-only planner and
+produces the reviewed 4/3/17/74 Chinatown target plan. This is repository test
+evidence only; runtime bootstrap, source ID 1, login, validate, execute, replay,
+and restart remain AL-003S Owner-gated evidence.
 
 PR-F entered `main` through PR #56 at
 `8f909525781804f61d1da388882f530da358c3c4`. The reviewed Owner

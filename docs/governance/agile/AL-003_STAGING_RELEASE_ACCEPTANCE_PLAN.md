@@ -1,12 +1,12 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Status: `AL-003S_WAITING_FOR_STG-005B_AND_OWNER_RUNTIME_APPROVAL`
+> Capability state: `AL-003S_WAITING_FOR_STG-005B_MERGE_AND_OWNER_RUNTIME_APPROVAL`
 >
 > Historical failed candidate: `8f909525781804f61d1da388882f530da358c3c4`
 >
-> Current main: `5baada03935e004d80af1e7a36fb7db39bd6abbb` (`IN_MAIN`, not deployed)
+> Current main: `bbb1af9520c188b6ef6362e783284ba4001a7e63` (`IN_MAIN`, not deployed)
 >
-> Governance packages: PR #60 and PR #71, `IN_MAIN`; neither is runtime evidence
+> Governance packages: PR #60, PR #71, and PR #61, `IN_MAIN`; none is runtime evidence
 >
 > Next candidate SHA: `EVIDENCE_PENDING` after STG-005B dependency completion and fresh Owner approval
 
@@ -141,9 +141,11 @@ before any of these steps execute:
    sanitized IDs/status and confirm source Store ID is exactly `1`.
 4. Log in as the synthetic Owner and verify Organization/source workspace and
    Owner capabilities. Never retain the token or credential in evidence.
-5. Provision the reviewed Synthetic St-Denis source-menu manifest through
-   supported Store-scoped APIs, keeping all data synthetic and printing
-   disabled. Verify source revision and expected SKU/option/profile inputs.
+5. Run the reviewed STG-005B non-web command in default planning mode, then at
+   its separate write checkpoint apply the immutable synthetic source graph.
+   Verify 4 categories, 3 stations, 13 source items, 38 source options, one
+   revision increment, an exact replay with no revision change, and printing
+   disabled. Do not improvise row-by-row HTTP writes or raw SQL.
 6. Call the formal onboarding API with a fresh key to create the inactive
    synthetic target and target-only Manager/Frontdesk accounts. Replay the same
    request, verify no duplicate Store/staff, and confirm the Owner sees/opens
@@ -158,9 +160,10 @@ before any of these steps execute:
    persisted topology/menu, login/access, and replay. Production remains
    untouched.
 
-The reusable Synthetic St-Denis manifest/profile is a bounded follow-up loop;
-until it exists, the manifest and its application-API calls must be reviewed as
-part of the runtime package rather than improvised during execution.
+The reusable Synthetic St-Denis manifest/application path is prepared in
+dependency-bound Draft PR #62. It is not available to runtime until
+its architecture and implementation dependencies enter `main`, a fresh exact
+SHA is selected, and the Owner separately approves the mutation sequence.
 
 ## Acceptance sequence
 
@@ -214,6 +217,6 @@ payloads, or customer data.
   `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`; exact-SHA deployment and
   Flyway V10 alone do not prove the Owner login or clone API topology.
 
-## Current stop state
+## Capability dependency state
 
-`AL-003S_WAITING_FOR_STG-005B_AND_OWNER_RUNTIME_APPROVAL`
+`AL-003S_WAITING_FOR_STG-005B_MERGE_AND_OWNER_RUNTIME_APPROVAL`

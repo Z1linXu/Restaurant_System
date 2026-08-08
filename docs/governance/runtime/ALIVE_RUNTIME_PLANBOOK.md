@@ -26,7 +26,7 @@
 | Environment | `restaurant-prod` | `OPERATOR_CONFIRMED` | Environment label only; no host or secret is recorded. |
 | `RUNTIME_COMMIT` | `4667f3c` | `OPERATOR_CONFIRMED` | Reported deployed commit, not a formal release approval. |
 | Production branch | `main` | `OPERATOR_CONFIRMED` | Branch relationship is not a deployment approval record. |
-| Last merged `DOCUMENTATION_COMMIT` | `5baada03935e004d80af1e7a36fb7db39bd6abbb` | `MACHINE_VERIFIED` from `origin/main` | PR #71 is `IN_MAIN`. This does not make that commit a Staging or Production runtime. |
+| Last merged `DOCUMENTATION_COMMIT` | `bbb1af9520c188b6ef6362e783284ba4001a7e63` | `MACHINE_VERIFIED` from `origin/main` | PR #61 is `IN_MAIN`. This does not make that commit a Staging or Production runtime. |
 | Deployment mode | HTTP | `OPERATOR_CONFIRMED` | HTTPS/certificate posture is outside this record. |
 | Compose services | `db`, `backend`, `nginx` | `OPERATOR_CONFIRMED` | No new container inspection was run for this planbook. |
 | Database schema | Flyway V7, including `V7__add_print_job_attention_acknowledgement.sql` | `OPERATOR_CONFIRMED` | Not a restore or schema-integrity rehearsal. |
@@ -72,9 +72,9 @@ snapshots. Do not copy those reports into this planbook.
 | STG-004 state | PR #38 merged the STG-004 runtime evidence. Exact SHA `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` passed PLAN, fresh PREFLIGHT, serial build/start, runtime verification, and isolated stop/start recovery. Server Staging remains running; Production remained unchanged. |
 | STG-005 state | PLAN complete. The Owner approved CP-0 as a separate minimal Staging-only bootstrap implementation and accepted CP-4 as a feature-disabled KDS/Assembling boundary. Positive Kitchen/Assembling workflow remains `EVIDENCE_PENDING`. |
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
-| AL-003 state | PR #58 preserves the failed-attempt evidence; PR #59's bounded PostgreSQL UID-70/mode-0700 private-leaf repair, PR #60's Owner decisions, and PR #71's handoff navigation are `IN_MAIN` at `5baada03935e004d80af1e7a36fb7db39bd6abbb`. None proves a new Staging deployment. |
+| AL-003 state | PR #58 preserves the failed-attempt evidence; PR #59's bounded PostgreSQL UID-70/mode-0700 private-leaf repair, PR #60's Owner decisions, PR #71's handoff navigation, and PR #61's modular architecture are `IN_MAIN` at `bbb1af9520c188b6ef6362e783284ba4001a7e63`. None proves a new Staging deployment. |
 | Staging Owner login prerequisite | `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`; code audit proves an Organization Owner naturally accesses every same-Organization Store, so no explicit target Owner Store membership is required. Runtime bootstrap, credential, login, workspace, target onboarding, and API evidence remain pending. |
-| Current permitted work | Review the stacked Draft PR queue #61-#65 and #67-#70 in dependency order. Review printer Store-isolation repair PR #66 independently. Rebuild only the next layer from latest main after its dependency enters main. |
+| Current permitted work | Review Draft PR #62 and independent printer Store-isolation repair PR #66. Rebuild only #63 from latest main after #62 enters main. Run local tests, independent review, and governance sync; runtime mutation remains prohibited. |
 | Explicitly not permitted | Reusing old SHA approval/evidence; SSH/runtime mutation; deployment; Flyway; bootstrap; credential creation; login; source-menu writes; validate/execute; real clone; Production Store 1 access/mutation; PR merge; or duplicate implementation of the prepared Draft queue. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
@@ -103,8 +103,8 @@ packages without that mapping.
 | Private-leaf repair / PR #59 | `IN_MAIN` via merge `c3956592da8a33092ab745c7cc6aac05e9babfa7` | Staging-only path-validation correction and governance rules; no runtime action or business/API change. |
 | Owner decisions governance sync / PR #60 | `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d` | Documentation-only alignment of product direction, access semantics, FT-001 gaps, and runtime gates. |
 | Current project handoff / PR #71 | `IN_MAIN` at `5baada03935e004d80af1e7a36fb7db39bd6abbb` | Navigation snapshot only; no runtime action or capability change. |
-| Modular architecture / PR #61 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | Defines the Generic Store Provisioning Engine, Versioned Store Profiles, Reusable Provisioning Modules, and anti-hardcode boundary; no API/runtime behavior. |
-| STG-005B Synthetic St-Denis baseline / PR #62 | `STACKED_ONLY` on #61 | Guarded synthetic source-menu capability; no runtime execution. |
+| Modular architecture / PR #61 | `IN_MAIN` at `bbb1af9520c188b6ef6362e783284ba4001a7e63` | Defines the Generic Store Provisioning Engine, Versioned Store Profiles, Reusable Provisioning Modules, and anti-hardcode boundary; no API/runtime behavior. |
+| STG-005B Synthetic St-Denis baseline / PR #62 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | [Local evidence](STG-005B_SYNTHETIC_ST_DENIS_BASELINE_EVIDENCE.md) covers the guarded non-web planner/applier, 4/3/13/38 source graph, 4/3/17/74 target-plan compatibility, rollback, concurrency, focused tests, and full backend regression. No runtime execution. |
 | AL-003S Staging acceptance preparation / PR #63 | `STACKED_ONLY` on #62 | Guarded tooling/plan only; runtime approval remains separate. |
 | AL-004 Generic Store Profile contract / PR #64 | `STACKED_ONLY` on #63 | Declarative contract only; no public execution. |
 | AL-005A Staff/Table plan / PR #65 | `STACKED_ONLY` on #64 | Preparation only; no credential/table writer. |
@@ -125,12 +125,15 @@ stacked branch. Its evidence is
 
 Current `main` contains the generic clone transaction, source-option layer,
 complete Chinatown Profile, read-only planner, and protected Owner HTTP API.
-This is repository capability only. No real clone has run; Staging remains on
-`4397f995...` / Flyway V8 and Production remains on `4667f3c` / Flyway V7.
+This is repository capability only. No real clone has run. The latest retained
+runtime evidence snapshots record Staging at `4397f995...` / Flyway V8 and
+Production at `4667f3c` / Flyway V7; this package performed no fresh runtime
+inspection and does not assert that those environments remain unchanged.
 
 The unique feature stop state is
 `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL`.
-The separate
+PR #61 is `IN_MAIN`; STG-005B Draft PR #62 remains repository-only and is not
+`IN_MAIN`, Staging, or Production evidence. The separate
 runtime acceptance prerequisite remains
 `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`.
 

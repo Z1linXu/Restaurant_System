@@ -16,3 +16,5 @@ app:
 stg005:
   bootstrap:
     command-enabled: false
+  source-menu:
+    command-enabled: false

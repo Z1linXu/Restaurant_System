@@ -28,9 +28,9 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| `origin/main` | `5baada03935e004d80af1e7a36fb7db39bd6abbb` | `IN_MAIN`; merge of PR #71 |
+| `origin/main` | `bbb1af9520c188b6ef6362e783284ba4001a7e63` | `IN_MAIN`; merge of PR #61 |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, clean | Local checkout is behind `origin/main`; it was not modified by this handoff |
-| Handoff branch | `codex/current-project-handoff` | Documentation-only snapshot; PR #71 is already represented by the exact `origin/main` above |
+| Handoff branch | `codex/current-project-handoff` | Documentation-only snapshot; PR #71 remains `IN_MAIN` and is an ancestor of the exact `origin/main` above |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
 
 `IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
@@ -56,8 +56,8 @@ GitHub state was read on 2026-08-08. Every PR below was open and Draft.
 
 | PR | Package | Base | Head | State | Depends on | In main? | Owner action |
 |---|---|---|---|---|---|---|---|
-| #61 | Modular architecture foundation | `main` | Rebuilt from `origin/main@5baada03935e004d80af1e7a36fb7db39bd6abbb`; exact head is GitHub PR metadata | `DRAFT_PR` | PR #71/main | No | Review first; merge only if approved |
-| #62 | STG-005B Synthetic St-Denis baseline | PR #61 branch | `0aba8377a3b7acec047c6ffd025f774d8a4d5e87` | `STACKED_ONLY` | #61 | No | Rebuild onto latest main after #61 enters main |
+| #61 | Modular architecture foundation | `main` | merge `bbb1af9520c188b6ef6362e783284ba4001a7e63` | `IN_MAIN` | PR #71/main | Yes | Main capability; no runtime behavior |
+| #62 | STG-005B Synthetic St-Denis baseline | `main` | Rebuilt from `origin/main@bbb1af9520c188b6ef6362e783284ba4001a7e63`; exact head is GitHub PR metadata | `DRAFT_PR` | #61/main | No | Review next; merge only if approved |
 | #63 | AL-003S Staging acceptance preparation | PR #62 branch | `880795f9fa6101116f9fd1f370caeb0bdf16b647` | `STACKED_ONLY` | #62 | No | Rebuild after #62; runtime use remains separately gated |
 | #64 | AL-004 Generic Store Profile contract | PR #63 branch | `136c297dd789744fecc45e7b8a3f810d96aae56a` | `STACKED_ONLY` | #63 | No | Rebuild after #63 and re-review contract |
 | #65 | AL-005A Staff/Table plan | PR #64 branch | `c2cd17205de01c21113c1a1d5d9e82a59e0ff47f` | `STACKED_ONLY` | #64 | No | Rebuild after #64 |
@@ -98,7 +98,7 @@ V10 ran on Staging or Production.
 | Current package | Project handoff over the prepared Draft queue |
 | Feature stop state | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` |
 | Handoff stop state | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | Review #61-#70 and #66; separately approve any runtime or Production action |
+| Current Owner gate | Review #62 next and #66 independently; separately approve any runtime or Production action |
 
 ### Permitted work
 
@@ -133,7 +133,10 @@ V10 ran on Staging or Production.
   `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`.
 - PR #71 merged this navigation handoff into main at
   `5baada03935e004d80af1e7a36fb7db39bd6abbb`.
-- PRs #61-#70 and independent #66 are prepared Drafts, not main capability.
+- PR #61 merged the modular architecture foundation into main at
+  `bbb1af9520c188b6ef6362e783284ba4001a7e63`.
+- PR #62 and independent #66 are Drafts; PRs #63-#65 and #67-#70 remain
+  stacked-only, not main capability.
 
 ## 7. AL-003 repository capability
 
@@ -194,7 +197,7 @@ is the first Store Profile sample, not a shared-service special case.
 
 | ID | Purpose | Current state | Dependency / Owner gate |
 |---|---|---|---|
-| STG-005B / #62 | Reproducible synthetic St-Denis menu baseline | `STACKED_ONLY` | #61; no runtime execution |
+| STG-005B / #62 | Reproducible synthetic St-Denis menu baseline | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | #61 is `IN_MAIN`; no runtime execution |
 | AL-003S / #63 | Exact-SHA Staging acceptance preparation | `STACKED_ONLY` | #62 plus explicit runtime approval |
 | AL-004 / #64 | Generic Store Profile contract | `STACKED_ONLY` | #63 |
 | AL-005A / #65 | Staff/Table module plan | `STACKED_ONLY` | #64 |

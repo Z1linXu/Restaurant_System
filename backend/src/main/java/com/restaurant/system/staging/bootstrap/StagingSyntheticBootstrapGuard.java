@@ -21,6 +21,12 @@ public class StagingSyntheticBootstrapGuard {
         StagingSyntheticBootstrapExecutionContext context,
         StagingSyntheticBootstrapSpec spec
     ) {
+        validateEnvironment(context);
+        validateRequestBinding(context, spec == null ? null : spec.runtimeSha(), spec == null ? null : spec.toolSha());
+        validateSpec(spec);
+    }
+
+    public void validateEnvironment(StagingSyntheticBootstrapExecutionContext context) {
         if (context == null) {
             throw invalid("STG005_BOOTSTRAP_CONTEXT_INVALID", "Bootstrap execution context is required");
         }
@@ -33,19 +39,28 @@ public class StagingSyntheticBootstrapGuard {
         if (!context.expectedRuntimeSha().equals(context.observedRuntimeSha())) {
             throw invalid("STG005_BOOTSTRAP_RUNTIME_SHA_MISMATCH", "Observed runtime SHA does not match the approved runtime SHA");
         }
-        if (!context.toolSha().equals(spec == null ? null : spec.toolSha())) {
-            throw invalid("STG005_BOOTSTRAP_TOOL_SHA_MISMATCH", "Bootstrap tool SHA does not match the request");
-        }
-        if (!context.expectedRuntimeSha().equals(spec == null ? null : spec.runtimeSha())) {
-            throw invalid("STG005_BOOTSTRAP_RUNTIME_SHA_MISMATCH", "Bootstrap request is not bound to the approved runtime SHA");
-        }
         if (!"DISABLED".equals(normalizeUpper(context.printingMode())) || context.printingFeatureEnabled()) {
             throw invalid("STG005_BOOTSTRAP_PRINTING_REJECTED", "Bootstrap requires printing mode DISABLED and the printing feature disabled");
         }
         requireExact(normalizeLower(context.webApplicationType()), "none", "STG005_BOOTSTRAP_WEB_MODE_REJECTED");
         requireExact(databaseName(context.datasourceUrl()), EXPECTED_DATABASE, "STG005_BOOTSTRAP_DATABASE_REJECTED");
         requireExact(context.datasourceUsername(), EXPECTED_DATABASE_USER, "STG005_BOOTSTRAP_DATABASE_REJECTED");
-        validateSpec(spec);
+    }
+
+    public void validateRequestBinding(
+        StagingSyntheticBootstrapExecutionContext context,
+        String runtimeSha,
+        String toolSha
+    ) {
+        if (context == null) {
+            throw invalid("STG005_BOOTSTRAP_CONTEXT_INVALID", "Bootstrap execution context is required");
+        }
+        if (!context.toolSha().equals(toolSha)) {
+            throw invalid("STG005_BOOTSTRAP_TOOL_SHA_MISMATCH", "Bootstrap tool SHA does not match the request");
+        }
+        if (!context.expectedRuntimeSha().equals(runtimeSha)) {
+            throw invalid("STG005_BOOTSTRAP_RUNTIME_SHA_MISMATCH", "Bootstrap request is not bound to the approved runtime SHA");
+        }
     }
 
     public void validateSpec(StagingSyntheticBootstrapSpec spec) {

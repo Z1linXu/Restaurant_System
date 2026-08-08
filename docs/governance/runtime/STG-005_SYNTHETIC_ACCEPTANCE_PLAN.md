@@ -124,10 +124,8 @@ Example naming:
 | Owner login/display name | `STG005_OWNER_<RUN>` |
 | Manager login/display name | `STG005_MANAGER_<RUN>` |
 | Frontdesk login/display name | `STG005_FRONTDESK_<RUN>` |
-| Station | `STG005_STATION_<RUN>` |
-| Category | `STG005_CATEGORY_<RUN>` |
-| Item name/SKU | `STG005_ITEM_<RUN>` |
-| Option name/code | `STG005_OPTION_<RUN>` |
+| General STG-005 station/category/item/option fixture | `STG005_` display and technical identifiers |
+| AL-003 synthetic source menu | `STG005_` display names; reviewed semantic category/station/SKU/option codes |
 | Table label/code | `STG005_TABLE_<RUN>` |
 | Idempotency key | `STG005_ONBOARD_<RUN>_<CASE>` |
 | Local draft/client order ID | `STG005_ORDER_<RUN>_<CASE>` |
@@ -139,6 +137,12 @@ Git, evidence, shell history, logs, screenshots, or API transcripts.
 The run must not use real people, restaurants, phone numbers, email addresses,
 customers, notes, printer endpoints, Pad registrations, or production data.
 Synthetic free-text fields must be blank or use an `STG005_` marker.
+
+The AL-003 synthetic source baseline is the explicit exception for technical
+menu identifiers: its category/station codes, item SKUs, option groups, and
+option codes must match the reviewed clone profile. Only topology/run identity
+and human-readable synthetic labels use `STG005_`. This prevents a synthetic
+SKU prefix from causing `SOURCE_SKU_MISSING` during formal clone validation.
 
 ## 4. Synthetic topology
 
