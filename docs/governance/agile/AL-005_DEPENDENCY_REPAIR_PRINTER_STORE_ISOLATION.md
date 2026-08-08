@@ -1,6 +1,6 @@
 # AL-005 Dependency Repair: Printer Store Isolation
 
-> Status: `IMPLEMENTED_WAITING_FOR_OWNER_REVIEW`
+> Status: `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` in PR #66
 >
 > Base: `origin/main@2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`
 >
@@ -54,7 +54,7 @@ provisioning module. They do not require a new product decision.
 
 ## Promotion boundary
 
-This repair is independent of Draft PRs #61-#65 and targets `main`. It must be
+Draft PR #66 is independent of Draft PRs #61-#65 and targets `main`. It must be
 merged before any AL-005 executable printer provisioning adapter is promoted.
 It does not make AL-005 implemented and does not authorize runtime printing.
 
