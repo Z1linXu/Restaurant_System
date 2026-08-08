@@ -478,6 +478,19 @@ activation endpoint, migration, persisted lifecycle, or runtime status change.
 The Profile declares required modules, modules produce sanitized evidence, and
 only a future reviewed workflow may own the final inactive-to-active transition.
 
+The future Chinatown Production release boundary is defined in
+[REL-001 Chinatown Production Release Candidate Plan](docs/governance/agile/REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE_PLAN.md).
+One exact SHA must be merged to `main`, accepted unchanged on isolated Staging,
+and then pass a separately approved fresh Production gap, migration,
+compatibility, backup/recovery, and rollback review. The current Draft stack is
+not an RC. This documentation package does not select a candidate, inspect a
+runtime, run Flyway, deploy, read Store 1, clone a menu, or activate a Store.
+The checked-in Production Compose currently binds PostgreSQL through a path
+relative to its Compose file, while the deploy helper uses one combined
+backend/frontend build command. A detached exact-SHA deployment is therefore
+`NO-GO` until a reviewed guard preserves the existing fixed Production state
+root and enforces serial builds plus the approved memory threshold.
+
 STG-005B prepares a Staging-only, non-web source-menu fixture around the
 existing menu entities, Store lock, and revision service. Its source graph has
 4 categories, 3 stations, 13 items, and 38 options and is proven locally to

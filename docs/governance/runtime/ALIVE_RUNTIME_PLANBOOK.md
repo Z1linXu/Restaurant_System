@@ -62,9 +62,9 @@ snapshots. Do not copy those reports into this planbook.
 | Item | Current state |
 |---|---|
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `AL-006_STORE_ACTIVATION_WORKFLOW` |
+| Current Agile Loop | `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE` |
 | Loop type | `DEPENDENCY_BOUND_PREPARATION` |
-| Loop status | `AL-006_ACTIVATION_PREPARED_WAITING_FOR_DEPENDENCIES` |
+| Loop status | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | PR #27 merged the backend foundation into `main`; Production remains on the older runtime and no production onboarding is established by that merge. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -74,7 +74,7 @@ snapshots. Do not copy those reports into this planbook.
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
 | AL-003 state | PR #58 preserves the failed-attempt evidence and PR #59's bounded PostgreSQL UID-70/mode-0700 private-leaf repair is `IN_MAIN` at `c3956592da8a33092ab745c7cc6aac05e9babfa7`. Neither record proves a new Staging deployment. |
 | Staging Owner login prerequisite | `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`; code audit proves an Organization Owner naturally accesses every same-Organization Store, so no explicit target Owner Store membership is required. Runtime bootstrap, credential, login, workspace, target onboarding, and API evidence remain pending. |
-| Current permitted work | Review the stacked Draft PR queue #61-#65 and #67-#69 in dependency order. Independently review printer Store-isolation repair PR #66. Bounded downstream planning may continue; executable provisioning and activation work waits for dependency promotion and explicit prerequisite decisions. Runtime mutation remains prohibited. |
+| Current permitted work | Review the stacked Draft PR queue #61-#65 and #67-#69 in dependency order, then review the unnumbered REL-001 preparation after its Draft PR is created. Independently review printer Store-isolation repair PR #66. Exact-SHA release planning and evidence templates may continue; all runtime inspection/mutation remains prohibited without new Owner approval. |
 | Explicitly not permitted | Reusing old SHA approval/evidence; SSH/runtime mutation; deployment; Flyway; bootstrap; credential creation; login; source-menu writes; validate/execute; real clone; Production Store 1 access/mutation; or implementation outside the selected architecture/STG-005B package and explicitly bounded downstream preparation. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
@@ -108,6 +108,7 @@ packages without that mapping.
 | AL-005 Printing provisioning preparation / PR #67 | `AL-005_PRINTING_PREPARED_WAITING_FOR_DEPENDENCIES` (`STACKED_ONLY` Git classification) | Records existing printing authorities, profile/runtime boundaries, fixed Chinatown policy, prerequisite defects, staged contracts, and test gates. It adds no writer, endpoint, migration, printer, assignment, device, mode change, test print, or runtime action. |
 | AL-005B Device/Pad provisioning preparation / PR #68 | `AL-005B_DEVICE_PREPARED_WAITING_FOR_DEPENDENCIES` (`STACKED_ONLY` Git classification) | Records pairing/auth/heartbeat/Store-wide queue authorities, profile/runtime boundaries, four-Pad Chinatown policy, prerequisite gaps, and readiness gates. It adds no writer, endpoint, migration, device, token, pairing, Worker change, or runtime action. |
 | AL-006 Store activation preparation / PR #69 | `AL-006_ACTIVATION_PREPARED_WAITING_FOR_DEPENDENCIES` (`STACKED_ONLY` Git classification) | Defines the conceptual lifecycle, fail-closed evidence aggregation, Profile/module responsibility split, future exclusive activation writer, legacy direct-active compatibility gate, staged tests, and Owner decisions. It adds no endpoint, migration, status transition, or runtime action. |
+| REL-001 Chinatown Production RC preparation | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` (`STACKED_ONLY` Git classification) | Defines exact-SHA identity, Staging acceptance dependency, Production read-only gap scope, V8-V10 migration/compatibility matrix, backup/recovery gates, NO-GO conditions, rollback boundaries, and sanitized evidence. It names no candidate and performs no runtime action. |
 | Printer Store-isolation repair / PR #66 | independent `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | Main-based prerequisite; not included in this stack. It must merge before an executable printing writer is promoted. |
 
 PR-D promotion evidence is now historical main evidence: semantic source
@@ -177,6 +178,16 @@ It records that no unified activation orchestrator exists, that conceptual
 readiness stages are not current `stores.status` values, and that legacy direct
 `active` writes, evidence persistence, verifier contracts, and runtime gates
 must be resolved before a future exclusive activation transition is built.
+
+The Production Release Candidate boundary is documented in
+[REL-001 Chinatown Production Release Candidate Plan](../agile/REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE_PLAN.md).
+It requires one exact merged SHA to pass the same-SHA Staging acceptance plus a
+fresh, separately approved Production gap/backup/compatibility review. No RC
+SHA is selected, and no runtime evidence was collected by that package.
+The current Production Compose uses a release-relative PostgreSQL bind path and
+the current deploy helper combines backend/frontend builds without the retained
+1 GiB memory gate. Production deployment is `NO-GO` until a bounded repair
+preserves a fixed external state root and enforces guarded serial builds.
 
 Git ground truth must always distinguish `MERGED_ON_GITHUB`, `IN_MAIN`,
 `DEPLOYED_TO_STAGING`, and `DEPLOYED_TO_PRODUCTION`. A stacked PR merged into a

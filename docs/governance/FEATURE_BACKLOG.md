@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `AL-005B_DEVICE_PREPARED_WAITING_FOR_DEPENDENCIES` |
-| target_loop | `AL-005B_DEVICE_PAD_PROVISIONING_MODULE` |
-| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, and PR #60's Owner decisions are `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. Draft PRs #61-#65, #67, and #68 remain dependency-bound and are not in `main`. AL-005B Draft PR #68 prepares only the Device/Pad authority, profile/runtime boundary, readiness contract, and staged gates; it adds no writer, endpoint, migration, device, token, pairing, Worker behavior, or runtime execution. |
+| status | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` |
+| target_loop | `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE` |
+| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, and PR #60's Owner decisions are `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. Draft PRs #61-#65 and #67-#69 remain dependency-bound and are not in `main`. AL-006 Draft PR #69 prepares only the fail-closed activation contract. The unnumbered REL-001 package prepares only release identity, migration/compatibility, backup/recovery, rollback, and evidence gates; it selects no SHA and performs no runtime action. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Review Draft PRs #61-#65, #67, and #68 in dependency order. Independently review/merge printer Store-isolation repair PR #66 before any executable AL-005 writer. AL-005B execution remains blocked by AL-005 plus device credential, idempotency, integrity, and runtime-evidence decisions. Runtime acceptance still needs a fresh exact-SHA request and separate Owner approval. |
+| next action | Review Draft PRs #61-#65 and #67-#69 in dependency order, then review the REL-001 plan after its Draft PR is created. Independently review/merge printer Store-isolation repair PR #66 before any executable AL-005 writer. Production release remains blocked by same-SHA Staging acceptance, fixed-state-root/serial-build deployment repair, fresh Production evidence, recovery proof, and explicit Owner approval. |
 
 ### Current AL-003 delivery state
 
@@ -44,6 +44,8 @@
 | AL-005A Staff/Table module preparation / PR #65 | `AL-005A_PREPARED_WAITING_FOR_AL-004` (`STACKED_ONLY` Git classification); existing-authority audit and implementation contract only; no writer, endpoint, migration, credential, table, or runtime execution |
 | AL-005 Printing provisioning preparation / PR #67 | `AL-005_PRINTING_PREPARED_WAITING_FOR_DEPENDENCIES` (`STACKED_ONLY`); current printing authority/risk audit and staged contract only; no writer, endpoint, migration, printer, assignment, device, mode change, test print, or runtime action |
 | AL-005B Device/Pad provisioning preparation / PR #68 | `AL-005B_DEVICE_PREPARED_WAITING_FOR_DEPENDENCIES` (`STACKED_ONLY`); authority/readiness audit and staged contract only; no endpoint, migration, device, token, pairing, Worker change, or runtime action |
+| AL-006 Store activation preparation / PR #69 | `AL-006_ACTIVATION_PREPARED_WAITING_FOR_DEPENDENCIES` (`STACKED_ONLY`); fail-closed evidence/workflow contract only; no endpoint, migration, status transition, or runtime action |
+| REL-001 Production RC preparation | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` (`STACKED_ONLY`); no candidate SHA, runtime inspection, deployment, migration, or Production action |
 | AL-005 printer Store-isolation repair / PR #66 | independent main-based `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`; prerequisite only, not present in this stacked branch |
 
 The Owner-login acceptance prerequisite is not satisfied by repository code or
@@ -211,6 +213,7 @@ seed/demo Store.
 | Printing provisioning module | `PREPARED_WAITING_FOR_DEPENDENCIES` | The authority/risk audit preserves `DISABLED`, runtime-only endpoints, current Print Engine, and Chinatown's fixed pre-job GRAB/FRONTDESK enabled-module policy. The inactive writer remains gated by PR #66, strict-mode compatibility, a generic pre-job policy gate, role/assignment integrity, and idempotency. AL-005B is required only for runtime binding/activation evidence. |
 | Device/Pad provisioning module | `PREPARED_WAITING_FOR_DEPENDENCIES` | Existing pairing/auth/heartbeat and Store-wide PAD_DIRECT queue are preserved. No per-device module assignment exists or is planned. Contract/planner work depends on AL-005P1 module policy; runtime readiness remains blocked by credential storage, trusted APK provenance, idempotency/integrity, and explicit Worker/field evidence gates. |
 | Store activation validation/workflow | `PREPARED_WAITING_FOR_DEPENDENCIES` | AL-006 defines a fail-closed Profile/module/evidence contract and a future exclusive activation writer. Current `Store.status` is still free text and legacy Platform Admin paths may write `active` directly; persistence, compatibility, authority, verifier, and runtime-evidence decisions remain gated. |
+| Chinatown Production Release Candidate | `PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` | REL-001 requires one exact merged/accepted SHA, fresh Production gap and Store 1 evidence under separate approval, V7-to-target migration/compatibility proof, backup/recovery review, immutable images, and explicit Owner deployment approval. No candidate SHA or runtime action is authorized by the plan. |
 | Chinatown end-to-end field acceptance | `PRODUCTION_PENDING` | Owner/staff login, dine-in order, update, expected tickets, and operational completion remain required. |
 
 ### Proposed bounded loop order
@@ -239,7 +242,8 @@ seed/demo Store.
    [AL-006 Store Activation Workflow Plan](agile/AL-006_STORE_ACTIVATION_WORKFLOW_PLAN.md).
 8. `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE`: Store 1 read-only source
    capture, Production gap/migration/backup/rollback review, and exact-SHA
-   approval.
+   approval. The bounded preparation is
+   [REL-001 Chinatown Production Release Candidate Plan](agile/REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE_PLAN.md).
 9. `ACT-001_CHINATOWN_PRODUCTION_ACTIVATION`: execute approved provisioning and
    complete Owner/staff/order/printing/Pad field acceptance.
 
