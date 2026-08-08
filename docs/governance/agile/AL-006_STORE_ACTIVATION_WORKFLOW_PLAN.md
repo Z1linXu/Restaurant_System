@@ -6,6 +6,8 @@
 >
 > Git classification: `STACKED_ONLY`
 >
+> Draft PR: #69, base Draft PR #68 branch
+>
 > Runtime effect: none
 
 ## 1. Purpose
