@@ -43,6 +43,10 @@ separate from historical evidence snapshots and business implementation details:
   records the next fresh Batch A trigger, exact candidate import, deterministic
   `0750` releases-parent false positive, preserved V8 runtime, bounded
   trust-root correction, expired candidate boundary, and mandatory restart.
+- [STG-007 Rotation State-Root Mode Guard Repair Evidence](docs/governance/runtime/STG-007_ROTATION_STATE_ROOT_MODE_GUARD_REPAIR_EVIDENCE.md)
+  records the next Batch A trigger, exact inert release/consumed approval,
+  rotation state-parent false positive before env mutation, preserved V8
+  runtime, complete state-root reconciliation, and mandatory restart.
 - [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
   authority for current issue triage and closure status.
 - [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
@@ -643,6 +647,16 @@ hardcoded `0700`. The bounded correction permits only exact `0700` or
 non-group-writable `0750` and revalidates the starting mode plus device/inode
 before and after worktree creation. The new release remains private `0700`;
 `0775`, path replacement and identity drift remain `NO_GO`.
+
+After PR #78 merged, Batch A restarted from candidate `35ccf5cb...`, imported
+it and created its clean private detached release. The action approval was
+consumed, then rotation stopped before any recovery/env write because
+`rotate_environment` retained a second hardcoded `0700` state-parent check.
+The complete reconciliation validates exact `0700` or established
+non-group-writable `0750` during initial input validation, then revalidates the
+starting mode and device/inode after lock acquisition, before recovery work
+and before atomic env replacement. The inert release and consumed approval
+remain preserved; Staging remains on the old SHA/V8.
 
 Repository PRs now follow the permanent auto-merge gate in the Agile Loop
 Operating Model: latest-main base, exact single-package scope, all applicable

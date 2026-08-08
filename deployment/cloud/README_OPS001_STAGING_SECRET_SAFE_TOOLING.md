@@ -206,6 +206,14 @@ printing guards remain byte-identical. The official `staging-deploy.sh
 --validate` must pass after rotation; otherwise the prior environment is
 restored. The sanitized recovery record contains digests only.
 
+The rotation state parent uses the same fixed/canonical/non-symlink,
+operator-owned exact `0700` or established non-group-writable `0750` contract.
+Its starting mode and device/inode are validated before approval consumption
+or release creation and revalidated before recovery preparation and before the
+atomic environment replacement. Recovery, approval-consumption, lock and
+record children remain private `0700` directories or `0600` files. Mode
+`0775`, any other mode, or state-root identity drift remains `NO_GO`.
+
 ## Restart and Flyway evidence boundary
 
 Both runtime evidence actions require fresh AL-003S preflight/readiness
