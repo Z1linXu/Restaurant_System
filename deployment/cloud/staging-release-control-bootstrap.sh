@@ -16,6 +16,7 @@ BUNDLE_ROOT=""
 DELEGATE_PID=""
 CONTROL_ROOT_IDENTITY=""
 STATE_PARENT_IDENTITY=""
+STATE_PARENT_MODE=""
 ORIGINAL_ARGS=("$@")
 
 usage() {
@@ -80,11 +81,11 @@ is_exact_control_root() {
 cleanup() {
   local status=$? cleanup_error=""
   trap - EXIT ERR INT TERM
-  if [[ -n "$CONTROL_ROOT" && -n "$CONTROL_ROOT_IDENTITY" && -n "$STATE_PARENT_IDENTITY" ]]; then
+  if [[ -n "$CONTROL_ROOT" && -n "$CONTROL_ROOT_IDENTITY" && -n "$STATE_PARENT_IDENTITY" && -n "$STATE_PARENT_MODE" ]]; then
     if ! is_exact_control_root "$CONTROL_ROOT" ||
        [[ ! -d "$EXPECTED_ROOT/state" || -L "$EXPECTED_ROOT/state" ||
           "$(file_owner "$EXPECTED_ROOT/state")" != "$(id -u)" ||
-          "$(file_mode "$EXPECTED_ROOT/state")" != "700" ||
+          "$(file_mode "$EXPECTED_ROOT/state")" != "$STATE_PARENT_MODE" ||
           "$(file_identity "$EXPECTED_ROOT/state")" != "$STATE_PARENT_IDENTITY" ||
           ! -d "$CONTROL_ROOT" || -L "$CONTROL_ROOT" ||
           "$(file_owner "$CONTROL_ROOT")" != "$(id -u)" ||
@@ -146,7 +147,10 @@ validate_control_root() {
   is_exact_control_root "$self_parent" || die "bootstrap must run from the fixed private control-root pattern"
   [[ "$state_parent" == "$EXPECTED_ROOT/state" && -d "$state_parent" && ! -L "$state_parent" ]] || die "Staging state parent must be the fixed real directory"
   path_has_symlink "$state_parent" && die "Staging state parent must not traverse a symlink"
-  [[ "$(file_owner "$state_parent")" == "$(id -u)" && "$(file_mode "$state_parent")" == "700" ]] || die "Staging state parent must be owner-only mode 0700"
+  STATE_PARENT_MODE="$(file_mode "$state_parent")"
+  [[ "$(file_owner "$state_parent")" == "$(id -u)" &&
+     ( "$STATE_PARENT_MODE" == "700" || "$STATE_PARENT_MODE" == "750" ) ]] ||
+    die "Staging state parent must be owner-owned mode 0700 or 0750"
   [[ -d "$self_parent" && ! -L "$self_parent" && -f "$self_path" && ! -L "$self_path" ]] || die "bootstrap control source must be a regular non-symlink file"
   path_has_symlink "$self_path" && die "bootstrap control source must not traverse a symlink"
   [[ "$(file_owner "$self_parent")" == "$(id -u)" && "$(file_mode "$self_parent")" == "700" ]] || die "bootstrap control root must be owner-only mode 0700"

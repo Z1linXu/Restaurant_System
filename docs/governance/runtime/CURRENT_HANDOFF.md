@@ -8,11 +8,12 @@
 >
 > Snapshot date: 2026-08-08, America/Toronto
 >
-> Runtime freshness: after PR #75 entered main, STG-007 restarted Batch A and
-> re-confirmed retained Staging `4397f995...` / V8, disabled printing,
-> loopback health/isolation, resource headroom, and minimum Production
-> continuity. No mutation occurred; execution stopped at the missing reviewed
-> first-use control path for the OPS-001 release helper.
+> Runtime freshness: after PR #76 entered main, STG-007 restarted Batch A from
+> exact candidate `e6fac236...`. Fresh retained Staging `4397f995...` / V8,
+> disabled printing, loopback/isolation/resources and minimum Production
+> continuity passed; exact candidate import passed. Bootstrap stopped before
+> release/env mutation at a deterministic `0700` versus established safe
+> `0750` state-parent guard mismatch. Cleanup completed.
 
 ## 1. Project mission
 
@@ -31,9 +32,9 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| `origin/main` before this STG-007 dependency repair | `b93d8efdbd699333d73d9ffcc29e8f8443e51764` | `IN_MAIN`; merge of preflight repair PR #75 |
+| `origin/main` before this STG-007 dependency repair | `e6fac236c7620cd2f579d2a180367f4f753a6d42` | `IN_MAIN`; merge of exact-Git bootstrap repair PR #76 |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
-| Current delivery branch | `codex/ops001-release-bootstrap-repair` | exact-Git/private-control-root bootstrap repair only; runtime execution stopped before Batch A mutation |
+| Current delivery branch | `codex/ops001-state-root-mode-repair` | bounded bootstrap state-parent mode guard repair only; runtime execution stopped before release/env mutation |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
 
 `IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
@@ -75,6 +76,9 @@ closed, merged, and `IN_MAIN`.
 | #70 | REL-001 Production RC plan | `main` | merge `645d4909625f70fc241d5468382d66a30a030fb1` | `IN_MAIN` | #69/main | Yes | Planning authority only; no RC, ACT-001, or runtime action |
 | #72 | Post-stack Ground Truth audit | `main` | merge `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | `IN_MAIN` | completed #61-#71 main stack | Yes | Governance/capability audit only; no runtime action |
 | #73 | STG-006 evidence/governance | `main` | merge `85d97b7327b2e15aa561ed28a5788b92cedf6f5b` | `IN_MAIN` | #72/main | Yes | Passive evidence only; no runtime mutation |
+| #74 | OPS-001 secret-safe tooling | `main` | merge `362c954a8753204476ddf1415ea86050589760dd` | `IN_MAIN` | #73/main | Yes | Repository tooling only; runtime actions remain separately gated |
+| #75 | STG-007 retained-listener preflight repair | `main` | merge `b93d8efdbd699333d73d9ffcc29e8f8443e51764` | `IN_MAIN` | #74/main | Yes | Guard repair only; no runtime mutation |
+| #76 | STG-007 exact-Git release bootstrap repair | `main` | merge `e6fac236c7620cd2f579d2a180367f4f753a6d42` | `IN_MAIN` | #75/main | Yes | Control-path repair only; no release, deploy or Flyway action |
 
 Main stack review order:
 
@@ -103,9 +107,9 @@ V10 ran on Staging or Production.
 | Field | Current value |
 |---|---|
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `STG-007_RELEASE_TOOL_BOOTSTRAP_REPAIR` |
-| Current package | Fail-closed exact-Git control bootstrap for the existing OPS-001 release helper, tests, and governance only |
-| Feature stop state | `STG-007_BATCH_A_BLOCKED_BY_RELEASE_TOOL_BOOTSTRAP_REPAIR` until the repair is verified and merged |
+| Current Agile Loop | `STG-007_STATE_ROOT_MODE_GUARD_REPAIR` |
+| Current package | Reconcile the bootstrap state-parent guard with exact owner-owned modes `0700`/established `0750`; tests and governance only |
+| Feature stop state | `STG-007_BATCH_A_BLOCKED_BY_STATE_ROOT_MODE_REPAIR` until the repair is verified and merged |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
 | Current Owner gate | Repair publication uses the Owner's Dependency Repair Auto-Loop policy. After merge, the old exact-SHA approval expires and Batch A must restart from the new merged main. |
 
@@ -113,8 +117,8 @@ V10 ran on Staging or Production.
 
 - Fetch and verify Git/GitHub ground truth.
 - Review the post-stack capability audit and bounded next-loop ordering.
-- Implement and verify only the exact-Git/private-control-root release-tool
-  bootstrap repair.
+- Implement and verify only the state-root mode guard repair without weakening
+  task-root, repository, environment, PostgreSQL-leaf or cleanup security.
 - Run focused/mock regressions, Agent 6 review, publication gates, and mandatory
   governance sync; auto-merge only if every permanent repository gate passes.
 
@@ -166,6 +170,14 @@ V10 ran on Staging or Production.
 - PR #73 entered `main` at `85d97b7327b2e15aa561ed28a5788b92cedf6f5b`.
   It records `STG-006=PASS` and `OPS-001=REQUIRED`; it performed no runtime
   mutation.
+- PR #74 entered `main` at `362c954a8753204476ddf1415ea86050589760dd`
+  with OPS-001 repository tooling; runtime use remained separately gated.
+- PR #75 entered `main` at `b93d8efdbd699333d73d9ffcc29e8f8443e51764`
+  with the retained-listener preflight repair; no runtime mutation occurred.
+- PR #76 entered `main` at `e6fac236c7620cd2f579d2a180367f4f753a6d42`
+  with the exact-Git release bootstrap. The next Batch A attempt imported that
+  candidate, then stopped before release/env mutation at the state-parent mode
+  guard now under bounded repair.
 
 ## 7. AL-003 repository capability
 
@@ -236,7 +248,7 @@ is the first Store Profile sample, not a shared-service special case.
 | REL-001 / #70 | Formal Chinatown Production RC plan | `IN_MAIN` at `645d4909625f70fc241d5468382d66a30a030fb1` | planning only; no candidate, deployment, or activation |
 | ACT-001 | Production provisioning and field acceptance | `NOT_STARTED_OWNER_GATED` | Accepted RC and explicit Production activation approval |
 | STG-006 | Exact-main passive preflight | `PASS` for candidate `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | Evidence only; no release/deploy/migration approval |
-| OPS-001 | Secret-safe Staging tooling repair | `REPOSITORY_COMPLETE` after this reviewed package enters main | Every helper remains exact-action Owner-gated for runtime use |
+| OPS-001 | Secret-safe Staging tooling repair | `REPOSITORY_COMPLETE` through PR #74 plus control-path repairs #75/#76 | Every helper remains exact-action Owner-gated for runtime use |
 | STG-007 | Exact-SHA deploy and V9/V10 migration | `WAITING_FOR_OWNER_RUNTIME_APPROVAL` after OPS-001 main verification | Bind the new merged-main SHA and approve release/env plus deploy/Flyway as distinct batches |
 
 The authoritative post-stack capability matrix, Staging decision, and next

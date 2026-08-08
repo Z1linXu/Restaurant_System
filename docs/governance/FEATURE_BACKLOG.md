@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `STG-007_BATCH_A_BLOCKED_BY_RELEASE_TOOL_BOOTSTRAP_REPAIR` |
-| target_loop | `STG-007_RELEASE_TOOL_BOOTSTRAP_REPAIR`, then restart `STG-007_EXACT_SHA_DEPLOY_AND_MIGRATE` from the next merged main |
-| implementation status | PR-A through PR-F, PRs #58-#75 and #61-#74 are `IN_MAIN` through preflight repair merge `b93d8efdbd699333d73d9ffcc29e8f8443e51764`; #66 remains the independent Printer Store-isolation repair. Staging remains `4397f995...` / Flyway V8. The restarted read-only Batch A baseline passed, then stopped because the retained release predates OPS-001 and no reviewed exact-Git control bootstrap could invoke the release helper without a manual release/bypass. No Batch A mutation or Batch B action occurred. |
+| status | `STG-007_BATCH_A_BLOCKED_BY_STATE_ROOT_MODE_REPAIR` |
+| target_loop | `STG-007_STATE_ROOT_MODE_GUARD_REPAIR`, then restart `STG-007_EXACT_SHA_DEPLOY_AND_MIGRATE` from the next merged main |
+| implementation status | PR-A through PR-F and PRs #58-#76 are `IN_MAIN`; #66 remains the independent Printer Store-isolation repair. Batch A restarted from `e6fac236...`; fresh retained Staging `4397f995...` / V8, resource/isolation and Production-continuity gates passed, and the candidate was imported into the dedicated repository. Bootstrap stopped before release/env mutation because its `0700` state-parent guard contradicted the established safe `0750` topology. The unexecuted control root and unconsumed approval were removed; no release, env rotation, preflight, Docker/Flyway or Batch B action occurred. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Verify and publish the exact-Git release-tool control bootstrap repair. Its merge invalidates `b93d8ef...`; restart all Batch A gates from the next merged main before any deploy/Flyway eligibility. |
+| next action | Verify and publish the bounded state-root mode guard repair. Its merge invalidates `e6fac236...`; restart every Batch A gate from the next exact main before any deploy/Flyway eligibility. |
 
 ### Current AL-003 delivery state
 
@@ -50,7 +50,7 @@
 | REL-001 Production RC plan / PR #70 | `IN_MAIN` at `645d4909625f70fc241d5468382d66a30a030fb1` | Exact-SHA release gates only; no selected candidate, Staging pass, Production deploy, or activation action |
 | Post-stack Ground Truth audit / PR #72 | `IN_MAIN` at `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | Capability/runtime gap audit only; no deployment or acceptance |
 | STG-006 evidence/governance / PR #73 | `IN_MAIN` at `85d97b7327b2e15aa561ed28a5788b92cedf6f5b` | Passive evidence only; STG-006 PASS, no deployment or mutation |
-| OPS-001 secret-safe tooling | `REPOSITORY_COMPLETE` after this reviewed package enters main | Detached release/env rotation, runtime/Flyway restart evidence, and secret-FD Owner/API helpers; runtime actions remain separately gated |
+| OPS-001 secret-safe tooling | `REPOSITORY_COMPLETE` through PR #74 plus control-path repairs #75/#76 | Detached release/env rotation, runtime/Flyway restart evidence, and secret-FD Owner/API helpers; runtime actions remain separately gated |
 
 The Owner-login acceptance prerequisite is not satisfied by repository code or
 deployment alone. Read-only code audit confirms that an active Organization
