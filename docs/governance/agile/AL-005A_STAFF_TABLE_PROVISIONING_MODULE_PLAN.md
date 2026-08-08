@@ -1,13 +1,14 @@
 # AL-005A Staff and Table Provisioning Module Plan
 
-> Status: `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`
+> Status: `IN_MAIN` via PR #65 merge
+> `8f58bcbfca253c1598b967f4d17c04c0be1cce5b`
 >
 > Package: `AL-005A1_STAFF_TABLE_MODULE_CONTRACTS`
 >
 > Dependency: AL-004 Store Profile contract `IN_MAIN` at
 > `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6`
 >
-> Draft PR: #65 (main-based `DRAFT_PR`)
+> PR: #65 (`IN_MAIN`)
 >
 > Runtime effect: none
 
@@ -17,7 +18,7 @@ AL-005A will turn existing staff/access and dining-table capabilities into
 reusable Store provisioning modules without creating another onboarding
 engine. This preparation package records the executable boundaries that are
 safe to implement after the AL-004 profile contract enters `main`; it is now
-rebuilt as a main-based Draft and remains planning only.
+entered `main` and remains planning only.
 
 The architecture remains:
 
@@ -239,6 +240,6 @@ governance sync.
 
 ## 10. Current stop state
 
-`AL-005A_DRAFT_PR_WAITING_FOR_OWNER_REVIEW`
+`AL-005A_IN_MAIN_WAITING_FOR_NEXT_DEPENDENCY_REVIEW`
 
 No Staff/Table provisioning runtime capability is established by this plan.

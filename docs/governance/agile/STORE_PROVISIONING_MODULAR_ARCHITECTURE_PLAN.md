@@ -371,8 +371,8 @@ Synthetic St-Denis repository baseline, and PR #63 established guarded Staging
 acceptance preparation. The AL-004 contract entered `main` via PR #64 and still
 registers no concrete Store Profile, exposes no public template endpoint, and
 adds no executable provisioning workflow. No runtime operation is authorized.
-The rebuilt #65 Staff/Table package is a main-based Draft; #67 and later
-packages remain `STACKED_ONLY` until their direct dependency enters `main`.
+The #65 Staff/Table package is `IN_MAIN`; #67 and later packages remain
+`STACKED_ONLY` until their direct dependency enters `main`.
 
 The `IN_MAIN` STG-005B package adds no migration or HTTP endpoint. It
 uses the existing Staging profile/guards, an immutable 4/3/13/38 source

@@ -89,8 +89,8 @@ deployment. PR #71's handoff navigation, PR #61's modular architecture, PR
 #62's Synthetic St-Denis baseline, PR #63's guarded acceptance preparation,
 and PR #64's Generic Store Profile contract are `IN_MAIN` at
 `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6`; none changes runtime state.
-Draft PR #65 is the next main-based Staff/Access and Table planning package,
-while PRs #67-#70 remain dependency-bound. PR #66 is an independent
+PR #65's Staff/Access and Table planning package is `IN_MAIN`; PRs #67-#70
+remain dependency-bound. PR #66 is an independent
 main-based prerequisite repair. The current
 feature stop state is
 `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL`.
@@ -100,7 +100,8 @@ Modules without adding runtime behavior. PR #62 provides the guarded Synthetic
 St-Denis baseline, PR #63 provides guarded acceptance preparation, and PR #64
 supplies the generic version/profile identity, module-reference, and
 canonical-fingerprint contract as repository capability, not runtime evidence.
-Draft PR #65 supplies only reusable Staff/Access and Table planning boundaries.
+PR #65 supplies reusable Staff/Access and Table planning boundaries as
+repository capability only.
 No current statement authorizes server access, Flyway execution, synthetic
 bootstrap, credential creation, login, source-menu writes, validate, execute,
 a runtime clone, merge, or deployment. Staging acceptance retains the distinct

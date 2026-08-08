@@ -121,6 +121,17 @@ Print Center stores the active mode in `stores.printing_mode`.
 
 `PAD_DIRECT` only changes where printing is executed. It does not change order submission, order update, manual reprint, or receipt rendering semantics.
 
+PAD_DIRECT complete/fail keeps its existing job-state contract. Printer health
+timestamps are updated only through a printer lookup scoped to the durable
+job's Store; a missing or out-of-scope printer does not redirect the health
+write to another Store.
+
+Printer configuration writes are Store-scoped. `PUT
+/api/v1/admin/printing/printers/{id}` requires access to the request Store and
+the existing printer row must already belong to that same Store. A mismatched
+printer ID is rejected; the endpoint cannot transfer a printer config between
+Stores by changing `store_id`.
+
 ### Pad Direct Device APIs
 
 Admin/device registration:

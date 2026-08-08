@@ -64,7 +64,7 @@ separate from historical evidence snapshots and business implementation details:
 - [AL-005A Staff and Table Provisioning Module Plan](docs/governance/agile/AL-005A_STAFF_TABLE_PROVISIONING_MODULE_PLAN.md)
   records the existing credential/membership and dining-table authorities,
   reusable module boundaries, security/schema gaps, and implementation gates.
-  Draft PR #65 is a dependency-bound preparation package and adds no writer, API,
+  PR #65 is `IN_MAIN` repository preparation and adds no writer, API,
   migration, credential, table, or runtime behavior.
 - [AL-003A final menu comparison](docs/governance/agile/AL-003A_FINAL_MENU_COMPARISON.md)
   is the single product-mapping authority for the Store 1 to Chinatown target
@@ -5565,6 +5565,16 @@ No online payment provider integration is included in this phase.
 - Store-level Print Center status only controls automatic order-triggered printing.
 - Disabling Print Center does not hide or disable Print Center configuration APIs.
 - Printer list, printer assignment, print job history, printer save, assignment save, and connection test remain available while Print Center is disabled.
+- Updating an existing printer config is Store-immutable: the persisted printer
+  must already belong to the authorized request Store. A cross-Store ID cannot
+  be moved by changing `store_id`, and the service rejects the request before
+  mutating or saving the entity.
+- Automatic dispatch revalidates that the assigned printer belongs to the
+  dispatch Store before rendering or transport. A dirty cross-Store assignment
+  is failed without sending content to that printer.
+- PAD_DIRECT complete/fail updates printer success/failure health metadata only
+  when the referenced printer belongs to the durable job Store. A dirty or
+  missing printer reference does not change the existing job terminal result.
 - Successful dispatch updates `printed_at` and printer `last_successful_print_at`.
 - Failed dispatch updates `failed_at`, `error_message`, and printer `last_failed_print_at`.
 - Manual reprint is supported from Print Center and Order Center.

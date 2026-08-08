@@ -70,7 +70,7 @@ These are authoritative product inputs, not open questions:
 
 ### 1.2 Current Git ground truth
 
-| Package | Commit | State relative to `origin/main` `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6` |
+| Package | Commit | State relative to `origin/main` `8f58bcbfca253c1598b967f4d17c04c0be1cce5b` |
 |---|---|---|
 | PR-C / PR #47 | merge `ba169ed8b689ddef8dffe94deee82fea191cdcfb` | `IN_MAIN` |
 | PR-E / PR #54 | merge `82b8059f6af1c7dff4eeb1648ca47bec039b5e52` | `IN_MAIN`; PR-F0 promotion base |
@@ -86,6 +86,7 @@ These are authoritative product inputs, not open questions:
 | Synthetic St-Denis baseline / PR #62 | merge `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b` | `IN_MAIN`; repository capability only |
 | AL-003S Staging acceptance preparation / PR #63 | merge `732d77c89ff067982702426ff918d5e097e1d0fb` | `IN_MAIN`; repository-only guarded preparation, no runtime execution |
 | Generic Store Profile contract / PR #64 | merge `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6` | `IN_MAIN`; declarative profile contract, no runtime execution |
+| Staff/Table provisioning plan / PR #65 | merge `8f58bcbfca253c1598b967f4d17c04c0be1cce5b` | `IN_MAIN`; planning only, no writer or runtime execution |
 
 This document describes the complete reviewed target architecture. A section
 in this plan is not evidence that its implementation is in `main`, Staging, or

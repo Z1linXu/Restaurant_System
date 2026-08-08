@@ -1,10 +1,13 @@
 package com.restaurant.system.printing.service.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -250,7 +253,80 @@ class PadPrintJobServiceImplTest {
     }
 
     @Test
+    void completeDoesNotUpdatePrinterHealthOutsideJobStore() {
+        StoreDevice device = device();
+        PrintJob job = claimedPadJob(PrintJobStatus.PRINTING, device.id, "attempt-1");
+        PadPrintJobCompleteRequest request = new PadPrintJobCompleteRequest();
+        request.client_attempt_token = "attempt-1";
+        when(printJobService.requireJob(job.id)).thenReturn(job);
+        when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(printJobAttemptRepository.findAllByPrintJobIdAndClientAttemptToken(job.id, "attempt-1"))
+            .thenReturn(List.of(attempt("attempt-1", PrintJobStatus.PRINTING)));
+        when(printerConfigRepository.findByIdAndStoreId(job.printer_id, job.store_id)).thenReturn(Optional.empty());
+        when(printJobService.toResponse(any(PrintJob.class)))
+            .thenAnswer(invocation -> PrintJobResponse.from(invocation.getArgument(0), null, null));
+
+        PrintJobResponse response = service.completeJob(device, job.id, request);
+
+        assertEquals(PrintJobStatus.PRINTED, response.status);
+        verify(printerConfigRepository).findByIdAndStoreId(job.printer_id, job.store_id);
+        verify(printerConfigRepository, never()).findById(job.printer_id);
+        verify(printerConfigRepository, never()).save(any(PrinterConfig.class));
+    }
+
+    @Test
+    void completeUpdatesPrinterHealthWithinJobStore() {
+        StoreDevice device = device();
+        PrintJob job = claimedPadJob(PrintJobStatus.PRINTING, device.id, "attempt-1");
+        PrinterConfig printer = printer(job.printer_id, "Store Printer", "192.168.1.101", 9100);
+        printer.last_error_message = "previous failure";
+        PadPrintJobCompleteRequest request = new PadPrintJobCompleteRequest();
+        request.client_attempt_token = "attempt-1";
+        when(printJobService.requireJob(job.id)).thenReturn(job);
+        when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(printJobAttemptRepository.findAllByPrintJobIdAndClientAttemptToken(job.id, "attempt-1"))
+            .thenReturn(List.of(attempt("attempt-1", PrintJobStatus.PRINTING)));
+        when(printerConfigRepository.findByIdAndStoreId(job.printer_id, job.store_id)).thenReturn(Optional.of(printer));
+        when(printJobService.toResponse(any(PrintJob.class)))
+            .thenAnswer(invocation -> PrintJobResponse.from(invocation.getArgument(0), null, null));
+
+        PrintJobResponse response = service.completeJob(device, job.id, request);
+
+        assertEquals(PrintJobStatus.PRINTED, response.status);
+        assertNotNull(printer.last_successful_print_at);
+        assertNull(printer.last_error_message);
+        verify(printerConfigRepository).save(printer);
+        verify(printerConfigRepository, never()).findById(job.printer_id);
+    }
+
+    @Test
     void failWorksFromPrinting() {
+        StoreDevice device = device();
+        PrintJob job = claimedPadJob(PrintJobStatus.PRINTING, device.id, "attempt-1");
+        PrinterConfig printer = printer(job.printer_id, "Store Printer", "192.168.1.101", 9100);
+        PadPrintJobFailRequest request = new PadPrintJobFailRequest();
+        request.client_attempt_token = "attempt-1";
+        request.error_code = "ANDROID_NATIVE_PRINT_FAILED";
+        request.error_message = "printer offline";
+        when(printJobService.requireJob(job.id)).thenReturn(job);
+        when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(printJobAttemptRepository.findAllByPrintJobIdAndClientAttemptToken(job.id, "attempt-1")).thenReturn(List.of(attempt("attempt-1", PrintJobStatus.PRINTING)));
+        when(printerConfigRepository.findByIdAndStoreId(job.printer_id, job.store_id)).thenReturn(Optional.of(printer));
+        when(printJobService.toResponse(any(PrintJob.class))).thenAnswer(invocation -> PrintJobResponse.from(invocation.getArgument(0), null, null));
+
+        PrintJobResponse response = service.failJob(device, job.id, request);
+
+        assertEquals(PrintJobStatus.FAILED, response.status);
+        assertEquals("ANDROID_NATIVE_PRINT_FAILED", job.error_code);
+        assertNotNull(printer.last_failed_print_at);
+        assertEquals("printer offline", printer.last_error_message);
+        verify(printerConfigRepository).save(printer);
+        verify(printerConfigRepository).findByIdAndStoreId(job.printer_id, job.store_id);
+        verify(printerConfigRepository, never()).findById(job.printer_id);
+    }
+
+    @Test
+    void failDoesNotUpdatePrinterHealthOutsideJobStore() {
         StoreDevice device = device();
         PrintJob job = claimedPadJob(PrintJobStatus.PRINTING, device.id, "attempt-1");
         PadPrintJobFailRequest request = new PadPrintJobFailRequest();
@@ -259,14 +335,18 @@ class PadPrintJobServiceImplTest {
         request.error_message = "printer offline";
         when(printJobService.requireJob(job.id)).thenReturn(job);
         when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(printJobAttemptRepository.findAllByPrintJobIdAndClientAttemptToken(job.id, "attempt-1")).thenReturn(List.of(attempt("attempt-1", PrintJobStatus.PRINTING)));
-        when(printerConfigRepository.findById(7L)).thenReturn(Optional.empty());
-        when(printJobService.toResponse(any(PrintJob.class))).thenAnswer(invocation -> PrintJobResponse.from(invocation.getArgument(0), null, null));
+        when(printJobAttemptRepository.findAllByPrintJobIdAndClientAttemptToken(job.id, "attempt-1"))
+            .thenReturn(List.of(attempt("attempt-1", PrintJobStatus.PRINTING)));
+        when(printerConfigRepository.findByIdAndStoreId(job.printer_id, job.store_id)).thenReturn(Optional.empty());
+        when(printJobService.toResponse(any(PrintJob.class)))
+            .thenAnswer(invocation -> PrintJobResponse.from(invocation.getArgument(0), null, null));
 
         PrintJobResponse response = service.failJob(device, job.id, request);
 
         assertEquals(PrintJobStatus.FAILED, response.status);
-        assertEquals("ANDROID_NATIVE_PRINT_FAILED", job.error_code);
+        verify(printerConfigRepository).findByIdAndStoreId(job.printer_id, job.store_id);
+        verify(printerConfigRepository, never()).findById(job.printer_id);
+        verify(printerConfigRepository, never()).save(any(PrinterConfig.class));
     }
 
     @Test
