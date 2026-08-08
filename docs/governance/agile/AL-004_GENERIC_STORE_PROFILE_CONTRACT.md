@@ -1,10 +1,10 @@
 # AL-004 Generic Store Profile Contract
 
-> Package state: `STACKED_ONLY_WAITING_FOR_OWNER_REVIEW`
+> Package state: `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`
 >
-> Parent: stacked AL-003S preparation Head `880795f9fa6101116f9fd1f370caeb0bdf16b647`
+> Parent: `origin/main@732d77c89ff067982702426ff918d5e097e1d0fb` (PR #63 `IN_MAIN`)
 >
-> Review: Draft PR #64, base Draft PR #63 branch
+> Review: Draft PR #64, rebuilt with base `main`
 >
 > Runtime access: not performed
 
@@ -73,8 +73,8 @@ enforcement, immutable registry snapshots, applicable activation requirements,
 and safe summary projection.
 
 Full backend tests and compile must pass before the Draft PR review gate. This
-package remains stacked-only until each dependency is independently reviewed
-and promoted from latest `main`.
+package remains a main-based Draft until Owner review. Downstream packages stay
+stacked-only until this contract is independently reviewed and promoted.
 
 ## 5. Next bounded input
 

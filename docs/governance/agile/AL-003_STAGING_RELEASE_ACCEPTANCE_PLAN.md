@@ -1,14 +1,14 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Capability state: `AL-003S_STACKED_PREPARATION_WAITING_FOR_DEPENDENCIES_AND_OWNER_RUNTIME_APPROVAL`
+> Capability state: `AL-003S_IN_MAIN_WAITING_FOR_RUNTIME_APPROVAL`
 >
 > Historical failed candidate: `8f909525781804f61d1da388882f530da358c3c4`
 >
-> Current main: `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d` (`IN_MAIN`, not deployed)
+> Current main: `732d77c89ff067982702426ff918d5e097e1d0fb` (`IN_MAIN`, not deployed)
 >
-> Governance package: PR #60, `IN_MAIN`
+> Governance packages: PR #60, PR #71, PR #61, PR #62, and PR #63 are `IN_MAIN`; none is runtime evidence
 >
-> Next candidate SHA: `EVIDENCE_PENDING` after STG-005B dependency completion and fresh Owner approval
+> Next candidate SHA: `EVIDENCE_PENDING` after fresh Owner runtime approval
 
 ## Authorization boundary
 
@@ -161,12 +161,12 @@ before any of these steps execute:
    persisted topology/menu, login/access, and replay. Production remains
    untouched.
 
-The reusable Synthetic St-Denis manifest/application path is prepared in
-dependency-bound Draft PR #62. It is not available to runtime until
-its architecture and implementation dependencies enter `main`, a fresh exact
-SHA is selected, and the Owner separately approves the mutation sequence.
+The reusable Synthetic St-Denis manifest/application path entered `main` via
+PR #62. It remains repository capability only: it is not available to runtime
+until a fresh exact SHA is selected and the Owner separately approves the
+mutation sequence.
 
-The stacked AL-003S package adds the missing guarded one-shot launcher and
+The `IN_MAIN` AL-003S package adds the missing guarded one-shot launcher and
 publishes the exact command, evidence, and rollback plan in
 [AL-003S Staging Acceptance Preparation](AL-003S_STAGING_ACCEPTANCE_PREPARATION.md).
 It defaults to validation and requires explicit runtime and write gates. This
@@ -227,4 +227,4 @@ payloads, or customer data.
 
 ## Capability dependency state
 
-`AL-003S_STACKED_PREPARATION_WAITING_FOR_DEPENDENCIES_AND_OWNER_RUNTIME_APPROVAL`
+`AL-003S_IN_MAIN_WAITING_FOR_RUNTIME_APPROVAL`
