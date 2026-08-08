@@ -5471,6 +5471,13 @@ No online payment provider integration is included in this phase.
 - Store-level Print Center status only controls automatic order-triggered printing.
 - Disabling Print Center does not hide or disable Print Center configuration APIs.
 - Printer list, printer assignment, print job history, printer save, assignment save, and connection test remain available while Print Center is disabled.
+- Updating an existing printer config is Store-immutable: the persisted printer
+  must already belong to the authorized request Store. A cross-Store ID cannot
+  be moved by changing `store_id`, and the service rejects the request before
+  mutating or saving the entity.
+- Automatic dispatch revalidates that the assigned printer belongs to the
+  dispatch Store before rendering or transport. A dirty cross-Store assignment
+  is failed without sending content to that printer.
 - Successful dispatch updates `printed_at` and printer `last_successful_print_at`.
 - Failed dispatch updates `failed_at`, `error_message`, and printer `last_failed_print_at`.
 - Manual reprint is supported from Print Center and Order Center.

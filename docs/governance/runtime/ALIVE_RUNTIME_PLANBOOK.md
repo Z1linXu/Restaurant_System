@@ -26,7 +26,7 @@
 | Environment | `restaurant-prod` | `OPERATOR_CONFIRMED` | Environment label only; no host or secret is recorded. |
 | `RUNTIME_COMMIT` | `4667f3c` | `OPERATOR_CONFIRMED` | Reported deployed commit, not a formal release approval. |
 | Production branch | `main` | `OPERATOR_CONFIRMED` | Branch relationship is not a deployment approval record. |
-| Last merged `DOCUMENTATION_COMMIT` | `c3956592da8a33092ab745c7cc6aac05e9babfa7` | `MACHINE_VERIFIED` from `origin/main` | PR #59 is `IN_MAIN`. This does not make that commit a Staging or Production runtime. |
+| Last merged `DOCUMENTATION_COMMIT` | `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d` | `MACHINE_VERIFIED` from `origin/main` | PR #60 is `IN_MAIN`. This does not make that commit a Staging or Production runtime. |
 | Deployment mode | HTTP | `OPERATOR_CONFIRMED` | HTTPS/certificate posture is outside this record. |
 | Compose services | `db`, `backend`, `nginx` | `OPERATOR_CONFIRMED` | No new container inspection was run for this planbook. |
 | Database schema | Flyway V7, including `V7__add_print_job_attention_acknowledgement.sql` | `OPERATOR_CONFIRMED` | Not a restore or schema-integrity rehearsal. |
@@ -62,9 +62,9 @@ snapshots. Do not copy those reports into this planbook.
 | Item | Current state |
 |---|---|
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `AL-003 Store 1 -> Chinatown Live Menu Clone` |
-| Loop type | `IMPLEMENTATION` |
-| Loop status | `AL-003_OWNER_DECISIONS_GOVERNANCE_SYNC_WAITING_FOR_OWNER_REVIEW` |
+| Current Agile Loop | `AL-005_DEPENDENCY_REPAIR_PRINTER_STORE_ISOLATION` |
+| Loop type | `DEPENDENCY_REPAIR` |
+| Loop status | `AL-005_PRINTER_STORE_ISOLATION_REPAIR_WAITING_FOR_OWNER_REVIEW` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | PR #27 merged the backend foundation into `main`; Production remains on the older runtime and no production onboarding is established by that merge. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -74,8 +74,8 @@ snapshots. Do not copy those reports into this planbook.
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
 | AL-003 state | PR #58 preserves the failed-attempt evidence and PR #59's bounded PostgreSQL UID-70/mode-0700 private-leaf repair is `IN_MAIN` at `c3956592da8a33092ab745c7cc6aac05e9babfa7`. Neither record proves a new Staging deployment. |
 | Staging Owner login prerequisite | `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`; code audit proves an Organization Owner naturally accesses every same-Organization Store, so no explicit target Owner Store membership is required. Runtime bootstrap, credential, login, workspace, target onboarding, and API evidence remain pending. |
-| Current permitted work | Owner review of governance Draft PR #60. After merge, request a separate exact-SHA Staging runtime-mutation approval. |
-| Explicitly not permitted | Reusing old SHA approval/evidence, SSH/runtime mutation, deployment, Flyway, bootstrap, credential creation, login, source-menu writes, validate/execute, real clone, Production Store 1 access, Production mutation, or implementation of proposed future loops. |
+| Current permitted work | Review the bounded printer Store-isolation repair and the separately tracked dependency-bound architecture/preparation Draft PR queue. Runtime mutation remains prohibited. |
+| Explicitly not permitted | Reusing old SHA approval/evidence; SSH/runtime mutation; deployment; Flyway; bootstrap; credential creation; login; source-menu writes; validate/execute; real clone; printer configuration or test print; Production Store 1 access; or Production mutation. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 [AGILE_LOOP_OPERATING_MODEL.md](../AGILE_LOOP_OPERATING_MODEL.md), and
@@ -93,7 +93,8 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 | PR-F / PR #56 | `IN_MAIN` via merge `8f909525781804f61d1da388882f530da358c3c4` | Protected Owner validate/execute API facade reusing the internal planner, V10 coordinator, and lock-owning transaction without a second clone engine. |
 | Attempt evidence / PR #58 | `IN_MAIN` via merge `1482cddf4f10478ed571e4d7422100dc40006f6b` | Immutable record of the failed exact-SHA preflight and safe V8 runtime recovery. |
 | Private-leaf repair / PR #59 | `IN_MAIN` via merge `c3956592da8a33092ab745c7cc6aac05e9babfa7` | Staging-only path-validation correction and governance rules; no runtime action or business/API change. |
-| Owner decisions governance sync / PR #60 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | Documentation-only alignment of product direction, access semantics, FT-001 gaps, and runtime gates. |
+| Owner decisions governance sync / PR #60 | `IN_MAIN` via merge `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d` | Documentation-only alignment of product direction, access semantics, FT-001 gaps, and runtime gates. |
+| AL-005 printer Store-isolation dependency repair | `IMPLEMENTED_WAITING_FOR_OWNER_REVIEW` | Rejects cross-Store printer config updates before mutation/save and rejects cross-Store assigned printers during automatic dispatch before renderer/transport execution. It changes no endpoint, printing mode, assignment data, job state contract, transport implementation, Android, or runtime action. |
 
 PR-D promotion evidence is now historical main evidence: semantic source
 `5a0dc09944b4b0945fe95027d7f12647212ea559`, reviewed promotion head
@@ -110,9 +111,12 @@ This is repository capability only. No real clone has run; Staging remains on
 `4397f995...` / Flyway V8 and Production remains on `4667f3c` / Flyway V7.
 
 The unique current package stop state is
-`AL-003_OWNER_DECISIONS_GOVERNANCE_SYNC_WAITING_FOR_OWNER_REVIEW`. The separate
+`AL-005_PRINTER_STORE_ISOLATION_REPAIR_WAITING_FOR_OWNER_REVIEW`. The separate
 runtime acceptance prerequisite remains
 `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`.
+
+The bounded repair contract and verification scope are documented in
+[AL-005 Printer Store Isolation Dependency Repair](../agile/AL-005_DEPENDENCY_REPAIR_PRINTER_STORE_ISOLATION.md).
 
 Git ground truth must always distinguish `MERGED_ON_GITHUB`, `IN_MAIN`,
 `DEPLOYED_TO_STAGING`, and `DEPLOYED_TO_PRODUCTION`. A stacked PR merged into a

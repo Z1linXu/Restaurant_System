@@ -121,6 +121,12 @@ Print Center stores the active mode in `stores.printing_mode`.
 
 `PAD_DIRECT` only changes where printing is executed. It does not change order submission, order update, manual reprint, or receipt rendering semantics.
 
+Printer configuration writes are Store-scoped. `PUT
+/api/v1/admin/printing/printers/{id}` requires access to the request Store and
+the existing printer row must already belong to that same Store. A mismatched
+printer ID is rejected; the endpoint cannot transfer a printer config between
+Stores by changing `store_id`.
+
 ### Pad Direct Device APIs
 
 Admin/device registration:
