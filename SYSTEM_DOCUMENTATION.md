@@ -39,6 +39,10 @@ separate from historical evidence snapshots and business implementation details:
   records the fresh Batch A trigger, reviewed candidate import, deterministic
   `0750` state-parent false positive, preserved V8 runtime, bounded guard
   correction, expired candidate boundary, and mandatory Batch A restart.
+- [STG-007 Releases-Root Mode Guard Repair Evidence](docs/governance/runtime/STG-007_RELEASES_ROOT_MODE_GUARD_REPAIR_EVIDENCE.md)
+  records the next fresh Batch A trigger, exact candidate import, deterministic
+  `0750` releases-parent false positive, preserved V8 runtime, bounded
+  trust-root correction, expired candidate boundary, and mandatory restart.
 - [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
   authority for current issue triage and closure status.
 - [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
@@ -630,6 +634,15 @@ revalidates the exact initial mode, and preserves the owner, canonical path,
 symlink, inode, private task-root and fail-closed cleanup checks. Mode `0775`
 and every group/world-writable mode remain rejected. No release, environment
 rotation, preflight, Docker lifecycle or Flyway action occurred.
+
+After PR #77 merged that correction, Batch A restarted from exact candidate
+`5c6d8bb7...`. Candidate import passed and bootstrap delegated to the release
+helper, which stopped before approval consumption or mutation because the
+existing canonical/operator-owned releases parent is mode `0750`, not its
+hardcoded `0700`. The bounded correction permits only exact `0700` or
+non-group-writable `0750` and revalidates the starting mode plus device/inode
+before and after worktree creation. The new release remains private `0700`;
+`0775`, path replacement and identity drift remain `NO_GO`.
 
 Repository PRs now follow the permanent auto-merge gate in the Agile Loop
 Operating Model: latest-main base, exact single-package scope, all applicable

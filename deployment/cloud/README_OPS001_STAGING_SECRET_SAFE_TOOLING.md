@@ -186,7 +186,11 @@ migrates, reads Production, or creates a release by a second path.
 dedicated bare repository at `/srv/restaurant-pos/staging/repository.git`. It
 does not fetch or clone. It creates only
 `releases/<approved-sha>` as a clean detached worktree, never from the
-Production checkout.
+Production checkout. The fixed releases parent must be canonical,
+non-symlink, operator-owned and exact mode `0700` or the established
+non-group-writable `0750`. Its starting mode and inode are revalidated before
+and after worktree creation; `0775`, owner/mode/inode drift, or path
+replacement is `NO_GO`. The new exact release itself is always mode `0700`.
 
 The environment rotation copies the prior private environment into the
 owner-only recovery directory, prepares a new mode-0600 file, proves that only

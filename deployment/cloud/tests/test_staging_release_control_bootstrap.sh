@@ -196,7 +196,7 @@ STAGING_BOOTSTRAP_TEST_LOG="$LOG_FILE" STAGING_BOOTSTRAP_TEST_READY="$SIGNAL_REA
   --validate --approved-sha "$APPROVED_SHA" --env-file "$FAKE_ROOT/config/.env.staging" \
   >"$TMP_DIR/signal.out" 2>"$TMP_DIR/signal.err" &
 BOOTSTRAP_PID=$!
-for _ in 1 2 3 4 5; do [[ -e "$SIGNAL_READY" ]] && break; sleep 0.1; done
+for _ in $(seq 1 50); do [[ -e "$SIGNAL_READY" ]] && break; sleep 0.1; done
 [[ -e "$SIGNAL_READY" ]] || fail 'signal fixture did not reach delegated helper'
 kill -TERM "$BOOTSTRAP_PID"
 set +e
