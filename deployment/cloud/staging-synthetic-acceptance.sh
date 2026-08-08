@@ -450,16 +450,31 @@ mark_action_blocked() {
     echo "AL003S_ACCEPTANCE|WARN|blocked marker unavailable; lock record remains authoritative" >&2
 }
 
+container_health_state() {
+  local id="$1" state_keys health
+  state_keys="$(controlled_docker inspect --format '{{range $key, $value := .State}}{{$key}}{{"\n"}}{{end}}' "$id")" ||
+    die "cannot inspect container state keys"
+  if printf '%s\n' "$state_keys" | grep -Fxq Health; then
+    health="$(controlled_docker inspect --format '{{index (index .State "Health") "Status"}}' "$id")" ||
+      die "cannot inspect configured container health"
+    [[ "$health" =~ ^[A-Za-z]+$ ]] || die "configured container health metadata is invalid"
+    printf '%s' "$health"
+  else
+    printf 'NO_HEALTHCHECK'
+  fi
+}
+
 project_fingerprint() {
-  local project="$1" ids id line metadata="" services status health
+  local project="$1" ids id line health metadata="" services status
   ids="$(controlled_docker ps --filter "label=com.docker.compose.project=$project" --format '{{.ID}}')" ||
     die "cannot list $project containers"
   [[ -n "$ids" ]] || die "$project has no running containers"
   while IFS= read -r id; do
     [[ -n "$id" ]] || continue
-    line="$(controlled_docker inspect --format '{{.Id}}|{{.Name}}|{{index .Config.Labels "com.docker.compose.service"}}|{{.Image}}|{{.Created}}|{{.RestartCount}}|{{.State.Status}}|{{if .State.Health}}{{.State.Health.Status}}{{else}}NO_HEALTHCHECK{{end}}' "$id")" ||
+    line="$(controlled_docker inspect --format '{{.Id}}|{{.Name}}|{{index .Config.Labels "com.docker.compose.service"}}|{{.Image}}|{{.Created}}|{{.RestartCount}}|{{.State.Status}}' "$id")" ||
       die "cannot inspect $project container metadata"
-    metadata="${metadata}${line}"$'\n'
+    health="$(container_health_state "$id")"
+    metadata="${metadata}${line}|${health}"$'\n'
   done <<<"$ids"
   services="$(printf '%s' "$metadata" | cut -d'|' -f3 | sort)"
   [[ "$services" == $'backend\ndb\nnginx' ]] || die "$project services must be exactly backend, db, nginx"

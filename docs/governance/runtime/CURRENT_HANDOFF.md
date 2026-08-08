@@ -8,12 +8,12 @@
 >
 > Snapshot date: 2026-08-08, America/Toronto
 >
-> Runtime freshness: after PR #78 entered main, STG-007 restarted Batch A from
-> exact candidate `35ccf5cb...`. Fresh retained Staging `4397f995...` / V8,
-> disabled printing, isolation/resources/Production continuity, import and
-> exact release creation passed. Approval was consumed; rotation stopped before
-> recovery/env write at its remaining `0700` versus safe `0750` state-parent
-> guard. Inert release/approval are preserved and env remains unchanged.
+> Runtime freshness: PR #79 entered main at `868e229f...`. STG-007 Batch A then
+> passed release/env rotation and formal preflight. Conditional Batch B deployed
+> that exact SHA and applied V9/V10; Staging is healthy at Flyway V10 with
+> printing disabled and Production continuity unchanged. Passive readiness
+> stopped before PASS evidence on the optional Docker health-field fingerprint
+> bug; no collect-evidence or same-image restart followed.
 
 ## 1. Project mission
 
@@ -32,9 +32,9 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| `origin/main` before this STG-007 dependency repair | `35ccf5cb823bb22b449d8b82baa2f22db2e242df` | `IN_MAIN`; merge of releases-parent guard repair PR #78 |
+| `origin/main` before this STG-007 dependency repair | `868e229f1b5afd28163e5031ad8fabffaad651f6` | `IN_MAIN`; merge of rotation state-root repair PR #79 |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
-| Current delivery branch | `codex/ops001-rotation-state-root-mode-repair` | complete rotation state-parent mode reconciliation only; runtime stopped before recovery/env mutation |
+| Current delivery branch | `codex/ops001-readiness-health-fingerprint-repair` | missing-health-safe project fingerprint repair only; runtime access is stopped |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
 
 `IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
@@ -81,6 +81,7 @@ closed, merged, and `IN_MAIN`.
 | #76 | STG-007 exact-Git release bootstrap repair | `main` | merge `e6fac236c7620cd2f579d2a180367f4f753a6d42` | `IN_MAIN` | #75/main | Yes | Control-path repair only; no release, deploy or Flyway action |
 | #77 | STG-007 state-parent mode guard repair | `main` | merge `5c6d8bb70d74756cc7fe3f76b2d43cb07c6e6f33` | `IN_MAIN` | #76/main | Yes | Trust-root guard repair only; no release/env, deploy or Flyway action |
 | #78 | STG-007 releases-parent mode guard repair | `main` | merge `35ccf5cb823bb22b449d8b82baa2f22db2e242df` | `IN_MAIN` | #77/main | Yes | Trust-root guard repair only; no release/env, deploy or Flyway action |
+| #79 | STG-007 rotation state-root mode guard repair | `main` | merge `868e229f1b5afd28163e5031ad8fabffaad651f6` | `IN_MAIN` | #78/main | Yes | Guard/test/governance repair; later runtime use was separately authorized |
 
 Main stack review order:
 
@@ -97,7 +98,7 @@ STG-006 freshly observed only the bounded runtime identity below.
 | Environment | Retained evidence | Classification and boundary |
 |---|---|---|
 | Production | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`; Compose `cloud` `db/backend/nginx`; unchanged IDs/start times/restart `0`; health 200 | `MACHINE_VERIFIED_READ_ONLY` continuity only; Flyway/business state not queried |
-| Staging | `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c`; Flyway V8; `db/backend/nginx` running | `MACHINE_VERIFIED_READ_ONLY`; candidate is not deployed |
+| Staging | `868e229f1b5afd28163e5031ad8fabffaad651f6`; Flyway V10; `db/backend/nginx` running; health 200/200/200 | `DEPLOYED_TO_STAGING`; readiness collection and same-image restart remain incomplete |
 | Staging isolation | project `restaurant-pos-staging`; only `127.0.0.1:18080`; separate state/network/mounts; private leaf UID 70/mode 0700 | `MACHINE_VERIFIED_READ_ONLY` |
 | Staging printing | `STAGING_PRINT_MODE=DISABLED`; feature flag `false` | `MACHINE_VERIFIED_READ_ONLY` |
 
@@ -109,24 +110,24 @@ V10 ran on Staging or Production.
 | Field | Current value |
 |---|---|
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `STG-007_ROTATION_STATE_ROOT_MODE_GUARD_REPAIR` |
-| Current package | Complete environment rotation's state-parent reconciliation with exact `0700`/established `0750`; tests and governance only |
-| Feature stop state | `STG-007_BATCH_A_BLOCKED_BY_ROTATION_STATE_ROOT_MODE_REPAIR` until the repair is verified and merged |
+| Current Agile Loop | `STG-007_READINESS_HEALTH_FINGERPRINT_REPAIR` |
+| Current package | Missing-health-safe shared project fingerprint; tests and governance only |
+| Feature stop state | `STG-007_BATCH_B_BLOCKED_BY_READINESS_FINGERPRINT_REPAIR` until the repair is verified and merged |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | Repair publication uses the Owner's Dependency Repair Auto-Loop policy. After merge, the old exact-SHA approval expires and Batch A must restart from the new merged main. |
+| Current Owner gate | Repair publication uses the Owner's Dependency Repair Auto-Loop policy. After merge, exact-main Ground Truth evaluation must restart, but the original V8-only conditional Batch B authority cannot be reused or generalized to redeploy a new-main candidate over the now-V10 Staging runtime. |
 
 ### Permitted work
 
 - Fetch and verify Git/GitHub ground truth.
 - Review the post-stack capability audit and bounded next-loop ordering.
-- Implement and verify only the complete rotation state-root mode repair
-  without weakening repository, release, env, recovery or cleanup security.
+- Implement and verify only the missing-health-safe project fingerprint repair
+  without weakening service, running-state or unhealthy-state checks.
 - Run focused/mock regressions, Agent 6 review, publication gates, and mandatory
   governance sync; auto-merge only if every permanent repository gate passes.
 
 ### Prohibited work without new approval
 
-- Further SSH or any Staging/Production mutation while the dependency repair is
+- Further SSH or any Staging/Production access while the dependency repair is
   under review; Staging/Production deployment and runtime Docker lifecycle operations.
 - Runtime Flyway, bootstrap, credential creation, login, validate/execute, or
   real menu clone.
@@ -188,6 +189,11 @@ V10 ran on Staging or Production.
   with the releases-parent correction. The next Batch A attempt created its
   exact release and consumed approval, then stopped before env mutation at the
   remaining rotation state-parent mode guard now under bounded repair.
+- PR #79 entered `main` at `868e229f1b5afd28163e5031ad8fabffaad651f6`
+  with the rotation state-parent correction. The next authorized run passed
+  Batch A, deployed that exact SHA and applied V9/V10, then stopped before
+  readiness PASS or restart at the optional-health fingerprint bug now under
+  bounded repair.
 
 ## 7. AL-003 repository capability
 
