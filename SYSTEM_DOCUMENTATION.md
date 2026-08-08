@@ -30,6 +30,11 @@ separate from historical evidence snapshots and business implementation details:
   fail-closed ownership correction, local verification scope, expired prior
   candidate boundary, and mandatory Batch A restart. It authorizes no runtime
   mutation.
+- [STG-007 Release Tool Bootstrap Repair Evidence](docs/governance/runtime/STG-007_RELEASE_TOOL_BOOTSTRAP_REPAIR_EVIDENCE.md)
+  records the retained-release first-use blocker, exact-Git/private-control-root
+  adapter, bounded candidate-import prerequisite, local verification, expired
+  candidate boundary, and mandatory Batch A restart. It authorizes no runtime
+  mutation.
 - [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
   authority for current issue triage and closure status.
 - [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
@@ -596,6 +601,18 @@ occupied port only when sanitized `ss` plus Docker metadata prove one running
 or unverifiable ownership remains fail-closed. The repair itself performs no
 runtime action; once merged, it invalidates the previous exact candidate and
 requires STG-007 Batch A to restart from the new main.
+
+The restarted Batch A then found that the retained pre-OPS-001 release cannot
+invoke the new release helper, while that helper deliberately creates the next
+release and does not fetch. The release-control bootstrap closes only this
+first-use control-path gap. It is materialized from the exact approved Git
+blob into a private task-owned control root, proves its own digest and the
+fixed bare repository/ref, extracts a symlink-free exact candidate bundle,
+verifies the release helper/library digests, and delegates unchanged arguments
+to `staging-release-rotation.sh`. It has no second release/env engine and
+performs no fetch, clone, Docker, Flyway, API, business-data, or Production
+action. Its merge invalidates the prior candidate and requires another full
+Batch A restart.
 
 Repository PRs now follow the permanent auto-merge gate in the Agile Loop
 Operating Model: latest-main base, exact single-package scope, all applicable
