@@ -28,6 +28,9 @@ NEXT_ENV_FILE=""
 RELEASES_DIR="$OPS001_EXPECTED_ROOT/releases"
 RELEASES_DIR_MODE=""
 RELEASES_DIR_IDENTITY=""
+STATE_DIR="$OPS001_EXPECTED_ROOT/state"
+STATE_DIR_MODE=""
+STATE_DIR_IDENTITY=""
 
 usage() {
   cat <<'EOF'
@@ -126,6 +129,33 @@ assert_releases_root_unchanged() {
     ops001_die "Staging releases directory identity changed"
 }
 
+state_root_identity() {
+  if stat -c '%d:%i' "$1" >/dev/null 2>&1; then stat -c '%d:%i' "$1"; else stat -f '%d:%i' "$1"; fi
+}
+
+validate_state_root() {
+  [[ "$STATE_DIR" == "$OPS001_EXPECTED_ROOT/state" ]] || ops001_die "Staging state directory path changed"
+  [[ -d "$STATE_DIR" && ! -L "$STATE_DIR" ]] || ops001_die "Staging state directory must be a real directory"
+  ops001_path_has_symlink "$STATE_DIR" && ops001_die "Staging state directory must not traverse symlinks"
+  [[ "$(ops001_canonical_dir "$STATE_DIR")" == "$STATE_DIR" ]] || ops001_die "Staging state directory must use the fixed canonical path"
+  STATE_DIR_MODE="$(ops001_file_mode "$STATE_DIR")"
+  [[ "$(ops001_file_owner "$STATE_DIR")" == "$(id -u)" &&
+     ( "$STATE_DIR_MODE" == "700" || "$STATE_DIR_MODE" == "750" ) ]] ||
+    ops001_die "Staging state directory must be owner-owned mode 0700 or 0750"
+  STATE_DIR_IDENTITY="$(state_root_identity "$STATE_DIR")"
+}
+
+assert_state_root_unchanged() {
+  [[ -n "$STATE_DIR_MODE" && -n "$STATE_DIR_IDENTITY" && -d "$STATE_DIR" && ! -L "$STATE_DIR" ]] ||
+    ops001_die "Staging state directory identity is unavailable"
+  ops001_path_has_symlink "$STATE_DIR" && ops001_die "Staging state directory identity changed"
+  [[ "$(ops001_canonical_dir "$STATE_DIR")" == "$STATE_DIR" &&
+     "$(ops001_file_owner "$STATE_DIR")" == "$(id -u)" &&
+     "$(ops001_file_mode "$STATE_DIR")" == "$STATE_DIR_MODE" &&
+     "$(state_root_identity "$STATE_DIR")" == "$STATE_DIR_IDENTITY" ]] ||
+    ops001_die "Staging state directory identity changed"
+}
+
 validate_inputs() {
   [[ "$-" != *x* ]] || ops001_die "shell tracing must be disabled"
   [[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]] || ops001_die "approved SHA must be a lowercase full 40-character SHA"
@@ -133,7 +163,9 @@ validate_inputs() {
   ops001_validate_env_file "$ENV_FILE"
   ENV_DIGEST="$(ops001_file_digest "$ENV_FILE")"
   RELEASES_DIR="$OPS001_EXPECTED_ROOT/releases"
+  STATE_DIR="$OPS001_EXPECTED_ROOT/state"
   RELEASE_DIR="$RELEASES_DIR/$APPROVED_SHA"
+  validate_state_root
   validate_releases_root
   validate_repository
 }
@@ -208,11 +240,8 @@ assert_only_identity_changed() {
 }
 
 rotate_environment() {
-  local state_dir="$OPS001_EXPECTED_ROOT/state" recovery_dir="$OPS001_EXPECTED_ROOT/state/ops001-env-recovery" prior_digest next_digest marker
-  [[ -d "$state_dir" && ! -L "$state_dir" ]] || ops001_die "Staging state directory must be a real directory"
-  ops001_path_has_symlink "$state_dir" && ops001_die "Staging state directory must not traverse symlinks"
-  [[ "$(ops001_canonical_dir "$state_dir")" == "$state_dir" && "$(ops001_file_owner "$state_dir")" == "$(id -u)" && "$(ops001_file_mode "$state_dir")" == "700" ]] ||
-    ops001_die "Staging state directory must be the fixed owner-only mode-0700 directory"
+  local recovery_dir="$STATE_DIR/ops001-env-recovery" prior_digest next_digest marker
+  assert_state_root_unchanged
   if [[ -e "$recovery_dir" || -L "$recovery_dir" ]]; then
     [[ -d "$recovery_dir" && ! -L "$recovery_dir" ]] || ops001_die "environment recovery directory must be a real directory"
     ops001_path_has_symlink "$recovery_dir" && ops001_die "environment recovery directory must not traverse symlinks"
@@ -237,6 +266,7 @@ rotate_environment() {
   printf 'OPS001_ENV_ROTATION|STATUS|PREPARED\nOPS001_ENV_ROTATION|APPROVED_SHA|%s\nOPS001_ENV_ROTATION|PRIOR_SHA256|%s\nOPS001_ENV_ROTATION|CURRENT_SHA256|%s\n' "$APPROVED_SHA" "$prior_digest" "$next_digest" >"$marker"
   chmod 600 "$marker"
   ROTATION_STATE="PREPARED"
+  assert_state_root_unchanged
   mv -f -- "$NEXT_ENV_FILE" "$ENV_FILE"; NEXT_ENV_FILE=""
   ROTATION_STATE="ROTATED"
   chmod 600 "$ENV_FILE"
@@ -267,6 +297,8 @@ rotate_environment() {
 run_prepare() {
   local scope="repository=$REPOSITORY;release=$RELEASE_DIR;identity_fields=4"
   acquire_action_lock
+  assert_state_root_unchanged
+  assert_releases_root_unchanged
   assert_no_pending_rotation
   ops001_validate_approval "$APPROVAL_FILE" "$APPROVAL_SHA256" "$ACTION" "$APPROVED_SHA" "$ENV_DIGEST" "$scope"
   OPS001_APPROVAL_FILE="$APPROVAL_FILE"

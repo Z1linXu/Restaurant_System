@@ -26,6 +26,7 @@ EXPECTED_ROOT="$OPS001_EXPECTED_ROOT"
 mkdir -p "$OPS001_EXPECTED_ROOT"/{config,evidence,releases,state}
 chmod 700 "$OPS001_EXPECTED_ROOT"/{config,evidence,releases,state}
 chmod 750 "$OPS001_EXPECTED_ROOT/releases"
+chmod 750 "$OPS001_EXPECTED_ROOT/state"
 REPOSITORY="$OPS001_EXPECTED_ROOT/repository.git"
 
 FAKE_FLOCK="$TMP_DIR/flock"
@@ -92,6 +93,20 @@ chmod 600 "$APPROVAL_FILE"
 APPROVAL_SHA256="$(ops001_file_digest "$APPROVAL_FILE")"
 
 validate_inputs
+chmod 700 "$OPS001_EXPECTED_ROOT/state"
+expect_failure state_mode_drift assert_state_root_unchanged
+assert_contains 'Staging state directory identity changed' "$TMP_DIR/state_mode_drift.err"
+chmod 750 "$OPS001_EXPECTED_ROOT/state"
+assert_state_root_unchanged
+chmod 775 "$OPS001_EXPECTED_ROOT/state"
+expect_failure state_unsafe_mode validate_state_root
+assert_contains 'Staging state directory must be owner-owned mode 0700 or 0750' "$TMP_DIR/state_unsafe_mode.err"
+chmod 750 "$OPS001_EXPECTED_ROOT/state"
+validate_state_root
+chmod 700 "$OPS001_EXPECTED_ROOT/state"
+validate_state_root
+chmod 750 "$OPS001_EXPECTED_ROOT/state"
+validate_state_root
 chmod 700 "$OPS001_EXPECTED_ROOT/releases"
 expect_failure releases_mode_drift assert_releases_root_unchanged
 assert_contains 'Staging releases directory identity changed' "$TMP_DIR/releases_mode_drift.err"
