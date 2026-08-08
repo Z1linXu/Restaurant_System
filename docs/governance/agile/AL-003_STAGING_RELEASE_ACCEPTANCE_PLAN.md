@@ -1,26 +1,24 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Capability state: `STG-007_RUNTIME_RECOVERED_RESTART_EVIDENCE_BLOCKED_BY_READINESS_FAIL_CLOSED_REPAIR_WAITING_FOR_OWNER_REVIEW`
+> Capability state: `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE_WAITING_FOR_OWNER_RUNTIME_APPROVAL`
 >
 > Historical failed candidate: `8f909525781804f61d1da388882f530da358c3c4`
 >
-> Current exact main and deployed Staging SHA before this repair: `63600b13b10a5549d9095a03c94e69a9f880af9f`
+> Current exact deployed Staging SHA: `2837ae88e55142c99c6975f8b6575febffc913a1`
 >
 > Governance packages: PR #72 and PRs #60-#71 are `IN_MAIN`; repository merge is not runtime evidence
 >
-> Runtime checkpoint: V10-to-V10 deploy, repaired readiness and runtime collection `PASS`; same-image restart evidence `NO_GO` after transient startup 502
+> Runtime checkpoint: `STG-007=PASS`; V10-to-V10 deploy, repaired readiness, runtime collection, same-image restart and post-restart verification all `PASS`
 
 ## Authorization boundary
 
 This template does not approve Store 1 access, synthetic bootstrap execution,
 credentials, login or a real clone. The Owner separately approved a bounded
 V10-aware STG-007 continuation through exact redeploy, runtime collection and
-same-image restart. PR #81's fresh continuation reached the restart action, but
-the action is `NO_GO`: the runtime recovered at exact V10 identities after the
-single health probe raced startup, while no PASS evidence or blocked marker was
-emitted. The consumed chain cannot be reused. That authority remains exact-SHA/
-action-bound and does not extend to STG-008, acceptance data writes or
-Production mutation.
+same-image restart. After PR #82 merged the readiness/fail-closed repair, a
+fully fresh chain deployed exact `2837ae88...` and passed every STG-007 gate.
+That authority is complete and consumed; it does not extend to STG-008,
+acceptance data writes, Owner/API actions or Production mutation.
 
 Historically, PR #56 entered `main` and the fixed release candidate was
 `8f909525781804f61d1da388882f530da358c3c4`. The read-only preflight is recorded
@@ -56,13 +54,14 @@ existing exact-SHA, approval, lock, redaction and runtime boundaries. No helper
 may infer its own runtime authority; every action requires a distinct exact-SHA/
 environment/action-bound Owner approval. Runtime use through PR #80's exact
 `39fa284b...` redeploy and repaired readiness passed; PR #81 then repaired the
-canonical `true` token and entered main at `63600b13...`. A fresh continuation
-deployed that exact SHA and passed Flyway/runtime collection. Same-image restart
-retained exact identities but returned `NO_GO` on an immediate 502 before
-Spring completed startup. Runtime recovery does not retroactively satisfy the
-restart evidence gate, and no acceptance action followed.
+canonical `true` token and entered main at `63600b13...`. That historical
+continuation passed Flyway/runtime collection but ended with restart `NO_GO`.
+PR #82 entered main at exact `2837ae88...` with the bounded readiness and
+nonzero-exit repair. A fresh continuation deployed that exact SHA, kept Flyway
+V10/no-pending, and passed readiness, runtime collection, same-image restart
+and post-restart verification. No synthetic acceptance action followed.
 
-PR #59 merged the bounded repair at
+PR #59 merged the earlier private-leaf bounded repair at
 `c3956592da8a33092ab745c7cc6aac05e9babfa7`. It validates the initialized
 PostgreSQL directory as a protected leaf from its canonical parent and
 metadata without entering the leaf or changing its UID-70 ownership / `0700`
@@ -155,11 +154,15 @@ Forbidden shortcuts include Production accounts or password hashes, manual
 membership inserts, developer login switching, hard-coded tokens, disabled
 authorization, and copied customer or Store data.
 
-## Exact runtime sequence awaiting Owner mutation approval
+## End-to-end runtime sequence and current gate split
 
-After this governance package is merged, calculate the new full main SHA. The
-Owner must approve that exact SHA and the bounded runtime command/evidence plan
-before any of these steps execute:
+Steps 1-2 and the infrastructure restart portion of step 9 were completed by
+STG-007 at exact deployed `2837ae88...`; they must not be repeated from this
+plan without new authority. STG-008 is stopped at a true Owner Runtime Gate and
+would cover only the synthetic topology/source work in steps 3 and 5, with
+separate plan/execute approvals and fresh readiness. Steps 4 and 6-9's
+login/onboarding/clone acceptance remain later gates. The retained end-to-end
+sequence is:
 
 1. Create a fresh detached Staging release and fresh env/preflight evidence
    bound to the exact SHA; confirm `restaurant-pos-staging`, only
@@ -265,4 +268,4 @@ recovers.
 
 ## Capability dependency state
 
-`STG-007_RUNTIME_RECOVERED_RESTART_EVIDENCE_BLOCKED_BY_READINESS_FAIL_CLOSED_REPAIR_WAITING_FOR_OWNER_REVIEW`
+`STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE_WAITING_FOR_OWNER_RUNTIME_APPROVAL`

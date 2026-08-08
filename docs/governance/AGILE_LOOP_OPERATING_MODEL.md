@@ -96,14 +96,16 @@ STG-006 freshly verified the retained isolated Staging runtime and minimum
 Production continuity without mutation. PR #73 placed that evidence/governance
 package in `main` at `85d97b7327b2e15aa561ed28a5788b92cedf6f5b`.
 OPS-001 now supplies the bounded secret-safe repository tooling. PR #81 is
-`IN_MAIN` at `63600b13b10a5549d9095a03c94e69a9f880af9f`; its later,
-separately authorized V10-aware runtime use passed exact release/env binding,
-formal preflight, V10-to-V10 Staging deploy, readiness and sanitized Flyway/
-runtime collection. Same-image restart retained the exact containers/images
-but returned `NO_GO` when its immediate health probe raced application startup.
-Runtime recovered at the same V10 identities, while no PASS evidence or
-required blocked marker was emitted. The current unique stop state is
-`STG-007_RUNTIME_RECOVERED_RESTART_EVIDENCE_BLOCKED_BY_READINESS_FAIL_CLOSED_REPAIR_WAITING_FOR_OWNER_REVIEW`.
+`IN_MAIN` at `63600b13b10a5549d9095a03c94e69a9f880af9f`; its historical
+V10-aware runtime use ended at restart `NO_GO`. PR #82 then entered `main` at
+`2837ae88e55142c99c6975f8b6575febffc913a1` with bounded three-endpoint
+restart readiness and nonzero-exit blocked-state persistence. A fully fresh,
+separately authorized V10-to-V10 continuation deployed that exact SHA to
+isolated Staging and passed formal preflight, repaired readiness, sanitized
+Flyway/runtime collection, one same-image restart and post-restart
+verification. Flyway remained V10/no-pending; printing/isolation and Production
+continuity were unchanged. `STG-007=PASS`. The current unique stop state is
+`STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE_WAITING_FOR_OWNER_RUNTIME_APPROVAL`.
 PR #61 is the architecture/governance foundation: it defines the Generic
 Store Provisioning Engine, Versioned Store Profiles, and Reusable Provisioning
 Modules without adding runtime behavior. PR #62 provides the guarded Synthetic
@@ -112,23 +114,23 @@ supplies the generic version/profile identity, module-reference, and
 canonical-fingerprint contract as repository capability, not runtime evidence.
 PR #65 supplies reusable Staff/Access and Table planning boundaries as
 repository capability only.
-While that bounded repository repair is unmerged, no current statement
-authorizes further server access, a second restart, Flyway execution, synthetic
-bootstrap, credential creation, login, source-menu writes, validate, execute,
-a runtime clone or deployment. The consumed restart approval/evidence cannot be
-reused. After a qualifying repair auto-merge, the existing bounded V10-aware
-continuation requires a new exact-main release/env/preflight/readiness/action
-chain. Staging acceptance retains the distinct prerequisite
+The completed STG-007 authority does not authorize another deploy/restart,
+Flyway execution, synthetic bootstrap, credential creation, source-menu write,
+login, target onboarding, validate, execute, replay, clone, or Production
+action. Every consumed STG-007 approval remains non-replayable. STG-008 requires
+a new Owner Runtime Gate binding exact deployed SHA, fresh readiness and
+separate STG-005A/STG-005B plan/execute approvals. Staging acceptance retains
+the distinct prerequisite
 `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING` until synthetic-only runtime
 evidence proves the complete Owner login topology.
 
 The authoritative post-stack matrix and next-loop order are in
 [POST_STACK_GROUND_TRUTH_AUDIT.md](runtime/POST_STACK_GROUND_TRUTH_AUDIT.md).
-STG-006 is complete for its passive scope. The active bounded phase is the
-restart-readiness/fail-closed Dependency Repair; after its clean merge, STG-007
-must restart from the new full merged-main SHA and fresh bindings. Repository
-tooling completion is not Staging PASS, mutation authority for STG-008, or
-Production approval.
+STG-006 is complete for its passive scope and STG-007 is complete for its exact
+V10 continuation scope. The next phase is
+`STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE`, stopped before mutation at its true
+Owner Runtime Gate. STG-007 PASS is not AL-003 Staging acceptance, STG-008
+authority, or Production approval.
 
 The architecture authority for future provisioning packages is
 [STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md](agile/STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md).

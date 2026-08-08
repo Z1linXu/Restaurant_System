@@ -59,6 +59,11 @@ separate from historical evidence snapshots and business implementation details:
   records PR #81 in main, the fresh exact `63600b13...` V10-to-V10 deploy,
   readiness/runtime collection PASS, same-image restart startup-race `NO_GO`,
   exact runtime recovery, missing blocked marker, and bounded tooling repair.
+- [STG-007 Exact-SHA V10 Continuation Evidence](docs/governance/runtime/STG-007_EXACT_SHA_CONTINUATION_EVIDENCE.md)
+  records PR #82 in main, fresh exact `2837ae88...` release/env and formal
+  V10 continuation preflight, V10-to-V10 deploy, repaired readiness/runtime
+  collection, same-image restart and post-restart PASS, unchanged printing/
+  isolation/Production continuity, and the STG-008 Owner Runtime Gate.
 - [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
   authority for current issue triage and closure status.
 - [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
@@ -719,6 +724,24 @@ persists blocked state before cleanup for explicit exits, command failures,
 signals, timeouts and evidence failures after mutation begins; the mutation
 flag clears only after complete PASS evidence. No application, API, migration,
 Compose/runtime configuration or Production behavior changes.
+
+PR #82 merged that bounded repair at
+`2837ae88e55142c99c6975f8b6575febffc913a1`. A fully fresh Owner-authorized
+continuation imported that pinned main object, created a clean detached release,
+rotated only the four private release-identity fields, and formally accepted
+the existing Staging V10 schema as a V10-to-V10 entry with repository
+migrations V1-V10 and no pending migration. Serial builds and Staging-only
+deploy completed. Repaired readiness, sanitized runtime/Flyway collection, one
+same-image restart, and post-restart verification all passed with exact
+container/image/release/environment/Flyway identity unchanged. Health returned
+`200/200/200`, printing stayed `DISABLED/false`, loopback/state/network/mount
+isolation remained intact, and permitted Production continuity fields plus
+health remained unchanged. `STG-007 = PASS`; AL-003 is not yet Staging accepted.
+The unique stop state is
+`STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE_WAITING_FOR_OWNER_RUNTIME_APPROVAL`.
+No synthetic topology/source, credential, login, target onboarding, clone,
+Store 1 read, printer/Pad, Production, or ACT-001 action is authorized by that
+PASS.
 
 Repository PRs now follow the permanent auto-merge gate in the Agile Loop
 Operating Model: latest-main base, exact single-package scope, all applicable

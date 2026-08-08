@@ -1,6 +1,6 @@
 # AL-003 Store 1 -> Chinatown Live Menu Clone Technical Plan
 
-> Status: `IN_MAIN_AWAITING_STAGING_ACCEPTANCE`; STG-007 restart-readiness/fail-closed Dependency Repair active
+> Status: `IN_MAIN_AWAITING_STAGING_ACCEPTANCE`; `STG-007=PASS`, STG-008 Owner Runtime Gate active
 >
 > Prepared: 2026-07-31, America/Toronto
 >
@@ -26,7 +26,7 @@
 | `PLAN_STATUS` | `IN_MAIN_AWAITING_STAGING_ACCEPTANCE_AND_RUNTIME_APPROVAL` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | PRs #60-#81 and the #61-#70 stack are `IN_MAIN` through PR #81 at `63600b13...`. That exact SHA is deployed to isolated Staging at V10; readiness and runtime collection passed, but same-image restart evidence is `NO_GO`. Complete only the bounded restart-readiness/fail-closed repair, then restart fresh exact-main bindings under the existing V10-aware authorization. Do not begin STG-008 or infer clone/Production authority. |
+| `RECOMMENDED_ACTION` | PRs #60-#82 and the #61-#70 stack are `IN_MAIN` through PR #82 at `2837ae88...`. That exact SHA is deployed to isolated Staging at V10 and passed formal preflight, repaired readiness, runtime collection, same-image restart and post-restart verification. `STG-007=PASS`. Stop at `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE_WAITING_FOR_OWNER_RUNTIME_APPROVAL`; do not infer synthetic-write, clone, Staging-acceptance or Production authority. |
 
 PR-A through PR-F are in `main`. PR-D supplies generic source-option copying
 and target-local parent mapping; PR #54 placed the concrete Chinatown Profile
@@ -70,7 +70,7 @@ These are authoritative product inputs, not open questions:
 
 ### 1.2 Current Git ground truth
 
-| Package | Commit | State relative to `origin/main` `63600b13b10a5549d9095a03c94e69a9f880af9f` |
+| Package | Commit | State relative to exact STG-007 runtime candidate `2837ae88e55142c99c6975f8b6575febffc913a1` |
 |---|---|---|
 | PR-C / PR #47 | merge `ba169ed8b689ddef8dffe94deee82fea191cdcfb` | `IN_MAIN` |
 | PR-E / PR #54 | merge `82b8059f6af1c7dff4eeb1648ca47bec039b5e52` | `IN_MAIN`; PR-F0 promotion base |
@@ -88,6 +88,7 @@ These are authoritative product inputs, not open questions:
 | Generic Store Profile contract / PR #64 | merge `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6` | `IN_MAIN`; declarative profile contract, no runtime execution |
 | Staff/Table provisioning plan / PR #65 | merge `8f58bcbfca253c1598b967f4d17c04c0be1cce5b` | `IN_MAIN`; planning only, no writer or runtime execution |
 | Flyway success-token repair / PR #81 | merge `63600b13b10a5549d9095a03c94e69a9f880af9f` | `IN_MAIN`; runtime collector token repair, later Staging collection PASS; no clone behavior |
+| Restart readiness/fail-closed repair / PR #82 | merge `2837ae88e55142c99c6975f8b6575febffc913a1` | `IN_MAIN`; exact merged SHA later passed STG-007; no clone behavior |
 
 This document describes the complete reviewed target architecture. A section
 in this plan is not evidence that its implementation is in `main`, Staging, or
@@ -985,16 +986,16 @@ change. It supplies a secret-FD client for the existing Owner contracts and
 verifies exact Owner identity/workspace, synthetic target onboarding/replay,
 reviewed validation counts, execute revision and replay without exposing
 passwords, access/refresh tokens or raw idempotency keys. The same package
-supplies detached release/env and same-container restart/Flyway tooling. These
-are repository capabilities only; login, onboarding, validate, execute and
-restart remain separate action-specific Owner Runtime Gates.
+supplies detached release/env and same-container restart/Flyway tooling.
+STG-007 has now proved those infrastructure controls at exact `2837ae88...`;
+login, onboarding, validate and execute remain separate action-specific Owner
+Runtime Gates, and any future restart still needs its own authorization.
 
 Current STG-007 evidence is narrower than clone acceptance. Exact
-`63600b13b10a5549d9095a03c94e69a9f880af9f` is deployed only to isolated
-Staging at Flyway V10; formal preflight, readiness and sanitized runtime
-collection passed. Same-image restart retained exact container/image/Flyway
-identity but its immediate health probe raced startup and returned `NO_GO`.
-Health later recovered at the same identities, without valid restart PASS
-evidence or the required blocked marker. The bounded tooling repair changes no
-clone/API/profile behavior. STG-005A, STG-005B, credential creation, login,
-target onboarding, validate/execute/replay and STG-008 remain unexecuted.
+`2837ae88e55142c99c6975f8b6575febffc913a1` is deployed only to isolated
+Staging at Flyway V10; formal preflight, readiness, sanitized runtime
+collection, same-image restart and post-restart health passed with exact
+container/image/release/Flyway identity unchanged. The bounded tooling repair
+changes no clone/API/profile behavior. STG-005A, STG-005B, credential creation,
+login, target onboarding and validate/execute/replay remain unexecuted.
+STG-008 is the next true Owner Runtime Gate, not an authorized action.
