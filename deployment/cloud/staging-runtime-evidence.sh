@@ -19,6 +19,7 @@ RESTART_MUTATION_STARTED="false"
 BEFORE_PROJECT_FINGERPRINT=""
 BEFORE_FLYWAY_DIGEST=""
 BEFORE_CONTAINER_IDS=""
+HTTP_READINESS_ATTEMPTS=30
 
 usage() {
   cat <<'EOF'
@@ -153,6 +154,24 @@ wait_service() {
   die "$service did not become ready within 60 seconds"
 }
 
+wait_http_200() {
+  local description="$1" url="$2" attempts="$HTTP_READINESS_ATTEMPTS" http_code
+  while (( attempts > 0 )); do
+    http_code="$("$CURL_BIN" --silent --show-error --output /dev/null --write-out '%{http_code}' --connect-timeout 1 --max-time 1 --noproxy '*' "$url" 2>/dev/null || true)"
+    http_code="${http_code:-000}"
+    [[ "$http_code" =~ ^[0-9]{3}$ ]] || die "$description returned invalid HTTP metadata"
+    case "$http_code" in
+      200) return 0 ;;
+      000|502|503|504)
+        sleep 2
+        attempts=$((attempts - 1))
+        ;;
+      *) die "$description returned non-transient HTTP $http_code" ;;
+    esac
+  done
+  die "$description did not return HTTP 200 within 90 seconds"
+}
+
 capture_before_restart() {
   BEFORE_PROJECT_FINGERPRINT="$(project_fingerprint "$EXPECTED_PROJECT")"
   BEFORE_FLYWAY_DIGEST="$(flyway_digest)"
@@ -160,7 +179,7 @@ capture_before_restart() {
 }
 
 same_image_restart() {
-  local after_ids after_flyway after_project http_code
+  local after_ids after_flyway after_project
   assert_snapshot_integrity
   assert_release_identity
   validate_running_backend_identity
@@ -176,16 +195,17 @@ same_image_restart() {
   controlled_compose start db; wait_service db
   controlled_compose start backend; wait_service backend
   controlled_compose start nginx; wait_service nginx
-  http_code="$("$CURL_BIN" --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 15 --noproxy '*' http://127.0.0.1:18080/api/v1/system/health)" || die "loopback health request failed"
-  [[ "$http_code" == "200" ]] || die "loopback health must return HTTP 200"
+  wait_http_200 "backend health" "http://127.0.0.1:18080/api/v1/system/health"
+  wait_http_200 "frontend" "http://127.0.0.1:18080/"
+  wait_http_200 "SockJS info" "http://127.0.0.1:18080/ws/info"
   after_ids="$(container_identity_lines | cut -d'|' -f1-3)"
   after_flyway="$(flyway_digest)"
   after_project="$(project_fingerprint "$EXPECTED_PROJECT")"
   [[ "$after_ids" == "$BEFORE_CONTAINER_IDS" ]] || die "container or image identity changed during restart"
   [[ "$after_flyway" == "$BEFORE_FLYWAY_DIGEST" ]] || die "Flyway history changed during restart"
   [[ "$after_project" == "$BEFORE_PROJECT_FINGERPRINT" ]] || die "project fingerprint changed during restart"
-  RESTART_MUTATION_STARTED="false"
   emit_evidence AFTER_RESTART
+  RESTART_MUTATION_STARTED="false"
 }
 
 collect_evidence() {
@@ -209,9 +229,12 @@ run_runtime_action() {
   case "$ACTION" in collect-evidence) collect_evidence ;; same-image-restart) same_image_restart ;; *) die "unsupported action: $ACTION" ;; esac
 }
 
-runtime_error() {
+runtime_exit() {
   local status=$?
-  if [[ "$RESTART_MUTATION_STARTED" == "true" ]]; then mark_action_blocked "OPS001_RUNTIME_RESTART_FAILED" || true; fi
+  trap - EXIT ERR INT TERM
+  if [[ "$status" -ne 0 && "$RESTART_MUTATION_STARTED" == "true" ]]; then
+    mark_action_blocked "OPS001_RUNTIME_RESTART_FAILED" || true
+  fi
   cleanup || true
   exit "$status"
 }
@@ -250,7 +273,8 @@ main() {
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-  trap runtime_error ERR INT TERM
-  trap cleanup EXIT
+  trap runtime_exit EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
   main "$@"
 fi

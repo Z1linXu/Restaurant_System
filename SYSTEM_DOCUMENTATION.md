@@ -55,6 +55,10 @@ separate from historical evidence snapshots and business implementation details:
   records PR #80 in main, the authorized exact `39fa284b...` V10-to-V10
   redeploy and readiness PASS, the runtime collector's `success::text`
   `true`/mock-`t` mismatch, and the bounded no-restart repair boundary.
+- [STG-007 Restart Readiness and Fail-Closed Repair Evidence](docs/governance/runtime/STG-007_RESTART_READINESS_FAIL_CLOSED_REPAIR_EVIDENCE.md)
+  records PR #81 in main, the fresh exact `63600b13...` V10-to-V10 deploy,
+  readiness/runtime collection PASS, same-image restart startup-race `NO_GO`,
+  exact runtime recovery, missing blocked marker, and bounded tooling repair.
 - [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
   authority for current issue triage and closure status.
 - [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
@@ -693,6 +697,28 @@ No same-image restart followed. The bounded correction now requires exact
 action sequence, product behavior, deployment configuration, or Production
 state. Its merge creates a new exact-main candidate and requires the V10-aware
 continuation evidence chain to restart.
+
+PR #81 merged the Flyway success-token repair at
+`63600b13b10a5549d9095a03c94e69a9f880af9f`. A fully fresh V10-aware chain
+deployed that exact SHA to isolated Staging and passed formal preflight,
+readiness and sanitized runtime/Flyway collection. The same-image restart kept
+the exact db/backend/nginx container and immutable image IDs, but its one
+immediate backend health request returned 502 before the roughly 36-second
+Spring startup completed. Runtime later returned `200/200/200` with Flyway
+still V10, printing disabled, isolation intact and Production port-80 health/
+container continuity unchanged. The action remains `NO_GO`: its approval was
+consumed, its redirected evidence is empty/non-PASS, and explicit `die/exit`
+bypassed the ERR-only blocked-marker handler.
+
+The bounded repair treats Docker `running` without a healthcheck only as a
+lifecycle signal. After ordered same-container starts it waits inside a fixed
+window for backend health, frontend root and `/ws/info` HTTP 200, retries only
+transport/502/503/504 startup states, and then revalidates exact container,
+image, Flyway and project identity. A centralized nonzero `EXIT` handler
+persists blocked state before cleanup for explicit exits, command failures,
+signals, timeouts and evidence failures after mutation begins; the mutation
+flag clears only after complete PASS evidence. No application, API, migration,
+Compose/runtime configuration or Production behavior changes.
 
 Repository PRs now follow the permanent auto-merge gate in the Agile Loop
 Operating Model: latest-main base, exact single-package scope, all applicable

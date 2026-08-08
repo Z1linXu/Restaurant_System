@@ -26,7 +26,7 @@
 | Environment | `restaurant-prod` | `OPERATOR_CONFIRMED` | Environment label only; no host or secret is recorded. |
 | `RUNTIME_COMMIT` | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e` | `MACHINE_VERIFIED_READ_ONLY` during STG-006 continuity | Current runtime identity only, not a formal release approval. |
 | Production branch | `main` | `MACHINE_VERIFIED_READ_ONLY` during STG-006 continuity | Branch relationship is not a deployment approval record. |
-| Last verified `DOCUMENTATION_COMMIT` before this repair | `39fa284b7bccd64d650c396f2c7532b0a0858b4b` | `MACHINE_VERIFIED` from `origin/main` | PR #80 contains the repaired health fingerprint collector and is also the separately authorized deployed Staging SHA; it is not a Production runtime. |
+| Last verified `DOCUMENTATION_COMMIT` before this repair | `63600b13b10a5549d9095a03c94e69a9f880af9f` | `MACHINE_VERIFIED` from `origin/main` | PR #81 contains the Flyway success-token repair and is also the separately authorized deployed Staging SHA; it is not a Production runtime. |
 | Deployment mode | HTTP | `OPERATOR_CONFIRMED` | HTTPS/certificate posture is outside this record. |
 | Compose services | `db`, `backend`, `nginx` under project `cloud`; unchanged before/after STG-006, restart count 0 | `MACHINE_VERIFIED_READ_ONLY` | Minimum continuity only; no environment or business-data read. |
 | Database schema | Flyway V7, including `V7__add_print_job_attention_acknowledgement.sql` | `OPERATOR_CONFIRMED` | Not a restore or schema-integrity rehearsal. |
@@ -62,10 +62,10 @@ snapshots. Do not copy those reports into this planbook.
 | Item | Current state |
 |---|---|
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `STG-007_FLYWAY_SUCCESS_TOKEN_REPAIR` |
+| Current Agile Loop | `STG-007_RESTART_READINESS_FAIL_CLOSED_REPAIR` |
 | Loop type | `REPOSITORY_OPERATIONAL_TOOLING_REPAIR` |
-| Loop status | `STG-007_RUNTIME_COLLECTION_BLOCKED_BY_FLYWAY_SUCCESS_TOKEN_REPAIR` |
-| Current package | align runtime Flyway validation with its own PostgreSQL `success::text=true` query token; focused tests, evidence and governance only |
+| Loop status | `STG-007_RUNTIME_RECOVERED_RESTART_EVIDENCE_BLOCKED_BY_READINESS_FAIL_CLOSED_REPAIR_WAITING_FOR_OWNER_REVIEW` |
+| Current package | bounded three-endpoint restart readiness plus nonzero-exit blocked-state persistence; focused tests, evidence and governance only |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | PR #27 merged the backend foundation into `main`; Production remains on the older runtime and no production onboarding is established by that merge. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -74,12 +74,12 @@ snapshots. Do not copy those reports into this planbook.
 | STG-005 state | PLAN complete. The Owner approved CP-0 as a separate minimal Staging-only bootstrap implementation and accepted CP-4 as a feature-disabled KDS/Assembling boundary. Positive Kitchen/Assembling workflow remains `EVIDENCE_PENDING`. |
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
 | STG-006 state | `PASS` for candidate `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b`. Fresh read-only evidence confirmed retained Staging `4397f995...` / V8, isolated project/network/state, loopback bind, printing disabled, healthy endpoints, resource headroom, and unchanged Production continuity. No candidate release, deploy, Flyway, restart, login, or data mutation occurred. |
-| OPS-001 state | `REPOSITORY_COMPLETE` through PR #80 except for the bounded Flyway success-token repair now in progress. Exact release/env rotation, V10-to-V10 deploy and repaired readiness worked for `39fa284b...`; runtime collection exposed a `success::text=true` versus mock-`t` validator mismatch before PASS evidence. |
-| STG-007 state | PR #80 is `IN_MAIN` at `39fa284b7bccd64d650c396f2c7532b0a0858b4b`. Fresh V10 continuation entry, env digest `19da0f48...`, formal preflight digest `3ece6065...`, exact redeploy, V10/no-pending verification and repaired readiness digest `7d60f9ee...` passed. Read-only runtime collection then returned `NO_GO` on the Flyway success token; its approval was consumed, its evidence is empty/non-PASS, and no same-image restart occurred. Staging remains healthy at exact `39fa284b...`; printing/isolation and Production continuity are unchanged. |
-| AL-003 state | PR #72, PR #80 and PRs #61-#71 are `IN_MAIN`; exact `39fa284b...` is `DEPLOYED_TO_STAGING` at Flyway V10, but STG-007 is not PASS and no bootstrap, credential, login, onboarding, clone or acceptance action has run. |
+| OPS-001 state | `REPOSITORY_COMPLETE` through PR #81 except for the bounded restart-readiness/fail-closed repair now in progress. Exact release/env rotation, V10-to-V10 deploy, readiness and sanitized runtime/Flyway collection worked for `63600b13...`; same-image restart exposed the immediate-health race and explicit-exit marker gap. |
+| STG-007 state | PR #81 is `IN_MAIN` at `63600b13b10a5549d9095a03c94e69a9f880af9f`. Fresh entry digest `3264d42b...`, env digest `0fbcd403...`, formal preflight digest `c7f505a7...`, exact redeploy, V10/no-pending verification, readiness digest `7c02f27e...` and runtime collection digest `3c1a6f27...` passed. Same-image restart retained all exact container/image IDs but returned `NO_GO` on an immediate 502 before Spring was ready and emitted neither PASS evidence nor the required blocked marker. Runtime later recovered to 200/200/200 at the same identities; printing/isolation and Production continuity are unchanged. |
+| AL-003 state | PR #72, PR #81 and PRs #61-#71 are `IN_MAIN`; exact `63600b13...` is `DEPLOYED_TO_STAGING` at Flyway V10, but STG-007 is not PASS and no bootstrap, credential, login, onboarding, clone or acceptance action has run. |
 | Staging Owner login prerequisite | `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`; code audit proves an Organization Owner naturally accesses every same-Organization Store, so no explicit target Owner Store membership is required. Runtime bootstrap, credential, login, workspace, target onboarding, and API evidence remain pending. |
-| Current permitted work | Complete only the exact Flyway success-token repair, focused regressions, Agent 6 review, governance sync and Dependency Repair publication. After merge, restart the authorized V10-aware continuation from fresh exact-main identity/preflight/readiness bindings; do not reuse the failed collection chain. |
-| Explicitly not permitted | Further runtime access while the repair is unmerged; reuse of consumed approval or failed evidence; same-image restart under `39fa284b...`; bootstrap; synthetic writes; credentials; login; onboarding; validate/execute/replay/clone; Store 1 read; Production build/pull/restart/deploy/Flyway/data read or mutation; Chinatown activation; or STG-008. |
+| Current permitted work | Complete only the bounded restart-readiness/fail-closed repair, focused regressions, Agent 6 review, governance sync and Dependency Repair publication. After merge, restart the authorized V10-aware continuation from fresh exact-main identity/preflight/readiness bindings; do not reuse the failed restart chain. |
+| Explicitly not permitted | Further runtime access while the repair is unmerged; reuse of either consumed approval or failed evidence; a second restart under `63600b13...`; bootstrap; synthetic writes; credentials; login; onboarding; validate/execute/replay/clone; Store 1 read; Production build/pull/restart/deploy/Flyway/data read or mutation; Chinatown activation; or STG-008. |
 
 Agent and worker execution is ephemeral. After a bounded task, the result and
 evidence must be returned and persisted, the active session/process terminated,
@@ -127,6 +127,7 @@ packages without that mapping.
 | Post-stack Ground Truth audit / PR #72 | `IN_MAIN` at `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | Capability/gap governance only; no runtime action. |
 | STG-006 evidence/governance / PR #73 | `IN_MAIN` at `85d97b7327b2e15aa561ed28a5788b92cedf6f5b` | Passive evidence only; `STG-006=PASS`, no deployment or runtime mutation. |
 | Readiness health fingerprint repair / PR #80 | `IN_MAIN` at `39fa284b7bccd64d650c396f2c7532b0a0858b4b` | Correct optional-health classification; later runtime use separately proved repaired readiness PASS. |
+| Flyway success-token repair / PR #81 | `IN_MAIN` at `63600b13b10a5549d9095a03c94e69a9f880af9f` | Exact `success::text=true` collector validation; later runtime use separately proved runtime collection PASS. |
 
 PR-D promotion evidence is now historical main evidence: semantic source
 `5a0dc09944b4b0945fe95027d7f12647212ea559`, reviewed promotion head
@@ -145,19 +146,22 @@ continuity at full SHA `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`.
 Production Flyway was not queried and remains retained V7 evidence only.
 
 The unique feature stop state during this bounded dependency repair is
-`STG-007_RUNTIME_COLLECTION_BLOCKED_BY_FLYWAY_SUCCESS_TOKEN_REPAIR`.
+`STG-007_RUNTIME_RECOVERED_RESTART_EVIDENCE_BLOCKED_BY_READINESS_FAIL_CLOSED_REPAIR_WAITING_FOR_OWNER_REVIEW`.
 
 OPS-001 adds repository-only guarded helpers for a detached release plus
 four-field atomic private-env rotation, sanitized Flyway/runtime collection
 plus same-container restart, and secret-FD Owner onboarding/clone acceptance.
 Each runtime action is exact-SHA/environment/action bound and consumes one
 private Owner approval digest. The package changes no application, migration,
-Compose/runtime configuration, or business API. PR #80 is `IN_MAIN`, and the
-exact `39fa284b...` V10-aware runtime use was separately Owner-authorized:
-release/env rotation, formal preflight, V10-to-V10 deploy and repaired
-readiness completed. Runtime collection then stopped before PASS because the
-collector query's canonical `true` success token did not match its mock-`t`
-validator. No restart, API, synthetic write or Production action followed.
+Compose/runtime configuration, or business API. PR #81 is `IN_MAIN`, and the
+exact `63600b13...` V10-aware runtime use was separately Owner-authorized:
+release/env rotation, formal preflight, V10-to-V10 deploy, repaired readiness
+and sanitized Flyway/runtime collection completed. Same-image restart then
+stopped/started the same exact containers, but one immediate probe saw 502
+before Spring completed startup. Runtime recovered at the same identities and
+V10, while the failed action retained no PASS evidence and explicit `die/exit`
+bypassed its documented blocked marker. No API, synthetic write or Production
+action followed.
 See [OPS-001 local evidence](OPS-001_STAGING_SECRET_SAFE_TOOLING_EVIDENCE.md)
 and the
 [OPS-001 runbook](../../../deployment/cloud/README_OPS001_STAGING_SECRET_SAFE_TOOLING.md).
@@ -234,15 +238,28 @@ restart or blocked marker followed. The bounded repair and exact runtime
 boundary are recorded in
 [STG-007 Flyway Success Token Repair Evidence](STG-007_FLYWAY_SUCCESS_TOKEN_REPAIR_EVIDENCE.md).
 
+PR #81 merged the Flyway token repair at
+`63600b13b10a5549d9095a03c94e69a9f880af9f`. A fresh exact-main continuation
+passed V10 entry, release/env binding, formal preflight, V10-to-V10 deploy,
+repaired readiness and sanitized runtime collection. The following same-image
+restart retained all exact containers/images and V10, but its single immediate
+backend health request raced the roughly 36-second application startup and
+returned 502. Runtime subsequently recovered to `200/200/200`; Production
+port-80 health and container continuity remained unchanged. The action remains
+`NO_GO`: its approval is consumed, its evidence is empty/non-PASS, and explicit
+`die/exit` bypassed the ERR-only blocked-marker handler. The bounded repair is
+recorded in
+[STG-007 Restart Readiness and Fail-Closed Repair Evidence](STG-007_RESTART_READINESS_FAIL_CLOSED_REPAIR_EVIDENCE.md).
+
 The `IN_MAIN` acceptance preparation is documented in
 [AL-003S Staging Acceptance Preparation](../agile/AL-003S_STAGING_ACCEPTANCE_PREPARATION.md).
 Its launcher closes the bounded non-web command-entry gap but does not authorize
 runtime use. The package provides a passive Production-continuity/resource
 collector; STG-006 used a single bounded read-only Coordinator timeline for its
 own preflight evidence, not an acceptance action. STG-007 has now evidenced
-release/environment rotation, exact V10-to-V10 deployment, Flyway V10 and
-repaired readiness, but still requires repaired sanitized runtime collection,
-same-image restart evidence and the separately gated secret-safe Owner/API
+release/environment rotation, exact V10-to-V10 deployment, Flyway V10,
+repaired readiness and sanitized runtime collection, but still requires valid
+same-image restart PASS evidence and the separately gated secret-safe Owner/API
 acceptance sequence.
 Local checks and explicit pending gates are retained in
 [AL-003S Preparation Evidence](AL-003S_STAGING_ACCEPTANCE_PREPARATION_EVIDENCE.md).

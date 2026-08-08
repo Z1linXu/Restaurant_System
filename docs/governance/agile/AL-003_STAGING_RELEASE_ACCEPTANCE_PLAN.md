@@ -1,22 +1,26 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Capability state: `STG-007_RUNTIME_COLLECTION_BLOCKED_BY_FLYWAY_SUCCESS_TOKEN_REPAIR`
+> Capability state: `STG-007_RUNTIME_RECOVERED_RESTART_EVIDENCE_BLOCKED_BY_READINESS_FAIL_CLOSED_REPAIR_WAITING_FOR_OWNER_REVIEW`
 >
 > Historical failed candidate: `8f909525781804f61d1da388882f530da358c3c4`
 >
-> Current exact main and deployed Staging SHA before this repair: `39fa284b7bccd64d650c396f2c7532b0a0858b4b`
+> Current exact main and deployed Staging SHA before this repair: `63600b13b10a5549d9095a03c94e69a9f880af9f`
 >
 > Governance packages: PR #72 and PRs #60-#71 are `IN_MAIN`; repository merge is not runtime evidence
 >
-> Runtime checkpoint: V10-to-V10 deploy and repaired readiness `PASS`; runtime collection and same-image restart pending
+> Runtime checkpoint: V10-to-V10 deploy, repaired readiness and runtime collection `PASS`; same-image restart evidence `NO_GO` after transient startup 502
 
 ## Authorization boundary
 
 This template does not approve Store 1 access, synthetic bootstrap execution,
 credentials, login or a real clone. The Owner separately approved a bounded
 V10-aware STG-007 continuation through exact redeploy, runtime collection and
-same-image restart. That authority remains exact-SHA/action-bound and does not
-extend to STG-008, acceptance data writes or Production mutation.
+same-image restart. PR #81's fresh continuation reached the restart action, but
+the action is `NO_GO`: the runtime recovered at exact V10 identities after the
+single health probe raced startup, while no PASS evidence or blocked marker was
+emitted. The consumed chain cannot be reused. That authority remains exact-SHA/
+action-bound and does not extend to STG-008, acceptance data writes or
+Production mutation.
 
 Historically, PR #56 entered `main` and the fixed release candidate was
 `8f909525781804f61d1da388882f530da358c3c4`. The read-only preflight is recorded
@@ -51,9 +55,12 @@ Flyway evidence, and a secret-FD Owner/API acceptance client. They preserve the
 existing exact-SHA, approval, lock, redaction and runtime boundaries. No helper
 may infer its own runtime authority; every action requires a distinct exact-SHA/
 environment/action-bound Owner approval. Runtime use through PR #80's exact
-`39fa284b...` redeploy and repaired readiness passed, but the read-only Flyway
-collector stopped before PASS on the canonical `true` versus mock-`t` token
-mismatch. No same-image restart or acceptance action followed.
+`39fa284b...` redeploy and repaired readiness passed; PR #81 then repaired the
+canonical `true` token and entered main at `63600b13...`. A fresh continuation
+deployed that exact SHA and passed Flyway/runtime collection. Same-image restart
+retained exact identities but returned `NO_GO` on an immediate 502 before
+Spring completed startup. Runtime recovery does not retroactively satisfy the
+restart evidence gate, and no acceptance action followed.
 
 PR #59 merged the bounded repair at
 `c3956592da8a33092ab745c7cc6aac05e9babfa7`. It validates the initialized
@@ -81,7 +88,9 @@ runtime until a new exact-SHA deployment is separately approved.
    and Production continuity.
 3. Build backend then frontend serially; start only `db`, `backend`, and `nginx`.
 4. Flyway V1-V10 must be successful. Second startup must not rerun V10.
-5. JPA validation, `/`, `/api/v1/system/health`, and `/ws/info` must pass.
+5. JPA validation must pass. After any restart, a fixed bounded window must
+   converge to HTTP 200 for `/api/v1/system/health`, `/`, and `/ws/info` before
+   exact container/image/Flyway/project invariance and PASS evidence can pass.
 6. Public binding, non-disabled printing, Production container change, resource
    breach, digest mismatch, or migration/schema error is an immediate NO-GO.
 
@@ -178,9 +187,11 @@ before any of these steps execute:
 8. At the separately recorded execute checkpoint, call `/menu-clone` with a
    fresh unrecorded key; verify result, replay, source invariance, target
    revision, counts, absence of excluded side effects, and printing disabled.
-9. Stop/start only the Staging Compose project; verify health, Flyway history,
-   persisted topology/menu, login/access, and replay. Production remains
-   untouched.
+9. Stop/start only the Staging Compose project; bounded readiness must prove
+   backend health, frontend root and `/ws/info` HTTP 200 before exact identity/
+   Flyway/project checks and PASS evidence. Any non-PASS after stop begins must
+   persist blocked state before cleanup. Then verify persisted topology/menu,
+   login/access and replay. Production remains untouched.
 
 The reusable Synthetic St-Denis manifest/application path entered `main` via
 PR #62. It remains repository capability only: it is not available to runtime
@@ -221,7 +232,9 @@ version, Flyway V1-V10, JPA/health results, before/after counts and revisions,
 sanitized HTTP outcomes, canonical V9/V10 request evidence, supplementary
 audit action when available, resources, and Production continuity.
 Never record secrets, raw idempotency keys, credentials, tokens, complete menu
-payloads, or customer data.
+payloads, or customer data. An empty or partial redirected action file remains
+failure context and can never be promoted to PASS merely because health later
+recovers.
 
 ## Rollback and NO-GO
 
@@ -245,7 +258,11 @@ payloads, or customer data.
 - Acceptance remains `NO-GO` while
   `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`; exact-SHA deployment and
   Flyway V10 alone do not prove the Owner login or clone API topology.
+- A same-image restart is `NO-GO` unless all three loopback endpoints converge
+  inside the reviewed bound, exact container/image/Flyway/project identities
+  remain unchanged, complete PASS evidence is emitted, and every post-mutation
+  non-PASS path has durable blocked-state semantics.
 
 ## Capability dependency state
 
-`STG-007_RUNTIME_COLLECTION_BLOCKED_BY_FLYWAY_SUCCESS_TOKEN_REPAIR`
+`STG-007_RUNTIME_RECOVERED_RESTART_EVIDENCE_BLOCKED_BY_READINESS_FAIL_CLOSED_REPAIR_WAITING_FOR_OWNER_REVIEW`

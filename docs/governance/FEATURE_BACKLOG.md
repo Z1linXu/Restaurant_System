@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `STG-007_RUNTIME_COLLECTION_BLOCKED_BY_FLYWAY_SUCCESS_TOKEN_REPAIR` |
-| target_loop | `STG-007_FLYWAY_SUCCESS_TOKEN_REPAIR`, then restart the authorized V10-aware continuation from the next exact merged main |
-| implementation status | PR-A through PR-F and PRs #58-#80 are `IN_MAIN`; #66 remains an independent completed repair. PR #80 merged at exact main `39fa284b...`. A fresh Owner-authorized V10-to-V10 continuation bound, preflighted and deployed that exact SHA to Staging; Flyway remained V10 with no pending migration, health is 200/200/200, printing/isolation remained intact, repaired readiness passed, and Production continuity remained unchanged. Runtime collection then stopped before PASS because the helper query emitted PostgreSQL `success::text=true` while its validator/mock expected `t`. No same-image restart, bootstrap, credential, login, clone, Store read or Production mutation occurred. |
+| status | `STG-007_RUNTIME_RECOVERED_RESTART_EVIDENCE_BLOCKED_BY_READINESS_FAIL_CLOSED_REPAIR_WAITING_FOR_OWNER_REVIEW` |
+| target_loop | `STG-007_RESTART_READINESS_FAIL_CLOSED_REPAIR`, then restart the authorized V10-aware continuation from the next exact merged main |
+| implementation status | PR-A through PR-F and PRs #58-#81 are `IN_MAIN`; #66 remains an independent completed repair. PR #81 merged at exact main `63600b13...`. A fresh Owner-authorized V10-to-V10 continuation bound, preflighted and deployed that exact SHA to Staging; Flyway remained V10 with no pending migration, printing/isolation remained intact, readiness and sanitized runtime collection passed, and Production continuity remained unchanged. Same-image restart retained the exact containers/images but returned `NO_GO` when one immediate health request raced application startup. Runtime recovered to 200/200/200 at the same identities; the failed action produced no PASS evidence and explicit exit produced no blocked marker. No bootstrap, credential, login, clone, Store read or Production mutation occurred. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Complete the exact Flyway success-token Dependency Repair, focused regressions, Agent 6 review and auto-merge gates. Its merge invalidates `39fa284b...` as the candidate even though that SHA remains the known healthy Staging runtime at Flyway V10; restart all exact release/preflight/readiness/runtime evidence bindings from the new main under the Owner's bounded V10-aware continuation. |
+| next action | Complete the bounded restart-readiness/fail-closed Dependency Repair, focused regressions, Agent 6 review and auto-merge gates. Its merge invalidates `63600b13...` as the candidate even though that SHA remains the known healthy Staging runtime at Flyway V10; restart all exact release/preflight/readiness/action bindings from the new main under the Owner's bounded V10-aware continuation. |
 
 ### Current AL-003 delivery state
 
@@ -52,6 +52,7 @@
 | STG-006 evidence/governance / PR #73 | `IN_MAIN` at `85d97b7327b2e15aa561ed28a5788b92cedf6f5b` | Passive evidence only; STG-006 PASS, no deployment or mutation |
 | OPS-001 secret-safe tooling | `REPOSITORY_COMPLETE` through PR #74 plus control-path repairs #75-#78 | Detached release/env rotation, runtime/Flyway restart evidence, and secret-FD Owner/API helpers; runtime actions remain separately gated |
 | Readiness health fingerprint repair / PR #80 | `IN_MAIN` at `39fa284b7bccd64d650c396f2c7532b0a0858b4b` | Missing optional health is classified as `NO_HEALTHCHECK`; present-invalid and unhealthy remain fail-closed |
+| Flyway success-token repair / PR #81 | `IN_MAIN` at `63600b13b10a5549d9095a03c94e69a9f880af9f` | PostgreSQL `success::text=true` is accepted exactly; false/abbreviated/invalid history remains fail-closed |
 
 The Owner-login acceptance prerequisite is not satisfied by repository code or
 deployment alone. Read-only code audit confirms that an active Organization
@@ -66,9 +67,10 @@ authorization bypass, or real business data may supply that evidence.
 
 The AL-003S preparation closes the reviewed non-web launcher gap for
 STG-005A/STG-005B. STG-006 freshly collected passive resource, isolation, and
-Staging/Production-continuity evidence. Secret-safe release/env rotation,
-same-image restart/Flyway evidence, and secret-safe Owner/API calls remain
-explicit OPS-001 prerequisites rather than inferred capabilities.
+Staging/Production-continuity evidence. Secret-safe release/env rotation and
+sanitized Flyway collection now have runtime evidence. Valid same-image
+restart PASS evidence and secret-safe Owner/API calls remain explicit OPS-001
+prerequisites rather than inferred capabilities.
 
 `MERGED_ON_GITHUB` is not sufficient evidence for `IN_MAIN` when a PR's base
 is another feature branch. Each stacked layer requires a latest-`main`
@@ -202,14 +204,14 @@ seed/demo Store.
 | Generic menu clone transaction, options, replay, locks, API | `DONE_IN_MAIN` | PR-A through PR-F and V10 are repository capability only. |
 | Frozen Chinatown Store Profile | `DONE_IN_MAIN` | `CHINATOWN_MENU_2026_02_02` is the approved initial Production target contract. |
 | PostgreSQL private-leaf Staging guard | `DONE_IN_MAIN` | PR #59 merged at `c3956592da8a33092ab745c7cc6aac05e9babfa7`; no redeploy is implied. |
-| Exact-SHA Staging deployment and Flyway V9/V10 | `DEPLOYED_TO_STAGING` | Exact `39fa284b...` passed fresh V10-aware formal preflight and V10-to-V10 redeploy; Flyway remains V10 with no pending migration and readiness passed. Runtime collection and same-image restart remain incomplete, so STG-007 is not PASS. |
+| Exact-SHA Staging deployment and Flyway V9/V10 | `DEPLOYED_TO_STAGING` | Exact `63600b13...` passed fresh V10-aware formal preflight and V10-to-V10 redeploy; Flyway remains V10 with no pending migration, readiness and runtime collection passed. Same-image restart evidence is `NO_GO`, so STG-007 is not PASS. |
 | Synthetic Organization/source/Owner bootstrap | `STAGING_PENDING` | STG-005A is in main but has not executed on evidenced Staging. |
 | Synthetic target onboarding and Owner target access | `STAGING_PENDING` | Existing onboarding plus Organization Owner access is sufficient; runtime evidence is missing. |
 | Synthetic Owner login/workspace/Owner API authorization | `STAGING_PENDING` | Credential must be supplied at runtime and never retained in Git/evidence. |
 | Reproducible Synthetic St-Denis source-menu baseline | `IN_MAIN` via PR #62 | Guarded, versioned, transactional empty-or-exact implementation is repository capability only and has not run on Staging. |
 | AL-003 validate/execute/replay/restart acceptance | `STAGING_PENDING` | Requires the full synthetic topology and source-menu contract first. |
 | STG-006 exact-main passive preflight | `PASS` | At STG-006 capture, candidate was `33c6e3c...` and retained Staging was `4397f995...` / V8; this historical PASS does not override the later STG-007 deployment. |
-| OPS-001 secret-safe tooling | `REPAIR_IN_PROGRESS` after runtime use | Release/env rotation, exact deploy and repaired readiness succeeded. Runtime collection exposed the exact PostgreSQL `success::text=true` versus mock-`t` mismatch. No credentials, API action or same-image restart evidence exists. |
+| OPS-001 secret-safe tooling | `REPAIR_IN_PROGRESS` after runtime use | Release/env rotation, exact deploy, repaired readiness and sanitized runtime collection succeeded. Same-image restart exposed the startup-readiness race and explicit-exit blocked-marker gap; runtime recovered but no PASS restart evidence exists. No credentials or API action occurred. |
 | Production Store 1 read-only source capture/drift review | `PRODUCTION_PENDING` | Separate Owner Runtime Gate; only menu-related evidence may be read. |
 | Production Chinatown Store/staff/menu provisioning | `PRODUCTION_PENDING` | Exact-SHA Release Candidate and production approval required. |
 | Generic Store Profile identity/composition contract | `IN_MAIN` via PR #64 | Exact versioned identity, module references with reviewed expected fingerprints, activation requirements, canonical fingerprint, and safe summaries are repository capability only; no concrete Store Profile or callable workflow is implied. |
