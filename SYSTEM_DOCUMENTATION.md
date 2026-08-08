@@ -71,8 +71,8 @@ separate from historical evidence snapshots and business implementation details:
 - [AL-005B Device and Pad Provisioning Module Plan](docs/governance/agile/AL-005B_DEVICE_PAD_PROVISIONING_MODULE_PLAN.md)
   records the current pairing/authentication, heartbeat, Store-wide PAD_DIRECT
   queue, Android Worker visibility, profile/runtime boundaries, and readiness
-  gates. The stacked preparation adds no endpoint, migration, device, token,
-  pairing, Worker change, or runtime behavior.
+  gates. Draft PR #68 is `STACKED_ONLY` above PR #67 and adds no endpoint,
+  migration, device, token, pairing, Worker change, or runtime behavior.
 - [AL-003A final menu comparison](docs/governance/agile/AL-003A_FINAL_MENU_COMPARISON.md)
   is the single product-mapping authority for the Store 1 to Chinatown target
   menu. Repository seed data is historical reference only.

@@ -1,12 +1,14 @@
 # AL-005B Device and Pad Provisioning Module Plan
 
-> Status: `AL-005B_DEVICE_PREPARED_WAITING_FOR_DEPENDENCIES`
+> Status: `AL-005B_DEVICE_PREPARED_WAITING_FOR_DEPENDENCIES` in Draft PR #68
 >
 > Package: `AL-005B_DEVICE_PAD_PROVISIONING_MODULE`
 >
 > Git classification: `STACKED_ONLY`
 >
 > Base: AL-005 Printing Provisioning Draft PR #67 head
+>
+> Draft PR: #68 (`STACKED_ONLY`)
 >
 > Runtime access: not performed
 
