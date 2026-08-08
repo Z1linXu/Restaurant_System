@@ -2,7 +2,7 @@
 
 > Status: `ACTIVE_GOVERNANCE_PROCESS`
 >
-> Last updated: 2026-08-07, America/Toronto
+> Last updated: 2026-08-08, America/Toronto
 
 ## 1. Required lifecycle
 
@@ -81,12 +81,14 @@ merged into `main` by PR #27 but is not thereby deployed or production-ready.
 The current feature loop is AL-003. PR-A through PR-F are in `main`; that is
 repository capability only and is not Staging or Production acceptance.
 
-The current package is the bounded PostgreSQL private-leaf preflight repair.
-Its review stop state is
-`AL-003_STAGING_PREFLIGHT_REPAIR_WAITING_FOR_OWNER_REVIEW`. No current statement
-authorizes server access, Flyway execution, synthetic bootstrap, validate,
-execute, a runtime clone, merge, or deployment. A future Staging acceptance
-also retains the distinct prerequisite
+PR #59's bounded PostgreSQL private-leaf repair is now `IN_MAIN` at
+`c3956592da8a33092ab745c7cc6aac05e9babfa7`; this does not prove a new Staging
+deployment. The current package synchronizes the 2026-08-08 Owner decisions and
+stops at `AL-003_OWNER_DECISIONS_GOVERNANCE_SYNC_WAITING_FOR_OWNER_REVIEW`.
+No current statement authorizes server access, Flyway execution, synthetic
+bootstrap, credential creation, login, source-menu writes, validate, execute,
+a runtime clone, merge, or deployment. Staging acceptance retains the distinct
+prerequisite
 `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING` until synthetic-only runtime
 evidence proves the complete Owner login topology.
 
@@ -156,9 +158,55 @@ Future design direction includes a Generic Store Provisioning Engine, Store
 Profile Framework, Printing Provisioning Module, Staff/Table Provisioning
 Module, Device/Pad Provisioning Module, and Store Activation Workflow. Candidate
 loops are `AL-004_GENERIC_STORE_PROFILE_FRAMEWORK`,
-`AL-005_PRINTING_PROVISIONING_TEMPLATE`, and
-`AL-006_STORE_ACTIVATION_WORKFLOW`; naming them here does not authorize or start
-their implementation.
+`AL-005A_STAFF_TABLE_PROVISIONING_MODULES`,
+`AL-005_PRINTING_PROVISIONING_TEMPLATE`,
+`AL-005B_DEVICE_PAD_PROVISIONING_MODULE`, and
+`AL-006_STORE_ACTIVATION_WORKFLOW`. Production promotion/activation candidates
+are `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE` and
+`ACT-001_CHINATOWN_PRODUCTION_ACTIVATION`. Naming them here does not authorize
+or start their implementation.
+
+### 8.1 Owner/Admin Store provisioning principle
+
+A Store selected for onboarding is a real operational target unless its plan
+explicitly labels it synthetic. Chinatown is the second planned Production
+Store, not a demo or one-off clone exercise. Completion therefore means a
+Production-ready Store, not merely a created Store row or a successful menu
+clone transaction.
+
+The normal long-term workflow is Owner/Admin initiated and must reuse shared
+provisioning modules:
+
+`Create Store -> choose versioned Store Profile -> provision access/staff -> provision menu -> provision tables -> provision printing -> provision devices -> activation validation -> activate Store`
+
+Programmer-run SQL, copied database rows, per-Store ID/name branches, and a new
+clone engine per restaurant are forbidden as routine provisioning mechanisms.
+An Organization Owner automatically receives access to Stores in that
+Organization when the current authorization contract grants Organization-level
+Owner access; provisioning must not manufacture redundant Store memberships.
+Store-scoped staff continue to require explicit Store memberships.
+
+The reviewed Chinatown profile and a future versioned St-Denis profile are
+separate inputs to the same generic engine. A profile identifies reviewed
+Store-specific data; it does not authorize runtime execution or activation.
+
+### 8.2 Production-like Staging and release-candidate principle
+
+Staging is a long-lived Production-like acceptance environment with
+synthetic-only data. It may mirror Production configuration shape, menu shape,
+roles, permissions, feature flags, ordering behavior, and printing semantics,
+but it must not reuse Production credentials, password hashes, tokens,
+customers, orders, payment data, printer endpoints, device secrets, or a copy
+of the Production database. Printing remains `DISABLED` or an explicitly
+approved non-real mode; real printers and Pads require their own Owner gate.
+
+Production promotion follows:
+
+`Staging accepted exact SHA -> Production gap audit -> Production Release Candidate -> migration/backup/rollback review -> Owner approval -> exact-SHA Production deployment -> post-deploy verification`
+
+Deploying the latest branch tip without this chain is prohibited. Repository
+capability, Staging deployment, Staging acceptance, release-candidate status,
+and Production deployment remain separate governance states.
 
 ## 9. Git ground truth and stacked PR rules
 

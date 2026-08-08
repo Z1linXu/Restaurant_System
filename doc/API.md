@@ -444,14 +444,67 @@ Response behavior:
 
 ## Owner Workspace
 
+### Owner Store Onboarding API (AL-002 in main)
+
+`POST /api/v1/owner/organizations/{organizationId}/stores/onboard`
+
+Headers:
+
+- authenticated Owner context;
+- required `Idempotency-Key` (maximum 255 trimmed characters).
+
+Request:
+
+```json
+{
+  "source_store_id": 1,
+  "store_name": "Synthetic Target",
+  "store_code": "STG005_TARGET",
+  "staff": [
+    {
+      "login_identifier": "STG005_MANAGER_EXAMPLE",
+      "full_name": "STG005 Manager",
+      "role_code": "MANAGER",
+      "initial_password": "runtime-only secret"
+    }
+  ]
+}
+```
+
+Current contract:
+
+- requires the caller to have role `OWNER` plus an active `OWNER`
+  `organization_membership` in the exact Organization;
+- requires the source Store to belong to that Organization;
+- creates one inactive, printing-disabled target Store;
+- requires at least one staff entry and currently accepts only `MANAGER` and
+  `FRONTDESK` staff roles;
+- creates BCrypt-backed credentials and explicit target Store memberships for
+  those staff accounts;
+- does not create an Owner target Store membership. Under the current
+  `StoreAccessService` contract, the Organization Owner automatically accesses
+  every Store in that Organization and receives the Organization Owner role in
+  workspace/store context;
+- returns `onboarding_request_id`, Organization/source/target Store fields,
+  onboarding/result status, `replayed`, and redacted staff identifiers/roles;
+  it never returns the supplied passwords or password hashes;
+- same Organization/key/fingerprint replays the existing completed result;
+  changed structural content or a different replay password conflicts; an
+  in-progress request does not create another Store;
+- creates no menu, table, printer, assignment, Pad/device, order, payment, or
+  activation record.
+
+This existing API is the target-Store creation component of the future Owner
+provisioning workflow. No Owner UI or menu-template selection contract is
+currently exposed by this endpoint.
+
 ### Owner Store Menu Clone API (AL-003 PR-F in main)
 
-Current `main` at PR #56 contains internal persistence/idempotency DTOs, the generic
+Current `main` contains internal persistence/idempotency DTOs, the generic
 Category/Station/Item transaction, generic source-option cloning, and the
 versioned Chinatown Profile, plus PR-F0's shared read-only option planner and
-structured diagnostics. PR-F adds the following Owner-only routes. They are in
-the repository contract but are not deployed or runtime-validated by that
-merge.
+structured diagnostics. PR #56 added the following Owner-only routes. They are
+in the repository contract but are not thereby deployed or runtime-validated.
 
 The current internal request DTO shape is:
 

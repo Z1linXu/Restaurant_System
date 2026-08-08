@@ -1,12 +1,12 @@
 # AL-003 Store 1 -> Chinatown Live Menu Clone Technical Plan
 
-> Status: `AL-003_STAGING_PREFLIGHT_REPAIR_WAITING_FOR_OWNER_REVIEW`
+> Status: `AL-003_OWNER_DECISIONS_GOVERNANCE_SYNC_WAITING_FOR_OWNER_REVIEW`
 >
 > Prepared: 2026-07-31, America/Toronto
 >
-> Ground truth updated: 2026-08-07, America/Toronto
+> Ground truth updated: 2026-08-08, America/Toronto
 >
-> Phase: `BOUNDED DEPENDENCY REPAIR / OWNER REVIEW`
+> Phase: `GOVERNANCE SYNC / STAGING ACCEPTANCE PREPARATION`
 >
 > Historical PR-C repository base: `ae019bf6460cbbbd69153a046d0fbda1fe707eb0`
 >
@@ -23,19 +23,54 @@
 |---|---|
 | `AL003_PLAN_FOUND` | `false` before this document was created |
 | `PLAN_PATH` | `docs/governance/agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md` |
-| `PLAN_STATUS` | `AL-003_STAGING_PREFLIGHT_REPAIR_WAITING_FOR_OWNER_REVIEW` |
+| `PLAN_STATUS` | `AL-003_OWNER_DECISIONS_GOVERNANCE_SYNC_WAITING_FOR_OWNER_REVIEW` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | Owner reviews protected PostgreSQL-leaf repair Draft PR #59; after merge, select a new exact SHA and retain the independent Owner-login prerequisite before acceptance. |
+| `RECOMMENDED_ACTION` | PR #59 is `IN_MAIN`. Owner reviews this governance sync; after merge, select the new exact SHA and approve the bounded Staging deployment/bootstrap/login/clone acceptance sequence separately. |
 
 PR-A through PR-F are in `main`. PR-D supplies generic source-option copying
 and target-local parent mapping; PR #54 placed the concrete Chinatown Profile
 in `main`; PR #55 added the shared read-only planner; and PR #56 added the
 protected Owner validate/execute API. No runtime clone or deployment has run.
 
-### 1.1 Current Git ground truth
+### 1.1 Owner decisions fixed on 2026-08-08
 
-| Package | Commit | State relative to `origin/main` `1482cddf4f10478ed571e4d7422100dc40006f6b` |
+These are authoritative product inputs, not open questions:
+
+1. Chinatown is the second planned real Production Store. AL-003 repository
+   capability and Staging clone acceptance are intermediate gates; FT-001 closes
+   only when Chinatown is Production-ready.
+2. The reviewed `CHINATOWN_MENU_2026_02_02` Categories, Stations, 17 items,
+   bilingual names, prices, sizes, noodle types, Combo rules, tea egg, extra
+   meat, and ordering are frozen as the initial Production target contract.
+3. Production Store 1 / St-Denis live menu is the Production source of truth.
+   Production clone requires read-only Store 1 menu/revision/drift evidence;
+   repository seeds and synthetic Staging data cannot substitute for it.
+4. Chinatown's initial menu must be produced by validate then execute through
+   the generic clone engine. Manual Menu Management is permitted only for
+   normal post-initialization business changes.
+5. An active Organization Owner automatically accesses every Store in that
+   Organization under the current `StoreAccessService` contract. The target
+   Store therefore needs no redundant Owner Store membership. Store-scoped
+   staff still require their own target memberships.
+6. The long-term Owner workflow selects a versioned menu template. The current
+   Chinatown Profile and a future `ST_DENIS_MENU` Profile must use the same
+   registry, transaction, idempotency, and provisioning engine.
+7. Staging is a persistent Production-like, synthetic-only environment.
+   Synthetic credentials are allowed, but Production credentials, hashes,
+   tokens, customers, orders, payments, database copies, real printers, and
+   device secrets are forbidden.
+8. Production promotion uses a formal exact-SHA Release Candidate after
+   Staging acceptance, Production gap audit, migration review, and
+   backup/rollback review.
+9. Chinatown activation must include Store configuration, Owner/staff access,
+   menu, tables, printing, Pad/device binding, login, actual order submission,
+   updates, expected tickets, and operational completion. Payment remains
+   outside this decision unless separately authorized.
+
+### 1.2 Current Git ground truth
+
+| Package | Commit | State relative to `origin/main` `c3956592da8a33092ab745c7cc6aac05e9babfa7` |
 |---|---|---|
 | PR-C / PR #47 | merge `ba169ed8b689ddef8dffe94deee82fea191cdcfb` | `IN_MAIN` |
 | PR-E / PR #54 | merge `82b8059f6af1c7dff4eeb1648ca47bec039b5e52` | `IN_MAIN`; PR-F0 promotion base |
@@ -43,7 +78,8 @@ protected Owner validate/execute API. No runtime clone or deployment has run.
 | PR-E / historical PR #49 | semantic source `972802e701cb9cb2623b647132e4430a7b338e32` | Superseded by PR #54 `IN_MAIN` promotion |
 | PR-F0 / PR #55 | merge `6773fd0b78d7b3b33ee0d2a8b1d593a7b8c6af2` | `IN_MAIN` |
 | PR-F / PR #56 | merge `8f909525781804f61d1da388882f530da358c3c4` | `IN_MAIN`; historical failed release candidate, no longer authorized |
-| Attempt evidence / PR #58 | merge `1482cddf4f10478ed571e4d7422100dc40006f6b` | `IN_MAIN`; records preflight `NO_GO` and pre-migration recovery |
+| Attempt evidence / PR #58 | merge `1482cddf4f10478ed571e4d7422100dc40006f6b` | `IN_MAIN`; immutable failed-attempt/runtime recovery evidence |
+| Private-leaf repair / PR #59 | merge `c3956592da8a33092ab745c7cc6aac05e9babfa7` | `IN_MAIN`; no Staging or Production deployment implied |
 
 This document describes the complete reviewed target architecture. A section
 in this plan is not evidence that its implementation is in `main`, Staging, or
@@ -830,7 +866,7 @@ and creates Draft PRs only.
 
 ## 22. Owner review checkpoints
 
-Owner approval is required before:
+The original implementation checkpoints were:
 
 1. PR-A is treated as the implementation contract.
 2. V10 and the new request lifecycle are implemented.
@@ -840,6 +876,10 @@ Owner approval is required before:
 6. Any Staging validation writes synthetic menu data.
 7. Any Store 1 runtime read, real target clone, migration, deployment, Store
    activation, print configuration, or production action occurs.
+
+Items 1-5 were satisfied by the reviewed PR-A through PR-F merges now in
+`main`. Items 6-7 remain active runtime gates. This governance package does not
+reuse either approval or authorize any Staging or Production action.
 
 No remaining product question is raised for prices, categories, item ordering,
 Combo scope, Combo 3 egg, tea egg identity, noodle types, hidden add/remove,
@@ -880,7 +920,7 @@ Stop and return to Owner if:
 
 ## Final state
 
-`AL-003_STAGING_PREFLIGHT_REPAIR_WAITING_FOR_OWNER_REVIEW`
+`AL-003_OWNER_DECISIONS_GOVERNANCE_SYNC_WAITING_FOR_OWNER_REVIEW`
 
 PR-F entered `main` through PR #56 at
 `8f909525781804f61d1da388882f530da358c3c4`. The reviewed Owner
@@ -890,19 +930,24 @@ read-only Staging preflight found the existing runtime healthy at
 clone, or deployment occurred. Exact-SHA deployment remains Owner-gated by
 [the release plan](AL-003_STAGING_RELEASE_ACCEPTANCE_PLAN.md) and
 [the preflight evidence](../runtime/AL-003_STAGING_RELEASE_PREFLIGHT_EVIDENCE.md).
-The approved deployment attempt later stopped before build because the formal
-preflight cannot traverse the initialized PostgreSQL mode-0700 data leaf as the
-deployment user. Recovery restored Staging to V8. The next package is a bounded
-Dependency Repair that validates the leaf from its canonical parent and secure
-metadata without entering or weakening it. After merge, a new exact SHA and
-fresh approval are required;
-see
+The approved deployment attempt later stopped before build because the old
+formal preflight entered the initialized PostgreSQL mode-0700 data leaf as the
+deployment user. Recovery restored Staging to V8. PR #59's bounded repair is
+now `IN_MAIN` at `c3956592da8a33092ab745c7cc6aac05e9babfa7`; it validates the
+leaf from its canonical parent and metadata without entering or weakening it.
+This merge is not deployment evidence. The next Staging attempt requires the
+new exact merged-main SHA, fresh preflight/evidence bindings, and explicit
+Owner runtime approval. See
 [the attempt evidence](../runtime/AL-003_STAGING_RELEASE_ATTEMPT_EVIDENCE.md).
 
 Staging acceptance separately remains
 `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`. STG-005A is implemented in
 the repository but has not run on the evidenced V8 Staging runtime. It creates
 only the synthetic Organization, source Store, Owner credential, Organization
-membership, and source-Store membership; target Store/access and successful
-Owner login require later approved synthetic-only runtime evidence. Deployment
-success alone cannot close that prerequisite or authorize validate/execute.
+membership, and source-Store membership. Existing onboarding can create the
+inactive target and its Store-scoped staff, while `StoreAccessService` grants
+the Organization Owner target access without a redundant target membership.
+The synthetic credential, login, workspace, source-menu baseline, target
+onboarding, and authenticated validate/execute calls still require later
+approved runtime evidence. Deployment success alone cannot close that
+prerequisite or authorize validate/execute.

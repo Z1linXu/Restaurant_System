@@ -6,7 +6,7 @@
 >
 > Status: `PLAN_COMPLETE`
 >
-> Last updated: 2026-07-27, America/Toronto
+> Last updated: 2026-08-08, America/Toronto
 >
 > Boundary: historical read-only repository discovery and planning record. Its
 > approved implementation successor is `AL-002`, limited to backend onboarding
@@ -31,6 +31,35 @@ The implementation must add a dedicated owner-onboarding capability with:
 5. an explicit per-Store print-module policy so Chinatown never creates a
    HOT_KITCHEN job merely because an assignment is absent;
 6. on-site-only printer endpoints and explicit device pairing after Store setup.
+
+### 1.1 Owner production-direction addendum (2026-08-08)
+
+This addendum supersedes historical AL-001 uncertainty where later reviewed
+AL-002/AL-003 contracts now provide executable evidence:
+
+- Chinatown is the second planned real Production Store. The feature target is
+  a Production-ready Store with access/staff, menu, tables, printing, devices,
+  login, and actual order/print acceptance.
+- AL-002 and AL-003 capabilities must become reusable modules in an
+  Owner/Admin-triggered provisioning workflow. Programmer-run SQL, copied rows,
+  and per-Store branches are not acceptable routine operations.
+- An active Organization Owner already receives same-Organization Store access
+  through `StoreAccessService`; Store creation must not add a redundant Owner
+  target-Store membership. Target staff remain explicitly Store-scoped.
+- The reviewed Chinatown Profile is frozen as the initial Production menu
+  contract. Its Production source is live Store 1 / St-Denis, subject to an
+  Owner-gated read-only source/revision/drift capture before clone.
+- First menu initialization uses the generic clone engine. Menu Management is
+  for ordinary post-initialization changes.
+- Future Owner template selection must include Chinatown and a versioned
+  St-Denis menu profile backed by the same generic engine.
+- Staging is a durable Production-like, synthetic-only acceptance environment.
+  Production promotion requires an accepted exact Staging SHA followed by a
+  formal Production Release Candidate and separate Owner approval.
+
+The current gap matrix and bounded delivery order are maintained in
+[FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md). This historical plan does not
+authorize those later loops or any runtime action.
 
 ## 2. Requirements and non-negotiable boundary
 

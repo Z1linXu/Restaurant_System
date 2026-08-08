@@ -2,7 +2,7 @@
 
 > Status: `ACTIVE_GOVERNANCE_BACKLOG`
 >
-> Last updated: 2026-08-07, America/Toronto
+> Last updated: 2026-08-08, America/Toronto
 >
 > Features are not incidents. A feature may be requirements-confirmed without
 > being authorized for implementation or production provisioning.
@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `AL-003_STAGING_PREFLIGHT_REPAIR_WAITING_FOR_OWNER_REVIEW` |
+| status | `AL-003_OWNER_DECISIONS_GOVERNANCE_SYNC_WAITING_FOR_OWNER_REVIEW` |
 | target_loop | `AL-003` |
-| implementation status | PR-A through PR-F and PR #58 evidence are in `main`. Draft PR #59 validates the initialized PostgreSQL private leaf without entering or weakening it and includes focused regressions; it is review-only and has not changed Staging. |
+| implementation status | PR-A through PR-F, PR #58 evidence, and PR #59's protected PostgreSQL-leaf repair are `IN_MAIN` at `c3956592da8a33092ab745c7cc6aac05e9babfa7`. Staging remains on the separately evidenced older runtime; no V9/V10/bootstrap/clone execution is implied. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Owner reviews the private-leaf repair. After merge, deployment requires a new exact SHA and fresh approval; Staging acceptance separately remains `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`. |
+| next action | Owner reviews this governance sync. After merge, select the new exact main SHA and request a separate Staging runtime-mutation approval for deploy, V9/V10, synthetic bootstrap, source-menu preparation, target onboarding, login, validate, execute, replay, and restart acceptance. |
 
 ### Current AL-003 delivery state
 
@@ -35,15 +35,18 @@
 | PR-F0 | `IN_MAIN` via PR #55 |
 | PR-F | `IN_MAIN` via PR #56 |
 | PR #58 attempt evidence | `IN_MAIN` |
-| Private-leaf preflight repair / PR #59 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` |
+| Private-leaf preflight repair / PR #59 | `IN_MAIN` via merge `c3956592da8a33092ab745c7cc6aac05e9babfa7` |
 
 The Owner-login acceptance prerequisite is not satisfied by repository code or
-deployment alone. STG-005A has not run on the evidenced Staging runtime and its
-reviewed scope creates only the synthetic source topology. Before AL-003 can be
-accepted, separate Owner-approved synthetic runtime evidence must prove target
-Store access, safe Owner login, and authenticated validate/execute calls. No
-Production credential, raw SQL membership insert, authorization bypass, or
-real business data may supply that topology.
+deployment alone. Read-only code audit confirms that an active Organization
+`OWNER` membership already grants access to every Store in that Organization;
+the onboarding flow therefore does not need to create a redundant target-Store
+membership for the Owner. STG-005A and onboarding can establish the required
+identity/access topology, but they have not run on the evidenced Staging
+runtime. Separate Owner-approved runtime evidence must still prove the
+synthetic credential, login, workspace access, target onboarding, and
+authenticated validate/execute calls. No Production credential, raw SQL,
+authorization bypass, or real business data may supply that evidence.
 
 `MERGED_ON_GITHUB` is not sufficient evidence for `IN_MAIN` when a PR's base
 is another feature branch. Each stacked layer requires a latest-`main`
@@ -138,6 +141,87 @@ Organization isolation, source invariance, and explicit side-effect exclusions
 pass. The broader FT-001 feature still requires separately approved table,
 printing, Pad, UI, and field acceptance; it is never accepted by creating a
 seed/demo Store.
+
+### Owner decisions effective 2026-08-08
+
+- Chinatown is the second planned real Production Store. FT-001 closes only at
+  `Production-ready Chinatown Store`, not at Store creation, API completion, or
+  a Staging demonstration.
+- The reviewed `CHINATOWN_MENU_2026_02_02` Categories, Stations, 17 items,
+  bilingual names, prices, sizes, noodle types, Combo rules, tea egg, extra
+  meat, and ordering are frozen as the initial Production target contract.
+  Normal post-activation changes use Menu Management and do not expand AL-003.
+- Production Store 1 / St-Denis live menu is the only Production clone source.
+  Repository seeds and synthetic Staging data are not Production evidence.
+- Chinatown's first menu initialization must use the reviewed clone engine:
+  create inactive Store, validate, review, execute, verify, then activate.
+  Manual Menu Management is not the initial Production provisioning path.
+- Organization Owners inherit access to all Stores in their active
+  Organization membership. Manager/frontdesk and other Store-scoped staff keep
+  explicit target-Store memberships.
+- Future Owner UI must offer reviewed versioned menu templates including
+  `CHINATOWN_MENU` and a future `ST_DENIS_MENU` profile, both backed by the same
+  generic clone/provisioning engine.
+- Staging is a persistent Production-like, synthetic-only environment. A
+  Synthetic St-Denis baseline must be reproducible without Production
+  credentials, database copies, customers, orders, payments, real printers, or
+  device secrets.
+- Production release strategy is a formal exact-SHA Release Candidate after
+  Staging acceptance, Production gap audit, migration review, and
+  backup/rollback review. `git pull latest` is not a release process.
+
+### FT-001 completion gap matrix
+
+| Capability | State | Evidence / next boundary |
+|---|---|---|
+| Generic Owner Organization authorization | `DONE_IN_MAIN` | Active Organization `OWNER` membership grants same-Organization Store access; cross-Organization access remains forbidden. |
+| Idempotent inactive Store onboarding | `DONE_IN_MAIN` | AL-002 creates an inactive target and requested Manager/Frontdesk accounts with BCrypt credentials and Store memberships. |
+| Generic menu clone transaction, options, replay, locks, API | `DONE_IN_MAIN` | PR-A through PR-F and V10 are repository capability only. |
+| Frozen Chinatown Store Profile | `DONE_IN_MAIN` | `CHINATOWN_MENU_2026_02_02` is the approved initial Production target contract. |
+| PostgreSQL private-leaf Staging guard | `DONE_IN_MAIN` | PR #59 merged at `c3956592da8a33092ab745c7cc6aac05e9babfa7`; no redeploy is implied. |
+| Exact-SHA Staging deployment and Flyway V9/V10 | `STAGING_PENDING` | Requires fresh merged SHA, preflight evidence, and explicit Owner runtime approval. |
+| Synthetic Organization/source/Owner bootstrap | `STAGING_PENDING` | STG-005A is in main but has not executed on evidenced Staging. |
+| Synthetic target onboarding and Owner target access | `STAGING_PENDING` | Existing onboarding plus Organization Owner access is sufficient; runtime evidence is missing. |
+| Synthetic Owner login/workspace/Owner API authorization | `STAGING_PENDING` | Credential must be supplied at runtime and never retained in Git/evidence. |
+| Reproducible Synthetic St-Denis source-menu baseline | `NEEDS_NEW_LOOP` | Store-scoped menu APIs exist, but no reviewed reusable St-Denis synthetic baseline/profile is in main. |
+| AL-003 validate/execute/replay/restart acceptance | `STAGING_PENDING` | Requires the full synthetic topology and source-menu contract first. |
+| Production Store 1 read-only source capture/drift review | `PRODUCTION_PENDING` | Separate Owner Runtime Gate; only menu-related evidence may be read. |
+| Production Chinatown Store/staff/menu provisioning | `PRODUCTION_PENDING` | Exact-SHA Release Candidate and production approval required. |
+| Owner Create Store / Choose Menu Template UI | `NOT_IMPLEMENTED` | Existing Platform Admin template UI is not the approved Owner workflow. |
+| Versioned `ST_DENIS_MENU` profile | `NEEDS_NEW_LOOP` | Must reuse the generic profile registry/clone engine; no Store ID 3 branch. |
+| Table provisioning module | `NEEDS_NEW_LOOP` | Existing Store-scoped table APIs can be reused; activation orchestration is absent. |
+| Printing provisioning module | `NEEDS_NEW_LOOP` | No printer/assignment clone; runtime endpoints and physical tests remain separately gated. |
+| Device/Pad provisioning module | `NEEDS_NEW_LOOP` | Pairing exists, but Store activation orchestration and Chinatown field evidence do not. |
+| Store activation validation/workflow | `NEEDS_NEW_LOOP` | Must gate activation on access, menu, tables, printing, devices, login, and order acceptance. |
+| Chinatown end-to-end field acceptance | `PRODUCTION_PENDING` | Owner/staff login, dine-in order, update, expected tickets, and operational completion remain required. |
+
+### Proposed bounded loop order
+
+1. `STG-005B_SYNTHETIC_ST_DENIS_BASELINE`: define a reviewed, idempotent,
+   synthetic-only St-Denis menu/configuration baseline using existing generic
+   modules and supported APIs.
+2. `AL-003S_STAGING_CLONE_ACCEPTANCE`: exact-SHA deployment, V9/V10,
+   STG-005A bootstrap, target onboarding, Owner login/access, source baseline,
+   validate, execute, replay, restart, and Production-continuity evidence.
+3. `AL-004_GENERIC_STORE_PROFILE_FRAMEWORK`: Owner Create Store UI, versioned
+   template selection, and the future `ST_DENIS_MENU` profile without a second
+   clone engine.
+4. `AL-005A_STAFF_TABLE_PROVISIONING_MODULES`: reusable staff/access and table
+   provisioning inputs around the existing onboarding and table APIs.
+5. `AL-005_PRINTING_PROVISIONING_TEMPLATE`: Store-scoped printer/module
+   assignment inputs and safe physical-print acceptance gates.
+6. `AL-005B_DEVICE_PAD_PROVISIONING_MODULE`: reusable Store device binding and
+   Pad pairing/worker readiness gates without embedding device secrets.
+7. `AL-006_STORE_ACTIVATION_WORKFLOW`: aggregate validation and explicit Store
+   activation after all provisioning modules pass.
+8. `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE`: Store 1 read-only source
+   capture, Production gap/migration/backup/rollback review, and exact-SHA
+   approval.
+9. `ACT-001_CHINATOWN_PRODUCTION_ACTIVATION`: execute approved provisioning and
+   complete Owner/staff/order/printing/Pad field acceptance.
+
+These names record dependency order only. They do not authorize implementation,
+runtime mutation, Production access, or deployment.
 
 ### Explicit non-goals
 
