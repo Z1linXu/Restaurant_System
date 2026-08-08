@@ -60,7 +60,7 @@ separate from historical evidence snapshots and business implementation details:
 - [AL-005A Staff and Table Provisioning Module Plan](docs/governance/agile/AL-005A_STAFF_TABLE_PROVISIONING_MODULE_PLAN.md)
   records the existing credential/membership and dining-table authorities,
   reusable module boundaries, security/schema gaps, and implementation gates.
-  It is a dependency-bound preparation package and adds no writer, API,
+  Draft PR #65 is a dependency-bound preparation package and adds no writer, API,
   migration, credential, table, or runtime behavior.
 - [AL-003A final menu comparison](docs/governance/agile/AL-003A_FINAL_MENU_COMPARISON.md)
   is the single product-mapping authority for the Store 1 to Chinatown target

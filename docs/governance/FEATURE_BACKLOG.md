@@ -16,7 +16,7 @@
 | priority | `HIGH` |
 | status | `AL-005A_PREPARED_WAITING_FOR_AL-004` |
 | target_loop | `AL-005A_STAFF_TABLE_PROVISIONING_MODULES` |
-| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, and PR #60's Owner decisions are `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. Draft PRs #61-#64 remain dependency-bound and are not in `main`. AL-005A has only a Staff/Table contract and risk-audit preparation; it adds no writer, endpoint, migration, credential, table, or runtime execution. Staging remains on the separately evidenced older runtime. |
+| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, and PR #60's Owner decisions are `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. Draft PRs #61-#65 remain dependency-bound and are not in `main`. AL-005A PR #65 has only a Staff/Table contract and risk-audit preparation; it adds no writer, endpoint, migration, credential, table, or runtime execution. Staging remains on the separately evidenced older runtime. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
 | next action | Review Draft PR #61, then dependency-bound Draft PRs #62 and #63, then PR #64 and the AL-005A preparation package. AL-005A1 implementation requires AL-004 in `main`; Chinatown keeps the approved blank-table/manual-setup policy. Any future predefined-table writer needs separate schema evidence and normalization/replay decisions. Runtime acceptance still needs a fresh exact-SHA request and separate Owner approval. |
 
@@ -41,7 +41,7 @@
 | STG-005B Synthetic St-Denis baseline / PR #62 | `STACKED_DRAFT_WAITING_FOR_OWNER_REVIEW`; no migration, public API, SSH, runtime write, or clone execution |
 | AL-003S Staging acceptance preparation / PR #63 | `STACKED_DRAFT_WAITING_FOR_OWNER_REVIEW_AND_RUNTIME_APPROVAL`; guarded launcher/tests and command/evidence/rollback documents only; no runtime action |
 | AL-004 generic Store Profile contract / PR #64 | `STACKED_ONLY_WAITING_FOR_OWNER_REVIEW`; exact identity/version/composition/fingerprint contract only; no concrete profile, API, migration, UI, or provisioning execution |
-| AL-005A Staff/Table module preparation | `AL-005A_PREPARED_WAITING_FOR_AL-004` (`STACKED_ONLY` Git classification); existing-authority audit and implementation contract only; no writer, endpoint, migration, credential, table, or runtime execution |
+| AL-005A Staff/Table module preparation / PR #65 | `AL-005A_PREPARED_WAITING_FOR_AL-004` (`STACKED_ONLY` Git classification); existing-authority audit and implementation contract only; no writer, endpoint, migration, credential, table, or runtime execution |
 
 The Owner-login acceptance prerequisite is not satisfied by repository code or
 deployment alone. Read-only code audit confirms that an active Organization

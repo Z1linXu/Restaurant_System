@@ -6,6 +6,8 @@
 >
 > Dependency: AL-004 Store Profile contract Draft PR #64
 >
+> Draft PR: #65 (`STACKED_ONLY`)
+>
 > Runtime effect: none
 
 ## 1. Purpose
