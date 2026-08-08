@@ -444,14 +444,14 @@ Response behavior:
 
 ## Owner Workspace
 
-### Owner Store Menu Clone API (AL-003 PR-F candidate)
+### Owner Store Menu Clone API (AL-003 PR-F in main)
 
-Current `main` contains internal persistence/idempotency DTOs, the generic
+Current `main` at PR #56 contains internal persistence/idempotency DTOs, the generic
 Category/Station/Item transaction, generic source-option cloning, and the
 versioned Chinatown Profile, plus PR-F0's shared read-only option planner and
-structured diagnostics. PR-F adds the following Owner-only routes in this
-review candidate. They are not in `main`, deployed, or callable until the Owner
-merges its Draft PR.
+structured diagnostics. PR-F adds the following Owner-only routes. They are in
+the repository contract but are not deployed or runtime-validated by that
+merge.
 
 The current internal request DTO shape is:
 
@@ -494,13 +494,13 @@ and intentionally excludes internal source-to-target ID maps.
 
 PR #52 placed the internal, generic `SOURCE_OPTIONS` graph composer in `main`;
 PR #54 added the concrete Chinatown Profile and target override composer without
-changing the request/response DTO or registering a Controller. The PR-F0
-candidate adds an internal `validate` contract only: it composes a virtual
+changing the request/response DTO or registering a Controller. PR #55 adds an
+internal `validate` contract only: it composes a virtual
 target option plan, invokes the same complete validator used by execute, and
 returns bounded `missingCodes`, `duplicateCodes`, and safe `warnings`. It is not
 an HTTP contract and performs no menu, revision, request, or audit write.
-PR-F reuses those exact internal paths rather than implementing a second clone
-engine:
+PR #56's PR-F facade reuses those exact internal paths rather than implementing
+a second clone engine:
 
 - `POST /api/v1/owner/organizations/{organizationId}/stores/{targetStoreId}/menu-clone/validate`
   is read-only, needs no idempotency key, and returns `valid`, revisions,

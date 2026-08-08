@@ -1,16 +1,25 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Status: `PLAN_ONLY_NOT_AUTHORIZED`
+> Status: `AL-003_STAGING_RELEASE_PLAN_WAITING_FOR_OWNER_APPROVAL`
 >
-> Candidate SHA: `<PR_F_MERGED_MAIN_FULL_40_SHA>`
+> Candidate SHA: `8f909525781804f61d1da388882f530da358c3c4`
 >
-> Runtime access performed: `NO`
+> Read-only runtime preflight performed: `YES`; no mutation or deployment
 
 ## Authorization boundary
 
 This template does not approve SSH, deployment, Flyway execution, Store 1
 access, synthetic bootstrap execution, or a real clone. A later Owner approval
 must bind one full 40-character merged-main SHA and each runtime command batch.
+
+PR #56 is merged into `main`; the fixed release candidate is now
+`8f909525781804f61d1da388882f530da358c3c4`. The read-only preflight is recorded
+in
+[AL-003 Staging Release Read-only Preflight Evidence](../runtime/AL-003_STAGING_RELEASE_PREFLIGHT_EVIDENCE.md).
+It returned `GO` for requesting exact-SHA Owner approval and `NO-GO` for
+immediate deployment. The detached candidate release and fresh formal
+preflight evidence do not yet exist, and rollback from a V10 database to the
+retained V8-era Staging images has no runtime compatibility evidence.
 
 ## Fixed Staging identity
 
@@ -78,6 +87,9 @@ payloads, or customer data.
 
 - Application rollback may use only a previously verified image that tolerates
   V10. V10 remains append-only; do not use Flyway clean/repair or schema drop.
+- The currently retained `4397f995...` Staging images are not a verified V10
+  rollback target. They remain `NO-GO` after migration unless a separately
+  approved compatibility gate passes.
 - Stop on source ID/profile mismatch, incomplete source evidence, nonempty
   target, printing not disabled, source mutation, target revision other than
   +1, partial graph, duplicate clone, print job creation, or Production change.
