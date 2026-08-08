@@ -31,7 +31,7 @@ READINESS_EVIDENCE_SHA256=cccccccccccccccccccccccccccccccccccccccccccccccccccccc
 ACTION=same-image-restart
 
 CALLS="$TMP_DIR/calls"
-FLYWAY_ROWS="$(while IFS='|' read -r version script checksum; do printf '%s|%s|%s|t|%s\n' "$version" "$version" "$script" "$checksum"; done < <(expected_flyway_manifest))"
+FLYWAY_ROWS="$(while IFS='|' read -r version script checksum; do printf '%s|%s|%s|true|%s\n' "$version" "$version" "$script" "$checksum"; done < <(expected_flyway_manifest))"
 controlled_compose() {
   printf '%s\n' "$*" >>"$CALLS"
   case "$*" in
@@ -94,9 +94,12 @@ assert_contains 'OPS001_RUNTIME|AFTER_RESTART|STATUS|PASS' "$TMP_DIR/restart-evi
 [[ "$RESTART_MUTATION_STARTED" == false ]] || fail 'restart mutation flag was not cleared'
 
 VALID_FLYWAY_ROWS="$FLYWAY_ROWS"
-FLYWAY_ROWS="$(printf '%s\n' "$VALID_FLYWAY_ROWS" | sed '2s/|t|/|f|/')"
+FLYWAY_ROWS="$(printf '%s\n' "$VALID_FLYWAY_ROWS" | sed '2s/|true|/|false|/')"
 expect_failure failed_flyway flyway_digest
 assert_contains 'invalid or failed row' "$TMP_DIR/failed_flyway.err"
+FLYWAY_ROWS="$(printf '%s\n' "$VALID_FLYWAY_ROWS" | sed '2s/|true|/|t|/')"
+expect_failure abbreviated_success_flyway flyway_digest
+assert_contains 'invalid or failed row' "$TMP_DIR/abbreviated_success_flyway.err"
 FLYWAY_ROWS="$(printf '%s\n' "$VALID_FLYWAY_ROWS" | sed '5d')"
 expect_failure missing_flyway flyway_digest
 assert_contains 'does not exactly match' "$TMP_DIR/missing_flyway.err"
@@ -123,6 +126,7 @@ assert_contains 'container or image identity changed' "$TMP_DIR/identity_drift.e
 
 grep -Fq 'controlled_compose stop nginx backend db' "$SCRIPT" || fail 'ordered stop is missing'
 grep -Fq 'controlled_compose start db' "$SCRIPT" || fail 'same-container start is missing'
+grep -Fq 'success::text' "$SCRIPT" || fail 'runtime query no longer emits PostgreSQL canonical boolean text'
 lock_line="$(rg -n '^  acquire_action_lock$' "$SCRIPT" | tail -n 1 | cut -d: -f1)"
 consume_line="$(rg -n '^  ops001_consume_approval$' "$SCRIPT" | cut -d: -f1)"
 [[ "$lock_line" -lt "$consume_line" ]] || fail 'runtime approval is consumed before the shared lock'

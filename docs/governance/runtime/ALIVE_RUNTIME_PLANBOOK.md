@@ -26,7 +26,7 @@
 | Environment | `restaurant-prod` | `OPERATOR_CONFIRMED` | Environment label only; no host or secret is recorded. |
 | `RUNTIME_COMMIT` | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e` | `MACHINE_VERIFIED_READ_ONLY` during STG-006 continuity | Current runtime identity only, not a formal release approval. |
 | Production branch | `main` | `MACHINE_VERIFIED_READ_ONLY` during STG-006 continuity | Branch relationship is not a deployment approval record. |
-| Last verified `DOCUMENTATION_COMMIT` before this repair | `868e229f1b5afd28163e5031ad8fabffaad651f6` | `MACHINE_VERIFIED` from `origin/main` | PR #79 contains the rotation state-root guard reconciliation and is also the separately authorized deployed Staging SHA; it is not a Production runtime. |
+| Last verified `DOCUMENTATION_COMMIT` before this repair | `39fa284b7bccd64d650c396f2c7532b0a0858b4b` | `MACHINE_VERIFIED` from `origin/main` | PR #80 contains the repaired health fingerprint collector and is also the separately authorized deployed Staging SHA; it is not a Production runtime. |
 | Deployment mode | HTTP | `OPERATOR_CONFIRMED` | HTTPS/certificate posture is outside this record. |
 | Compose services | `db`, `backend`, `nginx` under project `cloud`; unchanged before/after STG-006, restart count 0 | `MACHINE_VERIFIED_READ_ONLY` | Minimum continuity only; no environment or business-data read. |
 | Database schema | Flyway V7, including `V7__add_print_job_attention_acknowledgement.sql` | `OPERATOR_CONFIRMED` | Not a restore or schema-integrity rehearsal. |
@@ -62,10 +62,10 @@ snapshots. Do not copy those reports into this planbook.
 | Item | Current state |
 |---|---|
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `STG-007_READINESS_HEALTH_FINGERPRINT_REPAIR` |
+| Current Agile Loop | `STG-007_FLYWAY_SUCCESS_TOKEN_REPAIR` |
 | Loop type | `REPOSITORY_OPERATIONAL_TOOLING_REPAIR` |
-| Loop status | `STG-007_BATCH_B_BLOCKED_BY_READINESS_FINGERPRINT_REPAIR` |
-| Current package | make shared project fingerprinting safely classify a missing optional Docker health object as `NO_HEALTHCHECK`; tests, evidence, and governance only |
+| Loop status | `STG-007_RUNTIME_COLLECTION_BLOCKED_BY_FLYWAY_SUCCESS_TOKEN_REPAIR` |
+| Current package | align runtime Flyway validation with its own PostgreSQL `success::text=true` query token; focused tests, evidence and governance only |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | PR #27 merged the backend foundation into `main`; Production remains on the older runtime and no production onboarding is established by that merge. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -74,12 +74,12 @@ snapshots. Do not copy those reports into this planbook.
 | STG-005 state | PLAN complete. The Owner approved CP-0 as a separate minimal Staging-only bootstrap implementation and accepted CP-4 as a feature-disabled KDS/Assembling boundary. Positive Kitchen/Assembling workflow remains `EVIDENCE_PENDING`. |
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
 | STG-006 state | `PASS` for candidate `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b`. Fresh read-only evidence confirmed retained Staging `4397f995...` / V8, isolated project/network/state, loopback bind, printing disabled, healthy endpoints, resource headroom, and unchanged Production continuity. No candidate release, deploy, Flyway, restart, login, or data mutation occurred. |
-| OPS-001 state | `REPOSITORY_COMPLETE` through PR #74 plus repairs #75-#79. Release/env rotation and exact deploy worked for `868e229f...`; passive readiness exposed the remaining optional-health fingerprint false negative now under bounded repair. |
-| STG-007 state | PR #79 merged at `868e229f1b5afd28163e5031ad8fabffaad651f6`. Batch A passed with env digest `8d304153...` and formal preflight digest `bc2bf98e...`. Batch B deployed that exact SHA and applied V9/V10; Staging is healthy at Flyway V10 with printing disabled and Production continuity unchanged. Readiness returned `NO_GO` before evidence emission because a no-healthcheck service lacks Docker `State.Health`; no collection or same-image restart occurred. |
-| AL-003 state | PR #72 and PRs #61-#71 are `IN_MAIN`; exact `868e229f...` is now `DEPLOYED_TO_STAGING` at Flyway V10, but STG-007 is not PASS and no bootstrap, login, onboarding, clone or acceptance action has run. |
+| OPS-001 state | `REPOSITORY_COMPLETE` through PR #80 except for the bounded Flyway success-token repair now in progress. Exact release/env rotation, V10-to-V10 deploy and repaired readiness worked for `39fa284b...`; runtime collection exposed a `success::text=true` versus mock-`t` validator mismatch before PASS evidence. |
+| STG-007 state | PR #80 is `IN_MAIN` at `39fa284b7bccd64d650c396f2c7532b0a0858b4b`. Fresh V10 continuation entry, env digest `19da0f48...`, formal preflight digest `3ece6065...`, exact redeploy, V10/no-pending verification and repaired readiness digest `7d60f9ee...` passed. Read-only runtime collection then returned `NO_GO` on the Flyway success token; its approval was consumed, its evidence is empty/non-PASS, and no same-image restart occurred. Staging remains healthy at exact `39fa284b...`; printing/isolation and Production continuity are unchanged. |
+| AL-003 state | PR #72, PR #80 and PRs #61-#71 are `IN_MAIN`; exact `39fa284b...` is `DEPLOYED_TO_STAGING` at Flyway V10, but STG-007 is not PASS and no bootstrap, credential, login, onboarding, clone or acceptance action has run. |
 | Staging Owner login prerequisite | `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`; code audit proves an Organization Owner naturally accesses every same-Organization Store, so no explicit target Owner Store membership is required. Runtime bootstrap, credential, login, workspace, target onboarding, and API evidence remain pending. |
-| Current permitted work | Complete only the missing-health-safe project fingerprint repair, focused/mock regressions, Agent 6 review, governance sync and publication. After merge, restart exact-main Ground Truth evaluation; do not silently reuse the old candidate or its runtime evidence chain. |
-| Explicitly not permitted | Further runtime access during repair; release/env rotation; deploy; Docker lifecycle; Flyway; readiness retry; runtime evidence collection; same-image restart; bootstrap; credentials; login; onboarding; validate/execute/replay/clone; Store 1 read; Production mutation; Chinatown activation; or any continuation under the old candidate. |
+| Current permitted work | Complete only the exact Flyway success-token repair, focused regressions, Agent 6 review, governance sync and Dependency Repair publication. After merge, restart the authorized V10-aware continuation from fresh exact-main identity/preflight/readiness bindings; do not reuse the failed collection chain. |
+| Explicitly not permitted | Further runtime access while the repair is unmerged; reuse of consumed approval or failed evidence; same-image restart under `39fa284b...`; bootstrap; synthetic writes; credentials; login; onboarding; validate/execute/replay/clone; Store 1 read; Production build/pull/restart/deploy/Flyway/data read or mutation; Chinatown activation; or STG-008. |
 
 Agent and worker execution is ephemeral. After a bounded task, the result and
 evidence must be returned and persisted, the active session/process terminated,
@@ -126,6 +126,7 @@ packages without that mapping.
 | REL-001 Production RC plan / PR #70 | `IN_MAIN` at `645d4909625f70fc241d5468382d66a30a030fb1` | Exact-SHA release gates only; no selected candidate, Staging pass, Production deploy, or activation action. |
 | Post-stack Ground Truth audit / PR #72 | `IN_MAIN` at `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | Capability/gap governance only; no runtime action. |
 | STG-006 evidence/governance / PR #73 | `IN_MAIN` at `85d97b7327b2e15aa561ed28a5788b92cedf6f5b` | Passive evidence only; `STG-006=PASS`, no deployment or runtime mutation. |
+| Readiness health fingerprint repair / PR #80 | `IN_MAIN` at `39fa284b7bccd64d650c396f2c7532b0a0858b4b` | Correct optional-health classification; later runtime use separately proved repaired readiness PASS. |
 
 PR-D promotion evidence is now historical main evidence: semantic source
 `5a0dc09944b4b0945fe95027d7f12647212ea559`, reviewed promotion head
@@ -143,18 +144,20 @@ confirmed Staging at `4397f995...` / Flyway V8 and minimum Production
 continuity at full SHA `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`.
 Production Flyway was not queried and remains retained V7 evidence only.
 
-The unique feature stop state during this sixth bounded dependency repair is
-`STG-007_BATCH_B_BLOCKED_BY_READINESS_FINGERPRINT_REPAIR`.
+The unique feature stop state during this bounded dependency repair is
+`STG-007_RUNTIME_COLLECTION_BLOCKED_BY_FLYWAY_SUCCESS_TOKEN_REPAIR`.
 
 OPS-001 adds repository-only guarded helpers for a detached release plus
 four-field atomic private-env rotation, sanitized Flyway/runtime collection
 plus same-container restart, and secret-FD Owner onboarding/clone acceptance.
 Each runtime action is exact-SHA/environment/action bound and consumes one
 private Owner approval digest. The package changes no application, migration,
-Compose/runtime configuration, or business API. The exact `868e229f...`
-runtime use was separately Owner-authorized: release/env rotation, deploy and
-V9/V10 completed, while readiness stopped before PASS evidence and before any
-runtime collection, restart, API or Production action.
+Compose/runtime configuration, or business API. PR #80 is `IN_MAIN`, and the
+exact `39fa284b...` V10-aware runtime use was separately Owner-authorized:
+release/env rotation, formal preflight, V10-to-V10 deploy and repaired
+readiness completed. Runtime collection then stopped before PASS because the
+collector query's canonical `true` success token did not match its mock-`t`
+validator. No restart, API, synthetic write or Production action followed.
 See [OPS-001 local evidence](OPS-001_STAGING_SECRET_SAFE_TOOLING_EVIDENCE.md)
 and the
 [OPS-001 runbook](../../../deployment/cloud/README_OPS001_STAGING_SECRET_SAFE_TOOLING.md).
@@ -220,15 +223,27 @@ field access. No collect-evidence approval or same-image restart followed. The
 bounded repair is recorded in
 [STG-007 Readiness Health Fingerprint Repair Evidence](STG-007_READINESS_HEALTH_FINGERPRINT_REPAIR_EVIDENCE.md).
 
+PR #80 merged that repair at
+`39fa284b7bccd64d650c396f2c7532b0a0858b4b`. A newly authorized V10-aware
+continuation reconfirmed the `868e229f...` / V10 baseline, then bound,
+preflighted and deployed exact `39fa284b...` without a new migration. Repaired
+readiness passed. The following read-only collector consumed its separate
+approval but stopped before PASS evidence because PostgreSQL
+`success::text=true` did not match the validator's mock-only `t` token. No
+restart or blocked marker followed. The bounded repair and exact runtime
+boundary are recorded in
+[STG-007 Flyway Success Token Repair Evidence](STG-007_FLYWAY_SUCCESS_TOKEN_REPAIR_EVIDENCE.md).
+
 The `IN_MAIN` acceptance preparation is documented in
 [AL-003S Staging Acceptance Preparation](../agile/AL-003S_STAGING_ACCEPTANCE_PREPARATION.md).
 Its launcher closes the bounded non-web command-entry gap but does not authorize
 runtime use. The package provides a passive Production-continuity/resource
 collector; STG-006 used a single bounded read-only Coordinator timeline for its
 own preflight evidence, not an acceptance action. STG-007 has now evidenced
-release/environment rotation, exact deployment and Flyway V10, but still
-requires repaired readiness, sanitized runtime collection, same-image restart
-evidence and the separately gated secret-safe Owner/API acceptance sequence.
+release/environment rotation, exact V10-to-V10 deployment, Flyway V10 and
+repaired readiness, but still requires repaired sanitized runtime collection,
+same-image restart evidence and the separately gated secret-safe Owner/API
+acceptance sequence.
 Local checks and explicit pending gates are retained in
 [AL-003S Preparation Evidence](AL-003S_STAGING_ACCEPTANCE_PREPARATION_EVIDENCE.md).
 

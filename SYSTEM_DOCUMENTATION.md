@@ -51,6 +51,10 @@ separate from historical evidence snapshots and business implementation details:
   records exact `868e229f...` release/deploy and Flyway V10 evidence, the
   passive readiness optional-health false negative, bounded repository repair,
   and the current no-restart stop boundary.
+- [STG-007 Flyway Success Token Repair Evidence](docs/governance/runtime/STG-007_FLYWAY_SUCCESS_TOKEN_REPAIR_EVIDENCE.md)
+  records PR #80 in main, the authorized exact `39fa284b...` V10-to-V10
+  redeploy and readiness PASS, the runtime collector's `success::text`
+  `true`/mock-`t` mismatch, and the bounded no-restart repair boundary.
 - [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
   authority for current issue triage and closure status.
 - [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
@@ -674,6 +678,21 @@ bounded repair first enumerates state-map keys and emits `NO_HEALTHCHECK` only
 when `Health` is genuinely absent; present-empty, invalid or unhealthy health
 status, missing services, and non-running containers remain fail-closed. No
 runtime evidence collection or same-image restart occurred after the failure.
+
+PR #80 merged the optional-health repair at
+`39fa284b7bccd64d650c396f2c7532b0a0858b4b`. Under a new explicit V10-aware
+Owner authorization, Ground Truth reconfirmed Staging `868e229f...` / V10 and
+Production continuity, then created and deployed exact `39fa284b...` through a
+fresh release/environment binding and formal preflight. Flyway remained exact
+V1-V10 with no pending migration, health stayed `200/200/200`, printing stayed
+disabled, and repaired readiness passed. The following read-only runtime
+collector stopped before PASS evidence because its query emits PostgreSQL
+`success::text=true` while its validator and mock fixture accepted only `t`.
+No same-image restart followed. The bounded correction now requires exact
+`true`, rejects `false` and abbreviated `t`, and changes no migration, runtime
+action sequence, product behavior, deployment configuration, or Production
+state. Its merge creates a new exact-main candidate and requires the V10-aware
+continuation evidence chain to restart.
 
 Repository PRs now follow the permanent auto-merge gate in the Agile Loop
 Operating Model: latest-main base, exact single-package scope, all applicable

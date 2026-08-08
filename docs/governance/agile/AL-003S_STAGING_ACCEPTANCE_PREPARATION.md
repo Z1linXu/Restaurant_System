@@ -6,6 +6,12 @@
 >
 > Runtime execution in this package: `NOT_AUTHORIZED`
 
+> Current runtime checkpoint: separate Owner authorization deployed exact
+> `39fa284b7bccd64d650c396f2c7532b0a0858b4b` V10-to-V10 and repaired
+> readiness passed. OPS-001 runtime collection stopped before PASS on the
+> PostgreSQL `success::text=true` versus mock-`t` validator mismatch; no
+> same-image restart or synthetic acceptance action followed.
+
 ## 1. Purpose and classification
 
 This package turns the reviewed AL-003 Staging sequence into an exact,

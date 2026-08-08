@@ -225,6 +225,10 @@ version/script/checksum tuples exactly match the approved release's reviewed
 checksum manifest. Focused tests recompute that manifest from the repository
 SQL with Flyway 10.10.0's line-normalized CRC32 algorithm; missing, extra,
 failed, renamed or checksum-mismatched scripts fail closed.
+The collector compares the exact PostgreSQL `success::text` token `true`;
+`false`, the abbreviated display token `t`, blank or any other spelling is
+rejected. This keeps the validator aligned with its own query instead of a
+mock-only `psql` display assumption.
 It never emits database credentials or raw environment values.
 
 Project fingerprints explicitly distinguish `healthy` from
