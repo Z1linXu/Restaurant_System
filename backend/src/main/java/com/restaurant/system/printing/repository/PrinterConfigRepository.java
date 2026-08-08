@@ -2,11 +2,18 @@ package com.restaurant.system.printing.repository;
 
 import com.restaurant.system.printing.entity.PrinterConfig;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface PrinterConfigRepository extends JpaRepository<PrinterConfig, Long> {
+
+    @Query("""
+        select pc from PrinterConfig pc
+        where pc.id = :id and pc.store_id = :storeId
+        """)
+    Optional<PrinterConfig> findByIdAndStoreId(@Param("id") Long id, @Param("storeId") Long storeId);
 
     @Query("""
         select pc from PrinterConfig pc

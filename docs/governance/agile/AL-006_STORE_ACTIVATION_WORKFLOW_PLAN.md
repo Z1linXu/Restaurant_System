@@ -1,12 +1,12 @@
 # AL-006 Store Activation Workflow Plan
 
-> Status: `AL-006_ACTIVATION_PREPARED_WAITING_FOR_DEPENDENCIES`
+> Status: `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`
 >
 > Package: `AL-006A_ACTIVATION_CONTRACT_AND_READ_ONLY_VALIDATOR_PLAN`
 >
-> Git classification: `STACKED_ONLY`
+> Git classification: `DRAFT_PR`
 >
-> Draft PR: #69, base Draft PR #68 branch
+> Draft PR: #69, base `main@9e93573be97cfd01a9ad3efe64d55827854c497a` with #68 `IN_MAIN`
 >
 > Runtime effect: none
 
@@ -331,7 +331,8 @@ Future implementation tests must prove:
 
 Implementation remains blocked by these decisions or unmerged dependencies:
 
-- promotion of the generic architecture/Profile/module stack into `main`;
+- promotion of the generic architecture/Profile/module stack into `main` is
+  complete through #68; remaining work is verifier/evidence contract review;
 - completion of required staff/table/printing/device verifier contracts;
 - activation persistence and next migration decision;
 - legacy Platform Admin active-write policy and existing Store-status

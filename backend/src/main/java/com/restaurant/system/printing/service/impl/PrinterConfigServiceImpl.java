@@ -57,9 +57,13 @@ public class PrinterConfigServiceImpl implements PrinterConfigService {
     @Override
     @Transactional
     public PrinterConfig savePrinter(PrinterConfig printerConfig) {
+        if (printerConfig == null || printerConfig.store_id == null) {
+            throw new BusinessException("Printer store is required");
+        }
         PrinterConfig target = printerConfig.id == null
             ? new PrinterConfig()
-            : printerConfigRepository.findById(printerConfig.id).orElseThrow(() -> new BusinessException("Printer not found"));
+            : printerConfigRepository.findByIdAndStoreId(printerConfig.id, printerConfig.store_id)
+                .orElseThrow(() -> new BusinessException("Printer not found"));
         target.store_id = printerConfig.store_id;
         target.name = printerConfig.name;
         target.ip_address = printerConfig.ip_address;
