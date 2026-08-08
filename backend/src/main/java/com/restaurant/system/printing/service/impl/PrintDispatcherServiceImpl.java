@@ -619,8 +619,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 return;
             }
 
-            printer = printerConfigRepository.findById(assignment.printer_id)
-                .orElseThrow(() -> new BusinessException("Assigned printer not found"));
+            printer = requirePrinterForStore(assignment.printer_id, storeId);
             if (!Boolean.TRUE.equals(printer.enabled)) {
                 job = printJobService.attachRenderedContent(job, printer.id, null);
                 printJobService.markFailed(job, printer, "PRINTER_DISABLED", "Assigned printer is disabled");

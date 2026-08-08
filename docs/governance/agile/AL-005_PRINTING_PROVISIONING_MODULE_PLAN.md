@@ -1,14 +1,14 @@
 # AL-005 Printing Provisioning Module Plan
 
-> Status: `AL-005_PRINTING_PREPARED_WAITING_FOR_DEPENDENCIES` in Draft PR #67
+> Status: `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` in Draft PR #67
 >
 > Package: `AL-005_PRINTING_PROVISIONING_TEMPLATE`
 >
-> Git classification: `STACKED_ONLY`
+> Git classification: `DRAFT_PR` based on latest `main`
 >
-> Base: AL-005A Draft PR #65 head
+> Base: `origin/main@f483a4640503c20f6eec1e2e9ae1d198bf23d1f3` (PR #66 IN_MAIN)
 >
-> Draft PR: #67 (`STACKED_ONLY`)
+> Draft PR: #67 (`base=main`)
 >
 > Runtime access: not performed
 
@@ -155,23 +155,23 @@ not be inferred from physical printer names or endpoints.
 
 ## 7. Dependency Repair Gate
 
-Independent Draft PR #66 repairs two pre-existing Store-isolation defects:
+PR #66 entered `main` at `f483a4640503c20f6eec1e2e9ae1d198bf23d1f3` and repairs
+two pre-existing Store-isolation defects:
 
 1. an existing printer config cannot be moved across Stores through a changed
    request `store_id`;
 2. automatic dispatch revalidates that an assigned printer belongs to the
    dispatch Store before renderer/transport execution.
 
-PR #66 targets `main` independently of this stacked package. It must enter
-`main` before any executable AL-005 writer is promoted. This plan does not
-copy that implementation into the stacked branch and does not treat a Draft PR
-as merged capability.
+PR #66 was independent of this package and is now the Store-isolation safety
+foundation in `main`. This plan does not copy that implementation into the
+branch and does not authorize an executable writer or runtime operation.
 
 ## 8. Remaining implementation gates
 
 | Gate | Current evidence | Required before writer |
 |---|---|---|
-| printer Store isolation | independent Draft PR #66 | merge and latest-main promotion review |
+| printer Store isolation | PR #66 `IN_MAIN` at `f483a4640503c20f6eec1e2e9ae1d198bf23d1f3` | retain scoped guards in all future writer reviews |
 | strict mode handling | unknown non-blank values normalize to `REAL`; blank stored mode follows legacy `printing_enabled` fallback to `DISABLED` or `REAL` | compatibility decision and focused fail-closed tests |
 | logical printer role | no current persisted role code | reviewed contract; migration only if persistence is required |
 | assignment uniqueness | no `(store_id, module_code)` database uniqueness | read-only duplicate evidence and schema decision |
@@ -182,6 +182,7 @@ as merged capability.
 | whole-module transaction/idempotency | current operations are separate transactions | parent coordinator contract and terminal failure/replay semantics |
 | printer CRUD audit | mode/assignment are audited; printer CRUD is not | audit contract before executable Owner workflow |
 | PAD readiness | belongs to device/pairing/worker domain | AL-005B evidence |
+| existing/obsolete logical roles and assignments | lifecycle policy is not yet defined | explicit retain/deactivate/conflict/reconcile decision; no delete, retarget, or cross-Store reuse; idempotent reconcile and rollback tests |
 
 No append-only migration is authorized by this plan. A future migration cannot
 add unique constraints until Store-scoped duplicate evidence is collected in
@@ -198,6 +199,11 @@ an approved environment and normalization/remediation policy is reviewed.
 
 The initial executable slice must not activate printing. It may at most create
 or reconcile inactive logical configuration under a parent idempotency scope.
+Before P3, the Owner must approve an explicit lifecycle policy for existing or
+obsolete logical roles and assignments: exact replay, conflict, update,
+deactivate, or retain. No delete, retarget, cross-Store reuse, or destructive
+cleanup is allowed by inference. Reconciliation and rollback must be
+idempotent, Store-scoped, and covered by tests before a writer gate can pass.
 Activation belongs to AL-006 after runtime evidence passes.
 
 ## 10. Test contract
@@ -247,4 +253,4 @@ restore, automatic FAILED requeue, or destructive bulk deletion.
 
 ## 13. Stop state
 
-`AL-005_PRINTING_PREPARED_WAITING_FOR_DEPENDENCIES`
+`DRAFT_PR_WAITING_FOR_OWNER_REVIEW`

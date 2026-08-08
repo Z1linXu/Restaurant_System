@@ -7,6 +7,10 @@ separate from historical evidence snapshots and business implementation details:
 
 - [Alive Runtime Planbook](docs/governance/runtime/ALIVE_RUNTIME_PLANBOOK.md)
   is the living current-status, approval-boundary, and deployment-entry index.
+- [Current Project Handoff](docs/governance/runtime/CURRENT_HANDOFF.md) is a
+  concise conversation-transfer snapshot. It is navigation only and never
+  overrides Git, the Planbook, backlogs, operating model, technical plans, or
+  verified runtime evidence.
 - [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
   authority for current issue triage and closure status.
 - [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
@@ -40,8 +44,8 @@ separate from historical evidence snapshots and business implementation details:
 - [STG-005B Synthetic St-Denis source-menu runbook](deployment/cloud/README_STG005_SYNTHETIC_SOURCE_MENU.md)
   defines the versioned synthetic manifest, default read-only plan, explicit
   execution gate, empty-or-exact transaction/replay behavior, and sanitized
-  evidence contract. The implementation is stacked Draft PR #62; it authorizes
-  no runtime command or Production source substitution.
+  evidence contract. PR #62 is `IN_MAIN`; it authorizes no runtime command or
+  Production source substitution.
 - [STG-005B local implementation evidence](docs/governance/runtime/STG-005B_SYNTHETIC_ST_DENIS_BASELINE_EVIDENCE.md)
   records focused/full backend tests, transaction/replay/concurrency evidence,
   scope scans, and the remaining merge/runtime gates. It is not Staging
@@ -60,14 +64,14 @@ separate from historical evidence snapshots and business implementation details:
 - [AL-005A Staff and Table Provisioning Module Plan](docs/governance/agile/AL-005A_STAFF_TABLE_PROVISIONING_MODULE_PLAN.md)
   records the existing credential/membership and dining-table authorities,
   reusable module boundaries, security/schema gaps, and implementation gates.
-  Draft PR #65 is a dependency-bound preparation package and adds no writer, API,
+  PR #65 is `IN_MAIN` repository preparation and adds no writer, API,
   migration, credential, table, or runtime behavior.
 - [AL-005 Printing Provisioning Module Plan](docs/governance/agile/AL-005_PRINTING_PROVISIONING_MODULE_PLAN.md)
   records the existing printing authorities, runtime-only endpoint boundary,
   fixed Chinatown module policy, prerequisite defects, and staged delivery
-  gates. Draft PR #67 is `STACKED_ONLY` above PR #65 and adds no writer, API,
-  migration, printer, assignment, mode change, device, test print, or runtime
-  behavior.
+  gates. Draft PR #67 is rebuilt from latest `main` and remains a single-layer
+  planning package; it adds no writer, API, migration, printer, assignment,
+  mode change, device, test print, or runtime behavior.
 - [AL-003A final menu comparison](docs/governance/agile/AL-003A_FINAL_MENU_COMPARISON.md)
   is the single product-mapping authority for the Store 1 to Chinatown target
   menu. Repository seed data is historical reference only.
@@ -400,7 +404,16 @@ capability must not be described as
 Production behavior.
 
 PR #60 merged the 2026-08-08 Owner direction into `main` at
-`2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. The modular target is a Generic
+`2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; PR #71 then merged the Current
+Project Handoff navigation at `5baada03935e004d80af1e7a36fb7db39bd6abbb`; PR
+#61 then merged the modular architecture foundation at
+`bbb1af9520c188b6ef6362e783284ba4001a7e63`; PR #62 then merged the guarded
+Synthetic St-Denis baseline at `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b`,
+and PR #63 then merged guarded AL-003S acceptance preparation at
+`732d77c89ff067982702426ff918d5e097e1d0fb`; PR #64 then merged the declarative
+Generic Store Profile contract at `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6`.
+None is runtime evidence. The
+modular target is a Generic
 Store Provisioning Engine consuming Versioned Store Profiles and Reusable
 Provisioning Modules. Shared implementation must remain Store-neutral;
 Store-specific desired state belongs in a reviewed profile, physical
@@ -408,7 +421,7 @@ endpoints/secrets remain runtime-only, and accepted actions are retained as
 sanitized evidence. The architecture authority is
 [STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md](docs/governance/agile/STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md).
 
-The stacked AL-004 contract introduces a Store-neutral registry above the
+The `IN_MAIN` AL-004 contract introduces a Store-neutral registry above the
 existing menu-profile registry. It validates exact code/version identities,
 unique module references carrying reviewed expected fingerprints, applicable activation
 requirements, and a deterministic canonical fingerprint. It intentionally
@@ -447,14 +460,20 @@ gated by the independent Store-isolation repair PR #66, unknown-mode
 compatibility, that pre-job policy gate, logical-role/assignment integrity,
 parent idempotency, and AL-005B readiness.
 
+Agile Loop agents and workers are ephemeral resources. Completed bounded tasks
+must return persisted evidence to the Coordinator, terminate their active
+session/process, release temporary resources, and clean only known safe
+task-owned scratch/build/worktree artifacts. Unknown or shared resources are
+retained and reported; destructive global cleanup is prohibited.
+
 STG-005B prepares a Staging-only, non-web source-menu fixture around the
 existing menu entities, Store lock, and revision service. Its source graph has
 4 categories, 3 stations, 13 items, and 38 options and is proven locally to
 produce the existing Chinatown read-only target plan of 4 categories, 3
 stations, 17 items, and 74 options. It adds no migration or HTTP endpoint.
 Synthetic display/topology identity uses `STG005_`; stable menu technical codes
-remain the exact AL-003 semantic identifiers. The implementation is not in
-`main` and has not been run on Staging or Production.
+remain the exact AL-003 semantic identifiers. The implementation is in `main`
+via PR #62 and has not been run on Staging or Production.
 
 The dependency-bound AL-003S preparation adds a guarded operational launcher
 for the existing STG-005A/STG-005B non-web commands. It defaults to validation,
@@ -5573,6 +5592,16 @@ No online payment provider integration is included in this phase.
 - Store-level Print Center status only controls automatic order-triggered printing.
 - Disabling Print Center does not hide or disable Print Center configuration APIs.
 - Printer list, printer assignment, print job history, printer save, assignment save, and connection test remain available while Print Center is disabled.
+- Updating an existing printer config is Store-immutable: the persisted printer
+  must already belong to the authorized request Store. A cross-Store ID cannot
+  be moved by changing `store_id`, and the service rejects the request before
+  mutating or saving the entity.
+- Automatic dispatch revalidates that the assigned printer belongs to the
+  dispatch Store before rendering or transport. A dirty cross-Store assignment
+  is failed without sending content to that printer.
+- PAD_DIRECT complete/fail updates printer success/failure health metadata only
+  when the referenced printer belongs to the durable job Store. A dirty or
+  missing printer reference does not change the existing job terminal result.
 - Successful dispatch updates `printed_at` and printer `last_successful_print_at`.
 - Failed dispatch updates `failed_at`, `error_message`, and printer `last_failed_print_at`.
 - Manual reprint is supported from Print Center and Order Center.

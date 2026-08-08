@@ -1,6 +1,10 @@
 # STG-005B Synthetic St-Denis Baseline Evidence
 
-> Package state: `STACKED_DRAFT_PR_62_WAITING_FOR_OWNER_REVIEW`
+> Historical package state at local verification: `DRAFT_PR_62_WAITING_FOR_OWNER_REVIEW`
+>
+> Current Git state: `IN_MAIN` via PR #62 merge
+> `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b`; this remains repository-only
+> capability, not runtime evidence.
 >
 > Verification time: `2026-08-08T00:54:21-0400`
 >
@@ -15,10 +19,17 @@
 | Architecture dependency head used as package base | `61b8feabecac3444b345a9261af4f2bed76b9ccc` |
 | Implementation branch | `codex/stg-005b-synthetic-st-denis-baseline` |
 | Draft PR | [#62](https://github.com/Z1linXu/Restaurant_System/pull/62) |
-| Package relationship | `STACKED_ONLY` above the unmerged architecture Draft PR |
+| Historical package relationship | `STACKED_ONLY` above the then-unmerged architecture Draft PR |
 
-This evidence does not classify either package as `IN_MAIN`. Promotion must be
-reviewed again from the then-current `main` after its dependency is merged.
+PR #61 subsequently entered `main` at
+`bbb1af9520c188b6ef6362e783284ba4001a7e63`. This package was rebuilt from
+that mainline commit for renewed review; the historical rows above retain the
+original package-base evidence and do not classify the current Draft as
+`IN_MAIN`.
+
+At the time of this local evidence neither package was `IN_MAIN`. Subsequent
+promotion placed PR #62 in `main`; this historical record does not imply a
+Staging or Production runtime action.
 
 ## 2. Implemented boundary
 
@@ -51,6 +62,11 @@ The transaction contract is:
 - concurrent apply: serialize on the source Store lock.
 
 ## 3. Local verification evidence
+
+After the rebuild from `origin/main`
+`bbb1af9520c188b6ef6362e783284ba4001a7e63`, the focused suite, complete
+backend regression, and compile command below were rerun successfully. This is
+local repository evidence only.
 
 | Check | Result | Evidence |
 |---|---|---|
@@ -95,12 +111,13 @@ runtime acceptance evidence.
 
 ## 5. Remaining gates
 
-1. Owner review and merge of the modular architecture dependency.
-2. Rebase or semantic promotion of this package from the resulting `main`.
-3. Owner review and merge of the promoted STG-005B package.
-4. A fresh exact merged-main SHA, runtime plan, evidence digest, and explicit
+1. PR #61 is `IN_MAIN`; this package has been rebuilt from the resulting main
+   and still requires Owner review and merge.
+2. After #62 enters main, rebuild #63 from latest main and repeat its review,
+   tests, and governance sync.
+3. A fresh exact merged-main SHA, runtime plan, evidence digest, and explicit
    Owner approval before any Staging command.
-5. Runtime proof for V9/V10, STG-005A topology, source Store ID `1`, synthetic
+4. Runtime proof for V9/V10, STG-005A topology, source Store ID `1`, synthetic
    Owner login, source-menu plan/apply/replay, AL-003 validate/execute/replay,
    restart persistence, and Production continuity.
 
