@@ -19,6 +19,11 @@ rechecking that the printer belonged to the dispatch Store. These are existing
 Store-isolation defects and prerequisites for any reusable printing
 provisioning module. They do not require a new product decision.
 
+The PAD_DIRECT complete/fail paths also updated printer success/failure health
+fields by bare `printer_id`. A dirty historical job reference could therefore
+update another Store's printer health metadata even though the job/device Store
+boundary itself was enforced.
+
 ## Bounded correction
 
 - Reject null/unscoped printer writes in the service boundary.
@@ -29,6 +34,9 @@ provisioning module. They do not require a new product decision.
 - Reuse the existing Store-scoped printer validation in automatic dispatch so
   a dirty cross-Store assignment fails after the durable job/payload snapshot
   is created but before renderer or transport execution.
+- Scope PAD_DIRECT printer-health updates by both `printer_id` and the durable
+  job `store_id`; a missing or cross-Store printer skips only the health update
+  and does not change the existing complete/fail job terminal-state contract.
 
 ## Explicit non-goals
 
@@ -49,6 +57,8 @@ provisioning module. They do not require a new product decision.
 - missing Store scope is rejected;
 - automatic dispatch rejects a cross-Store assigned printer and does not render
   or call transport;
+- PAD_DIRECT complete/fail never updates printer health through a bare
+  cross-Store ID, while the job still reaches its existing terminal state;
 - focused printing test, full backend test, compile, `git diff --check`, and
   scope/secret scan pass before review.
 

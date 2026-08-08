@@ -166,7 +166,7 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
         job.updated_at = now;
         PrintJob saved = printJobRepository.save(job);
         completeAttempt(saved, attemptToken, PrintJobStatus.PRINTED, null, null, request == null ? null : request.raw_result, now);
-        updatePrinterSuccess(saved.printer_id, now);
+        updatePrinterSuccess(saved.printer_id, saved.store_id, now);
         logger.info("PAD_DIRECT Job Finished job {} module {} device {} store {}", saved.id, saved.module_code, device.id, device.storeId);
         return printJobService.toResponse(saved);
     }
@@ -190,7 +190,7 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
         job.updated_at = now;
         PrintJob saved = printJobRepository.save(job);
         completeAttempt(saved, attemptToken, PrintJobStatus.FAILED, saved.error_code, saved.error_message, request == null ? null : request.raw_result, now);
-        updatePrinterFailure(saved.printer_id, saved.error_message, now);
+        updatePrinterFailure(saved.printer_id, saved.store_id, saved.error_message, now);
         logger.warn("PAD_DIRECT Job Failed job {} module {} device {} store {} code {} message {}",
             saved.id,
             saved.module_code,
@@ -340,11 +340,11 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
         printJobAttemptRepository.save(attempt);
     }
 
-    private void updatePrinterSuccess(Long printerId, LocalDateTime now) {
-        if (printerId == null) {
+    private void updatePrinterSuccess(Long printerId, Long storeId, LocalDateTime now) {
+        if (printerId == null || storeId == null) {
             return;
         }
-        PrinterConfig printer = printerConfigRepository.findById(printerId).orElse(null);
+        PrinterConfig printer = printerConfigRepository.findByIdAndStoreId(printerId, storeId).orElse(null);
         if (printer == null) {
             return;
         }
@@ -354,11 +354,11 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
         printerConfigRepository.save(printer);
     }
 
-    private void updatePrinterFailure(Long printerId, String errorMessage, LocalDateTime now) {
-        if (printerId == null) {
+    private void updatePrinterFailure(Long printerId, Long storeId, String errorMessage, LocalDateTime now) {
+        if (printerId == null || storeId == null) {
             return;
         }
-        PrinterConfig printer = printerConfigRepository.findById(printerId).orElse(null);
+        PrinterConfig printer = printerConfigRepository.findByIdAndStoreId(printerId, storeId).orElse(null);
         if (printer == null) {
             return;
         }

@@ -37,7 +37,7 @@
 | PR #58 attempt evidence | `IN_MAIN` |
 | Private-leaf preflight repair / PR #59 | `IN_MAIN` via merge `c3956592da8a33092ab745c7cc6aac05e9babfa7` |
 | Owner decisions governance sync / PR #60 | `IN_MAIN` via merge `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; documentation only, no runtime action |
-| AL-005 printer Store-isolation dependency repair / PR #66 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`; guards config update and automatic dispatch Store ownership with no migration, API shape, printing mode, assignment data, job-state contract, transport implementation, Android, or runtime action |
+| AL-005 printer Store-isolation dependency repair / PR #66 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`; guards config update, automatic dispatch, and PAD_DIRECT printer-health Store ownership with no migration, API shape, printing mode, assignment data, job-state contract, transport implementation, Android, or runtime action |
 
 The Owner-login acceptance prerequisite is not satisfied by repository code or
 deployment alone. Read-only code audit confirms that an active Organization

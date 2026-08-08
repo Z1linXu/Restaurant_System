@@ -5478,6 +5478,9 @@ No online payment provider integration is included in this phase.
 - Automatic dispatch revalidates that the assigned printer belongs to the
   dispatch Store before rendering or transport. A dirty cross-Store assignment
   is failed without sending content to that printer.
+- PAD_DIRECT complete/fail updates printer success/failure health metadata only
+  when the referenced printer belongs to the durable job Store. A dirty or
+  missing printer reference does not change the existing job terminal result.
 - Successful dispatch updates `printed_at` and printer `last_successful_print_at`.
 - Failed dispatch updates `failed_at`, `error_message`, and printer `last_failed_print_at`.
 - Manual reprint is supported from Print Center and Order Center.
