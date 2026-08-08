@@ -7,6 +7,10 @@ separate from historical evidence snapshots and business implementation details:
 
 - [Alive Runtime Planbook](docs/governance/runtime/ALIVE_RUNTIME_PLANBOOK.md)
   is the living current-status, approval-boundary, and deployment-entry index.
+- [Current Project Handoff](docs/governance/runtime/CURRENT_HANDOFF.md) is a
+  concise conversation-transfer snapshot. It is navigation only and never
+  overrides Git, the Planbook, backlogs, operating model, technical plans, or
+  verified runtime evidence.
 - [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
   authority for current issue triage and closure status.
 - [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
