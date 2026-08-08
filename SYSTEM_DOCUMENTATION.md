@@ -7,6 +7,10 @@ separate from historical evidence snapshots and business implementation details:
 
 - [Alive Runtime Planbook](docs/governance/runtime/ALIVE_RUNTIME_PLANBOOK.md)
   is the living current-status, approval-boundary, and deployment-entry index.
+- [Current Project Handoff](docs/governance/runtime/CURRENT_HANDOFF.md) is a
+  concise conversation-transfer snapshot. It is navigation only and never
+  overrides Git, the Planbook, backlogs, operating model, technical plans, or
+  verified runtime evidence.
 - [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
   authority for current issue triage and closure status.
 - [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
@@ -369,7 +373,9 @@ capability must not be described as
 Production behavior.
 
 PR #60 merged the 2026-08-08 Owner direction into `main` at
-`2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. The modular target is a Generic
+`2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; PR #71 then merged the Current
+Project Handoff navigation at `5baada03935e004d80af1e7a36fb7db39bd6abbb`.
+Neither is runtime evidence. The modular target is a Generic
 Store Provisioning Engine consuming Versioned Store Profiles and Reusable
 Provisioning Modules. Shared implementation must remain Store-neutral;
 Store-specific desired state belongs in a reviewed profile, physical

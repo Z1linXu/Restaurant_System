@@ -78,16 +78,22 @@ with an explicit recorded transition:
 
 `AL-001` is `PLAN_COMPLETE` for `FT-001`. AL-002's backend foundation was
 merged into `main` by PR #27 but is not thereby deployed or production-ready.
-The current feature loop is AL-003. PR-A through PR-F are in `main`; that is
-repository capability only and is not Staging or Production acceptance.
+AL-003 PR-A through PR-F are in `main`; that is repository capability only and
+is not Staging or Production acceptance. Current dependency-bound preparation
+culminates in `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE`.
 
-PR #59's bounded PostgreSQL private-leaf repair and PR #60's Owner-decision
-governance sync are `IN_MAIN` at
-`2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; this does not prove a new Staging
-deployment. The current package records the modular Store provisioning
-architecture before STG-005B implementation. Its review state is
-`STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN_WAITING_FOR_OWNER_REVIEW` in
-Draft PR #61.
+PR #59's bounded PostgreSQL private-leaf repair is now `IN_MAIN`, and PR #60's
+2026-08-08 Owner decisions are `IN_MAIN` at
+`2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; neither proves a new Staging
+deployment. PR #71's handoff navigation is `IN_MAIN` at
+`5baada03935e004d80af1e7a36fb7db39bd6abbb`; it does not change runtime state.
+Draft PRs #61-#65 and #67-#70 form a dependency-bound preparation
+stack. PR #66 is an independent main-based prerequisite repair. The current
+feature stop state is
+`REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL`.
+Draft PR #61 is the architecture/governance foundation: it defines the Generic
+Store Provisioning Engine, Versioned Store Profiles, and Reusable Provisioning
+Modules without adding runtime behavior or advancing a downstream package.
 No current statement authorizes server access, Flyway execution, synthetic
 bootstrap, credential creation, login, source-menu writes, validate, execute,
 a runtime clone, merge, or deployment. Staging acceptance retains the distinct
@@ -287,6 +293,11 @@ ground truth, and, only when separately authorized, verifying runtime ground
 truth. The Agent must identify the current loop, unique stop state, allowed
 actions, prohibited actions, unresolved risks, and exact evidence authority.
 Conversation history is not a substitute for this check.
+
+The concise [Current Project Handoff](runtime/CURRENT_HANDOFF.md) may accelerate
+conversation transfer, but it is navigation only and never overrides this
+model, the Planbook, Feature Backlog, technical plans, Git, or verified runtime
+evidence.
 
 When Git or authorized runtime evidence conflicts with the Planbook, ground
 truth wins and governance drift is repaired in the same iteration. Work must

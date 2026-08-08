@@ -4,9 +4,9 @@
 >
 > Historical failed candidate: `8f909525781804f61d1da388882f530da358c3c4`
 >
-> Current main: `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d` (`IN_MAIN`, not deployed)
+> Current main: `5baada03935e004d80af1e7a36fb7db39bd6abbb` (`IN_MAIN`, not deployed)
 >
-> Governance package: PR #60, `IN_MAIN`
+> Governance packages: PR #60 and PR #71, `IN_MAIN`; neither is runtime evidence
 >
 > Next candidate SHA: `EVIDENCE_PENDING` after STG-005B dependency completion and fresh Owner approval
 

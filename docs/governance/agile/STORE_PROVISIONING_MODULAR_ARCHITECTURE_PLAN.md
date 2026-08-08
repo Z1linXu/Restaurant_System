@@ -4,7 +4,7 @@
 >
 > Prepared: 2026-08-08, America/Toronto
 >
-> Repository base: `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`
+> Repository base: `5baada03935e004d80af1e7a36fb7db39bd6abbb`
 >
 > Review: Draft PR #61, base `main`
 >
@@ -129,7 +129,7 @@ Production Store 1 is the Owner-approved live source for the Chinatown
 Production clone. That source identity/evidence requirement is a profile input
 boundary, not permission to hard-code Store 1 inside the generic engine.
 
-## 5. Generic provisioning engine
+## 5. Generic Store Provisioning Engine
 
 The future engine coordinates module contracts but does not implement domain
 business rules itself. Its responsibilities are limited to:
