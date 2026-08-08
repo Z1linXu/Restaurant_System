@@ -43,7 +43,7 @@ GitHub Merged badge into a non-main base is not evidence that work entered
 | Worktree | Branch / purpose | State |
 |---|---|---|
 | `/Users/xuzilin/projects/Restaurant_System` | Owner `main` workspace | Clean and untouched; behind `origin/main` |
-| `/private/tmp/restaurant-al006-activation-plan` | PR #69 | Active main-based rebuild worktree at `82f71b1...` |
+| `/private/tmp/restaurant-al006-activation-plan` | PR #69 | Temporary rebuild worktree; removed after push; branch retained for Owner review |
 | `/private/tmp/restaurant-rel001-rc-plan` | PR #70 | Active stacked worktree at `59246ae...` |
 | `/private/tmp/restaurant-current-handoff` | this handoff | Documentation-only worktree |
 
