@@ -46,6 +46,11 @@ separate from historical evidence snapshots and business implementation details:
 - [AL-003 PR-B PostgreSQL/Flyway V10 verification](docs/governance/runtime/AL-003_PR_B_POSTGRES_FLYWAY_V10_VERIFICATION.md)
   records local PostgreSQL 16 evidence for the idempotency/transaction
   foundation. It is not Staging or Production migration evidence.
+- [AL-003 exact-SHA Staging release plan](docs/governance/agile/AL-003_STAGING_RELEASE_ACCEPTANCE_PLAN.md)
+  and its
+  [read-only preflight evidence](docs/governance/runtime/AL-003_STAGING_RELEASE_PREFLIGHT_EVIDENCE.md)
+  bind the merged PR-F candidate, current runtime gap, rollback limits, and
+  Owner approval gate. They authorize no deployment or clone.
 - [Frontdesk/GRAB item-name rules](docs/operations/FRONTDESK_GRAB_ITEM_NAME_RULES.md)
   remains the operational display-rule source; do not duplicate its item table
   here.
@@ -262,29 +267,41 @@ PR #47 merged PR-C into `main` at
 reviewed source-option clone into `main` through merge commit `13f26f1`.
 Current main therefore includes idempotency, revision/lock consistency, exact
 profile identity, Category/Station/Item creation, and active source-option copy
-with fresh target IDs and target-local parent mapping. It still has no public
-Owner menu-clone Controller or HTTP endpoint and cannot execute a real clone
-over HTTP.
+with fresh target IDs and target-local parent mapping. PR #56 later added the
+public Owner Controller; this paragraph describes the earlier PR-D boundary.
 
 PR #54 placed the first complete versioned Chinatown Profile in `main` at
 `82b8059f6af1c7dff4eeb1648ca47bec039b5e52`. The concrete Profile owns Store 1,
 PDF prices, four categories, 17 target items, ordering, size sets, seven noodle
 types, four Combo definitions, and new target SKUs; shared clone services remain
-Store-neutral. The PR-F0 candidate adds only the internal read-only planning
+Store-neutral. PR #55 adds only the internal read-only planning
 boundary: a virtual target option plan, one shared validate/execute validator,
 and bounded safe diagnostics. It adds no Migration, public endpoint,
 authorization, runtime query, real clone, print routing/state change, or
 deployment. PR #55 subsequently merged that PR-F0 boundary into `main`.
-The PR-F Draft candidate adds a protected Owner API facade only: it maps the
+PR #56 merged the PR-F protected Owner API facade into `main`: it maps the
 reviewed validate and execute routes onto the existing read-only planner,
 shared option-plan validator, V10 idempotency/replay/terminal-FAILED
 coordinator, and lock-owning transaction. It neither creates a second clone
-engine nor performs a runtime clone. The candidate remains neither merged nor
-deployed. See [AL-003 PR-F0 Read-only Planning Boundary](docs/governance/agile/AL-003_PR_F0_READ_ONLY_PLANNING_BOUNDARY.md).
+engine nor proves a runtime clone. The exact mainline release candidate is
+`8f909525781804f61d1da388882f530da358c3c4`; it is not deployed. See
+[AL-003 PR-F0 Read-only Planning Boundary](docs/governance/agile/AL-003_PR_F0_READ_ONLY_PLANNING_BOUNDARY.md).
+
+The AL-003 read-only Staging release preflight found the existing isolated
+runtime still healthy at `4397f995...` with Flyway V8 and printing disabled.
+The candidate contains V9 and V10 but neither migration has run on Staging.
+Resources, loopback port isolation, and Production continuity support an Owner
+approval request; immediate deployment remains `NO-GO` until the exact-SHA
+release and fresh formal evidence gates are approved. The retained V8-era
+images are not an approved rollback target after V10 without separate runtime
+compatibility evidence. See
+[AL-003 Staging Release Read-only Preflight Evidence](docs/governance/runtime/AL-003_STAGING_RELEASE_PREFLIGHT_EVIDENCE.md)
+and
+[AL-003 Exact-SHA Staging Release and Acceptance Plan](docs/governance/agile/AL-003_STAGING_RELEASE_ACCEPTANCE_PLAN.md).
 
 The reported Production runtime remains `4667f3c`. Its difference from current
-main and the PR-E candidate is neither a release approval nor proof of
-deployment. Candidate and current-main capability must not be described as
+main is neither a release approval nor proof of deployment. Current-main
+capability must not be described as
 Production behavior.
 
 STG-005A owns `V9__add_staging_synthetic_bootstrap_requests.sql`. PR-B adds the

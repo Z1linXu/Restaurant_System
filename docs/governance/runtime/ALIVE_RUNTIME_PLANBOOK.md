@@ -64,7 +64,7 @@ snapshots. Do not copy those reports into this planbook.
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `AL-003 Store 1 -> Chinatown Live Menu Clone` |
 | Loop type | `IMPLEMENTATION` |
-| Loop status | `AL-003_PR_F_WAITING_FOR_OWNER_REVIEW` |
+| Loop status | `AL-003_STAGING_RELEASE_PLAN_WAITING_FOR_OWNER_APPROVAL` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | PR #27 merged the backend foundation into `main`; Production remains on the older runtime and no production onboarding is established by that merge. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -72,9 +72,9 @@ snapshots. Do not copy those reports into this planbook.
 | STG-004 state | PR #38 merged the STG-004 runtime evidence. Exact SHA `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` passed PLAN, fresh PREFLIGHT, serial build/start, runtime verification, and isolated stop/start recovery. Server Staging remains running; Production remained unchanged. |
 | STG-005 state | PLAN complete. The Owner approved CP-0 as a separate minimal Staging-only bootstrap implementation and accepted CP-4 as a feature-disabled KDS/Assembling boundary. Positive Kitchen/Assembling workflow remains `EVIDENCE_PENDING`. |
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
-| AL-003 state | PR #55 merged PR-F0's read-only planning, shared option-plan validator, and structured diagnostics into `main`. PR-F is now an independently rebuilt Owner API Draft candidate that reuses those main paths; it remains unmerged and undeployed. |
-| Current permitted work | Owner review of the PR-F Owner validate/execute API candidate only. |
-| Explicitly not permitted | Treating the PR-F candidate as `IN_MAIN`, Store 1 runtime access, real clone, SSH, Flyway, Staging or Production mutation, automatic merge, deployment, STG-006, or unrelated backlog work. |
+| AL-003 state | PR #56 merged the protected Owner validate/execute API into `main` at `8f909525781804f61d1da388882f530da358c3c4`. A read-only release preflight found current Staging healthy and isolated at `4397f995...` / Flyway V8; no deployment or migration occurred. |
+| Current permitted work | Owner review of the exact-SHA Staging release gate for `8f909525781804f61d1da388882f530da358c3c4`. |
+| Explicitly not permitted | Deployment before exact-SHA approval, Flyway execution, synthetic bootstrap, validate/execute, real clone, Store 1 data access, Production mutation, automatic merge, STG-006, or unrelated backlog work. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 [AGILE_LOOP_OPERATING_MODEL.md](../AGILE_LOOP_OPERATING_MODEL.md), and
@@ -89,7 +89,7 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 | PR-D / PR #52 | `IN_MAIN` via merge `13f26f1` | Generic source-option cloning and parent mapping are current-main capability. |
 | PR-E / PR #54 | `IN_MAIN` via `82b8059f6af1c7dff4eeb1648ca47bec039b5e52` | Concrete versioned Chinatown Profile, target override composer, and bounded Small label compatibility are current-main capability. |
 | PR-F0 / PR #55 | `IN_MAIN` via merge `6773fd0b78d7b3b33ee0d2a8b1d593a7b8c6af2` | Internal read-only option-plan composition/validation, shared execute parity validation, and bounded structured diagnostics. |
-| PR-F | `DRAFT_CANDIDATE_WAITING_FOR_OWNER_REVIEW` | Protected Owner validate/execute API facade; it reuses the internal planner, V10 coordinator, and lock-owning transaction without a second clone engine. |
+| PR-F / PR #56 | `IN_MAIN` via merge `8f909525781804f61d1da388882f530da358c3c4` | Protected Owner validate/execute API facade reusing the internal planner, V10 coordinator, and lock-owning transaction without a second clone engine. |
 
 PR-D promotion evidence is now historical main evidence: semantic source
 `5a0dc09944b4b0945fe95027d7f12647212ea559`, reviewed promotion head
@@ -100,14 +100,13 @@ PR-F0 is rebuilt from that main commit, rather than promoted from its historical
 stacked branch. Its evidence is
 [AL-003 PR-F0 Read-only Planning Boundary](../agile/AL-003_PR_F0_READ_ONLY_PLANNING_BOUNDARY.md).
 
-Current `main` contains the generic clone transaction, source-option layer, and
-the complete Chinatown Profile, but cannot execute a real menu clone over HTTP.
-PR-F0 remains candidate-only. Production remains separately reported at
-`4667f3c`; current-main and candidate capability are not production capability
-or release approval.
+Current `main` contains the generic clone transaction, source-option layer,
+complete Chinatown Profile, read-only planner, and protected Owner HTTP API.
+This is repository capability only. No real clone has run; Staging remains on
+`4397f995...` / Flyway V8 and Production remains on `4667f3c` / Flyway V7.
 
 The unique stop state for this loop is
-`AL-003_PR_F_WAITING_FOR_OWNER_REVIEW`.
+`AL-003_STAGING_RELEASE_PLAN_WAITING_FOR_OWNER_APPROVAL`.
 
 Git ground truth must always distinguish `MERGED_ON_GITHUB`, `IN_MAIN`,
 `DEPLOYED_TO_STAGING`, and `DEPLOYED_TO_PRODUCTION`. A stacked PR merged into a
@@ -414,6 +413,37 @@ printing, activation, staff/table, and device modules are direction only.
 
 Dependency repair and Store Profile governance are authoritative in
 [AGILE_LOOP_OPERATING_MODEL.md](../AGILE_LOOP_OPERATING_MODEL.md).
+
+### AL-003 exact-SHA Staging release gate
+
+- Exact candidate: `8f909525781804f61d1da388882f530da358c3c4`, the
+  merged PR #56 `origin/main` commit.
+- A 2026-08-08 read-only preflight observed Staging still running the exact
+  historical SHA `4397f995...` with Flyway V8, printing disabled, only
+  `127.0.0.1:18080`, healthy frontend/backend/SockJS endpoints, and isolated
+  project/network/database state.
+- Production remained `main` at `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`
+  with its same container IDs, start times, running state, and zero restarts.
+  No Production write or lifecycle command occurred.
+- Host evidence reported two CPUs, about 1.7 GiB available memory, and about
+  42 GiB free disk. These are point-in-time readings; the 1 GiB stop threshold
+  and serial backend-then-nginx build remain mandatory.
+- Staging is missing V9 and V10. Production is missing V8 through V10. Only
+  Staging V9/V10 is eligible for a later exact-SHA deployment approval;
+  Production remains out of scope.
+- Existing preflight evidence and images belong to older SHAs and cannot be
+  reused. Runtime compatibility of the retained V8-era images with a V10
+  database is unproven, so application rollback to them after migration is
+  `NO-GO` without a separate compatibility gate.
+- Gate result: `GO` to request Owner exact-SHA deployment approval; `NO-GO`
+  for immediate deployment. No candidate release, fresh formal evidence,
+  build, start, migration, bootstrap, validate, execute, or clone occurred.
+- Evidence:
+  [AL-003 Staging Release Read-only Preflight Evidence](AL-003_STAGING_RELEASE_PREFLIGHT_EVIDENCE.md)
+  and
+  [AL-003 Exact-SHA Staging Release and Acceptance Plan](../agile/AL-003_STAGING_RELEASE_ACCEPTANCE_PLAN.md).
+- Next state:
+  `AL-003_STAGING_RELEASE_PLAN_WAITING_FOR_OWNER_APPROVAL`.
 
 ### AL-002 implementation record
 

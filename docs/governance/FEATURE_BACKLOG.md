@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `AL-003_PR_F_WAITING_FOR_OWNER_REVIEW` |
+| status | `AL-003_STAGING_RELEASE_PLAN_WAITING_FOR_OWNER_APPROVAL` |
 | target_loop | `AL-003` |
-| implementation status | PR-A through PR-F0 are in `main`; PR-F0 entered through PR #55. PR-F is a Draft candidate for the Owner validate/execute API and reuses the existing planning, validator, idempotency, and lock-owning transaction paths. No Store 1 runtime read, real clone, print configuration, Staging/Production migration, or deployment is established. |
+| implementation status | PR-A through PR-F are in `main`; PR-F entered through PR #56 at `8f909525781804f61d1da388882f530da358c3c4`. The public Owner API reuses the existing planning, validator, idempotency, and lock-owning transaction paths. A read-only release preflight ran, but no Store 1 runtime read, real clone, print configuration, migration, or deployment occurred. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Owner reviews the independently verified PR-F API candidate. |
+| next action | Owner reviews the exact-SHA Staging release gate, including the fresh-evidence and rollback-compatibility conditions. |
 
 ### Current AL-003 delivery state
 
@@ -33,7 +33,7 @@
 | PR-D | `IN_MAIN` via PR #52 |
 | PR-E | `IN_MAIN` via PR #54 |
 | PR-F0 | `IN_MAIN` via PR #55 |
-| PR-F | `DRAFT_CANDIDATE_WAITING_FOR_OWNER_REVIEW` |
+| PR-F | `IN_MAIN` via PR #56 |
 
 `MERGED_ON_GITHUB` is not sufficient evidence for `IN_MAIN` when a PR's base
 is another feature branch. Each stacked layer requires a latest-`main`
