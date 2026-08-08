@@ -21,9 +21,9 @@ Production continuity.
 | Parent STG-005B checkpoint | `0aba8377a3b7acec047c6ffd025f774d8a4d5e87` |
 | Branch | `codex/al-003s-staging-acceptance-preparation` |
 | Package implementation commit | `47902430313117ac51a1f054a267ec7371267218` |
-| Final evidence/PR-binding commit | `TO_BE_BOUND_AFTER_DRAFT_PR_CREATION` |
-| PR | `TO_BE_BOUND_AFTER_DRAFT_PR_CREATION` |
-| Dependency state | Draft PR #61 -> stacked Draft PR #62 -> this stacked preparation |
+| Final evidence/PR-binding commit | This document's commit; resolve from Draft PR #63 Head metadata |
+| PR | Draft PR #63 (`STACKED_ONLY`) |
+| Dependency state | Draft PR #61 -> stacked Draft PR #62 -> stacked Draft PR #63 |
 
 ## Local verification
 
