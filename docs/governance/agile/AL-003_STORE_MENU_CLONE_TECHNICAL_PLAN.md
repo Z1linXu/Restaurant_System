@@ -23,10 +23,10 @@
 |---|---|
 | `AL003_PLAN_FOUND` | `false` before this document was created |
 | `PLAN_PATH` | `docs/governance/agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md` |
-| `PLAN_STATUS` | `IN_MAIN_AWAITING_STG-005B_AND_STAGING_ACCEPTANCE` |
+| `PLAN_STATUS` | `IN_MAIN_AWAITING_STAGING_ACCEPTANCE_AND_RUNTIME_APPROVAL` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | PR #60, PR #71, PR #61, and PR #62 are `IN_MAIN`. Complete the guarded AL-003S preparation review before requesting a separately approved exact-SHA Staging deployment/bootstrap/login/clone acceptance sequence. |
+| `RECOMMENDED_ACTION` | PRs #60, #71, #61, #62, #63, and #64 are `IN_MAIN`. Request a fresh exact-SHA, separately Owner-approved Staging deployment/bootstrap/login/clone acceptance sequence; repository merges do not authorize that runtime work. |
 
 PR-A through PR-F are in `main`. PR-D supplies generic source-option copying
 and target-local parent mapping; PR #54 placed the concrete Chinatown Profile
@@ -70,7 +70,7 @@ These are authoritative product inputs, not open questions:
 
 ### 1.2 Current Git ground truth
 
-| Package | Commit | State relative to `origin/main` `732d77c89ff067982702426ff918d5e097e1d0fb` |
+| Package | Commit | State relative to `origin/main` `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6` |
 |---|---|---|
 | PR-C / PR #47 | merge `ba169ed8b689ddef8dffe94deee82fea191cdcfb` | `IN_MAIN` |
 | PR-E / PR #54 | merge `82b8059f6af1c7dff4eeb1648ca47bec039b5e52` | `IN_MAIN`; PR-F0 promotion base |
@@ -85,6 +85,7 @@ These are authoritative product inputs, not open questions:
 | Modular architecture / PR #61 | merge `bbb1af9520c188b6ef6362e783284ba4001a7e63` | `IN_MAIN`; architecture only |
 | Synthetic St-Denis baseline / PR #62 | merge `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b` | `IN_MAIN`; repository capability only |
 | AL-003S Staging acceptance preparation / PR #63 | merge `732d77c89ff067982702426ff918d5e097e1d0fb` | `IN_MAIN`; repository-only guarded preparation, no runtime execution |
+| Generic Store Profile contract / PR #64 | merge `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6` | `IN_MAIN`; declarative profile contract, no runtime execution |
 
 This document describes the complete reviewed target architecture. A section
 in this plan is not evidence that its implementation is in `main`, Staging, or
@@ -929,7 +930,7 @@ Stop and return to Owner if:
 
 ## Current capability state
 
-`IN_MAIN_AWAITING_AL-003S_REVIEW_AND_STAGING_ACCEPTANCE`
+`IN_MAIN_AWAITING_STAGING_ACCEPTANCE_AND_RUNTIME_APPROVAL`
 
 STG-005B entered `main` through PR #62 and provides an immutable synthetic source
 graph and a guarded non-web empty-or-exact application path. It does not change

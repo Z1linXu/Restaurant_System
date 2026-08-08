@@ -28,7 +28,7 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| `origin/main` | `732d77c89ff067982702426ff918d5e097e1d0fb` | `IN_MAIN`; merge of PR #63 |
+| `origin/main` | `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6` | `IN_MAIN`; merge of PR #64 |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, clean | Local checkout is behind `origin/main`; it was not modified by this handoff |
 | Handoff branch | `codex/current-project-handoff` | Documentation-only snapshot; PR #71 remains `IN_MAIN` and is an ancestor of the exact `origin/main` above |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
@@ -59,8 +59,8 @@ GitHub state was read on 2026-08-08. Every PR below was open and Draft.
 | #61 | Modular architecture foundation | `main` | merge `bbb1af9520c188b6ef6362e783284ba4001a7e63` | `IN_MAIN` | PR #71/main | Yes | Main capability; no runtime behavior |
 | #62 | STG-005B Synthetic St-Denis baseline | `main` | merge `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b` | `IN_MAIN` | #61/main | Yes | Main capability; no runtime execution |
 | #63 | AL-003S Staging acceptance preparation | `main` | merge `732d77c89ff067982702426ff918d5e097e1d0fb` | `IN_MAIN` | #62/main | Yes | Repository-only acceptance preparation; runtime use remains separately gated |
-| #64 | AL-004 Generic Store Profile contract | `main` | Rebuilt from `origin/main@732d77c89ff067982702426ff918d5e097e1d0fb`; exact head is GitHub PR metadata | `DRAFT_PR` | #63/main | No | Review next; declarative contract only |
-| #65 | AL-005A Staff/Table plan | PR #64 branch | `c2cd17205de01c21113c1a1d5d9e82a59e0ff47f` | `STACKED_ONLY` | #64 | No | Rebuild after #64 |
+| #64 | AL-004 Generic Store Profile contract | `main` | merge `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6` | `IN_MAIN` | #63/main | Yes | Declarative repository capability only |
+| #65 | AL-005A Staff/Table plan | `main` | Rebuilt from `origin/main@54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6`; exact head is GitHub PR metadata | `DRAFT_PR` | #64/main | No | Review next; planning only |
 | #66 | Printer Store-isolation repair | `main` | `db9075c76b2c5096b9319f55e2b72a82604de053` | `INDEPENDENT_DRAFT_PR` | current main | No | Review independently before executable Printing provisioning |
 | #67 | AL-005 Printing provisioning plan | PR #65 branch | `48271f1249f1e782e191c12efb6a97a640119b24` | `STACKED_ONLY` | #65; #66 before executable writer | No | Rebuild after #65; preserve #66 gate |
 | #68 | AL-005B Device/Pad plan | PR #67 branch | `c60682e77a4ac42beff7d299e6d3a940d302897f` | `STACKED_ONLY` | #67 | No | Rebuild after #67 |
@@ -98,7 +98,7 @@ V10 ran on Staging or Production.
 | Current package | Project handoff over the prepared Draft queue |
 | Feature stop state | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` |
 | Handoff stop state | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | Review #64 next and #66 independently; separately approve any runtime or Production action |
+| Current Owner gate | Review #65 next and #66 independently; separately approve any runtime or Production action |
 
 ### Permitted work
 
@@ -138,8 +138,9 @@ V10 ran on Staging or Production.
 - PR #62 merged the guarded Synthetic St-Denis baseline into main at
   `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b`.
 - PR #63 entered `main` at `732d77c89ff067982702426ff918d5e097e1d0fb`.
-  PR #64 and independent #66 are Drafts; PRs #65 and #67-#70 remain
-  stacked-only, not main capability.
+- PR #64 entered `main` at `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6`.
+  PR #65 and independent #66 are Drafts; PRs #67-#70 remain stacked-only,
+  not main capability.
 
 ## 7. AL-003 repository capability
 
@@ -202,8 +203,8 @@ is the first Store Profile sample, not a shared-service special case.
 |---|---|---|---|
 | STG-005B / #62 | Reproducible synthetic St-Denis menu baseline | `IN_MAIN` | Repository capability only; no runtime execution |
 | AL-003S / #63 | Exact-SHA Staging acceptance preparation | `IN_MAIN` | Repository capability only; explicit runtime approval remains separate |
-| AL-004 / #64 | Generic Store Profile contract | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | #63 is `IN_MAIN`; no provisioning/runtime execution |
-| AL-005A / #65 | Staff/Table module plan | `STACKED_ONLY` | #64 |
+| AL-004 / #64 | Generic Store Profile contract | `IN_MAIN` | Repository capability only; no provisioning/runtime execution |
+| AL-005A / #65 | Staff/Table module plan | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | #64 is `IN_MAIN`; no writer or runtime execution |
 | AL-005 / #67 | Printing provisioning plan | `STACKED_ONLY` | #65; independent #66 before writer |
 | AL-005B / #68 | Device/Pad provisioning plan | `STACKED_ONLY` | #67 |
 | AL-006 / #69 | Fail-closed activation workflow plan | `STACKED_ONLY` | #68 |

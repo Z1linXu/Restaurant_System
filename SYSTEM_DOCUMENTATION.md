@@ -61,6 +61,11 @@ separate from historical evidence snapshots and business implementation details:
   defines the first declarative Store-level identity/composition slice. It
   registers no concrete profile and has no public endpoint, migration, UI, or
   executable provisioning workflow.
+- [AL-005A Staff and Table Provisioning Module Plan](docs/governance/agile/AL-005A_STAFF_TABLE_PROVISIONING_MODULE_PLAN.md)
+  records the existing credential/membership and dining-table authorities,
+  reusable module boundaries, security/schema gaps, and implementation gates.
+  Draft PR #65 is a dependency-bound preparation package and adds no writer, API,
+  migration, credential, table, or runtime behavior.
 - [AL-003A final menu comparison](docs/governance/agile/AL-003A_FINAL_MENU_COMPARISON.md)
   is the single product-mapping authority for the Store 1 to Chinatown target
   menu. Repository seed data is historical reference only.
@@ -399,7 +404,9 @@ Project Handoff navigation at `5baada03935e004d80af1e7a36fb7db39bd6abbb`; PR
 `bbb1af9520c188b6ef6362e783284ba4001a7e63`; PR #62 then merged the guarded
 Synthetic St-Denis baseline at `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b`,
 and PR #63 then merged guarded AL-003S acceptance preparation at
-`732d77c89ff067982702426ff918d5e097e1d0fb`. None is runtime evidence. The
+`732d77c89ff067982702426ff918d5e097e1d0fb`; PR #64 then merged the declarative
+Generic Store Profile contract at `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6`.
+None is runtime evidence. The
 modular target is a Generic
 Store Provisioning Engine consuming Versioned Store Profiles and Reusable
 Provisioning Modules. Shared implementation must remain Store-neutral;
@@ -408,7 +415,7 @@ endpoints/secrets remain runtime-only, and accepted actions are retained as
 sanitized evidence. The architecture authority is
 [STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md](docs/governance/agile/STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md).
 
-The main-based Draft AL-004 contract introduces a Store-neutral registry above the
+The `IN_MAIN` AL-004 contract introduces a Store-neutral registry above the
 existing menu-profile registry. It validates exact code/version identities,
 unique module references carrying reviewed expected fingerprints, applicable activation
 requirements, and a deterministic canonical fingerprint. It intentionally
@@ -419,6 +426,18 @@ not provision a Store and does not register an Owner API or UI.
 It does not yet verify a referenced module/configuration against a module
 registry or deployed runtime; that compatibility gate remains a later engine
 capability.
+
+The AL-005A audit confirms that `OnboardingStaffProvisioningService` is the
+existing internal authority for transactionally creating a Store-scoped user,
+BCrypt credential, and explicit Store membership. It must remain subordinate
+to a parent authorization/idempotency transaction, and Organization Owners do
+not receive redundant target-Store memberships. The current Platform Admin
+dining-table path is not a safe provisioning upsert: table-code uniqueness,
+loaded-row Store ownership, immutable template identity, normalization, replay,
+and update/deactivation semantics are unresolved. Chinatown retains the
+approved blank-table/manual-setup policy. AL-005A therefore plans only
+versioned non-secret contracts and a read-only table planner before any
+separately reviewed predefined-table writer or migration.
 
 STG-005B prepares a Staging-only, non-web source-menu fixture around the
 existing menu entities, Store lock, and revision service. Its source graph has

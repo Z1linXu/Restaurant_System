@@ -16,9 +16,9 @@
 | priority | `HIGH` |
 | status | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` |
 | target_loop | `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE` |
-| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, PR #60's Owner decisions, PR #71's handoff navigation, PR #61's Modular Architecture Foundation, PR #62's Synthetic St-Denis baseline, and PR #63's guarded AL-003S acceptance preparation are `IN_MAIN` at `732d77c89ff067982702426ff918d5e097e1d0fb`. Draft PR #64 supplies the declarative Generic Store Profile contract; PRs #65 and #67-#70 remain dependency-bound and not in main. PR #66 is an independent main-based Draft repair. No Draft establishes Staging or Production state. |
+| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, PR #60's Owner decisions, PR #71's handoff navigation, PR #61's Modular Architecture Foundation, PR #62's Synthetic St-Denis baseline, PR #63's guarded AL-003S acceptance preparation, and PR #64's Generic Store Profile contract are `IN_MAIN` at `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6`. Draft PR #65 supplies reusable Staff/Access and Table provisioning planning only; PRs #67-#70 remain dependency-bound and not in main. PR #66 is an independent main-based Draft repair. No Draft establishes Staging or Production state. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Review #64, then rebuild #65 from latest main after #64 enters main. Review #66 independently before executable Printing provisioning. Runtime acceptance and Production actions remain separately Owner-gated. |
+| next action | Review #65, then rebuild #67 from latest main after #65 enters main. Review #66 independently before executable Printing provisioning. Runtime acceptance and Production actions remain separately Owner-gated. |
 
 ### Current AL-003 delivery state
 
@@ -41,8 +41,8 @@
 | Modular architecture / PR #61 | `IN_MAIN` at `bbb1af9520c188b6ef6362e783284ba4001a7e63`; Generic Store Provisioning Engine + Versioned Store Profiles + Reusable Provisioning Modules, architecture only |
 | STG-005B Synthetic St-Denis baseline / PR #62 | `IN_MAIN` at `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b`; guarded, versioned, transactional source baseline; no runtime execution implied |
 | AL-003S Staging acceptance preparation / PR #63 | `IN_MAIN` at `732d77c89ff067982702426ff918d5e097e1d0fb`; guarded launcher, passive evidence, approval/identity binding, immutable image pin, command plan, acceptance template, and rollback boundary only; no runtime action |
-| AL-004 Generic Store Profile contract / PR #64 | main-based `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`; declarative version/profile identity, module-reference, canonical fingerprint, and safe-summary contract only; no concrete profile, API, migration, UI, or provisioning execution |
-| AL-005A Staff/Table plan / PR #65 | `STACKED_ONLY` on #64; no writer |
+| AL-004 Generic Store Profile contract / PR #64 | `IN_MAIN` at `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6`; declarative version/profile identity, module-reference, canonical fingerprint, and safe-summary contract only; no concrete profile, API, migration, UI, or provisioning execution |
+| AL-005A Staff/Table plan / PR #65 | main-based `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`; reusable Staff/Access and Table provisioning planning only; no writer, endpoint, migration, credential, table, or runtime execution |
 | Printer Store-isolation repair / PR #66 | independent main-based `DRAFT_PR`; required before executable Printing provisioning |
 | AL-005 Printing plan / PR #67 | `STACKED_ONLY` on #65; no runtime mutation |
 | AL-005B Device/Pad plan / PR #68 | `STACKED_ONLY` on #67; no pairing/Worker mutation |
@@ -206,11 +206,11 @@ seed/demo Store.
 | AL-003 validate/execute/replay/restart acceptance | `STAGING_PENDING` | Requires the full synthetic topology and source-menu contract first. |
 | Production Store 1 read-only source capture/drift review | `PRODUCTION_PENDING` | Separate Owner Runtime Gate; only menu-related evidence may be read. |
 | Production Chinatown Store/staff/menu provisioning | `PRODUCTION_PENDING` | Exact-SHA Release Candidate and production approval required. |
-| Generic Store Profile identity/composition contract | `DRAFT_PR_64_WAITING_FOR_OWNER_REVIEW` | Exact versioned identity, module references with reviewed expected fingerprints, activation requirements, canonical fingerprint, and safe summaries are under review; no concrete Store Profile or callable workflow is implied. |
+| Generic Store Profile identity/composition contract | `IN_MAIN` via PR #64 | Exact versioned identity, module references with reviewed expected fingerprints, activation requirements, canonical fingerprint, and safe summaries are repository capability only; no concrete Store Profile or callable workflow is implied. |
 | Owner Create Store / Choose Menu Template UI | `NOT_IMPLEMENTED` | Existing Platform Admin template UI is not the approved Owner workflow. |
-| Generic Store Profile contract | `DRAFT_PR_64_WAITING_FOR_OWNER_REVIEW` | Declarative identity/composition contract only; no Owner UI or provisioning execution. |
+| Generic Store Profile contract | `IN_MAIN` via PR #64 | Declarative identity/composition contract only; no Owner UI or provisioning execution. |
 | Versioned `ST_DENIS_MENU` profile | `NEEDS_NEW_LOOP` | The strict identity for a complete Store Profile is not finalized; it must reuse the generic profile registry/clone engine with no Store ID 3 branch. |
-| Table provisioning module | `PREPARED_DRAFT_PR_65` | Authority/contract plan only; no table writer. |
+| Staff/Table provisioning module | `DRAFT_PR_65_WAITING_FOR_OWNER_REVIEW` | Reusable Staff/Access and Table module planning only; no writer. Chinatown remains blank-table/manual setup; future predefined-table writing requires schema, normalization, ownership, and replay decisions. |
 | Printing provisioning module | `PREPARED_DRAFT_PR_67` | Plan only; independent Store-isolation repair #66 is required before an executable writer. |
 | Device/Pad provisioning module | `PREPARED_DRAFT_PR_68` | Plan only; pairing, tokens and Worker behavior remain runtime-gated. |
 | Store activation validation/workflow | `PREPARED_DRAFT_PR_69` | Fail-closed plan only; no status transition or activation writer. |
@@ -229,7 +229,9 @@ seed/demo Store.
    template selection, and the future `ST_DENIS_MENU` profile without a second
    clone engine.
 4. `AL-005A_STAFF_TABLE_PROVISIONING_MODULES`: reusable staff/access and table
-   provisioning inputs around the existing onboarding and table APIs.
+   provisioning inputs around the existing onboarding authority and a new
+   Store-safe table planner/provisioner boundary. The preparation contract is
+   [AL-005A Staff and Table Provisioning Module Plan](agile/AL-005A_STAFF_TABLE_PROVISIONING_MODULE_PLAN.md).
 5. `AL-005_PRINTING_PROVISIONING_TEMPLATE`: Store-scoped printer/module
    assignment inputs and safe physical-print acceptance gates.
 6. `AL-005B_DEVICE_PAD_PROVISIONING_MODULE`: reusable Store device binding and

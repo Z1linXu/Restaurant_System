@@ -295,7 +295,7 @@ binding, and immutable image-ID pinning. The remaining gates are:
 These findings do not require a product-contract change, but they prohibit
 claiming `AL-003_STAGING_ACCEPTANCE_READY`. They should be handled as bounded
 operational repair packages or explicit Owner-approved manual procedures after
-the stacked dependencies enter `main`.
+the required dependencies and a fresh runtime approval are in place.
 
 ## 9. Acceptance and stop state
 

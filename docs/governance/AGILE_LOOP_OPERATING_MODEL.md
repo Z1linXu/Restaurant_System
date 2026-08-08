@@ -86,21 +86,21 @@ PR #59's bounded PostgreSQL private-leaf repair is now `IN_MAIN`, and PR #60's
 2026-08-08 Owner decisions are `IN_MAIN` at
 `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; neither proves a new Staging
 deployment. PR #71's handoff navigation, PR #61's modular architecture, PR
-#62's Synthetic St-Denis baseline, and PR #63's guarded acceptance preparation
-are `IN_MAIN` at `732d77c89ff067982702426ff918d5e097e1d0fb`; none changes
-runtime state. Draft PR #64 is the next main-based declarative
-profile-contract package, while PRs #65 and #67-#70 remain dependency-bound.
-PR #66 is an independent
+#62's Synthetic St-Denis baseline, PR #63's guarded acceptance preparation,
+and PR #64's Generic Store Profile contract are `IN_MAIN` at
+`54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6`; none changes runtime state.
+Draft PR #65 is the next main-based Staff/Access and Table planning package,
+while PRs #67-#70 remain dependency-bound. PR #66 is an independent
 main-based prerequisite repair. The current
 feature stop state is
 `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL`.
 PR #61 is the architecture/governance foundation: it defines the Generic
 Store Provisioning Engine, Versioned Store Profiles, and Reusable Provisioning
 Modules without adding runtime behavior. PR #62 provides the guarded Synthetic
-St-Denis baseline and PR #63 provides guarded acceptance preparation as
-repository capability, not runtime evidence. Draft PR #64 supplies only the
-generic version/profile identity, module-reference, and canonical-fingerprint
-contract.
+St-Denis baseline, PR #63 provides guarded acceptance preparation, and PR #64
+supplies the generic version/profile identity, module-reference, and
+canonical-fingerprint contract as repository capability, not runtime evidence.
+Draft PR #65 supplies only reusable Staff/Access and Table planning boundaries.
 No current statement authorizes server access, Flyway execution, synthetic
 bootstrap, credential creation, login, source-menu writes, validate, execute,
 a runtime clone, merge, or deployment. Staging acceptance retains the distinct

@@ -1,10 +1,11 @@
 # AL-004 Generic Store Profile Contract
 
-> Package state: `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`
+> Package state: `IN_MAIN` via PR #64 merge
+> `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6`
 >
 > Parent: `origin/main@732d77c89ff067982702426ff918d5e097e1d0fb` (PR #63 `IN_MAIN`)
 >
-> Review: Draft PR #64, rebuilt with base `main`
+> Review: merged to `main` as PR #64
 >
 > Runtime access: not performed
 
@@ -72,9 +73,9 @@ deterministic ordering-independent fingerprints, canonical fingerprint
 enforcement, immutable registry snapshots, applicable activation requirements,
 and safe summary projection.
 
-Full backend tests and compile must pass before the Draft PR review gate. This
-package remains a main-based Draft until Owner review. Downstream packages stay
-stacked-only until this contract is independently reviewed and promoted.
+Full backend tests and compile passed before the PR #64 review gate. This
+package is now `IN_MAIN`; downstream #65 was rebuilt from that mainline, while
+later packages remain stacked-only until their direct dependency is promoted.
 
 ## 5. Next bounded input
 

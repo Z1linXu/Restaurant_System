@@ -122,7 +122,7 @@ reviewed policy such as `manual_after_creation` or `not_applicable`.
 | Profile | State | Boundary |
 |---|---|---|
 | `CHINATOWN_MENU_2026_02_02` | `IN_MAIN` menu-clone profile | Frozen initial Chinatown menu target; not a complete Store Profile yet. |
-| Generic Store Profile contract | `DRAFT_PR_64_WAITING_FOR_OWNER_REVIEW` | Exact identity/version, module references with reviewed expected fingerprints, activation requirements, and safe registry summaries only; no concrete Store Profile or workflow is registered. |
+| Generic Store Profile contract | `IN_MAIN` via PR #64 | Exact identity/version, module references with reviewed expected fingerprints, activation requirements, and safe registry summaries only; no concrete Store Profile or workflow is registered. |
 | Complete St-Denis Store Profile | `PLANNED_IDENTITY_NOT_FINAL` | Production-like Store template; no current registry entry or public API. Historical documents use `ST_DENIS_MENU` for a menu-only candidate, while `ST_DENIS_PROFILE_V1` is an architecture placeholder for the future complete Store Profile. The implementing loop must select one strict, case-sensitive identity before code is written. |
 | Synthetic St-Denis baseline | `IN_MAIN` via PR #62 | Versioned empty-or-exact synthetic fixture/application capability; not executed and not Production source evidence. |
 
@@ -298,6 +298,13 @@ Store 1 contents, and cannot replace the Production read-only source gate.
 | 8 | `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE` | Production gap/migration/backup/rollback/compatibility package | No deployment without approval |
 | 9 | `ACT-001_CHINATOWN_PRODUCTION_ACTIVATION` | Approved runtime provisioning and field acceptance | No unauthorized Production mutation |
 
+The bounded AL-005A authority/risk audit and staged contract are maintained in
+[AL-005A Staff and Table Provisioning Module Plan](AL-005A_STAFF_TABLE_PROVISIONING_MODULE_PLAN.md).
+It preserves AL-002's credential/membership authority, rejects the current
+Platform Admin table writer as a provisioning upsert, and keeps table writing
+behind explicit normalization, uniqueness, ownership, replay, and immutable
+template gates.
+
 ### 10.1 Historical label mapping
 
 Earlier plans used short labels before the modular roadmap was approved. Those
@@ -361,11 +368,11 @@ runtime evidence and cannot be replaced by unit tests.
 
 PR #61 established this architecture in `main`; PR #62 established the
 Synthetic St-Denis repository baseline, and PR #63 established guarded Staging
-acceptance preparation. The first AL-004 contract slice is now rebuilt as a
-main-based Draft and still registers no concrete Store Profile, exposes no
-public template endpoint, and adds no executable provisioning workflow. No
-runtime operation is authorized. Downstream #65 and later packages remain
-`STACKED_ONLY` until this contract enters `main` and they are rebuilt.
+acceptance preparation. The AL-004 contract entered `main` via PR #64 and still
+registers no concrete Store Profile, exposes no public template endpoint, and
+adds no executable provisioning workflow. No runtime operation is authorized.
+The rebuilt #65 Staff/Table package is a main-based Draft; #67 and later
+packages remain `STACKED_ONLY` until their direct dependency enters `main`.
 
 The `IN_MAIN` STG-005B package adds no migration or HTTP endpoint. It
 uses the existing Staging profile/guards, an immutable 4/3/13/38 source
