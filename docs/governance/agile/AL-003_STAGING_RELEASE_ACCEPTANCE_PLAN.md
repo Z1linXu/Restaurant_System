@@ -1,6 +1,6 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Status: `AL-003_STAGING_RELEASE_PLAN_WAITING_FOR_OWNER_APPROVAL`
+> Status: `AL-003_STAGING_RELEASE_NO_GO_WAITING_FOR_OWNER_REPAIR_APPROVAL`
 >
 > Candidate SHA: `8f909525781804f61d1da388882f530da358c3c4`
 >
@@ -20,6 +20,15 @@ It returned `GO` for requesting exact-SHA Owner approval and `NO-GO` for
 immediate deployment. The detached candidate release and fresh formal
 preflight evidence do not yet exist, and rollback from a V10 database to the
 retained V8-era Staging images has no runtime compatibility evidence.
+
+The Owner subsequently approved this SHA. A clean detached release was created,
+but formal preflight returned `NO-GO` before build: the path guard requires the
+deployment user to enter the initialized PostgreSQL UID-70 mode-0700 data leaf.
+Automatic pre-migration recovery restored the old Staging runtime and identity;
+Flyway remains V8 and Production remained unchanged. See
+[AL-003 Staging Release Attempt Evidence](../runtime/AL-003_STAGING_RELEASE_ATTEMPT_EVIDENCE.md).
+The old approval and failed evidence cannot be reused after the required
+preflight repair is merged.
 
 ## Fixed Staging identity
 
@@ -97,3 +106,7 @@ payloads, or customer data.
   or production deployment. Production still requires approved Store-1-only
   menu evidence, backup evidence, release approval, and a separate deployment
   gate.
+- An initialized PostgreSQL data leaf may be non-traversable to the deployment
+  user while still being healthy. Until the preflight validates that opaque
+  leaf without requiring `cd`, this release path is `NO-GO`. Do not weaken the
+  data-directory permissions or bypass the evidence gate.

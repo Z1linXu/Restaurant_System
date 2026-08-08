@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `AL-003_STAGING_RELEASE_PLAN_WAITING_FOR_OWNER_APPROVAL` |
+| status | `AL-003_STAGING_RELEASE_NO_GO_WAITING_FOR_OWNER_REPAIR_APPROVAL` |
 | target_loop | `AL-003` |
-| implementation status | PR-A through PR-F are in `main`; PR-F entered through PR #56 at `8f909525781804f61d1da388882f530da358c3c4`. The public Owner API reuses the existing planning, validator, idempotency, and lock-owning transaction paths. A read-only release preflight ran, but no Store 1 runtime read, real clone, print configuration, migration, or deployment occurred. |
+| implementation status | PR-A through PR-F are in `main`. The Owner-approved exact-SHA Staging attempt stopped at formal preflight: the guard cannot traverse the initialized PostgreSQL mode-0700 data leaf. Automatic pre-migration recovery restored Staging at `4397f995...` / Flyway V8; no candidate build, migration, bootstrap, or clone occurred. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Owner reviews the exact-SHA Staging release gate, including the fresh-evidence and rollback-compatibility conditions. |
+| next action | Owner reviews a smallest preflight-only Dependency Repair package; deployment requires a new merged SHA and fresh exact-SHA approval. |
 
 ### Current AL-003 delivery state
 
