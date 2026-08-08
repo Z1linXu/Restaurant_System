@@ -62,7 +62,7 @@ GitHub state was read on 2026-08-08. Every PR below was open and Draft.
 | #64 | AL-004 Generic Store Profile contract | `main` | merge `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6` | `IN_MAIN` | #63/main | Yes | Declarative repository capability only |
 | #65 | AL-005A Staff/Table plan | `main` | merge `8f58bcbfca253c1598b967f4d17c04c0be1cce5b` | `IN_MAIN` | #64/main | Yes | Repository planning only |
 | #66 | Printer Store-isolation repair | `main` | merge `f483a4640503c20f6eec1e2e9ae1d198bf23d1f3` | `IN_MAIN` | #65/main | Yes | Security foundation; no runtime behavior |
-| #67 | AL-005 Printing provisioning plan | `main` | `48271f1249f1e782e191c12efb6a97a640119b24` (rebuild pending) | `DRAFT_PR` | #65/main; #66 IN_MAIN | No | Owner review; do not begin #68 |
+| #67 | AL-005 Printing provisioning plan | `main` | `7d55f7aa7bab076bfc522d4652f15f6de3d0cded` | `DRAFT_PR` | #65/main; #66 IN_MAIN | No | Owner review; do not begin #68 |
 | #68 | AL-005B Device/Pad plan | PR #67 branch | `c60682e77a4ac42beff7d299e6d3a940d302897f` | `STACKED_ONLY` | #67 | No | Rebuild after #67 |
 | #69 | AL-006 Activation workflow plan | PR #68 branch | `82f71b1a4f8fbc443b2e7515c9c2ce17e0f474f5` | `STACKED_ONLY` | #68 | No | Rebuild after #68 |
 | #70 | REL-001 Production RC plan | PR #69 branch | `59246ae758716c1d457be465eb34fd4e757f02ec` | `STACKED_ONLY` | #69 | No | Rebuild after #69; no runtime approval implied |
