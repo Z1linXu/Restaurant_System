@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` |
-| target_loop | `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE` |
-| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, PR #60's Owner decisions, PR #71's handoff navigation, PR #61's Modular Architecture Foundation, PR #62's Synthetic St-Denis baseline, PR #63's guarded AL-003S acceptance preparation, PR #64's Generic Store Profile contract, PR #65's Staff/Table planning, PR #66's Printer Store-isolation repair, PR #67's Printing Provisioning plan, PR #68's Device/Pad Provisioning plan, and PR #69's Activation Workflow plan are `IN_MAIN` at `dc682203b2b24bbdb453a5520b297b9051139f13`. Draft PR #70 is the next main-based Production Release Candidate planning package. No Draft establishes Staging or Production state. |
+| status | `POST_STACK_GROUND_TRUTH_SYNC_WAITING_FOR_OWNER_REVIEW` |
+| target_loop | `STG-006_EXACT_MAIN_PREFLIGHT` after the governance sync enters main |
+| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, PR #60's Owner decisions, PR #71's handoff navigation, and PRs #61-#70 are `IN_MAIN` at `645d4909625f70fc241d5468382d66a30a030fb1`. #66 is the independent Printer Store-isolation code repair. The other overnight layers are architecture, contract, plan, or guarded preparation except for the implemented Synthetic St-Denis and AL-003S tooling described below. No merge establishes Staging or Production state. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Review the rebuilt Draft PR #70 as a single-layer REL-001 Production Release Candidate plan. Do not begin any later package; Staging acceptance, Production evidence, deployment, and Chinatown activation remain separately Owner-gated. |
+| next action | Review the docs-only Post-Stack Ground Truth sync. After it merges, select the resulting exact main SHA and request Owner approval for a fresh passive Staging preflight. This is not deployment approval. |
 
 ### Current AL-003 delivery state
 
@@ -47,7 +47,7 @@
 | AL-005 Printing plan / PR #67 | `IN_MAIN` at `65e3d3ced2b5b05eb36d56ce67e475768ad19dff` | Reusable Store-scoped Printing Provisioning planning only; no writer, endpoint, migration, printer, assignment, mode change, test print, or runtime mutation |
 | AL-005B Device/Pad plan / PR #68 | `IN_MAIN` at `9e93573be97cfd01a9ad3efe64d55827854c497a` | Single-layer reusable Device/Pad Provisioning plan; no pairing, token, Worker, endpoint, migration, or runtime mutation |
 | AL-006 Activation plan / PR #69 | `IN_MAIN` at `dc682203b2b24bbdb453a5520b297b9051139f13` | Fail-closed workflow plan only; lifecycle and validator are conceptual; no status transition or activation writer |
-| REL-001 Production RC plan / PR #70 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` based on latest `main` | Exact-SHA release gates only; no selected candidate, Staging pass, Production deploy, or activation action |
+| REL-001 Production RC plan / PR #70 | `IN_MAIN` at `645d4909625f70fc241d5468382d66a30a030fb1` | Exact-SHA release gates only; no selected candidate, Staging pass, Production deploy, or activation action |
 
 The Owner-login acceptance prerequisite is not satisfied by repository code or
 deployment alone. Read-only code audit confirms that an active Organization
@@ -215,10 +215,15 @@ seed/demo Store.
 | Printing provisioning module | `IN_MAIN` via PR #67 | Single-layer reusable Store-scoped Printing Provisioning plan; no executable writer or runtime mutation. |
 | Device/Pad provisioning module | `IN_MAIN` via PR #68 at `9e93573be97cfd01a9ad3efe64d55827854c497a` | Reusable Store-scoped pairing, binding, readiness, and health planning only; no pairing, token, Worker, endpoint, or runtime mutation. |
 | Store activation validation/workflow | `IN_MAIN` via PR #69 | Fail-closed plan only; lifecycle and validator are conceptual; no status transition or activation writer. |
-| Chinatown Production Release Candidate | `DRAFT_PR_70_WAITING_FOR_OWNER_REVIEW` | Exact-SHA/migration/backup/rollback/resource/deployment gates only; no selected candidate, Staging pass, Production deploy, or Chinatown activation. |
+| Chinatown Production Release Candidate | `PLAN_ONLY` via PR #70 `IN_MAIN` | Exact-SHA/migration/backup/rollback/resource/deployment gates only; no selected candidate, Staging pass, Production deploy, or Chinatown activation. |
 | Chinatown end-to-end field acceptance | `PRODUCTION_PENDING` | Owner/staff login, dine-in order, update, expected tickets, and operational completion remain required. |
 
 ### Proposed bounded loop order
+
+The #61-#70 preparation packages below are complete in main. Their historical
+dependency order is retained for traceability; it is not the current execution
+queue. The current capability matrix and next executable/implementation loop
+order are in [Post-Stack Ground Truth Audit](runtime/POST_STACK_GROUND_TRUTH_AUDIT.md).
 
 1. `STG-005B_SYNTHETIC_ST_DENIS_BASELINE`: define a reviewed, idempotent,
    synthetic-only St-Denis menu/configuration baseline using existing generic

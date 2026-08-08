@@ -1,6 +1,6 @@
 # AL-005 Dependency Repair: Printer Store Isolation
 
-> Status: `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` in PR #66
+> Status: `IN_MAIN` via PR #66 at `f483a4640503c20f6eec1e2e9ae1d198bf23d1f3`
 >
 > Base: `origin/main@8f58bcbfca253c1598b967f4d17c04c0be1cce5b` (PR #65 `IN_MAIN`)
 >
@@ -64,10 +64,11 @@ boundary itself was enforced.
 
 ## Promotion boundary
 
-Draft PR #66 is independent of the #61-#65 mainline stack and targets `main`.
-It must be merged before any AL-005 executable printer provisioning adapter is promoted.
+PR #66 is independent of the #61-#65 mainline stack and entered `main` at
+`f483a4640503c20f6eec1e2e9ae1d198bf23d1f3`. It remains a prerequisite for
+any AL-005 executable printer provisioning adapter.
 It does not make AL-005 implemented and does not authorize runtime printing.
 
 ## Stop state
 
-`AL-005_PRINTER_STORE_ISOLATION_REPAIR_WAITING_FOR_OWNER_REVIEW`
+`AL-005_PRINTER_STORE_ISOLATION_REPAIR_IN_MAIN`

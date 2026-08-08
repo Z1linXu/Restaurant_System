@@ -26,7 +26,7 @@
 | Environment | `restaurant-prod` | `OPERATOR_CONFIRMED` | Environment label only; no host or secret is recorded. |
 | `RUNTIME_COMMIT` | `4667f3c` | `OPERATOR_CONFIRMED` | Reported deployed commit, not a formal release approval. |
 | Production branch | `main` | `OPERATOR_CONFIRMED` | Branch relationship is not a deployment approval record. |
-| Last merged `DOCUMENTATION_COMMIT` | `dc682203b2b24bbdb453a5520b297b9051139f13` | `MACHINE_VERIFIED` from `origin/main` | PR #69 is `IN_MAIN`; this does not make that commit a Staging or Production runtime. |
+| Last merged `DOCUMENTATION_COMMIT` | `645d4909625f70fc241d5468382d66a30a030fb1` | `MACHINE_VERIFIED` from `origin/main` | PR #70 and the complete #61-#70 preparation stack are `IN_MAIN`; this does not make that commit a Staging or Production runtime. |
 | Deployment mode | HTTP | `OPERATOR_CONFIRMED` | HTTPS/certificate posture is outside this record. |
 | Compose services | `db`, `backend`, `nginx` | `OPERATOR_CONFIRMED` | No new container inspection was run for this planbook. |
 | Database schema | Flyway V7, including `V7__add_print_job_attention_acknowledgement.sql` | `OPERATOR_CONFIRMED` | Not a restore or schema-integrity rehearsal. |
@@ -62,10 +62,10 @@ snapshots. Do not copy those reports into this planbook.
 | Item | Current state |
 |---|---|
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE` |
-| Loop type | `DEPENDENCY_BOUND_PREPARATION` |
-| Loop status | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` |
-| Current package | `DRAFT_PR_70_WAITING_FOR_OWNER_REVIEW` — exact-SHA Production RC planning only |
+| Current Agile Loop | `POST_STACK_GROUND_TRUTH_AUDIT` |
+| Loop type | `GOVERNANCE_GROUND_TRUTH_SYNC` |
+| Loop status | `POST_STACK_GROUND_TRUTH_SYNC_WAITING_FOR_OWNER_REVIEW` |
+| Current package | docs-only post-stack capability/runtime audit and governance reconciliation |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | PR #27 merged the backend foundation into `main`; Production remains on the older runtime and no production onboarding is established by that merge. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -73,10 +73,10 @@ snapshots. Do not copy those reports into this planbook.
 | STG-004 state | PR #38 merged the STG-004 runtime evidence. Exact SHA `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` passed PLAN, fresh PREFLIGHT, serial build/start, runtime verification, and isolated stop/start recovery. Server Staging remains running; Production remained unchanged. |
 | STG-005 state | PLAN complete. The Owner approved CP-0 as a separate minimal Staging-only bootstrap implementation and accepted CP-4 as a feature-disabled KDS/Assembling boundary. Positive Kitchen/Assembling workflow remains `EVIDENCE_PENDING`. |
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
-| AL-003 state | PR #58 preserves the failed-attempt evidence; PR #59's bounded PostgreSQL UID-70/mode-0700 private-leaf repair, PR #60's Owner decisions, PR #71's handoff navigation, PR #61's modular architecture, PR #62's Synthetic St-Denis baseline, PR #63's guarded Staging acceptance preparation, PR #64's Generic Store Profile contract, PR #65's Staff/Table planning, PR #66's Printer Store-isolation repair, PR #67's Printing Provisioning plan, PR #68's Device/Pad Provisioning plan, and PR #69's Activation Workflow plan are `IN_MAIN` at `dc682203b2b24bbdb453a5520b297b9051139f13`. None proves a new Staging deployment. |
+| AL-003 state | PR #58 preserves the failed-attempt evidence; PR #59's bounded PostgreSQL UID-70/mode-0700 private-leaf repair, PR #60's Owner decisions, PR #71's handoff navigation, and PRs #61-#70 are all `IN_MAIN` at `645d4909625f70fc241d5468382d66a30a030fb1`. #61-#65 and #67-#70 are architecture/contract/planning or guarded preparation; #66 is the independent Printer Store-isolation code repair. None proves a new Staging deployment. |
 | Staging Owner login prerequisite | `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`; code audit proves an Organization Owner naturally accesses every same-Organization Store, so no explicit target Owner Store membership is required. Runtime bootstrap, credential, login, workspace, target onboarding, and API evidence remain pending. |
-| Current permitted work | Review the rebuilt main-based Draft PR #70 REL-001 Production Release Candidate plan as a single layer. Run local planning checks, independent review, governance sync, and bounded cleanup audit; runtime inspection/mutation remains prohibited. |
-| Explicitly not permitted | Reusing old SHA approval/evidence; SSH; Staging/Production deploy; Flyway execution; bootstrap; credential creation; login; source-menu writes; validate/execute; real clone; Store 1 runtime read; Production migration; Production deployment; Chinatown activation; ACT-001 implementation; PR merge; or any later package. |
+| Current permitted work | Review and merge-decision for the docs-only post-stack sync. After it enters main, select the resulting exact SHA and request Owner approval for a fresh passive Staging preflight and reviewed procedure. Local checks, independent review, governance sync, and bounded cleanup audit remain allowed. |
+| Explicitly not permitted | Reusing old SHA approval/evidence; SSH; detached release creation; Staging/Production deploy; Docker lifecycle; Flyway execution; bootstrap; credential creation; login; source-menu writes; validate/execute; real clone; Store 1 runtime read; Production migration/deployment; Chinatown activation; ACT-001 implementation; PR merge; or runtime mutation. |
 
 Agent and worker execution is ephemeral. After a bounded task, the result and
 evidence must be returned and persisted, the active session/process terminated,
@@ -120,7 +120,7 @@ packages without that mapping.
 | AL-005 Printing plan / PR #67 | `IN_MAIN` at `65e3d3ced2b5b05eb36d56ce67e475768ad19dff` | Reusable Store-scoped Printing Provisioning plan only; no writer, endpoint, migration, printer, assignment, mode change, test print, or runtime mutation. |
 | AL-005B Device/Pad plan / PR #68 | `IN_MAIN` at `9e93573be97cfd01a9ad3efe64d55827854c497a` | Reusable Store-scoped Device/Pad Provisioning plan only; no endpoint, migration, device, token, pairing, Worker change, or runtime mutation. |
 | AL-006 Activation plan / PR #69 | `IN_MAIN` at `dc682203b2b24bbdb453a5520b297b9051139f13` | Fail-closed workflow plan only; lifecycle and validator are conceptual; no Store status transition or activation writer. |
-| REL-001 Production RC plan / PR #70 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` based on latest `main` | Exact-SHA release gates only; no selected candidate, Staging pass, Production deploy, or activation action. |
+| REL-001 Production RC plan / PR #70 | `IN_MAIN` at `645d4909625f70fc241d5468382d66a30a030fb1` | Exact-SHA release gates only; no selected candidate, Staging pass, Production deploy, or activation action. |
 
 PR-D promotion evidence is now historical main evidence: semantic source
 `5a0dc09944b4b0945fe95027d7f12647212ea559`, reviewed promotion head
@@ -139,10 +139,18 @@ Production at `4667f3c` / Flyway V7; this package performed no fresh runtime
 inspection and does not assert that those environments remain unchanged.
 
 The unique feature stop state is
-`REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL`.
-PRs #61 through #69 are `IN_MAIN`; their repository-only preparation is not
+`POST_STACK_GROUND_TRUTH_SYNC_WAITING_FOR_OWNER_REVIEW`.
+PRs #61 through #70 are `IN_MAIN`; their repository-only preparation is not
 Staging or Production evidence. The separate runtime acceptance prerequisite remains
 `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`.
+
+The current post-stack capability matrix, gap classification, Staging decision,
+and next bounded loops are recorded in
+[Post-Stack Ground Truth Audit](POST_STACK_GROUND_TRUTH_AUDIT.md). The next real
+phase is Staging runtime acceptance. `GO_FOR_OWNER_APPROVAL` applies only to a
+fresh passive preflight for the exact post-sync main SHA; immediate deploy and
+full acceptance remain `NO_GO` until the documented procedural and evidence
+gates pass.
 
 The `IN_MAIN` acceptance preparation is documented in
 [AL-003S Staging Acceptance Preparation](../agile/AL-003S_STAGING_ACCEPTANCE_PREPARATION.md).

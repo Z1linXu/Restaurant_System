@@ -1,14 +1,14 @@
 # AL-005B Device and Pad Provisioning Module Plan
 
-> Status: `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` in Draft PR #68
+> Status: `IN_MAIN` via PR #68
 >
 > Package: `AL-005B_DEVICE_PAD_PROVISIONING_MODULE`
 >
-> Git classification: `DRAFT_PR` based on latest `main`
+> Git classification: `IN_MAIN`
 >
-> Base: `origin/main@65e3d3ced2b5b05eb36d56ce67e475768ad19dff` (PR #67 IN_MAIN)
+> Historical reviewed base: `origin/main@65e3d3ced2b5b05eb36d56ce67e475768ad19dff` (PR #67 IN_MAIN)
 >
-> Draft PR: #68 (`base=main`)
+> Source PR: #68; merged at `9e93573be97cfd01a9ad3efe64d55827854c497a`
 >
 > Runtime access: not performed
 
@@ -240,8 +240,9 @@ or PAD_DIRECT path.
 
 ## 11. Stop state
 
-`DRAFT_PR_WAITING_FOR_OWNER_REVIEW`
+`IN_MAIN_PLAN_ONLY_WAITING_FOR_BOUNDED_IMPLEMENTATION_SELECTION`
 
-The next executable step is not authorized. Owner review must first resolve the
+The plan is in main, but no executable Device/Pad provisioning step is
+authorized. A selected bounded implementation loop must first resolve the
 identified security/integrity/evidence gates; no pairing, credential creation,
 Worker mutation, or runtime operation is implied.

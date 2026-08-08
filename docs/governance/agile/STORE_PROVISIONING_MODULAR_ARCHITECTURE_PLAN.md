@@ -402,10 +402,10 @@ acceptance preparation. The AL-004 contract entered `main` via PR #64 and still
 registers no concrete Store Profile, exposes no public template endpoint, and
 adds no executable provisioning workflow. No runtime operation is authorized.
 The #65 Staff/Table package, independent #66 Printer Store-isolation repair,
-and #67 Printing Provisioning plan are `IN_MAIN`; #68 Device/Pad Provisioning
-and #69 Activation Workflow are also `IN_MAIN` at the latest `origin/main`.
-#70 is the main-based Draft Production Release Candidate plan; no later package
-is authorized by this architecture record.
+and #67 Printing Provisioning plan are `IN_MAIN`; #68 Device/Pad Provisioning,
+#69 Activation Workflow, and #70 Production Release Candidate planning are also
+`IN_MAIN` at `origin/main@645d4909625f70fc241d5468382d66a30a030fb1`.
+No package state authorizes runtime work.
 
 The `IN_MAIN` STG-005B package adds no migration or HTTP endpoint. It
 uses the existing Staging profile/guards, an immutable 4/3/13/38 source
@@ -413,7 +413,7 @@ manifest, a single-transaction empty-or-exact applier, one revision increment,
 and sanitized evidence. It remains dependency-bound to this architecture
 review and separately Owner-gated for runtime use.
 
-The prepared AL-006 stacked package is also planning-only. It defines the
+The `IN_MAIN` AL-006 package is planning-only. It defines the
 Profile/module/evidence responsibility split, a read-only fail-closed validator
 shape, the future exclusive activation-write boundary, and staged prerequisite
 repairs. Existing `Store.status` remains unchanged and is not reinterpreted as

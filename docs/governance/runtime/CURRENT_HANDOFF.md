@@ -28,7 +28,7 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| `origin/main` | `dc682203b2b24bbdb453a5520b297b9051139f13` | `IN_MAIN`; merge of PR #69 |
+| `origin/main` | `645d4909625f70fc241d5468382d66a30a030fb1` | `IN_MAIN`; merge of PR #70 |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
 | Handoff branch | `codex/current-project-handoff` | Documentation-only snapshot; PR #71 remains `IN_MAIN` and is an ancestor of the current `origin/main` above |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
@@ -38,21 +38,23 @@ provisioning without destabilizing current restaurant operations.
 GitHub Merged badge into a non-main base is not evidence that work entered
 `main`.
 
-### Relevant worktrees at snapshot time
+### Relevant registered worktrees at this audit
 
 | Worktree | Branch / purpose | State |
 |---|---|---|
 | `/Users/xuzilin/projects/Restaurant_System` | Owner `main` workspace | Dirty with Owner work; behind `origin/main` and untouched |
-| `/private/tmp/restaurant-al006-activation-plan` | PR #69 | Temporary rebuild worktree; removed after push; branch retained for Owner review |
-| `/private/tmp/restaurant-rel001-rc-plan` | PR #70 | Temporary rebuild worktree; removed after push; branch retained for Owner review |
-| `/private/tmp/restaurant-current-handoff` | this handoff | Documentation-only worktree |
+| `/private/tmp/restaurant-post-stack-audit` | `codex/post-stack-ground-truth-audit` | Current docs-only audit worktree |
+| `/private/tmp/restaurant-current-handoff` | `codex/current-project-handoff` | Retained historical PR #71 worktree |
+| `/private/tmp/restaurant-pr61-rebuild` through `/private/tmp/restaurant-pr65-rebuild` | merged #61-#65 branch worktrees | Retained historical worktrees; not current delivery inputs |
 
-Other `git worktree list` entries were historical prunable registrations. They
-are not active delivery inputs and were not cleaned by this task.
+No registered #69/#70 rebuild worktree remains. Historical worktrees were not
+removed by this audit because their branches/evidence are retained and cleanup
+was not required for the governance correction.
 
-## 3. Draft PR dependency map
+## 3. Completed PR dependency map
 
-GitHub state was read on 2026-08-08. Every PR below was open and Draft.
+GitHub and main ancestry were verified on 2026-08-08. Every PR below is
+closed, merged, and `IN_MAIN`.
 
 | PR | Package | Base | Head | State | Depends on | In main? | Owner action |
 |---|---|---|---|---|---|---|---|
@@ -65,7 +67,7 @@ GitHub state was read on 2026-08-08. Every PR below was open and Draft.
 | #67 | AL-005 Printing provisioning plan | `main` | merge `65e3d3ced2b5b05eb36d56ce67e475768ad19dff` | `IN_MAIN` | #65/main; #66 IN_MAIN | Yes | Repository planning only |
 | #68 | AL-005B Device/Pad plan | `main` | `80839d454e8f88391b16e8ba502d3e4bcccd4fb6` | `IN_MAIN` | #67/main | Yes | Main capability; no runtime behavior |
 | #69 | AL-006 Activation workflow plan | `main` | `b38d3188edc0555bea7e54dafc4868a7c4726005` | `IN_MAIN` | #68/main | Yes | Main capability; no runtime behavior |
-| #70 | REL-001 Production RC plan | `main` | `4e69a04195c8b58b37d778ef8d83c5eb7715a501` | `DRAFT_PR` | #69/main | No | Owner review; no ACT-001 or runtime action |
+| #70 | REL-001 Production RC plan | `main` | merge `645d4909625f70fc241d5468382d66a30a030fb1` | `IN_MAIN` | #69/main | Yes | Planning authority only; no RC, ACT-001, or runtime action |
 
 Main stack review order:
 
@@ -95,17 +97,16 @@ V10 ran on Staging or Production.
 | Field | Current value |
 |---|---|
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE` |
-| Current package | Rebuilt Draft PR #70 REL-001 Chinatown Production Release Candidate plan |
-| Feature stop state | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` |
-| Handoff stop state | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | Review rebuilt #70; separately approve any runtime or Production action |
+| Current Agile Loop | `POST_STACK_GROUND_TRUTH_AUDIT` |
+| Current package | Docs-only Post-Stack Ground Truth synchronization |
+| Feature stop state | `POST_STACK_GROUND_TRUTH_SYNC_WAITING_FOR_OWNER_REVIEW` |
+| Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
+| Current Owner gate | Review the docs-only ground-truth sync; after merge, separately approve the resulting exact-main SHA for fresh passive Staging preflight |
 
 ### Permitted work
 
 - Fetch and verify Git/GitHub ground truth.
-- Review Draft PRs and rebuild the next stacked layer from latest main after its
-  dependency enters main.
+- Review the post-stack capability audit and bounded next-loop ordering.
 - Run local tests, independent review, and mandatory governance sync.
 - Create bounded repairs when the Dependency Repair Auto-Loop applies.
 
@@ -145,7 +146,8 @@ V10 ran on Staging or Production.
 - PR #67 entered `main` at `65e3d3ced2b5b05eb36d56ce67e475768ad19dff`.
 - PR #68 entered `main` at `9e93573be97cfd01a9ad3efe64d55827854c497a`.
 - PR #69 entered `main` at `dc682203b2b24bbdb453a5520b297b9051139f13`.
-  PR #70 is the rebuilt main-based Draft; no later package is authorized.
+- PR #70 entered `main` at `645d4909625f70fc241d5468382d66a30a030fb1`.
+  This completes the #61-#70 preparation stack; no runtime state is implied.
 
 ## 7. AL-003 repository capability
 
@@ -213,8 +215,11 @@ is the first Store Profile sample, not a shared-service special case.
 | AL-005 / #67 | Printing provisioning plan | `IN_MAIN` | repository planning only; no writer/runtime action |
 | AL-005B / #68 | Device/Pad provisioning plan | `IN_MAIN` at `9e93573be97cfd01a9ad3efe64d55827854c497a` | no pairing/credential/Worker/runtime action |
 | AL-006 / #69 | Fail-closed activation workflow plan | `IN_MAIN` at `dc682203b2b24bbdb453a5520b297b9051139f13` | no status transition or activation writer |
-| REL-001 / #70 | Formal Chinatown Production RC plan | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | latest `main` with #69 IN_MAIN; no candidate, deployment, or activation |
+| REL-001 / #70 | Formal Chinatown Production RC plan | `IN_MAIN` at `645d4909625f70fc241d5468382d66a30a030fb1` | planning only; no candidate, deployment, or activation |
 | ACT-001 | Production provisioning and field acceptance | `NOT_STARTED_OWNER_GATED` | Accepted RC and explicit Production activation approval |
+
+The authoritative post-stack capability matrix, Staging decision, and next
+bounded loops are in [Post-Stack Ground Truth Audit](POST_STACK_GROUND_TRUTH_AUDIT.md).
 
 ## 11. Stack rebuild rule
 
@@ -257,13 +262,13 @@ from current main.
    `AGILE_LOOP_OPERATING_MODEL.md`, `FEATURE_BACKLOG.md`, and the applicable
    technical plan.
 3. Verify current `origin/main`; do not trust the Owner workspace branch tip.
-4. Verify GitHub PR #61 through #70 and independent PR #66.
+4. Verify GitHub PR #61 through #71 and independent PR #66 semantics.
 5. Distinguish main, stacked Draft, Staging, and Production state.
-6. Report the current queue and review order to the Owner.
+6. Report the completed main stack and the next Staging Owner Gate.
 7. Do not recreate or redesign packages #61-#70.
-8. Do not create duplicate implementation while the Draft queue is unreconciled.
-9. After an Owner merge, rebuild only the next dependency layer from latest
-   main and rerun its checks/review/governance sync.
+8. Do not infer implementation from the planning packages.
+9. After this governance sync merges, select the resulting exact main SHA and
+   request approval for fresh passive Staging preflight before any runtime step.
 10. Stop at runtime/product/operations Owner Gates; otherwise continue the
     bounded Agile Loop and Dependency Repair Auto-Loop.
 

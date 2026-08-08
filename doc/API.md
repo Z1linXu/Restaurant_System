@@ -163,8 +163,8 @@ Admin/device registration:
   - Soft-revokes the device with `status = REVOKED`, `is_active = false`.
   - Disabled/revoked devices fail device-authenticated runtime calls with `403`.
 
-AL-005B is a planned provisioning boundary, not an additional API. Its current
-review package adds no endpoint, DTO, migration, device write, token operation,
+AL-005B is an `IN_MAIN` provisioning plan, not an additional API. PR #68 adds
+no endpoint, DTO, migration, device write, token operation,
 pairing, or Worker behavior. Versioned Store Profiles must not carry device IDs,
 tokens, pairing state, `last_seen_at`, auto-print preferences, Worker state, or
 printer endpoints. Existing code has no per-device module assignment: every
@@ -531,7 +531,7 @@ the conceptual AL-006 lifecycle, and legacy Platform Admin Store endpoints can
 write status directly. Do not infer activation readiness from onboarding,
 menu-clone completion, a device heartbeat, or an existing `active` value.
 
-The future contract is planned in
+The future contract is planned in the `IN_MAIN` PR #69 document
 [AL-006 Store Activation Workflow Plan](../docs/governance/agile/AL-006_STORE_ACTIVATION_WORKFLOW_PLAN.md).
 It requires Profile-bound evidence from access/staff, menu, tables, printing,
 devices, login, and operational smoke checks before an approved workflow can
@@ -654,6 +654,10 @@ returns printer endpoints, database printer IDs, device identities, secrets,
 raw print payloads, or physical-test evidence. A future read-only planner and
 writer require separate reviewed API contracts after Store-isolation,
 strict-mode, assignment-integrity, idempotency, and device-readiness gates.
+
+PR #70's `IN_MAIN` REL-001 package is a Production Release Candidate plan only.
+It adds no release, deployment, Store 1 read, provisioning, or activation API.
+There is no generic Store Provisioning Engine endpoint in the current contract.
 
 ### Owner Multi-Store Overview
 GET `/api/v1/owner/overview`

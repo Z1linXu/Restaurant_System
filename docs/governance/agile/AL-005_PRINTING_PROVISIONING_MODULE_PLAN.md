@@ -255,4 +255,4 @@ restore, automatic FAILED requeue, or destructive bulk deletion.
 
 ## 13. Stop state
 
-`IN_MAIN_WAITING_FOR_AL-005B_DEVICE_PAD_REVIEW`
+`IN_MAIN_PLAN_ONLY_WAITING_FOR_BOUNDED_IMPLEMENTATION_SELECTION`
