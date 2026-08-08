@@ -79,9 +79,14 @@ separate from historical evidence snapshots and business implementation details:
   migration, device, token, pairing, Worker change, or runtime behavior.
 - [AL-006 Store Activation Workflow Plan](docs/governance/agile/AL-006_STORE_ACTIVATION_WORKFLOW_PLAN.md)
   defines the fail-closed lifecycle, validator gates, evidence boundary, and
-  future exclusive activation writer. Draft PR #69 is planning-only and adds
-  no endpoint, migration, status transition, Store mutation, or runtime
-  behavior.
+  future exclusive activation writer. PR #69 is `IN_MAIN` and adds no
+  endpoint, migration, status transition, Store mutation, or runtime behavior.
+- [REL-001 Chinatown Production Release Candidate Plan](docs/governance/agile/REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE_PLAN.md)
+  defines exact-SHA Staging acceptance, Production gap audit, migration and
+  compatibility review, backup/restore/rollback, resource/deploy gates, Store
+  1 read approval, exact RC approval, and post-deploy verification. Draft PR
+  #70 is planning-only and does not select an RC, claim Staging acceptance,
+  deploy Production, or implement ACT-001 activation.
 - [AL-003A final menu comparison](docs/governance/agile/AL-003A_FINAL_MENU_COMPARISON.md)
   is the single product-mapping authority for the Store 1 to Chinatown target
   menu. Repository seed data is historical reference only.
@@ -495,6 +500,19 @@ therefore a planning-only, fail-closed evidence contract. It does not create an
 activation endpoint, migration, persisted lifecycle, or runtime status change.
 The Profile declares required modules, modules produce sanitized evidence, and
 only a future reviewed workflow may own the final inactive-to-active transition.
+
+The future Chinatown Production release boundary is defined in
+[REL-001 Chinatown Production Release Candidate Plan](docs/governance/agile/REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE_PLAN.md).
+One exact SHA must be merged to `main`, accepted unchanged on isolated Staging,
+and then pass a separately approved fresh Production gap, migration,
+compatibility, backup/recovery, and rollback review. The current Draft stack is
+not an RC. This documentation package does not select a candidate, inspect a
+runtime, run Flyway, deploy, read Store 1, clone a menu, or activate a Store.
+The checked-in Production Compose currently binds PostgreSQL through a path
+relative to its Compose file, while the deploy helper uses one combined
+backend/frontend build command. A detached exact-SHA deployment is therefore
+`NO-GO` until a reviewed guard preserves the existing fixed Production state
+root and enforces serial builds plus the approved memory threshold.
 
 Agile Loop agents and workers are ephemeral resources. Completed bounded tasks
 must return persisted evidence to the Coordinator, terminate their active

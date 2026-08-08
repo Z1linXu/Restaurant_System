@@ -16,9 +16,9 @@
 | priority | `HIGH` |
 | status | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` |
 | target_loop | `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE` |
-| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, PR #60's Owner decisions, PR #71's handoff navigation, PR #61's Modular Architecture Foundation, PR #62's Synthetic St-Denis baseline, PR #63's guarded AL-003S acceptance preparation, PR #64's Generic Store Profile contract, PR #65's Staff/Table planning, PR #66's Printer Store-isolation repair, PR #67's Printing Provisioning plan, and PR #68's Device/Pad Provisioning plan are `IN_MAIN` at `9e93573be97cfd01a9ad3efe64d55827854c497a`. Draft PR #69 is the next main-based Store Activation planning package; PR #70 remains dependency-bound and not in main. No Draft establishes Staging or Production state. |
+| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, PR #60's Owner decisions, PR #71's handoff navigation, PR #61's Modular Architecture Foundation, PR #62's Synthetic St-Denis baseline, PR #63's guarded AL-003S acceptance preparation, PR #64's Generic Store Profile contract, PR #65's Staff/Table planning, PR #66's Printer Store-isolation repair, PR #67's Printing Provisioning plan, PR #68's Device/Pad Provisioning plan, and PR #69's Activation Workflow plan are `IN_MAIN` at `dc682203b2b24bbdb453a5520b297b9051139f13`. Draft PR #70 is the next main-based Production Release Candidate planning package. No Draft establishes Staging or Production state. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Review the rebuilt Draft PR #69 as a single-layer fail-closed Store Activation Workflow plan. Do not begin #70 until #69 is Owner-reviewed and merged into `main`; runtime acceptance and Production actions remain separately Owner-gated. |
+| next action | Review the rebuilt Draft PR #70 as a single-layer REL-001 Production Release Candidate plan. Do not begin any later package; Staging acceptance, Production evidence, deployment, and Chinatown activation remain separately Owner-gated. |
 
 ### Current AL-003 delivery state
 
@@ -46,8 +46,8 @@
 | Printer Store-isolation repair / PR #66 | `IN_MAIN` at `f483a4640503c20f6eec1e2e9ae1d198bf23d1f3`; rejects cross-Store printer config updates, cross-Store automatic dispatch, and PAD_DIRECT printer-health updates; no migration, endpoint shape, transport, Android, or runtime action |
 | AL-005 Printing plan / PR #67 | `IN_MAIN` at `65e3d3ced2b5b05eb36d56ce67e475768ad19dff` | Reusable Store-scoped Printing Provisioning planning only; no writer, endpoint, migration, printer, assignment, mode change, test print, or runtime mutation |
 | AL-005B Device/Pad plan / PR #68 | `IN_MAIN` at `9e93573be97cfd01a9ad3efe64d55827854c497a` | Single-layer reusable Device/Pad Provisioning plan; no pairing, token, Worker, endpoint, migration, or runtime mutation |
-| AL-006 Activation plan / PR #69 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` based on latest `main`; no activation writer |
-| REL-001 Production RC plan / PR #70 | `STACKED_ONLY` on #69; no selected candidate or runtime action |
+| AL-006 Activation plan / PR #69 | `IN_MAIN` at `dc682203b2b24bbdb453a5520b297b9051139f13` | Fail-closed workflow plan only; lifecycle and validator are conceptual; no status transition or activation writer |
+| REL-001 Production RC plan / PR #70 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` based on latest `main` | Exact-SHA release gates only; no selected candidate, Staging pass, Production deploy, or activation action |
 
 The Owner-login acceptance prerequisite is not satisfied by repository code or
 deployment alone. Read-only code audit confirms that an active Organization
@@ -214,8 +214,8 @@ seed/demo Store.
 | Staff/Table provisioning module | `IN_MAIN` via PR #65 | Reusable Staff/Access and Table module planning only; no writer. Chinatown remains blank-table/manual setup; future predefined-table writing requires schema, normalization, ownership, and replay decisions. |
 | Printing provisioning module | `IN_MAIN` via PR #67 | Single-layer reusable Store-scoped Printing Provisioning plan; no executable writer or runtime mutation. |
 | Device/Pad provisioning module | `IN_MAIN` via PR #68 at `9e93573be97cfd01a9ad3efe64d55827854c497a` | Reusable Store-scoped pairing, binding, readiness, and health planning only; no pairing, token, Worker, endpoint, or runtime mutation. |
-| Store activation validation/workflow | `DRAFT_PR_69_WAITING_FOR_OWNER_REVIEW` | Fail-closed plan only; lifecycle and validator are conceptual; no status transition or activation writer. |
-| Chinatown Production Release Candidate | `PREPARED_DRAFT_PR_70` | Exact-SHA/migration/backup/rollback gates only; no selected candidate or runtime action. |
+| Store activation validation/workflow | `IN_MAIN` via PR #69 | Fail-closed plan only; lifecycle and validator are conceptual; no status transition or activation writer. |
+| Chinatown Production Release Candidate | `DRAFT_PR_70_WAITING_FOR_OWNER_REVIEW` | Exact-SHA/migration/backup/rollback/resource/deployment gates only; no selected candidate, Staging pass, Production deploy, or Chinatown activation. |
 | Chinatown end-to-end field acceptance | `PRODUCTION_PENDING` | Owner/staff login, dine-in order, update, expected tickets, and operational completion remain required. |
 
 ### Proposed bounded loop order
@@ -244,7 +244,8 @@ seed/demo Store.
    [AL-006 Store Activation Workflow Plan](agile/AL-006_STORE_ACTIVATION_WORKFLOW_PLAN.md).
 8. `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE`: Store 1 read-only source
    capture, Production gap/migration/backup/rollback review, and exact-SHA
-   approval.
+   approval. The bounded preparation is
+   [REL-001 Chinatown Production Release Candidate Plan](agile/REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE_PLAN.md).
 9. `ACT-001_CHINATOWN_PRODUCTION_ACTIVATION`: execute approved provisioning and
    complete Owner/staff/order/printing/Pad field acceptance.
 

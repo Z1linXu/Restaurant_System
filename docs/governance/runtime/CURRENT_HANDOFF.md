@@ -28,7 +28,7 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| `origin/main` | `9e93573be97cfd01a9ad3efe64d55827854c497a` | `IN_MAIN`; merge of PR #68 |
+| `origin/main` | `dc682203b2b24bbdb453a5520b297b9051139f13` | `IN_MAIN`; merge of PR #69 |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
 | Handoff branch | `codex/current-project-handoff` | Documentation-only snapshot; PR #71 remains `IN_MAIN` and is an ancestor of the current `origin/main` above |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
@@ -42,9 +42,9 @@ GitHub Merged badge into a non-main base is not evidence that work entered
 
 | Worktree | Branch / purpose | State |
 |---|---|---|
-| `/Users/xuzilin/projects/Restaurant_System` | Owner `main` workspace | Clean and untouched; behind `origin/main` |
+| `/Users/xuzilin/projects/Restaurant_System` | Owner `main` workspace | Dirty with Owner work; behind `origin/main` and untouched |
 | `/private/tmp/restaurant-al006-activation-plan` | PR #69 | Temporary rebuild worktree; removed after push; branch retained for Owner review |
-| `/private/tmp/restaurant-rel001-rc-plan` | PR #70 | Active stacked worktree at `59246ae...` |
+| `/private/tmp/restaurant-rel001-rc-plan` | PR #70 | Temporary rebuild worktree; removed after push; branch retained for Owner review |
 | `/private/tmp/restaurant-current-handoff` | this handoff | Documentation-only worktree |
 
 Other `git worktree list` entries were historical prunable registrations. They
@@ -64,8 +64,8 @@ GitHub state was read on 2026-08-08. Every PR below was open and Draft.
 | #66 | Printer Store-isolation repair | `main` | merge `f483a4640503c20f6eec1e2e9ae1d198bf23d1f3` | `IN_MAIN` | #65/main | Yes | Security foundation; no runtime behavior |
 | #67 | AL-005 Printing provisioning plan | `main` | merge `65e3d3ced2b5b05eb36d56ce67e475768ad19dff` | `IN_MAIN` | #65/main; #66 IN_MAIN | Yes | Repository planning only |
 | #68 | AL-005B Device/Pad plan | `main` | `80839d454e8f88391b16e8ba502d3e4bcccd4fb6` | `IN_MAIN` | #67/main | Yes | Main capability; no runtime behavior |
-| #69 | AL-006 Activation workflow plan | `main` | `6e4e33a14884454e14edb07ebbf2de8d7f47fab7` | `DRAFT_PR` | #68/main | No | Owner review; do not begin #70 |
-| #70 | REL-001 Production RC plan | PR #69 branch | `59246ae758716c1d457be465eb34fd4e757f02ec` | `STACKED_ONLY` | #69 | No | Rebuild after #69; no runtime approval implied |
+| #69 | AL-006 Activation workflow plan | `main` | `b38d3188edc0555bea7e54dafc4868a7c4726005` | `IN_MAIN` | #68/main | Yes | Main capability; no runtime behavior |
+| #70 | REL-001 Production RC plan | `main` | `4e69a04195c8b58b37d778ef8d83c5eb7715a501` | `DRAFT_PR` | #69/main | No | Owner review; no ACT-001 or runtime action |
 
 Main stack review order:
 
@@ -96,10 +96,10 @@ V10 ran on Staging or Production.
 |---|---|
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE` |
-| Current package | Rebuilt Draft PR #69 AL-006 Store Activation Workflow plan |
+| Current package | Rebuilt Draft PR #70 REL-001 Chinatown Production Release Candidate plan |
 | Feature stop state | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` |
 | Handoff stop state | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | Review rebuilt #69; separately approve any runtime or Production action |
+| Current Owner gate | Review rebuilt #70; separately approve any runtime or Production action |
 
 ### Permitted work
 
@@ -144,8 +144,8 @@ V10 ran on Staging or Production.
 - PR #66 entered `main` at `f483a4640503c20f6eec1e2e9ae1d198bf23d1f3`.
 - PR #67 entered `main` at `65e3d3ced2b5b05eb36d56ce67e475768ad19dff`.
 - PR #68 entered `main` at `9e93573be97cfd01a9ad3efe64d55827854c497a`.
-  PR #69 is the rebuilt main-based Draft; PR #70 remains stacked-only,
-  not main capability.
+- PR #69 entered `main` at `dc682203b2b24bbdb453a5520b297b9051139f13`.
+  PR #70 is the rebuilt main-based Draft; no later package is authorized.
 
 ## 7. AL-003 repository capability
 
@@ -212,8 +212,8 @@ is the first Store Profile sample, not a shared-service special case.
 | AL-005A / #65 | Staff/Table module plan | `IN_MAIN` | Repository planning only; no writer or runtime execution |
 | AL-005 / #67 | Printing provisioning plan | `IN_MAIN` | repository planning only; no writer/runtime action |
 | AL-005B / #68 | Device/Pad provisioning plan | `IN_MAIN` at `9e93573be97cfd01a9ad3efe64d55827854c497a` | no pairing/credential/Worker/runtime action |
-| AL-006 / #69 | Fail-closed activation workflow plan | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | latest `main` with #68 IN_MAIN; no status transition or activation writer |
-| REL-001 / #70 | Formal Chinatown Production RC plan | `STACKED_ONLY` | #69, Staging acceptance, Production approval |
+| AL-006 / #69 | Fail-closed activation workflow plan | `IN_MAIN` at `dc682203b2b24bbdb453a5520b297b9051139f13` | no status transition or activation writer |
+| REL-001 / #70 | Formal Chinatown Production RC plan | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | latest `main` with #69 IN_MAIN; no candidate, deployment, or activation |
 | ACT-001 | Production provisioning and field acceptance | `NOT_STARTED_OWNER_GATED` | Accepted RC and explicit Production activation approval |
 
 ## 11. Stack rebuild rule

@@ -329,6 +329,12 @@ aggregates module evidence without replacing domain authorities, and records
 the current legacy direct-`active` Platform Admin paths as a prerequisite gate.
 It adds no activation API, migration, status transition, or runtime action.
 
+The exact-SHA Production release boundary is maintained in
+[REL-001 Chinatown Production Release Candidate Plan](REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE_PLAN.md).
+It requires the same merged SHA to pass Staging acceptance, fresh Production
+gap evidence, migration/compatibility review, backup/recovery review, and an
+explicit Owner execution approval. It performs no runtime inspection or action.
+
 ### 10.1 Historical label mapping
 
 Earlier plans used short labels before the modular roadmap was approved. Those
@@ -397,8 +403,9 @@ registers no concrete Store Profile, exposes no public template endpoint, and
 adds no executable provisioning workflow. No runtime operation is authorized.
 The #65 Staff/Table package, independent #66 Printer Store-isolation repair,
 and #67 Printing Provisioning plan are `IN_MAIN`; #68 Device/Pad Provisioning
-is now `IN_MAIN` at the latest `origin/main`, while #69 is the main-based Draft
-Activation Workflow plan and #70 remains `STACKED_ONLY` until #69 enters `main`.
+and #69 Activation Workflow are also `IN_MAIN` at the latest `origin/main`.
+#70 is the main-based Draft Production Release Candidate plan; no later package
+is authorized by this architecture record.
 
 The `IN_MAIN` STG-005B package adds no migration or HTTP endpoint. It
 uses the existing Staging profile/guards, an immutable 4/3/13/38 source

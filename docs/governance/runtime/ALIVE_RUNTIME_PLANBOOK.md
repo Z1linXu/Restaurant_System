@@ -26,7 +26,7 @@
 | Environment | `restaurant-prod` | `OPERATOR_CONFIRMED` | Environment label only; no host or secret is recorded. |
 | `RUNTIME_COMMIT` | `4667f3c` | `OPERATOR_CONFIRMED` | Reported deployed commit, not a formal release approval. |
 | Production branch | `main` | `OPERATOR_CONFIRMED` | Branch relationship is not a deployment approval record. |
-| Last merged `DOCUMENTATION_COMMIT` | `9e93573be97cfd01a9ad3efe64d55827854c497a` | `MACHINE_VERIFIED` from `origin/main` | PR #68 is `IN_MAIN`; this does not make that commit a Staging or Production runtime. |
+| Last merged `DOCUMENTATION_COMMIT` | `dc682203b2b24bbdb453a5520b297b9051139f13` | `MACHINE_VERIFIED` from `origin/main` | PR #69 is `IN_MAIN`; this does not make that commit a Staging or Production runtime. |
 | Deployment mode | HTTP | `OPERATOR_CONFIRMED` | HTTPS/certificate posture is outside this record. |
 | Compose services | `db`, `backend`, `nginx` | `OPERATOR_CONFIRMED` | No new container inspection was run for this planbook. |
 | Database schema | Flyway V7, including `V7__add_print_job_attention_acknowledgement.sql` | `OPERATOR_CONFIRMED` | Not a restore or schema-integrity rehearsal. |
@@ -62,10 +62,10 @@ snapshots. Do not copy those reports into this planbook.
 | Item | Current state |
 |---|---|
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `AL-006_STORE_ACTIVATION_WORKFLOW` |
+| Current Agile Loop | `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE` |
 | Loop type | `DEPENDENCY_BOUND_PREPARATION` |
-| Loop status | `AL-006_ACTIVATION_PREPARED_WAITING_FOR_OWNER_REVIEW` |
-| Feature stop state | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` |
+| Loop status | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` |
+| Current package | `DRAFT_PR_70_WAITING_FOR_OWNER_REVIEW` — exact-SHA Production RC planning only |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | PR #27 merged the backend foundation into `main`; Production remains on the older runtime and no production onboarding is established by that merge. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -73,10 +73,10 @@ snapshots. Do not copy those reports into this planbook.
 | STG-004 state | PR #38 merged the STG-004 runtime evidence. Exact SHA `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` passed PLAN, fresh PREFLIGHT, serial build/start, runtime verification, and isolated stop/start recovery. Server Staging remains running; Production remained unchanged. |
 | STG-005 state | PLAN complete. The Owner approved CP-0 as a separate minimal Staging-only bootstrap implementation and accepted CP-4 as a feature-disabled KDS/Assembling boundary. Positive Kitchen/Assembling workflow remains `EVIDENCE_PENDING`. |
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
-| AL-003 state | PR #58 preserves the failed-attempt evidence; PR #59's bounded PostgreSQL UID-70/mode-0700 private-leaf repair, PR #60's Owner decisions, PR #71's handoff navigation, PR #61's modular architecture, PR #62's Synthetic St-Denis baseline, PR #63's guarded Staging acceptance preparation, PR #64's Generic Store Profile contract, PR #65's Staff/Table planning, PR #66's Printer Store-isolation repair, PR #67's Printing Provisioning plan, and PR #68's Device/Pad Provisioning plan are `IN_MAIN` at `9e93573be97cfd01a9ad3efe64d55827854c497a`. None proves a new Staging deployment. |
+| AL-003 state | PR #58 preserves the failed-attempt evidence; PR #59's bounded PostgreSQL UID-70/mode-0700 private-leaf repair, PR #60's Owner decisions, PR #71's handoff navigation, PR #61's modular architecture, PR #62's Synthetic St-Denis baseline, PR #63's guarded Staging acceptance preparation, PR #64's Generic Store Profile contract, PR #65's Staff/Table planning, PR #66's Printer Store-isolation repair, PR #67's Printing Provisioning plan, PR #68's Device/Pad Provisioning plan, and PR #69's Activation Workflow plan are `IN_MAIN` at `dc682203b2b24bbdb453a5520b297b9051139f13`. None proves a new Staging deployment. |
 | Staging Owner login prerequisite | `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`; code audit proves an Organization Owner naturally accesses every same-Organization Store, so no explicit target Owner Store membership is required. Runtime bootstrap, credential, login, workspace, target onboarding, and API evidence remain pending. |
-| Current permitted work | Review the rebuilt main-based Draft PR #69 Store Activation Workflow plan as a single layer. Run local planning checks, independent review, governance sync, and bounded cleanup audit; runtime mutation remains prohibited. |
-| Explicitly not permitted | Reusing old SHA approval/evidence; SSH/runtime mutation; deployment; Flyway; bootstrap; credential creation; login; source-menu writes; validate/execute; real clone; Pad pairing; device credential creation; Store activation; Production Store 1 access/mutation; PR merge; #70 work; or duplicate implementation of the prepared Draft queue. |
+| Current permitted work | Review the rebuilt main-based Draft PR #70 REL-001 Production Release Candidate plan as a single layer. Run local planning checks, independent review, governance sync, and bounded cleanup audit; runtime inspection/mutation remains prohibited. |
+| Explicitly not permitted | Reusing old SHA approval/evidence; SSH; Staging/Production deploy; Flyway execution; bootstrap; credential creation; login; source-menu writes; validate/execute; real clone; Store 1 runtime read; Production migration; Production deployment; Chinatown activation; ACT-001 implementation; PR merge; or any later package. |
 
 Agent and worker execution is ephemeral. After a bounded task, the result and
 evidence must be returned and persisted, the active session/process terminated,
@@ -119,8 +119,8 @@ packages without that mapping.
 | Printer Store-isolation repair / PR #66 | `IN_MAIN` at `f483a4640503c20f6eec1e2e9ae1d198bf23d1f3` | Rejects cross-Store printer config updates, cross-Store automatic dispatch, and PAD_DIRECT printer-health updates; no migration, endpoint shape, transport, Android, or runtime action. |
 | AL-005 Printing plan / PR #67 | `IN_MAIN` at `65e3d3ced2b5b05eb36d56ce67e475768ad19dff` | Reusable Store-scoped Printing Provisioning plan only; no writer, endpoint, migration, printer, assignment, mode change, test print, or runtime mutation. |
 | AL-005B Device/Pad plan / PR #68 | `IN_MAIN` at `9e93573be97cfd01a9ad3efe64d55827854c497a` | Reusable Store-scoped Device/Pad Provisioning plan only; no endpoint, migration, device, token, pairing, Worker change, or runtime mutation. |
-| AL-006 Activation plan / PR #69 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` based on latest `main` | Fail-closed workflow plan only; lifecycle and validator are conceptual; no Store status transition or activation writer. |
-| REL-001 Production RC plan / PR #70 | `STACKED_ONLY` on #69 | Exact-SHA release gates only; no candidate or runtime action. |
+| AL-006 Activation plan / PR #69 | `IN_MAIN` at `dc682203b2b24bbdb453a5520b297b9051139f13` | Fail-closed workflow plan only; lifecycle and validator are conceptual; no Store status transition or activation writer. |
+| REL-001 Production RC plan / PR #70 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` based on latest `main` | Exact-SHA release gates only; no selected candidate, Staging pass, Production deploy, or activation action. |
 
 PR-D promotion evidence is now historical main evidence: semantic source
 `5a0dc09944b4b0945fe95027d7f12647212ea559`, reviewed promotion head
@@ -140,7 +140,7 @@ inspection and does not assert that those environments remain unchanged.
 
 The unique feature stop state is
 `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL`.
-PRs #61 through #68 are `IN_MAIN`; their repository-only preparation is not
+PRs #61 through #69 are `IN_MAIN`; their repository-only preparation is not
 Staging or Production evidence. The separate runtime acceptance prerequisite remains
 `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`.
 
@@ -183,6 +183,16 @@ It records that no unified activation orchestrator exists, that conceptual
 readiness stages are not current `stores.status` values, and that legacy direct
 `active` writes, evidence persistence, verifier contracts, and runtime gates
 must be resolved before a future exclusive activation transition is built.
+
+The Production Release Candidate boundary is documented in
+[REL-001 Chinatown Production Release Candidate Plan](../agile/REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE_PLAN.md).
+It requires one exact merged SHA to pass the same-SHA Staging acceptance plus a
+fresh, separately approved Production gap/backup/compatibility review. No RC
+SHA is selected, and no runtime evidence was collected by that package.
+The current Production Compose uses a release-relative PostgreSQL bind path and
+the current deploy helper combines backend/frontend builds without the retained
+1 GiB memory gate. Production deployment is `NO-GO` until a bounded repair
+preserves a fixed external state root and enforces guarded serial builds.
 
 Git ground truth must always distinguish `MERGED_ON_GITHUB`, `IN_MAIN`,
 `DEPLOYED_TO_STAGING`, and `DEPLOYED_TO_PRODUCTION`. A stacked PR merged into a
