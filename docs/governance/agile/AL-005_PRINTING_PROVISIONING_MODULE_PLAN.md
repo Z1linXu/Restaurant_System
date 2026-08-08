@@ -155,12 +155,14 @@ not be inferred from physical printer names or endpoints.
 
 ## 7. Dependency Repair Gate
 
-Independent Draft PR #66 repairs two pre-existing Store-isolation defects:
+Independent Draft PR #66 repairs three pre-existing Store-isolation defects:
 
 1. an existing printer config cannot be moved across Stores through a changed
    request `store_id`;
 2. automatic dispatch revalidates that an assigned printer belongs to the
-   dispatch Store before renderer/transport execution.
+   dispatch Store before renderer/transport execution;
+3. PAD_DIRECT complete/fail scopes printer-health updates to the durable job
+   Store instead of looking up a bare printer ID.
 
 PR #66 targets `main` independently of this stacked package. It must enter
 `main` before any executable AL-005 writer is promoted. This plan does not
@@ -198,7 +200,8 @@ an approved environment and normalization/remediation policy is reviewed.
 
 The initial executable slice must not activate printing. It may at most create
 or reconcile inactive logical configuration under a parent idempotency scope.
-Activation belongs to AL-006 after runtime evidence passes.
+That inactive writer does not depend on AL-005B. Runtime binding in AL-005P4
+and activation in AL-006 do depend on AL-005B readiness evidence.
 
 ## 10. Test contract
 

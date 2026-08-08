@@ -106,6 +106,7 @@ packages without that mapping.
 | AL-004 generic Store Profile contract / PR #64 | `STACKED_ONLY_WAITING_FOR_OWNER_REVIEW` | Adds exact Store-profile identity/version/composition, module policies, activation requirements, canonical fingerprinting, and safe summaries. It registers no concrete profile and has no endpoint, migration, provisioning engine, UI, or runtime action. |
 | AL-005A Staff/Table module preparation / PR #65 | `AL-005A_PREPARED_WAITING_FOR_AL-004` (`STACKED_ONLY` Git classification) | Records the existing staff/access and dining-table authorities, reusable module contracts, security gaps, test gates, and Owner/schema decisions. It adds no writer, endpoint, migration, credential, table, or runtime action. |
 | AL-005 Printing provisioning preparation / PR #67 | `AL-005_PRINTING_PREPARED_WAITING_FOR_DEPENDENCIES` (`STACKED_ONLY` Git classification) | Records existing printing authorities, profile/runtime boundaries, fixed Chinatown policy, prerequisite defects, staged contracts, and test gates. It adds no writer, endpoint, migration, printer, assignment, device, mode change, test print, or runtime action. |
+| AL-005B Device/Pad provisioning preparation | `AL-005B_DEVICE_PREPARED_WAITING_FOR_DEPENDENCIES` (`STACKED_ONLY` Git classification) | Records pairing/auth/heartbeat/Store-wide queue authorities, profile/runtime boundaries, four-Pad Chinatown policy, prerequisite gaps, and readiness gates. It adds no writer, endpoint, migration, device, token, pairing, Worker change, or runtime action. |
 | Printer Store-isolation repair / PR #66 | independent `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | Main-based prerequisite; not included in this stack. It must merge before an executable printing writer is promoted. |
 
 PR-D promotion evidence is now historical main evidence: semantic source
@@ -158,8 +159,16 @@ The downstream Printing audit is documented in
 [AL-005 Printing Provisioning Module Plan](../agile/AL-005_PRINTING_PROVISIONING_MODULE_PLAN.md).
 It keeps Store Profiles endpoint-free, preserves `DISABLED` until operational
 acceptance, and records PR #66 plus strict-mode, a generic pre-job enabled-module
-gate, role/assignment integrity, idempotency, and AL-005B device readiness as
-writer/activation gates.
+gate, role/assignment integrity, and idempotency as inactive-writer gates.
+AL-005B device readiness is a later runtime-binding/activation gate, not a gate
+for creating inactive logical configuration.
+
+The dependent Device/Pad audit is documented in
+[AL-005B Device and Pad Provisioning Module Plan](../agile/AL-005B_DEVICE_PAD_PROVISIONING_MODULE_PLAN.md).
+It preserves the current Store-wide PAD_DIRECT queue with no per-device module
+assignment and keeps identities, tokens, pairing, auto-print, and Worker health
+outside versioned profiles. Executable work remains blocked by AL-005 and the
+documented credential, idempotency, integrity, and runtime-evidence gates.
 
 Git ground truth must always distinguish `MERGED_ON_GITHUB`, `IN_MAIN`,
 `DEPLOYED_TO_STAGING`, and `DEPLOYED_TO_PRODUCTION`. A stacked PR merged into a
