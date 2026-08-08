@@ -53,6 +53,10 @@ separate from historical evidence snapshots and business implementation details:
   bind the non-web command entry, exact evidence, secret-redaction, and rollback
   boundaries. They authorize no SSH, container action, Flyway, bootstrap,
   login, API call, or clone.
+- [AL-004 Generic Store Profile Contract](docs/governance/agile/AL-004_GENERIC_STORE_PROFILE_CONTRACT.md)
+  defines the first declarative Store-level identity/composition slice. It
+  registers no concrete profile and has no public endpoint, migration, UI, or
+  executable provisioning workflow.
 - [AL-003A final menu comparison](docs/governance/agile/AL-003A_FINAL_MENU_COMPARISON.md)
   is the single product-mapping authority for the Store 1 to Chinatown target
   menu. Repository seed data is historical reference only.
@@ -392,6 +396,18 @@ Store-specific desired state belongs in a reviewed profile, physical
 endpoints/secrets remain runtime-only, and accepted actions are retained as
 sanitized evidence. The architecture authority is
 [STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md](docs/governance/agile/STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md).
+
+The stacked AL-004 contract introduces a Store-neutral registry above the
+existing menu-profile registry. It validates exact code/version identities,
+unique module references carrying reviewed expected fingerprints, applicable activation
+requirements, and a deterministic canonical fingerprint. It intentionally
+registers no concrete Chinatown or St-Denis Store Profile: Store-level
+timezone, language, tax, receipt defaults, and complete module references must
+not be guessed from repository seed data. This repository-only contract does
+not provision a Store and does not register an Owner API or UI.
+It does not yet verify a referenced module/configuration against a module
+registry or deployed runtime; that compatibility gate remains a later engine
+capability.
 
 STG-005B prepares a Staging-only, non-web source-menu fixture around the
 existing menu entities, Store lock, and revision service. Its source graph has

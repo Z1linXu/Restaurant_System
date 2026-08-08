@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `AL-003S_STACKED_PREPARATION_WAITING_FOR_DEPENDENCIES_AND_OWNER_RUNTIME_APPROVAL` |
-| target_loop | `AL-003` |
-| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, and PR #60's Owner decisions are `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. The modular provisioning architecture package is under review in Draft PR #61. Staging remains on the separately evidenced older runtime; no V9/V10/bootstrap/clone execution is implied. |
+| status | `AL-004_STACKED_PROFILE_CONTRACT_WAITING_FOR_OWNER_REVIEW` |
+| target_loop | `AL-004_GENERIC_STORE_PROFILE_FRAMEWORK` |
+| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, and PR #60's Owner decisions are `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. Draft PRs #61-#63 remain dependency-bound and are not in `main`. The stacked AL-004 package adds only a declarative Store-profile contract. Staging remains on the separately evidenced older runtime; no V9/V10/bootstrap/clone/provisioning execution is implied. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Review Draft PR #61, then dependency-bound Draft PR #62, then independently promote/review the stacked AL-003S preparation. Only after all dependencies enter `main` may a fresh exact-SHA runtime request be submitted for separate Owner approval. |
+| next action | Review Draft PR #61, then dependency-bound Draft PRs #62 and #63, then the stacked AL-004 contract package. Runtime acceptance still needs a fresh exact-SHA request and separate Owner approval after its dependencies enter `main`. |
 
 ### Current AL-003 delivery state
 
@@ -39,7 +39,8 @@
 | Owner decisions governance sync / PR #60 | `IN_MAIN` via merge `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; documentation only, no runtime action |
 | Modular Store provisioning architecture / PR #61 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`; documentation only, no runtime action |
 | STG-005B Synthetic St-Denis baseline / PR #62 | `STACKED_DRAFT_WAITING_FOR_OWNER_REVIEW`; no migration, public API, SSH, runtime write, or clone execution |
-| AL-003S Staging acceptance preparation | `STACKED_PREPARATION_WAITING_FOR_DEPENDENCIES_AND_OWNER_RUNTIME_APPROVAL`; guarded launcher/tests and command/evidence/rollback documents only; no runtime action |
+| AL-003S Staging acceptance preparation / PR #63 | `STACKED_DRAFT_WAITING_FOR_OWNER_REVIEW_AND_RUNTIME_APPROVAL`; guarded launcher/tests and command/evidence/rollback documents only; no runtime action |
+| AL-004 generic Store Profile contract | `STACKED_ONLY_WAITING_FOR_OWNER_REVIEW`; exact identity/version/composition/fingerprint contract only; no concrete profile, API, migration, UI, or provisioning execution |
 
 The Owner-login acceptance prerequisite is not satisfied by repository code or
 deployment alone. Read-only code audit confirms that an active Organization
@@ -198,6 +199,7 @@ seed/demo Store.
 | AL-003 validate/execute/replay/restart acceptance | `STAGING_PENDING` | Requires the full synthetic topology and source-menu contract first. |
 | Production Store 1 read-only source capture/drift review | `PRODUCTION_PENDING` | Separate Owner Runtime Gate; only menu-related evidence may be read. |
 | Production Chinatown Store/staff/menu provisioning | `PRODUCTION_PENDING` | Exact-SHA Release Candidate and production approval required. |
+| Generic Store Profile identity/composition contract | `STACKED_ONLY` | Exact versioned identity, module references with reviewed expected fingerprints, activation requirements, canonical fingerprint, and safe summaries are under review; no concrete Store Profile or callable workflow is implied. |
 | Owner Create Store / Choose Menu Template UI | `NOT_IMPLEMENTED` | Existing Platform Admin template UI is not the approved Owner workflow. |
 | Versioned St-Denis profile | `NEEDS_NEW_LOOP` | Historical planning calls the menu-only candidate `ST_DENIS_MENU`; the strict identity for a complete Store Profile is not finalized. It must reuse the generic profile registry/clone engine with no Store ID 3 branch. |
 | Table provisioning module | `NEEDS_NEW_LOOP` | Existing Store-scoped table APIs can be reused; activation orchestration is absent. |

@@ -589,6 +589,12 @@ operational bindings do not alter any HTTP API contract. The one-shot is
 serialized, time-bounded, and post-checked; the approval artifact is procedural
 evidence binding rather than a cryptographic API authorization credential.
 
+The stacked AL-004 Store Profile contract does not add an HTTP endpoint. Its
+registry and safe summary are internal declarative contracts only. Owner
+template discovery/selection, Store provisioning execution, and concrete
+Chinatown/St-Denis Store Profiles remain unimplemented and must not be inferred
+from these internal types.
+
 ### Owner Multi-Store Overview
 GET `/api/v1/owner/overview`
 
