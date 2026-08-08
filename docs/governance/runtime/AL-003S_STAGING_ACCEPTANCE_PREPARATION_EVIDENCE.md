@@ -20,7 +20,8 @@ Production continuity.
 |---|---|
 | Parent STG-005B checkpoint | `0aba8377a3b7acec047c6ffd025f774d8a4d5e87` |
 | Branch | `codex/al-003s-staging-acceptance-preparation` |
-| Package commit | `TO_BE_BOUND_AFTER_COMMIT` |
+| Package implementation commit | `47902430313117ac51a1f054a267ec7371267218` |
+| Final evidence/PR-binding commit | `TO_BE_BOUND_AFTER_DRAFT_PR_CREATION` |
 | PR | `TO_BE_BOUND_AFTER_DRAFT_PR_CREATION` |
 | Dependency state | Draft PR #61 -> stacked Draft PR #62 -> this stacked preparation |
 
@@ -41,11 +42,10 @@ Production continuity.
 | Local Markdown links in changed documents | `PASS` |
 | `git diff --check` | `PASS` before commit |
 | Secret/scope scan | `PASS`; no secret value, migration, business Java, Compose topology, frontend, or Android change |
-| `test_staging_local_rehearsal.sh` | `PENDING_CLEAN_HEAD_RERUN`: correctly refused the dirty pre-commit worktree |
+| `test_staging_local_rehearsal.sh` | `PASS` on clean committed Head `47902430313117ac51a1f054a267ec7371267218` |
 
-The local rehearsal guard is not reported as failed functionality. Its contract
-requires a clean committed HEAD; it will be rerun after the package commit and
-the result bound in the final evidence update.
+The pre-commit invocation correctly refused a dirty worktree. The required
+post-commit rerun then passed on the exact clean implementation commit above.
 
 ## Safety properties exercised
 
