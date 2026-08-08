@@ -2,9 +2,11 @@
 
 > Status: `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL`
 >
-> Git classification: `STACKED_ONLY`
+> Git classification: `DRAFT_PR`
 >
 > Draft PR: [#70](https://github.com/Z1linXu/Restaurant_System/pull/70)
+>
+> Base: `main@dc682203b2b24bbdb453a5520b297b9051139f13` with PR #69 `IN_MAIN`
 >
 > Candidate SHA: `EVIDENCE_PENDING`
 >
@@ -43,12 +45,13 @@ historical evidence, not fresh runtime assertions:
 |---|---|---|---|
 | Production | `4667f3c` | V7 | Owner/operator-confirmed historical baseline; formal release approval and current freshness are unproven. |
 | Staging | `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` | V8 | Historical STG-004 evidence; later AL-003 candidate attempts did not establish a completed replacement runtime. |
-| Repository `main` at stack origin | `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d` | V1-V10 files present | Repository capability only; not deployed by this plan. |
+| Historical stack origin | `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d` | V1-V10 files present | Historical reference only; not the current release baseline. |
+| Current repository `origin/main` | `dc682203b2b24bbdb453a5520b297b9051139f13` | #61–#69 repository packages present | Repository capability only; PR #70 is still a Draft and is not a Production candidate. |
 
-The Draft stack above that `main` commit is not a Production candidate. A
-candidate can be named only after all intended code packages are merged to
-`main`, the tree is clean, and the full 40-character SHA is immutable for the
-release review.
+Only Draft PR #70 remains above the current `main` baseline and is not a
+Production candidate. A candidate can be named only after the intended release
+tree is clean and the full 40-character SHA is immutable for the release
+review.
 
 ### Current P0 release-path conflict
 

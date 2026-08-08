@@ -1,6 +1,6 @@
 # AL-003S Staging Acceptance Preparation
 
-> Package state: `STACKED_ONLY_WAITING_FOR_DEPENDENCIES_AND_OWNER_RUNTIME_APPROVAL`
+> Package state: `IN_MAIN_WAITING_FOR_RUNTIME_APPROVAL`
 >
 > Prepared against: STG-005B checkpoint `0aba8377a3b7acec047c6ffd025f774d8a4d5e87`
 >
@@ -28,9 +28,9 @@ call an API, or execute a clone.
 
 The runtime sequence is `NO_GO` until all of the following are true:
 
-1. Modular architecture Draft PR #61 enters `main`.
-2. STG-005B Draft PR #62 is independently promoted from the resulting `main`
-   and enters `main`.
+1. Modular architecture PR #61 and STG-005B PR #62 are `IN_MAIN`.
+2. Guarded AL-003S preparation PR #63 is `IN_MAIN` at
+   `732d77c89ff067982702426ff918d5e097e1d0fb`.
 3. A new full 40-character merged-main candidate SHA is selected.
 4. The Owner approves that exact SHA and each bounded runtime-mutation batch.
 5. A fresh release, private Staging environment digest, formal preflight PASS
@@ -295,7 +295,7 @@ binding, and immutable image-ID pinning. The remaining gates are:
 These findings do not require a product-contract change, but they prohibit
 claiming `AL-003_STAGING_ACCEPTANCE_READY`. They should be handled as bounded
 operational repair packages or explicit Owner-approved manual procedures after
-the stacked dependencies enter `main`.
+the required dependencies and a fresh runtime approval are in place.
 
 ## 9. Acceptance and stop state
 
@@ -305,4 +305,4 @@ Passing the package does not authorize or prove runtime acceptance.
 
 Stop state:
 
-`AL-003S_STACKED_PREPARATION_WAITING_FOR_DEPENDENCIES_AND_OWNER_RUNTIME_APPROVAL`
+`AL-003S_IN_MAIN_WAITING_FOR_RUNTIME_APPROVAL`
