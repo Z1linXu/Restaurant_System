@@ -64,7 +64,7 @@ snapshots. Do not copy those reports into this planbook.
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `AL-003 Store 1 -> Chinatown Live Menu Clone` |
 | Loop type | `IMPLEMENTATION` |
-| Loop status | `AL-003_STAGING_RELEASE_PLAN_WAITING_FOR_OWNER_APPROVAL` |
+| Loop status | `AL-003_STAGING_RELEASE_NO_GO_WAITING_FOR_OWNER_REPAIR_APPROVAL` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | PR #27 merged the backend foundation into `main`; Production remains on the older runtime and no production onboarding is established by that merge. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -72,9 +72,9 @@ snapshots. Do not copy those reports into this planbook.
 | STG-004 state | PR #38 merged the STG-004 runtime evidence. Exact SHA `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` passed PLAN, fresh PREFLIGHT, serial build/start, runtime verification, and isolated stop/start recovery. Server Staging remains running; Production remained unchanged. |
 | STG-005 state | PLAN complete. The Owner approved CP-0 as a separate minimal Staging-only bootstrap implementation and accepted CP-4 as a feature-disabled KDS/Assembling boundary. Positive Kitchen/Assembling workflow remains `EVIDENCE_PENDING`. |
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
-| AL-003 state | PR #56 merged the protected Owner validate/execute API into `main` at `8f909525781804f61d1da388882f530da358c3c4`. A read-only release preflight found current Staging healthy and isolated at `4397f995...` / Flyway V8; no deployment or migration occurred. |
-| Current permitted work | Owner review of the exact-SHA Staging release gate for `8f909525781804f61d1da388882f530da358c3c4`. |
-| Explicitly not permitted | Deployment before exact-SHA approval, Flyway execution, synthetic bootstrap, validate/execute, real clone, Store 1 data access, Production mutation, automatic merge, STG-006, or unrelated backlog work. |
+| AL-003 state | Owner approved `8f909525781804f61d1da388882f530da358c3c4`, but formal server preflight returned `NO-GO` because the upgrade-path guard requires `ubuntu` to `cd` into the PostgreSQL-owned mode-0700 data leaf. Recovery restored the old Staging runtime; no build or migration occurred. |
+| Current permitted work | Owner review of a smallest preflight-only Dependency Repair package. |
+| Explicitly not permitted | Reusing the failed evidence or old approval, weakening PostgreSQL permissions, editing the approved release, deployment, Flyway execution, bootstrap, validate/execute, real clone, Store 1 access, Production mutation, STG-006, or unrelated work. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 [AGILE_LOOP_OPERATING_MODEL.md](../AGILE_LOOP_OPERATING_MODEL.md), and
@@ -106,7 +106,7 @@ This is repository capability only. No real clone has run; Staging remains on
 `4397f995...` / Flyway V8 and Production remains on `4667f3c` / Flyway V7.
 
 The unique stop state for this loop is
-`AL-003_STAGING_RELEASE_PLAN_WAITING_FOR_OWNER_APPROVAL`.
+`AL-003_STAGING_RELEASE_NO_GO_WAITING_FOR_OWNER_REPAIR_APPROVAL`.
 
 Git ground truth must always distinguish `MERGED_ON_GITHUB`, `IN_MAIN`,
 `DEPLOYED_TO_STAGING`, and `DEPLOYED_TO_PRODUCTION`. A stacked PR merged into a
@@ -442,8 +442,40 @@ Dependency repair and Store Profile governance are authoritative in
   [AL-003 Staging Release Read-only Preflight Evidence](AL-003_STAGING_RELEASE_PREFLIGHT_EVIDENCE.md)
   and
   [AL-003 Exact-SHA Staging Release and Acceptance Plan](../agile/AL-003_STAGING_RELEASE_ACCEPTANCE_PLAN.md).
-- Next state:
+- Historical next state before the approved attempt:
   `AL-003_STAGING_RELEASE_PLAN_WAITING_FOR_OWNER_APPROVAL`.
+
+### AL-003 exact-SHA deployment attempt
+
+- PR #57 entered `main` at
+  `f73fce9aa1c9abff1796715f3258dc4f6bb22207`. The Owner separately approved
+  runtime release SHA `8f909525781804f61d1da388882f530da358c3c4`.
+- The fresh pre-write baseline passed: old Staging was healthy at
+  `4397f995...` / Flyway V8, printing was disabled, `18080` was loopback-only,
+  resources exceeded thresholds, and Production continuity matched retained
+  evidence.
+- The independent Staging repository created a clean detached candidate
+  release. The private identity was updated and only the old Staging project
+  was stopped to free the formal-preflight port.
+- Formal preflight returned `NO-GO` before build because its directory
+  canonicalizer attempted to `cd` into the PostgreSQL-owned UID-70 mode-0700
+  persistent data leaf. This is a real upgrade-path guard defect.
+- The pre-migration recovery guard restored the old private identity and old
+  Staging runtime. Flyway remains V8; frontend, backend health, and SockJS info
+  returned 200; Production container IDs, start times, states, and zero
+  restarts remained unchanged.
+- No candidate image, V9/V10 migration, bootstrap, validate, execute, Store 1
+  read, clone, or Production mutation occurred.
+- The failed private evidence has SHA-256
+  `c0c926e77bafeacb2ad972c2580417791814b323e4a3ab9fc05462c475f384b5`.
+- Dependency Repair Gate: fix only the opaque PostgreSQL-leaf validation and
+  its regression test. Do not weaken directory permissions, bypass evidence,
+  or edit the approved release. A merged repair requires a new full-SHA Owner
+  approval and fresh evidence.
+- Evidence:
+  [AL-003 Staging Release Attempt Evidence](AL-003_STAGING_RELEASE_ATTEMPT_EVIDENCE.md).
+- Next state:
+  `AL-003_STAGING_RELEASE_NO_GO_WAITING_FOR_OWNER_REPAIR_APPROVAL`.
 
 ### AL-002 implementation record
 

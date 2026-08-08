@@ -1,6 +1,6 @@
 # AL-003 Store 1 -> Chinatown Live Menu Clone Technical Plan
 
-> Status: `AL-003_STAGING_RELEASE_PLAN_WAITING_FOR_OWNER_APPROVAL`
+> Status: `AL-003_STAGING_RELEASE_NO_GO_WAITING_FOR_OWNER_REPAIR_APPROVAL`
 >
 > Prepared: 2026-07-31, America/Toronto
 >
@@ -23,10 +23,10 @@
 |---|---|
 | `AL003_PLAN_FOUND` | `false` before this document was created |
 | `PLAN_PATH` | `docs/governance/agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md` |
-| `PLAN_STATUS` | `AL-003_STAGING_RELEASE_PLAN_WAITING_FOR_OWNER_APPROVAL` |
+| `PLAN_STATUS` | `AL-003_STAGING_RELEASE_NO_GO_WAITING_FOR_OWNER_REPAIR_APPROVAL` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | Owner reviews the exact-SHA Staging release gate for merged main `8f909525781804f61d1da388882f530da358c3c4`. |
+| `RECOMMENDED_ACTION` | Owner reviews the smallest preflight upgrade-path repair; the prior exact-SHA approval and failed evidence cannot be reused. |
 
 PR-A through PR-F are in `main`. PR-D supplies generic source-option copying
 and target-local parent mapping; PR #54 placed the concrete Chinatown Profile
@@ -879,7 +879,7 @@ Stop and return to Owner if:
 
 ## Final state
 
-`AL-003_STAGING_RELEASE_PLAN_WAITING_FOR_OWNER_APPROVAL`
+`AL-003_STAGING_RELEASE_NO_GO_WAITING_FOR_OWNER_REPAIR_APPROVAL`
 
 PR-F entered `main` through PR #56 at
 `8f909525781804f61d1da388882f530da358c3c4`. The reviewed Owner
@@ -889,3 +889,9 @@ read-only Staging preflight found the existing runtime healthy at
 clone, or deployment occurred. Exact-SHA deployment remains Owner-gated by
 [the release plan](AL-003_STAGING_RELEASE_ACCEPTANCE_PLAN.md) and
 [the preflight evidence](../runtime/AL-003_STAGING_RELEASE_PREFLIGHT_EVIDENCE.md).
+The approved deployment attempt later stopped before build because the formal
+preflight cannot traverse the initialized PostgreSQL mode-0700 data leaf as the
+deployment user. Recovery restored Staging to V8. The next package is a bounded
+preflight-only Dependency Repair, followed by a new merged SHA and approval;
+see
+[the attempt evidence](../runtime/AL-003_STAGING_RELEASE_ATTEMPT_EVIDENCE.md).

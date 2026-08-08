@@ -299,6 +299,16 @@ compatibility evidence. See
 and
 [AL-003 Exact-SHA Staging Release and Acceptance Plan](docs/governance/agile/AL-003_STAGING_RELEASE_ACCEPTANCE_PLAN.md).
 
+The Owner-approved deployment attempt created the clean detached `8f909...`
+release but stopped before image build. Formal preflight attempted to
+canonicalize the initialized PostgreSQL UID-70 mode-0700 data leaf by entering
+it as `ubuntu`, returned `NO-GO`, and triggered pre-migration recovery. Staging
+is restored at `4397f995...` / Flyway V8 with health checks passing; Production
+was unchanged. The guard must receive a bounded upgrade-path repair and a new
+merged-SHA approval. Do not loosen database-directory permissions or bypass the
+evidence gate. See
+[AL-003 Staging Release Attempt Evidence](docs/governance/runtime/AL-003_STAGING_RELEASE_ATTEMPT_EVIDENCE.md).
+
 The reported Production runtime remains `4667f3c`. Its difference from current
 main is neither a release approval nor proof of deployment. Current-main
 capability must not be described as
