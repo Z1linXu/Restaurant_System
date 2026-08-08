@@ -8,8 +8,9 @@
 >
 > Snapshot date: 2026-08-08, America/Toronto
 >
-> Runtime freshness: no SSH, database, Docker runtime, Android, or Production
-> access was performed for this handoff.
+> Runtime freshness: STG-006 completed one Owner-authorized passive Staging
+> observation and minimum Production-continuity observation at 2026-08-08
+> 18:15 UTC. No runtime mutation or business-data read was performed.
 
 ## 1. Project mission
 
@@ -28,9 +29,9 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| `origin/main` | `645d4909625f70fc241d5468382d66a30a030fb1` | `IN_MAIN`; merge of PR #70 |
+| `origin/main` | `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | `IN_MAIN`; merge of PR #72 |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
-| Handoff branch | `codex/current-project-handoff` | Documentation-only snapshot; PR #71 remains `IN_MAIN` and is an ancestor of the current `origin/main` above |
+| Current delivery branch | `codex/stg-006-exact-main-preflight` | STG-006 evidence/governance only; no runtime implementation or mutation |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
 
 `IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
@@ -43,7 +44,8 @@ GitHub Merged badge into a non-main base is not evidence that work entered
 | Worktree | Branch / purpose | State |
 |---|---|---|
 | `/Users/xuzilin/projects/Restaurant_System` | Owner `main` workspace | Dirty with Owner work; behind `origin/main` and untouched |
-| `/private/tmp/restaurant-post-stack-audit` | `codex/post-stack-ground-truth-audit` | Current docs-only audit worktree |
+| `/private/tmp/restaurant-stg006-preflight` | `codex/stg-006-exact-main-preflight` | Current STG-006 evidence/governance worktree |
+| `/private/tmp/restaurant-post-stack-audit` | `codex/post-stack-ground-truth-audit` | Retained historical PR #72 worktree |
 | `/private/tmp/restaurant-current-handoff` | `codex/current-project-handoff` | Retained historical PR #71 worktree |
 | `/private/tmp/restaurant-pr61-rebuild` through `/private/tmp/restaurant-pr65-rebuild` | merged #61-#65 branch worktrees | Retained historical worktrees; not current delivery inputs |
 
@@ -68,6 +70,7 @@ closed, merged, and `IN_MAIN`.
 | #68 | AL-005B Device/Pad plan | `main` | `80839d454e8f88391b16e8ba502d3e4bcccd4fb6` | `IN_MAIN` | #67/main | Yes | Main capability; no runtime behavior |
 | #69 | AL-006 Activation workflow plan | `main` | `b38d3188edc0555bea7e54dafc4868a7c4726005` | `IN_MAIN` | #68/main | Yes | Main capability; no runtime behavior |
 | #70 | REL-001 Production RC plan | `main` | merge `645d4909625f70fc241d5468382d66a30a030fb1` | `IN_MAIN` | #69/main | Yes | Planning authority only; no RC, ACT-001, or runtime action |
+| #72 | Post-stack Ground Truth audit | `main` | merge `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | `IN_MAIN` | completed #61-#71 main stack | Yes | Governance/capability audit only; no runtime action |
 
 Main stack review order:
 
@@ -79,15 +82,14 @@ printing or device operations.
 
 ## 4. Runtime ground truth
 
-These are retained historical evidence, not fresh observations made for this
-handoff.
+STG-006 freshly observed only the bounded runtime identity below.
 
 | Environment | Retained evidence | Classification and boundary |
 |---|---|---|
-| Production | reported commit `4667f3c`; Flyway V7; Compose `db/backend/nginx`; PAD_DIRECT field printing | `NOT FRESHLY VERIFIED`; full 40-character runtime SHA was not retained in this snapshot |
-| Staging | `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c`; Flyway V8 | `NOT FRESHLY VERIFIED`; historical STG-004 evidence only |
-| Staging isolation | Compose project `restaurant-pos-staging`; `127.0.0.1:18080`; independent state | `NOT FRESHLY VERIFIED` |
-| Staging printing | `DISABLED` | `NOT FRESHLY VERIFIED` |
+| Production | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`; Compose `cloud` `db/backend/nginx`; unchanged IDs/start times/restart `0`; health 200 | `MACHINE_VERIFIED_READ_ONLY` continuity only; Flyway/business state not queried |
+| Staging | `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c`; Flyway V8; `db/backend/nginx` running | `MACHINE_VERIFIED_READ_ONLY`; candidate is not deployed |
+| Staging isolation | project `restaurant-pos-staging`; only `127.0.0.1:18080`; separate state/network/mounts; private leaf UID 70/mode 0700 | `MACHINE_VERIFIED_READ_ONLY` |
+| Staging printing | `STAGING_PRINT_MODE=DISABLED`; feature flag `false` | `MACHINE_VERIFIED_READ_ONLY` |
 
 Repository migrations V1-V10 exist in current main. That does not prove V9 or
 V10 ran on Staging or Production.
@@ -97,26 +99,29 @@ V10 ran on Staging or Production.
 | Field | Current value |
 |---|---|
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `POST_STACK_GROUND_TRUTH_AUDIT` |
-| Current package | Docs-only Post-Stack Ground Truth synchronization |
-| Feature stop state | `POST_STACK_GROUND_TRUTH_SYNC_WAITING_FOR_OWNER_REVIEW` |
+| Current Agile Loop | `STG-006_EXACT_MAIN_PREFLIGHT` |
+| Current package | Fresh passive exact-main preflight evidence and governance sync |
+| Feature stop state | `STG-006_PASS_OPS-001_REQUIRED_WAITING_FOR_OWNER_REVIEW` |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | Review the docs-only ground-truth sync; after merge, separately approve the resulting exact-main SHA for fresh passive Staging preflight |
+| Current Owner gate | Review STG-006 PASS evidence and approve a bounded OPS-001 technical design/repair scope; no runtime mutation is included |
 
 ### Permitted work
 
 - Fetch and verify Git/GitHub ground truth.
 - Review the post-stack capability audit and bounded next-loop ordering.
 - Run local tests, independent review, and mandatory governance sync.
-- Create bounded repairs when the Dependency Repair Auto-Loop applies.
+- Create bounded repairs when the Dependency Repair Auto-Loop applies, except
+  OPS-001 implementation, whose trust-root/approval scope is the current Owner
+  decision.
 
 ### Prohibited work without new approval
 
-- SSH, Staging or Production deployment, runtime Docker lifecycle operations.
+- Further SSH, Staging or Production deployment, runtime Docker lifecycle operations.
 - Runtime Flyway, bootstrap, credential creation, login, validate/execute, or
   real menu clone.
 - Production Store 1 read or mutation.
 - Printer configuration, test print, Pad pairing, or device/Worker mutation.
+- OPS-001 implementation before Owner scope/design approval, or STG-007.
 - PR merge, auto-merge, Production activation, restore, destructive database or
   Git commands.
 
@@ -148,6 +153,9 @@ V10 ran on Staging or Production.
 - PR #69 entered `main` at `dc682203b2b24bbdb453a5520b297b9051139f13`.
 - PR #70 entered `main` at `645d4909625f70fc241d5468382d66a30a030fb1`.
   This completes the #61-#70 preparation stack; no runtime state is implied.
+- PR #72 entered `main` at `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b`.
+  STG-006 then freshly verified the retained isolated Staging runtime and
+  minimum Production continuity without mutation.
 
 ## 7. AL-003 repository capability
 
@@ -217,6 +225,8 @@ is the first Store Profile sample, not a shared-service special case.
 | AL-006 / #69 | Fail-closed activation workflow plan | `IN_MAIN` at `dc682203b2b24bbdb453a5520b297b9051139f13` | no status transition or activation writer |
 | REL-001 / #70 | Formal Chinatown Production RC plan | `IN_MAIN` at `645d4909625f70fc241d5468382d66a30a030fb1` | planning only; no candidate, deployment, or activation |
 | ACT-001 | Production provisioning and field acceptance | `NOT_STARTED_OWNER_GATED` | Accepted RC and explicit Production activation approval |
+| STG-006 | Exact-main passive preflight | `PASS` for candidate `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | Evidence only; no release/deploy/migration approval |
+| OPS-001 | Secret-safe Staging tooling repair | `REQUIRED_OWNER_SCOPE_REVIEW` | Release/env, restart/Flyway, and Owner/API client design must be reviewed before implementation/runtime use |
 
 The authoritative post-stack capability matrix, Staging decision, and next
 bounded loops are in [Post-Stack Ground Truth Audit](POST_STACK_GROUND_TRUTH_AUDIT.md).
@@ -233,7 +243,10 @@ from current main.
 
 ## 12. Known blockers and risks
 
-- Exact-SHA Staging runtime approval and acceptance are pending.
+- STG-006 passive evidence passed; exact-SHA release/deployment approval and
+  full Staging acceptance remain pending.
+- OPS-001 secret-safe release/env, same-image restart/Flyway, and Owner/API
+  tooling is required before STG-007.
 - Synthetic bootstrap, Owner login, validate/execute/replay/restart evidence is
   pending.
 - Production and repository main have an unreviewed runtime gap.
@@ -262,13 +275,13 @@ from current main.
    `AGILE_LOOP_OPERATING_MODEL.md`, `FEATURE_BACKLOG.md`, and the applicable
    technical plan.
 3. Verify current `origin/main`; do not trust the Owner workspace branch tip.
-4. Verify GitHub PR #61 through #71 and independent PR #66 semantics.
+4. Verify GitHub PR #61 through #72 and independent PR #66 semantics.
 5. Distinguish main, stacked Draft, Staging, and Production state.
 6. Report the completed main stack and the next Staging Owner Gate.
 7. Do not recreate or redesign packages #61-#70.
 8. Do not infer implementation from the planning packages.
-9. After this governance sync merges, select the resulting exact main SHA and
-   request approval for fresh passive Staging preflight before any runtime step.
+9. Read the STG-006 evidence; do not repeat its runtime observation or advance
+   to STG-007. The next action is bounded OPS-001 design/repair review.
 10. Stop at runtime/product/operations Owner Gates; otherwise continue the
     bounded Agile Loop and Dependency Repair Auto-Loop.
 
@@ -310,5 +323,6 @@ Primary authorities:
 - [Known Issues Backlog](../KNOWN_ISSUES_BACKLOG.md)
 - [AL-003 technical plan](../agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md)
 - [AL-003 Staging acceptance plan](../agile/AL-003_STAGING_RELEASE_ACCEPTANCE_PLAN.md)
+- [STG-006 exact-main preflight evidence](STG-006_EXACT_MAIN_PREFLIGHT_EVIDENCE.md)
 - [System Documentation](../../../SYSTEM_DOCUMENTATION.md)
 - [API contract](../../../doc/API.md)

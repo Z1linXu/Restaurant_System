@@ -1,14 +1,14 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Capability state: `AL-003S_IN_MAIN_WAITING_FOR_RUNTIME_APPROVAL`
+> Capability state: `STG-006_PASS_OPS-001_REQUIRED_WAITING_FOR_OWNER_REVIEW`
 >
 > Historical failed candidate: `8f909525781804f61d1da388882f530da358c3c4`
 >
-> Current audited main: `645d4909625f70fc241d5468382d66a30a030fb1` (`IN_MAIN`, not deployed)
+> Current audited main / STG-006 candidate: `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` (`IN_MAIN`, not deployed)
 >
-> Governance packages: PR #60, PR #71, and PRs #61-#70 are `IN_MAIN`; none is runtime evidence
+> Governance packages: PR #72 and PRs #60-#71 are `IN_MAIN`; repository merge is not runtime evidence
 >
-> Next candidate SHA: `EVIDENCE_PENDING` after fresh Owner runtime approval
+> Passive preflight: `STG-006_PASS`; deployment and acceptance remain pending
 
 ## Authorization boundary
 
@@ -16,14 +16,14 @@ This template does not approve SSH, deployment, Flyway execution, Store 1
 access, synthetic bootstrap execution, or a real clone. A later Owner approval
 must bind one full 40-character merged-main SHA and each runtime command batch.
 
-PR #56 is merged into `main`; the fixed release candidate is now
+Historically, PR #56 entered `main` and the fixed release candidate was
 `8f909525781804f61d1da388882f530da358c3c4`. The read-only preflight is recorded
 in
 [AL-003 Staging Release Read-only Preflight Evidence](../runtime/AL-003_STAGING_RELEASE_PREFLIGHT_EVIDENCE.md).
 It returned `GO` for requesting exact-SHA Owner approval and `NO-GO` for
-immediate deployment. The detached candidate release and fresh formal
-preflight evidence do not yet exist, and rollback from a V10 database to the
-retained V8-era Staging images has no runtime compatibility evidence.
+immediate deployment. This paragraph describes that historical candidate;
+rollback from a V10 database to the retained V8-era Staging images still has no
+runtime compatibility evidence.
 
 The Owner subsequently approved this SHA. A clean detached release was created,
 but formal preflight returned `NO-GO` before build: the path guard requires the
@@ -33,6 +33,20 @@ Flyway remains V8 and Production remained unchanged. See
 [AL-003 Staging Release Attempt Evidence](../runtime/AL-003_STAGING_RELEASE_ATTEMPT_EVIDENCE.md).
 The old approval and failed evidence cannot be reused. PR #59's later merge
 changes the candidate code and requires a new exact-SHA approval/evidence set.
+
+STG-006 subsequently selected current
+`origin/main@33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` and completed only the
+Owner-authorized passive observation. Fresh evidence confirmed the retained
+runtime remains `4397f995...` / Flyway V8, isolated, healthy, and printing
+disabled, with unchanged Production continuity. The candidate release is
+absent and no environment rotation, image build, container lifecycle, Flyway,
+login, or data action occurred. See
+[STG-006 Exact-Main Passive Preflight Evidence](../runtime/STG-006_EXACT_MAIN_PREFLIGHT_EVIDENCE.md).
+
+OPS-001 remains required before STG-007. Its Owner-reviewed design must close
+secret-safe release/environment rotation, same-image restart/Flyway evidence,
+and Owner/API client handling without weakening the existing exact-SHA,
+approval, lock, redaction, or runtime boundaries.
 
 PR #59 merged the bounded repair at
 `c3956592da8a33092ab745c7cc6aac05e9babfa7`. It validates the initialized

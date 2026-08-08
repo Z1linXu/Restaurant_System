@@ -1,6 +1,6 @@
 # AL-003S Staging Acceptance Preparation
 
-> Package state: `IN_MAIN_WAITING_FOR_RUNTIME_APPROVAL`
+> Package state: `IN_MAIN`; `STG-006_PASS`; `OPS-001_REQUIRED`
 >
 > Prepared against: STG-005B checkpoint `0aba8377a3b7acec047c6ffd025f774d8a4d5e87`
 >
@@ -289,8 +289,8 @@ binding, and immutable image-ID pinning. The remaining gates are:
 3. no secret-safe Owner/API acceptance client is published;
 4. PostgreSQL 16 concurrency remains runtime evidence pending; local source
    graph concurrency uses H2;
-5. all current runtime SHAs/Flyway levels are retained evidence snapshots, not
-   fresh observations.
+5. STG-006 freshly observed the retained runtime SHAs/Flyway boundary, but did
+   not create the candidate release or execute any acceptance action.
 
 These findings do not require a product-contract change, but they prohibit
 claiming `AL-003_STAGING_ACCEPTANCE_READY`. They should be handled as bounded
@@ -305,4 +305,4 @@ Passing the package does not authorize or prove runtime acceptance.
 
 Stop state:
 
-`AL-003S_IN_MAIN_WAITING_FOR_RUNTIME_APPROVAL`
+`STG-006_PASS_OPS-001_REQUIRED_WAITING_FOR_OWNER_REVIEW`
