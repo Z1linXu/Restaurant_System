@@ -210,7 +210,7 @@ seed/demo Store.
 | Staff/Table provisioning module | `PREPARED_WAITING_FOR_DEPENDENCY` | AL-002 staff/credential authority is reusable only under a parent transaction. Chinatown uses the approved blank-table/manual-setup policy. The existing Platform Admin table writer cannot be reused as a future predefined-template upsert; table uniqueness, Store ownership, normalization, replay, and immutable-template decisions remain gated. |
 | Printing provisioning module | `PREPARED_WAITING_FOR_DEPENDENCIES` | The authority/risk audit preserves `DISABLED`, runtime-only endpoints, current Print Engine, and Chinatown's fixed pre-job GRAB/FRONTDESK enabled-module policy. The inactive writer remains gated by PR #66, strict-mode compatibility, a generic pre-job policy gate, role/assignment integrity, and idempotency. AL-005B is required only for runtime binding/activation evidence. |
 | Device/Pad provisioning module | `PREPARED_WAITING_FOR_DEPENDENCIES` | Existing pairing/auth/heartbeat and Store-wide PAD_DIRECT queue are preserved. No per-device module assignment exists or is planned. Contract/planner work depends on AL-005P1 module policy; runtime readiness remains blocked by credential storage, trusted APK provenance, idempotency/integrity, and explicit Worker/field evidence gates. |
-| Store activation validation/workflow | `NEEDS_NEW_LOOP` | Must gate activation on access, menu, tables, printing, devices, login, and order acceptance. |
+| Store activation validation/workflow | `PREPARED_WAITING_FOR_DEPENDENCIES` | AL-006 defines a fail-closed Profile/module/evidence contract and a future exclusive activation writer. Current `Store.status` is still free text and legacy Platform Admin paths may write `active` directly; persistence, compatibility, authority, verifier, and runtime-evidence decisions remain gated. |
 | Chinatown end-to-end field acceptance | `PRODUCTION_PENDING` | Owner/staff login, dine-in order, update, expected tickets, and operational completion remain required. |
 
 ### Proposed bounded loop order
@@ -235,7 +235,8 @@ seed/demo Store.
    Pad pairing/worker readiness gates without embedding device secrets. The
    bounded preparation is [AL-005B Device and Pad Provisioning Module Plan](agile/AL-005B_DEVICE_PAD_PROVISIONING_MODULE_PLAN.md).
 7. `AL-006_STORE_ACTIVATION_WORKFLOW`: aggregate validation and explicit Store
-   activation after all provisioning modules pass.
+   activation after all provisioning modules pass. The bounded preparation is
+   [AL-006 Store Activation Workflow Plan](agile/AL-006_STORE_ACTIVATION_WORKFLOW_PLAN.md).
 8. `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE`: Store 1 read-only source
    capture, Production gap/migration/backup/rollback review, and exact-SHA
    approval.

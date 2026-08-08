@@ -512,6 +512,21 @@ This existing API is the target-Store creation component of the future Owner
 provisioning workflow. No Owner UI or menu-template selection contract is
 currently exposed by this endpoint.
 
+### Store Activation API (not implemented)
+
+There is currently no Owner or Platform API that implements the reviewed
+fail-closed Store activation workflow. `Store.status` is a free-text field, not
+the conceptual AL-006 lifecycle, and legacy Platform Admin Store endpoints can
+write status directly. Do not infer activation readiness from onboarding,
+menu-clone completion, a device heartbeat, or an existing `active` value.
+
+The future contract is planned in
+[AL-006 Store Activation Workflow Plan](../docs/governance/agile/AL-006_STORE_ACTIVATION_WORKFLOW_PLAN.md).
+It requires Profile-bound evidence from access/staff, menu, tables, printing,
+devices, login, and operational smoke checks before an approved workflow can
+perform a final status transition. This planning package adds no route, DTO,
+Migration, authorization capability, or runtime action.
+
 ### Owner Store Menu Clone API (AL-003 PR-F in main)
 
 Current `main` contains internal persistence/idempotency DTOs, the generic

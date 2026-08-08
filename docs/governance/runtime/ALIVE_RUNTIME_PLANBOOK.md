@@ -62,9 +62,9 @@ snapshots. Do not copy those reports into this planbook.
 | Item | Current state |
 |---|---|
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `AL-005_PRINTING_PROVISIONING_TEMPLATE` |
+| Current Agile Loop | `AL-006_STORE_ACTIVATION_WORKFLOW` |
 | Loop type | `DEPENDENCY_BOUND_PREPARATION` |
-| Loop status | `AL-005_PRINTING_PREPARED_WAITING_FOR_DEPENDENCIES` |
+| Loop status | `AL-006_ACTIVATION_PREPARED_WAITING_FOR_DEPENDENCIES` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | PR #27 merged the backend foundation into `main`; Production remains on the older runtime and no production onboarding is established by that merge. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -74,7 +74,7 @@ snapshots. Do not copy those reports into this planbook.
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
 | AL-003 state | PR #58 preserves the failed-attempt evidence and PR #59's bounded PostgreSQL UID-70/mode-0700 private-leaf repair is `IN_MAIN` at `c3956592da8a33092ab745c7cc6aac05e9babfa7`. Neither record proves a new Staging deployment. |
 | Staging Owner login prerequisite | `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`; code audit proves an Organization Owner naturally accesses every same-Organization Store, so no explicit target Owner Store membership is required. Runtime bootstrap, credential, login, workspace, target onboarding, and API evidence remain pending. |
-| Current permitted work | Review Draft PRs #61-#65 and #67 in dependency order. Independently review printer Store-isolation repair PR #66. Bounded downstream scope audits may continue; executable AL-005 work waits for dependency promotion and explicit prerequisite decisions. Runtime mutation remains prohibited. |
+| Current permitted work | Review the stacked Draft PR queue #61-#65 and #67-#68, followed by the unnumbered AL-006 activation preparation after its Draft PR is created. Independently review printer Store-isolation repair PR #66. Bounded downstream planning may continue; executable provisioning and activation work waits for dependency promotion and explicit prerequisite decisions. Runtime mutation remains prohibited. |
 | Explicitly not permitted | Reusing old SHA approval/evidence; SSH/runtime mutation; deployment; Flyway; bootstrap; credential creation; login; source-menu writes; validate/execute; real clone; Production Store 1 access/mutation; or implementation outside the selected architecture/STG-005B package and explicitly bounded downstream preparation. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
@@ -107,6 +107,7 @@ packages without that mapping.
 | AL-005A Staff/Table module preparation / PR #65 | `AL-005A_PREPARED_WAITING_FOR_AL-004` (`STACKED_ONLY` Git classification) | Records the existing staff/access and dining-table authorities, reusable module contracts, security gaps, test gates, and Owner/schema decisions. It adds no writer, endpoint, migration, credential, table, or runtime action. |
 | AL-005 Printing provisioning preparation / PR #67 | `AL-005_PRINTING_PREPARED_WAITING_FOR_DEPENDENCIES` (`STACKED_ONLY` Git classification) | Records existing printing authorities, profile/runtime boundaries, fixed Chinatown policy, prerequisite defects, staged contracts, and test gates. It adds no writer, endpoint, migration, printer, assignment, device, mode change, test print, or runtime action. |
 | AL-005B Device/Pad provisioning preparation / PR #68 | `AL-005B_DEVICE_PREPARED_WAITING_FOR_DEPENDENCIES` (`STACKED_ONLY` Git classification) | Records pairing/auth/heartbeat/Store-wide queue authorities, profile/runtime boundaries, four-Pad Chinatown policy, prerequisite gaps, and readiness gates. It adds no writer, endpoint, migration, device, token, pairing, Worker change, or runtime action. |
+| AL-006 Store activation preparation | `AL-006_ACTIVATION_PREPARED_WAITING_FOR_DEPENDENCIES` (`STACKED_ONLY` Git classification) | Defines the conceptual lifecycle, fail-closed evidence aggregation, Profile/module responsibility split, future exclusive activation writer, legacy direct-active compatibility gate, staged tests, and Owner decisions. It adds no endpoint, migration, status transition, or runtime action. |
 | Printer Store-isolation repair / PR #66 | independent `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | Main-based prerequisite; not included in this stack. It must merge before an executable printing writer is promoted. |
 
 PR-D promotion evidence is now historical main evidence: semantic source
@@ -169,6 +170,13 @@ It preserves the current Store-wide PAD_DIRECT queue with no per-device module
 assignment and keeps identities, tokens, pairing, auto-print, and Worker health
 outside versioned profiles. Executable work remains blocked by AL-005 and the
 documented credential, idempotency, integrity, and runtime-evidence gates.
+
+The bounded Activation audit is documented in
+[AL-006 Store Activation Workflow Plan](../agile/AL-006_STORE_ACTIVATION_WORKFLOW_PLAN.md).
+It records that no unified activation orchestrator exists, that conceptual
+readiness stages are not current `stores.status` values, and that legacy direct
+`active` writes, evidence persistence, verifier contracts, and runtime gates
+must be resolved before a future exclusive activation transition is built.
 
 Git ground truth must always distinguish `MERGED_ON_GITHUB`, `IN_MAIN`,
 `DEPLOYED_TO_STAGING`, and `DEPLOYED_TO_PRODUCTION`. A stacked PR merged into a

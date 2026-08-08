@@ -468,6 +468,16 @@ APK/build provenance remains a separate acceptance gate.
 Chinatown requires four independently paired Pads and retains the Store-wide
 queue; AL-005B does not invent device-module affinity or perform pairing.
 
+The future Store activation boundary is defined in
+[AL-006 Store Activation Workflow Plan](docs/governance/agile/AL-006_STORE_ACTIVATION_WORKFLOW_PLAN.md).
+Current code has no unified activation orchestrator: `Store.status` remains a
+free-text field, onboarding creates an inactive/printing-disabled Store, and
+legacy Platform Admin Store writers may still set `active` directly. AL-006 is
+therefore a planning-only, fail-closed evidence contract. It does not create an
+activation endpoint, migration, persisted lifecycle, or runtime status change.
+The Profile declares required modules, modules produce sanitized evidence, and
+only a future reviewed workflow may own the final inactive-to-active transition.
+
 STG-005B prepares a Staging-only, non-web source-menu fixture around the
 existing menu entities, Store lock, and revision service. Its source graph has
 4 categories, 3 stations, 13 items, and 38 options and is proven locally to
