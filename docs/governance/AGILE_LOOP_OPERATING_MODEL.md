@@ -85,13 +85,15 @@ culminates in `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE`.
 PR #59's bounded PostgreSQL private-leaf repair is now `IN_MAIN`, and PR #60's
 2026-08-08 Owner decisions are `IN_MAIN` at
 `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; neither proves a new Staging
-deployment. PR #71's handoff navigation and PRs #61-#70 are all `IN_MAIN` at
-`origin/main@645d4909625f70fc241d5468382d66a30a030fb1`. PR #66 is the
+deployment. PR #71's handoff navigation, PRs #61-#70, and PR #72's post-stack
+audit are all `IN_MAIN` at
+`origin/main@33c6e3c52aa40793f6bb861101c16ccdd1b85b5b`. PR #66 is the
 independent Printer Store-isolation code repair. The remaining overnight layers
 are architecture, contracts, plans, or guarded preparation except for the
 implemented STG-005B baseline and AL-003S tooling; none changes runtime state.
-The current feature stop state is
-`POST_STACK_GROUND_TRUTH_SYNC_WAITING_FOR_OWNER_REVIEW`.
+STG-006 freshly verified the retained isolated Staging runtime and minimum
+Production continuity without mutation. The current feature stop state is
+`STG-006_PASS_OPS-001_REQUIRED_WAITING_FOR_OWNER_REVIEW`.
 PR #61 is the architecture/governance foundation: it defines the Generic
 Store Provisioning Engine, Versioned Store Profiles, and Reusable Provisioning
 Modules without adding runtime behavior. PR #62 provides the guarded Synthetic
@@ -100,7 +102,7 @@ supplies the generic version/profile identity, module-reference, and
 canonical-fingerprint contract as repository capability, not runtime evidence.
 PR #65 supplies reusable Staff/Access and Table planning boundaries as
 repository capability only.
-No current statement authorizes server access, Flyway execution, synthetic
+No current statement authorizes further server access, Flyway execution, synthetic
 bootstrap, credential creation, login, source-menu writes, validate, execute,
 a runtime clone, merge, or deployment. Staging acceptance retains the distinct
 prerequisite
@@ -109,9 +111,10 @@ evidence proves the complete Owner login topology.
 
 The authoritative post-stack matrix and next-loop order are in
 [POST_STACK_GROUND_TRUTH_AUDIT.md](runtime/POST_STACK_GROUND_TRUTH_AUDIT.md).
-After that docs-only sync enters main, the next real phase is a fresh exact-main
-Staging preflight request. `GO_FOR_OWNER_APPROVAL` is limited to the passive
-preflight and procedure-review gate; it is not deployment or mutation approval.
+STG-006 is complete for its passive scope. The next bounded phase is Owner
+review of OPS-001 design inputs for secret-safe release/env rotation,
+same-image restart/Flyway evidence, and Owner/API client tooling. It is not
+deployment or mutation approval.
 
 The architecture authority for future provisioning packages is
 [STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md](agile/STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md).
@@ -361,3 +364,36 @@ report retained unknown or historical artifacts instead of guessing.
 
 Each round reports Agents spawned/completed/active, temporary worktrees
 created/retained/removed, and known leftover large artifacts.
+
+## 15. Smart Multi-Agent execution policy
+
+The Coordinator must build a task-dependency graph before assigning work. A
+candidate task may run in another Agent only when it can start immediately and
+finish independently without another Agent's unfinished output. Discovery,
+planning, implementation, verification, and governance reconciliation stay
+with the same Coordinator when they form one serial chain; they must not be
+split merely to increase Agent count.
+
+The default is one Coordinator. Use the minimum Agents required for maximum
+safe parallelism, normally zero to three independent workers plus an optional
+independent reviewer. Agent count is not a success metric.
+
+Runtime interaction follows a stricter rule:
+
+`ONE RUNTIME ENVIRONMENT = ONE ACTIVE EXECUTOR`
+
+One Runtime Coordinator owns the complete Staging and Production observation
+timeline. Other Agents may inspect repository state or analyze already
+sanitized evidence, but must not concurrently SSH, inspect overlapping runtime
+state, run runtime scripts, or collect competing evidence. This applies even
+to read-only work.
+
+An independent reviewer may start after implementation or evidence collection
+is complete. The reviewer does not edit or silently repair the work; findings
+return to the Coordinator for disposition. This sequential launch is allowed
+because it preserves review independence rather than pretending to be parallel
+delivery.
+
+At normal completion, every bounded worker has returned its result and ended,
+and the round reports `Agents active = 0`. The lifecycle and worktree cleanup
+rules in sections 13 and 14 remain mandatory.

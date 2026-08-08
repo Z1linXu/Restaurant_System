@@ -14,6 +14,11 @@ separate from historical evidence snapshots and business implementation details:
 - [Post-Stack Ground Truth Audit](docs/governance/runtime/POST_STACK_GROUND_TRUTH_AUDIT.md)
   records verified #61-#71 main ancestry, the plan-to-code capability matrix,
   retained runtime boundaries, the Staging entry decision, and next loops.
+- [STG-006 Exact-Main Passive Preflight Evidence](docs/governance/runtime/STG-006_EXACT_MAIN_PREFLIGHT_EVIDENCE.md)
+  records candidate `33c6e3c...`, fresh Staging `4397f995...` / Flyway V8
+  isolation/resource/health evidence, unchanged minimum Production continuity,
+  `STG-006 = PASS`, and `OPS-001 = REQUIRED`. It authorizes no deploy,
+  migration, login, restart, or data action.
 - [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
   authority for current issue triage and closure status.
 - [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
@@ -431,8 +436,9 @@ and PR #63 then merged guarded AL-003S acceptance preparation at
 `732d77c89ff067982702426ff918d5e097e1d0fb`; PR #64 then merged the declarative
 Generic Store Profile contract at `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6`.
 PRs #65 through #70 then entered main in dependency order, with independent
-Printer Store-isolation repair #66 between #65 and #67; current audited main is
-`645d4909625f70fc241d5468382d66a30a030fb1`. None is runtime evidence. The
+Printer Store-isolation repair #66 between #65 and #67; PR #72's post-stack
+audit entered main at `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b`.
+STG-006 bound that exact SHA but did not deploy it. The
 modular target is a Generic
 Store Provisioning Engine consuming Versioned Store Profiles and Reusable
 Provisioning Modules. Shared implementation must remain Store-neutral;
@@ -525,6 +531,13 @@ session/process, release temporary resources, and clean only known safe
 task-owned scratch/build/worktree artifacts. Unknown or shared resources are
 retained and reported; destructive global cleanup is prohibited.
 
+Multi-Agent execution follows the permanent Smart Multi-Agent rule in the
+Agile Loop Operating Model: build the dependency graph first, parallelize only
+work that can start and finish independently, keep serial delivery with the
+Coordinator, use exactly one runtime executor, and end normal rounds with zero
+active Agents. An independent reviewer may start after implementation/evidence
+completion to preserve review independence.
+
 STG-005B prepares a Staging-only, non-web source-menu fixture around the
 existing menu entities, Store lock, and revision service. Its source graph has
 4 categories, 3 stations, 13 items, and 38 options and is proven locally to
@@ -547,6 +560,16 @@ cryptographic authorization mechanism. This repository tooling is not
 runtime authorization or runtime evidence. Owner login, target onboarding,
 menu-clone API calls, restart persistence, and runtime execution remain
 separately gated and must not be inferred from launcher tests.
+
+STG-006 freshly confirmed the retained Staging runtime is still
+`4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` / Flyway V8 with the isolated
+project, loopback bind, disabled printing, separate state/network/mounts,
+healthy endpoints, and current resource headroom. The bounded Production
+continuity snapshot stayed unchanged. The exact-main candidate is not present
+as a server release. OPS-001 is required because the repository still lacks a
+reviewed release/environment rotation helper, an approval-bound same-image
+restart/Flyway collector, and a secret-safe Owner login/onboarding/clone client.
+Those operations must not be improvised with token-bearing shell commands.
 
 STG-005A owns `V9__add_staging_synthetic_bootstrap_requests.sql`. PR-B adds the
 separate append-only `V10__add_owner_store_menu_clone_requests.sql`. V10 creates

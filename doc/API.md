@@ -629,6 +629,15 @@ operational bindings do not alter any HTTP API contract. The one-shot is
 serialized, time-bounded, and post-checked; the approval artifact is procedural
 evidence binding rather than a cryptographic API authorization credential.
 
+STG-006 added no endpoint, DTO, header, or authentication behavior. Its passive
+runtime evidence confirms only the current Staging boundary. OPS-001 is
+required before runtime Owner acceptance because no reviewed client currently
+keeps login/staff passwords, access/refresh tokens, and onboarding/clone
+idempotency keys out of argv, stdout, shell history, and evidence. Any future
+client must reuse the existing `/auth/login`, `/auth/me`, workspace, Owner
+onboarding, `/menu-clone/validate`, `/menu-clone`, and `/auth/logout` contracts;
+it must not invent a second API or weaken Owner authorization.
+
 The `IN_MAIN` AL-004 Store Profile contract does not add an HTTP endpoint. Its
 registry and safe summary are internal declarative contracts only. Owner
 template discovery/selection, Store provisioning execution, and concrete

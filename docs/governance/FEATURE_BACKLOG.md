@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `POST_STACK_GROUND_TRUTH_SYNC_WAITING_FOR_OWNER_REVIEW` |
-| target_loop | `STG-006_EXACT_MAIN_PREFLIGHT` after the governance sync enters main |
-| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, PR #60's Owner decisions, PR #71's handoff navigation, and PRs #61-#70 are `IN_MAIN` at `645d4909625f70fc241d5468382d66a30a030fb1`. #66 is the independent Printer Store-isolation code repair. The other overnight layers are architecture, contract, plan, or guarded preparation except for the implemented Synthetic St-Denis and AL-003S tooling described below. No merge establishes Staging or Production state. |
+| status | `STG-006_PASS_OPS-001_REQUIRED_WAITING_FOR_OWNER_REVIEW` |
+| target_loop | `OPS-001_STAGING_SECRET_SAFE_TOOLING_REPAIR` after Owner scope review; STG-007 remains prohibited |
+| implementation status | PR-A through PR-F, PR #58, PR #59, PR #60, PR #71, PRs #61-#70, and post-stack audit PR #72 are `IN_MAIN` at `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b`. #66 remains the independent Printer Store-isolation code repair. STG-006 freshly observed the retained Staging runtime at `4397f995...` / Flyway V8 and did not deploy the candidate. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Review the docs-only Post-Stack Ground Truth sync. After it merges, select the resulting exact main SHA and request Owner approval for a fresh passive Staging preflight. This is not deployment approval. |
+| next action | Review the STG-006 PASS evidence and approve or revise the bounded OPS-001 design inputs. This is not deployment approval. |
 
 ### Current AL-003 delivery state
 
@@ -48,6 +48,7 @@
 | AL-005B Device/Pad plan / PR #68 | `IN_MAIN` at `9e93573be97cfd01a9ad3efe64d55827854c497a` | Single-layer reusable Device/Pad Provisioning plan; no pairing, token, Worker, endpoint, migration, or runtime mutation |
 | AL-006 Activation plan / PR #69 | `IN_MAIN` at `dc682203b2b24bbdb453a5520b297b9051139f13` | Fail-closed workflow plan only; lifecycle and validator are conceptual; no status transition or activation writer |
 | REL-001 Production RC plan / PR #70 | `IN_MAIN` at `645d4909625f70fc241d5468382d66a30a030fb1` | Exact-SHA release gates only; no selected candidate, Staging pass, Production deploy, or activation action |
+| Post-stack Ground Truth audit / PR #72 | `IN_MAIN` at `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | Capability/runtime gap audit only; no deployment or acceptance |
 
 The Owner-login acceptance prerequisite is not satisfied by repository code or
 deployment alone. Read-only code audit confirms that an active Organization
@@ -61,11 +62,10 @@ authenticated validate/execute calls. No Production credential, raw SQL,
 authorization bypass, or real business data may supply that evidence.
 
 The AL-003S preparation closes the reviewed non-web launcher gap for
-STG-005A/STG-005B and adds a bounded passive resource plus
-Staging/Production-continuity fingerprint collector. Runtime collection remains
-unexecuted. Secret-safe release/env rotation, same-image restart/Flyway
-evidence, and secret-safe Owner/API calls remain explicit runtime prerequisites
-rather than inferred capabilities.
+STG-005A/STG-005B. STG-006 freshly collected passive resource, isolation, and
+Staging/Production-continuity evidence. Secret-safe release/env rotation,
+same-image restart/Flyway evidence, and secret-safe Owner/API calls remain
+explicit OPS-001 prerequisites rather than inferred capabilities.
 
 `MERGED_ON_GITHUB` is not sufficient evidence for `IN_MAIN` when a PR's base
 is another feature branch. Each stacked layer requires a latest-`main`
@@ -205,6 +205,8 @@ seed/demo Store.
 | Synthetic Owner login/workspace/Owner API authorization | `STAGING_PENDING` | Credential must be supplied at runtime and never retained in Git/evidence. |
 | Reproducible Synthetic St-Denis source-menu baseline | `IN_MAIN` via PR #62 | Guarded, versioned, transactional empty-or-exact implementation is repository capability only and has not run on Staging. |
 | AL-003 validate/execute/replay/restart acceptance | `STAGING_PENDING` | Requires the full synthetic topology and source-menu contract first. |
+| STG-006 exact-main passive preflight | `PASS` | Candidate `33c6e3c...`; current Staging remains `4397f995...` / V8, isolated, healthy, printing disabled; Production continuity unchanged. No deployment occurred. |
+| OPS-001 secret-safe tooling | `REQUIRED` | Missing reviewed release/env rotation, same-image restart/Flyway collector, and Owner/API client. Owner must review one bounded design before implementation/runtime use. |
 | Production Store 1 read-only source capture/drift review | `PRODUCTION_PENDING` | Separate Owner Runtime Gate; only menu-related evidence may be read. |
 | Production Chinatown Store/staff/menu provisioning | `PRODUCTION_PENDING` | Exact-SHA Release Candidate and production approval required. |
 | Generic Store Profile identity/composition contract | `IN_MAIN` via PR #64 | Exact versioned identity, module references with reviewed expected fingerprints, activation requirements, canonical fingerprint, and safe summaries are repository capability only; no concrete Store Profile or callable workflow is implied. |

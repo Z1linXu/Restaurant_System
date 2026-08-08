@@ -2,16 +2,17 @@
 
 > Audit date: 2026-08-08, America/Toronto
 >
-> Repository base: `origin/main@645d4909625f70fc241d5468382d66a30a030fb1`
+> Repository base: `origin/main@33c6e3c52aa40793f6bb861101c16ccdd1b85b5b`
 >
-> Runtime access: not performed
+> Follow-up runtime access: STG-006 passive/read-only observation completed;
+> see `STG-006_EXACT_MAIN_PREFLIGHT_EVIDENCE.md`
 >
-> Decision: `STAGING_NOW_GO_FOR_OWNER_APPROVAL_FOR_FRESH_PASSIVE_PREFLIGHT_ONLY`
+> Current decision: `STG-006_PASS_OPS-001_REQUIRED_WAITING_FOR_OWNER_REVIEW`
 
 ## 1. Executive summary
 
 PRs #61 through #70 and the independent handoff PR #71 are all ancestors of
-the current `origin/main`. PR #66 remains the independent Printer
+the current `origin/main`; PR #72's audit is also `IN_MAIN`. PR #66 remains the independent Printer
 Store-isolation repair even though it entered main between #65 and #67.
 
 The overnight stack completed architecture, contracts, plans, the guarded
@@ -21,13 +22,11 @@ Provisioning Engine, concrete complete Store Profiles, reusable Staff/Table,
 Printing, or Device provisioning writers, the Activation workflow, a
 Production Release Candidate, or ACT-001.
 
-The next real phase is exact-main Staging runtime acceptance for the already
-implemented AL-002/AL-003 and STG-005A/STG-005B capabilities. The repository is
-eligible to request Owner approval for a new exact-SHA, fresh passive Staging
-preflight and a review of the bounded runtime procedure. This is not approval
-to deploy or mutate Staging. Deployment and acceptance remain `NO_GO` until
-fresh preflight/evidence gates pass and a secret-safe release/restart/API
-procedure is reviewed.
+STG-006 bound `33c6e3c...` and completed the authorized fresh passive preflight.
+The retained Staging runtime remains isolated and healthy at `4397f995...` /
+V8, and Production continuity was unchanged. Deployment and acceptance remain
+`NO_GO`: OPS-001 secret-safe release/env, restart/Flyway, and Owner/API tooling
+requires a bounded Owner-reviewed design before STG-007.
 
 ## 2. Git and PR ground truth
 
@@ -44,9 +43,10 @@ procedure is reviewed.
 | #68 | Device/Pad provisioning preparation | `9e93573be97cfd01a9ad3efe64d55827854c497a` | `IN_MAIN`; plan only |
 | #69 | Store Activation workflow preparation | `dc682203b2b24bbdb453a5520b297b9051139f13` | `IN_MAIN`; plan only |
 | #70 | Chinatown Production RC preparation | `645d4909625f70fc241d5468382d66a30a030fb1` | `IN_MAIN`; plan only |
+| #72 | Post-stack Ground Truth audit | `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | `IN_MAIN`; governance audit only |
 
 All listed merge commits are verified ancestors of current `origin/main`.
-There is no `DRAFT_PR` or `STACKED_ONLY` package remaining in #61-#71.
+There is no `DRAFT_PR` or `STACKED_ONLY` package remaining in #61-#72.
 `IN_MAIN` does not imply `DEPLOYED_TO_STAGING` or
 `DEPLOYED_TO_PRODUCTION`.
 
@@ -71,13 +71,14 @@ There is no `DRAFT_PR` or `STACKED_ONLY` package remaining in #61-#71.
 
 ## 4. Runtime ground truth
 
-No runtime was inspected during this audit. Retained evidence records only:
+The original PR #72 audit did not inspect runtime. Its STG-006 follow-up now
+records fresh, bounded evidence:
 
 | Environment | Retained evidence | Current classification |
 |---|---|---|
-| Staging | `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c`, Flyway V8, isolated project and loopback bind, printing disabled | Historical evidence; freshness unknown |
-| Production | reported `4667f3c`, Flyway V7, PAD_DIRECT field flow | Historical/operator evidence; freshness unknown |
-| Repository | V1-V10 and `origin/main@645d490...` | Repository capability only |
+| Staging | `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c`, Flyway V8, isolated project/network/state, loopback bind, printing disabled, health 200 | `MACHINE_VERIFIED_READ_ONLY` by STG-006; candidate not deployed |
+| Production | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`, project `cloud`, identical before/after container identity/start/restart, health 200 | `MACHINE_VERIFIED_READ_ONLY` continuity only; Flyway/business state not queried |
+| Repository | V1-V10 and `origin/main@33c6e3c...` | Repository capability only |
 
 There is no retained evidence that Staging applied V9/V10 or executed
 STG-005A, STG-005B, Owner login, target onboarding, menu validate/execute,
@@ -88,24 +89,18 @@ any #61-#70 capability.
 
 | Class | Blocker | Effect |
 |---|---|---|
-| Code/procedure | No reviewed secret-safe release/environment rotation helper, same-image restart/Flyway collector, or Owner/API acceptance client | Does not block a fresh passive preflight; blocks improvised deploy/full acceptance |
+| Code/procedure | No reviewed secret-safe release/environment rotation helper, same-image restart/Flyway collector, or Owner/API acceptance client | `OPS-001 REQUIRED`; blocks STG-007/full acceptance |
 | Configuration | No detached release, private environment digest, image identity, synthetic run identity, credential, or action approval exists for the next exact SHA | Must be created only inside separately approved runtime batches |
-| Evidence | Current Staging SHA/Flyway freshness and all V9/V10/bootstrap/login/clone/restart results are pending | Repository capability cannot be promoted to Staging acceptance |
-| Owner/runtime gate | Exact-SHA preflight, deployment, migration, credential/bootstrap, API execute, restart, Production read/deploy, and activation each require separate approval | Work stops before every unapproved runtime mutation |
+| Evidence | Current Staging SHA/Flyway freshness is now verified; V9/V10/bootstrap/login/clone/restart results remain pending | Repository capability cannot be promoted to Staging acceptance |
+| Owner/runtime gate | OPS-001 design, deployment, migration, credential/bootstrap, API execute, restart, Production read/deploy, and activation each require separate approval | Work stops before every unapproved runtime mutation |
 | Production safety | Release-relative state path, combined Production build, missing phase resource gates, restore rehearsal, backup integrity, and old-app compatibility remain unresolved | Production deployment and ACT-001 are `NO_GO` |
 
 ## 6. Staging decision
 
-`STAGING NOW: GO_FOR_OWNER_APPROVAL` means only:
-
-1. merge this governance correction;
-2. select the resulting exact full `origin/main` SHA;
-3. request Owner approval for a fresh passive preflight and review of the
-   secret-safe command/evidence procedure.
-
-It does not authorize SSH, detached-release creation, deployment, Docker
-lifecycle, Flyway, credentials, bootstrap, login, API calls, or database
-writes. Immediate deployment/full acceptance is still `NO_GO` until:
+`STG-006 = PASS` for the passive evidence scope only. It does not authorize
+detached-release creation, deployment, Docker lifecycle, Flyway, credentials,
+bootstrap, login, API calls, restart, or database writes. Immediate
+deployment/full acceptance is still `NO_GO` until:
 
 - fresh release/environment/preflight digests pass;
 - the same-image restart/Flyway evidence procedure is reviewed;
@@ -122,8 +117,8 @@ exact accepted RC are all pending.
 
 | Order | Loop ID | Goal | Dependency | Acceptance evidence | Owner gate | Runtime gate | Rollback boundary |
 |---:|---|---|---|---|---|---|---|
-| 1 | `STG-006_EXACT_MAIN_PREFLIGHT` | Bind post-audit main SHA and collect fresh passive isolation/resource/continuity evidence | governance audit merged | reviewed PASS evidence digest | exact SHA + passive preflight approval | read-only server access | no container/database change |
-| 2 | `OPS-001_STAGING_SECRET_SAFE_TOOLING_REPAIR` | Close release/env rotation, same-image restart/Flyway collection, and Owner/API secret-handling gaps | STG-006 procedure review | shell/focused tests, redaction and independent review | approve manual procedure versus bounded tooling | no runtime mutation in implementation | Git revert only |
+| 1 | `STG-006_EXACT_MAIN_PREFLIGHT` | Bind post-audit main SHA and collect fresh passive isolation/resource/continuity evidence | governance audit merged | `PASS` evidence at candidate `33c6e3c...` | completed read-only authorization | no further runtime action | no container/database change |
+| 2 | `OPS-001_STAGING_SECRET_SAFE_TOOLING_REPAIR` | Close release/env rotation, same-image restart/Flyway collection, and Owner/API secret-handling gaps | STG-006 PASS | shell/focused tests, redaction and independent review | approve exact design inputs and bounded repair | no runtime mutation in implementation | Git revert only |
 | 3 | `STG-007_EXACT_SHA_DEPLOY_AND_MIGRATE` | Deploy only approved Staging SHA and verify V9/V10, health, second start, continuity | STG-006 PASS + OPS-001 accepted | exact images, Flyway V1-V10, health and continuity | deployment/migration approval | Staging deploy + Flyway | prior verified compatible image or stop/roll-forward; never clean/restore |
 | 4 | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` | Execute/replay STG-005A and STG-005B with printing disabled | STG-007 PASS | sanitized IDs/counts/revisions/replay | separate credential/bootstrap/source-write approvals | synthetic Staging writes | transaction rollback; retain successful evidence |
 | 5 | `STG-009_AL003_OWNER_ACCEPTANCE` | Owner login, target onboarding, validate, execute, replay, restart/persistence | STG-008 PASS | sanitized auth/status/count/source-invariance/restart evidence | separate execute checkpoint | synthetic Staging writes and restart | transaction rollback; no destructive cleanup |
@@ -141,13 +136,12 @@ main do not authorize skipping directly to their writers.
 
 Current Owner actions, in order:
 
-1. review the docs-only Post-Stack Ground Truth sync;
-2. after merge, approve or reject the exact resulting main SHA for
-   `STG-006_EXACT_MAIN_PREFLIGHT`;
-3. review any secret-safe operational repair before Staging mutation;
+1. review the STG-006 PASS evidence/governance package;
+2. approve or revise the bounded OPS-001 technical design inputs;
+3. review the resulting tooling repair before any runtime use;
 4. approve each deploy, migration, bootstrap, login/API, execute, and restart
    batch separately.
 
 Unique stop state:
 
-`POST_STACK_GROUND_TRUTH_SYNC_WAITING_FOR_OWNER_REVIEW`
+`STG-006_PASS_OPS-001_REQUIRED_WAITING_FOR_OWNER_REVIEW`
