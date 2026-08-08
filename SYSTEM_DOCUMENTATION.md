@@ -25,6 +25,11 @@ separate from historical evidence snapshots and business implementation details:
   rotation, same-container restart/Flyway evidence, and secret-FD Owner/API
   acceptance helpers. They are repository capability only and authorize no
   runtime action.
+- [STG-007 Preflight Upgrade Port Guard Repair Evidence](docs/governance/runtime/STG-007_PREFLIGHT_UPGRADE_PORT_GUARD_REPAIR_EVIDENCE.md)
+  records the deterministic retained-listener upgrade blocker, the exact
+  fail-closed ownership correction, local verification scope, expired prior
+  candidate boundary, and mandatory Batch A restart. It authorizes no runtime
+  mutation.
 - [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
   authority for current issue triage and closure status.
 - [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
@@ -579,6 +584,18 @@ private-env rotation helper, an approval-bound same-container restart/Flyway
 collector, and a secret-FD Owner login/onboarding/clone client. All default to
 validation and every real action consumes a distinct exact-SHA/environment/
 action-bound Owner approval. No OPS-001 helper has run on a runtime.
+
+The first STG-007 bounded read-only identity check confirmed that the retained
+Staging nginx still owns `127.0.0.1:18080`. The formal preflight previously
+treated every occupied port as `NO_GO`, which made an in-place exact-SHA
+upgrade impossible without stopping the retained runtime before Batch A had
+passed. The repaired guard keeps first-deploy free-port behavior and accepts an
+occupied port only when sanitized `ss` plus Docker metadata prove one running
+`restaurant-pos-staging/nginx` container with the sole
+`80/tcp -> 127.0.0.1:18080` mapping. All public, unexpected, multiple, stopped,
+or unverifiable ownership remains fail-closed. The repair itself performs no
+runtime action; once merged, it invalidates the previous exact candidate and
+requires STG-007 Batch A to restart from the new main.
 
 Repository PRs now follow the permanent auto-merge gate in the Agile Loop
 Operating Model: latest-main base, exact single-package scope, all applicable

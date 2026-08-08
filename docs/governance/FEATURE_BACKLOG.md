@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `OPS-001_REPOSITORY_COMPLETE_STG-007_WAITING_FOR_OWNER_RUNTIME_APPROVAL` after OPS-001 repository merge |
-| target_loop | `STG-007_EXACT_SHA_DEPLOY_AND_MIGRATE`, runtime Owner-gated and not started |
-| implementation status | PR-A through PR-F, PRs #58-#73 and #61-#71 are `IN_MAIN` through `85d97b7327b2e15aa561ed28a5788b92cedf6f5b`; #66 remains the independent Printer Store-isolation repair. OPS-001 adds repository-only secret-safe helpers/tests after this reviewed package enters main. Staging remains `4397f995...` / Flyway V8; no candidate deploy or runtime action occurred. |
+| status | `STG-007_BATCH_A_BLOCKED_BY_PREFLIGHT_UPGRADE_PORT_GUARD_REPAIR` |
+| target_loop | `STG-007_PREFLIGHT_UPGRADE_PORT_GUARD_REPAIR`, then restart `STG-007_EXACT_SHA_DEPLOY_AND_MIGRATE` from the new merged main |
+| implementation status | PR-A through PR-F, PRs #58-#74 and #61-#73 are `IN_MAIN` through OPS-001 merge `362c954a8753204476ddf1415ea86050589760dd`; #66 remains the independent Printer Store-isolation repair. Staging remains `4397f995...` / Flyway V8. A bounded read-only STG-007 identity check found the formal preflight's busy-port rule cannot distinguish the exact retained Staging nginx listener from an unexpected owner; no Batch A mutation or Batch B action occurred. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | After OPS-001 is verified `IN_MAIN`, bind the new full main SHA and review separate STG-007 release/env and deploy/Flyway runtime batches. Do not execute them without exact Owner approval. |
+| next action | Verify and publish the bounded fail-closed upgrade-port ownership repair. Its merge invalidates the old exact-SHA candidate; restart all Batch A gates from the new merged main before any deploy/Flyway eligibility. |
 
 ### Current AL-003 delivery state
 

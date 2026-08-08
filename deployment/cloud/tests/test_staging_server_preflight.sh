@@ -49,7 +49,11 @@ if [[ "${1:-}" == "image" && "${2:-}" == "inspect" ]]; then
   exit 0
 fi
 if [[ "${1:-}" == "inspect" ]]; then
-  printf 'name=/stg004 status=running health=healthy image=sha256:stg004fake\n'
+  if [[ -n "${FAKE_NGINX_INSPECT:-}" ]]; then
+    printf '%s\n' "$FAKE_NGINX_INSPECT"
+  else
+    printf 'name=/stg004 status=running health=healthy image=sha256:stg004fake\n'
+  fi
   exit 0
 fi
 [[ "${1:-}" == "compose" ]] || exit 92
@@ -108,7 +112,11 @@ services:
     max-file: "3"
 EOF
     ;;
-  ps) : ;;
+  ps)
+    if [[ "${1:-}" == "-q" && "${2:-}" == "nginx" && -n "${FAKE_NGINX_CONTAINER_ID:-}" ]]; then
+      printf '%s\n' "$FAKE_NGINX_CONTAINER_ID"
+    fi
+    ;;
   build) printf 'fake build complete\n' ;;
   up) printf 'fake up complete\n' ;;
   *) exit 94 ;;
@@ -208,6 +216,8 @@ run_preflight() {
     FAKE_POSTGRES_STAT_PATH="${FAKE_POSTGRES_STAT_PATH:-}" \
     FAKE_POSTGRES_STAT_OWNER="${FAKE_POSTGRES_STAT_OWNER:-}" \
     FAKE_POSTGRES_STAT_MODE="${FAKE_POSTGRES_STAT_MODE:-}" \
+    FAKE_NGINX_CONTAINER_ID="${FAKE_NGINX_CONTAINER_ID:-}" \
+    FAKE_NGINX_INSPECT="${FAKE_NGINX_INSPECT:-}" \
     "$RUNNER" --validate --env-file "$ENV_FILE" \
     --approved-sha "$SHA" --production-project cloud --production-root "$PRODUCTION_ROOT" \
     --min-free-bytes 1048576 --max-used-percent 80 --min-available-memory-kb 1024 --min-cpu-count 1
@@ -328,7 +338,70 @@ printf 'LISTEN 0 4096 127.0.0.1:18080 0.0.0.0:*\n'
 SS_BUSY
 chmod +x "$FAKE_BIN/ss"
 expect_failure port_busy run_preflight
-assert_contains 'CHECK|PORT_18080|NO_GO|' "$TMP_DIR/port_busy.out"
+assert_contains 'CHECK|PORT_18080|NO_GO|loopback listener is not owned by exactly one expected Staging nginx container' "$TMP_DIR/port_busy.out"
+
+set +e
+FAKE_NGINX_CONTAINER_ID=staging-nginx \
+FAKE_NGINX_INSPECT=$'project=restaurant-pos-staging\nservice=nginx\nstate=running\nbinding=80/tcp|127.0.0.1|18080' \
+  run_preflight >"$TMP_DIR/retained_staging.out"
+status=$?
+set -e
+if [[ "$status" -ne 0 && "$status" -ne 3 ]]; then
+  cat "$TMP_DIR/retained_staging.out" >&2
+  fail 'exact retained Staging listener preflight did not pass'
+fi
+assert_contains 'CHECK|PORT_18080|PASS|retained expected Staging nginx owns the exact loopback port binding' "$TMP_DIR/retained_staging.out"
+
+FAKE_NGINX_CONTAINER_ID=staging-nginx \
+FAKE_NGINX_INSPECT=$'project=unexpected-project\nservice=nginx\nstate=running\nbinding=80/tcp|127.0.0.1|18080' \
+  expect_failure wrong_port_owner run_preflight
+assert_contains 'CHECK|PORT_18080|NO_GO|loopback listener does not match the exact expected Staging nginx ownership and binding' "$TMP_DIR/wrong_port_owner.out"
+
+FAKE_NGINX_CONTAINER_ID=staging-nginx \
+FAKE_NGINX_INSPECT=$'project=restaurant-pos-staging\nservice=backend\nstate=running\nbinding=80/tcp|127.0.0.1|18080' \
+  expect_failure wrong_port_service run_preflight
+assert_contains 'CHECK|PORT_18080|NO_GO|loopback listener does not match the exact expected Staging nginx ownership and binding' "$TMP_DIR/wrong_port_service.out"
+
+FAKE_NGINX_CONTAINER_ID=staging-nginx \
+FAKE_NGINX_INSPECT=$'project=restaurant-pos-staging\nservice=nginx\nstate=exited\nbinding=80/tcp|127.0.0.1|18080' \
+  expect_failure stopped_port_owner run_preflight
+assert_contains 'CHECK|PORT_18080|NO_GO|loopback listener does not match the exact expected Staging nginx ownership and binding' "$TMP_DIR/stopped_port_owner.out"
+
+FAKE_NGINX_CONTAINER_ID=staging-nginx \
+FAKE_NGINX_INSPECT=$'project=<no value>\nservice=<no value>\nstate=running' \
+  expect_failure missing_port_metadata run_preflight
+assert_contains 'CHECK|PORT_18080|NO_GO|loopback listener does not match the exact expected Staging nginx ownership and binding' "$TMP_DIR/missing_port_metadata.out"
+
+FAKE_NGINX_CONTAINER_ID=staging-nginx \
+FAKE_NGINX_INSPECT=$'project=restaurant-pos-staging\nservice=nginx\nstate=running\nbinding=80/tcp|127.0.0.1|18080\nbinding=443/tcp|0.0.0.0|18443' \
+  expect_failure extra_port_mapping run_preflight
+assert_contains 'CHECK|PORT_18080|NO_GO|loopback listener does not match the exact expected Staging nginx ownership and binding' "$TMP_DIR/extra_port_mapping.out"
+
+FAKE_NGINX_CONTAINER_ID=$'staging-nginx\nstaging-nginx-duplicate' \
+FAKE_NGINX_INSPECT=$'project=restaurant-pos-staging\nservice=nginx\nstate=running\nbinding=80/tcp|127.0.0.1|18080' \
+  expect_failure multiple_nginx_owners run_preflight
+assert_contains 'CHECK|PORT_18080|NO_GO|loopback listener is not owned by exactly one expected Staging nginx container' "$TMP_DIR/multiple_nginx_owners.out"
+
+cat >"$FAKE_BIN/ss" <<'SS_DUPLICATE'
+#!/usr/bin/env bash
+printf 'LISTEN 0 4096 127.0.0.1:18080 0.0.0.0:*\n'
+printf 'LISTEN 0 4096 127.0.0.1:18080 0.0.0.0:*\n'
+SS_DUPLICATE
+chmod +x "$FAKE_BIN/ss"
+FAKE_NGINX_CONTAINER_ID=staging-nginx \
+FAKE_NGINX_INSPECT=$'project=restaurant-pos-staging\nservice=nginx\nstate=running\nbinding=80/tcp|127.0.0.1|18080' \
+  expect_failure multiple_listeners run_preflight
+assert_contains 'CHECK|PORT_18080|NO_GO|port 18080 is not owned by exactly one listener' "$TMP_DIR/multiple_listeners.out"
+
+cat >"$FAKE_BIN/ss" <<'SS_PUBLIC'
+#!/usr/bin/env bash
+printf 'LISTEN 0 4096 0.0.0.0:18080 0.0.0.0:*\n'
+SS_PUBLIC
+chmod +x "$FAKE_BIN/ss"
+FAKE_NGINX_CONTAINER_ID=staging-nginx \
+FAKE_NGINX_INSPECT=$'project=restaurant-pos-staging\nservice=nginx\nstate=running\nbinding=80/tcp|127.0.0.1|18080' \
+  expect_failure public_port run_preflight
+assert_contains 'CHECK|PORT_18080|NO_GO|port 18080 has a public or unexpected listener' "$TMP_DIR/public_port.out"
 
 cat >"$FAKE_BIN/ss" <<'SS_CLEAR'
 #!/usr/bin/env bash
@@ -469,4 +542,4 @@ assert_contains 'does not match the exact evidence file' "$TMP_DIR/tampered_evid
 git -C "$RELEASE" status --short | grep -q . &&
   fail 'evidence tests unexpectedly changed the release checkout'
 
-echo 'PASS: STG-004 preflight uses isolated fake tools, rejects unsafe isolation and printing input, and never executes a Docker lifecycle action.'
+echo 'PASS: STG-004 preflight accepts only free or exact retained-Staging ports, rejects unsafe isolation and printing input, and never executes a Docker lifecycle action.'
