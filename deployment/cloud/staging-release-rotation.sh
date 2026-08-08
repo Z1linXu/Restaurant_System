@@ -25,6 +25,9 @@ RECOVERY_DIGEST=""
 ROTATION_MARKER=""
 ROTATION_STATE="NONE"
 NEXT_ENV_FILE=""
+RELEASES_DIR="$OPS001_EXPECTED_ROOT/releases"
+RELEASES_DIR_MODE=""
+RELEASES_DIR_IDENTITY=""
 
 usage() {
   cat <<'EOF'
@@ -96,15 +99,42 @@ validate_repository() {
   [[ "$remote_main" == "$APPROVED_SHA" ]] || ops001_die "approved SHA must equal the dedicated repository origin/main"
 }
 
+release_root_identity() {
+  if stat -c '%d:%i' "$1" >/dev/null 2>&1; then stat -c '%d:%i' "$1"; else stat -f '%d:%i' "$1"; fi
+}
+
+validate_releases_root() {
+  [[ "$RELEASES_DIR" == "$OPS001_EXPECTED_ROOT/releases" ]] || ops001_die "Staging releases directory path changed"
+  [[ -d "$RELEASES_DIR" && ! -L "$RELEASES_DIR" ]] || ops001_die "Staging releases directory is unavailable"
+  ops001_path_has_symlink "$RELEASES_DIR" && ops001_die "Staging releases directory must not traverse symlinks"
+  [[ "$(ops001_canonical_dir "$RELEASES_DIR")" == "$RELEASES_DIR" ]] || ops001_die "Staging releases directory must use the fixed canonical path"
+  RELEASES_DIR_MODE="$(ops001_file_mode "$RELEASES_DIR")"
+  [[ "$(ops001_file_owner "$RELEASES_DIR")" == "$(id -u)" &&
+     ( "$RELEASES_DIR_MODE" == "700" || "$RELEASES_DIR_MODE" == "750" ) ]] ||
+    ops001_die "Staging releases directory must be owner-owned mode 0700 or 0750"
+  RELEASES_DIR_IDENTITY="$(release_root_identity "$RELEASES_DIR")"
+}
+
+assert_releases_root_unchanged() {
+  [[ -n "$RELEASES_DIR_MODE" && -n "$RELEASES_DIR_IDENTITY" &&
+     -d "$RELEASES_DIR" && ! -L "$RELEASES_DIR" ]] || ops001_die "Staging releases directory identity is unavailable"
+  ops001_path_has_symlink "$RELEASES_DIR" && ops001_die "Staging releases directory identity changed"
+  [[ "$(ops001_canonical_dir "$RELEASES_DIR")" == "$RELEASES_DIR" &&
+     "$(ops001_file_owner "$RELEASES_DIR")" == "$(id -u)" &&
+     "$(ops001_file_mode "$RELEASES_DIR")" == "$RELEASES_DIR_MODE" &&
+     "$(release_root_identity "$RELEASES_DIR")" == "$RELEASES_DIR_IDENTITY" ]] ||
+    ops001_die "Staging releases directory identity changed"
+}
+
 validate_inputs() {
   [[ "$-" != *x* ]] || ops001_die "shell tracing must be disabled"
   [[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]] || ops001_die "approved SHA must be a lowercase full 40-character SHA"
   [[ "$ENV_FILE" == "$OPS001_EXPECTED_ROOT/config/.env.staging" ]] || ops001_die "environment file must use the fixed Staging path"
   ops001_validate_env_file "$ENV_FILE"
   ENV_DIGEST="$(ops001_file_digest "$ENV_FILE")"
-  RELEASE_DIR="$OPS001_EXPECTED_ROOT/releases/$APPROVED_SHA"
-  [[ -d "$OPS001_EXPECTED_ROOT/releases" && ! -L "$OPS001_EXPECTED_ROOT/releases" ]] || ops001_die "Staging releases directory is unavailable"
-  [[ "$(ops001_file_owner "$OPS001_EXPECTED_ROOT/releases")" == "$(id -u)" && "$(ops001_file_mode "$OPS001_EXPECTED_ROOT/releases")" == "700" ]] || ops001_die "Staging releases directory must be owner-only mode 0700"
+  RELEASES_DIR="$OPS001_EXPECTED_ROOT/releases"
+  RELEASE_DIR="$RELEASES_DIR/$APPROVED_SHA"
+  validate_releases_root
   validate_repository
 }
 
@@ -129,9 +159,11 @@ assert_release() {
 }
 
 create_detached_release() {
+  assert_releases_root_unchanged
   [[ ! -e "$RELEASE_DIR" && ! -L "$RELEASE_DIR" ]] || ops001_die "exact release path already exists; refusing overwrite"
   umask 077
   git --git-dir="$REPOSITORY" worktree add --detach "$RELEASE_DIR" "$APPROVED_SHA" >/dev/null
+  assert_releases_root_unchanged
   chmod 700 "$RELEASE_DIR"
   assert_release
 }

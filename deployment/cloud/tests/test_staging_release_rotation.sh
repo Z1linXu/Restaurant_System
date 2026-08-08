@@ -25,6 +25,7 @@ OPS001_EXPECTED_ENVIRONMENT="restaurant-pos-staging"
 EXPECTED_ROOT="$OPS001_EXPECTED_ROOT"
 mkdir -p "$OPS001_EXPECTED_ROOT"/{config,evidence,releases,state}
 chmod 700 "$OPS001_EXPECTED_ROOT"/{config,evidence,releases,state}
+chmod 750 "$OPS001_EXPECTED_ROOT/releases"
 REPOSITORY="$OPS001_EXPECTED_ROOT/repository.git"
 
 FAKE_FLOCK="$TMP_DIR/flock"
@@ -91,6 +92,20 @@ chmod 600 "$APPROVAL_FILE"
 APPROVAL_SHA256="$(ops001_file_digest "$APPROVAL_FILE")"
 
 validate_inputs
+chmod 700 "$OPS001_EXPECTED_ROOT/releases"
+expect_failure releases_mode_drift assert_releases_root_unchanged
+assert_contains 'Staging releases directory identity changed' "$TMP_DIR/releases_mode_drift.err"
+chmod 750 "$OPS001_EXPECTED_ROOT/releases"
+assert_releases_root_unchanged
+chmod 775 "$OPS001_EXPECTED_ROOT/releases"
+expect_failure releases_unsafe_mode validate_releases_root
+assert_contains 'Staging releases directory must be owner-owned mode 0700 or 0750' "$TMP_DIR/releases_unsafe_mode.err"
+chmod 750 "$OPS001_EXPECTED_ROOT/releases"
+validate_releases_root
+chmod 700 "$OPS001_EXPECTED_ROOT/releases"
+validate_releases_root
+chmod 750 "$OPS001_EXPECTED_ROOT/releases"
+validate_releases_root
 RECOVERY_REDIRECT="$TMP_DIR/recovery-redirect"
 mkdir "$RECOVERY_REDIRECT"; chmod 700 "$RECOVERY_REDIRECT"
 ln -s "$RECOVERY_REDIRECT" "$OPS001_EXPECTED_ROOT/state/ops001-env-recovery"

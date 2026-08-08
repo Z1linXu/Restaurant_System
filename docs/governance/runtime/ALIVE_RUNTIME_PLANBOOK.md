@@ -26,7 +26,7 @@
 | Environment | `restaurant-prod` | `OPERATOR_CONFIRMED` | Environment label only; no host or secret is recorded. |
 | `RUNTIME_COMMIT` | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e` | `MACHINE_VERIFIED_READ_ONLY` during STG-006 continuity | Current runtime identity only, not a formal release approval. |
 | Production branch | `main` | `MACHINE_VERIFIED_READ_ONLY` during STG-006 continuity | Branch relationship is not a deployment approval record. |
-| Last verified `DOCUMENTATION_COMMIT` before this repair | `e6fac236c7620cd2f579d2a180367f4f753a6d42` | `MACHINE_VERIFIED` from `origin/main` | PR #76 contains the exact-Git release bootstrap; this does not make that commit a Staging or Production runtime. |
+| Last verified `DOCUMENTATION_COMMIT` before this repair | `5c6d8bb70d74756cc7fe3f76b2d43cb07c6e6f33` | `MACHINE_VERIFIED` from `origin/main` | PR #77 contains the state-parent guard reconciliation; this does not make that commit a Staging or Production runtime. |
 | Deployment mode | HTTP | `OPERATOR_CONFIRMED` | HTTPS/certificate posture is outside this record. |
 | Compose services | `db`, `backend`, `nginx` under project `cloud`; unchanged before/after STG-006, restart count 0 | `MACHINE_VERIFIED_READ_ONLY` | Minimum continuity only; no environment or business-data read. |
 | Database schema | Flyway V7, including `V7__add_print_job_attention_acknowledgement.sql` | `OPERATOR_CONFIRMED` | Not a restore or schema-integrity rehearsal. |
@@ -62,10 +62,10 @@ snapshots. Do not copy those reports into this planbook.
 | Item | Current state |
 |---|---|
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `STG-007_STATE_ROOT_MODE_GUARD_REPAIR` |
+| Current Agile Loop | `STG-007_RELEASES_ROOT_MODE_GUARD_REPAIR` |
 | Loop type | `REPOSITORY_OPERATIONAL_TOOLING_REPAIR` |
-| Loop status | `STG-007_BATCH_A_BLOCKED_BY_STATE_ROOT_MODE_REPAIR` |
-| Current package | fail-closed reconciliation of the bootstrap state-parent mode guard with the established safe `0750` Staging topology; tests, evidence, and governance only |
+| Loop status | `STG-007_BATCH_A_BLOCKED_BY_RELEASES_ROOT_MODE_REPAIR` |
+| Current package | fail-closed reconciliation of the release helper's releases-parent mode guard with the established safe `0750` topology; tests, evidence, and governance only |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | PR #27 merged the backend foundation into `main`; Production remains on the older runtime and no production onboarding is established by that merge. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -74,11 +74,11 @@ snapshots. Do not copy those reports into this planbook.
 | STG-005 state | PLAN complete. The Owner approved CP-0 as a separate minimal Staging-only bootstrap implementation and accepted CP-4 as a feature-disabled KDS/Assembling boundary. Positive Kitchen/Assembling workflow remains `EVIDENCE_PENDING`. |
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
 | STG-006 state | `PASS` for candidate `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b`. Fresh read-only evidence confirmed retained Staging `4397f995...` / V8, isolated project/network/state, loopback bind, printing disabled, healthy endpoints, resource headroom, and unchanged Production continuity. No candidate release, deploy, Flyway, restart, login, or data mutation occurred. |
-| OPS-001 state | `REPOSITORY_COMPLETE` through PR #74 plus control-path repairs #75/#76. Helpers default to validation and require exact SHA/env/action plus one-use Owner approval; the latest bootstrap entry stopped before release/env delegation. |
-| STG-007 state | PR #76 merged the exact-Git bootstrap at `e6fac236c7620cd2f579d2a180367f4f753a6d42`. Batch A restarted; read-only gates and exact candidate import passed, then bootstrap stopped before release/env mutation because the `0700` state-parent guard rejected the established owner-owned `0750` topology. Cleanup completed, Staging remains `4397f995...` / V8, and Batch B never became eligible. |
+| OPS-001 state | `REPOSITORY_COMPLETE` through PR #74 plus control-path repairs #75-#77. Helpers default to validation and require exact SHA/env/action plus one-use Owner approval; the latest release-helper entry stopped before approval consumption or mutation. |
+| STG-007 state | PR #77 merged the state-parent repair at `5c6d8bb70d74756cc7fe3f76b2d43cb07c6e6f33`. Batch A restarted; fresh gates and candidate import passed, bootstrap delegated, then release validation stopped before approval consumption/mutation because the `0700` releases-parent guard rejected the established canonical/operator-owned `0750` directory. Cleanup completed, Staging remains `4397f995...` / V8, and Batch B never became eligible. |
 | AL-003 state | PR #72 and PRs #61-#71 are `IN_MAIN`; PR #73 then entered main at `85d97b7327b2e15aa561ed28a5788b92cedf6f5b`. STG-006 observed the retained Staging runtime at `4397f995...` / Flyway V8; no later candidate is deployed. |
 | Staging Owner login prerequisite | `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`; code audit proves an Organization Owner naturally accesses every same-Organization Store, so no explicit target Owner Store membership is required. Runtime bootstrap, credential, login, workspace, target onboarding, and API evidence remain pending. |
-| Current permitted work | Complete only the bounded state-root mode guard repair, tests, Agent 6 review, governance sync, and publication under the permanent auto-merge gate. After merge, restart STG-007 Batch A from the new exact main. |
+| Current permitted work | Complete only the bounded releases-root mode guard repair, tests, Agent 6 review, governance sync, and publication under the permanent auto-merge gate. After merge, restart STG-007 Batch A from the new exact main. |
 | Explicitly not permitted | Further runtime access during repair; detached server release or environment rotation; Staging/Production deploy; Docker lifecycle; Flyway; bootstrap; credentials; login; onboarding; validate/execute/replay/clone; restart; Store 1 read; Production mutation; Chinatown activation; or STG-007 Batch B. |
 
 Agent and worker execution is ephemeral. After a bounded task, the result and
@@ -143,8 +143,8 @@ confirmed Staging at `4397f995...` / Flyway V8 and minimum Production
 continuity at full SHA `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`.
 Production Flyway was not queried and remains retained V7 evidence only.
 
-The unique feature stop state during this third bounded dependency repair is
-`STG-007_BATCH_A_BLOCKED_BY_STATE_ROOT_MODE_REPAIR`.
+The unique feature stop state during this fourth bounded dependency repair is
+`STG-007_BATCH_A_BLOCKED_BY_RELEASES_ROOT_MODE_REPAIR`.
 
 OPS-001 adds repository-only guarded helpers for a detached release plus
 four-field atomic private-env rotation, sanitized Flyway/runtime collection
@@ -186,6 +186,15 @@ mutation when the bootstrap rejected the established owner-owned mode `0750`
 state parent. The deterministic guard repair is recorded in
 [STG-007 State-Root Mode Guard Repair Evidence](STG-007_STATE_ROOT_MODE_GUARD_REPAIR_EVIDENCE.md).
 After it merges, `e6fac236...` expires and Batch A must restart again from the
+next exact main; Batch B remains ineligible.
+
+PR #77 merged that state-parent correction at
+`5c6d8bb70d74756cc7fe3f76b2d43cb07c6e6f33`. The next Batch A restart passed
+fresh gates and exact candidate import; bootstrap then delegated, but the
+release helper stopped before approval consumption/mutation at the established
+mode-`0750` releases-parent boundary. The fourth deterministic repair is in
+[STG-007 Releases-Root Mode Guard Repair Evidence](STG-007_RELEASES_ROOT_MODE_GUARD_REPAIR_EVIDENCE.md).
+After it merges, `5c6d8bb7...` expires and Batch A must restart again from the
 next exact main; Batch B remains ineligible.
 
 The `IN_MAIN` acceptance preparation is documented in
