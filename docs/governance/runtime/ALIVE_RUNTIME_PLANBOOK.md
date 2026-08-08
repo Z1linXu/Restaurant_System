@@ -64,7 +64,7 @@ snapshots. Do not copy those reports into this planbook.
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `AL-003 Store 1 -> Chinatown Live Menu Clone` |
 | Loop type | `IMPLEMENTATION` |
-| Loop status | `STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN_WAITING_FOR_OWNER_REVIEW` |
+| Loop status | `STG-005B_STACKED_IMPLEMENTATION_WAITING_FOR_OWNER_REVIEW` |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | PR #27 merged the backend foundation into `main`; Production remains on the older runtime and no production onboarding is established by that merge. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -74,7 +74,7 @@ snapshots. Do not copy those reports into this planbook.
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
 | AL-003 state | PR #58 preserves the failed-attempt evidence and PR #59's bounded PostgreSQL UID-70/mode-0700 private-leaf repair is `IN_MAIN` at `c3956592da8a33092ab745c7cc6aac05e9babfa7`. Neither record proves a new Staging deployment. |
 | Staging Owner login prerequisite | `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`; code audit proves an Organization Owner naturally accesses every same-Organization Store, so no explicit target Owner Store membership is required. Runtime bootstrap, credential, login, workspace, target onboarding, and API evidence remain pending. |
-| Current permitted work | Modular architecture planning, STG-005B repository discovery/implementation preparation, local tests, independent review, governance sync, and Draft PR creation. Runtime mutation remains prohibited. |
+| Current permitted work | Complete and review the dependency-bound STG-005B implementation/Draft PR, prepare AL-003S command/evidence/rollback documentation, and perform bounded downstream scope audits. Runtime mutation remains prohibited. |
 | Explicitly not permitted | Reusing old SHA approval/evidence; SSH/runtime mutation; deployment; Flyway; bootstrap; credential creation; login; source-menu writes; validate/execute; real clone; Production Store 1 access/mutation; or implementation outside the selected architecture/STG-005B package and explicitly bounded downstream preparation. |
 
 The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
@@ -99,6 +99,7 @@ packages without that mapping.
 | PR-F / PR #56 | `IN_MAIN` via merge `8f909525781804f61d1da388882f530da358c3c4` | Protected Owner validate/execute API facade reusing the internal planner, V10 coordinator, and lock-owning transaction without a second clone engine. |
 | Attempt evidence / PR #58 | `IN_MAIN` via merge `1482cddf4f10478ed571e4d7422100dc40006f6b` | Immutable record of the failed exact-SHA preflight and safe V8 runtime recovery. |
 | Private-leaf repair / PR #59 | `IN_MAIN` via merge `c3956592da8a33092ab745c7cc6aac05e9babfa7` | Staging-only path-validation correction and governance rules; no runtime action or business/API change. |
+| STG-005B Synthetic St-Denis baseline | `STACKED_DRAFT_IMPLEMENTED_NOT_IN_MAIN` | [Local evidence](STG-005B_SYNTHETIC_ST_DENIS_BASELINE_EVIDENCE.md) covers the guarded non-web planner/applier, 4/3/13/38 source graph, 4/3/17/74 target-plan compatibility, rollback, concurrency, and full backend regression. No runtime execution. |
 | Owner decisions governance sync / PR #60 | `IN_MAIN` via merge `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d` | Documentation-only alignment of product direction, access semantics, FT-001 gaps, and runtime gates. |
 | Modular Store provisioning architecture / PR #61 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | Defines Generic Engine + Versioned Profiles + Reusable Modules; no API/runtime behavior. |
 
@@ -113,11 +114,13 @@ stacked branch. Its evidence is
 
 Current `main` contains the generic clone transaction, source-option layer,
 complete Chinatown Profile, read-only planner, and protected Owner HTTP API.
-This is repository capability only. No real clone has run; Staging remains on
-`4397f995...` / Flyway V8 and Production remains on `4667f3c` / Flyway V7.
+This is repository capability only. No real clone has run. The latest retained
+runtime evidence snapshots record Staging at `4397f995...` / Flyway V8 and
+Production at `4667f3c` / Flyway V7; this package performed no fresh runtime
+inspection and does not assert that those environments remain unchanged.
 
-The current architecture package review state is
-`STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN_WAITING_FOR_OWNER_REVIEW`. The separate
+The architecture package remains in Draft PR #61. The dependency-bound
+STG-005B implementation is prepared above it and is not `IN_MAIN`. The separate
 runtime acceptance prerequisite remains
 `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`.
 

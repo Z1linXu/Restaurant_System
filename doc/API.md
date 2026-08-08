@@ -571,6 +571,13 @@ a second clone engine:
   exposes source-to-target ID maps, source menu payloads, credentials, tokens,
   endpoints, or raw exceptions.
 
+STG-005B does not add another menu endpoint. Its Synthetic St-Denis manifest
+planner/applier is a disabled-by-default, non-web Staging command used only to
+prepare AL-003 acceptance data after separate runtime approval. Public clients
+must continue to use the existing Owner `/menu-clone/validate` and
+`/menu-clone` contracts; the synthetic manifest, fingerprint payload, and
+internal database IDs are not API responses.
+
 ### Owner Multi-Store Overview
 GET `/api/v1/owner/overview`
 

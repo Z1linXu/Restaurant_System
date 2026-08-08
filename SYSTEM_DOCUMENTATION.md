@@ -37,6 +37,15 @@ separate from historical evidence snapshots and business implementation details:
   idempotency, transaction, evidence, and approval contract for the minimum
   synthetic prerequisite topology. It does not authorize executing the
   bootstrap.
+- [STG-005B Synthetic St-Denis source-menu runbook](deployment/cloud/README_STG005_SYNTHETIC_SOURCE_MENU.md)
+  defines the versioned synthetic manifest, default read-only plan, explicit
+  execution gate, empty-or-exact transaction/replay behavior, and sanitized
+  evidence contract. It is dependency-bound work and authorizes no runtime
+  command or Production source substitution.
+- [STG-005B local implementation evidence](docs/governance/runtime/STG-005B_SYNTHETIC_ST_DENIS_BASELINE_EVIDENCE.md)
+  records focused/full backend tests, transaction/replay/concurrency evidence,
+  scope scans, and the remaining merge/runtime gates. It is not Staging
+  execution evidence.
 - [AL-003A final menu comparison](docs/governance/agile/AL-003A_FINAL_MENU_COMPARISON.md)
   is the single product-mapping authority for the Store 1 to Chinatown target
   menu. Repository seed data is historical reference only.
@@ -376,6 +385,15 @@ Store-specific desired state belongs in a reviewed profile, physical
 endpoints/secrets remain runtime-only, and accepted actions are retained as
 sanitized evidence. The architecture authority is
 [STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md](docs/governance/agile/STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md).
+
+STG-005B prepares a Staging-only, non-web source-menu fixture around the
+existing menu entities, Store lock, and revision service. Its source graph has
+4 categories, 3 stations, 13 items, and 38 options and is proven locally to
+produce the existing Chinatown read-only target plan of 4 categories, 3
+stations, 17 items, and 74 options. It adds no migration or HTTP endpoint.
+Synthetic display/topology identity uses `STG005_`; stable menu technical codes
+remain the exact AL-003 semantic identifiers. The implementation is not in
+`main` and has not been run on Staging or Production.
 
 STG-005A owns `V9__add_staging_synthetic_bootstrap_requests.sql`. PR-B adds the
 separate append-only `V10__add_owner_store_menu_clone_requests.sql`. V10 creates

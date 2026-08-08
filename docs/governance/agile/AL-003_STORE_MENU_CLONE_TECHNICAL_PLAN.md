@@ -919,9 +919,18 @@ Stop and return to Owner if:
   clone, merge, or deployment. Later package states are governed by Section
   1.1 and do not rewrite that historical fact.
 
-## Final state
+## Current capability state
 
 `IN_MAIN_AWAITING_STG-005B_AND_STAGING_ACCEPTANCE`
+
+The dependency-bound STG-005B package prepares an immutable synthetic source
+graph and a guarded non-web empty-or-exact application path. It does not change
+the public clone API, V10 contract, Chinatown target profile, or Production
+source authority. Local integration verifies that its 4-category, 3-station,
+13-item, 38-option source graph passes the existing read-only planner and
+produces the reviewed 4/3/17/74 Chinatown target plan. This is repository test
+evidence only; runtime bootstrap, source ID 1, login, validate, execute, replay,
+and restart remain AL-003S Owner-gated evidence.
 
 PR-F entered `main` through PR #56 at
 `8f909525781804f61d1da388882f530da358c3c4`. The reviewed Owner

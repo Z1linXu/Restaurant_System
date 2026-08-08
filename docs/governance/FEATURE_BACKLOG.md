@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN_WAITING_FOR_OWNER_REVIEW` |
+| status | `STG-005B_STACKED_IMPLEMENTATION_WAITING_FOR_OWNER_REVIEW` |
 | target_loop | `AL-003` |
 | implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, and PR #60's Owner decisions are `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. The modular provisioning architecture package is under review in Draft PR #61. Staging remains on the separately evidenced older runtime; no V9/V10/bootstrap/clone execution is implied. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Review the modular architecture package while STG-005B is prepared as dependency-bound work. Runtime deployment/bootstrap/clone remains separately Owner-gated. |
+| next action | Review Draft PR #61 first, then the dependency-bound STG-005B Draft PR. After both enter `main`, prepare a fresh exact-SHA AL-003S runtime package for separate Owner approval. |
 
 ### Current AL-003 delivery state
 
@@ -38,6 +38,7 @@
 | Private-leaf preflight repair / PR #59 | `IN_MAIN` via merge `c3956592da8a33092ab745c7cc6aac05e9babfa7` |
 | Owner decisions governance sync / PR #60 | `IN_MAIN` via merge `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; documentation only, no runtime action |
 | Modular Store provisioning architecture / PR #61 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`; documentation only, no runtime action |
+| STG-005B Synthetic St-Denis baseline | `STACKED_DRAFT_IMPLEMENTED_NOT_IN_MAIN`; no migration, public API, SSH, runtime write, or clone execution |
 
 The Owner-login acceptance prerequisite is not satisfied by repository code or
 deployment alone. Read-only code audit confirms that an active Organization
@@ -185,7 +186,7 @@ seed/demo Store.
 | Synthetic Organization/source/Owner bootstrap | `STAGING_PENDING` | STG-005A is in main but has not executed on evidenced Staging. |
 | Synthetic target onboarding and Owner target access | `STAGING_PENDING` | Existing onboarding plus Organization Owner access is sufficient; runtime evidence is missing. |
 | Synthetic Owner login/workspace/Owner API authorization | `STAGING_PENDING` | Credential must be supplied at runtime and never retained in Git/evidence. |
-| Reproducible Synthetic St-Denis source-menu baseline | `NEEDS_NEW_LOOP` | Store-scoped menu APIs exist, but no reviewed reusable St-Denis synthetic baseline/profile is in main. |
+| Reproducible Synthetic St-Denis source-menu baseline | `STACKED_DRAFT` | A guarded, versioned, transactional empty-or-exact implementation is prepared above Draft PR #61. It is not in `main` and has not run on Staging. |
 | AL-003 validate/execute/replay/restart acceptance | `STAGING_PENDING` | Requires the full synthetic topology and source-menu contract first. |
 | Production Store 1 read-only source capture/drift review | `PRODUCTION_PENDING` | Separate Owner Runtime Gate; only menu-related evidence may be read. |
 | Production Chinatown Store/staff/menu provisioning | `PRODUCTION_PENDING` | Exact-SHA Release Candidate and production approval required. |
