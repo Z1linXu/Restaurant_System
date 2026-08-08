@@ -163,6 +163,15 @@ Admin/device registration:
   - Soft-revokes the device with `status = REVOKED`, `is_active = false`.
   - Disabled/revoked devices fail device-authenticated runtime calls with `403`.
 
+AL-005B is a planned provisioning boundary, not an additional API. Its current
+review package adds no endpoint, DTO, migration, device write, token operation,
+pairing, or Worker behavior. Versioned Store Profiles must not carry device IDs,
+tokens, pairing state, `last_seen_at`, auto-print preferences, Worker state, or
+printer endpoints. Existing code has no per-device module assignment: every
+active paired Pad can consume eligible PAD_DIRECT jobs for its Store. A future
+read-only planner may expose only sanitized readiness counts/diagnostics after a
+separately reviewed contract.
+
 Pad print queue:
 
 - `GET /api/v1/stores/{storeId}/printing/jobs/pending?limit=25`
@@ -172,6 +181,11 @@ Pad print queue:
   - Auth: `X-Device-Id`, `X-Device-Token`.
   - Request: `client_attempt_token`, optional `lease_seconds`.
   - Atomically changes the job to `CLAIMED`; concurrent devices receive `409`.
+- `POST /api/v1/printing/jobs/{jobId}/start-print`
+  - Auth: `X-Device-Id`, `X-Device-Token`.
+  - Request: `client_attempt_token`, optional `lease_seconds`.
+  - Changes the claimed job to `PRINTING` for the same device/attempt and
+    extends the lease before native TCP output starts.
 - `GET /api/v1/printing/jobs/{jobId}/payload`
   - Auth: `X-Device-Id`, `X-Device-Token`.
   - Only the claiming device can read payload.

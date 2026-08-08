@@ -69,9 +69,14 @@ separate from historical evidence snapshots and business implementation details:
 - [AL-005 Printing Provisioning Module Plan](docs/governance/agile/AL-005_PRINTING_PROVISIONING_MODULE_PLAN.md)
   records the existing printing authorities, runtime-only endpoint boundary,
   fixed Chinatown module policy, prerequisite defects, and staged delivery
-  gates. Draft PR #67 is rebuilt from latest `main` and remains a single-layer
-  planning package; it adds no writer, API, migration, printer, assignment,
-  mode change, device, test print, or runtime behavior.
+  gates. PR #67 is now `IN_MAIN` at the latest main merge and adds no writer,
+  API, migration, printer, assignment, mode change, device, test print, or
+  runtime behavior.
+- [AL-005B Device and Pad Provisioning Module Plan](docs/governance/agile/AL-005B_DEVICE_PAD_PROVISIONING_MODULE_PLAN.md)
+  records the current pairing/authentication, heartbeat, Store-wide PAD_DIRECT
+  queue, Android Worker visibility, profile/runtime boundaries, and readiness
+  gates. Draft PR #68 is rebuilt from latest `main` and adds no endpoint,
+  migration, device, token, pairing, Worker change, or runtime behavior.
 - [AL-003A final menu comparison](docs/governance/agile/AL-003A_FINAL_MENU_COMPARISON.md)
   is the single product-mapping authority for the Store 1 to Chinatown target
   menu. Repository seed data is historical reference only.
@@ -455,10 +460,26 @@ separate operational evidence. Chinatown's fixed target is PAD_DIRECT with
 exactly GRAB and FRONTDESK_RECEIPT across two on-site printers; role-code names
 are not inferred from physical printer labels. A generic Store-scoped
 enabled-module policy must run before Print Job creation so excluded
-HOT_KITCHEN work does not become an assignment failure. Executable work remains
+HOT_KITCHEN work does not become an assignment failure. The inactive writer is
 gated by the independent Store-isolation repair PR #66, unknown-mode
-compatibility, that pre-job policy gate, logical-role/assignment integrity,
-parent idempotency, and AL-005B readiness.
+compatibility, that pre-job policy gate, logical-role/assignment integrity, and
+parent idempotency. AL-005B readiness gates runtime binding/activation, not the
+inactive logical-configuration writer.
+
+The AL-005B Device/Pad audit keeps the current Store-scoped device and Android
+execution authorities intact. Current code has no per-device module assignment:
+any active paired Pad may consume eligible PAD_DIRECT jobs for its Store. A
+versioned Store Profile may eventually state only reviewed readiness intent,
+such as minimum Pad count, allowed platform, executor type, and dependency on
+the AL-005 enabled-module policy. Device IDs, tokens/hashes, pairing, local
+auto-print preference, app installation, `last_seen_at`, Worker state/errors,
+printer endpoints, and Print Job data remain runtime-only. `last_seen_at` is set
+at registration and later touched by authenticated calls; it is not proof of
+successful local pairing or that the Worker is enabled and polling. Current
+app-version reporting may be `unknown` or client-controlled, so exact installed
+APK/build provenance remains a separate acceptance gate.
+Chinatown requires four independently paired Pads and retains the Store-wide
+queue; AL-005B does not invent device-module affinity or perform pairing.
 
 Agile Loop agents and workers are ephemeral resources. Completed bounded tasks
 must return persisted evidence to the Coordinator, terminate their active

@@ -218,10 +218,12 @@ Provisioning does not rewrite the print engine or bypass PRINTING safeguards.
 
 ### 6.6 Device / Pad Provisioner
 
-Reuse current pairing, Store binding, module assignment, heartbeat/health, and
-Android Worker visibility. Device identity/token creation is runtime-only and
-separately approved. The module verifies desired binding/readiness; it does not
-embed a Pad or token in a profile and does not rewrite the Android Worker.
+Reuse current pairing, Store binding, heartbeat, Store-wide PAD_DIRECT queue,
+and Android Worker visibility. Current code has no per-device module assignment,
+and the provisioning design must not invent one. Device identity/token creation
+is runtime-only and separately approved. The module verifies desired
+binding/readiness; it does not embed a Pad or token in a profile and does not
+rewrite the Android Worker.
 
 ## 7. Activation workflow
 
@@ -247,8 +249,9 @@ Owner-approved waiver before activation.
 Minimum Chinatown activation evidence includes Store linkage/configuration,
 Owner and staff login/access, cloned menu and revision, tables, printer
 assignments and physical ticket checks, Pad Store binding and Worker health,
-dine-in submit/update, expected GRAB/FRONTDESK_RECEIPT/HOT_KITCHEN tickets, and
-operational completion. Payment is not silently added.
+dine-in submit/update, expected GRAB/FRONTDESK_RECEIPT tickets, proof that the
+excluded HOT_KITCHEN module creates no job, and operational completion. Payment
+is not silently added.
 
 ## 8. Existing implementation map
 
@@ -293,7 +296,7 @@ Store 1 contents, and cannot replace the Production read-only source gate.
 | 3 | `AL-004_GENERIC_STORE_PROFILE_FRAMEWORK` | Store-level profile identity/composition/module references, followed by separately reviewed concrete profiles and Owner template contract | No all-module rewrite or implicit executable workflow |
 | 4 | `AL-005A_STAFF_TABLE_PROVISIONING_MODULES` | Reusable staff/access and table adapters | No order/table runtime-engine rewrite |
 | 5 | `AL-005_PRINTING_PROVISIONING_TEMPLATE` | Runtime-safe printer-role/assignment provisioning contract | No endpoints in Git; no print engine V2 |
-| 6 | `AL-005B_DEVICE_PAD_PROVISIONING_MODULE` | Pair/bind/assign/health provisioning contract | No Android Worker rewrite |
+| 6 | `AL-005B_DEVICE_PAD_PROVISIONING_MODULE` | Store binding and pairing/Worker-readiness contract | No device-module affinity or Android Worker rewrite |
 | 7 | `AL-006_STORE_ACTIVATION_WORKFLOW` | Orchestration and fail-closed activation validator | No implicit payment expansion |
 | 8 | `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE` | Production gap/migration/backup/rollback/compatibility package | No deployment without approval |
 | 9 | `ACT-001_CHINATOWN_PRODUCTION_ACTIVATION` | Approved runtime provisioning and field acceptance | No unauthorized Production mutation |
@@ -311,6 +314,13 @@ It keeps physical endpoints and activation runtime-only, starts from
 `DISABLED`, reuses the current Print Engine, and gates any writer on Store
 isolation, strict mode, logical-role, assignment-integrity, idempotency, and
 device-readiness prerequisites.
+
+The dependent Device/Pad authority and readiness audit is maintained in
+[AL-005B Device and Pad Provisioning Module Plan](AL-005B_DEVICE_PAD_PROVISIONING_MODULE_PLAN.md).
+It keeps device identity, tokens, pairing, auto-print preference, and Worker
+health runtime-only; preserves the current Store-wide queue with no per-device
+module assignment; and leaves all pairing/runtime actions behind explicit
+Owner gates.
 
 ### 10.1 Historical label mapping
 
@@ -378,9 +388,10 @@ Synthetic St-Denis repository baseline, and PR #63 established guarded Staging
 acceptance preparation. The AL-004 contract entered `main` via PR #64 and still
 registers no concrete Store Profile, exposes no public template endpoint, and
 adds no executable provisioning workflow. No runtime operation is authorized.
-The #65 Staff/Table package and independent #66 Printer Store-isolation repair
-are `IN_MAIN`; #67 is now a main-based Draft Printing Provisioning plan, while
-#68-#70 remain `STACKED_ONLY` until their direct dependency enters `main`.
+The #65 Staff/Table package, independent #66 Printer Store-isolation repair,
+and #67 Printing Provisioning plan are `IN_MAIN`; #68 is now a main-based Draft
+Device/Pad Provisioning plan, while #69-#70 remain `STACKED_ONLY` until their
+direct dependency enters `main`.
 
 The `IN_MAIN` STG-005B package adds no migration or HTTP endpoint. It
 uses the existing Staging profile/guards, an immutable 4/3/13/38 source

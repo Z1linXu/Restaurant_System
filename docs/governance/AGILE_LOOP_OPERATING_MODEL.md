@@ -90,8 +90,10 @@ deployment. PR #71's handoff navigation, PR #61's modular architecture, PR
 and PR #64's Generic Store Profile contract are `IN_MAIN`; none changes
 runtime state. PR #65's Staff/Access and Table planning package and PR #66's
 Printer Store-isolation repair are `IN_MAIN` at
-`f483a4640503c20f6eec1e2e9ae1d198bf23d1f3`; PR #67 is the next main-based
-Printing Provisioning planning layer and PRs #68-#70 remain dependency-bound.
+`f483a4640503c20f6eec1e2e9ae1d198bf23d1f3`; PR #67's Printing Provisioning
+plan is now `IN_MAIN` at the latest main, and PR #68 is the next main-based
+Device/Pad Provisioning planning layer while PRs #69-#70 remain
+dependency-bound.
 The current
 feature stop state is
 `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL`.

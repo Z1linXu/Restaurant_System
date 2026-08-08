@@ -1,14 +1,14 @@
 # AL-005 Printing Provisioning Module Plan
 
-> Status: `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` in Draft PR #67
+> Status: `IN_MAIN` via PR #67; downstream AL-005B remains separately gated
 >
 > Package: `AL-005_PRINTING_PROVISIONING_TEMPLATE`
 >
-> Git classification: `DRAFT_PR` based on latest `main`
+> Git classification: `IN_MAIN`
 >
-> Base: `origin/main@f483a4640503c20f6eec1e2e9ae1d198bf23d1f3` (PR #66 IN_MAIN)
+> Base: `origin/main@65e3d3ced2b5b05eb36d56ce67e475768ad19dff` (PR #67 IN_MAIN)
 >
-> Draft PR: #67 (`base=main`)
+> Source PR: #67 (`base=main`)
 >
 > Runtime access: not performed
 
@@ -156,12 +156,14 @@ not be inferred from physical printer names or endpoints.
 ## 7. Dependency Repair Gate
 
 PR #66 entered `main` at `f483a4640503c20f6eec1e2e9ae1d198bf23d1f3` and repairs
-two pre-existing Store-isolation defects:
+the pre-existing Store-isolation defects:
 
 1. an existing printer config cannot be moved across Stores through a changed
    request `store_id`;
 2. automatic dispatch revalidates that an assigned printer belongs to the
-   dispatch Store before renderer/transport execution.
+   dispatch Store before renderer/transport execution;
+3. PAD_DIRECT complete/fail scopes printer-health updates to the durable job
+   Store instead of looking up a bare printer ID.
 
 PR #66 was independent of this package and is now the Store-isolation safety
 foundation in `main`. This plan does not copy that implementation into the
@@ -253,4 +255,4 @@ restore, automatic FAILED requeue, or destructive bulk deletion.
 
 ## 13. Stop state
 
-`DRAFT_PR_WAITING_FOR_OWNER_REVIEW`
+`IN_MAIN_WAITING_FOR_AL-005B_DEVICE_PAD_REVIEW`

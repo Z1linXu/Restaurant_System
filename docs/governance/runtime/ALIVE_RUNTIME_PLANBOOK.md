@@ -26,7 +26,7 @@
 | Environment | `restaurant-prod` | `OPERATOR_CONFIRMED` | Environment label only; no host or secret is recorded. |
 | `RUNTIME_COMMIT` | `4667f3c` | `OPERATOR_CONFIRMED` | Reported deployed commit, not a formal release approval. |
 | Production branch | `main` | `OPERATOR_CONFIRMED` | Branch relationship is not a deployment approval record. |
-| Last merged `DOCUMENTATION_COMMIT` | `f483a4640503c20f6eec1e2e9ae1d198bf23d1f3` | `MACHINE_VERIFIED` from `origin/main` | PR #66 is `IN_MAIN`; this does not make that commit a Staging or Production runtime. |
+| Last merged `DOCUMENTATION_COMMIT` | `65e3d3ced2b5b05eb36d56ce67e475768ad19dff` | `MACHINE_VERIFIED` from `origin/main` | PR #67 is `IN_MAIN`; this does not make that commit a Staging or Production runtime. |
 | Deployment mode | HTTP | `OPERATOR_CONFIRMED` | HTTPS/certificate posture is outside this record. |
 | Compose services | `db`, `backend`, `nginx` | `OPERATOR_CONFIRMED` | No new container inspection was run for this planbook. |
 | Database schema | Flyway V7, including `V7__add_print_job_attention_acknowledgement.sql` | `OPERATOR_CONFIRMED` | Not a restore or schema-integrity rehearsal. |
@@ -72,10 +72,10 @@ snapshots. Do not copy those reports into this planbook.
 | STG-004 state | PR #38 merged the STG-004 runtime evidence. Exact SHA `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` passed PLAN, fresh PREFLIGHT, serial build/start, runtime verification, and isolated stop/start recovery. Server Staging remains running; Production remained unchanged. |
 | STG-005 state | PLAN complete. The Owner approved CP-0 as a separate minimal Staging-only bootstrap implementation and accepted CP-4 as a feature-disabled KDS/Assembling boundary. Positive Kitchen/Assembling workflow remains `EVIDENCE_PENDING`. |
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
-| AL-003 state | PR #58 preserves the failed-attempt evidence; PR #59's bounded PostgreSQL UID-70/mode-0700 private-leaf repair, PR #60's Owner decisions, PR #71's handoff navigation, PR #61's modular architecture, PR #62's Synthetic St-Denis baseline, PR #63's guarded Staging acceptance preparation, PR #64's Generic Store Profile contract, PR #65's Staff/Table planning, and PR #66's Printer Store-isolation repair are `IN_MAIN` at `f483a4640503c20f6eec1e2e9ae1d198bf23d1f3`. None proves a new Staging deployment. |
+| AL-003 state | PR #58 preserves the failed-attempt evidence; PR #59's bounded PostgreSQL UID-70/mode-0700 private-leaf repair, PR #60's Owner decisions, PR #71's handoff navigation, PR #61's modular architecture, PR #62's Synthetic St-Denis baseline, PR #63's guarded Staging acceptance preparation, PR #64's Generic Store Profile contract, PR #65's Staff/Table planning, PR #66's Printer Store-isolation repair, and PR #67's Printing Provisioning plan are `IN_MAIN` at `65e3d3ced2b5b05eb36d56ce67e475768ad19dff`. None proves a new Staging deployment. |
 | Staging Owner login prerequisite | `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`; code audit proves an Organization Owner naturally accesses every same-Organization Store, so no explicit target Owner Store membership is required. Runtime bootstrap, credential, login, workspace, target onboarding, and API evidence remain pending. |
-| Current permitted work | Review the rebuilt main-based Draft PR #67 Printing Provisioning plan as a single layer. Run local checks, independent review, governance sync, and bounded cleanup audit; runtime mutation remains prohibited. |
-| Explicitly not permitted | Reusing old SHA approval/evidence; SSH/runtime mutation; deployment; Flyway; bootstrap; credential creation; login; source-menu writes; validate/execute; real clone; Production Store 1 access/mutation; PR merge; #68 work; or duplicate implementation of the prepared Draft queue. |
+| Current permitted work | Review the rebuilt main-based Draft PR #68 Device/Pad Provisioning plan as a single layer. Run local planning checks, independent review, governance sync, and bounded cleanup audit; runtime mutation remains prohibited. |
+| Explicitly not permitted | Reusing old SHA approval/evidence; SSH/runtime mutation; deployment; Flyway; bootstrap; credential creation; login; source-menu writes; validate/execute; real clone; Pad pairing; device credential creation; Production Store 1 access/mutation; PR merge; #69 work; or duplicate implementation of the prepared Draft queue. |
 
 Agent and worker execution is ephemeral. After a bounded task, the result and
 evidence must be returned and persisted, the active session/process terminated,
@@ -116,8 +116,8 @@ packages without that mapping.
 | AL-004 Generic Store Profile contract / PR #64 | `IN_MAIN` at `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6` | Exact identity/version/composition, module policies, activation requirements, canonical fingerprinting, and safe summaries; no concrete profile, endpoint, migration, provisioning engine, UI, or runtime action. |
 | AL-005A Staff/Table plan / PR #65 | `IN_MAIN` at `8f58bcbfca253c1598b967f4d17c04c0be1cce5b` | Planning only; no writer, endpoint, migration, credential, table, or runtime action. |
 | Printer Store-isolation repair / PR #66 | `IN_MAIN` at `f483a4640503c20f6eec1e2e9ae1d198bf23d1f3` | Rejects cross-Store printer config updates, cross-Store automatic dispatch, and PAD_DIRECT printer-health updates; no migration, endpoint shape, transport, Android, or runtime action. |
-| AL-005 Printing plan / PR #67 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` based on latest `main` | Reusable Store-scoped Printing Provisioning plan only; no writer, endpoint, migration, printer, assignment, mode change, test print, or runtime mutation. |
-| AL-005B Device/Pad plan / PR #68 | `STACKED_ONLY` on #67 | Preparation only; no pairing/token/Worker mutation. |
+| AL-005 Printing plan / PR #67 | `IN_MAIN` at `65e3d3ced2b5b05eb36d56ce67e475768ad19dff` | Reusable Store-scoped Printing Provisioning plan only; no writer, endpoint, migration, printer, assignment, mode change, test print, or runtime mutation. |
+| AL-005B Device/Pad plan / PR #68 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` based on latest `main` | Reusable Store-scoped Device/Pad Provisioning plan only; no endpoint, migration, device, token, pairing, Worker change, or runtime mutation. |
 | AL-006 Activation plan / PR #69 | `STACKED_ONLY` on #68 | Fail-closed workflow plan only; no Store status transition. |
 | REL-001 Production RC plan / PR #70 | `STACKED_ONLY` on #69 | Exact-SHA release gates only; no candidate or runtime action. |
 
@@ -139,8 +139,8 @@ inspection and does not assert that those environments remain unchanged.
 
 The unique feature stop state is
 `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL`.
-PRs #61, #62, #63, #64, and #65 are `IN_MAIN`; their repository-only preparation is
-not Staging or Production evidence. The separate runtime acceptance prerequisite remains
+PRs #61 through #67 are `IN_MAIN`; their repository-only preparation is not
+Staging or Production evidence. The separate runtime acceptance prerequisite remains
 `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`.
 
 The `IN_MAIN` acceptance preparation is documented in
@@ -155,16 +155,26 @@ Local checks and explicit pending gates are retained in
 
 The independent printer Store-isolation repair is documented in
 [AL-005 Printer Store Isolation Dependency Repair](../agile/AL-005_DEPENDENCY_REPAIR_PRINTER_STORE_ISOLATION.md).
-It is a main-based Draft limited to Store-bound config update, automatic
-dispatch, and PAD_DIRECT printer-health guards; it does not authorize printing
-provisioning, printer configuration, a test print, or any runtime action.
+It is `IN_MAIN` at PR #66's merge and remains limited to Store-bound config
+update, automatic dispatch, and PAD_DIRECT printer-health guards; it does not
+authorize printing provisioning, printer configuration, a test print, or any
+runtime action.
 
 The downstream Printing audit is documented in
 [AL-005 Printing Provisioning Module Plan](../agile/AL-005_PRINTING_PROVISIONING_MODULE_PLAN.md).
 It keeps Store Profiles endpoint-free, preserves `DISABLED` until operational
 acceptance, and records PR #66 plus strict-mode, a generic pre-job enabled-module
-gate, role/assignment integrity, idempotency, and AL-005B device readiness as
-writer/activation gates.
+gate, role/assignment integrity, and idempotency as inactive-writer gates.
+AL-005B device readiness is a later runtime-binding/activation gate, not a gate
+for creating inactive logical configuration.
+
+The main-based Draft Device/Pad audit is documented in
+[AL-005B Device and Pad Provisioning Module Plan](../agile/AL-005B_DEVICE_PAD_PROVISIONING_MODULE_PLAN.md).
+It preserves the current Store-wide PAD_DIRECT queue with no per-device module
+assignment and keeps identities, tokens, pairing, auto-print, and Worker health
+outside versioned profiles. It adds no endpoint, migration, pairing, credential,
+Worker, or runtime behavior. Executable work remains blocked by the documented
+credential, idempotency, integrity, and runtime-evidence gates.
 
 Git ground truth must always distinguish `MERGED_ON_GITHUB`, `IN_MAIN`,
 `DEPLOYED_TO_STAGING`, and `DEPLOYED_TO_PRODUCTION`. A stacked PR merged into a

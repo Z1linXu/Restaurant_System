@@ -28,7 +28,7 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| `origin/main` | `f483a4640503c20f6eec1e2e9ae1d198bf23d1f3` | `IN_MAIN`; merge of PR #66 |
+| `origin/main` | `65e3d3ced2b5b05eb36d56ce67e475768ad19dff` | `IN_MAIN`; merge of PR #67 |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, clean | Local checkout is behind `origin/main`; it was not modified by this handoff |
 | Handoff branch | `codex/current-project-handoff` | Documentation-only snapshot; PR #71 remains `IN_MAIN` and is an ancestor of the exact `origin/main` above |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
@@ -62,8 +62,8 @@ GitHub state was read on 2026-08-08. Every PR below was open and Draft.
 | #64 | AL-004 Generic Store Profile contract | `main` | merge `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6` | `IN_MAIN` | #63/main | Yes | Declarative repository capability only |
 | #65 | AL-005A Staff/Table plan | `main` | merge `8f58bcbfca253c1598b967f4d17c04c0be1cce5b` | `IN_MAIN` | #64/main | Yes | Repository planning only |
 | #66 | Printer Store-isolation repair | `main` | merge `f483a4640503c20f6eec1e2e9ae1d198bf23d1f3` | `IN_MAIN` | #65/main | Yes | Security foundation; no runtime behavior |
-| #67 | AL-005 Printing provisioning plan | `main` | `7d55f7aa7bab076bfc522d4652f15f6de3d0cded` | `DRAFT_PR` | #65/main; #66 IN_MAIN | No | Owner review; do not begin #68 |
-| #68 | AL-005B Device/Pad plan | PR #67 branch | `c60682e77a4ac42beff7d299e6d3a940d302897f` | `STACKED_ONLY` | #67 | No | Rebuild after #67 |
+| #67 | AL-005 Printing provisioning plan | `main` | merge `65e3d3ced2b5b05eb36d56ce67e475768ad19dff` | `IN_MAIN` | #65/main; #66 IN_MAIN | Yes | Repository planning only |
+| #68 | AL-005B Device/Pad plan | `main` | `eda55fd66296c7cbd9f7622cae38e7dc3e751fd6` | `DRAFT_PR` | #67/main | No | Owner review; do not begin #69 |
 | #69 | AL-006 Activation workflow plan | PR #68 branch | `82f71b1a4f8fbc443b2e7515c9c2ce17e0f474f5` | `STACKED_ONLY` | #68 | No | Rebuild after #68 |
 | #70 | REL-001 Production RC plan | PR #69 branch | `59246ae758716c1d457be465eb34fd4e757f02ec` | `STACKED_ONLY` | #69 | No | Rebuild after #69; no runtime approval implied |
 
@@ -71,8 +71,9 @@ Main stack review order:
 
 `#61 -> #62 -> #63 -> #64 -> #65 -> #67 -> #68 -> #69 -> #70`
 
-PR #66 is independent and is now `IN_MAIN`. It is the Store-isolation safety
-foundation for #67, but it does not authorize runtime printing operations.
+PR #66 is independent and is now `IN_MAIN`. PR #67 is also `IN_MAIN` as the
+Printing Provisioning planning foundation for #68; neither authorizes runtime
+printing or device operations.
 
 ## 4. Runtime ground truth
 
@@ -98,7 +99,7 @@ V10 ran on Staging or Production.
 | Current package | Project handoff over the prepared Draft queue |
 | Feature stop state | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` |
 | Handoff stop state | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | Review rebuilt #67; separately approve any runtime or Production action |
+| Current Owner gate | Review rebuilt #68; separately approve any runtime or Production action |
 
 ### Permitted work
 
@@ -141,7 +142,8 @@ V10 ran on Staging or Production.
 - PR #64 entered `main` at `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6`.
 - PR #65 entered `main` at `8f58bcbfca253c1598b967f4d17c04c0be1cce5b`.
 - PR #66 entered `main` at `f483a4640503c20f6eec1e2e9ae1d198bf23d1f3`.
-  PR #67 is the rebuilt main-based Draft; PRs #68-#70 remain stacked-only,
+- PR #67 entered `main` at `65e3d3ced2b5b05eb36d56ce67e475768ad19dff`.
+  PR #68 is the rebuilt main-based Draft; PRs #69-#70 remain stacked-only,
   not main capability.
 
 ## 7. AL-003 repository capability
@@ -207,8 +209,8 @@ is the first Store Profile sample, not a shared-service special case.
 | AL-003S / #63 | Exact-SHA Staging acceptance preparation | `IN_MAIN` | Repository capability only; explicit runtime approval remains separate |
 | AL-004 / #64 | Generic Store Profile contract | `IN_MAIN` | Repository capability only; no provisioning/runtime execution |
 | AL-005A / #65 | Staff/Table module plan | `IN_MAIN` | Repository planning only; no writer or runtime execution |
-| AL-005 / #67 | Printing provisioning plan | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | latest `main` with #66 IN_MAIN; no writer/runtime action |
-| AL-005B / #68 | Device/Pad provisioning plan | `STACKED_ONLY` | #67 |
+| AL-005 / #67 | Printing provisioning plan | `IN_MAIN` | repository planning only; no writer/runtime action |
+| AL-005B / #68 | Device/Pad provisioning plan | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | latest `main` with #67 IN_MAIN; no pairing/credential/Worker/runtime action |
 | AL-006 / #69 | Fail-closed activation workflow plan | `STACKED_ONLY` | #68 |
 | REL-001 / #70 | Formal Chinatown Production RC plan | `STACKED_ONLY` | #69, Staging acceptance, Production approval |
 | ACT-001 | Production provisioning and field acceptance | `NOT_STARTED_OWNER_GATED` | Accepted RC and explicit Production activation approval |
