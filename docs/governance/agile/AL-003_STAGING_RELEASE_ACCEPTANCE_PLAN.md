@@ -160,8 +160,8 @@ before any of these steps execute:
    persisted topology/menu, login/access, and replay. Production remains
    untouched.
 
-The reusable Synthetic St-Denis manifest/application path is prepared in the
-dependency-bound STG-005B Draft package. It is not available to runtime until
+The reusable Synthetic St-Denis manifest/application path is prepared in
+dependency-bound Draft PR #62. It is not available to runtime until
 its architecture and implementation dependencies enter `main`, a fresh exact
 SHA is selected, and the Owner separately approves the mutation sequence.
 

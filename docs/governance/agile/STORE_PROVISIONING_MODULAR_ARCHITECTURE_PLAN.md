@@ -123,7 +123,7 @@ reviewed policy such as `manual_after_creation` or `not_applicable`.
 |---|---|---|
 | `CHINATOWN_MENU_2026_02_02` | `IN_MAIN` menu-clone profile | Frozen initial Chinatown menu target; not a complete Store Profile yet. |
 | Complete St-Denis Store Profile | `PLANNED_IDENTITY_NOT_FINAL` | Production-like Store template; no current registry entry or public API. Historical documents use `ST_DENIS_MENU` for a menu-only candidate, while `ST_DENIS_PROFILE_V1` is an architecture placeholder for the future complete Store Profile. The implementing loop must select one strict, case-sensitive identity before code is written. |
-| Synthetic St-Denis baseline | `STG-005B_STACKED_DRAFT` | Versioned empty-or-exact synthetic fixture/application package; not in `main`, not executed, and not Production source evidence. |
+| Synthetic St-Denis baseline | `STG-005B_STACKED_DRAFT_PR_62` | Versioned empty-or-exact synthetic fixture/application package; not in `main`, not executed, and not Production source evidence. |
 
 Production Store 1 is the Owner-approved live source for the Chinatown
 Production clone. That source identity/evidence requirement is a profile input

@@ -40,8 +40,8 @@ separate from historical evidence snapshots and business implementation details:
 - [STG-005B Synthetic St-Denis source-menu runbook](deployment/cloud/README_STG005_SYNTHETIC_SOURCE_MENU.md)
   defines the versioned synthetic manifest, default read-only plan, explicit
   execution gate, empty-or-exact transaction/replay behavior, and sanitized
-  evidence contract. It is dependency-bound work and authorizes no runtime
-  command or Production source substitution.
+  evidence contract. The implementation is stacked Draft PR #62; it authorizes
+  no runtime command or Production source substitution.
 - [STG-005B local implementation evidence](docs/governance/runtime/STG-005B_SYNTHETIC_ST_DENIS_BASELINE_EVIDENCE.md)
   records focused/full backend tests, transaction/replay/concurrency evidence,
   scope scans, and the remaining merge/runtime gates. It is not Staging

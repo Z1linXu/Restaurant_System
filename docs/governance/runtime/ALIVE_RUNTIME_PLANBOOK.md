@@ -99,7 +99,7 @@ packages without that mapping.
 | PR-F / PR #56 | `IN_MAIN` via merge `8f909525781804f61d1da388882f530da358c3c4` | Protected Owner validate/execute API facade reusing the internal planner, V10 coordinator, and lock-owning transaction without a second clone engine. |
 | Attempt evidence / PR #58 | `IN_MAIN` via merge `1482cddf4f10478ed571e4d7422100dc40006f6b` | Immutable record of the failed exact-SHA preflight and safe V8 runtime recovery. |
 | Private-leaf repair / PR #59 | `IN_MAIN` via merge `c3956592da8a33092ab745c7cc6aac05e9babfa7` | Staging-only path-validation correction and governance rules; no runtime action or business/API change. |
-| STG-005B Synthetic St-Denis baseline | `STACKED_DRAFT_IMPLEMENTED_NOT_IN_MAIN` | [Local evidence](STG-005B_SYNTHETIC_ST_DENIS_BASELINE_EVIDENCE.md) covers the guarded non-web planner/applier, 4/3/13/38 source graph, 4/3/17/74 target-plan compatibility, rollback, concurrency, and full backend regression. No runtime execution. |
+| STG-005B Synthetic St-Denis baseline / PR #62 | `STACKED_DRAFT_WAITING_FOR_OWNER_REVIEW` | [Local evidence](STG-005B_SYNTHETIC_ST_DENIS_BASELINE_EVIDENCE.md) covers the guarded non-web planner/applier, 4/3/13/38 source graph, 4/3/17/74 target-plan compatibility, rollback, concurrency, and full backend regression. No runtime execution. |
 | Owner decisions governance sync / PR #60 | `IN_MAIN` via merge `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d` | Documentation-only alignment of product direction, access semantics, FT-001 gaps, and runtime gates. |
 | Modular Store provisioning architecture / PR #61 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW` | Defines Generic Engine + Versioned Profiles + Reusable Modules; no API/runtime behavior. |
 
@@ -119,8 +119,8 @@ runtime evidence snapshots record Staging at `4397f995...` / Flyway V8 and
 Production at `4667f3c` / Flyway V7; this package performed no fresh runtime
 inspection and does not assert that those environments remain unchanged.
 
-The architecture package remains in Draft PR #61. The dependency-bound
-STG-005B implementation is prepared above it and is not `IN_MAIN`. The separate
+The architecture package remains in Draft PR #61. Dependency-bound STG-005B
+Draft PR #62 is stacked above it and is not `IN_MAIN`. The separate
 runtime acceptance prerequisite remains
 `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`.
 

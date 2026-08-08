@@ -1,6 +1,6 @@
 # STG-005B Synthetic St-Denis Baseline Evidence
 
-> Package state: `STACKED_DRAFT_IMPLEMENTED_NOT_IN_MAIN`
+> Package state: `STACKED_DRAFT_PR_62_WAITING_FOR_OWNER_REVIEW`
 >
 > Verification time: `2026-08-08T00:54:21-0400`
 >
@@ -14,6 +14,7 @@
 | Architecture dependency branch | `codex/store-provisioning-modular-architecture-plan` |
 | Architecture dependency head used as package base | `61b8feabecac3444b345a9261af4f2bed76b9ccc` |
 | Implementation branch | `codex/stg-005b-synthetic-st-denis-baseline` |
+| Draft PR | [#62](https://github.com/Z1linXu/Restaurant_System/pull/62) |
 | Package relationship | `STACKED_ONLY` above the unmerged architecture Draft PR |
 
 This evidence does not classify either package as `IN_MAIN`. Promotion must be

@@ -923,7 +923,7 @@ Stop and return to Owner if:
 
 `IN_MAIN_AWAITING_STG-005B_AND_STAGING_ACCEPTANCE`
 
-The dependency-bound STG-005B package prepares an immutable synthetic source
+Dependency-bound STG-005B Draft PR #62 prepares an immutable synthetic source
 graph and a guarded non-web empty-or-exact application path. It does not change
 the public clone API, V10 contract, Chinatown target profile, or Production
 source authority. Local integration verifies that its 4-category, 3-station,
