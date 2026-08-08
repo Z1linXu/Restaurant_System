@@ -4,15 +4,14 @@
 >
 > Prepared against: STG-005B checkpoint `0aba8377a3b7acec047c6ffd025f774d8a4d5e87`
 >
-> Runtime execution in this package: `NOT_AUTHORIZED`
+> Runtime execution in this package: `NOT_AUTHORIZED_FOR_STG-008`
 
 > Current runtime checkpoint: separate Owner authorization deployed exact
-> `63600b13b10a5549d9095a03c94e69a9f880af9f` V10-to-V10; repaired readiness
-> and sanitized runtime/Flyway collection passed. Same-image restart retained
-> exact container/image identities but returned `NO_GO` when an immediate
-> health probe raced Spring startup. Runtime recovered at the same V10
-> identities, but no PASS evidence or required blocked marker was emitted; no
-> synthetic acceptance action followed.
+> `2837ae88e55142c99c6975f8b6575febffc913a1` V10-to-V10. Fresh formal
+> preflight, repaired readiness, sanitized runtime/Flyway collection, one
+> same-image restart and post-restart verification all passed with exact
+> identities unchanged. `STG-007=PASS`; no synthetic bootstrap, source-menu,
+> credential, login, onboarding or clone action followed.
 
 ## 1. Purpose and classification
 
@@ -47,6 +46,12 @@ The runtime sequence is `NO_GO` until all of the following are true:
    `Printing=DISABLED`, and Production continuity.
 
 Historical SHA approvals and evidence cannot be reused.
+
+STG-007 satisfied the release/deployment prerequisites above for exact deployed
+`2837ae88...`, but its consumed approvals do not authorize STG-008. The next
+batch requires fresh readiness and separate Owner approvals for
+`bootstrap-plan`, `bootstrap-execute`, `source-menu-plan`, and
+`source-menu-execute`; the synthetic password remains stdin-only.
 
 ## 3. Guarded launcher contract
 
@@ -305,8 +310,8 @@ tooling gaps while preserving these remaining runtime gates:
    evidence collector;
 3. OPS-001 now publishes the secret-FD Owner/API acceptance client;
 4. runtime use has separately proved release/env rotation, V10 redeploy,
-   readiness and sanitized collection; valid same-image restart PASS evidence
-   remains pending and every future action still requires a distinct exact
+   readiness, sanitized collection and valid same-image restart PASS evidence
+   at exact `2837ae88...`; every future action still requires a distinct exact
    approval;
 5. PostgreSQL 16 concurrency remains runtime evidence pending; local source
    graph concurrency uses H2;
@@ -325,4 +330,4 @@ Passing the package does not authorize or prove runtime acceptance.
 
 Stop state:
 
-`STG-007_RUNTIME_RECOVERED_RESTART_EVIDENCE_BLOCKED_BY_READINESS_FAIL_CLOSED_REPAIR_WAITING_FOR_OWNER_REVIEW`
+`STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE_WAITING_FOR_OWNER_RUNTIME_APPROVAL`

@@ -2,13 +2,16 @@
 
 > Audit date: 2026-08-08, America/Toronto
 >
-> Repository base: `origin/main@33c6e3c52aa40793f6bb861101c16ccdd1b85b5b`
+> Current runtime-sensitive repository base:
+> `origin/main@2837ae88e55142c99c6975f8b6575febffc913a1`
 >
-> Follow-up runtime access: STG-006 passive/read-only observation completed;
-> see `STG-006_EXACT_MAIN_PREFLIGHT_EVIDENCE.md`
+> Follow-up runtime access: STG-006 passive/read-only observation and the
+> bounded STG-007 V10-aware continuation completed; see
+> `STG-006_EXACT_MAIN_PREFLIGHT_EVIDENCE.md` and
+> `STG-007_EXACT_SHA_CONTINUATION_EVIDENCE.md`
 >
-> Current decision after reviewed OPS-001 repository merge:
-> `OPS-001_REPOSITORY_COMPLETE_STG-007_WAITING_FOR_OWNER_RUNTIME_APPROVAL`
+> Current decision:
+> `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE_WAITING_FOR_OWNER_RUNTIME_APPROVAL`
 
 ## 1. Executive summary
 
@@ -23,12 +26,14 @@ Provisioning Engine, concrete complete Store Profiles, reusable Staff/Table,
 Printing, or Device provisioning writers, the Activation workflow, a
 Production Release Candidate, or ACT-001.
 
-STG-006 bound `33c6e3c...` and completed the authorized fresh passive preflight.
-The retained Staging runtime remains isolated and healthy at `4397f995...` /
-V8, and Production continuity was unchanged. Deployment and acceptance remain
-`NO_GO` for immediate runtime execution. OPS-001 now closes the repository
-release/env, restart/Flyway, and Owner/API tooling gaps after reviewed merge;
-STG-007 still needs a new exact-main SHA and separate Owner runtime approvals.
+STG-006 bound `33c6e3c...` and completed its authorized passive preflight.
+OPS-001 and its fail-closed dependency repairs later entered main. Under a new,
+bounded V10-aware authorization, STG-007 deployed exact
+`2837ae88e55142c99c6975f8b6575febffc913a1` to isolated Staging, retained
+Flyway V10 with no pending migration, passed repaired readiness and runtime
+collection, and passed one same-image restart. Printing remained disabled and
+Production continuity was unchanged. `STG-007 = PASS`; this is infrastructure
+acceptance only, not synthetic topology/source creation or AL-003 acceptance.
 
 ## 2. Git and PR ground truth
 
@@ -46,9 +51,14 @@ STG-007 still needs a new exact-main SHA and separate Owner runtime approvals.
 | #69 | Store Activation workflow preparation | `dc682203b2b24bbdb453a5520b297b9051139f13` | `IN_MAIN`; plan only |
 | #70 | Chinatown Production RC preparation | `645d4909625f70fc241d5468382d66a30a030fb1` | `IN_MAIN`; plan only |
 | #72 | Post-stack Ground Truth audit | `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | `IN_MAIN`; governance audit only |
+| #73 | STG-006 evidence/governance | `85d97b7327b2e15aa561ed28a5788b92cedf6f5b` | `IN_MAIN`; passive preflight evidence only |
+| #74 | OPS-001 secret-safe tooling repair | `362c954a8753204476ddf1415ea86050589760dd` | `IN_MAIN`; repository tooling only |
+| #81 | Flyway success-token repair | `63600b13b10a5549d9095a03c94e69a9f880af9f` | `IN_MAIN`; fail-closed collector repair |
+| #82 | Restart/readiness fail-closed repair | `2837ae88e55142c99c6975f8b6575febffc913a1` | `IN_MAIN`; bounded readiness/restart repair |
 
-All listed merge commits are verified ancestors of current `origin/main`.
-There is no `DRAFT_PR` or `STACKED_ONLY` package remaining in #61-#72.
+All listed merge commits are verified ancestors of the runtime-sensitive
+`origin/main@2837ae88...` candidate. There is no `DRAFT_PR` or `STACKED_ONLY`
+package remaining in #61-#72.
 `IN_MAIN` does not imply `DEPLOYED_TO_STAGING` or
 `DEPLOYED_TO_PRODUCTION`.
 
@@ -62,7 +72,7 @@ There is no `DRAFT_PR` or `STACKED_ONLY` package remaining in #61-#72.
 | Access/Staff | `PARTIAL_IMPLEMENTATION` | Onboarding transaction creates BCrypt credentials and Store memberships. There is no reusable Profile planner/reconcile contract or standalone idempotent module. Runtime passwords remain outside Git. |
 | Menu | `DONE_IN_CODE`; `RUNTIME_EVIDENCE_PENDING` | Owner validate/execute API, V10 idempotency, generic clone transaction, Chinatown menu Profile, source invariance, replay, and tests exist. No Staging or Production clone evidence exists. |
 | Synthetic St-Denis baseline | `DONE_IN_CODE`; `RUNTIME_EVIDENCE_PENDING` | Guarded empty-or-exact STG-005B planner/writer exists and is tested. It has not run on evidenced Staging. |
-| Staging acceptance launcher | `DONE_IN_CODE`; `STAGING_PENDING` | AL-003S launcher/readiness guards exist. Exact-main deploy, V9/V10, bootstrap, login, onboarding, clone, replay, and restart evidence are pending. |
+| Staging acceptance launcher | `DONE_IN_CODE`; `INFRASTRUCTURE_ACCEPTED`; `AL003_PENDING` | Exact-main V10-to-V10 deploy, readiness, runtime collection and same-image restart passed. Bootstrap, source creation, login, onboarding, clone and replay remain unexecuted. |
 | Tables | `PARTIAL_IMPLEMENTATION` | Existing admin CRUD/template copy exists. No Store Profile contract/planner/idempotent writer; uniqueness, ownership, normalization, and reconcile rules are unresolved. |
 | Printer Store isolation | `DONE_IN_CODE` | PR #66 scopes config update, dispatch, and PAD printer-health lookup to the durable Store. This is not Printing provisioning. |
 | Printing | `PARTIAL_IMPLEMENTATION` | Print Engine, Print Center, PAD_DIRECT and assignments exist. Reusable logical-role/module policy, strict planner, inactive idempotent writer, and physical acceptance are not implemented. |
@@ -73,41 +83,39 @@ There is no `DRAFT_PR` or `STACKED_ONLY` package remaining in #61-#72.
 
 ## 4. Runtime ground truth
 
-The original PR #72 audit did not inspect runtime. Its STG-006 follow-up now
-records fresh, bounded evidence:
+The original PR #72 audit did not inspect runtime. STG-006 and STG-007 now
+record fresh, bounded evidence:
 
 | Environment | Retained evidence | Current classification |
 |---|---|---|
-| Staging | `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c`, Flyway V8, isolated project/network/state, loopback bind, printing disabled, health 200 | `MACHINE_VERIFIED_READ_ONLY` by STG-006; candidate not deployed |
-| Production | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`, project `cloud`, identical before/after container identity/start/restart, health 200 | `MACHINE_VERIFIED_READ_ONLY` continuity only; Flyway/business state not queried |
-| Repository | V1-V10 and `origin/main@33c6e3c...` | Repository capability only |
+| Staging | exact release `2837ae88e55142c99c6975f8b6575febffc913a1`, Flyway V10/no pending migration, health 200/200/200, isolated project/network/state and loopback bind, printing disabled | `STG-007_PASS`; exact V10-to-V10 deploy and same-image restart verified |
+| Production | retained release `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`, project `cloud`, identical before/after container IDs, image IDs, starts and restart counts, health 200 | `MACHINE_VERIFIED_READ_ONLY` continuity only; Flyway/business state not queried |
+| Repository | migrations V1-V10 and exact candidate `origin/main@2837ae88...` | Exact deployed runtime source; later governance-only commits do not change this runtime identity |
 
-There is no retained evidence that Staging applied V9/V10 or executed
-STG-005A, STG-005B, Owner login, target onboarding, menu validate/execute,
-replay, or same-image restart. There is no evidence that Production contains
-any #61-#70 capability.
+There is retained evidence that Staging is at V10, has no pending migration,
+and recovered from a same-image restart. No V8-to-V9-to-V10 migration was
+rerun or inferred during the V10 continuation. STG-005A, STG-005B, Owner
+login, target onboarding, menu validate/execute and replay remain unexecuted.
+There is no evidence that Production contains any #61-#70 capability.
 
 ## 5. Current blockers
 
 | Class | Blocker | Effect |
 |---|---|---|
-| Code/procedure | OPS-001 publishes fail-closed release/env, same-container restart/Flyway, and secret-FD Owner/API helpers after reviewed merge | Repository blocker closed; runtime artifacts and evidence remain absent |
-| Configuration | No detached release, private environment digest, image identity, synthetic run identity, credential, or action approval exists for the next exact SHA | Must be created only inside separately approved runtime batches |
-| Evidence | Current Staging SHA/Flyway freshness is now verified; V9/V10/bootstrap/login/clone/restart results remain pending | Repository capability cannot be promoted to Staging acceptance |
-| Owner/runtime gate | STG-007 release/env, deployment, migration, credential/bootstrap, API execute, restart, Production read/deploy, and activation each require separate approval | Work stops before every unapproved runtime mutation |
+| Code/procedure | OPS-001 plus PRs #81/#82 publish fail-closed release/env, Flyway/readiness/restart and secret-FD Owner/API helpers | Repository blocker closed; the authorized STG-007 path passed |
+| Configuration | STG-007 release/env/image evidence exists. No synthetic run identity or runtime-only synthetic credential exists | Create only inside a separately approved STG-008 batch |
+| Evidence | Exact Staging V10 deploy/readiness/restart evidence is complete; bootstrap/source/login/clone evidence remains absent | STG-007 passes, while AL-003 acceptance remains pending |
+| Owner/runtime gate | STG-008 bootstrap planning/execution and source planning/execution/replay require new action-specific approvals | Stop before every unapproved synthetic write or credential creation |
 | Production safety | Release-relative state path, combined Production build, missing phase resource gates, restore rehearsal, backup integrity, and old-app compatibility remain unresolved | Production deployment and ACT-001 are `NO_GO` |
 
 ## 6. Staging decision
 
-`STG-006 = PASS` for the passive evidence scope only. It does not authorize
-detached-release creation, deployment, Docker lifecycle, Flyway, credentials,
-bootstrap, login, API calls, restart, or database writes. Immediate
-deployment/full acceptance is still `NO_GO` until:
-
-- the reviewed OPS-001 repository package is verified `IN_MAIN`;
-- fresh release/environment/preflight digests pass;
-- the exact merged-main SHA and separate STG-007 action batches are approved;
-- each runtime mutation batch receives an action-specific Owner approval.
+`STG-006 = PASS` for its historical passive scope and `STG-007 = PASS` for the
+bounded V10-aware infrastructure continuation. The latter proves exact-main
+deployment, V10/no-pending, repaired readiness, runtime evidence and same-image
+restart. It does not prove or authorize synthetic Store topology/source data,
+runtime credential creation, Owner login, target onboarding, clone execution,
+full AL-003 acceptance or any Production mutation.
 
 Production remains `NO_GO`: fixed external state-root protection, serial
 build/resource gates, current Production evidence, Store 1 read approval,
@@ -119,8 +127,8 @@ exact accepted RC are all pending.
 | Order | Loop ID | Goal | Dependency | Acceptance evidence | Owner gate | Runtime gate | Rollback boundary |
 |---:|---|---|---|---|---|---|---|
 | 1 | `STG-006_EXACT_MAIN_PREFLIGHT` | Bind post-audit main SHA and collect fresh passive isolation/resource/continuity evidence | governance audit merged | `PASS` evidence at candidate `33c6e3c...` | completed read-only authorization | no further runtime action | no container/database change |
-| 2 | `OPS-001_STAGING_SECRET_SAFE_TOOLING_REPAIR` | Close release/env rotation, same-image restart/Flyway collection, and Owner/API secret-handling gaps | STG-006 PASS | shell/focused tests, redaction and independent review | repository auto-merge gate | no runtime mutation in implementation | Git revert only |
-| 3 | `STG-007_EXACT_SHA_DEPLOY_AND_MIGRATE` | Deploy only approved Staging SHA and verify V9/V10, health, second start, continuity | STG-006 PASS + OPS-001 accepted | exact images, Flyway V1-V10, health and continuity | deployment/migration approval | Staging deploy + Flyway | prior verified compatible image or stop/roll-forward; never clean/restore |
+| 2 | `OPS-001_STAGING_SECRET_SAFE_TOOLING_REPAIR` | Close release/env rotation, same-image restart/Flyway collection, and Owner/API secret-handling gaps | STG-006 PASS | `PASS`; reviewed package and repairs #81/#82 are in main | completed repository merge gates | no runtime mutation in implementation | Git revert only |
+| 3 | `STG-007_EXACT_SHA_CONTINUATION` | Deploy exact approved Staging SHA from V10 and verify no-pending, health, readiness, evidence, same-image restart and continuity | STG-006 PASS + OPS-001 accepted | `PASS` at exact `2837ae88...`; Flyway V10; health 200/200/200 | completed bounded V10-aware authorization | completed Staging-only V10-to-V10 continuation | no destructive rollback used |
 | 4 | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` | Execute/replay STG-005A and STG-005B with printing disabled | STG-007 PASS | sanitized IDs/counts/revisions/replay | separate credential/bootstrap/source-write approvals | synthetic Staging writes | transaction rollback; retain successful evidence |
 | 5 | `STG-009_AL003_OWNER_ACCEPTANCE` | Owner login, target onboarding, validate, execute, replay, restart/persistence | STG-008 PASS | sanitized auth/status/count/source-invariance/restart evidence | separate execute checkpoint | synthetic Staging writes and restart | transaction rollback; no destructive cleanup |
 | 6 | `AL-004A_CONCRETE_STORE_PROFILE_AND_ENGINE_PLANNER` | Register complete non-secret Store Profile(s), module config registry, and read-only engine plan | STG-009 findings reviewed | deterministic fingerprints, planner and anti-hardcode tests | Profile identity/config review | none | Git revert |
@@ -135,13 +143,18 @@ main do not authorize skipping directly to their writers.
 
 ## 8. Current Owner gates and unique stop state
 
-Current Owner actions after OPS-001 enters main, in order:
+The next Owner gate is STG-008 only, in bounded order:
 
-1. review one exact merged-main STG-007 release/env batch;
-2. separately approve deploy/Flyway after formal preflight PASS;
-3. approve each bootstrap/source, login/onboarding, execute/replay and restart
-   batch separately.
+1. approve STG-005A bootstrap plan, then separately approve its execution and
+   replay with a runtime-only password supplied through standard input;
+2. after fresh readiness, approve STG-005B source-menu plan, then separately
+   approve its execution and replay for source Store ID 1;
+3. review sanitized Store IDs, counts, revisions and replay evidence. Expected
+   synthetic source data is 4 categories, 3 stations, 13 items and 38 options.
+
+This gate does not authorize Owner login, Chinatown target onboarding,
+validate/execute/clone, printer configuration, Pad pairing or Production work.
 
 Unique stop state:
 
-`OPS-001_REPOSITORY_COMPLETE_STG-007_WAITING_FOR_OWNER_RUNTIME_APPROVAL`
+`STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE_WAITING_FOR_OWNER_RUNTIME_APPROVAL`
