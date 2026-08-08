@@ -24,7 +24,8 @@ assert_contains() { grep -Fq -- "$1" "$2" || fail "missing '$1' in $2"; }
 
 bash -n "$SOURCE_SCRIPT"
 mkdir -p "$FAKE_ROOT/state" "$SOURCE_REPO/deployment/cloud"
-chmod 700 "$FAKE_ROOT" "$FAKE_ROOT/state"
+chmod 700 "$FAKE_ROOT"
+chmod 750 "$FAKE_ROOT/state"
 git init -q "$SOURCE_REPO"
 git -C "$SOURCE_REPO" config user.email ops001-bootstrap@example.invalid
 git -C "$SOURCE_REPO" config user.name OPS001-Bootstrap
@@ -46,6 +47,9 @@ fi
 control_root="$(cd -P "$(dirname "$0")/../../.." && pwd)"
 if [[ -n "${STAGING_BOOTSTRAP_TEST_DRIFT_MODE:-}" ]]; then
   chmod 755 "$control_root"
+fi
+if [[ -n "${STAGING_BOOTSTRAP_TEST_DRIFT_STATE_MODE:-}" ]]; then
+  chmod 700 "$(dirname "$control_root")"
 fi
 if [[ -n "${STAGING_BOOTSTRAP_TEST_DRIFT_INODE:-}" ]]; then
   mv "$control_root" "$control_root.displaced"
@@ -86,6 +90,22 @@ STAGING_BOOTSTRAP_TEST_LOG="$LOG_FILE" "$CONTROL_ROOT/staging-release-control-bo
 assert_contains 'OPS001_RELEASE_ENV|PASS|fixture' "$TMP_DIR/pass.out"
 assert_contains "--validate --approved-sha $APPROVED_SHA --env-file $FAKE_ROOT/config/.env.staging" "$LOG_FILE"
 [[ ! -e "$CONTROL_ROOT" ]] || fail 'successful bootstrap did not clean its private control root'
+
+chmod 700 "$FAKE_ROOT/state"
+CONTROL_ROOT="$(materialize "$APPROVED_SHA")"
+STAGING_BOOTSTRAP_TEST_LOG="$LOG_FILE" "$CONTROL_ROOT/staging-release-control-bootstrap.sh" \
+  --validate --approved-sha "$APPROVED_SHA" --env-file "$FAKE_ROOT/config/.env.staging" >"$TMP_DIR/pass-0700.out"
+assert_contains 'OPS001_RELEASE_ENV|PASS|fixture' "$TMP_DIR/pass-0700.out"
+[[ ! -e "$CONTROL_ROOT" ]] || fail '0700 state-parent bootstrap did not clean its private control root'
+chmod 750 "$FAKE_ROOT/state"
+
+CONTROL_ROOT="$(materialize "$APPROVED_SHA")"
+chmod 775 "$FAKE_ROOT/state"
+expect_failure state_parent_mode "$CONTROL_ROOT/staging-release-control-bootstrap.sh" --help
+assert_contains 'Staging state parent must be owner-owned mode 0700 or 0750' "$TMP_DIR/state_parent_mode.err"
+[[ -d "$CONTROL_ROOT" ]] || fail 'unsafe-state-parent root was unexpectedly deleted'
+chmod 750 "$FAKE_ROOT/state"
+rm -rf "$CONTROL_ROOT"
 
 CONTROL_ROOT="$(materialize "$APPROVED_SHA")"
 "$CONTROL_ROOT/staging-release-control-bootstrap.sh" --help >"$TMP_DIR/help.out"
@@ -136,6 +156,15 @@ STAGING_BOOTSTRAP_TEST_DRIFT_MODE=true STAGING_BOOTSTRAP_TEST_LOG="$LOG_FILE" \
 assert_contains 'private control-root identity changed; refusing unsafe removal' "$TMP_DIR/cleanup_mode_drift.err"
 [[ -d "$CONTROL_ROOT" ]] || fail 'mode-drift root was unexpectedly deleted'
 chmod 700 "$CONTROL_ROOT"
+rm -rf "$CONTROL_ROOT"
+
+CONTROL_ROOT="$(materialize "$APPROVED_SHA")"
+STAGING_BOOTSTRAP_TEST_DRIFT_STATE_MODE=true STAGING_BOOTSTRAP_TEST_LOG="$LOG_FILE" \
+  expect_failure cleanup_state_mode_drift "$CONTROL_ROOT/staging-release-control-bootstrap.sh" \
+  --validate --approved-sha "$APPROVED_SHA" --env-file "$FAKE_ROOT/config/.env.staging"
+assert_contains 'private control-root identity changed; refusing unsafe removal' "$TMP_DIR/cleanup_state_mode_drift.err"
+[[ -d "$CONTROL_ROOT" ]] || fail 'state-mode-drift root was unexpectedly deleted'
+chmod 750 "$FAKE_ROOT/state"
 rm -rf "$CONTROL_ROOT"
 
 CONTROL_ROOT="$(materialize "$APPROVED_SHA")"

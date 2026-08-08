@@ -35,6 +35,10 @@ separate from historical evidence snapshots and business implementation details:
   adapter, bounded candidate-import prerequisite, local verification, expired
   candidate boundary, and mandatory Batch A restart. It authorizes no runtime
   mutation.
+- [STG-007 State-Root Mode Guard Repair Evidence](docs/governance/runtime/STG-007_STATE_ROOT_MODE_GUARD_REPAIR_EVIDENCE.md)
+  records the fresh Batch A trigger, reviewed candidate import, deterministic
+  `0750` state-parent false positive, preserved V8 runtime, bounded guard
+  correction, expired candidate boundary, and mandatory Batch A restart.
 - [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
   authority for current issue triage and closure status.
 - [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
@@ -588,7 +592,10 @@ tooling gap with a dedicated-bare-repository detached release/four-field atomic
 private-env rotation helper, an approval-bound same-container restart/Flyway
 collector, and a secret-FD Owner login/onboarding/clone client. All default to
 validation and every real action consumes a distinct exact-SHA/environment/
-action-bound Owner approval. No OPS-001 helper has run on a runtime.
+action-bound Owner approval. During the latest Batch A attempt, only the
+release-control bootstrap entry guard ran: it stopped before delegating to the
+release/env helper, and its unexecuted task root plus unconsumed approval were
+removed. No release, env rotation, deploy, Flyway or restart action ran.
 
 The first STG-007 bounded read-only identity check confirmed that the retained
 Staging nginx still owns `127.0.0.1:18080`. The formal preflight previously
@@ -613,6 +620,16 @@ to `staging-release-rotation.sh`. It has no second release/env engine and
 performs no fetch, clone, Docker, Flyway, API, business-data, or Production
 action. Its merge invalidates the prior candidate and requires another full
 Batch A restart.
+
+After that bootstrap entered main through PR #76, Batch A restarted from exact
+candidate `e6fac236...`. The reviewed candidate import passed, but bootstrap
+delegation stopped because its state-parent guard required `0700` while the
+established owner-owned, non-group-writable Staging containment directory is
+`0750`. The bounded correction accepts only `0700` or `0750`, records and
+revalidates the exact initial mode, and preserves the owner, canonical path,
+symlink, inode, private task-root and fail-closed cleanup checks. Mode `0775`
+and every group/world-writable mode remain rejected. No release, environment
+rotation, preflight, Docker lifecycle or Flyway action occurred.
 
 Repository PRs now follow the permanent auto-merge gate in the Agile Loop
 Operating Model: latest-main base, exact single-package scope, all applicable

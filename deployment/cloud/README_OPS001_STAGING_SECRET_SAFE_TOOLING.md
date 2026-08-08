@@ -174,8 +174,11 @@ reviewed rotation helper and deletes only its exact task-owned temporary
 control root on every normal/error/signal path. The root must use the exact
 six-alphanumeric-character `mktemp` suffix and initially contain only the
 fixed-name bootstrap source. Cleanup revalidates parent/root owner, mode and
-inode; an identity drift or removal failure returns `NO_GO` without deleting
-an untrusted target. A caller should remove an unexecuted control root if
+inode. The fixed Staging state parent may be only owner-owned mode `0700` or
+the established non-group-writable mode `0750`; its exact starting mode must
+remain unchanged through cleanup. Group/world-writable modes remain `NO_GO`.
+An identity drift or removal failure returns `NO_GO` without deleting an
+untrusted target. A caller should remove an unexecuted control root if
 materialization itself fails. It never fetches, clones, builds, starts,
 migrates, reads Production, or creates a release by a second path.
 
