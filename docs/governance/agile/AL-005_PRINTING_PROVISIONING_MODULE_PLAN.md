@@ -1,12 +1,14 @@
 # AL-005 Printing Provisioning Module Plan
 
-> Status: `AL-005_PRINTING_PREPARED_WAITING_FOR_DEPENDENCIES`
+> Status: `AL-005_PRINTING_PREPARED_WAITING_FOR_DEPENDENCIES` in Draft PR #67
 >
 > Package: `AL-005_PRINTING_PROVISIONING_TEMPLATE`
 >
 > Git classification: `STACKED_ONLY`
 >
 > Base: AL-005A Draft PR #65 head
+>
+> Draft PR: #67 (`STACKED_ONLY`)
 >
 > Runtime access: not performed
 

@@ -65,8 +65,9 @@ separate from historical evidence snapshots and business implementation details:
 - [AL-005 Printing Provisioning Module Plan](docs/governance/agile/AL-005_PRINTING_PROVISIONING_MODULE_PLAN.md)
   records the existing printing authorities, runtime-only endpoint boundary,
   fixed Chinatown module policy, prerequisite defects, and staged delivery
-  gates. It adds no writer, API, migration, printer, assignment, mode change,
-  device, test print, or runtime behavior.
+  gates. Draft PR #67 is `STACKED_ONLY` above PR #65 and adds no writer, API,
+  migration, printer, assignment, mode change, device, test print, or runtime
+  behavior.
 - [AL-003A final menu comparison](docs/governance/agile/AL-003A_FINAL_MENU_COMPARISON.md)
   is the single product-mapping authority for the Store 1 to Chinatown target
   menu. Repository seed data is historical reference only.

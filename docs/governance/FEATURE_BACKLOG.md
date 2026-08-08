@@ -16,9 +16,9 @@
 | priority | `HIGH` |
 | status | `AL-005_PRINTING_PREPARED_WAITING_FOR_DEPENDENCIES` |
 | target_loop | `AL-005_PRINTING_PROVISIONING_TEMPLATE` |
-| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, and PR #60's Owner decisions are `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. Draft PRs #61-#65 remain dependency-bound and are not in `main`. This stacked AL-005 package adds only the Printing authority/risk audit and staged implementation contract; it adds no writer, endpoint, migration, printer, assignment, device, mode change, test print, or runtime execution. |
+| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, and PR #60's Owner decisions are `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. Draft PRs #61-#65 and #67 remain dependency-bound and are not in `main`. AL-005 Draft PR #67 adds only the Printing authority/risk audit and staged implementation contract; it adds no writer, endpoint, migration, printer, assignment, device, mode change, test print, or runtime execution. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Review Draft PRs #61-#65 in dependency order, then this AL-005 Printing plan. Independently review/merge printer Store-isolation repair PR #66 before any executable AL-005 writer. AL-005P1 requires AL-004 in `main`; later writer work also requires strict-mode and assignment-integrity decisions. Runtime acceptance still needs a fresh exact-SHA request and separate Owner approval. |
+| next action | Review Draft PRs #61-#65 and #67 in dependency order. Independently review/merge printer Store-isolation repair PR #66 before any executable AL-005 writer. AL-005P1 requires AL-004 in `main`; later writer work also requires strict-mode and assignment-integrity decisions. Runtime acceptance still needs a fresh exact-SHA request and separate Owner approval. |
 
 ### Current AL-003 delivery state
 
@@ -42,7 +42,7 @@
 | AL-003S Staging acceptance preparation / PR #63 | `STACKED_DRAFT_WAITING_FOR_OWNER_REVIEW_AND_RUNTIME_APPROVAL`; guarded launcher/tests and command/evidence/rollback documents only; no runtime action |
 | AL-004 generic Store Profile contract / PR #64 | `STACKED_ONLY_WAITING_FOR_OWNER_REVIEW`; exact identity/version/composition/fingerprint contract only; no concrete profile, API, migration, UI, or provisioning execution |
 | AL-005A Staff/Table module preparation / PR #65 | `AL-005A_PREPARED_WAITING_FOR_AL-004` (`STACKED_ONLY` Git classification); existing-authority audit and implementation contract only; no writer, endpoint, migration, credential, table, or runtime execution |
-| AL-005 Printing provisioning preparation | `AL-005_PRINTING_PREPARED_WAITING_FOR_DEPENDENCIES` (`STACKED_ONLY`); current printing authority/risk audit and staged contract only; no writer, endpoint, migration, printer, assignment, device, mode change, test print, or runtime action |
+| AL-005 Printing provisioning preparation / PR #67 | `AL-005_PRINTING_PREPARED_WAITING_FOR_DEPENDENCIES` (`STACKED_ONLY`); current printing authority/risk audit and staged contract only; no writer, endpoint, migration, printer, assignment, device, mode change, test print, or runtime action |
 | AL-005 printer Store-isolation repair / PR #66 | independent main-based `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`; prerequisite only, not present in this stacked branch |
 
 The Owner-login acceptance prerequisite is not satisfied by repository code or
