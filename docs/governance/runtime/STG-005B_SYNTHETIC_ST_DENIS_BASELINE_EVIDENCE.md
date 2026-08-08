@@ -24,8 +24,8 @@
 PR #61 subsequently entered `main` at
 `bbb1af9520c188b6ef6362e783284ba4001a7e63`. This package was rebuilt from
 that mainline commit for renewed review; the historical rows above retain the
-original package-base evidence and do not classify the current Draft as
-`IN_MAIN`.
+original package-base evidence. PR #62 later entered `main` at
+`467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b`.
 
 At the time of this local evidence neither package was `IN_MAIN`. Subsequent
 promotion placed PR #62 in `main`; this historical record does not imply a

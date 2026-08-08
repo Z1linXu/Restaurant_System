@@ -4,9 +4,9 @@
 >
 > Historical failed candidate: `8f909525781804f61d1da388882f530da358c3c4`
 >
-> Current main: `8f58bcbfca253c1598b967f4d17c04c0be1cce5b` (`IN_MAIN`, not deployed)
+> Current audited main: `645d4909625f70fc241d5468382d66a30a030fb1` (`IN_MAIN`, not deployed)
 >
-> Governance packages: PR #60, PR #71, PR #61, PR #62, PR #63, PR #64, and PR #65 are `IN_MAIN`; none is runtime evidence
+> Governance packages: PR #60, PR #71, and PRs #61-#70 are `IN_MAIN`; none is runtime evidence
 >
 > Next candidate SHA: `EVIDENCE_PENDING` after fresh Owner runtime approval
 

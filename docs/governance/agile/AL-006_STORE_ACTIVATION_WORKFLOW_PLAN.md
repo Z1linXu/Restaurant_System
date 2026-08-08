@@ -1,12 +1,12 @@
 # AL-006 Store Activation Workflow Plan
 
-> Status: `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`
+> Status: `IN_MAIN` via PR #69
 >
 > Package: `AL-006A_ACTIVATION_CONTRACT_AND_READ_ONLY_VALIDATOR_PLAN`
 >
-> Git classification: `DRAFT_PR`
+> Git classification: `IN_MAIN`
 >
-> Draft PR: #69, base `main@9e93573be97cfd01a9ad3efe64d55827854c497a` with #68 `IN_MAIN`
+> Source PR: #69; historical base `main@9e93573be97cfd01a9ad3efe64d55827854c497a`; merged at `dc682203b2b24bbdb453a5520b297b9051139f13`
 >
 > Runtime effect: none
 

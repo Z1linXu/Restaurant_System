@@ -1,6 +1,6 @@
 # STG-005B Synthetic St-Denis Source Menu Runbook
 
-> Capability state: `STACKED_DRAFT_IMPLEMENTED_NOT_EXECUTED`
+> Capability state: `IN_MAIN_IMPLEMENTED_NOT_EXECUTED` via PR #62
 >
 > Scope: guarded, non-web creation of one reviewed synthetic source-menu graph
 > for AL-003 Staging acceptance.

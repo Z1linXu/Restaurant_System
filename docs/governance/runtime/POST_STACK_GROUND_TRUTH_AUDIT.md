@@ -1,0 +1,153 @@
+# Post-Stack Ground Truth Audit
+
+> Audit date: 2026-08-08, America/Toronto
+>
+> Repository base: `origin/main@645d4909625f70fc241d5468382d66a30a030fb1`
+>
+> Runtime access: not performed
+>
+> Decision: `STAGING_NOW_GO_FOR_OWNER_APPROVAL_FOR_FRESH_PASSIVE_PREFLIGHT_ONLY`
+
+## 1. Executive summary
+
+PRs #61 through #70 and the independent handoff PR #71 are all ancestors of
+the current `origin/main`. PR #66 remains the independent Printer
+Store-isolation repair even though it entered main between #65 and #67.
+
+The overnight stack completed architecture, contracts, plans, the guarded
+Synthetic St-Denis baseline, Staging acceptance tooling, and one concrete
+Printer isolation repair. It did **not** implement a complete Generic Store
+Provisioning Engine, concrete complete Store Profiles, reusable Staff/Table,
+Printing, or Device provisioning writers, the Activation workflow, a
+Production Release Candidate, or ACT-001.
+
+The next real phase is exact-main Staging runtime acceptance for the already
+implemented AL-002/AL-003 and STG-005A/STG-005B capabilities. The repository is
+eligible to request Owner approval for a new exact-SHA, fresh passive Staging
+preflight and a review of the bounded runtime procedure. This is not approval
+to deploy or mutate Staging. Deployment and acceptance remain `NO_GO` until
+fresh preflight/evidence gates pass and a secret-safe release/restart/API
+procedure is reviewed.
+
+## 2. Git and PR ground truth
+
+| PR | Package | Merge commit | Current classification |
+|---|---|---|---|
+| #71 | Current Handoff navigation | `5baada03935e004d80af1e7a36fb7db39bd6abbb` | `IN_MAIN`; navigation only |
+| #61 | Modular Architecture Foundation | `bbb1af9520c188b6ef6362e783284ba4001a7e63` | `IN_MAIN`; architecture only |
+| #62 | STG-005B Synthetic St-Denis baseline | `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b` | `IN_MAIN`; repository capability |
+| #63 | AL-003S Staging acceptance preparation | `732d77c89ff067982702426ff918d5e097e1d0fb` | `IN_MAIN`; operational tooling only |
+| #64 | Generic Store Profile contract | `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6` | `IN_MAIN`; contract slice only |
+| #65 | Staff/Table provisioning preparation | `8f58bcbfca253c1598b967f4d17c04c0be1cce5b` | `IN_MAIN`; plan only |
+| #66 | Printer Store-isolation repair | `f483a4640503c20f6eec1e2e9ae1d198bf23d1f3` | `IN_MAIN`; independent code repair |
+| #67 | Printing provisioning preparation | `65e3d3ced2b5b05eb36d56ce67e475768ad19dff` | `IN_MAIN`; plan only |
+| #68 | Device/Pad provisioning preparation | `9e93573be97cfd01a9ad3efe64d55827854c497a` | `IN_MAIN`; plan only |
+| #69 | Store Activation workflow preparation | `dc682203b2b24bbdb453a5520b297b9051139f13` | `IN_MAIN`; plan only |
+| #70 | Chinatown Production RC preparation | `645d4909625f70fc241d5468382d66a30a030fb1` | `IN_MAIN`; plan only |
+
+All listed merge commits are verified ancestors of current `origin/main`.
+There is no `DRAFT_PR` or `STACKED_ONLY` package remaining in #61-#71.
+`IN_MAIN` does not imply `DEPLOYED_TO_STAGING` or
+`DEPLOYED_TO_PRODUCTION`.
+
+## 3. Capability matrix
+
+| Capability | Status | Ground truth and remaining boundary |
+|---|---|---|
+| Generic Provisioning Engine | `NOT_IMPLEMENTED` | No engine, module SPI/registry, parent request coordinator, or provisioning API exists. |
+| Versioned Store Profile | `PARTIAL_IMPLEMENTATION` | Exact identity/composition/fingerprint/registry contract exists, but no complete Chinatown or St-Denis Store Profile is registered and no module registry proves referenced configuration. |
+| Store Core | `PARTIAL_IMPLEMENTATION` | AL-002 creates an idempotent inactive, printing-disabled Store, but it is not Profile-driven and legacy Platform Admin/Seeder paths can still create `active` Stores. |
+| Access/Staff | `PARTIAL_IMPLEMENTATION` | Onboarding transaction creates BCrypt credentials and Store memberships. There is no reusable Profile planner/reconcile contract or standalone idempotent module. Runtime passwords remain outside Git. |
+| Menu | `DONE_IN_CODE`; `RUNTIME_EVIDENCE_PENDING` | Owner validate/execute API, V10 idempotency, generic clone transaction, Chinatown menu Profile, source invariance, replay, and tests exist. No Staging or Production clone evidence exists. |
+| Synthetic St-Denis baseline | `DONE_IN_CODE`; `RUNTIME_EVIDENCE_PENDING` | Guarded empty-or-exact STG-005B planner/writer exists and is tested. It has not run on evidenced Staging. |
+| Staging acceptance launcher | `DONE_IN_CODE`; `STAGING_PENDING` | AL-003S launcher/readiness guards exist. Exact-main deploy, V9/V10, bootstrap, login, onboarding, clone, replay, and restart evidence are pending. |
+| Tables | `PARTIAL_IMPLEMENTATION` | Existing admin CRUD/template copy exists. No Store Profile contract/planner/idempotent writer; uniqueness, ownership, normalization, and reconcile rules are unresolved. |
+| Printer Store isolation | `DONE_IN_CODE` | PR #66 scopes config update, dispatch, and PAD printer-health lookup to the durable Store. This is not Printing provisioning. |
+| Printing | `PARTIAL_IMPLEMENTATION` | Print Engine, Print Center, PAD_DIRECT and assignments exist. Reusable logical-role/module policy, strict planner, inactive idempotent writer, and physical acceptance are not implemented. |
+| Device/Pad | `PARTIAL_IMPLEMENTATION` | Registration, hashed token, heartbeat, Store-bound queue and Android Worker exist. Reusable planner/writer, trusted build provenance, durable Worker-health evidence, and idempotent pairing are not implemented. |
+| Activation | `NOT_IMPLEMENTED` | No validator, workflow, evidence repository, activation API, or exclusive inactive-to-active transition exists. Legacy direct `active` writes remain a prerequisite repair. |
+| REL-001 Production RC | `PLAN_ONLY`; `STAGING_PENDING`; `PRODUCTION_PENDING` | The plan is in main, but no candidate SHA has passed Staging and no Production gap/backup/restore/compatibility/deploy evidence exists. |
+| ACT-001 Chinatown activation | `NOT_IMPLEMENTED`; `PRODUCTION_PENDING` | No technical package or executable activation exists. |
+
+## 4. Runtime ground truth
+
+No runtime was inspected during this audit. Retained evidence records only:
+
+| Environment | Retained evidence | Current classification |
+|---|---|---|
+| Staging | `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c`, Flyway V8, isolated project and loopback bind, printing disabled | Historical evidence; freshness unknown |
+| Production | reported `4667f3c`, Flyway V7, PAD_DIRECT field flow | Historical/operator evidence; freshness unknown |
+| Repository | V1-V10 and `origin/main@645d490...` | Repository capability only |
+
+There is no retained evidence that Staging applied V9/V10 or executed
+STG-005A, STG-005B, Owner login, target onboarding, menu validate/execute,
+replay, or same-image restart. There is no evidence that Production contains
+any #61-#70 capability.
+
+## 5. Current blockers
+
+| Class | Blocker | Effect |
+|---|---|---|
+| Code/procedure | No reviewed secret-safe release/environment rotation helper, same-image restart/Flyway collector, or Owner/API acceptance client | Does not block a fresh passive preflight; blocks improvised deploy/full acceptance |
+| Configuration | No detached release, private environment digest, image identity, synthetic run identity, credential, or action approval exists for the next exact SHA | Must be created only inside separately approved runtime batches |
+| Evidence | Current Staging SHA/Flyway freshness and all V9/V10/bootstrap/login/clone/restart results are pending | Repository capability cannot be promoted to Staging acceptance |
+| Owner/runtime gate | Exact-SHA preflight, deployment, migration, credential/bootstrap, API execute, restart, Production read/deploy, and activation each require separate approval | Work stops before every unapproved runtime mutation |
+| Production safety | Release-relative state path, combined Production build, missing phase resource gates, restore rehearsal, backup integrity, and old-app compatibility remain unresolved | Production deployment and ACT-001 are `NO_GO` |
+
+## 6. Staging decision
+
+`STAGING NOW: GO_FOR_OWNER_APPROVAL` means only:
+
+1. merge this governance correction;
+2. select the resulting exact full `origin/main` SHA;
+3. request Owner approval for a fresh passive preflight and review of the
+   secret-safe command/evidence procedure.
+
+It does not authorize SSH, detached-release creation, deployment, Docker
+lifecycle, Flyway, credentials, bootstrap, login, API calls, or database
+writes. Immediate deployment/full acceptance is still `NO_GO` until:
+
+- fresh release/environment/preflight digests pass;
+- the same-image restart/Flyway evidence procedure is reviewed;
+- a secret-safe Owner login/onboarding/clone API procedure or client is
+  reviewed;
+- each runtime mutation batch receives an action-specific Owner approval.
+
+Production remains `NO_GO`: fixed external state-root protection, serial
+build/resource gates, current Production evidence, Store 1 read approval,
+V7-to-V10 compatibility, backup integrity, isolated restore rehearsal, and an
+exact accepted RC are all pending.
+
+## 7. Next bounded Agile Loops
+
+| Order | Loop ID | Goal | Dependency | Acceptance evidence | Owner gate | Runtime gate | Rollback boundary |
+|---:|---|---|---|---|---|---|---|
+| 1 | `STG-006_EXACT_MAIN_PREFLIGHT` | Bind post-audit main SHA and collect fresh passive isolation/resource/continuity evidence | governance audit merged | reviewed PASS evidence digest | exact SHA + passive preflight approval | read-only server access | no container/database change |
+| 2 | `OPS-001_STAGING_SECRET_SAFE_TOOLING_REPAIR` | Close release/env rotation, same-image restart/Flyway collection, and Owner/API secret-handling gaps | STG-006 procedure review | shell/focused tests, redaction and independent review | approve manual procedure versus bounded tooling | no runtime mutation in implementation | Git revert only |
+| 3 | `STG-007_EXACT_SHA_DEPLOY_AND_MIGRATE` | Deploy only approved Staging SHA and verify V9/V10, health, second start, continuity | STG-006 PASS + OPS-001 accepted | exact images, Flyway V1-V10, health and continuity | deployment/migration approval | Staging deploy + Flyway | prior verified compatible image or stop/roll-forward; never clean/restore |
+| 4 | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` | Execute/replay STG-005A and STG-005B with printing disabled | STG-007 PASS | sanitized IDs/counts/revisions/replay | separate credential/bootstrap/source-write approvals | synthetic Staging writes | transaction rollback; retain successful evidence |
+| 5 | `STG-009_AL003_OWNER_ACCEPTANCE` | Owner login, target onboarding, validate, execute, replay, restart/persistence | STG-008 PASS | sanitized auth/status/count/source-invariance/restart evidence | separate execute checkpoint | synthetic Staging writes and restart | transaction rollback; no destructive cleanup |
+| 6 | `AL-004A_CONCRETE_STORE_PROFILE_AND_ENGINE_PLANNER` | Register complete non-secret Store Profile(s), module config registry, and read-only engine plan | STG-009 findings reviewed | deterministic fingerprints, planner and anti-hardcode tests | Profile identity/config review | none | Git revert |
+| 7 | `AL-005A1_ACCESS_TABLE_CONTRACT_PLANNER` | Add reusable Staff/Access and Table contracts/read-only planner; resolve Store-isolation/normalization gates | AL-004A | focused authorization/fingerprint/planner tests | login convention/table policy decisions as needed | none | Git revert |
+| 8 | `AL-005P1_PRINTING_CONTRACT_PLANNER` | Add fail-closed logical-role/module policy and read-only planner | AL-004A + #66 | printing/security regressions; no job/endpoint writes | strict mode/reconcile policy decisions | none | Git revert |
+| 9 | `AL-005B1_DEVICE_CONTRACT_PLANNER` | Add safe Device/Pad readiness contract and read-only planner | AL-005P1 contract | Store isolation, redaction, build/health semantics tests | trusted build/freshness policy | none | Git revert |
+| 10 | `AL-006A_ACTIVATION_READ_ONLY_VALIDATOR` | Implement fail-closed aggregate validator before any status writer | module contracts and evidence model stable | missing/stale/wrong-Store evidence tests; zero writes | lifecycle/persistence and legacy-writer decisions | none | Git revert |
+
+Executable module writers, REL-001 Production RC selection, and ACT-001 remain
+later loops after these contracts and Staging evidence. Planning documents in
+main do not authorize skipping directly to their writers.
+
+## 8. Current Owner gates and unique stop state
+
+Current Owner actions, in order:
+
+1. review the docs-only Post-Stack Ground Truth sync;
+2. after merge, approve or reject the exact resulting main SHA for
+   `STG-006_EXACT_MAIN_PREFLIGHT`;
+3. review any secret-safe operational repair before Staging mutation;
+4. approve each deploy, migration, bootstrap, login/API, execute, and restart
+   batch separately.
+
+Unique stop state:
+
+`POST_STACK_GROUND_TRUTH_SYNC_WAITING_FOR_OWNER_REVIEW`

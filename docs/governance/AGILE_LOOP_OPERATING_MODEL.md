@@ -85,18 +85,13 @@ culminates in `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE`.
 PR #59's bounded PostgreSQL private-leaf repair is now `IN_MAIN`, and PR #60's
 2026-08-08 Owner decisions are `IN_MAIN` at
 `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; neither proves a new Staging
-deployment. PR #71's handoff navigation, PR #61's modular architecture, PR
-#62's Synthetic St-Denis baseline, PR #63's guarded acceptance preparation,
-and PR #64's Generic Store Profile contract are `IN_MAIN`; none changes
-runtime state. PR #65's Staff/Access and Table planning package and PR #66's
-Printer Store-isolation repair are `IN_MAIN` at
-`f483a4640503c20f6eec1e2e9ae1d198bf23d1f3`; PR #67's Printing Provisioning
-plan is now `IN_MAIN` at the latest main, and PR #68 is the next main-based
-Device/Pad Provisioning planning layer while PRs #69-#70 remain
-dependency-bound.
-The current
-feature stop state is
-`REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL`.
+deployment. PR #71's handoff navigation and PRs #61-#70 are all `IN_MAIN` at
+`origin/main@645d4909625f70fc241d5468382d66a30a030fb1`. PR #66 is the
+independent Printer Store-isolation code repair. The remaining overnight layers
+are architecture, contracts, plans, or guarded preparation except for the
+implemented STG-005B baseline and AL-003S tooling; none changes runtime state.
+The current feature stop state is
+`POST_STACK_GROUND_TRUTH_SYNC_WAITING_FOR_OWNER_REVIEW`.
 PR #61 is the architecture/governance foundation: it defines the Generic
 Store Provisioning Engine, Versioned Store Profiles, and Reusable Provisioning
 Modules without adding runtime behavior. PR #62 provides the guarded Synthetic
@@ -111,6 +106,12 @@ a runtime clone, merge, or deployment. Staging acceptance retains the distinct
 prerequisite
 `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING` until synthetic-only runtime
 evidence proves the complete Owner login topology.
+
+The authoritative post-stack matrix and next-loop order are in
+[POST_STACK_GROUND_TRUTH_AUDIT.md](runtime/POST_STACK_GROUND_TRUTH_AUDIT.md).
+After that docs-only sync enters main, the next real phase is a fresh exact-main
+Staging preflight request. `GO_FOR_OWNER_APPROVAL` is limited to the passive
+preflight and procedure-review gate; it is not deployment or mutation approval.
 
 The architecture authority for future provisioning packages is
 [STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md](agile/STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md).

@@ -11,6 +11,9 @@ separate from historical evidence snapshots and business implementation details:
   concise conversation-transfer snapshot. It is navigation only and never
   overrides Git, the Planbook, backlogs, operating model, technical plans, or
   verified runtime evidence.
+- [Post-Stack Ground Truth Audit](docs/governance/runtime/POST_STACK_GROUND_TRUTH_AUDIT.md)
+  records verified #61-#71 main ancestry, the plan-to-code capability matrix,
+  retained runtime boundaries, the Staging entry decision, and next loops.
 - [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
   authority for current issue triage and closure status.
 - [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
@@ -75,7 +78,7 @@ separate from historical evidence snapshots and business implementation details:
 - [AL-005B Device and Pad Provisioning Module Plan](docs/governance/agile/AL-005B_DEVICE_PAD_PROVISIONING_MODULE_PLAN.md)
   records the current pairing/authentication, heartbeat, Store-wide PAD_DIRECT
   queue, Android Worker visibility, profile/runtime boundaries, and readiness
--  gates. PR #68 is `IN_MAIN` at the latest `main` and adds no endpoint,
+  gates. PR #68 is `IN_MAIN` and adds no endpoint,
   migration, device, token, pairing, Worker change, or runtime behavior.
 - [AL-006 Store Activation Workflow Plan](docs/governance/agile/AL-006_STORE_ACTIVATION_WORKFLOW_PLAN.md)
   defines the fail-closed lifecycle, validator gates, evidence boundary, and
@@ -84,8 +87,8 @@ separate from historical evidence snapshots and business implementation details:
 - [REL-001 Chinatown Production Release Candidate Plan](docs/governance/agile/REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE_PLAN.md)
   defines exact-SHA Staging acceptance, Production gap audit, migration and
   compatibility review, backup/restore/rollback, resource/deploy gates, Store
-  1 read approval, exact RC approval, and post-deploy verification. Draft PR
-  #70 is planning-only and does not select an RC, claim Staging acceptance,
+  1 read approval, exact RC approval, and post-deploy verification. PR #70 is
+  `IN_MAIN` planning-only and does not select an RC, claim Staging acceptance,
   deploy Production, or implement ACT-001 activation.
 - [AL-003A final menu comparison](docs/governance/agile/AL-003A_FINAL_MENU_COMPARISON.md)
   is the single product-mapping authority for the Store 1 to Chinatown target
@@ -427,7 +430,9 @@ Synthetic St-Denis baseline at `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b`,
 and PR #63 then merged guarded AL-003S acceptance preparation at
 `732d77c89ff067982702426ff918d5e097e1d0fb`; PR #64 then merged the declarative
 Generic Store Profile contract at `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6`.
-None is runtime evidence. The
+PRs #65 through #70 then entered main in dependency order, with independent
+Printer Store-isolation repair #66 between #65 and #67; current audited main is
+`645d4909625f70fc241d5468382d66a30a030fb1`. None is runtime evidence. The
 modular target is a Generic
 Store Provisioning Engine consuming Versioned Store Profiles and Reusable
 Provisioning Modules. Shared implementation must remain Store-neutral;
@@ -505,8 +510,8 @@ The future Chinatown Production release boundary is defined in
 [REL-001 Chinatown Production Release Candidate Plan](docs/governance/agile/REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE_PLAN.md).
 One exact SHA must be merged to `main`, accepted unchanged on isolated Staging,
 and then pass a separately approved fresh Production gap, migration,
-compatibility, backup/recovery, and rollback review. The current Draft stack is
-not an RC. This documentation package does not select a candidate, inspect a
+compatibility, backup/recovery, and rollback review. The completed planning
+stack is not an RC. This documentation package does not select a candidate, inspect a
 runtime, run Flyway, deploy, read Store 1, clone a menu, or activate a Store.
 The checked-in Production Compose currently binds PostgreSQL through a path
 relative to its Compose file, while the deploy helper uses one combined
