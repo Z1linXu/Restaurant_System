@@ -6,6 +6,8 @@
 >
 > Repository base: `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`
 >
+> Review: Draft PR #61, base `main`
+>
 > Runtime access: not performed
 
 ## 1. Purpose and authority

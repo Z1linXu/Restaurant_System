@@ -86,7 +86,8 @@ governance sync are `IN_MAIN` at
 `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; this does not prove a new Staging
 deployment. The current package records the modular Store provisioning
 architecture before STG-005B implementation. Its review state is
-`STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN_WAITING_FOR_OWNER_REVIEW`.
+`STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN_WAITING_FOR_OWNER_REVIEW` in
+Draft PR #61.
 No current statement authorizes server access, Flyway execution, synthetic
 bootstrap, credential creation, login, source-menu writes, validate, execute,
 a runtime clone, merge, or deployment. Staging acceptance retains the distinct

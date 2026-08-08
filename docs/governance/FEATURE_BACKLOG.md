@@ -16,7 +16,7 @@
 | priority | `HIGH` |
 | status | `STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN_WAITING_FOR_OWNER_REVIEW` |
 | target_loop | `AL-003` |
-| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, and PR #60's Owner decisions are `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. The modular provisioning architecture package is under review. Staging remains on the separately evidenced older runtime; no V9/V10/bootstrap/clone execution is implied. |
+| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, and PR #60's Owner decisions are `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. The modular provisioning architecture package is under review in Draft PR #61. Staging remains on the separately evidenced older runtime; no V9/V10/bootstrap/clone execution is implied. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
 | next action | Review the modular architecture package while STG-005B is prepared as dependency-bound work. Runtime deployment/bootstrap/clone remains separately Owner-gated. |
 
@@ -37,7 +37,7 @@
 | PR #58 attempt evidence | `IN_MAIN` |
 | Private-leaf preflight repair / PR #59 | `IN_MAIN` via merge `c3956592da8a33092ab745c7cc6aac05e9babfa7` |
 | Owner decisions governance sync / PR #60 | `IN_MAIN` via merge `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; documentation only, no runtime action |
-| Modular Store provisioning architecture | `DRAFT_PREPARATION`; documentation only, no runtime action |
+| Modular Store provisioning architecture / PR #61 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`; documentation only, no runtime action |
 
 The Owner-login acceptance prerequisite is not satisfied by repository code or
 deployment alone. Read-only code audit confirms that an active Organization
