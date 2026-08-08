@@ -7,7 +7,8 @@
 > Follow-up runtime access: STG-006 passive/read-only observation completed;
 > see `STG-006_EXACT_MAIN_PREFLIGHT_EVIDENCE.md`
 >
-> Current decision: `STG-006_PASS_OPS-001_REQUIRED_WAITING_FOR_OWNER_REVIEW`
+> Current decision after reviewed OPS-001 repository merge:
+> `OPS-001_REPOSITORY_COMPLETE_STG-007_WAITING_FOR_OWNER_RUNTIME_APPROVAL`
 
 ## 1. Executive summary
 
@@ -25,8 +26,9 @@ Production Release Candidate, or ACT-001.
 STG-006 bound `33c6e3c...` and completed the authorized fresh passive preflight.
 The retained Staging runtime remains isolated and healthy at `4397f995...` /
 V8, and Production continuity was unchanged. Deployment and acceptance remain
-`NO_GO`: OPS-001 secret-safe release/env, restart/Flyway, and Owner/API tooling
-requires a bounded Owner-reviewed design before STG-007.
+`NO_GO` for immediate runtime execution. OPS-001 now closes the repository
+release/env, restart/Flyway, and Owner/API tooling gaps after reviewed merge;
+STG-007 still needs a new exact-main SHA and separate Owner runtime approvals.
 
 ## 2. Git and PR ground truth
 
@@ -89,10 +91,10 @@ any #61-#70 capability.
 
 | Class | Blocker | Effect |
 |---|---|---|
-| Code/procedure | No reviewed secret-safe release/environment rotation helper, same-image restart/Flyway collector, or Owner/API acceptance client | `OPS-001 REQUIRED`; blocks STG-007/full acceptance |
+| Code/procedure | OPS-001 publishes fail-closed release/env, same-container restart/Flyway, and secret-FD Owner/API helpers after reviewed merge | Repository blocker closed; runtime artifacts and evidence remain absent |
 | Configuration | No detached release, private environment digest, image identity, synthetic run identity, credential, or action approval exists for the next exact SHA | Must be created only inside separately approved runtime batches |
 | Evidence | Current Staging SHA/Flyway freshness is now verified; V9/V10/bootstrap/login/clone/restart results remain pending | Repository capability cannot be promoted to Staging acceptance |
-| Owner/runtime gate | OPS-001 design, deployment, migration, credential/bootstrap, API execute, restart, Production read/deploy, and activation each require separate approval | Work stops before every unapproved runtime mutation |
+| Owner/runtime gate | STG-007 release/env, deployment, migration, credential/bootstrap, API execute, restart, Production read/deploy, and activation each require separate approval | Work stops before every unapproved runtime mutation |
 | Production safety | Release-relative state path, combined Production build, missing phase resource gates, restore rehearsal, backup integrity, and old-app compatibility remain unresolved | Production deployment and ACT-001 are `NO_GO` |
 
 ## 6. Staging decision
@@ -102,10 +104,9 @@ detached-release creation, deployment, Docker lifecycle, Flyway, credentials,
 bootstrap, login, API calls, restart, or database writes. Immediate
 deployment/full acceptance is still `NO_GO` until:
 
+- the reviewed OPS-001 repository package is verified `IN_MAIN`;
 - fresh release/environment/preflight digests pass;
-- the same-image restart/Flyway evidence procedure is reviewed;
-- a secret-safe Owner login/onboarding/clone API procedure or client is
-  reviewed;
+- the exact merged-main SHA and separate STG-007 action batches are approved;
 - each runtime mutation batch receives an action-specific Owner approval.
 
 Production remains `NO_GO`: fixed external state-root protection, serial
@@ -118,7 +119,7 @@ exact accepted RC are all pending.
 | Order | Loop ID | Goal | Dependency | Acceptance evidence | Owner gate | Runtime gate | Rollback boundary |
 |---:|---|---|---|---|---|---|---|
 | 1 | `STG-006_EXACT_MAIN_PREFLIGHT` | Bind post-audit main SHA and collect fresh passive isolation/resource/continuity evidence | governance audit merged | `PASS` evidence at candidate `33c6e3c...` | completed read-only authorization | no further runtime action | no container/database change |
-| 2 | `OPS-001_STAGING_SECRET_SAFE_TOOLING_REPAIR` | Close release/env rotation, same-image restart/Flyway collection, and Owner/API secret-handling gaps | STG-006 PASS | shell/focused tests, redaction and independent review | approve exact design inputs and bounded repair | no runtime mutation in implementation | Git revert only |
+| 2 | `OPS-001_STAGING_SECRET_SAFE_TOOLING_REPAIR` | Close release/env rotation, same-image restart/Flyway collection, and Owner/API secret-handling gaps | STG-006 PASS | shell/focused tests, redaction and independent review | repository auto-merge gate | no runtime mutation in implementation | Git revert only |
 | 3 | `STG-007_EXACT_SHA_DEPLOY_AND_MIGRATE` | Deploy only approved Staging SHA and verify V9/V10, health, second start, continuity | STG-006 PASS + OPS-001 accepted | exact images, Flyway V1-V10, health and continuity | deployment/migration approval | Staging deploy + Flyway | prior verified compatible image or stop/roll-forward; never clean/restore |
 | 4 | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` | Execute/replay STG-005A and STG-005B with printing disabled | STG-007 PASS | sanitized IDs/counts/revisions/replay | separate credential/bootstrap/source-write approvals | synthetic Staging writes | transaction rollback; retain successful evidence |
 | 5 | `STG-009_AL003_OWNER_ACCEPTANCE` | Owner login, target onboarding, validate, execute, replay, restart/persistence | STG-008 PASS | sanitized auth/status/count/source-invariance/restart evidence | separate execute checkpoint | synthetic Staging writes and restart | transaction rollback; no destructive cleanup |
@@ -134,14 +135,13 @@ main do not authorize skipping directly to their writers.
 
 ## 8. Current Owner gates and unique stop state
 
-Current Owner actions, in order:
+Current Owner actions after OPS-001 enters main, in order:
 
-1. review the STG-006 PASS evidence/governance package;
-2. approve or revise the bounded OPS-001 technical design inputs;
-3. review the resulting tooling repair before any runtime use;
-4. approve each deploy, migration, bootstrap, login/API, execute, and restart
+1. review one exact merged-main STG-007 release/env batch;
+2. separately approve deploy/Flyway after formal preflight PASS;
+3. approve each bootstrap/source, login/onboarding, execute/replay and restart
    batch separately.
 
 Unique stop state:
 
-`STG-006_PASS_OPS-001_REQUIRED_WAITING_FOR_OWNER_REVIEW`
+`OPS-001_REPOSITORY_COMPLETE_STG-007_WAITING_FOR_OWNER_RUNTIME_APPROVAL`

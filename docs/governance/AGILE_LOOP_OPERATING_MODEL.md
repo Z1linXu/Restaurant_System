@@ -41,8 +41,9 @@ with an explicit recorded transition:
   directly.
 - Codex may create a branch, edit approved code/documents, run local tests,
   commit, push, and prepare a PR when explicitly authorized.
-- Codex must not merge a PR, deploy, SSH into production, initialize production
-  data, or access/record production secrets without explicit owner approval.
+- Repository PR merge follows the permanent auto-merge policy in section 16.
+  Runtime execution remains separately approval-gated and is never implied by
+  repository auto-merge.
 - CI success means code verification only. It is not owner approval, merge, or
   deployment approval.
 - A migration, data repair, backup/restore action, printer action, or Android
@@ -86,14 +87,17 @@ PR #59's bounded PostgreSQL private-leaf repair is now `IN_MAIN`, and PR #60's
 2026-08-08 Owner decisions are `IN_MAIN` at
 `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; neither proves a new Staging
 deployment. PR #71's handoff navigation, PRs #61-#70, and PR #72's post-stack
-audit are all `IN_MAIN` at
-`origin/main@33c6e3c52aa40793f6bb861101c16ccdd1b85b5b`. PR #66 is the
+audit are all `IN_MAIN`; PR #73 then entered
+`origin/main@85d97b7327b2e15aa561ed28a5788b92cedf6f5b`. PR #66 is the
 independent Printer Store-isolation code repair. The remaining overnight layers
 are architecture, contracts, plans, or guarded preparation except for the
 implemented STG-005B baseline and AL-003S tooling; none changes runtime state.
 STG-006 freshly verified the retained isolated Staging runtime and minimum
-Production continuity without mutation. The current feature stop state is
-`STG-006_PASS_OPS-001_REQUIRED_WAITING_FOR_OWNER_REVIEW`.
+Production continuity without mutation. PR #73 placed that evidence/governance
+package in `main` at `85d97b7327b2e15aa561ed28a5788b92cedf6f5b`.
+OPS-001 now supplies the bounded secret-safe repository tooling. The resulting
+stop state after its repository merge is
+`OPS-001_REPOSITORY_COMPLETE_STG-007_WAITING_FOR_OWNER_RUNTIME_APPROVAL`.
 PR #61 is the architecture/governance foundation: it defines the Generic
 Store Provisioning Engine, Versioned Store Profiles, and Reusable Provisioning
 Modules without adding runtime behavior. PR #62 provides the guarded Synthetic
@@ -111,10 +115,10 @@ evidence proves the complete Owner login topology.
 
 The authoritative post-stack matrix and next-loop order are in
 [POST_STACK_GROUND_TRUTH_AUDIT.md](runtime/POST_STACK_GROUND_TRUTH_AUDIT.md).
-STG-006 is complete for its passive scope. The next bounded phase is Owner
-review of OPS-001 design inputs for secret-safe release/env rotation,
-same-image restart/Flyway evidence, and Owner/API client tooling. It is not
-deployment or mutation approval.
+STG-006 is complete for its passive scope. The next bounded phase after
+OPS-001 enters main is Owner review of an exact STG-007 runtime plan and full
+merged-main SHA. Repository tooling completion is not deployment or mutation
+approval.
 
 The architecture authority for future provisioning packages is
 [STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md](agile/STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md).
@@ -328,10 +332,10 @@ satisfied. Stop when an Owner merge, runtime authorization, product decision,
 or another gate in section 7 is genuinely required.
 
 Agents may create isolated worktrees and branches, edit the authorized scope,
-test, commit, push, open Draft PRs, perform independent review, and synchronize
-governance. They may not merge Owner-gated PRs, enable auto-merge, force-push a
-reviewed branch over others, deploy or mutate Production, perform a real clone,
-or bypass a runtime gate.
+test, commit, push, open Draft PRs, perform independent review, synchronize
+governance, and apply section 16's repository auto-merge policy. They may not
+force-push a reviewed branch over others, deploy or mutate any runtime,
+perform a real clone, or bypass a runtime gate.
 
 ## 13. Ephemeral Agent / Worker Lifecycle
 
@@ -397,3 +401,43 @@ delivery.
 At normal completion, every bounded worker has returned its result and ended,
 and the round reports `Agents active = 0`. The lifecycle and worktree cleanup
 rules in sections 13 and 14 remain mandatory.
+
+## 16. Repository auto-merge policy
+
+Repository PRs default to automatic merge after, and only after, the complete
+review gate below passes. This standing repository policy is Owner authority to
+mark a qualifying Draft ready and merge that exact reviewed head; it is not
+authority to weaken branch protection, bypass GitHub checks, or merge a
+different scope.
+
+All of these conditions are mandatory:
+
+1. The PR targets current `main`; its base contains the latest `origin/main`,
+   its reviewed head is frozen, GitHub reports no conflict, and any base drift
+   was handled by Stack Rebuild plus semantic reconciliation followed by fresh
+   verification.
+2. The diff contains exactly one selected Agile Loop package. No unexpected
+   implementation, migration, generated artifact, secret, runtime
+   configuration mutation, or unrelated commit is present.
+3. Focused and required regressions pass. Compilation/Maven, frontend, Android,
+   migration or deployment checks are mandatory whenever that surface changed.
+4. `git diff --check`, Markdown-link validation, secret scan and governance
+   drift scan pass against the final head.
+5. An independent reviewer returns `ACCEPT` with no unresolved blocking
+   finding, review thread, requested change, or security/safety ambiguity.
+6. GitHub reports `mergeable=true`, clean merge state, no failed or pending
+   required check, unchanged base/head/scope, and no unexpected new commit.
+
+Any conflict, base drift, failed check, unresolved finding, product/architecture
+ambiguity, safety-boundary change, migration surprise, secret finding, runtime
+behavior surprise, or scope change cancels automatic merge and stops at the
+Owner Gate. Repairing it requires a new final-head review; a previous ACCEPT or
+approval cannot be reused.
+
+Repository auto-merge never authorizes SSH, deployment, Flyway, bootstrap,
+credential creation, login, API mutation, container lifecycle, Store/Printer/
+Pad mutation, Production read, or any Staging/Production action. Runtime
+auto-execution is a distinct policy and remains prohibited unless the Owner
+explicitly approves the exact environment, SHA, action batch and rollback/
+evidence boundary for that occurrence. `IN_MAIN`, `DEPLOYED_TO_STAGING`,
+`STAGING_ACCEPTED`, and `DEPLOYED_TO_PRODUCTION` remain separate states.

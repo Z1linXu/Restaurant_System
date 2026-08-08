@@ -630,13 +630,17 @@ serialized, time-bounded, and post-checked; the approval artifact is procedural
 evidence binding rather than a cryptographic API authorization credential.
 
 STG-006 added no endpoint, DTO, header, or authentication behavior. Its passive
-runtime evidence confirms only the current Staging boundary. OPS-001 is
-required before runtime Owner acceptance because no reviewed client currently
-keeps login/staff passwords, access/refresh tokens, and onboarding/clone
-idempotency keys out of argv, stdout, shell history, and evidence. Any future
-client must reuse the existing `/auth/login`, `/auth/me`, workspace, Owner
-onboarding, `/menu-clone/validate`, `/menu-clone`, and `/auth/logout` contracts;
-it must not invent a second API or weaken Owner authorization.
+runtime evidence confirms only the current Staging boundary. OPS-001 adds a
+repository operational client that reuses the existing `/auth/login`,
+`/auth/me`, workspace, Owner overview/onboarding, `/menu-clone/validate`,
+`/menu-clone`, and `/auth/logout` contracts; it adds no endpoint, DTO, header,
+authorization bypass, or application behavior. Passwords, access/refresh
+tokens, staff passwords, and raw onboarding/clone idempotency keys enter only
+through an inherited descriptor and private temporary files, never argv,
+stdout, shell history or evidence. The client verifies Organization Owner
+identity/access, target onboarding/replay, inherited target access, reviewed
+profile/counts, execute revision and replay. Its repository tests are not login
+or Staging evidence; every real API batch remains separately Owner-approved.
 
 The `IN_MAIN` AL-004 Store Profile contract does not add an HTTP endpoint. Its
 registry and safe summary are internal declarative contracts only. Owner

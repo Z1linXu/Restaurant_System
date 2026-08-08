@@ -26,7 +26,7 @@
 | Environment | `restaurant-prod` | `OPERATOR_CONFIRMED` | Environment label only; no host or secret is recorded. |
 | `RUNTIME_COMMIT` | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e` | `MACHINE_VERIFIED_READ_ONLY` during STG-006 continuity | Current runtime identity only, not a formal release approval. |
 | Production branch | `main` | `MACHINE_VERIFIED_READ_ONLY` during STG-006 continuity | Branch relationship is not a deployment approval record. |
-| Last merged `DOCUMENTATION_COMMIT` | `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | `MACHINE_VERIFIED` from `origin/main` | PR #72 and #61-#71 are `IN_MAIN`; this does not make that commit a Staging or Production runtime. |
+| Last verified `DOCUMENTATION_COMMIT` before OPS-001 | `85d97b7327b2e15aa561ed28a5788b92cedf6f5b` | `MACHINE_VERIFIED` from `origin/main` | PR #73 contains STG-006 evidence/governance; this does not make that commit a Staging or Production runtime. |
 | Deployment mode | HTTP | `OPERATOR_CONFIRMED` | HTTPS/certificate posture is outside this record. |
 | Compose services | `db`, `backend`, `nginx` under project `cloud`; unchanged before/after STG-006, restart count 0 | `MACHINE_VERIFIED_READ_ONLY` | Minimum continuity only; no environment or business-data read. |
 | Database schema | Flyway V7, including `V7__add_print_job_attention_acknowledgement.sql` | `OPERATOR_CONFIRMED` | Not a restore or schema-integrity rehearsal. |
@@ -62,10 +62,10 @@ snapshots. Do not copy those reports into this planbook.
 | Item | Current state |
 |---|---|
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `STG-006_EXACT_MAIN_PREFLIGHT` |
-| Loop type | `PASSIVE_RUNTIME_EVIDENCE_AND_GOVERNANCE_SYNC` |
-| Loop status | `STG-006_PASS_OPS-001_REQUIRED_WAITING_FOR_OWNER_REVIEW` |
-| Current package | exact-main passive Staging evidence plus OPS-001 dependency audit |
+| Current Agile Loop | `OPS-001_STAGING_SECRET_SAFE_TOOLING_REPAIR` |
+| Loop type | `REPOSITORY_OPERATIONAL_TOOLING_REPAIR` |
+| Loop status | `OPS-001_REPOSITORY_COMPLETE_STG-007_WAITING_FOR_OWNER_RUNTIME_APPROVAL` after the reviewed package enters main |
+| Current package | secret-safe release/env, runtime/Flyway restart evidence, and Owner/API acceptance tooling; repository only |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | PR #27 merged the backend foundation into `main`; Production remains on the older runtime and no production onboarding is established by that merge. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -74,11 +74,11 @@ snapshots. Do not copy those reports into this planbook.
 | STG-005 state | PLAN complete. The Owner approved CP-0 as a separate minimal Staging-only bootstrap implementation and accepted CP-4 as a feature-disabled KDS/Assembling boundary. Positive Kitchen/Assembling workflow remains `EVIDENCE_PENDING`. |
 | STG-005A state | PR #40 merged the profile-gated synthetic bootstrap and append-only `V9__add_staging_synthetic_bootstrap_requests.sql` into `main`. This record does not prove V9 was applied or that bootstrap ran against server Staging. |
 | STG-006 state | `PASS` for candidate `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b`. Fresh read-only evidence confirmed retained Staging `4397f995...` / V8, isolated project/network/state, loopback bind, printing disabled, healthy endpoints, resource headroom, and unchanged Production continuity. No candidate release, deploy, Flyway, restart, login, or data mutation occurred. |
-| OPS-001 state | `REQUIRED`. Release/env rotation, same-image restart/Flyway evidence, and Owner/API secret-safe tooling require a bounded design and Owner review before STG-007. |
-| AL-003 state | PR #72 and PRs #61-#71 are all `IN_MAIN` at `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b`. STG-006 freshly observed the retained Staging runtime at `4397f995...` / Flyway V8; the candidate is not deployed. |
+| OPS-001 state | `REPOSITORY_COMPLETE` after this reviewed package enters main. The helpers default to validation and require exact SHA/env/action plus one-use Owner approval for every future runtime batch. No runtime action has executed. |
+| AL-003 state | PR #72 and PRs #61-#71 are `IN_MAIN`; PR #73 then entered main at `85d97b7327b2e15aa561ed28a5788b92cedf6f5b`. STG-006 observed the retained Staging runtime at `4397f995...` / Flyway V8; no later candidate is deployed. |
 | Staging Owner login prerequisite | `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`; code audit proves an Organization Owner naturally accesses every same-Organization Store, so no explicit target Owner Store membership is required. Runtime bootstrap, credential, login, workspace, target onboarding, and API evidence remain pending. |
-| Current permitted work | Review the fresh STG-006 evidence/governance package and decide the bounded OPS-001 design/repair scope. Local checks, independent review, and safe task-owned cleanup remain allowed. |
-| Explicitly not permitted | OPS-001 implementation before Owner scope/design approval; repeating/expanding runtime access; detached release creation; environment rotation; Staging/Production deploy; Docker lifecycle; Flyway; bootstrap; credentials; login; onboarding; validate/execute/replay/clone; restart; Store 1 read; Production mutation; Chinatown activation; PR merge; or STG-007. |
+| Current permitted work | Complete repository verification/review/publication under the auto-merge policy; after merge, prepare an exact-SHA STG-007 runtime plan for Owner review without executing it. |
+| Explicitly not permitted | SSH/runtime access; detached server release or environment rotation; Staging/Production deploy; Docker lifecycle; Flyway; bootstrap; credentials; login; onboarding; validate/execute/replay/clone; restart; Store 1 read; Production mutation; Chinatown activation; or any STG-007 runtime command. |
 
 Agent and worker execution is ephemeral. After a bounded task, the result and
 evidence must be returned and persisted, the active session/process terminated,
@@ -124,6 +124,7 @@ packages without that mapping.
 | AL-006 Activation plan / PR #69 | `IN_MAIN` at `dc682203b2b24bbdb453a5520b297b9051139f13` | Fail-closed workflow plan only; lifecycle and validator are conceptual; no Store status transition or activation writer. |
 | REL-001 Production RC plan / PR #70 | `IN_MAIN` at `645d4909625f70fc241d5468382d66a30a030fb1` | Exact-SHA release gates only; no selected candidate, Staging pass, Production deploy, or activation action. |
 | Post-stack Ground Truth audit / PR #72 | `IN_MAIN` at `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | Capability/gap governance only; no runtime action. |
+| STG-006 evidence/governance / PR #73 | `IN_MAIN` at `85d97b7327b2e15aa561ed28a5788b92cedf6f5b` | Passive evidence only; `STG-006=PASS`, no deployment or runtime mutation. |
 
 PR-D promotion evidence is now historical main evidence: semantic source
 `5a0dc09944b4b0945fe95027d7f12647212ea559`, reviewed promotion head
@@ -141,8 +142,18 @@ confirmed Staging at `4397f995...` / Flyway V8 and minimum Production
 continuity at full SHA `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`.
 Production Flyway was not queried and remains retained V7 evidence only.
 
-The unique feature stop state is
-`STG-006_PASS_OPS-001_REQUIRED_WAITING_FOR_OWNER_REVIEW`.
+The unique feature stop state after the reviewed OPS-001 package enters main is
+`OPS-001_REPOSITORY_COMPLETE_STG-007_WAITING_FOR_OWNER_RUNTIME_APPROVAL`.
+
+OPS-001 adds repository-only guarded helpers for a detached release plus
+four-field atomic private-env rotation, sanitized Flyway/runtime collection
+plus same-container restart, and secret-FD Owner onboarding/clone acceptance.
+Each runtime action is exact-SHA/environment/action bound and consumes one
+private Owner approval digest. The package changes no application, migration,
+Compose/runtime configuration, or business API and has not accessed a runtime.
+See [OPS-001 local evidence](OPS-001_STAGING_SECRET_SAFE_TOOLING_EVIDENCE.md)
+and the
+[OPS-001 runbook](../../../deployment/cloud/README_OPS001_STAGING_SECRET_SAFE_TOOLING.md).
 PR #72 and PRs #61 through #71 are `IN_MAIN`. STG-006 is fresh passive evidence,
 not a candidate deployment or Staging acceptance. The separate runtime
 acceptance prerequisite remains
@@ -152,8 +163,9 @@ The current post-stack capability matrix and loop order remain in
 [Post-Stack Ground Truth Audit](POST_STACK_GROUND_TRUTH_AUDIT.md). The completed
 passive observation is recorded in
 [STG-006 Exact-Main Passive Preflight Evidence](STG-006_EXACT_MAIN_PREFLIGHT_EVIDENCE.md).
-`STG-006 = PASS`, while `OPS-001 = REQUIRED`; immediate deploy and full
-acceptance remain `NO_GO`.
+`STG-006 = PASS`. OPS-001 closes the repository tooling prerequisite after its
+reviewed package enters main; immediate deploy and full acceptance remain
+`NO_GO` until the separate STG-007 Owner Runtime Gate.
 
 The `IN_MAIN` acceptance preparation is documented in
 [AL-003S Staging Acceptance Preparation](../agile/AL-003S_STAGING_ACCEPTANCE_PREPARATION.md).
@@ -704,11 +716,12 @@ volume, restore a backup, or run an unreviewed downgrade as part of rollback.
 
 ## 8. Owner approval boundaries
 
-Codex may prepare branches, code, tests, commits, push a review branch, and
-open a PR when the applicable loop permits it. The following require explicit
-owner approval for each occurrence:
+Codex may prepare branches, code, tests, commits, push a review branch, open a
+PR, and merge a qualifying repository PR under the Operating Model's permanent
+auto-merge gate. The following runtime actions require explicit Owner approval
+for each occurrence:
 
-- PR merge, production deployment, SSH/runtime commands, or environment changes;
+- production deployment, SSH/runtime commands, or environment changes;
 - production Store, user, membership, credential, device, printer, or table creation;
 - production migrations, backup restore/rehearsal, data repair, or deletion;
 - use of passwords, secrets, certificates, printer IPs, or pairing credentials;

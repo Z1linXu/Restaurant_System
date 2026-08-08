@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `STG-006_PASS_OPS-001_REQUIRED_WAITING_FOR_OWNER_REVIEW` |
-| target_loop | `OPS-001_STAGING_SECRET_SAFE_TOOLING_REPAIR` after Owner scope review; STG-007 remains prohibited |
-| implementation status | PR-A through PR-F, PR #58, PR #59, PR #60, PR #71, PRs #61-#70, and post-stack audit PR #72 are `IN_MAIN` at `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b`. #66 remains the independent Printer Store-isolation code repair. STG-006 freshly observed the retained Staging runtime at `4397f995...` / Flyway V8 and did not deploy the candidate. |
+| status | `OPS-001_REPOSITORY_COMPLETE_STG-007_WAITING_FOR_OWNER_RUNTIME_APPROVAL` after OPS-001 repository merge |
+| target_loop | `STG-007_EXACT_SHA_DEPLOY_AND_MIGRATE`, runtime Owner-gated and not started |
+| implementation status | PR-A through PR-F, PRs #58-#73 and #61-#71 are `IN_MAIN` through `85d97b7327b2e15aa561ed28a5788b92cedf6f5b`; #66 remains the independent Printer Store-isolation repair. OPS-001 adds repository-only secret-safe helpers/tests after this reviewed package enters main. Staging remains `4397f995...` / Flyway V8; no candidate deploy or runtime action occurred. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Review the STG-006 PASS evidence and approve or revise the bounded OPS-001 design inputs. This is not deployment approval. |
+| next action | After OPS-001 is verified `IN_MAIN`, bind the new full main SHA and review separate STG-007 release/env and deploy/Flyway runtime batches. Do not execute them without exact Owner approval. |
 
 ### Current AL-003 delivery state
 
@@ -49,6 +49,8 @@
 | AL-006 Activation plan / PR #69 | `IN_MAIN` at `dc682203b2b24bbdb453a5520b297b9051139f13` | Fail-closed workflow plan only; lifecycle and validator are conceptual; no status transition or activation writer |
 | REL-001 Production RC plan / PR #70 | `IN_MAIN` at `645d4909625f70fc241d5468382d66a30a030fb1` | Exact-SHA release gates only; no selected candidate, Staging pass, Production deploy, or activation action |
 | Post-stack Ground Truth audit / PR #72 | `IN_MAIN` at `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | Capability/runtime gap audit only; no deployment or acceptance |
+| STG-006 evidence/governance / PR #73 | `IN_MAIN` at `85d97b7327b2e15aa561ed28a5788b92cedf6f5b` | Passive evidence only; STG-006 PASS, no deployment or mutation |
+| OPS-001 secret-safe tooling | `REPOSITORY_COMPLETE` after this reviewed package enters main | Detached release/env rotation, runtime/Flyway restart evidence, and secret-FD Owner/API helpers; runtime actions remain separately gated |
 
 The Owner-login acceptance prerequisite is not satisfied by repository code or
 deployment alone. Read-only code audit confirms that an active Organization
@@ -206,7 +208,7 @@ seed/demo Store.
 | Reproducible Synthetic St-Denis source-menu baseline | `IN_MAIN` via PR #62 | Guarded, versioned, transactional empty-or-exact implementation is repository capability only and has not run on Staging. |
 | AL-003 validate/execute/replay/restart acceptance | `STAGING_PENDING` | Requires the full synthetic topology and source-menu contract first. |
 | STG-006 exact-main passive preflight | `PASS` | Candidate `33c6e3c...`; current Staging remains `4397f995...` / V8, isolated, healthy, printing disabled; Production continuity unchanged. No deployment occurred. |
-| OPS-001 secret-safe tooling | `REQUIRED` | Missing reviewed release/env rotation, same-image restart/Flyway collector, and Owner/API client. Owner must review one bounded design before implementation/runtime use. |
+| OPS-001 secret-safe tooling | `REPOSITORY_COMPLETE` after reviewed merge | Fail-closed helpers and mock tests close the code/procedure gap; no server release, private env, credential, approval artifact, API result or restart evidence is thereby created. |
 | Production Store 1 read-only source capture/drift review | `PRODUCTION_PENDING` | Separate Owner Runtime Gate; only menu-related evidence may be read. |
 | Production Chinatown Store/staff/menu provisioning | `PRODUCTION_PENDING` | Exact-SHA Release Candidate and production approval required. |
 | Generic Store Profile identity/composition contract | `IN_MAIN` via PR #64 | Exact versioned identity, module references with reviewed expected fingerprints, activation requirements, canonical fingerprint, and safe summaries are repository capability only; no concrete Store Profile or callable workflow is implied. |
