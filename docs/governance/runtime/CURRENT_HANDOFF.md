@@ -31,7 +31,7 @@ provisioning without destabilizing current restaurant operations.
 | `origin/main` | `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d` | `IN_MAIN`; merge of PR #60 |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, clean | Local checkout is behind `origin/main`; it was not modified by this handoff |
 | Handoff branch | `codex/current-project-handoff` | Documentation-only, based on the exact `origin/main` above |
-| Handoff PR | `PENDING_DRAFT_PR_CREATION` | Update after GitHub allocates the PR number |
+| Handoff PR | [Draft PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | Base is `main`; exact current head is authoritative in GitHub PR metadata |
 
 `IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
 `DEPLOYED_TO_STAGING`, and `DEPLOYED_TO_PRODUCTION` are distinct states. A
