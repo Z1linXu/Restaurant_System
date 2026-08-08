@@ -323,9 +323,9 @@ gate. The exact leaf must remain a real non-symlink directory named
 `state/postgres`, owned by the deploy user before initialization or
 `postgres:16-alpine` UID 70 afterward, with mode `0700`. The repair neither
 enters the leaf nor changes its permissions. Missing, symlinked, or unexpected
-topology/metadata remains fail-closed. The repository change is under review in
-Draft PR #59 and has not been merged or deployed; the old exact-SHA approval
-cannot be reused.
+topology/metadata remains fail-closed. PR #59 merged the repair into `main` at
+`c3956592da8a33092ab745c7cc6aac05e9babfa7`; it has not been deployed by this
+record, and the old exact-SHA approval cannot be reused.
 
 AL-003 Staging acceptance also has the independent prerequisite
 `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`. Retained evidence shows that
@@ -333,12 +333,35 @@ STG-005A has not run on the current V8 Staging runtime, but this repair did not
 query runtime tables and therefore does not infer that every synthetic user or
 membership row is absent. Repository code proves only that STG-005A can create
 the synthetic Organization, source Store, Owner credential, active
-Organization membership, and source-Store membership. It does not create a
-target Store or Owner target-Store membership, and no retained evidence proves
-a safe Owner login or authenticated validate/execute call. A future
-Owner-approved synthetic-only preparation must close those gates without
-Production credentials, raw SQL, authorization bypasses, or real business
-data. Deployment success alone is not Staging acceptance readiness.
+Organization membership, and source-Store membership. AL-002 onboarding can
+create the inactive target and target-scoped Manager/Frontdesk accounts.
+`StoreAccessService` grants the Organization Owner access to every Store in the
+same active Organization membership, so no redundant Owner target-Store
+membership is required. No retained evidence yet proves a safe Owner login,
+target workspace access, source-menu baseline, or authenticated
+validate/execute call. A future Owner-approved synthetic-only preparation must
+close those runtime gates without Production credentials, raw SQL,
+authorization bypasses, or real business data. Deployment success alone is not
+Staging acceptance readiness.
+
+Owner decisions recorded on 2026-08-08 establish Chinatown as the second
+planned real Production Store. The frozen Chinatown Profile is its initial
+menu target, Production Store 1 / St-Denis is the live Production source, and
+the first menu initialization must use the generic validate/execute clone
+engine. Future Owner Store creation must select reviewed versioned menu
+templates, including Chinatown and a planned St-Denis profile, without adding
+Store-ID branches or another clone engine.
+
+FT-001 is not complete at Store creation or menu clone. Production activation
+requires Owner/staff access, menu, tables, printing, Pad/device binding, login,
+actual dine-in order/update, expected ticket printing, and operational-flow
+acceptance. Staging is the long-lived Production-like but synthetic-only gate;
+Production credentials/data, customer/order/payment data, real printer
+endpoints, and device secrets are never copied into it. Production deployment
+must use an exact SHA that passed Staging, then a formal Production gap audit,
+Release Candidate, migration and backup/rollback review, Owner approval, and
+post-deploy verification. The authoritative gap matrix and bounded loop order
+are in [FEATURE_BACKLOG.md](docs/governance/FEATURE_BACKLOG.md).
 
 The reported Production runtime remains `4667f3c`. Its difference from current
 main is neither a release approval nor proof of deployment. Current-main
