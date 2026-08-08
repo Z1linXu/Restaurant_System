@@ -322,6 +322,13 @@ health runtime-only; preserves the current Store-wide queue with no per-device
 module assignment; and leaves all pairing/runtime actions behind explicit
 Owner gates.
 
+The fail-closed orchestration and evidence boundary is maintained in
+[AL-006 Store Activation Workflow Plan](AL-006_STORE_ACTIVATION_WORKFLOW_PLAN.md).
+It keeps the lifecycle conceptual until persistence is separately approved,
+aggregates module evidence without replacing domain authorities, and records
+the current legacy direct-`active` Platform Admin paths as a prerequisite gate.
+It adds no activation API, migration, status transition, or runtime action.
+
 ### 10.1 Historical label mapping
 
 Earlier plans used short labels before the modular roadmap was approved. Those
@@ -389,11 +396,18 @@ acceptance preparation. The AL-004 contract entered `main` via PR #64 and still
 registers no concrete Store Profile, exposes no public template endpoint, and
 adds no executable provisioning workflow. No runtime operation is authorized.
 The #65 Staff/Table package, independent #66 Printer Store-isolation repair,
-and #67 Printing Provisioning plan are `IN_MAIN`; #68 is now a main-based Draft
-Device/Pad Provisioning plan, while #69-#70 remain `STACKED_ONLY` until their
-direct dependency enters `main`.
+and #67 Printing Provisioning plan are `IN_MAIN`; #68 Device/Pad Provisioning
+is now `IN_MAIN` at the latest `origin/main`, while #69 is the main-based Draft
+Activation Workflow plan and #70 remains `STACKED_ONLY` until #69 enters `main`.
 
 The `IN_MAIN` STG-005B package adds no migration or HTTP endpoint. It
 uses the existing Staging profile/guards, an immutable 4/3/13/38 source
 manifest, a single-transaction empty-or-exact applier, one revision increment,
-and sanitized evidence. It remains separately Owner-gated for runtime use.
+and sanitized evidence. It remains dependency-bound to this architecture
+review and separately Owner-gated for runtime use.
+
+The prepared AL-006 stacked package is also planning-only. It defines the
+Profile/module/evidence responsibility split, a read-only fail-closed validator
+shape, the future exclusive activation-write boundary, and staged prerequisite
+repairs. Existing `Store.status` remains unchanged and is not reinterpreted as
+the conceptual workflow state machine.

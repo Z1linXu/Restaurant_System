@@ -75,8 +75,13 @@ separate from historical evidence snapshots and business implementation details:
 - [AL-005B Device and Pad Provisioning Module Plan](docs/governance/agile/AL-005B_DEVICE_PAD_PROVISIONING_MODULE_PLAN.md)
   records the current pairing/authentication, heartbeat, Store-wide PAD_DIRECT
   queue, Android Worker visibility, profile/runtime boundaries, and readiness
-  gates. Draft PR #68 is rebuilt from latest `main` and adds no endpoint,
+-  gates. PR #68 is `IN_MAIN` at the latest `main` and adds no endpoint,
   migration, device, token, pairing, Worker change, or runtime behavior.
+- [AL-006 Store Activation Workflow Plan](docs/governance/agile/AL-006_STORE_ACTIVATION_WORKFLOW_PLAN.md)
+  defines the fail-closed lifecycle, validator gates, evidence boundary, and
+  future exclusive activation writer. Draft PR #69 is planning-only and adds
+  no endpoint, migration, status transition, Store mutation, or runtime
+  behavior.
 - [AL-003A final menu comparison](docs/governance/agile/AL-003A_FINAL_MENU_COMPARISON.md)
   is the single product-mapping authority for the Store 1 to Chinatown target
   menu. Repository seed data is historical reference only.
@@ -480,6 +485,16 @@ app-version reporting may be `unknown` or client-controlled, so exact installed
 APK/build provenance remains a separate acceptance gate.
 Chinatown requires four independently paired Pads and retains the Store-wide
 queue; AL-005B does not invent device-module affinity or perform pairing.
+
+The future Store activation boundary is defined in
+[AL-006 Store Activation Workflow Plan](docs/governance/agile/AL-006_STORE_ACTIVATION_WORKFLOW_PLAN.md).
+Current code has no unified activation orchestrator: `Store.status` remains a
+free-text field, onboarding creates an inactive/printing-disabled Store, and
+legacy Platform Admin Store writers may still set `active` directly. AL-006 is
+therefore a planning-only, fail-closed evidence contract. It does not create an
+activation endpoint, migration, persisted lifecycle, or runtime status change.
+The Profile declares required modules, modules produce sanitized evidence, and
+only a future reviewed workflow may own the final inactive-to-active transition.
 
 Agile Loop agents and workers are ephemeral resources. Completed bounded tasks
 must return persisted evidence to the Coordinator, terminate their active
