@@ -6,7 +6,9 @@
 >
 > Current main: `c3956592da8a33092ab745c7cc6aac05e9babfa7` (`IN_MAIN`, not deployed)
 >
-> Next candidate SHA: `EVIDENCE_PENDING` after this governance package merges and receives fresh Owner approval
+> Governance package: Draft PR #60, `WAITING_FOR_OWNER_REVIEW`
+>
+> Next candidate SHA: `EVIDENCE_PENDING` after PR #60 merges and receives fresh Owner approval
 
 ## Authorization boundary
 

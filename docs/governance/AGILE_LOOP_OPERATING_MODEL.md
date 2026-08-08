@@ -84,7 +84,8 @@ repository capability only and is not Staging or Production acceptance.
 PR #59's bounded PostgreSQL private-leaf repair is now `IN_MAIN` at
 `c3956592da8a33092ab745c7cc6aac05e9babfa7`; this does not prove a new Staging
 deployment. The current package synchronizes the 2026-08-08 Owner decisions and
-stops at `AL-003_OWNER_DECISIONS_GOVERNANCE_SYNC_WAITING_FOR_OWNER_REVIEW`.
+is under Owner review in Draft PR #60. It stops at
+`AL-003_OWNER_DECISIONS_GOVERNANCE_SYNC_WAITING_FOR_OWNER_REVIEW`.
 No current statement authorizes server access, Flyway execution, synthetic
 bootstrap, credential creation, login, source-menu writes, validate, execute,
 a runtime clone, merge, or deployment. Staging acceptance retains the distinct

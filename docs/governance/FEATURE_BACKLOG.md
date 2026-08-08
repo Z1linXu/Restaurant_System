@@ -16,7 +16,7 @@
 | priority | `HIGH` |
 | status | `AL-003_OWNER_DECISIONS_GOVERNANCE_SYNC_WAITING_FOR_OWNER_REVIEW` |
 | target_loop | `AL-003` |
-| implementation status | PR-A through PR-F, PR #58 evidence, and PR #59's protected PostgreSQL-leaf repair are `IN_MAIN` at `c3956592da8a33092ab745c7cc6aac05e9babfa7`. Staging remains on the separately evidenced older runtime; no V9/V10/bootstrap/clone execution is implied. |
+| implementation status | PR-A through PR-F, PR #58 evidence, and PR #59's protected PostgreSQL-leaf repair are `IN_MAIN` at `c3956592da8a33092ab745c7cc6aac05e9babfa7`. The Owner-decision governance sync is under review in Draft PR #60. Staging remains on the separately evidenced older runtime; no V9/V10/bootstrap/clone execution is implied. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
 | next action | Owner reviews this governance sync. After merge, select the new exact main SHA and request a separate Staging runtime-mutation approval for deploy, V9/V10, synthetic bootstrap, source-menu preparation, target onboarding, login, validate, execute, replay, and restart acceptance. |
 
@@ -36,6 +36,7 @@
 | PR-F | `IN_MAIN` via PR #56 |
 | PR #58 attempt evidence | `IN_MAIN` |
 | Private-leaf preflight repair / PR #59 | `IN_MAIN` via merge `c3956592da8a33092ab745c7cc6aac05e9babfa7` |
+| Owner decisions governance sync / PR #60 | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`; documentation only, no runtime action |
 
 The Owner-login acceptance prerequisite is not satisfied by repository code or
 deployment alone. Read-only code audit confirms that an active Organization

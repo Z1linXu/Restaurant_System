@@ -26,7 +26,7 @@
 | `PLAN_STATUS` | `AL-003_OWNER_DECISIONS_GOVERNANCE_SYNC_WAITING_FOR_OWNER_REVIEW` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | PR #59 is `IN_MAIN`. Owner reviews this governance sync; after merge, select the new exact SHA and approve the bounded Staging deployment/bootstrap/login/clone acceptance sequence separately. |
+| `RECOMMENDED_ACTION` | PR #59 is `IN_MAIN`. Owner reviews governance Draft PR #60; after merge, select the new exact SHA and approve the bounded Staging deployment/bootstrap/login/clone acceptance sequence separately. |
 
 PR-A through PR-F are in `main`. PR-D supplies generic source-option copying
 and target-local parent mapping; PR #54 placed the concrete Chinatown Profile
@@ -80,6 +80,7 @@ These are authoritative product inputs, not open questions:
 | PR-F / PR #56 | merge `8f909525781804f61d1da388882f530da358c3c4` | `IN_MAIN`; historical failed release candidate, no longer authorized |
 | Attempt evidence / PR #58 | merge `1482cddf4f10478ed571e4d7422100dc40006f6b` | `IN_MAIN`; immutable failed-attempt/runtime recovery evidence |
 | Private-leaf repair / PR #59 | merge `c3956592da8a33092ab745c7cc6aac05e9babfa7` | `IN_MAIN`; no Staging or Production deployment implied |
+| Owner decisions governance sync / PR #60 | head branch `codex/al-003-owner-decisions-governance-sync` | `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`; documentation only |
 
 This document describes the complete reviewed target architecture. A section
 in this plan is not evidence that its implementation is in `main`, Staging, or
