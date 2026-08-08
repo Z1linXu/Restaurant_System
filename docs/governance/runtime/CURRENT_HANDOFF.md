@@ -8,10 +8,11 @@
 >
 > Snapshot date: 2026-08-08, America/Toronto
 >
-> Runtime freshness: STG-007 began with a bounded read-only identity check of
-> the retained Staging listener after OPS-001 entered main. No environment,
-> release, container, Flyway, credential, business-data, or Production mutation
-> occurred; execution stopped at the formal-preflight upgrade guard defect.
+> Runtime freshness: after PR #75 entered main, STG-007 restarted Batch A and
+> re-confirmed retained Staging `4397f995...` / V8, disabled printing,
+> loopback health/isolation, resource headroom, and minimum Production
+> continuity. No mutation occurred; execution stopped at the missing reviewed
+> first-use control path for the OPS-001 release helper.
 
 ## 1. Project mission
 
@@ -30,9 +31,9 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| `origin/main` before this STG-007 dependency repair | `362c954a8753204476ddf1415ea86050589760dd` | `IN_MAIN`; merge of OPS-001 PR #74 |
+| `origin/main` before this STG-007 dependency repair | `b93d8efdbd699333d73d9ffcc29e8f8443e51764` | `IN_MAIN`; merge of preflight repair PR #75 |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
-| Current delivery branch | `codex/stg-007-exact-sha-deploy-evidence` | STG-007 preflight upgrade-port guard repair only; runtime execution stopped before Batch A mutation |
+| Current delivery branch | `codex/ops001-release-bootstrap-repair` | exact-Git/private-control-root bootstrap repair only; runtime execution stopped before Batch A mutation |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
 
 `IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
@@ -102,9 +103,9 @@ V10 ran on Staging or Production.
 | Field | Current value |
 |---|---|
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `STG-007_PREFLIGHT_UPGRADE_PORT_GUARD_REPAIR` |
-| Current package | Fail-closed formal-preflight upgrade-port ownership correction, tests, and governance only |
-| Feature stop state | `STG-007_BATCH_A_BLOCKED_BY_PREFLIGHT_UPGRADE_PORT_GUARD_REPAIR` until the repair is verified and merged |
+| Current Agile Loop | `STG-007_RELEASE_TOOL_BOOTSTRAP_REPAIR` |
+| Current package | Fail-closed exact-Git control bootstrap for the existing OPS-001 release helper, tests, and governance only |
+| Feature stop state | `STG-007_BATCH_A_BLOCKED_BY_RELEASE_TOOL_BOOTSTRAP_REPAIR` until the repair is verified and merged |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
 | Current Owner gate | Repair publication uses the Owner's Dependency Repair Auto-Loop policy. After merge, the old exact-SHA approval expires and Batch A must restart from the new merged main. |
 
@@ -112,7 +113,8 @@ V10 ran on Staging or Production.
 
 - Fetch and verify Git/GitHub ground truth.
 - Review the post-stack capability audit and bounded next-loop ordering.
-- Implement and verify only the bounded preflight upgrade-port ownership repair.
+- Implement and verify only the exact-Git/private-control-root release-tool
+  bootstrap repair.
 - Run focused/mock regressions, Agent 6 review, publication gates, and mandatory
   governance sync; auto-merge only if every permanent repository gate passes.
 

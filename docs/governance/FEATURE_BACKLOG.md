@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `STG-007_BATCH_A_BLOCKED_BY_PREFLIGHT_UPGRADE_PORT_GUARD_REPAIR` |
-| target_loop | `STG-007_PREFLIGHT_UPGRADE_PORT_GUARD_REPAIR`, then restart `STG-007_EXACT_SHA_DEPLOY_AND_MIGRATE` from the new merged main |
-| implementation status | PR-A through PR-F, PRs #58-#74 and #61-#73 are `IN_MAIN` through OPS-001 merge `362c954a8753204476ddf1415ea86050589760dd`; #66 remains the independent Printer Store-isolation repair. Staging remains `4397f995...` / Flyway V8. A bounded read-only STG-007 identity check found the formal preflight's busy-port rule cannot distinguish the exact retained Staging nginx listener from an unexpected owner; no Batch A mutation or Batch B action occurred. |
+| status | `STG-007_BATCH_A_BLOCKED_BY_RELEASE_TOOL_BOOTSTRAP_REPAIR` |
+| target_loop | `STG-007_RELEASE_TOOL_BOOTSTRAP_REPAIR`, then restart `STG-007_EXACT_SHA_DEPLOY_AND_MIGRATE` from the next merged main |
+| implementation status | PR-A through PR-F, PRs #58-#75 and #61-#74 are `IN_MAIN` through preflight repair merge `b93d8efdbd699333d73d9ffcc29e8f8443e51764`; #66 remains the independent Printer Store-isolation repair. Staging remains `4397f995...` / Flyway V8. The restarted read-only Batch A baseline passed, then stopped because the retained release predates OPS-001 and no reviewed exact-Git control bootstrap could invoke the release helper without a manual release/bypass. No Batch A mutation or Batch B action occurred. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Verify and publish the bounded fail-closed upgrade-port ownership repair. Its merge invalidates the old exact-SHA candidate; restart all Batch A gates from the new merged main before any deploy/Flyway eligibility. |
+| next action | Verify and publish the exact-Git release-tool control bootstrap repair. Its merge invalidates `b93d8ef...`; restart all Batch A gates from the next merged main before any deploy/Flyway eligibility. |
 
 ### Current AL-003 delivery state
 

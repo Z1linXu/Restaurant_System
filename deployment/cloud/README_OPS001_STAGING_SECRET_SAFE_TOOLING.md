@@ -10,6 +10,7 @@ creation, login, API acceptance, restart, or Production access.
 
 | Tool | Safe default | Explicit runtime actions |
 |---|---|---|
+| `staging-release-control-bootstrap.sh` | verifies an exact Git-materialized control source and private temporary bundle | delegates unchanged arguments to `staging-release-rotation.sh`; it has no release/runtime action of its own |
 | `staging-release-rotation.sh` | validates exact SHA, private env and dedicated bare repository | `prepare-release-env`: detached worktree plus atomic four-field identity rotation |
 | `staging-runtime-evidence.sh` | validates the exact release/env/preflight binding | `collect-evidence`; `same-image-restart` using existing containers only |
 | `staging-owner-acceptance-client.sh` | validates exact release, private env and approved preflight identity | `prepare-target`; `clone-acceptance` against loopback APIs |
@@ -49,6 +50,134 @@ decision. It is not a cryptographic signature and does not replace restricted
 server access.
 
 ## Release and environment boundary
+
+The retained pre-OPS-001 release does not contain the release helper, while
+the helper itself is responsible for creating the next release. Use the
+reviewed control bootstrap to close that first-use boundary; never create the
+candidate release manually.
+
+First, import only the exact approved `main` into the already-existing
+dedicated bare repository. The import is deliberately split into an immutable
+trust-root check, a pinned remote check, an object-only fetch, and a
+compare-and-swap ref update. Do not replace it with a normal fetch refspec:
+
+```bash
+set -euo pipefail
+repository=/srv/restaurant-pos/staging/repository.git
+approved_sha=<full-approved-main-sha>
+expected_origin=https://github.com/Z1linXu/Restaurant_System.git
+zero_oid=0000000000000000000000000000000000000000
+
+test "$repository" = /srv/restaurant-pos/staging/repository.git
+test -d "$repository"
+test ! -L "$repository"
+test "$(cd -P "$(dirname "$repository")" && pwd)/$(basename "$repository")" = "$repository"
+current="$repository"
+while test "$current" != /; do
+  test ! -L "$current"
+  current="$(dirname "$current")"
+done
+test "$(stat -c '%u' "$repository")" = "$(id -u)"
+test "$(git --git-dir="$repository" rev-parse --is-bare-repository)" = true
+test "$(git --git-dir="$repository" remote | wc -l | tr -d ' ')" = 1
+test "$(git --git-dir="$repository" remote)" = origin
+test "$(git --git-dir="$repository" remote get-url --all origin | wc -l | tr -d ' ')" = 1
+test "$(git --git-dir="$repository" remote get-url origin)" = "$expected_origin"
+repository_identity="$(stat -c '%d:%i' "$repository")"
+
+prior_main="$(git --git-dir="$repository" show-ref --verify --hash \
+  refs/remotes/origin/main 2>/dev/null || true)"
+test -z "$prior_main" || test "${#prior_main}" = 40
+expected_old="${prior_main:-$zero_oid}"
+other_refs_before="$(git --git-dir="$repository" for-each-ref \
+  --format='%(refname) %(objectname)' | \
+  awk '$1 != "refs/remotes/origin/main"' | sha256sum | awk '{print $1}')"
+if test -e "$repository/FETCH_HEAD"; then
+  fetch_head_before="present:$(sha256sum "$repository/FETCH_HEAD" | awk '{print $1}')"
+else
+  fetch_head_before=absent
+fi
+
+remote_line="$(git --git-dir="$repository" ls-remote --refs origin refs/heads/main)"
+test "$remote_line" = "$(printf '%s\t%s' "$approved_sha" refs/heads/main)"
+
+chmod 700 "$repository"
+test "$(stat -c '%d:%i' "$repository")" = "$repository_identity"
+test "$(stat -c '%u' "$repository")" = "$(id -u)"
+test "$(stat -c '%a' "$repository")" = 700
+test ! -L "$repository"
+test "$(git --git-dir="$repository" rev-parse --is-bare-repository)" = true
+test "$(git --git-dir="$repository" remote)" = origin
+test "$(git --git-dir="$repository" remote get-url --all origin | wc -l | tr -d ' ')" = 1
+test "$(git --git-dir="$repository" remote get-url origin)" = "$expected_origin"
+
+git --git-dir="$repository" fetch --no-tags --no-write-fetch-head origin \
+  "$approved_sha"
+remote_line="$(git --git-dir="$repository" ls-remote --refs origin refs/heads/main)"
+test "$remote_line" = "$(printf '%s\t%s' "$approved_sha" refs/heads/main)"
+git --git-dir="$repository" cat-file -e "$approved_sha^{commit}"
+test "$(stat -c '%d:%i' "$repository")" = "$repository_identity"
+test "$(stat -c '%u' "$repository")" = "$(id -u)"
+test "$(stat -c '%a' "$repository")" = 700
+test ! -L "$repository"
+test "$(git --git-dir="$repository" rev-parse --is-bare-repository)" = true
+test "$(git --git-dir="$repository" remote)" = origin
+test "$(git --git-dir="$repository" remote get-url --all origin | wc -l | tr -d ' ')" = 1
+test "$(git --git-dir="$repository" remote get-url origin)" = "$expected_origin"
+
+git --git-dir="$repository" update-ref refs/remotes/origin/main \
+  "$approved_sha" "$expected_old"
+test "$(git --git-dir="$repository" show-ref --verify --hash \
+  refs/remotes/origin/main)" = "$approved_sha"
+test "$(git --git-dir="$repository" for-each-ref \
+  --format='%(refname) %(objectname)' | \
+  awk '$1 != "refs/remotes/origin/main"' | sha256sum | awk '{print $1}')" = \
+  "$other_refs_before"
+if test "$fetch_head_before" = absent; then
+  test ! -e "$repository/FETCH_HEAD"
+else
+  test "$fetch_head_before" = \
+    "present:$(sha256sum "$repository/FETCH_HEAD" | awk '{print $1}')"
+fi
+```
+
+This is neither a clone nor a Production checkout operation. Stop if the
+canonical path, owner, repository inode, bare/origin identity, either pinned
+remote result, object, ref CAS, or exact SHA differs. A pre-fetch remote
+mismatch performs no mutation. A post-fetch mismatch may leave only
+unreferenced Git objects; it must leave `refs/remotes/origin/main`, all other
+refs, and `FETCH_HEAD` unchanged.
+
+Next, materialize only the approved bootstrap blob into a fresh owner-only
+control root and invoke it with the release helper's unchanged arguments:
+
+```bash
+staging_root=/srv/restaurant-pos/staging
+control_root="$(mktemp -d "$staging_root/state/ops001-release-control.XXXXXX")"
+chmod 700 "$control_root"
+control="$control_root/staging-release-control-bootstrap.sh"
+git --git-dir="$repository" show \
+  "$approved_sha:deployment/cloud/staging-release-control-bootstrap.sh" >"$control"
+chmod 700 "$control"
+
+"$control" --execute-runtime --action prepare-release-env \
+  --approved-sha "$approved_sha" \
+  --env-file "$staging_root/config/.env.staging" \
+  --approval <private-approval-file> \
+  --approval-sha256 <approval-digest>
+```
+
+The bootstrap verifies its own digest against the exact candidate Git blob,
+the fixed bare-repository/ref identity, the private control root, and the
+symlink-free extracted `deployment/cloud` bundle. It then delegates to the
+reviewed rotation helper and deletes only its exact task-owned temporary
+control root on every normal/error/signal path. The root must use the exact
+six-alphanumeric-character `mktemp` suffix and initially contain only the
+fixed-name bootstrap source. Cleanup revalidates parent/root owner, mode and
+inode; an identity drift or removal failure returns `NO_GO` without deleting
+an untrusted target. A caller should remove an unexecuted control root if
+materialization itself fails. It never fetches, clones, builds, starts,
+migrates, reads Production, or creates a release by a second path.
 
 `prepare-release-env` requires the exact commit to already exist in the
 dedicated bare repository at `/srv/restaurant-pos/staging/repository.git`. It
@@ -127,6 +256,8 @@ fresh secret input.
 Only mock/local tests are permitted in OPS-001:
 
 ```bash
+deployment/cloud/tests/test_staging_release_control_bootstrap.sh
+deployment/cloud/tests/test_staging_repository_candidate_import.sh
 deployment/cloud/tests/test_staging_release_rotation.sh
 deployment/cloud/tests/test_staging_runtime_evidence.sh
 deployment/cloud/tests/test_staging_owner_acceptance_client.sh
