@@ -66,6 +66,12 @@ separate from historical evidence snapshots and business implementation details:
   reusable module boundaries, security/schema gaps, and implementation gates.
   PR #65 is `IN_MAIN` repository preparation and adds no writer, API,
   migration, credential, table, or runtime behavior.
+- [AL-005 Printing Provisioning Module Plan](docs/governance/agile/AL-005_PRINTING_PROVISIONING_MODULE_PLAN.md)
+  records the existing printing authorities, runtime-only endpoint boundary,
+  fixed Chinatown module policy, prerequisite defects, and staged delivery
+  gates. Draft PR #67 is rebuilt from latest `main` and remains a single-layer
+  planning package; it adds no writer, API, migration, printer, assignment,
+  mode change, device, test print, or runtime behavior.
 - [AL-003A final menu comparison](docs/governance/agile/AL-003A_FINAL_MENU_COMPARISON.md)
   is the single product-mapping authority for the Store 1 to Chinatown target
   menu. Repository seed data is historical reference only.
@@ -438,6 +444,27 @@ and update/deactivation semantics are unresolved. Chinatown retains the
 approved blank-table/manual-setup policy. AL-005A therefore plans only
 versioned non-secret contracts and a read-only table planner before any
 separately reviewed predefined-table writer or migration.
+
+The AL-005 Printing audit keeps the existing Print Engine authoritative.
+Versioned profiles may eventually declare logical printer roles, supported
+module mappings, paper/encoding/font/copy defaults, and activation
+requirements, but never physical endpoints, database printer IDs, device
+secrets, or runtime health. Provisioning starts and remains `DISABLED`; mode
+activation, endpoint binding, Pad readiness, and physical tickets require
+separate operational evidence. Chinatown's fixed target is PAD_DIRECT with
+exactly GRAB and FRONTDESK_RECEIPT across two on-site printers; role-code names
+are not inferred from physical printer labels. A generic Store-scoped
+enabled-module policy must run before Print Job creation so excluded
+HOT_KITCHEN work does not become an assignment failure. Executable work remains
+gated by the independent Store-isolation repair PR #66, unknown-mode
+compatibility, that pre-job policy gate, logical-role/assignment integrity,
+parent idempotency, and AL-005B readiness.
+
+Agile Loop agents and workers are ephemeral resources. Completed bounded tasks
+must return persisted evidence to the Coordinator, terminate their active
+session/process, release temporary resources, and clean only known safe
+task-owned scratch/build/worktree artifacts. Unknown or shared resources are
+retained and reported; destructive global cleanup is prohibited.
 
 STG-005B prepares a Staging-only, non-web source-menu fixture around the
 existing menu entities, Store lock, and revision service. Its source graph has

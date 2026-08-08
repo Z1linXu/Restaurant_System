@@ -87,11 +87,12 @@ PR #59's bounded PostgreSQL private-leaf repair is now `IN_MAIN`, and PR #60's
 `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`; neither proves a new Staging
 deployment. PR #71's handoff navigation, PR #61's modular architecture, PR
 #62's Synthetic St-Denis baseline, PR #63's guarded acceptance preparation,
-and PR #64's Generic Store Profile contract are `IN_MAIN` at
-`54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6`; none changes runtime state.
-PR #65's Staff/Access and Table planning package is `IN_MAIN`; PRs #67-#70
-remain dependency-bound. PR #66 is an independent
-main-based prerequisite repair. The current
+and PR #64's Generic Store Profile contract are `IN_MAIN`; none changes
+runtime state. PR #65's Staff/Access and Table planning package and PR #66's
+Printer Store-isolation repair are `IN_MAIN` at
+`f483a4640503c20f6eec1e2e9ae1d198bf23d1f3`; PR #67 is the next main-based
+Printing Provisioning planning layer and PRs #68-#70 remain dependency-bound.
+The current
 feature stop state is
 `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL`.
 PR #61 is the architecture/governance foundation: it defines the Generic
@@ -325,3 +326,35 @@ test, commit, push, open Draft PRs, perform independent review, and synchronize
 governance. They may not merge Owner-gated PRs, enable auto-merge, force-push a
 reviewed branch over others, deploy or mutate Production, perform a real clone,
 or bypass a runtime gate.
+
+## 13. Ephemeral Agent / Worker Lifecycle
+
+Every multi-agent, sub-agent, and worker is a temporary execution resource.
+After a bounded task completes, the Agent must:
+
+`finish assigned task -> return result/evidence to Coordinator -> confirm the
+result is persisted where required -> terminate its active session/process ->
+release temporary resources -> clean obsolete task-owned scratch/build/worktree
+resources when safe`
+
+Completed Agents must not remain running or attached indefinitely. The
+Coordinator owns lifecycle accounting and must end a round with zero active
+Agents unless a clearly named task is still executing.
+
+## 14. Worktree and disk cleanup safety
+
+Cleanup may remove only known task-owned temporary scratch directories, test
+output, obsolete build caches, unused detached rehearsal worktrees, and
+terminated worker/session resources after commits, pushed branches, PRs, and
+required evidence are safely persisted. Never automatically delete an
+unmerged branch, reviewed commit, Draft PR branch, active worktree, uncommitted
+evidence, runtime/database/backup data, or a shared dependency cache without a
+specific safety proof.
+
+Do not use `git clean -fdx`, `git reset --hard`, broad `rm -rf`,
+`docker system prune -a`, or `docker volume prune` for disk pressure. Before
+cleanup, record the resource owner, purpose, and safe-to-delete decision;
+report retained unknown or historical artifacts instead of guessing.
+
+Each round reports Agents spawned/completed/active, temporary worktrees
+created/retained/removed, and known leftover large artifacts.

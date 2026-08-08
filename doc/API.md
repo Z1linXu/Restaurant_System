@@ -618,6 +618,14 @@ Admin dining-table endpoints must not be treated as a generic Store
 provisioning writer until Store ownership and table-code idempotency constraints
 are separately reviewed.
 
+The AL-005 Printing provisioning preparation adds no HTTP endpoint or DTO.
+Existing Print Center APIs remain the only operational configuration surface;
+they are not a generic Store provisioning API. No profile endpoint accepts or
+returns printer endpoints, database printer IDs, device identities, secrets,
+raw print payloads, or physical-test evidence. A future read-only planner and
+writer require separate reviewed API contracts after Store-isolation,
+strict-mode, assignment-integrity, idempotency, and device-readiness gates.
+
 ### Owner Multi-Store Overview
 GET `/api/v1/owner/overview`
 

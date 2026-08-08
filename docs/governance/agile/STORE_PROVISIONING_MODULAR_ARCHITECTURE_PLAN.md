@@ -305,6 +305,13 @@ Platform Admin table writer as a provisioning upsert, and keeps table writing
 behind explicit normalization, uniqueness, ownership, replay, and immutable
 template gates.
 
+The downstream Printing authority/risk audit is maintained in
+[AL-005 Printing Provisioning Module Plan](AL-005_PRINTING_PROVISIONING_MODULE_PLAN.md).
+It keeps physical endpoints and activation runtime-only, starts from
+`DISABLED`, reuses the current Print Engine, and gates any writer on Store
+isolation, strict mode, logical-role, assignment-integrity, idempotency, and
+device-readiness prerequisites.
+
 ### 10.1 Historical label mapping
 
 Earlier plans used short labels before the modular roadmap was approved. Those
@@ -371,8 +378,9 @@ Synthetic St-Denis repository baseline, and PR #63 established guarded Staging
 acceptance preparation. The AL-004 contract entered `main` via PR #64 and still
 registers no concrete Store Profile, exposes no public template endpoint, and
 adds no executable provisioning workflow. No runtime operation is authorized.
-The #65 Staff/Table package is `IN_MAIN`; #67 and later packages remain
-`STACKED_ONLY` until their direct dependency enters `main`.
+The #65 Staff/Table package and independent #66 Printer Store-isolation repair
+are `IN_MAIN`; #67 is now a main-based Draft Printing Provisioning plan, while
+#68-#70 remain `STACKED_ONLY` until their direct dependency enters `main`.
 
 The `IN_MAIN` STG-005B package adds no migration or HTTP endpoint. It
 uses the existing Staging profile/guards, an immutable 4/3/13/38 source
