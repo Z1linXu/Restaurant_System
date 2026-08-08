@@ -64,7 +64,7 @@ GitHub state was read on 2026-08-08. Every PR below was open and Draft.
 | #66 | Printer Store-isolation repair | `main` | merge `f483a4640503c20f6eec1e2e9ae1d198bf23d1f3` | `IN_MAIN` | #65/main | Yes | Security foundation; no runtime behavior |
 | #67 | AL-005 Printing provisioning plan | `main` | merge `65e3d3ced2b5b05eb36d56ce67e475768ad19dff` | `IN_MAIN` | #65/main; #66 IN_MAIN | Yes | Repository planning only |
 | #68 | AL-005B Device/Pad plan | `main` | `80839d454e8f88391b16e8ba502d3e4bcccd4fb6` | `IN_MAIN` | #67/main | Yes | Main capability; no runtime behavior |
-| #69 | AL-006 Activation workflow plan | `main` | `82f71b1a4f8fbc443b2e7515c9c2ce17e0f474f5` (rebuild pending) | `DRAFT_PR` | #68/main | No | Owner review; do not begin #70 |
+| #69 | AL-006 Activation workflow plan | `main` | `6e4e33a14884454e14edb07ebbf2de8d7f47fab7` | `DRAFT_PR` | #68/main | No | Owner review; do not begin #70 |
 | #70 | REL-001 Production RC plan | PR #69 branch | `59246ae758716c1d457be465eb34fd4e757f02ec` | `STACKED_ONLY` | #69 | No | Rebuild after #69; no runtime approval implied |
 
 Main stack review order:
