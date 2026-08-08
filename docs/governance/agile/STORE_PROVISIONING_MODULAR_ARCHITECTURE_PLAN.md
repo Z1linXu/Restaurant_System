@@ -305,6 +305,13 @@ Platform Admin table writer as a provisioning upsert, and keeps table writing
 behind explicit normalization, uniqueness, ownership, replay, and immutable
 template gates.
 
+The downstream Printing authority/risk audit is maintained in
+[AL-005 Printing Provisioning Module Plan](AL-005_PRINTING_PROVISIONING_MODULE_PLAN.md).
+It keeps physical endpoints and activation runtime-only, starts from
+`DISABLED`, reuses the current Print Engine, and gates any writer on Store
+isolation, strict mode, logical-role, assignment-integrity, idempotency, and
+device-readiness prerequisites.
+
 ### 10.1 Historical label mapping
 
 Earlier plans used short labels before the modular roadmap was approved. Those

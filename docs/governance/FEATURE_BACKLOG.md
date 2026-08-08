@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `AL-005A_PREPARED_WAITING_FOR_AL-004` |
-| target_loop | `AL-005A_STAFF_TABLE_PROVISIONING_MODULES` |
-| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, and PR #60's Owner decisions are `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. Draft PRs #61-#65 remain dependency-bound and are not in `main`. AL-005A PR #65 has only a Staff/Table contract and risk-audit preparation; it adds no writer, endpoint, migration, credential, table, or runtime execution. Staging remains on the separately evidenced older runtime. |
+| status | `AL-005_PRINTING_PREPARED_WAITING_FOR_DEPENDENCIES` |
+| target_loop | `AL-005_PRINTING_PROVISIONING_TEMPLATE` |
+| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, and PR #60's Owner decisions are `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. Draft PRs #61-#65 remain dependency-bound and are not in `main`. This stacked AL-005 package adds only the Printing authority/risk audit and staged implementation contract; it adds no writer, endpoint, migration, printer, assignment, device, mode change, test print, or runtime execution. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Review Draft PR #61, then dependency-bound Draft PRs #62 and #63, then PR #64 and the AL-005A preparation package. AL-005A1 implementation requires AL-004 in `main`; Chinatown keeps the approved blank-table/manual-setup policy. Any future predefined-table writer needs separate schema evidence and normalization/replay decisions. Runtime acceptance still needs a fresh exact-SHA request and separate Owner approval. |
+| next action | Review Draft PRs #61-#65 in dependency order, then this AL-005 Printing plan. Independently review/merge printer Store-isolation repair PR #66 before any executable AL-005 writer. AL-005P1 requires AL-004 in `main`; later writer work also requires strict-mode and assignment-integrity decisions. Runtime acceptance still needs a fresh exact-SHA request and separate Owner approval. |
 
 ### Current AL-003 delivery state
 
@@ -42,6 +42,8 @@
 | AL-003S Staging acceptance preparation / PR #63 | `STACKED_DRAFT_WAITING_FOR_OWNER_REVIEW_AND_RUNTIME_APPROVAL`; guarded launcher/tests and command/evidence/rollback documents only; no runtime action |
 | AL-004 generic Store Profile contract / PR #64 | `STACKED_ONLY_WAITING_FOR_OWNER_REVIEW`; exact identity/version/composition/fingerprint contract only; no concrete profile, API, migration, UI, or provisioning execution |
 | AL-005A Staff/Table module preparation / PR #65 | `AL-005A_PREPARED_WAITING_FOR_AL-004` (`STACKED_ONLY` Git classification); existing-authority audit and implementation contract only; no writer, endpoint, migration, credential, table, or runtime execution |
+| AL-005 Printing provisioning preparation | `AL-005_PRINTING_PREPARED_WAITING_FOR_DEPENDENCIES` (`STACKED_ONLY`); current printing authority/risk audit and staged contract only; no writer, endpoint, migration, printer, assignment, device, mode change, test print, or runtime action |
+| AL-005 printer Store-isolation repair / PR #66 | independent main-based `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`; prerequisite only, not present in this stacked branch |
 
 The Owner-login acceptance prerequisite is not satisfied by repository code or
 deployment alone. Read-only code audit confirms that an active Organization
@@ -204,7 +206,7 @@ seed/demo Store.
 | Owner Create Store / Choose Menu Template UI | `NOT_IMPLEMENTED` | Existing Platform Admin template UI is not the approved Owner workflow. |
 | Versioned St-Denis profile | `NEEDS_NEW_LOOP` | Historical planning calls the menu-only candidate `ST_DENIS_MENU`; the strict identity for a complete Store Profile is not finalized. It must reuse the generic profile registry/clone engine with no Store ID 3 branch. |
 | Staff/Table provisioning module | `PREPARED_WAITING_FOR_DEPENDENCY` | AL-002 staff/credential authority is reusable only under a parent transaction. Chinatown uses the approved blank-table/manual-setup policy. The existing Platform Admin table writer cannot be reused as a future predefined-template upsert; table uniqueness, Store ownership, normalization, replay, and immutable-template decisions remain gated. |
-| Printing provisioning module | `NEEDS_NEW_LOOP` | No printer/assignment clone; runtime endpoints and physical tests remain separately gated. |
+| Printing provisioning module | `PREPARED_WAITING_FOR_DEPENDENCIES` | The authority/risk audit preserves `DISABLED`, runtime-only endpoints, current Print Engine, and Chinatown's fixed pre-job GRAB/FRONTDESK enabled-module policy. A writer remains gated by PR #66, strict-mode compatibility, a generic pre-job policy gate, role/assignment integrity, idempotency, and AL-005B readiness. |
 | Device/Pad provisioning module | `NEEDS_NEW_LOOP` | Pairing exists, but Store activation orchestration and Chinatown field evidence do not. |
 | Store activation validation/workflow | `NEEDS_NEW_LOOP` | Must gate activation on access, menu, tables, printing, devices, login, and order acceptance. |
 | Chinatown end-to-end field acceptance | `PRODUCTION_PENDING` | Owner/staff login, dine-in order, update, expected tickets, and operational completion remain required. |
@@ -225,7 +227,8 @@ seed/demo Store.
    Store-safe table planner/provisioner boundary. The preparation contract is
    [AL-005A Staff and Table Provisioning Module Plan](agile/AL-005A_STAFF_TABLE_PROVISIONING_MODULE_PLAN.md).
 5. `AL-005_PRINTING_PROVISIONING_TEMPLATE`: Store-scoped printer/module
-   assignment inputs and safe physical-print acceptance gates.
+   assignment inputs and safe physical-print acceptance gates. The bounded
+   preparation is [AL-005 Printing Provisioning Module Plan](agile/AL-005_PRINTING_PROVISIONING_MODULE_PLAN.md).
 6. `AL-005B_DEVICE_PAD_PROVISIONING_MODULE`: reusable Store device binding and
    Pad pairing/worker readiness gates without embedding device secrets.
 7. `AL-006_STORE_ACTIVATION_WORKFLOW`: aggregate validation and explicit Store
