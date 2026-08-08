@@ -29,9 +29,9 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| `origin/main` | `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | `IN_MAIN`; merge of PR #72 |
+| `origin/main` before OPS-001 | `85d97b7327b2e15aa561ed28a5788b92cedf6f5b` | `IN_MAIN`; merge of PR #73 |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
-| Current delivery branch | `codex/stg-006-exact-main-preflight` | STG-006 evidence/governance only; no runtime implementation or mutation |
+| Current delivery branch | `codex/ops-001-staging-secret-safe-tooling` | OPS-001 repository tooling/tests/governance only; no runtime access or mutation |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
 
 `IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
@@ -44,7 +44,8 @@ GitHub Merged badge into a non-main base is not evidence that work entered
 | Worktree | Branch / purpose | State |
 |---|---|---|
 | `/Users/xuzilin/projects/Restaurant_System` | Owner `main` workspace | Dirty with Owner work; behind `origin/main` and untouched |
-| `/private/tmp/restaurant-stg006-preflight` | `codex/stg-006-exact-main-preflight` | Current STG-006 evidence/governance worktree |
+| `/private/tmp/restaurant-stg006-preflight` | `codex/stg-006-exact-main-preflight` | Retained historical PR #73 worktree |
+| `/private/tmp/restaurant-ops001-tooling` | `codex/ops-001-staging-secret-safe-tooling` | Current OPS-001 isolated repository worktree |
 | `/private/tmp/restaurant-post-stack-audit` | `codex/post-stack-ground-truth-audit` | Retained historical PR #72 worktree |
 | `/private/tmp/restaurant-current-handoff` | `codex/current-project-handoff` | Retained historical PR #71 worktree |
 | `/private/tmp/restaurant-pr61-rebuild` through `/private/tmp/restaurant-pr65-rebuild` | merged #61-#65 branch worktrees | Retained historical worktrees; not current delivery inputs |
@@ -71,6 +72,7 @@ closed, merged, and `IN_MAIN`.
 | #69 | AL-006 Activation workflow plan | `main` | `b38d3188edc0555bea7e54dafc4868a7c4726005` | `IN_MAIN` | #68/main | Yes | Main capability; no runtime behavior |
 | #70 | REL-001 Production RC plan | `main` | merge `645d4909625f70fc241d5468382d66a30a030fb1` | `IN_MAIN` | #69/main | Yes | Planning authority only; no RC, ACT-001, or runtime action |
 | #72 | Post-stack Ground Truth audit | `main` | merge `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | `IN_MAIN` | completed #61-#71 main stack | Yes | Governance/capability audit only; no runtime action |
+| #73 | STG-006 evidence/governance | `main` | merge `85d97b7327b2e15aa561ed28a5788b92cedf6f5b` | `IN_MAIN` | #72/main | Yes | Passive evidence only; no runtime mutation |
 
 Main stack review order:
 
@@ -99,20 +101,20 @@ V10 ran on Staging or Production.
 | Field | Current value |
 |---|---|
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `STG-006_EXACT_MAIN_PREFLIGHT` |
-| Current package | Fresh passive exact-main preflight evidence and governance sync |
-| Feature stop state | `STG-006_PASS_OPS-001_REQUIRED_WAITING_FOR_OWNER_REVIEW` |
+| Current Agile Loop | `OPS-001_STAGING_SECRET_SAFE_TOOLING_REPAIR` |
+| Current package | Fail-closed release/env, runtime/Flyway restart evidence, and Owner/API client tooling |
+| Feature stop state | `OPS-001_REPOSITORY_COMPLETE_STG-007_WAITING_FOR_OWNER_RUNTIME_APPROVAL` after repository merge |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | Review STG-006 PASS evidence and approve a bounded OPS-001 technical design/repair scope; no runtime mutation is included |
+| Current Owner gate | After OPS-001 enters main, review the exact merged-main STG-007 deploy/Flyway runtime batch; no runtime action is pre-approved |
 
 ### Permitted work
 
 - Fetch and verify Git/GitHub ground truth.
 - Review the post-stack capability audit and bounded next-loop ordering.
-- Run local tests, independent review, and mandatory governance sync.
-- Create bounded repairs when the Dependency Repair Auto-Loop applies, except
-  OPS-001 implementation, whose trust-root/approval scope is the current Owner
-  decision.
+- Run OPS-001 local/mock tests, independent review, publication gates and
+  mandatory governance sync.
+- Prepare a later STG-007 exact-SHA runtime plan after merge, without executing
+  it.
 
 ### Prohibited work without new approval
 
@@ -121,9 +123,10 @@ V10 ran on Staging or Production.
   real menu clone.
 - Production Store 1 read or mutation.
 - Printer configuration, test print, Pad pairing, or device/Worker mutation.
-- OPS-001 implementation before Owner scope/design approval, or STG-007.
-- PR merge, auto-merge, Production activation, restore, destructive database or
-  Git commands.
+- Any OPS-001 helper against a real runtime, or any STG-007 runtime command.
+- Repository merge that fails Operating Model section 16's permanent
+  auto-merge gate, Production activation, restore, or destructive database/Git
+  commands.
 
 ## 6. What is already done
 
@@ -156,6 +159,9 @@ V10 ran on Staging or Production.
 - PR #72 entered `main` at `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b`.
   STG-006 then freshly verified the retained isolated Staging runtime and
   minimum Production continuity without mutation.
+- PR #73 entered `main` at `85d97b7327b2e15aa561ed28a5788b92cedf6f5b`.
+  It records `STG-006=PASS` and `OPS-001=REQUIRED`; it performed no runtime
+  mutation.
 
 ## 7. AL-003 repository capability
 
@@ -226,7 +232,8 @@ is the first Store Profile sample, not a shared-service special case.
 | REL-001 / #70 | Formal Chinatown Production RC plan | `IN_MAIN` at `645d4909625f70fc241d5468382d66a30a030fb1` | planning only; no candidate, deployment, or activation |
 | ACT-001 | Production provisioning and field acceptance | `NOT_STARTED_OWNER_GATED` | Accepted RC and explicit Production activation approval |
 | STG-006 | Exact-main passive preflight | `PASS` for candidate `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | Evidence only; no release/deploy/migration approval |
-| OPS-001 | Secret-safe Staging tooling repair | `REQUIRED_OWNER_SCOPE_REVIEW` | Release/env, restart/Flyway, and Owner/API client design must be reviewed before implementation/runtime use |
+| OPS-001 | Secret-safe Staging tooling repair | `REPOSITORY_COMPLETE` after this reviewed package enters main | Every helper remains exact-action Owner-gated for runtime use |
+| STG-007 | Exact-SHA deploy and V9/V10 migration | `WAITING_FOR_OWNER_RUNTIME_APPROVAL` after OPS-001 main verification | Bind the new merged-main SHA and approve release/env plus deploy/Flyway as distinct batches |
 
 The authoritative post-stack capability matrix, Staging decision, and next
 bounded loops are in [Post-Stack Ground Truth Audit](POST_STACK_GROUND_TRUTH_AUDIT.md).
@@ -245,8 +252,8 @@ from current main.
 
 - STG-006 passive evidence passed; exact-SHA release/deployment approval and
   full Staging acceptance remain pending.
-- OPS-001 secret-safe release/env, same-image restart/Flyway, and Owner/API
-  tooling is required before STG-007.
+- OPS-001 repository tooling must be verified `IN_MAIN`; its existence does not
+  create the runtime release/env, action approvals or STG-007 evidence.
 - Synthetic bootstrap, Owner login, validate/execute/replay/restart evidence is
   pending.
 - Production and repository main have an unreviewed runtime gap.
@@ -280,8 +287,9 @@ from current main.
 6. Report the completed main stack and the next Staging Owner Gate.
 7. Do not recreate or redesign packages #61-#70.
 8. Do not infer implementation from the planning packages.
-9. Read the STG-006 evidence; do not repeat its runtime observation or advance
-   to STG-007. The next action is bounded OPS-001 design/repair review.
+9. Read STG-006 and OPS-001 evidence; do not repeat runtime observation or run
+   STG-007. After OPS-001 is `IN_MAIN`, stop at the exact-SHA STG-007 Owner
+   Runtime Gate.
 10. Stop at runtime/product/operations Owner Gates; otherwise continue the
     bounded Agile Loop and Dependency Repair Auto-Loop.
 
@@ -324,5 +332,7 @@ Primary authorities:
 - [AL-003 technical plan](../agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md)
 - [AL-003 Staging acceptance plan](../agile/AL-003_STAGING_RELEASE_ACCEPTANCE_PLAN.md)
 - [STG-006 exact-main preflight evidence](STG-006_EXACT_MAIN_PREFLIGHT_EVIDENCE.md)
+- [OPS-001 local tooling evidence](OPS-001_STAGING_SECRET_SAFE_TOOLING_EVIDENCE.md)
+- [OPS-001 secret-safe tooling runbook](../../../deployment/cloud/README_OPS001_STAGING_SECRET_SAFE_TOOLING.md)
 - [System Documentation](../../../SYSTEM_DOCUMENTATION.md)
 - [API contract](../../../doc/API.md)

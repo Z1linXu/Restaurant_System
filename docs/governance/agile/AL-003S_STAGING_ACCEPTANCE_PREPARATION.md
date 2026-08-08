@@ -1,6 +1,6 @@
 # AL-003S Staging Acceptance Preparation
 
-> Package state: `IN_MAIN`; `STG-006_PASS`; `OPS-001_REQUIRED`
+> Package state: `IN_MAIN`; `STG-006_PASS`; OPS-001 repository tooling complete after reviewed merge
 >
 > Prepared against: STG-005B checkpoint `0aba8377a3b7acec047c6ffd025f774d8a4d5e87`
 >
@@ -281,21 +281,24 @@ bounded gaps. Final Agent 6 review additionally required serialized and bounded
 actions, explicit procedural-approval semantics, post-action continuity, and
 fresh disk/load checks. This package now supplies those controls alongside
 fresh resource/Production-continuity fingerprinting, action-specific approval
-binding, and immutable image-ID pinning. The remaining gates are:
+binding, and immutable image-ID pinning. OPS-001 closes the three repository
+tooling gaps while preserving these remaining runtime gates:
 
-1. no secret-safe detached-release/environment rotation helper is published;
-2. no reviewed same-image restart/start helper or Flyway evidence collector is
-   published;
-3. no secret-safe Owner/API acceptance client is published;
-4. PostgreSQL 16 concurrency remains runtime evidence pending; local source
+1. OPS-001 now publishes the secret-safe detached-release/four-field
+   environment rotation helper;
+2. OPS-001 now publishes the approval-bound same-container restart/Flyway
+   evidence collector;
+3. OPS-001 now publishes the secret-FD Owner/API acceptance client;
+4. all three remain runtime-unused and require distinct exact-action Owner
+   approvals;
+5. PostgreSQL 16 concurrency remains runtime evidence pending; local source
    graph concurrency uses H2;
-5. STG-006 freshly observed the retained runtime SHAs/Flyway boundary, but did
+6. STG-006 freshly observed the retained runtime SHAs/Flyway boundary, but did
    not create the candidate release or execute any acceptance action.
 
-These findings do not require a product-contract change, but they prohibit
-claiming `AL-003_STAGING_ACCEPTANCE_READY`. They should be handled as bounded
-operational repair packages or explicit Owner-approved manual procedures after
-the required dependencies and a fresh runtime approval are in place.
+Repository completion does not permit claiming
+`AL-003_STAGING_ACCEPTANCE_READY`. STG-007 and each later acceptance batch need
+a fresh exact-SHA Owner runtime approval and retained evidence.
 
 ## 9. Acceptance and stop state
 
@@ -305,4 +308,4 @@ Passing the package does not authorize or prove runtime acceptance.
 
 Stop state:
 
-`STG-006_PASS_OPS-001_REQUIRED_WAITING_FOR_OWNER_REVIEW`
+`OPS-001_REPOSITORY_COMPLETE_STG-007_WAITING_FOR_OWNER_RUNTIME_APPROVAL`

@@ -19,6 +19,12 @@ separate from historical evidence snapshots and business implementation details:
   isolation/resource/health evidence, unchanged minimum Production continuity,
   `STG-006 = PASS`, and `OPS-001 = REQUIRED`. It authorizes no deploy,
   migration, login, restart, or data action.
+- [OPS-001 Staging Secret-Safe Tooling](deployment/cloud/README_OPS001_STAGING_SECRET_SAFE_TOOLING.md)
+  and its [local evidence](docs/governance/runtime/OPS-001_STAGING_SECRET_SAFE_TOOLING_EVIDENCE.md)
+  provide exact-SHA/action-bound detached release plus four-field private-env
+  rotation, same-container restart/Flyway evidence, and secret-FD Owner/API
+  acceptance helpers. They are repository capability only and authorize no
+  runtime action.
 - [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
   authority for current issue triage and closure status.
 - [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
@@ -566,10 +572,20 @@ STG-006 freshly confirmed the retained Staging runtime is still
 project, loopback bind, disabled printing, separate state/network/mounts,
 healthy endpoints, and current resource headroom. The bounded Production
 continuity snapshot stayed unchanged. The exact-main candidate is not present
-as a server release. OPS-001 is required because the repository still lacks a
-reviewed release/environment rotation helper, an approval-bound same-image
-restart/Flyway collector, and a secret-safe Owner login/onboarding/clone client.
-Those operations must not be improvised with token-bearing shell commands.
+as a server release. PR #73 placed that passive evidence in main at
+`85d97b7327b2e15aa561ed28a5788b92cedf6f5b`. OPS-001 closes the repository
+tooling gap with a dedicated-bare-repository detached release/four-field atomic
+private-env rotation helper, an approval-bound same-container restart/Flyway
+collector, and a secret-FD Owner login/onboarding/clone client. All default to
+validation and every real action consumes a distinct exact-SHA/environment/
+action-bound Owner approval. No OPS-001 helper has run on a runtime.
+
+Repository PRs now follow the permanent auto-merge gate in the Agile Loop
+Operating Model: latest-main base, exact single-package scope, all applicable
+tests/checks, secret/link/drift/diff scans, independent `ACCEPT`, clean GitHub
+mergeability, and unchanged final head are all required. Any drift or blocking
+finding stops at the Owner Gate. Repository auto-merge never authorizes or
+executes Staging/Production activity.
 
 STG-005A owns `V9__add_staging_synthetic_bootstrap_requests.sql`. PR-B adds the
 separate append-only `V10__add_owner_store_menu_clone_requests.sql`. V10 creates

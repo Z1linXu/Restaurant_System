@@ -1,6 +1,6 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Capability state: `STG-006_PASS_OPS-001_REQUIRED_WAITING_FOR_OWNER_REVIEW`
+> Capability state: `OPS-001_REPOSITORY_COMPLETE_STG-007_WAITING_FOR_OWNER_RUNTIME_APPROVAL` after reviewed repository merge
 >
 > Historical failed candidate: `8f909525781804f61d1da388882f530da358c3c4`
 >
@@ -43,10 +43,12 @@ absent and no environment rotation, image build, container lifecycle, Flyway,
 login, or data action occurred. See
 [STG-006 Exact-Main Passive Preflight Evidence](../runtime/STG-006_EXACT_MAIN_PREFLIGHT_EVIDENCE.md).
 
-OPS-001 remains required before STG-007. Its Owner-reviewed design must close
-secret-safe release/environment rotation, same-image restart/Flyway evidence,
-and Owner/API client handling without weakening the existing exact-SHA,
-approval, lock, redaction, or runtime boundaries.
+OPS-001 supplies the reviewed repository helpers before STG-007: exact detached
+release/four-field private-env rotation, same-container restart plus sanitized
+Flyway evidence, and a secret-FD Owner/API acceptance client. They preserve the
+existing exact-SHA, approval, lock, redaction and runtime boundaries. No helper
+has run on Staging; every action requires a distinct exact-SHA/environment/
+action-bound Owner approval.
 
 PR #59 merged the bounded repair at
 `c3956592da8a33092ab745c7cc6aac05e9babfa7`. It validates the initialized
@@ -241,4 +243,4 @@ payloads, or customer data.
 
 ## Capability dependency state
 
-`AL-003S_IN_MAIN_WAITING_FOR_RUNTIME_APPROVAL`
+`OPS-001_REPOSITORY_COMPLETE_STG-007_WAITING_FOR_OWNER_RUNTIME_APPROVAL`

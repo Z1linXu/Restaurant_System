@@ -1,6 +1,6 @@
 # AL-003 Store 1 -> Chinatown Live Menu Clone Technical Plan
 
-> Status: `IN_MAIN_AWAITING_STAGING_ACCEPTANCE`; AL-003S preparation is `IN_MAIN` and remains separately runtime-gated
+> Status: `IN_MAIN_AWAITING_STAGING_ACCEPTANCE`; OPS-001 repository tooling is complete after reviewed merge and remains separately runtime-gated
 >
 > Prepared: 2026-07-31, America/Toronto
 >
@@ -26,7 +26,7 @@
 | `PLAN_STATUS` | `IN_MAIN_AWAITING_STAGING_ACCEPTANCE_AND_RUNTIME_APPROVAL` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | PRs #60, #71, #61, #62, #63, and #64 are `IN_MAIN`. Request a fresh exact-SHA, separately Owner-approved Staging deployment/bootstrap/login/clone acceptance sequence; repository merges do not authorize that runtime work. |
+| `RECOMMENDED_ACTION` | PRs #60-#73 and the #61-#70 stack are `IN_MAIN` through PR #73 at `85d97b7...`. After OPS-001 enters main, bind its new exact SHA and request separate Owner-approved STG-007 release/env and deploy/Flyway batches; repository merges do not authorize runtime work. |
 
 PR-A through PR-F are in `main`. PR-D supplies generic source-option copying
 and target-local parent mapping; PR #54 placed the concrete Chinatown Profile
@@ -978,3 +978,12 @@ supplies a guarded launcher for the existing STG-005A/STG-005B non-web commands
 and a sanitized evidence template. It adds no clone behavior and performs no
 runtime action. Its independent review findings remain hard gates for a future
 exact-SHA Owner runtime approval.
+
+OPS-001 adds no endpoint, clone behavior, migration, profile or application
+change. It supplies a secret-FD client for the existing Owner contracts and
+verifies exact Owner identity/workspace, synthetic target onboarding/replay,
+reviewed validation counts, execute revision and replay without exposing
+passwords, access/refresh tokens or raw idempotency keys. The same package
+supplies detached release/env and same-container restart/Flyway tooling. These
+are repository capabilities only; login, onboarding, validate, execute and
+restart remain separate action-specific Owner Runtime Gates.
