@@ -4,6 +4,8 @@
 >
 > Git classification: `STACKED_ONLY`
 >
+> Draft PR: [#70](https://github.com/Z1linXu/Restaurant_System/pull/70)
+>
 > Candidate SHA: `EVIDENCE_PENDING`
 >
 > Runtime access: not performed

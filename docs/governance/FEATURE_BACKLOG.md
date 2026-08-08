@@ -16,9 +16,9 @@
 | priority | `HIGH` |
 | status | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` |
 | target_loop | `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE` |
-| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, and PR #60's Owner decisions are `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. Draft PRs #61-#65 and #67-#69 remain dependency-bound and are not in `main`. AL-006 Draft PR #69 prepares only the fail-closed activation contract. The unnumbered REL-001 package prepares only release identity, migration/compatibility, backup/recovery, rollback, and evidence gates; it selects no SHA and performs no runtime action. |
+| implementation status | PR-A through PR-F, PR #58 evidence, PR #59's repair, and PR #60's Owner decisions are `IN_MAIN` at `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`. Draft PRs #61-#65 and #67-#70 remain dependency-bound and are not in `main`. AL-006 Draft PR #69 prepares only the fail-closed activation contract. REL-001 Draft PR #70 prepares only release identity, migration/compatibility, backup/recovery, rollback, and evidence gates; it selects no SHA and performs no runtime action. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Review Draft PRs #61-#65 and #67-#69 in dependency order, then review the REL-001 plan after its Draft PR is created. Independently review/merge printer Store-isolation repair PR #66 before any executable AL-005 writer. Production release remains blocked by same-SHA Staging acceptance, fixed-state-root/serial-build deployment repair, fresh Production evidence, recovery proof, and explicit Owner approval. |
+| next action | Review Draft PRs #61-#65 and #67-#70 in dependency order. Independently review/merge printer Store-isolation repair PR #66 before any executable AL-005 writer. Production release remains blocked by same-SHA Staging acceptance, fixed-state-root/serial-build deployment repair, fresh Production evidence, recovery proof, and explicit Owner approval. |
 
 ### Current AL-003 delivery state
 
@@ -45,7 +45,7 @@
 | AL-005 Printing provisioning preparation / PR #67 | `AL-005_PRINTING_PREPARED_WAITING_FOR_DEPENDENCIES` (`STACKED_ONLY`); current printing authority/risk audit and staged contract only; no writer, endpoint, migration, printer, assignment, device, mode change, test print, or runtime action |
 | AL-005B Device/Pad provisioning preparation / PR #68 | `AL-005B_DEVICE_PREPARED_WAITING_FOR_DEPENDENCIES` (`STACKED_ONLY`); authority/readiness audit and staged contract only; no endpoint, migration, device, token, pairing, Worker change, or runtime action |
 | AL-006 Store activation preparation / PR #69 | `AL-006_ACTIVATION_PREPARED_WAITING_FOR_DEPENDENCIES` (`STACKED_ONLY`); fail-closed evidence/workflow contract only; no endpoint, migration, status transition, or runtime action |
-| REL-001 Production RC preparation | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` (`STACKED_ONLY`); no candidate SHA, runtime inspection, deployment, migration, or Production action |
+| REL-001 Production RC preparation / PR #70 | `REL-001_RC_PLAN_PREPARED_WAITING_FOR_STAGING_ACCEPTANCE_AND_OWNER_APPROVAL` (`STACKED_ONLY`); no candidate SHA, runtime inspection, deployment, migration, or Production action |
 | AL-005 printer Store-isolation repair / PR #66 | independent main-based `DRAFT_PR_WAITING_FOR_OWNER_REVIEW`; prerequisite only, not present in this stacked branch |
 
 The Owner-login acceptance prerequisite is not satisfied by repository code or
