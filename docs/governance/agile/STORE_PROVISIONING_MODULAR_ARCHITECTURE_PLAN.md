@@ -1,6 +1,6 @@
 # Store Provisioning Modular Architecture Plan
 
-> Status: `ARCHITECTURE_PLAN_DRAFT_WAITING_FOR_OWNER_REVIEW`
+> Capability state: `DRAFT_PR_61`
 >
 > Prepared: 2026-08-08, America/Toronto
 >
@@ -122,7 +122,7 @@ reviewed policy such as `manual_after_creation` or `not_applicable`.
 | Profile | State | Boundary |
 |---|---|---|
 | `CHINATOWN_MENU_2026_02_02` | `IN_MAIN` menu-clone profile | Frozen initial Chinatown menu target; not a complete Store Profile yet. |
-| `ST_DENIS_PROFILE_V1` | `PLANNED` | Production-like Store template; no current registry entry or public API. |
+| Complete St-Denis Store Profile | `PLANNED_IDENTITY_NOT_FINAL` | Production-like Store template; no current registry entry or public API. Historical documents use `ST_DENIS_MENU` for a menu-only candidate, while `ST_DENIS_PROFILE_V1` is an architecture placeholder for the future complete Store Profile. The implementing loop must select one strict, case-sensitive identity before code is written. |
 | Synthetic St-Denis baseline | `STG-005B_PLANNED` | Synthetic-only acceptance fixture/manifest; not Production source evidence. |
 
 Production Store 1 is the Owner-approved live source for the Chinatown
@@ -273,11 +273,15 @@ SKU/option contract. It may add a reviewed, versioned synthetic manifest and a
 Staging-only idempotent application mechanism only if current APIs cannot
 provide a safe reproducible path without manual SQL.
 
-The baseline must use the `STG005_` namespace, keep printing disabled, contain
-no real credentials/endpoints/devices/customers/orders/payments, and expose
-only sanitized plan/evidence. It is not `ST_DENIS_PROFILE_V1`, does not prove
-Production Store 1 contents, and cannot replace the Production read-only source
-gate.
+Synthetic topology and run identities (Organization, Store, user/login, run ID,
+and evidence identity) must use the `STG005_` namespace. Menu category/station
+codes, item SKUs, option groups, and option codes must instead use the stable
+AL-003 semantic identifiers required by the reviewed clone profile; prefixing
+those technical identifiers would make the synthetic source invalid. The
+baseline keeps printing disabled, contains no real credentials/endpoints/
+devices/customers/orders/payments, and exposes only sanitized plan/evidence.
+It is not the future complete St-Denis Store Profile, does not prove Production
+Store 1 contents, and cannot replace the Production read-only source gate.
 
 ## 10. Incremental loop boundaries
 
@@ -293,9 +297,21 @@ gate.
 | 8 | `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE` | Production gap/migration/backup/rollback/compatibility package | No deployment without approval |
 | 9 | `ACT-001_CHINATOWN_PRODUCTION_ACTIVATION` | Approved runtime provisioning and field acceptance | No unauthorized Production mutation |
 
-Historical loop IDs remain unchanged. These identifiers map the Owner's
-modular intent onto the dependency order already recorded in the Feature
-Backlog; naming them does not start or authorize runtime work.
+### 10.1 Historical label mapping
+
+Earlier plans used short labels before the modular roadmap was approved. Those
+records remain historical and are not silently redefined:
+
+| Historical label | Historical scope | Current bounded destination |
+|---|---|---|
+| `AL-004` in the AL-001 plan | Owner onboarding UI, All Stores, staff/table setup, and Print Center constraints | Profile/template selection belongs to `AL-004_GENERIC_STORE_PROFILE_FRAMEWORK`; staff/table and printing work move to `AL-005A` and `AL-005`. |
+| `AL-005` in the AL-001 plan | Production configuration and field acceptance | Release and activation work moves to `REL-001` and `ACT-001`; it is not the same package as `AL-005_PRINTING_PROVISIONING_TEMPLATE`. |
+| `ST_DENIS_MENU` in the Feature Backlog | Historical menu-only profile candidate | Input to the future Store Profile decision; it is not proof that `ST_DENIS_PROFILE_V1` is an implemented registry identity. |
+
+The fully qualified identifiers in the table above are the current roadmap
+labels. Historical documents keep their original wording for traceability.
+Naming or mapping a loop does not start implementation or authorize runtime
+work.
 
 ## 11. Testing strategy
 

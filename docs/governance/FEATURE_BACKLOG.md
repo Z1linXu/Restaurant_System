@@ -190,7 +190,7 @@ seed/demo Store.
 | Production Store 1 read-only source capture/drift review | `PRODUCTION_PENDING` | Separate Owner Runtime Gate; only menu-related evidence may be read. |
 | Production Chinatown Store/staff/menu provisioning | `PRODUCTION_PENDING` | Exact-SHA Release Candidate and production approval required. |
 | Owner Create Store / Choose Menu Template UI | `NOT_IMPLEMENTED` | Existing Platform Admin template UI is not the approved Owner workflow. |
-| Versioned `ST_DENIS_MENU` profile | `NEEDS_NEW_LOOP` | Must reuse the generic profile registry/clone engine; no Store ID 3 branch. |
+| Versioned St-Denis profile | `NEEDS_NEW_LOOP` | Historical planning calls the menu-only candidate `ST_DENIS_MENU`; the strict identity for a complete Store Profile is not finalized. It must reuse the generic profile registry/clone engine with no Store ID 3 branch. |
 | Table provisioning module | `NEEDS_NEW_LOOP` | Existing Store-scoped table APIs can be reused; activation orchestration is absent. |
 | Printing provisioning module | `NEEDS_NEW_LOOP` | No printer/assignment clone; runtime endpoints and physical tests remain separately gated. |
 | Device/Pad provisioning module | `NEEDS_NEW_LOOP` | Pairing exists, but Store activation orchestration and Chinatown field evidence do not. |
@@ -224,6 +224,12 @@ seed/demo Store.
 
 These names record dependency order only. They do not authorize implementation,
 runtime mutation, Production access, or deployment.
+
+Historical short labels are preserved rather than silently reused: the AL-001
+plan's `AL-004` UI/configuration scope is split across the current AL-004,
+AL-005A, and AL-005 packages, while its historical `AL-005` Production scope
+maps to REL-001 and ACT-001. The canonical mapping is maintained in
+[STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md](agile/STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md).
 
 The shared architecture and anti-hardcode boundary for these loops is
 [STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md](agile/STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md).

@@ -81,6 +81,12 @@ The authoritative work records are [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md),
 [AGILE_LOOP_OPERATING_MODEL.md](../AGILE_LOOP_OPERATING_MODEL.md), and
 [AL-001 technical plan](../agile/AL-001_OWNER_STORE_ONBOARDING_CHINATOWN_TECHNICAL_PLAN.md).
 
+The current fully qualified modular Loop identifiers and their legacy-label
+mapping are authoritative in
+[STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md](../agile/STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md);
+historical short `AL-004`/`AL-005` labels must not be interpreted as the new
+packages without that mapping.
+
 ### Current AL-003 Git ground truth
 
 | Package | Git state | Current capability boundary |
