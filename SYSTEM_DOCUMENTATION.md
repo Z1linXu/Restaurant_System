@@ -47,6 +47,10 @@ separate from historical evidence snapshots and business implementation details:
   records the next Batch A trigger, exact inert release/consumed approval,
   rotation state-parent false positive before env mutation, preserved V8
   runtime, complete state-root reconciliation, and mandatory restart.
+- [STG-007 Readiness Health Fingerprint Repair Evidence](docs/governance/runtime/STG-007_READINESS_HEALTH_FINGERPRINT_REPAIR_EVIDENCE.md)
+  records exact `868e229f...` release/deploy and Flyway V10 evidence, the
+  passive readiness optional-health false negative, bounded repository repair,
+  and the current no-restart stop boundary.
 - [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
   authority for current issue triage and closure status.
 - [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
@@ -657,6 +661,19 @@ non-group-writable `0750` during initial input validation, then revalidates the
 starting mode and device/inode after lock acquisition, before recovery work
 and before atomic env replacement. The inert release and consumed approval
 remain preserved; Staging remains on the old SHA/V8.
+
+After PR #79 merged the final rotation guard, STG-007 restarted from exact main
+`868e229f1b5afd28163e5031ad8fabffaad651f6`. Batch A passed release/environment
+rotation and formal preflight. Conditional Batch B built and deployed that
+exact SHA and Flyway advanced from V8 through V9 and V10. Staging remained
+isolated, printing stayed disabled, frontend/backend/SockJS returned 200, and
+Production continuity was unchanged. The next passive readiness capture stopped
+before PASS evidence because Docker omits `State.Health` for services without a
+healthcheck and shared fingerprinting used a direct optional-field lookup. The
+bounded repair first enumerates state-map keys and emits `NO_HEALTHCHECK` only
+when `Health` is genuinely absent; present-empty, invalid or unhealthy health
+status, missing services, and non-running containers remain fail-closed. No
+runtime evidence collection or same-image restart occurred after the failure.
 
 Repository PRs now follow the permanent auto-merge gate in the Agile Loop
 Operating Model: latest-main base, exact single-package scope, all applicable

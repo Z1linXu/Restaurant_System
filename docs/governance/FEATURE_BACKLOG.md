@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `STG-007_BATCH_A_BLOCKED_BY_ROTATION_STATE_ROOT_MODE_REPAIR` |
-| target_loop | `STG-007_ROTATION_STATE_ROOT_MODE_GUARD_REPAIR`, then restart `STG-007_EXACT_SHA_DEPLOY_AND_MIGRATE` from the next merged main |
-| implementation status | PR-A through PR-F and PRs #58-#78 are `IN_MAIN`; #66 remains independent. Batch A restarted from `35ccf5cb...`; fresh retained Staging `4397f995...` / V8, resource/isolation/Production continuity, candidate import and exact clean detached release creation passed. Approval was consumed, then env rotation stopped before any recovery/env write because `rotate_environment` retained a hardcoded `0700` state-parent guard against the established safe `0750` topology. The inert release/consumed approval are preserved, control cleanup passed, env remains unchanged, and no preflight, Docker/Flyway or Batch B action occurred. |
+| status | `STG-007_BATCH_B_BLOCKED_BY_READINESS_FINGERPRINT_REPAIR` |
+| target_loop | `STG-007_READINESS_HEALTH_FINGERPRINT_REPAIR`, then restart STG-007 Ground Truth evaluation from the next merged main |
+| implementation status | PR-A through PR-F and PRs #58-#79 are `IN_MAIN`; #66 remains independent. From exact main `868e229f...`, Batch A passed release/env rotation, formal preflight, resource/isolation/printing and Production-continuity gates. The exact candidate then deployed to Staging; V9/V10 applied successfully, Flyway is V10, health is 200/200/200 and Production remained unchanged. Passive readiness stopped because the shared Docker fingerprint used a direct optional `State.Health` lookup against a service with no healthcheck. No readiness PASS, runtime evidence collection, same-image restart, bootstrap, login, clone or Production mutation occurred. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md) and [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md) |
-| next action | Verify and publish the complete rotation state-root mode reconciliation. Its merge invalidates candidate `35ccf5cb...`; restart every Batch A gate with a new approval from the next exact main. |
+| next action | Verify and publish the missing-health-safe project fingerprint repair. Its merge invalidates `868e229f...` as the candidate even though that SHA remains the known healthy Staging runtime at Flyway V10; restart Ground Truth evaluation from the next exact main and stop if the original V8 entry condition no longer authorizes Batch B. |
 
 ### Current AL-003 delivery state
 
@@ -201,14 +201,14 @@ seed/demo Store.
 | Generic menu clone transaction, options, replay, locks, API | `DONE_IN_MAIN` | PR-A through PR-F and V10 are repository capability only. |
 | Frozen Chinatown Store Profile | `DONE_IN_MAIN` | `CHINATOWN_MENU_2026_02_02` is the approved initial Production target contract. |
 | PostgreSQL private-leaf Staging guard | `DONE_IN_MAIN` | PR #59 merged at `c3956592da8a33092ab745c7cc6aac05e9babfa7`; no redeploy is implied. |
-| Exact-SHA Staging deployment and Flyway V9/V10 | `STAGING_PENDING` | Requires fresh merged SHA, preflight evidence, and explicit Owner runtime approval. |
+| Exact-SHA Staging deployment and Flyway V9/V10 | `DEPLOYED_TO_STAGING` | Exact `868e229f...` passed formal preflight, deployed and advanced Flyway to V10; readiness evidence and same-image restart remain incomplete, so STG-007 is not PASS. |
 | Synthetic Organization/source/Owner bootstrap | `STAGING_PENDING` | STG-005A is in main but has not executed on evidenced Staging. |
 | Synthetic target onboarding and Owner target access | `STAGING_PENDING` | Existing onboarding plus Organization Owner access is sufficient; runtime evidence is missing. |
 | Synthetic Owner login/workspace/Owner API authorization | `STAGING_PENDING` | Credential must be supplied at runtime and never retained in Git/evidence. |
 | Reproducible Synthetic St-Denis source-menu baseline | `IN_MAIN` via PR #62 | Guarded, versioned, transactional empty-or-exact implementation is repository capability only and has not run on Staging. |
 | AL-003 validate/execute/replay/restart acceptance | `STAGING_PENDING` | Requires the full synthetic topology and source-menu contract first. |
-| STG-006 exact-main passive preflight | `PASS` | Candidate `33c6e3c...`; current Staging remains `4397f995...` / V8, isolated, healthy, printing disabled; Production continuity unchanged. No deployment occurred. |
-| OPS-001 secret-safe tooling | `REPOSITORY_COMPLETE` after reviewed merge | Fail-closed helpers and mock tests close the code/procedure gap; no server release, private env, credential, approval artifact, API result or restart evidence is thereby created. |
+| STG-006 exact-main passive preflight | `PASS` | At STG-006 capture, candidate was `33c6e3c...` and retained Staging was `4397f995...` / V8; this historical PASS does not override the later STG-007 deployment. |
+| OPS-001 secret-safe tooling | `REPAIR_IN_PROGRESS` after runtime use | Release/env rotation and exact deploy succeeded; passive readiness exposed the optional-health fingerprint bug. No credentials, API action or same-image restart evidence exists. |
 | Production Store 1 read-only source capture/drift review | `PRODUCTION_PENDING` | Separate Owner Runtime Gate; only menu-related evidence may be read. |
 | Production Chinatown Store/staff/menu provisioning | `PRODUCTION_PENDING` | Exact-SHA Release Candidate and production approval required. |
 | Generic Store Profile identity/composition contract | `IN_MAIN` via PR #64 | Exact versioned identity, module references with reviewed expected fingerprints, activation requirements, canonical fingerprint, and safe summaries are repository capability only; no concrete Store Profile or callable workflow is implied. |

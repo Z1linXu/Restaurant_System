@@ -227,6 +227,14 @@ SQL with Flyway 10.10.0's line-normalized CRC32 algorithm; missing, extra,
 failed, renamed or checksum-mismatched scripts fail closed.
 It never emits database credentials or raw environment values.
 
+Project fingerprints explicitly distinguish `healthy` from
+`NO_HEALTHCHECK`. Docker omits `State.Health` for services without a configured
+healthcheck, so the shared collector first enumerates the state-map keys. Only
+a genuinely absent `Health` key becomes `NO_HEALTHCHECK`. If the key exists,
+its `Status` must be present, syntactically valid and exactly `healthy`;
+present-empty, invalid or unhealthy state, missing services and non-running
+services remain `NO_GO`.
+
 `same-image-restart` serializes with AL-003S, captures the existing container,
 image, project and Flyway identities, and invokes only:
 
