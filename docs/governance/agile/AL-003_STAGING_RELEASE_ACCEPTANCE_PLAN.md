@@ -1,6 +1,6 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Capability state: `STG-008_ONE_SHOT_LIFECYCLE_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
+> Capability state: `STG-008_CONTINUOUS_STAGING_LOOP_AUTHORIZED`
 >
 > Historical failed candidate: `8f909525781804f61d1da388882f530da358c3c4`
 >
@@ -266,9 +266,10 @@ access. That is not a plan PASS. The one-shot profile also activated the
 long-lived WebSocket broker, so it reached the 600-second containment timeout;
 the resulting Compose `--rm` and scoped finalizer overlap retained the
 fail-closed blocked pair. The bounded lifecycle repair excludes WebSocket
-infrastructure only from that non-web profile. It must enter `main` and receive
-a new exact-SHA Staging release/recovery approval before another PLAN; no prior
-approval, evidence, or credential channel is reusable. See
+infrastructure only from that non-web profile. PR #91 entered `main` at
+`9a776d3...`; the current continuous authorization covers its exact-SHA
+Staging release/recovery continuation before another PLAN. No prior approval,
+evidence, or credential channel is reusable. See
 [one-shot lifecycle repair evidence](../runtime/STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md).
 
 The `IN_MAIN` AL-003S package adds the missing guarded one-shot launcher and
@@ -338,4 +339,4 @@ recovers.
 
 ## Capability dependency state
 
-`STG-008_ONE_SHOT_LIFECYCLE_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
+`STG-008_CONTINUOUS_STAGING_LOOP_AUTHORIZED`

@@ -106,8 +106,10 @@ Flyway/runtime collection, one same-image restart and post-restart
 verification. Flyway remained V10/no-pending; printing/isolation and Production
 continuity were unchanged. `STG-007=PASS`. Exact `2a6c30a...` later validated
 PR #89 in Staging before exposing the separate non-web one-shot lifecycle
-defect. The current unique stop state is
-`STG-008_ONE_SHOT_LIFECYCLE_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
+defect. PR #91 is `IN_MAIN` at `9a776d3...`; the Owner now authorizes the
+bounded continuous Staging loop from fresh exact rebind through guarded
+STG-005A/STG-005B work and conditional Phase-A Owner-login acceptance. The
+current unique stop state is `STG-008_CONTINUOUS_STAGING_LOOP_AUTHORIZED`.
 PR #83 merged only the final STG-007 evidence/governance into
 `main@2ed56b06f37c9257a655ec334f81e31ca4a518a6`; exact Staging correctly
 remained `2837ae88...`. The Owner then authorized STG-008. Its read-only entry
@@ -157,10 +159,11 @@ STG-005A plan failed before its command or data path because non-web startup
 required a servlet-bound request context. The resulting fail-closed records
 remain retained; topology and request data remain zero.
 
-The bounded non-web request-context repair is repository-only and not
-deployed. It requires a newly fetched exact main, a new Owner runtime gate,
-fresh Batch A, then only the reviewed new blocked-state recovery before any
-retry or password request. See [its evidence](runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md).
+The bounded non-web request-context repair was runtime-validated by exact
+`2a6c30a...`; PR #91 then placed the separate lifecycle repair in current main
+`9a776d3...`, not yet deployed. The current continuous Owner authorization
+covers the fresh exact Staging-only Batch A and reviewed new blocked-state
+recovery before retry or password request. See [its evidence](runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md).
 The restarted batch must bind fresh readiness and distinct approvals to every
 STG-005A/STG-005B plan/create/replay. Staging acceptance retains
 the distinct prerequisite
@@ -476,6 +479,13 @@ Gate must bind/deploy it and recover only the matching blocked pair before a
 new digest-bound PLAN. Existing approval, evidence, credential, and timeout
 artifacts are non-replayable. See
 [STG-008 one-shot lifecycle repair evidence](runtime/STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md).
+
+PR #91 merged that repair at `9a776d3aaa2c357e1edeac46e54168bda1f5431f`.
+The current Owner authorization expressly permits exact Staging-only rebind,
+preflight, V10-to-V10 deployment, readiness and matching blocked-pair recovery
+for this repair and later same-scope bounded repairs. It does not authorize a
+migration, product/security/identity change, Production action, or destructive
+operation.
 
 ## 16. Repository auto-merge policy
 

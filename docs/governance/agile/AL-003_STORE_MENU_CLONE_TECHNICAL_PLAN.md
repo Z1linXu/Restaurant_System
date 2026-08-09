@@ -26,7 +26,7 @@
 | `PLAN_STATUS` | `IN_MAIN_AWAITING_STAGING_ACCEPTANCE_AND_RUNTIME_APPROVAL` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | PRs #60-#90 and the #61-#70 stack are `IN_MAIN`; exact `2a6c30a...` is deployed to isolated Staging at V10 after the bounded rebind/deploy/recovery continuation, while `STG-007=PASS` remains historical infrastructure evidence. The Owner aligned the STG-008 credential contract. The password-free plan reached `VALIDATED`, proving PR #89 in runtime, then a separate non-web WebSocket lifecycle timeout retained the new fail-closed pair; zero writes occurred. Merge the lifecycle repair and stop at a fresh exact-main Staging deploy plus post-Batch-A blocked-recovery Owner Gate. Do not infer bootstrap, clone, Staging acceptance or Production authority. |
+| `RECOMMENDED_ACTION` | PRs #60-#91 and the #61-#70 stack are `IN_MAIN`; exact `2a6c30a...` remains deployed to isolated Staging at V10, while PR #91 lifecycle repair is current main `9a776d3...` and not deployed. The Owner aligned the STG-008 credential contract and authorized continuous same-scope Staging rebind. The password-free plan reached `VALIDATED`, proving PR #89 in runtime, then the WebSocket lifecycle timeout retained the new pair; zero writes occurred. Do not infer clone, Staging acceptance or Production authority. |
 
 PR-A through PR-F are in `main`. PR-D supplies generic source-option copying
 and target-local parent mapping; PR #54 placed the concrete Chinatown Profile
@@ -1012,7 +1012,7 @@ STG-005B, credential creation, login, target onboarding and
 validate/execute/replay remain unexecuted. STG-008 is stopped after the
 separate non-web WebSocket lifecycle timeout; the lifecycle repair is not
 deployed, at
-`STG-008_ONE_SHOT_LIFECYCLE_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
+`STG-008_CONTINUOUS_STAGING_LOOP_AUTHORIZED`.
 See [the sanitized STG-008 entry evidence](../runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md)
 [the Flyway guard repair evidence](../runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md),
 and [the release-rebind serialization repair evidence](../runtime/STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md).

@@ -4,7 +4,7 @@
 >
 > Prepared against: STG-005B checkpoint `0aba8377a3b7acec047c6ffd025f774d8a4d5e87`
 >
-> Runtime checkpoint: `STG-008_ONE_SHOT_LIFECYCLE_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
+> Runtime checkpoint: `STG-008_CONTINUOUS_STAGING_LOOP_AUTHORIZED`
 
 > Current runtime checkpoint: STG-007 historically passed at exact
 > `2837ae88e55142c99c6975f8b6575febffc913a1`. A later Owner authorization
@@ -375,4 +375,4 @@ The current repair and boundary are recorded in
 
 Stop state:
 
-`STG-008_ONE_SHOT_LIFECYCLE_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
+`STG-008_CONTINUOUS_STAGING_LOOP_AUTHORIZED`

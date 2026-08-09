@@ -2,8 +2,8 @@
 
 > Audit date: 2026-08-09, America/Toronto
 >
-> Runtime-sensitive deployed-main floor after PR #90 publication:
-> `2a6c30a5948882ff8bf1d3808e2970fe5b4a6ae3`
+> Runtime-sensitive current-main candidate after PR #91 publication:
+> `9a776d3aaa2c357e1edeac46e54168bda1f5431f`
 >
 > Exact deployed Staging runtime:
 > `2a6c30a5948882ff8bf1d3808e2970fe5b4a6ae3`
@@ -14,7 +14,7 @@
 > `STG-007_EXACT_SHA_CONTINUATION_EVIDENCE.md`
 >
 > Current decision:
-> `STG-008_ONE_SHOT_LIFECYCLE_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
+> `STG-008_CONTINUOUS_STAGING_LOOP_AUTHORIZED`
 
 ## 1. Executive summary
 
@@ -85,6 +85,7 @@ zero data writes.
 | #87 | STG-008 release-rebind serialization repair | `4b954e09a365fec909ed6da3ddf8fa9f13639cdc` | `IN_MAIN`; blocked-state-safe recovery release/env path later used by exact `6753855497...` continuation |
 | #89 | STG-008 non-web request-context repair | `434c9cc808648a4f80c91435d8667ad9fe160018` | `IN_MAIN`; runtime-validated by exact `2a6c30a...` before a distinct lifecycle timeout |
 | #90 | STG-008 Ground Truth closure | `2a6c30a5948882ff8bf1d3808e2970fe5b4a6ae3` | `IN_MAIN`; exact deployed Staging candidate for the validated plan attempt |
+| #91 | STG-008 one-shot lifecycle repair | `9a776d3aaa2c357e1edeac46e54168bda1f5431f` | `IN_MAIN`; bounded non-web WebSocket exclusion, not yet deployed |
 
 All listed merge commits are verified ancestors of current
 `origin/main` at publication time. PR #82 and all earlier runtime-sensitive packages
@@ -155,7 +156,7 @@ counts, exact V10 and healthy unchanged Staging/Production continuity.
 | Code/procedure | OPS-001 plus PRs #81/#82 publish fail-closed release/env, Flyway/readiness/restart and secret-FD Owner/API helpers | Repository blocker closed; the authorized STG-007 path passed |
 | Configuration | Approved identity is `STG005_OWNER_20260808_R01`; the runtime-only password remains ungenerated/unread and guarded at 12-through-256 characters | Do not request it before the repaired exact image is deployed and blocked-state recovery passes |
 | Evidence | Exact Staging V10 deploy/readiness/restart evidence is complete; bootstrap/source/login/clone evidence remains absent | STG-007 passes, while AL-003 acceptance remains pending |
-| Owner/runtime gate | Exact `2a6c30a...` passed rebind/preflight/deploy/readiness and old-pair recovery. Its password-free plan reached `VALIDATED`, then retained a new blocked state after the separate non-web WebSocket lifecycle timeout. | Merge the lifecycle repair, then approve its freshly fetched exact main for recovery-specific release/preflight/deploy; only after Batch A passes recover the new reviewed pair, then restart every action with fresh evidence |
+| Owner/runtime gate | Exact `2a6c30a...` passed rebind/preflight/deploy/readiness and old-pair recovery. Its password-free plan reached `VALIDATED`, then retained a new blocked state after the separate non-web WebSocket lifecycle timeout. PR #91 lifecycle repair is current main `9a776d3...`. | Current continuous Owner authorization covers its recovery-specific release/preflight/deploy; only after Batch A passes recover the new reviewed pair, then restart every action with fresh evidence |
 | Production safety | Release-relative state path, combined Production build, missing phase resource gates, restore rehearsal, backup integrity, and old-app compatibility remain unresolved | Production deployment and ACT-001 are `NO_GO` |
 
 ## 6. Staging decision
@@ -185,7 +186,7 @@ exact accepted RC are all pending.
 | 1 | `STG-006_EXACT_MAIN_PREFLIGHT` | Bind post-audit main SHA and collect fresh passive isolation/resource/continuity evidence | governance audit merged | `PASS` evidence at candidate `33c6e3c...` | completed read-only authorization | no further runtime action | no container/database change |
 | 2 | `OPS-001_STAGING_SECRET_SAFE_TOOLING_REPAIR` | Close release/env rotation, same-image restart/Flyway collection, and Owner/API secret-handling gaps | STG-006 PASS | `PASS`; reviewed package and repairs #81/#82 are in main | completed repository merge gates | no runtime mutation in implementation | Git revert only |
 | 3 | `STG-007_EXACT_SHA_CONTINUATION` | Deploy exact approved Staging SHA from V10 and verify no-pending, health, readiness, evidence, same-image restart and continuity | STG-006 PASS + OPS-001 accepted | `PASS` at exact `2837ae88...`; Flyway V10; health 200/200/200 | completed bounded V10-aware authorization | completed Staging-only V10-to-V10 continuation | no destructive rollback used |
-| 4 | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` | Execute/replay STG-005A and STG-005B with printing disabled | STG-007 PASS; exact `2a6c30a...` rebind/deploy/recovery completed; PR #89 was runtime-validated and the lifecycle repair requires a new candidate | entry and password-free plan `NO_GO`; plan reached `VALIDATED` but timed out before data access; future sanitized IDs/counts/revisions/replay | merge lifecycle repair, approve its exact main for rebind/preflight/deploy, then recover only the new reviewed blocked pair and issue distinct plan/create/replay approvals | no data write yet; future synthetic Staging writes only | transaction rollback; retain successful evidence |
+| 4 | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` | Execute/replay STG-005A and STG-005B with printing disabled | STG-007 PASS; exact `2a6c30a...` rebind/deploy/recovery completed; PR #89 was runtime-validated and PR #91 lifecycle repair is current main `9a776d3...` | entry and password-free plan `NO_GO`; plan reached `VALIDATED` but timed out before data access; future sanitized IDs/counts/revisions/replay | current continuous authorization covers rebind/preflight/deploy, matching recovery, fresh plan and guarded create/replay; each invocation uses a reviewed digest-bound internal approval | no data write yet; future synthetic Staging writes only | transaction rollback; retain successful evidence |
 | 5 | `STG-009_AL003_OWNER_ACCEPTANCE` | Owner login, target onboarding, validate, execute, replay, restart/persistence | STG-008 PASS | sanitized auth/status/count/source-invariance/restart evidence | separate execute checkpoint | synthetic Staging writes and restart | transaction rollback; no destructive cleanup |
 | 6 | `AL-004A_CONCRETE_STORE_PROFILE_AND_ENGINE_PLANNER` | Register complete non-secret Store Profile(s), module config registry, and read-only engine plan | STG-009 findings reviewed | deterministic fingerprints, planner and anti-hardcode tests | Profile identity/config review | none | Git revert |
 | 7 | `AL-005A1_ACCESS_TABLE_CONTRACT_PLANNER` | Add reusable Staff/Access and Table contracts/read-only planner; resolve Store-isolation/normalization gates | AL-004A | focused authorization/fingerprint/planner tests | login convention/table policy decisions as needed | none | Git revert |
@@ -204,27 +205,29 @@ release/private-env binding, formal preflight, V10-to-V10 deploy, fresh
 readiness and recovery of only the old reviewed blocked pair. Its password-free
 plan reached `VALIDATED` before a non-web WebSocket lifecycle timeout; zero
 synthetic data changed and the new fail-closed pair was retained. The current
-Owner gate follows lifecycle-repair merge and a fresh exact-SHA rebind/recovery:
+Owner gate is the current continuous exact-SHA rebind/recovery authorization:
 
-1. merge the reviewed non-web one-shot lifecycle repair; approve a newly
-   fetched exact `main` containing it
-   for the dedicated recovery release/private-env action, preflight and
-   Staging-only deploy;
+1. fetch current exact `main@9a776d3...` containing the merged non-web one-shot
+   lifecycle repair for the dedicated recovery release/private-env action,
+   preflight and Staging-only deploy;
 2. only after that Batch A passes, perform the already bounded recovery after
    fresh confirmation of one-shot absence, zero transaction state, V10, health
    and continuity, then clear only the exact new reviewed blocked pair;
-3. restart STG-008 with fresh readiness and a distinct digest-bound approval
-   for every STG-005A/STG-005B plan, create and replay invocation;
+3. restart STG-008 with fresh readiness and a distinct reviewed digest-bound
+   internal approval for every STG-005A/STG-005B plan, execute and replay
+   invocation;
 4. request the 12-through-256 runtime-only password only at STG-005A execute
    through the reviewed private stdin/FD channel, never Git/argv/log/evidence;
 5. review sanitized Store IDs, counts, revisions and replay evidence. Expected
    source data remains 4 categories, 3 stations, 13 items and 38 options.
 
-This gate does not authorize Owner login, Chinatown target onboarding,
-validate/execute/clone, printer configuration, Pad pairing or Production work.
+This gate does not authorize Chinatown target onboarding, AL-003
+validate/execute/clone, printer configuration, Pad pairing, Production work,
+or Owner login before STG-008 PASS. Conditional Phase-A synthetic Owner login
+is authorized only after STG-008 PASS.
 
 Unique stop state:
 
-`STG-008_ONE_SHOT_LIFECYCLE_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
+`STG-008_CONTINUOUS_STAGING_LOOP_AUTHORIZED`
 
 See [STG-008 one-shot lifecycle repair evidence](STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md).
