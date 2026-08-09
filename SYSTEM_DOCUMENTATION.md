@@ -64,6 +64,11 @@ separate from historical evidence snapshots and business implementation details:
   V10 continuation preflight, V10-to-V10 deploy, repaired readiness/runtime
   collection, same-image restart and post-restart PASS, unchanged printing/
   isolation/Production continuity, and the STG-008 Owner Runtime Gate.
+- [STG-008 Synthetic Topology and Source Entry Evidence](docs/governance/runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md)
+  records documentation main `2ed56b06...` versus deployed Staging
+  `2837ae88...`, read-only V10/readiness/isolation/Production continuity,
+  zero synthetic topology/credential rows, safe next Store ID `1`, and the
+  credential-contract `NO_GO` before any one-shot or data write.
 - [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
   authority for current issue triage and closure status.
 - [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
@@ -431,13 +436,18 @@ topology/metadata remains fail-closed. PR #59 merged the repair into `main` at
 record, and the old exact-SHA approval cannot be reused.
 
 AL-003 Staging acceptance also has the independent prerequisite
-`AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`. Retained evidence shows that
-STG-005A has not run on the current V8 Staging runtime, but this repair did not
-query runtime tables and therefore does not infer that every synthetic user or
-membership row is absent. Repository code proves only that STG-005A can create
-the synthetic Organization, source Store, Owner credential, active
-Organization membership, and source-Store membership. AL-002 onboarding can
-create the inactive target and target-scoped Manager/Frontdesk accounts.
+`AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`. Current evidence proves
+Staging is exact `2837ae88...` at Flyway V10. The later STG-008 read-only entry
+queried only aggregate and synthetic-scoped metadata and proved that every
+Organization, Store, user, credential, Organization-membership,
+Store-membership, and bootstrap-request count is zero. It also proved
+`stores_id_seq last_value=1, is_called=false`, so the source Store can still be
+ID `1` without a write probe. Synthetic Owner is `NOT_CREATED`. Repository code
+proves that STG-005A can create the synthetic Organization, source Store, Owner
+credential, active Organization membership, and source-Store membership, but
+the requested account convention does not satisfy the guarded `STG005_`
+identity and 12-through-256 password contract. No plan or write began. AL-002
+onboarding can create the inactive target and target-scoped Manager/Frontdesk accounts.
 `StoreAccessService` grants the Organization Owner access to every Store in the
 same active Organization membership, so no redundant Owner target-Store
 membership is required. No retained evidence yet proves a safe Owner login,
@@ -737,11 +747,13 @@ container/image/release/environment/Flyway identity unchanged. Health returned
 `200/200/200`, printing stayed `DISABLED/false`, loopback/state/network/mount
 isolation remained intact, and permitted Production continuity fields plus
 health remained unchanged. `STG-007 = PASS`; AL-003 is not yet Staging accepted.
-The unique stop state is
-`STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE_WAITING_FOR_OWNER_RUNTIME_APPROVAL`.
+PR #83 then advanced `main` to `2ed56b06...` with evidence/governance only;
+the deployed runtime correctly remained `2837ae88...`. The next authorized
+STG-008 entry stopped read-only before `bootstrap-plan` at the credential
+contract. The unique stop state is
+`STG-008_CREDENTIAL_CONTRACT_ALIGNMENT_WAITING_FOR_OWNER_DECISION`.
 No synthetic topology/source, credential, login, target onboarding, clone,
-Store 1 read, printer/Pad, Production, or ACT-001 action is authorized by that
-PASS.
+Store 1 read, printer/Pad, Production, or ACT-001 action occurred.
 
 Repository PRs now follow the permanent auto-merge gate in the Agile Loop
 Operating Model: latest-main base, exact single-package scope, all applicable

@@ -1,6 +1,6 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Capability state: `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE_WAITING_FOR_OWNER_RUNTIME_APPROVAL`
+> Capability state: `STG-008_CREDENTIAL_CONTRACT_ALIGNMENT_WAITING_FOR_OWNER_DECISION`
 >
 > Historical failed candidate: `8f909525781804f61d1da388882f530da358c3c4`
 >
@@ -19,6 +19,18 @@ same-image restart. After PR #82 merged the readiness/fail-closed repair, a
 fully fresh chain deployed exact `2837ae88...` and passed every STG-007 gate.
 That authority is complete and consumed; it does not extend to STG-008,
 acceptance data writes, Owner/API actions or Production mutation.
+
+The Owner later authorized the bounded STG-008 synthetic topology/source
+batch. Its read-only entry checks retained exact runtime `2837ae88...`, Flyway
+V10, health `200/200/200`, printing/isolation, and unchanged Production
+continuity. Staging contained zero Organization, Store, user, credential,
+membership, or bootstrap-request rows; `stores_id_seq last_value=1,
+is_called=false` safely proves the next Store can be ID `1`. The batch stopped
+before `bootstrap-plan` because the requested account convention does not
+satisfy the reviewed `STG005_` identity and 12-through-256 password contract.
+No one-shot, credential, synthetic write, source graph, login, or API action
+occurred. See
+[STG-008 entry evidence](../runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).
 
 Historically, PR #56 entered `main` and the fixed release candidate was
 `8f909525781804f61d1da388882f530da358c3c4`. The read-only preflight is recorded
@@ -115,11 +127,11 @@ The acceptance prerequisite state is
 must never be reported as `AL-003_STAGING_ACCEPTANCE_READY`.
 
 Current runtime evidence proves that Staging is on exact Flyway V10 and that
-the STG-005A bootstrap has never been executed there. Therefore no V9 bootstrap
-request or idempotency evidence from that mechanism exists in the evidenced
-runtime. No business-data query was performed, so the precise row-level reason
-that Owner login is unavailable remains `EVIDENCE_PENDING`: the reports do not
-prove whether unrelated synthetic user or membership rows exist.
+the STG-005A bootstrap has never been executed there. The STG-008 entry used
+synthetic-scoped and aggregate read-only queries and proved zero Organization,
+Store, user, credential, Organization-membership, Store-membership, and V9
+bootstrap-request rows. Synthetic Owner is therefore `NOT_CREATED`; no
+password/hash/token or unrelated identifier was read or retained.
 
 Repository code and the reviewed runbook establish these exact capability
 boundaries:
@@ -158,9 +170,11 @@ authorization, and copied customer or Store data.
 
 Steps 1-2 and the infrastructure restart portion of step 9 were completed by
 STG-007 at exact deployed `2837ae88...`; they must not be repeated from this
-plan without new authority. STG-008 is stopped at a true Owner Runtime Gate and
-would cover only the synthetic topology/source work in steps 3 and 5, with
-separate plan/execute approvals and fresh readiness. Steps 4 and 6-9's
+plan without new authority. STG-008 received runtime authority, but its
+read-only entry stopped before step 3 at the credential-contract Owner Gate.
+After explicit credential alignment, a resumed batch may cover only the
+synthetic topology/source work in steps 3 and 5, with fresh readiness and
+distinct plan/create/replay approvals. Steps 4 and 6-9's
 login/onboarding/clone acceptance remain later gates. The retained end-to-end
 sequence is:
 
@@ -268,4 +282,4 @@ recovers.
 
 ## Capability dependency state
 
-`STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE_WAITING_FOR_OWNER_RUNTIME_APPROVAL`
+`STG-008_CREDENTIAL_CONTRACT_ALIGNMENT_WAITING_FOR_OWNER_DECISION`

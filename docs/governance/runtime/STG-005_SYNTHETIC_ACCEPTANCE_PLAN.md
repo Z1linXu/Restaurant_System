@@ -506,3 +506,24 @@ This PLAN PR changes documentation only:
 
 No application, migration, configuration, deployment, Android, generated
 asset, or runtime file is modified.
+
+## 24. Current STG-008 checkpoint (2026-08-08)
+
+The historical CP-0 implementation gap was later closed in repository main by
+the guarded STG-005A bootstrap and STG-005B source-menu packages. Exact
+`2837ae88e55142c99c6975f8b6575febffc913a1` is now deployed to isolated
+Staging at Flyway V10 and `STG-007=PASS`.
+
+The Owner-authorized STG-008 entry nevertheless stopped before the first
+one-shot. Read-only evidence proved all Organization/Store/user/credential/
+membership/bootstrap-request counts are zero and the next generated Store ID
+is safely `1`; it also proved Staging readiness/printing/isolation and
+Production continuity remain intact. The requested account convention does
+not satisfy the reviewed `STG005_` identity and 12-through-256 password guard.
+No bootstrap plan, create, replay, source-menu action, login, or data mutation
+occurred.
+
+Current decision: `STG-008 = NO_GO` at
+`STG-008_CREDENTIAL_CONTRACT_ALIGNMENT_WAITING_FOR_OWNER_DECISION`. The
+authoritative sanitized result is
+[STG-008 Synthetic Topology and Source Entry Evidence](STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).

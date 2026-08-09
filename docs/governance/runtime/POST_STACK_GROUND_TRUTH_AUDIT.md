@@ -2,8 +2,11 @@
 
 > Audit date: 2026-08-08, America/Toronto
 >
-> Current runtime-sensitive repository base:
-> `origin/main@2837ae88e55142c99c6975f8b6575febffc913a1`
+> Current documentation repository base before STG-008 evidence publication:
+> `origin/main@2ed56b06f37c9257a655ec334f81e31ca4a518a6`
+>
+> Exact deployed Staging runtime:
+> `2837ae88e55142c99c6975f8b6575febffc913a1`
 >
 > Follow-up runtime access: STG-006 passive/read-only observation and the
 > bounded STG-007 V10-aware continuation completed; see
@@ -11,7 +14,7 @@
 > `STG-007_EXACT_SHA_CONTINUATION_EVIDENCE.md`
 >
 > Current decision:
-> `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE_WAITING_FOR_OWNER_RUNTIME_APPROVAL`
+> `STG-008_CREDENTIAL_CONTRACT_ALIGNMENT_WAITING_FOR_OWNER_DECISION`
 
 ## 1. Executive summary
 
@@ -34,6 +37,10 @@ Flyway V10 with no pending migration, passed repaired readiness and runtime
 collection, and passed one same-image restart. Printing remained disabled and
 Production continuity was unchanged. `STG-007 = PASS`; this is infrastructure
 acceptance only, not synthetic topology/source creation or AL-003 acceptance.
+PR #83 then merged only that evidence/governance into `main@2ed56b06...`.
+The Owner-authorized STG-008 read-only entry retained exact runtime
+`2837ae88...`, found zero synthetic topology/credential rows, and proved the
+next Store ID is `1`; it stopped before plan/write at the credential contract.
 
 ## 2. Git and PR ground truth
 
@@ -55,10 +62,13 @@ acceptance only, not synthetic topology/source creation or AL-003 acceptance.
 | #74 | OPS-001 secret-safe tooling repair | `362c954a8753204476ddf1415ea86050589760dd` | `IN_MAIN`; repository tooling only |
 | #81 | Flyway success-token repair | `63600b13b10a5549d9095a03c94e69a9f880af9f` | `IN_MAIN`; fail-closed collector repair |
 | #82 | Restart/readiness fail-closed repair | `2837ae88e55142c99c6975f8b6575febffc913a1` | `IN_MAIN`; bounded readiness/restart repair |
+| #83 | STG-007 final evidence/governance | `2ed56b06f37c9257a655ec334f81e31ca4a518a6` | `IN_MAIN`; documentation/evidence only |
 
-All listed merge commits are verified ancestors of the runtime-sensitive
-`origin/main@2837ae88...` candidate. There is no `DRAFT_PR` or `STACKED_ONLY`
-package remaining in #61-#72.
+All listed merge commits are verified ancestors of current
+`origin/main@2ed56b06...`. PR #82 and all earlier runtime-sensitive packages
+are ancestors of deployed `2837ae88...`; PR #83 is intentionally later and
+documentation-only. There is no `DRAFT_PR` or `STACKED_ONLY` package remaining
+in #61-#83.
 `IN_MAIN` does not imply `DEPLOYED_TO_STAGING` or
 `DEPLOYED_TO_PRODUCTION`.
 
@@ -71,7 +81,7 @@ package remaining in #61-#72.
 | Store Core | `PARTIAL_IMPLEMENTATION` | AL-002 creates an idempotent inactive, printing-disabled Store, but it is not Profile-driven and legacy Platform Admin/Seeder paths can still create `active` Stores. |
 | Access/Staff | `PARTIAL_IMPLEMENTATION` | Onboarding transaction creates BCrypt credentials and Store memberships. There is no reusable Profile planner/reconcile contract or standalone idempotent module. Runtime passwords remain outside Git. |
 | Menu | `DONE_IN_CODE`; `RUNTIME_EVIDENCE_PENDING` | Owner validate/execute API, V10 idempotency, generic clone transaction, Chinatown menu Profile, source invariance, replay, and tests exist. No Staging or Production clone evidence exists. |
-| Synthetic St-Denis baseline | `DONE_IN_CODE`; `RUNTIME_EVIDENCE_PENDING` | Guarded empty-or-exact STG-005B planner/writer exists and is tested. It has not run on evidenced Staging. |
+| Synthetic St-Denis baseline | `DONE_IN_CODE`; `STG-008_NO_GO` | Guarded empty-or-exact STG-005B planner/writer exists and is tested. It did not reach plan because the parent STG-005A credential gate stopped first. |
 | Staging acceptance launcher | `DONE_IN_CODE`; `INFRASTRUCTURE_ACCEPTED`; `AL003_PENDING` | Exact-main V10-to-V10 deploy, readiness, runtime collection and same-image restart passed. Bootstrap, source creation, login, onboarding, clone and replay remain unexecuted. |
 | Tables | `PARTIAL_IMPLEMENTATION` | Existing admin CRUD/template copy exists. No Store Profile contract/planner/idempotent writer; uniqueness, ownership, normalization, and reconcile rules are unresolved. |
 | Printer Store isolation | `DONE_IN_CODE` | PR #66 scopes config update, dispatch, and PAD printer-health lookup to the durable Store. This is not Printing provisioning. |
@@ -90,7 +100,7 @@ record fresh, bounded evidence:
 |---|---|---|
 | Staging | exact release `2837ae88e55142c99c6975f8b6575febffc913a1`, Flyway V10/no pending migration, health 200/200/200, isolated project/network/state and loopback bind, printing disabled | `STG-007_PASS`; exact V10-to-V10 deploy and same-image restart verified |
 | Production | retained release `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`, project `cloud`, identical before/after container IDs, image IDs, starts and restart counts, health 200 | `MACHINE_VERIFIED_READ_ONLY` continuity only; Flyway/business state not queried |
-| Repository | migrations V1-V10 and exact candidate `origin/main@2837ae88...` | Exact deployed runtime source; later governance-only commits do not change this runtime identity |
+| Repository | migrations V1-V10; documentation main `2ed56b06...`; deployed source `2837ae88...` | PR #83 is governance-only and does not change runtime identity |
 
 There is retained evidence that Staging is at V10, has no pending migration,
 and recovered from a same-image restart. No V8-to-V9-to-V10 migration was
@@ -98,14 +108,20 @@ rerun or inferred during the V10 continuation. STG-005A, STG-005B, Owner
 login, target onboarding, menu validate/execute and replay remain unexecuted.
 There is no evidence that Production contains any #61-#70 capability.
 
+STG-008 additionally proved through aggregate/synthetic-scoped read-only
+queries that Organization, Store, user, credential, membership, and bootstrap-
+request counts are all zero. Synthetic Owner is `NOT_CREATED`, and
+`stores_id_seq last_value=1, is_called=false` establishes safe first Store ID
+allocation without a write probe.
+
 ## 5. Current blockers
 
 | Class | Blocker | Effect |
 |---|---|---|
 | Code/procedure | OPS-001 plus PRs #81/#82 publish fail-closed release/env, Flyway/readiness/restart and secret-FD Owner/API helpers | Repository blocker closed; the authorized STG-007 path passed |
-| Configuration | STG-007 release/env/image evidence exists. No synthetic run identity or runtime-only synthetic credential exists | Create only inside a separately approved STG-008 batch |
+| Configuration | STG-007 release/env/image evidence exists. No synthetic run identity or credential exists; the requested account convention conflicts with the guarded `STG005_` / 12-through-256 contract | Owner must approve a compatible exact identifier and runtime-only password; do not weaken or transform the credential |
 | Evidence | Exact Staging V10 deploy/readiness/restart evidence is complete; bootstrap/source/login/clone evidence remains absent | STG-007 passes, while AL-003 acceptance remains pending |
-| Owner/runtime gate | STG-008 bootstrap planning/execution and source planning/execution/replay require new action-specific approvals | Stop before every unapproved synthetic write or credential creation |
+| Owner/runtime gate | STG-008 received runtime authority but stopped before its first one-shot under the credential-ambiguity rule | Resume only after credential alignment, then recollect readiness and use distinct digest-bound approvals per invocation |
 | Production safety | Release-relative state path, combined Production build, missing phase resource gates, restore rehearsal, backup integrity, and old-app compatibility remain unresolved | Production deployment and ACT-001 are `NO_GO` |
 
 ## 6. Staging decision
@@ -116,6 +132,10 @@ deployment, V10/no-pending, repaired readiness, runtime evidence and same-image
 restart. It does not prove or authorize synthetic Store topology/source data,
 runtime credential creation, Owner login, target onboarding, clone execution,
 full AL-003 acceptance or any Production mutation.
+
+`STG-008 = NO_GO` at its credential entry gate. This is not deployment,
+migration, bootstrap-transaction, or source-menu failure; no plan/write began
+and runtime remained unchanged.
 
 Production remains `NO_GO`: fixed external state-root protection, serial
 build/resource gates, current Production evidence, Store 1 read approval,
@@ -129,7 +149,7 @@ exact accepted RC are all pending.
 | 1 | `STG-006_EXACT_MAIN_PREFLIGHT` | Bind post-audit main SHA and collect fresh passive isolation/resource/continuity evidence | governance audit merged | `PASS` evidence at candidate `33c6e3c...` | completed read-only authorization | no further runtime action | no container/database change |
 | 2 | `OPS-001_STAGING_SECRET_SAFE_TOOLING_REPAIR` | Close release/env rotation, same-image restart/Flyway collection, and Owner/API secret-handling gaps | STG-006 PASS | `PASS`; reviewed package and repairs #81/#82 are in main | completed repository merge gates | no runtime mutation in implementation | Git revert only |
 | 3 | `STG-007_EXACT_SHA_CONTINUATION` | Deploy exact approved Staging SHA from V10 and verify no-pending, health, readiness, evidence, same-image restart and continuity | STG-006 PASS + OPS-001 accepted | `PASS` at exact `2837ae88...`; Flyway V10; health 200/200/200 | completed bounded V10-aware authorization | completed Staging-only V10-to-V10 continuation | no destructive rollback used |
-| 4 | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` | Execute/replay STG-005A and STG-005B with printing disabled | STG-007 PASS | sanitized IDs/counts/revisions/replay | separate credential/bootstrap/source-write approvals | synthetic Staging writes | transaction rollback; retain successful evidence |
+| 4 | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` | Execute/replay STG-005A and STG-005B with printing disabled | STG-007 PASS; credential Owner Gate unresolved | entry `NO_GO`; future sanitized IDs/counts/revisions/replay | approve compatible `STG005_` identity/password, then distinct plan/create/replay approvals | no write yet; future synthetic Staging writes only | transaction rollback; retain successful evidence |
 | 5 | `STG-009_AL003_OWNER_ACCEPTANCE` | Owner login, target onboarding, validate, execute, replay, restart/persistence | STG-008 PASS | sanitized auth/status/count/source-invariance/restart evidence | separate execute checkpoint | synthetic Staging writes and restart | transaction rollback; no destructive cleanup |
 | 6 | `AL-004A_CONCRETE_STORE_PROFILE_AND_ENGINE_PLANNER` | Register complete non-secret Store Profile(s), module config registry, and read-only engine plan | STG-009 findings reviewed | deterministic fingerprints, planner and anti-hardcode tests | Profile identity/config review | none | Git revert |
 | 7 | `AL-005A1_ACCESS_TABLE_CONTRACT_PLANNER` | Add reusable Staff/Access and Table contracts/read-only planner; resolve Store-isolation/normalization gates | AL-004A | focused authorization/fingerprint/planner tests | login convention/table policy decisions as needed | none | Git revert |
@@ -143,18 +163,20 @@ main do not authorize skipping directly to their writers.
 
 ## 8. Current Owner gates and unique stop state
 
-The next Owner gate is STG-008 only, in bounded order:
+The current Owner gate is STG-008 credential alignment:
 
-1. approve STG-005A bootstrap plan, then separately approve its execution and
-   replay with a runtime-only password supplied through standard input;
-2. after fresh readiness, approve STG-005B source-menu plan, then separately
-   approve its execution and replay for source Store ID 1;
-3. review sanitized Store IDs, counts, revisions and replay evidence. Expected
-   synthetic source data is 4 categories, 3 stations, 13 items and 38 options.
+1. approve one exact login/display identifier satisfying `STG005_`;
+2. approve a Staging-only runtime password satisfying the retained
+   12-through-256 contract, supplied through non-interactive standard input;
+3. on resume, recollect readiness and use a distinct digest-bound approval for
+   every STG-005A/STG-005B plan, create and replay invocation;
+4. review sanitized Store IDs, counts, revisions and replay evidence. Expected
+   synthetic source data remains 4 categories, 3 stations, 13 items and
+   38 options.
 
 This gate does not authorize Owner login, Chinatown target onboarding,
 validate/execute/clone, printer configuration, Pad pairing or Production work.
 
 Unique stop state:
 
-`STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE_WAITING_FOR_OWNER_RUNTIME_APPROVAL`
+`STG-008_CREDENTIAL_CONTRACT_ALIGNMENT_WAITING_FOR_OWNER_DECISION`

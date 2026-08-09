@@ -123,3 +123,15 @@ runtime acceptance evidence.
 
 Until those gates are completed, this package remains repository-only and must
 not be described as a deployed Synthetic St-Denis baseline.
+
+## 6. STG-008 runtime entry update
+
+PR #62 is now historical `IN_MAIN` capability. On 2026-08-08 the authorized
+STG-008 read-only entry found zero Staging topology/bootstrap rows and safely
+proved the next generated Store ID is `1`, but STG-005A stopped before plan or
+write at the credential-contract Owner Gate. STG-005B therefore did not enter
+plan, execute, or replay. Its runtime state remains `NOT_CREATED`; no source
+revision or 4/3/13/38 graph row changed.
+
+The current sanitized runtime decision is
+[STG-008 Synthetic Topology and Source Entry Evidence](STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).

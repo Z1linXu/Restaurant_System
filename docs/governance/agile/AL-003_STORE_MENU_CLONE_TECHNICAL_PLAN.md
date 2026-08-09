@@ -1,6 +1,6 @@
 # AL-003 Store 1 -> Chinatown Live Menu Clone Technical Plan
 
-> Status: `IN_MAIN_AWAITING_STAGING_ACCEPTANCE`; `STG-007=PASS`, STG-008 Owner Runtime Gate active
+> Status: `IN_MAIN_AWAITING_STAGING_ACCEPTANCE`; `STG-007=PASS`, `STG-008=NO_GO` at credential Owner Gate
 >
 > Prepared: 2026-07-31, America/Toronto
 >
@@ -26,7 +26,7 @@
 | `PLAN_STATUS` | `IN_MAIN_AWAITING_STAGING_ACCEPTANCE_AND_RUNTIME_APPROVAL` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | PRs #60-#82 and the #61-#70 stack are `IN_MAIN` through PR #82 at `2837ae88...`. That exact SHA is deployed to isolated Staging at V10 and passed formal preflight, repaired readiness, runtime collection, same-image restart and post-restart verification. `STG-007=PASS`. Stop at `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE_WAITING_FOR_OWNER_RUNTIME_APPROVAL`; do not infer synthetic-write, clone, Staging-acceptance or Production authority. |
+| `RECOMMENDED_ACTION` | PRs #60-#83 and the #61-#70 stack are `IN_MAIN`; exact `2837ae88...` remains deployed to isolated Staging at V10 and `STG-007=PASS`, while PR #83 is evidence/governance only. STG-008 read-only entry found no synthetic Owner/topology and proved Store ID `1` is safely allocatable, then stopped before plan/write because the requested credential convention conflicts with the guarded contract. Stop at `STG-008_CREDENTIAL_CONTRACT_ALIGNMENT_WAITING_FOR_OWNER_DECISION`; do not infer synthetic-write, clone, Staging-acceptance or Production authority. |
 
 PR-A through PR-F are in `main`. PR-D supplies generic source-option copying
 and target-local parent mapping; PR #54 placed the concrete Chinatown Profile
@@ -964,7 +964,11 @@ Owner runtime approval. See
 
 Staging acceptance separately remains
 `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`. STG-005A is implemented in
-the repository but has not run on the evidenced V10 Staging runtime. It creates
+the repository but has not run on the evidenced V10 Staging runtime. STG-008
+read-only evidence proves the relevant topology, credential, membership, and
+bootstrap-request rows are all absent and the next generated Store ID is `1`.
+The requested account convention is not compatible with the `STG005_` identity
+and 12-through-256 password guard, so no plan or write began. STG-005A creates
 only the synthetic Organization, source Store, Owner credential, Organization
 membership, and source-Store membership. Existing onboarding can create the
 inactive target and its Store-scoped staff, while `StoreAccessService` grants
@@ -998,4 +1002,6 @@ collection, same-image restart and post-restart health passed with exact
 container/image/release/Flyway identity unchanged. The bounded tooling repair
 changes no clone/API/profile behavior. STG-005A, STG-005B, credential creation,
 login, target onboarding and validate/execute/replay remain unexecuted.
-STG-008 is the next true Owner Runtime Gate, not an authorized action.
+STG-008 is `NO_GO` at
+`STG-008_CREDENTIAL_CONTRACT_ALIGNMENT_WAITING_FOR_OWNER_DECISION`. See
+[the sanitized STG-008 entry evidence](../runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).

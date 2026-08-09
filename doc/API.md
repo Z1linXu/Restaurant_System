@@ -469,6 +469,38 @@ Response behavior:
 
 ## Owner Workspace
 
+### Authentication Login Contract
+
+`POST /api/v1/auth/login`
+
+Canonical request:
+
+```json
+{
+  "login_identifier": "<approved-login-identifier>",
+  "password": "<runtime-only-secret>"
+}
+```
+
+- `login_identifier` is the canonical JSON field. The compatibility aliases
+  `loginId`, `loginIdentifier`, and `username` are accepted, but operational
+  tooling should use the canonical field.
+- The lookup trims the identifier and matches
+  `user_credentials.login_identifier` case-insensitively. It does not require
+  an email-shaped value.
+- A successful credential must be active and use the `BCRYPT` algorithm; login
+  returns access/refresh tokens, user context, feature flags, and permissions.
+  Those tokens and the submitted password must never enter repository or
+  runtime evidence.
+- The guarded STG-005A creation path is deliberately narrower than the general
+  login lookup: the bootstrap Owner login/display identity must begin with
+  `STG005_`, is written consistently to `users.username` and
+  `user_credentials.login_identifier`, and accepts only a runtime password of
+  12 through 256 characters through non-interactive standard input.
+- The STG-008 read-only entry found no existing synthetic Owner and stopped
+  before plan/write because the requested credential convention did not meet
+  those retained bootstrap guards. No credential or login was attempted.
+
 ### Owner Store Onboarding API (AL-002 in main)
 
 `POST /api/v1/owner/organizations/{organizationId}/stores/onboard`

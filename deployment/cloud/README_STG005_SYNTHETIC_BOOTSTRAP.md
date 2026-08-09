@@ -173,3 +173,20 @@ STG-005.
 
 No SSH, migration, bootstrap execution, or server write was performed while
 creating this implementation.
+
+## STG-008 runtime entry checkpoint (2026-08-08)
+
+The Owner-authorized STG-008 entry performed a read-only check against exact
+deployed Staging SHA `2837ae88e55142c99c6975f8b6575febffc913a1` at Flyway
+V10. It found zero Organization, Store, user, credential, membership, and
+bootstrap-request rows. `stores_id_seq last_value=1, is_called=false` proves
+the first guarded bootstrap can still receive source Store ID `1` without a
+write probe or sequence reset. Synthetic Owner is `NOT_CREATED`.
+
+Execution stopped before `bootstrap-plan`: the requested account convention
+does not satisfy this runbook's mandatory `STG005_` identity prefix and
+12-through-256 runtime password contract. Do not lower either guard, transform
+or invent the Owner's secret, or run a one-shot merely to reproduce the known
+failure. Resume only after an explicit Owner decision supplies a compatible
+safe login/display identifier and runtime-only password. The sanitized record
+is [STG-008 entry evidence](../../docs/governance/runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).

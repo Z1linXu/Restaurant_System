@@ -105,7 +105,15 @@ isolated Staging and passed formal preflight, repaired readiness, sanitized
 Flyway/runtime collection, one same-image restart and post-restart
 verification. Flyway remained V10/no-pending; printing/isolation and Production
 continuity were unchanged. `STG-007=PASS`. The current unique stop state is
-`STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE_WAITING_FOR_OWNER_RUNTIME_APPROVAL`.
+now `STG-008_CREDENTIAL_CONTRACT_ALIGNMENT_WAITING_FOR_OWNER_DECISION`.
+PR #83 merged only the final STG-007 evidence/governance into
+`main@2ed56b06f37c9257a655ec334f81e31ca4a518a6`; exact Staging correctly
+remained `2837ae88...`. The Owner then authorized STG-008. Its read-only entry
+reconfirmed V10/readiness/printing/isolation and Production continuity, found
+zero synthetic topology/credential rows, and safely proved the next Store ID
+is `1`. It stopped before `bootstrap-plan` because the requested account
+convention does not satisfy the reviewed `STG005_` identity and
+12-through-256 password contract. No one-shot or data write occurred.
 PR #61 is the architecture/governance foundation: it defines the Generic
 Store Provisioning Engine, Versioned Store Profiles, and Reusable Provisioning
 Modules without adding runtime behavior. PR #62 provides the guarded Synthetic
@@ -117,9 +125,11 @@ repository capability only.
 The completed STG-007 authority does not authorize another deploy/restart,
 Flyway execution, synthetic bootstrap, credential creation, source-menu write,
 login, target onboarding, validate, execute, replay, clone, or Production
-action. Every consumed STG-007 approval remains non-replayable. STG-008 requires
-a new Owner Runtime Gate binding exact deployed SHA, fresh readiness and
-separate STG-005A/STG-005B plan/execute approvals. Staging acceptance retains
+action. Every consumed STG-007 approval remains non-replayable. The later
+STG-008 authorization stopped at its explicit credential ambiguity rule. It
+may resume only after the Owner approves a compatible exact synthetic login/
+display identity and runtime-only password; it must then bind fresh readiness
+and distinct approvals to every STG-005A/STG-005B plan/create/replay. Staging acceptance retains
 the distinct prerequisite
 `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING` until synthetic-only runtime
 evidence proves the complete Owner login topology.
@@ -128,9 +138,9 @@ The authoritative post-stack matrix and next-loop order are in
 [POST_STACK_GROUND_TRUTH_AUDIT.md](runtime/POST_STACK_GROUND_TRUTH_AUDIT.md).
 STG-006 is complete for its passive scope and STG-007 is complete for its exact
 V10 continuation scope. The next phase is
-`STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE`, stopped before mutation at its true
-Owner Runtime Gate. STG-007 PASS is not AL-003 Staging acceptance, STG-008
-authority, or Production approval.
+`STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE`, stopped read-only before plan/mutation
+at its credential Owner Gate. STG-007 PASS is not AL-003 Staging acceptance,
+STG-008 PASS, or Production approval.
 
 The architecture authority for future provisioning packages is
 [STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md](agile/STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md).

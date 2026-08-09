@@ -4,7 +4,7 @@
 >
 > Prepared against: STG-005B checkpoint `0aba8377a3b7acec047c6ffd025f774d8a4d5e87`
 >
-> Runtime execution in this package: `NOT_AUTHORIZED_FOR_STG-008`
+> Runtime checkpoint: `STG-008_ENTRY_NO_GO_BEFORE_ONE_SHOT`
 
 > Current runtime checkpoint: separate Owner authorization deployed exact
 > `2837ae88e55142c99c6975f8b6575febffc913a1` V10-to-V10. Fresh formal
@@ -12,6 +12,12 @@
 > same-image restart and post-restart verification all passed with exact
 > identities unchanged. `STG-007=PASS`; no synthetic bootstrap, source-menu,
 > credential, login, onboarding or clone action followed.
+>
+> A later Owner-authorized STG-008 entry reconfirmed that runtime read-only,
+> found no existing synthetic Owner/topology, proved the next Store ID is `1`,
+> and stopped before `bootstrap-plan` because the requested credential
+> convention conflicts with the launcher/application `STG005_` identity and
+> 12-through-256 password contract. No one-shot or write occurred.
 
 ## 1. Purpose and classification
 
@@ -48,10 +54,11 @@ The runtime sequence is `NO_GO` until all of the following are true:
 Historical SHA approvals and evidence cannot be reused.
 
 STG-007 satisfied the release/deployment prerequisites above for exact deployed
-`2837ae88...`, but its consumed approvals do not authorize STG-008. The next
-batch requires fresh readiness and separate Owner approvals for
-`bootstrap-plan`, `bootstrap-execute`, `source-menu-plan`, and
-`source-menu-execute`; the synthetic password remains stdin-only.
+`2837ae88...`. The Owner then authorized STG-008, but the credential contract
+stopped the batch before its first one-shot. A resumed batch requires explicit
+Owner credential alignment, fresh readiness, and a distinct digest-bound
+approval artifact for every bootstrap/source plan, create, and replay
+invocation; the synthetic password remains stdin-only.
 
 ## 3. Guarded launcher contract
 
@@ -328,6 +335,9 @@ This preparation package passes when its shell tests, existing Staging guard
 tests, backend regression, compile, scope scan, and governance checks pass.
 Passing the package does not authorize or prove runtime acceptance.
 
+The current read-only entry result is recorded in
+[STG-008 Synthetic Topology and Source Entry Evidence](../runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).
+
 Stop state:
 
-`STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE_WAITING_FOR_OWNER_RUNTIME_APPROVAL`
+`STG-008_CREDENTIAL_CONTRACT_ALIGNMENT_WAITING_FOR_OWNER_DECISION`
