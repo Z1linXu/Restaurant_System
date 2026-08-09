@@ -28,13 +28,13 @@
 | observed_behavior | Exact Staging `2a6c30a...` reached `STG005_BOOTSTRAP|status=VALIDATED` before credential or data access, but the non-web profile also started `SimpleBrokerMessageHandler`; the JVM remained alive until the reviewed 600-second timeout. Compose `--rm` cleanup and the launcher finalizer then overlapped, preserving fail-closed blocked state. |
 | expected_behavior | The dedicated non-web one-shot excludes long-lived WebSocket infrastructure while preserving the normal web runtime contract. A successful password-free plan exits inside its bounded window; unexpected cleanup failure remains fail-closed. |
 | operational_impact | STG-008 cannot safely progress beyond PLAN; no synthetic business write is permitted while the reviewed blocked pair is retained. |
-| current_workaround | None. Do not retry the failed plan on exact `2a6c30a...`. |
+| current_workaround | PR #91 is `IN_MAIN` at `9a776d3...`; do not retry the failed plan on deployed exact `2a6c30a...`. Rebind the current exact candidate under the continuous Staging authorization. |
 | evidence | [STG-008 one-shot lifecycle repair evidence](runtime/STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md). |
 | authoritative_rule | [AL-003S Staging acceptance runbook](../../deployment/cloud/README_AL003S_STAGING_ACCEPTANCE.md). |
-| status | `REPAIR_REQUIRES_EXACT_SHA_REDEPLOY` |
+| status | `REPAIR_IN_MAIN_REQUIRES_EXACT_SHA_REDEPLOY` |
 | target_loop | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` Dependency Repair Auto-Loop. |
-| acceptance_criteria | Focused non-web lifecycle and shell safety regressions plus independent review pass; the repair enters `main`; a newly approved exact release passes rebind, deploy, readiness, recovery and a fresh PLAN without a timeout. |
-| deployment_required | Yes, Staging-only exact redeploy after separate Owner approval; no Production deployment. |
+| acceptance_criteria | Focused non-web lifecycle and shell safety regressions plus independent review passed; PR #91 entered `main`. The current continuous authorization must rebind/deploy that exact SHA, pass readiness/recovery and a fresh PLAN without a timeout. |
+| deployment_required | Yes, Staging-only exact redeploy under the current continuous Owner authorization; no Production deployment. |
 | last_updated | 2026-08-09 |
 
 ### KI-008 - Non-web STG-005 plan cannot construct servlet request context
@@ -46,14 +46,14 @@
 | title | Non-web STG-005 plan cannot construct servlet request context |
 | observed_behavior | The approved password-free `bootstrap-plan` exits during Spring context initialization because `RequestUserContextService` requires `HttpServletRequest` while the guarded one-shot is non-web. |
 | expected_behavior | The non-web guarded command constructs without inventing a request; any request-authentication attempt remains fail-closed. |
-| operational_impact | STG-008 cannot safely progress beyond PLAN; no synthetic data write is permitted while fail-closed state is retained. |
-| current_workaround | None. Do not retry the failed plan on the same exact runtime. |
+| operational_impact | Historical blocker resolved: exact `2a6c30a...` constructed and reached `VALIDATED` before credential/data access. The separate lifecycle blocker is tracked as `KI-009`. |
+| current_workaround | None; do not reuse old evidence. The current loop proceeds through PR #91's lifecycle repair and the continuous exact-SHA rebind authorization. |
 | evidence | [STG-008 non-web request-context repair evidence](runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md). |
 | authoritative_rule | [AL-003S Staging acceptance runbook](../../deployment/cloud/README_AL003S_STAGING_ACCEPTANCE.md). |
-| status | `REPAIR_REQUIRES_EXACT_SHA_REDEPLOY` |
+| status | `RESOLVED_BY_EXACT_RUNTIME_VALIDATION` |
 | target_loop | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` Dependency Repair Auto-Loop. |
-| acceptance_criteria | Focused authorization/non-web safety regressions and independent review passed; PR #89 entered `main`; a newly approved exact release must pass rebind, deploy, readiness and recovery before a new PLAN. |
-| deployment_required | Yes, Staging-only exact redeploy after separate Owner approval; no Production deployment. |
+| acceptance_criteria | Focused authorization/non-web safety regressions and independent review passed; PR #89 entered `main`; exact `2a6c30a...` passed rebind/deploy/readiness/recovery and emitted password-free `VALIDATED`. |
+| deployment_required | Completed by the exact `2a6c30a...` Staging-only deploy; no Production deployment. |
 | last_updated | 2026-08-09 |
 
 ### KI-002 - 走上海青被错误压缩为走青

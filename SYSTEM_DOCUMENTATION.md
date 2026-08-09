@@ -819,13 +819,20 @@ The password-free STG-005A plan reached `VALIDATED`, proving the request-context
 repair before credential or data access, but the non-web WebSocket broker kept
 the JVM alive to the 600-second bound. Compose cleanup and the scoped finalizer
 overlapped, so the fail-closed pair was correctly retained. Zero synthetic data
-was written; the next dependency repair is the narrow one-shot lifecycle fix.
+was written. PR #91 merged the narrow lifecycle fix at `9a776d3...`; it remains
+`IN_MAIN` and requires exact Staging rebind before deployment evidence. The
+current Owner authorization covers that Staging-only rebind and later bounded
+same-scope repair rebinds, never a migration, Production action or security/
+product/identity-boundary change.
 
 The bounded repository repair for that non-web authorization-context defect is
 documented in [STG-008 Non-Web Request-Context Repair Evidence](docs/governance/runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md).
 It entered `main` through PR #89 at `434c9cc808648a4f80c91435d8667ad9fe160018`
-and was runtime-validated by exact `2a6c30a...`. The unique stop state is
-`STG-008_ONE_SHOT_LIFECYCLE_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
+and was runtime-validated by exact `2a6c30a...`. PR #91 is `IN_MAIN` at
+`9a776d3...`; the Owner has authorized the bounded continuous Staging loop
+from fresh exact rebind through guarded topology/source work and conditional
+Phase-A Owner-login acceptance. The current unique stop state is
+`STG-008_CONTINUOUS_STAGING_LOOP_AUTHORIZED`.
 
 Repository PRs now follow the permanent auto-merge gate in the Agile Loop
 Operating Model: latest-main base, exact single-package scope, all applicable

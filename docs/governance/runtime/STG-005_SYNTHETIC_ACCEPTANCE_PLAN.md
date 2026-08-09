@@ -536,14 +536,19 @@ Current decision: the startup-safety dependency repair entered main through PR
 `6753855497...` to Staging at V10, then exact `2a6c30a...` proved the
 request-context repair by reaching password-free `VALIDATED`. The non-web
 WebSocket broker nevertheless held the one-shot alive to its timeout; zero
-synthetic rows changed and the new fail-closed pair remains. Runtime is stopped
-at
-`STG-008_ONE_SHOT_LIFECYCLE_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
+synthetic rows changed and the new fail-closed pair remains. PR #91 then put
+the bounded lifecycle repair in `main@9a776d3...`; it is `IN_MAIN`, not
+deployed, while `2a6c30a...` remains the deployed Staging runtime. The Owner
+has authorized the bounded continuous Staging loop from a freshly fetched exact
+rebind through guarded topology/source work and conditional Phase-A Owner-login
+acceptance. Runtime is at `STG-008_CONTINUOUS_STAGING_LOOP_AUTHORIZED`.
 The immutable entry result remains
 [STG-008 Synthetic Topology and Source Entry Evidence](STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md),
 and the resumed failure/repair is
 [STG-008 Flyway Guard Repair Evidence](STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md).
 The subsequent fresh baseline/deadlock and repository correction are in
 [STG-008 Release-Rebind Serialization Repair Evidence](STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md).
-The replacement repository repair is in
-[STG-008 Non-Web Request-Context Repair Evidence](STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md).
+The historical request-context repair is in
+[STG-008 Non-Web Request-Context Repair Evidence](STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md);
+the current lifecycle repair is in
+[STG-008 One-Shot Lifecycle Repair Evidence](STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md).
