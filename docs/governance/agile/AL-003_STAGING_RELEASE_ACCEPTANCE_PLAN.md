@@ -1,10 +1,10 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Capability state: `STG-008_CONTINUOUS_STAGING_LOOP_AUTHORIZED`
+> Capability state: `STG-009_PHASE_A_OWNER_LOGIN_VERIFIED_WAITING_FOR_PHASE_B_CLONE_APPROVAL`
 >
 > Historical failed candidate: `8f909525781804f61d1da388882f530da358c3c4`
 >
-> Current exact deployed Staging SHA: `2a6c30a5948882ff8bf1d3808e2970fe5b4a6ae3`
+> Current exact deployed Staging SHA: `468b8705c8e360b9e34336c5560442179544069b`
 >
 > Governance packages: PR #72 and PRs #60-#71 are `IN_MAIN`; PR #85's bounded
 > startup-safety repair, PR #86 Ground Truth closure and PR #87 release-rebind
@@ -157,16 +157,21 @@ runtime until a new exact-SHA deployment is separately approved.
 
 ### Staging Owner login prerequisite
 
-The acceptance prerequisite state is
-`AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`. Application deployment alone
-must never be reported as `AL-003_STAGING_ACCEPTANCE_READY`.
+The acceptance prerequisite state is now
+`STG-009_PHASE_A_OWNER_LOGIN_VERIFIED_WAITING_FOR_PHASE_B_CLONE_APPROVAL` for
+the bounded synthetic Phase-A gate. Application deployment alone is still not
+`AL-003_STAGING_ACCEPTANCE_READY`; exact Staging `468b8705...` additionally
+proved the synthetic Owner login, Organization Owner role, exact source-Store
+workspace/overview access, and logout. Chinatown onboarding and clone remain
+separately gated.
 
-Current runtime evidence proves that Staging is on exact Flyway V10 and that
-the STG-005A bootstrap has never been executed there. The STG-008 entry used
-synthetic-scoped and aggregate read-only queries and proved zero Organization,
-Store, user, credential, Organization-membership, Store-membership, and V9
-bootstrap-request rows. Synthetic Owner is therefore `NOT_CREATED`; no
-password/hash/token or unrelated identifier was read or retained.
+Historical STG-008 entry evidence (before the authorized synthetic run) proved
+that an earlier V10 Staging baseline had no STG-005A execution and zero
+Organization, Store, user, credential, membership, and bootstrap-request rows.
+That historical zero baseline is superseded by exact `468b8705...` evidence:
+STG-005A/B are `VALIDATED/CREATED/REPLAYED`, the synthetic Owner and source
+Store are ready, and Phase-A login/workspace/overview/logout passed. No
+password/hash/token or unrelated identifier is retained here.
 
 Repository code and the reviewed runbook establish these exact capability
 boundaries:
@@ -181,9 +186,10 @@ boundaries:
   every Store in that Organization. The bootstrap Owner therefore does not
   need a redundant target-Store membership after onboarding; runtime evidence
   must prove inherited access through workspace/context and Owner APIs.
-- No safe Staging login credential or successful Owner login is present in the
-  retained evidence. Credentials must be supplied only at an approved runtime
-  checkpoint and never copied from Production or recorded in evidence.
+- The synthetic Staging credential is ready and the successful Owner login is
+  retained in sanitized [STG-009 Phase-A evidence](../runtime/STG-009_PHASE_A_OWNER_LOGIN_EVIDENCE.md).
+  The credential remains runtime-only: it was supplied through secret-FD and
+  its password is not copied to Production, Git, logs, or evidence.
 
 Before AL-003 acceptance, an Owner-approved runtime preparation must prove this
 synthetic-only topology without raw SQL or authorization bypass:
@@ -215,13 +221,10 @@ release/env path in main. Exact `6753855497...` subsequently passed its
 Staging-only rebind/deploy/readiness/recovery sequence. The following fresh
 exact `2a6c30a...` STG-005A plan reached `VALIDATED`, proving the request-context
 repair before a non-web WebSocket lifecycle timeout retained a new blocked
-pair. A lifecycle-repaired, newly fetched exact main must receive a new Staging
-release/deploy approval, and the new retained blocked state remains recoverable
-only after Batch A passes. Only then may a restarted
-batch cover the synthetic topology/source work in steps 3 and 5 with fresh
-readiness and distinct plan/create/replay approvals. Steps 4 and 6-9's
-login/onboarding/clone acceptance remain later gates. The retained end-to-end
-sequence is:
+pair. The following is the retained historical sequence from before the
+successful `468b8705...` continuation; it is not a current instruction to
+repeat A/B or Phase-A. Chinatown onboarding/clone remains later Owner-gated
+work. The historical end-to-end sequence was:
 
 1. Create a fresh detached Staging release and fresh env/preflight evidence
    bound to the exact SHA; confirm `restaurant-pos-staging`, only
@@ -339,4 +342,8 @@ recovers.
 
 ## Capability dependency state
 
-`STG-008_CONTINUOUS_STAGING_LOOP_AUTHORIZED`
+`STG-009_PHASE_A_OWNER_LOGIN_VERIFIED_WAITING_FOR_PHASE_B_CLONE_APPROVAL`
+
+Exact Staging `468b8705...` passed the bounded synthetic Phase-A login
+acceptance; Phase-B Chinatown onboarding/validate/execute/clone/replay and all
+Production operations remain outside this plan's current authorization.

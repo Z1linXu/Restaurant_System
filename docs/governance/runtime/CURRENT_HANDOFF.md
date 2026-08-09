@@ -2,15 +2,15 @@
 
 ## Current verified continuation override (2026-08-09)
 
-`origin/main=cfe7d856...`; Staging remains exact `712531b...`, Flyway is
+`origin/main=468b8705...`; Staging is exact `468b8705...`, Flyway is
 V1--V10 with no pending or failed migration, and Printing is disabled.
 STG-005A PLAN/EXECUTE/REPLAY are `VALIDATED/CREATED/REPLAYED`; STG-005B is
 `VALIDATED/CREATED/REPLAYED` with `4/3/13/38` and replay revision `2 -> 2`.
 Synthetic Organization, Owner, source Store and credential are ready. No
-one-shot is active, the blocked marker is absent, and the lock is empty. This
-is `DEPLOYED_TO_STAGING` evidence, not `STAGING_ACCEPTED`. PR #95 is in main
-but not deployed; after fresh exact rebind/readiness only Phase-A Owner login
-is permitted. Chinatown onboarding/clone remains prohibited.
+one-shot is active, the blocked marker is absent, and the lock is empty. Exact
+Staging readiness and Phase-A Owner login acceptance both passed on this
+candidate; this remains `DEPLOYED_TO_STAGING`/synthetic acceptance evidence,
+not Production acceptance. Chinatown onboarding/clone remains prohibited.
 
 See [STG-008 synthetic runtime progress evidence](STG-008_SYNTHETIC_RUNTIME_PROGRESS_EVIDENCE.md).
 
@@ -82,10 +82,10 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| runtime-sensitive current-main candidate | `cfe7d856edaa7c5d0b2e44b4347c1b71e2c0f23e` | `IN_MAIN`; PR #95 Phase-A tooling requires exact Staging rebind before runtime evidence. |
-| exact deployed Staging runtime | `712531b941db92f4325a86126883706314f4cba5` | `DEPLOYED_TO_STAGING`; V10, synthetic A/B execution/replay complete, no one-shot or blocked marker. |
+| runtime-sensitive current-main candidate | `468b8705c8e360b9e34336c5560442179544069b` | `IN_MAIN`; PR #97 jq-free Phase-A parser repair, exact Staging deploy and Phase-A runtime evidence. |
+| exact deployed Staging runtime | `468b8705c8e360b9e34336c5560442179544069b` | `DEPLOYED_TO_STAGING`; V10, synthetic A/B execution/replay and Phase-A login acceptance complete, no one-shot or blocked marker. |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
-| Runtime-sensitive delivery package | PR #95 / exact `cfe7d856...` | `IN_MAIN`; bounded Phase-A login tooling, not yet deployed |
+| Runtime-sensitive delivery package | PR #97 / exact `468b8705...` | `IN_MAIN` and `DEPLOYED_TO_STAGING`; bounded jq-free Phase-A login tooling runtime-verified |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
 
 `IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
@@ -163,7 +163,7 @@ the current bounded Staging runtime identity below.
 | Environment | Retained evidence | Classification and boundary |
 |---|---|---|
 | Production | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`; Compose `cloud` `db/backend/nginx`; unchanged IDs/start times/restart `0`; health 200 | `MACHINE_VERIFIED_READ_ONLY` continuity only; Flyway/business state not queried |
-| Staging | `712531b941db92f4325a86126883706314f4cba5`; Flyway V10 with no pending or failed migration; exact `db/backend/nginx` identities running; health 200/200/200 | `DEPLOYED_TO_STAGING`; synthetic A/B plan/execute/replay complete, no active one-shot, marker absent, lock empty |
+| Staging | `468b8705c8e360b9e34336c5560442179544069b`; Flyway V10 with no pending or failed migration; exact `db/backend/nginx` identities running; health 200/200/200 | `DEPLOYED_TO_STAGING`; synthetic A/B plan/execute/replay and Phase-A login/logout complete, no active one-shot, marker absent, lock empty |
 | Staging isolation | project `restaurant-pos-staging`; only `127.0.0.1:18080`; separate state/network/mounts; private leaf UID 70/mode 0700 | `MACHINE_VERIFIED_READ_ONLY` |
 | Staging printing | `STAGING_PRINT_MODE=DISABLED`; feature flag `false` | `MACHINE_VERIFIED_READ_ONLY` |
 
@@ -194,8 +194,8 @@ new exact candidate and authorization cannot be reused.
 |---|---|
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `STG-009_PHASE_A_OWNER_LOGIN_ACCEPTANCE` |
-| Current package | Exact `712531b...` is deployed at V10 with completed synthetic A/B plan/execute/replay, `4/3/13/38`, replay `2 -> 2`, no active one-shot, no marker and empty lock. `STG-008=PASS` for these gates. PR #95 `cfe7d856...` is the next exact rebind/readiness candidate for Phase-A Owner login. |
-| Feature stop state | `STG-009_PHASE_A_OWNER_LOGIN_PENDING_EXACT_REBIND` |
+| Current package | Exact `468b8705...` is deployed at V10 with completed synthetic A/B plan/execute/replay, `4/3/13/38`, replay `2 -> 2`, and successful Phase-A login/me/workspaces/overview/logout. No active one-shot, marker or lock remains. |
+| Feature stop state | `STG-009_PHASE_A_OWNER_LOGIN_VERIFIED_WAITING_FOR_PHASE_B_CLONE_APPROVAL` |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
 | Current Owner gate | The Owner has already authorized the bounded continuous STG-008 loop: current exact-main release/private-env binding, formal preflight, Staging-only V10-to-V10 deploy, fresh readiness, exact-matching recovery of the newly retained records, fresh STG-005A PLAN, then the guarded synthetic STG-005A/STG-005B execute/replay sequence and conditional Owner-login acceptance. Every runtime invocation still needs its reviewed, digest-bound internal action approval; that is not a new Owner Gate. A same-scope bounded repair merge may rebind automatically. Any migration, product/security/identity-contract change, Production requirement, ambiguous identity, unexpected data, or destructive action is a true Owner Gate. |
 
@@ -454,13 +454,14 @@ from current main.
 6. Report the completed main stack and the next Staging Owner Gate.
 7. Do not recreate or redesign packages #61-#70.
 8. Do not infer implementation from the planning packages.
-9. Read STG-006, OPS-001, the STG-007 repair/final evidence, and all three
-   STG-008 evidence records. Treat `STG-007=PASS`, the credential decision as
-   resolved, and STG-008 as blocked before data write. Do not reuse the
-   `4759a23b...` authorization, run a synthetic helper, or clear blocked state
-   without a newly approved exact-main-containing-#87 deploy Gate and the
-   bounded post-Batch-A recovery conditions.
-10. Stop at runtime/product/operations Owner Gates; otherwise continue the
+9. Read STG-006, OPS-001, the STG-007 repair/final evidence, all STG-008
+   evidence records, and [STG-009 Phase-A evidence](STG-009_PHASE_A_OWNER_LOGIN_EVIDENCE.md).
+   Treat `STG-008=PASS` and `STG-009_PHASE_A_OWNER_LOGIN=PASS` as verified on
+   exact Staging `468b8705...`; no one-shot, blocked marker, or lock remains.
+10. Stop at `STG-009_PHASE_A_OWNER_LOGIN_VERIFIED_WAITING_FOR_PHASE_B_CLONE_APPROVAL`.
+    Do not start Chinatown onboarding, AL-003 validate/execute/clone/replay, or
+    any Production operation without the next Owner Runtime Gate.
+11. Stop at runtime/product/operations Owner Gates; otherwise continue the
     bounded Agile Loop and Dependency Repair Auto-Loop.
 
 ## 14. Auto-loop behavior
@@ -510,6 +511,7 @@ Primary authorities:
 - [STG-008 guarded one-shot Flyway repair evidence](STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md)
 - [STG-008 non-web request-context repair evidence](STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md)
 - [STG-008 one-shot lifecycle repair evidence](STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md)
+- [STG-009 Phase-A Owner login evidence](STG-009_PHASE_A_OWNER_LOGIN_EVIDENCE.md)
 - [OPS-001 secret-safe tooling runbook](../../../deployment/cloud/README_OPS001_STAGING_SECRET_SAFE_TOOLING.md)
 - [System Documentation](../../../SYSTEM_DOCUMENTATION.md)
 - [API contract](../../../doc/API.md)

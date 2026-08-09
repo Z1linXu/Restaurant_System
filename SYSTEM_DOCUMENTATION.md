@@ -2,12 +2,14 @@
 
 ## Current verified STG-008 continuation
 
-Staging is exact `712531b...` at Flyway V10. STG-005A and STG-005B have
+Staging is exact `468b8705...` at Flyway V10. STG-005A and STG-005B have
 completed PLAN/EXECUTE/REPLAY as `VALIDATED/CREATED/REPLAYED`; the synthetic
 source menu is `4/3/13/38`, replay is `2 -> 2`, no one-shot or blocked marker is
 active, and the lock is empty. This is `DEPLOYED_TO_STAGING` evidence only;
-`IN_MAIN` and `STAGING_ACCEPTED` remain separate. PR #95 needs fresh exact-SHA
-Staging rebind/readiness before Phase-A Owner login.
+`IN_MAIN` and `STAGING_ACCEPTED` remain separate. PR #97 is `IN_MAIN` and its
+Phase-A-only jq fallback was deployed and verified on this exact Staging
+runtime; Owner login acceptance passed. The next stop is the Phase-B Owner
+Runtime Gate.
 
 ## Current Governance Index
 
@@ -467,33 +469,21 @@ topology/metadata remains fail-closed. PR #59 merged the repair into `main` at
 `c3956592da8a33092ab745c7cc6aac05e9babfa7`; it has not been deployed by this
 record, and the old exact-SHA approval cannot be reused.
 
-AL-003 Staging acceptance also has the independent prerequisite
-`AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`. Current evidence proves
-Staging is exact `2837ae88...` at Flyway V10. The later STG-008 read-only entry
-queried only aggregate and synthetic-scoped metadata and proved that every
-Organization, Store, user, credential, Organization-membership,
-Store-membership, and bootstrap-request count is zero. It also proved
-`stores_id_seq last_value=1, is_called=false`, so the source Store can still be
-ID `1` without a write probe. Synthetic Owner is `NOT_CREATED`. Repository code
-proves that STG-005A can create the synthetic Organization, source Store, Owner
-credential, active Organization membership, and source-Store membership, but
-the first STG-008 entry stopped before plan while its requested account
-convention did not satisfy the guarded `STG005_` identity and 12-through-256
-password contract. The Owner later approved
-`STG005_OWNER_20260808_R01` without lowering that contract. Fresh readiness
-passed; the password-free bootstrap plan then stopped before the command/data
-path because the older cloud safety guard rejected the one-shot's required
-Flyway-disabled profile. Cleanup succeeded, all topology remained absent, and
-the launcher retained blocked state. AL-002 onboarding can create the inactive
-target and target-scoped Manager/Frontdesk accounts.
+Historical AL-003/STG-008 entry evidence (before the successful synthetic run)
+recorded `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`, exact Staging
+`2837ae88...`, Flyway V10, and zero Organization/Store/user/credential/
+membership/bootstrap-request rows. It also recorded the guarded identity and
+password contract, the pre-command Flyway safety NO_GO, and fail-closed
+cleanup. That historical zero baseline is superseded by exact Staging
+`468b8705...`: STG-005A/B are complete, the synthetic Owner and source Store
+are ready, and Phase-A login/workspace/overview/logout passed. The current
+synthetic evidence remains separate from Chinatown target onboarding.
 `StoreAccessService` grants the Organization Owner access to every Store in the
 same active Organization membership, so no redundant Owner target-Store
-membership is required. No retained evidence yet proves a safe Owner login,
-target workspace access, source-menu baseline, or authenticated
-validate/execute call. A future Owner-approved synthetic-only preparation must
-close those runtime gates without Production credentials, raw SQL,
-authorization bypasses, or real business data. Deployment success alone is not
-Staging acceptance readiness.
+membership is required. The Phase-A evidence proves only the synthetic source
+workspace/overview access; target onboarding and authenticated validate/execute
+remain future Owner-gated actions. No Production credentials, raw SQL,
+authorization bypasses, or real business data may supply those gates.
 
 Owner decisions recorded on 2026-08-08 establish Chinatown as the second
 planned real Production Store. The frozen Chinatown Profile is its initial
@@ -845,8 +835,9 @@ It entered `main` through PR #89 at `434c9cc808648a4f80c91435d8667ad9fe160018`
 and was runtime-validated by exact `2a6c30a...`. PR #91 is `IN_MAIN` at
 `9a776d3...`; the Owner has authorized the bounded continuous Staging loop
 from fresh exact rebind through guarded topology/source work and conditional
-Phase-A Owner-login acceptance. The current unique stop state is
-`STG-008_CONTINUOUS_STAGING_LOOP_AUTHORIZED`.
+Phase-A Owner-login acceptance. Exact `468b8705...` passed that bounded login
+acceptance; the current unique stop state is
+`STG-009_PHASE_A_OWNER_LOGIN_VERIFIED_WAITING_FOR_PHASE_B_CLONE_APPROVAL`.
 
 Fresh read-only inspection later found that the retained STG-005A failure’s
 normal two-line cleanup/action-failure lock is more specific than the

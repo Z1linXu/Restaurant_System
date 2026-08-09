@@ -1,6 +1,6 @@
 # AL-003 Store 1 -> Chinatown Live Menu Clone Technical Plan
 
-> Status: `IN_MAIN_AWAITING_STAGING_ACCEPTANCE`; `STG-007=PASS`, `STG-008` at dependency-repair/exact-runtime Owner Gate
+> Status: `IN_MAIN_AWAITING_PHASE_B_OWNER_RUNTIME_GATE`; `STG-008=PASS`, `STG-009_PHASE_A_OWNER_LOGIN=PASS`
 >
 > Prepared: 2026-07-31, America/Toronto
 >
@@ -26,7 +26,7 @@
 | `PLAN_STATUS` | `IN_MAIN_AWAITING_STAGING_ACCEPTANCE_AND_RUNTIME_APPROVAL` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | PRs #60-#91 and the #61-#70 stack are `IN_MAIN`; PR #92’s governance-only merge makes current main `8b93d09...`, while exact `2a6c30a...` remains deployed to isolated Staging at V10. The Owner aligned the STG-008 credential contract and authorized continuous same-scope Staging rebind. The password-free plan reached `VALIDATED`, proving PR #89 in runtime, then the WebSocket lifecycle timeout retained the new pair; zero writes occurred. Do not infer clone, Staging acceptance or Production authority. |
+| `RECOMMENDED_ACTION` | PRs #60-#97 and the #61-#70 stack are `IN_MAIN`; exact `468b8705...` is deployed to isolated Staging at V10. STG-005A/B and Phase-A Owner login evidence passed for the synthetic source only. Do not infer Chinatown clone, Production deployment, or Production authority. |
 
 PR-A through PR-F are in `main`. PR-D supplies generic source-option copying
 and target-local parent mapping; PR #54 placed the concrete Chinatown Profile
@@ -1007,14 +1007,14 @@ post-restart health with exact container/image/release/Flyway identity
 unchanged. The later exact `6753855497...` Staging continuation passed
 rebind/deploy/readiness/old-pair recovery; exact `2a6c30a...` then verified the
 non-web request-context repair through password-free `VALIDATED`. The bounded
-tooling repair changes no clone/API/profile behavior. STG-005A execute,
-STG-005B, credential creation, login, target onboarding and
-validate/execute/replay remain unexecuted. STG-008 is stopped after the
-separate non-web WebSocket lifecycle timeout; the lifecycle repair is not
-deployed, at
-`STG-008_CONTINUOUS_STAGING_LOOP_AUTHORIZED`.
+tooling repair changes no clone/API/profile behavior. Exact `468b8705...` then
+verified the completed STG-005A/B synthetic topology and Phase-A Owner login;
+target onboarding and validate/execute/replay remain unexecuted. The unique
+stop state is
+`STG-009_PHASE_A_OWNER_LOGIN_VERIFIED_WAITING_FOR_PHASE_B_CLONE_APPROVAL`.
 See [the sanitized STG-008 entry evidence](../runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md)
 [the Flyway guard repair evidence](../runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md),
 and [the release-rebind serialization repair evidence](../runtime/STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md).
 See also [the non-web request-context repair evidence](../runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md)
 and [the one-shot lifecycle repair evidence](../runtime/STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md).
+See also [the STG-009 Phase-A Owner login evidence](../runtime/STG-009_PHASE_A_OWNER_LOGIN_EVIDENCE.md).
