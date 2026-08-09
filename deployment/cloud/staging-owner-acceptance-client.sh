@@ -43,14 +43,21 @@ Usage:
     --approved-sha <full-sha> --env-file <fixed-env> --preflight-evidence <file> \
     --preflight-evidence-sha256 <sha256> --organization-id <id> \
     --approval <file> --approval-sha256 <sha256> --secrets-fd <open-fd>
+  staging-owner-acceptance-client.sh --execute-runtime --action owner-login-acceptance \
+    --approved-sha <full-sha> --env-file <fixed-env> --preflight-evidence <file> \
+    --preflight-evidence-sha256 <sha256> --organization-id <id> --source-store-id 1 \
+    --approval <file> --approval-sha256 <sha256> --secrets-fd <open-fd>
   staging-owner-acceptance-client.sh --execute-runtime --action clone-acceptance \
     --approved-sha <full-sha> --env-file <fixed-env> --preflight-evidence <file> \
     --preflight-evidence-sha256 <sha256> --organization-id <id> \
     --target-store-id <id> --source-store-id 1 --profile-code CHINATOWN_MENU_2026_02_02 \
     --approval <file> --approval-sha256 <sha256> --secrets-fd <open-fd>
 
-The inherited FD contains one JSON object. Both actions require
-login_identifier/login_password. prepare-target additionally requires
+The inherited FD contains one JSON object. Every action requires
+login_identifier/login_password. owner-login-acceptance performs only login,
+exact Owner/workspace/dashboard access verification, and logout; it creates no
+Store, staff, credential, menu, request, or other business data.
+prepare-target additionally requires
 onboarding_idempotency_key and onboarding_request. clone-acceptance requires
 clone_idempotency_key. Secret values are forbidden in argv/environment/output.
 The client uses only loopback HTTP, no redirects/proxy, private mode-0600
@@ -201,11 +208,19 @@ verify_owner_context() {
         ;;
       workspaces)
         "$JQ_BIN" -e --argjson organization "$ORGANIZATION_ID" '.data.organizations | any(.id == $organization and .role_code == "OWNER")' "$LAST_RESPONSE" >/dev/null || ops001_die "workspace lacks approved Organization Owner access"
-        if [[ -n "$TARGET_STORE_ID" ]]; then "$JQ_BIN" -e --argjson target "$TARGET_STORE_ID" '.data.stores | any(.id == $target)' "$LAST_RESPONSE" >/dev/null || ops001_die "workspace lacks inherited target Store access"; fi
+        if [[ "$ACTION" == "owner-login-acceptance" ]]; then
+          "$JQ_BIN" -e --argjson organization "$ORGANIZATION_ID" --argjson source "$SOURCE_STORE_ID" '.data.stores | type == "array" and length == 1 and .[0].id == $source and .[0].organization_id == $organization' "$LAST_RESPONSE" >/dev/null || ops001_die "workspace Store access is not exactly the approved synthetic source Store"
+        elif [[ -n "$TARGET_STORE_ID" ]]; then
+          "$JQ_BIN" -e --argjson target "$TARGET_STORE_ID" '.data.stores | any(.id == $target)' "$LAST_RESPONSE" >/dev/null || ops001_die "workspace lacks inherited target Store access"
+        fi
         ;;
       overview)
         "$JQ_BIN" -e --argjson organization "$ORGANIZATION_ID" '.data.organizations | any(.id == $organization and .role_code == "OWNER")' "$LAST_RESPONSE" >/dev/null || ops001_die "Owner overview lacks approved Organization"
-        if [[ -n "$TARGET_STORE_ID" ]]; then "$JQ_BIN" -e --argjson target "$TARGET_STORE_ID" '[.data.organizations[].stores[]?] | any(.id == $target)' "$LAST_RESPONSE" >/dev/null || ops001_die "Owner overview lacks target Store"; fi
+        if [[ "$ACTION" == "owner-login-acceptance" ]]; then
+          "$JQ_BIN" -e --argjson source "$SOURCE_STORE_ID" '[.data.organizations[].stores[]?] | type == "array" and length == 1 and .[0].id == $source' "$LAST_RESPONSE" >/dev/null || ops001_die "Owner overview Store access is not exactly the approved synthetic source Store"
+        elif [[ -n "$TARGET_STORE_ID" ]]; then
+          "$JQ_BIN" -e --argjson target "$TARGET_STORE_ID" '[.data.organizations[].stores[]?] | any(.id == $target)' "$LAST_RESPONSE" >/dev/null || ops001_die "Owner overview lacks target Store"
+        fi
         ;;
     esac
     printf 'OPS001_API|%s|HTTP_%s\n' "$(printf '%s' "$label" | tr '[:lower:]' '[:upper:]')" "$LAST_HTTP_STATUS"
@@ -259,7 +274,7 @@ run_action() {
   ops001_validate_approval "$APPROVAL_FILE" "$APPROVAL_SHA256" "$ACTION" "$APPROVED_SHA" "$ENV_DIGEST" "$(client_scope)"
   OPS001_APPROVAL_FILE="$APPROVAL_FILE"; ops001_assert_approval_unchanged; ops001_consume_approval
   initialize_private_root; read_secret_input; login; verify_owner_context
-  case "$ACTION" in prepare-target) prepare_target; clone_validation ;; clone-acceptance) clone_acceptance ;; esac
+  case "$ACTION" in owner-login-acceptance) ;; prepare-target) prepare_target; clone_validation ;; clone-acceptance) clone_acceptance ;; esac
   logout
   printf 'OPS001_API|%s|PASS\n' "$(printf '%s' "$ACTION" | tr '[:lower:]' '[:upper:]')"
 }
@@ -288,7 +303,7 @@ main() {
     [[ "$EXECUTE_RUNTIME" == "false" && -z "$APPROVAL_FILE$APPROVAL_SHA256$SECRETS_FD" ]] || ops001_die "validation accepts no runtime, approval, or secret input"
     printf 'OPS001_API|VALIDATE|PASS|no login or API request executed\n'; return
   fi
-  [[ "$ACTION" == "prepare-target" || "$ACTION" == "clone-acceptance" ]] || ops001_die "unsupported action: $ACTION"
+  [[ "$ACTION" == "owner-login-acceptance" || "$ACTION" == "prepare-target" || "$ACTION" == "clone-acceptance" ]] || ops001_die "unsupported action: $ACTION"
   [[ "$EXECUTE_RUNTIME" == "true" ]] || ops001_die "$ACTION requires --execute-runtime"
   [[ "$ORGANIZATION_ID" =~ ^[1-9][0-9]*$ ]] || ops001_die "organization ID must be positive"
   [[ "$SOURCE_STORE_ID" == "1" && "$PROFILE_CODE" == "CHINATOWN_MENU_2026_02_02" ]] || ops001_die "Owner acceptance requires reviewed source/profile bindings"

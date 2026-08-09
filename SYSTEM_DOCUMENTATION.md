@@ -23,8 +23,10 @@ separate from historical evidence snapshots and business implementation details:
   and its [local evidence](docs/governance/runtime/OPS-001_STAGING_SECRET_SAFE_TOOLING_EVIDENCE.md)
   provide exact-SHA/action-bound detached release plus four-field private-env
   rotation, same-container restart/Flyway evidence, and secret-FD Owner/API
-  acceptance helpers. They are repository capability only and authorize no
-  runtime action.
+  acceptance helpers. The bounded `owner-login-acceptance` action proves only
+  synthetic Owner login, exact Organization/source-Store access and logout; it
+  cannot onboard a target Store or invoke clone endpoints. These are repository
+  capability only and authorize no runtime action.
 - [STG-007 Preflight Upgrade Port Guard Repair Evidence](docs/governance/runtime/STG-007_PREFLIGHT_UPGRADE_PORT_GUARD_REPAIR_EVIDENCE.md)
   records the deterministic retained-listener upgrade blocker, the exact
   fail-closed ownership correction, local verification scope, expired prior
