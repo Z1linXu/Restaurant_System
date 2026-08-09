@@ -14,11 +14,11 @@
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `STG-008_CREDENTIAL_CONTRACT_ALIGNMENT_WAITING_FOR_OWNER_DECISION` |
-| target_loop | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE`; entry `NO_GO` Owner Gate before STG-005A plan/write |
-| implementation status | PR-A through PR-F and PRs #58-#83 are `IN_MAIN`; #66 remains an independent completed repair. Exact `2837ae88...` is deployed to isolated Staging at Flyway V10 and `STG-007=PASS`; PR #83 advanced documentation main only. STG-008 read-only entry reconfirmed health `200/200/200`, printing/isolation and unchanged Production continuity, found zero synthetic topology/credential rows, and proved the next Store ID is `1`. It then stopped before plan/write because the requested credential convention conflicts with the guarded `STG005_` login and 12-through-256 password contract. |
-| authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md), [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md), and [STG-008 entry evidence](runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md) |
-| next action | Owner must approve one exact `STG005_` login/display identifier and a Staging-only runtime password satisfying the retained minimum. A resumed batch must bind deployed `2837ae88...`, recollect fresh readiness, and use distinct digest-bound approvals for every STG-005A/STG-005B plan/create/replay invocation. It must not include login, target onboarding, clone or Production access. |
+| status | `STG-008_DEPENDENCY_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL` |
+| target_loop | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE`; bounded one-shot/Flyway safety repair under repository review after password-free STG-005A plan `NO_GO` |
+| implementation status | PR-A through PR-F, PRs #58-#84, and independent #66 are `IN_MAIN`. Exact `2837ae88...` remains deployed to isolated Staging at Flyway V10 and `STG-007=PASS`; later main through #84 was documentation only. The Owner approved `STG005_OWNER_20260808_R01` without lowering the password guard. Fresh readiness passed, but the first password-free `bootstrap-plan` one-shot stopped before the command/data path because the older cloud safety guard rejected its required Flyway-disabled profile. Cleanup succeeded, topology stayed empty, Production continuity stayed unchanged, and fail-closed state was retained. A bounded backend safety-contract repair is the only repository change under review. |
+| authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md), [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md), [STG-008 entry evidence](runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md), and [STG-008 Flyway guard repair evidence](runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md) |
+| next action | Complete and auto-merge the qualifying bounded repair. Because it changes backend startup behavior, request a new Owner-approved exact-SHA Staging release/deploy plus separately approved blocked-state recovery; then restart STG-008 with fresh readiness/approvals. Do not request the runtime-only password before that gate, patch the old image, or begin source-menu/login/onboarding/clone/Production work. |
 
 ### Current AL-003 delivery state
 
@@ -55,6 +55,7 @@
 | Flyway success-token repair / PR #81 | `IN_MAIN` at `63600b13b10a5549d9095a03c94e69a9f880af9f` | PostgreSQL `success::text=true` is accepted exactly; false/abbreviated/invalid history remains fail-closed |
 | Restart readiness/fail-closed repair / PR #82 | `IN_MAIN` at `2837ae88e55142c99c6975f8b6575febffc913a1` | Bounded three-endpoint readiness and nonzero-exit blocked-state persistence; exact merged SHA later passed STG-007 |
 | STG-007 final evidence/governance / PR #83 | `IN_MAIN` at `2ed56b06f37c9257a655ec334f81e31ca4a518a6` | Documentation/evidence only; no runtime-capability or runtime-state change |
+| STG-008 entry evidence/governance / PR #84 | `IN_MAIN` at `828af4e84581dcb051248beee694c307a65210c5` | Sanitized credential-gate entry evidence only; no application, migration, runtime configuration, credential, or data mutation |
 
 The Owner-login acceptance prerequisite is not satisfied by repository code or
 deployment alone. Read-only code audit confirms that an active Organization
@@ -64,8 +65,11 @@ membership for the Owner. STG-005A and onboarding can establish the required
 identity/access topology, but they have not run on the evidenced Staging
 runtime. STG-008 entry evidence now proves the account/topology rows are
 absent and Store ID `1` remains safely allocatable; it also records the
-credential-contract `NO_GO`. Separate Owner-approved runtime evidence must still prove the
-synthetic credential, login, workspace access, target onboarding, and
+historical credential-contract `NO_GO`. The Owner has now aligned that contract,
+but the fresh password-free plan exposed the bounded cloud/Flyway safety-rule
+conflict before the command path. Separate Owner-approved exact-SHA recovery
+and runtime evidence must still prove the synthetic credential, login,
+workspace access, target onboarding, and
 authenticated validate/execute calls. No Production credential, raw SQL,
 authorization bypass, or real business data may supply that evidence.
 
@@ -209,7 +213,7 @@ seed/demo Store.
 | Frozen Chinatown Store Profile | `DONE_IN_MAIN` | `CHINATOWN_MENU_2026_02_02` is the approved initial Production target contract. |
 | PostgreSQL private-leaf Staging guard | `DONE_IN_MAIN` | PR #59 merged at `c3956592da8a33092ab745c7cc6aac05e9babfa7`; no redeploy is implied. |
 | Exact-SHA Staging deployment and Flyway V9/V10 | `STG-007_PASS` / `DEPLOYED_TO_STAGING` | Exact `2837ae88...` passed fresh V10 continuation entry, formal preflight, V10-to-V10 deploy, repaired readiness, runtime collection, same-image restart and post-restart verification. Flyway remains exact V10/no-pending; this is not AL-003 Staging acceptance. |
-| Synthetic Organization/source/Owner bootstrap | `STAGING_NO_GO_OWNER_GATE` | STG-005A is in main but plan/write/replay did not start. Read-only evidence proves zero topology/credential/request rows and safe next Store ID `1`; Owner must align the requested account with the guarded synthetic-prefix/password contract. |
+| Synthetic Organization/source/Owner bootstrap | `STAGING_DEPENDENCY_REPAIR_RUNTIME_GATE` | Owner identity/password contract is aligned. Fresh plan reached one bounded one-shot but failed before the STG-005A command because the old cloud safety guard rejected required Flyway-disabled mode. Cleanup and zero-write evidence passed; blocked state is retained. Merge the bounded repair, then obtain new exact-SHA deploy and blocked-recovery approval before retry. |
 | Synthetic target onboarding and Owner target access | `STAGING_PENDING` | Existing onboarding plus Organization Owner access is sufficient; runtime evidence is missing. |
 | Synthetic Owner login/workspace/Owner API authorization | `STAGING_PENDING` | Account is `NOT_CREATED`; a compatible credential must first be Owner-approved and supplied at runtime, never retained in Git/evidence. Login itself remains outside STG-008. |
 | Reproducible Synthetic St-Denis source-menu baseline | `IN_MAIN` via PR #62 | Guarded, versioned, transactional empty-or-exact implementation is repository capability only and has not run on Staging. |

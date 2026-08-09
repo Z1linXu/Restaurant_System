@@ -1,6 +1,6 @@
 # AL-003 Store 1 -> Chinatown Live Menu Clone Technical Plan
 
-> Status: `IN_MAIN_AWAITING_STAGING_ACCEPTANCE`; `STG-007=PASS`, `STG-008=NO_GO` at credential Owner Gate
+> Status: `IN_MAIN_AWAITING_STAGING_ACCEPTANCE`; `STG-007=PASS`, `STG-008` at dependency-repair/exact-runtime Owner Gate
 >
 > Prepared: 2026-07-31, America/Toronto
 >
@@ -26,7 +26,7 @@
 | `PLAN_STATUS` | `IN_MAIN_AWAITING_STAGING_ACCEPTANCE_AND_RUNTIME_APPROVAL` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | PRs #60-#83 and the #61-#70 stack are `IN_MAIN`; exact `2837ae88...` remains deployed to isolated Staging at V10 and `STG-007=PASS`, while PR #83 is evidence/governance only. STG-008 read-only entry found no synthetic Owner/topology and proved Store ID `1` is safely allocatable, then stopped before plan/write because the requested credential convention conflicts with the guarded contract. Stop at `STG-008_CREDENTIAL_CONTRACT_ALIGNMENT_WAITING_FOR_OWNER_DECISION`; do not infer synthetic-write, clone, Staging-acceptance or Production authority. |
+| `RECOMMENDED_ACTION` | PRs #60-#84 and the #61-#70 stack are `IN_MAIN`; exact `2837ae88...` remains deployed to isolated Staging at V10 and `STG-007=PASS`, while PRs #83/#84 are evidence/governance only. The Owner aligned the STG-008 credential contract. Fresh password-free plan readiness passed, but the one-shot stopped before its command/data path at the older cloud/Flyway safety conflict and retained blocked state with zero writes. Complete the bounded repository repair, then stop at the new exact-SHA Staging deploy plus blocked-recovery Owner Gate; do not infer bootstrap, clone, Staging acceptance or Production authority. |
 
 PR-A through PR-F are in `main`. PR-D supplies generic source-option copying
 and target-local parent mapping; PR #54 placed the concrete Chinatown Profile
@@ -967,9 +967,14 @@ Staging acceptance separately remains
 the repository but has not run on the evidenced V10 Staging runtime. STG-008
 read-only evidence proves the relevant topology, credential, membership, and
 bootstrap-request rows are all absent and the next generated Store ID is `1`.
-The requested account convention is not compatible with the `STG005_` identity
-and 12-through-256 password guard, so no plan or write began. STG-005A creates
-only the synthetic Organization, source Store, Owner credential, Organization
+The first entry's account convention was not compatible with the `STG005_`
+identity and 12-through-256 password guard, so no plan or write began. The
+Owner later approved `STG005_OWNER_20260808_R01` without lowering that guard.
+Fresh plan readiness passed, but the password-free one-shot failed during
+shared startup safety validation before the STG-005A command or data path
+because the older cloud rule rejected required Flyway-disabled mode. Cleanup
+and zero-write continuity passed; blocked state remains. STG-005A creates only
+the synthetic Organization, source Store, Owner credential, Organization
 membership, and source-Store membership. Existing onboarding can create the
 inactive target and its Store-scoped staff, while `StoreAccessService` grants
 the Organization Owner target access without a redundant target membership.
@@ -1002,6 +1007,7 @@ collection, same-image restart and post-restart health passed with exact
 container/image/release/Flyway identity unchanged. The bounded tooling repair
 changes no clone/API/profile behavior. STG-005A, STG-005B, credential creation,
 login, target onboarding and validate/execute/replay remain unexecuted.
-STG-008 is `NO_GO` at
-`STG-008_CREDENTIAL_CONTRACT_ALIGNMENT_WAITING_FOR_OWNER_DECISION`. See
-[the sanitized STG-008 entry evidence](../runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).
+STG-008 is stopped after a pre-command plan `NO_GO` at
+`STG-008_DEPENDENCY_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
+See [the sanitized STG-008 entry evidence](../runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md)
+and [the Flyway guard repair evidence](../runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md).

@@ -135,3 +135,11 @@ revision or 4/3/13/38 graph row changed.
 
 The current sanitized runtime decision is
 [STG-008 Synthetic Topology and Source Entry Evidence](STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).
+
+The Owner later aligned the credential contract, but the fresh password-free
+STG-005A plan one-shot failed before its command/data path at the older shared
+cloud/Flyway safety rule. Cleanup succeeded, topology remained empty, and
+blocked state was retained. STG-005B still has no plan/create/replay runtime
+result. Its next prerequisite is the bounded repair in main, a newly approved
+exact Staging deployment, and separately approved blocked-state recovery. See
+[STG-008 Flyway Guard Repair Evidence](STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md).

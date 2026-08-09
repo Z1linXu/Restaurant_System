@@ -1,6 +1,6 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Capability state: `STG-008_CREDENTIAL_CONTRACT_ALIGNMENT_WAITING_FOR_OWNER_DECISION`
+> Capability state: `STG-008_DEPENDENCY_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
 >
 > Historical failed candidate: `8f909525781804f61d1da388882f530da358c3c4`
 >
@@ -31,6 +31,20 @@ satisfy the reviewed `STG005_` identity and 12-through-256 password contract.
 No one-shot, credential, synthetic write, source graph, login, or API action
 occurred. See
 [STG-008 entry evidence](../runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).
+
+PR #84 later merged that sanitized evidence at `828af4e8...`. The Owner then
+approved `STG005_OWNER_20260808_R01` while retaining the 12-through-256
+runtime-only password contract. Fresh exact readiness passed. The first
+password-free `bootstrap-plan` one-shot stopped before its STG-005A command,
+credential reader, or transaction because the older cloud startup safety rule
+required Flyway enabled while this reviewed non-web profile must keep Flyway
+disabled. Cleanup succeeded, topology/request counts stayed zero, V10 and
+both environments remained healthy/unchanged, and the launcher retained its
+blocked state. A bounded fail-closed repository repair is recorded in
+[STG-008 Flyway Guard Repair Evidence](../runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md).
+Because it changes backend startup behavior, its merged SHA requires a new
+exact Staging deploy approval and separate blocked-state recovery before any
+retry or password request.
 
 Historically, PR #56 entered `main` and the fixed release candidate was
 `8f909525781804f61d1da388882f530da358c3c4`. The read-only preflight is recorded
@@ -170,11 +184,14 @@ authorization, and copied customer or Store data.
 
 Steps 1-2 and the infrastructure restart portion of step 9 were completed by
 STG-007 at exact deployed `2837ae88...`; they must not be repeated from this
-plan without new authority. STG-008 received runtime authority, but its
-read-only entry stopped before step 3 at the credential-contract Owner Gate.
-After explicit credential alignment, a resumed batch may cover only the
-synthetic topology/source work in steps 3 and 5, with fresh readiness and
-distinct plan/create/replay approvals. Steps 4 and 6-9's
+plan without new authority. STG-008 received runtime authority. Its first
+entry stopped before step 3 at the credential-contract Owner Gate; after
+alignment, the first plan one-shot stopped before the command at the bounded
+cloud/Flyway dependency defect. The repair must enter main, its exact backend
+SHA must receive a new Staging release/deploy approval, and retained blocked
+state must receive separate recovery approval. Only then may a restarted
+batch cover the synthetic topology/source work in steps 3 and 5 with fresh
+readiness and distinct plan/create/replay approvals. Steps 4 and 6-9's
 login/onboarding/clone acceptance remain later gates. The retained end-to-end
 sequence is:
 
@@ -282,4 +299,4 @@ recovers.
 
 ## Capability dependency state
 
-`STG-008_CREDENTIAL_CONTRACT_ALIGNMENT_WAITING_FOR_OWNER_DECISION`
+`STG-008_DEPENDENCY_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`

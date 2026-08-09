@@ -499,7 +499,12 @@ Canonical request:
   12 through 256 characters through non-interactive standard input.
 - The STG-008 read-only entry found no existing synthetic Owner and stopped
   before plan/write because the requested credential convention did not meet
-  those retained bootstrap guards. No credential or login was attempted.
+  those retained bootstrap guards. The Owner later approved
+  `STG005_OWNER_20260808_R01` without changing them. Fresh password-free plan
+  readiness then exposed a pre-command cloud/Flyway safety-rule conflict; no
+  credential, bootstrap transaction, or login was attempted. The API contract
+  is unchanged, and runtime remains gated on repaired exact-SHA deployment and
+  blocked-state recovery.
 
 ### Owner Store Onboarding API (AL-002 in main)
 

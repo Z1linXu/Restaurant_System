@@ -4,7 +4,7 @@
 >
 > Prepared against: STG-005B checkpoint `0aba8377a3b7acec047c6ffd025f774d8a4d5e87`
 >
-> Runtime checkpoint: `STG-008_ENTRY_NO_GO_BEFORE_ONE_SHOT`
+> Runtime checkpoint: `STG-008_BOOTSTRAP_PLAN_NO_GO_BEFORE_COMMAND_WITH_BLOCKED_STATE`
 
 > Current runtime checkpoint: separate Owner authorization deployed exact
 > `2837ae88e55142c99c6975f8b6575febffc913a1` V10-to-V10. Fresh formal
@@ -18,6 +18,15 @@
 > and stopped before `bootstrap-plan` because the requested credential
 > convention conflicts with the launcher/application `STG005_` identity and
 > 12-through-256 password contract. No one-shot or write occurred.
+>
+> The Owner then approved `STG005_OWNER_20260808_R01` without lowering the
+> password guard. Fresh exact readiness passed and the password-free plan
+> started one bounded one-shot. Spring stopped before the STG-005A command
+> because the older shared cloud safety rule rejected this profile's required
+> Flyway-disabled mode. Cleanup succeeded, topology stayed empty, and both
+> blocked records were retained. A bounded repository repair is under review;
+> a new exact-SHA deploy and separate blocked-state recovery Owner Gate precede
+> any retry.
 
 ## 1. Purpose and classification
 
@@ -54,11 +63,15 @@ The runtime sequence is `NO_GO` until all of the following are true:
 Historical SHA approvals and evidence cannot be reused.
 
 STG-007 satisfied the release/deployment prerequisites above for exact deployed
-`2837ae88...`. The Owner then authorized STG-008, but the credential contract
-stopped the batch before its first one-shot. A resumed batch requires explicit
-Owner credential alignment, fresh readiness, and a distinct digest-bound
-approval artifact for every bootstrap/source plan, create, and replay
-invocation; the synthetic password remains stdin-only.
+`2837ae88...`. The credential contract is now aligned. The first fresh plan
+one-shot exposed a pre-command cloud/Flyway safety conflict and left the
+launcher blocked with zero application writes. The bounded repair changes the
+backend startup guard, so the deployed old image cannot consume it. After the
+repair enters main, a resumed batch requires a newly approved exact-SHA
+Staging release/deploy, separately approved blocked-state recovery, fresh
+readiness, and a distinct digest-bound approval artifact for every bootstrap/
+source plan, create, and replay invocation; the password remains stdin-only
+and must not be requested before that gate.
 
 ## 3. Guarded launcher contract
 
@@ -335,9 +348,11 @@ This preparation package passes when its shell tests, existing Staging guard
 tests, backend regression, compile, scope scan, and governance checks pass.
 Passing the package does not authorize or prove runtime acceptance.
 
-The current read-only entry result is recorded in
+The historical read-only entry result is recorded in
 [STG-008 Synthetic Topology and Source Entry Evidence](../runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).
+The later plan failure, zero-write continuity and dependency repair are in
+[STG-008 Flyway Guard Repair Evidence](../runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md).
 
 Stop state:
 
-`STG-008_CREDENTIAL_CONTRACT_ALIGNMENT_WAITING_FOR_OWNER_DECISION`
+`STG-008_DEPENDENCY_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
