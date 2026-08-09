@@ -45,6 +45,10 @@ printf 'release fixture\n' >"$SOURCE_REPO/fixture.txt"
 mkdir -p "$SOURCE_REPO/deployment/cloud"
 cat >"$SOURCE_REPO/deployment/cloud/staging-deploy.sh" <<EOF
 #!/usr/bin/env bash
+if [[ -e "$TMP_DIR/drift-block-during-validator" ]]; then
+  printf 'AL003S_BLOCKED|drifted_during_rotation\n' >"$OPS001_EXPECTED_ROOT/state/al003s-acceptance.blocked"
+  printf 'AL003S_BLOCKED|drifted_during_rotation\n' >"$OPS001_EXPECTED_ROOT/state/al003s-acceptance.lock"
+fi
 [[ ! -e "$TMP_DIR/fail-validator" ]]
 EOF
 chmod +x "$SOURCE_REPO/deployment/cloud/staging-deploy.sh"
@@ -128,8 +132,69 @@ expect_failure recovery_symlink rotate_environment
 assert_contains 'environment recovery directory must be a real directory' "$TMP_DIR/recovery_symlink.err"
 [[ -z "$(find "$RECOVERY_REDIRECT" -mindepth 1 -print -quit)" ]] || fail 'recovery symlink redirected a secret snapshot'
 unlink "$OPS001_EXPECTED_ROOT/state/ops001-env-recovery"
+printf 'AL003S_BLOCKED|action_failed_requires_owner_review\n' >"$OPS001_EXPECTED_ROOT/state/al003s-acceptance.blocked"
+printf 'AL003S_BLOCKED|action_failed_requires_owner_review\n' >"$OPS001_EXPECTED_ROOT/state/al003s-acceptance.lock"
+chmod 600 "$OPS001_EXPECTED_ROOT/state/al003s-acceptance.blocked" "$OPS001_EXPECTED_ROOT/state/al003s-acceptance.lock"
+BLOCKED_MARKER_DIGEST="$(ops001_file_digest "$OPS001_EXPECTED_ROOT/state/al003s-acceptance.blocked")"
+BLOCKED_LOCK_DIGEST="$(ops001_file_digest "$OPS001_EXPECTED_ROOT/state/al003s-acceptance.lock")"
+expect_failure synthetic_action_still_blocked acquire_action_lock
+assert_contains 'AL-003S actions are blocked pending Owner cleanup review' "$TMP_DIR/synthetic_action_still_blocked.err"
+expect_failure regular_release_still_blocked run_prepare
+assert_contains 'AL-003S actions are blocked pending Owner cleanup review' "$TMP_DIR/regular_release_still_blocked.err"
+
+chmod 644 "$OPS001_EXPECTED_ROOT/state/al003s-acceptance.blocked"
+expect_failure recovery_block_mode assert_recovery_blocked_state
+assert_contains 'owner-owned mode 0600' "$TMP_DIR/recovery_block_mode.err"
+chmod 600 "$OPS001_EXPECTED_ROOT/state/al003s-acceptance.blocked"
+chmod 644 "$OPS001_EXPECTED_ROOT/state/al003s-acceptance.lock"
+expect_failure recovery_lock_mode acquire_staging_serialization_lock
+assert_contains 'action lock metadata is unsafe' "$TMP_DIR/recovery_lock_mode.err"
+[[ "$(ops001_file_mode "$OPS001_EXPECTED_ROOT/state/al003s-acceptance.lock")" == "644" ]] || fail 'unsafe retained lock mode was silently changed'
+chmod 600 "$OPS001_EXPECTED_ROOT/state/al003s-acceptance.lock"
+printf 'AL003S_BLOCKED|unexpected\nAL003S_BLOCKED|second\n' >"$OPS001_EXPECTED_ROOT/state/al003s-acceptance.blocked"
+expect_failure recovery_block_shape assert_recovery_blocked_state
+assert_contains 'identity is invalid or mismatched' "$TMP_DIR/recovery_block_shape.err"
+printf 'AL003S_BLOCKED|action_failed_requires_owner_review\ntrailing_unterminated_record' >"$OPS001_EXPECTED_ROOT/state/al003s-acceptance.blocked"
+printf 'AL003S_BLOCKED|action_failed_requires_owner_review\ntrailing_unterminated_record' >"$OPS001_EXPECTED_ROOT/state/al003s-acceptance.lock"
+expect_failure recovery_block_unterminated_trailer assert_recovery_blocked_state
+assert_contains 'identity is invalid or mismatched' "$TMP_DIR/recovery_block_unterminated_trailer.err"
+printf 'AL003S_BLOCKED|action_failed_requires_owner_review\n' >"$OPS001_EXPECTED_ROOT/state/al003s-acceptance.blocked"
+printf 'AL003S_BLOCKED|action_failed_requires_owner_review\n' >"$OPS001_EXPECTED_ROOT/state/al003s-acceptance.lock"
+mv "$OPS001_EXPECTED_ROOT/state/al003s-acceptance.blocked" "$TMP_DIR/blocked-marker-real"
+ln -s "$TMP_DIR/blocked-marker-real" "$OPS001_EXPECTED_ROOT/state/al003s-acceptance.blocked"
+expect_failure recovery_block_symlink assert_recovery_blocked_state
+assert_contains 'requires both retained AL-003S blocked records' "$TMP_DIR/recovery_block_symlink.err"
+unlink "$OPS001_EXPECTED_ROOT/state/al003s-acceptance.blocked"
+mv "$TMP_DIR/blocked-marker-real" "$OPS001_EXPECTED_ROOT/state/al003s-acceptance.blocked"
+RECOVERY_BLOCK_MARKER_DIGEST=""
+RECOVERY_BLOCK_LOCK_DIGEST=""
+assert_recovery_blocked_state
+printf 'AL003S_BLOCKED|different_reviewed_reason\n' >"$OPS001_EXPECTED_ROOT/state/al003s-acceptance.blocked"
+printf 'AL003S_BLOCKED|different_reviewed_reason\n' >"$OPS001_EXPECTED_ROOT/state/al003s-acceptance.lock"
+expect_failure recovery_block_digest_drift assert_recovery_blocked_state
+assert_contains 'changed during release preparation' "$TMP_DIR/recovery_block_digest_drift.err"
+printf 'AL003S_BLOCKED|action_failed_requires_owner_review\n' >"$OPS001_EXPECTED_ROOT/state/al003s-acceptance.blocked"
+printf 'AL003S_BLOCKED|action_failed_requires_owner_review\n' >"$OPS001_EXPECTED_ROOT/state/al003s-acceptance.lock"
+assert_recovery_blocked_state
+
+ACTION=prepare-recovery-release-env
+SCOPE="repository=$REPOSITORY;release=$RELEASE_DIR;identity_fields=4;blocked_marker_sha256=$RECOVERY_BLOCK_MARKER_DIGEST;blocked_lock_sha256=$RECOVERY_BLOCK_LOCK_DIGEST"
+cat >"$APPROVAL_FILE" <<EOF
+OPS001_APPROVAL|STATUS|OWNER_APPROVED
+OPS001_APPROVAL|ENVIRONMENT|restaurant-pos-staging
+OPS001_APPROVAL|EXPIRES_AT_EPOCH|$((NOW + 600))
+OPS001_APPROVAL|ACTION|$ACTION
+OPS001_APPROVAL|APPROVED_SHA|$APPROVED_SHA
+OPS001_APPROVAL|ENV_SHA256|$ENV_DIGEST
+OPS001_APPROVAL|REQUEST_FINGERPRINT|$(ops001_request_fingerprint "$ACTION" "$APPROVED_SHA" "$ENV_DIGEST" "$SCOPE")
+OPS001_APPROVAL|REFERENCE|owner/OPS-001-recovery-release-test
+EOF
+chmod 600 "$APPROVAL_FILE"
+APPROVAL_SHA256="$(ops001_file_digest "$APPROVAL_FILE")"
 run_prepare >"$TMP_DIR/prepare.out"
 assert_contains 'OPS001_RELEASE_ENV|PASS' "$TMP_DIR/prepare.out"
+[[ "$(ops001_file_digest "$OPS001_EXPECTED_ROOT/state/al003s-acceptance.blocked")" == "$BLOCKED_MARKER_DIGEST" ]] || fail 'release rebind changed the retained blocked marker'
+[[ "$(ops001_file_digest "$OPS001_EXPECTED_ROOT/state/al003s-acceptance.lock")" == "$BLOCKED_LOCK_DIGEST" ]] || fail 'release rebind changed the retained blocked lock record'
 assert_release
 [[ "$(ops001_file_mode "$RELEASE_DIR")" == 700 ]] || fail 'release mode is not 0700'
 [[ "$(ops001_env_value "$ENV_FILE" STAGING_COMMIT_SHA)" == "$APPROVED_SHA" ]] || fail 'environment SHA not rotated'
@@ -139,6 +204,15 @@ assert_release
 
 PRIOR_ENV_DIGEST="$(ops001_file_digest "$ENV_FILE")"
 ENV_DIGEST="$PRIOR_ENV_DIGEST"
+rotate_with_exit_cleanup() { trap cleanup EXIT; rotate_environment; }
+touch "$TMP_DIR/drift-block-during-validator"
+ROTATION_STATE=NONE
+expect_failure blocked_record_drift_rollback rotate_with_exit_cleanup
+assert_contains 'retained AL-003S blocked records changed during release preparation' "$TMP_DIR/blocked_record_drift_rollback.err"
+[[ "$(ops001_file_digest "$ENV_FILE")" == "$PRIOR_ENV_DIGEST" ]] || fail 'blocked-record drift did not restore the prior environment'
+printf 'AL003S_BLOCKED|action_failed_requires_owner_review\n' >"$OPS001_EXPECTED_ROOT/state/al003s-acceptance.blocked"
+printf 'AL003S_BLOCKED|action_failed_requires_owner_review\n' >"$OPS001_EXPECTED_ROOT/state/al003s-acceptance.lock"
+rm -f "$TMP_DIR/drift-block-during-validator"
 touch "$TMP_DIR/fail-validator"
 OPS001_APPROVAL_FILE="$APPROVAL_FILE"
 OPS001_VALIDATED_APPROVAL_SHA256="$(ops001_file_digest "$APPROVAL_FILE")"
@@ -185,5 +259,6 @@ expect_failure non_identity_drift assert_only_identity_changed "$OLD_COPY" "$NEW
 assert_contains 'non-identity environment field changed: DB_PASSWORD' "$TMP_DIR/non_identity_drift.err"
 
 ! grep -Eq '(git clone|git fetch|docker|flyway|ssh )' "$SCRIPT" || fail 'release helper contains forbidden runtime/network command'
-grep -Fq 'acquire_action_lock' "$SCRIPT" || fail 'release/env action does not use the shared Staging action lock'
+grep -Fq 'acquire_action_lock' "$SCRIPT" || fail 'ordinary release/env action does not honor retained AL-003S blocked state'
+grep -Fq 'acquire_staging_serialization_lock' "$SCRIPT" || fail 'recovery release/env action does not use the shared Staging serialization lock'
 echo 'PASS: OPS-001 detached release and four-field atomic environment rotation fail closed.'

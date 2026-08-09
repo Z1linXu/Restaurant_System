@@ -111,6 +111,15 @@ container is absent and repeating continuity checks; recovery must inspect and
 clear every blocked record that actually exists. This launcher never clears a
 record automatically.
 
+An exact repaired release may need to exist before those checks can satisfy the
+approved recovery order. The OPS-001 `prepare-recovery-release-env` action is
+the only bounded prerequisite exception: it takes the same mutex, requires and
+approval-binds the exact retained marker and lock digests, prepares only the
+detached release and four-field environment identity, and proves both records
+unchanged. All AL-003S plan/execute/replay, runtime evidence/restart, and
+Owner/API actions remain blocked until the separate recovery actually clears
+the reviewed records.
+
 `bootstrap-execute` accepts its password only from non-interactive stdin. The
 launcher has no password/token argument and does not write an evidence file
 containing command output. Retain only the sanitized `STG005_BOOTSTRAP|...` or
