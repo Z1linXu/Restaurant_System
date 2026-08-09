@@ -24,9 +24,10 @@
 > started one bounded one-shot. Spring stopped before the STG-005A command
 > because the older shared cloud safety rule rejected this profile's required
 > Flyway-disabled mode. Cleanup succeeded, topology stayed empty, and both
-> blocked records were retained. A bounded repository repair is under review;
-> a new exact-SHA deploy and separate blocked-state recovery Owner Gate precede
-> any retry.
+> blocked records were retained. PR #85 merged the bounded repository repair;
+> a freshly fetched latest exact main containing #85 must receive Staging
+> release/preflight/deploy approval, and blocked-state recovery requires a
+> separate Owner approval before any retry.
 
 ## 1. Purpose and classification
 
@@ -66,8 +67,8 @@ STG-007 satisfied the release/deployment prerequisites above for exact deployed
 `2837ae88...`. The credential contract is now aligned. The first fresh plan
 one-shot exposed a pre-command cloud/Flyway safety conflict and left the
 launcher blocked with zero application writes. The bounded repair changes the
-backend startup guard, so the deployed old image cannot consume it. After the
-repair enters main, a resumed batch requires a newly approved exact-SHA
+backend startup guard, so the deployed old image cannot consume it. PR #85 put
+the repair in main; a resumed batch requires a newly approved latest-exact-main
 Staging release/deploy, separately approved blocked-state recovery, fresh
 readiness, and a distinct digest-bound approval artifact for every bootstrap/
 source plan, create, and replay invocation; the password remains stdin-only

@@ -767,8 +767,9 @@ readiness passed and the password-free plan started one bounded one-shot. The
 older `ProductionSafetyConfig` rejected required `Flyway=false` before the
 STG-005A command or data path. Cleanup succeeded; Flyway stayed V10, topology
 stayed empty, Production continuity stayed unchanged, and fail-closed state was
-persisted. The bounded repository repair is under review. The unique stop
-state after publication is
+persisted. PR #85 merged the bounded repository repair at
+`c95c3840fa972f84b3e5dbd345fef3e4c12aa8c6`; it has not been deployed. The
+unique stop state is
 `STG-008_DEPENDENCY_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
 No credential input, synthetic topology/source write, login, target onboarding,
 clone, Store 1 read, printer/Pad, Production, or ACT-001 action occurred.

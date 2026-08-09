@@ -530,8 +530,8 @@ its command/data path because the older cloud startup safety rule rejected the
 profile's required Flyway-disabled mode. Cleanup and zero-write continuity
 passed, and the launcher retained blocked state.
 
-Current decision: repository dependency repair may complete under the
-Auto-Loop; runtime then stops at
+Current decision: repository dependency repair entered main through PR #85;
+runtime remains stopped at
 `STG-008_DEPENDENCY_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
 The immutable entry result remains
 [STG-008 Synthetic Topology and Source Entry Evidence](STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md),

@@ -6,7 +6,9 @@
 >
 > Current exact deployed Staging SHA: `2837ae88e55142c99c6975f8b6575febffc913a1`
 >
-> Governance packages: PR #72 and PRs #60-#71 are `IN_MAIN`; repository merge is not runtime evidence
+> Governance packages: PR #72 and PRs #60-#71 are `IN_MAIN`; PR #85's bounded
+> startup-safety repair is also `IN_MAIN` but undeployed; repository merge is
+> not runtime evidence
 >
 > Runtime checkpoint: `STG-007=PASS`; V10-to-V10 deploy, repaired readiness, runtime collection, same-image restart and post-restart verification all `PASS`
 
@@ -187,9 +189,10 @@ STG-007 at exact deployed `2837ae88...`; they must not be repeated from this
 plan without new authority. STG-008 received runtime authority. Its first
 entry stopped before step 3 at the credential-contract Owner Gate; after
 alignment, the first plan one-shot stopped before the command at the bounded
-cloud/Flyway dependency defect. The repair must enter main, its exact backend
-SHA must receive a new Staging release/deploy approval, and retained blocked
-state must receive separate recovery approval. Only then may a restarted
+cloud/Flyway dependency defect. PR #85 put the repair in main; the freshly
+fetched latest exact main containing it must receive a new Staging
+release/deploy approval, and retained blocked state must receive separate
+recovery approval. Only then may a restarted
 batch cover the synthetic topology/source work in steps 3 and 5 with fresh
 readiness and distinct plan/create/replay approvals. Steps 4 and 6-9's
 login/onboarding/clone acceptance remain later gates. The retained end-to-end
