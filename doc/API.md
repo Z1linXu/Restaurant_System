@@ -3,9 +3,11 @@
 ## Runtime acceptance boundary
 
 The synthetic Staging topology/source evidence is not a public API acceptance
-claim. STG-005A/STG-005B are guarded operational actions; PR #95's
+claim. STG-005A/STG-005B are guarded operational actions; PR #95/#97's
 `owner-login-acceptance` reuses existing auth/workspace/overview/logout
-contracts only. Chinatown onboarding and menu clone remain separately gated.
+contracts only. Exact Staging Phase-A evidence passed for the synthetic Owner;
+Chinatown onboarding and menu clone remain separately gated by the next Owner
+Runtime Gate.
 
 This document defines the core API endpoints for the restaurant management system MVP.
 

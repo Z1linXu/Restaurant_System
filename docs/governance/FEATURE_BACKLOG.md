@@ -2,13 +2,15 @@
 
 ## Current verified STG-008 runtime state (2026-08-09)
 
-Staging is exact `712531b...` at Flyway V10. STG-005A and STG-005B
+Staging is exact `468b8705c8e360b9e34336c5560442179544069b` at Flyway V10. STG-005A and STG-005B
 PLAN/EXECUTE/REPLAY are `VALIDATED/CREATED/REPLAYED`; the source menu is
 `4 categories / 3 stations / 13 items / 38 options` and replay is `2 -> 2`.
 Synthetic Organization, Owner, source Store and credential are ready. No
 one-shot is active, the blocked marker is absent, and the lock is empty. This
-is not `STAGING_ACCEPTED`; PR #95 is `IN_MAIN` only. Fresh exact rebind/readiness
-then Phase-A Owner login is the only next bounded action.
+is not `STAGING_ACCEPTED`; PR #97 is `IN_MAIN` and its Phase-A tooling is
+runtime-verified on the exact Staging release. Login/me/workspaces/overview/
+logout all passed for the synthetic Owner. The next action is the Phase-B Owner
+Runtime Gate; no Chinatown or Production action is authorized.
 
 > Status: `ACTIVE_GOVERNANCE_BACKLOG`
 >
@@ -24,11 +26,11 @@ then Phase-A Owner login is the only next bounded action.
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `STG-009_PHASE_A_OWNER_LOGIN_ACCEPTANCE` |
-| target_loop | `STG-009_PHASE_A_OWNER_LOGIN_ACCEPTANCE`; exact `712531b...` completed synthetic A/B execution and replay. Current main `cfe7d856...` includes PR #95 Phase-A tooling and requires fresh exact Staging rebind. |
-| implementation status | `STG-008=PASS` for completed synthetic topology/source evidence on deployed Staging `712531b...`: A/B plan/execute/replay, exact `4/3/13/38` menu, replay `2 -> 2`, no duplicate/crossover, Printing disabled, isolation and Production continuity unchanged. PR #95 `cfe7d856...` is `IN_MAIN` and awaits exact Staging rebind before Phase-A login. |
+| status | `STG-009_PHASE_A_OWNER_LOGIN_VERIFIED_WAITING_FOR_PHASE_B_CLONE_APPROVAL` |
+| target_loop | `STG-009_PHASE_A_OWNER_LOGIN_ACCEPTANCE`; exact `468b8705...` completed synthetic A/B execution/replay and Phase-A Owner login acceptance. |
+| implementation status | `STG-008=PASS` and `STG-009_PHASE_A_OWNER_LOGIN=PASS` on exact Staging `468b8705...`: A/B plan/execute/replay, exact `4/3/13/38` menu, replay `2 -> 2`, no duplicate/crossover, Printing disabled, isolation and Production continuity unchanged; authenticated synthetic Owner access and logout passed. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md), [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md), [STG-008 entry evidence](runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md), [STG-008 Flyway guard repair evidence](runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md), [STG-008 release-rebind repair evidence](runtime/STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md), [STG-008 non-web request-context repair evidence](runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md), and [STG-008 one-shot lifecycle repair evidence](runtime/STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md). |
-| next action | Bind exact `cfe7d856...`, formal-preflight and deploy only isolated Staging V10-to-V10, collect fresh readiness, verify existing synthetic topology/source, then run Phase-A Owner login. Do not repeat A/B actions or begin Chinatown/Production work. |
+| next action | Stop at `STG-009_PHASE_A_OWNER_LOGIN_VERIFIED_WAITING_FOR_PHASE_B_CLONE_APPROVAL`. Do not repeat A/B or Phase-A actions and do not begin Chinatown/Production work. |
 
 ### Current AL-003 delivery state
 
@@ -226,11 +228,11 @@ seed/demo Store.
 | Frozen Chinatown Store Profile | `DONE_IN_MAIN` | `CHINATOWN_MENU_2026_02_02` is the approved initial Production target contract. |
 | PostgreSQL private-leaf Staging guard | `DONE_IN_MAIN` | PR #59 merged at `c3956592da8a33092ab745c7cc6aac05e9babfa7`; no redeploy is implied. |
 | Exact-SHA Staging deployment and Flyway V9/V10 | `STG-007_PASS` / `DEPLOYED_TO_STAGING` | Historical exact `2837ae88...` passed fresh V10 continuation entry, formal preflight, V10-to-V10 deploy, repaired readiness, runtime collection, same-image restart and post-restart verification. Flyway remains exact V10/no-pending; this is not AL-003 Staging acceptance. |
-| Synthetic Organization/source/Owner bootstrap | `STG-008_PASS` / `DEPLOYED_TO_STAGING` | Exact `712531b...` has ready synthetic Organization, Owner, source Store, credential and memberships; A/B execution/replay evidence is complete with no blocked marker or active one-shot. |
+| Synthetic Organization/source/Owner bootstrap | `STG-008_PASS` / `DEPLOYED_TO_STAGING` | Exact `468b8705...` has ready synthetic Organization, Owner, source Store, credential and memberships; A/B execution/replay evidence is complete with no blocked marker or active one-shot. |
 | Synthetic target onboarding and Owner target access | `STAGING_PENDING` | Existing onboarding plus Organization Owner access is sufficient; runtime evidence is missing. |
-| Synthetic Owner login/workspace/Owner API authorization | `STAGING_PENDING` | Synthetic Owner and private credential are ready; Phase-A login remains pending exact `cfe7d856...` Staging deployment/readiness. No credential value is retained in Git/evidence. |
+| Synthetic Owner login/workspace/Owner API authorization | `STG-009_PHASE_A_PASS` | Exact `468b8705...` passed login, authenticated principal, Organization Owner role, exact synthetic source-Store workspace/overview access, and logout. No credential value is retained in Git/evidence. |
 | Reproducible Synthetic St-Denis source-menu baseline | `DEPLOYED_TO_STAGING` via PR #62 capability | Guarded source graph is ready at `4/3/13/38`, replay revision `2 -> 2`; this is not Production or Chinatown acceptance. |
-| AL-003 validate/execute/replay/restart acceptance | `STG-009_PHASE_A_PENDING` | Phase-A Owner login follows fresh exact PR #95 rebind/readiness; Chinatown Phase B remains prohibited. |
+| AL-003 validate/execute/replay/restart acceptance | `STG-009_PHASE_B_OWNER_GATE` | Phase-A Owner login is complete on exact Staging; Chinatown Phase B remains prohibited pending the next Owner Runtime Gate. |
 | STG-006 exact-main passive preflight | `PASS` | At STG-006 capture, candidate was `33c6e3c...` and retained Staging was `4397f995...` / V8; this historical PASS does not override the later STG-007 deployment. |
 | OPS-001 secret-safe tooling | `REPOSITORY_COMPLETE` through PR #87; STG-007 runtime evidence `PASS` | Release/env rotation, exact deploy, repaired readiness, sanitized runtime collection and same-image restart passed at `2837ae88...`. PR #87's later recovery-only release/env path supported the exact `6753855497...` rebind/deploy/recovery continuation. No credentials or API action occurred. |
 | Production Store 1 read-only source capture/drift review | `PRODUCTION_PENDING` | Separate Owner Runtime Gate; only menu-related evidence may be read. |

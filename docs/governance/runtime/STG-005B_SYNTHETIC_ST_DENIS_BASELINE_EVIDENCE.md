@@ -10,6 +10,14 @@
 >
 > Runtime access: `NOT_PERFORMED`
 
+## Current runtime confirmation (2026-08-09)
+
+The guarded baseline was executed and replayed in synthetic Staging under the
+separate continuous authorization. Exact Staging `468b8705...` retained
+`4/3/13/38`, revision `2 -> 2`, no duplicate graph, and no Store crossover.
+This confirmation is runtime evidence only; it does not authorize Chinatown or
+Production clone work.
+
 ## 1. Git and dependency boundary
 
 | Evidence | Value |

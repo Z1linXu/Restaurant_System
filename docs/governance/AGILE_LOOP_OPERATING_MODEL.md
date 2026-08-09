@@ -2,13 +2,14 @@
 
 ## Verified continuation state (2026-08-09)
 
-The completed loop is `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE`; the active loop is `STG-009_PHASE_A_OWNER_LOGIN_ACCEPTANCE` under the existing
+The completed loop is `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE`; the bounded
+`STG-009_PHASE_A_OWNER_LOGIN_ACCEPTANCE` has PASSed under the existing
 Continuous Authorization Envelope. STG-005A and STG-005B PLAN/EXECUTE/REPLAY
 are `VALIDATED/CREATED/REPLAYED`; the source menu is `4/3/13/38` and replay is
 `2 -> 2`. `IN_MAIN`, `DEPLOYED_TO_STAGING`, and `STAGING_ACCEPTED` remain
-distinct. PR #95 requires fresh exact rebind/preflight/Staging V10-to-V10
-readiness before Phase-A Owner login. Chinatown onboarding/clone is outside
-this loop.
+distinct. Exact Staging `468b8705...` passed V10 readiness and the synthetic
+Owner login/workspace/overview/logout checks. Chinatown onboarding/clone is
+outside this loop and requires the next Owner Runtime Gate.
 
 > Status: `ACTIVE_GOVERNANCE_PROCESS`
 >
@@ -119,7 +120,8 @@ PR #89 in Staging before exposing the separate non-web one-shot lifecycle
 defect. PR #91 is `IN_MAIN` at `9a776d3...`; the Owner now authorizes the
 bounded continuous Staging loop from fresh exact rebind through guarded
 STG-005A/STG-005B work and conditional Phase-A Owner-login acceptance. The
-current unique stop state is `STG-008_CONTINUOUS_STAGING_LOOP_AUTHORIZED`.
+current unique stop state is
+`STG-009_PHASE_A_OWNER_LOGIN_VERIFIED_WAITING_FOR_PHASE_B_CLONE_APPROVAL`.
 
 Fresh read-only state inspection found a bounded recovery-tooling defect: the
 retained current lock has the reviewed ordered cleanup-plus-action-failure

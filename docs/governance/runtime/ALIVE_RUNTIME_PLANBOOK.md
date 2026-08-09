@@ -26,7 +26,7 @@
 | Environment | `restaurant-prod` | `OPERATOR_CONFIRMED` | Environment label only; no host or secret is recorded. |
 | `RUNTIME_COMMIT` | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e` | retained identity plus `MACHINE_VERIFIED_READ_ONLY` continuity during STG-007 | Current Production runtime identity only, not a formal release approval. |
 | Production branch | `main` | `MACHINE_VERIFIED_READ_ONLY` during STG-006 continuity | Branch relationship is not a deployment approval record. |
-| Runtime-sensitive current-main candidate | `cfe7d856edaa7c5d0b2e44b4347c1b71e2c0f23e` | `MACHINE_VERIFIED` Git Ground Truth | PR #95 is `IN_MAIN` Phase-A tooling only and is not deployed. The continuous authorization permits same-scope exact Staging-only rebind/preflight/V10-to-V10 deploy and bounded Phase-A login acceptance. |
+| Runtime-sensitive current-main candidate | `468b8705c8e360b9e34336c5560442179544069b` | `MACHINE_VERIFIED` Git Ground Truth | PR #97 jq-free Phase-A parser repair is `IN_MAIN`; exact detached release, V10-to-V10 Staging deploy, readiness, and Phase-A login acceptance were runtime-verified. |
 | STG-007 exact runtime candidate / documentation base before evidence publication | `2837ae88e55142c99c6975f8b6575febffc913a1` | `MACHINE_VERIFIED` from `origin/main`, detached release, build source and deployed Staging identity | PR #82 merge and deployed Staging SHA; it is not the Production runtime. A later evidence-only merge must remain distinct from the deployed SHA. |
 | Deployment mode | HTTP | `OPERATOR_CONFIRMED` | HTTPS/certificate posture is outside this record. |
 | Compose services | `db`, `backend`, `nginx` under project `cloud`; unchanged across the final STG-007 continuation, original start times, restart count 0, health 200 | `MACHINE_VERIFIED_READ_ONLY` | Minimum continuity only; no environment, Flyway, Store, or business-data read. |
@@ -65,9 +65,10 @@ snapshots. Do not copy those reports into this planbook.
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `STG-009_PHASE_A_OWNER_LOGIN_ACCEPTANCE` |
 | Loop type | `OWNER_GATED_STAGING_SYNTHETIC_ACCEPTANCE` |
-| Loop status | `STG-008=PASS; STG-009_PHASE_A_PENDING_EXACT_REBIND` |
-| Current package | Exact `712531b...` is deployed to isolated Staging at Flyway V10. STG-005A and STG-005B have each completed PLAN/EXECUTE/REPLAY; the source menu is `4/3/13/38` and replay retained revision `2 -> 2`. No one-shot or blocked marker remains. PR #95's `cfe7d85...` Phase-A client is `IN_MAIN`, not deployed; the next authorized work is its fresh exact-SHA rebind/deploy/readiness then bounded login acceptance. |
-| STG-008 state | `PASS` for the completed synthetic topology/source contract on deployed Staging `712531b...`; Phase-A Owner login remains separately pending. |
+| Loop status | `STG-008=PASS; STG-009_PHASE_A_OWNER_LOGIN=PASS` |
+| Current package | Exact `468b8705c8e360b9e34336c5560442179544069b` is deployed to isolated Staging at Flyway V10. STG-005A and STG-005B remain `VALIDATED/CREATED/REPLAYED`; the source menu is `4/3/13/38` and replay retained revision `2 -> 2`. No one-shot or blocked marker remains. PR #97's jq-free Phase-A-only parser is `IN_MAIN` and runtime-verified. |
+| STG-008 state | `PASS` for the completed synthetic topology/source contract on exact Staging `468b8705...`; synthetic Organization, Owner, source Store and credential are ready, with no duplicate/crossover. |
+| STG-009 Phase-A state | `PASS`: login, authenticated principal/workspace/overview checks, and logout all returned HTTP 200 for `STG005_OWNER_20260808_R01`; only the synthetic Organization/source Store were exposed. |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | PR #27 merged the backend foundation into `main`; Production remains on the older runtime and no production onboarding is established by that merge. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -78,10 +79,10 @@ snapshots. Do not copy those reports into this planbook.
 | STG-006 state | `PASS` for candidate `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b`. Fresh read-only evidence confirmed retained Staging `4397f995...` / V8, isolated project/network/state, loopback bind, printing disabled, healthy endpoints, resource headroom, and unchanged Production continuity. No candidate release, deploy, Flyway, restart, login, or data mutation occurred. |
 | OPS-001 state | `REPOSITORY_COMPLETE` through PR #87. The final exact `2837ae88...` runtime use passed release/env binding, V10-to-V10 deploy, repaired readiness, sanitized Flyway/runtime collection and same-image restart without weakening any guard. PR #87 later supplied the blocked-state-safe release/env preparation path, which was used by exact `6753855497...` for the bounded rebind/deploy/recovery continuation. Runtime use remains action-specific and Owner-gated. |
 | STG-007 state | `PASS` at exact deployed Staging SHA `2837ae88e55142c99c6975f8b6575febffc913a1`. Environment digest `124eb472...`, continuation entry `8d744fa8...`, formal preflight `7174a295...`, readiness `19a8fec2...`, runtime collection `03337e71...`, restart readiness `6392783f...`, and same-image restart `2208d8ca...` all passed. Flyway remained exact V10/no-pending; health returned 200/200/200; exact container/image/release identity, printing, isolation and Production continuity were unchanged. |
-| AL-003 state | PRs #61-#95 are `IN_MAIN`; exact `712531b...` is `DEPLOYED_TO_STAGING` at Flyway V10 with completed synthetic topology/source evidence. PR #95 is `IN_MAIN`, not deployed. No Chinatown onboarding, validation, clone, or Staging acceptance result exists. |
-| Staging Owner login prerequisite | Synthetic Owner `STG005_OWNER_20260808_R01` and private credential are ready. `owner-login-acceptance` remains pending until `cfe7d85...` is freshly deployed and readiness passes; no credential value is retained here. |
-| Current permitted work | Under the current continuous Owner authorization, bind exact `cfe7d856...`, formal-preflight and deploy only isolated Staging V10-to-V10, collect fresh readiness, verify the completed synthetic topology/source, then run only Phase-A `owner-login-acceptance`. Same-scope bounded Dependency Repairs may merge, rebind, and continue automatically; any migration, security-contract, product, identity, Production or destructive change is a true Owner Gate. |
-| Explicitly not permitted | Any action outside the current continuous authorization: migration/Flyway change, security/credential-contract or Store-identity change, product decision, destructive operation, Production build/pull/restart/deploy/Flyway/data read or mutation, Chinatown activation, ACT-001, clone Phase B, Store 1 read, printer/Pad action, or any Phase-A login before fresh exact `cfe7d856...` Staging rebind/readiness. The authorized sequence is exact Staging rebind/preflight/deploy, readiness, synthetic verification, and conditional Owner-login acceptance; each invocation remains constrained by its reviewed digest-bound internal action approval. |
+| AL-003 state | PRs #61-#97 are `IN_MAIN`; exact `468b8705...` is `DEPLOYED_TO_STAGING` at Flyway V10 with completed synthetic topology/source and Phase-A Owner-login evidence. No Chinatown onboarding, validation, clone, or Production acceptance result exists. |
+| Staging Owner login prerequisite | Synthetic Owner `STG005_OWNER_20260808_R01` and private credential are ready. `owner-login-acceptance` passed on exact `468b8705...` with authenticated Organization Owner and exact synthetic source-Store access; no credential value is retained here. |
+| Current permitted work | The authorized Phase-A sequence is complete on exact Staging `468b8705...`; preserve evidence and stop at the Phase-B Owner Runtime Gate. Same-scope bounded Dependency Repairs may merge and rebind only when needed; any migration, security-contract, product, identity, Production or destructive change is a true Owner Gate. |
+| Explicitly not permitted | Chinatown onboarding, AL-003 validate/execute/clone/replay, Production build/pull/restart/deploy/Flyway/data read or mutation, Store 1 read, printer/Pad action, or any new runtime-sensitive action without a new Owner Runtime Gate. `IN_MAIN`, `DEPLOYED_TO_STAGING`, and `STAGING_ACCEPTED` remain distinct. |
 
 Agent and worker execution is ephemeral. After a bounded task, the result and
 evidence must be returned and persisted, the active session/process terminated,
@@ -153,10 +154,10 @@ confirmed Staging at `4397f995...` / Flyway V8 and minimum Production
 continuity at full SHA `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`.
 Production Flyway was not queried and remains retained V7 evidence only.
 
-The exact `2a6c30a...` continuation validated the request-context repair before
-the password-free plan encountered the separate non-web WebSocket lifecycle
-timeout and retained a new blocked pair. The unique feature stop state is
-`STG-008_CONTINUOUS_STAGING_LOOP_AUTHORIZED`.
+The exact `468b8705...` continuation deployed the repaired Phase-A tooling,
+passed fresh readiness, verified the synthetic topology/menu and completed the
+Owner login/workspace/overview/logout acceptance. The unique feature stop state
+is `STG-009_PHASE_A_OWNER_LOGIN_VERIFIED_WAITING_FOR_PHASE_B_CLONE_APPROVAL`.
 
 OPS-001 adds repository-only guarded helpers for a detached release plus
 four-field atomic private-env rotation, sanitized Flyway/runtime collection
