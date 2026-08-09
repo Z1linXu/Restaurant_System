@@ -47,8 +47,14 @@ done
 case "$url" in
   */auth/login) body='{"success":true,"data":{"access_token":"access-token-value-abcdefghijklmnopqrstuvwxyz","refresh_token":"refresh-token-value-abcdefghijklmnopqrstuvwxyz","user":{"role_code":"OWNER","organization_id":10}}}' ;;
   */auth/me) grep -Eq 'Authorization: Bearer (access|me-access)-token-value-' "$config" || exit 95; body='{"success":true,"data":{"access_token":"me-access-token-value-abcdefghijklmnopqrstuvwxyz","refresh_token":null,"user":{"role_code":"OWNER","organization_id":10}}}' ;;
-  */me/workspaces) grep -Fq 'Authorization: Bearer me-access-token-value-' "$config" || exit 95; body='{"success":true,"data":{"organizations":[{"id":10,"role_code":"OWNER"}],"stores":[{"id":22}]}}' ;;
-  */owner/overview) grep -Fq 'Authorization: Bearer me-access-token-value-' "$config" || exit 95; body='{"success":true,"data":{"organizations":[{"id":10,"role_code":"OWNER","stores":[{"id":22}]}]}}' ;;
+  */me/workspaces)
+    grep -Fq 'Authorization: Bearer me-access-token-value-' "$config" || exit 95
+    if [[ "${FAKE_LOGIN_ONLY:-0}" == 1 ]]; then
+      if [[ "${FAKE_EXTRA_STORE:-0}" == 1 ]]; then body='{"success":true,"data":{"organizations":[{"id":10,"role_code":"OWNER"}],"stores":[{"id":1,"organization_id":10},{"id":2,"organization_id":10}]}}'; else body='{"success":true,"data":{"organizations":[{"id":10,"role_code":"OWNER"}],"stores":[{"id":1,"organization_id":10}]}}'; fi
+    else body='{"success":true,"data":{"organizations":[{"id":10,"role_code":"OWNER"}],"stores":[{"id":22}]}}'; fi ;;
+  */owner/overview)
+    grep -Fq 'Authorization: Bearer me-access-token-value-' "$config" || exit 95
+    if [[ "${FAKE_LOGIN_ONLY:-0}" == 1 ]]; then body='{"success":true,"data":{"organizations":[{"id":10,"role_code":"OWNER","stores":[{"id":1}]}]}}'; else body='{"success":true,"data":{"organizations":[{"id":10,"role_code":"OWNER","stores":[{"id":22}]}]}}'; fi ;;
   */stores/onboard)
     count=0; [[ ! -f "$FAKE_STATE/onboard" ]] || count="$(cat "$FAKE_STATE/onboard")"; count=$((count+1)); printf '%s' "$count" >"$FAKE_STATE/onboard"
     grep -Fq 'Idempotency-Key: idem-onboarding-' "$config" || exit 94
@@ -66,6 +72,36 @@ printf '200'
 EOF
 chmod +x "$FAKE_CURL"; mkdir "$FAKE_STATE"; export FAKE_STATE
 CURL_BIN="$FAKE_CURL"
+
+LOGIN_ONLY_SECRET="$TMP_DIR/login-only.json"
+cat >"$LOGIN_ONLY_SECRET" <<'EOF'
+{"login_identifier":"STG005_OWNER_TEST","login_password":"OwnerPassphrase-123"}
+EOF
+chmod 600 "$LOGIN_ONLY_SECRET"
+initialize_private_root
+export FAKE_LOGIN_ONLY=1
+exec 6<"$LOGIN_ONLY_SECRET"; SECRETS_FD=6; ACTION=owner-login-acceptance; TARGET_STORE_ID=""
+read_secret_input
+login >"$TMP_DIR/login-only.out"; verify_owner_context >>"$TMP_DIR/login-only.out"; logout >>"$TMP_DIR/login-only.out"
+assert_contains 'OPS001_API|LOGIN|HTTP_200' "$TMP_DIR/login-only.out"
+assert_contains 'OPS001_API|WORKSPACES|HTTP_200' "$TMP_DIR/login-only.out"
+assert_contains 'OPS001_API|OVERVIEW|HTTP_200' "$TMP_DIR/login-only.out"
+assert_contains 'OPS001_API|LOGOUT|HTTP_200' "$TMP_DIR/login-only.out"
+assert_not_contains 'OwnerPassphrase' "$TMP_DIR/login-only.out"
+assert_not_contains 'access-token-value' "$TMP_DIR/login-only.out"
+assert_not_contains 'ONBOARDING' "$TMP_DIR/login-only.out"
+assert_not_contains 'CLONE' "$TMP_DIR/login-only.out"
+cleanup
+initialize_private_root
+export FAKE_EXTRA_STORE=1
+exec 5<"$LOGIN_ONLY_SECRET"; SECRETS_FD=5; ACTION=owner-login-acceptance; TARGET_STORE_ID=""
+read_secret_input
+login >/dev/null
+expect_failure unexpected_store_access verify_owner_context
+assert_contains 'not exactly the approved synthetic source Store' "$TMP_DIR/unexpected_store_access.err"
+cleanup
+unset FAKE_EXTRA_STORE
+unset FAKE_LOGIN_ONLY
 
 CONTENDED_FLOCK="$TMP_DIR/contended-flock"
 cat >"$CONTENDED_FLOCK" <<'EOF'
@@ -141,4 +177,5 @@ runtime_line="$(rg -n '^  validate_exact_runtime_target$' "$SCRIPT" | cut -d: -f
 [[ "$lock_line" -lt "$runtime_line" ]] || fail 'exact-runtime validation does not occur under the shared action lock'
 grep -Fq '"$FLOCK_BIN" -u "$ACTION_LOCK_FD"' "$SCRIPT" || fail 'shared action lock is not released during cleanup'
 ! grep -Eq '(--location|curl[^\n]* -L([[:space:]]|$)|https?://[^1]|X-User-Id|--password|--token)' "$SCRIPT" || fail 'client contains redirect, non-loopback, auth bypass, or argv-secret behavior'
-echo 'PASS: OPS-001 Owner acceptance client keeps secrets off argv/output and verifies login/onboarding/validate/execute/replay failures.'
+grep -Fq 'owner-login-acceptance' "$SCRIPT" || fail 'dedicated Owner login acceptance action is missing'
+echo 'PASS: OPS-001 Owner acceptance client keeps secrets off argv/output and verifies bounded login/onboarding/validate/execute/replay behavior.'

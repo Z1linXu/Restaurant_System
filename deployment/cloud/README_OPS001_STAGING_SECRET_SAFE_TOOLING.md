@@ -13,7 +13,7 @@ creation, login, API acceptance, restart, or Production access.
 | `staging-release-control-bootstrap.sh` | verifies an exact Git-materialized control source and private temporary bundle | delegates unchanged arguments to `staging-release-rotation.sh`; it has no release/runtime action of its own |
 | `staging-release-rotation.sh` | validates exact SHA, private env and dedicated bare repository | `prepare-release-env`: ordinary detached worktree plus atomic four-field identity rotation; `prepare-recovery-release-env`: the same release/env operation while retaining one exact reviewed AL-003S blocked pair |
 | `staging-runtime-evidence.sh` | validates the exact release/env/preflight binding | `collect-evidence`; `same-image-restart` using existing containers only |
-| `staging-owner-acceptance-client.sh` | validates exact release, private env and approved preflight identity | `prepare-target`; `clone-acceptance` against loopback APIs |
+| `staging-owner-acceptance-client.sh` | validates exact release, private env and approved preflight identity | `owner-login-acceptance`; `prepare-target`; `clone-acceptance` against loopback APIs |
 
 The tools share `staging-ops-common.sh` for fixed environment identity,
 mode-0600 files, digests, approval fingerprints and one-use approval records.
@@ -298,7 +298,11 @@ only in a private mode-0700 temporary root with mode-0600 request, response and
 curl-config files, are never arguments or evidence, and are removed on exit.
 Non-login responses containing secret-shaped fields are rejected.
 
-`prepare-target` proves Owner identity/workspace/overview, performs onboarding
+`owner-login-acceptance` is the bounded Phase A action. It proves the approved
+synthetic Owner identity, Organization `OWNER` authority, and exactly one
+approved synthetic source-Store workspace/dashboard access, then logs out. It
+does not onboard a target Store, validate/execute/replay a clone, or create
+runtime business data. `prepare-target` proves Owner identity/workspace/overview, performs onboarding
 and exact replay, proves inherited target access, and stops after the existing
 clone validator confirms the reviewed `4/3/17/74` counts. `clone-acceptance`
 requires a later, separately approved batch for source Store `1` and profile

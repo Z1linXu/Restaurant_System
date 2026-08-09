@@ -670,8 +670,12 @@ STG-006 added no endpoint, DTO, header, or authentication behavior. Its passive
 runtime evidence confirms only the current Staging boundary. OPS-001 adds a
 repository operational client that reuses the existing `/auth/login`,
 `/auth/me`, workspace, Owner overview/onboarding, `/menu-clone/validate`,
-`/menu-clone`, and `/auth/logout` contracts; it adds no endpoint, DTO, header,
-authorization bypass, or application behavior. Passwords, access/refresh
+`/menu-clone`, and `/auth/logout` contracts; its bounded
+`owner-login-acceptance` action uses only `/auth/login`, `/auth/me`,
+`/me/workspaces`, `/owner/overview`, and `/auth/logout` to prove the approved
+synthetic Owner's exact Organization and source-Store access before logout. It
+adds no endpoint, DTO, header, authorization bypass, onboarding, clone, or
+application behavior. Passwords, access/refresh
 tokens, staff passwords, and raw onboarding/clone idempotency keys enter only
 through an inherited descriptor and private temporary files, never argv,
 stdout, shell history or evidence. The client verifies Organization Owner
