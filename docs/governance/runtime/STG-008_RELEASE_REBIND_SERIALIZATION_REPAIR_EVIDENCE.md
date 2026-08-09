@@ -10,7 +10,11 @@
 >
 > Runtime result: `NO_GO_BEFORE_BATCH_A_MUTATION`
 >
-> Repair publication state: `READY_FOR_REPOSITORY_REVIEW`
+> Repair publication state: `IN_MAIN`
+>
+> Repair PR: #87, reviewed head
+> `84457266d1f752cb755b1933b01d849ae62407ed`, merge
+> `4b954e09a365fec909ed6da3ddf8fa9f13639cdc`
 
 ## Fresh Ground Truth and bounded observation
 
@@ -93,17 +97,32 @@ business-data writer, Production behavior or blocked-state clear operation.
 
 ## Verification and runtime boundary
 
-Focused shell verification covers ordinary-action rejection, unsafe/malformed/
+Focused shell verification covered ordinary-action rejection, unsafe/malformed/
 symlink blocked records, digest-bound recovery release, byte-for-byte record
 retention, exact bundle delegation, four-field env-only rotation, approval
-replay and existing runtime guards. Full deployment shell regressions,
-`git diff --check`, Markdown links, secret scan, governance drift and an
-independent Agent 6 review are publication gates; their final results are
-recorded in the repository review rather than predeclared here.
+replay and existing runtime guards. All 13 deployment shell regression files,
+Bash syntax, `git diff --check`, changed-file Markdown links, the
+high-confidence secret scan, scope scan and governance drift scan passed.
+`shellcheck` was unavailable, so Bash syntax was the recorded static-shell
+substitute. Agent 6 first blocked unsafe existing-lock mode repair, acceptance
+of a trailing unterminated record and a post-commit drift window. All three
+findings were corrected and regression-tested; the final independent result
+was `ACCEPT` with no blocking finding.
 
-This repair is runtime-sensitive tooling. Its merge will advance exact main,
-so the Owner's conditional authorization for exact
+The repair was published through PR #87 after GitHub reconfirmed `base=main`,
+the unchanged reviewed head, one expected commit, clean mergeability, no
+conflict and no failed check. Its merge is an `IN_MAIN` repository fact only:
+no release, private-env rotation, preflight, build, deploy, Flyway, blocked-
+state recovery, one-shot, credential request or business-data action occurred.
+
+This repair is runtime-sensitive tooling. Its merge advanced exact main, so
+the Owner's conditional authorization for exact
 `4759a23b1a00d3254936e6c8eeb0ec33012b5145` cannot be silently rebound to the
 new merge. After qualifying publication, fresh Git Ground Truth and a new
 exact-SHA Owner Runtime approval are required before candidate import or any
-Batch A action. STG-008 remains `NO_GO`; no password may be requested.
+Batch A action. The runtime-sensitive main floor is now
+`4b954e09a365fec909ed6da3ddf8fa9f13639cdc`; a later governance-only main may
+be selected only after a fresh fetch proves it remains this commit's
+descendant. STG-008 remains `NO_GO`; no password may be requested. The unique
+stop state is
+`STG-008_RELEASE_REBIND_REPAIR_IN_MAIN_WAITING_FOR_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.

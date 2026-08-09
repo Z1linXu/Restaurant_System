@@ -23,9 +23,16 @@
 > readiness passed, but the password-free STG-005A plan one-shot stopped before
 > its command/data path because the older cloud safety rule rejected required
 > Flyway-disabled mode. Cleanup and zero-write continuity passed, and the
-> launcher retained blocked state. PR #85 merged the bounded repository repair
-> at `c95c3840...`; it has not been deployed. Staging remains exact
-> `2837ae88...` and Production remains unchanged.
+> launcher retained blocked state. PR #85 merged the bounded startup-safety
+> repair and PR #86 closed its Ground Truth. The next authorized continuation
+> freshly reconfirmed exact Staging `2837ae88...`, V10, zero synthetic state,
+> the reviewed blocked pair, Printing/isolation and Production continuity. It
+> stopped before Batch A mutation because the ordinary release path could not
+> legally cross the retained block. PR #87 merged the dedicated recovery
+> release-rebind repair at `4b954e09...`; it has not been deployed or used.
+> That runtime-sensitive merge superseded the authorization bound to
+> `4759a23b...`. Staging remains exact `2837ae88...` and Production remains
+> unchanged.
 
 ## 1. Project mission
 
@@ -44,10 +51,10 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| runtime-sensitive main floor | `c95c3840fa972f84b3e5dbd345fef3e4c12aa8c6` | `IN_MAIN`; PR #85 merge containing the bounded startup-safety repair. Any later governance-only main must be freshly fetched and remain a descendant before runtime approval. |
+| runtime-sensitive main floor | `4b954e09a365fec909ed6da3ddf8fa9f13639cdc` | `IN_MAIN`; PR #87 merge containing the blocked-state-safe release-rebind repair. Any later governance-only main must be freshly fetched and remain a descendant before runtime approval. |
 | exact deployed Staging runtime | `2837ae88e55142c99c6975f8b6575febffc913a1` | `DEPLOYED_TO_STAGING`; PR #82 merge and exact STG-007 PASS runtime, distinct from later documentation main |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
-| Runtime-sensitive delivery package | PR #85 / head `8582805b31237d576f900e0a29d9249778d35acd` | `IN_MAIN` through merge `c95c3840...`; no unmerged runtime-sensitive package remains |
+| Runtime-sensitive delivery package | PR #87 / head `84457266d1f752cb755b1933b01d849ae62407ed` | `IN_MAIN` through merge `4b954e09...`; no unmerged runtime-sensitive package remains |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
 
 `IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
@@ -66,7 +73,8 @@ GitHub Merged badge into a non-main base is not evidence that work entered
 | `/private/tmp/restaurant-current-handoff` | `codex/current-project-handoff` | Retained historical PR #71 worktree |
 | `/private/tmp/restaurant-stg007-execution` | `codex/stg007-v10-continuation-final-evidence` | Retained historical STG-007 evidence/governance worktree; Owner workspace untouched |
 | `/private/tmp/restaurant-stg008-execution` | `codex/stg008-synthetic-topology-source` | Current isolated STG-008 `NO_GO` evidence/governance worktree; Owner workspace untouched |
-| `/private/tmp/restaurant-stg008-resume` | retained PR #85 repair plus governance-closure worktree | Current isolated repository worktree; Owner workspace untouched and no runtime action performed from it |
+| `/private/tmp/restaurant-stg008-resume` | retained PR #85/#86 historical repair and closure worktree | Historical isolated repository worktree; Owner workspace untouched |
+| `/private/tmp/restaurant-stg008-recovery` | PR #87 repair plus governance-closure worktree | Current isolated repository worktree; Owner workspace untouched and no runtime mutation performed from it |
 | `/private/tmp/restaurant-pr61-rebuild` through `/private/tmp/restaurant-pr65-rebuild` | merged #61-#65 branch worktrees | Retained historical worktrees; not current delivery inputs |
 
 No registered #69/#70 rebuild worktree remains. Historical worktrees were not
@@ -104,6 +112,8 @@ closed, merged, and `IN_MAIN`.
 | #83 | STG-007 final evidence/governance | `main` | merge `2ed56b06f37c9257a655ec334f81e31ca4a518a6` | `IN_MAIN` | #82/main | Yes | Documentation/evidence only; no runtime-capability or runtime-state change |
 | #84 | STG-008 entry evidence/governance | `main` | merge `828af4e84581dcb051248beee694c307a65210c5` | `IN_MAIN` | #83/main | Yes | Sanitized credential-gate evidence only; no application, migration, runtime configuration, credential, or business-data mutation |
 | #85 | STG-008 guarded one-shot Flyway safety repair | `main` | merge `c95c3840fa972f84b3e5dbd345fef3e4c12aa8c6` | `IN_MAIN` | #84/main | Yes | Exact-profile no-migration startup-safety reconciliation plus tests/governance; not deployed and no credential/data mutation |
+| #86 | STG-008 dependency-repair Ground Truth closure | `main` | merge `4759a23b1a00d3254936e6c8eeb0ec33012b5145` | `IN_MAIN` | #85/main | Yes | Documentation-only closure; no runtime action |
+| #87 | STG-008 release-rebind serialization repair | `main` | merge `4b954e09a365fec909ed6da3ddf8fa9f13639cdc` | `IN_MAIN` | #86/main | Yes | Recovery-only release/env preparation preserves both reviewed blocked records and every ordinary action block; undeployed and unused |
 
 Main stack review order:
 
@@ -136,22 +146,30 @@ This is a failed password-free plan one-shot before the STG-005A command, not a
 failed transaction, deployment, migration, or credential operation. The
 launcher is blocked pending separately approved recovery.
 
+The later fresh baseline, release-rebind sequencing deadlock and bounded PR
+#87 correction are recorded in
+[STG-008 Release-Rebind Serialization Repair Evidence](STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md).
+That continuation stopped before candidate import or Batch A mutation. The
+repair is `IN_MAIN` but not deployed; the prior exact-SHA authorization cannot
+be reused.
+
 ## 5. Current feature and loop
 
 | Field | Current value |
 |---|---|
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` |
-| Current package | Credential contract aligned; fresh `bootstrap-plan` stopped before STG-005A command/data access at the cloud/Flyway safety conflict. Synthetic Owner remains `NOT_CREATED`, Store ID `1` remains safely available, topology is empty, and PR #85's bounded repair is `IN_MAIN` but not deployed. |
-| Feature stop state | `STG-008_DEPENDENCY_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL` |
+| Current package | Credential contract aligned; fresh `bootstrap-plan` stopped before STG-005A command/data access at the cloud/Flyway safety conflict. Synthetic Owner remains `NOT_CREATED`, Store ID `1` remains safely available, topology is empty, and runtime-sensitive PRs #85/#87 are `IN_MAIN` but not deployed. The intervening recovery continuation stopped before Batch A mutation at the now-repaired release-rebind sequencing deadlock. |
+| Feature stop state | `STG-008_RELEASE_REBIND_REPAIR_IN_MAIN_WAITING_FOR_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL` |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | Approve a freshly fetched latest exact main containing PR #85 for Staging release/preflight/deploy and separately approve fail-closed record recovery after read-only confirmation. Only then may STG-008 restart with new action evidence and request the password through a reviewed private stdin/FD channel. |
+| Current Owner gate | Approve a freshly fetched exact main containing PR #87 for recovery-specific release/private-env preparation, formal preflight and Staging-only V10-to-V10 deploy. Only after Batch A passes may the already bounded fail-closed record recovery run; STG-008 must then restart from fresh readiness/PLAN with new one-use approvals. The password may be requested only when fresh STG-005A EXECUTE actually needs it, through the reviewed private stdin/FD channel. |
 
 ### Permitted work
 
 - Fetch and verify Git/GitHub ground truth.
-- Review STG-007 PASS, both STG-008 evidence records, and merged PR #85.
-- Complete only the documentation-only Ground Truth closure under the
+- Review STG-007 PASS, all three STG-008 evidence records, and merged PRs
+  #85-#87.
+- Complete only this documentation-only Ground Truth closure under the
   permanent auto-merge gate.
 - Verify Git/GitHub Ground Truth and report the exact next runtime approval
   boundary.
@@ -164,9 +182,12 @@ launcher is blocked pending separately approved recovery.
   login, target onboarding, validate/execute/replay, or clone.
 - Production Store 1 read or mutation.
 - Printer configuration, test print, Pad pairing, or device/Worker mutation.
+- Candidate import, approval consumption, release/env preparation, or another
+  Batch A action under the authorization bound to `4759a23b...`.
 - Clearing the blocked marker/lock record, requesting the password, or any
-  further STG-008 helper/one-shot before a freshly fetched latest exact main
-  containing PR #85 is deployed and recovery receives separate approval;
+  further STG-008 helper/one-shot before a newly Owner-approved, freshly
+  fetched exact main containing PR #87 is deployed and the bounded post-Batch-A
+  recovery conditions pass;
   lowering the password/prefix guard or modifying the Owner's secret.
 - Repository merge that fails Operating Model section 16's permanent
   auto-merge gate, Production activation, restore, or destructive database/Git
@@ -325,9 +346,9 @@ is the first Store Profile sample, not a shared-service special case.
 | REL-001 / #70 | Formal Chinatown Production RC plan | `IN_MAIN` at `645d4909625f70fc241d5468382d66a30a030fb1` | planning only; no candidate, deployment, or activation |
 | ACT-001 | Production provisioning and field acceptance | `NOT_STARTED_OWNER_GATED` | Accepted RC and explicit Production activation approval |
 | STG-006 | Exact-main passive preflight | `PASS` for candidate `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | Evidence only; no release/deploy/migration approval |
-| OPS-001 | Secret-safe Staging tooling | `REPOSITORY_COMPLETE`; bounded repairs #75-#82 are `IN_MAIN` | Runtime actions remain independently exact-SHA/action/Owner-gated |
+| OPS-001 | Secret-safe Staging tooling | `REPOSITORY_COMPLETE`; bounded repairs #75-#82 and #87 are `IN_MAIN` | PR #87's recovery-only release/env path is undeployed and unused; runtime actions remain independently exact-SHA/action/Owner-gated |
 | STG-007 | Exact-SHA V10-aware continuation | `PASS` at deployed Staging SHA `2837ae88...` / Flyway V10 | Runtime batch complete; no approval or evidence is reusable |
-| STG-008 | Synthetic topology and source | `DEPENDENCY_REPAIR_RUNTIME_GATE` | Identity/password contract is aligned. The password-free plan exposed a pre-command Flyway safety-rule conflict; no data write occurred. Bounded repair publication, new exact-SHA Staging deploy, and separately approved blocked-state recovery precede any retry. |
+| STG-008 | Synthetic topology and source | `DEPENDENCY_REPAIR_RUNTIME_GATE` | Identity/password contract is aligned. The password-free plan exposed a pre-command Flyway safety-rule conflict; no data write occurred. PR #85 repaired that rule; PR #87 repaired the later release-rebind sequencing deadlock. Both are undeployed. A new exact-SHA Staging deploy and post-Batch-A blocked-state recovery precede any retry. |
 
 The authoritative post-stack capability matrix, Staging decision, and next
 bounded loops are in [Post-Stack Ground Truth Audit](POST_STACK_GROUND_TRUTH_AUDIT.md).
@@ -346,10 +367,12 @@ from current main.
 
 - STG-007 passed at exact deployed `2837ae88...` / Flyway V10, but it does not
   authorize or prove synthetic bootstrap, Owner login, or clone acceptance.
-- STG-008's bounded backend repair entered main through PR #85; a freshly
-  fetched latest exact main containing it requires a Staging release/deploy
-  approval. The old deployed image
-  cannot be patched or treated as repaired.
+- STG-008's bounded backend repair entered main through PR #85 and the
+  blocked-state-safe release-rebind correction entered through PR #87. A
+  freshly fetched exact main containing #87 requires a new Staging
+  release/deploy approval because the authorization bound to `4759a23b...`
+  cannot cross the runtime-sensitive merge. The old deployed image cannot be
+  patched or treated as repaired.
 - The failed plan retained both blocked records. A separate recovery approval
   must confirm one-shot absence, zero transaction state, V10, health and
   continuity before clearing them.
@@ -376,6 +399,9 @@ from current main.
   the fresh exact-SHA continuation produced valid same-image restart evidence.
 - The STG-008 guarded one-shot Flyway safety repair entered main through PR
   #85 at `c95c3840fa972f84b3e5dbd345fef3e4c12aa8c6`; it remains undeployed.
+- PR #87 merged the blocked-state-safe release-rebind serialization repair at
+  `4b954e09a365fec909ed6da3ddf8fa9f13639cdc` after full shell regressions and
+  Agent 6 `ACCEPT`; it remains undeployed and unused.
 
 ## 13. START HERE for the next Agent
 
@@ -384,16 +410,17 @@ from current main.
    `AGILE_LOOP_OPERATING_MODEL.md`, `FEATURE_BACKLOG.md`, and the applicable
    technical plan.
 3. Verify current `origin/main`; do not trust the Owner workspace branch tip.
-4. Verify GitHub PR #61 through #85 and independent PR #66 semantics.
+4. Verify GitHub PR #61 through #87 and independent PR #66 semantics.
 5. Distinguish main, stacked Draft, Staging, and Production state.
 6. Report the completed main stack and the next Staging Owner Gate.
 7. Do not recreate or redesign packages #61-#70.
 8. Do not infer implementation from the planning packages.
-9. Read STG-006, OPS-001, the STG-007 repair/final evidence, and both STG-008
-   evidence records. Treat `STG-007=PASS`, the credential decision as resolved,
-   and STG-008 as blocked before data write. Do not run a synthetic helper or
-   clear blocked state without the latest-exact-main-containing-#85 deploy Gate
-   and separate blocked-state recovery approval.
+9. Read STG-006, OPS-001, the STG-007 repair/final evidence, and all three
+   STG-008 evidence records. Treat `STG-007=PASS`, the credential decision as
+   resolved, and STG-008 as blocked before data write. Do not reuse the
+   `4759a23b...` authorization, run a synthetic helper, or clear blocked state
+   without a newly approved exact-main-containing-#87 deploy Gate and the
+   bounded post-Batch-A recovery conditions.
 10. Stop at runtime/product/operations Owner Gates; otherwise continue the
     bounded Agile Loop and Dependency Repair Auto-Loop.
 

@@ -24,10 +24,14 @@
 > started one bounded one-shot. Spring stopped before the STG-005A command
 > because the older shared cloud safety rule rejected this profile's required
 > Flyway-disabled mode. Cleanup succeeded, topology stayed empty, and both
-> blocked records were retained. PR #85 merged the bounded repository repair;
-> a freshly fetched latest exact main containing #85 must receive Staging
-> release/preflight/deploy approval, and blocked-state recovery requires a
-> separate Owner approval before any retry.
+> blocked records were retained. PR #85 merged the bounded startup-safety
+> repair and PR #86 closed its Ground Truth. A later recovery continuation
+> reconfirmed the zero-write V10 baseline but stopped before Batch A mutation
+> when the ordinary release path could not legally cross those retained
+> records. PR #87 merged the dedicated blocked-state-safe release/env repair at
+> `4b954e09...`; it is not deployed. Its new runtime-sensitive SHA requires a
+> new exact-main Staging release/preflight/deploy Owner approval, and blocked-
+> state recovery remains a bounded post-Batch-A action.
 
 ## 1. Purpose and classification
 
@@ -68,8 +72,11 @@ STG-007 satisfied the release/deployment prerequisites above for exact deployed
 one-shot exposed a pre-command cloud/Flyway safety conflict and left the
 launcher blocked with zero application writes. The bounded repair changes the
 backend startup guard, so the deployed old image cannot consume it. PR #85 put
-the repair in main; a resumed batch requires a newly approved latest-exact-main
-Staging release/deploy, separately approved blocked-state recovery, fresh
+that repair in main. PR #87 subsequently put the recovery-only release/env
+sequencing repair in main after the continuation stopped before mutation. A
+resumed batch requires a newly approved latest-exact-main descendant of
+`4b954e09...` for recovery-specific release/env binding and Staging deploy,
+separately bounded post-Batch-A blocked-state recovery, fresh
 readiness, and a distinct digest-bound approval artifact for every bootstrap/
 source plan, create, and replay invocation; the password remains stdin-only
 and must not be requested before that gate.
@@ -353,7 +360,10 @@ The historical read-only entry result is recorded in
 [STG-008 Synthetic Topology and Source Entry Evidence](../runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).
 The later plan failure, zero-write continuity and dependency repair are in
 [STG-008 Flyway Guard Repair Evidence](../runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md).
+The subsequent fresh baseline, release-rebind sequencing deadlock and PR #87
+repair are in
+[STG-008 Release-Rebind Serialization Repair Evidence](../runtime/STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md).
 
 Stop state:
 
-`STG-008_DEPENDENCY_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
+`STG-008_RELEASE_REBIND_REPAIR_IN_MAIN_WAITING_FOR_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`

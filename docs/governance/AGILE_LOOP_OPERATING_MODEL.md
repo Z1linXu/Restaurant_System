@@ -106,7 +106,7 @@ Flyway/runtime collection, one same-image restart and post-restart
 verification. Flyway remained V10/no-pending; printing/isolation and Production
 continuity were unchanged. `STG-007=PASS`. The current unique stop state is
 now, after qualifying repair publication,
-`STG-008_DEPENDENCY_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
+`STG-008_RELEASE_REBIND_REPAIR_IN_MAIN_WAITING_FOR_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
 PR #83 merged only the final STG-007 evidence/governance into
 `main@2ed56b06f37c9257a655ec334f81e31ca4a518a6`; exact Staging correctly
 remained `2837ae88...`. The Owner then authorized STG-008. Its read-only entry
@@ -138,9 +138,24 @@ Flyway execution, synthetic bootstrap, credential creation, source-menu write,
 login, target onboarding, validate, execute, replay, clone, or Production
 action. Every consumed STG-007 approval remains non-replayable. The credential
 decision is resolved, but the failed plan readiness/approval cannot be reused.
-PR #85 entered main with the bounded repair. Its changed backend SHA requires
-a new exact Staging release/deploy Owner Gate and the retained blocked records
-require separately approved recovery before any retry or password request.
+PR #85 entered main with the bounded startup-safety repair and PR #86 closed
+its documentation Ground Truth. The Owner then authorized a continuation
+conditionally bound to exact `4759a23b...`. Fresh Git/runtime observation
+reconfirmed deployed `2837ae88...`, V10, zero synthetic state, retained exact
+blocked records, Printing disabled, isolation and Production continuity. Before
+Batch A mutation, control-flow review found that ordinary release rotation
+must pass the block that the approved sequence may clear only after the new
+runtime is deployed. The Agent therefore entered Dependency Repair rather than
+bypass or prematurely clear state. PR #87 entered main at `4b954e09...` with
+a recovery-only, digest-bound release/env preparation path that preserves both
+blocked records and leaves the ordinary action gate unchanged. No release,
+deploy, recovery, credential or business-data action occurred.
+
+Because PR #87 changes runtime-sensitive tooling and advances exact main, the
+authorization bound to `4759a23b...` is not reusable. A fresh exact-main
+Staging release/deploy Owner Gate is required, and the retained blocked records
+still require the bounded post-Batch-A recovery authority before any retry or
+password request.
 The restarted batch must bind fresh readiness and distinct approvals to every
 STG-005A/STG-005B plan/create/replay. Staging acceptance retains
 the distinct prerequisite
