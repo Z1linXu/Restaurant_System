@@ -1,5 +1,12 @@
 # Restaurant System API (MVP)
 
+## Runtime acceptance boundary
+
+The synthetic Staging topology/source evidence is not a public API acceptance
+claim. STG-005A/STG-005B are guarded operational actions; PR #95's
+`owner-login-acceptance` reuses existing auth/workspace/overview/logout
+contracts only. Chinatown onboarding and menu clone remain separately gated.
+
 This document defines the core API endpoints for the restaurant management system MVP.
 
 ## Base URL

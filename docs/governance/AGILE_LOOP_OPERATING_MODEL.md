@@ -1,5 +1,15 @@
 # Agile Loop Operating Model
 
+## Verified continuation state (2026-08-09)
+
+The completed loop is `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE`; the active loop is `STG-009_PHASE_A_OWNER_LOGIN_ACCEPTANCE` under the existing
+Continuous Authorization Envelope. STG-005A and STG-005B PLAN/EXECUTE/REPLAY
+are `VALIDATED/CREATED/REPLAYED`; the source menu is `4/3/13/38` and replay is
+`2 -> 2`. `IN_MAIN`, `DEPLOYED_TO_STAGING`, and `STAGING_ACCEPTED` remain
+distinct. PR #95 requires fresh exact rebind/preflight/Staging V10-to-V10
+readiness before Phase-A Owner login. Chinatown onboarding/clone is outside
+this loop.
+
 > Status: `ACTIVE_GOVERNANCE_PROCESS`
 >
 > Last updated: 2026-08-08, America/Toronto

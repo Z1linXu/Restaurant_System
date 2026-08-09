@@ -1,5 +1,19 @@
 # Current Project Handoff
 
+## Current verified continuation override (2026-08-09)
+
+`origin/main=cfe7d856...`; Staging remains exact `712531b...`, Flyway is
+V1--V10 with no pending or failed migration, and Printing is disabled.
+STG-005A PLAN/EXECUTE/REPLAY are `VALIDATED/CREATED/REPLAYED`; STG-005B is
+`VALIDATED/CREATED/REPLAYED` with `4/3/13/38` and replay revision `2 -> 2`.
+Synthetic Organization, Owner, source Store and credential are ready. No
+one-shot is active, the blocked marker is absent, and the lock is empty. This
+is `DEPLOYED_TO_STAGING` evidence, not `STAGING_ACCEPTED`. PR #95 is in main
+but not deployed; after fresh exact rebind/readiness only Phase-A Owner login
+is permitted. Chinatown onboarding/clone remains prohibited.
+
+See [STG-008 synthetic runtime progress evidence](STG-008_SYNTHETIC_RUNTIME_PROGRESS_EVIDENCE.md).
+
 > This Handoff is a navigation snapshot only.
 > Git ground truth, `ALIVE_RUNTIME_PLANBOOK.md`, `FEATURE_BACKLOG.md`,
 > `AGILE_LOOP_OPERATING_MODEL.md` and applicable Technical Plans remain
@@ -68,10 +82,10 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| runtime-sensitive current-main candidate | `8b93d09086101776322785e215225d84378fdd2e` | `IN_MAIN`; PR #92 governance-only continuous-authority merge atop PR #91 lifecycle repair. It requires exact Staging rebind before deployment evidence. |
-| exact deployed Staging runtime | `2a6c30a5948882ff8bf1d3808e2970fe5b4a6ae3` | `DEPLOYED_TO_STAGING`; V10-to-V10 continuation passed until the password-free plan timeout; no synthetic business write occurred. |
+| runtime-sensitive current-main candidate | `cfe7d856edaa7c5d0b2e44b4347c1b71e2c0f23e` | `IN_MAIN`; PR #95 Phase-A tooling requires exact Staging rebind before runtime evidence. |
+| exact deployed Staging runtime | `712531b941db92f4325a86126883706314f4cba5` | `DEPLOYED_TO_STAGING`; V10, synthetic A/B execution/replay complete, no one-shot or blocked marker. |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
-| Runtime-sensitive delivery package | PR #91 plus PR #92 / exact `8b93d09086101776322785e215225d84378fdd2e` | `IN_MAIN`; bounded one-shot lifecycle repair and governance authority, not yet deployed |
+| Runtime-sensitive delivery package | PR #95 / exact `cfe7d856...` | `IN_MAIN`; bounded Phase-A login tooling, not yet deployed |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
 
 `IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
@@ -149,7 +163,7 @@ the current bounded Staging runtime identity below.
 | Environment | Retained evidence | Classification and boundary |
 |---|---|---|
 | Production | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`; Compose `cloud` `db/backend/nginx`; unchanged IDs/start times/restart `0`; health 200 | `MACHINE_VERIFIED_READ_ONLY` continuity only; Flyway/business state not queried |
-| Staging | `2a6c30a5948882ff8bf1d3808e2970fe5b4a6ae3`; Flyway V10 with no pending migration; exact `db/backend/nginx` identities running; health 200/200/200 | `DEPLOYED_TO_STAGING`; rebind/preflight/readiness and old-pair recovery passed, then the password-free plan reached `VALIDATED` before a non-web WebSocket lifecycle timeout retained a new blocked pair |
+| Staging | `712531b941db92f4325a86126883706314f4cba5`; Flyway V10 with no pending or failed migration; exact `db/backend/nginx` identities running; health 200/200/200 | `DEPLOYED_TO_STAGING`; synthetic A/B plan/execute/replay complete, no active one-shot, marker absent, lock empty |
 | Staging isolation | project `restaurant-pos-staging`; only `127.0.0.1:18080`; separate state/network/mounts; private leaf UID 70/mode 0700 | `MACHINE_VERIFIED_READ_ONLY` |
 | Staging printing | `STAGING_PRINT_MODE=DISABLED`; feature flag `false` | `MACHINE_VERIFIED_READ_ONLY` |
 
@@ -179,9 +193,9 @@ new exact candidate and authorization cannot be reused.
 | Field | Current value |
 |---|---|
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` |
-| Current package | Exact `2a6c30a...` passed rebind/preflight/deploy/readiness and cleared only the reviewed old block. Its fresh password-free `bootstrap-plan` reached `VALIDATED`, but the non-web WebSocket broker held the one-shot open until the timeout; no credential/data access occurred. Synthetic Owner remains `NOT_CREATED` and topology is empty. PR #91 fixed that lifecycle defect; fresh read-only inspection then found the current reviewed cleanup-plus-action-failure lock form is rejected by the recovery helper’s one-line-only check. That bounded compatibility repair is in the Dependency Repair Auto-Loop before the next exact continuation. |
-| Feature stop state | `STG-008_CONTINUOUS_STAGING_LOOP_AUTHORIZED` |
+| Current Agile Loop | `STG-009_PHASE_A_OWNER_LOGIN_ACCEPTANCE` |
+| Current package | Exact `712531b...` is deployed at V10 with completed synthetic A/B plan/execute/replay, `4/3/13/38`, replay `2 -> 2`, no active one-shot, no marker and empty lock. `STG-008=PASS` for these gates. PR #95 `cfe7d856...` is the next exact rebind/readiness candidate for Phase-A Owner login. |
+| Feature stop state | `STG-009_PHASE_A_OWNER_LOGIN_PENDING_EXACT_REBIND` |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
 | Current Owner gate | The Owner has already authorized the bounded continuous STG-008 loop: current exact-main release/private-env binding, formal preflight, Staging-only V10-to-V10 deploy, fresh readiness, exact-matching recovery of the newly retained records, fresh STG-005A PLAN, then the guarded synthetic STG-005A/STG-005B execute/replay sequence and conditional Owner-login acceptance. Every runtime invocation still needs its reviewed, digest-bound internal action approval; that is not a new Owner Gate. A same-scope bounded repair merge may rebind automatically. Any migration, product/security/identity-contract change, Production requirement, ambiguous identity, unexpected data, or destructive action is a true Owner Gate. |
 
@@ -371,7 +385,7 @@ is the first Store Profile sample, not a shared-service special case.
 | STG-006 | Exact-main passive preflight | `PASS` for candidate `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | Evidence only; no release/deploy/migration approval |
 | OPS-001 | Secret-safe Staging tooling | `REPOSITORY_COMPLETE`; bounded repairs #75-#82 and #87 are `IN_MAIN` | PR #87's recovery-only release/env path supported the later exact `6753855497...` rebind/deploy/recovery; runtime actions remain independently exact-SHA/action/Owner-gated |
 | STG-007 | Exact-SHA V10-aware continuation | `PASS` at deployed Staging SHA `2837ae88...` / Flyway V10 | Runtime batch complete; no approval or evidence is reusable |
-| STG-008 | Synthetic topology and source | `DEPENDENCY_REPAIR_RUNTIME_GATE` | Identity/password contract is aligned. Exact `2a6c30a...` completed rebind/deploy/readiness and validated the request-context repair before a non-web WebSocket lifecycle timeout; no data write occurred. A new exact-SHA Staging deploy and post-Batch-A recovery of the newly retained pair precede any retry. |
+| STG-008 | Synthetic topology and source | `PASS` | Synthetic Organization/Owner/source Store and credential ready; A/B PLAN/EXECUTE/REPLAY complete at `4/3/13/38`, replay `2 -> 2`, no duplicate/crossover, Printing disabled, isolation and Production continuity unchanged. |
 
 The authoritative post-stack capability matrix, Staging decision, and next
 bounded loops are in [Post-Stack Ground Truth Audit](POST_STACK_GROUND_TRUTH_AUDIT.md).
