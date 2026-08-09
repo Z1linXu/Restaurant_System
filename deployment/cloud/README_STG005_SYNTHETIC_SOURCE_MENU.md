@@ -147,3 +147,16 @@ connection strings, endpoints, customers, orders, payments, or raw exceptions.
 9. Stop for Owner review before target clone execution.
 
 No runtime command was executed while creating this package.
+
+## STG-008 runtime entry checkpoint (2026-08-08)
+
+STG-008 did not reach source-menu planning. Read-only Staging evidence found no
+completed STG-005A request and no source Store, so the required source Store ID
+`1` / bootstrap provenance does not exist. STG-005A itself stopped before plan
+or write at the credential-contract Owner Gate. Consequently no category,
+station, item, option, relationship, fingerprint, or revision mutation
+occurred, and the 4/3/13/38 graph remains repository authority only.
+
+Do not bypass the parent bootstrap, create the graph with raw SQL, or treat
+this entry `NO_GO` as source-menu failure. See
+[STG-008 entry evidence](../../docs/governance/runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).
