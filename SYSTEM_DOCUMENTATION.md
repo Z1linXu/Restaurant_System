@@ -772,9 +772,7 @@ older `ProductionSafetyConfig` rejected required `Flyway=false` before the
 STG-005A command or data path. Cleanup succeeded; Flyway stayed V10, topology
 stayed empty, Production continuity stayed unchanged, and fail-closed state was
 persisted. PR #85 merged the bounded repository repair at
-`c95c3840fa972f84b3e5dbd345fef3e4c12aa8c6`; it has not been deployed. The
-unique stop state is
-`STG-008_DEPENDENCY_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
+`c95c3840fa972f84b3e5dbd345fef3e4c12aa8c6`; it has not been deployed.
 No credential input, synthetic topology/source write, login, target onboarding,
 clone, Store 1 read, printer/Pad, Production, or ACT-001 action occurred.
 
@@ -795,6 +793,21 @@ lock, owner/mode/shape parity, and approval-bound digests; it keeps both files
 byte-for-byte unchanged while preparing only the detached release and four
 non-secret environment identity fields. Ordinary release and every synthetic,
 runtime-evidence/restart, and Owner/API action retain the original block.
+
+Agent 6 first blocked three fail-closed gaps in that release-rebind correction:
+an unsafe existing lock could be silently chmod-repaired, a trailing
+unterminated record could pass the line-count check, and record drift could be
+noticed only after rotation had committed. The implementation now rejects the
+unsafe mode, validates one complete ASCII record plus final newline, and
+revalidates while rotation can still roll back. All 13 deployment shell test
+files and repository checks passed; Agent 6's final result was `ACCEPT`. PR #87
+merged the repair at
+`4b954e09a365fec909ed6da3ddf8fa9f13639cdc`. It remains undeployed and unused.
+That runtime-sensitive merge invalidated the recovery authorization bound to
+`4759a23b...`; no release, env rotation, preflight, deploy, Flyway, blocked-
+state recovery, one-shot, password request or business-data action followed.
+The unique stop state is
+`STG-008_RELEASE_REBIND_REPAIR_IN_MAIN_WAITING_FOR_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
 
 Repository PRs now follow the permanent auto-merge gate in the Agile Loop
 Operating Model: latest-main base, exact single-package scope, all applicable

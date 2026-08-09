@@ -1,14 +1,15 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Capability state: `STG-008_DEPENDENCY_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
+> Capability state: `STG-008_RELEASE_REBIND_REPAIR_IN_MAIN_WAITING_FOR_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
 >
 > Historical failed candidate: `8f909525781804f61d1da388882f530da358c3c4`
 >
 > Current exact deployed Staging SHA: `2837ae88e55142c99c6975f8b6575febffc913a1`
 >
 > Governance packages: PR #72 and PRs #60-#71 are `IN_MAIN`; PR #85's bounded
-> startup-safety repair is also `IN_MAIN` but undeployed; repository merge is
-> not runtime evidence
+> startup-safety repair, PR #86 Ground Truth closure and PR #87 release-rebind
+> serialization repair are also `IN_MAIN`. Runtime-sensitive #85/#87 are
+> undeployed; repository merge is not runtime evidence
 >
 > Runtime checkpoint: `STG-007=PASS`; V10-to-V10 deploy, repaired readiness, runtime collection, same-image restart and post-restart verification all `PASS`
 
@@ -47,6 +48,19 @@ blocked state. A bounded fail-closed repository repair is recorded in
 Because it changes backend startup behavior, its merged SHA requires a new
 exact Staging deploy approval and separate blocked-state recovery before any
 retry or password request.
+
+The Owner later authorized that recovery sequence conditionally for exact
+`4759a23b...`. Fresh read-only observation reconfirmed deployed
+`2837ae88...`, Flyway V10, zero synthetic state, the exact retained blocked
+pair, Printing disabled, isolation and Production continuity. Before any
+Batch A mutation, the ordinary release path was proved unable to cross the
+retained block without violating Batch A-before-recovery ordering. The bounded
+[release-rebind serialization repair](../runtime/STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md)
+entered main through PR #87 at `4b954e09...`; it preserves both blocked files
+and every ordinary action block. It was not deployed or executed. Because it
+advanced runtime-sensitive main, the conditional `4759a23b...` authorization
+is superseded and cannot authorize the new candidate. No action approval was
+created or consumed in that continuation.
 
 Historically, PR #56 entered `main` and the fixed release candidate was
 `8f909525781804f61d1da388882f530da358c3c4`. The read-only preflight is recorded
@@ -189,10 +203,13 @@ STG-007 at exact deployed `2837ae88...`; they must not be repeated from this
 plan without new authority. STG-008 received runtime authority. Its first
 entry stopped before step 3 at the credential-contract Owner Gate; after
 alignment, the first plan one-shot stopped before the command at the bounded
-cloud/Flyway dependency defect. PR #85 put the repair in main; the freshly
-fetched latest exact main containing it must receive a new Staging
-release/deploy approval, and retained blocked state must receive separate
-recovery approval. Only then may a restarted
+cloud/Flyway dependency defect. PR #85 put that repair in main. The first
+authorized recovery continuation then stopped before Batch A mutation at the
+release-rebind sequencing deadlock, and PR #87 put the bounded recovery-only
+release/env path in main. A freshly fetched exact-main descendant of
+`4b954e09...` must receive a new Staging release/deploy approval, and retained
+blocked state remains recoverable only after Batch A passes. Only then may a
+restarted
 batch cover the synthetic topology/source work in steps 3 and 5 with fresh
 readiness and distinct plan/create/replay approvals. Steps 4 and 6-9's
 login/onboarding/clone acceptance remain later gates. The retained end-to-end
@@ -302,4 +319,4 @@ recovers.
 
 ## Capability dependency state
 
-`STG-008_DEPENDENCY_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
+`STG-008_RELEASE_REBIND_REPAIR_IN_MAIN_WAITING_FOR_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`

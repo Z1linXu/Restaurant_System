@@ -530,10 +530,15 @@ its command/data path because the older cloud startup safety rule rejected the
 profile's required Flyway-disabled mode. Cleanup and zero-write continuity
 passed, and the launcher retained blocked state.
 
-Current decision: repository dependency repair entered main through PR #85;
-runtime remains stopped at
-`STG-008_DEPENDENCY_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
+Current decision: the startup-safety dependency repair entered main through PR
+#85 and the later blocked-state-safe release-rebind repair entered main through
+PR #87 at `4b954e09...`; neither is deployed. The intervening continuation
+stopped before candidate import or Batch A mutation, so the authorization bound
+to `4759a23b...` is not reusable. Runtime remains stopped at
+`STG-008_RELEASE_REBIND_REPAIR_IN_MAIN_WAITING_FOR_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
 The immutable entry result remains
 [STG-008 Synthetic Topology and Source Entry Evidence](STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md),
 and the resumed failure/repair is
 [STG-008 Flyway Guard Repair Evidence](STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md).
+The subsequent fresh baseline/deadlock and repository correction are in
+[STG-008 Release-Rebind Serialization Repair Evidence](STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md).

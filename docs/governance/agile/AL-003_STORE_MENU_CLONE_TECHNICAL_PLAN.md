@@ -26,7 +26,7 @@
 | `PLAN_STATUS` | `IN_MAIN_AWAITING_STAGING_ACCEPTANCE_AND_RUNTIME_APPROVAL` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | PRs #60-#85 and the #61-#70 stack are `IN_MAIN`; exact `2837ae88...` remains deployed to isolated Staging at V10 and `STG-007=PASS`, while PRs #83/#84 are evidence/governance only and PR #85 is an undeployed bounded startup-safety repair. The Owner aligned the STG-008 credential contract. Fresh password-free plan readiness passed, but the one-shot stopped before its command/data path at the older cloud/Flyway safety conflict and retained blocked state with zero writes. Stop at the new latest-exact-main Staging deploy plus blocked-recovery Owner Gate; do not infer bootstrap, clone, Staging acceptance or Production authority. |
+| `RECOMMENDED_ACTION` | PRs #60-#87 and the #61-#70 stack are `IN_MAIN`; exact `2837ae88...` remains deployed to isolated Staging at V10 and `STG-007=PASS`, while PRs #83/#84/#86 are evidence/governance only and runtime-sensitive PRs #85/#87 are undeployed. The Owner aligned the STG-008 credential contract. Fresh password-free plan readiness passed, but the one-shot stopped before its command/data path at the older cloud/Flyway safety conflict and retained blocked state with zero writes. A later recovery continuation reconfirmed the baseline and stopped before Batch A mutation at the release-rebind sequencing deadlock now repaired by #87. Stop at the new exact-main Staging deploy plus post-Batch-A blocked-recovery Owner Gate; do not reuse the `4759a23b...` authorization or infer bootstrap, clone, Staging acceptance or Production authority. |
 
 PR-A through PR-F are in `main`. PR-D supplies generic source-option copying
 and target-local parent mapping; PR #54 placed the concrete Chinatown Profile
@@ -1007,7 +1007,9 @@ collection, same-image restart and post-restart health passed with exact
 container/image/release/Flyway identity unchanged. The bounded tooling repair
 changes no clone/API/profile behavior. STG-005A, STG-005B, credential creation,
 login, target onboarding and validate/execute/replay remain unexecuted.
-STG-008 is stopped after a pre-command plan `NO_GO` at
-`STG-008_DEPENDENCY_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
+STG-008 is stopped after a pre-command plan `NO_GO` and a later pre-Batch-A
+release-rebind dependency repair at
+`STG-008_RELEASE_REBIND_REPAIR_IN_MAIN_WAITING_FOR_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
 See [the sanitized STG-008 entry evidence](../runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md)
-and [the Flyway guard repair evidence](../runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md).
+[the Flyway guard repair evidence](../runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md),
+and [the release-rebind serialization repair evidence](../runtime/STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md).
