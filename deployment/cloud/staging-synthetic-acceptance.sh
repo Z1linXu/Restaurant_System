@@ -404,7 +404,7 @@ load_per_cpu_milli() {
   awk -v processors="$processors" 'NR == 1 && processors > 0 {printf "%d\n", ($1 * 1000) / processors; found=1} END {if (!found) exit 1}' /proc/loadavg
 }
 
-acquire_action_lock() {
+acquire_staging_serialization_lock() {
   local state_dir mode
   state_dir="$EXPECTED_ROOT/state"
   [[ -d "$state_dir" && ! -L "$state_dir" ]] || die "Staging state directory must be a real directory"
@@ -419,10 +419,13 @@ acquire_action_lock() {
   umask 077
   exec 9>>"$ACTION_LOCK_FILE"
   ACTION_LOCK_FD="9"
-  chmod 600 "$ACTION_LOCK_FILE"
   [[ "$(file_owner "$ACTION_LOCK_FILE")" == "$(id -u)" && "$(file_mode "$ACTION_LOCK_FILE")" == "600" ]] ||
     die "AL-003S action lock metadata is unsafe"
   "$FLOCK_BIN" -n "$ACTION_LOCK_FD" || die "another AL-003S action is already running"
+}
+
+acquire_action_lock() {
+  acquire_staging_serialization_lock
   if [[ -e "$ACTION_BLOCKED_MARKER" ]] || grep -Eq '^AL003S_BLOCKED\|' "$ACTION_LOCK_FILE"; then
     die "AL-003S actions are blocked pending Owner cleanup review"
   fi

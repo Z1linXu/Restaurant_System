@@ -31,6 +31,10 @@ RELEASES_DIR_IDENTITY=""
 STATE_DIR="$OPS001_EXPECTED_ROOT/state"
 STATE_DIR_MODE=""
 STATE_DIR_IDENTITY=""
+RECOVERY_BLOCK_MARKER_DIGEST=""
+RECOVERY_BLOCK_LOCK_DIGEST=""
+ROTATED_ENV_DIGEST=""
+ROTATION_RECORD_DIGEST=""
 
 usage() {
   cat <<'EOF'
@@ -40,12 +44,21 @@ Usage:
   staging-release-rotation.sh --execute-runtime --action prepare-release-env \
     --approved-sha <full-sha> --env-file /srv/restaurant-pos/staging/config/.env.staging \
     --approval <private-file> --approval-sha256 <sha256>
+  staging-release-rotation.sh --execute-runtime --action prepare-recovery-release-env \
+    --approved-sha <full-sha> --env-file /srv/restaurant-pos/staging/config/.env.staging \
+    --approval <private-file> --approval-sha256 <sha256>
 
 Default/--validate is read-only. prepare-release-env requires an action/SHA/
 environment-bound one-use Owner approval. It uses the existing dedicated bare
 Staging repository; it never fetches, clones, builds, starts, runs Flyway, or
 prints environment values. Only STAGING_COMMIT_SHA, BACKEND_IMAGE,
 FRONTEND_IMAGE, and VITE_APP_BUILD_VERSION may change.
+
+prepare-recovery-release-env is the narrower prerequisite for a retained
+AL-003S blocked state: it requires the exact reviewed marker and lock record,
+binds both digests into its one-use approval, leaves both byte-for-byte
+unchanged, and only prepares the repaired exact release/environment. It does
+not clear blocked state or authorize a later runtime/data action.
 EOF
 }
 
@@ -183,6 +196,33 @@ assert_no_pending_rotation() {
   done
 }
 
+assert_recovery_blocked_state() {
+  local marker="$STATE_DIR/al003s-acceptance.blocked" lock="$STATE_DIR/al003s-acceptance.lock"
+  local marker_line lock_line marker_digest lock_digest marker_bytes lock_bytes path
+  for path in "$marker" "$lock"; do
+    [[ -f "$path" && ! -L "$path" ]] || ops001_die "recovery release requires both retained AL-003S blocked records"
+    ops001_path_has_symlink "$path" && ops001_die "retained AL-003S blocked records must not traverse symlinks"
+    [[ "$(ops001_file_owner "$path")" == "$(id -u)" && "$(ops001_file_mode "$path")" == "600" ]] ||
+      ops001_die "retained AL-003S blocked records must be owner-owned mode 0600"
+  done
+  marker_line="$(sed -n '1p' "$marker")"
+  lock_line="$(sed -n '1p' "$lock")"
+  marker_bytes="$(wc -c <"$marker" | tr -d ' ')"
+  lock_bytes="$(wc -c <"$lock" | tr -d ' ')"
+  [[ "$marker_line" =~ ^AL003S_BLOCKED\|[A-Za-z0-9_]+$ && "$lock_line" == "$marker_line" &&
+     "$marker_bytes" == "$(( ${#marker_line} + 1 ))" && "$lock_bytes" == "$(( ${#lock_line} + 1 ))" ]] ||
+    ops001_die "retained AL-003S blocked record identity is invalid or mismatched"
+  marker_digest="$(ops001_file_digest "$marker")"
+  lock_digest="$(ops001_file_digest "$lock")"
+  if [[ -z "$RECOVERY_BLOCK_MARKER_DIGEST$RECOVERY_BLOCK_LOCK_DIGEST" ]]; then
+    RECOVERY_BLOCK_MARKER_DIGEST="$marker_digest"
+    RECOVERY_BLOCK_LOCK_DIGEST="$lock_digest"
+  else
+    [[ "$marker_digest" == "$RECOVERY_BLOCK_MARKER_DIGEST" && "$lock_digest" == "$RECOVERY_BLOCK_LOCK_DIGEST" ]] ||
+      ops001_die "retained AL-003S blocked records changed during release preparation"
+  fi
+}
+
 assert_release() {
   [[ -d "$RELEASE_DIR" && ! -L "$RELEASE_DIR" ]] || ops001_die "exact detached release is missing"
   ops001_path_has_symlink "$RELEASE_DIR" && ops001_die "exact detached release must not traverse symlinks"
@@ -267,6 +307,7 @@ rotate_environment() {
   chmod 600 "$marker"
   ROTATION_STATE="PREPARED"
   assert_state_root_unchanged
+  [[ "$ACTION" != "prepare-recovery-release-env" ]] || assert_recovery_blocked_state
   mv -f -- "$NEXT_ENV_FILE" "$ENV_FILE"; NEXT_ENV_FILE=""
   ROTATION_STATE="ROTATED"
   chmod 600 "$ENV_FILE"
@@ -289,14 +330,25 @@ rotate_environment() {
     ops001_die "official Staging validation failed; recovery failed and Owner recovery is required"
   fi
   ops001_assert_approval_unchanged
+  [[ "$ACTION" != "prepare-recovery-release-env" ]] || assert_recovery_blocked_state
   printf 'OPS001_ENV_ROTATION|STATUS|COMMITTED\n' >>"$marker"
   ROTATION_STATE="COMMITTED"
-  printf 'OPS001_RELEASE_ENV|PASS|approved_sha=%s|env_sha256=%s|recovery_record_sha256=%s\n' "$APPROVED_SHA" "$next_digest" "$(ops001_file_digest "$marker")"
+  ROTATED_ENV_DIGEST="$next_digest"
+  ROTATION_RECORD_DIGEST="$(ops001_file_digest "$marker")"
 }
 
 run_prepare() {
   local scope="repository=$REPOSITORY;release=$RELEASE_DIR;identity_fields=4"
-  acquire_action_lock
+  if [[ "$ACTION" == "prepare-recovery-release-env" ]]; then
+    # This action is only the exact release prerequisite for a separately
+    # approved recovery. It serializes with every AL-003S action while leaving
+    # the reviewed blocked records authoritative and byte-for-byte unchanged.
+    acquire_staging_serialization_lock
+    assert_recovery_blocked_state
+    scope="${scope};blocked_marker_sha256=$RECOVERY_BLOCK_MARKER_DIGEST;blocked_lock_sha256=$RECOVERY_BLOCK_LOCK_DIGEST"
+  else
+    acquire_action_lock
+  fi
   assert_state_root_unchanged
   assert_releases_root_unchanged
   assert_no_pending_rotation
@@ -304,8 +356,12 @@ run_prepare() {
   OPS001_APPROVAL_FILE="$APPROVAL_FILE"
   ops001_assert_approval_unchanged
   ops001_consume_approval
+  [[ "$ACTION" != "prepare-recovery-release-env" ]] || assert_recovery_blocked_state
   create_detached_release
+  [[ "$ACTION" != "prepare-recovery-release-env" ]] || assert_recovery_blocked_state
   rotate_environment
+  printf 'OPS001_RELEASE_ENV|PASS|approved_sha=%s|env_sha256=%s|recovery_record_sha256=%s\n' \
+    "$APPROVED_SHA" "$ROTATED_ENV_DIGEST" "$ROTATION_RECORD_DIGEST"
 }
 
 main() {
@@ -332,9 +388,9 @@ main() {
       if [[ -e "$RELEASE_DIR" ]]; then assert_release; fi
       printf 'OPS001_RELEASE_ENV|VALIDATE|PASS|no state changed\n'
       ;;
-    prepare-release-env)
-      [[ "$EXECUTE_RUNTIME" == "true" ]] || ops001_die "prepare-release-env requires --execute-runtime"
-      [[ -n "$APPROVAL_FILE" && "$APPROVAL_SHA256" =~ ^[0-9a-f]{64}$ ]] || ops001_die "prepare-release-env requires one action-specific Owner approval"
+    prepare-release-env|prepare-recovery-release-env)
+      [[ "$EXECUTE_RUNTIME" == "true" ]] || ops001_die "$ACTION requires --execute-runtime"
+      [[ -n "$APPROVAL_FILE" && "$APPROVAL_SHA256" =~ ^[0-9a-f]{64}$ ]] || ops001_die "$ACTION requires one action-specific Owner approval"
       FLOCK_BIN="$(command -v flock || true)"
       [[ "$FLOCK_BIN" == /* && -x "$FLOCK_BIN" ]] || ops001_die "flock is required for the shared Staging action lock"
       run_prepare

@@ -11,7 +11,7 @@ creation, login, API acceptance, restart, or Production access.
 | Tool | Safe default | Explicit runtime actions |
 |---|---|---|
 | `staging-release-control-bootstrap.sh` | verifies an exact Git-materialized control source and private temporary bundle | delegates unchanged arguments to `staging-release-rotation.sh`; it has no release/runtime action of its own |
-| `staging-release-rotation.sh` | validates exact SHA, private env and dedicated bare repository | `prepare-release-env`: detached worktree plus atomic four-field identity rotation |
+| `staging-release-rotation.sh` | validates exact SHA, private env and dedicated bare repository | `prepare-release-env`: ordinary detached worktree plus atomic four-field identity rotation; `prepare-recovery-release-env`: the same release/env operation while retaining one exact reviewed AL-003S blocked pair |
 | `staging-runtime-evidence.sh` | validates the exact release/env/preflight binding | `collect-evidence`; `same-image-restart` using existing containers only |
 | `staging-owner-acceptance-client.sh` | validates exact release, private env and approved preflight identity | `prepare-target`; `clone-acceptance` against loopback APIs |
 
@@ -24,8 +24,14 @@ engine.
 
 Every runtime-capable helper serializes through the existing fixed
 `state/al003s-acceptance.lock`. Release/env rotation, runtime evidence/restart,
-and Owner/API batches therefore cannot overlap. Lock contention or an existing
-blocked marker fails closed before exact-runtime validation or mutation.
+and Owner/API batches therefore cannot overlap. Ordinary actions still reject
+either retained blocked record before exact-runtime validation or mutation.
+The sole exception is `prepare-recovery-release-env`, which exists because a
+reviewed backend/tool repair must be deployed before those records may be
+recovered. It obtains the same mutex, requires both exact owner-only records,
+binds their digests into its one-use approval, and proves they remain
+byte-for-byte unchanged. It does not clear blocked state or authorize deploy,
+recovery, one-shot, credential, or business-data work.
 
 ## Approval artifact
 
@@ -160,7 +166,7 @@ git --git-dir="$repository" show \
   "$approved_sha:deployment/cloud/staging-release-control-bootstrap.sh" >"$control"
 chmod 700 "$control"
 
-"$control" --execute-runtime --action prepare-release-env \
+"$control" --execute-runtime --action <prepare-release-env-or-prepare-recovery-release-env> \
   --approved-sha "$approved_sha" \
   --env-file "$staging_root/config/.env.staging" \
   --approval <private-approval-file> \
@@ -191,6 +197,16 @@ non-symlink, operator-owned and exact mode `0700` or the established
 non-group-writable `0750`. Its starting mode and inode are revalidated before
 and after worktree creation; `0775`, owner/mode/inode drift, or path
 replacement is `NO_GO`. The new exact release itself is always mode `0700`.
+
+Ordinary `prepare-release-env` continues to reject a blocked marker or a
+blocked line in the shared lock file. The recovery prerequisite action is
+accepted only when both fixed files are regular, non-symlink, invoking-user
+owned, mode `0600`, contain the same single syntactically valid
+`AL003S_BLOCKED|...` record, and remain unchanged before release creation,
+before environment rotation, and after rotation. Their SHA-256 digests are
+part of the action approval fingerprint. Missing, extra, mismatched, malformed,
+unsafe, or drifting records are `NO_GO`; no generic ignore-blocked option
+exists.
 
 The environment rotation copies the prior private environment into the
 owner-only recovery directory, prepares a new mode-0600 file, proves that only

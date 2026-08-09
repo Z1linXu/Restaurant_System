@@ -74,6 +74,10 @@ separate from historical evidence snapshots and business implementation details:
   readiness, the password-free bootstrap plan's pre-command cloud/Flyway
   safety conflict, successful one-shot cleanup, zero data writes, retained
   blocked state, and the bounded fail-closed repository repair.
+- [STG-008 Release-Rebind Serialization Repair Evidence](docs/governance/runtime/STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md)
+  records the fresh V10/zero-data/continuity baseline, the retained exact
+  blocked pair, the release-helper sequencing deadlock, and the narrow
+  digest-bound recovery-release prerequisite. It authorizes no runtime use.
 - [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
   authority for current issue triage and closure status.
 - [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
@@ -773,6 +777,24 @@ unique stop state is
 `STG-008_DEPENDENCY_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
 No credential input, synthetic topology/source write, login, target onboarding,
 clone, Store 1 read, printer/Pad, Production, or ACT-001 action occurred.
+
+The later bounded recovery continuation re-established Git and runtime Ground
+Truth before mutation: Staging remained exact `2837ae88...` at V10, all
+synthetic topology/request and menu-business counts remained zero, Printing
+remained disabled, all three Staging endpoints returned 200, isolation was
+intact, and permitted Production continuity was unchanged. Both retained
+AL-003S files contained the same single reviewed failure record and no scoped
+one-shot existed. Static control-flow review then proved a dependency deadlock:
+ordinary release rotation called the full blocked-state action gate before it
+could create the repaired exact release, while the approved recovery sequence
+forbids clearing those records until after that repaired exact runtime is
+deployed. The bounded repository correction separates the shared mutex from
+the ordinary unblocked assertion and adds only
+`prepare-recovery-release-env`. That action requires the exact fixed marker and
+lock, owner/mode/shape parity, and approval-bound digests; it keeps both files
+byte-for-byte unchanged while preparing only the detached release and four
+non-secret environment identity fields. Ordinary release and every synthetic,
+runtime-evidence/restart, and Owner/API action retain the original block.
 
 Repository PRs now follow the permanent auto-merge gate in the Agile Loop
 Operating Model: latest-main base, exact single-package scope, all applicable

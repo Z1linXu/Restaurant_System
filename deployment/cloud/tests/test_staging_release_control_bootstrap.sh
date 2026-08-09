@@ -91,6 +91,17 @@ assert_contains 'OPS001_RELEASE_ENV|PASS|fixture' "$TMP_DIR/pass.out"
 assert_contains "--validate --approved-sha $APPROVED_SHA --env-file $FAKE_ROOT/config/.env.staging" "$LOG_FILE"
 [[ ! -e "$CONTROL_ROOT" ]] || fail 'successful bootstrap did not clean its private control root'
 
+CONTROL_ROOT="$(materialize "$APPROVED_SHA")"
+STAGING_BOOTSTRAP_TEST_LOG="$LOG_FILE" "$CONTROL_ROOT/staging-release-control-bootstrap.sh" \
+  --execute-runtime --action prepare-recovery-release-env \
+  --approved-sha "$APPROVED_SHA" --env-file "$FAKE_ROOT/config/.env.staging" \
+  --approval "$FAKE_ROOT/evidence/recovery-release.approval" \
+  --approval-sha256 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+  >"$TMP_DIR/recovery-action-pass.out"
+assert_contains 'OPS001_RELEASE_ENV|PASS|fixture' "$TMP_DIR/recovery-action-pass.out"
+assert_contains "--execute-runtime --action prepare-recovery-release-env --approved-sha $APPROVED_SHA" "$LOG_FILE"
+[[ ! -e "$CONTROL_ROOT" ]] || fail 'recovery-action bootstrap did not clean its private control root'
+
 chmod 700 "$FAKE_ROOT/state"
 CONTROL_ROOT="$(materialize "$APPROVED_SHA")"
 STAGING_BOOTSTRAP_TEST_LOG="$LOG_FILE" "$CONTROL_ROOT/staging-release-control-bootstrap.sh" \
