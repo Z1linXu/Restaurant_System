@@ -1,5 +1,14 @@
 # STG-005 Synthetic Business Acceptance Plan
 
+## Current verified execution state (2026-08-09)
+
+The Staging-only synthetic sequence completed without duplication: STG-005A
+and STG-005B PLAN/EXECUTE/REPLAY are `VALIDATED/CREATED/REPLAYED`; menu counts
+are `4/3/13/38` and replay revision is `2 -> 2`. Organization, Owner, source
+Store and credential are ready; no one-shot or blocked marker remains and the
+lock is empty. This is runtime evidence, not Staging acceptance or Production
+evidence.
+
 > Loop: `STG-005_SYNTHETIC_BUSINESS_ACCEPTANCE`
 >
 > Phase: `PLAN`
@@ -538,11 +547,11 @@ request-context repair by reaching password-free `VALIDATED`. The non-web
 WebSocket broker nevertheless held the one-shot alive to its timeout; zero
 synthetic rows changed and the new fail-closed pair remains. PR #91 then put
 the bounded lifecycle repair in PR #91; PR #92's governance-only merge makes
-`main@8b93d09...`. It is `IN_MAIN`, not deployed, while `2a6c30a...` remains
-the deployed Staging runtime. The Owner
+`main@cfe7d856...`. It is `IN_MAIN`, not deployed, while `712531b...` remains
+the deployed Staging runtime with the synthetic A/B sequence complete. The Owner
 has authorized the bounded continuous Staging loop from a freshly fetched exact
-rebind through guarded topology/source work and conditional Phase-A Owner-login
-acceptance. Runtime is at `STG-008_CONTINUOUS_STAGING_LOOP_AUTHORIZED`.
+rebind through Phase-A Owner-login acceptance. `STG-008=PASS` is limited to
+the completed synthetic topology/source gates; Phase-A remains pending.
 The immutable entry result remains
 [STG-008 Synthetic Topology and Source Entry Evidence](STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md),
 and the resumed failure/repair is

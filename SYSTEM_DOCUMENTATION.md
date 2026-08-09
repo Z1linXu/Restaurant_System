@@ -1,5 +1,14 @@
 # SYSTEM DOCUMENTATION
 
+## Current verified STG-008 continuation
+
+Staging is exact `712531b...` at Flyway V10. STG-005A and STG-005B have
+completed PLAN/EXECUTE/REPLAY as `VALIDATED/CREATED/REPLAYED`; the synthetic
+source menu is `4/3/13/38`, replay is `2 -> 2`, no one-shot or blocked marker is
+active, and the lock is empty. This is `DEPLOYED_TO_STAGING` evidence only;
+`IN_MAIN` and `STAGING_ACCEPTED` remain separate. PR #95 needs fresh exact-SHA
+Staging rebind/readiness before Phase-A Owner login.
+
 ## Current Governance Index
 
 The current runtime and delivery-governance entry points are intentionally kept

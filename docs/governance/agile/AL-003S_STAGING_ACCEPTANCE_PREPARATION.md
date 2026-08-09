@@ -1,5 +1,13 @@
 # AL-003S Staging Acceptance Preparation
 
+## Current verified checkpoint (2026-08-09)
+
+The synthetic prerequisite actions completed in isolated Staging: STG-005A and
+STG-005B each have PLAN `VALIDATED`, EXECUTE `CREATED`, REPLAY `REPLAYED`; the
+source menu is `4/3/13/38` and replay is `2 -> 2`. This does not claim
+`STAGING_ACCEPTED` and does not authorize Chinatown onboarding or clone. After
+PR #95's exact-SHA rebind/readiness, only Phase-A Owner login may proceed.
+
 > Package state: `IN_MAIN`; `STG-006_PASS`; OPS-001 repository tooling complete after reviewed merge
 >
 > Prepared against: STG-005B checkpoint `0aba8377a3b7acec047c6ffd025f774d8a4d5e87`
