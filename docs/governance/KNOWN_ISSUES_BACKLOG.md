@@ -2,7 +2,7 @@
 
 > Status: `ACTIVE_GOVERNANCE_BACKLOG`
 >
-> Last updated: 2026-07-27, America/Toronto
+> Last updated: 2026-08-09, America/Toronto
 >
 > This is the authority for current issue triage. Historical evidence remains
 > in the Phase 3 reports and is not rewritten here.
@@ -17,6 +17,25 @@
 | P3 | A UX, process, or governance improvement. |
 
 ## Active issues
+
+### KI-008 - Non-web STG-005 plan cannot construct servlet request context
+
+| Field | Value |
+|---|---|
+| issue_id | `KI-008` |
+| priority | `P2` |
+| title | Non-web STG-005 plan cannot construct servlet request context |
+| observed_behavior | The approved password-free `bootstrap-plan` exits during Spring context initialization because `RequestUserContextService` requires `HttpServletRequest` while the guarded one-shot is non-web. |
+| expected_behavior | The non-web guarded command constructs without inventing a request; any request-authentication attempt remains fail-closed. |
+| operational_impact | STG-008 cannot safely progress beyond PLAN; no synthetic data write is permitted while fail-closed state is retained. |
+| current_workaround | None. Do not retry the failed plan on the same exact runtime. |
+| evidence | [STG-008 non-web request-context repair evidence](runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md). |
+| authoritative_rule | [AL-003S Staging acceptance runbook](../../deployment/cloud/README_AL003S_STAGING_ACCEPTANCE.md). |
+| status | `REPAIR_REQUIRES_EXACT_SHA_REDEPLOY` |
+| target_loop | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` Dependency Repair Auto-Loop. |
+| acceptance_criteria | Focused authorization/non-web safety regressions and independent review pass; the repair enters `main`; a newly approved exact release passes rebind, deploy, readiness and recovery before a new PLAN. |
+| deployment_required | Yes, Staging-only exact redeploy after separate Owner approval; no Production deployment. |
+| last_updated | 2026-08-09 |
 
 ### KI-002 - 走上海青被错误压缩为走青
 

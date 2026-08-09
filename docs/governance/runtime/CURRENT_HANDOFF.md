@@ -6,7 +6,7 @@
 > authoritative. If this file conflicts with those sources, the authoritative
 > sources win.
 >
-> Snapshot date: 2026-08-08, America/Toronto
+> Snapshot date: 2026-08-09, America/Toronto
 >
 > Runtime freshness: PR #82 entered `main` at `2837ae88...` with the bounded
 > restart-readiness/fail-closed repair. A fully fresh Owner-authorized
@@ -29,9 +29,15 @@
 > the reviewed blocked pair, Printing/isolation and Production continuity. It
 > stopped before Batch A mutation because the ordinary release path could not
 > legally cross the retained block. PR #87 merged the dedicated recovery
-> release-rebind repair at `4b954e09...`; it has not been deployed or used.
-> That runtime-sensitive merge superseded the authorization bound to
-> `4759a23b...`. Staging remains exact `2837ae88...` and Production remains
+> release-rebind repair at `4b954e09...`; its initial publication state is
+> historical. That runtime-sensitive merge superseded the authorization bound
+> to `4759a23b...`. A later Owner-authorized continuation bound and deployed
+> exact `6753855497b8c47be99a8d88ae9d9961653addb0` to Staging at Flyway V10,
+> passed formal preflight/readiness and recovered only the reviewed old blocked
+> records. The next password-free plan failed before its command/data path
+> because non-web startup required a servlet request context; cleanup and
+> zero-write continuity passed, and a new blocked pair was retained. The
+> bounded repository repair is pending publication; Production remains
 > unchanged.
 
 ## 1. Project mission
@@ -51,8 +57,8 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| runtime-sensitive main floor | `4b954e09a365fec909ed6da3ddf8fa9f13639cdc` | `IN_MAIN`; PR #87 merge containing the blocked-state-safe release-rebind repair. Any later governance-only main must be freshly fetched and remain a descendant before runtime approval. |
-| exact deployed Staging runtime | `2837ae88e55142c99c6975f8b6575febffc913a1` | `DEPLOYED_TO_STAGING`; PR #82 merge and exact STG-007 PASS runtime, distinct from later documentation main |
+| runtime-sensitive deployed-main floor | `6753855497b8c47be99a8d88ae9d9961653addb0` | `DEPLOYED_TO_STAGING`; includes the PR #87 recovery path. Any future runtime-sensitive repair must be freshly fetched as a new exact candidate before runtime approval. |
+| exact deployed Staging runtime | `6753855497b8c47be99a8d88ae9d9961653addb0` | `DEPLOYED_TO_STAGING`; authorized V10-to-V10 continuation, distinct from the pending request-context repair |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
 | Runtime-sensitive delivery package | PR #87 / head `84457266d1f752cb755b1933b01d849ae62407ed` | `IN_MAIN` through merge `4b954e09...`; no unmerged runtime-sensitive package remains |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
@@ -111,9 +117,9 @@ closed, merged, and `IN_MAIN`.
 | #82 | STG-007 restart readiness/fail-closed repair | `main` | merge `2837ae88e55142c99c6975f8b6575febffc913a1` | `IN_MAIN` | #81/main | Yes | Bounded three-endpoint readiness and nonzero-exit blocked-state persistence; exact merged SHA later passed the authorized V10 continuation |
 | #83 | STG-007 final evidence/governance | `main` | merge `2ed56b06f37c9257a655ec334f81e31ca4a518a6` | `IN_MAIN` | #82/main | Yes | Documentation/evidence only; no runtime-capability or runtime-state change |
 | #84 | STG-008 entry evidence/governance | `main` | merge `828af4e84581dcb051248beee694c307a65210c5` | `IN_MAIN` | #83/main | Yes | Sanitized credential-gate evidence only; no application, migration, runtime configuration, credential, or business-data mutation |
-| #85 | STG-008 guarded one-shot Flyway safety repair | `main` | merge `c95c3840fa972f84b3e5dbd345fef3e4c12aa8c6` | `IN_MAIN` | #84/main | Yes | Exact-profile no-migration startup-safety reconciliation plus tests/governance; not deployed and no credential/data mutation |
+| #85 | STG-008 guarded one-shot Flyway safety repair | `main` | merge `c95c3840fa972f84b3e5dbd345fef3e4c12aa8c6` | `IN_MAIN` | #84/main | Yes | Exact-profile no-migration startup-safety reconciliation plus tests/governance; its original publication did not deploy or mutate credentials/data |
 | #86 | STG-008 dependency-repair Ground Truth closure | `main` | merge `4759a23b1a00d3254936e6c8eeb0ec33012b5145` | `IN_MAIN` | #85/main | Yes | Documentation-only closure; no runtime action |
-| #87 | STG-008 release-rebind serialization repair | `main` | merge `4b954e09a365fec909ed6da3ddf8fa9f13639cdc` | `IN_MAIN` | #86/main | Yes | Recovery-only release/env preparation preserves both reviewed blocked records and every ordinary action block; undeployed and unused |
+| #87 | STG-008 release-rebind serialization repair | `main` | merge `4b954e09a365fec909ed6da3ddf8fa9f13639cdc` | `IN_MAIN` | #86/main | Yes | Recovery-only release/env preparation preserves both reviewed blocked records and every ordinary action block; it later supported exact `6753855497...` Staging rebind/deploy/recovery |
 
 Main stack review order:
 
@@ -125,13 +131,14 @@ printing or device operations.
 
 ## 4. Runtime ground truth
 
-STG-006 established the historical passive baseline; the final STG-007
-continuation established the current bounded runtime identity below.
+STG-006 established the historical passive baseline and STG-007 established
+the historical infrastructure identity. The later STG-008 continuation updated
+the current bounded Staging runtime identity below.
 
 | Environment | Retained evidence | Classification and boundary |
 |---|---|---|
 | Production | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`; Compose `cloud` `db/backend/nginx`; unchanged IDs/start times/restart `0`; health 200 | `MACHINE_VERIFIED_READ_ONLY` continuity only; Flyway/business state not queried |
-| Staging | `2837ae88e55142c99c6975f8b6575febffc913a1`; Flyway V10 with no pending migration; exact `db/backend/nginx` identities running; health 200/200/200 | `DEPLOYED_TO_STAGING`; formal preflight, repaired readiness, runtime collection, same-image restart and post-restart verification all PASS; `STG-007=PASS` |
+| Staging | `6753855497b8c47be99a8d88ae9d9961653addb0`; Flyway V10 with no pending migration; exact `db/backend/nginx` identities running; health 200/200/200 | `DEPLOYED_TO_STAGING`; STG-007 infrastructure PASS is retained, then rebind/preflight/readiness and old-pair recovery passed before a password-free plan failed before command/data access |
 | Staging isolation | project `restaurant-pos-staging`; only `127.0.0.1:18080`; separate state/network/mounts; private leaf UID 70/mode 0700 | `MACHINE_VERIFIED_READ_ONLY` |
 | Staging printing | `STAGING_PRINT_MODE=DISABLED`; feature flag `false` | `MACHINE_VERIFIED_READ_ONLY` |
 
@@ -144,14 +151,17 @@ The resumed plan failure and bounded repair are recorded in
 [STG-008 Flyway Guard Repair Evidence](STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md).
 This is a failed password-free plan one-shot before the STG-005A command, not a
 failed transaction, deployment, migration, or credential operation. The
-launcher is blocked pending separately approved recovery.
+launcher retains the new fail-closed pair pending a repaired exact candidate
+and separately approved recovery.
 
 The later fresh baseline, release-rebind sequencing deadlock and bounded PR
 #87 correction are recorded in
 [STG-008 Release-Rebind Serialization Repair Evidence](STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md).
-That continuation stopped before candidate import or Batch A mutation. The
-repair is `IN_MAIN` but not deployed; the prior exact-SHA authorization cannot
-be reused.
+That historical continuation stopped before candidate import or Batch A
+mutation. Its PR #87 repair was later used by exact `6753855497...` for
+Staging rebind/preflight/deploy/readiness and old-pair recovery. The following
+non-web plan failure supersedes that historical gate; its repair requires a
+new exact candidate and authorization cannot be reused.
 
 ## 5. Current feature and loop
 
@@ -159,10 +169,10 @@ be reused.
 |---|---|
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` |
-| Current package | Credential contract aligned; fresh `bootstrap-plan` stopped before STG-005A command/data access at the cloud/Flyway safety conflict. Synthetic Owner remains `NOT_CREATED`, Store ID `1` remains safely available, topology is empty, and runtime-sensitive PRs #85/#87 are `IN_MAIN` but not deployed. The intervening recovery continuation stopped before Batch A mutation at the now-repaired release-rebind sequencing deadlock. |
-| Feature stop state | `STG-008_RELEASE_REBIND_REPAIR_IN_MAIN_WAITING_FOR_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL` |
+| Current package | Exact `6753855...` passed rebind/preflight/deploy/readiness and cleared only the reviewed old block. Its fresh password-free `bootstrap-plan` then failed before command/data access because request context requires servlet injection in non-web mode. Synthetic Owner remains `NOT_CREATED`, topology is empty, and a newly retained blocked pair requires a repair-dependent fresh exact continuation. |
+| Feature stop state | `STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL` |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | Approve a freshly fetched exact main containing PR #87 for recovery-specific release/private-env preparation, formal preflight and Staging-only V10-to-V10 deploy. Only after Batch A passes may the already bounded fail-closed record recovery run; STG-008 must then restart from fresh readiness/PLAN with new one-use approvals. The password may be requested only when fresh STG-005A EXECUTE actually needs it, through the reviewed private stdin/FD channel. |
+| Current Owner gate | After the repository repair enters `main`, approve a freshly fetched exact candidate for release/private-env binding, formal preflight, Staging-only V10-to-V10 deploy, fresh readiness and bounded recovery of the newly retained records. Then restart with a new password-free PLAN and new action approval. The password may be requested only when fresh STG-005A EXECUTE actually needs it, through the reviewed private stdin/FD channel. |
 
 ### Permitted work
 
@@ -346,9 +356,9 @@ is the first Store Profile sample, not a shared-service special case.
 | REL-001 / #70 | Formal Chinatown Production RC plan | `IN_MAIN` at `645d4909625f70fc241d5468382d66a30a030fb1` | planning only; no candidate, deployment, or activation |
 | ACT-001 | Production provisioning and field acceptance | `NOT_STARTED_OWNER_GATED` | Accepted RC and explicit Production activation approval |
 | STG-006 | Exact-main passive preflight | `PASS` for candidate `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | Evidence only; no release/deploy/migration approval |
-| OPS-001 | Secret-safe Staging tooling | `REPOSITORY_COMPLETE`; bounded repairs #75-#82 and #87 are `IN_MAIN` | PR #87's recovery-only release/env path is undeployed and unused; runtime actions remain independently exact-SHA/action/Owner-gated |
+| OPS-001 | Secret-safe Staging tooling | `REPOSITORY_COMPLETE`; bounded repairs #75-#82 and #87 are `IN_MAIN` | PR #87's recovery-only release/env path supported the later exact `6753855497...` rebind/deploy/recovery; runtime actions remain independently exact-SHA/action/Owner-gated |
 | STG-007 | Exact-SHA V10-aware continuation | `PASS` at deployed Staging SHA `2837ae88...` / Flyway V10 | Runtime batch complete; no approval or evidence is reusable |
-| STG-008 | Synthetic topology and source | `DEPENDENCY_REPAIR_RUNTIME_GATE` | Identity/password contract is aligned. The password-free plan exposed a pre-command Flyway safety-rule conflict; no data write occurred. PR #85 repaired that rule; PR #87 repaired the later release-rebind sequencing deadlock. Both are undeployed. A new exact-SHA Staging deploy and post-Batch-A blocked-state recovery precede any retry. |
+| STG-008 | Synthetic topology and source | `DEPENDENCY_REPAIR_RUNTIME_GATE` | Identity/password contract is aligned. The exact `6753855497...` continuation completed rebind/deploy/readiness and old-pair recovery. Its password-free plan then failed before command/data access at the non-web request-context dependency; no data write occurred. A new exact-SHA Staging deploy and post-Batch-A recovery of the newly retained pair precede any retry. |
 
 The authoritative post-stack capability matrix, Staging decision, and next
 bounded loops are in [Post-Stack Ground Truth Audit](POST_STACK_GROUND_TRUTH_AUDIT.md).
@@ -398,10 +408,12 @@ from current main.
 - OPS-001 restart readiness/fail-closed repair entered main through PR #82 and
   the fresh exact-SHA continuation produced valid same-image restart evidence.
 - The STG-008 guarded one-shot Flyway safety repair entered main through PR
-  #85 at `c95c3840fa972f84b3e5dbd345fef3e4c12aa8c6`; it remains undeployed.
+  #85 at `c95c3840fa972f84b3e5dbd345fef3e4c12aa8c6`; its publication itself did
+  not perform a runtime action.
 - PR #87 merged the blocked-state-safe release-rebind serialization repair at
   `4b954e09a365fec909ed6da3ddf8fa9f13639cdc` after full shell regressions and
-  Agent 6 `ACCEPT`; it remains undeployed and unused.
+  Agent 6 `ACCEPT`; it later supported the exact `6753855497...` Staging
+  rebind/deploy/readiness and old-pair recovery continuation.
 
 ## 13. START HERE for the next Agent
 
@@ -469,6 +481,7 @@ Primary authorities:
 - [STG-007 exact-SHA V10 continuation evidence](STG-007_EXACT_SHA_CONTINUATION_EVIDENCE.md)
 - [STG-008 synthetic topology/source entry evidence](STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md)
 - [STG-008 guarded one-shot Flyway repair evidence](STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md)
+- [STG-008 non-web request-context repair evidence](STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md)
 - [OPS-001 secret-safe tooling runbook](../../../deployment/cloud/README_OPS001_STAGING_SECRET_SAFE_TOOLING.md)
 - [System Documentation](../../../SYSTEM_DOCUMENTATION.md)
 - [API contract](../../../doc/API.md)
