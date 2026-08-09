@@ -35,7 +35,10 @@ separate from historical evidence snapshots and business implementation details:
   acceptance helpers. The bounded `owner-login-acceptance` action proves only
   synthetic Owner login, exact Organization/source-Store access and logout; it
   cannot onboard a target Store or invoke clone endpoints. These are repository
-  capability only and authorize no runtime action.
+  capability only and authorize no runtime action. On jq-absent Staging hosts,
+  the Phase-A-only client uses its fixed Python JSON compatibility helper; the
+  helper is fail-closed, covers the exact safe-client predicates, and cannot be
+  selected by onboarding or clone actions.
 - [STG-007 Preflight Upgrade Port Guard Repair Evidence](docs/governance/runtime/STG-007_PREFLIGHT_UPGRADE_PORT_GUARD_REPAIR_EVIDENCE.md)
   records the deterministic retained-listener upgrade blocker, the exact
   fail-closed ownership correction, local verification scope, expired prior

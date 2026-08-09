@@ -297,7 +297,10 @@ main() {
   done
   [[ -n "$APPROVED_SHA$ENV_FILE" ]] || ops001_die "approved SHA and environment file are required"
   CURL_BIN="$(command -v curl || true)"; JQ_BIN="$(command -v jq || true)"
-  [[ "$CURL_BIN" == /* && "$JQ_BIN" == /* ]] || ops001_die "curl and jq are required"
+  if [[ -z "$JQ_BIN" && "$ACTION" == "owner-login-acceptance" ]]; then
+    JQ_BIN="$SCRIPT_DIR/ops001-jq-compat.py"
+  fi
+  [[ "$CURL_BIN" == /* && "$JQ_BIN" == /* && -x "$JQ_BIN" ]] || ops001_die "curl and jq-compatible parser are required"
   validate_release_and_env
   if [[ "$ACTION" == "validate" ]]; then
     [[ "$EXECUTE_RUNTIME" == "false" && -z "$APPROVAL_FILE$APPROVAL_SHA256$SECRETS_FD" ]] || ops001_die "validation accepts no runtime, approval, or secret input"

@@ -13,6 +13,14 @@ assert_not_contains() { ! grep -Fq -- "$1" "$2" || fail "unexpected '$1' in $2";
 expect_failure() { local label="$1"; shift; if (trap - EXIT; "$@") >"$TMP_DIR/$label.out" 2>"$TMP_DIR/$label.err"; then fail "$label unexpectedly passed"; fi; }
 
 bash -n "$SCRIPT"
+COMPAT="$REPO_ROOT/deployment/cloud/ops001-jq-compat.py"
+python3 -m py_compile "$COMPAT"
+printf '{"data":{"stores":[{"id":1,"organization_id":10}]}}' >"$TMP_DIR/compat-workspace.json"
+"$COMPAT" -e --argjson organization 10 --argjson source 1 '.data.stores | type == "array" and length == 1 and .[0].id == $source and .[0].organization_id == $organization' "$TMP_DIR/compat-workspace.json"
+printf '{"data":{"stores":[{"id":1,"organization_id":10},{"id":2,"organization_id":10}]}}' >"$TMP_DIR/compat-extra-store.json"
+expect_failure compat_extra_store "$COMPAT" -e --argjson organization 10 --argjson source 1 '.data.stores | type == "array" and length == 1 and .[0].id == $source and .[0].organization_id == $organization' "$TMP_DIR/compat-extra-store.json"
+printf '{"data":{"access_token":"abcdefghijklmnopqrstuv"}}' >"$TMP_DIR/compat-short-me.json"
+expect_failure compat_short_me "$COMPAT" -er '.data.access_token | strings | select(length >= 24)' "$TMP_DIR/compat-short-me.json"
 "$SCRIPT" --help >"$TMP_DIR/help"
 assert_contains 'Secret values are forbidden in argv/environment/output.' "$TMP_DIR/help"
 expect_failure missing_bindings "$SCRIPT" --validate
