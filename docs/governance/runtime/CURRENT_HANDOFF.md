@@ -68,10 +68,10 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| runtime-sensitive current-main candidate | `9a776d3aaa2c357e1edeac46e54168bda1f5431f` | `IN_MAIN`; PR #91 lifecycle repair. It requires exact Staging rebind before deployment evidence. |
+| runtime-sensitive current-main candidate | `8b93d09086101776322785e215225d84378fdd2e` | `IN_MAIN`; PR #92 governance-only continuous-authority merge atop PR #91 lifecycle repair. It requires exact Staging rebind before deployment evidence. |
 | exact deployed Staging runtime | `2a6c30a5948882ff8bf1d3808e2970fe5b4a6ae3` | `DEPLOYED_TO_STAGING`; V10-to-V10 continuation passed until the password-free plan timeout; no synthetic business write occurred. |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
-| Runtime-sensitive delivery package | PR #91 / exact `9a776d3aaa2c357e1edeac46e54168bda1f5431f` | `IN_MAIN`; bounded one-shot lifecycle repair, not yet deployed |
+| Runtime-sensitive delivery package | PR #91 plus PR #92 / exact `8b93d09086101776322785e215225d84378fdd2e` | `IN_MAIN`; bounded one-shot lifecycle repair and governance authority, not yet deployed |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
 
 `IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
@@ -180,7 +180,7 @@ new exact candidate and authorization cannot be reused.
 |---|---|
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` |
-| Current package | Exact `2a6c30a...` passed rebind/preflight/deploy/readiness and cleared only the reviewed old block. Its fresh password-free `bootstrap-plan` reached `VALIDATED`, but the non-web WebSocket broker held the one-shot open until the timeout; no credential/data access occurred. Synthetic Owner remains `NOT_CREATED`, topology is empty, and a newly retained blocked pair requires a lifecycle-repair-dependent fresh exact continuation. |
+| Current package | Exact `2a6c30a...` passed rebind/preflight/deploy/readiness and cleared only the reviewed old block. Its fresh password-free `bootstrap-plan` reached `VALIDATED`, but the non-web WebSocket broker held the one-shot open until the timeout; no credential/data access occurred. Synthetic Owner remains `NOT_CREATED` and topology is empty. PR #91 fixed that lifecycle defect; fresh read-only inspection then found the current reviewed cleanup-plus-action-failure lock form is rejected by the recovery helper’s one-line-only check. That bounded compatibility repair is in the Dependency Repair Auto-Loop before the next exact continuation. |
 | Feature stop state | `STG-008_CONTINUOUS_STAGING_LOOP_AUTHORIZED` |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
 | Current Owner gate | The Owner has already authorized the bounded continuous STG-008 loop: current exact-main release/private-env binding, formal preflight, Staging-only V10-to-V10 deploy, fresh readiness, exact-matching recovery of the newly retained records, fresh STG-005A PLAN, then the guarded synthetic STG-005A/STG-005B execute/replay sequence and conditional Owner-login acceptance. Every runtime invocation still needs its reviewed, digest-bound internal action approval; that is not a new Owner Gate. A same-scope bounded repair merge may rebind automatically. Any migration, product/security/identity-contract change, Production requirement, ambiguous identity, unexpected data, or destructive action is a true Owner Gate. |

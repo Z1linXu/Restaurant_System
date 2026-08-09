@@ -201,12 +201,14 @@ replacement is `NO_GO`. The new exact release itself is always mode `0700`.
 Ordinary `prepare-release-env` continues to reject a blocked marker or a
 blocked line in the shared lock file. The recovery prerequisite action is
 accepted only when both fixed files are regular, non-symlink, invoking-user
-owned, mode `0600`, contain the same single syntactically valid
-`AL003S_BLOCKED|...` record, and remain unchanged before release creation,
-before environment rotation, and after rotation. Their SHA-256 digests are
-part of the action approval fingerprint. Missing, extra, mismatched, malformed,
-unsafe, or drifting records are `NO_GO`; no generic ignore-blocked option
-exists.
+owned, mode `0600`, and contain either the same single syntactically valid
+`AL003S_BLOCKED|...` record or the exact ordered two-record lifecycle form:
+`AL003S_BLOCKED|scoped_container_cleanup_failed` followed by the same marker
+record. They remain unchanged before release creation, before environment
+rotation, and after rotation. Their full-file SHA-256 digests are part of the
+action approval fingerprint. Missing, extra, reordered, mismatched,
+malformed, unsafe, or drifting records are `NO_GO`; no generic ignore-blocked
+option exists.
 
 The environment rotation copies the prior private environment into the
 owner-only recovery directory, prepares a new mode-0600 file, proves that only

@@ -169,6 +169,21 @@ mv "$TMP_DIR/blocked-marker-real" "$OPS001_EXPECTED_ROOT/state/al003s-acceptance
 RECOVERY_BLOCK_MARKER_DIGEST=""
 RECOVERY_BLOCK_LOCK_DIGEST=""
 assert_recovery_blocked_state
+printf 'AL003S_BLOCKED|action_failed_requires_owner_review\n' >"$OPS001_EXPECTED_ROOT/state/al003s-acceptance.blocked"
+printf 'AL003S_BLOCKED|scoped_container_cleanup_failed\nAL003S_BLOCKED|action_failed_requires_owner_review\n' >"$OPS001_EXPECTED_ROOT/state/al003s-acceptance.lock"
+RECOVERY_BLOCK_MARKER_DIGEST=""
+RECOVERY_BLOCK_LOCK_DIGEST=""
+assert_recovery_blocked_state
+printf 'AL003S_BLOCKED|scoped_container_cleanup_failed\nAL003S_BLOCKED|different_reviewed_reason\n' >"$OPS001_EXPECTED_ROOT/state/al003s-acceptance.lock"
+RECOVERY_BLOCK_MARKER_DIGEST=""
+RECOVERY_BLOCK_LOCK_DIGEST=""
+expect_failure recovery_block_cleanup_pair_mismatch assert_recovery_blocked_state
+assert_contains 'identity is invalid or mismatched' "$TMP_DIR/recovery_block_cleanup_pair_mismatch.err"
+printf 'AL003S_BLOCKED|action_failed_requires_owner_review\n' >"$OPS001_EXPECTED_ROOT/state/al003s-acceptance.blocked"
+printf 'AL003S_BLOCKED|action_failed_requires_owner_review\n' >"$OPS001_EXPECTED_ROOT/state/al003s-acceptance.lock"
+RECOVERY_BLOCK_MARKER_DIGEST=""
+RECOVERY_BLOCK_LOCK_DIGEST=""
+assert_recovery_blocked_state
 printf 'AL003S_BLOCKED|different_reviewed_reason\n' >"$OPS001_EXPECTED_ROOT/state/al003s-acceptance.blocked"
 printf 'AL003S_BLOCKED|different_reviewed_reason\n' >"$OPS001_EXPECTED_ROOT/state/al003s-acceptance.lock"
 expect_failure recovery_block_digest_drift assert_recovery_blocked_state

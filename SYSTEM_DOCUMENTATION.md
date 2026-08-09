@@ -834,6 +834,12 @@ from fresh exact rebind through guarded topology/source work and conditional
 Phase-A Owner-login acceptance. The current unique stop state is
 `STG-008_CONTINUOUS_STAGING_LOOP_AUTHORIZED`.
 
+Fresh read-only inspection later found that the retained STG-005A failure’s
+normal two-line cleanup/action-failure lock is more specific than the
+recovery helper’s one-line legacy shape. The bounded compatibility repair
+accepts only that exact ordered pair with full-digest approval binding; it
+does not clear state, deploy, migrate, or alter synthetic business data.
+
 Repository PRs now follow the permanent auto-merge gate in the Agile Loop
 Operating Model: latest-main base, exact single-package scope, all applicable
 tests/checks, secret/link/drift/diff scans, independent `ACCEPT`, clean GitHub

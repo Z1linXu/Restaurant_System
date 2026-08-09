@@ -28,7 +28,7 @@
 | observed_behavior | Exact Staging `2a6c30a...` reached `STG005_BOOTSTRAP|status=VALIDATED` before credential or data access, but the non-web profile also started `SimpleBrokerMessageHandler`; the JVM remained alive until the reviewed 600-second timeout. Compose `--rm` cleanup and the launcher finalizer then overlapped, preserving fail-closed blocked state. |
 | expected_behavior | The dedicated non-web one-shot excludes long-lived WebSocket infrastructure while preserving the normal web runtime contract. A successful password-free plan exits inside its bounded window; unexpected cleanup failure remains fail-closed. |
 | operational_impact | STG-008 cannot safely progress beyond PLAN; no synthetic business write is permitted while the reviewed blocked pair is retained. |
-| current_workaround | PR #91 is `IN_MAIN` at `9a776d3...`; do not retry the failed plan on deployed exact `2a6c30a...`. Rebind the current exact candidate under the continuous Staging authorization. |
+| current_workaround | PR #91 is `IN_MAIN`; PR #92's governance-only merge makes current exact main `8b93d09...`. Do not retry the failed plan on deployed exact `2a6c30a...`. The recovery-pair compatibility repair must merge, then rebind its new exact candidate under the continuous Staging authorization. |
 | evidence | [STG-008 one-shot lifecycle repair evidence](runtime/STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md). |
 | authoritative_rule | [AL-003S Staging acceptance runbook](../../deployment/cloud/README_AL003S_STAGING_ACCEPTANCE.md). |
 | status | `REPAIR_IN_MAIN_REQUIRES_EXACT_SHA_REDEPLOY` |
