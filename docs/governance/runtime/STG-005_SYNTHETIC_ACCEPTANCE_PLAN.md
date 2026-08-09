@@ -537,8 +537,9 @@ Current decision: the startup-safety dependency repair entered main through PR
 request-context repair by reaching password-free `VALIDATED`. The non-web
 WebSocket broker nevertheless held the one-shot alive to its timeout; zero
 synthetic rows changed and the new fail-closed pair remains. PR #91 then put
-the bounded lifecycle repair in `main@9a776d3...`; it is `IN_MAIN`, not
-deployed, while `2a6c30a...` remains the deployed Staging runtime. The Owner
+the bounded lifecycle repair in PR #91; PR #92's governance-only merge makes
+`main@8b93d09...`. It is `IN_MAIN`, not deployed, while `2a6c30a...` remains
+the deployed Staging runtime. The Owner
 has authorized the bounded continuous Staging loop from a freshly fetched exact
 rebind through guarded topology/source work and conditional Phase-A Owner-login
 acceptance. Runtime is at `STG-008_CONTINUOUS_STAGING_LOOP_AUTHORIZED`.

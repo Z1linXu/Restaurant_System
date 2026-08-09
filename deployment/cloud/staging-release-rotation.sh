@@ -198,7 +198,8 @@ assert_no_pending_rotation() {
 
 assert_recovery_blocked_state() {
   local marker="$STATE_DIR/al003s-acceptance.blocked" lock="$STATE_DIR/al003s-acceptance.lock"
-  local marker_line lock_line marker_digest lock_digest marker_bytes lock_bytes path
+  local marker_line lock_first_line lock_second_line marker_digest lock_digest
+  local marker_bytes lock_bytes lock_lines expected_two_line_bytes path valid_lock="false"
   for path in "$marker" "$lock"; do
     [[ -f "$path" && ! -L "$path" ]] || ops001_die "recovery release requires both retained AL-003S blocked records"
     ops001_path_has_symlink "$path" && ops001_die "retained AL-003S blocked records must not traverse symlinks"
@@ -206,11 +207,25 @@ assert_recovery_blocked_state() {
       ops001_die "retained AL-003S blocked records must be owner-owned mode 0600"
   done
   marker_line="$(sed -n '1p' "$marker")"
-  lock_line="$(sed -n '1p' "$lock")"
+  lock_first_line="$(sed -n '1p' "$lock")"
+  lock_second_line="$(sed -n '2p' "$lock")"
   marker_bytes="$(wc -c <"$marker" | tr -d ' ')"
   lock_bytes="$(wc -c <"$lock" | tr -d ' ')"
-  [[ "$marker_line" =~ ^AL003S_BLOCKED\|[A-Za-z0-9_]+$ && "$lock_line" == "$marker_line" &&
-     "$marker_bytes" == "$(( ${#marker_line} + 1 ))" && "$lock_bytes" == "$(( ${#lock_line} + 1 ))" ]] ||
+  lock_lines="$(wc -l <"$lock" | tr -d ' ')"
+  [[ "$marker_line" =~ ^AL003S_BLOCKED\|[A-Za-z0-9_]+$ &&
+     "$marker_bytes" == "$(( ${#marker_line} + 1 ))" ]] ||
+    ops001_die "retained AL-003S blocked record identity is invalid or mismatched"
+  if [[ "$lock_lines" == "1" && "$lock_first_line" == "$marker_line" &&
+        "$lock_bytes" == "$(( ${#marker_line} + 1 ))" ]]; then
+    valid_lock="true"
+  else
+    expected_two_line_bytes="$(( ${#lock_first_line} + ${#marker_line} + 2 ))"
+    [[ "$lock_lines" == "2" &&
+       "$lock_first_line" == "AL003S_BLOCKED|scoped_container_cleanup_failed" &&
+       "$lock_second_line" == "$marker_line" &&
+       "$lock_bytes" == "$expected_two_line_bytes" ]] && valid_lock="true"
+  fi
+  [[ "$valid_lock" == "true" ]] ||
     ops001_die "retained AL-003S blocked record identity is invalid or mismatched"
   marker_digest="$(ops001_file_digest "$marker")"
   lock_digest="$(ops001_file_digest "$lock")"

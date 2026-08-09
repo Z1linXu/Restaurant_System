@@ -64,3 +64,24 @@ preflight, Staging-only V10-to-V10 deployment, fresh readiness, and recovery
 only of the exact retained blocked pair. A new digest-bound STG-005A PLAN is
 then required. Do not reuse this attempt’s action approval, readiness, plan,
 or runtime-only credential channel.
+
+## Recovery-pair compatibility repair
+
+Fresh read-only observation of the retained pair found the reviewed marker
+`AL003S_BLOCKED|action_failed_requires_owner_review` and a mode-0600 lock
+containing, in order, `scoped_container_cleanup_failed` followed by that same
+marker. This is the launcher’s normal fail-closed result when its finalizer
+observes the scoped Compose cleanup already in progress.
+
+The existing `prepare-recovery-release-env` helper accepted only a one-line
+lock exactly equal to the marker. It therefore could not prepare the repaired
+release that is required before the pair may be recovered. The bounded
+repository repair accepts either the existing one-line exact pair or only this
+two-line ordered cleanup-plus-marker pair. It still rejects extra, reordered,
+different, malformed, unsafe, symlinked, or drifting records and binds the
+full marker and lock digests into the one-use approval. It never clears a
+record, deploys, migrates, reads a credential, or changes synthetic data.
+
+The repair is in the Dependency Repair Auto-Loop. Once it meets the permanent
+repository merge gates, fetch the resulting exact `origin/main`, inspect its
+bounded scope, and resume the already authorized Staging rebind sequence.

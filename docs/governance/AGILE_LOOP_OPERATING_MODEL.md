@@ -110,6 +110,14 @@ defect. PR #91 is `IN_MAIN` at `9a776d3...`; the Owner now authorizes the
 bounded continuous Staging loop from fresh exact rebind through guarded
 STG-005A/STG-005B work and conditional Phase-A Owner-login acceptance. The
 current unique stop state is `STG-008_CONTINUOUS_STAGING_LOOP_AUTHORIZED`.
+
+Fresh read-only state inspection found a bounded recovery-tooling defect: the
+retained current lock has the reviewed ordered cleanup-plus-action-failure
+records, while the recovery prerequisite accepted only a one-line legacy
+shape. This enters the Dependency Repair Auto-Loop. Its exact pair-only
+compatibility repair must pass the permanent repository gates, merge, and be
+rebound under the already authorized same-scope Staging sequence; it does not
+authorize a manual clear or a broader blocked-state bypass.
 PR #83 merged only the final STG-007 evidence/governance into
 `main@2ed56b06f37c9257a655ec334f81e31ca4a518a6`; exact Staging correctly
 remained `2837ae88...`. The Owner then authorized STG-008. Its read-only entry
