@@ -201,6 +201,125 @@ class ProductionSafetyConfigTest {
     }
 
     @Test
+    void guardedStagingSyntheticBootstrapOneShotAllowsFlywayDisabled() {
+        MockEnvironment environment = guardedStagingSyntheticOneShotEnvironment();
+
+        assertDoesNotThrow(() -> ProductionSafetyConfig.validateEnvironment(environment));
+    }
+
+    @Test
+    void guardedStagingSyntheticSourceMenuOneShotAllowsFlywayDisabled() {
+        MockEnvironment environment = guardedStagingSyntheticOneShotEnvironment()
+            .withProperty("stg005.bootstrap.command-enabled", "false")
+            .withProperty("stg005.source-menu.command-enabled", "true");
+
+        assertDoesNotThrow(() -> ProductionSafetyConfig.validateEnvironment(environment));
+    }
+
+    @Test
+    void guardedStagingSyntheticOneShotRequiresFlywayDisabled() {
+        MockEnvironment environment = guardedStagingSyntheticOneShotEnvironment()
+            .withProperty("spring.flyway.enabled", "true");
+
+        IllegalStateException exception = assertThrows(
+            IllegalStateException.class,
+            () -> ProductionSafetyConfig.validateEnvironment(environment)
+        );
+
+        assertTrue(exception.getMessage().contains("must be false"));
+    }
+
+    @Test
+    void guardedStagingSyntheticOneShotRequiresDdlValidate() {
+        MockEnvironment ddlNone = guardedStagingSyntheticOneShotEnvironment()
+            .withProperty("spring.jpa.hibernate.ddl-auto", "none");
+        MockEnvironment ddlBlank = guardedStagingSyntheticOneShotEnvironment()
+            .withProperty("spring.jpa.hibernate.ddl-auto", "");
+
+        assertSyntheticViolation(ddlNone, "spring.jpa.hibernate.ddl-auto");
+        assertSyntheticViolation(ddlBlank, "spring.jpa.hibernate.ddl-auto");
+    }
+
+    @Test
+    void stagingSyntheticOneShotRejectsExtraProductionProfile() {
+        MockEnvironment environment = guardedStagingSyntheticOneShotEnvironment()
+            .withProperty("spring.flyway.enabled", "true");
+        environment.setActiveProfiles("cloud", "staging-synthetic-bootstrap", "production");
+
+        assertSyntheticViolation(environment, "requires exactly the cloud");
+    }
+
+    @Test
+    void stagingSyntheticOneShotRequiresCloudProfile() {
+        MockEnvironment environment = guardedStagingSyntheticOneShotEnvironment();
+        environment.setActiveProfiles("staging-synthetic-bootstrap");
+
+        assertSyntheticViolation(environment, "requires exactly the cloud");
+    }
+
+    @Test
+    void stagingSyntheticOneShotRetainsOrdinaryCloudSafetyGuards() {
+        MockEnvironment environment = guardedStagingSyntheticOneShotEnvironment()
+            .withProperty("app.auth.x-user-id-fallback-enabled", "true");
+
+        assertSyntheticViolation(environment, "app.auth.x-user-id-fallback-enabled");
+    }
+
+    @Test
+    void stagingSyntheticOneShotRequiresNonWebMode() {
+        MockEnvironment environment = guardedStagingSyntheticOneShotEnvironment()
+            .withProperty("spring.main.web-application-type", "servlet")
+            .withProperty("spring.flyway.enabled", "true");
+
+        assertSyntheticViolation(environment, "spring.main.web-application-type");
+    }
+
+    @Test
+    void stagingSyntheticOneShotRequiresExactlyOneCommand() {
+        MockEnvironment noCommand = guardedStagingSyntheticOneShotEnvironment()
+            .withProperty("stg005.bootstrap.command-enabled", "false");
+        MockEnvironment bothCommands = guardedStagingSyntheticOneShotEnvironment()
+            .withProperty("stg005.source-menu.command-enabled", "true");
+
+        assertSyntheticViolation(noCommand, "exactly one guarded STG-005");
+        assertSyntheticViolation(bothCommands, "exactly one guarded STG-005");
+    }
+
+    @Test
+    void stagingSyntheticOneShotRequiresPrintingAndSeedGuards() {
+        MockEnvironment printingEnabled = guardedStagingSyntheticOneShotEnvironment()
+            .withProperty("app.features.printing", "true");
+        MockEnvironment runtimeSeedEnabled = guardedStagingSyntheticOneShotEnvironment()
+            .withProperty("app.seed.runtime-enabled", "true");
+
+        assertSyntheticViolation(printingEnabled, "app.features.printing");
+        assertSyntheticViolation(runtimeSeedEnabled, "app.seed.runtime-enabled");
+    }
+
+    @Test
+    void stagingSyntheticOneShotRequiresExactDatabaseIdentity() {
+        MockEnvironment wrongDatabase = guardedStagingSyntheticOneShotEnvironment()
+            .withProperty("spring.datasource.url", "jdbc:postgresql://db:5432/restaurant_system");
+        MockEnvironment uppercaseDatabase = guardedStagingSyntheticOneShotEnvironment()
+            .withProperty("spring.datasource.url", "jdbc:postgresql://DB:5432/restaurant_pos_staging");
+        MockEnvironment paddedDatabase = guardedStagingSyntheticOneShotEnvironment()
+            .withProperty("spring.datasource.url", " jdbc:postgresql://db:5432/restaurant_pos_staging ");
+        MockEnvironment wrongDatabaseUser = guardedStagingSyntheticOneShotEnvironment()
+            .withProperty("spring.datasource.username", "postgres");
+        MockEnvironment uppercaseDatabaseUser = guardedStagingSyntheticOneShotEnvironment()
+            .withProperty("spring.datasource.username", "RESTAURANT_POS_STAGING");
+        MockEnvironment paddedDatabaseUser = guardedStagingSyntheticOneShotEnvironment()
+            .withProperty("spring.datasource.username", " restaurant_pos_staging ");
+
+        assertSyntheticViolation(wrongDatabase, "spring.datasource.url");
+        assertSyntheticViolation(uppercaseDatabase, "spring.datasource.url");
+        assertSyntheticViolation(paddedDatabase, "spring.datasource.url");
+        assertSyntheticViolation(wrongDatabaseUser, "spring.datasource.username");
+        assertSyntheticViolation(uppercaseDatabaseUser, "spring.datasource.username");
+        assertSyntheticViolation(paddedDatabaseUser, "spring.datasource.username");
+    }
+
+    @Test
     void pilotProfileWithPlaceholderSecretFails() {
         MockEnvironment environment = new MockEnvironment()
             .withProperty("app.auth.jwt-secret", "replace-this-pilot-secret-before-production-use");
@@ -281,6 +400,30 @@ class ProductionSafetyConfigTest {
             .withProperty("spring.flyway.enabled", "true");
         environment.setActiveProfiles("cloud");
         return environment;
+    }
+
+    private MockEnvironment guardedStagingSyntheticOneShotEnvironment() {
+        MockEnvironment environment = cloudEnvironment()
+            .withProperty("app.auth.jwt-secret", SAFE_SECRET)
+            .withProperty("spring.flyway.enabled", "false")
+            .withProperty("spring.main.web-application-type", "none")
+            .withProperty("app.features.printing", "false")
+            .withProperty("app.seed.runtime-enabled", "false")
+            .withProperty("stg005.bootstrap.command-enabled", "true")
+            .withProperty("stg005.source-menu.command-enabled", "false")
+            .withProperty("spring.datasource.url", "jdbc:postgresql://db:5432/restaurant_pos_staging")
+            .withProperty("spring.datasource.username", "restaurant_pos_staging");
+        environment.setActiveProfiles("cloud", "staging-synthetic-bootstrap");
+        return environment;
+    }
+
+    private void assertSyntheticViolation(MockEnvironment environment, String field) {
+        IllegalStateException exception = assertThrows(
+            IllegalStateException.class,
+            () -> ProductionSafetyConfig.validateEnvironment(environment)
+        );
+
+        assertTrue(exception.getMessage().contains(field));
     }
 
     private MockEnvironment pilotEnvironment() {

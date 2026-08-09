@@ -125,6 +125,14 @@ health before a one-shot command. Its presence is not runtime approval. Do not i
 the production checkout, production `.env`, raw SQL, `RuntimeDataSeeder`, or
 developer role switching.
 
+The non-web profile deliberately sets Flyway disabled. The shared production
+safety guard accepts that state only for the exact
+`cloud,staging-synthetic-bootstrap` profile pair when web mode is `none`, JPA
+DDL is `validate`, printing and runtime seeding are disabled, exactly one
+STG-005 command is enabled, and the datasource URL/user identify the isolated
+Staging database. The same profile rejects Flyway enabled. This is a bounded
+no-migration one-shot contract, not a general cloud Flyway bypass.
+
 ## Idempotency and transaction behavior
 
 - The first successful run stores a SHA-256 request fingerprint and result IDs.
@@ -174,7 +182,7 @@ STG-005.
 No SSH, migration, bootstrap execution, or server write was performed while
 creating this implementation.
 
-## STG-008 runtime entry checkpoint (2026-08-08)
+## STG-008 runtime checkpoints (2026-08-08)
 
 The Owner-authorized STG-008 entry performed a read-only check against exact
 deployed Staging SHA `2837ae88e55142c99c6975f8b6575febffc913a1` at Flyway
@@ -190,3 +198,15 @@ or invent the Owner's secret, or run a one-shot merely to reproduce the known
 failure. Resume only after an explicit Owner decision supplies a compatible
 safe login/display identifier and runtime-only password. The sanitized record
 is [STG-008 entry evidence](../../docs/governance/runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).
+
+The Owner later approved `STG005_OWNER_20260808_R01` and retained the password
+contract. Fresh Ground Truth/readiness passed, but the password-free
+`bootstrap-plan` one-shot stopped before the command or data path because the
+older production safety guard did not recognize this profile's required
+Flyway-disabled shape. Cleanup succeeded, topology remained empty, and the
+launcher persisted blocked state. The bounded repository correction retains
+all ordinary cloud guards and adds the exact bidirectional one-shot contract
+above. After that repair enters main, a new exact release/deploy and separately
+approved blocked-state recovery are required; the old image cannot be patched
+or retried. See
+[STG-008 Flyway guard repair evidence](../../docs/governance/runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md).

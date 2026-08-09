@@ -65,6 +65,13 @@ The profile disables Flyway. The command cannot silently migrate the database.
 No password, token, endpoint, customer, order, payment, printer, or device
 input is accepted.
 
+The shared production safety guard permits Flyway disabled only for the exact
+guarded non-web Staging synthetic shape: exact profiles, `ddl-auto=validate`,
+printing/runtime seeding disabled, exactly one STG-005 command enabled, and
+the fixed isolated Staging datasource URL/user. It rejects Flyway enabled for
+this one-shot and continues to require Flyway enabled for ordinary cloud/prod
+runtime. This is safety narrowing, not a general exception.
+
 ## Modes
 
 Default mode is read-only planning. It loads the Store and returns one
@@ -160,3 +167,13 @@ occurred, and the 4/3/13/38 graph remains repository authority only.
 Do not bypass the parent bootstrap, create the graph with raw SQL, or treat
 this entry `NO_GO` as source-menu failure. See
 [STG-008 entry evidence](../../docs/governance/runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).
+
+After the Owner aligned the credential contract, fresh `bootstrap-plan`
+reached the guarded one-shot but failed before the STG-005A command because
+the older shared production safety rule required Flyway enabled for every
+cloud profile. The bounded repair models the exact Flyway-disabled one-shot
+contract without weakening ordinary cloud/prod startup. No topology or
+source-menu row was written. Source-menu plan/create/replay remain blocked
+until the repair is in main, a new exact backend image is deployed, and the
+retained AL-003S blocked state receives separate Owner-approved recovery. See
+[STG-008 Flyway guard repair evidence](../../docs/governance/runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md).

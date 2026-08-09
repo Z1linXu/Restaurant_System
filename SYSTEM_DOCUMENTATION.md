@@ -69,6 +69,11 @@ separate from historical evidence snapshots and business implementation details:
   `2837ae88...`, read-only V10/readiness/isolation/Production continuity,
   zero synthetic topology/credential rows, safe next Store ID `1`, and the
   credential-contract `NO_GO` before any one-shot or data write.
+- [STG-008 Guarded One-Shot Flyway Safety Repair Evidence](docs/governance/runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md)
+  records PR #84 in main, the approved credential alignment, fresh exact
+  readiness, the password-free bootstrap plan's pre-command cloud/Flyway
+  safety conflict, successful one-shot cleanup, zero data writes, retained
+  blocked state, and the bounded fail-closed repository repair.
 - [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
   authority for current issue triage and closure status.
 - [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
@@ -445,9 +450,15 @@ Store-membership, and bootstrap-request count is zero. It also proved
 ID `1` without a write probe. Synthetic Owner is `NOT_CREATED`. Repository code
 proves that STG-005A can create the synthetic Organization, source Store, Owner
 credential, active Organization membership, and source-Store membership, but
-the requested account convention does not satisfy the guarded `STG005_`
-identity and 12-through-256 password contract. No plan or write began. AL-002
-onboarding can create the inactive target and target-scoped Manager/Frontdesk accounts.
+the first STG-008 entry stopped before plan while its requested account
+convention did not satisfy the guarded `STG005_` identity and 12-through-256
+password contract. The Owner later approved
+`STG005_OWNER_20260808_R01` without lowering that contract. Fresh readiness
+passed; the password-free bootstrap plan then stopped before the command/data
+path because the older cloud safety guard rejected the one-shot's required
+Flyway-disabled profile. Cleanup succeeded, all topology remained absent, and
+the launcher retained blocked state. AL-002 onboarding can create the inactive
+target and target-scoped Manager/Frontdesk accounts.
 `StoreAccessService` grants the Organization Owner access to every Store in the
 same active Organization membership, so no redundant Owner target-Store
 membership is required. No retained evidence yet proves a safe Owner login,
@@ -750,10 +761,17 @@ health remained unchanged. `STG-007 = PASS`; AL-003 is not yet Staging accepted.
 PR #83 then advanced `main` to `2ed56b06...` with evidence/governance only;
 the deployed runtime correctly remained `2837ae88...`. The next authorized
 STG-008 entry stopped read-only before `bootstrap-plan` at the credential
-contract. The unique stop state is
-`STG-008_CREDENTIAL_CONTRACT_ALIGNMENT_WAITING_FOR_OWNER_DECISION`.
-No synthetic topology/source, credential, login, target onboarding, clone,
-Store 1 read, printer/Pad, Production, or ACT-001 action occurred.
+contract. PR #84 later entered `main@828af4e8...` with that sanitized evidence.
+After the Owner aligned the identity/credential contract, fresh exact
+readiness passed and the password-free plan started one bounded one-shot. The
+older `ProductionSafetyConfig` rejected required `Flyway=false` before the
+STG-005A command or data path. Cleanup succeeded; Flyway stayed V10, topology
+stayed empty, Production continuity stayed unchanged, and fail-closed state was
+persisted. The bounded repository repair is under review. The unique stop
+state after publication is
+`STG-008_DEPENDENCY_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
+No credential input, synthetic topology/source write, login, target onboarding,
+clone, Store 1 read, printer/Pad, Production, or ACT-001 action occurred.
 
 Repository PRs now follow the permanent auto-merge gate in the Agile Loop
 Operating Model: latest-main base, exact single-package scope, all applicable
@@ -929,7 +947,14 @@ Strict production profiles fail startup when any of the following are true:
 - `app.dev-tools.role-switcher-enabled=true`.
 - `app.seed.force-overwrite=true`.
 - `spring.jpa.hibernate.ddl-auto` is `update`, `create`, or `create-drop`.
-- `spring.flyway.enabled=false`.
+- `spring.flyway.enabled=false` for ordinary cloud/prod runtime.
+
+The exact guarded `cloud,staging-synthetic-bootstrap` non-web one-shot is the
+only narrower contract. It must use Flyway disabled so a data command cannot
+migrate, while also requiring `ddl-auto=validate`, printing/runtime seeding
+disabled, exactly one STG-005 command, and the exact isolated Staging JDBC
+URL/user. Flyway enabled, a broadened profile set, or any missing predicate
+fails startup. All ordinary cloud/prod checks above continue to apply.
 
 Pilot profile is semi-strict. It fails startup when:
 

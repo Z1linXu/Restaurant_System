@@ -16,12 +16,15 @@
 > Flyway remained exact V10, health returned `200/200/200`, printing and
 > isolation remained unchanged, and Production continuity remained unchanged.
 > `STG-007 = PASS`. PR #83 then merged only that evidence/governance into
-> `main@2ed56b06...`; runtime remained exact `2837ae88...`. The subsequently
-> authorized STG-008 entry performed read-only runtime/topology checks, found
-> no existing synthetic Owner and safely proved the next Store ID is `1`, then
-> stopped before plan/write because the requested credential convention does
-> not satisfy the guarded `STG005_` / 12-through-256 contract. `STG-008=NO_GO`;
-> Staging and Production remain unchanged.
+> `main@2ed56b06...`; runtime remained exact `2837ae88...`. The first STG-008
+> entry stopped read-only at the credential decision, and PR #84 placed that
+> sanitized evidence in `main@828af4e8...`. The Owner then approved
+> `STG005_OWNER_20260808_R01` while retaining the password guard. Fresh exact
+> readiness passed, but the password-free STG-005A plan one-shot stopped before
+> its command/data path because the older cloud safety rule rejected required
+> Flyway-disabled mode. Cleanup and zero-write continuity passed, and the
+> launcher retained blocked state. A bounded repository repair is under review;
+> Staging remains exact `2837ae88...` and Production remains unchanged.
 
 ## 1. Project mission
 
@@ -40,10 +43,10 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| current `origin/main` before STG-008 evidence publication | `2ed56b06f37c9257a655ec334f81e31ca4a518a6` | `IN_MAIN`; merge of evidence/governance-only PR #83; its diff from deployed Staging contains no runtime-capability change |
+| current `origin/main` before STG-008 dependency-repair publication | `828af4e84581dcb051248beee694c307a65210c5` | `IN_MAIN`; merge of evidence/governance-only PR #84; its diff from deployed Staging contains no runtime-capability change |
 | exact deployed Staging runtime | `2837ae88e55142c99c6975f8b6575febffc913a1` | `DEPLOYED_TO_STAGING`; PR #82 merge and exact STG-007 PASS runtime, distinct from later documentation main |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
-| Current delivery branch | `codex/stg008-synthetic-topology-source` | STG-008 sanitized `NO_GO` evidence/governance only; no application, migration, deployment/runtime configuration, credential, or business-data change |
+| Current delivery branch | `codex/stg008-synthetic-topology-source-resume` | bounded `ProductionSafetyConfig` one-shot/Flyway dependency repair plus tests/governance; no migration, credential, Store writer, deployment, or runtime configuration mutation |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
 
 `IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
@@ -62,6 +65,7 @@ GitHub Merged badge into a non-main base is not evidence that work entered
 | `/private/tmp/restaurant-current-handoff` | `codex/current-project-handoff` | Retained historical PR #71 worktree |
 | `/private/tmp/restaurant-stg007-execution` | `codex/stg007-v10-continuation-final-evidence` | Retained historical STG-007 evidence/governance worktree; Owner workspace untouched |
 | `/private/tmp/restaurant-stg008-execution` | `codex/stg008-synthetic-topology-source` | Current isolated STG-008 `NO_GO` evidence/governance worktree; Owner workspace untouched |
+| `/private/tmp/restaurant-stg008-resume` | `codex/stg008-synthetic-topology-source-resume` | Current isolated dependency-repair worktree based on PR #84 main; Owner workspace untouched |
 | `/private/tmp/restaurant-pr61-rebuild` through `/private/tmp/restaurant-pr65-rebuild` | merged #61-#65 branch worktrees | Retained historical worktrees; not current delivery inputs |
 
 No registered #69/#70 rebuild worktree remains. Historical worktrees were not
@@ -97,6 +101,7 @@ closed, merged, and `IN_MAIN`.
 | #81 | STG-007 Flyway success-token repair | `main` | merge `63600b13b10a5549d9095a03c94e69a9f880af9f` | `IN_MAIN` | #80/main | Yes | Exact PostgreSQL boolean-token validation repair; later runtime use was separately authorized |
 | #82 | STG-007 restart readiness/fail-closed repair | `main` | merge `2837ae88e55142c99c6975f8b6575febffc913a1` | `IN_MAIN` | #81/main | Yes | Bounded three-endpoint readiness and nonzero-exit blocked-state persistence; exact merged SHA later passed the authorized V10 continuation |
 | #83 | STG-007 final evidence/governance | `main` | merge `2ed56b06f37c9257a655ec334f81e31ca4a518a6` | `IN_MAIN` | #82/main | Yes | Documentation/evidence only; no runtime-capability or runtime-state change |
+| #84 | STG-008 entry evidence/governance | `main` | merge `828af4e84581dcb051248beee694c307a65210c5` | `IN_MAIN` | #83/main | Yes | Sanitized credential-gate evidence only; no application, migration, runtime configuration, credential, or business-data mutation |
 
 Main stack review order:
 
@@ -121,9 +126,13 @@ continuation established the current bounded runtime identity below.
 Repository migrations are exactly V1-V10. Machine evidence proves Staging is
 V10; it does not prove V8-V10 ran on Production.
 
-The current synthetic-entry decision is
+The historical credential-entry decision is
 [STG-008 Synthetic Topology and Source Entry Evidence](STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).
-It is read-only `NO_GO` evidence, not a failed deployment or bootstrap write.
+The resumed plan failure and bounded repair are recorded in
+[STG-008 Flyway Guard Repair Evidence](STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md).
+This is a failed password-free plan one-shot before the STG-005A command, not a
+failed transaction, deployment, migration, or credential operation. The
+launcher is blocked pending separately approved recovery.
 
 ## 5. Current feature and loop
 
@@ -131,29 +140,32 @@ It is read-only `NO_GO` evidence, not a failed deployment or bootstrap write.
 |---|---|
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` |
-| Current package | Owner-authorized read-only STG-008 entry stopped before `bootstrap-plan`; Synthetic Owner is `NOT_CREATED`, Store ID `1` allocation is safely available, and no synthetic write exists |
-| Feature stop state | `STG-008_CREDENTIAL_CONTRACT_ALIGNMENT_WAITING_FOR_OWNER_DECISION` |
+| Current package | Credential contract aligned; fresh `bootstrap-plan` stopped before STG-005A command/data access at the cloud/Flyway safety conflict. Synthetic Owner remains `NOT_CREATED`, Store ID `1` remains safely available, topology is empty, and a bounded repository repair is under review. |
+| Feature stop state | `STG-008_DEPENDENCY_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL` after qualifying repair publication |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | Approve one exact `STG005_` login/display identifier and a Staging-only runtime password satisfying the existing 12-through-256 contract. The resumed batch must use fresh readiness and distinct digest-bound approval artifacts; weakening, transforming, or inventing credentials is prohibited. |
+| Current Owner gate | After the repair enters main, approve its new exact SHA for fresh Staging release/preflight/deploy and separately approve fail-closed record recovery after read-only confirmation. Only then may STG-008 restart with new action evidence and request the password through a reviewed private stdin/FD channel. |
 
 ### Permitted work
 
 - Fetch and verify Git/GitHub ground truth.
-- Review STG-007 PASS and STG-008 entry `NO_GO` evidence.
-- Perform static planning/evidence review and repository publication gates.
-- Resolve the credential contract through an explicit Owner decision; until
-  then describe only the proposed identities/writes/replay boundary.
+- Review STG-007 PASS, both STG-008 evidence records, and the bounded repair.
+- Run repository tests, independent review, governance sync, Draft PR and the
+  permanent auto-merge gate for that repair.
+- Verify Git/GitHub Ground Truth and report the exact next runtime approval
+  boundary.
 
 ### Prohibited work without new approval
 
-- Reuse of any consumed STG-007 approval or evidence, another deploy/restart,
-  or continuation of the completed runtime batch.
+- Reuse of consumed/failed STG-007 or STG-008 approval/readiness evidence,
+  another deploy/restart, or continuation on the old image.
 - Runtime Flyway, bootstrap, synthetic credential creation, source creation,
   login, target onboarding, validate/execute/replay, or clone.
 - Production Store 1 read or mutation.
 - Printer configuration, test print, Pad pairing, or device/Worker mutation.
-- Any further STG-008 helper or one-shot before the credential Owner Gate is
-  resolved; lowering the password/prefix guard or modifying the Owner's secret.
+- Clearing the blocked marker/lock record, requesting the password, or any
+  further STG-008 helper/one-shot before a new exact-SHA deploy and separate
+  recovery approval; lowering the password/prefix guard or modifying the
+  Owner's secret.
 - Repository merge that fails Operating Model section 16's permanent
   auto-merge gate, Production activation, restore, or destructive database/Git
   commands.
@@ -235,6 +247,13 @@ It is read-only `NO_GO` evidence, not a failed deployment or bootstrap write.
   read-only entry check: zero synthetic topology/credential rows, safe next
   Store ID `1`, unchanged Staging/Production continuity, and a credential-
   contract `NO_GO` before any plan or write.
+- PR #84 entered `main` at `828af4e84581dcb051248beee694c307a65210c5`
+  with only that sanitized STG-008 entry evidence/governance. The Owner then
+  aligned the credential contract. Fresh readiness passed, but the first
+  password-free plan one-shot stopped before its command because the older
+  cloud safety guard rejected Flyway-disabled mode. Cleanup and zero-write
+  continuity passed; fail-closed state remains until separately approved
+  recovery.
 
 ## 7. AL-003 repository capability
 
@@ -306,7 +325,7 @@ is the first Store Profile sample, not a shared-service special case.
 | STG-006 | Exact-main passive preflight | `PASS` for candidate `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | Evidence only; no release/deploy/migration approval |
 | OPS-001 | Secret-safe Staging tooling | `REPOSITORY_COMPLETE`; bounded repairs #75-#82 are `IN_MAIN` | Runtime actions remain independently exact-SHA/action/Owner-gated |
 | STG-007 | Exact-SHA V10-aware continuation | `PASS` at deployed Staging SHA `2837ae88...` / Flyway V10 | Runtime batch complete; no approval or evidence is reusable |
-| STG-008 | Synthetic topology and source | `NO_GO_CREDENTIAL_OWNER_GATE` | Read-only entry passed and Store ID `1` is safe; no Owner/topology exists. Plan/write never started because the requested account convention conflicts with the guarded `STG005_` / password-length contract. |
+| STG-008 | Synthetic topology and source | `DEPENDENCY_REPAIR_RUNTIME_GATE` | Identity/password contract is aligned. The password-free plan exposed a pre-command Flyway safety-rule conflict; no data write occurred. Bounded repair publication, new exact-SHA Staging deploy, and separately approved blocked-state recovery precede any retry. |
 
 The authoritative post-stack capability matrix, Staging decision, and next
 bounded loops are in [Post-Stack Ground Truth Audit](POST_STACK_GROUND_TRUTH_AUDIT.md).
@@ -325,9 +344,12 @@ from current main.
 
 - STG-007 passed at exact deployed `2837ae88...` / Flyway V10, but it does not
   authorize or prove synthetic bootstrap, Owner login, or clone acceptance.
-- STG-008 synthetic Organization/source/Owner and source-menu writes require
-  explicit Owner alignment on a `STG005_` login/display identifier and a
-  runtime-only password satisfying the retained guard.
+- STG-008's bounded backend repair must enter main; its changed exact SHA then
+  requires a fresh Staging release/deploy approval. The old deployed image
+  cannot be patched or treated as repaired.
+- The failed plan retained both blocked records. A separate recovery approval
+  must confirm one-shot absence, zero transaction state, V10, health and
+  continuity before clearing them.
 - Owner login, target onboarding, validate/execute/replay evidence is pending.
 - Production and repository main have an unreviewed runtime gap.
 - Production needs a fixed state/control-root strategy before detached-release
@@ -357,15 +379,16 @@ from current main.
    `AGILE_LOOP_OPERATING_MODEL.md`, `FEATURE_BACKLOG.md`, and the applicable
    technical plan.
 3. Verify current `origin/main`; do not trust the Owner workspace branch tip.
-4. Verify GitHub PR #61 through #83 and independent PR #66 semantics.
+4. Verify GitHub PR #61 through #84 and independent PR #66 semantics, plus the
+   current dependency-repair PR if published.
 5. Distinguish main, stacked Draft, Staging, and Production state.
 6. Report the completed main stack and the next Staging Owner Gate.
 7. Do not recreate or redesign packages #61-#70.
 8. Do not infer implementation from the planning packages.
-9. Read STG-006, OPS-001, the STG-007 repair/final evidence, and
-   `STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md`. Treat
-   `STG-007=PASS` and `STG-008=NO_GO`; do not run a synthetic helper until the
-   credential Owner Gate is explicitly resolved.
+9. Read STG-006, OPS-001, the STG-007 repair/final evidence, and both STG-008
+   evidence records. Treat `STG-007=PASS`, the credential decision as resolved,
+   and STG-008 as blocked before data write. Do not run a synthetic helper or
+   clear blocked state without the new exact-SHA deploy/recovery Owner Gate.
 10. Stop at runtime/product/operations Owner Gates; otherwise continue the
     bounded Agile Loop and Dependency Repair Auto-Loop.
 
@@ -412,6 +435,8 @@ Primary authorities:
 - [STG-007 Flyway success-token repair evidence](STG-007_FLYWAY_SUCCESS_TOKEN_REPAIR_EVIDENCE.md)
 - [STG-007 restart readiness/fail-closed repair evidence](STG-007_RESTART_READINESS_FAIL_CLOSED_REPAIR_EVIDENCE.md)
 - [STG-007 exact-SHA V10 continuation evidence](STG-007_EXACT_SHA_CONTINUATION_EVIDENCE.md)
+- [STG-008 synthetic topology/source entry evidence](STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md)
+- [STG-008 guarded one-shot Flyway repair evidence](STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md)
 - [OPS-001 secret-safe tooling runbook](../../../deployment/cloud/README_OPS001_STAGING_SECRET_SAFE_TOOLING.md)
 - [System Documentation](../../../SYSTEM_DOCUMENTATION.md)
 - [API contract](../../../doc/API.md)

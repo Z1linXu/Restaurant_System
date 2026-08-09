@@ -523,7 +523,17 @@ not satisfy the reviewed `STG005_` identity and 12-through-256 password guard.
 No bootstrap plan, create, replay, source-menu action, login, or data mutation
 occurred.
 
-Current decision: `STG-008 = NO_GO` at
-`STG-008_CREDENTIAL_CONTRACT_ALIGNMENT_WAITING_FOR_OWNER_DECISION`. The
-authoritative sanitized result is
-[STG-008 Synthetic Topology and Source Entry Evidence](STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).
+That entry decision was later resolved when the Owner approved
+`STG005_OWNER_20260808_R01` without changing the password guard. Fresh exact
+readiness passed, but the password-free STG-005A plan one-shot stopped before
+its command/data path because the older cloud startup safety rule rejected the
+profile's required Flyway-disabled mode. Cleanup and zero-write continuity
+passed, and the launcher retained blocked state.
+
+Current decision: repository dependency repair may complete under the
+Auto-Loop; runtime then stops at
+`STG-008_DEPENDENCY_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
+The immutable entry result remains
+[STG-008 Synthetic Topology and Source Entry Evidence](STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md),
+and the resumed failure/repair is
+[STG-008 Flyway Guard Repair Evidence](STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md).
