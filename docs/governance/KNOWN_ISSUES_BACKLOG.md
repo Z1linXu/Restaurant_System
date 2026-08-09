@@ -33,7 +33,7 @@
 | authoritative_rule | [AL-003S Staging acceptance runbook](../../deployment/cloud/README_AL003S_STAGING_ACCEPTANCE.md). |
 | status | `REPAIR_REQUIRES_EXACT_SHA_REDEPLOY` |
 | target_loop | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` Dependency Repair Auto-Loop. |
-| acceptance_criteria | Focused authorization/non-web safety regressions and independent review pass; the repair enters `main`; a newly approved exact release passes rebind, deploy, readiness and recovery before a new PLAN. |
+| acceptance_criteria | Focused authorization/non-web safety regressions and independent review passed; PR #89 entered `main`; a newly approved exact release must pass rebind, deploy, readiness and recovery before a new PLAN. |
 | deployment_required | Yes, Staging-only exact redeploy after separate Owner approval; no Production deployment. |
 | last_updated | 2026-08-09 |
 

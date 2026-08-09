@@ -817,7 +817,8 @@ fail-closed records were retained.
 
 The bounded repository repair for that non-web authorization-context defect is
 documented in [STG-008 Non-Web Request-Context Repair Evidence](docs/governance/runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md).
-It is not deployed. The unique stop state is
+It entered `main` through PR #89 at `434c9cc808648a4f80c91435d8667ad9fe160018`
+and is not deployed. The unique stop state is
 `STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
 
 Repository PRs now follow the permanent auto-merge gate in the Agile Loop

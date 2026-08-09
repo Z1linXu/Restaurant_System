@@ -148,7 +148,7 @@ records remain present.
 | Code/procedure | OPS-001 plus PRs #81/#82 publish fail-closed release/env, Flyway/readiness/restart and secret-FD Owner/API helpers | Repository blocker closed; the authorized STG-007 path passed |
 | Configuration | Approved identity is `STG005_OWNER_20260808_R01`; the runtime-only password remains ungenerated/unread and guarded at 12-through-256 characters | Do not request it before the repaired exact image is deployed and blocked-state recovery passes |
 | Evidence | Exact Staging V10 deploy/readiness/restart evidence is complete; bootstrap/source/login/clone evidence remains absent | STG-007 passes, while AL-003 acceptance remains pending |
-| Owner/runtime gate | Exact `6753855497...` passed rebind/preflight/deploy/readiness and old-pair recovery. Its password-free plan retained a new blocked state after a pre-command non-web request-context defect. | Publish the bounded repair, then approve its fresh exact main for recovery-specific release/preflight/deploy; only after Batch A passes recover the new reviewed pair, then restart every action with fresh evidence |
+| Owner/runtime gate | Exact `6753855497...` passed rebind/preflight/deploy/readiness and old-pair recovery. Its password-free plan retained a new blocked state after a pre-command non-web request-context defect. PR #89 is `IN_MAIN` but not deployed. | Approve a freshly fetched exact main containing PR #89 for recovery-specific release/preflight/deploy; only after Batch A passes recover the new reviewed pair, then restart every action with fresh evidence |
 | Production safety | Release-relative state path, combined Production build, missing phase resource gates, restore rehearsal, backup integrity, and old-app compatibility remain unresolved | Production deployment and ACT-001 are `NO_GO` |
 
 ## 6. Staging decision
@@ -178,7 +178,7 @@ exact accepted RC are all pending.
 | 1 | `STG-006_EXACT_MAIN_PREFLIGHT` | Bind post-audit main SHA and collect fresh passive isolation/resource/continuity evidence | governance audit merged | `PASS` evidence at candidate `33c6e3c...` | completed read-only authorization | no further runtime action | no container/database change |
 | 2 | `OPS-001_STAGING_SECRET_SAFE_TOOLING_REPAIR` | Close release/env rotation, same-image restart/Flyway collection, and Owner/API secret-handling gaps | STG-006 PASS | `PASS`; reviewed package and repairs #81/#82 are in main | completed repository merge gates | no runtime mutation in implementation | Git revert only |
 | 3 | `STG-007_EXACT_SHA_CONTINUATION` | Deploy exact approved Staging SHA from V10 and verify no-pending, health, readiness, evidence, same-image restart and continuity | STG-006 PASS + OPS-001 accepted | `PASS` at exact `2837ae88...`; Flyway V10; health 200/200/200 | completed bounded V10-aware authorization | completed Staging-only V10-to-V10 continuation | no destructive rollback used |
-| 4 | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` | Execute/replay STG-005A and STG-005B with printing disabled | STG-007 PASS; exact `6753855497...` rebind/deploy/recovery completed; a new repaired exact candidate still requires approval | entry and password-free plan `NO_GO`; plan failed before command/data access; future sanitized IDs/counts/revisions/replay | after repair publication, approve a newly fetched exact main for rebind/preflight/deploy, then recover only the new reviewed blocked pair and issue distinct plan/create/replay approvals | no data write yet; future synthetic Staging writes only | transaction rollback; retain successful evidence |
+| 4 | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` | Execute/replay STG-005A and STG-005B with printing disabled | STG-007 PASS; exact `6753855497...` rebind/deploy/recovery completed; PR #89 repair is `IN_MAIN` and its new candidate still requires approval | entry and password-free plan `NO_GO`; plan failed before command/data access; future sanitized IDs/counts/revisions/replay | approve a newly fetched exact main containing PR #89 for rebind/preflight/deploy, then recover only the new reviewed blocked pair and issue distinct plan/create/replay approvals | no data write yet; future synthetic Staging writes only | transaction rollback; retain successful evidence |
 | 5 | `STG-009_AL003_OWNER_ACCEPTANCE` | Owner login, target onboarding, validate, execute, replay, restart/persistence | STG-008 PASS | sanitized auth/status/count/source-invariance/restart evidence | separate execute checkpoint | synthetic Staging writes and restart | transaction rollback; no destructive cleanup |
 | 6 | `AL-004A_CONCRETE_STORE_PROFILE_AND_ENGINE_PLANNER` | Register complete non-secret Store Profile(s), module config registry, and read-only engine plan | STG-009 findings reviewed | deterministic fingerprints, planner and anti-hardcode tests | Profile identity/config review | none | Git revert |
 | 7 | `AL-005A1_ACCESS_TABLE_CONTRACT_PLANNER` | Add reusable Staff/Access and Table contracts/read-only planner; resolve Store-isolation/normalization gates | AL-004A | focused authorization/fingerprint/planner tests | login convention/table policy decisions as needed | none | Git revert |
@@ -200,9 +200,10 @@ context dependency; zero synthetic data changed and the new fail-closed pair
 was retained. The current Owner gate is therefore the repaired exact-SHA
 rebind and bounded recovery of that new pair:
 
-1. complete normal repository review/publication of the non-web request-context
-   repair, then approve a newly fetched exact `main` for the dedicated
-   recovery release/private-env action, preflight and Staging-only deploy;
+1. PR #89 has completed repository review/publication of the non-web
+   request-context repair; approve a newly fetched exact `main` containing it
+   for the dedicated recovery release/private-env action, preflight and
+   Staging-only deploy;
 2. only after that Batch A passes, perform the already bounded recovery after
    fresh confirmation of one-shot absence, zero transaction state, V10, health
    and continuity, then clear only the exact new reviewed blocked pair;
