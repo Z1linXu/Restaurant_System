@@ -7841,3 +7841,11 @@ mapping rules, kitchen-task snapshot precedence, grouping/quantity formats,
 fallback behavior, and the required GRAB regression coverage. This system
 document keeps only this summary and link; it must not duplicate the full
 per-item mapping table.
+
+## STG-008 non-web realtime boundary
+
+The guarded `staging-synthetic-bootstrap` profile excludes the WebSocket
+configuration and its STOMP publisher, while providing a profile-specific
+no-op `RealtimeEventPublisher` so ordinary service wiring remains valid.
+This boundary is limited to the non-web one-shot; normal web realtime behavior
+is unchanged.

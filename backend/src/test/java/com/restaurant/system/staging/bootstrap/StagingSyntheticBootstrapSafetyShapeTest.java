@@ -4,12 +4,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.restaurant.system.analytics.service.AnalyticsAggregationScheduler;
 import com.restaurant.system.common.config.WebSocketConfig;
+import com.restaurant.system.common.realtime.NonWebRealtimeEventPublisher;
+import com.restaurant.system.common.realtime.RealtimeEventPublisher;
+import com.restaurant.system.common.realtime.StompRealtimeEventPublisher;
 import com.restaurant.system.printing.service.impl.OrderDispatchOutboxProcessor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 class StagingSyntheticBootstrapSafetyShapeTest {
 
@@ -36,6 +40,22 @@ class StagingSyntheticBootstrapSafetyShapeTest {
             .containsExactly("!staging-synthetic-bootstrap");
         assertThat(WebSocketConfig.class.getAnnotation(Profile.class).value())
             .containsExactly("!staging-synthetic-bootstrap");
+        assertThat(StompRealtimeEventPublisher.class.getAnnotation(Profile.class).value())
+            .containsExactly("!staging-synthetic-bootstrap");
+        assertThat(NonWebRealtimeEventPublisher.class.getAnnotation(Profile.class).value())
+            .containsExactly("staging-synthetic-bootstrap");
+    }
+
+    @Test
+    void nonWebProfileProvidesExactlyOneRealtimePublisherWithoutWebSocketInfrastructure() {
+        try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
+            context.getEnvironment().setActiveProfiles("staging-synthetic-bootstrap");
+            context.register(StompRealtimeEventPublisher.class, NonWebRealtimeEventPublisher.class);
+            context.refresh();
+
+            assertThat(context.getBeansOfType(RealtimeEventPublisher.class))
+                .containsOnlyKeys("nonWebRealtimeEventPublisher");
+        }
     }
 
     @Test
