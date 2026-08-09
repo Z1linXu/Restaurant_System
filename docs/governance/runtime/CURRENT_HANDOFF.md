@@ -37,7 +37,8 @@
 > records. The next password-free plan failed before its command/data path
 > because non-web startup required a servlet request context; cleanup and
 > zero-write continuity passed, and a new blocked pair was retained. The
-> bounded repository repair is pending publication; Production remains
+> bounded repository repair entered `main` as PR #89 at `434c9cc...`; it is
+> not deployed. Production remains
 > unchanged.
 
 ## 1. Project mission
@@ -60,7 +61,7 @@ provisioning without destabilizing current restaurant operations.
 | runtime-sensitive deployed-main floor | `6753855497b8c47be99a8d88ae9d9961653addb0` | `DEPLOYED_TO_STAGING`; includes the PR #87 recovery path. Any future runtime-sensitive repair must be freshly fetched as a new exact candidate before runtime approval. |
 | exact deployed Staging runtime | `6753855497b8c47be99a8d88ae9d9961653addb0` | `DEPLOYED_TO_STAGING`; authorized V10-to-V10 continuation, distinct from the pending request-context repair |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
-| Runtime-sensitive delivery package | PR #87 / head `84457266d1f752cb755b1933b01d849ae62407ed` | `IN_MAIN` through merge `4b954e09...`; no unmerged runtime-sensitive package remains |
+| Runtime-sensitive delivery package | PR #89 / head `2af0493fde646335dc2c6c3b36501d86e8894d43` | `IN_MAIN` through merge `434c9cc808648a4f80c91435d8667ad9fe160018`; repository repair only, not deployed |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
 
 `IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
@@ -172,7 +173,7 @@ new exact candidate and authorization cannot be reused.
 | Current package | Exact `6753855...` passed rebind/preflight/deploy/readiness and cleared only the reviewed old block. Its fresh password-free `bootstrap-plan` then failed before command/data access because request context requires servlet injection in non-web mode. Synthetic Owner remains `NOT_CREATED`, topology is empty, and a newly retained blocked pair requires a repair-dependent fresh exact continuation. |
 | Feature stop state | `STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL` |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | After the repository repair enters `main`, approve a freshly fetched exact candidate for release/private-env binding, formal preflight, Staging-only V10-to-V10 deploy, fresh readiness and bounded recovery of the newly retained records. Then restart with a new password-free PLAN and new action approval. The password may be requested only when fresh STG-005A EXECUTE actually needs it, through the reviewed private stdin/FD channel. |
+| Current Owner gate | Approve a freshly fetched exact candidate containing PR #89 for release/private-env binding, formal preflight, Staging-only V10-to-V10 deploy, fresh readiness and bounded recovery of the newly retained records. Then restart with a new password-free PLAN and new action approval. The password may be requested only when fresh STG-005A EXECUTE actually needs it, through the reviewed private stdin/FD channel. |
 
 ### Permitted work
 

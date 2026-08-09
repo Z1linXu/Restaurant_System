@@ -4,7 +4,7 @@
 >
 > Runtime result: `NO_GO_BEFORE_STG005A_PLAN_PASS`
 >
-> Repository publication state: `REPAIR_REQUIRES_NORMAL_GATES_AND_NEW_EXACT_SHA_RUNTIME_REBIND`
+> Repository publication state: `IN_MAIN_PR_89_434c9cc_REQUIRES_NEW_EXACT_SHA_RUNTIME_REBIND`
 
 ## Observed bounded runtime failure
 

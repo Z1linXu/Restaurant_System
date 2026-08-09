@@ -26,7 +26,7 @@
 | `PLAN_STATUS` | `IN_MAIN_AWAITING_STAGING_ACCEPTANCE_AND_RUNTIME_APPROVAL` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | PRs #60-#87 and the #61-#70 stack are `IN_MAIN`; exact `6753855497...` is deployed to isolated Staging at V10 after a bounded rebind/deploy/recovery continuation, while `STG-007=PASS` remains historical infrastructure evidence. The Owner aligned the STG-008 credential contract. The first password-free plan then stopped before command/data access because non-web startup could not construct its servlet-bound request context; zero writes occurred and the new fail-closed pair was retained. Stop for the bounded repository repair, then a new exact-main Staging deploy plus post-Batch-A blocked-recovery Owner Gate; do not infer bootstrap, clone, Staging acceptance or Production authority. |
+| `RECOMMENDED_ACTION` | PRs #60-#89 and the #61-#70 stack are `IN_MAIN`; exact `6753855497...` is deployed to isolated Staging at V10 after a bounded rebind/deploy/recovery continuation, while `STG-007=PASS` remains historical infrastructure evidence. The Owner aligned the STG-008 credential contract. The first password-free plan then stopped before command/data access because non-web startup could not construct its servlet-bound request context; zero writes occurred and the new fail-closed pair was retained. PR #89 merged the bounded repair but is not deployed; stop at a new exact-main Staging deploy plus post-Batch-A blocked-recovery Owner Gate. Do not infer bootstrap, clone, Staging acceptance or Production authority. |
 
 PR-A through PR-F are in `main`. PR-D supplies generic source-option copying
 and target-local parent mapping; PR #54 placed the concrete Chinatown Profile
@@ -1010,7 +1010,8 @@ changes no clone/API/profile behavior. STG-005A, STG-005B, credential creation,
 login, target onboarding and validate/execute/replay remain unexecuted.
 STG-008 is stopped after a pre-command plan `NO_GO`; its prior release-rebind
 repair supported a later exact `6753855497...` rebind/deploy/recovery, and the
-new non-web request-context repair is pending publication at
+new non-web request-context repair is `IN_MAIN` through PR #89 at `434c9cc...`,
+but remains undeployed, at
 `STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
 See [the sanitized STG-008 entry evidence](../runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md)
 [the Flyway guard repair evidence](../runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md),
