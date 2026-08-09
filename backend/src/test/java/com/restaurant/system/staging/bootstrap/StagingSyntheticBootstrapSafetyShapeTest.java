@@ -3,6 +3,7 @@ package com.restaurant.system.staging.bootstrap;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.restaurant.system.analytics.service.AnalyticsAggregationScheduler;
+import com.restaurant.system.common.config.WebSocketConfig;
 import com.restaurant.system.printing.service.impl.OrderDispatchOutboxProcessor;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,10 +29,12 @@ class StagingSyntheticBootstrapSafetyShapeTest {
     }
 
     @Test
-    void commandProfileExcludesBusinessSchedulers() {
+    void commandProfileExcludesLongLivedRuntimeComponents() {
         assertThat(AnalyticsAggregationScheduler.class.getAnnotation(Profile.class).value())
             .containsExactly("!staging-synthetic-bootstrap");
         assertThat(OrderDispatchOutboxProcessor.class.getAnnotation(Profile.class).value())
+            .containsExactly("!staging-synthetic-bootstrap");
+        assertThat(WebSocketConfig.class.getAnnotation(Profile.class).value())
             .containsExactly("!staging-synthetic-bootstrap");
     }
 

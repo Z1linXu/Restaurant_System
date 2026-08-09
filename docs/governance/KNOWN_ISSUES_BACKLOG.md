@@ -18,6 +18,25 @@
 
 ## Active issues
 
+### KI-009 - Non-web STG-005 one-shot retains WebSocket broker lifecycle
+
+| Field | Value |
+|---|---|
+| issue_id | `KI-009` |
+| priority | `P2` |
+| title | Non-web STG-005 one-shot does not exit after validated command completion |
+| observed_behavior | Exact Staging `2a6c30a...` reached `STG005_BOOTSTRAP|status=VALIDATED` before credential or data access, but the non-web profile also started `SimpleBrokerMessageHandler`; the JVM remained alive until the reviewed 600-second timeout. Compose `--rm` cleanup and the launcher finalizer then overlapped, preserving fail-closed blocked state. |
+| expected_behavior | The dedicated non-web one-shot excludes long-lived WebSocket infrastructure while preserving the normal web runtime contract. A successful password-free plan exits inside its bounded window; unexpected cleanup failure remains fail-closed. |
+| operational_impact | STG-008 cannot safely progress beyond PLAN; no synthetic business write is permitted while the reviewed blocked pair is retained. |
+| current_workaround | None. Do not retry the failed plan on exact `2a6c30a...`. |
+| evidence | [STG-008 one-shot lifecycle repair evidence](runtime/STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md). |
+| authoritative_rule | [AL-003S Staging acceptance runbook](../../deployment/cloud/README_AL003S_STAGING_ACCEPTANCE.md). |
+| status | `REPAIR_REQUIRES_EXACT_SHA_REDEPLOY` |
+| target_loop | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` Dependency Repair Auto-Loop. |
+| acceptance_criteria | Focused non-web lifecycle and shell safety regressions plus independent review pass; the repair enters `main`; a newly approved exact release passes rebind, deploy, readiness, recovery and a fresh PLAN without a timeout. |
+| deployment_required | Yes, Staging-only exact redeploy after separate Owner approval; no Production deployment. |
+| last_updated | 2026-08-09 |
+
 ### KI-008 - Non-web STG-005 plan cannot construct servlet request context
 
 | Field | Value |

@@ -104,8 +104,10 @@ separately authorized V10-to-V10 continuation deployed that exact SHA to
 isolated Staging and passed formal preflight, repaired readiness, sanitized
 Flyway/runtime collection, one same-image restart and post-restart
 verification. Flyway remained V10/no-pending; printing/isolation and Production
-continuity were unchanged. `STG-007=PASS`. The current unique stop state is
-`STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
+continuity were unchanged. `STG-007=PASS`. Exact `2a6c30a...` later validated
+PR #89 in Staging before exposing the separate non-web one-shot lifecycle
+defect. The current unique stop state is
+`STG-008_ONE_SHOT_LIFECYCLE_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
 PR #83 merged only the final STG-007 evidence/governance into
 `main@2ed56b06f37c9257a655ec334f81e31ca4a518a6`; exact Staging correctly
 remained `2837ae88...`. The Owner then authorized STG-008. Its read-only entry
@@ -455,6 +457,25 @@ delivery.
 At normal completion, every bounded worker has returned its result and ended,
 and the round reports `Agents active = 0`. The lifecycle and worktree cleanup
 rules in sections 13 and 14 remain mandatory.
+
+### STG-008 one-shot lifecycle dependency repair
+
+The exact `2a6c30a...` Staging continuation demonstrated that PR #89's
+request-context repair works in the guarded non-web runtime: the password-free
+STG-005A plan reached `VALIDATED` before credential or data access. It also
+identified a distinct lifecycle defect: the one-shot profile instantiated the
+long-lived WebSocket broker, so the process reached its 600-second bound and
+the fail-closed scoped-cleanup path retained the blocked pair. This is a
+bounded repository Dependency Repair, not authority to replay the plan.
+
+The repair may exclude WebSocket infrastructure only from the dedicated
+non-web `staging-synthetic-bootstrap` profile. It must preserve every normal
+web-runtime WebSocket contract and every one-shot safety guard. After merge,
+the repair creates a new runtime-sensitive exact SHA: a fresh Owner Runtime
+Gate must bind/deploy it and recover only the matching blocked pair before a
+new digest-bound PLAN. Existing approval, evidence, credential, and timeout
+artifacts are non-replayable. See
+[STG-008 one-shot lifecycle repair evidence](runtime/STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md).
 
 ## 16. Repository auto-merge policy
 

@@ -1,16 +1,17 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Capability state: `STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
+> Capability state: `STG-008_ONE_SHOT_LIFECYCLE_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
 >
 > Historical failed candidate: `8f909525781804f61d1da388882f530da358c3c4`
 >
-> Current exact deployed Staging SHA: `6753855497b8c47be99a8d88ae9d9961653addb0`
+> Current exact deployed Staging SHA: `2a6c30a5948882ff8bf1d3808e2970fe5b4a6ae3`
 >
 > Governance packages: PR #72 and PRs #60-#71 are `IN_MAIN`; PR #85's bounded
 > startup-safety repair, PR #86 Ground Truth closure and PR #87 release-rebind
 > serialization repair are also `IN_MAIN`. The later exact `6753855497...`
-> continuation used #87 for Staging-only rebind/deploy/recovery; the current
-> non-web request-context repair remains repository-only and undeployed
+> continuation used #87 for Staging-only rebind/deploy/recovery. PR #89's
+> request-context repair was runtime-validated by current exact `2a6c30a...`;
+> the separate one-shot lifecycle repair remains repository-only and undeployed.
 >
 > Runtime checkpoint: `STG-007=PASS`; V10-to-V10 deploy, repaired readiness, runtime collection, same-image restart and post-restart verification all `PASS`
 
@@ -60,10 +61,11 @@ retained block without violating Batch A-before-recovery ordering. The bounded
 entered main through PR #87 at `4b954e09...`; it preserves both blocked files
 and every ordinary action block. A later Owner-authorized continuation used it
 to bind, preflight and deploy exact `6753855497...`, then cleared only the
-reviewed old pair. The following password-free plan failed before command/data
-access at a non-web request-context dependency. No synthetic data changed; the
-new fail-closed records require the bounded repository repair and a new exact
-candidate/Owner runtime gate.
+reviewed old pair. Exact `2a6c30a...` then reached password-free `VALIDATED`,
+proving the request-context repair before a separate non-web WebSocket lifecycle
+timeout. No synthetic data changed; the new fail-closed records require the
+bounded lifecycle repository repair and a new exact candidate/Owner runtime
+gate.
 
 Historically, PR #56 entered `main` and the fixed release candidate was
 `8f909525781804f61d1da388882f530da358c3c4`. The read-only preflight is recorded
@@ -211,8 +213,9 @@ authorized recovery continuation then stopped before Batch A mutation at the
 release-rebind sequencing deadlock, and PR #87 put the bounded recovery-only
 release/env path in main. Exact `6753855497...` subsequently passed its
 Staging-only rebind/deploy/readiness/recovery sequence. The following fresh
-STG-005A plan failed before command/data access at the non-web request-context
-dependency. A repaired, newly fetched exact main must receive a new Staging
+exact `2a6c30a...` STG-005A plan reached `VALIDATED`, proving the request-context
+repair before a non-web WebSocket lifecycle timeout retained a new blocked
+pair. A lifecycle-repaired, newly fetched exact main must receive a new Staging
 release/deploy approval, and the new retained blocked state remains recoverable
 only after Batch A passes. Only then may a restarted
 batch cover the synthetic topology/source work in steps 3 and 5 with fresh
@@ -256,6 +259,17 @@ The reusable Synthetic St-Denis manifest/application path entered `main` via
 PR #62. It remains repository capability only: it is not available to runtime
 until a fresh exact SHA is selected and the Owner separately approves the
 mutation sequence.
+
+Exact `2a6c30a...` later verified PR #89 in the real guarded non-web path: the
+password-free STG-005A plan reached `VALIDATED` before any credential or data
+access. That is not a plan PASS. The one-shot profile also activated the
+long-lived WebSocket broker, so it reached the 600-second containment timeout;
+the resulting Compose `--rm` and scoped finalizer overlap retained the
+fail-closed blocked pair. The bounded lifecycle repair excludes WebSocket
+infrastructure only from that non-web profile. It must enter `main` and receive
+a new exact-SHA Staging release/recovery approval before another PLAN; no prior
+approval, evidence, or credential channel is reusable. See
+[one-shot lifecycle repair evidence](../runtime/STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md).
 
 The `IN_MAIN` AL-003S package adds the missing guarded one-shot launcher and
 publishes the exact command, evidence, and rollback plan in
@@ -324,4 +338,4 @@ recovers.
 
 ## Capability dependency state
 
-`STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
+`STG-008_ONE_SHOT_LIFECYCLE_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`

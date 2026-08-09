@@ -82,6 +82,11 @@ separate from historical evidence snapshots and business implementation details:
   records the bounded fix that lets the guarded non-web synthetic command
   construct its application context without creating a servlet request. Any
   attempt to use request authentication in that mode remains fail-closed.
+- [STG-008 One-Shot Lifecycle Repair Evidence](docs/governance/runtime/STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md)
+  records the exact-runtime validation of the request-context repair, the
+  remaining non-web WebSocket broker timeout/cleanup race, and the narrow
+  repository repair that excludes that long-lived web component only from the
+  guarded one-shot profile. It authorizes no runtime retry or data action.
 - [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
   authority for current issue triage and closure status.
 - [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
@@ -808,18 +813,19 @@ files and repository checks passed; Agent 6's final result was `ACCEPT`. PR #87
 merged the repair at
 `4b954e09a365fec909ed6da3ddf8fa9f13639cdc`. A later Owner-authorized
 continuation used that control path to bind, preflight, build and deploy exact
-`6753855497b8c47be99a8d88ae9d9961653addb0` to isolated Staging at V10. Fresh
-readiness passed and the bounded recovery cleared only the reviewed old blocked
-marker. The following password-free STG-005A plan then failed before its
-command or data path because non-web startup could not construct the
-servlet-bound request context; zero synthetic data was written and the new
-fail-closed records were retained.
+`6753855497b8c47be99a8d88ae9d9961653addb0` to isolated Staging at V10. PR #89
+then entered `main` and exact `2a6c30a...` was deployed under a new Owner gate.
+The password-free STG-005A plan reached `VALIDATED`, proving the request-context
+repair before credential or data access, but the non-web WebSocket broker kept
+the JVM alive to the 600-second bound. Compose cleanup and the scoped finalizer
+overlapped, so the fail-closed pair was correctly retained. Zero synthetic data
+was written; the next dependency repair is the narrow one-shot lifecycle fix.
 
 The bounded repository repair for that non-web authorization-context defect is
 documented in [STG-008 Non-Web Request-Context Repair Evidence](docs/governance/runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md).
 It entered `main` through PR #89 at `434c9cc808648a4f80c91435d8667ad9fe160018`
-and is not deployed. The unique stop state is
-`STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
+and was runtime-validated by exact `2a6c30a...`. The unique stop state is
+`STG-008_ONE_SHOT_LIFECYCLE_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
 
 Repository PRs now follow the permanent auto-merge gate in the Agile Loop
 Operating Model: latest-main base, exact single-package scope, all applicable

@@ -533,12 +533,12 @@ passed, and the launcher retained blocked state.
 Current decision: the startup-safety dependency repair entered main through PR
 #85 and the blocked-state-safe release-rebind repair entered main through PR
 #87 at `4b954e09...`. A later Owner-authorized continuation deployed exact
-`6753855497...` to Staging at V10, passed fresh readiness and recovered only
-the reviewed old blocked pair. Its next password-free plan failed before the
-command/data path because non-web startup could not construct the
-servlet-bound request context; zero synthetic rows changed and the new
-fail-closed pair remains. Runtime is stopped at
-`STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
+`6753855497...` to Staging at V10, then exact `2a6c30a...` proved the
+request-context repair by reaching password-free `VALIDATED`. The non-web
+WebSocket broker nevertheless held the one-shot alive to its timeout; zero
+synthetic rows changed and the new fail-closed pair remains. Runtime is stopped
+at
+`STG-008_ONE_SHOT_LIFECYCLE_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
 The immutable entry result remains
 [STG-008 Synthetic Topology and Source Entry Evidence](STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md),
 and the resumed failure/repair is
