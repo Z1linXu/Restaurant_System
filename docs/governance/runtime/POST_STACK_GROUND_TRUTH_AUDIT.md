@@ -2,11 +2,11 @@
 
 > Audit date: 2026-08-09, America/Toronto
 >
-> Runtime-sensitive repository floor after STG-008 repair publication:
-> `origin/main` contains PR #87 merge `4b954e09a365fec909ed6da3ddf8fa9f13639cdc`
+> Runtime-sensitive deployed-main floor after PR #90 publication:
+> `2a6c30a5948882ff8bf1d3808e2970fe5b4a6ae3`
 >
 > Exact deployed Staging runtime:
-> `6753855497b8c47be99a8d88ae9d9961653addb0`
+> `2a6c30a5948882ff8bf1d3808e2970fe5b4a6ae3`
 >
 > Follow-up runtime access: STG-006 passive/read-only observation and the
 > bounded STG-007 V10-aware continuation completed; see
@@ -14,7 +14,7 @@
 > `STG-007_EXACT_SHA_CONTINUATION_EVIDENCE.md`
 >
 > Current decision:
-> `STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
+> `STG-008_ONE_SHOT_LIFECYCLE_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
 
 ## 1. Executive summary
 
@@ -53,8 +53,10 @@ ordinary release path could not legally cross the retained blocked pair. PR
 #87 merged the dedicated recovery release-rebind repair at `4b954e09...`. A
 later continuation used it for exact `6753855497...` rebind/preflight/deploy,
 fresh readiness and recovery of only the old reviewed pair. The following
-password-free plan then failed before command/data access at the non-web
-request-context dependency, retaining a new blocked pair with zero data writes.
+exact `2a6c30a...` continuation reached password-free `VALIDATED`, proving the
+non-web request-context repair before credential/data access. Its separate
+non-web WebSocket broker lifecycle timeout retained a new blocked pair with
+zero data writes.
 
 ## 2. Git and PR ground truth
 
@@ -81,12 +83,15 @@ request-context dependency, retaining a new blocked pair with zero data writes.
 | #85 | STG-008 guarded one-shot Flyway safety repair | `c95c3840fa972f84b3e5dbd345fef3e4c12aa8c6` | `IN_MAIN`; exact-profile no-migration startup repair; initial publication had no runtime action |
 | #86 | STG-008 dependency-repair Ground Truth closure | `4759a23b1a00d3254936e6c8eeb0ec33012b5145` | `IN_MAIN`; documentation only |
 | #87 | STG-008 release-rebind serialization repair | `4b954e09a365fec909ed6da3ddf8fa9f13639cdc` | `IN_MAIN`; blocked-state-safe recovery release/env path later used by exact `6753855497...` continuation |
+| #89 | STG-008 non-web request-context repair | `434c9cc808648a4f80c91435d8667ad9fe160018` | `IN_MAIN`; runtime-validated by exact `2a6c30a...` before a distinct lifecycle timeout |
+| #90 | STG-008 Ground Truth closure | `2a6c30a5948882ff8bf1d3808e2970fe5b4a6ae3` | `IN_MAIN`; exact deployed Staging candidate for the validated plan attempt |
 
 All listed merge commits are verified ancestors of current
 `origin/main` at publication time. PR #82 and all earlier runtime-sensitive packages
 are ancestors of historical STG-007 deployment `2837ae88...`; PRs #83/#84/#86
 are documentation-only, while #87 was later used by deployed
-`6753855497...`. There is no `DRAFT_PR` or `STACKED_ONLY` package
+`6753855497...`, #89 was runtime-validated by deployed `2a6c30a...`, and #90
+is that deployed candidate’s governance closure. There is no `DRAFT_PR` or `STACKED_ONLY` package
 remaining in #61-#87 after repair
 publication. A later governance-only merge may advance exact main and must be
 freshly fetched without being misclassified as deployed.
@@ -102,7 +107,7 @@ freshly fetched without being misclassified as deployed.
 | Store Core | `PARTIAL_IMPLEMENTATION` | AL-002 creates an idempotent inactive, printing-disabled Store, but it is not Profile-driven and legacy Platform Admin/Seeder paths can still create `active` Stores. |
 | Access/Staff | `PARTIAL_IMPLEMENTATION` | Onboarding transaction creates BCrypt credentials and Store memberships. There is no reusable Profile planner/reconcile contract or standalone idempotent module. Runtime passwords remain outside Git. |
 | Menu | `DONE_IN_CODE`; `RUNTIME_EVIDENCE_PENDING` | Owner validate/execute API, V10 idempotency, generic clone transaction, Chinatown menu Profile, source invariance, replay, and tests exist. No Staging or Production clone evidence exists. |
-| Synthetic St-Denis baseline | `DONE_IN_CODE`; `STG-008_DEPENDENCY_REPAIR_GATE` | Guarded empty-or-exact STG-005B planner/writer exists and is tested. Parent STG-005A credential alignment and the historical Flyway-safety repair are resolved. Its later password-free plan stopped before the command at the non-web request-context dependency. STG-005B has not run. |
+| Synthetic St-Denis baseline | `DONE_IN_CODE`; `STG-008_DEPENDENCY_REPAIR_GATE` | Guarded empty-or-exact STG-005B planner/writer exists and is tested. Parent STG-005A credential alignment and the historical Flyway-safety repair are resolved. Exact `2a6c30a...` later reached password-free `VALIDATED`, then stopped at the separate non-web WebSocket lifecycle timeout. STG-005B has not run. |
 | Staging acceptance launcher | `DONE_IN_CODE`; `INFRASTRUCTURE_ACCEPTED`; `AL003_PENDING` | Exact-main V10-to-V10 deploy, readiness, runtime collection and same-image restart passed. Bootstrap, source creation, login, onboarding, clone and replay remain unexecuted. |
 | Tables | `PARTIAL_IMPLEMENTATION` | Existing admin CRUD/template copy exists. No Store Profile contract/planner/idempotent writer; uniqueness, ownership, normalization, and reconcile rules are unresolved. |
 | Printer Store isolation | `DONE_IN_CODE` | PR #66 scopes config update, dispatch, and PAD printer-health lookup to the durable Store. This is not Printing provisioning. |
@@ -119,9 +124,9 @@ record fresh, bounded evidence:
 
 | Environment | Retained evidence | Current classification |
 |---|---|---|
-| Staging | exact release `6753855497b8c47be99a8d88ae9d9961653addb0`, Flyway V10/no pending migration, health 200/200/200, isolated project/network/state and loopback bind, printing disabled | STG-007 infrastructure evidence retained; later STG-008 rebind/deploy/readiness/old-pair recovery passed, then a password-free plan failed before command/data access |
+| Staging | exact release `2a6c30a5948882ff8bf1d3808e2970fe5b4a6ae3`, Flyway V10/no pending migration, health 200/200/200, isolated project/network/state and loopback bind, printing disabled | STG-007 infrastructure evidence retained; later STG-008 rebind/deploy/readiness/old-pair recovery passed, and the password-free plan reached `VALIDATED` before a non-web WebSocket lifecycle timeout retained a new blocked pair |
 | Production | retained release `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`, project `cloud`, identical before/after container IDs, image IDs, starts and restart counts, health 200 | `MACHINE_VERIFIED_READ_ONLY` continuity only; Flyway/business state not queried |
-| Repository | migrations V1-V10; deployed source `6753855497...`; current repair changes only non-web request-context injection | PRs #83/#84/#86 are governance-only; #87 supported the later bounded continuation, and the new repair is repository-only until a future exact release |
+| Repository | migrations V1-V10; deployed source `2a6c30a...`; current repair excludes WebSocket infrastructure only from the dedicated non-web one-shot profile | PRs #83/#84/#86 are governance-only; #87 supported the later bounded continuation, PR #89 was runtime-validated, and the lifecycle repair remains repository-only until a future exact release |
 
 There is retained evidence that Staging is at V10, has no pending migration,
 and recovered from a same-image restart. No V8-to-V9-to-V10 migration was
@@ -135,11 +140,13 @@ request counts are all zero. Synthetic Owner is `NOT_CREATED`, and
 `stores_id_seq last_value=1, is_called=false` establishes safe first Store ID
 allocation without a write probe.
 
-After credential alignment, one fresh `bootstrap-plan` one-shot failed before
-the STG-005A command, credential reader, or transaction. Post-failure
-read-only evidence retained all zero counts, exact V10 and healthy unchanged
-Staging/Production continuity. The one-shot was removed and both fail-closed
-records remain present.
+After credential alignment, the fresh exact `2a6c30a...` `bootstrap-plan`
+one-shot reached `VALIDATED` before the credential reader, execute/bootstrap
+transaction, or data access. The non-web WebSocket broker then held it to the 600-second bound;
+Compose had begun `--rm` when the scoped finalizer observed cleanup already in
+progress, so it retained both fail-closed records. The one-shot is now absent;
+post-failure read-only evidence retained all zero
+counts, exact V10 and healthy unchanged Staging/Production continuity.
 
 ## 5. Current blockers
 
@@ -148,7 +155,7 @@ records remain present.
 | Code/procedure | OPS-001 plus PRs #81/#82 publish fail-closed release/env, Flyway/readiness/restart and secret-FD Owner/API helpers | Repository blocker closed; the authorized STG-007 path passed |
 | Configuration | Approved identity is `STG005_OWNER_20260808_R01`; the runtime-only password remains ungenerated/unread and guarded at 12-through-256 characters | Do not request it before the repaired exact image is deployed and blocked-state recovery passes |
 | Evidence | Exact Staging V10 deploy/readiness/restart evidence is complete; bootstrap/source/login/clone evidence remains absent | STG-007 passes, while AL-003 acceptance remains pending |
-| Owner/runtime gate | Exact `6753855497...` passed rebind/preflight/deploy/readiness and old-pair recovery. Its password-free plan retained a new blocked state after a pre-command non-web request-context defect. PR #89 is `IN_MAIN` but not deployed. | Approve a freshly fetched exact main containing PR #89 for recovery-specific release/preflight/deploy; only after Batch A passes recover the new reviewed pair, then restart every action with fresh evidence |
+| Owner/runtime gate | Exact `2a6c30a...` passed rebind/preflight/deploy/readiness and old-pair recovery. Its password-free plan reached `VALIDATED`, then retained a new blocked state after the separate non-web WebSocket lifecycle timeout. | Merge the lifecycle repair, then approve its freshly fetched exact main for recovery-specific release/preflight/deploy; only after Batch A passes recover the new reviewed pair, then restart every action with fresh evidence |
 | Production safety | Release-relative state path, combined Production build, missing phase resource gates, restore rehearsal, backup integrity, and old-app compatibility remain unresolved | Production deployment and ACT-001 are `NO_GO` |
 
 ## 6. Staging decision
@@ -178,7 +185,7 @@ exact accepted RC are all pending.
 | 1 | `STG-006_EXACT_MAIN_PREFLIGHT` | Bind post-audit main SHA and collect fresh passive isolation/resource/continuity evidence | governance audit merged | `PASS` evidence at candidate `33c6e3c...` | completed read-only authorization | no further runtime action | no container/database change |
 | 2 | `OPS-001_STAGING_SECRET_SAFE_TOOLING_REPAIR` | Close release/env rotation, same-image restart/Flyway collection, and Owner/API secret-handling gaps | STG-006 PASS | `PASS`; reviewed package and repairs #81/#82 are in main | completed repository merge gates | no runtime mutation in implementation | Git revert only |
 | 3 | `STG-007_EXACT_SHA_CONTINUATION` | Deploy exact approved Staging SHA from V10 and verify no-pending, health, readiness, evidence, same-image restart and continuity | STG-006 PASS + OPS-001 accepted | `PASS` at exact `2837ae88...`; Flyway V10; health 200/200/200 | completed bounded V10-aware authorization | completed Staging-only V10-to-V10 continuation | no destructive rollback used |
-| 4 | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` | Execute/replay STG-005A and STG-005B with printing disabled | STG-007 PASS; exact `6753855497...` rebind/deploy/recovery completed; PR #89 repair is `IN_MAIN` and its new candidate still requires approval | entry and password-free plan `NO_GO`; plan failed before command/data access; future sanitized IDs/counts/revisions/replay | approve a newly fetched exact main containing PR #89 for rebind/preflight/deploy, then recover only the new reviewed blocked pair and issue distinct plan/create/replay approvals | no data write yet; future synthetic Staging writes only | transaction rollback; retain successful evidence |
+| 4 | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` | Execute/replay STG-005A and STG-005B with printing disabled | STG-007 PASS; exact `2a6c30a...` rebind/deploy/recovery completed; PR #89 was runtime-validated and the lifecycle repair requires a new candidate | entry and password-free plan `NO_GO`; plan reached `VALIDATED` but timed out before data access; future sanitized IDs/counts/revisions/replay | merge lifecycle repair, approve its exact main for rebind/preflight/deploy, then recover only the new reviewed blocked pair and issue distinct plan/create/replay approvals | no data write yet; future synthetic Staging writes only | transaction rollback; retain successful evidence |
 | 5 | `STG-009_AL003_OWNER_ACCEPTANCE` | Owner login, target onboarding, validate, execute, replay, restart/persistence | STG-008 PASS | sanitized auth/status/count/source-invariance/restart evidence | separate execute checkpoint | synthetic Staging writes and restart | transaction rollback; no destructive cleanup |
 | 6 | `AL-004A_CONCRETE_STORE_PROFILE_AND_ENGINE_PLANNER` | Register complete non-secret Store Profile(s), module config registry, and read-only engine plan | STG-009 findings reviewed | deterministic fingerprints, planner and anti-hardcode tests | Profile identity/config review | none | Git revert |
 | 7 | `AL-005A1_ACCESS_TABLE_CONTRACT_PLANNER` | Add reusable Staff/Access and Table contracts/read-only planner; resolve Store-isolation/normalization gates | AL-004A | focused authorization/fingerprint/planner tests | login convention/table policy decisions as needed | none | Git revert |
@@ -192,16 +199,15 @@ main do not authorize skipping directly to their writers.
 
 ## 8. Current Owner gates and unique stop state
 
-The credential decision is resolved. The exact `6753855497...` continuation
-completed release/private-env binding, formal preflight, V10-to-V10 deploy,
-fresh readiness and recovery of only the old reviewed blocked pair. Its next
-password-free plan failed before command/data access at the non-web request
-context dependency; zero synthetic data changed and the new fail-closed pair
-was retained. The current Owner gate is therefore the repaired exact-SHA
-rebind and bounded recovery of that new pair:
+The credential decision is resolved. Exact `2a6c30a...` completed
+release/private-env binding, formal preflight, V10-to-V10 deploy, fresh
+readiness and recovery of only the old reviewed blocked pair. Its password-free
+plan reached `VALIDATED` before a non-web WebSocket lifecycle timeout; zero
+synthetic data changed and the new fail-closed pair was retained. The current
+Owner gate follows lifecycle-repair merge and a fresh exact-SHA rebind/recovery:
 
-1. PR #89 has completed repository review/publication of the non-web
-   request-context repair; approve a newly fetched exact `main` containing it
+1. merge the reviewed non-web one-shot lifecycle repair; approve a newly
+   fetched exact `main` containing it
    for the dedicated recovery release/private-env action, preflight and
    Staging-only deploy;
 2. only after that Batch A passes, perform the already bounded recovery after
@@ -219,4 +225,6 @@ validate/execute/clone, printer configuration, Pad pairing or Production work.
 
 Unique stop state:
 
-`STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
+`STG-008_ONE_SHOT_LIFECYCLE_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
+
+See [STG-008 one-shot lifecycle repair evidence](STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md).

@@ -4,14 +4,15 @@
 >
 > Prepared against: STG-005B checkpoint `0aba8377a3b7acec047c6ffd025f774d8a4d5e87`
 >
-> Runtime checkpoint: `STG-008_BOOTSTRAP_PLAN_NO_GO_BEFORE_COMMAND_WITH_BLOCKED_STATE`
+> Runtime checkpoint: `STG-008_ONE_SHOT_LIFECYCLE_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
 
-> Current runtime checkpoint: separate Owner authorization deployed exact
-> `2837ae88e55142c99c6975f8b6575febffc913a1` V10-to-V10. Fresh formal
-> preflight, repaired readiness, sanitized runtime/Flyway collection, one
-> same-image restart and post-restart verification all passed with exact
-> identities unchanged. `STG-007=PASS`; no synthetic bootstrap, source-menu,
-> credential, login, onboarding or clone action followed.
+> Current runtime checkpoint: STG-007 historically passed at exact
+> `2837ae88e55142c99c6975f8b6575febffc913a1`. A later Owner authorization
+> deployed exact `2a6c30a5948882ff8bf1d3808e2970fe5b4a6ae3` V10-to-V10, passed
+> formal preflight/readiness and recovered only the approved old blocked pair.
+> Its password-free STG-005A plan reached `VALIDATED` before the separate
+> non-web WebSocket lifecycle timeout; no credential or synthetic business
+> write occurred and a new fail-closed pair remains.
 >
 > A later Owner-authorized STG-008 entry reconfirmed that runtime read-only,
 > found no existing synthetic Owner/topology, proved the next Store ID is `1`,
@@ -30,11 +31,11 @@
 > when the ordinary release path could not legally cross those retained
 > records. PR #87 merged the dedicated blocked-state-safe release/env repair at
 > `4b954e09...`; a later continuation used it to deploy exact `6753855497...`,
-> pass fresh readiness and recover only the old reviewed pair. The following
-> password-free plan failed before command/data access at the non-web
-> request-context dependency. Its repair requires a new exact-main Staging
-> release/preflight/deploy Owner approval, and recovery remains a bounded
-> post-Batch-A action.
+> pass fresh readiness and recover only the old reviewed pair. Exact `2a6c30a...`
+> then validated the request-context repair before the password-free plan reached
+> the distinct non-web WebSocket lifecycle timeout. Its lifecycle repair requires
+> a new exact-main Staging release/preflight/deploy Owner approval, and recovery
+> remains a bounded post-Batch-A action.
 
 ## 1. Purpose and classification
 
@@ -367,11 +368,11 @@ The subsequent fresh baseline, release-rebind sequencing deadlock and PR #87
 repair are in
 [STG-008 Release-Rebind Serialization Repair Evidence](../runtime/STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md).
 The later exact `6753855497...` rebind/deploy/readiness/recovery continuation
-passed, but its following password-free plan failed before command/data access
-at the non-web request-context dependency. The new repair and current boundary
-are recorded in
-[STG-008 Non-Web Request-Context Repair Evidence](../runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md).
+passed, then exact `2a6c30a...` validated the request-context repair before the
+password-free plan reached its separate non-web WebSocket lifecycle timeout.
+The current repair and boundary are recorded in
+[STG-008 One-Shot Lifecycle Repair Evidence](../runtime/STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md).
 
 Stop state:
 
-`STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
+`STG-008_ONE_SHOT_LIFECYCLE_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`

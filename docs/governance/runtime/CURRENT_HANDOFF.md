@@ -37,9 +37,18 @@
 > records. The next password-free plan failed before its command/data path
 > because non-web startup required a servlet request context; cleanup and
 > zero-write continuity passed, and a new blocked pair was retained. The
-> bounded repository repair entered `main` as PR #89 at `434c9cc...`; it is
-> not deployed. Production remains
-> unchanged.
+> bounded repository repair entered `main` as PR #89 at `434c9cc...`. PR #90
+> then entered `main@2a6c30a...`. The Owner-authorized continuation deployed
+> that exact candidate to isolated Staging at V10, passed preflight/readiness,
+> and recovered only the reviewed prior blocked pair. The fresh password-free
+> plan reached `VALIDATED`, proving the request-context repair in the runtime,
+> but a non-web WebSocket broker kept the JVM alive to its 600-second timeout.
+> Its scoped finalizer then encountered Compose `--rm` already in progress and
+> correctly retained a new blocked pair. There was no credential read or
+> synthetic business write; Staging returned to 200/200/200 with Printing
+> disabled and Production continuity remained unchanged. A narrow repository
+> lifecycle repair is required before a fresh exact-SHA Staging gate. Production
+> remains unchanged.
 
 ## 1. Project mission
 
@@ -58,10 +67,10 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| runtime-sensitive deployed-main floor | `6753855497b8c47be99a8d88ae9d9961653addb0` | `DEPLOYED_TO_STAGING`; includes the PR #87 recovery path. Any future runtime-sensitive repair must be freshly fetched as a new exact candidate before runtime approval. |
-| exact deployed Staging runtime | `6753855497b8c47be99a8d88ae9d9961653addb0` | `DEPLOYED_TO_STAGING`; authorized V10-to-V10 continuation, distinct from the pending request-context repair |
+| runtime-sensitive deployed-main floor | `2a6c30a5948882ff8bf1d3808e2970fe5b4a6ae3` | `DEPLOYED_TO_STAGING`; it includes PR #89 and #90 but exposed the one-shot lifecycle blocker. Any future runtime-sensitive repair must be freshly fetched as a new exact candidate before runtime approval. |
+| exact deployed Staging runtime | `2a6c30a5948882ff8bf1d3808e2970fe5b4a6ae3` | `DEPLOYED_TO_STAGING`; V10-to-V10 continuation passed until the password-free plan timeout; no synthetic business write occurred. |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
-| Runtime-sensitive delivery package | PR #89 / head `2af0493fde646335dc2c6c3b36501d86e8894d43` | `IN_MAIN` through merge `434c9cc808648a4f80c91435d8667ad9fe160018`; repository repair only, not deployed |
+| Runtime-sensitive delivery package | PR #89 plus PR #90 / exact `2a6c30a5948882ff8bf1d3808e2970fe5b4a6ae3` | `DEPLOYED_TO_STAGING`; PR #89 was runtime-validated, while the distinct one-shot lifecycle repair remains repository-only |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
 
 `IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
@@ -139,7 +148,7 @@ the current bounded Staging runtime identity below.
 | Environment | Retained evidence | Classification and boundary |
 |---|---|---|
 | Production | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`; Compose `cloud` `db/backend/nginx`; unchanged IDs/start times/restart `0`; health 200 | `MACHINE_VERIFIED_READ_ONLY` continuity only; Flyway/business state not queried |
-| Staging | `6753855497b8c47be99a8d88ae9d9961653addb0`; Flyway V10 with no pending migration; exact `db/backend/nginx` identities running; health 200/200/200 | `DEPLOYED_TO_STAGING`; STG-007 infrastructure PASS is retained, then rebind/preflight/readiness and old-pair recovery passed before a password-free plan failed before command/data access |
+| Staging | `2a6c30a5948882ff8bf1d3808e2970fe5b4a6ae3`; Flyway V10 with no pending migration; exact `db/backend/nginx` identities running; health 200/200/200 | `DEPLOYED_TO_STAGING`; rebind/preflight/readiness and old-pair recovery passed, then the password-free plan reached `VALIDATED` before a non-web WebSocket lifecycle timeout retained a new blocked pair |
 | Staging isolation | project `restaurant-pos-staging`; only `127.0.0.1:18080`; separate state/network/mounts; private leaf UID 70/mode 0700 | `MACHINE_VERIFIED_READ_ONLY` |
 | Staging printing | `STAGING_PRINT_MODE=DISABLED`; feature flag `false` | `MACHINE_VERIFIED_READ_ONLY` |
 
@@ -170,10 +179,10 @@ new exact candidate and authorization cannot be reused.
 |---|---|
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` |
-| Current package | Exact `6753855...` passed rebind/preflight/deploy/readiness and cleared only the reviewed old block. Its fresh password-free `bootstrap-plan` then failed before command/data access because request context requires servlet injection in non-web mode. Synthetic Owner remains `NOT_CREATED`, topology is empty, and a newly retained blocked pair requires a repair-dependent fresh exact continuation. |
-| Feature stop state | `STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL` |
+| Current package | Exact `2a6c30a...` passed rebind/preflight/deploy/readiness and cleared only the reviewed old block. Its fresh password-free `bootstrap-plan` reached `VALIDATED`, but the non-web WebSocket broker held the one-shot open until the timeout; no credential/data access occurred. Synthetic Owner remains `NOT_CREATED`, topology is empty, and a newly retained blocked pair requires a lifecycle-repair-dependent fresh exact continuation. |
+| Feature stop state | `STG-008_ONE_SHOT_LIFECYCLE_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL` |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | Approve a freshly fetched exact candidate containing PR #89 for release/private-env binding, formal preflight, Staging-only V10-to-V10 deploy, fresh readiness and bounded recovery of the newly retained records. Then restart with a new password-free PLAN and new action approval. The password may be requested only when fresh STG-005A EXECUTE actually needs it, through the reviewed private stdin/FD channel. |
+| Current Owner gate | After the lifecycle repair enters `main`, approve a freshly fetched exact candidate for release/private-env binding, formal preflight, Staging-only V10-to-V10 deploy, fresh readiness and bounded recovery of the newly retained records. Then restart with a new password-free PLAN and new action approval. The password may be requested only when fresh STG-005A EXECUTE actually needs it, through the reviewed private stdin/FD channel. |
 
 ### Permitted work
 
@@ -359,7 +368,7 @@ is the first Store Profile sample, not a shared-service special case.
 | STG-006 | Exact-main passive preflight | `PASS` for candidate `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | Evidence only; no release/deploy/migration approval |
 | OPS-001 | Secret-safe Staging tooling | `REPOSITORY_COMPLETE`; bounded repairs #75-#82 and #87 are `IN_MAIN` | PR #87's recovery-only release/env path supported the later exact `6753855497...` rebind/deploy/recovery; runtime actions remain independently exact-SHA/action/Owner-gated |
 | STG-007 | Exact-SHA V10-aware continuation | `PASS` at deployed Staging SHA `2837ae88...` / Flyway V10 | Runtime batch complete; no approval or evidence is reusable |
-| STG-008 | Synthetic topology and source | `DEPENDENCY_REPAIR_RUNTIME_GATE` | Identity/password contract is aligned. The exact `6753855497...` continuation completed rebind/deploy/readiness and old-pair recovery. Its password-free plan then failed before command/data access at the non-web request-context dependency; no data write occurred. A new exact-SHA Staging deploy and post-Batch-A recovery of the newly retained pair precede any retry. |
+| STG-008 | Synthetic topology and source | `DEPENDENCY_REPAIR_RUNTIME_GATE` | Identity/password contract is aligned. Exact `2a6c30a...` completed rebind/deploy/readiness and validated the request-context repair before a non-web WebSocket lifecycle timeout; no data write occurred. A new exact-SHA Staging deploy and post-Batch-A recovery of the newly retained pair precede any retry. |
 
 The authoritative post-stack capability matrix, Staging decision, and next
 bounded loops are in [Post-Stack Ground Truth Audit](POST_STACK_GROUND_TRUTH_AUDIT.md).
@@ -483,6 +492,7 @@ Primary authorities:
 - [STG-008 synthetic topology/source entry evidence](STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md)
 - [STG-008 guarded one-shot Flyway repair evidence](STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md)
 - [STG-008 non-web request-context repair evidence](STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md)
+- [STG-008 one-shot lifecycle repair evidence](STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md)
 - [OPS-001 secret-safe tooling runbook](../../../deployment/cloud/README_OPS001_STAGING_SECRET_SAFE_TOOLING.md)
 - [System Documentation](../../../SYSTEM_DOCUMENTATION.md)
 - [API contract](../../../doc/API.md)
