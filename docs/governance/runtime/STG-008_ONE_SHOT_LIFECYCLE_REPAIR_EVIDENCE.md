@@ -85,3 +85,14 @@ record, deploys, migrates, reads a credential, or changes synthetic data.
 The repair is in the Dependency Repair Auto-Loop. Once it meets the permanent
 repository merge gates, fetch the resulting exact `origin/main`, inspect its
 bounded scope, and resume the already authorized Staging rebind sequence.
+
+## Non-web realtime-publisher dependency repair
+
+After exact `325e172...` deployed the recovery-pair repair and passed
+readiness/recovery, a fresh password-free STG-005A PLAN failed before any
+credential or transaction: `StompRealtimeEventPublisher` requires
+`SimpMessagingTemplate` while the dedicated non-web profile correctly excludes
+`WebSocketConfig`. The bounded repair excludes only that publisher from the
+same profile and adds a safety-shape regression; normal web behavior is
+unchanged. The newly retained fail-closed pair requires a fresh exact rebind
+and recovery before another PLAN.

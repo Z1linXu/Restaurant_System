@@ -1,12 +1,14 @@
 package com.restaurant.system.common.realtime;
 
 import java.util.List;
+import org.springframework.context.annotation.Profile;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
+@Profile("!staging-synthetic-bootstrap")
 public class StompRealtimeEventPublisher implements RealtimeEventPublisher {
 
     private final SimpMessagingTemplate messagingTemplate;
