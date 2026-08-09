@@ -138,8 +138,8 @@ Flyway execution, synthetic bootstrap, credential creation, source-menu write,
 login, target onboarding, validate, execute, replay, clone, or Production
 action. Every consumed STG-007 approval remains non-replayable. The credential
 decision is resolved, but the failed plan readiness/approval cannot be reused.
-After the bounded repair enters main, its changed backend SHA requires a new
-exact Staging release/deploy Owner Gate and the retained blocked records
+PR #85 entered main with the bounded repair. Its changed backend SHA requires
+a new exact Staging release/deploy Owner Gate and the retained blocked records
 require separately approved recovery before any retry or password request.
 The restarted batch must bind fresh readiness and distinct approvals to every
 STG-005A/STG-005B plan/create/replay. Staging acceptance retains

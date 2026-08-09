@@ -8,7 +8,8 @@
 >
 > Runtime result: `STG-005A PLAN = NO_GO`; no application data write
 >
-> Repair state: `REPOSITORY_REPAIR_UNDER_REVIEW`; runtime use remains separately gated
+> Repair state: `IN_MAIN` through PR #85 at
+> `c95c3840fa972f84b3e5dbd345fef3e4c12aa8c6`; runtime use remains separately gated
 
 ## Scope and Ground Truth
 
@@ -135,13 +136,17 @@ and user against the raw resolved property exactly and rejects case/whitespace
 aliases; focused and full regressions were rerun. Agent 6's final re-review is
 `ACCEPT` with no remaining finding.
 
-The final GitHub latest-main base/head/diff/check/mergeability gates remain
-mandatory before publication or merge.
+The GitHub gate then passed against exact base `828af4e8...`: PR #85 contained
+one expected commit (`8582805b...`) and 17 expected files, was conflict-free,
+`MERGEABLE/CLEAN`, had no failed or pending check, and retained Agent 6
+`ACCEPT`. It was marked ready and merged under the permanent Auto-Merge Policy
+as `c95c3840fa972f84b3e5dbd345fef3e4c12aa8c6`. Both the reviewed head and
+merge commit were verified ancestors of `origin/main`.
 
 ## Runtime boundary and next Owner Gate
 
-Merging this repair will create a new exact `main` SHA with a backend change.
-It cannot repair the already-built/deployed `2837ae88...` image, and neither
+PR #85 created a new exact `main` SHA with a backend change. It cannot repair
+the already-built/deployed `2837ae88...` image, and neither
 the failed readiness/approval nor the retained STG-007 deployment evidence may
 be rebound to that changed candidate. The shared blocked state also requires
 a separately approved recovery that first confirms one-shot absence, zero
@@ -150,7 +155,8 @@ blocked records.
 
 The next runtime batch therefore requires explicit Owner approval for:
 
-1. the new exact merged repair SHA;
+1. the freshly fetched latest exact `main` containing PR #85 (a later
+   governance-only merge may advance it without changing this repair);
 2. a fresh exact Staging release/preflight and Staging-only deployment of that
    SHA with no new migration expected;
 3. bounded blocked-state recovery after read-only safety confirmation; and

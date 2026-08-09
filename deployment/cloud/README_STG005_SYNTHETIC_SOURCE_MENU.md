@@ -174,6 +174,6 @@ the older shared production safety rule required Flyway enabled for every
 cloud profile. The bounded repair models the exact Flyway-disabled one-shot
 contract without weakening ordinary cloud/prod startup. No topology or
 source-menu row was written. Source-menu plan/create/replay remain blocked
-until the repair is in main, a new exact backend image is deployed, and the
+until the PR #85 repair is deployed in a new exact backend image and the
 retained AL-003S blocked state receives separate Owner-approved recovery. See
 [STG-008 Flyway guard repair evidence](../../docs/governance/runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md).

@@ -206,7 +206,7 @@ older production safety guard did not recognize this profile's required
 Flyway-disabled shape. Cleanup succeeded, topology remained empty, and the
 launcher persisted blocked state. The bounded repository correction retains
 all ordinary cloud guards and adds the exact bidirectional one-shot contract
-above. After that repair enters main, a new exact release/deploy and separately
-approved blocked-state recovery are required; the old image cannot be patched
-or retried. See
+above. That repair entered main through PR #85. A new exact release/deploy and
+separately approved blocked-state recovery are still required; the old image
+cannot be patched or retried. See
 [STG-008 Flyway guard repair evidence](../../docs/governance/runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md).
