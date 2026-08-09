@@ -29,9 +29,12 @@
 > reconfirmed the zero-write V10 baseline but stopped before Batch A mutation
 > when the ordinary release path could not legally cross those retained
 > records. PR #87 merged the dedicated blocked-state-safe release/env repair at
-> `4b954e09...`; it is not deployed. Its new runtime-sensitive SHA requires a
-> new exact-main Staging release/preflight/deploy Owner approval, and blocked-
-> state recovery remains a bounded post-Batch-A action.
+> `4b954e09...`; a later continuation used it to deploy exact `6753855497...`,
+> pass fresh readiness and recover only the old reviewed pair. The following
+> password-free plan failed before command/data access at the non-web
+> request-context dependency. Its repair requires a new exact-main Staging
+> release/preflight/deploy Owner approval, and recovery remains a bounded
+> post-Batch-A action.
 
 ## 1. Purpose and classification
 
@@ -363,7 +366,12 @@ The later plan failure, zero-write continuity and dependency repair are in
 The subsequent fresh baseline, release-rebind sequencing deadlock and PR #87
 repair are in
 [STG-008 Release-Rebind Serialization Repair Evidence](../runtime/STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md).
+The later exact `6753855497...` rebind/deploy/readiness/recovery continuation
+passed, but its following password-free plan failed before command/data access
+at the non-web request-context dependency. The new repair and current boundary
+are recorded in
+[STG-008 Non-Web Request-Context Repair Evidence](../runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md).
 
 Stop state:
 
-`STG-008_RELEASE_REBIND_REPAIR_IN_MAIN_WAITING_FOR_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
+`STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`

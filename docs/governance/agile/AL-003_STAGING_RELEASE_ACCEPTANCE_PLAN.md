@@ -1,15 +1,16 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Capability state: `STG-008_RELEASE_REBIND_REPAIR_IN_MAIN_WAITING_FOR_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
+> Capability state: `STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
 >
 > Historical failed candidate: `8f909525781804f61d1da388882f530da358c3c4`
 >
-> Current exact deployed Staging SHA: `2837ae88e55142c99c6975f8b6575febffc913a1`
+> Current exact deployed Staging SHA: `6753855497b8c47be99a8d88ae9d9961653addb0`
 >
 > Governance packages: PR #72 and PRs #60-#71 are `IN_MAIN`; PR #85's bounded
 > startup-safety repair, PR #86 Ground Truth closure and PR #87 release-rebind
-> serialization repair are also `IN_MAIN`. Runtime-sensitive #85/#87 are
-> undeployed; repository merge is not runtime evidence
+> serialization repair are also `IN_MAIN`. The later exact `6753855497...`
+> continuation used #87 for Staging-only rebind/deploy/recovery; the current
+> non-web request-context repair remains repository-only and undeployed
 >
 > Runtime checkpoint: `STG-007=PASS`; V10-to-V10 deploy, repaired readiness, runtime collection, same-image restart and post-restart verification all `PASS`
 
@@ -57,10 +58,12 @@ Batch A mutation, the ordinary release path was proved unable to cross the
 retained block without violating Batch A-before-recovery ordering. The bounded
 [release-rebind serialization repair](../runtime/STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md)
 entered main through PR #87 at `4b954e09...`; it preserves both blocked files
-and every ordinary action block. It was not deployed or executed. Because it
-advanced runtime-sensitive main, the conditional `4759a23b...` authorization
-is superseded and cannot authorize the new candidate. No action approval was
-created or consumed in that continuation.
+and every ordinary action block. A later Owner-authorized continuation used it
+to bind, preflight and deploy exact `6753855497...`, then cleared only the
+reviewed old pair. The following password-free plan failed before command/data
+access at a non-web request-context dependency. No synthetic data changed; the
+new fail-closed records require the bounded repository repair and a new exact
+candidate/Owner runtime gate.
 
 Historically, PR #56 entered `main` and the fixed release candidate was
 `8f909525781804f61d1da388882f530da358c3c4`. The read-only preflight is recorded
@@ -206,10 +209,12 @@ alignment, the first plan one-shot stopped before the command at the bounded
 cloud/Flyway dependency defect. PR #85 put that repair in main. The first
 authorized recovery continuation then stopped before Batch A mutation at the
 release-rebind sequencing deadlock, and PR #87 put the bounded recovery-only
-release/env path in main. A freshly fetched exact-main descendant of
-`4b954e09...` must receive a new Staging release/deploy approval, and retained
-blocked state remains recoverable only after Batch A passes. Only then may a
-restarted
+release/env path in main. Exact `6753855497...` subsequently passed its
+Staging-only rebind/deploy/readiness/recovery sequence. The following fresh
+STG-005A plan failed before command/data access at the non-web request-context
+dependency. A repaired, newly fetched exact main must receive a new Staging
+release/deploy approval, and the new retained blocked state remains recoverable
+only after Batch A passes. Only then may a restarted
 batch cover the synthetic topology/source work in steps 3 and 5 with fresh
 readiness and distinct plan/create/replay approvals. Steps 4 and 6-9's
 login/onboarding/clone acceptance remain later gates. The retained end-to-end
@@ -319,4 +324,4 @@ recovers.
 
 ## Capability dependency state
 
-`STG-008_RELEASE_REBIND_REPAIR_IN_MAIN_WAITING_FOR_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`
+`STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`

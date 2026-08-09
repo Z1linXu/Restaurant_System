@@ -6,6 +6,7 @@ import com.restaurant.system.user.repository.RoleRepository;
 import com.restaurant.system.user.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -14,24 +15,29 @@ public class RequestUserContextService {
     public static final String AUTHENTICATED_USER_ATTRIBUTE = RequestUserContextService.class.getName() + ".currentUser";
     static final String USER_ID_HEADER = "X-User-Id";
 
-    private final HttpServletRequest request;
+    private final ObjectProvider<HttpServletRequest> requestProvider;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final boolean xUserIdFallbackEnabled;
 
     public RequestUserContextService(
-        HttpServletRequest request,
+        ObjectProvider<HttpServletRequest> requestProvider,
         UserRepository userRepository,
         RoleRepository roleRepository,
         @Value("${app.auth.x-user-id-fallback-enabled:true}") boolean xUserIdFallbackEnabled
     ) {
-        this.request = request;
+        this.requestProvider = requestProvider;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.xUserIdFallbackEnabled = xUserIdFallbackEnabled;
     }
 
     public AuthenticatedUser getRequiredUser() {
+        HttpServletRequest request = requestProvider.getIfAvailable();
+        if (request == null) {
+            throw new UnauthorizedException("Request authorization context is unavailable");
+        }
+
         Object cached = request.getAttribute(AUTHENTICATED_USER_ATTRIBUTE);
         if (cached instanceof AuthenticatedUser authenticatedUser) {
             return authenticatedUser;

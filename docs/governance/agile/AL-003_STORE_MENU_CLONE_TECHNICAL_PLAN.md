@@ -26,7 +26,7 @@
 | `PLAN_STATUS` | `IN_MAIN_AWAITING_STAGING_ACCEPTANCE_AND_RUNTIME_APPROVAL` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | PRs #60-#87 and the #61-#70 stack are `IN_MAIN`; exact `2837ae88...` remains deployed to isolated Staging at V10 and `STG-007=PASS`, while PRs #83/#84/#86 are evidence/governance only and runtime-sensitive PRs #85/#87 are undeployed. The Owner aligned the STG-008 credential contract. Fresh password-free plan readiness passed, but the one-shot stopped before its command/data path at the older cloud/Flyway safety conflict and retained blocked state with zero writes. A later recovery continuation reconfirmed the baseline and stopped before Batch A mutation at the release-rebind sequencing deadlock now repaired by #87. Stop at the new exact-main Staging deploy plus post-Batch-A blocked-recovery Owner Gate; do not reuse the `4759a23b...` authorization or infer bootstrap, clone, Staging acceptance or Production authority. |
+| `RECOMMENDED_ACTION` | PRs #60-#87 and the #61-#70 stack are `IN_MAIN`; exact `6753855497...` is deployed to isolated Staging at V10 after a bounded rebind/deploy/recovery continuation, while `STG-007=PASS` remains historical infrastructure evidence. The Owner aligned the STG-008 credential contract. The first password-free plan then stopped before command/data access because non-web startup could not construct its servlet-bound request context; zero writes occurred and the new fail-closed pair was retained. Stop for the bounded repository repair, then a new exact-main Staging deploy plus post-Batch-A blocked-recovery Owner Gate; do not infer bootstrap, clone, Staging acceptance or Production authority. |
 
 PR-A through PR-F are in `main`. PR-D supplies generic source-option copying
 and target-local parent mapping; PR #54 placed the concrete Chinatown Profile
@@ -1000,16 +1000,19 @@ STG-007 has now proved those infrastructure controls at exact `2837ae88...`;
 login, onboarding, validate and execute remain separate action-specific Owner
 Runtime Gates, and any future restart still needs its own authorization.
 
-Current STG-007 evidence is narrower than clone acceptance. Exact
-`2837ae88e55142c99c6975f8b6575febffc913a1` is deployed only to isolated
-Staging at Flyway V10; formal preflight, readiness, sanitized runtime
-collection, same-image restart and post-restart health passed with exact
-container/image/release/Flyway identity unchanged. The bounded tooling repair
+Current STG-007 evidence is narrower than clone acceptance. Its historical
+exact `2837ae88e55142c99c6975f8b6575febffc913a1` deployment passed formal
+preflight, readiness, sanitized runtime collection, same-image restart and
+post-restart health with exact container/image/release/Flyway identity
+unchanged. The later exact `6753855497...` Staging continuation passed
+rebind/deploy/readiness/old-pair recovery before the non-web plan failure. The bounded tooling repair
 changes no clone/API/profile behavior. STG-005A, STG-005B, credential creation,
 login, target onboarding and validate/execute/replay remain unexecuted.
-STG-008 is stopped after a pre-command plan `NO_GO` and a later pre-Batch-A
-release-rebind dependency repair at
-`STG-008_RELEASE_REBIND_REPAIR_IN_MAIN_WAITING_FOR_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
+STG-008 is stopped after a pre-command plan `NO_GO`; its prior release-rebind
+repair supported a later exact `6753855497...` rebind/deploy/recovery, and the
+new non-web request-context repair is pending publication at
+`STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
 See [the sanitized STG-008 entry evidence](../runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md)
 [the Flyway guard repair evidence](../runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md),
 and [the release-rebind serialization repair evidence](../runtime/STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md).
+See also [the non-web request-context repair evidence](../runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md).

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.restaurant.system.kitchen.entity.KitchenTask;
 import com.restaurant.system.kitchen.repository.KitchenTaskRepository;
@@ -23,6 +24,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.ObjectProvider;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -48,8 +50,9 @@ class AuthorizationServiceTest {
 
     @BeforeEach
     void setUp() {
+        ObjectProvider<HttpServletRequest> requestProvider = requestProvider(request);
         RequestUserContextService requestUserContextService = new RequestUserContextService(
-            request,
+            requestProvider,
             userRepository,
             roleRepository,
             true
@@ -139,6 +142,35 @@ class AuthorizationServiceTest {
         when(request.getHeader("X-User-Id")).thenReturn(null);
 
         assertThrows(UnauthorizedException.class, () -> authorizationService.require(Capability.ORDER_VIEW_DETAIL));
+    }
+
+    @Test
+    void missingServletRequestFailsClosedWithoutQueryingUserData() {
+        ObjectProvider<HttpServletRequest> noRequestProvider = requestProvider(null);
+        RequestUserContextService requestUserContextService = new RequestUserContextService(
+            noRequestProvider,
+            userRepository,
+            roleRepository,
+            true
+        );
+        AuthorizationService nonWebAuthorizationService = new AuthorizationService(
+            requestUserContextService,
+            new RoleCapabilityRegistry(),
+            storeAccessService,
+            orderRepository,
+            orderItemRepository,
+            kitchenTaskRepository
+        );
+
+        assertThrows(UnauthorizedException.class, () -> nonWebAuthorizationService.require(Capability.ORDER_VIEW_DETAIL));
+        verifyNoInteractions(userRepository, roleRepository);
+    }
+
+    private ObjectProvider<HttpServletRequest> requestProvider(HttpServletRequest servletRequest) {
+        @SuppressWarnings("unchecked")
+        ObjectProvider<HttpServletRequest> provider = org.mockito.Mockito.mock(ObjectProvider.class);
+        lenient().when(provider.getIfAvailable()).thenReturn(servletRequest);
+        return provider;
     }
 
     @Test

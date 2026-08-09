@@ -78,6 +78,10 @@ separate from historical evidence snapshots and business implementation details:
   records the fresh V10/zero-data/continuity baseline, the retained exact
   blocked pair, the release-helper sequencing deadlock, and the narrow
   digest-bound recovery-release prerequisite. It authorizes no runtime use.
+- [STG-008 Non-Web Request Context Repair Evidence](docs/governance/runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md)
+  records the bounded fix that lets the guarded non-web synthetic command
+  construct its application context without creating a servlet request. Any
+  attempt to use request authentication in that mode remains fail-closed.
 - [Known Issues Backlog](docs/governance/KNOWN_ISSUES_BACKLOG.md) is the
   authority for current issue triage and closure status.
 - [Feature Backlog](docs/governance/FEATURE_BACKLOG.md) is the authority for
@@ -802,12 +806,19 @@ unsafe mode, validates one complete ASCII record plus final newline, and
 revalidates while rotation can still roll back. All 13 deployment shell test
 files and repository checks passed; Agent 6's final result was `ACCEPT`. PR #87
 merged the repair at
-`4b954e09a365fec909ed6da3ddf8fa9f13639cdc`. It remains undeployed and unused.
-That runtime-sensitive merge invalidated the recovery authorization bound to
-`4759a23b...`; no release, env rotation, preflight, deploy, Flyway, blocked-
-state recovery, one-shot, password request or business-data action followed.
-The unique stop state is
-`STG-008_RELEASE_REBIND_REPAIR_IN_MAIN_WAITING_FOR_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
+`4b954e09a365fec909ed6da3ddf8fa9f13639cdc`. A later Owner-authorized
+continuation used that control path to bind, preflight, build and deploy exact
+`6753855497b8c47be99a8d88ae9d9961653addb0` to isolated Staging at V10. Fresh
+readiness passed and the bounded recovery cleared only the reviewed old blocked
+marker. The following password-free STG-005A plan then failed before its
+command or data path because non-web startup could not construct the
+servlet-bound request context; zero synthetic data was written and the new
+fail-closed records were retained.
+
+The bounded repository repair for that non-web authorization-context defect is
+documented in [STG-008 Non-Web Request-Context Repair Evidence](docs/governance/runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md).
+It is not deployed. The unique stop state is
+`STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_REQUIRES_NEW_EXACT_SHA_STAGING_REBIND_AND_BLOCKED_STATE_RECOVERY_OWNER_RUNTIME_APPROVAL`.
 
 Repository PRs now follow the permanent auto-merge gate in the Agile Loop
 Operating Model: latest-main base, exact single-package scope, all applicable
