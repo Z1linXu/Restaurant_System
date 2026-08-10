@@ -2,20 +2,25 @@
 
 ## Current verified continuation override (2026-08-10)
 
-`origin/main=1c0289b797207fad50d4327df64a8234e02fe594`; Staging remains exact `468b8705...`, Flyway is
+Git Ground Truth before evidence publication was
+`origin/main=1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c`; Staging is exact
+`1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c`, Flyway is
 V1--V10 with no pending or failed migration, and Printing is disabled.
 STG-005A PLAN/EXECUTE/REPLAY are `VALIDATED/CREATED/REPLAYED`; STG-005B is
 `VALIDATED/CREATED/REPLAYED` with `4/3/13/38` and replay revision `2 -> 2`.
 Synthetic Organization, Owner, source Store and credential are ready. No
 one-shot is active, the blocked marker is absent, and the lock is empty. Exact
-Staging readiness and API-only Owner login checks passed on this candidate, but
-manual Chrome acceptance then failed at the initial login POST with CORS HTTP
-403 before authentication. Phase A is reopened at
-`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`;
+Formal preflight, V10-to-V10 deploy, readiness, private credential rotation,
+secret-safe API acceptance and real-Chrome browser-equivalent login/
+Organization/Store/dashboard/refresh/logout checks passed without a 401/403.
+Fresh Owner post-repair manual UI evidence is the only remaining Phase-A item.
+The unique stop is
+`STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`;
 this remains `DEPLOYED_TO_STAGING`, not `STAGING_ACCEPTED`. Chinatown
 onboarding/clone remains prohibited.
 
-See [STG-008 synthetic runtime progress evidence](STG-008_SYNTHETIC_RUNTIME_PROGRESS_EVIDENCE.md).
+See [STG-008 synthetic runtime progress evidence](STG-008_SYNTHETIC_RUNTIME_PROGRESS_EVIDENCE.md)
+and [STG-009 browser-equivalent acceptance evidence](STG-009_PHASE_A_BROWSER_EQUIVALENT_ACCEPTANCE_EVIDENCE.md).
 
 > This Handoff is a navigation snapshot only.
 > Git ground truth, `ALIVE_RUNTIME_PLANBOOK.md`, `FEATURE_BACKLOG.md`,
@@ -85,10 +90,10 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| runtime-sensitive current-main candidate | `1c0289b797207fad50d4327df64a8234e02fe594` | `IN_MAIN` through PR #99; the browser-login proxy/rotation repair is not yet deployed or Staging accepted. |
-| exact deployed Staging runtime | `468b8705c8e360b9e34336c5560442179544069b` | `DEPLOYED_TO_STAGING`; V10 and synthetic A/B execution/replay complete. API-only login checks passed, but browser Phase A is reopened; no one-shot or blocked marker. |
+| runtime-sensitive deployed candidate | `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c` | `IN_MAIN` and `DEPLOYED_TO_STAGING`; automated API/browser-equivalent acceptance passed, Owner manual UI evidence pending. |
+| exact deployed Staging runtime | `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c` | `DEPLOYED_TO_STAGING`; V10, synthetic A/B and automated Phase-A checks complete; no one-shot, marker or lock. |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
-| Runtime-sensitive delivery package | browser-login proxy/rotation dependency repair / PR #99 | `IN_MAIN` at `1c0289b...`; not deployed and not Staging accepted |
+| Runtime-sensitive delivery package | browser-login proxy/rotation dependency repair / PR #99 | `IN_MAIN` and deployed through exact `1a3f2e...`; Owner manual UI acceptance remains separate |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
 
 `IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
@@ -166,7 +171,7 @@ the current bounded Staging runtime identity below.
 | Environment | Retained evidence | Classification and boundary |
 |---|---|---|
 | Production | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`; Compose `cloud` `db/backend/nginx`; unchanged IDs/start times/restart `0`; health 200 | `MACHINE_VERIFIED_READ_ONLY` continuity only; Flyway/business state not queried |
-| Staging | `468b8705c8e360b9e34336c5560442179544069b`; Flyway V10 with no pending or failed migration; exact `db/backend/nginx` identities running; health 200/200/200 | `DEPLOYED_TO_STAGING`; synthetic A/B plan/execute/replay complete. Prior login/logout evidence is API-only; browser Phase A is reopened. No active one-shot, marker absent, lock empty. |
+| Staging | `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c`; Flyway V10 with no pending or failed migration; exact `db/backend/nginx` identities running; health 200/200/200 | `DEPLOYED_TO_STAGING`; synthetic A/B and automated Phase-A API/browser-equivalent acceptance complete. Owner manual UI evidence pending; no active one-shot, marker or lock. |
 | Staging isolation | project `restaurant-pos-staging`; only `127.0.0.1:18080`; separate state/network/mounts; private leaf UID 70/mode 0700 | `MACHINE_VERIFIED_READ_ONLY` |
 | Staging printing | `STAGING_PRINT_MODE=DISABLED`; feature flag `false` | `MACHINE_VERIFIED_READ_ONLY` |
 
@@ -196,11 +201,11 @@ new exact candidate and authorization cannot be reused.
 | Field | Current value |
 |---|---|
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN` |
-| Current package | Exact `468b8705...` remains deployed at V10 with completed synthetic A/B plan/execute/replay, `4/3/13/38`, replay `2 -> 2`. API-only Phase A passed, but manual Chrome acceptance failed at the first login POST with CORS HTTP 403 before authentication. No active one-shot, marker or lock remains. |
-| Feature stop state | `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND` |
+| Current Agile Loop | `STG-009_PHASE_A_OWNER_MANUAL_UI_ACCEPTANCE` |
+| Current package | Exact `1a3f2e...` is deployed at V10 with completed synthetic A/B, `4/3/13/38`, replay `2 -> 2`, credential rotation and automated API/browser-equivalent acceptance. No active one-shot, marker or lock remains. |
+| Feature stop state | `STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE` |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | No new Owner Gate for the bounded browser-login dependency repair, exact-SHA Staging rebind/deploy, private credential rotation, browser-equivalent verification, or manual Phase-A retry. STG-005A/B must not be repeated. Chinatown Phase B, migration, product/security/identity-contract change, Production requirement, ambiguous identity, unexpected data, or destructive action remains a true Owner Gate. |
+| Current Owner gate | Owner supplies fresh post-repair manual UI login, principal, Organization, sole source Store and dashboard evidence. STG-005A/B must not be repeated. Chinatown Phase B, migration, product/security/identity-contract change, Production requirement, ambiguous identity, unexpected data, or destructive action remains a separate true Owner Gate. |
 
 ### Permitted work
 

@@ -5,6 +5,12 @@
 > acceptance by `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN`. API-only 200 did
 > not exercise browser Origin/proxy behavior; see
 > [the browser-login repair evidence](STG-009_PHASE_A_BROWSER_LOGIN_403_REPAIR_EVIDENCE.md).
+>
+> Later exact runtime evidence deployed `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c`,
+> privately rotated the credential and passed both API and real-Chrome
+> browser-equivalent acceptance. STG-008 remains `PASS`; only fresh Owner
+> post-repair manual UI confirmation remains for Phase A. See
+> [the browser-equivalent evidence](STG-009_PHASE_A_BROWSER_EQUIVALENT_ACCEPTANCE_EVIDENCE.md).
 
 > Classification: `MACHINE_VERIFIED_STAGING_EVIDENCE`
 >
@@ -37,13 +43,14 @@
 
 ## Current boundary
 
-`STG-008=PASS` covers the completed synthetic topology/source contract. The
-separately bounded API-only Phase-A evidence does not establish browser PASS:
-fresh exact deployment/readiness, STG-005A and STG-005B plan/execute/replay,
-expected counts/revision, no duplicate/crossover, disabled Printing, intact
-isolation, and unchanged Production continuity remain valid. Phase B remains prohibited.
-The unique stop state is
-`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`.
+`STG-008=PASS` covers the completed synthetic topology/source contract. Exact
+`1a3f2e...` retained that topology and passed fresh deployment/readiness,
+private credential rotation, API and real-Chrome browser-equivalent Phase-A
+acceptance. STG-005A/B plan/execute/replay, expected counts/revision, no
+duplicate/crossover, disabled Printing, intact isolation and unchanged
+Production continuity remain valid. Fresh Owner post-repair manual UI evidence
+is pending and Phase B remains prohibited. The unique stop state is
+`STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`.
 
 No password, token, cookie, authorization header, or business data is retained
 in this evidence.

@@ -5,17 +5,18 @@
 The synthetic prerequisite actions completed in isolated Staging: STG-005A and
 STG-005B each have PLAN `VALIDATED`, EXECUTE `CREATED`, REPLAY `REPLAYED`; the
 source menu is `4/3/13/38` and replay is `2 -> 2`. Exact Staging
-`468b8705c8e360b9e34336c5560442179544069b` then passed readiness and the
-bounded API-only Phase-A Owner login/workspace/overview/logout checks. Manual
-Chrome acceptance then failed on the first login POST with CORS HTTP 403 before
-authentication. STG-005A/B remain complete and must not be repeated. This does
-not authorize Chinatown onboarding or clone.
+`1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c` passed formal preflight,
+V10-to-V10 deploy, readiness, private credential rotation, API acceptance and
+real-Chrome browser-equivalent login/workspace/Organization/Store/dashboard/
+refresh/logout checks without a 401/403. Fresh Owner post-repair manual UI
+evidence remains required. STG-005A/B must not be repeated, and Chinatown
+onboarding/clone remains unauthorized.
 
 > Package state: `IN_MAIN`; `STG-006_PASS`; OPS-001 repository tooling complete after reviewed merge
 >
 > Prepared against: STG-005B checkpoint `0aba8377a3b7acec047c6ffd025f774d8a4d5e87`
 >
-> Runtime checkpoint: `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`
+> Runtime checkpoint: `STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`
 
 > Final Phase-A evidence: [STG-009 Phase-A Owner login evidence](../runtime/STG-009_PHASE_A_OWNER_LOGIN_EVIDENCE.md)
 
@@ -388,4 +389,4 @@ The current repair and boundary are recorded in
 
 Stop state:
 
-`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`
+`STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`

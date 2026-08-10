@@ -2,17 +2,17 @@
 
 ## Current verified execution state (2026-08-10)
 
-The Staging-only synthetic sequence completed without duplication on exact
-Staging `468b8705...`: STG-005A
+The Staging-only synthetic sequence remains complete without duplication on
+exact Staging `1a3f2e...`: STG-005A
 and STG-005B PLAN/EXECUTE/REPLAY are `VALIDATED/CREATED/REPLAYED`; menu counts
 are `4/3/13/38` and replay revision is `2 -> 2`. Organization, Owner, source
 Store and credential are ready; no one-shot or blocked marker remains and the
 lock is empty. This is synthetic Staging runtime evidence, not Production
-acceptance. The separate API-only Phase-A checks passed, but manual Chrome
-acceptance failed at the initial login POST with CORS HTTP 403 before
-authentication. Phase A is reopened at
-`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`; no
-Chinatown or Production action is implied.
+acceptance. The repaired runtime passed private credential rotation, API and
+real-Chrome browser-equivalent Phase-A checks without a 401/403. Fresh Owner
+post-repair manual UI evidence remains pending at
+`STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`;
+no Chinatown or Production action is implied.
 
 > Loop: `STG-005_SYNTHETIC_BUSINESS_ACCEPTANCE`
 >

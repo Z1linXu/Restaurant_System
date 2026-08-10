@@ -1,25 +1,25 @@
 # SYSTEM DOCUMENTATION
 
-> 2026-08-10 Phase-A Ground Truth: synthetic topology/source remains complete,
-> but browser login acceptance is reopened. The first Chrome request,
-> `POST /api/v1/auth/login`, was rejected by Spring CORS before authentication
-> because nginx stripped the explicit SSH-tunnel port from the upstream Host.
-> The generic repair preserves `$http_host`; it is not deployed or accepted
-> until a fresh exact-SHA Staging runtime proves the browser flow. API-only
-> acceptance is insufficient, and Chinatown/Production remains gated.
+> 2026-08-10 Phase-A Ground Truth: synthetic topology/source remains complete.
+> Exact Staging `1a3f2e...` deployed the generic `$http_host` repair, retained
+> Flyway V10 and passed formal preflight, readiness, private credential
+> rotation, API acceptance and real-Chrome browser-equivalent acceptance
+> without a 401/403. Fresh Owner post-repair manual UI evidence is the only
+> remaining Phase-A item; Chinatown/Production remains gated.
 
 ## Current verified STG-008 continuation
 
-Staging is exact `468b8705...` at Flyway V10. STG-005A and STG-005B have
+Staging is exact `1a3f2e...` at Flyway V10. STG-005A and STG-005B have
 completed PLAN/EXECUTE/REPLAY as `VALIDATED/CREATED/REPLAYED`; the synthetic
 source menu is `4/3/13/38`, replay is `2 -> 2`, no one-shot or blocked marker is
 active, and the lock is empty. This is `DEPLOYED_TO_STAGING` evidence only;
 `IN_MAIN` and `STAGING_ACCEPTED` remain separate. PR #97 is `IN_MAIN` and its
 Phase-A-only jq fallback was deployed and its API-only checks passed on this
 exact Staging runtime. Manual Chrome acceptance superseded that conclusion with
-the initial CORS 403. PR #99's proxy/rotation repair is `IN_MAIN` at
-`1c0289b...`, but remains undeployed and unaccepted; the next action is fresh
-exact-SHA Staging validation and browser Phase-A retry, not Phase B.
+the initial CORS 403. PR #99's proxy/rotation repair is `IN_MAIN` and deployed;
+the rotated credential, API flow and real-Chrome browser-equivalent flow
+passed. Owner post-repair manual UI evidence remains pending; Phase B is not
+authorized.
 
 ## Current Governance Index
 
@@ -847,10 +847,11 @@ It entered `main` through PR #89 at `434c9cc808648a4f80c91435d8667ad9fe160018`
 and was runtime-validated by exact `2a6c30a...`. PR #91 is `IN_MAIN` at
 `9a776d3...`; the Owner has authorized the bounded continuous Staging loop
 from fresh exact rebind through guarded topology/source work and conditional
-Phase-A Owner-login acceptance. Exact `468b8705...` passed only the API client;
-manual Chrome evidence reopened browser acceptance at the initial CORS 403.
-The current unique stop state is
-`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`.
+Phase-A Owner-login acceptance. Exact `1a3f2e...` deployed the proxy repair,
+rotated the credential privately and passed API plus real-Chrome
+browser-equivalent acceptance. Fresh Owner manual UI evidence remains. The
+current unique stop state is
+`STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`.
 
 Fresh read-only inspection later found that the retained STG-005A failure’s
 normal two-line cleanup/action-failure lock is more specific than the

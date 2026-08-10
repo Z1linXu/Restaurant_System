@@ -1,6 +1,11 @@
 # AL-003 Store 1 -> Chinatown Live Menu Clone Technical Plan
 
-> Status: `IN_MAIN_PHASE_A_BROWSER_LOGIN_REOPENED`; `STG-008=PASS`, `STG-009_PHASE_A_OWNER_LOGIN=REOPENED_BROWSER_403`
+> Status: `IN_MAIN_PHASE_A_BROWSER_EQUIVALENT_PASS`; `STG-008=PASS`, `STG-009_PHASE_A_OWNER_LOGIN=OWNER_MANUAL_UI_PENDING`
+>
+> Exact Staging `1a3f2e...` passed the repaired API and real-Chrome
+> browser-equivalent Owner flow after private credential rotation. Phase B
+> remains prohibited until the Owner supplies fresh post-repair manual UI
+> evidence.
 >
 > Prepared: 2026-07-31, America/Toronto
 >
@@ -26,7 +31,7 @@
 | `PLAN_STATUS` | `IN_MAIN_AWAITING_STAGING_ACCEPTANCE_AND_RUNTIME_APPROVAL` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | PRs #60-#99 and the #61-#70 stack are `IN_MAIN`; exact `468b8705...` is deployed to isolated Staging at V10. STG-005A/B passed; Phase-A login evidence is API-only and manual Chrome 403 reopened browser acceptance. PR #99's proxy/rotation dependency repair awaits exact-SHA Staging rebind and validation. Do not infer Chinatown clone, Production deployment, or Production authority. |
+| `RECOMMENDED_ACTION` | PRs #60-#100 and the #61-#70 stack are `IN_MAIN`; exact `1a3f2e...` is deployed to isolated Staging at V10. STG-005A/B, credential rotation and automated API/browser-equivalent Phase-A acceptance passed. Fresh Owner manual UI evidence remains. Do not infer Chinatown clone, Production deployment, or Production authority. |
 
 PR-A through PR-F are in `main`. PR-D supplies generic source-option copying
 and target-local parent mapping; PR #54 placed the concrete Chinatown Profile
@@ -1007,12 +1012,12 @@ post-restart health with exact container/image/release/Flyway identity
 unchanged. The later exact `6753855497...` Staging continuation passed
 rebind/deploy/readiness/old-pair recovery; exact `2a6c30a...` then verified the
 non-web request-context repair through password-free `VALIDATED`. The bounded
-tooling repair changes no clone/API/profile behavior. Exact `468b8705...` then
-verified the completed STG-005A/B synthetic topology and API-only Owner checks;
-manual Chrome 403 reopened Phase A. Target onboarding and validate/execute/
-replay remain unexecuted. The unique
-stop state is
-`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`.
+tooling repair changes no clone/API/profile behavior. Exact `1a3f2e...` then
+verified completed STG-005A/B, private credential rotation and API/real-Chrome
+browser-equivalent Owner checks. Fresh Owner manual UI evidence remains;
+target onboarding and validate/execute/replay are unexecuted. The unique stop
+state is
+`STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`.
 See [the sanitized STG-008 entry evidence](../runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md)
 [the Flyway guard repair evidence](../runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md),
 and [the release-rebind serialization repair evidence](../runtime/STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md).

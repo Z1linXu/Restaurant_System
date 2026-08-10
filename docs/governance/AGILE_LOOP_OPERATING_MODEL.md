@@ -3,14 +3,16 @@
 ## Verified continuation state (2026-08-10)
 
 The completed loop is `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE`; the bounded
-`STG-009_PHASE_A_OWNER_LOGIN_ACCEPTANCE` is reopened by manual browser evidence.
+`STG-009_PHASE_A_OWNER_LOGIN_ACCEPTANCE` remains open for Owner manual evidence.
 STG-005A and STG-005B PLAN/EXECUTE/REPLAY remain
 `VALIDATED/CREATED/REPLAYED`; the source menu is `4/3/13/38` and replay is
 `2 -> 2`. `IN_MAIN`, `DEPLOYED_TO_STAGING`, and `STAGING_ACCEPTED` remain
-distinct. Exact Staging `468b8705...` passed API-only Owner checks, but Chrome
-failed at the first login POST with upstream same-origin/CORS HTTP 403 before
-authentication. The current unique stop state is
-`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`.
+distinct. Exact Staging `1a3f2e...` passed formal preflight, V10-to-V10 deploy,
+readiness, private credential rotation, API acceptance and real-Chrome
+browser-equivalent acceptance without a 401/403. The pre-repair manual failure
+remains historical; fresh Owner manual UI evidence is pending. The unique stop
+state is
+`STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`.
 Chinatown onboarding/clone remains outside this loop.
 
 > Status: `ACTIVE_GOVERNANCE_PROCESS`
@@ -119,11 +121,11 @@ Flyway/runtime collection, one same-image restart and post-restart
 verification. Flyway remained V10/no-pending; printing/isolation and Production
 continuity were unchanged. `STG-007=PASS`. Exact `2a6c30a...` later validated
 PR #89 in Staging before exposing the separate non-web one-shot lifecycle
-defect. PR #91 is `IN_MAIN` at `9a776d3...`; the Owner now authorizes the
-bounded continuous Staging loop from fresh exact rebind through guarded
-STG-005A/STG-005B work and conditional Phase-A Owner-login acceptance. The
-current unique stop state is
-`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`.
+defect. PR #91 is `IN_MAIN` at `9a776d3...`; later exact `1a3f2e...` completed
+the authorized synthetic prerequisites, deployed the browser repair and passed
+API plus real-Chrome browser-equivalent acceptance. The current unique stop
+state is
+`STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`.
 
 Fresh read-only state inspection found a bounded recovery-tooling defect: the
 retained current lock has the reviewed ordered cleanup-plus-action-failure
@@ -182,10 +184,9 @@ required a servlet-bound request context. The resulting fail-closed records
 remain retained; topology and request data remain zero.
 
 The bounded non-web request-context repair was runtime-validated by exact
-`2a6c30a...`; PR #91 then placed the separate lifecycle repair in current main
-`9a776d3...`, not yet deployed. The current continuous Owner authorization
-covers the fresh exact Staging-only Batch A and reviewed new blocked-state
-recovery before retry or password request. See [its evidence](runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md).
+`2a6c30a...`; PR #91 then placed the separate lifecycle repair in main at
+`9a776d3...`. Later continuations superseded this historical checkpoint and
+deployed exact `1a3f2e...`. See [its evidence](runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md).
 The restarted batch must bind fresh readiness and distinct approvals to every
 STG-005A/STG-005B plan/create/replay. Staging acceptance retains
 the distinct prerequisite
