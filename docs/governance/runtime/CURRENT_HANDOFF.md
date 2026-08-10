@@ -2,7 +2,8 @@
 
 ## Current manifest v2 readiness override (2026-08-10)
 
-Fresh Git Ground Truth is `origin/main=53c217f893aa60e365f3ebb1b3de989862857eae`.
+The manifest-v2 collection baseline was
+`origin/main=53c217f893aa60e365f3ebb1b3de989862857eae`.
 The corrected Production/Staging read-only loop produced a deterministic,
 schema-valid [manifest v2](ST_DENIS_TWIN_PARITY_MANIFEST_V2.json); Staging was
 not reconstructed. Current stop:
