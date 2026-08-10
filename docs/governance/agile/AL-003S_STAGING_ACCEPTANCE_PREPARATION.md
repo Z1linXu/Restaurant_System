@@ -15,7 +15,7 @@ not authorize Chinatown onboarding or clone.
 >
 > Prepared against: STG-005B checkpoint `0aba8377a3b7acec047c6ffd025f774d8a4d5e87`
 >
-> Runtime checkpoint: `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`
+> Runtime checkpoint: `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`
 
 > Final Phase-A evidence: [STG-009 Phase-A Owner login evidence](../runtime/STG-009_PHASE_A_OWNER_LOGIN_EVIDENCE.md)
 
@@ -388,4 +388,4 @@ The current repair and boundary are recorded in
 
 Stop state:
 
-`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`
+`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`

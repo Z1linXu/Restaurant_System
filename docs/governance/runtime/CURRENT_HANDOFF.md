@@ -2,7 +2,7 @@
 
 ## Current verified continuation override (2026-08-10)
 
-`origin/main=468b8705...`; Staging is exact `468b8705...`, Flyway is
+`origin/main=1c0289b797207fad50d4327df64a8234e02fe594`; Staging remains exact `468b8705...`, Flyway is
 V1--V10 with no pending or failed migration, and Printing is disabled.
 STG-005A PLAN/EXECUTE/REPLAY are `VALIDATED/CREATED/REPLAYED`; STG-005B is
 `VALIDATED/CREATED/REPLAYED` with `4/3/13/38` and replay revision `2 -> 2`.
@@ -11,7 +11,7 @@ one-shot is active, the blocked marker is absent, and the lock is empty. Exact
 Staging readiness and API-only Owner login checks passed on this candidate, but
 manual Chrome acceptance then failed at the initial login POST with CORS HTTP
 403 before authentication. Phase A is reopened at
-`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`;
+`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`;
 this remains `DEPLOYED_TO_STAGING`, not `STAGING_ACCEPTED`. Chinatown
 onboarding/clone remains prohibited.
 
@@ -85,10 +85,10 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| runtime-sensitive current-main candidate | `7a1dbe6ef64b04977fdf5aac5e6ebfdf8b4cc182` | `IN_MAIN`; governance-only PR #98 is newer than deployed Staging. The browser-login proxy/rotation repair is only `DEPENDENCY_REPAIR_IN_REVIEW`. |
+| runtime-sensitive current-main candidate | `1c0289b797207fad50d4327df64a8234e02fe594` | `IN_MAIN` through PR #99; the browser-login proxy/rotation repair is not yet deployed or Staging accepted. |
 | exact deployed Staging runtime | `468b8705c8e360b9e34336c5560442179544069b` | `DEPLOYED_TO_STAGING`; V10 and synthetic A/B execution/replay complete. API-only login checks passed, but browser Phase A is reopened; no one-shot or blocked marker. |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
-| Runtime-sensitive delivery package | browser-login proxy/rotation dependency repair | `DEPENDENCY_REPAIR_IN_REVIEW`; not `IN_MAIN`, not deployed, not Staging accepted |
+| Runtime-sensitive delivery package | browser-login proxy/rotation dependency repair / PR #99 | `IN_MAIN` at `1c0289b...`; not deployed and not Staging accepted |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
 
 `IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
@@ -198,7 +198,7 @@ new exact candidate and authorization cannot be reused.
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` |
 | Current Agile Loop | `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN` |
 | Current package | Exact `468b8705...` remains deployed at V10 with completed synthetic A/B plan/execute/replay, `4/3/13/38`, replay `2 -> 2`. API-only Phase A passed, but manual Chrome acceptance failed at the first login POST with CORS HTTP 403 before authentication. No active one-shot, marker or lock remains. |
-| Feature stop state | `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW` |
+| Feature stop state | `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND` |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
 | Current Owner gate | No new Owner Gate for the bounded browser-login dependency repair, exact-SHA Staging rebind/deploy, private credential rotation, browser-equivalent verification, or manual Phase-A retry. STG-005A/B must not be repeated. Chinatown Phase B, migration, product/security/identity-contract change, Production requirement, ambiguous identity, unexpected data, or destructive action remains a true Owner Gate. |
 

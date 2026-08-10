@@ -11,7 +11,7 @@ lock is empty. This is synthetic Staging runtime evidence, not Production
 acceptance. The separate API-only Phase-A checks passed, but manual Chrome
 acceptance failed at the initial login POST with CORS HTTP 403 before
 authentication. Phase A is reopened at
-`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`; no
+`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`; no
 Chinatown or Production action is implied.
 
 > Loop: `STG-005_SYNTHETIC_BUSINESS_ACCEPTANCE`

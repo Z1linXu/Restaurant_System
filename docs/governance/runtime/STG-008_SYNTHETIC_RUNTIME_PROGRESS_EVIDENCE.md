@@ -43,7 +43,7 @@ fresh exact deployment/readiness, STG-005A and STG-005B plan/execute/replay,
 expected counts/revision, no duplicate/crossover, disabled Printing, intact
 isolation, and unchanged Production continuity remain valid. Phase B remains prohibited.
 The unique stop state is
-`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`.
+`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`.
 
 No password, token, cookie, authorization header, or business data is retained
 in this evidence.

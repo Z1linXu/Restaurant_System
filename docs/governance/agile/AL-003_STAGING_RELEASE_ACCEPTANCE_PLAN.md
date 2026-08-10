@@ -1,6 +1,6 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Capability state: `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`
+> Capability state: `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`
 >
 > API-only Phase-A evidence is superseded by manual Chrome evidence: the first
 > browser login request returned CORS HTTP 403 before authentication. A fresh
@@ -164,7 +164,7 @@ runtime until a new exact-SHA deployment is separately approved.
 ### Staging Owner login prerequisite
 
 The acceptance prerequisite state is now
-`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`.
+`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`.
 Application deployment and API-only login checks are not
 `AL-003_STAGING_ACCEPTANCE_READY`; exact Staging must additionally pass the
 browser flow after private credential rotation. Chinatown onboarding and clone
@@ -349,7 +349,7 @@ recovers.
 
 ## Capability dependency state
 
-`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`
+`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`
 
 Exact Staging `468b8705...` passed only the API-only Phase-A client. Browser
 acceptance is reopened; Phase-B Chinatown onboarding/validate/execute/clone/

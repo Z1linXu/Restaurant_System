@@ -27,11 +27,11 @@ no Chinatown or Production action is authorized.
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW` |
+| status | `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND` |
 | target_loop | `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN`; exact `468b8705...` completed synthetic A/B execution/replay, but browser Phase A is reopened. |
-| implementation status | `STG-008=PASS`; API-only Phase-A checks passed, while manual Chrome login failed before authentication with CORS HTTP 403. The generic nginx Host/port preservation repair is repository-only until exact-SHA Staging validation. |
+| implementation status | `STG-008=PASS`; API-only Phase-A checks passed, while manual Chrome login failed before authentication with CORS HTTP 403. PR #99's generic nginx Host/port preservation and private credential-rotation repair is `IN_MAIN` at `1c0289b...`, not yet deployed or Staging accepted. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md), [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md), [STG-008 entry evidence](runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md), [STG-008 Flyway guard repair evidence](runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md), [STG-008 release-rebind repair evidence](runtime/STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md), [STG-008 non-web request-context repair evidence](runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md), and [STG-008 one-shot lifecycle repair evidence](runtime/STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md). |
-| next action | Merge the bounded repair, exact-SHA rebind/deploy to Staging, rotate the exposed synthetic credential privately, then run browser-equivalent and Owner manual Phase-A acceptance. Do not repeat A/B and do not begin Chinatown/Production work. |
+| next action | Bind fresh exact `origin/main`, preflight and deploy V10-to-V10 to isolated Staging, rotate the exposed synthetic credential privately, then run browser-equivalent and Owner manual Phase-A acceptance. Do not repeat A/B and do not begin Chinatown/Production work. |
 
 ### Current AL-003 delivery state
 
@@ -231,7 +231,7 @@ seed/demo Store.
 | Exact-SHA Staging deployment and Flyway V9/V10 | `STG-007_PASS` / `DEPLOYED_TO_STAGING` | Historical exact `2837ae88...` passed fresh V10 continuation entry, formal preflight, V10-to-V10 deploy, repaired readiness, runtime collection, same-image restart and post-restart verification. Flyway remains exact V10/no-pending; this is not AL-003 Staging acceptance. |
 | Synthetic Organization/source/Owner bootstrap | `STG-008_PASS` / `DEPLOYED_TO_STAGING` | Exact `468b8705...` has ready synthetic Organization, Owner, source Store, credential and memberships; A/B execution/replay evidence is complete with no blocked marker or active one-shot. |
 | Synthetic target onboarding and Owner target access | `STAGING_PENDING` | Existing onboarding plus Organization Owner access is sufficient; runtime evidence is missing. |
-| Synthetic Owner login/workspace/Owner API authorization | `STG-009_PHASE_A_REOPENED_BROWSER_403` | Exact `468b8705...` passed the API-only client, but manual Chrome failed at the initial login POST with CORS HTTP 403 before authentication. Repair is in review; browser-equivalent and Owner manual evidence plus private credential rotation remain. |
+| Synthetic Owner login/workspace/Owner API authorization | `STG-009_PHASE_A_REOPENED_BROWSER_403` | Exact `468b8705...` passed the API-only client, but manual Chrome failed at the initial login POST with CORS HTTP 403 before authentication. PR #99's repair is `IN_MAIN` and waiting for exact-SHA Staging rebind; browser-equivalent and Owner manual evidence plus private credential rotation remain. |
 | Reproducible Synthetic St-Denis source-menu baseline | `DEPLOYED_TO_STAGING` via PR #62 capability | Guarded source graph is ready at `4/3/13/38`, replay revision `2 -> 2`; this is not Production or Chinatown acceptance. |
 | AL-003 validate/execute/replay/restart acceptance | `BLOCKED_BY_REOPENED_PHASE_A` | Chinatown Phase B remains prohibited. It becomes the next Owner Gate only after browser Phase A is genuinely verified. |
 | STG-006 exact-main passive preflight | `PASS` | At STG-006 capture, candidate was `33c6e3c...` and retained Staging was `4397f995...` / V8; this historical PASS does not override the later STG-007 deployment. |

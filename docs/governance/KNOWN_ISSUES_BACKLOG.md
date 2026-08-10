@@ -30,7 +30,7 @@
 | operational_impact | `STG-009_PHASE_A_OWNER_LOGIN` is reopened. API-only HTTP 200 cannot be treated as browser UI acceptance. |
 | current_workaround | None. Do not weaken CORS or add a Store/user-specific allowlist. Deploy only the reviewed generic proxy repair under the existing exact-SHA Staging authorization. |
 | evidence | [STG-009 browser-login 403 repair evidence](runtime/STG-009_PHASE_A_BROWSER_LOGIN_403_REPAIR_EVIDENCE.md). |
-| status | `DEPENDENCY_REPAIR_IN_REVIEW` |
+| status | `REPAIR_IN_MAIN_REQUIRES_EXACT_SHA_STAGING_REDEPLOY` |
 | target_loop | `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN` Dependency Repair Auto-Loop. |
 | acceptance_criteria | Proxy regression and repository checks pass; independent review accepts; fresh exact-SHA Staging deploy proves browser-equivalent login/session/redirect/Owner shell/Organization/source-Store/dashboard/refresh/logout without 401/403; the exposed synthetic credential is privately rotated; Owner manual browser evidence passes. |
 | deployment_required | Yes, Staging-only exact redeploy; no Production deployment. |
