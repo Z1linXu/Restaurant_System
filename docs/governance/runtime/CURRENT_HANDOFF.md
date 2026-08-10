@@ -2,14 +2,15 @@
 
 ## Current verified continuation override (2026-08-10)
 
-Git Ground Truth before evidence publication was
-`origin/main=1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c`; Staging is exact
+Git Ground Truth after browser-equivalent evidence publication is
+`origin/main=aec59af93a9bf42ce3d167a579a19be80eadc9b0`; this is the docs-only
+PR #101 merge. Staging remains exact
 `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c`, Flyway is
 V1--V10 with no pending or failed migration, and Printing is disabled.
 STG-005A PLAN/EXECUTE/REPLAY are `VALIDATED/CREATED/REPLAYED`; STG-005B is
 `VALIDATED/CREATED/REPLAYED` with `4/3/13/38` and replay revision `2 -> 2`.
 Synthetic Organization, Owner, source Store and credential are ready. No
-one-shot is active, the blocked marker is absent, and the lock is empty. Exact
+one-shot is active, the blocked marker is absent, and the lock is empty.
 Formal preflight, V10-to-V10 deploy, readiness, private credential rotation,
 secret-safe API acceptance and real-Chrome browser-equivalent login/
 Organization/Store/dashboard/refresh/logout checks passed without a 401/403.
@@ -69,9 +70,10 @@ and [STG-009 browser-equivalent acceptance evidence](STG-009_PHASE_A_BROWSER_EQU
 > correctly retained a new blocked pair. There was no credential read or
 > synthetic business write; Staging returned to 200/200/200 with Printing
 > disabled and Production continuity remained unchanged. A narrow repository
-> lifecycle repair entered `main` through PR #91 at `9a776d3...`. The current
-> Owner authorization now covers its fresh exact-SHA Staging-only rebind and
-> same-scope bounded repair rebinds; Production remains unchanged.
+> lifecycle repair entered `main` through PR #91 at `9a776d3...`. Later
+> authorized continuations deployed and verified its successors; this is now
+> historical context and grants no current rebind authority. Production
+> remained unchanged.
 
 ## 1. Project mission
 
@@ -94,6 +96,7 @@ provisioning without destabilizing current restaurant operations.
 | exact deployed Staging runtime | `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c` | `DEPLOYED_TO_STAGING`; V10, synthetic A/B and automated Phase-A checks complete; no one-shot, marker or lock. |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
 | Runtime-sensitive delivery package | browser-login proxy/rotation dependency repair / PR #99 | `IN_MAIN` and deployed through exact `1a3f2e...`; Owner manual UI acceptance remains separate |
+| Browser-equivalent evidence / PR #101 | merge `aec59af93a9bf42ce3d167a579a19be80eadc9b0` | `IN_MAIN`; evidence/governance only, not deployed runtime |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
 
 `IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
@@ -113,7 +116,7 @@ GitHub Merged badge into a non-main base is not evidence that work entered
 | `/private/tmp/restaurant-stg007-execution` | `codex/stg007-v10-continuation-final-evidence` | Retained historical STG-007 evidence/governance worktree; Owner workspace untouched |
 | `/private/tmp/restaurant-stg008-execution` | `codex/stg008-synthetic-topology-source` | Current isolated STG-008 `NO_GO` evidence/governance worktree; Owner workspace untouched |
 | `/private/tmp/restaurant-stg008-resume` | retained PR #85/#86 historical repair and closure worktree | Historical isolated repository worktree; Owner workspace untouched |
-| `/private/tmp/restaurant-stg008-recovery` | PR #87 repair plus governance-closure worktree | Current isolated repository worktree; Owner workspace untouched and no runtime mutation performed from it |
+| `/private/tmp/restaurant-stg008-recovery` | current continuous Staging/evidence worktree | Owner workspace untouched; reviewed Staging actions and evidence publication completed, with no Production mutation |
 | `/private/tmp/restaurant-pr61-rebuild` through `/private/tmp/restaurant-pr65-rebuild` | merged #61-#65 branch worktrees | Retained historical worktrees; not current delivery inputs |
 
 No registered #69/#70 rebuild worktree remains. Historical worktrees were not
@@ -182,19 +185,19 @@ The historical credential-entry decision is
 [STG-008 Synthetic Topology and Source Entry Evidence](STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).
 The resumed plan failure and bounded repair are recorded in
 [STG-008 Flyway Guard Repair Evidence](STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md).
-This is a failed password-free plan one-shot before the STG-005A command, not a
-failed transaction, deployment, migration, or credential operation. The
-launcher retains the new fail-closed pair pending a repaired exact candidate
-and separately approved recovery.
+This was a failed password-free plan one-shot before the STG-005A command, not
+a failed transaction, deployment, migration, or credential operation. Its
+historical fail-closed pair was later recovered through the reviewed path; the
+current runtime has no marker or lock and no recovery is pending.
 
 The later fresh baseline, release-rebind sequencing deadlock and bounded PR
 #87 correction are recorded in
 [STG-008 Release-Rebind Serialization Repair Evidence](STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md).
 That historical continuation stopped before candidate import or Batch A
 mutation. Its PR #87 repair was later used by exact `6753855497...` for
-Staging rebind/preflight/deploy/readiness and old-pair recovery. The following
-non-web plan failure supersedes that historical gate; its repair requires a
-new exact candidate and authorization cannot be reused.
+Staging rebind/preflight/deploy/readiness and old-pair recovery. Subsequent
+non-web repairs and exact continuations resolved that historical gate; no
+current rebind or recovery instruction is inherited from it.
 
 ## 5. Current feature and loop
 
@@ -210,30 +213,27 @@ new exact candidate and authorization cannot be reused.
 ### Permitted work
 
 - Fetch and verify Git/GitHub ground truth.
-- Review STG-007 PASS, all STG-008 evidence records, and merged repair PRs
-  #85/#87/#89/#91.
-- Under the current bounded authorization, bind the freshly fetched exact
-  `origin/main`, formal-preflight and deploy only isolated Staging V10-to-V10,
-  collect readiness, recover only the exact reviewed pair, then execute the
-  fresh STG-005A/STG-005B guarded sequence and conditional Owner-login
-  acceptance when each preceding gate passes.
-- Apply the permanent repository auto-merge gate to a bounded Dependency
-  Repair, then rebind the new exact SHA only when its scope remains authorized.
+- Read the completed STG-008 evidence and PR #101 browser-equivalent evidence;
+  do not repeat STG-005A/B, deployment, credential rotation, or automated login.
+- Owner may retrieve the rotated credential through the private runtime path
+  and perform the bounded post-repair manual Staging UI login, principal,
+  Organization, sole source Store and dashboard confirmation.
+- Publish only bounded evidence/governance corrections under the permanent
+  repository auto-merge gate. A runtime-sensitive repair requires a new exact
+  runtime decision and cannot inherit this manual-acceptance gate.
 
 ### Prohibited work without new approval
 
 - Reuse of consumed/failed STG-007 or STG-008 approval/readiness evidence, or
   continuation on an old image.
-- Any runtime action outside the bounded continuous STG-008 authorization:
-  Flyway/schema change, target onboarding, AL-003 validation/clone/replay,
-  printer/Pad action, or Owner login before STG-008 PASS.
+- Any runtime action outside the current Owner manual Staging UI acceptance:
+  deploy/restart/Flyway/schema change, target onboarding, AL-003 validation/
+  clone/replay, printer/Pad action, or Production action.
 - Production Store 1 read or mutation.
 - Printer configuration, test print, Pad pairing, or device/Worker mutation.
 - Candidate import, approval consumption, release/env preparation, recovery,
-  helper/one-shot, or credential use outside the fresh exact-SHA sequence and
-  its reviewed action binding. The exact reviewed pair may be recovered only
-  after Batch A and the specified fresh zero-data/health/isolation checks pass.
-  Never lower the password/prefix guard or expose/modify the Owner's secret.
+  helper/one-shot, credential rotation or automated acceptance rerun. Never
+  lower the password/prefix guard or expose/modify the Owner's secret.
 - Repository merge that fails Operating Model section 16's permanent
   auto-merge gate, Production activation, restore, or destructive database/Git
   commands.
@@ -244,8 +244,9 @@ new exact candidate and authorization cannot be reused.
 - AL-002 Owner onboarding foundation and V8 are in main.
 - STG-001 through STG-004 established the isolated Staging plan, deployment
   package, local Docker rehearsal, and historical server Staging evidence.
-- STG-005 plan and STG-005A guarded synthetic bootstrap are in main; bootstrap
-  has not been evidenced on the retained Staging runtime.
+- STG-005A/B are in main and fully evidenced in isolated Staging as
+  `VALIDATED/CREATED/REPLAYED`, with one synthetic topology and `4/3/13/38`,
+  replay `2 -> 2`, no duplicate/crossover and no active block/lock.
 - AL-003 PR-A through PR-F are in main.
 - PR #58 retained the failed exact-SHA Staging attempt evidence.
 - PR #59 fixed the bounded PostgreSQL UID-70/mode-0700 preflight defect in main.
@@ -320,8 +321,20 @@ new exact candidate and authorization cannot be reused.
   aligned the credential contract. Fresh readiness passed, but the first
   password-free plan one-shot stopped before its command because the older
   cloud safety guard rejected Flyway-disabled mode. Cleanup and zero-write
-  continuity passed; fail-closed state remains until separately approved
-  recovery.
+  continuity passed; at that historical checkpoint fail-closed state remained
+  until the later separately approved recovery.
+- PRs #85-#94 repaired the guarded startup, exact release/recovery, non-web
+  context, lifecycle and blocked-pair paths. Their later exact runtime use
+  completed STG-005A/B without duplicate/crossover and cleared all active
+  one-shot/marker/lock state.
+- PRs #95-#98 added and evidenced secret-safe API Phase-A acceptance. Owner
+  manual Chrome then exposed the distinct same-origin 403.
+- PR #99 repaired generic proxy Host/port preservation and added reviewed
+  private credential rotation; PR #100 recorded its pre-deploy Ground Truth.
+- Exact `1a3f2e...` deployed that repair and passed V10-to-V10 preflight,
+  readiness, credential rotation, API and real-Chrome browser-equivalent
+  acceptance. PR #101 published the sanitized evidence into
+  `main@aec59af93a9bf42ce3d167a579a19be80eadc9b0` without changing runtime.
 
 ## 7. AL-003 repository capability
 
@@ -339,9 +352,10 @@ Current main includes:
 Repository capability is not Staging acceptance and is not Production
 deployment. No real Chinatown clone has been evidenced.
 
-Still missing are Synthetic St-Denis and Owner topology, login/target
-onboarding, validate/execute/replay evidence, and the separate Production
-source, RC, deployment, provisioning and field-acceptance gates.
+Synthetic St-Denis topology/source and automated Owner login evidence now
+exist. Still missing are fresh Owner post-repair manual UI evidence, Chinatown
+target onboarding, validate/execute/clone/replay evidence, and the separate
+Production source, RC, deployment, provisioning and field-acceptance gates.
 
 ## 8. Owner product decisions that are settled
 
@@ -381,8 +395,8 @@ is the first Store Profile sample, not a shared-service special case.
 
 | ID | Purpose | Current state | Dependency / Owner gate |
 |---|---|---|---|
-| STG-005B / #62 | Reproducible synthetic St-Denis menu baseline | `IN_MAIN` | Repository capability only; no runtime execution |
-| AL-003S / #63 | Exact-SHA Staging acceptance preparation | `IN_MAIN` | Repository capability only; explicit runtime approval remains separate |
+| STG-005B / #62 | Reproducible synthetic St-Denis menu baseline | `IN_MAIN` and `DEPLOYED_TO_STAGING` evidence | PLAN/EXECUTE/REPLAY passed at `4/3/13/38`, revision `2 -> 2`; no duplicate/crossover |
+| AL-003S / #63 | Exact-SHA Staging acceptance preparation | `IN_MAIN`; reviewed tooling used under separate runtime approvals | Current runtime is exact `1a3f2e...`; Owner manual UI acceptance remains separate |
 | AL-004 / #64 | Generic Store Profile contract | `IN_MAIN` | Repository capability only; no provisioning/runtime execution |
 | AL-005A / #65 | Staff/Table module plan | `IN_MAIN` | Repository planning only; no writer or runtime execution |
 | AL-005 / #67 | Printing provisioning plan | `IN_MAIN` | repository planning only; no writer/runtime action |
@@ -410,18 +424,13 @@ from current main.
 
 ## 12. Known blockers and risks
 
-- STG-007 passed at exact deployed `2837ae88...` / Flyway V10, but it does not
-  authorize or prove synthetic bootstrap, Owner login, or clone acceptance.
-- STG-008's bounded backend repair entered main through PR #85 and the
-  blocked-state-safe release-rebind correction entered through PR #87. A
-  freshly fetched exact main containing #87 requires a new Staging
-  release/deploy approval because the authorization bound to `4759a23b...`
-  cannot cross the runtime-sensitive merge. The old deployed image cannot be
-  patched or treated as repaired.
-- The failed plan retained both blocked records. A separate recovery approval
-  must confirm one-shot absence, zero transaction state, V10, health and
-  continuity before clearing them.
-- Owner login, target onboarding, validate/execute/replay evidence is pending.
+- STG-008 is `PASS`; its former runtime/tooling blockers and blocked records
+  are resolved historical evidence and must not be replayed.
+- API and real-Chrome browser-equivalent Owner login acceptance pass on exact
+  `1a3f2e...`; fresh Owner post-repair manual UI evidence is the only current
+  Phase-A blocker.
+- Chinatown target onboarding and AL-003 validate/execute/clone/replay remain
+  unexecuted and outside the current authorization.
 - Production and repository main have an unreviewed runtime gap.
 - Production needs a fixed state/control-root strategy before detached-release
   deployment can be safe.
@@ -457,20 +466,19 @@ from current main.
    `AGILE_LOOP_OPERATING_MODEL.md`, `FEATURE_BACKLOG.md`, and the applicable
    technical plan.
 3. Verify current `origin/main`; do not trust the Owner workspace branch tip.
-4. Verify GitHub PR #61 through #87 and independent PR #66 semantics.
+4. Verify GitHub PR #61 through #101 and independent PR #66 semantics.
 5. Distinguish main, stacked Draft, Staging, and Production state.
 6. Report the completed main stack and the next Staging Owner Gate.
 7. Do not recreate or redesign packages #61-#70.
 8. Do not infer implementation from the planning packages.
 9. Read STG-006, OPS-001, the STG-007 repair/final evidence, all STG-008
-   evidence records, and [STG-009 Phase-A evidence](STG-009_PHASE_A_OWNER_LOGIN_EVIDENCE.md).
-   Treat `STG-008=PASS` as verified on exact Staging `468b8705...`; no one-shot,
-   blocked marker, or lock remains. Treat the API-only Phase-A result as
-   superseded by the manual Chrome 403 evidence.
-10. Continue only the reviewed proxy repair, exact-SHA Staging rebind,
-    credential rotation and browser/Owner Phase-A acceptance. Do not start
-    Chinatown onboarding, AL-003 validate/execute/clone/replay, or any
-    Production operation without the next Owner Runtime Gate.
+   evidence records, [STG-009 Phase-A API evidence](STG-009_PHASE_A_OWNER_LOGIN_EVIDENCE.md)
+   and [browser-equivalent evidence](STG-009_PHASE_A_BROWSER_EQUIVALENT_ACCEPTANCE_EVIDENCE.md).
+   Treat `STG-008=PASS` and automated Phase-A API/browser-equivalent acceptance
+   as verified on exact Staging `1a3f2e...`; no one-shot, marker or lock remains.
+10. Continue only the Owner's bounded post-repair manual Staging UI acceptance.
+    Do not rebind, redeploy, rotate credentials, repeat automated acceptance,
+    start Chinatown onboarding/clone, or perform any Production operation.
 11. Stop at runtime/product/operations Owner Gates; otherwise continue the
     bounded Agile Loop and Dependency Repair Auto-Loop.
 
@@ -522,6 +530,7 @@ Primary authorities:
 - [STG-008 non-web request-context repair evidence](STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md)
 - [STG-008 one-shot lifecycle repair evidence](STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md)
 - [STG-009 Phase-A Owner login evidence](STG-009_PHASE_A_OWNER_LOGIN_EVIDENCE.md)
+- [STG-009 browser-equivalent acceptance evidence](STG-009_PHASE_A_BROWSER_EQUIVALENT_ACCEPTANCE_EVIDENCE.md)
 - [OPS-001 secret-safe tooling runbook](../../../deployment/cloud/README_OPS001_STAGING_SECRET_SAFE_TOOLING.md)
 - [System Documentation](../../../SYSTEM_DOCUMENTATION.md)
 - [API contract](../../../doc/API.md)
