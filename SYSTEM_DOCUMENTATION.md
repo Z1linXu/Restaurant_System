@@ -17,8 +17,9 @@ active, and the lock is empty. This is `DEPLOYED_TO_STAGING` evidence only;
 `IN_MAIN` and `STAGING_ACCEPTED` remain separate. PR #97 is `IN_MAIN` and its
 Phase-A-only jq fallback was deployed and its API-only checks passed on this
 exact Staging runtime. Manual Chrome acceptance superseded that conclusion with
-the initial CORS 403. The proxy/rotation repair is in review; the next action is
-fresh exact-SHA Staging validation and browser Phase-A retry, not Phase B.
+the initial CORS 403. PR #99's proxy/rotation repair is `IN_MAIN` at
+`1c0289b...`, but remains undeployed and unaccepted; the next action is fresh
+exact-SHA Staging validation and browser Phase-A retry, not Phase B.
 
 ## Current Governance Index
 
@@ -849,7 +850,7 @@ from fresh exact rebind through guarded topology/source work and conditional
 Phase-A Owner-login acceptance. Exact `468b8705...` passed only the API client;
 manual Chrome evidence reopened browser acceptance at the initial CORS 403.
 The current unique stop state is
-`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`.
+`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`.
 
 Fresh read-only inspection later found that the retained STG-005A failure’s
 normal two-line cleanup/action-failure lock is more specific than the

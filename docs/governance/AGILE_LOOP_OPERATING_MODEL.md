@@ -10,7 +10,7 @@ STG-005A and STG-005B PLAN/EXECUTE/REPLAY remain
 distinct. Exact Staging `468b8705...` passed API-only Owner checks, but Chrome
 failed at the first login POST with upstream same-origin/CORS HTTP 403 before
 authentication. The current unique stop state is
-`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`.
+`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`.
 Chinatown onboarding/clone remains outside this loop.
 
 > Status: `ACTIVE_GOVERNANCE_PROCESS`
@@ -123,7 +123,7 @@ defect. PR #91 is `IN_MAIN` at `9a776d3...`; the Owner now authorizes the
 bounded continuous Staging loop from fresh exact rebind through guarded
 STG-005A/STG-005B work and conditional Phase-A Owner-login acceptance. The
 current unique stop state is
-`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`.
+`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`.
 
 Fresh read-only state inspection found a bounded recovery-tooling defect: the
 retained current lock has the reviewed ordered cleanup-plus-action-failure

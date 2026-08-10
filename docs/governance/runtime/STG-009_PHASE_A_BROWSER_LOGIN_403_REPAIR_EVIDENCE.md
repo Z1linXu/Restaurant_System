@@ -4,6 +4,11 @@
 >
 > Runtime state: `REQUIRES_FRESH_EXACT_SHA_STAGING_DEPLOY_AND_BROWSER_VALIDATION`
 
+> Repository publication: PR #99 is `IN_MAIN`; reviewed head
+> `b983b884c2b5eaa3a2b26ce81f1c098d083f4a79` entered `main` through merge
+> `1c0289b797207fad50d4327df64a8234e02fe594`. This publication is not runtime
+> deployment or browser acceptance evidence.
+
 ## Observation
 
 Owner manual Chrome acceptance used the loopback SSH-tunnel URL and synthetic

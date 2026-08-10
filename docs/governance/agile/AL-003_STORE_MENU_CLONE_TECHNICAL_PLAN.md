@@ -26,7 +26,7 @@
 | `PLAN_STATUS` | `IN_MAIN_AWAITING_STAGING_ACCEPTANCE_AND_RUNTIME_APPROVAL` |
 | `PLAN_GAPS` | No prior standalone plan covered the current clone contract, target profile, idempotency, transaction, audit, rollback, tests, PR split, and multi-agent ownership together. |
 | `PLAN_STALE_SECTIONS` | AL-001 and the Feature Backlog retained historical `Small 13.99`, older item ordering, broader WOK/FRIED/printing assumptions, and an earlier combined AL-003 scope. Those statements are superseded for menu cloning by the final AL-003A comparison and this plan. |
-| `RECOMMENDED_ACTION` | PRs #60-#98 and the #61-#70 stack are `IN_MAIN`; exact `468b8705...` is deployed to isolated Staging at V10. STG-005A/B passed; Phase-A login evidence is API-only and manual Chrome 403 reopened browser acceptance. The proxy/rotation dependency repair is in review. Do not infer Chinatown clone, Production deployment, or Production authority. |
+| `RECOMMENDED_ACTION` | PRs #60-#99 and the #61-#70 stack are `IN_MAIN`; exact `468b8705...` is deployed to isolated Staging at V10. STG-005A/B passed; Phase-A login evidence is API-only and manual Chrome 403 reopened browser acceptance. PR #99's proxy/rotation dependency repair awaits exact-SHA Staging rebind and validation. Do not infer Chinatown clone, Production deployment, or Production authority. |
 
 PR-A through PR-F are in `main`. PR-D supplies generic source-option copying
 and target-local parent mapping; PR #54 placed the concrete Chinatown Profile
@@ -1012,7 +1012,7 @@ verified the completed STG-005A/B synthetic topology and API-only Owner checks;
 manual Chrome 403 reopened Phase A. Target onboarding and validate/execute/
 replay remain unexecuted. The unique
 stop state is
-`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`.
+`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`.
 See [the sanitized STG-008 entry evidence](../runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md)
 [the Flyway guard repair evidence](../runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md),
 and [the release-rebind serialization repair evidence](../runtime/STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md).
