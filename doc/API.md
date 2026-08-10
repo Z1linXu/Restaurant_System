@@ -1,12 +1,17 @@
 # Restaurant System API (MVP)
 
+> TWIN-001 manifest v2 boundary (2026-08-10): no API was added or changed.
+> The completed read-only manifest loop creates no reconstruction endpoint or
+> write authorization. Current stop:
+> `TWIN-001_MANIFEST_V2_RECONSTRUCTION_READY_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
+
 > TWIN-001 reconstruction boundary (2026-08-10): reconstruction approval did
 > not create a new API. Pre-write validation stopped before runtime entry
 > because the retained manifest is not a complete, V7-schema-consistent writer
 > input. Local verification passed the intended `V7 -> V10` forward path, but
-> no reconstructed Twin or API smoke ran. Current stop is
-> `TWIN-001_RECONSTRUCTION_NO_GO_WAITING_FOR_MANIFEST_COMPLETION_READ_APPROVAL`;
-> the next corrected Production read is a TRUE OWNER GATE. See the
+> no reconstructed Twin or API smoke ran. The historical NO-GO stop was
+> `TWIN-001_RECONSTRUCTION_NO_GO_WAITING_FOR_MANIFEST_COMPLETION_READ_APPROVAL`.
+> See the
 > [immutable NO-GO evidence](../docs/governance/runtime/TWIN-001_STAGING_RECONSTRUCTION_SCHEMA_NO_GO_EVIDENCE.md).
 
 > TWIN-001 inventory boundary (2026-08-10): the Owner-approved Production
