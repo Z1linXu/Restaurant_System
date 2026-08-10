@@ -23,6 +23,10 @@ performed no Production read and no Staging/Production mutation. The immediate
 next runtime gate is the independent
 `PRODUCTION_ST_DENIS_CONFIGURATION_READ_APPROVAL`.
 
+Verified governance `origin/main` is
+`9536e46f33cd7196dde66d2a40ee02101d0521c6` after PR #103; this is a
+documentation-only merge and does not change the deployed Staging SHA.
+
 The unique current stop state is
 `TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`.
 See [TWIN-001 St-Denis Twin Plan](../agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.md).
@@ -45,7 +49,7 @@ See [TWIN-001 St-Denis Twin Plan](../agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.m
 | Environment | `restaurant-prod` | `OPERATOR_CONFIRMED` | Environment label only; no host or secret is recorded. |
 | `RUNTIME_COMMIT` | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e` | retained identity plus `MACHINE_VERIFIED_READ_ONLY` continuity during STG-007 | Current Production runtime identity only, not a formal release approval. |
 | Production branch | `main` | `MACHINE_VERIFIED_READ_ONLY` during STG-006 continuity | Branch relationship is not a deployment approval record. |
-| Runtime-sensitive deployed candidate | `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c` | `MACHINE_VERIFIED` Git/runtime Ground Truth | PR #99's repair and PR #100's closure are `IN_MAIN`; later PR #101/#102 are governance-only. Detached release, build source and deployed Staging identity match this SHA. This proves deployment and automated acceptance, not Production parity. |
+| Runtime-sensitive deployed candidate | `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c` | `MACHINE_VERIFIED` Git/runtime Ground Truth | PR #99's repair and PR #100's closure are `IN_MAIN`; later PR #101/#102/#103 are governance-only. Detached release, build source and deployed Staging identity match this SHA. This proves deployment and automated acceptance, not Production parity. |
 | STG-007 exact runtime candidate / documentation base before evidence publication | `2837ae88e55142c99c6975f8b6575febffc913a1` | `MACHINE_VERIFIED` from `origin/main`, detached release, build source and deployed Staging identity | PR #82 merge and deployed Staging SHA; it is not the Production runtime. A later evidence-only merge must remain distinct from the deployed SHA. |
 | Deployment mode | HTTP | `OPERATOR_CONFIRMED` | HTTPS/certificate posture is outside this record. |
 | Compose services | `db`, `backend`, `nginx` under project `cloud`; unchanged across the final STG-007 continuation, original start times, restart count 0, health 200 | `MACHINE_VERIFIED_READ_ONLY` | Minimum continuity only; no environment, Flyway, Store, or business-data read. |
