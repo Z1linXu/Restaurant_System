@@ -1,19 +1,21 @@
 # Agile Loop Operating Model
 
-## Verified continuation state (2026-08-09)
+## Verified continuation state (2026-08-10)
 
 The completed loop is `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE`; the bounded
-`STG-009_PHASE_A_OWNER_LOGIN_ACCEPTANCE` has PASSed under the existing
-Continuous Authorization Envelope. STG-005A and STG-005B PLAN/EXECUTE/REPLAY
-are `VALIDATED/CREATED/REPLAYED`; the source menu is `4/3/13/38` and replay is
+`STG-009_PHASE_A_OWNER_LOGIN_ACCEPTANCE` is reopened by manual browser evidence.
+STG-005A and STG-005B PLAN/EXECUTE/REPLAY remain
+`VALIDATED/CREATED/REPLAYED`; the source menu is `4/3/13/38` and replay is
 `2 -> 2`. `IN_MAIN`, `DEPLOYED_TO_STAGING`, and `STAGING_ACCEPTED` remain
-distinct. Exact Staging `468b8705...` passed V10 readiness and the synthetic
-Owner login/workspace/overview/logout checks. Chinatown onboarding/clone is
-outside this loop and requires the next Owner Runtime Gate.
+distinct. Exact Staging `468b8705...` passed API-only Owner checks, but Chrome
+failed at the first login POST with upstream same-origin/CORS HTTP 403 before
+authentication. The current unique stop state is
+`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`.
+Chinatown onboarding/clone remains outside this loop.
 
 > Status: `ACTIVE_GOVERNANCE_PROCESS`
 >
-> Last updated: 2026-08-08, America/Toronto
+> Last updated: 2026-08-10, America/Toronto
 
 ## 1. Required lifecycle
 
@@ -121,7 +123,7 @@ defect. PR #91 is `IN_MAIN` at `9a776d3...`; the Owner now authorizes the
 bounded continuous Staging loop from fresh exact rebind through guarded
 STG-005A/STG-005B work and conditional Phase-A Owner-login acceptance. The
 current unique stop state is
-`STG-009_PHASE_A_OWNER_LOGIN_VERIFIED_WAITING_FOR_PHASE_B_CLONE_APPROVAL`.
+`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`.
 
 Fresh read-only state inspection found a bounded recovery-tooling defect: the
 retained current lock has the reviewed ordered cleanup-plus-action-failure

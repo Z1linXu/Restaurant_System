@@ -1,6 +1,6 @@
 # STG-005 Synthetic Business Acceptance Plan
 
-## Current verified execution state (2026-08-09)
+## Current verified execution state (2026-08-10)
 
 The Staging-only synthetic sequence completed without duplication on exact
 Staging `468b8705...`: STG-005A
@@ -8,8 +8,11 @@ and STG-005B PLAN/EXECUTE/REPLAY are `VALIDATED/CREATED/REPLAYED`; menu counts
 are `4/3/13/38` and replay revision is `2 -> 2`. Organization, Owner, source
 Store and credential are ready; no one-shot or blocked marker remains and the
 lock is empty. This is synthetic Staging runtime evidence, not Production
-acceptance. The separate Phase-A Owner login also passed; no Chinatown or
-Production action is implied.
+acceptance. The separate API-only Phase-A checks passed, but manual Chrome
+acceptance failed at the initial login POST with CORS HTTP 403 before
+authentication. Phase A is reopened at
+`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`; no
+Chinatown or Production action is implied.
 
 > Loop: `STG-005_SYNTHETIC_BUSINESS_ACCEPTANCE`
 >
@@ -549,10 +552,10 @@ request-context repair by reaching password-free `VALIDATED`. The non-web
 WebSocket broker nevertheless held the one-shot alive to its timeout; zero
 synthetic rows changed and the new fail-closed pair remains. PR #91 then put
 the bounded lifecycle repair in PR #91; PR #92's governance-only merge makes
-`main@468b8705...` is deployed to Staging with the synthetic A/B sequence and
-Phase-A Owner-login acceptance complete. `STG-008=PASS` and
-`STG-009_PHASE_A_OWNER_LOGIN=PASS` are limited to the synthetic Staging scope;
-Chinatown Phase B remains pending its Owner Runtime Gate.
+`main@468b8705...` is deployed to Staging with the synthetic A/B sequence
+complete. `STG-008=PASS`; the prior Phase-A PASS claim is API-only and
+superseded by manual browser 403 evidence. Chinatown Phase B is
+blocked until Phase A is reverified and then reaches its Owner Runtime Gate.
 The immutable entry result remains
 [STG-008 Synthetic Topology and Source Entry Evidence](STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md),
 and the resumed failure/repair is

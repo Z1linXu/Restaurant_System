@@ -1,5 +1,13 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-10 Phase-A Ground Truth: synthetic topology/source remains complete,
+> but browser login acceptance is reopened. The first Chrome request,
+> `POST /api/v1/auth/login`, was rejected by Spring CORS before authentication
+> because nginx stripped the explicit SSH-tunnel port from the upstream Host.
+> The generic repair preserves `$http_host`; it is not deployed or accepted
+> until a fresh exact-SHA Staging runtime proves the browser flow. API-only
+> acceptance is insufficient, and Chinatown/Production remains gated.
+
 ## Current verified STG-008 continuation
 
 Staging is exact `468b8705...` at Flyway V10. STG-005A and STG-005B have
@@ -7,9 +15,10 @@ completed PLAN/EXECUTE/REPLAY as `VALIDATED/CREATED/REPLAYED`; the synthetic
 source menu is `4/3/13/38`, replay is `2 -> 2`, no one-shot or blocked marker is
 active, and the lock is empty. This is `DEPLOYED_TO_STAGING` evidence only;
 `IN_MAIN` and `STAGING_ACCEPTED` remain separate. PR #97 is `IN_MAIN` and its
-Phase-A-only jq fallback was deployed and verified on this exact Staging
-runtime; Owner login acceptance passed. The next stop is the Phase-B Owner
-Runtime Gate.
+Phase-A-only jq fallback was deployed and its API-only checks passed on this
+exact Staging runtime. Manual Chrome acceptance superseded that conclusion with
+the initial CORS 403. The proxy/rotation repair is in review; the next action is
+fresh exact-SHA Staging validation and browser Phase-A retry, not Phase B.
 
 ## Current Governance Index
 
@@ -475,14 +484,16 @@ recorded `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`, exact Staging
 membership/bootstrap-request rows. It also recorded the guarded identity and
 password contract, the pre-command Flyway safety NO_GO, and fail-closed
 cleanup. That historical zero baseline is superseded by exact Staging
-`468b8705...`: STG-005A/B are complete, the synthetic Owner and source Store
-are ready, and Phase-A login/workspace/overview/logout passed. The current
-synthetic evidence remains separate from Chinatown target onboarding.
+`468b8705...`: STG-005A/B are complete, and the synthetic Owner and source
+Store are ready. The login/workspace/overview/logout result was API-only;
+manual Chrome 403 reopened browser Phase A. The current synthetic evidence
+remains separate from Chinatown target onboarding.
 `StoreAccessService` grants the Organization Owner access to every Store in the
 same active Organization membership, so no redundant Owner target-Store
-membership is required. The Phase-A evidence proves only the synthetic source
-workspace/overview access; target onboarding and authenticated validate/execute
-remain future Owner-gated actions. No Production credentials, raw SQL,
+membership is required. The superseded API-only evidence proves only the
+synthetic source workspace/overview API contract; browser acceptance remains
+open. Target onboarding and authenticated validate/execute remain future
+Owner-gated actions. No Production credentials, raw SQL,
 authorization bypasses, or real business data may supply those gates.
 
 Owner decisions recorded on 2026-08-08 establish Chinatown as the second
@@ -835,9 +846,10 @@ It entered `main` through PR #89 at `434c9cc808648a4f80c91435d8667ad9fe160018`
 and was runtime-validated by exact `2a6c30a...`. PR #91 is `IN_MAIN` at
 `9a776d3...`; the Owner has authorized the bounded continuous Staging loop
 from fresh exact rebind through guarded topology/source work and conditional
-Phase-A Owner-login acceptance. Exact `468b8705...` passed that bounded login
-acceptance; the current unique stop state is
-`STG-009_PHASE_A_OWNER_LOGIN_VERIFIED_WAITING_FOR_PHASE_B_CLONE_APPROVAL`.
+Phase-A Owner-login acceptance. Exact `468b8705...` passed only the API client;
+manual Chrome evidence reopened browser acceptance at the initial CORS 403.
+The current unique stop state is
+`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`.
 
 Fresh read-only inspection later found that the retained STG-005A failure’s
 normal two-line cleanup/action-failure lock is more specific than the

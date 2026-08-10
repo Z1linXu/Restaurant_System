@@ -2,7 +2,7 @@
 
 > Status: `ACTIVE_GOVERNANCE_BACKLOG`
 >
-> Last updated: 2026-08-09, America/Toronto
+> Last updated: 2026-08-10, America/Toronto
 >
 > This is the authority for current issue triage. Historical evidence remains
 > in the Phase 3 reports and is not rewritten here.
@@ -17,6 +17,24 @@
 | P3 | A UX, process, or governance improvement. |
 
 ## Active issues
+
+### KI-010 - Browser login rejected by proxy same-origin contract
+
+| Field | Value |
+|---|---|
+| issue_id | `KI-010` |
+| priority | `P1` for Staging acceptance; no Production incident observed |
+| title | SSH-tunneled browser login returns CORS HTTP 403 before authentication |
+| observed_behavior | Manual Chrome acceptance against `http://127.0.0.1:18080` reached `POST /api/v1/auth/login` and received `403 Invalid CORS request`; no principal, role, Organization, Store, or dashboard request was reached. The API-only acceptance client had no browser Origin and therefore passed. |
+| expected_behavior | nginx preserves the browser-visible Host and explicit tunnel port so Spring recognizes the request as same-origin; login then proceeds through the existing generic authentication and Organization/Store authorization contracts. |
+| operational_impact | `STG-009_PHASE_A_OWNER_LOGIN` is reopened. API-only HTTP 200 cannot be treated as browser UI acceptance. |
+| current_workaround | None. Do not weaken CORS or add a Store/user-specific allowlist. Deploy only the reviewed generic proxy repair under the existing exact-SHA Staging authorization. |
+| evidence | [STG-009 browser-login 403 repair evidence](runtime/STG-009_PHASE_A_BROWSER_LOGIN_403_REPAIR_EVIDENCE.md). |
+| status | `DEPENDENCY_REPAIR_IN_REVIEW` |
+| target_loop | `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN` Dependency Repair Auto-Loop. |
+| acceptance_criteria | Proxy regression and repository checks pass; independent review accepts; fresh exact-SHA Staging deploy proves browser-equivalent login/session/redirect/Owner shell/Organization/source-Store/dashboard/refresh/logout without 401/403; the exposed synthetic credential is privately rotated; Owner manual browser evidence passes. |
+| deployment_required | Yes, Staging-only exact redeploy; no Production deployment. |
+| last_updated | 2026-08-10 |
 
 ### KI-009 - Non-web STG-005 one-shot retains WebSocket broker lifecycle
 

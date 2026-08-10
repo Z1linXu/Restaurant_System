@@ -1,6 +1,6 @@
 # Current Project Handoff
 
-## Current verified continuation override (2026-08-09)
+## Current verified continuation override (2026-08-10)
 
 `origin/main=468b8705...`; Staging is exact `468b8705...`, Flyway is
 V1--V10 with no pending or failed migration, and Printing is disabled.
@@ -8,9 +8,12 @@ STG-005A PLAN/EXECUTE/REPLAY are `VALIDATED/CREATED/REPLAYED`; STG-005B is
 `VALIDATED/CREATED/REPLAYED` with `4/3/13/38` and replay revision `2 -> 2`.
 Synthetic Organization, Owner, source Store and credential are ready. No
 one-shot is active, the blocked marker is absent, and the lock is empty. Exact
-Staging readiness and Phase-A Owner login acceptance both passed on this
-candidate; this remains `DEPLOYED_TO_STAGING`/synthetic acceptance evidence,
-not Production acceptance. Chinatown onboarding/clone remains prohibited.
+Staging readiness and API-only Owner login checks passed on this candidate, but
+manual Chrome acceptance then failed at the initial login POST with CORS HTTP
+403 before authentication. Phase A is reopened at
+`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`;
+this remains `DEPLOYED_TO_STAGING`, not `STAGING_ACCEPTED`. Chinatown
+onboarding/clone remains prohibited.
 
 See [STG-008 synthetic runtime progress evidence](STG-008_SYNTHETIC_RUNTIME_PROGRESS_EVIDENCE.md).
 
@@ -20,7 +23,7 @@ See [STG-008 synthetic runtime progress evidence](STG-008_SYNTHETIC_RUNTIME_PROG
 > authoritative. If this file conflicts with those sources, the authoritative
 > sources win.
 >
-> Snapshot date: 2026-08-09, America/Toronto
+> Snapshot date: 2026-08-10, America/Toronto
 >
 > Runtime freshness: PR #82 entered `main` at `2837ae88...` with the bounded
 > restart-readiness/fail-closed repair. A fully fresh Owner-authorized
@@ -82,10 +85,10 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| runtime-sensitive current-main candidate | `468b8705c8e360b9e34336c5560442179544069b` | `IN_MAIN`; PR #97 jq-free Phase-A parser repair, exact Staging deploy and Phase-A runtime evidence. |
-| exact deployed Staging runtime | `468b8705c8e360b9e34336c5560442179544069b` | `DEPLOYED_TO_STAGING`; V10, synthetic A/B execution/replay and Phase-A login acceptance complete, no one-shot or blocked marker. |
+| runtime-sensitive current-main candidate | `7a1dbe6ef64b04977fdf5aac5e6ebfdf8b4cc182` | `IN_MAIN`; governance-only PR #98 is newer than deployed Staging. The browser-login proxy/rotation repair is only `DEPENDENCY_REPAIR_IN_REVIEW`. |
+| exact deployed Staging runtime | `468b8705c8e360b9e34336c5560442179544069b` | `DEPLOYED_TO_STAGING`; V10 and synthetic A/B execution/replay complete. API-only login checks passed, but browser Phase A is reopened; no one-shot or blocked marker. |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
-| Runtime-sensitive delivery package | PR #97 / exact `468b8705...` | `IN_MAIN` and `DEPLOYED_TO_STAGING`; bounded jq-free Phase-A login tooling runtime-verified |
+| Runtime-sensitive delivery package | browser-login proxy/rotation dependency repair | `DEPENDENCY_REPAIR_IN_REVIEW`; not `IN_MAIN`, not deployed, not Staging accepted |
 | Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
 
 `IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
@@ -163,7 +166,7 @@ the current bounded Staging runtime identity below.
 | Environment | Retained evidence | Classification and boundary |
 |---|---|---|
 | Production | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`; Compose `cloud` `db/backend/nginx`; unchanged IDs/start times/restart `0`; health 200 | `MACHINE_VERIFIED_READ_ONLY` continuity only; Flyway/business state not queried |
-| Staging | `468b8705c8e360b9e34336c5560442179544069b`; Flyway V10 with no pending or failed migration; exact `db/backend/nginx` identities running; health 200/200/200 | `DEPLOYED_TO_STAGING`; synthetic A/B plan/execute/replay and Phase-A login/logout complete, no active one-shot, marker absent, lock empty |
+| Staging | `468b8705c8e360b9e34336c5560442179544069b`; Flyway V10 with no pending or failed migration; exact `db/backend/nginx` identities running; health 200/200/200 | `DEPLOYED_TO_STAGING`; synthetic A/B plan/execute/replay complete. Prior login/logout evidence is API-only; browser Phase A is reopened. No active one-shot, marker absent, lock empty. |
 | Staging isolation | project `restaurant-pos-staging`; only `127.0.0.1:18080`; separate state/network/mounts; private leaf UID 70/mode 0700 | `MACHINE_VERIFIED_READ_ONLY` |
 | Staging printing | `STAGING_PRINT_MODE=DISABLED`; feature flag `false` | `MACHINE_VERIFIED_READ_ONLY` |
 
@@ -193,11 +196,11 @@ new exact candidate and authorization cannot be reused.
 | Field | Current value |
 |---|---|
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `STG-009_PHASE_A_OWNER_LOGIN_ACCEPTANCE` |
-| Current package | Exact `468b8705...` is deployed at V10 with completed synthetic A/B plan/execute/replay, `4/3/13/38`, replay `2 -> 2`, and successful Phase-A login/me/workspaces/overview/logout. No active one-shot, marker or lock remains. |
-| Feature stop state | `STG-009_PHASE_A_OWNER_LOGIN_VERIFIED_WAITING_FOR_PHASE_B_CLONE_APPROVAL` |
+| Current Agile Loop | `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN` |
+| Current package | Exact `468b8705...` remains deployed at V10 with completed synthetic A/B plan/execute/replay, `4/3/13/38`, replay `2 -> 2`. API-only Phase A passed, but manual Chrome acceptance failed at the first login POST with CORS HTTP 403 before authentication. No active one-shot, marker or lock remains. |
+| Feature stop state | `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW` |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | The Owner has already authorized the bounded continuous STG-008 loop: current exact-main release/private-env binding, formal preflight, Staging-only V10-to-V10 deploy, fresh readiness, exact-matching recovery of the newly retained records, fresh STG-005A PLAN, then the guarded synthetic STG-005A/STG-005B execute/replay sequence and conditional Owner-login acceptance. Every runtime invocation still needs its reviewed, digest-bound internal action approval; that is not a new Owner Gate. A same-scope bounded repair merge may rebind automatically. Any migration, product/security/identity-contract change, Production requirement, ambiguous identity, unexpected data, or destructive action is a true Owner Gate. |
+| Current Owner gate | No new Owner Gate for the bounded browser-login dependency repair, exact-SHA Staging rebind/deploy, private credential rotation, browser-equivalent verification, or manual Phase-A retry. STG-005A/B must not be repeated. Chinatown Phase B, migration, product/security/identity-contract change, Production requirement, ambiguous identity, unexpected data, or destructive action remains a true Owner Gate. |
 
 ### Permitted work
 
@@ -456,11 +459,13 @@ from current main.
 8. Do not infer implementation from the planning packages.
 9. Read STG-006, OPS-001, the STG-007 repair/final evidence, all STG-008
    evidence records, and [STG-009 Phase-A evidence](STG-009_PHASE_A_OWNER_LOGIN_EVIDENCE.md).
-   Treat `STG-008=PASS` and `STG-009_PHASE_A_OWNER_LOGIN=PASS` as verified on
-   exact Staging `468b8705...`; no one-shot, blocked marker, or lock remains.
-10. Stop at `STG-009_PHASE_A_OWNER_LOGIN_VERIFIED_WAITING_FOR_PHASE_B_CLONE_APPROVAL`.
-    Do not start Chinatown onboarding, AL-003 validate/execute/clone/replay, or
-    any Production operation without the next Owner Runtime Gate.
+   Treat `STG-008=PASS` as verified on exact Staging `468b8705...`; no one-shot,
+   blocked marker, or lock remains. Treat the API-only Phase-A result as
+   superseded by the manual Chrome 403 evidence.
+10. Continue only the reviewed proxy repair, exact-SHA Staging rebind,
+    credential rotation and browser/Owner Phase-A acceptance. Do not start
+    Chinatown onboarding, AL-003 validate/execute/clone/replay, or any
+    Production operation without the next Owner Runtime Gate.
 11. Stop at runtime/product/operations Owner Gates; otherwise continue the
     bounded Agile Loop and Dependency Repair Auto-Loop.
 

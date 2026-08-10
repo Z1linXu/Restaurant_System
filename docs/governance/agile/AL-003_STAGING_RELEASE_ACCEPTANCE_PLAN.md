@@ -1,6 +1,12 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Capability state: `STG-009_PHASE_A_OWNER_LOGIN_VERIFIED_WAITING_FOR_PHASE_B_CLONE_APPROVAL`
+> Capability state: `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`
+>
+> API-only Phase-A evidence is superseded by manual Chrome evidence: the first
+> browser login request returned CORS HTTP 403 before authentication. A fresh
+> exact-SHA Staging deploy must validate the generic proxy repair, rotate the
+> exposed synthetic credential privately, and pass browser plus Owner manual
+> acceptance before Phase A can close.
 >
 > Historical failed candidate: `8f909525781804f61d1da388882f530da358c3c4`
 >
@@ -158,20 +164,20 @@ runtime until a new exact-SHA deployment is separately approved.
 ### Staging Owner login prerequisite
 
 The acceptance prerequisite state is now
-`STG-009_PHASE_A_OWNER_LOGIN_VERIFIED_WAITING_FOR_PHASE_B_CLONE_APPROVAL` for
-the bounded synthetic Phase-A gate. Application deployment alone is still not
-`AL-003_STAGING_ACCEPTANCE_READY`; exact Staging `468b8705...` additionally
-proved the synthetic Owner login, Organization Owner role, exact source-Store
-workspace/overview access, and logout. Chinatown onboarding and clone remain
-separately gated.
+`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`.
+Application deployment and API-only login checks are not
+`AL-003_STAGING_ACCEPTANCE_READY`; exact Staging must additionally pass the
+browser flow after private credential rotation. Chinatown onboarding and clone
+remain separately gated.
 
 Historical STG-008 entry evidence (before the authorized synthetic run) proved
 that an earlier V10 Staging baseline had no STG-005A execution and zero
 Organization, Store, user, credential, membership, and bootstrap-request rows.
 That historical zero baseline is superseded by exact `468b8705...` evidence:
-STG-005A/B are `VALIDATED/CREATED/REPLAYED`, the synthetic Owner and source
-Store are ready, and Phase-A login/workspace/overview/logout passed. No
-password/hash/token or unrelated identifier is retained here.
+STG-005A/B are `VALIDATED/CREATED/REPLAYED`, and the synthetic Owner and source
+Store are ready. The login/workspace/overview/logout result was API-only and is
+superseded for browser acceptance by the manual CORS 403. No password/hash/
+token or unrelated identifier is retained here.
 
 Repository code and the reviewed runbook establish these exact capability
 boundaries:
@@ -223,8 +229,9 @@ exact `2a6c30a...` STG-005A plan reached `VALIDATED`, proving the request-contex
 repair before a non-web WebSocket lifecycle timeout retained a new blocked
 pair. The following is the retained historical sequence from before the
 successful `468b8705...` continuation; it is not a current instruction to
-repeat A/B or Phase-A. Chinatown onboarding/clone remains later Owner-gated
-work. The historical end-to-end sequence was:
+repeat A/B. Browser Phase A must be retried only after the reviewed repair,
+fresh exact-SHA deploy and private credential rotation. Chinatown onboarding/
+clone remains later Owner-gated work. The historical end-to-end sequence was:
 
 1. Create a fresh detached Staging release and fresh env/preflight evidence
    bound to the exact SHA; confirm `restaurant-pos-staging`, only
@@ -342,8 +349,8 @@ recovers.
 
 ## Capability dependency state
 
-`STG-009_PHASE_A_OWNER_LOGIN_VERIFIED_WAITING_FOR_PHASE_B_CLONE_APPROVAL`
+`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`
 
-Exact Staging `468b8705...` passed the bounded synthetic Phase-A login
-acceptance; Phase-B Chinatown onboarding/validate/execute/clone/replay and all
-Production operations remain outside this plan's current authorization.
+Exact Staging `468b8705...` passed only the API-only Phase-A client. Browser
+acceptance is reopened; Phase-B Chinatown onboarding/validate/execute/clone/
+replay and all Production operations remain outside this plan's authorization.

@@ -1,13 +1,20 @@
 # Restaurant System API (MVP)
 
+> Browser transport note (2026-08-10): loopback SSH-tunnel deployments must
+> preserve the browser-visible Host including an explicit port when proxying
+> `/api/` and `/ws`. Otherwise Spring can classify a same-origin login as CORS
+> and reject it before the authentication controller. This transport repair
+> does not change any authentication, role, Organization, Store, or endpoint
+> contract; API-only acceptance does not establish browser UI acceptance.
+
 ## Runtime acceptance boundary
 
 The synthetic Staging topology/source evidence is not a public API acceptance
 claim. STG-005A/STG-005B are guarded operational actions; PR #95/#97's
 `owner-login-acceptance` reuses existing auth/workspace/overview/logout
-contracts only. Exact Staging Phase-A evidence passed for the synthetic Owner;
-Chinatown onboarding and menu clone remain separately gated by the next Owner
-Runtime Gate.
+contracts only. Exact Staging passed that API-only path, but manual Chrome CORS
+403 reopened browser Phase A. Chinatown onboarding and menu clone remain
+blocked; their Owner Runtime Gate is not current until browser Phase A passes.
 
 This document defines the core API endpoints for the restaurant management system MVP.
 
