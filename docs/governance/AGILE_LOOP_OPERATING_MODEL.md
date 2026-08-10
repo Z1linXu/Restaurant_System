@@ -2,18 +2,28 @@
 
 ## Verified continuation state (2026-08-10)
 
-The completed loop is `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE`; the bounded
-`STG-009_PHASE_A_OWNER_LOGIN_ACCEPTANCE` remains open for Owner manual evidence.
+Owner has reprioritized the active route to `TWIN-001_ST_DENIS_STAGING_TWIN`.
+The former `STG-009 Phase A -> Chinatown Phase B -> REL-001` route remains
+historical and deferred, not cancelled. Staging's designated long-term role is
+a Production-like St-Denis Operational Twin and mandatory pre-Production
+validation environment. The Twin is not yet established.
+The former route is explicitly
+`DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY`; its plans and
+evidence remain preserved.
 STG-005A and STG-005B PLAN/EXECUTE/REPLAY remain
 `VALIDATED/CREATED/REPLAYED`; the source menu is `4/3/13/38` and replay is
 `2 -> 2`. `IN_MAIN`, `DEPLOYED_TO_STAGING`, and `STAGING_ACCEPTED` remain
 distinct. Exact Staging `1a3f2e...` passed formal preflight, V10-to-V10 deploy,
 readiness, private credential rotation, API acceptance and real-Chrome
 browser-equivalent acceptance without a 401/403. The pre-repair manual failure
-remains historical; fresh Owner manual UI evidence is pending. The unique stop
-state is
-`STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`.
-Chinatown onboarding/clone remains outside this loop.
+remains historical; the former manual-acceptance stop is deferred by the Owner.
+The unique current stop state is
+`TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`.
+The next independent Owner gate is
+`PRODUCTION_ST_DENIS_CONFIGURATION_READ_APPROVAL`; this round performs no
+Production configuration read.
+No Production read, Staging mutation, module implementation, or Chinatown
+Phase B action is authorized.
 
 > Status: `ACTIVE_GOVERNANCE_PROCESS`
 >
@@ -96,7 +106,7 @@ with an explicit recorded transition:
 merged into `main` by PR #27 but is not thereby deployed or production-ready.
 AL-003 PR-A through PR-F are in `main`; that is repository capability only and
 is not Staging or Production acceptance. Current dependency-bound preparation
-culminates in `REL-001_CHINATOWN_PRODUCTION_RELEASE_CANDIDATE`.
+is superseded by TWIN-001 planning; REL-001 remains preserved deferred planning.
 
 PR #59's bounded PostgreSQL private-leaf repair is now `IN_MAIN`, and PR #60's
 2026-08-08 Owner decisions are `IN_MAIN` at
@@ -123,9 +133,8 @@ continuity were unchanged. `STG-007=PASS`. Exact `2a6c30a...` later validated
 PR #89 in Staging before exposing the separate non-web one-shot lifecycle
 defect. PR #91 is `IN_MAIN` at `9a776d3...`; later exact `1a3f2e...` completed
 the authorized synthetic prerequisites, deployed the browser repair and passed
-API plus real-Chrome browser-equivalent acceptance. The current unique stop
-state is
-`STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`.
+API plus real-Chrome browser-equivalent acceptance. That Phase-A stop is now
+historical and deferred by the Owner Twin route.
 
 Fresh read-only state inspection found a bounded recovery-tooling defect: the
 retained current lock has the reviewed ordered cleanup-plus-action-failure
@@ -181,26 +190,24 @@ binding, formal preflight, V10-to-V10 Staging deploy, readiness and recovery of
 only the reviewed old blocked pair all passed. The subsequent password-free
 STG-005A plan failed before its command or data path because non-web startup
 required a servlet-bound request context. The resulting fail-closed records
-remain retained; topology and request data remain zero.
+are historical; later exact continuation cleared the reviewed state, and
+current topology/runtime evidence is complete.
 
 The bounded non-web request-context repair was runtime-validated by exact
 `2a6c30a...`; PR #91 then placed the separate lifecycle repair in main at
 `9a776d3...`. Later continuations superseded this historical checkpoint and
 deployed exact `1a3f2e...`. See [its evidence](runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md).
-The restarted batch must bind fresh readiness and distinct approvals to every
-STG-005A/STG-005B plan/create/replay. Staging acceptance retains
-the distinct prerequisite
-`AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING` until synthetic-only runtime
-evidence proves the complete Owner login topology.
+The restarted batch was completed by retained exact runtime evidence;
+STG-005A/B must not be repeated. The former
+`AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING` is historical Phase-A
+context, not the current Agile Loop.
 
-The authoritative post-stack matrix and next-loop order are in
-[POST_STACK_GROUND_TRUTH_AUDIT.md](runtime/POST_STACK_GROUND_TRUTH_AUDIT.md).
-STG-006 is complete for its passive scope and STG-007 is complete for its exact
-V10 continuation scope. The next phase is
-`STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE`, stopped read-only before plan/mutation
-historically at its credential Owner Gate and now stopped after a pre-command
-plan failure at the dependency-repair/runtime-rebind Gate. STG-007 PASS is not
-AL-003 Staging acceptance, STG-008 PASS, or Production approval.
+The authoritative post-stack matrix remains historical capability evidence.
+The next loop is TWIN-001; see [TWIN-001 St-Denis Twin Plan](agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.md)
+and [POST_STACK_GROUND_TRUTH_AUDIT.md](runtime/POST_STACK_GROUND_TRUTH_AUDIT.md).
+STG-006/7/8 and Phase-A evidence remain scoped historical runtime records.
+The synthetic baseline is not yet a parity Twin, and no prior PASS proves
+Production approval.
 
 The architecture authority for future provisioning packages is
 [STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md](agile/STORE_PROVISIONING_MODULAR_ARCHITECTURE_PLAN.md).
@@ -484,7 +491,7 @@ At normal completion, every bounded worker has returned its result and ended,
 and the round reports `Agents active = 0`. The lifecycle and worktree cleanup
 rules in sections 13 and 14 remain mandatory.
 
-### STG-008 one-shot lifecycle dependency repair
+### Historical STG-008 one-shot lifecycle dependency repair
 
 The exact `2a6c30a...` Staging continuation demonstrated that PR #89's
 request-context repair works in the guarded non-web runtime: the password-free
@@ -504,11 +511,12 @@ artifacts are non-replayable. See
 [STG-008 one-shot lifecycle repair evidence](runtime/STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md).
 
 PR #91 merged that repair at `9a776d3aaa2c357e1edeac46e54168bda1f5431f`.
-The current Owner authorization expressly permits exact Staging-only rebind,
-preflight, V10-to-V10 deployment, readiness and matching blocked-pair recovery
-for this repair and later same-scope bounded repairs. It does not authorize a
-migration, product/security/identity change, Production action, or destructive
-operation.
+Its exact Staging rebind, preflight, V10-to-V10 deployment, readiness and
+matching blocked-pair recovery are historical retained evidence; the former
+continuous authorization is consumed. No current rebind, recovery, migration,
+Production action, destructive operation or product/security/identity change
+is authorized. The current route is TWIN-001 planning and its independent
+Production read gate.
 
 ## 16. Repository auto-merge policy
 

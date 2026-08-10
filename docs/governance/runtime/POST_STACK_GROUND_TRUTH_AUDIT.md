@@ -1,5 +1,10 @@
 # Post-Stack Ground Truth Audit
 
+> Historical capability snapshot. On 2026-08-10 the Owner superseded this
+> audit's STG-008 loop order and runtime authorization with the TWIN-001
+> St-Denis Twin planning/read-approval route. Retained rows preserve history;
+> this document is not current runtime authority and authorizes no action.
+
 > Audit date: 2026-08-09, America/Toronto
 >
 > Runtime-sensitive current-main candidate after PR #92 governance publication:

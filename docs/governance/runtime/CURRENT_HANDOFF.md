@@ -1,10 +1,30 @@
 # Current Project Handoff
 
+## Owner strategic route override (2026-08-10)
+
+The former `STG-009 Phase A -> Chinatown Phase B -> REL-001` route is preserved
+as historical planning but is deferred. The current route is planning
+`TWIN-001_ST_DENIS_STAGING_TWIN`, whose designated long-term role is a
+Production-like St-Denis Operational Twin and mandatory pre-Production
+validation environment.
+The former route is explicitly
+`DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY`; it remains
+preserved rather than cancelled.
+
+The Twin is not yet established. Existing synthetic St-Denis data is
+`CURRENT_SYNTHETIC_BASELINE`, not Production-parity evidence. This round did
+not read Production configuration and performed no Staging/Production
+mutation. The next independent gate is
+`PRODUCTION_ST_DENIS_CONFIGURATION_READ_APPROVAL`.
+
+Current unique stop state:
+`TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`.
+See [TWIN-001 St-Denis Twin Plan](../agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.md).
+
 ## Current verified continuation override (2026-08-10)
 
-Git Ground Truth after browser-equivalent evidence publication is
-`origin/main=aec59af93a9bf42ce3d167a579a19be80eadc9b0`; this is the docs-only
-PR #101 merge. Staging remains exact
+Git Ground Truth is `origin/main=87dc27dcf30f351f833829da55730ad09a0a2eb6`.
+PR #101/#102 are governance-only merges. Staging remains exact
 `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c`, Flyway is
 V1--V10 with no pending or failed migration, and Printing is disabled.
 STG-005A PLAN/EXECUTE/REPLAY are `VALIDATED/CREATED/REPLAYED`; STG-005B is
@@ -14,11 +34,12 @@ one-shot is active, the blocked marker is absent, and the lock is empty.
 Formal preflight, V10-to-V10 deploy, readiness, private credential rotation,
 secret-safe API acceptance and real-Chrome browser-equivalent login/
 Organization/Store/dashboard/refresh/logout checks passed without a 401/403.
-Fresh Owner post-repair manual UI evidence is the only remaining Phase-A item.
-The unique stop is
-`STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`;
-this remains `DEPLOYED_TO_STAGING`, not `STAGING_ACCEPTED`. Chinatown
-onboarding/clone remains prohibited.
+Fresh Owner post-repair manual UI evidence remains pending and is deferred
+behind TWIN-001; the retained browser-equivalent result is historical Phase-A
+foundation. The former
+stop `STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`
+is historical; the current stop is the TWIN-001 plan/read gate. Chinatown
+onboarding/clone remains deferred and prohibited.
 
 See [STG-008 synthetic runtime progress evidence](STG-008_SYNTHETIC_RUNTIME_PROGRESS_EVIDENCE.md)
 and [STG-009 browser-equivalent acceptance evidence](STG-009_PHASE_A_BROWSER_EQUIVALENT_ACCEPTANCE_EVIDENCE.md).
@@ -81,12 +102,15 @@ Restaurant System is moving from one operational Store to reusable multi-Store
 provisioning without destabilizing current restaurant operations.
 
 - St-Denis is the current Production Store.
-- Chinatown is the planned second real Production Store and the highest-priority
-  delivery target.
+- St-Denis Twin planning and Owner field-test/bug-fix readiness are the current
+  highest-priority route.
+- Chinatown is still the planned second real Production Store, but is deferred
+  until the Twin, field-test loop and later modularization gates complete.
 - A future third Store matching St-Denis should reuse a reviewed St-Denis
   profile, not copied code or data scripts.
 - The direction is multi-Store SaaS-style provisioning through shared modules
-  and Profiles, while the immediate goal remains a safely released Chinatown.
+  and Profiles, while the immediate goal is the St-Denis Twin planning and
+  Owner field-test/bug-fix route.
 
 ## 2. Current Git ground truth
 
@@ -203,32 +227,30 @@ current rebind or recovery instruction is inherited from it.
 
 | Field | Current value |
 |---|---|
-| Current Feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `STG-009_PHASE_A_OWNER_MANUAL_UI_ACCEPTANCE` |
-| Current package | Exact `1a3f2e...` is deployed at V10 with completed synthetic A/B, `4/3/13/38`, replay `2 -> 2`, credential rotation and automated API/browser-equivalent acceptance. No active one-shot, marker or lock remains. |
-| Feature stop state | `STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE` |
+| Current Feature | `FT-001 Owner Store Onboarding - Chinatown` (deferred) |
+| Current Agile Loop | `TWIN-001_ST_DENIS_STAGING_TWIN` |
+| Current package | Exact `1a3f2e...` remains deployed at V10 with completed synthetic A/B and automated browser-equivalent acceptance. It is a `CURRENT_SYNTHETIC_BASELINE`, not yet a Production-parity Twin. |
+| Feature stop state | `TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL` |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | Owner supplies fresh post-repair manual UI login, principal, Organization, sole source Store and dashboard evidence. STG-005A/B must not be repeated. Chinatown Phase B, migration, product/security/identity-contract change, Production requirement, ambiguous identity, unexpected data, or destructive action remains a separate true Owner Gate. |
+| Current Owner gate | `PRODUCTION_ST_DENIS_CONFIGURATION_READ_APPROVAL`: exact runtime/Store identity, allowed columns/domains, bounded read strategy, sanitized manifest, reconstruction target and no-mutation guarantee. No Production read is authorized in this round. |
 
 ### Permitted work
 
 - Fetch and verify Git/GitHub ground truth.
-- Read the completed STG-008 evidence and PR #101 browser-equivalent evidence;
-  do not repeat STG-005A/B, deployment, credential rotation, or automated login.
-- Owner may retrieve the rotated credential through the private runtime path
-  and perform the bounded post-repair manual Staging UI login, principal,
-  Organization, sole source Store and dashboard confirmation.
-- Publish only bounded evidence/governance corrections under the permanent
-  repository auto-merge gate. A runtime-sensitive repair requires a new exact
-  runtime decision and cannot inherit this manual-acceptance gate.
+- Read the TWIN-001 plan and reconcile governance against verified runtime
+  evidence. Repository-only planning and bounded documentation repair are
+  permitted.
+- Prepare, but do not execute, the independent Production configuration-read
+  approval package. No Production query or Staging reconstruction occurs.
 
 ### Prohibited work without new approval
 
 - Reuse of consumed/failed STG-007 or STG-008 approval/readiness evidence, or
   continuation on an old image.
-- Any runtime action outside the current Owner manual Staging UI acceptance:
-  deploy/restart/Flyway/schema change, target onboarding, AL-003 validation/
-  clone/replay, printer/Pad action, or Production action.
+- Any Staging/Production runtime action, Production configuration read,
+  deployment, restart, Flyway/schema change, printer/device binding, Owner
+  manual acceptance, target onboarding, AL-003 validation/clone/replay, or
+  module implementation.
 - Production Store 1 read or mutation.
 - Printer configuration, test print, Pad pairing, or device/Worker mutation.
 - Candidate import, approval consumption, release/env preparation, recovery,
@@ -409,8 +431,10 @@ is the first Store Profile sample, not a shared-service special case.
 | STG-007 | Exact-SHA V10-aware continuation | `PASS` at deployed Staging SHA `2837ae88...` / Flyway V10 | Runtime batch complete; no approval or evidence is reusable |
 | STG-008 | Synthetic topology and source | `PASS` | Synthetic Organization/Owner/source Store and credential ready; A/B PLAN/EXECUTE/REPLAY complete at `4/3/13/38`, replay `2 -> 2`, no duplicate/crossover, Printing disabled, isolation and Production continuity unchanged. |
 
-The authoritative post-stack capability matrix, Staging decision, and next
-bounded loops are in [Post-Stack Ground Truth Audit](POST_STACK_GROUND_TRUTH_AUDIT.md).
+The post-stack capability matrix and Staging decision remain historical in
+[Post-Stack Ground Truth Audit](POST_STACK_GROUND_TRUTH_AUDIT.md). Its former
+loop order and STG-008 runtime authorization are superseded by TWIN-001 and
+are not current authority.
 
 ## 11. Stack rebuild rule
 
@@ -427,8 +451,8 @@ from current main.
 - STG-008 is `PASS`; its former runtime/tooling blockers and blocked records
   are resolved historical evidence and must not be replayed.
 - API and real-Chrome browser-equivalent Owner login acceptance pass on exact
-  `1a3f2e...`; fresh Owner post-repair manual UI evidence is the only current
-  Phase-A blocker.
+  `1a3f2e...`; the former manual Phase-A gate is deferred by the Owner Twin
+  route and is not the current loop.
 - Chinatown target onboarding and AL-003 validate/execute/clone/replay remain
   unexecuted and outside the current authorization.
 - Production and repository main have an unreviewed runtime gap.
@@ -466,19 +490,20 @@ from current main.
    `AGILE_LOOP_OPERATING_MODEL.md`, `FEATURE_BACKLOG.md`, and the applicable
    technical plan.
 3. Verify current `origin/main`; do not trust the Owner workspace branch tip.
-4. Verify GitHub PR #61 through #101 and independent PR #66 semantics.
+4. Verify GitHub PR #61 through #102 and independent PR #66 semantics.
 5. Distinguish main, stacked Draft, Staging, and Production state.
 6. Report the completed main stack and the next Staging Owner Gate.
 7. Do not recreate or redesign packages #61-#70.
 8. Do not infer implementation from the planning packages.
-9. Read STG-006, OPS-001, the STG-007 repair/final evidence, all STG-008
+9. Read the TWIN-001 plan, STG-006, OPS-001, the STG-007 repair/final evidence, all STG-008
    evidence records, [STG-009 Phase-A API evidence](STG-009_PHASE_A_OWNER_LOGIN_EVIDENCE.md)
    and [browser-equivalent evidence](STG-009_PHASE_A_BROWSER_EQUIVALENT_ACCEPTANCE_EVIDENCE.md).
    Treat `STG-008=PASS` and automated Phase-A API/browser-equivalent acceptance
    as verified on exact Staging `1a3f2e...`; no one-shot, marker or lock remains.
-10. Continue only the Owner's bounded post-repair manual Staging UI acceptance.
-    Do not rebind, redeploy, rotate credentials, repeat automated acceptance,
-    start Chinatown onboarding/clone, or perform any Production operation.
+10. Continue only TWIN-001 repository planning and governance review. Do not
+    read Production, rebind/redeploy Staging, rotate credentials, repeat
+    automated acceptance, start Chinatown onboarding/clone, or implement
+    modules without the later Owner decisions.
 11. Stop at runtime/product/operations Owner Gates; otherwise continue the
     bounded Agile Loop and Dependency Repair Auto-Loop.
 

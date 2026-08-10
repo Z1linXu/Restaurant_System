@@ -2,7 +2,7 @@
 
 > Classification: `REPOSITORY_DEPENDENCY_REPAIR_EVIDENCE`
 >
-> Runtime state: `REPAIR_DEPLOYED_BROWSER_EQUIVALENT_PASS_OWNER_MANUAL_UI_PENDING`
+> Runtime state: `REPAIR_DEPLOYED_BROWSER_EQUIVALENT_PASS_DEFERRED_BY_OWNER_TWIN_PRIORITY`
 
 > Repository publication: PR #99 is `IN_MAIN`; reviewed head
 > `b983b884c2b5eaa3a2b26ce81f1c098d083f4a79` entered `main` through merge

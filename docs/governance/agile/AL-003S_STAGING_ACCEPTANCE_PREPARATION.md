@@ -1,6 +1,6 @@
 # AL-003S Staging Acceptance Preparation
 
-## Current verified checkpoint (2026-08-10)
+## Historical verified checkpoint (2026-08-10)
 
 The synthetic prerequisite actions completed in isolated Staging: STG-005A and
 STG-005B each have PLAN `VALIDATED`, EXECUTE `CREATED`, REPLAY `REPLAYED`; the
@@ -9,14 +9,17 @@ source menu is `4/3/13/38` and replay is `2 -> 2`. Exact Staging
 V10-to-V10 deploy, readiness, private credential rotation, API acceptance and
 real-Chrome browser-equivalent login/workspace/Organization/Store/dashboard/
 refresh/logout checks without a 401/403. Fresh Owner post-repair manual UI
-evidence remains required. STG-005A/B must not be repeated, and Chinatown
-onboarding/clone remains unauthorized.
+evidence remains valid historical foundation. STG-005A/B must not be repeated;
+the Owner has deferred Chinatown onboarding/clone behind TWIN-001 and the
+field-test loop.
 
 > Package state: `IN_MAIN`; `STG-006_PASS`; OPS-001 repository tooling complete after reviewed merge
 >
 > Prepared against: STG-005B checkpoint `0aba8377a3b7acec047c6ffd025f774d8a4d5e87`
 >
-> Runtime checkpoint: `STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`
+> Runtime checkpoint: `DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY`
+
+> Current route: [TWIN-001 St-Denis Twin Plan](TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.md)
 
 > Final Phase-A evidence: [STG-009 Phase-A Owner login evidence](../runtime/STG-009_PHASE_A_OWNER_LOGIN_EVIDENCE.md)
 
@@ -389,4 +392,4 @@ The current repair and boundary are recorded in
 
 Stop state:
 
-`STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`
+`TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`

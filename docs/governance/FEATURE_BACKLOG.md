@@ -1,5 +1,21 @@
 # Feature Backlog
 
+## Owner strategic route override (2026-08-10)
+
+The immediate route is now `TWIN-001_ST_DENIS_STAGING_TWIN`: a long-lived
+Production-like St-Denis Operational Twin and mandatory pre-Production
+validation environment. The former STG-009 manual Phase-A gate, Chinatown
+Phase B, and REL-001 Production RC remain preserved but are
+`DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY`.
+
+The Twin is not yet established. Existing synthetic St-Denis is
+`CURRENT_SYNTHETIC_BASELINE`, not Production-parity evidence. This round does
+not read Production or mutate either environment. The next independent gate is
+`PRODUCTION_ST_DENIS_CONFIGURATION_READ_APPROVAL`.
+
+Current unique stop state:
+`TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`.
+
 ## Current verified STG-008 runtime state (2026-08-10)
 
 Staging is exact `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c` at Flyway V10. STG-005A and STG-005B
@@ -28,11 +44,20 @@ UI evidence remains pending. No Chinatown or Production action is authorized.
 | feature_id | `FT-001` |
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
-| status | `STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE` |
-| target_loop | `STG-009_PHASE_A_OWNER_MANUAL_UI_ACCEPTANCE`; exact `1a3f2e...` completed synthetic A/B and automated Phase-A acceptance. |
-| implementation status | `STG-008=PASS`; PR #99's generic repair is `IN_MAIN` and deployed at exact `1a3f2e...`. Formal preflight, V10-to-V10 deployment, readiness, credential rotation, API and real-Chrome browser-equivalent acceptance passed. Owner post-repair manual UI evidence remains pending. |
+| status | `DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY` |
+| target_loop | `TWIN-001_ST_DENIS_STAGING_TWIN`; exact `1a3f2e...` completed synthetic A/B and automated Phase-A acceptance, but is not a Production-parity Twin. |
+| implementation status | `STG-008=PASS`; PR #99's generic repair is deployed at exact `1a3f2e...`. API and browser-equivalent evidence remain valid historical foundation. Owner has deferred manual Phase-A closure behind Twin planning. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md), [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md), [STG-008 entry evidence](runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md), [STG-008 Flyway guard repair evidence](runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md), [STG-008 release-rebind repair evidence](runtime/STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md), [STG-008 non-web request-context repair evidence](runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md), and [STG-008 one-shot lifecycle repair evidence](runtime/STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md). |
-| next action | Owner performs the bounded post-repair manual Staging login and confirms principal, Organization, sole source Store and dashboard. Do not repeat A/B and do not begin Chinatown/Production work. |
+| next action | Review TWIN-001 planning, then seek `PRODUCTION_ST_DENIS_CONFIGURATION_READ_APPROVAL`. Do not read Production, repeat A/B, begin Chinatown, or implement modules. |
+
+### Current strategic roadmap
+
+| Phase | State | Boundary |
+|---|---|---|
+| `PHASE 1 TWIN-001_ST_DENIS_STAGING_TWIN` | `TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL` | Plan only; no Production read or Staging reconstruction |
+| `PHASE 2 OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` | `DEFERRED_UNTIL_TWIN_PLAN_AND_RUNTIME_VALIDATION` | Owner checklist and bounded repair loop; no implementation yet |
+| `PHASE 3 MODULAR_PROVISIONING_IMPLEMENTATION` | `ARCHITECTURE_DIRECTION_APPROVED_IMPLEMENTATION_DEFERRED` | Opens only after Owner says “可以进行模块化了” |
+| `PHASE 4 CHINATOWN_STAGING_ACCEPTANCE` | `DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY` | Existing AL-003/REL-001 preserved; requires future `CHINATOWN_RESUME_GATE` |
 
 ### Current AL-003 delivery state
 
@@ -232,9 +257,9 @@ seed/demo Store.
 | Exact-SHA Staging deployment and Flyway V9/V10 | `STG-007_PASS` / `DEPLOYED_TO_STAGING` | Historical exact `2837ae88...` passed fresh V10 continuation entry, formal preflight, V10-to-V10 deploy, repaired readiness, runtime collection, same-image restart and post-restart verification. Flyway remains exact V10/no-pending; this is not AL-003 Staging acceptance. |
 | Synthetic Organization/source/Owner bootstrap | `STG-008_PASS` / `DEPLOYED_TO_STAGING` | Exact `1a3f2e...` retains ready synthetic Organization, Owner, source Store, credential and memberships; A/B execution/replay evidence is complete with no blocked marker or active one-shot. |
 | Synthetic target onboarding and Owner target access | `STAGING_PENDING` | Existing onboarding plus Organization Owner access is sufficient; runtime evidence is missing. |
-| Synthetic Owner login/workspace/Owner API authorization | `BROWSER_EQUIVALENT_PASS_OWNER_MANUAL_PENDING` | Exact `1a3f2e...` deployed PR #99, rotated the credential privately and passed API plus real-Chrome browser-equivalent login/session/Organization/Store/dashboard/refresh/logout acceptance without a 401/403. Fresh Owner manual UI evidence remains. |
+| Synthetic Owner login/workspace/Owner API authorization | `BROWSER_EQUIVALENT_PASS_OWNER_MANUAL_DEFERRED_BY_OWNER_TWIN_PRIORITY` | Exact `1a3f2e...` deployed PR #99, rotated the credential privately and passed API plus real-Chrome browser-equivalent login/session/Organization/Store/dashboard/refresh/logout acceptance without a 401/403. Fresh Owner manual UI evidence remains deferred behind TWIN-001. |
 | Reproducible Synthetic St-Denis source-menu baseline | `DEPLOYED_TO_STAGING` via PR #62 capability | Guarded source graph is ready at `4/3/13/38`, replay revision `2 -> 2`; this is not Production or Chinatown acceptance. |
-| AL-003 validate/execute/replay/restart acceptance | `BLOCKED_BY_REOPENED_PHASE_A` | Chinatown Phase B remains prohibited. It becomes the next Owner Gate only after browser Phase A is genuinely verified. |
+| AL-003 validate/execute/replay/restart acceptance | `DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY` | Chinatown Phase B remains prohibited. Future `CHINATOWN_RESUME_GATE` follows Twin, field-test and later modularization DoD. |
 | STG-006 exact-main passive preflight | `PASS` | At STG-006 capture, candidate was `33c6e3c...` and retained Staging was `4397f995...` / V8; this historical PASS does not override the later STG-007 deployment. |
 | OPS-001 secret-safe tooling | `REPOSITORY_COMPLETE` through PR #87; STG-007 runtime evidence `PASS` | Release/env rotation, exact deploy, repaired readiness, sanitized runtime collection and same-image restart passed at `2837ae88...`. PR #87's later recovery-only release/env path supported the exact `6753855497...` rebind/deploy/recovery continuation. No credentials or API action occurred. |
 | Production Store 1 read-only source capture/drift review | `PRODUCTION_PENDING` | Separate Owner Runtime Gate; only menu-related evidence may be read. |

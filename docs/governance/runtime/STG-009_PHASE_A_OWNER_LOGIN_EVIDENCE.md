@@ -7,8 +7,8 @@
 > Exact `1a3f2e...` later deployed the proxy repair and passed fresh API plus
 > real-Chrome browser-equivalent acceptance after private credential rotation;
 > see [the browser-equivalent evidence](STG-009_PHASE_A_BROWSER_EQUIVALENT_ACCEPTANCE_EVIDENCE.md).
-> `STG-009_PHASE_A_OWNER_LOGIN` remains open only for fresh Owner post-repair
-> manual UI evidence.
+> `STG-009_PHASE_A_OWNER_LOGIN` manual closure is preserved as historical
+> evidence and deferred behind the Owner's TWIN-001 route.
 
 ## Scope
 

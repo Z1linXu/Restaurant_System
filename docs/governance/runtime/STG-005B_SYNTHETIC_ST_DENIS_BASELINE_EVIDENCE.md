@@ -10,13 +10,20 @@
 >
 > Runtime access: `NOT_PERFORMED`
 
-## Current runtime confirmation (2026-08-09)
+## Historical runtime confirmation (2026-08-09)
 
 The guarded baseline was executed and replayed in synthetic Staging under the
 separate continuous authorization. Exact Staging `468b8705...` retained
 `4/3/13/38`, revision `2 -> 2`, no duplicate graph, and no Store crossover.
-This confirmation is runtime evidence only; it does not authorize Chinatown or
-Production clone work.
+This confirmation is runtime evidence only and is now classified as the
+`CURRENT_SYNTHETIC_BASELINE`; it is not Production-parity evidence and does
+not authorize Chinatown or Production clone work.
+
+## Twin route clarification
+
+TWIN-001 must assess what can be reused from this synthetic baseline, what
+differs from Production, and what requires reconciliation. It must not delete,
+reset or rebuild this baseline destructively.
 
 ## 1. Git and dependency boundary
 

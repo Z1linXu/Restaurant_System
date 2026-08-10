@@ -1,18 +1,17 @@
 # STG-005 Synthetic Business Acceptance Plan
 
-## Current verified execution state (2026-08-10)
+## Historical verified execution state (2026-08-10)
 
 The Staging-only synthetic sequence remains complete without duplication on
 exact Staging `1a3f2e...`: STG-005A
 and STG-005B PLAN/EXECUTE/REPLAY are `VALIDATED/CREATED/REPLAYED`; menu counts
 are `4/3/13/38` and replay revision is `2 -> 2`. Organization, Owner, source
 Store and credential are ready; no one-shot or blocked marker remains and the
-lock is empty. This is synthetic Staging runtime evidence, not Production
-acceptance. The repaired runtime passed private credential rotation, API and
-real-Chrome browser-equivalent Phase-A checks without a 401/403. Fresh Owner
-post-repair manual UI evidence remains pending at
-`STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`;
-no Chinatown or Production action is implied.
+lock is empty. This is the `CURRENT_SYNTHETIC_BASELINE`, not a Production
+parity Twin. The repaired runtime passed private credential rotation, API and
+real-Chrome browser-equivalent checks without a 401/403. The former Phase-A
+manual gate is preserved but deferred by the Owner Twin route; no Chinatown or
+Production action is implied.
 
 > Loop: `STG-005_SYNTHETIC_BUSINESS_ACCEPTANCE`
 >

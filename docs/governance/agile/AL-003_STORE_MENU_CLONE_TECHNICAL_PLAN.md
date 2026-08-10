@@ -1,11 +1,11 @@
 # AL-003 Store 1 -> Chinatown Live Menu Clone Technical Plan
 
-> Status: `IN_MAIN_PHASE_A_BROWSER_EQUIVALENT_PASS`; `STG-008=PASS`, `STG-009_PHASE_A_OWNER_LOGIN=OWNER_MANUAL_UI_PENDING`
+> Status: `IN_MAIN_DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY`; `STG-008=PASS`
 >
 > Exact Staging `1a3f2e...` passed the repaired API and real-Chrome
-> browser-equivalent Owner flow after private credential rotation. Phase B
-> remains prohibited until the Owner supplies fresh post-repair manual UI
-> evidence.
+> browser-equivalent Owner flow after private credential rotation. That Phase-A
+> route is preserved as historical evidence; Phase B is deferred behind
+> TWIN-001 and the Owner field-test loop.
 >
 > Prepared: 2026-07-31, America/Toronto
 >
@@ -1014,10 +1014,10 @@ rebind/deploy/readiness/old-pair recovery; exact `2a6c30a...` then verified the
 non-web request-context repair through password-free `VALIDATED`. The bounded
 tooling repair changes no clone/API/profile behavior. Exact `1a3f2e...` then
 verified completed STG-005A/B, private credential rotation and API/real-Chrome
-browser-equivalent Owner checks. Fresh Owner manual UI evidence remains;
-target onboarding and validate/execute/replay are unexecuted. The unique stop
-state is
-`STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`.
+browser-equivalent Owner checks. Fresh Owner manual UI evidence remains
+historical; target onboarding and validate/execute/replay are unexecuted. The
+current unique stop state is
+`TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`.
 See [the sanitized STG-008 entry evidence](../runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md)
 [the Flyway guard repair evidence](../runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md),
 and [the release-rebind serialization repair evidence](../runtime/STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md).

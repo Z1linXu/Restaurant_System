@@ -2,7 +2,7 @@
 
 > Classification: `MACHINE_VERIFIED_STAGING_RUNTIME_EVIDENCE`
 >
-> Result: `BROWSER_EQUIVALENT_PASS_OWNER_MANUAL_UI_PENDING`
+> Result: `BROWSER_EQUIVALENT_PASS_OWNER_MANUAL_UI_DEFERRED_BY_OWNER_TWIN_PRIORITY`
 >
 > Observation date: 2026-08-10, America/Toronto
 
@@ -74,19 +74,19 @@ and removed, and the browser clipboard was cleared.
 - Staging frontend, authoritative backend health and WebSocket info are HTTP
   200 after the browser flow. Printing remains disabled.
 
-## Closure boundary
+## Closure boundary and Twin route
 
 This evidence closes the automated API and browser-equivalent requirements;
 it does not fabricate Owner manual UI evidence. The pre-repair Owner manual
-attempt remains a historical failure. A fresh Owner post-repair manual login,
-Organization/Store visibility and dashboard confirmation is the only remaining
-Phase-A acceptance item.
+attempt remains a historical failure. Owner has deferred the manual Phase-A
+retry behind TWIN-001; this evidence is retained as Twin foundation evidence,
+not as Production-parity evidence.
 
 Therefore:
 
 - `STG-008 = PASS` remains valid;
-- `STG-009_PHASE_A_OWNER_LOGIN = PENDING_OWNER_MANUAL_UI_ACCEPTANCE`;
-- the unique stop state is
-  `STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`;
+- `STG-009_PHASE_A_OWNER_LOGIN` is deferred by the Owner Twin priority;
+- the current unique stop state is
+  `TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`;
 - Chinatown onboarding, validate, execute, clone, replay and every Production
   mutation remain prohibited.
