@@ -1,19 +1,21 @@
 # AL-003S Staging Acceptance Preparation
 
-## Current verified checkpoint (2026-08-09)
+## Current verified checkpoint (2026-08-10)
 
 The synthetic prerequisite actions completed in isolated Staging: STG-005A and
 STG-005B each have PLAN `VALIDATED`, EXECUTE `CREATED`, REPLAY `REPLAYED`; the
 source menu is `4/3/13/38` and replay is `2 -> 2`. Exact Staging
 `468b8705c8e360b9e34336c5560442179544069b` then passed readiness and the
-bounded Phase-A Owner login/workspace/overview/logout checks. This does not
-authorize Chinatown onboarding or clone.
+bounded API-only Phase-A Owner login/workspace/overview/logout checks. Manual
+Chrome acceptance then failed on the first login POST with CORS HTTP 403 before
+authentication. STG-005A/B remain complete and must not be repeated. This does
+not authorize Chinatown onboarding or clone.
 
 > Package state: `IN_MAIN`; `STG-006_PASS`; OPS-001 repository tooling complete after reviewed merge
 >
 > Prepared against: STG-005B checkpoint `0aba8377a3b7acec047c6ffd025f774d8a4d5e87`
 >
-> Runtime checkpoint: `STG-009_PHASE_A_OWNER_LOGIN_VERIFIED_WAITING_FOR_PHASE_B_CLONE_APPROVAL`
+> Runtime checkpoint: `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`
 
 > Final Phase-A evidence: [STG-009 Phase-A Owner login evidence](../runtime/STG-009_PHASE_A_OWNER_LOGIN_EVIDENCE.md)
 
@@ -386,4 +388,4 @@ The current repair and boundary are recorded in
 
 Stop state:
 
-`STG-009_PHASE_A_OWNER_LOGIN_VERIFIED_WAITING_FOR_PHASE_B_CLONE_APPROVAL`
+`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`

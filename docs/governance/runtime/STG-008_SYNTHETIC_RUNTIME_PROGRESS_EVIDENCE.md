@@ -1,5 +1,11 @@
 # STG-008 synthetic runtime progress evidence
 
+> 2026-08-10 clarification: STG-008 topology/source remains PASS, but the
+> separately claimed Phase-A Owner-login PASS is superseded for browser
+> acceptance by `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN`. API-only 200 did
+> not exercise browser Origin/proxy behavior; see
+> [the browser-login repair evidence](STG-009_PHASE_A_BROWSER_LOGIN_403_REPAIR_EVIDENCE.md).
+
 > Classification: `MACHINE_VERIFIED_STAGING_EVIDENCE`
 >
 > Scope: sanitized Staging-only execution facts. These facts establish
@@ -24,20 +30,20 @@
 - Printing remains disabled; the Staging HTTP root, backend health, and
   `/ws/info` checks are healthy. Production continuity observation remains
   limited to container/image/start/restart/health identity and unchanged.
-- `STG-009_PHASE_A_OWNER_LOGIN` passed on this exact release: login,
-  authenticated principal/workspace/overview checks and logout all returned
-  HTTP 200 for `STG005_OWNER_20260808_R01`; the exact synthetic source Store
-  was the only Store exposed. See [sanitized Phase-A evidence](STG-009_PHASE_A_OWNER_LOGIN_EVIDENCE.md).
+- The API-only `STG-009_PHASE_A_OWNER_LOGIN` client passed on this exact
+  release, but manual Chrome acceptance later failed at the initial CORS 403
+  before authentication. See [the superseded API evidence](STG-009_PHASE_A_OWNER_LOGIN_EVIDENCE.md)
+  and [the browser repair evidence](STG-009_PHASE_A_BROWSER_LOGIN_403_REPAIR_EVIDENCE.md).
 
 ## Current boundary
 
-`STG-008=PASS` covers the completed synthetic topology/source contract and the
-separately bounded `STG-009_PHASE_A_OWNER_LOGIN=PASS` evidence:
+`STG-008=PASS` covers the completed synthetic topology/source contract. The
+separately bounded API-only Phase-A evidence does not establish browser PASS:
 fresh exact deployment/readiness, STG-005A and STG-005B plan/execute/replay,
 expected counts/revision, no duplicate/crossover, disabled Printing, intact
-isolation, and unchanged Production continuity. Phase B remains prohibited.
+isolation, and unchanged Production continuity remain valid. Phase B remains prohibited.
 The unique stop state is
-`STG-009_PHASE_A_OWNER_LOGIN_VERIFIED_WAITING_FOR_PHASE_B_CLONE_APPROVAL`.
+`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`.
 
 No password, token, cookie, authorization header, or business data is retained
 in this evidence.

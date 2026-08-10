@@ -2,7 +2,7 @@
 
 > Status: `ACTIVE_GOVERNANCE_RECORD`
 >
-> Last updated: 2026-08-09, America/Toronto
+> Last updated: 2026-08-10, America/Toronto
 >
 > Scope: current operating baseline, active work, deployment entry conditions,
 > and approval boundaries. This is a living index, not a replacement for the
@@ -63,12 +63,12 @@ snapshots. Do not copy those reports into this planbook.
 | Item | Current state |
 |---|---|
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `STG-009_PHASE_A_OWNER_LOGIN_ACCEPTANCE` |
+| Current Agile Loop | `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN` |
 | Loop type | `OWNER_GATED_STAGING_SYNTHETIC_ACCEPTANCE` |
-| Loop status | `STG-008=PASS; STG-009_PHASE_A_OWNER_LOGIN=PASS` |
-| Current package | Exact `468b8705c8e360b9e34336c5560442179544069b` is deployed to isolated Staging at Flyway V10. STG-005A and STG-005B remain `VALIDATED/CREATED/REPLAYED`; the source menu is `4/3/13/38` and replay retained revision `2 -> 2`. No one-shot or blocked marker remains. PR #97's jq-free Phase-A-only parser is `IN_MAIN` and runtime-verified. |
+| Loop status | `STG-008=PASS; STG-009_PHASE_A_OWNER_LOGIN=REOPENED_BROWSER_403` |
+| Current package | Exact `468b8705c8e360b9e34336c5560442179544069b` remains deployed to isolated Staging at Flyway V10. STG-005A and STG-005B remain `VALIDATED/CREATED/REPLAYED`; the source menu is `4/3/13/38` and replay retained revision `2 -> 2`. No one-shot or blocked marker remains. Manual Chrome acceptance found the first browser request, `POST /api/v1/auth/login`, returning `403 Invalid CORS request` before authentication because nginx discarded the SSH-tunnel port from the upstream `Host`. The bounded proxy repair is repository work only until a fresh exact-SHA Staging deploy validates it. |
 | STG-008 state | `PASS` for the completed synthetic topology/source contract on exact Staging `468b8705...`; synthetic Organization, Owner, source Store and credential are ready, with no duplicate/crossover. |
-| STG-009 Phase-A state | `PASS`: login, authenticated principal/workspace/overview checks, and logout all returned HTTP 200 for `STG005_OWNER_20260808_R01`; only the synthetic Organization/source Store were exposed. |
+| STG-009 Phase-A state | `REOPENED`: the API-only secret-safe flow returned HTTP 200, but manual browser acceptance on `http://127.0.0.1:18080` failed at the initial login POST with CORS HTTP 403. No principal, authorization branch, workspace, or Store branch was reached. Browser-equivalent runtime evidence plus Owner manual acceptance are required. |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | PR #27 merged the backend foundation into `main`; Production remains on the older runtime and no production onboarding is established by that merge. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -79,9 +79,9 @@ snapshots. Do not copy those reports into this planbook.
 | STG-006 state | `PASS` for candidate `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b`. Fresh read-only evidence confirmed retained Staging `4397f995...` / V8, isolated project/network/state, loopback bind, printing disabled, healthy endpoints, resource headroom, and unchanged Production continuity. No candidate release, deploy, Flyway, restart, login, or data mutation occurred. |
 | OPS-001 state | `REPOSITORY_COMPLETE` through PR #87. The final exact `2837ae88...` runtime use passed release/env binding, V10-to-V10 deploy, repaired readiness, sanitized Flyway/runtime collection and same-image restart without weakening any guard. PR #87 later supplied the blocked-state-safe release/env preparation path, which was used by exact `6753855497...` for the bounded rebind/deploy/recovery continuation. Runtime use remains action-specific and Owner-gated. |
 | STG-007 state | `PASS` at exact deployed Staging SHA `2837ae88e55142c99c6975f8b6575febffc913a1`. Environment digest `124eb472...`, continuation entry `8d744fa8...`, formal preflight `7174a295...`, readiness `19a8fec2...`, runtime collection `03337e71...`, restart readiness `6392783f...`, and same-image restart `2208d8ca...` all passed. Flyway remained exact V10/no-pending; health returned 200/200/200; exact container/image/release identity, printing, isolation and Production continuity were unchanged. |
-| AL-003 state | PRs #61-#97 are `IN_MAIN`; exact `468b8705...` is `DEPLOYED_TO_STAGING` at Flyway V10 with completed synthetic topology/source and Phase-A Owner-login evidence. No Chinatown onboarding, validation, clone, or Production acceptance result exists. |
-| Staging Owner login prerequisite | Synthetic Owner `STG005_OWNER_20260808_R01` and private credential are ready. `owner-login-acceptance` passed on exact `468b8705...` with authenticated Organization Owner and exact synthetic source-Store access; no credential value is retained here. |
-| Current permitted work | The authorized Phase-A sequence is complete on exact Staging `468b8705...`; preserve evidence and stop at the Phase-B Owner Runtime Gate. Same-scope bounded Dependency Repairs may merge and rebind only when needed; any migration, security-contract, product, identity, Production or destructive change is a true Owner Gate. |
+| AL-003 state | PRs #61-#98 are `IN_MAIN`; exact `468b8705...` is `DEPLOYED_TO_STAGING` at Flyway V10 with completed synthetic topology/source. Its Owner-login evidence is API-only and browser Phase A is reopened. The proxy/rotation repair is `DEPENDENCY_REPAIR_IN_REVIEW`; no Chinatown onboarding, validation, clone, or Production acceptance result exists. |
+| Staging Owner login prerequisite | Synthetic Owner `STG005_OWNER_20260808_R01` remains ready, but the prior private credential is compromised by manual communication and must be rotated through the reviewed runtime-only channel after the proxy repair deploys. API-only acceptance does not satisfy browser acceptance. |
+| Current permitted work | Complete the bounded same-origin proxy repair, tests, independent review and auto-merge; then use the existing continuous authorization for fresh exact-SHA Staging rebind/deploy/readiness, runtime-only credential rotation, browser-equivalent acceptance and Owner manual confirmation. Same-scope bounded repairs may continue. |
 | Explicitly not permitted | Chinatown onboarding, AL-003 validate/execute/clone/replay, Production build/pull/restart/deploy/Flyway/data read or mutation, Store 1 read, printer/Pad action, or any new runtime-sensitive action without a new Owner Runtime Gate. `IN_MAIN`, `DEPLOYED_TO_STAGING`, and `STAGING_ACCEPTED` remain distinct. |
 
 Agent and worker execution is ephemeral. After a bounded task, the result and
@@ -156,8 +156,10 @@ Production Flyway was not queried and remains retained V7 evidence only.
 
 The exact `468b8705...` continuation deployed the repaired Phase-A tooling,
 passed fresh readiness, verified the synthetic topology/menu and completed the
-Owner login/workspace/overview/logout acceptance. The unique feature stop state
-is `STG-009_PHASE_A_OWNER_LOGIN_VERIFIED_WAITING_FOR_PHASE_B_CLONE_APPROVAL`.
+API-only Owner login/workspace/overview/logout checks. Manual Chrome acceptance
+then proved that the first browser login POST is rejected by the proxy/CORS
+same-origin contract. The unique stop state is
+`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_DEPENDENCY_REPAIR_IN_REVIEW`.
 
 OPS-001 adds repository-only guarded helpers for a detached release plus
 four-field atomic private-env rotation, sanitized Flyway/runtime collection

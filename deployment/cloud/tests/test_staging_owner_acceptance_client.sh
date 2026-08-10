@@ -21,6 +21,14 @@ printf '{"data":{"stores":[{"id":1,"organization_id":10},{"id":2,"organization_i
 expect_failure compat_extra_store "$COMPAT" -e --argjson organization 10 --argjson source 1 '.data.stores | type == "array" and length == 1 and .[0].id == $source and .[0].organization_id == $organization' "$TMP_DIR/compat-extra-store.json"
 printf '{"data":{"access_token":"abcdefghijklmnopqrstuv"}}' >"$TMP_DIR/compat-short-me.json"
 expect_failure compat_short_me "$COMPAT" -er '.data.access_token | strings | select(length >= 24)' "$TMP_DIR/compat-short-me.json"
+printf '{"login_identifier":"STG005_OWNER_TEST","login_password":"OwnerPassphrase-123","new_login_password":"NewOwnerPassphrase20"}' >"$TMP_DIR/compat-rotate.json"
+"$COMPAT" -e '(.new_login_password | type == "string" and length == 20) and (.new_login_password != .login_password)' "$TMP_DIR/compat-rotate.json"
+"$COMPAT" -c '{login_identifier: .login_identifier, password: .new_login_password}' "$TMP_DIR/compat-rotate.json" >"$TMP_DIR/compat-new-login.json"
+"$COMPAT" -c '{new_password: .new_login_password}' "$TMP_DIR/compat-rotate.json" >"$TMP_DIR/compat-reset.json"
+printf '{"data":{"user":{"id":7}}}' >"$TMP_DIR/compat-user-id.json"
+[[ "$("$COMPAT" -er '.data.user.id | numbers' "$TMP_DIR/compat-user-id.json")" == 7 ]] || fail 'compat parser did not retain the Owner user ID contract'
+printf '{"data":{"user":{"username":"STG005_OWNER_TEST"}}}' >"$TMP_DIR/compat-username.json"
+"$COMPAT" -e --arg login STG005_OWNER_TEST '.data.user.username == $login' "$TMP_DIR/compat-username.json"
 "$SCRIPT" --help >"$TMP_DIR/help"
 assert_contains 'Secret values are forbidden in argv/environment/output.' "$TMP_DIR/help"
 expect_failure missing_bindings "$SCRIPT" --validate
@@ -43,17 +51,23 @@ FAKE_STATE="$TMP_DIR/fake-state"
 cat >"$FAKE_CURL" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-config=""; output=""; url=""
+config=""; output=""; url=""; data_file=""
 [[ "${1:-}" == '-q' ]] || exit 98
 args="$*"
 [[ "$args" != *'OwnerPassphrase'* && "$args" != *'StaffPassphrase'* && "$args" != *'idem-'* && "$args" != *'access-token-value'* ]] || exit 97
 while [[ $# -gt 0 ]]; do
-  case "$1" in --config) config="$2"; shift ;; --output) output="$2"; shift ;; http://*) url="$1" ;; esac
+  case "$1" in --config) config="$2"; shift ;; --output) output="$2"; shift ;; --data-binary) data_file="${2#@}"; shift ;; http://*) url="$1" ;; esac
   shift
 done
 [[ "$(stat -f '%Lp' "$config" 2>/dev/null || stat -c '%a' "$config")" == 600 ]] || exit 96
 case "$url" in
-  */auth/login) body='{"success":true,"data":{"access_token":"access-token-value-abcdefghijklmnopqrstuvwxyz","refresh_token":"refresh-token-value-abcdefghijklmnopqrstuvwxyz","user":{"role_code":"OWNER","organization_id":10}}}' ;;
+  */auth/login)
+    [[ -f "$data_file" ]] || exit 91
+    if grep -Fq 'NewOwnerPassphrase20' "$data_file"; then printf 'new' >"$FAKE_STATE/login-password";
+    elif grep -Fq 'OwnerPassphrase-123' "$data_file"; then printf 'old' >"$FAKE_STATE/login-password";
+    else exit 90; fi
+    username="${FAKE_LOGIN_USERNAME:-STG005_OWNER_TEST}"
+    body="{\"success\":true,\"data\":{\"access_token\":\"access-token-value-abcdefghijklmnopqrstuvwxyz\",\"refresh_token\":\"refresh-token-value-abcdefghijklmnopqrstuvwxyz\",\"user\":{\"id\":7,\"username\":\"$username\",\"role_code\":\"OWNER\",\"organization_id\":10}}}" ;;
   */auth/me) grep -Eq 'Authorization: Bearer (access|me-access)-token-value-' "$config" || exit 95; body='{"success":true,"data":{"access_token":"me-access-token-value-abcdefghijklmnopqrstuvwxyz","refresh_token":null,"user":{"role_code":"OWNER","organization_id":10}}}' ;;
   */me/workspaces)
     grep -Fq 'Authorization: Bearer me-access-token-value-' "$config" || exit 95
@@ -63,6 +77,11 @@ case "$url" in
   */owner/overview)
     grep -Fq 'Authorization: Bearer me-access-token-value-' "$config" || exit 95
     if [[ "${FAKE_LOGIN_ONLY:-0}" == 1 ]]; then body='{"success":true,"data":{"organizations":[{"id":10,"role_code":"OWNER","stores":[{"id":1}]}]}}'; else body='{"success":true,"data":{"organizations":[{"id":10,"role_code":"OWNER","stores":[{"id":22}]}]}}'; fi ;;
+  */admin/staff/7/reset-password)
+    grep -Fq 'Authorization: Bearer me-access-token-value-' "$config" || exit 95
+    grep -Fq 'NewOwnerPassphrase20' "$data_file" || exit 89
+    [[ "$(cat "$FAKE_STATE/login-password")" == old ]] || exit 88
+    body='{"success":true,"data":{"id":7,"username":"STG005_OWNER_TEST","role_code":"OWNER"}}' ;;
   */stores/onboard)
     count=0; [[ ! -f "$FAKE_STATE/onboard" ]] || count="$(cat "$FAKE_STATE/onboard")"; count=$((count+1)); printf '%s' "$count" >"$FAKE_STATE/onboard"
     grep -Fq 'Idempotency-Key: idem-onboarding-' "$config" || exit 94
@@ -109,6 +128,54 @@ expect_failure unexpected_store_access verify_owner_context
 assert_contains 'not exactly the approved synthetic source Store' "$TMP_DIR/unexpected_store_access.err"
 cleanup
 unset FAKE_EXTRA_STORE
+
+ROTATE_SECRET="$TMP_DIR/rotate.json"
+cat >"$ROTATE_SECRET" <<'EOF'
+{"login_identifier":"STG005_OWNER_TEST","login_password":"OwnerPassphrase-123","new_login_password":"NewOwnerPassphrase20"}
+EOF
+chmod 600 "$ROTATE_SECRET"
+initialize_private_root
+exec 4<"$ROTATE_SECRET"; SECRETS_FD=4; ACTION=rotate-owner-credential; TARGET_STORE_ID=""
+APPROVED_LOGIN_IDENTIFIER=STG005_OWNER_TEST
+[[ "$(client_scope)" == *';owner_login_identifier=STG005_OWNER_TEST' ]] || fail 'credential rotation approval scope is not bound to the exact synthetic Owner identifier'
+read_secret_input
+login >"$TMP_DIR/rotate.out"; verify_owner_context >>"$TMP_DIR/rotate.out"; rotate_owner_credential >>"$TMP_DIR/rotate.out"; logout >>"$TMP_DIR/rotate.out"
+assert_contains 'OPS001_API|OWNER_CREDENTIAL|ROTATED|HTTP_200' "$TMP_DIR/rotate.out"
+[[ "$(grep -c 'OPS001_API|LOGIN|HTTP_200' "$TMP_DIR/rotate.out")" == 2 ]] || fail 'credential rotation must prove old and new credential login'
+assert_not_contains 'OwnerPassphrase' "$TMP_DIR/rotate.out"
+assert_not_contains 'NewOwnerPassphrase' "$TMP_DIR/rotate.out"
+assert_not_contains 'access-token-value' "$TMP_DIR/rotate.out"
+[[ "$(cat "$FAKE_STATE/login-password")" == new ]] || fail 'credential rotation did not prove the exact new credential after reset'
+cleanup
+
+while read -r invalid_label old_password invalid_password; do
+  invalid_secret="$TMP_DIR/invalid-$invalid_label.json"
+  printf '{"login_identifier":"STG005_OWNER_TEST","login_password":"%s","new_login_password":"%s"}\n' "$old_password" "$invalid_password" >"$invalid_secret"
+  chmod 600 "$invalid_secret"
+  initialize_private_root
+  exec 3<"$invalid_secret"; SECRETS_FD=3; ACTION=rotate-owner-credential; APPROVED_LOGIN_IDENTIFIER=STG005_OWNER_TEST
+  expect_failure "invalid_rotation_$invalid_label" read_secret_input
+  cleanup
+done <<'EOF'
+same SameAsOldPassphrase1 SameAsOldPassphrase1
+length19 OwnerPassphrase-123 NineteenCharacter12
+length21 OwnerPassphrase-123 TwentyOneCharacters12
+EOF
+
+initialize_private_root
+exec 3<"$ROTATE_SECRET"; SECRETS_FD=3; ACTION=rotate-owner-credential; APPROVED_LOGIN_IDENTIFIER=STG005_DIFFERENT_OWNER
+expect_failure rotation_approval_identity_mismatch read_secret_input
+assert_contains 'does not match the approval binding' "$TMP_DIR/rotation_approval_identity_mismatch.err"
+cleanup
+
+initialize_private_root
+exec 3<"$ROTATE_SECRET"; SECRETS_FD=3; ACTION=rotate-owner-credential; APPROVED_LOGIN_IDENTIFIER=STG005_OWNER_TEST
+read_secret_input
+export FAKE_LOGIN_USERNAME=STG005_DIFFERENT_OWNER
+expect_failure rotation_response_identity_mismatch login
+assert_contains 'login principal does not match' "$TMP_DIR/rotation_response_identity_mismatch.err"
+unset FAKE_LOGIN_USERNAME
+cleanup
 unset FAKE_LOGIN_ONLY
 
 CONTENDED_FLOCK="$TMP_DIR/contended-flock"

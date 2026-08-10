@@ -1,5 +1,12 @@
 # STG-009 Phase-A Owner Login Evidence
 
+> Superseded for browser acceptance on 2026-08-10. This report remains valid
+> only for its API-only secret-safe checks. Owner manual Chrome acceptance found
+> the initial login POST returning CORS HTTP 403 before authentication; see
+> [the browser-login repair evidence](STG-009_PHASE_A_BROWSER_LOGIN_403_REPAIR_EVIDENCE.md).
+> `STG-009_PHASE_A_OWNER_LOGIN` is reopened until fresh exact-SHA browser and
+> Owner manual evidence pass.
+
 ## Scope
 
 This is sanitized Staging-only evidence for `STG-009_PHASE_A_OWNER_LOGIN_ACCEPTANCE`.
