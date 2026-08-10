@@ -16,6 +16,10 @@
 > planning. It is not the immediate next objective; TWIN-001 and the Owner
 > field-test/bug-fix loop must complete first, followed by an explicit
 > `CHINATOWN_RESUME_GATE`.
+>
+> Canonical release policy: [Agile Loop release/promotion policy](../AGILE_LOOP_OPERATING_MODEL.md#83-canonical-release-promotion-drift-and-recovery-policy).
+> This plan supplies Chinatown-specific evidence fields and gates; it does
+> not create a second release, drift, rollback, or restore authority.
 
 ## 1. Purpose
 
@@ -125,7 +129,30 @@ REL-001 is not eligible for Production approval until:
 An AL-003S pass authorizes neither Production deployment nor Production Store
 1 access. Those remain separate gates.
 
+### Release Candidate freeze and artifact promotion
+
+Once the future St-Denis Twin, automated regression, parity manifest and Owner
+manual acceptance pass, create one immutable RC record before any Production
+action. Its `RC_ID` binds the exact merged source SHA, verified `main` ancestry,
+backend/frontend image digests, relevant Android artifact identity,
+migration/Flyway target and checksums, parity-manifest identity, automated and
+Owner acceptance results, and build manifest metadata. Later `main` commits do
+not advance the frozen RC. Production must promote the same backend/frontend/
+Android artifact digests accepted in Staging; rebuilding the same SHA on
+Production is not a substitute. If tooling cannot preserve those digests,
+record the gap and stop at `NO_GO`.
+
 ## 5. Production read-only gap audit
+
+Any recurring or release-triggered Production-to-Twin drift check is
+read-only. It emits only sanitized fingerprints/manifests and classifies each
+domain as `MATCH`, `EXPECTED_ENVIRONMENT_DIFFERENCE`,
+`SANITIZED_DATA_DIFFERENCE`, `TEST_HARDWARE_DIFFERENCE`,
+`BLOCKING_BEHAVIOR_DIFFERENCE`, or `NOT_YET_VERIFIED`. Detection must never
+auto-sync or overwrite Staging; an explicit Owner-approved, Owner-triggered
+Twin sync request is required for bounded Twin reconciliation. This plan grants
+no Production-read or Staging-mutation authority. A blocking behavior
+difference is an immediate Production `NO_GO`.
 
 The future approved preflight may read only the minimum sanitized evidence
 needed for a release decision:
@@ -209,10 +236,24 @@ If the old Production backend cannot safely run on V10, application rollback
 after migration is `NO-GO`; the release needs a roll-forward plan or an
 Owner-approved, rehearsed database recovery strategy.
 
+The required decision is the
+`APPLICATION_ROLLBACK_COMPATIBILITY_GATE`: bind current schema/migration state,
+previous artifact identity, compatibility evidence, rollback target identity,
+and post-rollback health verification. Rollback is preferred only when that
+gate is `YES`; if compatibility is `NO` or uncertain, use bounded emergency
+roll-forward and do not automatically roll back.
+
 ## 8. Backup and recovery gate
 
 The retained Production backup record proves only that a non-empty file was
 reported in July 2026. It does not prove freshness, integrity, or restorability.
+
+`backup existence != proven recoverability`. Release maturity requires backup
+integrity evidence, a reviewed recovery boundary, and an appropriately
+periodic isolated restore rehearsal with recovery-point/time expectations.
+Ordinary releases need not restore Production, but unknown integrity or
+rehearsal status is not a PASS. Backup creation, restore rehearsal and restore
+execution remain separately approved operations.
 
 Before deployment:
 
@@ -318,6 +359,11 @@ runtime actions.
   continuity fails.
 
 ## 11. Rollback boundaries
+
+Application rollback is never unconditional. Apply the
+`APPLICATION_ROLLBACK_COMPATIBILITY_GATE` before selecting a previous artifact;
+database restore, Flyway history edits, volume deletion and other destructive
+rollback actions remain separately Owner-gated and are not automatic recovery.
 
 ### Before migration commit
 

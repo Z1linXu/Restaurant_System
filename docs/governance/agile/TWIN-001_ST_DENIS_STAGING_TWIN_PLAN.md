@@ -164,7 +164,38 @@ enter `REL-001` only after code and schema are validated in the Twin, the
 parity manifest has no blocking difference, daily workflows pass, relevant
 printing/device flows pass, and required Owner manual validation is complete.
 
-## 9. Definition of Done and deferred routes
+## 9. Release identity, recurring drift, and recovery handoff
+
+TWIN-001 hands release policy to the canonical
+[Agile Loop release/promotion policy](../AGILE_LOOP_OPERATING_MODEL.md#83-canonical-release-promotion-drift-and-recovery-policy)
+and does not create a second RC authority. After Twin acceptance, the release
+package must freeze an immutable `RC_ID` bound to exact source SHA, backend and
+frontend artifact digests, relevant Android artifact identity, migration set,
+parity-manifest identity, automated result, Owner result, and build metadata.
+Later `main` movement never changes that RC. Production may promote only the
+same artifact digests accepted in Staging; if tooling cannot carry those
+digests, the promotion remains a documented implementation gap and `NO_GO`.
+
+Recurring Production-to-Twin checks are read-only and emit sanitized manifests.
+They classify each result as `MATCH`, `EXPECTED_ENVIRONMENT_DIFFERENCE`,
+`SANITIZED_DATA_DIFFERENCE`, `TEST_HARDWARE_DIFFERENCE`,
+`BLOCKING_BEHAVIOR_DIFFERENCE`, or `NOT_YET_VERIFIED`. Detection only reports
+and classifies. It never automatically mutates or overwrites Staging; an
+explicit Owner-approved, Owner-triggered Twin sync request is required for
+bounded Twin sync. This plan grants no Production-read or Staging-mutation
+authority. Any `BLOCKING_BEHAVIOR_DIFFERENCE` is a Production `NO_GO`.
+
+Production incident handling uses
+`APPLICATION_ROLLBACK_COMPATIBILITY_GATE`: rollback is preferred only when
+the previous application artifact is proven compatible with the current schema
+and migration state; otherwise use a bounded roll-forward repair. Database
+restore, Flyway history changes, volume deletion, and other destructive
+rollback actions remain separately Owner-gated. Backup existence is not
+recoverability; integrity evidence, isolated restore rehearsal status, and
+recovery-point/time boundaries must be recorded before release maturity is
+claimed.
+
+## 10. Definition of Done and deferred routes
 
 TWIN-001 requires APP, SCHEMA, STORE, MENU, TABLES, STAFF, ACCESS, FEATURES,
 PRINTING, DEVICES and OPERATIONAL_WORKFLOWS classifications; no raw sensitive
@@ -185,7 +216,7 @@ separate modularization DoD, Planbook must issue `CHINATOWN_RESUME_GATE` before
 resuming STG-009 Phase B or AL-003 validate/execute/replay. No second clone
 engine may be created.
 
-## 10. Current stop
+## 11. Current stop
 
 `TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`
 

@@ -16,6 +16,13 @@ not read Production or mutate either environment. The next independent gate is
 Current unique stop state:
 `TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`.
 
+Release maturity follows the canonical Agile Loop policy: an accepted Twin
+freezes an immutable RC, Production promotes the same artifact digests rather
+than rebuilding the same SHA, recurring drift checks are read-only and never
+auto-sync Staging, rollback requires `APPLICATION_ROLLBACK_COMPATIBILITY_GATE`,
+and backup existence is not recoverability. These remain future gates; the
+current loop is still repository-only TWIN-001 planning.
+
 ## Current verified STG-008 runtime state (2026-08-10)
 
 Staging is exact `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c` at Flyway V10. STG-005A and STG-005B

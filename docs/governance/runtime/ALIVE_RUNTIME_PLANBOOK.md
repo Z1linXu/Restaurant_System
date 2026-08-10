@@ -23,10 +23,10 @@ performed no Production read and no Staging/Production mutation. The immediate
 next runtime gate is the independent
 `PRODUCTION_ST_DENIS_CONFIGURATION_READ_APPROVAL`.
 
-PRs #103 and #104 are verified governance-only merges in `main`; a fresh
-`git fetch origin --prune` is required before the next action to establish the
-current exact `origin/main`. These documentation-only merges do not change the
-deployed Staging SHA.
+The recent Twin governance closure merges are verified governance-only in
+`main`; a fresh `git fetch origin --prune` is required before the next action to
+establish the current exact `origin/main`. These documentation-only merges do
+not change the deployed Staging SHA.
 
 The unique current stop state is
 `TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`.
@@ -50,7 +50,7 @@ See [TWIN-001 St-Denis Twin Plan](../agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.m
 | Environment | `restaurant-prod` | `OPERATOR_CONFIRMED` | Environment label only; no host or secret is recorded. |
 | `RUNTIME_COMMIT` | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e` | retained identity plus `MACHINE_VERIFIED_READ_ONLY` continuity during STG-007 | Current Production runtime identity only, not a formal release approval. |
 | Production branch | `main` | `MACHINE_VERIFIED_READ_ONLY` during STG-006 continuity | Branch relationship is not a deployment approval record. |
-| Runtime-sensitive deployed candidate | `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c` | `MACHINE_VERIFIED` Git/runtime Ground Truth | PR #99's repair and PR #100's closure are `IN_MAIN`; later PR #101/#102/#103 are governance-only. Detached release, build source and deployed Staging identity match this SHA. This proves deployment and automated acceptance, not Production parity. |
+| Runtime-sensitive deployed candidate | `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c` | `MACHINE_VERIFIED` Git/runtime Ground Truth | PR #99's repair and PR #100's closure are `IN_MAIN`; later governance closure merges are documentation-only. Detached release, build source and deployed Staging identity match this SHA. This proves deployment and automated acceptance, not Production parity. |
 | STG-007 exact runtime candidate / documentation base before evidence publication | `2837ae88e55142c99c6975f8b6575febffc913a1` | `MACHINE_VERIFIED` from `origin/main`, detached release, build source and deployed Staging identity | PR #82 merge and deployed Staging SHA; it is not the Production runtime. A later evidence-only merge must remain distinct from the deployed SHA. |
 | Deployment mode | HTTP | `OPERATOR_CONFIRMED` | HTTPS/certificate posture is outside this record. |
 | Compose services | `db`, `backend`, `nginx` under project `cloud`; unchanged across the final STG-007 continuation, original start times, restart count 0, health 200 | `MACHINE_VERIFIED_READ_ONLY` | Minimum continuity only; no environment, Flyway, Store, or business-data read. |
@@ -107,6 +107,14 @@ snapshots. Do not copy those reports into this planbook.
 | Staging Owner login prerequisite | Historical synthetic Owner/browser-equivalent foundation is complete; manual Phase-A closure is deferred by the Owner Twin priority. Retrieval remains private; no secret is stored in Git/evidence. |
 | Current permitted work | Repository-only TWIN-001 planning/review and governance synchronization. A future Production configuration read requires `PRODUCTION_ST_DENIS_CONFIGURATION_READ_APPROVAL`; no read occurs in this round. |
 | Explicitly not permitted | Chinatown onboarding, AL-003 validate/execute/clone/replay, Production build/pull/restart/deploy/Flyway/data read or mutation, Store 1 read, printer/Pad action, or any new runtime-sensitive action without a new Owner Runtime Gate. `IN_MAIN`, `DEPLOYED_TO_STAGING`, and `STAGING_ACCEPTED` remain distinct. |
+
+The canonical [release/promotion policy](../AGILE_LOOP_OPERATING_MODEL.md#83-canonical-release-promotion-drift-and-recovery-policy)
+now requires immutable RC freeze, exact same-artifact promotion, recurring
+read-only drift detection with explicit Owner-triggered Twin sync, the
+`APPLICATION_ROLLBACK_COMPATIBILITY_GATE`, and backup integrity plus isolated
+restore-rehearsal readiness. These are future governance gates only; they do
+not authorize a Production read, deployment, restore, or Staging mutation in
+the current TWIN-001 loop.
 
 Agent and worker execution is ephemeral. After a bounded task, the result and
 evidence must be returned and persisted, the active session/process terminated,

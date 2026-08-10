@@ -14,6 +14,13 @@
 > without a 401/403. The former manual Phase-A item is preserved as historical
 > evidence and deferred behind TWIN-001; Chinatown/Production remains gated.
 
+> Release policy update (2026-08-10): the canonical Agile Loop policy now
+> requires immutable RC freeze, build-once/same-artifact promotion, recurring
+> read-only drift detection with explicit Twin sync, the
+> `APPLICATION_ROLLBACK_COMPATIBILITY_GATE`, and backup-integrity plus isolated
+> restore-rehearsal readiness. These are future governance gates only; this
+> round performed no runtime action.
+
 ## Current verified STG-008 continuation
 
 Staging is exact `1a3f2e...` at Flyway V10. STG-005A and STG-005B have
@@ -199,6 +206,11 @@ separate from historical evidence snapshots and business implementation details:
   1 read approval, exact RC approval, and post-deploy verification. PR #70 is
   `IN_MAIN` planning-only and does not select an RC, claim Staging acceptance,
   deploy Production, or implement ACT-001 activation.
+- [Agile Loop release/promotion policy](docs/governance/AGILE_LOOP_OPERATING_MODEL.md#83-canonical-release-promotion-drift-and-recovery-policy)
+  is the single authority for RC freeze, same-artifact promotion, recurring
+  drift classification/sync, rollback compatibility, backup integrity, and
+  restore-rehearsal readiness. REL-001 and TWIN-001 bind this policy without
+  creating a second release authority.
 - [AL-003A final menu comparison](docs/governance/agile/AL-003A_FINAL_MENU_COMPARISON.md)
   is the single product-mapping authority for the Store 1 to Chinatown target
   menu. Repository seed data is historical reference only.

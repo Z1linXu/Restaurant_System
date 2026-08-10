@@ -339,6 +339,9 @@ The exact-SHA Production release boundary is maintained in
 It requires the same merged SHA to pass Staging acceptance, fresh Production
 gap evidence, migration/compatibility review, backup/recovery review, and an
 explicit Owner execution approval. It performs no runtime inspection or action.
+Release freeze, same-artifact promotion, recurring drift classification,
+rollback compatibility and restore-readiness semantics are governed only by
+the [Agile Loop release/promotion policy](../AGILE_LOOP_OPERATING_MODEL.md#83-canonical-release-promotion-drift-and-recovery-policy).
 
 ### 10.1 Historical label mapping
 

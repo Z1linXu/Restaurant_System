@@ -23,8 +23,8 @@ See [TWIN-001 St-Denis Twin Plan](../agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.m
 
 ## Current verified continuation override (2026-08-10)
 
-PR #101/#102/#103/#104 are governance-only merges in `main`; the exact
-`origin/main` SHA must be freshly fetched before the next action. Staging remains exact
+The recent Twin governance closure merges are governance-only in `main`; the
+exact `origin/main` SHA must be freshly fetched before the next action. Staging remains exact
 `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c`, Flyway is
 V1--V10 with no pending or failed migration, and Printing is disabled.
 STG-005A PLAN/EXECUTE/REPLAY are `VALIDATED/CREATED/REPLAYED`; STG-005B is
@@ -233,6 +233,14 @@ current rebind or recovery instruction is inherited from it.
 | Feature stop state | `TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL` |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
 | Current Owner gate | `PRODUCTION_ST_DENIS_CONFIGURATION_READ_APPROVAL`: exact runtime/Store identity, allowed columns/domains, bounded read strategy, sanitized manifest, reconstruction target and no-mutation guarantee. No Production read is authorized in this round. |
+
+Release/promotion navigation follows the canonical [Agile Loop policy](../AGILE_LOOP_OPERATING_MODEL.md#83-canonical-release-promotion-drift-and-recovery-policy):
+freeze an immutable RC after Twin/automated/Owner acceptance, promote the same
+artifact digests, detect drift read-only and sync only after an explicit
+Owner-approved, Owner-triggered Twin sync request, use
+`APPLICATION_ROLLBACK_COMPATIBILITY_GATE`, and treat
+backup existence as distinct from recoverability. These future gates do not
+change the current TWIN-001 read-approval stop.
 
 ### Permitted work
 
