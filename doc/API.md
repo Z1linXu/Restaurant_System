@@ -1,5 +1,14 @@
 # Restaurant System API (MVP)
 
+> TWIN-001 reconstruction boundary (2026-08-10): reconstruction approval did
+> not create a new API. Pre-write validation stopped before runtime entry
+> because the retained manifest is not a complete, V7-schema-consistent writer
+> input. Local verification passed the intended `V7 -> V10` forward path, but
+> no reconstructed Twin or API smoke ran. Current stop is
+> `TWIN-001_RECONSTRUCTION_NO_GO_WAITING_FOR_MANIFEST_COMPLETION_READ_APPROVAL`;
+> the next corrected Production read is a TRUE OWNER GATE. See the
+> [immutable NO-GO evidence](../docs/governance/runtime/TWIN-001_STAGING_RECONSTRUCTION_SCHEMA_NO_GO_EVIDENCE.md).
+
 > TWIN-001 inventory boundary (2026-08-10): the Owner-approved Production
 > St-Denis configuration read is recorded in the [sanitized parity manifest](../docs/governance/runtime/ST_DENIS_TWIN_PARITY_MANIFEST.md)
 > and [inventory evidence](../docs/governance/runtime/TWIN-001_PRODUCTION_INVENTORY_EVIDENCE.md).

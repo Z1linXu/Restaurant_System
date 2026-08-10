@@ -1,6 +1,31 @@
 # Current Project Handoff
 
-## Current verified Production inventory override (2026-08-10)
+## Current reconstruction NO-GO override (2026-08-10)
+
+Fresh Git Ground Truth is
+`origin/main=295ed4b1278750dfc5492c3109e0ac767e158ffd`. The Owner granted
+`TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`, but pre-write source validation
+stopped before runtime entry. The retained manifest lacks deterministic
+row-level values required by its own writer contract and records multiple
+table/column names that cannot exist in the checksum-identical V7 repository
+schema. No Staging or Production action occurred.
+
+Local isolated PostgreSQL 16.14 evidence proves the intended, append-only
+`V7 -> V8 -> V9 -> V10` path, preserves a representative St-Denis safe
+configuration fingerprint and counts, passes current-candidate JPA/health, and
+reports no migration on second startup. The version delta is explicitly
+`CURRENT_PRODUCTION_VERSION_DIFFERENCE`; it does not authorize downgrading
+Staging. Aggregate `SCHEMA = BLOCKING_BEHAVIOR_DIFFERENCE` and
+`TWIN-001 = NO_GO` remain until the complete reconstructed Twin runs on V10.
+
+See
+[reconstruction schema/input NO-GO evidence](TWIN-001_STAGING_RECONSTRUCTION_SCHEMA_NO_GO_EVIDENCE.md).
+Unique stop:
+`TWIN-001_RECONSTRUCTION_NO_GO_WAITING_FOR_MANIFEST_COMPLETION_READ_APPROVAL`.
+Next TRUE OWNER GATE:
+`TWIN-001_RECONSTRUCTION_MANIFEST_COMPLETION_READ_APPROVAL`.
+
+## Historical verified Production inventory checkpoint (2026-08-10)
 
 The Owner-approved read gate has completed. Fresh repository Ground Truth is
 `origin/main=34ef8c577dd5e8464ef885bf235b0bece0018503`; retained Production is
@@ -14,10 +39,10 @@ write, Twin Sync, deployment, migration or restart occurred.
 `DEPLOYED_TO_PRODUCTION` remain distinct classifications.
 
 See [sanitized parity manifest](ST_DENIS_TWIN_PARITY_MANIFEST.md) and
-[inventory evidence](TWIN-001_PRODUCTION_INVENTORY_EVIDENCE.md). Current unique
+[inventory evidence](TWIN-001_PRODUCTION_INVENTORY_EVIDENCE.md). Checkpoint
 stop: `TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
-Next Owner Gate: `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`. The reconstruction
-plan is design-only; all runtime synchronization remains prohibited.
+Its next Owner Gate was `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`, later
+granted before the current pre-write NO-GO.
 
 ## Owner strategic route override (2026-08-10)
 
@@ -34,7 +59,8 @@ The Twin is not yet established. Existing synthetic St-Denis data is
 `CURRENT_SYNTHETIC_BASELINE`, not Production-parity evidence. The completed
 read-only inventory is evidence, not a reconstruction or synchronization.
 
-The former read-approval stop is historical. Current unique stop state:
+The former read-approval stop and inventory checkpoint are historical. The
+checkpoint stop was:
 `TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
 See [TWIN-001 St-Denis Twin Plan](../agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.md).
 
@@ -55,7 +81,10 @@ Fresh Owner post-repair manual UI evidence remains pending and is deferred
 behind TWIN-001; the retained browser-equivalent result is historical Phase-A
 foundation. The former
 stop `STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`
-is historical; the current stop is the TWIN-001 reconstruction-approval gate. Chinatown
+is historical. The current stop is
+`TWIN-001_RECONSTRUCTION_NO_GO_WAITING_FOR_MANIFEST_COMPLETION_READ_APPROVAL`;
+the next TRUE OWNER GATE is
+`TWIN-001_RECONSTRUCTION_MANIFEST_COMPLETION_READ_APPROVAL`. Chinatown
 onboarding/clone remains deferred and prohibited.
 
 See [STG-008 synthetic runtime progress evidence](STG-008_SYNTHETIC_RUNTIME_PROGRESS_EVIDENCE.md)
@@ -247,9 +276,9 @@ current rebind or recovery instruction is inherited from it.
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` (deferred) |
 | Current Agile Loop | `TWIN-001_ST_DENIS_STAGING_TWIN` |
 | Current package | Exact `1a3f2e...` remains deployed at V10 with completed synthetic A/B and automated browser-equivalent acceptance. It is a `CURRENT_SYNTHETIC_BASELINE`, not yet a Production-parity Twin. |
-| Feature stop state | `TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL` |
+| Feature stop state | `TWIN-001_RECONSTRUCTION_NO_GO_WAITING_FOR_MANIFEST_COMPLETION_READ_APPROVAL` |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`: review the sanitized Production inventory and design-only reconstruction plan. No Staging reconstruction or Twin Sync is authorized by this handoff. |
+| Current Owner gate | `TWIN-001_RECONSTRUCTION_MANIFEST_COMPLETION_READ_APPROVAL`: corrected bounded Production read and complete sanitized writer payload; no Production read or Staging reconstruction is authorized by this handoff. |
 
 Release/promotion navigation follows the canonical [Agile Loop policy](../AGILE_LOOP_OPERATING_MODEL.md#83-canonical-release-promotion-drift-and-recovery-policy):
 freeze an immutable RC after Twin/automated/Owner acceptance, promote the same
@@ -257,7 +286,7 @@ artifact digests, detect drift read-only and sync only after an explicit
 Owner-approved, Owner-triggered Twin sync request, use
 `APPLICATION_ROLLBACK_COMPATIBILITY_GATE`, and treat
 backup existence as distinct from recoverability. These future gates do not
-change the current TWIN-001 reconstruction-approval stop.
+change the current TWIN-001 manifest-completion-read stop.
 
 ### Permitted work
 
@@ -265,9 +294,9 @@ change the current TWIN-001 reconstruction-approval stop.
 - Read the TWIN-001 plan and reconcile governance against verified runtime
   evidence. Repository-only planning and bounded documentation repair are
   permitted.
-- Review the completed Production inventory, its manifest/evidence, and the
-  design-only `TWIN-001_STAGING_RECONSTRUCTION_PLAN`; perform repository-only
-  governance repair as needed.
+- Review the completed inventory, the manifest-input NO-GO, and the corrected
+  bounded-read/reconstruction-payload plan; perform repository-only governance
+  repair as needed.
 
 ### Prohibited work without new approval
 

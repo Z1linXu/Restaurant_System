@@ -1,6 +1,23 @@
 # SYSTEM DOCUMENTATION
 
-> 2026-08-10 TWIN-001 inventory Ground Truth: Owner-approved bounded
+> 2026-08-10 TWIN-001 reconstruction NO-GO: the Owner granted
+> `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`, but pre-write source validation
+> stopped before runtime entry. The retained manifest omits deterministic
+> row-level writer values and documents table/column names that conflict with
+> the checksum-identical V7 repository schema. No Staging or Production action
+> occurred. Local PostgreSQL 16.14 evidence proves the intended append-only
+> `V7 -> V8 -> V9 -> V10` path, preserves a representative St-Denis safe
+> configuration fingerprint/counts, passes current-candidate JPA/health, and
+> requires no migration on second startup. The observed V7/V10 delta is
+> `CURRENT_PRODUCTION_VERSION_DIFFERENCE`, not a downgrade target. Aggregate
+> `SCHEMA = BLOCKING_BEHAVIOR_DIFFERENCE` and `TWIN-001 = NO_GO` remain until a
+> complete reconstructed Twin operates on V10. Current stop:
+> `TWIN-001_RECONSTRUCTION_NO_GO_WAITING_FOR_MANIFEST_COMPLETION_READ_APPROVAL`.
+> Next TRUE OWNER GATE:
+> `TWIN-001_RECONSTRUCTION_MANIFEST_COMPLETION_READ_APPROVAL`. See
+> [immutable evidence](docs/governance/runtime/TWIN-001_STAGING_RECONSTRUCTION_SCHEMA_NO_GO_EVIDENCE.md).
+
+> Historical 2026-08-10 TWIN-001 inventory checkpoint: Owner-approved bounded
 > Production configuration read completed without writes. Fresh
 > `origin/main=34ef8c577dd5e8464ef885bf235b0bece0018503`; Production retained
 > `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`/Flyway V7 and isolated Staging
@@ -11,15 +28,15 @@
 > and [inventory evidence](docs/governance/runtime/TWIN-001_PRODUCTION_INVENTORY_EVIDENCE.md)
 > contain explicit-column safe configuration only. No Staging reconstruction,
 > Twin Sync, deployment, migration, restart, business-data read, or mutation
-> occurred. Current stop:
+> occurred. Checkpoint stop:
 > `TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
 
 > Owner route update (2026-08-10): Staging is now planned as a long-lived
 > Production-like St-Denis Operational Twin and mandatory pre-Production
 > validation environment. TWIN-001 inventory is complete; the existing
 > synthetic St-Denis runtime is a `CURRENT_SYNTHETIC_BASELINE`, not a parity
-> Twin. The next gate is `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`; no
-> Staging/Production mutation occurred.
+> Twin. Its next gate was `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`, later
+> granted before the current pre-write NO-GO.
 
 > 2026-08-10 Phase-A Ground Truth: synthetic topology/source remains complete.
 > Exact Staging `1a3f2e...` deployed the generic `$http_host` repair, retained
@@ -892,7 +909,7 @@ conditional Phase-A Owner-login acceptance; that authorization is consumed and
 historical. Exact `1a3f2e...` deployed the proxy repair,
 rotated the credential privately and passed API plus real-Chrome
 browser-equivalent acceptance. The former manual Phase-A gate is deferred by
-the Owner Twin priority. The current unique stop state is
+the Owner Twin priority. The historical inventory checkpoint stop was
 `TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
 
 Fresh read-only inspection later found that the retained STG-005A failure’s
