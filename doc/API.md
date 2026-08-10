@@ -12,9 +12,10 @@
 The synthetic Staging topology/source evidence is not a public API acceptance
 claim. STG-005A/STG-005B are guarded operational actions; PR #95/#97's
 `owner-login-acceptance` reuses existing auth/workspace/overview/logout
-contracts only. Exact Staging passed that API-only path, but manual Chrome CORS
-403 reopened browser Phase A. Chinatown onboarding and menu clone remain
-blocked; their Owner Runtime Gate is not current until browser Phase A passes.
+contracts only. Exact Staging `1a3f2e...` deployed the proxy repair and passed
+both the secret-safe API path and real-Chrome browser-equivalent acceptance.
+Fresh Owner post-repair manual UI evidence remains pending. Chinatown onboarding
+and menu clone remain blocked until Phase A genuinely closes.
 
 This document defines the core API endpoints for the restaurant management system MVP.
 

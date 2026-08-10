@@ -1,16 +1,15 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Capability state: `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`
+> Capability state: `STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`
 >
-> API-only Phase-A evidence is superseded by manual Chrome evidence: the first
-> browser login request returned CORS HTTP 403 before authentication. A fresh
-> exact-SHA Staging deploy must validate the generic proxy repair, rotate the
-> exposed synthetic credential privately, and pass browser plus Owner manual
-> acceptance before Phase A can close.
+> Exact `1a3f2e...` deployed the generic repair, rotated the credential through
+> the private channel and passed API plus real-Chrome browser-equivalent
+> acceptance. The pre-repair manual 403 remains historical; fresh Owner
+> post-repair manual UI evidence is still required before Phase A closes.
 >
 > Historical failed candidate: `8f909525781804f61d1da388882f530da358c3c4`
 >
-> Current exact deployed Staging SHA: `468b8705c8e360b9e34336c5560442179544069b`
+> Current exact deployed Staging SHA: `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c`
 >
 > Governance packages: PR #72 and PRs #60-#71 are `IN_MAIN`; PR #85's bounded
 > startup-safety repair, PR #86 Ground Truth closure and PR #87 release-rebind
@@ -164,11 +163,11 @@ runtime until a new exact-SHA deployment is separately approved.
 ### Staging Owner login prerequisite
 
 The acceptance prerequisite state is now
-`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`.
-Application deployment and API-only login checks are not
-`AL-003_STAGING_ACCEPTANCE_READY`; exact Staging must additionally pass the
-browser flow after private credential rotation. Chinatown onboarding and clone
-remain separately gated.
+`STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`.
+Exact Staging passed deployment, private credential rotation, API and
+real-Chrome browser-equivalent checks, but it is not
+`AL-003_STAGING_ACCEPTANCE_READY` until fresh Owner manual UI evidence exists.
+Chinatown onboarding and clone remain separately gated.
 
 Historical STG-008 entry evidence (before the authorized synthetic run) proved
 that an earlier V10 Staging baseline had no STG-005A execution and zero
@@ -349,8 +348,9 @@ recovers.
 
 ## Capability dependency state
 
-`STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN_REPAIR_IN_MAIN_WAITING_FOR_EXACT_SHA_STAGING_REBIND`
+`STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`
 
-Exact Staging `468b8705...` passed only the API-only Phase-A client. Browser
-acceptance is reopened; Phase-B Chinatown onboarding/validate/execute/clone/
-replay and all Production operations remain outside this plan's authorization.
+Exact Staging `1a3f2e...` passed API and real-Chrome browser-equivalent Phase-A
+acceptance after private credential rotation. Fresh Owner manual UI evidence
+remains; Phase-B Chinatown onboarding/validate/execute/clone/replay and all
+Production operations remain outside this plan's authorization.

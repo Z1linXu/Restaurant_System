@@ -2,7 +2,7 @@
 
 > Classification: `REPOSITORY_DEPENDENCY_REPAIR_EVIDENCE`
 >
-> Runtime state: `REQUIRES_FRESH_EXACT_SHA_STAGING_DEPLOY_AND_BROWSER_VALIDATION`
+> Runtime state: `REPAIR_DEPLOYED_BROWSER_EQUIVALENT_PASS_OWNER_MANUAL_UI_PENDING`
 
 > Repository publication: PR #99 is `IN_MAIN`; reviewed head
 > `b983b884c2b5eaa3a2b26ce81f1c098d083f4a79` entered `main` through merge
@@ -44,17 +44,18 @@ secret FD, changes only the authenticated synthetic Owner credential through
 the existing staff-admin contract, and proves the new credential with a second
 login/context/logout sequence. No value is printed or retained in evidence.
 
-## Verification and remaining runtime gate
+## Verification and remaining Owner gate
 
 `test_nginx_browser_origin_contract.sh` requires both proxy templates to
 preserve Host plus port and rejects the old port-stripping header. The normal
 cloud/staging shell regressions, Markdown links, secret scan, governance drift,
 and independent review remain publication gates.
 
-Repository acceptance is not runtime acceptance. After merge, the existing
-continuous authorization requires a fresh exact-SHA detached Staging release,
-formal preflight, V10-to-V10 deploy, readiness and isolation checks. The
-compromised synthetic credential must then be rotated through the private
-runtime-only channel before browser-equivalent and Owner manual acceptance.
-No STG-005A/B action may be repeated, and Phase B/Chinatown/Production remains
-outside this repair.
+Repository acceptance is not runtime acceptance. Exact
+`1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c` was subsequently bound, preflighted,
+built and deployed to isolated Staging. V10-to-V10 continuity, readiness,
+isolation, private credential rotation, API acceptance and real-Chrome
+browser-equivalent acceptance passed without a 401/403. See
+[the browser-equivalent evidence](STG-009_PHASE_A_BROWSER_EQUIVALENT_ACCEPTANCE_EVIDENCE.md).
+No STG-005A/B action was repeated. Fresh Owner post-repair manual UI evidence
+is still required, and Phase B/Chinatown/Production remains outside this repair.

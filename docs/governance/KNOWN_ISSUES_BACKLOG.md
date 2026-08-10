@@ -27,10 +27,10 @@
 | title | SSH-tunneled browser login returns CORS HTTP 403 before authentication |
 | observed_behavior | Manual Chrome acceptance against `http://127.0.0.1:18080` reached `POST /api/v1/auth/login` and received `403 Invalid CORS request`; no principal, role, Organization, Store, or dashboard request was reached. The API-only acceptance client had no browser Origin and therefore passed. |
 | expected_behavior | nginx preserves the browser-visible Host and explicit tunnel port so Spring recognizes the request as same-origin; login then proceeds through the existing generic authentication and Organization/Store authorization contracts. |
-| operational_impact | `STG-009_PHASE_A_OWNER_LOGIN` is reopened. API-only HTTP 200 cannot be treated as browser UI acceptance. |
-| current_workaround | None. Do not weaken CORS or add a Store/user-specific allowlist. Deploy only the reviewed generic proxy repair under the existing exact-SHA Staging authorization. |
-| evidence | [STG-009 browser-login 403 repair evidence](runtime/STG-009_PHASE_A_BROWSER_LOGIN_403_REPAIR_EVIDENCE.md). |
-| status | `REPAIR_IN_MAIN_REQUIRES_EXACT_SHA_STAGING_REDEPLOY` |
+| operational_impact | Automated Phase-A API and browser-equivalent acceptance now pass; closure is held only for fresh Owner post-repair manual UI evidence. |
+| current_workaround | None required. Do not weaken CORS or add a Store/user-specific allowlist. |
+| evidence | [STG-009 browser-login 403 repair evidence](runtime/STG-009_PHASE_A_BROWSER_LOGIN_403_REPAIR_EVIDENCE.md) and [browser-equivalent acceptance evidence](runtime/STG-009_PHASE_A_BROWSER_EQUIVALENT_ACCEPTANCE_EVIDENCE.md). |
+| status | `REPAIR_DEPLOYED_BROWSER_EQUIVALENT_PASS_OWNER_MANUAL_UI_PENDING` |
 | target_loop | `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN` Dependency Repair Auto-Loop. |
 | acceptance_criteria | Proxy regression and repository checks pass; independent review accepts; fresh exact-SHA Staging deploy proves browser-equivalent login/session/redirect/Owner shell/Organization/source-Store/dashboard/refresh/logout without 401/403; the exposed synthetic credential is privately rotated; Owner manual browser evidence passes. |
 | deployment_required | Yes, Staging-only exact redeploy; no Production deployment. |

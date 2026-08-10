@@ -4,8 +4,11 @@
 > only for its API-only secret-safe checks. Owner manual Chrome acceptance found
 > the initial login POST returning CORS HTTP 403 before authentication; see
 > [the browser-login repair evidence](STG-009_PHASE_A_BROWSER_LOGIN_403_REPAIR_EVIDENCE.md).
-> `STG-009_PHASE_A_OWNER_LOGIN` is reopened until fresh exact-SHA browser and
-> Owner manual evidence pass.
+> Exact `1a3f2e...` later deployed the proxy repair and passed fresh API plus
+> real-Chrome browser-equivalent acceptance after private credential rotation;
+> see [the browser-equivalent evidence](STG-009_PHASE_A_BROWSER_EQUIVALENT_ACCEPTANCE_EVIDENCE.md).
+> `STG-009_PHASE_A_OWNER_LOGIN` remains open only for fresh Owner post-repair
+> manual UI evidence.
 
 ## Scope
 
