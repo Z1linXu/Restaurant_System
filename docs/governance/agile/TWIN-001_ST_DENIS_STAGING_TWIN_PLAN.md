@@ -1,8 +1,8 @@
 # TWIN-001 St-Denis Production-like Staging Twin Plan
 
-> Status: `INVENTORY_COMPLETE_WAITING_FOR_RECONSTRUCTION_APPROVAL`
+> Status: `RECONSTRUCTION_NO_GO_MANIFEST_INPUT_NOT_EXECUTABLE`
 >
-> Current stop state: `TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`
+> Current stop state: `TWIN-001_RECONSTRUCTION_NO_GO_WAITING_FOR_MANIFEST_COMPLETION_READ_APPROVAL`
 >
 > Owner decision date: 2026-08-10, America/Toronto
 
@@ -82,7 +82,7 @@ Staging staff usernames and roles should be Production-equivalent where safe:
 All Staging credentials remain independent synthetic/test credentials. A
 Production password or hash must never be reused.
 
-## 4. Completed read gate and next Owner Runtime Gate
+## 4. Completed read gate and historical reconstruction gate
 
 The completed read gate was independently named:
 
@@ -98,9 +98,10 @@ Its approval package bound:
 - Staging reconstruction target and expected differences;
 - rollback/no-mutation guarantee and abort conditions.
 
-The read gate is complete. The next runtime gate is independently named
-`TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`; this plan does not grant that
-authority.
+The read gate is complete. Its next runtime gate was independently named
+`TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`; the Owner later granted it. The
+pre-write source check failed before runtime entry, so that approval produced
+no Staging mutation and cannot authorize the new corrected Production read.
 
 ## 5. Reconstruction strategy
 
@@ -227,7 +228,8 @@ engine may be created.
 
 ## 11. Design-only TWIN-001_STAGING_RECONSTRUCTION_PLAN
 
-The reconstruction plan is declarative and has not run:
+The reconstruction plan remains declarative and has not run; the granted
+execution package stopped before its first runtime action:
 
 1. Bind a fresh exact release and compatible schema decision; do not copy
    Production V7 history into Staging V10 or run Flyway as part of this plan.
@@ -254,8 +256,25 @@ The reconstruction plan is declarative and has not run:
 
 ## 12. Current stop
 
-`TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`
+`TWIN-001_RECONSTRUCTION_NO_GO_WAITING_FOR_MANIFEST_COMPLETION_READ_APPROVAL`
 
-The next Owner Gate is `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`. The
-manifest/evidence may be reviewed and the repository plan refined; no Staging
-reconstruction, Twin Sync, or other runtime action is authorized by this plan.
+The Owner granted `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`, but pre-write
+source validation stopped the package before runtime entry. The current
+manifest omits deterministic row-level reconstruction values and documents
+query columns that conflict with the checksum-identical V7 repository schema.
+The immutable evidence is
+[TWIN-001 reconstruction schema/input NO-GO](../runtime/TWIN-001_STAGING_RECONSTRUCTION_SCHEMA_NO_GO_EVIDENCE.md).
+
+Local PostgreSQL 16 evidence proves the reviewed forward path
+`V7 -> V8 -> V9 -> V10`, current-candidate startup, data-shape preservation,
+and second-start idempotency. The raw version delta is therefore
+`CURRENT_PRODUCTION_VERSION_DIFFERENCE`, not authority to downgrade Staging.
+The aggregate `SCHEMA` result remains `BLOCKING_BEHAVIOR_DIFFERENCE` until a
+reconstructed St-Denis Twin actually operates and passes parity validation on
+V10.
+
+The next TRUE OWNER GATE is
+`TWIN-001_RECONSTRUCTION_MANIFEST_COMPLETION_READ_APPROVAL`. It is a new,
+corrected, bounded Production read gate and is not implied by the consumed
+reconstruction approval. No Staging reconstruction, Twin Sync, Production
+read, schema action, or other runtime action is authorized by this plan.

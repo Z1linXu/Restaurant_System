@@ -7,9 +7,17 @@
 > This is the authority for current issue triage. Historical evidence remains
 > in the Phase 3 reports and is not rewritten here.
 
-Current TWIN-001 stop: `TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
-Next gate: `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`. The Production inventory
-is complete and read-only; Staging reconstruction and Twin Sync remain blocked.
+Current TWIN-001 stop:
+`TWIN-001_RECONSTRUCTION_NO_GO_WAITING_FOR_MANIFEST_COMPLETION_READ_APPROVAL`.
+Next TRUE OWNER GATE:
+`TWIN-001_RECONSTRUCTION_MANIFEST_COMPLETION_READ_APPROVAL`. The Owner granted
+the reconstruction approval, but the batch stopped before runtime entry
+because the retained manifest is incomplete and conflicts with the
+checksum-identical V7 schema. The V7-to-V10 forward migration path passed
+local PostgreSQL 16.14 verification; the raw delta is
+`CURRENT_PRODUCTION_VERSION_DIFFERENCE`, while aggregate
+`SCHEMA = BLOCKING_BEHAVIOR_DIFFERENCE` remains pending an actual reconstructed
+V10 Twin.
 
 ## Priority definitions
 
@@ -29,13 +37,13 @@ is complete and read-only; Staging reconstruction and Twin Sync remain blocked.
 | issue_id | `KI-011` |
 | priority | `P2` governance/product readiness |
 | title | Staging must become a long-lived Production-like St-Denis Operational Twin |
-| observed_behavior | Existing Staging has a verified synthetic St-Denis baseline and automated Owner/browser-equivalent evidence. The bounded Production configuration inventory is now complete and retained as a sanitized parity manifest; reconstruction has not begun. |
+| observed_behavior | Existing Staging has a verified synthetic St-Denis baseline and automated Owner/browser-equivalent evidence. Reconstruction approval was received, but pre-write validation proved the retained manifest is incomplete and inconsistent with the checksum-identical V7 schema, so reconstruction did not begin. |
 | expected_behavior | Staging reconstructs safe St-Denis operational configuration through shared application code and generic Store logic, with every parity domain classified `MATCH`, `EXPECTED_DIFFERENCE`, `BLOCKING_DIFFERENCE`, or `NOT_YET_VERIFIED`. |
 | operational_impact | Production promotion and the former Chinatown-first route remain deferred until Twin parity and Owner field validation are complete. |
-| current_workaround | Review the manifest and design-only reconstruction plan. Do not mutate Staging or sync the Twin. |
-| evidence | [TWIN-001 St-Denis Twin Plan](agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.md), [sanitized parity manifest](runtime/ST_DENIS_TWIN_PARITY_MANIFEST.md), and [inventory evidence](runtime/TWIN-001_PRODUCTION_INVENTORY_EVIDENCE.md). |
-| status | `INVENTORY_COMPLETE_WAITING_FOR_RECONSTRUCTION_APPROVAL` |
-| next_gate | `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL` |
+| current_workaround | Preserve Staging V10 and the historical manifest. Do not infer omitted values, downgrade, sync, or re-read Production without the new bounded gate. |
+| evidence | [TWIN-001 St-Denis Twin Plan](agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.md), [sanitized parity manifest](runtime/ST_DENIS_TWIN_PARITY_MANIFEST.md), [inventory evidence](runtime/TWIN-001_PRODUCTION_INVENTORY_EVIDENCE.md), and [reconstruction schema/input NO-GO](runtime/TWIN-001_STAGING_RECONSTRUCTION_SCHEMA_NO_GO_EVIDENCE.md). |
+| status | `RECONSTRUCTION_NO_GO_MANIFEST_INPUT_NOT_EXECUTABLE` |
+| next_gate | `TWIN-001_RECONSTRUCTION_MANIFEST_COMPLETION_READ_APPROVAL` |
 | safety_boundary | No raw customer/order/payment data, credentials, secrets, production printer/device endpoints, `SELECT *`, or complete database dump. |
 | last_updated | 2026-08-10 |
 

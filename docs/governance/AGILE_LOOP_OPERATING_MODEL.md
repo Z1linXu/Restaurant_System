@@ -1,6 +1,25 @@
 # Agile Loop Operating Model
 
-## Current verified inventory override (2026-08-10)
+## Current reconstruction NO-GO override (2026-08-10)
+
+The Owner granted `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`. The runtime batch
+did not begin because pre-write validation proved the retained manifest is not
+a complete or V7-schema-consistent reconstruction input. The loop is now
+`TWIN-001_RECONSTRUCTION_NO_GO_WAITING_FOR_MANIFEST_COMPLETION_READ_APPROVAL`.
+Its next TRUE OWNER GATE is
+`TWIN-001_RECONSTRUCTION_MANIFEST_COMPLETION_READ_APPROVAL`; no prior approval
+authorizes that corrected Production read.
+
+Local PostgreSQL 16.14 evidence proves `V7 -> V8 -> V9 -> V10` is the intended
+append-only forward chain and preserves representative safe Store/menu/table/
+access/feature/printing/device configuration. The raw version delta is
+`CURRENT_PRODUCTION_VERSION_DIFFERENCE`, never a backward-parity target.
+`SCHEMA = BLOCKING_BEHAVIOR_DIFFERENCE` remains at the aggregate Twin level
+until the reconstructed St-Denis configuration operates and passes V10 parity
+validation. See
+[the immutable NO-GO evidence](runtime/TWIN-001_STAGING_RECONSTRUCTION_SCHEMA_NO_GO_EVIDENCE.md).
+
+## Historical verified inventory checkpoint (2026-08-10)
 
 The active loop remains `TWIN-001_ST_DENIS_STAGING_TWIN`, but its independent
 Production read gate has now completed under the Owner's bounded
@@ -15,10 +34,10 @@ The resulting [sanitized parity manifest](runtime/ST_DENIS_TWIN_PARITY_MANIFEST.
 and [inventory evidence](runtime/TWIN-001_PRODUCTION_INVENTORY_EVIDENCE.md)
 contain only explicit, bounded, read-only configuration observations. No
 business/history/secret data was selected and no runtime mutation occurred.
-The current stop is
+The checkpoint stop was
 `TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`;
-the next Owner Gate is `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`. Twin
-reconstruction and synchronization remain prohibited until that gate.
+its next Owner Gate was `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`, which was
+later granted before the current pre-write NO-GO.
 
 ## Verified continuation state (2026-08-10)
 
@@ -37,11 +56,11 @@ distinct. Exact Staging `1a3f2e...` passed formal preflight, V10-to-V10 deploy,
 readiness, private credential rotation, API acceptance and real-Chrome
 browser-equivalent acceptance without a 401/403. The pre-repair manual failure
 remains historical; the former manual-acceptance stop is deferred by the Owner.
-The former read-approval stop is historical. The unique current stop state is
+The former read-approval stop and inventory checkpoint are historical. The
+checkpoint stop was
 `TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
-The next independent Owner gate is `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`.
-No further Production read, Staging mutation, module implementation, or
-Chinatown Phase B action is authorized.
+The next independent Owner gate at that checkpoint was
+`TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`.
 
 > Status: `ACTIVE_GOVERNANCE_PROCESS`
 >

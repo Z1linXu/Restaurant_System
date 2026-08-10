@@ -1,6 +1,28 @@
 # Feature Backlog
 
-## Current verified Production inventory override (2026-08-10)
+## Current reconstruction NO-GO override (2026-08-10)
+
+`TWIN-001_STAGING_RECONSTRUCTION_APPROVAL` was received, but pre-write source
+validation stopped before runtime entry. The reviewed manifest is incomplete
+as a deterministic reconstruction payload and its recorded query columns
+conflict with the checksum-identical V7 schema. No Staging/Production action
+occurred.
+
+An isolated PostgreSQL 16.14 verification passed the intended append-only
+`V7 -> V8 -> V9 -> V10` forward path, current-candidate JPA/health, safe
+configuration preservation, and second-start no-migration check. The observed
+version delta is `CURRENT_PRODUCTION_VERSION_DIFFERENCE`, not a downgrade
+target. Aggregate `SCHEMA = BLOCKING_BEHAVIOR_DIFFERENCE` and
+`TWIN-001 = NO_GO` remain because no complete reconstructed Twin has operated
+on V10.
+
+Current stop:
+`TWIN-001_RECONSTRUCTION_NO_GO_WAITING_FOR_MANIFEST_COMPLETION_READ_APPROVAL`.
+Next TRUE OWNER GATE:
+`TWIN-001_RECONSTRUCTION_MANIFEST_COMPLETION_READ_APPROVAL`. See
+[the immutable NO-GO evidence](runtime/TWIN-001_STAGING_RECONSTRUCTION_SCHEMA_NO_GO_EVIDENCE.md).
+
+## Historical verified Production inventory checkpoint (2026-08-10)
 
 The Owner-approved St-Denis read gate completed as a bounded, explicit-column,
 read-only inventory. Fresh `origin/main=34ef8c577dd5e8464ef885bf235b0bece0018503`;
@@ -13,9 +35,10 @@ The [sanitized parity manifest](runtime/ST_DENIS_TWIN_PARITY_MANIFEST.md) and
 [inventory evidence](runtime/TWIN-001_PRODUCTION_INVENTORY_EVIDENCE.md) record
 the domain classes and concrete safe values. No Staging reconstruction, Twin
 Sync, deployment, migration, restart, business-data read, or mutation occurred.
-The current unique stop is
+The checkpoint stop was
 `TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`;
-the next gate is `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`.
+its next gate was `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`, later granted
+before the current pre-write NO-GO.
 
 ## Owner strategic route override (2026-08-10)
 
@@ -27,9 +50,11 @@ Phase B, and REL-001 Production RC remain preserved but are
 
 The Twin is not yet established. Existing synthetic St-Denis is
 `CURRENT_SYNTHETIC_BASELINE`, not Production-parity evidence. The read-only
-inventory is evidence only; reconstruction remains Owner-gated.
+inventory is evidence only; the corrected manifest-completion read and any
+later reconstruction retry remain independently Owner-gated.
 
-The former read-approval stop is historical. Current unique stop state:
+The former read-approval stop and inventory checkpoint are historical. The
+checkpoint stop was:
 `TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
 
 Release maturity follows the canonical Agile Loop policy: an accepted Twin
@@ -72,13 +97,13 @@ UI evidence remains pending. No Chinatown or Production action is authorized.
 | target_loop | `TWIN-001_ST_DENIS_STAGING_TWIN`; exact `1a3f2e...` completed synthetic A/B and automated Phase-A acceptance, but is not a Production-parity Twin. |
 | implementation status | `STG-008=PASS`; PR #99's generic repair is deployed at exact `1a3f2e...`. API and browser-equivalent evidence remain valid historical foundation. Owner has deferred manual Phase-A closure behind Twin planning. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md), [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md), [STG-008 entry evidence](runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md), [STG-008 Flyway guard repair evidence](runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md), [STG-008 release-rebind repair evidence](runtime/STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md), [STG-008 non-web request-context repair evidence](runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md), and [STG-008 one-shot lifecycle repair evidence](runtime/STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md). |
-| next action | Review the sanitized inventory and design-only `TWIN-001_STAGING_RECONSTRUCTION_PLAN`, then seek `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`. Do not reconstruct Staging, begin Chinatown, or implement modules. |
+| next action | Seek `TWIN-001_RECONSTRUCTION_MANIFEST_COMPLETION_READ_APPROVAL` for a corrected bounded read and complete sanitized writer payload. Do not re-read Production, infer omitted values, reconstruct Staging, begin Chinatown, or implement modules. |
 
 ### Current strategic roadmap
 
 | Phase | State | Boundary |
 |---|---|---|
-| `PHASE 1 TWIN-001_ST_DENIS_STAGING_TWIN` | `TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL` | Inventory complete; reconstruction remains design-only pending Owner Gate |
+| `PHASE 1 TWIN-001_ST_DENIS_STAGING_TWIN` | `TWIN-001_RECONSTRUCTION_NO_GO_WAITING_FOR_MANIFEST_COMPLETION_READ_APPROVAL` | V7-to-V10 forward path locally verified; deterministic manifest payload remains blocked behind a new TRUE OWNER GATE |
 | `PHASE 2 OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` | `DEFERRED_UNTIL_TWIN_PLAN_AND_RUNTIME_VALIDATION` | Owner checklist and bounded repair loop; no implementation yet |
 | `PHASE 3 MODULAR_PROVISIONING_IMPLEMENTATION` | `ARCHITECTURE_DIRECTION_APPROVED_IMPLEMENTATION_DEFERRED` | Opens only after Owner says “可以进行模块化了” |
 | `PHASE 4 CHINATOWN_STAGING_ACCEPTANCE` | `DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY` | Existing AL-003/REL-001 preserved; requires future `CHINATOWN_RESUME_GATE` |
