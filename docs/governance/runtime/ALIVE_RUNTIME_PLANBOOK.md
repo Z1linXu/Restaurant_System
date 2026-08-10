@@ -23,9 +23,10 @@ performed no Production read and no Staging/Production mutation. The immediate
 next runtime gate is the independent
 `PRODUCTION_ST_DENIS_CONFIGURATION_READ_APPROVAL`.
 
-Verified governance `origin/main` is
-`9536e46f33cd7196dde66d2a40ee02101d0521c6` after PR #103; this is a
-documentation-only merge and does not change the deployed Staging SHA.
+PRs #103 and #104 are verified governance-only merges in `main`; a fresh
+`git fetch origin --prune` is required before the next action to establish the
+current exact `origin/main`. These documentation-only merges do not change the
+deployed Staging SHA.
 
 The unique current stop state is
 `TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`.

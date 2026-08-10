@@ -23,8 +23,8 @@ See [TWIN-001 St-Denis Twin Plan](../agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.m
 
 ## Current verified continuation override (2026-08-10)
 
-Git Ground Truth is `origin/main=9536e46f33cd7196dde66d2a40ee02101d0521c6`.
-PR #101/#102/#103 are governance-only merges. Staging remains exact
+PR #101/#102/#103/#104 are governance-only merges in `main`; the exact
+`origin/main` SHA must be freshly fetched before the next action. Staging remains exact
 `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c`, Flyway is
 V1--V10 with no pending or failed migration, and Printing is disabled.
 STG-005A PLAN/EXECUTE/REPLAY are `VALIDATED/CREATED/REPLAYED`; STG-005B is
