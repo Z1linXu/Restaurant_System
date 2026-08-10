@@ -1016,8 +1016,11 @@ tooling repair changes no clone/API/profile behavior. Exact `1a3f2e...` then
 verified completed STG-005A/B, private credential rotation and API/real-Chrome
 browser-equivalent Owner checks. Fresh Owner manual UI evidence remains
 historical; target onboarding and validate/execute/replay are unexecuted. The
-current unique stop state is
-`TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`.
+read-approval stop recorded when this plan was published,
+`TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`,
+is historical and superseded. The current unique stop state is
+`TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`;
+the next gate is `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`.
 See [the sanitized STG-008 entry evidence](../runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md)
 [the Flyway guard repair evidence](../runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md),
 and [the release-rebind serialization repair evidence](../runtime/STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md).

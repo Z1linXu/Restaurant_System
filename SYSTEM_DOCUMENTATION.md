@@ -1,11 +1,25 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-10 TWIN-001 inventory Ground Truth: Owner-approved bounded
+> Production configuration read completed without writes. Fresh
+> `origin/main=34ef8c577dd5e8464ef885bf235b0bece0018503`; Production retained
+> `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`/Flyway V7 and isolated Staging
+> `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c`/Flyway V10. Exact Production
+> identity is Store `1 / 4483_R_SAINT_DENIS / 4483 R. Saint-Denis` in
+> Organization `1 / LANZHOU_NOODLES / Lanzhou Noodles`.
+> The [sanitized parity manifest](docs/governance/runtime/ST_DENIS_TWIN_PARITY_MANIFEST.md)
+> and [inventory evidence](docs/governance/runtime/TWIN-001_PRODUCTION_INVENTORY_EVIDENCE.md)
+> contain explicit-column safe configuration only. No Staging reconstruction,
+> Twin Sync, deployment, migration, restart, business-data read, or mutation
+> occurred. Current stop:
+> `TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
+
 > Owner route update (2026-08-10): Staging is now planned as a long-lived
 > Production-like St-Denis Operational Twin and mandatory pre-Production
-> validation environment. TWIN-001 is plan-ready only; the existing synthetic
-> St-Denis runtime is a `CURRENT_SYNTHETIC_BASELINE`, not a parity Twin. The
-> next gate is `PRODUCTION_ST_DENIS_CONFIGURATION_READ_APPROVAL`; this round
-> performed no Production read or Staging/Production mutation.
+> validation environment. TWIN-001 inventory is complete; the existing
+> synthetic St-Denis runtime is a `CURRENT_SYNTHETIC_BASELINE`, not a parity
+> Twin. The next gate is `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`; no
+> Staging/Production mutation occurred.
 
 > 2026-08-10 Phase-A Ground Truth: synthetic topology/source remains complete.
 > Exact Staging `1a3f2e...` deployed the generic `$http_host` repair, retained
@@ -44,7 +58,11 @@ separate from historical evidence snapshots and business implementation details:
   is the living current-status, approval-boundary, and deployment-entry index.
 - [TWIN-001 St-Denis Twin Plan](docs/governance/agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.md)
   is the current Owner-approved parity/reconstruction planning authority. It
-  does not authorize a Production read or runtime mutation.
+  does not authorize Twin synchronization or runtime mutation.
+- [ST-DENIS Twin parity manifest](docs/governance/runtime/ST_DENIS_TWIN_PARITY_MANIFEST.md)
+  and [Production inventory evidence](docs/governance/runtime/TWIN-001_PRODUCTION_INVENTORY_EVIDENCE.md)
+  record the completed bounded read-only inventory. They authorize no
+  synchronization or Staging write.
 - [Current Project Handoff](docs/governance/runtime/CURRENT_HANDOFF.md) is a
   concise conversation-transfer snapshot. It is navigation only and never
   overrides Git, the Planbook, backlogs, operating model, technical plans, or
@@ -875,7 +893,7 @@ historical. Exact `1a3f2e...` deployed the proxy repair,
 rotated the credential privately and passed API plus real-Chrome
 browser-equivalent acceptance. The former manual Phase-A gate is deferred by
 the Owner Twin priority. The current unique stop state is
-`TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`.
+`TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
 
 Fresh read-only inspection later found that the retained STG-005A failure’s
 normal two-line cleanup/action-failure lock is more specific than the

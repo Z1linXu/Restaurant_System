@@ -390,6 +390,11 @@ password-free plan reached its separate non-web WebSocket lifecycle timeout.
 The current repair and boundary are recorded in
 [STG-008 One-Shot Lifecycle Repair Evidence](../runtime/STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md).
 
-Stop state:
+Historical stop state at this preparation snapshot:
 
 `TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`
+
+This is superseded by the current TWIN-001 inventory state
+`TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
+The next Owner Gate is `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`; this
+preparation remains non-authorizing and does not start reconstruction.

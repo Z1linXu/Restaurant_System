@@ -1,5 +1,24 @@
 # Current Project Handoff
 
+## Current verified Production inventory override (2026-08-10)
+
+The Owner-approved read gate has completed. Fresh repository Ground Truth is
+`origin/main=34ef8c577dd5e8464ef885bf235b0bece0018503`; retained Production is
+`4667f3c35f85c9f8538f82789d9df1531d4fbc9e`/Flyway V7 and isolated Staging is
+`1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c`/Flyway V10. Production Store
+`1 / 4483_R_SAINT_DENIS / 4483 R. Saint-Denis` belongs to Organization
+`1 / LANZHOU_NOODLES / Lanzhou Noodles`. The read was bounded, explicit-column,
+Store-scoped and read-only; no Production business data, secrets, Staging
+write, Twin Sync, deployment, migration or restart occurred.
+`IN_MAIN`, `DEPLOYED_TO_STAGING`, `STAGING_ACCEPTED`, and
+`DEPLOYED_TO_PRODUCTION` remain distinct classifications.
+
+See [sanitized parity manifest](ST_DENIS_TWIN_PARITY_MANIFEST.md) and
+[inventory evidence](TWIN-001_PRODUCTION_INVENTORY_EVIDENCE.md). Current unique
+stop: `TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
+Next Owner Gate: `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`. The reconstruction
+plan is design-only; all runtime synchronization remains prohibited.
+
 ## Owner strategic route override (2026-08-10)
 
 The former `STG-009 Phase A -> Chinatown Phase B -> REL-001` route is preserved
@@ -12,13 +31,11 @@ The former route is explicitly
 preserved rather than cancelled.
 
 The Twin is not yet established. Existing synthetic St-Denis data is
-`CURRENT_SYNTHETIC_BASELINE`, not Production-parity evidence. This round did
-not read Production configuration and performed no Staging/Production
-mutation. The next independent gate is
-`PRODUCTION_ST_DENIS_CONFIGURATION_READ_APPROVAL`.
+`CURRENT_SYNTHETIC_BASELINE`, not Production-parity evidence. The completed
+read-only inventory is evidence, not a reconstruction or synchronization.
 
-Current unique stop state:
-`TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`.
+The former read-approval stop is historical. Current unique stop state:
+`TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
 See [TWIN-001 St-Denis Twin Plan](../agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.md).
 
 ## Current verified continuation override (2026-08-10)
@@ -38,7 +55,7 @@ Fresh Owner post-repair manual UI evidence remains pending and is deferred
 behind TWIN-001; the retained browser-equivalent result is historical Phase-A
 foundation. The former
 stop `STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`
-is historical; the current stop is the TWIN-001 plan/read gate. Chinatown
+is historical; the current stop is the TWIN-001 reconstruction-approval gate. Chinatown
 onboarding/clone remains deferred and prohibited.
 
 See [STG-008 synthetic runtime progress evidence](STG-008_SYNTHETIC_RUNTIME_PROGRESS_EVIDENCE.md)
@@ -230,9 +247,9 @@ current rebind or recovery instruction is inherited from it.
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` (deferred) |
 | Current Agile Loop | `TWIN-001_ST_DENIS_STAGING_TWIN` |
 | Current package | Exact `1a3f2e...` remains deployed at V10 with completed synthetic A/B and automated browser-equivalent acceptance. It is a `CURRENT_SYNTHETIC_BASELINE`, not yet a Production-parity Twin. |
-| Feature stop state | `TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL` |
+| Feature stop state | `TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL` |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | `PRODUCTION_ST_DENIS_CONFIGURATION_READ_APPROVAL`: exact runtime/Store identity, allowed columns/domains, bounded read strategy, sanitized manifest, reconstruction target and no-mutation guarantee. No Production read is authorized in this round. |
+| Current Owner gate | `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`: review the sanitized Production inventory and design-only reconstruction plan. No Staging reconstruction or Twin Sync is authorized by this handoff. |
 
 Release/promotion navigation follows the canonical [Agile Loop policy](../AGILE_LOOP_OPERATING_MODEL.md#83-canonical-release-promotion-drift-and-recovery-policy):
 freeze an immutable RC after Twin/automated/Owner acceptance, promote the same
@@ -240,7 +257,7 @@ artifact digests, detect drift read-only and sync only after an explicit
 Owner-approved, Owner-triggered Twin sync request, use
 `APPLICATION_ROLLBACK_COMPATIBILITY_GATE`, and treat
 backup existence as distinct from recoverability. These future gates do not
-change the current TWIN-001 read-approval stop.
+change the current TWIN-001 reconstruction-approval stop.
 
 ### Permitted work
 
@@ -248,14 +265,15 @@ change the current TWIN-001 read-approval stop.
 - Read the TWIN-001 plan and reconcile governance against verified runtime
   evidence. Repository-only planning and bounded documentation repair are
   permitted.
-- Prepare, but do not execute, the independent Production configuration-read
-  approval package. No Production query or Staging reconstruction occurs.
+- Review the completed Production inventory, its manifest/evidence, and the
+  design-only `TWIN-001_STAGING_RECONSTRUCTION_PLAN`; perform repository-only
+  governance repair as needed.
 
 ### Prohibited work without new approval
 
 - Reuse of consumed/failed STG-007 or STG-008 approval/readiness evidence, or
   continuation on an old image.
-- Any Staging/Production runtime action, Production configuration read,
+- Any Staging/Production runtime action, further Production configuration read,
   deployment, restart, Flyway/schema change, printer/device binding, Owner
   manual acceptance, target onboarding, AL-003 validation/clone/replay, or
   module implementation.

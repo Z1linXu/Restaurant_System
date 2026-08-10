@@ -1,5 +1,25 @@
 # Agile Loop Operating Model
 
+## Current verified inventory override (2026-08-10)
+
+The active loop remains `TWIN-001_ST_DENIS_STAGING_TWIN`, but its independent
+Production read gate has now completed under the Owner's bounded
+`PRODUCTION_ST_DENIS_CONFIGURATION_READ_APPROVAL`. Fresh `origin/main` is
+`34ef8c577dd5e8464ef885bf235b0bece0018503`; Production is retained at
+`4667f3c35f85c9f8538f82789d9df1531d4fbc9e`/V7 and isolated Staging at
+`1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c`/V10. The exact Production identity
+is Store `1 / 4483_R_SAINT_DENIS / 4483 R. Saint-Denis` in Organization
+`1 / LANZHOU_NOODLES / Lanzhou Noodles`.
+
+The resulting [sanitized parity manifest](runtime/ST_DENIS_TWIN_PARITY_MANIFEST.md)
+and [inventory evidence](runtime/TWIN-001_PRODUCTION_INVENTORY_EVIDENCE.md)
+contain only explicit, bounded, read-only configuration observations. No
+business/history/secret data was selected and no runtime mutation occurred.
+The current stop is
+`TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`;
+the next Owner Gate is `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`. Twin
+reconstruction and synchronization remain prohibited until that gate.
+
 ## Verified continuation state (2026-08-10)
 
 Owner has reprioritized the active route to `TWIN-001_ST_DENIS_STAGING_TWIN`.
@@ -17,13 +37,11 @@ distinct. Exact Staging `1a3f2e...` passed formal preflight, V10-to-V10 deploy,
 readiness, private credential rotation, API acceptance and real-Chrome
 browser-equivalent acceptance without a 401/403. The pre-repair manual failure
 remains historical; the former manual-acceptance stop is deferred by the Owner.
-The unique current stop state is
-`TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`.
-The next independent Owner gate is
-`PRODUCTION_ST_DENIS_CONFIGURATION_READ_APPROVAL`; this round performs no
-Production configuration read.
-No Production read, Staging mutation, module implementation, or Chinatown
-Phase B action is authorized.
+The former read-approval stop is historical. The unique current stop state is
+`TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
+The next independent Owner gate is `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`.
+No further Production read, Staging mutation, module implementation, or
+Chinatown Phase B action is authorized.
 
 > Status: `ACTIVE_GOVERNANCE_PROCESS`
 >

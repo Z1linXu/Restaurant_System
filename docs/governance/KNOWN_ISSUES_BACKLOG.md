@@ -7,6 +7,10 @@
 > This is the authority for current issue triage. Historical evidence remains
 > in the Phase 3 reports and is not rewritten here.
 
+Current TWIN-001 stop: `TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
+Next gate: `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`. The Production inventory
+is complete and read-only; Staging reconstruction and Twin Sync remain blocked.
+
 ## Priority definitions
 
 | Priority | Meaning |
@@ -25,13 +29,13 @@
 | issue_id | `KI-011` |
 | priority | `P2` governance/product readiness |
 | title | Staging must become a long-lived Production-like St-Denis Operational Twin |
-| observed_behavior | Existing Staging has a verified synthetic St-Denis baseline and automated Owner/browser-equivalent evidence, but no sanitized Production configuration inventory or parity manifest. |
+| observed_behavior | Existing Staging has a verified synthetic St-Denis baseline and automated Owner/browser-equivalent evidence. The bounded Production configuration inventory is now complete and retained as a sanitized parity manifest; reconstruction has not begun. |
 | expected_behavior | Staging reconstructs safe St-Denis operational configuration through shared application code and generic Store logic, with every parity domain classified `MATCH`, `EXPECTED_DIFFERENCE`, `BLOCKING_DIFFERENCE`, or `NOT_YET_VERIFIED`. |
 | operational_impact | Production promotion and the former Chinatown-first route remain deferred until Twin parity and Owner field validation are complete. |
-| current_workaround | None. Do not read Production or mutate Staging in this planning round. |
-| evidence | [TWIN-001 St-Denis Twin Plan](agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.md). |
-| status | `PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL` |
-| next_gate | `PRODUCTION_ST_DENIS_CONFIGURATION_READ_APPROVAL` |
+| current_workaround | Review the manifest and design-only reconstruction plan. Do not mutate Staging or sync the Twin. |
+| evidence | [TWIN-001 St-Denis Twin Plan](agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.md), [sanitized parity manifest](runtime/ST_DENIS_TWIN_PARITY_MANIFEST.md), and [inventory evidence](runtime/TWIN-001_PRODUCTION_INVENTORY_EVIDENCE.md). |
+| status | `INVENTORY_COMPLETE_WAITING_FOR_RECONSTRUCTION_APPROVAL` |
+| next_gate | `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL` |
 | safety_boundary | No raw customer/order/payment data, credentials, secrets, production printer/device endpoints, `SELECT *`, or complete database dump. |
 | last_updated | 2026-08-10 |
 

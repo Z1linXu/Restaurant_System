@@ -1,8 +1,8 @@
 # TWIN-001 St-Denis Production-like Staging Twin Plan
 
-> Status: `PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`
+> Status: `INVENTORY_COMPLETE_WAITING_FOR_RECONSTRUCTION_APPROVAL`
 >
-> Current stop state: `TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`
+> Current stop state: `TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`
 >
 > Owner decision date: 2026-08-10, America/Toronto
 
@@ -16,15 +16,23 @@ Twin is planned, not yet established; the immediate FT-001 route is therefore:
 bug-fix loop -> automated validation -> Owner manual validation -> Production
 promotion`
 
-This plan is governance and reconstruction planning only. It performs no
-Production read, Staging mutation, deployment, migration, printer binding,
-module implementation, Chinatown onboarding, or Production promotion.
+This plan is governance and reconstruction planning only. The Owner-approved
+bounded Production configuration read has completed; it performed no Staging
+mutation, deployment, migration, printer binding, module implementation,
+Chinatown onboarding, or Production promotion.
 
 The existing synthetic St-Denis Organization/Owner/source Store/menu remains a
 `CURRENT_SYNTHETIC_BASELINE`. It is useful Twin foundation evidence, but it is
 not automatically a Production-parity Twin. Do not delete, reset, or rebuild
 it destructively. A later TWIN-001 runtime package must explicitly decide what
 can be reused, what differs, and what must be reconciled.
+
+The resulting [sanitized parity manifest](../runtime/ST_DENIS_TWIN_PARITY_MANIFEST.md)
+and [inventory evidence](../runtime/TWIN-001_PRODUCTION_INVENTORY_EVIDENCE.md)
+are the only current Production-derived inputs. They identify Production
+Store `1 / 4483_R_SAINT_DENIS / 4483 R. Saint-Denis` in Organization
+`1 / LANZHOU_NOODLES / Lanzhou Noodles`. They contain no secrets, PII,
+customer/order/payment data, endpoint credentials, token hashes, or raw dump.
 
 ## 2. Operational parity contract
 
@@ -74,13 +82,13 @@ Staging staff usernames and roles should be Production-equivalent where safe:
 All Staging credentials remain independent synthetic/test credentials. A
 Production password or hash must never be reused.
 
-## 4. Required future Owner Runtime Gate
+## 4. Completed read gate and next Owner Runtime Gate
 
-The next runtime gate is independently named:
+The completed read gate was independently named:
 
 `PRODUCTION_ST_DENIS_CONFIGURATION_READ_APPROVAL`
 
-It is not granted by this plan. Its approval package must bind:
+Its approval package bound:
 
 - exact Production runtime identity and exact Store 1 identity;
 - exact allowed configuration read domains and columns;
@@ -90,8 +98,9 @@ It is not granted by this plan. Its approval package must bind:
 - Staging reconstruction target and expected differences;
 - rollback/no-mutation guarantee and abort conditions.
 
-This round performs no Production read. It does not assume Store 1 identity,
-current configuration, or parity values beyond retained historical evidence.
+The read gate is complete. The next runtime gate is independently named
+`TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`; this plan does not grant that
+authority.
 
 ## 5. Reconstruction strategy
 
@@ -216,10 +225,37 @@ separate modularization DoD, Planbook must issue `CHINATOWN_RESUME_GATE` before
 resuming STG-009 Phase B or AL-003 validate/execute/replay. No second clone
 engine may be created.
 
-## 11. Current stop
+## 11. Design-only TWIN-001_STAGING_RECONSTRUCTION_PLAN
 
-`TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`
+The reconstruction plan is declarative and has not run:
 
-The immediate next action is repository planning review followed by the
-independent `PRODUCTION_ST_DENIS_CONFIGURATION_READ_APPROVAL` gate. No runtime
-action is authorized by this plan.
+1. Bind a fresh exact release and compatible schema decision; do not copy
+   Production V7 history into Staging V10 or run Flyway as part of this plan.
+2. Reuse the generic Store/Profile and provisioning modules already in `main`.
+   Project Store, Organization, menu graph, stations, tables, staff/access,
+   feature flags, printing topology and devices through idempotent, Store-scoped
+   contracts. Never copy Production IDs, credentials, printer endpoints, or
+   device token hashes.
+3. Preserve the synthetic Owner and source Store as an environment boundary.
+   Replace credentials with a private synthetic value and keep Printing
+   `DISABLED` until the separate home-printer gate.
+4. Reconcile the manifest classes before any write: V7/V10 schema is a
+   blocking behavior difference; menu/table/Store values are sanitized data
+   differences; staff/access/features are expected environment differences;
+   printing/devices are test-hardware differences; workflows remain
+   not-yet-verified.
+5. Execute only after the Owner reconstruction gate with a dry-run diff,
+   one-use approval, rollback/abort contract, no-cross-Store assertion,
+   duplicate detection, and before/after sanitized evidence. Ambiguous
+   identity fails closed.
+6. Validate every domain and retain a versioned manifest fingerprint. No
+   automatic sync, raw dump, broad clone, destructive cleanup, or Production
+   write is permitted.
+
+## 12. Current stop
+
+`TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`
+
+The next Owner Gate is `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`. The
+manifest/evidence may be reviewed and the repository plan refined; no Staging
+reconstruction, Twin Sync, or other runtime action is authorized by this plan.

@@ -21,6 +21,12 @@
 > This plan supplies Chinatown-specific evidence fields and gates; it does
 > not create a second release, drift, rollback, or restore authority.
 
+> TWIN-001 inventory handoff (2026-08-10): a separate bounded read-only
+> Production St-Denis inventory is now recorded in [the parity manifest](../runtime/ST_DENIS_TWIN_PARITY_MANIFEST.md)
+> and [its evidence report](../runtime/TWIN-001_PRODUCTION_INVENTORY_EVIDENCE.md).
+> That evidence does not select a Chinatown candidate, authorize Store 1
+> reads, or authorize Staging reconstruction, clone, deployment, or activation.
+
 ## 1. Purpose
 
 REL-001 defines the exact evidence and approval package required before the

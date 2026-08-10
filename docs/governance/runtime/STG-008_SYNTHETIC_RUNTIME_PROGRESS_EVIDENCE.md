@@ -52,8 +52,11 @@ acceptance. STG-005A/B plan/execute/replay, expected counts/revision, no
 duplicate/crossover, disabled Printing, intact isolation and unchanged
 Production continuity remain valid. Fresh Owner post-repair manual UI evidence
 is deferred by the Owner Twin priority and Phase B remains prohibited. The
-current unique stop state is
-`TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`.
+read-approval stop captured by this historical evidence,
+`TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`,
+is superseded. The current unique stop state is
+`TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`;
+the next gate is `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`.
 
 No password, token, cookie, authorization header, or business data is retained
 in this evidence.
