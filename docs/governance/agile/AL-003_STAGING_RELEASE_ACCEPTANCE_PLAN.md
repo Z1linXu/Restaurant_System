@@ -350,7 +350,12 @@ recovers.
 
 ## Capability dependency state
 
+The prior read-approval dependency snapshot
 `TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`
+is historical and superseded by the completed read-only inventory. The current
+TWIN-001 stop is
+`TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`;
+the next gate is `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`.
 
 Exact Staging `1a3f2e...` passed API and real-Chrome browser-equivalent Phase-A
 acceptance after private credential rotation. Fresh Owner manual UI evidence

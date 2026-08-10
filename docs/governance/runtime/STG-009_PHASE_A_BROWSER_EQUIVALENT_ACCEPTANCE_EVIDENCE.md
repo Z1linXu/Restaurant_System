@@ -86,7 +86,10 @@ Therefore:
 
 - `STG-008 = PASS` remains valid;
 - `STG-009_PHASE_A_OWNER_LOGIN` is deferred by the Owner Twin priority;
-- the current unique stop state is
-  `TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`;
+- the read-approval stop captured by this historical evidence,
+  `TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`,
+  is superseded; the current unique stop state is
+  `TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`;
+- the next Owner Gate is `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`;
 - Chinatown onboarding, validate, execute, clone, replay and every Production
   mutation remain prohibited.

@@ -1,5 +1,12 @@
 # Restaurant System API (MVP)
 
+> TWIN-001 inventory boundary (2026-08-10): the Owner-approved Production
+> St-Denis configuration read is recorded in the [sanitized parity manifest](../docs/governance/runtime/ST_DENIS_TWIN_PARITY_MANIFEST.md)
+> and [inventory evidence](../docs/governance/runtime/TWIN-001_PRODUCTION_INVENTORY_EVIDENCE.md).
+> This is repository/evidence documentation only: no API contract changed and
+> no endpoint performs Staging reconstruction, Twin Sync, Production read,
+> deployment, migration, restart, or business-data mutation.
+
 > Browser transport note (2026-08-10): loopback SSH-tunnel deployments must
 > preserve the browser-visible Host including an explicit port when proxying
 > `/api/` and `/ws`. Otherwise Spring can classify a same-origin login as CORS
