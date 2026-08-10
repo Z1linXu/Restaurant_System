@@ -1,11 +1,18 @@
 # SYSTEM DOCUMENTATION
 
+> Owner route update (2026-08-10): Staging is now planned as a long-lived
+> Production-like St-Denis Operational Twin and mandatory pre-Production
+> validation environment. TWIN-001 is plan-ready only; the existing synthetic
+> St-Denis runtime is a `CURRENT_SYNTHETIC_BASELINE`, not a parity Twin. The
+> next gate is `PRODUCTION_ST_DENIS_CONFIGURATION_READ_APPROVAL`; this round
+> performed no Production read or Staging/Production mutation.
+
 > 2026-08-10 Phase-A Ground Truth: synthetic topology/source remains complete.
 > Exact Staging `1a3f2e...` deployed the generic `$http_host` repair, retained
 > Flyway V10 and passed formal preflight, readiness, private credential
 > rotation, API acceptance and real-Chrome browser-equivalent acceptance
-> without a 401/403. Fresh Owner post-repair manual UI evidence is the only
-> remaining Phase-A item; Chinatown/Production remains gated.
+> without a 401/403. The former manual Phase-A item is preserved as historical
+> evidence and deferred behind TWIN-001; Chinatown/Production remains gated.
 
 ## Current verified STG-008 continuation
 
@@ -18,8 +25,8 @@ Phase-A-only jq fallback was deployed and its API-only checks passed on this
 exact Staging runtime. Manual Chrome acceptance superseded that conclusion with
 the initial CORS 403. PR #99's proxy/rotation repair is `IN_MAIN` and deployed;
 the rotated credential, API flow and real-Chrome browser-equivalent flow
-passed. Owner post-repair manual UI evidence remains pending; Phase B is not
-authorized.
+passed. This is a `CURRENT_SYNTHETIC_BASELINE`, not a Production-parity Twin;
+the Owner has deferred Phase-A manual closure and Phase B behind TWIN-001.
 
 ## Current Governance Index
 
@@ -28,6 +35,9 @@ separate from historical evidence snapshots and business implementation details:
 
 - [Alive Runtime Planbook](docs/governance/runtime/ALIVE_RUNTIME_PLANBOOK.md)
   is the living current-status, approval-boundary, and deployment-entry index.
+- [TWIN-001 St-Denis Twin Plan](docs/governance/agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.md)
+  is the current Owner-approved parity/reconstruction planning authority. It
+  does not authorize a Production read or runtime mutation.
 - [Current Project Handoff](docs/governance/runtime/CURRENT_HANDOFF.md) is a
   concise conversation-transfer snapshot. It is navigation only and never
   overrides Git, the Planbook, backlogs, operating model, technical plans, or
@@ -836,22 +846,24 @@ repair before credential or data access, but the non-web WebSocket broker kept
 the JVM alive to the 600-second bound. Compose cleanup and the scoped finalizer
 overlapped, so the fail-closed pair was correctly retained. Zero synthetic data
 was written. PR #91 merged the narrow lifecycle fix at `9a776d3...`; it remains
-`IN_MAIN` and requires exact Staging rebind before deployment evidence. The
-current Owner authorization covers that Staging-only rebind and later bounded
-same-scope repair rebinds, never a migration, Production action or security/
-product/identity-boundary change.
+`IN_MAIN`, and its former exact Staging rebind requirement is satisfied only by
+retained historical runtime evidence. That old Owner authorization is consumed
+and does not grant a current rebind or repair action; the current route is the
+TWIN-001 planning/read gate. No migration, Production action or
+security/product/identity boundary is changed.
 
 The bounded repository repair for that non-web authorization-context defect is
 documented in [STG-008 Non-Web Request-Context Repair Evidence](docs/governance/runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md).
 It entered `main` through PR #89 at `434c9cc808648a4f80c91435d8667ad9fe160018`
 and was runtime-validated by exact `2a6c30a...`. PR #91 is `IN_MAIN` at
-`9a776d3...`; the Owner has authorized the bounded continuous Staging loop
-from fresh exact rebind through guarded topology/source work and conditional
-Phase-A Owner-login acceptance. Exact `1a3f2e...` deployed the proxy repair,
+`9a776d3...`; the former Owner authorization covered a bounded continuous
+Staging loop from fresh exact rebind through guarded topology/source work and
+conditional Phase-A Owner-login acceptance; that authorization is consumed and
+historical. Exact `1a3f2e...` deployed the proxy repair,
 rotated the credential privately and passed API plus real-Chrome
-browser-equivalent acceptance. Fresh Owner manual UI evidence remains. The
-current unique stop state is
-`STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`.
+browser-equivalent acceptance. The former manual Phase-A gate is deferred by
+the Owner Twin priority. The current unique stop state is
+`TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`.
 
 Fresh read-only inspection later found that the retained STG-005A failure’s
 normal two-line cleanup/action-failure lock is more specific than the

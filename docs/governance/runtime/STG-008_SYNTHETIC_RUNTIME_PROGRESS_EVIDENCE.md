@@ -1,6 +1,6 @@
 # STG-008 synthetic runtime progress evidence
 
-> 2026-08-10 clarification: STG-008 topology/source remains PASS, but the
+> 2026-08-10 historical clarification: STG-008 topology/source remains PASS, but the
 > separately claimed Phase-A Owner-login PASS is superseded for browser
 > acceptance by `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN`. API-only 200 did
 > not exercise browser Origin/proxy behavior; see
@@ -9,7 +9,9 @@
 > Later exact runtime evidence deployed `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c`,
 > privately rotated the credential and passed both API and real-Chrome
 > browser-equivalent acceptance. STG-008 remains `PASS`; only fresh Owner
-> post-repair manual UI confirmation remains for Phase A. See
+> post-repair manual UI confirmation remains as deferred Phase-A evidence. The
+> current route is TWIN-001; see
+> [the Twin plan](../agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.md) and
 > [the browser-equivalent evidence](STG-009_PHASE_A_BROWSER_EQUIVALENT_ACCEPTANCE_EVIDENCE.md).
 
 > Classification: `MACHINE_VERIFIED_STAGING_EVIDENCE`
@@ -49,8 +51,9 @@ private credential rotation, API and real-Chrome browser-equivalent Phase-A
 acceptance. STG-005A/B plan/execute/replay, expected counts/revision, no
 duplicate/crossover, disabled Printing, intact isolation and unchanged
 Production continuity remain valid. Fresh Owner post-repair manual UI evidence
-is pending and Phase B remains prohibited. The unique stop state is
-`STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`.
+is deferred by the Owner Twin priority and Phase B remains prohibited. The
+current unique stop state is
+`TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`.
 
 No password, token, cookie, authorization header, or business data is retained
 in this evidence.

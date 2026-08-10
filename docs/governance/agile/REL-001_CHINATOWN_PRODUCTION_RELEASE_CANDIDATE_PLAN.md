@@ -1,6 +1,6 @@
 # REL-001 Chinatown Production Release Candidate Plan
 
-> Status: `IN_MAIN_PLAN_ONLY_WAITING_FOR_STAGING_ACCEPTANCE`
+> Status: `IN_MAIN_PLAN_ONLY_DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY`
 >
 > Git classification: `IN_MAIN_PLAN_ONLY`
 >
@@ -11,6 +11,11 @@
 > Candidate SHA: `EVIDENCE_PENDING`
 >
 > Runtime access: not performed
+
+> Route update (2026-08-10): REL-001 remains preserved future Production RC
+> planning. It is not the immediate next objective; TWIN-001 and the Owner
+> field-test/bug-fix loop must complete first, followed by an explicit
+> `CHINATOWN_RESUME_GATE`.
 
 ## 1. Purpose
 

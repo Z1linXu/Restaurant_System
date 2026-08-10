@@ -18,6 +18,23 @@
 
 ## Active issues
 
+### KI-011 - Production-like St-Denis Twin parity is not yet established
+
+| Field | Value |
+|---|---|
+| issue_id | `KI-011` |
+| priority | `P2` governance/product readiness |
+| title | Staging must become a long-lived Production-like St-Denis Operational Twin |
+| observed_behavior | Existing Staging has a verified synthetic St-Denis baseline and automated Owner/browser-equivalent evidence, but no sanitized Production configuration inventory or parity manifest. |
+| expected_behavior | Staging reconstructs safe St-Denis operational configuration through shared application code and generic Store logic, with every parity domain classified `MATCH`, `EXPECTED_DIFFERENCE`, `BLOCKING_DIFFERENCE`, or `NOT_YET_VERIFIED`. |
+| operational_impact | Production promotion and the former Chinatown-first route remain deferred until Twin parity and Owner field validation are complete. |
+| current_workaround | None. Do not read Production or mutate Staging in this planning round. |
+| evidence | [TWIN-001 St-Denis Twin Plan](agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.md). |
+| status | `PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL` |
+| next_gate | `PRODUCTION_ST_DENIS_CONFIGURATION_READ_APPROVAL` |
+| safety_boundary | No raw customer/order/payment data, credentials, secrets, production printer/device endpoints, `SELECT *`, or complete database dump. |
+| last_updated | 2026-08-10 |
+
 ### KI-010 - Browser login rejected by proxy same-origin contract
 
 | Field | Value |
@@ -27,13 +44,13 @@
 | title | SSH-tunneled browser login returns CORS HTTP 403 before authentication |
 | observed_behavior | Manual Chrome acceptance against `http://127.0.0.1:18080` reached `POST /api/v1/auth/login` and received `403 Invalid CORS request`; no principal, role, Organization, Store, or dashboard request was reached. The API-only acceptance client had no browser Origin and therefore passed. |
 | expected_behavior | nginx preserves the browser-visible Host and explicit tunnel port so Spring recognizes the request as same-origin; login then proceeds through the existing generic authentication and Organization/Store authorization contracts. |
-| operational_impact | Automated Phase-A API and browser-equivalent acceptance now pass; closure is held only for fresh Owner post-repair manual UI evidence. |
+| operational_impact | Automated Phase-A API and browser-equivalent acceptance pass; the former manual closure is preserved as evidence and deferred by the Owner's TWIN-001 priority. |
 | current_workaround | None required. Do not weaken CORS or add a Store/user-specific allowlist. |
 | evidence | [STG-009 browser-login 403 repair evidence](runtime/STG-009_PHASE_A_BROWSER_LOGIN_403_REPAIR_EVIDENCE.md) and [browser-equivalent acceptance evidence](runtime/STG-009_PHASE_A_BROWSER_EQUIVALENT_ACCEPTANCE_EVIDENCE.md). |
-| status | `REPAIR_DEPLOYED_BROWSER_EQUIVALENT_PASS_OWNER_MANUAL_UI_PENDING` |
-| target_loop | `STG-009_PHASE_A_BROWSER_LOGIN_403_FORBIDDEN` Dependency Repair Auto-Loop. |
+| status | `REPAIR_DEPLOYED_BROWSER_EQUIVALENT_PASS_DEFERRED_BY_OWNER_TWIN_PRIORITY` |
+| target_loop | `TWIN-001_ST_DENIS_STAGING_TWIN`; the browser-equivalent repair is retained as historical foundation and no new runtime repair is authorized by this issue entry. |
 | acceptance_criteria | Proxy regression and repository checks pass; independent review accepts; fresh exact-SHA Staging deploy proves browser-equivalent login/session/redirect/Owner shell/Organization/source-Store/dashboard/refresh/logout without 401/403; the exposed synthetic credential is privately rotated; Owner manual browser evidence passes. |
-| deployment_required | Yes, Staging-only exact redeploy; no Production deployment. |
+| deployment_required | Historical Staging-only exact redeploy completed; no new deployment is authorized by this issue entry. |
 | last_updated | 2026-08-10 |
 
 ### KI-009 - Non-web STG-005 one-shot retains WebSocket broker lifecycle
@@ -45,14 +62,14 @@
 | title | Non-web STG-005 one-shot does not exit after validated command completion |
 | observed_behavior | Exact Staging `2a6c30a...` reached `STG005_BOOTSTRAP|status=VALIDATED` before credential or data access, but the non-web profile also started `SimpleBrokerMessageHandler`; the JVM remained alive until the reviewed 600-second timeout. Compose `--rm` cleanup and the launcher finalizer then overlapped, preserving fail-closed blocked state. |
 | expected_behavior | The dedicated non-web one-shot excludes long-lived WebSocket infrastructure while preserving the normal web runtime contract. A successful password-free plan exits inside its bounded window; unexpected cleanup failure remains fail-closed. |
-| operational_impact | STG-008 cannot safely progress beyond PLAN; no synthetic business write is permitted while the reviewed blocked pair is retained. |
-| current_workaround | PR #91 is `IN_MAIN`; PR #92's governance-only merge makes current exact main `8b93d09...`. Do not retry the failed plan on deployed exact `2a6c30a...`. The recovery-pair compatibility repair must merge, then rebind its new exact candidate under the continuous Staging authorization. |
+| operational_impact | Historical STG-008 progress stopped before synthetic business writes; the reviewed pair was later recovered and the current synthetic baseline is complete. No replay is authorized by this issue entry. |
+| current_workaround | Historical recovery and lifecycle repairs are retained as evidence. Do not replay the old one-shot or infer current runtime authority from its former exact SHA; the current route is the Owner-prioritized TWIN-001 governance plan. |
 | evidence | [STG-008 one-shot lifecycle repair evidence](runtime/STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md). |
 | authoritative_rule | [AL-003S Staging acceptance runbook](../../deployment/cloud/README_AL003S_STAGING_ACCEPTANCE.md). |
-| status | `REPAIR_IN_MAIN_REQUIRES_EXACT_SHA_REDEPLOY` |
-| target_loop | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` Dependency Repair Auto-Loop. |
-| acceptance_criteria | Focused non-web lifecycle and shell safety regressions plus independent review passed; PR #91 entered `main`. The current continuous authorization must rebind/deploy that exact SHA, pass readiness/recovery and a fresh PLAN without a timeout. |
-| deployment_required | Yes, Staging-only exact redeploy under the current continuous Owner authorization; no Production deployment. |
+| status | `HISTORICAL_REPAIR_RESOLVED_DEFERRED_BY_OWNER_ST_DENIS_TWIN_PRIORITY` |
+| target_loop | `TWIN-001_ST_DENIS_STAGING_TWIN`; no STG-008 replay is authorized by this backlog entry. |
+| acceptance_criteria | Focused non-web lifecycle and shell safety regressions plus independent review passed; PR #91 entered `main` and later exact runtime evidence is retained. No new rebind, recovery or PLAN is authorized by this issue entry. |
+| deployment_required | Historical Staging-only exact redeploy completed; no new deployment is authorized by this backlog entry. |
 | last_updated | 2026-08-09 |
 
 ### KI-008 - Non-web STG-005 plan cannot construct servlet request context
@@ -65,11 +82,11 @@
 | observed_behavior | The approved password-free `bootstrap-plan` exits during Spring context initialization because `RequestUserContextService` requires `HttpServletRequest` while the guarded one-shot is non-web. |
 | expected_behavior | The non-web guarded command constructs without inventing a request; any request-authentication attempt remains fail-closed. |
 | operational_impact | Historical blocker resolved: exact `2a6c30a...` constructed and reached `VALIDATED` before credential/data access. The separate lifecycle blocker is tracked as `KI-009`. |
-| current_workaround | None; do not reuse old evidence. The current loop proceeds through PR #91's lifecycle repair and the continuous exact-SHA rebind authorization. |
+| current_workaround | None; do not reuse old evidence. The former STG-008 continuation is historical and deferred behind the Owner-prioritized TWIN-001 route. |
 | evidence | [STG-008 non-web request-context repair evidence](runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md). |
 | authoritative_rule | [AL-003S Staging acceptance runbook](../../deployment/cloud/README_AL003S_STAGING_ACCEPTANCE.md). |
 | status | `RESOLVED_BY_EXACT_RUNTIME_VALIDATION` |
-| target_loop | `STG-008_SYNTHETIC_TOPOLOGY_AND_SOURCE` Dependency Repair Auto-Loop. |
+| target_loop | `TWIN-001_ST_DENIS_STAGING_TWIN`; no STG-008 replay is authorized by this backlog entry. |
 | acceptance_criteria | Focused authorization/non-web safety regressions and independent review passed; PR #89 entered `main`; exact `2a6c30a...` passed rebind/deploy/readiness/recovery and emitted password-free `VALIDATED`. |
 | deployment_required | Completed by the exact `2a6c30a...` Staging-only deploy; no Production deployment. |
 | last_updated | 2026-08-09 |

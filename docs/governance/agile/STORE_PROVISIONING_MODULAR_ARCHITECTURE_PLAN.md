@@ -1,6 +1,6 @@
 # Store Provisioning Modular Architecture Plan
 
-> Capability state: `IN_MAIN`
+> Capability state: `ARCHITECTURE_DIRECTION_APPROVED / IMPLEMENTATION_DEFERRED / WAITING_FOR_OWNER_FIELD_TEST_COMPLETION`
 >
 > Prepared: 2026-08-08, America/Toronto
 >
@@ -9,6 +9,11 @@
 > Review: PR #61 merged to `main`
 >
 > Runtime access: not performed
+
+> Owner route update (2026-08-10): architecture direction is preserved, but
+> implementation waits for the St-Denis Twin and Owner field-test loop.
+> Reopen only after the Owner explicitly says “可以进行模块化了” and
+> reconcile module boundaries against the parity manifest and bug history.
 
 ## 1. Purpose and authority
 

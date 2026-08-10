@@ -7,6 +7,11 @@
 > does not change any authentication, role, Organization, Store, or endpoint
 > contract; API-only acceptance does not establish browser UI acceptance.
 
+> Staging route update (2026-08-10): the existing synthetic St-Denis topology
+> and browser-equivalent evidence are Twin foundation evidence only. TWIN-001
+> parity planning is current; no Production configuration read or runtime
+> mutation is authorized by this documentation change.
+
 ## Runtime acceptance boundary
 
 The synthetic Staging topology/source evidence is not a public API acceptance
@@ -14,8 +19,9 @@ claim. STG-005A/STG-005B are guarded operational actions; PR #95/#97's
 `owner-login-acceptance` reuses existing auth/workspace/overview/logout
 contracts only. Exact Staging `1a3f2e...` deployed the proxy repair and passed
 both the secret-safe API path and real-Chrome browser-equivalent acceptance.
-Fresh Owner post-repair manual UI evidence remains pending. Chinatown onboarding
-and menu clone remain blocked until Phase A genuinely closes.
+The former Owner manual Phase-A gate is preserved but deferred by the TWIN-001
+priority. Chinatown onboarding and menu clone remain blocked until the future
+Twin, field-test and explicit resume gates are complete.
 
 This document defines the core API endpoints for the restaurant management system MVP.
 

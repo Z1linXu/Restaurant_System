@@ -1,11 +1,11 @@
 # AL-003 Exact-SHA Staging Release and Acceptance Plan
 
-> Capability state: `STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`
+> Capability state: `DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY`
 >
 > Exact `1a3f2e...` deployed the generic repair, rotated the credential through
 > the private channel and passed API plus real-Chrome browser-equivalent
-> acceptance. The pre-repair manual 403 remains historical; fresh Owner
-> post-repair manual UI evidence is still required before Phase A closes.
+> acceptance. This Phase-A evidence is preserved; the Owner has deferred its
+> manual closure behind TWIN-001 and the field-test loop.
 >
 > Historical failed candidate: `8f909525781804f61d1da388882f530da358c3c4`
 >
@@ -16,7 +16,9 @@
 > serialization repair are also `IN_MAIN`. The later exact `6753855497...`
 > continuation used #87 for Staging-only rebind/deploy/recovery. PR #89's
 > request-context repair was runtime-validated by current exact `2a6c30a...`;
-> the separate one-shot lifecycle repair remains repository-only and undeployed.
+> the separate one-shot lifecycle repair is `IN_MAIN` with later exact runtime
+> evidence retained historically; its former rebind authorization is consumed
+> and does not authorize a current runtime action.
 >
 > Runtime checkpoint: `STG-007=PASS`; V10-to-V10 deploy, repaired readiness, runtime collection, same-image restart and post-restart verification all `PASS`
 
@@ -162,12 +164,12 @@ runtime until a new exact-SHA deployment is separately approved.
 
 ### Staging Owner login prerequisite
 
-The acceptance prerequisite state is now
+The former acceptance prerequisite state was
 `STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`.
 Exact Staging passed deployment, private credential rotation, API and
-real-Chrome browser-equivalent checks, but it is not
-`AL-003_STAGING_ACCEPTANCE_READY` until fresh Owner manual UI evidence exists.
-Chinatown onboarding and clone remain separately gated.
+real-Chrome browser-equivalent checks. This historical Phase-A closure is
+deferred by the Owner TWIN-001 route; Chinatown onboarding and clone remain
+separately gated.
 
 Historical STG-008 entry evidence (before the authorized synthetic run) proved
 that an earlier V10 Staging baseline had no STG-005A execution and zero
@@ -276,9 +278,9 @@ long-lived WebSocket broker, so it reached the 600-second containment timeout;
 the resulting Compose `--rm` and scoped finalizer overlap retained the
 fail-closed blocked pair. The bounded lifecycle repair excludes WebSocket
 infrastructure only from that non-web profile. PR #91 entered `main` at
-`9a776d3...`; the current continuous authorization covers its exact-SHA
-Staging release/recovery continuation before another PLAN. No prior approval,
-evidence, or credential channel is reusable. See
+`9a776d3...`; its exact-SHA Staging release/recovery continuation is
+historical and the former continuous authorization is consumed. No prior
+approval, evidence, or credential channel is reusable. See
 [one-shot lifecycle repair evidence](../runtime/STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md).
 
 The `IN_MAIN` AL-003S package adds the missing guarded one-shot launcher and
@@ -338,9 +340,9 @@ recovers.
   without requiring `cd`; the merge itself does not authorize a release. Bind
   a fresh exact SHA and evidence after this governance package merges. Do not
   weaken the data-directory permissions or bypass the evidence gate.
-- Acceptance remains `NO-GO` while
-  `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`; exact-SHA deployment and
-  Flyway V10 alone do not prove the Owner login or clone API topology.
+- Historical acceptance was `NO-GO` while
+  `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`; that prerequisite is now
+  deferred by the Owner Twin route and is not the current loop.
 - A same-image restart is `NO-GO` unless all three loopback endpoints converge
   inside the reviewed bound, exact container/image/Flyway/project identities
   remain unchanged, complete PASS evidence is emitted, and every post-mutation
@@ -348,7 +350,7 @@ recovers.
 
 ## Capability dependency state
 
-`STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`
+`TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`
 
 Exact Staging `1a3f2e...` passed API and real-Chrome browser-equivalent Phase-A
 acceptance after private credential rotation. Fresh Owner manual UI evidence

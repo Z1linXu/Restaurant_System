@@ -4,7 +4,7 @@
 >
 > Type: `FEATURE_DISCOVERY_AND_PLAN`
 >
-> Status: `PLAN_COMPLETE`
+> Status: `PLAN_COMPLETE_DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY`
 >
 > Last updated: 2026-08-08, America/Toronto
 >
@@ -12,6 +12,10 @@
 > approved implementation successor is `AL-002`, limited to backend onboarding
 > foundations. This plan does not authorize creating Chinatown, accounts,
 > credentials, devices, printer configuration, or production data.
+
+> Owner route update (2026-08-10): this Chinatown plan remains preserved but
+> deferred by `TWIN-001_ST_DENIS_STAGING_TWIN` and the subsequent Owner field-
+> test/bug-fix loop. It is not the immediate next implementation route.
 
 ## 1. Decision summary
 

@@ -8,6 +8,25 @@
 > and approval boundaries. This is a living index, not a replacement for the
 > immutable Phase 3 evidence reports.
 
+## Owner strategic route override (2026-08-10)
+
+The Owner has reprioritized the product route. The former sequence
+`STG-009 Phase A -> Chinatown Phase B -> REL-001 Production RC` is preserved as
+history but deferred. The current highest priority is planning
+`TWIN-001_ST_DENIS_STAGING_TWIN`, whose designated long-term role is a
+Production-like St-Denis Operational Twin and mandatory pre-Production
+validation environment.
+
+The Twin is planned, not yet established. Existing synthetic St-Denis data is
+`CURRENT_SYNTHETIC_BASELINE`, not a claim of Production parity. This round
+performed no Production read and no Staging/Production mutation. The immediate
+next runtime gate is the independent
+`PRODUCTION_ST_DENIS_CONFIGURATION_READ_APPROVAL`.
+
+The unique current stop state is
+`TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`.
+See [TWIN-001 St-Denis Twin Plan](../agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.md).
+
 ## 1. Evidence vocabulary
 
 | Label | Meaning | Do not infer |
@@ -26,7 +45,7 @@
 | Environment | `restaurant-prod` | `OPERATOR_CONFIRMED` | Environment label only; no host or secret is recorded. |
 | `RUNTIME_COMMIT` | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e` | retained identity plus `MACHINE_VERIFIED_READ_ONLY` continuity during STG-007 | Current Production runtime identity only, not a formal release approval. |
 | Production branch | `main` | `MACHINE_VERIFIED_READ_ONLY` during STG-006 continuity | Branch relationship is not a deployment approval record. |
-| Runtime-sensitive deployed candidate | `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c` | `MACHINE_VERIFIED` Git/runtime Ground Truth | PR #99's repair and PR #100's closure are `IN_MAIN`; detached release, build source and deployed Staging identity match this SHA. This proves deployment and automated acceptance, not Owner manual acceptance. |
+| Runtime-sensitive deployed candidate | `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c` | `MACHINE_VERIFIED` Git/runtime Ground Truth | PR #99's repair and PR #100's closure are `IN_MAIN`; later PR #101/#102 are governance-only. Detached release, build source and deployed Staging identity match this SHA. This proves deployment and automated acceptance, not Production parity. |
 | STG-007 exact runtime candidate / documentation base before evidence publication | `2837ae88e55142c99c6975f8b6575febffc913a1` | `MACHINE_VERIFIED` from `origin/main`, detached release, build source and deployed Staging identity | PR #82 merge and deployed Staging SHA; it is not the Production runtime. A later evidence-only merge must remain distinct from the deployed SHA. |
 | Deployment mode | HTTP | `OPERATOR_CONFIRMED` | HTTPS/certificate posture is outside this record. |
 | Compose services | `db`, `backend`, `nginx` under project `cloud`; unchanged across the final STG-007 continuation, original start times, restart count 0, health 200 | `MACHINE_VERIFIED_READ_ONLY` | Minimum continuity only; no environment, Flyway, Store, or business-data read. |
@@ -62,13 +81,13 @@ snapshots. Do not copy those reports into this planbook.
 
 | Item | Current state |
 |---|---|
-| Current feature | `FT-001 Owner Store Onboarding - Chinatown` |
-| Current Agile Loop | `STG-009_PHASE_A_OWNER_MANUAL_UI_ACCEPTANCE` |
-| Loop type | `OWNER_GATED_STAGING_SYNTHETIC_ACCEPTANCE` |
-| Loop status | `STG-008=PASS; STG-009_PHASE_A_OWNER_LOGIN=PENDING_OWNER_MANUAL_UI_ACCEPTANCE` |
-| Current package | Exact `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c` is deployed to isolated Staging at Flyway V10. STG-005A/B remain `VALIDATED/CREATED/REPLAYED`, `4/3/13/38`, replay `2 -> 2`, with no one-shot, marker or lock. Formal preflight, V10-to-V10 deploy, readiness, private credential rotation, API acceptance and real-Chrome browser-equivalent acceptance passed; the initial login and all authenticated flows returned 200 with no 401/403. Fresh Owner post-repair manual UI evidence remains required. |
-| STG-008 state | `PASS` for the completed synthetic topology/source contract on exact Staging `468b8705...`; synthetic Organization, Owner, source Store and credential are ready, with no duplicate/crossover. |
-| STG-009 Phase-A state | `AUTOMATED_ACCEPTANCE_PASS_OWNER_MANUAL_PENDING`: the repaired exact runtime passed secret-safe API and real-Chrome browser-equivalent login/session/Organization/Store/dashboard/refresh/logout acceptance. The pre-repair manual 403 remains historical; a fresh Owner manual UI retry is the only remaining Phase-A item. |
+| Current feature | `FT-001 Owner Store Onboarding - Chinatown` (deferred by Owner) |
+| Current Agile Loop | `TWIN-001_ST_DENIS_STAGING_TWIN` |
+| Loop type | `OWNER_GATED_PRODUCTION_LIKE_STAGING_PARITY` |
+| Loop status | `STG-008=PASS; STG-009_PHASE_A_OWNER_LOGIN=DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY; TWIN-001=PLAN_READY` |
+| Current package | Exact `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c` remains deployed to isolated Staging at Flyway V10. Synthetic A/B and automated browser-equivalent evidence remain valid, but the environment is not yet a Production-parity Twin. This round performed no Production read or runtime mutation. |
+| STG-008 state | `PASS` for the completed synthetic topology/source contract, retained in current exact Staging `1a3f2e...`; synthetic Organization, Owner, source Store and credential are ready, with no duplicate/crossover. This is the `CURRENT_SYNTHETIC_BASELINE`, not Twin parity. |
+| STG-009 Phase-A state | `DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY`: prior API/browser-equivalent evidence is retained; Owner manual UI acceptance is no longer the immediate loop. |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | PR #27 merged the backend foundation into `main`; Production remains on the older runtime and no production onboarding is established by that merge. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
@@ -79,9 +98,9 @@ snapshots. Do not copy those reports into this planbook.
 | STG-006 state | `PASS` for candidate `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b`. Fresh read-only evidence confirmed retained Staging `4397f995...` / V8, isolated project/network/state, loopback bind, printing disabled, healthy endpoints, resource headroom, and unchanged Production continuity. No candidate release, deploy, Flyway, restart, login, or data mutation occurred. |
 | OPS-001 state | `REPOSITORY_COMPLETE` through PR #87. The final exact `2837ae88...` runtime use passed release/env binding, V10-to-V10 deploy, repaired readiness, sanitized Flyway/runtime collection and same-image restart without weakening any guard. PR #87 later supplied the blocked-state-safe release/env preparation path, which was used by exact `6753855497...` for the bounded rebind/deploy/recovery continuation. Runtime use remains action-specific and Owner-gated. |
 | STG-007 state | `PASS` at exact deployed Staging SHA `2837ae88e55142c99c6975f8b6575febffc913a1`. Environment digest `124eb472...`, continuation entry `8d744fa8...`, formal preflight `7174a295...`, readiness `19a8fec2...`, runtime collection `03337e71...`, restart readiness `6392783f...`, and same-image restart `2208d8ca...` all passed. Flyway remained exact V10/no-pending; health returned 200/200/200; exact container/image/release identity, printing, isolation and Production continuity were unchanged. |
-| AL-003 state | PRs #61-#101 are `IN_MAIN`; PR #101 is evidence/governance only. Exact `1a3f2e...` is `DEPLOYED_TO_STAGING` at Flyway V10 with completed synthetic topology/source and automated Phase-A API/browser-equivalent acceptance. No Chinatown onboarding, validation, clone, or Production acceptance result exists. |
-| Staging Owner login prerequisite | Synthetic Owner `STG005_OWNER_20260808_R01` and the privately rotated runtime-only credential are ready. Retrieval remains private; no secret is stored in Git/evidence. Fresh Owner manual UI evidence is pending. |
-| Current permitted work | Owner may retrieve the rotated credential through the private runtime path and perform the bounded post-repair manual Staging login/Organization/Store/dashboard check. Repository-only evidence publication is allowed. |
+| AL-003 state | PRs #61-#101 are `IN_MAIN`; Chinatown Phase B, validation/clone and REL-001 are `DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY`. Existing code, plans and evidence remain preserved; no Production acceptance result exists. |
+| Staging Owner login prerequisite | Historical synthetic Owner/browser-equivalent foundation is complete; manual Phase-A closure is deferred by the Owner Twin priority. Retrieval remains private; no secret is stored in Git/evidence. |
+| Current permitted work | Repository-only TWIN-001 planning/review and governance synchronization. A future Production configuration read requires `PRODUCTION_ST_DENIS_CONFIGURATION_READ_APPROVAL`; no read occurs in this round. |
 | Explicitly not permitted | Chinatown onboarding, AL-003 validate/execute/clone/replay, Production build/pull/restart/deploy/Flyway/data read or mutation, Store 1 read, printer/Pad action, or any new runtime-sensitive action without a new Owner Runtime Gate. `IN_MAIN`, `DEPLOYED_TO_STAGING`, and `STAGING_ACCEPTED` remain distinct. |
 
 Agent and worker execution is ephemeral. After a bounded task, the result and
@@ -157,8 +176,9 @@ Production Flyway was not queried and remains retained V7 evidence only.
 The exact `468b8705...` continuation exposed the historical browser CORS
 failure. PR #99 repaired it, and exact `1a3f2e...` subsequently passed formal
 preflight, V10-to-V10 deploy, readiness, private credential rotation, API and
-real-Chrome browser-equivalent acceptance. The unique stop state is
-`STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`.
+real-Chrome browser-equivalent acceptance. The former Phase-A stop is now
+historical and deferred by the Owner Twin route. The current unique stop state
+is `TWIN-001_ST_DENIS_STAGING_TWIN_PLAN_READY_WAITING_FOR_OWNER_RUNTIME_READ_APPROVAL`.
 
 OPS-001 adds repository-only guarded helpers for a detached release plus
 four-field atomic private-env rotation, sanitized Flyway/runtime collection
@@ -192,14 +212,15 @@ bounded PR #87 repair and final Agent 6 acceptance. The later exact
 `6753855497...` continuation completed Batch A and cleared only the reviewed
 old blocked pair; its following plan failure and replacement repair are in
 [STG-008 Non-Web Request-Context Repair Evidence](STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md).
-PR #72 and PRs #61 through #71 are `IN_MAIN`. STG-006 is fresh passive evidence,
-not a candidate deployment or Staging acceptance. The separate runtime
-acceptance prerequisite remains
-`AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`.
+PR #72 and PRs #61 through #71 are `IN_MAIN`. STG-006 is historical passive
+evidence. The former runtime acceptance prerequisite
+`AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING` is historical and deferred
+by the current TWIN-001 route.
 
-The current post-stack capability matrix and loop order remain in
-[Post-Stack Ground Truth Audit](POST_STACK_GROUND_TRUTH_AUDIT.md). The completed
-passive observation is recorded in
+The post-stack capability matrix remains a historical capability snapshot in
+[Post-Stack Ground Truth Audit](POST_STACK_GROUND_TRUTH_AUDIT.md); its old loop
+order and runtime authorization are superseded by TWIN-001 and are not current
+authority. The completed passive observation is recorded in
 [STG-006 Exact-Main Passive Preflight Evidence](STG-006_EXACT_MAIN_PREFLIGHT_EVIDENCE.md).
 `STG-006 = PASS`. OPS-001 is `REPOSITORY_COMPLETE` in PR #74. STG-007 then
 stopped before mutation because the formal preflight could not accept an exact
@@ -748,9 +769,10 @@ Dependency repair and Store Profile governance are authoritative in
   `c3956592da8a33092ab745c7cc6aac05e9babfa7`; runtime deployment remains
   separately unverified and unauthorized.
 
-### AL-003 Staging Owner login prerequisite
+### Historical AL-003 Staging Owner login prerequisite
 
-- Status: `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`.
+- Status: historical `AL-003_STAGING_OWNER_LOGIN_PREREQUISITE_PENDING`; current
+  route is deferred by the Owner Twin priority.
 - Retained evidence says Staging remains Flyway V8 and STG-005A has never run;
   the repair did not query runtime tables. Exact user/membership row presence
   is therefore `EVIDENCE_PENDING`, not inferred absent.
