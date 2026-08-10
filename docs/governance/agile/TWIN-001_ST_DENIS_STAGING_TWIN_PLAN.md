@@ -1,8 +1,8 @@
 # TWIN-001 St-Denis Production-like Staging Twin Plan
 
-> Status: `RECONSTRUCTION_NO_GO_MANIFEST_INPUT_NOT_EXECUTABLE`
+> Status: `MANIFEST_V2_RECONSTRUCTION_READY_READ_ONLY`
 >
-> Current stop state: `TWIN-001_RECONSTRUCTION_NO_GO_WAITING_FOR_MANIFEST_COMPLETION_READ_APPROVAL`
+> Current stop state: `TWIN-001_MANIFEST_V2_RECONSTRUCTION_READY_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`
 >
 > Owner decision date: 2026-08-10, America/Toronto
 
@@ -15,6 +15,9 @@ Twin is planned, not yet established; the immediate FT-001 route is therefore:
 `Production St-Denis -> parity model -> Staging St-Denis Twin -> development/
 bug-fix loop -> automated validation -> Owner manual validation -> Production
 promotion`
+
+Manifest v2 now supplies deterministic, schema-valid safe configuration input
+and an explicit V7-to-V10 mapping. It does not authorize a Staging writer.
 
 This plan is governance and reconstruction planning only. The Owner-approved
 bounded Production configuration read has completed; it performed no Staging
@@ -256,14 +259,12 @@ execution package stopped before its first runtime action:
 
 ## 12. Current stop
 
-`TWIN-001_RECONSTRUCTION_NO_GO_WAITING_FOR_MANIFEST_COMPLETION_READ_APPROVAL`
+`TWIN-001_MANIFEST_V2_RECONSTRUCTION_READY_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`
 
-The Owner granted `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`, but pre-write
-source validation stopped the package before runtime entry. The current
-manifest omits deterministic row-level reconstruction values and documents
-query columns that conflict with the checksum-identical V7 repository schema.
-The immutable evidence is
-[TWIN-001 reconstruction schema/input NO-GO](../runtime/TWIN-001_STAGING_RECONSTRUCTION_SCHEMA_NO_GO_EVIDENCE.md).
+The earlier reconstruction approval stopped before runtime entry because v1
+was incomplete. The corrected read now supplies
+[manifest v2 completion evidence](../runtime/TWIN-001_MANIFEST_V2_COMPLETION_EVIDENCE.md)
+and [V7-to-V10 mapping](../runtime/V7_PRODUCTION_TO_V10_TWIN_CONFIGURATION_MAPPING.md).
 
 Local PostgreSQL 16 evidence proves the reviewed forward path
 `V7 -> V8 -> V9 -> V10`, current-candidate startup, data-shape preservation,
@@ -273,8 +274,6 @@ The aggregate `SCHEMA` result remains `BLOCKING_BEHAVIOR_DIFFERENCE` until a
 reconstructed St-Denis Twin actually operates and passes parity validation on
 V10.
 
-The next TRUE OWNER GATE is
-`TWIN-001_RECONSTRUCTION_MANIFEST_COMPLETION_READ_APPROVAL`. It is a new,
-corrected, bounded Production read gate and is not implied by the consumed
-reconstruction approval. No Staging reconstruction, Twin Sync, Production
-read, schema action, or other runtime action is authorized by this plan.
+The next TRUE OWNER GATE is `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`.
+No Staging reconstruction, Twin Sync, Production read, schema action, or other
+runtime action is authorized by this plan until that distinct approval.

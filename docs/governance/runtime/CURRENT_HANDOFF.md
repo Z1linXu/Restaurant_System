@@ -1,6 +1,15 @@
 # Current Project Handoff
 
-## Current reconstruction NO-GO override (2026-08-10)
+## Current manifest v2 readiness override (2026-08-10)
+
+Fresh Git Ground Truth is `origin/main=53c217f893aa60e365f3ebb1b3de989862857eae`.
+The corrected Production/Staging read-only loop produced a deterministic,
+schema-valid [manifest v2](ST_DENIS_TWIN_PARITY_MANIFEST_V2.json); Staging was
+not reconstructed. Current stop:
+`TWIN-001_MANIFEST_V2_RECONSTRUCTION_READY_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
+Next TRUE OWNER GATE: `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`.
+
+## Historical reconstruction NO-GO override (2026-08-10)
 
 Fresh Git Ground Truth is
 `origin/main=295ed4b1278750dfc5492c3109e0ac767e158ffd`. The Owner granted
@@ -82,9 +91,8 @@ behind TWIN-001; the retained browser-equivalent result is historical Phase-A
 foundation. The former
 stop `STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`
 is historical. The current stop is
-`TWIN-001_RECONSTRUCTION_NO_GO_WAITING_FOR_MANIFEST_COMPLETION_READ_APPROVAL`;
-the next TRUE OWNER GATE is
-`TWIN-001_RECONSTRUCTION_MANIFEST_COMPLETION_READ_APPROVAL`. Chinatown
+`TWIN-001_MANIFEST_V2_RECONSTRUCTION_READY_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`;
+the next TRUE OWNER GATE is `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`. Chinatown
 onboarding/clone remains deferred and prohibited.
 
 See [STG-008 synthetic runtime progress evidence](STG-008_SYNTHETIC_RUNTIME_PROGRESS_EVIDENCE.md)
@@ -276,9 +284,9 @@ current rebind or recovery instruction is inherited from it.
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` (deferred) |
 | Current Agile Loop | `TWIN-001_ST_DENIS_STAGING_TWIN` |
 | Current package | Exact `1a3f2e...` remains deployed at V10 with completed synthetic A/B and automated browser-equivalent acceptance. It is a `CURRENT_SYNTHETIC_BASELINE`, not yet a Production-parity Twin. |
-| Feature stop state | `TWIN-001_RECONSTRUCTION_NO_GO_WAITING_FOR_MANIFEST_COMPLETION_READ_APPROVAL` |
+| Feature stop state | `TWIN-001_MANIFEST_V2_RECONSTRUCTION_READY_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL` |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | `TWIN-001_RECONSTRUCTION_MANIFEST_COMPLETION_READ_APPROVAL`: corrected bounded Production read and complete sanitized writer payload; no Production read or Staging reconstruction is authorized by this handoff. |
+| Current Owner gate | `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`: Staging-only reconstruction remains separately gated; no writer is authorized by this handoff. |
 
 Release/promotion navigation follows the canonical [Agile Loop policy](../AGILE_LOOP_OPERATING_MODEL.md#83-canonical-release-promotion-drift-and-recovery-policy):
 freeze an immutable RC after Twin/automated/Owner acceptance, promote the same

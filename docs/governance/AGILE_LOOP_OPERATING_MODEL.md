@@ -1,6 +1,14 @@
 # Agile Loop Operating Model
 
-## Current reconstruction NO-GO override (2026-08-10)
+## Current manifest v2 readiness override (2026-08-10)
+
+The corrected Owner-approved read completed and produced deterministic,
+schema-valid manifest v2 plus V7-to-V10 mapping. The current stop is
+`TWIN-001_MANIFEST_V2_RECONSTRUCTION_READY_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
+Auto-merge of evidence does not authorize a Staging writer; the next TRUE OWNER
+GATE is `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`.
+
+## Historical reconstruction NO-GO override (2026-08-10)
 
 The Owner granted `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`. The runtime batch
 did not begin because pre-write validation proved the retained manifest is not

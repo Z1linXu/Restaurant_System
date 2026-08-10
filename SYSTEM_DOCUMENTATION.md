@@ -1,5 +1,13 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-10 TWIN-001 manifest v2 completion: the corrected Owner-approved
+> Production/Staging read-only loop produced a deterministic, secret-free,
+> V7-to-V10 configuration input with the complete 380-option graph. No
+> Staging reconstruction, migration, credential action or Production mutation
+> occurred. Current stop:
+> `TWIN-001_MANIFEST_V2_RECONSTRUCTION_READY_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
+> See [completion evidence](docs/governance/runtime/TWIN-001_MANIFEST_V2_COMPLETION_EVIDENCE.md).
+
 > 2026-08-10 TWIN-001 reconstruction NO-GO: the Owner granted
 > `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`, but pre-write source validation
 > stopped before runtime entry. The retained manifest omits deterministic
@@ -11,10 +19,9 @@
 > requires no migration on second startup. The observed V7/V10 delta is
 > `CURRENT_PRODUCTION_VERSION_DIFFERENCE`, not a downgrade target. Aggregate
 > `SCHEMA = BLOCKING_BEHAVIOR_DIFFERENCE` and `TWIN-001 = NO_GO` remain until a
-> complete reconstructed Twin operates on V10. Current stop:
+> complete reconstructed Twin operates on V10. The historical NO-GO stop was
 > `TWIN-001_RECONSTRUCTION_NO_GO_WAITING_FOR_MANIFEST_COMPLETION_READ_APPROVAL`.
-> Next TRUE OWNER GATE:
-> `TWIN-001_RECONSTRUCTION_MANIFEST_COMPLETION_READ_APPROVAL`. See
+> See
 > [immutable evidence](docs/governance/runtime/TWIN-001_STAGING_RECONSTRUCTION_SCHEMA_NO_GO_EVIDENCE.md).
 
 > Historical 2026-08-10 TWIN-001 inventory checkpoint: Owner-approved bounded
