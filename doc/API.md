@@ -23,6 +23,16 @@ The former Owner manual Phase-A gate is preserved but deferred by the TWIN-001
 priority. Chinatown onboarding and menu clone remain blocked until the future
 Twin, field-test and explicit resume gates are complete.
 
+## Release and promotion boundary
+
+Release identity and promotion are governance contracts, not API endpoints.
+The canonical [Agile Loop release/promotion policy](../docs/governance/AGILE_LOOP_OPERATING_MODEL.md#83-canonical-release-promotion-drift-and-recovery-policy)
+requires an immutable RC after Twin/automated/Owner acceptance, promotion of
+the same artifact digests accepted in Staging, read-only drift detection with
+explicit sync approval, `APPLICATION_ROLLBACK_COMPATIBILITY_GATE`, and backup
+integrity plus restore-rehearsal readiness. No API call silently synchronizes
+Staging, deploys Production, restores a database, or activates Chinatown.
+
 This document defines the core API endpoints for the restaurant management system MVP.
 
 ## Base URL

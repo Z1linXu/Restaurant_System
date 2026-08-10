@@ -331,6 +331,97 @@ Deploying the latest branch tip without this chain is prohibited. Repository
 capability, Staging deployment, Staging acceptance, release-candidate status,
 and Production deployment remain separate governance states.
 
+### 8.3 Canonical release, promotion, drift, and recovery policy
+
+This section is the canonical repository policy for release promotion. TWIN-001
+and REL-001 provide route-specific evidence and gates; neither may create a
+second or weaker release authority.
+
+#### Release Candidate Freeze
+
+After the St-Denis Twin passes automated regression, classified parity checks,
+and required Owner manual acceptance, freeze an immutable Release Candidate
+record before any Production promotion. The record must bind a unique `RC_ID`,
+the exact 40-character source SHA and verified `main` ancestry, backend and
+frontend image digests, relevant Android artifact identity, migration/Flyway
+target and checksums, parity-manifest identity, automated acceptance result,
+Owner acceptance result, and build timestamp/manifest metadata. Freeze also
+binds the reviewed release scope and approval identity. Later `main` movement
+does not move the frozen RC; Production may promote only that RC. Any source,
+artifact, migration, parity, evidence, environment or scope change requires a
+new RC and a fresh Staging acceptance chain.
+
+#### Build once, promote the same artifact
+
+The required flow is:
+
+`build once -> deploy exact artifacts to Staging -> validate -> promote the same artifact digests to Production`.
+
+Rebuilding the same source SHA separately for Production is not equivalent to
+promoting the accepted artifact. Before Production promotion, the backend,
+frontend, and relevant Android artifact identities/digests must match the
+Staging-accepted release manifest. If current tooling cannot carry the exact
+artifact digests through promotion, record a tooling implementation gap and
+stop the promotion; do not alter deployment runtime in a planning loop.
+
+#### Continuous drift detection and explicit Twin sync
+
+Production-to-Twin drift detection is recurring and read-only. It may emit
+sanitized fingerprints/manifests for `MENU_DRIFT`, `TABLE_DRIFT`,
+`STAFF_DRIFT`, `ACCESS_DRIFT`, `FEATURE_DRIFT`, `PRINTING_DRIFT`,
+`DEVICE_DRIFT`, and other approved parity domains. Every result is classified
+as `MATCH`, `EXPECTED_ENVIRONMENT_DIFFERENCE`,
+`SANITIZED_DATA_DIFFERENCE`, `TEST_HARDWARE_DIFFERENCE`,
+`BLOCKING_BEHAVIOR_DIFFERENCE`, or `NOT_YET_VERIFIED`.
+
+Detection never mutates Staging and never silently overwrites Owner test
+state. A drift finding follows:
+
+`report -> classify -> explicit Owner-approved, Owner-triggered Twin sync request -> bounded Twin sync -> parity validation`.
+
+Any `BLOCKING_BEHAVIOR_DIFFERENCE` makes Production promotion `NO_GO`. This
+policy grants no Production-read or Staging-mutation authority; every sync or
+runtime execution remains separately bound to an explicit Owner gate.
+
+#### Rollback-first compatibility gate, otherwise roll-forward
+
+Production incident handling is `rollback-first WHEN compatibility is proven;
+otherwise roll-forward`. The mandatory
+`APPLICATION_ROLLBACK_COMPATIBILITY_GATE` binds the current schema and
+migration state, previous application artifact identity, compatibility
+evidence, rollback target identity, and post-rollback health verification. An
+old application must never be assumed compatible with a newer Flyway schema.
+If compatibility is unknown or false, automatic rollback is forbidden and a
+bounded emergency roll-forward repair is required. Destructive database
+rollback, restore, Flyway history edits, and volume deletion require a
+separate Owner gate and are never implicit in application rollback.
+
+#### Backup and restore readiness
+
+`backup existence != proven recoverability`. Release maturity requires current
+backup integrity evidence, a reviewed recovery boundary, and an appropriately
+periodic isolated restore rehearsal with recorded recovery point/time
+expectations. Ordinary releases need not restore Production, but a release may
+not claim recovery readiness when integrity, rehearsal status, or boundaries
+are unknown. Backup creation, restore rehearsal, and restore execution remain
+separately approved operations.
+
+#### Source direction and responsibilities
+
+Application-code source is the latest approved shared candidate/RC. Production
+St-Denis is the operational configuration parity source. Copying a currently
+deployed old Production application binary or code backward into Staging is
+forbidden; the Twin validates the next shared candidate, not an old binary.
+
+Owner owns product requirements/bug reports, Staging manual acceptance,
+strategic phase transitions, and final Production approval. Codex owns bounded
+reproduction, planning within authority, implementation, tests, Agent 6 review,
+PR/auto-merge, exact-SHA Staging deployment when separately authorized,
+automated regression, and evidence/governance sync. An Owner-reported ordinary
+bug is one repair package -> tests -> review -> auto-merge -> separately
+authorized Staging deploy -> Owner retest; Codex is not authorized to invent an
+unbounded “no bugs remain” loop.
+
 ## 9. Git ground truth and stacked PR rules
 
 Every status decision must distinguish these states explicitly:

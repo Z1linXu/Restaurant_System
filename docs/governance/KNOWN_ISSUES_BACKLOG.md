@@ -156,14 +156,14 @@
 | priority | `P2` |
 | title | 数据库恢复演练未执行 |
 | observed_behavior | A backup artifact was operator-confirmed as present and non-empty, but no independently approved restore rehearsal is recorded. |
-| expected_behavior | A separately approved, non-production restore rehearsal has a documented result, timing, and follow-up actions. |
+| expected_behavior | A separately approved, non-production restore rehearsal has a documented result, timing, recovery-point/time expectations, and follow-up actions; backup integrity is independently verified. |
 | operational_impact | Backup recoverability and recovery time remain unknown. |
 | current_workaround | Preserve backups and treat restoration readiness as unverified. |
 | evidence | [PHASE_3_COMPLETION_REPORT.md](runtime/PHASE_3_COMPLETION_REPORT.md) and [POST_DEPLOY_RUNTIME_EVIDENCE.md](runtime/POST_DEPLOY_RUNTIME_EVIDENCE.md). |
 | authoritative_rule | [RUNTIME_VERIFICATION_CHECKLIST.md](RUNTIME_VERIFICATION_CHECKLIST.md). |
 | status | `EVIDENCE_PENDING` |
 | target_loop | Future owner-approved operations reliability loop. |
-| acceptance_criteria | An owner-approved non-production restore rehearsal succeeds without production data mutation; resulting evidence records scope and limitations without secrets. |
+| acceptance_criteria | An owner-approved isolated restore rehearsal succeeds without Production data mutation; backup integrity, recovery boundaries and scope/limitations are recorded without secrets. |
 | deployment_required | No application deployment; an owner-approved operations exercise is required. |
 | last_updated | 2026-07-27 |
 
@@ -175,14 +175,14 @@
 | priority | `P3` |
 | title | 正式生产批准和发布记录尚未建立 |
 | observed_behavior | A reported runtime commit exists, but no independent formal approval/release record is retained. |
-| expected_behavior | Each production deployment has an owner approval, release/PR reference, deployed commit, migration statement, and rollback reference. |
+| expected_behavior | Each production deployment has an immutable RC identity, Owner approval, release/PR reference, exact source/artifact digests, deployed commit, migration statement, parity/acceptance results, and rollback reference. |
 | operational_impact | Release provenance and incident response are slower and less auditable. |
 | current_workaround | Use the Phase 3 evidence and owner confirmation as bounded historical context only. |
 | evidence | [VERIFIED_RUNTIME_BASELINE.md](runtime/VERIFIED_RUNTIME_BASELINE.md); [PHASE_3_COMPLETION_REPORT.md](runtime/PHASE_3_COMPLETION_REPORT.md). |
 | authoritative_rule | [AGILE_LOOP_OPERATING_MODEL.md](AGILE_LOOP_OPERATING_MODEL.md). |
 | status | `PROCESS_PENDING` |
 | target_loop | Governance/release-process improvement, unassigned. |
-| acceptance_criteria | A lightweight owner-approved release record exists for future deployments without recording secrets or customer data. |
+| acceptance_criteria | A lightweight owner-approved RC record freezes exact source/artifact identities after Twin/automated/Owner acceptance, proves same-artifact promotion, records compatibility-gated rollback/roll-forward and backup readiness, and contains no secrets or customer data. |
 | deployment_required | No. |
 | last_updated | 2026-07-27 |
 
