@@ -1,6 +1,6 @@
 # Staging MOCK Printing Runtime Policy Repair Evidence
 
-> Status: `REPOSITORY_REPAIR_VERIFIED_WAITING_FOR_AGENT6_RECHECK_PR`
+> Status: `REPOSITORY_REPAIR_AGENT6_ACCEPTED_WAITING_FOR_PR`
 >
 > Package: `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT`
 >
@@ -55,9 +55,11 @@ Print Jobs. Production container identity and health were unchanged.
 - All 14 deployment shell test files passed after the fake Compose fixtures
   were updated to represent the new two-property application policy.
 - The first Agent 6 review rejected the repeated mode reads as a transport
-  safety race. The correction above and its regression are complete; fresh
-  Agent 6 re-review, PR/merge and exact-SHA Staging runtime validation remain
-  pending in this repository repair record.
+  safety race. After the correction and regression above, fresh Agent 6
+  re-review returned `ACCEPT`: every transport-capable operation now uses one
+  effective-mode snapshot, and the bounded package adds no Staging-only
+  business branch, migration, secret, Production mutation or printer action.
+  PR/merge and exact-SHA Staging runtime validation remain pending.
 
 No Staging or Production mutation, migration, restart, printer contact,
 endpoint write, Pad pairing, order creation or credential read occurred during
@@ -65,4 +67,4 @@ this repair phase.
 
 ## Stop state
 
-`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT_REPAIR_VERIFIED_WAITING_FOR_AGENT6_RECHECK_PR`
+`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT_REPAIR_AGENT6_ACCEPTED_WAITING_FOR_PR`
