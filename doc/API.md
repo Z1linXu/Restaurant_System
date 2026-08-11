@@ -1,8 +1,15 @@
 # Restaurant System API (MVP)
 
-> TWIN-001 manifest v2 boundary (2026-08-10): no API was added or changed.
+> TWIN-001 approved reconstruction tooling adds no endpoint or DTO. The
+> Staging-only staff step reuses `/auth/login`, Store-scoped Staff Admin
+> list/update/create, and `/auth/logout`; all passwords enter through an
+> inherited mode-0600 descriptor and remain independent from Production.
+> Menu/table/KDS/logical printing/device topology projection is a guarded
+> operational tool, not a public API.
+
+> Historical TWIN-001 manifest v2 boundary (2026-08-10): no API was added or changed.
 > The completed read-only manifest loop creates no reconstruction endpoint or
-> write authorization. Current stop:
+> write authorization at that checkpoint. Historical stop:
 > `TWIN-001_MANIFEST_V2_RECONSTRUCTION_READY_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
 
 > TWIN-001 reconstruction boundary (2026-08-10): reconstruction approval did

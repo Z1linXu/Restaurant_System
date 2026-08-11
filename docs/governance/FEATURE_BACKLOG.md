@@ -1,11 +1,19 @@
 # Feature Backlog
 
-## Current manifest v2 readiness override (2026-08-10)
+## Current TWIN-001 reconstruction execution override (2026-08-10)
+
+`TWIN-001_STAGING_RECONSTRUCTION_APPROVAL` is active. The bounded zero-delete
+projector/staff dependency package is repository verified and awaiting
+Agent 6/PR/merge before Staging apply, parity and automated smoke continue.
+Production, Flyway, physical printing/Pad pairing, Chinatown, modularization
+and REL-001 remain outside this loop.
+
+## Historical manifest v2 readiness checkpoint (2026-08-10)
 
 The corrected bounded read completed with a deterministic V7-to-V10 safe
-manifest v2. No Staging writer ran. Current stop:
+manifest v2. No Staging writer ran at that checkpoint. Historical stop:
 `TWIN-001_MANIFEST_V2_RECONSTRUCTION_READY_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
-Next TRUE OWNER GATE: `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`.
+That gate is now granted and superseded by the current execution override.
 
 ## Historical reconstruction NO-GO override (2026-08-10)
 
@@ -104,13 +112,13 @@ UI evidence remains pending. No Chinatown or Production action is authorized.
 | target_loop | `TWIN-001_ST_DENIS_STAGING_TWIN`; exact `1a3f2e...` completed synthetic A/B and automated Phase-A acceptance, but is not a Production-parity Twin. |
 | implementation status | `STG-008=PASS`; PR #99's generic repair is deployed at exact `1a3f2e...`. API and browser-equivalent evidence remain valid historical foundation. Owner has deferred manual Phase-A closure behind Twin planning. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md), [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md), [STG-008 entry evidence](runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md), [STG-008 Flyway guard repair evidence](runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md), [STG-008 release-rebind repair evidence](runtime/STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md), [STG-008 non-web request-context repair evidence](runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md), and [STG-008 one-shot lifecycle repair evidence](runtime/STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md). |
-| next action | Seek `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL` for a separately reviewed Staging-only writer. Do not re-read Production, reconstruct Staging, begin Chinatown, or implement modules without that gate. |
+| next action | Complete the approved bounded Staging reconstruction, parity and automated smoke loop. Do not re-read Production, begin Chinatown, modularize, start Owner field testing, or promote Production. |
 
 ### Current strategic roadmap
 
 | Phase | State | Boundary |
 |---|---|---|
-| `PHASE 1 TWIN-001_ST_DENIS_STAGING_TWIN` | `TWIN-001_MANIFEST_V2_RECONSTRUCTION_READY_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL` | V7-to-V10 mapping and deterministic manifest v2 are complete; Staging writer remains separately Owner-gated |
+| `PHASE 1 TWIN-001_ST_DENIS_STAGING_TWIN` | `STAGING_RECONSTRUCTION_APPROVED_DEPENDENCY_REPAIR_IN_PROGRESS` | V7-to-V10 mapping and manifest v2 are complete; bounded writer review precedes approved Staging execution |
 | `PHASE 2 OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` | `DEFERRED_UNTIL_TWIN_PLAN_AND_RUNTIME_VALIDATION` | Owner checklist and bounded repair loop; no implementation yet |
 | `PHASE 3 MODULAR_PROVISIONING_IMPLEMENTATION` | `ARCHITECTURE_DIRECTION_APPROVED_IMPLEMENTATION_DEFERRED` | Opens only after Owner says “可以进行模块化了” |
 | `PHASE 4 CHINATOWN_STAGING_ACCEPTANCE` | `DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY` | Existing AL-003/REL-001 preserved; requires future `CHINATOWN_RESUME_GATE` |

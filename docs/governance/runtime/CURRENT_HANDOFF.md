@@ -1,14 +1,24 @@
 # Current Project Handoff
 
-## Current manifest v2 readiness override (2026-08-10)
+## Current reconstruction execution override (2026-08-10)
+
+Owner approval `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL` is active. Fresh
+`origin/main=5f89bdeea6f9a6810c0a38d6d94a59b2156bd6ba`; Production remains V7
+read-only and Staging remains exact `1a3f2e...`/V10 at the retained synthetic
+baseline. The manifest-v2-bound, zero-delete projector and secret-FD Staff API
+reconciler are repository verified and awaiting Agent 6/PR/merge before the
+approved runtime apply continues. See
+[tooling evidence](TWIN-001_STAGING_RECONSTRUCTION_TOOLING_EVIDENCE.md).
+
+## Historical manifest v2 readiness checkpoint (2026-08-10)
 
 The manifest-v2 collection baseline was
 `origin/main=53c217f893aa60e365f3ebb1b3de989862857eae`.
 The corrected Production/Staging read-only loop produced a deterministic,
 schema-valid [manifest v2](ST_DENIS_TWIN_PARITY_MANIFEST_V2.json); Staging was
-not reconstructed. Current stop:
+not reconstructed at that checkpoint. Historical stop:
 `TWIN-001_MANIFEST_V2_RECONSTRUCTION_READY_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
-Next TRUE OWNER GATE: `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`.
+That gate is now granted and superseded by the current execution override.
 
 ## Historical reconstruction NO-GO override (2026-08-10)
 
@@ -92,9 +102,9 @@ behind TWIN-001; the retained browser-equivalent result is historical Phase-A
 foundation. The former
 stop `STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`
 is historical. The current stop is
-`TWIN-001_MANIFEST_V2_RECONSTRUCTION_READY_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`;
-the next TRUE OWNER GATE is `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`. Chinatown
-onboarding/clone remains deferred and prohibited.
+`TWIN-001_STAGING_RECONSTRUCTION_APPROVED_DEPENDENCY_REPAIR_IN_PROGRESS`.
+The next TRUE OWNER GATE after operational readiness is the Owner field-test
+loop; Chinatown onboarding/clone remains deferred and prohibited.
 
 See [STG-008 synthetic runtime progress evidence](STG-008_SYNTHETIC_RUNTIME_PROGRESS_EVIDENCE.md)
 and [STG-009 browser-equivalent acceptance evidence](STG-009_PHASE_A_BROWSER_EQUIVALENT_ACCEPTANCE_EVIDENCE.md).
@@ -285,9 +295,9 @@ current rebind or recovery instruction is inherited from it.
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` (deferred) |
 | Current Agile Loop | `TWIN-001_ST_DENIS_STAGING_TWIN` |
 | Current package | Exact `1a3f2e...` remains deployed at V10 with completed synthetic A/B and automated browser-equivalent acceptance. It is a `CURRENT_SYNTHETIC_BASELINE`, not yet a Production-parity Twin. |
-| Feature stop state | `TWIN-001_MANIFEST_V2_RECONSTRUCTION_READY_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL` |
+| Feature stop state | `TWIN-001_STAGING_RECONSTRUCTION_APPROVED_DEPENDENCY_REPAIR_IN_PROGRESS` |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`: Staging-only reconstruction remains separately gated; no writer is authorized by this handoff. |
+| Current Owner gate | `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`: active for the bounded Staging-only writer, parity, safe automated smoke and required exact-SHA rebind. |
 
 Release/promotion navigation follows the canonical [Agile Loop policy](../AGILE_LOOP_OPERATING_MODEL.md#83-canonical-release-promotion-drift-and-recovery-policy):
 freeze an immutable RC after Twin/automated/Owner acceptance, promote the same
@@ -295,31 +305,31 @@ artifact digests, detect drift read-only and sync only after an explicit
 Owner-approved, Owner-triggered Twin sync request, use
 `APPLICATION_ROLLBACK_COMPATIBILITY_GATE`, and treat
 backup existence as distinct from recoverability. These future gates do not
-change the current TWIN-001 manifest-completion-read stop.
+change the current approved reconstruction-execution stop.
 
 ### Permitted work
 
 - Fetch and verify Git/GitHub ground truth.
-- Read the TWIN-001 plan and reconcile governance against verified runtime
-  evidence. Repository-only planning and bounded documentation repair are
-  permitted.
-- Review the completed inventory, the manifest-input NO-GO, and the corrected
-  bounded-read/reconstruction-payload plan; perform repository-only governance
-  repair as needed.
+- Execute the manifest-v2-bound, zero-delete Staging configuration projection,
+  independent test-credential reconciliation, parity validation and safe
+  automated smoke under the active reconstruction approval.
+- Perform bounded repository/tooling/business-logic dependency repair, tests,
+  Agent 6 review, governance sync, auto-merge, fresh authority recovery and a
+  required exact-SHA Staging rebind before retrying only the failed step.
 
-### Prohibited work without new approval
+### Prohibited or separately gated work
 
 - Reuse of consumed/failed STG-007 or STG-008 approval/readiness evidence, or
   continuation on an old image.
-- Any Staging/Production runtime action, further Production configuration read,
-  deployment, restart, Flyway/schema change, printer/device binding, Owner
-  manual acceptance, target onboarding, AL-003 validation/clone/replay, or
-  module implementation.
+- Any Production runtime action or further Production configuration read;
+  schema/migration change; Staging downgrade, Flyway edit or destructive reset;
+  physical printer binding, Pad pairing, Owner manual field test, Chinatown,
+  modularization, AL-003/REL-001 or Production promotion.
 - Production Store 1 read or mutation.
 - Printer configuration, test print, Pad pairing, or device/Worker mutation.
-- Candidate import, approval consumption, release/env preparation, recovery,
-  helper/one-shot, credential rotation or automated acceptance rerun. Never
-  lower the password/prefix guard or expose/modify the Owner's secret.
+- Credential exposure/copy from Production or security-boundary weakening.
+  Staging-only test credential creation/reuse/rotation and safe automated smoke
+  remain explicitly allowed by the active reconstruction approval.
 - Repository merge that fails Operating Model section 16's permanent
   auto-merge gate, Production activation, restore, or destructive database/Git
   commands.
