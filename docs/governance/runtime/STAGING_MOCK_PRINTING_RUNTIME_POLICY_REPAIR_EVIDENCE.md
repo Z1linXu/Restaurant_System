@@ -1,6 +1,6 @@
 # Staging MOCK Printing Runtime Policy Repair Evidence
 
-> Status: `REPOSITORY_REPAIR_VERIFIED_WAITING_FOR_AGENT6_PR`
+> Status: `REPOSITORY_REPAIR_VERIFIED_WAITING_FOR_AGENT6_RECHECK_PR`
 >
 > Package: `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT`
 >
@@ -38,18 +38,26 @@ Print Jobs. Production container identity and health were unchanged.
 - Preserve the existing MOCK path: persisted outbox event, routing,
   `PrintJob`, renderer, assignment, rendered snapshot, MOCK log and terminal
   `PRINTED` state. No Staging-specific business branch or migration is added.
+- Capture the effective Store printing mode once per dispatch, reprint or
+  diagnostic operation and use that immutable snapshot through the transport
+  decision. This closes the Agent 6 mode-change time-of-check/time-of-use
+  finding: a concurrent `MOCK` to `DISABLED` change cannot cause the same
+  operation to enter physical transport.
 
 ## Verification state
 
-- Focused printing/outbox tests: 26 passed.
+- Focused printing/outbox tests: 27 passed, including a regression that returns
+  `MOCK` then `DISABLED`, proves one mode read and proves zero printer transport.
 - Full backend regression: 394 tests, zero failures, zero errors, three
   pre-existing skips.
 - Staging guard regression: passed, including MOCK pair acceptance and
   rejection of expanded mode allowlists or endpoint configuration.
 - All 14 deployment shell test files passed after the fake Compose fixtures
   were updated to represent the new two-property application policy.
-- Agent 6, PR/merge and exact-SHA Staging runtime validation remain pending in
-  this repository repair record.
+- The first Agent 6 review rejected the repeated mode reads as a transport
+  safety race. The correction above and its regression are complete; fresh
+  Agent 6 re-review, PR/merge and exact-SHA Staging runtime validation remain
+  pending in this repository repair record.
 
 No Staging or Production mutation, migration, restart, printer contact,
 endpoint write, Pad pairing, order creation or credential read occurred during
@@ -57,4 +65,4 @@ this repair phase.
 
 ## Stop state
 
-`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT_REPAIR_VERIFIED_WAITING_FOR_AGENT6_PR`
+`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT_REPAIR_VERIFIED_WAITING_FOR_AGENT6_RECHECK_PR`
