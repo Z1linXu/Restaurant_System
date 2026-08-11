@@ -27,10 +27,10 @@ health passed; `BLOCKING_BEHAVIOR_DIFFERENCE=0`. Production remained unchanged
 and read-only at `4667f3c35f85c9f8538f82789d9df1531d4fbc9e` / V7. See
 [operational Twin evidence](TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md).
 
-Current stop:
+Historical reconstruction stop:
 `TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`.
-Next Owner Gate: `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`. Do not start the manual
-field test, hardware gates, Chinatown, modularization, REL-001 or Production
+The Owner has opened that loop; the current field-test override above governs.
+Do not start hardware gates, Chinatown, modularization, REL-001 or Production
 promotion from this handoff alone.
 
 ## Historical reconstruction execution override (2026-08-10)
@@ -298,7 +298,7 @@ the current bounded Staging runtime identity below.
 | Production | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`; Compose `cloud` `db/backend/nginx`; unchanged IDs/start times/restart `0`; health 200 | `MACHINE_VERIFIED_READ_ONLY` continuity only; Flyway/business state not queried |
 | Staging | `1dd036737f6cf41c0558f14b7f8343144f718b5a`; Flyway V10 with ten successful and zero failed rows; exact `db/backend/nginx` identities running; health 200/200/200 | `DEPLOYED_TO_STAGING`; manifest-v2 parity remains valid and MOCK printing acceptance passes with `BLOCKING_BEHAVIOR_DIFFERENCE=0`. Owner field testing continues. |
 | Staging isolation | project `restaurant-pos-staging`; only `127.0.0.1:18080`; separate state/network/mounts; private leaf UID 70/mode 0700 | `MACHINE_VERIFIED_READ_ONLY` |
-| Staging printing | `STAGING_PRINT_MODE=DISABLED`; feature flag `false` | `MACHINE_VERIFIED_READ_ONLY` |
+| Staging printing | `STAGING_PRINT_MODE=MOCK`; feature flag `true`; allowed modes `DISABLED,MOCK`; endpoint configuration disabled | `MACHINE_VERIFIED`; 7/7 MOCK jobs printed with zero physical transport |
 
 Repository migrations are exactly V1-V10. Machine evidence proves Staging is
 V10; it does not prove V8-V10 ran on Production.
@@ -328,9 +328,9 @@ current rebind or recovery instruction is inherited from it.
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` (deferred) |
 | Current Agile Loop | `TWIN-001_ST_DENIS_STAGING_TWIN` |
 | Current package | Exact `1dd036737f6cf41c0558f14b7f8343144f718b5a` is deployed at V10 with complete manifest-v2 parity and verified MOCK printing. |
-| Feature stop state | `TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST` |
+| Feature stop state | `STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES` |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`; not started by this handoff. |
+| Current Owner gate | `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`; active, with physical printing separately gated. |
 
 Release/promotion navigation follows the canonical [Agile Loop policy](../AGILE_LOOP_OPERATING_MODEL.md#83-canonical-release-promotion-drift-and-recovery-policy):
 freeze an immutable RC after Twin/automated/Owner acceptance, promote the same
@@ -526,7 +526,7 @@ is the first Store Profile sample, not a shared-service special case.
 | ID | Purpose | Current state | Dependency / Owner gate |
 |---|---|---|---|
 | STG-005B / #62 | Reproducible synthetic St-Denis menu baseline | `IN_MAIN` and `DEPLOYED_TO_STAGING` evidence | PLAN/EXECUTE/REPLAY passed at `4/3/13/38`, revision `2 -> 2`; no duplicate/crossover |
-| AL-003S / #63 | Exact-SHA Staging acceptance preparation | `IN_MAIN`; reviewed tooling used under separate runtime approvals | Current runtime is exact `53209823...`; Operational Twin automated validation passes and Owner field testing remains separate |
+| AL-003S / #63 | Exact-SHA Staging acceptance preparation | `IN_MAIN`; reviewed tooling used under separate runtime approvals | Current runtime is exact `1dd0367...`; Operational Twin plus MOCK validation pass and Owner field testing is active |
 | AL-004 / #64 | Generic Store Profile contract | `IN_MAIN` | Repository capability only; no provisioning/runtime execution |
 | AL-005A / #65 | Staff/Table module plan | `IN_MAIN` | Repository planning only; no writer or runtime execution |
 | AL-005 / #67 | Printing provisioning plan | `IN_MAIN` | repository planning only; no writer/runtime action |

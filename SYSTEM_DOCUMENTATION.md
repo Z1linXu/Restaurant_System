@@ -18,9 +18,10 @@
 > safe automated POS beverage workflow smoke, realtime/health checks and
 > Production continuity with `BLOCKING_BEHAVIOR_DIFFERENCE=0`. Production
 > remained read-only at `4667f3c35f85c9f8538f82789d9df1531d4fbc9e` / V7.
-> Current stop:
-> `TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`.
-> Next Owner Gate: `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`. See
+> The reconstruction foundation stop was
+> `TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`;
+> the Owner has since opened that loop. Current stop is
+> `STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`. See
 > [operational Twin evidence](docs/governance/runtime/TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md).
 
 > Historical 2026-08-10 TWIN-001 reconstruction tooling: Owner approval was active and a

@@ -36,9 +36,10 @@ Production continuity. Production remained read-only at
 `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`/V7. See
 [operational Twin evidence](TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md).
 
-Current stop:
+Historical reconstruction stop:
 `TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`.
-Next Owner Gate: `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`. Physical printing,
+The Owner has opened that loop; the current field-test override above governs.
+Physical printing,
 positive KDS enablement and Pad pairing remain
 `SEPARATE_OWNER_RUNTIME_GATE_PENDING`; Chinatown, modularization, REL-001 and
 Production promotion remain prohibited.
@@ -209,7 +210,7 @@ snapshots. Do not copy those reports into this planbook.
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` (deferred by Owner) |
 | Current Agile Loop | `TWIN-001_ST_DENIS_STAGING_TWIN` |
 | Loop type | `OWNER_GATED_PRODUCTION_LIKE_STAGING_PARITY` |
-| Loop status | `STG-008=PASS; STG-009_PHASE_A_OWNER_LOGIN=DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY; TWIN-001=PASS_WAITING_FOR_OWNER_FIELD_TEST` |
+| Loop status | `STG-008=PASS; STG-009_PHASE_A_OWNER_LOGIN=DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY; TWIN-001=PASS_OWNER_FIELD_TEST_ACTIVE` |
 | Current package | Exact `1dd036737f6cf41c0558f14b7f8343144f718b5a` is deployed to isolated Staging at Flyway V10 and passes manifest-v2 parity plus MOCK printing acceptance. |
 | STG-008 state | Historical `PASS` synthetic foundation; TWIN-001 reconciled it in place to the current Operational Twin without reset or cross-Store crossover. |
 | STG-009 Phase-A state | `DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY`: prior API/browser-equivalent evidence is retained; Owner manual UI acceptance is no longer the immediate loop. |

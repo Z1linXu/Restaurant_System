@@ -17,11 +17,11 @@
 > smoke and health with zero blocking behavior difference. Physical printing,
 > positive KDS enablement and Pad pairing remain separate gates.
 
-> Status: `PASS_WAITING_FOR_OWNER_FIELD_TEST`
+> Status: `PASS_OWNER_FIELD_TEST_ACTIVE`
 >
-> Current stop state: `TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`
+> Current stop state: `STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`
 >
-> Owner decision date: 2026-08-10, America/Toronto
+> Owner decision date: 2026-08-11, America/Toronto
 
 ## 1. Owner decision and scope
 
@@ -277,14 +277,17 @@ sequence. This is an immutable execution record, not authority to replay it:
 
 ## 12. Current stop
 
-`TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`
+`STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`
 
 The corrected read supplied
 [manifest v2 completion evidence](../runtime/TWIN-001_MANIFEST_V2_COMPLETION_EVIDENCE.md)
 and [V7-to-V10 mapping](../runtime/V7_PRODUCTION_TO_V10_TWIN_CONFIGURATION_MAPPING.md).
-The approved bounded reconstruction then completed on exact Staging
-`53209823fa320cc56c31d04ee5c7719a83a78acc` / V10; see
-[operational Twin evidence](../runtime/TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md).
+The approved bounded reconstruction completed on exact Staging
+`53209823fa320cc56c31d04ee5c7719a83a78acc` / V10, then the field-test package
+deployed exact `1dd036737f6cf41c0558f14b7f8343144f718b5a` / V10 and verified
+MOCK printing; see
+[operational Twin evidence](../runtime/TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md)
+and [MOCK field-test evidence](../runtime/STAGING_MOCK_PRINTING_FIELD_TEST_EVIDENCE.md).
 
 Local PostgreSQL 16 evidence proves the reviewed forward path
 `V7 -> V8 -> V9 -> V10`, current-candidate startup, data-shape preservation,
