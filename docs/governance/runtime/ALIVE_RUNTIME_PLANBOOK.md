@@ -1,6 +1,23 @@
 # Alive Runtime Planbook
 
-## Current Owner field-test Printing bug repair (2026-08-11)
+## Current exact-RC Production promotion preparation (2026-08-11)
+
+The Owner freshly attested that exact Staging `2661eb76c36dd9aa58db94ceacd278242ef4c9ab`
+passed the required field acceptance and conditionally authorized its existing
+St-Denis application-only Production promotion after every mandatory gate
+passes. This closes the stale Owner-retest blocker for that exact SHA only;
+Chinatown, Store provisioning, printer/Pad changes and Production data changes
+remain excluded. `RC-ST-DENIS-20260811-2661EB76` is `RC_PREPARED`, not frozen.
+
+A bounded tooling repair now supplies fixed-state, same-host exact-image-ID,
+no-build/no-pull, serialized backend-before-frontend promotion plus private
+atomic backup and network-isolated restore rehearsal. Runtime use is still
+`NO_GO` pending merge, fresh validation, V7-to-V10 and old-app-on-V10 rehearsal,
+backup/restore evidence, final frozen RC and Agent 6 acceptance. Production
+remains `4667f3c...` / V7 and was not restarted or migrated by this package.
+Current unique stop: `RC_PREPARED_WAITING_FOR_MANDATORY_PROMOTION_GATES`.
+
+## Historical superseded Owner field-test Printing bug repair (2026-08-11)
 
 The Owner continued `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` after the Operational
 Twin reached READY and approved bounded Staging/repository repair for six
@@ -16,8 +33,8 @@ binding, Pad pairing, `REAL`, public printer access, Chinatown, modularization,
 REL-001 and Production promotion remain prohibited.
 
 See [Owner field-test printing fixes evidence](OWNER_FIELD_TEST_PRINTING_FIXES_EVIDENCE.md).
-Current stop:
-`OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.
+Historical stop, superseded by the fresh exact-RC Owner acceptance:
+`HISTORICAL_OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.
 
 ## Current Staging MOCK Printing field-test override (2026-08-11)
 
@@ -41,7 +58,7 @@ Repository tests, Agent 6, PR/auto-merge, exact-SHA rebind, private environment
 change, Store-scoped MOCK transition, browser verification and automated
 synthetic smoke passed. See
 [field-test evidence](STAGING_MOCK_PRINTING_FIELD_TEST_EVIDENCE.md). Current
-stop: `OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`. Production
+historical stop: `HISTORICAL_OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`. Production
 mutation, real/home
 printer binding, public printer access, Pad pairing, Chinatown,
 modularization, REL-001 and Production promotion remain prohibited.

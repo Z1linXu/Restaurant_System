@@ -1,5 +1,15 @@
 # REL-001 Chinatown Production Release Candidate Plan
 
+> Route update (2026-08-11): the Owner has separately activated a bounded
+> existing St-Denis application-only exact-RC promotion decision for accepted
+> Staging `2661eb76...`. This does not activate Chinatown or ACT-001. The
+> prepared RC and new promotion/recovery helpers implement the canonical
+> fixed-state/same-artifact/no-build boundary, but runtime remains `NO_GO` until
+> migration, client, rollback, backup/restore, final freeze and Agent 6 gates
+> pass. The conceptual Production-build language later in this historical plan
+> is superseded by §8.3: Production promotes accepted image IDs and never
+> rebuilds the RC.
+
 > Status: `IN_MAIN_PLAN_ONLY_DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY`
 >
 > Git classification: `IN_MAIN_PLAN_ONLY`

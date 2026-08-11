@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+SCRIPT="$ROOT/deployment/cloud/production-exact-artifact-promote.sh"
+OVERRIDE="$ROOT/deployment/cloud/docker-compose.production-promotion.yml"
+
+bash -n "$SCRIPT"
+grep -Fq 'EXPECTED_PROJECT="cloud"' "$SCRIPT"
+grep -Fq 'EXPECTED_CONTROL_ROOT="/home/ubuntu/Restaurant_System/deployment/cloud"' "$SCRIPT"
+grep -Fq 'MIN_AVAILABLE_MEMORY_KB=1048576' "$SCRIPT"
+grep -Fq 'no-build --pull never backend' "$SCRIPT"
+grep -Fq 'no-build --pull never nginx' "$SCRIPT"
+grep -Fq -- '--pull never' "$SCRIPT"
+grep -Fq 'RC manifest digest mismatch' "$SCRIPT"
+grep -Fq 'resolved Compose digest differs from RC' "$SCRIPT"
+grep -Fq 'resolved Compose topology differs' "$SCRIPT"
+grep -Fq 'assert set(d["services"])=={"db","backend","nginx"}' "$SCRIPT"
+grep -Fq 'second start requested before successful promotion' "$SCRIPT"
+grep -Fq 'candidate backend did not become healthy' "$SCRIPT"
+grep -Fq '/api/v1/system/health' "$SCRIPT"
+grep -Fq 'RC mandatory execution gates are not closed' "$SCRIPT"
+grep -Fq 'RC tooling identity is not frozen' "$SCRIPT"
+grep -Fq 'tooling blob digest differs from RC' "$SCRIPT"
+grep -Fq 'success::text' "$SCRIPT"
+grep -Fq '.production-ops.lock' "$SCRIPT"
+grep -Fq 'Production Flyway ledger is not exact V10' "$SCRIPT"
+grep -Fq -- '--connect-timeout 2 --max-time 5' "$SCRIPT"
+grep -Fq 'post-nginx frontend/API readiness failed' "$SCRIPT"
+grep -Fq 'logs --since "$second_start_epoch"' "$SCRIPT"
+grep -Fq 'docker --context default' "$SCRIPT"
+grep -Fq 'env -i' "$SCRIPT"
+grep -Fq 'Production DB container identity changed' "$SCRIPT"
+grep -Fq 'PRODUCTION_POSTGRES_DATA_DIR is required' "$OVERRIDE"
+
+! grep -Eq 'compose .*build|compose .*pull|down( -v)?|flyway (clean|repair)|docker system prune|rm -rf' "$SCRIPT"
+! grep -Eq 'mkdir.*postgres|cp .*postgres|mv .*postgres' "$SCRIPT"
+
+printf 'production exact-artifact promotion static guards: PASS\n'

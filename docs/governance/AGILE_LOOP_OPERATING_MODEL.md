@@ -1,8 +1,21 @@
 # Agile Loop Operating Model
 
-## Current Owner field-test Printing bug repair (2026-08-11)
+## Current exact-artifact promotion tooling repair (2026-08-11)
 
-The active loop remains `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`. The Owner
+The active bounded dependency repair implements §8.3 for the exact
+Staging-accepted St-Denis candidate: a prepared RC manifest binds source,
+artifact, migration, parity and acceptance identities; Production promotion
+uses the already-present immutable image IDs, a fixed retained state root,
+clean Docker context/environment, no build or pull, serialized starts and a
+shared fail-closed operations lock. The paired backup path uses an atomic
+private archive and network-isolated, resource-limited disposable restore.
+Capability in main never self-authorizes runtime execution; all RC fields and
+backup/migration/rollback/Agent-6 gates must be PASS before execution.
+Current unique stop: `RC_PREPARED_WAITING_FOR_MANDATORY_PROMOTION_GATES`.
+
+## Historical superseded Owner field-test Printing bug repair (2026-08-11)
+
+The historical loop was `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`. The Owner
 approved bounded repository/Staging-only repair for field-test printing display
 and PAD_DIRECT lifecycle reliability defects. Ordinary bounded bugs continue
 through root cause, minimal repair, tests, Agent 6, governance sync, PR
@@ -16,7 +29,7 @@ REL-001 and Production promotion remain outside the loop.
 This repair package entered `main` through PR #117 at
 `2661eb76c36dd9aa58db94ceacd278242ef4c9ab`, deployed to exact Staging at that
 SHA, passed automated MOCK submit/update/reprint smoke, and now stops at
-`OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.
+`HISTORICAL_OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`, now superseded.
 
 ## Current Staging MOCK Printing field-test override (2026-08-11)
 
@@ -35,7 +48,7 @@ current field-test repair runtime
 `2661eb76c36dd9aa58db94ceacd278242ef4c9ab`. Store 1 remains `MOCK/true`;
 submit, all three routes, update tickets, reprint, rendered snapshots and
 health passed with no physical transport. The loop now waits at
-`OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.
+`HISTORICAL_OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`, now superseded.
 
 ## Historical TWIN-001 operational Twin readiness checkpoint (2026-08-10)
 

@@ -1,5 +1,23 @@
 # Restaurant POS Cloud Deployment Template
 
+> Production promotion safety: `deploy.sh` remains a first-install/local-build
+> helper and MUST NOT be used for an existing Production release. An existing
+> Production database may be promoted only with the reviewed
+> `production-exact-artifact-promote.sh` path, which fixes the retained state
+> root, verifies already-present Staging-accepted image IDs, performs no build
+> or pull, enforces the 1 GiB memory gate, starts backend then frontend, and
+> proves the database container was not recreated. Database backup and isolated
+> restore gates remain mandatory and separate.
+
+`production-backup-rehearsal.sh` is the promotion-specific backup path. It
+requires the fixed owner-only backup root, captures through the already-running
+`cloud-db-1` container without reading a raw environment file, writes through a
+private temporary file, verifies the custom-format archive, and atomically
+renames it. Its rehearsal mode restores only into a network-isolated disposable
+PostgreSQL tmpfs using `--exit-on-error --single-transaction`; it never cleans
+or restores the Production database. A real Production restore remains a new
+Owner gate.
+
 This folder is a cloud deployment architecture package. It is a template only:
 it does not deploy to any server, does not connect to infrastructure, and does
 not contain real secrets.
