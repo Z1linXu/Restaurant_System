@@ -1,6 +1,6 @@
 # Owner Field-Test Printing Fixes Evidence
 
-> Status: `AGENT6_ACCEPT_WAITING_FOR_PR_MERGE_STAGING_DEPLOY`
+> Status: `DEPLOYED_TO_STAGING_MOCK_SMOKE_PASS_WAITING_FOR_OWNER_RETEST`
 >
 > Package: `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`
 >
@@ -13,6 +13,25 @@ bugs after the Operational Twin reached READY. Production remains unchanged and
 may receive only lightweight continuity checks. This package does not authorize
 Production mutation, real printer binding, public printer access, Pad pairing,
 Chinatown, modularization, REL-001 or Production promotion.
+
+## PR, merge and Staging deployment
+
+Repository repair entered `main` through PR #117.
+
+| Field | Value |
+|---|---|
+| repair commit | `5f3b34fa3a4cd4f214f491413878884b1ef38f70` |
+| merge SHA | `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` |
+| deployed Staging SHA | `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` |
+| Staging Flyway | V10; `installed_rank=10`, `version=10`, success `true` |
+| preflight evidence | `/srv/restaurant-pos/staging/evidence/owner-field-printing-fixes-preflight-2661eb76c36dd9aa58db94ceacd278242ef4c9ab.txt` |
+| preflight SHA-256 | `0071c0dff12e10d8f969d1db1d6c3eb14373d14db05609379ca84c58e36fab82` |
+| release-env recovery record SHA-256 | `89806722dbcb6e75d974d41d7c7eebf5f6eb7337a43df5a27867ea4a130409e8` |
+| Staging health | `PASS`; backend loopback health passed and frontend returned HTTP 200 on `127.0.0.1:18080` |
+
+Staging retained Store 1 Printing `MOCK/true`, four enabled endpoint-free
+logical printers and three enabled assignments: `FRONTDESK_RECEIPT/SMALL`,
+`GRAB/MEDIUM`, and `HOT_KITCHEN/LARGE`.
 
 ## Issue 1 - GRAB remove bok choy abbreviation
 
@@ -172,7 +191,45 @@ Classification:
 - Bounded added-line secret scan: `PASS`; only dummy test attempt-token names
   and safety-boundary prose matched, with no runtime secret value.
 
-## Pending
+## Staging MOCK field-test smoke
 
-PR auto-merge, exact-SHA Staging deploy/rebind, automated MOCK smoke and
-Production continuity remain pending for this repair package.
+Exact deployed Staging SHA
+`2661eb76c36dd9aa58db94ceacd278242ef4c9ab` passed a synthetic, non-PII pickup
+order smoke through the retained MOCK pipeline:
+
+`order commit -> durable outbox -> routing -> PrintJob -> renderer -> assignment -> MOCK dispatch -> rendered snapshot -> PRINTED`
+
+The smoke covered initial submit, submitted-order update and GRAB reprint.
+Seven Print Jobs were created and all seven reached `PRINTED`. The submit
+response returned while zero Print Jobs were visible immediately afterward,
+confirming order-submit independence from downstream printing. Aggregate retry
+count was zero and every rendered snapshot was non-blank.
+
+| Check | Result |
+|---|---|
+| GRAB `remove_bok_choy` full label | `PASS`; rendered `走上海青` |
+| chicken cold noodle leek-leaf rule | `PASS`; rendered `鸡凉韭` / `韭` semantics |
+| GRAB fried quantity symbol | `PASS`; rendered `2×炸虾` |
+| Frontdesk receipt quantity expansion | `PASS`; quantity expanded in rendered receipt |
+| routing counts | `GRAB=3`, `FRONTDESK_RECEIPT=2`, `HOT_KITCHEN=2` |
+| receipt counts | `GRAB=2`, `GRAB_UPDATE=1`, `FRONTDESK_RECEIPT=1`, `FRONTDESK_RECEIPT_UPDATE=1`, `HOT_KITCHEN=1`, `HOT_KITCHEN_UPDATE=1` |
+| synthetic cleanup | `PASS`; synthetic order cancelled after verification |
+
+Sanitized private evidence path:
+`/srv/restaurant-pos/staging/evidence/owner-field-printing-fixes-mock-smoke-2661eb76c36dd9aa58db94ceacd278242ef4c9ab.txt`
+
+Evidence SHA-256:
+`87ef0d02ceebcbccedab3b99ee43904b135dd8cc1068e3bbfa971c7c5e561ac2`.
+
+## Production continuity
+
+Production was not deployed, restarted, migrated, configured or queried for
+business data. Lightweight continuity showed the retained `cloud` containers
+still running with restart count `0`: `cloud-nginx-1` and `cloud-backend-1`
+have been up for two weeks, and `cloud-db-1` for four weeks with Docker health
+healthy. Production HTTP health on `127.0.0.1/api/v1/menu/health` returned
+`200`.
+
+## Stop state
+
+`OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.

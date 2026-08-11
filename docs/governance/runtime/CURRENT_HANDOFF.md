@@ -8,27 +8,30 @@ abbreviation defects, Frontdesk receipt quantity aggregation, GRAB fried
 quantity symbol mismatch, and a PAD_DIRECT screen-off reliability issue. Issue
 6 is audit-only and does not authorize queue/concurrency behavior changes.
 
-Repository repair is locally verified after resolving Agent 6 lifecycle-safety
-blocks. Agent 6 returned `ACCEPT`; the package is waiting for PR/merge,
-exact-SHA Staging deployment and automated MOCK smoke. Production remains unchanged
-except for allowed lightweight continuity checks. See
+Repository repair entered `main` through PR #117 at
+`2661eb76c36dd9aa58db94ceacd278242ef4c9ab`, was deployed to exact Staging at
+that SHA, and passed automated MOCK smoke after resolving Agent 6
+lifecycle-safety blocks. Production remains unchanged except for allowed
+lightweight continuity checks. See
 [Owner field-test printing fixes evidence](OWNER_FIELD_TEST_PRINTING_FIXES_EVIDENCE.md).
 
 ## Current Staging MOCK Printing field-test override (2026-08-11)
 
-Owner field testing is active and the bounded package
-`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` is approved. Fresh
-repair PR #114 is in `main@1dd036737f6cf41c0558f14b7f8343144f718b5a`;
-exact Staging now runs that SHA / V10 with Printing `MOCK/true`, 4
-endpoint-free logical printers and 3 enabled assignments.
+Owner field testing is active. The bounded package
+`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` completed through PR #114 and was
+superseded in current runtime by the field-test repair package above. Exact
+Staging now runs `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` / V10 with
+Printing `MOCK/true`, 4 endpoint-free logical printers and 3 enabled
+assignments.
 Production remains read-only and unchanged at `4667f3c...` / V7.
 
 The bounded dependency repair adds a generic runtime printing-mode allowlist
 and endpoint-configuration policy so Staging can permit only
 `DISABLED,MOCK`, never `REAL` or `PAD_DIRECT`, while retaining the shared MOCK
 renderer/job/dispatch path. Automated submit/update/reprint smoke and browser
-Printing Settings verification passed. Current stop:
-`STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`. See
+Printing Settings verification passed, and PR #117's field-test printing fixes
+smoke now also passes. Current stop:
+`OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`. See
 [field-test evidence](STAGING_MOCK_PRINTING_FIELD_TEST_EVIDENCE.md).
 No physical printer/Pad action or Production mutation is authorized.
 
@@ -228,10 +231,10 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| runtime-sensitive deployed candidate | `1dd036737f6cf41c0558f14b7f8343144f718b5a` | `IN_MAIN` through PR #114 and `DEPLOYED_TO_STAGING`; complete Twin parity and MOCK printing acceptance passed. |
-| exact deployed Staging runtime | `1dd036737f6cf41c0558f14b7f8343144f718b5a` | `DEPLOYED_TO_STAGING`; Flyway V10, reconstructed Operational Twin, MOCK/true, health 200/200/200, restart count zero. |
+| runtime-sensitive deployed candidate | `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` | `IN_MAIN` through PR #117 and `DEPLOYED_TO_STAGING`; complete Twin parity, MOCK printing acceptance and Owner field-test printing fixes smoke passed. |
+| exact deployed Staging runtime | `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` | `DEPLOYED_TO_STAGING`; Flyway V10, reconstructed Operational Twin, MOCK/true, health passed, restart count zero. |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
-| Runtime-sensitive delivery package | Staging MOCK runtime policy / PR #114 | `IN_MAIN` and deployed through exact `1dd0367...`; Owner field testing continues in MOCK |
+| Runtime-sensitive delivery package | Owner field-test printing fixes / PR #117 | `IN_MAIN` and deployed through exact `2661eb76...`; Owner retest pending in MOCK |
 | Browser-equivalent evidence / PR #101 | merge `aec59af93a9bf42ce3d167a579a19be80eadc9b0` | `IN_MAIN`; evidence/governance only, not deployed runtime |
 | Operational Twin closure PR | [PR #112](https://github.com/Z1linXu/Restaurant_System/pull/112) | `IN_MAIN` at `9715d2447d5781e2437917aafc1fb1b6b4a5250f`; documentation/evidence only, not deployed |
 
@@ -310,7 +313,7 @@ the current bounded Staging runtime identity below.
 | Environment | Retained evidence | Classification and boundary |
 |---|---|---|
 | Production | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`; Compose `cloud` `db/backend/nginx`; unchanged IDs/start times/restart `0`; health 200 | `MACHINE_VERIFIED_READ_ONLY` continuity only; Flyway/business state not queried |
-| Staging | `1dd036737f6cf41c0558f14b7f8343144f718b5a`; Flyway V10 with ten successful and zero failed rows; exact `db/backend/nginx` identities running; health 200/200/200 | `DEPLOYED_TO_STAGING`; manifest-v2 parity remains valid and MOCK printing acceptance passes with `BLOCKING_BEHAVIOR_DIFFERENCE=0`. Owner field testing continues. |
+| Staging | `2661eb76c36dd9aa58db94ceacd278242ef4c9ab`; Flyway V10 with ten successful and zero failed rows; exact `db/backend/nginx` identities running; health passed | `DEPLOYED_TO_STAGING`; manifest-v2 parity remains valid, MOCK printing acceptance passes, and Owner field-test printing fixes smoke passed with `BLOCKING_BEHAVIOR_DIFFERENCE=0`. Owner retest pending. |
 | Staging isolation | project `restaurant-pos-staging`; only `127.0.0.1:18080`; separate state/network/mounts; private leaf UID 70/mode 0700 | `MACHINE_VERIFIED_READ_ONLY` |
 | Staging printing | `STAGING_PRINT_MODE=MOCK`; feature flag `true`; allowed modes `DISABLED,MOCK`; endpoint configuration disabled | `MACHINE_VERIFIED`; 7/7 MOCK jobs printed with zero physical transport |
 
@@ -341,8 +344,8 @@ current rebind or recovery instruction is inherited from it.
 |---|---|
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` (deferred) |
 | Current Agile Loop | `TWIN-001_ST_DENIS_STAGING_TWIN` |
-| Current package | Exact `1dd036737f6cf41c0558f14b7f8343144f718b5a` is deployed at V10 with complete manifest-v2 parity and verified MOCK printing. |
-| Feature stop state | `STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES` |
+| Current package | Exact `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` is deployed at V10 with complete manifest-v2 parity, verified MOCK printing and field-test printing fixes smoke. |
+| Feature stop state | `OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST` |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
 | Current Owner gate | `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`; active, with physical printing separately gated. |
 
@@ -544,7 +547,7 @@ is the first Store Profile sample, not a shared-service special case.
 | ID | Purpose | Current state | Dependency / Owner gate |
 |---|---|---|---|
 | STG-005B / #62 | Reproducible synthetic St-Denis menu baseline | `IN_MAIN` and `DEPLOYED_TO_STAGING` evidence | PLAN/EXECUTE/REPLAY passed at `4/3/13/38`, revision `2 -> 2`; no duplicate/crossover |
-| AL-003S / #63 | Exact-SHA Staging acceptance preparation | `IN_MAIN`; reviewed tooling used under separate runtime approvals | Current runtime is exact `1dd0367...`; Operational Twin plus MOCK validation pass and Owner field testing is active |
+| AL-003S / #63 | Exact-SHA Staging acceptance preparation | `IN_MAIN`; reviewed tooling used under separate runtime approvals | Current runtime is exact `2661eb76...`; Operational Twin plus MOCK validation pass and Owner retest is pending |
 | AL-004 / #64 | Generic Store Profile contract | `IN_MAIN` | Repository capability only; no provisioning/runtime execution |
 | AL-005A / #65 | Staff/Table module plan | `IN_MAIN` | Repository planning only; no writer or runtime execution |
 | AL-005 / #67 | Printing provisioning plan | `IN_MAIN` | repository planning only; no writer/runtime action |
@@ -628,7 +631,7 @@ from current main.
    and [browser-equivalent evidence](STG-009_PHASE_A_BROWSER_EQUIVALENT_ACCEPTANCE_EVIDENCE.md).
    Treat `STG-008=PASS` and automated Phase-A API/browser-equivalent acceptance
    on exact historical Staging `1a3f2e...` as foundation evidence. Current
-   exact Staging `1dd036737...` is the validated Operational Twin with MOCK
+   exact Staging `2661eb76...` is the validated Operational Twin with MOCK
    printing enabled.
 10. Continue `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`. Do not replay reconstruction,
     read Production, enter physical hardware gates, start Chinatown

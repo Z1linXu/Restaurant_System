@@ -2,32 +2,34 @@
 
 ## Current Owner field-test Printing bug repair (2026-08-11)
 
-`OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` continues after
-`STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`. The current
+`OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` continues after the earlier
+`STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES` checkpoint. The current
 bounded repair covers Owner-confirmed printing display defects, PAD_DIRECT
 screen-off reliability, and an audit-only queue latency explanation. Repository
-repair is locally verified and waiting for Agent 6, PR/merge, exact-SHA
-Staging deployment and Owner retest.
+repair entered `main` through PR #117, exact Staging
+`2661eb76c36dd9aa58db94ceacd278242ef4c9ab` passed automated MOCK smoke, and
+the package now waits for Owner retest at
+`OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.
 
 ## Current Owner field-test Printing slice (2026-08-11)
 
 `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` is active for the bounded
 `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` slice. PR #114 supplied the
-generic fail-closed runtime policy, and exact Staging
-`1dd036737f6cf41c0558f14b7f8343144f718b5a` / V10 now runs
+generic fail-closed runtime policy. Exact current Staging
+`2661eb76c36dd9aa58db94ceacd278242ef4c9ab` / V10 now runs
 `MOCK/true`. Submit, three-route dispatch, update tickets, reprint, rendered
 snapshots and browser visibility passed against the retained
 4-printer/3-assignment topology. Physical printing, Pad pairing and Production
 remain excluded. Current stop:
-`STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`.
+`OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.
 
 ## Current TWIN-001 operational Twin readiness override (2026-08-10)
 
 TWIN-001 reconstruction remains `PASS` and Owner field testing is active.
-Exact Staging `1dd036737f6cf41c0558f14b7f8343144f718b5a` / Flyway V10 passes deterministic
+Exact Staging `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` / Flyway V10 passes deterministic
 manifest-v2 parity, independent Staff credential verification, safe automated
 workflow smoke and health with zero blocking behavior difference. Current stop:
-`STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`.
+`OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.
 The active loop may continue bounded Owner field testing and bug repair. No
 hardware gate, modularization, Chinatown, REL-001 or Production work starts
 automatically.
@@ -141,7 +143,7 @@ UI evidence remains pending. No Chinatown or Production action is authorized.
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
 | status | `DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY` |
-| target_loop | `TWIN-001_ST_DENIS_STAGING_TWIN`; exact `1dd0367...` is the V10 Operational Twin in the active Owner field-test loop. Chinatown remains deferred. |
+| target_loop | `TWIN-001_ST_DENIS_STAGING_TWIN`; exact `2661eb76...` is the current V10 Operational Twin in the active Owner field-test loop. Chinatown remains deferred. |
 | implementation status | `STG-008=PASS`; PR #99's generic repair is deployed at exact `1a3f2e...`. API and browser-equivalent evidence remain valid historical foundation. Owner has deferred manual Phase-A closure behind Twin planning. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md), [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md), [STG-008 entry evidence](runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md), [STG-008 Flyway guard repair evidence](runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md), [STG-008 release-rebind repair evidence](runtime/STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md), [STG-008 non-web request-context repair evidence](runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md), and [STG-008 one-shot lifecycle repair evidence](runtime/STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md). |
 | next action | Continue bounded `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`. Do not replay reconstruction, re-read Production, begin Chinatown, modularize, enter hardware gates, or promote Production. |

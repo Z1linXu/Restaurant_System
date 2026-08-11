@@ -1,6 +1,6 @@
 # SYSTEM DOCUMENTATION
 
-> 2026-08-11 Owner field-test printing repair candidate: bounded repository
+> 2026-08-11 Owner field-test printing repair: bounded repository
 > repair fixes GRAB/Frontdesk display defects and PAD_DIRECT lifecycle
 > reliability without changing API endpoints, schema, Production, or queue
 > architecture. `remove_bok_choy` now renders `走上海青`; chicken cold noodle
@@ -10,12 +10,16 @@
 > flight, preserving the completion/failure callback path instead of
 > invalidating the worker generation. Issue 6 is documented as audit-only:
 > automatic dispatch remains a durable outbox polled every 1000ms by default
-> and processed sequentially per scheduler batch. Staging deploy and Owner
-> retest are pending.
+> and processed sequentially per scheduler batch. PR #117 merged at
+> `2661eb76c36dd9aa58db94ceacd278242ef4c9ab`; exact Staging deployed that SHA
+> and passed automated MOCK submit/update/reprint smoke. Owner retest remains
+> pending at
+> `OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.
 
 > 2026-08-11 Staging MOCK field-test package: Owner field testing is active and
-> `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` is complete on exact Staging
-> `1dd036737f6cf41c0558f14b7f8343144f718b5a` / Flyway V10.
+> `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` is complete and superseded by
+> the current field-test repair runtime on exact Staging
+> `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` / Flyway V10.
 > The shared printing service gains environment-configured allowed modes and
 > endpoint-write policy. Defaults preserve existing behavior; isolated Staging
 > resolves to `DISABLED,MOCK` only with endpoint configuration disabled. The
@@ -23,7 +27,7 @@
 > printed without transport. Submit, GRAB, FRONTDESK_RECEIPT, HOT_KITCHEN,
 > update, reprint, browser visibility and health passed. Production and
 > physical hardware remain unchanged. Current stop:
-> `STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`.
+> `OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.
 
 > Historical 2026-08-10 TWIN-001 operational Twin foundation: exact Staging
 > `53209823fa320cc56c31d04ee5c7719a83a78acc` on Flyway V10 passed complete
@@ -34,7 +38,7 @@
 > The reconstruction foundation stop was
 > `TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`;
 > the Owner has since opened that loop. Current stop is
-> `STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`. See
+> `OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`. See
 > [operational Twin evidence](docs/governance/runtime/TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md).
 
 > Historical 2026-08-10 TWIN-001 reconstruction tooling: Owner approval was active and a
