@@ -12,9 +12,9 @@
 > physical hardware remain unchanged. Current stop:
 > `STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`.
 
-> 2026-08-10 TWIN-001 operational Twin: exact Staging
-> `53209823fa320cc56c31d04ee5c7719a83a78acc` remains on Flyway V10 and passes
-> complete manifest-v2 parity, independent Staff credential verification,
+> Historical 2026-08-10 TWIN-001 operational Twin foundation: exact Staging
+> `53209823fa320cc56c31d04ee5c7719a83a78acc` on Flyway V10 passed complete
+> manifest-v2 parity, independent Staff credential verification,
 > safe automated POS beverage workflow smoke, realtime/health checks and
 > Production continuity with `BLOCKING_BEHAVIOR_DIFFERENCE=0`. Production
 > remained read-only at `4667f3c35f85c9f8538f82789d9df1531d4fbc9e` / V7.

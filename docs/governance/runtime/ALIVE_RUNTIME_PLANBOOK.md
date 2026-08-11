@@ -28,11 +28,13 @@ modularization, REL-001 and Production promotion remain prohibited.
 
 ## Current operational Twin readiness override (2026-08-10)
 
-`TWIN-001_STAGING_RECONSTRUCTION_APPROVAL` completed successfully. Exact
-Staging `53209823fa320cc56c31d04ee5c7719a83a78acc` remains on Flyway V10 and
-passes manifest-v2 parity with `BLOCKING_BEHAVIOR_DIFFERENCE=0`, automated
+`TWIN-001_STAGING_RECONSTRUCTION_APPROVAL` completed successfully on exact
+historical Staging `53209823fa320cc56c31d04ee5c7719a83a78acc` / Flyway V10
+with manifest-v2 parity, `BLOCKING_BEHAVIOR_DIFFERENCE=0`, automated
 Owner/Staff/POS beverage workflow smoke, frontend/backend/WebSocket health and
-Production continuity. Production remained read-only at
+Production continuity. The current field-test package subsequently deployed
+exact `1dd036737f6cf41c0558f14b7f8343144f718b5a` while retaining Flyway V10 and
+that parity. Production remained read-only at
 `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`/V7. See
 [operational Twin evidence](TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md).
 
