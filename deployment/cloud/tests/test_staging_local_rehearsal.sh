@@ -139,6 +139,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: cloud
       APP_FEATURES_PRINTING: "false"
+      APP_PRINTING_ALLOWED_MODES: "DISABLED,MOCK"
+      APP_PRINTING_ENDPOINT_CONFIGURATION_ENABLED: "false"
     cpus: 1
     mem_limit: "805306368"
     logging:

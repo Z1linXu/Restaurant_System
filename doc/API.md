@@ -175,6 +175,14 @@ Returns renderer-backed module options with availability and an unavailable reas
 
 Print Center stores the active mode in `stores.printing_mode`.
 
+The shared service may additionally receive an environment-specific
+`app.printing.allowed-modes` ceiling and
+`app.printing.endpoint-configuration-enabled` policy. Defaults preserve the
+existing four-mode contract. A restricted environment rejects a Store mode or
+printer endpoint write outside its configured policy before persistence or
+dispatch; this is a deployment safety boundary, not a Store-specific business
+branch.
+
 - `REAL`: backend renders and sends ESC/POS TCP to the configured printer.
 - `MOCK`: backend renders, stores preview text, and marks jobs printed without socket access.
 - `PAD_DIRECT`: backend renders and stores `PENDING` print jobs for Android Pad local printing. Backend must not open TCP printer sockets in this mode.

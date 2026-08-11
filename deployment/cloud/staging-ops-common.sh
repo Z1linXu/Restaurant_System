@@ -102,15 +102,25 @@ ops001_env_value() {
 }
 
 ops001_validate_fixed_env_identity() {
-  local env_file="$1" approved_sha="$2"
+  local env_file="$1" approved_sha="$2" print_mode print_feature allowed_modes endpoint_configuration
   [[ "$(ops001_env_value "$env_file" COMPOSE_PROJECT_NAME || true)" == "$OPS001_EXPECTED_ENVIRONMENT" ]] ||
     ops001_die "environment project must be $OPS001_EXPECTED_ENVIRONMENT"
   [[ "$(ops001_env_value "$env_file" STAGING_ROOT || true)" == "$OPS001_EXPECTED_ROOT" ]] || ops001_die "environment root mismatch"
   [[ "$(ops001_env_value "$env_file" STAGING_COMMIT_SHA || true)" == "$approved_sha" ]] || ops001_die "environment SHA mismatch"
   [[ "$(ops001_env_value "$env_file" HTTP_BIND_ADDRESS || true)" == "127.0.0.1" ]] || ops001_die "Staging bind must remain loopback-only"
   [[ "$(ops001_env_value "$env_file" HTTP_PORT || true)" == "18080" ]] || ops001_die "Staging port must remain 18080"
-  [[ "$(ops001_env_value "$env_file" STAGING_PRINT_MODE || true)" == "DISABLED" ]] || ops001_die "Staging printing must remain DISABLED"
-  [[ "$(ops001_env_value "$env_file" STAGING_PRINTING_FEATURE_ENABLED || true)" == "false" ]] || ops001_die "Staging printing feature must remain false"
+  print_mode="$(ops001_env_value "$env_file" STAGING_PRINT_MODE || true)"
+  print_feature="$(ops001_env_value "$env_file" STAGING_PRINTING_FEATURE_ENABLED || true)"
+  allowed_modes="$(ops001_env_value "$env_file" STAGING_ALLOWED_PRINTING_MODES || true)"
+  endpoint_configuration="$(ops001_env_value "$env_file" STAGING_PRINTER_ENDPOINT_CONFIGURATION_ENABLED || true)"
+  [[ -n "$allowed_modes" ]] || allowed_modes="DISABLED,MOCK"
+  [[ -n "$endpoint_configuration" ]] || endpoint_configuration="false"
+  case "$print_mode/$print_feature" in
+    DISABLED/false|MOCK/true) ;;
+    *) ops001_die "Staging printing must use DISABLED/false or MOCK/true" ;;
+  esac
+  [[ "$allowed_modes" == "DISABLED,MOCK" ]] || ops001_die "Staging runtime printing modes must be exactly DISABLED,MOCK"
+  [[ "$endpoint_configuration" == "false" ]] || ops001_die "Staging printer endpoint configuration must remain disabled"
 }
 
 ops001_request_fingerprint() {

@@ -1,5 +1,13 @@
 # AL-005 Printing Provisioning Module Plan
 
+> Operational field-test note (2026-08-11): this historical provisioning plan
+> still authorizes no profile-selected active mode. Separately, the Owner has
+> approved bounded MOCK execution in the existing St-Denis Staging Twin. The
+> shared application now receives a generic runtime mode allowlist and endpoint
+> configuration policy; Staging is constrained to `DISABLED,MOCK` with endpoint
+> writes disabled. This does not authorize `REAL`, `PAD_DIRECT`, provisioning,
+> migration or physical binding.
+
 > Status: `IN_MAIN` via PR #67; downstream AL-005B remains separately gated
 >
 > Package: `AL-005_PRINTING_PROVISIONING_TEMPLATE`

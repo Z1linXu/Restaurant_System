@@ -1,5 +1,30 @@
 # Alive Runtime Planbook
 
+## Current Staging MOCK Printing field-test override (2026-08-11)
+
+The Owner started `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` and approved the bounded
+Staging-only package `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT`. Fresh
+`origin/main` is `cabcb58198def63df4e2b4dda5e5eb1164c395a9`; exact Staging
+remains `53209823fa320cc56c31d04ee5c7719a83a78acc` / V10 with Store Printing
+`DISABLED/false`, four endpoint-free logical printers and three enabled
+assignments. Production remains unchanged and read-only at
+`4667f3c35f85c9f8538f82789d9df1531d4fbc9e` / V7.
+
+Ground Truth found the reviewed bounded dependency: server tooling permits
+only `DISABLED`, while enabling the existing Print Center without a runtime
+ceiling would also expose `REAL` and `PAD_DIRECT`. The current package adds a
+generic application runtime allowlist and endpoint-configuration policy, with
+Staging fixed to `DISABLED,MOCK` and endpoint configuration disabled. See the
+[runtime-policy repair evidence](STAGING_MOCK_PRINTING_RUNTIME_POLICY_REPAIR_EVIDENCE.md).
+
+Current stop:
+`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT_REPAIR_AGENT6_ACCEPTED_WAITING_FOR_PR`.
+After tests, Agent 6, PR and auto-merge, the approved loop may perform the
+required exact-SHA Staging rebind, private environment change, Store-scoped
+MOCK transition and automated synthetic smoke. Production mutation, real/home
+printer binding, public printer access, Pad pairing, Chinatown,
+modularization, REL-001 and Production promotion remain prohibited.
+
 ## Current operational Twin readiness override (2026-08-10)
 
 `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL` completed successfully. Exact

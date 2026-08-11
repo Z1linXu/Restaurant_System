@@ -96,6 +96,8 @@ services:
     DB_NAME: $(value DB_NAME)
     DB_USER: $(value DB_USER)
     APP_FEATURES_PRINTING: "false"
+    APP_PRINTING_ALLOWED_MODES: "DISABLED,MOCK"
+    APP_PRINTING_ENDPOINT_CONFIGURATION_ENABLED: "false"
     cpus: 1
     mem_limit: 805306368
     max-size: 10m

@@ -353,6 +353,50 @@ class PrintDispatcherServiceImplTest {
     }
 
     @Test
+    void mockDispatchRunsRendererAndPersistsPrintedJobWithoutTransport() {
+        DispatchFixture fixture = configureSuccessfulDispatch(PrintModuleCode.GRAB, "dine_in", 1, "MOCK");
+        when(grabRenderer.render(any())).thenReturn("SANITIZED MOCK RECEIPT");
+        when(printJobService.markPrinted(
+            fixture.job,
+            fixture.printer,
+            "Mock print succeeded - no physical printer used"
+        )).thenReturn(fixture.job);
+
+        service.dispatchPersistedEvent(PrintModuleCode.GRAB, 1L, fixture.order.id, null, null);
+
+        verify(grabRenderer).render(any());
+        verify(printJobService).attachRenderedContent(fixture.job, fixture.printer.id, "SANITIZED MOCK RECEIPT");
+        verify(printJobService).markPrinted(
+            fixture.job,
+            fixture.printer,
+            "Mock print succeeded - no physical printer used"
+        );
+        verifyNoInteractions(printerTransport);
+    }
+
+    @Test
+    void mockDispatchUsesOneModeSnapshotWhenStoreModeChangesConcurrently() {
+        DispatchFixture fixture = configureSuccessfulDispatch(PrintModuleCode.GRAB, "dine_in", 1, "MOCK");
+        when(printerConfigService.getStorePrintingMode(1L)).thenReturn("MOCK", "DISABLED");
+        when(grabRenderer.render(any())).thenReturn("SANITIZED MOCK RECEIPT");
+        when(printJobService.markPrinted(
+            fixture.job,
+            fixture.printer,
+            "Mock print succeeded - no physical printer used"
+        )).thenReturn(fixture.job);
+
+        service.dispatchPersistedEvent(PrintModuleCode.GRAB, 1L, fixture.order.id, null, null);
+
+        verify(printerConfigService, times(1)).getStorePrintingMode(1L);
+        verify(printJobService).markPrinted(
+            fixture.job,
+            fixture.printer,
+            "Mock print succeeded - no physical printer used"
+        );
+        verifyNoInteractions(printerTransport);
+    }
+
+    @Test
     void padDirectDispatchQueuesPayloadWithAssignmentFontSize() {
         DispatchFixture fixture = configureSuccessfulDispatch(PrintModuleCode.GRAB, "dine_in", 1, "PAD_DIRECT");
         fixture.assignment.font_size = "LARGE";
@@ -432,7 +476,7 @@ class PrintDispatcherServiceImplTest {
             any(),
             anyString()
         )).thenReturn(job);
-        when(printerConfigService.isPrintingEnabled(store.id)).thenReturn(true);
+        when(printerConfigService.getStorePrintingMode(store.id)).thenReturn("REAL");
         when(printerAssignmentRepository.findByStoreIdAndModuleCode(store.id, PrintModuleCode.GRAB))
             .thenReturn(Optional.of(assignment));
         when(printerConfigRepository.findById(printer.id)).thenReturn(Optional.of(printer));
@@ -477,7 +521,6 @@ class PrintDispatcherServiceImplTest {
         job.status = PrintJobStatus.PENDING;
 
         when(featureFlagService.isEnabled(FeaturePackage.PRINTING)).thenReturn(true);
-        when(printerConfigService.isPrintingEnabled(store.id)).thenReturn(true);
         when(printerConfigService.getStorePrintingMode(store.id)).thenReturn("REAL");
         when(storeRepository.findById(store.id)).thenReturn(Optional.of(store));
         when(orderRepository.findById(order.id)).thenReturn(Optional.of(order));
@@ -489,7 +532,7 @@ class PrintDispatcherServiceImplTest {
             eq(store.organization_id), eq(store.id), eq(order.id), any(), any(), eq(PrintModuleCode.GRAB), anyString(), any(), anyString()
         )).thenReturn(job);
         when(printJobService.attachRenderedContent(eq(job), eq(printer.id), anyString())).thenReturn(job);
-        return new DispatchFixture(order, printer, assignment);
+        return new DispatchFixture(order, printer, assignment, job);
     }
 
     private DispatchFixture configureSuccessfulDispatch(String moduleCode, String orderType, int copies) {
@@ -525,13 +568,12 @@ class PrintDispatcherServiceImplTest {
         job.status = PrintJobStatus.PENDING;
 
         when(featureFlagService.isEnabled(FeaturePackage.PRINTING)).thenReturn(true);
-        when(printerConfigService.isPrintingEnabled(store.id)).thenReturn(true);
         when(printerConfigService.getStorePrintingMode(store.id)).thenReturn(printingMode);
         when(storeRepository.findById(store.id)).thenReturn(Optional.of(store));
         when(orderRepository.findById(order.id)).thenReturn(Optional.of(order));
         when(printerAssignmentRepository.findByStoreIdAndModuleCode(store.id, moduleCode)).thenReturn(Optional.of(assignment));
         when(printerConfigRepository.findById(printer.id)).thenReturn(Optional.of(printer));
-        if (!"PAD_DIRECT".equalsIgnoreCase(printingMode)) {
+        if (!"PAD_DIRECT".equalsIgnoreCase(printingMode) && !"MOCK".equalsIgnoreCase(printingMode)) {
             when(printerTransport.supports(printer.printer_type)).thenReturn(true);
         }
         when(orderItemRepository.findAllByOrderId(order.id)).thenReturn(List.of());
@@ -540,11 +582,13 @@ class PrintDispatcherServiceImplTest {
             eq(store.organization_id), eq(store.id), eq(order.id), any(), any(), eq(moduleCode), anyString(), any(), anyString()
         )).thenReturn(job);
         when(printJobService.attachRenderedContent(eq(job), eq(printer.id), anyString())).thenReturn(job);
-        if (!"PAD_DIRECT".equalsIgnoreCase(printingMode)) {
+        if (!"PAD_DIRECT".equalsIgnoreCase(printingMode) && !"MOCK".equalsIgnoreCase(printingMode)) {
             when(printJobService.markPrinting(job, printer)).thenReturn(job);
             when(printJobService.markPrinted(job, printer)).thenReturn(job);
+        } else if ("MOCK".equalsIgnoreCase(printingMode)) {
+            when(printJobService.markPrinting(job, printer)).thenReturn(job);
         }
-        return new DispatchFixture(order, printer, assignment);
+        return new DispatchFixture(order, printer, assignment, job);
     }
 
     private OrderItem item(Long id, Long batchId) {
@@ -556,7 +600,7 @@ class PrintDispatcherServiceImplTest {
         return item;
     }
 
-    private record DispatchFixture(Order order, PrinterConfig printer, PrinterAssignment assignment) {
+    private record DispatchFixture(Order order, PrinterConfig printer, PrinterAssignment assignment, PrintJob job) {
     }
 
     @Test
@@ -566,7 +610,7 @@ class PrintDispatcherServiceImplTest {
         store.organization_id = 1L;
         when(featureFlagService.isEnabled(FeaturePackage.PRINTING)).thenReturn(true);
         when(storeRepository.findById(1L)).thenReturn(Optional.of(store));
-        when(printerConfigService.isPrintingEnabled(1L)).thenReturn(false);
+        when(printerConfigService.getStorePrintingMode(1L)).thenReturn("DISABLED");
 
         PrintJob job = new PrintJob();
         job.id = 99L;
