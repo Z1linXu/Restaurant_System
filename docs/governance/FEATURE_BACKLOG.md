@@ -3,23 +3,24 @@
 ## Current Owner field-test Printing slice (2026-08-11)
 
 `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` is active for the bounded
-`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` slice. Repository repair is in
-progress to enforce a generic runtime mode ceiling and disabled endpoint
-configuration before Staging changes from `DISABLED/false` to `MOCK/true`.
-The intended acceptance uses the existing complete MOCK pipeline and the
-retained 4-printer/3-assignment topology. Physical printing, Pad pairing and
-Production remain excluded. Current stop:
-`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT_REPAIR_AGENT6_ACCEPTED_WAITING_FOR_PR`.
+`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` slice. PR #114 supplied the
+generic fail-closed runtime policy, and exact Staging
+`1dd036737f6cf41c0558f14b7f8343144f718b5a` / V10 now runs
+`MOCK/true`. Submit, three-route dispatch, update tickets, reprint, rendered
+snapshots and browser visibility passed against the retained
+4-printer/3-assignment topology. Physical printing, Pad pairing and Production
+remain excluded. Current stop:
+`STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`.
 
 ## Current TWIN-001 operational Twin readiness override (2026-08-10)
 
-TWIN-001 reconstruction is `PASS_WAITING_FOR_OWNER_FIELD_TEST`. Exact Staging
-`53209823fa320cc56c31d04ee5c7719a83a78acc` / Flyway V10 passes deterministic
+TWIN-001 reconstruction remains `PASS` and Owner field testing is active.
+Exact Staging `1dd036737f6cf41c0558f14b7f8343144f718b5a` / Flyway V10 passes deterministic
 manifest-v2 parity, independent Staff credential verification, safe automated
 workflow smoke and health with zero blocking behavior difference. Current stop:
-`TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`.
-Next Owner Gate: `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`. No field test, hardware
-gate, modularization, Chinatown, REL-001 or Production work starts
+`STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`.
+The active loop may continue bounded Owner field testing and bug repair. No
+hardware gate, modularization, Chinatown, REL-001 or Production work starts
 automatically.
 
 ## Historical TWIN-001 reconstruction execution override (2026-08-10)
@@ -131,17 +132,17 @@ UI evidence remains pending. No Chinatown or Production action is authorized.
 | title | Owner Store Onboarding - Chinatown |
 | priority | `HIGH` |
 | status | `DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY` |
-| target_loop | `TWIN-001_ST_DENIS_STAGING_TWIN`; exact `53209823...` is the V10 Operational Twin waiting for the Owner field-test loop. Chinatown remains deferred. |
+| target_loop | `TWIN-001_ST_DENIS_STAGING_TWIN`; exact `1dd0367...` is the V10 Operational Twin in the active Owner field-test loop. Chinatown remains deferred. |
 | implementation status | `STG-008=PASS`; PR #99's generic repair is deployed at exact `1a3f2e...`. API and browser-equivalent evidence remain valid historical foundation. Owner has deferred manual Phase-A closure behind Twin planning. |
 | authority | [AL-003A final menu comparison](agile/AL-003A_FINAL_MENU_COMPARISON.md), [AL-003 technical plan](agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md), [STG-008 entry evidence](runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md), [STG-008 Flyway guard repair evidence](runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md), [STG-008 release-rebind repair evidence](runtime/STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md), [STG-008 non-web request-context repair evidence](runtime/STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md), and [STG-008 one-shot lifecycle repair evidence](runtime/STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md). |
-| next action | Await explicit entry into `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`. Do not replay reconstruction, re-read Production, begin Chinatown, modularize, enter hardware gates, or promote Production. |
+| next action | Continue bounded `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`. Do not replay reconstruction, re-read Production, begin Chinatown, modularize, enter hardware gates, or promote Production. |
 
 ### Current strategic roadmap
 
 | Phase | State | Boundary |
 |---|---|---|
-| `PHASE 1 TWIN-001_ST_DENIS_STAGING_TWIN` | `PASS_WAITING_FOR_OWNER_FIELD_TEST` | Exact V10 Twin parity and safe automated smoke pass; next gate is Owner field-test approval |
-| `PHASE 2 OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` | `NEXT_OWNER_GATE_PENDING` | Operational Twin is ready; the Owner must explicitly start the manual checklist and bounded repair loop |
+| `PHASE 1 TWIN-001_ST_DENIS_STAGING_TWIN` | `PASS_OWNER_FIELD_TEST_ACTIVE` | Exact V10 Twin parity and safe automated smoke pass; Owner field testing is active |
+| `PHASE 2 OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` | `ACTIVE_MOCK_PRINTING_VERIFIED` | Continue the manual checklist and bounded repair loop until Owner completion |
 | `PHASE 3 MODULAR_PROVISIONING_IMPLEMENTATION` | `ARCHITECTURE_DIRECTION_APPROVED_IMPLEMENTATION_DEFERRED` | Opens only after Owner says “可以进行模块化了” |
 | `PHASE 4 CHINATOWN_STAGING_ACCEPTANCE` | `DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY` | Existing AL-003/REL-001 preserved; requires future `CHINATOWN_RESUME_GATE` |
 

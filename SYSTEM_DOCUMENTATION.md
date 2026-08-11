@@ -1,14 +1,16 @@
 # SYSTEM DOCUMENTATION
 
 > 2026-08-11 Staging MOCK field-test package: Owner field testing is active and
-> `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` is in bounded dependency repair.
+> `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` is complete on exact Staging
+> `1dd036737f6cf41c0558f14b7f8343144f718b5a` / Flyway V10.
 > The shared printing service gains environment-configured allowed modes and
 > endpoint-write policy. Defaults preserve existing behavior; isolated Staging
 > resolves to `DISABLED,MOCK` only with endpoint configuration disabled. The
-> existing MOCK path still renders and persists Print Jobs before marking them
-> printed without transport. Runtime enablement remains pending Agent 6,
-> PR/merge and exact-SHA Staging validation; Production and physical hardware
-> remain unchanged.
+> existing MOCK path renders and persists Print Jobs before marking them
+> printed without transport. Submit, GRAB, FRONTDESK_RECEIPT, HOT_KITCHEN,
+> update, reprint, browser visibility and health passed. Production and
+> physical hardware remain unchanged. Current stop:
+> `STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`.
 
 > 2026-08-10 TWIN-001 operational Twin: exact Staging
 > `53209823fa320cc56c31d04ee5c7719a83a78acc` remains on Flyway V10 and passes
@@ -16,9 +18,10 @@
 > safe automated POS beverage workflow smoke, realtime/health checks and
 > Production continuity with `BLOCKING_BEHAVIOR_DIFFERENCE=0`. Production
 > remained read-only at `4667f3c35f85c9f8538f82789d9df1531d4fbc9e` / V7.
-> Current stop:
-> `TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`.
-> Next Owner Gate: `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`. See
+> The reconstruction foundation stop was
+> `TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`;
+> the Owner has since opened that loop. Current stop is
+> `STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`. See
 > [operational Twin evidence](docs/governance/runtime/TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md).
 
 > Historical 2026-08-10 TWIN-001 reconstruction tooling: Owner approval was active and a

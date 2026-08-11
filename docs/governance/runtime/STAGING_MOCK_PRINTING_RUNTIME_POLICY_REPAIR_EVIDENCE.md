@@ -1,6 +1,6 @@
 # Staging MOCK Printing Runtime Policy Repair Evidence
 
-> Status: `REPOSITORY_REPAIR_AGENT6_ACCEPTED_WAITING_FOR_PR`
+> Status: `IN_MAIN_AND_RUNTIME_VERIFIED`
 >
 > Package: `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT`
 >
@@ -59,7 +59,8 @@ Print Jobs. Production container identity and health were unchanged.
   re-review returned `ACCEPT`: every transport-capable operation now uses one
   effective-mode snapshot, and the bounded package adds no Staging-only
   business branch, migration, secret, Production mutation or printer action.
-  PR/merge and exact-SHA Staging runtime validation remain pending.
+  PR #114 then merged the exact reviewed package to `main` at
+  `1dd036737f6cf41c0558f14b7f8343144f718b5a`.
 
 No Staging or Production mutation, migration, restart, printer contact,
 endpoint write, Pad pairing, order creation or credential read occurred during
@@ -67,4 +68,6 @@ this repair phase.
 
 ## Stop state
 
-`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT_REPAIR_AGENT6_ACCEPTED_WAITING_FOR_PR`
+This repair record is superseded by the
+[runtime field-test evidence](STAGING_MOCK_PRINTING_FIELD_TEST_EVIDENCE.md).
+Current stop: `STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`.

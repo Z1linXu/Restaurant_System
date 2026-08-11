@@ -11,15 +11,22 @@ ceiling is exactly `DISABLED,MOCK`; printer endpoint configuration remains
 disabled. Production, `REAL`, `PAD_DIRECT`, physical binding and all deferred
 routes remain outside this authorization.
 
-## Current TWIN-001 operational Twin readiness override (2026-08-10)
+Execution completed on exact Staging
+`1dd036737f6cf41c0558f14b7f8343144f718b5a` / V10. Store 1 is `MOCK/true`;
+submit, all three routes, update tickets, reprint, rendered snapshots, browser
+visibility and health passed with no physical transport. The loop continues at
+`STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`.
+
+## Historical TWIN-001 operational Twin readiness checkpoint (2026-08-10)
 
 The Owner-approved Staging reconstruction, V10 parity validator and safe
 automated smoke completed on exact deployed SHA
 `53209823fa320cc56c31d04ee5c7719a83a78acc`. TWIN-001 is `PASS` for
 reconstruction readiness with zero blocking behavior difference and now stops
 at `TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`.
-The next Owner Gate is `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`; the manual test
-itself and all separate printing/KDS/Pad hardware gates remain unexecuted.
+At that checkpoint the next Owner Gate was `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`;
+the current override above records that the Owner has since opened the manual
+loop. Separate physical printing/KDS/Pad hardware gates remain unexecuted.
 
 ## Historical TWIN-001 reconstruction execution override (2026-08-10)
 

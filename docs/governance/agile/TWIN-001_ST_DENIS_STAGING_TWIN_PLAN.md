@@ -4,8 +4,11 @@
 > and approved the bounded Staging-only
 > `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` package. It may enable only
 > MOCK through the retained logical topology after the generic runtime
-> allowlist/endpoint-policy repair passes. Real/home printer binding and Pad
-> pairing remain separate gates.
+> allowlist/endpoint-policy repair passes. Exact Staging `1dd036737f...` / V10
+> now runs `MOCK/true`; three-route submit/update tickets, GRAB reprint,
+> browser visibility and health passed. Current stop is
+> `STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`. Real/home printer
+> binding and Pad pairing remain separate gates.
 
 > Execution update (2026-08-10): Owner approval
 > `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL` completed. Exact Staging
@@ -14,11 +17,11 @@
 > smoke and health with zero blocking behavior difference. Physical printing,
 > positive KDS enablement and Pad pairing remain separate gates.
 
-> Status: `PASS_WAITING_FOR_OWNER_FIELD_TEST`
+> Status: `PASS_OWNER_FIELD_TEST_ACTIVE`
 >
-> Current stop state: `TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`
+> Current stop state: `STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`
 >
-> Owner decision date: 2026-08-10, America/Toronto
+> Owner decision date: 2026-08-11, America/Toronto
 
 ## 1. Owner decision and scope
 
@@ -274,14 +277,17 @@ sequence. This is an immutable execution record, not authority to replay it:
 
 ## 12. Current stop
 
-`TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`
+`STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`
 
 The corrected read supplied
 [manifest v2 completion evidence](../runtime/TWIN-001_MANIFEST_V2_COMPLETION_EVIDENCE.md)
 and [V7-to-V10 mapping](../runtime/V7_PRODUCTION_TO_V10_TWIN_CONFIGURATION_MAPPING.md).
-The approved bounded reconstruction then completed on exact Staging
-`53209823fa320cc56c31d04ee5c7719a83a78acc` / V10; see
-[operational Twin evidence](../runtime/TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md).
+The approved bounded reconstruction completed on exact Staging
+`53209823fa320cc56c31d04ee5c7719a83a78acc` / V10, then the field-test package
+deployed exact `1dd036737f6cf41c0558f14b7f8343144f718b5a` / V10 and verified
+MOCK printing; see
+[operational Twin evidence](../runtime/TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md)
+and [MOCK field-test evidence](../runtime/STAGING_MOCK_PRINTING_FIELD_TEST_EVIDENCE.md).
 
 Local PostgreSQL 16 evidence proves the reviewed forward path
 `V7 -> V8 -> V9 -> V10`, current-candidate startup, data-shape preservation,
@@ -291,6 +297,8 @@ The reconstructed Twin operates on V10 and passes parity validation and safe
 automated smoke. `SCHEMA` is `CURRENT_PRODUCTION_VERSION_DIFFERENCE` and
 `BLOCKING_BEHAVIOR_DIFFERENCE=0`.
 
-The next TRUE OWNER GATE is `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`; this plan does
-not start the human field test. Production reads/writes, schema actions,
-physical printing/Pad pairing and all deferred routes remain unauthorized.
+`OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` is active. This evidence does not claim the
+Owner's human acceptance result; the next Owner decision signal is field-test
+completion, including “可以进行模块化了” if the Owner chooses to advance.
+Production reads/writes, schema actions, physical printing/Pad pairing and all
+deferred routes remain unauthorized.

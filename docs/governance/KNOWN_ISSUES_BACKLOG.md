@@ -1,18 +1,16 @@
 # Known Issues Backlog
 
-Current field-test override (2026-08-11): bounded issue `KI-012` is selected.
-The Staging guard cannot currently run server-side MOCK, and enabling the
-Printing feature without a runtime mode ceiling would expose modes outside the
-Owner-approved package. The generic allowlist/endpoint-policy dependency
-repair is in progress; no runtime mutation has yet occurred.
+Current field-test override (2026-08-11): bounded issue `KI-012` is resolved.
+The generic allowlist/endpoint-policy repair entered `main` through PR #114,
+and exact Staging `1dd036737f6cf41c0558f14b7f8343144f718b5a` / V10 now runs
+server-side MOCK with the complete pipeline and zero physical transport.
 
 Current TWIN-001 closure override (2026-08-10): KI-011's reconstruction and
 automated-validation portion is resolved. Exact Staging
-`53209823fa320cc56c31d04ee5c7719a83a78acc` / V10 has complete manifest-v2
+`1dd036737f6cf41c0558f14b7f8343144f718b5a` / V10 retains complete manifest-v2
 parity, independent Staff credentials, safe automated workflow smoke and zero
-blocking behavior difference. It is waiting for the separately approved Owner
-field-test loop at
-`TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`.
+blocking behavior difference. The Owner field-test loop is active at
+`STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`.
 
 Historical KI-011 dependency-repair override (2026-08-10): the manifest-v2
 projector and secret-FD staff reconciler are repository verified. Fresh
@@ -58,9 +56,9 @@ V10 Twin.
 | observed_behavior | Deployment tooling permits server Staging only as `DISABLED/false`; if the Printing feature alone is enabled, the existing Store API accepts `REAL` and `PAD_DIRECT` as well as `MOCK`. |
 | expected_behavior | An environment-neutral application policy constrains permitted modes; Staging allows exactly `DISABLED,MOCK`, rejects printer endpoint writes, and MOCK still executes the normal renderer/job/dispatch pipeline without transport. |
 | operational_impact | Owner cannot safely inspect real Print Center behavior or synthetic tickets in the Operational Twin. |
-| current_workaround | Keep Staging `DISABLED/false` until the reviewed repair is merged and deployed. |
-| evidence | [Staging MOCK runtime-policy repair evidence](runtime/STAGING_MOCK_PRINTING_RUNTIME_POLICY_REPAIR_EVIDENCE.md). |
-| status | `REPOSITORY_REPAIR_VERIFIED_WAITING_FOR_AGENT6_PR` |
+| current_workaround | None for MOCK field testing. Physical binding remains separately gated. |
+| evidence | [runtime-policy repair evidence](runtime/STAGING_MOCK_PRINTING_RUNTIME_POLICY_REPAIR_EVIDENCE.md) and [field-test evidence](runtime/STAGING_MOCK_PRINTING_FIELD_TEST_EVIDENCE.md). |
+| status | `RESOLVED_STAGING_MOCK_VERIFIED` |
 | target_loop | `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` |
 | safety_boundary | Staging only; no Production mutation, real endpoint, socket contact, Pad pairing, migration or destructive reset. |
 | last_updated | 2026-08-11 |
@@ -72,15 +70,15 @@ V10 Twin.
 | issue_id | `KI-011` |
 | priority | `P2` governance/product readiness |
 | title | Staging must become a long-lived Production-like St-Denis Operational Twin |
-| observed_behavior | Exact Staging `53209823...` / V10 now matches manifest v2, verifies independent Staff credentials, passes safe automated order/beverage smoke and reports zero blocking behavior difference. Owner field testing and separately gated physical hardware flows remain pending. |
+| observed_behavior | Exact Staging `1dd0367...` / V10 retains manifest-v2 parity and independent Staff credentials, passes safe workflow plus MOCK printing smoke, and reports zero blocking behavior difference. Owner field testing is active; physical hardware remains pending. |
 | expected_behavior | Staging reconstructs safe St-Denis operational configuration through shared application code and generic Store logic, with every parity domain classified `MATCH`, `EXPECTED_DIFFERENCE`, `BLOCKING_DIFFERENCE`, or `NOT_YET_VERIFIED`. |
 | operational_impact | Production promotion and the former Chinatown-first route remain deferred until Twin parity and Owner field validation are complete. |
-| current_workaround | Preserve exact Staging V10 Twin state and await the Owner field-test loop. Do not downgrade, auto-sync, re-read Production, or enter separate hardware gates without approval. |
-| evidence | [manifest v2](runtime/ST_DENIS_TWIN_PARITY_MANIFEST_V2.json), [mapping](runtime/V7_PRODUCTION_TO_V10_TWIN_CONFIGURATION_MAPPING.md), [completion evidence](runtime/TWIN-001_MANIFEST_V2_COMPLETION_EVIDENCE.md), and [operational Twin evidence](runtime/TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md). |
-| status | `RESOLVED_FOR_RECONSTRUCTION_AND_AUTOMATED_SMOKE / OWNER_FIELD_TEST_PENDING` |
-| next_gate | `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` after operational readiness |
+| current_workaround | Preserve exact Staging V10 Twin state and continue the active Owner field-test loop. Do not downgrade, auto-sync, re-read Production, or enter separate hardware gates without approval. |
+| evidence | [manifest v2](runtime/ST_DENIS_TWIN_PARITY_MANIFEST_V2.json), [mapping](runtime/V7_PRODUCTION_TO_V10_TWIN_CONFIGURATION_MAPPING.md), [completion evidence](runtime/TWIN-001_MANIFEST_V2_COMPLETION_EVIDENCE.md), [operational Twin evidence](runtime/TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md), and [MOCK field-test evidence](runtime/STAGING_MOCK_PRINTING_FIELD_TEST_EVIDENCE.md). |
+| status | `RESOLVED_FOR_RECONSTRUCTION_AND_AUTOMATED_SMOKE / OWNER_FIELD_TEST_ACTIVE` |
+| next_gate | Continue `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`; physical printer binding remains a separate runtime gate |
 | safety_boundary | No raw customer/order/payment data, credentials, secrets, production printer/device endpoints, `SELECT *`, or complete database dump. |
-| last_updated | 2026-08-10 |
+| last_updated | 2026-08-11 |
 
 ### KI-010 - Browser login rejected by proxy same-origin contract
 
