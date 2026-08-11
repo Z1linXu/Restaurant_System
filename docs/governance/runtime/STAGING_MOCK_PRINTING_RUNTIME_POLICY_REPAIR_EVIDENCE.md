@@ -48,7 +48,7 @@ Print Jobs. Production container identity and health were unchanged.
 
 - Focused printing/outbox tests: 27 passed, including a regression that returns
   `MOCK` then `DISABLED`, proves one mode read and proves zero printer transport.
-- Full backend regression: 394 tests, zero failures, zero errors, three
+- Full backend regression: 395 tests, zero failures, zero errors, three
   pre-existing skips.
 - Staging guard regression: passed, including MOCK pair acceptance and
   rejection of expanded mode allowlists or endpoint configuration.
