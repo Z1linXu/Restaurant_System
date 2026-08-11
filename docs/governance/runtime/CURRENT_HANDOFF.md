@@ -196,12 +196,12 @@ provisioning without destabilizing current restaurant operations.
 
 | Item | Verified value | Classification |
 |---|---|---|
-| runtime-sensitive deployed candidate | `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c` | `IN_MAIN` and `DEPLOYED_TO_STAGING`; automated API/browser-equivalent acceptance passed, Owner manual UI evidence pending. |
-| exact deployed Staging runtime | `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c` | `DEPLOYED_TO_STAGING`; V10, synthetic A/B and automated Phase-A checks complete; no one-shot, marker or lock. |
+| runtime-sensitive deployed candidate | `53209823fa320cc56c31d04ee5c7719a83a78acc` | `IN_MAIN` through PR #111 and `DEPLOYED_TO_STAGING`; complete manifest-v2 parity and safe automated smoke passed. |
+| exact deployed Staging runtime | `53209823fa320cc56c31d04ee5c7719a83a78acc` | `DEPLOYED_TO_STAGING`; Flyway V10, reconstructed Operational Twin, health 200/200/200, restart count zero. |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
-| Runtime-sensitive delivery package | browser-login proxy/rotation dependency repair / PR #99 | `IN_MAIN` and deployed through exact `1a3f2e...`; Owner manual UI acceptance remains separate |
+| Runtime-sensitive delivery package | TWIN-001 guarded reconstruction tooling / PR #111 | `IN_MAIN` and deployed through exact `53209823...`; Owner field testing remains separate |
 | Browser-equivalent evidence / PR #101 | merge `aec59af93a9bf42ce3d167a579a19be80eadc9b0` | `IN_MAIN`; evidence/governance only, not deployed runtime |
-| Handoff PR | [PR #71](https://github.com/Z1linXu/Restaurant_System/pull/71) | `IN_MAIN`; its GitHub merge commit is `5baada03935e004d80af1e7a36fb7db39bd6abbb` |
+| Operational Twin closure PR | [PR #112](https://github.com/Z1linXu/Restaurant_System/pull/112) | `IN_MAIN` at `9715d2447d5781e2437917aafc1fb1b6b4a5250f`; documentation/evidence only, not deployed |
 
 `IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
 `DEPLOYED_TO_STAGING`, and `DEPLOYED_TO_PRODUCTION` are distinct states. A
@@ -278,7 +278,7 @@ the current bounded Staging runtime identity below.
 | Environment | Retained evidence | Classification and boundary |
 |---|---|---|
 | Production | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`; Compose `cloud` `db/backend/nginx`; unchanged IDs/start times/restart `0`; health 200 | `MACHINE_VERIFIED_READ_ONLY` continuity only; Flyway/business state not queried |
-| Staging | `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c`; Flyway V10 with no pending or failed migration; exact `db/backend/nginx` identities running; health 200/200/200 | `DEPLOYED_TO_STAGING`; synthetic A/B and automated Phase-A API/browser-equivalent acceptance complete. Owner manual UI evidence pending; no active one-shot, marker or lock. |
+| Staging | `53209823fa320cc56c31d04ee5c7719a83a78acc`; Flyway V10 with ten successful and zero failed rows; exact `db/backend/nginx` identities running; health 200/200/200 | `DEPLOYED_TO_STAGING`; manifest-v2 parity and safe automated order/beverage smoke pass with `BLOCKING_BEHAVIOR_DIFFERENCE=0`. Owner field testing is the next gate. |
 | Staging isolation | project `restaurant-pos-staging`; only `127.0.0.1:18080`; separate state/network/mounts; private leaf UID 70/mode 0700 | `MACHINE_VERIFIED_READ_ONLY` |
 | Staging printing | `STAGING_PRINT_MODE=DISABLED`; feature flag `false` | `MACHINE_VERIFIED_READ_ONLY` |
 
@@ -508,7 +508,7 @@ is the first Store Profile sample, not a shared-service special case.
 | ID | Purpose | Current state | Dependency / Owner gate |
 |---|---|---|---|
 | STG-005B / #62 | Reproducible synthetic St-Denis menu baseline | `IN_MAIN` and `DEPLOYED_TO_STAGING` evidence | PLAN/EXECUTE/REPLAY passed at `4/3/13/38`, revision `2 -> 2`; no duplicate/crossover |
-| AL-003S / #63 | Exact-SHA Staging acceptance preparation | `IN_MAIN`; reviewed tooling used under separate runtime approvals | Current runtime is exact `1a3f2e...`; Owner manual UI acceptance remains separate |
+| AL-003S / #63 | Exact-SHA Staging acceptance preparation | `IN_MAIN`; reviewed tooling used under separate runtime approvals | Current runtime is exact `53209823...`; Operational Twin automated validation passes and Owner field testing remains separate |
 | AL-004 / #64 | Generic Store Profile contract | `IN_MAIN` | Repository capability only; no provisioning/runtime execution |
 | AL-005A / #65 | Staff/Table module plan | `IN_MAIN` | Repository planning only; no writer or runtime execution |
 | AL-005 / #67 | Printing provisioning plan | `IN_MAIN` | repository planning only; no writer/runtime action |
@@ -580,17 +580,18 @@ from current main.
    `AGILE_LOOP_OPERATING_MODEL.md`, `FEATURE_BACKLOG.md`, and the applicable
    technical plan.
 3. Verify current `origin/main`; do not trust the Owner workspace branch tip.
-4. Verify GitHub PR #61 through #102 and independent PR #66 semantics.
+4. Verify GitHub PR #61 through #112 and independent PR #66 semantics.
 5. Distinguish main, stacked Draft, Staging, and Production state.
-6. Report the completed main stack and the next Staging Owner Gate.
+6. Report the completed Operational Twin and the next Owner field-test gate.
 7. Do not recreate or redesign packages #61-#70.
 8. Do not infer implementation from the planning packages.
 9. Read the TWIN-001 plan, STG-006, OPS-001, the STG-007 repair/final evidence, all STG-008
    evidence records, [STG-009 Phase-A API evidence](STG-009_PHASE_A_OWNER_LOGIN_EVIDENCE.md)
    and [browser-equivalent evidence](STG-009_PHASE_A_BROWSER_EQUIVALENT_ACCEPTANCE_EVIDENCE.md).
    Treat `STG-008=PASS` and automated Phase-A API/browser-equivalent acceptance
-   as verified on exact Staging `1a3f2e...`; no one-shot, marker or lock remains.
-10. Continue only TWIN-001 repository planning and governance review. Do not
+   on exact historical Staging `1a3f2e...` as foundation evidence. Current
+   exact Staging `53209823...` is the validated Operational Twin.
+10. Wait for `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`. Do not replay reconstruction,
     read Production, rebind/redeploy Staging, rotate credentials, repeat
     automated acceptance, start Chinatown onboarding/clone, or implement
     modules without the later Owner decisions.
