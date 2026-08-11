@@ -1,15 +1,15 @@
 # TWIN-001 St-Denis Production-like Staging Twin Plan
 
 > Execution update (2026-08-10): Owner approval
-> `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL` is active. The bounded in-place,
-> zero-delete projector and secret-FD Staff API reconciler are repository
-> verified. After Agent 6/merge/fresh authority recovery, the approved runtime
-> loop continues through parity and automated smoke; physical printing and Pad
-> pairing remain separate gates.
+> `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL` completed. Exact Staging
+> `53209823fa320cc56c31d04ee5c7719a83a78acc` / V10 passes deterministic
+> manifest-v2 parity, independent Staff credentials, safe automated workflow
+> smoke and health with zero blocking behavior difference. Physical printing,
+> positive KDS enablement and Pad pairing remain separate gates.
 
-> Status: `STAGING_RECONSTRUCTION_APPROVED_DEPENDENCY_REPAIR_IN_PROGRESS`
+> Status: `PASS_WAITING_FOR_OWNER_FIELD_TEST`
 >
-> Current stop state: `TWIN-001_STAGING_RECONSTRUCTION_APPROVED_DEPENDENCY_REPAIR_IN_PROGRESS`
+> Current stop state: `TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`
 >
 > Owner decision date: 2026-08-10, America/Toronto
 
@@ -17,26 +17,28 @@
 
 Owner designates Staging's long-term role as a Production-like St-Denis
 Operational Twin and mandatory pre-Production validation environment. The
-Twin is planned, not yet established; the immediate FT-001 route is therefore:
+operational Twin is reconstructed and automated-validation ready; the
+remaining immediate FT-001 route is therefore:
 
 `Production St-Denis -> parity model -> Staging St-Denis Twin -> development/
 bug-fix loop -> automated validation -> Owner manual validation -> Production
 promotion`
 
-Manifest v2 supplies deterministic, schema-valid safe configuration input and
-an explicit V7-to-V10 mapping. The Owner's current reconstruction approval
-authorizes only the bounded Staging writer and validation loop defined here.
+Manifest v2 supplied deterministic, schema-valid safe configuration input and
+an explicit V7-to-V10 mapping. The completed reconstruction approval authorized
+only the bounded Staging writer and validation loop recorded here; it grants
+no replay or new runtime action after this stop.
 
 The earlier revision was governance and reconstruction planning only. The
-current approval advances the bounded Staging reconstruction, parity and
-automated-smoke loop; it still authorizes no Production action, migration,
-physical printer/Pad binding, Chinatown work, modularization or promotion.
+completed approval advanced the bounded Staging reconstruction, parity and
+automated-smoke loop. It authorizes no further writer/credential/deploy replay,
+Production action, migration, physical printer/Pad binding, Chinatown work,
+modularization or promotion.
 
-The existing synthetic St-Denis Organization/Owner/source Store/menu remains a
-`CURRENT_SYNTHETIC_BASELINE`. It is useful Twin foundation evidence, but it is
-not automatically a Production-parity Twin. Do not delete, reset, or rebuild
-it destructively. A later TWIN-001 runtime package must explicitly decide what
-can be reused, what differs, and what must be reconciled.
+The former synthetic St-Denis Organization/Owner/source Store/menu was the
+`CURRENT_SYNTHETIC_BASELINE`. It was reconciled in place without reset or
+delete and is now the reviewed Operational Twin. See
+[runtime evidence](../runtime/TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md).
 
 The resulting [sanitized parity manifest](../runtime/ST_DENIS_TWIN_PARITY_MANIFEST.md)
 and [inventory evidence](../runtime/TWIN-001_PRODUCTION_INVENTORY_EVIDENCE.md)
@@ -237,11 +239,10 @@ separate modularization DoD, Planbook must issue `CHINATOWN_RESUME_GATE` before
 resuming STG-009 Phase B or AL-003 validate/execute/replay. No second clone
 engine may be created.
 
-## 11. Approved TWIN-001_STAGING_RECONSTRUCTION execution contract
+## 11. Completed TWIN-001_STAGING_RECONSTRUCTION execution record
 
-The reconstruction runtime write has not yet run because its bounded tooling
-dependency repair is still under review. Once that repair is merged and fresh
-authority is recovered, the active approval authorizes this sequence:
+The reconstruction runtime write completed under the following reviewed
+sequence. This is an immutable execution record, not authority to replay it:
 
 1. Bind a fresh exact release and compatible schema decision; do not copy
    Production V7 history into Staging V10 or run Flyway as part of this plan.
@@ -256,7 +257,7 @@ authority is recovered, the active approval authorizes this sequence:
 4. Treat the raw V7/V10 version delta as
    `CURRENT_PRODUCTION_VERSION_DIFFERENCE`; only an observed V10 operational
    incompatibility is `BLOCKING_BEHAVIOR_DIFFERENCE`.
-5. Execute under the active Owner reconstruction gate with a dry-run diff,
+5. Execute under the Owner reconstruction gate with a dry-run diff,
    one-use approval, rollback/abort contract, no-cross-Store assertion,
    duplicate detection, and before/after sanitized evidence. Ambiguous
    identity fails closed.
@@ -266,23 +267,23 @@ authority is recovered, the active approval authorizes this sequence:
 
 ## 12. Current stop
 
-`TWIN-001_STAGING_RECONSTRUCTION_APPROVED_DEPENDENCY_REPAIR_IN_PROGRESS`
+`TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`
 
-The earlier reconstruction approval stopped before runtime entry because v1
-was incomplete. The corrected read now supplies
+The corrected read supplied
 [manifest v2 completion evidence](../runtime/TWIN-001_MANIFEST_V2_COMPLETION_EVIDENCE.md)
 and [V7-to-V10 mapping](../runtime/V7_PRODUCTION_TO_V10_TWIN_CONFIGURATION_MAPPING.md).
+The approved bounded reconstruction then completed on exact Staging
+`53209823fa320cc56c31d04ee5c7719a83a78acc` / V10; see
+[operational Twin evidence](../runtime/TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md).
 
 Local PostgreSQL 16 evidence proves the reviewed forward path
 `V7 -> V8 -> V9 -> V10`, current-candidate startup, data-shape preservation,
 and second-start idempotency. The raw version delta is therefore
 `CURRENT_PRODUCTION_VERSION_DIFFERENCE`, not authority to downgrade Staging.
-The aggregate `SCHEMA` result remains `BLOCKING_BEHAVIOR_DIFFERENCE` until a
-reconstructed St-Denis Twin actually operates and passes parity validation on
-V10.
+The reconstructed Twin operates on V10 and passes parity validation and safe
+automated smoke. `SCHEMA` is `CURRENT_PRODUCTION_VERSION_DIFFERENCE` and
+`BLOCKING_BEHAVIOR_DIFFERENCE=0`.
 
-The active approval permits the bounded Staging-only reconstruction, exact-SHA
-rebind when required, parity and automated smoke loop. The next TRUE OWNER GATE
-after operational readiness is `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`; this plan
-does not start the human field test. Production reads/writes, schema actions,
+The next TRUE OWNER GATE is `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`; this plan does
+not start the human field test. Production reads/writes, schema actions,
 physical printing/Pad pairing and all deferred routes remain unauthorized.

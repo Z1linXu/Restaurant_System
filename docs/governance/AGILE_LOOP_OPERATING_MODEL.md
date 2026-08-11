@@ -1,6 +1,16 @@
 # Agile Loop Operating Model
 
-## Current TWIN-001 reconstruction execution override (2026-08-10)
+## Current TWIN-001 operational Twin readiness override (2026-08-10)
+
+The Owner-approved Staging reconstruction, V10 parity validator and safe
+automated smoke completed on exact deployed SHA
+`53209823fa320cc56c31d04ee5c7719a83a78acc`. TWIN-001 is `PASS` for
+reconstruction readiness with zero blocking behavior difference and now stops
+at `TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`.
+The next Owner Gate is `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`; the manual test
+itself and all separate printing/KDS/Pad hardware gates remain unexecuted.
+
+## Historical TWIN-001 reconstruction execution override (2026-08-10)
 
 The Owner granted the reconstruction gate. The current bounded dependency
 repair supplies an in-place, idempotent Staging-only projector and secret-safe
@@ -54,7 +64,7 @@ The checkpoint stop was
 its next Owner Gate was `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`, which was
 later granted before the current pre-write NO-GO.
 
-## Verified continuation state (2026-08-10)
+## Historical verified continuation state (2026-08-10)
 
 Owner has reprioritized the active route to `TWIN-001_ST_DENIS_STAGING_TWIN`.
 The former `STG-009 Phase A -> Chinatown Phase B -> REL-001` route remains

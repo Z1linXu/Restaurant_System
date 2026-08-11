@@ -1,6 +1,21 @@
 # Current Project Handoff
 
-## Current reconstruction execution override (2026-08-10)
+## Current operational Twin readiness override (2026-08-10)
+
+The approved reconstruction loop completed on exact Staging
+`53209823fa320cc56c31d04ee5c7719a83a78acc` / Flyway V10. Manifest v2 parity,
+independent Staff credentials, safe automated order/beverage smoke and final
+health passed; `BLOCKING_BEHAVIOR_DIFFERENCE=0`. Production remained unchanged
+and read-only at `4667f3c35f85c9f8538f82789d9df1531d4fbc9e` / V7. See
+[operational Twin evidence](TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md).
+
+Current stop:
+`TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`.
+Next Owner Gate: `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`. Do not start the manual
+field test, hardware gates, Chinatown, modularization, REL-001 or Production
+promotion from this handoff alone.
+
+## Historical reconstruction execution override (2026-08-10)
 
 Owner approval `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL` is active. Fresh
 `origin/main=5f89bdeea6f9a6810c0a38d6d94a59b2156bd6ba`; Production remains V7
@@ -64,7 +79,7 @@ stop: `TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION
 Its next Owner Gate was `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`, later
 granted before the current pre-write NO-GO.
 
-## Owner strategic route override (2026-08-10)
+## Historical Owner strategic route override (2026-08-10)
 
 The former `STG-009 Phase A -> Chinatown Phase B -> REL-001` route is preserved
 as historical planning but is deferred. The current route is planning
@@ -84,7 +99,7 @@ checkpoint stop was:
 `TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
 See [TWIN-001 St-Denis Twin Plan](../agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.md).
 
-## Current verified continuation override (2026-08-10)
+## Historical verified continuation override (2026-08-10)
 
 The recent Twin governance closure merges are governance-only in `main`; the
 exact `origin/main` SHA must be freshly fetched before the next action. Staging remains exact
@@ -294,10 +309,10 @@ current rebind or recovery instruction is inherited from it.
 |---|---|
 | Current Feature | `FT-001 Owner Store Onboarding - Chinatown` (deferred) |
 | Current Agile Loop | `TWIN-001_ST_DENIS_STAGING_TWIN` |
-| Current package | Exact `1a3f2e...` remains deployed at V10 with completed synthetic A/B and automated browser-equivalent acceptance. It is a `CURRENT_SYNTHETIC_BASELINE`, not yet a Production-parity Twin. |
-| Feature stop state | `TWIN-001_STAGING_RECONSTRUCTION_APPROVED_DEPENDENCY_REPAIR_IN_PROGRESS` |
+| Current package | Exact `53209823fa320cc56c31d04ee5c7719a83a78acc` is deployed at V10 with complete manifest-v2 parity and safe automated smoke. |
+| Feature stop state | `TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST` |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`: active for the bounded Staging-only writer, parity, safe automated smoke and required exact-SHA rebind. |
+| Current Owner gate | `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`; not started by this handoff. |
 
 Release/promotion navigation follows the canonical [Agile Loop policy](../AGILE_LOOP_OPERATING_MODEL.md#83-canonical-release-promotion-drift-and-recovery-policy):
 freeze an immutable RC after Twin/automated/Owner acceptance, promote the same
@@ -305,17 +320,16 @@ artifact digests, detect drift read-only and sync only after an explicit
 Owner-approved, Owner-triggered Twin sync request, use
 `APPLICATION_ROLLBACK_COMPATIBILITY_GATE`, and treat
 backup existence as distinct from recoverability. These future gates do not
-change the current approved reconstruction-execution stop.
+change the current completed-Twin field-test-wait stop.
 
 ### Permitted work
 
 - Fetch and verify Git/GitHub ground truth.
-- Execute the manifest-v2-bound, zero-delete Staging configuration projection,
-  independent test-credential reconciliation, parity validation and safe
-  automated smoke under the active reconstruction approval.
-- Perform bounded repository/tooling/business-logic dependency repair, tests,
-  Agent 6 review, governance sync, auto-merge, fresh authority recovery and a
-  required exact-SHA Staging rebind before retrying only the failed step.
+- Review retained evidence and perform non-mutating health/parity checks needed
+  to hand the completed Twin to the next Owner gate.
+- Complete this evidence/governance PR under Auto-Merge policy. Its
+  documentation-only merge does not require or authorize another Staging
+  rebind.
 
 ### Prohibited or separately gated work
 
@@ -328,8 +342,10 @@ change the current approved reconstruction-execution stop.
 - Production Store 1 read or mutation.
 - Printer configuration, test print, Pad pairing, or device/Worker mutation.
 - Credential exposure/copy from Production or security-boundary weakening.
-  Staging-only test credential creation/reuse/rotation and safe automated smoke
-  remain explicitly allowed by the active reconstruction approval.
+  Further Staging credential creation/reuse/rotation is no longer authorized
+  by the completed reconstruction approval.
+- Projector/staff replay, another Staging deploy/rebind, or repetition of the
+  completed automated smoke without new bounded authority.
 - Repository merge that fails Operating Model section 16's permanent
   auto-merge gate, Production activation, restore, or destructive database/Git
   commands.

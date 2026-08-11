@@ -1,6 +1,14 @@
 # Known Issues Backlog
 
-Current KI-011 dependency-repair override (2026-08-10): the manifest-v2
+Current TWIN-001 closure override (2026-08-10): KI-011's reconstruction and
+automated-validation portion is resolved. Exact Staging
+`53209823fa320cc56c31d04ee5c7719a83a78acc` / V10 has complete manifest-v2
+parity, independent Staff credentials, safe automated workflow smoke and zero
+blocking behavior difference. It is waiting for the separately approved Owner
+field-test loop at
+`TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`.
+
+Historical KI-011 dependency-repair override (2026-08-10): the manifest-v2
 projector and secret-FD staff reconciler are repository verified. Fresh
 read-only planning accepts the exact synthetic baseline with zero deletes.
 Runtime parity is still pending merge and approved Staging execution; this is
@@ -13,7 +21,7 @@ not yet a Twin PASS.
 > This is the authority for current issue triage. Historical evidence remains
 > in the Phase 3 reports and is not rewritten here.
 
-Current TWIN-001 stop:
+Historical TWIN-001 stop:
 `TWIN-001_STAGING_RECONSTRUCTION_APPROVED_DEPENDENCY_REPAIR_IN_PROGRESS`.
 The reconstruction approval is active; the next TRUE OWNER GATE after
 operational readiness is the Owner field-test loop. Manifest v2 is
@@ -34,19 +42,19 @@ V10 Twin.
 
 ## Active issues
 
-### KI-011 - Production-like St-Denis Twin parity is not yet established
+### KI-011 - Production-like St-Denis Twin parity and automated smoke
 
 | Field | Value |
 |---|---|
 | issue_id | `KI-011` |
 | priority | `P2` governance/product readiness |
 | title | Staging must become a long-lived Production-like St-Denis Operational Twin |
-| observed_behavior | Existing Staging has a verified synthetic St-Denis baseline and automated Owner/browser-equivalent evidence. Manifest v2 corrected the historical input defect; bounded reconstruction tooling is now under dependency-repair review before the approved write. |
+| observed_behavior | Exact Staging `53209823...` / V10 now matches manifest v2, verifies independent Staff credentials, passes safe automated order/beverage smoke and reports zero blocking behavior difference. Owner field testing and separately gated physical hardware flows remain pending. |
 | expected_behavior | Staging reconstructs safe St-Denis operational configuration through shared application code and generic Store logic, with every parity domain classified `MATCH`, `EXPECTED_DIFFERENCE`, `BLOCKING_DIFFERENCE`, or `NOT_YET_VERIFIED`. |
 | operational_impact | Production promotion and the former Chinatown-first route remain deferred until Twin parity and Owner field validation are complete. |
-| current_workaround | Preserve Staging V10 and execute only the manifest-v2-bound zero-delete writer. Do not infer values, downgrade, auto-sync, or re-read Production. |
-| evidence | [manifest v2](runtime/ST_DENIS_TWIN_PARITY_MANIFEST_V2.json), [mapping](runtime/V7_PRODUCTION_TO_V10_TWIN_CONFIGURATION_MAPPING.md), and [completion evidence](runtime/TWIN-001_MANIFEST_V2_COMPLETION_EVIDENCE.md). |
-| status | `STAGING_RECONSTRUCTION_APPROVED_DEPENDENCY_REPAIR_IN_PROGRESS` |
+| current_workaround | Preserve exact Staging V10 Twin state and await the Owner field-test loop. Do not downgrade, auto-sync, re-read Production, or enter separate hardware gates without approval. |
+| evidence | [manifest v2](runtime/ST_DENIS_TWIN_PARITY_MANIFEST_V2.json), [mapping](runtime/V7_PRODUCTION_TO_V10_TWIN_CONFIGURATION_MAPPING.md), [completion evidence](runtime/TWIN-001_MANIFEST_V2_COMPLETION_EVIDENCE.md), and [operational Twin evidence](runtime/TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md). |
+| status | `RESOLVED_FOR_RECONSTRUCTION_AND_AUTOMATED_SMOKE / OWNER_FIELD_TEST_PENDING` |
 | next_gate | `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` after operational readiness |
 | safety_boundary | No raw customer/order/payment data, credentials, secrets, production printer/device endpoints, `SELECT *`, or complete database dump. |
 | last_updated | 2026-08-10 |

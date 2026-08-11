@@ -1,6 +1,17 @@
 # SYSTEM DOCUMENTATION
 
-> 2026-08-10 TWIN-001 reconstruction tooling: Owner approval is active and a
+> 2026-08-10 TWIN-001 operational Twin: exact Staging
+> `53209823fa320cc56c31d04ee5c7719a83a78acc` remains on Flyway V10 and passes
+> complete manifest-v2 parity, independent Staff credential verification,
+> safe automated POS beverage workflow smoke, realtime/health checks and
+> Production continuity with `BLOCKING_BEHAVIOR_DIFFERENCE=0`. Production
+> remained read-only at `4667f3c35f85c9f8538f82789d9df1531d4fbc9e` / V7.
+> Current stop:
+> `TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`.
+> Next Owner Gate: `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`. See
+> [operational Twin evidence](docs/governance/runtime/TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md).
+
+> Historical 2026-08-10 TWIN-001 reconstruction tooling: Owner approval was active and a
 > bounded manifest-v2 projector plus secret-FD staff reconciler is repository
 > verified. Fresh read-only Staging planning accepts the exact retained
 > `4/3/13/38` baseline and plans an in-place, zero-delete projection to
@@ -69,7 +80,7 @@
 > restore-rehearsal readiness. These are future governance gates only; this
 > round performed no runtime action.
 
-## Current verified STG-008 continuation
+## Historical verified STG-008 continuation
 
 Staging is exact `1a3f2e...` at Flyway V10. STG-005A and STG-005B have
 completed PLAN/EXECUTE/REPLAY as `VALIDATED/CREATED/REPLAYED`; the synthetic
@@ -93,6 +104,10 @@ separate from historical evidence snapshots and business implementation details:
 - [TWIN-001 St-Denis Twin Plan](docs/governance/agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.md)
   is the current Owner-approved parity/reconstruction planning authority. It
   does not authorize Twin synchronization or runtime mutation.
+- [TWIN-001 St-Denis Operational Twin Evidence](docs/governance/runtime/TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md)
+  records the exact V10 reconstruction, parity validator, automated smoke,
+  Production continuity, intentional environment differences and field-test
+  gate.
 - [ST-DENIS Twin parity manifest](docs/governance/runtime/ST_DENIS_TWIN_PARITY_MANIFEST.md)
   and [Production inventory evidence](docs/governance/runtime/TWIN-001_PRODUCTION_INVENTORY_EVIDENCE.md)
   record the completed bounded read-only inventory. They authorize no
