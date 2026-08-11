@@ -1,5 +1,20 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-11 Owner field-test three-reliability repair batch: repository repair
+> is under review for Staging-only Owner retest. Android PAD_DIRECT now requests
+> a short pre-output `CLAIMED` lease so a background/screen-off Pad cannot hold
+> a not-yet-started job for minutes; `PRINTING` still uses the conservative
+> physical-output lease and is not blindly reclaimed. Pad menu remains
+> offline-first through the existing IndexedDB complete-snapshot/head model;
+> foreground, focus, online and bounded periodic checks now trigger revision
+> refresh, and a failed refresh keeps the last complete snapshot. Ordering UI
+> now makes `draftSubmissionLocked` visible and disables item/customization
+> actions instead of silently returning. Automatic printing still uses the
+> durable outbox, but dispatch is scheduled by Store+printer key with
+> same-printer FIFO and bounded executor concurrency for unrelated printers. No
+> endpoint, DTO, schema, migration, Production runtime, Production printer, Pad
+> pairing or physical binding is changed.
+
 > 2026-08-11 Production exact-RC result: existing St-Denis Production now runs
 > the immutable backend/frontend artifacts accepted on Staging for application
 > SHA `2661eb76c36dd9aa58db94ceacd278242ef4c9ab`. Flyway advanced only through

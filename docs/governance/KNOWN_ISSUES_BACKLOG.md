@@ -1,5 +1,12 @@
 # Known Issues Backlog
 
+Current Owner field-test repair batch (2026-08-11): the Owner authorized
+`STAGING_THREE_RELIABILITY_REPAIR_BATCH` for three Staging/repository-only
+reliability repairs. The current code package is under review and targets:
+screen-off Pad pre-output claim blocking, long-lived menu snapshot revision
+invalidation plus visible click-lock UX, and accidental global printing outbox
+serialization. Production remains out of scope.
+
 Production-promotion closure (2026-08-11): exact frozen RC
 `RC-ST-DENIS-20260811-2661EB76` is deployed to existing Production St-Denis at
 Flyway V10. Migration, backup/integrity/isolated restore, rollback compatibility,
@@ -77,6 +84,23 @@ V10 Twin.
 | P3 | A UX, process, or governance improvement. |
 
 ## Active issues
+
+### KI-014 - Owner field-test three reliability follow-up repairs
+
+| Field | Value |
+|---|---|
+| issue_id | `KI-014` |
+| priority | `P1` for Pad sleep print blocking; `P2` for menu revision/click-lock and bounded printing latency |
+| title | Pad sleep print blocking, menu revision/click-lock, and accidental global printing latency |
+| observed_behavior | Owner field testing and investigation identified a background/screen-off Pad holding a pre-output print claim long enough to block service, long-lived Pad menu snapshots that can remain on revision N without a visible refresh trigger, click handlers that silently return while a draft is locked, and automatic outbox dispatch that serializes unrelated printers in one scheduler loop. |
+| expected_behavior | An inactive Pad must not indefinitely hold a not-yet-started print job; ambiguous physical `PRINTING` state must not be blindly reprinted; Pad menu cache must remain offline-first but revision-aware; locked drafts must show clear disabled state; unrelated printers should dispatch concurrently while same-printer FIFO remains preserved. |
+| operational_impact | Staging Owner retest should cover physical Pad sleep behavior after repository deploy. Repository tests can prove lifecycle policy, leases, cache atomicity, click-lock UX and bounded keyed scheduling but cannot fully simulate real device screen-off. |
+| current_workaround | Wake the sleeping Pad to release queued output; refresh/reopen Pad browser after Menu Management changes; avoid submitting new print-heavy orders while one printer path is slow. |
+| evidence | [three-reliability repair batch evidence](runtime/STAGING_THREE_RELIABILITY_REPAIR_BATCH_EVIDENCE.md). |
+| status | `REPAIR_UNDER_REVIEW` |
+| target_loop | `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` |
+| safety_boundary | Staging/repository-only; no Production mutation, deploy, restart, Flyway, configuration change, printer contact, credential copy, schema change, physical binding, Pad pairing, Chinatown or modularization. |
+| last_updated | 2026-08-11 |
 
 ### KI-013 - Owner field-test printing display and PAD_DIRECT lifecycle bugs
 

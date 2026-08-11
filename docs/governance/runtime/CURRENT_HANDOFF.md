@@ -1,5 +1,29 @@
 # Current Project Handoff
 
+## Current Owner field-test three-reliability repair batch (2026-08-11)
+
+After exact-RC Production promotion, the Owner resumed
+`OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` and authorized the Staging/repository-only
+`STAGING_THREE_RELIABILITY_REPAIR_BATCH`. Production is out of scope except for
+lightweight continuity observation; no Production deploy, restart, Flyway,
+configuration, printer, Pad, business-data or credential action is authorized.
+
+The active package repairs three bounded field-test findings before Staging
+Owner retest:
+
+1. PAD sleep/background must not indefinitely block another active print worker.
+2. long-lived Pad menu snapshots must be revision-aware while retaining
+   offline-first IndexedDB fallback, and locked drafts must show a visible
+   click-lock state.
+3. automatic printing outbox dispatch must remove accidental global
+   serialization by using bounded Store+printer keyed execution while
+   preserving same-printer FIFO, retry, Store isolation and duplicate safety.
+
+Evidence file:
+[STAGING_THREE_RELIABILITY_REPAIR_BATCH_EVIDENCE](STAGING_THREE_RELIABILITY_REPAIR_BATCH_EVIDENCE.md).
+Current repository stop until Agent 6/PR/merge/Staging regression:
+`STAGING_THREE_RELIABILITY_REPAIR_BATCH_UNDER_REVIEW`.
+
 ## Current Production promotion result (2026-08-11)
 
 Existing Production St-Denis now runs the exact frozen backend/frontend image

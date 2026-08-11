@@ -1,5 +1,12 @@
 # TWIN-001 St-Denis Production-like Staging Twin Plan
 
+> Current field-test reliability batch (2026-08-11): after exact-RC Production
+> promotion, the Owner authorized `STAGING_THREE_RELIABILITY_REPAIR_BATCH` for
+> Staging/repository-only repair of Pad sleep print blocking, Pad menu
+> revision/click-lock behavior, and bounded printing outbox latency. Production
+> is not in scope. Physical printer binding, Pad pairing, Chinatown,
+> modularization and any Production promotion remain separate gates.
+
 > Field-test bug-repair update (2026-08-11): the Owner continued
 > `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` for bounded printing display and
 > PAD_DIRECT lifecycle reliability defects. Repository repair entered `main`

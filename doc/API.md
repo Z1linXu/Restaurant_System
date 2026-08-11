@@ -1,5 +1,16 @@
 # Restaurant System API (MVP)
 
+> Owner field-test three-reliability repair boundary (2026-08-11): no public
+> endpoint or DTO changed. PAD_DIRECT still uses the existing
+> pending/claim/start-print/payload/complete/fail/release surface; the Android
+> worker now requests a shorter pre-output `CLAIMED` lease while preserving the
+> longer `PRINTING` lease for ambiguous physical output. Automatic printing
+> still enters the durable outbox and returns independently of order submission;
+> repository dispatch is now Store+printer keyed, same-key FIFO and bounded by
+> the configured print executor. Menu catalog API shape is unchanged; Pad/Web
+> clients use the existing revisioned catalog plus local IndexedDB snapshots for
+> revision-aware, offline-first refresh.
+
 > Owner field-test printing repair boundary (2026-08-11): no endpoint or DTO
 > changed. PAD_DIRECT keeps the existing pending/claim/start-print/payload/
 > complete/fail/release API surface. The Android worker lifecycle repair keeps

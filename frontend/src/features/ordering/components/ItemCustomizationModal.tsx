@@ -31,6 +31,8 @@ interface ItemCustomizationModalProps {
   onClose: () => void
   onChange: (nextDraft: ItemCustomizationDraft) => void
   onSubmit: () => void
+  submitDisabled?: boolean
+  submitDisabledReason?: string
 }
 
 function ChoiceButton({
@@ -151,6 +153,8 @@ export function ItemCustomizationModal({
   onClose,
   onChange,
   onSubmit,
+  submitDisabled = false,
+  submitDisabledReason,
 }: ItemCustomizationModalProps) {
   const customization = item.customization
   const compact = useIpadLandscape()
@@ -560,7 +564,16 @@ export function ItemCustomizationModal({
               </div>
             </div>
 
-            <Button className={compact ? 'min-h-12 rounded-[18px] px-6 text-[0.95rem]' : 'min-h-16 rounded-[24px] px-8 text-lg'} onClick={onSubmit}>
+            {submitDisabled && submitDisabledReason ? (
+              <div className="rounded-[16px] bg-[rgba(151,34,34,0.08)] px-4 py-3 text-[0.9rem] font-bold text-[rgb(116,22,22)]">
+                {submitDisabledReason}
+              </div>
+            ) : null}
+            <Button
+              className={compact ? 'min-h-12 rounded-[18px] px-6 text-[0.95rem]' : 'min-h-16 rounded-[24px] px-8 text-lg'}
+              onClick={onSubmit}
+              disabled={submitDisabled}
+            >
               {mode === 'add' ? 'Add to Order / 添加到订单' : 'Update Item / 更新菜品'}
             </Button>
           </div>

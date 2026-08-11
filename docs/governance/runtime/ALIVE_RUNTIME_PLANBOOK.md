@@ -1,5 +1,32 @@
 # Alive Runtime Planbook
 
+## Current Owner field-test three-reliability repair batch (2026-08-11)
+
+The Owner authorized `STAGING_THREE_RELIABILITY_REPAIR_BATCH` inside
+`OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` after exact-RC Production promotion. The
+package is Staging/repository-only and must not mutate, restart, deploy,
+migrate, reconfigure, or contact Production printers/Devices. Production now
+runs the exact promoted RC at Flyway V10; Staging remains the validation
+environment.
+
+Repository repair is in progress for three bounded field-test issues:
+
+- `PAD_SLEEP_PRINT_BLOCKING_REPAIR`: shorten only the Android pre-output
+  `CLAIMED` lease so a background/screen-off Pad cannot hold a not-yet-started
+  job indefinitely; keep `PRINTING` recovery conservative to avoid blind
+  duplicate output.
+- `PAD_MENU_REVISION_AND_CLICK_LOCK_REPAIR`: keep the IndexedDB
+  offline-first menu snapshot model, add visibility/focus/online/periodic
+  revision checks, and expose a clear disabled state while a draft is locked.
+- `PRINTING_BOUNDED_SCHEDULING_LATENCY_REPAIR`: preserve durable outbox and
+  same-printer FIFO while using bounded Store+printer keyed dispatch chains so
+  unrelated printers do not wait behind one slow printer.
+
+Evidence is being recorded in
+[three-reliability repair batch evidence](STAGING_THREE_RELIABILITY_REPAIR_BATCH_EVIDENCE.md).
+Current repository stop until PR/merge/deploy/regression completes:
+`STAGING_THREE_RELIABILITY_REPAIR_BATCH_UNDER_REVIEW`.
+
 ## Current exact-RC Production promotion result (2026-08-11)
 
 Owner-authorized `RC-ST-DENIS-20260811-2661EB76` promoted the exact
