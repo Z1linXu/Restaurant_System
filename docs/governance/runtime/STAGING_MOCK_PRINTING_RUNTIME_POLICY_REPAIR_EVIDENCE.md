@@ -1,6 +1,6 @@
 # Staging MOCK Printing Runtime Policy Repair Evidence
 
-> Status: `REPOSITORY_REPAIR_IN_PROGRESS`
+> Status: `REPOSITORY_REPAIR_VERIFIED_WAITING_FOR_AGENT6_PR`
 >
 > Package: `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT`
 >
@@ -42,10 +42,14 @@ Print Jobs. Production container identity and health were unchanged.
 ## Verification state
 
 - Focused printing/outbox tests: 26 passed.
+- Full backend regression: 394 tests, zero failures, zero errors, three
+  pre-existing skips.
 - Staging guard regression: passed, including MOCK pair acceptance and
   rejection of expanded mode allowlists or endpoint configuration.
-- Full regressions, final scope scans, Agent 6, PR/merge and exact-SHA Staging
-  runtime validation remain pending in this repository repair record.
+- All 14 deployment shell test files passed after the fake Compose fixtures
+  were updated to represent the new two-property application policy.
+- Agent 6, PR/merge and exact-SHA Staging runtime validation remain pending in
+  this repository repair record.
 
 No Staging or Production mutation, migration, restart, printer contact,
 endpoint write, Pad pairing, order creation or credential read occurred during
@@ -53,4 +57,4 @@ this repair phase.
 
 ## Stop state
 
-`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT_DEPENDENCY_REPAIR_IN_PROGRESS`
+`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT_REPAIR_VERIFIED_WAITING_FOR_AGENT6_PR`

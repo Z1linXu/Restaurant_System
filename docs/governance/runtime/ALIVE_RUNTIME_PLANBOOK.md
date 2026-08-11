@@ -18,7 +18,7 @@ Staging fixed to `DISABLED,MOCK` and endpoint configuration disabled. See the
 [runtime-policy repair evidence](STAGING_MOCK_PRINTING_RUNTIME_POLICY_REPAIR_EVIDENCE.md).
 
 Current stop:
-`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT_DEPENDENCY_REPAIR_IN_PROGRESS`.
+`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT_REPAIR_VERIFIED_WAITING_FOR_AGENT6_PR`.
 After tests, Agent 6, PR and auto-merge, the approved loop may perform the
 required exact-SHA Staging rebind, private environment change, Store-scoped
 MOCK transition and automated synthetic smoke. Production mutation, real/home

@@ -60,7 +60,7 @@ V10 Twin.
 | operational_impact | Owner cannot safely inspect real Print Center behavior or synthetic tickets in the Operational Twin. |
 | current_workaround | Keep Staging `DISABLED/false` until the reviewed repair is merged and deployed. |
 | evidence | [Staging MOCK runtime-policy repair evidence](runtime/STAGING_MOCK_PRINTING_RUNTIME_POLICY_REPAIR_EVIDENCE.md). |
-| status | `DEPENDENCY_REPAIR_IN_PROGRESS` |
+| status | `REPOSITORY_REPAIR_VERIFIED_WAITING_FOR_AGENT6_PR` |
 | target_loop | `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` |
 | safety_boundary | Staging only; no Production mutation, real endpoint, socket contact, Pad pairing, migration or destructive reset. |
 | last_updated | 2026-08-11 |
