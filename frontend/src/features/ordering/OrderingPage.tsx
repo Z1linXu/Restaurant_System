@@ -297,6 +297,18 @@ export function OrderingPage({
               ? '菜单刷新失败，继续使用本机缓存菜单。'
               : null
 
+  const draftSubmissionLockMessage = draftSubmissionLocked
+    ? localSubmitState === 'SUBMITTING'
+      ? '订单正在提交到后端，暂时不能继续点菜。'
+      : localSubmitState === 'QUEUED'
+        ? '订单已进入待提交队列。如需修改，请先在订单栏选择“返回修改”。'
+        : localSubmitState === 'FAILED_RETRYABLE'
+          ? '订单等待自动重试。如需修改，请先返回修改。'
+          : localSubmitState === 'CONFLICT' || localSubmitState === 'FAILED_VALIDATION'
+            ? '订单需要处理同步冲突或菜单校验问题，请先在订单栏处理。'
+            : '订单正在同步，暂时不能继续点菜。'
+    : null
+
   useEffect(() => {
     if (!activeCategoryId && categories[0]?.id) {
       setActiveCategoryId(categories[0].id)
@@ -655,6 +667,12 @@ export function OrderingPage({
           </div>
         ) : null}
 
+        {draftSubmissionLockMessage ? (
+          <div className="rounded-[20px] border border-[rgba(151,34,34,0.22)] bg-[rgba(151,34,34,0.08)] px-5 py-3 text-[0.95rem] font-bold text-[rgb(116,22,22)]">
+            {draftSubmissionLockMessage}
+          </div>
+        ) : null}
+
         {lastLocalSavedAt ? (
           <div className="text-right text-xs font-semibold text-[var(--muted)]">
             本机草稿已保存：{new Date(lastLocalSavedAt).toLocaleTimeString()}
@@ -700,6 +718,8 @@ export function OrderingPage({
                     quickAddState={quickAddStates[item.id] ?? 'idle'}
                     orderedQuantity={orderedQuantityByMenuItemId.get(item.id) ?? 0}
                     canDecrement={!draftSubmissionLocked && latestMutableItemByMenuItemId.has(item.id)}
+                    disabled={draftSubmissionLocked}
+                    disabledReason={draftSubmissionLockMessage ?? undefined}
                     compact={isIpadLandscape}
                   />
                 ))}
@@ -761,6 +781,8 @@ export function OrderingPage({
           onClose={closeCustomizationModal}
           onChange={(nextDraft) => setCustomizationState((current) => (current ? { ...current, draft: nextDraft } : null))}
           onSubmit={() => void handleModalSubmit()}
+          submitDisabled={draftSubmissionLocked}
+          submitDisabledReason={draftSubmissionLockMessage ?? undefined}
         />
       ) : null}
 

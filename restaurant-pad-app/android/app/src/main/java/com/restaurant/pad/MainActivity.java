@@ -84,6 +84,8 @@ public class MainActivity extends Activity {
     private static final long PAD_DIRECT_WATCHDOG_INTERVAL_MS = 5000;
     private static final long PAD_DIRECT_STALE_POLL_MS = 10000;
     private static final int PAD_DIRECT_MAX_CONSECUTIVE_ERRORS = 3;
+    private static final int PAD_DIRECT_PRE_PRINT_CLAIM_LEASE_SECONDS = 30;
+    private static final int PAD_DIRECT_PRINTING_LEASE_SECONDS = 300;
 
     private WebView webView;
     private SharedPreferences preferences;
@@ -1542,7 +1544,7 @@ public class MainActivity extends Activity {
                 stepStartedAt = System.currentTimeMillis();
                 JSONObject claimRequest = new JSONObject();
                 claimRequest.put("client_attempt_token", attemptToken);
-                claimRequest.put("lease_seconds", 300);
+                claimRequest.put("lease_seconds", PAD_DIRECT_PRE_PRINT_CLAIM_LEASE_SECONDS);
                 HttpResult claimResult = postDeviceJson("/api/v1/printing/jobs/" + jobId + "/claim", claimRequest);
                 logWorkerDuration("claim_duration_ms", jobId, stepStartedAt);
                 if (claimResult.status == 401 || claimResult.status == 403) {
@@ -1590,7 +1592,7 @@ public class MainActivity extends Activity {
                 stepStartedAt = System.currentTimeMillis();
                 JSONObject startPrintRequest = new JSONObject();
                 startPrintRequest.put("client_attempt_token", attemptToken);
-                startPrintRequest.put("lease_seconds", 300);
+                startPrintRequest.put("lease_seconds", PAD_DIRECT_PRINTING_LEASE_SECONDS);
                 HttpResult startPrintResult = postDeviceJson("/api/v1/printing/jobs/" + jobId + "/start-print", startPrintRequest);
                 logWorkerDuration("start_print_duration_ms", jobId, stepStartedAt);
                 requireSuccessResponse(startPrintResult, "标记开始打印失败");

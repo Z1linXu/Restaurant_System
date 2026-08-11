@@ -6,11 +6,9 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import jakarta.persistence.LockModeType;
 
 public interface OrderDispatchOutboxRepository extends JpaRepository<OrderDispatchOutbox, Long> {
 
@@ -58,12 +56,27 @@ public interface OrderDispatchOutboxRepository extends JpaRepository<OrderDispat
         @Param("now") LocalDateTime now
     );
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         select event from OrderDispatchOutbox event
-        where event.status = 'PENDING'
+        where event.status in ('PENDING', 'PROCESSING')
           and event.nextAttemptAt <= :now
         order by event.id asc
         """)
-    List<OrderDispatchOutbox> findDueForUpdate(@Param("now") LocalDateTime now, Pageable pageable);
+    List<OrderDispatchOutbox> findDueForDispatch(@Param("now") LocalDateTime now, Pageable pageable);
+
+    @Modifying
+    @Query("""
+        update OrderDispatchOutbox event
+        set event.status = 'PROCESSING',
+            event.nextAttemptAt = :leaseExpiresAt,
+            event.updatedAt = :now
+        where event.id = :id
+          and event.status in ('PENDING', 'PROCESSING')
+          and event.nextAttemptAt <= :now
+        """)
+    int claimDueForProcessing(
+        @Param("id") Long id,
+        @Param("now") LocalDateTime now,
+        @Param("leaseExpiresAt") LocalDateTime leaseExpiresAt
+    );
 }

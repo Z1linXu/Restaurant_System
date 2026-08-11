@@ -9,6 +9,8 @@ interface MenuItemCardProps {
   quickAddState?: 'idle' | 'adding' | 'added'
   orderedQuantity?: number
   canDecrement?: boolean
+  disabled?: boolean
+  disabledReason?: string
   compact?: boolean
 }
 
@@ -20,6 +22,8 @@ export function MenuItemCard({
   quickAddState = 'idle',
   orderedQuantity = 0,
   canDecrement = false,
+  disabled = false,
+  disabledReason,
   compact = false,
 }: MenuItemCardProps) {
   const addLabel = quickAddState === 'adding' ? '...' : quickAddState === 'added' ? 'Added' : '+'
@@ -28,10 +32,19 @@ export function MenuItemCard({
   return (
     <div
       role="button"
-      tabIndex={0}
-      className="text-left"
-      onClick={() => onSelect(item)}
+      aria-disabled={disabled}
+      title={disabled ? disabledReason : undefined}
+      tabIndex={disabled ? -1 : 0}
+      className={`text-left ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+      onClick={() => {
+        if (!disabled) {
+          onSelect(item)
+        }
+      }}
       onKeyDown={(event) => {
+        if (disabled) {
+          return
+        }
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault()
           onSelect(item)
@@ -83,12 +96,12 @@ export function MenuItemCard({
                   type="button"
                   onClick={async (event) => {
                     event.stopPropagation()
-                    if (!canDecrement) {
+                    if (disabled || !canDecrement) {
                       return
                     }
                     await onDecrement?.(item)
                   }}
-                  disabled={!canDecrement}
+                  disabled={disabled || !canDecrement}
                   className={`inline-flex items-center justify-center rounded-full bg-white/85 transition disabled:cursor-not-allowed disabled:opacity-35 ${compact ? 'h-8 w-8 text-[1rem]' : 'h-9 w-9 text-[1.1rem]'}`}
                   aria-label={`Remove one ${item.nameEn}`}
                 >
@@ -101,9 +114,12 @@ export function MenuItemCard({
                   type="button"
                   onClick={async (event) => {
                     event.stopPropagation()
+                    if (disabled) {
+                      return
+                    }
                     await onQuickAdd?.(item)
                   }}
-                  disabled={!onQuickAdd || quickAddState === 'adding'}
+                  disabled={disabled || !onQuickAdd || quickAddState === 'adding'}
                   className={`inline-flex items-center justify-center rounded-full font-bold text-[var(--on-primary)] shadow-[0_10px_22px_rgba(97,0,0,0.18)] transition disabled:cursor-not-allowed disabled:opacity-45 ${
                     quickAddState === 'added'
                       ? 'scale-105 bg-[var(--secondary)]'
@@ -119,9 +135,12 @@ export function MenuItemCard({
                 type="button"
                 onClick={async (event) => {
                   event.stopPropagation()
+                  if (disabled) {
+                    return
+                  }
                   await onQuickAdd(item)
                 }}
-                disabled={quickAddState === 'adding'}
+                disabled={disabled || quickAddState === 'adding'}
                 className={`inline-flex items-center justify-center rounded-full font-bold text-[var(--on-primary)] shadow-[0_10px_22px_rgba(97,0,0,0.18)] transition ${
                   quickAddState === 'added'
                     ? 'scale-105 bg-[var(--secondary)]'

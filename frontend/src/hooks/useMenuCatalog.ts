@@ -228,6 +228,7 @@ export type MenuRefreshStatus =
   | 'AUTH_REQUIRED'
 
 const CACHE_STALE_AFTER_MS = 24 * 60 * 60 * 1000
+const MENU_REVISION_PERIODIC_CHECK_MS = 60 * 1000
 
 function buildScope(storeId: number, identity: MenuCatalogIdentity): MenuCacheScope | null {
   if (identity.accountId == null || identity.organizationId == null) {
@@ -395,6 +396,30 @@ export function useMenuCatalog(storeId: number, identity: MenuCatalogIdentity) {
       active = false
     }
   }, [accountId, organizationId, refreshRequest, scopeKey, storeId])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return
+    }
+
+    const requestForegroundRefresh = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine !== false) {
+        setRefreshRequest((current) => current + 1)
+      }
+    }
+    const intervalId = window.setInterval(requestForegroundRefresh, MENU_REVISION_PERIODIC_CHECK_MS)
+
+    window.addEventListener('focus', requestForegroundRefresh)
+    window.addEventListener('online', requestForegroundRefresh)
+    document.addEventListener('visibilitychange', requestForegroundRefresh)
+
+    return () => {
+      window.clearInterval(intervalId)
+      window.removeEventListener('focus', requestForegroundRefresh)
+      window.removeEventListener('online', requestForegroundRefresh)
+      document.removeEventListener('visibilitychange', requestForegroundRefresh)
+    }
+  }, [scopeKey])
 
   const categories = useMemo(() => catalog?.categories ?? [], [catalog])
   const items = useMemo(() => catalog?.items ?? [], [catalog])
