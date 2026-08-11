@@ -1,7 +1,9 @@
 # SYSTEM DOCUMENTATION
 
 > 2026-08-11 Owner field-test three-reliability repair batch: repository repair
-> is under review for Staging-only Owner retest. Android PAD_DIRECT now requests
+> entered `main` through PR #122 and exact Staging deployed
+> `3ec4d88a47f68e05b92d9246bfd63af2d1f297f9` for Owner retest. Android
+> PAD_DIRECT now requests
 > a short pre-output `CLAIMED` lease so a background/screen-off Pad cannot hold
 > a not-yet-started job for minutes; `PRINTING` still uses the conservative
 > physical-output lease and is not blindly reclaimed. Pad menu remains
@@ -13,7 +15,8 @@
 > durable outbox, but dispatch is scheduled by Store+printer key with
 > same-printer FIFO and bounded executor concurrency for unrelated printers. No
 > endpoint, DTO, schema, migration, Production runtime, Production printer, Pad
-> pairing or physical binding is changed.
+> pairing or physical binding is changed. Staging health and automated MOCK
+> smoke passed; real physical Pad sleep behavior remains Owner retest scope.
 
 > 2026-08-11 Production exact-RC result: existing St-Denis Production now runs
 > the immutable backend/frontend artifacts accepted on Staging for application

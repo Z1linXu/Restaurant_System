@@ -1,18 +1,21 @@
 # Feature Backlog
 
-## Active Owner field-test three-reliability repair batch (2026-08-11)
+## Completed Owner field-test three-reliability repair batch (2026-08-11)
 
-- `PAD_SLEEP_PRINT_BLOCKING_REPAIR`: `UNDER_REVIEW`; repository change shortens
-  Android pre-output `CLAIMED` lease while preserving conservative
-  `PRINTING` handling for ambiguous physical-output state.
-- `PAD_MENU_REVISION_AND_CLICK_LOCK_REPAIR`: `UNDER_REVIEW`; repository change
-  keeps IndexedDB offline snapshots and adds visibility/focus/online/periodic
-  revision checks plus visible disabled UX when a draft is locked.
-- `PRINTING_BOUNDED_SCHEDULING_LATENCY_REPAIR`: `UNDER_REVIEW`; repository
-  change keeps durable outbox and same-printer FIFO while enabling bounded
-  Store+printer keyed concurrency for unrelated printers.
+- `PAD_SLEEP_PRINT_BLOCKING_REPAIR`: `DEPLOYED_TO_STAGING`; repository change
+  shortens Android pre-output `CLAIMED` lease while preserving conservative
+  `PRINTING` handling for ambiguous physical-output state. Owner physical Pad
+  retest remains required for real screen-off confirmation.
+- `PAD_MENU_REVISION_AND_CLICK_LOCK_REPAIR`: `DEPLOYED_TO_STAGING`; repository
+  change keeps IndexedDB offline snapshots and adds visibility/focus/online/
+  periodic revision checks plus visible disabled UX when a draft is locked.
+- `PRINTING_BOUNDED_SCHEDULING_LATENCY_REPAIR`: `DEPLOYED_TO_STAGING`;
+  repository change keeps durable outbox and same-printer FIFO while enabling
+  bounded Store+printer keyed concurrency for unrelated printers.
 
-Scope remains Staging/repository-only. Production promotion, Chinatown,
+PR #122 merged and exact Staging
+`3ec4d88a47f68e05b92d9246bfd63af2d1f297f9` passed health and automated MOCK
+smoke. Scope remained Staging/repository-only. Production promotion, Chinatown,
 modularization, schema/Flyway changes, physical printer binding, Pad pairing
 and Production configuration remain excluded.
 

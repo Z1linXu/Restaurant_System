@@ -1,11 +1,11 @@
 # Known Issues Backlog
 
-Current Owner field-test repair batch (2026-08-11): the Owner authorized
-`STAGING_THREE_RELIABILITY_REPAIR_BATCH` for three Staging/repository-only
-reliability repairs. The current code package is under review and targets:
-screen-off Pad pre-output claim blocking, long-lived menu snapshot revision
-invalidation plus visible click-lock UX, and accidental global printing outbox
-serialization. Production remains out of scope.
+Current Owner field-test repair batch (2026-08-11): the Owner-authorized
+`STAGING_THREE_RELIABILITY_REPAIR_BATCH` completed through PR #122 and exact
+Staging deploy at `3ec4d88a47f68e05b92d9246bfd63af2d1f297f9`. Repository and
+Staging smoke passed for screen-off Pad pre-output claim blocking, long-lived
+menu snapshot revision invalidation plus visible click-lock UX, and accidental
+global printing outbox serialization. Production remained out of scope.
 
 Production-promotion closure (2026-08-11): exact frozen RC
 `RC-ST-DENIS-20260811-2661EB76` is deployed to existing Production St-Denis at
@@ -22,10 +22,10 @@ Historical Production-promotion preparation update (2026-08-11): the Owner's fre
 acceptance attestation closes KI-013 as a release blocker for
 `2661eb76c36dd9aa58db94ceacd278242ef4c9ab`. The former relative Production
 state-root, mutable rebuild, combined start and unproven backup-tooling gaps are
-addressed by a bounded dependency repair now under Agent 6 review. They remain
-runtime `NO_GO` until merged and validated. Old-app-on-V10 compatibility,
-V7-to-V10 rehearsal, isolated restore, fresh backup and final RC freeze remain
-open mandatory evidence gates; no Production deploy has occurred.
+addressed by the later bounded dependency repair, Agent 6 review, merge and
+promotion-gate validation. The exact RC was subsequently promoted through the
+current Production-promotion evidence; this paragraph is retained only as a
+superseded checkpoint.
 Historical stop (superseded):
 `RC_PREPARED_WAITING_FOR_MANDATORY_PROMOTION_GATES`.
 
@@ -59,7 +59,7 @@ not yet a Twin PASS.
 
 > Status: `ACTIVE_GOVERNANCE_BACKLOG`
 >
-> Last updated: 2026-08-10, America/Toronto
+> Last updated: 2026-08-11, America/Toronto
 >
 > This is the authority for current issue triage. Historical evidence remains
 > in the Phase 3 reports and is not rewritten here.
@@ -94,10 +94,10 @@ V10 Twin.
 | title | Pad sleep print blocking, menu revision/click-lock, and accidental global printing latency |
 | observed_behavior | Owner field testing and investigation identified a background/screen-off Pad holding a pre-output print claim long enough to block service, long-lived Pad menu snapshots that can remain on revision N without a visible refresh trigger, click handlers that silently return while a draft is locked, and automatic outbox dispatch that serializes unrelated printers in one scheduler loop. |
 | expected_behavior | An inactive Pad must not indefinitely hold a not-yet-started print job; ambiguous physical `PRINTING` state must not be blindly reprinted; Pad menu cache must remain offline-first but revision-aware; locked drafts must show clear disabled state; unrelated printers should dispatch concurrently while same-printer FIFO remains preserved. |
-| operational_impact | Staging Owner retest should cover physical Pad sleep behavior after repository deploy. Repository tests can prove lifecycle policy, leases, cache atomicity, click-lock UX and bounded keyed scheduling but cannot fully simulate real device screen-off. |
+| operational_impact | Staging Owner retest should cover physical Pad sleep behavior after repository deploy. Repository tests proved lifecycle policy, leases, cache atomicity, click-lock UX and bounded keyed scheduling; real device screen-off remains `OWNER_PHYSICAL_PAD_RETEST_REQUIRED`. |
 | current_workaround | Wake the sleeping Pad to release queued output; refresh/reopen Pad browser after Menu Management changes; avoid submitting new print-heavy orders while one printer path is slow. |
 | evidence | [three-reliability repair batch evidence](runtime/STAGING_THREE_RELIABILITY_REPAIR_BATCH_EVIDENCE.md). |
-| status | `REPAIR_UNDER_REVIEW` |
+| status | `DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST` |
 | target_loop | `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` |
 | safety_boundary | Staging/repository-only; no Production mutation, deploy, restart, Flyway, configuration change, printer contact, credential copy, schema change, physical binding, Pad pairing, Chinatown or modularization. |
 | last_updated | 2026-08-11 |
