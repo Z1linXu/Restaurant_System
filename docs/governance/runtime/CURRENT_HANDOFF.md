@@ -338,13 +338,16 @@ artifact digests, detect drift read-only and sync only after an explicit
 Owner-approved, Owner-triggered Twin sync request, use
 `APPLICATION_ROLLBACK_COMPATIBILITY_GATE`, and treat
 backup existence as distinct from recoverability. These future gates do not
-change the current completed-Twin field-test-wait stop.
+change the active Owner field-test stop.
 
 ### Permitted work
 
 - Fetch and verify Git/GitHub ground truth.
-- Review retained evidence and perform non-mutating health/parity checks needed
-  to hand the completed Twin to the next Owner gate.
+- Continue Owner manual field testing against the retained Operational Twin and
+  verified MOCK ticket previews.
+- Perform bounded observations and route discovered ordinary bugs through
+  repair, tests, Agent 6, governance and exact-SHA Staging retry under the
+  active loop.
 - Complete this evidence/governance PR under Auto-Merge policy. Its
   documentation-only merge does not require or authorize another Staging
   rebind.
@@ -355,10 +358,11 @@ change the current completed-Twin field-test-wait stop.
   continuation on an old image.
 - Any Production runtime action or further Production configuration read;
   schema/migration change; Staging downgrade, Flyway edit or destructive reset;
-  physical printer binding, Pad pairing, Owner manual field test, Chinatown,
+  physical printer binding, Pad pairing, Chinatown,
   modularization, AL-003/REL-001 or Production promotion.
 - Production Store 1 read or mutation.
-- Printer configuration, test print, Pad pairing, or device/Worker mutation.
+- Real printer/endpoint configuration, physical test print, Pad pairing, or
+  device/Worker mutation. Owner manual MOCK use remains permitted.
 - Credential exposure/copy from Production or security-boundary weakening.
   Further Staging credential creation/reuse/rotation is no longer authorized
   by the completed reconstruction approval.

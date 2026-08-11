@@ -73,12 +73,12 @@ V10 Twin.
 | observed_behavior | Exact Staging `1dd0367...` / V10 retains manifest-v2 parity and independent Staff credentials, passes safe workflow plus MOCK printing smoke, and reports zero blocking behavior difference. Owner field testing is active; physical hardware remains pending. |
 | expected_behavior | Staging reconstructs safe St-Denis operational configuration through shared application code and generic Store logic, with every parity domain classified `MATCH`, `EXPECTED_DIFFERENCE`, `BLOCKING_DIFFERENCE`, or `NOT_YET_VERIFIED`. |
 | operational_impact | Production promotion and the former Chinatown-first route remain deferred until Twin parity and Owner field validation are complete. |
-| current_workaround | Preserve exact Staging V10 Twin state and await the Owner field-test loop. Do not downgrade, auto-sync, re-read Production, or enter separate hardware gates without approval. |
-| evidence | [manifest v2](runtime/ST_DENIS_TWIN_PARITY_MANIFEST_V2.json), [mapping](runtime/V7_PRODUCTION_TO_V10_TWIN_CONFIGURATION_MAPPING.md), [completion evidence](runtime/TWIN-001_MANIFEST_V2_COMPLETION_EVIDENCE.md), and [operational Twin evidence](runtime/TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md). |
+| current_workaround | Preserve exact Staging V10 Twin state and continue the active Owner field-test loop. Do not downgrade, auto-sync, re-read Production, or enter separate hardware gates without approval. |
+| evidence | [manifest v2](runtime/ST_DENIS_TWIN_PARITY_MANIFEST_V2.json), [mapping](runtime/V7_PRODUCTION_TO_V10_TWIN_CONFIGURATION_MAPPING.md), [completion evidence](runtime/TWIN-001_MANIFEST_V2_COMPLETION_EVIDENCE.md), [operational Twin evidence](runtime/TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md), and [MOCK field-test evidence](runtime/STAGING_MOCK_PRINTING_FIELD_TEST_EVIDENCE.md). |
 | status | `RESOLVED_FOR_RECONSTRUCTION_AND_AUTOMATED_SMOKE / OWNER_FIELD_TEST_ACTIVE` |
 | next_gate | Continue `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`; physical printer binding remains a separate runtime gate |
 | safety_boundary | No raw customer/order/payment data, credentials, secrets, production printer/device endpoints, `SELECT *`, or complete database dump. |
-| last_updated | 2026-08-10 |
+| last_updated | 2026-08-11 |
 
 ### KI-010 - Browser login rejected by proxy same-origin contract
 

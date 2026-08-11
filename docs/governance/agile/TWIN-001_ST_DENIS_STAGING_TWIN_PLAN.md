@@ -297,6 +297,8 @@ The reconstructed Twin operates on V10 and passes parity validation and safe
 automated smoke. `SCHEMA` is `CURRENT_PRODUCTION_VERSION_DIFFERENCE` and
 `BLOCKING_BEHAVIOR_DIFFERENCE=0`.
 
-The next TRUE OWNER GATE is `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`; this plan does
-not start the human field test. Production reads/writes, schema actions,
-physical printing/Pad pairing and all deferred routes remain unauthorized.
+`OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` is active. This evidence does not claim the
+Owner's human acceptance result; the next Owner decision signal is field-test
+completion, including “可以进行模块化了” if the Owner chooses to advance.
+Production reads/writes, schema actions, physical printing/Pad pairing and all
+deferred routes remain unauthorized.
