@@ -1,6 +1,23 @@
 # Alive Runtime Planbook
 
-## Current reconstruction execution override (2026-08-10)
+## Current operational Twin readiness override (2026-08-10)
+
+`TWIN-001_STAGING_RECONSTRUCTION_APPROVAL` completed successfully. Exact
+Staging `53209823fa320cc56c31d04ee5c7719a83a78acc` remains on Flyway V10 and
+passes manifest-v2 parity with `BLOCKING_BEHAVIOR_DIFFERENCE=0`, automated
+Owner/Staff/POS beverage workflow smoke, frontend/backend/WebSocket health and
+Production continuity. Production remained read-only at
+`4667f3c35f85c9f8538f82789d9df1531d4fbc9e`/V7. See
+[operational Twin evidence](TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md).
+
+Current stop:
+`TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`.
+Next Owner Gate: `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`. Physical printing,
+positive KDS enablement and Pad pairing remain
+`SEPARATE_OWNER_RUNTIME_GATE_PENDING`; Chinatown, modularization, REL-001 and
+Production promotion remain prohibited.
+
+## Historical reconstruction execution override (2026-08-10)
 
 The Owner granted `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`. Fresh Git Ground
 Truth is `origin/main=5f89bdeea6f9a6810c0a38d6d94a59b2156bd6ba`; retained Production
@@ -83,7 +100,7 @@ deployment, Staging write, or Twin sync occurred. The checkpoint stop was
 Its next Owner Gate was `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`, which the
 Owner later granted before the current pre-write NO-GO.
 
-## Owner strategic route override (2026-08-10)
+## Historical Owner strategic route override (2026-08-10)
 
 The Owner has reprioritized the product route. The former sequence
 `STG-009 Phase A -> Chinatown Phase B -> REL-001 Production RC` is preserved as
@@ -166,9 +183,9 @@ snapshots. Do not copy those reports into this planbook.
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` (deferred by Owner) |
 | Current Agile Loop | `TWIN-001_ST_DENIS_STAGING_TWIN` |
 | Loop type | `OWNER_GATED_PRODUCTION_LIKE_STAGING_PARITY` |
-| Loop status | `STG-008=PASS; STG-009_PHASE_A_OWNER_LOGIN=DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY; TWIN-001=STAGING_RECONSTRUCTION_APPROVED_DEPENDENCY_REPAIR_IN_PROGRESS` |
-| Current package | Exact `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c` remains deployed to isolated Staging at Flyway V10. The bounded reconstruction tooling repair is being reviewed before the approved write begins. |
-| STG-008 state | `PASS` for the completed synthetic topology/source contract, retained in current exact Staging `1a3f2e...`; synthetic Organization, Owner, source Store and credential are ready, with no duplicate/crossover. This is the `CURRENT_SYNTHETIC_BASELINE`, not Twin parity. |
+| Loop status | `STG-008=PASS; STG-009_PHASE_A_OWNER_LOGIN=DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY; TWIN-001=PASS_WAITING_FOR_OWNER_FIELD_TEST` |
+| Current package | Exact `53209823fa320cc56c31d04ee5c7719a83a78acc` is deployed to isolated Staging at Flyway V10 and passes manifest-v2 parity plus safe automated smoke. |
+| STG-008 state | Historical `PASS` synthetic foundation; TWIN-001 reconciled it in place to the current Operational Twin without reset or cross-Store crossover. |
 | STG-009 Phase-A state | `DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY`: prior API/browser-equivalent evidence is retained; Owner manual UI acceptance is no longer the immediate loop. |
 | AL-001 state | `PLAN_COMPLETE` |
 | AL-002 state | PR #27 merged the backend foundation into `main`; Production remains on the older runtime and no production onboarding is established by that merge. |
@@ -182,7 +199,7 @@ snapshots. Do not copy those reports into this planbook.
 | STG-007 state | `PASS` at exact deployed Staging SHA `2837ae88e55142c99c6975f8b6575febffc913a1`. Environment digest `124eb472...`, continuation entry `8d744fa8...`, formal preflight `7174a295...`, readiness `19a8fec2...`, runtime collection `03337e71...`, restart readiness `6392783f...`, and same-image restart `2208d8ca...` all passed. Flyway remained exact V10/no-pending; health returned 200/200/200; exact container/image/release identity, printing, isolation and Production continuity were unchanged. |
 | AL-003 state | PRs #61-#101 are `IN_MAIN`; Chinatown Phase B, validation/clone and REL-001 are `DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY`. Existing code, plans and evidence remain preserved; no Production acceptance result exists. |
 | Staging Owner login prerequisite | Historical synthetic Owner/browser-equivalent foundation is complete; manual Phase-A closure is deferred by the Owner Twin priority. Retrieval remains private; no secret is stored in Git/evidence. |
-| Current permitted work | Under active `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`: bounded zero-delete Staging reconstruction, independent test credentials, parity, safe automated smoke, ordinary dependency repair and required exact-SHA Staging rebind. |
+| Current permitted work | Repository/Git ground-truth verification and read-only evidence review while waiting for `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`. The completed reconstruction approval does not authorize projector/staff replay, credential rotation, another deploy/rebind or field testing. |
 | Explicitly not permitted | Production read/write/deploy/Flyway action; Staging downgrade/Flyway edit/destructive reset; Chinatown; modularization; REL-001; Production promotion; physical printer binding; Pad pairing; or Owner field testing itself. `IN_MAIN`, `DEPLOYED_TO_STAGING`, and `STAGING_ACCEPTED` remain distinct. |
 
 The canonical [release/promotion policy](../AGILE_LOOP_OPERATING_MODEL.md#83-canonical-release-promotion-drift-and-recovery-policy)
