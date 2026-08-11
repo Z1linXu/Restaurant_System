@@ -602,9 +602,11 @@ from current main.
    `AGILE_LOOP_OPERATING_MODEL.md`, `FEATURE_BACKLOG.md`, and the applicable
    technical plan.
 3. Verify current `origin/main`; do not trust the Owner workspace branch tip.
-4. Verify GitHub PR #61 through #112 and independent PR #66 semantics.
+4. Verify historical GitHub PR #61 through #112, independent PR #66, repair PR
+   #114, and the current evidence PR semantics.
 5. Distinguish main, stacked Draft, Staging, and Production state.
-6. Report the completed Operational Twin and the next Owner field-test gate.
+6. Report the completed Operational Twin and continue the active Owner
+   field-test loop from the current stop state.
 7. Do not recreate or redesign packages #61-#70.
 8. Do not infer implementation from the planning packages.
 9. Read the TWIN-001 plan, STG-006, OPS-001, the STG-007 repair/final evidence, all STG-008
@@ -612,11 +614,13 @@ from current main.
    and [browser-equivalent evidence](STG-009_PHASE_A_BROWSER_EQUIVALENT_ACCEPTANCE_EVIDENCE.md).
    Treat `STG-008=PASS` and automated Phase-A API/browser-equivalent acceptance
    on exact historical Staging `1a3f2e...` as foundation evidence. Current
-   exact Staging `53209823...` is the validated Operational Twin.
-10. Wait for `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`. Do not replay reconstruction,
-    read Production, rebind/redeploy Staging, rotate credentials, repeat
-    automated acceptance, start Chinatown onboarding/clone, or implement
-    modules without the later Owner decisions.
+   exact Staging `1dd036737...` is the validated Operational Twin with MOCK
+   printing enabled.
+10. Continue `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`. Do not replay reconstruction,
+    read Production, enter physical hardware gates, start Chinatown
+    onboarding/clone, or implement modules without later Owner decisions.
+    Rebind/redeploy Staging or repeat focused acceptance only when a bounded bug
+    repair in the active loop requires it.
 11. Stop at runtime/product/operations Owner Gates; otherwise continue the
     bounded Agile Loop and Dependency Repair Auto-Loop.
 
