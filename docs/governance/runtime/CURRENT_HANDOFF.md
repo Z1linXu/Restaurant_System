@@ -1,5 +1,19 @@
 # Current Project Handoff
 
+## Current Owner field-test Printing bug repair (2026-08-11)
+
+The current active package is the next `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`
+slice after Staging MOCK printing was verified. The Owner reported GRAB
+abbreviation defects, Frontdesk receipt quantity aggregation, GRAB fried
+quantity symbol mismatch, and a PAD_DIRECT screen-off reliability issue. Issue
+6 is audit-only and does not authorize queue/concurrency behavior changes.
+
+Repository repair is locally verified after resolving Agent 6 lifecycle-safety
+blocks. Agent 6 returned `ACCEPT`; the package is waiting for PR/merge,
+exact-SHA Staging deployment and automated MOCK smoke. Production remains unchanged
+except for allowed lightweight continuity checks. See
+[Owner field-test printing fixes evidence](OWNER_FIELD_TEST_PRINTING_FIXES_EVIDENCE.md).
+
 ## Current Staging MOCK Printing field-test override (2026-08-11)
 
 Owner field testing is active and the bounded package

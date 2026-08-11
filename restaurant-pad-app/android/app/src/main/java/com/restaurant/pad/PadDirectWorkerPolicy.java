@@ -61,4 +61,28 @@ final class PadDirectWorkerPolicy {
             || phase == JobPhase.LOCAL_PRINT_SUCCEEDED
             || phase == JobPhase.COMPLETING;
     }
+
+    static boolean shouldDeferLifecycleStop(
+        boolean workerRunning,
+        boolean stopRequested,
+        boolean activeWorkerJobInProgress,
+        boolean manualJobInProgress
+    ) {
+        return !stopRequested
+            && (activeWorkerJobInProgress || manualJobInProgress)
+            && (workerRunning || manualJobInProgress);
+    }
+
+    static boolean canStartPolledJob(
+        boolean appForeground,
+        boolean workerRunning,
+        boolean stopRequested,
+        long callbackGeneration,
+        long currentGeneration
+    ) {
+        return appForeground
+            && workerRunning
+            && !stopRequested
+            && isCurrentGeneration(callbackGeneration, currentGeneration);
+    }
 }

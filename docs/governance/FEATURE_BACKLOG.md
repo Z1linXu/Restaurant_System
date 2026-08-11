@@ -1,5 +1,14 @@
 # Feature Backlog
 
+## Current Owner field-test Printing bug repair (2026-08-11)
+
+`OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` continues after
+`STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`. The current
+bounded repair covers Owner-confirmed printing display defects, PAD_DIRECT
+screen-off reliability, and an audit-only queue latency explanation. Repository
+repair is locally verified and waiting for Agent 6, PR/merge, exact-SHA
+Staging deployment and Owner retest.
+
 ## Current Owner field-test Printing slice (2026-08-11)
 
 `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` is active for the bounded

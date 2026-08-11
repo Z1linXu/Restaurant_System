@@ -1,5 +1,18 @@
 # Agile Loop Operating Model
 
+## Current Owner field-test Printing bug repair (2026-08-11)
+
+The active loop remains `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`. The Owner
+approved bounded repository/Staging-only repair for field-test printing display
+and PAD_DIRECT lifecycle reliability defects. Ordinary bounded bugs continue
+through root cause, minimal repair, tests, Agent 6, governance sync, PR
+auto-merge, exact-SHA Staging deployment, automated smoke and Owner retest.
+
+Issue 6 in this package is audit-only. Queue/concurrency architecture must not
+change without a separate Owner decision. Production mutation, real printer
+binding, public printer access, Pad pairing, Chinatown, modularization,
+REL-001 and Production promotion remain outside the loop.
+
 ## Current Staging MOCK Printing field-test override (2026-08-11)
 
 The Owner opened `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` and approved

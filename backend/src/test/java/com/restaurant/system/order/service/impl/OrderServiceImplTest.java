@@ -815,6 +815,77 @@ class OrderServiceImplTest {
         assertFalse(tasks.get(0).special_instructions_snapshot.contains("加青"));
     }
 
+    @Test
+    void removeBokChoyKeepsFullKitchenInstructionName() {
+        MenuItemOption removeBokChoy = menuOption(103L, "remove", "remove_bok_choy", "REMOVE", "走上海青", "No Bok Choy", BigDecimal.ZERO);
+        when(menuItemOptionRepository.findById(anyLong())).thenAnswer(invocation -> {
+            Long optionId = invocation.getArgument(0);
+            return removeBokChoy.id.equals(optionId) ? Optional.of(removeBokChoy) : Optional.empty();
+        });
+
+        CreateOrderItemRequest itemRequest = new CreateOrderItemRequest();
+        itemRequest.menu_item_id = menuItem.id;
+        itemRequest.quantity = 1;
+        itemRequest.options = List.of(optionRequest(removeBokChoy.id, 1));
+
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.store_id = store.id;
+        request.created_by = 1L;
+        request.order_type = "dine_in";
+        request.table_no = "T9";
+        request.items = List.of(itemRequest);
+
+        OrderResponse submittedOrder = orderService.submitOrder(orderService.createOrder(request).id);
+        List<KitchenTask> tasks = kitchenTaskRepository.findAllByOrderId(submittedOrder.id);
+
+        assertEquals(1, tasks.size());
+        assertTrue(tasks.get(0).special_instructions_snapshot.contains("走上海青"));
+        assertFalse(tasks.get(0).special_instructions_snapshot.contains("走青"));
+    }
+
+    @Test
+    void coldChickenNoodleHidesThinAndShowsLeekLeafInKitchenInstruction() {
+        menuItem.sku = "cold_noodle_shredded_chicken";
+        menuItem.name_zh = "鸡丝凉面";
+        MenuItemOption thin = menuOption(201L, "noodle_type", "noodle_thin", "NOODLE_TYPE", "细", "Thin", BigDecimal.ZERO);
+        MenuItemOption leekLeaf = menuOption(202L, "noodle_type", "noodle_leek_leaf", "NOODLE_TYPE", "韭叶", "Leek Leaf", BigDecimal.ZERO);
+        when(menuItemOptionRepository.findById(anyLong())).thenAnswer(invocation -> {
+            Long optionId = invocation.getArgument(0);
+            if (thin.id.equals(optionId)) {
+                return Optional.of(thin);
+            }
+            if (leekLeaf.id.equals(optionId)) {
+                return Optional.of(leekLeaf);
+            }
+            return Optional.empty();
+        });
+
+        OrderResponse thinOrder = submitSingleOptionOrder(thin.id, "T-THIN");
+        OrderResponse leekLeafOrder = submitSingleOptionOrder(leekLeaf.id, "T-LEEK");
+
+        KitchenTask thinTask = kitchenTaskRepository.findAllByOrderId(thinOrder.id).get(0);
+        KitchenTask leekLeafTask = kitchenTaskRepository.findAllByOrderId(leekLeafOrder.id).get(0);
+        assertTrue(thinTask.special_instructions_snapshot.contains("鸡凉"));
+        assertFalse(thinTask.special_instructions_snapshot.contains("鸡凉细"));
+        assertTrue(leekLeafTask.special_instructions_snapshot.contains("鸡凉韭"));
+    }
+
+    private OrderResponse submitSingleOptionOrder(Long optionId, String tableNo) {
+        CreateOrderItemRequest itemRequest = new CreateOrderItemRequest();
+        itemRequest.menu_item_id = menuItem.id;
+        itemRequest.quantity = 1;
+        itemRequest.options = List.of(optionRequest(optionId, 1));
+
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.store_id = store.id;
+        request.created_by = 1L;
+        request.order_type = "dine_in";
+        request.table_no = tableNo;
+        request.items = List.of(itemRequest);
+
+        return orderService.submitOrder(orderService.createOrder(request).id);
+    }
+
     private MenuItemOption menuOption(
         Long id,
         String optionType,

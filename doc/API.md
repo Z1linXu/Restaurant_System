@@ -1,5 +1,12 @@
 # Restaurant System API (MVP)
 
+> Owner field-test printing repair boundary (2026-08-11): no endpoint or DTO
+> changed. PAD_DIRECT keeps the existing pending/claim/start-print/payload/
+> complete/fail/release API surface. The Android worker lifecycle repair keeps
+> an in-flight job generation alive across app pause/stop so the existing API
+> can receive complete/fail/recovery calls; it does not create blind
+> `PRINTING` reclaim or any new physical-printer authority.
+
 > TWIN-001 approved reconstruction tooling adds no endpoint or DTO. The
 > Staging-only staff step reuses `/auth/login`, Store-scoped Staff Admin
 > list/update/create, and `/auth/logout`; all passwords enter through an

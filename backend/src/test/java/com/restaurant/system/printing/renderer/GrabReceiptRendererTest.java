@@ -72,10 +72,10 @@ class GrabReceiptRendererTest {
             fried(3L, 301L, "春卷", null, null, null)
         );
 
-        assertTrue(output.contains("2*炸虾"));
-        assertTrue(output.contains("1*春卷"));
-        assertTrue(output.indexOf("2*炸虾") < output.indexOf("1*春卷"));
-        assertFalse(output.contains("1*炸虾\n\n1*炸虾"));
+        assertTrue(output.contains("2×炸虾"));
+        assertTrue(output.contains("1×春卷"));
+        assertTrue(output.indexOf("2×炸虾") < output.indexOf("1×春卷"));
+        assertFalse(output.contains("1×炸虾\n\n1×炸虾"));
     }
 
     @Test
@@ -86,7 +86,7 @@ class GrabReceiptRendererTest {
             fried(3L, 300L, "炸虾", null, null, null)
         );
 
-        assertTrue(output.contains("3*炸虾"));
+        assertTrue(output.contains("3×炸虾"));
         assertEquals(1, countOccurrences(output, "炸虾"));
     }
 
@@ -101,7 +101,7 @@ class GrabReceiptRendererTest {
             fried(6L, 300L, "炸虾", null, "COMBO_EGG", "combo_fried_egg")
         );
 
-        assertEquals(6, countOccurrences(output, "1*炸虾"));
+        assertEquals(6, countOccurrences(output, "1×炸虾"));
         assertTrue(output.contains("备注：不要酱"));
     }
 
@@ -161,6 +161,25 @@ class GrabReceiptRendererTest {
 
         assertTrue(output.contains("加上海青"));
         assertFalse(output.contains("加青"));
+    }
+
+    @Test
+    void keepsRemoveBokChoyFullName() {
+        String output = renderNoodle("走上海青");
+
+        assertTrue(output.contains("走上海青"));
+        assertFalse(output.contains("走青"));
+    }
+
+    @Test
+    void grabFriedQuantityUsesMultiplicationSign() {
+        String output = renderFried(
+            fried(1L, 301L, "春卷", null, null, null),
+            fried(2L, 301L, "春卷", null, null, null)
+        );
+
+        assertTrue(output.contains("2×春卷"));
+        assertFalse(output.contains("2*春卷"));
     }
 
     @Test
@@ -429,12 +448,63 @@ class GrabReceiptRendererTest {
 
         String output = stripMarkup(frontdeskRenderer.render(request));
 
-        assertTrue(output.contains("2* combo 中碗牛肉面"));
+        assertEquals(2, countOccurrences(output, "1* combo 中碗牛肉面"));
+        assertFalse(output.contains("2* combo 中碗牛肉面"));
         assertFalse(output.toLowerCase().contains("regular"));
         assertFalse(output.contains("传统牛肉面"));
         assertTrue(output.contains("辣度: 少辣"));
         assertTrue(output.contains("小菜: 毛豆"));
         assertTrue(output.contains("备注：少汤"));
+    }
+
+    @Test
+    void frontdeskReceiptExpandsIdenticalNoodleQuantityIntoSeparateLines() {
+        FrontdeskReceiptRenderer frontdeskRenderer = new FrontdeskReceiptRenderer();
+        Order order = baseOrder();
+        order.subtotal_amount = new BigDecimal("24.00");
+        order.total_amount = new BigDecimal("27.59");
+        OrderItem item = frontdeskSoupNoodleItem(1L, 2, "传统牛肉面");
+        OrderItemOption size = option(1L, item.id, "size", "SIZE", "size_regular", "中碗");
+
+        PrintRenderRequest request = new PrintRenderRequest();
+        request.module_code = PrintModuleCode.FRONTDESK_RECEIPT;
+        request.order = order;
+        request.order_items = List.of(item);
+        request.order_item_options = List.of(size);
+        request.happened_at = order.submitted_at;
+
+        String output = stripMarkup(frontdeskRenderer.render(request));
+
+        assertEquals(2, countOccurrences(output, "中碗牛肉面"));
+        assertFalse(output.contains("2 x 中碗牛肉面"));
+        assertFalse(output.contains("$12.00 x 2"));
+    }
+
+    @Test
+    void frontdeskReceiptExpandsIdenticalComboQuantityIntoSeparateLines() {
+        FrontdeskReceiptRenderer frontdeskRenderer = new FrontdeskReceiptRenderer();
+        Order order = baseOrder();
+        order.subtotal_amount = new BigDecimal("34.00");
+        order.total_amount = new BigDecimal("39.09");
+        OrderItem item = frontdeskSoupNoodleItem(1L, 2, "传统牛肉面");
+        item.unit_price = new BigDecimal("17.00");
+        item.line_amount = new BigDecimal("34.00");
+        OrderItemOption combo = option(1L, item.id, "addon", "COMBO", "combo", "套餐");
+        combo.price_delta = new BigDecimal("5.00");
+        OrderItemOption size = option(2L, item.id, "size", "SIZE", "size_regular", "中碗");
+
+        PrintRenderRequest request = new PrintRenderRequest();
+        request.module_code = PrintModuleCode.FRONTDESK_RECEIPT;
+        request.order = order;
+        request.order_items = List.of(item);
+        request.order_item_options = List.of(combo, size);
+        request.happened_at = order.submitted_at;
+
+        String output = stripMarkup(frontdeskRenderer.render(request));
+
+        assertEquals(2, countOccurrences(output, "1* combo 中碗牛肉面"));
+        assertFalse(output.contains("2* combo 中碗牛肉面"));
+        assertEquals(2, countOccurrences(output, "$17.00"));
     }
 
     @Test

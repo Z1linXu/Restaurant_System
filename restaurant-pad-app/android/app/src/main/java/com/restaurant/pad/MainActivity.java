@@ -91,6 +91,7 @@ public class MainActivity extends Activity {
     private volatile boolean padDirectJobInProgress = false;
     private final Handler padDirectWorkerHandler = new Handler(Looper.getMainLooper());
     private final AtomicLong padDirectWorkerGenerationCounter = new AtomicLong(0L);
+    private final Object padDirectWorkerLifecycleLock = new Object();
     private volatile long padDirectWorkerGeneration = 0L;
     private volatile Runnable padDirectWorkerPollRunnable;
     private volatile Runnable padDirectWorkerRecoveryRunnable;
@@ -717,6 +718,11 @@ public class MainActivity extends Activity {
     private void clearPadDirectActiveJob() {
         padDirectActiveJob = null;
         preferences.edit().remove(KEY_PAD_DIRECT_ACTIVE_JOB).apply();
+    }
+
+    private boolean hasActivePadDirectJobInProgress() {
+        PadDirectActiveJobContext activeJob = padDirectActiveJob;
+        return activeJob != null && !activeJob.isTerminal();
     }
 
     private void persistPadDirectHighRiskStop(String errorCode, String reason, PadDirectActiveJobContext context) {
@@ -1486,19 +1492,32 @@ public class MainActivity extends Activity {
         long generation
     ) throws Exception {
         long jobStartedAt = System.currentTimeMillis();
-        PadDirectActiveJobContext activeJob = padDirectActiveJob;
-        if (activeJob == null || activeJob.jobId != jobId || !attemptToken.equals(activeJob.attemptToken)) {
-            activeJob = new PadDirectActiveJobContext(
-                jobId,
-                moduleCode,
-                attemptToken,
-                PadDirectWorkerPolicy.JobPhase.CLAIMING,
-                false,
-                false,
-                generation,
-                padDirectWorkerCurrentPrinterEndpoint
-            );
-            persistPadDirectActiveJob(activeJob);
+        PadDirectActiveJobContext activeJob;
+        synchronized (padDirectWorkerLifecycleLock) {
+            activeJob = padDirectActiveJob;
+            if (activeJob == null || activeJob.jobId != jobId || !attemptToken.equals(activeJob.attemptToken)) {
+                if (generation > 0 && !PadDirectWorkerPolicy.canStartPolledJob(
+                    padDirectAppForeground,
+                    padDirectWorkerRunning,
+                    padDirectWorkerStopRequested,
+                    generation,
+                    padDirectWorkerGeneration
+                )) {
+                    Log.i(WORKER_TAG, "Worker Job Begin blocked before claim because lifecycle/generation stopped jobId=" + jobId);
+                    return PadDirectJobResult.idle("App 已离开前台，本轮未领取新打印任务。");
+                }
+                activeJob = new PadDirectActiveJobContext(
+                    jobId,
+                    moduleCode,
+                    attemptToken,
+                    PadDirectWorkerPolicy.JobPhase.CLAIMING,
+                    false,
+                    false,
+                    generation,
+                    padDirectWorkerCurrentPrinterEndpoint
+                );
+                persistPadDirectActiveJob(activeJob);
+            }
         }
         boolean claimed = activeJob.claimed;
         boolean localPrintSent = activeJob.localPrintMayHaveSucceeded;
@@ -2675,7 +2694,19 @@ public class MainActivity extends Activity {
                             + " module=" + moduleCode
                             + " queueDelayMs=" + padDirectWorkerLastJobQueueDelayMs
                             + " printerEndpoint=" + padDirectWorkerCurrentPrinterEndpoint);
-                        workerResult = executePadDirectJob(jobId, moduleCode, attemptToken, generation);
+                        if (!PadDirectWorkerPolicy.canStartPolledJob(
+                            padDirectAppForeground,
+                            padDirectWorkerRunning,
+                            padDirectWorkerStopRequested,
+                            generation,
+                            padDirectWorkerGeneration
+                        )) {
+                            Log.i(WORKER_TAG, "Worker Poll Result ignored before claim because lifecycle/generation stopped jobId=" + jobId);
+                            clearPadDirectCurrentJob();
+                            workerResult = PadDirectJobResult.idle("App 已离开前台，本轮未领取新打印任务。");
+                        } else {
+                            workerResult = executePadDirectJob(jobId, moduleCode, attemptToken, generation);
+                        }
                     }
                 }
                 }
@@ -3134,31 +3165,51 @@ public class MainActivity extends Activity {
     }
 
     private void stopPadDirectWorkerForLifecycle(String reason) {
-        if (padDirectWorkerStoppedForLifecycle && !padDirectWorkerRunning) {
-            Log.i(WORKER_TAG, "Worker Stopped already pending lifecycle resume reason=" + reason);
-            return;
+        synchronized (padDirectWorkerLifecycleLock) {
+            if (padDirectWorkerStoppedForLifecycle && !padDirectWorkerRunning) {
+                Log.i(WORKER_TAG, "Worker Stopped already pending lifecycle resume reason=" + reason);
+                return;
+            }
+            if (PadDirectWorkerPolicy.shouldDeferLifecycleStop(
+                padDirectWorkerRunning,
+                padDirectWorkerStopRequested,
+                hasActivePadDirectJobInProgress(),
+                padDirectJobInProgress
+            )) {
+                boolean shouldResume = padDirectWorkerRunning
+                    && activePadDirectWorkerControls != null
+                    && isPadDirectAutoPrintEnabled();
+                padDirectWorkerStoppedForLifecycle = shouldResume;
+                padDirectWorkerLifecycleResumePending = shouldResume;
+                padDirectWorkerLastStopReason = reason + "-deferred-in-flight";
+                Log.i(WORKER_TAG, "Worker Lifecycle stop deferred reason=" + reason + "; in-flight job will finish before worker stops");
+                setPadDirectWorkerState(PadDirectWorkerState.LIFECYCLE_PAUSED);
+                updatePadDirectKeepScreenOn();
+                updatePadDirectWorkerControls();
+                return;
+            }
+            boolean shouldResume = padDirectWorkerRunning
+                && !padDirectWorkerStopRequested
+                && activePadDirectWorkerControls != null
+                && isPadDirectAutoPrintEnabled();
+            if (shouldResume) {
+                Log.i(WORKER_TAG, "Worker Stopped reason=" + reason + "; worker will resume when app returns to foreground");
+            } else if (padDirectWorkerRunning) {
+                Log.i(WORKER_TAG, "Worker Stopped reason=" + reason + "; no automatic resume");
+            }
+            padDirectWorkerStoppedForLifecycle = shouldResume;
+            padDirectWorkerLifecycleResumePending = shouldResume;
+            padDirectWorkerStopRequested = true;
+            padDirectWorkerRunning = false;
+            padDirectWorkerLastStopReason = reason;
+            invalidatePadDirectWorkerGeneration(reason);
+            clearPadDirectWorkerCallbacks();
+            updatePadDirectKeepScreenOn();
+            setPadDirectWorkerState(padDirectWorkerInProgress || padDirectJobInProgress
+                ? PadDirectWorkerState.LIFECYCLE_PAUSED
+                : PadDirectWorkerState.STOPPED);
+            updatePadDirectWorkerControls();
         }
-        boolean shouldResume = padDirectWorkerRunning
-            && !padDirectWorkerStopRequested
-            && activePadDirectWorkerControls != null
-            && isPadDirectAutoPrintEnabled();
-        if (shouldResume) {
-            Log.i(WORKER_TAG, "Worker Stopped reason=" + reason + "; worker will resume when app returns to foreground");
-        } else if (padDirectWorkerRunning) {
-            Log.i(WORKER_TAG, "Worker Stopped reason=" + reason + "; no automatic resume");
-        }
-        padDirectWorkerStoppedForLifecycle = shouldResume;
-        padDirectWorkerLifecycleResumePending = shouldResume;
-        padDirectWorkerStopRequested = true;
-        padDirectWorkerRunning = false;
-        padDirectWorkerLastStopReason = reason;
-        invalidatePadDirectWorkerGeneration(reason);
-        clearPadDirectWorkerCallbacks();
-        updatePadDirectKeepScreenOn();
-        setPadDirectWorkerState(padDirectWorkerInProgress || padDirectJobInProgress
-            ? PadDirectWorkerState.LIFECYCLE_PAUSED
-            : PadDirectWorkerState.STOPPED);
-        updatePadDirectWorkerControls();
     }
 
     private String tokenLast4(String token) {
