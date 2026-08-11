@@ -1,5 +1,12 @@
 # Known Issues Backlog
 
+Current field-test bug-repair override (2026-08-11): a new bounded
+`OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` repair is in progress for Owner-confirmed
+printing display issues, PAD_DIRECT lifecycle reliability, and audit-only queue
+latency documentation. Repository repair is locally verified after resolving an
+Agent 6 lifecycle-safety block. Agent 6 returned `ACCEPT`; PR/merge, exact-SHA
+Staging deployment and MOCK smoke remain pending.
+
 Current field-test override (2026-08-11): bounded issue `KI-012` is resolved.
 The generic allowlist/endpoint-policy repair entered `main` through PR #114,
 and exact Staging `1dd036737f6cf41c0558f14b7f8343144f718b5a` / V10 now runs
@@ -45,6 +52,23 @@ V10 Twin.
 | P3 | A UX, process, or governance improvement. |
 
 ## Active issues
+
+### KI-013 - Owner field-test printing display and PAD_DIRECT lifecycle bugs
+
+| Field | Value |
+|---|---|
+| issue_id | `KI-013` |
+| priority | `P1` for PAD_DIRECT reliability, `P2` for receipt display; Staging/field-test scope |
+| title | Owner field-test printing display and Pad lifecycle defects |
+| observed_behavior | GRAB printed `走上海青` as `走青`; chicken cold noodle printed `鸡凉细` for thin and omitted `韭` for leek leaf; Frontdesk receipt collapsed quantity lines; GRAB fried quantities used `*`; an inactive/screen-off Pad could leave printing dependent on all Pads returning foreground; queue latency was unclear. |
+| expected_behavior | GRAB keeps `走上海青`, chicken cold noodle hides thin and appends `韭` for leek leaf, Frontdesk prints each noodle/combo serving separately, GRAB fried quantity uses `×`, in-flight Pad jobs complete/fail without lifecycle generation loss, and queue latency is documented without behavior change. |
+| operational_impact | Owner cannot confidently field-test Staging MOCK/PAD_DIRECT printing behavior until these repairs are deployed and smoke-tested. |
+| current_workaround | Keep using Staging MOCK for automated smoke; do not bind real printers or pair Pads beyond approved gates. |
+| evidence | [Owner field-test printing fixes evidence](runtime/OWNER_FIELD_TEST_PRINTING_FIXES_EVIDENCE.md). |
+| status | `AGENT6_ACCEPT_WAITING_FOR_PR_MERGE_STAGING_DEPLOY` |
+| target_loop | `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` |
+| safety_boundary | No Production mutation, real printer endpoint, Production printer contact, secret copy, schema migration, destructive reset, Chinatown, modularization, REL-001, or Production promotion. |
+| last_updated | 2026-08-11 |
 
 ### KI-012 - Staging server MOCK lacks a fail-closed runtime mode ceiling
 

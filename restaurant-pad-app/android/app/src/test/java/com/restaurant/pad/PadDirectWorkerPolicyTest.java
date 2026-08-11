@@ -40,4 +40,87 @@ public class PadDirectWorkerPolicyTest {
         assertTrue(PadDirectWorkerPolicy.isAmbiguousOutputPhase(PadDirectWorkerPolicy.JobPhase.LOCAL_PRINT_SUCCEEDED));
         assertFalse(PadDirectWorkerPolicy.isAmbiguousOutputPhase(PadDirectWorkerPolicy.JobPhase.CLAIMED));
     }
+
+    @Test
+    public void lifecyclePauseDefersStopWhileWorkerJobIsInFlight() {
+        assertFalse(PadDirectWorkerPolicy.shouldDeferLifecycleStop(true, false, false, false));
+        assertTrue(PadDirectWorkerPolicy.shouldDeferLifecycleStop(true, false, true, false));
+        assertTrue(PadDirectWorkerPolicy.shouldDeferLifecycleStop(false, false, false, true));
+        assertFalse(PadDirectWorkerPolicy.shouldDeferLifecycleStop(true, true, true, false));
+        assertFalse(PadDirectWorkerPolicy.shouldDeferLifecycleStop(true, false, false, false));
+    }
+
+    @Test
+    public void stoppedGenerationCannotStartPolledJob() {
+        assertTrue(PadDirectWorkerPolicy.canStartPolledJob(true, true, false, 4, 4));
+        assertFalse(PadDirectWorkerPolicy.canStartPolledJob(false, true, false, 4, 4));
+        assertFalse(PadDirectWorkerPolicy.canStartPolledJob(true, false, false, 4, 4));
+        assertFalse(PadDirectWorkerPolicy.canStartPolledJob(true, true, true, 4, 4));
+        assertFalse(PadDirectWorkerPolicy.canStartPolledJob(true, true, false, 4, 5));
+    }
+
+    @Test
+    public void lifecycleStopAndPolledJobBeginAreAtomicAlternatives() {
+        Object lifecycleLock = new Object();
+
+        MutableWorkerState stopWins = new MutableWorkerState();
+        synchronized (lifecycleLock) {
+            applyLifecycleStop(stopWins);
+        }
+        synchronized (lifecycleLock) {
+            tryBeginPolledJob(stopWins);
+        }
+        assertFalse(stopWins.activeJob);
+        assertTrue(stopWins.stopRequested);
+        assertFalse(stopWins.deferredStop);
+
+        MutableWorkerState beginWins = new MutableWorkerState();
+        synchronized (lifecycleLock) {
+            tryBeginPolledJob(beginWins);
+        }
+        synchronized (lifecycleLock) {
+            applyLifecycleStop(beginWins);
+        }
+        assertTrue(beginWins.activeJob);
+        assertFalse(beginWins.stopRequested);
+        assertTrue(beginWins.deferredStop);
+    }
+
+    private static void tryBeginPolledJob(MutableWorkerState state) {
+        if (PadDirectWorkerPolicy.canStartPolledJob(
+            state.appForeground,
+            state.workerRunning,
+            state.stopRequested,
+            state.callbackGeneration,
+            state.currentGeneration
+        )) {
+            state.activeJob = true;
+        }
+    }
+
+    private static void applyLifecycleStop(MutableWorkerState state) {
+        if (PadDirectWorkerPolicy.shouldDeferLifecycleStop(
+            state.workerRunning,
+            state.stopRequested,
+            state.activeJob,
+            state.manualJob
+        )) {
+            state.deferredStop = true;
+            return;
+        }
+        state.stopRequested = true;
+        state.workerRunning = false;
+        state.currentGeneration += 1;
+    }
+
+    private static final class MutableWorkerState {
+        boolean appForeground = true;
+        boolean workerRunning = true;
+        boolean stopRequested = false;
+        boolean activeJob = false;
+        boolean manualJob = false;
+        boolean deferredStop = false;
+        long callbackGeneration = 4;
+        long currentGeneration = 4;
+    }
 }

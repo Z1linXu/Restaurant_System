@@ -78,33 +78,36 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
 
         for (OrderItem item : items) {
             List<OrderItemOption> options = optionsByItemId.getOrDefault(item.id, List.of());
-            appendSizedLine(builder, buildItemLine(item, options));
-            String noodleType = resolveNoodleTypeLabel(options);
-            if (noodleType != null) {
-                appendSizedLine(builder, noodleType);
+            int displayCount = Math.max(1, item.quantity == null ? 1 : item.quantity);
+            for (int copy = 0; copy < displayCount; copy += 1) {
+                appendSizedLine(builder, buildItemLine(item, options, 1));
+                String noodleType = resolveNoodleTypeLabel(options);
+                if (noodleType != null) {
+                    appendSizedLine(builder, noodleType);
+                }
+                String spicyLevel = resolveSpicyLevelLabel(options);
+                if (spicyLevel != null) {
+                    appendSizedLine(builder, "辣度: " + spicyLevel);
+                }
+                List<String> chargeableLines = resolveChargeableOptionLines(options);
+                for (String chargeableLine : chargeableLines) {
+                    appendSizedLine(builder, chargeableLine);
+                }
+                for (String comboSideLine : resolveComboSideLines(
+                    item,
+                    options,
+                    comboSideItemsByGroup.getOrDefault(item.combo_group_no, List.of()),
+                    optionsByItemId
+                )) {
+                    appendSizedLine(builder, comboSideLine);
+                }
+                String itemNote = resolveItemNote(item);
+                if (itemNote != null) {
+                    appendSizedLine(builder, "备注：" + itemNote);
+                }
+                appendSizedLine(builder, formatSingleItemMoney(item));
+                builder.append("\n");
             }
-            String spicyLevel = resolveSpicyLevelLabel(options);
-            if (spicyLevel != null) {
-                appendSizedLine(builder, "辣度: " + spicyLevel);
-            }
-            List<String> chargeableLines = resolveChargeableOptionLines(options);
-            for (String chargeableLine : chargeableLines) {
-                appendSizedLine(builder, chargeableLine);
-            }
-            for (String comboSideLine : resolveComboSideLines(
-                item,
-                options,
-                comboSideItemsByGroup.getOrDefault(item.combo_group_no, List.of()),
-                optionsByItemId
-            )) {
-                appendSizedLine(builder, comboSideLine);
-            }
-            String itemNote = resolveItemNote(item);
-            if (itemNote != null) {
-                appendSizedLine(builder, "备注：" + itemNote);
-            }
-            appendSizedLine(builder, formatItemMoney(item));
-            builder.append("\n");
         }
 
         appendSizedLine(builder, "--------------------------------");
@@ -139,9 +142,13 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
     }
 
     private String buildItemLine(OrderItem item, List<OrderItemOption> options) {
+        return buildItemLine(item, options, item.quantity == null ? 1 : item.quantity);
+    }
+
+    private String buildItemLine(OrderItem item, List<OrderItemOption> options, int displayQuantity) {
         String baseName = resolveReceiptDisplayName(item);
         StringBuilder builder = new StringBuilder();
-        int quantity = item.quantity == null ? 1 : item.quantity;
+        int quantity = Math.max(1, displayQuantity);
         boolean soupNoodle = isSoupNoodle(item);
         boolean combo = isComboItem(item, options);
         if (soupNoodle) {
@@ -414,6 +421,17 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
             return formatMoney(unitPrice) + " x" + quantity + " = " + formatMoney(lineAmount);
         }
         return formatMoney(lineAmount);
+    }
+
+    private String formatSingleItemMoney(OrderItem item) {
+        int quantity = item.quantity == null ? 1 : item.quantity;
+        if (quantity > 1) {
+            BigDecimal unitPrice = safeMoney(item.unit_price);
+            if (unitPrice.compareTo(BigDecimal.ZERO) > 0) {
+                return formatMoney(unitPrice);
+            }
+        }
+        return formatItemMoney(item);
     }
 
     private boolean containsComboLabel(String value) {

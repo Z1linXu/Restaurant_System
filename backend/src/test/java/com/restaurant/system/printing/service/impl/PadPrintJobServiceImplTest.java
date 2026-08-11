@@ -113,6 +113,36 @@ class PadPrintJobServiceImplTest {
     }
 
     @Test
+    void expiredClaimedJobCanBeReclaimedByAnotherActivePad() {
+        StoreDevice activeDevice = device();
+        PrintJob expiredClaim = claimedPadJob(PrintJobStatus.CLAIMED, 99L, "sleeping-pad-attempt");
+        expiredClaim.claimExpiresAt = LocalDateTime.now().minusMinutes(2);
+        PadPrintJobClaimRequest request = new PadPrintJobClaimRequest();
+        request.client_attempt_token = "active-pad-attempt";
+
+        when(printJobService.requireJob(expiredClaim.id)).thenReturn(expiredClaim);
+        when(printJobRepository.claimPadDirectJob(
+            eq(expiredClaim.id),
+            eq(activeDevice.storeId),
+            eq(activeDevice.id),
+            eq("active-pad-attempt"),
+            any(),
+            any()
+        )).thenReturn(1);
+        PrintJob reclaimed = claimedPadJob(PrintJobStatus.CLAIMED, activeDevice.id, "active-pad-attempt");
+        when(printJobService.requireJob(expiredClaim.id)).thenReturn(expiredClaim, reclaimed);
+        when(printJobAttemptRepository.findAllByPrintJobIdAndClientAttemptToken(expiredClaim.id, "active-pad-attempt")).thenReturn(List.of());
+        when(printJobAttemptRepository.countByPrintJobId(expiredClaim.id)).thenReturn(1L);
+        when(printJobService.toResponse(reclaimed)).thenReturn(PrintJobResponse.from(reclaimed, null, null));
+
+        PrintJobResponse response = service.claimJob(activeDevice, expiredClaim.id, request);
+
+        assertEquals(PrintJobStatus.CLAIMED, response.status);
+        assertEquals(activeDevice.id, reclaimed.claimedByDeviceId);
+        verify(printJobAttemptRepository).save(any());
+    }
+
+    @Test
     void startPrintRequiresClaimedDevice() {
         StoreDevice device = device();
         PrintJob job = claimedPadJob(PrintJobStatus.CLAIMED, 999L, "attempt-1");

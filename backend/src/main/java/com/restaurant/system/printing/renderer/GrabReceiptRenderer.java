@@ -241,7 +241,7 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
         String itemName = fallback(task.item_name_snapshot_zh, task.item_name_snapshot_en, "Item");
         String special = normalize(task.special_instructions_snapshot);
         String displayName = special != null && shouldUseSpecialAsPrimary(itemName, special) ? special : itemName;
-        return quantity + "*" + displayName;
+        return quantity + "×" + displayName;
     }
 
     private boolean isSideTask(KitchenTask task, OrderItem orderItem) {

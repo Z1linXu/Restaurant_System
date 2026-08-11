@@ -1,5 +1,18 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-11 Owner field-test printing repair candidate: bounded repository
+> repair fixes GRAB/Frontdesk display defects and PAD_DIRECT lifecycle
+> reliability without changing API endpoints, schema, Production, or queue
+> architecture. `remove_bok_choy` now renders `走上海青`; chicken cold noodle
+> hides `细`/`细面` and appends `韭` for `韭叶`; Frontdesk receipt expands
+> item quantity into separate receipt sections; GRAB fried quantities use
+> `×`. Android PAD_DIRECT defers lifecycle stop while a print job is in
+> flight, preserving the completion/failure callback path instead of
+> invalidating the worker generation. Issue 6 is documented as audit-only:
+> automatic dispatch remains a durable outbox polled every 1000ms by default
+> and processed sequentially per scheduler batch. Staging deploy and Owner
+> retest are pending.
+
 > 2026-08-11 Staging MOCK field-test package: Owner field testing is active and
 > `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` is complete on exact Staging
 > `1dd036737f6cf41c0558f14b7f8343144f718b5a` / Flyway V10.

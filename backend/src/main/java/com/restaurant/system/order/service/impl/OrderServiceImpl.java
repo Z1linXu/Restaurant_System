@@ -1951,8 +1951,8 @@ public class OrderServiceImpl implements OrderService {
                  "pickled_vegetable_beef_noodle",
                  "vegetable_noodle",
                  "dan_dan_noodle" -> "三细".equals(noodleZh);
-            case "zha_jiang_noodle",
-                 "cold_noodle_shredded_chicken" -> "韭叶".equals(noodleZh);
+            case "zha_jiang_noodle" -> "韭叶".equals(noodleZh);
+            case "cold_noodle_shredded_chicken" -> "细".equals(noodleZh) || "细面".equals(noodleZh);
             default -> false;
         };
     }
@@ -2032,7 +2032,7 @@ public class OrderServiceImpl implements OrderService {
             case "radish" -> "走萝";
             case "noodle" -> "走面";
             case "less_noodle" -> "少面";
-            case "bok_choy" -> "走青";
+            case "bok_choy" -> "走上海青";
             case "broccoli" -> "走西兰";
             case "corn" -> "走玉米";
             case "mushroom" -> "走菇";

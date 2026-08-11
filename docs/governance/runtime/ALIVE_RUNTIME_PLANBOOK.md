@@ -1,5 +1,23 @@
 # Alive Runtime Planbook
 
+## Current Owner field-test Printing bug repair (2026-08-11)
+
+The Owner continued `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` after the Operational
+Twin reached READY and approved bounded Staging/repository repair for six
+printing field-test issues. Repository repair is currently verified locally
+after resolving Agent 6 lifecycle-safety blocks. Agent 6 returned `ACCEPT`;
+the package awaits PR/merge, exact-SHA Staging deployment and MOCK smoke.
+
+Scope includes GRAB/Frontdesk renderer fixes, Android PAD_DIRECT lifecycle
+reliability repair, and an audit-only queue latency record. Production remains
+unchanged and may receive only lightweight continuity checks. Physical printer
+binding, Pad pairing, `REAL`, public printer access, Chinatown, modularization,
+REL-001 and Production promotion remain prohibited.
+
+See [Owner field-test printing fixes evidence](OWNER_FIELD_TEST_PRINTING_FIXES_EVIDENCE.md).
+Current candidate stop:
+`OWNER_FIELD_TEST_PRINTING_FIXES_AGENT6_ACCEPT_WAITING_FOR_PR_MERGE_STAGING_DEPLOY`.
+
 ## Current Staging MOCK Printing field-test override (2026-08-11)
 
 The Owner started `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` and approved the bounded

@@ -1,5 +1,12 @@
 # TWIN-001 St-Denis Production-like Staging Twin Plan
 
+> Field-test bug-repair update (2026-08-11): the Owner continued
+> `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` for bounded printing display and
+> PAD_DIRECT lifecycle reliability defects. Repository repair is locally
+> verified and awaiting Agent 6, PR/merge, exact-SHA Staging deployment and
+> MOCK smoke. Issue 6 is audit-only; queue/concurrency behavior is unchanged.
+> Real printer binding and Pad pairing remain separate gates.
+
 > Field-test update (2026-08-11): the Owner opened the manual field-test loop
 > and approved the bounded Staging-only
 > `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` package. It may enable only
