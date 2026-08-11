@@ -4,9 +4,10 @@
 
 The Owner continued `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` after the Operational
 Twin reached READY and approved bounded Staging/repository repair for six
-printing field-test issues. Repository repair is currently verified locally
-after resolving Agent 6 lifecycle-safety blocks. Agent 6 returned `ACCEPT`;
-the package awaits PR/merge, exact-SHA Staging deployment and MOCK smoke.
+printing field-test issues. Repository repair entered `main` through PR #117
+at `2661eb76c36dd9aa58db94ceacd278242ef4c9ab`, was deployed to exact Staging
+at that SHA, and passed automated MOCK smoke after resolving Agent 6
+lifecycle-safety blocks.
 
 Scope includes GRAB/Frontdesk renderer fixes, Android PAD_DIRECT lifecycle
 reliability repair, and an audit-only queue latency record. Production remains
@@ -15,17 +16,18 @@ binding, Pad pairing, `REAL`, public printer access, Chinatown, modularization,
 REL-001 and Production promotion remain prohibited.
 
 See [Owner field-test printing fixes evidence](OWNER_FIELD_TEST_PRINTING_FIXES_EVIDENCE.md).
-Current candidate stop:
-`OWNER_FIELD_TEST_PRINTING_FIXES_AGENT6_ACCEPT_WAITING_FOR_PR_MERGE_STAGING_DEPLOY`.
+Current stop:
+`OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.
 
 ## Current Staging MOCK Printing field-test override (2026-08-11)
 
 The Owner started `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` and approved the bounded
-Staging-only package `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT`. Fresh
-repository repair entered `main` through PR #114 at
-`1dd036737f6cf41c0558f14b7f8343144f718b5a`; exact Staging now runs that SHA
-at V10 with Store Printing `MOCK/true`, four endpoint-free logical printers
-and three enabled assignments. Production remains unchanged and read-only at
+Staging-only package `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT`. That
+earlier package entered `main` through PR #114 and was superseded in current
+runtime by PR #117. Exact Staging now runs
+`2661eb76c36dd9aa58db94ceacd278242ef4c9ab` at V10 with Store Printing
+`MOCK/true`, four endpoint-free logical printers and three enabled assignments.
+Production remains unchanged and read-only at
 `4667f3c35f85c9f8538f82789d9df1531d4fbc9e` / V7.
 
 Ground Truth found the reviewed bounded dependency: server tooling permits
@@ -39,7 +41,7 @@ Repository tests, Agent 6, PR/auto-merge, exact-SHA rebind, private environment
 change, Store-scoped MOCK transition, browser verification and automated
 synthetic smoke passed. See
 [field-test evidence](STAGING_MOCK_PRINTING_FIELD_TEST_EVIDENCE.md). Current
-stop: `STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`. Production
+stop: `OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`. Production
 mutation, real/home
 printer binding, public printer access, Pad pairing, Chinatown,
 modularization, REL-001 and Production promotion remain prohibited.
@@ -50,8 +52,8 @@ modularization, REL-001 and Production promotion remain prohibited.
 historical Staging `53209823fa320cc56c31d04ee5c7719a83a78acc` / Flyway V10
 with manifest-v2 parity, `BLOCKING_BEHAVIOR_DIFFERENCE=0`, automated
 Owner/Staff/POS beverage workflow smoke, frontend/backend/WebSocket health and
-Production continuity. The current field-test package subsequently deployed
-exact `1dd036737f6cf41c0558f14b7f8343144f718b5a` while retaining Flyway V10 and
+Production continuity. The current field-test packages subsequently deployed
+exact `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` while retaining Flyway V10 and
 that parity. Production remained read-only at
 `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`/V7. See
 [operational Twin evidence](TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md).
@@ -191,7 +193,7 @@ See [TWIN-001 St-Denis Twin Plan](../agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.m
 | Environment | `restaurant-prod` | `OPERATOR_CONFIRMED` | Environment label only; no host or secret is recorded. |
 | `RUNTIME_COMMIT` | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e` | retained identity plus `MACHINE_VERIFIED_READ_ONLY` continuity during STG-007 | Current Production runtime identity only, not a formal release approval. |
 | Production branch | `main` | `MACHINE_VERIFIED_READ_ONLY` during STG-006 continuity | Branch relationship is not a deployment approval record. |
-| Runtime-sensitive deployed candidate | `1dd036737f6cf41c0558f14b7f8343144f718b5a` | `MACHINE_VERIFIED` Git/runtime Ground Truth | PR #114's generic printing runtime policy is in the exact detached release, build source and deployed Staging images. Flyway remains V10; MOCK submit/update/reprint and browser checks pass. |
+| Runtime-sensitive deployed candidate | `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` | `MACHINE_VERIFIED` Git/runtime Ground Truth | PR #117's Owner field-test printing fixes are in the exact detached release, build source and deployed Staging images. Flyway remains V10; MOCK submit/update/reprint smoke passes. |
 | STG-007 exact runtime candidate / documentation base before evidence publication | `2837ae88e55142c99c6975f8b6575febffc913a1` | `MACHINE_VERIFIED` from `origin/main`, detached release, build source and deployed Staging identity | PR #82 merge and deployed Staging SHA; it is not the Production runtime. A later evidence-only merge must remain distinct from the deployed SHA. |
 | Deployment mode | HTTP | `OPERATOR_CONFIRMED` | HTTPS/certificate posture is outside this record. |
 | Compose services | `db`, `backend`, `nginx` under project `cloud`; unchanged across the final STG-007 continuation, original start times, restart count 0, health 200 | `MACHINE_VERIFIED_READ_ONLY` | Minimum continuity only; no environment, Flyway, Store, or business-data read. |
@@ -231,7 +233,7 @@ snapshots. Do not copy those reports into this planbook.
 | Current Agile Loop | `TWIN-001_ST_DENIS_STAGING_TWIN` |
 | Loop type | `OWNER_GATED_PRODUCTION_LIKE_STAGING_PARITY` |
 | Loop status | `STG-008=PASS; STG-009_PHASE_A_OWNER_LOGIN=DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY; TWIN-001=PASS_OWNER_FIELD_TEST_ACTIVE` |
-| Current package | Exact `1dd036737f6cf41c0558f14b7f8343144f718b5a` is deployed to isolated Staging at Flyway V10 and passes manifest-v2 parity plus MOCK printing acceptance. |
+| Current package | Exact `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` is deployed to isolated Staging at Flyway V10 and passes manifest-v2 parity plus MOCK printing acceptance and field-test printing fixes smoke. |
 | STG-008 state | Historical `PASS` synthetic foundation; TWIN-001 reconciled it in place to the current Operational Twin without reset or cross-Store crossover. |
 | STG-009 Phase-A state | `DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY`: prior API/browser-equivalent evidence is retained; Owner manual UI acceptance is no longer the immediate loop. |
 | AL-001 state | `PLAN_COMPLETE` |

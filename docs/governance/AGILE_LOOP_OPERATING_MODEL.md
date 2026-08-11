@@ -13,6 +13,11 @@ change without a separate Owner decision. Production mutation, real printer
 binding, public printer access, Pad pairing, Chinatown, modularization,
 REL-001 and Production promotion remain outside the loop.
 
+This repair package entered `main` through PR #117 at
+`2661eb76c36dd9aa58db94ceacd278242ef4c9ab`, deployed to exact Staging at that
+SHA, passed automated MOCK submit/update/reprint smoke, and now stops at
+`OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.
+
 ## Current Staging MOCK Printing field-test override (2026-08-11)
 
 The Owner opened `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` and approved
@@ -24,11 +29,13 @@ ceiling is exactly `DISABLED,MOCK`; printer endpoint configuration remains
 disabled. Production, `REAL`, `PAD_DIRECT`, physical binding and all deferred
 routes remain outside this authorization.
 
-Execution completed on exact Staging
-`1dd036737f6cf41c0558f14b7f8343144f718b5a` / V10. Store 1 is `MOCK/true`;
-submit, all three routes, update tickets, reprint, rendered snapshots, browser
-visibility and health passed with no physical transport. The loop continues at
-`STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`.
+Execution completed initially on exact Staging
+`1dd036737f6cf41c0558f14b7f8343144f718b5a` / V10 and is superseded by the
+current field-test repair runtime
+`2661eb76c36dd9aa58db94ceacd278242ef4c9ab`. Store 1 remains `MOCK/true`;
+submit, all three routes, update tickets, reprint, rendered snapshots and
+health passed with no physical transport. The loop now waits at
+`OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.
 
 ## Historical TWIN-001 operational Twin readiness checkpoint (2026-08-10)
 

@@ -2,19 +2,21 @@
 
 > Field-test bug-repair update (2026-08-11): the Owner continued
 > `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` for bounded printing display and
-> PAD_DIRECT lifecycle reliability defects. Repository repair is locally
-> verified and awaiting Agent 6, PR/merge, exact-SHA Staging deployment and
-> MOCK smoke. Issue 6 is audit-only; queue/concurrency behavior is unchanged.
+> PAD_DIRECT lifecycle reliability defects. Repository repair entered `main`
+> through PR #117 at `2661eb76c36dd9aa58db94ceacd278242ef4c9ab`, exact
+> Staging was deployed at that SHA, and automated MOCK smoke passed. Issue 6 is
+> audit-only; queue/concurrency behavior is unchanged.
 > Real printer binding and Pad pairing remain separate gates.
 
 > Field-test update (2026-08-11): the Owner opened the manual field-test loop
 > and approved the bounded Staging-only
 > `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` package. It may enable only
 > MOCK through the retained logical topology after the generic runtime
-> allowlist/endpoint-policy repair passes. Exact Staging `1dd036737f...` / V10
-> now runs `MOCK/true`; three-route submit/update tickets, GRAB reprint,
-> browser visibility and health passed. Current stop is
-> `STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`. Real/home printer
+> allowlist/endpoint-policy repair passes. Exact current Staging
+> `2661eb76...` / V10 now runs `MOCK/true`; three-route submit/update tickets,
+> GRAB reprint, browser visibility, health and field-test printing fixes smoke
+> passed. Current stop is
+> `OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`. Real/home printer
 > binding and Pad pairing remain separate gates.
 
 > Execution update (2026-08-10): Owner approval
@@ -26,7 +28,7 @@
 
 > Status: `PASS_OWNER_FIELD_TEST_ACTIVE`
 >
-> Current stop state: `STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`
+> Current stop state: `OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`
 >
 > Owner decision date: 2026-08-11, America/Toronto
 
@@ -284,14 +286,14 @@ sequence. This is an immutable execution record, not authority to replay it:
 
 ## 12. Current stop
 
-`STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`
+`OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`
 
 The corrected read supplied
 [manifest v2 completion evidence](../runtime/TWIN-001_MANIFEST_V2_COMPLETION_EVIDENCE.md)
 and [V7-to-V10 mapping](../runtime/V7_PRODUCTION_TO_V10_TWIN_CONFIGURATION_MAPPING.md).
 The approved bounded reconstruction completed on exact Staging
 `53209823fa320cc56c31d04ee5c7719a83a78acc` / V10, then the field-test package
-deployed exact `1dd036737f6cf41c0558f14b7f8343144f718b5a` / V10 and verified
+deployed exact `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` / V10 and verified
 MOCK printing; see
 [operational Twin evidence](../runtime/TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md)
 and [MOCK field-test evidence](../runtime/STAGING_MOCK_PRINTING_FIELD_TEST_EVIDENCE.md).

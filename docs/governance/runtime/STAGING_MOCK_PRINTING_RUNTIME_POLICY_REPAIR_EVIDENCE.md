@@ -69,5 +69,9 @@ this repair phase.
 ## Stop state
 
 This repair record is superseded by the
-[runtime field-test evidence](STAGING_MOCK_PRINTING_FIELD_TEST_EVIDENCE.md).
-Current stop: `STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`.
+[runtime field-test evidence](STAGING_MOCK_PRINTING_FIELD_TEST_EVIDENCE.md)
+and the later
+[Owner field-test printing fixes evidence](OWNER_FIELD_TEST_PRINTING_FIXES_EVIDENCE.md).
+Historical checkpoint: `STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`.
+Current stop:
+`OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.

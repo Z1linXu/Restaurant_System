@@ -4,20 +4,22 @@ Current field-test bug-repair override (2026-08-11): a new bounded
 `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` repair is in progress for Owner-confirmed
 printing display issues, PAD_DIRECT lifecycle reliability, and audit-only queue
 latency documentation. Repository repair is locally verified after resolving an
-Agent 6 lifecycle-safety block. Agent 6 returned `ACCEPT`; PR/merge, exact-SHA
-Staging deployment and MOCK smoke remain pending.
+Agent 6 lifecycle-safety block. Agent 6 returned `ACCEPT`; PR #117 entered
+`main`, exact Staging
+`2661eb76c36dd9aa58db94ceacd278242ef4c9ab` passed automated MOCK smoke, and
+the package now waits for Owner retest.
 
 Current field-test override (2026-08-11): bounded issue `KI-012` is resolved.
 The generic allowlist/endpoint-policy repair entered `main` through PR #114,
-and exact Staging `1dd036737f6cf41c0558f14b7f8343144f718b5a` / V10 now runs
+and exact Staging `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` / V10 now runs
 server-side MOCK with the complete pipeline and zero physical transport.
 
 Current TWIN-001 closure override (2026-08-10): KI-011's reconstruction and
 automated-validation portion is resolved. Exact Staging
-`1dd036737f6cf41c0558f14b7f8343144f718b5a` / V10 retains complete manifest-v2
+`2661eb76c36dd9aa58db94ceacd278242ef4c9ab` / V10 retains complete manifest-v2
 parity, independent Staff credentials, safe automated workflow smoke and zero
 blocking behavior difference. The Owner field-test loop is active at
-`STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`.
+`OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.
 
 Historical KI-011 dependency-repair override (2026-08-10): the manifest-v2
 projector and secret-FD staff reconciler are repository verified. Fresh
@@ -65,7 +67,7 @@ V10 Twin.
 | operational_impact | Owner cannot confidently field-test Staging MOCK/PAD_DIRECT printing behavior until these repairs are deployed and smoke-tested. |
 | current_workaround | Keep using Staging MOCK for automated smoke; do not bind real printers or pair Pads beyond approved gates. |
 | evidence | [Owner field-test printing fixes evidence](runtime/OWNER_FIELD_TEST_PRINTING_FIXES_EVIDENCE.md). |
-| status | `AGENT6_ACCEPT_WAITING_FOR_PR_MERGE_STAGING_DEPLOY` |
+| status | `DEPLOYED_TO_STAGING_MOCK_SMOKE_PASS_WAITING_FOR_OWNER_RETEST` |
 | target_loop | `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` |
 | safety_boundary | No Production mutation, real printer endpoint, Production printer contact, secret copy, schema migration, destructive reset, Chinatown, modularization, REL-001, or Production promotion. |
 | last_updated | 2026-08-11 |
@@ -94,7 +96,7 @@ V10 Twin.
 | issue_id | `KI-011` |
 | priority | `P2` governance/product readiness |
 | title | Staging must become a long-lived Production-like St-Denis Operational Twin |
-| observed_behavior | Exact Staging `1dd0367...` / V10 retains manifest-v2 parity and independent Staff credentials, passes safe workflow plus MOCK printing smoke, and reports zero blocking behavior difference. Owner field testing is active; physical hardware remains pending. |
+| observed_behavior | Exact Staging `2661eb76...` / V10 retains manifest-v2 parity and independent Staff credentials, passes safe workflow plus MOCK printing smoke and field-test printing fixes smoke, and reports zero blocking behavior difference. Owner retest is pending; physical hardware remains pending. |
 | expected_behavior | Staging reconstructs safe St-Denis operational configuration through shared application code and generic Store logic, with every parity domain classified `MATCH`, `EXPECTED_DIFFERENCE`, `BLOCKING_DIFFERENCE`, or `NOT_YET_VERIFIED`. |
 | operational_impact | Production promotion and the former Chinatown-first route remain deferred until Twin parity and Owner field validation are complete. |
 | current_workaround | Preserve exact Staging V10 Twin state and continue the active Owner field-test loop. Do not downgrade, auto-sync, re-read Production, or enter separate hardware gates without approval. |
