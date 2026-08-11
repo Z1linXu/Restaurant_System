@@ -1,10 +1,9 @@
 # Known Issues Backlog
 
-Current field-test override (2026-08-11): bounded issue `KI-012` is selected.
-The Staging guard cannot currently run server-side MOCK, and enabling the
-Printing feature without a runtime mode ceiling would expose modes outside the
-Owner-approved package. The generic allowlist/endpoint-policy dependency
-repair is in progress; no runtime mutation has yet occurred.
+Current field-test override (2026-08-11): bounded issue `KI-012` is resolved.
+The generic allowlist/endpoint-policy repair entered `main` through PR #114,
+and exact Staging `1dd036737f6cf41c0558f14b7f8343144f718b5a` / V10 now runs
+server-side MOCK with the complete pipeline and zero physical transport.
 
 Current TWIN-001 closure override (2026-08-10): KI-011's reconstruction and
 automated-validation portion is resolved. Exact Staging
@@ -58,9 +57,9 @@ V10 Twin.
 | observed_behavior | Deployment tooling permits server Staging only as `DISABLED/false`; if the Printing feature alone is enabled, the existing Store API accepts `REAL` and `PAD_DIRECT` as well as `MOCK`. |
 | expected_behavior | An environment-neutral application policy constrains permitted modes; Staging allows exactly `DISABLED,MOCK`, rejects printer endpoint writes, and MOCK still executes the normal renderer/job/dispatch pipeline without transport. |
 | operational_impact | Owner cannot safely inspect real Print Center behavior or synthetic tickets in the Operational Twin. |
-| current_workaround | Keep Staging `DISABLED/false` until the reviewed repair is merged and deployed. |
-| evidence | [Staging MOCK runtime-policy repair evidence](runtime/STAGING_MOCK_PRINTING_RUNTIME_POLICY_REPAIR_EVIDENCE.md). |
-| status | `REPOSITORY_REPAIR_VERIFIED_WAITING_FOR_AGENT6_PR` |
+| current_workaround | None for MOCK field testing. Physical binding remains separately gated. |
+| evidence | [runtime-policy repair evidence](runtime/STAGING_MOCK_PRINTING_RUNTIME_POLICY_REPAIR_EVIDENCE.md) and [field-test evidence](runtime/STAGING_MOCK_PRINTING_FIELD_TEST_EVIDENCE.md). |
+| status | `RESOLVED_STAGING_MOCK_VERIFIED` |
 | target_loop | `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` |
 | safety_boundary | Staging only; no Production mutation, real endpoint, socket contact, Pad pairing, migration or destructive reset. |
 | last_updated | 2026-08-11 |

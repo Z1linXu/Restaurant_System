@@ -7,6 +7,10 @@
 > configuration policy; Staging is constrained to `DISABLED,MOCK` with endpoint
 > writes disabled. This does not authorize `REAL`, `PAD_DIRECT`, provisioning,
 > migration or physical binding.
+> Runtime result: exact St-Denis Staging `1dd036737f...` / V10 passed MOCK
+> submit/update/reprint and browser verification with four logical printers,
+> three assignments, zero endpoints and zero physical transport. This does not
+> activate or advance the separately gated provisioning package below.
 
 > Status: `IN_MAIN` via PR #67; downstream AL-005B remains separately gated
 >

@@ -4,8 +4,11 @@
 > and approved the bounded Staging-only
 > `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` package. It may enable only
 > MOCK through the retained logical topology after the generic runtime
-> allowlist/endpoint-policy repair passes. Real/home printer binding and Pad
-> pairing remain separate gates.
+> allowlist/endpoint-policy repair passes. Exact Staging `1dd036737f...` / V10
+> now runs `MOCK/true`; three-route submit/update tickets, GRAB reprint,
+> browser visibility and health passed. Current stop is
+> `STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES`. Real/home printer
+> binding and Pad pairing remain separate gates.
 
 > Execution update (2026-08-10): Owner approval
 > `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL` completed. Exact Staging
