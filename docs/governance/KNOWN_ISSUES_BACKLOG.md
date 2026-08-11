@@ -1,13 +1,24 @@
 # Known Issues Backlog
 
-Current field-test bug-repair override (2026-08-11): a new bounded
+Production-promotion update (2026-08-11): the Owner's fresh exact-candidate
+acceptance attestation closes KI-013 as a release blocker for
+`2661eb76c36dd9aa58db94ceacd278242ef4c9ab`. The former relative Production
+state-root, mutable rebuild, combined start and unproven backup-tooling gaps are
+addressed by a bounded dependency repair now under Agent 6 review. They remain
+runtime `NO_GO` until merged and validated. Old-app-on-V10 compatibility,
+V7-to-V10 rehearsal, isolated restore, fresh backup and final RC freeze remain
+open mandatory evidence gates; no Production deploy has occurred.
+Current unique stop: `RC_PREPARED_WAITING_FOR_MANDATORY_PROMOTION_GATES`.
+
+Historical superseded field-test bug-repair override (2026-08-11): a bounded
 `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` repair is in progress for Owner-confirmed
 printing display issues, PAD_DIRECT lifecycle reliability, and audit-only queue
 latency documentation. Repository repair is locally verified after resolving an
 Agent 6 lifecycle-safety block. Agent 6 returned `ACCEPT`; PR #117 entered
 `main`, exact Staging
 `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` passed automated MOCK smoke, and
-the package now waits for Owner retest.
+the package then waited for Owner retest; the fresh exact-RC Owner acceptance
+supersedes that wait.
 
 Current field-test override (2026-08-11): bounded issue `KI-012` is resolved.
 The generic allowlist/endpoint-policy repair entered `main` through PR #114,
@@ -19,7 +30,7 @@ automated-validation portion is resolved. Exact Staging
 `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` / V10 retains complete manifest-v2
 parity, independent Staff credentials, safe automated workflow smoke and zero
 blocking behavior difference. The Owner field-test loop is active at
-`OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.
+`HISTORICAL_OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`, now superseded.
 
 Historical KI-011 dependency-repair override (2026-08-10): the manifest-v2
 projector and secret-FD staff reconciler are repository verified. Fresh

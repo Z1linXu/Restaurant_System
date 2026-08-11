@@ -15,8 +15,8 @@
 > allowlist/endpoint-policy repair passes. Exact current Staging
 > `2661eb76...` / V10 now runs `MOCK/true`; three-route submit/update tickets,
 > GRAB reprint, browser visibility, health and field-test printing fixes smoke
-> passed. Current stop is
-> `OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`. Real/home printer
+> passed. Its historical stop was
+> `HISTORICAL_OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`. Real/home printer
 > binding and Pad pairing remain separate gates.
 
 > Execution update (2026-08-10): Owner approval
@@ -26,9 +26,9 @@
 > smoke and health with zero blocking behavior difference. Physical printing,
 > positive KDS enablement and Pad pairing remain separate gates.
 
-> Status: `PASS_OWNER_FIELD_TEST_ACTIVE`
+> Status: `PASS_STAGING_ACCEPTED_RC_PREPARATION_ACTIVE`
 >
-> Current stop state: `OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`
+> Current stop state: `RC_PREPARED_WAITING_FOR_MANDATORY_PROMOTION_GATES`
 >
 > Owner decision date: 2026-08-11, America/Toronto
 
@@ -286,7 +286,7 @@ sequence. This is an immutable execution record, not authority to replay it:
 
 ## 12. Current stop
 
-`OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`
+`RC_PREPARED_WAITING_FOR_MANDATORY_PROMOTION_GATES`
 
 The corrected read supplied
 [manifest v2 completion evidence](../runtime/TWIN-001_MANIFEST_V2_COMPLETION_EVIDENCE.md)

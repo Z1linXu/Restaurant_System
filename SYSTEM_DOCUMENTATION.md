@@ -1,5 +1,21 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-11 Production promotion tooling boundary: existing Production
+> releases must not use the generic build-oriented `deployment/cloud/deploy.sh`.
+> The exact-artifact promotion helper and Production-only Compose override bind
+> project `cloud` to the retained fixed state root, require immutable local
+> image IDs already accepted in Staging, prohibit build/pull/database recreation,
+> enforce a 1 GiB available-memory gate, and start backend before frontend.
+> Runtime use remains conditional on RC, migration, rollback compatibility,
+> backup/isolated-restore, preflight, and Owner gates.
+> The paired promotion backup helper creates a private atomic custom-format
+> dump from the identified `cloud` database container, validates it with
+> `pg_restore --list`, and rehearses it only in a network-isolated disposable
+> PostgreSQL tmpfs with transactional, exit-on-error restore semantics. It
+> contains no Production restore authority.
+> Current unique stop:
+> `RC_PREPARED_WAITING_FOR_MANDATORY_PROMOTION_GATES`.
+
 > 2026-08-11 Owner field-test printing repair: bounded repository
 > repair fixes GRAB/Frontdesk display defects and PAD_DIRECT lifecycle
 > reliability without changing API endpoints, schema, Production, or queue
@@ -12,9 +28,9 @@
 > automatic dispatch remains a durable outbox polled every 1000ms by default
 > and processed sequentially per scheduler batch. PR #117 merged at
 > `2661eb76c36dd9aa58db94ceacd278242ef4c9ab`; exact Staging deployed that SHA
-> and passed automated MOCK submit/update/reprint smoke. Owner retest remains
-> pending at
-> `OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.
+> and passed automated MOCK submit/update/reprint smoke. Its historical retest
+> wait was
+> `HISTORICAL_OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`, now superseded.
 
 > 2026-08-11 Staging MOCK field-test package: Owner field testing is active and
 > `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` is complete and superseded by
@@ -26,8 +42,8 @@
 > existing MOCK path renders and persists Print Jobs before marking them
 > printed without transport. Submit, GRAB, FRONTDESK_RECEIPT, HOT_KITCHEN,
 > update, reprint, browser visibility and health passed. Production and
-> physical hardware remain unchanged. Current stop:
-> `OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.
+> physical hardware remain unchanged. Historical stop, now superseded:
+> `HISTORICAL_OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.
 
 > Historical 2026-08-10 TWIN-001 operational Twin foundation: exact Staging
 > `53209823fa320cc56c31d04ee5c7719a83a78acc` on Flyway V10 passed complete
@@ -37,8 +53,8 @@
 > remained read-only at `4667f3c35f85c9f8538f82789d9df1531d4fbc9e` / V7.
 > The reconstruction foundation stop was
 > `TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`;
-> the Owner has since opened that loop. Current stop is
-> `OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`. See
+> the Owner has since opened that loop. Historical stop, now superseded, is
+> `HISTORICAL_OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`. See
 > [operational Twin evidence](docs/governance/runtime/TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md).
 
 > Historical 2026-08-10 TWIN-001 reconstruction tooling: Owner approval was active and a

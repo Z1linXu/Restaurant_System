@@ -1,6 +1,18 @@
 # Feature Backlog
 
-## Current Owner field-test Printing bug repair (2026-08-11)
+## Production exact-artifact promotion dependency repair (2026-08-11)
+
+- `REL-DEPLOY-001`: fixed-state, exact-image-ID, no-build/no-pull Production
+  promotion helper and override — `DEPENDENCY_REPAIR_UNDER_REVIEW`.
+- `REL-RECOVERY-001`: private atomic Production backup plus isolated
+  transactional restore rehearsal — `DEPENDENCY_REPAIR_UNDER_REVIEW`.
+- Exact `2661eb76...` Owner field acceptance — `OPERATOR_CONFIRMED_PASS` for
+  this RC only; governance synchronization supersedes the stale retest wait.
+- Production deployment remains `NO_GO` until the prepared RC is frozen with
+  migration, Android/client, rollback, backup/restore and Agent 6 PASS results.
+Current unique stop: `RC_PREPARED_WAITING_FOR_MANDATORY_PROMOTION_GATES`.
+
+## Historical superseded Owner field-test Printing bug repair (2026-08-11)
 
 `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` continues after the earlier
 `STAGING_MOCK_PRINTING_VERIFIED_OWNER_FIELD_TEST_CONTINUES` checkpoint. The current
@@ -8,8 +20,8 @@ bounded repair covers Owner-confirmed printing display defects, PAD_DIRECT
 screen-off reliability, and an audit-only queue latency explanation. Repository
 repair entered `main` through PR #117, exact Staging
 `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` passed automated MOCK smoke, and
-the package now waits for Owner retest at
-`OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.
+the package then waited for Owner retest at
+`HISTORICAL_OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`, now superseded.
 
 ## Current Owner field-test Printing slice (2026-08-11)
 
@@ -21,7 +33,7 @@ generic fail-closed runtime policy. Exact current Staging
 snapshots and browser visibility passed against the retained
 4-printer/3-assignment topology. Physical printing, Pad pairing and Production
 remain excluded. Current stop:
-`OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.
+`HISTORICAL_OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`, now superseded.
 
 ## Current TWIN-001 operational Twin readiness override (2026-08-10)
 
@@ -29,7 +41,7 @@ TWIN-001 reconstruction remains `PASS` and Owner field testing is active.
 Exact Staging `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` / Flyway V10 passes deterministic
 manifest-v2 parity, independent Staff credential verification, safe automated
 workflow smoke and health with zero blocking behavior difference. Current stop:
-`OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.
+`HISTORICAL_OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`, now superseded.
 The active loop may continue bounded Owner field testing and bug repair. No
 hardware gate, modularization, Chinatown, REL-001 or Production work starts
 automatically.
