@@ -8,8 +8,11 @@ After exact-RC Production promotion, the Owner resumed
 lightweight continuity observation; no Production deploy, restart, Flyway,
 configuration, printer, Pad, business-data or credential action is authorized.
 
-The active package repairs three bounded field-test findings before Staging
-Owner retest:
+Repository repair entered `main` through PR #122 at
+`3ec4d88a47f68e05b92d9246bfd63af2d1f297f9`, exact Staging was deployed at
+that SHA, Flyway remained V10, Printing remained `MOCK/true`, and automated
+Staging MOCK smoke passed. The package repaired three bounded field-test
+findings before Owner retest:
 
 1. PAD sleep/background must not indefinitely block another active print worker.
 2. long-lived Pad menu snapshots must be revision-aware while retaining
@@ -21,8 +24,8 @@ Owner retest:
 
 Evidence file:
 [STAGING_THREE_RELIABILITY_REPAIR_BATCH_EVIDENCE](STAGING_THREE_RELIABILITY_REPAIR_BATCH_EVIDENCE.md).
-Current repository stop until Agent 6/PR/merge/Staging regression:
-`STAGING_THREE_RELIABILITY_REPAIR_BATCH_UNDER_REVIEW`.
+Current unique stop:
+`OWNER_FIELD_TEST_THREE_RELIABILITY_REPAIRS_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST`.
 
 ## Current Production promotion result (2026-08-11)
 

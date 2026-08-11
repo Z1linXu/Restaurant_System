@@ -9,7 +9,13 @@ migrate, reconfigure, or contact Production printers/Devices. Production now
 runs the exact promoted RC at Flyway V10; Staging remains the validation
 environment.
 
-Repository repair is in progress for three bounded field-test issues:
+Repository repair entered `main` through PR #122 at
+`3ec4d88a47f68e05b92d9246bfd63af2d1f297f9`, exact Staging was deployed at
+that SHA, Flyway remained V10, Printing remained `MOCK/true` with four enabled
+logical printers and three assignments, health passed, and automated Staging
+MOCK smoke passed for the safe generated route.
+
+The package covered three bounded field-test issues:
 
 - `PAD_SLEEP_PRINT_BLOCKING_REPAIR`: shorten only the Android pre-output
   `CLAIMED` lease so a background/screen-off Pad cannot hold a not-yet-started
@@ -24,8 +30,8 @@ Repository repair is in progress for three bounded field-test issues:
 
 Evidence is being recorded in
 [three-reliability repair batch evidence](STAGING_THREE_RELIABILITY_REPAIR_BATCH_EVIDENCE.md).
-Current repository stop until PR/merge/deploy/regression completes:
-`STAGING_THREE_RELIABILITY_REPAIR_BATCH_UNDER_REVIEW`.
+Current unique stop:
+`OWNER_FIELD_TEST_THREE_RELIABILITY_REPAIRS_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST`.
 
 ## Current exact-RC Production promotion result (2026-08-11)
 

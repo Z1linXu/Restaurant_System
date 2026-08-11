@@ -3,8 +3,10 @@
 > Current field-test reliability batch (2026-08-11): after exact-RC Production
 > promotion, the Owner authorized `STAGING_THREE_RELIABILITY_REPAIR_BATCH` for
 > Staging/repository-only repair of Pad sleep print blocking, Pad menu
-> revision/click-lock behavior, and bounded printing outbox latency. Production
-> is not in scope. Physical printer binding, Pad pairing, Chinatown,
+> revision/click-lock behavior, and bounded printing outbox latency. PR #122
+> entered `main`, exact Staging deployed
+> `3ec4d88a47f68e05b92d9246bfd63af2d1f297f9`, and health/MOCK smoke passed.
+> Production is not in scope. Physical printer binding, Pad pairing, Chinatown,
 > modularization and any Production promotion remain separate gates.
 
 > Field-test bug-repair update (2026-08-11): the Owner continued
