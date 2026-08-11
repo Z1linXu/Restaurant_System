@@ -1,6 +1,17 @@
 # Known Issues Backlog
 
-Production-promotion update (2026-08-11): the Owner's fresh exact-candidate
+Production-promotion closure (2026-08-11): exact frozen RC
+`RC-ST-DENIS-20260811-2661EB76` is deployed to existing Production St-Denis at
+Flyway V10. Migration, backup/integrity/isolated restore, rollback compatibility,
+second-start/no-pending, health and continuity gates passed. No P0/P1 remains
+open from the bounded observation. A one-shot post-nginx readiness check caused
+a fail-closed false-negative during startup; the runtime was healthy on the
+immediate bounded retry, and a minimal repository repair adds bounded polling
+for future promotions. It did not change the frozen RC or deployed runtime.
+Current unique stop:
+`PRODUCTION_EXACT_RC_PROMOTED_POST_DEPLOY_OBSERVATION_PASS`.
+
+Historical Production-promotion preparation update (2026-08-11): the Owner's fresh exact-candidate
 acceptance attestation closes KI-013 as a release blocker for
 `2661eb76c36dd9aa58db94ceacd278242ef4c9ab`. The former relative Production
 state-root, mutable rebuild, combined start and unproven backup-tooling gaps are
@@ -8,7 +19,8 @@ addressed by a bounded dependency repair now under Agent 6 review. They remain
 runtime `NO_GO` until merged and validated. Old-app-on-V10 compatibility,
 V7-to-V10 rehearsal, isolated restore, fresh backup and final RC freeze remain
 open mandatory evidence gates; no Production deploy has occurred.
-Current unique stop: `RC_PREPARED_WAITING_FOR_MANDATORY_PROMOTION_GATES`.
+Historical stop (superseded):
+`RC_PREPARED_WAITING_FOR_MANDATORY_PROMOTION_GATES`.
 
 Historical superseded field-test bug-repair override (2026-08-11): a bounded
 `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` repair is in progress for Owner-confirmed
@@ -73,14 +85,14 @@ V10 Twin.
 | issue_id | `KI-013` |
 | priority | `P1` for PAD_DIRECT reliability, `P2` for receipt display; Staging/field-test scope |
 | title | Owner field-test printing display and Pad lifecycle defects |
-| observed_behavior | GRAB printed `走上海青` as `走青`; chicken cold noodle printed `鸡凉细` for thin and omitted `韭` for leek leaf; Frontdesk receipt collapsed quantity lines; GRAB fried quantities used `*`; an inactive/screen-off Pad could leave printing dependent on all Pads returning foreground; queue latency was unclear. |
+| observed_behavior | Historical field defects covered GRAB/Frontdesk display and inactive/screen-off Pad lifecycle behavior. The bounded repair deployed to exact Staging `2661eb76...`, passed MOCK smoke, and the Owner's exact-candidate acceptance closed the retest gate. |
 | expected_behavior | GRAB keeps `走上海青`, chicken cold noodle hides thin and appends `韭` for leek leaf, Frontdesk prints each noodle/combo serving separately, GRAB fried quantity uses `×`, in-flight Pad jobs complete/fail without lifecycle generation loss, and queue latency is documented without behavior change. |
-| operational_impact | Owner cannot confidently field-test Staging MOCK/PAD_DIRECT printing behavior until these repairs are deployed and smoke-tested. |
-| current_workaround | Keep using Staging MOCK for automated smoke; do not bind real printers or pair Pads beyond approved gates. |
+| operational_impact | Resolved for the exact accepted candidate. Physical printer binding and Pad pairing remain separate runtime gates, not unresolved KI-013 behavior. |
+| current_workaround | None for the repaired exact candidate. |
 | evidence | [Owner field-test printing fixes evidence](runtime/OWNER_FIELD_TEST_PRINTING_FIXES_EVIDENCE.md). |
-| status | `DEPLOYED_TO_STAGING_MOCK_SMOKE_PASS_WAITING_FOR_OWNER_RETEST` |
-| target_loop | `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` |
-| safety_boundary | No Production mutation, real printer endpoint, Production printer contact, secret copy, schema migration, destructive reset, Chinatown, modularization, REL-001, or Production promotion. |
+| status | `RESOLVED_OWNER_ACCEPTED_FOR_EXACT_RC` |
+| target_loop | Historical `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`; completed for exact `2661eb76...`. |
+| safety_boundary | The repair did not authorize real printer binding, Pad pairing, secrets, destructive reset, Chinatown or modularization. Its accepted artifact was later promoted only through the separately frozen Production RC. |
 | last_updated | 2026-08-11 |
 
 ### KI-012 - Staging server MOCK lacks a fail-closed runtime mode ceiling
@@ -107,13 +119,13 @@ V10 Twin.
 | issue_id | `KI-011` |
 | priority | `P2` governance/product readiness |
 | title | Staging must become a long-lived Production-like St-Denis Operational Twin |
-| observed_behavior | Exact Staging `2661eb76...` / V10 retains manifest-v2 parity and independent Staff credentials, passes safe workflow plus MOCK printing smoke and field-test printing fixes smoke, and reports zero blocking behavior difference. Owner retest is pending; physical hardware remains pending. |
+| observed_behavior | Exact Staging `2661eb76...` / V10 retains manifest-v2 parity and independent Staff credentials, passed safe workflow/MOCK/field-test smoke with zero blocking behavior difference, received exact-candidate Owner acceptance, and became the frozen Production RC. Physical hardware remains separately gated. |
 | expected_behavior | Staging reconstructs safe St-Denis operational configuration through shared application code and generic Store logic, with every parity domain classified `MATCH`, `EXPECTED_DIFFERENCE`, `BLOCKING_DIFFERENCE`, or `NOT_YET_VERIFIED`. |
-| operational_impact | Production promotion and the former Chinatown-first route remain deferred until Twin parity and Owner field validation are complete. |
-| current_workaround | Preserve exact Staging V10 Twin state and continue the active Owner field-test loop. Do not downgrade, auto-sync, re-read Production, or enter separate hardware gates without approval. |
+| operational_impact | Resolved for St-Denis reconstruction, automated/Owner acceptance and the exact-RC Production promotion. Chinatown and hardware routes remain independent future decisions. |
+| current_workaround | Preserve exact Staging V10 Twin state; no workaround or active field-test loop remains. |
 | evidence | [manifest v2](runtime/ST_DENIS_TWIN_PARITY_MANIFEST_V2.json), [mapping](runtime/V7_PRODUCTION_TO_V10_TWIN_CONFIGURATION_MAPPING.md), [completion evidence](runtime/TWIN-001_MANIFEST_V2_COMPLETION_EVIDENCE.md), [operational Twin evidence](runtime/TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md), and [MOCK field-test evidence](runtime/STAGING_MOCK_PRINTING_FIELD_TEST_EVIDENCE.md). |
-| status | `RESOLVED_FOR_RECONSTRUCTION_AND_AUTOMATED_SMOKE / OWNER_FIELD_TEST_ACTIVE` |
-| next_gate | Continue `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`; physical printer binding remains a separate runtime gate |
+| status | `RESOLVED_TWIN_OWNER_ACCEPTED_EXACT_RC_PROMOTED` |
+| next_gate | None for KI-011; physical printer binding remains a separate runtime gate and Chinatown remains separately deferred. |
 | safety_boundary | No raw customer/order/payment data, credentials, secrets, production printer/device endpoints, `SELECT *`, or complete database dump. |
 | last_updated | 2026-08-11 |
 
@@ -230,43 +242,43 @@ V10 Twin.
 | deployment_required | Yes, backend receipt-renderer deployment. |
 | last_updated | 2026-07-27 |
 
-### KI-005 - 数据库恢复演练未执行
+### KI-005 - 数据库恢复演练（已完成隔离验证）
 
 | Field | Value |
 |---|---|
 | issue_id | `KI-005` |
 | priority | `P2` |
-| title | 数据库恢复演练未执行 |
-| observed_behavior | A backup artifact was operator-confirmed as present and non-empty, but no independently approved restore rehearsal is recorded. |
+| title | 数据库恢复演练与可恢复性证据 |
+| observed_behavior | A fresh V7 pre-deploy backup passed custom-format integrity and restored successfully only into a network-none, tmpfs, resource-limited disposable PostgreSQL container with an exact V1-V7 ledger. |
 | expected_behavior | A separately approved, non-production restore rehearsal has a documented result, timing, recovery-point/time expectations, and follow-up actions; backup integrity is independently verified. |
-| operational_impact | Backup recoverability and recovery time remain unknown. |
-| current_workaround | Preserve backups and treat restoration readiness as unverified. |
-| evidence | [PHASE_3_COMPLETION_REPORT.md](runtime/PHASE_3_COMPLETION_REPORT.md) and [POST_DEPLOY_RUNTIME_EVIDENCE.md](runtime/POST_DEPLOY_RUNTIME_EVIDENCE.md). |
+| operational_impact | Recoverability was demonstrated for the fresh pre-deploy archive. Production restore remains a destructive Owner gate and no RTO claim is inferred. |
+| current_workaround | None; preserve the verified archive and the separate restore authority boundary. |
+| evidence | [Production backup/restore rehearsal evidence](runtime/PRODUCTION_ST_DENIS_BACKUP_RESTORE_REHEARSAL_EVIDENCE.md). |
 | authoritative_rule | [RUNTIME_VERIFICATION_CHECKLIST.md](RUNTIME_VERIFICATION_CHECKLIST.md). |
-| status | `EVIDENCE_PENDING` |
-| target_loop | Future owner-approved operations reliability loop. |
+| status | `RESOLVED_ISOLATED_RESTORE_PASS` |
+| target_loop | Completed exact-RC recovery gate; a real Production restore is still separately Owner-gated. |
 | acceptance_criteria | An owner-approved isolated restore rehearsal succeeds without Production data mutation; backup integrity, recovery boundaries and scope/limitations are recorded without secrets. |
-| deployment_required | No application deployment; an owner-approved operations exercise is required. |
-| last_updated | 2026-07-27 |
+| deployment_required | No; the approved isolated exercise completed without Production mutation. |
+| last_updated | 2026-08-11 |
 
-### KI-006 - 正式生产批准和发布记录尚未建立
+### KI-006 - 正式生产批准和发布记录（已建立）
 
 | Field | Value |
 |---|---|
 | issue_id | `KI-006` |
 | priority | `P3` |
-| title | 正式生产批准和发布记录尚未建立 |
-| observed_behavior | A reported runtime commit exists, but no independent formal approval/release record is retained. |
+| title | 正式生产批准和发布记录 |
+| observed_behavior | Frozen `RC-ST-DENIS-20260811-2661EB76` binds exact source/images/migrations/acceptance/backup/rollback evidence and the Owner-authorized Production result. |
 | expected_behavior | Each production deployment has an immutable RC identity, Owner approval, release/PR reference, exact source/artifact digests, deployed commit, migration statement, parity/acceptance results, and rollback reference. |
-| operational_impact | Release provenance and incident response are slower and less auditable. |
-| current_workaround | Use the Phase 3 evidence and owner confirmation as bounded historical context only. |
-| evidence | [VERIFIED_RUNTIME_BASELINE.md](runtime/VERIFIED_RUNTIME_BASELINE.md); [PHASE_3_COMPLETION_REPORT.md](runtime/PHASE_3_COMPLETION_REPORT.md). |
+| operational_impact | Resolved for the exact St-Denis RC; future releases require new immutable records. |
+| current_workaround | None. |
+| evidence | [frozen RC](runtime/RC_ST_DENIS_20260811_2661EB76.json) and [Production promotion evidence](runtime/PRODUCTION_ST_DENIS_EXACT_RC_PROMOTION_EVIDENCE.md). |
 | authoritative_rule | [AGILE_LOOP_OPERATING_MODEL.md](AGILE_LOOP_OPERATING_MODEL.md). |
-| status | `PROCESS_PENDING` |
-| target_loop | Governance/release-process improvement, unassigned. |
+| status | `RESOLVED_EXACT_RC_RECORD_ESTABLISHED` |
+| target_loop | Completed for `RC-ST-DENIS-20260811-2661EB76`. |
 | acceptance_criteria | A lightweight owner-approved RC record freezes exact source/artifact identities after Twin/automated/Owner acceptance, proves same-artifact promotion, records compatibility-gated rollback/roll-forward and backup readiness, and contains no secrets or customer data. |
-| deployment_required | No. |
-| last_updated | 2026-07-27 |
+| deployment_required | Completed as part of the separately authorized exact-RC batch. |
+| last_updated | 2026-08-11 |
 
 ### KI-007 - 单门店员工的 Android Device Pairing 流程过于复杂
 

@@ -1,6 +1,23 @@
 # Alive Runtime Planbook
 
-## Current exact-RC Production promotion preparation (2026-08-11)
+## Current exact-RC Production promotion result (2026-08-11)
+
+Owner-authorized `RC-ST-DENIS-20260811-2661EB76` promoted the exact
+Staging-accepted application artifacts for
+`2661eb76c36dd9aa58db94ceacd278242ef4c9ab` to existing Production St-Denis.
+Production advanced from Flyway V7 to exact V10; second-start/no-pending,
+frontend/API/WebSocket, protected-auth boundary, retained Store-scoped config,
+`PAD_DIRECT` 4-printer/3-assignment topology, continuity and bounded observation
+passed. The database container and fixed state root were retained. Staging,
+Chinatown, Store provisioning, printer/Pad configuration and business data were
+not changed. See [promotion evidence](PRODUCTION_ST_DENIS_EXACT_RC_PROMOTION_EVIDENCE.md),
+[backup/restore evidence](PRODUCTION_ST_DENIS_BACKUP_RESTORE_REHEARSAL_EVIDENCE.md),
+and [rollback evidence](PRODUCTION_ST_DENIS_V7_V10_ROLLBACK_COMPATIBILITY_EVIDENCE.md).
+
+Current unique stop:
+`PRODUCTION_EXACT_RC_PROMOTED_POST_DEPLOY_OBSERVATION_PASS`.
+
+## Historical exact-RC Production promotion preparation (2026-08-11)
 
 The Owner freshly attested that exact Staging `2661eb76c36dd9aa58db94ceacd278242ef4c9ab`
 passed the required field acceptance and conditionally authorized its existing
@@ -15,7 +32,8 @@ atomic backup and network-isolated restore rehearsal. Runtime use is still
 `NO_GO` pending merge, fresh validation, V7-to-V10 and old-app-on-V10 rehearsal,
 backup/restore evidence, final frozen RC and Agent 6 acceptance. Production
 remains `4667f3c...` / V7 and was not restarted or migrated by this package.
-Current unique stop: `RC_PREPARED_WAITING_FOR_MANDATORY_PROMOTION_GATES`.
+Historical stop (superseded):
+`RC_PREPARED_WAITING_FOR_MANDATORY_PROMOTION_GATES`.
 
 ## Historical superseded Owner field-test Printing bug repair (2026-08-11)
 
@@ -36,7 +54,7 @@ See [Owner field-test printing fixes evidence](OWNER_FIELD_TEST_PRINTING_FIXES_E
 Historical stop, superseded by the fresh exact-RC Owner acceptance:
 `HISTORICAL_OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`.
 
-## Current Staging MOCK Printing field-test override (2026-08-11)
+## Historical Staging MOCK Printing field-test override (2026-08-11)
 
 The Owner started `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` and approved the bounded
 Staging-only package `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT`. That
@@ -44,8 +62,9 @@ earlier package entered `main` through PR #114 and was superseded in current
 runtime by PR #117. Exact Staging now runs
 `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` at V10 with Store Printing
 `MOCK/true`, four endpoint-free logical printers and three enabled assignments.
-Production remains unchanged and read-only at
-`4667f3c35f85c9f8538f82789d9df1531d4fbc9e` / V7.
+Production remained unchanged and read-only at
+`4667f3c35f85c9f8538f82789d9df1531d4fbc9e` / V7 during that historical
+Staging-only package.
 
 Ground Truth found the reviewed bounded dependency: server tooling permits
 only `DISABLED`, while enabling the existing Print Center without a runtime
@@ -59,11 +78,11 @@ change, Store-scoped MOCK transition, browser verification and automated
 synthetic smoke passed. See
 [field-test evidence](STAGING_MOCK_PRINTING_FIELD_TEST_EVIDENCE.md). Current
 historical stop: `HISTORICAL_OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`. Production
-mutation, real/home
+The package authorized no Production mutation, real/home
 printer binding, public printer access, Pad pairing, Chinatown,
-modularization, REL-001 and Production promotion remain prohibited.
+modularization, REL-001 or Production promotion.
 
-## Current operational Twin readiness override (2026-08-10)
+## Historical operational Twin readiness override (2026-08-10)
 
 `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL` completed successfully on exact
 historical Staging `53209823fa320cc56c31d04ee5c7719a83a78acc` / Flyway V10
@@ -77,11 +96,12 @@ that parity. Production remained read-only at
 
 Historical reconstruction stop:
 `TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`.
-The Owner has opened that loop; the current field-test override above governs.
+The Owner later opened and completed that field-test route for the exact
+candidate.
 Physical printing,
 positive KDS enablement and Pad pairing remain
-`SEPARATE_OWNER_RUNTIME_GATE_PENDING`; Chinatown, modularization, REL-001 and
-Production promotion remain prohibited.
+`SEPARATE_OWNER_RUNTIME_GATE_PENDING`; this historical Twin package itself did
+not authorize Chinatown, modularization, REL-001 or Production promotion.
 
 ## Historical reconstruction execution override (2026-08-10)
 
@@ -208,14 +228,14 @@ See [TWIN-001 St-Denis Twin Plan](../agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.m
 | Item | Current value | Evidence | Boundary |
 |---|---|---|---|
 | Environment | `restaurant-prod` | `OPERATOR_CONFIRMED` | Environment label only; no host or secret is recorded. |
-| `RUNTIME_COMMIT` | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e` | retained identity plus `MACHINE_VERIFIED_READ_ONLY` continuity during STG-007 | Current Production runtime identity only, not a formal release approval. |
+| Deployed Production application | exact accepted SHA `2661eb76c36dd9aa58db94ceacd278242ef4c9ab`; backend `sha256:2db920f0...`; frontend `sha256:233cc07d...` | `RC-ST-DENIS-20260811-2661EB76` plus post-deploy evidence | Immutable image identity; the retained filesystem checkout remains `4667f3c...` and is not the deployed artifact identity. |
 | Production branch | `main` | `MACHINE_VERIFIED_READ_ONLY` during STG-006 continuity | Branch relationship is not a deployment approval record. |
-| Runtime-sensitive deployed candidate | `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` | `MACHINE_VERIFIED` Git/runtime Ground Truth | PR #117's Owner field-test printing fixes are in the exact detached release, build source and deployed Staging images. Flyway remains V10; MOCK submit/update/reprint smoke passes. |
+| Runtime-sensitive deployed candidate | `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` | `STAGING_ACCEPTED` and `DEPLOYED_TO_PRODUCTION` | Same accepted image IDs run in Production; Staging remains exact at V10/MOCK. |
 | STG-007 exact runtime candidate / documentation base before evidence publication | `2837ae88e55142c99c6975f8b6575febffc913a1` | `MACHINE_VERIFIED` from `origin/main`, detached release, build source and deployed Staging identity | PR #82 merge and deployed Staging SHA; it is not the Production runtime. A later evidence-only merge must remain distinct from the deployed SHA. |
 | Deployment mode | HTTP | `OPERATOR_CONFIRMED` | HTTPS/certificate posture is outside this record. |
-| Compose services | `db`, `backend`, `nginx` under project `cloud`; unchanged across the final STG-007 continuation, original start times, restart count 0, health 200 | `MACHINE_VERIFIED_READ_ONLY` | Minimum continuity only; no environment, Flyway, Store, or business-data read. |
-| Database schema | Flyway V7, including `V7__add_print_job_attention_acknowledgement.sql` | `OPERATOR_CONFIRMED` | Not a restore or schema-integrity rehearsal. |
-| Current backup artifact | `deployment/cloud/backups/restaurant_pos_20260725_033648.dump` | `OPERATOR_CONFIRMED` | Reported non-empty, approximately 812K; recoverability is unproven. |
+| Compose services | `db`, `backend`, `nginx` under project `cloud`; DB container retained; restart counts `0/0/0`; health `UP` | `MACHINE_VERIFIED` post-deploy | Exact-RC bounded observation only. |
+| Database schema | exact Flyway V1-V10, all successful; second start no pending | `MACHINE_VERIFIED` | Only reviewed V8/V9/V10 advanced the prior V7 database. |
+| Current backup artifact | `restaurant-pos-predeploy-20260811T155951Z.dump`, SHA-256 `04c3ef44...`, mode `0600` | `MACHINE_VERIFIED` integrity plus isolated restore | Production restore remains a new Owner gate. |
 | Print mode | PAD_DIRECT field flow | `OPERATOR_CONFIRMED` | Does not replace device-by-device health evidence. |
 
 Historical detail remains in [POST_DEPLOY_RUNTIME_EVIDENCE.md](POST_DEPLOY_RUNTIME_EVIDENCE.md),
@@ -239,22 +259,22 @@ snapshots. Do not copy those reports into this planbook.
 | P0/P1 production incident | No active P0 or P1 item recorded in the current backlog. | [KNOWN_ISSUES_BACKLOG.md](../KNOWN_ISSUES_BACKLOG.md) |
 | Historical Orders stale-chunk/WebView blank page | `KI-001` is closed as `CLOSED_OPERATOR_CONFIRMED`; the historical cache-clear recovery remains documented. | [KNOWN_ISSUES_BACKLOG.md](../KNOWN_ISSUES_BACKLOG.md) |
 | Active operational issues | `KI-002` through `KI-007` remain open or evidence/process pending. | [KNOWN_ISSUES_BACKLOG.md](../KNOWN_ISSUES_BACKLOG.md) |
-| Production approval record | Not established. | `KI-006`; `EVIDENCE_PENDING` |
-| Database restore rehearsal | Not executed or evidenced. | `KI-005`; `EVIDENCE_PENDING` |
+| Production approval record | Frozen exact RC and Owner-authorized application-only promotion completed. | [Production promotion evidence](PRODUCTION_ST_DENIS_EXACT_RC_PROMOTION_EVIDENCE.md) |
+| Database restore rehearsal | Fresh backup restored only to a network-none tmpfs clone; V1-V7 exact. | [Backup/restore evidence](PRODUCTION_ST_DENIS_BACKUP_RESTORE_REHEARSAL_EVIDENCE.md) |
 
 ## 5. Current feature and Agile Loop
 
 | Item | Current state |
 |---|---|
-| Current feature | `FT-001 Owner Store Onboarding - Chinatown` (deferred by Owner) |
-| Current Agile Loop | `TWIN-001_ST_DENIS_STAGING_TWIN` |
-| Loop type | `OWNER_GATED_PRODUCTION_LIKE_STAGING_PARITY` |
-| Loop status | `STG-008=PASS; STG-009_PHASE_A_OWNER_LOGIN=DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY; TWIN-001=PASS_OWNER_FIELD_TEST_ACTIVE` |
-| Current package | Exact `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` is deployed to isolated Staging at Flyway V10 and passes manifest-v2 parity plus MOCK printing acceptance and field-test printing fixes smoke. |
+| Current feature | Existing St-Denis exact-RC Production promotion complete; `FT-001` Chinatown remains deferred. |
+| Current Agile Loop | `PRODUCTION_ST_DENIS_EXACT_RC_PROMOTION` completed |
+| Loop type | `OWNER_GATED_EXACT_ARTIFACT_PRODUCTION_PROMOTION` |
+| Loop status | `PRODUCTION_EXACT_RC_PROMOTED_POST_DEPLOY_OBSERVATION_PASS` |
+| Current package | Exact `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` remains in isolated Staging at V10/MOCK and now runs in Production at V10/PAD_DIRECT via frozen RC. |
 | STG-008 state | Historical `PASS` synthetic foundation; TWIN-001 reconciled it in place to the current Operational Twin without reset or cross-Store crossover. |
 | STG-009 Phase-A state | `DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY`: prior API/browser-equivalent evidence is retained; Owner manual UI acceptance is no longer the immediate loop. |
 | AL-001 state | `PLAN_COMPLETE` |
-| AL-002 state | PR #27 merged the backend foundation into `main`; Production remains on the older runtime and no production onboarding is established by that merge. |
+| AL-002 state | PR #27 merged the backend foundation into `main`; current Production application identity is governed by the later exact RC, not that historical merge. |
 | STG-002 state | Deployment package merged to `main` by PR #31; this does not establish a server Staging runtime. |
 | STG-003 state | PR #35 merged the completed real local Docker rehearsal into `main`; final runtime Head `74dd6a628002f96e4f2b4fbe3cf479fb23ed8e01` is `FINAL_HEAD_REHEARSAL_PASS`. |
 | STG-004 state | PR #38 merged the STG-004 runtime evidence. Exact SHA `4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c` passed PLAN, fresh PREFLIGHT, serial build/start, runtime verification, and isolated stop/start recovery. Server Staging remains running; Production remained unchanged. |
@@ -263,18 +283,17 @@ snapshots. Do not copy those reports into this planbook.
 | STG-006 state | `PASS` for candidate `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b`. Fresh read-only evidence confirmed retained Staging `4397f995...` / V8, isolated project/network/state, loopback bind, printing disabled, healthy endpoints, resource headroom, and unchanged Production continuity. No candidate release, deploy, Flyway, restart, login, or data mutation occurred. |
 | OPS-001 state | `REPOSITORY_COMPLETE` through PR #87. The final exact `2837ae88...` runtime use passed release/env binding, V10-to-V10 deploy, repaired readiness, sanitized Flyway/runtime collection and same-image restart without weakening any guard. PR #87 later supplied the blocked-state-safe release/env preparation path, which was used by exact `6753855497...` for the bounded rebind/deploy/recovery continuation. Runtime use remains action-specific and Owner-gated. |
 | STG-007 state | `PASS` at exact deployed Staging SHA `2837ae88e55142c99c6975f8b6575febffc913a1`. Environment digest `124eb472...`, continuation entry `8d744fa8...`, formal preflight `7174a295...`, readiness `19a8fec2...`, runtime collection `03337e71...`, restart readiness `6392783f...`, and same-image restart `2208d8ca...` all passed. Flyway remained exact V10/no-pending; health returned 200/200/200; exact container/image/release identity, printing, isolation and Production continuity were unchanged. |
-| AL-003 state | PRs #61-#101 are `IN_MAIN`; Chinatown Phase B, validation/clone and REL-001 are `DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY`. Existing code, plans and evidence remain preserved; no Production acceptance result exists. |
+| AL-003 state | PRs #61-#101 are `IN_MAIN`; Chinatown Phase B, validation/clone and REL-001 remain deferred. Existing St-Denis exact-RC acceptance does not activate Chinatown. |
 | Staging Owner login prerequisite | Historical synthetic Owner/browser-equivalent foundation is complete; manual Phase-A closure is deferred by the Owner Twin priority. Retrieval remains private; no secret is stored in Git/evidence. |
-| Current permitted work | Continue Owner manual field testing against the retained Operational Twin and verified Staging MOCK pipeline; bounded bugs return through repair, tests, Agent 6 and exact-SHA Staging retry under the active loop. |
-| Explicitly not permitted | Production read/write/deploy/Flyway action; Staging downgrade/Flyway edit/destructive reset; Chinatown; modularization; REL-001; Production promotion; physical printer binding; Pad pairing; `REAL`; or public printer access. `IN_MAIN`, `DEPLOYED_TO_STAGING`, and `STAGING_ACCEPTED` remain distinct. |
+| Current permitted work | Publish reviewed exact-RC evidence and perform bounded read-only continuity checks. |
+| Explicitly not permitted | Further Production runtime/configuration action; rollback absent a severe incident; DB restore; schema/Flyway change; Staging downgrade/reset; Chinatown; modularization; physical printer binding; Pad pairing; `REAL`; or public printer access. |
 
 The canonical [release/promotion policy](../AGILE_LOOP_OPERATING_MODEL.md#83-canonical-release-promotion-drift-and-recovery-policy)
-now requires immutable RC freeze, exact same-artifact promotion, recurring
-read-only drift detection with explicit Owner-triggered Twin sync, the
+requires immutable RC freeze, exact same-artifact promotion, the
 `APPLICATION_ROLLBACK_COMPATIBILITY_GATE`, and backup integrity plus isolated
-restore-rehearsal readiness. These are future governance gates only; they do
-not authorize a Production read, deployment, restore, or Staging mutation in
-the current TWIN-001 loop.
+restore-rehearsal readiness. Those gates passed for this exact St-Denis RC;
+future promotion, restore, Staging mutation or Chinatown work still requires
+new scoped authority.
 
 Agent and worker execution is ephemeral. After a bounded task, the result and
 evidence must be returned and persisted, the active session/process terminated,
@@ -341,10 +360,11 @@ stacked branch. Its evidence is
 
 Current `main` contains the generic clone transaction, source-option layer,
 complete Chinatown Profile, read-only planner, and protected Owner HTTP API.
-This is repository capability only. No real clone has run. STG-006 freshly
-confirmed Staging at `4397f995...` / Flyway V8 and minimum Production
-continuity at full SHA `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`.
-Production Flyway was not queried and remains retained V7 evidence only.
+This is repository capability only. No real clone has run. At the historical
+STG-006 checkpoint, Staging was `4397f995...` / Flyway V8 and minimum
+Production continuity was
+`4667f3c35f85c9f8538f82789d9df1531d4fbc9e`; Production Flyway had not yet
+been queried. The current exact-RC result at the top supersedes that snapshot.
 
 The exact `468b8705...` continuation exposed the historical browser CORS
 failure. PR #99 repaired it, and exact `1a3f2e...` subsequently passed formal
