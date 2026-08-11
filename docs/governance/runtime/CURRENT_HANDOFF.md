@@ -13,7 +13,7 @@ The bounded dependency repair adds a generic runtime printing-mode allowlist
 and endpoint-configuration policy so Staging can permit only
 `DISABLED,MOCK`, never `REAL` or `PAD_DIRECT`, while retaining the shared MOCK
 renderer/job/dispatch path. Current stop:
-`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT_REPAIR_VERIFIED_WAITING_FOR_AGENT6_PR`.
+`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT_REPAIR_AGENT6_ACCEPTED_WAITING_FOR_PR`.
 See [repair evidence](STAGING_MOCK_PRINTING_RUNTIME_POLICY_REPAIR_EVIDENCE.md).
 No physical printer/Pad action or Production mutation is authorized.
 

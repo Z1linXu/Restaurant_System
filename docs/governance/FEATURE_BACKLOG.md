@@ -9,7 +9,7 @@ configuration before Staging changes from `DISABLED/false` to `MOCK/true`.
 The intended acceptance uses the existing complete MOCK pipeline and the
 retained 4-printer/3-assignment topology. Physical printing, Pad pairing and
 Production remain excluded. Current stop:
-`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT_REPAIR_VERIFIED_WAITING_FOR_AGENT6_PR`.
+`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT_REPAIR_AGENT6_ACCEPTED_WAITING_FOR_PR`.
 
 ## Current TWIN-001 operational Twin readiness override (2026-08-10)
 
