@@ -1,5 +1,16 @@
 # Feature Backlog
 
+## Current Owner field-test Printing slice (2026-08-11)
+
+`OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` is active for the bounded
+`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` slice. Repository repair is in
+progress to enforce a generic runtime mode ceiling and disabled endpoint
+configuration before Staging changes from `DISABLED/false` to `MOCK/true`.
+The intended acceptance uses the existing complete MOCK pipeline and the
+retained 4-printer/3-assignment topology. Physical printing, Pad pairing and
+Production remain excluded. Current stop:
+`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT_DEPENDENCY_REPAIR_IN_PROGRESS`.
+
 ## Current TWIN-001 operational Twin readiness override (2026-08-10)
 
 TWIN-001 reconstruction is `PASS_WAITING_FOR_OWNER_FIELD_TEST`. Exact Staging

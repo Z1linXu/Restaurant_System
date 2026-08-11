@@ -1,5 +1,12 @@
 # TWIN-001 St-Denis Production-like Staging Twin Plan
 
+> Field-test update (2026-08-11): the Owner opened the manual field-test loop
+> and approved the bounded Staging-only
+> `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` package. It may enable only
+> MOCK through the retained logical topology after the generic runtime
+> allowlist/endpoint-policy repair passes. Real/home printer binding and Pad
+> pairing remain separate gates.
+
 > Execution update (2026-08-10): Owner approval
 > `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL` completed. Exact Staging
 > `53209823fa320cc56c31d04ee5c7719a83a78acc` / V10 passes deterministic

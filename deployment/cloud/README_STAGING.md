@@ -67,27 +67,32 @@ Required properties include:
 - database name and user containing `staging`;
 - unique database password and JWT secret, at least 16 and 32 characters;
 - SHA-specific backend/frontend image tags and frontend build version;
-- `STAGING_PRINT_MODE=DISABLED` and `STAGING_PRINTING_FEATURE_ENABLED=false`.
+- `STAGING_PRINT_MODE=DISABLED` with `STAGING_PRINTING_FEATURE_ENABLED=false`
+  for the default state, or the explicitly approved bounded pair
+  `MOCK`/`true`;
+- `STAGING_ALLOWED_PRINTING_MODES=DISABLED,MOCK` and
+  `STAGING_PRINTER_ENDPOINT_CONFIGURATION_ENABLED=false` (these are also the
+  fail-closed Compose defaults for retained private environments).
 
 The guard rejects blank SHA values, `:local` tags, ports 80/443, public binds,
 relative or symlinked PostgreSQL paths, production-like database defaults,
 placeholder secrets, `REAL`, `PAD_DIRECT`, and any configured printer endpoint.
 
 For `STAGING_PRINT_MODE=DISABLED`, the package sets the actual backend
-property `APP_FEATURES_PRINTING=false`. The resolved Compose configuration is
-checked for that exact value before any build or start. This disables printing
-at the application Feature Flag layer, including when a synthetic Store was
-mistakenly created with an enabled Store mode.
+property `APP_FEATURES_PRINTING=false`. For an explicitly approved bounded
+MOCK field-test package, `STAGING_PRINT_MODE=MOCK` requires
+`STAGING_PRINTING_FEATURE_ENABLED=true`. Both shapes set the application
+runtime allowlist to exactly `DISABLED,MOCK` and disable printer endpoint
+configuration. The resolved Compose configuration is checked before any build
+or start. `REAL` and `PAD_DIRECT` therefore remain rejected by the application
+service boundary even while the Printing APIs are available.
 
-`STAGING_PRINT_MODE` does not create or modify Store database rows. Any
-synthetic Store created for Staging must have its actual `printing_mode` set to
-`DISABLED` before normal smoke tests. Server/default Staging does not permit
-`MOCK`, because STG-002 has no application-level allowlist proving that a Store
-or API cannot be changed to `REAL` or `PAD_DIRECT`. `MOCK` is accepted only by
-the no-deploy `--local-validate` rehearsal path, which validates package input
-and does not start a backend. Actual mock Print Job execution is deferred to a
-future reviewed allowlist implementation. The guard rejects `REAL`,
-`PAD_DIRECT`, and any `STAGING_PRINTER_ENDPOINT` declaration.
+`STAGING_PRINT_MODE` does not create or modify Store database rows. Any Store
+mode transition remains a separate authorized, Store-scoped API action. The
+default Store state is `DISABLED`; an approved field-test package may set it to
+`MOCK` only after the backend runtime policy is active. The guard rejects
+`REAL`, `PAD_DIRECT`, endpoint configuration enablement, and any
+`STAGING_PRINTER_ENDPOINT` declaration.
 
 The dotenv parser accepts only unambiguous `KEY=value` or fully quoted values.
 It rejects duplicate keys, inline comments, whitespace in unquoted values, and

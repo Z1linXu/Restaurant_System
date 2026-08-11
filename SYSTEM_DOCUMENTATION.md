@@ -1,5 +1,15 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-11 Staging MOCK field-test package: Owner field testing is active and
+> `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` is in bounded dependency repair.
+> The shared printing service gains environment-configured allowed modes and
+> endpoint-write policy. Defaults preserve existing behavior; isolated Staging
+> resolves to `DISABLED,MOCK` only with endpoint configuration disabled. The
+> existing MOCK path still renders and persists Print Jobs before marking them
+> printed without transport. Runtime enablement remains pending Agent 6,
+> PR/merge and exact-SHA Staging validation; Production and physical hardware
+> remain unchanged.
+
 > 2026-08-10 TWIN-001 operational Twin: exact Staging
 > `53209823fa320cc56c31d04ee5c7719a83a78acc` remains on Flyway V10 and passes
 > complete manifest-v2 parity, independent Staff credential verification,

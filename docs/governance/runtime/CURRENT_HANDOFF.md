@@ -1,5 +1,22 @@
 # Current Project Handoff
 
+## Current Staging MOCK Printing field-test override (2026-08-11)
+
+Owner field testing is active and the bounded package
+`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` is approved. Fresh
+`origin/main=cabcb58198def63df4e2b4dda5e5eb1164c395a9`; exact Staging remains
+`53209823fa320cc56c31d04ee5c7719a83a78acc` / V10 with Printing
+`DISABLED/false`, 4 endpoint-free logical printers and 3 enabled assignments.
+Production remains read-only and unchanged at `4667f3c...` / V7.
+
+The bounded dependency repair adds a generic runtime printing-mode allowlist
+and endpoint-configuration policy so Staging can permit only
+`DISABLED,MOCK`, never `REAL` or `PAD_DIRECT`, while retaining the shared MOCK
+renderer/job/dispatch path. Current stop:
+`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT_DEPENDENCY_REPAIR_IN_PROGRESS`.
+See [repair evidence](STAGING_MOCK_PRINTING_RUNTIME_POLICY_REPAIR_EVIDENCE.md).
+No physical printer/Pad action or Production mutation is authorized.
+
 ## Current operational Twin readiness override (2026-08-10)
 
 The approved reconstruction loop completed on exact Staging

@@ -47,9 +47,9 @@ services:
       APP_SEED_DEMO_DATA_ENABLED: "false"
       APP_SEED_MEMBERSHIP_SUPPLEMENT_ENABLED: "false"
       APP_SEED_PRODUCTION_BOOTSTRAP_ENABLED: "false"
-      # Server/default staging validation requires this to resolve to false.
-      # Local MOCK shape validation never starts this Compose service.
       APP_FEATURES_PRINTING: ${STAGING_PRINTING_FEATURE_ENABLED:?STAGING_PRINTING_FEATURE_ENABLED is required}
+      APP_PRINTING_ALLOWED_MODES: ${STAGING_ALLOWED_PRINTING_MODES:-DISABLED,MOCK}
+      APP_PRINTING_ENDPOINT_CONFIGURATION_ENABLED: ${STAGING_PRINTER_ENDPOINT_CONFIGURATION_ENABLED:-false}
     expose:
       - "8080"
     depends_on:

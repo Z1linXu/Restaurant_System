@@ -1,5 +1,16 @@
 # Agile Loop Operating Model
 
+## Current Staging MOCK Printing field-test override (2026-08-11)
+
+The Owner opened `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` and approved
+`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT`. The package may repair the
+bounded runtime-policy/tooling gap, auto-merge after the permanent review gate,
+rebind exact Staging SHA, switch only Staging application feature plus Store 1
+mode to MOCK, and run synthetic MOCK printing acceptance. Its Staging runtime
+ceiling is exactly `DISABLED,MOCK`; printer endpoint configuration remains
+disabled. Production, `REAL`, `PAD_DIRECT`, physical binding and all deferred
+routes remain outside this authorization.
+
 ## Current TWIN-001 operational Twin readiness override (2026-08-10)
 
 The Owner-approved Staging reconstruction, V10 parity validator and safe
