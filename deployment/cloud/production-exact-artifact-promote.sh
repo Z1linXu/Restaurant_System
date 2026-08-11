@@ -148,10 +148,15 @@ wait_health() {
   die "candidate backend did not become healthy"
 }
 verify_public_routes() {
-  local frontend_code health_body
-  frontend_code="$(env -i PATH="$SAFE_PATH" curl --noproxy '*' --connect-timeout 2 --max-time 5 -sS -o /dev/null -w '%{http_code}' http://127.0.0.1/ || true)"
-  health_body="$(env -i PATH="$SAFE_PATH" curl --noproxy '*' --connect-timeout 2 --max-time 5 -fsS http://127.0.0.1/api/v1/system/health || true)"
-  [[ "$frontend_code" == "200" && "$health_body" == *'"status":"UP"'* ]] || die "post-nginx frontend/API readiness failed"
+  local frontend_code="" health_body=""
+  local deadline=$((SECONDS + 30))
+  while (( SECONDS < deadline )); do
+    frontend_code="$(env -i PATH="$SAFE_PATH" curl --noproxy '*' --connect-timeout 2 --max-time 5 -sS -o /dev/null -w '%{http_code}' http://127.0.0.1/ || true)"
+    health_body="$(env -i PATH="$SAFE_PATH" curl --noproxy '*' --connect-timeout 2 --max-time 5 -fsS http://127.0.0.1/api/v1/system/health || true)"
+    [[ "$frontend_code" == "200" && "$health_body" == *'"status":"UP"'* ]] && return 0
+    sleep 1
+  done
+  die "post-nginx frontend/API readiness failed"
 }
 
 resource_gate

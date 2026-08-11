@@ -1,6 +1,18 @@
 # Agile Loop Operating Model
 
-## Current exact-artifact promotion tooling repair (2026-08-11)
+## Current exact-artifact Production result (2026-08-11)
+
+The §8.3 path completed for frozen St-Denis RC
+`RC-ST-DENIS-20260811-2661EB76`: exact Staging-accepted application artifacts
+were promoted without build/pull, Production advanced V7 to V10, and
+second-start/no-pending plus bounded observation passed. Backup/isolated
+restore and old-application-on-V10 compatibility are proven; rollback is
+application-only and DB restore remains separately Owner-gated. This result
+does not activate Chinatown, ACT-001, provisioning, printer or Pad work.
+Current unique stop:
+`PRODUCTION_EXACT_RC_PROMOTED_POST_DEPLOY_OBSERVATION_PASS`.
+
+## Historical exact-artifact promotion tooling repair (2026-08-11)
 
 The active bounded dependency repair implements §8.3 for the exact
 Staging-accepted St-Denis candidate: a prepared RC manifest binds source,
@@ -11,7 +23,8 @@ shared fail-closed operations lock. The paired backup path uses an atomic
 private archive and network-isolated, resource-limited disposable restore.
 Capability in main never self-authorizes runtime execution; all RC fields and
 backup/migration/rollback/Agent-6 gates must be PASS before execution.
-Current unique stop: `RC_PREPARED_WAITING_FOR_MANDATORY_PROMOTION_GATES`.
+Historical stop (superseded):
+`RC_PREPARED_WAITING_FOR_MANDATORY_PROMOTION_GATES`.
 
 ## Historical superseded Owner field-test Printing bug repair (2026-08-11)
 

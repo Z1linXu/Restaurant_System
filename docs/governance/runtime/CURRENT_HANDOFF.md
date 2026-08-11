@@ -1,6 +1,21 @@
 # Current Project Handoff
 
-## Current Production promotion preparation (2026-08-11)
+## Current Production promotion result (2026-08-11)
+
+Existing Production St-Denis now runs the exact frozen backend/frontend image
+pair for accepted application SHA `2661eb76c36dd9aa58db94ceacd278242ef4c9ab`
+at Flyway V10. Exact RC, backup/integrity/isolated restore, V7-to-V10 rehearsal,
+old-app-on-V10 rollback compatibility, Agent 6, second-start/no-pending and
+bounded observation all passed. The previous application images remain
+available; application-only rollback on V10 is compatible if a future severe
+incident requires it. No DB restore is authorized. No Chinatown, Store/menu,
+printer, Pad, credential or business-data action is implied.
+
+Current unique stop:
+`PRODUCTION_EXACT_RC_PROMOTED_POST_DEPLOY_OBSERVATION_PASS`. See
+[exact-RC Production evidence](PRODUCTION_ST_DENIS_EXACT_RC_PROMOTION_EVIDENCE.md).
+
+## Historical Production promotion preparation (2026-08-11)
 
 Fresh Owner authority promotes only the exact Staging-accepted candidate
 `2661eb76c36dd9aa58db94ceacd278242ef4c9ab`, never later main. Fresh passive
@@ -13,7 +28,8 @@ without changing application code or migrations. It is not deployment evidence:
 rollback compatibility, migration rehearsal, restore rehearsal, fresh backup,
 final RC freeze and Agent 6 remain mandatory before any Production lifecycle
 action. Chinatown and every provisioning/activation action remain blocked.
-Current unique stop: `RC_PREPARED_WAITING_FOR_MANDATORY_PROMOTION_GATES`.
+Historical stop (superseded):
+`RC_PREPARED_WAITING_FOR_MANDATORY_PROMOTION_GATES`.
 
 ## Historical superseded Owner field-test Printing bug repair (2026-08-11)
 
@@ -30,15 +46,16 @@ lifecycle-safety blocks. Production remains unchanged except for allowed
 lightweight continuity checks. See
 [Owner field-test printing fixes evidence](OWNER_FIELD_TEST_PRINTING_FIXES_EVIDENCE.md).
 
-## Current Staging MOCK Printing field-test override (2026-08-11)
+## Historical Staging MOCK Printing field-test override (2026-08-11)
 
-Owner field testing is active. The bounded package
+Owner field testing was active. The bounded package
 `STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` completed through PR #114 and was
 superseded in current runtime by the field-test repair package above. Exact
 Staging now runs `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` / V10 with
 Printing `MOCK/true`, 4 endpoint-free logical printers and 3 enabled
 assignments.
-Production remains read-only and unchanged at `4667f3c...` / V7.
+Production remained read-only and unchanged at `4667f3c...` / V7 during that
+historical Staging-only package.
 
 The bounded dependency repair adds a generic runtime printing-mode allowlist
 and endpoint-configuration policy so Staging can permit only
@@ -48,9 +65,9 @@ Printing Settings verification passed, and PR #117's field-test printing fixes
 smoke now also passes. Historical stop, superseded by exact-RC Owner acceptance:
 `HISTORICAL_OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`. See
 [field-test evidence](STAGING_MOCK_PRINTING_FIELD_TEST_EVIDENCE.md).
-No physical printer/Pad action or Production mutation is authorized.
+That package authorized no physical printer/Pad action or Production mutation.
 
-## Current operational Twin readiness override (2026-08-10)
+## Historical operational Twin readiness override (2026-08-10)
 
 The approved reconstruction loop completed on exact Staging
 `53209823fa320cc56c31d04ee5c7719a83a78acc` / Flyway V10. Manifest v2 parity,
@@ -61,9 +78,9 @@ and read-only at `4667f3c35f85c9f8538f82789d9df1531d4fbc9e` / V7. See
 
 Historical reconstruction stop:
 `TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`.
-The Owner has opened that loop; the current field-test override above governs.
-Do not start hardware gates, Chinatown, modularization, REL-001 or Production
-promotion from this handoff alone.
+The Owner later opened and completed that field-test route for the exact
+candidate. This historical Twin evidence did not authorize hardware gates,
+Chinatown, modularization, REL-001 or Production promotion by itself.
 
 ## Historical reconstruction execution override (2026-08-10)
 
@@ -232,22 +249,24 @@ Restaurant System is moving from one operational Store to reusable multi-Store
 provisioning without destabilizing current restaurant operations.
 
 - St-Denis is the current Production Store.
-- St-Denis Twin planning and Owner field-test/bug-fix readiness are the current
-  highest-priority route.
+- St-Denis Twin planning and Owner field-test/bug-fix acceptance completed for
+  exact `2661eb76...`; its exact-RC Production promotion is the current closed
+  result.
 - Chinatown is still the planned second real Production Store, but is deferred
   until the Twin, field-test loop and later modularization gates complete.
 - A future third Store matching St-Denis should reuse a reviewed St-Denis
   profile, not copied code or data scripts.
-- The direction is multi-Store SaaS-style provisioning through shared modules
-  and Profiles, while the immediate goal is the St-Denis Twin planning and
-  Owner field-test/bug-fix route.
+- The direction remains multi-Store SaaS-style provisioning through shared
+  modules and Profiles. No next implementation or runtime route starts from the
+  completed St-Denis promotion without a new Owner decision.
 
 ## 2. Current Git ground truth
 
 | Item | Verified value | Classification |
 |---|---|---|
-| runtime-sensitive deployed candidate | `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` | `IN_MAIN` through PR #117 and `DEPLOYED_TO_STAGING`; complete Twin parity, MOCK printing acceptance and Owner field-test printing fixes smoke passed. |
+| runtime-sensitive deployed candidate | `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` | `IN_MAIN` through PR #117, `STAGING_ACCEPTED`, and now `DEPLOYED_TO_PRODUCTION` through frozen RC `RC-ST-DENIS-20260811-2661EB76`. |
 | exact deployed Staging runtime | `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` | `DEPLOYED_TO_STAGING`; Flyway V10, reconstructed Operational Twin, MOCK/true, health passed, restart count zero. |
+| exact deployed Production application | backend `sha256:2db920f0...`, frontend `sha256:233cc07d...` | Exact accepted SHA `2661eb76...`; Flyway V10; fixed DB state/container retained; post-deploy observation PASS. |
 | Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
 | Runtime-sensitive delivery package | Owner field-test printing fixes / PR #117 | `STAGING_ACCEPTED` through exact `2661eb76...`; fresh Owner acceptance attested |
 | Browser-equivalent evidence / PR #101 | merge `aec59af93a9bf42ce3d167a579a19be80eadc9b0` | `IN_MAIN`; evidence/governance only, not deployed runtime |
@@ -322,18 +341,19 @@ printing or device operations.
 ## 4. Runtime ground truth
 
 STG-006 established the historical passive baseline and STG-007 established
-the historical infrastructure identity. The later STG-008 continuation updated
-the current bounded Staging runtime identity below.
+the historical infrastructure identity. The later STG-008 continuation and
+the exact St-Denis RC promotion establish the current identities below.
 
 | Environment | Retained evidence | Classification and boundary |
 |---|---|---|
-| Production | `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`; Compose `cloud` `db/backend/nginx`; unchanged IDs/start times/restart `0`; health 200 | `MACHINE_VERIFIED_READ_ONLY` continuity only; Flyway/business state not queried |
+| Production | accepted app SHA `2661eb76c36dd9aa58db94ceacd278242ef4c9ab`; backend `sha256:2db920f0...`; frontend `sha256:233cc07d...`; Compose `cloud`; retained DB `c2ab37fec6ac`; health `UP`; restart `0/0/0`; Flyway V10 | `DEPLOYED_TO_PRODUCTION`; frozen exact RC, second-start/no-pending and bounded observation PASS; filesystem checkout `4667f3c...` remains only the retained previous source identity |
 | Staging | `2661eb76c36dd9aa58db94ceacd278242ef4c9ab`; Flyway V10 with ten successful and zero failed rows; exact `db/backend/nginx` identities running; health passed | `STAGING_ACCEPTED`; manifest-v2 parity, MOCK printing and fresh Owner acceptance pass with `BLOCKING_BEHAVIOR_DIFFERENCE=0`. |
 | Staging isolation | project `restaurant-pos-staging`; only `127.0.0.1:18080`; separate state/network/mounts; private leaf UID 70/mode 0700 | `MACHINE_VERIFIED_READ_ONLY` |
 | Staging printing | `STAGING_PRINT_MODE=MOCK`; feature flag `true`; allowed modes `DISABLED,MOCK`; endpoint configuration disabled | `MACHINE_VERIFIED`; 7/7 MOCK jobs printed with zero physical transport |
 
-Repository migrations are exactly V1-V10. Machine evidence proves Staging is
-V10; it does not prove V8-V10 ran on Production.
+Repository migrations are exactly V1-V10. Machine evidence proves both Staging
+and Production are V10; Production applied only reviewed V8/V9/V10 and the
+separate second start proved no pending migration.
 
 The historical credential-entry decision is
 [STG-008 Synthetic Topology and Source Entry Evidence](STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).
@@ -357,30 +377,25 @@ current rebind or recovery instruction is inherited from it.
 
 | Field | Current value |
 |---|---|
-| Current Feature | `FT-001 Owner Store Onboarding - Chinatown` (deferred) |
-| Current Agile Loop | `TWIN-001_ST_DENIS_STAGING_TWIN` |
-| Current package | Exact `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` is deployed at V10 with complete manifest-v2 parity, verified MOCK printing and field-test printing fixes smoke. |
-| Feature stop state | `HISTORICAL_OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`; superseded by current RC preparation |
+| Current Feature | Existing St-Denis exact-RC Production promotion complete; `FT-001` Chinatown remains deferred. |
+| Current Agile Loop | `PRODUCTION_ST_DENIS_EXACT_RC_PROMOTION` completed |
+| Current package | Frozen `RC-ST-DENIS-20260811-2661EB76`; exact `2661eb76...` deployed to Production at V10; Staging remains exact `2661eb76...` / V10 / MOCK. |
+| Feature stop state | `PRODUCTION_EXACT_RC_PROMOTED_POST_DEPLOY_OBSERVATION_PASS` |
 | Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
-| Current Owner gate | `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`; active, with physical printing separately gated. |
+| Current Owner gate | No automatic next runtime action. Any Chinatown, printer/Pad, rollback/restore or new Production batch requires its own authority. |
 
 Release/promotion navigation follows the canonical [Agile Loop policy](../AGILE_LOOP_OPERATING_MODEL.md#83-canonical-release-promotion-drift-and-recovery-policy):
 freeze an immutable RC after Twin/automated/Owner acceptance, promote the same
-artifact digests, detect drift read-only and sync only after an explicit
-Owner-approved, Owner-triggered Twin sync request, use
-`APPLICATION_ROLLBACK_COMPATIBILITY_GATE`, and treat
-backup existence as distinct from recoverability. These future gates do not
-change the active Owner field-test stop.
+artifact digests, use `APPLICATION_ROLLBACK_COMPATIBILITY_GATE`, and treat
+backup existence as distinct from recoverability. Those gates passed for this
+exact RC; every future release still requires a new bound record and authority.
 
 ### Permitted work
 
 - Fetch and verify Git/GitHub ground truth.
-- Continue Owner manual field testing against the retained Operational Twin and
-  verified MOCK ticket previews.
-- Perform bounded observations and route discovered ordinary bugs through
-  repair, tests, Agent 6, governance and exact-SHA Staging retry under the
-  active loop.
-- Complete this evidence/governance PR under Auto-Merge policy. Its
+- Perform read-only verification of the completed exact-RC evidence and retained
+  Staging/Production continuity.
+- Complete this tooling/evidence/governance PR under Auto-Merge policy. Its
   documentation-only merge does not require or authorize another Staging
   rebind.
 
@@ -388,10 +403,10 @@ change the active Owner field-test stop.
 
 - Reuse of consumed/failed STG-007 or STG-008 approval/readiness evidence, or
   continuation on an old image.
-- Any Production runtime action or further Production configuration read;
-  schema/migration change; Staging downgrade, Flyway edit or destructive reset;
-  physical printer binding, Pad pairing, Chinatown,
-  modularization, AL-003/REL-001 or Production promotion.
+- Any further Production runtime/configuration action; schema/migration change;
+  application rollback absent a severe incident; database restore; Staging
+  downgrade/Flyway edit/destructive reset; physical printer binding, Pad
+  pairing, Chinatown, modularization, AL-003/REL-001 or another promotion.
 - Production Store 1 read or mutation.
 - Real printer/endpoint configuration, physical test print, Pad pairing, or
   device/Worker mutation. Owner manual MOCK use remains permitted.
@@ -562,7 +577,7 @@ is the first Store Profile sample, not a shared-service special case.
 | ID | Purpose | Current state | Dependency / Owner gate |
 |---|---|---|---|
 | STG-005B / #62 | Reproducible synthetic St-Denis menu baseline | `IN_MAIN` and `DEPLOYED_TO_STAGING` evidence | PLAN/EXECUTE/REPLAY passed at `4/3/13/38`, revision `2 -> 2`; no duplicate/crossover |
-| AL-003S / #63 | Exact-SHA Staging acceptance preparation | `IN_MAIN`; reviewed tooling used under separate runtime approvals | Current runtime is exact `2661eb76...`; Operational Twin plus MOCK validation pass and Owner retest is pending |
+| AL-003S / #63 | Exact-SHA Staging acceptance preparation | `IN_MAIN`; reviewed tooling used under separate runtime approvals | Exact `2661eb76...` passed Operational Twin, MOCK validation and Owner acceptance, then became the frozen Production RC. |
 | AL-004 / #64 | Generic Store Profile contract | `IN_MAIN` | Repository capability only; no provisioning/runtime execution |
 | AL-005A / #65 | Staff/Table module plan | `IN_MAIN` | Repository planning only; no writer or runtime execution |
 | AL-005 / #67 | Printing provisioning plan | `IN_MAIN` | repository planning only; no writer/runtime action |
@@ -599,16 +614,13 @@ from current main.
   route and is not the current loop.
 - Chinatown target onboarding and AL-003 validate/execute/clone/replay remain
   unexecuted and outside the current authorization.
-- Production and repository main have an unreviewed runtime gap.
-- Production needs a fixed state/control-root strategy before detached-release
-  deployment can be safe.
-- Production deploy tooling needs guarded serial builds and the 1 GiB memory
-  gates described by PR #70.
-- Fresh Production preflight and separate Store 1 read approval are pending.
-- Backup integrity and isolated restore rehearsal are pending.
-- Old-application-on-new-schema rollback compatibility is pending.
+- The exact-RC Production gap, fixed state root, serialized exact-image tooling,
+  1 GiB resource gate, fresh preflight, backup integrity, isolated restore and
+  old-app-on-V10 rollback compatibility are resolved for
+  `RC-ST-DENIS-20260811-2661EB76` only.
 - Printing and Device/Pad field provisioning remain unimplemented/runtime-gated.
-- Exact RC, Production deployment, and separate ACT-001 approval are pending.
+- Chinatown REL-001/ACT-001 remain separately pending and were not activated by
+  the St-Denis promotion.
 
 ### Recently resolved
 
@@ -634,35 +646,34 @@ from current main.
    `AGILE_LOOP_OPERATING_MODEL.md`, `FEATURE_BACKLOG.md`, and the applicable
    technical plan.
 3. Verify current `origin/main`; do not trust the Owner workspace branch tip.
-4. Verify historical GitHub PR #61 through #112, independent PR #66, repair PR
-   #114, and the current evidence PR semantics.
+4. Verify historical GitHub PR #61 through #120, independent PR #66, and the
+   current exact-RC evidence PR semantics.
 5. Distinguish main, stacked Draft, Staging, and Production state.
-6. Report the completed Operational Twin and continue the active Owner
-   field-test loop from the current stop state.
+6. Report the completed exact-RC Production promotion and retain stop state
+   `PRODUCTION_EXACT_RC_PROMOTED_POST_DEPLOY_OBSERVATION_PASS`.
 7. Do not recreate or redesign packages #61-#70.
 8. Do not infer implementation from the planning packages.
 9. Read the TWIN-001 plan, STG-006, OPS-001, the STG-007 repair/final evidence, all STG-008
    evidence records, [STG-009 Phase-A API evidence](STG-009_PHASE_A_OWNER_LOGIN_EVIDENCE.md)
    and [browser-equivalent evidence](STG-009_PHASE_A_BROWSER_EQUIVALENT_ACCEPTANCE_EVIDENCE.md).
    Treat `STG-008=PASS` and automated Phase-A API/browser-equivalent acceptance
-   on exact historical Staging `1a3f2e...` as foundation evidence. Current
-   exact Staging `2661eb76...` is the validated Operational Twin with MOCK
-   printing enabled.
-10. Continue `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`. Do not replay reconstruction,
-    read Production, enter physical hardware gates, start Chinatown
-    onboarding/clone, or implement modules without later Owner decisions.
-    Rebind/redeploy Staging or repeat focused acceptance only when a bounded bug
-    repair in the active loop requires it.
-11. Stop at runtime/product/operations Owner Gates; otherwise continue the
-    bounded Agile Loop and Dependency Repair Auto-Loop.
+   on exact historical Staging `1a3f2e...` as foundation evidence. Exact
+   Staging `2661eb76...` remains the validated Operational Twin with MOCK
+   printing; exact Production `2661eb76...` now runs V10 with PAD_DIRECT.
+10. Do not continue `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`, rebind/redeploy
+    Staging, read or mutate Production, enter physical hardware gates, start
+    Chinatown onboarding/clone, restore/rollback, or implement modules without
+    a new explicit Owner decision.
+11. The completed promotion creates no automatic next runtime action. Stop at
+    the unique state above and await a new scoped objective/Owner gate.
 
 ## 14. Auto-loop behavior
 
-Continue to follow Dependency Repair Auto-Loop, Continuous Agile Loop,
-Mandatory Governance Sync, and Planbook Ground Truth Rule. A clear bounded
-defect with no product/security/runtime change should be repaired, tested,
-reviewed, documented, and submitted as a Draft PR. Do not mechanically stop at
-a repairable `NO_GO`.
+For a future Owner-approved bounded task, follow Dependency Repair Auto-Loop,
+Continuous Agile Loop, Mandatory Governance Sync, and Planbook Ground Truth
+Rule. A clear bounded defect within that future authority should be repaired,
+tested, reviewed and documented without broadening runtime scope. This section
+does not keep the completed Production promotion loop active.
 
 Stop only for a real product/architecture ambiguity, security boundary,
 runtime mutation, Production action, irreversible operation, or dependency

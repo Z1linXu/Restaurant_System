@@ -1,6 +1,18 @@
 # SYSTEM DOCUMENTATION
 
-> 2026-08-11 Production promotion tooling boundary: existing Production
+> 2026-08-11 Production exact-RC result: existing St-Denis Production now runs
+> the immutable backend/frontend artifacts accepted on Staging for application
+> SHA `2661eb76c36dd9aa58db94ceacd278242ef4c9ab`. Flyway advanced only through
+> reviewed V8/V9/V10; second-start/no-pending, frontend/API/WebSocket, auth
+> boundary, Store-scoped configuration preservation, `PAD_DIRECT` printing
+> topology, continuity and bounded observation passed. The fixed PostgreSQL
+> state root/container and previous application images were retained. Backup
+> integrity, isolated restore and old-app-on-V10 compatibility passed; rollback
+> is application-only, while database restore remains separately Owner-gated.
+> Current unique stop:
+> `PRODUCTION_EXACT_RC_PROMOTED_POST_DEPLOY_OBSERVATION_PASS`.
+
+> Historical 2026-08-11 Production promotion tooling boundary: existing Production
 > releases must not use the generic build-oriented `deployment/cloud/deploy.sh`.
 > The exact-artifact promotion helper and Production-only Compose override bind
 > project `cloud` to the retained fixed state root, require immutable local
@@ -13,7 +25,7 @@
 > `pg_restore --list`, and rehearses it only in a network-isolated disposable
 > PostgreSQL tmpfs with transactional, exit-on-error restore semantics. It
 > contains no Production restore authority.
-> Current unique stop:
+> Historical stop (superseded):
 > `RC_PREPARED_WAITING_FOR_MANDATORY_PROMOTION_GATES`.
 
 > 2026-08-11 Owner field-test printing repair: bounded repository

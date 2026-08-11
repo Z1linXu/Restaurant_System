@@ -1,6 +1,13 @@
 # REL-001 Chinatown Production Release Candidate Plan
 
-> Route update (2026-08-11): the Owner has separately activated a bounded
+> Route update (2026-08-11): the separate existing St-Denis exact-RC promotion
+> completed for `RC-ST-DENIS-20260811-2661EB76`, exact accepted application SHA
+> `2661eb76...`, at Production Flyway V10. This is evidence for the canonical
+> release mechanism only. It does not select a Chinatown candidate, activate
+> REL-001/ACT-001, create a Store, or authorize configuration or business-data
+> work. Chinatown remains deferred behind its own explicit Owner gates.
+
+> Historical route update (2026-08-11): the Owner separately activated a bounded
 > existing St-Denis application-only exact-RC promotion decision for accepted
 > Staging `2661eb76...`. This does not activate Chinatown or ACT-001. The
 > prepared RC and new promotion/recovery helpers implement the canonical
