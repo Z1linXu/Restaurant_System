@@ -1,10 +1,20 @@
 # SYSTEM DOCUMENTATION
 
-> 2026-08-10 TWIN-001 manifest v2 completion: the corrected Owner-approved
+> 2026-08-10 TWIN-001 reconstruction tooling: Owner approval is active and a
+> bounded manifest-v2 projector plus secret-FD staff reconciler is repository
+> verified. Fresh read-only Staging planning accepts the exact retained
+> `4/3/13/38` baseline and plans an in-place, zero-delete projection to
+> `6/5/39/380`, 13 tables, 6 KDS configs, 4 endpoint-free logical printers, 3
+> assignments and 7 token-free device topology rows. Printing remains
+> disabled; Production is never contacted. See the
+> [runbook](deployment/cloud/README_TWIN001_STAGING_RECONSTRUCTION.md) and
+> [tooling evidence](docs/governance/runtime/TWIN-001_STAGING_RECONSTRUCTION_TOOLING_EVIDENCE.md).
+
+> Historical 2026-08-10 TWIN-001 manifest v2 completion: the corrected Owner-approved
 > Production/Staging read-only loop produced a deterministic, secret-free,
 > V7-to-V10 configuration input with the complete 380-option graph. No
 > Staging reconstruction, migration, credential action or Production mutation
-> occurred. Current stop:
+> occurred at that checkpoint. Historical stop:
 > `TWIN-001_MANIFEST_V2_RECONSTRUCTION_READY_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
 > See [completion evidence](docs/governance/runtime/TWIN-001_MANIFEST_V2_COMPLETION_EVIDENCE.md).
 

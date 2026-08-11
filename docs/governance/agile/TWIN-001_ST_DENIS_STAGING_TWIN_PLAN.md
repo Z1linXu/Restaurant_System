@@ -1,8 +1,15 @@
 # TWIN-001 St-Denis Production-like Staging Twin Plan
 
-> Status: `MANIFEST_V2_RECONSTRUCTION_READY_READ_ONLY`
+> Execution update (2026-08-10): Owner approval
+> `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL` is active. The bounded in-place,
+> zero-delete projector and secret-FD Staff API reconciler are repository
+> verified. After Agent 6/merge/fresh authority recovery, the approved runtime
+> loop continues through parity and automated smoke; physical printing and Pad
+> pairing remain separate gates.
+
+> Status: `STAGING_RECONSTRUCTION_APPROVED_DEPENDENCY_REPAIR_IN_PROGRESS`
 >
-> Current stop state: `TWIN-001_MANIFEST_V2_RECONSTRUCTION_READY_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`
+> Current stop state: `TWIN-001_STAGING_RECONSTRUCTION_APPROVED_DEPENDENCY_REPAIR_IN_PROGRESS`
 >
 > Owner decision date: 2026-08-10, America/Toronto
 
@@ -16,13 +23,14 @@ Twin is planned, not yet established; the immediate FT-001 route is therefore:
 bug-fix loop -> automated validation -> Owner manual validation -> Production
 promotion`
 
-Manifest v2 now supplies deterministic, schema-valid safe configuration input
-and an explicit V7-to-V10 mapping. It does not authorize a Staging writer.
+Manifest v2 supplies deterministic, schema-valid safe configuration input and
+an explicit V7-to-V10 mapping. The Owner's current reconstruction approval
+authorizes only the bounded Staging writer and validation loop defined here.
 
-This plan is governance and reconstruction planning only. The Owner-approved
-bounded Production configuration read has completed; it performed no Staging
-mutation, deployment, migration, printer binding, module implementation,
-Chinatown onboarding, or Production promotion.
+The earlier revision was governance and reconstruction planning only. The
+current approval advances the bounded Staging reconstruction, parity and
+automated-smoke loop; it still authorizes no Production action, migration,
+physical printer/Pad binding, Chinatown work, modularization or promotion.
 
 The existing synthetic St-Denis Organization/Owner/source Store/menu remains a
 `CURRENT_SYNTHETIC_BASELINE`. It is useful Twin foundation evidence, but it is
@@ -229,10 +237,11 @@ separate modularization DoD, Planbook must issue `CHINATOWN_RESUME_GATE` before
 resuming STG-009 Phase B or AL-003 validate/execute/replay. No second clone
 engine may be created.
 
-## 11. Design-only TWIN-001_STAGING_RECONSTRUCTION_PLAN
+## 11. Approved TWIN-001_STAGING_RECONSTRUCTION execution contract
 
-The reconstruction plan remains declarative and has not run; the granted
-execution package stopped before its first runtime action:
+The reconstruction runtime write has not yet run because its bounded tooling
+dependency repair is still under review. Once that repair is merged and fresh
+authority is recovered, the active approval authorizes this sequence:
 
 1. Bind a fresh exact release and compatible schema decision; do not copy
    Production V7 history into Staging V10 or run Flyway as part of this plan.
@@ -244,12 +253,10 @@ execution package stopped before its first runtime action:
 3. Preserve the synthetic Owner and source Store as an environment boundary.
    Replace credentials with a private synthetic value and keep Printing
    `DISABLED` until the separate home-printer gate.
-4. Reconcile the manifest classes before any write: V7/V10 schema is a
-   blocking behavior difference; menu/table/Store values are sanitized data
-   differences; staff/access/features are expected environment differences;
-   printing/devices are test-hardware differences; workflows remain
-   not-yet-verified.
-5. Execute only after the Owner reconstruction gate with a dry-run diff,
+4. Treat the raw V7/V10 version delta as
+   `CURRENT_PRODUCTION_VERSION_DIFFERENCE`; only an observed V10 operational
+   incompatibility is `BLOCKING_BEHAVIOR_DIFFERENCE`.
+5. Execute under the active Owner reconstruction gate with a dry-run diff,
    one-use approval, rollback/abort contract, no-cross-Store assertion,
    duplicate detection, and before/after sanitized evidence. Ambiguous
    identity fails closed.
@@ -259,7 +266,7 @@ execution package stopped before its first runtime action:
 
 ## 12. Current stop
 
-`TWIN-001_MANIFEST_V2_RECONSTRUCTION_READY_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`
+`TWIN-001_STAGING_RECONSTRUCTION_APPROVED_DEPENDENCY_REPAIR_IN_PROGRESS`
 
 The earlier reconstruction approval stopped before runtime entry because v1
 was incomplete. The corrected read now supplies
@@ -274,6 +281,8 @@ The aggregate `SCHEMA` result remains `BLOCKING_BEHAVIOR_DIFFERENCE` until a
 reconstructed St-Denis Twin actually operates and passes parity validation on
 V10.
 
-The next TRUE OWNER GATE is `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`.
-No Staging reconstruction, Twin Sync, Production read, schema action, or other
-runtime action is authorized by this plan until that distinct approval.
+The active approval permits the bounded Staging-only reconstruction, exact-SHA
+rebind when required, parity and automated smoke loop. The next TRUE OWNER GATE
+after operational readiness is `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`; this plan
+does not start the human field test. Production reads/writes, schema actions,
+physical printing/Pad pairing and all deferred routes remain unauthorized.

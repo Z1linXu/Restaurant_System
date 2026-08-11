@@ -1,5 +1,11 @@
 # Known Issues Backlog
 
+Current KI-011 dependency-repair override (2026-08-10): the manifest-v2
+projector and secret-FD staff reconciler are repository verified. Fresh
+read-only planning accepts the exact synthetic baseline with zero deletes.
+Runtime parity is still pending merge and approved Staging execution; this is
+not yet a Twin PASS.
+
 > Status: `ACTIVE_GOVERNANCE_BACKLOG`
 >
 > Last updated: 2026-08-10, America/Toronto
@@ -8,10 +14,10 @@
 > in the Phase 3 reports and is not rewritten here.
 
 Current TWIN-001 stop:
-`TWIN-001_MANIFEST_V2_RECONSTRUCTION_READY_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
-Next TRUE OWNER GATE: `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`. The Owner
-approved and completed the corrected manifest read; v2 is deterministic and
-schema-valid. The V7-to-V10 forward migration path passed
+`TWIN-001_STAGING_RECONSTRUCTION_APPROVED_DEPENDENCY_REPAIR_IN_PROGRESS`.
+The reconstruction approval is active; the next TRUE OWNER GATE after
+operational readiness is the Owner field-test loop. Manifest v2 is
+deterministic and schema-valid. The V7-to-V10 forward migration path passed
 local PostgreSQL 16.14 verification; the raw delta is
 `CURRENT_PRODUCTION_VERSION_DIFFERENCE`, while aggregate
 `SCHEMA = BLOCKING_BEHAVIOR_DIFFERENCE` remains pending an actual reconstructed
@@ -35,13 +41,13 @@ V10 Twin.
 | issue_id | `KI-011` |
 | priority | `P2` governance/product readiness |
 | title | Staging must become a long-lived Production-like St-Denis Operational Twin |
-| observed_behavior | Existing Staging has a verified synthetic St-Denis baseline and automated Owner/browser-equivalent evidence. Reconstruction approval was received, but pre-write validation proved the retained manifest is incomplete and inconsistent with the checksum-identical V7 schema, so reconstruction did not begin. |
+| observed_behavior | Existing Staging has a verified synthetic St-Denis baseline and automated Owner/browser-equivalent evidence. Manifest v2 corrected the historical input defect; bounded reconstruction tooling is now under dependency-repair review before the approved write. |
 | expected_behavior | Staging reconstructs safe St-Denis operational configuration through shared application code and generic Store logic, with every parity domain classified `MATCH`, `EXPECTED_DIFFERENCE`, `BLOCKING_DIFFERENCE`, or `NOT_YET_VERIFIED`. |
 | operational_impact | Production promotion and the former Chinatown-first route remain deferred until Twin parity and Owner field validation are complete. |
-| current_workaround | Preserve Staging V10 and the historical manifest. Do not infer omitted values, downgrade, sync, or re-read Production without the new bounded gate. |
+| current_workaround | Preserve Staging V10 and execute only the manifest-v2-bound zero-delete writer. Do not infer values, downgrade, auto-sync, or re-read Production. |
 | evidence | [manifest v2](runtime/ST_DENIS_TWIN_PARITY_MANIFEST_V2.json), [mapping](runtime/V7_PRODUCTION_TO_V10_TWIN_CONFIGURATION_MAPPING.md), and [completion evidence](runtime/TWIN-001_MANIFEST_V2_COMPLETION_EVIDENCE.md). |
-| status | `MANIFEST_V2_RECONSTRUCTION_READY_READ_ONLY` |
-| next_gate | `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL` |
+| status | `STAGING_RECONSTRUCTION_APPROVED_DEPENDENCY_REPAIR_IN_PROGRESS` |
+| next_gate | `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` after operational readiness |
 | safety_boundary | No raw customer/order/payment data, credentials, secrets, production printer/device endpoints, `SELECT *`, or complete database dump. |
 | last_updated | 2026-08-10 |
 

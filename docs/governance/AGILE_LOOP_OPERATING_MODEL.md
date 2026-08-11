@@ -1,12 +1,19 @@
 # Agile Loop Operating Model
 
-## Current manifest v2 readiness override (2026-08-10)
+## Current TWIN-001 reconstruction execution override (2026-08-10)
+
+The Owner granted the reconstruction gate. The current bounded dependency
+repair supplies an in-place, idempotent Staging-only projector and secret-safe
+Staff API reconciler. After tests, Agent 6, governance sync and auto-merge, the
+same loop performs fresh fetch/authority recovery and retries only the approved
+runtime step; ordinary main movement does not reopen the Owner gate.
+
+## Historical manifest v2 readiness checkpoint (2026-08-10)
 
 The corrected Owner-approved read completed and produced deterministic,
-schema-valid manifest v2 plus V7-to-V10 mapping. The current stop is
+schema-valid manifest v2 plus V7-to-V10 mapping. Its historical stop was
 `TWIN-001_MANIFEST_V2_RECONSTRUCTION_READY_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
-Auto-merge of evidence does not authorize a Staging writer; the next TRUE OWNER
-GATE is `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`.
+The current Owner granted that gate; the execution override above now governs.
 
 ## Historical reconstruction NO-GO override (2026-08-10)
 

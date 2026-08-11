@@ -1,5 +1,22 @@
 # Alive Runtime Planbook
 
+## Current reconstruction execution override (2026-08-10)
+
+The Owner granted `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`. Fresh Git Ground
+Truth is `origin/main=5f89bdeea6f9a6810c0a38d6d94a59b2156bd6ba`; retained Production
+remains read-only at V7 and isolated Staging remains exact
+`1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c` at V10. A fresh bounded Staging
+snapshot accepted the exact `CURRENT_SYNTHETIC_BASELINE` and the repository
+projector plan is `PLAN_READY` with no delete/reset/downgrade.
+
+The current dependency package is
+[TWIN-001 Staging Reconstruction Tooling Evidence](TWIN-001_STAGING_RECONSTRUCTION_TOOLING_EVIDENCE.md).
+It must enter `main`, pass Agent 6, then fresh authority recovery may continue
+the already-approved Staging-only apply, staff reconciliation, parity and
+automated smoke loop without another ordinary repair gate. Production reads or
+writes, schema/migration changes, destructive reset and physical hardware
+binding remain prohibited or separately gated.
+
 > Status: `ACTIVE_GOVERNANCE_RECORD`
 >
 > Last updated: 2026-08-10, America/Toronto
@@ -8,14 +25,14 @@
 > and approval boundaries. This is a living index, not a replacement for the
 > immutable Phase 3 evidence reports.
 
-## Current manifest v2 readiness override (2026-08-10)
+## Historical manifest v2 readiness checkpoint (2026-08-10)
 
 The corrected Owner-approved read completed in read-only mode. Manifest v2
 contains the deterministic safe St-Denis configuration graph, all 380 option
 relationships, and an explicit V7-to-V10 mapping; neither runtime changed.
 See [manifest v2 completion evidence](TWIN-001_MANIFEST_V2_COMPLETION_EVIDENCE.md).
-Current stop: `TWIN-001_MANIFEST_V2_RECONSTRUCTION_READY_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
-Next TRUE OWNER GATE: `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`.
+Historical stop: `TWIN-001_MANIFEST_V2_RECONSTRUCTION_READY_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
+That gate is now granted and superseded by the current execution override.
 
 ## Historical reconstruction NO-GO override (2026-08-10)
 
@@ -149,8 +166,8 @@ snapshots. Do not copy those reports into this planbook.
 | Current feature | `FT-001 Owner Store Onboarding - Chinatown` (deferred by Owner) |
 | Current Agile Loop | `TWIN-001_ST_DENIS_STAGING_TWIN` |
 | Loop type | `OWNER_GATED_PRODUCTION_LIKE_STAGING_PARITY` |
-| Loop status | `STG-008=PASS; STG-009_PHASE_A_OWNER_LOGIN=DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY; TWIN-001=RECONSTRUCTION_NO_GO_MANIFEST_INPUT_NOT_EXECUTABLE` |
-| Current package | Exact `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c` remains deployed to isolated Staging at Flyway V10. Synthetic A/B and automated browser-equivalent evidence remain valid; pre-write reconstruction source validation failed and no runtime action followed. |
+| Loop status | `STG-008=PASS; STG-009_PHASE_A_OWNER_LOGIN=DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY; TWIN-001=STAGING_RECONSTRUCTION_APPROVED_DEPENDENCY_REPAIR_IN_PROGRESS` |
+| Current package | Exact `1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c` remains deployed to isolated Staging at Flyway V10. The bounded reconstruction tooling repair is being reviewed before the approved write begins. |
 | STG-008 state | `PASS` for the completed synthetic topology/source contract, retained in current exact Staging `1a3f2e...`; synthetic Organization, Owner, source Store and credential are ready, with no duplicate/crossover. This is the `CURRENT_SYNTHETIC_BASELINE`, not Twin parity. |
 | STG-009 Phase-A state | `DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY`: prior API/browser-equivalent evidence is retained; Owner manual UI acceptance is no longer the immediate loop. |
 | AL-001 state | `PLAN_COMPLETE` |
@@ -165,8 +182,8 @@ snapshots. Do not copy those reports into this planbook.
 | STG-007 state | `PASS` at exact deployed Staging SHA `2837ae88e55142c99c6975f8b6575febffc913a1`. Environment digest `124eb472...`, continuation entry `8d744fa8...`, formal preflight `7174a295...`, readiness `19a8fec2...`, runtime collection `03337e71...`, restart readiness `6392783f...`, and same-image restart `2208d8ca...` all passed. Flyway remained exact V10/no-pending; health returned 200/200/200; exact container/image/release identity, printing, isolation and Production continuity were unchanged. |
 | AL-003 state | PRs #61-#101 are `IN_MAIN`; Chinatown Phase B, validation/clone and REL-001 are `DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY`. Existing code, plans and evidence remain preserved; no Production acceptance result exists. |
 | Staging Owner login prerequisite | Historical synthetic Owner/browser-equivalent foundation is complete; manual Phase-A closure is deferred by the Owner Twin priority. Retrieval remains private; no secret is stored in Git/evidence. |
-| Current permitted work | Review manifest v2 and prepare bounded Staging-only reconstruction design/evidence; repository governance synchronization only. |
-| Explicitly not permitted | Staging reconstruction without `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`; Chinatown onboarding; AL-003 validate/execute/clone/replay; Production build/pull/restart/deploy/Flyway/data mutation; printer/Pad action; or any new runtime-sensitive action without its Owner Gate. `IN_MAIN`, `DEPLOYED_TO_STAGING`, and `STAGING_ACCEPTED` remain distinct. |
+| Current permitted work | Under active `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`: bounded zero-delete Staging reconstruction, independent test credentials, parity, safe automated smoke, ordinary dependency repair and required exact-SHA Staging rebind. |
+| Explicitly not permitted | Production read/write/deploy/Flyway action; Staging downgrade/Flyway edit/destructive reset; Chinatown; modularization; REL-001; Production promotion; physical printer binding; Pad pairing; or Owner field testing itself. `IN_MAIN`, `DEPLOYED_TO_STAGING`, and `STAGING_ACCEPTED` remain distinct. |
 
 The canonical [release/promotion policy](../AGILE_LOOP_OPERATING_MODEL.md#83-canonical-release-promotion-drift-and-recovery-policy)
 now requires immutable RC freeze, exact same-artifact promotion, recurring
