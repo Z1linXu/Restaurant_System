@@ -29,12 +29,15 @@ path_has_symlink "$RC_MANIFEST" && die "RC manifest traverses a symlink"
 mapfile -t tooling < <(python3 - "$RC_MANIFEST" <<'PY'
 import json,sys
 d=json.load(open(sys.argv[1], encoding='utf-8'))
-for k in ('status','tooling_commit_sha','backup_helper_sha256'):
-    print(d.get(k,''))
+print(d.get('status',''))
+print(d.get('tooling_commit_sha',''))
+print(d.get('backup_helper_sha256',''))
+print(d.get('backup_flyway_target','V7'))
 PY
 ) || die "RC manifest is invalid"
 [[ "${tooling[0]:-}" == "RC_PREPARED" || "${tooling[0]:-}" == "RC_FROZEN" ]] || die "RC status is invalid"
 [[ "${tooling[1]:-}" =~ ^[0-9a-f]{40}$ && "${tooling[2]:-}" =~ ^[0-9a-f]{64}$ ]] || die "RC tooling identity is not frozen"
+[[ "${tooling[3]:-}" =~ ^V[0-9]+$ ]] || die "backup Flyway target is invalid"
 [[ "$(git -C "$(dirname "${BASH_SOURCE[0]}")/../.." rev-parse HEAD)" == "${tooling[1]}" && -z "$(git -C "$(dirname "${BASH_SOURCE[0]}")/../.." status --porcelain --untracked-files=no)" && "$(digest "${BASH_SOURCE[0]}")" == "${tooling[2]}" ]] || die "backup tooling blob differs from RC"
 [[ -d "$BACKUP_ROOT" && ! -L "$BACKUP_ROOT" && "$(realpath "$BACKUP_ROOT")" == "$BACKUP_ROOT" ]] || die "fixed backup root is unsafe"
 path_has_symlink "$BACKUP_ROOT" && die "backup root traverses a symlink"
@@ -87,6 +90,7 @@ for _ in $(seq 1 60); do docker_default exec "$REHEARSAL_CONTAINER" pg_isready -
 docker_default exec "$REHEARSAL_CONTAINER" pg_isready -U postgres -d restore_rehearsal >/dev/null 2>&1 || die "isolated DB did not become ready"
 docker_default exec -i "$REHEARSAL_CONTAINER" pg_restore -U postgres -d restore_rehearsal --no-owner --no-privileges --exit-on-error --single-transaction <"$canonical_backup"
 actual_flyway="$(docker_default exec "$REHEARSAL_CONTAINER" psql -X -v ON_ERROR_STOP=1 -At -U postgres -d restore_rehearsal -c "select version || chr(124) || script || chr(124) || success::text || chr(124) || checksum from flyway_schema_history order by installed_rank")"
-expected_flyway="$(awk -F'|' '/^[1-7]\|/ {print $1 "|" $2 "|true|" $3}' "$FLYWAY_MANIFEST")"
-[[ "$actual_flyway" == "$expected_flyway" ]] || die "isolated restore Flyway ledger differs from exact V1-V7"
-printf 'RESTORE_REHEARSAL|backup_sha256=%s|flyway=V7-exact|isolated_tmpfs=true|result=PASS\n' "$EXPECTED_BACKUP_SHA256"
+target_version="${tooling[3]#V}"
+expected_flyway="$(awk -F'|' -v target="$target_version" '/^[0-9]+[|]/ && ($1 + 0) <= (target + 0) {print $1 "|" $2 "|true|" $3}' "$FLYWAY_MANIFEST")"
+[[ "$actual_flyway" == "$expected_flyway" ]] || die "isolated restore Flyway ledger differs from exact backup target"
+printf 'RESTORE_REHEARSAL|backup_sha256=%s|flyway=%s-exact|isolated_tmpfs=true|result=PASS\n' "$EXPECTED_BACKUP_SHA256" "${tooling[3]}"

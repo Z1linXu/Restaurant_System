@@ -1,5 +1,13 @@
 # Known Issues Backlog
 
+Current Production-promotion tooling dependency (2026-08-12): the
+three-reliability Production promotion loop found a repository/tooling-only
+blocker before deployment. Exact-artifact promotion must distinguish previous
+running application SHA from retained Production control checkout SHA, and V10
+backup rehearsal must validate a V10 Flyway ledger. The bounded repair is not a
+runtime action and does not mark the three reliability repairs
+`OWNER_FIELD_VERIFIED`.
+
 Current Owner field-test repair batch (2026-08-11): the Owner-authorized
 `STAGING_THREE_RELIABILITY_REPAIR_BATCH` completed through PR #122 and exact
 Staging deploy at `3ec4d88a47f68e05b92d9246bfd63af2d1f297f9`. Repository and

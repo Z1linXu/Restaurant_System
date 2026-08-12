@@ -1,5 +1,20 @@
 # Alive Runtime Planbook
 
+## Current Production promotion tooling dependency repair (2026-08-12)
+
+`THREE_RELIABILITY_REPAIRS_PRODUCTION_RC_PROMOTION` discovered a bounded
+tooling blocker before any Production deployment: the next RC must distinguish
+the previous running application artifact (`2661eb76...`) from the retained
+Production control checkout (`4667f3c...`), and fresh V10 backup restore
+rehearsal must validate a V10 Flyway ledger rather than the historical V7
+backup shape. The repository-only repair updates the exact-artifact promotion
+and backup rehearsal helpers with manifest-bound fields while preserving
+no-build/no-pull, fixed-state-root, digest, isolated-restore and destructive
+operation guards. It authorizes no runtime action by itself.
+
+Evidence:
+[three-reliability Production promotion tooling repair](THREE_RELIABILITY_PRODUCTION_PROMOTION_TOOLING_REPAIR_EVIDENCE.md).
+
 ## Current Owner field-test three-reliability repair batch (2026-08-11)
 
 The Owner authorized `STAGING_THREE_RELIABILITY_REPAIR_BATCH` inside
