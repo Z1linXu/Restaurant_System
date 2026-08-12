@@ -1,8 +1,23 @@
 # Feature Backlog
 
+## Current Production deployment of three-reliability repairs (2026-08-12)
+
+`PAD_SLEEP_PRINT_BLOCKING_REPAIR`,
+`PAD_MENU_REVISION_AND_CLICK_LOCK_REPAIR`, and
+`PRINTING_BOUNDED_SCHEDULING_LATENCY_REPAIR` are now
+`DEPLOYED_TO_PRODUCTION` through exact RC
+`RC-THREE-RELIABILITY-20260812-3EC4D88` / application SHA
+`3ec4d88a47f68e05b92d9246bfd63af2d1f297f9`. Production remained Flyway V10,
+kept `PAD_DIRECT` printing, four printers and three assignments, and passed
+health/WebSocket/second-start/bounded observation. Owner field retest remains
+required before marking any of these repairs `OWNER_FIELD_VERIFIED`.
+
+Current unique stop:
+`THREE_RELIABILITY_REPAIRS_PRODUCTION_PROMOTED_WAITING_FOR_OWNER_FIELD_RETEST`.
+
 ## Current three-reliability Production promotion tooling dependency repair (2026-08-12)
 
-`THREE_RELIABILITY_REPAIRS_PRODUCTION_RC_PROMOTION` found a pre-deploy
+Historical same-round dependency repair: `THREE_RELIABILITY_REPAIRS_PRODUCTION_RC_PROMOTION` found a pre-deploy
 tooling-only blocker: the next immutable RC must record previous application
 artifact identity separately from retained Production control checkout
 identity, and fresh V10 backup restore rehearsal needs an explicit V10 Flyway

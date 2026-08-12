@@ -1,5 +1,17 @@
 # Agile Loop Operating Model
 
+## Current three-reliability Production promotion result (2026-08-12)
+
+The §8.3 exact-artifact path completed for
+`RC-THREE-RELIABILITY-20260812-3EC4D88`: exact Staging-tested SHA
+`3ec4d88a47f68e05b92d9246bfd63af2d1f297f9` was promoted to Production by
+backend/frontend image ID, not by later docs/tooling `main`. Production stayed
+on Flyway V10 with no pending migration and preserved its own database,
+Store/configuration, `PAD_DIRECT` printing topology, credentials and runtime
+environment. Backup, isolated restore, rollback compatibility, Agent 6 and
+bounded observation passed. The repairs are deployed, but remain pending Owner
+field retest and are not `OWNER_FIELD_VERIFIED`.
+
 ## Current Production promotion tooling clarification (2026-08-12)
 
 An immutable RC may bind a previous running application artifact separately

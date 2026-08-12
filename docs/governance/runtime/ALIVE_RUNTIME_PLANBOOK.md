@@ -1,8 +1,30 @@
 # Alive Runtime Planbook
 
+## Current Production three-reliability promotion result (2026-08-12)
+
+Owner-authorized `THREE_RELIABILITY_REPAIRS_PRODUCTION_RC_PROMOTION` completed
+for exact Staging-tested runtime SHA
+`3ec4d88a47f68e05b92d9246bfd63af2d1f297f9`. The immutable RC is
+`RC-THREE-RELIABILITY-20260812-3EC4D88`; Production now runs backend image
+`sha256:2de71105c8fa262c59833c71f7fddfb3f18ec3fb869ba4765adb3b04e1b4ef14`
+and frontend image
+`sha256:061ac73df1ee8516f8a0fcd94bda70ccdae2a90d7c4f7833e1b63650fe503be0`.
+Production remained Flyway V10 with no pending migration, retained its database
+container/state root, and preserved Store `4483_R_SAINT_DENIS` Printing
+`PAD_DIRECT`, four logical printers, three assignments and existing
+configuration. Fresh backup, V10 isolated restore rehearsal, application-only
+rollback compatibility, Agent 6 and bounded observation passed.
+
+The repairs are `DEPLOYED_TO_PRODUCTION`, not `OWNER_FIELD_VERIFIED`.
+Physical Pad sleep behavior, menu revision field behavior and real printing
+latency remain Owner retest items. See
+[three-reliability Production promotion evidence](PRODUCTION_THREE_RELIABILITY_RC_PROMOTION_EVIDENCE.md).
+Current unique stop:
+`THREE_RELIABILITY_REPAIRS_PRODUCTION_PROMOTED_WAITING_FOR_OWNER_FIELD_RETEST`.
+
 ## Current Production promotion tooling dependency repair (2026-08-12)
 
-`THREE_RELIABILITY_REPAIRS_PRODUCTION_RC_PROMOTION` discovered a bounded
+Historical same-round dependency repair: `THREE_RELIABILITY_REPAIRS_PRODUCTION_RC_PROMOTION` discovered a bounded
 tooling blocker before any Production deployment: the next RC must distinguish
 the previous running application artifact (`2661eb76...`) from the retained
 Production control checkout (`4667f3c...`), and fresh V10 backup restore
