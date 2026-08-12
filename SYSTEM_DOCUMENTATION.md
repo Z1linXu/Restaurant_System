@@ -1,5 +1,19 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-12 final productization roadmap audit: planning-only audit completed
+> for the route from one working Store to reliable N-Store productization. The
+> product rule is `BUILD ONCE, CONFIGURE MANY`; future Stores must not be
+> created by code/database copies, per-Store branches, or shared-code
+> Store-name/Store-ID conditionals. The accepted roadmap order is Phase A
+> modular productization, Phase B Owner Store provisioning, then Phase C real
+> multi-Store proof with Chinatown and Sainte-Catherine. Current Production and
+> Staging both retain exact application artifact
+> `3ec4d88a47f68e05b92d9246bfd63af2d1f297f9`; read-only health checks passed
+> and no runtime was changed. See
+> [FINAL_PRODUCTIZATION_THREE_PHASE_ROADMAP_AUDIT](docs/governance/agile/FINAL_PRODUCTIZATION_THREE_PHASE_ROADMAP_AUDIT.md).
+> Current stop:
+> `FINAL_PRODUCTIZATION_AUDIT_COMPLETE_WAITING_FOR_OWNER_30_ANSWERS`.
+
 > 2026-08-12 Production three-reliability promotion result: exact
 > Staging-tested SHA `3ec4d88a47f68e05b92d9246bfd63af2d1f297f9` is deployed to
 > Production as `RC-THREE-RELIABILITY-20260812-3EC4D88`. Production stayed on

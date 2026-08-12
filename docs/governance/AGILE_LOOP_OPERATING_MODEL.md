@@ -1,5 +1,27 @@
 # Agile Loop Operating Model
 
+## Current final productization route (2026-08-12)
+
+The active planning route is a three-phase productization program:
+
+1. `PHASE_A_MODULAR_PRODUCTIZATION`
+2. `PHASE_B_OWNER_STORE_PROVISIONING`
+3. `PHASE_C_REAL_MULTI_STORE_PROOF_CHINATOWN_AND_SAINTE_CATHERINE`
+
+Phase A must establish the module/profile/configuration/gating contract before
+any Owner Create New Store workflow. Phase B must implement the Owner Store
+provisioning workflow before Chinatown or Sainte-Catherine are created. Phase C
+must use the accepted Phase A+B product path rather than manual shortcuts.
+
+The Owner field-test and bug-fix loop is continuous but side-car. If no
+confirmed P0/P1 blocker exists, bug fixing does not block ordinary product
+development. P0/P1 fixes may interrupt the roadmap through the normal
+root-cause, minimal repair, tests, Agent 6, governance sync, PR/merge and
+runtime gate sequence.
+
+Current planning stop:
+`FINAL_PRODUCTIZATION_AUDIT_COMPLETE_WAITING_FOR_OWNER_30_ANSWERS`.
+
 ## Current three-reliability Production promotion result (2026-08-12)
 
 The §8.3 exact-artifact path completed for

@@ -1,5 +1,13 @@
 # Known Issues Backlog
 
+Current final productization route (2026-08-12): open field-test follow-up work
+continues through the Owner field-test and bug-fix loop, but the loop is now a
+side-car to product development unless a confirmed P0/P1 blocker exists. The
+three-phase productization roadmap is tracked in
+[FINAL_PRODUCTIZATION_THREE_PHASE_ROADMAP_AUDIT](agile/FINAL_PRODUCTIZATION_THREE_PHASE_ROADMAP_AUDIT.md)
+and currently waits for the Owner's 30 Phase A/B/C answers. No new runtime issue
+or runtime mutation is introduced by that planning audit.
+
 Current Production deployment update (2026-08-12): KI-014's three repository
 repairs are `DEPLOYED_TO_PRODUCTION` through exact RC
 `RC-THREE-RELIABILITY-20260812-3EC4D88` / application SHA `3ec4d88...`.
