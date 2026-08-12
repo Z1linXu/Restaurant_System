@@ -1,5 +1,12 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-12 Production promotion tooling note: exact-artifact promotion now
+> separates previous running application identity from retained Production
+> control checkout identity, and Production backup rehearsal accepts a
+> manifest-bound backup Flyway target. This supports three-reliability repair
+> promotion from a V10 Production baseline without changing API contracts,
+> business behavior, schema, migrations or runtime configuration by itself.
+
 > 2026-08-11 Owner field-test three-reliability repair batch: repository repair
 > entered `main` through PR #122 and exact Staging deployed
 > `3ec4d88a47f68e05b92d9246bfd63af2d1f297f9` for Owner retest. Android

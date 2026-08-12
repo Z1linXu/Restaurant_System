@@ -1,5 +1,14 @@
 # Agile Loop Operating Model
 
+## Current Production promotion tooling clarification (2026-08-12)
+
+An immutable RC may bind a previous running application artifact separately
+from the retained Production control checkout used by exact-artifact tooling.
+Fresh backup rehearsal must bind the expected backup Flyway ledger explicitly
+when the current Production database is already V10. This clarification is a
+repository/tooling dependency repair only; it does not authorize deployment,
+restore, migration or rollback by itself.
+
 ## Current exact-artifact Production result (2026-08-11)
 
 The §8.3 path completed for frozen St-Denis RC

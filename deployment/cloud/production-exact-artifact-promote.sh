@@ -70,18 +70,20 @@ path_has_symlink "$RC_MANIFEST" && die "RC manifest traverses a symlink"
 mapfile -t rc < <(python3 - "$RC_MANIFEST" <<'PY'
 import json, re, sys
 d=json.load(open(sys.argv[1], encoding='utf-8'))
-keys=('status','rc_id','source_sha','source_main_ancestry','production_previous_sha','postgres_image_id','backend_image_tag','backend_image_id','frontend_image_tag','frontend_image_id','resolved_compose_sha256','tooling_commit_sha','promotion_helper_sha256','backup_helper_sha256','promotion_override_sha256','flyway_manifest_sha256','staging_acceptance_sha256','flyway_target','parity_result','owner_field_test_result','printing_field_test_result','android_client_compatibility_result','migration_rehearsal_result','rollback_compatibility_result','backup_recovery_result','isolated_restore_result','fresh_backup_sha256')
+keys=('status','rc_id','source_sha','source_main_ancestry','production_previous_sha','production_control_checkout_sha','postgres_image_id','backend_image_tag','backend_image_id','frontend_image_tag','frontend_image_id','resolved_compose_sha256','tooling_commit_sha','promotion_helper_sha256','backup_helper_sha256','promotion_override_sha256','flyway_manifest_sha256','staging_acceptance_sha256','flyway_target','parity_result','owner_field_test_result','printing_field_test_result','android_client_compatibility_result','migration_rehearsal_result','rollback_compatibility_result','backup_recovery_result','isolated_restore_result','fresh_backup_sha256')
 for k in keys:
     v=d.get(k,'')
+    if k == 'production_control_checkout_sha' and not v:
+        v=d.get('production_previous_sha','')
     if not isinstance(v,str) or '\n' in v: raise SystemExit(2)
     print(v)
 PY
 ) || die "RC manifest is invalid"
-[[ ${#rc[@]} -eq 27 ]] || die "RC manifest fields are incomplete"
-RC_STATUS="${rc[0]}"; RC_ID="${rc[1]}"; APPROVED_SHA="${rc[2]}"; MAIN_ANCESTRY="${rc[3]}"; EXPECTED_CURRENT_SHA="${rc[4]}"
-POSTGRES_IMAGE_ID="${rc[5]}"; BACKEND_IMAGE="${rc[6]}"; BACKEND_IMAGE_ID="${rc[7]}"; FRONTEND_IMAGE="${rc[8]}"; FRONTEND_IMAGE_ID="${rc[9]}"
-EXPECTED_COMPOSE_DIGEST="${rc[10]}"; TOOLING_SHA="${rc[11]}"; EXPECTED_PROMOTION_HELPER_DIGEST="${rc[12]}"; EXPECTED_BACKUP_HELPER_DIGEST="${rc[13]}"; EXPECTED_OVERRIDE_DIGEST="${rc[14]}"; EXPECTED_FLYWAY_DIGEST="${rc[15]}"; STAGING_ACCEPTANCE_DIGEST="${rc[16]}"; FLYWAY_TARGET="${rc[17]}"
-PARITY_RESULT="${rc[18]}"; OWNER_RESULT="${rc[19]}"; PRINTING_RESULT="${rc[20]}"; ANDROID_RESULT="${rc[21]}"; MIGRATION_RESULT="${rc[22]}"; ROLLBACK_RESULT="${rc[23]}"; BACKUP_RESULT="${rc[24]}"; RESTORE_RESULT="${rc[25]}"; FRESH_BACKUP_SHA="${rc[26]}"
+[[ ${#rc[@]} -eq 28 ]] || die "RC manifest fields are incomplete"
+RC_STATUS="${rc[0]}"; RC_ID="${rc[1]}"; APPROVED_SHA="${rc[2]}"; MAIN_ANCESTRY="${rc[3]}"; PRODUCTION_PREVIOUS_SHA="${rc[4]}"; EXPECTED_CONTROL_CHECKOUT_SHA="${rc[5]}"
+POSTGRES_IMAGE_ID="${rc[6]}"; BACKEND_IMAGE="${rc[7]}"; BACKEND_IMAGE_ID="${rc[8]}"; FRONTEND_IMAGE="${rc[9]}"; FRONTEND_IMAGE_ID="${rc[10]}"
+EXPECTED_COMPOSE_DIGEST="${rc[11]}"; TOOLING_SHA="${rc[12]}"; EXPECTED_PROMOTION_HELPER_DIGEST="${rc[13]}"; EXPECTED_BACKUP_HELPER_DIGEST="${rc[14]}"; EXPECTED_OVERRIDE_DIGEST="${rc[15]}"; EXPECTED_FLYWAY_DIGEST="${rc[16]}"; STAGING_ACCEPTANCE_DIGEST="${rc[17]}"; FLYWAY_TARGET="${rc[18]}"
+PARITY_RESULT="${rc[19]}"; OWNER_RESULT="${rc[20]}"; PRINTING_RESULT="${rc[21]}"; ANDROID_RESULT="${rc[22]}"; MIGRATION_RESULT="${rc[23]}"; ROLLBACK_RESULT="${rc[24]}"; BACKUP_RESULT="${rc[25]}"; RESTORE_RESULT="${rc[26]}"; FRESH_BACKUP_SHA="${rc[27]}"
 [[ "$RC_STATUS" == "RC_FROZEN" || ( "$ACTION" == "validate" && "$RC_STATUS" == "RC_PREPARED" ) ]] || die "RC status does not authorize this action"
 [[ "$RC_ID" =~ ^RC-[A-Za-z0-9._-]+$ ]] || die "RC ID is invalid"
 [[ "$MAIN_ANCESTRY" == "PASS" && "$FLYWAY_TARGET" == "V10" && "$PARITY_RESULT" == PASS* && "$OWNER_RESULT" == PASS* && "$PRINTING_RESULT" == PASS* ]] || die "RC acceptance fields are not PASS"
@@ -89,7 +91,7 @@ if [[ "$ACTION" != "validate" ]]; then
   [[ "$TOOLING_SHA" =~ ^[0-9a-f]{40}$ && "$EXPECTED_PROMOTION_HELPER_DIGEST" =~ ^[0-9a-f]{64}$ && "$EXPECTED_BACKUP_HELPER_DIGEST" =~ ^[0-9a-f]{64}$ && "$EXPECTED_OVERRIDE_DIGEST" =~ ^[0-9a-f]{64}$ ]] || die "RC tooling identity is not frozen"
   [[ "$ANDROID_RESULT" == PASS* && "$MIGRATION_RESULT" == PASS* && ( "$ROLLBACK_RESULT" == "YES" || "$ROLLBACK_RESULT" == "NO|ROLL_FORWARD_ONLY_AFTER_V10" ) && "$BACKUP_RESULT" == PASS* && "$RESTORE_RESULT" == PASS* && "$FRESH_BACKUP_SHA" =~ ^[0-9a-f]{64}$ ]] || die "RC mandatory execution gates are not closed"
 fi
-[[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ && "$EXPECTED_CURRENT_SHA" =~ ^[0-9a-f]{40}$ ]] || die "RC Git identity is invalid"
+[[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ && "$PRODUCTION_PREVIOUS_SHA" =~ ^[0-9a-f]{40}$ && "$EXPECTED_CONTROL_CHECKOUT_SHA" =~ ^[0-9a-f]{40}$ ]] || die "RC Git identity is invalid"
 [[ "$BACKEND_IMAGE" == *"$APPROVED_SHA" && "$FRONTEND_IMAGE" == *"$APPROVED_SHA" ]] || die "RC image tags are not SHA-bound"
 [[ "$POSTGRES_IMAGE_ID" =~ ^sha256:[0-9a-f]{64}$ && "$BACKEND_IMAGE_ID" =~ ^sha256:[0-9a-f]{64}$ && "$FRONTEND_IMAGE_ID" =~ ^sha256:[0-9a-f]{64}$ ]] || die "RC image ID is invalid"
 [[ "$EXPECTED_COMPOSE_DIGEST" =~ ^[0-9a-f]{64}$ && "$EXPECTED_FLYWAY_DIGEST" =~ ^[0-9a-f]{64}$ && "$STAGING_ACCEPTANCE_DIGEST" =~ ^[0-9a-f]{64}$ ]] || die "RC evidence digest is invalid"
@@ -112,7 +114,7 @@ if [[ "$ACTION" != "validate" ]]; then
 fi
 
 actual_sha="$(git -C /home/ubuntu/Restaurant_System rev-parse HEAD)"
-[[ "$actual_sha" == "$EXPECTED_CURRENT_SHA" ]] || die "Production checkout identity drifted"
+[[ "$actual_sha" == "$EXPECTED_CONTROL_CHECKOUT_SHA" ]] || die "Production control checkout identity drifted"
 mapfile -t production_services < <(docker_default ps --filter "label=com.docker.compose.project=$EXPECTED_PROJECT" --format '{{.Label "com.docker.compose.service"}}' | sort)
 [[ "${production_services[*]}" == "backend db nginx" ]] || die "Production project services differ"
 db_id_before="$(docker_default ps -q --filter "label=com.docker.compose.project=$EXPECTED_PROJECT" --filter label=com.docker.compose.service=db)"

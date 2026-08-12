@@ -1,5 +1,16 @@
 # Feature Backlog
 
+## Current three-reliability Production promotion tooling dependency repair (2026-08-12)
+
+`THREE_RELIABILITY_REPAIRS_PRODUCTION_RC_PROMOTION` found a pre-deploy
+tooling-only blocker: the next immutable RC must record previous application
+artifact identity separately from retained Production control checkout
+identity, and fresh V10 backup restore rehearsal needs an explicit V10 Flyway
+ledger target. A bounded repository repair updates only promotion/backup
+helpers and tests. It does not authorize or perform Production deployment,
+restart, migration, backup, restore, configuration change, Chinatown,
+modularization, physical printer binding or Pad pairing.
+
 ## Completed Owner field-test three-reliability repair batch (2026-08-11)
 
 - `PAD_SLEEP_PRINT_BLOCKING_REPAIR`: `DEPLOYED_TO_STAGING`; repository change

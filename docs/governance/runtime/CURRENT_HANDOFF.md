@@ -1,5 +1,18 @@
 # Current Project Handoff
 
+## Current Production promotion tooling dependency repair (2026-08-12)
+
+The Owner approved `THREE_RELIABILITY_REPAIRS_PRODUCTION_RC_PROMOTION`, but
+fresh preflight found a tooling-only blocker before Production deployment:
+the previous application artifact and retained Production control checkout are
+different identities, and V10 backup rehearsal needs an explicit V10 ledger
+target. The bounded repository repair updates the promotion/backup helpers and
+tests only. It does not deploy, restart, migrate, back up, restore or
+reconfigure Production by itself.
+
+Evidence file:
+[THREE_RELIABILITY_PRODUCTION_PROMOTION_TOOLING_REPAIR_EVIDENCE](THREE_RELIABILITY_PRODUCTION_PROMOTION_TOOLING_REPAIR_EVIDENCE.md).
+
 ## Current Owner field-test three-reliability repair batch (2026-08-11)
 
 After exact-RC Production promotion, the Owner resumed
