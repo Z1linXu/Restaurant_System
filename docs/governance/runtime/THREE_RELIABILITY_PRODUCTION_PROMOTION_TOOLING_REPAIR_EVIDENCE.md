@@ -1,6 +1,6 @@
 # Three Reliability Production Promotion Tooling Repair Evidence
 
-> Status: `DEPENDENCY_REPAIR_IN_MAIN_PENDING_RUNTIME_USE`
+> Status: `DEPENDENCY_REPAIR_USED_FOR_PRODUCTION_PROMOTION_PASS`
 >
 > Date: 2026-08-12, America/Toronto
 >
@@ -62,9 +62,7 @@ Staging runtime action was performed by this repository repair.
 
 ## Runtime use boundary
 
-After this repair enters `main`, the promotion loop must fetch fresh Ground
-Truth, bind the new tooling commit in the immutable RC manifest, create a fresh
-V10 Production backup, perform the current V10 isolated restore rehearsal,
-validate rollback compatibility for the previous application artifact on the
-current V10 database, and only then execute exact-artifact Production promotion
-if every gate passes.
+This repair entered `main` through PR #124 at
+`47584d40e9a4f65cd719d8ea898d723bd8dba64f` and was used to freeze and promote
+`RC-THREE-RELIABILITY-20260812-3EC4D88`. The runtime promotion evidence is
+[Production three-reliability RC promotion evidence](PRODUCTION_THREE_RELIABILITY_RC_PROMOTION_EVIDENCE.md).

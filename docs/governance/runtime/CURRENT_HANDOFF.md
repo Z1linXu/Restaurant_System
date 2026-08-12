@@ -1,8 +1,31 @@
 # Current Project Handoff
 
+## Current Production three-reliability promotion result (2026-08-12)
+
+`THREE_RELIABILITY_REPAIRS_PRODUCTION_RC_PROMOTION` is complete. Exact
+Staging-tested runtime-sensitive SHA
+`3ec4d88a47f68e05b92d9246bfd63af2d1f297f9` was frozen as
+`RC-THREE-RELIABILITY-20260812-3EC4D88` and promoted to existing Production
+St-Denis by exact backend/frontend image ID. Latest main during promotion was
+`47584d40e9a4f65cd719d8ea898d723bd8dba64f`, but the Production application
+candidate remained exact `3ec4d88...`.
+
+Production retained Flyway V10, database container/state root, Store
+`4483_R_SAINT_DENIS`, `PAD_DIRECT` Printing, four logical printers, three
+assignments and existing configuration. Fresh backup and V10 isolated restore
+passed. Rollback is application-only to the previous `2661eb76...` image pair
+with DB remaining V10. No Production restore, downgrade, Flyway history edit,
+Staging MOCK copy, physical printer binding, Pad pairing, Chinatown or
+modularization occurred.
+
+Evidence:
+[PRODUCTION_THREE_RELIABILITY_RC_PROMOTION_EVIDENCE](PRODUCTION_THREE_RELIABILITY_RC_PROMOTION_EVIDENCE.md).
+Current unique stop:
+`THREE_RELIABILITY_REPAIRS_PRODUCTION_PROMOTED_WAITING_FOR_OWNER_FIELD_RETEST`.
+
 ## Current Production promotion tooling dependency repair (2026-08-12)
 
-The Owner approved `THREE_RELIABILITY_REPAIRS_PRODUCTION_RC_PROMOTION`, but
+Historical same-round dependency repair: the Owner approved `THREE_RELIABILITY_REPAIRS_PRODUCTION_RC_PROMOTION`, but
 fresh preflight found a tooling-only blocker before Production deployment:
 the previous application artifact and retained Production control checkout are
 different identities, and V10 backup rehearsal needs an explicit V10 ledger

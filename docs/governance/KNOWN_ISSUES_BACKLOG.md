@@ -1,7 +1,16 @@
 # Known Issues Backlog
 
+Current Production deployment update (2026-08-12): KI-014's three repository
+repairs are `DEPLOYED_TO_PRODUCTION` through exact RC
+`RC-THREE-RELIABILITY-20260812-3EC4D88` / application SHA `3ec4d88...`.
+Production health, Flyway V10/no pending, configuration preservation,
+application-only rollback compatibility, fresh backup, isolated restore and
+bounded observation passed. The issue is not yet `OWNER_FIELD_VERIFIED`;
+Owner must still retest physical Pad sleep behavior, menu revision field
+behavior and real printing latency in Production.
+
 Current Production-promotion tooling dependency (2026-08-12): the
-three-reliability Production promotion loop found a repository/tooling-only
+historical same-round three-reliability Production promotion loop found a repository/tooling-only
 blocker before deployment. Exact-artifact promotion must distinguish previous
 running application SHA from retained Production control checkout SHA, and V10
 backup rehearsal must validate a V10 Flyway ledger. The bounded repair is not a

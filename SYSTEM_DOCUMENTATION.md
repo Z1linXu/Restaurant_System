@@ -1,5 +1,13 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-12 Production three-reliability promotion result: exact
+> Staging-tested SHA `3ec4d88a47f68e05b92d9246bfd63af2d1f297f9` is deployed to
+> Production as `RC-THREE-RELIABILITY-20260812-3EC4D88`. Production stayed on
+> Flyway V10, preserved its own `PAD_DIRECT` printing topology/configuration,
+> and passed health/WebSocket/second-start/bounded observation. The Pad sleep,
+> menu revision and printing latency repairs are deployed but still require
+> Owner field retest; they are not `OWNER_FIELD_VERIFIED`.
+
 > 2026-08-12 Production promotion tooling note: exact-artifact promotion now
 > separates previous running application identity from retained Production
 > control checkout identity, and Production backup rehearsal accepts a

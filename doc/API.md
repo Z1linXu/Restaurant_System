@@ -1,5 +1,12 @@
 # Restaurant System API (MVP)
 
+> Production three-reliability promotion boundary (2026-08-12): exact
+> application SHA `3ec4d88a47f68e05b92d9246bfd63af2d1f297f9` is deployed to
+> Production. No public endpoint or DTO changed in this promotion. PAD_DIRECT,
+> menu catalog, offline snapshot, PrintJob/outbox and Print Center API
+> contracts remain as documented below. Production retained its own
+> `PAD_DIRECT` configuration; Staging `MOCK` configuration was not copied.
+
 > Owner field-test three-reliability repair boundary (2026-08-11): no public
 > endpoint or DTO changed. PAD_DIRECT still uses the existing
 > pending/claim/start-print/payload/complete/fail/release surface; the Android
