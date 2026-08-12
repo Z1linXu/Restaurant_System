@@ -1,5 +1,26 @@
 # Feature Backlog
 
+## Current final productization roadmap (2026-08-12)
+
+The final productization route is now planned as a strict three-phase program:
+
+- `PHASE_A_MODULAR_PRODUCTIZATION`: module catalog, dependency graph, Store
+  Profile contract, canonical St-Denis profile, module configuration schema,
+  validator and gating contract.
+- `PHASE_B_OWNER_STORE_PROVISIONING`: Owner-safe Draft -> profile/template ->
+  module configuration -> validation -> readiness -> activation workflow.
+- `PHASE_C_REAL_MULTI_STORE_PROOF_CHINATOWN_AND_SAINTE_CATHERINE`: use Phase
+  A+B to provision real Stores without manual shortcuts or per-Store code.
+
+Backlog rule: do not start Owner Create New Store before Phase A is accepted,
+and do not create Chinatown/Sainte-Catherine before Phase B is accepted. The
+field-test bug-fix loop remains a side loop unless a confirmed P0/P1 blocker
+is open. See
+[FINAL_PRODUCTIZATION_THREE_PHASE_ROADMAP_AUDIT](agile/FINAL_PRODUCTIZATION_THREE_PHASE_ROADMAP_AUDIT.md).
+
+Current stop:
+`FINAL_PRODUCTIZATION_AUDIT_COMPLETE_WAITING_FOR_OWNER_30_ANSWERS`.
+
 ## Current Production deployment of three-reliability repairs (2026-08-12)
 
 `PAD_SLEEP_PRINT_BLOCKING_REPAIR`,
