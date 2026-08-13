@@ -1,5 +1,14 @@
 # Store Provisioning Modular Architecture Plan
 
+> Final route update (2026-08-13):
+> `SUPERSEDED_BY_FINAL_PRODUCTIZATION_PLAN` for execution order and Owner
+> decisions. The architecture principle in this document is preserved, but the
+> active authority is now
+> [FINAL_PRODUCTIZATION_PLANBOOK](FINAL_PRODUCTIZATION_PLANBOOK.md). Phase A is
+> authorized and starts with `PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION`; Phase B
+> Owner Store Provisioning and Phase C real Store creation remain separately
+> gated.
+
 > Capability state: `ARCHITECTURE_DIRECTION_APPROVED / IMPLEMENTATION_DEFERRED / WAITING_FOR_OWNER_FIELD_TEST_COMPLETION`
 >
 > Prepared: 2026-08-08, America/Toronto

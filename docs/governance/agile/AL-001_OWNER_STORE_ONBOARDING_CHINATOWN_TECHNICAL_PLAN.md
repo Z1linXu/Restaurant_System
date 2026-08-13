@@ -1,5 +1,13 @@
 # AL-001 Owner Store Onboarding / Chinatown Requirements and Technical Plan
 
+> Final route update (2026-08-13):
+> `SUPERSEDED_BY_FINAL_PRODUCTIZATION_PLAN` for current sequencing. This
+> historical Chinatown plan remains evidence and requirement background, but
+> Phase C must re-review every Chinatown requirement under the new module
+> architecture before creating Chinatown through Phase B. Do not mechanically
+> restore old hardcodes or clone paths. See
+> [FINAL_PRODUCTIZATION_PLANBOOK](FINAL_PRODUCTIZATION_PLANBOOK.md).
+
 > Loop ID: `AL-001`
 >
 > Type: `FEATURE_DISCOVERY_AND_PLAN`

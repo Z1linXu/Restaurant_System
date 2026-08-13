@@ -1,5 +1,11 @@
 # AL-005B Device and Pad Provisioning Module Plan
 
+> Final route update (2026-08-13): preserved as historical module-planning
+> evidence and `SUPERSEDED_BY_FINAL_PRODUCTIZATION_PLAN` for active sequencing.
+> Phase A defines hardware capability contracts; physical Pad enrollment and
+> readiness remain Phase B/C runtime gates. See
+> [FINAL_PRODUCTIZATION_PLANBOOK](FINAL_PRODUCTIZATION_PLANBOOK.md).
+
 > Status: `IN_MAIN` via PR #68
 >
 > Package: `AL-005B_DEVICE_PAD_PROVISIONING_MODULE`

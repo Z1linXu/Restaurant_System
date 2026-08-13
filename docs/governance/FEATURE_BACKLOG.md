@@ -1,5 +1,29 @@
 # Feature Backlog
 
+## Current final productization planbook (2026-08-13)
+
+The Owner closed the 30-answer productization gate. The active plan is
+[FINAL_PRODUCTIZATION_PLANBOOK](agile/FINAL_PRODUCTIZATION_PLANBOOK.md).
+
+Current authorized roadmap:
+
+- `PHASE_A_MODULAR_PRODUCTIZATION`: authorized now. First loop:
+  `PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION`.
+- `PHASE_B_OWNER_STORE_PROVISIONING`: not authorized for implementation yet.
+- `PHASE_C_REAL_MULTI_STORE_PROOF_CHINATOWN_AND_SAINTE_CATHERINE`: not
+  authorized for implementation yet.
+
+Core normal-Store capabilities selected by the Owner are Ordering/POS, Menu,
+Menu Management, Table Management, Printing, GRAB Printing, Frontdesk Receipt,
+Order History and Reporting. KDS is optional/default off. Reports are core;
+advanced Analytics may be classified separately only after architecture audit.
+
+Current expected A0 stop:
+
+```text
+FINAL_PRODUCTIZATION_PLANBOOK_MERGED_PHASE_A0_DEPLOYED_WAITING_FOR_OWNER_SIZE_RETEST
+```
+
 ## Current final productization roadmap (2026-08-12)
 
 The final productization route is now planned as a strict three-phase program:

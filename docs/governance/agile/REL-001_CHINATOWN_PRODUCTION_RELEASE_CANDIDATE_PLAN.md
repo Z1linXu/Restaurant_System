@@ -1,5 +1,12 @@
 # REL-001 Chinatown Production Release Candidate Plan
 
+> Final route update (2026-08-13):
+> `SUPERSEDED_BY_FINAL_PRODUCTIZATION_PLAN` for current sequencing. REL-001
+> remains preserved release-candidate evidence architecture only. It must not
+> start until Phase A modularization and Phase B Owner provisioning are accepted
+> and Phase C selects a real Store proof path. See
+> [FINAL_PRODUCTIZATION_PLANBOOK](FINAL_PRODUCTIZATION_PLANBOOK.md).
+
 > Route update (2026-08-11): the separate existing St-Denis exact-RC promotion
 > completed for `RC-ST-DENIS-20260811-2661EB76`, exact accepted application SHA
 > `2661eb76...`, at Production Flyway V10. This is evidence for the canonical

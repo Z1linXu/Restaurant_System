@@ -1,5 +1,11 @@
 # AL-006 Store Activation Workflow Plan
 
+> Final route update (2026-08-13): preserved as historical activation-planning
+> evidence and `SUPERSEDED_BY_FINAL_PRODUCTIZATION_PLAN` for active sequencing.
+> Owner activation now follows Phase A module/profile validation and Phase B
+> provisioning; activation implementation is not authorized until Phase B. See
+> [FINAL_PRODUCTIZATION_PLANBOOK](FINAL_PRODUCTIZATION_PLANBOOK.md).
+
 > Status: `IN_MAIN` via PR #69
 >
 > Package: `AL-006A_ACTIVATION_CONTRACT_AND_READ_ONLY_VALIDATOR_PLAN`

@@ -1,5 +1,13 @@
 # TWIN-001 St-Denis Production-like Staging Twin Plan
 
+> Final route update (2026-08-13): the St-Denis Twin is preserved as the
+> Production-like validation foundation. The Owner has now closed the final
+> productization 30-answer gate and authorized Phase A under
+> [FINAL_PRODUCTIZATION_PLANBOOK](FINAL_PRODUCTIZATION_PLANBOOK.md). TWIN-001
+> does not authorize new Production reads/writes, replay, physical hardware
+> binding, Phase B/C implementation, Chinatown creation, or Sainte-Catherine
+> creation.
+
 > Current field-test reliability batch (2026-08-11): after exact-RC Production
 > promotion, the Owner authorized `STAGING_THREE_RELIABILITY_REPAIR_BATCH` for
 > Staging/repository-only repair of Pad sleep print blocking, Pad menu

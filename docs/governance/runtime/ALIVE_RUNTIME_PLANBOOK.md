@@ -1,5 +1,51 @@
 # Alive Runtime Planbook
 
+## Current final productization planbook and Phase A authorization (2026-08-13)
+
+The Owner closed the 30-answer final productization gate and authorized the
+Final Productization Planbook plus Phase A execution. The active product rule is
+`BUILD ONCE, CONFIGURE MANY`: future Stores must be created by shared
+application code, database-backed versioned Store Profiles, module
+configuration, and runtime readiness gates, not by copied projects, copied
+databases, per-Store branches, manual database clones, or shared-code
+Store-ID/name conditionals.
+
+The canonical planbook is
+[FINAL_PRODUCTIZATION_PLANBOOK](../agile/FINAL_PRODUCTIZATION_PLANBOOK.md).
+It supersedes the PR #126 audit stop
+`FINAL_PRODUCTIZATION_AUDIT_COMPLETE_WAITING_FOR_OWNER_30_ANSWERS`; the audit
+remains historical evidence and is not deleted or rewritten.
+
+The roadmap is fixed as:
+
+```text
+PHASE A — MODULAR PRODUCTIZATION
+↓
+PHASE B — OWNER NEW STORE PROVISIONING
+↓
+PHASE C — REAL MULTI-STORE PROOF
+```
+
+Current authorized implementation loop after this planbook enters `main`:
+
+```text
+PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION
+```
+
+Phase A may proceed continuously through A0-A10 while no TRUE OWNER GATE is
+hit. Phase B and Phase C implementation remain unauthorized. Production remains
+`NO MUTATION`: no deploy, restart, Flyway, configuration, menu, printer, Pad,
+Store, credential, rollback, restore, or business-data action is authorized.
+Staging deployment is allowed only for the exact Phase A loop that explicitly
+requires Staging validation, starting with A0.
+
+Current planned stop after successful A0 Staging deployment and automated
+validation:
+
+```text
+FINAL_PRODUCTIZATION_PLANBOOK_MERGED_PHASE_A0_DEPLOYED_WAITING_FOR_OWNER_SIZE_RETEST
+```
+
 ## Current final productization roadmap audit (2026-08-12)
 
 The Owner opened a planning-only final productization route after the three

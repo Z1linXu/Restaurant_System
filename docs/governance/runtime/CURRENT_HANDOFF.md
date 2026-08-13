@@ -1,5 +1,37 @@
 # Current Project Handoff
 
+## Current final productization planbook and Phase A authorization (2026-08-13)
+
+The Owner has closed the PR #126 30-answer gate. The active authority is now
+[FINAL_PRODUCTIZATION_PLANBOOK](../agile/FINAL_PRODUCTIZATION_PLANBOOK.md).
+It preserves the three-phase route:
+
+```text
+PHASE A — MODULAR PRODUCTIZATION
+↓
+PHASE B — OWNER NEW STORE PROVISIONING
+↓
+PHASE C — REAL MULTI-STORE PROOF
+```
+
+The next executable loop after fresh fetch/reread is:
+
+```text
+PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION
+```
+
+Phase A is authorized; Phase B/C are not. Production remains no-mutation. A0
+may use repository changes, tests, Agent 6, PR/auto-merge, exact-SHA Staging
+deployment and automated validation. Do not mark A0 Owner UI acceptance PASS
+until the Owner actually retests the Staging UX.
+
+The expected stop after successful A0 code, Staging deploy and automated
+validation is:
+
+```text
+FINAL_PRODUCTIZATION_PLANBOOK_MERGED_PHASE_A0_DEPLOYED_WAITING_FOR_OWNER_SIZE_RETEST
+```
+
 ## Current final productization roadmap audit (2026-08-12)
 
 Planning-only audit is complete for the new final productization route:
