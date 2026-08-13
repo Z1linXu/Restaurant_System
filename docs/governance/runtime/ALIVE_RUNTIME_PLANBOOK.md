@@ -54,6 +54,10 @@ canonical Pricing Rules APIs/UI, system-controlled Size Configuration,
 catalog/hash/cache pricing policy semantics, and a rollback compatibility
 mirror for Size/Combo `menu_item_options.price_delta` only. Production remains
 `NO MUTATION`.
+Repository implementation evidence is
+[PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_IMPLEMENTATION_EVIDENCE](../agile/PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_IMPLEMENTATION_EVIDENCE.md).
+Runtime Staging evidence is
+[PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_STAGING_EVIDENCE](../agile/PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_STAGING_EVIDENCE.md).
 
 Phase A may proceed continuously through A0-A10 while no TRUE OWNER GATE is
 hit. Phase B and Phase C implementation remain unauthorized. Production remains
@@ -62,8 +66,9 @@ Store, credential, rollback, restore, or business-data action is authorized.
 Staging deployment is allowed only for the exact Phase A loop that explicitly
 requires Staging validation, starting with A0.
 
-Current A0.1 stop after successful PR merge, exact-SHA Staging V10->V11
-deployment and automated validation:
+A0.1 was deployed to exact-SHA Staging at
+`ed3e4cdbf38c4d8812620baf64cd42ce3a229431`; Staging advanced from Flyway V10
+to V11 and automated validation passed. Current A0.1 stop:
 
 ```text
 PHASE_A0_1_STANDARD_SIZE_PRICING_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
@@ -85,11 +90,12 @@ A0_AUTOMATED_VALIDATION = PASS
 A0_OWNER_UI_ACCEPTANCE = PENDING
 ```
 
-Staging is exact
-`c83933f16f4eb1c1be33bd13772ac489d79a7176`, Flyway V10, Printing
-`MOCK/true`. The Owner's next action is manual Size UX retest only; do not
-start A1, Phase B, Phase C, Chinatown, Sainte-Catherine or Production deploy
-from this stop state without a fresh Owner decision.
+Staging now runs exact
+`ed3e4cdbf38c4d8812620baf64cd42ce3a229431`, Flyway V11, Printing
+`MOCK/true`, four enabled logical printers and three enabled assignments. The
+Owner's next action is manual A0.1 Size/Pricing Rules retest only; do not start
+A1, Phase B, Phase C, Chinatown, Sainte-Catherine or Production deploy from
+this stop state without a fresh Owner decision.
 
 ## Current final productization roadmap audit (2026-08-12)
 
