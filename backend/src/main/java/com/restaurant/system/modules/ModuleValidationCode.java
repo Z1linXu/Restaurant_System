@@ -1,0 +1,11 @@
+package com.restaurant.system.modules;
+
+public enum ModuleValidationCode {
+    UNKNOWN_MODULE,
+    CORE_MODULE_DISABLED,
+    REQUIRED_MODULE_DISABLED,
+    MODULE_CONFLICT,
+    ENVIRONMENT_CAPABILITY_MISSING,
+    HARDWARE_CAPABILITY_MISSING,
+    INVALID_DEPENDENCY_GRAPH
+}

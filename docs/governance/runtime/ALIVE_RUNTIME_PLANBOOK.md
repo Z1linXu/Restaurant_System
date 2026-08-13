@@ -127,6 +127,20 @@ machine-readable catalog is
 `backend/src/main/resources/module/module-catalog.v1.json`; focused static
 validation is `ModuleCatalogContractTest`.
 
+A1 has been accepted by Agent 6 and merged through PR #137 at
+`34169152c6d48ecf503b441fe7428416c399d0a9`:
+
+```text
+PHASE_A1_MODULE_CATALOG = PASS
+```
+
+A2 Module Dependency Graph now adds
+`backend/src/main/resources/module/module-dependency-graph.v1.json` and the
+reusable `ModuleDependencyValidator` for fail-closed `REQUIRES`,
+`CONFLICTS_WITH`, `REQUIRES_ENVIRONMENT_CAPABILITY`, and
+`REQUIRES_HARDWARE_CAPABILITY` validation. A2 remains repository/backend
+contract work only: no schema migration, Staging deploy or Production mutation.
+
 Phase A0 deployed evidence:
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](../agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).
 The deployed implementation preserves the existing Menu Engine path:
