@@ -30,6 +30,48 @@ export interface WorkspaceResponse {
   stores: WorkspaceStore[]
 }
 
+export interface StoreModuleValidationIssue {
+  code: string
+  module_key: string | null
+  target: string | null
+  message: string
+}
+
+export interface StoreModuleState {
+  module_key: string
+  display_name: string
+  classification: string
+  category: string
+  enabled: boolean | null
+  default_enabled: boolean
+  core_required: boolean
+  active_normal_store_required: boolean
+  activation_blocking: boolean
+  persisted: boolean
+  source: string | null
+  configuration_status: string | null
+  profile_code: string | null
+  profile_version: string | null
+  legacy_runtime_mode?: string | null
+  legacy_store_flag?: boolean | null
+}
+
+export interface StoreModuleConfiguration {
+  store_id: number
+  catalog_version: string
+  dependency_graph_version: string
+  valid: boolean
+  validation_status: string
+  environment_capability_source: string
+  hardware_capability_source: string
+  legacy_compatibility_status: string
+  legacy_precedence: string
+  environment_capabilities: string[]
+  hardware_capabilities: string[]
+  modules: StoreModuleState[]
+  validation_issues: StoreModuleValidationIssue[]
+}
+
 export interface StoreContextResponse {
   id: number
   name: string
@@ -39,6 +81,7 @@ export interface StoreContextResponse {
   organization_name: string | null
   organization_code: string | null
   role_code: string | null
+  module_configuration?: StoreModuleConfiguration | null
 }
 
 interface OfflineSnapshotOptions {

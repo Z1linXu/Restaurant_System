@@ -1,6 +1,7 @@
 package com.restaurant.system.common.auth.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.restaurant.system.modules.dto.StoreModuleConfigurationResponse;
 
 public class StoreContextResponse {
     public Long id;
@@ -19,4 +20,7 @@ public class StoreContextResponse {
 
     @JsonProperty("role_code")
     public String roleCode;
+
+    @JsonProperty("module_configuration")
+    public StoreModuleConfigurationResponse moduleConfiguration;
 }

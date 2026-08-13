@@ -34,6 +34,15 @@
 > Store module persistence or runtime gating behavior. A3 owns the Store-level
 > module read contract.
 
+> Phase A3 Store-level Module Configuration (2026-08-13): additive Flyway V13
+> introduces Store-scoped `store_modules` as the canonical Store module state
+> source. `/api/v1/stores/{storeId}/context` now includes
+> `module_configuration`; `/api/v1/stores/{storeId}/modules` exposes the same
+> canonical read contract; `/api/v1/admin/stores/{storeId}/modules` is a
+> bounded admin configuration contract. A3 separates environment capability,
+> Store module state, runtime mode and user authorization, while retaining
+> legacy runtime gating until A6/A7.
+
 > Final productization Phase A0 boundary (2026-08-13): Size configuration uses
 > the existing menu option/modifier APIs rather than a second size engine.
 > `MenuItem -> SizeVariant[1..N]` is represented by `menu_item_options` rows
@@ -166,6 +175,61 @@ Returns the organizations and stores available to the current authenticated user
 GET `/stores/{storeId}/context`
 
 Returns store context only if the current user is authorized for that store. URL `storeId` is never considered proof of access.
+
+The response includes canonical Store module configuration:
+
+- `module_configuration.store_id`
+- `catalog_version`
+- `dependency_graph_version`
+- `valid`
+- `validation_status`
+- `environment_capabilities`
+- `hardware_capabilities`
+- `modules[]`
+- `validation_issues[]`
+
+`/me/workspaces` intentionally remains a lightweight Store/Organization list
+and does not duplicate the module configuration payload.
+
+### Store Module Configuration
+
+GET `/stores/{storeId}/modules`
+
+Returns canonical Store module state for authorized users with Store access.
+The payload separates:
+
+- environment capability;
+- hardware capability;
+- Store module state;
+- legacy Store runtime mode/flag where applicable;
+- validation issues.
+
+PUT `/admin/stores/{storeId}/modules`
+
+Request:
+
+```json
+{
+  "store_id": 1,
+  "modules": [
+    {
+      "module_key": "KDS",
+      "enabled": false
+    }
+  ]
+}
+```
+
+Rules:
+
+- requires authenticated Store access plus `ADMIN_STORE_CONFIG` manager/owner
+  authority;
+- rejects unknown modules;
+- rejects duplicate module updates;
+- rejects disabling core modules for an active Store;
+- validates the resulting Store module graph with the A2 validator;
+- does not change menu revision, pricing, combo configuration, printing
+  runtime mode, devices, printer endpoints, orders, receipts or reports.
 
 ## Modules
 - Orders

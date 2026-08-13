@@ -167,6 +167,37 @@ relationships. Unknown modules and invalid graph entries fail closed. A2 does
 not create Store module persistence, deploy Staging, touch Production, or start
 A3 before A2 enters `main`.
 
+A2 is now accepted and merged:
+
+```text
+PHASE_A2_MODULE_DEPENDENCY_GRAPH = PASS
+AGENT_6 = A2_ACCEPT
+PR = #138
+MERGE_SHA = 1780c8934a502709844713d91c493b076e714983
+```
+
+A3 implementation navigation:
+
+- Technical evidence:
+  [PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION](../agile/PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION.md)
+- Additive migration:
+  `backend/src/main/resources/db/migration/V13__add_store_modules.sql`
+- Store module service/API:
+  `backend/src/main/java/com/restaurant/system/modules/StoreModuleServiceImpl.java`
+  and `backend/src/main/java/com/restaurant/system/modules/StoreModuleController.java`
+- Store Context contract extension:
+  `backend/src/main/java/com/restaurant/system/common/auth/dto/StoreContextResponse.java`
+- Focused validation:
+  `backend/src/test/java/com/restaurant/system/modules/StoreModuleServiceImplTest.java`
+  and `backend/src/test/java/com/restaurant/system/modules/StoreModuleControllerTest.java`
+
+A3 adds canonical Store-scoped `store_modules` state and the Store module
+read/config contract. It does not implement A4 profiles, A6 backend gating, A7
+frontend gating, A8 hardware management, Chinatown, Sainte-Catherine or
+Production deployment. Because A3 includes Flyway V13/runtime changes, it must
+be exact-SHA deployed to Staging and validated after PR merge before final
+Phase A1-A3 report.
+
 ## Current final productization roadmap audit (2026-08-12)
 
 Planning-only audit is complete for the new final productization route:

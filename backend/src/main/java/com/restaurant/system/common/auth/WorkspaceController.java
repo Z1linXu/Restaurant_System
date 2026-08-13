@@ -3,6 +3,7 @@ package com.restaurant.system.common.auth;
 import com.restaurant.system.common.auth.dto.StoreContextResponse;
 import com.restaurant.system.common.auth.dto.WorkspaceResponse;
 import com.restaurant.system.common.response.ApiResponse;
+import com.restaurant.system.modules.StoreModuleService;
 import com.restaurant.system.platform.entity.Organization;
 import com.restaurant.system.platform.repository.OrganizationRepository;
 import com.restaurant.system.user.entity.Store;
@@ -21,17 +22,20 @@ public class WorkspaceController {
     private final StoreAccessService storeAccessService;
     private final StoreRepository storeRepository;
     private final OrganizationRepository organizationRepository;
+    private final StoreModuleService storeModuleService;
 
     public WorkspaceController(
         RequestUserContextService requestUserContextService,
         StoreAccessService storeAccessService,
         StoreRepository storeRepository,
-        OrganizationRepository organizationRepository
+        OrganizationRepository organizationRepository,
+        StoreModuleService storeModuleService
     ) {
         this.requestUserContextService = requestUserContextService;
         this.storeAccessService = storeAccessService;
         this.storeRepository = storeRepository;
         this.organizationRepository = organizationRepository;
+        this.storeModuleService = storeModuleService;
     }
 
     @GetMapping("/me/workspaces")
@@ -72,6 +76,7 @@ public class WorkspaceController {
         response.status = store.status;
         response.organizationId = store.organization_id;
         response.roleCode = storeAccessService.roleCodeForStore(user, store);
+        response.moduleConfiguration = storeModuleService.getConfiguration(storeId);
         if (store.organization_id != null) {
             organizationRepository.findById(store.organization_id).ifPresent(organization -> {
                 response.organizationName = organization.name;

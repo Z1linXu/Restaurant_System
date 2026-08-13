@@ -1,6 +1,6 @@
 # Phase A2 Module Dependency Graph
 
-Status: `PHASE_A2_REPOSITORY_CONTRACT`
+Status: `PHASE_A2_MODULE_DEPENDENCY_GRAPH = PASS`
 
 Date: 2026-08-13
 
@@ -87,8 +87,11 @@ INVALID_DEPENDENCY_GRAPH
 - A2 does not authorize schema migration, Staging deployment, Production
   deployment, Chinatown, Sainte-Catherine, Phase B or Phase C.
 
-Expected A2 completion state after tests, Agent 6, PR and merge:
+Completion evidence:
 
 ```text
 PHASE_A2_MODULE_DEPENDENCY_GRAPH = PASS
+AGENT_6 = A2_ACCEPT
+PR = #138
+MERGE_SHA = 1780c8934a502709844713d91c493b076e714983
 ```
