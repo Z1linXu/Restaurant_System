@@ -15,6 +15,7 @@ public class MenuCatalogResponse {
     public String content_hash;
     public TaxPolicyResponse tax_policy;
     public StorePricingPolicyResponse pricing_policy;
+    public StoreComboConfigurationResponse combo_configuration;
     public List<CategoryResponse> categories;
 
     public MenuCatalogResponse(
@@ -26,6 +27,7 @@ public class MenuCatalogResponse {
         String comboMetadataVersion,
         TaxPolicyResponse taxPolicy,
         StorePricingPolicyResponse pricingPolicy,
+        StoreComboConfigurationResponse comboConfiguration,
         List<CategoryResponse> categories
     ) {
         this.store_id = storeId;
@@ -36,6 +38,7 @@ public class MenuCatalogResponse {
         this.combo_metadata_version = comboMetadataVersion;
         this.tax_policy = taxPolicy;
         this.pricing_policy = pricingPolicy;
+        this.combo_configuration = comboConfiguration;
         this.categories = categories;
     }
 

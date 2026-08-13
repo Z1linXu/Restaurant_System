@@ -45,18 +45,39 @@ The implementation package adds additive Flyway V11, Store-level Pricing Rules,
 system-controlled Size Configuration, item Combo allowed policy, catalog/hash/
 IndexedDB pricing policy semantics, and a Size/Combo `price_delta`
 compatibility mirror only for rollback safety. Production remains no-mutation.
+The Owner accepted the manual A0.1 Staging UX retest:
+
+```text
+OWNER_A0_1_PRICING_UX_RETEST = PASS
+```
 
 Phase A is authorized; Phase B/C are not. Production remains no-mutation. A0
 used repository changes, tests, Agent 6, PR/auto-merge, exact-SHA Staging
-deployment and automated validation. Do not mark A0 Owner UI acceptance PASS
-until the Owner actually retests the Staging UX.
+deployment and automated validation.
 
 A0.1 is deployed to exact-SHA Staging at
 `ed3e4cdbf38c4d8812620baf64cd42ce3a229431`; Staging advanced from Flyway V10
-to V11 and automated validation passed. Current stop:
+to V11 and automated validation passed.
+
+Current authorized bounded implementation loop:
 
 ```text
-PHASE_A0_1_STANDARD_SIZE_PRICING_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+PHASE_A0_2_STORE_COMBO_CONFIGURATION
+```
+
+A0.2 must implement Store-level Combo Contents configuration, not a second
+combo engine and not a pricing source. `store_pricing_policies.combo_delta`
+remains the canonical Combo price; per-item `menu_item_options` `COMBO` rows
+remain item `COMBO_ALLOWED`; `store_combo_components` is the Store-scoped
+canonical content table for reviewed `COMBO_EGG` and `COMBO_SIDE` components.
+New ordering may use stable negative transport IDs in frozen snapshots, but the
+enabled/name/code state remains Store Combo Configuration. Evidence:
+[PHASE_A0_2_STORE_COMBO_CONFIGURATION_IMPLEMENTATION_EVIDENCE](../agile/PHASE_A0_2_STORE_COMBO_CONFIGURATION_IMPLEMENTATION_EVIDENCE.md).
+
+Expected successful stop after PR merge and exact-SHA Staging validation:
+
+```text
+PHASE_A0_2_STORE_COMBO_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
 ```
 
 Current A0 deployed evidence:
@@ -72,7 +93,7 @@ Current A0 result:
 A0_CODE = COMPLETE
 A0_STAGING_DEPLOYED = YES
 A0_AUTOMATED_VALIDATION = PASS
-A0_OWNER_UI_ACCEPTANCE = PENDING
+A0_OWNER_UI_ACCEPTANCE = PASS_FOR_A0_1_PRICING_UX
 ```
 
 Staging now runs exact

@@ -2,6 +2,7 @@ import type {
   BackendFrontdeskOrderBoardItem,
   BackendOrderResponse,
   BackendOrderUpdateResponse,
+  ChoiceOption,
   ItemCustomizationDraft,
   MenuItem,
   OrderLineItem,
@@ -59,6 +60,18 @@ export interface IdempotentOrderItemPayload {
   }[]
 }
 
+interface OrderOptionPayload {
+  option_id: number
+  quantity: number
+  option_type_snapshot?: string | null
+  option_code_snapshot?: string | null
+  option_group_snapshot?: string | null
+  parent_option_id_snapshot?: number | null
+  option_name_snapshot_zh?: string
+  option_name_snapshot_en?: string
+  option_price_snapshot?: number
+}
+
 export interface IdempotentOrderSubmitPayload {
   client_order_id: string
   idempotency_key: string
@@ -96,16 +109,28 @@ function sleep(ms: number) {
 }
 
 export function mapOptions(draft: ItemCustomizationDraft, menuItem?: MenuItem) {
-  const optionPayloads: { option_id: number; quantity: number }[] = []
+  const optionPayloads: OrderOptionPayload[] = []
+  const optionsById = menuItem ? collectMenuItemOptions(menuItem) : new Map<string, ChoiceOption>()
 
   const pushOption = (optionId: string | undefined, quantity = 1) => {
     if (!optionId) {
       return
     }
-    optionPayloads.push({
+    const option = optionsById.get(optionId)
+    const payload: OrderOptionPayload = {
       option_id: Number(optionId),
       quantity,
-    })
+    }
+    if (option) {
+      payload.option_type_snapshot = option.optionType ?? null
+      payload.option_code_snapshot = option.optionCode ?? null
+      payload.option_group_snapshot = option.optionGroup ?? null
+      payload.parent_option_id_snapshot = option.parentOptionId == null ? null : Number(option.parentOptionId)
+      payload.option_name_snapshot_zh = option.labelZh
+      payload.option_name_snapshot_en = option.labelEn
+      payload.option_price_snapshot = option.priceDelta ?? 0
+    }
+    optionPayloads.push(payload)
   }
 
   pushOption(draft.sizeId)
@@ -129,6 +154,22 @@ export function mapOptions(draft: ItemCustomizationDraft, menuItem?: MenuItem) {
   })
 
   return optionPayloads
+}
+
+function collectMenuItemOptions(menuItem: MenuItem) {
+  const options = [
+    ...(menuItem.customization?.sizes?.options ?? []),
+    ...(menuItem.customization?.soupBases?.options ?? []),
+    ...(menuItem.customization?.noodleTypes ?? []),
+    ...(menuItem.customization?.spicyLevels ?? []),
+    ...(menuItem.customization?.combo?.option ? [menuItem.customization.combo.option] : []),
+    ...(menuItem.customization?.combo?.eggs ?? []),
+    ...(menuItem.customization?.combo?.sides ?? []),
+    ...(menuItem.customization?.combo?.sideRemoveOptions ?? []),
+    ...(menuItem.customization?.addOns ?? []),
+    ...(menuItem.customization?.removeOptions ?? []),
+  ]
+  return new Map(options.map((option) => [option.id, option]))
 }
 
 export async function findDraftOrderByTableSlot(storeId: number, slotLabel: string) {

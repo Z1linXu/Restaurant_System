@@ -11,6 +11,7 @@ import {
 } from '../../services/platformAdminService'
 import { ApiRequestError } from '../../services/apiClient'
 import { MenuOptionsPanel } from './MenuOptionsPanel'
+import { ComboConfigurationPanel } from './ComboConfigurationPanel'
 import { PricingRulesPanel } from './PricingRulesPanel'
 import { useAuth } from '../auth/useAuth'
 import { useCurrentStore } from '../store/StoreContext'
@@ -604,6 +605,11 @@ export function MenuManagementPage() {
                 {error}
               </div>
             ) : null}
+
+            <ComboConfigurationPanel
+              storeId={Number(selectedStoreId)}
+              onSaved={(message) => setToast({ kind: 'success', message })}
+            />
 
             <PricingRulesPanel
               storeId={Number(selectedStoreId)}

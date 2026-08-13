@@ -321,4 +321,126 @@ describe('ordering menu item display order', () => {
       }),
     ]))
   })
+
+  it('maps Store-filtered combo components and defaults to the first enabled egg and side', () => {
+    const data = catalog()
+    data.pricing_policy = {
+      store_id: 1,
+      policy_revision: 3,
+      size_small_delta: -2,
+      size_regular_delta: 0,
+      size_large_delta: 2,
+      combo_delta: 5,
+    }
+    data.combo_configuration = {
+      store_id: 1,
+      menu_revision: data.menu_revision,
+      groups: [
+        {
+          component_group: 'COMBO_EGG',
+          name_zh: '蛋类',
+          name_en: 'Egg',
+          default_component_code: 'combo_tea_egg',
+          components: [
+            {
+              component_group: 'COMBO_EGG',
+              component_code: 'combo_tea_egg',
+              name_zh: '卤蛋',
+              name_en: 'Tea Egg',
+              enabled: true,
+              display_order: 10,
+              is_default: true,
+            },
+            {
+              component_group: 'COMBO_EGG',
+              component_code: 'combo_fried_egg',
+              name_zh: '煎蛋',
+              name_en: 'Fried Egg',
+              enabled: false,
+              display_order: 20,
+              is_default: false,
+            },
+          ],
+        },
+        {
+          component_group: 'COMBO_SIDE',
+          name_zh: '小菜',
+          name_en: 'Side',
+          default_component_code: 'combo_edamame',
+          components: [
+            {
+              component_group: 'COMBO_SIDE',
+              component_code: 'combo_edamame',
+              name_zh: '毛豆',
+              name_en: 'Edamame',
+              enabled: true,
+              display_order: 10,
+              is_default: true,
+            },
+          ],
+        },
+      ],
+    }
+    data.categories[0].code = 'SOUP_NOODLE'
+    data.categories[0].items = [{
+      ...data.categories[0].items[0],
+      id: 61,
+      sku: 'traditional_beef_noodle',
+      name_zh: '传统牛肉面',
+      name_en: 'Traditional Beef Noodle',
+      options: [
+        {
+          id: 610,
+          option_type: 'addon',
+          option_code: 'combo',
+          option_group: 'COMBO',
+          parent_option_id: null,
+          sort_order: 100,
+          name_zh: '套餐',
+          name_en: 'Combo',
+          price_delta: 5,
+          is_active: true,
+        },
+        {
+          id: 611,
+          option_type: 'addon',
+          option_code: 'combo_tea_egg',
+          option_group: 'COMBO_EGG',
+          parent_option_id: null,
+          sort_order: 110,
+          name_zh: '套餐卤蛋',
+          name_en: 'Combo Tea Egg',
+          price_delta: 0,
+          is_active: true,
+        },
+        {
+          id: 613,
+          option_type: 'addon',
+          option_code: 'combo_edamame',
+          option_group: 'COMBO_SIDE',
+          parent_option_id: null,
+          sort_order: 130,
+          name_zh: '套餐毛豆',
+          name_en: 'Combo Edamame',
+          price_delta: 0,
+          is_active: true,
+        },
+      ],
+    }]
+
+    const item = mapCatalog(data).items[0]
+    const draft = buildDefaultDraft(item)
+    const line = buildLocalLineItem(item, { ...draft, comboEnabled: true })
+
+    expect(item.customization?.combo?.eggs.map((option) => option.optionCode)).toEqual(['combo_tea_egg'])
+    expect(item.customization?.combo?.sides.map((option) => option.optionCode)).toEqual(['combo_edamame'])
+    expect(draft.comboEggId).toBe('-20101')
+    expect(draft.comboSideId).toBe('-20201')
+    expect(line.lineSubtotal).toBe(7)
+    expect(line.optionSnapshots).toEqual(expect.arrayContaining([
+      expect.objectContaining({ optionCode: 'combo', optionGroup: 'COMBO', priceDelta: 5 }),
+      expect.objectContaining({ optionCode: 'combo_tea_egg', optionGroup: 'COMBO_EGG' }),
+      expect.objectContaining({ optionCode: 'combo_edamame', optionGroup: 'COMBO_SIDE' }),
+    ]))
+  })
 })

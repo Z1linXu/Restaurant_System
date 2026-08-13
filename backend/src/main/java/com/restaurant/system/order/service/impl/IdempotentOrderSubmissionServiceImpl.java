@@ -2,8 +2,10 @@ package com.restaurant.system.order.service.impl;
 
 import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.entity.MenuItemOption;
+import com.restaurant.system.menu.combo.StoreComboComponentDefinition;
 import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.menu.repository.MenuItemRepository;
+import com.restaurant.system.menu.service.StoreComboConfigurationService;
 import com.restaurant.system.order.dto.CreateOrderItemOptionRequest;
 import com.restaurant.system.order.dto.CreateOrderItemRequest;
 import com.restaurant.system.order.dto.CreateOrderRequest;
@@ -42,6 +44,7 @@ public class IdempotentOrderSubmissionServiceImpl implements IdempotentOrderSubm
     private final StoreRepository storeRepository;
     private final MenuItemRepository menuItemRepository;
     private final MenuItemOptionRepository menuItemOptionRepository;
+    private final StoreComboConfigurationService storeComboConfigurationService;
     private final OrderSubmissionHashService hashService;
     private final OrderService orderService;
 
@@ -50,6 +53,7 @@ public class IdempotentOrderSubmissionServiceImpl implements IdempotentOrderSubm
         StoreRepository storeRepository,
         MenuItemRepository menuItemRepository,
         MenuItemOptionRepository menuItemOptionRepository,
+        StoreComboConfigurationService storeComboConfigurationService,
         OrderSubmissionHashService hashService,
         OrderService orderService
     ) {
@@ -57,6 +61,7 @@ public class IdempotentOrderSubmissionServiceImpl implements IdempotentOrderSubm
         this.storeRepository = storeRepository;
         this.menuItemRepository = menuItemRepository;
         this.menuItemOptionRepository = menuItemOptionRepository;
+        this.storeComboConfigurationService = storeComboConfigurationService;
         this.hashService = hashService;
         this.orderService = orderService;
     }
@@ -190,7 +195,15 @@ public class IdempotentOrderSubmissionServiceImpl implements IdempotentOrderSubm
                 MenuItemOption option = menuItemOptionRepository.findById(optionRequest.option_id).orElse(null);
                 if (option == null) {
                     requireOptionSnapshot(optionRequest);
-                    logMenuDrift(request, itemRequest, "MENU_OPTION_MISSING", null, null, store.menu_revision);
+                    if (isStoreComboComponentSnapshot(optionRequest)) {
+                        storeComboConfigurationService.requireSnapshotEnabledForNewSelection(
+                            store.id,
+                            optionRequest.option_group_snapshot,
+                            optionRequest.option_code_snapshot
+                        );
+                    } else {
+                        logMenuDrift(request, itemRequest, "MENU_OPTION_MISSING", null, null, store.menu_revision);
+                    }
                     continue;
                 }
                 if (item != null && !item.id.equals(option.menu_item_id)
@@ -244,6 +257,12 @@ public class IdempotentOrderSubmissionServiceImpl implements IdempotentOrderSubm
 
     private boolean sameText(String submitted, String current) {
         return Objects.equals(trimToNull(submitted), trimToNull(current));
+    }
+
+    private boolean isStoreComboComponentSnapshot(CreateOrderItemOptionRequest option) {
+        return StoreComboComponentDefinition
+            .fromGroupAndCode(option.option_group_snapshot, option.option_code_snapshot)
+            .isPresent();
     }
 
     private void logMenuDrift(

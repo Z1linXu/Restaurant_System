@@ -8,6 +8,12 @@
 > Size/Combo `menu_item_options.price_delta` is a rollback compatibility mirror
 > only.
 
+> Phase A0.2 implementation (2026-08-13): Store-level Combo contents are
+> configured through `store_combo_components` and the dedicated Store Combo
+> Configuration API. Combo price still comes from
+> `store_pricing_policies.combo_delta`; item Combo allowed still comes from the
+> existing item-scoped `COMBO` option row.
+
 > Final productization Phase A0 boundary (2026-08-13): Size configuration uses
 > the existing menu option/modifier APIs rather than a second size engine.
 > `MenuItem -> SizeVariant[1..N]` is represented by `menu_item_options` rows
@@ -554,6 +560,22 @@ Response behavior:
   - `size_regular_delta`
   - `size_large_delta`
   - `combo_delta`
+- catalog payload includes `combo_configuration`:
+  - `store_id`
+  - `menu_revision`
+  - `groups[]`
+    - `component_group`
+    - `name_zh`
+    - `name_en`
+    - `default_component_code`
+    - `components[]`
+      - `component_group`
+      - `component_code`
+      - `name_zh`
+      - `name_en`
+      - `enabled`
+      - `display_order`
+      - `is_default`
 - option payload includes:
   - `id`
   - `option_type`
@@ -582,6 +604,15 @@ Response behavior:
 - Combo upcharge rows are also system-controlled. Generic option
   create/update/deactivate/reorder routes reject Combo upcharge writes; use
   Item Combo Policy for allow/disable and Pricing Rules for Store-level delta.
+- Store-level Combo contents are system-controlled in `store_combo_components`.
+  Use Store Combo Configuration for egg/side availability. Supported first
+  catalog codes are `combo_tea_egg`, `combo_fried_egg`, `combo_edamame`,
+  `combo_shredded_potato`, and `combo_cucumber_salad`.
+- Frontdesk ordering reads Store-level egg/side choices from
+  `combo_configuration`, not from item-scoped `menu_item_options`
+  `COMBO_EGG`/`COMBO_SIDE` rows. Frozen order snapshots use stable negative
+  transport IDs for those Store-level choices; the IDs are not database row
+  identities.
 - Size and Combo deltas in new catalog responses are effective Store policy
   values from `store_pricing_policies`; Size/Combo `menu_item_options.price_delta`
   is maintained only as a rollback compatibility mirror.
@@ -671,6 +702,78 @@ Request:
 
 The item controls only whether Combo is allowed. The Combo delta remains
 Store-level.
+
+#### Get Store Combo Configuration
+
+`GET /api/v1/admin/menu/combo-configuration?store_id={storeId}`
+
+Response data:
+
+```json
+{
+  "store_id": 1,
+  "menu_revision": 12,
+  "groups": [
+    {
+      "component_group": "COMBO_EGG",
+      "name_zh": "蛋类",
+      "name_en": "Egg",
+      "default_component_code": "combo_tea_egg",
+      "components": [
+        {
+          "component_group": "COMBO_EGG",
+          "component_code": "combo_tea_egg",
+          "name_zh": "卤蛋",
+          "name_en": "Tea Egg",
+          "enabled": true,
+          "display_order": 10,
+          "is_default": true
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### Update Store Combo Configuration
+
+`PUT /api/v1/admin/menu/combo-configuration`
+
+Request:
+
+```json
+{
+  "store_id": 1,
+  "components": [
+    {
+      "component_group": "COMBO_EGG",
+      "component_code": "combo_tea_egg",
+      "enabled": true
+    },
+    {
+      "component_group": "COMBO_EGG",
+      "component_code": "combo_fried_egg",
+      "enabled": false
+    }
+  ]
+}
+```
+
+Only reviewed `COMBO_EGG` and `COMBO_SIDE` component codes are accepted. The
+write is Store-scoped, emits `COMBO_CONFIGURATION_UPDATED`, increments
+`stores.menu_revision`, and updates `stores.menu_updated_at` in the same
+transaction. If an item allows Combo but no enabled required egg/side component
+remains available for that Store, the backend rejects the update with
+`COMBO_EGG_CONFIGURATION_MISSING` or `COMBO_SIDE_CONFIGURATION_MISSING`.
+
+New order submission rejects disabled or unsupported Store-configured
+`COMBO_EGG` / `COMBO_SIDE` selections. Historical order item snapshots are not
+rewritten.
+
+Frontdesk catalog/ordering clients must use the `combo_configuration` response
+for Store-level egg/side choices. Item-scoped `menu_item_options`
+`COMBO_EGG`/`COMBO_SIDE` rows are rollback-compatible legacy data and are hidden
+from new ordering.
 
 ---
 

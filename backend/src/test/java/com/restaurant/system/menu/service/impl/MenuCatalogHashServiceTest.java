@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import com.restaurant.system.menu.dto.MenuCatalogResponse;
+import com.restaurant.system.menu.dto.StoreComboConfigurationResponse;
 import com.restaurant.system.menu.dto.StorePricingPolicyResponse;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -22,7 +23,7 @@ class MenuCatalogHashServiceTest {
         catalog.generated_at = catalog.generated_at.plusHours(2);
 
         assertEquals(first, service.calculate(catalog));
-        assertEquals("fnv1a32:0be7d023", first);
+        assertEquals("fnv1a32:67fad5ce", first);
     }
 
     @Test
@@ -41,6 +42,17 @@ class MenuCatalogHashServiceTest {
         String before = service.calculate(catalog);
 
         catalog.pricing_policy.size_large_delta = new BigDecimal("3.00");
+
+        assertNotEquals(before, service.calculate(catalog));
+    }
+
+    @Test
+    void hashChangesWhenStoreComboConfigurationChanges() {
+        MenuCatalogResponse catalog = catalog();
+        String before = service.calculate(catalog);
+
+        catalog.combo_configuration.groups.get(0).components.get(1).enabled = false;
+        catalog.combo_configuration.groups.get(0).default_component_code = "combo_tea_egg";
 
         assertNotEquals(before, service.calculate(catalog));
     }
@@ -94,8 +106,56 @@ class MenuCatalogHashServiceTest {
                 "ca-qc-tax-2026-01"
             ),
             pricingPolicy(),
+            comboConfiguration(),
             List.of(category)
         );
+    }
+
+    private StoreComboConfigurationResponse comboConfiguration() {
+        StoreComboConfigurationResponse configuration = new StoreComboConfigurationResponse();
+        configuration.store_id = 1L;
+        configuration.menu_revision = 7L;
+        StoreComboConfigurationResponse.GroupResponse eggs = new StoreComboConfigurationResponse.GroupResponse();
+        eggs.component_group = "COMBO_EGG";
+        eggs.name_zh = "蛋类";
+        eggs.name_en = "Egg";
+        eggs.default_component_code = "combo_tea_egg";
+        eggs.components = List.of(
+            component("COMBO_EGG", "combo_tea_egg", "卤蛋", "Tea Egg", true, 10, true),
+            component("COMBO_EGG", "combo_fried_egg", "煎蛋", "Fried Egg", true, 20, false)
+        );
+        StoreComboConfigurationResponse.GroupResponse sides = new StoreComboConfigurationResponse.GroupResponse();
+        sides.component_group = "COMBO_SIDE";
+        sides.name_zh = "小菜";
+        sides.name_en = "Side";
+        sides.default_component_code = "combo_edamame";
+        sides.components = List.of(
+            component("COMBO_SIDE", "combo_edamame", "毛豆", "Edamame", true, 10, true),
+            component("COMBO_SIDE", "combo_shredded_potato", "土豆丝", "Shredded Potato", true, 20, false),
+            component("COMBO_SIDE", "combo_cucumber_salad", "拌黄瓜", "Cucumber Salad", true, 30, false)
+        );
+        configuration.groups = List.of(eggs, sides);
+        return configuration;
+    }
+
+    private StoreComboConfigurationResponse.ComponentResponse component(
+        String group,
+        String code,
+        String nameZh,
+        String nameEn,
+        boolean enabled,
+        int displayOrder,
+        boolean defaultComponent
+    ) {
+        StoreComboConfigurationResponse.ComponentResponse component = new StoreComboConfigurationResponse.ComponentResponse();
+        component.component_group = group;
+        component.component_code = code;
+        component.name_zh = nameZh;
+        component.name_en = nameEn;
+        component.enabled = enabled;
+        component.display_order = displayOrder;
+        component.is_default = defaultComponent;
+        return component;
     }
 
     private StorePricingPolicyResponse pricingPolicy() {

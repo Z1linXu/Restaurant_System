@@ -10,6 +10,20 @@ import {
   type MenuCacheScope,
 } from '../offline/menuCache'
 
+const STORE_COMBO_COMPONENT_OPTION_IDS: Record<string, string> = {
+  'COMBO_EGG:combo_tea_egg': '-20101',
+  'COMBO_EGG:combo_fried_egg': '-20102',
+  'COMBO_SIDE:combo_edamame': '-20201',
+  'COMBO_SIDE:combo_shredded_potato': '-20202',
+  'COMBO_SIDE:combo_cucumber_salad': '-20203',
+}
+
+const COMBO_SIDE_COMPONENT_CODE_BY_SKU: Record<string, string> = {
+  edamame: 'combo_edamame',
+  shredded_potato: 'combo_shredded_potato',
+  cucumber_salad: 'combo_cucumber_salad',
+}
+
 function formatCategoryLabel(code: string) {
   return code
     .toLowerCase()
@@ -63,6 +77,32 @@ function isComboSideRemove(option: ChoiceOption) {
   return option.optionGroup === 'COMBO_SIDE_REMOVE'
 }
 
+function isBackendRemoveOption(option: BackendMenuItem['options'][number]) {
+  return option.option_group === 'REMOVE' || (option.option_group == null && option.option_type === 'remove')
+}
+
+function normalizeComponentGroup(value: string | null | undefined) {
+  return (value ?? '').trim().toUpperCase()
+}
+
+function normalizeComponentCode(value: string | null | undefined) {
+  return (value ?? '').trim().toLowerCase()
+}
+
+function storeComboComponentOptionId(componentGroup: string | null | undefined, componentCode: string | null | undefined) {
+  return STORE_COMBO_COMPONENT_OPTION_IDS[
+    `${normalizeComponentGroup(componentGroup)}:${normalizeComponentCode(componentCode)}`
+  ]
+}
+
+function sortStoreComboComponents(
+  left: NonNullable<BackendMenuCatalog['combo_configuration']>['groups'][number]['components'][number],
+  right: NonNullable<BackendMenuCatalog['combo_configuration']>['groups'][number]['components'][number],
+) {
+  return (left.display_order ?? 999999) - (right.display_order ?? 999999)
+    || left.component_code.localeCompare(right.component_code)
+}
+
 function normalizeRequestLabel(value: string | undefined) {
   return (value ?? '')
     .trim()
@@ -106,11 +146,75 @@ function buildSideRemoveOptions(comboSides: ChoiceOption[], comboSideRemoves: Ch
   return Array.from(resultBySide.values()).flat()
 }
 
+function buildSideItemRemoveOptionsByComponentCode(data: BackendMenuCatalog) {
+  const result = new Map<string, ChoiceOption[]>()
+  data.categories.forEach((category) => {
+    category.items.forEach((item) => {
+      const componentCode = COMBO_SIDE_COMPONENT_CODE_BY_SKU[item.sku]
+      if (!componentCode) {
+        return
+      }
+      const removeOptions = item.options
+        .filter((option) => option.is_active)
+        .filter(isBackendRemoveOption)
+        .map(mapOption)
+        .sort(sortChoiceOptions)
+      if (removeOptions.length) {
+        result.set(componentCode, removeOptions)
+      }
+    })
+  })
+  return result
+}
+
+function storeComboChoices(
+  data: BackendMenuCatalog,
+  componentGroup: 'COMBO_EGG' | 'COMBO_SIDE',
+  sideItemRemoveOptionsByComponentCode: Map<string, ChoiceOption[]>,
+) {
+  const group = data.combo_configuration?.groups.find(
+    (candidate) => normalizeComponentGroup(candidate.component_group) === componentGroup,
+  )
+  if (!group) {
+    return []
+  }
+  return group.components
+    .filter((component) => component.enabled)
+    .sort(sortStoreComboComponents)
+    .map((component) => {
+      const id = storeComboComponentOptionId(component.component_group, component.component_code)
+      if (!id) {
+        return null
+      }
+      const option: ChoiceOption = {
+        id,
+        labelEn: component.name_en,
+        labelZh: component.name_zh,
+        priceDelta: 0,
+        optionType: 'addon',
+        optionCode: component.component_code,
+        optionGroup: component.component_group,
+        parentOptionId: null,
+        sortOrder: component.display_order,
+      }
+      if (componentGroup === 'COMBO_SIDE') {
+        option.sideItemRemoveOptions = (sideItemRemoveOptionsByComponentCode.get(component.component_code) ?? [])
+          .map((removeOption) => ({ ...removeOption, parentOptionId: id }))
+      }
+      return option
+    })
+    .filter((option): option is ChoiceOption => option != null)
+}
+
 function isFreeToggleAddOn(option: ChoiceOption) {
   return (option.priceDelta ?? 0) === 0 && (option.labelZh === '加香菜' || option.labelZh === '加葱')
 }
 
 export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
+  const sideItemRemoveOptionsByComponentCode = buildSideItemRemoveOptionsByComponentCode(data)
+  const storeComboEggs = storeComboChoices(data, 'COMBO_EGG', sideItemRemoveOptionsByComponentCode)
+  const storeComboSides = storeComboChoices(data, 'COMBO_SIDE', sideItemRemoveOptionsByComponentCode)
+
   const categories = data.categories.map((category) => ({
     id: String(category.id),
     code: category.code,
@@ -139,8 +243,8 @@ export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
           ? {
               combo: (() => {
                 const comboUpcharge = allOptions.find(isComboUpcharge)
-                const comboEggs = allOptions.filter(isComboEgg)
-                const comboSides = allOptions.filter(isComboSide)
+                const comboEggs = storeComboEggs
+                const comboSides = storeComboSides
                 const comboSideRemoves = allOptions.filter(isComboSideRemove)
                 if (!comboUpcharge || comboEggs.length === 0 || comboSides.length === 0) {
                   return undefined
@@ -210,6 +314,7 @@ export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
     contentHash: data.content_hash,
     taxPolicy: data.tax_policy,
     pricingPolicy: data.pricing_policy,
+    comboConfiguration: data.combo_configuration,
     categories,
     items,
   }

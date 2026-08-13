@@ -136,6 +136,26 @@ export function calculateMenuContentHash(catalog: BackendMenuCatalog) {
   appendValue(parts, catalog.pricing_policy?.size_regular_delta)
   appendValue(parts, catalog.pricing_policy?.size_large_delta)
   appendValue(parts, catalog.pricing_policy?.combo_delta)
+  appendValue(parts, catalog.combo_configuration?.store_id)
+  appendValue(parts, catalog.combo_configuration?.menu_revision)
+  const comboGroups = catalog.combo_configuration?.groups ?? []
+  appendValue(parts, comboGroups.length)
+  comboGroups.forEach((group) => {
+    appendValue(parts, group.component_group)
+    appendValue(parts, group.name_zh)
+    appendValue(parts, group.name_en)
+    appendValue(parts, group.default_component_code)
+    appendValue(parts, group.components.length)
+    group.components.forEach((component) => {
+      appendValue(parts, component.component_group)
+      appendValue(parts, component.component_code)
+      appendValue(parts, component.name_zh)
+      appendValue(parts, component.name_en)
+      appendValue(parts, component.enabled)
+      appendValue(parts, component.display_order)
+      appendValue(parts, component.is_default)
+    })
+  })
   appendCategories(parts, catalog.categories, catalog.catalog_version !== 'menu-catalog-v2')
   return `fnv1a32:${fnv1a32(parts.join(''))}`
 }

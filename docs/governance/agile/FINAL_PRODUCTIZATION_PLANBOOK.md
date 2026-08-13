@@ -235,10 +235,67 @@ Staging evidence:
 
 A0.1 is deployed to exact-SHA Staging at
 `ed3e4cdbf38c4d8812620baf64cd42ce3a229431`; Staging Flyway advanced from V10
-to V11 and automated validation passed. Current stop:
+to V11 and automated validation passed. Owner manual retest accepted:
 
 ```text
-PHASE_A0_1_STANDARD_SIZE_PRICING_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+OWNER_A0_1_PRICING_UX_RETEST = PASS
+```
+
+### A0.2 Store Combo Configuration
+
+Owner approved the next bounded A0 implementation:
+
+```text
+PHASE_A0_2_STORE_COMBO_CONFIGURATION
+```
+
+A0.2 implements Store-level Combo Contents configuration while preserving the
+reviewed A0.1 pricing and item contracts:
+
+- `store_pricing_policies.combo_delta` remains the canonical Store-level Combo
+  price source.
+- Item `COMBO_ALLOWED` remains expressed by the item-scoped
+  `menu_item_options` `COMBO` row.
+- `menu_item_options` continues to own Size enablement/identity, item
+  `COMBO_ALLOWED`, ordinary options and rollback-compatible legacy rows. It is
+  not the new application canonical source for `COMBO_EGG` / `COMBO_SIDE`
+  contents.
+- Store-level Combo content availability is modeled with additive
+  `store_combo_components`.
+- New ordering may use stable synthetic transport IDs in order snapshots for
+  Store-level Combo components, but the canonical enabled/name/code state remains
+  `store_combo_components`.
+- No shared-code Store ID/name conditionals, second combo engine, Production
+  mutation, Phase B/C work, Chinatown work or Production deploy is authorized.
+
+Required system-controlled first catalog:
+
+```text
+COMBO_EGG:
+  combo_tea_egg
+  combo_fried_egg
+
+COMBO_SIDE:
+  combo_edamame
+  combo_shredded_potato
+  combo_cucumber_salad
+```
+
+Content mutations must be Store-scoped and must update
+`stores.menu_revision` / `stores.menu_updated_at` in the same transaction.
+New catalog/hash/cache behavior must include `combo_configuration`. New order
+submission must reject disabled or unsupported Store-configured
+`COMBO_EGG`/`COMBO_SIDE` selections. Existing drafts, submitted/completed
+orders, receipts, printing snapshots and reports must not be repriced or
+reselected.
+
+Implementation evidence:
+[PHASE_A0_2_STORE_COMBO_CONFIGURATION_IMPLEMENTATION_EVIDENCE](PHASE_A0_2_STORE_COMBO_CONFIGURATION_IMPLEMENTATION_EVIDENCE.md).
+
+Expected successful stop after PR merge and exact-SHA Staging validation:
+
+```text
+PHASE_A0_2_STORE_COMBO_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
 ```
 
 Current implementation must be audited before changes. A0 must determine the
@@ -410,6 +467,8 @@ A0_OWNER_UI_ACCEPTANCE = PENDING
 ```
 
 Do not report Owner acceptance as PASS before the Owner confirms it.
+For the current A0.1 Pricing UX, the Owner has now confirmed PASS; this
+conditional template remains for future loops that deploy before Owner retest.
 
 ## 6. Phase A1-A10 acceptance summary
 
@@ -440,6 +499,7 @@ HARDWARE_CAPABILITY_CONTRACT = READY
 LEGACY_BLOCKERS = REMOVED/BOUNDED
 N_STORE_MODULE_REGRESSION = PASS
 A0 OWNER SIZE UX = PASS/PENDING
+A0.2 STORE COMBO CONFIGURATION = PASS/PENDING
 ```
 
 ## 7. True Owner gates
@@ -475,8 +535,11 @@ After this Planbook enters `main`, the next implementation loop is:
 PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION
 ```
 
-Do not start A1 before A0 unless A0 reaches a TRUE OWNER GATE. Do not start
-Phase B/C. Do not touch Production.
+Current fresh authority has advanced inside A0 through A0.1 and into the
+Owner-approved A0.2 Store Combo Configuration loop. Do not restart completed A0
+inventory/design work. Do not start A1 before A0.2 reaches its stop state unless
+A0.2 reaches a TRUE OWNER GATE. Do not start Phase B/C. Do not touch
+Production.
 
 Expected successful A0 stop:
 

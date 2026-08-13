@@ -3,6 +3,7 @@ package com.restaurant.system.menu.service.impl;
 import com.restaurant.system.common.pricing.TaxCalculator;
 import com.restaurant.system.menu.dto.MenuCatalogResponse;
 import com.restaurant.system.menu.dto.MenuRevisionResponse;
+import com.restaurant.system.menu.dto.StoreComboConfigurationResponse;
 import com.restaurant.system.menu.entity.MenuCategory;
 import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.entity.MenuItemOption;
@@ -13,6 +14,7 @@ import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.menu.repository.MenuItemRepository;
 import com.restaurant.system.menu.service.MenuService;
 import com.restaurant.system.menu.service.MenuRevisionService;
+import com.restaurant.system.menu.service.StoreComboConfigurationService;
 import com.restaurant.system.menu.service.StorePricingPolicyService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -34,6 +36,7 @@ public class MenuServiceImpl implements MenuService {
     private final MenuRevisionService menuRevisionService;
     private final MenuCatalogHashService menuCatalogHashService;
     private final StorePricingPolicyService storePricingPolicyService;
+    private final StoreComboConfigurationService storeComboConfigurationService;
 
     public MenuServiceImpl(
         MenuCategoryRepository menuCategoryRepository,
@@ -41,7 +44,8 @@ public class MenuServiceImpl implements MenuService {
         MenuItemOptionRepository menuItemOptionRepository,
         MenuRevisionService menuRevisionService,
         MenuCatalogHashService menuCatalogHashService,
-        StorePricingPolicyService storePricingPolicyService
+        StorePricingPolicyService storePricingPolicyService,
+        StoreComboConfigurationService storeComboConfigurationService
     ) {
         this.menuCategoryRepository = menuCategoryRepository;
         this.menuItemRepository = menuItemRepository;
@@ -49,6 +53,7 @@ public class MenuServiceImpl implements MenuService {
         this.menuRevisionService = menuRevisionService;
         this.menuCatalogHashService = menuCatalogHashService;
         this.storePricingPolicyService = storePricingPolicyService;
+        this.storeComboConfigurationService = storeComboConfigurationService;
     }
 
     @Override
@@ -62,8 +67,11 @@ public class MenuServiceImpl implements MenuService {
             ? List.of()
             : menuItemOptionRepository.findActiveByMenuItemIds(itemIds);
         StorePricingPolicy pricingPolicy = storePricingPolicyService.getEffectivePolicy(storeId);
+        StoreComboConfigurationResponse comboConfiguration = storeComboConfigurationService.getConfiguration(storeId);
+        storeComboConfigurationService.validateRequiredComponentsForCatalog(storeId, options);
         List<MenuItemOption> effectiveOptions = options.stream()
             .filter(this::isCatalogOption)
+            .filter(option -> storeComboConfigurationService.isCatalogOptionEnabled(storeId, option))
             .map(option -> storePricingPolicyService.applyEffectiveCatalogPricing(option, pricingPolicy))
             .toList();
 
@@ -154,6 +162,7 @@ public class MenuServiceImpl implements MenuService {
                 MenuRevisionService.TAX_POLICY_VERSION
             ),
             storePricingPolicyService.getPolicyResponse(storeId),
+            comboConfiguration,
             categoryResponses
         );
         response.content_hash = menuCatalogHashService.calculate(response);
