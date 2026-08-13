@@ -24,9 +24,10 @@ preserve A0.1 Pricing Rules as the Combo price source, keep item
 schema through `store_combo_components` for Store-scoped `COMBO_EGG` /
 `COMBO_SIDE` content configuration. It merged through PR #134, deployed to
 exact-SHA Staging `90ac0cb0496161b12c47cff00573b56b4abc961c` at Flyway V12,
-passed automated A0.2 validation, and now waits for Owner manual Staging retest
-at
+passed automated A0.2 validation, and the Owner accepted manual Staging retest
+with `OWNER_A0_2_MANUAL_STAGING_RETEST = PASS`. Historical A0.2 closure:
 `PHASE_A0_2_STORE_COMBO_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST`.
+Current Phase A authority continues through A1 -> A2 -> A3 and stops before A4.
 
 Current final productization route (2026-08-12): open field-test follow-up work
 continues through the Owner field-test and bug-fix loop, but the loop is now a

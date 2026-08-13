@@ -296,7 +296,13 @@ Runtime Staging evidence:
 
 A0.2 is merged through PR #134 and deployed to exact-SHA Staging at
 `90ac0cb0496161b12c47cff00573b56b4abc961c`; Staging is Flyway V12 and
-automated validation passed. Current stop:
+automated validation passed. Owner manual Staging retest is accepted:
+
+```text
+OWNER_A0_2_MANUAL_STAGING_RETEST = PASS
+```
+
+Historical A0.2 closure:
 
 ```text
 PHASE_A0_2_STORE_COMBO_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
@@ -503,7 +509,7 @@ HARDWARE_CAPABILITY_CONTRACT = READY
 LEGACY_BLOCKERS = REMOVED/BOUNDED
 N_STORE_MODULE_REGRESSION = PASS
 A0 OWNER SIZE UX = PASS/PENDING
-A0.2 STORE COMBO CONFIGURATION = PASS_WAITING_OWNER_RETEST
+A0.2 STORE COMBO CONFIGURATION = OWNER_ACCEPTED
 ```
 
 ## 7. True Owner gates
@@ -540,10 +546,9 @@ PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION
 ```
 
 Current fresh authority has advanced inside A0 through A0.1 and A0.2. A0.2 has
-reached exact-SHA Staging automated validation PASS and now waits for Owner
-manual retest at
-`PHASE_A0_2_STORE_COMBO_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST`.
-Do not restart completed A0 inventory/design work. Do not start A1, Phase B/C,
+reached exact-SHA Staging automated validation PASS and Owner manual retest
+PASS. The Owner now authorizes continuous A1 -> A2 -> A3 execution. Do not
+restart completed A0 inventory/design work. Do not start A4, Phase B/C,
 Chinatown, Sainte-Catherine or Production work without a fresh Owner decision.
 
 Expected successful A0 stop:

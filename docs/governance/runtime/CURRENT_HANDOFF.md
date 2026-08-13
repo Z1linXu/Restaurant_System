@@ -81,7 +81,13 @@ A0.2 merged through PR #134 and is deployed to exact-SHA Staging at
 automated A0.2 validation passed, including Combo API, Combo Egg/Side enablement,
 menu revision/hash, IndexedDB cache contract, draft/submitted snapshot
 preservation, disabled-component rejection, MOCK printing/kitchen routing,
-Store isolation and authorization. Current unique stop:
+Store isolation and authorization. The Owner completed manual Staging retest:
+
+```text
+OWNER_A0_2_MANUAL_STAGING_RETEST = PASS
+```
+
+Historical A0.2 closure:
 
 ```text
 PHASE_A0_2_STORE_COMBO_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
@@ -108,6 +114,19 @@ Staging now runs exact
 `MOCK/true`, four enabled logical printers and three enabled assignments.
 Production continuity remained HTTP 200/200 for system/menu health. Production
 was not deployed, restarted, migrated or reconfigured during A0.2.
+
+Current authorized continuous execution:
+
+```text
+PHASE_A1_MODULE_CATALOG
+→ PHASE_A2_MODULE_DEPENDENCY_GRAPH
+→ PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION
+```
+
+Do not stop between A1/A2/A3 for ordinary PASS/merge/review/deploy evidence.
+Stop only for a TRUE OWNER GATE, or after A3 at
+`PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION_COMPLETE_WAITING_FOR_PHASE_A4_OWNER_CONTINUATION`.
+Do not start A4, Phase B/C, Chinatown, Sainte-Catherine or Production work.
 
 ## Current final productization roadmap audit (2026-08-12)
 
