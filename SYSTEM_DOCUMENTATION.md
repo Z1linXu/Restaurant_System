@@ -6522,7 +6522,8 @@ Owner menu option management uses store-scoped Admin APIs instead of the broad P
 
 Delete is a soft delete: it sets `is_active=false` and does not physically remove the row. The backend validates that the current user can administer the item's store, options belong to the same menu item, parent options belong to the same menu item, parent options do not point to themselves or form cycles, and `COMBO_SIDE_REMOVE` parents are `COMBO_SIDE`.
 
-Phase A0.1 makes `SIZE` system-controlled instead of a free-form Owner option.
+Phase A0.1 makes `SIZE` and Combo upcharge rows system-controlled instead of
+free-form Owner options.
 The Owner Menu Management option panel now shows a dedicated
 `Size Configuration / 规格` control for exactly:
 
@@ -6552,6 +6553,9 @@ responses expose effective Size/Combo deltas from that table, and catalog
 content hash includes policy revision and delta fields. Policy writes, the
 Size/Combo compatibility mirror, and `stores.menu_revision` /
 `stores.menu_updated_at` are updated in the same transaction.
+Generic option create/update/deactivate/reorder endpoints also reject Combo
+upcharge writes; per-item Combo allowed/disabled state must use the dedicated
+Combo Policy endpoint, and Store-level Combo delta must use Pricing Rules.
 
 Ordering auto-selects the first active Size. If an item has only one configured
 Size, the modal shows it as read-only/auto-selected instead of rendering a

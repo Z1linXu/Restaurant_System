@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
 
     public static final String GROUP_SIZE = "SIZE";
+    public static final String GROUP_COMBO = "COMBO";
     public static final String GROUP_COMBO_SIDE = "COMBO_SIDE";
     public static final String GROUP_COMBO_SIDE_REMOVE = "COMBO_SIDE_REMOVE";
     private static final String OPTION_TYPE_SIZE = "size";
@@ -61,7 +62,7 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
         MenuItemOption option = new MenuItemOption();
         option.menu_item_id = itemId;
         applyRequest(option, request, true);
-        rejectSystemControlledSizeWrite(option);
+        rejectSystemControlledPricingWrite(option);
         validateSizeConfiguration(withCandidate(existingOptions, option));
         MenuItemOption saved = menuItemOptionRepository.save(option);
         menuRevisionService.incrementRevision(menuItem.store_id);
@@ -74,9 +75,9 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
         MenuItem menuItem = loadMenuItem(itemId);
         List<MenuItemOption> existingOptions = menuItemOptionRepository.findAllByMenuItemIdOrdered(itemId);
         MenuItemOption option = loadOptionFromList(itemId, optionId, existingOptions);
-        rejectSystemControlledSizeWrite(option);
+        rejectSystemControlledPricingWrite(option);
         applyRequest(option, request, false);
-        rejectSystemControlledSizeWrite(option);
+        rejectSystemControlledPricingWrite(option);
         validateSizeConfiguration(existingOptions);
         MenuItemOption saved = menuItemOptionRepository.save(option);
         menuRevisionService.incrementRevision(menuItem.store_id);
@@ -89,7 +90,7 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
         MenuItem menuItem = loadMenuItem(itemId);
         List<MenuItemOption> existingOptions = menuItemOptionRepository.findAllByMenuItemIdOrdered(itemId);
         MenuItemOption option = loadOptionFromList(itemId, optionId, existingOptions);
-        rejectSystemControlledSizeWrite(option);
+        rejectSystemControlledPricingWrite(option);
         option.is_active = false;
         option.updated_at = LocalDateTime.now();
         validateSizeConfiguration(existingOptions);
@@ -116,7 +117,7 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
             if (option == null) {
                 throw new BusinessException("Cannot reorder option from another menu item: " + optionOrder.id);
             }
-            rejectSystemControlledSizeWrite(option);
+            rejectSystemControlledPricingWrite(option);
             option.sort_order = optionOrder.sort_order;
             option.updated_at = now;
         }
@@ -290,14 +291,31 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
         }
     }
 
-    private void rejectSystemControlledSizeWrite(MenuItemOption option) {
+    private void rejectSystemControlledPricingWrite(MenuItemOption option) {
         if (option != null && isSizeOption(option)) {
             throw new BusinessException("SIZE options are system-controlled. Use Size Configuration to choose supported Sizes.");
+        }
+        if (option != null && isComboUpcharge(option)) {
+            throw new BusinessException("COMBO pricing is system-controlled. Use Combo Policy and Pricing Rules.");
         }
     }
 
     private boolean isSizeOption(MenuItemOption option) {
         return isSizeSemantic(option.option_group, option.option_type);
+    }
+
+    private boolean isComboUpcharge(MenuItemOption option) {
+        if (option == null) {
+            return false;
+        }
+        if (GROUP_COMBO.equals(normalizeGroup(option.option_group))) {
+            return true;
+        }
+        if ("combo".equalsIgnoreCase(blankToNull(option.option_code))) {
+            return true;
+        }
+        return "addon".equalsIgnoreCase(normalizeOptionTypeValue(option.option_type))
+            && ("套餐".equals(option.name_zh) || "combo".equalsIgnoreCase(blankToNull(option.name_en)));
     }
 
     private boolean isSizeSemantic(String optionGroup, String optionType) {

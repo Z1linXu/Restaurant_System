@@ -94,8 +94,11 @@ Menu Management now has:
   enablement and default selection;
 - per-item Combo allowed/disabled toggle.
 
-The old generic Owner option writer rejects Size create/update/deactivate/reorder
-attempts. Non-Size ordinary options continue to use the existing option writer.
+The old generic Owner option writer rejects Size and Combo upcharge
+create/update/deactivate/reorder attempts. Non-Size/non-Combo ordinary options
+continue to use the existing option writer. Per-item Combo allowed/disabled
+state is handled only by the Combo Policy endpoint; Store-level Combo delta is
+handled only by Pricing Rules.
 
 ## Revision/cache/snapshot boundaries
 
@@ -114,7 +117,7 @@ attempts. Non-Size ordinary options continue to use the existing option writer.
 Repository validation:
 
 ```text
-backend full tests:      PASS (415 tests, 3 skipped)
+backend full tests:      PASS (419 tests, 3 skipped)
 frontend full tests:     PASS (17 files, 85 tests)
 frontend build:          PASS
 changed-file eslint:     PASS
@@ -123,6 +126,12 @@ V11 PostgreSQL rehearsal: PASS
 
 Repository-wide frontend lint still reports pre-existing unrelated lint errors
 outside the A0.1 changed-file set. The A0.1 touched files pass targeted eslint.
+
+Post-merge Agent 6 repair review identified and closed one bounded enforcement
+gap: generic Owner option APIs also needed to reject Combo upcharge rows so
+`store_pricing_policies.combo_delta` remains the only canonical new-application
+Combo price source. Focused backend tests now cover generic Combo
+create/update/deactivate/reorder rejection.
 
 ## Boundaries retained
 
