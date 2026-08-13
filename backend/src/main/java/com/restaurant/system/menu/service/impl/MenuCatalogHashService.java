@@ -19,8 +19,18 @@ public class MenuCatalogHashService {
         append(canonical, catalog.tax_policy == null ? null : catalog.tax_policy.rate);
         append(canonical, catalog.tax_policy == null ? null : catalog.tax_policy.label);
         append(canonical, catalog.tax_policy == null ? null : catalog.tax_policy.version);
+        appendPricingPolicy(canonical, catalog.pricing_policy);
         appendCategories(canonical, catalog.categories);
         return "fnv1a32:" + fnv1a32(canonical.toString());
+    }
+
+    private void appendPricingPolicy(StringBuilder target, com.restaurant.system.menu.dto.StorePricingPolicyResponse policy) {
+        append(target, policy == null ? null : policy.store_id);
+        append(target, policy == null ? null : policy.policy_revision);
+        append(target, policy == null ? null : policy.size_small_delta);
+        append(target, policy == null ? null : policy.size_regular_delta);
+        append(target, policy == null ? null : policy.size_large_delta);
+        append(target, policy == null ? null : policy.combo_delta);
     }
 
     private void appendCategories(StringBuilder target, List<MenuCatalogResponse.CategoryResponse> categories) {

@@ -28,6 +28,14 @@ function catalog(): BackendMenuCatalog {
       label: '14.975%',
       version: 'ca-qc-tax-2026-01',
     },
+    pricing_policy: {
+      store_id: 1,
+      policy_revision: 1,
+      size_small_delta: -2,
+      size_regular_delta: 0,
+      size_large_delta: 2,
+      combo_delta: 5,
+    },
     categories: [{
       id: 11,
       code: 'SOUP_NOODLE',
@@ -76,7 +84,7 @@ describe('versioned menu cache identity and integrity', () => {
   })
 
   it('matches the backend deterministic hash fixture', () => {
-    expect(catalog().content_hash).toBe('fnv1a32:de151892')
+    expect(catalog().content_hash).toBe('fnv1a32:0be7d023')
   })
 
   it('rejects scope, revision, and content corruption', () => {
@@ -106,6 +114,6 @@ describe('versioned menu cache identity and integrity', () => {
   it('keeps validating legacy v2 snapshots before the next network refresh', () => {
     const legacy = catalog()
     legacy.catalog_version = 'menu-catalog-v2'
-    expect(calculateMenuContentHash(legacy)).toBe('fnv1a32:6b4cec40')
+    expect(calculateMenuContentHash(legacy)).toBe('fnv1a32:102ea095')
   })
 })

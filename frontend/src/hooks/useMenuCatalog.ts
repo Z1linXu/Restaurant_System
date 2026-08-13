@@ -209,6 +209,7 @@ export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
     generatedAt: data.generated_at,
     contentHash: data.content_hash,
     taxPolicy: data.tax_policy,
+    pricingPolicy: data.pricing_policy,
     categories,
     items,
   }

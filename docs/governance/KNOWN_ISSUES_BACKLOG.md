@@ -9,11 +9,12 @@ issue in this backlog blocks starting `PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION`
 Current A0.1 product-rule refinement (2026-08-13): Owner review accepted the A0
 `menu_item_options` Size engine but rejected free-form Size editing. The new
 contract requires system-controlled Small/Regular/Large and Store-level
-Size/Combo pricing policy. This is not a Production incident, but fresh schema
-audit found that implementation requires a new additive Store pricing policy
-table. A0.1 is therefore blocked by a TRUE OWNER schema gate, not by a runtime
-P0/P1:
-`PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_WAITING_FOR_OWNER_APPROVAL`.
+Size/Combo pricing policy. The Owner approved the additive Store pricing policy
+schema direction:
+`PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_APPROVAL`. This remains a
+productization package, not a Production incident. Production stays
+no-mutation; Staging V10->V11 validation is the next approved runtime step
+after PR merge.
 
 Current final productization route (2026-08-12): open field-test follow-up work
 continues through the Owner field-test and bug-fix loop, but the loop is now a

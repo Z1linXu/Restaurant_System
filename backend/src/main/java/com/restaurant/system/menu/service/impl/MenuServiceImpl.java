@@ -6,11 +6,14 @@ import com.restaurant.system.menu.dto.MenuRevisionResponse;
 import com.restaurant.system.menu.entity.MenuCategory;
 import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.entity.MenuItemOption;
+import com.restaurant.system.menu.pricing.StandardSize;
+import com.restaurant.system.menu.pricing.StorePricingPolicy;
 import com.restaurant.system.menu.repository.MenuCategoryRepository;
 import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.menu.repository.MenuItemRepository;
 import com.restaurant.system.menu.service.MenuService;
 import com.restaurant.system.menu.service.MenuRevisionService;
+import com.restaurant.system.menu.service.StorePricingPolicyService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -30,19 +33,22 @@ public class MenuServiceImpl implements MenuService {
     private final MenuItemOptionRepository menuItemOptionRepository;
     private final MenuRevisionService menuRevisionService;
     private final MenuCatalogHashService menuCatalogHashService;
+    private final StorePricingPolicyService storePricingPolicyService;
 
     public MenuServiceImpl(
         MenuCategoryRepository menuCategoryRepository,
         MenuItemRepository menuItemRepository,
         MenuItemOptionRepository menuItemOptionRepository,
         MenuRevisionService menuRevisionService,
-        MenuCatalogHashService menuCatalogHashService
+        MenuCatalogHashService menuCatalogHashService,
+        StorePricingPolicyService storePricingPolicyService
     ) {
         this.menuCategoryRepository = menuCategoryRepository;
         this.menuItemRepository = menuItemRepository;
         this.menuItemOptionRepository = menuItemOptionRepository;
         this.menuRevisionService = menuRevisionService;
         this.menuCatalogHashService = menuCatalogHashService;
+        this.storePricingPolicyService = storePricingPolicyService;
     }
 
     @Override
@@ -55,8 +61,13 @@ public class MenuServiceImpl implements MenuService {
         List<MenuItemOption> options = itemIds.isEmpty()
             ? List.of()
             : menuItemOptionRepository.findActiveByMenuItemIds(itemIds);
+        StorePricingPolicy pricingPolicy = storePricingPolicyService.getEffectivePolicy(storeId);
+        List<MenuItemOption> effectiveOptions = options.stream()
+            .filter(this::isCatalogOption)
+            .map(option -> storePricingPolicyService.applyEffectiveCatalogPricing(option, pricingPolicy))
+            .toList();
 
-        Map<Long, List<MenuCatalogResponse.OptionResponse>> optionsByItemId = options.stream()
+        Map<Long, List<MenuCatalogResponse.OptionResponse>> optionsByItemId = effectiveOptions.stream()
             .collect(Collectors.groupingBy(
                 option -> option.menu_item_id,
                 LinkedHashMap::new,
@@ -142,10 +153,23 @@ public class MenuServiceImpl implements MenuService {
                 TaxCalculator.TAX_RATE_LABEL,
                 MenuRevisionService.TAX_POLICY_VERSION
             ),
+            storePricingPolicyService.getPolicyResponse(storeId),
             categoryResponses
         );
         response.content_hash = menuCatalogHashService.calculate(response);
         return response;
+    }
+
+    private boolean isCatalogOption(MenuItemOption option) {
+        if (option == null) {
+            return false;
+        }
+        boolean sizeSemantic = "SIZE".equalsIgnoreCase(option.option_group == null ? "" : option.option_group)
+            || "size".equalsIgnoreCase(option.option_type == null ? "" : option.option_type);
+        if (!sizeSemantic) {
+            return true;
+        }
+        return StandardSize.fromOption(option.option_code, option.name_zh, option.name_en).isPresent();
     }
 
     private boolean isRemoveOption(MenuCatalogResponse.OptionResponse option) {

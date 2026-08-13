@@ -61,6 +61,7 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
         MenuItemOption option = new MenuItemOption();
         option.menu_item_id = itemId;
         applyRequest(option, request, true);
+        rejectSystemControlledSizeWrite(option);
         validateSizeConfiguration(withCandidate(existingOptions, option));
         MenuItemOption saved = menuItemOptionRepository.save(option);
         menuRevisionService.incrementRevision(menuItem.store_id);
@@ -73,7 +74,9 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
         MenuItem menuItem = loadMenuItem(itemId);
         List<MenuItemOption> existingOptions = menuItemOptionRepository.findAllByMenuItemIdOrdered(itemId);
         MenuItemOption option = loadOptionFromList(itemId, optionId, existingOptions);
+        rejectSystemControlledSizeWrite(option);
         applyRequest(option, request, false);
+        rejectSystemControlledSizeWrite(option);
         validateSizeConfiguration(existingOptions);
         MenuItemOption saved = menuItemOptionRepository.save(option);
         menuRevisionService.incrementRevision(menuItem.store_id);
@@ -86,6 +89,7 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
         MenuItem menuItem = loadMenuItem(itemId);
         List<MenuItemOption> existingOptions = menuItemOptionRepository.findAllByMenuItemIdOrdered(itemId);
         MenuItemOption option = loadOptionFromList(itemId, optionId, existingOptions);
+        rejectSystemControlledSizeWrite(option);
         option.is_active = false;
         option.updated_at = LocalDateTime.now();
         validateSizeConfiguration(existingOptions);
@@ -112,6 +116,7 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
             if (option == null) {
                 throw new BusinessException("Cannot reorder option from another menu item: " + optionOrder.id);
             }
+            rejectSystemControlledSizeWrite(option);
             option.sort_order = optionOrder.sort_order;
             option.updated_at = now;
         }
@@ -282,6 +287,12 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
                     throw new BusinessException("Active SIZE option display order must be unique");
                 }
             }
+        }
+    }
+
+    private void rejectSystemControlledSizeWrite(MenuItemOption option) {
+        if (option != null && isSizeOption(option)) {
+            throw new BusinessException("SIZE options are system-controlled. Use Size Configuration to choose supported Sizes.");
         }
     }
 

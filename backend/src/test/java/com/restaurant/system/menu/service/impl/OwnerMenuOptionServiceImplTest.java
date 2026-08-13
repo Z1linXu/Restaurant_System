@@ -71,15 +71,10 @@ class OwnerMenuOptionServiceImplTest {
     }
 
     @Test
-    void creatingSizeOptionPersistsCanonicalSizeContract() {
+    void creatingSizeOptionThroughGenericEndpointIsRejected() {
         MenuItem item = menuItem(14L, 3L);
         when(menuItemRepository.findById(14L)).thenReturn(Optional.of(item));
         when(menuItemOptionRepository.findAllByMenuItemIdOrdered(14L)).thenReturn(List.of());
-        when(menuItemOptionRepository.save(any(MenuItemOption.class))).thenAnswer(invocation -> {
-            MenuItemOption option = invocation.getArgument(0);
-            option.id = 91L;
-            return option;
-        });
         MenuItemOptionUpsertRequest request = new MenuItemOptionUpsertRequest();
         request.option_group = "SIZE";
         request.option_code = "size_small";
@@ -88,14 +83,7 @@ class OwnerMenuOptionServiceImplTest {
         request.sort_order = 10;
         request.price_delta = new BigDecimal("-1.00");
 
-        var response = service.createOption(14L, request);
-
-        assertEquals(91L, response.id);
-        assertEquals("SIZE", response.option_group);
-        assertEquals("size", response.option_type);
-        assertEquals("size_small", response.option_code);
-        assertEquals(new BigDecimal("-1.00"), response.price_delta);
-        verify(menuRevisionService).incrementRevision(3L);
+        assertThrows(BusinessException.class, () -> service.createOption(14L, request));
     }
 
     @Test
@@ -144,14 +132,13 @@ class OwnerMenuOptionServiceImplTest {
     }
 
     @Test
-    void reorderingSizesCanSetDerivedDefault() {
+    void reorderingSizesThroughGenericEndpointIsRejected() {
         MenuItem item = menuItem(14L, 3L);
         MenuItemOption small = sizeOption(81L, "size_small", true, 20);
         MenuItemOption regular = sizeOption(82L, "size_regular", true, 10);
         when(menuItemRepository.findById(14L)).thenReturn(Optional.of(item));
         when(menuItemOptionRepository.findAllByMenuItemIdOrdered(14L))
-            .thenReturn(List.of(regular, small))
-            .thenReturn(List.of(small, regular));
+            .thenReturn(List.of(regular, small));
         MenuItemOptionReorderRequest request = new MenuItemOptionReorderRequest();
         MenuItemOptionReorderRequest.OptionOrder smallFirst = new MenuItemOptionReorderRequest.OptionOrder();
         smallFirst.id = 81L;
@@ -161,11 +148,7 @@ class OwnerMenuOptionServiceImplTest {
         regularSecond.sort_order = 20;
         request.options = List.of(smallFirst, regularSecond);
 
-        service.reorderOptions(14L, request);
-
-        assertEquals(10, small.sort_order);
-        assertEquals(20, regular.sort_order);
-        verify(menuRevisionService).incrementRevision(3L);
+        assertThrows(BusinessException.class, () -> service.reorderOptions(14L, request));
     }
 
     private MenuItem menuItem(Long id, Long storeId) {

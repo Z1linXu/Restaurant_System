@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import com.restaurant.system.menu.dto.MenuCatalogResponse;
+import com.restaurant.system.menu.dto.StorePricingPolicyResponse;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,7 +22,7 @@ class MenuCatalogHashServiceTest {
         catalog.generated_at = catalog.generated_at.plusHours(2);
 
         assertEquals(first, service.calculate(catalog));
-        assertEquals("fnv1a32:de151892", first);
+        assertEquals("fnv1a32:0be7d023", first);
     }
 
     @Test
@@ -30,6 +31,16 @@ class MenuCatalogHashServiceTest {
         String before = service.calculate(catalog);
 
         catalog.categories.get(0).items.get(0).name_zh = "改名牛肉面";
+
+        assertNotEquals(before, service.calculate(catalog));
+    }
+
+    @Test
+    void hashChangesWhenStorePricingPolicyChanges() {
+        MenuCatalogResponse catalog = catalog();
+        String before = service.calculate(catalog);
+
+        catalog.pricing_policy.size_large_delta = new BigDecimal("3.00");
 
         assertNotEquals(before, service.calculate(catalog));
     }
@@ -82,7 +93,19 @@ class MenuCatalogHashServiceTest {
                 "14.975%",
                 "ca-qc-tax-2026-01"
             ),
+            pricingPolicy(),
             List.of(category)
         );
+    }
+
+    private StorePricingPolicyResponse pricingPolicy() {
+        StorePricingPolicyResponse policy = new StorePricingPolicyResponse();
+        policy.store_id = 1L;
+        policy.policy_revision = 1L;
+        policy.size_small_delta = new BigDecimal("-2.00");
+        policy.size_regular_delta = new BigDecimal("0.00");
+        policy.size_large_delta = new BigDecimal("2.00");
+        policy.combo_delta = new BigDecimal("5.00");
+        return policy;
     }
 }

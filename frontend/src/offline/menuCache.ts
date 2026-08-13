@@ -130,6 +130,12 @@ export function calculateMenuContentHash(catalog: BackendMenuCatalog) {
   appendValue(parts, catalog.tax_policy?.rate)
   appendValue(parts, catalog.tax_policy?.label)
   appendValue(parts, catalog.tax_policy?.version)
+  appendValue(parts, catalog.pricing_policy?.store_id)
+  appendValue(parts, catalog.pricing_policy?.policy_revision)
+  appendValue(parts, catalog.pricing_policy?.size_small_delta)
+  appendValue(parts, catalog.pricing_policy?.size_regular_delta)
+  appendValue(parts, catalog.pricing_policy?.size_large_delta)
+  appendValue(parts, catalog.pricing_policy?.combo_delta)
   appendCategories(parts, catalog.categories, catalog.catalog_version !== 'menu-catalog-v2')
   return `fnv1a32:${fnv1a32(parts.join(''))}`
 }

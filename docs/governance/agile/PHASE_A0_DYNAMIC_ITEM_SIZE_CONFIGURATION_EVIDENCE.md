@@ -22,15 +22,17 @@ free-form Size creation/editing as final product UX. The follow-up A0.1 product
 contract requires only system-controlled Small/Regular/Large Size definitions
 and Store-level Size/Combo pricing policy as canonical price source.
 
-Fresh schema audit found no Store-level pricing policy/settings table. A0.1 is
-therefore stopped before implementation at:
+Fresh schema audit found no Store-level pricing policy/settings table. The
+Owner approved the additive schema direction:
 
 ```text
-PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_WAITING_FOR_OWNER_APPROVAL
+PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_APPROVAL
 ```
 
 Evidence/design:
 [PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE](PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE.md).
+Implementation evidence:
+[PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_IMPLEMENTATION_EVIDENCE](PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_IMPLEMENTATION_EVIDENCE.md).
 
 ## Current size model audit
 
