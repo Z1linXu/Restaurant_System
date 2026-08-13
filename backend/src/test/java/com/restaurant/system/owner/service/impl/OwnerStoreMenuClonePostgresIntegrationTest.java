@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration;
 import com.restaurant.system.owner.exception.OwnerStoreMenuCloneException;
 import com.restaurant.system.owner.menu.ChinatownMenuCloneProfile;
+import com.restaurant.system.owner.menu.StoreMenuCloneProfileRegistry;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneReservation;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneReservationCommand;
 import com.restaurant.system.owner.service.OwnerStoreMenuCloneSuccessEvidence;
@@ -46,7 +47,12 @@ import org.springframework.transaction.support.TransactionTemplate;
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ContextConfiguration(classes = OwnerStoreMenuClonePostgresIntegrationTest.JpaSliceConfiguration.class)
-@Import({OwnerStoreMenuCloneRequestCoordinatorImpl.class, OwnerStoreMenuCloneFingerprint.class})
+@Import({
+    OwnerStoreMenuCloneRequestCoordinatorImpl.class,
+    OwnerStoreMenuCloneFingerprint.class,
+    StoreMenuCloneProfileRegistry.class,
+    ChinatownMenuCloneProfile.class
+})
 class OwnerStoreMenuClonePostgresIntegrationTest {
 
     @SpringBootConfiguration
@@ -80,13 +86,13 @@ class OwnerStoreMenuClonePostgresIntegrationTest {
 
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    void v1ThroughV10AndExactV10DatabaseObjectsArePresent() {
+    void v1ThroughCurrentFlywayAndExpectedDatabaseObjectsArePresent() {
         Integer successfulMigrations = jdbcTemplate.queryForObject(
-            "select count(*) from flyway_schema_history where version::integer between 1 and 10 and success",
+            "select count(*) from flyway_schema_history where version::integer between 1 and 12 and success",
             Integer.class
         );
-        Integer v10Rows = jdbcTemplate.queryForObject(
-            "select count(*) from flyway_schema_history where version = '10' and success",
+        Integer v12Rows = jdbcTemplate.queryForObject(
+            "select count(*) from flyway_schema_history where version = '12' and success",
             Integer.class
         );
         String constraintDefinition = jdbcTemplate.queryForObject(
@@ -106,12 +112,21 @@ class OwnerStoreMenuClonePostgresIntegrationTest {
             """,
             String.class
         );
+        String storeComboConstraintDefinition = jdbcTemplate.queryForObject(
+            """
+            select pg_get_constraintdef(oid)
+            from pg_constraint
+            where conname = 'uq_store_combo_components_store_group_code'
+            """,
+            String.class
+        );
 
-        assertThat(successfulMigrations).isEqualTo(10);
-        assertThat(v10Rows).isOne();
+        assertThat(successfulMigrations).isEqualTo(12);
+        assertThat(v12Rows).isOne();
         assertThat(constraintDefinition)
             .contains("organization_id", "source_store_id", "target_store_id", "idempotency_key");
         assertThat(indexDefinition).contains("(target_store_id)");
+        assertThat(storeComboConstraintDefinition).contains("store_id", "component_group", "component_code");
     }
 
     @Test

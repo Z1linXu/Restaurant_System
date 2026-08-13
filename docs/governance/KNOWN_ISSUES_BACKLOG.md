@@ -13,8 +13,16 @@ Size/Combo pricing policy. The Owner approved the additive Store pricing policy
 schema direction:
 `PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_APPROVAL`. This remains a
 productization package, not a Production incident. Production stays
-no-mutation; Staging V10->V11 validation is the next approved runtime step
-after PR merge.
+no-mutation; A0.1 Staging V10->V11 validation passed and the Owner accepted the
+manual Pricing UX retest.
+
+Current A0.2 productization package (2026-08-13): Owner approved
+`PHASE_A0_2_STORE_COMBO_CONFIGURATION` to implement Store-level Combo Contents
+configuration. This is not an incident and not a Production action. It must
+preserve A0.1 Pricing Rules as the Combo price source, keep item
+`COMBO_ALLOWED` in `menu_item_options`, and may add only bounded additive
+schema through `store_combo_components` for Store-scoped `COMBO_EGG` /
+`COMBO_SIDE` content configuration.
 
 Current final productization route (2026-08-12): open field-test follow-up work
 continues through the Owner field-test and bug-fix loop, but the loop is now a

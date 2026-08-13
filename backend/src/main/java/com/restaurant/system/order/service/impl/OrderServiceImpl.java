@@ -22,6 +22,7 @@ import com.restaurant.system.menu.repository.MenuItemBomRepository;
 import com.restaurant.system.menu.repository.MenuItemOptionBomRepository;
 import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.menu.repository.MenuItemRepository;
+import com.restaurant.system.menu.service.StoreComboConfigurationService;
 import com.restaurant.system.order.dto.CreateOrderItemOptionRequest;
 import com.restaurant.system.order.dto.CreateOrderItemRequest;
 import com.restaurant.system.order.dto.CreateOrderRequest;
@@ -162,6 +163,7 @@ public class OrderServiceImpl implements OrderService {
     private final StoreRepository storeRepository;
     private final RealtimeEventPublisher realtimeEventPublisher;
     private final PrintDispatcherService printDispatcherService;
+    private final StoreComboConfigurationService storeComboConfigurationService;
 
     public OrderServiceImpl(
         OrderRepository orderRepository,
@@ -181,7 +183,8 @@ public class OrderServiceImpl implements OrderService {
         StationRepository stationRepository,
         StoreRepository storeRepository,
         RealtimeEventPublisher realtimeEventPublisher,
-        PrintDispatcherService printDispatcherService
+        PrintDispatcherService printDispatcherService,
+        StoreComboConfigurationService storeComboConfigurationService
     ) {
         this.orderRepository = orderRepository;
         this.orderUpdateBatchRepository = orderUpdateBatchRepository;
@@ -201,6 +204,7 @@ public class OrderServiceImpl implements OrderService {
         this.storeRepository = storeRepository;
         this.realtimeEventPublisher = realtimeEventPublisher;
         this.printDispatcherService = printDispatcherService;
+        this.storeComboConfigurationService = storeComboConfigurationService;
     }
 
     @Override
@@ -343,7 +347,7 @@ public class OrderServiceImpl implements OrderService {
         orderItem.updated_at = now;
         orderItemRepository.save(orderItem);
 
-        replaceOrderItemOptions(orderItem, normalizeOptionRequests(request.options), now);
+        replaceOrderItemOptions(orderItem, order.store_id, normalizeOptionRequests(request.options), now);
         orderItem.line_amount = calculateLineAmount(
             orderItem.unit_price,
             orderItem.quantity,
@@ -927,6 +931,7 @@ public class OrderServiceImpl implements OrderService {
         OrderItem savedOrderItem = orderItemRepository.save(orderItem);
         List<OrderItemOption> savedOptions = createOrderItemOptions(
             savedOrderItem,
+            order.store_id,
             itemRequest.menu_item_id,
             normalizeOptionRequests(itemRequest.options),
             now
@@ -936,13 +941,19 @@ public class OrderServiceImpl implements OrderService {
         return orderItemRepository.save(savedOrderItem);
     }
 
-    private void replaceOrderItemOptions(OrderItem orderItem, List<CreateOrderItemOptionRequest> optionRequests, LocalDateTime now) {
+    private void replaceOrderItemOptions(
+        OrderItem orderItem,
+        Long storeId,
+        List<CreateOrderItemOptionRequest> optionRequests,
+        LocalDateTime now
+    ) {
         orderItemOptionRepository.deleteByOrderItemId(orderItem.id);
-        createOrderItemOptions(orderItem, orderItem.menu_item_id, optionRequests, now);
+        createOrderItemOptions(orderItem, storeId, orderItem.menu_item_id, optionRequests, now);
     }
 
     private List<OrderItemOption> createOrderItemOptions(
         OrderItem orderItem,
+        Long storeId,
         Long menuItemId,
         List<CreateOrderItemOptionRequest> optionRequests,
         LocalDateTime now
@@ -959,11 +970,22 @@ public class OrderServiceImpl implements OrderService {
             Long comboSideParentOptionId = optionRequest.parent_option_id_snapshot != null
                 ? optionRequest.parent_option_id_snapshot
                 : comboSideRemoveParentByOptionId.get(optionRequest.option_id);
-            if (menuItemOption != null && mainMenuItem != null) {
-                validateOptionBelongsToMenuItem(menuItemOption, menuItemId, comboSideParentOptionId != null);
+            if (menuItemOption != null) {
+                if (mainMenuItem != null) {
+                    validateOptionBelongsToMenuItem(menuItemOption, menuItemId, comboSideParentOptionId != null);
+                }
+                if (comboSideParentOptionId == null) {
+                    storeComboConfigurationService.requireOptionEnabledForNewSelection(storeId, menuItemOption);
+                }
             } else if (optionRequest.option_price_snapshot == null
                 || (firstNonBlank(optionRequest.option_name_snapshot_zh, optionRequest.option_name_snapshot_en) == null)) {
                 throw new BusinessException("Cached menu item option snapshot is incomplete: " + optionRequest.option_id);
+            } else if (comboSideParentOptionId == null) {
+                storeComboConfigurationService.requireSnapshotEnabledForNewSelection(
+                    storeId,
+                    optionRequest.option_group_snapshot,
+                    optionRequest.option_code_snapshot
+                );
             }
 
             OrderItemOption orderItemOption = new OrderItemOption();

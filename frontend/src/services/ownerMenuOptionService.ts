@@ -83,6 +83,39 @@ export interface StorePricingPolicyPreviewRecord {
   impact_groups: StorePricingPolicyPreviewImpactGroup[]
 }
 
+export interface StoreComboComponentRecord {
+  component_group: 'COMBO_EGG' | 'COMBO_SIDE' | string
+  component_code: string
+  name_zh: string
+  name_en: string
+  enabled: boolean
+  display_order: number
+  is_default: boolean
+}
+
+export interface StoreComboConfigurationGroupRecord {
+  component_group: 'COMBO_EGG' | 'COMBO_SIDE' | string
+  name_zh: string
+  name_en: string
+  default_component_code: string | null
+  components: StoreComboComponentRecord[]
+}
+
+export interface StoreComboConfigurationRecord {
+  store_id: number
+  menu_revision: number
+  groups: StoreComboConfigurationGroupRecord[]
+}
+
+export interface StoreComboConfigurationPayload {
+  store_id: number
+  components: Array<{
+    component_group: 'COMBO_EGG' | 'COMBO_SIDE' | string
+    component_code: string
+    enabled: boolean
+  }>
+}
+
 export interface MenuItemSizeConfigurationPayload {
   enabled_size_codes: StandardSizeCode[]
   default_size_code?: StandardSizeCode | null
@@ -141,6 +174,17 @@ export function previewStorePricingPolicy(payload: StorePricingPolicyPayload) {
 
 export function updateStorePricingPolicy(payload: StorePricingPolicyPayload) {
   return request<StorePricingPolicyRecord>('/api/v1/admin/menu/pricing-policy', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function fetchStoreComboConfiguration(storeId: number) {
+  return request<StoreComboConfigurationRecord>(`/api/v1/admin/menu/combo-configuration?store_id=${storeId}`)
+}
+
+export function updateStoreComboConfiguration(payload: StoreComboConfigurationPayload) {
+  return request<StoreComboConfigurationRecord>('/api/v1/admin/menu/combo-configuration', {
     method: 'PUT',
     body: JSON.stringify(payload),
   })

@@ -58,6 +58,11 @@ Repository implementation evidence is
 [PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_IMPLEMENTATION_EVIDENCE](../agile/PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_IMPLEMENTATION_EVIDENCE.md).
 Runtime Staging evidence is
 [PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_STAGING_EVIDENCE](../agile/PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_STAGING_EVIDENCE.md).
+A0.1 Owner manual Staging UX retest is now accepted:
+
+```text
+OWNER_A0_1_PRICING_UX_RETEST = PASS
+```
 
 Phase A may proceed continuously through A0-A10 while no TRUE OWNER GATE is
 hit. Phase B and Phase C implementation remain unauthorized. Production remains
@@ -68,10 +73,31 @@ requires Staging validation, starting with A0.
 
 A0.1 was deployed to exact-SHA Staging at
 `ed3e4cdbf38c4d8812620baf64cd42ce3a229431`; Staging advanced from Flyway V10
-to V11 and automated validation passed. Current A0.1 stop:
+to V11 and automated validation passed. A0.1 Owner retest passed.
+
+Current authorized bounded implementation loop:
 
 ```text
-PHASE_A0_1_STANDARD_SIZE_PRICING_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+PHASE_A0_2_STORE_COMBO_CONFIGURATION
+```
+
+A0.2 adds Store-level Combo Contents configuration separate from A0.1 Combo
+Pricing. `store_pricing_policies.combo_delta` remains the canonical Store-level
+Combo price source; item-level `menu_item_options` remains item
+`COMBO_ALLOWED`, Size enablement/identity, ordinary options and
+rollback-compatible legacy rows. `store_combo_components` is the Store-level
+canonical content source for reviewed `COMBO_EGG` and `COMBO_SIDE` components.
+New ordering may use stable negative transport IDs in frozen order option
+snapshots, but those IDs are not database row identities and do not form a
+second source of truth. Production remains `NO MUTATION`.
+
+A0.2 implementation evidence:
+[PHASE_A0_2_STORE_COMBO_CONFIGURATION_IMPLEMENTATION_EVIDENCE](../agile/PHASE_A0_2_STORE_COMBO_CONFIGURATION_IMPLEMENTATION_EVIDENCE.md).
+
+Expected successful A0.2 stop after PR merge and exact-SHA Staging validation:
+
+```text
+PHASE_A0_2_STORE_COMBO_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
 ```
 
 Phase A0 deployed evidence:
@@ -87,15 +113,15 @@ A0 runtime classification:
 A0_CODE = COMPLETE
 A0_STAGING_DEPLOYED = YES
 A0_AUTOMATED_VALIDATION = PASS
-A0_OWNER_UI_ACCEPTANCE = PENDING
+A0_OWNER_UI_ACCEPTANCE = PASS_FOR_A0_1_PRICING_UX
 ```
 
 Staging now runs exact
 `ed3e4cdbf38c4d8812620baf64cd42ce3a229431`, Flyway V11, Printing
 `MOCK/true`, four enabled logical printers and three enabled assignments. The
-Owner's next action is manual A0.1 Size/Pricing Rules retest only; do not start
-A1, Phase B, Phase C, Chinatown, Sainte-Catherine or Production deploy from
-this stop state without a fresh Owner decision.
+Owner has authorized only A0.2 Store Combo Configuration next; do not start A1,
+Phase B, Phase C, Chinatown, Sainte-Catherine or Production deploy from this
+state without a fresh Owner decision.
 
 ## Current final productization roadmap audit (2026-08-12)
 

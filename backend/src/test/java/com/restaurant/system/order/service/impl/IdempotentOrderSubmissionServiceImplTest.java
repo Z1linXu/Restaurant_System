@@ -15,6 +15,7 @@ import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.entity.MenuItemOption;
 import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.menu.repository.MenuItemRepository;
+import com.restaurant.system.menu.service.StoreComboConfigurationService;
 import com.restaurant.system.order.dto.CreateOrderItemRequest;
 import com.restaurant.system.order.dto.CreateOrderItemOptionRequest;
 import com.restaurant.system.order.dto.CreateOrderRequest;
@@ -60,6 +61,8 @@ class IdempotentOrderSubmissionServiceImplTest {
     @Mock
     private MenuItemOptionRepository menuItemOptionRepository;
     @Mock
+    private StoreComboConfigurationService storeComboConfigurationService;
+    @Mock
     private OrderService orderService;
 
     private final Map<String, OrderSubmissionRequest> records = new HashMap<>();
@@ -74,6 +77,7 @@ class IdempotentOrderSubmissionServiceImplTest {
             storeRepository,
             menuItemRepository,
             menuItemOptionRepository,
+            storeComboConfigurationService,
             new OrderSubmissionHashServiceImpl(new ObjectMapper()),
             orderService
         );
@@ -281,6 +285,30 @@ class IdempotentOrderSubmissionServiceImplTest {
         service.submit(1L, request, 5L);
 
         verify(orderService).createOrReplaceDraftAndSubmit(any(), any());
+    }
+
+    @Test
+    void syntheticStoreComboSnapshotsAreValidatedBeforeIdempotentSubmit() {
+        when(menuItemRepository.findById(20L)).thenReturn(Optional.empty());
+        IdempotentOrderSubmitRequest request = request("synthetic-combo-key", null);
+        CreateOrderItemOptionRequest option = new CreateOrderItemOptionRequest();
+        option.option_id = -20102L;
+        option.quantity = 1;
+        option.option_type_snapshot = "addon";
+        option.option_code_snapshot = "combo_fried_egg";
+        option.option_group_snapshot = "COMBO_EGG";
+        option.option_name_snapshot_zh = "煎蛋";
+        option.option_name_snapshot_en = "Fried Egg";
+        option.option_price_snapshot = BigDecimal.ZERO;
+        request.items.get(0).options = List.of(option);
+
+        service.submit(1L, request, 5L);
+
+        verify(storeComboConfigurationService).requireSnapshotEnabledForNewSelection(
+            1L,
+            "COMBO_EGG",
+            "combo_fried_egg"
+        );
     }
 
     @Test

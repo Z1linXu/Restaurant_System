@@ -36,6 +36,73 @@ function catalog(): BackendMenuCatalog {
       size_large_delta: 2,
       combo_delta: 5,
     },
+    combo_configuration: {
+      store_id: 1,
+      menu_revision: 7,
+      groups: [
+        {
+          component_group: 'COMBO_EGG',
+          name_zh: '蛋类',
+          name_en: 'Egg',
+          default_component_code: 'combo_tea_egg',
+          components: [
+            {
+              component_group: 'COMBO_EGG',
+              component_code: 'combo_tea_egg',
+              name_zh: '卤蛋',
+              name_en: 'Tea Egg',
+              enabled: true,
+              display_order: 10,
+              is_default: true,
+            },
+            {
+              component_group: 'COMBO_EGG',
+              component_code: 'combo_fried_egg',
+              name_zh: '煎蛋',
+              name_en: 'Fried Egg',
+              enabled: true,
+              display_order: 20,
+              is_default: false,
+            },
+          ],
+        },
+        {
+          component_group: 'COMBO_SIDE',
+          name_zh: '小菜',
+          name_en: 'Side',
+          default_component_code: 'combo_edamame',
+          components: [
+            {
+              component_group: 'COMBO_SIDE',
+              component_code: 'combo_edamame',
+              name_zh: '毛豆',
+              name_en: 'Edamame',
+              enabled: true,
+              display_order: 10,
+              is_default: true,
+            },
+            {
+              component_group: 'COMBO_SIDE',
+              component_code: 'combo_shredded_potato',
+              name_zh: '土豆丝',
+              name_en: 'Shredded Potato',
+              enabled: true,
+              display_order: 20,
+              is_default: false,
+            },
+            {
+              component_group: 'COMBO_SIDE',
+              component_code: 'combo_cucumber_salad',
+              name_zh: '拌黄瓜',
+              name_en: 'Cucumber Salad',
+              enabled: true,
+              display_order: 30,
+              is_default: false,
+            },
+          ],
+        },
+      ],
+    },
     categories: [{
       id: 11,
       code: 'SOUP_NOODLE',
@@ -84,7 +151,7 @@ describe('versioned menu cache identity and integrity', () => {
   })
 
   it('matches the backend deterministic hash fixture', () => {
-    expect(catalog().content_hash).toBe('fnv1a32:0be7d023')
+    expect(catalog().content_hash).toBe('fnv1a32:67fad5ce')
   })
 
   it('rejects scope, revision, and content corruption', () => {
@@ -111,9 +178,16 @@ describe('versioned menu cache identity and integrity', () => {
     expect(calculateMenuContentHash(reordered)).not.toBe(first.content_hash)
   })
 
+  it('includes Store combo configuration in the content hash', () => {
+    const first = catalog()
+    const changed = catalog()
+    changed.combo_configuration!.groups[0].components[1].enabled = false
+    expect(calculateMenuContentHash(changed)).not.toBe(first.content_hash)
+  })
+
   it('keeps validating legacy v2 snapshots before the next network refresh', () => {
     const legacy = catalog()
     legacy.catalog_version = 'menu-catalog-v2'
-    expect(calculateMenuContentHash(legacy)).toBe('fnv1a32:102ea095')
+    expect(calculateMenuContentHash(legacy)).toBe('fnv1a32:4b25fd78')
   })
 })

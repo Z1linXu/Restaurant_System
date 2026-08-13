@@ -151,7 +151,32 @@ export interface BackendMenuCatalog {
     size_large_delta: number
     combo_delta: number
   }
+  combo_configuration?: BackendStoreComboConfiguration
   categories: BackendMenuCategory[]
+}
+
+export interface BackendStoreComboConfiguration {
+  store_id: number
+  menu_revision: number
+  groups: BackendStoreComboConfigurationGroup[]
+}
+
+export interface BackendStoreComboConfigurationGroup {
+  component_group: 'COMBO_EGG' | 'COMBO_SIDE' | string
+  name_zh: string
+  name_en: string
+  default_component_code: string | null
+  components: BackendStoreComboComponent[]
+}
+
+export interface BackendStoreComboComponent {
+  component_group: 'COMBO_EGG' | 'COMBO_SIDE' | string
+  component_code: string
+  name_zh: string
+  name_en: string
+  enabled: boolean
+  display_order: number
+  is_default: boolean
 }
 
 export interface BackendMenuCategory {
@@ -201,6 +226,7 @@ export interface OrderingCatalog {
   contentHash: string
   taxPolicy: BackendMenuCatalog['tax_policy']
   pricingPolicy?: BackendMenuCatalog['pricing_policy']
+  comboConfiguration?: BackendStoreComboConfiguration
   categories: MenuCategory[]
   items: MenuItem[]
 }

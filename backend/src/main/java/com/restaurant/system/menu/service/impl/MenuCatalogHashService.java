@@ -20,6 +20,7 @@ public class MenuCatalogHashService {
         append(canonical, catalog.tax_policy == null ? null : catalog.tax_policy.label);
         append(canonical, catalog.tax_policy == null ? null : catalog.tax_policy.version);
         appendPricingPolicy(canonical, catalog.pricing_policy);
+        appendComboConfiguration(canonical, catalog.combo_configuration);
         appendCategories(canonical, catalog.categories);
         return "fnv1a32:" + fnv1a32(canonical.toString());
     }
@@ -31,6 +32,32 @@ public class MenuCatalogHashService {
         append(target, policy == null ? null : policy.size_regular_delta);
         append(target, policy == null ? null : policy.size_large_delta);
         append(target, policy == null ? null : policy.combo_delta);
+    }
+
+    private void appendComboConfiguration(StringBuilder target, com.restaurant.system.menu.dto.StoreComboConfigurationResponse configuration) {
+        append(target, configuration == null ? null : configuration.store_id);
+        append(target, configuration == null ? null : configuration.menu_revision);
+        List<com.restaurant.system.menu.dto.StoreComboConfigurationResponse.GroupResponse> groups =
+            configuration == null || configuration.groups == null ? List.of() : configuration.groups;
+        append(target, groups.size());
+        for (com.restaurant.system.menu.dto.StoreComboConfigurationResponse.GroupResponse group : groups) {
+            append(target, group.component_group);
+            append(target, group.name_zh);
+            append(target, group.name_en);
+            append(target, group.default_component_code);
+            List<com.restaurant.system.menu.dto.StoreComboConfigurationResponse.ComponentResponse> components =
+                group.components == null ? List.of() : group.components;
+            append(target, components.size());
+            for (com.restaurant.system.menu.dto.StoreComboConfigurationResponse.ComponentResponse component : components) {
+                append(target, component.component_group);
+                append(target, component.component_code);
+                append(target, component.name_zh);
+                append(target, component.name_en);
+                append(target, component.enabled);
+                append(target, component.display_order);
+                append(target, component.is_default);
+            }
+        }
     }
 
     private void appendCategories(StringBuilder target, List<MenuCatalogResponse.CategoryResponse> categories) {

@@ -28,6 +28,7 @@ import com.restaurant.system.menu.repository.MenuItemBomRepository;
 import com.restaurant.system.menu.repository.MenuItemOptionBomRepository;
 import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.menu.repository.MenuItemRepository;
+import com.restaurant.system.menu.service.StoreComboConfigurationService;
 import com.restaurant.system.order.dto.CreateOrderItemRequest;
 import com.restaurant.system.order.dto.CreateOrderItemOptionRequest;
 import com.restaurant.system.order.dto.CreateOrderRequest;
@@ -110,6 +111,8 @@ class OrderServiceImplTest {
     private RealtimeEventPublisher realtimeEventPublisher;
     @Mock
     private PrintDispatcherService printDispatcherService;
+    @Mock
+    private StoreComboConfigurationService storeComboConfigurationService;
 
     private OrderServiceImpl orderService;
     private KitchenServiceImpl kitchenService;
@@ -153,7 +156,8 @@ class OrderServiceImplTest {
             stationRepository,
             storeRepository,
             realtimeEventPublisher,
-            printDispatcherService
+            printDispatcherService,
+            storeComboConfigurationService
         );
         kitchenService = new KitchenServiceImpl(kitchenTaskRepository, orderRepository, realtimeEventPublisher);
         frontdeskBeverageService = new FrontdeskBeverageServiceImpl(
@@ -388,6 +392,74 @@ class OrderServiceImplTest {
         assertEquals(completedOrder.id, completedEvent.order_id);
         assertEquals(completedOrder.store_id, completedEvent.store_id);
         assertEquals("completed", completedEvent.order_status);
+    }
+
+    @Test
+    void creatingOrderItemChecksStoreComboComponentEligibilityForNewSelections() {
+        MenuItemOption friedEgg = new MenuItemOption();
+        friedEgg.id = 88L;
+        friedEgg.menu_item_id = menuItem.id;
+        friedEgg.option_type = "addon";
+        friedEgg.option_group = "COMBO_EGG";
+        friedEgg.option_code = "combo_fried_egg";
+        friedEgg.name_zh = "套餐煎蛋";
+        friedEgg.name_en = "Combo Fried Egg";
+        friedEgg.price_delta = BigDecimal.ZERO;
+        friedEgg.is_active = true;
+        when(menuItemOptionRepository.findById(88L)).thenReturn(Optional.of(friedEgg));
+
+        CreateOrderItemOptionRequest optionRequest = new CreateOrderItemOptionRequest();
+        optionRequest.option_id = friedEgg.id;
+        optionRequest.quantity = 1;
+
+        CreateOrderItemRequest itemRequest = new CreateOrderItemRequest();
+        itemRequest.menu_item_id = menuItem.id;
+        itemRequest.quantity = 1;
+        itemRequest.options = List.of(optionRequest);
+
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.store_id = store.id;
+        request.created_by = 1L;
+        request.order_type = "dine_in";
+        request.table_no = "T7";
+        request.items = List.of(itemRequest);
+
+        orderService.createOrder(request);
+
+        verify(storeComboConfigurationService).requireOptionEnabledForNewSelection(store.id, friedEgg);
+    }
+
+    @Test
+    void syntheticStoreComboComponentSnapshotsAreValidatedForNewSelections() {
+        CreateOrderItemOptionRequest optionRequest = new CreateOrderItemOptionRequest();
+        optionRequest.option_id = -20102L;
+        optionRequest.quantity = 1;
+        optionRequest.option_type_snapshot = "addon";
+        optionRequest.option_code_snapshot = "combo_fried_egg";
+        optionRequest.option_group_snapshot = "COMBO_EGG";
+        optionRequest.option_name_snapshot_zh = "煎蛋";
+        optionRequest.option_name_snapshot_en = "Fried Egg";
+        optionRequest.option_price_snapshot = BigDecimal.ZERO;
+
+        CreateOrderItemRequest itemRequest = new CreateOrderItemRequest();
+        itemRequest.menu_item_id = menuItem.id;
+        itemRequest.quantity = 1;
+        itemRequest.options = List.of(optionRequest);
+
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.store_id = store.id;
+        request.created_by = 1L;
+        request.order_type = "dine_in";
+        request.table_no = "T7";
+        request.items = List.of(itemRequest);
+
+        orderService.createOrder(request);
+
+        verify(storeComboConfigurationService).requireSnapshotEnabledForNewSelection(
+            store.id,
+            "COMBO_EGG",
+            "combo_fried_egg"
+        );
     }
 
     @Test

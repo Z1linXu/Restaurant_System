@@ -5,11 +5,11 @@
 > The active authority is
 > [FINAL_PRODUCTIZATION_PLANBOOK](docs/governance/agile/FINAL_PRODUCTIZATION_PLANBOOK.md).
 > The product rule remains `BUILD ONCE, CONFIGURE MANY`.
-> `PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION` is deployed to Staging and
-> automated validation passed. Phase B Owner New Store Provisioning and Phase C
-> real Chinatown/Sainte-Catherine creation are not authorized yet. Production
-> remains no-mutation. A0 Owner UI acceptance remains `PENDING` until the Owner
-> retests the Staging UX.
+> `PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION` and A0.1 Store-level Pricing Rules
+> are deployed to Staging and validated. The Owner accepted the A0.1 manual UX
+> retest. Phase B Owner New Store Provisioning and Phase C real
+> Chinatown/Sainte-Catherine creation are not authorized yet. Production remains
+> no-mutation.
 
 > 2026-08-13 Phase A0.1 product-rule refinement: Owner review accepted the
 > existing `OPTION + MODIFIER_GROUP + PRICE_DELTA` Size engine but rejected
@@ -29,7 +29,23 @@
 > `ed3e4cdbf38c4d8812620baf64cd42ce3a229431` at Flyway V11 with automated
 > validation PASS; see
 > [PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_STAGING_EVIDENCE](docs/governance/agile/PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_STAGING_EVIDENCE.md).
-> A0.1 Owner retest remains `PENDING`.
+> A0.1 Owner retest is `PASS`.
+
+> 2026-08-13 Phase A0.2 Store Combo Configuration: Owner approved
+> `PHASE_A0_2_STORE_COMBO_CONFIGURATION` to add Store-level Combo Contents
+> configuration separate from A0.1 Combo pricing. The implementation adds
+> additive Flyway V12 `store_combo_components` as the Store-level canonical
+> Combo content source for system-controlled `COMBO_EGG` and `COMBO_SIDE`
+> components. Item-level `menu_item_options` still controls `COMBO_ALLOWED`,
+> item-scoped component identity, `parent_option_id`, ordinary options and
+> order snapshots. `store_pricing_policies.combo_delta` remains the only
+> Store-level Combo price source. Combo content mutations increment
+> `stores.menu_revision` and update `stores.menu_updated_at` in the same
+> database transaction, catalog/hash/cache include `combo_configuration`, and
+> backend order submission rejects disabled or unsupported Store-configured
+> combo components for new selections. Historical drafts/submitted orders,
+> receipts, printing snapshots and reports are not repriced or reselected. See
+> [PHASE_A0_2_STORE_COMBO_CONFIGURATION_IMPLEMENTATION_EVIDENCE](docs/governance/agile/PHASE_A0_2_STORE_COMBO_CONFIGURATION_IMPLEMENTATION_EVIDENCE.md).
 
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The
@@ -3307,6 +3323,31 @@ The schema below is based on entity classes. Exact SQL column types other than e
 - `created_at` LocalDateTime
 - `updated_at` LocalDateTime
 
+#### store_combo_components
+- `id` BIGSERIAL
+- `store_id` Long
+- `component_group` String (`COMBO_EGG` or `COMBO_SIDE`)
+- `component_code` String
+- `name_zh` String
+- `name_en` String
+- `enabled` Boolean
+- `display_order` Integer
+- `created_at` LocalDateTime
+- `updated_at` LocalDateTime
+
+`store_combo_components` is the Phase A0.2 Store-level canonical source for
+Combo contents. It is Store-isolated by `(store_id, component_group,
+component_code)` and supports only the reviewed system-controlled first catalog:
+
+- `COMBO_EGG`: `combo_tea_egg`, `combo_fried_egg`
+- `COMBO_SIDE`: `combo_edamame`, `combo_shredded_potato`,
+  `combo_cucumber_salad`
+
+It does not control Combo pricing; `store_pricing_policies.combo_delta` remains
+the canonical Store-level Combo price. It does not replace item-level
+`menu_item_options` identity/snapshot rows; an item still controls
+`COMBO_ALLOWED` through the existing `COMBO` option row.
+
 #### menu_item_bom
 - `id` BIGSERIAL
 - `menu_item_id` Long
@@ -6562,6 +6603,34 @@ Generic option create/update/deactivate/reorder endpoints also reject Combo
 upcharge writes; per-item Combo allowed/disabled state must use the dedicated
 Combo Policy endpoint, and Store-level Combo delta must use Pricing Rules.
 
+Phase A0.2 adds Store-level Combo content configuration through
+`store_combo_components`. Menu Management exposes `Combo Configuration / 套餐配置`
+beside Pricing Rules. Owners can enable or disable only reviewed
+system-controlled egg/side components; they cannot create free-form component
+names or codes. The first enabled component by display order is the default in
+the catalog response.
+
+The Store-level Combo content contract is:
+
+- Combo price: `store_pricing_policies.combo_delta`
+- Item Combo allowed: item-scoped `menu_item_options` `COMBO` row
+- Store Combo contents: `store_combo_components`
+- New ordering Combo egg/side identity: `store_combo_components`, represented in
+  frozen `order_item_options` snapshots with stable negative transport IDs
+  (`-20101`, `-20102`, `-20201`, `-20202`, `-20203`) that are not database row
+  identities
+- Item-scoped `menu_item_options`: Size enablement/identity, item
+  `COMBO_ALLOWED`, ordinary options, rollback-compatible legacy rows
+
+A Combo content update stores component enabled flags, increments
+`stores.menu_revision`, and updates `stores.menu_updated_at` in the same
+database transaction. New catalog responses include `combo_configuration`;
+catalog content hash and IndexedDB validation include those fields. New order
+submission rejects disabled or unsupported Store-configured `COMBO_EGG` /
+`COMBO_SIDE` selections. Existing drafts, submitted/completed orders, receipts,
+printing snapshots and reports remain snapshot-based and are not repriced or
+reselected by future Combo configuration changes.
+
 Ordering auto-selects the first active Size. If an item has only one configured
 Size, the modal shows it as read-only/auto-selected instead of rendering a
 meaningless choice grid. The selected Size remains part of the order item
@@ -6586,7 +6655,7 @@ Combo side remove options can be resolved from two sources:
 - the selected side dish's own active `REMOVE` options, resolved from stable combo side option codes such as `combo_shredded_potato` -> side item SKU `shredded_potato`
 - legacy explicit child options where `parent_option_id` points to a `COMBO_SIDE` option
 
-Menu Management owns the displayed side requests. The catalog includes side item remove options on combo side options so `/frontdesk/menu` can show existing side-dish requests such as `走洋葱`, `走花生`, and `走香菜` for `套餐土豆丝`. If the real side item has active `REMOVE` options, the frontend uses those options and ignores legacy child options to avoid duplicates. Legacy child options are used only when the real side item has no active remove data. When the selected side remove belongs to the real side item rather than the main dish, order save accepts it only if the matching combo side is selected, then stores the snapshot as `COMBO_SIDE_REMOVE` with the selected combo side option as its parent. This keeps GRAB/kitchen side-task instructions correct without exposing arbitrary cross-item options.
+Menu Management owns the displayed side requests. The frontend derives combo side choices from `combo_configuration`, then attaches active `REMOVE` options from the corresponding side dish item (for example `combo_shredded_potato` -> side item SKU `shredded_potato`). Legacy child options are rollback-compatible only; they are not the canonical new ordering source. When the selected side remove belongs to the real side item rather than the main dish, order save accepts it only if the matching combo side is selected, then stores the snapshot as `COMBO_SIDE_REMOVE` with the selected synthetic combo side transport ID as its parent. This keeps GRAB/kitchen side-task instructions correct without exposing arbitrary cross-item options.
 
 The order payload includes selected combo, egg, side, and side child remove option IDs. New order option snapshots include `option_code_snapshot`, `option_group_snapshot`, and `parent_option_id_snapshot` so kitchen logic can use stable metadata for new orders. Legacy Chinese-name fallback remains only for older data.
 

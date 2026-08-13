@@ -34,19 +34,34 @@ Configuration, and a rollback compatibility mirror for Size/Combo
 [PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE](agile/PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE.md).
 Implementation evidence:
 [PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_IMPLEMENTATION_EVIDENCE](agile/PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_IMPLEMENTATION_EVIDENCE.md).
+The Owner accepted A0.1 manual Staging UX retest:
+`OWNER_A0_1_PRICING_UX_RETEST = PASS`.
 
-Current A0 stop:
+Current A0.2 implementation approval:
 
 ```text
-FINAL_PRODUCTIZATION_PLANBOOK_MERGED_PHASE_A0_DEPLOYED_WAITING_FOR_OWNER_SIZE_RETEST
+PHASE_A0_2_STORE_COMBO_CONFIGURATION
+```
+
+A0.2 implements Store-level Combo Contents configuration while preserving A0.1
+Pricing Rules as the Combo price source. The repository package may add
+`store_combo_components` as the Store-scoped canonical content table for
+reviewed `COMBO_EGG` and `COMBO_SIDE` components; item `COMBO_ALLOWED` remains
+in `menu_item_options`. Evidence:
+[PHASE_A0_2_STORE_COMBO_CONFIGURATION_IMPLEMENTATION_EVIDENCE](agile/PHASE_A0_2_STORE_COMBO_CONFIGURATION_IMPLEMENTATION_EVIDENCE.md).
+
+Expected A0.2 stop after exact-SHA Staging validation:
+
+```text
+PHASE_A0_2_STORE_COMBO_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
 ```
 
 Phase A0 deployed evidence is tracked in
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).
 Current deployed conclusion: existing menu option/modifier data safely models
 dynamic Size variants, so no Flyway migration was required for A0. Code,
-Staging deploy and automated validation are complete; Owner UI acceptance
-remains pending until Owner retest.
+Staging deploy and automated validation are complete; Owner A0.1 Pricing UX
+acceptance is now PASS.
 
 ## Current final productization roadmap (2026-08-12)
 

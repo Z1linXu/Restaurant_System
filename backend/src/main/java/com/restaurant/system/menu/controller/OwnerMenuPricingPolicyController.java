@@ -11,8 +11,11 @@ import com.restaurant.system.menu.dto.StorePricingPolicyPreviewRequest;
 import com.restaurant.system.menu.dto.StorePricingPolicyPreviewResponse;
 import com.restaurant.system.menu.dto.StorePricingPolicyResponse;
 import com.restaurant.system.menu.dto.StorePricingPolicyUpdateRequest;
+import com.restaurant.system.menu.dto.StoreComboConfigurationResponse;
+import com.restaurant.system.menu.dto.StoreComboConfigurationUpdateRequest;
 import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.repository.MenuItemRepository;
+import com.restaurant.system.menu.service.StoreComboConfigurationService;
 import com.restaurant.system.menu.service.StorePricingPolicyService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -31,17 +34,20 @@ import org.springframework.web.bind.annotation.RestController;
 public class OwnerMenuPricingPolicyController {
 
     private final StorePricingPolicyService storePricingPolicyService;
+    private final StoreComboConfigurationService storeComboConfigurationService;
     private final MenuItemRepository menuItemRepository;
     private final AuthorizationService authorizationService;
     private final AuditLogService auditLogService;
 
     public OwnerMenuPricingPolicyController(
         StorePricingPolicyService storePricingPolicyService,
+        StoreComboConfigurationService storeComboConfigurationService,
         MenuItemRepository menuItemRepository,
         AuthorizationService authorizationService,
         AuditLogService auditLogService
     ) {
         this.storePricingPolicyService = storePricingPolicyService;
+        this.storeComboConfigurationService = storeComboConfigurationService;
         this.menuItemRepository = menuItemRepository;
         this.authorizationService = authorizationService;
         this.auditLogService = auditLogService;
@@ -51,6 +57,12 @@ public class OwnerMenuPricingPolicyController {
     public ApiResponse<StorePricingPolicyResponse> getPolicy(@RequestParam("store_id") Long storeId) {
         authorizationService.requireForStore(storeId, Capability.ADMIN_MENU_MANAGE);
         return ApiResponse.success(storePricingPolicyService.getPolicyResponse(storeId));
+    }
+
+    @GetMapping("/combo-configuration")
+    public ApiResponse<StoreComboConfigurationResponse> getComboConfiguration(@RequestParam("store_id") Long storeId) {
+        authorizationService.requireForStore(storeId, Capability.ADMIN_MENU_MANAGE);
+        return ApiResponse.success(storeComboConfigurationService.getConfiguration(storeId));
     }
 
     @PostMapping("/pricing-policy/preview")
@@ -72,6 +84,27 @@ public class OwnerMenuPricingPolicyController {
         StorePricingPolicyResponse response = storePricingPolicyService.updatePolicy(storeId, request);
         auditLogService.record(user.storeId(), user, "STORE_PRICING_POLICY_UPDATED", "STORE", storeId, "Updated Store pricing policy", Map.of("store_id", storeId), servletRequest);
         return ApiResponse.success("Pricing policy updated", response);
+    }
+
+    @PutMapping("/combo-configuration")
+    public ApiResponse<StoreComboConfigurationResponse> updateComboConfiguration(
+        @RequestBody StoreComboConfigurationUpdateRequest request,
+        HttpServletRequest servletRequest
+    ) {
+        Long storeId = request == null ? null : request.store_id;
+        var user = authorizationService.requireForStore(storeId, Capability.ADMIN_MENU_MANAGE);
+        StoreComboConfigurationResponse response = storeComboConfigurationService.updateConfiguration(storeId, request);
+        auditLogService.record(
+            user.storeId(),
+            user,
+            "COMBO_CONFIGURATION_UPDATED",
+            "STORE",
+            storeId,
+            "Updated Store combo configuration",
+            Map.of("store_id", storeId),
+            servletRequest
+        );
+        return ApiResponse.success("Combo configuration updated", response);
     }
 
     @PutMapping("/items/{itemId}/size-configuration")
