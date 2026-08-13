@@ -48,7 +48,11 @@ Current A3 Store-level Module Configuration adds additive `store_modules`
 persistence and Store module read/config contracts. It intentionally retains
 legacy runtime gating until A6/A7, so the Reporting-vs-Analytics split and
 full backend/frontend gating migration remain productization backlog
-boundaries, not active incidents.
+boundaries, not active incidents. A3 is deployed and validated on exact-SHA
+Staging `c1b5e7681f24a11fbf99293567b3da08076fa3b6` at Flyway V13 after the
+bounded runtime DI repair PR #140. A3 acceptance and core regression smoke
+passed; Production remained no-mutation. There is no active Known Issue blocking
+the A3 stop state.
 
 Current final productization route (2026-08-12): open field-test follow-up work
 continues through the Owner field-test and bug-fix loop, but the loop is now a

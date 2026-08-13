@@ -123,6 +123,27 @@ A3 remains bounded to Store module persistence/read/config. A4 profiles, A6/A7
 runtime gating, Phase B/C, Chinatown, Sainte-Catherine and Production work are
 not part of this package.
 
+A3 is complete:
+
+```text
+PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION = PASS
+IMPLEMENTATION_PR = #139
+IMPLEMENTATION_MERGE_SHA = 1643ca071199c49b5d4404feac6ba367a3143a81
+RUNTIME_DI_REPAIR_PR = #140
+RUNTIME_DI_REPAIR_MERGE_SHA = c1b5e7681f24a11fbf99293567b3da08076fa3b6
+DEPLOYED_STAGING_SHA = c1b5e7681f24a11fbf99293567b3da08076fa3b6
+STAGING_FLYWAY = V13
+A3_ACCEPTANCE = PASS
+CORE_REGRESSION_SMOKE = PASS
+PRODUCTION_MUTATION = NONE
+```
+
+Current stop:
+
+```text
+PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION_COMPLETE_WAITING_FOR_PHASE_A4_OWNER_CONTINUATION
+```
+
 Phase A0 deployed evidence is tracked in
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).
 Current deployed conclusion: existing menu option/modifier data safely models

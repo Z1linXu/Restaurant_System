@@ -150,6 +150,17 @@ A9  Legacy Coupling Removal
 A10 Module Validation / Regression
 ```
 
+Current completed Phase A checkpoints:
+
+```text
+PHASE_A1_MODULE_CATALOG = PASS
+PHASE_A2_MODULE_DEPENDENCY_GRAPH = PASS
+PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION = PASS
+DEPLOYED_STAGING_SHA = c1b5e7681f24a11fbf99293567b3da08076fa3b6
+STAGING_FLYWAY = V13
+CURRENT_STOP = PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION_COMPLETE_WAITING_FOR_PHASE_A4_OWNER_CONTINUATION
+```
+
 This order must not change unless fresh audit proves a real technical
 dependency. Any change records the original order, actual order and reason.
 

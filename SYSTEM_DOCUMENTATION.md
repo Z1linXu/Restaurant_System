@@ -100,6 +100,15 @@
 > retains a package-private test constructor. The repair is application-only,
 > keeps the V13 schema, adds constructor-injection regression coverage, and does
 > not change Store module semantics or Production.
+> The repair merged through PR #140 and exact-SHA Staging now runs
+> `c1b5e7681f24a11fbf99293567b3da08076fa3b6` at Flyway V13. A3 automated
+> acceptance passed: Store Context exposes `module_configuration`, 11 Store
+> modules are present, 9 core modules are enabled, KDS is disabled/default-off,
+> fail-closed mutation guards pass, Printing remains `MOCK/true` with four
+> logical printers and three assignments, and core login/menu/tables/pricing/
+> combo/reports/order/GRAB/FRONTDESK_RECEIPT smoke passed. Production remained
+> no-mutation. Current stop:
+> `PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION_COMPLETE_WAITING_FOR_PHASE_A4_OWNER_CONTINUATION`.
 
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The

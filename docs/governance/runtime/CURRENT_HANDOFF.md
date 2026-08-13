@@ -191,12 +191,31 @@ A3 implementation navigation:
   `backend/src/test/java/com/restaurant/system/modules/StoreModuleServiceImplTest.java`
   and `backend/src/test/java/com/restaurant/system/modules/StoreModuleControllerTest.java`
 
+A3 is now accepted, merged, deployed to exact-SHA Staging and validated:
+
+```text
+PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION = PASS
+AGENT_6 = A3_ACCEPT
+IMPLEMENTATION_PR = #139
+IMPLEMENTATION_MERGE_SHA = 1643ca071199c49b5d4404feac6ba367a3143a81
+RUNTIME_DI_REPAIR_PR = #140
+RUNTIME_DI_REPAIR_MERGE_SHA = c1b5e7681f24a11fbf99293567b3da08076fa3b6
+DEPLOYED_STAGING_SHA = c1b5e7681f24a11fbf99293567b3da08076fa3b6
+STAGING_FLYWAY = V13
+STAGING_HEALTH = 200 / 200 / 200
+A3_ACCEPTANCE = PASS
+CORE_REGRESSION_SMOKE = PASS
+PRODUCTION_MUTATION = NONE
+```
+
 A3 adds canonical Store-scoped `store_modules` state and the Store module
 read/config contract. It does not implement A4 profiles, A6 backend gating, A7
 frontend gating, A8 hardware management, Chinatown, Sainte-Catherine or
-Production deployment. Because A3 includes Flyway V13/runtime changes, it must
-be exact-SHA deployed to Staging and validated after PR merge before final
-Phase A1-A3 report.
+Production deployment. The current stop is:
+
+```text
+PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION_COMPLETE_WAITING_FOR_PHASE_A4_OWNER_CONTINUATION
+```
 
 ## Current final productization roadmap audit (2026-08-12)
 

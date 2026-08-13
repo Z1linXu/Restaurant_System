@@ -1,6 +1,6 @@
 # Phase A3 Store-level Module Configuration
 
-Status: `PHASE_A3_IMPLEMENTATION_IN_PROGRESS`
+Status: `PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION_PASS`
 
 Date: 2026-08-13
 
@@ -211,6 +211,111 @@ frontend build (npm run build) = PASS
 frontend tests (npm test) = PASS
 ```
 
+Repair merge:
+
+```text
+PR = #140
+MERGE_SHA = c1b5e7681f24a11fbf99293567b3da08076fa3b6
+```
+
+## Exact-SHA Staging deployment and acceptance
+
+The final A3 Staging runtime is exact:
+
+```text
+deployed Staging SHA = c1b5e7681f24a11fbf99293567b3da08076fa3b6
+Staging Flyway = V13
+latest migration = V13__add_store_modules.sql
+failed migrations = 0
+frontend health = 200
+system health = 200
+SockJS health = 200
+Printing = MOCK / true
+logical printers = 4
+printer assignments = 3
+```
+
+Runtime evidence on the canonical Staging host
+`restaurant-prod:/srv/restaurant-pos/staging`:
+
+```text
+preflight evidence =
+/srv/restaurant-pos/staging/evidence/phase-a3-runtime-di-repair-preflight-c1b5e7681f24a11fbf99293567b3da08076fa3b6-1786662504.txt
+preflight sha256 =
+92b56be77113f2fd8a198eb00b8e03b7b43164726192b19cea89837cf260dba3
+
+health evidence =
+/srv/restaurant-pos/staging/evidence/phase-a3-runtime-di-repair-health-c1b5e7681f24a11fbf99293567b3da08076fa3b6-1786662778.txt
+health sha256 =
+e44460e11dc89de865dfcccf1e67a74d66f286786bb422c6ef8e84af6d683a14
+
+A3 module acceptance evidence =
+/srv/restaurant-pos/staging/evidence/phase-a3-store-module-acceptance-r02-c1b5e7681f24a11fbf99293567b3da08076fa3b6-1786662887.txt
+A3 module acceptance sha256 =
+21a39676740b41cae00bab823803d63257c12ca1791f865cd6c5628f94cf932c
+
+core regression smoke evidence =
+/srv/restaurant-pos/staging/evidence/phase-a3-core-regression-smoke-r02-c1b5e7681f24a11fbf99293567b3da08076fa3b6-1786663014.txt
+core regression smoke sha256 =
+af47a60cd47997e2d83b1a37347db0c098cd9638d800255cc5c7adb069f880a0
+```
+
+Automated A3 acceptance:
+
+```text
+Store Context module_configuration = PASS
+GET /api/v1/stores/{storeId}/modules = PASS
+module count = 11
+core required modules = 9
+enabled modules = 9
+disabled modules = 2
+KDS = disabled/default-off
+PRINTING module = enabled
+legacy compatibility status =
+A3_FOUNDATION_ONLY_LEGACY_RUNTIME_GATING_RETAINED_UNTIL_A6_A7
+authorized no-op manager/owner mutation = PASS
+unauthorized mutation rejected = PASS
+unknown module rejected = PASS
+duplicate update rejected = PASS
+core module disable rejected = PASS
+KDS dependency validator rejected missing capability enablement = PASS
+duplicate Store/module rows absent = PASS
+unique Store/module constraint present = PASS
+fail-closed cases caused no semantic module drift = PASS
+```
+
+The current Staging runtime contains one Store, so cross-Store isolation remains
+proved by focused repository regression tests rather than a live two-Store
+mutation. No second Store was created for this A3 acceptance pass.
+
+Core regression smoke:
+
+```text
+login = PASS
+menu = PASS
+Menu Management pricing policy read = PASS
+Store Combo Configuration read = PASS
+tables = PASS
+ordering = PASS
+frontdesk active/history reads = PASS
+reports = PASS
+printing MOCK = PASS
+GRAB = PASS
+FRONTDESK_RECEIPT = PASS
+kitchen routing = NOT_PRESENT_FOR_SELECTED_ITEM
+order submit independence = PASS
+```
+
+Production boundary:
+
+```text
+Production mutation = NONE
+Production deploy/restart/config/Flyway = NONE
+Production health = 200 / 200
+Production Flyway = V10
+Production failed migrations = 0
+```
+
 ## Boundaries retained
 
 A3 does not implement:
@@ -225,9 +330,10 @@ A3 does not implement:
 - Phase C Chinatown/Sainte-Catherine
 - Production deploy, migration, restart or configuration change
 
-Expected final A3 completion state after tests, Agent 6, PR, merge,
-exact-SHA Staging deploy and automated Staging validation:
+Final A3 completion state after tests, Agent 6, PRs, merges, exact-SHA Staging
+deploy and automated Staging validation:
 
 ```text
 PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION = PASS
+PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION_COMPLETE_WAITING_FOR_PHASE_A4_OWNER_CONTINUATION
 ```
