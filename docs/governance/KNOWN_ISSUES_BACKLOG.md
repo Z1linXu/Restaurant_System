@@ -35,6 +35,13 @@ compatibility boundary: `REPORTING_CORE` is required for normal Stores, while
 covers both and is classified as an environment capability until A3/A6/A7 split
 Store module state and runtime gates.
 
+A1 is accepted and merged (`PHASE_A1_MODULE_CATALOG = PASS`, PR #137,
+`34169152c6d48ecf503b441fe7428416c399d0a9`). A2 now records fail-closed
+dependency validation as a bounded repository/backend package. Unknown modules,
+invalid graph entries, missing required dependencies, missing environment or
+hardware capabilities and conflicts are validator outcomes, not runtime issues
+or Owner gates by themselves.
+
 Current final productization route (2026-08-12): open field-test follow-up work
 continues through the Owner field-test and bug-fix loop, but the loop is now a
 side-car to product development unless a confirmed P0/P1 blocker exists. The

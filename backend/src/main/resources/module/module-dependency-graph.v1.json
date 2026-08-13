@@ -1,0 +1,104 @@
+{
+  "graph_version": "PHASE_A2_MODULE_DEPENDENCY_GRAPH_V1",
+  "catalog_version": "PHASE_A1_MODULE_CATALOG_V1",
+  "catalog_resource": "module/module-catalog.v1.json",
+  "authority": {
+    "phase": "PHASE_A2_MODULE_DEPENDENCY_GRAPH",
+    "production_boundary": "NO_MUTATION",
+    "staging_boundary": "NO_DEPLOYMENT_REQUIRED_FOR_A2",
+    "validation_mode": "FAIL_CLOSED"
+  },
+  "supported_relationship_types": [
+    "REQUIRES",
+    "CONFLICTS_WITH",
+    "REQUIRES_ENVIRONMENT_CAPABILITY",
+    "REQUIRES_HARDWARE_CAPABILITY"
+  ],
+  "dependencies": [
+    {"source_module": "ORDERING_POS", "type": "REQUIRES", "target": "MENU"},
+    {"source_module": "MENU_MANAGEMENT", "type": "REQUIRES", "target": "MENU"},
+    {"source_module": "PRINTING", "type": "REQUIRES", "target": "ORDERING_POS"},
+    {"source_module": "ORDER_HISTORY", "type": "REQUIRES", "target": "ORDERING_POS"},
+    {"source_module": "REPORTING_CORE", "type": "REQUIRES", "target": "ORDERING_POS"},
+    {"source_module": "REPORTING_CORE", "type": "REQUIRES", "target": "ORDER_HISTORY"},
+    {"source_module": "STORE_ADMINISTRATION", "type": "REQUIRES", "target": "STAFF_ACCESS"},
+    {"source_module": "KDS", "type": "REQUIRES", "target": "ORDERING_POS"},
+    {"source_module": "ANALYTICS_ADVANCED", "type": "REQUIRES", "target": "REPORTING_CORE"},
+
+    {"source_module": "ORDERING_POS", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "CORE_POS_RUNTIME"},
+    {"source_module": "ORDERING_POS", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "AUTH_RUNTIME"},
+    {"source_module": "ORDERING_POS", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "DATABASE"},
+    {"source_module": "ORDERING_POS", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "WEBSOCKET_RUNTIME"},
+    {"source_module": "MENU", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "CORE_POS_RUNTIME"},
+    {"source_module": "MENU", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "DATABASE"},
+    {"source_module": "MENU_MANAGEMENT", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "ADMIN_RUNTIME"},
+    {"source_module": "MENU_MANAGEMENT", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "DATABASE"},
+    {"source_module": "TABLE_MANAGEMENT", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "ADMIN_RUNTIME"},
+    {"source_module": "TABLE_MANAGEMENT", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "DATABASE"},
+    {"source_module": "PRINTING", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "PRINTING_FEATURE_FLAG"},
+    {"source_module": "PRINTING", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "PRINT_MODE_RUNTIME"},
+    {"source_module": "PRINTING", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "DATABASE"},
+    {"source_module": "ORDER_HISTORY", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "CORE_POS_RUNTIME"},
+    {"source_module": "ORDER_HISTORY", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "DATABASE"},
+    {"source_module": "REPORTING_CORE", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "ANALYTICS_FEATURE_FLAG"},
+    {"source_module": "REPORTING_CORE", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "DATABASE"},
+    {"source_module": "STAFF_ACCESS", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "AUTH_RUNTIME"},
+    {"source_module": "STAFF_ACCESS", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "ADMIN_RUNTIME"},
+    {"source_module": "STAFF_ACCESS", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "DATABASE"},
+    {"source_module": "STORE_ADMINISTRATION", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "ADMIN_RUNTIME"},
+    {"source_module": "STORE_ADMINISTRATION", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "AUTH_RUNTIME"},
+    {"source_module": "STORE_ADMINISTRATION", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "DATABASE"},
+    {"source_module": "KDS", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "KDS_FEATURE_FLAG"},
+    {"source_module": "KDS", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "WEBSOCKET_RUNTIME"},
+    {"source_module": "KDS", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "DATABASE"},
+    {"source_module": "ANALYTICS_ADVANCED", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "ANALYTICS_FEATURE_FLAG"},
+    {"source_module": "ANALYTICS_ADVANCED", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "DATABASE"},
+
+    {"source_module": "ORDERING_POS", "type": "REQUIRES_HARDWARE_CAPABILITY", "target": "TOUCH_CLIENT"},
+    {"source_module": "PRINTING", "type": "REQUIRES_HARDWARE_CAPABILITY", "target": "PRINTER_TOPOLOGY_FOR_REAL_OR_PAD_DIRECT"},
+    {"source_module": "PRINTING", "type": "REQUIRES_HARDWARE_CAPABILITY", "target": "PAD_DEVICE_FOR_PAD_DIRECT"},
+    {"source_module": "KDS", "type": "REQUIRES_HARDWARE_CAPABILITY", "target": "KDS_DISPLAY_CLIENT"}
+  ],
+  "machine_readable_outcomes": [
+    {
+      "scenario": "DEFAULT_NORMAL_STORE_VALID",
+      "expected_valid": true,
+      "expected_issue_codes": []
+    },
+    {
+      "scenario": "KDS_OFF_VALID",
+      "expected_valid": true,
+      "expected_issue_codes": []
+    },
+    {
+      "scenario": "UNKNOWN_MODULE_FAIL_CLOSED",
+      "expected_valid": false,
+      "expected_issue_codes": ["UNKNOWN_MODULE"]
+    },
+    {
+      "scenario": "MISSING_REQUIRED_MODULE_FAIL_CLOSED",
+      "expected_valid": false,
+      "expected_issue_codes": ["CORE_MODULE_DISABLED", "REQUIRED_MODULE_DISABLED"]
+    },
+    {
+      "scenario": "MISSING_ENVIRONMENT_CAPABILITY_FAIL_CLOSED",
+      "expected_valid": false,
+      "expected_issue_codes": ["ENVIRONMENT_CAPABILITY_MISSING"]
+    },
+    {
+      "scenario": "MISSING_HARDWARE_CAPABILITY_FAIL_CLOSED",
+      "expected_valid": false,
+      "expected_issue_codes": ["HARDWARE_CAPABILITY_MISSING"]
+    },
+    {
+      "scenario": "CONFLICT_FAIL_CLOSED",
+      "expected_valid": false,
+      "expected_issue_codes": ["MODULE_CONFLICT"]
+    },
+    {
+      "scenario": "INVALID_DEPENDENCY_GRAPH_FAIL_CLOSED",
+      "expected_valid": false,
+      "expected_issue_codes": ["INVALID_DEPENDENCY_GRAPH"]
+    }
+  ]
+}

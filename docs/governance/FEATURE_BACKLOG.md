@@ -79,6 +79,25 @@ Current A1 Module Catalog package:
 - Static validation:
   `backend/src/test/java/com/restaurant/system/modules/ModuleCatalogContractTest.java`
 
+A1 is complete:
+
+```text
+PHASE_A1_MODULE_CATALOG = PASS
+PR = #137
+MERGE_SHA = 34169152c6d48ecf503b441fe7428416c399d0a9
+```
+
+Current A2 Module Dependency Graph package:
+
+- Technical evidence:
+  [PHASE_A2_MODULE_DEPENDENCY_GRAPH](agile/PHASE_A2_MODULE_DEPENDENCY_GRAPH.md)
+- Machine-readable graph:
+  `backend/src/main/resources/module/module-dependency-graph.v1.json`
+- Reusable validator:
+  `backend/src/main/java/com/restaurant/system/modules/ModuleDependencyValidator.java`
+- Focused validation:
+  `backend/src/test/java/com/restaurant/system/modules/ModuleDependencyValidatorTest.java`
+
 Phase A0 deployed evidence is tracked in
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).
 Current deployed conclusion: existing menu option/modifier data safely models

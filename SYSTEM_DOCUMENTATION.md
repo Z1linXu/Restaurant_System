@@ -66,6 +66,19 @@
 > Advanced Analytics is optional. A1 does not add Store module persistence,
 > deploy Staging or touch Production.
 
+> 2026-08-13 Phase A2 Module Dependency Graph: A1 is accepted and merged
+> (`PHASE_A1_MODULE_CATALOG = PASS`, PR #137,
+> `34169152c6d48ecf503b441fe7428416c399d0a9`). A2 adds
+> `backend/src/main/resources/module/module-dependency-graph.v1.json` and the
+> reusable `ModuleDependencyValidator`. The validator supports
+> `REQUIRES`, `CONFLICTS_WITH`, `REQUIRES_ENVIRONMENT_CAPABILITY`, and
+> `REQUIRES_HARDWARE_CAPABILITY`, returns stable machine-readable issue codes,
+> treats `KDS = DISABLED` as valid, and fails closed for unknown modules,
+> invalid dependency graph entries, disabled required modules, missing
+> environment/hardware capability, and conflicts. A2 does not add Store module
+> persistence, public API behavior, schema migration, Staging deployment or
+> Production mutation.
+
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The
 > product rule is `BUILD ONCE, CONFIGURE MANY`; future Stores must not be

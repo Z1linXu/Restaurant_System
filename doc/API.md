@@ -25,6 +25,15 @@
 > continue to expose workspace context but not final Store module state. A3 owns
 > the Store-level module read contract.
 
+> Phase A2 Module Dependency Graph (2026-08-13): the application-readable
+> dependency graph lives at
+> `backend/src/main/resources/module/module-dependency-graph.v1.json`.
+> `ModuleDependencyValidator` validates module choices against required modules,
+> conflicts, environment capabilities and hardware capabilities. A2 is an
+> internal contract/validator package only; it adds no endpoint, DTO, header,
+> Store module persistence or runtime gating behavior. A3 owns the Store-level
+> module read contract.
+
 > Final productization Phase A0 boundary (2026-08-13): Size configuration uses
 > the existing menu option/modifier APIs rather than a second size engine.
 > `MenuItem -> SizeVariant[1..N]` is represented by `menu_item_options` rows
