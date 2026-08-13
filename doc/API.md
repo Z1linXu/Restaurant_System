@@ -41,7 +41,10 @@
 > canonical read contract; `/api/v1/admin/stores/{storeId}/modules` is a
 > bounded admin configuration contract. A3 separates environment capability,
 > Store module state, runtime mode and user authorization, while retaining
-> legacy runtime gating until A6/A7.
+> legacy runtime gating until A6/A7. Exact-SHA Staging
+> `c1b5e7681f24a11fbf99293567b3da08076fa3b6` applied V13 and passed A3
+> acceptance after the bounded runtime DI repair PR #140; no additional public
+> endpoint or DTO was introduced by the repair.
 
 > Final productization Phase A0 boundary (2026-08-13): Size configuration uses
 > the existing menu option/modifier APIs rather than a second size engine.

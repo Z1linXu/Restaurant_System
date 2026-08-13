@@ -148,13 +148,16 @@ reusable `ModuleDependencyValidator` for fail-closed `REQUIRES`,
 `REQUIRES_HARDWARE_CAPABILITY` validation. A2 remains repository/backend
 contract work only: no schema migration, Staging deploy or Production mutation.
 
-A3 Store-level Module Configuration now adds additive Flyway V13
-`store_modules`, canonical Store module read/config APIs, and Store Context
-`module_configuration`:
+A3 Store-level Module Configuration is complete:
 [PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION](../agile/PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION.md).
-A3 is a runtime/schema change and therefore requires PR/merge, fresh fetch,
-exact-SHA Staging deploy, Flyway verification and automated Staging acceptance
-before it may be marked PASS. Production remains no-mutation.
+It adds additive Flyway V13 `store_modules`, canonical Store module read/config
+APIs, and Store Context `module_configuration`. PR #139 entered main at
+`1643ca071199c49b5d4404feac6ba367a3143a81`; the bounded runtime DI repair PR
+#140 entered main at `c1b5e7681f24a11fbf99293567b3da08076fa3b6`.
+Exact-SHA Staging now runs `c1b5e7681f24a11fbf99293567b3da08076fa3b6`, Flyway
+V13, health `200/200/200`, Printing `MOCK/true`, four logical printers and
+three assignments. A3 module acceptance and core regression smoke passed.
+Production remained no-mutation and retained Flyway V10.
 
 Phase A0 deployed evidence:
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](../agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).
@@ -173,13 +176,15 @@ A0_OWNER_UI_ACCEPTANCE = PASS_FOR_A0_1_PRICING_UX
 ```
 
 Staging now runs exact
-`90ac0cb0496161b12c47cff00573b56b4abc961c`, Flyway V12, Printing
+`c1b5e7681f24a11fbf99293567b3da08076fa3b6`, Flyway V13, Printing
 `MOCK/true`, four enabled logical printers and three enabled assignments. A1,
-A2 and A3 are authorized as one continuous Phase A execution chain; do not stop
-between A1/A2/A3 for ordinary completion, Agent 6 ACCEPT, PR merge, governance
-sync or automated PASS. Do not start A4, Phase B, Phase C, Chinatown,
+A2 and A3 are PASS. Do not start A4, Phase B, Phase C, Chinatown,
 Sainte-Catherine or Production deploy from this state without a fresh Owner
-decision.
+decision. Current stop:
+
+```text
+PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION_COMPLETE_WAITING_FOR_PHASE_A4_OWNER_CONTINUATION
+```
 
 ## Current final productization roadmap audit (2026-08-12)
 
