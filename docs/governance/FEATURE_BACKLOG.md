@@ -49,8 +49,12 @@ Pricing Rules as the Combo price source. The repository package may add
 reviewed `COMBO_EGG` and `COMBO_SIDE` components; item `COMBO_ALLOWED` remains
 in `menu_item_options`. Evidence:
 [PHASE_A0_2_STORE_COMBO_CONFIGURATION_IMPLEMENTATION_EVIDENCE](agile/PHASE_A0_2_STORE_COMBO_CONFIGURATION_IMPLEMENTATION_EVIDENCE.md).
+Runtime Staging evidence:
+[PHASE_A0_2_STORE_COMBO_CONFIGURATION_STAGING_EVIDENCE](agile/PHASE_A0_2_STORE_COMBO_CONFIGURATION_STAGING_EVIDENCE.md).
 
-Expected A0.2 stop after exact-SHA Staging validation:
+A0.2 merged through PR #134 and is deployed to exact-SHA Staging at
+`90ac0cb0496161b12c47cff00573b56b4abc961c` with Flyway V12 and automated
+validation PASS. Current stop:
 
 ```text
 PHASE_A0_2_STORE_COMBO_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST

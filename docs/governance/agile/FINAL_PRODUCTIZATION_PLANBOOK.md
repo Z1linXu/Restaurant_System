@@ -291,8 +291,12 @@ reselected.
 
 Implementation evidence:
 [PHASE_A0_2_STORE_COMBO_CONFIGURATION_IMPLEMENTATION_EVIDENCE](PHASE_A0_2_STORE_COMBO_CONFIGURATION_IMPLEMENTATION_EVIDENCE.md).
+Runtime Staging evidence:
+[PHASE_A0_2_STORE_COMBO_CONFIGURATION_STAGING_EVIDENCE](PHASE_A0_2_STORE_COMBO_CONFIGURATION_STAGING_EVIDENCE.md).
 
-Expected successful stop after PR merge and exact-SHA Staging validation:
+A0.2 is merged through PR #134 and deployed to exact-SHA Staging at
+`90ac0cb0496161b12c47cff00573b56b4abc961c`; Staging is Flyway V12 and
+automated validation passed. Current stop:
 
 ```text
 PHASE_A0_2_STORE_COMBO_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
@@ -499,7 +503,7 @@ HARDWARE_CAPABILITY_CONTRACT = READY
 LEGACY_BLOCKERS = REMOVED/BOUNDED
 N_STORE_MODULE_REGRESSION = PASS
 A0 OWNER SIZE UX = PASS/PENDING
-A0.2 STORE COMBO CONFIGURATION = PASS/PENDING
+A0.2 STORE COMBO CONFIGURATION = PASS_WAITING_OWNER_RETEST
 ```
 
 ## 7. True Owner gates
@@ -535,11 +539,12 @@ After this Planbook enters `main`, the next implementation loop is:
 PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION
 ```
 
-Current fresh authority has advanced inside A0 through A0.1 and into the
-Owner-approved A0.2 Store Combo Configuration loop. Do not restart completed A0
-inventory/design work. Do not start A1 before A0.2 reaches its stop state unless
-A0.2 reaches a TRUE OWNER GATE. Do not start Phase B/C. Do not touch
-Production.
+Current fresh authority has advanced inside A0 through A0.1 and A0.2. A0.2 has
+reached exact-SHA Staging automated validation PASS and now waits for Owner
+manual retest at
+`PHASE_A0_2_STORE_COMBO_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST`.
+Do not restart completed A0 inventory/design work. Do not start A1, Phase B/C,
+Chinatown, Sainte-Catherine or Production work without a fresh Owner decision.
 
 Expected successful A0 stop:
 
