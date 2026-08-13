@@ -1,5 +1,15 @@
 # Restaurant System API (MVP)
 
+> Phase A0.1 schema gate (2026-08-13): Owner review rejected free-form Size
+> editing and selected system-controlled Small/Regular/Large plus Store-level
+> Size/Combo pricing policy. Current public APIs still expose A0's
+> `menu_item_options` option surface; no new pricing-policy endpoint or DTO is
+> implemented yet. Fresh schema audit found no Store-level pricing policy table,
+> so the planned Pricing Rules API is blocked until
+> `PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_APPROVAL`. Planned, not yet
+> implemented, endpoints are documented in
+> `docs/governance/agile/PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE.md`.
+
 > Final productization Phase A0 boundary (2026-08-13): Size configuration uses
 > the existing menu option/modifier APIs rather than a second size engine.
 > `MenuItem -> SizeVariant[1..N]` is represented by `menu_item_options` rows

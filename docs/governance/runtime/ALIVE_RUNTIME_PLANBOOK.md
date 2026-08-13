@@ -32,6 +32,29 @@ Current authorized implementation loop after this planbook enters `main`:
 PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION
 ```
 
+Owner A0.1 refinement authority now records:
+
+```text
+PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_REFINEMENT
+```
+
+A0.1 tightens the Owner-facing Size contract: only system-controlled
+Small/Regular/Large Sizes are allowed, and Store-level Size/Combo pricing
+policies must become the canonical price source. Fresh schema audit found no
+existing Store-level pricing policy/settings table; current `menu_item_options`
+price deltas are per-item and cannot satisfy that policy without keeping the
+wrong source of truth. Therefore A0.1 is stopped before implementation at:
+
+```text
+PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_WAITING_FOR_OWNER_APPROVAL
+```
+
+See
+[A0.1 schema-gate evidence](../agile/PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE.md).
+No Flyway migration, business-code change, Staging deploy or Production action
+is authorized until the Owner approves
+`PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_APPROVAL`.
+
 Phase A may proceed continuously through A0-A10 while no TRUE OWNER GATE is
 hit. Phase B and Phase C implementation remain unauthorized. Production remains
 `NO MUTATION`: no deploy, restart, Flyway, configuration, menu, printer, Pad,

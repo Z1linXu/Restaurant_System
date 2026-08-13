@@ -14,6 +14,24 @@ Scope:
   exact-SHA Staging validation
 - Flyway: no migration required
 
+## A0.1 refinement note
+
+Owner Staging UI review accepted A0's underlying
+`OPTION + MODIFIER_GROUP + PRICE_DELTA` implementation direction, but rejected
+free-form Size creation/editing as final product UX. The follow-up A0.1 product
+contract requires only system-controlled Small/Regular/Large Size definitions
+and Store-level Size/Combo pricing policy as canonical price source.
+
+Fresh schema audit found no Store-level pricing policy/settings table. A0.1 is
+therefore stopped before implementation at:
+
+```text
+PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_WAITING_FOR_OWNER_APPROVAL
+```
+
+Evidence/design:
+[PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE](PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE.md).
+
 ## Current size model audit
 
 `CURRENT_SIZE_MODEL` is:

@@ -11,6 +11,19 @@
 > remains no-mutation. A0 Owner UI acceptance remains `PENDING` until the Owner
 > retests the Staging UX.
 
+> 2026-08-13 Phase A0.1 product-rule refinement: Owner review accepted the
+> existing `OPTION + MODIFIER_GROUP + PRICE_DELTA` Size engine but rejected
+> free-form Size creation/editing as final product UX. The next product
+> contract allows only system-controlled `SMALL/REGULAR/LARGE`
+> (`小碗/中碗/大碗`, `Small/Regular/Large`,
+> `size_small/size_regular/size_large`) and requires Store-level Size/Combo
+> pricing policy as the canonical price source. Fresh schema audit found no
+> existing Store-level pricing policy/settings table, so implementation stops
+> before code/migration/runtime at
+> `PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_WAITING_FOR_OWNER_APPROVAL`.
+> See
+> [PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE](docs/governance/agile/PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE.md).
+
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The
 > product rule is `BUILD ONCE, CONFIGURE MANY`; future Stores must not be

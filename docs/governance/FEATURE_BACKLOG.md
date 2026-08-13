@@ -18,6 +18,20 @@ Menu Management, Table Management, Printing, GRAB Printing, Frontdesk Receipt,
 Order History and Reporting. KDS is optional/default off. Reports are core;
 advanced Analytics may be classified separately only after architecture audit.
 
+Current A0.1 refinement stop:
+
+```text
+PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_WAITING_FOR_OWNER_APPROVAL
+```
+
+Owner UI review rejected free-form Size editing as final product UX. A0.1 keeps
+the `OPTION + MODIFIER_GROUP + PRICE_DELTA` engine for per-item Size identity,
+but requires system-controlled Small/Regular/Large and Store-level Size/Combo
+pricing policies as the canonical price source. Fresh schema audit found no
+existing Store-level pricing policy/settings table, so implementation requires
+an additive Flyway design before code/runtime work can continue. Evidence:
+[PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE](agile/PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE.md).
+
 Current A0 stop:
 
 ```text
