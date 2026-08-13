@@ -87,6 +87,38 @@ class OwnerMenuOptionServiceImplTest {
     }
 
     @Test
+    void creatingComboUpchargeThroughGenericEndpointIsRejected() {
+        MenuItem item = menuItem(14L, 3L);
+        when(menuItemRepository.findById(14L)).thenReturn(Optional.of(item));
+        when(menuItemOptionRepository.findAllByMenuItemIdOrdered(14L)).thenReturn(List.of());
+        MenuItemOptionUpsertRequest request = new MenuItemOptionUpsertRequest();
+        request.option_group = "COMBO";
+        request.option_code = "combo";
+        request.name_zh = "套餐";
+        request.name_en = "Combo";
+        request.sort_order = 100;
+        request.price_delta = new BigDecimal("5.00");
+
+        assertThrows(BusinessException.class, () -> service.createOption(14L, request));
+    }
+
+    @Test
+    void updatingExistingComboUpchargeThroughGenericEndpointIsRejected() {
+        MenuItem item = menuItem(14L, 3L);
+        MenuItemOption existing = comboOption(91L);
+        when(menuItemRepository.findById(14L)).thenReturn(Optional.of(item));
+        when(menuItemOptionRepository.findAllByMenuItemIdOrdered(14L)).thenReturn(List.of(existing));
+        MenuItemOptionUpsertRequest request = new MenuItemOptionUpsertRequest();
+        request.option_group = "ADD_ON";
+        request.option_code = "combo_custom";
+        request.name_zh = "套餐";
+        request.name_en = "Combo";
+        request.price_delta = new BigDecimal("7.00");
+
+        assertThrows(BusinessException.class, () -> service.updateOption(14L, 91L, request));
+    }
+
+    @Test
     void creatingDuplicateSizeCodeIsRejected() {
         MenuItem item = menuItem(14L, 3L);
         MenuItemOption existing = sizeOption(81L, "size_small", true, 10);
@@ -132,6 +164,16 @@ class OwnerMenuOptionServiceImplTest {
     }
 
     @Test
+    void deactivatingComboUpchargeThroughGenericEndpointIsRejected() {
+        MenuItem item = menuItem(14L, 3L);
+        MenuItemOption existing = comboOption(91L);
+        when(menuItemRepository.findById(14L)).thenReturn(Optional.of(item));
+        when(menuItemOptionRepository.findAllByMenuItemIdOrdered(14L)).thenReturn(List.of(existing));
+
+        assertThrows(BusinessException.class, () -> service.deactivateOption(14L, 91L));
+    }
+
+    @Test
     void reorderingSizesThroughGenericEndpointIsRejected() {
         MenuItem item = menuItem(14L, 3L);
         MenuItemOption small = sizeOption(81L, "size_small", true, 20);
@@ -147,6 +189,22 @@ class OwnerMenuOptionServiceImplTest {
         regularSecond.id = 82L;
         regularSecond.sort_order = 20;
         request.options = List.of(smallFirst, regularSecond);
+
+        assertThrows(BusinessException.class, () -> service.reorderOptions(14L, request));
+    }
+
+    @Test
+    void reorderingComboUpchargeThroughGenericEndpointIsRejected() {
+        MenuItem item = menuItem(14L, 3L);
+        MenuItemOption combo = comboOption(91L);
+        when(menuItemRepository.findById(14L)).thenReturn(Optional.of(item));
+        when(menuItemOptionRepository.findAllByMenuItemIdOrdered(14L))
+            .thenReturn(List.of(combo));
+        MenuItemOptionReorderRequest request = new MenuItemOptionReorderRequest();
+        MenuItemOptionReorderRequest.OptionOrder comboOrder = new MenuItemOptionReorderRequest.OptionOrder();
+        comboOrder.id = 91L;
+        comboOrder.sort_order = 120;
+        request.options = List.of(comboOrder);
 
         assertThrows(BusinessException.class, () -> service.reorderOptions(14L, request));
     }
@@ -178,6 +236,21 @@ class OwnerMenuOptionServiceImplTest {
         option.price_delta = BigDecimal.ZERO;
         option.is_active = active;
         option.sort_order = sortOrder;
+        return option;
+    }
+
+    private MenuItemOption comboOption(Long id) {
+        MenuItemOption option = new MenuItemOption();
+        option.id = id;
+        option.menu_item_id = 14L;
+        option.option_group = "COMBO";
+        option.option_type = "addon";
+        option.option_code = "combo";
+        option.name_zh = "套餐";
+        option.name_en = "Combo";
+        option.price_delta = new BigDecimal("5.00");
+        option.is_active = true;
+        option.sort_order = 100;
         return option;
     }
 }

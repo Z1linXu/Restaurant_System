@@ -579,6 +579,9 @@ Response behavior:
   generic option create/update/deactivate/reorder routes reject Size writes.
   Use the Size Configuration endpoint below. Supported Size semantics are only
   `size_small`, `size_regular`, and `size_large`.
+- Combo upcharge rows are also system-controlled. Generic option
+  create/update/deactivate/reorder routes reject Combo upcharge writes; use
+  Item Combo Policy for allow/disable and Pricing Rules for Store-level delta.
 - Size and Combo deltas in new catalog responses are effective Store policy
   values from `store_pricing_policies`; Size/Combo `menu_item_options.price_delta`
   is maintained only as a rollback compatibility mirror.
