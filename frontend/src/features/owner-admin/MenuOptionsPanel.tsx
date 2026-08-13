@@ -8,16 +8,19 @@ import {
   type MenuItemOptionPayload,
 } from '../../services/ownerMenuOptionService'
 import {
+  buildDefaultSizeOrder,
   buildDefaultNoodleTypeOrder,
+  defaultSizeOptionId,
   defaultNoodleTypeOptionId,
 } from './menuOptionDefaults'
 
-type EditableOptionGroup = 'REMOVE' | 'ADD_ON'
+type EditableOptionGroup = 'SIZE' | 'REMOVE' | 'ADD_ON'
 type DisplayOptionGroup = EditableOptionGroup | 'NOODLE_TYPE'
 
-const DISPLAY_GROUPS: DisplayOptionGroup[] = ['NOODLE_TYPE', 'REMOVE', 'ADD_ON']
+const DISPLAY_GROUPS: DisplayOptionGroup[] = ['SIZE', 'NOODLE_TYPE', 'REMOVE', 'ADD_ON']
 
 const GROUP_LABELS: Record<DisplayOptionGroup, string> = {
+  SIZE: 'Size / 规格',
   NOODLE_TYPE: '面型 / Noodle Type',
   REMOVE: 'Remove',
   ADD_ON: 'Add-on',
@@ -41,12 +44,34 @@ interface MenuOptionsPanelProps {
 }
 
 function optionTypeForGroup(group: EditableOptionGroup) {
-  return group === 'REMOVE' ? 'remove' : 'addon'
+  switch (group) {
+    case 'SIZE':
+      return 'size'
+    case 'REMOVE':
+      return 'remove'
+    default:
+      return 'addon'
+  }
+}
+
+function editableGroupFromDraft(draft: MenuItemOptionPayload): EditableOptionGroup {
+  const group = draft.option_group?.toUpperCase()
+  if (group === 'SIZE' || group === 'REMOVE' || group === 'ADD_ON') {
+    return group
+  }
+  const optionType = draft.option_type?.toLowerCase()
+  if (optionType === 'size') {
+    return 'SIZE'
+  }
+  if (optionType === 'remove') {
+    return 'REMOVE'
+  }
+  return 'ADD_ON'
 }
 
 function normalizeGroup(option: MenuItemOptionAdminRecord): DisplayOptionGroup | null {
   const optionGroup = option.option_group?.toUpperCase()
-  if (optionGroup === 'REMOVE' || optionGroup === 'ADD_ON' || optionGroup === 'NOODLE_TYPE') {
+  if (optionGroup === 'SIZE' || optionGroup === 'REMOVE' || optionGroup === 'ADD_ON' || optionGroup === 'NOODLE_TYPE') {
     return optionGroup
   }
 
@@ -55,6 +80,9 @@ function normalizeGroup(option: MenuItemOptionAdminRecord): DisplayOptionGroup |
   }
 
   const optionType = option.option_type?.toLowerCase()
+  if (optionType === 'size') {
+    return 'SIZE'
+  }
   if (optionType === 'noodle_type') {
     return 'NOODLE_TYPE'
   }
@@ -136,6 +164,7 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
       })),
     [options],
   )
+  const defaultSizeId = useMemo(() => defaultSizeOptionId(options), [options])
   const defaultNoodleTypeId = useMemo(() => defaultNoodleTypeOptionId(options), [options])
 
   const beginCreate = () => {
@@ -164,7 +193,7 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
   }
 
   const saveDraft = async () => {
-    const group = draft.option_group === 'REMOVE' ? 'REMOVE' : 'ADD_ON'
+    const group = editableGroupFromDraft(draft)
     try {
       setSaving(true)
       setError(null)
@@ -183,6 +212,12 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
 
       if (!payload.name_zh) {
         throw new Error('Chinese name is required.')
+      }
+      if (group === 'SIZE' && !payload.name_en.trim()) {
+        throw new Error('English name is required for Size.')
+      }
+      if (group === 'SIZE' && !payload.option_code) {
+        throw new Error('Size code is required.')
       }
 
       if (editingId) {
@@ -261,6 +296,21 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
     }
   }
 
+  const setDefaultSize = async (option: MenuItemOptionAdminRecord) => {
+    const reorderPayload = buildDefaultSizeOrder(options, option.id)
+    if (!reorderPayload) return
+    try {
+      setSaving(true)
+      setError(null)
+      await reorderOwnerMenuItemOptions(itemId, reorderPayload)
+      await loadOptions()
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Failed to set default size')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
       <div className="flex items-start justify-between gap-3">
@@ -289,7 +339,7 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
             <label className="block">
               <div className="text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Group</div>
               <select
-                value={draft.option_group === 'REMOVE' ? 'REMOVE' : 'ADD_ON'}
+                value={editableGroupFromDraft(draft)}
                 onChange={(event) => {
                   const group = event.target.value as EditableOptionGroup
                   setDraft({
@@ -302,6 +352,7 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
                 }}
                 className="mt-1 w-full rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2.5 text-[0.88rem] outline-none"
               >
+                <option value="SIZE">Size / 规格</option>
                 <option value="ADD_ON">Add-on</option>
                 <option value="REMOVE">Remove</option>
               </select>
@@ -370,7 +421,7 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
       ) : null}
 
       <div className="mt-5 flex items-center justify-between gap-3">
-        <div className="text-[0.86rem] font-black uppercase tracking-[0.12em] text-[var(--muted)]">Active Options</div>
+        <div className="text-[0.86rem] font-black uppercase tracking-[0.12em] text-[var(--muted)]">Item Options</div>
       </div>
 
       {loading ? (
@@ -382,6 +433,11 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
           {groupedOptions.map(({ group, options: groupOptions }) => (
             <section key={group} className="rounded-[18px] border border-[rgba(26,28,25,0.06)] bg-white/70 p-3">
               <div className="text-[0.82rem] font-black uppercase tracking-[0.12em] text-[var(--primary)]">{GROUP_LABELS[group]}</div>
+              {group === 'SIZE' ? (
+                <div className="mt-1 text-[0.76rem] text-[var(--muted)]">
+                  第一个启用的规格是新点单默认值。点击“设为默认”会保存排序并刷新菜单版本。
+                </div>
+              ) : null}
               {group === 'NOODLE_TYPE' ? (
                 <div className="mt-1 text-[0.76rem] text-[var(--muted)]">
                   第一个启用的面型是新点单默认值。点击“设为默认”会保存排序并刷新菜单版本。
@@ -389,7 +445,9 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
               ) : null}
               <div className="mt-2 space-y-2">
                 {groupOptions.length ? groupOptions.map((option, optionIndex) => {
+                  const isDefaultSize = group === 'SIZE' && option.id === defaultSizeId
                   const isDefaultNoodleType = group === 'NOODLE_TYPE' && option.id === defaultNoodleTypeId
+                  const isDefaultOption = isDefaultSize || isDefaultNoodleType
                   return (
                     <div
                       key={option.id}
@@ -399,7 +457,7 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2 font-semibold text-[var(--on-surface)]">
                             <span>{option.name_zh} <span className="text-[0.76rem] font-normal text-[var(--muted)]">/ {option.name_en || '-'}</span></span>
-                            {isDefaultNoodleType ? (
+                            {isDefaultOption ? (
                               <span className="rounded-full bg-[rgba(64,124,73,0.14)] px-2 py-1 text-[0.68rem] font-black text-[rgb(48,96,56)]">
                                 默认
                               </span>
@@ -410,6 +468,16 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
                           </div>
                         </div>
                         <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                          {group === 'SIZE' && option.is_active && !isDefaultSize ? (
+                            <button
+                              type="button"
+                              onClick={() => void setDefaultSize(option)}
+                              disabled={saving}
+                              className="min-h-10 rounded-full bg-[var(--primary)] px-3 py-1 text-[0.72rem] font-semibold text-white disabled:opacity-50"
+                            >
+                              设为默认
+                            </button>
+                          ) : null}
                           {group === 'NOODLE_TYPE' && option.is_active && !isDefaultNoodleType ? (
                             <button
                               type="button"

@@ -21,6 +21,7 @@ import type { ConnectionState } from '../../services/networkStatus'
 import { menuCacheNoticeDismissalKey } from '../../offline/menuCacheNotice'
 import { useAuth } from '../auth/useAuth'
 import { useCurrentStore } from '../store/StoreContext'
+import { isQuickAddItem } from './orderingCustomizationRules'
 
 interface OrderingPageProps {
   catalog: {
@@ -57,28 +58,6 @@ interface CustomizationState {
 
 const PRINT_ATTENTION_MODULES = new Set(['GRAB', 'FRONTDESK_RECEIPT'])
 const PRINT_ATTENTION_STATUSES = new Set(['FAILED', 'CANCELLED'])
-const QUICK_ADD_DRINK_CATEGORY_CODES = new Set(['DRINK', 'ALCOHOL', 'MILK_TEA'])
-const QUICK_ADD_DRINK_ITEM_TYPES = new Set(['DRINK', 'BEVERAGE'])
-
-function normalizeCode(value: string | null | undefined) {
-  return (value ?? '').trim().toUpperCase()
-}
-
-function hasRequiredCustomization(item: MenuItem) {
-  return Boolean(item.customization?.sizes?.required || item.customization?.soupBases?.required)
-}
-
-function isQuickAddItem(item: MenuItem) {
-  const categoryCode = normalizeCode(item.categoryCode)
-  const itemType = normalizeCode(item.itemType)
-  if (categoryCode === 'FRIED') {
-    return !item.customization
-  }
-  if (QUICK_ADD_DRINK_CATEGORY_CODES.has(categoryCode) || QUICK_ADD_DRINK_ITEM_TYPES.has(itemType)) {
-    return !hasRequiredCustomization(item)
-  }
-  return false
-}
 
 function connectionWarning(state: ConnectionState) {
   switch (state) {

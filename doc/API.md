@@ -1,15 +1,12 @@
 # Restaurant System API (MVP)
 
-> Final productization planbook boundary (2026-08-13): the Owner closed the
-> PR #126 30-answer gate and authorized Phase A. Current API behavior remains
-> unchanged by the Planbook PR itself. Phase A0 starts by auditing the current
-> Size representation across menu APIs, Menu Management, ordering, order item
-> snapshots, revisioned catalog cache and printing renderers. If existing menu
-> option/modifier APIs can safely express `MenuItem -> SizeVariant[1..N]`, A0
-> should extend that canonical path rather than create a second size engine. If
-> A0 requires a new public DTO shape or Flyway migration, the change must be
-> documented in this API file and pass the applicable schema/governance gate
-> before runtime use.
+> Final productization Phase A0 boundary (2026-08-13): Size configuration uses
+> the existing menu option/modifier APIs rather than a second size engine.
+> `MenuItem -> SizeVariant[1..N]` is represented by `menu_item_options` rows
+> with `option_group=SIZE`, `option_type=size`, stable `option_code`, bilingual
+> names, `sort_order`, `is_active`, and `price_delta`. Default Size is derived
+> as the first active Size by catalog order. No public DTO shape or Flyway
+> migration is introduced by A0.
 
 > Production three-reliability promotion boundary (2026-08-12): exact
 > application SHA `3ec4d88a47f68e05b92d9246bfd63af2d1f297f9` is deployed to
@@ -563,6 +560,16 @@ Response behavior:
 - `parent_option_id` supports child option modeling, for example `COMBO_SIDE_REMOVE` under a specific `COMBO_SIDE`
 - Catalog option ordering is `sort_order ASC NULLS LAST, id ASC`
 - Inactive options are hidden from new ordering, but historical orders use `order_item_options` snapshots
+- `SIZE` options are the canonical dynamic Size Variant model. New owner-managed
+  Size rows must have a stable `option_code`, bilingual names, present
+  `price_delta`, active `sort_order`, no `parent_option_id`, and
+  `option_type=size`. The default selected Size is the first active Size by the
+  same catalog ordering; no separate default column exists.
+- Owner option create/update/deactivate/reorder routes enforce the Size
+  contract when `option_group=SIZE` or `option_type=size`: at least one active
+  Size remains when size config exists, Size codes are unique per item, active
+  display orders are present and unique, and changing the default selected Size
+  is done by reordering the desired active Size first.
 - 菜单主数据使用双语字段：`name_zh`, `name_en`
 - MVP API 默认返回双语字段，由前端决定中文优先与英文回退逻辑
 - `DRINK` 与 `ALCOHOL` 为 direct-serve，不进厨房

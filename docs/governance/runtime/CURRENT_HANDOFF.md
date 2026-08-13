@@ -32,6 +32,13 @@ validation is:
 FINAL_PRODUCTIZATION_PLANBOOK_MERGED_PHASE_A0_DEPLOYED_WAITING_FOR_OWNER_SIZE_RETEST
 ```
 
+Current A0 implementation candidate evidence:
+[PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](../agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).
+The audited current size model is `OPTION + MODIFIER_GROUP + PRICE_DELTA`, and
+the candidate uses the existing `menu_item_options` engine as the canonical
+`MenuItem -> SizeVariant[1..N]` representation. No schema migration or
+Production runtime action is part of the candidate.
+
 ## Current final productization roadmap audit (2026-08-12)
 
 Planning-only audit is complete for the new final productization route:

@@ -162,6 +162,101 @@ describe('ordering menu item display order', () => {
     expect(buildDefaultDraft(item).sizeId).toBe('401')
   })
 
+  it('uses active dynamic sizes only and keeps the first active size as default', () => {
+    const data = catalog()
+    data.categories[0].items = [{
+      ...data.categories[0].items[0],
+      id: 51,
+      sku: 'dynamic_size_test_noodle',
+      name_zh: '动态规格面',
+      name_en: 'Dynamic Size Noodle',
+      base_price: 10,
+      options: [
+        {
+          id: 501,
+          option_type: 'size',
+          option_code: 'size_small',
+          option_group: 'SIZE',
+          parent_option_id: null,
+          sort_order: 10,
+          name_zh: '小碗',
+          name_en: 'Small',
+          price_delta: -1,
+          is_active: true,
+        },
+        {
+          id: 502,
+          option_type: 'size',
+          option_code: 'size_regular',
+          option_group: 'SIZE',
+          parent_option_id: null,
+          sort_order: 20,
+          name_zh: '中碗',
+          name_en: 'Regular',
+          price_delta: 0,
+          is_active: true,
+        },
+        {
+          id: 503,
+          option_type: 'size',
+          option_code: 'size_large',
+          option_group: 'SIZE',
+          parent_option_id: null,
+          sort_order: 30,
+          name_zh: '大碗',
+          name_en: 'Large',
+          price_delta: 3,
+          is_active: false,
+        },
+      ],
+    }]
+
+    const item = mapCatalog(data).items[0]
+
+    expect(item.customization?.sizes?.options.map((option) => option.optionCode))
+      .toEqual(['size_small', 'size_regular'])
+    expect(buildDefaultDraft(item).sizeId).toBe('501')
+  })
+
+  it('auto-selects a single configured size and snapshots its identity', () => {
+    const data = catalog()
+    data.categories[0].items = [{
+      ...data.categories[0].items[0],
+      id: 52,
+      sku: 'single_size_test_noodle',
+      name_zh: '单规格面',
+      name_en: 'Single Size Noodle',
+      base_price: 12,
+      options: [
+        {
+          id: 521,
+          option_type: 'size',
+          option_code: 'size_regular',
+          option_group: 'SIZE',
+          parent_option_id: null,
+          sort_order: 10,
+          name_zh: '中碗',
+          name_en: 'Regular',
+          price_delta: 0,
+          is_active: true,
+        },
+      ],
+    }]
+
+    const item = mapCatalog(data).items[0]
+    const line = buildLocalLineItem(item, buildDefaultDraft(item))
+
+    expect(buildDefaultDraft(item).sizeId).toBe('521')
+    expect(line.optionSnapshots).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        optionId: '521',
+        optionCode: 'size_regular',
+        optionGroup: 'SIZE',
+        nameZh: '中碗',
+      }),
+    ]))
+  })
+
   it('keeps the mapped Chinatown Small default through the frozen submit payload', () => {
     const data = catalog()
     data.categories[0].items = [{

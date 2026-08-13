@@ -125,16 +125,17 @@ export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
           || left.id - right.id,
       )
       .map((item) => {
-        const optionsByType = item.options.reduce<Record<string, ChoiceOption[]>>((groups, option) => {
+        const activeOptions = item.options.filter((option) => option.is_active)
+        const optionsByType = activeOptions.reduce<Record<string, ChoiceOption[]>>((groups, option) => {
           const mapped = mapOption(option)
           groups[option.option_type] = [...(groups[option.option_type] ?? []), mapped]
           return groups
         }, {})
         Object.values(optionsByType).forEach((options) => options.sort(sortChoiceOptions))
-        const allOptions = item.options.map(mapOption)
+        const allOptions = activeOptions.map(mapOption)
 
       const customization =
-        item.options.length > 0
+        activeOptions.length > 0
           ? {
               combo: (() => {
                 const comboUpcharge = allOptions.find(isComboUpcharge)
