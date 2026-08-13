@@ -46,6 +46,12 @@
 > combo components for new selections. Historical drafts/submitted orders,
 > receipts, printing snapshots and reports are not repriced or reselected. See
 > [PHASE_A0_2_STORE_COMBO_CONFIGURATION_IMPLEMENTATION_EVIDENCE](docs/governance/agile/PHASE_A0_2_STORE_COMBO_CONFIGURATION_IMPLEMENTATION_EVIDENCE.md).
+> A0.2 is deployed to exact-SHA Staging
+> `90ac0cb0496161b12c47cff00573b56b4abc961c` at Flyway V12 with automated
+> validation PASS; see
+> [PHASE_A0_2_STORE_COMBO_CONFIGURATION_STAGING_EVIDENCE](docs/governance/agile/PHASE_A0_2_STORE_COMBO_CONFIGURATION_STAGING_EVIDENCE.md).
+> Production remained no-mutation. Current stop:
+> `PHASE_A0_2_STORE_COMBO_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST`.
 
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The

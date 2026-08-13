@@ -73,8 +73,15 @@ canonical content table for reviewed `COMBO_EGG` and `COMBO_SIDE` components.
 New ordering may use stable negative transport IDs in frozen snapshots, but the
 enabled/name/code state remains Store Combo Configuration. Evidence:
 [PHASE_A0_2_STORE_COMBO_CONFIGURATION_IMPLEMENTATION_EVIDENCE](../agile/PHASE_A0_2_STORE_COMBO_CONFIGURATION_IMPLEMENTATION_EVIDENCE.md).
+Runtime evidence:
+[PHASE_A0_2_STORE_COMBO_CONFIGURATION_STAGING_EVIDENCE](../agile/PHASE_A0_2_STORE_COMBO_CONFIGURATION_STAGING_EVIDENCE.md).
 
-Expected successful stop after PR merge and exact-SHA Staging validation:
+A0.2 merged through PR #134 and is deployed to exact-SHA Staging at
+`90ac0cb0496161b12c47cff00573b56b4abc961c`. Staging advanced to Flyway V12;
+automated A0.2 validation passed, including Combo API, Combo Egg/Side enablement,
+menu revision/hash, IndexedDB cache contract, draft/submitted snapshot
+preservation, disabled-component rejection, MOCK printing/kitchen routing,
+Store isolation and authorization. Current unique stop:
 
 ```text
 PHASE_A0_2_STORE_COMBO_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
@@ -97,9 +104,10 @@ A0_OWNER_UI_ACCEPTANCE = PASS_FOR_A0_1_PRICING_UX
 ```
 
 Staging now runs exact
-`ed3e4cdbf38c4d8812620baf64cd42ce3a229431`, Flyway V11, Printing
+`90ac0cb0496161b12c47cff00573b56b4abc961c`, Flyway V12, Printing
 `MOCK/true`, four enabled logical printers and three enabled assignments.
-Production continuity remained HTTP 200/200 for system/menu health.
+Production continuity remained HTTP 200/200 for system/menu health. Production
+was not deployed, restarted, migrated or reconfigured during A0.2.
 
 ## Current final productization roadmap audit (2026-08-12)
 

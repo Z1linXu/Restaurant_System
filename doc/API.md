@@ -12,7 +12,9 @@
 > configured through `store_combo_components` and the dedicated Store Combo
 > Configuration API. Combo price still comes from
 > `store_pricing_policies.combo_delta`; item Combo allowed still comes from the
-> existing item-scoped `COMBO` option row.
+> existing item-scoped `COMBO` option row. Exact-SHA Staging deployment
+> `90ac0cb0496161b12c47cff00573b56b4abc961c` applied Flyway V12 and passed
+> automated A0.2 validation; Production remained no-mutation.
 
 > Final productization Phase A0 boundary (2026-08-13): Size configuration uses
 > the existing menu option/modifier APIs rather than a second size engine.

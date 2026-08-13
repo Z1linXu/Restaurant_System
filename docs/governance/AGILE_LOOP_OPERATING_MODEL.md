@@ -22,7 +22,7 @@ runtime validation.
 The Owner field-test and bug-fix loop remains side-car unless a confirmed
 P0/P1, security/data-integrity, or architecture blocker exists.
 
-Current A0.1 refinement:
+Current A0.1 refinement result:
 
 ```text
 PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_REFINEMENT
@@ -31,16 +31,29 @@ PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_REFINEMENT
 Owner review accepted the A0 Size engine direction but rejected free-form Size
 editing. A0.1 requires system-controlled Small/Regular/Large and Store-level
 Size/Combo pricing policy as the canonical pricing source. Fresh schema audit
-found no Store-level pricing policy/settings table, so this is a TRUE OWNER
-schema gate. Stop:
+found no Store-level pricing policy/settings table, so it correctly stopped at
+a TRUE OWNER schema gate:
 
 ```text
 PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_WAITING_FOR_OWNER_APPROVAL
 ```
 
-Do not add the Flyway migration, implement the new pricing APIs/UI, deploy
-Staging, or touch Production until the Owner approves
-`PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_APPROVAL`.
+The Owner approved `PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_APPROVAL`; A0.1 is
+implemented, merged, deployed to exact-SHA Staging at
+`ed3e4cdbf38c4d8812620baf64cd42ce3a229431`, validated at Flyway V11, and
+accepted by Owner manual UX retest. Production remained no-mutation.
+
+Current A0.2 Store Combo status:
+
+```text
+PHASE_A0_2_STORE_COMBO_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
+A0.2 merged through PR #134, deployed exact-SHA
+`90ac0cb0496161b12c47cff00573b56b4abc961c` to Staging, advanced Staging to
+Flyway V12, and passed automated validation. Production remained no-mutation.
+Docs-only evidence synchronization after deployment does not authorize or
+require a mechanical Staging redeploy.
 
 ## Current final productization route (2026-08-12)
 

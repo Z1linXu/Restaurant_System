@@ -268,22 +268,22 @@ existing registry and Chinatown profile beans. No runtime behavior changed.
 
 ## Runtime status
 
-At implementation-evidence creation time:
+Implementation then proceeded through Agent 6, PR #134, auto-merge, exact-SHA
+Staging deployment and automated runtime validation. Runtime evidence:
+[PHASE_A0_2_STORE_COMBO_CONFIGURATION_STAGING_EVIDENCE](PHASE_A0_2_STORE_COMBO_CONFIGURATION_STAGING_EVIDENCE.md).
 
 ```text
-AGENT_6_REVIEW = PENDING_UNAVAILABLE_IN_CURRENT_CODEX_SESSION
-PR = PENDING
-STAGING_DEPLOY = PENDING
-STAGING_FLYWAY = PENDING_V12
+AGENT_6_REVIEW = ACCEPT
+PR = #134 MERGED
+MERGE_SHA = 90ac0cb0496161b12c47cff00573b56b4abc961c
+STAGING_DEPLOY = DEPLOYED_EXACT_SHA
+STAGING_SHA = 90ac0cb0496161b12c47cff00573b56b4abc961c
+STAGING_FLYWAY = V12
+STAGING_AUTOMATED_VALIDATION = PASS
 PRODUCTION = NO_MUTATION
 ```
 
-Agent 6 review was requested multiple times in this Codex session, including
-full-context, focused and static-only read-only review requests. No Agent 6
-verdict returned within the bounded wait windows, so the package did not
-proceed to PR, auto-merge or Staging deployment in this session.
-
-Expected successful stop after PR merge and exact-SHA Staging validation:
+Current stop after PR merge and exact-SHA Staging validation:
 
 ```text
 PHASE_A0_2_STORE_COMBO_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST

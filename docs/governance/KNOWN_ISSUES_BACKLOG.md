@@ -22,7 +22,11 @@ configuration. This is not an incident and not a Production action. It must
 preserve A0.1 Pricing Rules as the Combo price source, keep item
 `COMBO_ALLOWED` in `menu_item_options`, and may add only bounded additive
 schema through `store_combo_components` for Store-scoped `COMBO_EGG` /
-`COMBO_SIDE` content configuration.
+`COMBO_SIDE` content configuration. It merged through PR #134, deployed to
+exact-SHA Staging `90ac0cb0496161b12c47cff00573b56b4abc961c` at Flyway V12,
+passed automated A0.2 validation, and now waits for Owner manual Staging retest
+at
+`PHASE_A0_2_STORE_COMBO_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST`.
 
 Current final productization route (2026-08-12): open field-test follow-up work
 continues through the Owner field-test and bug-fix loop, but the loop is now a
