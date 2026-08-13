@@ -54,11 +54,21 @@ Runtime Staging evidence:
 
 A0.2 merged through PR #134 and is deployed to exact-SHA Staging at
 `90ac0cb0496161b12c47cff00573b56b4abc961c` with Flyway V12 and automated
-validation PASS. Current stop:
+validation PASS. Owner manual Staging retest is accepted:
+
+```text
+OWNER_A0_2_MANUAL_STAGING_RETEST = PASS
+```
+
+Historical A0.2 closure:
 
 ```text
 PHASE_A0_2_STORE_COMBO_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
 ```
+
+Current authorized execution advances continuously through A1 Module Catalog,
+A2 Module Dependency Graph and A3 Store-level Module Configuration, then stops
+before A4.
 
 Phase A0 deployed evidence is tracked in
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).

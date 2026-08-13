@@ -50,8 +50,12 @@
 > `90ac0cb0496161b12c47cff00573b56b4abc961c` at Flyway V12 with automated
 > validation PASS; see
 > [PHASE_A0_2_STORE_COMBO_CONFIGURATION_STAGING_EVIDENCE](docs/governance/agile/PHASE_A0_2_STORE_COMBO_CONFIGURATION_STAGING_EVIDENCE.md).
-> Production remained no-mutation. Current stop:
+> Production remained no-mutation. Owner manual Staging retest is accepted:
+> `OWNER_A0_2_MANUAL_STAGING_RETEST = PASS`. Historical A0.2 closure:
 > `PHASE_A0_2_STORE_COMBO_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST`.
+> Current Phase A authority continues through A1 Module Catalog, A2 Module
+> Dependency Graph and A3 Store-level Module Configuration, then stops before
+> A4.
 
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The

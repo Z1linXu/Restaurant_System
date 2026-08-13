@@ -100,10 +100,24 @@ A0.2 has been merged through PR #134 and deployed to exact-SHA Staging at
 `90ac0cb0496161b12c47cff00573b56b4abc961c`. Staging advanced from Flyway V11
 to V12; automated Store Combo validation, MOCK printing/kitchen smoke,
 health/readiness, Store isolation and Production read-only continuity passed.
-The current unique stop is:
+The Owner completed manual Staging retest:
+
+```text
+OWNER_A0_2_MANUAL_STAGING_RETEST = PASS
+```
+
+Historical A0.2 closure:
 
 ```text
 PHASE_A0_2_STORE_COMBO_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
+Current authorized continuous execution now advances to:
+
+```text
+PHASE_A1_MODULE_CATALOG
+→ PHASE_A2_MODULE_DEPENDENCY_GRAPH
+→ PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION
 ```
 
 Phase A0 deployed evidence:
@@ -124,10 +138,12 @@ A0_OWNER_UI_ACCEPTANCE = PASS_FOR_A0_1_PRICING_UX
 
 Staging now runs exact
 `90ac0cb0496161b12c47cff00573b56b4abc961c`, Flyway V12, Printing
-`MOCK/true`, four enabled logical printers and three enabled assignments. The
-Owner manual A0.2 Staging retest remains pending. Do not start A1, Phase B,
-Phase C, Chinatown, Sainte-Catherine or Production deploy from this state
-without a fresh Owner decision.
+`MOCK/true`, four enabled logical printers and three enabled assignments. A1,
+A2 and A3 are authorized as one continuous Phase A execution chain; do not stop
+between A1/A2/A3 for ordinary completion, Agent 6 ACCEPT, PR merge, governance
+sync or automated PASS. Do not start A4, Phase B, Phase C, Chinatown,
+Sainte-Catherine or Production deploy from this state without a fresh Owner
+decision.
 
 ## Current final productization roadmap audit (2026-08-12)
 

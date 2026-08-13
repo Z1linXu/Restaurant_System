@@ -126,8 +126,13 @@ PROHIBITED_DATA = NOT_READ_OR_COPIED
 
 ## Owner retest gate
 
-Automated validation is complete. The next Owner action is manual Staging
-retest for:
+Automated validation is complete. The Owner completed manual Staging retest:
+
+```text
+OWNER_A0_2_MANUAL_STAGING_RETEST = PASS
+```
+
+Accepted manual coverage included:
 
 - Store Combo Configuration UI.
 - Tea Egg and Fried Egg enable/disable behavior.
@@ -137,7 +142,7 @@ retest for:
 - GRAB, Frontdesk Receipt and Hot Kitchen ticket readability.
 - Store isolation expectations from the Owner workflow.
 
-Unique stop:
+Historical A0.2 closure:
 
 ```text
 PHASE_A0_2_STORE_COMBO_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
