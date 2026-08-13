@@ -93,6 +93,13 @@
 > still uses legacy environment flags and Store runtime fields until A6/A7; A3
 > does not rewrite backend/frontend gating, create profiles, touch Production,
 > or start Phase B/C.
+> A3 runtime deployment of
+> `1643ca071199c49b5d4404feac6ba367a3143a81` applied Flyway V13 but exposed a
+> bounded Spring constructor injection bug in `StoreModuleServiceImpl`: the
+> production constructor needed explicit `@Autowired` because the class also
+> retains a package-private test constructor. The repair is application-only,
+> keeps the V13 schema, adds constructor-injection regression coverage, and does
+> not change Store module semantics or Production.
 
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The
