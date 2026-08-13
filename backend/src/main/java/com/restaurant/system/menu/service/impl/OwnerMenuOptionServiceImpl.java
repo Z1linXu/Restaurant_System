@@ -11,9 +11,12 @@ import com.restaurant.system.menu.repository.MenuItemRepository;
 import com.restaurant.system.menu.service.OwnerMenuOptionService;
 import com.restaurant.system.menu.service.MenuRevisionService;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -23,8 +26,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
 
+    public static final String GROUP_SIZE = "SIZE";
     public static final String GROUP_COMBO_SIDE = "COMBO_SIDE";
     public static final String GROUP_COMBO_SIDE_REMOVE = "COMBO_SIDE_REMOVE";
+    private static final String OPTION_TYPE_SIZE = "size";
 
     private final MenuItemRepository menuItemRepository;
     private final MenuItemOptionRepository menuItemOptionRepository;
@@ -52,9 +57,11 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
     @Transactional
     public MenuItemOptionAdminResponse createOption(Long itemId, MenuItemOptionUpsertRequest request) {
         MenuItem menuItem = loadMenuItem(itemId);
+        List<MenuItemOption> existingOptions = menuItemOptionRepository.findAllByMenuItemIdOrdered(itemId);
         MenuItemOption option = new MenuItemOption();
         option.menu_item_id = itemId;
         applyRequest(option, request, true);
+        validateSizeConfiguration(withCandidate(existingOptions, option));
         MenuItemOption saved = menuItemOptionRepository.save(option);
         menuRevisionService.incrementRevision(menuItem.store_id);
         return toResponse(saved);
@@ -64,8 +71,10 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
     @Transactional
     public MenuItemOptionAdminResponse updateOption(Long itemId, Long optionId, MenuItemOptionUpsertRequest request) {
         MenuItem menuItem = loadMenuItem(itemId);
-        MenuItemOption option = loadOption(itemId, optionId);
+        List<MenuItemOption> existingOptions = menuItemOptionRepository.findAllByMenuItemIdOrdered(itemId);
+        MenuItemOption option = loadOptionFromList(itemId, optionId, existingOptions);
         applyRequest(option, request, false);
+        validateSizeConfiguration(existingOptions);
         MenuItemOption saved = menuItemOptionRepository.save(option);
         menuRevisionService.incrementRevision(menuItem.store_id);
         return toResponse(saved);
@@ -75,9 +84,11 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
     @Transactional
     public MenuItemOptionAdminResponse deactivateOption(Long itemId, Long optionId) {
         MenuItem menuItem = loadMenuItem(itemId);
-        MenuItemOption option = loadOption(itemId, optionId);
+        List<MenuItemOption> existingOptions = menuItemOptionRepository.findAllByMenuItemIdOrdered(itemId);
+        MenuItemOption option = loadOptionFromList(itemId, optionId, existingOptions);
         option.is_active = false;
         option.updated_at = LocalDateTime.now();
+        validateSizeConfiguration(existingOptions);
         MenuItemOption saved = menuItemOptionRepository.save(option);
         menuRevisionService.incrementRevision(menuItem.store_id);
         return toResponse(saved);
@@ -103,8 +114,9 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
             }
             option.sort_order = optionOrder.sort_order;
             option.updated_at = now;
-            menuItemOptionRepository.save(option);
         }
+        validateSizeConfiguration(new ArrayList<>(optionsById.values()));
+        optionsById.values().forEach(menuItemOptionRepository::save);
         menuRevisionService.incrementRevision(menuItem.store_id);
         return getOptions(itemId);
     }
@@ -118,9 +130,13 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
         }
         String optionGroup = normalizeGroup(request.option_group);
         Long parentOptionId = request.parent_option_id;
+        String optionType = normalizeOptionType(request.option_type, optionGroup);
+        if (isSizeSemantic(optionGroup, optionType) && parentOptionId != null) {
+            throw new BusinessException("SIZE options cannot have a parent option");
+        }
         validateParent(option.menu_item_id, option.id, optionGroup, parentOptionId);
 
-        option.option_type = normalizeOptionType(request.option_type, optionGroup);
+        option.option_type = optionType;
         option.option_code = blankToNull(request.option_code);
         option.option_group = optionGroup;
         option.parent_option_id = parentOptionId;
@@ -185,14 +201,13 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
     }
 
     private String normalizeOptionType(String optionType, String optionGroup) {
-        if (optionType != null && !optionType.isBlank()) {
-            return optionType.trim().toLowerCase();
-        }
         if (optionGroup == null || optionGroup.isBlank()) {
-            return "addon";
+            return optionType != null && !optionType.isBlank()
+                ? optionType.trim().toLowerCase(Locale.ROOT)
+                : "addon";
         }
         return switch (optionGroup) {
-            case "SIZE" -> "size";
+            case GROUP_SIZE -> OPTION_TYPE_SIZE;
             case "SOUP_BASE" -> "soup_base";
             case "NOODLE_TYPE" -> "noodle_type";
             case "SPICY_LEVEL" -> "spicy_level";
@@ -206,6 +221,81 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
             return null;
         }
         return optionGroup.trim().toUpperCase();
+    }
+
+    private List<MenuItemOption> withCandidate(List<MenuItemOption> existingOptions, MenuItemOption candidate) {
+        List<MenuItemOption> result = new ArrayList<>(existingOptions);
+        result.removeIf(option -> candidate.id != null && Objects.equals(option.id, candidate.id));
+        result.add(candidate);
+        return result;
+    }
+
+    private MenuItemOption loadOptionFromList(Long itemId, Long optionId, List<MenuItemOption> options) {
+        if (optionId == null) {
+            throw new BusinessException("Option id is required");
+        }
+        return options.stream()
+            .filter(option -> optionId.equals(option.id))
+            .findFirst()
+            .orElseThrow(() -> new BusinessException("Menu item option does not belong to item " + itemId));
+    }
+
+    private void validateSizeConfiguration(List<MenuItemOption> candidateOptions) {
+        List<MenuItemOption> sizeOptions = candidateOptions.stream()
+            .filter(this::isSizeOption)
+            .toList();
+        if (sizeOptions.isEmpty()) {
+            return;
+        }
+
+        long activeSizeCount = sizeOptions.stream()
+            .filter(option -> Boolean.TRUE.equals(option.is_active))
+            .count();
+        if (activeSizeCount == 0) {
+            throw new BusinessException("At least one active SIZE option is required when an item has size configuration");
+        }
+
+        Set<String> optionCodes = new HashSet<>();
+        Set<Integer> activeDisplayOrders = new HashSet<>();
+        for (MenuItemOption option : sizeOptions) {
+            String optionCode = blankToNull(option.option_code);
+            if (optionCode == null) {
+                throw new BusinessException("SIZE option code is required");
+            }
+            if (!optionCodes.add(optionCode.toLowerCase(Locale.ROOT))) {
+                throw new BusinessException("SIZE option code must be unique per menu item: " + optionCode);
+            }
+            if (blankToNull(option.name_zh) == null || blankToNull(option.name_en) == null) {
+                throw new BusinessException("SIZE options require bilingual labels");
+            }
+            if (option.price_delta == null) {
+                throw new BusinessException("SIZE option price delta is required");
+            }
+            if (option.parent_option_id != null) {
+                throw new BusinessException("SIZE options cannot have a parent option");
+            }
+            if (Boolean.TRUE.equals(option.is_active)) {
+                if (option.sort_order == null) {
+                    throw new BusinessException("Active SIZE option display order is required");
+                }
+                if (!activeDisplayOrders.add(option.sort_order)) {
+                    throw new BusinessException("Active SIZE option display order must be unique");
+                }
+            }
+        }
+    }
+
+    private boolean isSizeOption(MenuItemOption option) {
+        return isSizeSemantic(option.option_group, option.option_type);
+    }
+
+    private boolean isSizeSemantic(String optionGroup, String optionType) {
+        return GROUP_SIZE.equals(normalizeGroup(optionGroup))
+            || OPTION_TYPE_SIZE.equals(normalizeOptionTypeValue(optionType));
+    }
+
+    private String normalizeOptionTypeValue(String optionType) {
+        return optionType == null ? null : optionType.trim().toLowerCase(Locale.ROOT);
     }
 
     private String blankToNull(String value) {

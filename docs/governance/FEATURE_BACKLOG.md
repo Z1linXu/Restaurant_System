@@ -24,6 +24,12 @@ Current expected A0 stop:
 FINAL_PRODUCTIZATION_PLANBOOK_MERGED_PHASE_A0_DEPLOYED_WAITING_FOR_OWNER_SIZE_RETEST
 ```
 
+Phase A0 evidence is tracked in
+[PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).
+Current candidate conclusion: existing menu option/modifier data safely models
+dynamic Size variants, so no Flyway migration is required for A0. Owner UI
+acceptance remains pending until exact-SHA Staging validation and Owner retest.
+
 ## Current final productization roadmap (2026-08-12)
 
 The final productization route is now planned as a strict three-phase program:

@@ -14,6 +14,14 @@ function normalizeStableCode(value?: string | null) {
   return (value ?? '').trim().toUpperCase()
 }
 
+function formatPriceDelta(priceDelta?: number) {
+  if (!priceDelta) {
+    return ''
+  }
+  const prefix = priceDelta > 0 ? '+' : '-'
+  return ` (${prefix}$${Math.abs(priceDelta).toFixed(2)})`
+}
+
 function isNoodleMenuItem(item: MenuItem) {
   const categoryCode = normalizeStableCode(item.categoryCode)
   if (NOODLE_CATEGORY_CODES.has(categoryCode)) {
@@ -344,18 +352,29 @@ export function ItemCustomizationModal({
                     </span>
                   ) : null}
                 </div>
-                <div className={`grid md:grid-cols-2 ${compact ? 'gap-3' : 'gap-4'}`}>
-                  {customization.sizes.options.map((option) => (
-                    <ChoiceButton
-                      key={option.id}
-                      active={draft.sizeId === option.id}
-                      label={`${option.labelEn}${option.priceDelta ? ` (+$${option.priceDelta.toFixed(2)})` : ''}`}
-                      sublabel={`${option.labelZh}${option.priceDelta ? ` (+$${option.priceDelta.toFixed(2)})` : ''}`}
-                      compact={compact}
-                      onClick={() => onChange({ ...draft, sizeId: option.id })}
-                    />
-                  ))}
-                </div>
+                {customization.sizes.options.length === 1 ? (
+                  <div className={`rounded-[18px] bg-[rgba(26,28,25,0.04)] text-[var(--on-surface)] ${compact ? 'px-4 py-3' : 'px-5 py-4'}`}>
+                    <div className={`${compact ? 'text-[0.95rem]' : 'text-[1.05rem]'} font-bold`}>
+                      Auto-selected: {customization.sizes.options[0].labelEn}{formatPriceDelta(customization.sizes.options[0].priceDelta)}
+                    </div>
+                    <div className={`${compact ? 'mt-0.5 text-[0.78rem]' : 'mt-1 text-sm'} text-[var(--muted)]`}>
+                      自动选择：{customization.sizes.options[0].labelZh}{formatPriceDelta(customization.sizes.options[0].priceDelta)}
+                    </div>
+                  </div>
+                ) : (
+                  <div className={`grid md:grid-cols-2 ${compact ? 'gap-3' : 'gap-4'}`}>
+                    {customization.sizes.options.map((option) => (
+                      <ChoiceButton
+                        key={option.id}
+                        active={draft.sizeId === option.id}
+                        label={`${option.labelEn}${formatPriceDelta(option.priceDelta)}`}
+                        sublabel={`${option.labelZh}${formatPriceDelta(option.priceDelta)}`}
+                        compact={compact}
+                        onClick={() => onChange({ ...draft, sizeId: option.id })}
+                      />
+                    ))}
+                  </div>
+                )}
               </section>
             ) : null}
 

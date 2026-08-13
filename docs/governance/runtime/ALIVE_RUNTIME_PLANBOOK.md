@@ -46,6 +46,13 @@ validation:
 FINAL_PRODUCTIZATION_PLANBOOK_MERGED_PHASE_A0_DEPLOYED_WAITING_FOR_OWNER_SIZE_RETEST
 ```
 
+Phase A0 implementation candidate evidence:
+[PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](../agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).
+The candidate preserves the existing Menu Engine path:
+`menu_item_options(option_group=SIZE, option_type=size, price_delta, sort_order)`.
+No Flyway migration, Production action, Phase B work, Phase C work, Chinatown
+runtime creation or Store provisioning is authorized or performed by A0.
+
 ## Current final productization roadmap audit (2026-08-12)
 
 The Owner opened a planning-only final productization route after the three

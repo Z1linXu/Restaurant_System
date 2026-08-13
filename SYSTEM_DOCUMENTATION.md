@@ -6492,7 +6492,40 @@ Owner menu option management uses store-scoped Admin APIs instead of the broad P
 
 Delete is a soft delete: it sets `is_active=false` and does not physically remove the row. The backend validates that the current user can administer the item's store, options belong to the same menu item, parent options belong to the same menu item, parent options do not point to themselves or form cycles, and `COMBO_SIDE_REMOVE` parents are `COMBO_SIDE`.
 
-The Owner Menu Management UI currently exposes a simplified operations panel for day-to-day maintenance. The panel intentionally shows only `Add-on` and `Remove` groups, with create, edit, deactivate/reactivate, and Up/Down sorting controls. Advanced groups such as `SIZE`, `SOUP_BASE`, `NOODLE_TYPE`, `SPICY_LEVEL`, `COMBO`, `COMBO_EGG`, `COMBO_SIDE`, and `COMBO_SIDE_REMOVE` remain supported by the API/catalog data model for ordering and combo behavior, but they are not shown in this simplified owner panel yet. Inactive options remain visible in Admin for recovery, while `/frontdesk/menu` only receives active options.
+Phase A0 promotes `SIZE` from hidden catalog metadata to owner-manageable menu
+master data. The Owner Menu Management option panel now shows `Size / 规格`,
+`Noodle Type`, `Remove`, and `Add-on`. The `SIZE`, `REMOVE`, and `ADD_ON`
+groups are editable; `NOODLE_TYPE` remains display/default-order oriented.
+For Size options the panel supports create, edit bilingual labels, edit price
+delta, deactivate/reactivate, Up/Down display ordering, and one-touch `设为默认`
+through the existing option reorder API. The default Size is not a separate
+database field: it is derived deterministically as the first active `SIZE`
+option ordered by `sort_order ASC NULLS LAST, id ASC`.
+
+The canonical product model is `MenuItem -> SizeVariant[1..N]` implemented
+through the existing `menu_item_options` engine:
+
+- `option_group = SIZE`
+- `option_type = size`
+- `option_code` is the stable Size code/key
+- `name_zh` and `name_en` are bilingual labels
+- `sort_order` is the display order and default-selection order
+- `is_active` controls whether the Size is orderable
+- `price_delta` is added to `menu_items.base_price`
+
+Backend owner option writes validate that an item with Size config keeps at
+least one active Size, Size codes are unique per item, labels are bilingual,
+price deltas are present, active display orders are present and unique, and
+Size options do not have parent options. Inactive options remain visible in
+Admin for recovery, while `/frontdesk/menu` receives active options only; the
+frontend also filters inactive options defensively before building the ordering
+catalog.
+
+Ordering auto-selects the first active Size. If an item has only one configured
+Size, the modal shows it as read-only/auto-selected instead of rendering a
+meaningless choice grid. The selected Size remains part of the order item
+option snapshot, frozen submit payload, order history, GRAB/frontdesk receipt
+and kitchen printing paths.
 
 Owner menu option APIs use the `admin:menu_manage` capability instead of the broader `admin:store_config` capability. All calls remain store-scoped and still verify that the menu item and option belong to the current store. Menu item create/update endpoints accept `admin:menu_manage` as well as the older `admin:store_config` capability for backward compatibility.
 
