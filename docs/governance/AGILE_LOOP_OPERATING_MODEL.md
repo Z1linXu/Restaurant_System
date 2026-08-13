@@ -1,5 +1,27 @@
 # Agile Loop Operating Model
 
+## Current final productization execution route (2026-08-13)
+
+The Owner closed the final productization 30-answer gate and authorized
+`FINAL_PRODUCTIZATION_PLANBOOK` plus `BEGIN_PHASE_A_MODULAR_PRODUCTIZATION`.
+The canonical authority is
+[FINAL_PRODUCTIZATION_PLANBOOK](agile/FINAL_PRODUCTIZATION_PLANBOOK.md).
+
+Phase A is now the current productization route. Its first executable loop is:
+
+```text
+PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION
+```
+
+The current route continues A0-A10 without ordinary stop-and-wait behavior when
+the next loop remains within Phase A and no TRUE OWNER GATE is hit. Phase B and
+Phase C remain separately gated. Production remains no-mutation; Staging
+deployment is allowed only when the selected Phase A loop explicitly requires
+runtime validation.
+
+The Owner field-test and bug-fix loop remains side-car unless a confirmed
+P0/P1, security/data-integrity, or architecture blocker exists.
+
 ## Current final productization route (2026-08-12)
 
 The active planning route is a three-phase productization program:

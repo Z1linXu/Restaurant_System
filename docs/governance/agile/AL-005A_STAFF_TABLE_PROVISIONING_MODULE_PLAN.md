@@ -1,5 +1,11 @@
 # AL-005A Staff and Table Provisioning Module Plan
 
+> Final route update (2026-08-13): preserved as historical module-planning
+> evidence and `SUPERSEDED_BY_FINAL_PRODUCTIZATION_PLAN` for active sequencing.
+> Staff/access and table requirements now flow through Phase A module/profile
+> contracts before Phase B Owner provisioning. See
+> [FINAL_PRODUCTIZATION_PLANBOOK](FINAL_PRODUCTIZATION_PLANBOOK.md).
+
 > Status: `IN_MAIN` via PR #65 merge
 > `8f58bcbfca253c1598b967f4d17c04c0be1cce5b`
 >

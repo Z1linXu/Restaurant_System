@@ -1,5 +1,11 @@
 # Known Issues Backlog
 
+Current final productization update (2026-08-13): the Owner closed the 30-answer
+gate and authorized [FINAL_PRODUCTIZATION_PLANBOOK](agile/FINAL_PRODUCTIZATION_PLANBOOK.md)
+plus Phase A. The field-test/bug-fix loop remains side-car unless a confirmed
+P0/P1, security/data-integrity, or architecture blocker exists. No active P0/P1
+issue in this backlog blocks starting `PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION`.
+
 Current final productization route (2026-08-12): open field-test follow-up work
 continues through the Owner field-test and bug-fix loop, but the loop is now a
 side-car to product development unless a confirmed P0/P1 blocker exists. The

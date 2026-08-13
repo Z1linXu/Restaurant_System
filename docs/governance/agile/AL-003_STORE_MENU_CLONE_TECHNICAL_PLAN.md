@@ -1,5 +1,13 @@
 # AL-003 Store 1 -> Chinatown Live Menu Clone Technical Plan
 
+> Final route update (2026-08-13):
+> `SUPERSEDED_BY_FINAL_PRODUCTIZATION_PLAN` for current sequencing. The generic
+> menu clone capability and historical Chinatown menu evidence remain preserved,
+> but Chinatown execution is Phase C only and must run through accepted Phase B
+> provisioning. Phase A starts with A0 Dynamic Item Size and must avoid
+> Chinatown runtime creation. See
+> [FINAL_PRODUCTIZATION_PLANBOOK](FINAL_PRODUCTIZATION_PLANBOOK.md).
+
 > Status: `IN_MAIN_DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY`; `STG-008=PASS`
 >
 > Exact Staging `1a3f2e...` passed the repaired API and real-Chrome

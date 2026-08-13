@@ -1,5 +1,16 @@
 # Restaurant System API (MVP)
 
+> Final productization planbook boundary (2026-08-13): the Owner closed the
+> PR #126 30-answer gate and authorized Phase A. Current API behavior remains
+> unchanged by the Planbook PR itself. Phase A0 starts by auditing the current
+> Size representation across menu APIs, Menu Management, ordering, order item
+> snapshots, revisioned catalog cache and printing renderers. If existing menu
+> option/modifier APIs can safely express `MenuItem -> SizeVariant[1..N]`, A0
+> should extend that canonical path rather than create a second size engine. If
+> A0 requires a new public DTO shape or Flyway migration, the change must be
+> documented in this API file and pass the applicable schema/governance gate
+> before runtime use.
+
 > Production three-reliability promotion boundary (2026-08-12): exact
 > application SHA `3ec4d88a47f68e05b92d9246bfd63af2d1f297f9` is deployed to
 > Production. No public endpoint or DTO changed in this promotion. PAD_DIRECT,

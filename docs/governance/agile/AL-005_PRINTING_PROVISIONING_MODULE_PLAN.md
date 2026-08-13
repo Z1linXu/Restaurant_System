@@ -1,5 +1,11 @@
 # AL-005 Printing Provisioning Module Plan
 
+> Final route update (2026-08-13): preserved as historical module-planning
+> evidence and `SUPERSEDED_BY_FINAL_PRODUCTIZATION_PLAN` for active sequencing.
+> Phase A now defines the Printing module and hardware capability contract;
+> Phase B/C handle logical provisioning and physical runtime readiness. See
+> [FINAL_PRODUCTIZATION_PLANBOOK](FINAL_PRODUCTIZATION_PLANBOOK.md).
+
 > Operational field-test note (2026-08-11): this historical provisioning plan
 > still authorizes no profile-selected active mode. Separately, the Owner has
 > approved bounded MOCK execution in the existing St-Denis Staging Twin. The
