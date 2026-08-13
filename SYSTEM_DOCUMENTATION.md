@@ -4,12 +4,12 @@
 > 30-answer gate and authorized Final Productization Planbook plus Phase A.
 > The active authority is
 > [FINAL_PRODUCTIZATION_PLANBOOK](docs/governance/agile/FINAL_PRODUCTIZATION_PLANBOOK.md).
-> The product rule remains `BUILD ONCE, CONFIGURE MANY`. Phase A starts with
-> `PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION`; Phase B Owner New Store
-> Provisioning and Phase C real Chinatown/Sainte-Catherine creation are not
-> authorized yet. Production remains no-mutation. A0 may deploy only to Staging
-> after tests, Agent 6, governance sync, PR and merge, and Owner UI acceptance
-> remains `PENDING` until the Owner retests the Staging UX.
+> The product rule remains `BUILD ONCE, CONFIGURE MANY`.
+> `PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION` is deployed to Staging and
+> automated validation passed. Phase B Owner New Store Provisioning and Phase C
+> real Chinatown/Sainte-Catherine creation are not authorized yet. Production
+> remains no-mutation. A0 Owner UI acceptance remains `PENDING` until the Owner
+> retests the Staging UX.
 
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The
