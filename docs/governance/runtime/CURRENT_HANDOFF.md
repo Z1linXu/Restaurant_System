@@ -21,7 +21,7 @@ PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION
 ```
 
 Phase A is authorized; Phase B/C are not. Production remains no-mutation. A0
-may use repository changes, tests, Agent 6, PR/auto-merge, exact-SHA Staging
+used repository changes, tests, Agent 6, PR/auto-merge, exact-SHA Staging
 deployment and automated validation. Do not mark A0 Owner UI acceptance PASS
 until the Owner actually retests the Staging UX.
 
@@ -32,12 +32,26 @@ validation is:
 FINAL_PRODUCTIZATION_PLANBOOK_MERGED_PHASE_A0_DEPLOYED_WAITING_FOR_OWNER_SIZE_RETEST
 ```
 
-Current A0 implementation candidate evidence:
+Current A0 deployed evidence:
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](../agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).
 The audited current size model is `OPTION + MODIFIER_GROUP + PRICE_DELTA`, and
-the candidate uses the existing `menu_item_options` engine as the canonical
+the deployed implementation uses the existing `menu_item_options` engine as the canonical
 `MenuItem -> SizeVariant[1..N]` representation. No schema migration or
-Production runtime action is part of the candidate.
+Production runtime action occurred.
+
+Current A0 result:
+
+```text
+A0_CODE = COMPLETE
+A0_STAGING_DEPLOYED = YES
+A0_AUTOMATED_VALIDATION = PASS
+A0_OWNER_UI_ACCEPTANCE = PENDING
+```
+
+Staging now runs exact
+`c83933f16f4eb1c1be33bd13772ac489d79a7176`, Flyway V10, Printing
+`MOCK/true`, four enabled logical printers and three enabled assignments.
+Production continuity remained HTTP 200/200 for system/menu health.
 
 ## Current final productization roadmap audit (2026-08-12)
 

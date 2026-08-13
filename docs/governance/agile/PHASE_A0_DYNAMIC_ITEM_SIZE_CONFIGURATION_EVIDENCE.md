@@ -1,8 +1,9 @@
 # Phase A0 Dynamic Item Size Configuration Evidence
 
-Status: `IMPLEMENTATION_CANDIDATE`
+Status: `DEPLOYED_TO_STAGING_AUTOMATED_VALIDATION_PASS_WAITING_FOR_OWNER_SIZE_RETEST`
 
 Base `origin/main`: `447d581b430aae7ec8c12f94dc8a95ffb714b9bc`
+Merged `origin/main`: `c83933f16f4eb1c1be33bd13772ac489d79a7176`
 
 Scope:
 
@@ -106,12 +107,70 @@ outside the A0 changed-file set; the A0 touched files pass targeted eslint.
 
 ## Boundaries retained
 
-- Production was not read, written, deployed, restarted, migrated or configured.
+- Production was not written, deployed, restarted, migrated or configured; only
+  bounded read-only continuity health checks were observed.
 - No Flyway migration or schema operation was added.
-- No Production or Staging runtime configuration was changed by the repository
-  candidate.
+- Staging was deployed only through the exact-SHA same-host Staging release,
+  preflight and deploy gates after PR merge.
 - Phase B, Phase C, Chinatown, Sainte-Catherine, Store provisioning and
   Production promotion remain unauthorized.
+
+## Exact-SHA Staging deployment and automated validation
+
+Final Productization Planbook entered `main` through PR #127 at merge
+`447d581b430aae7ec8c12f94dc8a95ffb714b9bc`. Phase A0 entered `main` through
+PR #128 at merge `c83933f16f4eb1c1be33bd13772ac489d79a7176`.
+
+Staging was then rebound and deployed to exact
+`c83933f16f4eb1c1be33bd13772ac489d79a7176` only. Production remained
+unchanged.
+
+Runtime evidence:
+
+| Evidence | Result |
+|---|---|
+| release/env rotation | `OPS001_RELEASE_ENV PASS`; approval SHA-256 `fc839ce7f4bc42c58688e3dce32c658d8fe36bf6498829f068d4fd6c2b1392be` |
+| preflight | `/srv/restaurant-pos/staging/evidence/phase-a0-preflight-c83933f16f4eb1c1be33bd13772ac489d79a7176.txt`; SHA-256 `f140468ca5f62f4310af3e1a86c6756ed94fbd62c422fc456db9ef73d5356d20`; `SUMMARY|PASS` |
+| deploy | `staging-deploy.sh --execute-start`; exact SHA `c83933f16f4eb1c1be33bd13772ac489d79a7176` |
+| health | Staging frontend/backend/WebSocket `200/200/200`; Production system/menu `200/200` after validation |
+| Flyway | last row `installed_rank=10`, `version=10`, `success=true`; rows `10`, failed `0` |
+| printing | Staging Store 1 retained `printing_enabled=true`, `printing_mode=MOCK`, enabled logical printers `4`, enabled assignments `3` |
+
+Automated Staging validation:
+
+- The deployed A0 contract initially exposed inactive legacy Size rows on
+  `traditional_beef_noodle` with blank `option_code` and blank
+  `option_group`. Those rows were Staging-only legacy configuration and blocked
+  the new V10 Size editor before persistence. They were normalized through the
+  existing Staging API only:
+  `/srv/restaurant-pos/staging/evidence/phase-a0-size-legacy-normalization-c83933f16f4eb1c1be33bd13772ac489d79a7176.txt`,
+  SHA-256 `f9ded6735819c8c87bbb9a5b753166ce2bb4542aa3dc5f33976fcf8c3773c6c5`.
+  The rows remained inactive; active Production-like menu visibility and
+  prices were not changed.
+- Dynamic Size smoke PASS evidence:
+  `/srv/restaurant-pos/staging/evidence/phase-a0-dynamic-size-smoke-c83933f16f4eb1c1be33bd13772ac489d79a7176-A0R372d333.txt`,
+  SHA-256 `fcb6144ed0608e87d1d48c705b628ce0da83197163adca097e26d703af946fc2`.
+- Conventional Size print smoke PASS evidence:
+  `/srv/restaurant-pos/staging/evidence/phase-a0-conventional-size-print-smoke-c83933f16f4eb1c1be33bd13772ac489d79a7176-A0Pab75f9.txt`,
+  SHA-256 `de98ecf708d90beb419283712471d9d749c8914d3601e37fe7bd8fee91ced8eb`.
+
+Validated Staging cases:
+
+| Case | Runtime result |
+|---|---|
+| Small / Regular / Large with default Regular | PASS; catalog active order `a0_regular/a0_small/a0_large` after reorder |
+| Regular / Large | PASS; catalog active order `a0_regular/a0_large` |
+| Single Size | PASS; catalog active order `a0_single` |
+| Small + Regular active, Large disabled | PASS; catalog active order `a0_small/a0_regular`; disabled Large hidden from catalog |
+| Menu Management API routes | PASS for `/admin/menu/management-context` and `/admin/platform/menu/items` |
+| revision/cache contract | PASS; every scenario observed matching revision endpoint and catalog revision/content hash |
+| order snapshot | PASS; submitted Staging order retained selected Size snapshot |
+| printing | PASS; order submit produced `GRAB` and `FRONTDESK_RECEIPT` `PRINTED`; HOT_KITCHEN module test `PRINTED`; conventional Size labels rendered on GRAB and Frontdesk |
+
+The smoke created Staging-only audit/menu-revision/order/print rows and restored
+the target item's active Size configuration to its pre-smoke normalized state.
+No credential value, token, raw environment value, printer endpoint, device
+credential, customer/PII, payment or Production business data was output.
 
 Expected post-validation stop after PR merge, exact-SHA Staging deploy and
 automated validation:

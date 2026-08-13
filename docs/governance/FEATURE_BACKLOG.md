@@ -18,17 +18,18 @@ Menu Management, Table Management, Printing, GRAB Printing, Frontdesk Receipt,
 Order History and Reporting. KDS is optional/default off. Reports are core;
 advanced Analytics may be classified separately only after architecture audit.
 
-Current expected A0 stop:
+Current A0 stop:
 
 ```text
 FINAL_PRODUCTIZATION_PLANBOOK_MERGED_PHASE_A0_DEPLOYED_WAITING_FOR_OWNER_SIZE_RETEST
 ```
 
-Phase A0 evidence is tracked in
+Phase A0 deployed evidence is tracked in
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).
-Current candidate conclusion: existing menu option/modifier data safely models
-dynamic Size variants, so no Flyway migration is required for A0. Owner UI
-acceptance remains pending until exact-SHA Staging validation and Owner retest.
+Current deployed conclusion: existing menu option/modifier data safely models
+dynamic Size variants, so no Flyway migration was required for A0. Code,
+Staging deploy and automated validation are complete; Owner UI acceptance
+remains pending until Owner retest.
 
 ## Current final productization roadmap (2026-08-12)
 

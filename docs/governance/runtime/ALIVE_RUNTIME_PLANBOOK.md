@@ -39,19 +39,33 @@ Store, credential, rollback, restore, or business-data action is authorized.
 Staging deployment is allowed only for the exact Phase A loop that explicitly
 requires Staging validation, starting with A0.
 
-Current planned stop after successful A0 Staging deployment and automated
-validation:
+Current A0 stop after successful Staging deployment and automated validation:
 
 ```text
 FINAL_PRODUCTIZATION_PLANBOOK_MERGED_PHASE_A0_DEPLOYED_WAITING_FOR_OWNER_SIZE_RETEST
 ```
 
-Phase A0 implementation candidate evidence:
+Phase A0 deployed evidence:
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](../agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).
-The candidate preserves the existing Menu Engine path:
+The deployed implementation preserves the existing Menu Engine path:
 `menu_item_options(option_group=SIZE, option_type=size, price_delta, sort_order)`.
 No Flyway migration, Production action, Phase B work, Phase C work, Chinatown
 runtime creation or Store provisioning is authorized or performed by A0.
+
+A0 runtime classification:
+
+```text
+A0_CODE = COMPLETE
+A0_STAGING_DEPLOYED = YES
+A0_AUTOMATED_VALIDATION = PASS
+A0_OWNER_UI_ACCEPTANCE = PENDING
+```
+
+Staging is exact
+`c83933f16f4eb1c1be33bd13772ac489d79a7176`, Flyway V10, Printing
+`MOCK/true`. The Owner's next action is manual Size UX retest only; do not
+start A1, Phase B, Phase C, Chinatown, Sainte-Catherine or Production deploy
+from this stop state without a fresh Owner decision.
 
 ## Current final productization roadmap audit (2026-08-12)
 
