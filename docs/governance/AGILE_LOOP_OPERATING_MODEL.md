@@ -22,6 +22,26 @@ runtime validation.
 The Owner field-test and bug-fix loop remains side-car unless a confirmed
 P0/P1, security/data-integrity, or architecture blocker exists.
 
+Current A0.1 refinement:
+
+```text
+PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_REFINEMENT
+```
+
+Owner review accepted the A0 Size engine direction but rejected free-form Size
+editing. A0.1 requires system-controlled Small/Regular/Large and Store-level
+Size/Combo pricing policy as the canonical pricing source. Fresh schema audit
+found no Store-level pricing policy/settings table, so this is a TRUE OWNER
+schema gate. Stop:
+
+```text
+PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_WAITING_FOR_OWNER_APPROVAL
+```
+
+Do not add the Flyway migration, implement the new pricing APIs/UI, deploy
+Staging, or touch Production until the Owner approves
+`PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_APPROVAL`.
+
 ## Current final productization route (2026-08-12)
 
 The active planning route is a three-phase productization program:

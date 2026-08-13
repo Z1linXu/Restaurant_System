@@ -211,6 +211,24 @@ Phase C is not authorized for implementation by this Planbook.
 
 ## 5. Phase A0 — Dynamic Item Size Configuration
 
+### A0.1 refinement gate
+
+Owner Staging UI review after A0 accepted the underlying
+`OPTION + MODIFIER_GROUP + PRICE_DELTA` engine but rejected free-form Size
+creation/editing as final product UX. A0.1 requires system-controlled
+Small/Regular/Large Size definitions and Store-level Size/Combo pricing policy
+as the canonical price source.
+
+Fresh schema audit found no existing Store-level pricing policy/settings table.
+A0.1 therefore stops before implementation at:
+
+```text
+PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_WAITING_FOR_OWNER_APPROVAL
+```
+
+Design/evidence:
+[PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE](PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE.md).
+
 Current implementation must be audited before changes. A0 must determine the
 actual size model:
 

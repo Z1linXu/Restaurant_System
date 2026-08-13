@@ -6,6 +6,15 @@ plus Phase A. The field-test/bug-fix loop remains side-car unless a confirmed
 P0/P1, security/data-integrity, or architecture blocker exists. No active P0/P1
 issue in this backlog blocks starting `PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION`.
 
+Current A0.1 product-rule refinement (2026-08-13): Owner review accepted the A0
+`menu_item_options` Size engine but rejected free-form Size editing. The new
+contract requires system-controlled Small/Regular/Large and Store-level
+Size/Combo pricing policy. This is not a Production incident, but fresh schema
+audit found that implementation requires a new additive Store pricing policy
+table. A0.1 is therefore blocked by a TRUE OWNER schema gate, not by a runtime
+P0/P1:
+`PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_WAITING_FOR_OWNER_APPROVAL`.
+
 Current final productization route (2026-08-12): open field-test follow-up work
 continues through the Owner field-test and bug-fix loop, but the loop is now a
 side-car to product development unless a confirmed P0/P1 blocker exists. The
