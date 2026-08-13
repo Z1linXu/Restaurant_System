@@ -29,6 +29,12 @@ with `OWNER_A0_2_MANUAL_STAGING_RETEST = PASS`. Historical A0.2 closure:
 `PHASE_A0_2_STORE_COMBO_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST`.
 Current Phase A authority continues through A1 -> A2 -> A3 and stops before A4.
 
+Current A1 Module Catalog package records the Reporting-vs-Analytics drift as a
+compatibility boundary: `REPORTING_CORE` is required for normal Stores, while
+`ANALYTICS_ADVANCED` is optional. The current `ANALYTICS` feature flag still
+covers both and is classified as an environment capability until A3/A6/A7 split
+Store module state and runtime gates.
+
 Current final productization route (2026-08-12): open field-test follow-up work
 continues through the Owner field-test and bug-fix loop, but the loop is now a
 side-car to product development unless a confirmed P0/P1 blocker exists. The

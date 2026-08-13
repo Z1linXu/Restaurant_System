@@ -70,6 +70,15 @@ Current authorized execution advances continuously through A1 Module Catalog,
 A2 Module Dependency Graph and A3 Store-level Module Configuration, then stops
 before A4.
 
+Current A1 Module Catalog package:
+
+- Technical evidence:
+  [PHASE_A1_MODULE_CATALOG](agile/PHASE_A1_MODULE_CATALOG.md)
+- Canonical machine-readable catalog:
+  `backend/src/main/resources/module/module-catalog.v1.json`
+- Static validation:
+  `backend/src/test/java/com/restaurant/system/modules/ModuleCatalogContractTest.java`
+
 Phase A0 deployed evidence is tracked in
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).
 Current deployed conclusion: existing menu option/modifier data safely models

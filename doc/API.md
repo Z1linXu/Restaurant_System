@@ -16,6 +16,15 @@
 > `90ac0cb0496161b12c47cff00573b56b4abc961c` applied Flyway V12 and passed
 > automated A0.2 validation; Production remained no-mutation.
 
+> Phase A1 Module Catalog (2026-08-13): the canonical product module catalog is
+> `backend/src/main/resources/module/module-catalog.v1.json`, with technical
+> evidence in
+> [PHASE_A1_MODULE_CATALOG](../docs/governance/agile/PHASE_A1_MODULE_CATALOG.md).
+> A1 is a contract/static-validation package only; no public API shape changes.
+> Current `/api/v1/me/workspaces` and `/api/v1/stores/{storeId}/context`
+> continue to expose workspace context but not final Store module state. A3 owns
+> the Store-level module read contract.
+
 > Final productization Phase A0 boundary (2026-08-13): Size configuration uses
 > the existing menu option/modifier APIs rather than a second size engine.
 > `MenuItem -> SizeVariant[1..N]` is represented by `menu_item_options` rows

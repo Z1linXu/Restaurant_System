@@ -551,6 +551,14 @@ PASS. The Owner now authorizes continuous A1 -> A2 -> A3 execution. Do not
 restart completed A0 inventory/design work. Do not start A4, Phase B/C,
 Chinatown, Sainte-Catherine or Production work without a fresh Owner decision.
 
+Current A1 Module Catalog evidence:
+
+```text
+docs/governance/agile/PHASE_A1_MODULE_CATALOG.md
+backend/src/main/resources/module/module-catalog.v1.json
+backend/src/test/java/com/restaurant/system/modules/ModuleCatalogContractTest.java
+```
+
 Expected successful A0 stop:
 
 ```text
