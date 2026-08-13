@@ -183,6 +183,34 @@ unknown module DB check constraint = PASS
 Agent 6 = A3_ACCEPT
 ```
 
+## Runtime DI repair
+
+The first exact-SHA Staging deployment of
+`1643ca071199c49b5d4404feac6ba367a3143a81` applied Flyway V13 successfully,
+but backend startup failed before readiness because Spring could not instantiate
+`StoreModuleServiceImpl`. Root cause: the class has both the production
+constructor and a package-private test constructor, but the production
+constructor was not explicitly annotated for Spring injection.
+
+Minimal repair:
+
+```text
+StoreModuleServiceImpl production constructor = @Autowired
+constructor-injection regression test = added
+schema/migration changes = none
+Store module semantics = unchanged
+Production mutation = none
+```
+
+Repair validation:
+
+```text
+focused backend tests = PASS
+backend full regression (mvn -q test) = PASS
+frontend build (npm run build) = PASS
+frontend tests (npm test) = PASS
+```
+
 ## Boundaries retained
 
 A3 does not implement:

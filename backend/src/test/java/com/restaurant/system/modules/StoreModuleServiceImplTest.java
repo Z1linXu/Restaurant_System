@@ -11,6 +11,7 @@ import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.modules.dto.StoreModuleUpdateRequest;
 import com.restaurant.system.user.entity.Store;
 import com.restaurant.system.user.repository.StoreRepository;
+import java.lang.reflect.Constructor;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -88,6 +90,17 @@ class StoreModuleServiceImplTest {
         assertTrue(activeNormalStoreRequired(response, "PRINTING"));
         assertFalse(activeNormalStoreRequired(response, "KDS"));
         assertEquals("A3_FOUNDATION_ONLY_LEGACY_RUNTIME_GATING_RETAINED_UNTIL_A6_A7", response.legacy_compatibility_status);
+    }
+
+    @Test
+    void productionConstructorIsExplicitlyAutowiredForSpringRuntime() throws NoSuchMethodException {
+        Constructor<StoreModuleServiceImpl> constructor = StoreModuleServiceImpl.class.getConstructor(
+            StoreRepository.class,
+            StoreModuleRepository.class,
+            StoreModuleCapabilityProvider.class
+        );
+
+        assertTrue(constructor.isAnnotationPresent(Autowired.class));
     }
 
     @Test
