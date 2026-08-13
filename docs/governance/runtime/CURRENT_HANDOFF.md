@@ -29,30 +29,31 @@ PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_REFINEMENT
 The Owner accepted the A0 data-model direction but rejected free-form Owner Size
 editing as final product UX. A0.1 must support only system-controlled
 Small/Regular/Large Size definitions and Store-level Size/Combo pricing
-policies. Fresh audit found that current schema has `menu_item_options`
-per-item deltas but no Store-level pricing policy/settings table, so A0.1 is
-stopped at the schema approval gate:
+policies. The Owner approved the additive pricing policy schema direction:
 
 ```text
-PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_WAITING_FOR_OWNER_APPROVAL
+PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_APPROVAL
 ```
 
 Evidence/design:
 [PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE](../agile/PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE.md).
-Do not implement the Flyway migration, pricing APIs, UI, Staging deploy or
-Production action until the Owner approves
-`PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_APPROVAL`.
+Implementation evidence:
+[PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_IMPLEMENTATION_EVIDENCE](../agile/PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_IMPLEMENTATION_EVIDENCE.md).
+The implementation package adds additive Flyway V11, Store-level Pricing Rules,
+system-controlled Size Configuration, item Combo allowed policy, catalog/hash/
+IndexedDB pricing policy semantics, and a Size/Combo `price_delta`
+compatibility mirror only for rollback safety. Production remains no-mutation.
 
 Phase A is authorized; Phase B/C are not. Production remains no-mutation. A0
 used repository changes, tests, Agent 6, PR/auto-merge, exact-SHA Staging
 deployment and automated validation. Do not mark A0 Owner UI acceptance PASS
 until the Owner actually retests the Staging UX.
 
-The expected stop after successful A0 code, Staging deploy and automated
-validation is:
+The expected stop after successful A0.1 PR merge, exact-SHA Staging V10->V11
+deployment and automated validation is:
 
 ```text
-FINAL_PRODUCTIZATION_PLANBOOK_MERGED_PHASE_A0_DEPLOYED_WAITING_FOR_OWNER_SIZE_RETEST
+PHASE_A0_1_STANDARD_SIZE_PRICING_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
 ```
 
 Current A0 deployed evidence:

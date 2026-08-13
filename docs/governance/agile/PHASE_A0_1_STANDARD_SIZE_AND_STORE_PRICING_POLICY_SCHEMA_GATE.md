@@ -1,6 +1,6 @@
 # Phase A0.1 Standard Size and Store Pricing Policy Schema Gate
 
-Status: `SCHEMA_CHANGE_DESIGN_COMPLETE_WAITING_FOR_OWNER_APPROVAL`
+Status: `OWNER_APPROVED_IMPLEMENTATION_PACKAGE_PREPARED`
 
 Fresh repository authority: `origin/main@85baeebdbbd1adfd4f512370a158a6ae5c8bb7bd`
 
@@ -10,11 +10,20 @@ Loop:
 PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_REFINEMENT
 ```
 
-Stop state:
+Original schema-gate stop state:
 
 ```text
 PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_WAITING_FOR_OWNER_APPROVAL
 ```
+
+Owner approval received 2026-08-13:
+
+```text
+PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_APPROVAL
+```
+
+Implementation evidence:
+[PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_IMPLEMENTATION_EVIDENCE](PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_IMPLEMENTATION_EVIDENCE.md).
 
 ## Owner product decision recorded
 
@@ -265,13 +274,32 @@ Printing/reporting:
 - no renderer reads current pricing policy at print time;
 - historical report totals unchanged after policy change.
 
-## Boundary
+## Approval/implementation update
 
-This evidence/plan introduces no backend/frontend/Android implementation,
-no Flyway migration, no runtime configuration, no Staging deploy, and no
-Production read/write/deploy/restart/Flyway/configuration action.
+After Owner approval, the implementation package adds
+`V11__add_store_pricing_policies.sql`, the pricing policy backend/API contract,
+Pricing Rules and canonical Size Configuration UI, catalog/hash/cache policy
+fields, and focused tests. The design remains additive and Store-isolated.
 
-Owner approval required to proceed:
+`menu_item_options.price_delta` for Size/Combo is retained only as a rollback
+compatibility mirror. It is not the new application source of truth. The mirror
+must be retired within Phase A after old-app rollback compatibility is no
+longer required by runtime governance.
+
+Expected post-deploy stop:
+
+```text
+PHASE_A0_1_STANDARD_SIZE_PRICING_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
+## Historical boundary before approval
+
+This design document originally introduced no backend/frontend/Android
+implementation, no Flyway migration, no runtime configuration, no Staging
+deploy, and no Production read/write/deploy/restart/Flyway/configuration
+action before Owner approval.
+
+Historical approval gate:
 
 ```text
 PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_APPROVAL

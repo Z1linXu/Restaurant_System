@@ -13,16 +13,18 @@
 
 > 2026-08-13 Phase A0.1 product-rule refinement: Owner review accepted the
 > existing `OPTION + MODIFIER_GROUP + PRICE_DELTA` Size engine but rejected
-> free-form Size creation/editing as final product UX. The next product
-> contract allows only system-controlled `SMALL/REGULAR/LARGE`
+> free-form Size creation/editing as final product UX. The Owner approved
+> `PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_APPROVAL`. The implementation adds
+> additive Flyway V11 `store_pricing_policies` as the Store-level canonical
+> Size/Combo pricing source, system-controlled `SMALL/REGULAR/LARGE`
 > (`小碗/中碗/大碗`, `Small/Regular/Large`,
-> `size_small/size_regular/size_large`) and requires Store-level Size/Combo
-> pricing policy as the canonical price source. Fresh schema audit found no
-> existing Store-level pricing policy/settings table, so implementation stops
-> before code/migration/runtime at
-> `PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_WAITING_FOR_OWNER_APPROVAL`.
-> See
-> [PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE](docs/governance/agile/PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE.md).
+> `size_small/size_regular/size_large`), Pricing Rules impact preview, item
+> Size Configuration and per-item Combo allowed policy. Size/Combo
+> `menu_item_options.price_delta` is now a rollback compatibility mirror only,
+> not the new application source of truth. See
+> [PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE](docs/governance/agile/PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE.md)
+> and
+> [PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_IMPLEMENTATION_EVIDENCE](docs/governance/agile/PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_IMPLEMENTATION_EVIDENCE.md).
 
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The
@@ -3278,10 +3280,25 @@ The schema below is based on entity classes. Exact SQL column types other than e
 - `id` BIGSERIAL
 - `menu_item_id` Long
 - `option_type` String
+- `option_code` String
+- `option_group` String
+- `parent_option_id` Long
+- `sort_order` Integer
 - `name_zh` String
 - `name_en` String
 - `price_delta` BigDecimal
 - `is_active` Boolean
+- `created_at` LocalDateTime
+- `updated_at` LocalDateTime
+
+#### store_pricing_policies
+- `id` BIGSERIAL
+- `store_id` Long, unique
+- `size_small_delta` BigDecimal
+- `size_regular_delta` BigDecimal
+- `size_large_delta` BigDecimal
+- `combo_delta` BigDecimal
+- `policy_revision` Long
 - `created_at` LocalDateTime
 - `updated_at` LocalDateTime
 
@@ -6505,40 +6522,43 @@ Owner menu option management uses store-scoped Admin APIs instead of the broad P
 
 Delete is a soft delete: it sets `is_active=false` and does not physically remove the row. The backend validates that the current user can administer the item's store, options belong to the same menu item, parent options belong to the same menu item, parent options do not point to themselves or form cycles, and `COMBO_SIDE_REMOVE` parents are `COMBO_SIDE`.
 
-Phase A0 promotes `SIZE` from hidden catalog metadata to owner-manageable menu
-master data. The Owner Menu Management option panel now shows `Size / 规格`,
-`Noodle Type`, `Remove`, and `Add-on`. The `SIZE`, `REMOVE`, and `ADD_ON`
-groups are editable; `NOODLE_TYPE` remains display/default-order oriented.
-For Size options the panel supports create, edit bilingual labels, edit price
-delta, deactivate/reactivate, Up/Down display ordering, and one-touch `设为默认`
-through the existing option reorder API. The default Size is not a separate
-database field: it is derived deterministically as the first active `SIZE`
-option ordered by `sort_order ASC NULLS LAST, id ASC`.
+Phase A0.1 makes `SIZE` system-controlled instead of a free-form Owner option.
+The Owner Menu Management option panel now shows a dedicated
+`Size Configuration / 规格` control for exactly:
+
+- `SMALL` -> `小碗 / Small` -> `size_small`
+- `REGULAR` -> `中碗 / Regular` -> `size_regular`
+- `LARGE` -> `大碗 / Large` -> `size_large`
+
+Owners choose which of those canonical Sizes an item supports and, when
+Regular is not enabled with multiple Sizes, which enabled Size is default. The
+generic option create/update/deactivate/reorder endpoints reject Size writes.
+`Noodle Type`, `Remove`, and ordinary `Add-on` remain in the option list;
+`NOODLE_TYPE` remains display/default-order oriented.
 
 The canonical product model is `MenuItem -> SizeVariant[1..N]` implemented
 through the existing `menu_item_options` engine:
 
 - `option_group = SIZE`
 - `option_type = size`
-- `option_code` is the stable Size code/key
-- `name_zh` and `name_en` are bilingual labels
+- `option_code` is one of the system Size codes
+- `name_zh` and `name_en` are system labels
 - `sort_order` is the display order and default-selection order
 - `is_active` controls whether the Size is orderable
-- `price_delta` is added to `menu_items.base_price`
+- `price_delta` is a compatibility mirror for Size rows only
 
-Backend owner option writes validate that an item with Size config keeps at
-least one active Size, Size codes are unique per item, labels are bilingual,
-price deltas are present, active display orders are present and unique, and
-Size options do not have parent options. Inactive options remain visible in
-Admin for recovery, while `/frontdesk/menu` receives active options only; the
-frontend also filters inactive options defensively before building the ordering
-catalog.
+Store-level Size/Combo pricing lives in `store_pricing_policies`. New catalog
+responses expose effective Size/Combo deltas from that table, and catalog
+content hash includes policy revision and delta fields. Policy writes, the
+Size/Combo compatibility mirror, and `stores.menu_revision` /
+`stores.menu_updated_at` are updated in the same transaction.
 
 Ordering auto-selects the first active Size. If an item has only one configured
 Size, the modal shows it as read-only/auto-selected instead of rendering a
 meaningless choice grid. The selected Size remains part of the order item
 option snapshot, frozen submit payload, order history, GRAB/frontdesk receipt
-and kitchen printing paths.
+and kitchen printing paths. Submitted/completed orders, receipts, print
+snapshots and reports are never repriced by future policy changes.
 
 Owner menu option APIs use the `admin:menu_manage` capability instead of the broader `admin:store_config` capability. All calls remain store-scoped and still verify that the menu item and option belong to the current store. Menu item create/update endpoints accept `admin:menu_manage` as well as the older `admin:store_config` capability for backward compatibility.
 

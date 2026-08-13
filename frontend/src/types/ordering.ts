@@ -143,6 +143,14 @@ export interface BackendMenuCatalog {
     label: string
     version: string
   }
+  pricing_policy?: {
+    store_id: number
+    policy_revision: number
+    size_small_delta: number
+    size_regular_delta: number
+    size_large_delta: number
+    combo_delta: number
+  }
   categories: BackendMenuCategory[]
 }
 
@@ -192,6 +200,7 @@ export interface OrderingCatalog {
   generatedAt: string
   contentHash: string
   taxPolicy: BackendMenuCatalog['tax_policy']
+  pricingPolicy?: BackendMenuCatalog['pricing_policy']
   categories: MenuCategory[]
   items: MenuItem[]
 }

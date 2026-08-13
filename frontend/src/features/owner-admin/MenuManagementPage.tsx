@@ -11,6 +11,7 @@ import {
 } from '../../services/platformAdminService'
 import { ApiRequestError } from '../../services/apiClient'
 import { MenuOptionsPanel } from './MenuOptionsPanel'
+import { PricingRulesPanel } from './PricingRulesPanel'
 import { useAuth } from '../auth/useAuth'
 import { useCurrentStore } from '../store/StoreContext'
 import {
@@ -603,6 +604,11 @@ export function MenuManagementPage() {
                 {error}
               </div>
             ) : null}
+
+            <PricingRulesPanel
+              storeId={Number(selectedStoreId)}
+              onSaved={(message) => setToast({ kind: 'success', message })}
+            />
 
             <div className="grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_420px]">
               <div className="rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">

@@ -220,14 +220,23 @@ Small/Regular/Large Size definitions and Store-level Size/Combo pricing policy
 as the canonical price source.
 
 Fresh schema audit found no existing Store-level pricing policy/settings table.
-A0.1 therefore stops before implementation at:
+The Owner approved the additive schema direction:
 
 ```text
-PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_WAITING_FOR_OWNER_APPROVAL
+PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_APPROVAL
 ```
 
 Design/evidence:
 [PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE](PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE.md).
+Implementation evidence:
+[PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_IMPLEMENTATION_EVIDENCE](PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_IMPLEMENTATION_EVIDENCE.md).
+
+Expected stop after exact-SHA Staging V10->V11 deployment and automated
+validation:
+
+```text
+PHASE_A0_1_STANDARD_SIZE_PRICING_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
 
 Current implementation must be audited before changes. A0 must determine the
 actual size model:

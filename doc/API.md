@@ -1,14 +1,12 @@
 # Restaurant System API (MVP)
 
-> Phase A0.1 schema gate (2026-08-13): Owner review rejected free-form Size
+> Phase A0.1 implementation (2026-08-13): Owner review rejected free-form Size
 > editing and selected system-controlled Small/Regular/Large plus Store-level
-> Size/Combo pricing policy. Current public APIs still expose A0's
-> `menu_item_options` option surface; no new pricing-policy endpoint or DTO is
-> implemented yet. Fresh schema audit found no Store-level pricing policy table,
-> so the planned Pricing Rules API is blocked until
-> `PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_APPROVAL`. Planned, not yet
-> implemented, endpoints are documented in
-> `docs/governance/agile/PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE.md`.
+> Size/Combo pricing policy. `store_pricing_policies` is the new application
+> canonical read/write source for Size/Combo deltas. `menu_item_options`
+> remains the per-item Size enablement/identity and ordinary option source.
+> Size/Combo `menu_item_options.price_delta` is a rollback compatibility mirror
+> only.
 
 > Final productization Phase A0 boundary (2026-08-13): Size configuration uses
 > the existing menu option/modifier APIs rather than a second size engine.
@@ -549,6 +547,13 @@ Response behavior:
   - `item_type`
   - `base_price`
   - `is_sold_out`
+- catalog payload includes `pricing_policy`:
+  - `store_id`
+  - `policy_revision`
+  - `size_small_delta`
+  - `size_regular_delta`
+  - `size_large_delta`
+  - `combo_delta`
 - option payload includes:
   - `id`
   - `option_type`
@@ -570,20 +575,99 @@ Response behavior:
 - `parent_option_id` supports child option modeling, for example `COMBO_SIDE_REMOVE` under a specific `COMBO_SIDE`
 - Catalog option ordering is `sort_order ASC NULLS LAST, id ASC`
 - Inactive options are hidden from new ordering, but historical orders use `order_item_options` snapshots
-- `SIZE` options are the canonical dynamic Size Variant model. New owner-managed
-  Size rows must have a stable `option_code`, bilingual names, present
-  `price_delta`, active `sort_order`, no `parent_option_id`, and
-  `option_type=size`. The default selected Size is the first active Size by the
-  same catalog ordering; no separate default column exists.
-- Owner option create/update/deactivate/reorder routes enforce the Size
-  contract when `option_group=SIZE` or `option_type=size`: at least one active
-  Size remains when size config exists, Size codes are unique per item, active
-  display orders are present and unique, and changing the default selected Size
-  is done by reordering the desired active Size first.
+- `SIZE` options are the per-item Size enablement/identity model, but Owner
+  generic option create/update/deactivate/reorder routes reject Size writes.
+  Use the Size Configuration endpoint below. Supported Size semantics are only
+  `size_small`, `size_regular`, and `size_large`.
+- Size and Combo deltas in new catalog responses are effective Store policy
+  values from `store_pricing_policies`; Size/Combo `menu_item_options.price_delta`
+  is maintained only as a rollback compatibility mirror.
 - 菜单主数据使用双语字段：`name_zh`, `name_en`
 - MVP API 默认返回双语字段，由前端决定中文优先与英文回退逻辑
 - `DRINK` 与 `ALCOHOL` 为 direct-serve，不进厨房
 - `MILK_TEA` 是否进入 BAR 任务流由门店配置决定
+
+### Owner Pricing Rules
+
+All endpoints require `X-User-Id` with `admin:menu_manage` for the target Store.
+
+#### Get Store Pricing Policy
+
+`GET /api/v1/admin/menu/pricing-policy?store_id={storeId}`
+
+Response data:
+
+```json
+{
+  "store_id": 1,
+  "policy_revision": 1,
+  "size_small_delta": -2.00,
+  "size_regular_delta": 0.00,
+  "size_large_delta": 2.00,
+  "combo_delta": 5.00
+}
+```
+
+#### Preview Store Pricing Policy
+
+`POST /api/v1/admin/menu/pricing-policy/preview`
+
+Request:
+
+```json
+{
+  "store_id": 1,
+  "size_small_delta": "-2.00",
+  "size_regular_delta": "0.00",
+  "size_large_delta": "3.00",
+  "combo_delta": "6.00"
+}
+```
+
+Response includes current/proposed policy and impact groups with affected item
+counts and sample old/new effective prices for future orders. Historical orders
+are not repriced.
+
+#### Update Store Pricing Policy
+
+`PUT /api/v1/admin/menu/pricing-policy`
+
+Request shape matches preview. The backend stores decimal money as BigDecimal,
+writes the Size/Combo compatibility mirror, increments `stores.menu_revision`
+and updates `stores.menu_updated_at` in the same transaction.
+
+#### Update Item Size Configuration
+
+`PUT /api/v1/admin/menu/items/{itemId}/size-configuration`
+
+Request:
+
+```json
+{
+  "enabled_size_codes": ["size_regular", "size_large"],
+  "default_size_code": "size_regular"
+}
+```
+
+Only `size_small`, `size_regular`, and `size_large` are accepted. If Regular is
+enabled it is the deterministic default. If only one Size is enabled it is
+auto-selected. If multiple Sizes are enabled and Regular is disabled,
+`default_size_code` must name one enabled Size.
+
+#### Update Item Combo Policy
+
+`PUT /api/v1/admin/menu/items/{itemId}/combo-policy`
+
+Request:
+
+```json
+{
+  "combo_allowed": true
+}
+```
+
+The item controls only whether Combo is allowed. The Combo delta remains
+Store-level.
 
 ---
 

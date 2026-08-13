@@ -40,20 +40,20 @@ PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_REFINEMENT
 
 A0.1 tightens the Owner-facing Size contract: only system-controlled
 Small/Regular/Large Sizes are allowed, and Store-level Size/Combo pricing
-policies must become the canonical price source. Fresh schema audit found no
-existing Store-level pricing policy/settings table; current `menu_item_options`
-price deltas are per-item and cannot satisfy that policy without keeping the
-wrong source of truth. Therefore A0.1 is stopped before implementation at:
+policies must become the canonical price source. The Owner approved the
+additive schema direction:
 
 ```text
-PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_WAITING_FOR_OWNER_APPROVAL
+PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_APPROVAL
 ```
 
 See
 [A0.1 schema-gate evidence](../agile/PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE.md).
-No Flyway migration, business-code change, Staging deploy or Production action
-is authorized until the Owner approves
-`PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_APPROVAL`.
+The implementation package adds Store-isolated `store_pricing_policies`,
+canonical Pricing Rules APIs/UI, system-controlled Size Configuration,
+catalog/hash/cache pricing policy semantics, and a rollback compatibility
+mirror for Size/Combo `menu_item_options.price_delta` only. Production remains
+`NO MUTATION`.
 
 Phase A may proceed continuously through A0-A10 while no TRUE OWNER GATE is
 hit. Phase B and Phase C implementation remain unauthorized. Production remains
@@ -62,10 +62,11 @@ Store, credential, rollback, restore, or business-data action is authorized.
 Staging deployment is allowed only for the exact Phase A loop that explicitly
 requires Staging validation, starting with A0.
 
-Current A0 stop after successful Staging deployment and automated validation:
+Current A0.1 stop after successful PR merge, exact-SHA Staging V10->V11
+deployment and automated validation:
 
 ```text
-FINAL_PRODUCTIZATION_PLANBOOK_MERGED_PHASE_A0_DEPLOYED_WAITING_FOR_OWNER_SIZE_RETEST
+PHASE_A0_1_STANDARD_SIZE_PRICING_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
 ```
 
 Phase A0 deployed evidence:
