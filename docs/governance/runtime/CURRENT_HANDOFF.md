@@ -128,6 +128,19 @@ Stop only for a TRUE OWNER GATE, or after A3 at
 `PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION_COMPLETE_WAITING_FOR_PHASE_A4_OWNER_CONTINUATION`.
 Do not start A4, Phase B/C, Chinatown, Sainte-Catherine or Production work.
 
+A1 implementation navigation:
+
+- Technical evidence: [PHASE_A1_MODULE_CATALOG](../agile/PHASE_A1_MODULE_CATALOG.md)
+- Machine-readable catalog:
+  `backend/src/main/resources/module/module-catalog.v1.json`
+- Static validation:
+  `backend/src/test/java/com/restaurant/system/modules/ModuleCatalogContractTest.java`
+
+A1 defines canonical module keys, capability classification, current feature
+flag classification, route/API mapping and authorization mapping. It does not
+create Store module persistence, deploy Staging, touch Production or start A2
+validation before A1 enters `main`.
+
 ## Current final productization roadmap audit (2026-08-12)
 
 Planning-only audit is complete for the new final productization route:

@@ -120,6 +120,13 @@ PHASE_A1_MODULE_CATALOG
 → PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION
 ```
 
+A1 Module Catalog implementation now defines the canonical product module
+catalog and maps current capabilities, flags, routes, APIs and authorization:
+[PHASE_A1_MODULE_CATALOG](../agile/PHASE_A1_MODULE_CATALOG.md). The
+machine-readable catalog is
+`backend/src/main/resources/module/module-catalog.v1.json`; focused static
+validation is `ModuleCatalogContractTest`.
+
 Phase A0 deployed evidence:
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](../agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).
 The deployed implementation preserves the existing Menu Engine path:

@@ -1,0 +1,716 @@
+{
+  "catalog_version": "PHASE_A1_MODULE_CATALOG_V1",
+  "authority": {
+    "phase": "PHASE_A1_MODULE_CATALOG",
+    "owner_required_normal_store_capabilities": [
+      "ORDERING",
+      "POS",
+      "MENU",
+      "MENU_MANAGEMENT",
+      "TABLE_MANAGEMENT",
+      "PRINTING",
+      "GRAB_PRINTING",
+      "FRONTDESK_RECEIPT",
+      "ORDER_HISTORY",
+      "REPORTING"
+    ],
+    "kds_decision": "OPTIONAL_DISABLED_BY_DEFAULT_NOT_ACTIVATION_BLOCKING",
+    "reporting_decision": "REPORTING_CORE_REQUIRED_ANALYTICS_ADVANCED_OPTIONAL"
+  },
+  "classifications": [
+    "CORE_MODULE",
+    "OPTIONAL_MODULE",
+    "MODULE_CAPABILITY",
+    "STORE_CONFIGURATION",
+    "ENVIRONMENT_CAPABILITY",
+    "HARDWARE_CAPABILITY",
+    "ROLE_CAPABILITY",
+    "SHARED_INFRASTRUCTURE",
+    "LEGACY_COUPLING",
+    "LEGACY_FLAG",
+    "RUNTIME_MODE",
+    "NOT_A_MODULE"
+  ],
+  "modules": [
+    {
+      "module_key": "ORDERING_POS",
+      "display_name": "Ordering / POS",
+      "category": "STORE_OPERATION",
+      "classification": "CORE_MODULE",
+      "core": true,
+      "optional": false,
+      "default_state": "ENABLED",
+      "activation_blocking": true,
+      "capabilities": [
+        "ORDERING",
+        "POS",
+        "FRONTDESK",
+        "DINE_IN",
+        "TAKEOUT",
+        "ORDER_DRAFT",
+        "ORDER_SUBMIT",
+        "ORDER_UPDATE",
+        "ORDER_COMPLETE",
+        "BEVERAGE_WORKFLOW",
+        "OFFLINE_ORDERING"
+      ],
+      "depends_on": [
+        "MENU"
+      ],
+      "conflicts_with": [],
+      "required_environment_capabilities": [
+        "CORE_POS_RUNTIME",
+        "AUTH_RUNTIME",
+        "DATABASE",
+        "WEBSOCKET_RUNTIME"
+      ],
+      "required_hardware_capabilities": [
+        "TOUCH_CLIENT"
+      ],
+      "frontend_routes": [
+        "/stores/{storeId}/frontdesk",
+        "/stores/{storeId}/frontdesk/menu",
+        "/stores/{storeId}/frontdesk/order",
+        "/frontdesk",
+        "/menu",
+        "/orders"
+      ],
+      "backend_api_prefixes": [
+        "/api/v1/orders",
+        "/api/v1/stores/{storeId}/orders",
+        "/api/v1/frontdesk/orders",
+        "/api/v1/frontdesk/beverages"
+      ],
+      "required_permissions": [
+        "order:create",
+        "order:edit_draft",
+        "order:submit",
+        "order:modify_submitted",
+        "order:complete",
+        "order:cancel",
+        "order:view_active",
+        "order:view_detail",
+        "beverage:view_board",
+        "beverage:start",
+        "beverage:ready",
+        "beverage:served",
+        "beverage:cancel",
+        "shelf:view",
+        "shelf:served"
+      ],
+      "store_configuration_relationship": "Consumes Store context, dining-table state and menu catalog; A3 will materialize Store module state separately from environment feature flags.",
+      "profile_relationship": "Normal Lanzhou Store profile must require ORDERING_POS for ACTIVE readiness."
+    },
+    {
+      "module_key": "MENU",
+      "display_name": "Menu Catalog",
+      "category": "STORE_OPERATION",
+      "classification": "CORE_MODULE",
+      "core": true,
+      "optional": false,
+      "default_state": "ENABLED",
+      "activation_blocking": true,
+      "capabilities": [
+        "MENU",
+        "MENU_CATALOG",
+        "MENU_REVISION",
+        "OFFLINE_MENU_SNAPSHOT",
+        "SIZE_CONFIGURATION_READ",
+        "PRICING_POLICY_READ",
+        "COMBO_CONFIGURATION_READ",
+        "STATION_RELATIONSHIPS"
+      ],
+      "depends_on": [],
+      "conflicts_with": [],
+      "required_environment_capabilities": [
+        "CORE_POS_RUNTIME",
+        "DATABASE"
+      ],
+      "required_hardware_capabilities": [],
+      "frontend_routes": [
+        "/stores/{storeId}/frontdesk/menu",
+        "/menu"
+      ],
+      "backend_api_prefixes": [
+        "/api/v1/menu"
+      ],
+      "required_permissions": [],
+      "store_configuration_relationship": "Menu data is Store-scoped through menu categories/items/options/pricing/combo configuration and stations.",
+      "profile_relationship": "Future Store Profile may define menu template/materialization, but existing active Stores own their independent menu graph."
+    },
+    {
+      "module_key": "MENU_MANAGEMENT",
+      "display_name": "Menu Management",
+      "category": "STORE_ADMINISTRATION",
+      "classification": "CORE_MODULE",
+      "core": true,
+      "optional": false,
+      "default_state": "ENABLED",
+      "activation_blocking": true,
+      "capabilities": [
+        "MENU_MANAGEMENT",
+        "MENU_ITEM_MANAGEMENT",
+        "MENU_OPTION_MANAGEMENT",
+        "SIZE_CONFIGURATION",
+        "PRICING_RULES",
+        "COMBO_CONFIGURATION",
+        "MENU_REVISION_WRITE",
+        "MENU_AUDIT"
+      ],
+      "depends_on": [
+        "MENU"
+      ],
+      "conflicts_with": [],
+      "required_environment_capabilities": [
+        "ADMIN_RUNTIME",
+        "DATABASE"
+      ],
+      "required_hardware_capabilities": [],
+      "frontend_routes": [
+        "/stores/{storeId}/admin/menu/items",
+        "/admin/menu/items"
+      ],
+      "backend_api_prefixes": [
+        "/api/v1/admin/menu",
+        "/api/v1/admin/menu/items/{itemId}/options"
+      ],
+      "required_permissions": [
+        "admin:menu_manage"
+      ],
+      "store_configuration_relationship": "Mutates Store-scoped menu graph and increments Store menu revision; does not control whether MENU itself exists.",
+      "profile_relationship": "Future Store Profile may seed defaults; active Store changes remain Store-owned."
+    },
+    {
+      "module_key": "TABLE_MANAGEMENT",
+      "display_name": "Table Management",
+      "category": "STORE_ADMINISTRATION",
+      "classification": "CORE_MODULE",
+      "core": true,
+      "optional": false,
+      "default_state": "ENABLED",
+      "activation_blocking": true,
+      "capabilities": [
+        "TABLE_MANAGEMENT",
+        "DINING_TABLE_CONFIGURATION",
+        "TABLE_AREA_CAPACITY",
+        "TABLE_ACTIVE_STATE",
+        "DINE_IN_CONTEXT"
+      ],
+      "depends_on": [],
+      "conflicts_with": [],
+      "required_environment_capabilities": [
+        "ADMIN_RUNTIME",
+        "DATABASE"
+      ],
+      "required_hardware_capabilities": [],
+      "frontend_routes": [
+        "/stores/{storeId}/admin/settings/tables",
+        "/admin/settings/tables"
+      ],
+      "backend_api_prefixes": [
+        "/api/v1/frontdesk/dining-tables",
+        "/api/v1/admin/platform/dining-tables"
+      ],
+      "required_permissions": [
+        "admin:store_config"
+      ],
+      "store_configuration_relationship": "Dining tables are Store-scoped operational configuration used by dine-in ordering.",
+      "profile_relationship": "Future Store Profile may provide table defaults; active Stores own independent table state."
+    },
+    {
+      "module_key": "PRINTING",
+      "display_name": "Printing",
+      "category": "STORE_OPERATION",
+      "classification": "CORE_MODULE",
+      "core": true,
+      "optional": false,
+      "default_state": "ENABLED",
+      "activation_blocking": true,
+      "capabilities": [
+        "PRINTING",
+        "PRINT_CENTER",
+        "GRAB_PRINTING",
+        "FRONTDESK_RECEIPT",
+        "HOT_KITCHEN_PRINTING",
+        "PRINT_JOB_HISTORY",
+        "MOCK_PRINTING",
+        "PAD_DIRECT_PRINTING",
+        "REAL_PRINTER_TRANSPORT",
+        "MODULE_PRINTER_ASSIGNMENTS",
+        "STORE_DEVICE_TOPOLOGY"
+      ],
+      "depends_on": [
+        "ORDERING_POS"
+      ],
+      "conflicts_with": [],
+      "required_environment_capabilities": [
+        "PRINTING_FEATURE_FLAG",
+        "PRINT_MODE_RUNTIME",
+        "DATABASE"
+      ],
+      "required_hardware_capabilities": [
+        "PRINTER_TOPOLOGY_FOR_REAL_OR_PAD_DIRECT",
+        "PAD_DEVICE_FOR_PAD_DIRECT"
+      ],
+      "frontend_routes": [
+        "/stores/{storeId}/admin/settings/printing",
+        "/admin/settings/printing"
+      ],
+      "backend_api_prefixes": [
+        "/api/v1/admin/printing",
+        "/api/v1/printing",
+        "/api/v1/stores/{storeId}/printing",
+        "/api/v1/orders/{id}/print-jobs",
+        "/api/v1/orders/{id}/print-options",
+        "/api/v1/orders/{id}/reprint"
+      ],
+      "required_permissions": [
+        "admin:printing_manage",
+        "admin:store_config",
+        "order:view_detail",
+        "order:submit"
+      ],
+      "store_configuration_relationship": "Current Store-level printing_enabled and printer assignments are legacy Store configuration; A3 must separate environment capability, Store module state and runtime print mode.",
+      "profile_relationship": "Normal Lanzhou Store requires Printing capability, but real hardware binding remains separate runtime/hardware readiness."
+    },
+    {
+      "module_key": "ORDER_HISTORY",
+      "display_name": "Order History",
+      "category": "STORE_OPERATION",
+      "classification": "CORE_MODULE",
+      "core": true,
+      "optional": false,
+      "default_state": "ENABLED",
+      "activation_blocking": true,
+      "capabilities": [
+        "ORDER_HISTORY",
+        "FRONTDESK_ORDER_HISTORY",
+        "ORDER_DETAIL_READ",
+        "TODAY_ORDER_BOARD",
+        "HISTORICAL_SNAPSHOT_READ"
+      ],
+      "depends_on": [
+        "ORDERING_POS"
+      ],
+      "conflicts_with": [],
+      "required_environment_capabilities": [
+        "CORE_POS_RUNTIME",
+        "DATABASE"
+      ],
+      "required_hardware_capabilities": [],
+      "frontend_routes": [
+        "/stores/{storeId}/frontdesk/order",
+        "/orders"
+      ],
+      "backend_api_prefixes": [
+        "/api/v1/frontdesk/orders/history",
+        "/api/v1/frontdesk/orders/today",
+        "/api/v1/orders/{id}"
+      ],
+      "required_permissions": [
+        "order:view_history",
+        "order:view_detail"
+      ],
+      "store_configuration_relationship": "Reads immutable submitted order snapshots; must not be repriced by later Menu/Pricing/Combo changes.",
+      "profile_relationship": "Normal Lanzhou Store profile must require order history for operations and auditability."
+    },
+    {
+      "module_key": "REPORTING_CORE",
+      "display_name": "Reporting Core",
+      "category": "REPORTING",
+      "classification": "CORE_MODULE",
+      "core": true,
+      "optional": false,
+      "default_state": "ENABLED",
+      "activation_blocking": true,
+      "capabilities": [
+        "REPORTING",
+        "SALES_REPORT",
+        "ITEM_SALES_REPORT",
+        "BASIC_STORE_REPORTING",
+        "OPERATIONAL_SUMMARY"
+      ],
+      "depends_on": [
+        "ORDERING_POS",
+        "ORDER_HISTORY"
+      ],
+      "conflicts_with": [],
+      "required_environment_capabilities": [
+        "ANALYTICS_FEATURE_FLAG",
+        "DATABASE"
+      ],
+      "required_hardware_capabilities": [],
+      "frontend_routes": [
+        "/stores/{storeId}/admin/reports/sales",
+        "/stores/{storeId}/admin/reports/items",
+        "/admin/reports/sales",
+        "/admin/reports/items"
+      ],
+      "backend_api_prefixes": [
+        "/api/v1/admin/analytics/summaries",
+        "/api/v1/admin/dashboard"
+      ],
+      "required_permissions": [
+        "admin:store_config"
+      ],
+      "store_configuration_relationship": "Current reports are gated by ANALYTICS environment flag; A3 must preserve Reporting Core as normal Store required module.",
+      "profile_relationship": "Normal Lanzhou Store profile must require basic reporting."
+    },
+    {
+      "module_key": "STAFF_ACCESS",
+      "display_name": "Staff and Access",
+      "category": "ACCESS_CONTROL",
+      "classification": "CORE_MODULE",
+      "core": true,
+      "optional": false,
+      "default_state": "ENABLED",
+      "activation_blocking": true,
+      "capabilities": [
+        "STAFF_MANAGEMENT",
+        "ROLE_ASSIGNMENT",
+        "PERMISSION_REGISTRY",
+        "STORE_ACCESS",
+        "ORGANIZATION_ACCESS"
+      ],
+      "depends_on": [],
+      "conflicts_with": [],
+      "required_environment_capabilities": [
+        "AUTH_RUNTIME",
+        "ADMIN_RUNTIME",
+        "DATABASE"
+      ],
+      "required_hardware_capabilities": [],
+      "frontend_routes": [
+        "/stores/{storeId}/admin/staff",
+        "/admin/staff"
+      ],
+      "backend_api_prefixes": [
+        "/api/v1/admin/staff",
+        "/api/v1/auth",
+        "/api/v1/me/workspaces",
+        "/api/v1/stores/{storeId}/context"
+      ],
+      "required_permissions": [
+        "admin:user_role_manage"
+      ],
+      "store_configuration_relationship": "Role permissions and Store module state are separate; module enablement must not grant authorization by itself.",
+      "profile_relationship": "Future Store provisioning must materialize staff/access separately from module state."
+    },
+    {
+      "module_key": "STORE_ADMINISTRATION",
+      "display_name": "Store Administration",
+      "category": "STORE_ADMINISTRATION",
+      "classification": "CORE_MODULE",
+      "core": true,
+      "optional": false,
+      "default_state": "ENABLED",
+      "activation_blocking": true,
+      "capabilities": [
+        "OWNER_OVERVIEW",
+        "STORE_CONTEXT",
+        "AUDIT_LOGS",
+        "STORE_SETTINGS",
+        "OPERATIONAL_SETTINGS"
+      ],
+      "depends_on": [
+        "STAFF_ACCESS"
+      ],
+      "conflicts_with": [],
+      "required_environment_capabilities": [
+        "ADMIN_RUNTIME",
+        "AUTH_RUNTIME",
+        "DATABASE"
+      ],
+      "required_hardware_capabilities": [],
+      "frontend_routes": [
+        "/owner",
+        "/owner/dashboard",
+        "/stores/{storeId}/admin",
+        "/stores/{storeId}/admin/dashboard",
+        "/stores/{storeId}/admin/audit-logs",
+        "/admin",
+        "/admin/dashboard",
+        "/admin/audit-logs"
+      ],
+      "backend_api_prefixes": [
+        "/api/v1/owner/overview",
+        "/api/v1/admin/dashboard",
+        "/api/v1/admin/audit-logs"
+      ],
+      "required_permissions": [
+        "admin:store_config",
+        "admin:user_role_manage"
+      ],
+      "store_configuration_relationship": "Store context and Owner overview currently expose environment feature booleans, not canonical Store module state.",
+      "profile_relationship": "Future profile/provisioning must expose Store administration as a normal active Store requirement."
+    },
+    {
+      "module_key": "KDS",
+      "display_name": "Kitchen Display System",
+      "category": "OPTIONAL_OPERATIONS",
+      "classification": "OPTIONAL_MODULE",
+      "core": false,
+      "optional": true,
+      "default_state": "DISABLED",
+      "activation_blocking": false,
+      "capabilities": [
+        "NOODLE_KDS",
+        "HOT_KITCHEN_KDS",
+        "PASS_BOARD",
+        "PICKUP_BOARD",
+        "KDS_HISTORY",
+        "KITCHEN_TASK_ACTIONS"
+      ],
+      "depends_on": [
+        "ORDERING_POS"
+      ],
+      "conflicts_with": [],
+      "required_environment_capabilities": [
+        "KDS_FEATURE_FLAG",
+        "WEBSOCKET_RUNTIME",
+        "DATABASE"
+      ],
+      "required_hardware_capabilities": [
+        "KDS_DISPLAY_CLIENT"
+      ],
+      "frontend_routes": [
+        "/stores/{storeId}/kds/grab",
+        "/stores/{storeId}/kds/hot-kitchen",
+        "/stores/{storeId}/kds/noodle",
+        "/stores/{storeId}/kds/ramen",
+        "/stores/{storeId}/kds/history",
+        "/stores/{storeId}/pickup",
+        "/kds/*",
+        "/pickup"
+      ],
+      "backend_api_prefixes": [
+        "/api/v1/kds",
+        "/api/v1/kitchen-tasks"
+      ],
+      "required_permissions": [
+        "kds:hot:view",
+        "kds:hot:start",
+        "kds:hot:ready_for_pickup",
+        "kds:noodle:view",
+        "kds:pass:view",
+        "kds:pass:ready_for_pickup",
+        "shelf:view",
+        "shelf:served"
+      ],
+      "store_configuration_relationship": "KDS OFF is a supported Store configuration; backend/front-end feature flags currently prevent route/API usage when disabled.",
+      "profile_relationship": "Normal Lanzhou Store profile defaults KDS disabled and not activation-blocking."
+    },
+    {
+      "module_key": "ANALYTICS_ADVANCED",
+      "display_name": "Advanced Analytics",
+      "category": "OPTIONAL_REPORTING",
+      "classification": "OPTIONAL_MODULE",
+      "core": false,
+      "optional": true,
+      "default_state": "DISABLED",
+      "activation_blocking": false,
+      "capabilities": [
+        "PROFIT_ANALYTICS",
+        "MULTI_STORE_ANALYTICS",
+        "OWNER_ANALYTICS_ADVANCED"
+      ],
+      "depends_on": [
+        "REPORTING_CORE"
+      ],
+      "conflicts_with": [],
+      "required_environment_capabilities": [
+        "ANALYTICS_FEATURE_FLAG",
+        "DATABASE"
+      ],
+      "required_hardware_capabilities": [],
+      "frontend_routes": [
+        "/stores/{storeId}/admin/reports/profit",
+        "/stores/{storeId}/admin/reports/stores",
+        "/admin/reports/profit",
+        "/admin/reports/stores"
+      ],
+      "backend_api_prefixes": [
+        "/api/v1/admin/analytics/summaries"
+      ],
+      "required_permissions": [
+        "admin:store_config"
+      ],
+      "store_configuration_relationship": "Current advanced analytics shares the ANALYTICS flag with Reporting Core; A3 must keep Reporting Core required while allowing advanced analytics to remain optional.",
+      "profile_relationship": "Future profiles may enable advanced analytics separately from required Reporting Core."
+    }
+  ],
+  "capability_classification": {
+    "Ordering": "CORE_MODULE",
+    "Dine-In": "MODULE_CAPABILITY",
+    "Takeout": "MODULE_CAPABILITY",
+    "Menu": "CORE_MODULE",
+    "Menu Management": "CORE_MODULE",
+    "Table Management": "CORE_MODULE",
+    "Frontdesk": "MODULE_CAPABILITY",
+    "Frontdesk Order History": "CORE_MODULE",
+    "GRAB": "MODULE_CAPABILITY",
+    "Frontdesk Receipt": "MODULE_CAPABILITY",
+    "Hot Kitchen": "MODULE_CAPABILITY",
+    "KDS": "OPTIONAL_MODULE",
+    "Beverage": "MODULE_CAPABILITY",
+    "Printing": "CORE_MODULE",
+    "Devices / Pads": "HARDWARE_CAPABILITY",
+    "Reports": "CORE_MODULE",
+    "Analytics": "OPTIONAL_MODULE",
+    "Owner Admin": "ROLE_CAPABILITY",
+    "Organization": "SHARED_INFRASTRUCTURE",
+    "Store": "CORE_MODULE",
+    "Staff": "CORE_MODULE",
+    "Roles / Permissions": "ROLE_CAPABILITY",
+    "Realtime / WebSocket": "SHARED_INFRASTRUCTURE",
+    "Offline Menu": "MODULE_CAPABILITY",
+    "Menu Revision": "MODULE_CAPABILITY",
+    "Pricing Policy": "MODULE_CAPABILITY",
+    "Combo Configuration": "MODULE_CAPABILITY",
+    "Stations": "STORE_CONFIGURATION",
+    "Audit": "ROLE_CAPABILITY",
+    "Platform Admin": "LEGACY_COUPLING",
+    "Store Settings": "STORE_CONFIGURATION",
+    "Operational Settings": "STORE_CONFIGURATION"
+  },
+  "current_feature_flag_classification": [
+    {
+      "flag": "app.features.core-pos",
+      "frontend_key": "CORE_POS",
+      "backend_key": "CORE_POS",
+      "classification": "ENVIRONMENT_CAPABILITY",
+      "target_module": "ORDERING_POS",
+      "a1_note": "Runtime package availability, not final Store module state."
+    },
+    {
+      "flag": "app.features.printing",
+      "frontend_key": "PRINTING",
+      "backend_key": "PRINTING",
+      "classification": "ENVIRONMENT_CAPABILITY",
+      "target_module": "PRINTING",
+      "a1_note": "Must remain separate from Store PRINTING state and print mode."
+    },
+    {
+      "flag": "app.features.kds",
+      "frontend_key": "KDS",
+      "backend_key": "KDS",
+      "classification": "ENVIRONMENT_CAPABILITY",
+      "target_module": "KDS",
+      "a1_note": "KDS is optional/default-off; disabled is legal and non-blocking."
+    },
+    {
+      "flag": "app.features.admin",
+      "frontend_key": "ADMIN",
+      "backend_key": "ADMIN",
+      "classification": "ENVIRONMENT_CAPABILITY",
+      "target_module": "STORE_ADMINISTRATION",
+      "a1_note": "Admin runtime availability, not permission by itself."
+    },
+    {
+      "flag": "app.features.analytics",
+      "frontend_key": "ANALYTICS",
+      "backend_key": "ANALYTICS",
+      "classification": "ENVIRONMENT_CAPABILITY",
+      "target_module": "REPORTING_CORE",
+      "a1_note": "Currently covers both required Reporting Core and optional Advanced Analytics; A3 must split Store module semantics without breaking runtime compatibility."
+    },
+    {
+      "flag": "app.features.platform",
+      "frontend_key": "PLATFORM",
+      "backend_key": "PLATFORM",
+      "classification": "ENVIRONMENT_CAPABILITY",
+      "target_module": null,
+      "a1_note": "Platform Admin is shared infrastructure, not normal Store module."
+    },
+    {
+      "flag": "app.features.developer-tools",
+      "frontend_key": "DEVELOPER_TOOLS",
+      "backend_key": "DEVELOPER_TOOLS",
+      "classification": "RUNTIME_MODE",
+      "target_module": null,
+      "a1_note": "Developer-only runtime tool gate."
+    },
+    {
+      "flag": "stores.printing_enabled",
+      "frontend_key": "printing_enabled",
+      "backend_key": "Store.printing_enabled",
+      "classification": "LEGACY_FLAG",
+      "target_module": "PRINTING",
+      "a1_note": "Legacy Store-level printing switch; A3 must define compatibility precedence and retirement."
+    },
+    {
+      "flag": "stores.printing_mode",
+      "frontend_key": "printing_mode",
+      "backend_key": "Store.printing_mode",
+      "classification": "RUNTIME_MODE",
+      "target_module": "PRINTING",
+      "a1_note": "Store-scoped selected DISABLED/MOCK/PAD_DIRECT/REAL runtime mode; not the PRINTING module boolean."
+    },
+    {
+      "flag": "app.printing.allowed-modes",
+      "frontend_key": null,
+      "backend_key": "PrintingRuntimePolicyProperties.allowedModes",
+      "classification": "RUNTIME_MODE",
+      "target_module": "PRINTING",
+      "a1_note": "Environment/runtime ceiling for allowed print modes; separate from Store module state and Store selected mode."
+    },
+    {
+      "flag": "frontend.featureConfig.ts",
+      "frontend_key": "featureConfig",
+      "backend_key": null,
+      "classification": "LEGACY_FLAG",
+      "target_module": null,
+      "a1_note": "Static UI hiding only; it is not a security boundary and not final Store module state."
+    },
+    {
+      "flag": "VITE_ENABLE_DEV_ROLE_SWITCHER",
+      "frontend_key": "VITE_ENABLE_DEV_ROLE_SWITCHER",
+      "backend_key": null,
+      "classification": "NOT_A_MODULE",
+      "target_module": null,
+      "a1_note": "Developer-only frontend helper, not a Store module."
+    },
+    {
+      "flag": "VITE_NETWORK_DIAGNOSTICS_ENABLED",
+      "frontend_key": "VITE_NETWORK_DIAGNOSTICS_ENABLED",
+      "backend_key": null,
+      "classification": "ENVIRONMENT_CAPABILITY",
+      "target_module": null,
+      "a1_note": "Diagnostics runtime capability, not a Store module."
+    }
+  ],
+  "shared_infrastructure": [
+    "AUTH_RUNTIME",
+    "DATABASE",
+    "WEBSOCKET_RUNTIME",
+    "STORE_CONTEXT",
+    "ORGANIZATION_CONTEXT",
+    "AUDIT_LOGGING",
+    "PLATFORM_ADMIN",
+    "RUNTIME_DATA_SEEDING"
+  ],
+  "hardware_capabilities": [
+    "TOUCH_CLIENT",
+    "PRINTER_TOPOLOGY_FOR_REAL_OR_PAD_DIRECT",
+    "PAD_DEVICE_FOR_PAD_DIRECT",
+    "KDS_DISPLAY_CLIENT"
+  ],
+  "legacy_couplings": [
+    {
+      "key": "ENV_ANALYTICS_COVERS_REPORTS_AND_ADVANCED_ANALYTICS",
+      "description": "Current ANALYTICS feature flag gates both basic reports and advanced analytics routes."
+    },
+    {
+      "key": "STORE_PRINTING_ENABLED_MIXES_MODULE_STATE_AND_STORE_MODE",
+      "description": "Current stores.printing_enabled participates in Printing Settings and synthetic bootstrap; A3 must separate Store module state from runtime print mode."
+    },
+    {
+      "key": "OWNER_OVERVIEW_FEATURES_ARE_ENVIRONMENT_FLAGS",
+      "description": "Owner overview exposes feature booleans from FeatureFlagService, not per-Store module state."
+    },
+    {
+      "key": "FRONTEND_FEATURE_CONFIG_IS_STATIC",
+      "description": "frontend/src/features/feature-flags/featureConfig.ts is a static runtime gate and not a security boundary."
+    }
+  ]
+}

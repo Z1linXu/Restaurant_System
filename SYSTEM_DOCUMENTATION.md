@@ -57,6 +57,15 @@
 > Dependency Graph and A3 Store-level Module Configuration, then stops before
 > A4.
 
+> 2026-08-13 Phase A1 Module Catalog: canonical product modules are recorded in
+> [PHASE_A1_MODULE_CATALOG](docs/governance/agile/PHASE_A1_MODULE_CATALOG.md)
+> and the machine-readable catalog
+> `backend/src/main/resources/module/module-catalog.v1.json`. A1 classifies
+> current business capabilities, route/API/auth mappings and feature flags. KDS
+> is optional/default-off/not activation-blocking. Reporting Core is required;
+> Advanced Analytics is optional. A1 does not add Store module persistence,
+> deploy Staging or touch Production.
+
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The
 > product rule is `BUILD ONCE, CONFIGURE MANY`; future Stores must not be
