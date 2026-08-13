@@ -25,6 +25,11 @@
 > [PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE](docs/governance/agile/PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE.md)
 > and
 > [PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_IMPLEMENTATION_EVIDENCE](docs/governance/agile/PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_IMPLEMENTATION_EVIDENCE.md).
+> The exact Staging deployment runs
+> `ed3e4cdbf38c4d8812620baf64cd42ce3a229431` at Flyway V11 with automated
+> validation PASS; see
+> [PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_STAGING_EVIDENCE](docs/governance/agile/PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_STAGING_EVIDENCE.md).
+> A0.1 Owner retest remains `PENDING`.
 
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The

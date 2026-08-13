@@ -1,6 +1,6 @@
 # Phase A0.1 Standard Size Pricing Policy Implementation Evidence
 
-Status: `REPOSITORY_VALIDATED_WAITING_FOR_PR_MERGE_AND_STAGING_DEPLOY`
+Status: `REPOSITORY_VALIDATED_AND_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST`
 
 Date: 2026-08-13
 
@@ -15,7 +15,7 @@ Scope:
 - Phase: `PHASE_A_MODULAR_PRODUCTIZATION`
 - Loop: `PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY`
 - Production: `NO MUTATION`
-- Staging: no runtime mutation in this repository evidence checkpoint
+- Staging: exact-SHA V10->V11 deploy completed after PR #131/#132 merge
 - Schema: additive Flyway `V11__add_store_pricing_policies.sql`
 
 ## Implemented contract
@@ -133,11 +133,21 @@ gap: generic Owner option APIs also needed to reject Combo upcharge rows so
 Combo price source. Focused backend tests now cover generic Combo
 create/update/deactivate/reorder rejection.
 
+## Staging deployment follow-up
+
+Post-merge exact-SHA Staging deployment and automated validation are recorded
+in
+[PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_STAGING_EVIDENCE](PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_STAGING_EVIDENCE.md).
+The deployed application SHA is
+`ed3e4cdbf38c4d8812620baf64cd42ce3a229431`; Staging advanced from Flyway V10
+to V11 and passed automated A0.1 validation. Production remained `NO MUTATION`.
+
 ## Boundaries retained
 
 - No Production write, deploy, restart, Flyway, configuration, credential,
   printer, Pad or business-data action occurred.
-- No Staging deploy occurred in this repository validation checkpoint.
+- Staging deploy was exact-SHA, additive V11 only, and validated in the
+  companion runtime evidence.
 - No schema downgrade, Flyway history edit, destructive migration, raw DB clone,
   Chinatown, Sainte-Catherine, Phase B, Phase C or Production promotion is
   introduced by this package.

@@ -39,6 +39,8 @@ Evidence/design:
 [PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE](../agile/PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE.md).
 Implementation evidence:
 [PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_IMPLEMENTATION_EVIDENCE](../agile/PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_IMPLEMENTATION_EVIDENCE.md).
+Staging evidence:
+[PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_STAGING_EVIDENCE](../agile/PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_STAGING_EVIDENCE.md).
 The implementation package adds additive Flyway V11, Store-level Pricing Rules,
 system-controlled Size Configuration, item Combo allowed policy, catalog/hash/
 IndexedDB pricing policy semantics, and a Size/Combo `price_delta`
@@ -49,8 +51,9 @@ used repository changes, tests, Agent 6, PR/auto-merge, exact-SHA Staging
 deployment and automated validation. Do not mark A0 Owner UI acceptance PASS
 until the Owner actually retests the Staging UX.
 
-The expected stop after successful A0.1 PR merge, exact-SHA Staging V10->V11
-deployment and automated validation is:
+A0.1 is deployed to exact-SHA Staging at
+`ed3e4cdbf38c4d8812620baf64cd42ce3a229431`; Staging advanced from Flyway V10
+to V11 and automated validation passed. Current stop:
 
 ```text
 PHASE_A0_1_STANDARD_SIZE_PRICING_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
@@ -73,7 +76,7 @@ A0_OWNER_UI_ACCEPTANCE = PENDING
 ```
 
 Staging now runs exact
-`c83933f16f4eb1c1be33bd13772ac489d79a7176`, Flyway V10, Printing
+`ed3e4cdbf38c4d8812620baf64cd42ce3a229431`, Flyway V11, Printing
 `MOCK/true`, four enabled logical printers and three enabled assignments.
 Production continuity remained HTTP 200/200 for system/menu health.
 
