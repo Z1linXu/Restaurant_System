@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -33,14 +34,29 @@ public class ModuleContractLoader {
         Map<String, ModuleState> defaultStates = new LinkedHashMap<>();
         Set<String> environmentCapabilities = new LinkedHashSet<>();
         Set<String> hardwareCapabilities = new LinkedHashSet<>();
+        List<ModuleDefinition> modules = new ArrayList<>();
+        Map<String, ModuleDefinition> modulesByKey = new LinkedHashMap<>();
 
         for (JsonNode module : root.path("modules")) {
             String moduleKey = module.path("module_key").asText();
+            ModuleState defaultState = ModuleState.fromDefaultState(module.path("default_state").asText());
+            ModuleDefinition definition = new ModuleDefinition(
+                moduleKey,
+                module.path("display_name").asText(),
+                module.path("classification").asText(),
+                module.path("category").asText(),
+                module.path("core").asBoolean(false),
+                activeNormalStore(module, defaultState),
+                module.path("activation_blocking").asBoolean(false),
+                defaultState
+            );
             moduleKeys.add(moduleKey);
+            modules.add(definition);
+            modulesByKey.put(moduleKey, definition);
             if (module.path("core").asBoolean(false)) {
                 coreModuleKeys.add(moduleKey);
             }
-            defaultStates.put(moduleKey, ModuleState.fromDefaultState(module.path("default_state").asText()));
+            defaultStates.put(moduleKey, defaultState);
             module.path("required_environment_capabilities").forEach(capability ->
                 environmentCapabilities.add(capability.asText())
             );
@@ -50,6 +66,9 @@ public class ModuleContractLoader {
         }
 
         return new ModuleCatalogDefinition(
+            root.path("catalog_version").asText(),
+            List.copyOf(modules),
+            Map.copyOf(modulesByKey),
             Set.copyOf(moduleKeys),
             Set.copyOf(coreModuleKeys),
             Map.copyOf(defaultStates),
@@ -83,5 +102,12 @@ public class ModuleContractLoader {
         } catch (IOException exception) {
             throw new IllegalStateException("Failed to read module contract resource: " + resourcePath, exception);
         }
+    }
+
+    private boolean activeNormalStore(JsonNode module, ModuleState defaultState) {
+        if (module.has("active_normal_store")) {
+            return module.path("active_normal_store").asBoolean(false);
+        }
+        return module.path("core").asBoolean(false) && defaultState == ModuleState.ENABLED;
     }
 }

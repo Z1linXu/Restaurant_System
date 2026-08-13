@@ -68,7 +68,9 @@
 
 > 2026-08-13 Phase A2 Module Dependency Graph: A1 is accepted and merged
 > (`PHASE_A1_MODULE_CATALOG = PASS`, PR #137,
-> `34169152c6d48ecf503b441fe7428416c399d0a9`). A2 adds
+> `34169152c6d48ecf503b441fe7428416c399d0a9`). A2 is accepted and merged
+> (`PHASE_A2_MODULE_DEPENDENCY_GRAPH = PASS`, PR #138,
+> `1780c8934a502709844713d91c493b076e714983`). A2 adds
 > `backend/src/main/resources/module/module-dependency-graph.v1.json` and the
 > reusable `ModuleDependencyValidator`. The validator supports
 > `REQUIRES`, `CONFLICTS_WITH`, `REQUIRES_ENVIRONMENT_CAPABILITY`, and
@@ -78,6 +80,19 @@
 > environment/hardware capability, and conflicts. A2 does not add Store module
 > persistence, public API behavior, schema migration, Staging deployment or
 > Production mutation.
+
+> 2026-08-13 Phase A3 Store-level Module Configuration: A3 adds additive
+> Flyway V13 `store_modules` as the canonical Store-scoped module state source
+> and deterministically materializes existing Stores from the A1 catalog:
+> normal core modules enabled, `KDS` disabled/default-off, and
+> `ANALYTICS_ADVANCED` disabled/default-off. The Store Context response now
+> includes `module_configuration`, and `GET /api/v1/stores/{storeId}/modules`
+> plus `PUT /api/v1/admin/stores/{storeId}/modules` provide the bounded
+> read/config contract. A3 separates environment capability, Store module
+> state, Store runtime mode and user authorization. Existing runtime behavior
+> still uses legacy environment flags and Store runtime fields until A6/A7; A3
+> does not rewrite backend/frontend gating, create profiles, touch Production,
+> or start Phase B/C.
 
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The

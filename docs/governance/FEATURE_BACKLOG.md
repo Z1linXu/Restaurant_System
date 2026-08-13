@@ -98,6 +98,31 @@ Current A2 Module Dependency Graph package:
 - Focused validation:
   `backend/src/test/java/com/restaurant/system/modules/ModuleDependencyValidatorTest.java`
 
+A2 is complete:
+
+```text
+PHASE_A2_MODULE_DEPENDENCY_GRAPH = PASS
+PR = #138
+MERGE_SHA = 1780c8934a502709844713d91c493b076e714983
+```
+
+Current A3 Store-level Module Configuration package:
+
+- Technical evidence:
+  [PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION](agile/PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION.md)
+- Additive persistence:
+  `backend/src/main/resources/db/migration/V13__add_store_modules.sql`
+- Canonical Store module read/config contract:
+  `GET /api/v1/stores/{storeId}/context`,
+  `GET /api/v1/stores/{storeId}/modules`, and
+  `PUT /api/v1/admin/stores/{storeId}/modules`
+- Backend foundation:
+  `backend/src/main/java/com/restaurant/system/modules/StoreModuleServiceImpl.java`
+
+A3 remains bounded to Store module persistence/read/config. A4 profiles, A6/A7
+runtime gating, Phase B/C, Chinatown, Sainte-Catherine and Production work are
+not part of this package.
+
 Phase A0 deployed evidence is tracked in
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).
 Current deployed conclusion: existing menu option/modifier data safely models

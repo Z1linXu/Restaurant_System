@@ -134,12 +134,27 @@ A1 has been accepted by Agent 6 and merged through PR #137 at
 PHASE_A1_MODULE_CATALOG = PASS
 ```
 
-A2 Module Dependency Graph now adds
+A2 Module Dependency Graph is accepted and merged through PR #138 at
+`1780c8934a502709844713d91c493b076e714983`:
+
+```text
+PHASE_A2_MODULE_DEPENDENCY_GRAPH = PASS
+```
+
+A2 Module Dependency Graph adds
 `backend/src/main/resources/module/module-dependency-graph.v1.json` and the
 reusable `ModuleDependencyValidator` for fail-closed `REQUIRES`,
 `CONFLICTS_WITH`, `REQUIRES_ENVIRONMENT_CAPABILITY`, and
 `REQUIRES_HARDWARE_CAPABILITY` validation. A2 remains repository/backend
 contract work only: no schema migration, Staging deploy or Production mutation.
+
+A3 Store-level Module Configuration now adds additive Flyway V13
+`store_modules`, canonical Store module read/config APIs, and Store Context
+`module_configuration`:
+[PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION](../agile/PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION.md).
+A3 is a runtime/schema change and therefore requires PR/merge, fresh fetch,
+exact-SHA Staging deploy, Flyway verification and automated Staging acceptance
+before it may be marked PASS. Production remains no-mutation.
 
 Phase A0 deployed evidence:
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](../agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).

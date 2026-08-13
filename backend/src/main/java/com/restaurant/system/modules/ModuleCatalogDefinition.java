@@ -1,9 +1,13 @@
 package com.restaurant.system.modules;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 public record ModuleCatalogDefinition(
+    String catalogVersion,
+    List<ModuleDefinition> modules,
+    Map<String, ModuleDefinition> modulesByKey,
     Set<String> moduleKeys,
     Set<String> coreModuleKeys,
     Map<String, ModuleState> defaultStates,
@@ -16,5 +20,9 @@ public record ModuleCatalogDefinition(
 
     public ModuleState defaultState(String moduleKey) {
         return defaultStates.getOrDefault(moduleKey, ModuleState.DISABLED);
+    }
+
+    public ModuleDefinition module(String moduleKey) {
+        return modulesByKey.get(moduleKey);
     }
 }

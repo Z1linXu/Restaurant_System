@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.restaurant.system.common.exception.GlobalExceptionHandler;
+import com.restaurant.system.modules.StoreModuleService;
+import com.restaurant.system.modules.dto.StoreModuleConfigurationResponse;
 import com.restaurant.system.platform.entity.Organization;
 import com.restaurant.system.platform.repository.OrganizationRepository;
 import com.restaurant.system.user.entity.Store;
@@ -32,6 +34,8 @@ class WorkspaceControllerTest {
     private StoreRepository storeRepository;
     @Mock
     private OrganizationRepository organizationRepository;
+    @Mock
+    private StoreModuleService storeModuleService;
 
     private MockMvc mockMvc;
     private AuthenticatedUser user;
@@ -42,7 +46,8 @@ class WorkspaceControllerTest {
             requestUserContextService,
             storeAccessService,
             storeRepository,
-            organizationRepository
+            organizationRepository,
+            storeModuleService
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
             .setControllerAdvice(new GlobalExceptionHandler())
@@ -103,13 +108,16 @@ class WorkspaceControllerTest {
         when(storeRepository.findById(10L)).thenReturn(Optional.of(store));
         when(organizationRepository.findById(100L)).thenReturn(Optional.of(organization));
         when(storeAccessService.roleCodeForStore(user, store)).thenReturn("OWNER");
+        when(storeModuleService.getConfiguration(10L)).thenReturn(moduleConfiguration(10L));
 
         mockMvc.perform(get("/api/v1/stores/10/context"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.id").value(10))
             .andExpect(jsonPath("$.data.organization_id").value(100))
             .andExpect(jsonPath("$.data.organization_name").value("Org 100"))
-            .andExpect(jsonPath("$.data.role_code").value("OWNER"));
+            .andExpect(jsonPath("$.data.role_code").value("OWNER"))
+            .andExpect(jsonPath("$.data.module_configuration.store_id").value(10))
+            .andExpect(jsonPath("$.data.module_configuration.validation_status").value("VALID"));
     }
 
     @Test
@@ -139,5 +147,15 @@ class WorkspaceControllerTest {
         store.code = "STORE_" + id;
         store.status = "active";
         return store;
+    }
+
+    private StoreModuleConfigurationResponse moduleConfiguration(Long storeId) {
+        StoreModuleConfigurationResponse response = new StoreModuleConfigurationResponse();
+        response.store_id = storeId;
+        response.valid = true;
+        response.validation_status = "VALID";
+        response.modules = List.of();
+        response.validation_issues = List.of();
+        return response;
     }
 }
