@@ -1,5 +1,23 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-14 Phase A9 Legacy Coupling Removal: A9 records the current
+> `BUILD ONCE, CONFIGURE MANY` cleanup. Store modules remain canonical in
+> `store_modules`; module definitions remain the catalog; dependencies remain
+> the dependency graph; Pricing remains `store_pricing_policies`; Combo/Menu
+> remain Store-scoped configuration; authorization remains membership + role +
+> capability; hardware readiness remains the A8 contract. `stores.printing_mode`
+> is the canonical runtime print mode and blank/unknown persisted values resolve
+> fail-closed to `DISABLED`. `stores.printing_enabled` is a bounded
+> compatibility mirror only. Legacy Platform Admin active Store creation and
+> template-copy Store creation are disabled until Phase B provisioning. Owner
+> onboarding/menu-clone HTTP facades require the `PLATFORM` environment
+> capability. `users.store_id` is retained only as a bounded compatibility
+> fallback when a user has no active Organization/Store membership. A9 adds no
+> Flyway migration and does not mutate Production. Evidence:
+> [PHASE_A9_LEGACY_COUPLING_REMOVAL_EVIDENCE](docs/governance/agile/PHASE_A9_LEGACY_COUPLING_REMOVAL_EVIDENCE.md)
+> and
+> [PHASE_A9_LEGACY_COMPATIBILITY_LEDGER](docs/governance/agile/PHASE_A9_LEGACY_COMPATIBILITY_LEDGER.md).
+
 > 2026-08-14 Phase A8 Hardware Capability Contract: A8 adds the canonical
 > hardware capability catalog at
 > `backend/src/main/resources/hardware/hardware-capability-catalog.v1.json`.

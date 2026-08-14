@@ -3,6 +3,7 @@ package com.restaurant.system.owner.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -14,6 +15,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.restaurant.system.common.auth.AuthenticatedUser;
 import com.restaurant.system.common.auth.AuthorizationService;
 import com.restaurant.system.common.exception.GlobalExceptionHandler;
+import com.restaurant.system.common.feature.FeatureDisabledException;
+import com.restaurant.system.common.feature.FeatureFlagService;
+import com.restaurant.system.common.feature.FeaturePackage;
 import com.restaurant.system.owner.dto.OwnerStoreOnboardingRequest;
 import com.restaurant.system.owner.dto.OwnerStoreOnboardingResponse;
 import com.restaurant.system.owner.dto.OwnerStoreOnboardingStaffRequest;
@@ -42,6 +46,8 @@ class OwnerStoreOnboardingControllerTest {
     private AuthorizationService authorizationService;
     @Mock
     private OwnerStoreOnboardingService onboardingService;
+    @Mock
+    private FeatureFlagService featureFlagService;
     @Captor
     private ArgumentCaptor<OwnerStoreOnboardingRequest> requestCaptor;
 
@@ -54,7 +60,8 @@ class OwnerStoreOnboardingControllerTest {
     void setUp() {
         OwnerStoreOnboardingController controller = new OwnerStoreOnboardingController(
             authorizationService,
-            onboardingService
+            onboardingService,
+            featureFlagService
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
             .setControllerAdvice(new GlobalExceptionHandler())
@@ -100,6 +107,21 @@ class OwnerStoreOnboardingControllerTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.error_code").value("REQUEST_HEADER_REQUIRED"));
+
+        verifyNoInteractions(authorizationService, onboardingService);
+    }
+
+    @Test
+    void platformFeatureGateBlocksOnboardingRuntimeBeforeOwnerAuthorization() throws Exception {
+        doThrow(new FeatureDisabledException(FeaturePackage.PLATFORM))
+            .when(featureFlagService).requireEnabled(FeaturePackage.PLATFORM);
+
+        mockMvc.perform(post("/api/v1/owner/organizations/{organizationId}/stores/onboard", ORGANIZATION_ID)
+                .header("Idempotency-Key", IDEMPOTENCY_KEY)
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(request())))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.error_code").value("FEATURE_DISABLED"));
 
         verifyNoInteractions(authorizationService, onboardingService);
     }

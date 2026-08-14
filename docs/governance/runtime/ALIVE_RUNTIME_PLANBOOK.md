@@ -1,5 +1,45 @@
 # Alive Runtime Planbook
 
+## Current Phase A A9 legacy coupling removal (2026-08-14)
+
+Owner authorized continuous execution from A8 into A9. Phase A9 is implemented
+in the repository worktree and remains pending final validation, Agent 6 review,
+PR merge, exact-SHA Staging deployment and automated regression:
+
+```text
+PHASE_A9_LEGACY_COUPLING_REMOVAL = REPOSITORY_IMPLEMENTED_PENDING_FINAL_VALIDATION
+```
+
+Evidence:
+[PHASE_A9_LEGACY_COUPLING_REMOVAL_EVIDENCE](../agile/PHASE_A9_LEGACY_COUPLING_REMOVAL_EVIDENCE.md)
+and
+[PHASE_A9_LEGACY_COMPATIBILITY_LEDGER](../agile/PHASE_A9_LEGACY_COMPATIBILITY_LEDGER.md).
+
+A9 removes or bounds current legacy coupling without changing schema or
+Production runtime:
+
+- Store modules remain canonical in `store_modules`; module definitions remain
+  the module catalog; dependencies remain the dependency graph.
+- Store Profiles remain versioned templates; Pricing remains
+  `store_pricing_policies`; Combo/Menu/authorization/hardware each keep their
+  Phase A canonical sources.
+- blank or unknown persisted printing mode now resolves fail-closed to
+  `DISABLED`; explicit printing-mode mutations must be a runtime-allowed mode.
+- legacy Platform Admin direct active Store creation and template-copy Store
+  creation are disabled until Phase B provisioning.
+- Owner onboarding and menu-clone HTTP facades are gated by the `PLATFORM`
+  environment capability until Phase B/C.
+- `users.store_id` remains only a bounded compatibility fallback when no active
+  Organization/Store membership exists.
+
+No Flyway migration is expected. Production remains `NO MUTATION`. After A9
+merge, deploy the exact merged SHA to Staging, run regression, then stop before
+A10:
+
+```text
+PHASE_A9_LEGACY_COUPLING_REMOVAL_COMPLETE_WAITING_FOR_PHASE_A10_OWNER_CONTINUATION
+```
+
 ## Current Phase A A8 hardware capability contract (2026-08-14)
 
 Owner authorized continuous execution from A8 into A9 after A6/A7 passed and

@@ -2,6 +2,7 @@ package com.restaurant.system.owner.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -14,6 +15,9 @@ import com.restaurant.system.common.auth.AuthenticatedUser;
 import com.restaurant.system.common.auth.AuthorizationService;
 import com.restaurant.system.common.auth.ForbiddenException;
 import com.restaurant.system.common.exception.GlobalExceptionHandler;
+import com.restaurant.system.common.feature.FeatureDisabledException;
+import com.restaurant.system.common.feature.FeatureFlagService;
+import com.restaurant.system.common.feature.FeaturePackage;
 import com.restaurant.system.owner.dto.OwnerStoreMenuCloneRequest;
 import com.restaurant.system.owner.dto.OwnerStoreMenuCloneResponse;
 import com.restaurant.system.owner.dto.OwnerStoreMenuCloneValidationResponse;
@@ -36,6 +40,7 @@ class OwnerStoreMenuCloneControllerTest {
 
     @Mock private AuthorizationService authorizationService;
     @Mock private OwnerStoreMenuCloneService menuCloneService;
+    @Mock private FeatureFlagService featureFlagService;
 
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
@@ -43,7 +48,11 @@ class OwnerStoreMenuCloneControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new OwnerStoreMenuCloneController(authorizationService, menuCloneService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new OwnerStoreMenuCloneController(
+                authorizationService,
+                menuCloneService,
+                featureFlagService
+            ))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
         objectMapper = new ObjectMapper();
@@ -90,6 +99,19 @@ class OwnerStoreMenuCloneControllerTest {
         mockMvc.perform(post(route() + "/validate").contentType("application/json").content("{}"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error_code").value("MENU_CLONE_REQUEST_INVALID"));
+
+        verifyNoInteractions(authorizationService, menuCloneService);
+    }
+
+    @Test
+    void platformFeatureGateBlocksCloneRuntimeBeforeOwnerAuthorization() throws Exception {
+        doThrow(new FeatureDisabledException(FeaturePackage.PLATFORM))
+            .when(featureFlagService).requireEnabled(FeaturePackage.PLATFORM);
+
+        mockMvc.perform(post(route() + "/validate")
+                .contentType("application/json").content(objectMapper.writeValueAsString(request())))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.error_code").value("FEATURE_DISABLED"));
 
         verifyNoInteractions(authorizationService, menuCloneService);
     }

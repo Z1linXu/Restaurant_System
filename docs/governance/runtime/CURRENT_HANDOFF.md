@@ -1,6 +1,50 @@
 # Current Project Handoff
 
-## 0. Phase A current handoff — A8 complete, continue A9
+## 0. Phase A current handoff — A9 repository implementation pending final validation
+
+Fresh main authority for the active A9 branch is:
+
+```text
+8796d03a2f01d3f222fa2e05fc9d2c6152f4809e
+```
+
+Phase A8 is merged and A9 is now implemented in the local repository worktree:
+
+```text
+PHASE_A9_LEGACY_COUPLING_REMOVAL = REPOSITORY_IMPLEMENTED_PENDING_FINAL_VALIDATION
+```
+
+Evidence:
+[PHASE_A9_LEGACY_COUPLING_REMOVAL_EVIDENCE](../agile/PHASE_A9_LEGACY_COUPLING_REMOVAL_EVIDENCE.md)
+and
+[PHASE_A9_LEGACY_COMPATIBILITY_LEDGER](../agile/PHASE_A9_LEGACY_COMPATIBILITY_LEDGER.md).
+
+Key A9 repository facts:
+
+- no additive/destructive Flyway migration is included or expected;
+- `stores.printing_mode` is the canonical runtime mode and blank/unknown
+  persisted values resolve fail-closed to `DISABLED`;
+- `stores.printing_enabled` remains a bounded compatibility mirror only, not a
+  source for inferring `REAL`;
+- legacy Platform Admin active Store creation paths fail closed until Phase B
+  provisioning;
+- Owner onboarding and menu-clone HTTP facades require the `PLATFORM`
+  environment capability before runtime use;
+- Store module state, pricing, combo, menu, authorization and hardware sources
+  remain the Phase A canonical contracts.
+
+Continue with final validation, Agent 6 review, PR/auto-merge, fresh fetch,
+exact-SHA Staging deployment and automated A9 regression. Production remains
+`NO MUTATION`. Do not start A10, Phase B/C, Chinatown, Sainte-Catherine or
+Production deployment.
+
+Unique stop state after Staging validation:
+
+```text
+PHASE_A9_LEGACY_COUPLING_REMOVAL_COMPLETE_WAITING_FOR_PHASE_A10_OWNER_CONTINUATION
+```
+
+## 0a. Historical Phase A A8 handoff — complete, superseded by active A9 section
 
 Current fresh main for this handoff sequence began at:
 

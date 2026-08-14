@@ -1,5 +1,11 @@
 # 08 Authorization Flow
 
+> A9 update: `users.store_id` is retained only as a bounded compatibility
+> fallback when no active Organization/Store membership exists. Legacy direct
+> active Store creation is disabled until Phase B provisioning, and Owner
+> onboarding/menu-clone HTTP facades are gated by the `PLATFORM` environment
+> capability.
+
 > A8 update: backend module access now evaluates Store module state,
 > module dependencies, environment capability and hardware capability before the
 > protected business action. Authorization remains membership/role/capability
@@ -75,6 +81,8 @@ sequenceDiagram
 
 - Backend authorization is the security boundary; frontend visibility is not.
 - Store-scoped APIs must verify Store access before business action.
+- The legacy `users.store_id` fallback is allowed only when no active
+  membership provides Store access.
 - Role capabilities are checked through the authorization service and registry.
 - A6 backend module/capability checks run after auth, Store access and role
   capability checks.

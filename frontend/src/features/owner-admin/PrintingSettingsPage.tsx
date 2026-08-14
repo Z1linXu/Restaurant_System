@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { isFeatureEnabled } from '../feature-flags/featureConfig'
 import { fetchPlatformOverview, type PlatformAdminOverview } from '../../services/platformAdminService'
 import { useCurrentStore } from '../store/useStoreContext'
@@ -409,7 +409,7 @@ export function PrintingSettingsPage() {
   const [padDeviceStatus, setPadDeviceStatus] = useState<AndroidPadDeviceStatus | null>(null)
   const [pairingPad, setPairingPad] = useState(false)
 
-  const refreshPadDeviceStatus = () => {
+  const refreshPadDeviceStatus = useCallback(() => {
     const bridge = getAndroidPadDeviceBridge()
     setPadBridgeAvailable(Boolean(bridge))
     if (!bridge) {
@@ -417,9 +417,9 @@ export function PrintingSettingsPage() {
       return
     }
     setPadDeviceStatus(parseAndroidPadStatus(bridge.getDeviceStatus()))
-  }
+  }, [])
 
-  const loadData = async (storeId: number) => {
+  const loadData = useCallback(async (storeId: number) => {
     setLoading(true)
     setJobsLoading(true)
     setDevicesLoading(true)
@@ -466,7 +466,7 @@ export function PrintingSettingsPage() {
     } finally {
       setDevicesLoading(false)
     }
-  }
+  }, [currentStore.storeName])
 
   useEffect(() => {
     setSelectedStoreId(String(storeId))
@@ -474,11 +474,11 @@ export function PrintingSettingsPage() {
 
   useEffect(() => {
     void loadData(Number(selectedStoreId))
-  }, [selectedStoreId])
+  }, [loadData, selectedStoreId])
 
   useEffect(() => {
     refreshPadDeviceStatus()
-  }, [selectedStoreId])
+  }, [refreshPadDeviceStatus, selectedStoreId])
 
   const stores = useMemo(
     () => (overview?.stores ?? []).map((store) => ({
@@ -527,7 +527,7 @@ export function PrintingSettingsPage() {
       stalePrintingCount,
     }
   }, [printJobs])
-  const printingMode = (printCenter?.printing_mode ?? (printCenter?.printing_enabled ? 'REAL' : 'DISABLED')) as PrintingMode
+  const printingMode = (printCenter?.printing_mode ?? 'DISABLED') as PrintingMode
   const cloudPrivatePrinterWarning = useMemo(() => {
     if (printCenter?.cloud_private_printer_warning) {
       return CLOUD_PRIVATE_PRINTER_WARNING

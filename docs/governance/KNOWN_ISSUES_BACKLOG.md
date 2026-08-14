@@ -1,5 +1,21 @@
 # Known Issues Backlog
 
+## Phase A9 resolved architecture risk
+
+The legacy coupling risk is addressed by
+`PHASE_A9_LEGACY_COUPLING_REMOVAL` at repository-implemented / pending-final-
+validation status. Current shared business runtime code has no active
+Store-ID/name hardcode for Chinatown, St-Denis or Sainte-Catherine. Remaining
+historical profile/source references are classified as bounded profile
+identity, staging-tool guard or documentation/evidence, not runtime Store
+branching.
+
+Legacy direct active Store creation is disabled until Phase B provisioning,
+Owner onboarding/menu-clone HTTP facades are `PLATFORM` capability gated, and
+blank/unknown persisted printing mode now fails closed to `DISABLED`. No
+Production incident or active P0/P1 is introduced by A9; no Flyway migration is
+expected.
+
 ## Phase A8 resolved architecture risk
 
 The prior risk that Printing, Pad devices, runtime print mode, Store logical

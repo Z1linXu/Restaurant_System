@@ -42,6 +42,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class PlatformAdminServiceImpl implements PlatformAdminService {
 
     private static final Pattern NATURAL_CODE_PATTERN = Pattern.compile("^([A-Za-z]+)?\\s*(\\d+)?(.*)$");
+    static final String LEGACY_STORE_CREATION_DISABLED =
+        "LEGACY_PLATFORM_STORE_CREATION_DISABLED_USE_PHASE_B_PROVISIONING";
 
     private final OrganizationRepository organizationRepository;
     private final RestaurantTemplateRepository restaurantTemplateRepository;
@@ -155,50 +157,24 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
     @Override
     @Transactional
     public Store saveStore(Store store) {
-        Store target = store.id == null
-            ? new Store()
-            : storeRepository.findById(store.id).orElseThrow(() -> new BusinessException("Store not found"));
+        if (store.id == null) {
+            throw new BusinessException(LEGACY_STORE_CREATION_DISABLED);
+        }
+        Store target = storeRepository.findById(store.id).orElseThrow(() -> new BusinessException("Store not found"));
         target.organization_id = store.organization_id;
         target.name = store.name;
         target.code = store.code;
         target.status = store.status == null ? "active" : store.status;
         target.enable_bar_kitchen_tasks = store.enable_bar_kitchen_tasks;
         target.printing_enabled = store.printing_enabled == null ? true : store.printing_enabled;
-        stamp(target, store.id == null);
+        stamp(target, false);
         return storeRepository.save(target);
     }
 
     @Override
     @Transactional
     public Store createStoreFromTemplate(CreateStoreFromTemplateRequest request) {
-        Store store = new Store();
-        store.organization_id = request.organization_id;
-        store.name = request.name;
-        store.code = request.code;
-        store.status = request.status == null ? "active" : request.status;
-        store.enable_bar_kitchen_tasks = request.enable_bar_kitchen_tasks;
-        store.printing_enabled = true;
-        stamp(store, true);
-        Store savedStore = storeRepository.save(store);
-
-        if (request.template_id == null) {
-            return savedStore;
-        }
-
-        RestaurantTemplate template = restaurantTemplateRepository.findById(request.template_id)
-            .orElseThrow(() -> new BusinessException("Template not found"));
-
-        boolean copiedStations = copyStationsFromTemplate(savedStore.id, template.default_station_setup_json);
-        copyDiningTablesFromTemplate(savedStore.id, template.default_dining_table_layout_rules_json);
-        boolean copiedCategories = copyMenuCategoriesFromTemplate(savedStore.id, template.default_menu_category_structure_json);
-        copyKdsConfigsFromTemplate(savedStore.id, template.default_kds_display_rules_json);
-        if (copiedStations || copiedCategories) {
-            menuRevisionService.incrementRevision(savedStore.id);
-            return storeRepository.findById(savedStore.id)
-                .orElseThrow(() -> new BusinessException("Store not found after template menu revision"));
-        }
-
-        return savedStore;
+        throw new BusinessException(LEGACY_STORE_CREATION_DISABLED);
     }
 
     @Override
