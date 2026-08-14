@@ -154,6 +154,22 @@
 > validation. A5 is complete and waits for Phase A6 Owner continuation.
 > Production remains no-mutation.
 
+> 2026-08-14 Phase A5.5 current Staging architecture UML baseline:
+> `PHASE_A5_5_CURRENT_STAGING_ARCHITECTURE_UML_BASELINE` is a
+> documentation-only baseline for the current post-A5 Staging architecture. The
+> documentation source authority was fresh main
+> `5f4504d23135655f63d564301f8e98f3218347b2`; the read-only observed Staging
+> runtime remained exact `3440fddad7571409c66189e44976658921e5de1f` at Flyway
+> V15 with Store `STG005_SRC_20260809_R01`, Printing `MOCK/true`, four logical
+> printers, three assignments, and `ST_DENIS_CANONICAL_PROFILE/v1` READY. No
+> backend/frontend/Android business code, schema, deployment, restart, Flyway,
+> Staging write, or Production runtime action occurred. The canonical Mermaid
+> sources are in
+> [Current Staging Architecture UML Baseline](docs/architecture/current-staging/README.md).
+> A5.5 records legacy runtime gating and live Store/profile graph count
+> differences as bounded current-architecture findings, not as authorization to
+> start A6, Phase B, Chinatown, Sainte-Catherine, or Production work.
+
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The
 > product rule is `BUILD ONCE, CONFIGURE MANY`; future Stores must not be
