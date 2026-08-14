@@ -41,14 +41,22 @@ public class MenuCatalogHashService {
             configuration == null || configuration.groups == null ? List.of() : configuration.groups;
         append(target, groups.size());
         for (com.restaurant.system.menu.dto.StoreComboConfigurationResponse.GroupResponse group : groups) {
+            append(target, group.group_id);
+            append(target, group.group_code);
             append(target, group.component_group);
             append(target, group.name_zh);
             append(target, group.name_en);
+            append(target, group.selection_rule);
+            append(target, group.required);
+            append(target, group.enabled);
+            append(target, group.display_order);
             append(target, group.default_component_code);
             List<com.restaurant.system.menu.dto.StoreComboConfigurationResponse.ComponentResponse> components =
                 group.components == null ? List.of() : group.components;
             append(target, components.size());
             for (com.restaurant.system.menu.dto.StoreComboConfigurationResponse.ComponentResponse component : components) {
+                append(target, component.id);
+                append(target, component.group_id);
                 append(target, component.component_group);
                 append(target, component.component_code);
                 append(target, component.name_zh);
@@ -56,6 +64,11 @@ public class MenuCatalogHashService {
                 append(target, component.enabled);
                 append(target, component.display_order);
                 append(target, component.is_default);
+                append(target, component.linked_menu_item_id);
+                append(target, component.linked_menu_item_sku);
+                append(target, component.linked_menu_item_name_zh);
+                append(target, component.linked_menu_item_name_en);
+                append(target, component.business_behavior);
             }
         }
     }

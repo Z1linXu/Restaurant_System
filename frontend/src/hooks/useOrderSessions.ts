@@ -53,6 +53,11 @@ export function buildDefaultDraft(menuItem: MenuItem): ItemCustomizationDraft {
     comboEnabled: false,
     comboEggId: menuItem.customization?.combo?.eggs[0]?.id,
     comboSideId: menuItem.customization?.combo?.sides[0]?.id,
+    comboSelections: Object.fromEntries(
+      (menuItem.customization?.combo?.groups ?? [])
+        .filter((group) => group.required || group.defaultOptionId)
+        .map((group) => [group.groupCode, group.defaultOptionId ?? group.options[0]?.id]),
+    ),
     comboSideRemoveIds: [],
     addOnQuantities: {},
     removeIds: [],
@@ -85,13 +90,29 @@ function calculateUnitPrice(menuItem: MenuItem, draft: ItemCustomizationDraft) {
   const soupBasePrice =
     menuItem.customization?.soupBases?.options.find((option) => option.id === draft.soupBaseId)?.priceDelta ?? 0
   const comboPrice = draft.comboEnabled ? (menuItem.customization?.combo?.upcharge ?? 0) : 0
+  const comboGroupPrice = draft.comboEnabled
+    ? menuItem.customization?.combo?.groups
+      ?.reduce((sum, group) => {
+        const legacySelection = group.groupCode === 'COMBO_EGG'
+          ? draft.comboEggId
+          : group.groupCode === 'COMBO_SIDE'
+            ? draft.comboSideId
+            : undefined
+        const selectedId = draft.comboSelections?.[group.groupCode]
+          ?? legacySelection
+          ?? group.defaultOptionId
+          ?? (group.required ? group.options[0]?.id : undefined)
+        const selected = group.options.find((option) => option.id === selectedId)
+        return sum + (selected?.priceDelta ?? 0)
+      }, 0) ?? 0
+    : 0
   const addOnPrice = sumAddOnPrice(menuItem.customization?.addOns, draft.addOnQuantities)
   const removeOptionPrice = sumPrice(menuItem.customization?.removeOptions, draft.removeIds)
   const comboSideRemovePrice = draft.comboEnabled
     ? sumPrice(menuItem.customization?.combo?.sideRemoveOptions, draft.comboSideRemoveIds)
     : 0
 
-  return menuItem.price + sizePrice + soupBasePrice + comboPrice + addOnPrice + removeOptionPrice + comboSideRemovePrice
+  return menuItem.price + sizePrice + soupBasePrice + comboPrice + comboGroupPrice + addOnPrice + removeOptionPrice + comboSideRemovePrice
 }
 
 function buildSummaryTags(menuItem: MenuItem, draft: ItemCustomizationDraft) {
@@ -122,9 +143,28 @@ function buildSummaryTags(menuItem: MenuItem, draft: ItemCustomizationDraft) {
   if (draft.comboEnabled) {
     summaryTags.push({ en: 'Combo', zh: '套餐' })
 
-    const eggLabel = getChoiceLabel(customization?.combo?.eggs, draft.comboEggId)
-    const sideLabel = getChoiceLabel(customization?.combo?.sides, draft.comboSideId)
+    const comboGroups = customization?.combo?.groups ?? []
+    const comboGroupLabels = comboGroups
+      .map((group) => {
+        const legacySelection = group.groupCode === 'COMBO_EGG'
+          ? draft.comboEggId
+          : group.groupCode === 'COMBO_SIDE'
+            ? draft.comboSideId
+            : undefined
+        return getChoiceLabel(
+          group.options,
+          draft.comboSelections?.[group.groupCode]
+            ?? legacySelection
+            ?? group.defaultOptionId
+            ?? (group.required ? group.options[0]?.id : undefined),
+        )
+      })
+      .filter((label): label is LocalizedText => label != null)
+    const eggLabel = comboGroups.length ? null : getChoiceLabel(customization?.combo?.eggs, draft.comboEggId)
+    const sideLabel = comboGroups.length ? null : getChoiceLabel(customization?.combo?.sides, draft.comboSideId)
     const sideRemoveLabels = getSelectedOptions(customization?.combo?.sideRemoveOptions, draft.comboSideRemoveIds)
+
+    summaryTags.push(...comboGroupLabels)
 
     if (eggLabel) {
       summaryTags.push(eggLabel)

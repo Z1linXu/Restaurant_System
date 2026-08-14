@@ -283,24 +283,44 @@ Phase B/C, Chinatown, Sainte-Catherine or Production work. Current Staging is
 deployed at `3440fddad7571409c66189e44976658921e5de1f` and waits for
 `PHASE_A6_OWNER_CONTINUATION`.
 
-Owner then authorized the documentation-only A5.5 baseline:
+Owner then authorized a documentation-only A5.5 baseline, but the current Owner
+request supersedes that sequencing. The former UML baseline is now deferred and
+renumbered to:
 
 ```text
-PHASE_A5_5_CURRENT_STAGING_ARCHITECTURE_UML_BASELINE
+PHASE_A5_6_CURRENT_STAGING_ARCHITECTURE_UML_BASELINE
 ```
 
-A5.5 is now recorded under
+The already prepared architecture docs remain recorded under
 [Current Staging Architecture UML Baseline](../../architecture/current-staging/README.md).
 It was prepared from source `5f4504d23135655f63d564301f8e98f3218347b2` and
 read-only Staging observation of deployed
 `3440fddad7571409c66189e44976658921e5de1f` / Flyway V15. The docs include
 system context, domain model, module/profile architecture, ordering, printing,
 menu revision cache, deployment and authorization flows. No runtime was
-changed, no code/schema was changed, and Production was not touched. A5.5 does
-not start or renumber A6-A10. Current stop:
+changed, no code/schema was changed, and Production was not touched. It is not
+the active A5.5 loop for this package.
+
+Current Owner-authorized loop:
 
 ```text
-PHASE_A5_5_UML_BASELINE_COMPLETE_WAITING_FOR_PHASE_A6_OWNER_CONTINUATION
+PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_CLOSURE
+```
+
+Evidence:
+[PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_EVIDENCE](../agile/PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_EVIDENCE.md).
+A5.5 adds dynamic Store-scoped Combo Groups/Components, Owner Category
+management, Owner Station management, Store-scoped validators, and unified menu
+revision/cache invalidation. It keeps Combo price in
+`store_pricing_policies.combo_delta`, item Combo allowed in item-scoped
+`menu_item_options`, and historical orders/receipts/printing/report data
+snapshot-backed. It may deploy only the exact merged SHA to Staging for
+automated validation. Production remains no-mutation.
+
+Expected A5.5 stop after Staging validation:
+
+```text
+PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
 ```
 
 ## Current final productization roadmap audit (2026-08-12)

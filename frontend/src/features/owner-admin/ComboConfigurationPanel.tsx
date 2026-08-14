@@ -2,11 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   fetchStoreComboConfiguration,
   updateStoreComboConfiguration,
+  type StoreComboConfigurationGroupRecord,
   type StoreComboConfigurationRecord,
 } from '../../services/ownerMenuOptionService'
+import type { MenuItemAdminRecord } from '../../services/platformAdminService'
 
 interface ComboConfigurationPanelProps {
   storeId: number
+  menuItems?: MenuItemAdminRecord[]
   onSaved?: (message: string) => void
 }
 
@@ -23,19 +26,41 @@ function cloneConfiguration(configuration: StoreComboConfigurationRecord | null)
   }
 }
 
-function sameConfiguration(left: StoreComboConfigurationRecord | null, right: StoreComboConfigurationRecord | null) {
-  if (!left || !right) return false
-  const leftComponents = left.groups.flatMap((group) => group.components)
-  const rightEnabled = new Map(
-    right.groups.flatMap((group) => group.components)
-      .map((component) => [`${component.component_group}:${component.component_code}`, component.enabled]),
-  )
-  return leftComponents.every((component) => (
-    rightEnabled.get(`${component.component_group}:${component.component_code}`) === component.enabled
-  ))
+function canonical(configuration: StoreComboConfigurationRecord | null) {
+  if (!configuration) return ''
+  return JSON.stringify(configuration.groups.map((group) => ({
+    group_id: group.group_id ?? null,
+    group_code: group.group_code ?? group.component_group ?? null,
+    name_zh: group.name_zh,
+    name_en: group.name_en,
+    selection_rule: group.selection_rule ?? 'EXACTLY_ONE',
+    required: group.required ?? (group.selection_rule !== 'OPTIONAL_ONE'),
+    enabled: group.enabled ?? true,
+    display_order: group.display_order ?? 0,
+    default_component_code: group.default_component_code ?? null,
+    components: group.components.map((component) => ({
+      id: component.id ?? null,
+      component_code: component.component_code ?? null,
+      name_zh: component.name_zh,
+      name_en: component.name_en,
+      enabled: component.enabled,
+      display_order: component.display_order,
+      is_default: component.is_default,
+      linked_menu_item_id: component.linked_menu_item_id ?? null,
+      business_behavior: component.business_behavior ?? 'NO_KITCHEN_TASK',
+    })),
+  })))
 }
 
-export function ComboConfigurationPanel({ storeId, onSaved }: ComboConfigurationPanelProps) {
+function nextOrder(values: Array<{ display_order?: number | null }>) {
+  return (values.reduce((max, value) => Math.max(max, value.display_order ?? 0), 0) || values.length * 10) + 10
+}
+
+function groupCode(group: StoreComboConfigurationGroupRecord) {
+  return (group.group_code ?? group.component_group ?? '').trim().toUpperCase()
+}
+
+export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: ComboConfigurationPanelProps) {
   const [configuration, setConfiguration] = useState<StoreComboConfigurationRecord | null>(null)
   const [draft, setDraft] = useState<StoreComboConfigurationRecord | null>(null)
   const [loading, setLoading] = useState(true)
@@ -66,22 +91,109 @@ export function ComboConfigurationPanel({ storeId, onSaved }: ComboConfiguration
     }
   }, [storeId])
 
-  const dirty = useMemo(() => !sameConfiguration(configuration, draft), [configuration, draft])
+  const dirty = useMemo(() => canonical(configuration) !== canonical(draft), [configuration, draft])
+  const activeMenuItems = useMemo(
+    () => menuItems.filter((item) => item.is_active),
+    [menuItems],
+  )
 
-  const toggleComponent = (groupCode: string, componentCode: string) => {
+  const patchGroup = (groupIndex: number, patch: Partial<StoreComboConfigurationGroupRecord>) => {
     if (!draft) return
     setDraft({
       ...draft,
-      groups: draft.groups.map((group) => (
-        group.component_group !== groupCode
+      groups: draft.groups.map((group, index) => (index === groupIndex ? { ...group, ...patch } : group)),
+    })
+  }
+
+  const patchComponent = (
+    groupIndex: number,
+    componentIndex: number,
+    patch: Partial<StoreComboConfigurationGroupRecord['components'][number]>,
+  ) => {
+    if (!draft) return
+    setDraft({
+      ...draft,
+      groups: draft.groups.map((group, index) => (
+        index !== groupIndex
           ? group
           : {
               ...group,
-              components: group.components.map((component) => (
-                component.component_code === componentCode
-                  ? { ...component, enabled: !component.enabled }
-                  : component
+              components: group.components.map((component, innerIndex) => (
+                innerIndex === componentIndex ? { ...component, ...patch } : component
               )),
+            }
+      )),
+    })
+  }
+
+  const addGroup = () => {
+    if (!draft) return
+    setDraft({
+      ...draft,
+      groups: [
+        ...draft.groups,
+        {
+          group_id: null,
+          group_code: null,
+          component_group: '',
+          name_zh: '',
+          name_en: '',
+          selection_rule: 'EXACTLY_ONE',
+          required: true,
+          enabled: true,
+          display_order: nextOrder(draft.groups),
+          default_component_code: null,
+          components: [],
+        },
+      ],
+    })
+  }
+
+  const addComponent = (groupIndex: number) => {
+    if (!draft) return
+    setDraft({
+      ...draft,
+      groups: draft.groups.map((group, index) => (
+        index !== groupIndex
+          ? group
+          : {
+              ...group,
+              components: [
+                ...group.components,
+                {
+                  id: null,
+                  group_id: group.group_id ?? null,
+                  component_group: groupCode(group),
+                  component_code: '',
+                  name_zh: '',
+                  name_en: '',
+                  enabled: true,
+                  display_order: nextOrder(group.components),
+                  is_default: group.components.length === 0,
+                  linked_menu_item_id: null,
+                  business_behavior: 'NO_KITCHEN_TASK',
+                },
+              ],
+            }
+      )),
+    })
+  }
+
+  const removeGroup = (groupIndex: number) => {
+    if (!draft) return
+    setDraft({ ...draft, groups: draft.groups.filter((_, index) => index !== groupIndex) })
+  }
+
+  const removeComponent = (groupIndex: number, componentIndex: number) => {
+    if (!draft) return
+    setDraft({
+      ...draft,
+      groups: draft.groups.map((group, index) => (
+        index !== groupIndex
+          ? group
+          : {
+              ...group,
+              components: group.components.filter((_, innerIndex) => innerIndex !== componentIndex),
             }
       )),
     })
@@ -94,11 +206,30 @@ export function ComboConfigurationPanel({ storeId, onSaved }: ComboConfiguration
       setError(null)
       const saved = await updateStoreComboConfiguration({
         store_id: storeId,
-        components: draft.groups.flatMap((group) => group.components.map((component) => ({
-          component_group: component.component_group,
-          component_code: component.component_code,
-          enabled: component.enabled,
-        }))),
+        groups: draft.groups.map((group) => ({
+          group_id: group.group_id ?? null,
+          group_code: group.group_code ?? group.component_group ?? null,
+          name_zh: group.name_zh.trim(),
+          name_en: group.name_en.trim(),
+          selection_rule: group.selection_rule ?? 'EXACTLY_ONE',
+          required: group.selection_rule === 'OPTIONAL_ONE' ? false : true,
+          enabled: group.enabled ?? true,
+          display_order: group.display_order ?? 0,
+          default_component_code: group.default_component_code ?? null,
+          components: group.components.map((component) => ({
+            id: component.id ?? null,
+            group_id: component.group_id ?? group.group_id ?? null,
+            component_group: groupCode(group),
+            component_code: component.component_code || null,
+            name_zh: component.name_zh.trim(),
+            name_en: component.name_en.trim(),
+            enabled: component.enabled,
+            display_order: component.display_order ?? 0,
+            is_default: component.is_default,
+            linked_menu_item_id: component.linked_menu_item_id ?? null,
+            business_behavior: component.business_behavior ?? 'NO_KITCHEN_TASK',
+          })),
+        })),
       })
       setConfiguration(saved)
       setDraft(cloneConfiguration(saved))
@@ -116,20 +247,30 @@ export function ComboConfigurationPanel({ storeId, onSaved }: ComboConfiguration
         <div>
           <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">Combo Configuration / 套餐配置</div>
           <div className="mt-1 text-[0.85rem] text-[var(--muted)]">
-            Store-level combo contents. Combo price still comes from Pricing Rules.
+            Store-level combo groups and components. Combo price still comes from Pricing Rules.
           </div>
           {configuration ? (
             <div className="mt-1 text-[0.76rem] text-[var(--muted)]">Menu revision {configuration.menu_revision}</div>
           ) : null}
         </div>
-        <button
-          type="button"
-          onClick={() => void handleSave()}
-          disabled={loading || saving || !dirty || !draft}
-          className="rounded-[14px] bg-[var(--primary)] px-3 py-2 text-[0.82rem] font-semibold text-white disabled:opacity-60"
-        >
-          {saving ? 'Saving...' : 'Save'}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={addGroup}
+            disabled={loading || saving || !draft}
+            className="rounded-[14px] border border-[rgba(97,0,0,0.18)] bg-white px-3 py-2 text-[0.82rem] font-semibold text-[var(--primary)] disabled:opacity-60"
+          >
+            + New Group
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={loading || saving || !dirty || !draft}
+            className="rounded-[14px] bg-[var(--primary)] px-3 py-2 text-[0.82rem] font-semibold text-white disabled:opacity-60"
+          >
+            {saving ? 'Saving...' : 'Save'}
+          </button>
+        </div>
       </div>
 
       {error ? (
@@ -143,49 +284,155 @@ export function ComboConfigurationPanel({ storeId, onSaved }: ComboConfiguration
           Loading Combo Configuration...
         </div>
       ) : (
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          {draft.groups.map((group) => {
-            const draftDefaultCode = group.components.find((component) => component.enabled)?.component_code ?? null
-            return (
-              <div key={group.component_group} className="rounded-[20px] bg-[rgba(26,28,25,0.035)] px-4 py-4">
-                <div className="text-[0.78rem] font-black uppercase tracking-[0.14em] text-[var(--muted)]">
-                  {group.name_en} / {group.name_zh}
+        <div className="mt-4 grid gap-3">
+          {draft.groups.map((group, groupIndex) => (
+            <div key={`${group.group_id ?? 'new'}:${group.group_code ?? groupIndex}`} className="rounded-[20px] bg-[rgba(26,28,25,0.035)] px-4 py-4">
+              <div className="grid gap-3 lg:grid-cols-[1fr_1fr_180px_140px]">
+                <input
+                  value={group.name_zh}
+                  onChange={(event) => patchGroup(groupIndex, { name_zh: event.target.value })}
+                  placeholder="Group Chinese name"
+                  className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none"
+                />
+                <input
+                  value={group.name_en}
+                  onChange={(event) => patchGroup(groupIndex, { name_en: event.target.value })}
+                  placeholder="Group English name"
+                  className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none"
+                />
+                <select
+                  value={group.selection_rule ?? 'EXACTLY_ONE'}
+                  onChange={(event) => patchGroup(groupIndex, {
+                    selection_rule: event.target.value,
+                    required: event.target.value !== 'OPTIONAL_ONE',
+                  })}
+                  className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none"
+                >
+                  <option value="EXACTLY_ONE">Choose exactly one</option>
+                  <option value="OPTIONAL_ONE">Optional choose one</option>
+                </select>
+                <input
+                  type="number"
+                  value={group.display_order ?? 0}
+                  onChange={(event) => patchGroup(groupIndex, { display_order: Number(event.target.value) })}
+                  className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none"
+                  aria-label="Group display order"
+                />
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="text-[0.75rem] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+                  {groupCode(group) || 'Code generated after save'}
                 </div>
-                <div className="mt-3 space-y-2">
-                  {group.components.map((component) => (
-                    <button
-                      type="button"
-                      role="checkbox"
-                      aria-checked={component.enabled}
-                      key={`${component.component_group}:${component.component_code}`}
-                      onClick={() => toggleComponent(group.component_group, component.component_code)}
-                      className="flex min-h-12 w-full items-center gap-3 rounded-[16px] bg-white px-3 py-2 text-left shadow-sm"
-                    >
-                      <span
-                        className={`inline-flex h-7 w-7 items-center justify-center rounded-[10px] border ${
-                          component.enabled
-                            ? 'border-[var(--primary)] bg-[var(--primary)] text-white'
-                            : 'border-[rgba(97,0,0,0.18)] bg-white text-transparent'
-                        }`}
-                      >
-                        ✓
-                      </span>
-                      <span>
-                        <span className="block text-[0.92rem] font-semibold text-[var(--on-surface)]">
-                          {component.name_zh} / {component.name_en}
-                        </span>
-                        {component.component_code === draftDefaultCode ? (
-                          <span className="mt-0.5 block text-[0.72rem] font-semibold text-[var(--muted)]">
-                            Default when Combo is enabled
-                          </span>
-                        ) : null}
-                      </span>
-                    </button>
-                  ))}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => patchGroup(groupIndex, { enabled: !(group.enabled ?? true) })}
+                    className="rounded-[12px] bg-white px-3 py-2 text-[0.78rem] font-semibold text-[var(--on-surface)]"
+                  >
+                    {group.enabled ?? true ? 'Enabled' : 'Disabled'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => addComponent(groupIndex)}
+                    className="rounded-[12px] bg-white px-3 py-2 text-[0.78rem] font-semibold text-[var(--primary)]"
+                  >
+                    + Add Item
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeGroup(groupIndex)}
+                    className="rounded-[12px] bg-[rgba(97,0,0,0.08)] px-3 py-2 text-[0.78rem] font-semibold text-[var(--primary)]"
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
-            )
-          })}
+
+              <div className="mt-3 space-y-2">
+                {group.components.map((component, componentIndex) => (
+                  <div
+                    key={`${component.id ?? 'new'}:${component.component_code ?? componentIndex}`}
+                    className="grid gap-2 rounded-[16px] bg-white p-3 lg:grid-cols-[1fr_1fr_120px_160px_220px_120px]"
+                  >
+                    <input
+                      value={component.name_zh}
+                      onChange={(event) => patchComponent(groupIndex, componentIndex, { name_zh: event.target.value })}
+                      placeholder="Item Chinese name"
+                      className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none"
+                    />
+                    <input
+                      value={component.name_en}
+                      onChange={(event) => patchComponent(groupIndex, componentIndex, { name_en: event.target.value })}
+                      placeholder="Item English name"
+                      className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none"
+                    />
+                    <input
+                      type="number"
+                      value={component.display_order ?? 0}
+                      onChange={(event) => patchComponent(groupIndex, componentIndex, { display_order: Number(event.target.value) })}
+                      className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none"
+                      aria-label="Component display order"
+                    />
+                    <select
+                      value={component.business_behavior ?? 'NO_KITCHEN_TASK'}
+                      onChange={(event) => patchComponent(groupIndex, componentIndex, {
+                        business_behavior: event.target.value,
+                        linked_menu_item_id: event.target.value === 'LINKED_MENU_ITEM' ? component.linked_menu_item_id ?? null : null,
+                      })}
+                      className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none"
+                    >
+                      <option value="NO_KITCHEN_TASK">No kitchen task</option>
+                      <option value="LINKED_MENU_ITEM">Link menu item</option>
+                      <option value="LEGACY_COMBO_SIDE_TASK">Legacy side task</option>
+                    </select>
+                    <select
+                      value={component.linked_menu_item_id ?? ''}
+                      onChange={(event) => patchComponent(groupIndex, componentIndex, {
+                        linked_menu_item_id: event.target.value ? Number(event.target.value) : null,
+                      })}
+                      disabled={(component.business_behavior ?? 'NO_KITCHEN_TASK') !== 'LINKED_MENU_ITEM'}
+                      className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none disabled:opacity-50"
+                    >
+                      <option value="">No linked item</option>
+                      {activeMenuItems.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name_zh} / {item.name_en || item.sku}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => patchComponent(groupIndex, componentIndex, { enabled: !component.enabled })}
+                        className="rounded-[12px] bg-[rgba(26,28,25,0.05)] px-3 py-2 text-[0.78rem] font-semibold text-[var(--on-surface)]"
+                      >
+                        {component.enabled ? 'On' : 'Off'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeComponent(groupIndex, componentIndex)}
+                        className="rounded-[12px] bg-[rgba(97,0,0,0.08)] px-3 py-2 text-[0.78rem] font-semibold text-[var(--primary)]"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    <label className="lg:col-span-6 flex items-center gap-2 text-[0.78rem] font-semibold text-[var(--muted)]">
+                      <input
+                        type="radio"
+                        checked={component.is_default || group.default_component_code === component.component_code}
+                        onChange={() => patchGroup(groupIndex, { default_component_code: component.component_code || null, components: group.components.map((current, index) => ({
+                          ...current,
+                          is_default: index === componentIndex,
+                        })) })}
+                      />
+                      Default component {component.component_code ? `· ${component.component_code}` : '· generated after save'}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </section>

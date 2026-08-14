@@ -79,6 +79,22 @@ function getDraftSubtotal(item: MenuItem, draft: ItemCustomizationDraft) {
   const soupBaseDelta =
     item.customization?.soupBases?.options.find((option) => option.id === draft.soupBaseId)?.priceDelta ?? 0
   const comboDelta = draft.comboEnabled ? (item.customization?.combo?.upcharge ?? 0) : 0
+  const comboGroupDelta = draft.comboEnabled
+    ? item.customization?.combo?.groups
+      ?.reduce((sum, group) => {
+        const legacySelection = group.groupCode === 'COMBO_EGG'
+          ? draft.comboEggId
+          : group.groupCode === 'COMBO_SIDE'
+            ? draft.comboSideId
+            : undefined
+        const selectedId = draft.comboSelections?.[group.groupCode]
+          ?? legacySelection
+          ?? group.defaultOptionId
+          ?? (group.required ? group.options[0]?.id : undefined)
+        const selected = group.options.find((option) => option.id === selectedId)
+        return sum + (selected?.priceDelta ?? 0)
+      }, 0) ?? 0
+    : 0
   const comboSideRemoveDelta = draft.comboEnabled
     ? item.customization?.combo?.sideRemoveOptions
       ?.filter((option) => draft.comboSideRemoveIds.includes(option.id))
@@ -92,7 +108,7 @@ function getDraftSubtotal(item: MenuItem, draft: ItemCustomizationDraft) {
       ?.filter((option) => draft.removeIds.includes(option.id))
       .reduce((sum, option) => sum + (option.priceDelta ?? 0), 0) ?? 0
 
-  return (item.price + sizeDelta + soupBaseDelta + comboDelta + comboSideRemoveDelta + addOnDelta + removeDelta) * draft.quantity
+  return (item.price + sizeDelta + soupBaseDelta + comboDelta + comboGroupDelta + comboSideRemoveDelta + addOnDelta + removeDelta) * draft.quantity
 }
 
 function printJobNeedsAttention(job: PrintJobRecord) {

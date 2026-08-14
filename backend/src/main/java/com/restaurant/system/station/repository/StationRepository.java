@@ -16,6 +16,15 @@ public interface StationRepository extends JpaRepository<Station, Long> {
 
     @Query("""
         select s from Station s
+        where s.store_id = :storeId and s.code = :code
+        """)
+    List<Station> findAllByStoreIdAndCode(
+        @Param("storeId") Long storeId,
+        @Param("code") String code
+    );
+
+    @Query("""
+        select s from Station s
         where s.store_id = :storeId and s.is_active = true
         order by s.sort_order asc, s.id asc
         """)

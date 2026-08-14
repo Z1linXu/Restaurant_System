@@ -235,27 +235,57 @@ state without a fresh Owner decision. Current A5 stop:
 PHASE_A5_ST_DENIS_CANONICAL_PROFILE_COMPLETE_WAITING_FOR_PHASE_A6_OWNER_CONTINUATION
 ```
 
-Owner next requested a documentation-only architecture baseline before A6:
+Owner next requested a documentation-only architecture baseline before A6, but
+then superseded that sequence with an Owner-requested configurability closure.
+The original UML baseline is deferred and renumbered to:
 
 ```text
-PHASE_A5_5_CURRENT_STAGING_ARCHITECTURE_UML_BASELINE
+PHASE_A5_6_CURRENT_STAGING_ARCHITECTURE_UML_BASELINE
 ```
 
-A5.5 uses fresh main `5f4504d23135655f63d564301f8e98f3218347b2` as source
-authority and read-only Staging observation of deployed
+The already prepared architecture docs remain historical/current-architecture
+evidence under
+[Current Staging Architecture UML Baseline](../../architecture/current-staging/README.md),
+but they are not the active A5.5 implementation loop and are not to be extended
+in this round.
+
+Current Owner-authorized A5.5 loop:
+
+```text
+PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_CLOSURE
+```
+
+A5.5 implementation evidence:
+[PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_EVIDENCE](../agile/PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_EVIDENCE.md).
+The repository package adds Flyway V16 for dynamic Store-scoped Combo Groups,
+extends `store_combo_components` with group/link/behavior/archive metadata, and
+reuses the existing `menu_categories` and `stations` models for Owner
+Category/Station management. Menu Management exposes `Menu Items`, `Categories`,
+`Stations`, `Combo Configuration`, and `Pricing Rules`. Combo pricing remains
+`store_pricing_policies.combo_delta`; item Combo allowed remains the item
+`COMBO` option row; historical orders/receipts/print snapshots/reports remain
+snapshot-backed and are not repriced or reselected. Combo/category/station
+mutations lock the Store and increment `stores.menu_revision` /
+`stores.menu_updated_at` in the same transaction.
+
+The deferred A5.6 UML baseline used fresh main
+`5f4504d23135655f63d564301f8e98f3218347b2` as source authority and read-only
+Staging observation of deployed
 `3440fddad7571409c66189e44976658921e5de1f` at Flyway V15. It records the
 current system context, domain model, module/profile architecture, ordering,
 printing, menu cache, deployment and authorization flows as Mermaid-backed
 documentation under
 [Current Staging Architecture UML Baseline](../../architecture/current-staging/README.md).
-A5.5 is documentation/governance only: no backend/frontend/Android business
-code, schema, deploy, restart, Flyway, Staging write, Production read, or
-Production mutation is included. It does not renumber or start A6-A10, Phase B,
-Phase C, Chinatown, Sainte-Catherine or Production promotion. Current A5.5
-stop:
+
+A5.5 Menu Management Configurability may deploy only the exact merged SHA to
+Staging and run automated acceptance. Production remains `NO MUTATION`. Do not
+start A5.6 UML, A6, Phase B, Phase C, Chinatown, Sainte-Catherine, or Production
+promotion after A5.5.
+
+Expected A5.5 runtime stop after exact-SHA Staging validation:
 
 ```text
-PHASE_A5_5_UML_BASELINE_COMPLETE_WAITING_FOR_PHASE_A6_OWNER_CONTINUATION
+PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
 ```
 
 ## Current final productization roadmap audit (2026-08-12)

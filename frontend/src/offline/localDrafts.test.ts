@@ -53,6 +53,7 @@ describe('local draft records', () => {
         lineSubtotal: 10,
         selection: {
           comboEnabled: false,
+          comboSelections: {},
           comboSideRemoveIds: [],
           addOnQuantities: { '22': 2 },
           removeIds: [],

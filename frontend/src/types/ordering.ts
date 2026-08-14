@@ -23,6 +23,17 @@ export interface MenuCategory {
   code?: string
 }
 
+export interface ComboChoiceGroup {
+  groupId?: string
+  groupCode: string
+  labelEn: string
+  labelZh: string
+  selectionRule: 'EXACTLY_ONE' | 'OPTIONAL_ONE' | string
+  required: boolean
+  defaultOptionId?: string
+  options: ChoiceOption[]
+}
+
 export interface MenuItemCustomizationConfig {
   sizes?: {
     required: boolean
@@ -38,6 +49,7 @@ export interface MenuItemCustomizationConfig {
     option?: ChoiceOption
     optionId?: string
     upcharge: number
+    groups: ComboChoiceGroup[]
     eggs: ChoiceOption[]
     sides: ChoiceOption[]
     sideRemoveOptions: ChoiceOption[]
@@ -85,6 +97,7 @@ export interface ItemSelectionState {
   comboEnabled: boolean
   comboEggId?: string
   comboSideId?: string
+  comboSelections: Record<string, string | undefined>
   comboSideRemoveIds: string[]
   addOnQuantities: Record<string, number>
   removeIds: string[]
@@ -162,14 +175,22 @@ export interface BackendStoreComboConfiguration {
 }
 
 export interface BackendStoreComboConfigurationGroup {
+  group_id?: number | null
+  group_code?: string | null
   component_group: 'COMBO_EGG' | 'COMBO_SIDE' | string
   name_zh: string
   name_en: string
+  selection_rule?: 'EXACTLY_ONE' | 'OPTIONAL_ONE' | string
+  required?: boolean
+  enabled?: boolean
+  display_order?: number | null
   default_component_code: string | null
   components: BackendStoreComboComponent[]
 }
 
 export interface BackendStoreComboComponent {
+  id?: number | null
+  group_id?: number | null
   component_group: 'COMBO_EGG' | 'COMBO_SIDE' | string
   component_code: string
   name_zh: string
@@ -177,6 +198,11 @@ export interface BackendStoreComboComponent {
   enabled: boolean
   display_order: number
   is_default: boolean
+  linked_menu_item_id?: number | null
+  linked_menu_item_sku?: string | null
+  linked_menu_item_name_zh?: string | null
+  linked_menu_item_name_en?: string | null
+  business_behavior?: string | null
 }
 
 export interface BackendMenuCategory {

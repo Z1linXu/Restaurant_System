@@ -143,6 +143,8 @@ A2  Module Dependency Graph
 A3  Store-Level Module Configuration
 A4  Store Profile Contract
 A5  St-Denis Canonical Profile
+A5.5 Menu Management Configurability Closure
+A5.6 Current Staging Architecture UML Baseline
 A6  Backend Module Gating
 A7  Frontend Module Gating
 A8  Hardware Capability Contract
@@ -201,6 +203,31 @@ Exact-SHA Staging deploy of `3440fddad7571409c66189e44976658921e5de1f` passed
 health, WebSocket readiness, Flyway V15, Profile fingerprint/artifact
 validation and deterministic graph-count validation. A5 is complete and waits
 for Phase A6 Owner continuation.
+
+The Owner then revised the pre-A6 sequence: the previously planned A5.5 UML
+baseline is deferred as
+`PHASE_A5_6_CURRENT_STAGING_ARCHITECTURE_UML_BASELINE`, while A5.5 is now:
+
+```text
+PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_CLOSURE
+```
+
+A5.5 closes Owner-requested configurability gaps in Menu Management. It adds a
+generic Store-scoped Combo Group model on top of the existing
+`store_combo_components` canonical content table, Category management through
+the current `menu_categories` model, and Station management through the current
+`stations` model. It preserves Store-level Combo price in
+`store_pricing_policies.combo_delta`, item Combo allowed in item-scoped
+`menu_item_options`, historical order/printing/report snapshots, and
+Store-scoped menu revision/cache invalidation. Evidence:
+[PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_EVIDENCE](PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_EVIDENCE.md).
+
+After A5.5 merge, exact-SHA Staging deploy and automated validation must pass
+before Owner manual retest. Production remains no-mutation. A5.5 must stop at:
+
+```text
+PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
 
 This order must not change unless fresh audit proves a real technical
 dependency. Any change records the original order, actual order and reason.
@@ -541,6 +568,8 @@ conditional template remains for future loops that deploy before Owner retest.
 | A3 Store Module State | Clear Store module state model, generally `DISABLED` / `ENABLED`, with `CONFIGURING` only if lifecycle truly requires it. |
 | A4 Store Profile Contract | Database-backed versioned Profile/ProfileVersion/ProfileModule/ProfileConfigurationSnapshot design and implementation. |
 | A5 St-Denis Canonical Profile | Reviewed safe profile expressing St-Denis-like Store generation without Production clone or Store-specific code path. |
+| A5.5 Menu Management Configurability | Owner can configure Store-specific Combo groups/components, Categories, and Stations without developer code changes, while preserving historical snapshots and menu revision/cache consistency. |
+| A5.6 Current Staging UML Baseline | Documentation-only architecture baseline for current Staging after A5/A5.5, before A6 backend gating. |
 | A6 Backend Gating | `authority + Store module enabled + environment capability available` enforced server-side. |
 | A7 Frontend Gating | Routes/navigation/settings/screens derive from authenticated Store module contract and fail closed. |
 | A8 Hardware Capability | Logical hardware capability contract for printing, Pad Direct, devices and readiness requirements without endpoints/secrets. |

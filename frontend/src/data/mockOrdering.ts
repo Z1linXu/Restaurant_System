@@ -45,6 +45,27 @@ const comboSides = [
   { id: 'potato', labelEn: 'Shredded Potato', labelZh: '土豆丝' },
 ]
 
+const comboGroups = [
+  {
+    groupCode: 'COMBO_EGG',
+    labelEn: 'Egg',
+    labelZh: '鸡蛋',
+    selectionRule: 'EXACTLY_ONE',
+    required: true,
+    defaultOptionId: comboEggs[0].id,
+    options: comboEggs,
+  },
+  {
+    groupCode: 'COMBO_SIDE',
+    labelEn: 'Side Dish',
+    labelZh: '配菜',
+    selectionRule: 'EXACTLY_ONE',
+    required: true,
+    defaultOptionId: comboSides[0].id,
+    options: comboSides,
+  },
+]
+
 const noodleAddOns = [
   { id: 'extra-egg', labelEn: 'Extra Egg', labelZh: '加蛋', priceDelta: 1.5 },
   { id: 'extra-meat', labelEn: 'Extra Meat', labelZh: '加肉', priceDelta: 3 },
@@ -71,7 +92,7 @@ export const menuItems: MenuItem[] = [
       sizes: { required: true, options: noodleSizes },
       noodleTypes,
       spicyLevels,
-      combo: { upcharge: 4.5, eggs: comboEggs, sides: comboSides, sideRemoveOptions: [] },
+      combo: { upcharge: 4.5, groups: comboGroups, eggs: comboEggs, sides: comboSides, sideRemoveOptions: [] },
       addOns: noodleAddOns,
       removeOptions: noodleRemoveOptions,
     },
@@ -89,7 +110,7 @@ export const menuItems: MenuItem[] = [
       sizes: { required: true, options: noodleSizes },
       noodleTypes,
       spicyLevels,
-      combo: { upcharge: 4.5, eggs: comboEggs, sides: comboSides, sideRemoveOptions: [] },
+      combo: { upcharge: 4.5, groups: comboGroups, eggs: comboEggs, sides: comboSides, sideRemoveOptions: [] },
       addOns: noodleAddOns,
       removeOptions: noodleRemoveOptions,
     },
@@ -192,6 +213,7 @@ export const initialOrderSessions: OrderSession[] = [
           noodleTypeId: 'sanxi',
           spicyLevelId: 'regular',
           comboEnabled: false,
+          comboSelections: {},
           comboSideRemoveIds: [],
           addOnQuantities: {},
           removeIds: ['no-cilantro'],
@@ -207,6 +229,7 @@ export const initialOrderSessions: OrderSession[] = [
         menuItems[3],
         {
           comboEnabled: false,
+          comboSelections: {},
           comboSideRemoveIds: [],
           addOnQuantities: {},
           removeIds: [],
@@ -236,6 +259,10 @@ export const initialOrderSessions: OrderSession[] = [
           comboEnabled: true,
           comboEggId: 'fried-egg',
           comboSideId: 'cucumber',
+          comboSelections: {
+            COMBO_EGG: 'fried-egg',
+            COMBO_SIDE: 'cucumber',
+          },
           comboSideRemoveIds: [],
           addOnQuantities: { 'extra-meat': 1, 'extra-noodle': 2 },
           removeIds: [],
@@ -265,6 +292,7 @@ export const initialOrderSessions: OrderSession[] = [
         menuItems[2],
         {
           comboEnabled: false,
+          comboSelections: {},
           comboSideRemoveIds: [],
           addOnQuantities: {},
           removeIds: [],

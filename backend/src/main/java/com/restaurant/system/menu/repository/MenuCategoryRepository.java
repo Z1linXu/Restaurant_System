@@ -16,6 +16,15 @@ public interface MenuCategoryRepository extends JpaRepository<MenuCategory, Long
 
     @Query("""
         select c from MenuCategory c
+        where c.store_id = :storeId and c.code = :code
+        """)
+    List<MenuCategory> findAllByStoreIdAndCode(
+        @Param("storeId") Long storeId,
+        @Param("code") String code
+    );
+
+    @Query("""
+        select c from MenuCategory c
         where c.store_id = :storeId and c.is_active = true
         order by c.sort_order asc, c.id asc
         """)

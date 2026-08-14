@@ -23,7 +23,7 @@ class MenuCatalogHashServiceTest {
         catalog.generated_at = catalog.generated_at.plusHours(2);
 
         assertEquals(first, service.calculate(catalog));
-        assertEquals("fnv1a32:67fad5ce", first);
+        assertEquals("fnv1a32:7c11b6d9", first);
     }
 
     @Test

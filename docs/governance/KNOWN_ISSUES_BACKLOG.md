@@ -74,6 +74,15 @@ entered `main` at `3440fddad7571409c66189e44976658921e5de1f`; exact-SHA
 Staging deploy passed Flyway V15 and Profile runtime validation. Production
 remains no-mutation.
 
+Current A5.5 Menu Management Configurability Closure (2026-08-14): this is
+Owner-requested Phase A productization work, not a Production incident. It
+addresses the known configurability gap that A0.2 still had hardcoded
+`COMBO_EGG`/`COMBO_SIDE` first-catalog assumptions, and adds Owner controls for
+Store-scoped Combo Groups/Components, Categories, and Stations. The former
+A5.5 UML baseline is deferred to A5.6. No active P0/P1 issue blocks this A5.5
+package. Production remains no-mutation; exact-SHA Staging deployment and
+automated validation are required after merge before Owner manual retest.
+
 Current final productization route (2026-08-12): open field-test follow-up work
 continues through the Owner field-test and bug-fix loop, but the loop is now a
 side-car to product development unless a confirmed P0/P1 blocker exists. The

@@ -11,10 +11,14 @@ import static org.mockito.Mockito.when;
 import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.menu.combo.StoreComboComponent;
 import com.restaurant.system.menu.combo.StoreComboComponentRepository;
+import com.restaurant.system.menu.combo.StoreComboGroup;
+import com.restaurant.system.menu.combo.StoreComboGroupRepository;
 import com.restaurant.system.menu.dto.MenuRevisionResponse;
 import com.restaurant.system.menu.dto.StoreComboConfigurationUpdateRequest;
+import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.entity.MenuItemOption;
 import com.restaurant.system.menu.repository.MenuItemOptionRepository;
+import com.restaurant.system.menu.repository.MenuItemRepository;
 import com.restaurant.system.menu.service.MenuRevisionService;
 import com.restaurant.system.user.repository.StoreRepository;
 import java.time.LocalDateTime;
@@ -36,42 +40,100 @@ import org.mockito.quality.Strictness;
 class StoreComboConfigurationServiceImplTest {
 
     @Mock
+    private StoreComboGroupRepository storeComboGroupRepository;
+    @Mock
     private StoreComboComponentRepository storeComboComponentRepository;
     @Mock
     private StoreRepository storeRepository;
     @Mock
     private MenuItemOptionRepository menuItemOptionRepository;
     @Mock
+    private MenuItemRepository menuItemRepository;
+    @Mock
     private MenuRevisionService menuRevisionService;
 
     private StoreComboConfigurationServiceImpl service;
+    private List<StoreComboGroup> groups;
     private List<StoreComboComponent> components;
 
     @BeforeEach
     void setUp() {
         service = new StoreComboConfigurationServiceImpl(
+            storeComboGroupRepository,
             storeComboComponentRepository,
             storeRepository,
             menuItemOptionRepository,
+            menuItemRepository,
             menuRevisionService
         );
+        groups = new ArrayList<>(List.of(
+            group(101L, 10L, "COMBO_EGG", "蛋类", "Egg", 10),
+            group(102L, 10L, "COMBO_SIDE", "小菜", "Side", 20),
+            group(201L, 20L, "COMBO_EGG", "蛋类", "Egg", 10),
+            group(202L, 20L, "COMBO_SIDE", "小菜", "Side", 20)
+        ));
         components = new ArrayList<>(List.of(
-            component(1L, 10L, "COMBO_EGG", "combo_tea_egg", true, 10),
-            component(2L, 10L, "COMBO_EGG", "combo_fried_egg", true, 20),
-            component(3L, 10L, "COMBO_SIDE", "combo_edamame", true, 10),
-            component(4L, 10L, "COMBO_SIDE", "combo_shredded_potato", true, 20),
-            component(5L, 10L, "COMBO_SIDE", "combo_cucumber_salad", true, 30),
-            component(6L, 20L, "COMBO_EGG", "combo_tea_egg", true, 10),
-            component(7L, 20L, "COMBO_EGG", "combo_fried_egg", false, 20),
-            component(8L, 20L, "COMBO_SIDE", "combo_edamame", true, 10),
-            component(9L, 20L, "COMBO_SIDE", "combo_shredded_potato", true, 20),
-            component(10L, 20L, "COMBO_SIDE", "combo_cucumber_salad", true, 30)
+            component(1L, 101L, 10L, "COMBO_EGG", "combo_tea_egg", true, 10),
+            component(2L, 101L, 10L, "COMBO_EGG", "combo_fried_egg", true, 20),
+            component(3L, 102L, 10L, "COMBO_SIDE", "combo_edamame", true, 10),
+            component(4L, 102L, 10L, "COMBO_SIDE", "combo_shredded_potato", true, 20),
+            component(5L, 102L, 10L, "COMBO_SIDE", "combo_cucumber_salad", true, 30),
+            component(6L, 201L, 20L, "COMBO_EGG", "combo_tea_egg", true, 10),
+            component(7L, 201L, 20L, "COMBO_EGG", "combo_fried_egg", false, 20),
+            component(8L, 202L, 20L, "COMBO_SIDE", "combo_edamame", true, 10),
+            component(9L, 202L, 20L, "COMBO_SIDE", "combo_shredded_potato", true, 20),
+            component(10L, 202L, 20L, "COMBO_SIDE", "combo_cucumber_salad", true, 30)
         ));
         when(storeRepository.existsById(any())).thenReturn(true);
+        when(storeComboGroupRepository.findAllByStoreIdOrdered(any())).thenAnswer(invocation -> groupsFor(invocation.getArgument(0)));
+        when(storeComboGroupRepository.findAllByStoreIdForUpdateOrdered(any())).thenAnswer(invocation -> groupsFor(invocation.getArgument(0)));
+        when(storeComboGroupRepository.findAllByStoreIdIncludingArchivedOrdered(any())).thenAnswer(invocation -> groups.stream()
+            .filter(group -> invocation.<Long>getArgument(0).equals(group.store_id))
+            .sorted(Comparator.comparing((StoreComboGroup group) -> group.display_order).thenComparing(group -> group.id))
+            .toList());
+        when(storeComboGroupRepository.findByStoreIdAndGroupCode(any(), any())).thenAnswer(invocation -> {
+            Long storeId = invocation.getArgument(0);
+            String groupCode = invocation.getArgument(1);
+            return groups.stream()
+                .filter(group -> storeId.equals(group.store_id))
+                .filter(group -> groupCode.equals(group.group_code))
+                .filter(group -> group.archived_at == null)
+                .findFirst();
+        });
+        when(storeComboGroupRepository.save(any())).thenAnswer(invocation -> {
+            StoreComboGroup saved = invocation.getArgument(0);
+            if (saved.id == null) {
+                saved.id = 300L + groups.size();
+                groups.add(saved);
+            }
+            groups.removeIf(existing -> saved.id.equals(existing.id));
+            groups.add(saved);
+            return saved;
+        });
+        when(storeComboGroupRepository.saveAll(any())).thenAnswer(invocation -> {
+            Iterable<StoreComboGroup> saved = invocation.getArgument(0);
+            List<StoreComboGroup> savedList = new ArrayList<>();
+            for (StoreComboGroup group : saved) {
+                groups.removeIf(existing -> group.id != null && group.id.equals(existing.id));
+                groups.add(group);
+                savedList.add(group);
+            }
+            return savedList;
+        });
         when(storeComboComponentRepository.findAllByStoreIdOrdered(any())).thenAnswer(invocation -> {
             Long storeId = invocation.getArgument(0);
             return components.stream()
                 .filter(component -> storeId.equals(component.store_id))
+                .sorted(Comparator.comparing((StoreComboComponent component) -> component.component_group)
+                    .thenComparing(component -> component.display_order)
+                    .thenComparing(component -> component.id))
+                .toList();
+        });
+        when(storeComboComponentRepository.findActiveByStoreIdOrdered(any())).thenAnswer(invocation -> {
+            Long storeId = invocation.getArgument(0);
+            return components.stream()
+                .filter(component -> storeId.equals(component.store_id))
+                .filter(component -> component.archived_at == null)
                 .sorted(Comparator.comparing((StoreComboComponent component) -> component.component_group)
                     .thenComparing(component -> component.display_order)
                     .thenComparing(component -> component.id))
@@ -85,7 +147,18 @@ class StoreComboConfigurationServiceImplTest {
                 .filter(component -> storeId.equals(component.store_id))
                 .filter(component -> group.equals(component.component_group))
                 .filter(component -> code.equals(component.component_code))
+                .filter(component -> component.archived_at == null)
                 .findFirst();
+        });
+        when(storeComboComponentRepository.save(any())).thenAnswer(invocation -> {
+            StoreComboComponent saved = invocation.getArgument(0);
+            if (saved.id == null) {
+                saved.id = 500L + components.size();
+                components.add(saved);
+            }
+            components.removeIf(existing -> saved.id.equals(existing.id));
+            components.add(saved);
+            return saved;
         });
         when(storeComboComponentRepository.saveAll(any())).thenAnswer(invocation -> {
             Iterable<StoreComboComponent> saved = invocation.getArgument(0);
@@ -95,7 +168,7 @@ class StoreComboConfigurationServiceImplTest {
                 if (component.id == null) {
                     component.id = ids.getAndIncrement();
                 }
-                components.removeIf(existing -> existing.id.equals(component.id));
+                components.removeIf(existing -> existing.id != null && existing.id.equals(component.id));
                 components.add(component);
                 savedList.add(component);
             }
@@ -204,6 +277,94 @@ class StoreComboConfigurationServiceImplTest {
         assertEquals("COMBO_COMPONENT_UNSUPPORTED", unsupported.getMessage());
     }
 
+    @Test
+    void updateCanCreateDynamicDrinkGroupAndValidateSnapshotSelections() {
+        when(menuItemOptionRepository.findActiveByStoreIdOrdered(10L)).thenReturn(List.of(
+            option(80L, 100L, "COMBO", "combo")
+        ));
+
+        StoreComboConfigurationUpdateRequest request = new StoreComboConfigurationUpdateRequest();
+        request.store_id = 10L;
+        request.groups = new ArrayList<>();
+        request.groups.add(groupUpdate("COMBO_EGG", "蛋类", "Egg", "EXACTLY_ONE",
+            componentUpdate(1L, "COMBO_EGG", "combo_tea_egg", "卤蛋", "Tea Egg", true, 10, true),
+            componentUpdate(2L, "COMBO_EGG", "combo_fried_egg", "煎蛋", "Fried Egg", true, 20, false)
+        ));
+        request.groups.add(groupUpdate("COMBO_SIDE", "小菜", "Side", "EXACTLY_ONE",
+            componentUpdate(3L, "COMBO_SIDE", "combo_edamame", "毛豆", "Edamame", true, 10, true)
+        ));
+        StoreComboConfigurationUpdateRequest.GroupUpdate drink = groupUpdate(null, "饮料", "Drink", "OPTIONAL_ONE",
+            componentUpdate(null, null, null, "可乐", "Coke", true, 10, true),
+            componentUpdate(null, null, null, "雪碧", "Sprite", true, 20, false)
+        );
+        request.groups.add(drink);
+
+        var response = service.updateConfiguration(10L, request);
+
+        var drinkGroup = response.groups.stream()
+            .filter(group -> "COMBO_DRINK".equals(group.group_code))
+            .findFirst()
+            .orElseThrow();
+        assertEquals("OPTIONAL_ONE", drinkGroup.selection_rule);
+        assertFalse(drinkGroup.required);
+        assertEquals("combo_coke", drinkGroup.default_component_code);
+        assertEquals(List.of("combo_coke", "combo_sprite"), drinkGroup.components.stream().map(component -> component.component_code).toList());
+        service.requireSnapshotEnabledForNewSelection(10L, "COMBO_DRINK", "combo_coke");
+        verify(menuRevisionService).incrementRevision(10L);
+    }
+
+    @Test
+    void nonKitchenTaskComponentClearsSubmittedLinkedMenuItem() {
+        when(menuItemOptionRepository.findActiveByStoreIdOrdered(10L)).thenReturn(List.of(
+            option(80L, 100L, "COMBO", "combo")
+        ));
+
+        StoreComboConfigurationUpdateRequest request = new StoreComboConfigurationUpdateRequest();
+        request.store_id = 10L;
+        StoreComboConfigurationUpdateRequest.ComponentUpdate teaEgg =
+            componentUpdate(1L, "COMBO_EGG", "combo_tea_egg", "卤蛋", "Tea Egg", true, 10, true);
+        teaEgg.business_behavior = "NO_KITCHEN_TASK";
+        teaEgg.linked_menu_item_id = 999L;
+        request.groups = List.of(
+            groupUpdate("COMBO_EGG", "蛋类", "Egg", "EXACTLY_ONE", teaEgg),
+            groupUpdate("COMBO_SIDE", "小菜", "Side", "EXACTLY_ONE",
+                componentUpdate(3L, "COMBO_SIDE", "combo_edamame", "毛豆", "Edamame", true, 10, true)
+            )
+        );
+
+        service.updateConfiguration(10L, request);
+
+        assertEquals(null, componentForStore(10L, "COMBO_EGG", "combo_tea_egg").linked_menu_item_id);
+    }
+
+    @Test
+    void rejectsCrossStoreLinkedMenuItemMapping() {
+        when(menuItemOptionRepository.findActiveByStoreIdOrdered(10L)).thenReturn(List.of(
+            option(80L, 100L, "COMBO", "combo")
+        ));
+        when(menuItemRepository.findById(900L)).thenReturn(Optional.of(menuItem(900L, 20L, true)));
+
+        StoreComboConfigurationUpdateRequest request = new StoreComboConfigurationUpdateRequest();
+        request.store_id = 10L;
+        StoreComboConfigurationUpdateRequest.ComponentUpdate teaEgg =
+            componentUpdate(1L, "COMBO_EGG", "combo_tea_egg", "卤蛋", "Tea Egg", true, 10, true);
+        teaEgg.business_behavior = "LINKED_MENU_ITEM";
+        teaEgg.linked_menu_item_id = 900L;
+        request.groups = List.of(
+            groupUpdate("COMBO_EGG", "蛋类", "Egg", "EXACTLY_ONE", teaEgg),
+            groupUpdate("COMBO_SIDE", "小菜", "Side", "EXACTLY_ONE",
+                componentUpdate(3L, "COMBO_SIDE", "combo_edamame", "毛豆", "Edamame", true, 10, true)
+            )
+        );
+
+        BusinessException exception = assertThrows(
+            BusinessException.class,
+            () -> service.updateConfiguration(10L, request)
+        );
+
+        assertEquals("COMBO_COMPONENT_MAPPING_INVALID", exception.getMessage());
+    }
+
     private StoreComboConfigurationUpdateRequest update(StoreComboConfigurationUpdateRequest.ComponentUpdate... updates) {
         return updateForStore(20L, updates);
     }
@@ -226,9 +387,76 @@ class StoreComboConfigurationServiceImplTest {
         return update;
     }
 
-    private StoreComboComponent component(Long id, Long storeId, String group, String code, boolean enabled, int order) {
+    private StoreComboConfigurationUpdateRequest.GroupUpdate groupUpdate(
+        String groupCode,
+        String nameZh,
+        String nameEn,
+        String selectionRule,
+        StoreComboConfigurationUpdateRequest.ComponentUpdate... components
+    ) {
+        StoreComboConfigurationUpdateRequest.GroupUpdate update = new StoreComboConfigurationUpdateRequest.GroupUpdate();
+        update.group_code = groupCode;
+        update.name_zh = nameZh;
+        update.name_en = nameEn;
+        update.selection_rule = selectionRule;
+        update.required = !"OPTIONAL_ONE".equals(selectionRule);
+        update.enabled = true;
+        update.display_order = 10;
+        update.components = List.of(components);
+        return update;
+    }
+
+    private StoreComboConfigurationUpdateRequest.ComponentUpdate componentUpdate(
+        Long id,
+        String group,
+        String code,
+        String nameZh,
+        String nameEn,
+        boolean enabled,
+        int order,
+        boolean isDefault
+    ) {
+        StoreComboConfigurationUpdateRequest.ComponentUpdate update = new StoreComboConfigurationUpdateRequest.ComponentUpdate();
+        update.id = id;
+        update.component_group = group;
+        update.component_code = code;
+        update.name_zh = nameZh;
+        update.name_en = nameEn;
+        update.enabled = enabled;
+        update.display_order = order;
+        update.is_default = isDefault;
+        update.business_behavior = "NO_KITCHEN_TASK";
+        return update;
+    }
+
+    private List<StoreComboGroup> groupsFor(Long storeId) {
+        return groups.stream()
+            .filter(group -> storeId.equals(group.store_id))
+            .filter(group -> group.archived_at == null)
+            .sorted(Comparator.comparing((StoreComboGroup group) -> group.display_order).thenComparing(group -> group.id))
+            .toList();
+    }
+
+    private StoreComboGroup group(Long id, Long storeId, String code, String nameZh, String nameEn, int order) {
+        StoreComboGroup group = new StoreComboGroup();
+        group.id = id;
+        group.store_id = storeId;
+        group.group_code = code;
+        group.name_zh = nameZh;
+        group.name_en = nameEn;
+        group.selection_rule = "EXACTLY_ONE";
+        group.required = true;
+        group.enabled = true;
+        group.display_order = order;
+        group.created_at = LocalDateTime.now();
+        group.updated_at = group.created_at;
+        return group;
+    }
+
+    private StoreComboComponent component(Long id, Long groupId, Long storeId, String group, String code, boolean enabled, int order) {
         StoreComboComponent component = new StoreComboComponent();
         component.id = id;
+        component.group_id = groupId;
         component.store_id = storeId;
         component.component_group = group;
         component.component_code = code;
@@ -236,6 +464,7 @@ class StoreComboConfigurationServiceImplTest {
         component.name_en = code;
         component.enabled = enabled;
         component.display_order = order;
+        component.business_behavior = "NO_KITCHEN_TASK";
         component.created_at = LocalDateTime.now();
         component.updated_at = component.created_at;
         return component;
@@ -261,6 +490,14 @@ class StoreComboConfigurationServiceImplTest {
         option.name_en = "Combo";
         option.is_active = true;
         return option;
+    }
+
+    private MenuItem menuItem(Long id, Long storeId, boolean active) {
+        MenuItem item = new MenuItem();
+        item.id = id;
+        item.store_id = storeId;
+        item.is_active = active;
+        return item;
     }
 
     private MenuRevisionResponse revision(Long storeId, Long revision) {
