@@ -1,5 +1,10 @@
 # 08 Authorization Flow
 
+> A8 update: backend module access now evaluates Store module state,
+> module dependencies, environment capability and hardware capability before the
+> protected business action. Authorization remains membership/role/capability
+> based; hardware readiness does not weaken Store access isolation.
+
 ## Purpose
 
 This diagram records the current authentication, Store access, role capability,

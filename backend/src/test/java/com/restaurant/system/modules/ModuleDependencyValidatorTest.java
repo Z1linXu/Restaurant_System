@@ -137,11 +137,39 @@ class ModuleDependencyValidatorTest {
     void enabledModuleMissingHardwareCapabilityFailsClosed() {
         ModuleValidationResult result = validator.validate(ModuleConfigurationInput.defaultsWith(
             normalStoreEnvironmentCapabilities(),
-            without(normalStoreHardwareCapabilities(), "PRINTER_TOPOLOGY_FOR_REAL_OR_PAD_DIRECT")
+            without(normalStoreHardwareCapabilities(), HardwareCapabilityKeys.PRINT_HOT_KITCHEN)
         ));
 
         assertFalse(result.valid());
         assertTrue(result.issueCodes().contains(ModuleValidationCode.HARDWARE_CAPABILITY_MISSING));
+    }
+
+    @Test
+    void legacyProfileHardwareAliasResolvesToCanonicalPrintingCapabilities() {
+        ModuleValidationResult result = validator.validate(ModuleConfigurationInput.defaultsWith(
+            normalStoreEnvironmentCapabilities(),
+            Set.of(
+                HardwareCapabilityKeys.TOUCH_CLIENT,
+                "PRINTER_TOPOLOGY_FOR_REAL_OR_PAD_DIRECT",
+                "PAD_DEVICE_FOR_PAD_DIRECT"
+            )
+        ));
+
+        assertTrue(result.valid(), () -> "legacy profile aliases must resolve through A8 catalog: " + result.issues());
+    }
+
+    @Test
+    void unknownHardwareCapabilityFailsClosedEvenWhenRequiredCapabilitiesArePresent() {
+        java.util.LinkedHashSet<String> capabilities = new java.util.LinkedHashSet<>(normalStoreHardwareCapabilities());
+        capabilities.add("CASH_DRAWER");
+
+        ModuleValidationResult result = validator.validate(ModuleConfigurationInput.defaultsWith(
+            normalStoreEnvironmentCapabilities(),
+            capabilities
+        ));
+
+        assertFalse(result.valid());
+        assertTrue(result.issueCodes().contains(ModuleValidationCode.UNKNOWN_HARDWARE_CAPABILITY));
     }
 
     @Test
@@ -225,9 +253,11 @@ class ModuleDependencyValidatorTest {
 
     private Set<String> normalStoreHardwareCapabilities() {
         return Set.of(
-            "TOUCH_CLIENT",
-            "PRINTER_TOPOLOGY_FOR_REAL_OR_PAD_DIRECT",
-            "PAD_DEVICE_FOR_PAD_DIRECT"
+            HardwareCapabilityKeys.TOUCH_CLIENT,
+            HardwareCapabilityKeys.PRINT_GRAB,
+            HardwareCapabilityKeys.PRINT_FRONTDESK_RECEIPT,
+            HardwareCapabilityKeys.PRINT_HOT_KITCHEN,
+            HardwareCapabilityKeys.PAD_DIRECT_PRINT_CLIENT
         );
     }
 

@@ -1,12 +1,14 @@
 {
-  "graph_version": "PHASE_A2_MODULE_DEPENDENCY_GRAPH_V1",
-  "catalog_version": "PHASE_A1_MODULE_CATALOG_V1",
-  "catalog_resource": "module/module-catalog.v1.json",
+  "graph_version": "PHASE_A8_MODULE_DEPENDENCY_GRAPH_HARDWARE_CAPABILITY_V2",
+  "catalog_version": "PHASE_A8_MODULE_CATALOG_HARDWARE_CAPABILITY_V2",
+    "catalog_resource": "module/module-catalog.v1.json",
+    "hardware_capability_catalog_resource": "hardware/hardware-capability-catalog.v1.json",
   "authority": {
     "phase": "PHASE_A2_MODULE_DEPENDENCY_GRAPH",
     "production_boundary": "NO_MUTATION",
     "staging_boundary": "NO_DEPLOYMENT_REQUIRED_FOR_A2",
-    "validation_mode": "FAIL_CLOSED"
+    "validation_mode": "FAIL_CLOSED",
+    "hardware_contract_phase": "PHASE_A8_HARDWARE_CAPABILITY_CONTRACT"
   },
   "supported_relationship_types": [
     "REQUIRES",
@@ -55,8 +57,10 @@
     {"source_module": "ANALYTICS_ADVANCED", "type": "REQUIRES_ENVIRONMENT_CAPABILITY", "target": "DATABASE"},
 
     {"source_module": "ORDERING_POS", "type": "REQUIRES_HARDWARE_CAPABILITY", "target": "TOUCH_CLIENT"},
-    {"source_module": "PRINTING", "type": "REQUIRES_HARDWARE_CAPABILITY", "target": "PRINTER_TOPOLOGY_FOR_REAL_OR_PAD_DIRECT"},
-    {"source_module": "PRINTING", "type": "REQUIRES_HARDWARE_CAPABILITY", "target": "PAD_DEVICE_FOR_PAD_DIRECT"},
+    {"source_module": "PRINTING", "type": "REQUIRES_HARDWARE_CAPABILITY", "target": "PRINT_GRAB"},
+    {"source_module": "PRINTING", "type": "REQUIRES_HARDWARE_CAPABILITY", "target": "PRINT_FRONTDESK_RECEIPT"},
+    {"source_module": "PRINTING", "type": "REQUIRES_HARDWARE_CAPABILITY", "target": "PRINT_HOT_KITCHEN"},
+    {"source_module": "PRINTING", "type": "REQUIRES_HARDWARE_CAPABILITY", "target": "PAD_DIRECT_PRINT_CLIENT"},
     {"source_module": "KDS", "type": "REQUIRES_HARDWARE_CAPABILITY", "target": "KDS_DISPLAY_CLIENT"}
   ],
   "machine_readable_outcomes": [
@@ -89,6 +93,11 @@
       "scenario": "MISSING_HARDWARE_CAPABILITY_FAIL_CLOSED",
       "expected_valid": false,
       "expected_issue_codes": ["HARDWARE_CAPABILITY_MISSING"]
+    },
+    {
+      "scenario": "UNKNOWN_HARDWARE_CAPABILITY_FAIL_CLOSED",
+      "expected_valid": false,
+      "expected_issue_codes": ["UNKNOWN_HARDWARE_CAPABILITY"]
     },
     {
       "scenario": "CONFLICT_FAIL_CLOSED",

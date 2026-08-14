@@ -18,6 +18,7 @@ public class StoreModuleAccessEvaluator {
     public static final String MODULE_DISABLED = "MODULE_DISABLED";
     public static final String MODULE_CONFIGURATION_INVALID = "MODULE_CONFIGURATION_INVALID";
     public static final String MODULE_ENVIRONMENT_CAPABILITY_MISSING = "MODULE_ENVIRONMENT_CAPABILITY_MISSING";
+    public static final String MODULE_HARDWARE_CAPABILITY_MISSING = "MODULE_HARDWARE_CAPABILITY_MISSING";
 
     private final StoreModuleRepository storeModuleRepository;
     private final StoreModuleCapabilityProvider capabilityProvider;
@@ -71,8 +72,10 @@ public class StoreModuleAccessEvaluator {
                 false,
                 false,
                 true,
+                true,
                 MODULE_CONFIGURATION_INVALID,
                 "Unknown Store module: " + normalizedModuleKey,
+                List.of(),
                 List.of(),
                 List.of("UNKNOWN_MODULE")
             );
@@ -88,8 +91,10 @@ public class StoreModuleAccessEvaluator {
                 false,
                 false,
                 true,
+                true,
                 MODULE_CONFIGURATION_INVALID,
                 "Store module configuration is missing: " + normalizedModuleKey,
+                List.of(),
                 List.of(),
                 List.of("STORE_MODULE_MISSING")
             );
@@ -102,8 +107,10 @@ public class StoreModuleAccessEvaluator {
                 true,
                 false,
                 true,
+                true,
                 MODULE_DISABLED,
                 "Module disabled for this Store: " + normalizedModuleKey,
+                List.of(),
                 List.of(),
                 List.of()
             );
@@ -118,8 +125,10 @@ public class StoreModuleAccessEvaluator {
                 true,
                 true,
                 true,
+                true,
                 MODULE_CONFIGURATION_INVALID,
                 "Store module configuration is invalid for " + normalizedModuleKey + ": " + String.join(",", configurationIssues),
+                List.of(),
                 List.of(),
                 configurationIssues
             );
@@ -138,10 +147,34 @@ public class StoreModuleAccessEvaluator {
                 true,
                 true,
                 false,
+                true,
                 MODULE_ENVIRONMENT_CAPABILITY_MISSING,
                 "Environment capability missing for " + normalizedModuleKey + ": " + String.join(",", missingEnvironmentCapabilities),
                 missingEnvironmentCapabilities,
+                List.of(),
                 List.of("ENVIRONMENT_CAPABILITY_MISSING")
+            );
+        }
+
+        Set<String> hardwareCapabilities = capabilityProvider.hardwareCapabilities(storeId);
+        List<String> missingHardwareCapabilities = requiredHardwareCapabilities(normalizedModuleKey).stream()
+            .filter(capability -> !hardwareCapabilities.contains(capability))
+            .sorted(Comparator.naturalOrder())
+            .toList();
+        if (!missingHardwareCapabilities.isEmpty()) {
+            return denied(
+                storeId,
+                normalizedModuleKey,
+                true,
+                true,
+                true,
+                true,
+                false,
+                MODULE_HARDWARE_CAPABILITY_MISSING,
+                "Hardware capability missing for " + normalizedModuleKey + ": " + String.join(",", missingHardwareCapabilities),
+                List.of(),
+                missingHardwareCapabilities,
+                List.of("HARDWARE_CAPABILITY_MISSING")
             );
         }
 
@@ -153,8 +186,10 @@ public class StoreModuleAccessEvaluator {
             true,
             true,
             true,
+            true,
             null,
             "Module capability allowed",
+            List.of(),
             List.of(),
             List.of()
         );
@@ -172,9 +207,11 @@ public class StoreModuleAccessEvaluator {
         boolean persisted,
         boolean storeModuleEnabled,
         boolean environmentAvailable,
+        boolean hardwareAvailable,
         String errorCode,
         String message,
         List<String> missingEnvironmentCapabilities,
+        List<String> missingHardwareCapabilities,
         List<String> issueCodes
     ) {
         return new StoreModuleAccessEvaluation(
@@ -184,10 +221,12 @@ public class StoreModuleAccessEvaluator {
             persisted,
             storeModuleEnabled,
             environmentAvailable,
+            hardwareAvailable,
             false,
             errorCode,
             message,
             List.copyOf(missingEnvironmentCapabilities),
+            List.copyOf(missingHardwareCapabilities),
             List.copyOf(issueCodes)
         );
     }
@@ -234,6 +273,15 @@ public class StoreModuleAccessEvaluator {
         return dependencyGraph.dependencies().stream()
             .filter(rule -> moduleKey.equals(rule.sourceModule()))
             .filter(rule -> ModuleDependencyType.REQUIRES_ENVIRONMENT_CAPABILITY.name().equals(rule.type()))
+            .map(ModuleDependencyRule::target)
+            .distinct()
+            .toList();
+    }
+
+    private List<String> requiredHardwareCapabilities(String moduleKey) {
+        return dependencyGraph.dependencies().stream()
+            .filter(rule -> moduleKey.equals(rule.sourceModule()))
+            .filter(rule -> ModuleDependencyType.REQUIRES_HARDWARE_CAPABILITY.name().equals(rule.type()))
             .map(ModuleDependencyRule::target)
             .distinct()
             .toList();

@@ -2,6 +2,7 @@ package com.restaurant.system.modules;
 
 import com.restaurant.system.common.feature.FeatureFlagService;
 import com.restaurant.system.common.feature.FeaturePackage;
+import com.restaurant.system.printing.PrintModuleCode;
 import com.restaurant.system.printing.PrintingMode;
 import com.restaurant.system.printing.PrintingRuntimePolicyProperties;
 import com.restaurant.system.printing.entity.PrinterAssignment;
@@ -13,7 +14,11 @@ import com.restaurant.system.printing.repository.StoreDeviceRepository;
 import com.restaurant.system.user.entity.Store;
 import com.restaurant.system.user.repository.StoreRepository;
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -71,47 +76,113 @@ public class StoreModuleCapabilityProviderImpl implements StoreModuleCapabilityP
 
     @Override
     public Set<String> hardwareCapabilities(Long storeId) {
-        Set<String> capabilities = new LinkedHashSet<>();
-        capabilities.add("TOUCH_CLIENT");
-        if (hasLogicalPrinterTopology(storeId)) {
-            capabilities.add("PRINTER_TOPOLOGY_FOR_REAL_OR_PAD_DIRECT");
-        }
-        if (hasPadDirectReadiness(storeId)) {
-            capabilities.add("PAD_DEVICE_FOR_PAD_DIRECT");
-        }
-        return Set.copyOf(capabilities);
+        return hardwareReadiness(storeId).stream()
+            .filter(StoreHardwareCapabilityReadiness::dependencySatisfied)
+            .map(StoreHardwareCapabilityReadiness::capabilityKey)
+            .collect(Collectors.toUnmodifiableSet());
     }
 
-    private boolean hasLogicalPrinterTopology(Long storeId) {
-        if (storeId == null) {
-            return false;
-        }
-        boolean hasEnabledPrinter = printerConfigRepository.findAllByStoreIdOrderByIdAsc(storeId).stream()
-            .anyMatch(printer -> Boolean.TRUE.equals(printer.enabled));
-        boolean hasEnabledAssignment = printerAssignmentRepository.findAllByStoreIdOrderByIdAsc(storeId).stream()
-            .anyMatch(this::isEnabledAssignment);
-        return hasEnabledPrinter && hasEnabledAssignment;
-    }
+    @Override
+    public List<StoreHardwareCapabilityReadiness> hardwareReadiness(Long storeId) {
+        List<StoreHardwareCapabilityReadiness> readiness = new java.util.ArrayList<>();
+        readiness.add(readiness(
+            HardwareCapabilityKeys.TOUCH_CLIENT,
+            HardwareReadinessState.VERIFIED,
+            true,
+            "HARDWARE_CAPABILITY",
+            "WEB_OR_TABLET_CLIENT_RUNTIME",
+            "Touch-capable web client is the current POS delivery model."
+        ));
 
-    private boolean hasPadDirectReadiness(Long storeId) {
-        if (storeId == null) {
-            return false;
-        }
-        Store store = storeRepository.findById(storeId).orElse(null);
+        LogicalPrinterTopology topology = logicalPrinterTopology(storeId);
+        readiness.add(printReadiness(HardwareCapabilityKeys.PRINT_GRAB, PrintModuleCode.GRAB, topology));
+        readiness.add(printReadiness(
+            HardwareCapabilityKeys.PRINT_FRONTDESK_RECEIPT,
+            PrintModuleCode.FRONTDESK_RECEIPT,
+            topology
+        ));
+        readiness.add(printReadiness(HardwareCapabilityKeys.PRINT_HOT_KITCHEN, PrintModuleCode.HOT_KITCHEN, topology));
+
+        List<StoreDevice> devices = storeId == null
+            ? List.of()
+            : storeDeviceRepository.findAllByStoreIdOrderByIdAsc(storeId);
+        boolean hasActivePad = devices.stream().anyMatch(this::isActivePadDevice);
+        readiness.add(readiness(
+            HardwareCapabilityKeys.PAD_DEVICE,
+            hasActivePad ? HardwareReadinessState.CONFIGURED : HardwareReadinessState.UNCONFIGURED,
+            false,
+            "PHYSICAL_DEVICE_BINDING",
+            "store_devices",
+            hasActivePad ? "At least one active Store-scoped Pad device exists." : "No active Store-scoped Pad device is currently enrolled."
+        ));
+        readiness.add(readiness(
+            HardwareCapabilityKeys.DEVICE_ENROLLMENT,
+            HardwareReadinessState.CONFIGURED,
+            false,
+            "ENVIRONMENT_CAPABILITY",
+            "StoreDeviceService",
+            "Store-scoped device registration, heartbeat and authentication services are present."
+        ));
+
+        Store store = storeId == null ? null : storeRepository.findById(storeId).orElse(null);
         String printingMode = store == null ? null : PrintingMode.normalize(store.printing_mode);
-        if (PrintingMode.PAD_DIRECT.equals(printingMode)) {
-            return hasActivePadDevice(storeId);
+        boolean padDirectRequired = PrintingMode.PAD_DIRECT.equals(printingMode);
+        readiness.add(readiness(
+            HardwareCapabilityKeys.PAD_DIRECT_PRINT_CLIENT,
+            !padDirectRequired
+                ? HardwareReadinessState.NOT_REQUIRED
+                : hasActivePad ? HardwareReadinessState.CONFIGURED : HardwareReadinessState.UNCONFIGURED,
+            padDirectRequired,
+            "PHYSICAL_DEVICE_BINDING",
+            "stores.printing_mode + store_devices",
+            padDirectRequired
+                ? "PAD_DIRECT mode requires an active Store-scoped Pad print client."
+                : "Current print mode does not require a physical Pad Direct print client."
+        ));
+
+        return List.copyOf(readiness);
+    }
+
+    private LogicalPrinterTopology logicalPrinterTopology(Long storeId) {
+        if (storeId == null) {
+            return new LogicalPrinterTopology(Map.of(), Map.of());
         }
-        return true;
+        Map<Long, PrinterConfig> printersById = printerConfigRepository.findAllByStoreIdOrderByIdAsc(storeId).stream()
+            .filter(printer -> printer.id != null)
+            .collect(Collectors.toMap(printer -> printer.id, Function.identity(), (left, right) -> left));
+        Map<String, PrinterAssignment> assignmentsByModule = printerAssignmentRepository.findAllByStoreIdOrderByIdAsc(storeId).stream()
+            .filter(this::isEnabledAssignment)
+            .filter(assignment -> assignment.module_code != null && !assignment.module_code.isBlank())
+            .collect(Collectors.toMap(
+                assignment -> assignment.module_code.trim().toUpperCase(),
+                Function.identity(),
+                (left, right) -> left
+            ));
+        return new LogicalPrinterTopology(printersById, assignmentsByModule);
+    }
+
+    private StoreHardwareCapabilityReadiness printReadiness(
+        String capability,
+        String moduleCode,
+        LogicalPrinterTopology topology
+    ) {
+        PrinterAssignment assignment = topology.assignmentsByModule().get(moduleCode);
+        PrinterConfig printer = assignment == null ? null : topology.printersById().get(assignment.printer_id);
+        boolean configured = printer != null && Boolean.TRUE.equals(printer.enabled);
+        return readiness(
+            capability,
+            configured ? HardwareReadinessState.CONFIGURED : HardwareReadinessState.UNCONFIGURED,
+            true,
+            "STORE_LOGICAL_CONFIGURATION",
+            "printer_configs + printer_assignments",
+            configured
+                ? moduleCode + " routes to an enabled logical printer."
+                : moduleCode + " is missing an enabled logical printer assignment."
+        );
     }
 
     private boolean isEnabledAssignment(PrinterAssignment assignment) {
         return assignment != null && Boolean.TRUE.equals(assignment.enabled) && assignment.printer_id != null;
-    }
-
-    private boolean hasActivePadDevice(Long storeId) {
-        return storeDeviceRepository.findAllByStoreIdOrderByIdAsc(storeId).stream()
-            .anyMatch(this::isActivePadDevice);
     }
 
     private boolean isActivePadDevice(StoreDevice device) {
@@ -123,5 +194,29 @@ public class StoreModuleCapabilityProviderImpl implements StoreModuleCapabilityP
         return "PAD".equalsIgnoreCase(deviceType)
             || "ANDROID".equalsIgnoreCase(platform)
             || "IPAD".equalsIgnoreCase(platform);
+    }
+
+    private StoreHardwareCapabilityReadiness readiness(
+        String capabilityKey,
+        HardwareReadinessState readinessState,
+        boolean requiredByCurrentRuntime,
+        String layer,
+        String source,
+        String note
+    ) {
+        return new StoreHardwareCapabilityReadiness(
+            capabilityKey,
+            readinessState,
+            requiredByCurrentRuntime,
+            layer,
+            source,
+            note
+        );
+    }
+
+    private record LogicalPrinterTopology(
+        Map<Long, PrinterConfig> printersById,
+        Map<String, PrinterAssignment> assignmentsByModule
+    ) {
     }
 }

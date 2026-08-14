@@ -1,5 +1,5 @@
 {
-  "catalog_version": "PHASE_A1_MODULE_CATALOG_V1",
+  "catalog_version": "PHASE_A8_MODULE_CATALOG_HARDWARE_CAPABILITY_V2",
   "authority": {
     "phase": "PHASE_A1_MODULE_CATALOG",
     "owner_required_normal_store_capabilities": [
@@ -249,8 +249,10 @@
         "DATABASE"
       ],
       "required_hardware_capabilities": [
-        "PRINTER_TOPOLOGY_FOR_REAL_OR_PAD_DIRECT",
-        "PAD_DEVICE_FOR_PAD_DIRECT"
+        "PRINT_GRAB",
+        "PRINT_FRONTDESK_RECEIPT",
+        "PRINT_HOT_KITCHEN",
+        "PAD_DIRECT_PRINT_CLIENT"
       ],
       "frontend_routes": [
         "/stores/{storeId}/admin/settings/printing",
@@ -691,8 +693,12 @@
   ],
   "hardware_capabilities": [
     "TOUCH_CLIENT",
-    "PRINTER_TOPOLOGY_FOR_REAL_OR_PAD_DIRECT",
-    "PAD_DEVICE_FOR_PAD_DIRECT",
+    "PRINT_GRAB",
+    "PRINT_FRONTDESK_RECEIPT",
+    "PRINT_HOT_KITCHEN",
+    "PAD_DIRECT_PRINT_CLIENT",
+    "PAD_DEVICE",
+    "DEVICE_ENROLLMENT",
     "KDS_DISPLAY_CLIENT"
   ],
   "legacy_couplings": [

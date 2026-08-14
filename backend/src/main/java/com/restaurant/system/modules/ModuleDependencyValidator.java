@@ -12,10 +12,20 @@ public class ModuleDependencyValidator {
 
     private final ModuleCatalogDefinition catalog;
     private final ModuleDependencyGraph graph;
+    private final HardwareCapabilityCatalogDefinition hardwareCatalog;
 
     public ModuleDependencyValidator(ModuleCatalogDefinition catalog, ModuleDependencyGraph graph) {
+        this(catalog, graph, new ModuleContractLoader().loadHardwareCatalog());
+    }
+
+    public ModuleDependencyValidator(
+        ModuleCatalogDefinition catalog,
+        ModuleDependencyGraph graph,
+        HardwareCapabilityCatalogDefinition hardwareCatalog
+    ) {
         this.catalog = catalog;
         this.graph = graph;
+        this.hardwareCatalog = hardwareCatalog;
     }
 
     public static ModuleDependencyValidator loadDefault() {
@@ -36,6 +46,17 @@ public class ModuleDependencyValidator {
                     moduleKey,
                     null,
                     "Unknown module state is not allowed"
+                ));
+            }
+        }
+
+        for (String hardwareCapability : input.hardwareCapabilities()) {
+            if (!hardwareCatalog.supports(hardwareCapability)) {
+                issues.add(issue(
+                    ModuleValidationCode.UNKNOWN_HARDWARE_CAPABILITY,
+                    null,
+                    hardwareCapability,
+                    "Unknown hardware capability is not allowed"
                 ));
             }
         }
@@ -111,7 +132,7 @@ public class ModuleDependencyValidator {
                     }
                 }
                 case REQUIRES_HARDWARE_CAPABILITY -> {
-                    if (!catalog.hardwareCapabilities().contains(rule.target())) {
+                    if (!hardwareCatalog.supports(rule.target())) {
                         issues.add(issue(
                             ModuleValidationCode.INVALID_DEPENDENCY_GRAPH,
                             rule.sourceModule(),
@@ -222,7 +243,9 @@ public class ModuleDependencyValidator {
         List<ModuleValidationIssue> issues,
         ModuleDependencyRule rule
     ) {
-        if (!input.hardwareCapabilities().contains(rule.target())) {
+        Set<String> inputCapabilities = canonicalHardwareCapabilities(input.hardwareCapabilities());
+        Set<String> requiredCapabilities = hardwareCatalog.canonicalKeys(rule.target());
+        if (requiredCapabilities.isEmpty() || inputCapabilities.stream().noneMatch(requiredCapabilities::contains)) {
             issues.add(issue(
                 ModuleValidationCode.HARDWARE_CAPABILITY_MISSING,
                 rule.sourceModule(),
@@ -230,6 +253,15 @@ public class ModuleDependencyValidator {
                 "Hardware capability is missing"
             ));
         }
+    }
+
+    private Set<String> canonicalHardwareCapabilities(Set<String> hardwareCapabilities) {
+        Set<String> canonical = new LinkedHashSet<>();
+        for (String capability : hardwareCapabilities == null ? Set.<String>of() : hardwareCapabilities) {
+            Set<String> canonicalKeys = hardwareCatalog.canonicalKeys(capability);
+            canonical.addAll(canonicalKeys);
+        }
+        return Set.copyOf(canonical);
     }
 
     private ModuleState stateFor(ModuleConfigurationInput input, String moduleKey) {

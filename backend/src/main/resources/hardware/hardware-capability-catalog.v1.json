@@ -1,0 +1,141 @@
+{
+  "catalog_version": "PHASE_A8_HARDWARE_CAPABILITY_CATALOG_V1",
+  "authority": {
+    "phase": "PHASE_A8_HARDWARE_CAPABILITY_CONTRACT",
+    "production_boundary": "NO_MUTATION",
+    "schema_boundary": "NO_MIGRATION",
+    "physical_binding_boundary": "SEPARATE_OWNER_RUNTIME_GATE"
+  },
+  "readiness_states": [
+    {
+      "state": "NOT_REQUIRED",
+      "dependency_satisfied": true,
+      "description": "The Store module can run in the current runtime mode without this physical binding."
+    },
+    {
+      "state": "UNCONFIGURED",
+      "dependency_satisfied": false,
+      "description": "The required logical or physical capability is missing and must fail closed."
+    },
+    {
+      "state": "CONFIGURED",
+      "dependency_satisfied": true,
+      "description": "The required logical topology or runtime binding exists."
+    },
+    {
+      "state": "VERIFIED",
+      "dependency_satisfied": true,
+      "description": "The required capability exists and has passed a safe runtime verification."
+    }
+  ],
+  "capabilities": [
+    {
+      "capability_key": "TOUCH_CLIENT",
+      "display_name": "Touch ordering client",
+      "layer": "HARDWARE_CAPABILITY",
+      "category": "CLIENT_DEVICE",
+      "readiness_contract": "A browser/tablet-class touch client is available for POS operation.",
+      "physical_binding": false,
+      "aliases": []
+    },
+    {
+      "capability_key": "PRINT_GRAB",
+      "display_name": "GRAB logical printing",
+      "layer": "STORE_LOGICAL_CONFIGURATION",
+      "category": "PRINTING",
+      "readiness_contract": "The Store has an enabled GRAB assignment routed to an enabled logical printer.",
+      "physical_binding": false,
+      "aliases": [
+        "GRAB_PRINTING",
+        "PRINTER_TOPOLOGY_FOR_REAL_OR_PAD_DIRECT"
+      ]
+    },
+    {
+      "capability_key": "PRINT_FRONTDESK_RECEIPT",
+      "display_name": "Frontdesk receipt logical printing",
+      "layer": "STORE_LOGICAL_CONFIGURATION",
+      "category": "PRINTING",
+      "readiness_contract": "The Store has an enabled FRONTDESK_RECEIPT assignment routed to an enabled logical printer.",
+      "physical_binding": false,
+      "aliases": [
+        "FRONTDESK_RECEIPT",
+        "PRINT_RECEIPT",
+        "PRINTER_TOPOLOGY_FOR_REAL_OR_PAD_DIRECT"
+      ]
+    },
+    {
+      "capability_key": "PRINT_HOT_KITCHEN",
+      "display_name": "Hot kitchen logical printing",
+      "layer": "STORE_LOGICAL_CONFIGURATION",
+      "category": "PRINTING",
+      "readiness_contract": "The Store has an enabled HOT_KITCHEN assignment routed to an enabled logical printer.",
+      "physical_binding": false,
+      "aliases": [
+        "HOT_KITCHEN_PRINTING",
+        "PRINTER_TOPOLOGY_FOR_REAL_OR_PAD_DIRECT"
+      ]
+    },
+    {
+      "capability_key": "PAD_DIRECT_PRINT_CLIENT",
+      "display_name": "Pad Direct print client",
+      "layer": "PHYSICAL_DEVICE_BINDING",
+      "category": "PRINTING",
+      "readiness_contract": "Required only when runtime mode is PAD_DIRECT; MOCK and DISABLED do not require a physical Pad Direct client.",
+      "physical_binding": true,
+      "aliases": [
+        "PAD_DEVICE_FOR_PAD_DIRECT"
+      ]
+    },
+    {
+      "capability_key": "PAD_DEVICE",
+      "display_name": "Pad device capability",
+      "layer": "PHYSICAL_DEVICE_BINDING",
+      "category": "DEVICE",
+      "readiness_contract": "A Store-scoped Pad device can be enrolled or verified without copying device credentials into Store Profiles.",
+      "physical_binding": true,
+      "aliases": [
+        "ANDROID_PAD"
+      ]
+    },
+    {
+      "capability_key": "DEVICE_ENROLLMENT",
+      "display_name": "Device enrollment capability",
+      "layer": "ENVIRONMENT_CAPABILITY",
+      "category": "DEVICE",
+      "readiness_contract": "The runtime exposes the Store-scoped device registration/heartbeat/authentication contract.",
+      "physical_binding": false,
+      "aliases": [
+        "STORE_DEVICE_TOPOLOGY"
+      ]
+    },
+    {
+      "capability_key": "KDS_DISPLAY_CLIENT",
+      "display_name": "KDS display client",
+      "layer": "HARDWARE_CAPABILITY",
+      "category": "KDS",
+      "readiness_contract": "Required only when the optional KDS module is enabled.",
+      "physical_binding": true,
+      "aliases": []
+    }
+  ],
+  "profile_contract": {
+    "allowed": [
+      "capability_key",
+      "required_for_modules",
+      "readiness_state",
+      "physical_pairing_policy",
+      "logical_printer_count",
+      "assignment_count"
+    ],
+    "forbidden": [
+      "printer_endpoint",
+      "ip_address",
+      "host",
+      "device_token",
+      "device_token_hash",
+      "credential",
+      "secret"
+    ],
+    "legacy_aliases_are_compatibility_only": true
+  }
+}

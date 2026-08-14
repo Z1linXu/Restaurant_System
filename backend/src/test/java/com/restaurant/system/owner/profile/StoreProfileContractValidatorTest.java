@@ -139,6 +139,30 @@ class StoreProfileContractValidatorTest {
     }
 
     @Test
+    void rejectsUnknownHardwareCapabilityThroughA8Catalog() {
+        String invalid = contentJson.replace(
+            "\"PAD_DEVICE_FOR_PAD_DIRECT\"",
+            "\"PAD_DEVICE_FOR_PAD_DIRECT\", \"CASH_DRAWER\""
+        );
+        String fingerprint = validator.computeAggregateFingerprint(
+            "TEST_PROFILE", "v1", StoreProfileContractValidator.SCHEMA_VERSION, invalid, artifacts
+        );
+
+        StoreProfileValidationResult result = validator.validate(
+            "TEST_PROFILE",
+            "v1",
+            StoreProfileContractValidator.SCHEMA_VERSION,
+            invalid,
+            fingerprint,
+            artifacts
+        );
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.issues()).extracting(StoreProfileValidationIssue::code)
+            .contains("MODULE_VALIDATION_UNKNOWN_HARDWARE_CAPABILITY");
+    }
+
+    @Test
     void rejectsProhibitedDataAndSourceStoreDbIds() {
         String invalid = contentJson.replace(
             "\"materialization_contract\": {",

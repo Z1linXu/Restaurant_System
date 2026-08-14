@@ -25,6 +25,7 @@ export type StoreModuleAccessStatus =
   | 'MODULE_DISABLED'
   | 'MODULE_CONFIGURATION_INVALID'
   | 'MODULE_ENVIRONMENT_CAPABILITY_MISSING'
+  | 'MODULE_HARDWARE_CAPABILITY_MISSING'
 
 export interface StoreModuleAccessResult {
   allowed: boolean
@@ -98,6 +99,16 @@ export function evaluateStoreModuleAccess(
       module,
       issues,
       `Environment capability missing for ${moduleKey}.`,
+    )
+  }
+  if (issues.some((issue) => issue.code === 'HARDWARE_CAPABILITY_MISSING')) {
+    return denied(
+      moduleKey,
+      'MODULE_HARDWARE_CAPABILITY_MISSING',
+      displayName,
+      module,
+      issues,
+      `Hardware capability missing for ${moduleKey}.`,
     )
   }
   if (issues.length > 0) {

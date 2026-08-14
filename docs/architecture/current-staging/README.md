@@ -1,5 +1,11 @@
 # Current Staging Architecture UML Baseline
 
+> Phase A8 update: the baseline now includes the hardware capability/readiness
+> contract. Current Staging `PRINTING=ON`, `MOCK`, four logical printers and
+> three assignments is valid without physical printer endpoints because
+> `PAD_DIRECT_PRINT_CLIENT` is `NOT_REQUIRED` in MOCK. A9 will update this
+> baseline again after legacy coupling removal and exact-SHA Staging regression.
+
 ## Purpose
 
 This directory is the formal documentation-only anti-drift architecture

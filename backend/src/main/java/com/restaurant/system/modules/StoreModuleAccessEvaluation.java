@@ -9,10 +9,12 @@ public record StoreModuleAccessEvaluation(
     boolean persisted,
     boolean storeModuleEnabled,
     boolean environmentAvailable,
+    boolean hardwareAvailable,
     boolean allowed,
     String errorCode,
     String message,
     List<String> missingEnvironmentCapabilities,
+    List<String> missingHardwareCapabilities,
     List<String> issueCodes
 ) {
 
