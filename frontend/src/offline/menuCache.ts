@@ -111,6 +111,43 @@ function appendCategories(parts: string[], categories: BackendMenuCategory[], in
   })
 }
 
+function appendComboConfiguration(parts: string[], catalog: BackendMenuCatalog) {
+  appendValue(parts, catalog.combo_configuration?.store_id)
+  appendValue(parts, catalog.combo_configuration?.menu_revision)
+  const comboGroups = catalog.combo_configuration?.groups ?? []
+  appendValue(parts, comboGroups.length)
+  comboGroups.forEach((group) => {
+    appendValue(parts, group.group_id)
+    appendValue(parts, group.group_code)
+    appendValue(parts, group.component_group)
+    appendValue(parts, group.name_zh)
+    appendValue(parts, group.name_en)
+    appendValue(parts, group.selection_rule)
+    appendValue(parts, group.required)
+    appendValue(parts, group.enabled)
+    appendValue(parts, group.display_order)
+    appendValue(parts, group.default_component_code)
+    const components = group.components ?? []
+    appendValue(parts, components.length)
+    components.forEach((component) => {
+      appendValue(parts, component.id)
+      appendValue(parts, component.group_id)
+      appendValue(parts, component.component_group)
+      appendValue(parts, component.component_code)
+      appendValue(parts, component.name_zh)
+      appendValue(parts, component.name_en)
+      appendValue(parts, component.enabled)
+      appendValue(parts, component.display_order)
+      appendValue(parts, component.is_default)
+      appendValue(parts, component.linked_menu_item_id)
+      appendValue(parts, component.linked_menu_item_sku)
+      appendValue(parts, component.linked_menu_item_name_zh)
+      appendValue(parts, component.linked_menu_item_name_en)
+      appendValue(parts, component.business_behavior)
+    })
+  })
+}
+
 function fnv1a32(value: string) {
   let hash = 0x811c9dc5
   const bytes = new TextEncoder().encode(value)
@@ -136,26 +173,7 @@ export function calculateMenuContentHash(catalog: BackendMenuCatalog) {
   appendValue(parts, catalog.pricing_policy?.size_regular_delta)
   appendValue(parts, catalog.pricing_policy?.size_large_delta)
   appendValue(parts, catalog.pricing_policy?.combo_delta)
-  appendValue(parts, catalog.combo_configuration?.store_id)
-  appendValue(parts, catalog.combo_configuration?.menu_revision)
-  const comboGroups = catalog.combo_configuration?.groups ?? []
-  appendValue(parts, comboGroups.length)
-  comboGroups.forEach((group) => {
-    appendValue(parts, group.component_group)
-    appendValue(parts, group.name_zh)
-    appendValue(parts, group.name_en)
-    appendValue(parts, group.default_component_code)
-    appendValue(parts, group.components.length)
-    group.components.forEach((component) => {
-      appendValue(parts, component.component_group)
-      appendValue(parts, component.component_code)
-      appendValue(parts, component.name_zh)
-      appendValue(parts, component.name_en)
-      appendValue(parts, component.enabled)
-      appendValue(parts, component.display_order)
-      appendValue(parts, component.is_default)
-    })
-  })
+  appendComboConfiguration(parts, catalog)
   appendCategories(parts, catalog.categories, catalog.catalog_version !== 'menu-catalog-v2')
   return `fnv1a32:${fnv1a32(parts.join(''))}`
 }

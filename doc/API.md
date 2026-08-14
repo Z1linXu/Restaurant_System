@@ -78,6 +78,14 @@
 > same Store-scoped Menu Management authority and advance `stores.menu_revision`
 > / `stores.menu_updated_at` in the same transaction. Production remains
 > no-mutation.
+>
+> A5.5 Owner acceptance repair (2026-08-14): frontdesk clients must include the
+> complete A5.5 `combo_configuration` group/component metadata in their menu
+> content-hash projection. Store Combo group ordering/default changes must be
+> observed through the normal menu revision + full snapshot refresh path; do
+> not bypass `MENU_CACHE_HASH_MISMATCH`. Dynamic groups such as Drink are
+> rendered from `combo_configuration.groups[]` generically rather than
+> hardcoded to Egg/Side.
 
 > Final productization Phase A0 boundary (2026-08-13): Size configuration uses
 > the existing menu option/modifier APIs rather than a second size engine.
@@ -750,6 +758,12 @@ Response behavior:
   transport IDs for Store-level choices; the IDs are not database row
   identities. Legacy Egg/Side options keep their A0.2 negative IDs, and dynamic
   components receive deterministic generated negative IDs.
+- For new selections, ordering clients must resolve a selected Store Combo
+  component only if that option exists in the current snapshot's enabled
+  `combo_configuration.groups[].components[]`; otherwise they fall back to the
+  current group default or first enabled required option. Existing frozen draft
+  line/order snapshots are not silently rewritten by later Combo Configuration
+  changes.
 - Size and Combo deltas in new catalog responses are effective Store policy
   values from `store_pricing_policies`; Size/Combo `menu_item_options.price_delta`
   is maintained only as a rollback compatibility mirror.

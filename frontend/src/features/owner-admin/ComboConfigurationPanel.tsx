@@ -14,6 +14,7 @@ interface ComboConfigurationPanelProps {
 }
 
 type ErrorState = string | null
+const DISPLAY_ORDER_STEP = 10
 
 function cloneConfiguration(configuration: StoreComboConfigurationRecord | null): StoreComboConfigurationRecord | null {
   if (!configuration) return null
@@ -54,6 +55,24 @@ function canonical(configuration: StoreComboConfigurationRecord | null) {
 
 function nextOrder(values: Array<{ display_order?: number | null }>) {
   return (values.reduce((max, value) => Math.max(max, value.display_order ?? 0), 0) || values.length * 10) + 10
+}
+
+function moveWithDisplayOrder<T extends { display_order?: number | null }>(
+  values: T[],
+  fromIndex: number,
+  direction: -1 | 1,
+) {
+  const toIndex = fromIndex + direction
+  if (toIndex < 0 || toIndex >= values.length) {
+    return values
+  }
+  const moved = [...values]
+  const [item] = moved.splice(fromIndex, 1)
+  moved.splice(toIndex, 0, item)
+  return moved.map((value, index) => ({
+    ...value,
+    display_order: (index + 1) * DISPLAY_ORDER_STEP,
+  }))
 }
 
 function groupCode(group: StoreComboConfigurationGroupRecord) {
@@ -199,6 +218,29 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
     })
   }
 
+  const moveGroup = (groupIndex: number, direction: -1 | 1) => {
+    if (!draft) return
+    setDraft({
+      ...draft,
+      groups: moveWithDisplayOrder(draft.groups, groupIndex, direction),
+    })
+  }
+
+  const moveComponent = (groupIndex: number, componentIndex: number, direction: -1 | 1) => {
+    if (!draft) return
+    setDraft({
+      ...draft,
+      groups: draft.groups.map((group, index) => (
+        index !== groupIndex
+          ? group
+          : {
+              ...group,
+              components: moveWithDisplayOrder(group.components, componentIndex, direction),
+            }
+      )),
+    })
+  }
+
   const handleSave = async () => {
     if (!draft) return
     try {
@@ -287,7 +329,7 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
         <div className="mt-4 grid gap-3">
           {draft.groups.map((group, groupIndex) => (
             <div key={`${group.group_id ?? 'new'}:${group.group_code ?? groupIndex}`} className="rounded-[20px] bg-[rgba(26,28,25,0.035)] px-4 py-4">
-              <div className="grid gap-3 lg:grid-cols-[1fr_1fr_180px_140px]">
+              <div className="grid gap-3 lg:grid-cols-[1fr_1fr_180px_210px]">
                 <input
                   value={group.name_zh}
                   onChange={(event) => patchGroup(groupIndex, { name_zh: event.target.value })}
@@ -311,13 +353,36 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
                   <option value="EXACTLY_ONE">Choose exactly one</option>
                   <option value="OPTIONAL_ONE">Optional choose one</option>
                 </select>
-                <input
-                  type="number"
-                  value={group.display_order ?? 0}
-                  onChange={(event) => patchGroup(groupIndex, { display_order: Number(event.target.value) })}
-                  className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none"
-                  aria-label="Group display order"
-                />
+                <div className="grid grid-cols-[1fr_auto_auto] gap-2">
+                  <label className="grid gap-1">
+                    <span className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Display Order / 排序</span>
+                    <input
+                      type="number"
+                      value={group.display_order ?? 0}
+                      onChange={(event) => patchGroup(groupIndex, { display_order: Number(event.target.value) })}
+                      className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none"
+                      aria-label="Group display order"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => moveGroup(groupIndex, -1)}
+                    disabled={groupIndex === 0}
+                    className="mt-5 rounded-[12px] bg-white px-3 py-2 text-[0.78rem] font-semibold text-[var(--on-surface)] disabled:opacity-40"
+                    aria-label="Move group up"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveGroup(groupIndex, 1)}
+                    disabled={groupIndex === draft.groups.length - 1}
+                    className="mt-5 rounded-[12px] bg-white px-3 py-2 text-[0.78rem] font-semibold text-[var(--on-surface)] disabled:opacity-40"
+                    aria-label="Move group down"
+                  >
+                    ↓
+                  </button>
+                </div>
               </div>
 
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
@@ -353,7 +418,7 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
                 {group.components.map((component, componentIndex) => (
                   <div
                     key={`${component.id ?? 'new'}:${component.component_code ?? componentIndex}`}
-                    className="grid gap-2 rounded-[16px] bg-white p-3 lg:grid-cols-[1fr_1fr_120px_160px_220px_120px]"
+                    className="grid gap-2 rounded-[16px] bg-white p-3 lg:grid-cols-[1fr_1fr_190px_160px_220px_120px]"
                   >
                     <input
                       value={component.name_zh}
@@ -367,13 +432,36 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
                       placeholder="Item English name"
                       className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none"
                     />
-                    <input
-                      type="number"
-                      value={component.display_order ?? 0}
-                      onChange={(event) => patchComponent(groupIndex, componentIndex, { display_order: Number(event.target.value) })}
-                      className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none"
-                      aria-label="Component display order"
-                    />
+                    <div className="grid grid-cols-[1fr_auto_auto] gap-2">
+                      <label className="grid gap-1">
+                        <span className="text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">Display Order / 排序</span>
+                        <input
+                          type="number"
+                          value={component.display_order ?? 0}
+                          onChange={(event) => patchComponent(groupIndex, componentIndex, { display_order: Number(event.target.value) })}
+                          className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none"
+                          aria-label="Component display order"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => moveComponent(groupIndex, componentIndex, -1)}
+                        disabled={componentIndex === 0}
+                        className="mt-5 rounded-[10px] bg-[rgba(26,28,25,0.05)] px-2.5 py-2 text-[0.76rem] font-semibold text-[var(--on-surface)] disabled:opacity-40"
+                        aria-label="Move component up"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveComponent(groupIndex, componentIndex, 1)}
+                        disabled={componentIndex === group.components.length - 1}
+                        className="mt-5 rounded-[10px] bg-[rgba(26,28,25,0.05)] px-2.5 py-2 text-[0.76rem] font-semibold text-[var(--on-surface)] disabled:opacity-40"
+                        aria-label="Move component down"
+                      >
+                        ↓
+                      </button>
+                    </div>
                     <select
                       value={component.business_behavior ?? 'NO_KITCHEN_TASK'}
                       onChange={(event) => patchComponent(groupIndex, componentIndex, {

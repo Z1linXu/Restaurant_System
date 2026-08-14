@@ -223,10 +223,14 @@ Store-scoped menu revision/cache invalidation. Evidence:
 [PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_EVIDENCE](PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_EVIDENCE.md).
 
 After A5.5 merge, exact-SHA Staging deploy and automated validation must pass
-before Owner manual retest. Production remains no-mutation. A5.5 must stop at:
+before Owner manual retest. The first Owner manual Staging acceptance failed on
+menu cache hash parity, dynamic Combo rendering/default refresh, and
+display-order UX. Historical automated PASS evidence remains retained; the
+current bounded repair must deploy only to Staging, keep Production
+no-mutation, and must stop at:
 
 ```text
-PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+PHASE_A5_5_OWNER_ACCEPTANCE_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
 ```
 
 This order must not change unless fresh audit proves a real technical

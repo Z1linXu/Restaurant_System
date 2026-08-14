@@ -23,7 +23,7 @@ class MenuCatalogHashServiceTest {
         catalog.generated_at = catalog.generated_at.plusHours(2);
 
         assertEquals(first, service.calculate(catalog));
-        assertEquals("fnv1a32:7c11b6d9", first);
+        assertEquals("fnv1a32:07ab0e4f", first);
     }
 
     @Test
@@ -116,38 +116,64 @@ class MenuCatalogHashServiceTest {
         configuration.store_id = 1L;
         configuration.menu_revision = 7L;
         StoreComboConfigurationResponse.GroupResponse eggs = new StoreComboConfigurationResponse.GroupResponse();
+        eggs.group_id = 101L;
+        eggs.group_code = "COMBO_EGG";
         eggs.component_group = "COMBO_EGG";
         eggs.name_zh = "蛋类";
         eggs.name_en = "Egg";
+        eggs.selection_rule = "EXACTLY_ONE";
+        eggs.required = true;
+        eggs.enabled = true;
+        eggs.display_order = 10;
         eggs.default_component_code = "combo_tea_egg";
         eggs.components = List.of(
-            component("COMBO_EGG", "combo_tea_egg", "卤蛋", "Tea Egg", true, 10, true),
-            component("COMBO_EGG", "combo_fried_egg", "煎蛋", "Fried Egg", true, 20, false)
+            component(1001L, 101L, "COMBO_EGG", "combo_tea_egg", "卤蛋", "Tea Egg", true, 10, true,
+                null, null, null, null, "NO_KITCHEN_TASK"),
+            component(1002L, 101L, "COMBO_EGG", "combo_fried_egg", "煎蛋", "Fried Egg", true, 20, false,
+                null, null, null, null, "NO_KITCHEN_TASK")
         );
         StoreComboConfigurationResponse.GroupResponse sides = new StoreComboConfigurationResponse.GroupResponse();
+        sides.group_id = 102L;
+        sides.group_code = "COMBO_SIDE";
         sides.component_group = "COMBO_SIDE";
         sides.name_zh = "小菜";
         sides.name_en = "Side";
+        sides.selection_rule = "EXACTLY_ONE";
+        sides.required = true;
+        sides.enabled = true;
+        sides.display_order = 20;
         sides.default_component_code = "combo_edamame";
         sides.components = List.of(
-            component("COMBO_SIDE", "combo_edamame", "毛豆", "Edamame", true, 10, true),
-            component("COMBO_SIDE", "combo_shredded_potato", "土豆丝", "Shredded Potato", true, 20, false),
-            component("COMBO_SIDE", "combo_cucumber_salad", "拌黄瓜", "Cucumber Salad", true, 30, false)
+            component(2001L, 102L, "COMBO_SIDE", "combo_edamame", "毛豆", "Edamame", true, 10, true,
+                501L, "edamame", "毛豆", "Edamame", "LINKED_MENU_ITEM"),
+            component(2002L, 102L, "COMBO_SIDE", "combo_shredded_potato", "土豆丝", "Shredded Potato", true, 20, false,
+                502L, "shredded_potato", "土豆丝", "Shredded Potato", "LEGACY_COMBO_SIDE_TASK"),
+            component(2003L, 102L, "COMBO_SIDE", "combo_cucumber_salad", "拌黄瓜", "Cucumber Salad", true, 30, false,
+                503L, "cucumber_salad", "拌黄瓜", "Cucumber Salad", "LEGACY_COMBO_SIDE_TASK")
         );
         configuration.groups = List.of(eggs, sides);
         return configuration;
     }
 
     private StoreComboConfigurationResponse.ComponentResponse component(
+        Long id,
+        Long groupId,
         String group,
         String code,
         String nameZh,
         String nameEn,
         boolean enabled,
         int displayOrder,
-        boolean defaultComponent
+        boolean defaultComponent,
+        Long linkedMenuItemId,
+        String linkedMenuItemSku,
+        String linkedMenuItemNameZh,
+        String linkedMenuItemNameEn,
+        String businessBehavior
     ) {
         StoreComboConfigurationResponse.ComponentResponse component = new StoreComboConfigurationResponse.ComponentResponse();
+        component.id = id;
+        component.group_id = groupId;
         component.component_group = group;
         component.component_code = code;
         component.name_zh = nameZh;
@@ -155,6 +181,11 @@ class MenuCatalogHashServiceTest {
         component.enabled = enabled;
         component.display_order = displayOrder;
         component.is_default = defaultComponent;
+        component.linked_menu_item_id = linkedMenuItemId;
+        component.linked_menu_item_sku = linkedMenuItemSku;
+        component.linked_menu_item_name_zh = linkedMenuItemNameZh;
+        component.linked_menu_item_name_en = linkedMenuItemNameEn;
+        component.business_behavior = businessBehavior;
         return component;
     }
 

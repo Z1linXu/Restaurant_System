@@ -317,10 +317,23 @@ revision/cache invalidation. It keeps Combo price in
 snapshot-backed. It may deploy only the exact merged SHA to Staging for
 automated validation. Production remains no-mutation.
 
-Expected A5.5 stop after Staging validation:
+Owner manual Staging acceptance for the first A5.5 deployment failed. Current
+repair package:
 
 ```text
-PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_OWNER_ACCEPTANCE_REPAIR
+```
+
+Repair scope is bounded to complete frontend/backend catalog hash projection
+parity, dynamic Combo group ordering/default refresh in Ordering, Combo
+Configuration display-order Owner UX, focused regression coverage, exact-SHA
+Staging redeploy, and automated Owner-action acceptance. Do not start A5.6 UML,
+A6, Phase B/C, Chinatown, Sainte-Catherine, or Production.
+
+Expected A5.5 repair stop after Staging validation:
+
+```text
+PHASE_A5_5_OWNER_ACCEPTANCE_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
 ```
 
 ## Current final productization roadmap audit (2026-08-12)

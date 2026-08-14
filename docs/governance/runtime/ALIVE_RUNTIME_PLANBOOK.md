@@ -282,10 +282,18 @@ Staging and run automated acceptance. Production remains `NO MUTATION`. Do not
 start A5.6 UML, A6, Phase B, Phase C, Chinatown, Sainte-Catherine, or Production
 promotion after A5.5.
 
-Expected A5.5 runtime stop after exact-SHA Staging validation:
+Owner manual Staging acceptance for the first A5.5 deployment failed on
+`MENU_CACHE_HASH_MISMATCH`, dynamic Drink group visibility, disabled
+Side/default refresh, and unlabeled Combo display-order controls. Historical
+automated PASS evidence is retained; the active loop is the bounded
+Owner-acceptance repair package. The repair must preserve complete snapshot
+hash verification, dynamic Store-scoped Combo groups, frozen draft/order
+snapshots, and Production no-mutation.
+
+Expected A5.5 repair runtime stop after exact-SHA Staging validation:
 
 ```text
-PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+PHASE_A5_5_OWNER_ACCEPTANCE_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
 ```
 
 ## Current final productization roadmap audit (2026-08-12)
