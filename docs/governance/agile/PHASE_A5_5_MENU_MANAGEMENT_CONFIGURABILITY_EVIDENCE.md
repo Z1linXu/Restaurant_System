@@ -1,11 +1,11 @@
 # Phase A5.5 Menu Management Configurability Evidence
 
-> Status: `PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_REPOSITORY_READY`
+> Status: `PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_OWNER_ACCEPTANCE_REPAIR_REPOSITORY_READY`
 >
 > Prepared: 2026-08-14, America/Toronto
 >
-> Fresh repository authority at package start:
-> `origin/main@9bad443d5dc9451d96f4f2312ad2abaa35ebff84`
+> Fresh repository authority at repair package start:
+> `origin/main@073884df2d084ed30a3a9c16c7ede71b493e08ce`
 >
 > Runtime boundary: Production `NO MUTATION`. Staging deploy/validation is
 > authorized only after PR merge as exact-SHA Phase A5.5 validation.
@@ -179,6 +179,68 @@ IndexedDB keeps the existing complete-snapshot atomic switch model. Combo,
 category, and station mutations advance the Store menu revision so Pad/Web
 clients refresh as a whole revision rather than mixing partial menu graphs.
 
+## Owner manual acceptance repair
+
+The first exact-SHA A5.5 Staging automated acceptance is retained as historical
+evidence and is not overwritten. Owner manual Staging acceptance then failed on
+four UI/runtime-observable issues:
+
+```text
+PHASE_A5_5_OWNER_MANUAL_ACCEPTANCE = FAIL
+PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_OWNER_ACCEPTANCE_REPAIR = OPEN
+```
+
+Repair root cause:
+
+- `MENU_CACHE_HASH_MISMATCH`: the backend content hash included the A5.5
+  `combo_configuration` group/component metadata (`group_id`, `group_code`,
+  `selection_rule`, `required`, `enabled`, `display_order`, component ids,
+  linked menu item metadata, and `business_behavior`), but the frontend
+  IndexedDB validator omitted those same fields. After Combo Configuration
+  changed, the Pad/Web candidate snapshot was correctly rejected instead of
+  atomically replacing the active snapshot.
+- Dynamic Drink group visibility and disabled Side/default behavior were
+  downstream of the stale snapshot plus repeated legacy Egg/Side fallback
+  selection logic. The repair keeps legacy Egg/Side transport compatibility but
+  resolves every current combo group selection only against the new snapshot's
+  enabled options, falling back to the current Store-configured default/first
+  enabled option for new selections. Existing local draft line snapshots remain
+  frozen and are not silently rewritten.
+- Combo Configuration no longer exposes unlabeled raw `10` / `20` values as
+  ordinary Owner configuration. The field remains `display_order`, is labeled
+  `Display Order / 排序`, and the UI provides Up/Down controls while preserving
+  stable group/component identity.
+
+Repair validation added:
+
+- backend and frontend hash fixtures now lock the same A5.5 metadata-rich
+  catalog to `fnv1a32:07ab0e4f`.
+- frontend hash tests cover dynamic group metadata, component metadata,
+  default changes, disabled components, deterministic repeated reads, and
+  legacy v2 validation.
+- ordering tests cover dynamic Drink group mapping, disabled Coke removal,
+  archived group removal, Edamame-disabled next-default behavior, dynamic
+  selection submission, and existing frozen draft snapshot preservation.
+
+Repair repository validation before PR:
+
+| Check | Result |
+| --- | --- |
+| Backend full tests | `PASS` — `mvn -q test` |
+| Frontend full tests | `PASS` — `npm test -- --run`, 19 test files / 99 tests |
+| Frontend production build | `PASS` — `npm run build` |
+| Touched-file lint | `PASS_WITH_EXISTING_WARNING` — no errors; existing `useDraftOrder` exhaustive-deps warning retained |
+| Full frontend lint | `KNOWN_REPO_LINT_DEBT` — unrelated existing lint errors outside this repair scope |
+| Whitespace check | `PASS` — `git diff --check` |
+| Agent 6 | `A5_5_OWNER_ACCEPTANCE_REPAIR_ACCEPT` |
+
+Successful repair runtime stop:
+
+```text
+PHASE_A5_5_OWNER_MANUAL_ACCEPTANCE = FAIL_REPAIRED_WAITING_FOR_OWNER_RETEST
+PHASE_A5_5_OWNER_ACCEPTANCE_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
 ## Profile and historical compatibility
 
 `ST_DENIS_CANONICAL_PROFILE/v1` is not rewritten. A5.5 is compatible with the
@@ -236,6 +298,6 @@ Successful runtime stop:
 ```text
 PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY = IMPLEMENTED
 PHASE_A5_5_STAGING_AUTOMATED_ACCEPTANCE = PASS
-PHASE_A5_5_OWNER_MANUAL_ACCEPTANCE = PENDING
-PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+PHASE_A5_5_OWNER_MANUAL_ACCEPTANCE = FAIL_REPAIRED_WAITING_FOR_OWNER_RETEST
+PHASE_A5_5_OWNER_ACCEPTANCE_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
 ```

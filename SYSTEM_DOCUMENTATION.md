@@ -172,6 +172,17 @@
 > Production remains no-mutation. A5.5 must stop after exact-SHA Staging
 > automated acceptance and wait for Owner manual retest; it does not start
 > A5.6, A6, Phase B/C, Chinatown, Sainte-Catherine or Production deployment.
+>
+> 2026-08-14 A5.5 Owner manual acceptance repair: Owner manual Staging
+> acceptance failed after the first A5.5 deployment. The bounded repair fixes
+> `MENU_CACHE_HASH_MISMATCH` by aligning frontend IndexedDB content hashing
+> with backend A5.5 `combo_configuration` metadata, keeps dynamic Combo group
+> rendering generic, resolves disabled/removed current combo selections to the
+> Store-configured default for new selections while preserving frozen draft
+> snapshots, and labels Combo `display_order` as `Display Order / 排序` with
+> Up/Down controls. Historical automated PASS evidence is retained; the repair
+> must stop at
+> `PHASE_A5_5_OWNER_ACCEPTANCE_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST`.
 
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The

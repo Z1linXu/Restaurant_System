@@ -56,6 +56,7 @@ import {
 } from '../services/orderOutboxProcessor'
 import { readMenuSnapshot } from '../offline/menuCache'
 import { mapCatalog } from './useMenuCatalog'
+import { resolveComboGroupOptionId } from '../utils/comboSelection'
 
 function calculateDraftLineSubtotal(menuItem: MenuItem | undefined, draft: ItemCustomizationDraft) {
   if (!menuItem) {
@@ -68,15 +69,7 @@ function calculateDraftLineSubtotal(menuItem: MenuItem | undefined, draft: ItemC
   const comboGroupDelta = draft.comboEnabled
     ? menuItem.customization?.combo?.groups
       ?.reduce((sum, group) => {
-        const legacySelection = group.groupCode === 'COMBO_EGG'
-          ? draft.comboEggId
-          : group.groupCode === 'COMBO_SIDE'
-            ? draft.comboSideId
-            : undefined
-        const selectedId = draft.comboSelections?.[group.groupCode]
-          ?? legacySelection
-          ?? group.defaultOptionId
-          ?? (group.required ? group.options[0]?.id : undefined)
+        const selectedId = resolveComboGroupOptionId(draft, group)
         const selected = group.options.find((option) => option.id === selectedId)
         return sum + (selected?.priceDelta ?? 0)
       }, 0) ?? 0
@@ -329,17 +322,7 @@ export function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationD
     const comboGroups = menuItem.customization?.combo?.groups ?? []
     if (comboGroups.length) {
       comboGroups.forEach((group) => {
-        const legacySelection = group.groupCode === 'COMBO_EGG'
-          ? draft.comboEggId
-          : group.groupCode === 'COMBO_SIDE'
-            ? draft.comboSideId
-            : undefined
-        pushOptionTag(
-          draft.comboSelections?.[group.groupCode]
-            ?? legacySelection
-            ?? group.defaultOptionId
-            ?? (group.required ? group.options[0]?.id : undefined),
-        )
+        pushOptionTag(resolveComboGroupOptionId(draft, group))
       })
     } else {
       pushOptionTag(draft.comboEggId ?? menuItem.customization?.combo?.eggs[0]?.id)

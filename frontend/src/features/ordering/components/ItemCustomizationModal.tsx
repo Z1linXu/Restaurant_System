@@ -3,6 +3,11 @@ import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import { useIpadLandscape } from '../../../hooks/useIpadLandscape'
 import type { ComboChoiceGroup, ItemCustomizationDraft, MenuItem } from '../../../types/ordering'
+import {
+  defaultComboSelections,
+  resolveComboDraftSelections,
+  resolveComboGroupOptionId,
+} from '../../../utils/comboSelection'
 
 function isToggleAddOn(labelZh: string, priceDelta?: number) {
   return (priceDelta ?? 0) === 0 && (labelZh === '加香菜' || labelZh === '加葱')
@@ -29,26 +34,6 @@ function isNoodleMenuItem(item: MenuItem) {
   }
   // Structural fallback for older local data that may not expose category codes.
   return Boolean(item.customization?.noodleTypes?.length || item.customization?.soupBases)
-}
-
-function selectedComboOptionId(draft: ItemCustomizationDraft, group: ComboChoiceGroup) {
-  const legacySelection = group.groupCode === 'COMBO_EGG'
-    ? draft.comboEggId
-    : group.groupCode === 'COMBO_SIDE'
-      ? draft.comboSideId
-      : undefined
-  return draft.comboSelections?.[group.groupCode]
-    ?? legacySelection
-    ?? group.defaultOptionId
-    ?? (group.required ? group.options[0]?.id : undefined)
-}
-
-function defaultComboSelections(groups: ComboChoiceGroup[]) {
-  return Object.fromEntries(
-    groups
-      .filter((group) => group.required || group.defaultOptionId)
-      .map((group) => [group.groupCode, group.defaultOptionId ?? group.options[0]?.id]),
-  )
 }
 
 function comboDraftWithSelection(draft: ItemCustomizationDraft, group: ComboChoiceGroup, optionId: string): ItemCustomizationDraft {
@@ -214,7 +199,7 @@ export function ItemCustomizationModal({
               { groupCode: 'COMBO_SIDE', labelEn: 'Side Dish', labelZh: '配菜', selectionRule: 'EXACTLY_ONE', required: true, options: comboConfig.sides, defaultOptionId: comboConfig.sides[0]?.id },
             ].filter((group) => group.options.length) satisfies ComboChoiceGroup[]
         const nextDefaultSelections = defaultComboSelections(comboGroups)
-        const selectedComboSideId = selectedComboOptionId(
+        const selectedComboSideId = resolveComboGroupOptionId(
           draft,
           comboGroups.find((group) => group.groupCode === 'COMBO_SIDE')
             ?? { groupCode: 'COMBO_SIDE', labelEn: 'Side Dish', labelZh: '配菜', selectionRule: 'EXACTLY_ONE', required: true, options: comboConfig.sides, defaultOptionId: comboConfig.sides[0]?.id },
@@ -227,18 +212,23 @@ export function ItemCustomizationModal({
             <div className="flex items-center justify-between gap-4">
               <button
                 type="button"
-                onClick={() =>
-                  onChange({
+                onClick={() => {
+                  const resolvedDraft = resolveComboDraftSelections({
                     ...draft,
-                    comboEnabled: !draft.comboEnabled,
                     comboEggId: !draft.comboEnabled ? draft.comboEggId ?? nextDefaultSelections.COMBO_EGG ?? comboConfig.eggs[0]?.id : draft.comboEggId,
                     comboSideId: !draft.comboEnabled ? draft.comboSideId ?? nextDefaultSelections.COMBO_SIDE ?? comboConfig.sides[0]?.id : draft.comboSideId,
                     comboSelections: !draft.comboEnabled
                       ? { ...nextDefaultSelections, ...(draft.comboSelections ?? {}) }
                       : (draft.comboSelections ?? {}),
-                    comboSideRemoveIds: !draft.comboEnabled ? draft.comboSideRemoveIds : [],
+                  }, comboGroups)
+                  onChange({
+                    ...resolvedDraft,
+                    comboEnabled: !draft.comboEnabled,
+                    comboSideRemoveIds: !draft.comboEnabled && resolvedDraft.comboSideId === draft.comboSideId
+                      ? draft.comboSideRemoveIds
+                      : [],
                   })
-                }
+                }}
                 className="flex items-center gap-3 text-left"
               >
                 <span
@@ -270,7 +260,7 @@ export function ItemCustomizationModal({
                       {group.options.map((option) => (
                         <ChoiceButton
                           key={option.id}
-                          active={selectedComboOptionId(draft, group) === option.id}
+                          active={resolveComboGroupOptionId(draft, group) === option.id}
                           label={option.labelEn}
                           sublabel={option.labelZh}
                           compact={compact}

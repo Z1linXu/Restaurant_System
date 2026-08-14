@@ -41,12 +41,20 @@ function catalog(): BackendMenuCatalog {
       menu_revision: 7,
       groups: [
         {
+          group_id: 101,
+          group_code: 'COMBO_EGG',
           component_group: 'COMBO_EGG',
           name_zh: '蛋类',
           name_en: 'Egg',
+          selection_rule: 'EXACTLY_ONE',
+          required: true,
+          enabled: true,
+          display_order: 10,
           default_component_code: 'combo_tea_egg',
           components: [
             {
+              id: 1001,
+              group_id: 101,
               component_group: 'COMBO_EGG',
               component_code: 'combo_tea_egg',
               name_zh: '卤蛋',
@@ -54,8 +62,15 @@ function catalog(): BackendMenuCatalog {
               enabled: true,
               display_order: 10,
               is_default: true,
+              linked_menu_item_id: null,
+              linked_menu_item_sku: null,
+              linked_menu_item_name_zh: null,
+              linked_menu_item_name_en: null,
+              business_behavior: 'NO_KITCHEN_TASK',
             },
             {
+              id: 1002,
+              group_id: 101,
               component_group: 'COMBO_EGG',
               component_code: 'combo_fried_egg',
               name_zh: '煎蛋',
@@ -63,16 +78,29 @@ function catalog(): BackendMenuCatalog {
               enabled: true,
               display_order: 20,
               is_default: false,
+              linked_menu_item_id: null,
+              linked_menu_item_sku: null,
+              linked_menu_item_name_zh: null,
+              linked_menu_item_name_en: null,
+              business_behavior: 'NO_KITCHEN_TASK',
             },
           ],
         },
         {
+          group_id: 102,
+          group_code: 'COMBO_SIDE',
           component_group: 'COMBO_SIDE',
           name_zh: '小菜',
           name_en: 'Side',
+          selection_rule: 'EXACTLY_ONE',
+          required: true,
+          enabled: true,
+          display_order: 20,
           default_component_code: 'combo_edamame',
           components: [
             {
+              id: 2001,
+              group_id: 102,
               component_group: 'COMBO_SIDE',
               component_code: 'combo_edamame',
               name_zh: '毛豆',
@@ -80,8 +108,15 @@ function catalog(): BackendMenuCatalog {
               enabled: true,
               display_order: 10,
               is_default: true,
+              linked_menu_item_id: 501,
+              linked_menu_item_sku: 'edamame',
+              linked_menu_item_name_zh: '毛豆',
+              linked_menu_item_name_en: 'Edamame',
+              business_behavior: 'LINKED_MENU_ITEM',
             },
             {
+              id: 2002,
+              group_id: 102,
               component_group: 'COMBO_SIDE',
               component_code: 'combo_shredded_potato',
               name_zh: '土豆丝',
@@ -89,8 +124,15 @@ function catalog(): BackendMenuCatalog {
               enabled: true,
               display_order: 20,
               is_default: false,
+              linked_menu_item_id: 502,
+              linked_menu_item_sku: 'shredded_potato',
+              linked_menu_item_name_zh: '土豆丝',
+              linked_menu_item_name_en: 'Shredded Potato',
+              business_behavior: 'LEGACY_COMBO_SIDE_TASK',
             },
             {
+              id: 2003,
+              group_id: 102,
               component_group: 'COMBO_SIDE',
               component_code: 'combo_cucumber_salad',
               name_zh: '拌黄瓜',
@@ -98,6 +140,11 @@ function catalog(): BackendMenuCatalog {
               enabled: true,
               display_order: 30,
               is_default: false,
+              linked_menu_item_id: 503,
+              linked_menu_item_sku: 'cucumber_salad',
+              linked_menu_item_name_zh: '拌黄瓜',
+              linked_menu_item_name_en: 'Cucumber Salad',
+              business_behavior: 'LEGACY_COMBO_SIDE_TASK',
             },
           ],
         },
@@ -151,7 +198,7 @@ describe('versioned menu cache identity and integrity', () => {
   })
 
   it('matches the backend deterministic hash fixture', () => {
-    expect(catalog().content_hash).toBe('fnv1a32:67fad5ce')
+    expect(catalog().content_hash).toBe('fnv1a32:07ab0e4f')
   })
 
   it('rejects scope, revision, and content corruption', () => {
@@ -185,9 +232,82 @@ describe('versioned menu cache identity and integrity', () => {
     expect(calculateMenuContentHash(changed)).not.toBe(first.content_hash)
   })
 
+  it('includes A5.5 dynamic combo group metadata in the content hash', () => {
+    const first = catalog()
+
+    const renamedGroup = catalog()
+    renamedGroup.combo_configuration!.groups[0].group_code = 'COMBO_EGG_RENAMED'
+    expect(calculateMenuContentHash(renamedGroup)).not.toBe(first.content_hash)
+
+    const ruleChanged = catalog()
+    ruleChanged.combo_configuration!.groups[0].selection_rule = 'OPTIONAL_ONE'
+    ruleChanged.combo_configuration!.groups[0].required = false
+    expect(calculateMenuContentHash(ruleChanged)).not.toBe(first.content_hash)
+
+    const reorderedGroup = catalog()
+    reorderedGroup.combo_configuration!.groups[1].display_order = 5
+    expect(calculateMenuContentHash(reorderedGroup)).not.toBe(first.content_hash)
+  })
+
+  it('includes A5.5 dynamic combo component metadata in the content hash', () => {
+    const first = catalog()
+
+    const linkedItemChanged = catalog()
+    linkedItemChanged.combo_configuration!.groups[1].components[0].linked_menu_item_id = 999
+    expect(calculateMenuContentHash(linkedItemChanged)).not.toBe(first.content_hash)
+
+    const behaviorChanged = catalog()
+    behaviorChanged.combo_configuration!.groups[1].components[1].business_behavior = 'NO_KITCHEN_TASK'
+    expect(calculateMenuContentHash(behaviorChanged)).not.toBe(first.content_hash)
+
+    const defaultChanged = catalog()
+    defaultChanged.combo_configuration!.groups[1].default_component_code = 'combo_cucumber_salad'
+    expect(calculateMenuContentHash(defaultChanged)).not.toBe(first.content_hash)
+  })
+
+  it('hashes dynamic default combo groups deterministically across repeated catalog reads', () => {
+    const first = catalog()
+    first.combo_configuration!.groups.push({
+      group_id: 103,
+      group_code: 'COMBO_DRINK',
+      component_group: 'COMBO_DRINK',
+      name_zh: '饮料',
+      name_en: 'Drink',
+      selection_rule: 'OPTIONAL_ONE',
+      required: false,
+      enabled: true,
+      display_order: 30,
+      default_component_code: 'combo_coke',
+      components: [
+        {
+          id: 3001,
+          group_id: 103,
+          component_group: 'COMBO_DRINK',
+          component_code: 'combo_coke',
+          name_zh: '可乐',
+          name_en: 'Coke',
+          enabled: true,
+          display_order: 10,
+          is_default: true,
+          linked_menu_item_id: null,
+          linked_menu_item_sku: null,
+          linked_menu_item_name_zh: null,
+          linked_menu_item_name_en: null,
+          business_behavior: 'NO_KITCHEN_TASK',
+        },
+      ],
+    })
+
+    const second = structuredClone(first)
+    expect(calculateMenuContentHash(second)).toBe(calculateMenuContentHash(first))
+
+    second.combo_configuration!.groups[2].components[0].enabled = false
+    expect(calculateMenuContentHash(second)).not.toBe(calculateMenuContentHash(first))
+  })
+
   it('keeps validating legacy v2 snapshots before the next network refresh', () => {
     const legacy = catalog()
     legacy.catalog_version = 'menu-catalog-v2'
-    expect(calculateMenuContentHash(legacy)).toBe('fnv1a32:4b25fd78')
+    expect(calculateMenuContentHash(legacy)).toBe('fnv1a32:b8046cdf')
   })
 })

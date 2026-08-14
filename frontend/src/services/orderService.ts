@@ -11,6 +11,7 @@ import type {
 import type { RealtimeUpdateMessage } from '../types/kds'
 import type { PrintJobRecord } from './printingAdminService'
 import { apiRequest } from './apiClient'
+import { resolveComboGroupOptionId } from '../utils/comboSelection'
 
 const READ_RETRY_DELAYS_MS = [0, 250, 750]
 const pendingEditableOrderRequests = new Map<string, Promise<BackendOrderResponse>>()
@@ -148,16 +149,7 @@ export function mapOptions(draft: ItemCustomizationDraft, menuItem?: MenuItem) {
     const comboGroups = menuItem?.customization?.combo?.groups ?? []
     if (comboGroups.length) {
       comboGroups.forEach((group) => {
-        const legacySelection = group.groupCode === 'COMBO_EGG'
-          ? draft.comboEggId
-          : group.groupCode === 'COMBO_SIDE'
-            ? draft.comboSideId
-            : undefined
-        const selectedOptionId = draft.comboSelections?.[group.groupCode]
-          ?? legacySelection
-          ?? group.defaultOptionId
-          ?? (group.required ? group.options[0]?.id : undefined)
-        pushOption(selectedOptionId)
+        pushOption(resolveComboGroupOptionId(draft, group))
       })
     } else {
       pushOption(draft.comboEggId ?? menuItem?.customization?.combo?.eggs[0]?.id)

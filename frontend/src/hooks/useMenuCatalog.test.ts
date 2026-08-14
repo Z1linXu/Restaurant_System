@@ -560,4 +560,163 @@ describe('ordering menu item display order', () => {
       expect.objectContaining({ optionCode: 'combo_coke', optionGroup: 'COMBO_DRINK', nameZh: '可乐' }),
     ]))
   })
+
+  it('removes disabled dynamic combo components and resolves the next deterministic default', () => {
+    const data = catalog()
+    data.pricing_policy = {
+      store_id: 1,
+      policy_revision: 3,
+      size_small_delta: -2,
+      size_regular_delta: 0,
+      size_large_delta: 2,
+      combo_delta: 5,
+    }
+    data.combo_configuration = {
+      store_id: 1,
+      menu_revision: data.menu_revision,
+      groups: [
+        {
+          component_group: 'COMBO_EGG',
+          group_code: 'COMBO_EGG',
+          name_zh: '蛋类',
+          name_en: 'Egg',
+          selection_rule: 'EXACTLY_ONE',
+          required: true,
+          enabled: true,
+          display_order: 10,
+          default_component_code: 'combo_tea_egg',
+          components: [{
+            component_group: 'COMBO_EGG',
+            component_code: 'combo_tea_egg',
+            name_zh: '卤蛋',
+            name_en: 'Tea Egg',
+            enabled: true,
+            display_order: 10,
+            is_default: true,
+          }],
+        },
+        {
+          component_group: 'COMBO_SIDE',
+          group_code: 'COMBO_SIDE',
+          name_zh: '小菜',
+          name_en: 'Side',
+          selection_rule: 'EXACTLY_ONE',
+          required: true,
+          enabled: true,
+          display_order: 20,
+          default_component_code: 'combo_edamame',
+          components: [
+            {
+              component_group: 'COMBO_SIDE',
+              component_code: 'combo_edamame',
+              name_zh: '毛豆',
+              name_en: 'Edamame',
+              enabled: false,
+              display_order: 10,
+              is_default: true,
+            },
+            {
+              component_group: 'COMBO_SIDE',
+              component_code: 'combo_cucumber_salad',
+              name_zh: '拌黄瓜',
+              name_en: 'Cucumber Salad',
+              enabled: true,
+              display_order: 20,
+              is_default: false,
+            },
+          ],
+        },
+        {
+          component_group: 'COMBO_DRINK',
+          group_code: 'COMBO_DRINK',
+          name_zh: '饮料',
+          name_en: 'Drink',
+          selection_rule: 'OPTIONAL_ONE',
+          required: false,
+          enabled: true,
+          display_order: 30,
+          default_component_code: 'combo_coke',
+          components: [
+            {
+              component_group: 'COMBO_DRINK',
+              component_code: 'combo_coke',
+              name_zh: '可乐',
+              name_en: 'Coke',
+              enabled: false,
+              display_order: 10,
+              is_default: true,
+            },
+            {
+              component_group: 'COMBO_DRINK',
+              component_code: 'combo_sprite',
+              name_zh: '雪碧',
+              name_en: 'Sprite',
+              enabled: true,
+              display_order: 20,
+              is_default: false,
+            },
+          ],
+        },
+        {
+          component_group: 'COMBO_ARCHIVED',
+          group_code: 'COMBO_ARCHIVED',
+          name_zh: '归档',
+          name_en: 'Archived',
+          selection_rule: 'OPTIONAL_ONE',
+          required: false,
+          enabled: false,
+          display_order: 40,
+          default_component_code: 'combo_archived',
+          components: [{
+            component_group: 'COMBO_ARCHIVED',
+            component_code: 'combo_archived',
+            name_zh: '归档项',
+            name_en: 'Archived',
+            enabled: true,
+            display_order: 10,
+            is_default: true,
+          }],
+        },
+      ],
+    }
+    data.categories[0].code = 'SOUP_NOODLE'
+    data.categories[0].items = [{
+      ...data.categories[0].items[0],
+      id: 71,
+      sku: 'traditional_beef_noodle',
+      options: [{
+        id: 710,
+        option_type: 'addon',
+        option_code: 'combo',
+        option_group: 'COMBO',
+        parent_option_id: null,
+        sort_order: 100,
+        name_zh: '套餐',
+        name_en: 'Combo',
+        price_delta: 5,
+        is_active: true,
+      }],
+    }]
+
+    const item = mapCatalog(data).items[0]
+    const combo = item.customization?.combo
+    const draft = buildDefaultDraft(item)
+    const line = buildLocalLineItem(item, { ...draft, comboEnabled: true })
+
+    expect(combo?.groups.map((group) => group.groupCode)).toEqual(['COMBO_EGG', 'COMBO_SIDE', 'COMBO_DRINK'])
+    expect(combo?.groups.find((group) => group.groupCode === 'COMBO_SIDE')?.options.map((option) => option.optionCode))
+      .toEqual(['combo_cucumber_salad'])
+    expect(combo?.groups.find((group) => group.groupCode === 'COMBO_DRINK')?.options.map((option) => option.optionCode))
+      .toEqual(['combo_sprite'])
+    expect(draft.comboSelections.COMBO_SIDE).toBe('-20203')
+    expect(draft.comboSelections.COMBO_DRINK).toBeDefined()
+    expect(line.optionSnapshots).toEqual(expect.arrayContaining([
+      expect.objectContaining({ optionCode: 'combo_cucumber_salad', optionGroup: 'COMBO_SIDE' }),
+      expect.objectContaining({ optionCode: 'combo_sprite', optionGroup: 'COMBO_DRINK' }),
+    ]))
+    expect(line.optionSnapshots).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ optionCode: 'combo_edamame' }),
+      expect.objectContaining({ optionCode: 'combo_coke' }),
+    ]))
+  })
 })

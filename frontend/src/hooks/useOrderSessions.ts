@@ -8,6 +8,10 @@ import type {
   OrderSession,
 } from '../types/ordering'
 import { calculateTax, calculateTotal } from '../utils/tax'
+import {
+  defaultComboSelections,
+  resolveComboGroupOptionId,
+} from '../utils/comboSelection'
 
 function getChoiceLabel(options: ChoiceOption[] | undefined, optionId: string | undefined): LocalizedText | null {
   if (!options || !optionId) {
@@ -53,11 +57,7 @@ export function buildDefaultDraft(menuItem: MenuItem): ItemCustomizationDraft {
     comboEnabled: false,
     comboEggId: menuItem.customization?.combo?.eggs[0]?.id,
     comboSideId: menuItem.customization?.combo?.sides[0]?.id,
-    comboSelections: Object.fromEntries(
-      (menuItem.customization?.combo?.groups ?? [])
-        .filter((group) => group.required || group.defaultOptionId)
-        .map((group) => [group.groupCode, group.defaultOptionId ?? group.options[0]?.id]),
-    ),
+    comboSelections: defaultComboSelections(menuItem.customization?.combo?.groups ?? []),
     comboSideRemoveIds: [],
     addOnQuantities: {},
     removeIds: [],
@@ -93,15 +93,7 @@ function calculateUnitPrice(menuItem: MenuItem, draft: ItemCustomizationDraft) {
   const comboGroupPrice = draft.comboEnabled
     ? menuItem.customization?.combo?.groups
       ?.reduce((sum, group) => {
-        const legacySelection = group.groupCode === 'COMBO_EGG'
-          ? draft.comboEggId
-          : group.groupCode === 'COMBO_SIDE'
-            ? draft.comboSideId
-            : undefined
-        const selectedId = draft.comboSelections?.[group.groupCode]
-          ?? legacySelection
-          ?? group.defaultOptionId
-          ?? (group.required ? group.options[0]?.id : undefined)
+        const selectedId = resolveComboGroupOptionId(draft, group)
         const selected = group.options.find((option) => option.id === selectedId)
         return sum + (selected?.priceDelta ?? 0)
       }, 0) ?? 0
@@ -146,18 +138,7 @@ function buildSummaryTags(menuItem: MenuItem, draft: ItemCustomizationDraft) {
     const comboGroups = customization?.combo?.groups ?? []
     const comboGroupLabels = comboGroups
       .map((group) => {
-        const legacySelection = group.groupCode === 'COMBO_EGG'
-          ? draft.comboEggId
-          : group.groupCode === 'COMBO_SIDE'
-            ? draft.comboSideId
-            : undefined
-        return getChoiceLabel(
-          group.options,
-          draft.comboSelections?.[group.groupCode]
-            ?? legacySelection
-            ?? group.defaultOptionId
-            ?? (group.required ? group.options[0]?.id : undefined),
-        )
+        return getChoiceLabel(group.options, resolveComboGroupOptionId(draft, group))
       })
       .filter((label): label is LocalizedText => label != null)
     const eggLabel = comboGroups.length ? null : getChoiceLabel(customization?.combo?.eggs, draft.comboEggId)
