@@ -172,9 +172,14 @@ Production. Exact-SHA Staging deploy/Flyway validation is required after A5 PR
 merge because V15 seeds database-backed profile data. PR #143 entered `main`
 at `b83afa98d304223834793d03bfc367b4cf4238f1`; the first exact-SHA Staging
 attempt applied V14 then failed closed before V15 history because V15 JSON
-literals began with a newline under the A4 `content_json` check. The bounded
-repair changes only V15 seed literal layout and OPS-001 Flyway checksum
-evidence, with no Store materialization or Production action.
+literals began with a newline under the A4 `content_json` check. PR #145
+entered `main` at `494497dfbf874bcf12da7eb3821a276f663959c5` and repaired only
+the V15 seed literal layout and OPS-001 Flyway checksum evidence. Exact-SHA
+Staging deploy of that merge applied V15 successfully, then backend startup
+failed closed because the A4 `fingerprint_sha256 char(64)` columns were mapped
+by JPA as default `varchar(255)`. The current bounded repair changes only
+Profile entity metadata to explicit `char(64)`, with no Store materialization,
+new migration, Flyway history edit or Production action.
 
 Phase A0 deployed evidence is tracked in
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).

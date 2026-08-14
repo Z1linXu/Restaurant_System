@@ -189,10 +189,15 @@ A0.2 combo configuration continuity, logical printing topology only,
 role/access defaults without auth material, and profile/store independence.
 The first exact-SHA Staging attempt applied V14 then failed closed before a V15
 history row because V15 JSON seed literals started with newline characters and
-the A4 `content_json` check uses `left(btrim(content_json), 1)`. The bounded
-repair changes only V15 seed literal layout and OPS-001 Flyway checksum
-evidence; V15 still requires exact-SHA Staging Flyway validation after the
-repair PR merge before A5 runtime PASS.
+the A4 `content_json` check uses `left(btrim(content_json), 1)`. PR #145
+entered `main` at `494497dfbf874bcf12da7eb3821a276f663959c5` and repaired the
+V15 seed literal layout plus OPS-001 Flyway checksum evidence. Exact-SHA
+Staging deploy of that merge reached successful Flyway V15, then backend
+startup failed closed because V14 `fingerprint_sha256 char(64)` columns were
+mapped by JPA as default `varchar(255)`. The current bounded repair changes
+only Profile entity metadata to explicit `char(64)` and adds regression
+coverage; exact-SHA Staging health/profile validation is still required before
+A5 runtime PASS.
 
 This order must not change unless fresh audit proves a real technical
 dependency. Any change records the original order, actual order and reason.

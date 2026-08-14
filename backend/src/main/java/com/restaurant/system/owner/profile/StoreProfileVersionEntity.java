@@ -34,7 +34,7 @@ public class StoreProfileVersionEntity {
     @Column(name = "content_json", columnDefinition = "text")
     public String content_json;
 
-    @Column(name = "fingerprint_sha256")
+    @Column(name = "fingerprint_sha256", columnDefinition = "char(64)", length = 64)
     public String fingerprint_sha256;
 
     @Column(name = "source_reference")

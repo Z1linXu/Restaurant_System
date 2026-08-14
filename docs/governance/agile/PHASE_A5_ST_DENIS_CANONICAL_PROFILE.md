@@ -1,13 +1,13 @@
 # Phase A5 St-Denis Canonical Profile
 
-Status: `PHASE_A5_RUNTIME_SEED_LITERAL_REPAIR_READY_FOR_PR`
+Status: `PHASE_A5_RUNTIME_ENTITY_TYPE_REPAIR_READY_FOR_PR`
 
 Date: 2026-08-13
 
 Fresh repository authority:
 
 ```text
-origin/main@b83afa98d304223834793d03bfc367b4cf4238f1
+origin/main@494497dfbf874bcf12da7eb3821a276f663959c5
 ```
 
 A4 Store Profile Contract is in `main` through PR #142:
@@ -38,12 +38,19 @@ Runtime boundary:
 - V15 failed because the seed's dollar-quoted `content_json` literals began
   with a newline while the A4 PostgreSQL check constraint requires the stored
   text's first non-space character, as evaluated by `btrim`, to be `{`.
-- The bounded repair changes only V15 seed literal layout and the OPS-001
-  Flyway checksum manifest/test; no Store materialization, Production action,
-  schema history edit, downgrade, destructive reset, or runtime secret read is
-  included.
-- Exact-SHA Staging deploy/Flyway validation must be retried after the repair
-  PR enters `main` before A5 runtime PASS can be claimed.
+- The bounded seed-literal repair entered `main` through PR #145 at
+  `494497dfbf874bcf12da7eb3821a276f663959c5`; it changes only V15 seed literal
+  layout and the OPS-001 Flyway checksum manifest/test.
+- Exact-SHA Staging deploy of `494497dfbf874bcf12da7eb3821a276f663959c5`
+  applied Flyway V15 successfully, then backend startup failed closed during
+  Hibernate schema validation because the A4 `fingerprint_sha256 char(64)`
+  columns were mapped by JPA as default `varchar(255)`.
+- The current bounded entity-type repair changes only the A4 Profile entity
+  mapping for `fingerprint_sha256` to explicit `char(64)` and adds regression
+  coverage. It does not add a migration, edit Flyway history, reset Staging,
+  materialize a Store, touch Production, downgrade, or read runtime secrets.
+- Exact-SHA Staging deploy/Flyway validation must be retried after the
+  entity-type repair PR enters `main` before A5 runtime PASS can be claimed.
 - No Store materialization, Store activation, Owner Create New Store,
   Chinatown, Sainte-Catherine, A6, Phase B/C or Production action is included
 
@@ -311,6 +318,63 @@ deployment/cloud/tests/test_staging_runtime_evidence.sh
 PASS
 ```
 
+Seed-literal repair PR:
+
+```text
+PR = https://github.com/Z1linXu/Restaurant_System/pull/145
+merge = 494497dfbf874bcf12da7eb3821a276f663959c5
+```
+
+## Runtime entity-type repair
+
+Second Staging runtime attempt:
+
+```text
+APPROVED_SHA = 494497dfbf874bcf12da7eb3821a276f663959c5
+PREFLIGHT = PASS
+BUILD_START = PASS
+FLYWAY_AFTER_START = V15_SUCCESSFUL
+BACKEND_HEALTH = FAIL_CLOSED
+PRODUCTION_MUTATION = NONE
+```
+
+Fail-closed root cause:
+
+```text
+store_profile_versions.fingerprint_sha256 = char(64)
+store_profile_artifacts.fingerprint_sha256 = char(64)
+StoreProfileVersionEntity.fingerprint_sha256 = default varchar
+StoreProfileArtifactEntity.fingerprint_sha256 = default varchar
+Hibernate schema validation expected varchar(255) and rejected PostgreSQL bpchar.
+```
+
+Repair classification:
+
+```text
+BOUNDED_APPLICATION_SCHEMA_MAPPING_REPAIR
+NO_NEW_MIGRATION
+NO_FLYWAY_HISTORY_EDIT
+NO_STAGING_RESET
+NO_PRODUCTION_MUTATION
+```
+
+Repair:
+
+- declare both Profile fingerprint entity fields as
+  `@Column(name = "fingerprint_sha256", columnDefinition = "char(64)", length = 64)`;
+- add reflection regression coverage so entity metadata remains aligned with
+  the V14 PostgreSQL `character(64)` contract.
+
+Repair validation:
+
+```text
+mvn -q -Dtest='StoreProfileMigrationTest,StDenisCanonicalProfileContractTest,StoreProfileContractValidatorTest,StoreProfileControllerTest' test
+PASS
+
+mvn -q test
+PASS
+```
+
 ## Boundaries retained
 
 A5 does not:
@@ -328,5 +392,5 @@ A5 does not:
 Current repair stop before repair PR/merge:
 
 ```text
-PHASE_A5_RUNTIME_SEED_LITERAL_REPAIR_READY_FOR_PR
+PHASE_A5_RUNTIME_ENTITY_TYPE_REPAIR_READY_FOR_PR
 ```
