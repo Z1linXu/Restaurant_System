@@ -6,6 +6,10 @@ import {
   type StoreComboConfigurationRecord,
 } from '../../services/ownerMenuOptionService'
 import type { MenuItemAdminRecord } from '../../services/platformAdminService'
+import {
+  comboConfigurationLayoutClasses,
+  moveWithDisplayOrder,
+} from './comboConfigurationLayout'
 
 interface ComboConfigurationPanelProps {
   storeId: number
@@ -14,7 +18,6 @@ interface ComboConfigurationPanelProps {
 }
 
 type ErrorState = string | null
-const DISPLAY_ORDER_STEP = 10
 
 function cloneConfiguration(configuration: StoreComboConfigurationRecord | null): StoreComboConfigurationRecord | null {
   if (!configuration) return null
@@ -55,24 +58,6 @@ function canonical(configuration: StoreComboConfigurationRecord | null) {
 
 function nextOrder(values: Array<{ display_order?: number | null }>) {
   return (values.reduce((max, value) => Math.max(max, value.display_order ?? 0), 0) || values.length * 10) + 10
-}
-
-function moveWithDisplayOrder<T extends { display_order?: number | null }>(
-  values: T[],
-  fromIndex: number,
-  direction: -1 | 1,
-) {
-  const toIndex = fromIndex + direction
-  if (toIndex < 0 || toIndex >= values.length) {
-    return values
-  }
-  const moved = [...values]
-  const [item] = moved.splice(fromIndex, 1)
-  moved.splice(toIndex, 0, item)
-  return moved.map((value, index) => ({
-    ...value,
-    display_order: (index + 1) * DISPLAY_ORDER_STEP,
-  }))
 }
 
 function groupCode(group: StoreComboConfigurationGroupRecord) {
@@ -329,32 +314,40 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
         <div className="mt-4 grid gap-3">
           {draft.groups.map((group, groupIndex) => (
             <div key={`${group.group_id ?? 'new'}:${group.group_code ?? groupIndex}`} className="rounded-[20px] bg-[rgba(26,28,25,0.035)] px-4 py-4">
-              <div className="grid gap-3 lg:grid-cols-[1fr_1fr_180px_210px]">
-                <input
-                  value={group.name_zh}
-                  onChange={(event) => patchGroup(groupIndex, { name_zh: event.target.value })}
-                  placeholder="Group Chinese name"
-                  className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none"
-                />
-                <input
-                  value={group.name_en}
-                  onChange={(event) => patchGroup(groupIndex, { name_en: event.target.value })}
-                  placeholder="Group English name"
-                  className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none"
-                />
-                <select
-                  value={group.selection_rule ?? 'EXACTLY_ONE'}
-                  onChange={(event) => patchGroup(groupIndex, {
-                    selection_rule: event.target.value,
-                    required: event.target.value !== 'OPTIONAL_ONE',
-                  })}
-                  className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none"
-                >
-                  <option value="EXACTLY_ONE">Choose exactly one</option>
-                  <option value="OPTIONAL_ONE">Optional choose one</option>
-                </select>
-                <div className="grid grid-cols-[1fr_auto_auto] gap-2">
-                  <label className="grid gap-1">
+              <div className={comboConfigurationLayoutClasses.groupRow}>
+                <label className={comboConfigurationLayoutClasses.controlField}>
+                  <span className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Name ZH</span>
+                  <input
+                    value={group.name_zh}
+                    onChange={(event) => patchGroup(groupIndex, { name_zh: event.target.value })}
+                    placeholder="Group Chinese name"
+                    className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none"
+                  />
+                </label>
+                <label className={comboConfigurationLayoutClasses.controlField}>
+                  <span className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Name EN</span>
+                  <input
+                    value={group.name_en}
+                    onChange={(event) => patchGroup(groupIndex, { name_en: event.target.value })}
+                    placeholder="Group English name"
+                    className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none"
+                  />
+                </label>
+                <label className={comboConfigurationLayoutClasses.controlField}>
+                  <span className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Selection</span>
+                  <select
+                    value={group.selection_rule ?? 'EXACTLY_ONE'}
+                    onChange={(event) => patchGroup(groupIndex, {
+                      selection_rule: event.target.value,
+                      required: event.target.value !== 'OPTIONAL_ONE',
+                    })}
+                    className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none"
+                  >
+                    <option value="EXACTLY_ONE">Choose exactly one</option>
+                    <option value="OPTIONAL_ONE">Optional choose one</option>
+                  </select>
+                </label>
+                <label className={comboConfigurationLayoutClasses.displayOrderField}>
                     <span className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Display Order / 排序</span>
                     <input
                       type="number"
@@ -363,54 +356,53 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
                       className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none"
                       aria-label="Group display order"
                     />
-                  </label>
+                </label>
+                <div className={comboConfigurationLayoutClasses.reorderControls} aria-label="Group reorder controls">
                   <button
                     type="button"
                     onClick={() => moveGroup(groupIndex, -1)}
                     disabled={groupIndex === 0}
-                    className="mt-5 rounded-[12px] bg-white px-3 py-2 text-[0.78rem] font-semibold text-[var(--on-surface)] disabled:opacity-40"
+                    className="min-h-10 rounded-[12px] bg-white px-3 py-2 text-[0.78rem] font-semibold text-[var(--on-surface)] disabled:opacity-40"
                     aria-label="Move group up"
                   >
-                    ↑
+                    ↑ Up
                   </button>
                   <button
                     type="button"
                     onClick={() => moveGroup(groupIndex, 1)}
                     disabled={groupIndex === draft.groups.length - 1}
-                    className="mt-5 rounded-[12px] bg-white px-3 py-2 text-[0.78rem] font-semibold text-[var(--on-surface)] disabled:opacity-40"
+                    className="min-h-10 rounded-[12px] bg-white px-3 py-2 text-[0.78rem] font-semibold text-[var(--on-surface)] disabled:opacity-40"
                     aria-label="Move group down"
                   >
-                    ↓
+                    ↓ Down
                   </button>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => patchGroup(groupIndex, { enabled: !(group.enabled ?? true) })}
+                  className="min-h-10 rounded-[12px] bg-white px-3 py-2 text-[0.78rem] font-semibold text-[var(--on-surface)] xl:self-end"
+                >
+                  {group.enabled ?? true ? 'Enabled' : 'Disabled'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addComponent(groupIndex)}
+                  className="min-h-10 rounded-[12px] bg-white px-3 py-2 text-[0.78rem] font-semibold text-[var(--primary)] xl:self-end"
+                >
+                  + Add Item
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeGroup(groupIndex)}
+                  className="min-h-10 rounded-[12px] bg-[rgba(97,0,0,0.08)] px-3 py-2 text-[0.78rem] font-semibold text-[var(--primary)] xl:self-end"
+                >
+                  Delete
+                </button>
               </div>
 
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                 <div className="text-[0.75rem] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
                   {groupCode(group) || 'Code generated after save'}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => patchGroup(groupIndex, { enabled: !(group.enabled ?? true) })}
-                    className="rounded-[12px] bg-white px-3 py-2 text-[0.78rem] font-semibold text-[var(--on-surface)]"
-                  >
-                    {group.enabled ?? true ? 'Enabled' : 'Disabled'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => addComponent(groupIndex)}
-                    className="rounded-[12px] bg-white px-3 py-2 text-[0.78rem] font-semibold text-[var(--primary)]"
-                  >
-                    + Add Item
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => removeGroup(groupIndex)}
-                    className="rounded-[12px] bg-[rgba(97,0,0,0.08)] px-3 py-2 text-[0.78rem] font-semibold text-[var(--primary)]"
-                  >
-                    Delete
-                  </button>
                 </div>
               </div>
 
@@ -418,94 +410,104 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
                 {group.components.map((component, componentIndex) => (
                   <div
                     key={`${component.id ?? 'new'}:${component.component_code ?? componentIndex}`}
-                    className="grid gap-2 rounded-[16px] bg-white p-3 lg:grid-cols-[1fr_1fr_190px_160px_220px_120px]"
+                    className={comboConfigurationLayoutClasses.componentRow}
                   >
-                    <input
-                      value={component.name_zh}
-                      onChange={(event) => patchComponent(groupIndex, componentIndex, { name_zh: event.target.value })}
-                      placeholder="Item Chinese name"
-                      className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none"
-                    />
-                    <input
-                      value={component.name_en}
-                      onChange={(event) => patchComponent(groupIndex, componentIndex, { name_en: event.target.value })}
-                      placeholder="Item English name"
-                      className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none"
-                    />
-                    <div className="grid grid-cols-[1fr_auto_auto] gap-2">
-                      <label className="grid gap-1">
-                        <span className="text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">Display Order / 排序</span>
-                        <input
-                          type="number"
-                          value={component.display_order ?? 0}
-                          onChange={(event) => patchComponent(groupIndex, componentIndex, { display_order: Number(event.target.value) })}
-                          className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none"
-                          aria-label="Component display order"
-                        />
-                      </label>
+                    <label className={comboConfigurationLayoutClasses.controlField}>
+                      <span className="text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">Name ZH</span>
+                      <input
+                        value={component.name_zh}
+                        onChange={(event) => patchComponent(groupIndex, componentIndex, { name_zh: event.target.value })}
+                        placeholder="Item Chinese name"
+                        className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none"
+                      />
+                    </label>
+                    <label className={comboConfigurationLayoutClasses.controlField}>
+                      <span className="text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">Name EN</span>
+                      <input
+                        value={component.name_en}
+                        onChange={(event) => patchComponent(groupIndex, componentIndex, { name_en: event.target.value })}
+                        placeholder="Item English name"
+                        className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none"
+                      />
+                    </label>
+                    <label className={comboConfigurationLayoutClasses.displayOrderField}>
+                      <span className="text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">Display Order / 排序</span>
+                      <input
+                        type="number"
+                        value={component.display_order ?? 0}
+                        onChange={(event) => patchComponent(groupIndex, componentIndex, { display_order: Number(event.target.value) })}
+                        className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none"
+                        aria-label="Component display order"
+                      />
+                    </label>
+                    <div className={comboConfigurationLayoutClasses.reorderControls} aria-label="Component reorder controls">
                       <button
                         type="button"
                         onClick={() => moveComponent(groupIndex, componentIndex, -1)}
                         disabled={componentIndex === 0}
-                        className="mt-5 rounded-[10px] bg-[rgba(26,28,25,0.05)] px-2.5 py-2 text-[0.76rem] font-semibold text-[var(--on-surface)] disabled:opacity-40"
+                        className="min-h-10 rounded-[10px] bg-[rgba(26,28,25,0.05)] px-2.5 py-2 text-[0.76rem] font-semibold text-[var(--on-surface)] disabled:opacity-40"
                         aria-label="Move component up"
                       >
-                        ↑
+                        ↑ Up
                       </button>
                       <button
                         type="button"
                         onClick={() => moveComponent(groupIndex, componentIndex, 1)}
                         disabled={componentIndex === group.components.length - 1}
-                        className="mt-5 rounded-[10px] bg-[rgba(26,28,25,0.05)] px-2.5 py-2 text-[0.76rem] font-semibold text-[var(--on-surface)] disabled:opacity-40"
+                        className="min-h-10 rounded-[10px] bg-[rgba(26,28,25,0.05)] px-2.5 py-2 text-[0.76rem] font-semibold text-[var(--on-surface)] disabled:opacity-40"
                         aria-label="Move component down"
                       >
-                        ↓
+                        ↓ Down
                       </button>
                     </div>
-                    <select
-                      value={component.business_behavior ?? 'NO_KITCHEN_TASK'}
-                      onChange={(event) => patchComponent(groupIndex, componentIndex, {
-                        business_behavior: event.target.value,
-                        linked_menu_item_id: event.target.value === 'LINKED_MENU_ITEM' ? component.linked_menu_item_id ?? null : null,
-                      })}
-                      className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none"
-                    >
-                      <option value="NO_KITCHEN_TASK">No kitchen task</option>
-                      <option value="LINKED_MENU_ITEM">Link menu item</option>
-                      <option value="LEGACY_COMBO_SIDE_TASK">Legacy side task</option>
-                    </select>
-                    <select
-                      value={component.linked_menu_item_id ?? ''}
-                      onChange={(event) => patchComponent(groupIndex, componentIndex, {
-                        linked_menu_item_id: event.target.value ? Number(event.target.value) : null,
-                      })}
-                      disabled={(component.business_behavior ?? 'NO_KITCHEN_TASK') !== 'LINKED_MENU_ITEM'}
-                      className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none disabled:opacity-50"
-                    >
-                      <option value="">No linked item</option>
-                      {activeMenuItems.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.name_zh} / {item.name_en || item.sku}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => patchComponent(groupIndex, componentIndex, { enabled: !component.enabled })}
-                        className="rounded-[12px] bg-[rgba(26,28,25,0.05)] px-3 py-2 text-[0.78rem] font-semibold text-[var(--on-surface)]"
+                    <label className={comboConfigurationLayoutClasses.mappingField}>
+                      <span className="text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">Mapping</span>
+                      <select
+                        value={component.business_behavior ?? 'NO_KITCHEN_TASK'}
+                        onChange={(event) => patchComponent(groupIndex, componentIndex, {
+                          business_behavior: event.target.value,
+                          linked_menu_item_id: event.target.value === 'LINKED_MENU_ITEM' ? component.linked_menu_item_id ?? null : null,
+                        })}
+                        className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none"
                       >
-                        {component.enabled ? 'On' : 'Off'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeComponent(groupIndex, componentIndex)}
-                        className="rounded-[12px] bg-[rgba(97,0,0,0.08)] px-3 py-2 text-[0.78rem] font-semibold text-[var(--primary)]"
+                        <option value="NO_KITCHEN_TASK">No kitchen task</option>
+                        <option value="LINKED_MENU_ITEM">Link menu item</option>
+                        <option value="LEGACY_COMBO_SIDE_TASK">Legacy side task</option>
+                      </select>
+                    </label>
+                    <label className={comboConfigurationLayoutClasses.linkedItemField}>
+                      <span className="text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">Linked menu item</span>
+                      <select
+                        value={component.linked_menu_item_id ?? ''}
+                        onChange={(event) => patchComponent(groupIndex, componentIndex, {
+                          linked_menu_item_id: event.target.value ? Number(event.target.value) : null,
+                        })}
+                        disabled={(component.business_behavior ?? 'NO_KITCHEN_TASK') !== 'LINKED_MENU_ITEM'}
+                        className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none disabled:opacity-50"
                       >
-                        Delete
-                      </button>
-                    </div>
-                    <label className="lg:col-span-6 flex items-center gap-2 text-[0.78rem] font-semibold text-[var(--muted)]">
+                        <option value="">No linked item</option>
+                        {activeMenuItems.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.name_zh} / {item.name_en || item.sku}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => patchComponent(groupIndex, componentIndex, { enabled: !component.enabled })}
+                      className="min-h-10 rounded-[12px] bg-[rgba(26,28,25,0.05)] px-3 py-2 text-[0.78rem] font-semibold text-[var(--on-surface)] xl:self-end"
+                    >
+                      {component.enabled ? 'On' : 'Off'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeComponent(groupIndex, componentIndex)}
+                      className="min-h-10 rounded-[12px] bg-[rgba(97,0,0,0.08)] px-3 py-2 text-[0.78rem] font-semibold text-[var(--primary)] xl:self-end"
+                    >
+                      Delete
+                    </button>
+                    <label className={comboConfigurationLayoutClasses.defaultRow}>
                       <input
                         type="radio"
                         checked={component.is_default || group.default_component_code === component.component_code}

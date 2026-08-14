@@ -336,6 +336,23 @@ Expected A5.5 repair stop after Staging validation:
 PHASE_A5_5_OWNER_ACCEPTANCE_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
 ```
 
+Owner manual retest after that repair found a final UI-only blocker in Combo
+Configuration sort-control layout. Current bounded repair:
+
+```text
+PHASE_A5_5_COMBO_CONFIGURATION_SORT_CONTROL_UI_REPAIR
+```
+
+Only the frontend Combo Configuration layout/responsive spacing may change.
+Persistence, backend behavior, menu revision/cache semantics, ordering,
+Flyway/schema, Store Profile, A6, Phase B/C, and Production are out of scope.
+
+Expected stop:
+
+```text
+PHASE_A5_5_FINAL_UI_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
 ## Current final productization roadmap audit (2026-08-12)
 
 Planning-only audit is complete for the new final productization route:
