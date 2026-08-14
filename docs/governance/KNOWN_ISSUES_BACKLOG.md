@@ -69,7 +69,9 @@ closed on Hibernate schema validation because the A4 `fingerprint_sha256
 char(64)` columns were still mapped by JPA as default `varchar(255)`. This is
 tracked as bounded A5 dependency repair, not a Production incident. PR #146
 added explicit `char(64)` DDL metadata; the current follow-up repair adds
-explicit JDBC `Types#CHAR` metadata and regression coverage only. Production
+explicit JDBC `Types#CHAR` metadata and regression coverage only. PR #147
+entered `main` at `3440fddad7571409c66189e44976658921e5de1f`; exact-SHA
+Staging deploy passed Flyway V15 and Profile runtime validation. Production
 remains no-mutation.
 
 Current final productization route (2026-08-12): open field-test follow-up work

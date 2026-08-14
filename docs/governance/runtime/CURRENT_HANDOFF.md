@@ -273,12 +273,15 @@ A4 `fingerprint_sha256 char(64)` columns as PostgreSQL `bpchar` while the JPA
 entities still expected default `varchar(255)`. PR #146 changed Profile entity
 DDL metadata to explicit `char(64)`, but exact-SHA Staging still failed closed
 because Hibernate continued to expect JDBC `Types#VARCHAR`. The current bounded
-repair adds `@JdbcTypeCode(SqlTypes.CHAR)` and regression coverage only; it adds
-no migration, edits no Flyway history, resets no Staging data, and performs no
+repair PR #147 adds `@JdbcTypeCode(SqlTypes.CHAR)` and regression coverage only.
+It entered `main` at `3440fddad7571409c66189e44976658921e5de1f`; exact-SHA
+Staging deploy passed health, WebSocket readiness, Flyway V15, Profile
+fingerprint/artifact validation and graph-count validation. It adds no
+migration, edits no Flyway history, resets no Staging data, and performs no
 Production work. A5 does not create a Store, materialize St-Denis, start A6/A7,
-Phase B/C, Chinatown, Sainte-Catherine or Production work. Current Staging
-database has successful Flyway V15 and waits for exact-SHA Staging retry after
-the JDBC type repair enters `main`.
+Phase B/C, Chinatown, Sainte-Catherine or Production work. Current Staging is
+deployed at `3440fddad7571409c66189e44976658921e5de1f` and waits for
+`PHASE_A6_OWNER_CONTINUATION`.
 
 ## Current final productization roadmap audit (2026-08-12)
 
