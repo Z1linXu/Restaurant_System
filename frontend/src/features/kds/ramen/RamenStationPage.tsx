@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useRamenStationOrders } from '../../../hooks/useRamenStationOrders'
 import { RamenOrderCard } from './components/RamenOrderCard'
-import { useCurrentStore } from '../../store/StoreContext'
+import { useCurrentStore } from '../../store/useStoreContext'
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
   weekday: 'long',

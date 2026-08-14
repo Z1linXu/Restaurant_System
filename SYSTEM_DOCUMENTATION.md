@@ -210,6 +210,21 @@
 > [PHASE_A6_BACKEND_MODULE_GATING_EVIDENCE](docs/governance/agile/PHASE_A6_BACKEND_MODULE_GATING_EVIDENCE.md).
 > Production remains no-mutation.
 
+> 2026-08-14 Phase A7 Frontend Module Gating: A7 rewires Store-scoped
+> frontend route/page/navigation visibility to the authenticated Store Context
+> `module_configuration`. Store pages now fail closed through a Store-module
+> unavailable screen for `MODULE_DISABLED`,
+> `MODULE_CONFIGURATION_INVALID`, and
+> `MODULE_ENVIRONMENT_CAPABILITY_MISSING`, while legacy frontend
+> `featureConfig` remains only a bounded environment/platform compatibility
+> gate for non-Store runtime surfaces such as Platform Admin and Developer
+> Tools. KDS disabled now renders a Store-level disabled UX; Reports use
+> `REPORTING_CORE` and are not hidden by `ANALYTICS_ADVANCED=false`; Printing
+> Settings remain Store-module gated while preserving runtime print-mode
+> messaging. See
+> [PHASE_A7_FRONTEND_MODULE_GATING_EVIDENCE](docs/governance/agile/PHASE_A7_FRONTEND_MODULE_GATING_EVIDENCE.md).
+> Production remains no-mutation and A8 hardware capability remains pending.
+
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The
 > product rule is `BUILD ONCE, CONFIGURE MANY`; future Stores must not be

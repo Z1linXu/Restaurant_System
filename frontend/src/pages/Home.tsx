@@ -8,47 +8,53 @@ function navigateTo(path: string) {
 const sections = [
   {
     title: 'Frontdesk',
-    feature: 'CORE_POS',
     links: [
-      { label: 'Table Board', path: '/frontdesk', feature: 'CORE_POS' },
-      { label: 'Menu A', path: '/frontdesk/menu/a', feature: 'CORE_POS' },
-      { label: 'Menu B', path: '/frontdesk/menu/b', feature: 'CORE_POS' },
-      { label: 'Orders', path: '/frontdesk/order', feature: 'CORE_POS' },
-      { label: 'Pickup Board', path: '/pickup', feature: 'KDS' },
+      { label: 'Table Board', path: '/frontdesk' },
+      { label: 'Menu A', path: '/frontdesk/menu/a' },
+      { label: 'Menu B', path: '/frontdesk/menu/b' },
+      { label: 'Orders', path: '/frontdesk/order' },
+      { label: 'Pickup Board', path: '/pickup' },
     ],
   },
   {
     title: 'Kitchen',
-    feature: 'KDS',
     links: [
-      { label: 'Grab / Assembling', path: '/kds/grab', feature: 'KDS' },
-      { label: 'Hot Kitchen', path: '/kds/hot-kitchen', feature: 'KDS' },
-      { label: 'Noodle Monitor', path: '/kds/noodle', feature: 'KDS' },
-      { label: 'KDS History', path: '/kds/history', feature: 'KDS' },
+      { label: 'Grab / Assembling', path: '/kds/grab' },
+      { label: 'Hot Kitchen', path: '/kds/hot-kitchen' },
+      { label: 'Noodle Monitor', path: '/kds/noodle' },
+      { label: 'KDS History', path: '/kds/history' },
     ],
   },
   {
     title: 'Admin',
-    feature: 'ADMIN',
     links: [
-      { label: 'Owner Dashboard', path: '/admin/dashboard', feature: 'ADMIN' },
-      { label: 'Dining Tables', path: '/admin/settings/tables', feature: 'ADMIN' },
-      { label: 'Menu Management', path: '/admin/menu/items', feature: 'ADMIN' },
-      { label: 'Printing Settings', path: '/admin/settings/printing', feature: 'PRINTING' },
-      { label: 'Sales Report', path: '/admin/reports/sales', feature: 'ANALYTICS' },
-      { label: 'Item Sales Report', path: '/admin/reports/items', feature: 'ANALYTICS' },
-      { label: 'Profit Report', path: '/admin/reports/profit', feature: 'ANALYTICS' },
-      { label: 'Store Comparison Report', path: '/admin/reports/stores', feature: 'ANALYTICS' },
-      { label: 'Platform Admin', path: '/admin/platform', feature: 'PLATFORM' },
+      { label: 'Owner Dashboard', path: '/admin/dashboard' },
+      { label: 'Dining Tables', path: '/admin/settings/tables' },
+      { label: 'Menu Management', path: '/admin/menu/items' },
+      { label: 'Printing Settings', path: '/admin/settings/printing' },
+      { label: 'Sales Report', path: '/admin/reports/sales' },
+      { label: 'Item Sales Report', path: '/admin/reports/items' },
+      { label: 'Profit Report', path: '/admin/reports/profit' },
+      { label: 'Store Comparison Report', path: '/admin/reports/stores' },
+      { label: 'Platform Admin', path: '/admin/platform', environmentFeature: 'PLATFORM' },
     ],
   },
 ] as const satisfies Array<{
   title: string
-  feature: FeaturePackage
-  links: Array<{ label: string; path: string; feature: FeaturePackage }>
+  links: Array<{ label: string; path: string; environmentFeature?: FeaturePackage }>
 }>
 
 export default function Home() {
+  const visibleSections = sections
+    .map((section) => ({
+      ...section,
+      links: section.links.filter((link) => {
+        const environmentFeature = 'environmentFeature' in link ? link.environmentFeature : undefined
+        return shouldShowHomeLink(environmentFeature)
+      }),
+    }))
+    .filter((section) => section.links.length > 0)
+
   return (
     <div className="min-h-screen bg-[var(--surface)] px-6 py-6 text-[var(--on-surface)]">
       <div className="mx-auto max-w-[1200px] space-y-6">
@@ -67,16 +73,14 @@ export default function Home() {
         </div>
 
         <div className="grid gap-5 md:grid-cols-2">
-          {sections
-            .filter((section) => isFeatureEnabled(section.feature) || section.links.some((link) => isFeatureEnabled(link.feature)))
-            .map((section) => (
+          {visibleSections.map((section) => (
             <div
               key={section.title}
               className="rounded-[26px] bg-[rgba(255,255,255,0.84)] px-5 py-5 shadow-[0_16px_32px_rgba(26,28,25,0.05)]"
             >
               <div className="text-[1.35rem] font-extrabold tracking-[-0.04em] text-[var(--on-surface)]">{section.title}</div>
               <div className="mt-4 space-y-3">
-                {section.links.filter((link) => isFeatureEnabled(link.feature)).map((link) => (
+                {section.links.map((link) => (
                   <button
                     key={link.path}
                     type="button"
@@ -94,4 +98,11 @@ export default function Home() {
       </div>
     </div>
   )
+}
+
+function shouldShowHomeLink(environmentFeature?: FeaturePackage) {
+  if (environmentFeature === 'PLATFORM' || environmentFeature === 'DEVELOPER_TOOLS') {
+    return isFeatureEnabled(environmentFeature)
+  }
+  return true
 }

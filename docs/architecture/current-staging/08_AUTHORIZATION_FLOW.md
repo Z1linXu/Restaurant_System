@@ -7,15 +7,21 @@ and Store module context flow.
 
 ## Current runtime/source SHA
 
-- Repository source SHA: `923346f15757ca85fdafb509a803e87f04ae55bd`
-- Deployed Staging SHA: `923346f15757ca85fdafb509a803e87f04ae55bd`
+- Original A5.6 baseline source/deploy SHA:
+  `923346f15757ca85fdafb509a803e87f04ae55bd`
+- A6 merged source authority before A7:
+  `ae144e91a7900f0a541446e93c0f498f41f670c0`
+- A7 source authority:
+  this package/PR; exact merged main SHA and deployed Staging SHA are recorded
+  by the post-merge exact-SHA Staging deployment evidence/final report.
 - Staging Flyway: `V16`
 
 ## Scope
 
 Current backend request authentication, Store access checks, role capability
-checks, and Store Context/module context read path. It does not claim frontend
-module hiding is a security boundary.
+checks, A6 backend module/capability checks, and A7 Store Context-driven
+frontend gating. Frontend visibility is a fail-closed UX boundary, not the
+security boundary.
 
 ## Mermaid diagram
 
@@ -28,8 +34,10 @@ sequenceDiagram
     participant Filter as AuthTokenFilter
     participant StoreAccess as StoreAccessService
     participant Capability as AuthorizationService
+    participant ModuleGate as StoreModuleAccessEvaluator
     participant Workspace as Workspace and Store Context API
     participant Modules as StoreModuleService
+    participant FrontendGate as A7 frontend module gate
     participant Biz as Store-scoped business API
 
     User->>AuthAPI: login credentials
@@ -45,6 +53,8 @@ sequenceDiagram
     Biz->>StoreAccess: verify Store membership or allowed legacy fallback
     Biz->>Capability: verify role capability for action
     Capability-->>Biz: allow or fail closed
+    Biz->>ModuleGate: verify Store module and environment capability
+    ModuleGate-->>Biz: allow or fail closed
     Biz-->>User: Store-scoped response
 
     User->>Workspace: fetch workspaces and Store Context
@@ -52,6 +62,8 @@ sequenceDiagram
     Workspace->>Modules: load module_configuration for Store
     Modules-->>Workspace: Store modules, dependency/capability status
     Workspace-->>User: Store Context
+    User->>FrontendGate: route/page/nav decision from module_configuration
+    FrontendGate-->>User: render page or Store module unavailable UX
 ```
 
 ## Key invariants
@@ -59,8 +71,11 @@ sequenceDiagram
 - Backend authorization is the security boundary; frontend visibility is not.
 - Store-scoped APIs must verify Store access before business action.
 - Role capabilities are checked through the authorization service and registry.
-- Store Context includes module configuration, but full A6/A7 module
-  enforcement is not yet represented as current implementation.
+- A6 backend module/capability checks run after auth, Store access and role
+  capability checks.
+- A7 frontend route/page/navigation visibility reads Store Context
+  `module_configuration` and fails closed, but backend authorization remains
+  authoritative.
 - Refresh-token hashes or credential details are not exposed by this document.
 
 ## What omitted
@@ -68,7 +83,7 @@ sequenceDiagram
 - password hashes, refresh-token hashes, session secrets, cookies, and raw
   tokens
 - exact credential policy values
-- future A6 module enforcement and A7 frontend gating
+- A8 hardware readiness and physical printer/device binding
 
 ## Source files used
 
@@ -80,8 +95,11 @@ sequenceDiagram
 - `backend/src/main/java/com/restaurant/system/common/auth/RoleCapabilityRegistry.java`
 - `backend/src/main/java/com/restaurant/system/common/auth/Capability.java`
 - `backend/src/main/java/com/restaurant/system/common/auth/WorkspaceController.java`
+- `backend/src/main/java/com/restaurant/system/modules/StoreModuleAccessEvaluator.java`
 - `backend/src/main/java/com/restaurant/system/modules/StoreModuleServiceImpl.java`
 - `frontend/src/App.tsx`
+- `frontend/src/features/store/storeModuleAccess.ts`
+- `frontend/src/features/store/StoreContext.tsx`
 
 ## Last verified date
 

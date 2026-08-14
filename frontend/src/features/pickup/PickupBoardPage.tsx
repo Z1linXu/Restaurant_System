@@ -3,7 +3,7 @@ import { useIpadLandscape } from '../../hooks/useIpadLandscape'
 import { usePickupBoard } from '../../hooks/usePickupBoard'
 import { FrontdeskTopNav } from '../frontdesk/components/FrontdeskTopNav'
 import { PickupOrderCard } from './components/PickupOrderCard'
-import { useCurrentStore } from '../store/StoreContext'
+import { useCurrentStore } from '../store/useStoreContext'
 
 export function PickupBoardPage() {
   const { storeId } = useCurrentStore()

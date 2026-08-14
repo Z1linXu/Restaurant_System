@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { navigateTo } from '../../frontdesk/navigation'
 import { reportsNavItems, type ReportsSection } from './reportsNavigation'
-import { useOptionalCurrentStore } from '../../store/StoreContext'
+import { useOptionalCurrentStore } from '../../store/useStoreContext'
 import { buildStorePath } from '../../store/storeRoutes'
 
 interface OwnerAdminReportsShellProps {

@@ -15,7 +15,7 @@ import { ComboConfigurationPanel } from './ComboConfigurationPanel'
 import { CategoryManagementPanel, StationManagementPanel } from './MenuStructurePanels'
 import { PricingRulesPanel } from './PricingRulesPanel'
 import { useAuth } from '../auth/useAuth'
-import { useCurrentStore } from '../store/StoreContext'
+import { useCurrentStore } from '../store/useStoreContext'
 import {
   applyCategoryItemOrder,
   enterMenuItemReorderMode,

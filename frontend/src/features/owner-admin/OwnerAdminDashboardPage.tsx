@@ -9,7 +9,7 @@ import {
   type OwnerDashboardTrendPoint,
 } from '../../services/ownerDashboardService'
 import { fetchPlatformOverview, type PlatformAdminOverview } from '../../services/platformAdminService'
-import { useCurrentStore } from '../store/StoreContext'
+import { useCurrentStore } from '../store/useStoreContext'
 import { buildStorePath } from '../store/storeRoutes'
 
 const RANGE_OPTIONS: { value: OwnerDashboardRange; label: string }[] = [

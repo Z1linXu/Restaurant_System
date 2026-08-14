@@ -1,4 +1,4 @@
-import type { FeaturePackage } from '../../feature-flags/featureConfig'
+import type { StoreModuleKey } from '../../store/storeModuleAccess'
 
 export type ReportsSection = 'sales' | 'items' | 'stores' | 'profit'
 
@@ -10,19 +10,19 @@ export interface ReportsNavItem {
 }
 
 export const ownerAdminSidebarItems = [
-  { id: 'home', label: 'Home', icon: '⌂', description: 'Daily operating overview', path: '/admin/dashboard', feature: 'ADMIN' },
-  { id: 'stores', label: 'Stores', icon: '▣', description: 'Store portfolio and health', path: '/admin/settings/tables', feature: 'ADMIN' },
-  { id: 'menu', label: 'Menu Management', icon: '☰', description: 'Menu maintenance workspace', path: '/admin/menu/items', feature: 'ADMIN' },
-  { id: 'reports', label: 'Reports', icon: '◫', description: 'Sales and performance reports', path: '/admin/reports/sales', feature: 'ANALYTICS' },
-  { id: 'integrations', label: 'Integrations', icon: '◎', description: 'Delivery and platform links', path: null, feature: null },
-  { id: 'settings', label: 'Settings', icon: '⚙', description: 'Organization-level settings', path: '/admin/settings/printing', feature: 'PRINTING' },
+  { id: 'home', label: 'Home', icon: '⌂', description: 'Daily operating overview', path: '/admin/dashboard', moduleKey: 'STORE_ADMINISTRATION' },
+  { id: 'stores', label: 'Stores', icon: '▣', description: 'Store portfolio and health', path: '/admin/settings/tables', moduleKey: 'TABLE_MANAGEMENT' },
+  { id: 'menu', label: 'Menu Management', icon: '☰', description: 'Menu maintenance workspace', path: '/admin/menu/items', moduleKey: 'MENU_MANAGEMENT' },
+  { id: 'reports', label: 'Reports', icon: '◫', description: 'Sales and performance reports', path: '/admin/reports/sales', moduleKey: 'REPORTING_CORE' },
+  { id: 'integrations', label: 'Integrations', icon: '◎', description: 'Delivery and platform links', path: null, moduleKey: null },
+  { id: 'settings', label: 'Settings', icon: '⚙', description: 'Organization-level settings', path: '/admin/settings/printing', moduleKey: 'PRINTING' },
 ] as const satisfies Array<{
   id: string
   label: string
   icon: string
   description: string
   path: string | null
-  feature: FeaturePackage | null
+  moduleKey: StoreModuleKey | null
 }>
 
 export const reportsNavItems: ReportsNavItem[] = [

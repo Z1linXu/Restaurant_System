@@ -46,6 +46,15 @@
 > acceptance after the bounded runtime DI repair PR #140; no additional public
 > endpoint or DTO was introduced by the repair.
 
+> Phase A7 Frontend Module Gating (2026-08-14): no new public API is added.
+> The frontend now consumes `/api/v1/stores/{storeId}/context`
+> `module_configuration` as the canonical Store-scoped source for route,
+> page and navigation gating. Legacy frontend feature configuration remains an
+> environment/platform compatibility input only, not a Store module source.
+> Store-module frontend denials align to A6 semantics:
+> `MODULE_DISABLED`, `MODULE_CONFIGURATION_INVALID`, and
+> `MODULE_ENVIRONMENT_CAPABILITY_MISSING`.
+
 > Phase A4 Store Profile Contract (2026-08-13): additive Flyway V14 introduces
 > database-backed `store_profiles`, `store_profile_versions`, and
 > `store_profile_artifacts`. Store Profile versions are safe configuration

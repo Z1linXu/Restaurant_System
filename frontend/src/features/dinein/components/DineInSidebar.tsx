@@ -1,9 +1,9 @@
 import { navigateTo } from '../../frontdesk/navigation'
-import { isFeatureEnabled, type FeaturePackage } from '../../feature-flags/featureConfig'
 import { useAuth } from '../../auth/useAuth'
 import { StoreSwitcher } from '../../store/StoreSwitcher'
 import { buildStorePath } from '../../store/storeRoutes'
-import { useOptionalCurrentStore } from '../../store/StoreContext'
+import { useOptionalCurrentStore } from '../../store/useStoreContext'
+import { isStoreModuleEnabled, type StoreModuleKey } from '../../store/storeModuleAccess'
 
 interface DineInSidebarProps {
   activeItem?: 'menu'
@@ -13,14 +13,14 @@ interface DineInSidebarProps {
 }
 
 const navItems = [
-  { id: 'orders', label: 'Orders', icon: '▤', feature: 'CORE_POS' },
-  { id: 'menu', label: 'Menu', icon: '✕', feature: 'CORE_POS' },
-  { id: 'dashboard', label: 'Dashboard', icon: '◫', feature: 'ADMIN' },
+  { id: 'orders', label: 'Orders', icon: '▤', moduleKey: 'ORDER_HISTORY' },
+  { id: 'menu', label: 'Menu', icon: '✕', moduleKey: 'ORDERING_POS' },
+  { id: 'dashboard', label: 'Dashboard', icon: '◫', moduleKey: 'STORE_ADMINISTRATION' },
 ] as const satisfies Array<{
   id: 'orders' | 'menu' | 'dashboard'
   label: string
   icon: string
-  feature: FeaturePackage
+  moduleKey: StoreModuleKey
 }>
 
 export function DineInSidebar({
@@ -31,6 +31,7 @@ export function DineInSidebar({
 }: DineInSidebarProps) {
   const { isFrontdesk } = useAuth()
   const currentStore = useOptionalCurrentStore()
+  const moduleConfiguration = currentStore?.moduleConfiguration ?? null
   const path = (target: string) => currentStore ? buildStorePath(currentStore.storeId, target) : target
   return (
     <aside
@@ -71,7 +72,10 @@ export function DineInSidebar({
         </div>
 
         <nav className={`${compact ? 'space-y-2' : 'space-y-2.5'}`}>
-          {navItems.filter((item) => isFeatureEnabled(item.feature) && !(isFrontdesk && item.id === 'dashboard')).map((item) => {
+          {navItems.filter((item) => (
+            isStoreModuleEnabled(moduleConfiguration, item.moduleKey)
+            && !(isFrontdesk && item.id === 'dashboard')
+          )).map((item) => {
             const active = item.id === activeItem
             return (
               <button

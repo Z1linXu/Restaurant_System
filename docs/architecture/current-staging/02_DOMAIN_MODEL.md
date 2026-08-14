@@ -8,8 +8,13 @@ ordering, tables, staff access, and printing.
 
 ## Current runtime/source SHA
 
-- Repository source SHA: `923346f15757ca85fdafb509a803e87f04ae55bd`
-- Deployed Staging SHA: `923346f15757ca85fdafb509a803e87f04ae55bd`
+- Original A5.6 baseline source/deploy SHA:
+  `923346f15757ca85fdafb509a803e87f04ae55bd`
+- A6 merged source authority before A7:
+  `ae144e91a7900f0a541446e93c0f498f41f670c0`
+- A7 source authority:
+  this package/PR; exact merged main SHA and deployed Staging SHA are recorded
+  by the post-merge exact-SHA Staging deployment evidence/final report.
 - Staging Flyway: `V16`
 
 ## Scope
@@ -163,8 +168,9 @@ erDiagram
   Store-level Combo contents source.
 - `menu_item_options` remains the per-item Size/Combo enablement and ordinary
   option graph.
-- `store_modules` is the canonical Store module state, while runtime
-  enforcement work is still expected in A6/A7.
+- `store_modules` is the canonical Store module state; A6 backend gating and
+  A7 frontend route/page/navigation gating consume it after authenticated
+  Store Context / Store access.
 - Store Profile records are DB-backed templates and must not contain source DB
   IDs, secrets, PII, physical printer endpoints, or device credentials.
 

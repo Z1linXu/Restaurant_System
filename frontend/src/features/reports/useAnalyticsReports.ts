@@ -6,7 +6,7 @@ import {
 } from '../../services/analyticsReportService'
 import { fetchPlatformOverview, type PlatformAdminOverview } from '../../services/platformAdminService'
 import { toPreviousReportQuery, toReportQuery } from './reportUtils'
-import { useCurrentStore } from '../store/StoreContext'
+import { useCurrentStore } from '../store/useStoreContext'
 
 export interface ReportStoreOption {
   id: string

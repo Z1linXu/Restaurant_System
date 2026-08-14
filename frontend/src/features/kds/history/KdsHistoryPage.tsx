@@ -2,7 +2,7 @@ import { KdsSidebar } from '../noodle/components/KdsSidebar'
 import { KdsTopBar } from '../noodle/components/KdsTopBar'
 import { useKdsHistory } from '../../../hooks/useKdsHistory'
 import { useIpadLandscape } from '../../../hooks/useIpadLandscape'
-import { useCurrentStore } from '../../store/StoreContext'
+import { useCurrentStore } from '../../store/useStoreContext'
 import { buildStorePath } from '../../store/storeRoutes'
 
 const ASSEMBLING_STATIONS = ['NOODLE', 'WOK', 'COLD', 'DEEPFRIED'] as const

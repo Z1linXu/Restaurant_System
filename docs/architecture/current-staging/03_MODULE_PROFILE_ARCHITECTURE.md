@@ -8,14 +8,20 @@ contract relate to each other.
 
 ## Current runtime/source SHA
 
-- Repository source SHA: `923346f15757ca85fdafb509a803e87f04ae55bd`
-- Deployed Staging SHA: `923346f15757ca85fdafb509a803e87f04ae55bd`
+- Original A5.6 baseline source/deploy SHA:
+  `923346f15757ca85fdafb509a803e87f04ae55bd`
+- A6 merged source authority before A7:
+  `ae144e91a7900f0a541446e93c0f498f41f670c0`
+- A7 source authority:
+  this package/PR; exact merged main SHA and deployed Staging SHA are recorded
+  by the post-merge exact-SHA Staging deployment evidence/final report.
 - Staging Flyway: `V16`
 
 ## Scope
 
-A1 through A5.5 implemented architecture. A6/A7/A8 are shown only as future
-work, not as current behavior.
+A1 through A7 implemented architecture. A8 hardware capability management and
+Phase B Store provisioning are shown only as future work, not as current
+behavior.
 
 ## Mermaid diagram
 
@@ -30,6 +36,8 @@ flowchart TD
     capability --> service
     service --> context["Store Context response<br/>module_configuration"]
     service --> adminApi["Admin Store module API"]
+    service --> backendGate["A6 StoreModuleAccessEvaluator<br/>backend module/capability gate"]
+    context --> frontendGate["A7 frontend module gate<br/>routes, pages, navigation"]
 
     profileTables[("store_profiles<br/>store_profile_versions<br/>store_profile_artifacts")] --> profileService["StoreProfileCatalogService"]
     profileService --> ownerApi["Owner-only Profile read API"]
@@ -38,9 +46,7 @@ flowchart TD
     profileSeed["A5 ST_DENIS_CANONICAL_PROFILE/v1<br/>12 deterministic artifacts"] --> profileTables
     dryRun["StoreProfileMaterializationDryRunValidator"] --> profileValidator
 
-    legacy["Legacy runtime compatibility<br/>stores.printing_enabled / printing_mode<br/>frontend feature config"] -. "current compatibility" .-> context
-    a6["A6 backend module enforcement<br/>future"] -. "not implemented" .-> service
-    a7["A7 frontend module gating<br/>future"] -. "not implemented" .-> context
+    legacy["Legacy runtime compatibility<br/>stores.printing_enabled / printing_mode<br/>frontend platform/dev feature config"] -. "environment/runtime inputs" .-> capability
     phaseB["Phase B Store provisioning<br/>future"] -. "not implemented" .-> profileTables
 ```
 
@@ -53,13 +59,12 @@ flowchart TD
 - Hardware capability is derived from safe topology and readiness, not secrets.
 - `ST_DENIS_CANONICAL_PROFILE/v1` is reviewed seed data and a template for
   later provisioning/materialization work.
-- Current Staging runtime at this baseline intentionally retains bounded legacy
-  gates until A6/A7.
+- Current Staging runtime at this baseline implements A6 backend gating and A7
+  frontend gating; bounded legacy flags remain only environment/platform or
+  runtime-mode inputs.
 
 ## What omitted
 
-- A6 implementation mechanics
-- A7 UI hiding/security enforcement implementation
 - A8 physical hardware pairing or printer binding
 - Phase B materialization commands
 
@@ -70,10 +75,13 @@ flowchart TD
 - `backend/src/main/java/com/restaurant/system/modules/ModuleDependencyValidator.java`
 - `backend/src/main/java/com/restaurant/system/modules/StoreModuleServiceImpl.java`
 - `backend/src/main/java/com/restaurant/system/modules/StoreModuleCapabilityProviderImpl.java`
+- `backend/src/main/java/com/restaurant/system/modules/StoreModuleAccessEvaluator.java`
 - `backend/src/main/java/com/restaurant/system/modules/StoreModuleController.java`
 - `backend/src/main/java/com/restaurant/system/owner/profile/StoreProfileContractValidator.java`
 - `backend/src/main/java/com/restaurant/system/owner/profile/StoreProfileMaterializationDryRunValidator.java`
 - `frontend/src/App.tsx`
+- `frontend/src/features/store/storeModuleAccess.ts`
+- `frontend/src/features/store/StoreContext.tsx`
 - `frontend/src/features/feature-flags/featureConfig.ts`
 
 ## Last verified date

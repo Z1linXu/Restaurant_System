@@ -3,7 +3,7 @@ import { useIpadLandscape } from '../../../hooks/useIpadLandscape'
 import { useHotKitchenOrders } from '../../../hooks/useHotKitchenOrders'
 import { KdsTopBar, type KdsDisplaySizeMode } from '../noodle/components/KdsTopBar'
 import { HotKitchenOrderCard } from './components/HotKitchenOrderCard'
-import { useCurrentStore } from '../../store/StoreContext'
+import { useCurrentStore } from '../../store/useStoreContext'
 
 const PREP_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
   month: 'short',

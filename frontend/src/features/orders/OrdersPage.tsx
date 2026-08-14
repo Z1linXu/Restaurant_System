@@ -13,7 +13,7 @@ import type { PrintJobRecord } from '../../services/printingAdminService'
 import { FrontdeskTopNav } from '../frontdesk/components/FrontdeskTopNav'
 import { OrderHistoryDetail } from './components/OrderHistoryDetail'
 import { OrderMiniCard } from './components/OrderMiniCard'
-import { useCurrentStore } from '../store/StoreContext'
+import { useCurrentStore } from '../store/useStoreContext'
 import { printJobOperatorDisplayMessage, printOptionDisplayLabel } from '../../utils/displayLabels'
 
 export function OrdersPage() {

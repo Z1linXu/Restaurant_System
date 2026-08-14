@@ -4,15 +4,20 @@
 
 This directory is the formal documentation-only anti-drift architecture
 baseline for the current Phase A Staging runtime after A5.5 final UI repair.
-It records what is implemented and verified today, before A6 backend module
-enforcement, A7 frontend module gating, A8 hardware capability management,
-Phase B Store provisioning, or Phase C multi-Store creation.
+It records what is implemented and verified today through A7 frontend module
+gating, before A8 hardware capability management, Phase B Store provisioning,
+or Phase C multi-Store creation.
 
 ## Current runtime/source SHA
 
-- Repository source authority used for this documentation pass:
+- Original A5.6 baseline source/deploy authority:
   `923346f15757ca85fdafb509a803e87f04ae55bd`
-- Current deployed Staging application SHA observed read-only:
+- A6 merged source authority before A7:
+  `ae144e91a7900f0a541446e93c0f498f41f670c0`
+- A7 source authority:
+  this package/PR; exact merged main SHA and deployed Staging SHA are recorded
+  by the post-merge exact-SHA Staging deployment evidence/final report.
+- Current deployed Staging application SHA observed read-only before A7 deploy:
   `923346f15757ca85fdafb509a803e87f04ae55bd`
 - Current Staging Flyway: `V16`
 - Current Staging deployment root: `/srv/restaurant-pos/staging`
@@ -43,7 +48,7 @@ The diagrams cover the implemented current Staging architecture:
 - Staging deployment topology
 - authorization flow
 
-They intentionally do not describe future A6-A10, Phase B, Chinatown, or
+They intentionally do not describe future A8-A10, Phase B, Chinatown, or
 Sainte-Catherine behavior as current.
 
 ## Anti-drift authority
@@ -72,9 +77,9 @@ flowchart TD
     baseline --> deployment["07 Deployment Architecture"]
     baseline --> auth["08 Authorization Flow"]
 
-    runtime["Observed Staging runtime<br/>923346f... / Flyway V16"] --> baseline
-    source["Fresh source main<br/>923346f..."] --> baseline
-    future["A6-A10 / Phase B / Phase C<br/>not implemented here"] -. "future only" .-> baseline
+    runtime["Pre-A7 observed Staging runtime<br/>923346f... / Flyway V16"] --> baseline
+    source["A6 main + A7 package<br/>exact merge SHA recorded after deploy"] --> baseline
+    future["A8-A10 / Phase B / Phase C<br/>not implemented here"] -. "future only" .-> baseline
 ```
 
 ## Diagram index
@@ -92,10 +97,10 @@ flowchart TD
 
 | Finding | Classification | Current evidence | Disposition |
 | --- | --- | --- | --- |
-| A3 added `store_modules` as canonical Store module state, but current runtime still keeps some behavior gated by legacy environment flags and Store runtime fields, especially printing. | `A6_EXPECTED_WORK` | `StoreModuleServiceImpl`, `StoreModuleCapabilityProviderImpl`, `App.tsx`, current Store row `printing_enabled=true`, `printing_mode=MOCK`. | Document as current compatibility boundary; do not present A6/A7 enforcement as implemented. |
+| A6 backend module gating now consumes `store_modules` after auth/Store access/role checks, with legacy environment flags and print mode classified as environment/runtime capability inputs. | `A6_IMPLEMENTED` | `StoreModuleAccessEvaluator`, `StoreModuleCapabilityProviderImpl`, current Store row `printing_enabled=true`, `printing_mode=MOCK`. | Backend module access is current architecture; A8 hardware capability remains future. |
 | Live Staging Store menu option rows include legacy/null option-group compatibility rows while the A5 profile template has deterministic profile-local menu graph counts. | `BOUNDED_LEGACY_COMPATIBILITY` | Live Store observed `items=39`, `options=382`, active options `329`; A5 profile evidence records `options=380`, active profile semantics `330`. | Document that A5 profile is a reusable template, not live Store materialization. A6+ may reconcile materialization/runtime parity; this is not an A5.5 blocker. |
 | `ST_DENIS_CANONICAL_PROFILE/v1` is stored and validated, but no current code path creates a live Store from it. | `PHASE_B_EXPECTED_WORK` | `StoreProfileMaterializationDryRunValidator` validates graph shape only. | Keep profile as template architecture; do not draw Phase B Store creation as current. |
-| Frontend package visibility still reads frontend feature configuration in places even though Store modules are available through Store Context. | `A7_EXPECTED_WORK` | `frontend/src/App.tsx`, `frontend/src/features/feature-flags/featureConfig.ts`, Store Context `module_configuration`. | Document as current packaging/navigation compatibility, not a security boundary. |
+| Frontend Store-scoped routes, pages and navigation now read authenticated Store Context `module_configuration` and fail closed. | `A7_IMPLEMENTED` | `frontend/src/App.tsx`, `frontend/src/features/store/storeModuleAccess.ts`, `frontend/src/features/store/StoreContext.tsx`, Owner/frontdesk navigation components. | Legacy frontend feature config remains only an environment/platform compatibility gate. |
 
 ## Key invariants
 
@@ -104,16 +109,18 @@ flowchart TD
 - Staging is not downgraded from Flyway V16 and no Flyway history is edited.
 - Printing in current Staging is `MOCK`; physical printer binding and Pad
   pairing remain separate runtime gates.
+- Store-scoped frontend module gates consume Store Context
+  `module_configuration`; frontend feature config is not a Store module source.
 - Production is not read or mutated by this documentation baseline.
-- The source repository SHA and deployed Staging SHA may differ; for this
-  formal baseline they are both `923346f15757ca85fdafb509a803e87f04ae55bd`.
+- The source repository SHA and deployed Staging SHA may differ; the original
+  A5.6 observed baseline was `923346f15757ca85fdafb509a803e87f04ae55bd`, and
+  the A7 exact merged/deployed SHA is recorded after post-merge deployment.
 
 ## What omitted
 
 - Phase B Store provisioning workflow
 - real Chinatown and Sainte-Catherine Store creation
-- A6 backend module enforcement implementation
-- A7 frontend module gating implementation
+- A8 hardware capability management implementation
 - physical printer endpoints, printer credentials, device tokens, and raw env
 - customer PII, order history, payment data, and Production runtime details
 
@@ -130,12 +137,18 @@ flowchart TD
 - `docs/governance/runtime/PHASE_A5_ST_DENIS_CANONICAL_PROFILE_STAGING_EVIDENCE.md`
 - `backend/src/main/resources/module/module-catalog.v1.json`
 - `backend/src/main/resources/module/module-dependency-graph.v1.json`
+- `backend/src/main/java/com/restaurant/system/modules/StoreModuleAccessEvaluator.java`
 - `backend/src/main/resources/db/migration/V11__add_store_pricing_policies.sql`
 - `backend/src/main/resources/db/migration/V12__add_store_combo_components.sql`
 - `backend/src/main/resources/db/migration/V13__add_store_modules.sql`
 - `backend/src/main/resources/db/migration/V14__add_store_profiles.sql`
 - `backend/src/main/resources/db/migration/V15__seed_st_denis_canonical_profile.sql`
 - `backend/src/main/resources/db/migration/V16__add_dynamic_menu_management_configuration.sql`
+- `frontend/src/App.tsx`
+- `frontend/src/features/store/storeModuleAccess.ts`
+- `frontend/src/features/store/StoreContext.tsx`
+- `docs/governance/agile/PHASE_A6_BACKEND_MODULE_GATING_EVIDENCE.md`
+- `docs/governance/agile/PHASE_A7_FRONTEND_MODULE_GATING_EVIDENCE.md`
 - `deployment/cloud/docker-compose.staging.yml`
 - `deployment/cloud/README_STAGING.md`
 - `deployment/cloud/staging-deploy.sh`

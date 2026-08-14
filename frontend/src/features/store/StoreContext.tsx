@@ -1,33 +1,14 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { fetchStoreContext, type StoreContextResponse } from '../../services/storeWorkspaceService'
 import { getApiUserMessage } from '../../services/apiClient'
 import { useAuth } from '../auth/useAuth'
-
-interface StoreContextValue {
-  storeId: number
-  storeName: string
-  storeCode: string | null
-  organizationId: number | null
-  organizationName: string | null
-  roleCode: string | null
-  loading: boolean
-  error: string | null
-}
-
-const StoreContext = createContext<StoreContextValue | null>(null)
-
-function mapStoreContext(storeId: number, data: StoreContextResponse | null, loading: boolean, error: string | null): StoreContextValue {
-  return {
-    storeId,
-    storeName: data?.name ?? `门店 ${storeId}`,
-    storeCode: data?.code ?? null,
-    organizationId: data?.organization_id ?? null,
-    organizationName: data?.organization_name ?? null,
-    roleCode: data?.role_code ?? null,
-    loading,
-    error,
-  }
-}
+import { StoreContext, mapStoreContext } from './StoreContextCore'
+import { useCurrentStore } from './useStoreContext'
+import {
+  evaluateStoreModuleAccess,
+  type StoreModuleAccessResult,
+  type StoreModuleKey,
+} from './storeModuleAccess'
 
 export function StoreContextProvider({ storeId, children }: { storeId: number; children: React.ReactNode }) {
   const { isOfflineRestricted, user } = useAuth()
@@ -70,18 +51,6 @@ export function StoreContextProvider({ storeId, children }: { storeId: number; c
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }
 
-export function useCurrentStore() {
-  const value = useContext(StoreContext)
-  if (!value) {
-    throw new Error('useCurrentStore must be used inside StoreContextProvider')
-  }
-  return value
-}
-
-export function useOptionalCurrentStore() {
-  return useContext(StoreContext)
-}
-
 export function RequireStoreAccess({ children }: { children: React.ReactNode }) {
   const store = useCurrentStore()
   if (store.loading) {
@@ -108,4 +77,86 @@ export function RequireStoreAccess({ children }: { children: React.ReactNode }) 
   }
 
   return <>{children}</>
+}
+
+export function RequireStoreModule({
+  children,
+  moduleKey,
+}: {
+  children: React.ReactNode
+  moduleKey: StoreModuleKey
+}) {
+  const store = useCurrentStore()
+  const access = evaluateStoreModuleAccess(store.moduleConfiguration, moduleKey)
+  if (!access.allowed) {
+    return <StoreModuleUnavailablePage access={access} storeName={store.storeName} />
+  }
+  return <>{children}</>
+}
+
+function StoreModuleUnavailablePage({
+  access,
+  storeName,
+}: {
+  access: StoreModuleAccessResult
+  storeName: string
+}) {
+  const isEnvironmentGap = access.status === 'MODULE_ENVIRONMENT_CAPABILITY_MISSING'
+  const isPrinting = access.moduleKey === 'PRINTING'
+  const printingMode = access.module?.legacy_runtime_mode ?? null
+  const legacyPrintingFlag = access.module?.legacy_store_flag
+  return (
+    <div className="min-h-screen bg-[var(--surface)] px-6 py-6 text-[var(--on-surface)]">
+      <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-[980px] items-center justify-center">
+        <div className="w-full rounded-[30px] bg-[rgba(255,255,255,0.88)] px-7 py-8 shadow-[0_18px_42px_rgba(26,28,25,0.07)]">
+          <div className="text-[0.78rem] font-black uppercase tracking-[0.2em] text-[var(--primary)]">
+            Store module gate
+          </div>
+          <h1 className="mt-3 font-display text-[2.35rem] font-extrabold tracking-[-0.07em] text-[var(--on-surface)]">
+            {isEnvironmentGap ? '运行环境未就绪' : '功能未启用'}
+          </h1>
+          <p className="mt-3 max-w-[660px] text-[1rem] leading-7 text-[var(--muted)]">
+            <span className="font-semibold text-[var(--on-surface)]">{storeName}</span>
+            {' '}当前不能打开{' '}
+            <span className="font-semibold text-[var(--on-surface)]">{access.displayName}</span>
+            {' '}页面。前端已从已认证的 Store Context 读取模块状态，并按 Store-scoped module contract fail closed。
+          </p>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <ModuleStatusCard label="Module" value={access.moduleKey} />
+            <ModuleStatusCard label="Status" value={access.status} />
+            {isPrinting ? <ModuleStatusCard label="Runtime print mode" value={printingMode ?? 'UNKNOWN'} /> : null}
+            {isPrinting ? (
+              <ModuleStatusCard
+                label="Legacy printing flag"
+                value={legacyPrintingFlag == null ? 'UNKNOWN' : legacyPrintingFlag ? 'ENABLED' : 'DISABLED'}
+              />
+            ) : null}
+          </div>
+
+          <div className="mt-5 rounded-[18px] bg-[rgba(26,28,25,0.04)] px-4 py-3 text-[0.9rem] font-semibold leading-6 text-[var(--muted)]">
+            {access.message}
+            {access.issues.length ? (
+              <ul className="mt-3 space-y-1">
+                {access.issues.map((issue) => (
+                  <li key={`${issue.code}:${issue.module_key ?? ''}:${issue.target ?? ''}`}>
+                    {issue.code}{issue.target ? ` → ${issue.target}` : ''}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ModuleStatusCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[18px] bg-[rgba(26,28,25,0.04)] px-4 py-3">
+      <div className="text-[0.72rem] font-black uppercase tracking-[0.16em] text-[var(--muted)]">{label}</div>
+      <div className="mt-1 break-all text-[0.95rem] font-bold text-[var(--on-surface)]">{value}</div>
+    </div>
+  )
 }
