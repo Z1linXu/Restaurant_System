@@ -197,8 +197,10 @@ literal layout plus OPS-001 checksum evidence. Exact-SHA Staging deploy of
 `494497dfbf874bcf12da7eb3821a276f663959c5` applied Flyway V15 successfully,
 then backend startup failed closed during Hibernate schema validation because
 the A4 `fingerprint_sha256 char(64)` columns were mapped by JPA as default
-`varchar(255)`. The current bounded entity-type repair changes only Profile
-entity metadata to explicit `char(64)` and adds regression coverage. No Store
+`varchar(255)`. PR #146 changed Profile entity DDL metadata to explicit
+`char(64)`, but exact-SHA Staging still failed closed because Hibernate
+continued to expect JDBC `Types#VARCHAR`. The current bounded JDBC type repair
+adds `@JdbcTypeCode(SqlTypes.CHAR)` plus regression coverage. No Store
 materialization, Production action, migration, Flyway history edit, downgrade,
 destructive reset or runtime secret read is included. Production remains
 no-mutation.
@@ -220,16 +222,16 @@ A0_OWNER_UI_ACCEPTANCE = PASS_FOR_A0_1_PRICING_UX
 ```
 
 Staging is currently rebound to the A5 runtime-attempt environment but backend
-startup is fail-closed on the Profile entity type mapping until the repair PR
-is merged and redeployed. The Staging database has successful Flyway V15;
-Printing configuration remains `MOCK/true`, with four enabled logical printers
-and three enabled assignments. A1, A2 and A3 are PASS; A4 repository contract
-is in `main`; A5 requires the bounded entity-type repair and retry.
+startup is fail-closed on the Profile JDBC type mapping until the repair PR is
+merged and redeployed. The Staging database has successful Flyway V15; Printing
+configuration remains `MOCK/true`, with four enabled logical printers and three
+enabled assignments. A1, A2 and A3 are PASS; A4 repository contract is in
+`main`; A5 requires the bounded JDBC type repair and retry.
 Do not start A6, Phase B, Phase C, Chinatown, Sainte-Catherine or Production
 deploy from this state without a fresh Owner decision. Current A5 repair stop:
 
 ```text
-PHASE_A5_RUNTIME_ENTITY_TYPE_REPAIR_READY_FOR_PR
+PHASE_A5_RUNTIME_JDBC_CHAR_TYPE_REPAIR_READY_FOR_PR
 ```
 
 ## Current final productization roadmap audit (2026-08-12)

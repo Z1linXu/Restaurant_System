@@ -146,8 +146,10 @@
 > V15 successfully. Backend startup next failed closed during Hibernate schema
 > validation because the A4 Profile fingerprint columns are PostgreSQL
 > `char(64)` while the entities still mapped them as default `varchar(255)`.
-> The current bounded repair changes only Profile entity metadata to explicit
-> `char(64)` and adds regression coverage; Production remains no-mutation.
+> PR #146 added explicit `char(64)` DDL metadata, but Staging proved Hibernate
+> still expected JDBC `Types#VARCHAR`. The current bounded repair adds explicit
+> JDBC `Types#CHAR` metadata and regression coverage only; Production remains
+> no-mutation.
 
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The

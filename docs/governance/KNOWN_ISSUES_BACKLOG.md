@@ -67,9 +67,10 @@ violated the A4 `content_json` check. PR #145 repaired that seed literal shape
 and exact-SHA Staging then applied V15 successfully, but backend startup failed
 closed on Hibernate schema validation because the A4 `fingerprint_sha256
 char(64)` columns were still mapped by JPA as default `varchar(255)`. This is
-tracked as bounded A5 dependency repair, not a Production incident; the current
-repair changes only entity metadata and regression coverage. Production remains
-no-mutation.
+tracked as bounded A5 dependency repair, not a Production incident. PR #146
+added explicit `char(64)` DDL metadata; the current follow-up repair adds
+explicit JDBC `Types#CHAR` metadata and regression coverage only. Production
+remains no-mutation.
 
 Current final productization route (2026-08-12): open field-test follow-up work
 continues through the Owner field-test and bug-fix loop, but the loop is now a

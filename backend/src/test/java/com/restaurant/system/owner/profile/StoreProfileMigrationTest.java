@@ -6,6 +6,8 @@ import jakarta.persistence.Column;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
 
@@ -68,5 +70,6 @@ class StoreProfileMigrationTest {
         assertThat(column.name()).isEqualTo("fingerprint_sha256");
         assertThat(column.columnDefinition()).isEqualTo("char(64)");
         assertThat(column.length()).isEqualTo(64);
+        assertThat(field.getAnnotation(JdbcTypeCode.class).value()).isEqualTo(SqlTypes.CHAR);
     }
 }
