@@ -283,6 +283,26 @@ Phase B/C, Chinatown, Sainte-Catherine or Production work. Current Staging is
 deployed at `3440fddad7571409c66189e44976658921e5de1f` and waits for
 `PHASE_A6_OWNER_CONTINUATION`.
 
+Owner then authorized the documentation-only A5.5 baseline:
+
+```text
+PHASE_A5_5_CURRENT_STAGING_ARCHITECTURE_UML_BASELINE
+```
+
+A5.5 is now recorded under
+[Current Staging Architecture UML Baseline](../../architecture/current-staging/README.md).
+It was prepared from source `5f4504d23135655f63d564301f8e98f3218347b2` and
+read-only Staging observation of deployed
+`3440fddad7571409c66189e44976658921e5de1f` / Flyway V15. The docs include
+system context, domain model, module/profile architecture, ordering, printing,
+menu revision cache, deployment and authorization flows. No runtime was
+changed, no code/schema was changed, and Production was not touched. A5.5 does
+not start or renumber A6-A10. Current stop:
+
+```text
+PHASE_A5_5_UML_BASELINE_COMPLETE_WAITING_FOR_PHASE_A6_OWNER_CONTINUATION
+```
+
 ## Current final productization roadmap audit (2026-08-12)
 
 Planning-only audit is complete for the new final productization route:

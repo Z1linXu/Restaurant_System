@@ -235,6 +235,29 @@ state without a fresh Owner decision. Current A5 stop:
 PHASE_A5_ST_DENIS_CANONICAL_PROFILE_COMPLETE_WAITING_FOR_PHASE_A6_OWNER_CONTINUATION
 ```
 
+Owner next requested a documentation-only architecture baseline before A6:
+
+```text
+PHASE_A5_5_CURRENT_STAGING_ARCHITECTURE_UML_BASELINE
+```
+
+A5.5 uses fresh main `5f4504d23135655f63d564301f8e98f3218347b2` as source
+authority and read-only Staging observation of deployed
+`3440fddad7571409c66189e44976658921e5de1f` at Flyway V15. It records the
+current system context, domain model, module/profile architecture, ordering,
+printing, menu cache, deployment and authorization flows as Mermaid-backed
+documentation under
+[Current Staging Architecture UML Baseline](../../architecture/current-staging/README.md).
+A5.5 is documentation/governance only: no backend/frontend/Android business
+code, schema, deploy, restart, Flyway, Staging write, Production read, or
+Production mutation is included. It does not renumber or start A6-A10, Phase B,
+Phase C, Chinatown, Sainte-Catherine or Production promotion. Current A5.5
+stop:
+
+```text
+PHASE_A5_5_UML_BASELINE_COMPLETE_WAITING_FOR_PHASE_A6_OWNER_CONTINUATION
+```
+
 ## Current final productization roadmap audit (2026-08-12)
 
 The Owner opened a planning-only final productization route after the three
