@@ -224,12 +224,11 @@ A0_AUTOMATED_VALIDATION = PASS
 A0_OWNER_UI_ACCEPTANCE = PASS_FOR_A0_1_PRICING_UX
 ```
 
-Staging is currently deployed at exact
+Historical A5 closure deployed Staging at exact
 `3440fddad7571409c66189e44976658921e5de1f` with successful Flyway V15.
-Printing configuration remains `MOCK/true`, with four enabled logical printers
-and three enabled assignments. A1, A2, A3, A4 and A5 are PASS. Do not start A6,
-Phase B, Phase C, Chinatown, Sainte-Catherine or Production deploy from this
-state without a fresh Owner decision. Current A5 stop:
+Printing configuration remained `MOCK/true`, with four enabled logical printers
+and three enabled assignments. A1, A2, A3, A4 and A5 are PASS. Historical A5
+stop:
 
 ```text
 PHASE_A5_ST_DENIS_CANONICAL_PROFILE_COMPLETE_WAITING_FOR_PHASE_A6_OWNER_CONTINUATION
@@ -268,10 +267,10 @@ snapshot-backed and are not repriced or reselected. Combo/category/station
 mutations lock the Store and increment `stores.menu_revision` /
 `stores.menu_updated_at` in the same transaction.
 
-The deferred A5.6 UML baseline used fresh main
-`5f4504d23135655f63d564301f8e98f3218347b2` as source authority and read-only
-Staging observation of deployed
-`3440fddad7571409c66189e44976658921e5de1f` at Flyway V15. It records the
+The deferred A5.6 UML baseline is now formalized as the current anti-drift
+architecture baseline. It uses fresh main
+`923346f15757ca85fdafb509a803e87f04ae55bd` as source authority and read-only
+Staging observation of the same deployed SHA at Flyway V16. It records the
 current system context, domain model, module/profile architecture, ordering,
 printing, menu cache, deployment and authorization flows as Mermaid-backed
 documentation under
@@ -313,6 +312,25 @@ Expected final UI repair stop after exact-SHA Staging deployment:
 
 ```text
 PHASE_A5_5_FINAL_UI_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
+Owner manual acceptance of A5.5 is now PASS. The current Owner-authorized
+continuous execution is:
+
+```text
+PHASE_A6_BACKEND_MODULE_GATING
+→ PHASE_A7_FRONTEND_MODULE_GATING
+```
+
+A6 must enforce backend capability as authenticated principal, Store/
+Organization access, role/permission, Store module enabled and environment
+capability, while keeping hardware readiness for A8. A6 evidence is:
+[PHASE_A6_BACKEND_MODULE_GATING_EVIDENCE](../agile/PHASE_A6_BACKEND_MODULE_GATING_EVIDENCE.md).
+After A6 merge/fetch, continue to A7; after A7 exact-SHA Staging deployment
+and validation, stop before A8:
+
+```text
+PHASE_A7_FRONTEND_MODULE_GATING_COMPLETE_WAITING_FOR_PHASE_A8_OWNER_CONTINUATION
 ```
 
 ## Current final productization roadmap audit (2026-08-12)

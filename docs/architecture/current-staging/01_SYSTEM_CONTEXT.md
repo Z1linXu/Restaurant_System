@@ -7,9 +7,9 @@ or runtime components that interact with it.
 
 ## Current runtime/source SHA
 
-- Repository source SHA: `5f4504d23135655f63d564301f8e98f3218347b2`
-- Deployed Staging SHA: `3440fddad7571409c66189e44976658921e5de1f`
-- Staging Flyway: `V15`
+- Repository source SHA: `923346f15757ca85fdafb509a803e87f04ae55bd`
+- Deployed Staging SHA: `923346f15757ca85fdafb509a803e87f04ae55bd`
+- Staging Flyway: `V16`
 
 ## Scope
 
@@ -24,14 +24,14 @@ flowchart LR
     staff["Frontdesk staff browser"] --> nginx
     android["Android Pad WebView shell"] --> nginx
 
-    nginx --> frontend["React frontend bundle<br/>deployed SHA 3440fdd..."]
-    nginx --> backend["Spring Boot backend<br/>deployed SHA 3440fdd..."]
+    nginx --> frontend["React frontend bundle<br/>deployed SHA 923346f..."]
+    nginx --> backend["Spring Boot backend<br/>deployed SHA 923346f..."]
     frontend --> api["Store-scoped REST APIs"]
     frontend --> ws["WebSocket/STOMP"]
     api --> backend
     ws --> backend
 
-    backend --> db[("PostgreSQL 16<br/>Flyway V15")]
+    backend --> db[("PostgreSQL 16<br/>Flyway V16")]
     backend --> profile["Store Profile read model<br/>ST_DENIS_CANONICAL_PROFILE/v1"]
     backend --> print["Printing pipeline<br/>current mode MOCK"]
     print --> mock["Sanitized mock dispatch output"]

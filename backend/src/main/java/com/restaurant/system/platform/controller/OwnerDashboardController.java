@@ -3,6 +3,8 @@ package com.restaurant.system.platform.controller;
 import com.restaurant.system.common.auth.AuthorizationService;
 import com.restaurant.system.common.auth.Capability;
 import com.restaurant.system.common.response.ApiResponse;
+import com.restaurant.system.modules.ModuleKeys;
+import com.restaurant.system.modules.StoreModuleAccessEvaluator;
 import com.restaurant.system.platform.dto.OwnerDashboardResponse;
 import com.restaurant.system.platform.service.OwnerDashboardService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,10 +18,16 @@ public class OwnerDashboardController {
 
     private final OwnerDashboardService ownerDashboardService;
     private final AuthorizationService authorizationService;
+    private final StoreModuleAccessEvaluator moduleAccessEvaluator;
 
-    public OwnerDashboardController(OwnerDashboardService ownerDashboardService, AuthorizationService authorizationService) {
+    public OwnerDashboardController(
+        OwnerDashboardService ownerDashboardService,
+        AuthorizationService authorizationService,
+        StoreModuleAccessEvaluator moduleAccessEvaluator
+    ) {
         this.ownerDashboardService = ownerDashboardService;
         this.authorizationService = authorizationService;
+        this.moduleAccessEvaluator = moduleAccessEvaluator;
     }
 
     @GetMapping
@@ -31,6 +39,7 @@ public class OwnerDashboardController {
     ) {
         if (store_id != null) {
             authorizationService.requireForStore(store_id, Capability.ADMIN_STORE_CONFIG);
+            moduleAccessEvaluator.requireCapability(store_id, ModuleKeys.STORE_ADMINISTRATION);
         } else {
             authorizationService.require(Capability.ADMIN_STORE_CONFIG);
         }

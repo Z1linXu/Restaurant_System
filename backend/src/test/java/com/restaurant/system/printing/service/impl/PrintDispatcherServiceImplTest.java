@@ -12,10 +12,11 @@ import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 
 import com.restaurant.system.common.exception.BusinessException;
-import com.restaurant.system.common.feature.FeatureFlagService;
-import com.restaurant.system.common.feature.FeaturePackage;
 import com.restaurant.system.kitchen.entity.KitchenTask;
 import com.restaurant.system.kitchen.repository.KitchenTaskRepository;
+import com.restaurant.system.modules.ModuleKeys;
+import com.restaurant.system.modules.StoreModuleAccessEvaluation;
+import com.restaurant.system.modules.StoreModuleAccessEvaluator;
 import com.restaurant.system.order.repository.OrderItemOptionRepository;
 import com.restaurant.system.order.repository.OrderItemRepository;
 import com.restaurant.system.order.repository.OrderRepository;
@@ -45,10 +46,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.quality.Strictness;
 import org.springframework.mock.env.MockEnvironment;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class PrintDispatcherServiceImplTest {
 
     @Mock
@@ -70,7 +74,7 @@ class PrintDispatcherServiceImplTest {
     @Mock
     private PrinterTransport printerTransport;
     @Mock
-    private FeatureFlagService featureFlagService;
+    private StoreModuleAccessEvaluator moduleAccessEvaluator;
     @Mock
     private PrintJobService printJobService;
     @Mock
@@ -93,6 +97,7 @@ class PrintDispatcherServiceImplTest {
         when(grabRenderer.getModuleCode()).thenReturn(PrintModuleCode.GRAB);
         when(frontdeskRenderer.getModuleCode()).thenReturn(PrintModuleCode.FRONTDESK_RECEIPT);
         when(hotKitchenRenderer.getModuleCode()).thenReturn(PrintModuleCode.HOT_KITCHEN);
+        when(moduleAccessEvaluator.evaluateCapability(any(), eq(ModuleKeys.PRINTING))).thenReturn(printingAllowed());
         service = newService(new CloudPrintingGuard(new MockEnvironment()));
     }
 
@@ -109,12 +114,44 @@ class PrintDispatcherServiceImplTest {
             List.of(printerTransport),
             List.of(grabRenderer, frontdeskRenderer, hotKitchenRenderer),
             Runnable::run,
-            featureFlagService,
             printJobService,
             printJobRepository,
             cloudPrintingGuard,
             hotKitchenPrintEligibilityService,
-            orderDispatchOutboxService
+            orderDispatchOutboxService,
+            moduleAccessEvaluator
+        );
+    }
+
+    private StoreModuleAccessEvaluation printingAllowed() {
+        return new StoreModuleAccessEvaluation(
+            1L,
+            ModuleKeys.PRINTING,
+            true,
+            true,
+            true,
+            true,
+            true,
+            null,
+            "Module capability allowed",
+            List.of(),
+            List.of()
+        );
+    }
+
+    private StoreModuleAccessEvaluation printingDisabled() {
+        return new StoreModuleAccessEvaluation(
+            1L,
+            ModuleKeys.PRINTING,
+            true,
+            true,
+            false,
+            true,
+            false,
+            StoreModuleAccessEvaluator.MODULE_DISABLED,
+            "Module disabled for this Store: PRINTING",
+            List.of(),
+            List.of()
         );
     }
 
@@ -128,7 +165,6 @@ class PrintDispatcherServiceImplTest {
 
     @Test
     void persistedDispatchFailureBeforeJobCreationRemainsRetryable() {
-        when(featureFlagService.isEnabled(FeaturePackage.PRINTING)).thenReturn(true);
         when(storeRepository.findById(1L)).thenReturn(Optional.empty());
 
         assertThrows(
@@ -143,6 +179,16 @@ class PrintDispatcherServiceImplTest {
         );
 
         verifyNoInteractions(printJobService);
+    }
+
+    @Test
+    void persistedDispatchSkipsBeforeJobCreationWhenPrintingModuleUnavailable() {
+        when(moduleAccessEvaluator.evaluateCapability(1L, ModuleKeys.PRINTING)).thenReturn(printingDisabled());
+
+        service.dispatchPersistedEvent(PrintModuleCode.GRAB, 1L, 9L, null, "submit:9:GRAB");
+
+        verifyNoInteractions(printJobService);
+        verify(storeRepository, never()).findById(1L);
     }
 
     @Test
@@ -181,8 +227,6 @@ class PrintDispatcherServiceImplTest {
         task.order_item_id = item.id;
         task.station_code = "NOODLE";
         task.status = "pending";
-
-        when(featureFlagService.isEnabled(FeaturePackage.PRINTING)).thenReturn(true);
         when(storeRepository.findById(store.id)).thenReturn(Optional.of(store));
         when(orderRepository.findById(order.id)).thenReturn(Optional.of(order));
         when(orderItemRepository.findAllByOrderId(order.id)).thenReturn(List.of(item));
@@ -292,8 +336,6 @@ class PrintDispatcherServiceImplTest {
         order.id = 123L;
         order.store_id = store.id;
         OrderItem drinkItem = item(2L, 77L);
-
-        when(featureFlagService.isEnabled(FeaturePackage.PRINTING)).thenReturn(true);
         when(storeRepository.findById(store.id)).thenReturn(Optional.of(store));
         when(orderRepository.findById(order.id)).thenReturn(Optional.of(order));
         when(orderItemRepository.findAllByOrderId(order.id)).thenReturn(List.of(drinkItem));
@@ -462,8 +504,6 @@ class PrintDispatcherServiceImplTest {
         job.order_id = 123L;
         job.module_code = PrintModuleCode.GRAB;
         job.status = PrintJobStatus.PENDING;
-
-        when(featureFlagService.isEnabled(FeaturePackage.PRINTING)).thenReturn(true);
         when(storeRepository.findById(store.id)).thenReturn(Optional.of(store));
         when(printJobService.createPendingJob(
             eq(store.organization_id),
@@ -519,8 +559,6 @@ class PrintDispatcherServiceImplTest {
         job.order_id = order.id;
         job.module_code = PrintModuleCode.GRAB;
         job.status = PrintJobStatus.PENDING;
-
-        when(featureFlagService.isEnabled(FeaturePackage.PRINTING)).thenReturn(true);
         when(printerConfigService.getStorePrintingMode(store.id)).thenReturn("REAL");
         when(storeRepository.findById(store.id)).thenReturn(Optional.of(store));
         when(orderRepository.findById(order.id)).thenReturn(Optional.of(order));
@@ -566,8 +604,6 @@ class PrintDispatcherServiceImplTest {
         job.order_id = order.id;
         job.module_code = moduleCode;
         job.status = PrintJobStatus.PENDING;
-
-        when(featureFlagService.isEnabled(FeaturePackage.PRINTING)).thenReturn(true);
         when(printerConfigService.getStorePrintingMode(store.id)).thenReturn(printingMode);
         when(storeRepository.findById(store.id)).thenReturn(Optional.of(store));
         when(orderRepository.findById(order.id)).thenReturn(Optional.of(order));
@@ -608,7 +644,6 @@ class PrintDispatcherServiceImplTest {
         Store store = new Store();
         store.id = 1L;
         store.organization_id = 1L;
-        when(featureFlagService.isEnabled(FeaturePackage.PRINTING)).thenReturn(true);
         when(storeRepository.findById(1L)).thenReturn(Optional.of(store));
         when(printerConfigService.getStorePrintingMode(1L)).thenReturn("DISABLED");
 

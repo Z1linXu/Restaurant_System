@@ -7,6 +7,8 @@ import com.restaurant.system.common.auth.Capability;
 import com.restaurant.system.common.feature.FeatureFlagService;
 import com.restaurant.system.common.feature.FeaturePackage;
 import com.restaurant.system.common.response.ApiResponse;
+import com.restaurant.system.modules.ModuleKeys;
+import com.restaurant.system.modules.StoreModuleAccessEvaluator;
 import java.time.LocalDate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,15 +27,18 @@ public class AnalyticsAdminController {
     private final AnalyticsAggregationService analyticsAggregationService;
     private final AuthorizationService authorizationService;
     private final FeatureFlagService featureFlagService;
+    private final StoreModuleAccessEvaluator moduleAccessEvaluator;
 
     public AnalyticsAdminController(
         AnalyticsAggregationService analyticsAggregationService,
         AuthorizationService authorizationService,
-        FeatureFlagService featureFlagService
+        FeatureFlagService featureFlagService,
+        StoreModuleAccessEvaluator moduleAccessEvaluator
     ) {
         this.analyticsAggregationService = analyticsAggregationService;
         this.authorizationService = authorizationService;
         this.featureFlagService = featureFlagService;
+        this.moduleAccessEvaluator = moduleAccessEvaluator;
     }
 
     @PostMapping("/rebuild")
@@ -41,11 +46,12 @@ public class AnalyticsAdminController {
         @RequestParam String date,
         @RequestParam(required = false) Long store_id
     ) {
-        featureFlagService.requireEnabled(FeaturePackage.ANALYTICS);
         if (store_id != null) {
             authorizationService.requireForStore(store_id, Capability.ADMIN_STORE_CONFIG);
+            moduleAccessEvaluator.requireCapability(store_id, ModuleKeys.REPORTING_CORE);
         } else {
             authorizationService.require(Capability.ADMIN_STORE_CONFIG);
+            featureFlagService.requireEnabled(FeaturePackage.ANALYTICS);
         }
 
         analyticsAggregationService.rebuildForDate(LocalDate.parse(date), store_id);
@@ -61,11 +67,12 @@ public class AnalyticsAdminController {
         @RequestParam(required = false) String start_date,
         @RequestParam(required = false) String end_date
     ) {
-        featureFlagService.requireEnabled(FeaturePackage.ANALYTICS);
         if (store_id != null) {
             authorizationService.requireForStore(store_id, Capability.ADMIN_STORE_CONFIG);
+            moduleAccessEvaluator.requireCapability(store_id, ModuleKeys.REPORTING_CORE);
         } else {
             authorizationService.require(Capability.ADMIN_STORE_CONFIG);
+            featureFlagService.requireEnabled(FeaturePackage.ANALYTICS);
         }
 
         AnalyticsSummaryResponse response = analyticsAggregationService.getSummaries(

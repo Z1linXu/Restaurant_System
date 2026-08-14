@@ -278,10 +278,10 @@ It entered `main` at `3440fddad7571409c66189e44976658921e5de1f`; exact-SHA
 Staging deploy passed health, WebSocket readiness, Flyway V15, Profile
 fingerprint/artifact validation and graph-count validation. It adds no
 migration, edits no Flyway history, resets no Staging data, and performs no
-Production work. A5 does not create a Store, materialize St-Denis, start A6/A7,
-Phase B/C, Chinatown, Sainte-Catherine or Production work. Current Staging is
-deployed at `3440fddad7571409c66189e44976658921e5de1f` and waits for
-`PHASE_A6_OWNER_CONTINUATION`.
+Production work. A5 did not create a Store, materialize St-Denis, start A6/A7,
+Phase B/C, Chinatown, Sainte-Catherine or Production work. The historical A5
+runtime stop was deployed at `3440fddad7571409c66189e44976658921e5de1f` and
+waited for `PHASE_A6_OWNER_CONTINUATION`.
 
 Owner then authorized a documentation-only A5.5 baseline, but the current Owner
 request supersedes that sequencing. The former UML baseline is now deferred and
@@ -291,15 +291,14 @@ renumbered to:
 PHASE_A5_6_CURRENT_STAGING_ARCHITECTURE_UML_BASELINE
 ```
 
-The already prepared architecture docs remain recorded under
+The architecture docs are now formalized under
 [Current Staging Architecture UML Baseline](../../architecture/current-staging/README.md).
-It was prepared from source `5f4504d23135655f63d564301f8e98f3218347b2` and
-read-only Staging observation of deployed
-`3440fddad7571409c66189e44976658921e5de1f` / Flyway V15. The docs include
-system context, domain model, module/profile architecture, ordering, printing,
-menu revision cache, deployment and authorization flows. No runtime was
-changed, no code/schema was changed, and Production was not touched. It is not
-the active A5.5 loop for this package.
+They use source/deployed Staging
+`923346f15757ca85fdafb509a803e87f04ae55bd` / Flyway V16 as the current
+anti-drift authority. The docs include system context, domain model,
+module/profile architecture, ordering, printing, menu revision cache,
+deployment and authorization flows. The A5.6 baseline itself did not authorize
+runtime changes, code/schema changes, or Production action.
 
 Current Owner-authorized loop:
 
@@ -351,6 +350,28 @@ Expected stop:
 
 ```text
 PHASE_A5_5_FINAL_UI_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
+Owner manual acceptance of A5.5 is now PASS. The A5.6 current-Staging
+architecture package is formalized as the anti-drift baseline at fresh main
+and deployed Staging SHA `923346f15757ca85fdafb509a803e87f04ae55bd`, Flyway
+V16:
+[Current Staging Architecture UML Baseline](../../architecture/current-staging/README.md).
+
+Current authorized continuous execution:
+
+```text
+PHASE_A6_BACKEND_MODULE_GATING
+→ PHASE_A7_FRONTEND_MODULE_GATING
+```
+
+A6 evidence:
+[PHASE_A6_BACKEND_MODULE_GATING_EVIDENCE](../agile/PHASE_A6_BACKEND_MODULE_GATING_EVIDENCE.md).
+Continue from A6 merge/fresh fetch into A7. After A7 exact-SHA Staging deploy
+and validation, stop before A8, Phase B/C and Production:
+
+```text
+PHASE_A7_FRONTEND_MODULE_GATING_COMPLETE_WAITING_FOR_PHASE_A8_OWNER_CONTINUATION
 ```
 
 ## Current final productization roadmap audit (2026-08-12)

@@ -6,6 +6,8 @@ import com.restaurant.system.common.auth.Capability;
 import com.restaurant.system.common.feature.FeatureFlagService;
 import com.restaurant.system.common.feature.FeaturePackage;
 import com.restaurant.system.common.response.ApiResponse;
+import com.restaurant.system.modules.ModuleKeys;
+import com.restaurant.system.modules.StoreModuleAccessEvaluator;
 import com.restaurant.system.printing.dto.PrintCenterOverviewResponse;
 import com.restaurant.system.printing.dto.PrintJobResponse;
 import com.restaurant.system.printing.dto.PrintJobAttentionAcknowledgeRequest;
@@ -53,6 +55,7 @@ public class OwnerPrintingController {
     private final AuthorizationService authorizationService;
     private final FeatureFlagService featureFlagService;
     private final AuditLogService auditLogService;
+    private final StoreModuleAccessEvaluator moduleAccessEvaluator;
 
     @Autowired
     public OwnerPrintingController(
@@ -62,7 +65,8 @@ public class OwnerPrintingController {
         PrintJobService printJobService,
         AuthorizationService authorizationService,
         FeatureFlagService featureFlagService,
-        AuditLogService auditLogService
+        AuditLogService auditLogService,
+        StoreModuleAccessEvaluator moduleAccessEvaluator
     ) {
         this.printerConfigService = printerConfigService;
         this.printerAssignmentService = printerAssignmentService;
@@ -71,6 +75,7 @@ public class OwnerPrintingController {
         this.authorizationService = authorizationService;
         this.featureFlagService = featureFlagService;
         this.auditLogService = auditLogService;
+        this.moduleAccessEvaluator = moduleAccessEvaluator;
     }
 
     public OwnerPrintingController(
@@ -79,7 +84,8 @@ public class OwnerPrintingController {
         PrintDispatcherService printDispatcherService,
         PrintJobService printJobService,
         AuthorizationService authorizationService,
-        FeatureFlagService featureFlagService
+        FeatureFlagService featureFlagService,
+        StoreModuleAccessEvaluator moduleAccessEvaluator
     ) {
         this(
             printerConfigService,
@@ -88,34 +94,31 @@ public class OwnerPrintingController {
             printJobService,
             authorizationService,
             featureFlagService,
-            null
+            null,
+            moduleAccessEvaluator
         );
     }
 
     @GetMapping
     public ApiResponse<PrintCenterOverviewResponse> getOverview(@RequestParam Long store_id) {
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         requirePrintingAccess(store_id);
         return ApiResponse.success(printerConfigService.getOverview(store_id));
     }
 
     @GetMapping("/printers")
     public ApiResponse<List<PrinterConfig>> getPrinters(@RequestParam Long store_id) {
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         requirePrintingAccess(store_id);
         return ApiResponse.success(printerConfigService.getPrinters(store_id));
     }
 
     @PostMapping("/printers")
     public ApiResponse<PrinterConfig> createPrinter(@RequestBody PrinterConfig printerConfig) {
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         requirePrintingAccess(printerConfig.store_id);
         return ApiResponse.success("Printer saved", printerConfigService.savePrinter(printerConfig));
     }
 
     @PutMapping("/printers/{id}")
     public ApiResponse<PrinterConfig> updatePrinter(@PathVariable Long id, @RequestBody PrinterConfig printerConfig) {
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         requirePrintingAccess(printerConfig.store_id);
         printerConfig.id = id;
         return ApiResponse.success("Printer updated", printerConfigService.savePrinter(printerConfig));
@@ -123,7 +126,6 @@ public class OwnerPrintingController {
 
     @DeleteMapping("/printers/{id}")
     public ApiResponse<Boolean> deletePrinter(@PathVariable Long id, @RequestParam Long store_id) {
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         requirePrintingAccess(store_id);
         printerConfigService.deletePrinter(id, store_id);
         return ApiResponse.success("Printer deleted", true);
@@ -131,7 +133,6 @@ public class OwnerPrintingController {
 
     @PutMapping("/status")
     public ApiResponse<Boolean> updatePrintingStatus(@RequestBody StorePrintingStatusRequest request, HttpServletRequest servletRequest) {
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         var user = requirePrintingAccess(request.store_id);
         if (request.printing_mode != null && !request.printing_mode.isBlank()) {
             String mode = printerConfigService.updateStorePrintingMode(request.store_id, request.printing_mode);
@@ -145,14 +146,12 @@ public class OwnerPrintingController {
 
     @GetMapping("/assignments")
     public ApiResponse<List<PrinterAssignment>> getAssignments(@RequestParam Long store_id) {
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         requirePrintingAccess(store_id);
         return ApiResponse.success(printerAssignmentService.getAssignments(store_id));
     }
 
     @PutMapping("/assignments/{moduleCode}")
     public ApiResponse<PrinterAssignment> updateAssignment(@PathVariable String moduleCode, @RequestBody PrinterAssignmentUpdateRequest request, HttpServletRequest servletRequest) {
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         var user = requirePrintingAccess(request.store_id);
         request.module_code = moduleCode;
         PrinterAssignment assignment = printerAssignmentService.saveAssignment(request);
@@ -162,7 +161,6 @@ public class OwnerPrintingController {
 
     @PostMapping("/printers/test")
     public ApiResponse<PrinterTestResponse> testPrint(@RequestBody PrinterTestRequest request) {
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         requirePrintingAccess(request.store_id);
         PrinterTestResponse response = printDispatcherService.testPrint(request);
         return ApiResponse.success(response.success ? "Test print sent" : "Test print failed", response);
@@ -170,7 +168,6 @@ public class OwnerPrintingController {
 
     @PostMapping("/printers/connection-test")
     public ApiResponse<PrinterConnectionTestResponse> testConnection(@RequestBody PrinterConnectionTestRequest request) {
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         requirePrintingAccess(request.store_id);
         PrinterConnectionTestResponse response = printDispatcherService.testConnection(request);
         return ApiResponse.success(response.success ? "Printer connection successful" : "Printer connection failed", response);
@@ -186,14 +183,12 @@ public class OwnerPrintingController {
         @RequestParam(required = false) LocalDate startDate,
         @RequestParam(required = false) LocalDate endDate
     ) {
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         requirePrintingAccess(store_id);
         return ApiResponse.success(printJobService.searchJobs(store_id, status, orderId, moduleCode, printerId, startDate, endDate));
     }
 
     @PostMapping("/jobs/{jobId}/reprint")
     public ApiResponse<PrintJobResponse> reprintJob(@PathVariable Long jobId, HttpServletRequest servletRequest) {
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         var job = printJobService.requireJob(jobId);
         var user = requirePrintingAccess(job.store_id);
         PrintJobResponse response = printDispatcherService.reprintJob(jobId, user.userId());
@@ -207,7 +202,6 @@ public class OwnerPrintingController {
         @RequestBody(required = false) PrintJobAttentionAcknowledgeRequest request,
         HttpServletRequest servletRequest
     ) {
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         var job = printJobService.requireJob(jobId);
         var user = requirePrintingAccess(job.store_id);
         String note = request == null ? null : request.note;
@@ -248,17 +242,18 @@ public class OwnerPrintingController {
     }
 
     private com.restaurant.system.common.auth.AuthenticatedUser requirePrintingAccess(Long storeId) {
-        return authorizationService.requireForStore(
+        var user = authorizationService.requireForStore(
             storeId,
             Capability.ADMIN_PRINTING_MANAGE,
             Capability.ADMIN_STORE_CONFIG
         );
+        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.PRINTING);
+        return user;
     }
 
     @PostMapping("/printers/font-size-test")
     public ApiResponse<PrinterTestResponse> testCurrentFontSize(@RequestBody PrinterTestRequest request) {
         featureFlagService.requireEnabled(FeaturePackage.DEVELOPER_TOOLS);
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         requirePrintingAccess(request.store_id);
         PrinterTestResponse response = printDispatcherService.testCurrentFontSize(request);
         return ApiResponse.success(response.success ? "Current font size test sent" : "Current font size test failed", response);
@@ -266,7 +261,6 @@ public class OwnerPrintingController {
 
     @PostMapping("/modules/test")
     public ApiResponse<PrinterTestResponse> testAssignedModule(@RequestBody ModuleAssignmentTestRequest request) {
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         requirePrintingAccess(request.store_id);
         PrinterTestResponse response = printDispatcherService.testAssignedModulePrint(request);
         return ApiResponse.success(response.success ? "Module test print sent" : "Module test print failed", response);
@@ -275,7 +269,6 @@ public class OwnerPrintingController {
     @PostMapping("/printers/encoding-test")
     public ApiResponse<PrinterEncodingTestResponse> testEncodings(@RequestBody PrinterEncodingTestRequest request) {
         featureFlagService.requireEnabled(FeaturePackage.DEVELOPER_TOOLS);
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         requirePrintingAccess(request.store_id);
         PrinterEncodingTestResponse response = printDispatcherService.testEncodings(request);
         return ApiResponse.success(response.success ? "Encoding test tickets sent" : "One or more encoding tests failed", response);
@@ -284,7 +277,6 @@ public class OwnerPrintingController {
     @PostMapping("/grab-font-test")
     public ApiResponse<GrabFontTestResponse> testGrabFontModes(@RequestBody GrabFontTestRequest request) {
         featureFlagService.requireEnabled(FeaturePackage.DEVELOPER_TOOLS);
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         requirePrintingAccess(request.store_id);
         GrabFontTestResponse response = printDispatcherService.testGrabFontModes(request);
         return ApiResponse.success(response.success ? "GRAB font size test tickets sent" : "One or more GRAB font tests failed", response);

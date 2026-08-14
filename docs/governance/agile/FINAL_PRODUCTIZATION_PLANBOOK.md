@@ -233,6 +233,27 @@ no-mutation, and must stop at:
 PHASE_A5_5_OWNER_ACCEPTANCE_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
 ```
 
+Owner manual acceptance of A5.5 is now PASS. A5.6 is complete as the formal
+current-Staging anti-drift architecture baseline:
+[Current Staging Architecture UML Baseline](../../architecture/current-staging/README.md).
+The formal baseline is fresh main/deployed Staging
+`923346f15757ca85fdafb509a803e87f04ae55bd` at Flyway V16.
+
+Current continuous execution proceeds through:
+
+```text
+PHASE_A6_BACKEND_MODULE_GATING
+→ PHASE_A7_FRONTEND_MODULE_GATING
+```
+
+A6 backend module gating evidence:
+[PHASE_A6_BACKEND_MODULE_GATING_EVIDENCE](PHASE_A6_BACKEND_MODULE_GATING_EVIDENCE.md).
+After A7 exact-SHA Staging validation, stop before A8:
+
+```text
+PHASE_A7_FRONTEND_MODULE_GATING_COMPLETE_WAITING_FOR_PHASE_A8_OWNER_CONTINUATION
+```
+
 Owner final manual retest found one remaining UI-only blocker in Combo
 Configuration sort-control layout. The bounded
 `PHASE_A5_5_COMBO_CONFIGURATION_SORT_CONTROL_UI_REPAIR` may change only

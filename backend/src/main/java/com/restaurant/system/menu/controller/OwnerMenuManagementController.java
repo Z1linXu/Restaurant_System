@@ -13,6 +13,8 @@ import com.restaurant.system.menu.entity.MenuCategory;
 import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.repository.MenuCategoryRepository;
 import com.restaurant.system.menu.service.OwnerMenuStructureService;
+import com.restaurant.system.modules.ModuleKeys;
+import com.restaurant.system.modules.StoreModuleAccessEvaluator;
 import com.restaurant.system.menu.service.OwnerMenuItemOrderingService;
 import com.restaurant.system.station.entity.Station;
 import com.restaurant.system.station.repository.StationRepository;
@@ -42,6 +44,7 @@ public class OwnerMenuManagementController {
     private final OwnerMenuItemOrderingService ownerMenuItemOrderingService;
     private final OwnerMenuStructureService ownerMenuStructureService;
     private final AuditLogService auditLogService;
+    private final StoreModuleAccessEvaluator moduleAccessEvaluator;
 
     public OwnerMenuManagementController(
         AuthorizationService authorizationService,
@@ -50,7 +53,8 @@ public class OwnerMenuManagementController {
         StationRepository stationRepository,
         OwnerMenuItemOrderingService ownerMenuItemOrderingService,
         OwnerMenuStructureService ownerMenuStructureService,
-        AuditLogService auditLogService
+        AuditLogService auditLogService,
+        StoreModuleAccessEvaluator moduleAccessEvaluator
     ) {
         this.authorizationService = authorizationService;
         this.storeRepository = storeRepository;
@@ -59,11 +63,13 @@ public class OwnerMenuManagementController {
         this.ownerMenuItemOrderingService = ownerMenuItemOrderingService;
         this.ownerMenuStructureService = ownerMenuStructureService;
         this.auditLogService = auditLogService;
+        this.moduleAccessEvaluator = moduleAccessEvaluator;
     }
 
     @GetMapping("/management-context")
     public ApiResponse<MenuManagementContextResponse> getManagementContext(@RequestParam Long store_id) {
         authorizationService.requireForStore(store_id, Capability.ADMIN_MENU_MANAGE, Capability.ADMIN_STORE_CONFIG);
+        requireMenuManagement(store_id);
 
         MenuManagementContextResponse response = new MenuManagementContextResponse();
         response.stores = java.util.List.of(
@@ -93,6 +99,7 @@ public class OwnerMenuManagementController {
         HttpServletRequest servletRequest
     ) {
         var user = authorizationService.requireForStore(store_id, Capability.ADMIN_MENU_MANAGE, Capability.ADMIN_STORE_CONFIG);
+        requireMenuManagement(store_id);
         MenuCategory response = ownerMenuStructureService.createCategory(store_id, request);
         auditLogService.record(
             store_id,
@@ -115,6 +122,7 @@ public class OwnerMenuManagementController {
         HttpServletRequest servletRequest
     ) {
         var user = authorizationService.requireForStore(store_id, Capability.ADMIN_MENU_MANAGE, Capability.ADMIN_STORE_CONFIG);
+        requireMenuManagement(store_id);
         MenuCategory response = ownerMenuStructureService.updateCategory(store_id, categoryId, request);
         auditLogService.record(
             store_id,
@@ -136,6 +144,7 @@ public class OwnerMenuManagementController {
         HttpServletRequest servletRequest
     ) {
         var user = authorizationService.requireForStore(store_id, Capability.ADMIN_MENU_MANAGE, Capability.ADMIN_STORE_CONFIG);
+        requireMenuManagement(store_id);
         List<MenuCategory> response = ownerMenuStructureService.deleteCategory(store_id, categoryId);
         auditLogService.record(
             store_id,
@@ -157,6 +166,7 @@ public class OwnerMenuManagementController {
         HttpServletRequest servletRequest
     ) {
         var user = authorizationService.requireForStore(store_id, Capability.ADMIN_MENU_MANAGE, Capability.ADMIN_STORE_CONFIG);
+        requireMenuManagement(store_id);
         Station response = ownerMenuStructureService.createStation(store_id, request);
         auditLogService.record(
             store_id,
@@ -179,6 +189,7 @@ public class OwnerMenuManagementController {
         HttpServletRequest servletRequest
     ) {
         var user = authorizationService.requireForStore(store_id, Capability.ADMIN_MENU_MANAGE, Capability.ADMIN_STORE_CONFIG);
+        requireMenuManagement(store_id);
         Station response = ownerMenuStructureService.updateStation(store_id, stationId, request);
         auditLogService.record(
             store_id,
@@ -200,6 +211,7 @@ public class OwnerMenuManagementController {
         HttpServletRequest servletRequest
     ) {
         var user = authorizationService.requireForStore(store_id, Capability.ADMIN_MENU_MANAGE, Capability.ADMIN_STORE_CONFIG);
+        requireMenuManagement(store_id);
         List<Station> response = ownerMenuStructureService.deleteStation(store_id, stationId);
         auditLogService.record(
             store_id,
@@ -228,6 +240,7 @@ public class OwnerMenuManagementController {
             Capability.ADMIN_MENU_MANAGE,
             Capability.ADMIN_STORE_CONFIG
         );
+        requireMenuManagement(request.store_id);
         List<MenuItem> response = ownerMenuItemOrderingService.reorder(
             request.store_id,
             categoryId,
@@ -244,5 +257,9 @@ public class OwnerMenuManagementController {
             servletRequest
         );
         return ApiResponse.success("Menu item order updated", response);
+    }
+
+    private void requireMenuManagement(Long storeId) {
+        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.MENU_MANAGEMENT);
     }
 }

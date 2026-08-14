@@ -7,9 +7,9 @@ identity observed read-only.
 
 ## Current runtime/source SHA
 
-- Repository source SHA: `5f4504d23135655f63d564301f8e98f3218347b2`
-- Deployed Staging SHA: `3440fddad7571409c66189e44976658921e5de1f`
-- Staging Flyway: `V15`
+- Repository source SHA: `923346f15757ca85fdafb509a803e87f04ae55bd`
+- Deployed Staging SHA: `923346f15757ca85fdafb509a803e87f04ae55bd`
+- Staging Flyway: `V16`
 - Host observed through canonical access: `VM-0-5-ubuntu`
 - Deployment root: `/srv/restaurant-pos/staging`
 
@@ -24,7 +24,7 @@ restart, Production promotion, or Production access.
 flowchart TB
     operator["Authorized operator / Codex session"] --> ssh["Canonical SSH access<br/>restaurant-prod alias"]
     ssh --> root["/srv/restaurant-pos/staging"]
-    root --> current["current release binding<br/>STAGING_COMMIT_SHA=3440fdd..."]
+    root --> current["current release binding<br/>STAGING_COMMIT_SHA=923346f..."]
     root --> env["private Staging environment<br/>safe keys only"]
     root --> compose["docker compose project<br/>restaurant-pos-staging"]
 
@@ -33,7 +33,7 @@ flowchart TB
     compose --> db["db container<br/>PostgreSQL 16"]
     nginx --> backend
     backend --> db
-    backend --> flyway["Flyway schema history<br/>max successful version V15"]
+    backend --> flyway["Flyway schema history<br/>max successful version V16"]
     backend --> ws["WebSocket readiness<br/>/ws/info HTTP 200"]
 
     printEnv["STAGING_PRINT_MODE=MOCK<br/>allowed modes DISABLED,MOCK<br/>endpoint config disabled"] --> backend
@@ -45,7 +45,7 @@ flowchart TB
 - Staging uses its own compose project and database container.
 - Staging HTTP is loopback-bound on the host.
 - The current application SHA and repository source SHA may differ; this
-  baseline records both.
+  baseline records both. For this formal baseline they match at `923346f...`.
 - Staging deploy/restart/Flyway execution is not part of this documentation
   package.
 - Production deployment, Production restart, Production Flyway and Production

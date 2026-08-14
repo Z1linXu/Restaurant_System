@@ -3,6 +3,7 @@ package com.restaurant.system.printing.controller;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -16,6 +17,7 @@ import com.restaurant.system.common.auth.AuthorizationService;
 import com.restaurant.system.common.auth.Capability;
 import com.restaurant.system.common.feature.FeatureFlagService;
 import com.restaurant.system.common.feature.FeaturePackage;
+import com.restaurant.system.modules.StoreModuleAccessEvaluator;
 import com.restaurant.system.printing.dto.PrintCenterOverviewResponse;
 import com.restaurant.system.printing.dto.PrintJobResponse;
 import com.restaurant.system.printing.dto.PrinterAssignmentUpdateRequest;
@@ -35,6 +37,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.InOrder;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -54,6 +57,8 @@ class OwnerPrintingControllerDisabledStateTest {
     private AuthorizationService authorizationService;
     @Mock
     private FeatureFlagService featureFlagService;
+    @Mock
+    private StoreModuleAccessEvaluator moduleAccessEvaluator;
 
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
@@ -66,7 +71,8 @@ class OwnerPrintingControllerDisabledStateTest {
             printDispatcherService,
             printJobService,
             authorizationService,
-            featureFlagService
+            featureFlagService,
+            moduleAccessEvaluator
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
         objectMapper = new ObjectMapper();
@@ -98,6 +104,14 @@ class OwnerPrintingControllerDisabledStateTest {
         mockMvc.perform(get("/api/v1/admin/printing/printers").param("store_id", "1"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data", hasSize(1)));
+
+        InOrder orderedAccess = inOrder(authorizationService, moduleAccessEvaluator);
+        orderedAccess.verify(authorizationService).requireForStore(
+            1L,
+            Capability.ADMIN_PRINTING_MANAGE,
+            Capability.ADMIN_STORE_CONFIG
+        );
+        orderedAccess.verify(moduleAccessEvaluator).requireCapability(1L, "PRINTING");
     }
 
     @Test

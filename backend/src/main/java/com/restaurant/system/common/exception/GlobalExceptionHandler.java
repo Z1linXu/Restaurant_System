@@ -4,6 +4,7 @@ import com.restaurant.system.common.auth.ForbiddenException;
 import com.restaurant.system.common.auth.UnauthorizedException;
 import com.restaurant.system.common.feature.FeatureDisabledException;
 import com.restaurant.system.common.response.ApiResponse;
+import com.restaurant.system.modules.ModuleAccessException;
 import com.restaurant.system.order.exception.OrderSubmissionException;
 import com.restaurant.system.owner.exception.OwnerStoreMenuCloneException;
 import com.restaurant.system.owner.exception.OwnerStoreOnboardingException;
@@ -60,7 +61,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(FeatureDisabledException.class)
     public ResponseEntity<ApiResponse<Void>> handleFeatureDisabledException(FeatureDisabledException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.failure(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.failure("FEATURE_DISABLED", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ModuleAccessException.class)
+    public ResponseEntity<ApiResponse<Void>> handleModuleAccessException(ModuleAccessException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.failure(ex.getErrorCode(), ex.getMessage()));
     }
 
     @ExceptionHandler({

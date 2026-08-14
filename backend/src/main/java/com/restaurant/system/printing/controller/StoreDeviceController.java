@@ -2,14 +2,15 @@ package com.restaurant.system.printing.controller;
 
 import com.restaurant.system.common.auth.AuthorizationService;
 import com.restaurant.system.common.auth.Capability;
-import com.restaurant.system.common.feature.FeatureFlagService;
-import com.restaurant.system.common.feature.FeaturePackage;
 import com.restaurant.system.common.response.ApiResponse;
+import com.restaurant.system.modules.ModuleKeys;
+import com.restaurant.system.modules.StoreModuleAccessEvaluator;
 import com.restaurant.system.printing.dto.DeviceHeartbeatRequest;
 import com.restaurant.system.printing.dto.DeviceRegisterRequest;
 import com.restaurant.system.printing.dto.DeviceRegisterResponse;
 import com.restaurant.system.printing.dto.StoreDeviceRenameRequest;
 import com.restaurant.system.printing.dto.StoreDeviceResponse;
+import com.restaurant.system.printing.entity.StoreDevice;
 import com.restaurant.system.printing.service.StoreDeviceService;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,26 +27,26 @@ public class StoreDeviceController {
 
     private final StoreDeviceService storeDeviceService;
     private final AuthorizationService authorizationService;
-    private final FeatureFlagService featureFlagService;
+    private final StoreModuleAccessEvaluator moduleAccessEvaluator;
 
     public StoreDeviceController(
         StoreDeviceService storeDeviceService,
         AuthorizationService authorizationService,
-        FeatureFlagService featureFlagService
+        StoreModuleAccessEvaluator moduleAccessEvaluator
     ) {
         this.storeDeviceService = storeDeviceService;
         this.authorizationService = authorizationService;
-        this.featureFlagService = featureFlagService;
+        this.moduleAccessEvaluator = moduleAccessEvaluator;
     }
 
     @PostMapping("/api/v1/devices/register")
     public ApiResponse<DeviceRegisterResponse> registerDevice(@RequestBody DeviceRegisterRequest request) {
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         authorizationService.requireForStore(
             request.store_id,
             Capability.ADMIN_PRINTING_MANAGE,
             Capability.ADMIN_STORE_CONFIG
         );
+        requirePrinting(request.store_id);
         return ApiResponse.success("Device registered", storeDeviceService.registerDevice(request));
     }
 
@@ -55,18 +56,19 @@ public class StoreDeviceController {
         @RequestHeader("X-Device-Token") String deviceToken,
         @RequestBody(required = false) DeviceHeartbeatRequest request
     ) {
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
+        StoreDevice device = storeDeviceService.authenticateDevice(deviceId, deviceToken);
+        requirePrinting(device.storeId);
         return ApiResponse.success(storeDeviceService.heartbeat(deviceId, deviceToken, request));
     }
 
     @GetMapping("/api/v1/admin/printing/devices")
     public ApiResponse<List<StoreDeviceResponse>> listStoreDevices(@RequestParam Long store_id) {
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         authorizationService.requireForStore(
             store_id,
             Capability.ADMIN_PRINTING_MANAGE,
             Capability.ADMIN_STORE_CONFIG
         );
+        requirePrinting(store_id);
         return ApiResponse.success(storeDeviceService.listStoreDevices(store_id));
     }
 
@@ -76,7 +78,6 @@ public class StoreDeviceController {
         @RequestParam Long store_id,
         @RequestBody StoreDeviceRenameRequest request
     ) {
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         requirePrintingDeviceManagement(store_id);
         String deviceName = request == null ? null : request.device_name;
         return ApiResponse.success("Device renamed", storeDeviceService.renameDevice(store_id, deviceId, deviceName));
@@ -87,7 +88,6 @@ public class StoreDeviceController {
         @PathVariable Long deviceId,
         @RequestParam Long store_id
     ) {
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         requirePrintingDeviceManagement(store_id);
         return ApiResponse.success("Device disabled", storeDeviceService.disableDevice(store_id, deviceId));
     }
@@ -97,7 +97,6 @@ public class StoreDeviceController {
         @PathVariable Long deviceId,
         @RequestParam Long store_id
     ) {
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         requirePrintingDeviceManagement(store_id);
         return ApiResponse.success("Device revoked", storeDeviceService.revokeDevice(store_id, deviceId));
     }
@@ -108,5 +107,10 @@ public class StoreDeviceController {
             Capability.ADMIN_PRINTING_MANAGE,
             Capability.ADMIN_STORE_CONFIG
         );
+        requirePrinting(storeId);
+    }
+
+    private void requirePrinting(Long storeId) {
+        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.PRINTING);
     }
 }

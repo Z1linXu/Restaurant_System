@@ -8,9 +8,9 @@ ordering, tables, staff access, and printing.
 
 ## Current runtime/source SHA
 
-- Repository source SHA: `5f4504d23135655f63d564301f8e98f3218347b2`
-- Deployed Staging SHA: `3440fddad7571409c66189e44976658921e5de1f`
-- Staging Flyway: `V15`
+- Repository source SHA: `923346f15757ca85fdafb509a803e87f04ae55bd`
+- Deployed Staging SHA: `923346f15757ca85fdafb509a803e87f04ae55bd`
+- Staging Flyway: `V16`
 
 ## Scope
 
@@ -25,6 +25,7 @@ erDiagram
     ORGANIZATIONS ||--o{ USERS : scopes
     STORES ||--o{ STORE_MODULES : configures
     STORES ||--o{ STORE_PRICING_POLICIES : prices
+    STORES ||--o{ STORE_COMBO_GROUPS : groups_combos
     STORES ||--o{ STORE_COMBO_COMPONENTS : offers
     STORES ||--o{ CATEGORIES : contains
     STORES ||--o{ MENU_ITEMS : sells
@@ -43,6 +44,8 @@ erDiagram
     CATEGORIES ||--o{ MENU_ITEMS : groups
     MENU_ITEMS ||--o{ MENU_ITEM_OPTIONS : allows
     MENU_ITEM_OPTIONS ||--o{ MENU_ITEM_OPTIONS : parent_child
+    STORE_COMBO_GROUPS ||--o{ STORE_COMBO_COMPONENTS : contains
+    MENU_ITEMS ||--o{ STORE_COMBO_COMPONENTS : linked_component
     STATIONS ||--o{ MENU_ITEMS : production_route
 
     ORDERS ||--o{ ORDER_ITEMS : snapshots
@@ -76,6 +79,26 @@ erDiagram
       string source
       string configuration_status
     }
+    STORE_COMBO_GROUPS {
+      bigint id PK
+      bigint store_id FK
+      string group_code
+      integer display_order
+      boolean enabled
+      boolean required
+      string selection_rule
+      string default_component_code
+    }
+    STORE_COMBO_COMPONENTS {
+      bigint id PK
+      bigint store_id FK
+      bigint group_id FK
+      bigint linked_menu_item_id FK
+      string component_code
+      string business_behavior
+      integer display_order
+      boolean enabled
+    }
     STORE_PROFILES {
       bigint id PK
       string profile_code
@@ -106,7 +129,6 @@ erDiagram
     }
     MENU_ITEM_OPTIONS {
       bigint id PK
-      bigint store_id FK
       bigint menu_item_id FK
       bigint parent_option_id FK
       string option_group
@@ -137,7 +159,8 @@ erDiagram
   repriced when menu or pricing policies change.
 - `store_pricing_policies` is the canonical Store-level Size/Combo pricing
   source.
-- `store_combo_components` is the canonical Store-level Combo contents source.
+- `store_combo_groups` and `store_combo_components` are the canonical
+  Store-level Combo contents source.
 - `menu_item_options` remains the per-item Size/Combo enablement and ordinary
   option graph.
 - `store_modules` is the canonical Store module state, while runtime
@@ -160,6 +183,7 @@ erDiagram
 - `backend/src/main/resources/db/migration/V13__add_store_modules.sql`
 - `backend/src/main/resources/db/migration/V14__add_store_profiles.sql`
 - `backend/src/main/resources/db/migration/V15__seed_st_denis_canonical_profile.sql`
+- `backend/src/main/resources/db/migration/V16__add_dynamic_menu_management_configuration.sql`
 - `backend/src/main/java/com/restaurant/system/menu/service/impl/MenuServiceImpl.java`
 - `backend/src/main/java/com/restaurant/system/order/service/impl/OrderServiceImpl.java`
 - `backend/src/main/java/com/restaurant/system/modules/StoreModuleServiceImpl.java`
