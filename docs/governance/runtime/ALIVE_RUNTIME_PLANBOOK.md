@@ -189,15 +189,19 @@ printers/assignments `4/3`, combo components `5`, staff templates `4`, and
 device slots `7`. It adds a dry-run materialization validator only; it does not
 create a Store or bind any runtime. The first exact-SHA Staging deploy attempt
 for `b83afa98d304223834793d03bfc367b4cf4238f1` preserved Staging `MOCK/true`
-printing, applied Flyway V14, then failed closed before any V15 history row:
-V15 dollar-quoted `content_json` literals began with a newline, while the A4
-PostgreSQL check uses `left(btrim(content_json), 1)` and therefore rejected the
-stored value. The bounded repair changes only V15 seed literal layout and
-updates OPS-001 Flyway checksum evidence to V15. No Store materialization,
-Production action, Flyway history edit, downgrade, destructive reset or
-runtime secret read is included. Exact-SHA Staging deploy/Flyway validation
-must be retried after the repair PR enters `main` before A5 runtime PASS can be
-claimed. Production remains no-mutation.
+printing, applied Flyway V14, then failed closed before any V15 history row
+because V15 `content_json` literals began with a newline under the A4
+PostgreSQL check. PR #145 entered `main` at
+`494497dfbf874bcf12da7eb3821a276f663959c5` and repaired only the V15 seed
+literal layout plus OPS-001 checksum evidence. Exact-SHA Staging deploy of
+`494497dfbf874bcf12da7eb3821a276f663959c5` applied Flyway V15 successfully,
+then backend startup failed closed during Hibernate schema validation because
+the A4 `fingerprint_sha256 char(64)` columns were mapped by JPA as default
+`varchar(255)`. The current bounded entity-type repair changes only Profile
+entity metadata to explicit `char(64)` and adds regression coverage. No Store
+materialization, Production action, migration, Flyway history edit, downgrade,
+destructive reset or runtime secret read is included. Production remains
+no-mutation.
 
 Phase A0 deployed evidence:
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](../agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).
@@ -216,16 +220,16 @@ A0_OWNER_UI_ACCEPTANCE = PASS_FOR_A0_1_PRICING_UX
 ```
 
 Staging is currently rebound to the A5 runtime-attempt environment but backend
-startup is fail-closed on the repaired V15 seed until the repair PR is merged
-and redeployed. The Staging database has successful Flyway V14 and no successful
-V15 row; Printing configuration remains `MOCK/true`, with four enabled logical
-printers and three enabled assignments. A1, A2 and A3 are PASS; A4 repository
-contract is in `main`; A5 requires the bounded seed-literal repair and retry.
+startup is fail-closed on the Profile entity type mapping until the repair PR
+is merged and redeployed. The Staging database has successful Flyway V15;
+Printing configuration remains `MOCK/true`, with four enabled logical printers
+and three enabled assignments. A1, A2 and A3 are PASS; A4 repository contract
+is in `main`; A5 requires the bounded entity-type repair and retry.
 Do not start A6, Phase B, Phase C, Chinatown, Sainte-Catherine or Production
 deploy from this state without a fresh Owner decision. Current A5 repair stop:
 
 ```text
-PHASE_A5_RUNTIME_SEED_LITERAL_REPAIR_READY_FOR_PR
+PHASE_A5_RUNTIME_ENTITY_TYPE_REPAIR_READY_FOR_PR
 ```
 
 ## Current final productization roadmap audit (2026-08-12)

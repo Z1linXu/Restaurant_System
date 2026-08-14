@@ -2,7 +2,9 @@ package com.restaurant.system.owner.profile;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import jakarta.persistence.Column;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
@@ -51,5 +53,20 @@ class StoreProfileMigrationTest {
             .doesNotContain("access_token")
             .doesNotContain("printer_endpoint")
             .doesNotContain("ip_address");
+    }
+
+    @Test
+    void profileFingerprintEntitiesMatchPostgresChar64Columns() throws NoSuchFieldException {
+        assertFingerprintColumnMatchesChar64(StoreProfileVersionEntity.class);
+        assertFingerprintColumnMatchesChar64(StoreProfileArtifactEntity.class);
+    }
+
+    private void assertFingerprintColumnMatchesChar64(Class<?> entityType) throws NoSuchFieldException {
+        Field field = entityType.getDeclaredField("fingerprint_sha256");
+        Column column = field.getAnnotation(Column.class);
+
+        assertThat(column.name()).isEqualTo("fingerprint_sha256");
+        assertThat(column.columnDefinition()).isEqualTo("char(64)");
+        assertThat(column.length()).isEqualTo(64);
     }
 }

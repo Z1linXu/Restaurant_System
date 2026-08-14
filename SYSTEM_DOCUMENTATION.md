@@ -141,9 +141,13 @@
 > Staging-only `MOCK/true` printing and applied Flyway V14, then V15 failed
 > closed before a history row because its `content_json` dollar literals began
 > with a newline and the A4 PostgreSQL check uses
-> `left(btrim(content_json), 1)`. The bounded repair changes only V15 seed
-> literal layout and OPS-001 Flyway checksum evidence through V15; Production
-> remains no-mutation.
+> `left(btrim(content_json), 1)`. PR #145 repaired only the V15 seed literal
+> layout and OPS-001 checksum evidence; exact-SHA Staging then applied Flyway
+> V15 successfully. Backend startup next failed closed during Hibernate schema
+> validation because the A4 Profile fingerprint columns are PostgreSQL
+> `char(64)` while the entities still mapped them as default `varchar(255)`.
+> The current bounded repair changes only Profile entity metadata to explicit
+> `char(64)` and adds regression coverage; Production remains no-mutation.
 
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The

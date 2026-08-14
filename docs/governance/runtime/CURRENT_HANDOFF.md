@@ -264,14 +264,19 @@ built the Staging images, preserved Staging `MOCK/true` printing, applied
 Flyway V14, then failed closed before a V15 history row. Root cause: V15
 `content_json` dollar-quoted values started with a newline, but the A4
 PostgreSQL check uses `left(btrim(content_json), 1)`, and `btrim` does not
-strip newline characters. The bounded repair changes only the V15 seed literal
-layout and updates OPS-001 Flyway checksum evidence through V15. Focused tests,
-full backend regression and `deployment/cloud/tests/test_staging_runtime_evidence.sh`
-pass locally; Agent 6 accepted the repair. A5 does not create a Store,
-materialize St-Denis, start A6/A7, Phase B/C, Chinatown, Sainte-Catherine or
-Production work. Current Staging database has successful Flyway V14 and no
-successful V15 row until the repair PR is merged and exact-SHA Staging retry
-applies V15.
+strip newline characters. PR #145 entered `main` at
+`494497dfbf874bcf12da7eb3821a276f663959c5` and changed only the V15 seed
+literal layout plus OPS-001 Flyway checksum evidence. Exact-SHA Staging deploy
+of `494497dfbf874bcf12da7eb3821a276f663959c5` applied Flyway V15 successfully,
+then backend startup failed closed because Hibernate schema validation saw the
+A4 `fingerprint_sha256 char(64)` columns as PostgreSQL `bpchar` while the JPA
+entities still expected default `varchar(255)`. The current bounded repair
+changes only Profile entity mapping to explicit `char(64)` and adds regression
+coverage; it adds no migration, edits no Flyway history, resets no Staging data,
+and performs no Production work. A5 does not create a Store, materialize
+St-Denis, start A6/A7, Phase B/C, Chinatown, Sainte-Catherine or Production
+work. Current Staging database has successful Flyway V15 and waits for exact-SHA
+Staging retry after the entity mapping repair enters `main`.
 
 ## Current final productization roadmap audit (2026-08-12)
 
