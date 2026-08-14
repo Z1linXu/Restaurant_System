@@ -251,18 +251,27 @@ downgrade, content/fingerprint/source/schema/profile-version/profile-binding
 rewrites; immutable artifact protection covers insert/delete/update/move under
 immutable parent versions.
 
-A5 repository implementation now adds
+A5 repository implementation entered `main` through PR #143 at
+`b83afa98d304223834793d03bfc367b4cf4238f1` and adds
 [PHASE_A5_ST_DENIS_CANONICAL_PROFILE](../agile/PHASE_A5_ST_DENIS_CANONICAL_PROFILE.md):
 Flyway V15 safe profile seed data for `ST_DENIS_CANONICAL_PROFILE/v1`, profile
 fingerprint `af1a8f34cd156c1987b74ec1a9a22ddfd004859c617937b7d53f05e16e762602`,
 and a dry-run materialization validator. Counts are categories/items/options
 `6/39/380`, parent option relationships `11`, tables `13`, stations `5`,
 logical printers/assignments `4/3`, combo components `5`, staff templates `4`,
-device slots `7`. Focused tests and full backend regression pass locally.
-Current Staging is still `c1b5e7681f24a11fbf99293567b3da08076fa3b6` / Flyway
-V13 until the A5 PR is merged and exact-SHA Staging deploy applies V15.
-A5 does not create a Store, materialize St-Denis, start A6/A7, Phase B/C,
-Chinatown, Sainte-Catherine or Production work.
+device slots `7`. The first exact-SHA Staging deploy attempt for that merge
+built the Staging images, preserved Staging `MOCK/true` printing, applied
+Flyway V14, then failed closed before a V15 history row. Root cause: V15
+`content_json` dollar-quoted values started with a newline, but the A4
+PostgreSQL check uses `left(btrim(content_json), 1)`, and `btrim` does not
+strip newline characters. The bounded repair changes only the V15 seed literal
+layout and updates OPS-001 Flyway checksum evidence through V15. Focused tests,
+full backend regression and `deployment/cloud/tests/test_staging_runtime_evidence.sh`
+pass locally; Agent 6 accepted the repair. A5 does not create a Store,
+materialize St-Denis, start A6/A7, Phase B/C, Chinatown, Sainte-Catherine or
+Production work. Current Staging database has successful Flyway V14 and no
+successful V15 row until the repair PR is merged and exact-SHA Staging retry
+applies V15.
 
 ## Current final productization roadmap audit (2026-08-12)
 

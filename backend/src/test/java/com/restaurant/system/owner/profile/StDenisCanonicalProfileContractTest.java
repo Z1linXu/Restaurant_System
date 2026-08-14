@@ -122,6 +122,16 @@ class StDenisCanonicalProfileContractTest {
     }
 
     @Test
+    void seedJsonLiteralsStartWithPostgresCheckCompatibleCharacters() {
+        assertThat(seed.sql()).doesNotContainPattern("\\$(profile_content|artifact_[a-z_]+)\\$\\R[\\{\\[]");
+        assertThat(seed.profileContentJson()).startsWith("{");
+        assertThat(seed.artifacts())
+            .allSatisfy(artifact -> assertThat(artifact.contentJson())
+                .as(artifact.artifactCode())
+                .matches("^[\\{\\[][\\s\\S]*"));
+    }
+
+    @Test
     void profileUsesProfileLocalRefsAndRejectsOrphanMenuRelationships() {
         StoreProfileArtifactInput menu = seed.artifact("MENU_TEMPLATE");
         StoreProfileArtifactInput invalidMenu = new StoreProfileArtifactInput(
@@ -205,7 +215,7 @@ class StDenisCanonicalProfileContractTest {
 
     private static SqlProfileSeed parseSeed(String sql) {
         Pattern profilePattern = Pattern.compile(
-            "\\$profile_content\\$\\n(?<json>.*?)\\n\\s*\\$profile_content\\$,\\n\\s*'(?<fingerprint>[0-9a-f]{64})'",
+            "\\$profile_content\\$(?<json>\\{.*?)\\n\\s*\\$profile_content\\$,\\n\\s*'(?<fingerprint>[0-9a-f]{64})'",
             Pattern.DOTALL
         );
         Matcher profileMatcher = profilePattern.matcher(sql);
@@ -213,7 +223,7 @@ class StDenisCanonicalProfileContractTest {
 
         Pattern artifactPattern = Pattern.compile(
             "'(?<type>[A-Z_]+)',\\n\\s*'(?<code>[A-Z_]+)',\\n\\s*'(?<version>[^']+)',\\n"
-                + "\\s*\\$(?<tag>artifact_[a-z_]+)\\$\\n(?<json>.*?)\\n\\s*\\$\\k<tag>\\$,\\n"
+                + "\\s*\\$(?<tag>artifact_[a-z_]+)\\$(?<json>[\\{\\[].*?)\\n\\s*\\$\\k<tag>\\$,\\n"
                 + "\\s*'(?<fingerprint>[0-9a-f]{64})'",
             Pattern.DOTALL
         );

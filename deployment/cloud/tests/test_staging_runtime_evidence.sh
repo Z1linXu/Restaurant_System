@@ -80,7 +80,7 @@ EOF
 chmod +x "$CURL_BIN"
 
 emit_evidence COLLECT >"$TMP_DIR/evidence"
-assert_contains 'OPS001_RUNTIME|COLLECT|FLYWAY|count=10|max_version=10|digest=' "$TMP_DIR/evidence"
+assert_contains 'OPS001_RUNTIME|COLLECT|FLYWAY|count=15|max_version=15|digest=' "$TMP_DIR/evidence"
 assert_contains 'OPS001_RUNTIME|COLLECT|CONTAINER|backend|backend-id|sha256:backend-id-image|0' "$TMP_DIR/evidence"
 assert_not_contains "$FLYWAY_ROWS" "$TMP_DIR/evidence"
 
