@@ -17,6 +17,42 @@ public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
     long countAllByStoreId(@Param("storeId") Long storeId);
 
     @Query("""
+        select count(i) from MenuItem i
+        where i.store_id = :storeId and i.category_id = :categoryId
+        """)
+    long countByStoreIdAndCategoryId(
+        @Param("storeId") Long storeId,
+        @Param("categoryId") Long categoryId
+    );
+
+    @Query("""
+        select count(i) from MenuItem i
+        where i.store_id = :storeId and i.category_id = :categoryId and i.is_active = true
+        """)
+    long countActiveByStoreIdAndCategoryId(
+        @Param("storeId") Long storeId,
+        @Param("categoryId") Long categoryId
+    );
+
+    @Query("""
+        select count(i) from MenuItem i
+        where i.store_id = :storeId and i.station_id = :stationId
+        """)
+    long countByStoreIdAndStationId(
+        @Param("storeId") Long storeId,
+        @Param("stationId") Long stationId
+    );
+
+    @Query("""
+        select count(i) from MenuItem i
+        where i.store_id = :storeId and i.station_id = :stationId and i.is_active = true
+        """)
+    long countActiveByStoreIdAndStationId(
+        @Param("storeId") Long storeId,
+        @Param("stationId") Long stationId
+    );
+
+    @Query("""
         select i from MenuItem i
         where i.store_id = :storeId and i.is_active = true
         order by i.category_id asc, i.sort_order asc, i.id asc

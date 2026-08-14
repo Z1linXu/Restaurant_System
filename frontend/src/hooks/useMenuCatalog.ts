@@ -2,7 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchMenuCatalog, fetchMenuRevision } from '../services/menuService'
 import { ApiRequestError } from '../services/apiClient'
 import { recordAppOperation } from '../services/networkStatus'
-import type { BackendMenuCatalog, BackendMenuItem, ChoiceOption, MenuItem, OrderingCatalog } from '../types/ordering'
+import type {
+  BackendMenuCatalog,
+  BackendMenuItem,
+  ChoiceOption,
+  ComboChoiceGroup,
+  MenuItem,
+  OrderingCatalog,
+} from '../types/ordering'
 import {
   readActiveMenuSnapshot,
   replaceActiveMenuSnapshot,
@@ -89,10 +96,22 @@ function normalizeComponentCode(value: string | null | undefined) {
   return (value ?? '').trim().toLowerCase()
 }
 
+function fnv1a32(value: string) {
+  let hash = 0x811c9dc5
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return hash >>> 0
+}
+
 function storeComboComponentOptionId(componentGroup: string | null | undefined, componentCode: string | null | undefined) {
-  return STORE_COMBO_COMPONENT_OPTION_IDS[
-    `${normalizeComponentGroup(componentGroup)}:${normalizeComponentCode(componentCode)}`
-  ]
+  const key = `${normalizeComponentGroup(componentGroup)}:${normalizeComponentCode(componentCode)}`
+  const legacyId = STORE_COMBO_COMPONENT_OPTION_IDS[key]
+  if (legacyId) {
+    return legacyId
+  }
+  return String(-300000 - (fnv1a32(key) % 600000))
 }
 
 function sortStoreComboComponents(
@@ -167,25 +186,17 @@ function buildSideItemRemoveOptionsByComponentCode(data: BackendMenuCatalog) {
   return result
 }
 
-function storeComboChoices(
-  data: BackendMenuCatalog,
-  componentGroup: 'COMBO_EGG' | 'COMBO_SIDE',
+function storeComboChoiceGroup(
+  group: NonNullable<BackendMenuCatalog['combo_configuration']>['groups'][number],
   sideItemRemoveOptionsByComponentCode: Map<string, ChoiceOption[]>,
 ) {
-  const group = data.combo_configuration?.groups.find(
-    (candidate) => normalizeComponentGroup(candidate.component_group) === componentGroup,
-  )
-  if (!group) {
-    return []
-  }
-  return group.components
+  const groupCode = normalizeComponentGroup(group.group_code ?? group.component_group)
+  const options = group.components
     .filter((component) => component.enabled)
     .sort(sortStoreComboComponents)
     .map((component) => {
-      const id = storeComboComponentOptionId(component.component_group, component.component_code)
-      if (!id) {
-        return null
-      }
+      const componentGroup = normalizeComponentGroup(component.component_group || groupCode)
+      const id = storeComboComponentOptionId(componentGroup, component.component_code)
       const option: ChoiceOption = {
         id,
         labelEn: component.name_en,
@@ -193,7 +204,7 @@ function storeComboChoices(
         priceDelta: 0,
         optionType: 'addon',
         optionCode: component.component_code,
-        optionGroup: component.component_group,
+        optionGroup: componentGroup,
         parentOptionId: null,
         sortOrder: component.display_order,
       }
@@ -203,7 +214,30 @@ function storeComboChoices(
       }
       return option
     })
-    .filter((option): option is ChoiceOption => option != null)
+  const defaultComponentCode = normalizeComponentCode(group.default_component_code)
+  const defaultOptionId = options.find((option) => normalizeComponentCode(option.optionCode) === defaultComponentCode)?.id
+    ?? options[0]?.id
+  return {
+    groupId: group.group_id == null ? undefined : String(group.group_id),
+    groupCode,
+    labelEn: group.name_en,
+    labelZh: group.name_zh,
+    selectionRule: group.selection_rule ?? 'EXACTLY_ONE',
+    required: group.required ?? (group.selection_rule !== 'OPTIONAL_ONE'),
+    defaultOptionId,
+    options,
+  } satisfies ComboChoiceGroup
+}
+
+function storeComboChoiceGroups(
+  data: BackendMenuCatalog,
+  sideItemRemoveOptionsByComponentCode: Map<string, ChoiceOption[]>,
+) {
+  return (data.combo_configuration?.groups ?? [])
+    .filter((group) => group.enabled ?? true)
+    .sort((left, right) => (left.display_order ?? 999999) - (right.display_order ?? 999999))
+    .map((group) => storeComboChoiceGroup(group, sideItemRemoveOptionsByComponentCode))
+    .filter((group) => group.options.length > 0)
 }
 
 function isFreeToggleAddOn(option: ChoiceOption) {
@@ -212,8 +246,10 @@ function isFreeToggleAddOn(option: ChoiceOption) {
 
 export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
   const sideItemRemoveOptionsByComponentCode = buildSideItemRemoveOptionsByComponentCode(data)
-  const storeComboEggs = storeComboChoices(data, 'COMBO_EGG', sideItemRemoveOptionsByComponentCode)
-  const storeComboSides = storeComboChoices(data, 'COMBO_SIDE', sideItemRemoveOptionsByComponentCode)
+  const storeComboGroups = storeComboChoiceGroups(data, sideItemRemoveOptionsByComponentCode)
+  const storeComboEggs = storeComboGroups.find((group) => group.groupCode === 'COMBO_EGG')?.options ?? []
+  const storeComboSides = storeComboGroups.find((group) => group.groupCode === 'COMBO_SIDE')?.options ?? []
+  const storeComboGroupCodes = new Set(storeComboGroups.map((group) => group.groupCode))
 
   const categories = data.categories.map((category) => ({
     id: String(category.id),
@@ -243,19 +279,21 @@ export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
           ? {
               combo: (() => {
                 const comboUpcharge = allOptions.find(isComboUpcharge)
-                const comboEggs = storeComboEggs
-                const comboSides = storeComboSides
+                const requiredGroupsReady = storeComboGroups
+                  .filter((group) => group.required)
+                  .every((group) => group.options.length > 0)
                 const comboSideRemoves = allOptions.filter(isComboSideRemove)
-                if (!comboUpcharge || comboEggs.length === 0 || comboSides.length === 0) {
+                if (!comboUpcharge || storeComboGroups.length === 0 || !requiredGroupsReady) {
                   return undefined
                 }
                 return {
                   option: comboUpcharge,
                   optionId: comboUpcharge.id,
                   upcharge: comboUpcharge.priceDelta ?? 0,
-                  eggs: comboEggs,
-                  sides: comboSides,
-                  sideRemoveOptions: buildSideRemoveOptions(comboSides, comboSideRemoves),
+                  groups: storeComboGroups,
+                  eggs: storeComboEggs,
+                  sides: storeComboSides,
+                  sideRemoveOptions: buildSideRemoveOptions(storeComboSides, comboSideRemoves),
                 }
               })(),
               sizes: optionsByType.size?.length
@@ -273,7 +311,9 @@ export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
               noodleTypes: optionsByType.noodle_type,
               spicyLevels: optionsByType.spicy_level,
               addOns: (optionsByType.addon ?? [])
-                .filter((option) => !isComboUpcharge(option) && !isComboEgg(option) && !isComboSide(option))
+                .filter((option) => !isComboUpcharge(option))
+                .filter((option) => !storeComboGroupCodes.has(normalizeComponentGroup(option.optionGroup)))
+                .filter((option) => !isComboEgg(option) && !isComboSide(option))
                 .sort((left, right) => {
                   const leftRank = isFreeToggleAddOn(left) ? 0 : 1
                   const rightRank = isFreeToggleAddOn(right) ? 0 : 1

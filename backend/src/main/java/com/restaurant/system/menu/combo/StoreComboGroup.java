@@ -11,8 +11,8 @@ import lombok.Data;
 
 @Data
 @Entity
-@Table(name = "store_combo_components")
-public class StoreComboComponent {
+@Table(name = "store_combo_groups")
+public class StoreComboGroup {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,14 +22,8 @@ public class StoreComboComponent {
     @Column(name = "store_id", nullable = false)
     public Long store_id;
 
-    @Column(name = "group_id", nullable = false)
-    public Long group_id;
-
-    @Column(name = "component_group", nullable = false)
-    public String component_group;
-
-    @Column(name = "component_code", nullable = false)
-    public String component_code;
+    @Column(name = "group_code", nullable = false)
+    public String group_code;
 
     @Column(name = "name_zh", nullable = false)
     public String name_zh;
@@ -37,17 +31,20 @@ public class StoreComboComponent {
     @Column(name = "name_en", nullable = false)
     public String name_en;
 
+    @Column(name = "selection_rule", nullable = false)
+    public String selection_rule;
+
+    @Column(name = "required", nullable = false)
+    public Boolean required;
+
     @Column(name = "enabled", nullable = false)
     public Boolean enabled;
 
     @Column(name = "display_order", nullable = false)
     public Integer display_order;
 
-    @Column(name = "linked_menu_item_id")
-    public Long linked_menu_item_id;
-
-    @Column(name = "business_behavior", nullable = false)
-    public String business_behavior;
+    @Column(name = "default_component_code")
+    public String default_component_code;
 
     @Column(name = "archived_at")
     public LocalDateTime archived_at;

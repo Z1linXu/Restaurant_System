@@ -12,6 +12,7 @@ import {
 import { ApiRequestError } from '../../services/apiClient'
 import { MenuOptionsPanel } from './MenuOptionsPanel'
 import { ComboConfigurationPanel } from './ComboConfigurationPanel'
+import { CategoryManagementPanel, StationManagementPanel } from './MenuStructurePanels'
 import { PricingRulesPanel } from './PricingRulesPanel'
 import { useAuth } from '../auth/useAuth'
 import { useCurrentStore } from '../store/StoreContext'
@@ -46,6 +47,7 @@ type ToastState =
   | null
 
 type StatusFilter = 'all' | 'active' | 'inactive' | 'sold_out' | 'available'
+type MenuManagementSection = 'menu_items' | 'categories' | 'stations' | 'combo' | 'pricing'
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('en-CA', {
@@ -143,6 +145,7 @@ export function MenuManagementPage() {
   const [reorderMode, setReorderMode] = useState(false)
   const [filtersBeforeReorder, setFiltersBeforeReorder] = useState<MenuItemReorderFilters | null>(null)
   const [rebuildDate, setRebuildDate] = useState(new Date().toISOString().slice(0, 10))
+  const [activeSection, setActiveSection] = useState<MenuManagementSection>('menu_items')
 
   const loadOverview = async (storeId: number) => {
     setLoading(true)
@@ -210,7 +213,7 @@ export function MenuManagementPage() {
         .filter((station) => Number(station.store_id) === Number(selectedStoreId))
         .map((station) => ({
           id: asNumber(station.id),
-          label: `${asString(station.name)} (${asString(station.code)})`,
+          label: `${asString(station.name_zh, asString(station.name))} / ${asString(station.name_en, asString(station.name))} (${asString(station.code)})`,
         })),
     [overview, selectedStoreId],
   )
@@ -526,6 +529,14 @@ export function MenuManagementPage() {
     }
   }
 
+  const refreshMenuManagement = async () => {
+    await loadOverview(Number(selectedStoreId))
+  }
+
+  const showToast = (message: string, kind: 'success' | 'error' = 'success') => {
+    setToast({ kind, message })
+  }
+
   return (
     <div className="space-y-5">
             <div className="rounded-[28px] bg-[rgba(255,255,255,0.84)] px-5 py-4 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
@@ -606,16 +617,67 @@ export function MenuManagementPage() {
               </div>
             ) : null}
 
-            <ComboConfigurationPanel
-              storeId={Number(selectedStoreId)}
-              onSaved={(message) => setToast({ kind: 'success', message })}
-            />
+            <div className="flex flex-wrap gap-2 rounded-[22px] bg-[rgba(255,255,255,0.72)] p-2 shadow-[0_12px_24px_rgba(26,28,25,0.04)]">
+              {[
+                ['menu_items', 'Menu Items'],
+                ['categories', 'Categories'],
+                ['stations', 'Stations'],
+                ['combo', 'Combo Configuration'],
+                ['pricing', 'Pricing Rules'],
+              ].map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setActiveSection(key as MenuManagementSection)}
+                  className={`rounded-[16px] px-4 py-2.5 text-[0.86rem] font-semibold ${
+                    activeSection === key
+                      ? 'bg-[var(--primary)] text-white shadow-[0_10px_20px_rgba(97,0,0,0.14)]'
+                      : 'bg-white text-[var(--on-surface)]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
 
-            <PricingRulesPanel
-              storeId={Number(selectedStoreId)}
-              onSaved={(message) => setToast({ kind: 'success', message })}
-            />
+            {activeSection === 'categories' ? (
+              <CategoryManagementPanel
+                storeId={Number(selectedStoreId)}
+                records={overview?.menu_categories ?? []}
+                onChanged={refreshMenuManagement}
+                setToast={showToast}
+              />
+            ) : null}
 
+            {activeSection === 'stations' ? (
+              <StationManagementPanel
+                storeId={Number(selectedStoreId)}
+                records={overview?.stations ?? []}
+                onChanged={refreshMenuManagement}
+                setToast={showToast}
+              />
+            ) : null}
+
+            {activeSection === 'combo' ? (
+              <ComboConfigurationPanel
+                storeId={Number(selectedStoreId)}
+                menuItems={menuItems.map((item) => ({
+                  ...item,
+                  base_price: item.base_price,
+                  cost_per_item: item.cost_per_item,
+                }))}
+                onSaved={(message) => setToast({ kind: 'success', message })}
+              />
+            ) : null}
+
+            {activeSection === 'pricing' ? (
+              <PricingRulesPanel
+                storeId={Number(selectedStoreId)}
+                onSaved={(message) => setToast({ kind: 'success', message })}
+              />
+            ) : null}
+
+            {activeSection === 'menu_items' ? (
             <div className="grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_420px]">
               <div className="rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
                 <div className="flex flex-wrap items-end justify-between gap-3">
@@ -1018,6 +1080,7 @@ export function MenuManagementPage() {
                 />
               ) : null}
             </div>
+            ) : null}
     </div>
   )
 }

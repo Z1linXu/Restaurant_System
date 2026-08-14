@@ -218,7 +218,10 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         Long previousStoreId = target.store_id;
         target.store_id = station.store_id;
         target.name = station.name;
+        target.name_zh = firstNonBlank(station.name_zh, station.name);
+        target.name_en = firstNonBlank(station.name_en, station.name);
         target.code = station.code;
+        target.station_type = firstNonBlank(station.station_type, "KITCHEN");
         target.sort_order = station.sort_order;
         target.is_active = station.is_active == null ? true : station.is_active;
         stamp(target, station.id == null);
@@ -451,6 +454,9 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
                 station.store_id = storeId;
                 station.code = seed.code();
                 station.name = seed.name();
+                station.name_zh = seed.name();
+                station.name_en = seed.name();
+                station.station_type = "KITCHEN";
                 station.sort_order = seed.sort_order();
                 station.is_active = seed.is_active();
                 stamp(station, true);
@@ -607,6 +613,13 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
             entity.setCreated_at(LocalDateTime.now());
         }
         entity.setUpdated_at(LocalDateTime.now());
+    }
+
+    private String firstNonBlank(String first, String second) {
+        if (first != null && !first.isBlank()) {
+            return first;
+        }
+        return second;
     }
 
     private String extractNaturalPrefix(String value) {

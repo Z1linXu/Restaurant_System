@@ -25,8 +25,17 @@ public class Station {
     @Column(name = "name")
     public String name;
 
+    @Column(name = "name_zh")
+    public String name_zh;
+
+    @Column(name = "name_en")
+    public String name_en;
+
     @Column(name = "code")
     public String code;
+
+    @Column(name = "station_type")
+    public String station_type;
 
     @Column(name = "sort_order")
     public Integer sort_order;
@@ -39,4 +48,7 @@ public class Station {
 
     @Column(name = "updated_at")
     public LocalDateTime updated_at;
+
+    @Column(name = "archived_at")
+    public LocalDateTime archived_at;
 }

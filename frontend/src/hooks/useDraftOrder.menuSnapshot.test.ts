@@ -43,6 +43,7 @@ const menuItem: MenuItem = {
 const draft: ItemCustomizationDraft = {
   sizeId: '30',
   comboEnabled: false,
+  comboSelections: {},
   comboSideRemoveIds: [],
   addOnQuantities: { '40': 1 },
   removeIds: [],

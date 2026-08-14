@@ -67,6 +67,18 @@
 > profile is a safe versioned template only; these endpoints do not materialize
 > a Store, issue auth material, bind printers/devices or mutate Production.
 
+> Phase A5.5 Menu Management Configurability (2026-08-14): the previously
+> planned A5.5 UML baseline is deferred to A5.6. A5.5 adds dynamic
+> Store-scoped Combo Groups/Components, Category management, and Station
+> management. Flyway V16 introduces `store_combo_groups`, extends
+> `store_combo_components`, and extends `stations` with bilingual names and
+> controlled station type. The Store Combo Configuration API now accepts a
+> generic `groups[]` payload; the legacy flat `components[]` toggle payload
+> remains as a rollback-compatible bridge. Category/station mutations use the
+> same Store-scoped Menu Management authority and advance `stores.menu_revision`
+> / `stores.menu_updated_at` in the same transaction. Production remains
+> no-mutation.
+
 > Final productization Phase A0 boundary (2026-08-13): Size configuration uses
 > the existing menu option/modifier APIs rather than a second size engine.
 > `MenuItem -> SizeVariant[1..N]` is represented by `menu_item_options` rows
@@ -672,11 +684,19 @@ Response behavior:
   - `store_id`
   - `menu_revision`
   - `groups[]`
+    - `group_id`
+    - `group_code`
     - `component_group`
     - `name_zh`
     - `name_en`
+    - `selection_rule`
+    - `required`
+    - `enabled`
+    - `display_order`
     - `default_component_code`
     - `components[]`
+      - `id`
+      - `group_id`
       - `component_group`
       - `component_code`
       - `name_zh`
@@ -684,6 +704,11 @@ Response behavior:
       - `enabled`
       - `display_order`
       - `is_default`
+      - `linked_menu_item_id`
+      - `linked_menu_item_sku`
+      - `linked_menu_item_name_zh`
+      - `linked_menu_item_name_en`
+      - `business_behavior`
 - option payload includes:
   - `id`
   - `option_type`
@@ -712,15 +737,19 @@ Response behavior:
 - Combo upcharge rows are also system-controlled. Generic option
   create/update/deactivate/reorder routes reject Combo upcharge writes; use
   Item Combo Policy for allow/disable and Pricing Rules for Store-level delta.
-- Store-level Combo contents are system-controlled in `store_combo_components`.
-  Use Store Combo Configuration for egg/side availability. Supported first
-  catalog codes are `combo_tea_egg`, `combo_fried_egg`, `combo_edamame`,
-  `combo_shredded_potato`, and `combo_cucumber_salad`.
-- Frontdesk ordering reads Store-level egg/side choices from
+- Store-level Combo contents are configured by `store_combo_groups` and
+  `store_combo_components`. Store Combo Configuration owns group/component
+  names, enablement, display order, required/default behavior, and optional
+  business mapping. The reviewed first St-Denis catalog codes remain
+  `combo_tea_egg`, `combo_fried_egg`, `combo_edamame`,
+  `combo_shredded_potato`, and `combo_cucumber_salad`, but future Stores may
+  have different Store-scoped groups/components.
+- Frontdesk ordering reads Store-level combo choices from
   `combo_configuration`, not from item-scoped `menu_item_options`
   `COMBO_EGG`/`COMBO_SIDE` rows. Frozen order snapshots use stable negative
-  transport IDs for those Store-level choices; the IDs are not database row
-  identities.
+  transport IDs for Store-level choices; the IDs are not database row
+  identities. Legacy Egg/Side options keep their A0.2 negative IDs, and dynamic
+  components receive deterministic generated negative IDs.
 - Size and Combo deltas in new catalog responses are effective Store policy
   values from `store_pricing_policies`; Size/Combo `menu_item_options.price_delta`
   is maintained only as a rollback compatibility mirror.
@@ -820,22 +849,35 @@ Response data:
 ```json
 {
   "store_id": 1,
-  "menu_revision": 12,
+  "menu_revision": 16,
   "groups": [
     {
+      "group_id": 1,
+      "group_code": "COMBO_EGG",
       "component_group": "COMBO_EGG",
       "name_zh": "蛋类",
       "name_en": "Egg",
+      "selection_rule": "EXACTLY_ONE",
+      "required": true,
+      "enabled": true,
+      "display_order": 10,
       "default_component_code": "combo_tea_egg",
       "components": [
         {
+          "id": 1,
+          "group_id": 1,
           "component_group": "COMBO_EGG",
           "component_code": "combo_tea_egg",
           "name_zh": "卤蛋",
           "name_en": "Tea Egg",
           "enabled": true,
           "display_order": 10,
-          "is_default": true
+          "is_default": true,
+          "linked_menu_item_id": null,
+          "linked_menu_item_sku": null,
+          "linked_menu_item_name_zh": null,
+          "linked_menu_item_name_en": null,
+          "business_behavior": "NO_KITCHEN_TASK"
         }
       ]
     }
@@ -852,36 +894,128 @@ Request:
 ```json
 {
   "store_id": 1,
-  "components": [
+  "groups": [
     {
-      "component_group": "COMBO_EGG",
-      "component_code": "combo_tea_egg",
-      "enabled": true
-    },
-    {
-      "component_group": "COMBO_EGG",
-      "component_code": "combo_fried_egg",
-      "enabled": false
+      "group_id": 1,
+      "name_zh": "蛋类",
+      "name_en": "Egg",
+      "selection_rule": "EXACTLY_ONE",
+      "required": true,
+      "enabled": true,
+      "display_order": 10,
+      "default_component_code": "combo_tea_egg",
+      "components": [
+        {
+          "id": 1,
+          "name_zh": "卤蛋",
+          "name_en": "Tea Egg",
+          "enabled": true,
+          "display_order": 10,
+          "is_default": true,
+          "business_behavior": "NO_KITCHEN_TASK"
+        },
+        {
+          "name_zh": "煎蛋",
+          "name_en": "Fried Egg",
+          "enabled": true,
+          "display_order": 20,
+          "business_behavior": "NO_KITCHEN_TASK"
+        }
+      ]
     }
   ]
 }
 ```
 
-Only reviewed `COMBO_EGG` and `COMBO_SIDE` component codes are accepted. The
-write is Store-scoped, emits `COMBO_CONFIGURATION_UPDATED`, increments
-`stores.menu_revision`, and updates `stores.menu_updated_at` in the same
-transaction. If an item allows Combo but no enabled required egg/side component
-remains available for that Store, the backend rejects the update with
-`COMBO_EGG_CONFIGURATION_MISSING` or `COMBO_SIDE_CONFIGURATION_MISSING`.
+The full A5.5 payload is `groups[]`; a legacy flat `components[]`
+enabled-toggle payload is still accepted for rollback compatibility. New
+group/component codes are generated by the system from names. Existing
+`group_id`/component `id` or known codes retain stable identity. Omitting an
+existing group/component from the full payload archives/deactivates it instead
+of rewriting historical snapshots.
 
-New order submission rejects disabled or unsupported Store-configured
-`COMBO_EGG` / `COMBO_SIDE` selections. Historical order item snapshots are not
-rewritten.
+The write is Store-scoped, emits `COMBO_CONFIGURATION_UPDATED`, increments
+`stores.menu_revision`, and updates `stores.menu_updated_at` in the same
+transaction. Enabled required groups must have at least one enabled component
+and a valid default; otherwise the backend rejects the update with a stable code
+such as `{GROUP_CODE}_CONFIGURATION_MISSING` or
+`COMBO_DEFAULT_COMPONENT_INVALID`. Component business mapping is validated:
+`LINKED_MENU_ITEM` requires an active same-Store menu item, and
+`LEGACY_COMBO_SIDE_TASK` is accepted only for the reviewed legacy
+`COMBO_SIDE` side components.
+
+New order submission rejects disabled or unsupported Store-configured Combo
+selections. Historical order item snapshots are not rewritten.
 
 Frontdesk catalog/ordering clients must use the `combo_configuration` response
-for Store-level egg/side choices. Item-scoped `menu_item_options`
+for Store-level combo choices. Item-scoped `menu_item_options`
 `COMBO_EGG`/`COMBO_SIDE` rows are rollback-compatible legacy data and are hidden
-from new ordering.
+from new ordering when a Store Combo Group owns that semantic group.
+
+#### Create Menu Category
+
+`POST /api/v1/admin/menu/categories?store_id={storeId}`
+
+```json
+{
+  "name_zh": "饮品",
+  "name_en": "Drinks",
+  "sort_order": 60,
+  "enabled": true
+}
+```
+
+The backend generates a stable category code, stores the category under the
+target Store, increments menu revision in the same transaction, and returns the
+category.
+
+#### Update Menu Category
+
+`PUT /api/v1/admin/menu/categories/{categoryId}?store_id={storeId}`
+
+Request shape matches create. Deactivating a category that still has active
+menu items fails with `CATEGORY_HAS_ACTIVE_ITEMS`.
+
+#### Delete Menu Category
+
+`DELETE /api/v1/admin/menu/categories/{categoryId}?store_id={storeId}`
+
+Physical delete is allowed only when no menu item references the category.
+Otherwise the backend fails closed with `CATEGORY_NOT_EMPTY`; Owners must move
+or deactivate items first.
+
+#### Create Station
+
+`POST /api/v1/admin/menu/stations?store_id={storeId}`
+
+```json
+{
+  "name_zh": "饮品工位",
+  "name_en": "Drink Station",
+  "station_type": "BAR",
+  "sort_order": 60,
+  "enabled": true
+}
+```
+
+The backend generates a stable station code. Supported `station_type` values
+are `KITCHEN`, `BAR`, `COLD`, `PASS`, and `OTHER`.
+
+#### Update Station
+
+`PUT /api/v1/admin/menu/stations/{stationId}?store_id={storeId}`
+
+Request shape matches create. Deactivating a station fails with
+`STATION_HAS_ACTIVE_ITEMS` when active menu items route to it. Disabling the
+legacy `COLD` station while legacy combo-side routing is enabled fails with
+`STATION_HAS_LEGACY_COMBO_SIDE_ROUTING`.
+
+#### Delete Station
+
+`DELETE /api/v1/admin/menu/stations/{stationId}?store_id={storeId}`
+
+Physical delete is allowed only for unused stations. Referenced stations fail
+closed with `STATION_IN_USE`.
 
 ---
 

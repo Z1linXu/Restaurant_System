@@ -65,6 +65,22 @@ function calculateDraftLineSubtotal(menuItem: MenuItem | undefined, draft: ItemC
   const soupBaseDelta =
     menuItem.customization?.soupBases?.options.find((option) => option.id === draft.soupBaseId)?.priceDelta ?? 0
   const comboDelta = draft.comboEnabled ? (menuItem.customization?.combo?.upcharge ?? 0) : 0
+  const comboGroupDelta = draft.comboEnabled
+    ? menuItem.customization?.combo?.groups
+      ?.reduce((sum, group) => {
+        const legacySelection = group.groupCode === 'COMBO_EGG'
+          ? draft.comboEggId
+          : group.groupCode === 'COMBO_SIDE'
+            ? draft.comboSideId
+            : undefined
+        const selectedId = draft.comboSelections?.[group.groupCode]
+          ?? legacySelection
+          ?? group.defaultOptionId
+          ?? (group.required ? group.options[0]?.id : undefined)
+        const selected = group.options.find((option) => option.id === selectedId)
+        return sum + (selected?.priceDelta ?? 0)
+      }, 0) ?? 0
+    : 0
   const addOnDelta =
     menuItem.customization?.addOns
       ?.reduce((sum, option) => sum + (option.priceDelta ?? 0) * (draft.addOnQuantities[option.id] ?? 0), 0) ?? 0
@@ -73,7 +89,7 @@ function calculateDraftLineSubtotal(menuItem: MenuItem | undefined, draft: ItemC
       ?.filter((option) => draft.removeIds.includes(option.id))
       .reduce((sum, option) => sum + (option.priceDelta ?? 0), 0) ?? 0
 
-  return (menuItem.price + sizeDelta + soupBaseDelta + comboDelta + addOnDelta + removeDelta) * draft.quantity
+  return (menuItem.price + sizeDelta + soupBaseDelta + comboDelta + comboGroupDelta + addOnDelta + removeDelta) * draft.quantity
 }
 
 function optionTag(option: BackendOrderItemOptionResponse): LocalizedText {
@@ -97,6 +113,7 @@ function menuItemOptions(menuItem: MenuItem) {
     ...(menuItem.customization?.noodleTypes ?? []),
     ...(menuItem.customization?.spicyLevels ?? []),
     ...(menuItem.customization?.combo?.option ? [menuItem.customization.combo.option] : []),
+    ...(menuItem.customization?.combo?.groups.flatMap((group) => group.options) ?? []),
     ...(menuItem.customization?.combo?.eggs ?? []),
     ...(menuItem.customization?.combo?.sides ?? []),
     ...(menuItem.customization?.combo?.sideRemoveOptions ?? []),
@@ -135,6 +152,7 @@ function buildItemSelection(item: BackendOrderItemResponse, menuItem: MenuItem |
     comboEnabled: false,
     comboEggId: undefined,
     comboSideId: undefined,
+    comboSelections: {},
     comboSideRemoveIds: [],
     addOnQuantities: {},
     removeIds: [],
@@ -152,11 +170,19 @@ function buildItemSelection(item: BackendOrderItemResponse, menuItem: MenuItem |
     if (comboConfig?.eggs.some((comboOption) => comboOption.id === optionId)) {
       draft.comboEnabled = true
       draft.comboEggId = optionId
+      draft.comboSelections.COMBO_EGG = optionId
       return
     }
     if (comboConfig?.sides.some((comboOption) => comboOption.id === optionId)) {
       draft.comboEnabled = true
       draft.comboSideId = optionId
+      draft.comboSelections.COMBO_SIDE = optionId
+      return
+    }
+    const comboGroup = comboConfig?.groups.find((group) => group.options.some((comboOption) => comboOption.id === optionId))
+    if (comboGroup) {
+      draft.comboEnabled = true
+      draft.comboSelections[comboGroup.groupCode] = optionId
       return
     }
     if (comboConfig?.sideRemoveOptions.some((comboOption) => comboOption.id === optionId)) {
@@ -200,10 +226,21 @@ function buildItemSelection(item: BackendOrderItemResponse, menuItem: MenuItem |
     draft.spicyLevelId = menuItem.customization.spicyLevels[0].id
   }
   if (draft.comboEnabled && !draft.comboEggId && menuItem?.customization?.combo?.eggs[0]?.id) {
-    draft.comboEggId = menuItem.customization.combo.eggs[0].id
+    draft.comboEggId = menuItem.customization.combo.groups.find((group) => group.groupCode === 'COMBO_EGG')?.defaultOptionId
+      ?? menuItem.customization.combo.eggs[0].id
+    draft.comboSelections.COMBO_EGG = draft.comboSelections.COMBO_EGG ?? draft.comboEggId
   }
   if (draft.comboEnabled && !draft.comboSideId && menuItem?.customization?.combo?.sides[0]?.id) {
-    draft.comboSideId = menuItem.customization.combo.sides[0].id
+    draft.comboSideId = menuItem.customization.combo.groups.find((group) => group.groupCode === 'COMBO_SIDE')?.defaultOptionId
+      ?? menuItem.customization.combo.sides[0].id
+    draft.comboSelections.COMBO_SIDE = draft.comboSelections.COMBO_SIDE ?? draft.comboSideId
+  }
+  if (draft.comboEnabled) {
+    menuItem?.customization?.combo?.groups.forEach((group) => {
+      if (!draft.comboSelections[group.groupCode] && group.required) {
+        draft.comboSelections[group.groupCode] = group.defaultOptionId ?? group.options[0]?.id
+      }
+    })
   }
 
   return draft
@@ -270,6 +307,7 @@ export function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationD
       ...(menuItem.customization?.soupBases?.options ?? []),
       ...(menuItem.customization?.noodleTypes ?? []),
       ...(menuItem.customization?.spicyLevels ?? []),
+      ...(menuItem.customization?.combo?.groups.flatMap((group) => group.options) ?? []),
       ...(menuItem.customization?.combo?.eggs ?? []),
       ...(menuItem.customization?.combo?.sides ?? []),
       ...(menuItem.customization?.combo?.sideRemoveOptions ?? []),
@@ -288,8 +326,25 @@ export function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationD
   pushOptionTag(draft.spicyLevelId)
   if (draft.comboEnabled) {
     summaryTags.push({ en: 'Combo', zh: '套餐' })
-    pushOptionTag(draft.comboEggId ?? menuItem.customization?.combo?.eggs[0]?.id)
-    pushOptionTag(draft.comboSideId ?? menuItem.customization?.combo?.sides[0]?.id)
+    const comboGroups = menuItem.customization?.combo?.groups ?? []
+    if (comboGroups.length) {
+      comboGroups.forEach((group) => {
+        const legacySelection = group.groupCode === 'COMBO_EGG'
+          ? draft.comboEggId
+          : group.groupCode === 'COMBO_SIDE'
+            ? draft.comboSideId
+            : undefined
+        pushOptionTag(
+          draft.comboSelections?.[group.groupCode]
+            ?? legacySelection
+            ?? group.defaultOptionId
+            ?? (group.required ? group.options[0]?.id : undefined),
+        )
+      })
+    } else {
+      pushOptionTag(draft.comboEggId ?? menuItem.customization?.combo?.eggs[0]?.id)
+      pushOptionTag(draft.comboSideId ?? menuItem.customization?.combo?.sides[0]?.id)
+    }
     draft.comboSideRemoveIds.forEach((optionId) => pushOptionTag(optionId))
   }
   Object.entries(draft.addOnQuantities).forEach(([optionId, quantity]) => {

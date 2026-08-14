@@ -84,6 +84,8 @@ export interface StorePricingPolicyPreviewRecord {
 }
 
 export interface StoreComboComponentRecord {
+  id?: number | null
+  group_id?: number | null
   component_group: 'COMBO_EGG' | 'COMBO_SIDE' | string
   component_code: string
   name_zh: string
@@ -91,12 +93,23 @@ export interface StoreComboComponentRecord {
   enabled: boolean
   display_order: number
   is_default: boolean
+  linked_menu_item_id?: number | null
+  linked_menu_item_sku?: string | null
+  linked_menu_item_name_zh?: string | null
+  linked_menu_item_name_en?: string | null
+  business_behavior?: string | null
 }
 
 export interface StoreComboConfigurationGroupRecord {
+  group_id?: number | null
+  group_code?: string | null
   component_group: 'COMBO_EGG' | 'COMBO_SIDE' | string
   name_zh: string
   name_en: string
+  selection_rule?: 'EXACTLY_ONE' | 'OPTIONAL_ONE' | string
+  required?: boolean
+  enabled?: boolean
+  display_order?: number | null
   default_component_code: string | null
   components: StoreComboComponentRecord[]
 }
@@ -109,7 +122,31 @@ export interface StoreComboConfigurationRecord {
 
 export interface StoreComboConfigurationPayload {
   store_id: number
-  components: Array<{
+  groups?: Array<{
+    group_id?: number | null
+    group_code?: string | null
+    name_zh: string
+    name_en: string
+    selection_rule: 'EXACTLY_ONE' | 'OPTIONAL_ONE' | string
+    required: boolean
+    enabled: boolean
+    display_order: number
+    default_component_code?: string | null
+    components: Array<{
+      id?: number | null
+      group_id?: number | null
+      component_group?: 'COMBO_EGG' | 'COMBO_SIDE' | string
+      component_code?: string | null
+      name_zh: string
+      name_en: string
+      enabled: boolean
+      display_order: number
+      is_default?: boolean
+      linked_menu_item_id?: number | null
+      business_behavior?: string | null
+    }>
+  }>
+  components?: Array<{
     component_group: 'COMBO_EGG' | 'COMBO_SIDE' | string
     component_code: string
     enabled: boolean

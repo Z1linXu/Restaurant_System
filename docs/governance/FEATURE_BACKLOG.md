@@ -186,6 +186,19 @@ Flyway V15, Profile fingerprint/artifact validation and graph-count validation.
 No Store materialization, new migration after V15, Flyway history edit or
 Production action occurred.
 
+Current Owner-requested A5.5 configurability closure:
+[PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_EVIDENCE](agile/PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_EVIDENCE.md).
+The previous A5.5 UML baseline is deferred to
+`PHASE_A5_6_CURRENT_STAGING_ARCHITECTURE_UML_BASELINE`; A5.5 now implements
+Menu Management configurability for dynamic Store-scoped Combo
+Groups/Components, Categories, and Stations. The package preserves A0.1 Combo
+pricing (`store_pricing_policies.combo_delta`), item Combo allowed
+(`menu_item_options` `COMBO` row), historical snapshots, Store isolation, and
+unified menu revision/cache invalidation. Production remains no-mutation.
+After PR merge, exact-SHA Staging deploy and automated validation must pass
+before Owner manual retest. A6, Phase B/C, Chinatown, Sainte-Catherine and
+Production deployment remain out of scope.
+
 Phase A0 deployed evidence is tracked in
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).
 Current deployed conclusion: existing menu option/modifier data safely models

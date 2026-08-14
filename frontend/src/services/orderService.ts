@@ -111,11 +111,16 @@ function sleep(ms: number) {
 export function mapOptions(draft: ItemCustomizationDraft, menuItem?: MenuItem) {
   const optionPayloads: OrderOptionPayload[] = []
   const optionsById = menuItem ? collectMenuItemOptions(menuItem) : new Map<string, ChoiceOption>()
+  const pushedOptionIds = new Set<string>()
 
   const pushOption = (optionId: string | undefined, quantity = 1) => {
     if (!optionId) {
       return
     }
+    if (pushedOptionIds.has(optionId)) {
+      return
+    }
+    pushedOptionIds.add(optionId)
     const option = optionsById.get(optionId)
     const payload: OrderOptionPayload = {
       option_id: Number(optionId),
@@ -140,8 +145,24 @@ export function mapOptions(draft: ItemCustomizationDraft, menuItem?: MenuItem) {
 
   if (draft.comboEnabled) {
     pushOption(menuItem?.customization?.combo?.optionId)
-    pushOption(draft.comboEggId ?? menuItem?.customization?.combo?.eggs[0]?.id)
-    pushOption(draft.comboSideId ?? menuItem?.customization?.combo?.sides[0]?.id)
+    const comboGroups = menuItem?.customization?.combo?.groups ?? []
+    if (comboGroups.length) {
+      comboGroups.forEach((group) => {
+        const legacySelection = group.groupCode === 'COMBO_EGG'
+          ? draft.comboEggId
+          : group.groupCode === 'COMBO_SIDE'
+            ? draft.comboSideId
+            : undefined
+        const selectedOptionId = draft.comboSelections?.[group.groupCode]
+          ?? legacySelection
+          ?? group.defaultOptionId
+          ?? (group.required ? group.options[0]?.id : undefined)
+        pushOption(selectedOptionId)
+      })
+    } else {
+      pushOption(draft.comboEggId ?? menuItem?.customization?.combo?.eggs[0]?.id)
+      pushOption(draft.comboSideId ?? menuItem?.customization?.combo?.sides[0]?.id)
+    }
     draft.comboSideRemoveIds.forEach((optionId) => pushOption(optionId))
   }
 
@@ -163,6 +184,7 @@ function collectMenuItemOptions(menuItem: MenuItem) {
     ...(menuItem.customization?.noodleTypes ?? []),
     ...(menuItem.customization?.spicyLevels ?? []),
     ...(menuItem.customization?.combo?.option ? [menuItem.customization.combo.option] : []),
+    ...(menuItem.customization?.combo?.groups.flatMap((group) => group.options) ?? []),
     ...(menuItem.customization?.combo?.eggs ?? []),
     ...(menuItem.customization?.combo?.sides ?? []),
     ...(menuItem.customization?.combo?.sideRemoveOptions ?? []),

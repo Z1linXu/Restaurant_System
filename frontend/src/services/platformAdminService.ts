@@ -95,6 +95,45 @@ export interface MenuItemAdminRecord {
   updated_at?: string
 }
 
+export interface MenuCategoryAdminRecord {
+  id?: number
+  store_id: number
+  code: string
+  name_zh: string
+  name_en: string
+  sort_order: number | null
+  is_active: boolean
+}
+
+export interface StationAdminRecord {
+  id?: number
+  store_id: number
+  name: string
+  name_zh?: string | null
+  name_en?: string | null
+  code: string
+  station_type?: string | null
+  sort_order: number | null
+  is_active: boolean
+}
+
+export interface MenuCategoryPayload {
+  store_id: number
+  name_zh: string
+  name_en: string
+  sort_order: number
+  enabled: boolean
+}
+
+export interface StationPayload {
+  store_id: number
+  name_zh: string
+  name_en: string
+  station_type: string
+  sort_order: number
+  enabled: boolean
+}
+
 const request = apiRequest
 
 function buildHeaders() {
@@ -126,6 +165,56 @@ export async function reorderAdminMenuItems(storeId: number, categoryId: number,
       store_id: storeId,
       item_ids: itemIds,
     }),
+  })
+}
+
+export async function createMenuCategory(storeId: number, payload: MenuCategoryPayload) {
+  const params = new URLSearchParams({ store_id: String(storeId) })
+  return request<MenuCategoryAdminRecord>(`/api/v1/admin/menu/categories?${params.toString()}`, {
+    method: 'POST',
+    headers: buildHeaders(),
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function updateMenuCategory(storeId: number, categoryId: number, payload: MenuCategoryPayload) {
+  const params = new URLSearchParams({ store_id: String(storeId) })
+  return request<MenuCategoryAdminRecord>(`/api/v1/admin/menu/categories/${categoryId}?${params.toString()}`, {
+    method: 'PUT',
+    headers: buildHeaders(),
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function deleteMenuCategory(storeId: number, categoryId: number) {
+  const params = new URLSearchParams({ store_id: String(storeId) })
+  return request<MenuCategoryAdminRecord[]>(`/api/v1/admin/menu/categories/${categoryId}?${params.toString()}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function createMenuStation(storeId: number, payload: StationPayload) {
+  const params = new URLSearchParams({ store_id: String(storeId) })
+  return request<StationAdminRecord>(`/api/v1/admin/menu/stations?${params.toString()}`, {
+    method: 'POST',
+    headers: buildHeaders(),
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function updateMenuStation(storeId: number, stationId: number, payload: StationPayload) {
+  const params = new URLSearchParams({ store_id: String(storeId) })
+  return request<StationAdminRecord>(`/api/v1/admin/menu/stations/${stationId}?${params.toString()}`, {
+    method: 'PUT',
+    headers: buildHeaders(),
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function deleteMenuStation(storeId: number, stationId: number) {
+  const params = new URLSearchParams({ store_id: String(storeId) })
+  return request<StationAdminRecord[]>(`/api/v1/admin/menu/stations/${stationId}?${params.toString()}`, {
+    method: 'DELETE',
   })
 }
 
