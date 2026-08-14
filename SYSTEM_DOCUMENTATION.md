@@ -148,8 +148,11 @@
 > `char(64)` while the entities still mapped them as default `varchar(255)`.
 > PR #146 added explicit `char(64)` DDL metadata, but Staging proved Hibernate
 > still expected JDBC `Types#VARCHAR`. The current bounded repair adds explicit
-> JDBC `Types#CHAR` metadata and regression coverage only; Production remains
-> no-mutation.
+> JDBC `Types#CHAR` metadata and regression coverage only. PR #147 entered
+> `main` at `3440fddad7571409c66189e44976658921e5de1f`; exact-SHA Staging
+> deploy passed health, WebSocket readiness, Flyway V15 and Profile graph
+> validation. A5 is complete and waits for Phase A6 Owner continuation.
+> Production remains no-mutation.
 
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The

@@ -199,11 +199,14 @@ then backend startup failed closed during Hibernate schema validation because
 the A4 `fingerprint_sha256 char(64)` columns were mapped by JPA as default
 `varchar(255)`. PR #146 changed Profile entity DDL metadata to explicit
 `char(64)`, but exact-SHA Staging still failed closed because Hibernate
-continued to expect JDBC `Types#VARCHAR`. The current bounded JDBC type repair
-adds `@JdbcTypeCode(SqlTypes.CHAR)` plus regression coverage. No Store
-materialization, Production action, migration, Flyway history edit, downgrade,
-destructive reset or runtime secret read is included. Production remains
-no-mutation.
+continued to expect JDBC `Types#VARCHAR`. PR #147 added
+`@JdbcTypeCode(SqlTypes.CHAR)` plus regression coverage and entered `main` at
+`3440fddad7571409c66189e44976658921e5de1f`. Exact-SHA Staging deploy of that
+SHA passed health, WebSocket readiness, Flyway V15 validation, Profile
+fingerprint validation and deterministic graph-count validation. No Store
+materialization, Production action, migration after V15, Flyway history edit,
+downgrade, destructive reset or runtime secret read is included. Production
+remains no-mutation.
 
 Phase A0 deployed evidence:
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](../agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).
@@ -221,17 +224,15 @@ A0_AUTOMATED_VALIDATION = PASS
 A0_OWNER_UI_ACCEPTANCE = PASS_FOR_A0_1_PRICING_UX
 ```
 
-Staging is currently rebound to the A5 runtime-attempt environment but backend
-startup is fail-closed on the Profile JDBC type mapping until the repair PR is
-merged and redeployed. The Staging database has successful Flyway V15; Printing
-configuration remains `MOCK/true`, with four enabled logical printers and three
-enabled assignments. A1, A2 and A3 are PASS; A4 repository contract is in
-`main`; A5 requires the bounded JDBC type repair and retry.
-Do not start A6, Phase B, Phase C, Chinatown, Sainte-Catherine or Production
-deploy from this state without a fresh Owner decision. Current A5 repair stop:
+Staging is currently deployed at exact
+`3440fddad7571409c66189e44976658921e5de1f` with successful Flyway V15.
+Printing configuration remains `MOCK/true`, with four enabled logical printers
+and three enabled assignments. A1, A2, A3, A4 and A5 are PASS. Do not start A6,
+Phase B, Phase C, Chinatown, Sainte-Catherine or Production deploy from this
+state without a fresh Owner decision. Current A5 stop:
 
 ```text
-PHASE_A5_RUNTIME_JDBC_CHAR_TYPE_REPAIR_READY_FOR_PR
+PHASE_A5_ST_DENIS_CANONICAL_PROFILE_COMPLETE_WAITING_FOR_PHASE_A6_OWNER_CONTINUATION
 ```
 
 ## Current final productization roadmap audit (2026-08-12)

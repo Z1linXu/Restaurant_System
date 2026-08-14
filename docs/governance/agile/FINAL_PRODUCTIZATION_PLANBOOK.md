@@ -196,9 +196,11 @@ Staging deploy of that merge reached successful Flyway V15, then backend
 startup failed closed because V14 `fingerprint_sha256 char(64)` columns were
 mapped by JPA as default `varchar(255)`. PR #146 added explicit `char(64)` DDL
 metadata, but Staging proved Hibernate still expected JDBC `Types#VARCHAR`.
-The current bounded follow-up repair adds explicit JDBC `Types#CHAR` metadata
-and regression coverage only; exact-SHA Staging health/profile validation is
-still required before A5 runtime PASS.
+PR #147 added explicit JDBC `Types#CHAR` metadata and regression coverage only.
+Exact-SHA Staging deploy of `3440fddad7571409c66189e44976658921e5de1f` passed
+health, WebSocket readiness, Flyway V15, Profile fingerprint/artifact
+validation and deterministic graph-count validation. A5 is complete and waits
+for Phase A6 Owner continuation.
 
 This order must not change unless fresh audit proves a real technical
 dependency. Any change records the original order, actual order and reason.

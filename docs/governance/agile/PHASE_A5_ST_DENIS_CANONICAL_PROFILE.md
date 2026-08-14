@@ -1,13 +1,13 @@
 # Phase A5 St-Denis Canonical Profile
 
-Status: `PHASE_A5_RUNTIME_JDBC_CHAR_TYPE_REPAIR_READY_FOR_PR`
+Status: `PHASE_A5_ST_DENIS_CANONICAL_PROFILE_COMPLETE_WAITING_FOR_PHASE_A6_OWNER_CONTINUATION`
 
 Date: 2026-08-13
 
 Fresh repository authority:
 
 ```text
-origin/main@494497dfbf874bcf12da7eb3821a276f663959c5
+origin/main@3440fddad7571409c66189e44976658921e5de1f
 ```
 
 A4 Store Profile Contract is in `main` through PR #142:
@@ -48,12 +48,14 @@ Runtime boundary:
 - PR #146 changed the A4 Profile entity DDL metadata to explicit `char(64)`,
   but exact-SHA Staging proved Hibernate still treated the field as
   `Types#VARCHAR`. Backend startup therefore remained fail-closed.
-- The current bounded JDBC type repair adds explicit Hibernate
+- The final bounded JDBC type repair adds explicit Hibernate
   `@JdbcTypeCode(SqlTypes.CHAR)` metadata and regression coverage. It does not
   add a migration, edit Flyway history, reset Staging, materialize a Store,
   touch Production, downgrade, or read runtime secrets.
-- Exact-SHA Staging deploy/Flyway validation must be retried after the
-  JDBC type repair PR enters `main` before A5 runtime PASS can be claimed.
+- JDBC type repair PR #147 entered `main` at
+  `3440fddad7571409c66189e44976658921e5de1f`; exact-SHA Staging deploy passed
+  health, WebSocket readiness, Flyway V15 validation, Profile fingerprint and
+  deterministic graph-count validation.
 - No Store materialization, Store activation, Owner Create New Store,
   Chinatown, Sainte-Catherine, A6, Phase B/C or Production action is included
 
@@ -422,6 +424,36 @@ mvn -q test
 PASS
 ```
 
+JDBC CHAR type repair PR:
+
+```text
+PR = https://github.com/Z1linXu/Restaurant_System/pull/147
+merge = 3440fddad7571409c66189e44976658921e5de1f
+```
+
+## Runtime PASS evidence
+
+Detailed evidence:
+
+```text
+docs/governance/runtime/PHASE_A5_ST_DENIS_CANONICAL_PROFILE_STAGING_EVIDENCE.md
+```
+
+Runtime result:
+
+```text
+staging_deployed_sha = 3440fddad7571409c66189e44976658921e5de1f
+staging_flyway = V15
+staging_health = PASS
+staging_ws_info_http = 200
+profile_status = READY
+profile_fingerprint_sha256 = af1a8f34cd156c1987b74ec1a9a22ddfd004859c617937b7d53f05e16e762602
+artifact_count = 12
+deterministic_graph_counts = 6/39/380/11/13/5/4/3/5/4/7
+production_continuity = PASS
+prohibited_data_copied = NO
+```
+
 ## Boundaries retained
 
 A5 does not:
@@ -436,8 +468,8 @@ A5 does not:
 - create Chinatown or Sainte-Catherine
 - deploy or mutate Production
 
-Current repair stop before repair PR/merge:
+Current stop:
 
 ```text
-PHASE_A5_RUNTIME_JDBC_CHAR_TYPE_REPAIR_READY_FOR_PR
+PHASE_A5_ST_DENIS_CANONICAL_PROFILE_COMPLETE_WAITING_FOR_PHASE_A6_OWNER_CONTINUATION
 ```
