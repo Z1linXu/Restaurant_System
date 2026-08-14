@@ -12,7 +12,7 @@ import {
   type StaffUserPayload,
   type StaffUserRecord,
 } from '../../services/staffAdminService'
-import { useCurrentStore } from '../store/StoreContext'
+import { useCurrentStore } from '../store/useStoreContext'
 
 type StaffDraft = StaffUserPayload & { id?: number }
 

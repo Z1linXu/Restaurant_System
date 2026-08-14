@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { fetchAuditLogs, type AuditLogPage } from '../../services/auditLogService'
 import { fetchStaffStores, type StaffStoreRecord } from '../../services/staffAdminService'
-import { useCurrentStore } from '../store/StoreContext'
+import { useCurrentStore } from '../store/useStoreContext'
 
 function today() {
   return new Date().toISOString().slice(0, 10)

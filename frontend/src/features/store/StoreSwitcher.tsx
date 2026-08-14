@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { navigateTo } from '../frontdesk/navigation'
 import { fetchWorkspaces, type WorkspaceStore } from '../../services/storeWorkspaceService'
 import { replaceStoreId } from './storeRoutes'
-import { useOptionalCurrentStore } from './StoreContext'
+import { useOptionalCurrentStore } from './useStoreContext'
 import { useAuth } from '../auth/useAuth'
 
 export function StoreSwitcher({ compact = false }: { compact?: boolean }) {

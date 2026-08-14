@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { isFeatureEnabled } from '../feature-flags/featureConfig'
 import { fetchPlatformOverview, type PlatformAdminOverview } from '../../services/platformAdminService'
-import { useCurrentStore } from '../store/StoreContext'
+import { useCurrentStore } from '../store/useStoreContext'
 import { ApiRequestError } from '../../services/apiClient'
 import {
   deletePrinterConfig,

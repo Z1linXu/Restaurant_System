@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { navigateTo } from '../frontdesk/navigation'
-import { isFeatureEnabled, type FeaturePackage } from '../feature-flags/featureConfig'
 import { StoreSwitcher } from '../store/StoreSwitcher'
 import { buildStorePath, stripStorePrefix } from '../store/storeRoutes'
-import { useOptionalCurrentStore } from '../store/StoreContext'
+import { useOptionalCurrentStore } from '../store/useStoreContext'
+import { isStoreModuleEnabled, type StoreModuleKey } from '../store/storeModuleAccess'
 
 interface OwnerAdminShellProps {
   title: string
@@ -16,24 +16,25 @@ interface NavItem {
   label: string
   path: string
   match: (pathname: string) => boolean
-  feature: FeaturePackage | null
+  moduleKey?: StoreModuleKey
   frontdeskVisible?: boolean
 }
 
 const navItems: NavItem[] = [
-  { label: 'Owner Home / Stores', path: '/owner/dashboard', match: (path) => path.startsWith('/owner'), feature: 'ADMIN' },
-  { label: 'Home / Dashboard', path: '/admin/dashboard', match: (path) => path === '/admin' || path.startsWith('/admin/dashboard'), feature: 'ADMIN' },
-  { label: 'Menu Management', path: '/admin/menu/items', match: (path) => path.startsWith('/admin/menu/items'), feature: 'ADMIN', frontdeskVisible: true },
-  { label: 'Dining Tables', path: '/admin/settings/tables', match: (path) => path.startsWith('/admin/settings/tables'), feature: 'ADMIN' },
-  { label: 'Printing Settings', path: '/admin/settings/printing', match: (path) => path.startsWith('/admin/settings/printing'), feature: 'PRINTING', frontdeskVisible: true },
-  { label: 'Staff Management', path: '/admin/staff', match: (path) => path.startsWith('/admin/staff'), feature: 'ADMIN' },
-  { label: 'Audit Logs', path: '/admin/audit-logs', match: (path) => path.startsWith('/admin/audit-logs') || path.startsWith('/admin/audit'), feature: 'ADMIN' },
-  { label: 'Reports', path: '/admin/reports/sales', match: (path) => path.startsWith('/admin/reports'), feature: 'ANALYTICS' },
+  { label: 'Owner Home / Stores', path: '/owner/dashboard', match: (path) => path.startsWith('/owner') },
+  { label: 'Home / Dashboard', path: '/admin/dashboard', match: (path) => path === '/admin' || path.startsWith('/admin/dashboard'), moduleKey: 'STORE_ADMINISTRATION' },
+  { label: 'Menu Management', path: '/admin/menu/items', match: (path) => path.startsWith('/admin/menu/items'), moduleKey: 'MENU_MANAGEMENT', frontdeskVisible: true },
+  { label: 'Dining Tables', path: '/admin/settings/tables', match: (path) => path.startsWith('/admin/settings/tables'), moduleKey: 'TABLE_MANAGEMENT' },
+  { label: 'Printing Settings', path: '/admin/settings/printing', match: (path) => path.startsWith('/admin/settings/printing'), moduleKey: 'PRINTING', frontdeskVisible: true },
+  { label: 'Staff Management', path: '/admin/staff', match: (path) => path.startsWith('/admin/staff'), moduleKey: 'STAFF_ACCESS' },
+  { label: 'Audit Logs', path: '/admin/audit-logs', match: (path) => path.startsWith('/admin/audit-logs') || path.startsWith('/admin/audit'), moduleKey: 'STORE_ADMINISTRATION' },
+  { label: 'Reports', path: '/admin/reports/sales', match: (path) => path.startsWith('/admin/reports'), moduleKey: 'REPORTING_CORE' },
 ]
 
 export function OwnerAdminShell({ title, description, children }: OwnerAdminShellProps) {
   const { user, isOwner, isManager, isFrontdesk, signOut } = useAuth()
   const currentStore = useOptionalCurrentStore()
+  const moduleConfiguration = currentStore?.moduleConfiguration ?? null
   const [pathname, setPathname] = useState(window.location.pathname)
 
   useEffect(() => {
@@ -44,7 +45,7 @@ export function OwnerAdminShell({ title, description, children }: OwnerAdminShel
 
   const visibleItems = useMemo(
     () => navItems.filter((item) => {
-      if (item.feature != null && !isFeatureEnabled(item.feature)) {
+      if (item.moduleKey != null && !isStoreModuleEnabled(moduleConfiguration, item.moduleKey)) {
         return false
       }
       if (isOwner || isManager) {
@@ -52,7 +53,7 @@ export function OwnerAdminShell({ title, description, children }: OwnerAdminShel
       }
       return isFrontdesk && item.frontdeskVisible === true
     }),
-    [isFrontdesk, isManager, isOwner],
+    [isFrontdesk, isManager, isOwner, moduleConfiguration],
   )
 
   const homePath = isFrontdesk ? '/frontdesk' : '/admin/dashboard'

@@ -5,7 +5,7 @@ import {
   type DiningTableRecord,
   type PlatformAdminOverview,
 } from '../../services/platformAdminService'
-import { useCurrentStore } from '../store/StoreContext'
+import { useCurrentStore } from '../store/useStoreContext'
 
 type ToastState =
   | { kind: 'success' | 'error'; message: string }

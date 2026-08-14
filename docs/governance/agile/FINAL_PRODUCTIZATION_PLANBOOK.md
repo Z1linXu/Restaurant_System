@@ -239,15 +239,16 @@ current-Staging anti-drift architecture baseline:
 The formal baseline is fresh main/deployed Staging
 `923346f15757ca85fdafb509a803e87f04ae55bd` at Flyway V16.
 
-Current continuous execution proceeds through:
+Current continuous execution is:
 
 ```text
-PHASE_A6_BACKEND_MODULE_GATING
-→ PHASE_A7_FRONTEND_MODULE_GATING
+PHASE_A7_FRONTEND_MODULE_GATING
 ```
 
 A6 backend module gating evidence:
 [PHASE_A6_BACKEND_MODULE_GATING_EVIDENCE](PHASE_A6_BACKEND_MODULE_GATING_EVIDENCE.md).
+A7 frontend module gating evidence:
+[PHASE_A7_FRONTEND_MODULE_GATING_EVIDENCE](PHASE_A7_FRONTEND_MODULE_GATING_EVIDENCE.md).
 After A7 exact-SHA Staging validation, stop before A8:
 
 ```text
@@ -605,7 +606,7 @@ conditional template remains for future loops that deploy before Owner retest.
 | A5.5 Menu Management Configurability | Owner can configure Store-specific Combo groups/components, Categories, and Stations without developer code changes, while preserving historical snapshots and menu revision/cache consistency. |
 | A5.6 Current Staging UML Baseline | Documentation-only architecture baseline for current Staging after A5/A5.5, before A6 backend gating. |
 | A6 Backend Gating | `authority + Store module enabled + environment capability available` enforced server-side. |
-| A7 Frontend Gating | Routes/navigation/settings/screens derive from authenticated Store module contract and fail closed. |
+| A7 Frontend Gating | Routes/navigation/settings/screens derive from authenticated Store Context `module_configuration`, fail closed, keep KDS disabled UX Store-scoped, and keep Reports Core independent from Analytics Advanced. |
 | A8 Hardware Capability | Logical hardware capability contract for printing, Pad Direct, devices and readiness requirements without endpoints/secrets. |
 | A9 Legacy Cleanup | Chinatown Store-ID constant, legacy user fallback, direct active Store writer, global flags and blank printing mode either removed or bounded without current Production regression. |
 | A10 Regression | Prove multiple legal Store module configurations on one shared application with no cross-Store effects. |

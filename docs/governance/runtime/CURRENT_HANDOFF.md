@@ -361,14 +361,17 @@ V16:
 Current authorized continuous execution:
 
 ```text
-PHASE_A6_BACKEND_MODULE_GATING
-→ PHASE_A7_FRONTEND_MODULE_GATING
+PHASE_A7_FRONTEND_MODULE_GATING
 ```
 
 A6 evidence:
 [PHASE_A6_BACKEND_MODULE_GATING_EVIDENCE](../agile/PHASE_A6_BACKEND_MODULE_GATING_EVIDENCE.md).
-Continue from A6 merge/fresh fetch into A7. After A7 exact-SHA Staging deploy
-and validation, stop before A8, Phase B/C and Production:
+A7 evidence:
+[PHASE_A7_FRONTEND_MODULE_GATING_EVIDENCE](../agile/PHASE_A7_FRONTEND_MODULE_GATING_EVIDENCE.md).
+A7 uses authenticated Store Context `module_configuration` for frontend
+route/page/navigation gating and leaves A8 hardware readiness pending. After
+A7 exact-SHA Staging deploy and validation, stop before A8, Phase B/C and
+Production:
 
 ```text
 PHASE_A7_FRONTEND_MODULE_GATING_COMPLETE_WAITING_FOR_PHASE_A8_OWNER_CONTINUATION

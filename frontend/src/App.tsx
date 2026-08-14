@@ -4,7 +4,8 @@ import { FeatureDisabledPage } from './features/feature-flags/FeatureDisabledPag
 import { getRequiredFeatureForPath, isFeatureEnabled } from './features/feature-flags/featureConfig'
 import { OwnerAdminShell } from './features/owner-admin/OwnerAdminShell'
 import { DevRoleSwitcher } from './features/dev/DevRoleSwitcher'
-import { StoreContextProvider, RequireStoreAccess } from './features/store/StoreContext'
+import { StoreContextProvider, RequireStoreAccess, RequireStoreModule } from './features/store/StoreContext'
+import type { StoreModuleKey } from './features/store/storeModuleAccess'
 import { buildStorePath, chooseDefaultStore, defaultWorkspacePathForRole, mapLegacyPathToStorePath, stripStorePrefix } from './features/store/storeRoutes'
 import { fetchWorkspaces } from './services/storeWorkspaceService'
 import { navigateTo } from './features/frontdesk/navigation'
@@ -66,10 +67,17 @@ function ownerAdminPage(children: React.ReactNode, title: string, description?: 
   return <OwnerAdminShell title={title} description={description}>{children}</OwnerAdminShell>
 }
 
-function storePage(storeId: number, children: React.ReactNode, allowedRoles: AppRole[]) {
+function storePage(
+  storeId: number,
+  children: React.ReactNode,
+  allowedRoles: AppRole[],
+  requiredModuleKey?: StoreModuleKey,
+) {
   return guard(
     <StoreContextProvider storeId={storeId}>
-      <RequireStoreAccess>{children}</RequireStoreAccess>
+      <RequireStoreAccess>
+        {requiredModuleKey ? <RequireStoreModule moduleKey={requiredModuleKey}>{children}</RequireStoreModule> : children}
+      </RequireStoreAccess>
     </StoreContextProvider>,
     allowedRoles,
   )
@@ -148,6 +156,10 @@ function OfflineRestrictedPage() {
   )
 }
 
+function shouldApplyEnvironmentFeatureGate(feature: ReturnType<typeof getRequiredFeatureForPath>) {
+  return feature === 'PLATFORM' || feature === 'DEVELOPER_TOOLS'
+}
+
 function App() {
   const [pathname, setPathname] = useState(window.location.pathname)
   const { isOfflineRestricted } = useAuth()
@@ -159,7 +171,7 @@ function App() {
   }, [])
 
   const requiredFeature = getRequiredFeatureForPath(pathname)
-  if (!isFeatureEnabled(requiredFeature)) {
+  if (shouldApplyEnvironmentFeatureGate(requiredFeature) && !isFeatureEnabled(requiredFeature)) {
     return (
       <AppShell>
         <FeatureDisabledPage feature={requiredFeature} />
@@ -206,33 +218,33 @@ function App() {
   }
 
   if (storeId && routePath.startsWith('/kds/grab')) {
-    return <AppShell>{storePage(storeId, <KdsNoodle />, PASS_ROLES)}</AppShell>
+    return <AppShell>{storePage(storeId, <KdsNoodle />, PASS_ROLES, 'KDS')}</AppShell>
   }
 
   if (storeId && routePath.startsWith('/kds/hot-kitchen')) {
-    return <AppShell>{storePage(storeId, <KdsHotKitchen />, HOT_KITCHEN_ROLES)}</AppShell>
+    return <AppShell>{storePage(storeId, <KdsHotKitchen />, HOT_KITCHEN_ROLES, 'KDS')}</AppShell>
   }
 
   if (storeId && (routePath.startsWith('/kds/noodle') || routePath.startsWith('/kds/ramen'))) {
-    return <AppShell>{storePage(storeId, <KdsRamen />, NOODLE_ROLES)}</AppShell>
+    return <AppShell>{storePage(storeId, <KdsRamen />, NOODLE_ROLES, 'KDS')}</AppShell>
   }
 
   if (storeId && routePath.startsWith('/kds/history')) {
-    return <AppShell>{storePage(storeId, <KdsHistory />, ADMIN_ROLES)}</AppShell>
+    return <AppShell>{storePage(storeId, <KdsHistory />, ADMIN_ROLES, 'KDS')}</AppShell>
   }
 
   if (storeId && routePath.startsWith('/frontdesk/order')) {
-    return <AppShell>{storePage(storeId, <Orders />, FRONTDESK_ROLES)}</AppShell>
+    return <AppShell>{storePage(storeId, <Orders />, FRONTDESK_ROLES, 'ORDER_HISTORY')}</AppShell>
   }
 
   if (storeId && (routePath === '/admin' || routePath === '/admin/' || routePath.startsWith('/admin/dashboard'))) {
-    return <AppShell>{storePage(storeId, ownerAdminPage(<AdminDashboard />, 'Dashboard', 'Monitor restaurant performance and operating status.'), ADMIN_ROLES)}</AppShell>
+    return <AppShell>{storePage(storeId, ownerAdminPage(<AdminDashboard />, 'Dashboard', 'Monitor restaurant performance and operating status.'), ADMIN_ROLES, 'STORE_ADMINISTRATION')}</AppShell>
   }
 
   if (storeId && routePath.startsWith('/admin/staff')) {
     return (
       <AppShell>
-        {storePage(storeId, ownerAdminPage(<AdminStaff />, 'Staff Management', 'Manage manager and frontdesk access for this restaurant.'), ADMIN_ROLES)}
+        {storePage(storeId, ownerAdminPage(<AdminStaff />, 'Staff Management', 'Manage manager and frontdesk access for this restaurant.'), ADMIN_ROLES, 'STAFF_ACCESS')}
       </AppShell>
     )
   }
@@ -240,37 +252,37 @@ function App() {
   if (storeId && (routePath.startsWith('/admin/audit-logs') || routePath.startsWith('/admin/audit'))) {
     return (
       <AppShell>
-        {storePage(storeId, ownerAdminPage(<AdminAuditLogs />, 'Audit Logs', 'Review account, menu, printing, and order operations.'), ADMIN_ROLES)}
+        {storePage(storeId, ownerAdminPage(<AdminAuditLogs />, 'Audit Logs', 'Review account, menu, printing, and order operations.'), ADMIN_ROLES, 'STORE_ADMINISTRATION')}
       </AppShell>
     )
   }
 
   if (storeId && routePath.startsWith('/admin/settings/tables')) {
-    return <AppShell>{storePage(storeId, ownerAdminPage(<AdminDiningTables />, 'Dining Tables', 'Maintain table labels, areas, capacity, and active status.'), ADMIN_ROLES)}</AppShell>
+    return <AppShell>{storePage(storeId, ownerAdminPage(<AdminDiningTables />, 'Dining Tables', 'Maintain table labels, areas, capacity, and active status.'), ADMIN_ROLES, 'TABLE_MANAGEMENT')}</AppShell>
   }
 
   if (storeId && routePath.startsWith('/admin/menu/items')) {
-    return <AppShell>{storePage(storeId, ownerAdminPage(<AdminMenuItems />, 'Menu Management', 'Maintain menu items, pricing, cost, and options.'), STORE_TOOL_ROLES)}</AppShell>
+    return <AppShell>{storePage(storeId, ownerAdminPage(<AdminMenuItems />, 'Menu Management', 'Maintain menu items, pricing, cost, and options.'), STORE_TOOL_ROLES, 'MENU_MANAGEMENT')}</AppShell>
   }
 
   if (storeId && routePath.startsWith('/admin/settings/printing')) {
-    return <AppShell>{storePage(storeId, ownerAdminPage(<AdminPrintingSettings />, 'Printing Settings', 'Configure printers, assignments, test prints, and print jobs.'), STORE_TOOL_ROLES)}</AppShell>
+    return <AppShell>{storePage(storeId, ownerAdminPage(<AdminPrintingSettings />, 'Printing Settings', 'Configure printers, assignments, test prints, and print jobs.'), STORE_TOOL_ROLES, 'PRINTING')}</AppShell>
   }
 
   if (storeId && routePath.startsWith('/admin/reports/sales')) {
-    return <AppShell>{storePage(storeId, ownerAdminPage(<AdminReportsSales />, 'Sales Report', 'Review sales summaries from analytics tables.'), ADMIN_ROLES)}</AppShell>
+    return <AppShell>{storePage(storeId, ownerAdminPage(<AdminReportsSales />, 'Sales Report', 'Review sales summaries from analytics tables.'), ADMIN_ROLES, 'REPORTING_CORE')}</AppShell>
   }
 
   if (storeId && routePath.startsWith('/admin/reports/items')) {
-    return <AppShell>{storePage(storeId, ownerAdminPage(<AdminReportsItems />, 'Item Sales Report', 'Review top and low-performing menu items.'), ADMIN_ROLES)}</AppShell>
+    return <AppShell>{storePage(storeId, ownerAdminPage(<AdminReportsItems />, 'Item Sales Report', 'Review top and low-performing menu items.'), ADMIN_ROLES, 'REPORTING_CORE')}</AppShell>
   }
 
   if (storeId && routePath.startsWith('/admin/reports/profit')) {
-    return <AppShell>{storePage(storeId, ownerAdminPage(<AdminReportsProfit />, 'Profit Report', 'Review estimated cost, profit, and margin trends.'), ADMIN_ROLES)}</AppShell>
+    return <AppShell>{storePage(storeId, ownerAdminPage(<AdminReportsProfit />, 'Profit Report', 'Review estimated cost, profit, and margin trends.'), ADMIN_ROLES, 'REPORTING_CORE')}</AppShell>
   }
 
   if (storeId && routePath.startsWith('/admin/reports/stores')) {
-    return <AppShell>{storePage(storeId, ownerAdminPage(<AdminReportsStores />, 'Store Comparison', 'Compare store-level sales and operations.'), ADMIN_ROLES)}</AppShell>
+    return <AppShell>{storePage(storeId, ownerAdminPage(<AdminReportsStores />, 'Store Comparison', 'Compare store-level sales and operations.'), ADMIN_ROLES, 'REPORTING_CORE')}</AppShell>
   }
 
   if (storeId && routePath.startsWith('/admin/platform')) {
@@ -278,15 +290,15 @@ function App() {
   }
 
   if (storeId && routePath.startsWith('/pickup')) {
-    return <AppShell>{storePage(storeId, <PickupBoard />, PASS_ROLES)}</AppShell>
+    return <AppShell>{storePage(storeId, <PickupBoard />, PASS_ROLES, 'KDS')}</AppShell>
   }
 
   if (storeId && routePath.startsWith('/frontdesk/menu')) {
-    return <AppShell>{storePage(storeId, <DineIn />, FRONTDESK_ROLES)}</AppShell>
+    return <AppShell>{storePage(storeId, <DineIn />, FRONTDESK_ROLES, 'ORDERING_POS')}</AppShell>
   }
 
   if (storeId && (routePath === '/frontdesk' || routePath === '/frontdesk/')) {
-    return <AppShell>{storePage(storeId, <DineIn />, FRONTDESK_ROLES)}</AppShell>
+    return <AppShell>{storePage(storeId, <DineIn />, FRONTDESK_ROLES, 'ORDERING_POS')}</AppShell>
   }
 
   return (

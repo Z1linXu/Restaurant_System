@@ -4,7 +4,7 @@ import { useNoodleStationOrders } from '../../../hooks/useNoodleStationOrders'
 import { KdsOrderCard } from './components/KdsOrderCard'
 import { KdsSidebar } from './components/KdsSidebar'
 import { KdsTopBar, type KdsDisplaySizeMode } from './components/KdsTopBar'
-import { useCurrentStore } from '../../store/StoreContext'
+import { useCurrentStore } from '../../store/useStoreContext'
 import { buildStorePath } from '../../store/storeRoutes'
 
 const PREP_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {

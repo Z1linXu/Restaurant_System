@@ -20,7 +20,7 @@ import { getAndroidPadDeviceBridge } from '../../types/androidPadBridge'
 import type { ConnectionState } from '../../services/networkStatus'
 import { menuCacheNoticeDismissalKey } from '../../offline/menuCacheNotice'
 import { useAuth } from '../auth/useAuth'
-import { useCurrentStore } from '../store/StoreContext'
+import { useCurrentStore } from '../store/useStoreContext'
 import { isQuickAddItem } from './orderingCustomizationRules'
 
 interface OrderingPageProps {

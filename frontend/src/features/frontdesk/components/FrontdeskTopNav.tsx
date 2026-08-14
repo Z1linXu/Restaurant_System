@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { navigateTo } from '../navigation'
 import { useAuth } from '../../auth/useAuth'
-import { isFeatureEnabled, type FeaturePackage } from '../../feature-flags/featureConfig'
 import { StoreSwitcher } from '../../store/StoreSwitcher'
 import { buildStorePath } from '../../store/storeRoutes'
-import { useOptionalCurrentStore } from '../../store/StoreContext'
+import { useOptionalCurrentStore } from '../../store/useStoreContext'
+import { isStoreModuleEnabled, type StoreModuleKey } from '../../store/storeModuleAccess'
 import {
   getAndroidPadDeviceBridge,
   parseAndroidBridgeJson,
@@ -19,20 +19,21 @@ interface FrontdeskTopNavProps {
 }
 
 const navItems = [
-  { id: 'orders', label: 'Orders', icon: '▤', feature: 'CORE_POS' },
-  { id: 'menu', label: 'Menu', icon: '✕', feature: 'CORE_POS' },
-  { id: 'pickup', label: 'Pickup', icon: '◉', feature: 'KDS' },
-  { id: 'dashboard', label: 'Dashboard', icon: '◫', feature: 'ADMIN' },
+  { id: 'orders', label: 'Orders', icon: '▤', moduleKey: 'ORDER_HISTORY' },
+  { id: 'menu', label: 'Menu', icon: '✕', moduleKey: 'ORDERING_POS' },
+  { id: 'pickup', label: 'Pickup', icon: '◉', moduleKey: 'KDS' },
+  { id: 'dashboard', label: 'Dashboard', icon: '◫', moduleKey: 'STORE_ADMINISTRATION' },
 ] as const satisfies Array<{
   id: 'menu' | 'orders' | 'pickup' | 'dashboard'
   label: string
   icon: string
-  feature: FeaturePackage
+  moduleKey: StoreModuleKey
 }>
 
 export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
   const currentStore = useOptionalCurrentStore()
   const { user, signOut, permissions, features } = useAuth()
+  const moduleConfiguration = currentStore?.moduleConfiguration ?? null
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
@@ -42,6 +43,8 @@ export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
   const path = (target: string) => currentStore ? buildStorePath(currentStore.storeId, target) : target
   const role = user?.role_code?.toUpperCase()
   const canSeeAdminDashboard = role === 'OWNER' || role === 'ADMIN' || role === 'MANAGER'
+  const canUsePrintingSettings = isStoreModuleEnabled(moduleConfiguration, 'PRINTING')
+  const canUseMenuManagement = isStoreModuleEnabled(moduleConfiguration, 'MENU_MANAGEMENT')
 
   const updateUserMenuPosition = () => {
     const rect = userMenuButtonRef.current?.getBoundingClientRect()
@@ -59,7 +62,7 @@ export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
     if (!userMenuOpen) {
       return
     }
-    updateUserMenuPosition()
+    const animationFrameId = window.requestAnimationFrame(updateUserMenuPosition)
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target as Node
       if (!userMenuButtonRef.current?.contains(target) && !userMenuPanelRef.current?.contains(target)) {
@@ -71,6 +74,7 @@ export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
     window.addEventListener('resize', handleReposition)
     window.addEventListener('scroll', handleReposition, true)
     return () => {
+      window.cancelAnimationFrame(animationFrameId)
       window.removeEventListener('pointerdown', handlePointerDown)
       window.removeEventListener('resize', handleReposition)
       window.removeEventListener('scroll', handleReposition, true)
@@ -135,22 +139,26 @@ export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
                   <span>个人信息</span>
                   <span className="text-[0.78rem] font-semibold text-[var(--muted)]">Profile</span>
                 </button>
-                <button
-                  type="button"
-                  className="flex min-h-12 w-full items-center justify-between rounded-[16px] px-3 text-left text-[0.98rem] font-bold text-[rgba(26,28,25,0.84)] transition hover:bg-[rgba(97,0,0,0.06)]"
-                  onClick={() => openTool('/admin/settings/printing')}
-                >
-                  <span>打印设置</span>
-                  <span className="text-[0.78rem] font-semibold text-[var(--muted)]">Printing</span>
-                </button>
-                <button
-                  type="button"
-                  className="flex min-h-12 w-full items-center justify-between rounded-[16px] px-3 text-left text-[0.98rem] font-bold text-[rgba(26,28,25,0.84)] transition hover:bg-[rgba(97,0,0,0.06)]"
-                  onClick={() => openTool('/admin/menu/items')}
-                >
-                  <span>菜单管理</span>
-                  <span className="text-[0.78rem] font-semibold text-[var(--muted)]">Menu</span>
-                </button>
+                {canUsePrintingSettings ? (
+                  <button
+                    type="button"
+                    className="flex min-h-12 w-full items-center justify-between rounded-[16px] px-3 text-left text-[0.98rem] font-bold text-[rgba(26,28,25,0.84)] transition hover:bg-[rgba(97,0,0,0.06)]"
+                    onClick={() => openTool('/admin/settings/printing')}
+                  >
+                    <span>打印设置</span>
+                    <span className="text-[0.78rem] font-semibold text-[var(--muted)]">Printing</span>
+                  </button>
+                ) : null}
+                {canUseMenuManagement ? (
+                  <button
+                    type="button"
+                    className="flex min-h-12 w-full items-center justify-between rounded-[16px] px-3 text-left text-[0.98rem] font-bold text-[rgba(26,28,25,0.84)] transition hover:bg-[rgba(97,0,0,0.06)]"
+                    onClick={() => openTool('/admin/menu/items')}
+                  >
+                    <span>菜单管理</span>
+                    <span className="text-[0.78rem] font-semibold text-[var(--muted)]">Menu</span>
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className="flex min-h-12 w-full items-center justify-between rounded-[16px] px-3 text-left text-[0.98rem] font-black text-[var(--primary)] transition hover:bg-[rgba(97,0,0,0.08)]"
@@ -213,7 +221,10 @@ export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
 
       <nav className="flex items-center gap-2">
         <StoreSwitcher compact />
-        {navItems.filter((item) => isFeatureEnabled(item.feature) && (item.id !== 'dashboard' || canSeeAdminDashboard)).map((item) => {
+        {navItems.filter((item) => (
+          isStoreModuleEnabled(moduleConfiguration, item.moduleKey)
+          && (item.id !== 'dashboard' || canSeeAdminDashboard)
+        )).map((item) => {
           const active = item.id === activeItem
           return (
             <button
@@ -277,9 +288,12 @@ function StaffProfileModal({
   }
 
   useEffect(() => {
-    refreshAndroidState()
+    const animationFrameId = window.requestAnimationFrame(refreshAndroidState)
     const intervalId = window.setInterval(refreshAndroidState, 5000)
-    return () => window.clearInterval(intervalId)
+    return () => {
+      window.cancelAnimationFrame(animationFrameId)
+      window.clearInterval(intervalId)
+    }
   }, [])
 
   const enabledFeatures = Object.entries(features ?? {})

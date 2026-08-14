@@ -314,20 +314,17 @@ Expected final UI repair stop after exact-SHA Staging deployment:
 PHASE_A5_5_FINAL_UI_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
 ```
 
-Owner manual acceptance of A5.5 is now PASS. The current Owner-authorized
-continuous execution is:
-
-```text
-PHASE_A6_BACKEND_MODULE_GATING
-→ PHASE_A7_FRONTEND_MODULE_GATING
-```
-
-A6 must enforce backend capability as authenticated principal, Store/
-Organization access, role/permission, Store module enabled and environment
-capability, while keeping hardware readiness for A8. A6 evidence is:
+Owner manual acceptance of A5.5 is PASS. A6 backend module gating is merged
+and A7 frontend module gating is the active continuous execution package.
+A6 evidence is:
 [PHASE_A6_BACKEND_MODULE_GATING_EVIDENCE](../agile/PHASE_A6_BACKEND_MODULE_GATING_EVIDENCE.md).
-After A6 merge/fetch, continue to A7; after A7 exact-SHA Staging deployment
-and validation, stop before A8:
+A7 evidence is:
+[PHASE_A7_FRONTEND_MODULE_GATING_EVIDENCE](../agile/PHASE_A7_FRONTEND_MODULE_GATING_EVIDENCE.md).
+
+A7 gates Store-scoped routes, pages and navigation from authenticated Store
+Context `module_configuration`; legacy frontend feature configuration remains
+only an environment/platform compatibility gate. After A7 exact-SHA Staging
+deployment and validation, stop before A8:
 
 ```text
 PHASE_A7_FRONTEND_MODULE_GATING_COMPLETE_WAITING_FOR_PHASE_A8_OWNER_CONTINUATION

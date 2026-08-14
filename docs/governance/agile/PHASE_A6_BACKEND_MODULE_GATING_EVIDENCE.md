@@ -114,7 +114,7 @@ print mode and hardware binding separate:
 | `stores.printing_enabled` | `RUNTIME_MODE` / rollback compatibility | Still exposed by printing config; not the A6 module source. |
 | `stores.printing_mode` | `RUNTIME_MODE` | Controls `DISABLED` / `MOCK` / `PAD_DIRECT` / `REAL` runtime behavior after Store module access passes. |
 | Printer configs/assignments/device topology | `A8_HARDWARE_BOUNDARY` | Safe topology is visible, but hardware readiness enforcement is deferred to A8. |
-| Frontend feature config | `LEGACY_FEATURE_FLAG` / `A7_EXPECTED_WORK` | A7 must consume authenticated Store Context module state for navigation/route/page gating. |
+| Frontend feature config | `LEGACY_FEATURE_FLAG` / `A7_IMPLEMENTED` | A7 consumes authenticated Store Context module state for Store route/navigation/page gating; feature config remains environment/platform compatibility only. |
 
 ## Remaining intentional legacy surface
 

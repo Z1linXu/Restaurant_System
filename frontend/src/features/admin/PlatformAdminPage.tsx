@@ -7,7 +7,7 @@ import {
 } from '../../services/platformAdminService'
 import { isFeatureEnabled } from '../feature-flags/featureConfig'
 import { FrontdeskTopNav } from '../frontdesk/components/FrontdeskTopNav'
-import { useCurrentStore } from '../store/StoreContext'
+import { useCurrentStore } from '../store/useStoreContext'
 
 type SectionKey =
   | 'organizations'

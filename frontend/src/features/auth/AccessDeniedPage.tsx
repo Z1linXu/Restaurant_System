@@ -1,6 +1,6 @@
 import { navigateTo } from '../frontdesk/navigation'
 import { buildStorePath } from '../store/storeRoutes'
-import { useOptionalCurrentStore } from '../store/StoreContext'
+import { useOptionalCurrentStore } from '../store/useStoreContext'
 import { useAuth } from './useAuth'
 
 export function AccessDeniedPage({ message = 'You do not have access to this page.' }: { message?: string }) {

@@ -78,7 +78,7 @@ sequenceDiagram
 
 - browser implementation-specific HTTP cache internals
 - customer PII and order history
-- future A7 module-gated frontend navigation
+- unrelated frontend module-gated navigation details
 
 ## Source files used
 
