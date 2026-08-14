@@ -126,6 +126,18 @@
 > implement A6/A7 gating, start Phase B/C, create Chinatown/Sainte-Catherine,
 > or touch Production.
 
+> 2026-08-13 Phase A5 St-Denis Canonical Profile: A4 entered `main` through PR
+> #142 at `be14923c96098d80b1b841e2ba0edbe3ca2563a5`. A5 adds additive Flyway
+> V15 seed data for `ST_DENIS_CANONICAL_PROFILE/v1` and a dry-run
+> materialization validator. The profile fingerprint is
+> `af1a8f34cd156c1987b74ec1a9a22ddfd004859c617937b7d53f05e16e762602`; counts
+> are categories/items/options `6/39/380`, parent option relationships `11`,
+> tables `13`, stations `5`, logical printers/assignments `4/3`, combo
+> components `5`, staff templates `4`, and device slots `7`. A5 uses
+> profile-local refs and excludes Production DB IDs, auth material, physical
+> printer endpoints and device pairing material. It does not create a Store or
+> start Phase B/C/A6.
+
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The
 > product rule is `BUILD ONCE, CONFIGURE MANY`; future Stores must not be

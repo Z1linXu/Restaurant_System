@@ -166,7 +166,8 @@ PHASE_A4_STORE_PROFILE_CONTRACT
 → PHASE_A5_ST_DENIS_CANONICAL_PROFILE
 ```
 
-A4 Store Profile Contract implementation has passed Agent 6 review:
+A4 Store Profile Contract implementation has passed Agent 6 review and entered
+`main` through PR #142 at `be14923c96098d80b1b841e2ba0edbe3ca2563a5`:
 [PHASE_A4_STORE_PROFILE_CONTRACT](../agile/PHASE_A4_STORE_PROFILE_CONTRACT.md).
 It adds additive Flyway V14 `store_profiles`, `store_profile_versions`, and
 `store_profile_artifacts`, deterministic JSON fingerprinting, published version
@@ -175,8 +176,19 @@ insert/delete/update/move protection, a fail-closed validator, and Owner-only
 read APIs. Focused backend tests, full backend tests, `git diff --check` and
 Agent 6 are PASS. It does not create a Store, materialize St-Denis, deploy
 Staging, touch Production, start A6/A7, Phase B/C, Chinatown or
-Sainte-Catherine. After A4 enters `main`, the current Owner authorization
-continues directly to A5 without an Owner stop unless a TRUE OWNER GATE is hit.
+Sainte-Catherine.
+
+A5 St-Denis Canonical Profile repository implementation is now in progress:
+[PHASE_A5_ST_DENIS_CANONICAL_PROFILE](../agile/PHASE_A5_ST_DENIS_CANONICAL_PROFILE.md).
+It adds Flyway V15 safe profile seed data for
+`ST_DENIS_CANONICAL_PROFILE/v1`, fingerprint
+`af1a8f34cd156c1987b74ec1a9a22ddfd004859c617937b7d53f05e16e762602`,
+with menu graph counts `6/39/380`, tables `13`, stations `5`, logical
+printers/assignments `4/3`, combo components `5`, staff templates `4`, and
+device slots `7`. It adds a dry-run materialization validator only; it does not
+create a Store or bind any runtime. Because V15 is a Flyway data migration,
+exact-SHA Staging deploy/Flyway validation is required after A5 PR merge before
+A5 runtime PASS can be claimed. Production remains no-mutation.
 
 Phase A0 deployed evidence:
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](../agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).

@@ -178,6 +178,17 @@ backend tests, `git diff --check` and Agent 6 are PASS. A4 is generic contract
 work only; A5 owns the first `ST_DENIS_CANONICAL_PROFILE` proof. A6 and Phase
 B/C remain unauthorized until the A5 stop.
 
+A4 entered `main` through PR #142 at
+`be14923c96098d80b1b841e2ba0edbe3ca2563a5`. A5 repository implementation adds
+Flyway V15 seed data for the safe, versioned
+`ST_DENIS_CANONICAL_PROFILE/v1` and validates it with the A4 contract plus a
+dry-run materialization validator. A5 proves profile-local identity remapping,
+complete St-Denis menu graph relationships, A0.1 pricing policy continuity,
+A0.2 combo configuration continuity, logical printing topology only,
+role/access defaults without auth material, and profile/store independence.
+V15 requires exact-SHA Staging Flyway validation after A5 PR merge before A5
+runtime PASS.
+
 This order must not change unless fresh audit proves a real technical
 dependency. Any change records the original order, actual order and reason.
 
