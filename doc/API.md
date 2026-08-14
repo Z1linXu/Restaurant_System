@@ -59,8 +59,8 @@
 > or A6/A7 runtime module gating.
 
 > Phase A5 Store Profile Data (2026-08-13): after the bounded V15 seed-literal
-> repair and Profile fingerprint entity type repair are merged, and Flyway V15
-> is applied, the existing read-only Owner Profile endpoints expose
+> repair and Profile fingerprint JDBC CHAR type repair are merged, and Flyway
+> V15 is applied, the existing read-only Owner Profile endpoints expose
 > `ST_DENIS_CANONICAL_PROFILE/v1` with fingerprint
 > `af1a8f34cd156c1987b74ec1a9a22ddfd004859c617937b7d53f05e16e762602`. The
 > profile is a safe versioned template only; these endpoints do not materialize

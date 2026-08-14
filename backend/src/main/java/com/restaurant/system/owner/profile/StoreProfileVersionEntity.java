@@ -8,6 +8,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import lombok.Data;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Data
 @Entity
@@ -35,6 +37,7 @@ public class StoreProfileVersionEntity {
     public String content_json;
 
     @Column(name = "fingerprint_sha256", columnDefinition = "char(64)", length = 64)
+    @JdbcTypeCode(SqlTypes.CHAR)
     public String fingerprint_sha256;
 
     @Column(name = "source_reference")

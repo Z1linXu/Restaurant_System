@@ -1,6 +1,6 @@
 # Phase A5 St-Denis Canonical Profile
 
-Status: `PHASE_A5_RUNTIME_ENTITY_TYPE_REPAIR_READY_FOR_PR`
+Status: `PHASE_A5_RUNTIME_JDBC_CHAR_TYPE_REPAIR_READY_FOR_PR`
 
 Date: 2026-08-13
 
@@ -45,12 +45,15 @@ Runtime boundary:
   applied Flyway V15 successfully, then backend startup failed closed during
   Hibernate schema validation because the A4 `fingerprint_sha256 char(64)`
   columns were mapped by JPA as default `varchar(255)`.
-- The current bounded entity-type repair changes only the A4 Profile entity
-  mapping for `fingerprint_sha256` to explicit `char(64)` and adds regression
-  coverage. It does not add a migration, edit Flyway history, reset Staging,
-  materialize a Store, touch Production, downgrade, or read runtime secrets.
+- PR #146 changed the A4 Profile entity DDL metadata to explicit `char(64)`,
+  but exact-SHA Staging proved Hibernate still treated the field as
+  `Types#VARCHAR`. Backend startup therefore remained fail-closed.
+- The current bounded JDBC type repair adds explicit Hibernate
+  `@JdbcTypeCode(SqlTypes.CHAR)` metadata and regression coverage. It does not
+  add a migration, edit Flyway history, reset Staging, materialize a Store,
+  touch Production, downgrade, or read runtime secrets.
 - Exact-SHA Staging deploy/Flyway validation must be retried after the
-  entity-type repair PR enters `main` before A5 runtime PASS can be claimed.
+  JDBC type repair PR enters `main` before A5 runtime PASS can be claimed.
 - No Store materialization, Store activation, Owner Create New Store,
   Chinatown, Sainte-Catherine, A6, Phase B/C or Production action is included
 
@@ -375,6 +378,50 @@ mvn -q test
 PASS
 ```
 
+Entity metadata repair PR:
+
+```text
+PR = https://github.com/Z1linXu/Restaurant_System/pull/146
+merge = 3c99cf1559bbaad2e4c367422bb5eb76877fb086
+```
+
+## Runtime JDBC CHAR type repair
+
+Third Staging runtime attempt:
+
+```text
+APPROVED_SHA = 3c99cf1559bbaad2e4c367422bb5eb76877fb086
+PREFLIGHT = PASS
+BUILD_START = PASS
+FLYWAY_AFTER_START = V15_SUCCESSFUL
+BACKEND_HEALTH = FAIL_CLOSED
+PRODUCTION_MUTATION = NONE
+```
+
+Fail-closed root cause:
+
+```text
+@Column(columnDefinition = "char(64)", length = 64) changed generated DDL text,
+but Hibernate schema validation still carried expected JDBC type VARCHAR.
+PostgreSQL reports the live V14 columns as bpchar / Types#CHAR.
+```
+
+Repair:
+
+- add `@JdbcTypeCode(SqlTypes.CHAR)` to both Profile fingerprint entity fields;
+- extend `StoreProfileMigrationTest` to assert both the DDL metadata and the
+  Hibernate JDBC type metadata.
+
+Repair validation:
+
+```text
+mvn -q -Dtest=StoreProfileMigrationTest,StDenisCanonicalProfileContractTest,StoreProfileControllerTest test
+PASS
+
+mvn -q test
+PASS
+```
+
 ## Boundaries retained
 
 A5 does not:
@@ -392,5 +439,5 @@ A5 does not:
 Current repair stop before repair PR/merge:
 
 ```text
-PHASE_A5_RUNTIME_ENTITY_TYPE_REPAIR_READY_FOR_PR
+PHASE_A5_RUNTIME_JDBC_CHAR_TYPE_REPAIR_READY_FOR_PR
 ```

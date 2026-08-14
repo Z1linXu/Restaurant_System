@@ -177,9 +177,11 @@ entered `main` at `494497dfbf874bcf12da7eb3821a276f663959c5` and repaired only
 the V15 seed literal layout and OPS-001 Flyway checksum evidence. Exact-SHA
 Staging deploy of that merge applied V15 successfully, then backend startup
 failed closed because the A4 `fingerprint_sha256 char(64)` columns were mapped
-by JPA as default `varchar(255)`. The current bounded repair changes only
-Profile entity metadata to explicit `char(64)`, with no Store materialization,
-new migration, Flyway history edit or Production action.
+by JPA as default `varchar(255)`. PR #146 added explicit `char(64)` DDL
+metadata, but Staging proved Hibernate still expected JDBC `Types#VARCHAR`.
+The current bounded repair adds explicit `@JdbcTypeCode(SqlTypes.CHAR)` and
+regression coverage only, with no Store materialization, new migration, Flyway
+history edit or Production action.
 
 Phase A0 deployed evidence is tracked in
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).

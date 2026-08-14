@@ -270,13 +270,15 @@ literal layout plus OPS-001 Flyway checksum evidence. Exact-SHA Staging deploy
 of `494497dfbf874bcf12da7eb3821a276f663959c5` applied Flyway V15 successfully,
 then backend startup failed closed because Hibernate schema validation saw the
 A4 `fingerprint_sha256 char(64)` columns as PostgreSQL `bpchar` while the JPA
-entities still expected default `varchar(255)`. The current bounded repair
-changes only Profile entity mapping to explicit `char(64)` and adds regression
-coverage; it adds no migration, edits no Flyway history, resets no Staging data,
-and performs no Production work. A5 does not create a Store, materialize
-St-Denis, start A6/A7, Phase B/C, Chinatown, Sainte-Catherine or Production
-work. Current Staging database has successful Flyway V15 and waits for exact-SHA
-Staging retry after the entity mapping repair enters `main`.
+entities still expected default `varchar(255)`. PR #146 changed Profile entity
+DDL metadata to explicit `char(64)`, but exact-SHA Staging still failed closed
+because Hibernate continued to expect JDBC `Types#VARCHAR`. The current bounded
+repair adds `@JdbcTypeCode(SqlTypes.CHAR)` and regression coverage only; it adds
+no migration, edits no Flyway history, resets no Staging data, and performs no
+Production work. A5 does not create a Store, materialize St-Denis, start A6/A7,
+Phase B/C, Chinatown, Sainte-Catherine or Production work. Current Staging
+database has successful Flyway V15 and waits for exact-SHA Staging retry after
+the JDBC type repair enters `main`.
 
 ## Current final productization roadmap audit (2026-08-12)
 
