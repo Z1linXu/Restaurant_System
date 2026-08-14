@@ -3,6 +3,8 @@ package com.restaurant.system.order.controller;
 import com.restaurant.system.common.auth.AuthorizationService;
 import com.restaurant.system.common.auth.Capability;
 import com.restaurant.system.common.response.ApiResponse;
+import com.restaurant.system.modules.ModuleKeys;
+import com.restaurant.system.modules.StoreModuleAccessEvaluator;
 import com.restaurant.system.order.dto.FrontdeskOrderBoardResponse;
 import com.restaurant.system.order.service.OrderService;
 import java.util.List;
@@ -17,10 +19,16 @@ public class FrontdeskOrderController {
 
     private final OrderService orderService;
     private final AuthorizationService authorizationService;
+    private final StoreModuleAccessEvaluator moduleAccessEvaluator;
 
-    public FrontdeskOrderController(OrderService orderService, AuthorizationService authorizationService) {
+    public FrontdeskOrderController(
+        OrderService orderService,
+        AuthorizationService authorizationService,
+        StoreModuleAccessEvaluator moduleAccessEvaluator
+    ) {
         this.orderService = orderService;
         this.authorizationService = authorizationService;
+        this.moduleAccessEvaluator = moduleAccessEvaluator;
     }
 
     @GetMapping
@@ -33,6 +41,7 @@ public class FrontdeskOrderController {
         @RequestParam(required = false) String keyword
     ) {
         authorizationService.requireForStore(store_id, Capability.ORDER_VIEW_ACTIVE);
+        moduleAccessEvaluator.requireCapability(store_id, ModuleKeys.ORDERING_POS);
         return ApiResponse.success(
             orderService.getFrontdeskOrderBoard(store_id, status, order_type, table_no, pickup_no, keyword)
         );
@@ -49,6 +58,7 @@ public class FrontdeskOrderController {
         @RequestParam(required = false) Integer limit
     ) {
         authorizationService.requireForStore(store_id, Capability.ORDER_VIEW_HISTORY);
+        moduleAccessEvaluator.requireCapability(store_id, ModuleKeys.ORDER_HISTORY);
         return ApiResponse.success(
             orderService.getFrontdeskOrderHistory(store_id, status, order_type, table_no, pickup_no, keyword, limit)
         );
@@ -60,6 +70,7 @@ public class FrontdeskOrderController {
         @RequestParam(required = false) Integer limit
     ) {
         authorizationService.requireForStore(store_id, Capability.ORDER_VIEW_HISTORY);
+        moduleAccessEvaluator.requireCapability(store_id, ModuleKeys.ORDER_HISTORY);
         return ApiResponse.success(orderService.getFrontdeskTodayOrderHistory(store_id, limit));
     }
 }

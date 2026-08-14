@@ -6,6 +6,8 @@ import com.restaurant.system.common.auth.Capability;
 import com.restaurant.system.common.feature.FeatureFlagService;
 import com.restaurant.system.common.feature.FeaturePackage;
 import com.restaurant.system.common.response.ApiResponse;
+import com.restaurant.system.modules.ModuleKeys;
+import com.restaurant.system.modules.StoreModuleAccessEvaluator;
 import com.restaurant.system.menu.entity.MenuCategory;
 import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.entity.MenuItemOption;
@@ -40,22 +42,26 @@ public class PlatformAdminController {
     private final AuthorizationService authorizationService;
     private final FeatureFlagService featureFlagService;
     private final AuditLogService auditLogService;
+    private final StoreModuleAccessEvaluator moduleAccessEvaluator;
 
     public PlatformAdminController(
         PlatformAdminService platformAdminService,
         AuthorizationService authorizationService,
         FeatureFlagService featureFlagService,
-        AuditLogService auditLogService
+        AuditLogService auditLogService,
+        StoreModuleAccessEvaluator moduleAccessEvaluator
     ) {
         this.platformAdminService = platformAdminService;
         this.authorizationService = authorizationService;
         this.featureFlagService = featureFlagService;
         this.auditLogService = auditLogService;
+        this.moduleAccessEvaluator = moduleAccessEvaluator;
     }
 
     @GetMapping("/overview")
     public ApiResponse<PlatformAdminOverviewResponse> getOverview(@RequestParam Long store_id) {
         authorizationService.requireForStore(store_id, Capability.ADMIN_STORE_CONFIG, Capability.ADMIN_USER_ROLE_MANAGE);
+        requireStoreAdministration(store_id);
         return ApiResponse.success(platformAdminService.getOverview(store_id));
     }
 
@@ -135,18 +141,21 @@ public class PlatformAdminController {
     @GetMapping("/stations")
     public ApiResponse<List<Station>> getStations(@RequestParam Long store_id) {
         authorizationService.requireForStore(store_id, Capability.ADMIN_STORE_CONFIG);
+        requireMenuManagement(store_id);
         return ApiResponse.success(platformAdminService.getStations(store_id));
     }
 
     @PostMapping("/stations")
     public ApiResponse<Station> createStation(@RequestBody Station station) {
         authorizationService.requireForStore(station.store_id, Capability.ADMIN_STORE_CONFIG);
+        requireMenuManagement(station.store_id);
         return ApiResponse.success("Station saved", platformAdminService.saveStation(station));
     }
 
     @PutMapping("/stations/{id}")
     public ApiResponse<Station> updateStation(@PathVariable Long id, @RequestBody Station station) {
         authorizationService.requireForStore(station.store_id, Capability.ADMIN_STORE_CONFIG);
+        requireMenuManagement(station.store_id);
         station.id = id;
         return ApiResponse.success("Station updated", platformAdminService.saveStation(station));
     }
@@ -154,18 +163,21 @@ public class PlatformAdminController {
     @GetMapping("/dining-tables")
     public ApiResponse<List<DiningTable>> getDiningTables(@RequestParam Long store_id) {
         authorizationService.requireForStore(store_id, Capability.ADMIN_STORE_CONFIG);
+        requireTableManagement(store_id);
         return ApiResponse.success(platformAdminService.getDiningTables(store_id));
     }
 
     @PostMapping("/dining-tables")
     public ApiResponse<DiningTable> createDiningTable(@RequestBody DiningTable diningTable) {
         authorizationService.requireForStore(diningTable.store_id, Capability.ADMIN_STORE_CONFIG);
+        requireTableManagement(diningTable.store_id);
         return ApiResponse.success("Dining table saved", platformAdminService.saveDiningTable(diningTable));
     }
 
     @PutMapping("/dining-tables/{id}")
     public ApiResponse<DiningTable> updateDiningTable(@PathVariable Long id, @RequestBody DiningTable diningTable) {
         authorizationService.requireForStore(diningTable.store_id, Capability.ADMIN_STORE_CONFIG);
+        requireTableManagement(diningTable.store_id);
         diningTable.id = id;
         return ApiResponse.success("Dining table updated", platformAdminService.saveDiningTable(diningTable));
     }
@@ -173,18 +185,21 @@ public class PlatformAdminController {
     @GetMapping("/menu/categories")
     public ApiResponse<List<MenuCategory>> getMenuCategories(@RequestParam Long store_id) {
         authorizationService.requireForStore(store_id, Capability.ADMIN_STORE_CONFIG);
+        requireMenuManagement(store_id);
         return ApiResponse.success(platformAdminService.getMenuCategories(store_id));
     }
 
     @PostMapping("/menu/categories")
     public ApiResponse<MenuCategory> createMenuCategory(@RequestBody MenuCategory menuCategory) {
         authorizationService.requireForStore(menuCategory.store_id, Capability.ADMIN_STORE_CONFIG);
+        requireMenuManagement(menuCategory.store_id);
         return ApiResponse.success("Menu category saved", platformAdminService.saveMenuCategory(menuCategory));
     }
 
     @PutMapping("/menu/categories/{id}")
     public ApiResponse<MenuCategory> updateMenuCategory(@PathVariable Long id, @RequestBody MenuCategory menuCategory) {
         authorizationService.requireForStore(menuCategory.store_id, Capability.ADMIN_STORE_CONFIG);
+        requireMenuManagement(menuCategory.store_id);
         menuCategory.id = id;
         return ApiResponse.success("Menu category updated", platformAdminService.saveMenuCategory(menuCategory));
     }
@@ -192,12 +207,14 @@ public class PlatformAdminController {
     @GetMapping("/menu/items")
     public ApiResponse<List<MenuItem>> getMenuItems(@RequestParam Long store_id) {
         authorizationService.requireForStore(store_id, Capability.ADMIN_MENU_MANAGE, Capability.ADMIN_STORE_CONFIG);
+        requireMenuManagement(store_id);
         return ApiResponse.success(platformAdminService.getMenuItems(store_id));
     }
 
     @PostMapping("/menu/items")
     public ApiResponse<MenuItem> createMenuItem(@RequestBody MenuItem menuItem, HttpServletRequest servletRequest) {
         var user = authorizationService.requireForStore(menuItem.store_id, Capability.ADMIN_MENU_MANAGE, Capability.ADMIN_STORE_CONFIG);
+        requireMenuManagement(menuItem.store_id);
         MenuItem saved = platformAdminService.saveMenuItem(menuItem);
         auditLogService.record(saved.store_id, user, "MENU_ITEM_SAVED", "MENU_ITEM", saved.id, "Saved menu item " + saved.name_zh, Map.of("sku", saved.sku == null ? "" : saved.sku), servletRequest);
         return ApiResponse.success("Menu item saved", saved);
@@ -206,6 +223,7 @@ public class PlatformAdminController {
     @PutMapping("/menu/items/{id}")
     public ApiResponse<MenuItem> updateMenuItem(@PathVariable Long id, @RequestBody MenuItem menuItem, HttpServletRequest servletRequest) {
         var user = authorizationService.requireForStore(menuItem.store_id, Capability.ADMIN_MENU_MANAGE, Capability.ADMIN_STORE_CONFIG);
+        requireMenuManagement(menuItem.store_id);
         menuItem.id = id;
         MenuItem saved = platformAdminService.saveMenuItem(menuItem);
         auditLogService.record(saved.store_id, user, Boolean.FALSE.equals(saved.is_active) ? "MENU_ITEM_DEACTIVATED" : "MENU_ITEM_UPDATED", "MENU_ITEM", saved.id, "Updated menu item " + saved.name_zh, Map.of("active", Boolean.TRUE.equals(saved.is_active)), servletRequest);
@@ -215,6 +233,7 @@ public class PlatformAdminController {
     @GetMapping("/menu/item-options")
     public ApiResponse<List<MenuItemOption>> getMenuItemOptions(@RequestParam Long store_id) {
         authorizationService.requireForStore(store_id, Capability.ADMIN_STORE_CONFIG);
+        requireMenuManagement(store_id);
         return ApiResponse.success(platformAdminService.getMenuItemOptions(store_id));
     }
 
@@ -256,18 +275,21 @@ public class PlatformAdminController {
     @GetMapping("/users")
     public ApiResponse<List<User>> getUsers(@RequestParam Long store_id) {
         authorizationService.requireForStore(store_id, Capability.ADMIN_USER_ROLE_MANAGE);
+        requireStaffAccess(store_id);
         return ApiResponse.success(platformAdminService.getUsers(store_id));
     }
 
     @PostMapping("/users")
     public ApiResponse<User> createUser(@RequestBody User user) {
         authorizationService.requireForStore(user.getStore_id(), Capability.ADMIN_USER_ROLE_MANAGE);
+        requireStaffAccess(user.getStore_id());
         return ApiResponse.success("User saved", platformAdminService.saveUser(user));
     }
 
     @PutMapping("/users/{id}")
     public ApiResponse<User> updateUser(@PathVariable Long id, @RequestBody User user) {
         authorizationService.requireForStore(user.getStore_id(), Capability.ADMIN_USER_ROLE_MANAGE);
+        requireStaffAccess(user.getStore_id());
         user.setId(id);
         return ApiResponse.success("User updated", platformAdminService.saveUser(user));
     }
@@ -289,5 +311,21 @@ public class PlatformAdminController {
         authorizationService.require(Capability.ADMIN_USER_ROLE_MANAGE);
         role.setId(id);
         return ApiResponse.success("Role updated", platformAdminService.saveRole(role));
+    }
+
+    private void requireStoreAdministration(Long storeId) {
+        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.STORE_ADMINISTRATION);
+    }
+
+    private void requireMenuManagement(Long storeId) {
+        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.MENU_MANAGEMENT);
+    }
+
+    private void requireTableManagement(Long storeId) {
+        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.TABLE_MANAGEMENT);
+    }
+
+    private void requireStaffAccess(Long storeId) {
+        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.STAFF_ACCESS);
     }
 }

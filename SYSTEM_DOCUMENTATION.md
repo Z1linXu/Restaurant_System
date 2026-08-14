@@ -196,6 +196,20 @@
 > and Production remain out of scope. Stop state:
 > `PHASE_A5_5_FINAL_UI_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST`.
 
+> 2026-08-14 Phase A5.5/A5.6 closure and A6 authorization: Owner manual
+> acceptance of A5.5 is PASS. The Current Staging Architecture UML package is
+> now the formal anti-drift baseline at fresh main/deployed Staging
+> `923346f15757ca85fdafb509a803e87f04ae55bd`, Flyway V16:
+> [Current Staging Architecture UML Baseline](docs/architecture/current-staging/README.md).
+> A6 backend module gating introduces
+> `StoreModuleAccessEvaluator` as the application guard after authentication,
+> Store/Organization access and role permission checks. `store_modules` is the
+> canonical Store module source; environment feature flags and printing mode
+> remain environment/runtime capability inputs; A8 owns hardware capability.
+> See
+> [PHASE_A6_BACKEND_MODULE_GATING_EVIDENCE](docs/governance/agile/PHASE_A6_BACKEND_MODULE_GATING_EVIDENCE.md).
+> Production remains no-mutation.
+
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The
 > product rule is `BUILD ONCE, CONFIGURE MANY`; future Stores must not be

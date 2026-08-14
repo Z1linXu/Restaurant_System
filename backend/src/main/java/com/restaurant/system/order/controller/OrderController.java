@@ -3,9 +3,10 @@ package com.restaurant.system.order.controller;
 import com.restaurant.system.audit.service.AuditLogService;
 import com.restaurant.system.common.auth.AuthorizationService;
 import com.restaurant.system.common.auth.Capability;
-import com.restaurant.system.common.feature.FeatureFlagService;
-import com.restaurant.system.common.feature.FeaturePackage;
+import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.common.response.ApiResponse;
+import com.restaurant.system.modules.ModuleKeys;
+import com.restaurant.system.modules.StoreModuleAccessEvaluator;
 import com.restaurant.system.order.dto.CreateOrderRequest;
 import com.restaurant.system.order.dto.CreateOrderItemRequest;
 import com.restaurant.system.order.dto.CreateOrderUpdateRequest;
@@ -14,6 +15,8 @@ import com.restaurant.system.order.dto.OrderUpdateResponse;
 import com.restaurant.system.order.dto.UpdateDraftOrderHeaderRequest;
 import com.restaurant.system.order.dto.UpdateDraftOrderItemQuantityRequest;
 import com.restaurant.system.order.dto.UpdateDraftOrderItemRequest;
+import com.restaurant.system.order.entity.Order;
+import com.restaurant.system.order.repository.OrderRepository;
 import com.restaurant.system.order.service.OrderService;
 import com.restaurant.system.printing.dto.OrderReprintRequest;
 import com.restaurant.system.printing.dto.OrderPrintOptionResponse;
@@ -42,28 +45,32 @@ public class OrderController {
     private final AuthorizationService authorizationService;
     private final PrintDispatcherService printDispatcherService;
     private final PrintJobService printJobService;
-    private final FeatureFlagService featureFlagService;
     private final AuditLogService auditLogService;
+    private final StoreModuleAccessEvaluator moduleAccessEvaluator;
+    private final OrderRepository orderRepository;
 
     public OrderController(
         OrderService orderService,
         AuthorizationService authorizationService,
         PrintDispatcherService printDispatcherService,
         PrintJobService printJobService,
-        FeatureFlagService featureFlagService,
-        AuditLogService auditLogService
+        AuditLogService auditLogService,
+        StoreModuleAccessEvaluator moduleAccessEvaluator,
+        OrderRepository orderRepository
     ) {
         this.orderService = orderService;
         this.authorizationService = authorizationService;
         this.printDispatcherService = printDispatcherService;
         this.printJobService = printJobService;
-        this.featureFlagService = featureFlagService;
         this.auditLogService = auditLogService;
+        this.moduleAccessEvaluator = moduleAccessEvaluator;
+        this.orderRepository = orderRepository;
     }
 
     @PostMapping
     public ApiResponse<OrderResponse> createOrder(@Valid @RequestBody CreateOrderRequest request) {
         var user = authorizationService.requireForStore(request.store_id, Capability.ORDER_CREATE);
+        requireOrdering(request.store_id);
         request.created_by = user.userId();
         return ApiResponse.success("Order created in draft status", orderService.createOrder(request));
     }
@@ -75,6 +82,7 @@ public class OrderController {
         @RequestParam(required = false) String pickup_no
     ) {
         authorizationService.requireForStore(store_id, Capability.ORDER_CREATE);
+        requireOrdering(store_id);
         return ApiResponse.success(orderService.findOpenDraftOrder(store_id, table_no, pickup_no));
     }
 
@@ -85,12 +93,14 @@ public class OrderController {
         @RequestParam(required = false) String pickup_no
     ) {
         authorizationService.requireForStore(store_id, Capability.ORDER_VIEW_DETAIL);
+        requireOrdering(store_id);
         return ApiResponse.success(orderService.findOpenEditableOrder(store_id, table_no, pickup_no));
     }
 
     @GetMapping("/{id}")
     public ApiResponse<OrderResponse> getOrderDetail(@PathVariable Long id) {
         authorizationService.requireOrder(id, Capability.ORDER_VIEW_DETAIL);
+        requireOrdering(resolveOrderStoreId(id));
         return ApiResponse.success(orderService.getOrderDetail(id));
     }
 
@@ -100,6 +110,7 @@ public class OrderController {
         @RequestBody UpdateDraftOrderHeaderRequest request
     ) {
         authorizationService.requireOrder(id, Capability.ORDER_EDIT_DRAFT, Capability.ORDER_MODIFY_SUBMITTED);
+        requireOrdering(resolveOrderStoreId(id));
         return ApiResponse.success("Draft order header updated", orderService.updateDraftOrderHeader(id, request));
     }
 
@@ -109,6 +120,7 @@ public class OrderController {
         @Valid @RequestBody CreateOrderItemRequest request
     ) {
         authorizationService.requireOrder(id, Capability.ORDER_EDIT_DRAFT, Capability.ORDER_MODIFY_SUBMITTED);
+        requireOrdering(resolveOrderStoreId(id));
         return ApiResponse.success("Draft order item added", orderService.addDraftOrderItem(id, request));
     }
 
@@ -119,6 +131,7 @@ public class OrderController {
         @Valid @RequestBody UpdateDraftOrderItemQuantityRequest request
     ) {
         authorizationService.requireOrder(id, Capability.ORDER_EDIT_DRAFT, Capability.ORDER_MODIFY_SUBMITTED);
+        requireOrdering(resolveOrderStoreId(id));
         return ApiResponse.success("Draft order item quantity updated", orderService.updateDraftOrderItemQuantity(id, itemId, request));
     }
 
@@ -129,18 +142,21 @@ public class OrderController {
         @Valid @RequestBody UpdateDraftOrderItemRequest request
     ) {
         authorizationService.requireOrder(id, Capability.ORDER_EDIT_DRAFT, Capability.ORDER_MODIFY_SUBMITTED);
+        requireOrdering(resolveOrderStoreId(id));
         return ApiResponse.success("Draft order item updated", orderService.updateDraftOrderItem(id, itemId, request));
     }
 
     @DeleteMapping("/{id}/items/{itemId}")
     public ApiResponse<OrderResponse> removeDraftOrderItem(@PathVariable Long id, @PathVariable Long itemId) {
         authorizationService.requireOrder(id, Capability.ORDER_EDIT_DRAFT, Capability.ORDER_MODIFY_SUBMITTED);
+        requireOrdering(resolveOrderStoreId(id));
         return ApiResponse.success("Draft order item removed", orderService.removeDraftOrderItem(id, itemId));
     }
 
     @PostMapping("/{id}/submit")
     public ApiResponse<OrderResponse> submitOrder(@PathVariable Long id) {
         authorizationService.requireOrder(id, Capability.ORDER_SUBMIT);
+        requireOrdering(resolveOrderStoreId(id));
         return ApiResponse.success(
             "Order submitted and moved to preparing after kitchen task and inventory processing",
             orderService.submitOrder(id)
@@ -154,6 +170,7 @@ public class OrderController {
         HttpServletRequest servletRequest
     ) {
         var user = authorizationService.requireOrder(id, Capability.ORDER_MODIFY_SUBMITTED);
+        requireOrdering(resolveOrderStoreId(id));
         OrderUpdateResponse response = orderService.createOrderUpdate(id, request, user.userId());
         auditLogService.record(user.storeId(), user, "ORDER_UPDATED", "ORDER", id, "Update Order processed", Map.of("idempotency_key", request.idempotency_key), servletRequest);
         return ApiResponse.success(
@@ -170,12 +187,14 @@ public class OrderController {
         @RequestParam(required = false) String sort_by
     ) {
         authorizationService.requireForStore(store_id, Capability.ORDER_VIEW_ACTIVE);
+        requireOrdering(store_id);
         return ApiResponse.success(orderService.getActiveOrders(store_id, status, order_type, sort_by));
     }
 
     @PostMapping("/{id}/complete")
     public ApiResponse<OrderResponse> completeOrder(@PathVariable Long id, HttpServletRequest servletRequest) {
         var user = authorizationService.requireOrder(id, Capability.ORDER_COMPLETE);
+        requireOrdering(resolveOrderStoreId(id));
         OrderResponse response = orderService.completeOrder(id);
         auditLogService.record(user.storeId(), user, "ORDER_FINISHED", "ORDER", id, "Finished table/order", Map.of(), servletRequest);
         return ApiResponse.success("Order completed", response);
@@ -187,8 +206,8 @@ public class OrderController {
         @RequestBody OrderReprintRequest request,
         HttpServletRequest servletRequest
     ) {
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         var user = authorizationService.requireOrder(id, Capability.ORDER_VIEW_DETAIL);
+        requirePrinting(resolveOrderStoreId(id));
         PrintJobResponse response = printDispatcherService.reprintOrder(id, request, user.userId());
         auditLogService.record(user.storeId(), user, "ORDER_REPRINTED", "ORDER", id, "Reprint requested", Map.of("receipt_type", request.receipt_type == null ? "" : request.receipt_type), servletRequest);
         return ApiResponse.success("Reprint requested", response);
@@ -196,20 +215,39 @@ public class OrderController {
 
     @GetMapping("/{id}/print-jobs")
     public ApiResponse<List<PrintJobResponse>> getOrderPrintJobs(@PathVariable Long id) {
-        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
-        var user = authorizationService.requireOrder(id, Capability.ORDER_VIEW_DETAIL, Capability.ORDER_SUBMIT);
-        return ApiResponse.success(printJobService.listOrderJobs(user.storeId(), id));
+        authorizationService.requireOrder(id, Capability.ORDER_VIEW_DETAIL, Capability.ORDER_SUBMIT);
+        Long storeId = resolveOrderStoreId(id);
+        requirePrinting(storeId);
+        return ApiResponse.success(printJobService.listOrderJobs(storeId, id));
     }
 
     @GetMapping("/{id}/print-options")
     public ApiResponse<List<OrderPrintOptionResponse>> getOrderPrintOptions(@PathVariable Long id) {
         authorizationService.requireOrder(id, Capability.ORDER_VIEW_DETAIL);
+        requirePrinting(resolveOrderStoreId(id));
         return ApiResponse.success(printDispatcherService.getOrderPrintOptions(id));
     }
 
     @PostMapping("/{id}/cancel")
     public ApiResponse<OrderResponse> cancelOrder(@PathVariable Long id) {
         authorizationService.requireOrder(id, Capability.ORDER_CANCEL);
+        requireOrdering(resolveOrderStoreId(id));
         return ApiResponse.success("Order cancelled", orderService.cancelOrder(id));
+    }
+
+    private void requireOrdering(Long storeId) {
+        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.ORDERING_POS);
+    }
+
+    private void requirePrinting(Long storeId) {
+        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.PRINTING);
+    }
+
+    private Long resolveOrderStoreId(Long orderId) {
+        Order order = orderRepository.findExistingById(orderId);
+        if (order == null) {
+            throw new BusinessException("Order not found");
+        }
+        return order.store_id;
     }
 }

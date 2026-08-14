@@ -8,6 +8,8 @@ import com.restaurant.system.common.auth.AuthenticatedUser;
 import com.restaurant.system.common.auth.AuthorizationService;
 import com.restaurant.system.common.auth.ForbiddenException;
 import com.restaurant.system.common.exception.BusinessException;
+import com.restaurant.system.modules.ModuleKeys;
+import com.restaurant.system.modules.StoreModuleAccessEvaluator;
 import com.restaurant.system.staff.dto.ResetPasswordRequest;
 import com.restaurant.system.staff.dto.StaffStoreResponse;
 import com.restaurant.system.staff.dto.StaffUserRequest;
@@ -41,6 +43,7 @@ public class StaffAdminServiceImpl implements StaffAdminService {
     private final PasswordService passwordService;
     private final AuthorizationService authorizationService;
     private final AuditLogService auditLogService;
+    private final StoreModuleAccessEvaluator moduleAccessEvaluator;
 
     public StaffAdminServiceImpl(
         UserRepository userRepository,
@@ -49,7 +52,8 @@ public class StaffAdminServiceImpl implements StaffAdminService {
         UserCredentialRepository userCredentialRepository,
         PasswordService passwordService,
         AuthorizationService authorizationService,
-        AuditLogService auditLogService
+        AuditLogService auditLogService,
+        StoreModuleAccessEvaluator moduleAccessEvaluator
     ) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
@@ -58,6 +62,7 @@ public class StaffAdminServiceImpl implements StaffAdminService {
         this.passwordService = passwordService;
         this.authorizationService = authorizationService;
         this.auditLogService = auditLogService;
+        this.moduleAccessEvaluator = moduleAccessEvaluator;
     }
 
     @Override
@@ -77,6 +82,7 @@ public class StaffAdminServiceImpl implements StaffAdminService {
     @Transactional(readOnly = true)
     public List<StaffUserResponse> getStaff(Long storeId, AuthenticatedUser actor) {
         authorizationService.requireStaffManageForStore(storeId);
+        requireStaffAccess(storeId);
         return userRepository.findAllByStore_id(storeId).stream()
             .map(user -> StaffUserResponse.from(user, roleCode(user.getRole_id())))
             .filter(response -> authorizationService.isOwner(actor) || ROLE_FRONTDESK.equalsIgnoreCase(response.roleCode))
@@ -89,6 +95,7 @@ public class StaffAdminServiceImpl implements StaffAdminService {
     @Transactional
     public StaffUserResponse createStaff(StaffUserRequest request, AuthenticatedUser actor, HttpServletRequest servletRequest) {
         authorizationService.requireStaffManageForStore(request.storeId);
+        requireStaffAccess(request.storeId);
         String targetRoleCode = normalizeRole(request.roleCode);
         ensureCanManageRole(actor, targetRoleCode);
         if (request.password == null || request.password.isBlank()) {
@@ -133,6 +140,7 @@ public class StaffAdminServiceImpl implements StaffAdminService {
     public StaffUserResponse updateStaff(Long userId, StaffUserRequest request, AuthenticatedUser actor, HttpServletRequest servletRequest) {
         User user = requireUser(userId);
         authorizationService.requireStaffManageForStore(user.getStore_id());
+        requireStaffAccess(user.getStore_id());
         String currentRole = roleCode(user.getRole_id());
         ensureCanManageExistingUser(actor, user, currentRole);
         String targetRoleCode = normalizeRole(request.roleCode);
@@ -194,6 +202,7 @@ public class StaffAdminServiceImpl implements StaffAdminService {
     public StaffUserResponse resetPassword(Long userId, ResetPasswordRequest request, AuthenticatedUser actor, HttpServletRequest servletRequest) {
         User user = requireUser(userId);
         authorizationService.requireStaffManageForStore(user.getStore_id());
+        requireStaffAccess(user.getStore_id());
         String targetRole = roleCode(user.getRole_id());
         ensureCanManageExistingUser(actor, user, targetRole);
         UserCredential credential = userCredentialRepository.findFirstByLoginIdentifierIgnoreCase(user.getUsername())
@@ -212,6 +221,7 @@ public class StaffAdminServiceImpl implements StaffAdminService {
     private StaffUserResponse setStaffStatus(Long userId, AuthenticatedUser actor, String status, String action, HttpServletRequest servletRequest) {
         User user = requireUser(userId);
         authorizationService.requireStaffManageForStore(user.getStore_id());
+        requireStaffAccess(user.getStore_id());
         String targetRole = roleCode(user.getRole_id());
         ensureCanManageExistingUser(actor, user, targetRole);
         if (ROLE_OWNER.equalsIgnoreCase(targetRole) && !authorizationService.isOwner(actor)) {
@@ -236,6 +246,10 @@ public class StaffAdminServiceImpl implements StaffAdminService {
         if (authorizationService.isManager(actor) && !ROLE_FRONTDESK.equalsIgnoreCase(targetRole)) {
             throw new ForbiddenException("Manager can only manage frontdesk staff");
         }
+    }
+
+    private void requireStaffAccess(Long storeId) {
+        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.STAFF_ACCESS);
     }
 
     private void ensureCanManageRole(AuthenticatedUser actor, String targetRoleCode) {

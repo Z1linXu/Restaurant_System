@@ -10,6 +10,8 @@ import com.restaurant.system.menu.dto.MenuItemOptionUpsertRequest;
 import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.repository.MenuItemRepository;
 import com.restaurant.system.menu.service.OwnerMenuOptionService;
+import com.restaurant.system.modules.ModuleKeys;
+import com.restaurant.system.modules.StoreModuleAccessEvaluator;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
@@ -30,17 +32,20 @@ public class OwnerMenuOptionController {
     private final MenuItemRepository menuItemRepository;
     private final AuthorizationService authorizationService;
     private final AuditLogService auditLogService;
+    private final StoreModuleAccessEvaluator moduleAccessEvaluator;
 
     public OwnerMenuOptionController(
         OwnerMenuOptionService ownerMenuOptionService,
         MenuItemRepository menuItemRepository,
         AuthorizationService authorizationService,
-        AuditLogService auditLogService
+        AuditLogService auditLogService,
+        StoreModuleAccessEvaluator moduleAccessEvaluator
     ) {
         this.ownerMenuOptionService = ownerMenuOptionService;
         this.menuItemRepository = menuItemRepository;
         this.authorizationService = authorizationService;
         this.auditLogService = auditLogService;
+        this.moduleAccessEvaluator = moduleAccessEvaluator;
     }
 
     @GetMapping
@@ -101,6 +106,8 @@ public class OwnerMenuOptionController {
     private com.restaurant.system.common.auth.AuthenticatedUser requireItemStore(Long itemId) {
         MenuItem menuItem = menuItemRepository.findById(itemId)
             .orElseThrow(() -> new com.restaurant.system.common.exception.BusinessException("Menu item not found: " + itemId));
-        return authorizationService.requireForStore(menuItem.store_id, Capability.ADMIN_MENU_MANAGE);
+        var user = authorizationService.requireForStore(menuItem.store_id, Capability.ADMIN_MENU_MANAGE);
+        moduleAccessEvaluator.requireCapability(menuItem.store_id, ModuleKeys.MENU_MANAGEMENT);
+        return user;
     }
 }

@@ -8,13 +8,13 @@ contract relate to each other.
 
 ## Current runtime/source SHA
 
-- Repository source SHA: `5f4504d23135655f63d564301f8e98f3218347b2`
-- Deployed Staging SHA: `3440fddad7571409c66189e44976658921e5de1f`
-- Staging Flyway: `V15`
+- Repository source SHA: `923346f15757ca85fdafb509a803e87f04ae55bd`
+- Deployed Staging SHA: `923346f15757ca85fdafb509a803e87f04ae55bd`
+- Staging Flyway: `V16`
 
 ## Scope
 
-A1 through A5 implemented architecture. A6/A7/A8 are shown only as future
+A1 through A5.5 implemented architecture. A6/A7/A8 are shown only as future
 work, not as current behavior.
 
 ## Mermaid diagram
@@ -53,8 +53,8 @@ flowchart TD
 - Hardware capability is derived from safe topology and readiness, not secrets.
 - `ST_DENIS_CANONICAL_PROFILE/v1` is reviewed seed data and a template for
   later provisioning/materialization work.
-- Current Staging runtime intentionally retains bounded legacy gates until
-  A6/A7.
+- Current Staging runtime at this baseline intentionally retains bounded legacy
+  gates until A6/A7.
 
 ## What omitted
 

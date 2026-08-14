@@ -17,6 +17,8 @@ import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.repository.MenuItemRepository;
 import com.restaurant.system.menu.service.StoreComboConfigurationService;
 import com.restaurant.system.menu.service.StorePricingPolicyService;
+import com.restaurant.system.modules.ModuleKeys;
+import com.restaurant.system.modules.StoreModuleAccessEvaluator;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
@@ -38,30 +40,35 @@ public class OwnerMenuPricingPolicyController {
     private final MenuItemRepository menuItemRepository;
     private final AuthorizationService authorizationService;
     private final AuditLogService auditLogService;
+    private final StoreModuleAccessEvaluator moduleAccessEvaluator;
 
     public OwnerMenuPricingPolicyController(
         StorePricingPolicyService storePricingPolicyService,
         StoreComboConfigurationService storeComboConfigurationService,
         MenuItemRepository menuItemRepository,
         AuthorizationService authorizationService,
-        AuditLogService auditLogService
+        AuditLogService auditLogService,
+        StoreModuleAccessEvaluator moduleAccessEvaluator
     ) {
         this.storePricingPolicyService = storePricingPolicyService;
         this.storeComboConfigurationService = storeComboConfigurationService;
         this.menuItemRepository = menuItemRepository;
         this.authorizationService = authorizationService;
         this.auditLogService = auditLogService;
+        this.moduleAccessEvaluator = moduleAccessEvaluator;
     }
 
     @GetMapping("/pricing-policy")
     public ApiResponse<StorePricingPolicyResponse> getPolicy(@RequestParam("store_id") Long storeId) {
         authorizationService.requireForStore(storeId, Capability.ADMIN_MENU_MANAGE);
+        requireMenuManagement(storeId);
         return ApiResponse.success(storePricingPolicyService.getPolicyResponse(storeId));
     }
 
     @GetMapping("/combo-configuration")
     public ApiResponse<StoreComboConfigurationResponse> getComboConfiguration(@RequestParam("store_id") Long storeId) {
         authorizationService.requireForStore(storeId, Capability.ADMIN_MENU_MANAGE);
+        requireMenuManagement(storeId);
         return ApiResponse.success(storeComboConfigurationService.getConfiguration(storeId));
     }
 
@@ -71,6 +78,7 @@ public class OwnerMenuPricingPolicyController {
     ) {
         Long storeId = request == null ? null : request.store_id;
         authorizationService.requireForStore(storeId, Capability.ADMIN_MENU_MANAGE);
+        requireMenuManagement(storeId);
         return ApiResponse.success(storePricingPolicyService.preview(storeId, request));
     }
 
@@ -81,6 +89,7 @@ public class OwnerMenuPricingPolicyController {
     ) {
         Long storeId = request == null ? null : request.store_id;
         var user = authorizationService.requireForStore(storeId, Capability.ADMIN_MENU_MANAGE);
+        requireMenuManagement(storeId);
         StorePricingPolicyResponse response = storePricingPolicyService.updatePolicy(storeId, request);
         auditLogService.record(user.storeId(), user, "STORE_PRICING_POLICY_UPDATED", "STORE", storeId, "Updated Store pricing policy", Map.of("store_id", storeId), servletRequest);
         return ApiResponse.success("Pricing policy updated", response);
@@ -93,6 +102,7 @@ public class OwnerMenuPricingPolicyController {
     ) {
         Long storeId = request == null ? null : request.store_id;
         var user = authorizationService.requireForStore(storeId, Capability.ADMIN_MENU_MANAGE);
+        requireMenuManagement(storeId);
         StoreComboConfigurationResponse response = storeComboConfigurationService.updateConfiguration(storeId, request);
         auditLogService.record(
             user.storeId(),
@@ -134,6 +144,12 @@ public class OwnerMenuPricingPolicyController {
     private com.restaurant.system.common.auth.AuthenticatedUser requireItemStore(Long itemId) {
         MenuItem menuItem = menuItemRepository.findById(itemId)
             .orElseThrow(() -> new com.restaurant.system.common.exception.BusinessException("Menu item not found: " + itemId));
-        return authorizationService.requireForStore(menuItem.store_id, Capability.ADMIN_MENU_MANAGE);
+        var user = authorizationService.requireForStore(menuItem.store_id, Capability.ADMIN_MENU_MANAGE);
+        requireMenuManagement(menuItem.store_id);
+        return user;
+    }
+
+    private void requireMenuManagement(Long storeId) {
+        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.MENU_MANAGEMENT);
     }
 }

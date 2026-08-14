@@ -3,6 +3,8 @@ package com.restaurant.system.order.controller;
 import com.restaurant.system.common.auth.AuthorizationService;
 import com.restaurant.system.common.auth.Capability;
 import com.restaurant.system.common.response.ApiResponse;
+import com.restaurant.system.modules.ModuleKeys;
+import com.restaurant.system.modules.StoreModuleAccessEvaluator;
 import com.restaurant.system.order.dto.IdempotentOrderSubmitRequest;
 import com.restaurant.system.order.dto.IdempotentOrderSubmitResponse;
 import com.restaurant.system.order.service.IdempotentOrderSubmissionService;
@@ -19,13 +21,16 @@ public class IdempotentOrderSubmissionController {
 
     private final AuthorizationService authorizationService;
     private final IdempotentOrderSubmissionService submissionService;
+    private final StoreModuleAccessEvaluator moduleAccessEvaluator;
 
     public IdempotentOrderSubmissionController(
         AuthorizationService authorizationService,
-        IdempotentOrderSubmissionService submissionService
+        IdempotentOrderSubmissionService submissionService,
+        StoreModuleAccessEvaluator moduleAccessEvaluator
     ) {
         this.authorizationService = authorizationService;
         this.submissionService = submissionService;
+        this.moduleAccessEvaluator = moduleAccessEvaluator;
     }
 
     @PostMapping("/idempotent-submit")
@@ -38,6 +43,7 @@ public class IdempotentOrderSubmissionController {
             Capability.ORDER_CREATE,
             Capability.ORDER_SUBMIT
         );
+        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.ORDERING_POS);
         return ApiResponse.success(
             "Order accepted idempotently",
             submissionService.submit(storeId, request, user.userId())

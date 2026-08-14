@@ -7,6 +7,8 @@ import com.restaurant.system.menu.dto.MenuCatalogResponse;
 import com.restaurant.system.menu.dto.MenuRevisionResponse;
 import com.restaurant.system.menu.service.MenuService;
 import com.restaurant.system.menu.service.MenuRevisionService;
+import com.restaurant.system.modules.ModuleKeys;
+import com.restaurant.system.modules.StoreModuleAccessEvaluator;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,15 +21,18 @@ public class MenuController {
     private final MenuService menuService;
     private final MenuRevisionService menuRevisionService;
     private final AuthorizationService authorizationService;
+    private final StoreModuleAccessEvaluator moduleAccessEvaluator;
 
     public MenuController(
         MenuService menuService,
         MenuRevisionService menuRevisionService,
-        AuthorizationService authorizationService
+        AuthorizationService authorizationService,
+        StoreModuleAccessEvaluator moduleAccessEvaluator
     ) {
         this.menuService = menuService;
         this.menuRevisionService = menuRevisionService;
         this.authorizationService = authorizationService;
+        this.moduleAccessEvaluator = moduleAccessEvaluator;
     }
 
     @GetMapping("/health")
@@ -38,12 +43,14 @@ public class MenuController {
     @GetMapping("/catalog")
     public ApiResponse<MenuCatalogResponse> getCatalog(@RequestParam("store_id") Long storeId) {
         authorizationService.requireForStore(storeId, Capability.ORDER_CREATE);
+        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.MENU);
         return ApiResponse.success(menuService.getCatalog(storeId));
     }
 
     @GetMapping("/catalog/revision")
     public ApiResponse<MenuRevisionResponse> getCatalogRevision(@RequestParam("store_id") Long storeId) {
         authorizationService.requireForStore(storeId, Capability.ORDER_CREATE);
+        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.MENU);
         return ApiResponse.success(menuRevisionService.getRevision(storeId));
     }
 }

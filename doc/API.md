@@ -87,6 +87,16 @@
 > rendered from `combo_configuration.groups[]` generically rather than
 > hardcoded to Egg/Side.
 
+> Phase A6 Backend Module Gating (2026-08-14): Store-scoped business APIs now
+> use the canonical module-access contract after authentication, Store/
+> Organization access and role permission checks. `store_modules` is the Store
+> module source; environment feature flags and print mode are environment/
+> runtime capability inputs. Module denials return HTTP 403 with
+> `MODULE_DISABLED`, `MODULE_CONFIGURATION_INVALID` or
+> `MODULE_ENVIRONMENT_CAPABILITY_MISSING`. Legacy `FEATURE_DISABLED` remains
+> for non-Store environment gates such as developer tools. No endpoint path or
+> request DTO is changed by A6, and no Flyway migration is added.
+
 > Final productization Phase A0 boundary (2026-08-13): Size configuration uses
 > the existing menu option/modifier APIs rather than a second size engine.
 > `MenuItem -> SizeVariant[1..N]` is represented by `menu_item_options` rows

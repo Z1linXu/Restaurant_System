@@ -1,8 +1,6 @@
 package com.restaurant.system.printing.service.impl;
 
 import com.restaurant.system.common.exception.BusinessException;
-import com.restaurant.system.common.feature.FeatureFlagService;
-import com.restaurant.system.common.feature.FeaturePackage;
 import com.restaurant.system.common.pricing.TaxCalculator;
 import com.restaurant.system.kitchen.entity.KitchenTask;
 import com.restaurant.system.kitchen.repository.KitchenTaskRepository;
@@ -12,6 +10,9 @@ import com.restaurant.system.order.entity.OrderItemOption;
 import com.restaurant.system.order.repository.OrderItemOptionRepository;
 import com.restaurant.system.order.repository.OrderItemRepository;
 import com.restaurant.system.order.repository.OrderRepository;
+import com.restaurant.system.modules.ModuleKeys;
+import com.restaurant.system.modules.StoreModuleAccessEvaluation;
+import com.restaurant.system.modules.StoreModuleAccessEvaluator;
 import com.restaurant.system.printing.CloudPrintingGuard;
 import com.restaurant.system.printing.PrintModuleCode;
 import com.restaurant.system.printing.PrintJobStatus;
@@ -81,12 +82,12 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
     private final List<PrinterTransport> printerTransports;
     private final Map<String, ReceiptRenderer> renderersByModuleCode;
     private final Executor taskExecutor;
-    private final FeatureFlagService featureFlagService;
     private final PrintJobService printJobService;
     private final PrintJobRepository printJobRepository;
     private final CloudPrintingGuard cloudPrintingGuard;
     private final HotKitchenPrintEligibilityService hotKitchenPrintEligibilityService;
     private final OrderDispatchOutboxService orderDispatchOutboxService;
+    private final StoreModuleAccessEvaluator moduleAccessEvaluator;
 
     public PrintDispatcherServiceImpl(
         PrinterConfigService printerConfigService,
@@ -100,12 +101,12 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         List<PrinterTransport> printerTransports,
         List<ReceiptRenderer> renderers,
         @Qualifier("printTaskExecutor") Executor taskExecutor,
-        FeatureFlagService featureFlagService,
         PrintJobService printJobService,
         PrintJobRepository printJobRepository,
         CloudPrintingGuard cloudPrintingGuard,
         HotKitchenPrintEligibilityService hotKitchenPrintEligibilityService,
-        OrderDispatchOutboxService orderDispatchOutboxService
+        OrderDispatchOutboxService orderDispatchOutboxService,
+        StoreModuleAccessEvaluator moduleAccessEvaluator
     ) {
         this.printerConfigService = printerConfigService;
         this.printerConfigRepository = printerConfigRepository;
@@ -118,12 +119,12 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         this.printerTransports = printerTransports;
         this.renderersByModuleCode = renderers.stream().collect(Collectors.toMap(ReceiptRenderer::getModuleCode, renderer -> renderer));
         this.taskExecutor = taskExecutor;
-        this.featureFlagService = featureFlagService;
         this.printJobService = printJobService;
         this.printJobRepository = printJobRepository;
         this.cloudPrintingGuard = cloudPrintingGuard;
         this.hotKitchenPrintEligibilityService = hotKitchenPrintEligibilityService;
         this.orderDispatchOutboxService = orderDispatchOutboxService;
+        this.moduleAccessEvaluator = moduleAccessEvaluator;
     }
 
     @Override
@@ -152,8 +153,14 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         Long orderUpdateBatchId,
         String sourceKey
     ) {
-        if (!featureFlagService.isEnabled(FeaturePackage.PRINTING)) {
-            logger.info("Skipping persisted print event {} because PRINTING is disabled", sourceKey);
+        StoreModuleAccessEvaluation evaluation = moduleAccessEvaluator.evaluateCapability(storeId, ModuleKeys.PRINTING);
+        if (!evaluation.allowed()) {
+            logger.info(
+                "Skipping persisted print event {} because module {} is unavailable: {}",
+                sourceKey,
+                evaluation.moduleKey(),
+                evaluation.errorCode()
+            );
             return;
         }
         doDispatch(moduleCode, storeId, orderId, orderUpdateBatchId, sourceKey);
@@ -179,6 +186,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
 
     @Override
     public PrinterTestResponse testPrint(PrinterTestRequest request) {
+        requirePrintingModule(request.store_id);
         PrinterConfig printer = printerConfigRepository.findById(request.printer_id)
             .orElseThrow(() -> new BusinessException("Printer not found"));
         if (!request.store_id.equals(printer.store_id)) {
@@ -243,6 +251,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
 
     @Override
     public PrinterEncodingTestResponse testEncodings(PrinterEncodingTestRequest request) {
+        requirePrintingModule(request.store_id);
         PrinterConfig printer = printerConfigRepository.findById(request.printer_id)
             .orElseThrow(() -> new BusinessException("Printer not found"));
         if (!request.store_id.equals(printer.store_id)) {
@@ -302,6 +311,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
 
     @Override
     public GrabFontTestResponse testGrabFontModes(GrabFontTestRequest request) {
+        requirePrintingModule(request.store_id);
         PrinterConfig printer = printerConfigRepository.findById(request.printer_id)
             .orElseThrow(() -> new BusinessException("Printer not found"));
         if (!request.store_id.equals(printer.store_id)) {
@@ -371,6 +381,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
 
     @Override
     public PrinterTestResponse testCurrentFontSize(PrinterTestRequest request) {
+        requirePrintingModule(request.store_id);
         PrinterConfig printer = printerConfigRepository.findById(request.printer_id)
             .orElseThrow(() -> new BusinessException("Printer not found"));
         if (!request.store_id.equals(printer.store_id)) {
@@ -413,6 +424,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
 
     @Override
     public PrinterTestResponse testAssignedModulePrint(ModuleAssignmentTestRequest request) {
+        requirePrintingModule(request.store_id);
         PrinterTestResponse response = new PrinterTestResponse();
         try {
             String printingMode = printerConfigService.getStorePrintingMode(request.store_id);
@@ -524,6 +536,17 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             Store store = storeRepository.findById(storeId).orElse(null);
             if (store == null) {
                 throw new BusinessException("Store not found: " + storeId);
+            }
+            StoreModuleAccessEvaluation evaluation = moduleAccessEvaluator.evaluateCapability(storeId, ModuleKeys.PRINTING);
+            if (!evaluation.allowed()) {
+                logger.info(
+                    "Skipping print dispatch before job creation for module {} store {} order {} because {}",
+                    moduleCode,
+                    storeId,
+                    orderId,
+                    evaluation.errorCode()
+                );
+                return;
             }
             String printingMode = printerConfigService.getStorePrintingMode(storeId);
             if (PrintModuleCode.HOT_KITCHEN.equals(moduleCode)) {
@@ -728,6 +751,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
     @Override
     public PrintJobResponse reprintJob(Long jobId, Long requestedByUserId) {
         PrintJob job = printJobService.requireJob(jobId);
+        requirePrintingModule(job.store_id);
         PrinterConfig printer = requirePrinterForJob(job);
         String printingMode = printerConfigService.getStorePrintingMode(job.store_id);
         if (PrintingMode.DISABLED.equals(printingMode)) {
@@ -772,6 +796,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             throw new BusinessException("Order not found");
         }
         Store store = storeRepository.findById(order.store_id).orElseThrow(() -> new BusinessException("Store not found"));
+        requirePrintingModule(order.store_id);
         String printingMode = printerConfigService.getStorePrintingMode(order.store_id);
         if (PrintingMode.DISABLED.equals(printingMode)) {
             throw new BusinessException("Store printing is disabled");
@@ -829,7 +854,8 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         if (order == null) {
             throw new BusinessException("Order not found");
         }
-        boolean featureEnabled = featureFlagService.isEnabled(FeaturePackage.PRINTING);
+        StoreModuleAccessEvaluation evaluation = moduleAccessEvaluator.evaluateCapability(order.store_id, ModuleKeys.PRINTING);
+        boolean featureEnabled = evaluation.allowed();
         boolean storeEnabled = printerConfigService.isPrintingEnabled(order.store_id);
         return renderersByModuleCode.keySet().stream()
             .sorted()
@@ -879,8 +905,13 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         return response;
     }
 
+    private void requirePrintingModule(Long storeId) {
+        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.PRINTING);
+    }
+
     @Override
     public PrinterConnectionTestResponse testConnection(PrinterConnectionTestRequest request) {
+        requirePrintingModule(request.store_id);
         PrinterConfig printer = requirePrinterForStore(request.printer_id, request.store_id);
         PrinterConnectionTestResponse response = new PrinterConnectionTestResponse();
         response.checked_at = LocalDateTime.now();
