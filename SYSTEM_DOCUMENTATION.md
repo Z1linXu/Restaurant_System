@@ -110,6 +110,22 @@
 > no-mutation. Current stop:
 > `PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION_COMPLETE_WAITING_FOR_PHASE_A4_OWNER_CONTINUATION`.
 
+> 2026-08-13 Phase A4 Store Profile Contract: A4 adds additive Flyway V14
+> `store_profiles`, `store_profile_versions`, and `store_profile_artifacts` as
+> the database-backed versioned Store Profile contract. A Store Profile is a
+> safe reusable configuration template, not a database clone, Production export,
+> live Store binding, code branch, or Store-name conditional. Profile versions
+> contain canonical JSON content and referenced artifacts with deterministic
+> SHA-256 fingerprints; published/reviewed/ready versions are protected from
+> business-content rewrites by database triggers. The validator integrates the
+> A1/A2 module contract, requires explicit profile-local materialization
+> references/new target IDs, rejects source Store DB IDs, and scans for
+> credentials, PII, physical printer endpoints, device identities, DB/SSH
+> secrets and runtime-only data. A4 adds only Owner read APIs for profile list
+> and version read; it does not create Stores, provision staff, bind hardware,
+> implement A6/A7 gating, start Phase B/C, create Chinatown/Sainte-Catherine,
+> or touch Production.
+
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The
 > product rule is `BUILD ONCE, CONFIGURE MANY`; future Stores must not be

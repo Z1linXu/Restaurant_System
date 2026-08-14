@@ -159,6 +159,25 @@ V13, health `200/200/200`, Printing `MOCK/true`, four logical printers and
 three assignments. A3 module acceptance and core regression smoke passed.
 Production remained no-mutation and retained Flyway V10.
 
+Owner has now authorized continuous execution:
+
+```text
+PHASE_A4_STORE_PROFILE_CONTRACT
+→ PHASE_A5_ST_DENIS_CANONICAL_PROFILE
+```
+
+A4 Store Profile Contract implementation has passed Agent 6 review:
+[PHASE_A4_STORE_PROFILE_CONTRACT](../agile/PHASE_A4_STORE_PROFILE_CONTRACT.md).
+It adds additive Flyway V14 `store_profiles`, `store_profile_versions`, and
+`store_profile_artifacts`, deterministic JSON fingerprinting, published version
+immutability including profile binding immutability, immutable artifact
+insert/delete/update/move protection, a fail-closed validator, and Owner-only
+read APIs. Focused backend tests, full backend tests, `git diff --check` and
+Agent 6 are PASS. It does not create a Store, materialize St-Denis, deploy
+Staging, touch Production, start A6/A7, Phase B/C, Chinatown or
+Sainte-Catherine. After A4 enters `main`, the current Owner authorization
+continues directly to A5 without an Owner stop unless a TRUE OWNER GATE is hit.
+
 Phase A0 deployed evidence:
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](../agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).
 The deployed implementation preserves the existing Menu Engine path:
@@ -178,9 +197,9 @@ A0_OWNER_UI_ACCEPTANCE = PASS_FOR_A0_1_PRICING_UX
 Staging now runs exact
 `c1b5e7681f24a11fbf99293567b3da08076fa3b6`, Flyway V13, Printing
 `MOCK/true`, four enabled logical printers and three enabled assignments. A1,
-A2 and A3 are PASS. Do not start A4, Phase B, Phase C, Chinatown,
-Sainte-Catherine or Production deploy from this state without a fresh Owner
-decision. Current stop:
+A2 and A3 are PASS. A4/A5 are Owner-authorized continuous Phase A work; do not
+start A6, Phase B, Phase C, Chinatown, Sainte-Catherine or Production deploy
+from this state without a fresh Owner decision. Current pre-A4 stop:
 
 ```text
 PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION_COMPLETE_WAITING_FOR_PHASE_A4_OWNER_CONTINUATION

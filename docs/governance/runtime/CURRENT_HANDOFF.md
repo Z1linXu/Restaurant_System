@@ -217,6 +217,43 @@ Production deployment. The current stop is:
 PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION_COMPLETE_WAITING_FOR_PHASE_A4_OWNER_CONTINUATION
 ```
 
+Owner has now authorized the continuous A4 -> A5 Phase A loop:
+
+```text
+PHASE_A4_STORE_PROFILE_CONTRACT
+→ PHASE_A5_ST_DENIS_CANONICAL_PROFILE
+```
+
+A4 implementation navigation:
+
+- Technical evidence:
+  [PHASE_A4_STORE_PROFILE_CONTRACT](../agile/PHASE_A4_STORE_PROFILE_CONTRACT.md)
+- Additive migration:
+  `backend/src/main/resources/db/migration/V14__add_store_profiles.sql`
+- Profile contract/validator:
+  `backend/src/main/java/com/restaurant/system/owner/profile/StoreProfileContractValidator.java`
+  and
+  `backend/src/main/java/com/restaurant/system/owner/profile/StoreProfileCanonicalJson.java`
+- Database-backed profile entities/repositories:
+  `StoreProfileEntity`, `StoreProfileVersionEntity`,
+  `StoreProfileArtifactEntity` and their repositories
+- Owner-only read API:
+  `backend/src/main/java/com/restaurant/system/owner/profile/StoreProfileController.java`
+- Focused validation:
+  `backend/src/test/java/com/restaurant/system/owner/profile/StoreProfileMigrationTest.java`,
+  `StoreProfileContractValidatorTest.java`, and
+  `StoreProfileControllerTest.java`
+
+A4 is Agent 6 accepted and ready for PR/merge. It adds profile
+persistence/read/validation foundation only. Immutable version protection covers
+downgrade, content/fingerprint/source/schema/profile-version/profile-binding
+rewrites; immutable artifact protection covers insert/delete/update/move under
+immutable parent versions. Focused backend tests, full backend tests and
+`git diff --check` passed. It does not create a Store, materialize St-Denis,
+start A6/A7, Phase B/C, Chinatown, Sainte-Catherine or Production work. After
+A4 enters `main`, continue immediately to A5 under the same Owner
+authorization.
+
 ## Current final productization roadmap audit (2026-08-12)
 
 Planning-only audit is complete for the new final productization route:
