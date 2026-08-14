@@ -14,4 +14,4 @@
 12|V12__add_store_combo_components.sql|-1484328108
 13|V13__add_store_modules.sql|1338109061
 14|V14__add_store_profiles.sql|-965973533
-15|V15__seed_st_denis_canonical_profile.sql|-810527260
+15|V15__seed_st_denis_canonical_profile.sql|-800444250

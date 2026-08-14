@@ -23,7 +23,7 @@ WITH profile_version AS (
         'v1',
         'DRAFT',
         'STORE_PROFILE_CONTRACT_V1',
-        $profile_content${
+        $profile_content$ {
   "description": "Safe, versioned St-Denis reusable Store configuration profile. Not a database clone or live Store binding.",
   "display_name": "St-Denis Canonical Profile",
   "expected_differences": [
@@ -215,7 +215,7 @@ SELECT profile_version.id,
        'MODULE_DEFAULTS',
        'MODULE_DEFAULTS',
        'v1',
-       $artifact_module_defaults${
+       $artifact_module_defaults$ {
   "artifact_code": "MODULE_DEFAULTS",
   "artifact_version": "v1",
   "environment_capabilities": [
@@ -307,7 +307,7 @@ SELECT profile_version.id,
        'MENU_TEMPLATE',
        'MENU_TEMPLATE',
        'v1',
-       $artifact_menu_template${
+       $artifact_menu_template$ {
   "artifact_code": "MENU_TEMPLATE",
   "artifact_version": "v1",
   "categories": [
@@ -6351,7 +6351,7 @@ SELECT profile_version.id,
        'PRICING_POLICY',
        'PRICING_POLICY',
        'v1',
-       $artifact_pricing_policy${
+       $artifact_pricing_policy$ {
   "artifact_code": "PRICING_POLICY",
   "artifact_version": "v1",
   "combo_allowed_source": "MENU_TEMPLATE.items[].combo_allowed",
@@ -6381,7 +6381,7 @@ SELECT profile_version.id,
        'COMBO_CONFIGURATION',
        'COMBO_CONFIGURATION',
        'v1',
-       $artifact_combo_configuration${
+       $artifact_combo_configuration$ {
   "artifact_code": "COMBO_CONFIGURATION",
   "artifact_version": "v1",
   "combo_allowed_item_refs": [
@@ -6461,7 +6461,7 @@ SELECT profile_version.id,
        'TABLE_TEMPLATE',
        'TABLE_TEMPLATE',
        'v1',
-       $artifact_table_template${
+       $artifact_table_template$ {
   "artifact_code": "TABLE_TEMPLATE",
   "artifact_version": "v1",
   "identity_model": {
@@ -6628,7 +6628,7 @@ SELECT profile_version.id,
        'STATION_TEMPLATE',
        'STATION_TEMPLATE',
        'v1',
-       $artifact_station_template${
+       $artifact_station_template$ {
   "artifact_code": "STATION_TEMPLATE",
   "artifact_version": "v1",
   "identity_model": {
@@ -6687,7 +6687,7 @@ SELECT profile_version.id,
        'LOGICAL_PRINTING_TOPOLOGY',
        'PRINTING_TOPOLOGY',
        'v1',
-       $artifact_printing_topology${
+       $artifact_printing_topology$ {
   "artifact_code": "PRINTING_TOPOLOGY",
   "artifact_version": "v1",
   "assignments": [
@@ -6787,7 +6787,7 @@ SELECT profile_version.id,
        'ROLE_ACCESS_DEFAULTS',
        'ROLE_ACCESS_DEFAULTS',
        'v1',
-       $artifact_role_access_defaults${
+       $artifact_role_access_defaults$ {
   "artifact_code": "ROLE_ACCESS_DEFAULTS",
   "artifact_version": "v1",
   "materialization_policy": {
@@ -6856,7 +6856,7 @@ SELECT profile_version.id,
        'HARDWARE_REQUIREMENTS',
        'HARDWARE_REQUIREMENTS',
        'v1',
-       $artifact_hardware_requirements${
+       $artifact_hardware_requirements$ {
   "artifact_code": "HARDWARE_REQUIREMENTS",
   "artifact_version": "v1",
   "provenance": {
@@ -6896,7 +6896,7 @@ SELECT profile_version.id,
        'DEVICE_CAPABILITY_REQUIREMENTS',
        'DEVICE_CAPABILITY_REQUIREMENTS',
        'v1',
-       $artifact_device_capability_requirements${
+       $artifact_device_capability_requirements$ {
   "artifact_code": "DEVICE_CAPABILITY_REQUIREMENTS",
   "artifact_version": "v1",
   "device_slots": [
@@ -6985,7 +6985,7 @@ SELECT profile_version.id,
        'OPERATIONAL_SETTINGS',
        'OPERATIONAL_SETTINGS',
        'v1',
-       $artifact_operational_settings${
+       $artifact_operational_settings$ {
   "artifact_code": "OPERATIONAL_SETTINGS",
   "artifact_version": "v1",
   "kds_display_configs": [
@@ -7055,7 +7055,7 @@ SELECT profile_version.id,
        'FEATURE_DEFAULTS',
        'FEATURE_DEFAULTS',
        'v1',
-       $artifact_feature_defaults${
+       $artifact_feature_defaults$ {
   "artifact_code": "FEATURE_DEFAULTS",
   "artifact_version": "v1",
   "features": [
