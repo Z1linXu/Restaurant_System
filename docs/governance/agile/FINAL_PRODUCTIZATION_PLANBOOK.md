@@ -249,7 +249,10 @@ A6 backend module gating evidence:
 [PHASE_A6_BACKEND_MODULE_GATING_EVIDENCE](PHASE_A6_BACKEND_MODULE_GATING_EVIDENCE.md).
 A7 frontend module gating evidence:
 [PHASE_A7_FRONTEND_MODULE_GATING_EVIDENCE](PHASE_A7_FRONTEND_MODULE_GATING_EVIDENCE.md).
-After A7 exact-SHA Staging validation, stop before A8:
+Initial exact-SHA Staging deploy of PR #154 merge `c725e09db1f...` exposed a
+bounded backend DI startup defect; repair evidence is
+[PHASE_A7_BACKEND_DI_RUNTIME_REPAIR_EVIDENCE](PHASE_A7_BACKEND_DI_RUNTIME_REPAIR_EVIDENCE.md).
+After repair merge and exact-SHA Staging validation, stop before A8:
 
 ```text
 PHASE_A7_FRONTEND_MODULE_GATING_COMPLETE_WAITING_FOR_PHASE_A8_OWNER_CONTINUATION

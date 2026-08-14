@@ -223,6 +223,14 @@
 > Settings remain Store-module gated while preserving runtime print-mode
 > messaging. See
 > [PHASE_A7_FRONTEND_MODULE_GATING_EVIDENCE](docs/governance/agile/PHASE_A7_FRONTEND_MODULE_GATING_EVIDENCE.md).
+> Initial A7 exact-SHA Staging deploy surfaced a backend runtime DI defect:
+> `StoreModuleAccessEvaluator` had multiple constructors and no explicit
+> Spring injection constructor, so cloud startup attempted default
+> instantiation. The bounded repair marks the runtime constructor with
+> `@Autowired` and adds a Spring container instantiation regression test; it
+> does not change Store module semantics, API shape, schema, or Production.
+> See
+> [PHASE_A7_BACKEND_DI_RUNTIME_REPAIR_EVIDENCE](docs/governance/agile/PHASE_A7_BACKEND_DI_RUNTIME_REPAIR_EVIDENCE.md).
 > Production remains no-mutation and A8 hardware capability remains pending.
 
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
