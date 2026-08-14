@@ -1,5 +1,35 @@
 # Alive Runtime Planbook
 
+## Current Phase A A8 hardware capability contract (2026-08-14)
+
+Owner authorized continuous execution from A8 into A9 after A6/A7 passed and
+exact-SHA Staging ran `01d199a484b5ece19cf16d002a2565b6c42751e3` at Flyway
+V16. Phase A8 is complete in the repository:
+
+```text
+PHASE_A8_HARDWARE_CAPABILITY_CONTRACT = PASS
+```
+
+Evidence:
+[PHASE_A8_HARDWARE_CAPABILITY_CONTRACT_EVIDENCE](../agile/PHASE_A8_HARDWARE_CAPABILITY_CONTRACT_EVIDENCE.md).
+
+A8 adds the canonical hardware capability catalog and readiness contract while
+preserving Production `NO MUTATION` and avoiding any physical printer/Pad
+binding. It distinguishes Store module state, hardware capability, environment
+capability, Store logical topology, physical binding and runtime mode. Current
+Staging `PRINTING=ON`, `MOCK`, four logical printers and three assignments is
+valid: physical endpoints and Pad Direct clients are not required in MOCK.
+
+The continuous Owner-approved next step is:
+
+```text
+PHASE_A9_LEGACY_COUPLING_REMOVAL
+```
+
+A9 must complete, merge, exact-SHA deploy to Staging, validate regression, then
+stop before A10. Do not start A10, Phase B/C, Chinatown, Sainte-Catherine or
+Production deployment.
+
 ## Current final productization planbook and Phase A authorization (2026-08-13)
 
 The Owner closed the 30-answer final productization gate and authorized the

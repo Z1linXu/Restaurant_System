@@ -56,6 +56,16 @@ export interface StoreModuleState {
   legacy_store_flag?: boolean | null
 }
 
+export interface StoreHardwareCapabilityReadiness {
+  capability_key: string
+  readiness_state: 'NOT_REQUIRED' | 'UNCONFIGURED' | 'CONFIGURED' | 'VERIFIED' | string
+  required_by_current_runtime: boolean
+  dependency_satisfied: boolean
+  layer: string | null
+  source: string | null
+  note: string | null
+}
+
 export interface StoreModuleConfiguration {
   store_id: number
   catalog_version: string
@@ -68,6 +78,7 @@ export interface StoreModuleConfiguration {
   legacy_precedence: string
   environment_capabilities: string[]
   hardware_capabilities: string[]
+  hardware_readiness?: StoreHardwareCapabilityReadiness[]
   modules: StoreModuleState[]
   validation_issues: StoreModuleValidationIssue[]
 }

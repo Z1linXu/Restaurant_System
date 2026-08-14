@@ -1,5 +1,11 @@
 # 05 Printing Sequence
 
+> A8 update: Printing is layered as Store module `PRINTING`, logical
+> capabilities `PRINT_GRAB`, `PRINT_FRONTDESK_RECEIPT`, `PRINT_HOT_KITCHEN`,
+> runtime mode `DISABLED/MOCK/PAD_DIRECT/REAL`, and separate physical binding.
+> MOCK uses the full routing/render/job pipeline but does not require or contact
+> physical printer endpoints.
+
 ## Purpose
 
 This sequence records the current printing architecture and its mode branches,

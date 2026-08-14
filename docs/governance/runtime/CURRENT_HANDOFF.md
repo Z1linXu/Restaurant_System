@@ -1,5 +1,49 @@
 # Current Project Handoff
 
+## 0. Phase A current handoff — A8 complete, continue A9
+
+Current fresh main for this handoff sequence began at:
+
+```text
+01d199a484b5ece19cf16d002a2565b6c42751e3
+```
+
+Phase A6 and A7 are PASS. Phase A8 is now repository-complete:
+
+```text
+PHASE_A8_HARDWARE_CAPABILITY_CONTRACT = PASS
+```
+
+Evidence:
+[PHASE_A8_HARDWARE_CAPABILITY_CONTRACT_EVIDENCE](../agile/PHASE_A8_HARDWARE_CAPABILITY_CONTRACT_EVIDENCE.md).
+
+Key A8 contracts now in code:
+
+- `backend/src/main/resources/hardware/hardware-capability-catalog.v1.json`
+- `ModuleDependencyValidator` resolves A8 hardware capability aliases and
+  fails closed for unknown/missing capability.
+- `StoreModuleCapabilityProviderImpl` reports canonical hardware readiness
+  from Store logical printer assignments, runtime mode and Store devices.
+- Backend module access now checks hardware capability after environment
+  capability.
+- Frontend module access surfaces `MODULE_HARDWARE_CAPABILITY_MISSING`.
+
+Production remains `NO MUTATION`. No Staging deploy is required for the A8-only
+PR; final A8+A9 Staging deployment occurs after A9.
+
+Continue immediately to:
+
+```text
+PHASE_A9_LEGACY_COUPLING_REMOVAL
+```
+
+Stop only after A9 merge, exact-SHA Staging deployment/regression and the
+unique stop state:
+
+```text
+PHASE_A9_LEGACY_COUPLING_REMOVAL_COMPLETE_WAITING_FOR_PHASE_A10_OWNER_CONTINUATION
+```
+
 ## Current final productization planbook and Phase A authorization (2026-08-13)
 
 The Owner has closed the PR #126 30-answer gate. The active authority is now

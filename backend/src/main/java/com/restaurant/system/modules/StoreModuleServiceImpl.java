@@ -5,6 +5,7 @@ import com.restaurant.system.modules.dto.StoreModuleConfigurationResponse;
 import com.restaurant.system.modules.dto.StoreModuleResponse;
 import com.restaurant.system.modules.dto.StoreModuleUpdateRequest;
 import com.restaurant.system.modules.dto.StoreModuleValidationIssueResponse;
+import com.restaurant.system.modules.dto.StoreHardwareCapabilityReadinessResponse;
 import com.restaurant.system.user.entity.Store;
 import com.restaurant.system.user.repository.StoreRepository;
 import java.time.LocalDateTime;
@@ -135,7 +136,11 @@ public class StoreModuleServiceImpl implements StoreModuleService {
     private StoreModuleConfigurationResponse buildResponse(Store store, List<StoreModule> persistedModules) {
         Map<String, StoreModule> modulesByKey = indexPersistedModules(persistedModules);
         Set<String> environmentCapabilities = capabilityProvider.environmentCapabilities(store.id);
-        Set<String> hardwareCapabilities = capabilityProvider.hardwareCapabilities(store.id);
+        List<StoreHardwareCapabilityReadiness> hardwareReadiness = capabilityProvider.hardwareReadiness(store.id);
+        Set<String> hardwareCapabilities = hardwareReadiness.stream()
+            .filter(StoreHardwareCapabilityReadiness::dependencySatisfied)
+            .map(StoreHardwareCapabilityReadiness::capabilityKey)
+            .collect(Collectors.toUnmodifiableSet());
         List<StoreModuleValidationIssueResponse> validationIssues = new ArrayList<>();
         validationIssues.addAll(persistenceIssues(modulesByKey));
 
@@ -155,11 +160,14 @@ public class StoreModuleServiceImpl implements StoreModuleService {
         response.valid = validationIssues.isEmpty();
         response.validation_status = Boolean.TRUE.equals(response.valid) ? "VALID" : "INVALID";
         response.environment_capability_source = "RUNTIME_FEATURE_FLAGS_AND_SHARED_INFRASTRUCTURE";
-        response.hardware_capability_source = "STORE_RUNTIME_TOPOLOGY_WITH_PAD_DIRECT_CONDITIONAL_READINESS";
-        response.legacy_compatibility_status = "A3_FOUNDATION_ONLY_LEGACY_RUNTIME_GATING_RETAINED_UNTIL_A6_A7";
-        response.legacy_precedence = "CURRENT_RUNTIME_BEHAVIOR_STILL_USES_EXISTING_ENVIRONMENT_FLAGS_AND_STORE_RUNTIME_FIELDS; STORE_MODULES_ARE_CANONICAL_STATE_FOR_A3_READ_CONTRACT";
+        response.hardware_capability_source = "A8_HARDWARE_CAPABILITY_READINESS_CONTRACT";
+        response.legacy_compatibility_status = "STORE_MODULES_CANONICAL_WITH_BOUNDED_RUNTIME_MODE_COMPATIBILITY";
+        response.legacy_precedence = "STORE_MODULES_ARE_CANONICAL_MODULE_STATE; STORES_PRINTING_MODE_IS_RUNTIME_MODE; STORES_PRINTING_ENABLED_IS_BOUNDED_COMPATIBILITY";
         response.environment_capabilities = sorted(environmentCapabilities);
         response.hardware_capabilities = sorted(hardwareCapabilities);
+        response.hardware_readiness = hardwareReadiness.stream()
+            .map(StoreHardwareCapabilityReadinessResponse::from)
+            .toList();
         response.modules = catalog.modules().stream()
             .map(definition -> toModuleResponse(definition, modulesByKey.get(definition.moduleKey()), store))
             .toList();

@@ -102,6 +102,7 @@ function StoreModuleUnavailablePage({
   storeName: string
 }) {
   const isEnvironmentGap = access.status === 'MODULE_ENVIRONMENT_CAPABILITY_MISSING'
+  const isHardwareGap = access.status === 'MODULE_HARDWARE_CAPABILITY_MISSING'
   const isPrinting = access.moduleKey === 'PRINTING'
   const printingMode = access.module?.legacy_runtime_mode ?? null
   const legacyPrintingFlag = access.module?.legacy_store_flag
@@ -113,7 +114,7 @@ function StoreModuleUnavailablePage({
             Store module gate
           </div>
           <h1 className="mt-3 font-display text-[2.35rem] font-extrabold tracking-[-0.07em] text-[var(--on-surface)]">
-            {isEnvironmentGap ? '运行环境未就绪' : '功能未启用'}
+            {isEnvironmentGap ? '运行环境未就绪' : isHardwareGap ? '硬件能力未就绪' : '功能未启用'}
           </h1>
           <p className="mt-3 max-w-[660px] text-[1rem] leading-7 text-[var(--muted)]">
             <span className="font-semibold text-[var(--on-surface)]">{storeName}</span>

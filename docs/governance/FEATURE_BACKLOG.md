@@ -1,5 +1,14 @@
 # Feature Backlog
 
+## Phase A8 update — Hardware Capability Contract
+
+Status: `PHASE_A8_HARDWARE_CAPABILITY_CONTRACT = PASS`.
+
+The current hardware contract is repository-complete and ready to be carried
+into A9 regression. Physical printer binding, Pad pairing, real hardware
+verification and new Store activation remain Phase B/C or separate runtime
+gates. Next active Phase A item: `PHASE_A9_LEGACY_COUPLING_REMOVAL`.
+
 ## Current final productization planbook (2026-08-13)
 
 The Owner closed the 30-answer productization gate. The active plan is

@@ -1,5 +1,12 @@
 # Restaurant System API (MVP)
 
+> Phase A8 Hardware Capability Contract (2026-08-14): Store Context module
+> configuration includes optional `hardware_readiness[]` alongside
+> `hardware_capabilities[]`. The array contains safe canonical capability keys,
+> readiness state, source/layer and dependency-satisfied metadata only. It never
+> exposes printer endpoints, device tokens, credentials or secrets. Store module
+> access can now fail closed with `MODULE_HARDWARE_CAPABILITY_MISSING`.
+
 > Phase A0.1 implementation (2026-08-13): Owner review rejected free-form Size
 > editing and selected system-controlled Small/Regular/Large plus Store-level
 > Size/Combo pricing policy. `store_pricing_policies` is the new application

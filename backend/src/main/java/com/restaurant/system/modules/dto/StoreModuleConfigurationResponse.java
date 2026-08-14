@@ -14,6 +14,7 @@ public class StoreModuleConfigurationResponse {
     public String legacy_precedence;
     public List<String> environment_capabilities;
     public List<String> hardware_capabilities;
+    public List<StoreHardwareCapabilityReadinessResponse> hardware_readiness;
     public List<StoreModuleResponse> modules;
     public List<StoreModuleValidationIssueResponse> validation_issues;
 }

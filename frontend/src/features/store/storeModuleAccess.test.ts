@@ -55,6 +55,7 @@ function moduleConfiguration(overrides: Partial<Record<StoreModuleKey, boolean>>
     legacy_precedence: 'STORE_MODULES_CANONICAL',
     environment_capabilities: ['CORE_POS_RUNTIME', 'AUTH_RUNTIME', 'DATABASE', 'WEBSOCKET_RUNTIME', 'PRINTING_FEATURE_FLAG', 'PRINT_MODE_RUNTIME', 'ANALYTICS_FEATURE_FLAG'],
     hardware_capabilities: ['TOUCH_CLIENT'],
+    hardware_readiness: [],
     modules: moduleKeys.map((moduleKey) => moduleState(moduleKey, overrides[moduleKey] ?? true)),
     validation_issues: [],
   }
@@ -98,6 +99,22 @@ describe('Store module access contract', () => {
     expect(evaluateStoreModuleAccess(configuration, 'PRINTING')).toMatchObject({
       allowed: false,
       status: 'MODULE_ENVIRONMENT_CAPABILITY_MISSING',
+    })
+  })
+
+  it('surfaces module hardware capability gaps separately from disabled modules', () => {
+    const configuration = moduleConfiguration()
+    configuration.valid = false
+    configuration.validation_status = 'INVALID'
+    configuration.validation_issues = [{
+      code: 'HARDWARE_CAPABILITY_MISSING',
+      module_key: 'PRINTING',
+      target: 'PRINT_HOT_KITCHEN',
+      message: 'PRINT_HOT_KITCHEN is missing.',
+    }]
+    expect(evaluateStoreModuleAccess(configuration, 'PRINTING')).toMatchObject({
+      allowed: false,
+      status: 'MODULE_HARDWARE_CAPABILITY_MISSING',
     })
   })
 

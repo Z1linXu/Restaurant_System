@@ -16,6 +16,7 @@ public class ModuleContractLoader {
 
     public static final String CATALOG_RESOURCE = "/module/module-catalog.v1.json";
     public static final String DEPENDENCY_GRAPH_RESOURCE = "/module/module-dependency-graph.v1.json";
+    public static final String HARDWARE_CAPABILITY_CATALOG_RESOURCE = "/hardware/hardware-capability-catalog.v1.json";
 
     private final ObjectMapper objectMapper;
 
@@ -33,7 +34,8 @@ public class ModuleContractLoader {
         Set<String> coreModuleKeys = new LinkedHashSet<>();
         Map<String, ModuleState> defaultStates = new LinkedHashMap<>();
         Set<String> environmentCapabilities = new LinkedHashSet<>();
-        Set<String> hardwareCapabilities = new LinkedHashSet<>();
+        HardwareCapabilityCatalogDefinition hardwareCatalog = loadHardwareCatalog();
+        Set<String> hardwareCapabilities = new LinkedHashSet<>(hardwareCatalog.canonicalCapabilityKeys());
         List<ModuleDefinition> modules = new ArrayList<>();
         Map<String, ModuleDefinition> modulesByKey = new LinkedHashMap<>();
 
@@ -61,7 +63,7 @@ public class ModuleContractLoader {
                 environmentCapabilities.add(capability.asText())
             );
             module.path("required_hardware_capabilities").forEach(capability ->
-                hardwareCapabilities.add(capability.asText())
+                hardwareCapabilities.addAll(hardwareCatalog.canonicalKeys(capability.asText()))
             );
         }
 
@@ -90,6 +92,46 @@ public class ModuleContractLoader {
             root.path("graph_version").asText(),
             root.path("catalog_version").asText(),
             dependencies
+        );
+    }
+
+    public HardwareCapabilityCatalogDefinition loadHardwareCatalog() {
+        JsonNode root = readJson(HARDWARE_CAPABILITY_CATALOG_RESOURCE);
+        List<HardwareCapabilityDefinition> capabilities = new ArrayList<>();
+        Map<String, HardwareCapabilityDefinition> capabilitiesByKey = new LinkedHashMap<>();
+        Map<String, Set<String>> canonicalKeysBySupportedKey = new LinkedHashMap<>();
+
+        for (JsonNode node : root.path("capabilities")) {
+            String capabilityKey = HardwareCapabilityCatalogDefinition.normalize(node.path("capability_key").asText());
+            HardwareCapabilityDefinition definition = new HardwareCapabilityDefinition(
+                capabilityKey,
+                node.path("display_name").asText(),
+                node.path("layer").asText(),
+                node.path("category").asText(),
+                node.path("readiness_contract").asText(),
+                node.path("physical_binding").asBoolean(false),
+                StreamSupport.stream(node.path("aliases").spliterator(), false)
+                    .map(JsonNode::asText)
+                    .map(HardwareCapabilityCatalogDefinition::normalize)
+                    .toList()
+            );
+            capabilities.add(definition);
+            capabilitiesByKey.put(capabilityKey, definition);
+            canonicalKeysBySupportedKey
+                .computeIfAbsent(capabilityKey, ignored -> new LinkedHashSet<>())
+                .add(capabilityKey);
+            for (String alias : definition.aliases()) {
+                canonicalKeysBySupportedKey
+                    .computeIfAbsent(alias, ignored -> new LinkedHashSet<>())
+                    .add(capabilityKey);
+            }
+        }
+
+        return new HardwareCapabilityCatalogDefinition(
+            root.path("catalog_version").asText(),
+            capabilities,
+            capabilitiesByKey,
+            canonicalKeysBySupportedKey
         );
     }
 

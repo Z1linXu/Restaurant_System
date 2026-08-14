@@ -1,5 +1,13 @@
 # Known Issues Backlog
 
+## Phase A8 resolved architecture risk
+
+The prior risk that Printing, Pad devices, runtime print mode, Store logical
+printer topology and physical binding were mixed behind `printing_enabled`,
+`printing_mode` and legacy feature flags is resolved at the contract layer by
+`PHASE_A8_HARDWARE_CAPABILITY_CONTRACT`. Remaining physical printer/Pad
+binding work is still a separate runtime gate, not an A8 blocker.
+
 Current final productization update (2026-08-13): the Owner closed the 30-answer
 gate and authorized [FINAL_PRODUCTIZATION_PLANBOOK](agile/FINAL_PRODUCTIZATION_PLANBOOK.md)
 plus Phase A. The field-test/bug-fix loop remains side-car unless a confirmed

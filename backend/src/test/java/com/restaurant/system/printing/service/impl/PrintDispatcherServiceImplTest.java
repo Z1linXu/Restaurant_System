@@ -132,8 +132,10 @@ class PrintDispatcherServiceImplTest {
             true,
             true,
             true,
+            true,
             null,
             "Module capability allowed",
+            List.of(),
             List.of(),
             List.of()
         );
@@ -147,9 +149,11 @@ class PrintDispatcherServiceImplTest {
             true,
             false,
             true,
+            true,
             false,
             StoreModuleAccessEvaluator.MODULE_DISABLED,
             "Module disabled for this Store: PRINTING",
+            List.of(),
             List.of(),
             List.of()
         );

@@ -1,5 +1,11 @@
 # 03 Module/Profile Architecture
 
+> A8 update: Hardware capability is now a first-class contract, not a blended
+> `printing_enabled`/`printing_mode` concept. Module dependency validation uses
+> the A8 catalog, Store Context exposes `hardware_readiness`, and legacy profile
+> hardware keys resolve through catalog aliases without changing published
+> `ST_DENIS_CANONICAL_PROFILE/v1` content.
+
 ## Purpose
 
 This diagram shows how the current Phase A module catalog, dependency graph,

@@ -49,6 +49,7 @@ class StoreModuleAccessEvaluatorTest {
                 .toList();
         });
         when(capabilityProvider.environmentCapabilities(any())).thenReturn(normalEnvironmentCapabilities());
+        when(capabilityProvider.hardwareCapabilities(any())).thenReturn(normalHardwareCapabilities());
     }
 
     @Test
@@ -58,6 +59,7 @@ class StoreModuleAccessEvaluatorTest {
         assertTrue(evaluation.allowed());
         assertTrue(evaluation.storeModuleEnabled());
         assertTrue(evaluation.environmentAvailable());
+        assertTrue(evaluation.hardwareAvailable());
         assertDoesNotThrow(() -> evaluator.requireCapability(10L, ModuleKeys.MENU_MANAGEMENT));
     }
 
@@ -88,6 +90,23 @@ class StoreModuleAccessEvaluatorTest {
     }
 
     @Test
+    void enabledModuleWithMissingHardwareCapabilityFailsClosed() {
+        when(capabilityProvider.hardwareCapabilities(10L)).thenReturn(Set.of(
+            HardwareCapabilityKeys.TOUCH_CLIENT,
+            HardwareCapabilityKeys.PRINT_GRAB,
+            HardwareCapabilityKeys.PRINT_FRONTDESK_RECEIPT,
+            HardwareCapabilityKeys.PAD_DIRECT_PRINT_CLIENT
+        ));
+
+        StoreModuleAccessEvaluation evaluation = evaluator.evaluateCapability(10L, ModuleKeys.PRINTING);
+
+        assertFalse(evaluation.allowed());
+        assertFalse(evaluation.hardwareAvailable());
+        assertEquals(StoreModuleAccessEvaluator.MODULE_HARDWARE_CAPABILITY_MISSING, evaluation.errorCode());
+        assertTrue(evaluation.missingHardwareCapabilities().contains(HardwareCapabilityKeys.PRINT_HOT_KITCHEN));
+    }
+
+    @Test
     void requiredDependencyDisabledFailsClosedBeforeBusinessAction() {
         module(ModuleKeys.MENU).enabled = false;
 
@@ -103,6 +122,7 @@ class StoreModuleAccessEvaluatorTest {
         modules.addAll(defaultModulesForStore(20L));
         module(20L, ModuleKeys.KDS).enabled = true;
         when(capabilityProvider.environmentCapabilities(20L)).thenReturn(withKdsEnvironmentCapabilities());
+        when(capabilityProvider.hardwareCapabilities(20L)).thenReturn(withKdsHardwareCapabilities());
 
         assertFalse(evaluator.evaluateCapability(10L, ModuleKeys.KDS).allowed());
         assertTrue(evaluator.evaluateCapability(20L, ModuleKeys.KDS).allowed());
@@ -164,6 +184,27 @@ class StoreModuleAccessEvaluatorTest {
             "PRINT_MODE_RUNTIME",
             "ANALYTICS_FEATURE_FLAG",
             "KDS_FEATURE_FLAG"
+        );
+    }
+
+    private Set<String> normalHardwareCapabilities() {
+        return Set.of(
+            HardwareCapabilityKeys.TOUCH_CLIENT,
+            HardwareCapabilityKeys.PRINT_GRAB,
+            HardwareCapabilityKeys.PRINT_FRONTDESK_RECEIPT,
+            HardwareCapabilityKeys.PRINT_HOT_KITCHEN,
+            HardwareCapabilityKeys.PAD_DIRECT_PRINT_CLIENT
+        );
+    }
+
+    private Set<String> withKdsHardwareCapabilities() {
+        return Set.of(
+            HardwareCapabilityKeys.TOUCH_CLIENT,
+            HardwareCapabilityKeys.PRINT_GRAB,
+            HardwareCapabilityKeys.PRINT_FRONTDESK_RECEIPT,
+            HardwareCapabilityKeys.PRINT_HOT_KITCHEN,
+            HardwareCapabilityKeys.PAD_DIRECT_PRINT_CLIENT,
+            HardwareCapabilityKeys.KDS_DISPLAY_CLIENT
         );
     }
 }

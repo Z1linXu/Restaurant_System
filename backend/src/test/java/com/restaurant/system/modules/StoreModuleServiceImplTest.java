@@ -77,6 +77,7 @@ class StoreModuleServiceImplTest {
         });
         when(capabilityProvider.environmentCapabilities(any())).thenReturn(normalEnvironmentCapabilities());
         when(capabilityProvider.hardwareCapabilities(any())).thenReturn(normalHardwareCapabilities());
+        when(capabilityProvider.hardwareReadiness(any())).thenReturn(readiness(normalHardwareCapabilities()));
     }
 
     @Test
@@ -89,7 +90,10 @@ class StoreModuleServiceImplTest {
         assertFalse(enabled(response, "KDS"));
         assertTrue(activeNormalStoreRequired(response, "PRINTING"));
         assertFalse(activeNormalStoreRequired(response, "KDS"));
-        assertEquals("A3_FOUNDATION_ONLY_LEGACY_RUNTIME_GATING_RETAINED_UNTIL_A6_A7", response.legacy_compatibility_status);
+        assertEquals("STORE_MODULES_CANONICAL_WITH_BOUNDED_RUNTIME_MODE_COMPATIBILITY", response.legacy_compatibility_status);
+        assertTrue(response.hardware_capabilities.contains(HardwareCapabilityKeys.PRINT_GRAB));
+        assertTrue(response.hardware_readiness.stream()
+            .anyMatch(readiness -> HardwareCapabilityKeys.PRINT_GRAB.equals(readiness.capability_key)));
     }
 
     @Test
@@ -132,6 +136,7 @@ class StoreModuleServiceImplTest {
         StoreModuleUpdateRequest request = update(toggle("KDS", true));
         when(capabilityProvider.environmentCapabilities(10L)).thenReturn(withKdsEnvironmentCapabilities());
         when(capabilityProvider.hardwareCapabilities(10L)).thenReturn(withKdsHardwareCapabilities());
+        when(capabilityProvider.hardwareReadiness(10L)).thenReturn(readiness(withKdsHardwareCapabilities()));
 
         var response = service.updateConfiguration(10L, request);
 
@@ -265,18 +270,35 @@ class StoreModuleServiceImplTest {
 
     private Set<String> normalHardwareCapabilities() {
         return Set.of(
-            "TOUCH_CLIENT",
-            "PRINTER_TOPOLOGY_FOR_REAL_OR_PAD_DIRECT",
-            "PAD_DEVICE_FOR_PAD_DIRECT"
+            HardwareCapabilityKeys.TOUCH_CLIENT,
+            HardwareCapabilityKeys.PRINT_GRAB,
+            HardwareCapabilityKeys.PRINT_FRONTDESK_RECEIPT,
+            HardwareCapabilityKeys.PRINT_HOT_KITCHEN,
+            HardwareCapabilityKeys.PAD_DIRECT_PRINT_CLIENT
         );
     }
 
     private Set<String> withKdsHardwareCapabilities() {
         return Set.of(
-            "TOUCH_CLIENT",
-            "PRINTER_TOPOLOGY_FOR_REAL_OR_PAD_DIRECT",
-            "PAD_DEVICE_FOR_PAD_DIRECT",
-            "KDS_DISPLAY_CLIENT"
+            HardwareCapabilityKeys.TOUCH_CLIENT,
+            HardwareCapabilityKeys.PRINT_GRAB,
+            HardwareCapabilityKeys.PRINT_FRONTDESK_RECEIPT,
+            HardwareCapabilityKeys.PRINT_HOT_KITCHEN,
+            HardwareCapabilityKeys.PAD_DIRECT_PRINT_CLIENT,
+            HardwareCapabilityKeys.KDS_DISPLAY_CLIENT
         );
+    }
+
+    private List<StoreHardwareCapabilityReadiness> readiness(Set<String> capabilities) {
+        return capabilities.stream()
+            .map(capability -> new StoreHardwareCapabilityReadiness(
+                capability,
+                HardwareReadinessState.CONFIGURED,
+                true,
+                "TEST",
+                "TEST_PROVIDER",
+                "test readiness"
+            ))
+            .toList();
     }
 }

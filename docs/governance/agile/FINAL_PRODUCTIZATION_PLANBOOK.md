@@ -1,5 +1,18 @@
 # Final Productization Planbook
 
+## Phase A8 completion update (2026-08-14)
+
+`PHASE_A8_HARDWARE_CAPABILITY_CONTRACT = PASS`.
+
+A8 establishes `HARDWARE_CAPABILITY_CATALOG_V1`, the hardware requirement and
+readiness contract, logical-vs-physical printing boundaries, Pad/device
+capability boundaries and Store Profile hardware alias resolution. It adds no
+Flyway migration and does not bind physical printers or Pads. A8 evidence is
+[PHASE_A8_HARDWARE_CAPABILITY_CONTRACT_EVIDENCE](PHASE_A8_HARDWARE_CAPABILITY_CONTRACT_EVIDENCE.md).
+
+The active continuous execution now proceeds to A9 legacy coupling removal and
+must stop before A10 after exact-SHA Staging validation.
+
 > Status: `FINAL_PRODUCTIZATION_PLANBOOK_READY_PHASE_A_STARTED`
 >
 > Prepared: 2026-08-13, America/Toronto

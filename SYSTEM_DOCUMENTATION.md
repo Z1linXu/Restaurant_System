@@ -1,5 +1,17 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-14 Phase A8 Hardware Capability Contract: A8 adds the canonical
+> hardware capability catalog at
+> `backend/src/main/resources/hardware/hardware-capability-catalog.v1.json`.
+> Store modules remain canonical in `store_modules`; runtime feature flags are
+> environment capabilities; Store logical printers/assignments are logical
+> hardware topology; printer endpoints and Pad credentials are physical runtime
+> bindings and must not enter Store Profiles. Store Context now includes
+> `hardware_readiness`, and module access distinguishes
+> `MODULE_HARDWARE_CAPABILITY_MISSING`. A8 performs no Flyway migration,
+> physical binding or Production mutation. Evidence:
+> [PHASE_A8_HARDWARE_CAPABILITY_CONTRACT_EVIDENCE](docs/governance/agile/PHASE_A8_HARDWARE_CAPABILITY_CONTRACT_EVIDENCE.md).
+
 > 2026-08-13 final productization planbook: the Owner closed the PR #126
 > 30-answer gate and authorized Final Productization Planbook plus Phase A.
 > The active authority is
