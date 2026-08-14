@@ -60,8 +60,11 @@ incident, and is in `main` through PR #142 at
 also productization work, not an incident. It adds V15 safe profile seed data
 and a dry-run validator for `ST_DENIS_CANONICAL_PROFILE/v1`; it does not create
 Stores, provision auth material, copy Production/St-Denis runtime secrets or
-DB IDs, bind printers/devices, start Phase B/C or mutate Production. No active
-Known Issue blocks A5 execution under the Owner-approved Phase A loop.
+DB IDs, bind printers/devices, start Phase B/C or mutate Production. PR #143
+entered `main`, but the first exact-SHA Staging deploy failed closed before
+V15 history because V15 profile seed JSON literals started with a newline that
+violated the A4 `content_json` check. This is tracked as bounded A5 dependency
+repair, not a Production incident; Production remains no-mutation.
 
 Current final productization route (2026-08-12): open field-test follow-up work
 continues through the Owner field-test and bug-fix loop, but the loop is now a

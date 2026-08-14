@@ -169,7 +169,12 @@ without Production DB IDs, auth material, physical printer endpoints or device
 pairing material. It does not create or materialize Stores, start Owner
 provisioning, start A6 gating, create Chinatown/Sainte-Catherine or mutate
 Production. Exact-SHA Staging deploy/Flyway validation is required after A5 PR
-merge because V15 seeds database-backed profile data.
+merge because V15 seeds database-backed profile data. PR #143 entered `main`
+at `b83afa98d304223834793d03bfc367b4cf4238f1`; the first exact-SHA Staging
+attempt applied V14 then failed closed before V15 history because V15 JSON
+literals began with a newline under the A4 `content_json` check. The bounded
+repair changes only V15 seed literal layout and OPS-001 Flyway checksum
+evidence, with no Store materialization or Production action.
 
 Phase A0 deployed evidence is tracked in
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).

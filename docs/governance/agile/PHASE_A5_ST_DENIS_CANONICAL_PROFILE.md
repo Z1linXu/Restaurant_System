@@ -1,13 +1,13 @@
 # Phase A5 St-Denis Canonical Profile
 
-Status: `PHASE_A5_REPOSITORY_IMPLEMENTATION_AGENT_6_ACCEPTED_FOR_PR_MERGE`
+Status: `PHASE_A5_RUNTIME_SEED_LITERAL_REPAIR_READY_FOR_PR`
 
 Date: 2026-08-13
 
 Fresh repository authority:
 
 ```text
-origin/main@be14923c96098d80b1b841e2ba0edbe3ca2563a5
+origin/main@b83afa98d304223834793d03bfc367b4cf4238f1
 ```
 
 A4 Store Profile Contract is in `main` through PR #142:
@@ -18,13 +18,32 @@ PR = https://github.com/Z1linXu/Restaurant_System/pull/142
 merge = be14923c96098d80b1b841e2ba0edbe3ca2563a5
 ```
 
+A5 repository implementation entered `main` through PR #143:
+
+```text
+PHASE_A5_ST_DENIS_CANONICAL_PROFILE_REPOSITORY = PASS
+PR = https://github.com/Z1linXu/Restaurant_System/pull/143
+merge = b83afa98d304223834793d03bfc367b4cf4238f1
+```
+
 Runtime boundary:
 
 - Production: `NO MUTATION`
 - Staging before A5 deploy: `c1b5e7681f24a11fbf99293567b3da08076fa3b6`,
   Flyway V13
-- A5 repository package adds Flyway V15 profile seed data; exact-SHA Staging
-  deploy/Flyway validation is required after PR merge before A5 runtime PASS
+- First exact-SHA Staging deploy attempt for PR #143 merge
+  `b83afa98d304223834793d03bfc367b4cf4238f1` built the Staging images,
+  preserved Staging-only `MOCK/true` printing configuration, applied Flyway V14,
+  then failed closed before any V15 history row.
+- V15 failed because the seed's dollar-quoted `content_json` literals began
+  with a newline while the A4 PostgreSQL check constraint requires the stored
+  text's first non-space character, as evaluated by `btrim`, to be `{`.
+- The bounded repair changes only V15 seed literal layout and the OPS-001
+  Flyway checksum manifest/test; no Store materialization, Production action,
+  schema history edit, downgrade, destructive reset, or runtime secret read is
+  included.
+- Exact-SHA Staging deploy/Flyway validation must be retried after the repair
+  PR enters `main` before A5 runtime PASS can be claimed.
 - No Store materialization, Store activation, Owner Create New Store,
   Chinatown, Sainte-Catherine, A6, Phase B/C or Production action is included
 
@@ -244,6 +263,52 @@ Local Docker/PostgreSQL rehearsal was unavailable in this execution context
 because the Docker daemon was not reachable. V15 SQL is parser/contract-tested
 locally and must be proven by exact-SHA Staging Flyway after PR merge.
 
+## Runtime seed-literal repair
+
+First Staging runtime attempt:
+
+```text
+APPROVED_SHA = b83afa98d304223834793d03bfc367b4cf4238f1
+PREVIOUS_STAGING_SHA = c1b5e7681f24a11fbf99293567b3da08076fa3b6
+PREVIOUS_STAGING_FLYWAY = V13
+STAGING_ENV_ROTATION = PASS
+PREFLIGHT = PASS
+BUILD_START = PASS
+FLYWAY_AFTER_FAILURE = V14_SUCCESSFUL_WITH_NO_V15_SUCCESS_ROW
+PRODUCTION_MUTATION = NONE
+```
+
+Fail-closed root cause:
+
+```text
+V15 content_json dollar-quoted values used $tag$ + newline + JSON.
+A4 check constraint uses left(btrim(content_json), 1).
+PostgreSQL btrim(text) removes spaces, not newlines.
+Therefore the first stored character remained newline and V15 was rejected.
+```
+
+Repair:
+
+- V15 profile and artifact JSON literals now start immediately with `{`.
+- A5 contract test now rejects `$profile_content$` / `$artifact_*$` followed
+  by a newline before the JSON root.
+- The OPS-001 Flyway checksum manifest now covers V1-V15, including the
+  repaired V15 checksum, so official runtime evidence tooling can validate the
+  current migration set.
+
+Repair validation:
+
+```text
+mvn -q -Dtest='StDenisCanonicalProfileContractTest,StoreProfileMigrationTest,StoreProfileContractValidatorTest,StoreProfileControllerTest' test
+PASS
+
+mvn -q test
+PASS
+
+deployment/cloud/tests/test_staging_runtime_evidence.sh
+PASS
+```
+
 ## Boundaries retained
 
 A5 does not:
@@ -258,8 +323,8 @@ A5 does not:
 - create Chinatown or Sainte-Catherine
 - deploy or mutate Production
 
-Repository stop before PR/merge:
+Current repair stop before repair PR/merge:
 
 ```text
-PHASE_A5_REPOSITORY_IMPLEMENTATION_AGENT_6_ACCEPTED_FOR_PR_MERGE
+PHASE_A5_RUNTIME_SEED_LITERAL_REPAIR_READY_FOR_PR
 ```

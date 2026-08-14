@@ -178,7 +178,8 @@ Agent 6 are PASS. It does not create a Store, materialize St-Denis, deploy
 Staging, touch Production, start A6/A7, Phase B/C, Chinatown or
 Sainte-Catherine.
 
-A5 St-Denis Canonical Profile repository implementation is now in progress:
+A5 St-Denis Canonical Profile repository implementation entered `main` through
+PR #143 at `b83afa98d304223834793d03bfc367b4cf4238f1`:
 [PHASE_A5_ST_DENIS_CANONICAL_PROFILE](../agile/PHASE_A5_ST_DENIS_CANONICAL_PROFILE.md).
 It adds Flyway V15 safe profile seed data for
 `ST_DENIS_CANONICAL_PROFILE/v1`, fingerprint
@@ -186,9 +187,17 @@ It adds Flyway V15 safe profile seed data for
 with menu graph counts `6/39/380`, tables `13`, stations `5`, logical
 printers/assignments `4/3`, combo components `5`, staff templates `4`, and
 device slots `7`. It adds a dry-run materialization validator only; it does not
-create a Store or bind any runtime. Because V15 is a Flyway data migration,
-exact-SHA Staging deploy/Flyway validation is required after A5 PR merge before
-A5 runtime PASS can be claimed. Production remains no-mutation.
+create a Store or bind any runtime. The first exact-SHA Staging deploy attempt
+for `b83afa98d304223834793d03bfc367b4cf4238f1` preserved Staging `MOCK/true`
+printing, applied Flyway V14, then failed closed before any V15 history row:
+V15 dollar-quoted `content_json` literals began with a newline, while the A4
+PostgreSQL check uses `left(btrim(content_json), 1)` and therefore rejected the
+stored value. The bounded repair changes only V15 seed literal layout and
+updates OPS-001 Flyway checksum evidence to V15. No Store materialization,
+Production action, Flyway history edit, downgrade, destructive reset or
+runtime secret read is included. Exact-SHA Staging deploy/Flyway validation
+must be retried after the repair PR enters `main` before A5 runtime PASS can be
+claimed. Production remains no-mutation.
 
 Phase A0 deployed evidence:
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](../agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).
@@ -206,15 +215,17 @@ A0_AUTOMATED_VALIDATION = PASS
 A0_OWNER_UI_ACCEPTANCE = PASS_FOR_A0_1_PRICING_UX
 ```
 
-Staging now runs exact
-`c1b5e7681f24a11fbf99293567b3da08076fa3b6`, Flyway V13, Printing
-`MOCK/true`, four enabled logical printers and three enabled assignments. A1,
-A2 and A3 are PASS. A4/A5 are Owner-authorized continuous Phase A work; do not
-start A6, Phase B, Phase C, Chinatown, Sainte-Catherine or Production deploy
-from this state without a fresh Owner decision. Current pre-A4 stop:
+Staging is currently rebound to the A5 runtime-attempt environment but backend
+startup is fail-closed on the repaired V15 seed until the repair PR is merged
+and redeployed. The Staging database has successful Flyway V14 and no successful
+V15 row; Printing configuration remains `MOCK/true`, with four enabled logical
+printers and three enabled assignments. A1, A2 and A3 are PASS; A4 repository
+contract is in `main`; A5 requires the bounded seed-literal repair and retry.
+Do not start A6, Phase B, Phase C, Chinatown, Sainte-Catherine or Production
+deploy from this state without a fresh Owner decision. Current A5 repair stop:
 
 ```text
-PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION_COMPLETE_WAITING_FOR_PHASE_A4_OWNER_CONTINUATION
+PHASE_A5_RUNTIME_SEED_LITERAL_REPAIR_READY_FOR_PR
 ```
 
 ## Current final productization roadmap audit (2026-08-12)

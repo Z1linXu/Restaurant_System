@@ -10,3 +10,8 @@
 8|V8__add_owner_store_onboarding_requests.sql|1654406856
 9|V9__add_staging_synthetic_bootstrap_requests.sql|1828097009
 10|V10__add_owner_store_menu_clone_requests.sql|482267873
+11|V11__add_store_pricing_policies.sql|-1257180446
+12|V12__add_store_combo_components.sql|-1484328108
+13|V13__add_store_modules.sql|1338109061
+14|V14__add_store_profiles.sql|-965973533
+15|V15__seed_st_denis_canonical_profile.sql|-810527260

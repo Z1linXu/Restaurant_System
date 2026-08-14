@@ -127,16 +127,23 @@
 > or touch Production.
 
 > 2026-08-13 Phase A5 St-Denis Canonical Profile: A4 entered `main` through PR
-> #142 at `be14923c96098d80b1b841e2ba0edbe3ca2563a5`. A5 adds additive Flyway
-> V15 seed data for `ST_DENIS_CANONICAL_PROFILE/v1` and a dry-run
-> materialization validator. The profile fingerprint is
+> #142 at `be14923c96098d80b1b841e2ba0edbe3ca2563a5`; A5 entered `main`
+> through PR #143 at `b83afa98d304223834793d03bfc367b4cf4238f1`. A5 adds
+> additive Flyway V15 seed data for `ST_DENIS_CANONICAL_PROFILE/v1` and a
+> dry-run materialization validator. The profile fingerprint is
 > `af1a8f34cd156c1987b74ec1a9a22ddfd004859c617937b7d53f05e16e762602`; counts
 > are categories/items/options `6/39/380`, parent option relationships `11`,
 > tables `13`, stations `5`, logical printers/assignments `4/3`, combo
 > components `5`, staff templates `4`, and device slots `7`. A5 uses
 > profile-local refs and excludes Production DB IDs, auth material, physical
 > printer endpoints and device pairing material. It does not create a Store or
-> start Phase B/C/A6.
+> start Phase B/C/A6. First exact-SHA Staging deploy of PR #143 merge preserved
+> Staging-only `MOCK/true` printing and applied Flyway V14, then V15 failed
+> closed before a history row because its `content_json` dollar literals began
+> with a newline and the A4 PostgreSQL check uses
+> `left(btrim(content_json), 1)`. The bounded repair changes only V15 seed
+> literal layout and OPS-001 Flyway checksum evidence through V15; Production
+> remains no-mutation.
 
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The
