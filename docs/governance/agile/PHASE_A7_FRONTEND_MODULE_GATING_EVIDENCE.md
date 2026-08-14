@@ -136,6 +136,22 @@ mvn -q test
 PASS
 ```
 
+## A7 Staging runtime dependency repair
+
+Initial exact-SHA Staging deploy of PR #154 merge
+`c725e09db1f9211188755d265065d94883e3186d` built and started the Staging
+containers, but loopback health failed because the backend Spring context could
+not instantiate `StoreModuleAccessEvaluator`. Flyway validation reached V16
+successfully before the bean startup failure; no schema migration or Production
+action was involved.
+
+Repair evidence:
+[PHASE_A7_BACKEND_DI_RUNTIME_REPAIR_EVIDENCE](PHASE_A7_BACKEND_DI_RUNTIME_REPAIR_EVIDENCE.md).
+
+The repair is bounded to explicit constructor injection and a Spring
+instantiation regression test. After repair merge, retry only the failed
+Staging exact-SHA deploy/validation step and then stop before A8.
+
 Agent 6 focused review:
 
 ```text

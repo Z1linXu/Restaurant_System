@@ -369,9 +369,12 @@ A6 evidence:
 A7 evidence:
 [PHASE_A7_FRONTEND_MODULE_GATING_EVIDENCE](../agile/PHASE_A7_FRONTEND_MODULE_GATING_EVIDENCE.md).
 A7 uses authenticated Store Context `module_configuration` for frontend
-route/page/navigation gating and leaves A8 hardware readiness pending. After
-A7 exact-SHA Staging deploy and validation, stop before A8, Phase B/C and
-Production:
+route/page/navigation gating and leaves A8 hardware readiness pending. Initial
+exact-SHA Staging deploy of PR #154 merge `c725e09db1f...` exposed a bounded
+backend DI startup defect in `StoreModuleAccessEvaluator`; repair evidence is
+[PHASE_A7_BACKEND_DI_RUNTIME_REPAIR_EVIDENCE](../agile/PHASE_A7_BACKEND_DI_RUNTIME_REPAIR_EVIDENCE.md).
+After repair merge, retry only the exact-SHA Staging deploy and validation,
+then stop before A8, Phase B/C and Production:
 
 ```text
 PHASE_A7_FRONTEND_MODULE_GATING_COMPLETE_WAITING_FOR_PHASE_A8_OWNER_CONTINUATION
