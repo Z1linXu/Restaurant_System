@@ -84,6 +84,44 @@ class PrinterConfigServiceImplTest {
     }
 
     @Test
+    void blankPersistedModeResolvesToDisabledInsteadOfLegacyRealFallback() {
+        com.restaurant.system.user.entity.Store store = new com.restaurant.system.user.entity.Store();
+        store.id = 1L;
+        store.printing_enabled = true;
+        store.printing_mode = " ";
+        when(storeRepository.findById(1L)).thenReturn(Optional.of(store));
+
+        assertEquals("DISABLED", service.getStorePrintingMode(1L));
+    }
+
+    @Test
+    void unknownPersistedModeResolvesToDisabledInsteadOfLegacyRealFallback() {
+        com.restaurant.system.user.entity.Store store = new com.restaurant.system.user.entity.Store();
+        store.id = 1L;
+        store.printing_enabled = true;
+        store.printing_mode = "surprise";
+        when(storeRepository.findById(1L)).thenReturn(Optional.of(store));
+
+        assertEquals("DISABLED", service.getStorePrintingMode(1L));
+    }
+
+    @Test
+    void explicitModeMutationRejectsUnknownMode() {
+        com.restaurant.system.user.entity.Store store = new com.restaurant.system.user.entity.Store();
+        store.id = 1L;
+        store.printing_mode = "DISABLED";
+        when(storeRepository.findById(1L)).thenReturn(Optional.of(store));
+
+        BusinessException exception = assertThrows(
+            BusinessException.class,
+            () -> service.updateStorePrintingMode(1L, "surprise")
+        );
+
+        assertEquals("Unsupported printing mode: SURPRISE", exception.getMessage());
+        verify(storeRepository, never()).save(any(com.restaurant.system.user.entity.Store.class));
+    }
+
+    @Test
     void runtimePolicyRejectsEndpointConfigurationWhenDisabled() {
         runtimePolicy.setEndpointConfigurationEnabled(false);
         PrinterConfig request = printer(null, 1L, "No endpoint allowed");

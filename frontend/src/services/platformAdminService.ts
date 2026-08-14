@@ -54,15 +54,6 @@ export interface StoreKdsDisplayConfigRecord {
   config_json: string
 }
 
-export interface TemplateCreateStoreInput {
-  organization_id: number
-  template_id: number
-  name: string
-  code: string
-  status?: string
-  copy_menu_items?: boolean
-}
-
 export interface PlatformAdminOverview {
   organizations: Record<string, unknown>[]
   templates: Record<string, unknown>[]
@@ -222,14 +213,6 @@ export async function savePlatformEntity(path: string, payload: Record<string, u
   const target = id == null ? `/api/v1/admin/platform/${path}` : `/api/v1/admin/platform/${path}/${id}`
   return request<Record<string, unknown>>(target, {
     method: id == null ? 'POST' : 'PUT',
-    headers: buildHeaders(),
-    body: JSON.stringify(payload),
-  })
-}
-
-export async function createStoreFromTemplate(payload: TemplateCreateStoreInput) {
-  return request<Record<string, unknown>>('/api/v1/admin/platform/stores/from-template', {
-    method: 'POST',
     headers: buildHeaders(),
     body: JSON.stringify(payload),
   })

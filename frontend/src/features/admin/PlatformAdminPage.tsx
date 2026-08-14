@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  createStoreFromTemplate,
   fetchPlatformOverview,
   savePlatformEntity,
   type PlatformAdminOverview,
@@ -38,7 +37,7 @@ const sectionMeta: {
 }[] = [
   { key: 'organizations', title: 'Organizations', description: 'Tenant layer and lifecycle state.', path: 'organizations' },
   { key: 'templates', title: 'Templates', description: 'Reusable onboarding presets for future restaurants.', path: 'templates' },
-  { key: 'stores', title: 'Stores', description: 'Store records linked to organizations.', path: 'stores' },
+  { key: 'stores', title: 'Stores', description: 'Existing Store records linked to organizations. New Store provisioning is Phase B only.', path: 'stores' },
   { key: 'stations', title: 'Stations', description: 'Kitchen and production station setup.', path: 'stations' },
   { key: 'dining_tables', title: 'Dining Tables', description: 'Frontdesk table layout and split-table rules.', path: 'dining-tables' },
   { key: 'menu_categories', title: 'Menu Categories', description: 'Database-driven menu structure.', path: 'menu/categories' },
@@ -167,34 +166,23 @@ export function PlatformAdminPage() {
   const [error, setError] = useState<string | null>(null)
   const [editor, setEditor] = useState<EditorState | null>(null)
   const [saving, setSaving] = useState(false)
-  const [templateForm, setTemplateForm] = useState({
-    organization_id: 0,
-    template_id: 0,
-    name: '',
-    code: '',
-  })
 
-  const loadOverview = async () => {
+  const loadOverview = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
       const nextOverview = await fetchPlatformOverview(storeId)
       setOverview(nextOverview)
-      setTemplateForm((current) => ({
-        ...current,
-        organization_id: firstId(nextOverview.organizations) ?? 0,
-        template_id: firstId(nextOverview.templates) ?? 0,
-      }))
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Failed to load platform admin overview')
     } finally {
       setLoading(false)
     }
-  }
+  }, [storeId])
 
   useEffect(() => {
     void loadOverview()
-  }, [storeId])
+  }, [loadOverview])
 
   const sectionData = useMemo(() => {
     if (!overview) {
@@ -239,29 +227,6 @@ export function PlatformAdminPage() {
     }
   }
 
-  const handleCreateStoreFromTemplate = async () => {
-    try {
-      setSaving(true)
-      await createStoreFromTemplate({
-        organization_id: templateForm.organization_id,
-        template_id: templateForm.template_id,
-        name: templateForm.name,
-        code: templateForm.code,
-        status: 'active',
-      })
-      setTemplateForm((current) => ({
-        ...current,
-        name: '',
-        code: '',
-      }))
-      await loadOverview()
-    } catch (createError) {
-      window.alert(createError instanceof Error ? createError.message : 'Failed to create store from template')
-    } finally {
-      setSaving(false)
-    }
-  }
-
   return (
     <div className="min-h-screen bg-[var(--surface)] px-4 py-4 text-[var(--on-surface)]">
       <div className="mx-auto max-w-[1600px] space-y-4">
@@ -296,52 +261,9 @@ export function PlatformAdminPage() {
         </div>
 
         <div className="rounded-[24px] bg-[rgba(255,255,255,0.82)] p-4 shadow-[0_14px_28px_rgba(26,28,25,0.05)]">
-          <div className="text-[1.05rem] font-bold text-[var(--on-surface)]">Create Store From Template</div>
-          <div className="mt-3 grid gap-3 md:grid-cols-4">
-            <input
-              value={templateForm.name}
-              onChange={(event) => setTemplateForm((current) => ({ ...current, name: event.target.value }))}
-              placeholder="Store name"
-              className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2.5 text-[0.92rem]"
-            />
-            <input
-              value={templateForm.code}
-              onChange={(event) => setTemplateForm((current) => ({ ...current, code: event.target.value }))}
-              placeholder="Store code"
-              className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2.5 text-[0.92rem]"
-            />
-            <select
-              value={templateForm.organization_id}
-              onChange={(event) => setTemplateForm((current) => ({ ...current, organization_id: Number(event.target.value) }))}
-              className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2.5 text-[0.92rem]"
-            >
-              {(overview?.organizations ?? []).map((organization) => (
-                <option key={String(organization.id)} value={String(organization.id)}>
-                  {String(organization.name)}
-                </option>
-              ))}
-            </select>
-            <div className="flex gap-3">
-              <select
-                value={templateForm.template_id}
-                onChange={(event) => setTemplateForm((current) => ({ ...current, template_id: Number(event.target.value) }))}
-                className="min-w-0 flex-1 rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2.5 text-[0.92rem]"
-              >
-                {(overview?.templates ?? []).map((template) => (
-                  <option key={String(template.id)} value={String(template.id)}>
-                    {String(template.name)}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                disabled={saving || !templateForm.name.trim() || !templateForm.code.trim()}
-                onClick={() => void handleCreateStoreFromTemplate()}
-                className="rounded-[14px] bg-[var(--primary)] px-4 py-2.5 text-[0.92rem] font-semibold text-white disabled:opacity-50"
-              >
-                Create
-              </button>
-            </div>
+          <div className="text-[1.05rem] font-bold text-[var(--on-surface)]">Store Provisioning</div>
+          <div className="mt-2 text-[0.92rem] font-medium leading-6 text-[var(--muted)]">
+            Legacy direct active Store creation is disabled. New Store creation must go through the reviewed Phase B Owner provisioning workflow.
           </div>
         </div>
 
@@ -365,13 +287,19 @@ export function PlatformAdminPage() {
                       <div className="text-[1.05rem] font-bold text-[var(--on-surface)]">{section.title}</div>
                       <div className="mt-1 text-[0.84rem] leading-5 text-[var(--muted)]">{section.description}</div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => openEditor(section.key, section.path, `New ${section.title.slice(0, -1)}`)}
-                      className="rounded-[12px] bg-[rgba(97,0,0,0.08)] px-2.5 py-1.5 text-[0.82rem] font-semibold text-[var(--primary)]"
-                    >
-                      New
-                    </button>
+                    {section.key === 'stores' ? (
+                      <span className="rounded-[12px] bg-[rgba(26,28,25,0.06)] px-2.5 py-1.5 text-[0.82rem] font-semibold text-[var(--muted)]">
+                        Phase B only
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => openEditor(section.key, section.path, `New ${section.title.slice(0, -1)}`)}
+                        className="rounded-[12px] bg-[rgba(97,0,0,0.08)] px-2.5 py-1.5 text-[0.82rem] font-semibold text-[var(--primary)]"
+                      >
+                        New
+                      </button>
+                    )}
                   </div>
 
                   <div className="mt-3 text-[0.82rem] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">

@@ -1,5 +1,17 @@
 # Restaurant System API (MVP)
 
+> Phase A9 Legacy Coupling Removal (2026-08-14): Printing mode reads now treat
+> `stores.printing_mode` as the canonical runtime mode; blank, null or unknown
+> persisted values resolve fail-closed to `DISABLED`, and explicit mode
+> mutations must use an allowed runtime mode. Legacy Platform Admin Store
+> creation APIs fail closed until Phase B provisioning:
+> `POST /api/v1/admin/platform/stores` for new Stores and
+> `POST /api/v1/admin/platform/stores/from-template` return
+> `LEGACY_PLATFORM_STORE_CREATION_DISABLED_USE_PHASE_B_PROVISIONING` rather
+> than creating an active Store. Owner onboarding/menu-clone HTTP facades now
+> require the `PLATFORM` environment capability before runtime use; Phase B/C
+> Store provisioning and real multi-Store creation remain unauthorized.
+
 > Phase A8 Hardware Capability Contract (2026-08-14): Store Context module
 > configuration includes optional `hardware_readiness[]` alongside
 > `hardware_capabilities[]`. The array contains safe canonical capability keys,

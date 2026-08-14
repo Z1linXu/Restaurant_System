@@ -1,5 +1,33 @@
 # Feature Backlog
 
+## Phase A9 update — Legacy Coupling Removal
+
+Status:
+
+```text
+PHASE_A9_LEGACY_COUPLING_REMOVAL = REPOSITORY_IMPLEMENTED_PENDING_FINAL_VALIDATION
+```
+
+A9 bounds legacy compatibility while preserving the Phase A canonical sources:
+Store modules in `store_modules`, module definitions in the catalog,
+dependencies in the dependency graph, Store Profiles as versioned templates,
+Pricing in `store_pricing_policies`, Combo/Menu in their Store-scoped
+configuration, authorization through membership/role/capability and hardware
+through the A8 readiness contract.
+
+Current A9 disposition:
+
+- runtime Store-ID/name hardcode in shared business code: `0`;
+- legacy direct active Store creation: disabled until Phase B provisioning;
+- Owner onboarding/menu-clone HTTP facades: `PLATFORM` capability gated;
+- `stores.printing_mode`: canonical runtime mode, blank/unknown values resolve
+  to `DISABLED`;
+- `stores.printing_enabled`: bounded compatibility mirror only;
+- `users.store_id`: bounded fallback only when no active membership exists.
+
+Next required actions: final validation, Agent 6 review, PR merge, exact-SHA
+Staging deploy/regression, then stop before A10.
+
 ## Phase A8 update — Hardware Capability Contract
 
 Status: `PHASE_A8_HARDWARE_CAPABILITY_CONTRACT = PASS`.

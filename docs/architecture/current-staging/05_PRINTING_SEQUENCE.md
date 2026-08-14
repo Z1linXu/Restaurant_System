@@ -1,5 +1,10 @@
 # 05 Printing Sequence
 
+> A9 update: persisted `stores.printing_mode` is the canonical runtime mode.
+> Blank, null or unknown persisted values resolve fail-closed to `DISABLED`
+> instead of legacy `REAL`; explicit mode mutations must normalize to an
+> allowed runtime mode.
+
 > A8 update: Printing is layered as Store module `PRINTING`, logical
 > capabilities `PRINT_GRAB`, `PRINT_FRONTDESK_RECEIPT`, `PRINT_HOT_KITCHEN`,
 > runtime mode `DISABLED/MOCK/PAD_DIRECT/REAL`, and separate physical binding.
@@ -68,6 +73,8 @@ sequenceDiagram
   assignments.
 - Current Staging runtime allows only `DISABLED` and `MOCK`; endpoint
   configuration is disabled.
+- Blank/unknown persisted print mode is not inferred from
+  `printing_enabled`; it resolves to `DISABLED`.
 - Print jobs are Store-scoped and assignment-routed.
 - Renderer failures or dispatch failures update print job state; they must not
   roll back the submitted order.

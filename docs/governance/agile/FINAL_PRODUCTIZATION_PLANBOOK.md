@@ -1,5 +1,31 @@
 # Final Productization Planbook
 
+## Phase A9 repository implementation update (2026-08-14)
+
+`PHASE_A9_LEGACY_COUPLING_REMOVAL =
+REPOSITORY_IMPLEMENTED_PENDING_FINAL_VALIDATION`.
+
+A9 removes or fences the remaining legacy coupling that could undermine
+`BUILD ONCE, CONFIGURE MANY`: Store-ID/name runtime hardcodes are absent from
+shared business runtime code; legacy Platform Admin active Store creation is
+disabled until Phase B provisioning; Owner onboarding/menu-clone HTTP facades
+are guarded by the `PLATFORM` environment capability; blank/unknown persisted
+printing mode fails closed to `DISABLED`; and `users.store_id` remains only a
+bounded compatibility fallback when no active membership exists.
+
+The A9 compatibility ledger is
+[PHASE_A9_LEGACY_COMPATIBILITY_LEDGER](PHASE_A9_LEGACY_COMPATIBILITY_LEDGER.md).
+Implementation evidence is
+[PHASE_A9_LEGACY_COUPLING_REMOVAL_EVIDENCE](PHASE_A9_LEGACY_COUPLING_REMOVAL_EVIDENCE.md).
+
+A9 adds no Flyway migration and does not mutate Production. It must complete
+final validation, Agent 6 review, PR merge and exact-SHA Staging regression,
+then stop before A10:
+
+```text
+PHASE_A9_LEGACY_COUPLING_REMOVAL_COMPLETE_WAITING_FOR_PHASE_A10_OWNER_CONTINUATION
+```
+
 ## Phase A8 completion update (2026-08-14)
 
 `PHASE_A8_HARDWARE_CAPABILITY_CONTRACT = PASS`.

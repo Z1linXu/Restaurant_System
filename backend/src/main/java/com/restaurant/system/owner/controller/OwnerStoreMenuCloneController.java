@@ -3,6 +3,8 @@ package com.restaurant.system.owner.controller;
 import com.restaurant.system.common.auth.AuthorizationService;
 import com.restaurant.system.common.auth.AuthenticatedUser;
 import com.restaurant.system.common.auth.ForbiddenException;
+import com.restaurant.system.common.feature.FeatureFlagService;
+import com.restaurant.system.common.feature.FeaturePackage;
 import com.restaurant.system.common.response.ApiResponse;
 import com.restaurant.system.owner.dto.OwnerStoreMenuCloneRequest;
 import com.restaurant.system.owner.dto.OwnerStoreMenuCloneResponse;
@@ -24,13 +26,16 @@ public class OwnerStoreMenuCloneController {
 
     private final AuthorizationService authorizationService;
     private final OwnerStoreMenuCloneService menuCloneService;
+    private final FeatureFlagService featureFlagService;
 
     public OwnerStoreMenuCloneController(
         AuthorizationService authorizationService,
-        OwnerStoreMenuCloneService menuCloneService
+        OwnerStoreMenuCloneService menuCloneService,
+        FeatureFlagService featureFlagService
     ) {
         this.authorizationService = authorizationService;
         this.menuCloneService = menuCloneService;
+        this.featureFlagService = featureFlagService;
     }
 
     @PostMapping("/validate")
@@ -39,6 +44,7 @@ public class OwnerStoreMenuCloneController {
         @PathVariable Long targetStoreId,
         @RequestBody OwnerStoreMenuCloneRequest request
     ) {
+        featureFlagService.requireEnabled(FeaturePackage.PLATFORM);
         requireFixedRequest(request);
         return ApiResponse.success(
             "Menu clone validation completed",
@@ -55,6 +61,7 @@ public class OwnerStoreMenuCloneController {
         @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
         @RequestBody OwnerStoreMenuCloneRequest request
     ) {
+        featureFlagService.requireEnabled(FeaturePackage.PLATFORM);
         requireFixedRequest(request);
         return ApiResponse.success(
             "Menu clone accepted",

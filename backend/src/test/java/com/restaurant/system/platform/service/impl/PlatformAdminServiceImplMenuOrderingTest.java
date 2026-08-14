@@ -14,7 +14,6 @@ import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.menu.repository.MenuItemRepository;
 import com.restaurant.system.menu.service.MenuRevisionService;
 import com.restaurant.system.platform.dto.CreateStoreFromTemplateRequest;
-import com.restaurant.system.platform.entity.RestaurantTemplate;
 import com.restaurant.system.platform.repository.OrganizationRepository;
 import com.restaurant.system.platform.repository.RestaurantTemplateRepository;
 import com.restaurant.system.platform.repository.StoreKdsDisplayConfigRepository;
@@ -149,30 +148,42 @@ class PlatformAdminServiceImplMenuOrderingTest {
     }
 
     @Test
-    void templateMenuWritesIncrementOnlyTheNewTargetStoreRevision() {
+    void legacyTemplateStoreCreationFailsClosedUntilPhaseBProvisioning() {
         CreateStoreFromTemplateRequest request = new CreateStoreFromTemplateRequest();
         request.organization_id = 12L;
         request.name = "Synthetic Target";
         request.code = "SYNTHETIC_TARGET";
         request.template_id = 5L;
-        Store savedStore = new Store();
-        savedStore.id = 22L;
-        when(storeRepository.save(any(Store.class))).thenReturn(savedStore);
-        when(storeRepository.findById(22L)).thenReturn(Optional.of(savedStore));
-        RestaurantTemplate template = new RestaurantTemplate();
-        template.id = 5L;
-        template.source_store_id = 1L;
-        template.default_station_setup_json = """
-            [{"code":"HOT","name":"Hot Kitchen","sort_order":1,"is_active":true}]
-            """;
-        template.default_menu_category_structure_json = """
-            [{"code":"NOODLE","name_zh":"面","name_en":"Noodles","sort_order":1,"is_active":true}]
-            """;
-        when(restaurantTemplateRepository.findById(5L)).thenReturn(Optional.of(template));
 
-        service.createStoreFromTemplate(request);
+        com.restaurant.system.common.exception.BusinessException exception = assertThrows(
+            com.restaurant.system.common.exception.BusinessException.class,
+            () -> service.createStoreFromTemplate(request)
+        );
 
-        verify(menuRevisionService).incrementRevision(22L);
-        verify(menuRevisionService, never()).incrementRevision(1L);
+        assertEquals(
+            "LEGACY_PLATFORM_STORE_CREATION_DISABLED_USE_PHASE_B_PROVISIONING",
+            exception.getMessage()
+        );
+        verify(storeRepository, never()).save(any(Store.class));
+        verify(menuRevisionService, never()).incrementRevision(any());
+    }
+
+    @Test
+    void directNewStoreSaveFailsClosedUntilPhaseBProvisioning() {
+        Store request = new Store();
+        request.organization_id = 12L;
+        request.name = "Direct Store";
+        request.code = "DIRECT_STORE";
+
+        com.restaurant.system.common.exception.BusinessException exception = assertThrows(
+            com.restaurant.system.common.exception.BusinessException.class,
+            () -> service.saveStore(request)
+        );
+
+        assertEquals(
+            "LEGACY_PLATFORM_STORE_CREATION_DISABLED_USE_PHASE_B_PROVISIONING",
+            exception.getMessage()
+        );
+        verify(storeRepository, never()).save(any(Store.class));
     }
 }

@@ -1,6 +1,8 @@
 package com.restaurant.system.owner.controller;
 
 import com.restaurant.system.common.auth.AuthorizationService;
+import com.restaurant.system.common.feature.FeatureFlagService;
+import com.restaurant.system.common.feature.FeaturePackage;
 import com.restaurant.system.common.response.ApiResponse;
 import com.restaurant.system.owner.dto.OwnerStoreOnboardingRequest;
 import com.restaurant.system.owner.dto.OwnerStoreOnboardingResponse;
@@ -19,13 +21,16 @@ public class OwnerStoreOnboardingController {
 
     private final AuthorizationService authorizationService;
     private final OwnerStoreOnboardingService onboardingService;
+    private final FeatureFlagService featureFlagService;
 
     public OwnerStoreOnboardingController(
         AuthorizationService authorizationService,
-        OwnerStoreOnboardingService onboardingService
+        OwnerStoreOnboardingService onboardingService,
+        FeatureFlagService featureFlagService
     ) {
         this.authorizationService = authorizationService;
         this.onboardingService = onboardingService;
+        this.featureFlagService = featureFlagService;
     }
 
     @PostMapping("/onboard")
@@ -34,6 +39,7 @@ public class OwnerStoreOnboardingController {
         @RequestHeader("Idempotency-Key") String idempotencyKey,
         @Valid @RequestBody OwnerStoreOnboardingRequest request
     ) {
+        featureFlagService.requireEnabled(FeaturePackage.PLATFORM);
         return ApiResponse.success(
             "Store onboarding accepted",
             onboardingService.onboard(

@@ -41,13 +41,29 @@ public class PrintingRuntimePolicyProperties {
             }
             normalized.add(candidate);
         }
+        if (!normalized.contains(PrintingMode.DISABLED)) {
+            throw new IllegalStateException("app.printing.allowed-modes must include DISABLED for fail-closed printing behavior");
+        }
         allowedModes = new ArrayList<>(normalized);
     }
 
     public String requireAllowedMode(String mode) {
-        String normalized = PrintingMode.normalize(mode);
+        String normalized;
+        try {
+            normalized = PrintingMode.normalizeRequired(mode);
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException(exception.getMessage());
+        }
         if (!allowedModes.contains(normalized)) {
             throw new BusinessException("Printing mode " + normalized + " is not allowed by the runtime policy");
+        }
+        return normalized;
+    }
+
+    public String safePersistedModeOrDisabled(String mode) {
+        String normalized = PrintingMode.normalizeOrNull(mode);
+        if (normalized == null || !allowedModes.contains(normalized)) {
+            return requireAllowedMode(PrintingMode.DISABLED);
         }
         return normalized;
     }

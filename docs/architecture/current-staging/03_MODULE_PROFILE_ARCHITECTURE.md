@@ -1,5 +1,13 @@
 # 03 Module/Profile Architecture
 
+> A9 update: Store module state, profile templates, pricing policies, combo
+> configuration, menu data, membership/role authorization and hardware
+> readiness remain separate canonical sources. Legacy runtime compatibility is
+> bounded: `stores.printing_mode` is the canonical print mode,
+> `stores.printing_enabled` is a mirror, Owner provisioning/menu-clone facades
+> are `PLATFORM` gated, and direct active Store creation is disabled until
+> Phase B.
+
 > A8 update: Hardware capability is now a first-class contract, not a blended
 > `printing_enabled`/`printing_mode` concept. Module dependency validation uses
 > the A8 catalog, Store Context exposes `hardware_readiness`, and legacy profile
@@ -25,9 +33,9 @@ contract relate to each other.
 
 ## Scope
 
-A1 through A7 implemented architecture. A8 hardware capability management and
-Phase B Store provisioning are shown only as future work, not as current
-behavior.
+A1 through A8 implemented architecture. A9 repository changes are current
+source architecture pending exact-SHA Staging validation. Phase B Store
+provisioning is shown only as future work, not as current behavior.
 
 ## Mermaid diagram
 
@@ -52,7 +60,8 @@ flowchart TD
     profileSeed["A5 ST_DENIS_CANONICAL_PROFILE/v1<br/>12 deterministic artifacts"] --> profileTables
     dryRun["StoreProfileMaterializationDryRunValidator"] --> profileValidator
 
-    legacy["Legacy runtime compatibility<br/>stores.printing_enabled / printing_mode<br/>frontend platform/dev feature config"] -. "environment/runtime inputs" .-> capability
+    legacy["Bounded legacy compatibility<br/>stores.printing_enabled mirror<br/>frontend platform/dev env config"] -. "environment inputs" .-> capability
+    printMode["Canonical runtime print mode<br/>stores.printing_mode"] --> capability
     phaseB["Phase B Store provisioning<br/>future"] -. "not implemented" .-> profileTables
 ```
 
@@ -68,10 +77,14 @@ flowchart TD
 - Current Staging runtime at this baseline implements A6 backend gating and A7
   frontend gating; bounded legacy flags remain only environment/platform or
   runtime-mode inputs.
+- A9 disables legacy direct active Store writers; Phase B must provide the next
+  Store provisioning writer.
+- Owner onboarding and menu-clone HTTP facades remain unavailable unless the
+  `PLATFORM` environment capability is enabled.
 
 ## What omitted
 
-- A8 physical hardware pairing or printer binding
+- physical hardware pairing or printer binding
 - Phase B materialization commands
 
 ## Source files used

@@ -114,13 +114,7 @@ public class PrinterConfigServiceImpl implements PrinterConfigService {
     @Override
     public String getStorePrintingMode(Long storeId) {
         Store store = requireStore(storeId);
-        if (store.printing_mode != null && !store.printing_mode.isBlank()) {
-            return runtimePolicy.requireAllowedMode(store.printing_mode);
-        }
-        if (Boolean.FALSE.equals(store.printing_enabled)) {
-            return runtimePolicy.requireAllowedMode(PrintingMode.DISABLED);
-        }
-        return runtimePolicy.requireAllowedMode(PrintingMode.REAL);
+        return runtimePolicy.safePersistedModeOrDisabled(store.printing_mode);
     }
 
     @Override
