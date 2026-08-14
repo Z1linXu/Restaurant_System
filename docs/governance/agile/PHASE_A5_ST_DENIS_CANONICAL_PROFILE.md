@@ -289,9 +289,11 @@ Therefore the first stored character remained newline and V15 was rejected.
 
 Repair:
 
-- V15 profile and artifact JSON literals now start immediately with `{`.
+- V15 profile and artifact JSON literals now use `$tag$ {`: the stored text
+  begins with a regular space so the A4 `btrim` check sees `{`, while Flyway
+  does not see the placeholder sequence `${`.
 - A5 contract test now rejects `$profile_content$` / `$artifact_*$` followed
-  by a newline before the JSON root.
+  by a newline before the JSON root or immediately by `{` / `[`.
 - The OPS-001 Flyway checksum manifest now covers V1-V15, including the
   repaired V15 checksum, so official runtime evidence tooling can validate the
   current migration set.
