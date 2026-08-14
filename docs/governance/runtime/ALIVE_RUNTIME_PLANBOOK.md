@@ -296,6 +296,25 @@ Expected A5.5 repair runtime stop after exact-SHA Staging validation:
 PHASE_A5_5_OWNER_ACCEPTANCE_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
 ```
 
+Owner manual retest then found one remaining Combo Configuration sort-control
+layout blocker: `Display Order / 排序`, Up/Down, mapping, linked item, enabled,
+and delete controls could overlap in group/component rows. Current bounded
+repair:
+
+```text
+PHASE_A5_5_COMBO_CONFIGURATION_SORT_CONTROL_UI_REPAIR
+```
+
+Scope is frontend Combo Configuration layout/responsive spacing only. Do not
+change Combo persistence, backend validation, menu revision semantics,
+ordering, Flyway/schema, Store Profile, A6 module gating, or Production.
+
+Expected final UI repair stop after exact-SHA Staging deployment:
+
+```text
+PHASE_A5_5_FINAL_UI_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
 ## Current final productization roadmap audit (2026-08-12)
 
 The Owner opened a planning-only final productization route after the three

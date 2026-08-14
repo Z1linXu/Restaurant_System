@@ -233,6 +233,15 @@ no-mutation, and must stop at:
 PHASE_A5_5_OWNER_ACCEPTANCE_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
 ```
 
+Owner final manual retest found one remaining UI-only blocker in Combo
+Configuration sort-control layout. The bounded
+`PHASE_A5_5_COMBO_CONFIGURATION_SORT_CONTROL_UI_REPAIR` may change only
+frontend layout/responsive spacing for group/component rows and must stop at:
+
+```text
+PHASE_A5_5_FINAL_UI_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
 This order must not change unless fresh audit proves a real technical
 dependency. Any change records the original order, actual order and reason.
 

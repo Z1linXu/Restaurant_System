@@ -183,6 +183,18 @@
 > Up/Down controls. Historical automated PASS evidence is retained; the repair
 > must stop at
 > `PHASE_A5_5_OWNER_ACCEPTANCE_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST`.
+>
+> 2026-08-14 A5.5 final Combo sort-control UI repair: Owner manual retest found
+> a final UI-only blocker where Combo Configuration `Display Order / 排序`,
+> Up/Down, mapping type, linked menu item, enabled, and delete controls could
+> overlap in group/component rows. The bounded repair changes only frontend
+> responsive layout: group and component rows use explicit CSS Grid columns,
+> Up/Down controls have their own minimum-width Reorder container, and mapping/
+> linked item controls have separate grid areas that wrap below wide widths.
+> Combo persistence, defaults, enabled/disabled semantics, menu revision,
+> ordering, backend validation, Flyway/schema, Store Profile, A6, Phase B/C,
+> and Production remain out of scope. Stop state:
+> `PHASE_A5_5_FINAL_UI_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST`.
 
 > 2026-08-12 final productization roadmap audit: planning-only audit completed
 > for the route from one working Store to reliable N-Store productization. The

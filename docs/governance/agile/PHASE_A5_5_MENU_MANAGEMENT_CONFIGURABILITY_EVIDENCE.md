@@ -1,11 +1,11 @@
 # Phase A5.5 Menu Management Configurability Evidence
 
-> Status: `PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_OWNER_ACCEPTANCE_REPAIR_REPOSITORY_READY`
+> Status: `PHASE_A5_5_COMBO_CONFIGURATION_SORT_CONTROL_UI_REPAIR_REPOSITORY_READY`
 >
 > Prepared: 2026-08-14, America/Toronto
 >
-> Fresh repository authority at repair package start:
-> `origin/main@073884df2d084ed30a3a9c16c7ede71b493e08ce`
+> Fresh repository authority at final UI repair package start:
+> `origin/main@362a3b68d84daa9b2980ab1f04d1a68816895218`
 >
 > Runtime boundary: Production `NO MUTATION`. Staging deploy/validation is
 > authorized only after PR merge as exact-SHA Phase A5.5 validation.
@@ -239,6 +239,54 @@ Successful repair runtime stop:
 ```text
 PHASE_A5_5_OWNER_MANUAL_ACCEPTANCE = FAIL_REPAIRED_WAITING_FOR_OWNER_RETEST
 PHASE_A5_5_OWNER_ACCEPTANCE_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
+## Final Combo sort-control UI repair
+
+Owner manual retest of the deployed A5.5 Owner-acceptance repair found one
+remaining UI blocker in Combo Configuration: `Display Order / 排序`, Up/Down,
+mapping type, linked item, enabled, and delete controls could overlap in group
+and component rows at common desktop/tablet widths.
+
+Current bounded repair:
+
+```text
+PHASE_A5_5_COMBO_CONFIGURATION_SORT_CONTROL_UI_REPAIR
+```
+
+Repair scope is frontend layout only. It does not change Combo persistence,
+business logic, defaults, enabled/disabled semantics, menu revision, pricing,
+ordering, backend validation, Flyway/schema, Store Profile, or A6 module
+gating.
+
+Repository repair:
+
+- `ComboConfigurationPanel` now uses explicit responsive CSS Grid layout
+  contracts for group and component rows.
+- `Display Order / 排序` keeps a dedicated minimum-width field.
+- Up/Down controls move into their own `Reorder` grid column/container instead
+  of sharing the Display Order input area.
+- Component mapping type, linked menu item, enabled, and delete controls each
+  retain their own grid area at wide widths and wrap into readable two-column
+  rows below the wide breakpoint.
+- Up/Down labels remain visible/clickable, disabled state remains visible, and
+  keyboard/tab order follows DOM order.
+
+Focused regression:
+
+- `ComboConfigurationPanel.test.ts` locks the layout class contract: independent
+  reorder controls, mapping/link containers, responsive wrap behavior, no
+  absolute positioning, and no return to the old `grid-cols-[1fr_auto_auto]`
+  Display Order/Reorder compression.
+- `moveWithDisplayOrder` remains unchanged semantically: Up/Down still
+  resequences `display_order` as `10/20/30`.
+
+Expected final UI repair stop after exact-SHA Staging deployment:
+
+```text
+PHASE_A5_5_COMBO_SORT_UI_REPAIR = DEPLOYED_TO_STAGING
+PHASE_A5_5_OWNER_MANUAL_ACCEPTANCE = PENDING_FINAL_UI_RETEST
+PHASE_A5_5_FINAL_UI_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
 ```
 
 ## Profile and historical compatibility
