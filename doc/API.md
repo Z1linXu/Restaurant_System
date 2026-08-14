@@ -46,6 +46,18 @@
 > acceptance after the bounded runtime DI repair PR #140; no additional public
 > endpoint or DTO was introduced by the repair.
 
+> Phase A4 Store Profile Contract (2026-08-13): additive Flyway V14 introduces
+> database-backed `store_profiles`, `store_profile_versions`, and
+> `store_profile_artifacts`. Store Profile versions are safe configuration
+> templates with canonical JSON, deterministic fingerprints, immutable
+> published/reviewed/ready content, A1/A2 module validation and prohibited-data
+> scanning. A4 adds read-only Owner endpoints
+> `GET /api/v1/store-profiles` and
+> `GET /api/v1/store-profiles/{profileCode}/versions/{profileVersion}`. It does
+> not add a Store provisioning writer, Store activation workflow, credential
+> delivery, hardware binding, Production action, Chinatown, Sainte-Catherine,
+> or A6/A7 runtime module gating.
+
 > Final productization Phase A0 boundary (2026-08-13): Size configuration uses
 > the existing menu option/modifier APIs rather than a second size engine.
 > `MenuItem -> SizeVariant[1..N]` is represented by `menu_item_options` rows

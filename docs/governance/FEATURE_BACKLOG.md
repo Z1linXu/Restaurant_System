@@ -144,6 +144,25 @@ Current stop:
 PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION_COMPLETE_WAITING_FOR_PHASE_A4_OWNER_CONTINUATION
 ```
 
+Current A4 Store Profile Contract package:
+
+- Technical evidence:
+  [PHASE_A4_STORE_PROFILE_CONTRACT](agile/PHASE_A4_STORE_PROFILE_CONTRACT.md)
+- Additive persistence:
+  `backend/src/main/resources/db/migration/V14__add_store_profiles.sql`
+- Canonical profile read contract:
+  `GET /api/v1/store-profiles` and
+  `GET /api/v1/store-profiles/{profileCode}/versions/{profileVersion}`
+- Validator:
+  `backend/src/main/java/com/restaurant/system/owner/profile/StoreProfileContractValidator.java`
+
+A4 is bounded to database-backed versioned Profile contract/read/validation.
+Focused backend tests, full backend tests, `git diff --check` and Agent 6 are
+PASS for the A4 package. It does not create or materialize Stores, start Owner
+provisioning, start A6 gating, create Chinatown/Sainte-Catherine or mutate
+Production. A5 remains in the same Owner-authorized continuous loop after A4
+enters `main`.
+
 Phase A0 deployed evidence is tracked in
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).
 Current deployed conclusion: existing menu option/modifier data safely models

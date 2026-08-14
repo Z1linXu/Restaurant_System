@@ -161,6 +161,23 @@ STAGING_FLYWAY = V13
 CURRENT_STOP = PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION_COMPLETE_WAITING_FOR_PHASE_A4_OWNER_CONTINUATION
 ```
 
+Current Owner-authorized continuous execution:
+
+```text
+PHASE_A4_STORE_PROFILE_CONTRACT
+→ PHASE_A5_ST_DENIS_CANONICAL_PROFILE
+```
+
+A4 defines the database-backed versioned Store Profile contract with additive
+Flyway V14 `store_profiles`, `store_profile_versions`, and
+`store_profile_artifacts`, deterministic fingerprints, published version
+immutability including profile binding protection, immutable artifact
+insert/delete/update/move protection, A1/A2 module validation, prohibited-data
+scanning and read-only Owner Profile APIs. A4 focused backend tests, full
+backend tests, `git diff --check` and Agent 6 are PASS. A4 is generic contract
+work only; A5 owns the first `ST_DENIS_CANONICAL_PROFILE` proof. A6 and Phase
+B/C remain unauthorized until the A5 stop.
+
 This order must not change unless fresh audit proves a real technical
 dependency. Any change records the original order, actual order and reason.
 

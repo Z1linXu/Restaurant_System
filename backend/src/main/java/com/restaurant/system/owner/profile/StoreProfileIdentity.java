@@ -2,7 +2,7 @@ package com.restaurant.system.owner.profile;
 
 public record StoreProfileIdentity(String profileCode, String profileVersion) {
 
-    private static final String EXACT_VALUE_PATTERN = "[A-Za-z0-9][A-Za-z0-9._:-]*";
+    private static final String EXACT_VALUE_PATTERN = "[A-Za-z0-9][A-Za-z0-9._:_-]*";
 
     public StoreProfileIdentity {
         if (!isExact(profileCode) || !isExact(profileVersion)) {
