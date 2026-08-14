@@ -244,15 +244,25 @@ A4 implementation navigation:
   `StoreProfileContractValidatorTest.java`, and
   `StoreProfileControllerTest.java`
 
-A4 is Agent 6 accepted and ready for PR/merge. It adds profile
+A4 is in `main` through PR #142 at
+`be14923c96098d80b1b841e2ba0edbe3ca2563a5`. It adds profile
 persistence/read/validation foundation only. Immutable version protection covers
 downgrade, content/fingerprint/source/schema/profile-version/profile-binding
 rewrites; immutable artifact protection covers insert/delete/update/move under
-immutable parent versions. Focused backend tests, full backend tests and
-`git diff --check` passed. It does not create a Store, materialize St-Denis,
-start A6/A7, Phase B/C, Chinatown, Sainte-Catherine or Production work. After
-A4 enters `main`, continue immediately to A5 under the same Owner
-authorization.
+immutable parent versions.
+
+A5 repository implementation now adds
+[PHASE_A5_ST_DENIS_CANONICAL_PROFILE](../agile/PHASE_A5_ST_DENIS_CANONICAL_PROFILE.md):
+Flyway V15 safe profile seed data for `ST_DENIS_CANONICAL_PROFILE/v1`, profile
+fingerprint `af1a8f34cd156c1987b74ec1a9a22ddfd004859c617937b7d53f05e16e762602`,
+and a dry-run materialization validator. Counts are categories/items/options
+`6/39/380`, parent option relationships `11`, tables `13`, stations `5`,
+logical printers/assignments `4/3`, combo components `5`, staff templates `4`,
+device slots `7`. Focused tests and full backend regression pass locally.
+Current Staging is still `c1b5e7681f24a11fbf99293567b3da08076fa3b6` / Flyway
+V13 until the A5 PR is merged and exact-SHA Staging deploy applies V15.
+A5 does not create a Store, materialize St-Denis, start A6/A7, Phase B/C,
+Chinatown, Sainte-Catherine or Production work.
 
 ## Current final productization roadmap audit (2026-08-12)
 

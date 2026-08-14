@@ -58,6 +58,13 @@
 > delivery, hardware binding, Production action, Chinatown, Sainte-Catherine,
 > or A6/A7 runtime module gating.
 
+> Phase A5 Store Profile Data (2026-08-13): after Flyway V15 is applied, the
+> existing read-only Owner Profile endpoints expose
+> `ST_DENIS_CANONICAL_PROFILE/v1` with fingerprint
+> `af1a8f34cd156c1987b74ec1a9a22ddfd004859c617937b7d53f05e16e762602`. The
+> profile is a safe versioned template only; these endpoints do not materialize
+> a Store, issue auth material, bind printers/devices or mutate Production.
+
 > Final productization Phase A0 boundary (2026-08-13): Size configuration uses
 > the existing menu option/modifier APIs rather than a second size engine.
 > `MenuItem -> SizeVariant[1..N]` is represented by `menu_item_options` rows

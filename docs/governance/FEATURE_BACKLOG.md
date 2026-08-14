@@ -156,12 +156,20 @@ Current A4 Store Profile Contract package:
 - Validator:
   `backend/src/main/java/com/restaurant/system/owner/profile/StoreProfileContractValidator.java`
 
-A4 is bounded to database-backed versioned Profile contract/read/validation.
-Focused backend tests, full backend tests, `git diff --check` and Agent 6 are
-PASS for the A4 package. It does not create or materialize Stores, start Owner
+A4 is bounded to database-backed versioned Profile contract/read/validation and
+entered `main` through PR #142 at
+`be14923c96098d80b1b841e2ba0edbe3ca2563a5`. Focused backend tests, full
+backend tests, `git diff --check` and Agent 6 are PASS for the A4 package.
+
+A5 adds the first database-backed canonical profile:
+[PHASE_A5_ST_DENIS_CANONICAL_PROFILE](agile/PHASE_A5_ST_DENIS_CANONICAL_PROFILE.md).
+`ST_DENIS_CANONICAL_PROFILE/v1` is safe, versioned, fingerprinted and
+profile-local. It carries the complete reviewed St-Denis configuration graph
+without Production DB IDs, auth material, physical printer endpoints or device
+pairing material. It does not create or materialize Stores, start Owner
 provisioning, start A6 gating, create Chinatown/Sainte-Catherine or mutate
-Production. A5 remains in the same Owner-authorized continuous loop after A4
-enters `main`.
+Production. Exact-SHA Staging deploy/Flyway validation is required after A5 PR
+merge because V15 seeds database-backed profile data.
 
 Phase A0 deployed evidence is tracked in
 [PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).

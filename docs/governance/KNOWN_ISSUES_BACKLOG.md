@@ -55,14 +55,13 @@ passed; Production remained no-mutation. There is no active Known Issue blocking
 the A3 stop state.
 
 Current A4 Store Profile Contract is productization work, not a Production
-incident. It adds additive database-backed Profile/Version/Artifact persistence,
-deterministic fingerprinting, published/reviewed/ready/retired version
-immutability, immutable artifact protection, A1/A2 module validation and
-prohibited-data scanning. Focused backend tests, full backend tests,
-`git diff --check` and Agent 6 are PASS. It does not create Stores, provision
-credentials, copy Production/St-Denis runtime data, bind printers/devices,
-start Phase B/C or mutate Production. No active Known Issue blocks A4/A5
-execution under the Owner-approved Phase A loop.
+incident, and is in `main` through PR #142 at
+`be14923c96098d80b1b841e2ba0edbe3ca2563a5`. A5 St-Denis Canonical Profile is
+also productization work, not an incident. It adds V15 safe profile seed data
+and a dry-run validator for `ST_DENIS_CANONICAL_PROFILE/v1`; it does not create
+Stores, provision auth material, copy Production/St-Denis runtime secrets or
+DB IDs, bind printers/devices, start Phase B/C or mutate Production. No active
+Known Issue blocks A5 execution under the Owner-approved Phase A loop.
 
 Current final productization route (2026-08-12): open field-test follow-up work
 continues through the Owner field-test and bug-fix loop, but the loop is now a
