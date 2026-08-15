@@ -1,6 +1,28 @@
 # Feature Backlog
 
-## Phase A9 update — Legacy Coupling Removal
+## Phase A10 update — Final Modular Acceptance
+
+Status:
+
+```text
+PHASE_A_IMPLEMENTATION_COMPLETE = YES
+PHASE_A_AUTOMATED_ACCEPTANCE = PASS
+PHASE_A_OWNER_ACCEPTANCE = PENDING
+```
+
+A10 evidence:
+[PHASE_A10_FINAL_MODULAR_PRODUCTIZATION_ACCEPTANCE_EVIDENCE](agile/PHASE_A10_FINAL_MODULAR_PRODUCTIZATION_ACCEPTANCE_EVIDENCE.md).
+
+Phase A now has automated coverage for module catalog/dependencies,
+Store-scoped module state, pricing, combo/menu revision, frontend/backend
+gating, hardware readiness, legacy source-of-truth closure, MOCK printing and
+Store/staff/auth isolation. Phase B Owner Store Provisioning remains the next
+unimplemented roadmap package and requires explicit Owner approval.
+
+Do not start Phase B, Phase C, Chinatown, Sainte-Catherine or Production
+promotion before the next Owner gate.
+
+## Historical Phase A9 update — Legacy Coupling Removal
 
 Status:
 

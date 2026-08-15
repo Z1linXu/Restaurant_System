@@ -1,6 +1,27 @@
 # Final Productization Planbook
 
-## Phase A9 repository implementation update (2026-08-14)
+## Phase A10 final modular acceptance update (2026-08-14)
+
+`PHASE_A_IMPLEMENTATION_COMPLETE = YES` and
+`PHASE_A_AUTOMATED_ACCEPTANCE = PASS` on fresh main/deployed Staging SHA
+`ad4572759e01b5546ec59af24aa36b09e5c2dd00` at Flyway V16.
+
+Evidence is
+[PHASE_A10_FINAL_MODULAR_PRODUCTIZATION_ACCEPTANCE_EVIDENCE](PHASE_A10_FINAL_MODULAR_PRODUCTIZATION_ACCEPTANCE_EVIDENCE.md).
+Owner final Staging acceptance remains pending:
+[PHASE_A_OWNER_FINAL_STAGING_CHECKLIST](PHASE_A_OWNER_FINAL_STAGING_CHECKLIST.md).
+
+A10 does not authorize Phase B/C implementation, Chinatown, Sainte-Catherine,
+Production deployment, Production migration, Production configuration changes,
+physical printer binding or Pad pairing.
+
+Current stop:
+
+```text
+PHASE_A_MODULAR_PRODUCTIZATION_AUTOMATED_ACCEPTANCE_PASS_WAITING_FOR_OWNER_FINAL_ACCEPTANCE
+```
+
+## Historical Phase A9 repository implementation update (2026-08-14)
 
 `PHASE_A9_LEGACY_COUPLING_REMOVAL =
 REPOSITORY_IMPLEMENTED_PENDING_FINAL_VALIDATION`.

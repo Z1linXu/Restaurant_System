@@ -1,5 +1,11 @@
 # 03 Module/Profile Architecture
 
+> A10 update: automated Phase A acceptance passed on fresh main/deployed
+> Staging SHA `ad4572759e01b5546ec59af24aa36b09e5c2dd00`. Module catalog,
+> dependency graph, Store modules, profile template readiness, pricing, combo,
+> hardware readiness and Store/staff/auth isolation are accepted for Phase A.
+> Phase B materialization remains future work.
+
 > A9 update: Store module state, profile templates, pricing policies, combo
 > configuration, menu data, membership/role authorization and hardware
 > readiness remain separate canonical sources. Legacy runtime compatibility is
@@ -26,16 +32,14 @@ contract relate to each other.
   `923346f15757ca85fdafb509a803e87f04ae55bd`
 - A6 merged source authority before A7:
   `ae144e91a7900f0a541446e93c0f498f41f670c0`
-- A7 source authority:
-  this package/PR; exact merged main SHA and deployed Staging SHA are recorded
-  by the post-merge exact-SHA Staging deployment evidence/final report.
+- A10 source/deployed Staging authority:
+  `ad4572759e01b5546ec59af24aa36b09e5c2dd00`
 - Staging Flyway: `V16`
 
 ## Scope
 
-A1 through A8 implemented architecture. A9 repository changes are current
-source architecture pending exact-SHA Staging validation. Phase B Store
-provisioning is shown only as future work, not as current behavior.
+A1 through A10 implemented Phase A architecture. Phase B Store provisioning is
+shown only as future work, not as current behavior.
 
 ## Mermaid diagram
 
@@ -81,6 +85,8 @@ flowchart TD
   Store provisioning writer.
 - Owner onboarding and menu-clone HTTP facades remain unavailable unless the
   `PLATFORM` environment capability is enabled.
+- A10 accepts Phase A automated validation; Owner final Staging acceptance is
+  still pending.
 
 ## What omitted
 
@@ -105,4 +111,4 @@ flowchart TD
 
 ## Last verified date
 
-2026-08-14.
+2026-08-14, A10 automated acceptance.
