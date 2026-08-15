@@ -4,6 +4,7 @@ import com.restaurant.system.kitchen.entity.KitchenTask;
 import com.restaurant.system.order.entity.Order;
 import com.restaurant.system.order.entity.OrderItem;
 import com.restaurant.system.order.entity.OrderItemOption;
+import com.restaurant.system.printing.rules.PrintingDisplayRuleContext;
 import com.restaurant.system.user.entity.Store;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,4 +20,5 @@ public class PrintRenderRequest {
     public LocalDateTime happened_at;
     public Boolean is_update_ticket;
     public Long order_update_batch_id;
+    public PrintingDisplayRuleContext printing_rules;
 }

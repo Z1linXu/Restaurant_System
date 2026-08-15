@@ -10,7 +10,9 @@ import com.restaurant.system.menu.repository.MenuItemRepository;
 import com.restaurant.system.order.entity.Order;
 import com.restaurant.system.order.entity.OrderItem;
 import com.restaurant.system.order.entity.OrderItemOption;
+import com.restaurant.system.owner.profile.StoreProfileCanonicalJson;
 import com.restaurant.system.printing.dto.PrintRenderRequest;
+import com.restaurant.system.printing.rules.PrintingDisplayRuleContext;
 import com.restaurant.system.printing.semantic.HotKitchenPrintEligibilityService;
 import com.restaurant.system.printing.semantic.OptionSemanticResolver;
 import java.time.LocalDateTime;
@@ -298,6 +300,80 @@ class HotKitchenReceiptRendererTest {
         assertEquals(2, countOccurrences(content, "炸虾 ×1"));
         assertTrue(content.contains("备注：不要酱"));
         assertFalse(content.contains("炸虾 ×2"));
+    }
+
+    @Test
+    void hotKitchenRendererUsesIndependentHotDictionaryValues() {
+        HotKitchenReceiptRenderer renderer = renderer();
+        PrintRenderRequest request = baseRequest();
+        OrderItem item = request.order_items.get(0);
+        item.item_sku_snapshot = "braised_beef_tendon_noodle";
+        item.category_code_snapshot = "SOUP_NOODLE";
+        item.item_name_snapshot_zh = "红烧牛腱面";
+
+        OrderItemOption size = new OrderItemOption();
+        size.order_item_id = item.id;
+        size.option_type_snapshot = "size";
+        size.option_code_snapshot = "size_large";
+        size.option_name_snapshot_zh = "大碗";
+
+        OrderItemOption noodle = new OrderItemOption();
+        noodle.order_item_id = item.id;
+        noodle.option_type_snapshot = "noodle_type";
+        noodle.option_name_snapshot_zh = "二细";
+
+        OrderItemOption spicy = new OrderItemOption();
+        spicy.order_item_id = item.id;
+        spicy.option_type_snapshot = "spicy_level";
+        spicy.option_code_snapshot = "spicy_less";
+        spicy.option_name_snapshot_zh = "少辣";
+
+        OrderItemOption egg = new OrderItemOption();
+        egg.order_item_id = item.id;
+        egg.option_type_snapshot = "addon";
+        egg.option_code_snapshot = "fried_egg";
+        egg.option_group_snapshot = "ADD_ON";
+        egg.option_name_snapshot_zh = "加煎蛋";
+
+        OrderItemOption removeGreenOnion = new OrderItemOption();
+        removeGreenOnion.order_item_id = item.id;
+        removeGreenOnion.option_type_snapshot = "remove";
+        removeGreenOnion.option_code_snapshot = "remove_green_onion";
+        removeGreenOnion.option_group_snapshot = "REMOVE";
+        removeGreenOnion.option_name_snapshot_zh = "走葱";
+
+        request.order_item_options = List.of(size, noodle, spicy, egg, removeGreenOnion);
+        request.printing_rules = new PrintingDisplayRuleContext(null, 1, "test", StoreProfileCanonicalJson.parse("""
+            {
+              "schema_version": "PRINTING_DISPLAY_RULES_V1",
+              "outputs": ["GRAB", "FRONTDESK_RECEIPT", "HOT_KITCHEN"],
+              "item_aliases": [
+                {"item_sku": "braised_beef_tendon_noodle", "outputs": {"GRAB": "红G", "HOT_KITCHEN": "红H"}}
+              ],
+              "dictionaries": {
+                "SIZE": [
+                  {"semantic_code": "LARGE", "match_codes": ["size_large"], "match_zh": ["大碗"], "outputs": {"GRAB": "大G", "HOT_KITCHEN": "大H"}}
+                ],
+                "NOODLE_TYPE": [
+                  {"semantic_code": "ER_XI", "match_zh": ["二细"], "outputs": {"GRAB": "二G", "HOT_KITCHEN": "二H"}}
+                ],
+                "SPICINESS": [
+                  {"semantic_code": "LESS_SPICY", "match_codes": ["spicy_less"], "match_zh": ["少辣"], "outputs": {"GRAB": "辣G", "HOT_KITCHEN": "辣H"}}
+                ],
+                "MODIFIER_ADD": [["fried_egg", "+煎H"]],
+                "MODIFIER_REMOVE": [["green_onion", "走葱H"]]
+              },
+              "conditional_overrides": []
+            }
+            """));
+
+        String content = renderer.render(request);
+
+        assertTrue(content.contains("大H红H二H辣H×1 | +煎H 走葱H"));
+        assertFalse(content.contains("大G"));
+        assertFalse(content.contains("红G"));
+        assertFalse(content.contains("二G"));
+        assertFalse(content.contains("辣G"));
     }
 
     private HotKitchenReceiptRenderer renderer() {

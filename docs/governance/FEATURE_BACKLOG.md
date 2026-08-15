@@ -1,5 +1,47 @@
 # Feature Backlog
 
+## Phase A11 update — Printing Rule Configuration
+
+Status:
+
+```text
+PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION = REPOSITORY_CANDIDATE_READY
+PHASE_B_IMPLEMENTATION = BLOCKED_UNTIL_A11_STAGING_OWNER_ACCEPTANCE
+```
+
+The Owner added A11 as a Phase A productization closure before Phase B and
+answered the five A11 product decisions. The accepted implementation makes
+Printing Display Rule Configuration Store-scoped, profile-compatible,
+versionable and snapshot-safe for output-specific aliases, Store-global
+Size/noodle/spicy/modifier dictionaries, constrained display conditions,
+preview, validation and revision history. A11 display rules are deliberately
+separate from printer routing, logical topology, runtime mode, device
+credentials, physical endpoints, payment, pricing, reporting and PrintJob state.
+
+Evidence:
+
+- [PHASE_A11_PRINTING_RULE_AUDIT](agile/PHASE_A11_PRINTING_RULE_AUDIT.md)
+- [PRINTING_RULE_RECONCILIATION_MATRIX](agile/PRINTING_RULE_RECONCILIATION_MATRIX.md)
+- [PRODUCT_PRINT_RULE_INVENTORY](agile/PRODUCT_PRINT_RULE_INVENTORY.md)
+- [PRINTING_RULE_CONFIGURATION_ARCHITECTURE_OPTIONS](agile/PRINTING_RULE_CONFIGURATION_ARCHITECTURE_OPTIONS.md)
+- [A11_IMPLEMENTATION_PLAN_DRAFT](agile/A11_IMPLEMENTATION_PLAN_DRAFT.md)
+- [PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION_EVIDENCE](agile/PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION_EVIDENCE.md)
+
+Current required route:
+
+```text
+Phase A automated acceptance
+→ A11 Printing Rule Transparency & Configuration
+→ Owner Design Decision = CLOSED
+→ A11 Implementation Candidate
+→ PR / exact-SHA Staging deploy
+→ Staging Owner Acceptance
+→ Phase B
+```
+
+Do not start Phase B, Phase C, Chinatown, Sainte-Catherine or Production
+promotion before A11 Staging Owner acceptance.
+
 ## Phase A10 update — Final Modular Acceptance
 
 Status:

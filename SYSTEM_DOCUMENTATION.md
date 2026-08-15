@@ -1,5 +1,23 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-15 Phase A11 Printing Rule Configuration implementation candidate:
+> Owner answered the five A11 product decisions and approved implementation.
+> Additive Flyway V17 introduces Store-scoped, versioned
+> `printing_display_rule_sets` and `printing_display_rule_revisions`; published
+> revisions are protected from content rewrites, and `print_jobs` now records the
+> rule revision/fingerprint used for rendered output. The application resolves
+> GRAB / FRONTDESK_RECEIPT / HOT_KITCHEN display aliases from A11 structured
+> Store configuration with menu/order snapshot fallback; routing, eligibility,
+> pricing, PrintJob state, printer assignments, device credentials and physical
+> endpoints remain system/runtime-owned. Menu Management owns item-specific
+> output aliases, Printing Settings owns Store-global dictionaries, constrained
+> conditional display rules, preview, validation, publish, fingerprint and
+> revision history. Post-A11 Store Profile versions must include a
+> `PRINTING_DISPLAY_RULES` artifact; historical `ST_DENIS_CANONICAL_PROFILE/v1`
+> remains immutable and valid. Production remains no-mutation; Staging
+> deployment/Owner retest require the separate exact-SHA runtime step. Evidence:
+> [PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION_EVIDENCE](docs/governance/agile/PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION_EVIDENCE.md).
+
 > 2026-08-14 Phase A10 Final Modular Productization Acceptance: automated
 > Phase A acceptance passed on fresh main/deployed Staging SHA
 > `ad4572759e01b5546ec59af24aa36b09e5c2dd00`, Flyway V16. A10 validated
@@ -5304,6 +5322,25 @@ Current Phase 1 database additions:
     - `created_at`
     - `updated_at`
 
+Phase A11 Printing Display Rule additions:
+- `printing_display_rule_sets`
+  - Store-scoped canonical display-rule container
+  - one active revision per Store
+  - no physical printer endpoint, device credential, source Store ID, order
+    data, customer PII, payment data, or PrintJob runtime payload
+- `printing_display_rule_revisions`
+  - versioned structured display-rule content
+  - deterministic `fingerprint_sha256`
+  - draft/published lifecycle
+  - published content is protected from rewrite; new edits create a later
+    revision
+- `print_jobs`
+  - `printing_rule_revision_id`
+  - `printing_rule_fingerprint`
+  - these fields record which display-rule revision was used for new rendered
+    output; `rendered_text_snapshot` remains the primary frozen reprint
+    artifact
+
 Current store-level global print flag:
 - `stores.printing_enabled`
 - this is the store-wide master gate for Print Center
@@ -5341,6 +5378,7 @@ Current backend Print Center structure:
   - `PrinterConfigService`
   - `PrinterAssignmentService`
   - `PrintDispatcherService`
+  - `PrintingDisplayRuleService`
 - `service/impl`
   - `PrinterConfigServiceImpl`
   - `PrinterAssignmentServiceImpl`
@@ -5349,6 +5387,8 @@ Current backend Print Center structure:
   - `PrinterConfigRepository`
   - `PrinterAssignmentRepository`
   - `ReceiptTemplateRepository`
+  - `PrintingDisplayRuleSetRepository`
+  - `PrintingDisplayRuleRevisionRepository`
 - `entity`
   - `PrinterConfig`
   - `PrinterAssignment`
@@ -5360,6 +5400,12 @@ Current backend Print Center structure:
   - `PrinterTestResponse`
   - `StorePrintingStatusRequest`
   - `PrintRenderRequest`
+  - `PrintingDisplayRuleSettingsResponse`
+  - `PrintingDisplayRuleDraftRequest`
+  - `PrintingDisplayRulePublishRequest`
+  - `PrintingDisplayRuleValidationResponse`
+  - `PrintingDisplayRulePreviewRequest`
+  - `PrintingDisplayRulePreviewResponse`
 - `transport`
   - `PrinterTransport`
   - `EscPosTcpPrinterTransport`
@@ -5408,6 +5454,19 @@ Current dispatch architecture:
   - assigned printer
   - correct receipt renderer
   - correct transport
+
+Phase A11 display-rule architecture:
+- display rules are resolved before rendering and passed to renderers as a
+  `PrintingDisplayRuleContext`
+- `GRAB`, `FRONTDESK_RECEIPT`, and `HOT_KITCHEN` can use independent
+  Store-owned display aliases and dictionaries
+- missing aliases fall back to submitted order/menu snapshots
+- display rules do not choose printers, change assignments, alter routing
+  eligibility, mutate order totals, alter PrintJob state, contact devices, or
+  access other Stores
+- single job reprint still prefers `print_jobs.rendered_text_snapshot`
+- order-level reprint resolves the historical captured A11 rule revision when
+  available and falls back safely for pre-A11 jobs without A11 metadata
 
 Current async/safety rule:
 - printing is dispatched after transaction commit
@@ -5655,6 +5714,17 @@ Current owner admin APIs:
     - `FONT TEST C`
     - `FONT TEST D (3X)`
     - `FONT TEST E (4X)`
+- `GET /api/v1/admin/printing/display-rules?store_id=1`
+  - read active/draft/history Store-scoped Printing Display Rules
+- `POST /api/v1/admin/printing/display-rules/validate`
+  - validate a structured rule document without publishing or printing
+- `POST /api/v1/admin/printing/display-rules/preview`
+  - render sanitized preview output without creating orders, PrintJobs, device
+    actions or physical printer output
+- `POST /api/v1/admin/printing/display-rules/draft`
+  - save a draft display-rule revision
+- `POST /api/v1/admin/printing/display-rules/publish`
+  - publish a valid draft as the Store's active display-rule revision
 
 Current frontend Owner Admin page:
 - `frontend/src/features/owner-admin/PrintingSettingsPage.tsx`

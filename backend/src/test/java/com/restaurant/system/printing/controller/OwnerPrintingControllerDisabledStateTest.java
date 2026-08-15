@@ -27,6 +27,7 @@ import com.restaurant.system.printing.dto.StorePrintingStatusRequest;
 import com.restaurant.system.printing.entity.PrinterAssignment;
 import com.restaurant.system.printing.entity.PrinterConfig;
 import com.restaurant.system.printing.entity.PrintJob;
+import com.restaurant.system.printing.rules.PrintingDisplayRuleService;
 import com.restaurant.system.printing.service.PrintDispatcherService;
 import com.restaurant.system.printing.service.PrintJobService;
 import com.restaurant.system.printing.service.PrinterAssignmentService;
@@ -59,6 +60,8 @@ class OwnerPrintingControllerDisabledStateTest {
     private FeatureFlagService featureFlagService;
     @Mock
     private StoreModuleAccessEvaluator moduleAccessEvaluator;
+    @Mock
+    private PrintingDisplayRuleService printingDisplayRuleService;
 
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
@@ -72,7 +75,8 @@ class OwnerPrintingControllerDisabledStateTest {
             printJobService,
             authorizationService,
             featureFlagService,
-            moduleAccessEvaluator
+            moduleAccessEvaluator,
+            printingDisplayRuleService
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
         objectMapper = new ObjectMapper();

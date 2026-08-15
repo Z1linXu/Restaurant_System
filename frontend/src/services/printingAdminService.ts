@@ -156,6 +156,63 @@ export interface GrabFontTestResponse {
   results: GrabFontTestResult[]
 }
 
+export type PrintingDisplayRuleContent = Record<string, unknown>
+
+export interface PrintingDisplayRuleRevision {
+  id: number
+  revision_number: number
+  status: 'DRAFT' | 'PUBLISHED' | string
+  schema_version: string
+  fingerprint_sha256: string
+  source_reference?: string | null
+  summary?: string | null
+  content: PrintingDisplayRuleContent
+  created_at?: string | null
+  updated_at?: string | null
+  published_at?: string | null
+}
+
+export interface PrintingDisplayRuleSettings {
+  store_id: number
+  rule_set_id: number
+  active_revision_id?: number | null
+  active_revision?: PrintingDisplayRuleRevision | null
+  draft_revision?: PrintingDisplayRuleRevision | null
+  revisions: PrintingDisplayRuleRevision[]
+}
+
+export interface PrintingDisplayRuleValidationIssue {
+  path: string
+  message: string
+}
+
+export interface PrintingDisplayRuleValidationResponse {
+  valid: boolean
+  fingerprint_sha256: string
+  issues: PrintingDisplayRuleValidationIssue[]
+}
+
+export interface PrintingDisplayRulePreviewRequest {
+  store_id: number
+  content: PrintingDisplayRuleContent
+  item_sku?: string | null
+  item_name_zh?: string | null
+  item_name_en?: string | null
+  size_zh?: string | null
+  noodle_type_zh?: string | null
+  spiciness_zh?: string | null
+  modifier_add_codes?: string[]
+  modifier_remove_codes?: string[]
+  combo?: boolean
+}
+
+export interface PrintingDisplayRulePreviewResponse {
+  grab_preview: string
+  frontdesk_receipt_preview: string
+  hot_kitchen_preview: string
+  fingerprint_sha256: string
+}
+
 function buildHeaders() {
   return {
     'Content-Type': 'application/json',
@@ -378,6 +435,65 @@ export async function triggerGrabFontTest(storeId: number, printerId: number) {
     body: JSON.stringify({
       store_id: storeId,
       printer_id: printerId,
+    }),
+  })
+}
+
+export async function fetchPrintingDisplayRules(storeId: number): Promise<PrintingDisplayRuleSettings> {
+  const params = new URLSearchParams({ store_id: String(storeId) })
+  return request<PrintingDisplayRuleSettings>(`/api/v1/admin/printing/display-rules?${params.toString()}`)
+}
+
+export async function savePrintingDisplayRuleDraft(
+  storeId: number,
+  content: PrintingDisplayRuleContent,
+  summary?: string,
+): Promise<PrintingDisplayRuleRevision> {
+  return request<PrintingDisplayRuleRevision>('/api/v1/admin/printing/display-rules/draft', {
+    method: 'POST',
+    headers: buildHeaders(),
+    body: JSON.stringify({
+      store_id: storeId,
+      content,
+      summary: summary ?? null,
+    }),
+  })
+}
+
+export async function validatePrintingDisplayRules(
+  storeId: number,
+  content: PrintingDisplayRuleContent,
+): Promise<PrintingDisplayRuleValidationResponse> {
+  return request<PrintingDisplayRuleValidationResponse>('/api/v1/admin/printing/display-rules/validate', {
+    method: 'POST',
+    headers: buildHeaders(),
+    body: JSON.stringify({
+      store_id: storeId,
+      content,
+    }),
+  })
+}
+
+export async function previewPrintingDisplayRules(
+  input: PrintingDisplayRulePreviewRequest,
+): Promise<PrintingDisplayRulePreviewResponse> {
+  return request<PrintingDisplayRulePreviewResponse>('/api/v1/admin/printing/display-rules/preview', {
+    method: 'POST',
+    headers: buildHeaders(),
+    body: JSON.stringify(input),
+  })
+}
+
+export async function publishPrintingDisplayRuleDraft(
+  storeId: number,
+  revisionId: number,
+): Promise<PrintingDisplayRuleRevision> {
+  return request<PrintingDisplayRuleRevision>('/api/v1/admin/printing/display-rules/publish', {
+    method: 'POST',
+    headers: buildHeaders(),
+    body: JSON.stringify({
+      store_id: storeId,
+      revision_id: revisionId,
     }),
   })
 }

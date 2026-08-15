@@ -50,6 +50,8 @@ import com.restaurant.system.order.service.OrderService;
 import com.restaurant.system.production.entity.ProductionTask;
 import com.restaurant.system.production.repository.ProductionTaskRepository;
 import com.restaurant.system.printing.PrintModuleCode;
+import com.restaurant.system.printing.rules.PrintingDisplayRuleContext;
+import com.restaurant.system.printing.rules.PrintingDisplayRuleService;
 import com.restaurant.system.printing.service.PrintDispatcherService;
 import com.restaurant.system.station.entity.Station;
 import com.restaurant.system.station.repository.StationRepository;
@@ -164,6 +166,7 @@ public class OrderServiceImpl implements OrderService {
     private final RealtimeEventPublisher realtimeEventPublisher;
     private final PrintDispatcherService printDispatcherService;
     private final StoreComboConfigurationService storeComboConfigurationService;
+    private final PrintingDisplayRuleService printingDisplayRuleService;
 
     public OrderServiceImpl(
         OrderRepository orderRepository,
@@ -184,7 +187,8 @@ public class OrderServiceImpl implements OrderService {
         StoreRepository storeRepository,
         RealtimeEventPublisher realtimeEventPublisher,
         PrintDispatcherService printDispatcherService,
-        StoreComboConfigurationService storeComboConfigurationService
+        StoreComboConfigurationService storeComboConfigurationService,
+        PrintingDisplayRuleService printingDisplayRuleService
     ) {
         this.orderRepository = orderRepository;
         this.orderUpdateBatchRepository = orderUpdateBatchRepository;
@@ -205,6 +209,7 @@ public class OrderServiceImpl implements OrderService {
         this.realtimeEventPublisher = realtimeEventPublisher;
         this.printDispatcherService = printDispatcherService;
         this.storeComboConfigurationService = storeComboConfigurationService;
+        this.printingDisplayRuleService = printingDisplayRuleService;
     }
 
     @Override
@@ -1199,8 +1204,9 @@ public class OrderServiceImpl implements OrderService {
 
         KitchenTask kitchenTask = findKitchenTaskByOrderItemId(order.id, orderItem.id);
         MenuItem menuItem = resolveMenuItemSnapshot(orderItem, order.store_id);
+        PrintingDisplayRuleContext printingRules = printingDisplayRuleService.activeContext(order.store_id);
         if (kitchenTask == null) {
-            kitchenTask = createKitchenTaskForOrderItem(order, orderItem, orderItemOptions, menuItem, now);
+            kitchenTask = createKitchenTaskForOrderItem(order, orderItem, orderItemOptions, menuItem, now, printingRules);
         } else {
             if (KitchenTaskStatus.cancelled.name().equals(kitchenTask.status)
                 || KitchenTaskStatus.ready_for_pickup.name().equals(kitchenTask.status)
@@ -1211,14 +1217,14 @@ public class OrderServiceImpl implements OrderService {
                 kitchenTask.completed_at = null;
                 kitchenTask.served_at = null;
             }
-            kitchenTask.item_name_snapshot_zh = buildKitchenDisplayNameZh(menuItem, orderItem);
+            kitchenTask.item_name_snapshot_zh = buildKitchenDisplayNameZh(menuItem, orderItem, printingRules);
             kitchenTask.item_name_snapshot_en = orderItem.item_name_snapshot_en;
             kitchenTask.quantity = orderItem.quantity;
-            kitchenTask.special_instructions_snapshot = buildSpecialInstructionsSnapshot(menuItem, orderItem, orderItemOptions);
+            kitchenTask.special_instructions_snapshot = buildSpecialInstructionsSnapshot(menuItem, orderItem, orderItemOptions, printingRules);
             kitchenTaskRepository.save(kitchenTask);
         }
 
-        synchronizeComboSideKitchenTasks(order, orderItem, orderItemOptions, now);
+        synchronizeComboSideKitchenTasks(order, orderItem, orderItemOptions, now, printingRules);
     }
 
     private KitchenTask createKitchenTaskForOrderItem(
@@ -1226,7 +1232,8 @@ public class OrderServiceImpl implements OrderService {
         OrderItem orderItem,
         List<OrderItemOption> orderItemOptions,
         MenuItem menuItem,
-        LocalDateTime now
+        LocalDateTime now,
+        PrintingDisplayRuleContext printingRules
     ) {
         if (menuItem.station_id == null) {
             throw new BusinessException("menu_items.station_id is required for kitchen task assignment: " + menuItem.id);
@@ -1243,9 +1250,9 @@ public class OrderServiceImpl implements OrderService {
         kitchenTask.order_item_id = orderItem.id;
         kitchenTask.store_id = order.store_id;
         kitchenTask.station_code = station.code;
-        kitchenTask.item_name_snapshot_zh = buildKitchenDisplayNameZh(menuItem, orderItem);
+        kitchenTask.item_name_snapshot_zh = buildKitchenDisplayNameZh(menuItem, orderItem, printingRules);
         kitchenTask.item_name_snapshot_en = orderItem.item_name_snapshot_en;
-        kitchenTask.special_instructions_snapshot = buildSpecialInstructionsSnapshot(menuItem, orderItem, orderItemOptions);
+        kitchenTask.special_instructions_snapshot = buildSpecialInstructionsSnapshot(menuItem, orderItem, orderItemOptions, printingRules);
         kitchenTask.status = KitchenTaskStatus.pending.name();
         kitchenTask.quantity = orderItem.quantity;
         kitchenTask.created_at = now;
@@ -1396,6 +1403,7 @@ public class OrderServiceImpl implements OrderService {
         Map<Long, List<OrderItemOption>> optionsByOrderItemId = groupOptionsByOrderItemId(orderItemOptions);
         List<KitchenTask> kitchenTasks = new ArrayList<>();
         Store store = loadStore(order.store_id);
+        PrintingDisplayRuleContext printingRules = printingDisplayRuleService.activeContext(order.store_id);
 
         for (OrderItem orderItem : orderItems) {
             if (isDirectServe(orderItem.category_code_snapshot, store)) {
@@ -1418,12 +1426,13 @@ public class OrderServiceImpl implements OrderService {
             kitchenTask.order_item_id = orderItem.id;
             kitchenTask.store_id = order.store_id;
             kitchenTask.station_code = station.code;
-            kitchenTask.item_name_snapshot_zh = buildKitchenDisplayNameZh(menuItem, orderItem);
+            kitchenTask.item_name_snapshot_zh = buildKitchenDisplayNameZh(menuItem, orderItem, printingRules);
             kitchenTask.item_name_snapshot_en = orderItem.item_name_snapshot_en;
             kitchenTask.special_instructions_snapshot = buildSpecialInstructionsSnapshot(
                 menuItem,
                 orderItem,
-                optionsByOrderItemId.getOrDefault(orderItem.id, List.of())
+                optionsByOrderItemId.getOrDefault(orderItem.id, List.of()),
+                printingRules
             );
             kitchenTask.status = KitchenTaskStatus.pending.name();
             kitchenTask.quantity = orderItem.quantity;
@@ -1435,7 +1444,8 @@ public class OrderServiceImpl implements OrderService {
                 order,
                 orderItem,
                 optionsByOrderItemId.getOrDefault(orderItem.id, List.of()),
-                now
+                now,
+                printingRules
             ));
         }
         return kitchenTaskRepository.saveAll(kitchenTasks);
@@ -1717,9 +1727,14 @@ public class OrderServiceImpl implements OrderService {
             .orElseThrow(() -> new BusinessException("Menu category not found for menu item: " + menuItem.id));
     }
 
-    private String buildSpecialInstructionsSnapshot(MenuItem menuItem, OrderItem orderItem, List<OrderItemOption> orderItemOptions) {
-        String primaryLine = buildKitchenPrimaryLine(menuItem, orderItemOptions);
-        List<String> secondaryParts = buildKitchenSecondaryParts(orderItem, orderItemOptions);
+    private String buildSpecialInstructionsSnapshot(
+        MenuItem menuItem,
+        OrderItem orderItem,
+        List<OrderItemOption> orderItemOptions,
+        PrintingDisplayRuleContext printingRules
+    ) {
+        String primaryLine = buildKitchenPrimaryLine(menuItem, orderItemOptions, printingRules);
+        List<String> secondaryParts = buildKitchenSecondaryParts(orderItem, orderItemOptions, printingRules);
 
         List<String> lines = new ArrayList<>();
         if (primaryLine != null && !primaryLine.isBlank()) {
@@ -1832,8 +1847,12 @@ public class OrderServiceImpl implements OrderService {
         return new KitchenAddonToken(label, quantity);
     }
 
-    private String buildKitchenDisplayNameZh(MenuItem menuItem, OrderItem orderItem) {
+    private String buildKitchenDisplayNameZh(MenuItem menuItem, OrderItem orderItem, PrintingDisplayRuleContext printingRules) {
         if (menuItem.sku == null) return orderItem.item_name_snapshot_zh;
+        String configured = printingRules.resolveItemAlias(PrintModuleCode.GRAB, menuItem.sku, null);
+        if (configured != null && !configured.isBlank()) {
+            return configured;
+        }
         return switch (menuItem.sku) {
             case "beef_chow_mein" -> "牛炒";
             case "chicken_chow_mein" -> "鸡炒";
@@ -1846,12 +1865,20 @@ public class OrderServiceImpl implements OrderService {
         };
     }
 
-    private String buildKitchenPrimaryLine(MenuItem menuItem, List<OrderItemOption> options) {
-        String sizeCode = mapSizeCode(findOptionZh(options, OPTION_TYPE_SIZE));
-        String baseCode = mapItemBaseCode(menuItem.sku);
-        String noodleCode = mapNoodleCode(menuItem.sku, findOptionZh(options, OPTION_TYPE_NOODLE_TYPE));
-        String spicyCode = mapSpicyCode(findOptionZh(options, OPTION_TYPE_SPICY_LEVEL));
-        String soupBaseCode = mapSoupBaseCode(menuItem.sku, findOptionZh(options, OPTION_TYPE_SOUP_BASE));
+    private String buildKitchenPrimaryLine(
+        MenuItem menuItem,
+        List<OrderItemOption> options,
+        PrintingDisplayRuleContext printingRules
+    ) {
+        OrderItemOption sizeOption = findOption(options, OPTION_TYPE_SIZE);
+        OrderItemOption noodleOption = findOption(options, OPTION_TYPE_NOODLE_TYPE);
+        OrderItemOption spicyOption = findOption(options, OPTION_TYPE_SPICY_LEVEL);
+        OrderItemOption soupBaseOption = findOption(options, OPTION_TYPE_SOUP_BASE);
+        String sizeCode = mapSizeCode(sizeOption, printingRules);
+        String baseCode = mapItemBaseCode(menuItem.sku, printingRules);
+        String noodleCode = mapNoodleCode(menuItem.sku, noodleOption, printingRules);
+        String spicyCode = mapSpicyCode(spicyOption, printingRules);
+        String soupBaseCode = mapSoupBaseCode(menuItem.sku, soupBaseOption, printingRules);
 
         List<String> inline = new ArrayList<>();
         if (sizeCode != null) {
@@ -1877,8 +1904,12 @@ public class OrderServiceImpl implements OrderService {
         return primary;
     }
 
-    private String mapItemBaseCode(String sku) {
+    private String mapItemBaseCode(String sku, PrintingDisplayRuleContext printingRules) {
         if (sku == null) return null;
+        String configured = printingRules.resolveItemAlias(PrintModuleCode.GRAB, sku, null);
+        if (configured != null && !configured.isBlank()) {
+            return configured;
+        }
         return switch (sku) {
             case "braised_beef_tendon_noodle" -> "红";
             case "pickled_vegetable_beef_noodle" -> "酸";
@@ -1897,7 +1928,11 @@ public class OrderServiceImpl implements OrderService {
         };
     }
 
-    private List<String> buildKitchenSecondaryParts(OrderItem orderItem, List<OrderItemOption> options) {
+    private List<String> buildKitchenSecondaryParts(
+        OrderItem orderItem,
+        List<OrderItemOption> options,
+        PrintingDisplayRuleContext printingRules
+    ) {
         List<String> parts = new ArrayList<>();
         for (OrderItemOption option : options) {
             if (OPTION_TYPE_ADDON.equals(option.option_type_snapshot)) {
@@ -1905,7 +1940,7 @@ public class OrderServiceImpl implements OrderService {
                 if (isComboSideCode(addonCode)) {
                     continue;
                 }
-                String token = mapAddonToken(option);
+                String token = mapAddonToken(option, printingRules);
                 if (token != null) {
                     parts.add(token);
                 }
@@ -1915,7 +1950,7 @@ public class OrderServiceImpl implements OrderService {
                 if (isOptionGroup(option, "COMBO_SIDE_REMOVE")) {
                     continue;
                 }
-                String token = mapRemoveToken(option);
+                String token = mapRemoveToken(option, printingRules);
                 if (token != null) {
                     parts.add(token);
                 }
@@ -1924,18 +1959,30 @@ public class OrderServiceImpl implements OrderService {
         return parts;
     }
 
-    private String findOptionZh(List<OrderItemOption> options, String optionType) {
+    private OrderItemOption findOption(List<OrderItemOption> options, String optionType) {
         for (OrderItemOption option : options) {
             if (optionType.equals(option.option_type_snapshot)) {
-                return option.option_name_snapshot_zh;
+                return option;
             }
         }
         return null;
     }
 
-    private String mapSizeCode(String sizeZh) {
+    private String mapSizeCode(OrderItemOption option, PrintingDisplayRuleContext printingRules) {
+        String sizeZh = option == null ? null : option.option_name_snapshot_zh;
         if (sizeZh == null || sizeZh.isBlank()) {
             return null;
+        }
+        String configured = printingRules.resolveDictionaryOutput(
+            "SIZE",
+            PrintModuleCode.GRAB,
+            option.option_code_snapshot,
+            option.option_name_snapshot_zh,
+            option.option_name_snapshot_en,
+            null
+        );
+        if (configured != null) {
+            return configured;
         }
         if (sizeZh.contains("大")) {
             return "大";
@@ -1946,12 +1993,30 @@ public class OrderServiceImpl implements OrderService {
         return "中";
     }
 
-    private String mapNoodleCode(String sku, String noodleZh) {
+    private String mapNoodleCode(String sku, OrderItemOption option, PrintingDisplayRuleContext printingRules) {
+        String noodleZh = option == null ? null : option.option_name_snapshot_zh;
         if (noodleZh == null || noodleZh.isBlank()) {
             return null;
         }
-        if (isDefaultNoodleType(sku, noodleZh)) {
+        String semanticCode = printingRules.resolveSemanticCode(
+            "NOODLE_TYPE",
+            option.option_code_snapshot,
+            option.option_name_snapshot_zh,
+            option.option_name_snapshot_en
+        );
+        if (printingRules.shouldOmit(sku, "NOODLE_TYPE", semanticCode) || isDefaultNoodleType(sku, noodleZh)) {
             return null;
+        }
+        String configured = printingRules.resolveDictionaryOutput(
+            "NOODLE_TYPE",
+            PrintModuleCode.GRAB,
+            option.option_code_snapshot,
+            option.option_name_snapshot_zh,
+            option.option_name_snapshot_en,
+            null
+        );
+        if (configured != null) {
+            return configured;
         }
         return switch (noodleZh) {
             case "二细" -> "二";
@@ -1979,9 +2044,21 @@ public class OrderServiceImpl implements OrderService {
         };
     }
 
-    private String mapSpicyCode(String spicyZh) {
+    private String mapSpicyCode(OrderItemOption option, PrintingDisplayRuleContext printingRules) {
+        String spicyZh = option == null ? null : option.option_name_snapshot_zh;
         if (spicyZh == null || spicyZh.isBlank() || "不辣".equals(spicyZh)) {
             return null;
+        }
+        String configured = printingRules.resolveDictionaryOutput(
+            "SPICINESS",
+            PrintModuleCode.GRAB,
+            option.option_code_snapshot,
+            option.option_name_snapshot_zh,
+            option.option_name_snapshot_en,
+            null
+        );
+        if (configured != null) {
+            return configured.isBlank() ? null : configured;
         }
         return switch (spicyZh) {
             case "少辣" -> "（少s）";
@@ -1991,12 +2068,24 @@ public class OrderServiceImpl implements OrderService {
         };
     }
 
-    private String mapSoupBaseCode(String sku, String soupBaseZh) {
+    private String mapSoupBaseCode(String sku, OrderItemOption option, PrintingDisplayRuleContext printingRules) {
         if (!"vegetable_noodle".equals(sku)) {
             return null;
         }
+        String soupBaseZh = option == null ? null : option.option_name_snapshot_zh;
         if (soupBaseZh == null || soupBaseZh.isBlank()) {
             return "素";
+        }
+        String configured = printingRules.resolveDictionaryOutput(
+            "SOUP_BASE",
+            PrintModuleCode.GRAB,
+            option.option_code_snapshot,
+            option.option_name_snapshot_zh,
+            option.option_name_snapshot_en,
+            null
+        );
+        if (configured != null) {
+            return configured;
         }
         if ("素汤".equals(soupBaseZh)) {
             return "素";
@@ -2007,7 +2096,7 @@ public class OrderServiceImpl implements OrderService {
         return null;
     }
 
-    private String mapAddonToken(OrderItemOption option) {
+    private String mapAddonToken(OrderItemOption option, PrintingDisplayRuleContext printingRules) {
         String label = option.option_name_snapshot_zh;
         String code = resolveAddonCode(option);
         if (code == null || "combo".equals(code)) {
@@ -2037,17 +2126,18 @@ public class OrderServiceImpl implements OrderService {
         if (mapped == null) {
             return null;
         }
+        mapped = printingRules.resolveModifierToken("MODIFIER_ADD", code, mapped);
         int quantity = option.quantity == null ? 1 : option.quantity;
         return quantity > 1 ? mapped + "x" + quantity : mapped;
     }
 
-    private String mapRemoveToken(OrderItemOption option) {
+    private String mapRemoveToken(OrderItemOption option, PrintingDisplayRuleContext printingRules) {
         String label = option.option_name_snapshot_zh;
         String code = resolveRemoveCode(option);
         if (code == null) {
             return null;
         }
-        return switch (code) {
+        String fallback = switch (code) {
             case "cilantro" -> "走香";
             case "green_onion" -> "走葱";
             case "beef" -> "走牛";
@@ -2068,6 +2158,7 @@ public class OrderServiceImpl implements OrderService {
             case "green_pepper" -> "走青椒";
             default -> label;
         };
+        return printingRules.resolveModifierToken("MODIFIER_REMOVE", code, fallback);
     }
 
     private String resolveAddonCode(OrderItemOption option) {
@@ -2125,7 +2216,11 @@ public class OrderServiceImpl implements OrderService {
     private record KitchenAddonToken(String label, int quantity) {
     }
 
-    private List<ComboSideSelection> extractComboSideSelections(OrderItem orderItem, List<OrderItemOption> options) {
+    private List<ComboSideSelection> extractComboSideSelections(
+        OrderItem orderItem,
+        List<OrderItemOption> options,
+        PrintingDisplayRuleContext printingRules
+    ) {
         Map<String, ComboSideSelection> selections = new HashMap<>();
         for (OrderItemOption option : options) {
             if (!OPTION_TYPE_ADDON.equals(option.option_type_snapshot) && !isOptionGroup(option, "COMBO_SIDE")) {
@@ -2137,7 +2232,7 @@ public class OrderServiceImpl implements OrderService {
             }
             int optionQuantity = option.quantity == null ? 1 : option.quantity;
             int totalQuantity = optionQuantity * (orderItem.quantity == null ? 1 : orderItem.quantity);
-            List<String> childInstructions = extractComboSideChildInstructions(option, options);
+            List<String> childInstructions = extractComboSideChildInstructions(option, options, printingRules);
             ComboSideSelection selection = switch (code) {
                 case "combo_edamame" -> new ComboSideSelection(code, "毛豆", "Edamame", totalQuantity, childInstructions);
                 case "combo_shredded_potato" -> new ComboSideSelection(code, "土豆", "Shredded Potato", totalQuantity, childInstructions);
@@ -2152,7 +2247,11 @@ public class OrderServiceImpl implements OrderService {
         return new ArrayList<>(selections.values());
     }
 
-    private List<String> extractComboSideChildInstructions(OrderItemOption sideOption, List<OrderItemOption> options) {
+    private List<String> extractComboSideChildInstructions(
+        OrderItemOption sideOption,
+        List<OrderItemOption> options,
+        PrintingDisplayRuleContext printingRules
+    ) {
         List<String> instructions = new ArrayList<>();
         for (OrderItemOption option : options) {
             if (!isOptionGroup(option, "COMBO_SIDE_REMOVE")) {
@@ -2161,7 +2260,7 @@ public class OrderServiceImpl implements OrderService {
             if (sideOption.option_id == null || !sideOption.option_id.equals(option.parent_option_id_snapshot)) {
                 continue;
             }
-            String token = mapRemoveToken(option);
+            String token = mapRemoveToken(option, printingRules);
             if (token != null) {
                 instructions.add(token);
             }
@@ -2173,9 +2272,10 @@ public class OrderServiceImpl implements OrderService {
         Order order,
         OrderItem orderItem,
         List<OrderItemOption> options,
-        LocalDateTime now
+        LocalDateTime now,
+        PrintingDisplayRuleContext printingRules
     ) {
-        List<ComboSideSelection> selections = extractComboSideSelections(orderItem, options);
+        List<ComboSideSelection> selections = extractComboSideSelections(orderItem, options, printingRules);
         if (selections.isEmpty()) {
             return List.of();
         }
@@ -2209,7 +2309,8 @@ public class OrderServiceImpl implements OrderService {
         Order order,
         OrderItem orderItem,
         List<OrderItemOption> options,
-        LocalDateTime now
+        LocalDateTime now,
+        PrintingDisplayRuleContext printingRules
     ) {
         List<KitchenTask> existingTasks = findKitchenTasksByOrderItemId(order.id, orderItem.id).stream()
             .filter(this::isComboSideKitchenTask)
@@ -2220,7 +2321,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         Map<String, ComboSideSelection> desiredByLabel = new HashMap<>();
-        for (ComboSideSelection selection : extractComboSideSelections(orderItem, options)) {
+        for (ComboSideSelection selection : extractComboSideSelections(orderItem, options, printingRules)) {
             desiredByLabel.put(selection.labelZh(), selection);
         }
 

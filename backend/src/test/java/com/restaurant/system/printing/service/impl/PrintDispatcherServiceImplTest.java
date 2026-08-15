@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.nullable;
 
 import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.kitchen.entity.KitchenTask;
@@ -33,6 +34,8 @@ import com.restaurant.system.printing.renderer.ReceiptRenderer;
 import com.restaurant.system.printing.repository.PrintJobRepository;
 import com.restaurant.system.printing.repository.PrinterAssignmentRepository;
 import com.restaurant.system.printing.repository.PrinterConfigRepository;
+import com.restaurant.system.printing.rules.PrintingDisplayRuleContext;
+import com.restaurant.system.printing.rules.PrintingDisplayRuleService;
 import com.restaurant.system.printing.semantic.HotKitchenPrintEligibilityService;
 import com.restaurant.system.printing.service.PrintJobService;
 import com.restaurant.system.printing.service.OrderDispatchOutboxService;
@@ -89,6 +92,8 @@ class PrintDispatcherServiceImplTest {
     private HotKitchenPrintEligibilityService hotKitchenPrintEligibilityService;
     @Mock
     private OrderDispatchOutboxService orderDispatchOutboxService;
+    @Mock
+    private PrintingDisplayRuleService printingDisplayRuleService;
 
     private PrintDispatcherServiceImpl service;
 
@@ -98,6 +103,13 @@ class PrintDispatcherServiceImplTest {
         when(frontdeskRenderer.getModuleCode()).thenReturn(PrintModuleCode.FRONTDESK_RECEIPT);
         when(hotKitchenRenderer.getModuleCode()).thenReturn(PrintModuleCode.HOT_KITCHEN);
         when(moduleAccessEvaluator.evaluateCapability(any(), eq(ModuleKeys.PRINTING))).thenReturn(printingAllowed());
+        when(printingDisplayRuleService.activeContext(any())).thenReturn(PrintingDisplayRuleContext.defaultContext());
+        when(printingDisplayRuleService.contextForJob(any())).thenReturn(PrintingDisplayRuleContext.defaultContext());
+        when(printingDisplayRuleService.historicalContextForOrder(any(), any(), anyString())).thenReturn(PrintingDisplayRuleContext.defaultContext());
+        when(printJobService.attachRenderedContent(any(PrintJob.class), any(), nullable(String.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
+        when(printJobService.attachRenderedContent(any(PrintJob.class), any(), nullable(String.class), any(), nullable(String.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
         service = newService(new CloudPrintingGuard(new MockEnvironment()));
     }
 
@@ -119,7 +131,8 @@ class PrintDispatcherServiceImplTest {
             cloudPrintingGuard,
             hotKitchenPrintEligibilityService,
             orderDispatchOutboxService,
-            moduleAccessEvaluator
+            moduleAccessEvaluator,
+            printingDisplayRuleService
         );
     }
 
@@ -411,7 +424,13 @@ class PrintDispatcherServiceImplTest {
         service.dispatchPersistedEvent(PrintModuleCode.GRAB, 1L, fixture.order.id, null, null);
 
         verify(grabRenderer).render(any());
-        verify(printJobService).attachRenderedContent(fixture.job, fixture.printer.id, "SANITIZED MOCK RECEIPT");
+        verify(printJobService).attachRenderedContent(
+            fixture.job,
+            fixture.printer.id,
+            "SANITIZED MOCK RECEIPT",
+            null,
+            PrintingDisplayRuleContext.defaultContext().activeFingerprintOrDefault()
+        );
         verify(printJobService).markPrinted(
             fixture.job,
             fixture.printer,
@@ -513,11 +532,23 @@ class PrintDispatcherServiceImplTest {
             eq(store.organization_id),
             eq(store.id),
             eq(job.order_id),
-            any(),
-            any(),
+            nullable(Long.class),
+            nullable(Long.class),
             eq(PrintModuleCode.GRAB),
             anyString(),
-            any(),
+            nullable(Long.class),
+            anyString(),
+            nullable(String.class)
+        )).thenReturn(job);
+        when(printJobService.createPendingJob(
+            eq(store.organization_id),
+            eq(store.id),
+            eq(job.order_id),
+            nullable(Long.class),
+            nullable(Long.class),
+            eq(PrintModuleCode.GRAB),
+            anyString(),
+            nullable(Long.class),
             anyString()
         )).thenReturn(job);
         when(printerConfigService.getStorePrintingMode(store.id)).thenReturn("REAL");
@@ -571,9 +602,11 @@ class PrintDispatcherServiceImplTest {
         when(orderItemRepository.findAllByOrderId(order.id)).thenReturn(List.of());
         when(kitchenTaskRepository.findAllByOrderId(order.id)).thenReturn(List.of());
         when(printJobService.createPendingJob(
-            eq(store.organization_id), eq(store.id), eq(order.id), any(), any(), eq(PrintModuleCode.GRAB), anyString(), any(), anyString()
+            eq(store.organization_id), eq(store.id), eq(order.id), nullable(Long.class), nullable(Long.class), eq(PrintModuleCode.GRAB), anyString(), nullable(Long.class), anyString(), nullable(String.class)
         )).thenReturn(job);
-        when(printJobService.attachRenderedContent(eq(job), eq(printer.id), anyString())).thenReturn(job);
+        when(printJobService.createPendingJob(
+            eq(store.organization_id), eq(store.id), eq(order.id), nullable(Long.class), nullable(Long.class), eq(PrintModuleCode.GRAB), anyString(), nullable(Long.class), anyString()
+        )).thenReturn(job);
         return new DispatchFixture(order, printer, assignment, job);
     }
 
@@ -619,9 +652,11 @@ class PrintDispatcherServiceImplTest {
         when(orderItemRepository.findAllByOrderId(order.id)).thenReturn(List.of());
         when(kitchenTaskRepository.findAllByOrderId(order.id)).thenReturn(List.of());
         when(printJobService.createPendingJob(
-            eq(store.organization_id), eq(store.id), eq(order.id), any(), any(), eq(moduleCode), anyString(), any(), anyString()
+            eq(store.organization_id), eq(store.id), eq(order.id), nullable(Long.class), nullable(Long.class), eq(moduleCode), anyString(), nullable(Long.class), anyString(), nullable(String.class)
         )).thenReturn(job);
-        when(printJobService.attachRenderedContent(eq(job), eq(printer.id), anyString())).thenReturn(job);
+        when(printJobService.createPendingJob(
+            eq(store.organization_id), eq(store.id), eq(order.id), nullable(Long.class), nullable(Long.class), eq(moduleCode), anyString(), nullable(Long.class), anyString()
+        )).thenReturn(job);
         if (!"PAD_DIRECT".equalsIgnoreCase(printingMode) && !"MOCK".equalsIgnoreCase(printingMode)) {
             when(printJobService.markPrinting(job, printer)).thenReturn(job);
             when(printJobService.markPrinted(job, printer)).thenReturn(job);
@@ -657,8 +692,29 @@ class PrintDispatcherServiceImplTest {
         job.order_id = 123L;
         job.module_code = PrintModuleCode.GRAB;
         job.status = PrintJobStatus.PENDING;
-        when(printJobService.createPendingJob(1L, 1L, 123L, null, null, PrintModuleCode.GRAB, PrintModuleCode.GRAB, null,
-            "{\"source\":\"ORDER_SUBMIT\",\"module_code\":\"GRAB\",\"store_id\":1,\"order_id\":123}")).thenReturn(job);
+        when(printJobService.createPendingJob(
+            eq(1L),
+            eq(1L),
+            eq(123L),
+            nullable(Long.class),
+            nullable(Long.class),
+            eq(PrintModuleCode.GRAB),
+            eq(PrintModuleCode.GRAB),
+            nullable(Long.class),
+            anyString(),
+            nullable(String.class)
+        )).thenReturn(job);
+        when(printJobService.createPendingJob(
+            eq(1L),
+            eq(1L),
+            eq(123L),
+            nullable(Long.class),
+            nullable(Long.class),
+            eq(PrintModuleCode.GRAB),
+            eq(PrintModuleCode.GRAB),
+            nullable(Long.class),
+            anyString()
+        )).thenReturn(job);
 
         service.dispatchPersistedEvent(PrintModuleCode.GRAB, 1L, 123L, null, null);
 

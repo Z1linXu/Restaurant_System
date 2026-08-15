@@ -1,5 +1,18 @@
 # Restaurant System API (MVP)
 
+> Phase A11 Printing Rule Configuration implementation candidate (2026-08-15):
+> additive Flyway V17 adds Store-scoped, versioned
+> `printing_display_rule_sets` / `printing_display_rule_revisions` and records
+> `printing_rule_revision_id` / `printing_rule_fingerprint` on `print_jobs`.
+> New Owner Printing APIs under `/api/v1/admin/printing/display-rules*` expose a
+> structured, secret-free rule editor for GRAB, FRONTDESK_RECEIPT and
+> HOT_KITCHEN display aliases, dictionaries, constrained conditions, preview,
+> validation, publish and revision history. Routing, printer assignment, print
+> mode, printer endpoints, device credentials, pricing, reports and order state
+> remain unchanged. Historical job reprint still prefers the frozen
+> `rendered_text_snapshot`; order-level reprint resolves the captured A11 rule
+> revision where available and falls back safely for pre-A11 jobs.
+
 > Phase A10 final modular productization acceptance (2026-08-14): no public API
 > shape change was introduced by A10. Automated acceptance on deployed Staging
 > SHA `ad4572759e01b5546ec59af24aa36b09e5c2dd00` validated existing Store
@@ -410,6 +423,138 @@ branch.
 - `DISABLED`: backend cancels automatic print jobs without physical printing.
 
 `PAD_DIRECT` only changes where printing is executed. It does not change order submission, order update, manual reprint, or receipt rendering semantics.
+
+### Printing Display Rules
+
+Phase A11 adds Store-scoped Printing Display Rules. These endpoints configure
+only receipt/ticket wording for the three reviewed output modules:
+`GRAB`, `FRONTDESK_RECEIPT`, and `HOT_KITCHEN`.
+
+They do not configure printer endpoints, physical devices, printer assignment,
+print mode, order totals, payment, reporting, authorization, job state,
+queueing, retry, routing eligibility, or hardware readiness.
+
+GET `/api/v1/admin/printing/display-rules?store_id={storeId}`
+
+Returns the Store's active rule revision, optional draft revision, and revision
+history. The response includes:
+
+- `store_id`
+- `rule_set_id`
+- `active_revision_id`
+- `active_revision`
+- `draft_revision`
+- `revisions[]`
+- `schema_version`
+- `fingerprint_sha256`
+
+POST `/api/v1/admin/printing/display-rules/validate`
+
+Validates a structured rule document without publishing it. Validation rejects
+unknown outputs, duplicate/blank aliases, unknown structured fields,
+operational keys such as printer/device/credential/order-payment fields, and
+executable/script-like content.
+
+POST `/api/v1/admin/printing/display-rules/preview`
+
+Validates a structured rule document and returns sanitized preview text for the
+requested output module and sample scenario. Preview is render-only and creates
+no order, printer assignment, PrintJob, device action or physical output.
+
+POST `/api/v1/admin/printing/display-rules/draft`
+
+Saves a Store-scoped draft revision. Drafts are versioned configuration
+candidates only and do not affect live printing until published.
+
+POST `/api/v1/admin/printing/display-rules/publish`
+
+Publishes a valid draft as the Store's active revision. Published revisions are
+protected from content rewrites; later edits create another draft/revision.
+
+Rule document shape is structured, not executable:
+
+```json
+{
+  "schema_version": "PRINTING_DISPLAY_RULES_V1",
+  "outputs": ["GRAB", "FRONTDESK_RECEIPT", "HOT_KITCHEN"],
+  "item_aliases": [
+    {
+      "item_sku": "beef_chow_mein",
+      "outputs": {
+        "GRAB": "牛炒",
+        "FRONTDESK_RECEIPT": "牛肉炒面",
+        "HOT_KITCHEN": "牛炒"
+      }
+    }
+  ],
+  "dictionaries": {
+    "SIZE": [
+      {
+        "semantic_code": "LARGE",
+        "match_codes": ["size_large", "large"],
+        "match_zh": ["大", "大碗"],
+        "match_en": ["large"],
+        "outputs": {
+          "GRAB": "大",
+          "HOT_KITCHEN": "大",
+          "FRONTDESK_RECEIPT_ZH": "大碗",
+          "FRONTDESK_RECEIPT_EN": "Large"
+        }
+      }
+    ],
+    "NOODLE_TYPE": [
+      {
+        "semantic_code": "ER_XI",
+        "match_zh": ["二细"],
+        "outputs": {
+          "GRAB": "二",
+          "HOT_KITCHEN": "二"
+        }
+      }
+    ],
+    "SPICINESS": [
+      {
+        "semantic_code": "LESS_SPICY",
+        "match_codes": ["spicy_less"],
+        "match_zh": ["少辣"],
+        "outputs": {
+          "GRAB": "（少s）",
+          "HOT_KITCHEN": "（少s）",
+          "FRONTDESK_RECEIPT": "少辣"
+        }
+      }
+    ],
+    "MODIFIER_ADD": [["tea_egg", "+蛋"]],
+    "MODIFIER_REMOVE": [["green_onion", "走葱"]]
+  },
+  "conditional_overrides": [
+    {
+      "condition": {
+        "item_sku": "zha_jiang_noodle",
+        "dictionary": "NOODLE_TYPE",
+        "semantic_code": "LEEK_LEAF"
+      },
+      "omit": true
+    }
+  ],
+  "formatting": {
+    "fried_quantity_symbol": "×",
+    "single_noodle_quantity": "×1",
+    "multi_noodle_quantity": "×",
+    "addon_quantity_marker": "x",
+    "green_compression": "ONION_CILANTRO_TO_QING",
+    "frontdesk_combo_prefix": "combo"
+  },
+}
+```
+
+Menu Management exposes item-specific aliases for the same canonical outputs.
+If an output alias is blank or absent, renderers fall back to frozen submitted
+order/menu snapshots. A11 display rules cannot change routing or eligibility.
+The canonical rule document does not accept `item_code`, `output_aliases`,
+lowercase dictionary keys, raw templates, regex fields, scripts, or
+`conditional_rules`; use `item_sku`, `outputs`, uppercase dictionary names and
+`conditional_overrides`.
 
 PAD_DIRECT complete/fail keeps its existing job-state contract. Printer health
 timestamps are updated only through a printer lookup scoped to the durable

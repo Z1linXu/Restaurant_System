@@ -18,6 +18,8 @@ public class PrintJobResponse {
     public String status;
     public String execution_mode;
     public String rendered_text_snapshot;
+    public Long printing_rule_revision_id;
+    public String printing_rule_fingerprint;
     public String escpos_payload_base64;
     public String error_message;
     public String error_code;
@@ -58,6 +60,8 @@ public class PrintJobResponse {
         response.status = job.status;
         response.execution_mode = job.executionMode;
         response.rendered_text_snapshot = job.rendered_text_snapshot;
+        response.printing_rule_revision_id = job.printingRuleRevisionId;
+        response.printing_rule_fingerprint = job.printingRuleFingerprint;
         response.escpos_payload_base64 = job.escposPayloadBase64;
         response.error_message = job.error_message;
         response.error_code = job.error_code;

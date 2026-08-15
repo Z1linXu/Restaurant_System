@@ -6,6 +6,7 @@ import com.restaurant.system.order.entity.OrderItem;
 import com.restaurant.system.order.entity.OrderItemOption;
 import com.restaurant.system.printing.PrintModuleCode;
 import com.restaurant.system.printing.dto.PrintRenderRequest;
+import com.restaurant.system.printing.rules.PrintingDisplayRuleContext;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.format.DateTimeFormatter;
@@ -44,6 +45,7 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
     @Override
     public String render(PrintRenderRequest request) {
         Order order = request.order;
+        PrintingDisplayRuleContext printingRules = request.printing_rules;
         Map<Long, List<OrderItemOption>> optionsByItemId = (request.order_item_options == null ? List.<OrderItemOption>of() : request.order_item_options).stream()
             .collect(Collectors.groupingBy(option -> option.order_item_id));
         boolean updateTicket = Boolean.TRUE.equals(request.is_update_ticket);
@@ -80,12 +82,12 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
             List<OrderItemOption> options = optionsByItemId.getOrDefault(item.id, List.of());
             int displayCount = Math.max(1, item.quantity == null ? 1 : item.quantity);
             for (int copy = 0; copy < displayCount; copy += 1) {
-                appendSizedLine(builder, buildItemLine(item, options, 1));
+                appendSizedLine(builder, buildItemLine(item, options, 1, printingRules));
                 String noodleType = resolveNoodleTypeLabel(options);
                 if (noodleType != null) {
                     appendSizedLine(builder, noodleType);
                 }
-                String spicyLevel = resolveSpicyLevelLabel(options);
+                String spicyLevel = resolveSpicyLevelLabel(options, printingRules);
                 if (spicyLevel != null) {
                     appendSizedLine(builder, "辣度: " + spicyLevel);
                 }
@@ -97,7 +99,8 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
                     item,
                     options,
                     comboSideItemsByGroup.getOrDefault(item.combo_group_no, List.of()),
-                    optionsByItemId
+                    optionsByItemId,
+                    printingRules
                 )) {
                     appendSizedLine(builder, comboSideLine);
                 }
@@ -142,17 +145,22 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
     }
 
     private String buildItemLine(OrderItem item, List<OrderItemOption> options) {
-        return buildItemLine(item, options, item.quantity == null ? 1 : item.quantity);
+        return buildItemLine(item, options, item.quantity == null ? 1 : item.quantity, null);
     }
 
-    private String buildItemLine(OrderItem item, List<OrderItemOption> options, int displayQuantity) {
-        String baseName = resolveReceiptDisplayName(item);
+    private String buildItemLine(
+        OrderItem item,
+        List<OrderItemOption> options,
+        int displayQuantity,
+        PrintingDisplayRuleContext printingRules
+    ) {
+        String baseName = resolveReceiptDisplayName(item, printingRules);
         StringBuilder builder = new StringBuilder();
         int quantity = Math.max(1, displayQuantity);
         boolean soupNoodle = isSoupNoodle(item);
         boolean combo = isComboItem(item, options);
         if (soupNoodle) {
-            baseName = prependBowlSize(baseName, resolveSizeZhLabel(options));
+            baseName = prependBowlSize(baseName, resolveSizeZhLabel(options, printingRules));
         }
         if (soupNoodle && combo) {
             builder.append(quantity).append("* combo ");
@@ -166,7 +174,7 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         }
         builder.append(baseName);
         if (!soupNoodle) {
-            String sizeEn = resolveSizeEnLabel(options);
+            String sizeEn = resolveSizeEnLabel(options, printingRules);
             if (sizeEn != null) {
                 builder.append(" ").append(sizeEn);
             }
@@ -191,8 +199,18 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
             && SOUP_NOODLE_CATEGORY.equalsIgnoreCase(item.category_code_snapshot.trim());
     }
 
-    private String resolveReceiptDisplayName(OrderItem item) {
+    private String resolveReceiptDisplayName(OrderItem item, PrintingDisplayRuleContext printingRules) {
         String baseName = firstPresent(item.item_name_snapshot_zh, item.item_name_snapshot_en);
+        if (printingRules != null) {
+            String configured = printingRules.resolveItemAlias(
+                PrintModuleCode.FRONTDESK_RECEIPT,
+                item.item_sku_snapshot,
+                baseName
+            );
+            if (configured != null && !configured.isBlank()) {
+                return configured;
+            }
+        }
         if (baseName != null && baseName.contains("传统牛肉面")) {
             return baseName.replace("传统牛肉面", "牛肉面");
         }
@@ -209,19 +227,37 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         return sizeLabel + baseName;
     }
 
-    private String resolveSizeZhLabel(List<OrderItemOption> options) {
+    private String resolveSizeZhLabel(List<OrderItemOption> options, PrintingDisplayRuleContext printingRules) {
         return options.stream()
             .filter(option -> OPTION_TYPE_SIZE.equals(option.option_type_snapshot))
-            .map(option -> mapSizeZh(option.option_name_snapshot_zh, option.option_name_snapshot_en))
+            .map(option -> printingRules == null
+                ? mapSizeZh(option.option_name_snapshot_zh, option.option_name_snapshot_en)
+                : printingRules.resolveDictionaryOutputKey(
+                    "SIZE",
+                    "FRONTDESK_RECEIPT_ZH",
+                    option.option_code_snapshot,
+                    option.option_name_snapshot_zh,
+                    option.option_name_snapshot_en,
+                    mapSizeZh(option.option_name_snapshot_zh, option.option_name_snapshot_en)
+                ))
             .filter(label -> label != null && !label.isBlank())
             .findFirst()
             .orElse(null);
     }
 
-    private String resolveSizeEnLabel(List<OrderItemOption> options) {
+    private String resolveSizeEnLabel(List<OrderItemOption> options, PrintingDisplayRuleContext printingRules) {
         return options.stream()
             .filter(option -> OPTION_TYPE_SIZE.equals(option.option_type_snapshot))
-            .map(option -> mapSizeEn(option.option_name_snapshot_zh, option.option_name_snapshot_en))
+            .map(option -> printingRules == null
+                ? mapSizeEn(option.option_name_snapshot_zh, option.option_name_snapshot_en)
+                : printingRules.resolveDictionaryOutputKey(
+                    "SIZE",
+                    "FRONTDESK_RECEIPT_EN",
+                    option.option_code_snapshot,
+                    option.option_name_snapshot_zh,
+                    option.option_name_snapshot_en,
+                    mapSizeEn(option.option_name_snapshot_zh, option.option_name_snapshot_en)
+                ))
             .filter(label -> label != null && !label.isBlank())
             .findFirst()
             .orElse(null);
@@ -271,10 +307,19 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
             .orElse(null);
     }
 
-    private String resolveSpicyLevelLabel(List<OrderItemOption> options) {
+    private String resolveSpicyLevelLabel(List<OrderItemOption> options, PrintingDisplayRuleContext printingRules) {
         return options.stream()
             .filter(this::isSpicyLevelOption)
-            .map(option -> firstPresent(option.option_name_snapshot_zh, option.option_name_snapshot_en))
+            .map(option -> printingRules == null
+                ? firstPresent(option.option_name_snapshot_zh, option.option_name_snapshot_en)
+                : printingRules.resolveDictionaryOutput(
+                    "SPICINESS",
+                    PrintModuleCode.FRONTDESK_RECEIPT,
+                    option.option_code_snapshot,
+                    option.option_name_snapshot_zh,
+                    option.option_name_snapshot_en,
+                    firstPresent(option.option_name_snapshot_zh, option.option_name_snapshot_en)
+                ))
             .filter(Objects::nonNull)
             .findFirst()
             .orElse(null);
@@ -308,7 +353,8 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         OrderItem item,
         List<OrderItemOption> options,
         List<OrderItem> comboSideItems,
-        Map<Long, List<OrderItemOption>> optionsByItemId
+        Map<Long, List<OrderItemOption>> optionsByItemId,
+        PrintingDisplayRuleContext printingRules
     ) {
         if (!isComboItem(item, options)) {
             return List.of();
@@ -320,18 +366,18 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
             .filter(option -> isOptionGroup(option, OPTION_GROUP_COMBO_EGG))
             .toList();
         if (eggOptions.isEmpty()) {
-            addUniqueLine(lines, seen, "走蛋");
+            addUniqueLine(lines, seen, comboLabel(printingRules, "NO_EGG", "走蛋"));
         } else {
             eggOptions.stream()
                 .map(option -> cleanComboEggLabel(firstPresent(option.option_name_snapshot_zh, option.option_name_snapshot_en)))
-                .forEach(label -> addUniqueLine(lines, seen, "鸡蛋: " + label));
+                .forEach(label -> addUniqueLine(lines, seen, comboLabel(printingRules, "EGG_LABEL", "鸡蛋") + ": " + label));
         }
 
         List<OrderItemOption> sideOptions = options.stream()
             .filter(this::isComboSideOption)
             .toList();
         for (OrderItemOption sideOption : sideOptions) {
-            addUniqueLine(lines, seen, "小菜: " + cleanComboSideLabel(firstPresent(sideOption.option_name_snapshot_zh, sideOption.option_name_snapshot_en)));
+            addUniqueLine(lines, seen, comboLabel(printingRules, "SIDE_LABEL", "小菜") + ": " + cleanComboSideLabel(firstPresent(sideOption.option_name_snapshot_zh, sideOption.option_name_snapshot_en)));
             options.stream()
                 .filter(option -> isOptionGroup(option, OPTION_GROUP_COMBO_SIDE_REMOVE))
                 .filter(option -> sideOption.option_id != null && sideOption.option_id.equals(option.parent_option_id_snapshot))
@@ -341,7 +387,7 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         }
 
         for (OrderItem sideItem : comboSideItems) {
-            addUniqueLine(lines, seen, "小菜: " + cleanComboSideLabel(firstPresent(sideItem.item_name_snapshot_zh, sideItem.item_name_snapshot_en)));
+            addUniqueLine(lines, seen, comboLabel(printingRules, "SIDE_LABEL", "小菜") + ": " + cleanComboSideLabel(firstPresent(sideItem.item_name_snapshot_zh, sideItem.item_name_snapshot_en)));
             optionsByItemId.getOrDefault(sideItem.id, List.of()).stream()
                 .filter(option -> safeMoney(option.price_delta).compareTo(BigDecimal.ZERO) == 0)
                 .map(option -> firstPresent(option.option_name_snapshot_zh, option.option_name_snapshot_en))
@@ -350,6 +396,21 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         }
 
         return lines;
+    }
+
+    private String comboLabel(PrintingDisplayRuleContext printingRules, String semanticCode, String fallback) {
+        if (printingRules == null) {
+            return fallback;
+        }
+        return printingRules.content().path("dictionaries").path("COMBO").findValues("semantic_code").stream()
+            .anyMatch(node -> semanticCode.equals(node.asText()))
+            ? printingRules.content().path("dictionaries").path("COMBO").findParents("semantic_code").stream()
+                .filter(node -> semanticCode.equals(node.path("semantic_code").asText()))
+                .map(node -> node.path("outputs").path(PrintModuleCode.FRONTDESK_RECEIPT).asText(null))
+                .filter(value -> value != null && !value.isBlank())
+                .findFirst()
+                .orElse(fallback)
+            : fallback;
     }
 
     private void addUniqueLine(List<String> lines, Set<String> seen, String line) {

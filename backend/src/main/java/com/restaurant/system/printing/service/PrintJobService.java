@@ -46,6 +46,14 @@ public interface PrintJobService {
 
     PrintJob attachRenderedContent(PrintJob job, Long printerId, String renderedTextSnapshot);
 
+    PrintJob attachRenderedContent(
+        PrintJob job,
+        Long printerId,
+        String renderedTextSnapshot,
+        Long printingRuleRevisionId,
+        String printingRuleFingerprint
+    );
+
     PrintJob markPadDirectQueued(PrintJob job, PrinterConfig printer);
 
     PrintJob markPadDirectQueued(PrintJob job, PrinterConfig printer, String fontSize);

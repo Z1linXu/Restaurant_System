@@ -1,6 +1,64 @@
 # Current Project Handoff
 
-## 0. Phase A current handoff — A10 automated acceptance passed, Owner final acceptance pending
+## 0. Phase A11 current handoff — implementation candidate ready, Staging validation pending
+
+Fresh main at A11 design start:
+
+```text
+78ac87b633ba6d4e113d52ed65eddb8fcc06eacd
+```
+
+Current deployed Staging identity from governance remains:
+
+```text
+application_sha = ad4572759e01b5546ec59af24aa36b09e5c2dd00
+flyway = V16
+```
+
+A10 automated Phase A foundation remains `PASS`, and the Owner added A11 as a
+required Phase A productization closure before Phase B. The Owner answered the
+five A11 product decisions and approved implementation:
+
+```text
+PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION = REPOSITORY_CANDIDATE_READY
+PHASE_B_IMPLEMENTATION = BLOCKED_UNTIL_A11_STAGING_OWNER_ACCEPTANCE
+```
+
+A11 evidence:
+
+- [PHASE_A11_PRINTING_RULE_AUDIT](../agile/PHASE_A11_PRINTING_RULE_AUDIT.md)
+- [PRINTING_RULE_RECONCILIATION_MATRIX](../agile/PRINTING_RULE_RECONCILIATION_MATRIX.md)
+- [PRODUCT_PRINT_RULE_INVENTORY](../agile/PRODUCT_PRINT_RULE_INVENTORY.md)
+- [PRINTING_RULE_CONFIGURATION_ARCHITECTURE_OPTIONS](../agile/PRINTING_RULE_CONFIGURATION_ARCHITECTURE_OPTIONS.md)
+- [A11_IMPLEMENTATION_PLAN_DRAFT](../agile/A11_IMPLEMENTATION_PLAN_DRAFT.md)
+- [PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION_EVIDENCE](../agile/PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION_EVIDENCE.md)
+
+A11 repository candidate adds additive Flyway V17, Store-scoped versioned
+Printing Display Rule persistence, Owner APIs, Menu Management item aliases,
+Printing Settings dictionaries/preview/revision UI, renderer integration and
+historical rule revision capture on PrintJob render. It keeps routing,
+eligibility, pricing, reporting, PrintJob state, logical printer assignment,
+physical endpoints and device credentials outside Owner display-rule control.
+Post-A11 Store Profile versions must include a `PRINTING_DISPLAY_RULES`
+artifact; historical `ST_DENIS_CANONICAL_PROFILE/v1` remains immutable and
+valid.
+
+Next runtime action after PR/merge:
+
+```text
+EXACT_SHA_STAGING_DEPLOY_AND_A11_AUTOMATED_VALIDATION
+```
+
+Do not start Phase B, Phase C, Chinatown, Sainte-Catherine or Production
+promotion before A11 Staging Owner acceptance.
+
+Unique stop state:
+
+```text
+PHASE_A11_PRINTING_RULE_CONFIGURATION_REPOSITORY_READY_WAITING_FOR_STAGING_VALIDATION
+```
+
+## 0a. Historical Phase A current handoff — A10 automated acceptance passed, superseded by A11 gate
 
 Fresh main and deployed Staging application SHA:
 

@@ -234,6 +234,23 @@ V10 Twin.
 
 ## Active issues
 
+### KI-015 - Printing display rules are hidden in code rather than Store configuration
+
+| Field | Value |
+|---|---|
+| issue_id | `KI-015` |
+| priority | `P2` productization blocker for Phase B; no Production incident asserted |
+| title | Printing display rules are not transparent or configurable by Store/Profile |
+| observed_behavior | GRAB, FRONTDESK_RECEIPT and HOT_KITCHEN display wording depends on many renderer/order-service hardcodes: product aliases, Size/noodle/spicy abbreviations, add/remove modifier wording, combo wording, quantity formatting, label cleanup and legacy string matching. Owner cannot inspect or edit these rules in Menu Management or Printing Settings. |
+| expected_behavior | Canonical Printing Rule Configuration is Store-scoped, profile-compatible, versionable/snapshot-safe, reusable by Phase B provisioning and independent after Store materialization. It separates display rules from routing, PrintJob state, printer assignment, payment and authorization. |
+| operational_impact | Phase B Create New Store remains blocked until the A11 implementation candidate passes PR, exact-SHA Staging validation and Owner acceptance. |
+| current_workaround | Repository candidate adds Store-owned display rule configuration with menu/order snapshot fallback; runtime remains unchanged until Staging deploy. |
+| evidence | [PHASE_A11_PRINTING_RULE_AUDIT](agile/PHASE_A11_PRINTING_RULE_AUDIT.md), [PRINTING_RULE_RECONCILIATION_MATRIX](agile/PRINTING_RULE_RECONCILIATION_MATRIX.md), [PRODUCT_PRINT_RULE_INVENTORY](agile/PRODUCT_PRINT_RULE_INVENTORY.md), [PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION_EVIDENCE](agile/PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION_EVIDENCE.md). |
+| status | `A11_IMPLEMENTATION_REPOSITORY_CANDIDATE_READY_WAITING_FOR_PR_AND_STAGING_VALIDATION` |
+| target_loop | `PHASE_A11_PRINTING_RULE_TRANSPARENCY_AND_CONFIGURATION` |
+| safety_boundary | Additive V17 repository candidate only until deployment. No Production mutation, Production deploy, physical printer binding, Pad pairing, Phase B/C, Chinatown or Sainte-Catherine. |
+| last_updated | 2026-08-15 |
+
 ### KI-014 - Owner field-test three reliability follow-up repairs
 
 | Field | Value |
