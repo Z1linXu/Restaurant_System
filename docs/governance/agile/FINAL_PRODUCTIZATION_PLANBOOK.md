@@ -1,5 +1,60 @@
 # Final Productization Planbook
 
+## Phase A11 printing rule configuration gate (2026-08-15)
+
+The Owner added a Phase A productization closure before Phase B:
+
+```text
+PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION
+```
+
+A10 automated Phase A foundation acceptance remains valid, but Phase B is now
+blocked by A11:
+
+```text
+PHASE_B_IMPLEMENTATION = BLOCKED_BY_A11
+```
+
+A11 requires canonical Printing Rule Configuration to be Store-scoped,
+profile-compatible, versionable/snapshot-safe, reusable by Phase B provisioning
+and independent after Store materialization. Future
+`ST_DENIS_CANONICAL_PROFILE` versions must be able to include
+`PRINTING_DISPLAY_RULES` defaults/snapshots. Future Store creation must
+materialize target Store-owned rules rather than live-linking a source Store,
+copying source database IDs or hardcoding St-Denis/Chinatown behavior.
+
+A11 package:
+
+- [PHASE_A11_PRINTING_RULE_AUDIT](PHASE_A11_PRINTING_RULE_AUDIT.md)
+- [PRINTING_RULE_RECONCILIATION_MATRIX](PRINTING_RULE_RECONCILIATION_MATRIX.md)
+- [PRODUCT_PRINT_RULE_INVENTORY](PRODUCT_PRINT_RULE_INVENTORY.md)
+- [PRINTING_RULE_CONFIGURATION_ARCHITECTURE_OPTIONS](PRINTING_RULE_CONFIGURATION_ARCHITECTURE_OPTIONS.md)
+- [A11_IMPLEMENTATION_PLAN_DRAFT](A11_IMPLEMENTATION_PLAN_DRAFT.md)
+- [PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION_EVIDENCE](PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION_EVIDENCE.md)
+
+Current route:
+
+```text
+Phase A automated acceptance
+→ A11 Printing Rule Transparency & Configuration
+→ Owner Design Decision = CLOSED
+→ A11 Implementation Candidate
+→ PR / exact-SHA Staging deploy
+→ Staging Owner Acceptance
+→ Phase B
+```
+
+A11 implementation effect: additive V17 schema plus backend/frontend A11 display
+rule configuration. It does not mutate Production, bind physical printers, pair
+Pads, start Phase B/C, create Chinatown/Sainte-Catherine, or promote
+Production. Staging deployment and Owner retest remain separate runtime steps.
+
+Unique stop:
+
+```text
+PHASE_A11_PRINTING_RULE_CONFIGURATION_REPOSITORY_READY_WAITING_FOR_STAGING_VALIDATION
+```
+
 ## Phase A10 final modular acceptance update (2026-08-14)
 
 `PHASE_A_IMPLEMENTATION_COMPLETE = YES` and

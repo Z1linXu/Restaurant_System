@@ -95,7 +95,7 @@ public class StoreProfileContractValidator {
             assertTextEquals(root, "schema_version", schemaVersion, issues);
             scanProhibitedData(root, "$", issues);
             validateModuleDefaults(root, issues);
-            validateProfileReferences(root, issues);
+            validateProfileReferences(root, profileCode, profileVersion, safeArtifacts, issues);
             validateMenuTemplateShape(root, issues);
         }
 
@@ -206,13 +206,19 @@ public class StoreProfileContractValidator {
         }
     }
 
-    private void validateProfileReferences(JsonNode root, List<StoreProfileValidationIssue> issues) {
+    private void validateProfileReferences(
+        JsonNode root,
+        String profileCode,
+        String profileVersion,
+        List<StoreProfileArtifactInput> artifacts,
+        List<StoreProfileValidationIssue> issues
+    ) {
         JsonNode references = root.path("template_references");
         if (!references.isObject()) {
             issues.add(issue("TEMPLATE_REFERENCES_REQUIRED", "template_references", "Profile must reference versioned templates"));
             return;
         }
-        for (String required : List.of(
+        List<String> requiredReferences = new ArrayList<>(List.of(
             "menu_template",
             "pricing_policy",
             "combo_configuration",
@@ -221,7 +227,11 @@ public class StoreProfileContractValidator {
             "logical_printing_topology",
             "role_access_defaults",
             "hardware_requirements"
-        )) {
+        ));
+        if (requiresPrintingDisplayRules(profileCode, profileVersion)) {
+            requiredReferences.add("printing_display_rules");
+        }
+        for (String required : requiredReferences) {
             JsonNode reference = references.path(required);
             if (!reference.isObject()
                 || !StoreProfileIdentity.isExact(reference.path("artifact_code").asText(null))
@@ -229,8 +239,32 @@ public class StoreProfileContractValidator {
                 || !SHA256_PATTERN.matcher(reference.path("fingerprint_sha256").asText("")).matches()) {
                 issues.add(issue("TEMPLATE_REFERENCE_INVALID", "template_references." + required,
                     "Template references must include exact code, version and fingerprint"));
+                continue;
+            }
+            if (!hasMatchingArtifact(reference, artifacts)) {
+                issues.add(issue("TEMPLATE_REFERENCE_ARTIFACT_MISSING", "template_references." + required,
+                    "Template reference must have a matching artifact with the same code, version and fingerprint"));
             }
         }
+    }
+
+    private boolean requiresPrintingDisplayRules(String profileCode, String profileVersion) {
+        return !("ST_DENIS_CANONICAL_PROFILE".equals(profileCode) && "v1".equals(profileVersion));
+    }
+
+    private boolean hasMatchingArtifact(JsonNode reference, List<StoreProfileArtifactInput> artifacts) {
+        String artifactCode = reference.path("artifact_code").asText(null);
+        String artifactVersion = reference.path("artifact_version").asText(null);
+        String fingerprint = reference.path("fingerprint_sha256").asText(null);
+        for (StoreProfileArtifactInput artifact : artifacts == null ? List.<StoreProfileArtifactInput>of() : artifacts) {
+            if (artifact != null
+                && safe(artifact.artifactCode()).equals(safe(artifactCode))
+                && safe(artifact.artifactVersion()).equals(safe(artifactVersion))
+                && safe(artifact.fingerprintSha256()).equals(safe(fingerprint))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void validateMenuTemplateShape(JsonNode root, List<StoreProfileValidationIssue> issues) {

@@ -14,6 +14,7 @@ import { MenuOptionsPanel } from './MenuOptionsPanel'
 import { ComboConfigurationPanel } from './ComboConfigurationPanel'
 import { CategoryManagementPanel, StationManagementPanel } from './MenuStructurePanels'
 import { PricingRulesPanel } from './PricingRulesPanel'
+import { ItemPrintingRuleAliasPanel } from './PrintingDisplayRulesPanel'
 import { useAuth } from '../auth/useAuth'
 import { useCurrentStore } from '../store/useStoreContext'
 import {
@@ -934,6 +935,20 @@ export function MenuManagementPage() {
                         className="mt-1 w-full rounded-[16px] border border-[rgba(26,28,25,0.08)] bg-white px-4 py-3 text-[0.92rem] outline-none"
                       />
                     </label>
+
+                    {editor.id ? (
+                      <ItemPrintingRuleAliasPanel
+                        storeId={Number(selectedStoreId)}
+                        itemSku={editor.sku}
+                        itemNameZh={editor.name_zh}
+                        itemNameEn={editor.name_en}
+                        onToast={(message, kind = 'success') => setToast({ kind, message })}
+                      />
+                    ) : (
+                      <div className="rounded-[18px] border border-[rgba(38,86,160,0.12)] bg-[rgba(38,86,160,0.04)] px-4 py-3 text-[0.82rem] leading-5 text-[var(--muted)]">
+                        Item-specific printing aliases become available after the menu item has a saved SKU.
+                      </div>
+                    )}
 
                     <div className="grid gap-4 sm:grid-cols-2">
                       <label className="block">

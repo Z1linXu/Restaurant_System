@@ -50,6 +50,8 @@ import com.restaurant.system.order.repository.OrderRepository;
 import com.restaurant.system.order.repository.OrderUpdateBatchRepository;
 import com.restaurant.system.production.repository.ProductionTaskRepository;
 import com.restaurant.system.printing.PrintModuleCode;
+import com.restaurant.system.printing.rules.PrintingDisplayRuleContext;
+import com.restaurant.system.printing.rules.PrintingDisplayRuleService;
 import com.restaurant.system.printing.service.PrintDispatcherService;
 import com.restaurant.system.station.entity.Station;
 import com.restaurant.system.station.repository.StationRepository;
@@ -113,6 +115,8 @@ class OrderServiceImplTest {
     private PrintDispatcherService printDispatcherService;
     @Mock
     private StoreComboConfigurationService storeComboConfigurationService;
+    @Mock
+    private PrintingDisplayRuleService printingDisplayRuleService;
 
     private OrderServiceImpl orderService;
     private KitchenServiceImpl kitchenService;
@@ -157,7 +161,8 @@ class OrderServiceImplTest {
             storeRepository,
             realtimeEventPublisher,
             printDispatcherService,
-            storeComboConfigurationService
+            storeComboConfigurationService,
+            printingDisplayRuleService
         );
         kitchenService = new KitchenServiceImpl(kitchenTaskRepository, orderRepository, realtimeEventPublisher);
         frontdeskBeverageService = new FrontdeskBeverageServiceImpl(
@@ -169,6 +174,7 @@ class OrderServiceImplTest {
         store = new Store();
         store.id = 1L;
         store.enable_bar_kitchen_tasks = false;
+        when(printingDisplayRuleService.activeContext(anyLong())).thenReturn(PrintingDisplayRuleContext.defaultContext());
 
         menuCategory = new MenuCategory();
         menuCategory.id = 10L;

@@ -1,5 +1,64 @@
 # Alive Runtime Planbook
 
+## Current Phase A11 printing rule configuration gate (2026-08-15)
+
+The Owner added a Phase A productization closure before Phase B:
+
+```text
+PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION
+```
+
+Fresh repository authority for the A11 implementation start is
+`origin/main@78ac87b633ba6d4e113d52ed65eddb8fcc06eacd`.
+Phase A10 automated foundation acceptance remains valid, but Phase B
+implementation is blocked until A11 completes PR/merge, exact-SHA Staging
+validation and Owner acceptance.
+
+A11 evidence:
+[PHASE_A11_PRINTING_RULE_AUDIT](../agile/PHASE_A11_PRINTING_RULE_AUDIT.md),
+[PRINTING_RULE_RECONCILIATION_MATRIX](../agile/PRINTING_RULE_RECONCILIATION_MATRIX.md),
+[PRODUCT_PRINT_RULE_INVENTORY](../agile/PRODUCT_PRINT_RULE_INVENTORY.md),
+[PRINTING_RULE_CONFIGURATION_ARCHITECTURE_OPTIONS](../agile/PRINTING_RULE_CONFIGURATION_ARCHITECTURE_OPTIONS.md),
+and
+[A11_IMPLEMENTATION_PLAN_DRAFT](../agile/A11_IMPLEMENTATION_PLAN_DRAFT.md),
+[PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION_EVIDENCE](../agile/PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION_EVIDENCE.md).
+
+Current route:
+
+```text
+Phase A automated acceptance
+→ A11 Printing Rule Transparency & Configuration
+→ Owner Design Decision = CLOSED
+→ A11 Implementation Candidate
+→ PR / exact-SHA Staging deploy
+→ Staging Owner Acceptance
+→ Phase B
+```
+
+Required A11 product rule: canonical Printing Rule Configuration must be
+Store-scoped, profile-compatible, versionable/snapshot-safe, reusable by Phase B
+provisioning and independent after Store materialization. Future Store creation
+must materialize Store-owned printing display rules from profile defaults rather
+than live-linking source Stores, copying source database IDs, or using
+Store-name hardcodes.
+
+Current implementation boundary:
+
+```text
+Production = NO_MUTATION
+Staging = DEPLOYMENT_PENDING
+Schema/Flyway = ADDITIVE_V17_CANDIDATE
+Implementation = REPOSITORY_CANDIDATE_READY
+Deployment = NOT_STARTED_IN_THIS_REPOSITORY_STATE
+Phase_B = BLOCKED_UNTIL_A11_STAGING_OWNER_ACCEPTANCE
+```
+
+Unique stop state:
+
+```text
+PHASE_A11_PRINTING_RULE_CONFIGURATION_REPOSITORY_READY_WAITING_FOR_STAGING_VALIDATION
+```
+
 ## Current Phase A10 final modular acceptance (2026-08-14)
 
 Phase A automated acceptance is complete on fresh main

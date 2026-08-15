@@ -137,9 +137,27 @@ public class PrintJobServiceImpl implements PrintJobService {
     @Override
     @Transactional
     public PrintJob attachRenderedContent(PrintJob job, Long printerId, String renderedTextSnapshot) {
+        return attachRenderedContent(job, printerId, renderedTextSnapshot, null, null);
+    }
+
+    @Override
+    @Transactional
+    public PrintJob attachRenderedContent(
+        PrintJob job,
+        Long printerId,
+        String renderedTextSnapshot,
+        Long printingRuleRevisionId,
+        String printingRuleFingerprint
+    ) {
         PrintJob target = requireJob(job.id);
         target.printer_id = printerId;
         target.rendered_text_snapshot = renderedTextSnapshot;
+        if (printingRuleRevisionId != null) {
+            target.printingRuleRevisionId = printingRuleRevisionId;
+        }
+        if (printingRuleFingerprint != null && !printingRuleFingerprint.isBlank()) {
+            target.printingRuleFingerprint = printingRuleFingerprint;
+        }
         target.updated_at = LocalDateTime.now();
         return printJobRepository.save(target);
     }

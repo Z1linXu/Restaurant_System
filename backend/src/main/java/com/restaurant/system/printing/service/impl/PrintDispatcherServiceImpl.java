@@ -38,6 +38,8 @@ import com.restaurant.system.printing.renderer.ReceiptRenderer;
 import com.restaurant.system.printing.repository.PrintJobRepository;
 import com.restaurant.system.printing.repository.PrinterAssignmentRepository;
 import com.restaurant.system.printing.repository.PrinterConfigRepository;
+import com.restaurant.system.printing.rules.PrintingDisplayRuleContext;
+import com.restaurant.system.printing.rules.PrintingDisplayRuleService;
 import com.restaurant.system.printing.semantic.HotKitchenPrintEligibilityService;
 import com.restaurant.system.printing.service.PrintDispatcherService;
 import com.restaurant.system.printing.service.PrintJobService;
@@ -88,6 +90,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
     private final HotKitchenPrintEligibilityService hotKitchenPrintEligibilityService;
     private final OrderDispatchOutboxService orderDispatchOutboxService;
     private final StoreModuleAccessEvaluator moduleAccessEvaluator;
+    private final PrintingDisplayRuleService printingDisplayRuleService;
 
     public PrintDispatcherServiceImpl(
         PrinterConfigService printerConfigService,
@@ -106,7 +109,8 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         CloudPrintingGuard cloudPrintingGuard,
         HotKitchenPrintEligibilityService hotKitchenPrintEligibilityService,
         OrderDispatchOutboxService orderDispatchOutboxService,
-        StoreModuleAccessEvaluator moduleAccessEvaluator
+        StoreModuleAccessEvaluator moduleAccessEvaluator,
+        PrintingDisplayRuleService printingDisplayRuleService
     ) {
         this.printerConfigService = printerConfigService;
         this.printerConfigRepository = printerConfigRepository;
@@ -125,6 +129,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         this.hotKitchenPrintEligibilityService = hotKitchenPrintEligibilityService;
         this.orderDispatchOutboxService = orderDispatchOutboxService;
         this.moduleAccessEvaluator = moduleAccessEvaluator;
+        this.printingDisplayRuleService = printingDisplayRuleService;
     }
 
     @Override
@@ -527,6 +532,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         PrintJob job = null;
         PrinterConfig printer = null;
         PrintRenderRequest renderRequest = null;
+        PrintingDisplayRuleContext ruleContext = null;
         String preRenderedContent = null;
         try {
             if (dispatchSourceKey != null && printJobRepository.findByDispatchSourceKey(dispatchSourceKey).isPresent()) {
@@ -537,6 +543,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             if (store == null) {
                 throw new BusinessException("Store not found: " + storeId);
             }
+            ruleContext = printingDisplayRuleService.activeContext(storeId);
             StoreModuleAccessEvaluation evaluation = moduleAccessEvaluator.evaluateCapability(storeId, ModuleKeys.PRINTING);
             if (!evaluation.allowed()) {
                 logger.info(
@@ -550,7 +557,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             }
             String printingMode = printerConfigService.getStorePrintingMode(storeId);
             if (PrintModuleCode.HOT_KITCHEN.equals(moduleCode)) {
-                renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId);
+                renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId, ruleContext);
                 if (renderRequest == null) {
                     logger.warn(
                         "Skipping HOT_KITCHEN print before job creation because no render data was available for store {} order {} batch {}",
@@ -573,7 +580,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 ReceiptRenderer updateRenderer = renderersByModuleCode.get(moduleCode);
                 if (updateRenderer != null) {
                     if (renderRequest == null) {
-                        renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId);
+                        renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId, ruleContext);
                     }
                     if (renderRequest == null) {
                         logger.warn(
@@ -676,7 +683,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             }
 
             if (renderRequest == null) {
-                renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId);
+                renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId, ruleContext);
             }
             if (renderRequest == null) {
                 job = printJobService.attachRenderedContent(job, printer.id, null);
@@ -692,7 +699,13 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 return;
             }
 
-            job = printJobService.attachRenderedContent(job, printer.id, content);
+            job = printJobService.attachRenderedContent(
+                job,
+                printer.id,
+                content,
+                ruleContext == null ? null : ruleContext.revisionId(),
+                ruleContext == null ? null : ruleContext.activeFingerprintOrDefault()
+            );
             if (PrintingMode.PAD_DIRECT.equals(printingMode)) {
                 job = printJobService.markPadDirectQueued(job, printer, resolveEffectiveFontSize(assignment, printer));
                 int copies = resolveCopyCount(moduleCode, assignment, renderRequest.order);
@@ -761,8 +774,15 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             String content = job.rendered_text_snapshot;
             PrinterAssignment assignment = printerAssignmentRepository.findByStoreIdAndModuleCode(job.store_id, job.module_code).orElse(null);
             if (content == null || content.isBlank()) {
-                content = renderOrderContent(job.module_code, job.store_id, job.order_id);
-                job = printJobService.attachRenderedContent(job, printer.id, content);
+                PrintingDisplayRuleContext context = printingDisplayRuleService.contextForJob(job);
+                content = renderOrderContent(job.module_code, job.store_id, job.order_id, null, context);
+                job = printJobService.attachRenderedContent(
+                    job,
+                    printer.id,
+                    content,
+                    context.revisionId(),
+                    context.activeFingerprintOrDefault()
+                );
             } else {
                 job = printJobService.attachRenderedContent(job, printer.id, content);
             }
@@ -824,8 +844,15 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             if (!Boolean.TRUE.equals(printer.enabled)) {
                 return printJobService.toResponse(printJobService.markFailed(job, printer, "PRINTER_DISABLED", "Selected printer is disabled"));
             }
-            String content = renderOrderContent(moduleCode, order.store_id, order.id);
-            job = printJobService.attachRenderedContent(job, printer.id, content);
+            PrintingDisplayRuleContext historicalContext = printingDisplayRuleService.historicalContextForOrder(order.store_id, order.id, moduleCode);
+            String content = renderOrderContent(moduleCode, order.store_id, order.id, null, historicalContext);
+            job = printJobService.attachRenderedContent(
+                job,
+                printer.id,
+                content,
+                historicalContext.revisionId(),
+                historicalContext.activeFingerprintOrDefault()
+            );
             if (PrintingMode.PAD_DIRECT.equals(printingMode)) {
                 job = printJobService.markPadDirectQueued(job, printer, resolveEffectiveFontSize(assignment, printer));
                 logger.info("PAD_DIRECT queued order reprint job {} order {} module {}", job.id, orderId, moduleCode);
@@ -972,7 +999,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
     }
 
     private PrintRenderRequest buildRenderRequest(String moduleCode, Long storeId, Long orderId) {
-        return buildRenderRequest(moduleCode, storeId, orderId, null);
+        return buildRenderRequest(moduleCode, storeId, orderId, null, printingDisplayRuleService.activeContext(storeId));
     }
 
     private PrintRenderRequest buildRenderRequest(
@@ -980,6 +1007,16 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         Long storeId,
         Long orderId,
         Long orderUpdateBatchId
+    ) {
+        return buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId, printingDisplayRuleService.activeContext(storeId));
+    }
+
+    private PrintRenderRequest buildRenderRequest(
+        String moduleCode,
+        Long storeId,
+        Long orderId,
+        Long orderUpdateBatchId,
+        PrintingDisplayRuleContext ruleContext
     ) {
         Store store = storeRepository.findById(storeId).orElse(null);
         Order order = orderRepository.findById(orderId).orElse(null);
@@ -1017,19 +1054,30 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         request.happened_at = LocalDateTime.now();
         request.is_update_ticket = updateTicket;
         request.order_update_batch_id = orderUpdateBatchId;
+        request.printing_rules = ruleContext;
         return request;
     }
 
     private String renderOrderContent(String moduleCode, Long storeId, Long orderId) {
-        return renderOrderContent(moduleCode, storeId, orderId, null);
+        return renderOrderContent(moduleCode, storeId, orderId, null, printingDisplayRuleService.activeContext(storeId));
     }
 
     private String renderOrderContent(String moduleCode, Long storeId, Long orderId, Long orderUpdateBatchId) {
+        return renderOrderContent(moduleCode, storeId, orderId, orderUpdateBatchId, printingDisplayRuleService.activeContext(storeId));
+    }
+
+    private String renderOrderContent(
+        String moduleCode,
+        Long storeId,
+        Long orderId,
+        Long orderUpdateBatchId,
+        PrintingDisplayRuleContext ruleContext
+    ) {
         ReceiptRenderer renderer = renderersByModuleCode.get(moduleCode);
         if (renderer == null) {
             throw new BusinessException("No renderer is registered for module " + moduleCode);
         }
-        PrintRenderRequest renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId);
+        PrintRenderRequest renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId, ruleContext);
         if (renderRequest == null) {
             throw new BusinessException("No render data was available");
         }

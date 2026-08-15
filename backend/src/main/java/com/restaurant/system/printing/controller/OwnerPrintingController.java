@@ -25,6 +25,14 @@ import com.restaurant.system.printing.dto.ModuleAssignmentTestRequest;
 import com.restaurant.system.printing.entity.PrinterAssignment;
 import com.restaurant.system.printing.entity.PrinterConfig;
 import com.restaurant.system.printing.entity.PrintJob;
+import com.restaurant.system.printing.rules.PrintingDisplayRuleService;
+import com.restaurant.system.printing.rules.dto.PrintingDisplayRuleDraftRequest;
+import com.restaurant.system.printing.rules.dto.PrintingDisplayRulePreviewRequest;
+import com.restaurant.system.printing.rules.dto.PrintingDisplayRulePreviewResponse;
+import com.restaurant.system.printing.rules.dto.PrintingDisplayRulePublishRequest;
+import com.restaurant.system.printing.rules.dto.PrintingDisplayRuleRevisionResponse;
+import com.restaurant.system.printing.rules.dto.PrintingDisplayRuleSettingsResponse;
+import com.restaurant.system.printing.rules.dto.PrintingDisplayRuleValidationResponse;
 import com.restaurant.system.printing.service.PrintDispatcherService;
 import com.restaurant.system.printing.service.PrintJobService;
 import com.restaurant.system.printing.service.PrinterAssignmentService;
@@ -56,6 +64,7 @@ public class OwnerPrintingController {
     private final FeatureFlagService featureFlagService;
     private final AuditLogService auditLogService;
     private final StoreModuleAccessEvaluator moduleAccessEvaluator;
+    private final PrintingDisplayRuleService printingDisplayRuleService;
 
     @Autowired
     public OwnerPrintingController(
@@ -66,7 +75,8 @@ public class OwnerPrintingController {
         AuthorizationService authorizationService,
         FeatureFlagService featureFlagService,
         AuditLogService auditLogService,
-        StoreModuleAccessEvaluator moduleAccessEvaluator
+        StoreModuleAccessEvaluator moduleAccessEvaluator,
+        PrintingDisplayRuleService printingDisplayRuleService
     ) {
         this.printerConfigService = printerConfigService;
         this.printerAssignmentService = printerAssignmentService;
@@ -76,6 +86,7 @@ public class OwnerPrintingController {
         this.featureFlagService = featureFlagService;
         this.auditLogService = auditLogService;
         this.moduleAccessEvaluator = moduleAccessEvaluator;
+        this.printingDisplayRuleService = printingDisplayRuleService;
     }
 
     public OwnerPrintingController(
@@ -85,7 +96,8 @@ public class OwnerPrintingController {
         PrintJobService printJobService,
         AuthorizationService authorizationService,
         FeatureFlagService featureFlagService,
-        StoreModuleAccessEvaluator moduleAccessEvaluator
+        StoreModuleAccessEvaluator moduleAccessEvaluator,
+        PrintingDisplayRuleService printingDisplayRuleService
     ) {
         this(
             printerConfigService,
@@ -95,7 +107,8 @@ public class OwnerPrintingController {
             authorizationService,
             featureFlagService,
             null,
-            moduleAccessEvaluator
+            moduleAccessEvaluator,
+            printingDisplayRuleService
         );
     }
 
@@ -148,6 +161,48 @@ public class OwnerPrintingController {
     public ApiResponse<List<PrinterAssignment>> getAssignments(@RequestParam Long store_id) {
         requirePrintingAccess(store_id);
         return ApiResponse.success(printerAssignmentService.getAssignments(store_id));
+    }
+
+    @GetMapping("/display-rules")
+    public ApiResponse<PrintingDisplayRuleSettingsResponse> getDisplayRules(@RequestParam Long store_id) {
+        requirePrintingAccess(store_id);
+        return ApiResponse.success(printingDisplayRuleService.getSettings(store_id));
+    }
+
+    @PostMapping("/display-rules/draft")
+    public ApiResponse<PrintingDisplayRuleRevisionResponse> saveDisplayRuleDraft(
+        @RequestBody PrintingDisplayRuleDraftRequest request,
+        HttpServletRequest servletRequest
+    ) {
+        var user = requirePrintingAccess(request.store_id);
+        PrintingDisplayRuleRevisionResponse response = printingDisplayRuleService.saveDraft(request);
+        recordAudit(request.store_id, user, "PRINTING_DISPLAY_RULE_DRAFT_SAVED", "PRINTING_DISPLAY_RULE_REVISION",
+            response.id, "Printing display rule draft saved", Map.of("fingerprint_sha256", response.fingerprint_sha256), servletRequest);
+        return ApiResponse.success("Printing display rule draft saved", response);
+    }
+
+    @PostMapping("/display-rules/validate")
+    public ApiResponse<PrintingDisplayRuleValidationResponse> validateDisplayRules(@RequestBody PrintingDisplayRuleDraftRequest request) {
+        requirePrintingAccess(request.store_id);
+        return ApiResponse.success(printingDisplayRuleService.validate(request.store_id, request.content));
+    }
+
+    @PostMapping("/display-rules/preview")
+    public ApiResponse<PrintingDisplayRulePreviewResponse> previewDisplayRules(@RequestBody PrintingDisplayRulePreviewRequest request) {
+        requirePrintingAccess(request.store_id);
+        return ApiResponse.success(printingDisplayRuleService.preview(request));
+    }
+
+    @PostMapping("/display-rules/publish")
+    public ApiResponse<PrintingDisplayRuleRevisionResponse> publishDisplayRuleDraft(
+        @RequestBody PrintingDisplayRulePublishRequest request,
+        HttpServletRequest servletRequest
+    ) {
+        var user = requirePrintingAccess(request.store_id);
+        PrintingDisplayRuleRevisionResponse response = printingDisplayRuleService.publishDraft(request.store_id, request.revision_id);
+        recordAudit(request.store_id, user, "PRINTING_DISPLAY_RULE_PUBLISHED", "PRINTING_DISPLAY_RULE_REVISION",
+            response.id, "Printing display rule revision published", Map.of("fingerprint_sha256", response.fingerprint_sha256), servletRequest);
+        return ApiResponse.success("Printing display rule revision published", response);
     }
 
     @PutMapping("/assignments/{moduleCode}")

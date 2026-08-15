@@ -41,6 +41,7 @@ import {
   parseAndroidBridgeJson,
   type AndroidPadDeviceStatus,
 } from '../../types/androidPadBridge'
+import { PrintingDisplayRulesPanel } from './PrintingDisplayRulesPanel'
 
 type ToastState = { kind: 'success' | 'error'; message: string } | null
 
@@ -1006,6 +1007,11 @@ export function PrintingSettingsPage() {
                 旧版总开关：{printCenter?.printing_enabled ? '已启用' : '已关闭'}
               </button>
             </section>
+
+            <PrintingDisplayRulesPanel
+              storeId={Number(selectedStoreId)}
+              onToast={(message, kind = 'success') => setToast({ kind, message })}
+            />
 
             <button
               type="button"

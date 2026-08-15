@@ -55,6 +55,12 @@ public class PrintJob {
     @Column(name = "rendered_text_snapshot", columnDefinition = "text")
     public String rendered_text_snapshot;
 
+    @Column(name = "printing_rule_revision_id")
+    public Long printingRuleRevisionId;
+
+    @Column(name = "printing_rule_fingerprint", columnDefinition = "char(64)", length = 64)
+    public String printingRuleFingerprint;
+
     @Column(name = "escpos_payload_base64", columnDefinition = "text")
     public String escposPayloadBase64;
 

@@ -57,6 +57,7 @@ class StoreProfileContractValidatorTest {
                 "tables": {"artifact_code": "TABLE_TEMPLATE", "artifact_version": "v1", "fingerprint_sha256": "%s"},
                 "stations": {"artifact_code": "STATION_TEMPLATE", "artifact_version": "v1", "fingerprint_sha256": "%s"},
                 "logical_printing_topology": {"artifact_code": "PRINTING_TOPOLOGY", "artifact_version": "v1", "fingerprint_sha256": "%s"},
+                "printing_display_rules": {"artifact_code": "PRINTING_DISPLAY_RULES", "artifact_version": "v1", "fingerprint_sha256": "%s"},
                 "role_access_defaults": {"artifact_code": "ROLE_ACCESS_DEFAULTS", "artifact_version": "v1", "fingerprint_sha256": "%s"},
                 "hardware_requirements": {"artifact_code": "HARDWARE_REQUIREMENTS", "artifact_version": "v1", "fingerprint_sha256": "%s"}
               },
@@ -68,7 +69,8 @@ class StoreProfileContractValidatorTest {
             }
             """.formatted(
                 hash("{}"), hash("{}"), hash("{}"), hash("{}"),
-                hash("{}"), hash("{}"), hash("{}"), hash("{}")
+                hash("{}"), hash("{}"), hash("{}"), hash("{}"),
+                hash("{}")
             );
         artifacts = List.of(
             artifact("MODULE_DEFAULTS", "MODULE_DEFAULTS", "{}"),
@@ -78,6 +80,7 @@ class StoreProfileContractValidatorTest {
             artifact("TABLE_TEMPLATE", "TABLE_TEMPLATE", "{}"),
             artifact("STATION_TEMPLATE", "STATION_TEMPLATE", "{}"),
             artifact("LOGICAL_PRINTING_TOPOLOGY", "PRINTING_TOPOLOGY", "{}"),
+            artifact("PRINTING_DISPLAY_RULES", "PRINTING_DISPLAY_RULES", "{}"),
             artifact("ROLE_ACCESS_DEFAULTS", "ROLE_ACCESS_DEFAULTS", "{}"),
             artifact("HARDWARE_REQUIREMENTS", "HARDWARE_REQUIREMENTS", "{}")
         );
@@ -136,6 +139,77 @@ class StoreProfileContractValidatorTest {
         assertThat(result.valid()).isFalse();
         assertThat(result.issues()).extracting(StoreProfileValidationIssue::code)
             .contains("MODULE_VALIDATION_UNKNOWN_MODULE", "MODULE_VALIDATION_CORE_MODULE_DISABLED");
+    }
+
+    @Test
+    void postA11ProfileVersionsRequirePrintingDisplayRulesReference() {
+        String invalid = contentJson
+            .replace("\"profile_version\": \"v1\"", "\"profile_version\": \"v2\"")
+            .replace("""
+                "printing_display_rules": {"artifact_code": "PRINTING_DISPLAY_RULES", "artifact_version": "v1", "fingerprint_sha256": "%s"},
+                """.formatted(hash("{}")), "");
+        String fingerprint = validator.computeAggregateFingerprint(
+            "TEST_PROFILE", "v2", StoreProfileContractValidator.SCHEMA_VERSION, invalid, artifacts
+        );
+
+        StoreProfileValidationResult result = validator.validate(
+            "TEST_PROFILE",
+            "v2",
+            StoreProfileContractValidator.SCHEMA_VERSION,
+            invalid,
+            fingerprint,
+            artifacts
+        );
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.issues()).extracting(StoreProfileValidationIssue::path)
+            .contains("template_references.printing_display_rules");
+    }
+
+    @Test
+    void newPostA11VersionOneProfilesAlsoRequirePrintingDisplayRulesReference() {
+        String invalid = contentJson.replace("""
+                "printing_display_rules": {"artifact_code": "PRINTING_DISPLAY_RULES", "artifact_version": "v1", "fingerprint_sha256": "%s"},
+                """.formatted(hash("{}")), "");
+        String fingerprint = validator.computeAggregateFingerprint(
+            "TEST_PROFILE", "v1", StoreProfileContractValidator.SCHEMA_VERSION, invalid, artifacts
+        );
+
+        StoreProfileValidationResult result = validator.validate(
+            "TEST_PROFILE",
+            "v1",
+            StoreProfileContractValidator.SCHEMA_VERSION,
+            invalid,
+            fingerprint,
+            artifacts
+        );
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.issues()).extracting(StoreProfileValidationIssue::path)
+            .contains("template_references.printing_display_rules");
+    }
+
+    @Test
+    void referencesMustHaveMatchingArtifacts() {
+        List<StoreProfileArtifactInput> missingDisplayRules = artifacts.stream()
+            .filter(artifact -> !"PRINTING_DISPLAY_RULES".equals(artifact.artifactCode()))
+            .toList();
+        String fingerprint = validator.computeAggregateFingerprint(
+            "TEST_PROFILE", "v1", StoreProfileContractValidator.SCHEMA_VERSION, contentJson, missingDisplayRules
+        );
+
+        StoreProfileValidationResult result = validator.validate(
+            "TEST_PROFILE",
+            "v1",
+            StoreProfileContractValidator.SCHEMA_VERSION,
+            contentJson,
+            fingerprint,
+            missingDisplayRules
+        );
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.issues()).extracting(StoreProfileValidationIssue::code)
+            .contains("TEMPLATE_REFERENCE_ARTIFACT_MISSING");
     }
 
     @Test
