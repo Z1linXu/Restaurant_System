@@ -1,5 +1,22 @@
 # Known Issues Backlog
 
+## KI-A10-001 — KDS disabled module gate returns generic 500
+
+Status: `OPEN_NON_BLOCKING`.
+
+A10 runtime validation confirmed KDS-disabled access fails closed, but the HTTP
+shape is currently a generic `500 Internal server error` instead of a cleaner
+module-disabled or unavailable-capability response. No unauthorized mutation
+occurred, so this is not a Phase A acceptance blocker. Clean up response shape
+before module-gate UX polish.
+
+## Phase A10 resolved architecture risk
+
+`PHASE_A_IMPLEMENTATION_COMPLETE = YES` and
+`PHASE_A_AUTOMATED_ACCEPTANCE = PASS`. Owner final Staging acceptance remains
+pending. Phase B, Phase C, Chinatown, Sainte-Catherine and Production
+promotion remain unauthorized.
+
 ## Phase A9 resolved architecture risk
 
 The legacy coupling risk is addressed by

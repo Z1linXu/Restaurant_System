@@ -1,6 +1,40 @@
 # Alive Runtime Planbook
 
-## Current Phase A A9 legacy coupling removal (2026-08-14)
+## Current Phase A10 final modular acceptance (2026-08-14)
+
+Phase A automated acceptance is complete on fresh main
+`ad4572759e01b5546ec59af24aa36b09e5c2dd00`, which is also the currently
+deployed Staging application SHA at Flyway V16.
+
+```text
+PHASE_A_IMPLEMENTATION_COMPLETE = YES
+PHASE_A_AUTOMATED_ACCEPTANCE = PASS
+PHASE_A_OWNER_ACCEPTANCE = PENDING
+```
+
+Evidence:
+[PHASE_A10_FINAL_MODULAR_PRODUCTIZATION_ACCEPTANCE_EVIDENCE](../agile/PHASE_A10_FINAL_MODULAR_PRODUCTIZATION_ACCEPTANCE_EVIDENCE.md).
+
+Owner final Staging checklist:
+[PHASE_A_OWNER_FINAL_STAGING_CHECKLIST](../agile/PHASE_A_OWNER_FINAL_STAGING_CHECKLIST.md).
+
+A10 validated the module catalog/dependency graph, Store-scoped module state,
+Store configuration, profile contract, menu/pricing/combo revision semantics,
+module gates, hardware readiness, MOCK printing, Store/staff/auth isolation,
+legacy source-of-truth closure and Phase B readiness. Production remained
+`NO MUTATION`. Staging used only a bounded validation fixture, which was
+soft-cleaned inactive.
+
+Unique stop state:
+
+```text
+PHASE_A_MODULAR_PRODUCTIZATION_AUTOMATED_ACCEPTANCE_PASS_WAITING_FOR_OWNER_FINAL_ACCEPTANCE
+```
+
+Do not start Phase B, Phase C, Chinatown, Sainte-Catherine or Production
+promotion until the Owner opens the next gate.
+
+## Historical Phase A A9 legacy coupling removal (2026-08-14)
 
 Owner authorized continuous execution from A8 into A9. Phase A9 is implemented
 in the repository worktree and remains pending final validation, Agent 6 review,

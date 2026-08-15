@@ -1,5 +1,10 @@
 # Current Staging Architecture UML Baseline
 
+> Phase A10 update: automated Phase A acceptance passed on fresh main and
+> deployed Staging SHA `ad4572759e01b5546ec59af24aa36b09e5c2dd00` at Flyway
+> V16. The baseline remains current for Phase A; Phase B Store provisioning,
+> Chinatown, Sainte-Catherine and Production promotion remain future gates.
+
 > Phase A9 update: the baseline now records legacy coupling removal at
 > repository-implemented / pending exact-SHA Staging validation. Store module,
 > profile, pricing, combo, menu, authorization and hardware sources remain the
@@ -24,11 +29,10 @@ multi-Store creation.
   `ae144e91a7900f0a541446e93c0f498f41f670c0`
 - A8 source authority:
   `8796d03a2f01d3f222fa2e05fc9d2c6152f4809e`
-- A9 source authority:
-  this package/PR; exact merged main SHA and deployed Staging SHA are recorded
-  by the post-merge exact-SHA Staging deployment evidence/final report.
-- Current deployed Staging application SHA observed read-only before A7 deploy:
-  `923346f15757ca85fdafb509a803e87f04ae55bd`
+- A9/A10 source authority:
+  `ad4572759e01b5546ec59af24aa36b09e5c2dd00`
+- Current deployed Staging application SHA:
+  `ad4572759e01b5546ec59af24aa36b09e5c2dd00`
 - Current Staging Flyway: `V16`
 - Current Staging deployment root: `/srv/restaurant-pos/staging`
 - Current Staging compose project: `restaurant-pos-staging`
@@ -58,8 +62,8 @@ The diagrams cover the implemented current Staging architecture:
 - Staging deployment topology
 - authorization flow
 
-They intentionally do not describe future A10, Phase B, Chinatown, or
-Sainte-Catherine behavior as current.
+They intentionally do not describe Phase B, Chinatown, or Sainte-Catherine
+behavior as current.
 
 ## Anti-drift authority
 
@@ -87,9 +91,9 @@ flowchart TD
     baseline --> deployment["07 Deployment Architecture"]
     baseline --> auth["08 Authorization Flow"]
 
-    runtime["Pre-A7 observed Staging runtime<br/>923346f... / Flyway V16"] --> baseline
-    source["A8 main + A9 package<br/>exact merge SHA recorded after deploy"] --> baseline
-    future["A10 / Phase B / Phase C<br/>not implemented here"] -. "future only" .-> baseline
+    runtime["Current Staging runtime<br/>ad457275... / Flyway V16"] --> baseline
+    source["Phase A automated acceptance<br/>A10 PASS"] --> baseline
+    future["Phase B / Phase C<br/>not implemented here"] -. "future only" .-> baseline
 ```
 
 ## Diagram index
@@ -112,7 +116,8 @@ flowchart TD
 | `ST_DENIS_CANONICAL_PROFILE/v1` is stored and validated, but no current code path creates a live Store from it. | `PHASE_B_EXPECTED_WORK` | `StoreProfileMaterializationDryRunValidator` validates graph shape only. | Keep profile as template architecture; do not draw Phase B Store creation as current. |
 | Frontend Store-scoped routes, pages and navigation now read authenticated Store Context `module_configuration` and fail closed. | `A7_IMPLEMENTED` | `frontend/src/App.tsx`, `frontend/src/features/store/storeModuleAccess.ts`, `frontend/src/features/store/StoreContext.tsx`, Owner/frontdesk navigation components. | Legacy frontend feature config remains only an environment/platform compatibility gate. |
 | A8 hardware capability/readiness is now a first-class contract for module access. | `A8_IMPLEMENTED` | `hardware-capability-catalog.v1.json`, `StoreModuleCapabilityProviderImpl`, Store Context `hardware_readiness`, current MOCK Staging topology. | Physical binding and Pad pairing remain separate runtime gates. |
-| A9 legacy coupling removal disables legacy direct active Store creation, gates Owner onboarding/menu-clone facades behind `PLATFORM`, and makes blank/unknown print mode fail closed to `DISABLED`. | `A9_REPOSITORY_IMPLEMENTED_PENDING_STAGING_VALIDATION` | `PlatformAdminServiceImpl`, Owner onboarding/menu clone controllers, `PrintingRuntimePolicyProperties`, `PrinterConfigServiceImpl`, A9 compatibility ledger. | No Flyway expected; exact-SHA Staging validation required before A9 PASS. |
+| A9 legacy coupling removal disables legacy direct active Store creation, gates Owner onboarding/menu-clone facades behind `PLATFORM`, and makes blank/unknown print mode fail closed to `DISABLED`. | `A9_IMPLEMENTED_AND_VALIDATED` | `PlatformAdminServiceImpl`, Owner onboarding/menu clone controllers, `PrintingRuntimePolicyProperties`, `PrinterConfigServiceImpl`, A9 compatibility ledger. | Carried into A10 automated acceptance. |
+| A10 final modular acceptance validated Phase A source-of-truth, Store isolation, module gating, hardware readiness and MOCK printing. | `A10_AUTOMATED_ACCEPTANCE_PASS` | `PHASE_A10_FINAL_MODULAR_PRODUCTIZATION_ACCEPTANCE_EVIDENCE`, runtime evidence `A10_20260815T021324Z`. | Owner final Staging acceptance remains pending. |
 
 ## Key invariants
 

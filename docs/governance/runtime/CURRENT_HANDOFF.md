@@ -1,6 +1,55 @@
 # Current Project Handoff
 
-## 0. Phase A current handoff — A9 repository implementation pending final validation
+## 0. Phase A current handoff — A10 automated acceptance passed, Owner final acceptance pending
+
+Fresh main and deployed Staging application SHA:
+
+```text
+ad4572759e01b5546ec59af24aa36b09e5c2dd00
+```
+
+Current Phase A status:
+
+```text
+PHASE_A_IMPLEMENTATION_COMPLETE = YES
+PHASE_A_AUTOMATED_ACCEPTANCE = PASS
+PHASE_A_OWNER_ACCEPTANCE = PENDING
+```
+
+A10 evidence:
+[PHASE_A10_FINAL_MODULAR_PRODUCTIZATION_ACCEPTANCE_EVIDENCE](../agile/PHASE_A10_FINAL_MODULAR_PRODUCTIZATION_ACCEPTANCE_EVIDENCE.md).
+
+Owner checklist:
+[PHASE_A_OWNER_FINAL_STAGING_CHECKLIST](../agile/PHASE_A_OWNER_FINAL_STAGING_CHECKLIST.md).
+
+Staging retained St-Denis Store identity `store_id=1`,
+`store_code=STG005_SRC_20260809_R01`, Flyway V16 and menu revision 159.
+Automated A10 validation used a bounded synthetic Store fixture only; it was
+soft-cleaned inactive and generated staff credentials were deactivated/removed.
+Production remained `NO MUTATION`.
+
+Next Owner gate:
+
+```text
+PHASE_A_OWNER_FINAL_ACCEPTANCE
+```
+
+If accepted, the next implementation gate is:
+
+```text
+PHASE_B_OWNER_STORE_PROVISIONING_APPROVAL
+```
+
+Do not start Phase B, Phase C, Chinatown, Sainte-Catherine or Production
+promotion before explicit Owner approval.
+
+Unique stop state:
+
+```text
+PHASE_A_MODULAR_PRODUCTIZATION_AUTOMATED_ACCEPTANCE_PASS_WAITING_FOR_OWNER_FINAL_ACCEPTANCE
+```
+
+## 0a. Historical Phase A A9 handoff — superseded by A10 acceptance section
 
 Fresh main authority for the active A9 branch is:
 

@@ -1,5 +1,15 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-14 Phase A10 Final Modular Productization Acceptance: automated
+> Phase A acceptance passed on fresh main/deployed Staging SHA
+> `ad4572759e01b5546ec59af24aa36b09e5c2dd00`, Flyway V16. A10 validated
+> module catalog/dependencies, Store-scoped module state, pricing/combo/menu
+> revision behavior, module gates, hardware readiness, MOCK printing,
+> Store/staff/auth isolation, legacy source-of-truth closure and Phase B
+> readiness using a bounded Staging-only fixture. Production remained
+> no-mutation. Owner final Staging acceptance remains pending. Evidence:
+> [PHASE_A10_FINAL_MODULAR_PRODUCTIZATION_ACCEPTANCE_EVIDENCE](docs/governance/agile/PHASE_A10_FINAL_MODULAR_PRODUCTIZATION_ACCEPTANCE_EVIDENCE.md).
+
 > 2026-08-14 Phase A9 Legacy Coupling Removal: A9 records the current
 > `BUILD ONCE, CONFIGURE MANY` cleanup. Store modules remain canonical in
 > `store_modules`; module definitions remain the catalog; dependencies remain

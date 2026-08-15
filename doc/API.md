@@ -1,5 +1,13 @@
 # Restaurant System API (MVP)
 
+> Phase A10 final modular productization acceptance (2026-08-14): no public API
+> shape change was introduced by A10. Automated acceptance on deployed Staging
+> SHA `ad4572759e01b5546ec59af24aa36b09e5c2dd00` validated existing Store
+> Context/module APIs, Pricing Rules, Combo Configuration, Menu catalog/revision
+> endpoints, Staff/Auth boundaries, order submit and MOCK printing. Owner final
+> Staging acceptance remains pending; Phase B Store provisioning remains
+> unauthorized.
+
 > Phase A9 Legacy Coupling Removal (2026-08-14): Printing mode reads now treat
 > `stores.printing_mode` as the canonical runtime mode; blank, null or unknown
 > persisted values resolve fail-closed to `DISABLED`, and explicit mode
