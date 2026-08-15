@@ -193,6 +193,35 @@ payment/customer payload or raw environment value is introduced.
 - Phase B remains blocked until exact-SHA Staging deployment, automated A11
   validation and Owner Staging retest complete.
 
+## Staging startup repair
+
+During exact-SHA Staging deployment of merged PR #159
+(`9c5bc05912e565c0c4e8cb1b82eae88d15d0fa0a`), Flyway V17 applied
+successfully but backend startup failed schema validation because
+`print_jobs.printing_rule_fingerprint` is a PostgreSQL `CHAR(64)` / `bpchar`
+column while the `PrintJob` entity lacked the explicit Hibernate `CHAR` JDBC
+mapping already used by other fixed-length fingerprint entities.
+
+Repair scope:
+
+- no Flyway history edit;
+- no Staging reset or downgrade;
+- no Production mutation;
+- no printer endpoint/device/secret change;
+- add the missing `@JdbcTypeCode(SqlTypes.CHAR)` mapping to
+  `PrintJob.printingRuleFingerprint`;
+- add a focused entity schema-contract regression test.
+
+Repair validation:
+
+```text
+backend mvn -q -Dtest=PrintJobEntitySchemaContractTest test = PASS
+backend mvn -q -DskipTests compile = PASS
+backend mvn -q test = PASS (528 run, 0 failures, 0 errors, 3 skipped)
+git diff --check = PASS
+Agent 6 focused startup-repair review = ACCEPT
+```
+
 ## Next runtime gate
 
 After PR merge:

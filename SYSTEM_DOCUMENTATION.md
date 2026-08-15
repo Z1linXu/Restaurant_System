@@ -5340,6 +5340,10 @@ Phase A11 Printing Display Rule additions:
   - these fields record which display-rule revision was used for new rendered
     output; `rendered_text_snapshot` remains the primary frozen reprint
     artifact
+  - `printing_rule_fingerprint` is a PostgreSQL fixed-length SHA-256
+    fingerprint column and the JPA entity must keep an explicit `CHAR` JDBC
+    mapping so cloud schema validation accepts the deployed column type without
+    rewriting Flyway history
 
 Current store-level global print flag:
 - `stores.printing_enabled`
