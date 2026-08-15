@@ -8,6 +8,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import lombok.Data;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Data
 @Entity
@@ -59,6 +61,7 @@ public class PrintJob {
     public Long printingRuleRevisionId;
 
     @Column(name = "printing_rule_fingerprint", columnDefinition = "char(64)", length = 64)
+    @JdbcTypeCode(SqlTypes.CHAR)
     public String printingRuleFingerprint;
 
     @Column(name = "escpos_payload_base64", columnDefinition = "text")
