@@ -1,5 +1,42 @@
 # Final Productization Planbook
 
+## Phase B Part 1 Staging runtime-gate repair candidate (2026-08-16)
+
+The auth-prefix repair is merged and deployed to Staging at
+`6fff80e81651727f27f5b999c2e9c5c438fd7f31`. Runtime health, readiness,
+Flyway V20 and acceptance `--validate` passed. Automated acceptance then
+stopped before Store creation: Owner login/workspace passed, but the Phase B
+catalog endpoint returned HTTP 403.
+
+Fresh runtime evidence shows the backend container lacks the required Staging
+Phase B capability flags:
+
+```text
+APP_FEATURES_PLATFORM = ABSENT
+APP_PHASE_B_PROVISIONING_ENABLED = ABSENT
+```
+
+The current repair candidate maps and validates those two flags in the
+isolated Staging compose/deploy helper. Production compose/runtime remains out
+of scope and the backend cloud defaults remain fail-closed unless a runtime
+explicitly provides the flags.
+
+Required next route:
+
+```text
+PR/merge
+-> fresh fetch and governance reread
+-> exact-SHA Staging deploy
+-> Phase B Part 1 automated acceptance
+-> Owner manual Part 1 retest gate
+```
+
+Success still stops at:
+
+```text
+PHASE_B_PART1_CREATE_STORE_AND_MASTER_MENU_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
 ## Phase B Part 1 authorization prefix repair candidate (2026-08-16)
 
 Owner product decision change:

@@ -1,5 +1,16 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-16 Phase B Part 1 Staging runtime-gate repair candidate:
+> Auth-prefix repair is merged and deployed to Staging at
+> `6fff80e81651727f27f5b999c2e9c5c438fd7f31`; health/readiness/Flyway V20 and
+> acceptance `--validate` passed. Runtime acceptance stopped before Store
+> creation after Owner login/workspace passed and catalog returned HTTP 403.
+> Fresh runtime evidence shows the backend container lacked
+> `APP_FEATURES_PLATFORM` and `APP_PHASE_B_PROVISIONING_ENABLED`. The repair
+> maps and validates those flags only for the isolated Staging deploy helper;
+> backend cloud defaults remain fail-closed, and Production remains
+> `NO_MUTATION`.
+
 > 2026-08-16 Phase B Part 1 authorization prefix repair candidate: Owner
 > superseded the previous Phase B Part 1 acceptance convention that required
 > the Owner login identifier to begin with `STG005_`. Phase B Store

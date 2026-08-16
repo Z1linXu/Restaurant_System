@@ -1,5 +1,12 @@
 # Current Staging Architecture UML Baseline
 
+> Phase B Part 1 Staging runtime-gate repair note: the deployed auth-prefix
+> repair reached Owner login/workspace in Staging, then Phase B catalog
+> returned HTTP 403 because the backend container lacked
+> `APP_FEATURES_PLATFORM` and `APP_PHASE_B_PROVISIONING_ENABLED`. The current
+> repair candidate updates only the isolated Staging deploy mapping and leaves
+> Production no-mutation.
+
 > Phase B Part 1 authorization prefix repair note: the Owner provisioning API
 > uses authenticated Owner authority plus active Organization Owner membership
 > and exact Organization scope. `STG005_` naming remains a synthetic

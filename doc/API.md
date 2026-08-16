@@ -18,7 +18,10 @@
 > `ST_DENIS_CANONICAL_PROFILE/v2` and `LANZHOU_CHAIN_MASTER_MENU/v1`.
 > `POST /` requires `Idempotency-Key`, authenticated Owner authority, active
 > Organization ownership, the non-Production Phase B runtime gate and Platform
-> capability. It creates a synthetic/non-active validation Store, materializes
+> capability. In the isolated Staging runtime those gates are supplied by
+> `APP_FEATURES_PLATFORM=true` and
+> `APP_PHASE_B_PROVISIONING_ENABLED=true`; cloud defaults remain fail-closed
+> without explicit runtime flags. It creates a synthetic/non-active validation Store, materializes
 > the full Store-owned menu/config/printing-rule graph, records Master/Profile
 > provenance, and returns request/store IDs, replay flag, validation status,
 > result/error code and materialization counts. The API does not re-enable

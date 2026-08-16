@@ -1,5 +1,50 @@
 # Alive Runtime Planbook
 
+## Current Phase B Part 1 Staging runtime-gate repair candidate (2026-08-16)
+
+Fresh authority after the auth-prefix repair merge:
+
+```text
+origin/main = 6fff80e81651727f27f5b999c2e9c5c438fd7f31
+branch = codex/phase-b-staging-runtime-gate-repair
+staging_deployed_sha = 6fff80e81651727f27f5b999c2e9c5c438fd7f31
+staging_flyway = V20
+production = NO_MUTATION
+```
+
+Runtime evidence for the `6fff80e...` Staging deploy shows health/readiness
+PASS and Phase B Part 1 acceptance `--validate` PASS. Automated acceptance then
+stopped before Store creation: after the reviewed Owner login reached
+`LOGIN|HTTP_200` and `OWNER_WORKSPACE|PASS`, the catalog call returned HTTP
+403.
+
+Fresh code/runtime audit classifies the 403 as Staging runtime capability
+drift: the Phase B contract requires both `PLATFORM` capability and the
+non-Production Phase B provisioning gate, but the Staging backend container
+only exposed `SPRING_PROFILES_ACTIVE=cloud`; `APP_FEATURES_PLATFORM` and
+`APP_PHASE_B_PROVISIONING_ENABLED` were absent. The current repair candidate
+adds Staging-only compose/deploy-helper mapping and validation for those two
+flags. Backend authorization remains authenticated Owner plus active
+Organization Owner membership and exact Organization scope. No credential SQL,
+Flyway repair, Production action, Phase B Part 2, activation, printer endpoint,
+or hardware binding is authorized by this repair.
+
+Next required route:
+
+```text
+PR/merge
+-> fresh fetch and governance reread
+-> exact-SHA Staging deploy
+-> Phase B Part 1 automated acceptance
+-> Owner manual Part 1 retest gate
+```
+
+Unique stop target remains:
+
+```text
+PHASE_B_PART1_CREATE_STORE_AND_MASTER_MENU_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
 ## Current Phase B Part 1 auth-prefix repair candidate (2026-08-16)
 
 Fresh authority recovery for the Owner product decision change started from:

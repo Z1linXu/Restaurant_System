@@ -18,18 +18,21 @@ spring:
     enabled: true
 
 app:
+  features:
+    printing: ${APP_FEATURES_PRINTING:true}
+    kds: false
+    platform: ${APP_FEATURES_PLATFORM:false}
   auth:
     jwt-secret: ${JWT_SECRET}
     x-user-id-fallback-enabled: false
   dev-tools:
     role-switcher-enabled: false
+  phase-b:
+    provisioning:
+      enabled: ${APP_PHASE_B_PROVISIONING_ENABLED:false}
   seed:
     safe-metadata-enabled: true
     default-users-enabled: false
     demo-data-enabled: false
     membership-supplement-enabled: false
     production-bootstrap-enabled: false
-
-features:
-  printing: true
-  kds: false
