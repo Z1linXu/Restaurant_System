@@ -213,7 +213,7 @@ master_content AS (
                 'name_en', option_rows.option_json ->> 'name_en',
                 'name_zh', option_rows.option_json ->> 'name_zh',
                 'price_delta', option_rows.option_json ->> 'price_delta',
-                'sort_order', (option_rows.option_json ->> 'sort_order')::integer,
+                'sort_order', coalesce(NULLIF(option_rows.option_json ->> 'sort_order', '')::integer, option_rows.ordinal::integer),
                 'default_active', (option_rows.option_json ->> 'enabled')::boolean
             ) ORDER BY option_rows.ordinal)
             FROM option_rows
@@ -367,7 +367,7 @@ SELECT
     option_entry.value ->> 'name_en',
     option_entry.value ->> 'name_zh',
     coalesce(NULLIF(option_entry.value ->> 'price_delta', '')::numeric, 0),
-    (option_entry.value ->> 'sort_order')::integer,
+    coalesce(NULLIF(option_entry.value ->> 'sort_order', '')::integer, 0),
     (option_entry.value ->> 'default_active')::boolean,
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP

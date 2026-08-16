@@ -1,5 +1,15 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-16 Phase B Part 1 V19 Staging runtime repair: exact `origin/main`
+> `908902b41d4d4b34b0ce663da4a7dd75800cdb36` completed release/env
+> preparation, fresh same-host preflight and Staging deploy/start, but health
+> check failed because Flyway V19 attempted to insert Master Menu options with
+> `sort_order = null` for source Profile options that do not carry that field.
+> Read-only DB evidence showed Flyway successful through V18 and no successful
+> V19 row, so no Flyway repair/clean/history edit is required or allowed. The
+> repair gives V19 option seed rows a deterministic ordinality fallback and
+> updates the Flyway manifest. Production remains no-mutation.
+
 > 2026-08-16 Phase B Part 1 Owner New Store Provisioning repository
 > implementation: Owner has granted
 > `PHASE_B_OWNER_IMPLEMENTATION_APPROVAL = GRANTED_FOR_PART_1`. Fresh

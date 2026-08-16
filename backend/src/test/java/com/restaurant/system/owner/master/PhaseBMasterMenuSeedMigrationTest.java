@@ -34,6 +34,8 @@ class PhaseBMasterMenuSeedMigrationTest {
             .contains("product_key:option_group:option_code")
             .contains("product_key:option_ref")
             .contains("parent_master_option_key")
+            .contains("coalesce(nullif(option_rows.option_json ->> 'sort_order', '')::integer, option_rows.ordinal::integer)")
+            .contains("coalesce(nullif(option_entry.value ->> 'sort_order', '')::integer, 0)")
             .contains("printing_display_rules")
             .contains("442214c92fabc31801d5e9aff9e08b97eadd404b91141ad9efe28180fea081a0")
             .contains("profile_version = 'v2'")

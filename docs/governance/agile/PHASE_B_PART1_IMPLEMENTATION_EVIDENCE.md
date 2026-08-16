@@ -12,6 +12,7 @@ PHASE_B_PART1_FINAL_REVIEW_BY_AGENT_6 = ACCEPT
 PHASE_B_PART1_STAGING_PREFLIGHT = PENDING
 PHASE_B_PART1_STAGING_DEPLOYMENT = PENDING
 PHASE_B_PART1_STAGING_AUTOMATED_ACCEPTANCE = PENDING
+PHASE_B_PART1_RUNTIME_REPAIR = V19_SORT_ORDER_FALLBACK_IN_PROGRESS
 PHASE_B_PART1_OWNER_ACCEPTANCE = PENDING
 PHASE_B_PART2 = NOT_STARTED
 PRODUCTION = NO_MUTATION
@@ -30,6 +31,22 @@ Merge authority:
 PR = #161
 merged_at = 2026-08-16T02:50:24Z
 merge_commit = 4ace6988dd4793b3b7259bf7455289af24f13d4b
+```
+
+Runtime repair evidence:
+
+```text
+docs_sync_merge = 908902b41d4d4b34b0ce663da4a7dd75800cdb36
+release_env_evidence = /srv/restaurant-pos/staging/evidence/phase-b-part1-release-env-908902b41d4d4b34b0ce663da4a7dd75800cdb36.txt
+preflight_evidence = /srv/restaurant-pos/staging/evidence/phase-b-part1-preflight-908902b41d4d4b34b0ce663da4a7dd75800cdb36.txt
+preflight_sha256 = 665fa21c7fb18c0846f7f3f98f4b16259902e8d48ce7ac856d78c939de865605
+deploy_evidence = /srv/restaurant-pos/staging/evidence/phase-b-part1-deploy-908902b41d4d4b34b0ce663da4a7dd75800cdb36.txt
+deploy_sha256 = b2d9401e8b5dae779cd2ecf7104ccaaaa4d86214c11439267c2f7258104bc2ae
+health_evidence = /srv/restaurant-pos/staging/evidence/phase-b-part1-health-r2-908902b41d4d4b34b0ce663da4a7dd75800cdb36.txt
+health_sha256 = aef44a9a0b167dbf1b1c87f40454c022ce9ed68713d1fce8365eaf8b63075719
+blocker = Flyway V19 null option sort_order from source Profile options without sort_order
+flyway_runtime_state = V1-V18 successful, no V19 successful row
+repair = coalesce source option sort_order to JSON ordinality before content seed and table insert
 ```
 
 ## Implemented Scope
