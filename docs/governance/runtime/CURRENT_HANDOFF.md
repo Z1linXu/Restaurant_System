@@ -5,22 +5,25 @@
 Latest merged main and Staging runtime:
 
 ```text
-origin/main = 397bf09d01371961f6a438db67fd069afa7ed049
+origin/main = 83741ea88e07bf6735462fb5f3816650b6db59b4
 V19_REPAIR_PR = #163
-STAGING_DEPLOYED_SHA = 397bf09d01371961f6a438db67fd069afa7ed049
+JQ_FALLBACK_PR = #164
+STAGING_DEPLOYED_SHA = 83741ea88e07bf6735462fb5f3816650b6db59b4
 STAGING_FLYWAY = V20
 STAGING_HEALTH = PASS
+PHASE_B_ACCEPTANCE_VALIDATE = PASS
 PRODUCTION = NO_MUTATION
 ```
 
 Staging evidence:
 
 ```text
-candidate_import_sha256 = ed056da3556cc571d18886e85c75b4b45bb87dbe1b86a98a631d4a941bdc6d55
-release_env_sha256 = b69066aa9ab50debd4ed5057d2b64be4080d19ecb1175d9c798edad850c5c781
-preflight_r2_sha256 = a12231c644b0b1155a6af443c56ae88c0d6d510dc1e50a9424eed653e5f329ab
-deploy_r2_sha256 = 69200b5e1df781da20a29f1c5dce8b344edb471001c97dd0b20e01c3c423d4a7
-health_r2_sha256 = e44460e11dc89de865dfcccf1e67a74d66f286786bb422c6ef8e84af6d683a14
+candidate_import_sha256 = d37f5031f3ef0ed2821152ecf1de082aa5446a08abb4ecf1e5f389246ec58cbe
+release_env_sha256 = e19eb3306d5513be45fbb53a09d388be79f95bd1b97c0b2fb9b51a11184c2b9c
+preflight_sha256 = 3564abfd7c3e969b56b9a1d506a525d63d74248a5ff605c346bc304e3ea1b777
+deploy_sha256 = a1a2802c460186baadc20274d2c14436c73b0031548708b175f5bfc8a41f2a8e
+health_sha256 = e44460e11dc89de865dfcccf1e67a74d66f286786bb422c6ef8e84af6d683a14
+acceptance_validate_sha256 = daa170b306ebf3b7b35abb96dfab0187cf256bdcd044cbc9b1ba921197999ec3
 ```
 
 Backend startup logs show Flyway validated 20 migrations, migrated V19 and V20
@@ -32,9 +35,9 @@ Automated Phase B Part 1 acceptance is currently blocked before creating
 `PHASE_B_VALIDATION_STORE_*`:
 
 ```text
-BLOCKER_1 = Staging host lacks jq; Phase B acceptance requires a jq-compatible parser
+RESOLVED_BLOCKER = Staging host lacks jq; Phase B acceptance now uses checked-in jq-compatible parser
 REPAIR_1 = codex/phase-b-part1-acceptance-jq-fallback
-REPAIR_1_STATUS = local tests PASS, PR/merge/deploy still pending
+REPAIR_1_STATUS = PR #164 merged, deployed, acceptance --validate PASS
 BLOCKER_2 = runtime credential identity drift
 RUNTIME_STG005_CREDENTIAL_COUNT = 0
 RUNTIME_LEGACY_CREDENTIALS = owner, manager, staffA, staffB, a10_staff_*

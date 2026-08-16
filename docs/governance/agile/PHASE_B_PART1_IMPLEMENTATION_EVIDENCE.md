@@ -13,7 +13,7 @@ PHASE_B_PART1_STAGING_PREFLIGHT = PASS
 PHASE_B_PART1_STAGING_DEPLOYMENT = PASS
 PHASE_B_PART1_STAGING_AUTOMATED_ACCEPTANCE = PENDING
 PHASE_B_PART1_RUNTIME_REPAIR = V19_SORT_ORDER_FALLBACK_DEPLOYED_HEALTH_PASS
-PHASE_B_PART1_ACCEPTANCE_TOOLING_REPAIR = JQ_FALLBACK_IN_PROGRESS
+PHASE_B_PART1_ACCEPTANCE_TOOLING_REPAIR = JQ_FALLBACK_DEPLOYED_VALIDATE_PASS
 PHASE_B_PART1_ACCEPTANCE_RUNTIME_CREDENTIAL_GATE = BLOCKED_STG005_CREDENTIAL_DRIFT
 PHASE_B_PART1_OWNER_ACCEPTANCE = PENDING
 PHASE_B_PART2 = NOT_STARTED
@@ -79,6 +79,26 @@ runtime_legacy_credentials = owner, manager, staffA, staffB, a10_staff_*
 bootstrap_request = STG005_20260809_R01 completed at old runtime 712531b941db92f4325a86126883706314f4cba5c with owner_user_id=1
 conflict = historical governance says STG005 Owner credential ready, latest runtime evidence does not
 required_next_gate = reviewed Staging STG005 Owner credential reconciliation before automated acceptance
+```
+
+Jq fallback repair deploy evidence:
+
+```text
+jq_fallback_merge_sha = 83741ea88e07bf6735462fb5f3816650b6db59b4
+candidate_import_evidence = /srv/restaurant-pos/staging/evidence/phase-b-part1-candidate-import-83741ea88e07bf6735462fb5f3816650b6db59b4.txt
+candidate_import_sha256 = d37f5031f3ef0ed2821152ecf1de082aa5446a08abb4ecf1e5f389246ec58cbe
+release_env_evidence = /srv/restaurant-pos/staging/evidence/phase-b-part1-release-env-83741ea88e07bf6735462fb5f3816650b6db59b4.txt
+release_env_sha256 = e19eb3306d5513be45fbb53a09d388be79f95bd1b97c0b2fb9b51a11184c2b9c
+preflight_evidence = /srv/restaurant-pos/staging/evidence/phase-b-part1-preflight-83741ea88e07bf6735462fb5f3816650b6db59b4.txt
+preflight_sha256 = 3564abfd7c3e969b56b9a1d506a525d63d74248a5ff605c346bc304e3ea1b777
+deploy_evidence = /srv/restaurant-pos/staging/evidence/phase-b-part1-deploy-83741ea88e07bf6735462fb5f3816650b6db59b4.txt
+deploy_sha256 = a1a2802c460186baadc20274d2c14436c73b0031548708b175f5bfc8a41f2a8e
+health_evidence = /srv/restaurant-pos/staging/evidence/phase-b-part1-health-83741ea88e07bf6735462fb5f3816650b6db59b4.txt
+health_sha256 = e44460e11dc89de865dfcccf1e67a74d66f286786bb422c6ef8e84af6d683a14
+acceptance_validate_evidence = /srv/restaurant-pos/staging/evidence/phase-b-part1-acceptance-validate-83741ea88e07bf6735462fb5f3816650b6db59b4.txt
+acceptance_validate_sha256 = daa170b306ebf3b7b35abb96dfab0187cf256bdcd044cbc9b1ba921197999ec3
+runtime_env_sha = 83741ea88e07bf6735462fb5f3816650b6db59b4
+flyway = V20 with all rows success and V19 checksum 182579909
 ```
 
 ## Implemented Scope

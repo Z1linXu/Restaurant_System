@@ -1,39 +1,42 @@
 # Alive Runtime Planbook
 
-## Current Phase B Part 1 Staging state after V19 repair deploy (2026-08-16)
+## Current Phase B Part 1 Staging state after jq fallback deploy (2026-08-16)
 
-V19 sort-order repair merged through PR #163 and became:
+V19 sort-order repair merged through PR #163 at `397bf09d...`; jq fallback
+repair merged through PR #164 and became the current deployed authority:
 
 ```text
-origin/main = 397bf09d01371961f6a438db67fd069afa7ed049
+origin/main = 83741ea88e07bf6735462fb5f3816650b6db59b4
 ```
 
-Staging exact-SHA sequence for `397bf09d01371961f6a438db67fd069afa7ed049`:
+Staging exact-SHA sequence for `83741ea88e07bf6735462fb5f3816650b6db59b4`:
 
 ```text
 candidate_import = PASS
-candidate_import_evidence = /srv/restaurant-pos/staging/evidence/phase-b-part1-candidate-import-397bf09d01371961f6a438db67fd069afa7ed049.txt
-candidate_import_sha256 = ed056da3556cc571d18886e85c75b4b45bb87dbe1b86a98a631d4a941bdc6d55
+candidate_import_evidence = /srv/restaurant-pos/staging/evidence/phase-b-part1-candidate-import-83741ea88e07bf6735462fb5f3816650b6db59b4.txt
+candidate_import_sha256 = d37f5031f3ef0ed2821152ecf1de082aa5446a08abb4ecf1e5f389246ec58cbe
 release_env_validate = PASS
-release_env_validate_sha256 = 6807aee4bd51fc887ab7eaad1b6408b03faa63f3f9a1c69906e339e0770cd486
+release_env_validate_sha256 = 93b617cc93f46685a634481a76b817a239373c22adc9d66a731bdc72a3fa60cc
 release_env_execute = PASS
-release_env_sha256 = b69066aa9ab50debd4ed5057d2b64be4080d19ecb1175d9c798edad850c5c781
-preflight_r2 = PASS
-preflight_r2_sha256 = a12231c644b0b1155a6af443c56ae88c0d6d510dc1e50a9424eed653e5f329ab
-deploy_r2 = PASS
-deploy_r2_sha256 = 69200b5e1df781da20a29f1c5dce8b344edb471001c97dd0b20e01c3c423d4a7
-health_r2 = PASS
-health_r2_sha256 = e44460e11dc89de865dfcccf1e67a74d66f286786bb422c6ef8e84af6d683a14
+release_env_sha256 = e19eb3306d5513be45fbb53a09d388be79f95bd1b97c0b2fb9b51a11184c2b9c
+preflight = PASS
+preflight_sha256 = 3564abfd7c3e969b56b9a1d506a525d63d74248a5ff605c346bc304e3ea1b777
+deploy = PASS
+deploy_sha256 = a1a2802c460186baadc20274d2c14436c73b0031548708b175f5bfc8a41f2a8e
+health = PASS
+health_sha256 = e44460e11dc89de865dfcccf1e67a74d66f286786bb422c6ef8e84af6d683a14
+phase_b_acceptance_validate = PASS
+phase_b_acceptance_validate_sha256 = daa170b306ebf3b7b35abb96dfab0187cf256bdcd044cbc9b1ba921197999ec3
 flyway = V20 (V19 and V20 successfully applied by normal startup)
 production = NO_MUTATION
 ```
 
 Automated Phase B Part 1 acceptance is not complete. Fresh runtime inspection
-found two acceptance-gate blockers before Store creation:
+found the remaining acceptance-gate blocker before Store creation:
 
 ```text
 STAGING_HOST_JQ = ABSENT
-PHASE_B_ACCEPTANCE_JQ_FALLBACK_REPAIR = IN_PROGRESS
+PHASE_B_ACCEPTANCE_JQ_FALLBACK_REPAIR = DEPLOYED_AND_VALIDATE_PASS
 STG005_RUNTIME_CREDENTIALS = DRIFT
 runtime_counts = organizations=1 stores=5 users=6 credentials=6 stg005_organizations=1 stg005_stores=1 stg005_credentials=0
 legacy_credentials = owner, manager, staffA, staffB, a10_staff_*
