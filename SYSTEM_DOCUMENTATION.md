@@ -1,5 +1,19 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-16 Phase B Part 1 combo acceptance payload repair candidate:
+> Staging deploy of `origin/main@a9be0c858dab52ef46170551e14f7c8633ffac72`
+> passed health, readiness, runtime evidence and Flyway V21. Phase B Part 1
+> acceptance then created validation Store
+> `PHASE_B_VALIDATION_STORE_A9BE0C8_R1` / `store_id=7` and passed provisioning
+> replay, materialization, Store context/catalog, item/category isolation,
+> Store-only item isolation and pricing independence. It stopped at combo
+> independence because the acceptance helper sent combo components at the
+> top-level `components` field while the canonical combo API expects
+> `groups[].components` when group updates are present. The repair changes only
+> the acceptance payload shape and jq fallback for that fixed filter. Production
+> remains no-mutation; the next Staging acceptance rerun must use a new
+> validation Store code.
+
 > 2026-08-16 Phase B Part 1 jq fallback replay repair candidate:
 > Staging deploy of `origin/main@489e157433307c4b5aabdeb99e069a77e84561f5`
 > passed health, readiness, runtime evidence and Flyway V21, then Phase B

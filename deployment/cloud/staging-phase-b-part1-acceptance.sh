@@ -542,8 +542,10 @@ then 'PASS' else 'FAIL target pricing did not diverge independently' end;
     .data as $data |
     {
       store_id: $store,
-      groups: [$data.groups[] | {group_id, group_code, name_zh, name_en, selection_rule, required, enabled, display_order, default_component_code}],
-      components: [$data.groups[].components[] | {id, group_id, component_group, component_code, name_zh, name_en, enabled: (if .id == $component then false else .enabled end), display_order, is_default, linked_menu_item_id, business_behavior}]
+      groups: [$data.groups[] | {
+        group_id, group_code, name_zh, name_en, selection_rule, required, enabled, display_order, default_component_code,
+        components: [.components[] | {id, group_id, component_group, component_code, name_zh, name_en, enabled: (if .id == $component then false else .enabled end), display_order, is_default, linked_menu_item_id, business_behavior}]
+      }]
     }' "$combo" >"$combo_update"
   api_call update_combo PUT "/admin/menu/combo-configuration" "$combo_update" "$ACCESS_TOKEN"
   reject_secret_response_fields update_combo
