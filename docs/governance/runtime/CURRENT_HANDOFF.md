@@ -2,16 +2,17 @@
 
 ## 0. Phase B Part 1 current handoff - repository implementation pending runtime gates
 
-Fresh latest main:
+Part 1 implementation merge authority:
 
 ```text
-0de03c773ef04594e7d737c6bccdf6f607692eca
+PR #161
+4ace6988dd4793b3b7259bf7455289af24f13d4b
 ```
 
-Current branch/worktree for Phase B Part 1:
+Current branch/worktree for post-merge governance sync:
 
 ```text
-codex/phase-b-part1-owner-store-provisioning
+codex/phase-b-part1-postmerge-governance
 ```
 
 Latest Owner authority:
@@ -23,13 +24,13 @@ PHASE_A11_5_CHAIN_MASTER_MENU_DESIGN = PASS
 PHASE_B_OWNER_IMPLEMENTATION_APPROVAL = GRANTED_FOR_PART_1
 ```
 
-Part 1 repository implementation is complete pending PR/merge, fresh Staging
-runtime preflight, exact-SHA Staging deploy and automated acceptance. The
-package implements Owner UI-driven synthetic Store provisioning, complete
-Chain Master Menu materialization, independent local menu review/deactivation
-and Staging automated acceptance tooling. It is not authority for Part 2,
-final activation, Chinatown, Sainte-Catherine, Production, physical hardware
-binding or final staff credential provisioning.
+Part 1 repository implementation merged to `main` through PR #161 and remains
+pending fresh Staging runtime preflight, exact-SHA Staging deploy and
+automated acceptance. The package implements Owner UI-driven synthetic Store
+provisioning, complete Chain Master Menu materialization, independent local
+menu review/deactivation and Staging automated acceptance tooling. It is not
+authority for Part 2, final activation, Chinatown, Sainte-Catherine,
+Production, physical hardware binding or final staff credential provisioning.
 
 Fresh audit, plan and repository evidence:
 
@@ -62,13 +63,14 @@ fresh Staging runtime preflight is required before deploy
 Next gate:
 
 ```text
-PR_MERGE
+fresh Staging runtime preflight
 ```
 
 Then:
 
 ```text
 git fetch origin --prune
+-> confirm exact deploy SHA from current origin/main
 -> fresh Staging runtime preflight
 -> exact-SHA Staging deploy
 -> Phase B Part 1 automated acceptance

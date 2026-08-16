@@ -3,9 +3,10 @@
 > 2026-08-16 Phase B Part 1 Owner New Store Provisioning repository
 > implementation: Owner has granted
 > `PHASE_B_OWNER_IMPLEMENTATION_APPROVAL = GRANTED_FOR_PART_1`. Fresh
-> repository authority at implementation start is
-> `origin/main@0de03c773ef04594e7d737c6bccdf6f607692eca`. Part 1 repository
-> implementation is complete pending PR/merge, fresh Staging runtime preflight,
+> repository authority at implementation start was
+> `origin/main@0de03c773ef04594e7d737c6bccdf6f607692eca`; implementation merged
+> through PR #161 at `4ace6988dd4793b3b7259bf7455289af24f13d4b`. Part 1
+> repository implementation is now pending fresh Staging runtime preflight,
 > exact-SHA Staging deploy and automated acceptance. It adds additive Flyway
 > V18-V20, `LANZHOU_CHAIN_MASTER_MENU/v1`,
 > `ST_DENIS_CANONICAL_PROFILE/v2`, Owner-only idempotent Store provisioning
@@ -17,7 +18,8 @@
 > activation, Chinatown, Sainte-Catherine, physical printer/Pad binding, final
 > staff credentials, Production deploy/restart/Flyway or Production mutation.
 > Agent 6 final repository review returned `PHASE_B_PART1_ACCEPT`; next gate is
-> PR/merge, then fresh Staging runtime preflight before exact-SHA deploy.
+> fresh Staging runtime preflight before exact-SHA deploy from the current
+> fresh-fetched `origin/main`.
 > Evidence:
 > [PHASE_B_PART1_IMPLEMENTATION_AUDIT](docs/governance/agile/PHASE_B_PART1_IMPLEMENTATION_AUDIT.md)
 > ,
