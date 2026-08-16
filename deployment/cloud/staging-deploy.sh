@@ -38,11 +38,13 @@ DB_NAME DB_USER DB_PASSWORD JWT_SECRET SPRING_PROFILES_ACTIVE JAVA_OPTS
 BACKEND_IMAGE FRONTEND_IMAGE VITE_APP_BUILD_VERSION
 STAGING_PRINT_MODE STAGING_PRINTING_FEATURE_ENABLED STAGING_ALLOWED_PRINTING_MODES
 STAGING_PRINTER_ENDPOINT_CONFIGURATION_ENABLED STAGING_PRINTER_ENDPOINT
+STAGING_PLATFORM_FEATURE_ENABLED STAGING_PHASE_B_PROVISIONING_ENABLED
 STAGING_DB_CPU_LIMIT STAGING_DB_MEMORY_LIMIT
 STAGING_BACKEND_CPU_LIMIT STAGING_BACKEND_MEMORY_LIMIT
 STAGING_NGINX_CPU_LIMIT STAGING_NGINX_MEMORY_LIMIT
 STAGING_LOG_MAX_SIZE STAGING_LOG_MAX_FILE
-APP_FEATURES_PRINTING APP_PRINTING_ALLOWED_MODES APP_PRINTING_ENDPOINT_CONFIGURATION_ENABLED
+APP_FEATURES_PRINTING APP_FEATURES_PLATFORM APP_PHASE_B_PROVISIONING_ENABLED
+APP_PRINTING_ALLOWED_MODES APP_PRINTING_ENDPOINT_CONFIGURATION_ENABLED
 APP_AUTH_X_USER_ID_FALLBACK_ENABLED APP_DEV_TOOLS_ROLE_SWITCHER_ENABLED
 APP_SEED_DEFAULT_USERS_ENABLED APP_SEED_DEMO_DATA_ENABLED
 "
@@ -569,6 +571,13 @@ validate_inputs() {
   [[ "$STAGING_PRINTER_ENDPOINT_CONFIGURATION_ENABLED" == "false" ]] || die "Staging printer endpoint configuration must remain disabled"
   ! dotenv_present STAGING_PRINTER_ENDPOINT || die "STAGING_PRINTER_ENDPOINT must remain absent"
 
+  STAGING_PLATFORM_FEATURE_ENABLED="$(dotenv_value STAGING_PLATFORM_FEATURE_ENABLED || true)"
+  STAGING_PHASE_B_PROVISIONING_ENABLED="$(dotenv_value STAGING_PHASE_B_PROVISIONING_ENABLED || true)"
+  [[ -n "$STAGING_PLATFORM_FEATURE_ENABLED" ]] || STAGING_PLATFORM_FEATURE_ENABLED="true"
+  [[ -n "$STAGING_PHASE_B_PROVISIONING_ENABLED" ]] || STAGING_PHASE_B_PROVISIONING_ENABLED="true"
+  [[ "$STAGING_PLATFORM_FEATURE_ENABLED" == "true" ]] || die "Staging Platform capability must be true for Phase B Part 1 provisioning"
+  [[ "$STAGING_PHASE_B_PROVISIONING_ENABLED" == "true" ]] || die "Staging Phase B provisioning gate must be true for Phase B Part 1 provisioning"
+
   for key in APP_AUTH_X_USER_ID_FALLBACK_ENABLED APP_DEV_TOOLS_ROLE_SWITCHER_ENABLED APP_SEED_DEFAULT_USERS_ENABLED APP_SEED_DEMO_DATA_ENABLED; do
     value="$(dotenv_value "$key" || true)"
     [[ -z "$value" || "$value" == "false" ]] || die "$key must be false when set"
@@ -639,6 +648,8 @@ assert_resolved_compose() {
   grep -Eq "NGINX_SERVER_NAME: [\"']?${NGINX_SERVER_NAME}" "$resolved_config" || die "resolved Compose NGINX server name differs from the validated value"
   grep -Fq "VITE_APP_BUILD_VERSION: staging-$STAGING_COMMIT_SHA" "$resolved_config" || die "resolved Compose frontend build version differs from the validated SHA"
   grep -Eq "APP_FEATURES_PRINTING: [\"']?${STAGING_PRINTING_FEATURE_ENABLED}" "$resolved_config" || die "resolved backend printing feature does not match the validated staging mode"
+  grep -Eq "APP_FEATURES_PLATFORM: [\"']?${STAGING_PLATFORM_FEATURE_ENABLED}" "$resolved_config" || die "resolved backend Platform capability does not match the validated Phase B Staging gate"
+  grep -Eq "APP_PHASE_B_PROVISIONING_ENABLED: [\"']?${STAGING_PHASE_B_PROVISIONING_ENABLED}" "$resolved_config" || die "resolved backend Phase B provisioning gate does not match the validated Staging gate"
   grep -Eq "APP_PRINTING_ALLOWED_MODES: [\"']?${STAGING_ALLOWED_PRINTING_MODES}" "$resolved_config" || die "resolved backend printing mode policy does not match the Staging allowlist"
   grep -Eq "APP_PRINTING_ENDPOINT_CONFIGURATION_ENABLED: [\"']?${STAGING_PRINTER_ENDPOINT_CONFIGURATION_ENABLED}" "$resolved_config" || die "resolved backend printer endpoint policy is unsafe"
   grep -Eq '(127\.0\.0\.1:18080:80|published: "18080")' "$resolved_config" || die "resolved Compose does not expose the required loopback staging HTTP port"

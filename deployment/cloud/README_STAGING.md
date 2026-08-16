@@ -73,6 +73,11 @@ Required properties include:
 - `STAGING_ALLOWED_PRINTING_MODES=DISABLED,MOCK` and
   `STAGING_PRINTER_ENDPOINT_CONFIGURATION_ENABLED=false` (these are also the
   fail-closed Compose defaults for retained private environments).
+- for the current Phase B Part 1 Staging acceptance runtime,
+  `STAGING_PLATFORM_FEATURE_ENABLED=true` and
+  `STAGING_PHASE_B_PROVISIONING_ENABLED=true`; these map only into the
+  isolated Staging backend container as `APP_FEATURES_PLATFORM` and
+  `APP_PHASE_B_PROVISIONING_ENABLED`.
 
 The guard rejects blank SHA values, `:local` tags, ports 80/443, public binds,
 relative or symlinked PostgreSQL paths, production-like database defaults,
@@ -86,6 +91,12 @@ runtime allowlist to exactly `DISABLED,MOCK` and disable printer endpoint
 configuration. The resolved Compose configuration is checked before any build
 or start. `REAL` and `PAD_DIRECT` therefore remain rejected by the application
 service boundary even while the Printing APIs are available.
+
+Phase B Part 1 Store provisioning additionally requires the Staging Platform
+capability and Phase B provisioning runtime gate. The Staging deploy helper
+defaults and validates those two gates to `true` for the current acceptance
+loop. Backend cloud defaults remain fail-closed without explicit runtime flags,
+and the production deployment template is separate.
 
 `STAGING_PRINT_MODE` does not create or modify Store database rows. Any Store
 mode transition remains a separate authorized, Store-scoped API action. The

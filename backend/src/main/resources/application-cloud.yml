@@ -25,8 +25,11 @@ app:
     kds: false
     admin: true
     analytics: true
-    platform: false
+    platform: ${APP_FEATURES_PLATFORM:false}
     developer-tools: false
+  phase-b:
+    provisioning:
+      enabled: ${APP_PHASE_B_PROVISIONING_ENABLED:false}
   seed:
     runtime-enabled: true
     force-overwrite: false

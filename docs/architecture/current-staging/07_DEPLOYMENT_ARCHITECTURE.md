@@ -1,5 +1,12 @@
 # 07 Deployment Architecture
 
+> Phase B Part 1 Staging runtime-gate repair note: current Staging deploy
+> wiring must pass `APP_FEATURES_PLATFORM=true` and
+> `APP_PHASE_B_PROVISIONING_ENABLED=true` into the backend container for the
+> Owner provisioning acceptance loop. Backend cloud defaults remain
+> fail-closed, and Production deployment/runtime is not modified by this
+> Staging-only mapping.
+
 ## Purpose
 
 This diagram records the current Staging deployment topology and exact runtime

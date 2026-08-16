@@ -238,6 +238,8 @@ FRONTEND_IMAGE=restaurant-pos-frontend:staging-$COMMIT_SHA
 VITE_APP_BUILD_VERSION=staging-$COMMIT_SHA
 STAGING_PRINT_MODE=DISABLED
 STAGING_PRINTING_FEATURE_ENABLED=false
+STAGING_PLATFORM_FEATURE_ENABLED=false
+STAGING_PHASE_B_PROVISIONING_ENABLED=false
 STAGING_DB_CPU_LIMIT=0.75
 STAGING_DB_MEMORY_LIMIT=512m
 STAGING_BACKEND_CPU_LIMIT=1.00
@@ -266,6 +268,8 @@ assert_env_identity() {
   grep -Fxq 'SPRING_PROFILES_ACTIVE=cloud' "$file" || die "unexpected Spring profile"
   grep -Fxq 'STAGING_PRINT_MODE=DISABLED' "$file" || die "printing must be disabled"
   grep -Fxq 'STAGING_PRINTING_FEATURE_ENABLED=false' "$file" || die "printing feature must be false"
+  grep -Fxq 'STAGING_PLATFORM_FEATURE_ENABLED=false' "$file" || die "local rehearsal Platform capability must be false"
+  grep -Fxq 'STAGING_PHASE_B_PROVISIONING_ENABLED=false' "$file" || die "local rehearsal Phase B provisioning gate must be false"
   ! grep -Eq 'PRINTER|PAD_DIRECT|REAL|MOCK' "$file" || die "synthetic configuration contains forbidden printing settings"
 }
 
@@ -367,6 +371,8 @@ assert_resolved_compose() {
   grep -Fq 'target: /etc/nginx/templates/default.conf.template' "$resolved" || die "resolved Nginx template target differs"
   grep -Fq 'SPRING_PROFILES_ACTIVE: cloud' "$resolved" || die "resolved Spring profile differs"
   grep -Eq "APP_FEATURES_PRINTING: [\\\"']?false" "$resolved" || die "resolved printing feature differs"
+  grep -Eq "APP_FEATURES_PLATFORM: [\\\"']?false" "$resolved" || die "resolved Platform capability differs"
+  grep -Eq "APP_PHASE_B_PROVISIONING_ENABLED: [\\\"']?false" "$resolved" || die "resolved Phase B provisioning gate differs"
   grep -Fq 'STAGING_PRINT_MODE=DISABLED' "$env_file" || die "printing mode must remain disabled"
   source_count="$(grep -Ec '^[[:space:]]*source:' "$resolved" || true)"
   [[ "$source_count" -eq 2 ]] || die "resolved Compose has unexpected mounts"

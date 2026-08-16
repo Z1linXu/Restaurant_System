@@ -1,5 +1,54 @@
 # Current Project Handoff
 
+## 0. Phase B Part 1 current handoff - Staging runtime gate repair candidate
+
+Latest merged source and Staging runtime:
+
+```text
+origin/main = 6fff80e81651727f27f5b999c2e9c5c438fd7f31
+branch = codex/phase-b-staging-runtime-gate-repair
+STAGING_DEPLOYED_SHA = 6fff80e81651727f27f5b999c2e9c5c438fd7f31
+STAGING_FLYWAY = V20
+STAGING_HEALTH = PASS
+PRODUCTION = NO_MUTATION
+```
+
+Phase B Part 1 auth-prefix repair is merged and deployed to Staging.
+Acceptance `--validate` passed. Runtime execution did not create a Store: after
+the current reviewed Owner login reached `LOGIN|HTTP_200` and Owner workspace
+passed, `/owner/organizations/1/phase-b/store-provisioning/catalog` returned
+HTTP 403.
+
+Current blocker classification:
+
+```text
+PHASE_B_AUTH_PREFIX_REPAIR = MERGED_AND_DEPLOYED_TO_STAGING
+PHASE_B_PART1_STAGING_AUTOMATED_ACCEPTANCE = BLOCKED_BEFORE_STORE_CREATION
+BLOCKER = STAGING_RUNTIME_CAPABILITY_FLAGS_NOT_IN_BACKEND_CONTAINER
+MISSING_CONTAINER_FLAGS = APP_FEATURES_PLATFORM, APP_PHASE_B_PROVISIONING_ENABLED
+REPAIR_CANDIDATE = codex/phase-b-staging-runtime-gate-repair
+PHASE_B_PART2 = NOT_STARTED
+PRODUCTION = NO_MUTATION
+```
+
+The repair candidate is Staging-only deploy/runtime wiring. It keeps backend
+Phase B authorization as authenticated Owner plus active Organization Owner
+membership plus exact Organization scope. Do not mutate credentials with SQL,
+touch Production, start Phase B Part 2, activate the validation Store, add
+printer endpoints, or bind hardware as part of this repair.
+
+Next gate:
+
+```text
+PR/merge -> fresh fetch/reread -> exact-SHA Staging deploy -> Phase B Part 1 automated acceptance
+```
+
+Target unique stop remains:
+
+```text
+PHASE_B_PART1_CREATE_STORE_AND_MASTER_MENU_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
 ## 0. Phase B Part 1 current handoff - auth-prefix repair candidate
 
 Fresh authority and runtime identity for this continuation:
