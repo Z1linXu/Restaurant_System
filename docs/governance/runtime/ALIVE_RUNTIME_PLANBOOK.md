@@ -1,5 +1,51 @@
 # Alive Runtime Planbook
 
+## Current Phase B Part 1 Master fingerprint repair candidate (2026-08-16)
+
+Fresh authority after PR #167 merge and exact-SHA Staging deploy:
+
+```text
+origin/main = 218777e418c7415fee4deff7f1c026b3897308d9
+branch = codex/phase-b-master-fingerprint-repair
+staging_deployed_sha = 218777e418c7415fee4deff7f1c026b3897308d9
+staging_flyway = V20
+production = NO_MUTATION
+```
+
+Staging runtime-gate repair is deployed and effective: backend container
+evidence shows `APP_FEATURES_PLATFORM=true` and
+`APP_PHASE_B_PROVISIONING_ENABLED=true`. Phase B Part 1 automated acceptance
+then reached Owner login, Owner workspace and provisioning catalog, but stopped
+before Store creation when the first provisioning POST returned HTTP 400.
+Runtime DB evidence shows zero target Store rows and zero provisioning ledger
+rows for the attempted acceptance.
+
+Fresh code/runtime audit classifies the 400 as Chain Master Menu fingerprint
+drift: V19 stored `LANZHOU_CHAIN_MASTER_MENU/v1` fingerprint
+`e55ad23773753ade22e3e090622c361b58268ae5b43ee354ec7eef5b78f233f7`, while
+runtime canonical JSON validation recomputes
+`ef28a4d160373f0f08b810a6b82d1f3c84f2c7d4aa076cceac00836a13d4f38c`. The
+current repair candidate adds V21 to align the stored Master fingerprint,
+Profile v2 Master reference and API/acceptance constants. It does not modify
+Flyway history, credentials, Production, Phase B Part 2, activation, printer
+endpoints or hardware bindings.
+
+Next required route:
+
+```text
+PR/merge
+-> fresh fetch and governance reread
+-> exact-SHA Staging deploy
+-> Phase B Part 1 automated acceptance
+-> Owner manual Part 1 retest gate
+```
+
+Unique stop target remains:
+
+```text
+PHASE_B_PART1_CREATE_STORE_AND_MASTER_MENU_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
 ## Current Phase B Part 1 Staging runtime-gate repair candidate (2026-08-16)
 
 Fresh authority after the auth-prefix repair merge:
@@ -236,7 +282,7 @@ Part 1 repository implementation now adds Staging-only Owner Create New Store
 provisioning for a synthetic/non-active Store, complete Chain Master Menu
 materialization, independent Store-local menu review/deactivation, validation
 fixture hygiene and automated acceptance tooling. It includes additive Flyway
-V18-V20, `LANZHOU_CHAIN_MASTER_MENU/v1`,
+V18-V21, `LANZHOU_CHAIN_MASTER_MENU/v1`,
 `ST_DENIS_CANONICAL_PROFILE/v2`, the Owner-only idempotent provisioning API,
 Owner Dashboard Create New Store UI, and a secret-safe Staging acceptance
 harness. Part 1 does not authorize Phase B Part 2, final activation,

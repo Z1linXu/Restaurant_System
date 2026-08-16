@@ -366,7 +366,7 @@ with master_version as (
     and master_menu.master_menu_key = 'LANZHOU_CHAIN_MASTER_MENU'
     and version.version_key = 'v1'
     and version.status = 'PUBLISHED'
-    and version.fingerprint_sha256 = 'e55ad23773753ade22e3e090622c361b58268ae5b43ee354ec7eef5b78f233f7'
+    and version.fingerprint_sha256 = 'ef28a4d160373f0f08b810a6b82d1f3c84f2c7d4aa076cceac00836a13d4f38c'
 ),
 counts as (
   select
@@ -393,7 +393,7 @@ with master_version as (
     and master_menu.master_menu_key = 'LANZHOU_CHAIN_MASTER_MENU'
     and version.version_key = 'v1'
     and version.status = 'PUBLISHED'
-    and version.fingerprint_sha256 = 'e55ad23773753ade22e3e090622c361b58268ae5b43ee354ec7eef5b78f233f7'
+    and version.fingerprint_sha256 = 'ef28a4d160373f0f08b810a6b82d1f3c84f2c7d4aa076cceac00836a13d4f38c'
 ),
 representative as (
   select p.master_product_key, p.sku, target_mapping.local_entity_id as target_item_id, source_item.id as source_item_id

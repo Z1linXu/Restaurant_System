@@ -10,7 +10,7 @@ public class ChainMasterMenuCatalogService {
     public static final String INITIAL_MASTER_MENU_KEY = "LANZHOU_CHAIN_MASTER_MENU";
     public static final String INITIAL_MASTER_MENU_VERSION = "v1";
     public static final String INITIAL_MASTER_MENU_FINGERPRINT =
-        "e55ad23773753ade22e3e090622c361b58268ae5b43ee354ec7eef5b78f233f7";
+        "ef28a4d160373f0f08b810a6b82d1f3c84f2c7d4aa076cceac00836a13d4f38c";
 
     private final ChainMasterMenuRepository masterMenuRepository;
     private final ChainMasterMenuVersionRepository masterMenuVersionRepository;

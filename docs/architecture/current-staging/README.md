@@ -14,7 +14,7 @@
 
 > Phase B Part 1 repository implementation note: Chain Master Menu and Store
 > materialization are now implemented in the current Phase B Part 1 candidate
-> through additive Flyway V18-V20, `LANZHOU_CHAIN_MASTER_MENU/v1`,
+> through additive Flyway V18-V21, `LANZHOU_CHAIN_MASTER_MENU/v1`,
 > `ST_DENIS_CANONICAL_PROFILE/v2`, Owner-only idempotent provisioning and
 > Store-local override mappings. This candidate is not yet the deployed
 > Staging runtime baseline until PR/merge, fresh preflight, exact-SHA deploy
@@ -139,7 +139,7 @@ flowchart TD
 | A8 hardware capability/readiness is now a first-class contract for module access. | `A8_IMPLEMENTED` | `hardware-capability-catalog.v1.json`, `StoreModuleCapabilityProviderImpl`, Store Context `hardware_readiness`, current MOCK Staging topology. | Physical binding and Pad pairing remain separate runtime gates. |
 | A9 legacy coupling removal disables legacy direct active Store creation, gates Owner onboarding/menu-clone facades behind `PLATFORM`, and makes blank/unknown print mode fail closed to `DISABLED`. | `A9_IMPLEMENTED_AND_VALIDATED` | `PlatformAdminServiceImpl`, Owner onboarding/menu clone controllers, `PrintingRuntimePolicyProperties`, `PrinterConfigServiceImpl`, A9 compatibility ledger. | Carried into A10 automated acceptance. |
 | A10 final modular acceptance validated Phase A source-of-truth, Store isolation, module gating, hardware readiness and MOCK printing. | `A10_AUTOMATED_ACCEPTANCE_PASS` | `PHASE_A10_FINAL_MODULAR_PRODUCTIZATION_ACCEPTANCE_EVIDENCE`, runtime evidence `A10_20260815T021324Z`. | Owner final Staging acceptance remains pending. |
-| Phase B Part 1 Chain Master Menu and Store materialization are repository-implemented but not yet deployed as current Staging runtime. | `PHASE_B_PART1_REPOSITORY_IMPLEMENTED_PENDING_STAGING` | `PHASE_B_PART1_IMPLEMENTATION_EVIDENCE`, V18-V20 migrations, Owner provisioning API/UI and acceptance harness. | Keep deployed runtime identity at V16 until exact-SHA Staging deploy; Part 2 activation/staff/physical hardware remain planned. |
+| Phase B Part 1 Chain Master Menu and Store materialization are repository-implemented with the current fingerprint repair candidate but not yet deployed as the accepted Staging runtime. | `PHASE_B_PART1_REPOSITORY_IMPLEMENTED_PENDING_STAGING` | `PHASE_B_PART1_IMPLEMENTATION_EVIDENCE`, V18-V21 migrations, Owner provisioning API/UI and acceptance harness. | Keep deployed runtime identity at the latest exact-SHA evidence until Staging deploy/acceptance completes; Part 2 activation/staff/physical hardware remain planned. |
 
 ## Key invariants
 

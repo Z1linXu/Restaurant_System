@@ -1,5 +1,14 @@
 # Restaurant System API (MVP)
 
+> Phase B Part 1 Master fingerprint repair candidate (2026-08-16): the
+> provisioning catalog's `LANZHOU_CHAIN_MASTER_MENU/v1`
+> `master_menu_fingerprint_sha256` is aligned to the runtime canonical
+> fingerprint
+> `ef28a4d160373f0f08b810a6b82d1f3c84f2c7d4aa076cceac00836a13d4f38c` by
+> additive Flyway V21. This corrects a V19 seed fingerprint drift before any
+> Phase B Store was created in Staging. Endpoint paths, authorization, request
+> DTOs and Production boundaries are unchanged.
+
 > Phase B Part 1 authorization prefix repair candidate (2026-08-16): Owner
 > superseded the historical acceptance convention that required the Owner
 > `login_identifier` / username to start with `STG005_` for Phase B Store
