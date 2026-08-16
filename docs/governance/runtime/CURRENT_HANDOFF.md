@@ -1,5 +1,82 @@
 # Current Project Handoff
 
+## 0. Phase B Part 1 current handoff - auth-prefix repair candidate
+
+Fresh authority and runtime identity for this continuation:
+
+```text
+origin/main = 7f10e53163f9a07153e00acdeccf6199222808fd
+branch = codex/phase-b-auth-prefix-repair
+STAGING_DEPLOYED_SHA = 83741ea88e07bf6735462fb5f3816650b6db59b4
+STAGING_FLYWAY = V20
+STAGING_HEALTH = PASS
+PRODUCTION = NO_MUTATION
+```
+
+Owner product decision now supersedes the previous Phase B Part 1 acceptance
+gate that treated `STG005_` login naming as a product authorization boundary:
+
+```text
+PHASE_B_AUTHORIZATION_PREFIX_DRIFT_ANALYSIS = COMPLETE
+PHASE_B_AUTHORIZATION_PREFIX_DRIFT = REPAIR_CANDIDATE_AGENT6_ACCEPT_PENDING_PR_STAGING_ACCEPTANCE
+PHASE_B_CANONICAL_AUTHORIZATION = AUTHENTICATED_OWNER_WITH_ACTIVE_ORGANIZATION_OWNER_MEMBERSHIP
+PHASE_B_USERNAME_PREFIX_AUTHORIZATION = NOT_REQUIRED
+PHASE_B_AUTH_PREFIX_REPAIR_AGENT6 = PHASE_B_AUTH_PREFIX_REPAIR_ACCEPT
+PHASE_B_PART1_STAGING_AUTOMATED_ACCEPTANCE = PENDING
+PHASE_B_PART1_OWNER_ACCEPTANCE = PENDING
+PHASE_B_PART2 = NOT_STARTED
+```
+
+Current classification:
+
+- `STG005_` remains required for synthetic bootstrap/fixture identity when
+  those tools explicitly validate that namespace.
+- Phase B product authorization is principal/role/membership/scope based.
+- Backend provisioning already enforces Owner role and active Organization
+  Owner membership without username-prefix checks.
+- Frontend eligibility and `Access denied` behavior are role/backend-gate
+  driven; no username-prefix frontend gate was found.
+- Fresh Staging evidence shows legacy `owner` is an active credentialed
+  `OWNER` with active Organization Owner membership for Organization `1`; no
+  credential rename, rotation, duplicate STG005 Owner or raw SQL mutation is
+  authorized.
+
+Implemented local repair candidate:
+
+- Phase B Part 1 acceptance helper accepts any non-empty reviewed Owner login
+  identifier and verifies post-login `OWNER`, expected Organization scope and
+  exact authenticated username.
+- The jq-compatible fallback keeps explicit synthetic
+  `startswith("STG005_")` filters for bootstrap/onboarding callers while
+  allowing the new Phase B non-empty-login filter.
+- Backend tests cover `owner`, arbitrary Owner username, `STG005_` non-Owner,
+  wrong Organization, inactive membership and unauthenticated rejection.
+
+Validation completed locally:
+
+```text
+bash deployment/cloud/tests/test_staging_phase_b_part1_acceptance.sh = PASS
+mvn -q -f backend/pom.xml -Dtest=OwnerOrganizationAuthorizationServiceTest,OwnerStoreProvisioningControllerTest test = PASS
+mvn -q -f backend/pom.xml test = PASS
+npm test = PASS
+npm run build = PASS
+npm run lint = FAIL_EXISTING_FRONTEND_LINT_DEBT_UNRELATED_TO_AUTH_PREFIX_REPAIR
+for test_script in deployment/cloud/tests/*.sh; do bash "$test_script" || exit $?; done = PASS
+Agent 6 = PHASE_B_AUTH_PREFIX_REPAIR_ACCEPT
+```
+
+Next gate:
+
+```text
+PR/merge -> fetch/reread -> exact-SHA Staging deploy -> Phase B Part 1 automated acceptance
+```
+
+Target unique stop remains:
+
+```text
+PHASE_B_PART1_CREATE_STORE_AND_MASTER_MENU_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
 ## 0. Phase B Part 1 current handoff - Staging deployed, acceptance gate blocked
 
 Latest merged main and Staging runtime:

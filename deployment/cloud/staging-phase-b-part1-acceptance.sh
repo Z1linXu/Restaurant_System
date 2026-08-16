@@ -172,8 +172,8 @@ read_secret_input() {
     and (.login_password | type == "string" and length >= 12)
     and (.phase_b_idempotency_key | type == "string" and test("^[A-Za-z0-9._:-]{16,255}$"))' "$SECRET_INPUT" >/dev/null ||
     ops001_die "secret input JSON is invalid"
-  LOGIN_IDENTIFIER="$("$JQ_BIN" -er '.login_identifier | strings | select(startswith("STG005_"))' "$SECRET_INPUT")" ||
-    ops001_die "Owner login identifier is outside the synthetic Staging contract"
+  LOGIN_IDENTIFIER="$("$JQ_BIN" -er '.login_identifier | strings | select(length > 0)' "$SECRET_INPUT")" ||
+    ops001_die "Owner login identifier is required"
 }
 
 write_curl_config() {

@@ -14,7 +14,9 @@ PHASE_B_PART1_STAGING_DEPLOYMENT = PASS
 PHASE_B_PART1_STAGING_AUTOMATED_ACCEPTANCE = PENDING
 PHASE_B_PART1_RUNTIME_REPAIR = V19_SORT_ORDER_FALLBACK_DEPLOYED_HEALTH_PASS
 PHASE_B_PART1_ACCEPTANCE_TOOLING_REPAIR = JQ_FALLBACK_DEPLOYED_VALIDATE_PASS
-PHASE_B_PART1_ACCEPTANCE_RUNTIME_CREDENTIAL_GATE = BLOCKED_STG005_CREDENTIAL_DRIFT
+PHASE_B_PART1_ACCEPTANCE_RUNTIME_CREDENTIAL_GATE = SUPERSEDED_FOR_PRODUCT_AUTH_BY_OWNER_DECISION
+PHASE_B_AUTHORIZATION_PREFIX_DRIFT = REPAIR_CANDIDATE_AGENT6_ACCEPT_PENDING_PR_STAGING_ACCEPTANCE
+PHASE_B_AUTH_PREFIX_REPAIR_AGENT6 = PHASE_B_AUTH_PREFIX_REPAIR_ACCEPT
 PHASE_B_PART1_OWNER_ACCEPTANCE = PENDING
 PHASE_B_PART2 = NOT_STARTED
 PRODUCTION = NO_MUTATION
@@ -100,6 +102,78 @@ acceptance_validate_sha256 = daa170b306ebf3b7b35abb96dfab0187cf256bdcd044cbc9b1b
 runtime_env_sha = 83741ea88e07bf6735462fb5f3816650b6db59b4
 flyway = V20 with all rows success and V19 checksum 182579909
 ```
+
+## Phase B STG005 Authorization Drift Analysis
+
+Owner product decision:
+
+```text
+PHASE_B_PROVISIONING_AUTHORIZATION =
+  authenticated principal
+  + OWNER authority
+  + active Organization Owner membership
+  + correct Organization scope
+PHASE_B_PROVISIONING_USERNAME_PREFIX_REQUIRED = NO
+```
+
+Fresh finding:
+
+1. `STG005_` prefix requirements are defined in synthetic bootstrap/source
+   fixture docs and tools, credential rotation/reconciliation tooling, and the
+   historical Phase B Part 1 acceptance helper.
+2. The prefix belongs to Staging synthetic bootstrap/fixture identity,
+   acceptance-tooling convention and historical compatibility. It is not the
+   Phase B product authorization contract.
+3. The backend Phase B provisioning controller and service use feature flag,
+   non-Production runtime gate, Owner authority and active Organization Owner
+   membership. They do not check username prefix.
+4. The blocking Phase B prefix check existed in
+   `deployment/cloud/staging-phase-b-part1-acceptance.sh`.
+5. Frontend `Access denied` comes from role/route gating or backend 403; no
+   frontend username-prefix gate was found.
+6. Fresh runtime read-only evidence shows the current `owner` credential is
+   active, has role `OWNER`, active Organization Owner membership and the
+   expected Organization scope for Organization `1`.
+7. Removing prefix as a Phase B authorization condition affects acceptance
+   tooling, jq fallback compatibility, tests and governance. It does not
+   require backend or frontend product-code changes.
+8. Explicit `STG005_` checks remain required for synthetic bootstrap and
+   fixture tooling where the namespace itself is the safety contract.
+
+Implemented local repair:
+
+- Phase B Part 1 acceptance secret input now accepts any non-empty reviewed
+  Owner login identifier, then verifies the login response is `OWNER`, belongs
+  to the expected Organization and matches the authenticated username.
+- `ops001-jq-compat.py` preserves explicit `startswith("STG005_")` checks for
+  synthetic filters while supporting the Phase B non-empty login filter.
+- Backend authorization regression tests prove authority/membership, not
+  naming convention, determine provisioning access.
+
+Local validation:
+
+```text
+bash deployment/cloud/tests/test_staging_phase_b_part1_acceptance.sh = PASS
+mvn -q -f backend/pom.xml -Dtest=OwnerOrganizationAuthorizationServiceTest,OwnerStoreProvisioningControllerTest test = PASS
+mvn -q -f backend/pom.xml test = PASS
+npm test = PASS
+npm run build = PASS
+npm run lint = FAIL_EXISTING_FRONTEND_LINT_DEBT_UNRELATED_TO_AUTH_PREFIX_REPAIR
+for test_script in deployment/cloud/tests/*.sh; do bash "$test_script" || exit $?; done = PASS
+Agent 6 = PHASE_B_AUTH_PREFIX_REPAIR_ACCEPT
+```
+
+Agent 6 auth-prefix repair review:
+
+```text
+PHASE_B_AUTH_PREFIX_REPAIR_ACCEPT
+```
+
+Agent 6 found no blocking issues and confirmed product authorization remains
+principal/role/membership/scope based, Phase B acceptance no longer requires
+`STG005_`, explicit synthetic guards remain, the requested test matrix is
+covered, and no Production mutation/deploy/restart/Flyway action was
+introduced.
 
 ## Implemented Scope
 

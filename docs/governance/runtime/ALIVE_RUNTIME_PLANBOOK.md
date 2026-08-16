@@ -1,5 +1,93 @@
 # Alive Runtime Planbook
 
+## Current Phase B Part 1 auth-prefix repair candidate (2026-08-16)
+
+Fresh authority recovery for the Owner product decision change started from:
+
+```text
+origin/main = 7f10e53163f9a07153e00acdeccf6199222808fd
+branch = codex/phase-b-auth-prefix-repair
+staging_deployed_sha = 83741ea88e07bf6735462fb5f3816650b6db59b4
+staging_flyway = V20
+production = NO_MUTATION
+```
+
+Owner superseding product decision:
+
+```text
+PHASE_B_AUTHORIZATION_PREFIX_DRIFT_ANALYSIS = COMPLETE
+PHASE_B_PROVISIONING_AUTHORIZATION =
+  authenticated principal
+  + OWNER authority
+  + active Organization Owner membership
+  + exact Organization scope
+PHASE_B_PROVISIONING_USERNAME_PREFIX_REQUIRED = NO
+PHASE_B_AUTH_PREFIX_REPAIR_AGENT6 = PHASE_B_AUTH_PREFIX_REPAIR_ACCEPT
+PHASE_B_PART1_STAGING_AUTOMATED_ACCEPTANCE = PENDING
+PHASE_B_PART1_OWNER_ACCEPTANCE = PENDING
+PHASE_B_PART2 = NOT_STARTED
+```
+
+Bounded classification:
+
+- The `STG005_` prefix remains a Staging synthetic bootstrap/fixture identity
+  contract for STG005 bootstrap, source-menu and related fixture tooling.
+- It is also historical governance and acceptance-tooling convention.
+- It is not the Phase B product authorization boundary.
+- Current backend Phase B provisioning authorization already uses Owner role
+  plus active Organization membership; no backend username-prefix gate was
+  found.
+- Frontend `Access denied` remains role/route/backend-403 driven; no frontend
+  username-prefix gate was found.
+- Fresh runtime evidence shows the current `owner` principal satisfies login
+  credential presence, `OWNER` role, active Organization Owner membership and
+  correct Organization scope for Organization `1`.
+
+Implemented local repair candidate:
+
+- `deployment/cloud/staging-phase-b-part1-acceptance.sh` now accepts any
+  non-empty reviewed Owner login identifier and still verifies login response
+  `OWNER`, expected `organization_id`, and exact authenticated username.
+- `deployment/cloud/ops001-jq-compat.py` now honors both forms: non-empty
+  login identifiers for Phase B Part 1, and explicit `startswith("STG005_")`
+  filters for synthetic bootstrap/onboarding tools.
+- Regression coverage proves authorization is determined by authority and
+  membership, not naming convention.
+
+Local validation:
+
+```text
+bash deployment/cloud/tests/test_staging_phase_b_part1_acceptance.sh = PASS
+mvn -q -f backend/pom.xml -Dtest=OwnerOrganizationAuthorizationServiceTest,OwnerStoreProvisioningControllerTest test = PASS
+mvn -q -f backend/pom.xml test = PASS
+npm test = PASS
+npm run build = PASS
+npm run lint = FAIL_EXISTING_FRONTEND_LINT_DEBT_UNRELATED_TO_AUTH_PREFIX_REPAIR
+for test_script in deployment/cloud/tests/*.sh; do bash "$test_script" || exit $?; done = PASS
+Agent 6 = PHASE_B_AUTH_PREFIX_REPAIR_ACCEPT
+```
+
+Next required gates:
+
+```text
+PR/merge
+git fetch origin --prune
+fresh Planbook/Handoff reread
+exact-SHA Staging deploy if runtime-sensitive
+Phase B Part 1 automated acceptance with current reviewed private Owner credential path
+```
+
+Unique stop target remains:
+
+```text
+PHASE_B_PART1_CREATE_STORE_AND_MASTER_MENU_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
+Older statements that require a `STG005_` Owner credential for Phase B Part 1
+Store provisioning are superseded for product authorization by this Owner
+decision. They still apply where the explicit STG005 synthetic bootstrap or
+fixture contract is the subject.
+
 ## Current Phase B Part 1 Staging state after jq fallback deploy (2026-08-16)
 
 V19 sort-order repair merged through PR #163 at `397bf09d...`; jq fallback

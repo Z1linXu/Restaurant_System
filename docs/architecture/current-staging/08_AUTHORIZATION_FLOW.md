@@ -1,5 +1,11 @@
 # 08 Authorization Flow
 
+> Phase B Part 1 auth-prefix repair note: Phase B Store provisioning
+> authorization is principal/role/membership/scope based. `STG005_` naming is
+> retained for synthetic bootstrap/fixture identity, but username or
+> `login_identifier` prefix is not a product authorization boundary for the
+> Owner Store provisioning API.
+
 > A9 update: `users.store_id` is retained only as a bounded compatibility
 > fallback when no active Organization/Store membership exists. Legacy direct
 > active Store creation is disabled until Phase B provisioning, and Owner

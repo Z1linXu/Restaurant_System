@@ -1,5 +1,23 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-16 Phase B Part 1 authorization prefix repair candidate: Owner
+> superseded the previous Phase B Part 1 acceptance convention that required
+> the Owner login identifier to begin with `STG005_`. Phase B Store
+> provisioning authorization is authenticated principal plus `OWNER` authority
+> plus active Organization Owner membership plus exact Organization scope; the
+> login/username prefix is not a product permission boundary. Fresh audit found
+> the backend provisioning API and frontend Owner surfaces already follow
+> role/membership/scope gates, while the Phase B acceptance helper and jq
+> fallback contained the blocking prefix assumption. The local repair updates
+> only that acceptance/tooling path, preserving explicit `STG005_` checks for
+> synthetic bootstrap/fixture identity. Local validation passed the Phase B
+> acceptance helper test, focused backend authorization tests, full backend
+> tests, frontend tests and frontend build. Frontend lint still fails on
+> pre-existing unrelated lint debt. Staging remains deployed at
+> `83741ea88e07bf6735462fb5f3816650b6db59b4` / Flyway V20 until the repair
+> passes PR/merge, exact-SHA Staging deploy and automated acceptance. Agent 6
+> returned `PHASE_B_AUTH_PREFIX_REPAIR_ACCEPT`; Production remains no-mutation.
+
 > 2026-08-16 Phase B Part 1 Staging runtime update: V19 repair PR #163 first
 > deployed `origin/main@397bf09d01371961f6a438db67fd069afa7ed049` and brought
 > Staging to Flyway v20 without Flyway repair/clean/history edit. Follow-up PR

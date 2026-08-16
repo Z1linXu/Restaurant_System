@@ -17,6 +17,7 @@ import com.restaurant.system.common.auth.AuthenticatedUser;
 import com.restaurant.system.common.auth.AuthorizationService;
 import com.restaurant.system.common.auth.ForbiddenException;
 import com.restaurant.system.common.auth.OwnerOrganizationAuthorizationService;
+import com.restaurant.system.common.auth.UnauthorizedException;
 import com.restaurant.system.common.exception.GlobalExceptionHandler;
 import com.restaurant.system.common.feature.FeatureDisabledException;
 import com.restaurant.system.common.feature.FeatureFlagService;
@@ -161,6 +162,31 @@ class OwnerStoreProvisioningControllerTest {
     }
 
     @Test
+    void provisionAllowsArbitraryOwnerUsernameWhenOrganizationMembershipIsActive() throws Exception {
+        AuthenticatedUser arbitraryOwner = new AuthenticatedUser(
+            2L,
+            10L,
+            1L,
+            "regional_owner_42",
+            "Regional Owner",
+            "OWNER"
+        );
+        when(authorizationService.requireOwner()).thenReturn(arbitraryOwner);
+        when(provisioningService.provision(any())).thenReturn(successfulResult());
+
+        mockMvc.perform(post(route())
+                .header("Idempotency-Key", IDEMPOTENCY_KEY)
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(request())))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true));
+
+        verify(organizationAuthorizationService).requireActiveOwnerMembership(arbitraryOwner, ORGANIZATION_ID);
+        verify(provisioningService).provision(commandCaptor.capture());
+        assertThat(commandCaptor.getValue().actor()).isEqualTo(arbitraryOwner);
+    }
+
+    @Test
     void missingIdempotencyKeyReturnsBadRequestBeforeRuntimeOrAuthorization() throws Exception {
         mockMvc.perform(post(route())
                 .contentType("application/json")
@@ -217,6 +243,20 @@ class OwnerStoreProvisioningControllerTest {
                 .content(objectMapper.writeValueAsString(request())))
             .andExpect(status().isForbidden())
             .andExpect(jsonPath("$.error_code").value("PHASE_B_PROVISIONING_FORBIDDEN"));
+
+        verify(runtimeGate).requireEnabled();
+        verify(provisioningService, never()).provision(any());
+    }
+
+    @Test
+    void unauthenticatedProvisionRequestReturnsUnauthorizedBeforeProvisioning() throws Exception {
+        when(authorizationService.requireOwner()).thenThrow(new UnauthorizedException("Authentication required"));
+
+        mockMvc.perform(post(route())
+                .header("Idempotency-Key", IDEMPOTENCY_KEY)
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(request())))
+            .andExpect(status().isUnauthorized());
 
         verify(runtimeGate).requireEnabled();
         verify(provisioningService, never()).provision(any());

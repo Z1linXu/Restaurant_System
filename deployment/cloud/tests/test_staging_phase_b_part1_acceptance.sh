@@ -70,14 +70,32 @@ assert_contains 'origin = '\''STORE_ONLY'\''' "$SCRIPT"
 assert_contains 'ops001_validate_approval' "$SCRIPT"
 assert_contains 'ops001_consume_approval' "$SCRIPT"
 assert_contains 'ops001-jq-compat.py' "$SCRIPT"
+assert_contains '.data.user.role_code == "OWNER"' "$SCRIPT"
+assert_contains '.data.user.organization_id == $organization' "$SCRIPT"
+assert_contains '.data.user.username == $login' "$SCRIPT"
+assert_not_contains 'select(startswith("STG005_"))' "$SCRIPT"
+assert_not_contains 'Owner login identifier is outside the synthetic Staging contract' "$SCRIPT"
 
-printf '{"login_identifier":"STG005_OWNER_TEST","login_password":"OwnerPassphrase-123","phase_b_idempotency_key":"phase-b-idem-123456"}\n' >"$TMP_DIR/secret.json"
+printf '{"login_identifier":"owner","login_password":"OwnerPassphrase-123","phase_b_idempotency_key":"phase-b-idem-123456"}\n' >"$TMP_DIR/secret.json"
 "$JQ_COMPAT" -e 'type == "object"
     and (.login_identifier | type == "string" and length > 0)
     and (.login_password | type == "string" and length >= 12)
     and (.phase_b_idempotency_key | type == "string" and test("^[A-Za-z0-9._:-]{16,255}$"))' "$TMP_DIR/secret.json"
+[[ "$("$JQ_COMPAT" -er '.login_identifier | strings | select(length > 0)' "$TMP_DIR/secret.json")" == owner ]] ||
+  fail 'jq compatibility parser did not extract non-STG005 Owner login identifier'
+if "$JQ_COMPAT" -er '.login_identifier | strings | select(startswith("STG005_"))' "$TMP_DIR/secret.json" >/dev/null 2>&1; then
+  fail 'jq compatibility parser accepted non-STG005 login identifier for an explicit synthetic filter'
+fi
 [[ "$("$JQ_COMPAT" -er '.phase_b_idempotency_key' "$TMP_DIR/secret.json")" == phase-b-idem-123456 ]] ||
   fail 'jq compatibility parser did not extract Phase B idempotency key'
+
+printf '{"login_identifier":"regional_owner_42","login_password":"OwnerPassphrase-123","phase_b_idempotency_key":"phase-b-idem-abcdef"}\n' >"$TMP_DIR/arbitrary-owner-secret.json"
+"$JQ_COMPAT" -e 'type == "object"
+    and (.login_identifier | type == "string" and length > 0)
+    and (.login_password | type == "string" and length >= 12)
+    and (.phase_b_idempotency_key | type == "string" and test("^[A-Za-z0-9._:-]{16,255}$"))' "$TMP_DIR/arbitrary-owner-secret.json"
+[[ "$("$JQ_COMPAT" -er '.login_identifier | strings | select(length > 0)' "$TMP_DIR/arbitrary-owner-secret.json")" == regional_owner_42 ]] ||
+  fail 'jq compatibility parser rejected an arbitrary Owner login identifier'
 
 printf '{"success":true,"data":{"enabled":true,"profile_code":"ST_DENIS_CANONICAL_PROFILE","profile_version":"v2","master_menu_key":"LANZHOU_CHAIN_MASTER_MENU","master_menu_version":"v1","master_menu_fingerprint_sha256":"abc"}}\n' >"$TMP_DIR/catalog.json"
 "$JQ_COMPAT" -e '.data.enabled == true and .data.profile_code == "ST_DENIS_CANONICAL_PROFILE" and .data.profile_version == "v2" and .data.master_menu_key == "LANZHOU_CHAIN_MASTER_MENU" and .data.master_menu_version == "v1"' "$TMP_DIR/catalog.json"

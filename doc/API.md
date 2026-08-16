@@ -1,5 +1,15 @@
 # Restaurant System API (MVP)
 
+> Phase B Part 1 authorization prefix repair candidate (2026-08-16): Owner
+> superseded the historical acceptance convention that required the Owner
+> `login_identifier` / username to start with `STG005_` for Phase B Store
+> provisioning. The product API authorization boundary is authenticated
+> principal, `OWNER` authority, active Organization Owner membership and exact
+> Organization scope. A non-empty reviewed Owner login identifier is sufficient
+> for the acceptance helper to attempt login; after login it must verify
+> `OWNER`, expected `organization_id` and exact authenticated username. Explicit
+> `STG005_` checks remain valid for synthetic bootstrap/fixture tooling.
+
 > Phase B Part 1 Owner New Store Provisioning implementation (2026-08-16):
 > Owner authorized implementation for Part 1 only. Repository implementation
 > now adds the canonical Owner-only provisioning API under
@@ -1274,7 +1284,7 @@ Canonical request:
   tooling should use the canonical field.
 - The lookup trims the identifier and matches
   `user_credentials.login_identifier` case-insensitively. It does not require
-  an email-shaped value.
+  an email-shaped value or a `STG005_` prefix.
 - A successful credential must be active and use the `BCRYPT` algorithm; login
   returns access/refresh tokens, user context, feature flags, and permissions.
   Those tokens and the submitted password must never enter repository or
@@ -1284,6 +1294,9 @@ Canonical request:
   `STG005_`, is written consistently to `users.username` and
   `user_credentials.login_identifier`, and accepts only a runtime password of
   12 through 256 characters through non-interactive standard input.
+- Phase B Part 1 Store provisioning does not use the login identifier prefix as
+  authorization. It uses the authenticated principal plus Owner role and active
+  Organization Owner membership in the target Organization.
 - The STG-008 read-only entry found no existing synthetic Owner and stopped
   before plan/write because the requested credential convention did not meet
   those retained bootstrap guards. The Owner later approved
