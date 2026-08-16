@@ -1,5 +1,43 @@
 # Final Productization Planbook
 
+## Phase B Part 1 Master fingerprint repair candidate (2026-08-16)
+
+Runtime-gate repair PR #167 is merged and deployed to Staging at
+`218777e418c7415fee4deff7f1c026b3897308d9`; health/readiness, Flyway V20,
+runtime evidence and Phase B acceptance `--validate` passed. Automated
+acceptance reached Owner login/workspace and provisioning catalog, then stopped
+before Store creation when the first provisioning POST returned HTTP 400.
+
+Fresh evidence classifies the 400 as Chain Master Menu fingerprint drift:
+
+```text
+stored_master_fingerprint = e55ad23773753ade22e3e090622c361b58268ae5b43ee354ec7eef5b78f233f7
+runtime_canonical_master_fingerprint = ef28a4d160373f0f08b810a6b82d1f3c84f2c7d4aa076cceac00836a13d4f38c
+target_store_count = 0
+provisioning_ledger_count = 0
+```
+
+The current repair candidate adds additive Flyway V21, updates API/catalog
+constants and updates Staging acceptance checks to the canonical fingerprint.
+It does not modify Flyway history, credentials, Production, Phase B Part 2,
+activation, physical printer endpoints or hardware binding.
+
+Required next route:
+
+```text
+PR/merge
+-> fresh fetch and governance reread
+-> exact-SHA Staging deploy
+-> Phase B Part 1 automated acceptance
+-> Owner manual Part 1 retest gate
+```
+
+Success still stops at:
+
+```text
+PHASE_B_PART1_CREATE_STORE_AND_MASTER_MENU_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
 ## Phase B Part 1 Staging runtime-gate repair candidate (2026-08-16)
 
 The auth-prefix repair is merged and deployed to Staging at
@@ -111,7 +149,7 @@ Fresh implementation audit, package plan and repository evidence:
 - [PHASE_B_PART1_PACKAGE_PLAN](PHASE_B_PART1_PACKAGE_PLAN.md)
 - [PHASE_B_PART1_IMPLEMENTATION_EVIDENCE](PHASE_B_PART1_IMPLEMENTATION_EVIDENCE.md)
 
-Repository implementation adds additive Flyway V18-V20, the published
+Repository implementation adds additive Flyway V18-V21, the published
 `LANZHOU_CHAIN_MASTER_MENU/v1`, Phase B-ready
 `ST_DENIS_CANONICAL_PROFILE/v2`, Owner-only idempotent Store provisioning API,
 Store/Profile/Master provenance, validation fixture hygiene, Owner Dashboard

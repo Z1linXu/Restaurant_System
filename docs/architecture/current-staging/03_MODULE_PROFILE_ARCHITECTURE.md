@@ -3,7 +3,7 @@
 > Phase B Part 1 repository implementation note:
 > `LANZHOU_CHAIN_MASTER_MENU/v1`, Master product identity, Store
 > materialization and Store-local override mappings are implemented in the
-> current Part 1 candidate through additive V18-V20 schema and Owner-only
+> current Part 1 candidate through additive V18-V21 schema and Owner-only
 > provisioning services. They are pending PR/merge and exact-SHA Staging deploy
 > before becoming the deployed Staging runtime baseline.
 

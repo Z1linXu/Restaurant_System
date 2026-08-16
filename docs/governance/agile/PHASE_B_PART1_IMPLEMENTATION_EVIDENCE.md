@@ -17,7 +17,8 @@ PHASE_B_PART1_ACCEPTANCE_TOOLING_REPAIR = JQ_FALLBACK_DEPLOYED_VALIDATE_PASS
 PHASE_B_PART1_ACCEPTANCE_RUNTIME_CREDENTIAL_GATE = SUPERSEDED_FOR_PRODUCT_AUTH_BY_OWNER_DECISION
 PHASE_B_AUTHORIZATION_PREFIX_DRIFT = REPAIR_CANDIDATE_AGENT6_ACCEPT_PENDING_PR_STAGING_ACCEPTANCE
 PHASE_B_AUTH_PREFIX_REPAIR_AGENT6 = PHASE_B_AUTH_PREFIX_REPAIR_ACCEPT
-PHASE_B_STAGING_RUNTIME_GATE_DRIFT = REPAIR_CANDIDATE_PENDING_PR_STAGING_ACCEPTANCE
+PHASE_B_STAGING_RUNTIME_GATE_DRIFT = MERGED_DEPLOYED_STAGING_PASS
+PHASE_B_MASTER_FINGERPRINT_DRIFT = REPAIR_CANDIDATE_PENDING_PR_STAGING_ACCEPTANCE
 PHASE_B_PART1_OWNER_ACCEPTANCE = PENDING
 PHASE_B_PART2 = NOT_STARTED
 PRODUCTION = NO_MUTATION
@@ -35,6 +36,24 @@ acceptance_r2 = BLOCKED_BEFORE_STORE_CREATION
 acceptance_r2_stop = LOGIN_HTTP_200_AND_OWNER_WORKSPACE_PASS_THEN_CATALOG_HTTP_403
 runtime_drift = backend container lacks APP_FEATURES_PLATFORM and APP_PHASE_B_PROVISIONING_ENABLED
 repair_branch = codex/phase-b-staging-runtime-gate-repair
+production = NO_MUTATION
+```
+
+Master fingerprint repair candidate evidence:
+
+```text
+runtime_gate_repair_merge_sha = 218777e418c7415fee4deff7f1c026b3897308d9
+staging_health = PASS
+staging_readiness = PASS
+staging_runtime_evidence = PASS
+staging_flyway = V20
+acceptance = BLOCKED_BEFORE_STORE_CREATION
+acceptance_stop = LOGIN_HTTP_200_AND_OWNER_WORKSPACE_PASS_THEN_PROVISION_FIRST_HTTP_400
+target_store_count = 0
+provisioning_ledger_count = 0
+stored_master_fingerprint = e55ad23773753ade22e3e090622c361b58268ae5b43ee354ec7eef5b78f233f7
+runtime_canonical_master_fingerprint = ef28a4d160373f0f08b810a6b82d1f3c84f2c7d4aa076cceac00836a13d4f38c
+repair_branch = codex/phase-b-master-fingerprint-repair
 production = NO_MUTATION
 ```
 
@@ -257,7 +276,7 @@ V19 publishes:
 ```text
 master_menu_key = LANZHOU_CHAIN_MASTER_MENU
 master_menu_version = v1
-fingerprint_sha256 = e55ad23773753ade22e3e090622c361b58268ae5b43ee354ec7eef5b78f233f7
+fingerprint_sha256 = ef28a4d160373f0f08b810a6b82d1f3c84f2c7d4aa076cceac00836a13d4f38c
 source_reference = ST_DENIS_CANONICAL_PROFILE/v1:MENU_TEMPLATE/v1
 ```
 
@@ -270,8 +289,9 @@ V20 aligns provisioning validation status to:
 PENDING, PASS, WARNING, BLOCKING, FAILED
 ```
 
-The Flyway manifest is updated through V20 in
-`deployment/cloud/ops001-flyway-checksums.txt`.
+The Flyway manifest is updated through V21 in
+`deployment/cloud/ops001-flyway-checksums.txt`, including the Master
+fingerprint repair candidate.
 
 ## API
 

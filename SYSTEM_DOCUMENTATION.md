@@ -1,5 +1,21 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-16 Phase B Part 1 Master fingerprint repair candidate:
+> Runtime-gate repair PR #167 is merged and deployed to Staging at
+> `218777e418c7415fee4deff7f1c026b3897308d9`; health/readiness, Flyway V20,
+> runtime evidence and acceptance `--validate` passed. Runtime acceptance then
+> reached Owner login/workspace and provisioning catalog, but `provision_first`
+> returned HTTP 400 before Store creation. DB evidence shows no target Store
+> and no provisioning ledger row. Fresh audit identifies Chain Master Menu
+> fingerprint drift: V19 stored
+> `e55ad23773753ade22e3e090622c361b58268ae5b43ee354ec7eef5b78f233f7` while
+> runtime canonical JSON validation recomputes
+> `ef28a4d160373f0f08b810a6b82d1f3c84f2c7d4aa076cceac00836a13d4f38c`. The
+> repair adds additive Flyway V21 to align the persisted Master/Profile
+> fingerprint authority and updates API/acceptance constants. Production
+> remains `NO_MUTATION`; this does not authorize Phase B Part 2, activation,
+> credential mutation, printer endpoints or hardware binding.
+
 > 2026-08-16 Phase B Part 1 Staging runtime-gate repair candidate:
 > Auth-prefix repair is merged and deployed to Staging at
 > `6fff80e81651727f27f5b999c2e9c5c438fd7f31`; health/readiness/Flyway V20 and
@@ -62,7 +78,7 @@
 > through PR #161 at `4ace6988dd4793b3b7259bf7455289af24f13d4b`. Part 1
 > repository implementation is now pending fresh Staging runtime preflight,
 > exact-SHA Staging deploy and automated acceptance. It adds additive Flyway
-> V18-V20, `LANZHOU_CHAIN_MASTER_MENU/v1`,
+> V18-V21, `LANZHOU_CHAIN_MASTER_MENU/v1`,
 > `ST_DENIS_CANONICAL_PROFILE/v2`, Owner-only idempotent Store provisioning
 > APIs, Store/Profile/Master provenance, validation fixture hygiene, Owner
 > Dashboard Create New Store UI and a Staging acceptance harness. Materialized

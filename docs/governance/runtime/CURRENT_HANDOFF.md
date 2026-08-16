@@ -1,5 +1,56 @@
 # Current Project Handoff
 
+## 0. Phase B Part 1 current handoff - Master fingerprint repair candidate
+
+Latest merged source and Staging runtime:
+
+```text
+origin/main = 218777e418c7415fee4deff7f1c026b3897308d9
+branch = codex/phase-b-master-fingerprint-repair
+STAGING_DEPLOYED_SHA = 218777e418c7415fee4deff7f1c026b3897308d9
+STAGING_FLYWAY = V20
+STAGING_HEALTH = PASS
+PRODUCTION = NO_MUTATION
+```
+
+Runtime-gate repair PR #167 is merged and deployed to Staging. Backend
+container evidence confirms both Phase B Staging gates are effective. Phase B
+Part 1 automated acceptance reached `LOGIN|HTTP_200`, `OWNER_WORKSPACE|PASS`
+and provisioning catalog, then stopped before Store creation on
+`provision_first` HTTP 400. DB evidence shows no target Store and no
+provisioning ledger row were created.
+
+Current blocker classification:
+
+```text
+PHASE_B_STAGING_RUNTIME_GATE_REPAIR = MERGED_AND_DEPLOYED_TO_STAGING
+PHASE_B_PART1_STAGING_AUTOMATED_ACCEPTANCE = BLOCKED_BEFORE_STORE_CREATION
+BLOCKER = CHAIN_MASTER_MENU_STORED_FINGERPRINT_DRIFT
+STORED_MASTER_FINGERPRINT = e55ad23773753ade22e3e090622c361b58268ae5b43ee354ec7eef5b78f233f7
+RUNTIME_CANONICAL_MASTER_FINGERPRINT = ef28a4d160373f0f08b810a6b82d1f3c84f2c7d4aa076cceac00836a13d4f38c
+REPAIR_CANDIDATE = codex/phase-b-master-fingerprint-repair
+PHASE_B_PART2 = NOT_STARTED
+PRODUCTION = NO_MUTATION
+```
+
+The repair candidate adds V21 to align persisted Master/Profile fingerprint
+authority and updates API/acceptance constants. Do not edit Flyway history,
+mutate credentials, touch Production, start Phase B Part 2, activate the
+validation Store, add printer endpoints, or bind hardware as part of this
+repair.
+
+Next gate:
+
+```text
+PR/merge -> fresh fetch/reread -> exact-SHA Staging deploy -> Phase B Part 1 automated acceptance
+```
+
+Target unique stop remains:
+
+```text
+PHASE_B_PART1_CREATE_STORE_AND_MASTER_MENU_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
 ## 0. Phase B Part 1 current handoff - Staging runtime gate repair candidate
 
 Latest merged source and Staging runtime:
@@ -233,9 +284,9 @@ Fresh audit, plan and repository evidence:
 Implemented repository identity:
 
 ```text
-Flyway = V18 + V19 + V20 additive migrations
+Flyway = V18 + V19 + V20 + V21 additive migrations
 Master = LANZHOU_CHAIN_MASTER_MENU/v1
-Master fingerprint = e55ad23773753ade22e3e090622c361b58268ae5b43ee354ec7eef5b78f233f7
+Master fingerprint = ef28a4d160373f0f08b810a6b82d1f3c84f2c7d4aa076cceac00836a13d4f38c
 Profile = ST_DENIS_CANONICAL_PROFILE/v2 READY
 Provisioning API = /api/v1/owner/organizations/{organizationId}/phase-b/store-provisioning
 Part 1 Store kind = VALIDATION_FIXTURE

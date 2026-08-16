@@ -65,6 +65,30 @@ class PhaseBMasterMenuSeedMigrationTest {
         assertThat(ChainMasterMenuCatalogService.INITIAL_MASTER_MENU_VERSION)
             .isEqualTo("v1");
         assertThat(ChainMasterMenuCatalogService.INITIAL_MASTER_MENU_FINGERPRINT)
-            .isEqualTo("e55ad23773753ade22e3e090622c361b58268ae5b43ee354ec7eef5b78f233f7");
+            .isEqualTo("ef28a4d160373f0f08b810a6b82d1f3c84f2c7d4aa076cceac00836a13d4f38c");
+    }
+
+    @Test
+    void v21RepairsSeededFingerprintToRuntimeCanonicalAuthority() throws IOException {
+        String migration = new ClassPathResource(
+            "db/migration/V21__repair_phase_b_master_menu_fingerprint.sql"
+        ).getContentAsString(StandardCharsets.UTF_8).toLowerCase();
+
+        assertThat(migration)
+            .contains("phase_b_master_fingerprint_repair_blocked_by_provisioned_store")
+            .contains("phase_b_master_fingerprint_repair_blocked_by_completed_request")
+            .contains("disable trigger trg_chain_master_menu_versions_immutable")
+            .contains("enable trigger trg_chain_master_menu_versions_immutable")
+            .contains("disable trigger trg_store_profile_versions_immutable")
+            .contains("enable trigger trg_store_profile_versions_immutable")
+            .contains("e55ad23773753ade22e3e090622c361b58268ae5b43ee354ec7eef5b78f233f7")
+            .contains("ef28a4d160373f0f08b810a6b82d1f3c84f2c7d4aa076cceac00836a13d4f38c")
+            .contains("2083269d602cf068b78551ee5d53916442dc262a77c4fa5eaef8eae5dc1267c2")
+            .contains("51ddf408755ef476ac99abd9ab7498f48995431c5d5a52d98a77704ab71b23ae")
+            .contains("jsonb_set")
+            .contains("master_menu_reference,fingerprint_sha256")
+            .doesNotContain("drop table")
+            .doesNotContain("truncate")
+            .doesNotContain("delete from");
     }
 }

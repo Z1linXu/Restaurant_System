@@ -58,7 +58,7 @@ This is not a runtime incident and does not rewrite historical
 `ST_DENIS_CANONICAL_PROFILE/v1`. Phase B Part 1 migration V18 extends the
 artifact whitelist additively; V19 creates `ST_DENIS_CANONICAL_PROFILE/v2`
 with a `PRINTING_DISPLAY_RULES/v1` artifact. Runtime closure still depends on
-exact-SHA Staging applying V18-V20 successfully.
+exact-SHA Staging applying V18-V21 successfully.
 
 ## Phase A11/A11.5 resolved gating risk
 

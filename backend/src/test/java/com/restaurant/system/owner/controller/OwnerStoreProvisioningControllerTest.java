@@ -83,7 +83,9 @@ class OwnerStoreProvisioningControllerTest {
             .andExpect(jsonPath("$.data.profile_code").value("ST_DENIS_CANONICAL_PROFILE"))
             .andExpect(jsonPath("$.data.profile_version").value("v2"))
             .andExpect(jsonPath("$.data.master_menu_key").value("LANZHOU_CHAIN_MASTER_MENU"))
-            .andExpect(jsonPath("$.data.master_menu_version").value("v1"));
+            .andExpect(jsonPath("$.data.master_menu_version").value("v1"))
+            .andExpect(jsonPath("$.data.master_menu_fingerprint_sha256")
+                .value("ef28a4d160373f0f08b810a6b82d1f3c84f2c7d4aa076cceac00836a13d4f38c"));
 
         verify(featureFlagService).requireEnabled(FeaturePackage.PLATFORM);
         verify(runtimeGate).requireEnabled();
