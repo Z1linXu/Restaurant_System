@@ -1,6 +1,23 @@
 # Current Project Handoff
 
-## 0. Phase B Part 1 current handoff - repository implementation pending runtime gates
+## 0. Phase B Part 1 current handoff - V19 runtime repair in progress
+
+Staging runtime repair:
+
+```text
+DEPLOYED_SHA_WITH_BLOCKER = 908902b41d4d4b34b0ce663da4a7dd75800cdb36
+STAGING_PREFLIGHT = PASS
+STAGING_DEPLOY_START = COMPLETED
+STAGING_HEALTH = BLOCKED
+BLOCKER = V19 option sort_order null for source Profile options without sort_order
+FLYWAY_LEDGER = V1-V18 success, no V19 success row
+REPAIR = V19 option sort_order ordinality fallback, no Flyway repair/clean/history edit
+PRODUCTION = NO_MUTATION
+```
+
+Next gate is repair PR/merge, then fresh `git fetch origin --prune`, exact
+candidate import/release-env/preflight/deploy and Phase B Part 1 automated
+acceptance. Do not start Phase B Part 2.
 
 Part 1 implementation merge authority:
 
@@ -9,10 +26,10 @@ PR #161
 4ace6988dd4793b3b7259bf7455289af24f13d4b
 ```
 
-Current branch/worktree for post-merge governance sync:
+Current branch/worktree for runtime repair:
 
 ```text
-codex/phase-b-part1-postmerge-governance
+codex/phase-b-part1-v19-sort-order-repair
 ```
 
 Latest Owner authority:
@@ -63,7 +80,7 @@ fresh Staging runtime preflight is required before deploy
 Next gate:
 
 ```text
-fresh Staging runtime preflight
+V19_SORT_ORDER_REPAIR_PR_MERGE
 ```
 
 Then:
@@ -71,6 +88,7 @@ Then:
 ```text
 git fetch origin --prune
 -> confirm exact deploy SHA from current origin/main
+-> candidate import and release/env preparation
 -> fresh Staging runtime preflight
 -> exact-SHA Staging deploy
 -> Phase B Part 1 automated acceptance

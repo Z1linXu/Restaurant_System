@@ -1,5 +1,30 @@
 # Alive Runtime Planbook
 
+## Current Phase B Part 1 V19 runtime repair (2026-08-16)
+
+Exact Staging deploy/start for
+`908902b41d4d4b34b0ce663da4a7dd75800cdb36` completed after release/env
+preparation and fresh same-host preflight, but health failed because Flyway V19
+inserted Master Menu options with `sort_order = null` for source Profile
+options that omit `sort_order`.
+
+Read-only runtime evidence shows:
+
+```text
+STAGING_PREFLIGHT = PASS
+STAGING_DEPLOY_START = COMPLETED
+STAGING_HEALTH = BLOCKED
+FLYWAY_LEDGER = V1-V18 success, no V19 success row
+REPAIR_REQUIRED = V19 option sort_order ordinality fallback
+PRODUCTION = NO_MUTATION
+```
+
+No Flyway repair, clean, history edit, Production action, Phase B Part 2,
+final activation, physical hardware binding or final staff credential action is
+authorized. The repair must merge, then the next candidate must go through
+fresh fetch, candidate import, release/env preparation, preflight, exact-SHA
+Staging deploy and Phase B Part 1 automated acceptance.
+
 ## Current Phase B Part 1 implementation start (2026-08-16)
 
 Owner has formally opened Phase B for Part 1 only:
