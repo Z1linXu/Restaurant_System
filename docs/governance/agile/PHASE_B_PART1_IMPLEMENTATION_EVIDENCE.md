@@ -9,10 +9,12 @@ PHASE_B_OWNER_IMPLEMENTATION_APPROVAL = GRANTED_FOR_PART_1
 PHASE_B_PART1_REPOSITORY_IMPLEMENTATION = MERGED_TO_MAIN_VIA_PR_161
 PHASE_B_PART1_IMPLEMENTATION_MERGE_SHA = 4ace6988dd4793b3b7259bf7455289af24f13d4b
 PHASE_B_PART1_FINAL_REVIEW_BY_AGENT_6 = ACCEPT
-PHASE_B_PART1_STAGING_PREFLIGHT = PENDING
-PHASE_B_PART1_STAGING_DEPLOYMENT = PENDING
+PHASE_B_PART1_STAGING_PREFLIGHT = PASS
+PHASE_B_PART1_STAGING_DEPLOYMENT = PASS
 PHASE_B_PART1_STAGING_AUTOMATED_ACCEPTANCE = PENDING
-PHASE_B_PART1_RUNTIME_REPAIR = V19_SORT_ORDER_FALLBACK_IN_PROGRESS
+PHASE_B_PART1_RUNTIME_REPAIR = V19_SORT_ORDER_FALLBACK_DEPLOYED_HEALTH_PASS
+PHASE_B_PART1_ACCEPTANCE_TOOLING_REPAIR = JQ_FALLBACK_IN_PROGRESS
+PHASE_B_PART1_ACCEPTANCE_RUNTIME_CREDENTIAL_GATE = BLOCKED_STG005_CREDENTIAL_DRIFT
 PHASE_B_PART1_OWNER_ACCEPTANCE = PENDING
 PHASE_B_PART2 = NOT_STARTED
 PRODUCTION = NO_MUTATION
@@ -47,6 +49,36 @@ health_sha256 = aef44a9a0b167dbf1b1c87f40454c022ce9ed68713d1fce8365eaf8b63075719
 blocker = Flyway V19 null option sort_order from source Profile options without sort_order
 flyway_runtime_state = V1-V18 successful, no V19 successful row
 repair = coalesce source option sort_order to JSON ordinality before content seed and table insert
+```
+
+V19 repair deploy evidence:
+
+```text
+repair_merge_sha = 397bf09d01371961f6a438db67fd069afa7ed049
+candidate_import_evidence = /srv/restaurant-pos/staging/evidence/phase-b-part1-candidate-import-397bf09d01371961f6a438db67fd069afa7ed049.txt
+candidate_import_sha256 = ed056da3556cc571d18886e85c75b4b45bb87dbe1b86a98a631d4a941bdc6d55
+release_env_evidence = /srv/restaurant-pos/staging/evidence/phase-b-part1-release-env-397bf09d01371961f6a438db67fd069afa7ed049.txt
+release_env_sha256 = b69066aa9ab50debd4ed5057d2b64be4080d19ecb1175d9c798edad850c5c781
+preflight_r2_evidence = /srv/restaurant-pos/staging/evidence/phase-b-part1-preflight-r2-397bf09d01371961f6a438db67fd069afa7ed049.txt
+preflight_r2_sha256 = a12231c644b0b1155a6af443c56ae88c0d6d510dc1e50a9424eed653e5f329ab
+deploy_r2_evidence = /srv/restaurant-pos/staging/evidence/phase-b-part1-deploy-r2-397bf09d01371961f6a438db67fd069afa7ed049.txt
+deploy_r2_sha256 = 69200b5e1df781da20a29f1c5dce8b344edb471001c97dd0b20e01c3c423d4a7
+health_r2_evidence = /srv/restaurant-pos/staging/evidence/phase-b-part1-health-r2-397bf09d01371961f6a438db67fd069afa7ed049.txt
+health_r2_sha256 = e44460e11dc89de865dfcccf1e67a74d66f286786bb422c6ef8e84af6d683a14
+backend_log_flyway = V19 and V20 successfully applied; schema now v20
+```
+
+Acceptance gate drift found after health PASS:
+
+```text
+staging_host_jq = absent
+tooling_repair_branch = codex/phase-b-part1-acceptance-jq-fallback
+tooling_repair_scope = Phase B acceptance uses ops001-jq-compat.py fallback when jq is absent
+runtime_stg005_credential_count = 0
+runtime_legacy_credentials = owner, manager, staffA, staffB, a10_staff_*
+bootstrap_request = STG005_20260809_R01 completed at old runtime 712531b941db92f4325a86126883706314f4cba5c with owner_user_id=1
+conflict = historical governance says STG005 Owner credential ready, latest runtime evidence does not
+required_next_gate = reviewed Staging STG005 Owner credential reconciliation before automated acceptance
 ```
 
 ## Implemented Scope

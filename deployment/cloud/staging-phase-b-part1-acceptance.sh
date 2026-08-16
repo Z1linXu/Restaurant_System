@@ -650,9 +650,12 @@ main() {
   ENV_FILE="$(ops001_canonical_file "$ENV_FILE")" || ops001_die "cannot canonicalize environment file"
   CURL_BIN="$(command -v curl || true)"
   JQ_BIN="$(command -v jq || true)"
+  if [[ -z "$JQ_BIN" ]]; then
+    JQ_BIN="$SCRIPT_DIR/ops001-jq-compat.py"
+  fi
   FLOCK_BIN="$(command -v flock || true)"
   [[ "$CURL_BIN" == /* && "$JQ_BIN" == /* && "$FLOCK_BIN" == /* && -x "$JQ_BIN" ]] ||
-    ops001_die "curl, jq, and flock are required"
+    ops001_die "curl, jq-compatible parser, and flock are required"
   validate_release_and_env
   if [[ "$ACTION" == "validate" ]]; then
     [[ "$EXECUTE_RUNTIME" == "false" && -z "$APPROVAL_FILE$APPROVAL_SHA256$SECRETS_FD" ]] ||

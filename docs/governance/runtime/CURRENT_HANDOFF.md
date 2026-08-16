@@ -1,5 +1,51 @@
 # Current Project Handoff
 
+## 0. Phase B Part 1 current handoff - Staging deployed, acceptance gate blocked
+
+Latest merged main and Staging runtime:
+
+```text
+origin/main = 397bf09d01371961f6a438db67fd069afa7ed049
+V19_REPAIR_PR = #163
+STAGING_DEPLOYED_SHA = 397bf09d01371961f6a438db67fd069afa7ed049
+STAGING_FLYWAY = V20
+STAGING_HEALTH = PASS
+PRODUCTION = NO_MUTATION
+```
+
+Staging evidence:
+
+```text
+candidate_import_sha256 = ed056da3556cc571d18886e85c75b4b45bb87dbe1b86a98a631d4a941bdc6d55
+release_env_sha256 = b69066aa9ab50debd4ed5057d2b64be4080d19ecb1175d9c798edad850c5c781
+preflight_r2_sha256 = a12231c644b0b1155a6af443c56ae88c0d6d510dc1e50a9424eed653e5f329ab
+deploy_r2_sha256 = 69200b5e1df781da20a29f1c5dce8b344edb471001c97dd0b20e01c3c423d4a7
+health_r2_sha256 = e44460e11dc89de865dfcccf1e67a74d66f286786bb422c6ef8e84af6d683a14
+```
+
+Backend startup logs show Flyway validated 20 migrations, migrated V19 and V20
+from V18, and started normally. No Flyway repair, clean, history edit,
+Production action, Phase B Part 2, activation, physical hardware binding or
+final staff credential provisioning occurred.
+
+Automated Phase B Part 1 acceptance is currently blocked before creating
+`PHASE_B_VALIDATION_STORE_*`:
+
+```text
+BLOCKER_1 = Staging host lacks jq; Phase B acceptance requires a jq-compatible parser
+REPAIR_1 = codex/phase-b-part1-acceptance-jq-fallback
+REPAIR_1_STATUS = local tests PASS, PR/merge/deploy still pending
+BLOCKER_2 = runtime credential identity drift
+RUNTIME_STG005_CREDENTIAL_COUNT = 0
+RUNTIME_LEGACY_CREDENTIALS = owner, manager, staffA, staffB, a10_staff_*
+HISTORICAL_GOVERNANCE_CONFLICT = docs claim synthetic Owner credential ready
+NEXT_OWNER_GATE = reviewed Staging STG005 Owner credential reconciliation
+```
+
+Use latest runtime evidence as authority for the credential state. Do not
+relax the `STG005_` acceptance guard, use legacy `owner` to bypass the harness,
+hand-edit credentials with raw SQL, touch Production, or start Phase B Part 2.
+
 ## 0. Phase B Part 1 current handoff - V19 runtime repair in progress
 
 Staging runtime repair:
