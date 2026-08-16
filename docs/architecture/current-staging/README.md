@@ -1,5 +1,10 @@
 # Current Staging Architecture UML Baseline
 
+> Phase B Part 1 authorization prefix repair note: the Owner provisioning API
+> uses authenticated Owner authority plus active Organization Owner membership
+> and exact Organization scope. `STG005_` naming remains a synthetic
+> bootstrap/fixture convention, not a product authorization boundary.
+
 > Phase B Part 1 repository implementation note: Chain Master Menu and Store
 > materialization are now implemented in the current Phase B Part 1 candidate
 > through additive Flyway V18-V20, `LANZHOU_CHAIN_MASTER_MENU/v1`,

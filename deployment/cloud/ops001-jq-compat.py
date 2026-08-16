@@ -169,7 +169,9 @@ elif null_input and "revision_id: $revision" in filter_text:
     result = {"store_id": as_int("store"), "revision_id": as_int("revision")}
 elif filter_text.startswith(".login_identifier"):
     result = value.get("login_identifier") if isinstance(value, dict) else None
-    require(isinstance(result, str) and result.startswith("STG005_"))
+    require(isinstance(result, str) and len(result) > 0)
+    if 'startswith("STG005_")' in filter_text:
+        require(result.startswith("STG005_"))
 elif ".new_login_password" in filter_text and "length == 20" in filter_text:
     new_password = value.get("new_login_password") if isinstance(value, dict) else None
     require(isinstance(new_password, str) and len(new_password) == 20 and new_password != value.get("login_password"))

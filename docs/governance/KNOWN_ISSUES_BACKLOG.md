@@ -1,5 +1,27 @@
 # Known Issues Backlog
 
+## KI-B1-001 - Phase B acceptance treated STG005 login prefix as product authorization
+
+Status: `REPAIR_CANDIDATE_AGENT6_ACCEPT_PENDING_PR_STAGING_ACCEPTANCE`.
+
+Fresh authority recovery found a drift between the latest Owner product
+decision and the deployed Phase B Part 1 acceptance helper. The helper
+required a `STG005_` login identifier before it could use the reviewed private
+Staging Owner credential path, even though Phase B product authorization is
+supposed to be authenticated principal, `OWNER` authority, active Organization
+Owner membership and correct Organization scope.
+
+The backend provisioning API and frontend Owner surfaces do not use username
+prefix as an authorization condition. The local repair removes the Phase B
+acceptance prefix gate, preserves explicit `STG005_` checks in synthetic
+bootstrap/fixture tooling, and adds regression coverage for Owner, arbitrary
+Owner username, `STG005_` non-Owner rejection, wrong Organization rejection,
+inactive membership rejection and unauthenticated rejection.
+
+Agent 6 returned `PHASE_B_AUTH_PREFIX_REPAIR_ACCEPT`. This issue is not closed
+until PR/merge, exact-SHA Staging deploy and Phase B Part 1 automated
+acceptance pass.
+
 ## Phase B Part 1 repository-resolved gaps pending runtime validation
 
 Owner has granted implementation authority for Phase B Part 1. The previously

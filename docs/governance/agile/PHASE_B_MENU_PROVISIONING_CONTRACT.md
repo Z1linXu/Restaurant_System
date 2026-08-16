@@ -14,6 +14,13 @@ authority, and the repository implementation is recorded in
 [PHASE_B_PART1_IMPLEMENTATION_EVIDENCE](PHASE_B_PART1_IMPLEMENTATION_EVIDENCE.md).
 The status above is retained as historical A11.5 design evidence.
 
+Owner authorization clarification for Phase B Part 1: Store provisioning
+authorization is authenticated principal plus `OWNER` authority plus active
+Organization Owner membership plus correct Organization scope. A
+`STG005_` username/login prefix is not a product authorization requirement;
+that namespace remains only for explicit Staging synthetic bootstrap and
+fixture identity contracts.
+
 ## Historical required Owner approval before code
 
 Phase B implementation must not start until the Owner explicitly approves:

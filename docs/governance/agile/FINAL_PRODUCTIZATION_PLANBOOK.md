@@ -1,5 +1,51 @@
 # Final Productization Planbook
 
+## Phase B Part 1 authorization prefix repair candidate (2026-08-16)
+
+Owner product decision change:
+
+```text
+PHASE_B_PROVISIONING_AUTHORIZATION =
+  authenticated principal
+  + OWNER authority
+  + active Organization Owner membership
+  + correct Organization scope
+PHASE_B_PROVISIONING_USERNAME_PREFIX_REQUIRED = NO
+PHASE_B_AUTHORIZATION_PREFIX_DRIFT = REPAIR_CANDIDATE_AGENT6_ACCEPT_PENDING_PR_STAGING_ACCEPTANCE
+PHASE_B_AUTH_PREFIX_REPAIR_AGENT6 = PHASE_B_AUTH_PREFIX_REPAIR_ACCEPT
+PHASE_B_PART1_STAGING_AUTOMATED_ACCEPTANCE = PENDING
+PHASE_B_PART1_OWNER_ACCEPTANCE = PENDING
+PHASE_B_PART2 = NOT_STARTED
+PRODUCTION = NO_MUTATION
+```
+
+The old Phase B Part 1 acceptance gate required a `STG005_` Owner
+login identifier as a historical Staging synthetic convention. That rule is
+now superseded for Phase B product authorization. `STG005_` namespace checks
+remain valid for explicit synthetic bootstrap and fixture tooling.
+
+Fresh audit found no backend or frontend Phase B username-prefix authorization
+gate. The current repair candidate updates the Phase B Part 1 acceptance
+helper and jq fallback so acceptance can use the current reviewed private
+Staging Owner credential path, then verify the authenticated response has
+`OWNER` role, expected Organization scope and the exact submitted username.
+
+Required next route:
+
+```text
+PR/merge
+-> fresh fetch and governance reread
+-> exact-SHA Staging deploy
+-> Phase B Part 1 automated acceptance
+-> Owner manual Part 1 retest gate
+```
+
+Success still stops at:
+
+```text
+PHASE_B_PART1_CREATE_STORE_AND_MASTER_MENU_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
 ## Phase B Part 1 implementation authorization (2026-08-16)
 
 Owner has formally authorized Phase B implementation for Part 1 only:

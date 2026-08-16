@@ -1,5 +1,30 @@
 # Feature Backlog
 
+## Phase B Part 1 update - authorization prefix repair
+
+Status:
+
+```text
+PHASE_B_AUTHORIZATION_PREFIX_DRIFT = REPAIR_CANDIDATE_AGENT6_ACCEPT_PENDING_PR_STAGING_ACCEPTANCE
+PHASE_B_PRODUCT_AUTHORIZATION = OWNER_ROLE_PLUS_ACTIVE_ORGANIZATION_OWNER_MEMBERSHIP
+PHASE_B_USERNAME_PREFIX_AUTHORIZATION = NOT_REQUIRED
+PHASE_B_AUTH_PREFIX_REPAIR_AGENT6 = PHASE_B_AUTH_PREFIX_REPAIR_ACCEPT
+PHASE_B_PART1_STAGING_AUTOMATED_ACCEPTANCE = PENDING
+PHASE_B_PART1_OWNER_ACCEPTANCE = PENDING
+PHASE_B_PART2 = NOT_STARTED
+PRODUCTION = NO_MUTATION
+```
+
+Owner superseded the historical Phase B Part 1 acceptance convention that
+required the Owner login identifier to begin with `STG005_`. Part 1 product
+authorization now follows authenticated principal, `OWNER` authority, active
+Organization Owner membership and correct Organization scope. The `STG005_`
+namespace remains part of synthetic bootstrap/fixture identity tooling.
+
+Current repository repair candidate updates the Phase B Part 1 acceptance
+helper and jq fallback, with regression coverage proving authority and
+membership determine access instead of the login name.
+
 ## Phase B Part 1 update - Owner New Store Provisioning
 
 Status:

@@ -1,5 +1,6 @@
 package com.restaurant.system.common.auth;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
@@ -59,6 +60,39 @@ class OwnerOrganizationAuthorizationServiceTest {
     }
 
     @Test
+    void arbitraryOwnerUsernameCanUseExactOrganizationMembership() {
+        AuthenticatedUser owner = user(10L, "regional_owner_42", "OWNER");
+        when(organizationMembershipRepository.findFirstByUserIdAndOrganizationId(10L, 100L))
+            .thenReturn(Optional.of(ownerMembership(10L, 100L, "OWNER", true)));
+
+        assertDoesNotThrow(
+            () -> authorizationService.requireActiveOwnerMembership(owner, 100L)
+        );
+    }
+
+    @Test
+    void stagingPrefixedNonOwnerIsDeniedEvenWithMatchingOrganizationMembership() {
+        AuthenticatedUser nonOwner = user(10L, "STG005_MANAGER_01", "MANAGER");
+
+        assertThrows(
+            ForbiddenException.class,
+            () -> authorizationService.requireActiveOwnerMembership(nonOwner, 100L)
+        );
+    }
+
+    @Test
+    void stagingPrefixedOwnerFromWrongOrganizationIsDenied() {
+        AuthenticatedUser owner = user(10L, "STG005_OWNER_WRONG_ORG", "OWNER");
+        when(organizationMembershipRepository.findFirstByUserIdAndOrganizationId(10L, 200L))
+            .thenReturn(Optional.empty());
+
+        assertThrows(
+            ForbiddenException.class,
+            () -> authorizationService.requireActiveOwnerMembership(owner, 200L)
+        );
+    }
+
+    @Test
     void sourceStoreOutsideTargetOrganizationIsDenied() {
         AuthenticatedUser owner = user(10L, "OWNER");
         when(organizationMembershipRepository.findFirstByUserIdAndOrganizationId(10L, 100L))
@@ -95,6 +129,10 @@ class OwnerOrganizationAuthorizationServiceTest {
 
     private AuthenticatedUser user(Long userId, String roleCode) {
         return new AuthenticatedUser(userId, null, userId, "user" + userId, "User " + userId, roleCode);
+    }
+
+    private AuthenticatedUser user(Long userId, String username, String roleCode) {
+        return new AuthenticatedUser(userId, null, userId, username, "User " + userId, roleCode);
     }
 
     private OrganizationMembership ownerMembership(
