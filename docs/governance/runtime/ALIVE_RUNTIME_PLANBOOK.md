@@ -1,5 +1,52 @@
 # Alive Runtime Planbook
 
+## Current Phase B Part 1 Staging state after V19 repair deploy (2026-08-16)
+
+V19 sort-order repair merged through PR #163 and became:
+
+```text
+origin/main = 397bf09d01371961f6a438db67fd069afa7ed049
+```
+
+Staging exact-SHA sequence for `397bf09d01371961f6a438db67fd069afa7ed049`:
+
+```text
+candidate_import = PASS
+candidate_import_evidence = /srv/restaurant-pos/staging/evidence/phase-b-part1-candidate-import-397bf09d01371961f6a438db67fd069afa7ed049.txt
+candidate_import_sha256 = ed056da3556cc571d18886e85c75b4b45bb87dbe1b86a98a631d4a941bdc6d55
+release_env_validate = PASS
+release_env_validate_sha256 = 6807aee4bd51fc887ab7eaad1b6408b03faa63f3f9a1c69906e339e0770cd486
+release_env_execute = PASS
+release_env_sha256 = b69066aa9ab50debd4ed5057d2b64be4080d19ecb1175d9c798edad850c5c781
+preflight_r2 = PASS
+preflight_r2_sha256 = a12231c644b0b1155a6af443c56ae88c0d6d510dc1e50a9424eed653e5f329ab
+deploy_r2 = PASS
+deploy_r2_sha256 = 69200b5e1df781da20a29f1c5dce8b344edb471001c97dd0b20e01c3c423d4a7
+health_r2 = PASS
+health_r2_sha256 = e44460e11dc89de865dfcccf1e67a74d66f286786bb422c6ef8e84af6d683a14
+flyway = V20 (V19 and V20 successfully applied by normal startup)
+production = NO_MUTATION
+```
+
+Automated Phase B Part 1 acceptance is not complete. Fresh runtime inspection
+found two acceptance-gate blockers before Store creation:
+
+```text
+STAGING_HOST_JQ = ABSENT
+PHASE_B_ACCEPTANCE_JQ_FALLBACK_REPAIR = IN_PROGRESS
+STG005_RUNTIME_CREDENTIALS = DRIFT
+runtime_counts = organizations=1 stores=5 users=6 credentials=6 stg005_organizations=1 stg005_stores=1 stg005_credentials=0
+legacy_credentials = owner, manager, staffA, staffB, a10_staff_*
+bootstrap_request = STG005_20260809_R01 COMPLETED at runtime_sha 712531b941db92f4325a86126883706314f4cba5c with owner_user_id=1
+credential_gate = BLOCKED_PENDING_OWNER_REVIEWED_RECONCILIATION
+```
+
+Repository/governance statements that imply a currently usable
+`STG005_OWNER_20260808_R01` runtime credential conflict with the latest runtime
+evidence above. Use runtime evidence as ground truth. Do not bypass this by
+using legacy `owner`, relaxing the `STG005_` guard, manual SQL, Production
+access, or starting Phase B Part 2.
+
 ## Current Phase B Part 1 V19 runtime repair (2026-08-16)
 
 Exact Staging deploy/start for

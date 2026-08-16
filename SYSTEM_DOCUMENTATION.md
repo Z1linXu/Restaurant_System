@@ -1,5 +1,21 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-16 Phase B Part 1 Staging runtime update: V19 repair PR #163 merged
+> to `origin/main@397bf09d01371961f6a438db67fd069afa7ed049`, was imported into
+> the dedicated Staging repository, release-env was rotated, preflight passed,
+> exact Staging deploy/start completed, and health passed after backend startup.
+> Backend logs show Flyway validated 20 migrations and applied V19+V20
+> successfully, bringing Staging to v20 without Flyway repair/clean/history
+> edit. Automated Phase B Part 1 acceptance is still blocked before Owner Store
+> creation by Staging gate drift: the host has no `jq` binary, and current
+> runtime `user_credentials` contains zero `STG005_` login identifiers even
+> though Organization/Store STG005 rows and historical governance claim a
+> synthetic Owner credential exists. A bounded tooling repair adds a reviewed
+> `ops001-jq-compat.py` fallback for the Phase B acceptance harness; credential
+> identity reconciliation remains a separate Staging Owner gate and must not be
+> bypassed with legacy `owner` login, raw SQL, Production access, or relaxed
+> synthetic identity checks.
+
 > 2026-08-16 Phase B Part 1 V19 Staging runtime repair: exact `origin/main`
 > `908902b41d4d4b34b0ce663da4a7dd75800cdb36` completed release/env
 > preparation, fresh same-host preflight and Staging deploy/start, but health
