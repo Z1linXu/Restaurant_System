@@ -122,6 +122,8 @@ printf '{"success":true,"data":{"store_id":11,"status":"COMPLETED","result_code"
 "$JQ_COMPAT" -e '.data.status == "COMPLETED" and .data.result_code == "PHASE_B_STORE_PROVISIONED" and .data.counts.category_count > 0 and .data.counts.item_count > 0 and .data.counts.option_count > 0 and .data.counts.printing_rule_count == 1' "$TMP_DIR/provision-response.json"
 [[ "$("$JQ_COMPAT" -er '.data.store_id | numbers' "$TMP_DIR/provision-response.json")" == 11 ]] ||
   fail 'jq compatibility parser did not extract provisioned Store ID'
+[[ "$("$JQ_COMPAT" -er '.data.replayed | select(. == true)' "$TMP_DIR/provision-response.json")" == true ]] ||
+  fail 'jq compatibility parser did not expose replayed=true for command substitution'
 
 assert_not_contains '/stores/onboard' "$SCRIPT"
 assert_not_contains 'menu-clone' "$SCRIPT"

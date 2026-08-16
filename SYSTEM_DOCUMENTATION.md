@@ -1,5 +1,17 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-16 Phase B Part 1 jq fallback replay repair candidate:
+> Staging deploy of `origin/main@489e157433307c4b5aabdeb99e069a77e84561f5`
+> passed health, readiness, runtime evidence and Flyway V21, then Phase B
+> Part 1 acceptance created validation Store
+> `PHASE_B_VALIDATION_STORE_489E157_R1` / `store_id=6` and completed the
+> provisioning ledger. Acceptance stopped at the replay assertion because the
+> jq-absent Staging host used `ops001-jq-compat.py`; its `-er` boolean path
+> returned exit 0 without printing `true`, so command substitution read an
+> empty value. The repair restores jq-compatible boolean output and adds a
+> replay regression assertion. Production remains no-mutation; the next
+> Staging acceptance rerun must use a new validation Store code.
+
 > 2026-08-16 Phase B Part 1 Master fingerprint repair candidate:
 > Runtime-gate repair PR #167 is merged and deployed to Staging at
 > `218777e418c7415fee4deff7f1c026b3897308d9`; health/readiness, Flyway V20,
