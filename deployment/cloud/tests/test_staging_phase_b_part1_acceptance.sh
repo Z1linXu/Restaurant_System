@@ -125,6 +125,28 @@ printf '{"success":true,"data":{"store_id":11,"status":"COMPLETED","result_code"
 [[ "$("$JQ_COMPAT" -er '.data.replayed | select(. == true)' "$TMP_DIR/provision-response.json")" == true ]] ||
   fail 'jq compatibility parser did not expose replayed=true for command substitution'
 
+printf '{"success":true,"data":{"store_id":11,"groups":[{"group_id":1,"group_code":"COMBO_EGG","name_zh":"蛋类","name_en":"Egg","selection_rule":"EXACTLY_ONE","required":true,"enabled":true,"display_order":10,"default_component_code":"combo_tea_egg","components":[{"id":101,"group_id":1,"component_group":"COMBO_EGG","component_code":"combo_tea_egg","name_zh":"卤蛋","name_en":"Tea Egg","enabled":true,"display_order":10,"is_default":true,"linked_menu_item_id":null,"business_behavior":"NO_KITCHEN_TASK"},{"id":102,"group_id":1,"component_group":"COMBO_EGG","component_code":"combo_fried_egg","name_zh":"煎蛋","name_en":"Fried Egg","enabled":true,"display_order":20,"is_default":false,"linked_menu_item_id":null,"business_behavior":"NO_KITCHEN_TASK"}]}]}}\n' >"$TMP_DIR/combo-response.json"
+"$JQ_COMPAT" --argjson component 102 --argjson store 11 '
+    .data as $data |
+    {
+      store_id: $store,
+      groups: [$data.groups[] | {
+        group_id, group_code, name_zh, name_en, selection_rule, required, enabled, display_order, default_component_code,
+        components: [.components[] | {id, group_id, component_group, component_code, name_zh, name_en, enabled: (if .id == $component then false else .enabled end), display_order, is_default, linked_menu_item_id, business_behavior}]
+      }]
+    }' "$TMP_DIR/combo-response.json" >"$TMP_DIR/combo-update.json"
+python3 - "$TMP_DIR/combo-update.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    payload = json.load(handle)
+assert payload["store_id"] == 11
+assert "components" not in payload
+assert payload["groups"][0]["components"][0]["enabled"] is True
+assert payload["groups"][0]["components"][1]["enabled"] is False
+PY
+
 assert_not_contains '/stores/onboard' "$SCRIPT"
 assert_not_contains 'menu-clone' "$SCRIPT"
 assert_not_contains 'CHINATOWN' "$SCRIPT"

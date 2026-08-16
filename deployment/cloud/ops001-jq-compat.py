@@ -381,23 +381,24 @@ elif ".data as $data" in filter_text and "components:" in filter_text:
     result = {
         "store_id": as_int("store"),
         "groups": [
-            {key: group.get(key) for key in (
-                "group_id", "group_code", "name_zh", "name_en", "selection_rule",
-                "required", "enabled", "display_order", "default_component_code"
-            )}
-            for group in data.get("groups", [])
-        ],
-        "components": [
             {
-                **{key: component.get(key) for key in (
-                    "id", "group_id", "component_group", "component_code", "name_zh",
-                    "name_en", "display_order", "is_default", "linked_menu_item_id",
-                    "business_behavior"
+                **{key: group.get(key) for key in (
+                    "group_id", "group_code", "name_zh", "name_en", "selection_rule",
+                    "required", "enabled", "display_order", "default_component_code"
                 )},
-                "enabled": False if component.get("id") == component_id else component.get("enabled"),
+                "components": [
+                    {
+                        **{key: component.get(key) for key in (
+                            "id", "group_id", "component_group", "component_code", "name_zh",
+                            "name_en", "display_order", "is_default", "linked_menu_item_id",
+                            "business_behavior"
+                        )},
+                        "enabled": False if component.get("id") == component_id else component.get("enabled"),
+                    }
+                    for component in (group.get("components", []) or [])
+                ],
             }
             for group in data.get("groups", [])
-            for component in (group.get("components", []) or [])
         ],
     }
 elif ".data.active_revision.content" in filter_text and "item_aliases" in filter_text:
