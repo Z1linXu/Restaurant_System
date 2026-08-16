@@ -6,7 +6,8 @@ Status:
 
 ```text
 PHASE_B_OWNER_IMPLEMENTATION_APPROVAL = GRANTED_FOR_PART_1
-PHASE_B_PART1_REPOSITORY_IMPLEMENTATION = COMPLETE_PENDING_PR_MERGE
+PHASE_B_PART1_REPOSITORY_IMPLEMENTATION = MERGED_TO_MAIN_VIA_PR_161
+PHASE_B_PART1_IMPLEMENTATION_MERGE_SHA = 4ace6988dd4793b3b7259bf7455289af24f13d4b
 PHASE_B_PART1_STAGING_AUTOMATED_ACCEPTANCE = PENDING
 PHASE_B_PART1_OWNER_ACCEPTANCE = PENDING
 PHASE_B_PART2 = NOT_STARTED
@@ -14,7 +15,8 @@ PRODUCTION = NO_MUTATION
 ```
 
 Part 1 repository implementation now delivers the first Owner UI-driven Store
-provisioning path pending PR/merge and Staging runtime gates. It creates a
+provisioning path and is merged to `main` via PR #161 pending Staging runtime
+gates. It creates a
 Staging-only synthetic/non-active Store by an authorized Organization Owner,
 materializes the complete Chain Master Menu, supports independent Store-local
 menu review/deactivation and establishes validation fixture hygiene. It must

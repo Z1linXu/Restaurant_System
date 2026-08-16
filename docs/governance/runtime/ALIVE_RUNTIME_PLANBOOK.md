@@ -6,7 +6,8 @@ Owner has formally opened Phase B for Part 1 only:
 
 ```text
 PHASE_B_OWNER_IMPLEMENTATION_APPROVAL = GRANTED_FOR_PART_1
-PHASE_B_PART1_REPOSITORY_IMPLEMENTATION = COMPLETE_PENDING_PR_MERGE
+PHASE_B_PART1_REPOSITORY_IMPLEMENTATION = MERGED_TO_MAIN_VIA_PR_161
+PHASE_B_PART1_IMPLEMENTATION_MERGE_SHA = 4ace6988dd4793b3b7259bf7455289af24f13d4b
 PHASE_B_PART1_FINAL_REVIEW_BY_AGENT_6 = ACCEPT
 PHASE_B_PART1_STAGING_PREFLIGHT = PENDING
 PHASE_B_PART1_STAGING_DEPLOYMENT = PENDING
@@ -16,10 +17,11 @@ PHASE_A11_5_CHAIN_MASTER_MENU_DESIGN = PASS
 PRODUCTION = NO_MUTATION
 ```
 
-Fresh repository authority:
+Repository authority:
 
 ```text
-origin/main@0de03c773ef04594e7d737c6bccdf6f607692eca
+implementation_merge = origin/main@4ace6988dd4793b3b7259bf7455289af24f13d4b
+deploy_authority = fresh-fetched exact origin/main after this governance sync
 ```
 
 Part 1 repository implementation now adds Staging-only Owner Create New Store
@@ -44,7 +46,7 @@ Fresh Authority
 -> repository implementation packages
 -> governance/evidence sync
 -> Agent 6 final review PASS
--> PR/merge
+-> PR/merge PASS (#161 / 4ace6988dd4793b3b7259bf7455289af24f13d4b)
 -> fresh Staging runtime preflight before first deploy
 -> exact-SHA Staging deploy and automated acceptance
 -> Owner manual Part 1 retest gate

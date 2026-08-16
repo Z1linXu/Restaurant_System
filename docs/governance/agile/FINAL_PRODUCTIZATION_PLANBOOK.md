@@ -6,7 +6,8 @@ Owner has formally authorized Phase B implementation for Part 1 only:
 
 ```text
 PHASE_B_OWNER_IMPLEMENTATION_APPROVAL = GRANTED_FOR_PART_1
-PHASE_B_PART1_REPOSITORY_IMPLEMENTATION = COMPLETE_PENDING_PR_MERGE
+PHASE_B_PART1_REPOSITORY_IMPLEMENTATION = MERGED_TO_MAIN_VIA_PR_161
+PHASE_B_PART1_IMPLEMENTATION_MERGE_SHA = 4ace6988dd4793b3b7259bf7455289af24f13d4b
 PHASE_B_PART1_FINAL_REVIEW_BY_AGENT_6 = ACCEPT
 PHASE_B_PART1_STAGING_AUTOMATED_ACCEPTANCE = PENDING
 PHASE_B_PART1_OWNER_ACCEPTANCE = PENDING
@@ -35,6 +36,11 @@ Create New Store UI, and exact-SHA Staging acceptance tooling. Materialized
 Part 1 Stores are synthetic/non-active `VALIDATION_FIXTURE` rows at
 `READY_FOR_REVIEW` with Store-owned menu/config/printing rules, Master mapping
 evidence, and runtime `MOCK` printing mode.
+
+Implementation merged through PR #161 at
+`4ace6988dd4793b3b7259bf7455289af24f13d4b`. Any subsequent docs-only
+governance sync may advance `main`; Staging deployment must use the exact
+fresh-fetched `origin/main` SHA after that sync.
 
 Required review before PR/merge:
 
