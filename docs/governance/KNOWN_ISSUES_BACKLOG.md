@@ -1,5 +1,49 @@
 # Known Issues Backlog
 
+## Phase B Part 1 repository-resolved gaps pending runtime validation
+
+Owner has granted implementation authority for Phase B Part 1. The previously
+identified Part 1 gaps are repository-resolved by the current implementation
+and now require PR/merge, fresh Staging preflight, exact-SHA Staging deploy and
+automated acceptance before Owner manual retest:
+
+- Chain Master Menu persistence/versioning: `V18` + `V19`.
+- `PRINTING_DISPLAY_RULES` Store Profile artifact support: `V18`.
+- Store lifecycle/provisioning provenance and validation fixture visibility:
+  `V18` plus workspace/overview/store context/UI filtering.
+- Canonical idempotent Store materialization: Owner provisioning service and
+  `owner_store_provisioning_requests`.
+- Owner Create New Store UI: Owner Dashboard Part 1 panel.
+
+Evidence:
+
+- [PHASE_B_PART1_IMPLEMENTATION_AUDIT](agile/PHASE_B_PART1_IMPLEMENTATION_AUDIT.md)
+- [PHASE_B_PART1_PACKAGE_PLAN](agile/PHASE_B_PART1_PACKAGE_PLAN.md)
+- [PHASE_B_PART1_IMPLEMENTATION_EVIDENCE](agile/PHASE_B_PART1_IMPLEMENTATION_EVIDENCE.md)
+
+## KI-A11-5-001 - Store Profile artifact whitelist lacks A11 printing rules
+
+Status: `REPOSITORY_RESOLVED_PENDING_STAGING_FLYWAY_V18`.
+
+A11 governance requires post-A11 Store Profile versions to include a
+`PRINTING_DISPLAY_RULES` artifact, and A11 V17 adds Store-owned printing
+display rule tables. Fresh schema audit found V14
+`store_profile_artifacts.artifact_type` still whitelists the original A4
+artifact types and does not include `PRINTING_DISPLAY_RULES`; V17 does not
+alter that whitelist.
+
+This is not a runtime incident and does not rewrite historical
+`ST_DENIS_CANONICAL_PROFILE/v1`. Phase B Part 1 migration V18 extends the
+artifact whitelist additively; V19 creates `ST_DENIS_CANONICAL_PROFILE/v2`
+with a `PRINTING_DISPLAY_RULES/v1` artifact. Runtime closure still depends on
+exact-SHA Staging applying V18-V20 successfully.
+
+## Phase A11/A11.5 resolved gating risk
+
+Owner has declared `PHASE_A11_OWNER_ACCEPTANCE = PASS`. Phase B is no longer
+blocked by A11 Owner acceptance or by A11.5 design. It remains intentionally
+stopped until explicit Owner approval for Phase B implementation.
+
 ## KI-A10-001 — KDS disabled module gate returns generic 500
 
 Status: `OPEN_NON_BLOCKING`.

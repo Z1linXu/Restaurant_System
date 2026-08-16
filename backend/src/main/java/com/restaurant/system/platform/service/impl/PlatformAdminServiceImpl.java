@@ -10,6 +10,12 @@ import com.restaurant.system.menu.repository.MenuCategoryRepository;
 import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.menu.repository.MenuItemRepository;
 import com.restaurant.system.menu.service.MenuRevisionService;
+import com.restaurant.system.owner.master.ChainMasterMenuEntity;
+import com.restaurant.system.owner.master.ChainMasterMenuRepository;
+import com.restaurant.system.owner.master.ChainMasterMenuVersionEntity;
+import com.restaurant.system.owner.master.ChainMasterMenuVersionRepository;
+import com.restaurant.system.owner.provisioning.StoreMenuMasterMappingEntity;
+import com.restaurant.system.owner.provisioning.StoreMenuMasterMappingRepository;
 import com.restaurant.system.platform.dto.CreateStoreFromTemplateRequest;
 import com.restaurant.system.platform.dto.PlatformAdminOverviewResponse;
 import com.restaurant.system.platform.entity.Organization;
@@ -57,6 +63,9 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
     private final StoreKdsDisplayConfigRepository storeKdsDisplayConfigRepository;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final ChainMasterMenuRepository chainMasterMenuRepository;
+    private final ChainMasterMenuVersionRepository chainMasterMenuVersionRepository;
+    private final StoreMenuMasterMappingRepository storeMenuMasterMappingRepository;
     private final ObjectMapper objectMapper;
 
     public PlatformAdminServiceImpl(
@@ -71,7 +80,10 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         StoreKdsDisplayConfigRepository storeKdsDisplayConfigRepository,
         UserRepository userRepository,
         RoleRepository roleRepository,
-        MenuRevisionService menuRevisionService
+        MenuRevisionService menuRevisionService,
+        ChainMasterMenuRepository chainMasterMenuRepository,
+        ChainMasterMenuVersionRepository chainMasterMenuVersionRepository,
+        StoreMenuMasterMappingRepository storeMenuMasterMappingRepository
     ) {
         this.organizationRepository = organizationRepository;
         this.restaurantTemplateRepository = restaurantTemplateRepository;
@@ -85,6 +97,9 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.menuRevisionService = menuRevisionService;
+        this.chainMasterMenuRepository = chainMasterMenuRepository;
+        this.chainMasterMenuVersionRepository = chainMasterMenuVersionRepository;
+        this.storeMenuMasterMappingRepository = storeMenuMasterMappingRepository;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -279,7 +294,8 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
     @Override
     @Transactional
     public MenuItem saveMenuItem(MenuItem menuItem) {
-        MenuItem target = menuItem.id == null
+        boolean creating = menuItem.id == null;
+        MenuItem target = creating
             ? new MenuItem()
             : menuItemRepository.findById(menuItem.id).orElseThrow(() -> new BusinessException("Menu item not found"));
         Long previousStoreId = target.store_id;
@@ -302,8 +318,58 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         }
         stamp(target, menuItem.id == null);
         MenuItem saved = menuItemRepository.save(target);
+        if (creating) {
+            materializeStoreOnlyMapping(saved);
+        }
         incrementMenuRevisions(previousStoreId, saved.store_id);
         return saved;
+    }
+
+    private void materializeStoreOnlyMapping(MenuItem item) {
+        if (item == null || item.id == null || item.store_id == null) {
+            return;
+        }
+        Store store = storeRepository.findById(item.store_id).orElse(null);
+        if (!isPhaseBProvisionedStore(store)) {
+            return;
+        }
+        ChainMasterMenuVersionEntity masterVersion = requireProvisionedMasterVersion(store);
+        LocalDateTime now = LocalDateTime.now();
+        StoreMenuMasterMappingEntity mapping = new StoreMenuMasterMappingEntity();
+        mapping.store_id = item.store_id;
+        mapping.master_menu_version_id = masterVersion.id;
+        mapping.entity_type = "ITEM";
+        mapping.local_entity_id = item.id;
+        mapping.origin = "STORE_ONLY";
+        mapping.mapping_status = "STORE_ONLY";
+        mapping.created_at = now;
+        mapping.updated_at = now;
+        storeMenuMasterMappingRepository.save(mapping);
+    }
+
+    private ChainMasterMenuVersionEntity requireProvisionedMasterVersion(Store store) {
+        ChainMasterMenuEntity masterMenu = chainMasterMenuRepository
+            .findByOrganizationAndKey(store.organization_id, store.provisioned_master_menu_key)
+            .orElseThrow(() -> new BusinessException("STORE_ONLY_MASTER_MENU_NOT_FOUND"));
+        ChainMasterMenuVersionEntity masterVersion = chainMasterMenuVersionRepository
+            .findByMasterMenuAndVersionKey(masterMenu.id, store.provisioned_master_menu_version)
+            .orElseThrow(() -> new BusinessException("STORE_ONLY_MASTER_MENU_VERSION_NOT_FOUND"));
+        if (!"PUBLISHED".equals(masterVersion.status)) {
+            throw new BusinessException("STORE_ONLY_MASTER_MENU_VERSION_NOT_PUBLISHED");
+        }
+        if (!store.provisioned_master_menu_fingerprint_sha256.equals(masterVersion.fingerprint_sha256)) {
+            throw new BusinessException("STORE_ONLY_MASTER_MENU_FINGERPRINT_MISMATCH");
+        }
+        return masterVersion;
+    }
+
+    private boolean isPhaseBProvisionedStore(Store store) {
+        return store != null
+            && "PHASE_B_OWNER_PROVISIONING".equalsIgnoreCase(store.provisioning_source)
+            && store.organization_id != null
+            && store.provisioned_master_menu_key != null
+            && store.provisioned_master_menu_version != null
+            && store.provisioned_master_menu_fingerprint_sha256 != null;
     }
 
     private Integer nextMenuItemSortOrder(Long storeId, Long categoryId) {

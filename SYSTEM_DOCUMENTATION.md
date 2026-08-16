@@ -1,5 +1,54 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-16 Phase B Part 1 Owner New Store Provisioning repository
+> implementation: Owner has granted
+> `PHASE_B_OWNER_IMPLEMENTATION_APPROVAL = GRANTED_FOR_PART_1`. Fresh
+> repository authority at implementation start is
+> `origin/main@0de03c773ef04594e7d737c6bccdf6f607692eca`. Part 1 repository
+> implementation is complete pending PR/merge, fresh Staging runtime preflight,
+> exact-SHA Staging deploy and automated acceptance. It adds additive Flyway
+> V18-V20, `LANZHOU_CHAIN_MASTER_MENU/v1`,
+> `ST_DENIS_CANONICAL_PROFILE/v2`, Owner-only idempotent Store provisioning
+> APIs, Store/Profile/Master provenance, validation fixture hygiene, Owner
+> Dashboard Create New Store UI and a Staging acceptance harness. Materialized
+> Part 1 Stores are synthetic/non-active validation fixtures with Store-owned
+> menu/config/printing-rule rows, new local DB IDs, Master mappings and runtime
+> `MOCK` printing mode. This does not authorize Phase B Part 2, final
+> activation, Chinatown, Sainte-Catherine, physical printer/Pad binding, final
+> staff credentials, Production deploy/restart/Flyway or Production mutation.
+> Agent 6 final repository review returned `PHASE_B_PART1_ACCEPT`; next gate is
+> PR/merge, then fresh Staging runtime preflight before exact-SHA deploy.
+> Evidence:
+> [PHASE_B_PART1_IMPLEMENTATION_AUDIT](docs/governance/agile/PHASE_B_PART1_IMPLEMENTATION_AUDIT.md)
+> ,
+> [PHASE_B_PART1_PACKAGE_PLAN](docs/governance/agile/PHASE_B_PART1_PACKAGE_PLAN.md),
+> and
+> [PHASE_B_PART1_IMPLEMENTATION_EVIDENCE](docs/governance/agile/PHASE_B_PART1_IMPLEMENTATION_EVIDENCE.md).
+
+> 2026-08-15 Phase A11.5 Chain Master Menu and Store Materialization Design:
+> Owner formally declared `PHASE_A11_OWNER_ACCEPTANCE = PASS`; any older A11
+> `PENDING` governance is stale. Fresh repository authority is
+> `origin/main@0de03c773ef04594e7d737c6bccdf6f607692eca`. A11.5 defines
+> `LANZHOU_CHAIN_MASTER_MENU/v1` as an Organization-scoped immutable Master
+> Menu derived from reviewed St-Denis profile/menu artifacts, not live
+> Production St-Denis and not a live-linked Store. The design defines Master
+> product identity, Master versioning, Store materialization, Store-local
+> overrides and Phase B menu provisioning. No code, Flyway, Staging deploy,
+> restart, Production action or Phase B implementation occurred in the A11.5
+> design closure. That historical stop has now been superseded for Part 1 by
+> the 2026-08-16 Owner implementation authorization above.
+> Evidence:
+> [CURRENT_CHAIN_MENU_READINESS_AUDIT](docs/governance/agile/CURRENT_CHAIN_MENU_READINESS_AUDIT.md),
+> [PHASE_A11_5_CHAIN_MASTER_MENU_DESIGN](docs/governance/agile/PHASE_A11_5_CHAIN_MASTER_MENU_DESIGN.md),
+> [CHAIN_MASTER_MENU_CONTRACT](docs/governance/agile/CHAIN_MASTER_MENU_CONTRACT.md),
+> [CHAIN_MASTER_MENU_VERSIONING_CONTRACT](docs/governance/agile/CHAIN_MASTER_MENU_VERSIONING_CONTRACT.md),
+> [MASTER_PRODUCT_IDENTITY_CONTRACT](docs/governance/agile/MASTER_PRODUCT_IDENTITY_CONTRACT.md),
+> [STORE_MENU_MATERIALIZATION_CONTRACT](docs/governance/agile/STORE_MENU_MATERIALIZATION_CONTRACT.md),
+> [STORE_MENU_LOCAL_OVERRIDE_CONTRACT](docs/governance/agile/STORE_MENU_LOCAL_OVERRIDE_CONTRACT.md),
+> [PHASE_B_MENU_PROVISIONING_CONTRACT](docs/governance/agile/PHASE_B_MENU_PROVISIONING_CONTRACT.md),
+> [MASTER_MENU_SCHEMA_OPTIONS](docs/governance/agile/MASTER_MENU_SCHEMA_OPTIONS.md), and
+> [PHASE_B_CHAIN_MENU_ENTRY_READINESS](docs/governance/agile/PHASE_B_CHAIN_MENU_ENTRY_READINESS.md).
+
 > 2026-08-15 Phase A11 Printing Rule Configuration implementation candidate:
 > Owner answered the five A11 product decisions and approved implementation.
 > Additive Flyway V17 introduces Store-scoped, versioned

@@ -1,5 +1,12 @@
 # 03 Module/Profile Architecture
 
+> Phase B Part 1 repository implementation note:
+> `LANZHOU_CHAIN_MASTER_MENU/v1`, Master product identity, Store
+> materialization and Store-local override mappings are implemented in the
+> current Part 1 candidate through additive V18-V20 schema and Owner-only
+> provisioning services. They are pending PR/merge and exact-SHA Staging deploy
+> before becoming the deployed Staging runtime baseline.
+
 > A10 update: automated Phase A acceptance passed on fresh main/deployed
 > Staging SHA `ad4572759e01b5546ec59af24aa36b09e5c2dd00`. Module catalog,
 > dependency graph, Store modules, profile template readiness, pricing, combo,
@@ -38,8 +45,10 @@ contract relate to each other.
 
 ## Scope
 
-A1 through A10 implemented Phase A architecture. Phase B Store provisioning is
-shown only as future work, not as current behavior.
+A1 through A10 implemented Phase A architecture. Phase B Part 1 Store
+provisioning is repository-implemented in the current candidate and pending
+runtime deployment; Phase B Part 2 activation/staff/physical hardware remains
+future work.
 
 ## Mermaid diagram
 
@@ -62,11 +71,13 @@ flowchart TD
     profileValidator["StoreProfileContractValidator"] --> profileTables
     validator --> profileValidator
     profileSeed["A5 ST_DENIS_CANONICAL_PROFILE/v1<br/>12 deterministic artifacts"] --> profileTables
-    dryRun["StoreProfileMaterializationDryRunValidator"] --> profileValidator
+    dryRun["StoreProfileMaterializationDryRunValidator<br/>current dry-run only"] --> profileValidator
+    masterMenu["PHASE B PART 1 CANDIDATE<br/>LANZHOU_CHAIN_MASTER_MENU/v1<br/>V18-V19"] --> profileTables
+    materializer["PHASE B PART 1 CANDIDATE<br/>Owner provisioning materializer<br/>synthetic READY_FOR_REVIEW Store"] --> phaseB
 
     legacy["Bounded legacy compatibility<br/>stores.printing_enabled mirror<br/>frontend platform/dev env config"] -. "environment inputs" .-> capability
     printMode["Canonical runtime print mode<br/>stores.printing_mode"] --> capability
-    phaseB["Phase B Store provisioning<br/>future"] -. "not implemented" .-> profileTables
+    phaseB["Phase B Part 1 Store provisioning<br/>repository implemented, runtime pending"] --> profileTables
 ```
 
 ## Key invariants
@@ -87,11 +98,16 @@ flowchart TD
   `PLATFORM` environment capability is enabled.
 - A10 accepts Phase A automated validation; Owner final Staging acceptance is
   still pending.
+- Phase B Part 1 candidate adds Master Menu/materialization tables, APIs and
+  writers; deployed Staging closure still requires exact-SHA runtime evidence.
+- Part 1 provisioning creates synthetic/non-active validation Stores at
+  `READY_FOR_REVIEW` with `MOCK` runtime printing mode.
 
 ## What omitted
 
 - physical hardware pairing or printer binding
-- Phase B materialization commands
+- Phase B Part 2 activation, staff credential delivery and physical hardware
+  provisioning commands
 
 ## Source files used
 

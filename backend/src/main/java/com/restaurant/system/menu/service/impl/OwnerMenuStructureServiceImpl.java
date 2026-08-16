@@ -86,9 +86,6 @@ public class OwnerMenuStructureServiceImpl implements OwnerMenuStructureService 
             throw new BusinessException("CATEGORY_STORE_MISMATCH");
         }
         Boolean nextActive = bool(request.enabled, request.is_active, true);
-        if (!Boolean.TRUE.equals(nextActive) && menuItemRepository.countActiveByStoreIdAndCategoryId(storeId, category.id) > 0) {
-            throw new BusinessException("CATEGORY_HAS_ACTIVE_ITEMS");
-        }
 
         category.name_zh = cleanRequired(request.name_zh, "CATEGORY_NAME_ZH_REQUIRED");
         category.name_en = cleanRequired(request.name_en, "CATEGORY_NAME_EN_REQUIRED");

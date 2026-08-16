@@ -185,6 +185,27 @@ require_env_value() {
   printf '%s' "$value"
 }
 
+validate_staging_printing_policy() {
+  local print_mode print_feature allowed_modes endpoint_configuration
+  print_mode="$(require_env_value STAGING_PRINT_MODE)"
+  print_feature="$(require_env_value STAGING_PRINTING_FEATURE_ENABLED)"
+  if [[ "${ALLOW_SAFE_PRINTING_POLICY:-false}" == "true" ]]; then
+    allowed_modes="$(dotenv_value STAGING_ALLOWED_PRINTING_MODES || true)"
+    endpoint_configuration="$(dotenv_value STAGING_PRINTER_ENDPOINT_CONFIGURATION_ENABLED || true)"
+    [[ -n "$allowed_modes" ]] || allowed_modes="DISABLED,MOCK"
+    [[ -n "$endpoint_configuration" ]] || endpoint_configuration="false"
+    case "$print_mode/$print_feature" in
+      DISABLED/false|MOCK/true) ;;
+      *) die "Staging printing must use DISABLED/false or MOCK/true" ;;
+    esac
+    [[ "$allowed_modes" == "DISABLED,MOCK" ]] || die "Staging runtime printing modes must be exactly DISABLED,MOCK"
+    [[ "$endpoint_configuration" == "false" ]] || die "Staging printer endpoint configuration must remain disabled"
+    return
+  fi
+  [[ "$print_mode" == "$EXPECTED_PRINTING_MODE" ]] || die "printing mode must be $EXPECTED_PRINTING_MODE"
+  [[ "$print_feature" == "false" ]] || die "printing feature must remain disabled"
+}
+
 cleanup() {
   local status=$? remaining=""
   trap - ERR INT TERM
@@ -627,8 +648,7 @@ validate_release_and_evidence() {
   [[ "$(require_env_value STAGING_ROOT)" == "$EXPECTED_ROOT" ]] || die "Staging root mismatch"
   [[ "$(require_env_value STAGING_COMMIT_SHA)" == "$APPROVED_SHA" ]] || die "environment SHA mismatch"
   [[ "$(require_env_value SPRING_PROFILES_ACTIVE)" == "cloud" ]] || die "base Staging profile must be cloud"
-  [[ "$(require_env_value STAGING_PRINT_MODE)" == "$EXPECTED_PRINTING_MODE" ]] || die "printing mode must be DISABLED"
-  [[ "$(require_env_value STAGING_PRINTING_FEATURE_ENABLED)" == "false" ]] || die "printing feature must remain disabled"
+  validate_staging_printing_policy
   [[ "$(require_env_value BACKEND_IMAGE)" == *":staging-$APPROVED_SHA" ]] || die "backend image tag is not bound to the approved SHA"
 
   assert_release_identity

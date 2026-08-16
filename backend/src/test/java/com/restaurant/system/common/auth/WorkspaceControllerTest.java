@@ -70,6 +70,9 @@ class WorkspaceControllerTest {
             .andExpect(jsonPath("$.data.default_store_id").value(10))
             .andExpect(jsonPath("$.data.organizations[0].id").value(100))
             .andExpect(jsonPath("$.data.stores[0].id").value(10))
+            .andExpect(jsonPath("$.data.stores[0].store_kind").value("BUSINESS"))
+            .andExpect(jsonPath("$.data.stores[0].lifecycle_status").value("ACTIVE"))
+            .andExpect(jsonPath("$.data.stores[0].provisioning_source").value("LEGACY_EXISTING_STORE"))
             .andExpect(jsonPath("$.data.stores[0].role_code").value("OWNER"));
     }
 
@@ -101,6 +104,31 @@ class WorkspaceControllerTest {
     }
 
     @Test
+    void workspacesHideNonPhaseBValidationFixturesByDefault() throws Exception {
+        Store stagingFixture = store(30L, 100L);
+        stagingFixture.store_kind = "VALIDATION_FIXTURE";
+        stagingFixture.lifecycle_status = "READY_FOR_REVIEW";
+        stagingFixture.provisioning_source = "STAGING_VALIDATION";
+        Store phaseBStore = store(40L, 100L);
+        phaseBStore.store_kind = "VALIDATION_FIXTURE";
+        phaseBStore.lifecycle_status = "READY_FOR_REVIEW";
+        phaseBStore.provisioning_source = "PHASE_B_OWNER_PROVISIONING";
+
+        when(requestUserContextService.getRequiredUser()).thenReturn(user);
+        when(storeAccessService.accessibleOrganizations(user)).thenReturn(List.of());
+        when(storeAccessService.accessibleStores(user)).thenReturn(List.of(stagingFixture, phaseBStore));
+        when(storeAccessService.roleCodeForStore(user, phaseBStore)).thenReturn("OWNER");
+
+        mockMvc.perform(get("/api/v1/me/workspaces"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.default_store_id").value(40))
+            .andExpect(jsonPath("$.data.stores.length()").value(1))
+            .andExpect(jsonPath("$.data.stores[0].id").value(40))
+            .andExpect(jsonPath("$.data.stores[0].store_kind").value("VALIDATION_FIXTURE"))
+            .andExpect(jsonPath("$.data.stores[0].provisioning_source").value("PHASE_B_OWNER_PROVISIONING"));
+    }
+
+    @Test
     void storeContextReturnsContextWhenAllowed() throws Exception {
         Store store = store(10L, 100L);
         Organization organization = organization(100L);
@@ -115,6 +143,9 @@ class WorkspaceControllerTest {
             .andExpect(jsonPath("$.data.id").value(10))
             .andExpect(jsonPath("$.data.organization_id").value(100))
             .andExpect(jsonPath("$.data.organization_name").value("Org 100"))
+            .andExpect(jsonPath("$.data.store_kind").value("BUSINESS"))
+            .andExpect(jsonPath("$.data.lifecycle_status").value("ACTIVE"))
+            .andExpect(jsonPath("$.data.provisioning_source").value("LEGACY_EXISTING_STORE"))
             .andExpect(jsonPath("$.data.role_code").value("OWNER"))
             .andExpect(jsonPath("$.data.module_configuration.store_id").value(10))
             .andExpect(jsonPath("$.data.module_configuration.validation_status").value("VALID"));

@@ -9,6 +9,27 @@ public class StoreContextResponse {
     public String code;
     public String status;
 
+    @JsonProperty("store_kind")
+    public String storeKind;
+
+    @JsonProperty("lifecycle_status")
+    public String lifecycleStatus;
+
+    @JsonProperty("provisioning_source")
+    public String provisioningSource;
+
+    @JsonProperty("provisioned_profile_code")
+    public String provisionedProfileCode;
+
+    @JsonProperty("provisioned_profile_version")
+    public String provisionedProfileVersion;
+
+    @JsonProperty("provisioned_master_menu_key")
+    public String provisionedMasterMenuKey;
+
+    @JsonProperty("provisioned_master_menu_version")
+    public String provisionedMasterMenuVersion;
+
     @JsonProperty("organization_id")
     public Long organizationId;
 

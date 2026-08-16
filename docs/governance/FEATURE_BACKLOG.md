@@ -1,12 +1,82 @@
 # Feature Backlog
 
+## Phase B Part 1 update - Owner New Store Provisioning
+
+Status:
+
+```text
+PHASE_B_OWNER_IMPLEMENTATION_APPROVAL = GRANTED_FOR_PART_1
+PHASE_B_PART1_REPOSITORY_IMPLEMENTATION = COMPLETE_PENDING_PR_MERGE
+PHASE_B_PART1_STAGING_AUTOMATED_ACCEPTANCE = PENDING
+PHASE_B_PART1_OWNER_ACCEPTANCE = PENDING
+PHASE_B_PART2 = NOT_STARTED
+PRODUCTION = NO_MUTATION
+```
+
+Part 1 repository implementation now delivers the first Owner UI-driven Store
+provisioning path pending PR/merge and Staging runtime gates. It creates a
+Staging-only synthetic/non-active Store by an authorized Organization Owner,
+materializes the complete Chain Master Menu, supports independent Store-local
+menu review/deactivation and establishes validation fixture hygiene. It must
+still pass fresh Staging preflight, exact-SHA deploy and automated acceptance
+before stopping for Owner manual retest.
+
+Evidence:
+
+- [PHASE_B_PART1_IMPLEMENTATION_AUDIT](agile/PHASE_B_PART1_IMPLEMENTATION_AUDIT.md)
+- [PHASE_B_PART1_PACKAGE_PLAN](agile/PHASE_B_PART1_PACKAGE_PLAN.md)
+- [PHASE_B_PART1_IMPLEMENTATION_EVIDENCE](agile/PHASE_B_PART1_IMPLEMENTATION_EVIDENCE.md)
+
+## Phase A11.5 update - Chain Master Menu and Store Materialization Design
+
+Status:
+
+```text
+PHASE_A11_OWNER_ACCEPTANCE = PASS
+PHASE_A11_5_CHAIN_MASTER_MENU_DESIGN = PASS
+PHASE_B_MENU_PROVISIONING_MODEL = DEFINED
+PHASE_B_PART1_IMPLEMENTATION = GRANTED_FOR_PART_1
+PHASE_B_PART2 = NOT_STARTED
+```
+
+A11.5 defines the chain restaurant menu provisioning model:
+
+```text
+MASTER DEFINES THE STANDARD.
+STORE DEFINES LOCAL REALITY.
+```
+
+The first standard Master Menu is planned as
+`LANZHOU_CHAIN_MASTER_MENU/v1`, derived from the reviewed St-Denis canonical
+profile/menu artifact. It is not sourced from live Production St-Denis and is
+not live-linked to St-Denis after materialization.
+
+Evidence:
+
+- [CURRENT_CHAIN_MENU_READINESS_AUDIT](agile/CURRENT_CHAIN_MENU_READINESS_AUDIT.md)
+- [PHASE_A11_5_CHAIN_MASTER_MENU_DESIGN](agile/PHASE_A11_5_CHAIN_MASTER_MENU_DESIGN.md)
+- [CHAIN_MASTER_MENU_CONTRACT](agile/CHAIN_MASTER_MENU_CONTRACT.md)
+- [CHAIN_MASTER_MENU_VERSIONING_CONTRACT](agile/CHAIN_MASTER_MENU_VERSIONING_CONTRACT.md)
+- [MASTER_PRODUCT_IDENTITY_CONTRACT](agile/MASTER_PRODUCT_IDENTITY_CONTRACT.md)
+- [STORE_MENU_MATERIALIZATION_CONTRACT](agile/STORE_MENU_MATERIALIZATION_CONTRACT.md)
+- [STORE_MENU_LOCAL_OVERRIDE_CONTRACT](agile/STORE_MENU_LOCAL_OVERRIDE_CONTRACT.md)
+- [PHASE_B_MENU_PROVISIONING_CONTRACT](agile/PHASE_B_MENU_PROVISIONING_CONTRACT.md)
+- [MASTER_MENU_SCHEMA_OPTIONS](agile/MASTER_MENU_SCHEMA_OPTIONS.md)
+- [PHASE_B_CHAIN_MENU_ENTRY_READINESS](agile/PHASE_B_CHAIN_MENU_ENTRY_READINESS.md)
+
+The Owner has now explicitly approved Phase B implementation for Part 1 only.
+Do not start Phase B Part 2, Chinatown, Sainte-Catherine or Production from
+this approval.
+
 ## Phase A11 update — Printing Rule Configuration
 
 Status:
 
 ```text
-PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION = REPOSITORY_CANDIDATE_READY
-PHASE_B_IMPLEMENTATION = BLOCKED_UNTIL_A11_STAGING_OWNER_ACCEPTANCE
+PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION = ACCEPTED_BY_OWNER
+PHASE_A11_OWNER_ACCEPTANCE = PASS
+PHASE_B_PART1_IMPLEMENTATION = GRANTED_FOR_PART_1
+PHASE_B_PART2 = NOT_STARTED
 ```
 
 The Owner added A11 as a Phase A productization closure before Phase B and
@@ -35,12 +105,12 @@ Phase A automated acceptance
 → Owner Design Decision = CLOSED
 → A11 Implementation Candidate
 → PR / exact-SHA Staging deploy
-→ Staging Owner Acceptance
+→ Staging Owner Acceptance = PASS_OWNER_DECLARED
 → Phase B
 ```
 
 Do not start Phase B, Phase C, Chinatown, Sainte-Catherine or Production
-promotion before A11 Staging Owner acceptance.
+promotion before explicit Phase B Owner approval.
 
 ## Phase A10 update — Final Modular Acceptance
 

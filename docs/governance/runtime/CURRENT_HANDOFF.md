@@ -1,5 +1,153 @@
 # Current Project Handoff
 
+## 0. Phase B Part 1 current handoff - repository implementation pending runtime gates
+
+Fresh latest main:
+
+```text
+0de03c773ef04594e7d737c6bccdf6f607692eca
+```
+
+Current branch/worktree for Phase B Part 1:
+
+```text
+codex/phase-b-part1-owner-store-provisioning
+```
+
+Latest Owner authority:
+
+```text
+PHASE_A10_AUTOMATED_ACCEPTANCE = PASS
+PHASE_A11_OWNER_ACCEPTANCE = PASS
+PHASE_A11_5_CHAIN_MASTER_MENU_DESIGN = PASS
+PHASE_B_OWNER_IMPLEMENTATION_APPROVAL = GRANTED_FOR_PART_1
+```
+
+Part 1 repository implementation is complete pending PR/merge, fresh Staging
+runtime preflight, exact-SHA Staging deploy and automated acceptance. The
+package implements Owner UI-driven synthetic Store provisioning, complete
+Chain Master Menu materialization, independent local menu review/deactivation
+and Staging automated acceptance tooling. It is not authority for Part 2,
+final activation, Chinatown, Sainte-Catherine, Production, physical hardware
+binding or final staff credential provisioning.
+
+Fresh audit, plan and repository evidence:
+
+- [PHASE_B_PART1_IMPLEMENTATION_AUDIT](../agile/PHASE_B_PART1_IMPLEMENTATION_AUDIT.md)
+- [PHASE_B_PART1_PACKAGE_PLAN](../agile/PHASE_B_PART1_PACKAGE_PLAN.md)
+- [PHASE_B_PART1_IMPLEMENTATION_EVIDENCE](../agile/PHASE_B_PART1_IMPLEMENTATION_EVIDENCE.md)
+
+Implemented repository identity:
+
+```text
+Flyway = V18 + V19 + V20 additive migrations
+Master = LANZHOU_CHAIN_MASTER_MENU/v1
+Master fingerprint = e55ad23773753ade22e3e090622c361b58268ae5b43ee354ec7eef5b78f233f7
+Profile = ST_DENIS_CANONICAL_PROFILE/v2 READY
+Provisioning API = /api/v1/owner/organizations/{organizationId}/phase-b/store-provisioning
+Part 1 Store kind = VALIDATION_FIXTURE
+Part 1 lifecycle = READY_FOR_REVIEW
+Part 1 runtime printing mode = MOCK
+Agent 6 final review = PHASE_B_PART1_ACCEPT
+```
+
+Runtime caveat before first Phase B deploy:
+
+```text
+checked-in stable Staging authority = ad4572759e01b5546ec59af24aa36b09e5c2dd00 / V16
+A11 evidence records V17 apply + startup repair trail
+fresh Staging runtime preflight is required before deploy
+```
+
+Next gate:
+
+```text
+PR_MERGE
+```
+
+Then:
+
+```text
+git fetch origin --prune
+-> fresh Staging runtime preflight
+-> exact-SHA Staging deploy
+-> Phase B Part 1 automated acceptance
+```
+
+Target unique stop:
+
+```text
+PHASE_B_PART1_CREATE_STORE_AND_MASTER_MENU_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
+## 0. Historical Phase A11.5 handoff - superseded by Phase B Part 1 authorization
+
+Fresh latest main:
+
+```text
+0de03c773ef04594e7d737c6bccdf6f607692eca
+```
+
+Current branch/worktree used for this docs-only closure:
+
+```text
+codex/phase-a11-5-chain-master-menu-design
+```
+
+Latest Owner verdict:
+
+```text
+PHASE_A11_OWNER_ACCEPTANCE = PASS
+```
+
+If any older repository governance says A11 Owner acceptance is pending, treat
+it as stale and superseded by this Owner verdict. Do not rerun A11 manual
+acceptance.
+
+Current runtime identity from checked-in authority:
+
+```text
+STAGING_STABLE_APP_SHA = ad4572759e01b5546ec59af24aa36b09e5c2dd00
+STAGING_STABLE_FLYWAY = V16
+A11_LATEST_CODE_SHA = 0de03c773ef04594e7d737c6bccdf6f607692eca
+PRODUCTION_RC = RC-THREE-RELIABILITY-20260812-3EC4D88
+PRODUCTION_APP_SHA = 3ec4d88a47f68e05b92d9246bfd63af2d1f297f9
+PRODUCTION_FLYWAY = V10
+```
+
+A11.5 design defines `LANZHOU_CHAIN_MASTER_MENU/v1`, Master product identity,
+Master versioning, Store menu materialization, Store-local overrides and the
+Phase B menu provisioning contract. It makes the initial Master source the
+reviewed/canonicalized St-Denis profile/menu artifact, not live Production
+St-Denis and not a live-linked Store.
+
+Status:
+
+```text
+PHASE_A11_5_CHAIN_MASTER_MENU_DESIGN = PASS
+AGENT_6_PHASE_A11_5_DESIGN_REVIEW = ACCEPT
+PHASE_B_MENU_PROVISIONING_MODEL = DEFINED
+PHASE_B_PART1_IMPLEMENTATION = GRANTED_FOR_PART_1
+PHASE_B_PART2 = NOT_STARTED
+PRODUCTION = NO_MUTATION
+```
+
+Historical next Owner gate, now satisfied for Part 1 only:
+
+```text
+PHASE_B_OWNER_STORE_PROVISIONING_IMPLEMENTATION_APPROVAL
+```
+
+Historical stop state, superseded for Part 1 by the current handoff above:
+
+```text
+PHASE_A11_5_CHAIN_MASTER_MENU_DESIGN_COMPLETE_WAITING_FOR_PHASE_B_OWNER_APPROVAL
+```
+
+Do not implement Phase B Part 2, create Chinatown/Sainte-Catherine, touch
+Production, bind physical hardware, final-activate a Store or provision final
+staff credentials until the Owner explicitly opens a later gate.
+
 ## 0. Phase A11 current handoff — implementation candidate ready, Staging validation pending
 
 Fresh main at A11 design start:
@@ -20,8 +168,10 @@ required Phase A productization closure before Phase B. The Owner answered the
 five A11 product decisions and approved implementation:
 
 ```text
-PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION = REPOSITORY_CANDIDATE_READY
-PHASE_B_IMPLEMENTATION = BLOCKED_UNTIL_A11_STAGING_OWNER_ACCEPTANCE
+PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION = ACCEPTED_BY_OWNER
+PHASE_A11_OWNER_ACCEPTANCE = PASS
+PHASE_B_PART1_IMPLEMENTATION = GRANTED_FOR_PART_1
+PHASE_B_PART2 = NOT_STARTED
 ```
 
 A11 evidence:
@@ -43,19 +193,19 @@ Post-A11 Store Profile versions must include a `PRINTING_DISPLAY_RULES`
 artifact; historical `ST_DENIS_CANONICAL_PROFILE/v1` remains immutable and
 valid.
 
-Next runtime action after PR/merge:
+Superseded A11 runtime gate:
 
 ```text
-EXACT_SHA_STAGING_DEPLOY_AND_A11_AUTOMATED_VALIDATION
+PHASE_A11_OWNER_ACCEPTANCE = PASS_OWNER_DECLARED
 ```
 
 Do not start Phase B, Phase C, Chinatown, Sainte-Catherine or Production
-promotion before A11 Staging Owner acceptance.
+promotion before explicit Phase B Owner approval.
 
 Unique stop state:
 
 ```text
-PHASE_A11_PRINTING_RULE_CONFIGURATION_REPOSITORY_READY_WAITING_FOR_STAGING_VALIDATION
+PHASE_A11_OWNER_ACCEPTANCE_PASS_SUPERSEDED_BY_A11_5_DESIGN
 ```
 
 ## 0a. Historical Phase A current handoff — A10 automated acceptance passed, superseded by A11 gate

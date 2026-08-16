@@ -5,8 +5,12 @@ Status:
 ```text
 PHASE_A11_PRINTING_RULE_CONFIGURATION_ARCHITECTURE_OPTIONS = OPTION_A_HYBRID_ACCEPTED
 A11_OWNER_5_ANSWERS = CLOSED
-IMPLEMENTATION = REPOSITORY_CANDIDATE_READY
+IMPLEMENTATION = ACCEPTED_BY_OWNER
+PHASE_A11_OWNER_ACCEPTANCE = PASS
 ```
+
+Latest Owner acceptance supersedes the original repository-candidate status.
+Do not rerun A11 manual acceptance in the A11.5 loop.
 
 Owner decision closure:
 

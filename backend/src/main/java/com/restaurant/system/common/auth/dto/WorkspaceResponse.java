@@ -29,6 +29,15 @@ public class WorkspaceResponse {
         public String code;
         public String status;
 
+        @JsonProperty("store_kind")
+        public String storeKind;
+
+        @JsonProperty("lifecycle_status")
+        public String lifecycleStatus;
+
+        @JsonProperty("provisioning_source")
+        public String provisioningSource;
+
         @JsonProperty("organization_id")
         public Long organizationId;
 

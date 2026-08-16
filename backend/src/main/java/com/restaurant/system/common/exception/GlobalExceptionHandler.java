@@ -8,6 +8,7 @@ import com.restaurant.system.modules.ModuleAccessException;
 import com.restaurant.system.order.exception.OrderSubmissionException;
 import com.restaurant.system.owner.exception.OwnerStoreMenuCloneException;
 import com.restaurant.system.owner.exception.OwnerStoreOnboardingException;
+import com.restaurant.system.owner.exception.OwnerStoreProvisioningException;
 import jakarta.validation.ConstraintViolationException;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
@@ -38,6 +39,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(OwnerStoreMenuCloneException.class)
     public ResponseEntity<ApiResponse<Void>> handleOwnerStoreMenuCloneException(OwnerStoreMenuCloneException ex) {
+        return ResponseEntity.status(ex.getStatus()).body(ApiResponse.failure(ex.getErrorCode(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(OwnerStoreProvisioningException.class)
+    public ResponseEntity<ApiResponse<Void>> handleOwnerStoreProvisioningException(OwnerStoreProvisioningException ex) {
         return ResponseEntity.status(ex.getStatus()).body(ApiResponse.failure(ex.getErrorCode(), ex.getMessage()));
     }
 

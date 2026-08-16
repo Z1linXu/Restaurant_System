@@ -68,6 +68,12 @@ public class OwnerOverviewServiceImpl implements OwnerOverviewService {
             .toList();
 
         Map<Long, OwnerOverviewResponse.OrganizationOverview> organizationsById = new LinkedHashMap<>();
+        for (Organization organization : storeAccessService.accessibleOrganizations(user)) {
+            if (organization == null || organization.id == null) {
+                continue;
+            }
+            organizationsById.put(organization.id, buildOrganization(user, organization));
+        }
         for (Store store : stores) {
             Long organizationId = store.organization_id == null ? 0L : store.organization_id;
             OwnerOverviewResponse.OrganizationOverview organization = organizationsById.computeIfAbsent(
@@ -88,10 +94,7 @@ public class OwnerOverviewServiceImpl implements OwnerOverviewService {
         if (organizationId != null && organizationId > 0) {
             Organization organization = organizationRepository.findById(organizationId).orElse(null);
             if (organization != null) {
-                response.id = organization.id;
-                response.name = organization.name;
-                response.code = organization.code;
-                response.status = organization.status;
+                return buildOrganization(user, organization);
             } else {
                 response.id = organizationId;
                 response.name = "Organization " + organizationId;
@@ -111,6 +114,20 @@ public class OwnerOverviewServiceImpl implements OwnerOverviewService {
         return response;
     }
 
+    private OwnerOverviewResponse.OrganizationOverview buildOrganization(AuthenticatedUser user, Organization organization) {
+        OwnerOverviewResponse.OrganizationOverview response = new OwnerOverviewResponse.OrganizationOverview();
+        response.id = organization.id;
+        response.name = organization.name;
+        response.code = organization.code;
+        response.status = organization.status;
+        response.role_code = storeAccessService.roleCodeForOrganization(user, organization.id);
+        if (response.role_code == null || response.role_code.isBlank()) {
+            response.role_code = user.roleCode();
+        }
+        response.stores = new ArrayList<>();
+        return response;
+    }
+
     private OwnerOverviewResponse.StoreOverview buildStore(
         AuthenticatedUser user,
         Store store,
@@ -123,6 +140,13 @@ public class OwnerOverviewServiceImpl implements OwnerOverviewService {
         response.name = store.name;
         response.code = store.code;
         response.status = store.status;
+        response.store_kind = store.store_kind;
+        response.lifecycle_status = store.lifecycle_status;
+        response.provisioning_source = store.provisioning_source;
+        response.provisioned_profile_code = store.provisioned_profile_code;
+        response.provisioned_profile_version = store.provisioned_profile_version;
+        response.provisioned_master_menu_key = store.provisioned_master_menu_key;
+        response.provisioned_master_menu_version = store.provisioned_master_menu_version;
         response.role_code = storeAccessService.roleCodeForStore(user, store);
         response.features = featureMap();
         response.summary = buildSummary(store, startAt, endAt, generatedAt);

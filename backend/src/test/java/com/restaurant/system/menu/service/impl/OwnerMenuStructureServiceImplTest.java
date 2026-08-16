@@ -3,6 +3,7 @@ package com.restaurant.system.menu.service.impl;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.restaurant.system.common.exception.BusinessException;
@@ -57,17 +58,16 @@ class OwnerMenuStructureServiceImplTest {
     }
 
     @Test
-    void categoryDeactivateRejectsActiveMenuItems() {
+    void categoryDeactivatePreservesChildItemStateForEffectiveAvailability() {
         MenuCategory category = category();
         when(menuCategoryRepository.findById(4L)).thenReturn(Optional.of(category));
         when(menuItemRepository.countActiveByStoreIdAndCategoryId(10L, 4L)).thenReturn(1L);
+        when(menuCategoryRepository.save(any(MenuCategory.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        BusinessException exception = assertThrows(
-            BusinessException.class,
-            () -> service.updateCategory(10L, 4L, categoryRequest(false))
-        );
+        MenuCategory saved = service.updateCategory(10L, 4L, categoryRequest(false));
 
-        assertEquals("CATEGORY_HAS_ACTIVE_ITEMS", exception.getMessage());
+        assertEquals(false, saved.is_active);
+        verify(menuRevisionService).incrementRevision(10L);
     }
 
     @Test

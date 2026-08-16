@@ -1,5 +1,75 @@
 # Agile Loop Operating Model
 
+## Current gate update - Phase B Part 1 (2026-08-16)
+
+Owner has opened Phase B implementation for Part 1 only:
+
+```text
+PHASE_B_OWNER_IMPLEMENTATION_APPROVAL = GRANTED_FOR_PART_1
+PHASE_B_PART1_REPOSITORY_IMPLEMENTATION = COMPLETE_PENDING_PR_MERGE
+PHASE_B_PART1_FINAL_REVIEW_BY_AGENT_6 = ACCEPT
+PHASE_B_PART1_STAGING_AUTOMATED_ACCEPTANCE = PENDING
+PHASE_B_PART1_OWNER_ACCEPTANCE = PENDING
+```
+
+Current required sequence:
+
+```text
+Fresh Authority
+-> PHASE_B_PART1_IMPLEMENTATION_AUDIT
+-> PHASE_B_PART1_PACKAGE_PLAN
+-> PHASE_B_PART1_PLAN_REVIEW_BY_AGENT_6
+-> repository implementation packages
+-> PHASE_B_PART1_FINAL_REVIEW_BY_AGENT_6 PASS
+-> PR/merge
+-> fresh Staging runtime preflight
+-> exact-SHA Staging deploy
+-> Phase B Part 1 automated acceptance
+-> Owner manual retest gate
+```
+
+Part 1 is Staging-only. It does not authorize Phase B Part 2, Chinatown,
+Sainte-Catherine, Production action, physical printer/Pad binding, final staff
+credential provisioning or final Store activation.
+
+Repository implementation evidence:
+[PHASE_B_PART1_IMPLEMENTATION_EVIDENCE](agile/PHASE_B_PART1_IMPLEMENTATION_EVIDENCE.md).
+
+Target stop:
+
+```text
+PHASE_B_PART1_CREATE_STORE_AND_MASTER_MENU_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
+## Current gate update - Phase A11.5 (2026-08-15)
+
+Owner declared:
+
+```text
+PHASE_A11_OWNER_ACCEPTANCE = PASS
+```
+
+The active loop is now closed at documentation/design level for
+`PHASE_A11_5_CHAIN_MASTER_MENU_AND_STORE_MATERIALIZATION_DESIGN`.
+
+Current stop:
+
+```text
+PHASE_A11_5_CHAIN_MASTER_MENU_DESIGN_COMPLETE_WAITING_FOR_PHASE_B_OWNER_APPROVAL
+```
+
+Agent 6 focused design review:
+
+```text
+AGENT_6_PHASE_A11_5_DESIGN_REVIEW = ACCEPT
+BLOCKING_FINDINGS = 0
+```
+
+Phase B Part 1 implementation is now opened by the explicit Owner approval
+above. Staging deploy/restart and Flyway remain gated until implementation and
+fresh preflight. Production action, Phase B Part 2, Chinatown and
+Sainte-Catherine remain stopped.
+
 ## Current final productization execution route (2026-08-13)
 
 The Owner closed the final productization 30-answer gate and authorized

@@ -23,6 +23,17 @@ public interface StoreRepository extends JpaRepository<Store, Long> {
     @Query("select s from Store s where s.organization_id = :organizationId order by s.id asc")
     List<Store> findAllByOrganizationIdOrderByIdAsc(@Param("organizationId") Long organizationId);
 
+    @Query("""
+        select s from Store s
+        where s.organization_id = :organizationId
+          and lower(s.code) = lower(:code)
+        order by s.id asc
+        """)
+    List<Store> findAllByOrganizationIdAndCodeIgnoreCase(
+        @Param("organizationId") Long organizationId,
+        @Param("code") String code
+    );
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from Store s where s.id in :storeIds order by s.id asc")
     List<Store> findAllByIdInForUpdateOrderByIdAsc(@Param("storeIds") Collection<Long> storeIds);

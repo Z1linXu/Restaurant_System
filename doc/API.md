@@ -1,5 +1,33 @@
 # Restaurant System API (MVP)
 
+> Phase B Part 1 Owner New Store Provisioning implementation (2026-08-16):
+> Owner authorized implementation for Part 1 only. Repository implementation
+> now adds the canonical Owner-only provisioning API under
+> `/api/v1/owner/organizations/{organizationId}/phase-b/store-provisioning`.
+> `GET /catalog` returns the approved human-facing template pair
+> `ST_DENIS_CANONICAL_PROFILE/v2` and `LANZHOU_CHAIN_MASTER_MENU/v1`.
+> `POST /` requires `Idempotency-Key`, authenticated Owner authority, active
+> Organization ownership, the non-Production Phase B runtime gate and Platform
+> capability. It creates a synthetic/non-active validation Store, materializes
+> the full Store-owned menu/config/printing-rule graph, records Master/Profile
+> provenance, and returns request/store IDs, replay flag, validation status,
+> result/error code and materialization counts. The API does not re-enable
+> legacy direct active Store creation, does not expose internal DB IDs as the
+> primary Owner selection model, and does not authorize Production action.
+
+> Phase A11.5 Chain Master Menu design (2026-08-15): no public API is
+> implemented or changed by this documentation-only closure. Future Phase B API
+> work must introduce explicit Master Menu read/versioning and Store
+> provisioning dry-run/execute/status contracts instead of re-enabling legacy
+> direct active Store creation. Future APIs must preserve the boundaries in
+> [CHAIN_MASTER_MENU_CONTRACT](../docs/governance/agile/CHAIN_MASTER_MENU_CONTRACT.md),
+> [STORE_MENU_MATERIALIZATION_CONTRACT](../docs/governance/agile/STORE_MENU_MATERIALIZATION_CONTRACT.md),
+> and
+> [PHASE_B_MENU_PROVISIONING_CONTRACT](../docs/governance/agile/PHASE_B_MENU_PROVISIONING_CONTRACT.md).
+> That historical wait state is superseded for Phase B Part 1 by the
+> 2026-08-16 Owner authorization above; the API implementation still remains
+> unstarted until the Agent 6 plan review accepts the package plan.
+
 > Phase A11 Printing Rule Configuration implementation candidate (2026-08-15):
 > additive Flyway V17 adds Store-scoped, versioned
 > `printing_display_rule_sets` / `printing_display_rule_revisions` and records

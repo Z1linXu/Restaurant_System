@@ -3,18 +3,28 @@
 ## Status
 
 ```text
-PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION = REPOSITORY_CANDIDATE_READY
+PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION = ACCEPTED_BY_OWNER
 A11_OWNER_5_ANSWERS = CLOSED
-PHASE_B_IMPLEMENTATION = BLOCKED_UNTIL_A11_STAGING_OWNER_ACCEPTANCE
+PHASE_A11_OWNER_ACCEPTANCE = PASS
+PHASE_B_IMPLEMENTATION = WAITING_FOR_A11_5_AND_EXPLICIT_OWNER_APPROVAL
 PRODUCTION = NO_MUTATION
-STAGING_DEPLOYMENT = PENDING_PR_MERGE
+STAGING_OWNER_ACCEPTANCE = PASS_OWNER_DECLARED_2026_08_15
+LATEST_CODE_AUTHORITY = origin/main@0de03c773ef04594e7d737c6bccdf6f607692eca
 ```
 
 Fresh implementation authority:
 
 ```text
-origin/main@78ac87b633ba6d4e113d52ed65eddb8fcc06eacd
+origin/main@0de03c773ef04594e7d737c6bccdf6f607692eca
 ```
+
+Owner acceptance update:
+
+The Owner has completed A11 manual Staging acceptance and declared
+`PHASE_A11_OWNER_ACCEPTANCE = PASS`. This loop must not rerun A11 manual
+acceptance, redesign A11 or require Owner retest. Checked-in machine runtime
+evidence still preserves the historical V17 startup-repair trail below; the
+Owner verdict is the latest Owner acceptance authority.
 
 ## Owner decisions implemented
 
@@ -190,8 +200,8 @@ payment/customer payload or raw environment value is introduced.
   is part of the A11 rule contract.
 - A11 display rules cannot change printer routing, assignment, print mode,
   PrintJob state, pricing, reporting, payment or authorization.
-- Phase B remains blocked until exact-SHA Staging deployment, automated A11
-  validation and Owner Staging retest complete.
+- A11 Owner acceptance is now `PASS_OWNER_DECLARED`; Phase B remains stopped
+  only until explicit Phase B Owner approval after A11.5 design closure.
 
 ## Staging startup repair
 
@@ -224,14 +234,14 @@ Agent 6 focused startup-repair review = ACCEPT
 
 ## Next runtime gate
 
-After PR merge:
+Superseded by Owner acceptance update:
 
 ```text
-EXACT_SHA_STAGING_DEPLOY_AND_A11_AUTOMATED_VALIDATION
+PHASE_A11_OWNER_ACCEPTANCE = PASS
 ```
 
-Target stop after successful Staging deploy:
+Next gate:
 
 ```text
-PHASE_A11_PRINTING_RULE_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+PHASE_A11_5_CHAIN_MASTER_MENU_AND_STORE_MATERIALIZATION_DESIGN
 ```

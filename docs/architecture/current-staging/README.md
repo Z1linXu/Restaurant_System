@@ -1,5 +1,14 @@
 # Current Staging Architecture UML Baseline
 
+> Phase B Part 1 repository implementation note: Chain Master Menu and Store
+> materialization are now implemented in the current Phase B Part 1 candidate
+> through additive Flyway V18-V20, `LANZHOU_CHAIN_MASTER_MENU/v1`,
+> `ST_DENIS_CANONICAL_PROFILE/v2`, Owner-only idempotent provisioning and
+> Store-local override mappings. This candidate is not yet the deployed
+> Staging runtime baseline until PR/merge, fresh preflight, exact-SHA deploy
+> and automated acceptance complete. Current deployed Staging authority remains
+> recorded below.
+
 > Phase A10 update: automated Phase A acceptance passed on fresh main and
 > deployed Staging SHA `ad4572759e01b5546ec59af24aa36b09e5c2dd00` at Flyway
 > V16. The baseline remains current for Phase A; Phase B Store provisioning,
@@ -118,6 +127,7 @@ flowchart TD
 | A8 hardware capability/readiness is now a first-class contract for module access. | `A8_IMPLEMENTED` | `hardware-capability-catalog.v1.json`, `StoreModuleCapabilityProviderImpl`, Store Context `hardware_readiness`, current MOCK Staging topology. | Physical binding and Pad pairing remain separate runtime gates. |
 | A9 legacy coupling removal disables legacy direct active Store creation, gates Owner onboarding/menu-clone facades behind `PLATFORM`, and makes blank/unknown print mode fail closed to `DISABLED`. | `A9_IMPLEMENTED_AND_VALIDATED` | `PlatformAdminServiceImpl`, Owner onboarding/menu clone controllers, `PrintingRuntimePolicyProperties`, `PrinterConfigServiceImpl`, A9 compatibility ledger. | Carried into A10 automated acceptance. |
 | A10 final modular acceptance validated Phase A source-of-truth, Store isolation, module gating, hardware readiness and MOCK printing. | `A10_AUTOMATED_ACCEPTANCE_PASS` | `PHASE_A10_FINAL_MODULAR_PRODUCTIZATION_ACCEPTANCE_EVIDENCE`, runtime evidence `A10_20260815T021324Z`. | Owner final Staging acceptance remains pending. |
+| Phase B Part 1 Chain Master Menu and Store materialization are repository-implemented but not yet deployed as current Staging runtime. | `PHASE_B_PART1_REPOSITORY_IMPLEMENTED_PENDING_STAGING` | `PHASE_B_PART1_IMPLEMENTATION_EVIDENCE`, V18-V20 migrations, Owner provisioning API/UI and acceptance harness. | Keep deployed runtime identity at V16 until exact-SHA Staging deploy; Part 2 activation/staff/physical hardware remain planned. |
 
 ## Key invariants
 
@@ -129,6 +139,9 @@ flowchart TD
 - Store-scoped frontend module gates consume Store Context
   `module_configuration`; frontend feature config is not a Store module source.
 - Legacy direct active Store creation is disabled until Phase B provisioning.
+- Phase B Part 1 candidate provisioning creates synthetic/non-active
+  `VALIDATION_FIXTURE` Stores at `READY_FOR_REVIEW` with runtime `MOCK`
+  printing mode; it does not activate real Stores.
 - `stores.printing_mode` is canonical runtime mode; blank/unknown persisted
   values resolve fail-closed to `DISABLED`.
 - Production is not read or mutated by this documentation baseline.
@@ -138,7 +151,7 @@ flowchart TD
 
 ## What omitted
 
-- Phase B Store provisioning workflow
+- Phase B Part 2 activation/staff/hardware provisioning workflow
 - real Chinatown and Sainte-Catherine Store creation
 - A8 hardware capability management implementation
 - physical printer endpoints, printer credentials, device tokens, and raw env

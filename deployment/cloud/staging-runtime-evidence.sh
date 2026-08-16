@@ -10,6 +10,7 @@ SCRIPT_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/staging-synthetic-acceptance.sh"
 # shellcheck source=staging-ops-common.sh
 source "$SCRIPT_DIR/staging-ops-common.sh"
+ALLOW_SAFE_PRINTING_POLICY=true
 
 ACTION="validate"
 EXECUTE_RUNTIME="false"

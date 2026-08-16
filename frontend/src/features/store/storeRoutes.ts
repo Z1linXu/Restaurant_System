@@ -36,6 +36,11 @@ export function isAdminWorkspaceRole(roleCode: string | null | undefined) {
   return role === 'OWNER' || role === 'ADMIN' || role === 'MANAGER'
 }
 
+function isOwnerWorkspaceRole(roleCode: string | null | undefined) {
+  const role = roleCode?.toUpperCase()
+  return role === 'OWNER' || role === 'ADMIN'
+}
+
 export function defaultStorePathForRole(roleCode: string | null | undefined, storeId: number) {
   const role = roleCode?.toUpperCase()
   if (role === 'FRONTDESK') {
@@ -56,6 +61,9 @@ export function defaultStorePathForRole(roleCode: string | null | undefined, sto
 export function defaultWorkspacePathForRole(roleCode: string | null | undefined, workspaces: WorkspaceResponse) {
   const store = chooseDefaultStore(workspaces)
   if (!store) {
+    if (isOwnerWorkspaceRole(roleCode) && workspaces.organizations.length > 0) {
+      return '/owner/dashboard'
+    }
     return null
   }
   if (isAdminWorkspaceRole(roleCode) && workspaces.stores.length > 1) {

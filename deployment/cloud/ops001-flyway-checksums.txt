@@ -15,3 +15,8 @@
 13|V13__add_store_modules.sql|1338109061
 14|V14__add_store_profiles.sql|-965973533
 15|V15__seed_st_denis_canonical_profile.sql|-800444250
+16|V16__add_dynamic_menu_management_configuration.sql|473655687
+17|V17__add_printing_display_rules.sql|-1840784048
+18|V18__add_phase_b_master_menu_provisioning.sql|-1514098834
+19|V19__seed_phase_b_master_menu_profile_v2.sql|586207529
+20|V20__align_phase_b_provisioning_validation_status.sql|-1638534388
