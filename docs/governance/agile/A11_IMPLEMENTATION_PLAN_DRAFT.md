@@ -5,13 +5,16 @@ Status:
 ```text
 A11_IMPLEMENTATION_PLAN = ACCEPTED_BASELINE
 A11_OWNER_5_ANSWERS = CLOSED
-A11_IMPLEMENTATION = REPOSITORY_CANDIDATE_READY
+A11_IMPLEMENTATION = ACCEPTED_BY_OWNER
+PHASE_A11_OWNER_ACCEPTANCE = PASS
 ```
 
 This plan was the implementation baseline after the Owner answered the A11
 product questions and approved the implementation gate. Repository evidence is
 recorded in
 [PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION_EVIDENCE](PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION_EVIDENCE.md).
+The latest Owner verdict supersedes the historical Staging Owner-acceptance
+pending step; do not rerun A11 manual acceptance.
 
 ## Proposed sequence after Owner approval
 

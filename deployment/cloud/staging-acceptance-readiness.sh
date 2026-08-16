@@ -7,6 +7,7 @@ set -Eeuo pipefail
 READINESS_SCRIPT_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=staging-synthetic-acceptance.sh
 source "$READINESS_SCRIPT_DIR/staging-synthetic-acceptance.sh"
+ALLOW_SAFE_PRINTING_POLICY=true
 
 MIN_AVAILABLE_MEMORY_KB=""
 MIN_CPU_COUNT=""

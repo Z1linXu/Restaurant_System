@@ -1,5 +1,135 @@
 # Alive Runtime Planbook
 
+## Current Phase B Part 1 implementation start (2026-08-16)
+
+Owner has formally opened Phase B for Part 1 only:
+
+```text
+PHASE_B_OWNER_IMPLEMENTATION_APPROVAL = GRANTED_FOR_PART_1
+PHASE_B_PART1_REPOSITORY_IMPLEMENTATION = COMPLETE_PENDING_PR_MERGE
+PHASE_B_PART1_FINAL_REVIEW_BY_AGENT_6 = ACCEPT
+PHASE_B_PART1_STAGING_PREFLIGHT = PENDING
+PHASE_B_PART1_STAGING_DEPLOYMENT = PENDING
+PHASE_B_PART1_STAGING_AUTOMATED_ACCEPTANCE = PENDING
+PHASE_A11_OWNER_ACCEPTANCE = PASS
+PHASE_A11_5_CHAIN_MASTER_MENU_DESIGN = PASS
+PRODUCTION = NO_MUTATION
+```
+
+Fresh repository authority:
+
+```text
+origin/main@0de03c773ef04594e7d737c6bccdf6f607692eca
+```
+
+Part 1 repository implementation now adds Staging-only Owner Create New Store
+provisioning for a synthetic/non-active Store, complete Chain Master Menu
+materialization, independent Store-local menu review/deactivation, validation
+fixture hygiene and automated acceptance tooling. It includes additive Flyway
+V18-V20, `LANZHOU_CHAIN_MASTER_MENU/v1`,
+`ST_DENIS_CANONICAL_PROFILE/v2`, the Owner-only idempotent provisioning API,
+Owner Dashboard Create New Store UI, and a secret-safe Staging acceptance
+harness. Part 1 does not authorize Phase B Part 2, final activation,
+Chinatown, Sainte-Catherine, physical printer/Pad binding, final staff
+credential delivery, Production deployment, Production Flyway, Production
+restart or Production data mutation.
+
+Current required sequence:
+
+```text
+Fresh Authority
+-> PHASE_B_PART1_IMPLEMENTATION_AUDIT
+-> PHASE_B_PART1_PACKAGE_PLAN
+-> Agent 6 plan review
+-> repository implementation packages
+-> governance/evidence sync
+-> Agent 6 final review PASS
+-> PR/merge
+-> fresh Staging runtime preflight before first deploy
+-> exact-SHA Staging deploy and automated acceptance
+-> Owner manual Part 1 retest gate
+```
+
+Current unique stop target:
+
+```text
+PHASE_B_PART1_CREATE_STORE_AND_MASTER_MENU_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
+New Part 1 planning evidence:
+[PHASE_B_PART1_IMPLEMENTATION_AUDIT](../agile/PHASE_B_PART1_IMPLEMENTATION_AUDIT.md)
+and
+[PHASE_B_PART1_PACKAGE_PLAN](../agile/PHASE_B_PART1_PACKAGE_PLAN.md).
+
+Repository implementation evidence:
+[PHASE_B_PART1_IMPLEMENTATION_EVIDENCE](../agile/PHASE_B_PART1_IMPLEMENTATION_EVIDENCE.md).
+
+## Current Phase A11.5 chain master menu design closure (2026-08-15)
+
+Owner verdict:
+
+```text
+PHASE_A11_OWNER_ACCEPTANCE = PASS
+```
+
+This is the latest Owner state and supersedes older A11 `PENDING` governance.
+Do not rerun A11 manual acceptance or require Owner retest for A11.
+
+Fresh repository authority:
+
+```text
+origin/main@0de03c773ef04594e7d737c6bccdf6f607692eca
+```
+
+Runtime identity from checked-in authority:
+
+```text
+STAGING_STABLE_APP_SHA = ad4572759e01b5546ec59af24aa36b09e5c2dd00
+STAGING_STABLE_FLYWAY = V16
+A11_LATEST_CODE_SHA = 0de03c773ef04594e7d737c6bccdf6f607692eca
+A11_OWNER_ACCEPTANCE = PASS_OWNER_DECLARED
+PRODUCTION_RC = RC-THREE-RELIABILITY-20260812-3EC4D88
+PRODUCTION_APP_SHA = 3ec4d88a47f68e05b92d9246bfd63af2d1f297f9
+PRODUCTION_FLYWAY = V10
+```
+
+A11.5 defines `LANZHOU_CHAIN_MASTER_MENU/v1` as an Organization-scoped,
+immutable, published Master Menu derived from reviewed St-Denis profile/menu
+artifacts, not from live Production and not live-linked to St-Denis. Store
+materialization remains future Phase B work.
+
+Current state:
+
+```text
+PHASE_A11_5_CHAIN_MASTER_MENU_DESIGN = PASS
+AGENT_6_PHASE_A11_5_DESIGN_REVIEW = ACCEPT
+PHASE_B_MENU_PROVISIONING_MODEL = DEFINED
+PHASE_B_PART1_IMPLEMENTATION = GRANTED_FOR_PART_1
+PHASE_B_PART2 = NOT_STARTED
+PRODUCTION = NO_MUTATION
+RUNTIME_ACTION = NOT_PERFORMED
+```
+
+Current A11.5 evidence:
+[CURRENT_CHAIN_MENU_READINESS_AUDIT](../agile/CURRENT_CHAIN_MENU_READINESS_AUDIT.md),
+[PHASE_A11_5_CHAIN_MASTER_MENU_DESIGN](../agile/PHASE_A11_5_CHAIN_MASTER_MENU_DESIGN.md),
+[CHAIN_MASTER_MENU_CONTRACT](../agile/CHAIN_MASTER_MENU_CONTRACT.md),
+[CHAIN_MASTER_MENU_VERSIONING_CONTRACT](../agile/CHAIN_MASTER_MENU_VERSIONING_CONTRACT.md),
+[MASTER_PRODUCT_IDENTITY_CONTRACT](../agile/MASTER_PRODUCT_IDENTITY_CONTRACT.md),
+[STORE_MENU_MATERIALIZATION_CONTRACT](../agile/STORE_MENU_MATERIALIZATION_CONTRACT.md),
+[STORE_MENU_LOCAL_OVERRIDE_CONTRACT](../agile/STORE_MENU_LOCAL_OVERRIDE_CONTRACT.md),
+[PHASE_B_MENU_PROVISIONING_CONTRACT](../agile/PHASE_B_MENU_PROVISIONING_CONTRACT.md),
+[MASTER_MENU_SCHEMA_OPTIONS](../agile/MASTER_MENU_SCHEMA_OPTIONS.md),
+and
+[PHASE_B_CHAIN_MENU_ENTRY_READINESS](../agile/PHASE_B_CHAIN_MENU_ENTRY_READINESS.md).
+
+Historical A11.5 stop state, superseded for Part 1 by the 2026-08-16 Owner
+implementation authorization above:
+
+```text
+PHASE_A11_5_CHAIN_MASTER_MENU_DESIGN_COMPLETE_WAITING_FOR_PHASE_B_OWNER_APPROVAL
+```
+
 ## Current Phase A11 printing rule configuration gate (2026-08-15)
 
 The Owner added a Phase A productization closure before Phase B:
@@ -8,11 +138,11 @@ The Owner added a Phase A productization closure before Phase B:
 PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION
 ```
 
-Fresh repository authority for the A11 implementation start is
-`origin/main@78ac87b633ba6d4e113d52ed65eddb8fcc06eacd`.
-Phase A10 automated foundation acceptance remains valid, but Phase B
-implementation is blocked until A11 completes PR/merge, exact-SHA Staging
-validation and Owner acceptance.
+Fresh repository authority for the historical A11 implementation start was
+`origin/main@78ac87b633ba6d4e113d52ed65eddb8fcc06eacd`; latest code authority
+is now `origin/main@0de03c773ef04594e7d737c6bccdf6f607692eca`. Phase A10
+automated foundation acceptance remains valid. The former A11 Owner-acceptance
+block is superseded by `PHASE_A11_OWNER_ACCEPTANCE = PASS`.
 
 A11 evidence:
 [PHASE_A11_PRINTING_RULE_AUDIT](../agile/PHASE_A11_PRINTING_RULE_AUDIT.md),
@@ -31,7 +161,7 @@ Phase A automated acceptance
 → Owner Design Decision = CLOSED
 → A11 Implementation Candidate
 → PR / exact-SHA Staging deploy
-→ Staging Owner Acceptance
+→ Staging Owner Acceptance = PASS_OWNER_DECLARED
 → Phase B
 ```
 
@@ -46,17 +176,17 @@ Current implementation boundary:
 
 ```text
 Production = NO_MUTATION
-Staging = DEPLOYMENT_PENDING
-Schema/Flyway = ADDITIVE_V17_CANDIDATE
-Implementation = REPOSITORY_CANDIDATE_READY
-Deployment = NOT_STARTED_IN_THIS_REPOSITORY_STATE
-Phase_B = BLOCKED_UNTIL_A11_STAGING_OWNER_ACCEPTANCE
+Staging = SEE_LATEST_RUNTIME_IDENTITY_ABOVE
+Schema/Flyway = ADDITIVE_V17_CODE_PRESENT_WITH_RUNTIME_EVIDENCE_CAVEAT
+Implementation = ACCEPTED_BY_OWNER
+Deployment = NOT_RERUN_IN_A11_5_DOCS_LOOP
+Phase_B = WAITING_FOR_EXPLICIT_OWNER_APPROVAL
 ```
 
 Unique stop state:
 
 ```text
-PHASE_A11_PRINTING_RULE_CONFIGURATION_REPOSITORY_READY_WAITING_FOR_STAGING_VALIDATION
+PHASE_A11_OWNER_ACCEPTANCE_PASS_SUPERSEDED_BY_A11_5_DESIGN
 ```
 
 ## Current Phase A10 final modular acceptance (2026-08-14)

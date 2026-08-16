@@ -96,6 +96,7 @@ public class StoreProfileContractValidator {
             scanProhibitedData(root, "$", issues);
             validateModuleDefaults(root, issues);
             validateProfileReferences(root, profileCode, profileVersion, safeArtifacts, issues);
+            validateMasterMenuReference(root, profileCode, profileVersion, issues);
             validateMenuTemplateShape(root, issues);
         }
 
@@ -249,6 +250,43 @@ public class StoreProfileContractValidator {
     }
 
     private boolean requiresPrintingDisplayRules(String profileCode, String profileVersion) {
+        return !("ST_DENIS_CANONICAL_PROFILE".equals(profileCode) && "v1".equals(profileVersion));
+    }
+
+    private void validateMasterMenuReference(
+        JsonNode root,
+        String profileCode,
+        String profileVersion,
+        List<StoreProfileValidationIssue> issues
+    ) {
+        if (!requiresMasterMenuReference(profileCode, profileVersion)) {
+            return;
+        }
+        JsonNode reference = root.path("master_menu_reference");
+        if (!reference.isObject()) {
+            issues.add(issue("MASTER_MENU_REFERENCE_REQUIRED", "master_menu_reference",
+                "Post-A11 Store Profiles must reference a published Master Menu version"));
+            return;
+        }
+        if (!StoreProfileIdentity.isExact(reference.path("master_menu_key").asText(null))) {
+            issues.add(issue("MASTER_MENU_REFERENCE_INVALID", "master_menu_reference.master_menu_key",
+                "Master Menu reference must include an exact key"));
+        }
+        if (!StoreProfileIdentity.isExact(reference.path("master_menu_version").asText(null))) {
+            issues.add(issue("MASTER_MENU_REFERENCE_INVALID", "master_menu_reference.master_menu_version",
+                "Master Menu reference must include an exact version"));
+        }
+        if (!StoreProfileIdentity.isExact(reference.path("schema_version").asText(null))) {
+            issues.add(issue("MASTER_MENU_REFERENCE_INVALID", "master_menu_reference.schema_version",
+                "Master Menu reference must include a schema version"));
+        }
+        if (!SHA256_PATTERN.matcher(reference.path("fingerprint_sha256").asText("")).matches()) {
+            issues.add(issue("MASTER_MENU_REFERENCE_INVALID", "master_menu_reference.fingerprint_sha256",
+                "Master Menu reference must include a lowercase SHA-256 fingerprint"));
+        }
+    }
+
+    private boolean requiresMasterMenuReference(String profileCode, String profileVersion) {
         return !("ST_DENIS_CANONICAL_PROFILE".equals(profileCode) && "v1".equals(profileVersion));
     }
 

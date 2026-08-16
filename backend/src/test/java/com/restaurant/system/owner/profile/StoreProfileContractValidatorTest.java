@@ -61,6 +61,12 @@ class StoreProfileContractValidatorTest {
                 "role_access_defaults": {"artifact_code": "ROLE_ACCESS_DEFAULTS", "artifact_version": "v1", "fingerprint_sha256": "%s"},
                 "hardware_requirements": {"artifact_code": "HARDWARE_REQUIREMENTS", "artifact_version": "v1", "fingerprint_sha256": "%s"}
               },
+              "master_menu_reference": {
+                "master_menu_key": "LANZHOU_CHAIN_MASTER_MENU",
+                "master_menu_version": "v1",
+                "schema_version": "CHAIN_MASTER_MENU_V1",
+                "fingerprint_sha256": "e55ad23773753ade22e3e090622c361b58268ae5b43ee354ec7eef5b78f233f7"
+              },
               "materialization_contract": {
                 "uses_profile_local_refs": true,
                 "new_surrogate_ids_required": true,
@@ -187,6 +193,34 @@ class StoreProfileContractValidatorTest {
         assertThat(result.valid()).isFalse();
         assertThat(result.issues()).extracting(StoreProfileValidationIssue::path)
             .contains("template_references.printing_display_rules");
+    }
+
+    @Test
+    void postA11ProfileVersionsRequireMasterMenuReference() {
+        String invalid = contentJson.replace("""
+              "master_menu_reference": {
+                "master_menu_key": "LANZHOU_CHAIN_MASTER_MENU",
+                "master_menu_version": "v1",
+                "schema_version": "CHAIN_MASTER_MENU_V1",
+                "fingerprint_sha256": "e55ad23773753ade22e3e090622c361b58268ae5b43ee354ec7eef5b78f233f7"
+              },
+            """, "");
+        String fingerprint = validator.computeAggregateFingerprint(
+            "TEST_PROFILE", "v1", StoreProfileContractValidator.SCHEMA_VERSION, invalid, artifacts
+        );
+
+        StoreProfileValidationResult result = validator.validate(
+            "TEST_PROFILE",
+            "v1",
+            StoreProfileContractValidator.SCHEMA_VERSION,
+            invalid,
+            fingerprint,
+            artifacts
+        );
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.issues()).extracting(StoreProfileValidationIssue::path)
+            .contains("master_menu_reference");
     }
 
     @Test

@@ -4,8 +4,12 @@ Status:
 
 ```text
 PHASE_A11_PRODUCT_PRINT_RULE_INVENTORY = AUDIT_COMPLETE
-A11_IMPLEMENTATION = REPOSITORY_CANDIDATE_READY
+A11_IMPLEMENTATION = ACCEPTED_BY_OWNER
+PHASE_A11_OWNER_ACCEPTANCE = PASS
 ```
+
+Latest Owner acceptance supersedes the original repository-candidate status.
+Do not rerun A11 manual acceptance in the A11.5 loop.
 
 This inventory lists product- or wording-specific printing rules found in
 fresh code and docs. It intentionally does not propose moving every rule into

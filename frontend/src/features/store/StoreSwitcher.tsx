@@ -1,9 +1,29 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { navigateTo } from '../frontdesk/navigation'
 import { fetchWorkspaces, type WorkspaceStore } from '../../services/storeWorkspaceService'
 import { replaceStoreId } from './storeRoutes'
 import { useOptionalCurrentStore } from './useStoreContext'
 import { useAuth } from '../auth/useAuth'
+
+function normalizedLifecycleLabel(value: string | null | undefined) {
+  if (!value) return 'Unknown'
+  return value
+    .replaceAll('_', ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+function isLiveStore(store: WorkspaceStore | null | undefined) {
+  return (store?.store_kind ?? 'BUSINESS').toUpperCase() === 'BUSINESS'
+    && (store?.lifecycle_status ?? 'ACTIVE').toUpperCase() === 'ACTIVE'
+}
+
+function switcherLabel(store: WorkspaceStore | null | undefined) {
+  if (!store) return 'Store'
+  return isLiveStore(store)
+    ? store.name
+    : `${store.name} · Not Live · ${normalizedLifecycleLabel(store.lifecycle_status)}`
+}
 
 export function StoreSwitcher({ compact = false }: { compact?: boolean }) {
   const currentStore = useOptionalCurrentStore()
@@ -29,10 +49,13 @@ export function StoreSwitcher({ compact = false }: { compact?: boolean }) {
   }, [isOfflineRestricted, user?.id])
 
   const selectedStoreId = currentStore?.storeId ?? stores[0]?.id ?? ''
-  const label = useMemo(() => {
-    const matched = stores.find((store) => store.id === selectedStoreId)
-    return currentStore?.storeName ?? matched?.name ?? 'Store'
-  }, [currentStore?.storeName, selectedStoreId, stores])
+  const matchedStore = stores.find((store) => store.id === selectedStoreId)
+  const label = currentStore
+    ? (currentStore.storeKind ?? 'BUSINESS').toUpperCase() === 'BUSINESS'
+      && (currentStore.lifecycleStatus ?? 'ACTIVE').toUpperCase() === 'ACTIVE'
+        ? currentStore.storeName
+        : `${currentStore.storeName} · Not Live · ${normalizedLifecycleLabel(currentStore.lifecycleStatus)}`
+    : switcherLabel(matchedStore)
 
   if (error) {
     return <div className="text-[0.78rem] font-bold text-red-700">Store unavailable</div>
@@ -61,7 +84,7 @@ export function StoreSwitcher({ compact = false }: { compact?: boolean }) {
         >
           {stores.map((store) => (
             <option key={store.id} value={store.id}>
-              {store.name}
+              {switcherLabel(store)}
             </option>
           ))}
         </select>

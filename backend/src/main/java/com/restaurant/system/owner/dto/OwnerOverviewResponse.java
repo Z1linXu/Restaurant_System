@@ -24,6 +24,13 @@ public class OwnerOverviewResponse {
         public String name;
         public String code;
         public String status;
+        public String store_kind;
+        public String lifecycle_status;
+        public String provisioning_source;
+        public String provisioned_profile_code;
+        public String provisioned_profile_version;
+        public String provisioned_master_menu_key;
+        public String provisioned_master_menu_version;
         public String role_code;
         public Map<String, Boolean> features;
         public StoreSummary summary;

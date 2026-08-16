@@ -59,13 +59,28 @@ export function OwnerAdminShell({ title, description, children }: OwnerAdminShel
   const homePath = isFrontdesk ? '/frontdesk' : '/admin/dashboard'
   const shellTitle = isFrontdesk ? 'Store Tools' : 'Owner Console'
   const frontdeskPath = currentStore ? buildStorePath(currentStore.storeId, '/frontdesk') : '/frontdesk'
+  const currentStoreLive = !currentStore
+    || (
+      (currentStore.storeKind ?? 'BUSINESS').toUpperCase() === 'BUSINESS'
+      && (currentStore.lifecycleStatus ?? 'ACTIVE').toUpperCase() === 'ACTIVE'
+    )
   const backToFrontdeskButton = (
     <button
       type="button"
-      onClick={() => navigateTo(frontdeskPath)}
-      className="min-h-11 rounded-[16px] bg-[var(--primary)] px-4 text-[0.92rem] font-black text-white shadow-[0_12px_24px_rgba(97,0,0,0.16)]"
+      disabled={!currentStoreLive}
+      title={currentStoreLive ? undefined : 'Store is not live yet'}
+      onClick={() => {
+        if (currentStoreLive) {
+          navigateTo(frontdeskPath)
+        }
+      }}
+      className={`min-h-11 rounded-[16px] px-4 text-[0.92rem] font-black shadow-[0_12px_24px_rgba(97,0,0,0.16)] ${
+        currentStoreLive
+          ? 'bg-[var(--primary)] text-white'
+          : 'cursor-not-allowed bg-stone-200 text-stone-500 shadow-none'
+      }`}
     >
-      返回前台
+      {currentStoreLive ? '返回前台' : 'Not Live'}
     </button>
   )
 

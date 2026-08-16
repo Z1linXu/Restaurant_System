@@ -42,7 +42,9 @@ public class WorkspaceController {
     public ApiResponse<WorkspaceResponse> workspaces() {
         AuthenticatedUser user = requestUserContextService.getRequiredUser();
         WorkspaceResponse response = new WorkspaceResponse();
-        List<Store> stores = storeAccessService.accessibleStores(user);
+        List<Store> stores = storeAccessService.accessibleStores(user).stream()
+            .filter(this::visibleInDefaultWorkspace)
+            .toList();
         response.defaultStoreId = stores.stream()
             .filter(store -> store != null && store.id != null && store.id.equals(user.storeId()))
             .findFirst()
@@ -74,6 +76,13 @@ public class WorkspaceController {
         response.name = store.name;
         response.code = store.code;
         response.status = store.status;
+        response.storeKind = store.store_kind;
+        response.lifecycleStatus = store.lifecycle_status;
+        response.provisioningSource = store.provisioning_source;
+        response.provisionedProfileCode = store.provisioned_profile_code;
+        response.provisionedProfileVersion = store.provisioned_profile_version;
+        response.provisionedMasterMenuKey = store.provisioned_master_menu_key;
+        response.provisionedMasterMenuVersion = store.provisioned_master_menu_version;
         response.organizationId = store.organization_id;
         response.roleCode = storeAccessService.roleCodeForStore(user, store);
         response.moduleConfiguration = storeModuleService.getConfiguration(storeId);
@@ -105,8 +114,19 @@ public class WorkspaceController {
         response.name = store.name;
         response.code = store.code;
         response.status = store.status;
+        response.storeKind = store.store_kind;
+        response.lifecycleStatus = store.lifecycle_status;
+        response.provisioningSource = store.provisioning_source;
         response.organizationId = store.organization_id;
         response.roleCode = storeAccessService.roleCodeForStore(user, store);
         return response;
+    }
+
+    private boolean visibleInDefaultWorkspace(Store store) {
+        if (store == null) {
+            return false;
+        }
+        return !"VALIDATION_FIXTURE".equalsIgnoreCase(store.store_kind)
+            || "PHASE_B_OWNER_PROVISIONING".equalsIgnoreCase(store.provisioning_source);
     }
 }

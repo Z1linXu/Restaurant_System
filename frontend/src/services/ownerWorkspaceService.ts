@@ -18,6 +18,13 @@ export interface OwnerOverviewStore {
   name: string
   code: string | null
   status: string | null
+  store_kind?: string | null
+  lifecycle_status?: string | null
+  provisioning_source?: string | null
+  provisioned_profile_code?: string | null
+  provisioned_profile_version?: string | null
+  provisioned_master_menu_key?: string | null
+  provisioned_master_menu_version?: string | null
   role_code: string | null
   features: Record<string, boolean>
   summary: OwnerStoreSummary

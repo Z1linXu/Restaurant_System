@@ -33,6 +33,8 @@ ACTION=same-image-restart
 
 CALLS="$TMP_DIR/calls"
 FLYWAY_ROWS="$(while IFS='|' read -r version script checksum; do printf '%s|%s|%s|true|%s\n' "$version" "$version" "$script" "$checksum"; done < <(expected_flyway_manifest))"
+EXPECTED_FLYWAY_COUNT="$(expected_flyway_manifest | awk 'NF { count++ } END { print count + 0 }')"
+EXPECTED_FLYWAY_MAX="$(expected_flyway_manifest | awk -F'|' '$1+0 > max { max = $1 + 0 } END { print max + 0 }')"
 controlled_compose() {
   printf '%s\n' "$*" >>"$CALLS"
   case "$*" in
@@ -80,7 +82,7 @@ EOF
 chmod +x "$CURL_BIN"
 
 emit_evidence COLLECT >"$TMP_DIR/evidence"
-assert_contains 'OPS001_RUNTIME|COLLECT|FLYWAY|count=15|max_version=15|digest=' "$TMP_DIR/evidence"
+assert_contains "OPS001_RUNTIME|COLLECT|FLYWAY|count=$EXPECTED_FLYWAY_COUNT|max_version=$EXPECTED_FLYWAY_MAX|digest=" "$TMP_DIR/evidence"
 assert_contains 'OPS001_RUNTIME|COLLECT|CONTAINER|backend|backend-id|sha256:backend-id-image|0' "$TMP_DIR/evidence"
 assert_not_contains "$FLYWAY_ROWS" "$TMP_DIR/evidence"
 
