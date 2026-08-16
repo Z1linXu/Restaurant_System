@@ -127,12 +127,14 @@ def visible_catalog_items(document):
 
 
 def output(result):
-    if result is True and exit_status:
-        raise SystemExit(0)
-    if raw and isinstance(result, (str, int, float)):
+    if isinstance(result, bool):
+        print("true" if result else "false")
+    elif raw and isinstance(result, (str, int, float)):
         print(result)
-        return
-    print(json.dumps(result, ensure_ascii=False, separators=(",", ":") if compact else None))
+    else:
+        print(json.dumps(result, ensure_ascii=False, separators=(",", ":") if compact else None))
+    if exit_status and (result is False or result is None):
+        raise SystemExit(1)
 
 
 result = None
