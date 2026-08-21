@@ -1773,6 +1773,13 @@ Combo component rendering contract:
   based. Preview, MOCK, REAL, and PAD_DIRECT continue to consume the same
   renderer output, and FRONTDESK_RECEIPT semantics are unchanged.
 
+Printing Display Rule configuration and preview are Store-scoped configuration
+operations. They require Store authorization, an enabled persisted `PRINTING`
+module, and the Printing feature flag, but do not require physical printer or
+Pad readiness. Operational printer, assignment, job, test and reprint APIs
+continue to require the full `PRINTING` module capability, including hardware
+readiness.
+
 Print Center behavior:
 
 - `HOT_KITCHEN` assignment is active and editable.
