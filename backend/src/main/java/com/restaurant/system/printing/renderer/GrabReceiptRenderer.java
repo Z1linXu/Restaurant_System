@@ -6,6 +6,7 @@ import com.restaurant.system.order.entity.OrderItem;
 import com.restaurant.system.order.entity.OrderItemOption;
 import com.restaurant.system.printing.PrintModuleCode;
 import com.restaurant.system.printing.dto.PrintRenderRequest;
+import com.restaurant.system.printing.semantic.ComboComponentSemanticResolver;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -161,6 +162,9 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
     }
 
     private int resolveSortPriority(KitchenTask task, OrderItem orderItem) {
+        if (ComboComponentSemanticResolver.isSyntheticSideTask(task)) {
+            return 0;
+        }
         if ("COLD".equals(task.station_code)) {
             return 1;
         }
@@ -214,7 +218,7 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
         if (secondary != null) {
             lines.add(secondary);
         }
-        String itemNote = resolveItemNote(orderItem);
+        String itemNote = ComboComponentSemanticResolver.isSyntheticSideTask(task) ? null : resolveItemNote(orderItem);
         if (itemNote != null) {
             lines.add("备注：" + itemNote);
         }
@@ -245,6 +249,9 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
     }
 
     private boolean isSideTask(KitchenTask task, OrderItem orderItem) {
+        if (ComboComponentSemanticResolver.isSyntheticSideTask(task)) {
+            return true;
+        }
         if ("COLD".equals(task.station_code)) {
             return true;
         }
@@ -409,7 +416,7 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
             displayName = special;
         }
 
-        String itemNote = resolveItemNote(orderItem);
+        String itemNote = ComboComponentSemanticResolver.isSyntheticSideTask(task) ? null : resolveItemNote(orderItem);
         if (itemNote != null) {
             demands.add("备注：" + itemNote);
         }

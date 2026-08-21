@@ -7,6 +7,7 @@ import com.restaurant.system.order.entity.OrderItemOption;
 import com.restaurant.system.printing.PrintModuleCode;
 import com.restaurant.system.printing.dto.PrintRenderRequest;
 import com.restaurant.system.printing.rules.PrintingDisplayRuleContext;
+import com.restaurant.system.printing.semantic.ComboComponentSemanticResolver;
 import com.restaurant.system.printing.semantic.HotKitchenPrintEligibilityService;
 import java.time.format.DateTimeFormatter;
 import java.math.BigDecimal;
@@ -106,7 +107,9 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
         if (secondary != null) {
             builder.append(PrintMarkup.doubleHeight(secondary)).append("\n");
         }
-        String note = task.item() == null ? null : normalize(task.item().notes);
+        String note = ComboComponentSemanticResolver.isSyntheticSideTask(task.representative()) || task.item() == null
+            ? null
+            : normalize(task.item().notes);
         if (note != null) {
             builder.append(PrintMarkup.doubleHeight("备注：" + note)).append("\n");
         }
@@ -122,9 +125,14 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
         Map<HotKitchenGroupKey, AggregatedHotKitchenTask> grouped = new LinkedHashMap<>();
         for (KitchenTask originalTask : tasks) {
             OrderItem item = itemById.get(originalTask.order_item_id);
-            List<OrderItemOption> options = optionsByItemId.getOrDefault(originalTask.order_item_id, List.of());
-            KitchenTask task = applyHotKitchenDisplayRules(originalTask, item, options, printingRules);
-            KitchenNoodlePrintFormatter.NoodleConfig noodleConfig = KitchenNoodlePrintFormatter.isNoodleTask(task, item)
+            boolean standaloneSide = ComboComponentSemanticResolver.isSyntheticSideTask(originalTask);
+            List<OrderItemOption> options = standaloneSide
+                ? List.of()
+                : optionsByItemId.getOrDefault(originalTask.order_item_id, List.of());
+            KitchenTask task = standaloneSide
+                ? originalTask
+                : applyHotKitchenDisplayRules(originalTask, item, options, printingRules);
+            KitchenNoodlePrintFormatter.NoodleConfig noodleConfig = !standaloneSide && KitchenNoodlePrintFormatter.isNoodleTask(task, item)
                 ? KitchenNoodlePrintFormatter.buildConfig(task, item, KitchenNoodlePrintFormatter::normalizeModifierSegment)
                 : null;
             HotKitchenGroupKey key = buildGroupKey(task, item, options, noodleConfig);
@@ -404,8 +412,7 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
                 continue;
             }
             if (OPTION_TYPE_ADDON.equals(option.option_type_snapshot)) {
-                String addonCode = canonicalAddonCode(option.option_name_snapshot_zh);
-                if (isComboSideCode(addonCode)) {
+                if (ComboComponentSemanticResolver.isStandaloneSide(option)) {
                     continue;
                 }
                 String token = mapAddonToken(option, printingRules);
@@ -415,7 +422,7 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
                 continue;
             }
             if (OPTION_TYPE_REMOVE.equals(option.option_type_snapshot)) {
-                if ("COMBO_SIDE_REMOVE".equalsIgnoreCase(option.option_group_snapshot)) {
+                if (ComboComponentSemanticResolver.isSideRemoval(option)) {
                     continue;
                 }
                 String token = mapRemoveToken(option, printingRules);
@@ -505,16 +512,6 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
         return canonicalRemoveCode(option.option_name_snapshot_zh);
     }
 
-    private boolean isComboSideCode(String code) {
-        if (code == null) {
-            return false;
-        }
-        String normalized = code.toLowerCase(Locale.ROOT);
-        return normalized.contains("combo_edamame")
-            || normalized.contains("combo_shredded_potato")
-            || normalized.contains("combo_cucumber_salad");
-    }
-
     private String canonicalAddonCode(String label) {
         if (label == null || label.isBlank()) {
             return null;
@@ -587,6 +584,19 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
         List<OrderItemOption> options,
         KitchenNoodlePrintFormatter.NoodleConfig noodleConfig
     ) {
+        if (ComboComponentSemanticResolver.isSyntheticSideTask(task)) {
+            return new HotKitchenGroupKey(
+                null,
+                null,
+                "combo_side_component",
+                stable(task.station_code),
+                stable(fallback(task.item_name_snapshot_zh, task.item_name_snapshot_en, "Item"))
+                    + "|"
+                    + stable(task.special_instructions_snapshot),
+                "",
+                List.of()
+            );
+        }
         if (noodleConfig != null) {
             KitchenNoodlePrintFormatter.NoodleGroupKey noodleKey = KitchenNoodlePrintFormatter.buildGroupKey(
                 task,

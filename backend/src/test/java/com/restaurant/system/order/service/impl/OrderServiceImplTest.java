@@ -838,6 +838,163 @@ class OrderServiceImplTest {
     }
 
     @Test
+    void comboSideUsesStableIdentityForSyntheticTaskAndKeepsSameCodeTrueAddonOnMain() {
+        Station coldStation = new Station();
+        coldStation.id = 31L;
+        coldStation.store_id = store.id;
+        coldStation.code = "COLD";
+        coldStation.is_active = true;
+        when(stationRepository.findActiveStationByCodeAndStoreId("COLD", store.id)).thenReturn(coldStation);
+
+        CreateOrderItemOptionRequest comboSide = new CreateOrderItemOptionRequest();
+        comboSide.option_id = -20101L;
+        comboSide.quantity = 2;
+        comboSide.option_type_snapshot = "addon";
+        comboSide.option_group_snapshot = "COMBO_SIDE";
+        comboSide.option_code_snapshot = "combo_edamame";
+        comboSide.option_name_snapshot_zh = "本店今日小菜";
+        comboSide.option_name_snapshot_en = "Daily Side";
+        comboSide.option_price_snapshot = BigDecimal.ZERO;
+
+        CreateOrderItemOptionRequest trueAddon = new CreateOrderItemOptionRequest();
+        trueAddon.option_id = -20102L;
+        trueAddon.quantity = 1;
+        trueAddon.option_type_snapshot = "addon";
+        trueAddon.option_group_snapshot = "ADD_ON";
+        trueAddon.option_code_snapshot = "combo_edamame";
+        trueAddon.option_name_snapshot_zh = "毛豆";
+        trueAddon.option_name_snapshot_en = "Extra Edamame";
+        trueAddon.option_price_snapshot = new BigDecimal("2.00");
+
+        CreateOrderItemOptionRequest sideRemoval = new CreateOrderItemOptionRequest();
+        sideRemoval.option_id = -20103L;
+        sideRemoval.parent_option_id_snapshot = comboSide.option_id;
+        sideRemoval.quantity = 1;
+        sideRemoval.option_type_snapshot = "remove";
+        sideRemoval.option_group_snapshot = "COMBO_SIDE_REMOVE";
+        sideRemoval.option_code_snapshot = "remove_peanut";
+        sideRemoval.option_name_snapshot_zh = "走花生";
+        sideRemoval.option_name_snapshot_en = "No Peanut";
+        sideRemoval.option_price_snapshot = BigDecimal.ZERO;
+
+        CreateOrderItemRequest itemRequest = new CreateOrderItemRequest();
+        itemRequest.menu_item_id = menuItem.id;
+        itemRequest.quantity = 2;
+        itemRequest.notes = "只属于主餐";
+        itemRequest.options = List.of(comboSide, sideRemoval, trueAddon);
+
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.store_id = store.id;
+        request.created_by = 1L;
+        request.order_type = "dine_in";
+        request.table_no = "T-COMBO";
+        request.items = List.of(itemRequest);
+
+        OrderResponse submittedOrder = orderService.submitOrder(orderService.createOrder(request).id);
+        List<KitchenTask> tasks = kitchenTaskRepository.findAllByOrderId(submittedOrder.id);
+        KitchenTask mainTask = tasks.stream().filter(task -> task.priority == null).findFirst().orElseThrow();
+        KitchenTask sideTask = tasks.stream().filter(task -> Integer.valueOf(100).equals(task.priority)).findFirst().orElseThrow();
+
+        assertEquals(2, tasks.size());
+        assertEquals("+毛豆", mainTask.special_instructions_snapshot);
+        assertEquals("COLD", sideTask.station_code);
+        assertEquals("毛豆", sideTask.item_name_snapshot_zh);
+        assertEquals(4, sideTask.quantity);
+        assertEquals("走花生", sideTask.special_instructions_snapshot);
+        assertFalse(mainTask.special_instructions_snapshot.contains("走花生"));
+    }
+
+    @Test
+    void incompleteHistoricalComboSideIdentityDoesNotCreateTaskOrSuppressModifier() {
+        CreateOrderItemOptionRequest legacySide = new CreateOrderItemOptionRequest();
+        legacySide.option_id = -20201L;
+        legacySide.quantity = 1;
+        legacySide.option_type_snapshot = "addon";
+        legacySide.option_group_snapshot = null;
+        legacySide.option_code_snapshot = "combo_edamame";
+        legacySide.option_name_snapshot_zh = "套餐毛豆";
+        legacySide.option_name_snapshot_en = "Combo Edamame";
+        legacySide.option_price_snapshot = BigDecimal.ZERO;
+
+        CreateOrderItemRequest itemRequest = new CreateOrderItemRequest();
+        itemRequest.menu_item_id = menuItem.id;
+        itemRequest.quantity = 1;
+        itemRequest.options = List.of(legacySide);
+
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.store_id = store.id;
+        request.created_by = 1L;
+        request.order_type = "dine_in";
+        request.table_no = "T-LEGACY";
+        request.items = List.of(itemRequest);
+
+        OrderResponse submittedOrder = orderService.submitOrder(orderService.createOrder(request).id);
+        List<KitchenTask> tasks = kitchenTaskRepository.findAllByOrderId(submittedOrder.id);
+
+        assertEquals(1, tasks.size());
+        assertTrue(tasks.get(0).special_instructions_snapshot.contains("+毛豆"));
+    }
+
+    @Test
+    void updateBatchUsesSameComboSideContractAsOriginalSubmission() {
+        Station coldStation = new Station();
+        coldStation.id = 31L;
+        coldStation.store_id = store.id;
+        coldStation.code = "COLD";
+        coldStation.is_active = true;
+        when(stationRepository.findActiveStationByCodeAndStoreId("COLD", store.id)).thenReturn(coldStation);
+
+        CreateOrderItemRequest originalItem = new CreateOrderItemRequest();
+        originalItem.menu_item_id = menuItem.id;
+        originalItem.quantity = 1;
+        CreateOrderRequest originalRequest = new CreateOrderRequest();
+        originalRequest.store_id = store.id;
+        originalRequest.created_by = 1L;
+        originalRequest.order_type = "dine_in";
+        originalRequest.table_no = "T-UPDATE-COMBO";
+        originalRequest.items = List.of(originalItem);
+        OrderResponse submitted = orderService.submitOrder(orderService.createOrder(originalRequest).id);
+
+        CreateOrderItemOptionRequest comboSide = new CreateOrderItemOptionRequest();
+        comboSide.option_id = -20301L;
+        comboSide.quantity = 1;
+        comboSide.option_type_snapshot = "addon";
+        comboSide.option_group_snapshot = "COMBO_SIDE";
+        comboSide.option_code_snapshot = "combo_cucumber_salad";
+        comboSide.option_name_snapshot_zh = "凉拌黄瓜";
+        comboSide.option_name_snapshot_en = "Cucumber";
+        comboSide.option_price_snapshot = BigDecimal.ZERO;
+
+        CreateOrderItemRequest addedItem = new CreateOrderItemRequest();
+        addedItem.menu_item_id = menuItem.id;
+        addedItem.quantity = 1;
+        addedItem.notes = "更新主餐备注";
+        addedItem.options = List.of(comboSide);
+        CreateOrderUpdateRequest update = new CreateOrderUpdateRequest();
+        update.idempotency_key = "combo-side-update";
+        update.items = List.of(addedItem);
+
+        var result = orderService.createOrderUpdate(submitted.id, update, 1L);
+        Long addedItemId = result.order.items.stream()
+            .filter(item -> result.update_batch_id.equals(item.order_update_batch_id))
+            .map(item -> item.id)
+            .findFirst()
+            .orElseThrow();
+        List<KitchenTask> updateTasks = kitchenTaskRepository.findAllByOrderId(submitted.id).stream()
+            .filter(task -> addedItemId.equals(task.order_item_id))
+            .toList();
+
+        assertEquals(2, updateTasks.size());
+        assertEquals(1, updateTasks.stream().filter(task -> Integer.valueOf(100).equals(task.priority)).count());
+        assertEquals(1, updateTasks.stream().filter(task -> task.priority == null).count());
+        assertEquals(null, updateTasks.stream()
+            .filter(task -> task.priority == null)
+            .findFirst()
+            .orElseThrow()
+            .special_instructions_snapshot);
+    }
+
+    @Test
     void smallSizeRemainsDistinctFromMediumInKitchenInstructions() {
         MenuItemOption small = menuOption(
             104L, "size", "size_small", "SIZE", "小碗", "Small", BigDecimal.ZERO

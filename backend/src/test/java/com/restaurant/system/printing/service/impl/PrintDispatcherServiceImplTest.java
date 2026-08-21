@@ -483,6 +483,34 @@ class PrintDispatcherServiceImplTest {
     }
 
     @Test
+    void existingPrintJobReprintUsesFrozenRenderedSnapshotWithoutRerendering() {
+        PrintJob job = new PrintJob();
+        job.id = 77L;
+        job.store_id = 1L;
+        job.order_id = 123L;
+        job.printer_id = 10L;
+        job.module_code = PrintModuleCode.GRAB;
+        job.rendered_text_snapshot = "FROZEN HISTORICAL COMBO OUTPUT";
+        job.status = PrintJobStatus.PRINTED;
+
+        PrinterConfig printer = new PrinterConfig();
+        printer.id = job.printer_id;
+        printer.store_id = job.store_id;
+        printer.enabled = true;
+        when(printJobService.requireJob(job.id)).thenReturn(job);
+        when(printerConfigRepository.findById(printer.id)).thenReturn(Optional.of(printer));
+        when(printerConfigService.getStorePrintingMode(job.store_id)).thenReturn("MOCK");
+        when(printJobService.markPrinting(job, printer)).thenReturn(job);
+        when(printJobService.markPrinted(job, printer, "Mock print succeeded - no physical printer used")).thenReturn(job);
+
+        service.reprintJob(job.id, 5L);
+
+        verify(printJobService).attachRenderedContent(job, printer.id, "FROZEN HISTORICAL COMBO OUTPUT");
+        verify(grabRenderer, never()).render(any());
+        verifyNoInteractions(printerTransport);
+    }
+
+    @Test
     void cloudProfileBlocksPrivatePrinterBeforeTransport() {
         MockEnvironment environment = new MockEnvironment();
         environment.setActiveProfiles("cloud");
