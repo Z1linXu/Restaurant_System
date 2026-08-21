@@ -164,6 +164,16 @@ Package. When it exists, Codex may perform reviewed exact-SHA deployment,
 required Staging restart/Flyway, automated acceptance and evidence collection
 without another approval for every contained action.
 
+Within that authorized Phase/Package, merged runtime-sensitive or
+Owner-testable application, UI, backend, printing, API and runtime-contract
+changes proceed by default through fresh exact-SHA Staging deployment and
+applicable automated acceptance. Ordinary Staging technical failures use the
+bounded repair loop without repeated Owner approval when the repair does not
+expand scope or weaken a safety boundary.
+
+Documentation-only, governance-only, archive/cleanup, comment/formatting and
+other non-runtime mechanical changes do not trigger Staging deployment.
+
 Required boundaries:
 
 - isolated Staging configuration/data/credentials;
@@ -172,8 +182,11 @@ Required boundaries:
 - no real printer/device endpoint unless explicitly authorized;
 - evidence records environment, SHA, Flyway and acceptance result.
 
-Staging authority never implies Production authority. `CURRENT_STATE.yml`
-may explicitly pause otherwise standing authority for a governance-only run.
+Standing authorization does not open another Package or Phase and does not
+authorize real Store activation, new real credentials or Master-data mutation,
+or real Printer/Pad binding. Staging authority never implies Production
+authority. `CURRENT_STATE.yml` may explicitly pause otherwise standing
+authority for a governance-only run.
 
 ## 9. Production policy
 

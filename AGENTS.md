@@ -223,6 +223,18 @@ risk-based exception unless the Owner explicitly requires Agent 6.
 Standing Staging authorization exists only inside the current explicitly
 Owner-authorized Phase/Package and reviewed safety boundary.
 
+For runtime-sensitive changes inside that authorized Phase/Package, the
+default delivery loop continues after merge through fresh exact-SHA Staging
+deployment and applicable automated acceptance without a second per-deploy
+Owner approval. This includes user-testable application, UI, backend,
+printing, API and runtime-contract changes. Ordinary Staging technical failures
+remain inside the bounded repair loop and may be fixed, reviewed, merged,
+redeployed and re-tested without repeated Owner approval while scope and safety
+boundaries remain unchanged.
+
+Documentation-only, governance-only, archive/cleanup, comment/formatting and
+other non-runtime mechanical changes do not trigger a Staging deployment.
+
 When authorized, Staging work must use:
 
 - an exact full SHA;
@@ -231,8 +243,10 @@ When authorized, Staging work must use:
 - focused automated acceptance;
 - concise evidence tied to the exact SHA and environment.
 
-Do not copy Production credentials/data/endpoints into Staging. Staging
-authorization never implies Production authorization.
+Standing authorization never opens a new Package or Phase and never authorizes
+real Store activation, new real credentials or Master-data mutation, or real
+Printer/Pad binding. Do not copy Production credentials/data/endpoints into
+Staging. Staging authorization never implies Production authorization.
 
 ## 15. Production
 

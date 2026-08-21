@@ -127,7 +127,8 @@ Phase C is `NOT AUTHORIZED`.
 
 Owner approval is required for:
 
-- resuming the currently paused Phase B Part 1 runtime route;
+- resuming any Phase or Package that `CURRENT_STATE.yml` explicitly marks as
+  paused;
 - accepting Part 1 and opening Part 2;
 - real Store activation or real credential/master-data actions;
 - opening Phase C;

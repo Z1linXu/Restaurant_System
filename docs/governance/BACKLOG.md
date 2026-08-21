@@ -6,7 +6,7 @@ narrative is preserved in [`docs/archive`](../archive/README.md). Priority uses
 
 | ID | Type | Status | Priority | Phase / Package | Blocking | Description | Authority / reference |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| PB1-ACCEPT | FEATURE | PAUSED_OWNER_GATE | P1 | Phase B Part 1 | Yes | Resume only after Owner authorization; deploy fresh exact `origin/main` to isolated Staging and complete automated plus Owner acceptance. | [`CURRENT_STATE.yml`](CURRENT_STATE.yml), [`ROADMAP.md`](ROADMAP.md) |
+| PB1-ACCEPT | FEATURE | IN_PROGRESS_STAGING_ACCEPTANCE | P1 | Phase B Part 1 | Yes | Deploy fresh exact `origin/main` to isolated Staging, complete automated acceptance, then stop for Owner manual acceptance. | [`CURRENT_STATE.yml`](CURRENT_STATE.yml), [`ROADMAP.md`](ROADMAP.md) |
 | PB1-ACCEPT-PAYLOAD | BUG | REPOSITORY_RESOLVED_PENDING_STAGING | P1 | Phase B Part 1 | Yes | Validate the Combo `groups[].components` acceptance payload repair in fresh `origin/main`; use a new validation Store code because `PHASE_B_VALIDATION_STORE_A9BE0C8_R1` already exists. | [Staging acceptance script](../../deployment/cloud/staging-phase-b-part1-acceptance.sh) |
 | KI-A10-001 | BUG | OPEN_NON_BLOCKING | P3 | Phase B / UX debt | No | Replace generic KDS-disabled HTTP 500 with a clearer fail-closed capability response when separately authorized. | [historical issue detail](../archive/governance-pre-simplification/KNOWN_ISSUES_BACKLOG.md) |
 | PRINT-HARDWARE | FEATURE | OWNER_GATED | P2 | Phase B Part 2 | No for Part 1 | Real Printer/Pad endpoints, pairing and physical binding require a separately authorized package and exact environment scope. | [`ROADMAP.md`](ROADMAP.md), [`drafts/`](drafts/) |
