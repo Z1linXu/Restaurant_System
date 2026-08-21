@@ -1,9 +1,14 @@
 package com.restaurant.system.printing.controller;
 
 import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -15,6 +20,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.restaurant.system.common.auth.AuthenticatedUser;
 import com.restaurant.system.common.auth.AuthorizationService;
 import com.restaurant.system.common.auth.Capability;
+import com.restaurant.system.common.auth.ForbiddenException;
+import com.restaurant.system.common.exception.BusinessException;
+import com.restaurant.system.common.feature.FeatureDisabledException;
 import com.restaurant.system.common.feature.FeatureFlagService;
 import com.restaurant.system.common.feature.FeaturePackage;
 import com.restaurant.system.modules.StoreModuleAccessEvaluator;
@@ -28,6 +36,7 @@ import com.restaurant.system.printing.entity.PrinterAssignment;
 import com.restaurant.system.printing.entity.PrinterConfig;
 import com.restaurant.system.printing.entity.PrintJob;
 import com.restaurant.system.printing.rules.PrintingDisplayRuleService;
+import com.restaurant.system.printing.rules.dto.PrintingDisplayRuleSettingsResponse;
 import com.restaurant.system.printing.service.PrintDispatcherService;
 import com.restaurant.system.printing.service.PrintJobService;
 import com.restaurant.system.printing.service.PrinterAssignmentService;
@@ -65,10 +74,11 @@ class OwnerPrintingControllerDisabledStateTest {
 
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
+    private OwnerPrintingController controller;
 
     @BeforeEach
     void setUp() {
-        OwnerPrintingController controller = new OwnerPrintingController(
+        controller = new OwnerPrintingController(
             printerConfigService,
             printerAssignmentService,
             printDispatcherService,
@@ -80,9 +90,55 @@ class OwnerPrintingControllerDisabledStateTest {
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
         objectMapper = new ObjectMapper();
-        when(authorizationService.requireForStore(eq(1L), any(Capability[].class))).thenReturn(
+        lenient().when(authorizationService.requireForStore(eq(1L), any(Capability[].class))).thenReturn(
             new AuthenticatedUser(2L, 1L, 1L, "owner", "Owner", "ADMIN")
         );
+    }
+
+    @Test
+    void displayRuleConfigurationDoesNotRequireOperationalHardwareReadiness() throws Exception {
+        PrintingDisplayRuleSettingsResponse settings = new PrintingDisplayRuleSettingsResponse();
+        settings.store_id = 1L;
+        when(printingDisplayRuleService.getSettings(1L)).thenReturn(settings);
+        mockMvc.perform(get("/api/v1/admin/printing/display-rules").param("store_id", "1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.store_id").value(1));
+
+        verify(moduleAccessEvaluator).requireModuleEnabled(1L, "PRINTING");
+        verify(featureFlagService).requireEnabled(FeaturePackage.PRINTING);
+        verify(moduleAccessEvaluator, never()).requireCapability(1L, "PRINTING");
+    }
+
+    @Test
+    void displayRuleConfigurationStillFailsClosedWhenPrintingModuleIsDisabled() {
+        doThrow(new BusinessException("MODULE_DISABLED"))
+            .when(moduleAccessEvaluator).requireModuleEnabled(1L, "PRINTING");
+
+        assertThrows(BusinessException.class, () -> controller.getDisplayRules(1L));
+
+        verify(printingDisplayRuleService, never()).getSettings(1L);
+        verify(featureFlagService, never()).requireEnabled(FeaturePackage.PRINTING);
+    }
+
+    @Test
+    void displayRuleConfigurationStillFailsClosedWhenPrintingFeatureIsDisabled() {
+        doThrow(new FeatureDisabledException(FeaturePackage.PRINTING))
+            .when(featureFlagService).requireEnabled(FeaturePackage.PRINTING);
+
+        assertThrows(FeatureDisabledException.class, () -> controller.getDisplayRules(1L));
+
+        verify(printingDisplayRuleService, never()).getSettings(1L);
+    }
+
+    @Test
+    void displayRuleConfigurationStillRequiresStoreAuthorization() {
+        doThrow(new ForbiddenException("Access denied for store 1"))
+            .when(authorizationService).requireForStore(eq(1L), any(Capability[].class));
+
+        assertThrows(ForbiddenException.class, () -> controller.getDisplayRules(1L));
+
+        verify(moduleAccessEvaluator, never()).requireModuleEnabled(1L, "PRINTING");
+        verify(printingDisplayRuleService, never()).getSettings(1L);
     }
 
     @Test

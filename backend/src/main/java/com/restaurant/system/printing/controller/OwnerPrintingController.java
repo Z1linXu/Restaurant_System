@@ -165,7 +165,7 @@ public class OwnerPrintingController {
 
     @GetMapping("/display-rules")
     public ApiResponse<PrintingDisplayRuleSettingsResponse> getDisplayRules(@RequestParam Long store_id) {
-        requirePrintingAccess(store_id);
+        requirePrintingConfigurationAccess(store_id);
         return ApiResponse.success(printingDisplayRuleService.getSettings(store_id));
     }
 
@@ -174,7 +174,7 @@ public class OwnerPrintingController {
         @RequestBody PrintingDisplayRuleDraftRequest request,
         HttpServletRequest servletRequest
     ) {
-        var user = requirePrintingAccess(request.store_id);
+        var user = requirePrintingConfigurationAccess(request.store_id);
         PrintingDisplayRuleRevisionResponse response = printingDisplayRuleService.saveDraft(request);
         recordAudit(request.store_id, user, "PRINTING_DISPLAY_RULE_DRAFT_SAVED", "PRINTING_DISPLAY_RULE_REVISION",
             response.id, "Printing display rule draft saved", Map.of("fingerprint_sha256", response.fingerprint_sha256), servletRequest);
@@ -183,13 +183,13 @@ public class OwnerPrintingController {
 
     @PostMapping("/display-rules/validate")
     public ApiResponse<PrintingDisplayRuleValidationResponse> validateDisplayRules(@RequestBody PrintingDisplayRuleDraftRequest request) {
-        requirePrintingAccess(request.store_id);
+        requirePrintingConfigurationAccess(request.store_id);
         return ApiResponse.success(printingDisplayRuleService.validate(request.store_id, request.content));
     }
 
     @PostMapping("/display-rules/preview")
     public ApiResponse<PrintingDisplayRulePreviewResponse> previewDisplayRules(@RequestBody PrintingDisplayRulePreviewRequest request) {
-        requirePrintingAccess(request.store_id);
+        requirePrintingConfigurationAccess(request.store_id);
         return ApiResponse.success(printingDisplayRuleService.preview(request));
     }
 
@@ -198,7 +198,7 @@ public class OwnerPrintingController {
         @RequestBody PrintingDisplayRulePublishRequest request,
         HttpServletRequest servletRequest
     ) {
-        var user = requirePrintingAccess(request.store_id);
+        var user = requirePrintingConfigurationAccess(request.store_id);
         PrintingDisplayRuleRevisionResponse response = printingDisplayRuleService.publishDraft(request.store_id, request.revision_id);
         recordAudit(request.store_id, user, "PRINTING_DISPLAY_RULE_PUBLISHED", "PRINTING_DISPLAY_RULE_REVISION",
             response.id, "Printing display rule revision published", Map.of("fingerprint_sha256", response.fingerprint_sha256), servletRequest);
@@ -303,6 +303,17 @@ public class OwnerPrintingController {
             Capability.ADMIN_STORE_CONFIG
         );
         moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.PRINTING);
+        return user;
+    }
+
+    private com.restaurant.system.common.auth.AuthenticatedUser requirePrintingConfigurationAccess(Long storeId) {
+        var user = authorizationService.requireForStore(
+            storeId,
+            Capability.ADMIN_PRINTING_MANAGE,
+            Capability.ADMIN_STORE_CONFIG
+        );
+        moduleAccessEvaluator.requireModuleEnabled(storeId, ModuleKeys.PRINTING);
+        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
         return user;
     }
 
