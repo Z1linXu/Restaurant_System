@@ -166,7 +166,7 @@ occurred, and the 4/3/13/38 graph remains repository authority only.
 
 Do not bypass the parent bootstrap, create the graph with raw SQL, or treat
 this entry `NO_GO` as source-menu failure. See
-[STG-008 entry evidence](../../docs/governance/runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).
+[STG-008 entry evidence](../../docs/archive/governance-pre-simplification/runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).
 
 After the Owner aligned the credential contract, fresh `bootstrap-plan`
 reached the guarded one-shot but failed before the STG-005A command because
@@ -176,4 +176,4 @@ contract without weakening ordinary cloud/prod startup. No topology or
 source-menu row was written. Source-menu plan/create/replay remain blocked
 until the PR #85 repair is deployed in a new exact backend image and the
 retained AL-003S blocked state receives separate Owner-approved recovery. See
-[STG-008 Flyway guard repair evidence](../../docs/governance/runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md).
+[STG-008 Flyway guard repair evidence](../../docs/archive/governance-pre-simplification/runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md).
