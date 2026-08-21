@@ -1781,7 +1781,8 @@ Print Center behavior:
 
 Explicitly unchanged:
 
-- GRAB and FRONTDESK_RECEIPT routing/rendering semantics are unchanged.
+- GRAB routing and FRONTDESK_RECEIPT routing/rendering semantics are unchanged;
+  GRAB Combo-side rendering follows the contract above.
 - Print failures still do not roll back orders.
 - No automatic retry system is introduced.
 - No database migration is added.
