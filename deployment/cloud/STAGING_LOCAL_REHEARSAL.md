@@ -94,7 +94,7 @@ registry credentials.
 
 The complete machine evidence, including bounded failed attempts and test
 results, is maintained in
-`docs/governance/runtime/STG-003_LOCAL_REHEARSAL_EVIDENCE.md`. This local result
+`docs/archive/governance-pre-simplification/runtime/STG-003_LOCAL_REHEARSAL_EVIDENCE.md`. This local result
 does not authorize or prove a server Staging deployment.
 
 PR #35 subsequently bound the same runtime trees to final tested runtime Head

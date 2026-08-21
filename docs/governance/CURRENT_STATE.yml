@@ -1,0 +1,40 @@
+schema_version: 1
+updated_at: 2026-08-21
+
+repository:
+  ref: origin/main
+  sha: d08238a7f0ae2a89f3139257b2ae9456db056bba
+  sha_semantics: BASELINE_AT_STATE_WRITE
+
+phase:
+  current: PHASE_B
+  package: PHASE_B_PART1_STAGING_ACCEPTANCE
+  status: PAUSED_WAITING_FOR_OWNER_TO_RESUME_PRODUCTIZATION
+  next_phase_authorized: false
+
+staging:
+  deployed_sha: a9be0c858dab52ef46170551e14f7c8633ffac72
+  flyway: V21
+  acceptance: BLOCKED_AT_COMBO_INDEPENDENCE_AFTER_PROVISIONING_REPLAY_PASS
+  evidence: ../../SYSTEM_DOCUMENTATION.md
+
+production:
+  deployed_sha: 3ec4d88a47f68e05b92d9246bfd63af2d1f297f9
+  flyway: V10
+  mutation_authorized: false
+  evidence: ../archive/governance-pre-simplification/runtime/PRODUCTION_THREE_RELIABILITY_RC_PROMOTION_EVIDENCE.md
+
+gate:
+  type: OWNER
+  next_action: OWNER_AUTHORIZE_RESUME_PHASE_B_PART1_THEN_DEPLOY_FRESH_EXACT_SHA_AND_RERUN_ACCEPTANCE_WITH_NEW_VALIDATION_STORE_CODE
+
+authorization:
+  repository_governance: COMPLETE
+  phase_b_part1: PAUSED_REQUIRES_OWNER_RESUME_AUTHORIZATION
+  phase_b_part2: NONE
+  phase_c: NONE
+  staging: NONE_DURING_AND_AFTER_THIS_GOVERNANCE_RUN
+  production: NONE
+
+stop:
+  marker: REPOSITORY_GOVERNANCE_SIMPLIFICATION_COMPLETE_WAITING_FOR_OWNER_TO_RESUME_PRODUCTIZATION

@@ -6,9 +6,9 @@ one-shot commands. It does not authorize runtime execution.
 The authoritative dependency order, commands, evidence fields, API follow-up,
 rollback boundary, and unresolved gates are in:
 
-- `docs/governance/agile/AL-003S_STAGING_ACCEPTANCE_PREPARATION.md`
-- `docs/governance/runtime/AL-003S_STAGING_ACCEPTANCE_EVIDENCE_TEMPLATE.md`
-- `docs/governance/agile/AL-003_STAGING_RELEASE_ACCEPTANCE_PLAN.md`
+- `docs/archive/governance-pre-simplification/agile/AL-003S_STAGING_ACCEPTANCE_PREPARATION.md`
+- `docs/archive/governance-pre-simplification/runtime/AL-003S_STAGING_ACCEPTANCE_EVIDENCE_TEMPLATE.md`
+- `docs/archive/governance-pre-simplification/agile/AL-003_STAGING_RELEASE_ACCEPTANCE_PLAN.md`
 
 ## Safe defaults
 

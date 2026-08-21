@@ -197,7 +197,7 @@ does not satisfy this runbook's mandatory `STG005_` identity prefix and
 or invent the Owner's secret, or run a one-shot merely to reproduce the known
 failure. Resume only after an explicit Owner decision supplies a compatible
 safe login/display identifier and runtime-only password. The sanitized record
-is [STG-008 entry evidence](../../docs/governance/runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).
+is [STG-008 entry evidence](../../docs/archive/governance-pre-simplification/runtime/STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).
 
 The Owner later approved `STG005_OWNER_20260808_R01` and retained the password
 contract. Fresh Ground Truth/readiness passed, but the password-free
@@ -209,4 +209,4 @@ all ordinary cloud guards and adds the exact bidirectional one-shot contract
 above. That repair entered main through PR #85. A new exact release/deploy and
 separately approved blocked-state recovery are still required; the old image
 cannot be patched or retried. See
-[STG-008 Flyway guard repair evidence](../../docs/governance/runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md).
+[STG-008 Flyway guard repair evidence](../../docs/archive/governance-pre-simplification/runtime/STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md).

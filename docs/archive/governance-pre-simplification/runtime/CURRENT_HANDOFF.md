@@ -1,0 +1,1789 @@
+# Current Project Handoff
+
+> **SUPERSEDED / HISTORICAL ONLY.** This prepend-only Handoff is not current
+> authority. Read `docs/governance/CURRENT_STATE.yml`.
+
+## 0. Phase B Part 1 current handoff - Master fingerprint repair candidate
+
+Latest merged source and Staging runtime:
+
+```text
+origin/main = 218777e418c7415fee4deff7f1c026b3897308d9
+branch = codex/phase-b-master-fingerprint-repair
+STAGING_DEPLOYED_SHA = 218777e418c7415fee4deff7f1c026b3897308d9
+STAGING_FLYWAY = V20
+STAGING_HEALTH = PASS
+PRODUCTION = NO_MUTATION
+```
+
+Runtime-gate repair PR #167 is merged and deployed to Staging. Backend
+container evidence confirms both Phase B Staging gates are effective. Phase B
+Part 1 automated acceptance reached `LOGIN|HTTP_200`, `OWNER_WORKSPACE|PASS`
+and provisioning catalog, then stopped before Store creation on
+`provision_first` HTTP 400. DB evidence shows no target Store and no
+provisioning ledger row were created.
+
+Current blocker classification:
+
+```text
+PHASE_B_STAGING_RUNTIME_GATE_REPAIR = MERGED_AND_DEPLOYED_TO_STAGING
+PHASE_B_PART1_STAGING_AUTOMATED_ACCEPTANCE = BLOCKED_BEFORE_STORE_CREATION
+BLOCKER = CHAIN_MASTER_MENU_STORED_FINGERPRINT_DRIFT
+STORED_MASTER_FINGERPRINT = e55ad23773753ade22e3e090622c361b58268ae5b43ee354ec7eef5b78f233f7
+RUNTIME_CANONICAL_MASTER_FINGERPRINT = ef28a4d160373f0f08b810a6b82d1f3c84f2c7d4aa076cceac00836a13d4f38c
+REPAIR_CANDIDATE = codex/phase-b-master-fingerprint-repair
+PHASE_B_PART2 = NOT_STARTED
+PRODUCTION = NO_MUTATION
+```
+
+The repair candidate adds V21 to align persisted Master/Profile fingerprint
+authority and updates API/acceptance constants. Do not edit Flyway history,
+mutate credentials, touch Production, start Phase B Part 2, activate the
+validation Store, add printer endpoints, or bind hardware as part of this
+repair.
+
+Next gate:
+
+```text
+PR/merge -> fresh fetch/reread -> exact-SHA Staging deploy -> Phase B Part 1 automated acceptance
+```
+
+Target unique stop remains:
+
+```text
+PHASE_B_PART1_CREATE_STORE_AND_MASTER_MENU_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
+## 0. Phase B Part 1 current handoff - Staging runtime gate repair candidate
+
+Latest merged source and Staging runtime:
+
+```text
+origin/main = 6fff80e81651727f27f5b999c2e9c5c438fd7f31
+branch = codex/phase-b-staging-runtime-gate-repair
+STAGING_DEPLOYED_SHA = 6fff80e81651727f27f5b999c2e9c5c438fd7f31
+STAGING_FLYWAY = V20
+STAGING_HEALTH = PASS
+PRODUCTION = NO_MUTATION
+```
+
+Phase B Part 1 auth-prefix repair is merged and deployed to Staging.
+Acceptance `--validate` passed. Runtime execution did not create a Store: after
+the current reviewed Owner login reached `LOGIN|HTTP_200` and Owner workspace
+passed, `/owner/organizations/1/phase-b/store-provisioning/catalog` returned
+HTTP 403.
+
+Current blocker classification:
+
+```text
+PHASE_B_AUTH_PREFIX_REPAIR = MERGED_AND_DEPLOYED_TO_STAGING
+PHASE_B_PART1_STAGING_AUTOMATED_ACCEPTANCE = BLOCKED_BEFORE_STORE_CREATION
+BLOCKER = STAGING_RUNTIME_CAPABILITY_FLAGS_NOT_IN_BACKEND_CONTAINER
+MISSING_CONTAINER_FLAGS = APP_FEATURES_PLATFORM, APP_PHASE_B_PROVISIONING_ENABLED
+REPAIR_CANDIDATE = codex/phase-b-staging-runtime-gate-repair
+PHASE_B_PART2 = NOT_STARTED
+PRODUCTION = NO_MUTATION
+```
+
+The repair candidate is Staging-only deploy/runtime wiring. It keeps backend
+Phase B authorization as authenticated Owner plus active Organization Owner
+membership plus exact Organization scope. Do not mutate credentials with SQL,
+touch Production, start Phase B Part 2, activate the validation Store, add
+printer endpoints, or bind hardware as part of this repair.
+
+Next gate:
+
+```text
+PR/merge -> fresh fetch/reread -> exact-SHA Staging deploy -> Phase B Part 1 automated acceptance
+```
+
+Target unique stop remains:
+
+```text
+PHASE_B_PART1_CREATE_STORE_AND_MASTER_MENU_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
+## 0. Phase B Part 1 current handoff - auth-prefix repair candidate
+
+Fresh authority and runtime identity for this continuation:
+
+```text
+origin/main = 7f10e53163f9a07153e00acdeccf6199222808fd
+branch = codex/phase-b-auth-prefix-repair
+STAGING_DEPLOYED_SHA = 83741ea88e07bf6735462fb5f3816650b6db59b4
+STAGING_FLYWAY = V20
+STAGING_HEALTH = PASS
+PRODUCTION = NO_MUTATION
+```
+
+Owner product decision now supersedes the previous Phase B Part 1 acceptance
+gate that treated `STG005_` login naming as a product authorization boundary:
+
+```text
+PHASE_B_AUTHORIZATION_PREFIX_DRIFT_ANALYSIS = COMPLETE
+PHASE_B_AUTHORIZATION_PREFIX_DRIFT = REPAIR_CANDIDATE_AGENT6_ACCEPT_PENDING_PR_STAGING_ACCEPTANCE
+PHASE_B_CANONICAL_AUTHORIZATION = AUTHENTICATED_OWNER_WITH_ACTIVE_ORGANIZATION_OWNER_MEMBERSHIP
+PHASE_B_USERNAME_PREFIX_AUTHORIZATION = NOT_REQUIRED
+PHASE_B_AUTH_PREFIX_REPAIR_AGENT6 = PHASE_B_AUTH_PREFIX_REPAIR_ACCEPT
+PHASE_B_PART1_STAGING_AUTOMATED_ACCEPTANCE = PENDING
+PHASE_B_PART1_OWNER_ACCEPTANCE = PENDING
+PHASE_B_PART2 = NOT_STARTED
+```
+
+Current classification:
+
+- `STG005_` remains required for synthetic bootstrap/fixture identity when
+  those tools explicitly validate that namespace.
+- Phase B product authorization is principal/role/membership/scope based.
+- Backend provisioning already enforces Owner role and active Organization
+  Owner membership without username-prefix checks.
+- Frontend eligibility and `Access denied` behavior are role/backend-gate
+  driven; no username-prefix frontend gate was found.
+- Fresh Staging evidence shows legacy `owner` is an active credentialed
+  `OWNER` with active Organization Owner membership for Organization `1`; no
+  credential rename, rotation, duplicate STG005 Owner or raw SQL mutation is
+  authorized.
+
+Implemented local repair candidate:
+
+- Phase B Part 1 acceptance helper accepts any non-empty reviewed Owner login
+  identifier and verifies post-login `OWNER`, expected Organization scope and
+  exact authenticated username.
+- The jq-compatible fallback keeps explicit synthetic
+  `startswith("STG005_")` filters for bootstrap/onboarding callers while
+  allowing the new Phase B non-empty-login filter.
+- Backend tests cover `owner`, arbitrary Owner username, `STG005_` non-Owner,
+  wrong Organization, inactive membership and unauthenticated rejection.
+
+Validation completed locally:
+
+```text
+bash deployment/cloud/tests/test_staging_phase_b_part1_acceptance.sh = PASS
+mvn -q -f backend/pom.xml -Dtest=OwnerOrganizationAuthorizationServiceTest,OwnerStoreProvisioningControllerTest test = PASS
+mvn -q -f backend/pom.xml test = PASS
+npm test = PASS
+npm run build = PASS
+npm run lint = FAIL_EXISTING_FRONTEND_LINT_DEBT_UNRELATED_TO_AUTH_PREFIX_REPAIR
+for test_script in deployment/cloud/tests/*.sh; do bash "$test_script" || exit $?; done = PASS
+Agent 6 = PHASE_B_AUTH_PREFIX_REPAIR_ACCEPT
+```
+
+Next gate:
+
+```text
+PR/merge -> fetch/reread -> exact-SHA Staging deploy -> Phase B Part 1 automated acceptance
+```
+
+Target unique stop remains:
+
+```text
+PHASE_B_PART1_CREATE_STORE_AND_MASTER_MENU_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
+## 0. Phase B Part 1 current handoff - Staging deployed, acceptance gate blocked
+
+Latest merged main and Staging runtime:
+
+```text
+origin/main = 83741ea88e07bf6735462fb5f3816650b6db59b4
+V19_REPAIR_PR = #163
+JQ_FALLBACK_PR = #164
+STAGING_DEPLOYED_SHA = 83741ea88e07bf6735462fb5f3816650b6db59b4
+STAGING_FLYWAY = V20
+STAGING_HEALTH = PASS
+PHASE_B_ACCEPTANCE_VALIDATE = PASS
+PRODUCTION = NO_MUTATION
+```
+
+Staging evidence:
+
+```text
+candidate_import_sha256 = d37f5031f3ef0ed2821152ecf1de082aa5446a08abb4ecf1e5f389246ec58cbe
+release_env_sha256 = e19eb3306d5513be45fbb53a09d388be79f95bd1b97c0b2fb9b51a11184c2b9c
+preflight_sha256 = 3564abfd7c3e969b56b9a1d506a525d63d74248a5ff605c346bc304e3ea1b777
+deploy_sha256 = a1a2802c460186baadc20274d2c14436c73b0031548708b175f5bfc8a41f2a8e
+health_sha256 = e44460e11dc89de865dfcccf1e67a74d66f286786bb422c6ef8e84af6d683a14
+acceptance_validate_sha256 = daa170b306ebf3b7b35abb96dfab0187cf256bdcd044cbc9b1ba921197999ec3
+```
+
+Backend startup logs show Flyway validated 20 migrations, migrated V19 and V20
+from V18, and started normally. No Flyway repair, clean, history edit,
+Production action, Phase B Part 2, activation, physical hardware binding or
+final staff credential provisioning occurred.
+
+Automated Phase B Part 1 acceptance is currently blocked before creating
+`PHASE_B_VALIDATION_STORE_*`:
+
+```text
+RESOLVED_BLOCKER = Staging host lacks jq; Phase B acceptance now uses checked-in jq-compatible parser
+REPAIR_1 = codex/phase-b-part1-acceptance-jq-fallback
+REPAIR_1_STATUS = PR #164 merged, deployed, acceptance --validate PASS
+BLOCKER_2 = runtime credential identity drift
+RUNTIME_STG005_CREDENTIAL_COUNT = 0
+RUNTIME_LEGACY_CREDENTIALS = owner, manager, staffA, staffB, a10_staff_*
+HISTORICAL_GOVERNANCE_CONFLICT = docs claim synthetic Owner credential ready
+NEXT_OWNER_GATE = reviewed Staging STG005 Owner credential reconciliation
+```
+
+Use latest runtime evidence as authority for the credential state. Do not
+relax the `STG005_` acceptance guard, use legacy `owner` to bypass the harness,
+hand-edit credentials with raw SQL, touch Production, or start Phase B Part 2.
+
+## 0. Phase B Part 1 current handoff - V19 runtime repair in progress
+
+Staging runtime repair:
+
+```text
+DEPLOYED_SHA_WITH_BLOCKER = 908902b41d4d4b34b0ce663da4a7dd75800cdb36
+STAGING_PREFLIGHT = PASS
+STAGING_DEPLOY_START = COMPLETED
+STAGING_HEALTH = BLOCKED
+BLOCKER = V19 option sort_order null for source Profile options without sort_order
+FLYWAY_LEDGER = V1-V18 success, no V19 success row
+REPAIR = V19 option sort_order ordinality fallback, no Flyway repair/clean/history edit
+PRODUCTION = NO_MUTATION
+```
+
+Next gate is repair PR/merge, then fresh `git fetch origin --prune`, exact
+candidate import/release-env/preflight/deploy and Phase B Part 1 automated
+acceptance. Do not start Phase B Part 2.
+
+Part 1 implementation merge authority:
+
+```text
+PR #161
+4ace6988dd4793b3b7259bf7455289af24f13d4b
+```
+
+Current branch/worktree for runtime repair:
+
+```text
+codex/phase-b-part1-v19-sort-order-repair
+```
+
+Latest Owner authority:
+
+```text
+PHASE_A10_AUTOMATED_ACCEPTANCE = PASS
+PHASE_A11_OWNER_ACCEPTANCE = PASS
+PHASE_A11_5_CHAIN_MASTER_MENU_DESIGN = PASS
+PHASE_B_OWNER_IMPLEMENTATION_APPROVAL = GRANTED_FOR_PART_1
+```
+
+Part 1 repository implementation merged to `main` through PR #161 and remains
+pending fresh Staging runtime preflight, exact-SHA Staging deploy and
+automated acceptance. The package implements Owner UI-driven synthetic Store
+provisioning, complete Chain Master Menu materialization, independent local
+menu review/deactivation and Staging automated acceptance tooling. It is not
+authority for Part 2, final activation, Chinatown, Sainte-Catherine,
+Production, physical hardware binding or final staff credential provisioning.
+
+Fresh audit, plan and repository evidence:
+
+- [PHASE_B_PART1_IMPLEMENTATION_AUDIT](../agile/PHASE_B_PART1_IMPLEMENTATION_AUDIT.md)
+- [PHASE_B_PART1_PACKAGE_PLAN](../agile/PHASE_B_PART1_PACKAGE_PLAN.md)
+- [PHASE_B_PART1_IMPLEMENTATION_EVIDENCE](../agile/PHASE_B_PART1_IMPLEMENTATION_EVIDENCE.md)
+
+Implemented repository identity:
+
+```text
+Flyway = V18 + V19 + V20 + V21 additive migrations
+Master = LANZHOU_CHAIN_MASTER_MENU/v1
+Master fingerprint = ef28a4d160373f0f08b810a6b82d1f3c84f2c7d4aa076cceac00836a13d4f38c
+Profile = ST_DENIS_CANONICAL_PROFILE/v2 READY
+Provisioning API = /api/v1/owner/organizations/{organizationId}/phase-b/store-provisioning
+Part 1 Store kind = VALIDATION_FIXTURE
+Part 1 lifecycle = READY_FOR_REVIEW
+Part 1 runtime printing mode = MOCK
+Agent 6 final review = PHASE_B_PART1_ACCEPT
+```
+
+Runtime caveat before first Phase B deploy:
+
+```text
+checked-in stable Staging authority = ad4572759e01b5546ec59af24aa36b09e5c2dd00 / V16
+A11 evidence records V17 apply + startup repair trail
+fresh Staging runtime preflight is required before deploy
+```
+
+Next gate:
+
+```text
+V19_SORT_ORDER_REPAIR_PR_MERGE
+```
+
+Then:
+
+```text
+git fetch origin --prune
+-> confirm exact deploy SHA from current origin/main
+-> candidate import and release/env preparation
+-> fresh Staging runtime preflight
+-> exact-SHA Staging deploy
+-> Phase B Part 1 automated acceptance
+```
+
+Target unique stop:
+
+```text
+PHASE_B_PART1_CREATE_STORE_AND_MASTER_MENU_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
+## 0. Historical Phase A11.5 handoff - superseded by Phase B Part 1 authorization
+
+Fresh latest main:
+
+```text
+0de03c773ef04594e7d737c6bccdf6f607692eca
+```
+
+Current branch/worktree used for this docs-only closure:
+
+```text
+codex/phase-a11-5-chain-master-menu-design
+```
+
+Latest Owner verdict:
+
+```text
+PHASE_A11_OWNER_ACCEPTANCE = PASS
+```
+
+If any older repository governance says A11 Owner acceptance is pending, treat
+it as stale and superseded by this Owner verdict. Do not rerun A11 manual
+acceptance.
+
+Current runtime identity from checked-in authority:
+
+```text
+STAGING_STABLE_APP_SHA = ad4572759e01b5546ec59af24aa36b09e5c2dd00
+STAGING_STABLE_FLYWAY = V16
+A11_LATEST_CODE_SHA = 0de03c773ef04594e7d737c6bccdf6f607692eca
+PRODUCTION_RC = RC-THREE-RELIABILITY-20260812-3EC4D88
+PRODUCTION_APP_SHA = 3ec4d88a47f68e05b92d9246bfd63af2d1f297f9
+PRODUCTION_FLYWAY = V10
+```
+
+A11.5 design defines `LANZHOU_CHAIN_MASTER_MENU/v1`, Master product identity,
+Master versioning, Store menu materialization, Store-local overrides and the
+Phase B menu provisioning contract. It makes the initial Master source the
+reviewed/canonicalized St-Denis profile/menu artifact, not live Production
+St-Denis and not a live-linked Store.
+
+Status:
+
+```text
+PHASE_A11_5_CHAIN_MASTER_MENU_DESIGN = PASS
+AGENT_6_PHASE_A11_5_DESIGN_REVIEW = ACCEPT
+PHASE_B_MENU_PROVISIONING_MODEL = DEFINED
+PHASE_B_PART1_IMPLEMENTATION = GRANTED_FOR_PART_1
+PHASE_B_PART2 = NOT_STARTED
+PRODUCTION = NO_MUTATION
+```
+
+Historical next Owner gate, now satisfied for Part 1 only:
+
+```text
+PHASE_B_OWNER_STORE_PROVISIONING_IMPLEMENTATION_APPROVAL
+```
+
+Historical stop state, superseded for Part 1 by the current handoff above:
+
+```text
+PHASE_A11_5_CHAIN_MASTER_MENU_DESIGN_COMPLETE_WAITING_FOR_PHASE_B_OWNER_APPROVAL
+```
+
+Do not implement Phase B Part 2, create Chinatown/Sainte-Catherine, touch
+Production, bind physical hardware, final-activate a Store or provision final
+staff credentials until the Owner explicitly opens a later gate.
+
+## 0. Phase A11 current handoff — implementation candidate ready, Staging validation pending
+
+Fresh main at A11 design start:
+
+```text
+78ac87b633ba6d4e113d52ed65eddb8fcc06eacd
+```
+
+Current deployed Staging identity from governance remains:
+
+```text
+application_sha = ad4572759e01b5546ec59af24aa36b09e5c2dd00
+flyway = V16
+```
+
+A10 automated Phase A foundation remains `PASS`, and the Owner added A11 as a
+required Phase A productization closure before Phase B. The Owner answered the
+five A11 product decisions and approved implementation:
+
+```text
+PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION = ACCEPTED_BY_OWNER
+PHASE_A11_OWNER_ACCEPTANCE = PASS
+PHASE_B_PART1_IMPLEMENTATION = GRANTED_FOR_PART_1
+PHASE_B_PART2 = NOT_STARTED
+```
+
+A11 evidence:
+
+- [PHASE_A11_PRINTING_RULE_AUDIT](../agile/PHASE_A11_PRINTING_RULE_AUDIT.md)
+- [PRINTING_RULE_RECONCILIATION_MATRIX](../agile/PRINTING_RULE_RECONCILIATION_MATRIX.md)
+- [PRODUCT_PRINT_RULE_INVENTORY](../agile/PRODUCT_PRINT_RULE_INVENTORY.md)
+- [PRINTING_RULE_CONFIGURATION_ARCHITECTURE_OPTIONS](../agile/PRINTING_RULE_CONFIGURATION_ARCHITECTURE_OPTIONS.md)
+- [A11_IMPLEMENTATION_PLAN_DRAFT](../agile/A11_IMPLEMENTATION_PLAN_DRAFT.md)
+- [PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION_EVIDENCE](../agile/PHASE_A11_PRINTING_RULE_CONFIGURATION_IMPLEMENTATION_EVIDENCE.md)
+
+A11 repository candidate adds additive Flyway V17, Store-scoped versioned
+Printing Display Rule persistence, Owner APIs, Menu Management item aliases,
+Printing Settings dictionaries/preview/revision UI, renderer integration and
+historical rule revision capture on PrintJob render. It keeps routing,
+eligibility, pricing, reporting, PrintJob state, logical printer assignment,
+physical endpoints and device credentials outside Owner display-rule control.
+Post-A11 Store Profile versions must include a `PRINTING_DISPLAY_RULES`
+artifact; historical `ST_DENIS_CANONICAL_PROFILE/v1` remains immutable and
+valid.
+
+Superseded A11 runtime gate:
+
+```text
+PHASE_A11_OWNER_ACCEPTANCE = PASS_OWNER_DECLARED
+```
+
+Do not start Phase B, Phase C, Chinatown, Sainte-Catherine or Production
+promotion before explicit Phase B Owner approval.
+
+Unique stop state:
+
+```text
+PHASE_A11_OWNER_ACCEPTANCE_PASS_SUPERSEDED_BY_A11_5_DESIGN
+```
+
+## 0a. Historical Phase A current handoff — A10 automated acceptance passed, superseded by A11 gate
+
+Fresh main and deployed Staging application SHA:
+
+```text
+ad4572759e01b5546ec59af24aa36b09e5c2dd00
+```
+
+Current Phase A status:
+
+```text
+PHASE_A_IMPLEMENTATION_COMPLETE = YES
+PHASE_A_AUTOMATED_ACCEPTANCE = PASS
+PHASE_A_OWNER_ACCEPTANCE = PENDING
+```
+
+A10 evidence:
+[PHASE_A10_FINAL_MODULAR_PRODUCTIZATION_ACCEPTANCE_EVIDENCE](../agile/PHASE_A10_FINAL_MODULAR_PRODUCTIZATION_ACCEPTANCE_EVIDENCE.md).
+
+Owner checklist:
+[PHASE_A_OWNER_FINAL_STAGING_CHECKLIST](../agile/PHASE_A_OWNER_FINAL_STAGING_CHECKLIST.md).
+
+Staging retained St-Denis Store identity `store_id=1`,
+`store_code=STG005_SRC_20260809_R01`, Flyway V16 and menu revision 159.
+Automated A10 validation used a bounded synthetic Store fixture only; it was
+soft-cleaned inactive and generated staff credentials were deactivated/removed.
+Production remained `NO MUTATION`.
+
+Next Owner gate:
+
+```text
+PHASE_A_OWNER_FINAL_ACCEPTANCE
+```
+
+If accepted, the next implementation gate is:
+
+```text
+PHASE_B_OWNER_STORE_PROVISIONING_APPROVAL
+```
+
+Do not start Phase B, Phase C, Chinatown, Sainte-Catherine or Production
+promotion before explicit Owner approval.
+
+Unique stop state:
+
+```text
+PHASE_A_MODULAR_PRODUCTIZATION_AUTOMATED_ACCEPTANCE_PASS_WAITING_FOR_OWNER_FINAL_ACCEPTANCE
+```
+
+## 0a. Historical Phase A A9 handoff — superseded by A10 acceptance section
+
+Fresh main authority for the active A9 branch is:
+
+```text
+8796d03a2f01d3f222fa2e05fc9d2c6152f4809e
+```
+
+Phase A8 is merged and A9 is now implemented in the local repository worktree:
+
+```text
+PHASE_A9_LEGACY_COUPLING_REMOVAL = REPOSITORY_IMPLEMENTED_PENDING_FINAL_VALIDATION
+```
+
+Evidence:
+[PHASE_A9_LEGACY_COUPLING_REMOVAL_EVIDENCE](../agile/PHASE_A9_LEGACY_COUPLING_REMOVAL_EVIDENCE.md)
+and
+[PHASE_A9_LEGACY_COMPATIBILITY_LEDGER](../agile/PHASE_A9_LEGACY_COMPATIBILITY_LEDGER.md).
+
+Key A9 repository facts:
+
+- no additive/destructive Flyway migration is included or expected;
+- `stores.printing_mode` is the canonical runtime mode and blank/unknown
+  persisted values resolve fail-closed to `DISABLED`;
+- `stores.printing_enabled` remains a bounded compatibility mirror only, not a
+  source for inferring `REAL`;
+- legacy Platform Admin active Store creation paths fail closed until Phase B
+  provisioning;
+- Owner onboarding and menu-clone HTTP facades require the `PLATFORM`
+  environment capability before runtime use;
+- Store module state, pricing, combo, menu, authorization and hardware sources
+  remain the Phase A canonical contracts.
+
+Continue with final validation, Agent 6 review, PR/auto-merge, fresh fetch,
+exact-SHA Staging deployment and automated A9 regression. Production remains
+`NO MUTATION`. Do not start A10, Phase B/C, Chinatown, Sainte-Catherine or
+Production deployment.
+
+Unique stop state after Staging validation:
+
+```text
+PHASE_A9_LEGACY_COUPLING_REMOVAL_COMPLETE_WAITING_FOR_PHASE_A10_OWNER_CONTINUATION
+```
+
+## 0a. Historical Phase A A8 handoff — complete, superseded by active A9 section
+
+Current fresh main for this handoff sequence began at:
+
+```text
+01d199a484b5ece19cf16d002a2565b6c42751e3
+```
+
+Phase A6 and A7 are PASS. Phase A8 is now repository-complete:
+
+```text
+PHASE_A8_HARDWARE_CAPABILITY_CONTRACT = PASS
+```
+
+Evidence:
+[PHASE_A8_HARDWARE_CAPABILITY_CONTRACT_EVIDENCE](../agile/PHASE_A8_HARDWARE_CAPABILITY_CONTRACT_EVIDENCE.md).
+
+Key A8 contracts now in code:
+
+- `backend/src/main/resources/hardware/hardware-capability-catalog.v1.json`
+- `ModuleDependencyValidator` resolves A8 hardware capability aliases and
+  fails closed for unknown/missing capability.
+- `StoreModuleCapabilityProviderImpl` reports canonical hardware readiness
+  from Store logical printer assignments, runtime mode and Store devices.
+- Backend module access now checks hardware capability after environment
+  capability.
+- Frontend module access surfaces `MODULE_HARDWARE_CAPABILITY_MISSING`.
+
+Production remains `NO MUTATION`. No Staging deploy is required for the A8-only
+PR; final A8+A9 Staging deployment occurs after A9.
+
+Continue immediately to:
+
+```text
+PHASE_A9_LEGACY_COUPLING_REMOVAL
+```
+
+Stop only after A9 merge, exact-SHA Staging deployment/regression and the
+unique stop state:
+
+```text
+PHASE_A9_LEGACY_COUPLING_REMOVAL_COMPLETE_WAITING_FOR_PHASE_A10_OWNER_CONTINUATION
+```
+
+## Current final productization planbook and Phase A authorization (2026-08-13)
+
+The Owner has closed the PR #126 30-answer gate. The active authority is now
+[FINAL_PRODUCTIZATION_PLANBOOK](../agile/FINAL_PRODUCTIZATION_PLANBOOK.md).
+It preserves the three-phase route:
+
+```text
+PHASE A — MODULAR PRODUCTIZATION
+↓
+PHASE B — OWNER NEW STORE PROVISIONING
+↓
+PHASE C — REAL MULTI-STORE PROOF
+```
+
+The next executable loop after fresh fetch/reread is:
+
+```text
+PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION
+```
+
+Owner follow-up A0.1 decision:
+
+```text
+PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_REFINEMENT
+```
+
+The Owner accepted the A0 data-model direction but rejected free-form Owner Size
+editing as final product UX. A0.1 must support only system-controlled
+Small/Regular/Large Size definitions and Store-level Size/Combo pricing
+policies. The Owner approved the additive pricing policy schema direction:
+
+```text
+PHASE_A0_1_PRICING_POLICY_SCHEMA_CHANGE_APPROVAL
+```
+
+Evidence/design:
+[PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE](../agile/PHASE_A0_1_STANDARD_SIZE_AND_STORE_PRICING_POLICY_SCHEMA_GATE.md).
+Implementation evidence:
+[PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_IMPLEMENTATION_EVIDENCE](../agile/PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_IMPLEMENTATION_EVIDENCE.md).
+Staging evidence:
+[PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_STAGING_EVIDENCE](../agile/PHASE_A0_1_STANDARD_SIZE_PRICING_POLICY_STAGING_EVIDENCE.md).
+The implementation package adds additive Flyway V11, Store-level Pricing Rules,
+system-controlled Size Configuration, item Combo allowed policy, catalog/hash/
+IndexedDB pricing policy semantics, and a Size/Combo `price_delta`
+compatibility mirror only for rollback safety. Production remains no-mutation.
+The Owner accepted the manual A0.1 Staging UX retest:
+
+```text
+OWNER_A0_1_PRICING_UX_RETEST = PASS
+```
+
+Phase A is authorized; Phase B/C are not. Production remains no-mutation. A0
+used repository changes, tests, Agent 6, PR/auto-merge, exact-SHA Staging
+deployment and automated validation.
+
+A0.1 is deployed to exact-SHA Staging at
+`ed3e4cdbf38c4d8812620baf64cd42ce3a229431`; Staging advanced from Flyway V10
+to V11 and automated validation passed.
+
+Current authorized bounded implementation loop:
+
+```text
+PHASE_A0_2_STORE_COMBO_CONFIGURATION
+```
+
+A0.2 must implement Store-level Combo Contents configuration, not a second
+combo engine and not a pricing source. `store_pricing_policies.combo_delta`
+remains the canonical Combo price; per-item `menu_item_options` `COMBO` rows
+remain item `COMBO_ALLOWED`; `store_combo_components` is the Store-scoped
+canonical content table for reviewed `COMBO_EGG` and `COMBO_SIDE` components.
+New ordering may use stable negative transport IDs in frozen snapshots, but the
+enabled/name/code state remains Store Combo Configuration. Evidence:
+[PHASE_A0_2_STORE_COMBO_CONFIGURATION_IMPLEMENTATION_EVIDENCE](../agile/PHASE_A0_2_STORE_COMBO_CONFIGURATION_IMPLEMENTATION_EVIDENCE.md).
+Runtime evidence:
+[PHASE_A0_2_STORE_COMBO_CONFIGURATION_STAGING_EVIDENCE](../agile/PHASE_A0_2_STORE_COMBO_CONFIGURATION_STAGING_EVIDENCE.md).
+
+A0.2 merged through PR #134 and is deployed to exact-SHA Staging at
+`90ac0cb0496161b12c47cff00573b56b4abc961c`. Staging advanced to Flyway V12;
+automated A0.2 validation passed, including Combo API, Combo Egg/Side enablement,
+menu revision/hash, IndexedDB cache contract, draft/submitted snapshot
+preservation, disabled-component rejection, MOCK printing/kitchen routing,
+Store isolation and authorization. The Owner completed manual Staging retest:
+
+```text
+OWNER_A0_2_MANUAL_STAGING_RETEST = PASS
+```
+
+Historical A0.2 closure:
+
+```text
+PHASE_A0_2_STORE_COMBO_CONFIGURATION_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
+Current A0 deployed evidence:
+[PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE](../agile/PHASE_A0_DYNAMIC_ITEM_SIZE_CONFIGURATION_EVIDENCE.md).
+The audited current size model is `OPTION + MODIFIER_GROUP + PRICE_DELTA`, and
+the deployed implementation uses the existing `menu_item_options` engine as the canonical
+`MenuItem -> SizeVariant[1..N]` representation. No schema migration or
+Production runtime action occurred.
+
+Current A0 result:
+
+```text
+A0_CODE = COMPLETE
+A0_STAGING_DEPLOYED = YES
+A0_AUTOMATED_VALIDATION = PASS
+A0_OWNER_UI_ACCEPTANCE = PASS_FOR_A0_1_PRICING_UX
+```
+
+Staging now runs exact
+`90ac0cb0496161b12c47cff00573b56b4abc961c`, Flyway V12, Printing
+`MOCK/true`, four enabled logical printers and three enabled assignments.
+Production continuity remained HTTP 200/200 for system/menu health. Production
+was not deployed, restarted, migrated or reconfigured during A0.2.
+
+Current authorized continuous execution:
+
+```text
+PHASE_A1_MODULE_CATALOG
+→ PHASE_A2_MODULE_DEPENDENCY_GRAPH
+→ PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION
+```
+
+Do not stop between A1/A2/A3 for ordinary PASS/merge/review/deploy evidence.
+Stop only for a TRUE OWNER GATE, or after A3 at
+`PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION_COMPLETE_WAITING_FOR_PHASE_A4_OWNER_CONTINUATION`.
+Do not start A4, Phase B/C, Chinatown, Sainte-Catherine or Production work.
+
+A1 implementation navigation:
+
+- Technical evidence: [PHASE_A1_MODULE_CATALOG](../agile/PHASE_A1_MODULE_CATALOG.md)
+- Machine-readable catalog:
+  `backend/src/main/resources/module/module-catalog.v1.json`
+- Static validation:
+  `backend/src/test/java/com/restaurant/system/modules/ModuleCatalogContractTest.java`
+
+A1 defines canonical module keys, capability classification, current feature
+flag classification, route/API mapping and authorization mapping. It does not
+create Store module persistence, deploy Staging, touch Production or start A2
+validation before A1 enters `main`.
+
+A1 is now accepted and merged:
+
+```text
+PHASE_A1_MODULE_CATALOG = PASS
+AGENT_6 = A1_ACCEPT
+PR = #137
+MERGE_SHA = 34169152c6d48ecf503b441fe7428416c399d0a9
+```
+
+A2 implementation navigation:
+
+- Technical evidence:
+  [PHASE_A2_MODULE_DEPENDENCY_GRAPH](../agile/PHASE_A2_MODULE_DEPENDENCY_GRAPH.md)
+- Machine-readable dependency graph:
+  `backend/src/main/resources/module/module-dependency-graph.v1.json`
+- Reusable validator:
+  `backend/src/main/java/com/restaurant/system/modules/ModuleDependencyValidator.java`
+- Focused validation:
+  `backend/src/test/java/com/restaurant/system/modules/ModuleDependencyValidatorTest.java`
+
+A2 validates `REQUIRES`, `CONFLICTS_WITH`,
+`REQUIRES_ENVIRONMENT_CAPABILITY`, and `REQUIRES_HARDWARE_CAPABILITY`
+relationships. Unknown modules and invalid graph entries fail closed. A2 does
+not create Store module persistence, deploy Staging, touch Production, or start
+A3 before A2 enters `main`.
+
+A2 is now accepted and merged:
+
+```text
+PHASE_A2_MODULE_DEPENDENCY_GRAPH = PASS
+AGENT_6 = A2_ACCEPT
+PR = #138
+MERGE_SHA = 1780c8934a502709844713d91c493b076e714983
+```
+
+A3 implementation navigation:
+
+- Technical evidence:
+  [PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION](../agile/PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION.md)
+- Additive migration:
+  `backend/src/main/resources/db/migration/V13__add_store_modules.sql`
+- Store module service/API:
+  `backend/src/main/java/com/restaurant/system/modules/StoreModuleServiceImpl.java`
+  and `backend/src/main/java/com/restaurant/system/modules/StoreModuleController.java`
+- Store Context contract extension:
+  `backend/src/main/java/com/restaurant/system/common/auth/dto/StoreContextResponse.java`
+- Focused validation:
+  `backend/src/test/java/com/restaurant/system/modules/StoreModuleServiceImplTest.java`
+  and `backend/src/test/java/com/restaurant/system/modules/StoreModuleControllerTest.java`
+
+A3 is now accepted, merged, deployed to exact-SHA Staging and validated:
+
+```text
+PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION = PASS
+AGENT_6 = A3_ACCEPT
+IMPLEMENTATION_PR = #139
+IMPLEMENTATION_MERGE_SHA = 1643ca071199c49b5d4404feac6ba367a3143a81
+RUNTIME_DI_REPAIR_PR = #140
+RUNTIME_DI_REPAIR_MERGE_SHA = c1b5e7681f24a11fbf99293567b3da08076fa3b6
+DEPLOYED_STAGING_SHA = c1b5e7681f24a11fbf99293567b3da08076fa3b6
+STAGING_FLYWAY = V13
+STAGING_HEALTH = 200 / 200 / 200
+A3_ACCEPTANCE = PASS
+CORE_REGRESSION_SMOKE = PASS
+PRODUCTION_MUTATION = NONE
+```
+
+A3 adds canonical Store-scoped `store_modules` state and the Store module
+read/config contract. It does not implement A4 profiles, A6 backend gating, A7
+frontend gating, A8 hardware management, Chinatown, Sainte-Catherine or
+Production deployment. The current stop is:
+
+```text
+PHASE_A3_STORE_LEVEL_MODULE_CONFIGURATION_COMPLETE_WAITING_FOR_PHASE_A4_OWNER_CONTINUATION
+```
+
+Owner has now authorized the continuous A4 -> A5 Phase A loop:
+
+```text
+PHASE_A4_STORE_PROFILE_CONTRACT
+→ PHASE_A5_ST_DENIS_CANONICAL_PROFILE
+```
+
+A4 implementation navigation:
+
+- Technical evidence:
+  [PHASE_A4_STORE_PROFILE_CONTRACT](../agile/PHASE_A4_STORE_PROFILE_CONTRACT.md)
+- Additive migration:
+  `backend/src/main/resources/db/migration/V14__add_store_profiles.sql`
+- Profile contract/validator:
+  `backend/src/main/java/com/restaurant/system/owner/profile/StoreProfileContractValidator.java`
+  and
+  `backend/src/main/java/com/restaurant/system/owner/profile/StoreProfileCanonicalJson.java`
+- Database-backed profile entities/repositories:
+  `StoreProfileEntity`, `StoreProfileVersionEntity`,
+  `StoreProfileArtifactEntity` and their repositories
+- Owner-only read API:
+  `backend/src/main/java/com/restaurant/system/owner/profile/StoreProfileController.java`
+- Focused validation:
+  `backend/src/test/java/com/restaurant/system/owner/profile/StoreProfileMigrationTest.java`,
+  `StoreProfileContractValidatorTest.java`, and
+  `StoreProfileControllerTest.java`
+
+A4 is in `main` through PR #142 at
+`be14923c96098d80b1b841e2ba0edbe3ca2563a5`. It adds profile
+persistence/read/validation foundation only. Immutable version protection covers
+downgrade, content/fingerprint/source/schema/profile-version/profile-binding
+rewrites; immutable artifact protection covers insert/delete/update/move under
+immutable parent versions.
+
+A5 repository implementation entered `main` through PR #143 at
+`b83afa98d304223834793d03bfc367b4cf4238f1` and adds
+[PHASE_A5_ST_DENIS_CANONICAL_PROFILE](../agile/PHASE_A5_ST_DENIS_CANONICAL_PROFILE.md):
+Flyway V15 safe profile seed data for `ST_DENIS_CANONICAL_PROFILE/v1`, profile
+fingerprint `af1a8f34cd156c1987b74ec1a9a22ddfd004859c617937b7d53f05e16e762602`,
+and a dry-run materialization validator. Counts are categories/items/options
+`6/39/380`, parent option relationships `11`, tables `13`, stations `5`,
+logical printers/assignments `4/3`, combo components `5`, staff templates `4`,
+device slots `7`. The first exact-SHA Staging deploy attempt for that merge
+built the Staging images, preserved Staging `MOCK/true` printing, applied
+Flyway V14, then failed closed before a V15 history row. Root cause: V15
+`content_json` dollar-quoted values started with a newline, but the A4
+PostgreSQL check uses `left(btrim(content_json), 1)`, and `btrim` does not
+strip newline characters. PR #145 entered `main` at
+`494497dfbf874bcf12da7eb3821a276f663959c5` and changed only the V15 seed
+literal layout plus OPS-001 Flyway checksum evidence. Exact-SHA Staging deploy
+of `494497dfbf874bcf12da7eb3821a276f663959c5` applied Flyway V15 successfully,
+then backend startup failed closed because Hibernate schema validation saw the
+A4 `fingerprint_sha256 char(64)` columns as PostgreSQL `bpchar` while the JPA
+entities still expected default `varchar(255)`. PR #146 changed Profile entity
+DDL metadata to explicit `char(64)`, but exact-SHA Staging still failed closed
+because Hibernate continued to expect JDBC `Types#VARCHAR`. The current bounded
+repair PR #147 adds `@JdbcTypeCode(SqlTypes.CHAR)` and regression coverage only.
+It entered `main` at `3440fddad7571409c66189e44976658921e5de1f`; exact-SHA
+Staging deploy passed health, WebSocket readiness, Flyway V15, Profile
+fingerprint/artifact validation and graph-count validation. It adds no
+migration, edits no Flyway history, resets no Staging data, and performs no
+Production work. A5 did not create a Store, materialize St-Denis, start A6/A7,
+Phase B/C, Chinatown, Sainte-Catherine or Production work. The historical A5
+runtime stop was deployed at `3440fddad7571409c66189e44976658921e5de1f` and
+waited for `PHASE_A6_OWNER_CONTINUATION`.
+
+Owner then authorized a documentation-only A5.5 baseline, but the current Owner
+request supersedes that sequencing. The former UML baseline is now deferred and
+renumbered to:
+
+```text
+PHASE_A5_6_CURRENT_STAGING_ARCHITECTURE_UML_BASELINE
+```
+
+The architecture docs are now formalized under
+[Current Staging Architecture UML Baseline](../../architecture/phase-a-staging-2026-08-14/README.md).
+They use source/deployed Staging
+`923346f15757ca85fdafb509a803e87f04ae55bd` / Flyway V16 as the current
+anti-drift authority. The docs include system context, domain model,
+module/profile architecture, ordering, printing, menu revision cache,
+deployment and authorization flows. The A5.6 baseline itself did not authorize
+runtime changes, code/schema changes, or Production action.
+
+Current Owner-authorized loop:
+
+```text
+PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_CLOSURE
+```
+
+Evidence:
+[PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_EVIDENCE](../agile/PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_EVIDENCE.md).
+A5.5 adds dynamic Store-scoped Combo Groups/Components, Owner Category
+management, Owner Station management, Store-scoped validators, and unified menu
+revision/cache invalidation. It keeps Combo price in
+`store_pricing_policies.combo_delta`, item Combo allowed in item-scoped
+`menu_item_options`, and historical orders/receipts/printing/report data
+snapshot-backed. It may deploy only the exact merged SHA to Staging for
+automated validation. Production remains no-mutation.
+
+Owner manual Staging acceptance for the first A5.5 deployment failed. Current
+repair package:
+
+```text
+PHASE_A5_5_MENU_MANAGEMENT_CONFIGURABILITY_OWNER_ACCEPTANCE_REPAIR
+```
+
+Repair scope is bounded to complete frontend/backend catalog hash projection
+parity, dynamic Combo group ordering/default refresh in Ordering, Combo
+Configuration display-order Owner UX, focused regression coverage, exact-SHA
+Staging redeploy, and automated Owner-action acceptance. Do not start A5.6 UML,
+A6, Phase B/C, Chinatown, Sainte-Catherine, or Production.
+
+Expected A5.5 repair stop after Staging validation:
+
+```text
+PHASE_A5_5_OWNER_ACCEPTANCE_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
+Owner manual retest after that repair found a final UI-only blocker in Combo
+Configuration sort-control layout. Current bounded repair:
+
+```text
+PHASE_A5_5_COMBO_CONFIGURATION_SORT_CONTROL_UI_REPAIR
+```
+
+Only the frontend Combo Configuration layout/responsive spacing may change.
+Persistence, backend behavior, menu revision/cache semantics, ordering,
+Flyway/schema, Store Profile, A6, Phase B/C, and Production are out of scope.
+
+Expected stop:
+
+```text
+PHASE_A5_5_FINAL_UI_REPAIR_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST
+```
+
+Owner manual acceptance of A5.5 is now PASS. The A5.6 current-Staging
+architecture package is formalized as the anti-drift baseline at fresh main
+and deployed Staging SHA `923346f15757ca85fdafb509a803e87f04ae55bd`, Flyway
+V16:
+[Current Staging Architecture UML Baseline](../../architecture/phase-a-staging-2026-08-14/README.md).
+
+Current authorized continuous execution:
+
+```text
+PHASE_A7_FRONTEND_MODULE_GATING
+```
+
+A6 evidence:
+[PHASE_A6_BACKEND_MODULE_GATING_EVIDENCE](../agile/PHASE_A6_BACKEND_MODULE_GATING_EVIDENCE.md).
+A7 evidence:
+[PHASE_A7_FRONTEND_MODULE_GATING_EVIDENCE](../agile/PHASE_A7_FRONTEND_MODULE_GATING_EVIDENCE.md).
+A7 uses authenticated Store Context `module_configuration` for frontend
+route/page/navigation gating and leaves A8 hardware readiness pending. Initial
+exact-SHA Staging deploy of PR #154 merge `c725e09db1f...` exposed a bounded
+backend DI startup defect in `StoreModuleAccessEvaluator`; repair evidence is
+[PHASE_A7_BACKEND_DI_RUNTIME_REPAIR_EVIDENCE](../agile/PHASE_A7_BACKEND_DI_RUNTIME_REPAIR_EVIDENCE.md).
+After repair merge, retry only the exact-SHA Staging deploy and validation,
+then stop before A8, Phase B/C and Production:
+
+```text
+PHASE_A7_FRONTEND_MODULE_GATING_COMPLETE_WAITING_FOR_PHASE_A8_OWNER_CONTINUATION
+```
+
+## Current final productization roadmap audit (2026-08-12)
+
+Planning-only audit is complete for the new final productization route:
+
+```text
+currently can operate one Store
+    -> build once, configure many
+    -> reliably create and operate N Stores
+```
+
+Fresh repository authority was
+`origin/main@06581f6034539369af544a8fc29ed8ca55800ce8`. Current Production and
+Staging both retained exact application artifact
+`3ec4d88a47f68e05b92d9246bfd63af2d1f297f9`; read-only image identity and
+`/api/v1/system/health` checks passed. Runtime remained unchanged.
+
+The current route has exactly three main phases:
+
+1. `PHASE_A_MODULAR_PRODUCTIZATION`
+2. `PHASE_B_OWNER_STORE_PROVISIONING`
+3. `PHASE_C_REAL_MULTI_STORE_PROOF_CHINATOWN_AND_SAINTE_CATHERINE`
+
+Do not merge Phase B into Phase A. Do not create Chinatown or
+Sainte-Catherine manually before Phase B is accepted. The Owner field-test
+bug-fix loop remains a side loop; only confirmed P0/P1 blockers stop normal
+product development. See
+[FINAL_PRODUCTIZATION_THREE_PHASE_ROADMAP_AUDIT](../agile/FINAL_PRODUCTIZATION_THREE_PHASE_ROADMAP_AUDIT.md).
+
+Current unique stop:
+`FINAL_PRODUCTIZATION_AUDIT_COMPLETE_WAITING_FOR_OWNER_30_ANSWERS`.
+
+## Current Production three-reliability promotion result (2026-08-12)
+
+`THREE_RELIABILITY_REPAIRS_PRODUCTION_RC_PROMOTION` is complete. Exact
+Staging-tested runtime-sensitive SHA
+`3ec4d88a47f68e05b92d9246bfd63af2d1f297f9` was frozen as
+`RC-THREE-RELIABILITY-20260812-3EC4D88` and promoted to existing Production
+St-Denis by exact backend/frontend image ID. Latest main during promotion was
+`47584d40e9a4f65cd719d8ea898d723bd8dba64f`, but the Production application
+candidate remained exact `3ec4d88...`.
+
+Production retained Flyway V10, database container/state root, Store
+`4483_R_SAINT_DENIS`, `PAD_DIRECT` Printing, four logical printers, three
+assignments and existing configuration. Fresh backup and V10 isolated restore
+passed. Rollback is application-only to the previous `2661eb76...` image pair
+with DB remaining V10. No Production restore, downgrade, Flyway history edit,
+Staging MOCK copy, physical printer binding, Pad pairing, Chinatown or
+modularization occurred.
+
+Evidence:
+[PRODUCTION_THREE_RELIABILITY_RC_PROMOTION_EVIDENCE](PRODUCTION_THREE_RELIABILITY_RC_PROMOTION_EVIDENCE.md).
+Current unique stop:
+`THREE_RELIABILITY_REPAIRS_PRODUCTION_PROMOTED_WAITING_FOR_OWNER_FIELD_RETEST`.
+
+## Current Production promotion tooling dependency repair (2026-08-12)
+
+Historical same-round dependency repair: the Owner approved `THREE_RELIABILITY_REPAIRS_PRODUCTION_RC_PROMOTION`, but
+fresh preflight found a tooling-only blocker before Production deployment:
+the previous application artifact and retained Production control checkout are
+different identities, and V10 backup rehearsal needs an explicit V10 ledger
+target. The bounded repository repair updates the promotion/backup helpers and
+tests only. It does not deploy, restart, migrate, back up, restore or
+reconfigure Production by itself.
+
+Evidence file:
+[THREE_RELIABILITY_PRODUCTION_PROMOTION_TOOLING_REPAIR_EVIDENCE](THREE_RELIABILITY_PRODUCTION_PROMOTION_TOOLING_REPAIR_EVIDENCE.md).
+
+## Current Owner field-test three-reliability repair batch (2026-08-11)
+
+After exact-RC Production promotion, the Owner resumed
+`OWNER_FIELD_TEST_AND_BUG_FIX_LOOP` and authorized the Staging/repository-only
+`STAGING_THREE_RELIABILITY_REPAIR_BATCH`. Production is out of scope except for
+lightweight continuity observation; no Production deploy, restart, Flyway,
+configuration, printer, Pad, business-data or credential action is authorized.
+
+Repository repair entered `main` through PR #122 at
+`3ec4d88a47f68e05b92d9246bfd63af2d1f297f9`, exact Staging was deployed at
+that SHA, Flyway remained V10, Printing remained `MOCK/true`, and automated
+Staging MOCK smoke passed. The package repaired three bounded field-test
+findings before Owner retest:
+
+1. PAD sleep/background must not indefinitely block another active print worker.
+2. long-lived Pad menu snapshots must be revision-aware while retaining
+   offline-first IndexedDB fallback, and locked drafts must show a visible
+   click-lock state.
+3. automatic printing outbox dispatch must remove accidental global
+   serialization by using bounded Store+printer keyed execution while
+   preserving same-printer FIFO, retry, Store isolation and duplicate safety.
+
+Evidence file:
+[STAGING_THREE_RELIABILITY_REPAIR_BATCH_EVIDENCE](STAGING_THREE_RELIABILITY_REPAIR_BATCH_EVIDENCE.md).
+Current unique stop:
+`OWNER_FIELD_TEST_THREE_RELIABILITY_REPAIRS_DEPLOYED_TO_STAGING_WAITING_FOR_OWNER_RETEST`.
+
+## Current Production promotion result (2026-08-11)
+
+Existing Production St-Denis now runs the exact frozen backend/frontend image
+pair for accepted application SHA `2661eb76c36dd9aa58db94ceacd278242ef4c9ab`
+at Flyway V10. Exact RC, backup/integrity/isolated restore, V7-to-V10 rehearsal,
+old-app-on-V10 rollback compatibility, Agent 6, second-start/no-pending and
+bounded observation all passed. The previous application images remain
+available; application-only rollback on V10 is compatible if a future severe
+incident requires it. No DB restore is authorized. No Chinatown, Store/menu,
+printer, Pad, credential or business-data action is implied.
+
+Current unique stop:
+`PRODUCTION_EXACT_RC_PROMOTED_POST_DEPLOY_OBSERVATION_PASS`. See
+[exact-RC Production evidence](PRODUCTION_ST_DENIS_EXACT_RC_PROMOTION_EVIDENCE.md).
+
+## Historical Production promotion preparation (2026-08-11)
+
+Fresh Owner authority promotes only the exact Staging-accepted candidate
+`2661eb76c36dd9aa58db94ceacd278242ef4c9ab`, never later main. Fresh passive
+runtime evidence retains Production `4667f3c35f85c9f8538f82789d9df1531d4fbc9e`
+at V7 and binds accepted backend/frontend image IDs. The prepared RC record is
+`docs/governance/runtime/RC_ST_DENIS_20260811_2661EB76.json`.
+
+The current repository package repairs the unsafe relative-state/rebuild path
+without changing application code or migrations. It is not deployment evidence:
+rollback compatibility, migration rehearsal, restore rehearsal, fresh backup,
+final RC freeze and Agent 6 remain mandatory before any Production lifecycle
+action. Chinatown and every provisioning/activation action remain blocked.
+Historical stop (superseded):
+`RC_PREPARED_WAITING_FOR_MANDATORY_PROMOTION_GATES`.
+
+## Historical superseded Owner field-test Printing bug repair (2026-08-11)
+
+This historical package was the next `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`
+slice after Staging MOCK printing was verified. The Owner reported GRAB
+abbreviation defects, Frontdesk receipt quantity aggregation, GRAB fried
+quantity symbol mismatch, and a PAD_DIRECT screen-off reliability issue. Issue
+6 is audit-only and does not authorize queue/concurrency behavior changes.
+
+Repository repair entered `main` through PR #117 at
+`2661eb76c36dd9aa58db94ceacd278242ef4c9ab`, was deployed to exact Staging at
+that SHA, and passed automated MOCK smoke after resolving Agent 6
+lifecycle-safety blocks. Production remains unchanged except for allowed
+lightweight continuity checks. See
+[Owner field-test printing fixes evidence](OWNER_FIELD_TEST_PRINTING_FIXES_EVIDENCE.md).
+
+## Historical Staging MOCK Printing field-test override (2026-08-11)
+
+Owner field testing was active. The bounded package
+`STAGING_MOCK_PRINTING_FIELD_TEST_ENABLEMENT` completed through PR #114 and was
+superseded in current runtime by the field-test repair package above. Exact
+Staging now runs `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` / V10 with
+Printing `MOCK/true`, 4 endpoint-free logical printers and 3 enabled
+assignments.
+Production remained read-only and unchanged at `4667f3c...` / V7 during that
+historical Staging-only package.
+
+The bounded dependency repair adds a generic runtime printing-mode allowlist
+and endpoint-configuration policy so Staging can permit only
+`DISABLED,MOCK`, never `REAL` or `PAD_DIRECT`, while retaining the shared MOCK
+renderer/job/dispatch path. Automated submit/update/reprint smoke and browser
+Printing Settings verification passed, and PR #117's field-test printing fixes
+smoke now also passes. Historical stop, superseded by exact-RC Owner acceptance:
+`HISTORICAL_OWNER_FIELD_TEST_PRINTING_FIXES_DEPLOYED_WAITING_FOR_OWNER_RETEST`. See
+[field-test evidence](STAGING_MOCK_PRINTING_FIELD_TEST_EVIDENCE.md).
+That package authorized no physical printer/Pad action or Production mutation.
+
+## Historical operational Twin readiness override (2026-08-10)
+
+The approved reconstruction loop completed on exact Staging
+`53209823fa320cc56c31d04ee5c7719a83a78acc` / Flyway V10. Manifest v2 parity,
+independent Staff credentials, safe automated order/beverage smoke and final
+health passed; `BLOCKING_BEHAVIOR_DIFFERENCE=0`. Production remained unchanged
+and read-only at `4667f3c35f85c9f8538f82789d9df1531d4fbc9e` / V7. See
+[operational Twin evidence](TWIN-001_ST_DENIS_OPERATIONAL_TWIN_EVIDENCE.md).
+
+Historical reconstruction stop:
+`TWIN-001_ST_DENIS_OPERATIONAL_TWIN_READY_WAITING_FOR_OWNER_FIELD_TEST`.
+The Owner later opened and completed that field-test route for the exact
+candidate. This historical Twin evidence did not authorize hardware gates,
+Chinatown, modularization, REL-001 or Production promotion by itself.
+
+## Historical reconstruction execution override (2026-08-10)
+
+Owner approval `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL` is active. Fresh
+`origin/main=5f89bdeea6f9a6810c0a38d6d94a59b2156bd6ba`; Production remains V7
+read-only and Staging remains exact `1a3f2e...`/V10 at the retained synthetic
+baseline. The manifest-v2-bound, zero-delete projector and secret-FD Staff API
+reconciler are repository verified and awaiting Agent 6/PR/merge before the
+approved runtime apply continues. See
+[tooling evidence](TWIN-001_STAGING_RECONSTRUCTION_TOOLING_EVIDENCE.md).
+
+## Historical manifest v2 readiness checkpoint (2026-08-10)
+
+The manifest-v2 collection baseline was
+`origin/main=53c217f893aa60e365f3ebb1b3de989862857eae`.
+The corrected Production/Staging read-only loop produced a deterministic,
+schema-valid [manifest v2](../../../governance/runtime/ST_DENIS_TWIN_PARITY_MANIFEST_V2.json); Staging was
+not reconstructed at that checkpoint. Historical stop:
+`TWIN-001_MANIFEST_V2_RECONSTRUCTION_READY_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
+That gate is now granted and superseded by the current execution override.
+
+## Historical reconstruction NO-GO override (2026-08-10)
+
+Fresh Git Ground Truth is
+`origin/main=295ed4b1278750dfc5492c3109e0ac767e158ffd`. The Owner granted
+`TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`, but pre-write source validation
+stopped before runtime entry. The retained manifest lacks deterministic
+row-level values required by its own writer contract and records multiple
+table/column names that cannot exist in the checksum-identical V7 repository
+schema. No Staging or Production action occurred.
+
+Local isolated PostgreSQL 16.14 evidence proves the intended, append-only
+`V7 -> V8 -> V9 -> V10` path, preserves a representative St-Denis safe
+configuration fingerprint and counts, passes current-candidate JPA/health, and
+reports no migration on second startup. The version delta is explicitly
+`CURRENT_PRODUCTION_VERSION_DIFFERENCE`; it does not authorize downgrading
+Staging. Aggregate `SCHEMA = BLOCKING_BEHAVIOR_DIFFERENCE` and
+`TWIN-001 = NO_GO` remain until the complete reconstructed Twin runs on V10.
+
+See
+[reconstruction schema/input NO-GO evidence](TWIN-001_STAGING_RECONSTRUCTION_SCHEMA_NO_GO_EVIDENCE.md).
+Unique stop:
+`TWIN-001_RECONSTRUCTION_NO_GO_WAITING_FOR_MANIFEST_COMPLETION_READ_APPROVAL`.
+Next TRUE OWNER GATE:
+`TWIN-001_RECONSTRUCTION_MANIFEST_COMPLETION_READ_APPROVAL`.
+
+## Historical verified Production inventory checkpoint (2026-08-10)
+
+The Owner-approved read gate has completed. Fresh repository Ground Truth is
+`origin/main=34ef8c577dd5e8464ef885bf235b0bece0018503`; retained Production is
+`4667f3c35f85c9f8538f82789d9df1531d4fbc9e`/Flyway V7 and isolated Staging is
+`1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c`/Flyway V10. Production Store
+`1 / 4483_R_SAINT_DENIS / 4483 R. Saint-Denis` belongs to Organization
+`1 / LANZHOU_NOODLES / Lanzhou Noodles`. The read was bounded, explicit-column,
+Store-scoped and read-only; no Production business data, secrets, Staging
+write, Twin Sync, deployment, migration or restart occurred.
+`IN_MAIN`, `DEPLOYED_TO_STAGING`, `STAGING_ACCEPTED`, and
+`DEPLOYED_TO_PRODUCTION` remain distinct classifications.
+
+See [sanitized parity manifest](ST_DENIS_TWIN_PARITY_MANIFEST.md) and
+[inventory evidence](TWIN-001_PRODUCTION_INVENTORY_EVIDENCE.md). Checkpoint
+stop: `TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
+Its next Owner Gate was `TWIN-001_STAGING_RECONSTRUCTION_APPROVAL`, later
+granted before the current pre-write NO-GO.
+
+## Historical Owner strategic route override (2026-08-10)
+
+The former `STG-009 Phase A -> Chinatown Phase B -> REL-001` route is preserved
+as historical planning but is deferred. The current route is planning
+`TWIN-001_ST_DENIS_STAGING_TWIN`, whose designated long-term role is a
+Production-like St-Denis Operational Twin and mandatory pre-Production
+validation environment.
+The former route is explicitly
+`DEFERRED_BY_OWNER_ST_DENIS_TWIN_AND_FIELD_TEST_PRIORITY`; it remains
+preserved rather than cancelled.
+
+The Twin is not yet established. Existing synthetic St-Denis data is
+`CURRENT_SYNTHETIC_BASELINE`, not Production-parity evidence. The completed
+read-only inventory is evidence, not a reconstruction or synchronization.
+
+The former read-approval stop and inventory checkpoint are historical. The
+checkpoint stop was:
+`TWIN-001_PRODUCTION_INVENTORY_COMPLETE_WAITING_FOR_STAGING_RECONSTRUCTION_APPROVAL`.
+See [TWIN-001 St-Denis Twin Plan](../agile/TWIN-001_ST_DENIS_STAGING_TWIN_PLAN.md).
+
+## Historical verified continuation override (2026-08-10)
+
+The recent Twin governance closure merges are governance-only in `main`; the
+exact `origin/main` SHA must be freshly fetched before the next action. Staging remains exact
+`1a3f2e761aded38a246460ffa6bc1c6a28a7ca5c`, Flyway is
+V1--V10 with no pending or failed migration, and Printing is disabled.
+STG-005A PLAN/EXECUTE/REPLAY are `VALIDATED/CREATED/REPLAYED`; STG-005B is
+`VALIDATED/CREATED/REPLAYED` with `4/3/13/38` and replay revision `2 -> 2`.
+Synthetic Organization, Owner, source Store and credential are ready. No
+one-shot is active, the blocked marker is absent, and the lock is empty.
+Formal preflight, V10-to-V10 deploy, readiness, private credential rotation,
+secret-safe API acceptance and real-Chrome browser-equivalent login/
+Organization/Store/dashboard/refresh/logout checks passed without a 401/403.
+Fresh Owner post-repair manual UI evidence remains pending and is deferred
+behind TWIN-001; the retained browser-equivalent result is historical Phase-A
+foundation. The former
+stop `STG-009_PHASE_A_BROWSER_EQUIVALENT_PASS_WAITING_FOR_OWNER_MANUAL_UI_ACCEPTANCE`
+is historical. The current stop is
+`TWIN-001_STAGING_RECONSTRUCTION_APPROVED_DEPENDENCY_REPAIR_IN_PROGRESS`.
+The next TRUE OWNER GATE after operational readiness is the Owner field-test
+loop; Chinatown onboarding/clone remains deferred and prohibited.
+
+See [STG-008 synthetic runtime progress evidence](STG-008_SYNTHETIC_RUNTIME_PROGRESS_EVIDENCE.md)
+and [STG-009 browser-equivalent acceptance evidence](STG-009_PHASE_A_BROWSER_EQUIVALENT_ACCEPTANCE_EVIDENCE.md).
+
+> This Handoff is a navigation snapshot only.
+> Git ground truth, `ALIVE_RUNTIME_PLANBOOK.md`, `FEATURE_BACKLOG.md`,
+> `AGILE_LOOP_OPERATING_MODEL.md` and applicable Technical Plans remain
+> authoritative. If this file conflicts with those sources, the authoritative
+> sources win.
+>
+> Snapshot date: 2026-08-10, America/Toronto
+>
+> Runtime freshness: PR #82 entered `main` at `2837ae88...` with the bounded
+> restart-readiness/fail-closed repair. A fully fresh Owner-authorized
+> V10-to-V10 continuation then bound, preflighted, built and deployed exact
+> `2837ae88...` to isolated Staging. Repaired readiness, sanitized runtime
+> collection, one same-image restart, and post-restart verification all passed.
+> Flyway remained exact V10, health returned `200/200/200`, printing and
+> isolation remained unchanged, and Production continuity remained unchanged.
+> `STG-007 = PASS`. PR #83 then merged only that evidence/governance into
+> `main@2ed56b06...`; runtime remained exact `2837ae88...`. The first STG-008
+> entry stopped read-only at the credential decision, and PR #84 placed that
+> sanitized evidence in `main@828af4e8...`. The Owner then approved
+> `STG005_OWNER_20260808_R01` while retaining the password guard. Fresh exact
+> readiness passed, but the password-free STG-005A plan one-shot stopped before
+> its command/data path because the older cloud safety rule rejected required
+> Flyway-disabled mode. Cleanup and zero-write continuity passed, and the
+> launcher retained blocked state. PR #85 merged the bounded startup-safety
+> repair and PR #86 closed its Ground Truth. The next authorized continuation
+> freshly reconfirmed exact Staging `2837ae88...`, V10, zero synthetic state,
+> the reviewed blocked pair, Printing/isolation and Production continuity. It
+> stopped before Batch A mutation because the ordinary release path could not
+> legally cross the retained block. PR #87 merged the dedicated recovery
+> release-rebind repair at `4b954e09...`; its initial publication state is
+> historical. That runtime-sensitive merge superseded the authorization bound
+> to `4759a23b...`. A later Owner-authorized continuation bound and deployed
+> exact `6753855497b8c47be99a8d88ae9d9961653addb0` to Staging at Flyway V10,
+> passed formal preflight/readiness and recovered only the reviewed old blocked
+> records. The next password-free plan failed before its command/data path
+> because non-web startup required a servlet request context; cleanup and
+> zero-write continuity passed, and a new blocked pair was retained. The
+> bounded repository repair entered `main` as PR #89 at `434c9cc...`. PR #90
+> then entered `main@2a6c30a...`. The Owner-authorized continuation deployed
+> that exact candidate to isolated Staging at V10, passed preflight/readiness,
+> and recovered only the reviewed prior blocked pair. The fresh password-free
+> plan reached `VALIDATED`, proving the request-context repair in the runtime,
+> but a non-web WebSocket broker kept the JVM alive to its 600-second timeout.
+> Its scoped finalizer then encountered Compose `--rm` already in progress and
+> correctly retained a new blocked pair. There was no credential read or
+> synthetic business write; Staging returned to 200/200/200 with Printing
+> disabled and Production continuity remained unchanged. A narrow repository
+> lifecycle repair entered `main` through PR #91 at `9a776d3...`. Later
+> authorized continuations deployed and verified its successors; this is now
+> historical context and grants no current rebind authority. Production
+> remained unchanged.
+
+## 1. Project mission
+
+Restaurant System is moving from one operational Store to reusable multi-Store
+provisioning without destabilizing current restaurant operations.
+
+- St-Denis is the current Production Store.
+- St-Denis Twin planning and Owner field-test/bug-fix acceptance completed for
+  exact `2661eb76...`; its exact-RC Production promotion is the current closed
+  result.
+- Chinatown is still the planned second real Production Store, but is deferred
+  until the Twin, field-test loop and later modularization gates complete.
+- A future third Store matching St-Denis should reuse a reviewed St-Denis
+  profile, not copied code or data scripts.
+- The direction remains multi-Store SaaS-style provisioning through shared
+  modules and Profiles. No next implementation or runtime route starts from the
+  completed St-Denis promotion without a new Owner decision.
+
+## 2. Current Git ground truth
+
+| Item | Verified value | Classification |
+|---|---|---|
+| runtime-sensitive deployed candidate | `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` | `IN_MAIN` through PR #117, `STAGING_ACCEPTED`, and now `DEPLOYED_TO_PRODUCTION` through frozen RC `RC-ST-DENIS-20260811-2661EB76`. |
+| exact deployed Staging runtime | `2661eb76c36dd9aa58db94ceacd278242ef4c9ab` | `DEPLOYED_TO_STAGING`; Flyway V10, reconstructed Operational Twin, MOCK/true, health passed, restart count zero. |
+| exact deployed Production application | backend `sha256:2db920f0...`, frontend `sha256:233cc07d...` | Exact accepted SHA `2661eb76...`; Flyway V10; fixed DB state/container retained; post-deploy observation PASS. |
+| Owner workspace | `main@ba169ed8b689ddef8dffe94deee82fea191cdcfb`, dirty with Owner work | Local checkout is behind `origin/main`; it was not modified by this handoff |
+| Runtime-sensitive delivery package | Owner field-test printing fixes / PR #117 | `STAGING_ACCEPTED` through exact `2661eb76...`; fresh Owner acceptance attested |
+| Browser-equivalent evidence / PR #101 | merge `aec59af93a9bf42ce3d167a579a19be80eadc9b0` | `IN_MAIN`; evidence/governance only, not deployed runtime |
+| Operational Twin closure PR | [PR #112](https://github.com/Z1linXu/Restaurant_System/pull/112) | `IN_MAIN` at `9715d2447d5781e2437917aafc1fb1b6b4a5250f`; documentation/evidence only, not deployed |
+
+`IN_MAIN`, `DRAFT_PR`, `STACKED_ONLY`, `PREPARATION_ONLY`,
+`DEPLOYED_TO_STAGING`, and `DEPLOYED_TO_PRODUCTION` are distinct states. A
+GitHub Merged badge into a non-main base is not evidence that work entered
+`main`.
+
+### Relevant registered worktrees at this audit
+
+| Worktree | Branch / purpose | State |
+|---|---|---|
+| `/Users/xuzilin/projects/Restaurant_System` | Owner `main` workspace | Dirty with Owner work; behind `origin/main` and untouched |
+| `/private/tmp/restaurant-stg006-preflight` | `codex/stg-006-exact-main-preflight` | Retained historical PR #73 worktree |
+| `/private/tmp/restaurant-ops001-tooling` | `codex/ops-001-staging-secret-safe-tooling` | Retained historical OPS-001 repository worktree |
+| `/private/tmp/restaurant-post-stack-audit` | `codex/post-stack-ground-truth-audit` | Retained historical PR #72 worktree |
+| `/private/tmp/restaurant-current-handoff` | `codex/current-project-handoff` | Retained historical PR #71 worktree |
+| `/private/tmp/restaurant-stg007-execution` | `codex/stg007-v10-continuation-final-evidence` | Retained historical STG-007 evidence/governance worktree; Owner workspace untouched |
+| `/private/tmp/restaurant-stg008-execution` | `codex/stg008-synthetic-topology-source` | Current isolated STG-008 `NO_GO` evidence/governance worktree; Owner workspace untouched |
+| `/private/tmp/restaurant-stg008-resume` | retained PR #85/#86 historical repair and closure worktree | Historical isolated repository worktree; Owner workspace untouched |
+| `/private/tmp/restaurant-stg008-recovery` | current continuous Staging/evidence worktree | Owner workspace untouched; reviewed Staging actions and evidence publication completed, with no Production mutation |
+| `/private/tmp/restaurant-pr61-rebuild` through `/private/tmp/restaurant-pr65-rebuild` | merged #61-#65 branch worktrees | Retained historical worktrees; not current delivery inputs |
+
+No registered #69/#70 rebuild worktree remains. Historical worktrees were not
+removed by this audit because their branches/evidence are retained and cleanup
+was not required for the governance correction.
+
+## 3. Completed PR dependency map
+
+GitHub and main ancestry were verified on 2026-08-08. Every PR below is
+closed, merged, and `IN_MAIN`.
+
+| PR | Package | Base | Head | State | Depends on | In main? | Owner action |
+|---|---|---|---|---|---|---|---|
+| #61 | Modular architecture foundation | `main` | merge `bbb1af9520c188b6ef6362e783284ba4001a7e63` | `IN_MAIN` | PR #71/main | Yes | Main capability; no runtime behavior |
+| #62 | STG-005B Synthetic St-Denis baseline | `main` | merge `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b` | `IN_MAIN` | #61/main | Yes | Main capability; no runtime execution |
+| #63 | AL-003S Staging acceptance preparation | `main` | merge `732d77c89ff067982702426ff918d5e097e1d0fb` | `IN_MAIN` | #62/main | Yes | Repository-only acceptance preparation; runtime use remains separately gated |
+| #64 | AL-004 Generic Store Profile contract | `main` | merge `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6` | `IN_MAIN` | #63/main | Yes | Declarative repository capability only |
+| #65 | AL-005A Staff/Table plan | `main` | merge `8f58bcbfca253c1598b967f4d17c04c0be1cce5b` | `IN_MAIN` | #64/main | Yes | Repository planning only |
+| #66 | Printer Store-isolation repair | `main` | merge `f483a4640503c20f6eec1e2e9ae1d198bf23d1f3` | `IN_MAIN` | #65/main | Yes | Security foundation; no runtime behavior |
+| #67 | AL-005 Printing provisioning plan | `main` | merge `65e3d3ced2b5b05eb36d56ce67e475768ad19dff` | `IN_MAIN` | #65/main; #66 IN_MAIN | Yes | Repository planning only |
+| #68 | AL-005B Device/Pad plan | `main` | `80839d454e8f88391b16e8ba502d3e4bcccd4fb6` | `IN_MAIN` | #67/main | Yes | Main capability; no runtime behavior |
+| #69 | AL-006 Activation workflow plan | `main` | `b38d3188edc0555bea7e54dafc4868a7c4726005` | `IN_MAIN` | #68/main | Yes | Main capability; no runtime behavior |
+| #70 | REL-001 Production RC plan | `main` | merge `645d4909625f70fc241d5468382d66a30a030fb1` | `IN_MAIN` | #69/main | Yes | Planning authority only; no RC, ACT-001, or runtime action |
+| #72 | Post-stack Ground Truth audit | `main` | merge `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | `IN_MAIN` | completed #61-#71 main stack | Yes | Governance/capability audit only; no runtime action |
+| #73 | STG-006 evidence/governance | `main` | merge `85d97b7327b2e15aa561ed28a5788b92cedf6f5b` | `IN_MAIN` | #72/main | Yes | Passive evidence only; no runtime mutation |
+| #74 | OPS-001 secret-safe tooling | `main` | merge `362c954a8753204476ddf1415ea86050589760dd` | `IN_MAIN` | #73/main | Yes | Repository tooling only; runtime actions remain separately gated |
+| #75 | STG-007 retained-listener preflight repair | `main` | merge `b93d8efdbd699333d73d9ffcc29e8f8443e51764` | `IN_MAIN` | #74/main | Yes | Guard repair only; no runtime mutation |
+| #76 | STG-007 exact-Git release bootstrap repair | `main` | merge `e6fac236c7620cd2f579d2a180367f4f753a6d42` | `IN_MAIN` | #75/main | Yes | Control-path repair only; no release, deploy or Flyway action |
+| #77 | STG-007 state-parent mode guard repair | `main` | merge `5c6d8bb70d74756cc7fe3f76b2d43cb07c6e6f33` | `IN_MAIN` | #76/main | Yes | Trust-root guard repair only; no release/env, deploy or Flyway action |
+| #78 | STG-007 releases-parent mode guard repair | `main` | merge `35ccf5cb823bb22b449d8b82baa2f22db2e242df` | `IN_MAIN` | #77/main | Yes | Trust-root guard repair only; no release/env, deploy or Flyway action |
+| #79 | STG-007 rotation state-root mode guard repair | `main` | merge `868e229f1b5afd28163e5031ad8fabffaad651f6` | `IN_MAIN` | #78/main | Yes | Guard/test/governance repair; later runtime use was separately authorized |
+| #80 | STG-007 readiness health fingerprint repair | `main` | merge `39fa284b7bccd64d650c396f2c7532b0a0858b4b` | `IN_MAIN` | #79/main | Yes | Runtime fingerprint repair; later V10 continuation and readiness were separately authorized |
+| #81 | STG-007 Flyway success-token repair | `main` | merge `63600b13b10a5549d9095a03c94e69a9f880af9f` | `IN_MAIN` | #80/main | Yes | Exact PostgreSQL boolean-token validation repair; later runtime use was separately authorized |
+| #82 | STG-007 restart readiness/fail-closed repair | `main` | merge `2837ae88e55142c99c6975f8b6575febffc913a1` | `IN_MAIN` | #81/main | Yes | Bounded three-endpoint readiness and nonzero-exit blocked-state persistence; exact merged SHA later passed the authorized V10 continuation |
+| #83 | STG-007 final evidence/governance | `main` | merge `2ed56b06f37c9257a655ec334f81e31ca4a518a6` | `IN_MAIN` | #82/main | Yes | Documentation/evidence only; no runtime-capability or runtime-state change |
+| #84 | STG-008 entry evidence/governance | `main` | merge `828af4e84581dcb051248beee694c307a65210c5` | `IN_MAIN` | #83/main | Yes | Sanitized credential-gate evidence only; no application, migration, runtime configuration, credential, or business-data mutation |
+| #85 | STG-008 guarded one-shot Flyway safety repair | `main` | merge `c95c3840fa972f84b3e5dbd345fef3e4c12aa8c6` | `IN_MAIN` | #84/main | Yes | Exact-profile no-migration startup-safety reconciliation plus tests/governance; its original publication did not deploy or mutate credentials/data |
+| #86 | STG-008 dependency-repair Ground Truth closure | `main` | merge `4759a23b1a00d3254936e6c8eeb0ec33012b5145` | `IN_MAIN` | #85/main | Yes | Documentation-only closure; no runtime action |
+| #87 | STG-008 release-rebind serialization repair | `main` | merge `4b954e09a365fec909ed6da3ddf8fa9f13639cdc` | `IN_MAIN` | #86/main | Yes | Recovery-only release/env preparation preserves both reviewed blocked records and every ordinary action block; it later supported exact `6753855497...` Staging rebind/deploy/recovery |
+
+Main stack review order:
+
+`#61 -> #62 -> #63 -> #64 -> #65 -> #67 -> #68 -> #69 -> #70`
+
+PR #66 is independent and is now `IN_MAIN`. PR #67 is also `IN_MAIN` as the
+Printing Provisioning planning foundation for #68; neither authorizes runtime
+printing or device operations.
+
+## 4. Runtime ground truth
+
+STG-006 established the historical passive baseline and STG-007 established
+the historical infrastructure identity. The later STG-008 continuation and
+the exact St-Denis RC promotion establish the current identities below.
+
+| Environment | Retained evidence | Classification and boundary |
+|---|---|---|
+| Production | accepted app SHA `2661eb76c36dd9aa58db94ceacd278242ef4c9ab`; backend `sha256:2db920f0...`; frontend `sha256:233cc07d...`; Compose `cloud`; retained DB `c2ab37fec6ac`; health `UP`; restart `0/0/0`; Flyway V10 | `DEPLOYED_TO_PRODUCTION`; frozen exact RC, second-start/no-pending and bounded observation PASS; filesystem checkout `4667f3c...` remains only the retained previous source identity |
+| Staging | `2661eb76c36dd9aa58db94ceacd278242ef4c9ab`; Flyway V10 with ten successful and zero failed rows; exact `db/backend/nginx` identities running; health passed | `STAGING_ACCEPTED`; manifest-v2 parity, MOCK printing and fresh Owner acceptance pass with `BLOCKING_BEHAVIOR_DIFFERENCE=0`. |
+| Staging isolation | project `restaurant-pos-staging`; only `127.0.0.1:18080`; separate state/network/mounts; private leaf UID 70/mode 0700 | `MACHINE_VERIFIED_READ_ONLY` |
+| Staging printing | `STAGING_PRINT_MODE=MOCK`; feature flag `true`; allowed modes `DISABLED,MOCK`; endpoint configuration disabled | `MACHINE_VERIFIED`; 7/7 MOCK jobs printed with zero physical transport |
+
+Repository migrations are exactly V1-V10. Machine evidence proves both Staging
+and Production are V10; Production applied only reviewed V8/V9/V10 and the
+separate second start proved no pending migration.
+
+The historical credential-entry decision is
+[STG-008 Synthetic Topology and Source Entry Evidence](STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md).
+The resumed plan failure and bounded repair are recorded in
+[STG-008 Flyway Guard Repair Evidence](STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md).
+This was a failed password-free plan one-shot before the STG-005A command, not
+a failed transaction, deployment, migration, or credential operation. Its
+historical fail-closed pair was later recovered through the reviewed path; the
+current runtime has no marker or lock and no recovery is pending.
+
+The later fresh baseline, release-rebind sequencing deadlock and bounded PR
+#87 correction are recorded in
+[STG-008 Release-Rebind Serialization Repair Evidence](STG-008_RELEASE_REBIND_SERIALIZATION_REPAIR_EVIDENCE.md).
+That historical continuation stopped before candidate import or Batch A
+mutation. Its PR #87 repair was later used by exact `6753855497...` for
+Staging rebind/preflight/deploy/readiness and old-pair recovery. Subsequent
+non-web repairs and exact continuations resolved that historical gate; no
+current rebind or recovery instruction is inherited from it.
+
+## 5. Current feature and loop
+
+| Field | Current value |
+|---|---|
+| Current Feature | Existing St-Denis exact-RC Production promotion complete; `FT-001` Chinatown remains deferred. |
+| Current Agile Loop | `PRODUCTION_ST_DENIS_EXACT_RC_PROMOTION` completed |
+| Current package | Frozen `RC-ST-DENIS-20260811-2661EB76`; exact `2661eb76...` deployed to Production at V10; Staging remains exact `2661eb76...` / V10 / MOCK. |
+| Feature stop state | `PRODUCTION_EXACT_RC_PROMOTED_POST_DEPLOY_OBSERVATION_PASS` |
+| Handoff navigation status | `PROJECT_HANDOFF_IN_MAIN` |
+| Current Owner gate | No automatic next runtime action. Any Chinatown, printer/Pad, rollback/restore or new Production batch requires its own authority. |
+
+Release/promotion navigation follows the canonical [Agile Loop policy](../AGILE_LOOP_OPERATING_MODEL.md#83-canonical-release-promotion-drift-and-recovery-policy):
+freeze an immutable RC after Twin/automated/Owner acceptance, promote the same
+artifact digests, use `APPLICATION_ROLLBACK_COMPATIBILITY_GATE`, and treat
+backup existence as distinct from recoverability. Those gates passed for this
+exact RC; every future release still requires a new bound record and authority.
+
+### Permitted work
+
+- Fetch and verify Git/GitHub ground truth.
+- Perform read-only verification of the completed exact-RC evidence and retained
+  Staging/Production continuity.
+- Complete this tooling/evidence/governance PR under Auto-Merge policy. Its
+  documentation-only merge does not require or authorize another Staging
+  rebind.
+
+### Prohibited or separately gated work
+
+- Reuse of consumed/failed STG-007 or STG-008 approval/readiness evidence, or
+  continuation on an old image.
+- Any further Production runtime/configuration action; schema/migration change;
+  application rollback absent a severe incident; database restore; Staging
+  downgrade/Flyway edit/destructive reset; physical printer binding, Pad
+  pairing, Chinatown, modularization, AL-003/REL-001 or another promotion.
+- Production Store 1 read or mutation.
+- Real printer/endpoint configuration, physical test print, Pad pairing, or
+  device/Worker mutation. Owner manual MOCK use remains permitted.
+- Credential exposure/copy from Production or security-boundary weakening.
+  Further Staging credential creation/reuse/rotation is no longer authorized
+  by the completed reconstruction approval.
+- Projector/staff replay, another Staging deploy/rebind, or repetition of the
+  completed automated smoke without new bounded authority.
+- Repository merge that fails Operating Model section 16's permanent
+  auto-merge gate, Production activation, restore, or destructive database/Git
+  commands.
+
+## 6. What is already done
+
+- AL-001 planning is complete.
+- AL-002 Owner onboarding foundation and V8 are in main.
+- STG-001 through STG-004 established the isolated Staging plan, deployment
+  package, local Docker rehearsal, and historical server Staging evidence.
+- STG-005A/B are in main and fully evidenced in isolated Staging as
+  `VALIDATED/CREATED/REPLAYED`, with one synthetic topology and `4/3/13/38`,
+  replay `2 -> 2`, no duplicate/crossover and no active block/lock.
+- AL-003 PR-A through PR-F are in main.
+- PR #58 retained the failed exact-SHA Staging attempt evidence.
+- PR #59 fixed the bounded PostgreSQL UID-70/mode-0700 preflight defect in main.
+- PR #60 merged Owner product decisions and governance alignment into main at
+  `2058d7fcac6b4d2ee05f49f6e6e431d9ea96170d`.
+- PR #71 merged this navigation handoff into main at
+  `5baada03935e004d80af1e7a36fb7db39bd6abbb`.
+- PR #61 merged the modular architecture foundation into main at
+  `bbb1af9520c188b6ef6362e783284ba4001a7e63`.
+- PR #62 merged the guarded Synthetic St-Denis baseline into main at
+  `467ab5f8758fdafc3d6d0d3e2ede4145a9fb3b4b`.
+- PR #63 entered `main` at `732d77c89ff067982702426ff918d5e097e1d0fb`.
+- PR #64 entered `main` at `54b784e3a5c5e257c4fc4df4c1ce21f14160e9a6`.
+- PR #65 entered `main` at `8f58bcbfca253c1598b967f4d17c04c0be1cce5b`.
+- PR #66 entered `main` at `f483a4640503c20f6eec1e2e9ae1d198bf23d1f3`.
+- PR #67 entered `main` at `65e3d3ced2b5b05eb36d56ce67e475768ad19dff`.
+- PR #68 entered `main` at `9e93573be97cfd01a9ad3efe64d55827854c497a`.
+- PR #69 entered `main` at `dc682203b2b24bbdb453a5520b297b9051139f13`.
+- PR #70 entered `main` at `645d4909625f70fc241d5468382d66a30a030fb1`.
+  This completes the #61-#70 preparation stack; no runtime state is implied.
+- PR #72 entered `main` at `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b`.
+  STG-006 then freshly verified the retained isolated Staging runtime and
+  minimum Production continuity without mutation.
+- PR #73 entered `main` at `85d97b7327b2e15aa561ed28a5788b92cedf6f5b`.
+  It records `STG-006=PASS` and `OPS-001=REQUIRED`; it performed no runtime
+  mutation.
+- PR #74 entered `main` at `362c954a8753204476ddf1415ea86050589760dd`
+  with OPS-001 repository tooling; runtime use remained separately gated.
+- PR #75 entered `main` at `b93d8efdbd699333d73d9ffcc29e8f8443e51764`
+  with the retained-listener preflight repair; no runtime mutation occurred.
+- PR #76 entered `main` at `e6fac236c7620cd2f579d2a180367f4f753a6d42`
+  with the exact-Git release bootstrap. The next Batch A attempt imported that
+  candidate, then stopped before release/env mutation at the state-parent mode
+  guard now under bounded repair.
+- PR #77 entered `main` at `5c6d8bb70d74756cc7fe3f76b2d43cb07c6e6f33`
+  with the state-parent correction. The next Batch A attempt imported that
+  candidate and delegated bootstrap, then stopped before approval consumption
+  or mutation at the releases-parent mode guard now under bounded repair.
+- PR #78 entered `main` at `35ccf5cb823bb22b449d8b82baa2f22db2e242df`
+  with the releases-parent correction. The next Batch A attempt created its
+  exact release and consumed approval, then stopped before env mutation at the
+  remaining rotation state-parent mode guard now under bounded repair.
+- PR #79 entered `main` at `868e229f1b5afd28163e5031ad8fabffaad651f6`
+  with the rotation state-parent correction. The next authorized run passed
+  Batch A, deployed that exact SHA and applied V9/V10, then stopped before
+  readiness PASS or restart at the optional-health fingerprint bug now under
+  bounded repair.
+- PR #80 entered `main` at `39fa284b7bccd64d650c396f2c7532b0a0858b4b`.
+  The new V10-aware continuation deployed that exact SHA, retained V10 and
+  passed repaired readiness. Runtime collection then exposed the canonical
+  `true` versus mock-`t` validator mismatch before PASS evidence; no restart
+  followed.
+- PR #81 entered `main` at `63600b13b10a5549d9095a03c94e69a9f880af9f`.
+  A fresh V10-aware continuation deployed that exact SHA, passed formal
+  preflight, readiness and sanitized runtime/Flyway collection. Its same-image
+  restart retained the exact containers/images but the single immediate health
+  probe raced application startup and returned 502. Runtime recovered to
+  200/200/200 at the same identities; the action remains `NO_GO` because no
+  PASS evidence or blocked marker was produced.
+- PR #82 entered `main` at `2837ae88e55142c99c6975f8b6575febffc913a1`
+  with bounded three-endpoint restart readiness and nonzero-exit fail-closed
+  persistence. A new exact-main continuation then deployed that SHA
+  V10-to-V10 and passed formal preflight, readiness, runtime collection,
+  same-image restart, and post-restart verification. `STG-007 = PASS`.
+- PR #83 entered `main` at `2ed56b06f37c9257a655ec334f81e31ca4a518a6`
+  with only the final STG-007 evidence/governance. STG-008 later performed a
+  read-only entry check: zero synthetic topology/credential rows, safe next
+  Store ID `1`, unchanged Staging/Production continuity, and a credential-
+  contract `NO_GO` before any plan or write.
+- PR #84 entered `main` at `828af4e84581dcb051248beee694c307a65210c5`
+  with only that sanitized STG-008 entry evidence/governance. The Owner then
+  aligned the credential contract. Fresh readiness passed, but the first
+  password-free plan one-shot stopped before its command because the older
+  cloud safety guard rejected Flyway-disabled mode. Cleanup and zero-write
+  continuity passed; at that historical checkpoint fail-closed state remained
+  until the later separately approved recovery.
+- PRs #85-#94 repaired the guarded startup, exact release/recovery, non-web
+  context, lifecycle and blocked-pair paths. Their later exact runtime use
+  completed STG-005A/B without duplicate/crossover and cleared all active
+  one-shot/marker/lock state.
+- PRs #95-#98 added and evidenced secret-safe API Phase-A acceptance. Owner
+  manual Chrome then exposed the distinct same-origin 403.
+- PR #99 repaired generic proxy Host/port preservation and added reviewed
+  private credential rotation; PR #100 recorded its pre-deploy Ground Truth.
+- Exact `1a3f2e...` deployed that repair and passed V10-to-V10 preflight,
+  readiness, credential rotation, API and real-Chrome browser-equivalent
+  acceptance. PR #101 published the sanitized evidence into
+  `main@aec59af93a9bf42ce3d167a579a19be80eadc9b0` without changing runtime.
+
+## 7. AL-003 repository capability
+
+Current main includes:
+
+- generic Category/Station/Item clone transaction;
+- source option cloning with parent mapping;
+- versioned Chinatown Profile and target overrides;
+- shared read-only option-plan validation and structured diagnostics;
+- V10 idempotency reservation, replay, terminal `FAILED`, and sanitized result;
+- Organization Owner authorization;
+- public Owner `validate` and `execute` API facade reusing the same planner and
+  lock-owning transaction.
+
+Repository capability is not Staging acceptance and is not Production
+deployment. No real Chinatown clone has been evidenced.
+
+Synthetic St-Denis topology/source and automated Owner login evidence now
+exist. Still missing are fresh Owner post-repair manual UI evidence, Chinatown
+target onboarding, validate/execute/clone/replay evidence, and the separate
+Production source, RC, deployment, provisioning and field-acceptance gates.
+
+## 8. Owner product decisions that are settled
+
+1. Chinatown is the second real Production Store.
+2. Production Store 1 / St-Denis is the Chinatown menu source of truth.
+3. Chinatown's initial menu must be created through the reviewed Clone Engine.
+4. After clone/activation, Menu Management may modify the target normally.
+5. An Organization Owner naturally manages same-Organization Stores under the
+   current authorization contract; do not manufacture redundant target Owner
+   memberships.
+6. Staging uses synthetic-only credentials and data.
+7. Staging remains a Production-like synthetic St-Denis test environment.
+8. Production uses a formal exact-SHA Release Candidate process.
+9. Chinatown DoD is Store + Owner/Staff + Menu + Tables + Printing + Pads +
+   Login + actual order test.
+10. A third Store matching St-Denis must reuse a St-Denis Profile and shared
+    modules, never copy/paste Store-specific code.
+
+Do not reopen these decisions unless the Owner changes them or executable code
+proves the underlying contract has changed.
+
+## 9. Modular architecture direction
+
+Owner-approved direction, currently planned/prepared rather than implemented as
+one complete engine:
+
+`Generic Store Provisioning Engine + Versioned Store Profiles + Reusable Provisioning Modules`
+
+`Profile defines WHAT. Module defines HOW.`
+
+Planned reusable modules are Store Core, Access/Staff, Menu, Tables, Printing,
+Device/Pad, and Activation. Shared code must not branch on a Store ID/name,
+duplicate the Menu Clone Engine, or create copy/paste Store engines. Chinatown
+is the first Store Profile sample, not a shared-service special case.
+
+## 10. Current roadmap
+
+| ID | Purpose | Current state | Dependency / Owner gate |
+|---|---|---|---|
+| STG-005B / #62 | Reproducible synthetic St-Denis menu baseline | `IN_MAIN` and `DEPLOYED_TO_STAGING` evidence | PLAN/EXECUTE/REPLAY passed at `4/3/13/38`, revision `2 -> 2`; no duplicate/crossover |
+| AL-003S / #63 | Exact-SHA Staging acceptance preparation | `IN_MAIN`; reviewed tooling used under separate runtime approvals | Exact `2661eb76...` passed Operational Twin, MOCK validation and Owner acceptance, then became the frozen Production RC. |
+| AL-004 / #64 | Generic Store Profile contract | `IN_MAIN` | Repository capability only; no provisioning/runtime execution |
+| AL-005A / #65 | Staff/Table module plan | `IN_MAIN` | Repository planning only; no writer or runtime execution |
+| AL-005 / #67 | Printing provisioning plan | `IN_MAIN` | repository planning only; no writer/runtime action |
+| AL-005B / #68 | Device/Pad provisioning plan | `IN_MAIN` at `9e93573be97cfd01a9ad3efe64d55827854c497a` | no pairing/credential/Worker/runtime action |
+| AL-006 / #69 | Fail-closed activation workflow plan | `IN_MAIN` at `dc682203b2b24bbdb453a5520b297b9051139f13` | no status transition or activation writer |
+| REL-001 / #70 | Formal Chinatown Production RC plan | `IN_MAIN` at `645d4909625f70fc241d5468382d66a30a030fb1` | planning only; no candidate, deployment, or activation |
+| ACT-001 | Production provisioning and field acceptance | `NOT_STARTED_OWNER_GATED` | Accepted RC and explicit Production activation approval |
+| STG-006 | Exact-main passive preflight | `PASS` for candidate `33c6e3c52aa40793f6bb861101c16ccdd1b85b5b` | Evidence only; no release/deploy/migration approval |
+| OPS-001 | Secret-safe Staging tooling | `REPOSITORY_COMPLETE`; bounded repairs #75-#82 and #87 are `IN_MAIN` | PR #87's recovery-only release/env path supported the later exact `6753855497...` rebind/deploy/recovery; runtime actions remain independently exact-SHA/action/Owner-gated |
+| STG-007 | Exact-SHA V10-aware continuation | `PASS` at deployed Staging SHA `2837ae88...` / Flyway V10 | Runtime batch complete; no approval or evidence is reusable |
+| STG-008 | Synthetic topology and source | `PASS` | Synthetic Organization/Owner/source Store and credential ready; A/B PLAN/EXECUTE/REPLAY complete at `4/3/13/38`, replay `2 -> 2`, no duplicate/crossover, Printing disabled, isolation and Production continuity unchanged. |
+
+The post-stack capability matrix and Staging decision remain historical in
+[Post-Stack Ground Truth Audit](POST_STACK_GROUND_TRUTH_AUDIT.md). Its former
+loop order and STG-008 runtime authorization are superseded by TWIN-001 and
+are not current authority.
+
+## 11. Stack rebuild rule
+
+After each dependency enters main:
+
+`fetch latest main -> verify dependency IN_MAIN -> rebuild/rebase/retarget next package -> review diff -> rerun checks -> governance sync -> Owner review`
+
+Do not merge into an intermediate feature branch and report it as main. If a PR
+was merged only to a non-main base, keep it `STACKED_ONLY` and promote it again
+from current main.
+
+## 12. Known blockers and risks
+
+- STG-008 is `PASS`; its former runtime/tooling blockers and blocked records
+  are resolved historical evidence and must not be replayed.
+- API and real-Chrome browser-equivalent Owner login acceptance pass on exact
+  `1a3f2e...`; the former manual Phase-A gate is deferred by the Owner Twin
+  route and is not the current loop.
+- Chinatown target onboarding and AL-003 validate/execute/clone/replay remain
+  unexecuted and outside the current authorization.
+- The exact-RC Production gap, fixed state root, serialized exact-image tooling,
+  1 GiB resource gate, fresh preflight, backup integrity, isolated restore and
+  old-app-on-V10 rollback compatibility are resolved for
+  `RC-ST-DENIS-20260811-2661EB76` only.
+- Printing and Device/Pad field provisioning remain unimplemented/runtime-gated.
+- Chinatown REL-001/ACT-001 remain separately pending and were not activated by
+  the St-Denis promotion.
+
+### Recently resolved
+
+- AL-003 generic clone/profile/planner/API packages entered main.
+- PostgreSQL private-leaf mode-0700 preflight handling entered main via PR #59.
+- Owner decisions and access semantics entered main via PR #60.
+- Draft architecture and downstream preparation packages are already written;
+  do not regenerate them.
+- OPS-001 restart readiness/fail-closed repair entered main through PR #82 and
+  the fresh exact-SHA continuation produced valid same-image restart evidence.
+- The STG-008 guarded one-shot Flyway safety repair entered main through PR
+  #85 at `c95c3840fa972f84b3e5dbd345fef3e4c12aa8c6`; its publication itself did
+  not perform a runtime action.
+- PR #87 merged the blocked-state-safe release-rebind serialization repair at
+  `4b954e09a365fec909ed6da3ddf8fa9f13639cdc` after full shell regressions and
+  Agent 6 `ACCEPT`; it later supported the exact `6753855497...` Staging
+  rebind/deploy/readiness and old-pair recovery continuation.
+
+## 13. START HERE for the next Agent
+
+1. Run `git fetch origin --prune` without altering unrelated local work.
+2. Read this file, then read `ALIVE_RUNTIME_PLANBOOK.md`,
+   `AGILE_LOOP_OPERATING_MODEL.md`, `FEATURE_BACKLOG.md`, and the applicable
+   technical plan.
+3. Verify current `origin/main`; do not trust the Owner workspace branch tip.
+4. Verify historical GitHub PR #61 through #120, independent PR #66, and the
+   current exact-RC evidence PR semantics.
+5. Distinguish main, stacked Draft, Staging, and Production state.
+6. Report the completed exact-RC Production promotion and retain stop state
+   `PRODUCTION_EXACT_RC_PROMOTED_POST_DEPLOY_OBSERVATION_PASS`.
+7. Do not recreate or redesign packages #61-#70.
+8. Do not infer implementation from the planning packages.
+9. Read the TWIN-001 plan, STG-006, OPS-001, the STG-007 repair/final evidence, all STG-008
+   evidence records, [STG-009 Phase-A API evidence](STG-009_PHASE_A_OWNER_LOGIN_EVIDENCE.md)
+   and [browser-equivalent evidence](STG-009_PHASE_A_BROWSER_EQUIVALENT_ACCEPTANCE_EVIDENCE.md).
+   Treat `STG-008=PASS` and automated Phase-A API/browser-equivalent acceptance
+   on exact historical Staging `1a3f2e...` as foundation evidence. Exact
+   Staging `2661eb76...` remains the validated Operational Twin with MOCK
+   printing; exact Production `2661eb76...` now runs V10 with PAD_DIRECT.
+10. Do not continue `OWNER_FIELD_TEST_AND_BUG_FIX_LOOP`, rebind/redeploy
+    Staging, read or mutate Production, enter physical hardware gates, start
+    Chinatown onboarding/clone, restore/rollback, or implement modules without
+    a new explicit Owner decision.
+11. The completed promotion creates no automatic next runtime action. Stop at
+    the unique state above and await a new scoped objective/Owner gate.
+
+## 14. Auto-loop behavior
+
+For a future Owner-approved bounded task, follow Dependency Repair Auto-Loop,
+Continuous Agile Loop, Mandatory Governance Sync, and Planbook Ground Truth
+Rule. A clear bounded defect within that future authority should be repaired,
+tested, reviewed and documented without broadening runtime scope. This section
+does not keep the completed Production promotion loop active.
+
+Stop only for a real product/architecture ambiguity, security boundary,
+runtime mutation, Production action, irreversible operation, or dependency
+requiring Owner merge.
+
+## 15. Do not repeat
+
+- Do not redesign the AL-003 clone engine or create a second one.
+- Do not re-decide whether Chinatown is a real Store.
+- Do not re-decide the formal Production RC strategy.
+- Do not add a target Owner membership unless the authorization contract changes.
+- Do not re-fix the PostgreSQL mode-0700 preflight bug.
+- Do not revive historical stacked promotion branches.
+- Do not regenerate #61-#70 or implement duplicate equivalents.
+- Do not infer that a Draft, merge badge, repository migration, or local test is
+  deployed runtime evidence.
+
+## 16. Safety and evidence references
+
+Never place passwords, tokens, cookies, printer endpoints, customer data, raw
+menu payloads, raw idempotency keys, database credentials, SSH keys, or secrets
+in this handoff or future governance records.
+
+Primary authorities:
+
+- [Alive Runtime Planbook](ALIVE_RUNTIME_PLANBOOK.md)
+- [Feature Backlog](../FEATURE_BACKLOG.md)
+- [Agile Loop Operating Model](../AGILE_LOOP_OPERATING_MODEL.md)
+- [Known Issues Backlog](../KNOWN_ISSUES_BACKLOG.md)
+- [AL-003 technical plan](../agile/AL-003_STORE_MENU_CLONE_TECHNICAL_PLAN.md)
+- [AL-003 Staging acceptance plan](../agile/AL-003_STAGING_RELEASE_ACCEPTANCE_PLAN.md)
+- [STG-006 exact-main preflight evidence](STG-006_EXACT_MAIN_PREFLIGHT_EVIDENCE.md)
+- [OPS-001 local tooling evidence](OPS-001_STAGING_SECRET_SAFE_TOOLING_EVIDENCE.md)
+- [STG-007 Flyway success-token repair evidence](STG-007_FLYWAY_SUCCESS_TOKEN_REPAIR_EVIDENCE.md)
+- [STG-007 restart readiness/fail-closed repair evidence](STG-007_RESTART_READINESS_FAIL_CLOSED_REPAIR_EVIDENCE.md)
+- [STG-007 exact-SHA V10 continuation evidence](STG-007_EXACT_SHA_CONTINUATION_EVIDENCE.md)
+- [STG-008 synthetic topology/source entry evidence](STG-008_SYNTHETIC_TOPOLOGY_SOURCE_NO_GO_EVIDENCE.md)
+- [STG-008 guarded one-shot Flyway repair evidence](STG-008_STAGING_SYNTHETIC_FLYWAY_GUARD_REPAIR_EVIDENCE.md)
+- [STG-008 non-web request-context repair evidence](STG-008_NON_WEB_REQUEST_CONTEXT_REPAIR_EVIDENCE.md)
+- [STG-008 one-shot lifecycle repair evidence](STG-008_ONE_SHOT_LIFECYCLE_REPAIR_EVIDENCE.md)
+- [STG-009 Phase-A Owner login evidence](STG-009_PHASE_A_OWNER_LOGIN_EVIDENCE.md)
+- [STG-009 browser-equivalent acceptance evidence](STG-009_PHASE_A_BROWSER_EQUIVALENT_ACCEPTANCE_EVIDENCE.md)
+- [OPS-001 secret-safe tooling runbook](../../../../deployment/cloud/README_OPS001_STAGING_SECRET_SAFE_TOOLING.md)
+- [System Documentation](../../../../SYSTEM_DOCUMENTATION.md)
+- [API contract](../../../../doc/API.md)

@@ -1,4 +1,9 @@
-# Restaurant System API (MVP)
+# Restaurant System API
+
+> **Governance notice (2026-08-21):** this is the current API contract, not
+> Phase, Package, deployment or mutation authority. Current execution state is
+> owned by `docs/governance/CURRENT_STATE.yml`; historical status notes below
+> provide API evolution context only.
 
 > Phase B Part 1 Master fingerprint repair candidate (2026-08-16): the
 > provisioning catalog's `LANZHOU_CHAIN_MASTER_MENU/v1`
@@ -42,10 +47,10 @@
 > work must introduce explicit Master Menu read/versioning and Store
 > provisioning dry-run/execute/status contracts instead of re-enabling legacy
 > direct active Store creation. Future APIs must preserve the boundaries in
-> [CHAIN_MASTER_MENU_CONTRACT](../docs/governance/agile/CHAIN_MASTER_MENU_CONTRACT.md),
-> [STORE_MENU_MATERIALIZATION_CONTRACT](../docs/governance/agile/STORE_MENU_MATERIALIZATION_CONTRACT.md),
+> [CHAIN_MASTER_MENU_CONTRACT](../docs/governance/contracts/CHAIN_MASTER_MENU_CONTRACT.md),
+> [STORE_MENU_MATERIALIZATION_CONTRACT](../docs/governance/contracts/STORE_MENU_MATERIALIZATION_CONTRACT.md),
 > and
-> [PHASE_B_MENU_PROVISIONING_CONTRACT](../docs/governance/agile/PHASE_B_MENU_PROVISIONING_CONTRACT.md).
+> [PHASE_B_MENU_PROVISIONING_CONTRACT](../docs/governance/contracts/PHASE_B_MENU_PROVISIONING_CONTRACT.md).
 > That historical wait state is superseded for Phase B Part 1 by the
 > 2026-08-16 Owner authorization above; the API implementation still remains
 > unstarted until the Agent 6 plan review accepts the package plan.
@@ -109,7 +114,7 @@
 > Phase A1 Module Catalog (2026-08-13): the canonical product module catalog is
 > `backend/src/main/resources/module/module-catalog.v1.json`, with technical
 > evidence in
-> [PHASE_A1_MODULE_CATALOG](../docs/governance/agile/PHASE_A1_MODULE_CATALOG.md).
+> [PHASE_A1_MODULE_CATALOG](../docs/archive/governance-pre-simplification/agile/PHASE_A1_MODULE_CATALOG.md).
 > A1 is a contract/static-validation package only; no public API shape changes.
 > Current `/api/v1/me/workspaces` and `/api/v1/stores/{storeId}/context`
 > continue to expose workspace context but not final Store module state. A3 owns
@@ -248,11 +253,11 @@
 > no reconstructed Twin or API smoke ran. The historical NO-GO stop was
 > `TWIN-001_RECONSTRUCTION_NO_GO_WAITING_FOR_MANIFEST_COMPLETION_READ_APPROVAL`.
 > See the
-> [immutable NO-GO evidence](../docs/governance/runtime/TWIN-001_STAGING_RECONSTRUCTION_SCHEMA_NO_GO_EVIDENCE.md).
+> [immutable NO-GO evidence](../docs/archive/governance-pre-simplification/runtime/TWIN-001_STAGING_RECONSTRUCTION_SCHEMA_NO_GO_EVIDENCE.md).
 
 > TWIN-001 inventory boundary (2026-08-10): the Owner-approved Production
-> St-Denis configuration read is recorded in the [sanitized parity manifest](../docs/governance/runtime/ST_DENIS_TWIN_PARITY_MANIFEST.md)
-> and [inventory evidence](../docs/governance/runtime/TWIN-001_PRODUCTION_INVENTORY_EVIDENCE.md).
+> St-Denis configuration read is recorded in the [sanitized parity manifest](../docs/archive/governance-pre-simplification/runtime/ST_DENIS_TWIN_PARITY_MANIFEST.md)
+> and [inventory evidence](../docs/archive/governance-pre-simplification/runtime/TWIN-001_PRODUCTION_INVENTORY_EVIDENCE.md).
 > This is repository/evidence documentation only: no API contract changed and
 > no endpoint performs Staging reconstruction, Twin Sync, Production read,
 > deployment, migration, restart, or business-data mutation.
@@ -283,28 +288,36 @@ Twin, field-test and explicit resume gates are complete.
 ## Release and promotion boundary
 
 Release identity and promotion are governance contracts, not API endpoints.
-The canonical [Agile Loop release/promotion policy](../docs/governance/AGILE_LOOP_OPERATING_MODEL.md#83-canonical-release-promotion-drift-and-recovery-policy)
-requires an immutable RC after Twin/automated/Owner acceptance, promotion of
-the same artifact digests accepted in Staging, read-only drift detection with
-explicit sync approval, `APPLICATION_ROLLBACK_COMPATIBILITY_GATE`, and backup
-integrity plus restore-rehearsal readiness. No API call silently synchronizes
-Staging, deploys Production, restores a database, or activates Chinatown.
+The current [repository authority and Production policy](../docs/governance/AUTHORITY.md)
+requires an immutable Owner-approved release batch with exact artifacts,
+Staging acceptance, migration scope, backup, rollback and post-deploy checks.
+Archived Agile Loop material is historical context only. No API call silently
+synchronizes Staging, deploys Production, restores a database, or activates a
+Store.
 
-This document defines the core API endpoints for the restaurant management system MVP.
+This document defines the current API endpoints for the restaurant system.
 
 ## Base URL
 /api/v1
 
-## MVP Auth Context
+## Authentication Context
 
-For MVP, backend authorization uses request header:
-- `X-User-Id`
+The primary authenticated request contract is:
 
-Behavior:
-- backend loads the current user from `users`
-- backend resolves role from `roles`
-- backend enforces role capability checks server-side
-- this header-based context is temporary and should be replaceable by real login/auth later
+```text
+Authorization: Bearer <JWT access token>
+```
+
+`AuthTokenFilter` validates the access token, loads the active user and role,
+and installs the authenticated request context. Backend authorization then
+enforces role, Organization membership, Store membership and capability checks
+server-side as required by each API.
+
+`X-User-Id` is a legacy/local compatibility fallback controlled by
+`app.auth.x-user-id-fallback-enabled`. It is not the production authentication
+contract and shared/production-like environments must keep the fallback
+disabled through their safety configuration. New API design must not depend on
+this header.
 
 ## Store Access Scope
 
@@ -1381,7 +1394,7 @@ write status directly. Do not infer activation readiness from onboarding,
 menu-clone completion, a device heartbeat, or an existing `active` value.
 
 The future contract is planned in the `IN_MAIN` PR #69 document
-[AL-006 Store Activation Workflow Plan](../docs/governance/agile/AL-006_STORE_ACTIVATION_WORKFLOW_PLAN.md).
+[AL-006 Store Activation Workflow Plan](../docs/governance/drafts/AL-006_STORE_ACTIVATION_WORKFLOW_PLAN.md).
 It requires Profile-bound evidence from access/staff, menu, tables, printing,
 devices, login, and operational smoke checks before an approved workflow can
 perform a final status transition. This planning package adds no route, DTO,
