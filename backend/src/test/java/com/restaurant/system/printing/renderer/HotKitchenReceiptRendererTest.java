@@ -90,6 +90,77 @@ class HotKitchenReceiptRendererTest {
     }
 
     @Test
+    void stableComboSideDoesNotLeakIntoHotMainButSameCodeTrueAddonRemains() {
+        HotKitchenReceiptRenderer renderer = renderer();
+        PrintRenderRequest request = baseRequest();
+        request.printing_rules = PrintingDisplayRuleContext.defaultContext();
+        request.order_item_options.get(0).option_type_snapshot = "addon";
+
+        OrderItemOption comboSide = new OrderItemOption();
+        comboSide.order_item_id = request.order_items.get(0).id;
+        comboSide.option_type_snapshot = "addon";
+        comboSide.option_group_snapshot = "COMBO_SIDE";
+        comboSide.option_code_snapshot = "combo_edamame";
+        comboSide.option_name_snapshot_zh = "本店今日小菜";
+        comboSide.quantity = 1;
+
+        OrderItemOption trueAddon = new OrderItemOption();
+        trueAddon.order_item_id = request.order_items.get(0).id;
+        trueAddon.option_type_snapshot = "addon";
+        trueAddon.option_group_snapshot = "ADD_ON";
+        trueAddon.option_code_snapshot = "combo_edamame";
+        trueAddon.option_name_snapshot_zh = "毛豆";
+        trueAddon.quantity = 1;
+
+        request.order_item_options = List.of(request.order_item_options.get(0), comboSide, trueAddon);
+
+        String content = renderer.render(request);
+
+        assertTrue(content.contains("+煎"));
+        assertEquals(1, countOccurrences(content, "+毛豆"));
+        assertEquals(1, countOccurrences(content, "备注：less soup"));
+        assertFalse(content.contains("本店今日小菜"));
+    }
+
+    @Test
+    void hotRoutedSyntheticSideKeepsOwnInstructionsWithoutParentOptionsOrNote() {
+        HotKitchenReceiptRenderer renderer = renderer();
+        PrintRenderRequest request = baseRequest();
+        request.printing_rules = PrintingDisplayRuleContext.defaultContext();
+        request.order_item_options.get(0).option_type_snapshot = "addon";
+
+        OrderItemOption comboSide = new OrderItemOption();
+        comboSide.order_item_id = request.order_items.get(0).id;
+        comboSide.option_type_snapshot = "addon";
+        comboSide.option_group_snapshot = "COMBO_SIDE";
+        comboSide.option_code_snapshot = "combo_edamame";
+        comboSide.option_name_snapshot_zh = "毛豆";
+        comboSide.quantity = 1;
+        request.order_item_options = List.of(request.order_item_options.get(0), comboSide);
+
+        KitchenTask sideTask = new KitchenTask();
+        sideTask.id = 21L;
+        sideTask.order_id = request.order.id;
+        sideTask.order_item_id = request.order_items.get(0).id;
+        sideTask.station_code = "DEEPFRIED";
+        sideTask.item_name_snapshot_zh = "毛豆";
+        sideTask.item_name_snapshot_en = "Edamame";
+        sideTask.special_instructions_snapshot = "走花生";
+        sideTask.status = "pending";
+        sideTask.quantity = 1;
+        sideTask.priority = 100;
+        request.kitchen_tasks = List.of(request.kitchen_tasks.get(0), sideTask);
+
+        String content = renderer.render(request);
+
+        assertTrue(content.contains("毛豆 ×1"));
+        assertTrue(content.contains("走花生"));
+        assertEquals(1, countOccurrences(content, "+煎"));
+        assertEquals(1, countOccurrences(content, "备注：less soup"));
+        assertFalse(content.contains("+毛豆"));
+    }
+
+    @Test
     void rendersSplitTableSideLabelInChinese() {
         HotKitchenReceiptRenderer renderer = renderer();
         PrintRenderRequest request = baseRequest();

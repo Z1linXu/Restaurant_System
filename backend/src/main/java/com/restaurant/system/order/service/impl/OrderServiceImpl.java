@@ -52,6 +52,8 @@ import com.restaurant.system.production.repository.ProductionTaskRepository;
 import com.restaurant.system.printing.PrintModuleCode;
 import com.restaurant.system.printing.rules.PrintingDisplayRuleContext;
 import com.restaurant.system.printing.rules.PrintingDisplayRuleService;
+import com.restaurant.system.printing.semantic.ComboComponentSemanticResolver;
+import com.restaurant.system.printing.semantic.ComboComponentSemanticResolver.StandaloneSide;
 import com.restaurant.system.printing.service.PrintDispatcherService;
 import com.restaurant.system.station.entity.Station;
 import com.restaurant.system.station.repository.StationRepository;
@@ -111,7 +113,6 @@ public class OrderServiceImpl implements OrderService {
     private static final String PRODUCTION_SOURCE_KITCHEN_TASK = "kitchen_task";
     private static final String PRODUCTION_SOURCE_FRONTDESK_BEVERAGE = "frontdesk_beverage_item";
     private static final int DEFAULT_FRONTDESK_HISTORY_LIMIT = 20;
-    private static final int KITCHEN_TASK_PRIORITY_COMBO_SIDE = 100;
     private static final Set<String> ALLOWED_COMBO_ROLES = Set.of(
         COMBO_ROLE_MAIN,
         COMBO_ROLE_SIDE,
@@ -1936,8 +1937,7 @@ public class OrderServiceImpl implements OrderService {
         List<String> parts = new ArrayList<>();
         for (OrderItemOption option : options) {
             if (OPTION_TYPE_ADDON.equals(option.option_type_snapshot)) {
-                String addonCode = canonicalAddonCode(option.option_name_snapshot_zh);
-                if (isComboSideCode(addonCode)) {
+                if (ComboComponentSemanticResolver.isStandaloneSide(option)) {
                     continue;
                 }
                 String token = mapAddonToken(option, printingRules);
@@ -2207,7 +2207,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private boolean isComboSideKitchenTask(KitchenTask task) {
-        return task != null && Integer.valueOf(KITCHEN_TASK_PRIORITY_COMBO_SIDE).equals(task.priority);
+        return ComboComponentSemanticResolver.isSyntheticSideTask(task);
     }
 
     private record ComboSideSelection(String code, String labelZh, String labelEn, int quantity, List<String> instructions) {
@@ -2221,27 +2221,22 @@ public class OrderServiceImpl implements OrderService {
         List<OrderItemOption> options,
         PrintingDisplayRuleContext printingRules
     ) {
-        Map<String, ComboSideSelection> selections = new HashMap<>();
+        Map<String, ComboSideSelection> selections = new LinkedHashMap<>();
         for (OrderItemOption option : options) {
-            if (!OPTION_TYPE_ADDON.equals(option.option_type_snapshot) && !isOptionGroup(option, "COMBO_SIDE")) {
-                continue;
-            }
-            String code = resolveAddonCode(option);
-            if (!isComboSideCode(code)) {
+            StandaloneSide side = ComboComponentSemanticResolver.resolveStandaloneSide(option);
+            if (side == null) {
                 continue;
             }
             int optionQuantity = option.quantity == null ? 1 : option.quantity;
             int totalQuantity = optionQuantity * (orderItem.quantity == null ? 1 : orderItem.quantity);
             List<String> childInstructions = extractComboSideChildInstructions(option, options, printingRules);
-            ComboSideSelection selection = switch (code) {
-                case "combo_edamame" -> new ComboSideSelection(code, "毛豆", "Edamame", totalQuantity, childInstructions);
-                case "combo_shredded_potato" -> new ComboSideSelection(code, "土豆", "Shredded Potato", totalQuantity, childInstructions);
-                case "combo_cucumber_salad" -> new ComboSideSelection(code, "黄瓜", "Cucumber Salad", totalQuantity, childInstructions);
-                default -> null;
-            };
-            if (selection == null) {
-                continue;
-            }
+            ComboSideSelection selection = new ComboSideSelection(
+                side.code(),
+                side.labelZh(),
+                side.labelEn(),
+                totalQuantity,
+                childInstructions
+            );
             selections.put(selection.code(), selection);
         }
         return new ArrayList<>(selections.values());
@@ -2254,7 +2249,7 @@ public class OrderServiceImpl implements OrderService {
     ) {
         List<String> instructions = new ArrayList<>();
         for (OrderItemOption option : options) {
-            if (!isOptionGroup(option, "COMBO_SIDE_REMOVE")) {
+            if (!ComboComponentSemanticResolver.isSideRemoval(option)) {
                 continue;
             }
             if (sideOption.option_id == null || !sideOption.option_id.equals(option.parent_option_id_snapshot)) {
@@ -2298,7 +2293,7 @@ public class OrderServiceImpl implements OrderService {
                 : String.join(" ", selection.instructions());
             kitchenTask.status = KitchenTaskStatus.pending.name();
             kitchenTask.quantity = selection.quantity();
-            kitchenTask.priority = KITCHEN_TASK_PRIORITY_COMBO_SIDE;
+            kitchenTask.priority = ComboComponentSemanticResolver.SYNTHETIC_SIDE_TASK_PRIORITY;
             kitchenTask.created_at = now;
             tasks.add(kitchenTask);
         }
@@ -2341,7 +2336,7 @@ public class OrderServiceImpl implements OrderService {
                 task.order_item_id = orderItem.id;
                 task.store_id = order.store_id;
                 task.created_at = now;
-                task.priority = KITCHEN_TASK_PRIORITY_COMBO_SIDE;
+                task.priority = ComboComponentSemanticResolver.SYNTHETIC_SIDE_TASK_PRIORITY;
             }
             if (KitchenTaskStatus.cancelled.name().equals(task.status)
                 || KitchenTaskStatus.ready_for_pickup.name().equals(task.status)
@@ -2373,16 +2368,6 @@ public class OrderServiceImpl implements OrderService {
             task.cancelled_at = now;
             kitchenTaskRepository.save(task);
         }
-    }
-
-    private boolean isComboSideCode(String code) {
-        if (code == null) {
-            return false;
-        }
-        String normalized = code.toLowerCase();
-        return normalized.contains("combo_edamame")
-            || normalized.contains("combo_shredded_potato")
-            || normalized.contains("combo_cucumber_salad");
     }
 
     private boolean isComboSideOption(MenuItemOption option) {

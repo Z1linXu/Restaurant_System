@@ -1748,6 +1748,31 @@ Renderer behavior:
 - For noodle items routed because of fried egg, the ticket prints the whole kitchen-facing item line, not just an isolated egg.
 - The renderer reuses `kitchen_tasks.special_instructions_snapshot` so HOT_KITCHEN output stays aligned with existing GRAB/kitchen shorthand where possible.
 
+Combo component rendering contract:
+
+- The legacy standalone Combo sides are identified only by the stable pair
+  `option_group_snapshot = COMBO_SIDE` plus one of
+  `combo_edamame`, `combo_shredded_potato`, or
+  `combo_cucumber_salad`. Display names are not classification keys.
+- These components keep their existing synthetic `KitchenTask` identity
+  (`priority = 100`) and existing task station routing. Their component-level
+  child removals/instructions stay on the synthetic task, while the parent
+  `OrderItem.notes` belongs only to the main item.
+- GRAB prints synthetic Combo sides before the main item. Once represented by
+  a synthetic task, the same option is omitted from the main item's modifier
+  snapshot. An addon with the same display name or code but a different
+  semantic group remains a real main-item addon.
+- HOT_KITCHEN never inherits a parent item's aliases, modifiers, or note onto a
+  synthetic Combo-side task. A side appears there only when that task's own
+  existing station routing is hot. Combo fried egg remains a parent-line
+  option and continues to use `OptionSemanticResolver` eligibility; no egg
+  task or station identity is introduced.
+- Historical options missing the stable group or code fail safe: renderers do
+  not infer Combo-side ownership from a display label. Existing nonblank
+  `PrintJob.rendered_text_snapshot` reprints remain byte-for-byte snapshot
+  based. Preview, MOCK, REAL, and PAD_DIRECT continue to consume the same
+  renderer output, and FRONTDESK_RECEIPT semantics are unchanged.
+
 Print Center behavior:
 
 - `HOT_KITCHEN` assignment is active and editable.

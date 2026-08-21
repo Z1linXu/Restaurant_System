@@ -299,6 +299,68 @@ class GrabReceiptRendererTest {
     }
 
     @Test
+    void comboSidesRenderBeforeMainWithoutInheritingParentNoteOnOriginalAndUpdateTickets() {
+        for (boolean update : List.of(false, true)) {
+            Order order = baseOrder();
+            OrderItem main = frontdeskSoupNoodleItem(1L, 1, "传统牛肉面");
+            main.order_id = order.id;
+            main.category_code_snapshot = "SOUP_NOODLE";
+            main.notes = "这是主餐备注";
+
+            KitchenTask mainTask = task(10L, main.id, "NOODLE", "传统牛肉面", "大 | +蛋", 1);
+            KitchenTask edamameTask = task(11L, main.id, "COLD", "毛豆", null, 2);
+            edamameTask.priority = 100;
+            KitchenTask potatoTask = task(12L, main.id, "COLD", "土豆", "走花生", 1);
+            potatoTask.priority = 100;
+
+            PrintRenderRequest request = new PrintRenderRequest();
+            request.module_code = PrintModuleCode.GRAB;
+            request.order = order;
+            request.order_items = List.of(main);
+            request.order_item_options = List.of();
+            request.kitchen_tasks = List.of(mainTask, edamameTask, potatoTask);
+            request.is_update_ticket = update;
+            request.happened_at = order.submitted_at;
+
+            String output = stripMarkup(renderer.render(request));
+
+            assertTrue(output.indexOf("毛豆 x2") < output.indexOf("大×1 | +蛋"));
+            assertTrue(output.indexOf("土豆 x1") < output.indexOf("大×1 | +蛋"));
+            assertTrue(output.contains("土豆 x1\n走花生"));
+            assertEquals(1, countOccurrences(output, "备注：这是主餐备注"));
+            if (update) {
+                assertTrue(output.contains("UPDATED"));
+            }
+        }
+    }
+
+    @Test
+    void independentSameNameSideKeepsItsOwnNote() {
+        Order order = baseOrder();
+        OrderItem independentSide = new OrderItem();
+        independentSide.id = 2L;
+        independentSide.order_id = order.id;
+        independentSide.category_code_snapshot = "SIDE";
+        independentSide.item_name_snapshot_zh = "毛豆";
+        independentSide.notes = "独立小菜备注";
+        independentSide.quantity = 1;
+
+        KitchenTask task = task(20L, independentSide.id, "COLD", "毛豆", null, 1);
+
+        PrintRenderRequest request = new PrintRenderRequest();
+        request.module_code = PrintModuleCode.GRAB;
+        request.order = order;
+        request.order_items = List.of(independentSide);
+        request.order_item_options = List.of();
+        request.kitchen_tasks = List.of(task);
+        request.happened_at = order.submitted_at;
+
+        String output = stripMarkup(renderer.render(request));
+
+        assertTrue(output.contains("毛豆 x1\n备注：独立小菜备注"));
+    }
+
+    @Test
     void grabReceiptDisplaysSplitTableSidesInChinese() {
         assertTrue(renderNoodle("中", 1, "T1-A").contains("桌号：T1-左"));
         assertTrue(renderNoodle("中", 1, "T1-B").contains("桌号：T1-右"));
@@ -864,6 +926,21 @@ class GrabReceiptRendererTest {
         request.kitchen_tasks = tasks;
         request.happened_at = order.submitted_at;
         return stripMarkup(renderer.render(request));
+    }
+
+    private KitchenTask task(Long id, Long orderItemId, String stationCode, String nameZh, String special, int quantity) {
+        KitchenTask task = new KitchenTask();
+        task.id = id;
+        task.order_id = 100L;
+        task.order_item_id = orderItemId;
+        task.store_id = 1L;
+        task.station_code = stationCode;
+        task.item_name_snapshot_zh = nameZh;
+        task.special_instructions_snapshot = special;
+        task.status = "pending";
+        task.quantity = quantity;
+        task.created_at = LocalDateTime.of(2026, 6, 16, 12, 0).plusSeconds(id);
+        return task;
     }
 
     private Order baseOrder() {
