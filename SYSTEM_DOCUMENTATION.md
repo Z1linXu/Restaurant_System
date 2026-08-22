@@ -1,5 +1,16 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-22 Phase B Part 2 P0/P1 repair: Frontdesk now uses only Store-scoped
+> tables with guarded loading/switching, a single static SockJS/STOMP lifecycle
+> and bounded reconciliation. Printing requirements follow enabled logical
+> Store roles; endpoint-free MOCK supports PrintJob snapshots and reprints
+> without repeated 403 polling. Admin reads are Store-scoped, and reviewed
+> Staging release/log/disk hygiene plus request timing observability are active.
+> Exact implementation SHA `7dfe1e9d691941c6c36ee61aaaa69b4e17fca9ed`
+> is healthy on Staging with Flyway V26; Owner manual acceptance remains
+> pending. See
+> `docs/governance/PHASE_B_PART2_P0_P1_REPAIR_STAGING_EVIDENCE.md`.
+
 > 2026-08-23 Frontdesk browser bootstrap repair: the Vite browser bundle maps
 > the Node-style `global` reference used by SockJS transitive code to the
 > standard browser `globalThis`. This keeps static Frontdesk realtime imports
