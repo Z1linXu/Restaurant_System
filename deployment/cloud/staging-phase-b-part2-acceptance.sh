@@ -338,7 +338,6 @@ provision_store() {
   api_call provision POST \
     "/owner/organizations/$ORGANIZATION_ID/stores/$STORE_ID/phase-b/part2/provision" \
     "$body" "$ACCESS_TOKEN" "$key"
-  cp "$LAST_RESPONSE" "$PRIVATE_ROOT/provision.response"
   "$JQ_BIN" -e '
     .data.status == "COMPLETED"
     and .data.replayed == false
