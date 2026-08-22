@@ -8815,6 +8815,9 @@ removing accidental product and request complexity:
   host is shared and this package does not authorize Production logging changes.
   The fixed Staging `state/postgres` bind is metadata-validated as an explicit
   protected boundary and is never traversed by release evidence discovery.
+  Historical owner-owned regular evidence may retain its bounded legacy
+  non-executable mode inside the fixed owner-only evidence directory; the
+  retention tool never rewrites historical evidence to normalize permissions.
 
 This repair adds no Flyway migration, Owner readiness step, general Store
 delete UI, real Printer/Pad binding, Production mutation, KDS/Pickup
