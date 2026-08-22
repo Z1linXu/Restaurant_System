@@ -71,6 +71,54 @@ class OwnerMenuOptionServiceImplTest {
     }
 
     @Test
+    void legacyTypeOnlySizeWithoutCodeDoesNotBlockAddonRoundTrip() {
+        MenuItem item = menuItem(14L, 3L);
+        MenuItemOption legacySize = sizeOption(81L, null, true, 10);
+        legacySize.option_group = null;
+        legacySize.name_zh = "标准份";
+        legacySize.name_en = "Regular";
+        when(menuItemRepository.findById(14L)).thenReturn(Optional.of(item));
+        when(menuItemOptionRepository.findAllByMenuItemIdOrdered(14L)).thenReturn(List.of(legacySize));
+        when(menuItemOptionRepository.save(any(MenuItemOption.class))).thenAnswer(invocation -> {
+            MenuItemOption option = invocation.getArgument(0);
+            option.id = 90L;
+            return option;
+        });
+        MenuItemOptionUpsertRequest request = new MenuItemOptionUpsertRequest();
+        request.option_type = "addon";
+        request.option_group = "ADD_ON";
+        request.option_code = "fried_egg";
+        request.name_zh = "加煎蛋";
+        request.name_en = "Fried Egg";
+
+        var response = service.createOption(14L, request);
+
+        assertEquals("fried_egg", response.option_code);
+        verify(menuRevisionService).incrementRevision(3L);
+    }
+
+    @Test
+    void canonicalSizeWithoutCodeStillRejectsUnrelatedOptionMutation() {
+        MenuItem item = menuItem(14L, 3L);
+        MenuItemOption invalidSize = sizeOption(81L, null, true, 10);
+        when(menuItemRepository.findById(14L)).thenReturn(Optional.of(item));
+        when(menuItemOptionRepository.findAllByMenuItemIdOrdered(14L)).thenReturn(List.of(invalidSize));
+        MenuItemOptionUpsertRequest request = new MenuItemOptionUpsertRequest();
+        request.option_type = "addon";
+        request.option_group = "ADD_ON";
+        request.option_code = "fried_egg";
+        request.name_zh = "加煎蛋";
+        request.name_en = "Fried Egg";
+
+        BusinessException error = assertThrows(
+            BusinessException.class,
+            () -> service.createOption(14L, request)
+        );
+
+        assertEquals("SIZE option code is required", error.getMessage());
+    }
+
+    @Test
     void creatingSizeOptionThroughGenericEndpointIsRejected() {
         MenuItem item = menuItem(14L, 3L);
         when(menuItemRepository.findById(14L)).thenReturn(Optional.of(item));
@@ -223,12 +271,12 @@ class OwnerMenuOptionServiceImplTest {
         option.option_group = "SIZE";
         option.option_type = "size";
         option.option_code = code;
-        option.name_zh = switch (code) {
+        option.name_zh = switch (code == null ? "" : code) {
             case "size_small" -> "小碗";
             case "size_regular" -> "中碗";
             default -> "大碗";
         };
-        option.name_en = switch (code) {
+        option.name_en = switch (code == null ? "" : code) {
             case "size_small" -> "Small";
             case "size_regular" -> "Regular";
             default -> "Large";

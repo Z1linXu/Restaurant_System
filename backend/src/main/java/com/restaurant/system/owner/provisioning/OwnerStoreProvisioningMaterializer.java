@@ -8,6 +8,7 @@ import com.restaurant.system.menu.combo.StoreComboGroupRepository;
 import com.restaurant.system.menu.entity.MenuCategory;
 import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.entity.MenuItemOption;
+import com.restaurant.system.menu.pricing.StandardSize;
 import com.restaurant.system.menu.pricing.StorePricingPolicy;
 import com.restaurant.system.menu.pricing.StorePricingPolicyRepository;
 import com.restaurant.system.menu.repository.MenuCategoryRepository;
@@ -326,20 +327,25 @@ public class OwnerStoreProvisioningMaterializer {
         LocalDateTime now
     ) {
         Map<String, MenuItemOption> optionByMasterKey = new LinkedHashMap<>();
+        Map<String, ProvisionedStandardSizePlan.Decision> standardSizePlan =
+            ProvisionedStandardSizePlan.from(input.options());
         for (ChainMasterMenuOptionEntity masterOption : input.options()) {
             MenuItem item = Optional.ofNullable(itemByMasterKey.get(masterOption.master_product_key))
                 .orElseThrow(() -> conflict("MASTER_PRODUCT_UNRESOLVED", masterOption.master_product_key));
             MenuItemOption option = new MenuItemOption();
             option.menu_item_id = item.id;
-            option.option_type = masterOption.option_type;
-            option.option_code = masterOption.code;
-            option.option_group = masterOption.option_group;
+            ProvisionedStandardSizePlan.Decision sizeDecision = standardSizePlan.get(masterOption.master_option_key);
+            applyOptionIdentity(option, masterOption, sizeDecision);
             option.parent_option_id = null;
             option.sort_order = masterOption.sort_order;
-            option.name_zh = masterOption.name_zh;
-            option.name_en = masterOption.name_en;
+            if (sizeDecision == null) {
+                option.name_zh = masterOption.name_zh;
+                option.name_en = masterOption.name_en;
+            }
             option.price_delta = masterOption.price_delta == null ? BigDecimal.ZERO : masterOption.price_delta;
-            option.is_active = masterOption.default_active;
+            if (sizeDecision == null) {
+                option.is_active = masterOption.default_active;
+            }
             option.created_at = now;
             option.updated_at = now;
             MenuItemOption saved = optionRepository.save(option);
@@ -368,6 +374,39 @@ public class OwnerStoreProvisioningMaterializer {
             option.updated_at = now;
             optionRepository.save(option);
         }
+    }
+
+    static void applyOptionIdentity(
+        MenuItemOption option,
+        ChainMasterMenuOptionEntity masterOption,
+        ProvisionedStandardSizePlan.Decision sizeDecision
+    ) {
+        if (sizeDecision == null) {
+            option.option_type = masterOption.option_type;
+            option.option_code = masterOption.code;
+            option.option_group = masterOption.option_group;
+            return;
+        }
+
+        StandardSize size = sizeDecision.size();
+        option.option_type = "size";
+        option.parent_option_id = null;
+        option.is_active = sizeDecision.active();
+        if (sizeDecision.canonical()) {
+            option.option_group = "SIZE";
+            option.option_code = size.code;
+            option.name_zh = size.labelZh;
+            option.name_en = size.labelEn;
+            return;
+        }
+
+        // Retain one Store-local row and Master mapping for every legacy Master
+        // option, but keep duplicate/inactive legacy Size rows outside the
+        // canonical SIZE set with a stable Master-derived identity.
+        option.option_group = null;
+        option.option_code = ProvisionedStandardSizePlan.stableLegacyCode(masterOption, size);
+        option.name_zh = masterOption.name_zh;
+        option.name_en = masterOption.name_en;
     }
 
     private void materializePricingPolicy(Long storeId, StoreProfileArtifactEntity pricingArtifact, LocalDateTime now) {

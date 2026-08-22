@@ -160,7 +160,7 @@ public class StorePricingPolicyServiceImpl implements StorePricingPolicyService 
         List<MenuItemOption> existing = menuItemOptionRepository.findAllByMenuItemIdOrdered(itemId);
         Map<StandardSize, MenuItemOption> canonical = new LinkedHashMap<>();
         for (MenuItemOption option : existing) {
-            resolveSize(option).ifPresent(size -> canonical.putIfAbsent(size, option));
+            resolveSize(option).ifPresent(size -> canonical.merge(size, option, this::preferCanonicalSizeOption));
         }
 
         int sort = 10;
@@ -384,6 +384,21 @@ public class StorePricingPolicyServiceImpl implements StorePricingPolicyService 
     private boolean isSizeOption(MenuItemOption option) {
         return "SIZE".equalsIgnoreCase(blankToEmpty(option.option_group))
             || "size".equalsIgnoreCase(blankToEmpty(option.option_type));
+    }
+
+    private MenuItemOption preferCanonicalSizeOption(MenuItemOption current, MenuItemOption candidate) {
+        boolean currentCanonical = isCanonicalSizeIdentity(current);
+        boolean candidateCanonical = isCanonicalSizeIdentity(candidate);
+        if (currentCanonical != candidateCanonical) {
+            return candidateCanonical ? candidate : current;
+        }
+        return current;
+    }
+
+    private boolean isCanonicalSizeIdentity(MenuItemOption option) {
+        return option != null
+            && GROUP_SIZE.equalsIgnoreCase(blankToEmpty(option.option_group))
+            && StandardSize.fromCode(option.option_code).isPresent();
     }
 
     private boolean isComboUpcharge(MenuItemOption option) {

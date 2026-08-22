@@ -5,6 +5,16 @@
 > owned by `docs/governance/CURRENT_STATE.yml`; historical status notes below
 > provide API evolution context only.
 
+> Owner Menu Size compatibility contract: Phase B provisioning returns one
+> canonical Store-local option per enabled standard Size with `option_group`
+> `SIZE` and stable `option_code` `size_small`, `size_regular` or `size_large`.
+> `PUT /api/v1/admin/menu/items/{itemId}/size-configuration` prefers those
+> canonical identities during read-modify-save and can promote compatible
+> type-only legacy Size rows when an older Store explicitly saves Size
+> Configuration. Generic ADD_ON/REMOVE mutations ignore noncanonical type-only
+> legacy Size rows but continue to reject a canonical `SIZE` row whose code is
+> missing. Endpoint paths and request/response shapes are unchanged.
+
 > Phase B Part 1 Master fingerprint repair candidate (2026-08-16): the
 > provisioning catalog's `LANZHOU_CHAIN_MASTER_MENU/v1`
 > `master_menu_fingerprint_sha256` is aligned to the runtime canonical

@@ -131,6 +131,36 @@ class StorePricingPolicyServiceImplTest {
         verify(menuRevisionService).incrementRevision(3L);
     }
 
+    @Test
+    void sizeConfigurationPrefersExistingCanonicalIdentityOverEarlierLegacyRow() {
+        MenuItem item = new MenuItem();
+        item.id = 14L;
+        item.store_id = 3L;
+        List<MenuItemOption> stored = new ArrayList<>();
+        stored.add(option(81L, "size", null, null, "标准份", "Regular", false, 5, BigDecimal.ZERO));
+        stored.add(option(82L, "size", "size_regular", "SIZE", "中碗", "Regular", true, 70, BigDecimal.ZERO));
+        stored.add(option(83L, "size", "size_large", "SIZE", "大碗", "Large", true, 80, new BigDecimal("2.00")));
+
+        when(menuItemRepository.findById(14L)).thenReturn(Optional.of(item));
+        when(storeRepository.existsById(3L)).thenReturn(true);
+        when(storePricingPolicyRepository.findByStoreId(3L)).thenReturn(Optional.of(policy(3L)));
+        when(menuItemOptionRepository.findAllByMenuItemIdOrdered(14L)).thenAnswer(invocation -> stored.stream()
+            .sorted(Comparator.comparing((MenuItemOption option) -> option.sort_order == null ? Integer.MAX_VALUE : option.sort_order)
+                .thenComparing(option -> option.id))
+            .toList());
+        when(menuItemOptionRepository.save(any(MenuItemOption.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        MenuItemSizeConfigurationRequest request = new MenuItemSizeConfigurationRequest();
+        request.enabled_size_codes = List.of("size_regular", "size_large");
+
+        service.updateSizeConfiguration(14L, request);
+
+        assertEquals("size_regular", stored.stream().filter(option -> option.id.equals(82L)).findFirst().orElseThrow().option_code);
+        assertTrue(stored.stream().filter(option -> option.id.equals(82L)).findFirst().orElseThrow().is_active);
+        assertFalse(stored.stream().filter(option -> option.id.equals(81L)).findFirst().orElseThrow().is_active);
+        verify(menuRevisionService).incrementRevision(3L);
+    }
+
     private StorePricingPolicy policy(Long storeId) {
         StorePricingPolicy policy = new StorePricingPolicy();
         policy.id = 7L;
