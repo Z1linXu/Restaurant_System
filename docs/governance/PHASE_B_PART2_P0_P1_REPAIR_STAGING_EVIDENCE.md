@@ -4,6 +4,10 @@ Date: 2026-08-22 (America/Toronto)
 
 Implementation authority: `7dfe1e9d691941c6c36ee61aaaa69b4e17fca9ed`
 
+Final exact Staging artifact: `ae446874e6a6bc7d2c19cdbc1ca92603ed53d6de`
+(PR #209 governance/evidence sync; application code is the reviewed
+implementation above)
+
 Environment: isolated Staging (`restaurant-pos-staging`)
 
 Flyway: V26 (26 migrations validated; no migration added)
@@ -106,6 +110,7 @@ The shared coordinator cancels on Store/order change and unmount, rejects stale 
 - Initial documentation: PR #199 (`30da94adfd1dad37276326832efdadac6d2edc53`)
 - Reviewed Staging hygiene compatibility repairs: PRs #200–#207
 - Browser `globalThis` repair: PR #208, final implementation SHA `7dfe1e9d691941c6c36ee61aaaa69b4e17fca9ed`
+- Governance/evidence sync: PR #209, exact Staging artifact `ae446874e6a6bc7d2c19cdbc1ca92603ed53d6de`
 
 ## Remaining risks
 

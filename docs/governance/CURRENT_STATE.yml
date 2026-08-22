@@ -13,7 +13,7 @@ phase:
   next_phase_authorized: false
 
 staging:
-  deployed_sha: 7dfe1e9d691941c6c36ee61aaaa69b4e17fca9ed
+  deployed_sha: ae446874e6a6bc7d2c19cdbc1ca92603ed53d6de
   flyway: V26
   acceptance: PHASE_B_PART2_STAGING_AUTOMATED_ACCEPTANCE_PASS
   evidence: PHASE_B_PART2_PRODUCT_FLOW_STAGING_ACCEPTANCE_EVIDENCE.md

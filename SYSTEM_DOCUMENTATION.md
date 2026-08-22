@@ -7,8 +7,9 @@
 > without repeated 403 polling. Admin reads are Store-scoped, and reviewed
 > Staging release/log/disk hygiene plus request timing observability are active.
 > Exact implementation SHA `7dfe1e9d691941c6c36ee61aaaa69b4e17fca9ed`
-> is healthy on Staging with Flyway V26; Owner manual acceptance remains
-> pending. See
+> is represented by final exact Staging artifact
+> `ae446874e6a6bc7d2c19cdbc1ca92603ed53d6de` after governance/evidence sync;
+> Flyway remains V26 and Owner manual acceptance remains pending. See
 > `docs/governance/PHASE_B_PART2_P0_P1_REPAIR_STAGING_EVIDENCE.md`.
 
 > 2026-08-23 Frontdesk browser bootstrap repair: the Vite browser bundle maps
