@@ -1,5 +1,10 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-23 Frontdesk browser bootstrap repair: the Vite browser bundle maps
+> the Node-style `global` reference used by SockJS transitive code to the
+> standard browser `globalThis`. This keeps static Frontdesk realtime imports
+> bootable without adding a product step or changing the WebSocket contract.
+
 > 2026-08-23 Staging hygiene compatibility repair: BuildKit cache dry-run now
 > consumes Docker Buildx's fixed, delimiter-safe Go-template fields directly.
 > It no longer requires host `jq`, while retaining strict field validation,
