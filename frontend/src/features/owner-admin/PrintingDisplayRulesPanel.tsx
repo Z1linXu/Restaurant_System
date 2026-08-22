@@ -224,7 +224,12 @@ export function PrintingDisplayRulesPanel({ storeId, onToast }: PrintingDisplayR
     try {
       setSaving(true)
       const saved = await savePrintingDisplayRuleDraft(storeId, content, summary)
-      onToast?.(`Printing display rule draft saved: v${saved.revision_number}.`, 'success')
+      onToast?.(
+        saved.lifecycle_result === 'ALREADY_ACTIVE'
+          ? `Printing display rules are already active as v${saved.revision_number}.`
+          : `Printing display rule draft saved: v${saved.revision_number}.`,
+        'success',
+      )
       const next = await fetchPrintingDisplayRules(storeId)
       setSettings(next)
       setContent(activeContentFrom(next))

@@ -42,4 +42,22 @@ class PrintingDisplayRuleMigrationTest {
             .doesNotContain("credential")
             .doesNotContain("printer_endpoint");
     }
+
+    @Test
+    void v22MakesFingerprintQueryableButNotHistoricallyUniqueAndEnforcesOneDraft() throws IOException {
+        String migration = new ClassPathResource(
+            "db/migration/V22__repair_printing_display_rule_revision_lifecycle.sql"
+        ).getContentAsString(StandardCharsets.UTF_8).toLowerCase();
+
+        assertThat(migration)
+            .contains("drop constraint uq_printing_display_rule_revisions_fingerprint")
+            .contains("create index idx_printing_display_rule_revisions_set_fingerprint")
+            .contains("(rule_set_id, fingerprint_sha256)")
+            .contains("create unique index uq_printing_display_rule_revisions_single_draft")
+            .contains("where status = 'draft'")
+            .doesNotContain("delete from")
+            .doesNotContain("update public.printing_display_rule_revisions")
+            .doesNotContain("drop table")
+            .doesNotContain("truncate");
+    }
 }

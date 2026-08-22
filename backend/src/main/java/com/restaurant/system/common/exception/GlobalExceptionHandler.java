@@ -9,6 +9,7 @@ import com.restaurant.system.order.exception.OrderSubmissionException;
 import com.restaurant.system.owner.exception.OwnerStoreMenuCloneException;
 import com.restaurant.system.owner.exception.OwnerStoreOnboardingException;
 import com.restaurant.system.owner.exception.OwnerStoreProvisioningException;
+import com.restaurant.system.printing.rules.PrintingDisplayRuleConflictException;
 import jakarta.validation.ConstraintViolationException;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
@@ -44,6 +45,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(OwnerStoreProvisioningException.class)
     public ResponseEntity<ApiResponse<Void>> handleOwnerStoreProvisioningException(OwnerStoreProvisioningException ex) {
+        return ResponseEntity.status(ex.getStatus()).body(ApiResponse.failure(ex.getErrorCode(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(PrintingDisplayRuleConflictException.class)
+    public ResponseEntity<ApiResponse<Void>> handlePrintingDisplayRuleConflictException(PrintingDisplayRuleConflictException ex) {
         return ResponseEntity.status(ex.getStatus()).body(ApiResponse.failure(ex.getErrorCode(), ex.getMessage()));
     }
 

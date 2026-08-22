@@ -1,7 +1,6 @@
 package com.restaurant.system.printing.rules;
 
 import java.util.List;
-import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -32,8 +31,9 @@ public interface PrintingDisplayRuleRevisionRepository extends JpaRepository<Pri
         select revision from PrintingDisplayRuleRevision revision
         where revision.rule_set_id = :ruleSetId
           and revision.fingerprint_sha256 = :fingerprintSha256
+        order by revision.revision_number desc, revision.id desc
         """)
-    Optional<PrintingDisplayRuleRevision> findByRuleSetIdAndFingerprintSha256(
+    List<PrintingDisplayRuleRevision> findAllByRuleSetIdAndFingerprintSha256OrderByRevisionNumberDesc(
         @Param("ruleSetId") Long ruleSetId,
         @Param("fingerprintSha256") String fingerprintSha256
     );

@@ -176,9 +176,12 @@ public class OwnerPrintingController {
     ) {
         var user = requirePrintingConfigurationAccess(request.store_id);
         PrintingDisplayRuleRevisionResponse response = printingDisplayRuleService.saveDraft(request);
-        recordAudit(request.store_id, user, "PRINTING_DISPLAY_RULE_DRAFT_SAVED", "PRINTING_DISPLAY_RULE_REVISION",
-            response.id, "Printing display rule draft saved", Map.of("fingerprint_sha256", response.fingerprint_sha256), servletRequest);
-        return ApiResponse.success("Printing display rule draft saved", response);
+        boolean alreadyActive = "ALREADY_ACTIVE".equals(response.lifecycle_result);
+        String auditAction = alreadyActive ? "PRINTING_DISPLAY_RULE_ALREADY_ACTIVE" : "PRINTING_DISPLAY_RULE_DRAFT_SAVED";
+        String message = alreadyActive ? "Printing display rules are already active" : "Printing display rule draft saved";
+        recordAudit(request.store_id, user, auditAction, "PRINTING_DISPLAY_RULE_REVISION",
+            response.id, message, Map.of("fingerprint_sha256", response.fingerprint_sha256), servletRequest);
+        return ApiResponse.success(message, response);
     }
 
     @PostMapping("/display-rules/validate")
