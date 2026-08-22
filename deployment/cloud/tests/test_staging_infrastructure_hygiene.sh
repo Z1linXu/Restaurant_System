@@ -186,13 +186,24 @@ FAKE_DOCKER_DIR="$TMP_DIR/fake-docker"
 mkdir -p "$FAKE_DOCKER_DIR"
 DOCKER_MARKER="$TMP_DIR/fake-docker.pruned"
 DOCKER_CALLS="$TMP_DIR/fake-docker.calls"
+BUILDER_MODE="$TMP_DIR/fake-builder.mode"
 cat >"$FAKE_DOCKER_DIR/docker" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 printf '%s\n' "\$*" >>"$DOCKER_CALLS"
 case "\$*" in
   *'context inspect default'*) printf 'unix:///var/run/docker.sock\n' ;;
-  *'buildx inspect --builder default'*) printf 'default|docker\n' ;;
+  *'buildx inspect default'*)
+    mode="\$(cat "$BUILDER_MODE" 2>/dev/null || true)"
+    case "\$mode" in
+      partial-nonzero) printf '%s\n' 'Name: default' 'Driver: docker' 'Status: running'; exit 88 ;;
+      conflicting-status) printf '%s\n' 'Name: default' 'Driver: docker' 'Status: running' 'Status: stopped' ;;
+      conflicting-driver) printf '%s\n' 'Name: default' 'Driver: docker' 'Driver: remote' 'Status: running' ;;
+      conflicting-name) printf '%s\n' 'Name: default' 'Name: unexpected' 'Driver: docker' 'Status: running' ;;
+      extra-token) printf '%s\n' 'Name: default extra' 'Driver: docker' 'Status: running' ;;
+      *) printf '%s\n' 'Name: default' 'Driver: docker' 'Nodes:' 'Name: default' 'Status: running' ;;
+    esac
+    ;;
   *'buildx du --help'*) printf '%s\n' '--format --filter' ;;
   *'buildx prune --help'*) printf '%s\n' '--filter --force --keep-storage' ;;
   *' ps --format {{.Image}}'*)
@@ -227,6 +238,18 @@ assert_contains 'BUILDKIT_CACHE|PROTECTED|PRODUCTION_IMAGE|restaurant-pos-backen
 assert_contains 'BUILDKIT_CACHE|PROTECTED|STAGING_IMAGE|restaurant-pos-backend:staging-' "$BUILD_PLAN"
 assert_contains 'BUILDKIT_CACHE|ELIGIBLE_ID|cache-safe|size=1.234kB' "$BUILD_PLAN"
 assert_not_contains 'cache-in-use' "$BUILD_PLAN"
+expect_builder_failure() {
+  local mode="$1"
+  printf '%s\n' "$mode" >"$BUILDER_MODE"
+  expect_failure "buildkit_builder_${mode}" bash -c \
+    "PATH='$FAKE_DOCKER_DIR:$FAKE_FLOCK_DIR:$PATH'; source '$BUILD_SCRIPT'; HYGIENE_EXPECTED_ROOT='$BUILD_ROOT'; HYGIENE_ROOT='$BUILD_ROOT'; main --dry-run --env-file '$BUILD_ROOT/config/.env.staging' --production-image restaurant-pos-backend:production-sha"
+  rm -f "$BUILDER_MODE"
+}
+expect_builder_failure partial-nonzero
+expect_builder_failure conflicting-status
+expect_builder_failure conflicting-driver
+expect_builder_failure conflicting-name
+expect_builder_failure extra-token
 expect_failure buildkit_extra_field_rejected bash -c \
   "source '$BUILD_SCRIPT'; scan_cache_records 'cache-safe|true|false|false|0|2 weeks ago|1.234kB|regular|unexpected'"
 expect_failure buildkit_unsafe_size_rejected bash -c \

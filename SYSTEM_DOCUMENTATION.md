@@ -4,6 +4,8 @@
 > consumes Docker Buildx's fixed, delimiter-safe Go-template fields directly.
 > It no longer requires host `jq`, while retaining strict field validation,
 > exact-plan replay, protected active/Production images, and cache-only scope.
+> Builder identity uses the broadly supported fixed-name inspect output and
+> requires the local `default`/`docker` builder node to be running.
 
 > **Governance notice (2026-08-21):** this file is the supporting current
 > technical reference, not Phase, Package, Gate, next-action or deployment

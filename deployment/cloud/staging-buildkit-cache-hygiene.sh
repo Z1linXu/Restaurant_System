@@ -110,8 +110,27 @@ validate_docker_cli() {
   ENV_BIN="$(hygiene_require_command env)"
   context_host="$(docker_safe context inspect default --format '{{.Endpoints.docker.Host}}' 2>/dev/null || true)"
   [[ "$context_host" == unix://* ]] || hygiene_die "Docker default context must be a local Unix socket"
-  builder_info="$(docker_safe buildx inspect --builder "$BUILDER" --format '{{.Name}}|{{.Driver}}' 2>/dev/null || true)"
-  [[ "$builder_info" == *'|'* && "$builder_info" != *$'\n'* ]] || hygiene_die "fixed default BuildKit builder metadata is unavailable"
+  builder_info="$(docker_safe buildx inspect "$BUILDER" 2>/dev/null)" ||
+    hygiene_die "fixed default BuildKit builder metadata is unavailable"
+  printf '%s\n' "$builder_info" | awk -v expected_name="$BUILDER" '
+    $1 == "Name:" {
+      if (NF != 2 || $2 != expected_name) invalid = 1
+      names++
+      next
+    }
+    $1 == "Driver:" {
+      if (NF != 2 || $2 != "docker" || drivers != 0) invalid = 1
+      drivers++
+      next
+    }
+    $1 == "Status:" {
+      if (NF != 2 || $2 != "running" || statuses != 0) invalid = 1
+      statuses++
+      next
+    }
+    END { exit !(invalid == 0 && names >= 1 && drivers == 1 && statuses == 1) }
+  ' ||
+    hygiene_die "fixed default BuildKit builder metadata is unavailable"
   buildx_du_help="$(docker_safe buildx du --help 2>/dev/null || true)"
   [[ "$buildx_du_help" == *'--format'* && "$buildx_du_help" == *'--filter'* ]] || hygiene_die "BuildKit disk-usage JSON/filter API is unavailable"
   buildx_prune_help="$(docker_safe buildx prune --help 2>/dev/null || true)"
