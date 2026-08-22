@@ -3,7 +3,7 @@ updated_at: 2026-08-22
 
 repository:
   ref: origin/main
-  sha: 7bebe49f81ba45d151a4b8934a1d143c8925311d
+  sha: d0b1bde3a0e3382032a214a315703c5c18d4d058
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
@@ -13,10 +13,10 @@ phase:
   next_phase_authorized: false
 
 staging:
-  deployed_sha: 7bebe49f81ba45d151a4b8934a1d143c8925311d
+  deployed_sha: d0b1bde3a0e3382032a214a315703c5c18d4d058
   flyway: V26
   acceptance: PHASE_B_PART2_STAGING_AUTOMATED_ACCEPTANCE_PASS
-  evidence: PHASE_B_PART2_STAGING_AUTOMATED_ACCEPTANCE_EVIDENCE.md
+  evidence: PHASE_B_PART2_PRODUCT_FLOW_STAGING_ACCEPTANCE_EVIDENCE.md
   cleanup_evidence: PHASE_B_STAGING_SYNTHETIC_FIXTURE_CLEANUP_EXECUTION_EVIDENCE.md
 
 production:
@@ -32,7 +32,7 @@ gate:
 authorization:
   repository_governance: COMPLETE
   phase_b_part1: OWNER_ACCEPTED_CLOSED
-  phase_b_part2: OWNER_AUTHORIZED_IMPLEMENTATION
+  phase_b_part2: IMPLEMENTATION_AND_STAGING_AUTOMATED_ACCEPTANCE_COMPLETE_OWNER_MANUAL_ACCEPTANCE_PENDING
   phase_c: NONE
   staging: STANDING_AUTHORIZED_FOR_PHASE_B_PART2_EXACT_SHA_DEPLOY_ACCEPTANCE_AND_BOUNDED_REPAIR
   production: NONE
