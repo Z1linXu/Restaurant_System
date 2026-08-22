@@ -236,11 +236,11 @@ public class OrderController {
     }
 
     private void requireOrdering(Long storeId) {
-        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.ORDERING_POS);
+        moduleAccessEvaluator.requireOperationalCapability(storeId, ModuleKeys.ORDERING_POS);
     }
 
     private void requirePrinting(Long storeId) {
-        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.PRINTING);
+        moduleAccessEvaluator.requireOperationalCapability(storeId, ModuleKeys.PRINTING);
     }
 
     private Long resolveOrderStoreId(Long orderId) {

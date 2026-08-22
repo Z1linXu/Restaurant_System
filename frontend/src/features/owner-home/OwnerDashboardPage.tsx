@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { navigateTo } from '../frontdesk/navigation'
 import { buildStorePath } from '../store/storeRoutes'
@@ -6,7 +6,10 @@ import { getApiUserMessage } from '../../services/apiClient'
 import {
   fetchOwnerStoreProvisioningCatalog,
   provisionOwnerStore,
+  resolveOwnerStoreProvisioningAttempt,
+  shouldRotateOwnerStoreProvisioningAttempt,
   type OwnerStoreProvisioningCatalog,
+  type OwnerStoreProvisioningAttempt,
   type OwnerStoreProvisioningResult,
 } from '../../services/ownerStoreProvisioningService'
 import {
@@ -15,13 +18,7 @@ import {
   type OwnerOverviewResponse,
   type OwnerOverviewStore,
 } from '../../services/ownerWorkspaceService'
-import {
-  activateOwnerStorePart2,
-  fetchOwnerStorePart2Readiness,
-  provisionOwnerStorePart2,
-  type StorePart2ProvisioningResponse,
-  type StoreReadinessResponse,
-} from '../../services/ownerStorePart2Service'
+import { isStoreLive } from '../store/storeOperationalState'
 
 function formatMoney(value: number | null | undefined) {
   if (value == null) return 'N/A'
@@ -68,16 +65,11 @@ function normalizeStoreCode(value: string) {
 }
 
 function storeCodeFromName(name: string) {
-  return normalizeStoreCode(name) || 'PHASE_B_TEST_STORE'
+  return normalizeStoreCode(name) || 'NEW_STORE'
 }
 
 function isOperationalStore(store: OwnerOverviewStore) {
-  const status = (store.status ?? 'active').toLowerCase()
-  const lifecycle = (store.lifecycle_status ?? 'ACTIVE').toUpperCase()
-  const kind = (store.store_kind ?? 'BUSINESS').toUpperCase()
-  return status === 'active'
-    && lifecycle === 'ACTIVE'
-    && (kind === 'BUSINESS' || isPhaseBProvisionedStore(store))
+  return isStoreLive(store)
 }
 
 function isPhaseBProvisionedStore(store: OwnerOverviewStore) {
@@ -87,10 +79,6 @@ function isPhaseBProvisionedStore(store: OwnerOverviewStore) {
 function isVisibleOwnerStore(store: OwnerOverviewStore) {
   return (store.store_kind ?? 'BUSINESS').toUpperCase() !== 'VALIDATION_FIXTURE'
     || isPhaseBProvisionedStore(store)
-}
-
-function countValue(result: OwnerStoreProvisioningResult | null, key: keyof OwnerStoreProvisioningResult['counts']) {
-  return result?.counts?.[key] ?? 0
 }
 
 function Metric({ label, value, tone = 'default' }: { label: string; value: string | number; tone?: 'default' | 'danger' | 'muted' }) {
@@ -171,165 +159,10 @@ function StoreAction({
   )
 }
 
-function Part2ReadinessPanel({
-  organizationId,
-  store,
-  onActivated,
-}: {
-  organizationId: number
-  store: OwnerOverviewStore
-  onActivated: () => void
-}) {
-  const [readiness, setReadiness] = useState<StoreReadinessResponse | null>(null)
-  const [provisionResult, setProvisionResult] = useState<StorePart2ProvisioningResponse | null>(null)
-  const [activationResult, setActivationResult] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const live = isOperationalStore(store)
-
-  const loadReadiness = useCallback(() => {
-    setLoading(true)
-    setError(null)
-    fetchOwnerStorePart2Readiness(organizationId, store.id)
-      .then((nextReadiness) => setReadiness(nextReadiness))
-      .catch((exception) => setError(getApiUserMessage(exception, 'Unable to load Store readiness.')))
-      .finally(() => setLoading(false))
-  }, [organizationId, store.id])
-
-  useEffect(() => {
-    void Promise.resolve().then(() => loadReadiness())
-  }, [loadReadiness])
-
-  const handleProvision = async () => {
-    try {
-      setSubmitting(true)
-      setError(null)
-      setActivationResult(null)
-      const result = await provisionOwnerStorePart2(organizationId, store.id)
-      setProvisionResult(result)
-      setReadiness(result.readiness)
-    } catch (exception) {
-      setError(getApiUserMessage(exception, 'Part 2 provisioning failed.'))
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const handleActivate = async () => {
-    if (!readiness?.ready) return
-    try {
-      setSubmitting(true)
-      setError(null)
-      const result = await activateOwnerStorePart2(
-        organizationId,
-        store.id,
-        readiness.readiness_fingerprint,
-      )
-      setReadiness(result.readiness)
-      setActivationResult(`${result.status} · ${result.target_state}`)
-      onActivated()
-    } catch (exception) {
-      setError(getApiUserMessage(exception, 'Store activation failed.'))
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  return (
-    <div className="mt-5 rounded-[24px] border border-amber-100 bg-amber-50/70 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="text-[0.78rem] font-black uppercase tracking-[0.12em] text-amber-900">Phase B Part 2 readiness</div>
-          <div className="mt-1 text-[1.1rem] font-black text-amber-950">
-            {live ? 'LIVE' : readiness?.ready ? 'READY' : 'NOT_READY'}
-          </div>
-          <div className="mt-1 text-[0.82rem] font-semibold text-amber-900/80">
-            Provisioning is Store-local. Printing remains MOCK/DISABLED and no real hardware is bound.
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={loadReadiness}
-            disabled={loading || submitting}
-            className="rounded-[14px] bg-white px-3 py-2 text-[0.78rem] font-black text-amber-900 disabled:cursor-wait disabled:opacity-60"
-          >
-            {loading ? 'Checking...' : 'Refresh readiness'}
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleProvision()}
-            disabled={live || submitting}
-            className="rounded-[14px] bg-amber-800 px-3 py-2 text-[0.78rem] font-black text-white disabled:cursor-not-allowed disabled:bg-stone-300"
-          >
-            {submitting ? 'Working...' : 'Provision synthetic defaults'}
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleActivate()}
-            disabled={live || !readiness?.ready || submitting}
-            className="rounded-[14px] bg-emerald-700 px-3 py-2 text-[0.78rem] font-black text-white disabled:cursor-not-allowed disabled:bg-stone-300"
-          >
-            Activate Owner-approved Store
-          </button>
-        </div>
-      </div>
-
-      {error ? <div className="mt-3 rounded-[14px] bg-red-100 px-3 py-2 text-[0.82rem] font-bold text-red-800">{error}</div> : null}
-      {activationResult ? <div className="mt-3 rounded-[14px] bg-emerald-100 px-3 py-2 text-[0.82rem] font-black text-emerald-800">Activation: {activationResult}</div> : null}
-
-      {readiness ? (
-        <>
-          <div className="mt-4 grid gap-2 grid-cols-2 sm:grid-cols-5">
-            <Metric label="Stations" value={readiness.counts.station_count} />
-            <Metric label="Tables" value={readiness.counts.table_count} />
-            <Metric label="Staff" value={readiness.counts.staff_count} />
-            <Metric label="Printer roles" value={readiness.counts.printer_role_count} />
-            <Metric label="Devices" value={readiness.counts.device_count} />
-          </div>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {readiness.checks.map((check) => (
-              <div key={check.code} className="rounded-[14px] bg-white/80 px-3 py-2">
-                <div className="flex items-center justify-between gap-2 text-[0.74rem] font-black uppercase tracking-[0.06em]">
-                  <span>{check.code.replaceAll('_', ' ')}</span>
-                  <span className={check.status === 'PASS' ? 'text-emerald-700' : 'text-red-700'}>{check.status}</span>
-                </div>
-                <div className="mt-1 text-[0.78rem] font-semibold text-amber-950/75">{check.message}</div>
-              </div>
-            ))}
-          </div>
-        </>
-      ) : null}
-
-      {provisionResult?.synthetic_staff_credentials?.length || provisionResult?.synthetic_device_credentials?.length ? (
-        <div className="mt-4 rounded-[16px] bg-white/85 px-3 py-3 text-[0.78rem] text-amber-950">
-          <div className="font-black uppercase tracking-[0.08em]">Synthetic Staging credentials · shown once</div>
-          <div className="mt-1 font-semibold">These credentials are runtime-only delivery and are not stored in readiness evidence.</div>
-          {provisionResult.synthetic_staff_credentials.map((credential) => (
-            <div key={credential.login_identifier} className="mt-2 rounded-[12px] bg-amber-100/70 px-3 py-2 font-mono">
-              staff {credential.role_code}: {credential.login_identifier} / {credential.temporary_password}
-            </div>
-          ))}
-          {provisionResult.synthetic_device_credentials.map((credential) => (
-            <div key={credential.device_id} className="mt-2 rounded-[12px] bg-amber-100/70 px-3 py-2 font-mono break-all">
-              device {credential.device_name}: {credential.device_token}
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  )
-}
-
 function StoreCard({
-  organizationId,
   store,
-  onActivated,
 }: {
-  organizationId: number
   store: OwnerOverviewStore
-  onActivated: () => void
 }) {
   const features = {
     core: normalizeFeature(store.features, 'core_pos'),
@@ -341,12 +174,6 @@ function StoreCard({
   const summary = store.summary
   const failedPrintTone = summary.failed_print_jobs > 0 ? 'danger' : 'default'
   const operational = isOperationalStore(store)
-  const profileLabel = store.provisioned_profile_code && store.provisioned_profile_version
-    ? `${store.provisioned_profile_code} ${store.provisioned_profile_version}`
-    : null
-  const masterLabel = store.provisioned_master_menu_key && store.provisioned_master_menu_version
-    ? `${store.provisioned_master_menu_key} ${store.provisioned_master_menu_version}`
-    : null
 
   return (
     <section className="rounded-[30px] bg-white p-5 shadow-[0_18px_44px_rgba(26,28,25,0.08)]">
@@ -371,13 +198,6 @@ function StoreCard({
         <FeatureChip enabled={features.analytics} label="Analytics" />
       </div>
 
-      {profileLabel || masterLabel ? (
-        <div className="mt-3 flex flex-wrap gap-2 text-[0.78rem] font-bold text-[var(--muted)]">
-          {profileLabel ? <span className="rounded-full bg-[rgba(26,28,25,0.05)] px-3 py-1">Profile {profileLabel}</span> : null}
-          {masterLabel ? <span className="rounded-full bg-[rgba(26,28,25,0.05)] px-3 py-1">Menu {masterLabel}</span> : null}
-        </div>
-      ) : null}
-
       <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Metric label="Today Orders" value={summary.today_orders} />
         <Metric label="Today Sales" value={formatMoney(summary.today_sales)} />
@@ -388,10 +208,6 @@ function StoreCard({
         <Metric label="Last Print Failure" value={formatTime(summary.last_failed_print_at)} tone="muted" />
         <Metric label="KDS Active" value={features.kds ? (summary.kds_active_count ?? 0) : 'Disabled'} tone={features.kds ? 'default' : 'muted'} />
       </div>
-
-      {isPhaseBProvisionedStore(store) ? (
-        <Part2ReadinessPanel organizationId={organizationId} store={store} onActivated={onActivated} />
-      ) : null}
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <StoreAction store={store} path="/admin/dashboard" label="Admin Dashboard" enabled={features.admin} reason="Admin disabled" />
@@ -426,6 +242,7 @@ function CreateStorePanel({
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<OwnerStoreProvisioningResult | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const attemptRef = useRef<OwnerStoreProvisioningAttempt | null>(null)
 
   useEffect(() => {
     if (!selectedOrganizationId && eligibleOrganizations.length) {
@@ -493,7 +310,7 @@ function CreateStorePanel({
       setSubmitting(true)
       setSubmitError(null)
       setResult(null)
-      const nextResult = await provisionOwnerStore(organizationId, {
+      const request = {
         store_name: storeName.trim(),
         store_code: normalizedCode,
         profile_code: catalog.profile_code,
@@ -501,10 +318,17 @@ function CreateStorePanel({
         master_menu_key: catalog.master_menu_key,
         master_menu_version: catalog.master_menu_version,
         master_menu_fingerprint_sha256: catalog.master_menu_fingerprint_sha256,
-      })
+      }
+      const attempt = resolveOwnerStoreProvisioningAttempt(attemptRef.current, organizationId, request)
+      attemptRef.current = attempt
+      const nextResult = await provisionOwnerStore(organizationId, request, attempt.idempotencyKey)
+      attemptRef.current = null
       setResult(nextResult)
       onProvisioned(nextResult)
     } catch (error) {
+      if (shouldRotateOwnerStoreProvisioningAttempt(error)) {
+        attemptRef.current = null
+      }
       setSubmitError(getApiUserMessage(error, 'Store provisioning failed.'))
     } finally {
       setSubmitting(false)
@@ -517,14 +341,9 @@ function CreateStorePanel({
         <div>
           <div className="text-[1.45rem] font-black">Create New Store</div>
           <div className="mt-1 text-[0.9rem] font-semibold text-[var(--muted)]">
-            Phase B Store provisioning
+            Add the restaurant details. The Store will be ready to use when creation completes.
           </div>
         </div>
-        {catalog ? (
-          <div className="rounded-[16px] bg-emerald-50 px-3 py-2 text-[0.78rem] font-black uppercase text-emerald-700">
-            Enabled
-          </div>
-        ) : null}
       </div>
 
       <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(220px,0.8fr)_minmax(220px,1fr)_minmax(180px,0.7fr)]">
@@ -548,7 +367,7 @@ function CreateStorePanel({
           <input
             value={storeName}
             onChange={(event) => handleStoreNameChange(event.target.value)}
-            placeholder="PHASE_B_VALIDATION_STORE..."
+            placeholder="Restaurant name"
             className="min-h-12 rounded-[16px] border border-[rgba(26,28,25,0.08)] bg-white px-3 text-[0.92rem] font-bold outline-none"
           />
         </label>
@@ -561,25 +380,13 @@ function CreateStorePanel({
               setCodeTouched(true)
               setStoreCode(normalizeStoreCode(event.target.value))
             }}
-            placeholder="PHASE_B_TEST"
+            placeholder="STORE_CODE"
             className="min-h-12 rounded-[16px] border border-[rgba(26,28,25,0.08)] bg-white px-3 text-[0.92rem] font-bold uppercase outline-none"
           />
         </label>
       </div>
 
-      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-        <div className="rounded-[18px] bg-[rgba(26,28,25,0.04)] px-4 py-3">
-          <div className="text-[0.72rem] font-black uppercase text-[var(--muted)]">Store Profile</div>
-          <div className="mt-1 text-[0.95rem] font-black">
-            {catalogLoading ? 'Loading...' : catalog ? `${catalog.profile_code} ${catalog.profile_version}` : 'Unavailable'}
-          </div>
-        </div>
-        <div className="rounded-[18px] bg-[rgba(26,28,25,0.04)] px-4 py-3">
-          <div className="text-[0.72rem] font-black uppercase text-[var(--muted)]">Master Menu</div>
-          <div className="mt-1 text-[0.95rem] font-black">
-            {catalogLoading ? 'Loading...' : catalog ? `${catalog.master_menu_key} ${catalog.master_menu_version}` : 'Unavailable'}
-          </div>
-        </div>
+      <div className="mt-4 flex justify-end">
         <button
           type="button"
           disabled={!canSubmit}
@@ -606,20 +413,16 @@ function CreateStorePanel({
         <div className="mt-4 rounded-[20px] border border-emerald-100 bg-emerald-50 px-4 py-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <div className="text-[1rem] font-black text-emerald-800">
-                {result.status} · {result.validation_status}
-              </div>
-              <div className="mt-1 text-[0.82rem] font-bold text-emerald-700">
-                {countValue(result, 'category_count')} categories · {countValue(result, 'item_count')} items · {countValue(result, 'option_count')} options · {countValue(result, 'printing_rule_count')} print rules
-              </div>
+              <div className="text-[1rem] font-black text-emerald-800">Store created and ready.</div>
+              <div className="mt-1 text-[0.82rem] font-bold text-emerald-700">You can open the Dashboard or Frontdesk now.</div>
             </div>
             {result.store_id ? (
               <button
                 type="button"
-                onClick={() => navigateTo(buildStorePath(result.store_id!, '/admin/menu/items'))}
+                onClick={() => navigateTo(buildStorePath(result.store_id!, '/admin/dashboard'))}
                 className="rounded-[16px] bg-emerald-700 px-4 py-3 text-[0.88rem] font-black text-white"
               >
-                Open Menu
+                Open Dashboard
               </button>
             ) : null}
           </div>
@@ -631,10 +434,8 @@ function CreateStorePanel({
 
 function OrganizationSection({
   organization,
-  onActivated,
 }: {
   organization: OwnerOverviewOrganization
-  onActivated: () => void
 }) {
   const visibleStores = organization.stores.filter(
     (store) => isVisibleOwnerStore(store),
@@ -657,7 +458,7 @@ function OrganizationSection({
       </div>
       <div className="grid gap-5">
         {visibleStores.map((store) => (
-          <StoreCard key={store.id} organizationId={organization.id} store={store} onActivated={onActivated} />
+          <StoreCard key={store.id} store={store} />
         ))}
       </div>
     </div>
@@ -753,14 +554,14 @@ export function OwnerDashboardPage() {
             </div>
             <div className="mt-2 text-[0.98rem] font-semibold text-[var(--muted)]">
               {totalOrganizations > 0
-                ? 'Use Create New Store to provision the first non-live test Store for this Organization.'
+                ? 'Use Create New Store to add the first restaurant for this Organization.'
                 : 'This account has no active store membership. Please ask an owner or platform administrator to assign store access.'}
             </div>
           </div>
         ) : null}
 
         {overview?.organizations.map((organization) => (
-          <OrganizationSection key={organization.id} organization={organization} onActivated={loadOverview} />
+          <OrganizationSection key={organization.id} organization={organization} />
         ))}
       </div>
     </div>

@@ -6,6 +6,8 @@ import com.restaurant.system.common.auth.StoreAccessService;
 import com.restaurant.system.common.feature.FeatureFlagService;
 import com.restaurant.system.common.feature.FeaturePackage;
 import com.restaurant.system.order.repository.OrderRepository;
+import com.restaurant.system.modules.ModuleKeys;
+import com.restaurant.system.modules.StoreModuleAccessEvaluator;
 import com.restaurant.system.owner.dto.OwnerOverviewResponse;
 import com.restaurant.system.owner.service.OwnerOverviewService;
 import com.restaurant.system.platform.entity.Organization;
@@ -14,6 +16,7 @@ import com.restaurant.system.printing.repository.PrintJobRepository;
 import com.restaurant.system.printing.service.PrinterConfigService;
 import com.restaurant.system.station.repository.DiningTableRepository;
 import com.restaurant.system.user.entity.Store;
+import com.restaurant.system.user.StoreOperationalState;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -34,6 +37,7 @@ public class OwnerOverviewServiceImpl implements OwnerOverviewService {
     private final PrintJobRepository printJobRepository;
     private final PrinterConfigService printerConfigService;
     private final FeatureFlagService featureFlagService;
+    private final StoreModuleAccessEvaluator moduleAccessEvaluator;
 
     public OwnerOverviewServiceImpl(
         RequestUserContextService requestUserContextService,
@@ -43,7 +47,8 @@ public class OwnerOverviewServiceImpl implements OwnerOverviewService {
         DiningTableRepository diningTableRepository,
         PrintJobRepository printJobRepository,
         PrinterConfigService printerConfigService,
-        FeatureFlagService featureFlagService
+        FeatureFlagService featureFlagService,
+        StoreModuleAccessEvaluator moduleAccessEvaluator
     ) {
         this.requestUserContextService = requestUserContextService;
         this.storeAccessService = storeAccessService;
@@ -53,6 +58,7 @@ public class OwnerOverviewServiceImpl implements OwnerOverviewService {
         this.printJobRepository = printJobRepository;
         this.printerConfigService = printerConfigService;
         this.featureFlagService = featureFlagService;
+        this.moduleAccessEvaluator = moduleAccessEvaluator;
     }
 
     @Override
@@ -142,13 +148,15 @@ public class OwnerOverviewServiceImpl implements OwnerOverviewService {
         response.status = store.status;
         response.store_kind = store.store_kind;
         response.lifecycle_status = store.lifecycle_status;
+        response.operational_state = StoreOperationalState.value(store);
+        response.is_live = StoreOperationalState.isLive(store);
         response.provisioning_source = store.provisioning_source;
         response.provisioned_profile_code = store.provisioned_profile_code;
         response.provisioned_profile_version = store.provisioned_profile_version;
         response.provisioned_master_menu_key = store.provisioned_master_menu_key;
         response.provisioned_master_menu_version = store.provisioned_master_menu_version;
         response.role_code = storeAccessService.roleCodeForStore(user, store);
-        response.features = featureMap();
+        response.features = featureMap(store.id);
         response.summary = buildSummary(store, startAt, endAt, generatedAt);
         return response;
     }
@@ -178,10 +186,11 @@ public class OwnerOverviewServiceImpl implements OwnerOverviewService {
         return summary;
     }
 
-    private Map<String, Boolean> featureMap() {
+    private Map<String, Boolean> featureMap(Long storeId) {
         Map<String, Boolean> features = new LinkedHashMap<>();
         features.put("core_pos", featureFlagService.isEnabled(FeaturePackage.CORE_POS));
-        features.put("printing", featureFlagService.isEnabled(FeaturePackage.PRINTING));
+        features.put("printing", featureFlagService.isEnabled(FeaturePackage.PRINTING)
+            && moduleAccessEvaluator.isModuleEnabled(storeId, ModuleKeys.PRINTING));
         features.put("kds", featureFlagService.isEnabled(FeaturePackage.KDS));
         features.put("admin", featureFlagService.isEnabled(FeaturePackage.ADMIN));
         features.put("analytics", featureFlagService.isEnabled(FeaturePackage.ANALYTICS));

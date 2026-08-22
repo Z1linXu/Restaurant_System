@@ -2,6 +2,8 @@ package com.restaurant.system.printing.controller;
 
 import com.restaurant.system.common.auth.AuthorizationService;
 import com.restaurant.system.common.auth.Capability;
+import com.restaurant.system.common.feature.FeatureFlagService;
+import com.restaurant.system.common.feature.FeaturePackage;
 import com.restaurant.system.common.response.ApiResponse;
 import com.restaurant.system.modules.ModuleKeys;
 import com.restaurant.system.modules.StoreModuleAccessEvaluator;
@@ -28,15 +30,18 @@ public class StoreDeviceController {
     private final StoreDeviceService storeDeviceService;
     private final AuthorizationService authorizationService;
     private final StoreModuleAccessEvaluator moduleAccessEvaluator;
+    private final FeatureFlagService featureFlagService;
 
     public StoreDeviceController(
         StoreDeviceService storeDeviceService,
         AuthorizationService authorizationService,
-        StoreModuleAccessEvaluator moduleAccessEvaluator
+        StoreModuleAccessEvaluator moduleAccessEvaluator,
+        FeatureFlagService featureFlagService
     ) {
         this.storeDeviceService = storeDeviceService;
         this.authorizationService = authorizationService;
         this.moduleAccessEvaluator = moduleAccessEvaluator;
+        this.featureFlagService = featureFlagService;
     }
 
     @PostMapping("/api/v1/devices/register")
@@ -114,6 +119,9 @@ public class StoreDeviceController {
     }
 
     private void requirePrinting(Long storeId) {
-        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.PRINTING);
+        // Device enrollment is configuration management. A Store must be able
+        // to enter this path before any runtime printer/device capability exists.
+        featureFlagService.requireEnabled(FeaturePackage.PRINTING);
+        moduleAccessEvaluator.requireModuleEnabled(storeId, ModuleKeys.PRINTING);
     }
 }

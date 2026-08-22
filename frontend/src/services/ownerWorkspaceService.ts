@@ -20,6 +20,8 @@ export interface OwnerOverviewStore {
   status: string | null
   store_kind?: string | null
   lifecycle_status?: string | null
+  operational_state?: string | null
+  is_live?: boolean | null
   provisioning_source?: string | null
   provisioned_profile_code?: string | null
   provisioned_profile_version?: string | null

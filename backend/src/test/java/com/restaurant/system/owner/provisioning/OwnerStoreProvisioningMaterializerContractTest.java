@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 class OwnerStoreProvisioningMaterializerContractTest {
 
     @Test
-    void materializerCreatesNonActiveStoreOwnedRowsFromProfileAndMasterOnly() throws IOException {
+    void materializerCreatesAndValidatesACompleteLiveStoreInOneTransaction() throws IOException {
         String source = Files.readString(
             Path.of("src/main/java/com/restaurant/system/owner/provisioning/OwnerStoreProvisioningMaterializer.java"),
             StandardCharsets.UTF_8
@@ -19,9 +19,15 @@ class OwnerStoreProvisioningMaterializerContractTest {
 
         assertThat(source)
             .contains("validation_fixture")
-            .contains("ready_for_review")
+            .contains("store_created_live")
             .contains("phase_b_owner_provisioning")
-            .contains("printing_mode = \"mock\"")
+            .contains("printing_mode = \"disabled\"")
+            .contains("organizationrepository.findbyidforupdate")
+            .contains("baselineprovisioner.provision")
+            .contains("evaluateoperationalbaseline")
+            .contains("recordautomaticactivation")
+            .contains("store.status = \"active\"")
+            .contains("store.lifecycle_status = \"active\"")
             .contains("store_profile")
             .contains("printing_display_rules")
             .contains("master")
@@ -32,5 +38,8 @@ class OwnerStoreProvisioningMaterializerContractTest {
             .doesNotContain("credential")
             .doesNotContain("printer_endpoint")
             .doesNotContain("ip_address");
+
+        assertThat(source.indexOf("organizationrepository.findbyidforupdate"))
+            .isLessThan(source.indexOf("requireuniquestorecode"));
     }
 }

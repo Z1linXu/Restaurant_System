@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { StoreModuleConfiguration, StoreModuleState } from '../../services/storeWorkspaceService'
 import {
   evaluateStoreModuleAccess,
+  evaluateStoreModuleManagementAccess,
   getRequiredStoreModuleForPath,
   isStoreModuleEnabled,
   type StoreModuleKey,
@@ -115,6 +116,10 @@ describe('Store module access contract', () => {
     expect(evaluateStoreModuleAccess(configuration, 'PRINTING')).toMatchObject({
       allowed: false,
       status: 'MODULE_HARDWARE_CAPABILITY_MISSING',
+    })
+    expect(evaluateStoreModuleManagementAccess(configuration, 'PRINTING')).toMatchObject({
+      allowed: true,
+      status: 'ALLOWED',
     })
   })
 

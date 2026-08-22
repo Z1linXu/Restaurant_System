@@ -5,6 +5,21 @@
 > owned by `docs/governance/CURRENT_STATE.yml`; historical status notes below
 > provide API evolution context only.
 
+> **Current Owner Store creation and lifecycle contract (2026-08-22):** `POST
+> /api/v1/owner/organizations/{organizationId}/phase-b/store-provisioning` is
+> one complete business action. Inside one transaction it materializes the
+> immutable Profile/Master-derived Store graph, creates Store-local default
+> tables, grants the creating Owner explicit Store membership, creates
+> endpoint-free `DISABLED` logical printing roles, evaluates sanitized internal
+> operational readiness, records automatic activation evidence, and commits
+> only as `status=active` plus `lifecycle_status=ACTIVE` (`LIVE`). Failure rolls
+> back the Store aggregate; idempotent replay does not repeat side effects.
+> Normal creation does not create synthetic staff credentials, devices,
+> heartbeats, device proof or physical printer bindings. The Part 2 synthetic
+> provision/readiness/activate APIs below remain internal Staging acceptance and
+> diagnostic contracts, not normal Owner workflow steps. This contract does not
+> authorize Production mutation.
+
 > Phase B Part 2 Store readiness and activation contract (2026-08-22): the
 > Owner-only API is bounded to an inactive synthetic validation Store created
 > by the Part 1 materializer. `GET
@@ -376,6 +391,11 @@ Returns store context only if the current user is authorized for that store. URL
 
 The response includes canonical Store module configuration:
 
+- `status`
+- `lifecycle_status`
+- `operational_state` (`LIVE` or `NOT_LIVE`)
+- `is_live` (true only for canonical `active` + `ACTIVE`)
+
 - `module_configuration.store_id`
 - `catalog_version`
 - `dependency_graph_version`
@@ -387,7 +407,8 @@ The response includes canonical Store module configuration:
 - `validation_issues[]`
 
 `/me/workspaces` intentionally remains a lightweight Store/Organization list
-and does not duplicate the module configuration payload.
+and does not duplicate the module configuration payload. Each Store workspace
+does include the same `operational_state` and `is_live` lifecycle fields.
 
 ### Store Module Configuration
 
@@ -1615,6 +1636,9 @@ Response data:
   - `name`
   - `code`
   - `status`
+  - `lifecycle_status`
+  - `operational_state`
+  - `is_live`
   - `role_code`
   - `features.core_pos`
   - `features.printing`

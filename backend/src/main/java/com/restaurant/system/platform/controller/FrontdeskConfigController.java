@@ -34,7 +34,7 @@ public class FrontdeskConfigController {
     @GetMapping("/dining-tables")
     public ApiResponse<List<DiningTable>> getDiningTables(@RequestParam Long store_id) {
         authorizationService.requireForStore(store_id, Capability.ORDER_VIEW_ACTIVE, Capability.ORDER_CREATE);
-        moduleAccessEvaluator.requireCapability(store_id, ModuleKeys.TABLE_MANAGEMENT);
+        moduleAccessEvaluator.requireOperationalCapability(store_id, ModuleKeys.TABLE_MANAGEMENT);
         return ApiResponse.success(platformAdminService.getDiningTables(store_id));
     }
 }

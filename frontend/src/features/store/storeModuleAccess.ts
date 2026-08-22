@@ -140,6 +140,48 @@ export function isStoreModuleEnabled(
   return evaluateStoreModuleAccess(moduleConfiguration, moduleKey).allowed
 }
 
+export function evaluateStoreModuleManagementAccess(
+  moduleConfiguration: StoreModuleConfiguration | null | undefined,
+  moduleKey: StoreModuleKey,
+): StoreModuleAccessResult {
+  const module = findStoreModule(moduleConfiguration, moduleKey)
+  const displayName = module?.display_name ?? getStoreModuleDisplayName(moduleKey)
+  if (!moduleConfiguration || !module || !module.persisted) {
+    return denied(moduleKey, 'MODULE_CONFIGURATION_INVALID', displayName, module, [], `Store module configuration is unavailable: ${moduleKey}.`)
+  }
+  if (module.enabled !== true) {
+    return denied(moduleKey, 'MODULE_DISABLED', displayName, module, [], `Module disabled for this Store: ${moduleKey}.`)
+  }
+  const issues = getStoreModuleIssues(moduleConfiguration, moduleKey)
+  const environmentIssues = issues.filter((issue) => issue.code === 'ENVIRONMENT_CAPABILITY_MISSING')
+  if (environmentIssues.length > 0) {
+    return denied(
+      moduleKey,
+      'MODULE_ENVIRONMENT_CAPABILITY_MISSING',
+      displayName,
+      module,
+      environmentIssues,
+      `Environment capability missing for ${moduleKey}.`,
+    )
+  }
+  return {
+    allowed: true,
+    moduleKey,
+    status: 'ALLOWED',
+    displayName,
+    module,
+    issues,
+    message: 'Module management allowed; runtime capability is evaluated separately.',
+  }
+}
+
+export function isStoreModuleManagementEnabled(
+  moduleConfiguration: StoreModuleConfiguration | null | undefined,
+  moduleKey: StoreModuleKey,
+) {
+  return evaluateStoreModuleManagementAccess(moduleConfiguration, moduleKey).allowed
+}
+
 export function getRequiredStoreModuleForPath(pathname: string): StoreModuleKey | null {
   const normalized = normalizeStoreRoutePath(pathname)
   if (normalized.startsWith('/admin/platform')) {

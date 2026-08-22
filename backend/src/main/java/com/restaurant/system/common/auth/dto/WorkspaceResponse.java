@@ -35,6 +35,12 @@ public class WorkspaceResponse {
         @JsonProperty("lifecycle_status")
         public String lifecycleStatus;
 
+        @JsonProperty("operational_state")
+        public String operationalState;
+
+        @JsonProperty("is_live")
+        public Boolean live;
+
         @JsonProperty("provisioning_source")
         public String provisioningSource;
 

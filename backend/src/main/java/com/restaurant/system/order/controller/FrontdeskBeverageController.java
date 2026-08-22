@@ -83,7 +83,7 @@ public class FrontdeskBeverageController {
     }
 
     private void requireOrdering(Long storeId) {
-        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.ORDERING_POS);
+        moduleAccessEvaluator.requireOperationalCapability(storeId, ModuleKeys.ORDERING_POS);
     }
 
     private Long resolveOrderItemStoreId(Long orderItemId) {

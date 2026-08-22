@@ -155,6 +155,10 @@ class OwnerPrintingControllerDisabledStateTest {
             .andExpect(jsonPath("$.data.printing_enabled").value(false))
             .andExpect(jsonPath("$.data.printers", hasSize(1)))
             .andExpect(jsonPath("$.data.assignments", hasSize(1)));
+
+        verify(moduleAccessEvaluator).requireModuleEnabled(1L, "PRINTING");
+        verify(featureFlagService).requireEnabled(FeaturePackage.PRINTING);
+        verify(moduleAccessEvaluator, never()).requireCapability(1L, "PRINTING");
     }
 
     @Test
@@ -171,7 +175,8 @@ class OwnerPrintingControllerDisabledStateTest {
             Capability.ADMIN_PRINTING_MANAGE,
             Capability.ADMIN_STORE_CONFIG
         );
-        orderedAccess.verify(moduleAccessEvaluator).requireCapability(1L, "PRINTING");
+        orderedAccess.verify(moduleAccessEvaluator).requireModuleEnabled(1L, "PRINTING");
+        verify(featureFlagService).requireEnabled(FeaturePackage.PRINTING);
     }
 
     @Test

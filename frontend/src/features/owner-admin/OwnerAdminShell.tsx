@@ -4,7 +4,7 @@ import { navigateTo } from '../frontdesk/navigation'
 import { StoreSwitcher } from '../store/StoreSwitcher'
 import { buildStorePath, stripStorePrefix } from '../store/storeRoutes'
 import { useOptionalCurrentStore } from '../store/useStoreContext'
-import { isStoreModuleEnabled, type StoreModuleKey } from '../store/storeModuleAccess'
+import { isStoreModuleEnabled, isStoreModuleManagementEnabled, type StoreModuleKey } from '../store/storeModuleAccess'
 
 interface OwnerAdminShellProps {
   title: string
@@ -46,7 +46,9 @@ export function OwnerAdminShell({ title, description, children }: OwnerAdminShel
   const visibleItems = useMemo(
     () => navItems.filter((item) => {
       if (item.moduleKey != null && !isStoreModuleEnabled(moduleConfiguration, item.moduleKey)) {
-        return false
+        if (item.moduleKey !== 'PRINTING' || !isStoreModuleManagementEnabled(moduleConfiguration, item.moduleKey)) {
+          return false
+        }
       }
       if (isOwner || isManager) {
         return true
@@ -59,11 +61,7 @@ export function OwnerAdminShell({ title, description, children }: OwnerAdminShel
   const homePath = isFrontdesk ? '/frontdesk' : '/admin/dashboard'
   const shellTitle = isFrontdesk ? 'Store Tools' : 'Owner Console'
   const frontdeskPath = currentStore ? buildStorePath(currentStore.storeId, '/frontdesk') : '/frontdesk'
-  const currentStoreLive = !currentStore
-    || (
-      (currentStore.storeKind ?? 'BUSINESS').toUpperCase() === 'BUSINESS'
-      && (currentStore.lifecycleStatus ?? 'ACTIVE').toUpperCase() === 'ACTIVE'
-    )
+  const currentStoreLive = !currentStore || currentStore.isLive
   const backToFrontdeskButton = (
     <button
       type="button"

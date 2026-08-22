@@ -300,13 +300,7 @@ public class OwnerPrintingController {
     }
 
     private com.restaurant.system.common.auth.AuthenticatedUser requirePrintingAccess(Long storeId) {
-        var user = authorizationService.requireForStore(
-            storeId,
-            Capability.ADMIN_PRINTING_MANAGE,
-            Capability.ADMIN_STORE_CONFIG
-        );
-        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.PRINTING);
-        return user;
+        return requirePrintingConfigurationAccess(storeId);
     }
 
     private com.restaurant.system.common.auth.AuthenticatedUser requirePrintingConfigurationAccess(Long storeId) {

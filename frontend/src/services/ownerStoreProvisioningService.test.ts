@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { apiRequest } from './apiClient'
+import { ApiRequestError, apiRequest } from './apiClient'
 import {
   fetchOwnerStoreProvisioningCatalog,
   provisionOwnerStore,
+  resolveOwnerStoreProvisioningAttempt,
+  shouldRotateOwnerStoreProvisioningAttempt,
 } from './ownerStoreProvisioningService'
 
-vi.mock('./apiClient', () => ({
+vi.mock('./apiClient', async (importOriginal) => ({
+  ...await importOriginal<typeof import('./apiClient')>(),
   apiRequest: vi.fn(),
 }))
 
@@ -33,7 +36,7 @@ describe('owner store provisioning service', () => {
     )
   })
 
-  it('creates a Store through the canonical backend with an automatic idempotency key', async () => {
+  it('creates a Store through the canonical backend with the supplied stable idempotency key', async () => {
     mockedApiRequest.mockResolvedValueOnce({
       request_id: 1,
       store_id: 2,
@@ -60,15 +63,37 @@ describe('owner store provisioning service', () => {
       profile_version: 'v2',
       master_menu_key: 'LANZHOU_CHAIN_MASTER_MENU',
       master_menu_version: 'v1',
-    })
+    }, 'stable-create-key')
 
     const [, init] = mockedApiRequest.mock.calls[0]
     expect(mockedApiRequest.mock.calls[0][0]).toBe('/api/v1/owner/organizations/100/phase-b/store-provisioning')
     expect(init?.method).toBe('POST')
-    expect((init?.headers as Record<string, string>)['Idempotency-Key']).toBeTruthy()
+    expect((init?.headers as Record<string, string>)['Idempotency-Key']).toBe('stable-create-key')
     expect(JSON.parse(String(init?.body))).toMatchObject({
       store_name: 'Phase B Test Store',
       store_code: 'PHASE_B_TEST_STORE',
     })
+  })
+
+  it('retains the same key after an ambiguous failure and rotates it when content changes', () => {
+    const request = { store_name: 'Chinatown', store_code: 'CHINATOWN' }
+    const first = resolveOwnerStoreProvisioningAttempt(null, 100, request)
+    const retry = resolveOwnerStoreProvisioningAttempt(first, 100, { ...request })
+    const changed = resolveOwnerStoreProvisioningAttempt(retry, 100, { ...request, store_name: 'Chinatown East' })
+
+    expect(retry).toBe(first)
+    expect(changed.idempotencyKey).not.toBe(first.idempotencyKey)
+  })
+
+  it('rotates only after backend confirms that a failed ledger requires a new key', () => {
+    expect(shouldRotateOwnerStoreProvisioningAttempt(
+      new ApiRequestError(409, 'retry', 'retry', null, 'STORE_PROVISIONING_RETRY_REQUIRES_NEW_KEY'),
+    )).toBe(true)
+    expect(shouldRotateOwnerStoreProvisioningAttempt(
+      new ApiRequestError(0, 'timeout', 'timeout', null, 'REQUEST_TIMEOUT'),
+    )).toBe(false)
+    expect(shouldRotateOwnerStoreProvisioningAttempt(
+      new ApiRequestError(409, 'processing', 'processing', null, 'STORE_PROVISIONING_IN_PROGRESS'),
+    )).toBe(false)
   })
 })

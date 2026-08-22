@@ -52,9 +52,13 @@ Historical implementation and acceptance evidence is preserved under
 Goal:
 
 ```text
-Owner -> Create New Store -> Profile -> Modules -> Configure -> Validate
--> READY -> Activate
+Owner -> Add Store -> required details -> Create -> LIVE
 ```
+
+Profile/Master materialization, Store-local baseline provisioning, validation,
+readiness evidence and activation are transactional internal work. They are not
+separate Owner workflow steps. Optional Printer/Pad/device configuration is
+managed after creation and does not block Store LIVE.
 
 ### Part 1 — Create, materialize and review
 
@@ -83,16 +87,19 @@ Part 1 acceptance requires:
 - Owner manual Part 1 retest;
 - a unique stop before Part 2 or real activation.
 
-### Part 2 — Complete operational provisioning
+### Part 2 — Complete operational provisioning and simple Owner workflow
 
 Candidate scope:
 
-- table/station configuration;
-- staff/access provisioning;
-- logical printing topology;
-- automatic device enrollment/readiness;
-- complete validation and recovery;
-- READY and Owner-controlled activation.
+- transactionally complete Store-local table/station and Owner access baseline;
+- provide endpoint-free logical printing topology and management access;
+- keep real Printer/Pad/device configuration optional and unbound;
+- internally validate readiness, provenance, isolation and rollback safety;
+- automatically activate only after internal validation passes;
+- expose one Owner Create action and a canonical `active` + `ACTIVE` = `LIVE`
+  contract across Owner Home, Admin, StoreSwitcher and Frontdesk;
+- retain synthetic staff/device/readiness flows only for isolated Staging
+  automated acceptance and diagnostics, not normal product creation.
 
 Authorization and current execution state are recorded only in
 [`CURRENT_STATE.yml`](CURRENT_STATE.yml). Candidate designs in

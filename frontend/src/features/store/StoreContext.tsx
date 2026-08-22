@@ -6,6 +6,7 @@ import { StoreContext, mapStoreContext } from './StoreContextCore'
 import { useCurrentStore } from './useStoreContext'
 import {
   evaluateStoreModuleAccess,
+  evaluateStoreModuleManagementAccess,
   type StoreModuleAccessResult,
   type StoreModuleKey,
 } from './storeModuleAccess'
@@ -90,6 +91,38 @@ export function RequireStoreModule({
   const access = evaluateStoreModuleAccess(store.moduleConfiguration, moduleKey)
   if (!access.allowed) {
     return <StoreModuleUnavailablePage access={access} storeName={store.storeName} />
+  }
+  return <>{children}</>
+}
+
+export function RequireStoreModuleManagement({
+  children,
+  moduleKey,
+}: {
+  children: React.ReactNode
+  moduleKey: StoreModuleKey
+}) {
+  const store = useCurrentStore()
+  const access = evaluateStoreModuleManagementAccess(store.moduleConfiguration, moduleKey)
+  if (!access.allowed) {
+    return <StoreModuleUnavailablePage access={access} storeName={store.storeName} />
+  }
+  return <>{children}</>
+}
+
+export function RequireLiveStore({ children }: { children: React.ReactNode }) {
+  const store = useCurrentStore()
+  if (!store.isLive) {
+    return (
+      <div className="min-h-screen bg-[var(--surface)] px-6 py-8 text-[var(--on-surface)]">
+        <div className="mx-auto max-w-[760px] rounded-[30px] bg-white px-7 py-8 shadow-[0_22px_54px_rgba(26,28,25,0.1)]">
+          <div className="text-[1.8rem] font-black tracking-[-0.05em]">Store Not Live</div>
+          <div className="mt-2 text-[0.98rem] font-semibold text-[var(--muted)]">
+            {store.storeName} is not available for restaurant operations yet.
+          </div>
+        </div>
+      </div>
+    )
   }
   return <>{children}</>
 }

@@ -7,6 +7,7 @@ import com.restaurant.system.modules.StoreModuleService;
 import com.restaurant.system.platform.entity.Organization;
 import com.restaurant.system.platform.repository.OrganizationRepository;
 import com.restaurant.system.user.entity.Store;
+import com.restaurant.system.user.StoreOperationalState;
 import com.restaurant.system.user.repository.StoreRepository;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -78,6 +79,8 @@ public class WorkspaceController {
         response.status = store.status;
         response.storeKind = store.store_kind;
         response.lifecycleStatus = store.lifecycle_status;
+        response.operationalState = StoreOperationalState.value(store);
+        response.live = StoreOperationalState.isLive(store);
         response.provisioningSource = store.provisioning_source;
         response.provisionedProfileCode = store.provisioned_profile_code;
         response.provisionedProfileVersion = store.provisioned_profile_version;
@@ -116,6 +119,8 @@ public class WorkspaceController {
         response.status = store.status;
         response.storeKind = store.store_kind;
         response.lifecycleStatus = store.lifecycle_status;
+        response.operationalState = StoreOperationalState.value(store);
+        response.live = StoreOperationalState.isLive(store);
         response.provisioningSource = store.provisioning_source;
         response.organizationId = store.organization_id;
         response.roleCode = storeAccessService.roleCodeForStore(user, store);

@@ -140,6 +140,28 @@ public class StoreReadinessServiceImpl implements StoreReadinessService {
     @Override
     @Transactional
     public StoreReadinessResponse evaluate(Long organizationId, Long storeId) {
+        return evaluate(organizationId, storeId, null, ReadinessPolicy.SYNTHETIC_ACCEPTANCE);
+    }
+
+    @Override
+    @Transactional
+    public StoreReadinessResponse evaluateOperationalBaseline(
+        Long organizationId,
+        Long storeId,
+        Long ownerUserId
+    ) {
+        if (ownerUserId == null) {
+            throw new BusinessException("STORE_BASELINE_OWNER_REQUIRED");
+        }
+        return evaluate(organizationId, storeId, ownerUserId, ReadinessPolicy.OPERATIONAL_BASELINE);
+    }
+
+    private StoreReadinessResponse evaluate(
+        Long organizationId,
+        Long storeId,
+        Long ownerUserId,
+        ReadinessPolicy policy
+    ) {
         Store store = storeRepository.findById(storeId)
             .orElseThrow(() -> new BusinessException("PART2_STORE_NOT_FOUND"));
         requireScope(organizationId, store);
@@ -151,9 +173,17 @@ public class StoreReadinessServiceImpl implements StoreReadinessService {
         checkMenu(store, masterVersion, checks);
         checkModules(store, checks);
         checkStationsAndTables(store, checks);
-        checkStaff(store, checks);
+        if (policy == ReadinessPolicy.OPERATIONAL_BASELINE) {
+            checkOwnerAccess(store, ownerUserId, checks);
+        } else {
+            checkStaff(store, checks);
+        }
         checkPrinting(store, checks);
-        checkDevices(store, now, checks);
+        if (policy == ReadinessPolicy.OPERATIONAL_BASELINE) {
+            checks.add(check("DEVICE_READINESS", PASS, "No device is required for Store activation"));
+        } else {
+            checkDevices(store, now, checks);
+        }
         checkStructuralSmoke(store, checks);
 
         boolean ready = checks.stream().allMatch(check -> PASS.equals(check.status));
@@ -183,6 +213,25 @@ public class StoreReadinessServiceImpl implements StoreReadinessService {
         history.created_at = now;
         StoreReadinessEvidenceHistoryEntity savedHistory = evidenceHistoryRepository.save(history);
         return toResponse(store, saved, savedHistory.id, checks, ready);
+    }
+
+    private void checkOwnerAccess(Store store, Long ownerUserId, List<StoreReadinessResponse.Check> checks) {
+        StoreMembership storeMembership = storeMembershipRepository
+            .findFirstByUserIdAndStoreId(ownerUserId, store.id)
+            .orElse(null);
+        OrganizationMembership organizationMembership = organizationMembershipRepository
+            .findFirstByUserIdAndOrganizationId(ownerUserId, store.organization_id)
+            .orElse(null);
+        boolean valid = storeMembership != null
+            && Boolean.TRUE.equals(storeMembership.isActive)
+            && store.organization_id.equals(storeMembership.organizationId)
+            && "OWNER".equalsIgnoreCase(storeMembership.roleCode)
+            && organizationMembership != null
+            && Boolean.TRUE.equals(organizationMembership.isActive)
+            && store.organization_id.equals(organizationMembership.organizationId)
+            && "OWNER".equalsIgnoreCase(organizationMembership.roleCode);
+        checks.add(check("STAFF_ACCESS", valid ? PASS : FAIL,
+            valid ? "Owner access is Organization/Store scoped" : "Owner Store access is incomplete"));
     }
 
     private void checkStoreBoundary(Store store, List<StoreReadinessResponse.Check> checks) {
@@ -606,5 +655,10 @@ public class StoreReadinessServiceImpl implements StoreReadinessService {
 
     private boolean blank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private enum ReadinessPolicy {
+        SYNTHETIC_ACCEPTANCE,
+        OPERATIONAL_BASELINE
     }
 }

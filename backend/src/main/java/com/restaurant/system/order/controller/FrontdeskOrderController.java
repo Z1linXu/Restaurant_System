@@ -41,7 +41,7 @@ public class FrontdeskOrderController {
         @RequestParam(required = false) String keyword
     ) {
         authorizationService.requireForStore(store_id, Capability.ORDER_VIEW_ACTIVE);
-        moduleAccessEvaluator.requireCapability(store_id, ModuleKeys.ORDERING_POS);
+        moduleAccessEvaluator.requireOperationalCapability(store_id, ModuleKeys.ORDERING_POS);
         return ApiResponse.success(
             orderService.getFrontdeskOrderBoard(store_id, status, order_type, table_no, pickup_no, keyword)
         );
@@ -58,7 +58,7 @@ public class FrontdeskOrderController {
         @RequestParam(required = false) Integer limit
     ) {
         authorizationService.requireForStore(store_id, Capability.ORDER_VIEW_HISTORY);
-        moduleAccessEvaluator.requireCapability(store_id, ModuleKeys.ORDER_HISTORY);
+        moduleAccessEvaluator.requireOperationalCapability(store_id, ModuleKeys.ORDER_HISTORY);
         return ApiResponse.success(
             orderService.getFrontdeskOrderHistory(store_id, status, order_type, table_no, pickup_no, keyword, limit)
         );
@@ -70,7 +70,7 @@ public class FrontdeskOrderController {
         @RequestParam(required = false) Integer limit
     ) {
         authorizationService.requireForStore(store_id, Capability.ORDER_VIEW_HISTORY);
-        moduleAccessEvaluator.requireCapability(store_id, ModuleKeys.ORDER_HISTORY);
+        moduleAccessEvaluator.requireOperationalCapability(store_id, ModuleKeys.ORDER_HISTORY);
         return ApiResponse.success(orderService.getFrontdeskTodayOrderHistory(store_id, limit));
     }
 }

@@ -1,6 +1,8 @@
 package com.restaurant.system.modules;
 
 import com.restaurant.system.common.exception.BusinessException;
+import com.restaurant.system.user.StoreOperationalState;
+import com.restaurant.system.user.repository.StoreRepository;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -24,6 +26,7 @@ public class StoreModuleAccessEvaluator {
     private final StoreModuleCapabilityProvider capabilityProvider;
     private final ModuleCatalogDefinition catalog;
     private final ModuleDependencyGraph dependencyGraph;
+    private StoreRepository storeRepository;
 
     @Autowired
     public StoreModuleAccessEvaluator(
@@ -33,8 +36,14 @@ public class StoreModuleAccessEvaluator {
         this(
             storeModuleRepository,
             capabilityProvider,
-            new ModuleContractLoader()
+            new ModuleContractLoader(),
+            null
         );
+    }
+
+    @Autowired(required = false)
+    void setStoreRepository(StoreRepository storeRepository) {
+        this.storeRepository = storeRepository;
     }
 
     StoreModuleAccessEvaluator(
@@ -42,10 +51,20 @@ public class StoreModuleAccessEvaluator {
         StoreModuleCapabilityProvider capabilityProvider,
         ModuleContractLoader loader
     ) {
+        this(storeModuleRepository, capabilityProvider, loader, null);
+    }
+
+    StoreModuleAccessEvaluator(
+        StoreModuleRepository storeModuleRepository,
+        StoreModuleCapabilityProvider capabilityProvider,
+        ModuleContractLoader loader,
+        StoreRepository storeRepository
+    ) {
         this.storeModuleRepository = storeModuleRepository;
         this.capabilityProvider = capabilityProvider;
         this.catalog = loader.loadCatalog();
         this.dependencyGraph = loader.loadDependencyGraph();
+        this.storeRepository = storeRepository;
     }
 
     @Transactional(readOnly = true)
@@ -56,6 +75,19 @@ public class StoreModuleAccessEvaluator {
     @Transactional(readOnly = true)
     public void requireModuleEnabled(Long storeId, String moduleKey) {
         evaluateCapability(storeId, moduleKey).requireModuleEnabled();
+    }
+
+    @Transactional(readOnly = true)
+    public void requireOperationalCapability(Long storeId, String moduleKey) {
+        evaluateCapability(storeId, moduleKey).requireAllowed();
+        if (storeRepository == null) {
+            throw new BusinessException("STORE_OPERATIONAL_STATE_UNAVAILABLE");
+        }
+        var store = storeRepository.findById(storeId)
+            .orElseThrow(() -> new BusinessException("STORE_NOT_FOUND"));
+        if (!StoreOperationalState.isLive(store)) {
+            throw new BusinessException("STORE_NOT_LIVE");
+        }
     }
 
     @Transactional(readOnly = true)

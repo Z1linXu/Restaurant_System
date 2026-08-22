@@ -7,6 +7,21 @@
 > notes below preserve technical context and must not be interpreted as current
 > mutation authorization.
 
+> 2026-08-22 Phase B Part 2 Owner-flow correction: normal Owner Store creation
+> is one transactional business action. Profile/Master materialization,
+> Store-local default tables, explicit Owner Store membership, endpoint-free
+> logical printing roles, operational readiness evidence and automatic
+> activation complete internally before the API returns. Success commits only
+> as canonical `status=active` plus `lifecycle_status=ACTIVE` (`LIVE`); failure
+> rolls back the Store aggregate and replay is side-effect free. Normal creation
+> does not create synthetic staff credentials, devices, heartbeat/proof or real
+> printer bindings. Owner Home no longer exposes Part 2 provisioning/readiness/
+> activation controls. Store Context and workspace/overview APIs expose shared
+> `operational_state`/`is_live`; Admin Shell, StoreSwitcher and Frontdesk consume
+> that contract. Printing Management requires Store authorization plus an
+> enabled module, but not pre-existing hardware capability; runtime dispatch
+> remains fail-closed. No Flyway change is required.
+
 > 2026-08-22 Phase B Part 2 repository implementation and exact-SHA Staging
 > automated acceptance are complete on application SHA
 > `72fecac3a17e0ac40d6207f4c501eb0308210123` with Flyway V25. The implementation
@@ -1895,12 +1910,14 @@ Combo component rendering contract:
   based. Preview, MOCK, REAL, and PAD_DIRECT continue to consume the same
   renderer output, and FRONTDESK_RECEIPT semantics are unchanged.
 
-Printing Display Rule configuration and preview are Store-scoped configuration
-operations. They require Store authorization, an enabled persisted `PRINTING`
-module, and the Printing feature flag, but do not require physical printer or
-Pad readiness. Operational printer, assignment, job, test and reprint APIs
-continue to require the full `PRINTING` module capability, including hardware
-readiness.
+Printing Management is a Store-scoped configuration surface. Owner Print
+Center, printer/assignment configuration, job inspection, tests, Display Rule
+configuration and device enrollment require Store authorization, an enabled
+persisted `PRINTING` module and the Printing feature flag where applicable, but
+do not require an already configured physical Printer or Pad. Runtime dispatch,
+reprint and device transport services continue to evaluate the full PRINTING
+runtime capability and fail closed when hardware/runtime prerequisites are
+missing.
 
 Print Center behavior:
 

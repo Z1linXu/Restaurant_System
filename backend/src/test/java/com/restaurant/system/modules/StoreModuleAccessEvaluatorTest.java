@@ -8,6 +8,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import com.restaurant.system.common.exception.BusinessException;
+import com.restaurant.system.user.entity.Store;
+import com.restaurant.system.user.repository.StoreRepository;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -30,6 +33,8 @@ class StoreModuleAccessEvaluatorTest {
     private StoreModuleRepository storeModuleRepository;
     @Mock
     private StoreModuleCapabilityProvider capabilityProvider;
+    @Mock
+    private StoreRepository storeRepository;
 
     private StoreModuleAccessEvaluator evaluator;
     private ModuleCatalogDefinition catalog;
@@ -39,7 +44,7 @@ class StoreModuleAccessEvaluatorTest {
     void setUp() {
         ModuleContractLoader loader = new ModuleContractLoader();
         catalog = loader.loadCatalog();
-        evaluator = new StoreModuleAccessEvaluator(storeModuleRepository, capabilityProvider, loader);
+        evaluator = new StoreModuleAccessEvaluator(storeModuleRepository, capabilityProvider, loader, storeRepository);
         modules = new ArrayList<>(defaultModulesForStore(10L));
         when(storeModuleRepository.findAllByStoreIdOrderByIdAsc(any())).thenAnswer(invocation -> {
             Long storeId = invocation.getArgument(0);
@@ -50,6 +55,11 @@ class StoreModuleAccessEvaluatorTest {
         });
         when(capabilityProvider.environmentCapabilities(any())).thenReturn(normalEnvironmentCapabilities());
         when(capabilityProvider.hardwareCapabilities(any())).thenReturn(normalHardwareCapabilities());
+        Store liveStore = new Store();
+        liveStore.id = 10L;
+        liveStore.status = "active";
+        liveStore.lifecycle_status = "ACTIVE";
+        when(storeRepository.findById(10L)).thenReturn(java.util.Optional.of(liveStore));
     }
 
     @Test
@@ -61,6 +71,22 @@ class StoreModuleAccessEvaluatorTest {
         assertTrue(evaluation.environmentAvailable());
         assertTrue(evaluation.hardwareAvailable());
         assertDoesNotThrow(() -> evaluator.requireCapability(10L, ModuleKeys.MENU_MANAGEMENT));
+        assertDoesNotThrow(() -> evaluator.requireOperationalCapability(10L, ModuleKeys.MENU_MANAGEMENT));
+    }
+
+    @Test
+    void operationalCapabilityFailsClosedWhenCanonicalStoreLifecycleIsNotLive() {
+        Store notLiveStore = new Store();
+        notLiveStore.id = 10L;
+        notLiveStore.status = "active";
+        notLiveStore.lifecycle_status = "READY_FOR_REVIEW";
+        when(storeRepository.findById(10L)).thenReturn(java.util.Optional.of(notLiveStore));
+
+        BusinessException exception = assertThrows(
+            BusinessException.class,
+            () -> evaluator.requireOperationalCapability(10L, ModuleKeys.MENU_MANAGEMENT)
+        );
+        assertEquals("STORE_NOT_LIVE", exception.getMessage());
     }
 
     @Test
