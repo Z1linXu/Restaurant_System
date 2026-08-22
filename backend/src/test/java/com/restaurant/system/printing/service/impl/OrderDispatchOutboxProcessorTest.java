@@ -14,6 +14,7 @@ import com.restaurant.system.printing.entity.PrinterAssignment;
 import com.restaurant.system.printing.repository.OrderDispatchOutboxRepository;
 import com.restaurant.system.printing.repository.PrinterAssignmentRepository;
 import com.restaurant.system.printing.service.PrintDispatcherService;
+import com.restaurant.system.printing.service.PrintDispatchOutcome;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -68,7 +69,24 @@ class OrderDispatchOutboxProcessorTest {
         processor.processDueEvents();
 
         verify(printDispatcherService).dispatchPersistedEvent("GRAB", 1L, 9L, null, "submit:9:GRAB");
-        assertEquals("COMPLETED", event.status);
+        assertEquals("DISPATCHED", event.status);
+        assertNotNull(event.completedAt);
+    }
+
+    @Test
+    void skippedDispatchIsTerminalAndCannotMasqueradeAsSuccess() {
+        OrderDispatchOutbox event = event();
+        when(repository.findDueForDispatch(any(), any())).thenReturn(List.of(event));
+        when(repository.claimDueForProcessing(eq(event.id), any(), any())).thenReturn(1);
+        when(repository.findById(event.id)).thenReturn(Optional.of(event));
+        when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(printDispatcherService.dispatchPersistedEvent(any(), any(), any(), any(), any()))
+            .thenReturn(PrintDispatchOutcome.SKIPPED);
+
+        processor.processDueEvents();
+
+        assertEquals("SKIPPED", event.status);
+        assertEquals("SKIPPED", event.lastError);
         assertNotNull(event.completedAt);
     }
 
@@ -132,7 +150,7 @@ class OrderDispatchOutboxProcessorTest {
         processor.processDueEvents();
 
         assertEquals("PENDING", slow.status);
-        assertEquals("COMPLETED", unrelated.status);
+        assertEquals("DISPATCHED", unrelated.status);
     }
 
     @Test
@@ -185,8 +203,8 @@ class OrderDispatchOutboxProcessorTest {
             releaseSlow.countDown();
             executor.shutdownNow();
         }
-        assertEquals("COMPLETED", slow.status);
-        assertEquals("COMPLETED", unrelated.status);
+        assertEquals("DISPATCHED", slow.status);
+        assertEquals("DISPATCHED", unrelated.status);
     }
 
     @Test
@@ -203,7 +221,7 @@ class OrderDispatchOutboxProcessorTest {
         processor.processDueEvents();
 
         verify(printDispatcherService, times(1)).dispatchPersistedEvent("GRAB", 1L, 9L, null, "submit:9:GRAB");
-        assertEquals("COMPLETED", event.status);
+        assertEquals("DISPATCHED", event.status);
     }
 
     @Test
@@ -218,7 +236,7 @@ class OrderDispatchOutboxProcessorTest {
             .thenReturn(Optional.of(assignment(1L, "GRAB", 10L)));
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         org.mockito.Mockito.doThrow(new IllegalStateException("printer offline"))
-            .doNothing()
+            .doReturn(PrintDispatchOutcome.DISPATCHED)
             .when(printDispatcherService)
             .dispatchPersistedEvent(eq("GRAB"), any(), any(), any(), any());
 
@@ -230,7 +248,7 @@ class OrderDispatchOutboxProcessorTest {
         inOrder.verify(printDispatcherService).dispatchPersistedEvent("HOT_KITCHEN", 1L, 9L, null, "submit:9:HOT_KITCHEN");
         verify(printDispatcherService, times(1)).dispatchPersistedEvent(eq("GRAB"), any(), any(), any(), any());
         assertEquals("PENDING", first.status);
-        assertEquals("COMPLETED", second.status);
+        assertEquals("DISPATCHED", second.status);
     }
 
     private OrderDispatchOutbox event() {

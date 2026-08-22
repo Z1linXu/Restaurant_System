@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { dineInService } from '../services/dineInService'
 import { fetchDiningTables } from '../services/frontdeskConfigService'
-import { fetchActiveOrderBoardForStore, subscribeToFrontdeskOrders } from '../services/orderService'
+import {
+  fetchActiveOrderBoardForStore,
+  subscribeToFrontdeskOrders,
+  type FrontdeskRealtimeLifecycleEvent,
+} from '../services/orderService'
 import type { BackendDiningTableConfig, DiningTable, TableSeatCode, TableSlot, TableStatus } from '../types/dinein'
 
-const initialData = dineInService.getInitialData()
 const SEAT_CODES: TableSeatCode[] = ['A', 'B']
-const FRONTDESK_POLL_INTERVAL_MS = 30_000
+const FRONTDESK_FALLBACK_POLL_INTERVAL_MS = 30_000
+const FRONTDESK_CONNECTED_POLL_INTERVAL_MS = 120_000
 const FRONTDESK_WS_DEBOUNCE_MS = 500
 
 function stripOccupancy(table: DiningTable): DiningTable {
@@ -19,11 +22,7 @@ function stripOccupancy(table: DiningTable): DiningTable {
   }
 }
 
-function createBaseTables() {
-  return initialData.tables.map(stripOccupancy)
-}
-
-function mapBackendDiningTable(table: BackendDiningTableConfig): DiningTable {
+export function mapBackendDiningTable(table: BackendDiningTableConfig): DiningTable {
   return {
     id: table.id,
     label: table.table_name || table.table_code,
@@ -34,7 +33,7 @@ function mapBackendDiningTable(table: BackendDiningTableConfig): DiningTable {
   }
 }
 
-function buildSlots(tables: DiningTable[]) {
+export function buildTableSlots(tables: DiningTable[]) {
   return tables.flatMap<TableSlot>((table) => {
     if (table.occupancyMode === 'empty') {
       return [
@@ -91,6 +90,10 @@ function buildSlots(tables: DiningTable[]) {
   })
 }
 
+export function visibleTableSlotsForStore(tables: DiningTable[], dataStoreId: number | null, currentStoreId: number) {
+  return dataStoreId === currentStoreId ? buildTableSlots(tables) : []
+}
+
 function orderPriority(order: Awaited<ReturnType<typeof fetchActiveOrderBoardForStore>>[number]) {
   const draftPenalty = order.order_status === 'draft' ? 0 : 1000
   const itemWeight = order.total_item_count ?? 0
@@ -108,13 +111,20 @@ interface UseTableBoardOptions {
 export function useTableBoard(options: UseTableBoardOptions) {
   const enabled = options.enabled ?? true
   const storeId = options.storeId
-  const [tables, setTables] = useState<DiningTable[]>(createBaseTables)
+  const [tables, setTables] = useState<DiningTable[]>([])
+  const [tablesStoreId, setTablesStoreId] = useState<number | null>(null)
   const [syncError, setSyncError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(enabled)
+  const [hasLoaded, setHasLoaded] = useState(false)
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine))
-  const syncInFlightRef = useRef(false)
-  const syncPendingRef = useRef(false)
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false)
+  const [realtimeStatus, setRealtimeStatus] = useState<FrontdeskRealtimeLifecycleEvent['phase'] | null>(null)
+  const generationRef = useRef(0)
+  const syncStateRef = useRef({ generation: 0, inFlight: false, pending: false })
   const wsRefreshTimeoutRef = useRef<number | null>(null)
+  const pollTimeoutRef = useRef<number | null>(null)
   const enabledRef = useRef(enabled)
+  const realtimeConnectedRef = useRef(false)
   const onOrderTerminalRef = useRef(options.onOrderTerminal)
 
   useEffect(() => {
@@ -123,25 +133,34 @@ export function useTableBoard(options: UseTableBoardOptions) {
 
   useEffect(() => {
     enabledRef.current = enabled
-    if (!enabled) {
-      syncPendingRef.current = false
-      if (wsRefreshTimeoutRef.current !== null) {
-        window.clearTimeout(wsRefreshTimeoutRef.current)
-        wsRefreshTimeoutRef.current = null
-      }
+    generationRef.current += 1
+    syncStateRef.current = {
+      generation: generationRef.current,
+      inFlight: false,
+      pending: false,
     }
-  }, [enabled])
+    realtimeConnectedRef.current = false
+    setIsRealtimeConnected(false)
+    setRealtimeStatus(null)
+    setTables([])
+    setTablesStoreId(null)
+    setSyncError(null)
+    setHasLoaded(false)
+    setIsLoading(enabled)
+
+    if (wsRefreshTimeoutRef.current !== null) {
+      window.clearTimeout(wsRefreshTimeoutRef.current)
+      wsRefreshTimeoutRef.current = null
+    }
+    if (pollTimeoutRef.current !== null) {
+      window.clearTimeout(pollTimeoutRef.current)
+      pollTimeoutRef.current = null
+    }
+  }, [enabled, storeId])
 
   const hydrateBaseTables = useCallback(async () => {
-    try {
-      const diningTables = await fetchDiningTables(storeId)
-      if (!diningTables.length) {
-        return createBaseTables()
-      }
-      return diningTables.map(mapBackendDiningTable)
-    } catch {
-      return createBaseTables()
-    }
+    const diningTables = await fetchDiningTables(storeId)
+    return diningTables.map(mapBackendDiningTable)
   }, [storeId])
 
   const deriveTablesFromActiveOrders = useCallback(
@@ -203,8 +222,9 @@ export function useTableBoard(options: UseTableBoardOptions) {
   )
 
   const syncFromBackend = useCallback(async (options?: { force?: boolean }) => {
-    if (!enabledRef.current) {
-      syncPendingRef.current = false
+    const generation = generationRef.current
+    const syncState = syncStateRef.current
+    if (!enabledRef.current || syncState.generation !== generation) {
       return
     }
 
@@ -212,52 +232,84 @@ export function useTableBoard(options: UseTableBoardOptions) {
       return
     }
 
-    if (syncInFlightRef.current) {
-      syncPendingRef.current = true
+    if (syncState.inFlight) {
+      syncState.pending = true
       return
     }
 
-    syncInFlightRef.current = true
+    syncState.inFlight = true
+    setIsLoading(true)
     try {
       do {
-        syncPendingRef.current = false
+        syncState.pending = false
         const [baseTables, activeOrders] = await Promise.all([hydrateBaseTables(), fetchActiveOrderBoardForStore(storeId)])
-        if (!enabledRef.current) {
-          syncPendingRef.current = false
+        if (generationRef.current !== generation || !enabledRef.current || syncStateRef.current !== syncState) {
           return
         }
         setSyncError(null)
+        setHasLoaded(true)
         setTables(deriveTablesFromActiveOrders(baseTables, activeOrders))
-      } while (enabledRef.current && syncPendingRef.current && (options?.force || document.visibilityState === 'visible'))
+        setTablesStoreId(storeId)
+      } while (generationRef.current === generation
+        && enabledRef.current
+        && syncState.pending
+        && (options?.force || document.visibilityState === 'visible'))
     } catch (error) {
-      setSyncError(error instanceof Error ? error.message : 'Unable to sync table board')
+      if (generationRef.current === generation && enabledRef.current && syncStateRef.current === syncState) {
+        setHasLoaded(true)
+        setTablesStoreId(storeId)
+        setSyncError(error instanceof Error ? error.message : 'Unable to sync table board')
+      }
     } finally {
-      syncInFlightRef.current = false
+      if (syncStateRef.current === syncState) {
+        syncState.inFlight = false
+        setIsLoading(false)
+      }
     }
   }, [deriveTablesFromActiveOrders, hydrateBaseTables, storeId])
 
   const refreshTableAfterFinish = useCallback(
     async (baseTableLabel: string) => {
-      const [baseTables, activeOrders] = await Promise.all([hydrateBaseTables(), fetchActiveOrderBoardForStore(storeId)])
-      const nextTables = deriveTablesFromActiveOrders(baseTables, activeOrders)
-      const hasRemainingSeatOrders = activeOrders.some((order) => {
-        const tableNo = order.table_no ?? ''
-        return tableNo === baseTableLabel || tableNo.startsWith(`${baseTableLabel}-`)
-      })
+      const generation = generationRef.current
+      if (!enabledRef.current) return
+      setIsLoading(true)
+      try {
+        const [baseTables, activeOrders] = await Promise.all([hydrateBaseTables(), fetchActiveOrderBoardForStore(storeId)])
+        if (generationRef.current !== generation || !enabledRef.current) return
+        const nextTables = deriveTablesFromActiveOrders(baseTables, activeOrders)
+        const hasRemainingSeatOrders = activeOrders.some((order) => {
+          const tableNo = order.table_no ?? ''
+          return tableNo === baseTableLabel || tableNo.startsWith(`${baseTableLabel}-`)
+        })
 
-      setTables(
-        nextTables.map((table) => {
-          if (table.label !== baseTableLabel) {
+        setSyncError(null)
+        setHasLoaded(true)
+        setTablesStoreId(storeId)
+        setTables(
+          nextTables.map((table) => {
+            if (table.label !== baseTableLabel) {
+              return table
+            }
+
+            if (!hasRemainingSeatOrders) {
+              return stripOccupancy(table)
+            }
+
             return table
-          }
-
-          if (!hasRemainingSeatOrders) {
-            return stripOccupancy(table)
-          }
-
-          return table
-        }),
-      )
+          }),
+        )
+      } catch (error) {
+        if (generationRef.current === generation && enabledRef.current) {
+          setHasLoaded(true)
+          setTablesStoreId(storeId)
+          setSyncError(error instanceof Error ? error.message : 'Unable to sync table board')
+        }
+        throw error
+      } finally {
+        if (generationRef.current === generation) {
+          setIsLoading(false)
+        }
+      }
     },
     [deriveTablesFromActiveOrders, hydrateBaseTables, storeId],
   )
@@ -275,8 +327,11 @@ export function useTableBoard(options: UseTableBoardOptions) {
       return () => undefined
     }
 
+    const generation = generationRef.current
+    const isCurrent = () => generationRef.current === generation && enabledRef.current
+
     const scheduleWebSocketRefresh = (force = false) => {
-      if (!enabledRef.current) {
+      if (!isCurrent()) {
         return
       }
       if (document.visibilityState !== 'visible') {
@@ -289,14 +344,48 @@ export function useTableBoard(options: UseTableBoardOptions) {
 
       wsRefreshTimeoutRef.current = window.setTimeout(() => {
         wsRefreshTimeoutRef.current = null
-        if (!enabledRef.current) {
+        if (!isCurrent()) {
           return
         }
         void syncFromBackend(force ? { force: true } : undefined)
       }, force ? 100 : FRONTDESK_WS_DEBOUNCE_MS)
     }
 
+    const schedulePoll = () => {
+      if (!isCurrent() || document.visibilityState !== 'visible') {
+        return
+      }
+      if (pollTimeoutRef.current !== null) {
+        window.clearTimeout(pollTimeoutRef.current)
+      }
+      const delay = realtimeConnectedRef.current
+        ? FRONTDESK_CONNECTED_POLL_INTERVAL_MS
+        : FRONTDESK_FALLBACK_POLL_INTERVAL_MS
+      pollTimeoutRef.current = window.setTimeout(() => {
+        pollTimeoutRef.current = null
+        if (!isCurrent() || document.visibilityState !== 'visible') {
+          return
+        }
+        void syncFromBackend()
+        schedulePoll()
+      }, delay)
+    }
+
+    const handleRealtimeLifecycle = (event: FrontdeskRealtimeLifecycleEvent) => {
+      if (!isCurrent()) return
+      setRealtimeStatus(event.phase)
+      const connected = event.phase === 'CONNECTED'
+      if (connected !== realtimeConnectedRef.current) {
+        realtimeConnectedRef.current = connected
+        setIsRealtimeConnected(connected)
+        schedulePoll()
+      }
+    }
+
     const unsubscribe = subscribeToFrontdeskOrders(storeId, (message) => {
+      if (!isCurrent() || message.store_id !== storeId) {
+        return
+      }
       const eventType = (message.event_type ?? '').toLowerCase()
       const terminalStatus = message.order_status?.toLowerCase()
         ?? (eventType === 'order.completed' ? 'completed' : eventType === 'order.cancelled' ? 'cancelled' : null)
@@ -308,20 +397,11 @@ export function useTableBoard(options: UseTableBoardOptions) {
         void onOrderTerminalRef.current?.(message.order_id, terminalStatus)
       }
       scheduleWebSocketRefresh(isFinishEvent)
-    })
-
-    const poller = window.setInterval(() => {
-      if (!enabledRef.current) {
-        return
-      }
-      if (document.visibilityState !== 'visible') {
-        return
-      }
-      void syncFromBackend()
-    }, FRONTDESK_POLL_INTERVAL_MS)
+    }, { onLifecycle: handleRealtimeLifecycle })
+    schedulePoll()
 
     const handleVisibilityChange = () => {
-      if (!enabledRef.current) {
+      if (!isCurrent()) {
         return
       }
       if (document.visibilityState !== 'visible') {
@@ -329,16 +409,22 @@ export function useTableBoard(options: UseTableBoardOptions) {
           window.clearTimeout(wsRefreshTimeoutRef.current)
           wsRefreshTimeoutRef.current = null
         }
+        if (pollTimeoutRef.current !== null) {
+          window.clearTimeout(pollTimeoutRef.current)
+          pollTimeoutRef.current = null
+        }
         return
       }
 
       void syncFromBackend({ force: true })
+      schedulePoll()
     }
 
     const handleOnline = () => {
       setIsOnline(true)
-      if (enabledRef.current && document.visibilityState === 'visible') {
+      if (isCurrent() && document.visibilityState === 'visible') {
         void syncFromBackend({ force: true })
+        schedulePoll()
       }
     }
 
@@ -353,7 +439,6 @@ export function useTableBoard(options: UseTableBoardOptions) {
 
     return () => {
       unsubscribe()
-      window.clearInterval(poller)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
@@ -361,10 +446,17 @@ export function useTableBoard(options: UseTableBoardOptions) {
         window.clearTimeout(wsRefreshTimeoutRef.current)
         wsRefreshTimeoutRef.current = null
       }
+      if (pollTimeoutRef.current !== null) {
+        window.clearTimeout(pollTimeoutRef.current)
+        pollTimeoutRef.current = null
+      }
     }
   }, [enabled, storeId, syncFromBackend])
 
-  const tableSlots = useMemo(() => buildSlots(tables), [tables])
+  const tableSlots = useMemo(
+    () => visibleTableSlotsForStore(tables, tablesStoreId, storeId),
+    [storeId, tables, tablesStoreId],
+  )
 
   const statusCounts = useMemo(
     () =>
@@ -425,7 +517,11 @@ export function useTableBoard(options: UseTableBoardOptions) {
     tableSlots,
     statusCounts,
     syncError,
+    isLoading: isLoading || tablesStoreId !== storeId,
+    isEmpty: tablesStoreId === storeId && hasLoaded && tableSlots.length === 0,
     isOnline,
+    isRealtimeConnected,
+    realtimeStatus,
     startOrder,
     editOrder,
     endOrder,

@@ -13,6 +13,9 @@ import com.restaurant.system.order.repository.OrderRepository;
 import com.restaurant.system.modules.ModuleKeys;
 import com.restaurant.system.modules.StoreModuleAccessEvaluation;
 import com.restaurant.system.modules.StoreModuleAccessEvaluator;
+import com.restaurant.system.modules.StoreModuleCapabilityProvider;
+import com.restaurant.system.modules.StoreHardwareCapabilityReadiness;
+import com.restaurant.system.modules.HardwareCapabilityKeys;
 import com.restaurant.system.printing.CloudPrintingGuard;
 import com.restaurant.system.printing.PrintModuleCode;
 import com.restaurant.system.printing.PrintJobStatus;
@@ -42,9 +45,11 @@ import com.restaurant.system.printing.rules.PrintingDisplayRuleContext;
 import com.restaurant.system.printing.rules.PrintingDisplayRuleService;
 import com.restaurant.system.printing.semantic.HotKitchenPrintEligibilityService;
 import com.restaurant.system.printing.service.PrintDispatcherService;
+import com.restaurant.system.printing.service.PrintDispatchOutcome;
 import com.restaurant.system.printing.service.PrintJobService;
 import com.restaurant.system.printing.service.OrderDispatchOutboxService;
 import com.restaurant.system.printing.service.PrinterConfigService;
+import com.restaurant.system.printing.service.StorePrintingRoleRequirementService;
 import com.restaurant.system.printing.transport.EscPosFontTestMode;
 import com.restaurant.system.printing.transport.PrinterTransport;
 import com.restaurant.system.user.entity.Store;
@@ -90,6 +95,8 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
     private final HotKitchenPrintEligibilityService hotKitchenPrintEligibilityService;
     private final OrderDispatchOutboxService orderDispatchOutboxService;
     private final StoreModuleAccessEvaluator moduleAccessEvaluator;
+    private final StoreModuleCapabilityProvider moduleCapabilityProvider;
+    private final StorePrintingRoleRequirementService printingRoleRequirementService;
     private final PrintingDisplayRuleService printingDisplayRuleService;
 
     public PrintDispatcherServiceImpl(
@@ -110,6 +117,8 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         HotKitchenPrintEligibilityService hotKitchenPrintEligibilityService,
         OrderDispatchOutboxService orderDispatchOutboxService,
         StoreModuleAccessEvaluator moduleAccessEvaluator,
+        StoreModuleCapabilityProvider moduleCapabilityProvider,
+        StorePrintingRoleRequirementService printingRoleRequirementService,
         PrintingDisplayRuleService printingDisplayRuleService
     ) {
         this.printerConfigService = printerConfigService;
@@ -129,6 +138,8 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         this.hotKitchenPrintEligibilityService = hotKitchenPrintEligibilityService;
         this.orderDispatchOutboxService = orderDispatchOutboxService;
         this.moduleAccessEvaluator = moduleAccessEvaluator;
+        this.moduleCapabilityProvider = moduleCapabilityProvider;
+        this.printingRoleRequirementService = printingRoleRequirementService;
         this.printingDisplayRuleService = printingDisplayRuleService;
     }
 
@@ -151,24 +162,45 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
     }
 
     @Override
-    public void dispatchPersistedEvent(
+    public PrintDispatchOutcome dispatchPersistedEvent(
         String moduleCode,
         Long storeId,
         Long orderId,
         Long orderUpdateBatchId,
         String sourceKey
     ) {
+        if (!printingRoleRequirementService.requirement(storeId, moduleCode).required()) {
+            logger.info("Skipping persisted print event {} because Store printing role {} is disabled", sourceKey, moduleCode);
+            return PrintDispatchOutcome.SKIPPED;
+        }
         StoreModuleAccessEvaluation evaluation = moduleAccessEvaluator.evaluateCapability(storeId, ModuleKeys.PRINTING);
-        if (!evaluation.allowed()) {
+        if (!printingModuleDispatchAllowed(evaluation, storeId, moduleCode)) {
             logger.info(
                 "Skipping persisted print event {} because module {} is unavailable: {}",
                 sourceKey,
                 evaluation.moduleKey(),
                 evaluation.errorCode()
             );
-            return;
+            return StoreModuleAccessEvaluator.MODULE_HARDWARE_CAPABILITY_MISSING.equals(evaluation.errorCode())
+                ? PrintDispatchOutcome.CAPABILITY_UNAVAILABLE
+                : PrintDispatchOutcome.POLICY_BLOCKED;
         }
         doDispatch(moduleCode, storeId, orderId, orderUpdateBatchId, sourceKey);
+        PrintJob job = sourceKey == null ? null : printJobRepository.findByDispatchSourceKey(sourceKey).orElse(null);
+        if (job == null) {
+            return PrintDispatchOutcome.SKIPPED;
+        }
+        if (PrintJobStatus.FAILED.equals(job.status)) {
+            return PrintDispatchOutcome.FAILED;
+        }
+        if (PrintJobStatus.CANCELLED.equals(job.status)) {
+            return PrintDispatchOutcome.POLICY_BLOCKED;
+        }
+        return "MOCK".equalsIgnoreCase(job.executionMode) ||
+            (PrintJobStatus.PRINTED.equals(job.status)
+                && PrintingMode.MOCK.equals(printerConfigService.getStorePrintingMode(storeId)))
+            ? PrintDispatchOutcome.MOCK_RENDERED
+            : PrintDispatchOutcome.DISPATCHED;
     }
 
     @Override
@@ -444,47 +476,58 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 response.message = "module_code is required.";
                 return response;
             }
+            if (!printingRoleRequirementService.requirement(request.store_id, request.module_code).required()) {
+                response.success = false;
+                response.message = "Printing role is disabled for this Store: " + request.module_code + ".";
+                return response;
+            }
 
             Optional<PrinterAssignment> assignmentOptional = printerAssignmentRepository.findByStoreIdAndModuleCode(request.store_id, request.module_code);
-            if (assignmentOptional.isEmpty()) {
+            if (!PrintingMode.MOCK.equals(printingMode) && assignmentOptional.isEmpty()) {
                 response.success = false;
                 response.message = "No printer assignment exists for module " + request.module_code + ".";
                 return response;
             }
 
-            PrinterAssignment assignment = assignmentOptional.get();
-            if (!Boolean.TRUE.equals(assignment.enabled)) {
+            PrinterAssignment assignment = assignmentOptional.orElse(null);
+            if (!PrintingMode.MOCK.equals(printingMode) && !Boolean.TRUE.equals(assignment.enabled)) {
                 response.success = false;
                 response.message = "Printer assignment is disabled for module " + request.module_code + ".";
                 return response;
             }
-            if (assignment.printer_id == null) {
+            if (!PrintingMode.MOCK.equals(printingMode) && assignment.printer_id == null) {
                 response.success = false;
                 response.message = "No printer is assigned to module " + request.module_code + ".";
                 return response;
             }
 
-            PrinterConfig printer = printerConfigRepository.findById(assignment.printer_id)
-                .orElseThrow(() -> new BusinessException("Assigned printer not found"));
-            if (!Boolean.TRUE.equals(printer.enabled)) {
+            PrinterConfig printer = PrintingMode.MOCK.equals(printingMode)
+                ? null
+                : printerConfigRepository.findById(assignment.printer_id)
+                    .orElseThrow(() -> new BusinessException("Assigned printer not found"));
+            if (printer != null && !Boolean.TRUE.equals(printer.enabled)) {
                 response.success = false;
                 response.message = "Assigned printer is disabled for module " + request.module_code + ".";
                 return response;
             }
 
-            String content = buildAssignedModuleTestContent(request.store_id, request.module_code, resolveEffectiveFontSize(assignment, printer));
+            String content = buildAssignedModuleTestContent(
+                request.store_id,
+                request.module_code,
+                printer == null ? null : resolveEffectiveFontSize(assignment, printer)
+            );
             Store store = storeRepository.findById(request.store_id).orElseThrow(() -> new BusinessException("Store not found"));
             PrintJob job = printJobService.createPendingJob(
                 store.organization_id,
                 request.store_id,
                 null,
-                printer.id,
+                printer == null ? null : printer.id,
                 request.module_code,
                 request.module_code + "_TEST",
                 null,
                 buildPayloadSnapshot(request.module_code, request.store_id, null, "ADMIN_MODULE_TEST_PRINT")
             );
-            job = printJobService.attachRenderedContent(job, printer.id, content);
+            job = printJobService.attachRenderedContent(job, printer == null ? null : printer.id, content);
             if (PrintingMode.PAD_DIRECT.equals(printingMode)) {
                 job = printJobService.markPadDirectQueued(job, printer, resolveEffectiveFontSize(assignment, printer));
                 response.success = true;
@@ -545,7 +588,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             }
             ruleContext = printingDisplayRuleService.activeContext(storeId);
             StoreModuleAccessEvaluation evaluation = moduleAccessEvaluator.evaluateCapability(storeId, ModuleKeys.PRINTING);
-            if (!evaluation.allowed()) {
+            if (!printingModuleDispatchAllowed(evaluation, storeId, moduleCode)) {
                 logger.info(
                     "Skipping print dispatch before job creation for module {} store {} order {} because {}",
                     moduleCode,
@@ -653,30 +696,33 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 return;
             }
 
-            Optional<PrinterAssignment> assignmentOptional = printerAssignmentRepository.findByStoreIdAndModuleCode(storeId, moduleCode);
-            if (assignmentOptional.isEmpty()) {
-                printJobService.markFailed(job, null, "ASSIGNMENT_MISSING", "No printer assignment exists for module " + moduleCode);
-                logger.warn("Print job {} failed because assignment is missing for module {} store {}", job.id, moduleCode, storeId);
-                return;
-            }
-            PrinterAssignment assignment = assignmentOptional.get();
-            if (!Boolean.TRUE.equals(assignment.enabled) || assignment.printer_id == null) {
-                printJobService.markFailed(job, null, "ASSIGNMENT_DISABLED", "Printer assignment is disabled or missing printer for module " + moduleCode);
-                logger.warn("Print job {} failed because assignment is disabled or missing printer", job.id);
-                return;
-            }
+            PrinterAssignment assignment = printerAssignmentRepository
+                .findByStoreIdAndModuleCode(storeId, moduleCode)
+                .orElse(null);
+            if (!PrintingMode.MOCK.equals(printingMode)) {
+                if (assignment == null) {
+                    printJobService.markFailed(job, null, "ASSIGNMENT_MISSING", "No printer assignment exists for module " + moduleCode);
+                    logger.warn("Print job {} failed because assignment is missing for module {} store {}", job.id, moduleCode, storeId);
+                    return;
+                }
+                if (!Boolean.TRUE.equals(assignment.enabled) || assignment.printer_id == null) {
+                    printJobService.markFailed(job, null, "ASSIGNMENT_DISABLED", "Printer assignment is disabled or missing printer for module " + moduleCode);
+                    logger.warn("Print job {} failed because assignment is disabled or missing printer", job.id);
+                    return;
+                }
 
-            printer = requirePrinterForStore(assignment.printer_id, storeId);
-            if (!Boolean.TRUE.equals(printer.enabled)) {
-                job = printJobService.attachRenderedContent(job, printer.id, null);
-                printJobService.markFailed(job, printer, "PRINTER_DISABLED", "Assigned printer is disabled");
-                logger.warn("Print job {} failed because printer {} is disabled", job.id, printer.id);
-                return;
+                printer = requirePrinterForStore(assignment.printer_id, storeId);
+                if (!Boolean.TRUE.equals(printer.enabled)) {
+                    job = printJobService.attachRenderedContent(job, printer.id, null);
+                    printJobService.markFailed(job, printer, "PRINTER_DISABLED", "Assigned printer is disabled");
+                    logger.warn("Print job {} failed because printer {} is disabled", job.id, printer.id);
+                    return;
+                }
             }
 
             ReceiptRenderer renderer = renderersByModuleCode.get(moduleCode);
             if (renderer == null) {
-                job = printJobService.attachRenderedContent(job, printer.id, null);
+                job = printJobService.attachRenderedContent(job, printer == null ? null : printer.id, null);
                 printJobService.markFailed(job, printer, "RENDERER_MISSING", "No renderer is registered for module " + moduleCode);
                 logger.warn("Print job {} failed because renderer is missing for module {}", job.id, moduleCode);
                 return;
@@ -686,14 +732,14 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId, ruleContext);
             }
             if (renderRequest == null) {
-                job = printJobService.attachRenderedContent(job, printer.id, null);
+                job = printJobService.attachRenderedContent(job, printer == null ? null : printer.id, null);
                 printJobService.markFailed(job, printer, "RENDER_DATA_MISSING", "No render data was available");
                 logger.warn("Print job {} failed because no render data was available", job.id);
                 return;
             }
             String content = preRenderedContent != null ? preRenderedContent : renderer.render(renderRequest);
             if (content == null || content.isBlank()) {
-                job = printJobService.attachRenderedContent(job, printer.id, content);
+                job = printJobService.attachRenderedContent(job, printer == null ? null : printer.id, content);
                 printJobService.markFailed(job, printer, "RENDERED_CONTENT_BLANK", "Rendered content was blank");
                 logger.warn("Print job {} failed because rendered content was blank", job.id);
                 return;
@@ -701,7 +747,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
 
             job = printJobService.attachRenderedContent(
                 job,
-                printer.id,
+                printer == null ? null : printer.id,
                 content,
                 ruleContext == null ? null : ruleContext.revisionId(),
                 ruleContext == null ? null : ruleContext.activeFingerprintOrDefault()
@@ -732,7 +778,14 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 return;
             }
             job = printJobService.markPrinting(job, printer);
-            logger.info("Dispatching print job {} module {} store {} order {} to printer {}", job.id, moduleCode, storeId, orderId, printer.id);
+            logger.info(
+                "Dispatching print job {} module {} store {} order {} to printer {}",
+                job.id,
+                moduleCode,
+                storeId,
+                orderId,
+                printer == null ? "ENDPOINT_FREE_MOCK" : printer.id
+            );
             int copies = resolveCopyCount(moduleCode, assignment, renderRequest.order);
             for (int copyIndex = 0; copyIndex < copies; copyIndex++) {
                 if (PrintingMode.MOCK.equals(printingMode)) {
@@ -743,7 +796,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             }
             if (PrintingMode.MOCK.equals(printingMode)) {
                 printJobService.markPrinted(job, printer, "Mock print succeeded - no physical printer used");
-                logger.info("Mock printed module {} for store {} order {} using printer {} copies {}", moduleCode, storeId, orderId, printer.id, copies);
+                logger.info("Mock rendered module {} for store {} order {} without physical printer copies {}", moduleCode, storeId, orderId, copies);
             } else {
                 printJobService.markPrinted(job, printer);
                 logger.info("Printed module {} for store {} order {} using printer {} copies {}", moduleCode, storeId, orderId, printer.id, copies);
@@ -765,11 +818,14 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
     public PrintJobResponse reprintJob(Long jobId, Long requestedByUserId) {
         PrintJob job = printJobService.requireJob(jobId);
         requirePrintingModule(job.store_id);
-        PrinterConfig printer = requirePrinterForJob(job);
         String printingMode = printerConfigService.getStorePrintingMode(job.store_id);
         if (PrintingMode.DISABLED.equals(printingMode)) {
             throw new BusinessException("Store printing is disabled");
         }
+        if (!printingRoleRequirementService.requirement(job.store_id, job.module_code).required()) {
+            throw new BusinessException("Store printing role is disabled: " + job.module_code);
+        }
+        PrinterConfig printer = PrintingMode.MOCK.equals(printingMode) ? null : requirePrinterForJob(job);
         try {
             String content = job.rendered_text_snapshot;
             PrinterAssignment assignment = printerAssignmentRepository.findByStoreIdAndModuleCode(job.store_id, job.module_code).orElse(null);
@@ -778,13 +834,13 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 content = renderOrderContent(job.module_code, job.store_id, job.order_id, null, context);
                 job = printJobService.attachRenderedContent(
                     job,
-                    printer.id,
+                    printer == null ? null : printer.id,
                     content,
                     context.revisionId(),
                     context.activeFingerprintOrDefault()
                 );
             } else {
-                job = printJobService.attachRenderedContent(job, printer.id, content);
+                job = printJobService.attachRenderedContent(job, printer == null ? null : printer.id, content);
             }
             if (PrintingMode.PAD_DIRECT.equals(printingMode)) {
                 job = printJobService.markPadDirectQueued(job, printer, resolveEffectiveFontSize(assignment, printer));
@@ -822,33 +878,38 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             throw new BusinessException("Store printing is disabled");
         }
         String moduleCode = normalizeReceiptType(request == null ? null : request.receipt_type);
+        if (!printingRoleRequirementService.requirement(order.store_id, moduleCode).required()) {
+            throw new BusinessException("Store printing role is disabled: " + moduleCode);
+        }
         if (PrintModuleCode.HOT_KITCHEN.equals(moduleCode) && !hasPrintableContent(moduleCode, order.store_id, order.id)) {
             throw new BusinessException("Order has no HOT_KITCHEN content to reprint");
         }
         PrinterAssignment assignment = printerAssignmentRepository.findByStoreIdAndModuleCode(order.store_id, moduleCode).orElse(null);
-        PrinterConfig printer = request != null && request.printer_id != null
-            ? requirePrinterForStore(request.printer_id, order.store_id)
-            : requireAssignedPrinter(order.store_id, moduleCode, assignment);
+        PrinterConfig printer = PrintingMode.MOCK.equals(printingMode)
+            ? null
+            : request != null && request.printer_id != null
+                ? requirePrinterForStore(request.printer_id, order.store_id)
+                : requireAssignedPrinter(order.store_id, moduleCode, assignment);
 
         PrintJob job = printJobService.createPendingJob(
             store.organization_id,
             order.store_id,
             order.id,
-            printer.id,
+            printer == null ? null : printer.id,
             moduleCode,
             moduleCode,
             requestedByUserId,
             buildPayloadSnapshot(moduleCode, order.store_id, order.id, "ORDER_CENTER_REPRINT")
         );
         try {
-            if (!Boolean.TRUE.equals(printer.enabled)) {
+            if (printer != null && !Boolean.TRUE.equals(printer.enabled)) {
                 return printJobService.toResponse(printJobService.markFailed(job, printer, "PRINTER_DISABLED", "Selected printer is disabled"));
             }
             PrintingDisplayRuleContext historicalContext = printingDisplayRuleService.historicalContextForOrder(order.store_id, order.id, moduleCode);
             String content = renderOrderContent(moduleCode, order.store_id, order.id, null, historicalContext);
             job = printJobService.attachRenderedContent(
                 job,
-                printer.id,
+                printer == null ? null : printer.id,
                 content,
                 historicalContext.revisionId(),
                 historicalContext.activeFingerprintOrDefault()
@@ -882,11 +943,18 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             throw new BusinessException("Order not found");
         }
         StoreModuleAccessEvaluation evaluation = moduleAccessEvaluator.evaluateCapability(order.store_id, ModuleKeys.PRINTING);
-        boolean featureEnabled = evaluation.allowed();
         boolean storeEnabled = printerConfigService.isPrintingEnabled(order.store_id);
+        String printingMode = printerConfigService.getStorePrintingMode(order.store_id);
         return renderersByModuleCode.keySet().stream()
             .sorted()
-            .map(moduleCode -> buildOrderPrintOption(order.id, order.store_id, moduleCode, featureEnabled, storeEnabled))
+            .map(moduleCode -> buildOrderPrintOption(
+                order.id,
+                order.store_id,
+                moduleCode,
+                evaluation,
+                storeEnabled,
+                printingMode
+            ))
             .toList();
     }
 
@@ -894,14 +962,15 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         Long orderId,
         Long storeId,
         String moduleCode,
-        boolean featureEnabled,
-        boolean storeEnabled
+        StoreModuleAccessEvaluation evaluation,
+        boolean storeEnabled,
+        String printingMode
     ) {
         OrderPrintOptionResponse response = new OrderPrintOptionResponse();
         response.module_code = moduleCode;
         response.label = "Reprint " + moduleCode;
         response.available = false;
-        if (!featureEnabled) {
+        if (!printingModuleDispatchAllowed(evaluation, storeId, moduleCode)) {
             response.unavailable_reason = "Printing feature is disabled";
             return response;
         }
@@ -909,8 +978,17 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             response.unavailable_reason = "Store printing mode is disabled";
             return response;
         }
+        if (!printingRoleRequirementService.requirement(storeId, moduleCode).required()) {
+            response.unavailable_reason = "Printing role is disabled for this Store";
+            return response;
+        }
         if (PrintModuleCode.HOT_KITCHEN.equals(moduleCode) && !hasPrintableContent(moduleCode, storeId, orderId)) {
             response.unavailable_reason = "Order has no hot kitchen items to print";
+            return response;
+        }
+        if (PrintingMode.MOCK.equals(printingMode)) {
+            response.available = true;
+            response.unavailable_reason = null;
             return response;
         }
         PrinterAssignment assignment = printerAssignmentRepository.findByStoreIdAndModuleCode(storeId, moduleCode).orElse(null);
@@ -1169,6 +1247,33 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             job == null ? "N/A" : job.order_id,
             content == null ? "" : content
         );
+    }
+
+    private boolean printingModuleDispatchAllowed(
+        StoreModuleAccessEvaluation evaluation,
+        Long storeId,
+        String moduleCode
+    ) {
+        if (evaluation.allowed()) {
+            return true;
+        }
+        if (!StoreModuleAccessEvaluator.MODULE_HARDWARE_CAPABILITY_MISSING.equals(evaluation.errorCode())) {
+            return false;
+        }
+        String capabilityKey = switch (moduleCode) {
+            case PrintModuleCode.GRAB -> HardwareCapabilityKeys.PRINT_GRAB;
+            case PrintModuleCode.FRONTDESK_RECEIPT -> HardwareCapabilityKeys.PRINT_FRONTDESK_RECEIPT;
+            case PrintModuleCode.HOT_KITCHEN -> HardwareCapabilityKeys.PRINT_HOT_KITCHEN;
+            default -> null;
+        };
+        if (capabilityKey == null) {
+            return false;
+        }
+        return moduleCapabilityProvider.hardwareReadiness(storeId).stream()
+            .filter(readiness -> capabilityKey.equals(readiness.capabilityKey()))
+            .findFirst()
+            .map(StoreHardwareCapabilityReadiness::dependencySatisfied)
+            .orElse(false);
     }
 
     private void sendToPrinter(PrinterConfig printer, String content) {

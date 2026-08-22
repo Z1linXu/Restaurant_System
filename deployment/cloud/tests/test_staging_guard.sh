@@ -367,6 +367,7 @@ if ! (
   LOCAL_VALIDATE_MODE=false
   assert_clean_release() { :; }
   assert_resolved_compose() { :; }
+  run_release_retention_dry_run() { :; }
   controlled_compose() {
     local active_env_file="$1"
     shift
@@ -399,6 +400,7 @@ if (
   LOCAL_VALIDATE_MODE=false
   assert_clean_release() { :; }
   assert_resolved_compose() { :; }
+  run_release_retention_dry_run() { :; }
   controlled_compose() {
     local active_env_file="$1"
     shift
@@ -429,6 +431,7 @@ if (
   LOCAL_VALIDATE_MODE=false
   assert_clean_release() { :; }
   assert_resolved_compose() { :; }
+  run_release_retention_dry_run() { :; }
   controlled_compose() {
     local active_env_file="$1"
     shift

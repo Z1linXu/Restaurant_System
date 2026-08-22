@@ -1,6 +1,7 @@
 package com.restaurant.system.printing.service.impl;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -16,8 +17,12 @@ import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.kitchen.entity.KitchenTask;
 import com.restaurant.system.kitchen.repository.KitchenTaskRepository;
 import com.restaurant.system.modules.ModuleKeys;
+import com.restaurant.system.modules.HardwareCapabilityKeys;
+import com.restaurant.system.modules.HardwareReadinessState;
+import com.restaurant.system.modules.StoreHardwareCapabilityReadiness;
 import com.restaurant.system.modules.StoreModuleAccessEvaluation;
 import com.restaurant.system.modules.StoreModuleAccessEvaluator;
+import com.restaurant.system.modules.StoreModuleCapabilityProvider;
 import com.restaurant.system.order.repository.OrderItemOptionRepository;
 import com.restaurant.system.order.repository.OrderItemRepository;
 import com.restaurant.system.order.repository.OrderRepository;
@@ -38,8 +43,11 @@ import com.restaurant.system.printing.rules.PrintingDisplayRuleContext;
 import com.restaurant.system.printing.rules.PrintingDisplayRuleService;
 import com.restaurant.system.printing.semantic.HotKitchenPrintEligibilityService;
 import com.restaurant.system.printing.service.PrintJobService;
+import com.restaurant.system.printing.service.PrintDispatchOutcome;
 import com.restaurant.system.printing.service.OrderDispatchOutboxService;
 import com.restaurant.system.printing.service.PrinterConfigService;
+import com.restaurant.system.printing.service.StorePrintingRoleRequirement;
+import com.restaurant.system.printing.service.StorePrintingRoleRequirementService;
 import com.restaurant.system.printing.transport.PrinterTransport;
 import com.restaurant.system.user.entity.Store;
 import com.restaurant.system.user.repository.StoreRepository;
@@ -79,6 +87,10 @@ class PrintDispatcherServiceImplTest {
     @Mock
     private StoreModuleAccessEvaluator moduleAccessEvaluator;
     @Mock
+    private StoreModuleCapabilityProvider moduleCapabilityProvider;
+    @Mock
+    private StorePrintingRoleRequirementService printingRoleRequirementService;
+    @Mock
     private PrintJobService printJobService;
     @Mock
     private PrintJobRepository printJobRepository;
@@ -103,6 +115,8 @@ class PrintDispatcherServiceImplTest {
         when(frontdeskRenderer.getModuleCode()).thenReturn(PrintModuleCode.FRONTDESK_RECEIPT);
         when(hotKitchenRenderer.getModuleCode()).thenReturn(PrintModuleCode.HOT_KITCHEN);
         when(moduleAccessEvaluator.evaluateCapability(any(), eq(ModuleKeys.PRINTING))).thenReturn(printingAllowed());
+        when(printingRoleRequirementService.requirement(any(), anyString()))
+            .thenAnswer(invocation -> new StorePrintingRoleRequirement(invocation.getArgument(1), true, "test"));
         when(printingDisplayRuleService.activeContext(any())).thenReturn(PrintingDisplayRuleContext.defaultContext());
         when(printingDisplayRuleService.contextForJob(any())).thenReturn(PrintingDisplayRuleContext.defaultContext());
         when(printingDisplayRuleService.historicalContextForOrder(any(), any(), anyString())).thenReturn(PrintingDisplayRuleContext.defaultContext());
@@ -132,6 +146,8 @@ class PrintDispatcherServiceImplTest {
             hotKitchenPrintEligibilityService,
             orderDispatchOutboxService,
             moduleAccessEvaluator,
+            moduleCapabilityProvider,
+            printingRoleRequirementService,
             printingDisplayRuleService
         );
     }
@@ -168,6 +184,24 @@ class PrintDispatcherServiceImplTest {
             "Module disabled for this Store: PRINTING",
             List.of(),
             List.of(),
+            List.of()
+        );
+    }
+
+    private StoreModuleAccessEvaluation printingHardwareMissing() {
+        return new StoreModuleAccessEvaluation(
+            1L,
+            ModuleKeys.PRINTING,
+            true,
+            true,
+            true,
+            true,
+            false,
+            false,
+            StoreModuleAccessEvaluator.MODULE_HARDWARE_CAPABILITY_MISSING,
+            "One enabled output is missing hardware",
+            List.of(),
+            List.of(HardwareCapabilityKeys.PRINT_HOT_KITCHEN),
             List.of()
         );
     }
@@ -417,7 +451,7 @@ class PrintDispatcherServiceImplTest {
         when(grabRenderer.render(any())).thenReturn("SANITIZED MOCK RECEIPT");
         when(printJobService.markPrinted(
             fixture.job,
-            fixture.printer,
+            null,
             "Mock print succeeded - no physical printer used"
         )).thenReturn(fixture.job);
 
@@ -426,17 +460,87 @@ class PrintDispatcherServiceImplTest {
         verify(grabRenderer).render(any());
         verify(printJobService).attachRenderedContent(
             fixture.job,
-            fixture.printer.id,
+            null,
             "SANITIZED MOCK RECEIPT",
             null,
             PrintingDisplayRuleContext.defaultContext().activeFingerprintOrDefault()
         );
         verify(printJobService).markPrinted(
             fixture.job,
-            fixture.printer,
+            null,
             "Mock print succeeded - no physical printer used"
         );
         verifyNoInteractions(printerTransport);
+    }
+
+    @Test
+    void endpointFreeMockCreatesRenderedPrintJobWithoutPrinterOrAssignment() {
+        Store store = new Store();
+        store.id = 1L;
+        store.organization_id = 1L;
+        Order order = new Order();
+        order.id = 123L;
+        order.store_id = store.id;
+        order.order_type = "dine_in";
+        PrintJob job = new PrintJob();
+        job.id = 99L;
+        job.store_id = store.id;
+        job.order_id = order.id;
+        job.module_code = PrintModuleCode.GRAB;
+        job.status = PrintJobStatus.PRINTED;
+        when(printerConfigService.getStorePrintingMode(store.id)).thenReturn("MOCK");
+        when(storeRepository.findById(store.id)).thenReturn(Optional.of(store));
+        when(orderRepository.findById(order.id)).thenReturn(Optional.of(order));
+        when(orderItemRepository.findAllByOrderId(order.id)).thenReturn(List.of());
+        when(kitchenTaskRepository.findAllByOrderId(order.id)).thenReturn(List.of());
+        when(printerAssignmentRepository.findByStoreIdAndModuleCode(store.id, PrintModuleCode.GRAB))
+            .thenReturn(Optional.empty());
+        when(grabRenderer.render(any())).thenReturn("ENDPOINT FREE MOCK");
+        when(printJobService.createPendingJob(
+            eq(1L), eq(1L), eq(123L), nullable(Long.class), nullable(Long.class),
+            eq(PrintModuleCode.GRAB), eq(PrintModuleCode.GRAB), nullable(Long.class),
+            anyString(), eq("submit:123:GRAB")
+        )).thenReturn(job);
+        when(printJobService.markPrinting(job, null)).thenReturn(job);
+        when(printJobService.markPrinted(job, null, "Mock print succeeded - no physical printer used")).thenReturn(job);
+        when(printJobRepository.findByDispatchSourceKey("submit:123:GRAB"))
+            .thenReturn(Optional.empty(), Optional.of(job));
+
+        PrintDispatchOutcome outcome = service.dispatchPersistedEvent(
+            PrintModuleCode.GRAB,
+            1L,
+            123L,
+            null,
+            "submit:123:GRAB"
+        );
+
+        assertEquals(PrintDispatchOutcome.MOCK_RENDERED, outcome);
+        verify(printJobService).attachRenderedContent(
+            job,
+            null,
+            "ENDPOINT FREE MOCK",
+            null,
+            PrintingDisplayRuleContext.defaultContext().activeFingerprintOrDefault()
+        );
+        verifyNoInteractions(printerConfigRepository);
+        verifyNoInteractions(printerTransport);
+    }
+
+    @Test
+    void disabledStorePrintingRoleSkipsWithoutPrintJob() {
+        when(printingRoleRequirementService.requirement(1L, PrintModuleCode.HOT_KITCHEN))
+            .thenReturn(new StorePrintingRoleRequirement(PrintModuleCode.HOT_KITCHEN, false, "test"));
+
+        PrintDispatchOutcome outcome = service.dispatchPersistedEvent(
+            PrintModuleCode.HOT_KITCHEN,
+            1L,
+            123L,
+            null,
+            "submit:123:HOT_KITCHEN"
+        );
+
+        assertEquals(PrintDispatchOutcome.SKIPPED, outcome);
+        verifyNoInteractions(printJobService);
     }
 
     @Test
@@ -446,7 +550,7 @@ class PrintDispatcherServiceImplTest {
         when(grabRenderer.render(any())).thenReturn("SANITIZED MOCK RECEIPT");
         when(printJobService.markPrinted(
             fixture.job,
-            fixture.printer,
+            null,
             "Mock print succeeded - no physical printer used"
         )).thenReturn(fixture.job);
 
@@ -455,7 +559,7 @@ class PrintDispatcherServiceImplTest {
         verify(printerConfigService, times(1)).getStorePrintingMode(1L);
         verify(printJobService).markPrinted(
             fixture.job,
-            fixture.printer,
+            null,
             "Mock print succeeded - no physical printer used"
         );
         verifyNoInteractions(printerTransport);
@@ -500,12 +604,12 @@ class PrintDispatcherServiceImplTest {
         when(printJobService.requireJob(job.id)).thenReturn(job);
         when(printerConfigRepository.findById(printer.id)).thenReturn(Optional.of(printer));
         when(printerConfigService.getStorePrintingMode(job.store_id)).thenReturn("MOCK");
-        when(printJobService.markPrinting(job, printer)).thenReturn(job);
-        when(printJobService.markPrinted(job, printer, "Mock print succeeded - no physical printer used")).thenReturn(job);
+        when(printJobService.markPrinting(job, null)).thenReturn(job);
+        when(printJobService.markPrinted(job, null, "Mock print succeeded - no physical printer used")).thenReturn(job);
 
         service.reprintJob(job.id, 5L);
 
-        verify(printJobService).attachRenderedContent(job, printer.id, "FROZEN HISTORICAL COMBO OUTPUT");
+        verify(printJobService).attachRenderedContent(job, null, "FROZEN HISTORICAL COMBO OUTPUT");
         verify(grabRenderer, never()).render(any());
         verifyNoInteractions(printerTransport);
     }
@@ -689,7 +793,7 @@ class PrintDispatcherServiceImplTest {
             when(printJobService.markPrinting(job, printer)).thenReturn(job);
             when(printJobService.markPrinted(job, printer)).thenReturn(job);
         } else if ("MOCK".equalsIgnoreCase(printingMode)) {
-            when(printJobService.markPrinting(job, printer)).thenReturn(job);
+            when(printJobService.markPrinting(job, null)).thenReturn(job);
         }
         return new DispatchFixture(order, printer, assignment, job);
     }
@@ -749,5 +853,33 @@ class PrintDispatcherServiceImplTest {
         verify(printJobService).markCancelled(job, null, "PRINTING_DISABLED", "Store printing is disabled");
         verify(printerAssignmentRepository, never()).findByStoreIdAndModuleCode(1L, PrintModuleCode.GRAB);
         verify(printerTransport, never()).print(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    void printOptionsRemainIndependentWhenAnotherEnabledOutputIsMissingCapability() {
+        Order order = new Order();
+        order.id = 123L;
+        order.store_id = 1L;
+        when(orderRepository.findExistingById(123L)).thenReturn(order);
+        when(moduleAccessEvaluator.evaluateCapability(1L, ModuleKeys.PRINTING)).thenReturn(printingHardwareMissing());
+        when(printerConfigService.isPrintingEnabled(1L)).thenReturn(true);
+        when(printerConfigService.getStorePrintingMode(1L)).thenReturn("MOCK");
+        when(printingRoleRequirementService.requirement(1L, PrintModuleCode.GRAB))
+            .thenReturn(new StorePrintingRoleRequirement(PrintModuleCode.GRAB, true, "logical"));
+        when(printingRoleRequirementService.requirement(1L, PrintModuleCode.FRONTDESK_RECEIPT))
+            .thenReturn(new StorePrintingRoleRequirement(PrintModuleCode.FRONTDESK_RECEIPT, false, "logical"));
+        when(printingRoleRequirementService.requirement(1L, PrintModuleCode.HOT_KITCHEN))
+            .thenReturn(new StorePrintingRoleRequirement(PrintModuleCode.HOT_KITCHEN, false, "logical"));
+        when(moduleCapabilityProvider.hardwareReadiness(1L)).thenReturn(List.of(
+            new StoreHardwareCapabilityReadiness(HardwareCapabilityKeys.PRINT_GRAB, HardwareReadinessState.CONFIGURED, true, "MOCK", "logical", "enabled"),
+            new StoreHardwareCapabilityReadiness(HardwareCapabilityKeys.PRINT_FRONTDESK_RECEIPT, HardwareReadinessState.NOT_REQUIRED, false, "MOCK", "logical", "disabled"),
+            new StoreHardwareCapabilityReadiness(HardwareCapabilityKeys.PRINT_HOT_KITCHEN, HardwareReadinessState.NOT_REQUIRED, false, "MOCK", "logical", "disabled")
+        ));
+
+        var options = service.getOrderPrintOptions(123L);
+
+        assertEquals(true, options.stream().filter(option -> PrintModuleCode.GRAB.equals(option.module_code)).findFirst().orElseThrow().available);
+        assertEquals(false, options.stream().filter(option -> PrintModuleCode.FRONTDESK_RECEIPT.equals(option.module_code)).findFirst().orElseThrow().available);
+        assertEquals(false, options.stream().filter(option -> PrintModuleCode.HOT_KITCHEN.equals(option.module_code)).findFirst().orElseThrow().available);
     }
 }

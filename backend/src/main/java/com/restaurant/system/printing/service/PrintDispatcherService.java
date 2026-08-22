@@ -20,7 +20,7 @@ public interface PrintDispatcherService {
 
     void dispatchOrderUpdateAfterCommit(String moduleCode, Long storeId, Long orderId, Long orderUpdateBatchId);
 
-    void dispatchPersistedEvent(
+    PrintDispatchOutcome dispatchPersistedEvent(
         String moduleCode,
         Long storeId,
         Long orderId,

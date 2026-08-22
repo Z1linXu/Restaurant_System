@@ -1,8 +1,23 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ItemCustomizationDraft, MenuItem, OrderLineItem } from '../types/ordering'
 import { buildFrozenSubmitPayload } from '../hooks/useDraftOrder'
-import { mapOptions } from './orderService'
+import {
+  isTerminalPrintJobPollingError,
+  mapOptions,
+  startOrderPrintJobCoordinator,
+} from './orderService'
+import { ApiRequestError, apiRequest } from './apiClient'
 import type { LocalDraftRecord } from '../offline/localDrafts'
+
+vi.mock('./apiClient', async () => {
+  const actual = await vi.importActual<typeof import('./apiClient')>('./apiClient')
+  return {
+    ...actual,
+    apiRequest: vi.fn(),
+  }
+})
+
+const mockedApiRequest = vi.mocked(apiRequest)
 
 function menuItem(overrides: Partial<MenuItem> = {}): MenuItem {
   return {
@@ -145,5 +160,117 @@ describe('order option mapping for dynamic combo groups', () => {
     expect(payload.items[0].options).toEqual(expect.arrayContaining([
       expect.objectContaining({ option_id: 3001, option_code_snapshot: 'combo_coke', option_group_snapshot: 'COMBO_DRINK' }),
     ]))
+  })
+})
+
+function printJob(status: 'PENDING' | 'PRINTED' | 'FAILED' | 'CANCELLED', moduleCode: string): import('./printingAdminService').PrintJobRecord {
+  return {
+    id: moduleCode === 'GRAB' ? 1 : 2,
+    store_id: 7,
+    order_id: 91,
+    module_code: moduleCode,
+    receipt_type: moduleCode,
+    status,
+    created_at: '2026-08-22T00:00:00.000Z',
+  }
+}
+
+function printOption(moduleCode: string, available = true): import('../types/ordering').OrderPrintOption {
+  return {
+    module_code: moduleCode,
+    label: moduleCode,
+    available,
+    unavailable_reason: available ? null : 'disabled',
+  }
+}
+
+describe('frontdesk print-job coordinator', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+    mockedApiRequest.mockReset()
+  })
+
+  it('keeps one coordinator per Store/order even when the update batch changes', async () => {
+    vi.useFakeTimers()
+    mockedApiRequest
+      .mockResolvedValueOnce([printOption('GRAB'), printOption('FRONTDESK_RECEIPT')] as never)
+      .mockResolvedValueOnce([
+        printJob('PRINTED', 'GRAB'),
+        printJob('PRINTED', 'FRONTDESK_RECEIPT'),
+      ] as never)
+    const onAttention = vi.fn()
+
+    startOrderPrintJobCoordinator({
+      storeId: 7,
+      orderId: 91,
+      updateBatchId: null,
+      delaysMs: [0],
+      onAttention,
+    })
+    startOrderPrintJobCoordinator({
+      storeId: 7,
+      orderId: 91,
+      updateBatchId: 12,
+      delaysMs: [0],
+      onAttention,
+    })
+
+    await vi.advanceTimersByTimeAsync(0)
+    expect(mockedApiRequest).toHaveBeenCalledTimes(2)
+    expect(onAttention).not.toHaveBeenCalled()
+  })
+
+  it('completes against the Store enabled-role options instead of hard-coding GRAB plus receipt', async () => {
+    vi.useFakeTimers()
+    mockedApiRequest
+      .mockResolvedValueOnce([
+        printOption('GRAB', false),
+        printOption('FRONTDESK_RECEIPT', false),
+        printOption('HOT_KITCHEN', true),
+      ] as never)
+      .mockResolvedValueOnce([printJob('PRINTED', 'HOT_KITCHEN')] as never)
+
+    startOrderPrintJobCoordinator({
+      storeId: 7,
+      orderId: 91,
+      delaysMs: [0, 1, 2],
+      onAttention: vi.fn(),
+    })
+
+    await vi.advanceTimersByTimeAsync(10)
+    expect(mockedApiRequest).toHaveBeenCalledTimes(2)
+  })
+
+  it('terminates polling for access, conflict, and capability failures', async () => {
+    vi.useFakeTimers()
+    mockedApiRequest.mockRejectedValue(new ApiRequestError(403, 'denied'))
+    const onUnavailable = vi.fn()
+    startOrderPrintJobCoordinator({
+      storeId: 7,
+      orderId: 91,
+      delaysMs: [0, 1, 2],
+      onAttention: vi.fn(),
+      onUnavailable,
+    })
+
+    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(10)
+    expect(mockedApiRequest).toHaveBeenCalledTimes(1)
+    expect(onUnavailable).toHaveBeenCalledTimes(1)
+    expect(isTerminalPrintJobPollingError(new ApiRequestError(409, 'conflict'))).toBe(true)
+    expect(isTerminalPrintJobPollingError(new ApiRequestError(200, 'MODULE_HARDWARE_CAPABILITY_MISSING'))).toBe(true)
+  })
+
+  it('cancels delayed polling without a stale request', async () => {
+    vi.useFakeTimers()
+    const coordinator = startOrderPrintJobCoordinator({
+      storeId: 7,
+      orderId: 91,
+      delaysMs: [100],
+      onAttention: vi.fn(),
+    })
+    coordinator.cancel()
+    await vi.advanceTimersByTimeAsync(200)
+    expect(mockedApiRequest).not.toHaveBeenCalled()
   })
 })

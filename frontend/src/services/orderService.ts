@@ -10,8 +10,11 @@ import type {
 } from '../types/ordering'
 import type { RealtimeUpdateMessage } from '../types/kds'
 import type { PrintJobRecord } from './printingAdminService'
-import { apiRequest } from './apiClient'
+import { ApiRequestError, apiRequest } from './apiClient'
 import { resolveComboGroupOptionId } from '../utils/comboSelection'
+import { Client } from '@stomp/stompjs'
+import SockJS from 'sockjs-client'
+import { networkDiagnosticsDisplayEnabled } from './networkStatus'
 
 const READ_RETRY_DELAYS_MS = [0, 250, 750]
 const pendingEditableOrderRequests = new Map<string, Promise<BackendOrderResponse>>()
@@ -33,6 +36,43 @@ interface FrontdeskOrderQueryInput {
   storeId: number
   statuses?: string[]
   limit?: number
+}
+
+export type FrontdeskRealtimeLifecyclePhase =
+  | 'BOOTSTRAP_STARTED'
+  | 'CLIENT_CREATED'
+  | 'SOCKET_FACTORY_CALLED'
+  | 'CONNECTED'
+  | 'STOMP_ERROR'
+  | 'SOCKET_ERROR'
+  | 'SOCKET_CLOSED'
+  | 'DISCONNECTED'
+  | 'BOOTSTRAP_ERROR'
+  | 'CANCELLED'
+
+export interface FrontdeskRealtimeLifecycleEvent {
+  storeId: number
+  phase: FrontdeskRealtimeLifecyclePhase
+  transport: 'sockjs-stomp'
+  closeCode?: number
+}
+
+export interface FrontdeskRealtimeSubscriptionOptions {
+  onLifecycle?: (event: FrontdeskRealtimeLifecycleEvent) => void
+}
+
+export interface OrderPrintJobCoordinatorOptions {
+  storeId: number
+  orderId: number
+  updateBatchId?: number | null
+  delaysMs?: readonly number[]
+  onAttention: (jobs: PrintJobRecord[]) => void
+  onUnavailable?: (error: unknown) => void
+}
+
+export interface OrderPrintJobCoordinator {
+  key: string
+  cancel: () => void
 }
 
 export interface IdempotentOrderItemPayload {
@@ -105,8 +145,24 @@ function buildHeaders() {
 
 const request = apiRequest
 
-function sleep(ms: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms))
+function sleep(ms: number, signal?: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException('Operation cancelled', 'AbortError'))
+      return
+    }
+
+    function abort() {
+      globalThis.clearTimeout(timeoutId)
+      signal?.removeEventListener('abort', abort)
+      reject(new DOMException('Operation cancelled', 'AbortError'))
+    }
+    const timeoutId = globalThis.setTimeout(() => {
+      signal?.removeEventListener('abort', abort)
+      resolve()
+    }, ms)
+    signal?.addEventListener('abort', abort, { once: true })
+  })
 }
 
 export function mapOptions(draft: ItemCustomizationDraft, menuItem?: MenuItem) {
@@ -239,54 +295,105 @@ export async function fetchFrontdeskOrderHistory(input: FrontdeskOrderQueryInput
   return request<BackendFrontdeskOrderBoardItem[]>(`/api/v1/frontdesk/orders/history?${params.toString()}`)
 }
 
+function observeFrontdeskRealtime(event: FrontdeskRealtimeLifecycleEvent, onLifecycle?: (event: FrontdeskRealtimeLifecycleEvent) => void) {
+  try {
+    onLifecycle?.(event)
+  } catch {
+    // Lifecycle observers are diagnostics only and must not stop realtime delivery.
+  }
+  if (networkDiagnosticsDisplayEnabled && typeof console !== 'undefined') {
+    const details: Record<string, number | string> = {
+      store_id: event.storeId,
+      phase: event.phase,
+      transport: event.transport,
+    }
+    if (event.closeCode != null) {
+      details.close_code = event.closeCode
+    }
+    console.info('[frontdesk-realtime]', details)
+  }
+}
+
+function frontdeskRealtimeEndpoint() {
+  if (typeof window === 'undefined') {
+    return '/ws'
+  }
+  return new URL('/ws', window.location.href).toString()
+}
+
 export function subscribeToFrontdeskOrders(
   storeId: number,
   onMessage: (message: RealtimeUpdateMessage) => void,
+  options: FrontdeskRealtimeSubscriptionOptions = {},
 ) {
   let disposed = false
-  let deactivate: (() => void) | null = null
+  let client: Client | null = null
+  let unsubscribeTopic: (() => void) | null = null
+  const lifecycle = (phase: FrontdeskRealtimeLifecyclePhase, closeCode?: number) => {
+    if (disposed && phase !== 'CANCELLED') return
+    observeFrontdeskRealtime({ storeId, phase, transport: 'sockjs-stomp', closeCode }, options.onLifecycle)
+  }
 
-  void Promise.all([import('@stomp/stompjs'), import('sockjs-client')])
-    .then(([stompModule, sockJsModule]) => {
-      if (disposed) {
-        return
-      }
+  lifecycle('BOOTSTRAP_STARTED')
+  try {
+    client = new Client({
+      webSocketFactory: () => {
+        lifecycle('SOCKET_FACTORY_CALLED')
+        return new SockJS(frontdeskRealtimeEndpoint())
+      },
+      reconnectDelay: 3_000,
+      connectionTimeout: 10_000,
+      heartbeatIncoming: 10_000,
+      heartbeatOutgoing: 10_000,
+    })
 
-      const ClientCtor = stompModule.Client
-      const SockJSImport = sockJsModule.default
-      const SockJSCtor =
-        typeof SockJSImport === 'function'
-          ? SockJSImport
-          : ((sockJsModule as unknown as { SockJS?: typeof SockJSImport }).SockJS ?? SockJSImport)
-
-      const client = new ClientCtor({
-        webSocketFactory: () => new SockJSCtor('/ws'),
-        reconnectDelay: 3000,
-      })
-
-      client.onConnect = () => {
-        client.subscribe(`/topic/stores/${storeId}/frontdesk/orders`, (frame) => {
+    lifecycle('CLIENT_CREATED')
+    client.onConnect = () => {
+      if (disposed || !client) return
+      lifecycle('CONNECTED')
+      try {
+        unsubscribeTopic?.()
+        const subscription = client.subscribe(`/topic/stores/${storeId}/frontdesk/orders`, (frame) => {
+          if (disposed) return
           try {
             const message = JSON.parse(frame.body) as RealtimeUpdateMessage
-            onMessage(message)
+            if (message.store_id === storeId) {
+              onMessage(message)
+            }
           } catch {
-            // ignore malformed message
+            // Ignore malformed messages without exposing frame contents in diagnostics.
           }
         })
+        unsubscribeTopic = () => subscription.unsubscribe()
+      } catch {
+        lifecycle('STOMP_ERROR')
       }
-
-      client.activate()
-      deactivate = () => {
-        void client.deactivate()
-      }
-    })
-    .catch(() => {
-      // ignore websocket bootstrap failures; polling remains the fallback
-    })
+    }
+    client.onStompError = () => {
+      lifecycle('STOMP_ERROR')
+    }
+    client.onWebSocketError = () => {
+      lifecycle('SOCKET_ERROR')
+    }
+    client.onWebSocketClose = (event) => {
+      lifecycle('SOCKET_CLOSED', Number.isInteger(event.code) ? event.code : undefined)
+    }
+    client.onDisconnect = () => {
+      lifecycle('DISCONNECTED')
+    }
+    client.activate()
+  } catch {
+    lifecycle('BOOTSTRAP_ERROR')
+  }
 
   return () => {
+    if (disposed) return
     disposed = true
-    deactivate?.()
+    unsubscribeTopic?.()
+    lifecycle('CANCELLED')
+    if (client) {
+      void client.deactivate()
+    }
   }
 }
 
@@ -502,12 +609,132 @@ export async function reprintOrderReceipt(
   })
 }
 
-export async function fetchOrderPrintJobs(orderId: number) {
-  return request<PrintJobRecord[]>(`/api/v1/orders/${orderId}/print-jobs`)
+export async function fetchOrderPrintJobs(orderId: number, options: { signal?: AbortSignal } = {}) {
+  return request<PrintJobRecord[]>(`/api/v1/orders/${orderId}/print-jobs`, {
+    signal: options.signal,
+  })
 }
 
-export async function fetchOrderPrintOptions(orderId: number) {
-  return request<OrderPrintOption[]>(`/api/v1/orders/${orderId}/print-options`)
+const DEFAULT_PRINT_JOB_COORDINATOR_DELAYS_MS = [1_000, 3_000, 6_000, 10_000] as const
+const activePrintJobCoordinators = new Map<string, OrderPrintJobCoordinator>()
+
+function printJobCoordinatorKey(storeId: number, orderId: number) {
+  return `${storeId}:${orderId}`
+}
+
+function relevantPrintJobs(jobs: PrintJobRecord[], expectedModules: ReadonlySet<string>, updateBatchId?: number | null) {
+  return jobs.filter((job) => {
+    if (!expectedModules.has(job.module_code)) {
+      return false
+    }
+    return updateBatchId != null
+      ? job.order_update_batch_id === updateBatchId
+      : job.order_update_batch_id == null
+  })
+}
+
+const PRINT_ATTENTION_STATUSES = new Set(['FAILED', 'CANCELLED'])
+
+function printJobNeedsAttention(job: PrintJobRecord) {
+  return PRINT_ATTENTION_STATUSES.has(job.status)
+}
+
+export function isTerminalPrintJobPollingError(error: unknown) {
+  if (!(error instanceof ApiRequestError)) {
+    return false
+  }
+  if (error.status === 403 || error.status === 409) {
+    return true
+  }
+  const diagnostic = [error.code, error.message, error.userMessage]
+    .filter(Boolean)
+    .join(' ')
+    .toUpperCase()
+  return diagnostic.includes('CAPABILITY')
+    || diagnostic.includes('MODULE_')
+    || diagnostic.includes('PRINTING_DISABLED')
+    || diagnostic.includes('PRINTING_FEATURE')
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === 'AbortError'
+}
+
+export function startOrderPrintJobCoordinator(options: OrderPrintJobCoordinatorOptions): OrderPrintJobCoordinator {
+  const key = printJobCoordinatorKey(options.storeId, options.orderId)
+  activePrintJobCoordinators.get(key)?.cancel()
+
+  const controller = new AbortController()
+  let cancelled = false
+  const coordinator: OrderPrintJobCoordinator = {
+    key,
+    cancel: () => {
+      if (cancelled) return
+      cancelled = true
+      controller.abort()
+      if (activePrintJobCoordinators.get(key) === coordinator) {
+        activePrintJobCoordinators.delete(key)
+      }
+    },
+  }
+  activePrintJobCoordinators.set(key, coordinator)
+
+  const delays = options.delaysMs ?? DEFAULT_PRINT_JOB_COORDINATOR_DELAYS_MS
+  let expectedModules: Set<string> | null = null
+  void (async () => {
+    try {
+      for (const delayMs of delays) {
+        await sleep(delayMs, controller.signal)
+        if (cancelled) return
+
+        try {
+          if (expectedModules == null) {
+            const printOptions = await fetchOrderPrintOptions(options.orderId, { signal: controller.signal })
+            expectedModules = new Set(printOptions.filter((option) => option.available).map((option) => option.module_code))
+            if (expectedModules.size === 0) return
+          }
+          const jobs = await fetchOrderPrintJobs(options.orderId, { signal: controller.signal })
+          if (cancelled) return
+          const relevantJobs = relevantPrintJobs(jobs, expectedModules, options.updateBatchId)
+          const attentionJobs = relevantJobs.filter(printJobNeedsAttention)
+          if (attentionJobs.length) {
+            options.onAttention(attentionJobs)
+            return
+          }
+
+          const healthyModules = new Set(
+            relevantJobs
+              .filter((job) => job.status === 'PRINTED' || (job.execution_mode === 'PAD_DIRECT' && job.status === 'PENDING'))
+              .map((job) => job.module_code),
+          )
+          if ([...expectedModules].every((moduleCode) => healthyModules.has(moduleCode))) {
+            return
+          }
+        } catch (error) {
+          if (cancelled || isAbortError(error)) return
+          if (isTerminalPrintJobPollingError(error)) {
+            options.onUnavailable?.(error)
+            return
+          }
+          // A transient status read failure should not block order submission.
+        }
+      }
+    } finally {
+      if (activePrintJobCoordinators.get(key) === coordinator) {
+        activePrintJobCoordinators.delete(key)
+      }
+    }
+  })().catch(() => {
+    // Cancellation and observer failures must never become unhandled rejections.
+  })
+
+  return coordinator
+}
+
+export async function fetchOrderPrintOptions(orderId: number, options: { signal?: AbortSignal } = {}) {
+  return request<OrderPrintOption[]>(`/api/v1/orders/${orderId}/print-options`, {
+    signal: options.signal,
+  })
 }
 
 export async function fetchTodayOrderHistory(storeId: number, limit = 100) {

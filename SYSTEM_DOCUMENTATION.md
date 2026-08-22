@@ -8761,3 +8761,59 @@ The 2026-08-22 audited cleanup execution retained only STG005 Store 1 and
 deleted Store-local fixtures 2-17 through this path; sanitized execution
 evidence is recorded in
 `docs/governance/PHASE_B_STAGING_SYNTHETIC_FIXTURE_CLEANUP_EXECUTION_EVIDENCE.md`.
+
+## Phase B Part 2 Owner Manual Acceptance P0/P1 Repair
+
+The Owner-approved repair keeps internal readiness and runtime safety while
+removing accidental product and request complexity:
+
+- Frontdesk table state starts empty and renders loading, legitimate zero-table,
+  or retryable error states until the current Store response arrives. Production
+  UI no longer uses T1-T8 demo tables as initial or failure fallback data.
+  Store/request generations clear prior table, occupancy, order, and offline
+  presentation and reject late cross-Store responses while preserving whole,
+  left, and right split-table entry semantics.
+- Frontdesk realtime uses the existing SockJS/STOMP `/ws` transport directly,
+  emits sanitized lifecycle phases, refreshes from Store-scoped events, and
+  retains visibility-safe reconciliation polling. Connected polling is 120
+  seconds; disconnected fallback is 30 seconds. Offline server-order
+  reconciliation de-duplicates IDs, removes confirmed terminal records, and
+  limits detail reads to three concurrent requests.
+- Post-submit print visibility is coordinated once per `Store + order`; a new
+  coordinator cancels the previous run, unmount/Store changes abort pending
+  reads, and authorization/capability/policy responses stop retries instead of
+  producing repeated 403/409 traffic.
+- Printing output requirements are Store-scoped and independent. Enabled roles
+  are required; disabled/excluded roles are `NOT_REQUIRED`. Part 2 logical roles
+  are canonical; existing assignment rows are consulted only as a compatibility
+  fallback for legacy Stores that do not have the corresponding logical role.
+- `MOCK` renders and persists ORIGINAL/UPDATE/reprint snapshots for enabled
+  roles without a physical printer, endpoint, Pad, or transport. REAL and
+  PAD_DIRECT retain their existing physical capability and cloud-private-
+  endpoint guards. Disabled roles never generate PrintJobs.
+- Printing history/options management access is separate from physical runtime
+  capability. It still requires Store authorization, enabled Printing module,
+  and canonical LIVE lifecycle. Dispatch and reprint revalidate role, mode,
+  policy, and applicable physical capability.
+- Dispatch outbox terminal results now record explicit `DISPATCHED`,
+  `MOCK_RENDERED`, `SKIPPED`, `POLICY_BLOCKED`, `CAPABILITY_UNAVAILABLE`, or
+  `FAILED` outcomes. A skip without a PrintJob is no longer reported as normal
+  completion; exceptions remain retryable with the existing lease/backoff and
+  source-key idempotency.
+- Admin Dashboard and Printing selectors use authorized workspace summaries
+  instead of the global platform overview payload. Dashboard reads no longer
+  refetch after their own response supplies an organization id, stale Store
+  responses are ignored, and platform service Store reads use repository-level
+  Store predicates while the authorized global Platform Admin view remains.
+- Staging infrastructure hygiene is bounded by fixed-root, exact-environment,
+  dry-run plan/digest, protected-set, clean detached worktree, local Docker
+  context, and Production/volume/database no-mutation guards. Release removal
+  uses `git worktree remove`; BuildKit cleanup excludes images and volumes and
+  is limited to old reclaimable immutable unshared zero-use cache. Container
+  log retention remains bounded by Compose and Staging Nginx emits sanitized
+  request/upstream timing fields. Host journald remains policy-only because the
+  host is shared and this package does not authorize Production logging changes.
+
+This repair adds no Flyway migration, Owner readiness step, general Store
+delete UI, real Printer/Pad binding, Production mutation, KDS/Pickup
+optimization, or Phase C scope.

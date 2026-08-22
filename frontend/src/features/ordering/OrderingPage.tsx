@@ -13,9 +13,6 @@ import { ItemCustomizationModal } from './components/ItemCustomizationModal'
 import { MenuItemCard } from './components/MenuItemCard'
 import { OrderingTopBar } from './components/OrderingTopBar'
 import { OrderSummaryPanel } from './components/OrderSummaryPanel'
-import { fetchOrderPrintJobs } from '../../services/orderService'
-import type { PrintJobRecord } from '../../services/printingAdminService'
-import { printJobDisplayLabel, printJobOperatorDisplayMessage } from '../../utils/displayLabels'
 import { getAndroidPadDeviceBridge } from '../../types/androidPadBridge'
 import type { ConnectionState } from '../../services/networkStatus'
 import { menuCacheNoticeDismissalKey } from '../../offline/menuCacheNotice'
@@ -55,9 +52,6 @@ interface CustomizationState {
   draft: ItemCustomizationDraft
   editingItemId?: string
 }
-
-const PRINT_ATTENTION_MODULES = new Set(['GRAB', 'FRONTDESK_RECEIPT'])
-const PRINT_ATTENTION_STATUSES = new Set(['FAILED', 'CANCELLED'])
 
 function connectionWarning(state: ConnectionState) {
   switch (state) {
@@ -111,26 +105,6 @@ function getDraftSubtotal(item: MenuItem, draft: ItemCustomizationDraft) {
   return (item.price + sizeDelta + soupBaseDelta + comboDelta + comboGroupDelta + comboSideRemoveDelta + addOnDelta + removeDelta) * draft.quantity
 }
 
-function printJobNeedsAttention(job: PrintJobRecord) {
-  return PRINT_ATTENTION_MODULES.has(job.module_code) && PRINT_ATTENTION_STATUSES.has(job.status)
-}
-
-function printJobLabel(job: PrintJobRecord) {
-  return printJobDisplayLabel(job)
-}
-
-function printJobReason(job: PrintJobRecord) {
-  return printJobOperatorDisplayMessage(job) || '打印状态异常，请检查打印中心。'
-}
-
-function buildPrintAttentionMessage(jobs: PrintJobRecord[]) {
-  const details = jobs
-    .map((job) => `${printJobLabel(job)}: ${printJobReason(job)}`)
-    .join(' ')
-
-  return `订单已保存，但打印需要处理。${details} 请到订单记录或打印中心立即重打。`
-}
-
 function kickPadDirectPrintWorker(reason: string, orderId: number, updateBatchId?: number | null) {
   const bridge = getAndroidPadDeviceBridge()
   if (!bridge?.kickPrintWorker) {
@@ -180,12 +154,14 @@ export function OrderingPage({
   const [customizationState, setCustomizationState] = useState<CustomizationState | null>(null)
   const [takeoutDialogOpen, setTakeoutDialogOpen] = useState(false)
   const [quickAddStates, setQuickAddStates] = useState<Record<string, 'idle' | 'adding' | 'added'>>({})
-  const [printWarning, setPrintWarning] = useState<string | null>(null)
   const [menuUpdateNotice, setMenuUpdateNotice] = useState<string | null>(null)
   const [menuNoticeCollapsed, setMenuNoticeCollapsed] = useState(false)
   const connection = useConnectionStatus()
   const handledSubmittedOrderIdsRef = useRef(new Set<number>())
   const localSubmitRequestedRef = useRef(false)
+  const mountedRef = useRef(true)
+  const contextGenerationRef = useRef(0)
+  const contextKeyRef = useRef('')
   const previousMenuRevisionRef = useRef<number | null>(null)
   const {
     session,
@@ -217,6 +193,21 @@ export function OrderingPage({
     menuRevision: catalog.catalog?.menuRevision ?? 0,
   })
   const refreshOrderRef = useRef(refreshOrder)
+
+  const orderingContextKey = `${storeId}:${orderType}:${slotLabel}:${tableLabel}:${pickupLabel ?? ''}`
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    contextGenerationRef.current += 1
+    contextKeyRef.current = orderingContextKey
+    handledSubmittedOrderIdsRef.current.clear()
+  }, [orderingContextKey])
 
   useEffect(() => {
     refreshOrderRef.current = refreshOrder
@@ -444,77 +435,35 @@ export function OrderingPage({
     await returnQueuedOrderToDraft()
   }
 
-  const checkOrderPrintJobs = async (orderId: number, updateBatchId?: number | null) => {
-    const delays = [450, 900, 1400, 2200]
-    for (const delay of delays) {
-      await new Promise((resolve) => window.setTimeout(resolve, delay))
-      try {
-        const jobs = await fetchOrderPrintJobs(orderId)
-        const relevantJobs = jobs.filter((job) => {
-          if (!PRINT_ATTENTION_MODULES.has(job.module_code)) {
-            return false
-          }
-          return updateBatchId
-            ? job.order_update_batch_id === updateBatchId
-            : job.order_update_batch_id == null
-        })
-        const attentionJobs = relevantJobs.filter(printJobNeedsAttention)
-        if (attentionJobs.length) {
-          setPrintWarning(buildPrintAttentionMessage(attentionJobs))
-          return false
-        }
-        const printedModules = new Set(
-          relevantJobs
-            .filter((job) => job.status === 'PRINTED')
-            .map((job) => job.module_code),
-        )
-        if (printedModules.has('GRAB') && printedModules.has('FRONTDESK_RECEIPT')) {
-          return true
-        }
-      } catch {
-        // Do not block ordering if print status polling is temporarily unavailable.
-      }
-    }
-    return true
-  }
-
   const handleSubmitOrder = async () => {
-    setPrintWarning(null)
-    if (session?.status === 'draft') {
-      localSubmitRequestedRef.current = true
-      try {
-        const submittedOrder = await submitOrder()
-        if (!submittedOrder) {
-          return
-        }
-        handledSubmittedOrderIdsRef.current.add(submittedOrder.id)
-        kickPadDirectPrintWorker('order-submit', submittedOrder.id, null)
-        const printOk = await checkOrderPrintJobs(submittedOrder.id)
-        if (!printOk) {
-          return
-        }
-        onOrderSubmitted(slotLabel, tableLabel, submittedOrder.id, null)
-      } finally {
-        localSubmitRequestedRef.current = false
-      }
+    if (session?.status !== 'draft' && !session?.isModifiedAfterSubmit) {
       return
     }
 
-    if (session?.isModifiedAfterSubmit) {
-      const updatedOrder = await submitOrder()
-      if (!updatedOrder) {
+    const generation = contextGenerationRef.current
+    const contextKey = orderingContextKey
+    localSubmitRequestedRef.current = true
+    try {
+      const submittedOrder = await submitOrder()
+      if (!submittedOrder
+        || !mountedRef.current
+        || contextGenerationRef.current !== generation
+        || contextKeyRef.current !== contextKey) {
         return
       }
-      const updateBatchId = updatedOrder.items
-        .filter((item) => item.added_revision === updatedOrder.current_revision)
-        .map((item) => item.order_update_batch_id)
-        .find((batchId): batchId is number => batchId != null)
-      kickPadDirectPrintWorker('order-update-submit', updatedOrder.id, updateBatchId ?? null)
-      const printOk = await checkOrderPrintJobs(updatedOrder.id, updateBatchId)
-      if (!printOk) {
-        return
-      }
-      onOrderSubmitted(slotLabel, tableLabel, updatedOrder.id, updateBatchId ?? null)
+
+      handledSubmittedOrderIdsRef.current.add(submittedOrder.id)
+      const isUpdate = session?.status !== 'draft'
+      const updateBatchId = isUpdate
+        ? submittedOrder.items
+          .filter((item) => item.added_revision === submittedOrder.current_revision)
+          .map((item) => item.order_update_batch_id)
+          .find((batchId): batchId is number => batchId != null)
+        : null
+      kickPadDirectPrintWorker(isUpdate ? 'order-update-submit' : 'order-submit', submittedOrder.id, updateBatchId)
+      onOrderSubmitted(slotLabel, tableLabel, submittedOrder.id, updateBatchId)
+    } finally {
+      localSubmitRequestedRef.current = false
     }
   }
 
@@ -532,7 +481,8 @@ export function OrderingPage({
 
   useEffect(() => {
     const submittedOrderId = outboxRecord?.state === 'SUBMITTED' ? outboxRecord.serverOrderId : null
-    if (!submittedOrderId
+    if (!mountedRef.current
+      || !submittedOrderId
       || localSubmitRequestedRef.current
       || handledSubmittedOrderIdsRef.current.has(submittedOrderId)) return
     handledSubmittedOrderIdsRef.current.add(submittedOrderId)
@@ -545,12 +495,6 @@ export function OrderingPage({
       <div className={`mx-auto ${isIpadLandscape ? 'max-w-none space-y-3' : 'max-w-[1720px] space-y-6'}`}>
         {isIpadLandscape ? <FrontdeskTopNav activeItem="menu" /> : null}
         {isIpadLandscape ? <PrintWorkerHealthBanner /> : null}
-
-        {printWarning ? (
-          <div className="rounded-[20px] border-2 border-[rgba(151,34,34,0.35)] bg-[rgba(151,34,34,0.12)] px-5 py-4 text-[1rem] font-black text-[rgb(116,22,22)] shadow-[0_18px_34px_rgba(151,34,34,0.12)]">
-            {printWarning}
-          </div>
-        ) : null}
 
         {connectionWarning(connection.state) ? (
           <div className="rounded-[20px] border border-[rgba(151,34,34,0.25)] bg-[rgba(151,34,34,0.1)] px-5 py-4 text-[1rem] font-bold text-[rgb(116,22,22)]">

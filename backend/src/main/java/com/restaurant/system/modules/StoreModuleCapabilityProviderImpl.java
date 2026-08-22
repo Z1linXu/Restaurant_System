@@ -11,6 +11,8 @@ import com.restaurant.system.printing.entity.StoreDevice;
 import com.restaurant.system.printing.repository.PrinterAssignmentRepository;
 import com.restaurant.system.printing.repository.PrinterConfigRepository;
 import com.restaurant.system.printing.repository.StoreDeviceRepository;
+import com.restaurant.system.printing.service.StorePrintingRoleRequirement;
+import com.restaurant.system.printing.service.StorePrintingRoleRequirementService;
 import com.restaurant.system.user.entity.Store;
 import com.restaurant.system.user.repository.StoreRepository;
 import java.util.LinkedHashSet;
@@ -30,6 +32,7 @@ public class StoreModuleCapabilityProviderImpl implements StoreModuleCapabilityP
     private final PrinterConfigRepository printerConfigRepository;
     private final PrinterAssignmentRepository printerAssignmentRepository;
     private final StoreDeviceRepository storeDeviceRepository;
+    private final StorePrintingRoleRequirementService printingRoleRequirementService;
 
     public StoreModuleCapabilityProviderImpl(
         FeatureFlagService featureFlagService,
@@ -37,7 +40,8 @@ public class StoreModuleCapabilityProviderImpl implements StoreModuleCapabilityP
         StoreRepository storeRepository,
         PrinterConfigRepository printerConfigRepository,
         PrinterAssignmentRepository printerAssignmentRepository,
-        StoreDeviceRepository storeDeviceRepository
+        StoreDeviceRepository storeDeviceRepository,
+        StorePrintingRoleRequirementService printingRoleRequirementService
     ) {
         this.featureFlagService = featureFlagService;
         this.printingRuntimePolicy = printingRuntimePolicy;
@@ -45,6 +49,7 @@ public class StoreModuleCapabilityProviderImpl implements StoreModuleCapabilityP
         this.printerConfigRepository = printerConfigRepository;
         this.printerAssignmentRepository = printerAssignmentRepository;
         this.storeDeviceRepository = storeDeviceRepository;
+        this.printingRoleRequirementService = printingRoleRequirementService;
     }
 
     @Override
@@ -94,14 +99,28 @@ public class StoreModuleCapabilityProviderImpl implements StoreModuleCapabilityP
             "Touch-capable web client is the current POS delivery model."
         ));
 
+        Store store = storeId == null ? null : storeRepository.findById(storeId).orElse(null);
+        String printingMode = store == null ? null : PrintingMode.normalize(store.printing_mode);
         LogicalPrinterTopology topology = logicalPrinterTopology(storeId);
-        readiness.add(printReadiness(HardwareCapabilityKeys.PRINT_GRAB, PrintModuleCode.GRAB, topology));
+        Map<String, StorePrintingRoleRequirement> roleRequirements = store == null
+            ? Map.of()
+            : printingRoleRequirementService.requirements(storeId).stream()
+                .collect(Collectors.toMap(StorePrintingRoleRequirement::moduleCode, Function.identity()));
+        readiness.add(printReadiness(HardwareCapabilityKeys.PRINT_GRAB, PrintModuleCode.GRAB, printingMode, topology, roleRequirements));
         readiness.add(printReadiness(
             HardwareCapabilityKeys.PRINT_FRONTDESK_RECEIPT,
             PrintModuleCode.FRONTDESK_RECEIPT,
-            topology
+            printingMode,
+            topology,
+            roleRequirements
         ));
-        readiness.add(printReadiness(HardwareCapabilityKeys.PRINT_HOT_KITCHEN, PrintModuleCode.HOT_KITCHEN, topology));
+        readiness.add(printReadiness(
+            HardwareCapabilityKeys.PRINT_HOT_KITCHEN,
+            PrintModuleCode.HOT_KITCHEN,
+            printingMode,
+            topology,
+            roleRequirements
+        ));
 
         List<StoreDevice> devices = storeId == null
             ? List.of()
@@ -124,8 +143,6 @@ public class StoreModuleCapabilityProviderImpl implements StoreModuleCapabilityP
             "Store-scoped device registration, heartbeat and authentication services are present."
         ));
 
-        Store store = storeId == null ? null : storeRepository.findById(storeId).orElse(null);
-        String printingMode = store == null ? null : PrintingMode.normalize(store.printing_mode);
         boolean padDirectRequired = PrintingMode.PAD_DIRECT.equals(printingMode);
         readiness.add(readiness(
             HardwareCapabilityKeys.PAD_DIRECT_PRINT_CLIENT,
@@ -164,8 +181,34 @@ public class StoreModuleCapabilityProviderImpl implements StoreModuleCapabilityP
     private StoreHardwareCapabilityReadiness printReadiness(
         String capability,
         String moduleCode,
-        LogicalPrinterTopology topology
+        String printingMode,
+        LogicalPrinterTopology topology,
+        Map<String, StorePrintingRoleRequirement> roleRequirements
     ) {
+        StorePrintingRoleRequirement requirement = roleRequirements.getOrDefault(
+            moduleCode,
+            new StorePrintingRoleRequirement(moduleCode, false, "Store unavailable")
+        );
+        if (!requirement.required() || PrintingMode.DISABLED.equals(printingMode)) {
+            return readiness(
+                capability,
+                HardwareReadinessState.NOT_REQUIRED,
+                false,
+                "STORE_OPERATIONAL_PRINTING_ROLE",
+                requirement.source(),
+                moduleCode + " is disabled for the current Store runtime and does not block Printing."
+            );
+        }
+        if (PrintingMode.MOCK.equals(printingMode)) {
+            return readiness(
+                capability,
+                HardwareReadinessState.CONFIGURED,
+                true,
+                "ENDPOINT_FREE_MOCK_RUNTIME",
+                requirement.source(),
+                moduleCode + " is enabled and renders endpoint-free MOCK PrintJobs."
+            );
+        }
         PrinterAssignment assignment = topology.assignmentsByModule().get(moduleCode);
         PrinterConfig printer = assignment == null ? null : topology.printersById().get(assignment.printer_id);
         boolean configured = printer != null && Boolean.TRUE.equals(printer.enabled);
@@ -173,7 +216,7 @@ public class StoreModuleCapabilityProviderImpl implements StoreModuleCapabilityP
             capability,
             configured ? HardwareReadinessState.CONFIGURED : HardwareReadinessState.UNCONFIGURED,
             true,
-            "STORE_LOGICAL_CONFIGURATION",
+            "PHYSICAL_PRINTER_BINDING",
             "printer_configs + printer_assignments",
             configured
                 ? moduleCode + " routes to an enabled logical printer."

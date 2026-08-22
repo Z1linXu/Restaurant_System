@@ -1,3 +1,7 @@
+log_format staging_timing '$time_iso8601 method=$request_method uri=$uri status=$status bytes=$body_bytes_sent request_time=$request_time upstream_connect_time=$upstream_connect_time upstream_header_time=$upstream_header_time upstream_response_time=$upstream_response_time';
+access_log /dev/stdout staging_timing;
+error_log /dev/stderr warn;
+
 server {
     listen 80;
     server_name ${NGINX_SERVER_NAME};

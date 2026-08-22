@@ -80,6 +80,20 @@ public class StoreModuleAccessEvaluator {
     @Transactional(readOnly = true)
     public void requireOperationalCapability(Long storeId, String moduleKey) {
         evaluateCapability(storeId, moduleKey).requireAllowed();
+        requireLiveStore(storeId);
+    }
+
+    /**
+     * Allows Store-scoped management/history surfaces without requiring the
+     * runtime hardware they are used to configure or diagnose.
+     */
+    @Transactional(readOnly = true)
+    public void requireOperationalModuleEnabled(Long storeId, String moduleKey) {
+        evaluateCapability(storeId, moduleKey).requireModuleEnabled();
+        requireLiveStore(storeId);
+    }
+
+    private void requireLiveStore(Long storeId) {
         if (storeRepository == null) {
             throw new BusinessException("STORE_OPERATIONAL_STATE_UNAVAILABLE");
         }

@@ -4,6 +4,7 @@ import com.restaurant.system.printing.entity.OrderDispatchOutbox;
 import com.restaurant.system.printing.repository.OrderDispatchOutboxRepository;
 import com.restaurant.system.printing.repository.PrinterAssignmentRepository;
 import com.restaurant.system.printing.service.PrintDispatcherService;
+import com.restaurant.system.printing.service.PrintDispatchOutcome;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -88,16 +89,24 @@ public class OrderDispatchOutboxProcessor {
                 return;
             }
             try {
-                printDispatcherService.dispatchPersistedEvent(
+                PrintDispatchOutcome outcome = printDispatcherService.dispatchPersistedEvent(
                     event.moduleCode,
                     event.storeId,
                     event.orderId,
                     event.orderUpdateBatchId,
                     event.sourceKey
                 );
-                event.status = "COMPLETED";
+                if (outcome == null) {
+                    // Compatibility for older test doubles; production dispatchers
+                    // always return one explicit terminal outcome.
+                    outcome = PrintDispatchOutcome.DISPATCHED;
+                }
+                event.status = outcome.name();
                 event.completedAt = LocalDateTime.now();
-                event.lastError = null;
+                event.lastError = switch (outcome) {
+                    case DISPATCHED, MOCK_RENDERED -> null;
+                    default -> outcome.name();
+                };
             } catch (RuntimeException exception) {
                 event.status = "PENDING";
                 event.attemptCount = event.attemptCount + 1;
