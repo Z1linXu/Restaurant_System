@@ -43,6 +43,7 @@ TIMING_LINE="$(grep '^log_format staging_timing ' "$REPO_ROOT/deployment/cloud/n
 assert_not_contains 'docker system prune' "$BUILD_SCRIPT"
 assert_not_contains 'volume prune' "$BUILD_SCRIPT"
 assert_not_contains 'image prune' "$BUILD_SCRIPT"
+assert_not_contains 'hygiene_require_command jq' "$BUILD_SCRIPT"
 assert_not_contains 'rm -rf releases' "$RELEASE_SCRIPT"
 assert_not_contains 'journal vacuum' "$RELEASE_SCRIPT"
 
@@ -198,10 +199,10 @@ case "\$*" in
     printf '%s\n' 'restaurant-pos-backend:staging-active' 'restaurant-pos-backend:production-sha'
     ;;
   *' image inspect '*' --format {{.Id}}'*) printf 'sha256:%064d\n' 1 ;;
-  *'buildx du --builder default --format json --filter until=168h'*)
+  *'buildx du --builder default --format {{.ID}}|{{.Reclaimable}}|{{.Mutable}}|{{.Shared}}|{{.UsageCount}}|{{.LastUsedAt}}|{{.Size}}|{{.Type}} --filter until=168h'*)
     if [[ -e "$DOCKER_MARKER" ]]; then exit 0; fi
-    printf '%s\n' '{"ID":"cache-safe","Reclaimable":true,"Mutable":false,"Shared":false,"UsageCount":0,"LastUsedAt":"2020-01-01T00:00:00Z","Size":1234,"Type":"regular"}'
-    printf '%s\n' '{"ID":"cache-in-use","Reclaimable":false,"Mutable":false,"Shared":false,"UsageCount":1,"LastUsedAt":"2020-01-01T00:00:00Z","Size":4567,"Type":"regular"}'
+    printf '%s\n' 'cache-safe|true|false|false|0|2 weeks ago|1.234kB|regular'
+    printf '%s\n' 'cache-in-use|false|false|false|1|2 weeks ago|4.567kB|regular'
     ;;
   *'buildx prune --builder default --filter until=168h --keep-storage 10GB --force'*)
     : >"$DOCKER_MARKER"
@@ -224,8 +225,12 @@ BUILD_PLAN="$BUILD_ROOT/evidence/buildkit.plan"
 chmod 600 "$BUILD_PLAN"
 assert_contains 'BUILDKIT_CACHE|PROTECTED|PRODUCTION_IMAGE|restaurant-pos-backend:production-sha' "$BUILD_PLAN"
 assert_contains 'BUILDKIT_CACHE|PROTECTED|STAGING_IMAGE|restaurant-pos-backend:staging-' "$BUILD_PLAN"
-assert_contains 'BUILDKIT_CACHE|ELIGIBLE_ID|cache-safe|size_bytes=1234' "$BUILD_PLAN"
+assert_contains 'BUILDKIT_CACHE|ELIGIBLE_ID|cache-safe|size=1.234kB' "$BUILD_PLAN"
 assert_not_contains 'cache-in-use' "$BUILD_PLAN"
+expect_failure buildkit_extra_field_rejected bash -c \
+  "source '$BUILD_SCRIPT'; scan_cache_records 'cache-safe|true|false|false|0|2 weeks ago|1.234kB|regular|unexpected'"
+expect_failure buildkit_unsafe_size_rejected bash -c \
+  "source '$BUILD_SCRIPT'; scan_cache_records 'cache-safe|true|false|false|0|2 weeks ago|1.234kB;touch bad|regular'"
 BUILD_PLAN_SHA256="$(sha256sum "$BUILD_PLAN" | awk '{print $1}')"
 
 (

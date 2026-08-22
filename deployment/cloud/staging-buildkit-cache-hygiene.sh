@@ -16,7 +16,6 @@ PLAN_FILE=""
 PLAN_SHA256=""
 BUILDER="default"
 DOCKER_BIN=""
-JQ_BIN=""
 ENV_BIN=""
 CURRENT_SHA=""
 ENV_DIGEST=""
@@ -108,7 +107,6 @@ validate_docker_cli() {
   local context_host buildx_du_help buildx_prune_help builder_info image image_id running_images
   hygiene_validate_no_ambient_docker_overrides
   DOCKER_BIN="$(hygiene_require_command docker)"
-  JQ_BIN="$(hygiene_require_command jq)"
   ENV_BIN="$(hygiene_require_command env)"
   context_host="$(docker_safe context inspect default --format '{{.Endpoints.docker.Host}}' 2>/dev/null || true)"
   [[ "$context_host" == unix://* ]] || hygiene_die "Docker default context must be a local Unix socket"
@@ -135,7 +133,7 @@ validate_docker_cli() {
 }
 
 scan_cache_records() {
-  local json="$1" record id reclaimable mutable shared usage last_used size type
+  local records="$1" record id reclaimable mutable shared usage last_used size type extra
   CACHE_ELIGIBLE_IDS=""
   CACHE_ELIGIBLE_DETAILS=""
   CACHE_UNSAFE_LINES=""
@@ -143,30 +141,24 @@ scan_cache_records() {
   while IFS= read -r record || [[ -n "$record" ]]; do
     [[ -n "$record" ]] || continue
     CACHE_RECORD_COUNT=$((CACHE_RECORD_COUNT + 1))
-    id="$(printf '%s\n' "$record" | "$JQ_BIN" -r '.ID // empty')"
-    reclaimable="$(printf '%s\n' "$record" | "$JQ_BIN" -r 'if .Reclaimable == true then "true" elif .Reclaimable == false then "false" else empty end')"
-    mutable="$(printf '%s\n' "$record" | "$JQ_BIN" -r 'if .Mutable == true then "true" elif .Mutable == false then "false" else empty end')"
-    shared="$(printf '%s\n' "$record" | "$JQ_BIN" -r 'if .Shared == true then "true" elif .Shared == false then "false" else empty end')"
-    usage="$(printf '%s\n' "$record" | "$JQ_BIN" -r '.UsageCount // empty')"
-    last_used="$(printf '%s\n' "$record" | "$JQ_BIN" -r '.LastUsedAt // empty')"
-    size="$(printf '%s\n' "$record" | "$JQ_BIN" -r '.Size // empty')"
-    type="$(printf '%s\n' "$record" | "$JQ_BIN" -r '.Type // empty')"
-    [[ "$id" =~ ^[A-Za-z0-9._:-]+$ && "$reclaimable" =~ ^(true|false)$ && "$mutable" =~ ^(true|false)$ && "$shared" =~ ^(true|false)$ && "$usage" =~ ^[0-9]+$ && "$last_used" != *$'\n'* && "$size" =~ ^[0-9]+$ && -n "$type" ]] || hygiene_die "BuildKit disk-usage record is not machine-readable and safe"
+    IFS='|' read -r id reclaimable mutable shared usage last_used size type extra <<<"$record"
+    [[ -z "${extra:-}" && "$id" =~ ^[A-Za-z0-9._:-]+$ && "$reclaimable" =~ ^(true|false)$ && "$mutable" =~ ^(true|false)$ && "$shared" =~ ^(true|false)$ && "$usage" =~ ^[0-9]+$ && "$last_used" =~ ^[A-Za-z0-9._:+\ -]+$ && "$size" =~ ^[0-9]+([.][0-9]+)?([kMGT]i?)?B$ && "$type" =~ ^[A-Za-z0-9._:-]+$ ]] || hygiene_die "BuildKit disk-usage record is not machine-readable and safe"
     if [[ "$reclaimable" == "true" && "$mutable" == "false" && "$shared" == "false" && "$usage" == "0" ]]; then
       append_unique_line CACHE_ELIGIBLE_IDS "$id"
-      CACHE_ELIGIBLE_DETAILS="${CACHE_ELIGIBLE_DETAILS}${id}|size_bytes=${size};last_used=${last_used}"$'\n'
+      CACHE_ELIGIBLE_DETAILS="${CACHE_ELIGIBLE_DETAILS}${id}|size=${size};last_used=${last_used}"$'\n'
     elif [[ "$reclaimable" == "true" ]]; then
       CACHE_UNSAFE_LINES="${CACHE_UNSAFE_LINES}BUILDKIT_CACHE|UNSAFE_RECLAIMABLE|${id}|mutable=${mutable};shared=${shared};usage_count=${usage}"$'\n'
     else
       printf 'BUILDKIT_CACHE|RETAINED_IN_USE|%s|reclaimable=%s\n' "$id" "$reclaimable"
     fi
-  done <<<"$json"
+  done <<<"$records"
 }
 
 read_cache() {
-  local json
-  json="$(docker_safe buildx du --builder "$BUILDER" --format json --filter 'until=168h' 2>/dev/null)" || hygiene_die "BuildKit disk usage could not be read"
-  scan_cache_records "$json"
+  local records format
+  format='{{.ID}}|{{.Reclaimable}}|{{.Mutable}}|{{.Shared}}|{{.UsageCount}}|{{.LastUsedAt}}|{{.Size}}|{{.Type}}'
+  records="$(docker_safe buildx du --builder "$BUILDER" --format "$format" --filter 'until=168h' 2>/dev/null)" || hygiene_die "BuildKit disk usage could not be read"
+  scan_cache_records "$records"
   [[ -z "$CACHE_UNSAFE_LINES" ]] || hygiene_die "reclaimable BuildKit records are not clearly eligible"
 }
 
