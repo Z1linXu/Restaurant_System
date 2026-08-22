@@ -29,7 +29,21 @@
 > This fixes a fail-closed acceptance false negative; it does not change Store
 > lifecycle, module access, provisioning data or runtime API behavior.
 
-> 2026-08-22 Phase B Part 2 repository implementation and exact-SHA Staging
+> 2026-08-22 final Phase B Part 2 product-flow acceptance: exact application
+> SHA `d0b1bde3a0e3382032a214a315703c5c18d4d058` is deployed on isolated
+> Staging with Flyway V26. Synthetic Store 21 passed one-action
+> `Create -> LIVE`, immediate same-token Frontdesk access, endpoint-free
+> Printing Management, Store-local Menu isolation, rollback/replay and
+> Master/Profile immutability. Owner-created Staging Chinatown Store 18 now
+> exposes canonical `LIVE` consistently through Store Context and Owner
+> overview; Frontdesk and Printing Management return HTTP 200 with zero
+> physical printer bindings. Failed acceptance fixtures 19/20 were removed by
+> the reviewed cleanup path while historical evidence was preserved. Owner
+> manual acceptance remains pending. See
+> `docs/governance/PHASE_B_PART2_PRODUCT_FLOW_STAGING_ACCEPTANCE_EVIDENCE.md`.
+
+> 2026-08-22 earlier internal Phase B Part 2 repository implementation and
+> exact-SHA Staging
 > automated acceptance are complete on application SHA
 > `72fecac3a17e0ac40d6207f4c501eb0308210123` with Flyway V25. The implementation
 > adds additive readiness/evidence history, Store-local provisioning ledgers,
