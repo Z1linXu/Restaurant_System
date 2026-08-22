@@ -125,6 +125,14 @@ printf '{"success":true,"data":{"categories":[{"code":"A","items":[{"sku":"SKU_A
 "$JQ_COMPAT" -e '.data.categories | length > 0 and ([.[] | .items | length] | add) > 0' "$TMP_DIR/catalog-response.json"
 "$JQ_COMPAT" -e --arg sku SKU_A '[.data.categories[].items[]? | select(.sku == $sku)] | length == 1' "$TMP_DIR/catalog-response.json"
 
+printf '{"success":true,"data":[{"id":1},{"id":2}]}\n' >"$TMP_DIR/frontdesk-tables-response.json"
+"$JQ_COMPAT" -e '.data | length >= 2' "$TMP_DIR/frontdesk-tables-response.json"
+printf '{"success":true,"data":[{"id":1}]}\n' >"$TMP_DIR/frontdesk-tables-short-response.json"
+expect_failure compat_frontdesk_tables_short "$JQ_COMPAT" -e '.data | length >= 2' "$TMP_DIR/frontdesk-tables-short-response.json"
+printf '{"success":true,"data":[]}\n' >"$TMP_DIR/printing-devices-response.json"
+"$JQ_COMPAT" -e '.data | length == 0' "$TMP_DIR/printing-devices-response.json"
+expect_failure compat_unexpected_device "$JQ_COMPAT" -e '.data | length == 0' "$TMP_DIR/frontdesk-tables-short-response.json"
+
 printf '{"success":true,"data":{"store_id":11,"status":"COMPLETED","result_code":"STORE_CREATED_LIVE","validation_status":"PASS","replayed":true,"counts":{"category_count":2,"item_count":3,"option_count":4,"printing_rule_count":1}}}\n' >"$TMP_DIR/provision-response.json"
 "$JQ_COMPAT" -e '.data.status == "COMPLETED" and .data.result_code == "STORE_CREATED_LIVE" and .data.counts.category_count > 0 and .data.counts.item_count > 0 and .data.counts.option_count > 0 and .data.counts.printing_rule_count == 1' "$TMP_DIR/provision-response.json"
 [[ "$("$JQ_COMPAT" -er '.data.store_id | numbers' "$TMP_DIR/provision-response.json")" == 11 ]] ||

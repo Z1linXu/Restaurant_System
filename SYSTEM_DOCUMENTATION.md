@@ -22,6 +22,13 @@
 > enabled module, but not pre-existing hardware capability; runtime dispatch
 > remains fail-closed. No Flyway change is required.
 
+> 2026-08-22 Phase B Owner-flow acceptance repair: the reviewed Staging host
+> uses `ops001-jq-compat.py` when system `jq` is unavailable. The compatibility
+> subset now explicitly validates the exact list-cardinality filters used for
+> the post-create Frontdesk table baseline and empty synthetic device list.
+> This fixes a fail-closed acceptance false negative; it does not change Store
+> lifecycle, module access, provisioning data or runtime API behavior.
+
 > 2026-08-22 Phase B Part 2 repository implementation and exact-SHA Staging
 > automated acceptance are complete on application SHA
 > `72fecac3a17e0ac40d6207f4c501eb0308210123` with Flyway V25. The implementation
