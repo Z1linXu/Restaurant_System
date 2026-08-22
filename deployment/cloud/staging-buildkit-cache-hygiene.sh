@@ -26,6 +26,7 @@ CACHE_ELIGIBLE_IDS=""
 CACHE_ELIGIBLE_DETAILS=""
 CACHE_UNSAFE_LINES=""
 CACHE_RECORD_COUNT=0
+PRUNE_STORAGE_OPTION=""
 PLAN_PROTECTED_SET=""
 PLAN_ELIGIBLE_SET=""
 LIVE_PROTECTED_SET=""
@@ -134,7 +135,14 @@ validate_docker_cli() {
   buildx_du_help="$(docker_safe buildx du --help 2>/dev/null || true)"
   [[ "$buildx_du_help" == *'--format'* && "$buildx_du_help" == *'--filter'* ]] || hygiene_die "BuildKit disk-usage JSON/filter API is unavailable"
   buildx_prune_help="$(docker_safe buildx prune --help 2>/dev/null || true)"
-  [[ "$buildx_prune_help" == *'--filter'* && "$buildx_prune_help" == *'--force'* && "$buildx_prune_help" == *'--keep-storage'* ]] || hygiene_die "BuildKit cache-only prune API is unavailable"
+  [[ "$buildx_prune_help" == *'--filter'* && "$buildx_prune_help" == *'--force'* ]] || hygiene_die "BuildKit cache-only prune API is unavailable"
+  if [[ "$buildx_prune_help" == *'--reserved-space'* ]]; then
+    PRUNE_STORAGE_OPTION="reserved-space"
+  elif [[ "$buildx_prune_help" == *'--keep-storage'* ]]; then
+    PRUNE_STORAGE_OPTION="keep-storage"
+  else
+    hygiene_die "BuildKit cache-only prune storage-retention API is unavailable"
+  fi
 
   running_images="$(docker_safe ps --format '{{.Image}}' 2>/dev/null)" || hygiene_die "active Docker image set is unavailable"
   while IFS= read -r image; do
@@ -208,6 +216,7 @@ emit_plan() {
   printf 'BUILDKIT_CACHE|BUILDER|%s\n' "$BUILDER"
   printf 'BUILDKIT_CACHE|CACHE_MIN_AGE|168h\n'
   printf 'BUILDKIT_CACHE|KEEP_STORAGE|10GB\n'
+  printf 'BUILDKIT_CACHE|STORAGE_OPTION|%s\n' "$PRUNE_STORAGE_OPTION"
   emit_protected_set
   while IFS= read -r id; do
     [[ -n "$id" ]] || continue
@@ -224,7 +233,7 @@ plan_value() {
 }
 
 validate_plan_shape() {
-  local current_env current_builder boundary
+  local current_env current_builder current_storage_option boundary
   grep -Fxq "BUILDKIT_CACHE|SCHEMA|$HYGIENE_PLAN_SCHEMA" "$PLAN_FILE" || hygiene_die "BuildKit plan schema mismatch"
   grep -Fxq "BUILDKIT_CACHE|ENVIRONMENT|$HYGIENE_EXPECTED_ENVIRONMENT" "$PLAN_FILE" || hygiene_die "BuildKit plan environment mismatch"
   grep -Fxq "BUILDKIT_CACHE|COMPOSE_PROJECT|$HYGIENE_EXPECTED_PROJECT" "$PLAN_FILE" || hygiene_die "BuildKit plan project mismatch"
@@ -235,6 +244,8 @@ validate_plan_shape() {
   [[ "$current_builder" == "$BUILDER" ]] || hygiene_die "BuildKit plan builder differs from the fixed builder"
   grep -Fxq 'BUILDKIT_CACHE|CACHE_MIN_AGE|168h' "$PLAN_FILE" || hygiene_die "BuildKit plan age policy changed"
   grep -Fxq 'BUILDKIT_CACHE|KEEP_STORAGE|10GB' "$PLAN_FILE" || hygiene_die "BuildKit plan storage policy changed"
+  current_storage_option="$(plan_value STORAGE_OPTION "$PLAN_FILE")"
+  [[ "$current_storage_option" == "$PRUNE_STORAGE_OPTION" ]] || hygiene_die "BuildKit plan storage option differs from the installed CLI"
   boundary="$(grep -F 'BUILDKIT_CACHE|BOUNDARY|' "$PLAN_FILE" || true)"
   [[ "$boundary" == 'BUILDKIT_CACHE|BOUNDARY|action=BuildKit_cache_only;all=false;images=untouched;containers=untouched;volumes=untouched;database=untouched;production=untouched' ]] || hygiene_die "BuildKit plan boundary is unsafe"
 }
@@ -302,7 +313,11 @@ execute_plan() {
     printf 'BUILDKIT_CACHE|BOUNDARY|action=BuildKit_cache_only;all=false;images=untouched;containers=untouched;volumes=untouched;database=untouched;production=untouched\n'
     return 0
   fi
-  docker_safe buildx prune --builder "$BUILDER" --filter 'until=168h' --keep-storage 10GB --force >/dev/null 2>&1 || hygiene_die "BuildKit cache-only prune failed; no fallback cleanup exists"
+  if [[ "$PRUNE_STORAGE_OPTION" == "reserved-space" ]]; then
+    docker_safe buildx prune --builder "$BUILDER" --filter 'until=168h' --reserved-space 10GB --force >/dev/null 2>&1 || hygiene_die "BuildKit cache-only prune failed; no fallback cleanup exists"
+  else
+    docker_safe buildx prune --builder "$BUILDER" --filter 'until=168h' --keep-storage 10GB --force >/dev/null 2>&1 || hygiene_die "BuildKit cache-only prune failed; no fallback cleanup exists"
+  fi
   printf 'BUILDKIT_CACHE|STATUS|PASS|eligible_cache_only_pruned\n'
   printf 'BUILDKIT_CACHE|BOUNDARY|action=BuildKit_cache_only;all=false;images=untouched;containers=untouched;volumes=untouched;database=untouched;production=untouched\n'
 }

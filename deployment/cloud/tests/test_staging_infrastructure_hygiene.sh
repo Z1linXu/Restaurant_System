@@ -205,7 +205,14 @@ case "\$*" in
     esac
     ;;
   *'buildx du --help'*) printf '%s\n' '--format --filter' ;;
-  *'buildx prune --help'*) printf '%s\n' '--filter --force --keep-storage' ;;
+  *'buildx prune --help'*)
+    mode="\$(cat "$BUILDER_MODE" 2>/dev/null || true)"
+    if [[ "\$mode" == legacy-keep-storage ]]; then
+      printf '%s\n' '--filter --force --keep-storage'
+    else
+      printf '%s\n' '--filter --force --reserved-space'
+    fi
+    ;;
   *' ps --format {{.Image}}'*)
     printf '%s\n' 'restaurant-pos-backend:staging-active' 'restaurant-pos-backend:production-sha'
     ;;
@@ -215,9 +222,10 @@ case "\$*" in
     printf '%s\n' 'cache-safe|true|false|false|0|2 weeks ago|1.234kB|regular'
     printf '%s\n' 'cache-in-use|false|false|false|1|2 weeks ago|4.567kB|regular'
     ;;
-  *'buildx prune --builder default --filter until=168h --keep-storage 10GB --force'*)
+  *'buildx prune --builder default --filter until=168h --reserved-space 10GB --force'*)
     : >"$DOCKER_MARKER"
     ;;
+  *'buildx prune --builder default --filter until=168h --keep-storage 10GB --force'*) : >"$DOCKER_MARKER" ;;
   *) printf 'unexpected fake Docker command: %s\n' "\$*" >&2; exit 97 ;;
 esac
 EOF
@@ -237,6 +245,7 @@ chmod 600 "$BUILD_PLAN"
 assert_contains 'BUILDKIT_CACHE|PROTECTED|PRODUCTION_IMAGE|restaurant-pos-backend:production-sha' "$BUILD_PLAN"
 assert_contains 'BUILDKIT_CACHE|PROTECTED|STAGING_IMAGE|restaurant-pos-backend:staging-' "$BUILD_PLAN"
 assert_contains 'BUILDKIT_CACHE|ELIGIBLE_ID|cache-safe|size=1.234kB' "$BUILD_PLAN"
+assert_contains 'BUILDKIT_CACHE|STORAGE_OPTION|reserved-space' "$BUILD_PLAN"
 assert_not_contains 'cache-in-use' "$BUILD_PLAN"
 expect_builder_failure() {
   local mode="$1"
@@ -250,6 +259,17 @@ expect_builder_failure conflicting-status
 expect_builder_failure conflicting-driver
 expect_builder_failure conflicting-name
 expect_builder_failure extra-token
+printf '%s\n' legacy-keep-storage >"$BUILDER_MODE"
+(
+  PATH="$FAKE_DOCKER_DIR:$FAKE_FLOCK_DIR:$PATH"
+  source "$BUILD_SCRIPT"
+  HYGIENE_EXPECTED_ROOT="$BUILD_ROOT"
+  HYGIENE_ROOT="$BUILD_ROOT"
+  main --dry-run --env-file "$BUILD_ROOT/config/.env.staging" \
+    --production-image restaurant-pos-backend:production-sha
+) >"$TMP_DIR/buildkit-legacy-storage.plan"
+rm -f "$BUILDER_MODE"
+assert_contains 'BUILDKIT_CACHE|STORAGE_OPTION|keep-storage' "$TMP_DIR/buildkit-legacy-storage.plan"
 expect_failure buildkit_extra_field_rejected bash -c \
   "source '$BUILD_SCRIPT'; scan_cache_records 'cache-safe|true|false|false|0|2 weeks ago|1.234kB|regular|unexpected'"
 expect_failure buildkit_unsafe_size_rejected bash -c \
@@ -271,7 +291,7 @@ assert_contains 'BUILDKIT_CACHE|STATUS|PASS|eligible_cache_only_pruned' "$TMP_DI
 [[ -e "$DOCKER_MARKER" ]] || fail 'BuildKit execute did not call the cache-only prune'
 [[ "$(wc -l <"$DOCKER_CALLS" | tr -d ' ')" -ge 1 ]] || fail 'fake Docker was not called'
 
-PRUNE_CALL_COUNT="$(grep -Fc 'buildx prune --builder default --filter until=168h --keep-storage 10GB --force' "$DOCKER_CALLS" || true)"
+PRUNE_CALL_COUNT="$(grep -Fc 'buildx prune --builder default --filter until=168h --reserved-space 10GB --force' "$DOCKER_CALLS" || true)"
 [[ "$PRUNE_CALL_COUNT" == "1" ]] || fail 'unexpected initial BuildKit prune count'
 (
   PATH="$FAKE_DOCKER_DIR:$FAKE_FLOCK_DIR:$PATH"
@@ -285,7 +305,7 @@ PRUNE_CALL_COUNT="$(grep -Fc 'buildx prune --builder default --filter until=168h
     --plan-file "$BUILD_PLAN" --plan-sha256 "$BUILD_PLAN_SHA256"
 ) >"$TMP_DIR/buildkit-execute-repeat.out"
 assert_contains 'BUILDKIT_CACHE|STATUS|PASS|nothing_eligible;idempotent_noop' "$TMP_DIR/buildkit-execute-repeat.out"
-PRUNE_CALL_COUNT_AFTER="$(grep -Fc 'buildx prune --builder default --filter until=168h --keep-storage 10GB --force' "$DOCKER_CALLS" || true)"
+PRUNE_CALL_COUNT_AFTER="$(grep -Fc 'buildx prune --builder default --filter until=168h --reserved-space 10GB --force' "$DOCKER_CALLS" || true)"
 [[ "$PRUNE_CALL_COUNT_AFTER" == "1" ]] || fail 'repeat BuildKit execute was not an idempotent no-op'
 
 expect_failure buildkit_wrong_plan_digest bash -c \
