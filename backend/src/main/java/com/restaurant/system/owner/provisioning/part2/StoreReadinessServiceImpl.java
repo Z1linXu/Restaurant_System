@@ -43,6 +43,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -287,11 +288,18 @@ public class StoreReadinessServiceImpl implements StoreReadinessService {
                 : organizationMembershipRepository.findFirstByUserIdAndOrganizationId(user.getId(), store.organization_id).orElse(null);
             boolean valid = credential != null
                 && "BCRYPT".equalsIgnoreCase(credential.passwordAlgorithm)
+                && user.getUsername() != null
+                && user.getUsername().equalsIgnoreCase(credential.loginIdentifier)
                 && storeMembership != null
                 && Boolean.TRUE.equals(storeMembership.isActive)
+                && store.organization_id.equals(storeMembership.organizationId)
+                && Objects.equals(user.getRole_id(), storeMembership.roleId)
+                && role.equalsIgnoreCase(storeMembership.roleCode)
                 && organizationMembership != null
                 && Boolean.TRUE.equals(organizationMembership.isActive)
-                && store.organization_id.equals(organizationMembership.organizationId);
+                && store.organization_id.equals(organizationMembership.organizationId)
+                && Objects.equals(user.getRole_id(), organizationMembership.roleId)
+                && role.equalsIgnoreCase(organizationMembership.roleCode);
             roleReady.put(role, roleReady.get(role) || valid);
         }
         boolean valid = roleReady.values().stream().allMatch(Boolean.TRUE::equals);
@@ -301,8 +309,13 @@ public class StoreReadinessServiceImpl implements StoreReadinessService {
 
     private void checkPrinting(Store store, List<StoreReadinessResponse.Check> checks) {
         List<StoreLogicalPrinterRoleEntity> roles = printerRoleRepository.findAllByStoreIdOrderByRoleCodeAsc(store.id);
-        boolean requiredRoles = roles.stream().anyMatch(role -> "GRAB".equals(role.module_code) && Boolean.TRUE.equals(role.required))
-            && roles.stream().anyMatch(role -> "FRONTDESK_RECEIPT".equals(role.module_code) && Boolean.TRUE.equals(role.required));
+        boolean scopedRoles = roles.stream().allMatch(role -> store.organization_id.equals(role.organization_id));
+        boolean requiredRoles = roles.stream().anyMatch(role -> "GRAB".equals(role.module_code)
+                && Boolean.TRUE.equals(role.required)
+                && Boolean.TRUE.equals(role.enabled))
+            && roles.stream().anyMatch(role -> "FRONTDESK_RECEIPT".equals(role.module_code)
+                && Boolean.TRUE.equals(role.required)
+                && Boolean.TRUE.equals(role.enabled));
         boolean safeRoles = !roles.isEmpty() && roles.stream().allMatch(role ->
             ("DISABLED".equalsIgnoreCase(role.mode) || "MOCK".equalsIgnoreCase(role.mode))
                 && "UNBOUND".equalsIgnoreCase(role.physical_binding_status)
@@ -310,8 +323,8 @@ public class StoreReadinessServiceImpl implements StoreReadinessService {
         );
         boolean safeStoreMode = "DISABLED".equalsIgnoreCase(store.printing_mode)
             || "MOCK".equalsIgnoreCase(store.printing_mode);
-        checks.add(check("PRINTING_TOPOLOGY", requiredRoles && safeRoles && safeStoreMode ? PASS : FAIL,
-            requiredRoles && safeRoles && safeStoreMode
+        checks.add(check("PRINTING_TOPOLOGY", scopedRoles && requiredRoles && safeRoles && safeStoreMode ? PASS : FAIL,
+            scopedRoles && requiredRoles && safeRoles && safeStoreMode
                 ? "Logical printing roles are Store-scoped and endpoint-free"
                 : "Printing topology is incomplete or has an unsafe physical binding"));
         boolean hotKitchenExcluded = roles.stream().noneMatch(role -> "HOT_KITCHEN".equals(role.module_code) && Boolean.TRUE.equals(role.enabled));
@@ -323,6 +336,8 @@ public class StoreReadinessServiceImpl implements StoreReadinessService {
         boolean valid = deviceReadinessRepository.findAllByStoreIdOrderByDeviceIdAsc(store.id).stream().anyMatch(readiness -> {
             StoreDevice device = storeDeviceRepository.findByIdAndStoreId(readiness.device_id, store.id).orElse(null);
             return device != null
+                && store.organization_id.equals(device.organizationId)
+                && store.organization_id.equals(readiness.organization_id)
                 && Boolean.TRUE.equals(device.isActive)
                 && "ACTIVE".equalsIgnoreCase(device.status)
                 && Boolean.TRUE.equals(readiness.trusted_build)

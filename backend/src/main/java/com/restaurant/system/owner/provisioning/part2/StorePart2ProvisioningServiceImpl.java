@@ -6,6 +6,7 @@ import com.restaurant.system.common.auth.AuthenticatedUser;
 import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.owner.exception.OwnerStoreProvisioningException;
 import com.restaurant.system.owner.profile.StoreProfileCanonicalJson;
+import com.restaurant.system.printing.PrintingRuntimePolicyProperties;
 import com.restaurant.system.printing.PrintingMode;
 import com.restaurant.system.user.entity.Store;
 import com.restaurant.system.user.repository.StoreRepository;
@@ -25,6 +26,7 @@ public class StorePart2ProvisioningServiceImpl implements StorePart2Provisioning
     private final StorePart2ProvisioningWriter writer;
     private final StoreReadinessService readinessService;
     private final StoreActivationRequestCoordinator activationCoordinator;
+    private final PrintingRuntimePolicyProperties printingRuntimePolicy;
     private final ObjectMapper objectMapper;
 
     public StorePart2ProvisioningServiceImpl(
@@ -34,6 +36,7 @@ public class StorePart2ProvisioningServiceImpl implements StorePart2Provisioning
         StorePart2ProvisioningWriter writer,
         StoreReadinessService readinessService,
         StoreActivationRequestCoordinator activationCoordinator,
+        PrintingRuntimePolicyProperties printingRuntimePolicy,
         ObjectMapper objectMapper
     ) {
         this.storeRepository = storeRepository;
@@ -42,6 +45,7 @@ public class StorePart2ProvisioningServiceImpl implements StorePart2Provisioning
         this.writer = writer;
         this.readinessService = readinessService;
         this.activationCoordinator = activationCoordinator;
+        this.printingRuntimePolicy = printingRuntimePolicy;
         this.objectMapper = objectMapper;
     }
 
@@ -131,6 +135,7 @@ public class StorePart2ProvisioningServiceImpl implements StorePart2Provisioning
             if (expectedFingerprint != null && !expectedFingerprint.equals(readiness.readiness_fingerprint)) {
                 throw conflict("PART2_READINESS_FINGERPRINT_CONFLICT", "Readiness changed; review the current evidence before activation");
             }
+            printingRuntimePolicy.requireAllowedMode(PrintingMode.MOCK);
             lockedStore.status = "active";
             lockedStore.lifecycle_status = "ACTIVE";
             lockedStore.printing_mode = PrintingMode.MOCK;

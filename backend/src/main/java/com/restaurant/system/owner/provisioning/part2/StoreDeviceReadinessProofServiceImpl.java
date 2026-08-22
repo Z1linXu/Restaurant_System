@@ -44,6 +44,9 @@ public class StoreDeviceReadinessProofServiceImpl implements StoreDeviceReadines
             || !"VALIDATION_FIXTURE".equalsIgnoreCase(store.store_kind)) {
             throw new BusinessException("PART2_ONLY_VALIDATION_FIXTURE_ALLOWED");
         }
+        if (store.organization_id == null || !store.organization_id.equals(device.organizationId)) {
+            throw new BusinessException("PART2_DEVICE_ORGANIZATION_MISMATCH");
+        }
         String workerStatus = request == null || request.worker_status == null || request.worker_status.isBlank()
             ? "HEALTHY"
             : request.worker_status.trim().toUpperCase();

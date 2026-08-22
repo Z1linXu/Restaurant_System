@@ -385,7 +385,7 @@ select case when
   and (select count(*) from store_provisioning_resources where store_id = $STORE_ID and resource_type = 'TABLE') >= 2
   and (select count(*) from store_provisioning_resources where store_id = $STORE_ID and resource_type = 'DEVICE') = 1
   and (select count(*) from store_logical_printer_roles where store_id = $STORE_ID) = 2
-  and (select count(*) from store_logical_printer_roles where store_id = $STORE_ID and mode in ('DISABLED','MOCK') and physical_binding_status = 'UNBOUND' and assigned_printer_id is null) = 2
+  and (select count(*) from store_logical_printer_roles where store_id = $STORE_ID and mode in ('DISABLED','MOCK') and enabled = true and physical_binding_status = 'UNBOUND' and assigned_printer_id is null) = 2
   and (select count(*) from users user_row join roles role_row on role_row.id = user_row.role_id where user_row.store_id = $STORE_ID and role_row.code in ('MANAGER','FRONTDESK') and user_row.status = 'active') >= 2
   and (select count(*) from user_credentials credential join users user_row on user_row.id = credential.user_id where user_row.store_id = $STORE_ID and credential.password_algorithm = 'BCRYPT' and credential.is_active = true) >= 2
   and (select count(*) from organization_memberships membership join users user_row on user_row.id = membership.user_id where user_row.store_id = $STORE_ID and membership.organization_id = $ORGANIZATION_ID and membership.is_active = true) >= 2

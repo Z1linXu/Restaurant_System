@@ -422,8 +422,8 @@ public class StorePart2ProvisioningWriter {
 
     private List<Part2ProvisioningPlan.PrinterRoleSpec> defaultPrinterRoles() {
         return List.of(
-            new Part2ProvisioningPlan.PrinterRoleSpec("GRAB", "GRAB", "Synthetic GRAB", "MOCK", false, true),
-            new Part2ProvisioningPlan.PrinterRoleSpec("FRONTDESK_RECEIPT", "FRONTDESK_RECEIPT", "Synthetic Receipt", "MOCK", false, true)
+            new Part2ProvisioningPlan.PrinterRoleSpec("GRAB", "GRAB", "Synthetic GRAB", "MOCK", true, true),
+            new Part2ProvisioningPlan.PrinterRoleSpec("FRONTDESK_RECEIPT", "FRONTDESK_RECEIPT", "Synthetic Receipt", "MOCK", true, true)
         );
     }
 
