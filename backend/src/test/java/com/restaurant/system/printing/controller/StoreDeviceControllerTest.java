@@ -1,6 +1,7 @@
 package com.restaurant.system.printing.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -18,6 +19,7 @@ import com.restaurant.system.printing.dto.DeviceRegisterRequest;
 import com.restaurant.system.printing.dto.DeviceRegisterResponse;
 import com.restaurant.system.printing.dto.StoreDeviceRenameRequest;
 import com.restaurant.system.printing.dto.StoreDeviceResponse;
+import com.restaurant.system.printing.entity.StoreDevice;
 import com.restaurant.system.printing.service.StoreDeviceService;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -103,6 +105,32 @@ class StoreDeviceControllerTest {
             Capability.ADMIN_PRINTING_MANAGE,
             Capability.ADMIN_STORE_CONFIG
         );
+    }
+
+    @Test
+    void heartbeatRequiresOnlyStorePrintingModuleForDeviceReadiness() throws Exception {
+        StoreDevice device = new StoreDevice();
+        device.id = 90L;
+        device.storeId = 1L;
+        when(storeDeviceService.authenticateDevice(90L, "raw-device-token")).thenReturn(device);
+        StoreDeviceResponse response = new StoreDeviceResponse();
+        response.id = 90L;
+        response.store_id = 1L;
+        response.status = "ACTIVE";
+        when(storeDeviceService.heartbeat(eq(90L), eq("raw-device-token"), any())).thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/devices/heartbeat")
+                .header("X-Device-Id", "90")
+                .header("X-Device-Token", "raw-device-token")
+                .contentType("application/json")
+                .content("{\"app_version\":\"synthetic-build\",\"platform\":\"STAGING\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.id").value(90))
+            .andExpect(jsonPath("$.data.status").value("ACTIVE"));
+
+        verify(moduleAccessEvaluator).requireModuleEnabled(1L, ModuleKeys.PRINTING);
+        verify(moduleAccessEvaluator, org.mockito.Mockito.never()).requireCapability(1L, ModuleKeys.PRINTING);
+        verify(storeDeviceService).authenticateDevice(90L, "raw-device-token");
     }
 
     @Test

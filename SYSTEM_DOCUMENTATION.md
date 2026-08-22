@@ -30,6 +30,13 @@
 > endpoint shape. The parser regression test covers this exact response shape;
 > no credential or endpoint value is emitted.
 
+> 2026-08-22 Device readiness boundary repair: authenticated device heartbeat
+> now requires the Store-local PRINTING module to be enabled, but does not
+> require an environment or hardware printing capability. Heartbeat is a
+> readiness signal and has no physical print side effect, so this preserves
+> DISABLED/MOCK Staging safety while allowing the synthetic Part 2 device TTL
+> and proof contract to be exercised.
+
 > 2026-08-21 Owner confirmed `PHASE_B_PART1_OWNER_ACCEPTANCE = PASS` after the
 > exact-SHA Staging automated acceptance. `CURRENT_STATE.yml` now closes Part 1
 > and records `PHASE_B_PART2` as Owner-authorized for planning and implementation

@@ -57,7 +57,10 @@ public class StoreDeviceController {
         @RequestBody(required = false) DeviceHeartbeatRequest request
     ) {
         StoreDevice device = storeDeviceService.authenticateDevice(deviceId, deviceToken);
-        requirePrinting(device.storeId);
+        // Heartbeat is a device-readiness signal, not a physical print action.
+        // Keep the Store-local printing module boundary while allowing the
+        // synthetic Part 2 device proof to run with DISABLED/MOCK transport.
+        moduleAccessEvaluator.requireModuleEnabled(device.storeId, ModuleKeys.PRINTING);
         return ApiResponse.success(storeDeviceService.heartbeat(deviceId, deviceToken, request));
     }
 
