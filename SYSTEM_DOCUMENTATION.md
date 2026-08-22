@@ -17,6 +17,13 @@
 > Pad or Production mutation. Exact-SHA Staging deployment and automated
 > acceptance remain separate execution gates until their evidence is recorded.
 
+> 2026-08-22 Part 2 runtime repair: provisioning responses now use the
+> transactionally persisted request returned by the request coordinator, so a
+> successful write is reported as `COMPLETED` rather than exposing the stale
+> reservation state `PROCESSING`. A focused regression test covers this
+> response-state boundary. This repair does not change the readiness contract,
+> Store/Organization scope, credential delivery policy or activation gate.
+
 > 2026-08-21 Owner confirmed `PHASE_B_PART1_OWNER_ACCEPTANCE = PASS` after the
 > exact-SHA Staging automated acceptance. `CURRENT_STATE.yml` now closes Part 1
 > and records `PHASE_B_PART2` as Owner-authorized for planning and implementation
