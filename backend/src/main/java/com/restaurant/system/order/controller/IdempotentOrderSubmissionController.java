@@ -43,7 +43,7 @@ public class IdempotentOrderSubmissionController {
             Capability.ORDER_CREATE,
             Capability.ORDER_SUBMIT
         );
-        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.ORDERING_POS);
+        moduleAccessEvaluator.requireOperationalCapability(storeId, ModuleKeys.ORDERING_POS);
         return ApiResponse.success(
             "Order accepted idempotently",
             submissionService.submit(storeId, request, user.userId())

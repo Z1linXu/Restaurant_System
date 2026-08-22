@@ -58,7 +58,14 @@ assert_contains '/admin/menu/combo-configuration' "$SCRIPT"
 assert_contains '/admin/printing/display-rules' "$SCRIPT"
 assert_contains "store_kind = 'VALIDATION_FIXTURE'" "$SCRIPT"
 assert_contains "provisioning_source = 'PHASE_B_OWNER_PROVISIONING'" "$SCRIPT"
-assert_contains "printing_mode = 'MOCK'" "$SCRIPT"
+assert_contains "printing_mode = 'DISABLED'" "$SCRIPT"
+assert_contains 'STORE_CREATED_LIVE' "$SCRIPT"
+assert_contains 'OPERATIONAL_BASELINE' "$SCRIPT"
+assert_contains 'CREATE_FAILURE_ROLLBACK' "$SCRIPT"
+assert_contains 'LIVE_FRONTDESK_AND_UNBOUND_PRINTING_MANAGEMENT' "$SCRIPT"
+assert_contains '/admin/printing?store_id=$TARGET_STORE_ID' "$SCRIPT"
+assert_contains '/admin/printing/devices?store_id=$TARGET_STORE_ID' "$SCRIPT"
+assert_contains '.data.operational_state == "LIVE"' "$SCRIPT"
 assert_contains 'master_menu.organization_id = $ORGANIZATION_ID' "$SCRIPT"
 assert_contains "master_menu.master_menu_key = 'LANZHOU_CHAIN_MASTER_MENU'" "$SCRIPT"
 assert_contains "version.fingerprint_sha256 = 'ef28a4d160373f0f08b810a6b82d1f3c84f2c7d4aa076cceac00836a13d4f38c'" "$SCRIPT"
@@ -118,8 +125,8 @@ printf '{"success":true,"data":{"categories":[{"code":"A","items":[{"sku":"SKU_A
 "$JQ_COMPAT" -e '.data.categories | length > 0 and ([.[] | .items | length] | add) > 0' "$TMP_DIR/catalog-response.json"
 "$JQ_COMPAT" -e --arg sku SKU_A '[.data.categories[].items[]? | select(.sku == $sku)] | length == 1' "$TMP_DIR/catalog-response.json"
 
-printf '{"success":true,"data":{"store_id":11,"status":"COMPLETED","result_code":"PHASE_B_STORE_PROVISIONED","validation_status":"PASS","replayed":true,"counts":{"category_count":2,"item_count":3,"option_count":4,"printing_rule_count":1}}}\n' >"$TMP_DIR/provision-response.json"
-"$JQ_COMPAT" -e '.data.status == "COMPLETED" and .data.result_code == "PHASE_B_STORE_PROVISIONED" and .data.counts.category_count > 0 and .data.counts.item_count > 0 and .data.counts.option_count > 0 and .data.counts.printing_rule_count == 1' "$TMP_DIR/provision-response.json"
+printf '{"success":true,"data":{"store_id":11,"status":"COMPLETED","result_code":"STORE_CREATED_LIVE","validation_status":"PASS","replayed":true,"counts":{"category_count":2,"item_count":3,"option_count":4,"printing_rule_count":1}}}\n' >"$TMP_DIR/provision-response.json"
+"$JQ_COMPAT" -e '.data.status == "COMPLETED" and .data.result_code == "STORE_CREATED_LIVE" and .data.counts.category_count > 0 and .data.counts.item_count > 0 and .data.counts.option_count > 0 and .data.counts.printing_rule_count == 1' "$TMP_DIR/provision-response.json"
 [[ "$("$JQ_COMPAT" -er '.data.store_id | numbers' "$TMP_DIR/provision-response.json")" == 11 ]] ||
   fail 'jq compatibility parser did not extract provisioned Store ID'
 [[ "$("$JQ_COMPAT" -er '.data.replayed | select(. == true)' "$TMP_DIR/provision-response.json")" == true ]] ||
@@ -154,4 +161,4 @@ assert_not_contains 'source-store-id' "$SCRIPT"
 ! grep -Eq '(compose (down|rm)|down -v|docker system|flyway (clean|repair)|production-exact|production-promote)' "$SCRIPT" ||
   fail 'Phase B acceptance helper contains a forbidden lifecycle or Production operation'
 
-echo 'PASS: Phase B Part 1 acceptance helper is canonical-provisioning scoped, secret-safe, and avoids legacy clone/Production paths.'
+echo 'PASS: Phase B Owner Store workflow acceptance is one-action LIVE, secret-safe, and avoids legacy clone/Production paths.'

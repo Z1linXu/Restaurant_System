@@ -43,14 +43,14 @@ public class MenuController {
     @GetMapping("/catalog")
     public ApiResponse<MenuCatalogResponse> getCatalog(@RequestParam("store_id") Long storeId) {
         authorizationService.requireForStore(storeId, Capability.ORDER_CREATE);
-        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.MENU);
+        moduleAccessEvaluator.requireOperationalCapability(storeId, ModuleKeys.MENU);
         return ApiResponse.success(menuService.getCatalog(storeId));
     }
 
     @GetMapping("/catalog/revision")
     public ApiResponse<MenuRevisionResponse> getCatalogRevision(@RequestParam("store_id") Long storeId) {
         authorizationService.requireForStore(storeId, Capability.ORDER_CREATE);
-        moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.MENU);
+        moduleAccessEvaluator.requireOperationalCapability(storeId, ModuleKeys.MENU);
         return ApiResponse.success(menuRevisionService.getRevision(storeId));
     }
 }

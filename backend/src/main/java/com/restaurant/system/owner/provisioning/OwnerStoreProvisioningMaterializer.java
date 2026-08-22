@@ -23,6 +23,10 @@ import com.restaurant.system.owner.master.ChainMasterMenuOptionEntity;
 import com.restaurant.system.owner.master.ChainMasterMenuProductEntity;
 import com.restaurant.system.owner.profile.StoreProfileArtifactEntity;
 import com.restaurant.system.owner.profile.StoreProfileCanonicalJson;
+import com.restaurant.system.owner.provisioning.part2.StoreActivationRequestCoordinator;
+import com.restaurant.system.owner.provisioning.part2.StoreReadinessResponse;
+import com.restaurant.system.owner.provisioning.part2.StoreReadinessService;
+import com.restaurant.system.platform.repository.OrganizationRepository;
 import com.restaurant.system.printing.rules.PrintingDisplayRuleDefaults;
 import com.restaurant.system.printing.rules.PrintingDisplayRuleRevision;
 import com.restaurant.system.printing.rules.PrintingDisplayRuleRevisionRepository;
@@ -46,8 +50,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class OwnerStoreProvisioningMaterializer {
 
-    private static final String RESULT_CODE = "PHASE_B_STORE_PROVISIONED";
+    private static final String RESULT_CODE = "STORE_CREATED_LIVE";
 
+    private final OrganizationRepository organizationRepository;
     private final StoreRepository storeRepository;
     private final StoreModuleRepository moduleRepository;
     private final StationRepository stationRepository;
@@ -63,8 +68,12 @@ public class OwnerStoreProvisioningMaterializer {
     private final MenuRevisionService menuRevisionService;
     private final PhaseBPart1ProvisioningValidator provisioningValidator;
     private final OwnerStoreProvisioningRequestCoordinator requestCoordinator;
+    private final OperationalStoreBaselineProvisioner baselineProvisioner;
+    private final StoreReadinessService readinessService;
+    private final StoreActivationRequestCoordinator activationRequestCoordinator;
 
     public OwnerStoreProvisioningMaterializer(
+        OrganizationRepository organizationRepository,
         StoreRepository storeRepository,
         StoreModuleRepository moduleRepository,
         StationRepository stationRepository,
@@ -79,8 +88,12 @@ public class OwnerStoreProvisioningMaterializer {
         StoreMenuMasterMappingRepository mappingRepository,
         MenuRevisionService menuRevisionService,
         PhaseBPart1ProvisioningValidator provisioningValidator,
-        OwnerStoreProvisioningRequestCoordinator requestCoordinator
+        OwnerStoreProvisioningRequestCoordinator requestCoordinator,
+        OperationalStoreBaselineProvisioner baselineProvisioner,
+        StoreReadinessService readinessService,
+        StoreActivationRequestCoordinator activationRequestCoordinator
     ) {
+        this.organizationRepository = organizationRepository;
         this.storeRepository = storeRepository;
         this.moduleRepository = moduleRepository;
         this.stationRepository = stationRepository;
@@ -96,6 +109,9 @@ public class OwnerStoreProvisioningMaterializer {
         this.menuRevisionService = menuRevisionService;
         this.provisioningValidator = provisioningValidator;
         this.requestCoordinator = requestCoordinator;
+        this.baselineProvisioner = baselineProvisioner;
+        this.readinessService = readinessService;
+        this.activationRequestCoordinator = activationRequestCoordinator;
     }
 
     @Transactional
@@ -104,6 +120,8 @@ public class OwnerStoreProvisioningMaterializer {
         ResolvedOwnerStoreProvisioningInput input
     ) {
         OwnerStoreProvisioningCommand command = input.command();
+        organizationRepository.findByIdForUpdate(command.organizationId())
+            .orElseThrow(() -> conflict("ORGANIZATION_NOT_FOUND", "Organization not found"));
         requireUniqueStoreCode(command.organizationId(), command.storeCode());
         Map<String, StoreProfileArtifactEntity> artifacts = indexArtifacts(input.artifacts());
         JsonNode profileContent = StoreProfileCanonicalJson.parse(input.profileVersion().content_json);
@@ -145,6 +163,30 @@ public class OwnerStoreProvisioningMaterializer {
         if (validation.blocking()) {
             throw conflict("PHASE_B_PROVISIONING_VALIDATION_FAILED", String.join(", ", validation.issues()));
         }
+
+        baselineProvisioner.provision(store, command.actor());
+        StoreReadinessResponse readiness = readinessService.evaluateOperationalBaseline(
+            command.organizationId(),
+            store.id,
+            command.actor().userId()
+        );
+        if (!Boolean.TRUE.equals(readiness.ready)) {
+            throw conflict("STORE_OPERATIONAL_BASELINE_NOT_READY", "New Store operational baseline validation failed");
+        }
+        activationRequestCoordinator.recordAutomaticActivation(
+            command.organizationId(),
+            store.id,
+            reservation.requestId(),
+            input.requestFingerprint(),
+            readiness.evidence_id,
+            readiness.readiness_fingerprint,
+            command.actor().userId()
+        );
+        store.status = "active";
+        store.lifecycle_status = "ACTIVE";
+        store.updated_at = LocalDateTime.now();
+        storeRepository.save(store);
+
         OwnerStoreProvisioningReservation completed = requestCoordinator.complete(new OwnerStoreProvisioningSuccessEvidence(
             reservation.requestId(),
             command.organizationId(),
@@ -179,8 +221,8 @@ public class OwnerStoreProvisioningMaterializer {
         store.lifecycle_status = "CONFIGURING";
         store.provisioning_source = "PHASE_B_OWNER_PROVISIONING";
         store.enable_bar_kitchen_tasks = false;
-        store.printing_enabled = true;
-        store.printing_mode = "MOCK";
+        store.printing_enabled = false;
+        store.printing_mode = "DISABLED";
         store.menu_revision = 1L;
         store.menu_updated_at = now;
         store.provisioned_profile_code = command.profileCode();

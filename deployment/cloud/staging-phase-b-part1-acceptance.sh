@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Phase B Part 1 Staging acceptance. Runtime execution creates one explicit
-# PHASE_B validation Store through the same Owner provisioning API used by the
-# UI, then verifies Store-local menu independence without touching Production.
+# Phase B Owner Store workflow acceptance. Runtime execution creates one
+# explicit Staging validation Store through the same one-action API used by the
+# UI, then verifies LIVE usability and Store-local independence without
+# touching Production or real hardware.
 
 SCRIPT_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=staging-ops-common.sh
@@ -202,6 +203,17 @@ api_call() {
   "$JQ_BIN" -e '.success == true' "$response" >/dev/null || ops001_die "$label returned invalid or unsuccessful JSON"
 }
 
+api_expect_status() {
+  local label="$1" method="$2" path="$3" body="$4" token="$5" idempotency="$6" expected="$7"
+  local config="$PRIVATE_ROOT/$label.curl" response="$PRIVATE_ROOT/$label.response" status_file="$PRIVATE_ROOT/$label.status"
+  write_curl_config "$config" "$token" "$idempotency"
+  local -a args=(-q --config "$config" --request "$method" --output "$response" --write-out '%{http_code}' "$API_BASE$path")
+  [[ -z "$body" ]] || args+=(--data-binary "@$body")
+  "$CURL_BIN" "${args[@]}" >"$status_file" || true
+  LAST_HTTP_STATUS="$(cat "$status_file")"; LAST_RESPONSE="$response"
+  [[ "$LAST_HTTP_STATUS" == "$expected" ]] || ops001_die "$label expected HTTP $expected, got $LAST_HTTP_STATUS"
+}
+
 reject_secret_response_fields() {
   local label="$1"
   "$JQ_BIN" -e '[paths(scalars) as $p | ($p[-1] | tostring | ascii_downcase) | select(test("password|token|cookie|authorization|secret"))] | length == 0' "$LAST_RESPONSE" >/dev/null ||
@@ -321,7 +333,7 @@ provision_store() {
   reject_secret_response_fields provision_first
   first_store="$("$JQ_BIN" -er '.data.store_id | numbers' "$LAST_RESPONSE")"
   validation_status="$("$JQ_BIN" -er '.data.validation_status | select(. == "PASS" or . == "WARNING")' "$LAST_RESPONSE")"
-  "$JQ_BIN" -e '.data.status == "COMPLETED" and .data.result_code == "PHASE_B_STORE_PROVISIONED" and .data.counts.category_count > 0 and .data.counts.item_count > 0 and .data.counts.option_count > 0 and .data.counts.printing_rule_count == 1' "$LAST_RESPONSE" >/dev/null ||
+  "$JQ_BIN" -e '.data.status == "COMPLETED" and .data.result_code == "STORE_CREATED_LIVE" and .data.counts.category_count > 0 and .data.counts.item_count > 0 and .data.counts.option_count > 0 and .data.counts.printing_rule_count == 1' "$LAST_RESPONSE" >/dev/null ||
     ops001_die "provisioning result counts/status are invalid"
   api_call provision_replay POST "/owner/organizations/$ORGANIZATION_ID/phase-b/store-provisioning" "$request" "$ACCESS_TOKEN" "$key"
   reject_secret_response_fields provision_replay
@@ -330,6 +342,15 @@ provision_store() {
   [[ "$first_store" == "$second_store" && "$replayed" == "true" ]] ||
     ops001_die "Phase B provisioning replay contract failed"
   TARGET_STORE_ID="$first_store"
+  local rollback_key="phase-b-create-rollback-$first_store"
+  api_expect_status duplicate_code_rollback POST "/owner/organizations/$ORGANIZATION_ID/phase-b/store-provisioning" "$request" "$ACCESS_TOKEN" "$rollback_key" 409
+  reject_secret_response_fields duplicate_code_rollback
+  db_expect_pass CREATE_FAILURE_ROLLBACK "
+select case when
+  (select count(*) from stores where organization_id = $ORGANIZATION_ID and code = $(sql_literal "$STORE_CODE")) = 1
+  and (select count(*) from owner_store_provisioning_requests where organization_id = $ORGANIZATION_ID and idempotency_key = $(sql_literal "$rollback_key") and status = 'FAILED' and store_id is null) = 1
+then 'PASS' else 'FAIL duplicate-code create did not roll back safely' end;
+"
   printf 'PHASE_B_PART1_ACCEPTANCE|PROVISION|STORE_ID|%s|VALIDATION|%s|REPLAY|PASS\n' "$TARGET_STORE_ID" "$validation_status"
 }
 
@@ -340,12 +361,12 @@ from stores
 where id = $TARGET_STORE_ID
   and organization_id = $ORGANIZATION_ID
   and code = $(sql_literal "$STORE_CODE")
-  and lower(status) <> 'active'
+  and lower(status) = 'active'
   and store_kind = 'VALIDATION_FIXTURE'
-  and lifecycle_status = 'READY_FOR_REVIEW'
+  and lifecycle_status = 'ACTIVE'
   and provisioning_source = 'PHASE_B_OWNER_PROVISIONING'
-  and printing_enabled = true
-  and printing_mode = 'MOCK'
+  and printing_enabled = false
+  and printing_mode = 'DISABLED'
   and provisioned_profile_code = 'ST_DENIS_CANONICAL_PROFILE'
   and provisioned_profile_version = 'v2'
   and provisioned_master_menu_key = 'LANZHOU_CHAIN_MASTER_MENU'
@@ -356,6 +377,20 @@ select case when
   (select count(*) from stores where organization_id = $ORGANIZATION_ID and code = $(sql_literal "$STORE_CODE")) = 1
   and (select count(*) from owner_store_provisioning_requests where organization_id = $ORGANIZATION_ID and store_id = $TARGET_STORE_ID and status = 'COMPLETED') = 1
 then 'PASS' else 'FAIL duplicate Store or provisioning request detected' end;
+"
+  db_expect_pass OPERATIONAL_BASELINE "
+select case when
+  (select count(*) from dining_tables where store_id = $TARGET_STORE_ID and is_active = true) >= 2
+  and (select count(*) from stations where store_id = $TARGET_STORE_ID and is_active = true) > 0
+  and (select count(*) from store_memberships where store_id = $TARGET_STORE_ID and user_id = $OWNER_USER_ID and organization_id = $ORGANIZATION_ID and role_code = 'OWNER' and is_active = true) = 1
+  and (select count(*) from store_logical_printer_roles where store_id = $TARGET_STORE_ID and enabled = true and mode = 'DISABLED' and physical_binding_status = 'UNBOUND' and assigned_printer_id is null) = 2
+  and (select count(*) from printer_configs where store_id = $TARGET_STORE_ID) = 0
+  and (select count(*) from printer_assignments where store_id = $TARGET_STORE_ID) = 0
+  and (select count(*) from users where store_id = $TARGET_STORE_ID) = 0
+  and (select count(*) from store_devices where store_id = $TARGET_STORE_ID) = 0
+  and (select count(*) from store_readiness_evidence where store_id = $TARGET_STORE_ID and status = 'READY') = 1
+  and (select count(*) from store_activation_requests where store_id = $TARGET_STORE_ID and status = 'COMPLETED' and target_state = 'LIVE' and result_code = 'STORE_AUTO_ACTIVATED') = 1
+then 'PASS' else 'FAIL operational baseline, optional hardware, readiness or activation mismatch' end;
 "
   db_expect_pass MASTER_MAPPING_COUNTS "
 with master_version as (
@@ -423,13 +458,33 @@ then 'PASS' else 'FAIL local ID or parent option remap proof missing' end;
 verify_store_context_and_catalog() {
   api_call store_context GET "/stores/$TARGET_STORE_ID/context" "" "$ACCESS_TOKEN"
   reject_secret_response_fields store_context
-  "$JQ_BIN" -e '.data.status != "active" and .data.store_kind == "VALIDATION_FIXTURE" and .data.lifecycle_status == "READY_FOR_REVIEW" and .data.provisioning_source == "PHASE_B_OWNER_PROVISIONING" and (.data.module_configuration.modules | length > 0)' "$LAST_RESPONSE" >/dev/null ||
+  "$JQ_BIN" -e '.data.status == "active" and .data.lifecycle_status == "ACTIVE" and .data.operational_state == "LIVE" and .data.is_live == true and .data.provisioning_source == "PHASE_B_OWNER_PROVISIONING" and (.data.module_configuration.modules | length > 0)' "$LAST_RESPONSE" >/dev/null ||
     ops001_die "Store Context does not expose Phase B lifecycle/modules"
   api_call catalog_before GET "/menu/catalog?store_id=$TARGET_STORE_ID" "" "$ACCESS_TOKEN"
   reject_secret_response_fields catalog_before
   "$JQ_BIN" -e '.data.categories | length > 0 and ([.[] | .items | length] | add) > 0' "$LAST_RESPONSE" >/dev/null ||
     ops001_die "target Store catalog is empty"
   printf 'PHASE_B_PART1_ACCEPTANCE|STORE_CONTEXT_AND_CATALOG|PASS\n'
+}
+
+verify_operational_management_access() {
+  api_call workspaces_live GET /me/workspaces "" "$ACCESS_TOKEN"
+  reject_secret_response_fields workspaces_live
+  "$JQ_BIN" -e --argjson store "$TARGET_STORE_ID" '.data.stores | any(.id == $store and .operational_state == "LIVE" and .is_live == true)' "$LAST_RESPONSE" >/dev/null ||
+    ops001_die "workspace lifecycle does not match Store Context"
+  api_call overview_live GET /owner/overview "" "$ACCESS_TOKEN"
+  reject_secret_response_fields overview_live
+  "$JQ_BIN" -e --argjson store "$TARGET_STORE_ID" '[.data.organizations[].stores[] | select(.id == $store and .operational_state == "LIVE" and .is_live == true and .features.printing == true)] | length == 1' "$LAST_RESPONSE" >/dev/null ||
+    ops001_die "Owner overview lifecycle or Printing management availability mismatch"
+  api_call tables_live GET "/frontdesk/dining-tables?store_id=$TARGET_STORE_ID" "" "$ACCESS_TOKEN"
+  reject_secret_response_fields tables_live
+  "$JQ_BIN" -e '.data | length >= 2' "$LAST_RESPONSE" >/dev/null || ops001_die "Frontdesk tables are unavailable"
+  api_call printing_management GET "/admin/printing?store_id=$TARGET_STORE_ID" "" "$ACCESS_TOKEN"
+  reject_secret_response_fields printing_management
+  api_call printing_devices GET "/admin/printing/devices?store_id=$TARGET_STORE_ID" "" "$ACCESS_TOKEN"
+  reject_secret_response_fields printing_devices
+  "$JQ_BIN" -e '.data | length == 0' "$LAST_RESPONSE" >/dev/null || ops001_die "normal Store creation unexpectedly enrolled a device"
+  printf 'PHASE_B_PART1_ACCEPTANCE|LIVE_FRONTDESK_AND_UNBOUND_PRINTING_MANAGEMENT|PASS\n'
 }
 
 local_item_deactivation() {
@@ -611,6 +666,7 @@ run_acceptance() {
   provision_store
   verify_materialization
   verify_store_context_and_catalog
+  verify_operational_management_access
   local_item_deactivation
   local_category_deactivation
   store_only_item_acceptance

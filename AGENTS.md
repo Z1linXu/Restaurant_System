@@ -163,6 +163,67 @@ When authority is ambiguous, use the safer interpretation and fail closed.
 Read `SYSTEM_DOCUMENTATION.md`, `doc/API.md` and the routed technical contract
 before changing one of these boundaries.
 
+## Product Simplicity / 产品简化原则
+
+本项目是餐厅实际运营软件。默认产品原则：
+
+**内部可以复杂，用户操作必须简单。**
+
+Agent 不得因为后台架构、验证、readiness、provisioning、deployment 或测试
+机制复杂，而把这些复杂度直接暴露给 Owner、Manager、Frontdesk 或 Kitchen
+用户。
+
+### 核心规则
+
+1. 优先减少用户步骤。如果系统可以安全自动完成 A → B → C → D，不要要求
+   用户逐步点击、检查和确认 B、C、D。
+2. 内部工程状态默认不是产品功能。readiness、provisioning stages、
+   fingerprints、structural smoke、synthetic fixtures、internal validation、
+   replay/idempotency state、device proof、migration/deployment state 以及
+   Phase/Part 名称，除非 Owner 明确要求，应保留在 backend、diagnostics、
+   support 或 automated acceptance 中。
+3. Create、Save、Submit 应尽量形成完整业务动作。后台 provisioning、
+   validation、defaults、mapping 和 isolation checks 应由系统内部完成。
+4. 配置缺失与业务实体生命周期必须分离。Printer 未配置或 Offline、Pad
+   未绑定以及其他 optional hardware 缺失，不自动等于 Store Not Live，也不
+   应无理由阻塞整个业务流程。
+5. Management Access 与 Runtime Capability 必须分离。配置页面不能依赖
+   “已经配置完成”才能进入，避免形成无法进入配置页面因而永远无法配置的
+   循环依赖。
+6. 不建立重复 Source of Truth。保持 Menu Management = WHAT CAN BE
+   ORDERED、Printing Assignment = WHERE TO PRINT、Printing Display Rule =
+   HOW TO DISPLAY，不要求 Owner 在多个模块重复维护同一业务事实。
+7. 新增 Owner-facing 状态、按钮、步骤或页面前，必须确认用户是否真正需要
+   该概念、系统能否自动完成、它是产品需求还是内部实现细节，以及是否把
+   automated acceptance/debug tooling 暴露成产品 UI。
+8. 优先复用后台能力，不把每个 backend service/check 一一映射成 button、
+   card、status 或 Owner workflow step。
+9. Frontdesk、POS、KDS、Ready 和 Printing setup 尤其应优先少点击、大按钮、
+   明确状态、快速操作和最少认知负担。
+10. 不得为了架构完整性主动扩大产品流程。新增 lifecycle state、Owner Gate、
+    人工 provisioning step、配置页面、重复设置或用户 validation 操作前，
+    必须证明这些复杂度是业务真正需要的；否则选择更简单的方案。
+
+### 实施前 Product Simplicity Check
+
+任何新增或修改 Owner-facing workflow 的任务，在实施前快速检查：
+
+- 用户操作步骤是否增加；
+- 是否可以安全自动化；
+- 是否暴露内部工程概念；
+- 是否产生新的重复配置；
+- 是否存在循环依赖；
+- 是否把 optional dependency 变成全局 blocker。
+
+如果产品复杂度增加而当前 Owner requirement 没有明确要求，不要自行增加该
+复杂度。先简化方案；如果确实必须增加，则作为产品决策向 Owner 说明。
+
+在不破坏 business correctness、data integrity、authorization/isolation、
+transaction/idempotency safety、auditability 和 Production safety 的前提下，
+优先：
+
+**更少的用户步骤 > 更多的显式工程控制。复杂度应留在系统内部。**
+
 ## 10. Database and Migrations
 
 - Staging and Production schema evolution uses reviewed Flyway migrations.

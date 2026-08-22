@@ -26,6 +26,8 @@ public class OwnerOverviewResponse {
         public String status;
         public String store_kind;
         public String lifecycle_status;
+        public String operational_state;
+        public Boolean is_live;
         public String provisioning_source;
         public String provisioned_profile_code;
         public String provisioned_profile_version;

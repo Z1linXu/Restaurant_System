@@ -88,6 +88,36 @@ public class StoreActivationRequestCoordinator {
         return repository.save(request);
     }
 
+    @Transactional(propagation = Propagation.MANDATORY)
+    public StoreActivationRequestEntity recordAutomaticActivation(
+        Long organizationId,
+        Long storeId,
+        Long provisioningRequestId,
+        String requestFingerprint,
+        Long readinessEvidenceId,
+        String readinessFingerprint,
+        Long actorUserId
+    ) {
+        LocalDateTime now = LocalDateTime.now();
+        StoreActivationRequestEntity request = new StoreActivationRequestEntity();
+        request.organization_id = organizationId;
+        request.store_id = storeId;
+        request.idempotency_key = "AUTO_CREATE:" + provisioningRequestId;
+        request.request_fingerprint = requestFingerprint;
+        request.expected_readiness_fingerprint = readinessFingerprint;
+        request.status = COMPLETED;
+        request.target_state = "LIVE";
+        request.readiness_evidence_id = readinessEvidenceId;
+        request.result_code = "STORE_AUTO_ACTIVATED";
+        request.error_code = null;
+        request.result_json = json(Map.of("target_state", "LIVE", "result_code", request.result_code));
+        request.actor_user_id = actorUserId;
+        request.created_at = now;
+        request.updated_at = now;
+        request.completed_at = now;
+        return repository.save(request);
+    }
+
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public StoreActivationRequestEntity fail(Long requestId, String errorCode) {
         StoreActivationRequestEntity request = lock(requestId);

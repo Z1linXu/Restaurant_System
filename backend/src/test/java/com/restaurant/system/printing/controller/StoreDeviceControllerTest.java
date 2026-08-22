@@ -2,6 +2,8 @@ package com.restaurant.system.printing.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -13,6 +15,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.restaurant.system.common.auth.AuthorizationService;
 import com.restaurant.system.common.auth.Capability;
+import com.restaurant.system.common.feature.FeatureDisabledException;
+import com.restaurant.system.common.feature.FeatureFlagService;
+import com.restaurant.system.common.feature.FeaturePackage;
 import com.restaurant.system.modules.ModuleKeys;
 import com.restaurant.system.modules.StoreModuleAccessEvaluator;
 import com.restaurant.system.printing.dto.DeviceRegisterRequest;
@@ -39,16 +44,20 @@ class StoreDeviceControllerTest {
     private AuthorizationService authorizationService;
     @Mock
     private StoreModuleAccessEvaluator moduleAccessEvaluator;
+    @Mock
+    private FeatureFlagService featureFlagService;
 
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
+    private StoreDeviceController controller;
 
     @BeforeEach
     void setUp() {
-        StoreDeviceController controller = new StoreDeviceController(
+        controller = new StoreDeviceController(
             storeDeviceService,
             authorizationService,
-            moduleAccessEvaluator
+            moduleAccessEvaluator,
+            featureFlagService
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
         objectMapper = new ObjectMapper();
@@ -78,7 +87,8 @@ class StoreDeviceControllerTest {
             .andExpect(jsonPath("$.data.device_id").value(90))
             .andExpect(jsonPath("$.data.device_token").value("raw-token-returned-once"));
 
-        verify(moduleAccessEvaluator).requireCapability(1L, ModuleKeys.PRINTING);
+        verify(moduleAccessEvaluator).requireModuleEnabled(1L, ModuleKeys.PRINTING);
+        verify(featureFlagService).requireEnabled(FeaturePackage.PRINTING);
         verify(authorizationService).requireForStore(
             1L,
             Capability.ADMIN_PRINTING_MANAGE,
@@ -99,7 +109,8 @@ class StoreDeviceControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data[0].id").value(90));
 
-        verify(moduleAccessEvaluator).requireCapability(1L, ModuleKeys.PRINTING);
+        verify(moduleAccessEvaluator).requireModuleEnabled(1L, ModuleKeys.PRINTING);
+        verify(featureFlagService).requireEnabled(FeaturePackage.PRINTING);
         verify(authorizationService).requireForStore(
             1L,
             Capability.ADMIN_PRINTING_MANAGE,
@@ -151,7 +162,7 @@ class StoreDeviceControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.device_name").value("Expo Pad"));
 
-        verify(moduleAccessEvaluator).requireCapability(1L, ModuleKeys.PRINTING);
+        verify(moduleAccessEvaluator).requireModuleEnabled(1L, ModuleKeys.PRINTING);
         verify(authorizationService).requireForStore(
             1L,
             Capability.ADMIN_PRINTING_MANAGE,
@@ -173,7 +184,7 @@ class StoreDeviceControllerTest {
             .andExpect(jsonPath("$.data.status").value("DISABLED"))
             .andExpect(jsonPath("$.data.is_active").value(false));
 
-        verify(moduleAccessEvaluator).requireCapability(1L, ModuleKeys.PRINTING);
+        verify(moduleAccessEvaluator).requireModuleEnabled(1L, ModuleKeys.PRINTING);
         verify(authorizationService).requireForStore(
             1L,
             Capability.ADMIN_PRINTING_MANAGE,
@@ -195,11 +206,28 @@ class StoreDeviceControllerTest {
             .andExpect(jsonPath("$.data.status").value("REVOKED"))
             .andExpect(jsonPath("$.data.is_active").value(false));
 
-        verify(moduleAccessEvaluator).requireCapability(1L, ModuleKeys.PRINTING);
+        verify(moduleAccessEvaluator).requireModuleEnabled(1L, ModuleKeys.PRINTING);
         verify(authorizationService).requireForStore(
             1L,
             Capability.ADMIN_PRINTING_MANAGE,
             Capability.ADMIN_STORE_CONFIG
         );
+    }
+
+    @Test
+    void registerDeviceFailsClosedWhenPrintingFeatureIsDisabled() throws Exception {
+        doThrow(new FeatureDisabledException(FeaturePackage.PRINTING))
+            .when(featureFlagService).requireEnabled(FeaturePackage.PRINTING);
+        DeviceRegisterRequest request = new DeviceRegisterRequest();
+        request.store_id = 1L;
+        request.device_name = "Restaurant Pad";
+        request.device_type = "ANDROID_PAD";
+        request.platform = "ANDROID";
+
+        assertThrows(FeatureDisabledException.class, () -> controller.registerDevice(request));
+
+        verify(featureFlagService).requireEnabled(FeaturePackage.PRINTING);
+        verify(moduleAccessEvaluator, org.mockito.Mockito.never()).requireModuleEnabled(1L, ModuleKeys.PRINTING);
+        verify(storeDeviceService, org.mockito.Mockito.never()).registerDevice(any(DeviceRegisterRequest.class));
     }
 }

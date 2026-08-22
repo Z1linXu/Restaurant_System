@@ -8,6 +8,7 @@ import com.restaurant.system.common.auth.RequestUserContextService;
 import com.restaurant.system.common.auth.StoreAccessService;
 import com.restaurant.system.common.feature.FeatureFlagService;
 import com.restaurant.system.order.repository.OrderRepository;
+import com.restaurant.system.modules.StoreModuleAccessEvaluator;
 import com.restaurant.system.owner.dto.OwnerOverviewResponse;
 import com.restaurant.system.platform.entity.Organization;
 import com.restaurant.system.platform.repository.OrganizationRepository;
@@ -32,6 +33,7 @@ class OwnerOverviewServiceImplTest {
     @Mock private PrintJobRepository printJobRepository;
     @Mock private PrinterConfigService printerConfigService;
     @Mock private FeatureFlagService featureFlagService;
+    @Mock private StoreModuleAccessEvaluator moduleAccessEvaluator;
 
     private OwnerOverviewServiceImpl service;
     private AuthenticatedUser owner;
@@ -46,7 +48,8 @@ class OwnerOverviewServiceImplTest {
             diningTableRepository,
             printJobRepository,
             printerConfigService,
-            featureFlagService
+            featureFlagService,
+            moduleAccessEvaluator
         );
         owner = new AuthenticatedUser(20L, null, 1L, "owner", "Owner", "OWNER");
     }

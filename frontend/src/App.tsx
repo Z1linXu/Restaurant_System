@@ -4,7 +4,7 @@ import { FeatureDisabledPage } from './features/feature-flags/FeatureDisabledPag
 import { getRequiredFeatureForPath, isFeatureEnabled } from './features/feature-flags/featureConfig'
 import { OwnerAdminShell } from './features/owner-admin/OwnerAdminShell'
 import { DevRoleSwitcher } from './features/dev/DevRoleSwitcher'
-import { StoreContextProvider, RequireStoreAccess, RequireStoreModule } from './features/store/StoreContext'
+import { StoreContextProvider, RequireLiveStore, RequireStoreAccess, RequireStoreModule, RequireStoreModuleManagement } from './features/store/StoreContext'
 import type { StoreModuleKey } from './features/store/storeModuleAccess'
 import { buildStorePath, chooseDefaultStore, defaultWorkspacePathForRole, mapLegacyPathToStorePath, stripStorePrefix } from './features/store/storeRoutes'
 import { fetchWorkspaces } from './services/storeWorkspaceService'
@@ -72,11 +72,21 @@ function storePage(
   children: React.ReactNode,
   allowedRoles: AppRole[],
   requiredModuleKey?: StoreModuleKey,
+  options: { managementAccess?: boolean; requireLive?: boolean } = {},
 ) {
+  let content = children
+  if (requiredModuleKey) {
+    content = options.managementAccess
+      ? <RequireStoreModuleManagement moduleKey={requiredModuleKey}>{content}</RequireStoreModuleManagement>
+      : <RequireStoreModule moduleKey={requiredModuleKey}>{content}</RequireStoreModule>
+  }
+  if (options.requireLive) {
+    content = <RequireLiveStore>{content}</RequireLiveStore>
+  }
   return guard(
     <StoreContextProvider storeId={storeId}>
       <RequireStoreAccess>
-        {requiredModuleKey ? <RequireStoreModule moduleKey={requiredModuleKey}>{children}</RequireStoreModule> : children}
+        {content}
       </RequireStoreAccess>
     </StoreContextProvider>,
     allowedRoles,
@@ -234,7 +244,7 @@ function App() {
   }
 
   if (storeId && routePath.startsWith('/frontdesk/order')) {
-    return <AppShell>{storePage(storeId, <Orders />, FRONTDESK_ROLES, 'ORDER_HISTORY')}</AppShell>
+    return <AppShell>{storePage(storeId, <Orders />, FRONTDESK_ROLES, 'ORDER_HISTORY', { requireLive: true })}</AppShell>
   }
 
   if (storeId && (routePath === '/admin' || routePath === '/admin/' || routePath.startsWith('/admin/dashboard'))) {
@@ -266,7 +276,7 @@ function App() {
   }
 
   if (storeId && routePath.startsWith('/admin/settings/printing')) {
-    return <AppShell>{storePage(storeId, ownerAdminPage(<AdminPrintingSettings />, 'Printing Settings', 'Configure printers, assignments, test prints, and print jobs.'), STORE_TOOL_ROLES, 'PRINTING')}</AppShell>
+    return <AppShell>{storePage(storeId, ownerAdminPage(<AdminPrintingSettings />, 'Printing Settings', 'Configure printers, assignments, test prints, and print jobs.'), STORE_TOOL_ROLES, 'PRINTING', { managementAccess: true })}</AppShell>
   }
 
   if (storeId && routePath.startsWith('/admin/reports/sales')) {
@@ -294,11 +304,11 @@ function App() {
   }
 
   if (storeId && routePath.startsWith('/frontdesk/menu')) {
-    return <AppShell>{storePage(storeId, <DineIn />, FRONTDESK_ROLES, 'ORDERING_POS')}</AppShell>
+    return <AppShell>{storePage(storeId, <DineIn />, FRONTDESK_ROLES, 'ORDERING_POS', { requireLive: true })}</AppShell>
   }
 
   if (storeId && (routePath === '/frontdesk' || routePath === '/frontdesk/')) {
-    return <AppShell>{storePage(storeId, <DineIn />, FRONTDESK_ROLES, 'ORDERING_POS')}</AppShell>
+    return <AppShell>{storePage(storeId, <DineIn />, FRONTDESK_ROLES, 'ORDERING_POS', { requireLive: true })}</AppShell>
   }
 
   return (

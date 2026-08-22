@@ -1,4 +1,4 @@
-import { apiRequest } from './apiClient'
+import { ApiRequestError, apiRequest } from './apiClient'
 
 export interface OwnerStoreProvisioningCatalog {
   enabled: boolean
@@ -48,19 +48,45 @@ function createIdempotencyKey() {
   return `phase-b-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
+export interface OwnerStoreProvisioningAttempt {
+  payloadSignature: string
+  idempotencyKey: string
+}
+
+export function resolveOwnerStoreProvisioningAttempt(
+  previous: OwnerStoreProvisioningAttempt | null,
+  organizationId: number,
+  request: OwnerStoreProvisioningRequest,
+): OwnerStoreProvisioningAttempt {
+  const payloadSignature = JSON.stringify({ organizationId, request })
+  if (previous?.payloadSignature === payloadSignature) {
+    return previous
+  }
+  return { payloadSignature, idempotencyKey: createIdempotencyKey() }
+}
+
+export function shouldRotateOwnerStoreProvisioningAttempt(error: unknown) {
+  return error instanceof ApiRequestError
+    && error.code === 'STORE_PROVISIONING_RETRY_REQUIRES_NEW_KEY'
+}
+
 export function fetchOwnerStoreProvisioningCatalog(organizationId: number) {
   return apiRequest<OwnerStoreProvisioningCatalog>(
     `/api/v1/owner/organizations/${organizationId}/phase-b/store-provisioning/catalog`,
   )
 }
 
-export function provisionOwnerStore(organizationId: number, request: OwnerStoreProvisioningRequest) {
+export function provisionOwnerStore(
+  organizationId: number,
+  request: OwnerStoreProvisioningRequest,
+  idempotencyKey: string,
+) {
   return apiRequest<OwnerStoreProvisioningResult>(
     `/api/v1/owner/organizations/${organizationId}/phase-b/store-provisioning`,
     {
       method: 'POST',
       headers: {
-        'Idempotency-Key': createIdempotencyKey(),
+        'Idempotency-Key': idempotencyKey,
       },
       body: JSON.stringify(request),
     },

@@ -330,12 +330,23 @@ elif ".data.stores" in filter_text and "VALIDATION_FIXTURE" in filter_text:
         if store.get("store_kind", "") == "VALIDATION_FIXTURE" and store.get("provisioning_source", "") != "PHASE_B_OWNER_PROVISIONING":
             fail()
     result = True
+elif ".data.stores | any" in filter_text and "operational_state" in filter_text:
+    store_id = as_int("store")
+    stores = value["data"]["stores"]
+    require(any(row.get("id") == store_id and row.get("operational_state") == "LIVE" and row.get("is_live") is True for row in stores))
+    result = True
 elif ".data.stores" in filter_text and "organization_id" in filter_text:
     org = as_int("organization")
     source_id = int(arg.get("source", arg.get("target", 0)))
     stores = value["data"]["stores"]
     require(isinstance(stores, list) and len(stores) == 1)
     require(stores[0].get("id") == source_id and stores[0].get("organization_id") == org)
+    result = True
+elif ".data.organizations[].stores" in filter_text and "operational_state" in filter_text:
+    store_id = as_int("store")
+    stores = [store for organization in value["data"]["organizations"] for store in organization.get("stores", [])]
+    matched = [store for store in stores if store.get("id") == store_id and store.get("operational_state") == "LIVE" and store.get("is_live") is True and store.get("features", {}).get("printing") is True]
+    require(len(matched) == 1)
     result = True
 elif ".data.organizations" in filter_text:
     org = as_int("organization")
@@ -363,7 +374,8 @@ elif ".data.status == \"COMPLETED\"" in filter_text:
     data = value.get("data", {})
     counts = data.get("counts", {})
     require(data.get("status") == "COMPLETED")
-    require(data.get("result_code") == "PHASE_B_STORE_PROVISIONED")
+    expected_result = "STORE_CREATED_LIVE" if "STORE_CREATED_LIVE" in filter_text else "PHASE_B_STORE_PROVISIONED"
+    require(data.get("result_code") == expected_result)
     require(counts.get("category_count", 0) > 0)
     require(counts.get("item_count", 0) > 0)
     require(counts.get("option_count", 0) > 0)
@@ -372,6 +384,15 @@ elif ".data.status == \"COMPLETED\"" in filter_text:
 elif ".data.replayed" in filter_text:
     result = value["data"]["replayed"]
     require(result is True)
+elif ".data.status == \"active\"" in filter_text and ".data.module_configuration.modules" in filter_text:
+    data = value.get("data", {})
+    require(data.get("status") == "active")
+    require(data.get("lifecycle_status") == "ACTIVE")
+    require(data.get("operational_state") == "LIVE")
+    require(data.get("is_live") is True)
+    require(data.get("provisioning_source") == "PHASE_B_OWNER_PROVISIONING")
+    require(len(data.get("module_configuration", {}).get("modules", [])) > 0)
+    result = True
 elif ".data.status != \"active\"" in filter_text and ".data.module_configuration.modules" in filter_text:
     data = value.get("data", {})
     require(data.get("status") != "active")

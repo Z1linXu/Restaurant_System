@@ -1,5 +1,6 @@
 import { createContext } from 'react'
 import type { StoreContextResponse, StoreModuleConfiguration } from '../../services/storeWorkspaceService'
+import { isStoreLive } from './storeOperationalState'
 
 export interface StoreContextValue {
   storeId: number
@@ -8,6 +9,8 @@ export interface StoreContextValue {
   storeStatus: string | null
   storeKind: string | null
   lifecycleStatus: string | null
+  operationalState: string | null
+  isLive: boolean
   provisioningSource: string | null
   organizationId: number | null
   organizationName: string | null
@@ -32,6 +35,8 @@ export function mapStoreContext(
     storeStatus: data?.status ?? null,
     storeKind: data?.store_kind ?? null,
     lifecycleStatus: data?.lifecycle_status ?? null,
+    operationalState: data?.operational_state ?? null,
+    isLive: isStoreLive(data),
     provisioningSource: data?.provisioning_source ?? null,
     organizationId: data?.organization_id ?? null,
     organizationName: data?.organization_name ?? null,

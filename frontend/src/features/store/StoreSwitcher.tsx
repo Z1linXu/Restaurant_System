@@ -4,6 +4,7 @@ import { fetchWorkspaces, type WorkspaceStore } from '../../services/storeWorksp
 import { replaceStoreId } from './storeRoutes'
 import { useOptionalCurrentStore } from './useStoreContext'
 import { useAuth } from '../auth/useAuth'
+import { isStoreLive } from './storeOperationalState'
 
 function normalizedLifecycleLabel(value: string | null | undefined) {
   if (!value) return 'Unknown'
@@ -13,14 +14,9 @@ function normalizedLifecycleLabel(value: string | null | undefined) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
-function isLiveStore(store: WorkspaceStore | null | undefined) {
-  return (store?.store_kind ?? 'BUSINESS').toUpperCase() === 'BUSINESS'
-    && (store?.lifecycle_status ?? 'ACTIVE').toUpperCase() === 'ACTIVE'
-}
-
 function switcherLabel(store: WorkspaceStore | null | undefined) {
   if (!store) return 'Store'
-  return isLiveStore(store)
+  return isStoreLive(store)
     ? store.name
     : `${store.name} · Not Live · ${normalizedLifecycleLabel(store.lifecycle_status)}`
 }
@@ -51,8 +47,7 @@ export function StoreSwitcher({ compact = false }: { compact?: boolean }) {
   const selectedStoreId = currentStore?.storeId ?? stores[0]?.id ?? ''
   const matchedStore = stores.find((store) => store.id === selectedStoreId)
   const label = currentStore
-    ? (currentStore.storeKind ?? 'BUSINESS').toUpperCase() === 'BUSINESS'
-      && (currentStore.lifecycleStatus ?? 'ACTIVE').toUpperCase() === 'ACTIVE'
+    ? currentStore.isLive
         ? currentStore.storeName
         : `${currentStore.storeName} · Not Live · ${normalizedLifecycleLabel(currentStore.lifecycleStatus)}`
     : switcherLabel(matchedStore)
