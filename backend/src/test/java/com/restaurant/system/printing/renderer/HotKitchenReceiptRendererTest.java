@@ -447,6 +447,36 @@ class HotKitchenReceiptRendererTest {
         assertFalse(content.contains("辣G"));
     }
 
+    @Test
+    void dynamicAddonAndRemoveUseFrozenLabelsOnApplicableHotPath() {
+        HotKitchenReceiptRenderer renderer = renderer();
+        PrintRenderRequest request = baseRequest();
+        request.printing_rules = PrintingDisplayRuleContext.defaultContext();
+        OrderItemOption friedEgg = request.order_item_options.get(0);
+        friedEgg.option_type_snapshot = "addon";
+
+        OrderItemOption beefTendon = new OrderItemOption();
+        beefTendon.order_item_id = request.order_items.get(0).id;
+        beefTendon.option_type_snapshot = "addon";
+        beefTendon.option_group_snapshot = "ADD_ON";
+        beefTendon.option_code_snapshot = "s";
+        beefTendon.option_name_snapshot_zh = "加牛筋";
+        beefTendon.quantity = 1;
+
+        OrderItemOption removeBokChoy = new OrderItemOption();
+        removeBokChoy.order_item_id = request.order_items.get(0).id;
+        removeBokChoy.option_type_snapshot = "remove";
+        removeBokChoy.option_group_snapshot = "REMOVE";
+        removeBokChoy.option_code_snapshot = "removebaicai";
+        removeBokChoy.option_name_snapshot_zh = "走上海青";
+        removeBokChoy.quantity = 1;
+        request.order_item_options = List.of(friedEgg, beefTendon, removeBokChoy);
+
+        String content = renderer.render(request);
+
+        assertTrue(content.contains("+煎 +牛筋 走上海青"));
+    }
+
     private HotKitchenReceiptRenderer renderer() {
         MenuItemRepository menuItemRepository = Mockito.mock(MenuItemRepository.class);
         MenuItemOptionRepository optionRepository = Mockito.mock(MenuItemOptionRepository.class);

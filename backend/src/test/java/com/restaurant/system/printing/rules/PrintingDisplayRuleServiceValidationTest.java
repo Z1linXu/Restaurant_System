@@ -8,6 +8,7 @@ import com.restaurant.system.printing.repository.PrintJobRepository;
 import com.restaurant.system.printing.rules.dto.PrintingDisplayRulePreviewRequest;
 import com.restaurant.system.printing.rules.dto.PrintingDisplayRuleValidationResponse;
 import com.restaurant.system.user.repository.StoreRepository;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -177,5 +178,33 @@ class PrintingDisplayRuleServiceValidationTest {
         assertThat(response.grab_preview).contains("大G").contains("牛G").contains("二G").contains("辣G");
         assertThat(response.hot_kitchen_preview).contains("大H").contains("牛H").contains("二H").contains("辣H");
         assertThat(response.hot_kitchen_preview).doesNotContain("大G", "牛G", "二G", "辣G");
+    }
+
+    @Test
+    void previewUsesModifierOverrideAndFailsVisibleForUnknownCodes() {
+        PrintingDisplayRulePreviewRequest request = new PrintingDisplayRulePreviewRequest();
+        request.store_id = 1L;
+        request.content = StoreProfileCanonicalJson.parse("""
+            {
+              "schema_version": "PRINTING_DISPLAY_RULES_V1",
+              "outputs": ["GRAB", "FRONTDESK_RECEIPT", "HOT_KITCHEN"],
+              "item_aliases": [],
+              "dictionaries": {
+                "SIZE": [],
+                "NOODLE_TYPE": [],
+                "SPICINESS": [],
+                "MODIFIER_ADD": [["s", "+筋H"]],
+                "MODIFIER_REMOVE": []
+              },
+              "conditional_overrides": []
+            }
+            """);
+        request.modifier_add_codes = List.of("s", "future_addon");
+        request.modifier_remove_codes = List.of("future_remove");
+
+        var response = service.preview(request);
+
+        assertThat(response.grab_preview).contains("+筋H", "+future_addon", "走future_remove");
+        assertThat(response.hot_kitchen_preview).contains("+筋H", "+future_addon", "走future_remove");
     }
 }

@@ -624,6 +624,13 @@ Rule document shape is structured, not executable:
 Menu Management exposes item-specific aliases for the same canonical outputs.
 If an output alias is blank or absent, renderers fall back to frozen submitted
 order/menu snapshots. A11 display rules cannot change routing or eligibility.
+Modifier dictionaries follow the same optional-override rule: a valid ADD_ON
+or REMOVE without a matching dictionary entry remains kitchen-visible through
+its frozen `OrderItemOption` label. Unknown modifier codes are not rejected by
+the renderer. The preview endpoint applies the same resolver; its existing
+`modifier_add_codes` and `modifier_remove_codes` values act as visible sample
+labels when no dictionary override exists because preview has no historical
+order snapshot.
 The canonical rule document does not accept `item_code`, `output_aliases`,
 lowercase dictionary keys, raw templates, regex fields, scripts, or
 `conditional_rules`; use `item_sku`, `outputs`, uppercase dictionary names and

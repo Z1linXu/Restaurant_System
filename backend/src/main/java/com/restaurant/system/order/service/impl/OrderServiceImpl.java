@@ -54,6 +54,7 @@ import com.restaurant.system.printing.rules.PrintingDisplayRuleContext;
 import com.restaurant.system.printing.rules.PrintingDisplayRuleService;
 import com.restaurant.system.printing.semantic.ComboComponentSemanticResolver;
 import com.restaurant.system.printing.semantic.ComboComponentSemanticResolver.StandaloneSide;
+import com.restaurant.system.printing.semantic.KitchenModifierTokenResolver;
 import com.restaurant.system.printing.service.PrintDispatcherService;
 import com.restaurant.system.station.entity.Station;
 import com.restaurant.system.station.repository.StationRepository;
@@ -1940,7 +1941,7 @@ public class OrderServiceImpl implements OrderService {
                 if (ComboComponentSemanticResolver.isStandaloneSide(option)) {
                     continue;
                 }
-                String token = mapAddonToken(option, printingRules);
+                String token = KitchenModifierTokenResolver.resolveAddon(option, printingRules);
                 if (token != null) {
                     parts.add(token);
                 }
@@ -1950,7 +1951,7 @@ public class OrderServiceImpl implements OrderService {
                 if (isOptionGroup(option, "COMBO_SIDE_REMOVE")) {
                     continue;
                 }
-                String token = mapRemoveToken(option, printingRules);
+                String token = KitchenModifierTokenResolver.resolveRemove(option, printingRules);
                 if (token != null) {
                     parts.add(token);
                 }
@@ -2096,116 +2097,6 @@ public class OrderServiceImpl implements OrderService {
         return null;
     }
 
-    private String mapAddonToken(OrderItemOption option, PrintingDisplayRuleContext printingRules) {
-        String label = option.option_name_snapshot_zh;
-        String code = resolveAddonCode(option);
-        if (code == null || "combo".equals(code)) {
-            return null;
-        }
-        String mapped = switch (code) {
-            case "extra_noodle" -> "+面";
-            case "tea_egg", "combo_tea_egg" -> "+蛋";
-            case "fried_egg", "combo_fried_egg" -> "+煎";
-            case "extra_meat" -> "+肉";
-            case "extra_radish" -> "+萝";
-            case "bok_choy" -> "加上海青";
-            case "cilantro" -> "+香";
-            case "green_onion" -> "+葱";
-            case "extra_sauce" -> "+酱";
-            case "broccoli" -> "+西兰";
-            case "cabbage" -> "+包";
-            case "corn" -> "+玉";
-            case "seaweed" -> "+海";
-            case "mushroom" -> "+菇";
-            case "carrot_slice" -> "+胡";
-            case "combo_edamame" -> "+毛豆";
-            case "combo_shredded_potato" -> "+土豆";
-            case "combo_cucumber_salad" -> "+黄瓜";
-            default -> null;
-        };
-        if (mapped == null) {
-            return null;
-        }
-        mapped = printingRules.resolveModifierToken("MODIFIER_ADD", code, mapped);
-        int quantity = option.quantity == null ? 1 : option.quantity;
-        return quantity > 1 ? mapped + "x" + quantity : mapped;
-    }
-
-    private String mapRemoveToken(OrderItemOption option, PrintingDisplayRuleContext printingRules) {
-        String label = option.option_name_snapshot_zh;
-        String code = resolveRemoveCode(option);
-        if (code == null) {
-            return null;
-        }
-        String fallback = switch (code) {
-            case "cilantro" -> "走香";
-            case "green_onion" -> "走葱";
-            case "beef" -> "走牛";
-            case "radish" -> "走萝";
-            case "noodle" -> "走面";
-            case "less_noodle" -> "少面";
-            case "bok_choy" -> "走上海青";
-            case "broccoli" -> "走西兰";
-            case "corn" -> "走玉米";
-            case "mushroom" -> "走菇";
-            case "seaweed" -> "走海";
-            case "carrot" -> "走胡";
-            case "cucumber" -> "走黄瓜";
-            case "edamame" -> "走毛豆";
-            case "peanut" -> "走花生";
-            case "cabbage" -> "走包";
-            case "meat" -> "走肉";
-            case "green_pepper" -> "走青椒";
-            default -> label;
-        };
-        return printingRules.resolveModifierToken("MODIFIER_REMOVE", code, fallback);
-    }
-
-    private String resolveAddonCode(OrderItemOption option) {
-        if (option.option_code_snapshot != null && !option.option_code_snapshot.isBlank()) {
-            return option.option_code_snapshot;
-        }
-        // Legacy fallback for orders/options created before stable option_code metadata existed.
-        return canonicalAddonCode(option.option_name_snapshot_zh);
-    }
-
-    private String resolveRemoveCode(OrderItemOption option) {
-        if (option.option_code_snapshot != null && !option.option_code_snapshot.isBlank()) {
-            String code = option.option_code_snapshot;
-            return code.startsWith("remove_") ? code.substring("remove_".length()) : code;
-        }
-        // Legacy fallback for orders/options created before stable option_code metadata existed.
-        return canonicalRemoveCode(option.option_name_snapshot_zh);
-    }
-
-    private String canonicalAddonCode(String label) {
-        if (label == null || label.isBlank()) {
-            return null;
-        }
-        return switch (label) {
-            case "套餐" -> "combo";
-            case "加面" -> "extra_noodle";
-            case "加蛋", "套餐卤蛋" -> "tea_egg";
-            case "加煎蛋", "套餐煎蛋" -> "fried_egg";
-            case "加肉" -> "extra_meat";
-            case "加萝卜" -> "extra_radish";
-            case "加上海青" -> "bok_choy";
-            case "加香菜" -> "cilantro";
-            case "加葱" -> "green_onion";
-            case "加酱" -> "extra_sauce";
-            case "加西兰花" -> "broccoli";
-            case "加包菜" -> "cabbage";
-            case "加玉米" -> "corn";
-            case "加海菜" -> "seaweed";
-            case "加蘑菇" -> "mushroom";
-            case "加胡萝卜片" -> "carrot_slice";
-            case "套餐毛豆" -> "combo_edamame";
-            case "套餐土豆丝" -> "combo_shredded_potato";
-            case "套餐拌黄瓜" -> "combo_cucumber_salad";
-            default -> null;
-        };
-    }
-
     private boolean isComboSideKitchenTask(KitchenTask task) {
         return ComboComponentSemanticResolver.isSyntheticSideTask(task);
     }
@@ -2255,7 +2146,7 @@ public class OrderServiceImpl implements OrderService {
             if (sideOption.option_id == null || !sideOption.option_id.equals(option.parent_option_id_snapshot)) {
                 continue;
             }
-            String token = mapRemoveToken(option, printingRules);
+            String token = KitchenModifierTokenResolver.resolveRemove(option, printingRules);
             if (token != null) {
                 instructions.add(token);
             }
@@ -2417,33 +2308,6 @@ public class OrderServiceImpl implements OrderService {
 
     private boolean isOptionGroup(OrderItemOption option, String group) {
         return option.option_group_snapshot != null && group.equalsIgnoreCase(option.option_group_snapshot);
-    }
-
-    private String canonicalRemoveCode(String label) {
-        if (label == null || label.isBlank()) {
-            return null;
-        }
-        return switch (label) {
-            case "走香菜", "不要香菜" -> "cilantro";
-            case "走葱", "不要葱", "走洋葱" -> "green_onion";
-            case "走牛肉" -> "beef";
-            case "走萝卜" -> "radish";
-            case "走面", "No Noodle" -> "noodle";
-            case "少面" -> "less_noodle";
-            case "走上海青" -> "bok_choy";
-            case "走西兰花" -> "broccoli";
-            case "走玉米" -> "corn";
-            case "走蘑菇" -> "mushroom";
-            case "走海菜" -> "seaweed";
-            case "走胡萝卜片", "走胡萝卜" -> "carrot";
-            case "走黄瓜" -> "cucumber";
-            case "走毛豆" -> "edamame";
-            case "走花生", "走花生碎" -> "peanut";
-            case "走包菜" -> "cabbage";
-            case "走肉" -> "meat";
-            case "走青椒" -> "green_pepper";
-            default -> null;
-        };
     }
 
     private List<CreateOrderItemRequest> normalizeItemRequests(List<CreateOrderItemRequest> requests) {
