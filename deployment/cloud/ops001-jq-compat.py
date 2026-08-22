@@ -402,6 +402,14 @@ elif ".data.status != \"active\"" in filter_text and ".data.module_configuration
     modules = data.get("module_configuration", {}).get("modules", [])
     require(isinstance(modules, list) and len(modules) > 0)
     result = True
+elif filter_text.strip() == ".data | length >= 2":
+    data = value.get("data") if isinstance(value, dict) else None
+    require(isinstance(data, list) and len(data) >= 2)
+    result = True
+elif filter_text.strip() == ".data | length == 0":
+    data = value.get("data") if isinstance(value, dict) else None
+    require(isinstance(data, list) and len(data) == 0)
+    result = True
 elif ".data.categories | length > 0" in filter_text:
     categories = value.get("data", {}).get("categories", [])
     require(isinstance(categories, list) and len(categories) > 0)
