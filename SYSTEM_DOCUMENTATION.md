@@ -18,6 +18,18 @@
 > real Store, credential, Printer, Pad or Production mutation, and Phase C
 > remains unauthorized.
 
+> 2026-08-22 Staging Store cleanup audit: the isolated Staging Owner Dashboard
+> was reconciled against the database and current provisioning/reference
+> records. Store 1 (`STG005_SRC_20260809_R01`) is the retained STG005 and the
+> required synthetic source/reference Store; the current bootstrap provenance
+> records `source_store_id=1`. Sixteen other Stores were
+> classified as disposable automated or Owner test fixtures, but no reviewed
+> Store deletion/decommission path exists in the current repository. Cleanup
+> therefore failed closed with zero Store deletions; no historical evidence,
+> Master Menu, Store Profile, mapping, Production or real hardware state was
+> mutated. See
+> `docs/governance/PHASE_B_STAGING_STORE_CLEANUP_EVIDENCE.md`.
+
 > 2026-08-22 Part 2 runtime repair: provisioning responses now use the
 > transactionally persisted request returned by the request coordinator, so a
 > successful write is reported as `COMPLETED` rather than exposing the stale
