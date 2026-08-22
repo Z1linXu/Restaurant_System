@@ -7,6 +7,23 @@
 > notes below preserve technical context and must not be interpreted as current
 > mutation authorization.
 
+> 2026-08-21 Phase B Part 1 Staging automated acceptance: exact merged runtime
+> `96c81cf4fab8e771187ceeddeed28e5fc3e87f4a` is deployed to isolated Staging
+> with Flyway V21. Canonical acceptance created inactive validation Store 11,
+> `PHASE_B_VALIDATION_STORE_96C81CF_R1`, and passed Owner authentication,
+> Organization scope, Profile/Master materialization, independent local IDs and
+> mappings, modules, item/category/pricing/Combo/Printing Rule isolation,
+> Store-only item behavior, idempotent replay and global immutability. A
+> separate scope probe returned HTTP 403 for a wrong Organization and fixture
+> hygiene passed. Endpoint-free Store 1 MOCK jobs verified the Combo side as a
+> standalone first line, no duplicate side modifier, parent-only note,
+> preserved `COMBO_EGG + combo_fried_egg` HOT eligibility, no COLD side leakage
+> into HOT_KITCHEN, and a nonblank FRONTDESK_RECEIPT snapshot. The persisted
+> display contract renders that fried-egg semantic as `+煎`; changing it to
+> `+蛋` would be a separate Display Rule/master-data decision. Production and
+> real printer/Pad state were not mutated. Owner manual Part 1 acceptance is
+> the remaining gate.
+
 > 2026-08-16 Phase B Part 1 combo acceptance payload repair candidate:
 > Staging deploy of `origin/main@a9be0c858dab52ef46170551e14f7c8633ffac72`
 > passed health, readiness, runtime evidence and Flyway V21. Phase B Part 1

@@ -3,20 +3,20 @@ updated_at: 2026-08-21
 
 repository:
   ref: origin/main
-  sha: 9283b4b97f8f5e782ee6a22dd2079adc30a45ff2
+  sha: 96c81cf4fab8e771187ceeddeed28e5fc3e87f4a
   sha_semantics: BASELINE_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
   package: PHASE_B_PART1_STAGING_ACCEPTANCE
-  status: IN_PROGRESS_STAGING_ACCEPTANCE
+  status: WAITING_FOR_OWNER_MANUAL_ACCEPTANCE
   next_phase_authorized: false
 
 staging:
-  deployed_sha: a9be0c858dab52ef46170551e14f7c8633ffac72
+  deployed_sha: 96c81cf4fab8e771187ceeddeed28e5fc3e87f4a
   flyway: V21
-  acceptance: PENDING_FRESH_EXACT_SHA_DEPLOY_AND_AUTOMATED_ACCEPTANCE
-  evidence: ../../SYSTEM_DOCUMENTATION.md
+  acceptance: PHASE_B_PART1_AUTOMATED_ACCEPTANCE_PASS
+  evidence: ../archive/governance-pre-simplification/runtime/PHASE_B_PART1_STAGING_AUTOMATED_ACCEPTANCE_EVIDENCE.md
 
 production:
   deployed_sha: 3ec4d88a47f68e05b92d9246bfd63af2d1f297f9
@@ -25,16 +25,16 @@ production:
   evidence: ../archive/governance-pre-simplification/runtime/PRODUCTION_THREE_RELIABILITY_RC_PROMOTION_EVIDENCE.md
 
 gate:
-  type: TECHNICAL
-  next_action: DEPLOY_FRESH_EXACT_ORIGIN_MAIN_TO_STAGING_AND_RUN_PHASE_B_PART1_AUTOMATED_ACCEPTANCE_WITH_NEW_VALIDATION_STORE_CODE
+  type: OWNER
+  next_action: OWNER_MANUAL_PHASE_B_PART1_ACCEPTANCE_ON_STAGING
 
 authorization:
   repository_governance: COMPLETE
-  phase_b_part1: RESUMED_OWNER_AUTHORIZED_STAGING_ACCEPTANCE
+  phase_b_part1: REPOSITORY_COMPLETE_STAGING_AUTOMATED_ACCEPTANCE_PASS_OWNER_MANUAL_PENDING
   phase_b_part2: NONE
   phase_c: NONE
   staging: STANDING_AUTHORIZED_FOR_PHASE_B_PART1_EXACT_SHA_DEPLOY_ACCEPTANCE_AND_BOUNDED_REPAIR
   production: NONE
 
 stop:
-  marker: PHASE_B_PART1_RESUMED_READY_FOR_EXACT_SHA_STAGING_DEPLOY
+  marker: PHASE_B_PART1_STAGING_AUTOMATED_ACCEPTANCE_PASS_WAITING_FOR_OWNER_MANUAL_ACCEPTANCE
