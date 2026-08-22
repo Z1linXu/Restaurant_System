@@ -69,9 +69,10 @@ Boundary:
 - validate on exact-SHA Staging;
 - stop before activation and final real-world binding.
 
-Repository implementation is merged. Runtime acceptance remains incomplete.
-The last repository-proven Staging deployment predates current `origin/main`;
-see [`CURRENT_STATE.yml`](CURRENT_STATE.yml).
+Part 1 completion requires merged implementation, exact-SHA automated Staging
+acceptance and Owner manual acceptance. See
+[`CURRENT_STATE.yml`](CURRENT_STATE.yml) for current status. Part 2 and
+activation require separate Owner authorization.
 
 Part 1 acceptance requires:
 
