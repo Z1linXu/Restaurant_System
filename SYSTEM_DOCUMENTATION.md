@@ -8818,6 +8818,9 @@ removing accidental product and request complexity:
   Historical owner-owned regular evidence may retain its bounded legacy
   non-executable mode inside the fixed owner-only evidence directory; the
   retention tool never rewrites historical evidence to normalize permissions.
+  A same-owner, canonical exact-SHA legacy release with unsafe metadata is
+  retained without content inspection and can never become a deletion target;
+  current and previous verified releases still require full clean validation.
 
 This repair adds no Flyway migration, Owner readiness step, general Store
 delete UI, real Printer/Pad binding, Production mutation, KDS/Pickup

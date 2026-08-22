@@ -103,6 +103,9 @@ RELEASE_ROOT="$TMP_DIR/release/staging"
 make_release_fixture "$RELEASE_ROOT"
 RELEASE_ENV="$RELEASE_ROOT/config/.env.staging"
 RELEASE_PLAN="$RELEASE_ROOT/evidence/release-retention.plan"
+UNSAFE_LEGACY_RELEASE_SHA=ffffffffffffffffffffffffffffffffffffffff
+mkdir "$RELEASE_ROOT/releases/$UNSAFE_LEGACY_RELEASE_SHA"
+chmod 775 "$RELEASE_ROOT/releases/$UNSAFE_LEGACY_RELEASE_SHA"
 
 (
   PATH="$FAKE_FLOCK_DIR:$PATH"
@@ -117,6 +120,8 @@ assert_contains "RELEASE_RETENTION|PROTECTED|$PREVIOUS_RELEASE_SHA|previous_veri
 assert_contains "RELEASE_RETENTION|ELIGIBLE|${RELEASE_SHAS[0]}|" "$RELEASE_PLAN"
 assert_contains "RELEASE_RETENTION|ELIGIBLE|${RELEASE_SHAS[1]}|" "$RELEASE_PLAN"
 assert_not_contains 'state/postgres' "$RELEASE_PLAN"
+assert_contains "RELEASE_RETENTION|PROTECTED|$UNSAFE_LEGACY_RELEASE_SHA|unsafe_legacy_release_metadata" "$RELEASE_PLAN"
+assert_contains "RELEASE_RETENTION|UNSAFE_RETAINED|$UNSAFE_LEGACY_RELEASE_SHA|mode=775;content_not_inspected" "$RELEASE_PLAN"
 [[ "$(stat -f '%Lp' "$RELEASE_ROOT/evidence/legacy-mode.evidence" 2>/dev/null || stat -c '%a' "$RELEASE_ROOT/evidence/legacy-mode.evidence")" == 664 ]] || fail 'historical evidence mode was mutated'
 RELEASE_PLAN_SHA256="$(sha256sum "$RELEASE_PLAN" | awk '{print $1}')"
 
@@ -133,6 +138,7 @@ assert_contains 'RELEASE_RETENTION|REMOVED|' "$TMP_DIR/release-execute.out"
 [[ ! -e "$RELEASE_ROOT/releases/${RELEASE_SHAS[1]}" ]] || fail 'eligible release 2 was not removed'
 [[ -d "$RELEASE_ROOT/releases/$CURRENT_RELEASE_SHA" ]] || fail 'current release was removed'
 [[ -d "$RELEASE_ROOT/releases/$PREVIOUS_RELEASE_SHA" ]] || fail 'previous verified release was removed'
+[[ -d "$RELEASE_ROOT/releases/$UNSAFE_LEGACY_RELEASE_SHA" ]] || fail 'unsafe legacy release must be retained untouched'
 
 (
   PATH="$FAKE_FLOCK_DIR:$PATH"

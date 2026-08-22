@@ -29,6 +29,8 @@ STATE_IDENTITY=""
 PROTECTED_SHA_SET=""
 PROTECTED_LINES=""
 ALL_RELEASE_LINES=""
+UNSAFE_RELEASE_SHA_SET=""
+UNSAFE_RELEASE_LINES=""
 ELIGIBLE_LINES=""
 SKIP_LINES=""
 PLAN_CONTENT=""
@@ -292,14 +294,26 @@ validate_release_worktree() {
 }
 
 enumerate_releases() {
-  local path base metadata
+  local path base metadata mode
   ALL_RELEASE_LINES=""
+  UNSAFE_RELEASE_SHA_SET=""
+  UNSAFE_RELEASE_LINES=""
   while IFS= read -r path; do
     [[ -n "$path" ]] || continue
     [[ ! -L "$path" ]] || hygiene_die "Staging releases contains a symlink: $path"
     [[ -d "$path" ]] || hygiene_die "Staging releases contains a non-directory entry: $path"
     base="$(basename -- "$path")"
     [[ "$base" =~ ^[0-9a-f]{40}$ ]] || hygiene_die "Staging releases contains an unexpected entry: $base"
+    hygiene_path_has_symlink "$path" && hygiene_die "release path must not traverse a symlink: $base"
+    [[ "$(hygiene_canonical_dir "$path")" == "$path" ]] || hygiene_die "release canonical path changed: $base"
+    [[ "$(hygiene_file_owner "$path")" == "$(id -u)" ]] || hygiene_die "release owner is unsafe: $base"
+    mode="$(hygiene_file_mode "$path")"
+    [[ "$mode" =~ ^[0-7]{3,4}$ ]] || hygiene_die "release mode is unavailable: $base"
+    if [[ "$mode" != "700" ]]; then
+      UNSAFE_RELEASE_SHA_SET="${UNSAFE_RELEASE_SHA_SET}${base}"$'\n'
+      UNSAFE_RELEASE_LINES="${UNSAFE_RELEASE_LINES}RELEASE_RETENTION|UNSAFE_RETAINED|${base}|mode=${mode};content_not_inspected"$'\n'
+      continue
+    fi
     metadata="$(validate_release_worktree "$base")"
     ALL_RELEASE_LINES="${ALL_RELEASE_LINES}${metadata}"$'\n'
   done < <(find -P "$RELEASES_DIR" -mindepth 1 -maxdepth 1 -print | sort)
@@ -349,10 +363,15 @@ build_plan() {
   if [[ -n "$PREVIOUS_VERIFIED_SHA" ]]; then
     add_protected_sha "$PREVIOUS_VERIFIED_SHA" "previous_verified"
   fi
+  while IFS= read -r unsafe_sha; do
+    [[ -n "$unsafe_sha" ]] || continue
+    add_protected_sha "$unsafe_sha" "unsafe_legacy_release_metadata"
+  done <<<"$UNSAFE_RELEASE_SHA_SET"
   collect_reference_shas "$STATE_DIR"
   collect_reference_shas "$EVIDENCE_DIR"
   protect_keep_count
   select_eligible_releases "$now"
+  SKIP_LINES="${UNSAFE_RELEASE_LINES}${SKIP_LINES}"
   emit_plan
 }
 

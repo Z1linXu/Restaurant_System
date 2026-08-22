@@ -26,6 +26,11 @@ Release retention 将固定的 `state/postgres` 数据目录视为不可遍历�
 `0640/0644/0660/0664` mode；工具验证 owner、父目录、symlink 和有限 mode allowlist，但不会为了 mode normalization
 改写历史 evidence。world-writable、executable、owner drift 或非 regular evidence 仍 fail closed。
 
+若旧 release 目录仍是同 owner、非 symlink、canonical exact-SHA 名称，但 mode 不是
+当前要求的 `0700`，工具不会读取、chmod 或删除其内容；它会输出 `UNSAFE_RETAINED` 并
+加入 protected set。当前或 previous verified release 必须是完整验证过的 `0700` clean
+worktree，否则仍 fail closed。
+
 ## Release rotation 接入
 
 `staging-release-rotation.sh` 在 recovery record 中记录 `PRIOR_STAGING_SHA`。
