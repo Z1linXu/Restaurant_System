@@ -38,6 +38,10 @@ public interface StoreRepository extends JpaRepository<Store, Long> {
     @Query("select s from Store s where s.id in :storeIds order by s.id asc")
     List<Store> findAllByIdInForUpdateOrderByIdAsc(@Param("storeIds") Collection<Long> storeIds);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from Store s where s.id = :storeId")
+    java.util.Optional<Store> findByIdForUpdate(@Param("storeId") Long storeId);
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
     @Query(value = """

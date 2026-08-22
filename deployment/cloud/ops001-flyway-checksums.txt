@@ -22,3 +22,5 @@
 20|V20__align_phase_b_provisioning_validation_status.sql|-1638534388
 21|V21__repair_phase_b_master_menu_fingerprint.sql|2011567215
 22|V22__repair_printing_display_rule_revision_lifecycle.sql|-699128137
+23|V23__add_phase_b_part2_readiness_and_activation.sql|-1207640832
+24|V24__harden_phase_b_part2_evidence_and_device_heartbeat.sql|755635947

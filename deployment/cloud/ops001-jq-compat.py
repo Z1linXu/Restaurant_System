@@ -90,16 +90,21 @@ def as_int(name):
     return candidate
 
 
-def walk_reject_secret_keys(node):
+def walk_reject_secret_keys(node, pattern):
     if isinstance(node, dict):
         for key, child in node.items():
             lowered = str(key).lower()
-            if any(word in lowered for word in ("password", "token", "cookie", "authorization", "secret")):
+            if re.search(pattern, lowered, re.IGNORECASE):
                 fail()
-            walk_reject_secret_keys(child)
+            walk_reject_secret_keys(child, pattern)
     elif isinstance(node, list):
         for child in node:
-            walk_reject_secret_keys(child)
+            walk_reject_secret_keys(child, pattern)
+
+
+def secret_key_pattern(expression):
+    match = re.search(r'test\("([^"]+)"', expression)
+    return match.group(1) if match else r"password|token|cookie|authorization|secret"
 
 
 def active_first_id(collection):
@@ -152,6 +157,29 @@ elif null_input and "profile_code: $catalog[0].data.profile_code" in filter_text
         "master_menu_version": catalog.get("master_menu_version"),
         "master_menu_fingerprint_sha256": catalog.get("master_menu_fingerprint_sha256"),
     }
+elif null_input and filter_text.strip() == "{}":
+    result = {}
+elif null_input and "expected_readiness_fingerprint:$fingerprint" in filter_text:
+    result = {"expected_readiness_fingerprint": arg.get("fingerprint")}
+elif null_input and "ROLLBACK_STATION" in filter_text:
+    result = {
+        "stations": [{"code": "ROLLBACK_STATION", "name": "Rollback Station", "station_type": "KITCHEN", "sort_order": 900, "is_active": True}],
+        "tables": [{"table_code": "ROLLBACK_TABLE", "table_name": "Rollback Table", "capacity": 2, "supports_split": True, "sort_order": 900, "is_active": True}],
+        "staff": [{"role_code": "MANAGER", "full_name": "Rollback Manager"}],
+        "printer_roles": [
+            {"role_code": "ROLLBACK_GRAB_A", "module_code": "GRAB", "display_name": "Rollback A", "mode": "MOCK", "enabled": False, "required": False},
+            {"role_code": "ROLLBACK_GRAB_B", "module_code": "GRAB", "display_name": "Rollback B", "mode": "MOCK", "enabled": False, "required": False},
+        ],
+        "devices": [],
+    }
+elif null_input and "CHANGED_REQUEST_TABLE" in filter_text:
+    result = {"tables": [{"table_code": "CHANGED_REQUEST_TABLE", "table_name": "Changed", "capacity": 2, "supports_split": True, "sort_order": 901, "is_active": True}]}
+elif null_input and "app_version:\"synthetic-build\"" in filter_text:
+    result = {"app_version": "synthetic-build", "platform": "STAGING"}
+elif null_input and "trusted_build:false" in filter_text:
+    result = {"trusted_build": False, "worker_status": "ERROR"}
+elif null_input and "trusted_build:true" in filter_text:
+    result = {"trusted_build": True, "worker_status": "HEALTHY"}
 elif null_input and "name_zh: \"Phase B Store-only Item\"" in filter_text:
     result = {
         "store_id": as_int("store"),
@@ -213,8 +241,61 @@ elif ".clone_idempotency_key" in filter_text and "length >= 16" in filter_text:
 elif ".success == true" in filter_text:
     require(isinstance(value, dict) and value.get("success") is True)
     result = True
+elif ".data.proof_status == \"NOT_READY\"" in filter_text or ".data.proof_status == \"PASS\"" in filter_text:
+    expected = "PASS" if ".data.proof_status == \"PASS\"" in filter_text else "NOT_READY"
+    result = value.get("data", {}).get("proof_status")
+    require(result == expected)
+elif ".data.readiness_fingerprint | strings" in filter_text:
+    result = value.get("data", {}).get("readiness_fingerprint")
+    require(isinstance(result, str) and len(result) == 64)
+elif ".data.synthetic_device_credentials[0].device_id" in filter_text:
+    result = value.get("data", {}).get("synthetic_device_credentials", [{}])[0].get("device_id")
+    require(isinstance(result, int))
+elif ".data.synthetic_device_credentials[0].device_token" in filter_text:
+    result = value.get("data", {}).get("synthetic_device_credentials", [{}])[0].get("device_token")
+    require(isinstance(result, str) and len(result) > 20)
+elif ".data.ready == false" in filter_text or ".data.ready == true" in filter_text:
+    data = value.get("data", {})
+    expected_ready = ".data.ready == true" in filter_text
+    require(data.get("ready") is expected_ready)
+    if 'readiness_status == "NOT_READY"' in filter_text:
+        require(data.get("readiness_status") == "NOT_READY")
+    if 'readiness_status == "READY"' in filter_text:
+        require(data.get("readiness_status") == "READY")
+    if "DEVICE_READINESS" in filter_text:
+        require(any(
+            isinstance(check, dict)
+            and check.get("code") == "DEVICE_READINESS"
+            and check.get("status") == "FAIL"
+            for check in data.get("checks", [])
+        ))
+    result = True
+elif ".data.status == \"COMPLETED\"" in filter_text and "synthetic_staff_credentials" in filter_text:
+    data = value.get("data", {})
+    counts = data.get("counts", {})
+    readiness = data.get("readiness", {})
+    require(data.get("status") == "COMPLETED")
+    require(data.get("replayed") is False)
+    require(readiness.get("ready") is True)
+    require(counts.get("table_count", 0) >= 2)
+    require(counts.get("staff_count", 0) >= 2)
+    require(counts.get("printer_role_count", 0) >= 2)
+    require(counts.get("device_count", 0) >= 1)
+    require(len(data.get("synthetic_staff_credentials", [])) >= 2)
+    require(len(data.get("synthetic_device_credentials", [])) == 1)
+    result = True
+elif ".data.replayed == true" in filter_text and "synthetic_staff_credentials" in filter_text:
+    data = value.get("data", {})
+    require(data.get("replayed") is True)
+    require(len(data.get("synthetic_staff_credentials", [])) == 0)
+    require(len(data.get("synthetic_device_credentials", [])) == 0)
+    result = True
+elif ".data.replayed == true" in filter_text and ".data.target_state == \"LIVE\"" in filter_text:
+    data = value.get("data", {})
+    require(data.get("replayed") is True and data.get("target_state") == "LIVE")
+    result = True
 elif "paths(scalars)" in filter_text:
-    walk_reject_secret_keys(value)
+    walk_reject_secret_keys(value, secret_key_pattern(filter_text))
     result = True
 elif ".data.access_token" in filter_text:
     result = value["data"]["access_token"]

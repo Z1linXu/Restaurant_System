@@ -58,6 +58,7 @@ public class StoreDeviceServiceImpl implements StoreDeviceService {
         device.deviceTokenHash = hashToken(rawToken);
         device.status = "ACTIVE";
         device.lastSeenAt = now;
+        device.lastHeartbeatAt = null;
         device.appVersion = blankToNull(request.app_version);
         device.platform = blankToNull(request.platform);
         device.isActive = true;
@@ -88,7 +89,9 @@ public class StoreDeviceServiceImpl implements StoreDeviceService {
     @Transactional
     public StoreDeviceResponse heartbeat(Long deviceId, String rawDeviceToken, DeviceHeartbeatRequest request) {
         StoreDevice device = authenticateDevice(deviceId, rawDeviceToken);
-        boolean changed = false;
+        boolean changed = true;
+        LocalDateTime heartbeatAt = LocalDateTime.now();
+        device.lastHeartbeatAt = heartbeatAt;
         if (request != null) {
             String appVersion = blankToNull(request.app_version);
             String platform = blankToNull(request.platform);
@@ -102,7 +105,7 @@ public class StoreDeviceServiceImpl implements StoreDeviceService {
             }
         }
         if (changed) {
-            device.updatedAt = LocalDateTime.now();
+            device.updatedAt = heartbeatAt;
             storeDeviceRepository.save(device);
         }
         return StoreDeviceResponse.from(device);

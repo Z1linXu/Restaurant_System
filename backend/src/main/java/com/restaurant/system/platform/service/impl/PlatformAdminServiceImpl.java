@@ -176,10 +176,17 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
             throw new BusinessException(LEGACY_STORE_CREATION_DISABLED);
         }
         Store target = storeRepository.findById(store.id).orElseThrow(() -> new BusinessException("Store not found"));
+        boolean phaseBProvisioned = "PHASE_B_OWNER_PROVISIONING".equalsIgnoreCase(target.provisioning_source)
+            && "VALIDATION_FIXTURE".equalsIgnoreCase(target.store_kind);
+        String requestedStatus = store.status == null ? "active" : store.status;
+        if (phaseBProvisioned && ("active".equalsIgnoreCase(requestedStatus)
+            || "ACTIVE".equalsIgnoreCase(target.lifecycle_status))) {
+            throw new BusinessException("PHASE_B_PART2_ACTIVATION_COORDINATOR_REQUIRED");
+        }
         target.organization_id = store.organization_id;
         target.name = store.name;
         target.code = store.code;
-        target.status = store.status == null ? "active" : store.status;
+        target.status = requestedStatus;
         target.enable_bar_kitchen_tasks = store.enable_bar_kitchen_tasks;
         target.printing_enabled = store.printing_enabled == null ? true : store.printing_enabled;
         stamp(target, false);

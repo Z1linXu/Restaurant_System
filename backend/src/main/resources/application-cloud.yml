@@ -30,6 +30,7 @@ app:
   phase-b:
     provisioning:
       enabled: ${APP_PHASE_B_PROVISIONING_ENABLED:false}
+    runtime: ${APP_PHASE_B_RUNTIME:disabled}
   seed:
     runtime-enabled: true
     force-overwrite: false

@@ -40,6 +40,9 @@ public class StoreDevice {
     @Column(name = "last_seen_at")
     public LocalDateTime lastSeenAt;
 
+    @Column(name = "last_heartbeat_at")
+    public LocalDateTime lastHeartbeatAt;
+
     @Column(name = "app_version")
     public String appVersion;
 
