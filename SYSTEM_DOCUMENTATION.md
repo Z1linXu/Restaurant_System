@@ -1,5 +1,10 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-23 Staging hygiene compatibility repair: BuildKit cache dry-run now
+> consumes Docker Buildx's fixed, delimiter-safe Go-template fields directly.
+> It no longer requires host `jq`, while retaining strict field validation,
+> exact-plan replay, protected active/Production images, and cache-only scope.
+
 > **Governance notice (2026-08-21):** this file is the supporting current
 > technical reference, not Phase, Package, Gate, next-action or deployment
 > authority. Read `AGENTS.md`, `docs/governance/AUTHORITY.md` and
