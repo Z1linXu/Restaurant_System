@@ -6,6 +6,9 @@
 > exact-plan replay, protected active/Production images, and cache-only scope.
 > Builder identity uses the broadly supported fixed-name inspect output and
 > requires the local `default`/`docker` builder node to be running.
+> The dry-run plan also binds the installed Buildx 10GB retention spelling:
+> current `--reserved-space` or legacy `--keep-storage`; no other option is
+> accepted and execute must observe the same CLI contract.
 
 > **Governance notice (2026-08-21):** this file is the supporting current
 > technical reference, not Phase, Package, Gate, next-action or deployment
