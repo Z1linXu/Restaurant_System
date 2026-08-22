@@ -86,9 +86,10 @@ BuildKit execute 需要同一组 Production/active image inputs 和对应 plan d
 
 - Staging Compose 的 `db`、`backend`、`nginx` 保持 Docker `local` log driver，模板上限为
   `10m × 3`；现有资源上限校验继续负责防止更大值。
-- Staging Nginx 将 timing-only access log 写到 `/dev/stdout`，只包含 timestamp、status、
-  bytes 和 `request_time` / `upstream_*_time`。不记录 URI、query、headers、cookies、
-  Authorization 或 request body；Docker local driver 负责保留窗口。
+- Staging Nginx 将 sanitized timing access log 写到 `/dev/stdout`，只包含 timestamp、
+  method、Nginx normalized `$uri`（不含 query）、status、bytes 和 `request_time` /
+  `upstream_*_time`。不记录 `$request_uri`、query args、headers、cookies、Authorization
+  或 request body；Docker local driver 负责保留窗口。
 - journald 只采用 policy recommendation：`SystemMaxUse=1G`、`RuntimeMaxUse=512M`、
   `MaxRetentionSec=14day`、`MaxFileSec=1day`。脚本只报告该 policy，不修改 host config，
   不执行 vacuum。
