@@ -7,6 +7,16 @@
 > notes below preserve technical context and must not be interpreted as current
 > mutation authorization.
 
+> 2026-08-21 Owner confirmed `PHASE_B_PART1_OWNER_ACCEPTANCE = PASS` after the
+> exact-SHA Staging automated acceptance. `CURRENT_STATE.yml` now closes Part 1
+> and records `PHASE_B_PART2` as Owner-authorized for planning and implementation
+> within the current roadmap candidate scope. This does not authorize Phase C,
+> real Chinatown/Sainte-Catherine creation or activation, real credential
+> mutation, physical Printer/Pad binding, Production deployment, migration or
+> restart. The Part 1 Staging runtime remains the historical exact SHA
+> `dc2836f6805aa97c24454a27371f88d307db2c5e` / Flyway V22 until a later
+> Part 2 exact-SHA workflow is separately executed.
+
 > Phase B Store option identity contract: provisioning promotes each active
 > standard Size semantic to one Store-local canonical `SIZE` row using the
 > system-controlled `size_small`, `size_regular` or `size_large` code. Duplicate
@@ -72,8 +82,9 @@
 > into HOT_KITCHEN, and a nonblank FRONTDESK_RECEIPT snapshot. The persisted
 > display contract renders that fried-egg semantic as `+煎`; changing it to
 > `+蛋` would be a separate Display Rule/master-data decision. Production and
-> real printer/Pad state were not mutated. Owner manual Part 1 acceptance is
-> the remaining gate.
+> real printer/Pad state were not mutated. Owner manual Part 1 acceptance
+> subsequently passed; Phase B Part 2 is now the active authorized package. No
+> real Store, credential, printer/Pad binding or Production state was changed.
 
 > 2026-08-16 Phase B Part 1 combo acceptance payload repair candidate:
 > Staging deploy of `origin/main@a9be0c858dab52ef46170551e14f7c8633ffac72`
