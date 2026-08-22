@@ -432,11 +432,11 @@ select case when exists(select 1 from expired where expires_at < CURRENT_TIMESTA
   "$JQ_BIN" -e '.data.ready == false and any(.data.checks[]; .code == "DEVICE_READINESS" and .status == "FAIL")' "$LAST_RESPONSE" >/dev/null ||
     ops001_die "expired device readiness did not fail closed"
 
+  device_api_call device_heartbeat_restored POST /devices/heartbeat "$heartbeat" 200
+  reject_secret_fields device_heartbeat_restored
   device_api_call device_proof_restored POST /devices/readiness-proof "$restored" 200
   reject_secret_fields device_proof_restored
   "$JQ_BIN" -e '.data.proof_status == "PASS"' "$LAST_RESPONSE" >/dev/null || ops001_die "restored device proof did not pass"
-  device_api_call device_heartbeat_restored POST /devices/heartbeat "$heartbeat" 200
-  reject_secret_fields device_heartbeat_restored
   api_call readiness_restored GET "/owner/organizations/$ORGANIZATION_ID/stores/$STORE_ID/phase-b/part2/readiness" "" "$ACCESS_TOKEN" ""
   reject_secret_fields readiness_restored
   READINESS_FINGERPRINT="$("$JQ_BIN" -er '.data.readiness_fingerprint | strings | select(length == 64)' "$LAST_RESPONSE")"
