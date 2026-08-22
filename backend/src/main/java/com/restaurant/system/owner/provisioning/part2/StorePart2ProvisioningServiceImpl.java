@@ -79,8 +79,12 @@ public class StorePart2ProvisioningServiceImpl implements StorePart2Provisioning
             requirePart2Store(organizationId, lockedStore.id);
             StorePart2ProvisioningWriter.WriteResult result = writer.write(lockedStore, reservation.request().id, plan);
             StoreReadinessResponse readiness = readinessService.evaluate(organizationId, storeId);
-            requestCoordinator.complete(reservation.request().id, readiness.evidence_id, result);
-            return responseFromWrite(reservation.request(), result, readiness);
+            StoreProvisioningPart2RequestEntity completedRequest = requestCoordinator.complete(
+                reservation.request().id,
+                readiness.evidence_id,
+                result
+            );
+            return responseFromWrite(completedRequest, result, readiness);
         } catch (RuntimeException exception) {
             requestCoordinator.fail(reservation.request().id, errorCode(exception));
             throw exception;
