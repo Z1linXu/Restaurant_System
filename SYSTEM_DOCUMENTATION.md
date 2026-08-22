@@ -9,6 +9,8 @@
 > The dry-run plan also binds the installed Buildx 10GB retention spelling:
 > current `--reserved-space` or legacy `--keep-storage`; no other option is
 > accepted and execute must observe the same CLI contract.
+> Buildx records that are not reclaimable may legitimately omit `LastUsedAt`;
+> an empty timestamp never qualifies a reclaimable record for deletion.
 
 > **Governance notice (2026-08-21):** this file is the supporting current
 > technical reference, not Phase, Package, Gate, next-action or deployment

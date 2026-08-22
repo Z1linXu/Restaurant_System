@@ -169,8 +169,8 @@ scan_cache_records() {
     [[ -n "$record" ]] || continue
     CACHE_RECORD_COUNT=$((CACHE_RECORD_COUNT + 1))
     IFS='|' read -r id reclaimable mutable shared usage last_used size type extra <<<"$record"
-    [[ -z "${extra:-}" && "$id" =~ ^[A-Za-z0-9._:-]+$ && "$reclaimable" =~ ^(true|false)$ && "$mutable" =~ ^(true|false)$ && "$shared" =~ ^(true|false)$ && "$usage" =~ ^[0-9]+$ && "$last_used" =~ ^[A-Za-z0-9._:+\ -]+$ && "$size" =~ ^[0-9]+([.][0-9]+)?([kMGT]i?)?B$ && "$type" =~ ^[A-Za-z0-9._:-]+$ ]] || hygiene_die "BuildKit disk-usage record is not machine-readable and safe"
-    if [[ "$reclaimable" == "true" && "$mutable" == "false" && "$shared" == "false" && "$usage" == "0" ]]; then
+    [[ -z "${extra:-}" && "$id" =~ ^[A-Za-z0-9._:-]+$ && "$reclaimable" =~ ^(true|false)$ && "$mutable" =~ ^(true|false)$ && "$shared" =~ ^(true|false)$ && "$usage" =~ ^[0-9]+$ && ( -z "$last_used" || "$last_used" =~ ^[A-Za-z0-9._:+\ -]+$ ) && "$size" =~ ^[0-9]+([.][0-9]+)?([kMGT]i?)?B$ && "$type" =~ ^[A-Za-z0-9._:-]+$ ]] || hygiene_die "BuildKit disk-usage record is not machine-readable and safe"
+    if [[ "$reclaimable" == "true" && "$mutable" == "false" && "$shared" == "false" && "$usage" == "0" && -n "$last_used" ]]; then
       append_unique_line CACHE_ELIGIBLE_IDS "$id"
       CACHE_ELIGIBLE_DETAILS="${CACHE_ELIGIBLE_DETAILS}${id}|size=${size};last_used=${last_used}"$'\n'
     elif [[ "$reclaimable" == "true" ]]; then
