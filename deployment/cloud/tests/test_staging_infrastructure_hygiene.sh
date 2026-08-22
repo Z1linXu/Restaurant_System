@@ -221,6 +221,7 @@ case "\$*" in
     if [[ -e "$DOCKER_MARKER" ]]; then exit 0; fi
     printf '%s\n' 'cache-safe|true|false|false|0|2 weeks ago|1.234kB|regular'
     printf '%s\n' 'cache-in-use|false|false|false|1|2 weeks ago|4.567kB|regular'
+    printf '%s\n' 'cache-retained-no-last-used|false|false|false|0||4.096MB|regular'
     ;;
   *'buildx prune --builder default --filter until=168h --reserved-space 10GB --force'*)
     : >"$DOCKER_MARKER"
