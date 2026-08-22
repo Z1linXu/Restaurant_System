@@ -9,6 +9,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   define: {
     __APP_BUILD_VERSION__: JSON.stringify(appBuildVersion),
+    global: 'globalThis',
   },
   server: {
     host: true,
