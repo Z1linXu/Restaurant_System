@@ -24,5 +24,14 @@ class PhaseBPart2MigrationTest {
         assertFalse(sql.contains("device_token"));
         assertFalse(sql.contains("ip_address"));
         assertFalse(sql.contains("insert into public.stores"));
+
+        Path hardeningMigration = Path.of("src/main/resources/db/migration/V24__harden_phase_b_part2_evidence_and_device_heartbeat.sql");
+        String hardeningSql = Files.readString(hardeningMigration).toLowerCase();
+        assertTrue(hardeningSql.contains("create table store_readiness_evidence_history"));
+        assertTrue(hardeningSql.contains("last_heartbeat_at"));
+        assertFalse(hardeningSql.contains("drop table"));
+        assertFalse(hardeningSql.contains("password_hash"));
+        assertFalse(hardeningSql.contains("device_token"));
+        assertFalse(hardeningSql.contains("ip_address"));
     }
 }

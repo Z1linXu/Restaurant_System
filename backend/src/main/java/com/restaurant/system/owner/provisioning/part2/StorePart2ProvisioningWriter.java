@@ -7,6 +7,7 @@ import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.owner.service.ProvisionedStoreStaff;
 import com.restaurant.system.printing.dto.DeviceRegisterRequest;
 import com.restaurant.system.printing.dto.DeviceRegisterResponse;
+import com.restaurant.system.printing.dto.DeviceHeartbeatRequest;
 import com.restaurant.system.printing.entity.StoreDevice;
 import com.restaurant.system.printing.repository.StoreDeviceRepository;
 import com.restaurant.system.printing.service.StoreDeviceService;
@@ -50,7 +51,7 @@ public class StorePart2ProvisioningWriter {
     private final PasswordService passwordService;
     private final StoreDeviceService storeDeviceService;
     private final StoreDeviceRepository storeDeviceRepository;
-    private final StoreDeviceReadinessRepository deviceReadinessRepository;
+    private final StoreDeviceReadinessProofService readinessProofService;
 
     public StorePart2ProvisioningWriter(
         StationRepository stationRepository,
@@ -65,7 +66,7 @@ public class StorePart2ProvisioningWriter {
         PasswordService passwordService,
         StoreDeviceService storeDeviceService,
         StoreDeviceRepository storeDeviceRepository,
-        StoreDeviceReadinessRepository deviceReadinessRepository
+        StoreDeviceReadinessProofService readinessProofService
     ) {
         this.stationRepository = stationRepository;
         this.diningTableRepository = diningTableRepository;
@@ -79,7 +80,7 @@ public class StorePart2ProvisioningWriter {
         this.passwordService = passwordService;
         this.storeDeviceService = storeDeviceService;
         this.storeDeviceRepository = storeDeviceRepository;
-        this.deviceReadinessRepository = deviceReadinessRepository;
+        this.readinessProofService = readinessProofService;
     }
 
     @Transactional
@@ -342,26 +343,17 @@ public class StorePart2ProvisioningWriter {
             ensureResource(store, requestId, RESOURCE_DEVICE, resourceCode, device.id, now);
         }
 
-        StoreDeviceReadinessEntity readiness = deviceReadinessRepository.findByDeviceId(device.id)
-            .orElseGet(StoreDeviceReadinessEntity::new);
-        readiness.organization_id = store.organization_id;
-        readiness.store_id = store.id;
-        readiness.device_id = device.id;
-        readiness.contract_version = "PHASE_B_PART2_DEVICE_READINESS_V1";
-        readiness.trusted_build = spec.trustedBuild();
-        readiness.worker_status = spec.workerStatus();
-        readiness.proof_status = Boolean.TRUE.equals(spec.trustedBuild()) && "HEALTHY".equals(spec.workerStatus())
-            ? "PASS"
-            : "NOT_READY";
-        readiness.last_heartbeat_at = device.lastSeenAt == null ? now : device.lastSeenAt;
-        readiness.checked_at = now;
-        readiness.expires_at = now.plusMinutes(15);
-        readiness.evidence_json = "{\"trusted_build\":" + spec.trustedBuild()
-            + ",\"worker_status\":\"" + escape(spec.workerStatus())
-            + "\",\"proof_status\":\"" + readiness.proof_status + "\"}";
-        readiness.created_at = readiness.created_at == null ? now : readiness.created_at;
-        readiness.updated_at = now;
-        deviceReadinessRepository.save(readiness);
+        if (rawToken != null) {
+            DeviceHeartbeatRequest heartbeat = new DeviceHeartbeatRequest();
+            heartbeat.app_version = spec.appVersion();
+            heartbeat.platform = spec.platform();
+            storeDeviceService.heartbeat(device.id, rawToken, heartbeat);
+
+            DeviceReadinessProofRequest proof = new DeviceReadinessProofRequest();
+            proof.trusted_build = spec.trustedBuild();
+            proof.worker_status = spec.workerStatus();
+            readinessProofService.record(device.id, rawToken, proof);
+        }
         return rawToken == null ? null : new TemporaryDeviceCredential(device.id, device.deviceName, rawToken);
     }
 
@@ -461,10 +453,6 @@ public class StorePart2ProvisioningWriter {
             .replaceAll("[^A-Z0-9]+", "_")
             .replaceAll("_+", "_")
             .replaceAll("^_|_$", "");
-    }
-
-    private String escape(String value) {
-        return value == null ? "" : value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     private void requireInactivePart2Store(Store store) {

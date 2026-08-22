@@ -47,10 +47,15 @@ public class StoreDeviceReadinessProofServiceImpl implements StoreDeviceReadines
         if (store.organization_id == null || !store.organization_id.equals(device.organizationId)) {
             throw new BusinessException("PART2_DEVICE_ORGANIZATION_MISMATCH");
         }
-        String workerStatus = request == null || request.worker_status == null || request.worker_status.isBlank()
-            ? "HEALTHY"
-            : request.worker_status.trim().toUpperCase();
-        boolean trustedBuild = request == null || request.trusted_build == null || request.trusted_build;
+        if (request == null || request.trusted_build == null || request.worker_status == null
+            || request.worker_status.isBlank()) {
+            throw new BusinessException("PART2_DEVICE_PROOF_REQUIRED");
+        }
+        String workerStatus = request.worker_status.trim().toUpperCase();
+        boolean trustedBuild = request.trusted_build;
+        if (device.lastHeartbeatAt == null) {
+            throw new BusinessException("PART2_DEVICE_HEARTBEAT_REQUIRED");
+        }
         LocalDateTime now = LocalDateTime.now();
         StoreDeviceReadinessEntity readiness = readinessRepository.findByDeviceId(device.id)
             .orElseGet(StoreDeviceReadinessEntity::new);
@@ -61,7 +66,7 @@ public class StoreDeviceReadinessProofServiceImpl implements StoreDeviceReadines
         readiness.trusted_build = trustedBuild;
         readiness.worker_status = workerStatus;
         readiness.proof_status = trustedBuild && "HEALTHY".equals(workerStatus) ? "PASS" : "NOT_READY";
-        readiness.last_heartbeat_at = device.lastSeenAt == null ? now : device.lastSeenAt;
+        readiness.last_heartbeat_at = device.lastHeartbeatAt;
         readiness.checked_at = now;
         readiness.expires_at = now.plusMinutes(15);
         readiness.evidence_json = "{\"trusted_build\":" + trustedBuild

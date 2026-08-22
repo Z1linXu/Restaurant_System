@@ -14,7 +14,8 @@ mutates Production.
 
 Use the fixed Staging root `/srv/restaurant-pos/staging`, the detached release
 at the approved full SHA, and the reviewed `.env.staging`. The runtime must
-have Platform and Phase B provisioning enabled, with the bounded printing
+have Platform and Phase B provisioning enabled, carry the explicit
+`APP_PHASE_B_RUNTIME=staging` marker, and use the bounded printing
 pair `STAGING_PRINT_MODE=MOCK` and
 `STAGING_PRINTING_FEATURE_ENABLED=true`. The allowlist remains exactly
 `DISABLED,MOCK`, endpoint configuration remains disabled, and no endpoint/IP/
@@ -24,7 +25,7 @@ The normal sequence is:
 
 1. exact-SHA release preparation and STG-004 preflight;
 2. `staging-deploy.sh` validation/start using the same full SHA;
-3. health, Flyway V23 and restart-safety evidence;
+3. health, Flyway V24 and restart-safety evidence;
 4. `staging-phase-b-part2-acceptance.sh --validate`;
 5. Owner-approved `--execute-runtime --action phase-b-part2-acceptance`.
 
@@ -39,7 +40,7 @@ acceptance; any later cleanup is a separately reviewed Staging reconciliation.
 
 The helper checks, in order:
 
-- exact release SHA, environment/preflight/approval binding, health, Flyway V23
+- exact release SHA, environment/preflight/approval binding, health, Flyway V24
   and fixed Staging project identity;
 - initial `NOT_READY`, duplicate printer-module failure rollback and failed
   request ledger;

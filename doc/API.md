@@ -17,13 +17,15 @@
 > memberships, endpoint-free `DISABLED`/`MOCK` logical printer roles and
 > synthetic device registration/readiness. The first response may contain
 > one-time synthetic staff/device credentials; replay responses never do.
-> `POST .../activate` requires a fresh readiness fingerprint and
+> Device readiness requires an explicit authenticated heartbeat followed by an
+> explicit proof payload; omitted proof fields fail closed. `POST .../activate` requires a fresh readiness fingerprint and
 > `Idempotency-Key`, revalidates and locks the Store, then maps `READY` to the
 > existing `ACTIVE`/`ACTIVE` lifecycle state as the operational `LIVE` state.
 > No endpoint performs real printer binding, `PAD_DIRECT`/`REAL` configuration,
 > Production mutation or real Store activation. The legacy Platform Admin
 > direct-active writer rejects Part 2 validation fixtures and requires the
-> coordinator.
+> coordinator. Staging additionally requires the explicit
+> `APP_PHASE_B_RUNTIME=staging` marker; the cloud default is disabled.
 
 > Owner Menu Size compatibility contract: Phase B provisioning returns one
 > canonical Store-local option per enabled standard Size with `option_group`

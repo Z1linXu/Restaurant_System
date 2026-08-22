@@ -257,10 +257,10 @@ login() {
 verify_health_and_flyway() {
   api_call health GET /system/health "" "$ACCESS_TOKEN" ""
   reject_secret_fields health
-  db_expect_pass FLYWAY_V23 "
+  db_expect_pass FLYWAY_V24 "
 select case when exists (
-  select 1 from flyway_schema_history where version = '23' and success = true
-) then 'PASS' else 'FAIL Flyway V23 is not installed' end;
+  select 1 from flyway_schema_history where version = '24' and success = true
+) then 'PASS' else 'FAIL Flyway V24 is not installed' end;
 "
 }
 
@@ -529,7 +529,14 @@ verify_live_and_immutability() {
 select case when
   (select count(*) from stores where id = $STORE_ID and lower(status) = 'active' and lifecycle_status = 'ACTIVE' and printing_mode = 'MOCK') = 1
   and (select count(*) from store_readiness_evidence where store_id = $STORE_ID and status = 'READY') = 1
+  and (select count(*) from store_readiness_evidence_history where store_id = $STORE_ID and status = 'READY') >= 1
   and (select count(*) from store_activation_requests where store_id = $STORE_ID and status = 'COMPLETED' and target_state = 'LIVE') = 1
+  and exists (
+    select 1
+    from store_activation_requests activation
+    join store_readiness_evidence_history history on history.id = activation.readiness_evidence_id
+    where activation.store_id = $STORE_ID and activation.status = 'COMPLETED'
+  )
 then 'PASS' else 'FAIL Store did not reach the guarded LIVE state' end;
 "
   [[ "$(db_query "select md5(coalesce(string_agg(kind || ':' || id || ':' || value, '|' order by kind, id), '')) from (select 'category' kind, id::text, coalesce(code,'') || ':' || coalesce(is_active::text,'') || ':' || coalesce(sort_order::text,'') value from menu_categories where store_id = $STORE_ID union all select 'item', id::text, coalesce(sku,'') || ':' || coalesce(base_price::text,'') || ':' || coalesce(is_active::text,'') || ':' || coalesce(category_id::text,'') from menu_items where store_id = $STORE_ID union all select 'option', option_row.id::text, coalesce(option_row.option_code,'') || ':' || coalesce(option_row.price_delta::text,'') || ':' || coalesce(option_row.is_active::text,'') value from menu_item_options option_row join menu_items item on item.id = option_row.menu_item_id where item.store_id = $STORE_ID) rows;")" == "$MENU_SIGNATURE_BEFORE" ]] ||
@@ -549,6 +556,7 @@ verify_sanitized_evidence() {
   db_expect_pass SANITIZED_EVIDENCE "
 select case when
   not exists(select 1 from store_readiness_evidence where store_id = $STORE_ID and (evidence_json ilike '%password_hash%' or evidence_json ilike '%device_token_value%' or evidence_json ilike '%printer_endpoint%' or evidence_json ilike '%http://%'))
+  and not exists(select 1 from store_readiness_evidence_history where store_id = $STORE_ID and (evidence_json ilike '%password_hash%' or evidence_json ilike '%device_token_value%' or evidence_json ilike '%printer_endpoint%' or evidence_json ilike '%http://%'))
   and not exists(select 1 from store_provisioning_part2_requests where store_id = $STORE_ID and (config_json ilike '%temporary_password%' or config_json ilike '%device_token_value%' or config_json ilike '%http://%'))
   and not exists(select 1 from store_activation_requests where store_id = $STORE_ID and (result_json ilike '%token%' or result_json ilike '%password%'))
 then 'PASS' else 'FAIL sanitized readiness/activation evidence contains a secret-shaped value' end;

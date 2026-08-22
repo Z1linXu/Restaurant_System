@@ -23,6 +23,8 @@ import com.restaurant.system.owner.profile.StoreProfileVersionEntity;
 import com.restaurant.system.owner.profile.StoreProfileVersionRepository;
 import com.restaurant.system.owner.provisioning.StoreMenuMasterMappingRepository;
 import com.restaurant.system.printing.entity.StoreDevice;
+import com.restaurant.system.printing.repository.PrinterAssignmentRepository;
+import com.restaurant.system.printing.repository.PrinterConfigRepository;
 import com.restaurant.system.printing.repository.StoreDeviceRepository;
 import com.restaurant.system.station.entity.DiningTable;
 import com.restaurant.system.station.entity.Station;
@@ -76,6 +78,9 @@ public class StoreReadinessServiceImpl implements StoreReadinessService {
     private final StoreDeviceRepository storeDeviceRepository;
     private final StoreDeviceReadinessRepository deviceReadinessRepository;
     private final StoreReadinessEvidenceRepository evidenceRepository;
+    private final StoreReadinessEvidenceHistoryRepository evidenceHistoryRepository;
+    private final PrinterConfigRepository printerConfigRepository;
+    private final PrinterAssignmentRepository printerAssignmentRepository;
     private final ObjectMapper objectMapper;
 
     public StoreReadinessServiceImpl(
@@ -100,6 +105,9 @@ public class StoreReadinessServiceImpl implements StoreReadinessService {
         StoreDeviceRepository storeDeviceRepository,
         StoreDeviceReadinessRepository deviceReadinessRepository,
         StoreReadinessEvidenceRepository evidenceRepository,
+        StoreReadinessEvidenceHistoryRepository evidenceHistoryRepository,
+        PrinterConfigRepository printerConfigRepository,
+        PrinterAssignmentRepository printerAssignmentRepository,
         ObjectMapper objectMapper
     ) {
         this.storeRepository = storeRepository;
@@ -123,6 +131,9 @@ public class StoreReadinessServiceImpl implements StoreReadinessService {
         this.storeDeviceRepository = storeDeviceRepository;
         this.deviceReadinessRepository = deviceReadinessRepository;
         this.evidenceRepository = evidenceRepository;
+        this.evidenceHistoryRepository = evidenceHistoryRepository;
+        this.printerConfigRepository = printerConfigRepository;
+        this.printerAssignmentRepository = printerAssignmentRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -147,7 +158,7 @@ public class StoreReadinessServiceImpl implements StoreReadinessService {
 
         boolean ready = checks.stream().allMatch(check -> PASS.equals(check.status));
         String status = ready ? "READY" : "NOT_READY";
-        String evidenceJson = evidenceJson(status, checks);
+        String evidenceJson = evidenceJson(status, checks, resourceSnapshot(store, masterVersion));
         String fingerprint = com.restaurant.system.owner.profile.StoreProfileCanonicalJson.sha256Canonical(evidenceJson);
         StoreReadinessEvidenceEntity evidence = evidenceRepository.findByStoreIdForUpdate(store.id)
             .orElseGet(StoreReadinessEvidenceEntity::new);
@@ -161,7 +172,17 @@ public class StoreReadinessServiceImpl implements StoreReadinessService {
         evidence.created_at = evidence.created_at == null ? now : evidence.created_at;
         evidence.updated_at = now;
         StoreReadinessEvidenceEntity saved = evidenceRepository.save(evidence);
-        return toResponse(store, saved, checks, ready);
+        StoreReadinessEvidenceHistoryEntity history = new StoreReadinessEvidenceHistoryEntity();
+        history.organization_id = store.organization_id;
+        history.store_id = store.id;
+        history.status = status;
+        history.readiness_fingerprint = fingerprint;
+        history.evidence_json = evidenceJson;
+        history.checked_at = now;
+        history.expires_at = now.plusMinutes(READINESS_TTL_MINUTES);
+        history.created_at = now;
+        StoreReadinessEvidenceHistoryEntity savedHistory = evidenceHistoryRepository.save(history);
+        return toResponse(store, saved, savedHistory.id, checks, ready);
     }
 
     private void checkStoreBoundary(Store store, List<StoreReadinessResponse.Check> checks) {
@@ -323,8 +344,11 @@ public class StoreReadinessServiceImpl implements StoreReadinessService {
         );
         boolean safeStoreMode = "DISABLED".equalsIgnoreCase(store.printing_mode)
             || "MOCK".equalsIgnoreCase(store.printing_mode);
-        checks.add(check("PRINTING_TOPOLOGY", scopedRoles && requiredRoles && safeRoles && safeStoreMode ? PASS : FAIL,
-            scopedRoles && requiredRoles && safeRoles && safeStoreMode
+        boolean noPhysicalBindings = printerConfigRepository.findAllByStoreIdOrderByIdAsc(store.id).isEmpty()
+            && printerAssignmentRepository.findAllByStoreIdOrderByIdAsc(store.id).isEmpty();
+        boolean printingReady = scopedRoles && requiredRoles && safeRoles && safeStoreMode && noPhysicalBindings;
+        checks.add(check("PRINTING_TOPOLOGY", printingReady ? PASS : FAIL,
+            printingReady
                 ? "Logical printing roles are Store-scoped and endpoint-free"
                 : "Printing topology is incomplete or has an unsafe physical binding"));
         boolean hotKitchenExcluded = roles.stream().noneMatch(role -> "HOT_KITCHEN".equals(role.module_code) && Boolean.TRUE.equals(role.enabled));
@@ -346,7 +370,9 @@ public class StoreReadinessServiceImpl implements StoreReadinessService {
                 && readiness.expires_at != null
                 && readiness.expires_at.isAfter(now)
                 && readiness.last_heartbeat_at != null
-                && readiness.last_heartbeat_at.isAfter(now.minusMinutes(READINESS_TTL_MINUTES));
+                && device.lastHeartbeatAt != null
+                && readiness.last_heartbeat_at.equals(device.lastHeartbeatAt)
+                && device.lastHeartbeatAt.isAfter(now.minusMinutes(READINESS_TTL_MINUTES));
         });
         checks.add(check("DEVICE_READINESS", valid ? PASS : FAIL,
             valid ? "Synthetic device proof, heartbeat and Worker status are fresh" : "A fresh trusted synthetic device proof is required"));
@@ -381,22 +407,169 @@ public class StoreReadinessServiceImpl implements StoreReadinessService {
         return new StoreReadinessResponse.Check(code, status, message);
     }
 
-    private String evidenceJson(String status, List<StoreReadinessResponse.Check> checks) {
+    private String evidenceJson(String status, List<StoreReadinessResponse.Check> checks, Object snapshot) {
         try {
-            return objectMapper.writeValueAsString(Map.of("status", status, "checks", checks));
+            Map<String, Object> evidence = new LinkedHashMap<>();
+            evidence.put("status", status);
+            evidence.put("checks", checks);
+            evidence.put("resource_snapshot", snapshot);
+            return objectMapper.writeValueAsString(evidence);
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Readiness evidence cannot be serialized", exception);
         }
     }
 
+    private Map<String, Object> resourceSnapshot(Store store, ChainMasterMenuVersionEntity masterVersion) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("store", Map.of(
+            "organization_id", store.organization_id,
+            "store_id", store.id,
+            "status", value(store.status),
+            "lifecycle_status", value(store.lifecycle_status),
+            "printing_mode", value(store.printing_mode),
+            "printing_enabled", Boolean.TRUE.equals(store.printing_enabled),
+            "profile_fingerprint", value(store.provisioned_profile_fingerprint_sha256),
+            "master_fingerprint", value(store.provisioned_master_menu_fingerprint_sha256)
+        ));
+        snapshot.put("modules", storeModuleRepository.findAllByStoreIdOrderByIdAsc(store.id).stream()
+            .map(module -> Map.of(
+                "id", module.id,
+                "module_key", value(module.module_key),
+                "enabled", Boolean.TRUE.equals(module.enabled),
+                "configuration_status", value(module.configuration_status),
+                "profile_version", value(module.profile_version)
+            )).toList());
+        snapshot.put("categories", menuCategoryRepository.findAllByStoreIdOrderByIdAsc(store.id).stream()
+            .map(category -> Map.of(
+                "id", category.id,
+                "code", value(category.code),
+                "sort_order", category.sort_order == null ? 0 : category.sort_order,
+                "is_active", Boolean.TRUE.equals(category.is_active),
+                "updated_at", value(category.updated_at)
+            )).toList());
+        snapshot.put("items", menuItemRepository.findAllByStoreIdOrderByIdAsc(store.id).stream()
+            .map(item -> Map.of(
+                "id", item.id,
+                "category_id", item.category_id == null ? 0L : item.category_id,
+                "station_id", item.station_id == null ? 0L : item.station_id,
+                "sku", value(item.sku),
+                "base_price", value(item.base_price),
+                "is_active", Boolean.TRUE.equals(item.is_active),
+                "is_sold_out", Boolean.TRUE.equals(item.is_sold_out),
+                "sort_order", item.sort_order == null ? 0 : item.sort_order,
+                "updated_at", value(item.updated_at)
+            )).toList());
+        snapshot.put("mappings", masterVersion == null ? List.of() : mappingRepository
+            .findAllByStoreAndMasterVersion(store.id, masterVersion.id).stream()
+            .map(mapping -> Map.of(
+                "id", mapping.id,
+                "master_menu_version_id", mapping.master_menu_version_id,
+                "entity_type", value(mapping.entity_type),
+                "local_entity_id", mapping.local_entity_id,
+                "mapping_status", value(mapping.mapping_status)
+            )).toList());
+        snapshot.put("stations", stationRepository.findAllByStoreIdOrderByIdAsc(store.id).stream()
+            .map(station -> Map.of(
+                "id", station.id,
+                "code", value(station.code),
+                "station_type", value(station.station_type),
+                "sort_order", station.sort_order == null ? 0 : station.sort_order,
+                "is_active", Boolean.TRUE.equals(station.is_active),
+                "updated_at", value(station.updated_at)
+            )).toList());
+        snapshot.put("tables", diningTableRepository.findAllByStoreIdOrderBySortOrderAscIdAsc(store.id).stream()
+            .map(table -> Map.of(
+                "id", table.id,
+                "table_code", value(table.table_code),
+                "capacity", table.capacity == null ? 0 : table.capacity,
+                "supports_split", Boolean.TRUE.equals(table.supports_split),
+                "is_active", Boolean.TRUE.equals(table.is_active),
+                "updated_at", value(table.updated_at)
+            )).toList());
+        snapshot.put("staff", userRepository.findAllByStore_id(store.id).stream()
+            .map(user -> staffSnapshot(user, store)).toList());
+        snapshot.put("printer_roles", printerRoleRepository.findAllByStoreIdOrderByRoleCodeAsc(store.id).stream()
+            .map(role -> Map.of(
+                "id", role.id,
+                "role_code", value(role.role_code),
+                "module_code", value(role.module_code),
+                "mode", value(role.mode),
+                "enabled", Boolean.TRUE.equals(role.enabled),
+                "required", Boolean.TRUE.equals(role.required),
+                "physical_binding_status", value(role.physical_binding_status),
+                "assigned_printer_id", role.assigned_printer_id == null ? 0L : role.assigned_printer_id
+            )).toList());
+        snapshot.put("physical_printing", Map.of(
+            "printer_config_count", printerConfigRepository.findAllByStoreIdOrderByIdAsc(store.id).size(),
+            "printer_assignment_count", printerAssignmentRepository.findAllByStoreIdOrderByIdAsc(store.id).size()
+        ));
+        snapshot.put("devices", deviceReadinessRepository.findAllByStoreIdOrderByDeviceIdAsc(store.id).stream()
+            .map(readiness -> {
+                StoreDevice device = storeDeviceRepository.findByIdAndStoreId(readiness.device_id, store.id).orElse(null);
+                return Map.of(
+                    "readiness_id", readiness.id,
+                    "device_id", readiness.device_id,
+                    "device_status", device == null ? "MISSING" : value(device.status),
+                    "device_active", device != null && Boolean.TRUE.equals(device.isActive),
+                    "last_heartbeat_at", value(readiness.last_heartbeat_at),
+                    "trusted_build", Boolean.TRUE.equals(readiness.trusted_build),
+                    "worker_status", value(readiness.worker_status),
+                    "proof_status", value(readiness.proof_status),
+                    "expires_at", value(readiness.expires_at)
+                );
+            }).toList());
+        return snapshot;
+    }
+
+    private Map<String, Object> staffSnapshot(User user, Store store) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("user_id", user.getId());
+        snapshot.put("username", value(user.getUsername()));
+        snapshot.put("status", value(user.getStatus()));
+        snapshot.put("role_code", roleCode(user.getRole_id()));
+        UserCredential credential = user.getId() == null
+            ? null
+            : credentialRepository.findFirstByUserIdAndIsActiveTrue(user.getId()).orElse(null);
+        snapshot.put("credential", credential == null ? Map.of() : Map.of(
+            "id", credential.id,
+            "login_identifier", value(credential.loginIdentifier),
+            "password_algorithm", value(credential.passwordAlgorithm),
+            "is_active", Boolean.TRUE.equals(credential.isActive)
+        ));
+        StoreMembership storeMembership = user.getId() == null
+            ? null
+            : storeMembershipRepository.findFirstByUserIdAndStoreId(user.getId(), store.id).orElse(null);
+        snapshot.put("store_membership", storeMembership == null ? Map.of() : Map.of(
+            "id", storeMembership.id,
+            "organization_id", storeMembership.organizationId,
+            "role_code", value(storeMembership.roleCode),
+            "is_active", Boolean.TRUE.equals(storeMembership.isActive)
+        ));
+        OrganizationMembership organizationMembership = user.getId() == null
+            ? null
+            : organizationMembershipRepository.findFirstByUserIdAndOrganizationId(user.getId(), store.organization_id).orElse(null);
+        snapshot.put("organization_membership", organizationMembership == null ? Map.of() : Map.of(
+            "id", organizationMembership.id,
+            "organization_id", organizationMembership.organizationId,
+            "role_code", value(organizationMembership.roleCode),
+            "is_active", Boolean.TRUE.equals(organizationMembership.isActive)
+        ));
+        return snapshot;
+    }
+
+    private String value(Object value) {
+        return value == null ? "" : String.valueOf(value);
+    }
+
     private StoreReadinessResponse toResponse(
         Store store,
         StoreReadinessEvidenceEntity evidence,
+        Long historyEvidenceId,
         List<StoreReadinessResponse.Check> checks,
         boolean ready
     ) {
         StoreReadinessResponse response = new StoreReadinessResponse();
-        response.evidence_id = evidence.id;
+        response.evidence_id = historyEvidenceId;
         response.organization_id = store.organization_id;
         response.store_id = store.id;
         response.readiness_status = evidence.status;

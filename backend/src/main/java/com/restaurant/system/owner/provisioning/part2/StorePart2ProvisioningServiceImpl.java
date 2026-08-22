@@ -104,6 +104,9 @@ public class StorePart2ProvisioningServiceImpl implements StorePart2Provisioning
         requireActor(actor);
         Store store = requirePart2Store(organizationId, storeId);
         String expectedFingerprint = request == null ? null : normalize(request.expected_readiness_fingerprint);
+        if (expectedFingerprint == null || !expectedFingerprint.matches("[0-9a-fA-F]{64}")) {
+            throw conflict("PART2_READINESS_FINGERPRINT_REQUIRED", "Current readiness fingerprint is required for activation");
+        }
         String requestFingerprint = StoreProfileCanonicalJson.sha256Canonical(
             "{\"expected_readiness_fingerprint\":\"" + (expectedFingerprint == null ? "" : expectedFingerprint) + "\"}"
         );
@@ -132,7 +135,7 @@ public class StorePart2ProvisioningServiceImpl implements StorePart2Provisioning
             if (!Boolean.TRUE.equals(readiness.ready)) {
                 throw conflict("PART2_STORE_NOT_READY", "Store readiness is NOT_READY");
             }
-            if (expectedFingerprint != null && !expectedFingerprint.equals(readiness.readiness_fingerprint)) {
+            if (!expectedFingerprint.equalsIgnoreCase(readiness.readiness_fingerprint)) {
                 throw conflict("PART2_READINESS_FINGERPRINT_CONFLICT", "Readiness changed; review the current evidence before activation");
             }
             printingRuntimePolicy.requireAllowedMode(PrintingMode.MOCK);

@@ -19,6 +19,9 @@ public class PhaseBProvisioningRuntimeGate {
         if (isProductionProfile()) {
             throw forbidden("PHASE_B_PROVISIONING_FORBIDDEN_IN_PRODUCTION");
         }
+        if (!isExplicitStagingRuntime()) {
+            throw forbidden("PHASE_B_PROVISIONING_STAGING_RUNTIME_REQUIRED");
+        }
         if (!environment.getProperty("app.phase-b.provisioning.enabled", Boolean.class, false)) {
             throw forbidden("PHASE_B_PROVISIONING_DISABLED");
         }
@@ -26,12 +29,17 @@ public class PhaseBProvisioningRuntimeGate {
 
     public boolean enabled() {
         return !isProductionProfile()
+            && isExplicitStagingRuntime()
             && environment.getProperty("app.phase-b.provisioning.enabled", Boolean.class, false);
     }
 
     private boolean isProductionProfile() {
         return Arrays.stream(environment.getActiveProfiles())
             .anyMatch(profile -> "prod".equalsIgnoreCase(profile) || "production".equalsIgnoreCase(profile));
+    }
+
+    private boolean isExplicitStagingRuntime() {
+        return "staging".equalsIgnoreCase(environment.getProperty("app.phase-b.runtime", ""));
     }
 
     private OwnerStoreProvisioningException forbidden(String code) {
