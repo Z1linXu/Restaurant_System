@@ -7,15 +7,16 @@
 > notes below preserve technical context and must not be interpreted as current
 > mutation authorization.
 
-> 2026-08-22 Phase B Part 2 implementation is being delivered under the
-> current Owner authorization. The repository implementation adds additive
-> Flyway V23/V24/V25 readiness, immutable readiness evidence history, Store-local
-> provisioning ledgers, logical printer-role readiness, synthetic device proof
-> and the locked Owner activation
-> coordinator. The current implementation is fail-closed and Staging-only for
-> validation fixtures; it does not authorize real Store, credential, Printer,
-> Pad or Production mutation. Exact-SHA Staging deployment and automated
-> acceptance remain separate execution gates until their evidence is recorded.
+> 2026-08-22 Phase B Part 2 repository implementation and exact-SHA Staging
+> automated acceptance are complete on application SHA
+> `72fecac3a17e0ac40d6207f4c501eb0308210123` with Flyway V25. The implementation
+> adds additive readiness/evidence history, Store-local provisioning ledgers,
+> logical printer-role readiness, synthetic device proof and the locked Owner
+> activation coordinator. Final automated acceptance passed on synthetic Store
+> 17; Owner manual acceptance is pending. The implementation remains
+> fail-closed and Staging-only for validation fixtures: it does not authorize
+> real Store, credential, Printer, Pad or Production mutation, and Phase C
+> remains unauthorized.
 
 > 2026-08-22 Part 2 runtime repair: provisioning responses now use the
 > transactionally persisted request returned by the request coordinator, so a
