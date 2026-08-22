@@ -48,6 +48,7 @@ assert_contains 'FLYWAY_V25' "$SCRIPT"
 assert_contains 'store_readiness_evidence_history' "$SCRIPT"
 assert_contains 'printing_mode = '\''MOCK'\''' "$SCRIPT"
 assert_contains 'physical_binding_status = '\''UNBOUND'\''' "$SCRIPT"
+assert_not_contains 'cp "$LAST_RESPONSE" "$PRIVATE_ROOT/provision.response"' "$SCRIPT"
 assert_not_contains 'CHINATOWN' "$SCRIPT"
 assert_not_contains 'SAINTE' "$SCRIPT"
 ! grep -Eq '(compose (down|rm)|down -v|docker system|flyway (clean|repair)|production-exact|production-promote|printer endpoint|PAD_DIRECT)' "$SCRIPT" ||
