@@ -675,6 +675,14 @@ assert_resolved_compose() {
   RESOLVED_CONFIG=""
 }
 
+run_release_retention_dry_run() {
+  local retention_script="$SCRIPT_DIR/staging-release-retention.sh"
+  [[ -f "$retention_script" && ! -L "$retention_script" && -x "$retention_script" ]] ||
+    die "fixed Staging release-retention helper is unavailable"
+  "$retention_script" --dry-run --env-file "$ORIGINAL_ENV_FILE" ||
+    die "Staging release-retention dry-run failed; no build or start was attempted"
+}
+
 run_deploy_sequence() {
   assert_snapshot_integrity
   validate_postgres_data_path
@@ -683,6 +691,7 @@ run_deploy_sequence() {
   assert_snapshot_integrity
   validate_postgres_data_path
   assert_clean_release
+  run_release_retention_dry_run
 
   echo "Building isolated staging backend image for $STAGING_COMMIT_SHA..."
   controlled_compose "$ACTIVE_ENV_FILE" build backend ||

@@ -24,6 +24,28 @@ function itemCount(items: Array<{ quantity: number }>) {
   return items.reduce((total, item) => total + item.quantity, 0)
 }
 
+export const OFFLINE_RECONCILIATION_CONCURRENCY = 3
+
+export async function runBoundedReconciliation<T>(
+  values: readonly T[],
+  worker: (value: T) => Promise<void>,
+  isActive: () => boolean = () => true,
+  concurrency = OFFLINE_RECONCILIATION_CONCURRENCY,
+) {
+  let nextIndex = 0
+  const workerCount = Math.min(Math.max(1, concurrency), values.length)
+  const runWorker = async () => {
+    while (isActive()) {
+      const index = nextIndex
+      nextIndex += 1
+      if (index >= values.length) return
+      await worker(values[index])
+    }
+  }
+
+  await Promise.all(Array.from({ length: workerCount }, () => runWorker()))
+}
+
 export function useStoreOfflineOrders(scope: LocalDraftScope | null, enabled = true) {
   const [orders, setOrders] = useState<OfflineOrderBadge[]>([])
   const accountId = scope?.accountId ?? null
@@ -31,12 +53,16 @@ export function useStoreOfflineOrders(scope: LocalDraftScope | null, enabled = t
   const storeId = scope?.storeId ?? null
 
   useEffect(() => {
+    setOrders([])
     if (accountId == null || organizationId == null || storeId == null || !enabled) return
     const activeScope = { accountId, organizationId, storeId }
 
     let active = true
     let reloadTimer: number | null = null
-    const load = async () => {
+    let loadInFlight = false
+    let loadPending = false
+
+    const loadOnce = async () => {
       try {
         let [drafts, accountOutbox] = await Promise.all([
           listLocalDraftsForScope(activeScope),
@@ -49,16 +75,23 @@ export function useStoreOfflineOrders(scope: LocalDraftScope | null, enabled = t
         if (typeof navigator === 'undefined' || navigator.onLine) {
           let terminalRecordChanged = false
           const serverOrderIds = collectServerOrderIds(drafts, scopedOutbox)
-          await Promise.all(serverOrderIds.map(async (serverOrderId) => {
-            try {
-              const serverOrder = await fetchOrderDetail(serverOrderId)
-              if (!terminalLocalStateForServerStatus(serverOrder.status)) return
-              const finalized = await finalizeOfflineOrderRecords(activeScope, serverOrder.id, serverOrder.status)
-              terminalRecordChanged ||= finalized.drafts > 0 || finalized.outbox > 0
-            } catch {
-              // Reconciliation is best effort; offline records remain protected until the server is reachable.
-            }
-          }))
+          await runBoundedReconciliation(
+            serverOrderIds,
+            async (serverOrderId) => {
+              if (!active) return
+              try {
+                const serverOrder = await fetchOrderDetail(serverOrderId)
+                if (!active) return
+                if (!terminalLocalStateForServerStatus(serverOrder.status)) return
+                const finalized = await finalizeOfflineOrderRecords(activeScope, serverOrder.id, serverOrder.status)
+                terminalRecordChanged ||= finalized.drafts > 0 || finalized.outbox > 0
+              } catch {
+                // Reconciliation is best effort; offline records remain protected until the server is reachable.
+              }
+            },
+            () => active,
+          )
+          if (!active) return
           if (terminalRecordChanged) {
             ;[drafts, accountOutbox] = await Promise.all([
               listLocalDraftsForScope(activeScope),
@@ -67,38 +100,23 @@ export function useStoreOfflineOrders(scope: LocalDraftScope | null, enabled = t
           }
         }
         if (!active) return
-        const outboxByClientId = new Map(
-          accountOutbox
-            .filter((record) => record.organizationId === activeScope.organizationId && record.storeId === activeScope.storeId)
-            .map((record) => [record.clientOrderId, record]),
-        )
-        const seen = new Set<string>()
-        const badges: OfflineOrderBadge[] = []
 
-        drafts.forEach((draft) => {
-          if (draft.mode !== 'LOCAL_NEW_ORDER' || draft.items.length === 0) return
-          const outbox = outboxByClientId.get(draft.clientOrderId)
-          const state = outbox?.state ?? draft.submitState
-          if (!isActiveOfflineOrderState(state)) return
-          seen.add(draft.clientOrderId)
-          badges.push({
-            clientOrderId: draft.clientOrderId,
-            contextLabel: draft.context.tableNo ?? draft.context.pickupNo ?? draft.context.slotLabel,
-            tableNo: draft.context.tableNo,
-            pickupNo: draft.context.pickupNo,
-            state,
-            itemCount: itemCount(draft.items),
-            updatedAt: outbox?.updatedAt ?? draft.updatedAt,
-            lastErrorCode: outbox?.lastErrorCode ?? null,
-          })
-        })
+        const scopedLatestOutbox = accountOutbox
+          .filter((record) => record.organizationId === activeScope.organizationId && record.storeId === activeScope.storeId)
+          .reduce((records, record) => {
+            const current = records.get(record.clientOrderId)
+            if (!current || record.updatedAt.localeCompare(current.updatedAt) >= 0) {
+              records.set(record.clientOrderId, record)
+            }
+            return records
+          }, new Map<string, OrderOutboxRecord>())
+        const badgesByClientOrderId = new Map<string, OfflineOrderBadge>()
 
-        accountOutbox.forEach((outbox: OrderOutboxRecord) => {
-          if (seen.has(outbox.clientOrderId)
-            || outbox.organizationId !== activeScope.organizationId
-            || outbox.storeId !== activeScope.storeId
-            || !isActiveOfflineOrderState(outbox.state)) return
-          badges.push({
+        // The outbox is authoritative for a client id. Building it first prevents a
+        // stale draft row from duplicating or resurrecting an outbox row.
+        scopedLatestOutbox.forEach((outbox) => {
+          if (!isActiveOfflineOrderState(outbox.state)) return
+          badgesByClientOrderId.set(outbox.clientOrderId, {
             clientOrderId: outbox.clientOrderId,
             contextLabel: outbox.frozenPayload.table_no ?? outbox.frozenPayload.pickup_no ?? '本机订单',
             tableNo: outbox.frozenPayload.table_no,
@@ -109,15 +127,55 @@ export function useStoreOfflineOrders(scope: LocalDraftScope | null, enabled = t
             lastErrorCode: outbox.lastErrorCode,
           })
         })
+
+        drafts.forEach((draft) => {
+          if (draft.mode !== 'LOCAL_NEW_ORDER' || draft.items.length === 0) return
+          if (scopedLatestOutbox.has(draft.clientOrderId)) return
+          if (!isActiveOfflineOrderState(draft.submitState)) return
+          const current = badgesByClientOrderId.get(draft.clientOrderId)
+          if (current && current.updatedAt.localeCompare(draft.updatedAt) > 0) return
+          badgesByClientOrderId.set(draft.clientOrderId, {
+            clientOrderId: draft.clientOrderId,
+            contextLabel: draft.context.tableNo ?? draft.context.pickupNo ?? draft.context.slotLabel,
+            tableNo: draft.context.tableNo,
+            pickupNo: draft.context.pickupNo,
+            state: draft.submitState,
+            itemCount: itemCount(draft.items),
+            updatedAt: draft.updatedAt,
+            lastErrorCode: null,
+          })
+        })
+
+        const badges = [...badgesByClientOrderId.values()]
         badges.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
         setOrders(badges)
       } catch {
         if (active) setOrders([])
       }
     }
+
+    const load = async () => {
+      if (!active) return
+      if (loadInFlight) {
+        loadPending = true
+        return
+      }
+      loadInFlight = true
+      try {
+        do {
+          loadPending = false
+          await loadOnce()
+        } while (active && loadPending)
+      } finally {
+        loadInFlight = false
+      }
+    }
     const scheduleLoad = () => {
       if (reloadTimer != null) window.clearTimeout(reloadTimer)
-      reloadTimer = window.setTimeout(() => void load(), 80)
+      reloadTimer = window.setTimeout(() => {
+        reloadTimer = null
+        void load()
+      }, 80)
     }
 
     void load()

@@ -240,7 +240,7 @@ public class OrderController {
     }
 
     private void requirePrinting(Long storeId) {
-        moduleAccessEvaluator.requireOperationalCapability(storeId, ModuleKeys.PRINTING);
+        moduleAccessEvaluator.requireOperationalModuleEnabled(storeId, ModuleKeys.PRINTING);
     }
 
     private Long resolveOrderStoreId(Long orderId) {

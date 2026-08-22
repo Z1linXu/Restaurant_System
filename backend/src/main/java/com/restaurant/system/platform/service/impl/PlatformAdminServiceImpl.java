@@ -201,8 +201,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
 
     @Override
     public List<Station> getStations(Long storeId) {
-        return stationRepository.findAll().stream()
-            .filter(station -> storeId.equals(station.store_id))
+        return stationRepository.findAllByStoreIdOrderByIdAsc(storeId).stream()
             .sorted(Comparator.comparing((Station station) -> station.sort_order == null ? 0 : station.sort_order).thenComparing(station -> station.id))
             .toList();
     }
@@ -262,8 +261,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
 
     @Override
     public List<MenuCategory> getMenuCategories(Long storeId) {
-        return menuCategoryRepository.findAll().stream()
-            .filter(category -> storeId.equals(category.store_id))
+        return menuCategoryRepository.findAllByStoreIdOrderByIdAsc(storeId).stream()
             .sorted(Comparator.comparing((MenuCategory category) -> category.sort_order == null ? 0 : category.sort_order).thenComparing(category -> category.id))
             .toList();
     }
@@ -289,8 +287,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
 
     @Override
     public List<MenuItem> getMenuItems(Long storeId) {
-        return menuItemRepository.findAll().stream()
-            .filter(item -> storeId.equals(item.store_id))
+        return menuItemRepository.findAllByStoreIdOrderByIdAsc(storeId).stream()
             .sorted(Comparator
                 .comparing((MenuItem item) -> item.category_id == null ? Long.MAX_VALUE : item.category_id)
                 .thenComparing(item -> item.sort_order == null ? Integer.MAX_VALUE : item.sort_order)
@@ -386,11 +383,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
 
     @Override
     public List<MenuItemOption> getMenuItemOptions(Long storeId) {
-        List<Long> menuItemIds = getMenuItems(storeId).stream().map(item -> item.id).toList();
-        return menuItemOptionRepository.findAll().stream()
-            .filter(option -> menuItemIds.contains(option.menu_item_id))
-            .sorted(Comparator.comparing(option -> option.id))
-            .toList();
+        return menuItemOptionRepository.findAllByStoreIdOrderByIdAsc(storeId);
     }
 
     @Override
@@ -453,8 +446,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
 
     @Override
     public List<User> getUsers(Long storeId) {
-        return userRepository.findAll().stream()
-            .filter(user -> storeId.equals(user.getStore_id()))
+        return userRepository.findAllByStore_id(storeId).stream()
             .sorted(Comparator.comparing(User::getId))
             .toList();
     }

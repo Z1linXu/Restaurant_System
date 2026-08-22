@@ -295,7 +295,7 @@ assert_only_identity_changed() {
 }
 
 rotate_environment() {
-  local recovery_dir="$STATE_DIR/ops001-env-recovery" prior_digest next_digest marker
+  local recovery_dir="$STATE_DIR/ops001-env-recovery" prior_digest next_digest marker prior_sha
   assert_state_root_unchanged
   if [[ -e "$recovery_dir" || -L "$recovery_dir" ]]; then
     [[ -d "$recovery_dir" && ! -L "$recovery_dir" ]] || ops001_die "environment recovery directory must be a real directory"
@@ -311,6 +311,8 @@ rotate_environment() {
   prior_digest="$(ops001_file_digest "$RECOVERY_FILE")"
   RECOVERY_DIGEST="$prior_digest"
   [[ "$prior_digest" == "$ENV_DIGEST" ]] || ops001_die "environment changed while creating recovery snapshot"
+  prior_sha="$(ops001_env_value "$RECOVERY_FILE" STAGING_COMMIT_SHA || true)"
+  [[ "$prior_sha" =~ ^[0-9a-f]{40}$ ]] || ops001_die "prior Staging SHA is unavailable"
   NEXT_ENV_FILE="$(mktemp "$OPS001_EXPECTED_ROOT/config/.env.staging.next.XXXXXX")"
   replace_identity_fields "$RECOVERY_FILE" "$NEXT_ENV_FILE"
   assert_only_identity_changed "$RECOVERY_FILE" "$NEXT_ENV_FILE"
@@ -318,7 +320,7 @@ rotate_environment() {
   ops001_assert_approval_unchanged
   marker="$recovery_dir/$(basename "$RECOVERY_FILE").record"
   ROTATION_MARKER="$marker"
-  printf 'OPS001_ENV_ROTATION|STATUS|PREPARED\nOPS001_ENV_ROTATION|APPROVED_SHA|%s\nOPS001_ENV_ROTATION|PRIOR_SHA256|%s\nOPS001_ENV_ROTATION|CURRENT_SHA256|%s\n' "$APPROVED_SHA" "$prior_digest" "$next_digest" >"$marker"
+  printf 'OPS001_ENV_ROTATION|STATUS|PREPARED\nOPS001_ENV_ROTATION|APPROVED_SHA|%s\nOPS001_ENV_ROTATION|PRIOR_STAGING_SHA|%s\nOPS001_ENV_ROTATION|PRIOR_SHA256|%s\nOPS001_ENV_ROTATION|CURRENT_SHA256|%s\n' "$APPROVED_SHA" "$prior_sha" "$prior_digest" "$next_digest" >"$marker"
   chmod 600 "$marker"
   ROTATION_STATE="PREPARED"
   assert_state_root_unchanged

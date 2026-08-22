@@ -521,6 +521,18 @@ GET `/orders/{id}/print-options`
 
 Returns renderer-backed module options with availability and an unavailable reason based on feature, store mode, assignment, and printer configuration.
 
+The Store-scoped print history/options management endpoints require the
+`PRINTING` module and canonical LIVE Store lifecycle, but do not require a
+physical printer capability merely to read configuration or diagnostics.
+Runtime dispatch and reprint still enforce the selected mode, enabled output
+role, policy, assignment, device, and physical capability where applicable.
+
+Enabled output roles are evaluated independently. An excluded/disabled
+`GRAB`, `FRONTDESK_RECEIPT`, or `HOT_KITCHEN` role is `NOT_REQUIRED` and does
+not make the whole Printing module unavailable. In `MOCK`, an enabled role can
+create and render a Store-scoped PrintJob without a printer row, endpoint, or
+hardware binding; no socket/TCP transport is attempted.
+
 ### Store Printing Modes
 
 Print Center stores the active mode in `stores.printing_mode`.

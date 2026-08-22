@@ -130,6 +130,22 @@ class StoreModuleAccessEvaluatorTest {
         assertFalse(evaluation.hardwareAvailable());
         assertEquals(StoreModuleAccessEvaluator.MODULE_HARDWARE_CAPABILITY_MISSING, evaluation.errorCode());
         assertTrue(evaluation.missingHardwareCapabilities().contains(HardwareCapabilityKeys.PRINT_HOT_KITCHEN));
+        assertDoesNotThrow(() -> evaluator.requireOperationalModuleEnabled(10L, ModuleKeys.PRINTING));
+    }
+
+    @Test
+    void managementAccessStillRequiresCanonicalLiveLifecycle() {
+        Store notLiveStore = new Store();
+        notLiveStore.id = 10L;
+        notLiveStore.status = "active";
+        notLiveStore.lifecycle_status = "READY_FOR_REVIEW";
+        when(storeRepository.findById(10L)).thenReturn(java.util.Optional.of(notLiveStore));
+
+        BusinessException exception = assertThrows(
+            BusinessException.class,
+            () -> evaluator.requireOperationalModuleEnabled(10L, ModuleKeys.PRINTING)
+        );
+        assertEquals("STORE_NOT_LIVE", exception.getMessage());
     }
 
     @Test

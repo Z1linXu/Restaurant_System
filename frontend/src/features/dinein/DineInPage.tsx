@@ -13,7 +13,13 @@ import {
 import { FrontdeskTopNav } from '../frontdesk/components/FrontdeskTopNav'
 import { PrintWorkerHealthBanner } from '../frontdesk/components/PrintWorkerHealthBanner'
 import { OrderingPage } from '../ordering/OrderingPage'
-import { completeOrder, fetchOrderPrintJobs, fetchOrderPrintOptions, reprintOrderReceipt } from '../../services/orderService'
+import {
+  completeOrder,
+  fetchOrderPrintOptions,
+  reprintOrderReceipt,
+  startOrderPrintJobCoordinator,
+  type OrderPrintJobCoordinator,
+} from '../../services/orderService'
 import type { TableSlot } from '../../types/dinein'
 import type { OrderPrintOption } from '../../types/ordering'
 import type { PrintJobRecord } from '../../services/printingAdminService'
@@ -38,14 +44,6 @@ function buildGeneratedTakeoutLabel() {
   const stamp = Date.now().toString().slice(-4)
   const suffix = Math.random().toString(36).slice(2, 4).toUpperCase()
   return `TO-${stamp}${suffix}`
-}
-
-const POST_SUBMIT_PRINT_CHECK_DELAYS_MS = [1000, 3000, 6000, 10000]
-const PRINT_ATTENTION_MODULES = new Set(['GRAB', 'FRONTDESK_RECEIPT'])
-const PRINT_ATTENTION_STATUSES = new Set(['FAILED', 'CANCELLED'])
-
-function printJobNeedsAttention(job: PrintJobRecord) {
-  return PRINT_ATTENTION_MODULES.has(job.module_code) && PRINT_ATTENTION_STATUSES.has(job.status)
 }
 
 function printJobLabel(job: PrintJobRecord) {
@@ -179,8 +177,9 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     accountId: user?.id ?? null,
     organizationId,
   })
-  const printCheckTimeoutsRef = useRef<number[]>([])
+  const printCoordinatorRef = useRef<OrderPrintJobCoordinator | null>(null)
   const printCheckRunIdRef = useRef(0)
+  const printOptionsRequestIdRef = useRef(0)
   const tableBoardEnabled = activeOrderingContext == null
   const offlineOrderScope = useMemo(() => (
     user?.id && organizationId
@@ -196,7 +195,19 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
       console.error('Unable to finalize local offline order records', orderId, storageError)
     }
   }, [offlineOrderScope])
-  const { tableSlots, statusCounts, syncError, isOnline, startOrder, editOrder, endOrder, refreshFromBackend, refreshTableAfterFinish } = useTableBoard({
+  const {
+    tableSlots,
+    statusCounts,
+    syncError,
+    isLoading: tableBoardLoading,
+    isEmpty: tableBoardEmpty,
+    isOnline,
+    startOrder,
+    editOrder,
+    endOrder,
+    refreshFromBackend,
+    refreshTableAfterFinish,
+  } = useTableBoard({
     enabled: tableBoardEnabled,
     storeId,
     onOrderTerminal: finalizeTerminalOrder,
@@ -267,10 +278,11 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     }
   }, [offlineOrderScope, refreshFromBackend])
 
-  const clearPrintCheckTimeouts = () => {
-    printCheckTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId))
-    printCheckTimeoutsRef.current = []
-  }
+  const cancelPrintCoordinator = useCallback(() => {
+    printCheckRunIdRef.current += 1
+    printCoordinatorRef.current?.cancel()
+    printCoordinatorRef.current = null
+  }, [])
 
   const updateActiveOrderingContext = useCallback((
     nextContext: typeof activeOrderingContext,
@@ -285,9 +297,20 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
   }, [isIpadLandscape])
 
   useEffect(() => () => {
-    printCheckRunIdRef.current += 1
-    clearPrintCheckTimeouts()
-  }, [])
+    cancelPrintCoordinator()
+    printOptionsRequestIdRef.current += 1
+  }, [cancelPrintCoordinator])
+
+  useEffect(() => {
+    cancelPrintCoordinator()
+    printOptionsRequestIdRef.current += 1
+    setPrintAttentionMessage(null)
+    setSubmissionMessage(null)
+    setPrintTarget(null)
+    setPrintOptions([])
+    setPrintBusy(null)
+    setPrintError(null)
+  }, [cancelPrintCoordinator, storeId])
 
   useEffect(() => {
     const routeContext = parseMenuRoute(routePath, routeSearch)
@@ -374,50 +397,25 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     void refreshFromBackend()
   }
 
-  const startPostSubmitPrintCheck = (orderId: number, updateBatchId?: number | null) => {
-    clearPrintCheckTimeouts()
+  const startPostSubmitPrintCheck = useCallback((orderId: number, updateBatchId?: number | null) => {
+    cancelPrintCoordinator()
     setPrintAttentionMessage(null)
     const runId = printCheckRunIdRef.current + 1
     printCheckRunIdRef.current = runId
-
-    POST_SUBMIT_PRINT_CHECK_DELAYS_MS.forEach((delayMs) => {
-      const timeoutId = window.setTimeout(async () => {
-        if (printCheckRunIdRef.current !== runId) {
-          return
-        }
-
-        try {
-          const jobs = await fetchOrderPrintJobs(orderId)
-          const relevantJobs = jobs.filter((job) => {
-            if (!PRINT_ATTENTION_MODULES.has(job.module_code)) {
-              return false
-            }
-            return updateBatchId
-              ? job.order_update_batch_id === updateBatchId
-              : job.order_update_batch_id == null
-          })
-          const attentionJobs = relevantJobs.filter(printJobNeedsAttention)
-          if (attentionJobs.length) {
-            setPrintAttentionMessage(buildPostSubmitPrintAttentionMessage(attentionJobs))
-            clearPrintCheckTimeouts()
-            return
-          }
-
-          const printedModules = new Set(
-            relevantJobs
-              .filter((job) => job.status === 'PRINTED')
-              .map((job) => job.module_code),
-          )
-          if (printedModules.has('GRAB') && printedModules.has('FRONTDESK_RECEIPT')) {
-            clearPrintCheckTimeouts()
-          }
-        } catch {
-          // Keep this as a best-effort visibility check; order success should not depend on it.
-        }
-      }, delayMs)
-      printCheckTimeoutsRef.current.push(timeoutId)
+    printCoordinatorRef.current = startOrderPrintJobCoordinator({
+      storeId,
+      orderId,
+      updateBatchId,
+      onAttention: (attentionJobs) => {
+        if (printCheckRunIdRef.current !== runId) return
+        setPrintAttentionMessage(buildPostSubmitPrintAttentionMessage(attentionJobs))
+      },
+      onUnavailable: () => {
+        if (printCheckRunIdRef.current !== runId) return
+        setPrintAttentionMessage('订单已提交，但当前门店暂时无法读取打印状态；请稍后在订单记录或打印中心检查。')
+      },
     })
-  }
+  }, [cancelPrintCoordinator, storeId])
 
   const handleFinish = async (slot: TableSlot) => {
     if (!slot.orderDbId) {
@@ -455,33 +453,83 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     setPrintTarget(slot)
     setPrintOptions([])
     setPrintError(null)
+    const requestId = printOptionsRequestIdRef.current + 1
+    printOptionsRequestIdRef.current = requestId
     try {
-      setPrintOptions(await fetchOrderPrintOptions(slot.orderDbId))
+      const options = await fetchOrderPrintOptions(slot.orderDbId)
+      if (printOptionsRequestIdRef.current !== requestId) return
+      setPrintOptions(options)
     } catch (error) {
-      setPrintError(error instanceof Error ? error.message : 'Failed to load print options')
+      if (printOptionsRequestIdRef.current === requestId) {
+        setPrintError(error instanceof Error ? error.message : 'Failed to load print options')
+      }
     }
   }
 
   const handleManualReprint = async (option: OrderPrintOption) => {
-    if (!printTarget?.orderDbId || !option.available) {
+    const target = printTarget
+    const requestId = printOptionsRequestIdRef.current
+    if (!target?.orderDbId || !option.available) {
       return
     }
     try {
       setPrintBusy(option.module_code)
       setPrintError(null)
-      const result = await reprintOrderReceipt(printTarget.orderDbId, option.module_code)
+      const result = await reprintOrderReceipt(target.orderDbId, option.module_code)
+      if (printOptionsRequestIdRef.current !== requestId) return
       if (result.status !== 'PRINTED') {
         throw new Error(result.error_message ?? 'Print failed')
       }
-      setSubmissionMessage(`${option.label} sent for ${formatSplitSlotLabel(printTarget.label)}.`)
+      setSubmissionMessage(`${option.label} sent for ${formatSplitSlotLabel(target.label)}.`)
       setPrintAttentionMessage(null)
       setPrintTarget(null)
     } catch (error) {
-      setPrintError(error instanceof Error ? error.message : 'Print failed')
+      if (printOptionsRequestIdRef.current === requestId) {
+        setPrintError(error instanceof Error ? error.message : 'Print failed')
+      }
     } finally {
-      setPrintBusy(null)
+      if (printOptionsRequestIdRef.current === requestId) {
+        setPrintBusy(null)
+      }
     }
   }
+
+  const tableBoardContent = tableBoardLoading && visibleSlots.length === 0
+    ? (
+      <div className="flex min-h-48 items-center justify-center rounded-[24px] bg-white/60 px-5 py-8 text-center font-semibold text-[var(--muted)]">
+        Loading tables…
+      </div>
+    )
+    : tableBoardEmpty && syncError
+      ? (
+        <div className="flex min-h-48 flex-col items-center justify-center rounded-[24px] border border-[rgba(151,34,34,0.2)] bg-[rgba(151,34,34,0.08)] px-5 py-8 text-center text-[rgb(116,22,22)]">
+          <p className="font-semibold">{syncError}</p>
+          <button type="button" className="mt-4 min-h-11 rounded-full bg-[var(--primary)] px-5 py-2 font-black text-white" onClick={() => void refreshFromBackend({ force: true })}>
+            Retry
+          </button>
+        </div>
+      )
+      : tableBoardEmpty
+        ? (
+          <div className="flex min-h-48 items-center justify-center rounded-[24px] bg-white/60 px-5 py-8 text-center font-semibold text-[var(--muted)]">
+            No dining tables are configured for this store.
+          </div>
+        )
+        : (
+          <>
+            <TableStatusLegend counts={statusCounts} compact={workstationCompact} />
+            <TableGrid
+              slots={visibleSlots}
+              onEntrySelect={handleEntrySelect}
+              onStart={handleStart}
+              onEdit={handleEdit}
+              onPrint={(slot) => void handlePrint(slot)}
+              onFinish={(slot) => void handleFinish(slot)}
+              compact={workstationCompact}
+              offlineOrders={offlineOrders}
+            />
+          </>
+        )
 
   if (activeOrderingContext) {
     return (
@@ -543,7 +591,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
               </div>
             ) : null}
 
-            {syncError || !isOnline ? (
+            {(syncError && visibleSlots.length > 0) || !isOnline ? (
               <div className="rounded-[20px] border border-[rgba(151,34,34,0.2)] bg-[rgba(151,34,34,0.08)] px-4 py-3 text-[0.92rem] font-semibold text-[rgb(116,22,22)]">
                 {syncError ?? '当前设备离线，请检查网络后重试 / Device is offline. Please check the network and try again.'}
                 <button type="button" className="ml-3 font-black underline" onClick={() => void refreshFromBackend({ force: true })}>
@@ -563,17 +611,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
             />
 
             <Card tone="base" className={`bg-[rgba(255,255,255,0.36)] shadow-none ring-0 ${workstationCompact ? 'space-y-3 rounded-[24px] p-3.5' : 'space-y-5 rounded-[30px] p-4 md:p-5 xl:p-5'}`}>
-              <TableStatusLegend counts={statusCounts} compact={workstationCompact} />
-              <TableGrid
-                slots={visibleSlots}
-                onEntrySelect={handleEntrySelect}
-                onStart={handleStart}
-                onEdit={handleEdit}
-                onPrint={(slot) => void handlePrint(slot)}
-                onFinish={(slot) => void handleFinish(slot)}
-                compact={workstationCompact}
-                offlineOrders={offlineOrders}
-              />
+              {tableBoardContent}
             </Card>
           </div>
         </div>
@@ -611,7 +649,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
                 </div>
               ) : null}
 
-              {syncError || !isOnline ? (
+              {(syncError && visibleSlots.length > 0) || !isOnline ? (
                 <div className="rounded-[24px] border border-[rgba(151,34,34,0.2)] bg-[rgba(151,34,34,0.08)] px-5 py-4 text-base font-semibold text-[rgb(116,22,22)]">
                   {syncError ?? '当前设备离线，请检查网络后重试 / Device is offline. Please check the network and try again.'}
                   <button type="button" className="ml-3 font-black underline" onClick={() => void refreshFromBackend({ force: true })}>
@@ -630,30 +668,21 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
               />
 
               <Card tone="base" className="space-y-5 rounded-[30px] bg-[rgba(255,255,255,0.36)] p-4 md:p-5 xl:p-5 shadow-none ring-0">
-                <TableStatusLegend counts={statusCounts} />
-                <TableGrid
-                  slots={visibleSlots}
-                  onEntrySelect={handleEntrySelect}
-                  onStart={handleStart}
-                  onEdit={handleEdit}
-                  onPrint={(slot) => void handlePrint(slot)}
-                  onFinish={(slot) => void handleFinish(slot)}
-                  offlineOrders={offlineOrders}
-                />
+                {tableBoardContent}
               </Card>
             </div>
           </div>
         </div>
       )}
       {printTarget ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(25,20,18,0.36)] p-4" onClick={() => setPrintTarget(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(25,20,18,0.36)] p-4" onClick={() => { printOptionsRequestIdRef.current += 1; setPrintTarget(null) }}>
           <div className="w-full max-w-md rounded-[28px] bg-white p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold text-[var(--muted)]">Print current full order</p>
                 <h2 className="mt-1 text-2xl font-extrabold">{formatSplitSlotLabel(printTarget.label)}</h2>
               </div>
-              <button type="button" className="rounded-full px-3 py-2 font-bold" onClick={() => setPrintTarget(null)}>Close</button>
+              <button type="button" className="rounded-full px-3 py-2 font-bold" onClick={() => { printOptionsRequestIdRef.current += 1; setPrintTarget(null) }}>Close</button>
             </div>
             {printError ? <div className="mt-4 rounded-[16px] bg-red-50 px-4 py-3 font-semibold text-red-700">{printError}</div> : null}
             <div className="mt-5 space-y-3">
