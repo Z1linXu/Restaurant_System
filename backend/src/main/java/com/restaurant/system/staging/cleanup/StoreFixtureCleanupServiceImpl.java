@@ -22,7 +22,6 @@ import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -121,7 +120,7 @@ public class StoreFixtureCleanupServiceImpl implements StoreFixtureCleanupServic
     }
 
     @Override
-    @Transactional(isolation = Isolation.SERIALIZABLE)
+    @Transactional
     public StoreFixtureCleanupResponse cleanup(
         AuthenticatedUser actor,
         Long organizationId,
@@ -241,7 +240,7 @@ public class StoreFixtureCleanupServiceImpl implements StoreFixtureCleanupServic
             throw conflict("STAGING_FIXTURE_CLEANUP_IN_PROGRESS", "An identical cleanup request is already in progress");
         }
         LocalDateTime now = LocalDateTime.now();
-        jdbcTemplate.update(
+        int inserted = jdbcTemplate.update(
             "insert into staging_store_fixture_cleanup_requests "
                 + "(organization_id, idempotency_key, request_fingerprint, status, store_ids_json, "
                 + "approved_owner_manual_store_ids_json, actor_user_id, created_at, updated_at) "
@@ -256,6 +255,25 @@ public class StoreFixtureCleanupServiceImpl implements StoreFixtureCleanupServic
             now,
             now
         );
+        if (inserted == 0) {
+            List<Map<String, Object>> concurrentRows = jdbcTemplate.queryForList(
+                "select request_fingerprint, status, result_json from staging_store_fixture_cleanup_requests "
+                    + "where organization_id = ? and idempotency_key = ? for update",
+                organizationId,
+                idempotencyKey
+            );
+            if (concurrentRows.isEmpty()) {
+                throw conflict("STAGING_FIXTURE_CLEANUP_LEDGER_RECHECK_FAILED", "Concurrent cleanup ledger row could not be re-read");
+            }
+            Map<String, Object> row = concurrentRows.get(0);
+            if (!requestFingerprint.equalsIgnoreCase(String.valueOf(row.get("request_fingerprint")))) {
+                throw conflict("STAGING_FIXTURE_CLEANUP_IDEMPOTENCY_CONFLICT", "Idempotency-Key was already used for a different cleanup request");
+            }
+            if ("COMPLETED".equalsIgnoreCase(String.valueOf(row.get("status")))) {
+                return new LedgerReservation(true, (String) row.get("result_json"));
+            }
+            throw conflict("STAGING_FIXTURE_CLEANUP_IN_PROGRESS", "An identical cleanup request is already in progress");
+        }
         return new LedgerReservation(false, null);
     }
 

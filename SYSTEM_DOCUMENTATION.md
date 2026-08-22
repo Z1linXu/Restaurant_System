@@ -8716,5 +8716,6 @@ Store-local fixture rows are removed transactionally only after dependency and
 FK preflight. STG005/source/reference Store 1, Chain Master Menu, Store Profile,
 Master identity, shared authority and historical evidence remain protected.
 The additive V26 cleanup ledger makes execute replay and changed-key conflicts
-auditable; the transaction uses a serializable boundary for concurrent writes.
+auditable; ordered Store locks and a per-key advisory lock serialize cleanup
+requests without weakening the existing Store boundary.
 Production is fail-closed and has no mutation path.

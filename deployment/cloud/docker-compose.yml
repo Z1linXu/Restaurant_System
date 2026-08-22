@@ -35,6 +35,7 @@ services:
       JAVA_OPTS: ${JAVA_OPTS:-}
       TZ: ${TZ:-America/Toronto}
       APP_ENVIRONMENT: production
+      FLYWAY_TARGET: "10"
     expose:
       - "8080"
     depends_on:

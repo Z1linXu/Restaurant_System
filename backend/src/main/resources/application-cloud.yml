@@ -10,6 +10,7 @@ spring:
     show-sql: false
   flyway:
     enabled: true
+    target: ${FLYWAY_TARGET:latest}
     locations: classpath:db/migration
     baseline-on-migrate: true
     baseline-version: 1

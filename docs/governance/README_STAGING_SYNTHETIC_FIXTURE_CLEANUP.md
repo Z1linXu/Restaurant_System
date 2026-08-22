@@ -65,10 +65,10 @@ Store code/profile/master snapshots and is never deleted. Chain Master Menu,
 Store Profile, Master identity and shared authority tables are not in the
 delete set.
 
-The serializable transaction, ordered Store row locks and V26 ledger make
-execute replay idempotent: absent target Store rows are reported as
+The transaction, ordered Store row locks, per-key advisory lock and V26 ledger
+make execute replay idempotent: absent target Store rows are reported as
 `ALREADY_CLEANED` and do not create or delete new data. A failed preflight,
-serialization conflict or failed statement aborts the whole transaction.
+ledger recheck or failed statement aborts the whole transaction.
 
 ## Operator usage
 
