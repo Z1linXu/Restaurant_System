@@ -21,7 +21,8 @@ class PhaseBProvisioningRuntimeGateTest {
     void stagingMarkerAndGateAreRequiredTogether() {
         MockEnvironment environment = new MockEnvironment()
             .withProperty("app.phase-b.provisioning.enabled", "true")
-            .withProperty("app.phase-b.runtime", "staging");
+            .withProperty("app.phase-b.runtime", "staging")
+            .withProperty("app.environment", "staging");
 
         assertDoesNotThrow(() -> new PhaseBProvisioningRuntimeGate(environment).requireEnabled());
     }
@@ -30,8 +31,18 @@ class PhaseBProvisioningRuntimeGateTest {
     void productionProfileRemainsForbiddenEvenWithStagingMarker() {
         MockEnvironment environment = new MockEnvironment()
             .withProperty("app.phase-b.provisioning.enabled", "true")
-            .withProperty("app.phase-b.runtime", "staging");
+            .withProperty("app.phase-b.runtime", "staging")
+            .withProperty("app.environment", "staging");
         environment.setActiveProfiles("cloud", "production");
+
+        assertThrows(RuntimeException.class, () -> new PhaseBProvisioningRuntimeGate(environment).requireEnabled());
+    }
+
+    @Test
+    void stagingMarkerWithoutImmutableEnvironmentMarkerIsForbidden() {
+        MockEnvironment environment = new MockEnvironment()
+            .withProperty("app.phase-b.provisioning.enabled", "true")
+            .withProperty("app.phase-b.runtime", "staging");
 
         assertThrows(RuntimeException.class, () -> new PhaseBProvisioningRuntimeGate(environment).requireEnabled());
     }

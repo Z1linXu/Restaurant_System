@@ -8704,3 +8704,18 @@ configuration and its STOMP publisher, while providing a profile-specific
 no-op `RealtimeEventPublisher` so ordinary service wiring remains valid.
 This boundary is limited to the non-web one-shot; normal web realtime behavior
 is unchanged.
+
+## Staging synthetic/test fixture cleanup boundary
+
+The bounded Store fixture cleanup path is documented in
+`docs/governance/README_STAGING_SYNTHETIC_FIXTURE_CLEANUP.md`. It is a separate
+Owner-authorized Staging reconciliation endpoint, not general Store deletion.
+It requires exact Organization Owner authorization, the explicit Staging Phase
+B runtime gate, explicit audited Store IDs and a dry-run before execution.
+Store-local fixture rows are removed transactionally only after dependency and
+FK preflight. STG005/source/reference Store 1, Chain Master Menu, Store Profile,
+Master identity, shared authority and historical evidence remain protected.
+The additive V26 cleanup ledger makes execute replay and changed-key conflicts
+auditable; ordered Store locks and a per-key advisory lock serialize cleanup
+requests without weakening the existing Store boundary.
+Production is fail-closed and has no mutation path.

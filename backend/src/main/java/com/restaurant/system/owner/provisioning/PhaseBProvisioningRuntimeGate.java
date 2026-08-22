@@ -39,7 +39,8 @@ public class PhaseBProvisioningRuntimeGate {
     }
 
     private boolean isExplicitStagingRuntime() {
-        return "staging".equalsIgnoreCase(environment.getProperty("app.phase-b.runtime", ""));
+        return "staging".equalsIgnoreCase(environment.getProperty("app.phase-b.runtime", ""))
+            && "staging".equalsIgnoreCase(environment.getProperty("app.environment", ""));
     }
 
     private OwnerStoreProvisioningException forbidden(String code) {
