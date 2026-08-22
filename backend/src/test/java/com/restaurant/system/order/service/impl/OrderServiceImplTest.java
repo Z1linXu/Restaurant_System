@@ -1051,6 +1051,78 @@ class OrderServiceImplTest {
     }
 
     @Test
+    void dynamicAddonAndRemoveRemainVisibleOnOriginalKitchenTask() {
+        MenuItemOption beefTendon = menuOption(
+            106L, "addon", "s", "ADD_ON", "加牛筋", "Extra Beef Tendon", new BigDecimal("6.99")
+        );
+        MenuItemOption removeBokChoy = menuOption(
+            107L, "remove", "removebaicai", "REMOVE", "走上海青", "No Bok Choy", BigDecimal.ZERO
+        );
+        Map<Long, MenuItemOption> optionsById = Map.of(beefTendon.id, beefTendon, removeBokChoy.id, removeBokChoy);
+        when(menuItemOptionRepository.findById(anyLong())).thenAnswer(invocation ->
+            Optional.ofNullable(optionsById.get(invocation.<Long>getArgument(0)))
+        );
+
+        CreateOrderItemRequest itemRequest = new CreateOrderItemRequest();
+        itemRequest.menu_item_id = menuItem.id;
+        itemRequest.quantity = 1;
+        itemRequest.options = List.of(optionRequest(beefTendon.id, 1), optionRequest(removeBokChoy.id, 1));
+
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.store_id = store.id;
+        request.created_by = 1L;
+        request.order_type = "dine_in";
+        request.table_no = "T-DYNAMIC";
+        request.items = List.of(itemRequest);
+
+        OrderResponse submittedOrder = orderService.submitOrder(orderService.createOrder(request).id);
+        List<KitchenTask> tasks = kitchenTaskRepository.findAllByOrderId(submittedOrder.id);
+
+        assertEquals(1, tasks.size());
+        assertTrue(tasks.get(0).special_instructions_snapshot.contains("+牛筋 走上海青"));
+    }
+
+    @Test
+    void dynamicAddonUsesSameFailVisibleContractOnUpdateBatch() {
+        MenuItemOption beefTendon = menuOption(
+            108L, "addon", "future_dynamic_code", "ADD_ON", "加牛筋", "Extra Beef Tendon", new BigDecimal("6.99")
+        );
+        when(menuItemOptionRepository.findById(beefTendon.id)).thenReturn(Optional.of(beefTendon));
+
+        CreateOrderItemRequest originalItem = new CreateOrderItemRequest();
+        originalItem.menu_item_id = menuItem.id;
+        originalItem.quantity = 1;
+        CreateOrderRequest originalRequest = new CreateOrderRequest();
+        originalRequest.store_id = store.id;
+        originalRequest.created_by = 1L;
+        originalRequest.order_type = "dine_in";
+        originalRequest.table_no = "T-DYNAMIC-UPDATE";
+        originalRequest.items = List.of(originalItem);
+        OrderResponse submitted = orderService.submitOrder(orderService.createOrder(originalRequest).id);
+
+        CreateOrderItemRequest addedItem = new CreateOrderItemRequest();
+        addedItem.menu_item_id = menuItem.id;
+        addedItem.quantity = 1;
+        addedItem.options = List.of(optionRequest(beefTendon.id, 2));
+        CreateOrderUpdateRequest update = new CreateOrderUpdateRequest();
+        update.idempotency_key = "dynamic-addon-update";
+        update.items = List.of(addedItem);
+
+        var result = orderService.createOrderUpdate(submitted.id, update, 1L);
+        Long addedItemId = result.order.items.stream()
+            .filter(item -> result.update_batch_id.equals(item.order_update_batch_id))
+            .map(item -> item.id)
+            .findFirst()
+            .orElseThrow();
+        KitchenTask updateTask = kitchenTaskRepository.findAllByOrderId(submitted.id).stream()
+            .filter(task -> addedItemId.equals(task.order_item_id))
+            .findFirst()
+            .orElseThrow();
+
+        assertTrue(updateTask.special_instructions_snapshot.contains("+牛筋x2"));
+    }
+
+    @Test
     void removeBokChoyKeepsFullKitchenInstructionName() {
         MenuItemOption removeBokChoy = menuOption(103L, "remove", "remove_bok_choy", "REMOVE", "走上海青", "No Bok Choy", BigDecimal.ZERO);
         when(menuItemOptionRepository.findById(anyLong())).thenAnswer(invocation -> {

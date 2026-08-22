@@ -12,6 +12,7 @@ narrative is preserved in [`docs/archive`](../archive/README.md). Priority uses
 | PB2-PROVISION | FUTURE | NOT_AUTHORIZED | P2 | Phase B Part 2 | No for Part 1 | Complete tables/stations, staff/access, printing topology, device enrollment, validation, READY and activation workflow. | [`ROADMAP.md`](ROADMAP.md), [`drafts/`](drafts/) |
 | PC-MULTISTORE | FUTURE | NOT_AUTHORIZED | P2 | Phase C | No | Prove Chinatown then Sainte-Catherine through accepted Phase B provisioning without special branches or SQL shortcuts. | [`ROADMAP.md`](ROADMAP.md) |
 | DOC-TECH-SLIM | TECH_DEBT | DEFERRED | P3 | Governance | No | Reduce remaining technical-document drift only when maintenance pressure justifies a separate scoped package. | [`AUTHORITY.md`](AUTHORITY.md) |
+| OPTION-CODE-STABILITY | TECH_DEBT | DEFERRED | P2 | Phase B / Menu identity | No for current acceptance | Audit and then enforce a stable generation, uniqueness scope and post-creation immutability contract for Store-local `menu_item_options.option_code`. Staging evidence has shown one option snapshot changing from `jianiujin` to `s`, which can break Display Rule binding, historical semantic correlation and future dynamic-option stability. Do not add a constraint or rewrite historical snapshots without a separately authorized compatibility/backfill design. | [`SYSTEM_DOCUMENTATION.md`](../../SYSTEM_DOCUMENTATION.md), [`doc/API.md`](../../doc/API.md) |
 
 ## Backlog rules
 

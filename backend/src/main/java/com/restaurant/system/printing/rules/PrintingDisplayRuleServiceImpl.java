@@ -12,6 +12,7 @@ import com.restaurant.system.printing.rules.dto.PrintingDisplayRulePreviewRespon
 import com.restaurant.system.printing.rules.dto.PrintingDisplayRuleRevisionResponse;
 import com.restaurant.system.printing.rules.dto.PrintingDisplayRuleSettingsResponse;
 import com.restaurant.system.printing.rules.dto.PrintingDisplayRuleValidationResponse;
+import com.restaurant.system.printing.semantic.KitchenModifierTokenResolver;
 import com.restaurant.system.user.repository.StoreRepository;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -741,13 +742,13 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
     private String buildPreviewModifiers(PrintingDisplayRuleContext context, List<String> addCodes, List<String> removeCodes) {
         List<String> tokens = new ArrayList<>();
         for (String code : addCodes == null ? List.<String>of() : addCodes) {
-            String token = context.resolveModifierToken("MODIFIER_ADD", code, null);
+            String token = KitchenModifierTokenResolver.resolveAddon("ADD_ON", code, code, null, 1, context);
             if (token != null && !token.isBlank()) {
                 tokens.add(token);
             }
         }
         for (String code : removeCodes == null ? List.<String>of() : removeCodes) {
-            String token = context.resolveModifierToken("MODIFIER_REMOVE", code, null);
+            String token = KitchenModifierTokenResolver.resolveRemove(code, code, null, context);
             if (token != null && !token.isBlank()) {
                 tokens.add(token);
             }

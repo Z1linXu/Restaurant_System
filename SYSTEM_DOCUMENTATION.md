@@ -19,6 +19,21 @@
 > a canonical `SIZE` row with a missing code remains invalid. No schema or data
 > backfill is required.
 
+> Kitchen modifier presentation contract: Menu Management defines orderable
+> Store options, while Store-scoped Printing Display Rules are optional wording
+> overrides and never admission control. `KitchenModifierTokenResolver` uses
+> frozen `OrderItemOption` group/code/name/quantity snapshots for both order
+> submission and HOT_KITCHEN re-rendering. Known ADD_ON/REMOVE codes retain
+> their existing shorthand; an unknown, Store-only or legacy code falls back
+> visibly to the frozen label (`加牛筋` -> `+牛筋`) instead of being silently
+> dropped. Display labels are presentation fallback only and are not used for
+> Combo identity, deduplication, station routing or Store isolation. Printing
+> preview uses the same resolver; because its existing request supplies sample
+> codes rather than order snapshots, an unknown preview code is itself the
+> visible sample label. Existing nonblank `PrintJob.rendered_text_snapshot`
+> reprints, FRONTDESK_RECEIPT, Combo component/egg semantics, station routing
+> and MOCK/REAL/PAD_DIRECT transport remain unchanged.
+
 > 2026-08-21 Phase B Part 1 Staging automated acceptance: exact merged runtime
 > `96c81cf4fab8e771187ceeddeed28e5fc3e87f4a` is deployed to isolated Staging
 > with Flyway V21. Canonical acceptance created inactive validation Store 11,
