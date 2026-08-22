@@ -315,3 +315,45 @@ Report in Chinese:
 
 Never continue into a new Phase or Production merely because the current task
 completed successfully.
+
+## 19. Execution Time Breakdown
+
+After every substantive engineering task, the final Owner-facing report must
+include an `Execution Time Breakdown` with these stages:
+
+- Investigation / Planning
+- Implementation
+- Tests
+- Agent 6 / PR / Merge
+- Staging Deploy
+- Staging Acceptance
+- Evidence / Governance
+- Total
+
+Prefer actual wall-clock time. If a stage was not executed, report `N/A` or
+`Not required`; if time can only be estimated, mark it `Estimated`. `Total`
+must cover the actual interval from the start of the task through the final
+Stop. Add a brief reason for materially long stages, such as full regression,
+Maven/npm build, Agent 6 re-review, Staging image build, Flyway,
+readiness wait, acceptance replay, repair or redeploy. Include retries in the
+stage total and note their count and reason.
+
+Do not add frequent polling or progress wake-ups solely for timing, and do not
+weaken the existing long-running asynchronous-work or token-efficiency rules.
+Documentation-only or trivial mechanical tasks may use a simplified report,
+but must still include Implementation, Validation and Total. This reporting
+rule changes only the final report; it does not change testing, Agent 6, PR,
+Staging or Owner Gate requirements.
+
+Recommended format:
+
+| Stage | Time | Notes |
+| --- | ---: | --- |
+| Investigation / Planning | ... | ... |
+| Implementation | ... | ... |
+| Tests | ... | ... |
+| Agent 6 / PR / Merge | ... | ... |
+| Staging Deploy | ... | ... |
+| Staging Acceptance | ... | ... |
+| Evidence / Governance | ... | ... |
+| Total | ... | ... |

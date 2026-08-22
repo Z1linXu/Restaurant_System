@@ -17,6 +17,7 @@ staging:
   flyway: V25
   acceptance: PHASE_B_PART2_STAGING_AUTOMATED_ACCEPTANCE_PASS
   evidence: PHASE_B_PART2_STAGING_AUTOMATED_ACCEPTANCE_EVIDENCE.md
+  cleanup_evidence: PHASE_B_STAGING_STORE_CLEANUP_EVIDENCE.md
 
 production:
   deployed_sha: 3ec4d88a47f68e05b92d9246bfd63af2d1f297f9
