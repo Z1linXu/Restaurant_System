@@ -419,8 +419,13 @@ device_readiness_acceptance() {
   printf 'PHASE_B_PART2_ACCEPTANCE|DEVICE_MISSING_PREREQUISITE|PASS\n'
 
   db_expect_pass DEVICE_TTL_EXPIRY "
-update store_device_readiness set expires_at = CURRENT_TIMESTAMP - interval '1 second' where store_id = $STORE_ID and device_id = $DEVICE_ID;
-select case when exists(select 1 from store_device_readiness where store_id = $STORE_ID and device_id = $DEVICE_ID and expires_at < CURRENT_TIMESTAMP) then 'PASS' else 'FAIL TTL was not expired' end;
+with expired as (
+  update store_device_readiness
+  set expires_at = CURRENT_TIMESTAMP - interval '1 second'
+  where store_id = $STORE_ID and device_id = $DEVICE_ID
+  returning expires_at
+)
+select case when exists(select 1 from expired where expires_at < CURRENT_TIMESTAMP) then 'PASS' else 'FAIL TTL was not expired' end;
 "
   api_call readiness_ttl_expired GET "/owner/organizations/$ORGANIZATION_ID/stores/$STORE_ID/phase-b/part2/readiness" "" "$ACCESS_TOKEN" ""
   reject_secret_fields readiness_ttl_expired
