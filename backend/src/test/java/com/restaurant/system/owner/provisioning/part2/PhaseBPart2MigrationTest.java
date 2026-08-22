@@ -33,5 +33,14 @@ class PhaseBPart2MigrationTest {
         assertFalse(hardeningSql.contains("password_hash"));
         assertFalse(hardeningSql.contains("device_token"));
         assertFalse(hardeningSql.contains("ip_address"));
+
+        Path compatibilityMigration = Path.of("src/main/resources/db/migration/V25__widen_phase_b_device_contract_version.sql");
+        String compatibilitySql = Files.readString(compatibilityMigration).toLowerCase();
+        assertTrue(compatibilitySql.contains("alter table store_device_readiness"));
+        assertTrue(compatibilitySql.contains("alter column contract_version type varchar(64)"));
+        assertFalse(compatibilitySql.contains("drop table"));
+        assertFalse(compatibilitySql.contains("password_hash"));
+        assertFalse(compatibilitySql.contains("device_token"));
+        assertFalse(compatibilitySql.contains("ip_address"));
     }
 }

@@ -24,3 +24,4 @@
 22|V22__repair_printing_display_rule_revision_lifecycle.sql|-699128137
 23|V23__add_phase_b_part2_readiness_and_activation.sql|-1207640832
 24|V24__harden_phase_b_part2_evidence_and_device_heartbeat.sql|755635947
+25|V25__widen_phase_b_device_contract_version.sql|-1891760137

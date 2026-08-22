@@ -25,7 +25,7 @@ The normal sequence is:
 
 1. exact-SHA release preparation and STG-004 preflight;
 2. `staging-deploy.sh` validation/start using the same full SHA;
-3. health, Flyway V24 and restart-safety evidence;
+3. health, Flyway V25 and restart-safety evidence;
 4. `staging-phase-b-part2-acceptance.sh --validate`;
 5. Owner-approved `--execute-runtime --action phase-b-part2-acceptance`.
 
@@ -40,7 +40,7 @@ acceptance; any later cleanup is a separately reviewed Staging reconciliation.
 
 The helper checks, in order:
 
-- exact release SHA, environment/preflight/approval binding, health, Flyway V24
+- exact release SHA, environment/preflight/approval binding, health, Flyway V25
   and fixed Staging project identity;
 - initial `NOT_READY`, duplicate printer-module failure rollback and failed
   request ledger;
