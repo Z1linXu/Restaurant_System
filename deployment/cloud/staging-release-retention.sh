@@ -172,8 +172,30 @@ validate_reference_tree() {
     else
       hygiene_die "protected reference tree contains a non-regular path: $path"
     fi
-  done < <(find -P "$root" -mindepth 1 -print)
+  done < <(
+    if [[ "$root" == "$STATE_DIR" ]]; then
+      find -P "$root" -path "$STATE_DIR/postgres" -prune -o -mindepth 1 -print
+    else
+      find -P "$root" -mindepth 1 -print
+    fi
+  )
   return 0
+}
+
+validate_postgres_boundary() {
+  local path="$STATE_DIR/postgres" owner mode permissions group other
+  [[ "$path" == "$HYGIENE_EXPECTED_ROOT/state/postgres" ]] || hygiene_die "PostgreSQL protected path changed"
+  [[ -d "$path" && ! -L "$path" ]] || hygiene_die "PostgreSQL protected path must be a real directory"
+  owner="$(hygiene_file_owner "$path")"
+  [[ "$owner" == "$(id -u)" || "$owner" == "70" ]] || hygiene_die "PostgreSQL protected path owner is unsafe"
+  mode="$(hygiene_file_mode "$path")"
+  [[ "$mode" =~ ^[0-7]{3,4}$ ]] || hygiene_die "PostgreSQL protected path mode is unavailable"
+  permissions="${mode: -3}"
+  group="${permissions:1:1}"
+  other="${permissions:2:1}"
+  if (( (group & 2) != 0 || (other & 2) != 0 )); then
+    hygiene_die "PostgreSQL protected path is group or other writable"
+  fi
 }
 
 is_retention_plan_file() {
@@ -201,7 +223,13 @@ collect_reference_shas() {
         add_protected_sha "$sha" "evidence_or_recovery_reference" "$base"
       done < <(printf '%s\n' "$line" | grep -Eo '[0-9a-f]{40}' || true)
     done <"$path"
-  done < <(find -P "$tree" -type f -print)
+  done < <(
+    if [[ "$tree" == "$STATE_DIR" ]]; then
+      find -P "$tree" -path "$STATE_DIR/postgres" -prune -o -type f -print
+    else
+      find -P "$tree" -type f -print
+    fi
+  )
 }
 
 discover_previous_verified_sha() {
@@ -215,7 +243,7 @@ discover_previous_verified_sha() {
       newest_mtime="$mtime"
       newest_path="$path"
     fi
-  done < <(find -P "$STATE_DIR" -type f -name '*.record' -print)
+  done < <(find -P "$STATE_DIR" -path "$STATE_DIR/postgres" -prune -o -type f -name '*.record' -print)
   [[ -n "$newest_path" ]] || return 0
   candidate="$(awk -F'|' '$1 == "OPS001_ENV_ROTATION" && $2 == "PRIOR_STAGING_SHA" { print $3; exit }' "$newest_path")"
   [[ -z "$candidate" || "$candidate" =~ ^[0-9a-f]{40}$ ]] || hygiene_die "previous verified SHA marker is malformed"
@@ -337,6 +365,7 @@ prepare_scope() {
   CURRENT_SHA="$HYGIENE_CURRENT_SHA"
   validate_release_root
   validate_state_and_evidence_roots
+  validate_postgres_boundary
   validate_repository
   validate_reference_tree "$STATE_DIR"
   validate_reference_tree "$EVIDENCE_DIR"

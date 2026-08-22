@@ -18,6 +18,10 @@ deploy，也不改变应用代码、数据库、volume、container runtime 或 P
 缺失 API、非预期文件、权限漂移、Production/远端 Docker context、计划漂移或不完整
 protected set 会 fail closed。
 
+Release retention 将固定的 `state/postgres` 数据目录视为不可遍历、不可删除的保护边界：
+只校验其 exact path、非 symlink、owner（部署用户或 PostgreSQL UID 70）和不可被组/其他
+用户写入的 metadata，不读取数据库内容，也不把数据库文件当作 release evidence。
+
 ## Release rotation 接入
 
 `staging-release-rotation.sh` 在 recovery record 中记录 `PRIOR_STAGING_SHA`。

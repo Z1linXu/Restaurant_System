@@ -48,8 +48,8 @@ assert_not_contains 'journal vacuum' "$RELEASE_SCRIPT"
 
 make_scope() {
   local root="$1" sha="$2" env_file
-  mkdir -p "$root/config" "$root/evidence" "$root/releases" "$root/state"
-  chmod 700 "$root" "$root/config" "$root/evidence" "$root/releases" "$root/state"
+  mkdir -p "$root/config" "$root/evidence" "$root/releases" "$root/state/postgres"
+  chmod 700 "$root" "$root/config" "$root/evidence" "$root/releases" "$root/state" "$root/state/postgres"
   env_file="$root/config/.env.staging"
   printf '%s\n' \
     'COMPOSE_PROJECT_NAME=restaurant-pos-staging' \
@@ -114,6 +114,7 @@ assert_contains "RELEASE_RETENTION|PROTECTED|$CURRENT_RELEASE_SHA|current_stagin
 assert_contains "RELEASE_RETENTION|PROTECTED|$PREVIOUS_RELEASE_SHA|previous_verified" "$RELEASE_PLAN"
 assert_contains "RELEASE_RETENTION|ELIGIBLE|${RELEASE_SHAS[0]}|" "$RELEASE_PLAN"
 assert_contains "RELEASE_RETENTION|ELIGIBLE|${RELEASE_SHAS[1]}|" "$RELEASE_PLAN"
+assert_not_contains 'state/postgres' "$RELEASE_PLAN"
 RELEASE_PLAN_SHA256="$(sha256sum "$RELEASE_PLAN" | awk '{print $1}')"
 
 (
@@ -149,6 +150,12 @@ chmod 775 "$RELEASE_ROOT/state"
 expect_failure release_state_mode_rejected bash -c \
   "source '$RELEASE_SCRIPT'; HYGIENE_EXPECTED_ROOT='$RELEASE_ROOT'; HYGIENE_ROOT='$RELEASE_ROOT'; main --dry-run --env-file '$RELEASE_ENV'"
 chmod 700 "$RELEASE_ROOT/state"
+mv "$RELEASE_ROOT/state/postgres" "$RELEASE_ROOT/state/postgres-safe"
+ln -s "$RELEASE_ROOT/state/postgres-safe" "$RELEASE_ROOT/state/postgres"
+expect_failure release_postgres_symlink_rejected bash -c \
+  "source '$RELEASE_SCRIPT'; HYGIENE_EXPECTED_ROOT='$RELEASE_ROOT'; HYGIENE_ROOT='$RELEASE_ROOT'; main --dry-run --env-file '$RELEASE_ENV'"
+rm "$RELEASE_ROOT/state/postgres"
+mv "$RELEASE_ROOT/state/postgres-safe" "$RELEASE_ROOT/state/postgres"
 expect_failure release_arbitrary_env_rejected "$RELEASE_SCRIPT" --dry-run --env-file "$TMP_DIR/arbitrary/.env.staging"
 assert_contains 'fixed Staging path' "$TMP_DIR/release_arbitrary_env_rejected.err"
 
