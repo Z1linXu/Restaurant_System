@@ -1,0 +1,14 @@
+# Flyway 10.10.0 CRC32 values for the reviewed Production V1-V10 schema.
+# Production is intentionally pinned to V10; later Staging-only additive
+# migrations must not silently enter the Production promotion target.
+# Format: version|script|signed-checksum
+1|V1__baseline_current_schema.sql|431188510
+2|V2__add_versioned_menu_revision.sql|-1546045661
+3|V3__add_idempotent_order_submission_and_dispatch_outbox.sql|-1713808660
+4|V4__add_menu_item_sort_order.sql|1636049775
+5|V5__set_cold_chicken_noodle_default_type.sql|-1638580130
+6|V6__add_order_item_routing_snapshots.sql|-1681894826
+7|V7__add_print_job_attention_acknowledgement.sql|625683957
+8|V8__add_owner_store_onboarding_requests.sql|1654406856
+9|V9__add_staging_synthetic_bootstrap_requests.sql|1828097009
+10|V10__add_owner_store_menu_clone_requests.sql|482267873

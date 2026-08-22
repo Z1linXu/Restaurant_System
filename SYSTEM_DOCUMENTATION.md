@@ -8715,4 +8715,6 @@ B runtime gate, explicit audited Store IDs and a dry-run before execution.
 Store-local fixture rows are removed transactionally only after dependency and
 FK preflight. STG005/source/reference Store 1, Chain Master Menu, Store Profile,
 Master identity, shared authority and historical evidence remain protected.
+The additive V26 cleanup ledger makes execute replay and changed-key conflicts
+auditable; the transaction uses a serializable boundary for concurrent writes.
 Production is fail-closed and has no mutation path.

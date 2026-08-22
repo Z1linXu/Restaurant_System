@@ -9,6 +9,7 @@ public class StoreFixtureCleanupResponse {
 
     public Long organization_id;
     public boolean dry_run;
+    public boolean replayed;
     public String status;
     public List<Long> requested_store_ids = new ArrayList<>();
     public List<StoreResult> stores = new ArrayList<>();

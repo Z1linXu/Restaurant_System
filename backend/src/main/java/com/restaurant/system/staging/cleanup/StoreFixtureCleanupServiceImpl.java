@@ -1,11 +1,15 @@
 package com.restaurant.system.staging.cleanup;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.restaurant.system.common.auth.AuthenticatedUser;
 import com.restaurant.system.owner.exception.OwnerStoreProvisioningException;
+import com.restaurant.system.owner.profile.StoreProfileCanonicalJson;
 import com.restaurant.system.owner.provisioning.PhaseBProvisioningRuntimeGate;
 import com.restaurant.system.user.entity.Store;
 import com.restaurant.system.user.repository.StoreRepository;
 import java.sql.ResultSet;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -18,6 +22,7 @@ import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -62,7 +67,8 @@ public class StoreFixtureCleanupServiceImpl implements StoreFixtureCleanupServic
         "store_menu_master_mappings",
         "store_modules",
         "store_performance_summary",
-        "store_pricing_policies"
+        "store_pricing_policies",
+        "users"
     );
 
     private static final Set<String> PRESERVED_STORE_ID_TABLES = Set.of(
@@ -100,19 +106,22 @@ public class StoreFixtureCleanupServiceImpl implements StoreFixtureCleanupServic
     private final StoreRepository storeRepository;
     private final JdbcTemplate jdbcTemplate;
     private final PhaseBProvisioningRuntimeGate runtimeGate;
+    private final ObjectMapper objectMapper;
 
     public StoreFixtureCleanupServiceImpl(
         StoreRepository storeRepository,
         JdbcTemplate jdbcTemplate,
-        PhaseBProvisioningRuntimeGate runtimeGate
+        PhaseBProvisioningRuntimeGate runtimeGate,
+        ObjectMapper objectMapper
     ) {
         this.storeRepository = storeRepository;
         this.jdbcTemplate = jdbcTemplate;
         this.runtimeGate = runtimeGate;
+        this.objectMapper = objectMapper;
     }
 
     @Override
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public StoreFixtureCleanupResponse cleanup(
         AuthenticatedUser actor,
         Long organizationId,
@@ -136,6 +145,10 @@ public class StoreFixtureCleanupServiceImpl implements StoreFixtureCleanupServic
         boolean dryRun = !Boolean.FALSE.equals(request.dry_run);
         if (!dryRun && (idempotencyKey == null || idempotencyKey.isBlank())) {
             throw conflict("STAGING_FIXTURE_CLEANUP_IDEMPOTENCY_KEY_REQUIRED", "Execute cleanup requires Idempotency-Key");
+        }
+        String normalizedIdempotencyKey = idempotencyKey == null ? null : idempotencyKey.trim();
+        if (!dryRun && normalizedIdempotencyKey.length() > 255) {
+            throw conflict("STAGING_FIXTURE_CLEANUP_IDEMPOTENCY_KEY_INVALID", "Idempotency-Key must be at most 255 characters");
         }
 
         StoreFixtureCleanupResponse response = baseResponse(organizationId, storeIds, dryRun);
@@ -171,6 +184,19 @@ public class StoreFixtureCleanupServiceImpl implements StoreFixtureCleanupServic
             existingStores.add(store);
         }
 
+        if (!dryRun) {
+            LedgerReservation reservation = reserveLedger(
+                organizationId,
+                normalizedIdempotencyKey,
+                requestFingerprint(storeIds, ownerManualIds),
+                storeIds,
+                ownerManualIds,
+                actor.userId()
+            );
+            if (reservation.replayed()) {
+                return replayResponse(reservation.resultJson());
+            }
+        }
         preflight(response, storeIds, existingStores);
         if (dryRun) {
             response.status = "DRY_RUN_PASS";
@@ -180,7 +206,100 @@ public class StoreFixtureCleanupServiceImpl implements StoreFixtureCleanupServic
 
         response.status = "EXECUTED";
         deleteFixtureGraph(response, storeIds);
+        completeLedger(organizationId, normalizedIdempotencyKey, response);
         return response;
+    }
+
+    private LedgerReservation reserveLedger(
+        Long organizationId,
+        String idempotencyKey,
+        String requestFingerprint,
+        List<Long> storeIds,
+        Set<Long> ownerManualIds,
+        Long actorUserId
+    ) {
+        jdbcTemplate.queryForObject(
+            "select pg_advisory_xact_lock(hashtextextended(?, 0))",
+            (ResultSet rs, int rowNum) -> rs.getObject(1),
+            idempotencyKey
+        );
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+            "select request_fingerprint, status, result_json from staging_store_fixture_cleanup_requests "
+                + "where organization_id = ? and idempotency_key = ? for update",
+            organizationId,
+            idempotencyKey
+        );
+        if (!rows.isEmpty()) {
+            Map<String, Object> row = rows.get(0);
+            String existingFingerprint = String.valueOf(row.get("request_fingerprint"));
+            if (!requestFingerprint.equalsIgnoreCase(existingFingerprint)) {
+                throw conflict("STAGING_FIXTURE_CLEANUP_IDEMPOTENCY_CONFLICT", "Idempotency-Key was already used for a different cleanup request");
+            }
+            if ("COMPLETED".equalsIgnoreCase(String.valueOf(row.get("status")))) {
+                return new LedgerReservation(true, (String) row.get("result_json"));
+            }
+            throw conflict("STAGING_FIXTURE_CLEANUP_IN_PROGRESS", "An identical cleanup request is already in progress");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        jdbcTemplate.update(
+            "insert into staging_store_fixture_cleanup_requests "
+                + "(organization_id, idempotency_key, request_fingerprint, status, store_ids_json, "
+                + "approved_owner_manual_store_ids_json, actor_user_id, created_at, updated_at) "
+                + "values (?, ?, ?, 'PROCESSING', ?, ?, ?, ?, ?) "
+                + "on conflict (organization_id, idempotency_key) do nothing",
+            organizationId,
+            idempotencyKey,
+            requestFingerprint,
+            storeIds.toString(),
+            ownerManualIds.stream().sorted().toList().toString(),
+            actorUserId,
+            now,
+            now
+        );
+        return new LedgerReservation(false, null);
+    }
+
+    private void completeLedger(Long organizationId, String idempotencyKey, StoreFixtureCleanupResponse response) {
+        try {
+            LocalDateTime now = LocalDateTime.now();
+            int updated = jdbcTemplate.update(
+                "update staging_store_fixture_cleanup_requests set status = 'COMPLETED', result_json = ?, updated_at = ?, completed_at = ? "
+                    + "where organization_id = ? and idempotency_key = ? and status = 'PROCESSING'",
+                objectMapper.writeValueAsString(response),
+                now,
+                now,
+                organizationId,
+                idempotencyKey
+            );
+            if (updated != 1) {
+                throw conflict("STAGING_FIXTURE_CLEANUP_LEDGER_COMPLETION_FAILED", "Cleanup ledger completion was not unique");
+            }
+        } catch (JsonProcessingException exception) {
+            throw conflict("STAGING_FIXTURE_CLEANUP_LEDGER_SERIALIZATION_FAILED", "Sanitized cleanup result could not be recorded");
+        }
+    }
+
+    private StoreFixtureCleanupResponse replayResponse(String resultJson) {
+        if (resultJson == null || resultJson.isBlank()) {
+            throw conflict("STAGING_FIXTURE_CLEANUP_LEDGER_RESULT_MISSING", "Completed cleanup ledger result is missing");
+        }
+        try {
+            StoreFixtureCleanupResponse response = objectMapper.readValue(resultJson, StoreFixtureCleanupResponse.class);
+            response.replayed = true;
+            response.status = "REPLAYED";
+            return response;
+        } catch (JsonProcessingException exception) {
+            throw conflict("STAGING_FIXTURE_CLEANUP_LEDGER_RESULT_INVALID", "Completed cleanup ledger result is invalid");
+        }
+    }
+
+    private String requestFingerprint(List<Long> storeIds, Set<Long> ownerManualIds) {
+        String canonical = "{\"store_ids\":" + storeIds + ",\"approved_owner_manual_store_ids\":"
+            + ownerManualIds.stream().sorted().toList() + "}";
+        return StoreProfileCanonicalJson.sha256Canonical(canonical);
+    }
+
+    private record LedgerReservation(boolean replayed, String resultJson) {
     }
 
     private void preflight(StoreFixtureCleanupResponse response, List<Long> storeIds, List<Store> stores) {
@@ -221,6 +340,7 @@ public class StoreFixtureCleanupServiceImpl implements StoreFixtureCleanupServic
         assertNoSourceReference(response, "staging_synthetic_bootstrap_requests", "source_store_id", placeholders, storeIds);
         assertNoSourceReference(response, "restaurant_templates", "source_store_id", placeholders, storeIds);
         assertNoSourceReference(response, "owner_store_menu_clone_requests", "source_store_id", placeholders, storeIds);
+        assertNoTargetReference(response, "owner_store_menu_clone_requests", "target_store_id", placeholders, storeIds);
         assertSafeUsers(response, placeholders, storeIds);
         assertSafeInventoryReferences(response, placeholders, storeIds);
         response.dependency_checks.add("DIRECT_STORE_ID_TABLES_COVERED");
@@ -245,6 +365,20 @@ public class StoreFixtureCleanupServiceImpl implements StoreFixtureCleanupServic
         int count = count("select count(*) from " + table + " where " + column + " in (" + placeholders + ")", storeIds);
         if (count > 0) {
             throw conflict("STAGING_FIXTURE_CLEANUP_SOURCE_DEPENDENCY", table + " has " + count + " source/reference row(s)");
+        }
+        response.dependency_checks.add(table + "." + column + "=0");
+    }
+
+    private void assertNoTargetReference(
+        StoreFixtureCleanupResponse response,
+        String table,
+        String column,
+        String placeholders,
+        List<Long> storeIds
+    ) {
+        int count = count("select count(*) from " + table + " where " + column + " in (" + placeholders + ")", storeIds);
+        if (count > 0) {
+            throw conflict("STAGING_FIXTURE_CLEANUP_TARGET_DEPENDENCY", table + " has " + count + " historical target row(s)");
         }
         response.dependency_checks.add(table + "." + column + "=0");
     }

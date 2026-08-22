@@ -19,6 +19,13 @@ requests. Production profiles, non-Staging runtimes and disabled Phase B
 provisioning fail closed. The endpoint has no UI route and does not alter the
 general Store CRUD contract.
 
+The Staging package sets an immutable `APP_ENVIRONMENT=staging` container
+marker in addition to `APP_PHASE_B_RUNTIME=staging`; the runtime gate requires
+both. The additive Flyway `V26` ledger stores a request fingerprint and
+sanitized completed result for execute idempotency. Reusing a key with a
+different target set conflicts; replaying the same key returns the original
+result.
+
 The request supports `dry_run=true` (the default) and `dry_run=false`. Manual
 test Stores must be passed in `approved_owner_manual_store_ids`; the current
 audited allowlist is Store IDs `9` and `12`. Store `1` is always protected.
@@ -58,9 +65,10 @@ Store code/profile/master snapshots and is never deleted. Chain Master Menu,
 Store Profile, Master identity and shared authority tables are not in the
 delete set.
 
-The transaction and row locks make execute replay idempotent: absent target
-Store rows are reported as `ALREADY_CLEANED` and do not create or delete new
-data. A failed preflight or failed statement aborts the whole transaction.
+The serializable transaction, ordered Store row locks and V26 ledger make
+execute replay idempotent: absent target Store rows are reported as
+`ALREADY_CLEANED` and do not create or delete new data. A failed preflight,
+serialization conflict or failed statement aborts the whole transaction.
 
 ## Operator usage
 

@@ -34,6 +34,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JAVA_OPTS: ${JAVA_OPTS:-}
       TZ: ${TZ:-America/Toronto}
+      APP_ENVIRONMENT: production
     expose:
       - "8080"
     depends_on:
