@@ -8813,6 +8813,8 @@ removing accidental product and request complexity:
   log retention remains bounded by Compose and Staging Nginx emits sanitized
   request/upstream timing fields. Host journald remains policy-only because the
   host is shared and this package does not authorize Production logging changes.
+  The fixed Staging `state/postgres` bind is metadata-validated as an explicit
+  protected boundary and is never traversed by release evidence discovery.
 
 This repair adds no Flyway migration, Owner readiness step, general Store
 delete UI, real Printer/Pad binding, Production mutation, KDS/Pickup
