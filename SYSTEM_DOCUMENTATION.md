@@ -46,6 +46,18 @@
 > constraint with a normal lookup index and adds the single-DRAFT partial
 > unique index. `OPTION-CODE-STABILITY` remains separate deferred debt.
 
+> 2026-08-21 Printing Display Rule lifecycle Staging acceptance: PR #181
+> merged at exact SHA `dc2836f6805aa97c24454a27371f88d307db2c5e` and
+> isolated Staging applied Flyway V22. Store 1 rule set 3 successfully
+> published `addon_beef_tendon` as `+牛筋` (v9), changed it to `+牛筋鸡`
+> (v10), and rolled back to `+牛筋` (v11). v7/v9/v11 intentionally share a
+> content fingerprint while retaining distinct revision identity; v6/v7/v8
+> remained unchanged, active pointer moved to v11, and DRAFT count returned to
+> zero. Saving active v11 again returned `ALREADY_ACTIVE` without a new
+> revision. GRAB/HOT_KITCHEN preview resolved `+牛筋`. The actual Store-local
+> option remains `addon_beef_tendons`, so `OPTION-CODE-STABILITY` remains
+> separate debt. Health/readiness passed and Production was not mutated.
+
 > 2026-08-21 Phase B Part 1 Staging automated acceptance: exact merged runtime
 > `96c81cf4fab8e771187ceeddeed28e5fc3e87f4a` is deployed to isolated Staging
 > with Flyway V21. Canonical acceptance created inactive validation Store 11,
