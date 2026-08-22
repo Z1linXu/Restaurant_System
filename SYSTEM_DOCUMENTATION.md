@@ -7,6 +7,18 @@
 > notes below preserve technical context and must not be interpreted as current
 > mutation authorization.
 
+> Phase B Store option identity contract: provisioning promotes each active
+> standard Size semantic to one Store-local canonical `SIZE` row using the
+> system-controlled `size_small`, `size_regular` or `size_large` code. Duplicate
+> or inactive legacy Master Size rows retain independent Store-local rows and
+> Master mappings, remain inactive/noncanonical, and receive a stable code
+> derived from Master `option_ref`; the immutable Master/Profile artifacts are
+> not rewritten. Owner generic ADD_ON/REMOVE edits validate canonical `SIZE`
+> rows without allowing type-only legacy rows to block unrelated mutations.
+> Explicit Size Configuration still canonicalizes compatible legacy rows, and
+> a canonical `SIZE` row with a missing code remains invalid. No schema or data
+> backfill is required.
+
 > 2026-08-21 Phase B Part 1 Staging automated acceptance: exact merged runtime
 > `96c81cf4fab8e771187ceeddeed28e5fc3e87f4a` is deployed to isolated Staging
 > with Flyway V21. Canonical acceptance created inactive validation Store 11,

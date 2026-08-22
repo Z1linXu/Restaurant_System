@@ -248,7 +248,7 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
 
     private void validateSizeConfiguration(List<MenuItemOption> candidateOptions) {
         List<MenuItemOption> sizeOptions = candidateOptions.stream()
-            .filter(this::isSizeOption)
+            .filter(this::isCanonicalSizeOption)
             .toList();
         if (sizeOptions.isEmpty()) {
             return;
@@ -302,6 +302,10 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
 
     private boolean isSizeOption(MenuItemOption option) {
         return isSizeSemantic(option.option_group, option.option_type);
+    }
+
+    private boolean isCanonicalSizeOption(MenuItemOption option) {
+        return option != null && GROUP_SIZE.equals(normalizeGroup(option.option_group));
     }
 
     private boolean isComboUpcharge(MenuItemOption option) {
