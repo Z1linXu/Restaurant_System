@@ -94,8 +94,9 @@ Candidate scope:
 - complete validation and recovery;
 - READY and Owner-controlled activation.
 
-Part 2 is `NOT AUTHORIZED`. Candidate designs in
-[`drafts/`](drafts/) are supporting material only.
+Authorization and current execution state are recorded only in
+[`CURRENT_STATE.yml`](CURRENT_STATE.yml). Candidate designs in
+[`drafts/`](drafts/) remain supporting material and never authorize work.
 
 ## Phase C — Real Multi-Store Proof
 
