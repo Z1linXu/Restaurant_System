@@ -8,7 +8,8 @@ import {
   type OwnerDashboardStoreSummary,
   type OwnerDashboardTrendPoint,
 } from '../../services/ownerDashboardService'
-import { fetchPlatformOverview, type PlatformAdminOverview } from '../../services/platformAdminService'
+import { fetchWorkspaces, type WorkspaceStore } from '../../services/storeWorkspaceService'
+import { useAuth } from '../auth/useAuth'
 import { useCurrentStore } from '../store/useStoreContext'
 import { buildStorePath } from '../store/storeRoutes'
 
@@ -153,8 +154,9 @@ function ItemPerformanceList({
 }
 
 export function OwnerAdminDashboardPage() {
-  const { storeId } = useCurrentStore()
-  const [overview, setOverview] = useState<PlatformAdminOverview | null>(null)
+  const { storeId, storeName, storeCode, organizationId } = useCurrentStore()
+  const { isOfflineRestricted, user } = useAuth()
+  const [workspaceStores, setWorkspaceStores] = useState<WorkspaceStore[]>([])
   const [dashboard, setDashboard] = useState<OwnerDashboardResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [dashboardLoading, setDashboardLoading] = useState(true)
@@ -170,62 +172,106 @@ export function OwnerAdminDashboardPage() {
   }, [])
 
   useEffect(() => {
-    const loadOverview = async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const data = await fetchPlatformOverview(storeId)
-        setOverview(data)
-      } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Failed to load owner dashboard data')
-      } finally {
-        setLoading(false)
-      }
-    }
+    let active = true
+    setLoading(true)
+    setError(null)
 
-    void loadOverview()
-  }, [storeId])
+    fetchWorkspaces(user?.id, { preferOfflineSnapshot: isOfflineRestricted })
+      .then((workspaces) => {
+        if (!active) {
+          return
+        }
+        setWorkspaceStores(workspaces.stores ?? [])
+      })
+      .catch(() => {
+        if (!active) {
+          return
+        }
+        // The current StoreContext has already passed authorization. Keep this
+        // page usable with a single safe option if the selector request fails.
+        setWorkspaceStores([])
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false)
+        }
+      })
+
+    return () => {
+      active = false
+    }
+  }, [isOfflineRestricted, user?.id])
 
   useEffect(() => {
     setSelectedStoreId(String(storeId))
   }, [storeId])
 
-  const organization = overview?.organizations?.[0]
   const stores = useMemo<OwnerDashboardStoreSummary[]>(
-    () =>
-      (overview?.stores ?? []).map((store) => ({
+    () => {
+      const currentStoreOption: WorkspaceStore = {
+        id: storeId,
+        name: storeName,
+        code: storeCode ?? String(storeId),
+        status: null,
+        organization_id: organizationId,
+        role_code: null,
+      }
+      const selectorStores = workspaceStores.some((store) => Number(store.id) === storeId)
+        ? workspaceStores
+        : [currentStoreOption, ...workspaceStores]
+      return selectorStores.map((store) => ({
         id: Number(store.id),
         name: String(store.name ?? `Store ${store.id}`),
         code: String(store.code ?? store.id),
-      })),
-    [overview],
+      }))
+    },
+    [organizationId, storeCode, storeId, storeName, workspaceStores],
   )
 
   useEffect(() => {
-    if (!overview) {
+    if (loading || !selectedStoreId) {
       return
     }
 
+    const requestStoreId = Number(selectedStoreId)
+    if (!Number.isFinite(requestStoreId) || requestStoreId <= 0) {
+      return
+    }
+    const selectedWorkspaceStore = workspaceStores.find((store) => Number(store.id) === requestStoreId)
+    const requestOrganizationId = selectedWorkspaceStore?.organization_id
+      ?? (requestStoreId === storeId ? organizationId : null)
+    let active = true
+
     const loadDashboard = async () => {
       setDashboardLoading(true)
+      setDashboard(null)
       setError(null)
       try {
         const nextDashboard = await fetchOwnerDashboard({
-          organizationId: Number(organization?.id ?? dashboard?.organization_id ?? 1),
-          storeId: Number(selectedStoreId),
+          organizationId: requestOrganizationId,
+          storeId: requestStoreId,
           range: selectedRange,
           compare: compareEnabled,
         })
-        setDashboard(nextDashboard)
+        if (active) {
+          setDashboard(nextDashboard)
+        }
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Failed to load analytics dashboard')
+        if (active) {
+          setError(loadError instanceof Error ? loadError.message : 'Failed to load analytics dashboard')
+        }
       } finally {
-        setDashboardLoading(false)
+        if (active) {
+          setDashboardLoading(false)
+        }
       }
     }
 
     void loadDashboard()
-  }, [compareEnabled, dashboard?.organization_id, organization?.id, overview, selectedRange, selectedStoreId])
+    return () => {
+      active = false
+    }
+  }, [compareEnabled, loading, organizationId, selectedRange, selectedStoreId, storeId, workspaceStores])
 
   const currentStoreLabel = stores.find((store) => String(store.id) === selectedStoreId)?.name ?? 'Store'
 

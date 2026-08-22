@@ -1,5 +1,6 @@
 package com.restaurant.system.platform.service.impl;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -9,7 +10,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.restaurant.system.menu.entity.MenuCategory;
 import com.restaurant.system.menu.entity.MenuItem;
+import com.restaurant.system.menu.entity.MenuItemOption;
 import com.restaurant.system.menu.repository.MenuCategoryRepository;
 import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.menu.repository.MenuItemRepository;
@@ -28,6 +31,7 @@ import com.restaurant.system.station.entity.Station;
 import com.restaurant.system.station.repository.DiningTableRepository;
 import com.restaurant.system.station.repository.StationRepository;
 import com.restaurant.system.user.entity.Store;
+import com.restaurant.system.user.entity.User;
 import com.restaurant.system.user.repository.RoleRepository;
 import com.restaurant.system.user.repository.StoreRepository;
 import com.restaurant.system.user.repository.UserRepository;
@@ -212,6 +216,55 @@ class PlatformAdminServiceImplMenuOrderingTest {
 
         verify(menuRevisionService, never()).incrementRevision(any());
         verify(menuRevisionService, never()).incrementRevisionsInOrder(any());
+    }
+
+    @Test
+    void storeReadsUseScopedRepositoryQueriesAndPreserveStoreIsolation() {
+        Station station = new Station();
+        station.id = 21L;
+        station.store_id = 7L;
+        station.sort_order = 2;
+        when(stationRepository.findAllByStoreIdOrderByIdAsc(7L)).thenReturn(List.of(station));
+
+        MenuCategory category = new MenuCategory();
+        category.id = 31L;
+        category.store_id = 7L;
+        category.sort_order = 1;
+        when(menuCategoryRepository.findAllByStoreIdOrderByIdAsc(7L)).thenReturn(List.of(category));
+
+        MenuItem item = new MenuItem();
+        item.id = 41L;
+        item.store_id = 7L;
+        item.category_id = 31L;
+        item.sort_order = 1;
+        when(menuItemRepository.findAllByStoreIdOrderByIdAsc(7L)).thenReturn(List.of(item));
+
+        MenuItemOption option = new MenuItemOption();
+        option.id = 51L;
+        option.menu_item_id = 41L;
+        when(menuItemOptionRepository.findAllByStoreIdOrderByIdAsc(7L)).thenReturn(List.of(option));
+
+        User user = new User();
+        user.setId(61L);
+        user.setStore_id(7L);
+        when(userRepository.findAllByStore_id(7L)).thenReturn(List.of(user));
+
+        assertThat(service.getStations(7L)).containsExactly(station);
+        assertThat(service.getMenuCategories(7L)).containsExactly(category);
+        assertThat(service.getMenuItems(7L)).containsExactly(item);
+        assertThat(service.getMenuItemOptions(7L)).containsExactly(option);
+        assertThat(service.getUsers(7L)).containsExactly(user);
+
+        verify(stationRepository).findAllByStoreIdOrderByIdAsc(7L);
+        verify(menuCategoryRepository).findAllByStoreIdOrderByIdAsc(7L);
+        verify(menuItemRepository).findAllByStoreIdOrderByIdAsc(7L);
+        verify(menuItemOptionRepository).findAllByStoreIdOrderByIdAsc(7L);
+        verify(userRepository).findAllByStore_id(7L);
+        verify(stationRepository, never()).findAll();
+        verify(menuCategoryRepository, never()).findAll();
+        verify(menuItemRepository, never()).findAll();
+        verify(menuItemOptionRepository, never()).findAll();
+        verify(userRepository, never()).findAll();
     }
 
     @Test

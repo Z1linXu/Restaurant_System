@@ -10,6 +10,13 @@ public interface MenuItemOptionRepository extends JpaRepository<MenuItemOption, 
 
     @Query("""
         select o from MenuItemOption o join MenuItem i on i.id = o.menu_item_id
+        where i.store_id = :storeId
+        order by o.id asc
+        """)
+    List<MenuItemOption> findAllByStoreIdOrderByIdAsc(@Param("storeId") Long storeId);
+
+    @Query("""
+        select o from MenuItemOption o join MenuItem i on i.id = o.menu_item_id
         where i.store_id = :storeId and o.menu_item_id in :menuItemIds
         order by
             o.menu_item_id asc,

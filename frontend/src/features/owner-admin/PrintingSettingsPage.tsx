@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { isFeatureEnabled } from '../feature-flags/featureConfig'
-import { fetchPlatformOverview, type PlatformAdminOverview } from '../../services/platformAdminService'
+import { fetchWorkspaces, type WorkspaceStore } from '../../services/storeWorkspaceService'
 import { useCurrentStore } from '../store/useStoreContext'
-import { ApiRequestError } from '../../services/apiClient'
+import { useAuth } from '../auth/useAuth'
 import {
   deletePrinterConfig,
   disableStoreDevice,
@@ -78,22 +78,6 @@ const PRINTING_MODE_OPTIONS: Array<{ value: PrintingMode; label: string; descrip
 
 function asString(value: unknown, fallback = '') {
   return typeof value === 'string' ? value : fallback
-}
-
-function buildStoreOnlyOverview(storeId: number, storeName: string): PlatformAdminOverview {
-  return {
-    organizations: [],
-    templates: [],
-    stores: [{ id: storeId, name: storeName }],
-    roles: [],
-    users: [],
-    stations: [],
-    dining_tables: [],
-    menu_categories: [],
-    menu_items: [],
-    menu_item_options: [],
-    kds_display_configs: [],
-  }
 }
 
 function defaultPrinter(storeId: number): PrinterEditorState {
@@ -390,7 +374,8 @@ function parseAndroidPadStatus(rawStatus: string): AndroidPadDeviceStatus | null
 export function PrintingSettingsPage() {
   const currentStore = useCurrentStore()
   const { storeId } = currentStore
-  const [overview, setOverview] = useState<PlatformAdminOverview | null>(null)
+  const { isOfflineRestricted, user } = useAuth()
+  const [workspaceStores, setWorkspaceStores] = useState<WorkspaceStore[]>([])
   const [printCenter, setPrintCenter] = useState<PrintCenterOverview | null>(null)
   const [selectedStoreId, setSelectedStoreId] = useState(String(storeId))
   const [loading, setLoading] = useState(true)
@@ -409,6 +394,7 @@ export function PrintingSettingsPage() {
   const [padBridgeAvailable, setPadBridgeAvailable] = useState(false)
   const [padDeviceStatus, setPadDeviceStatus] = useState<AndroidPadDeviceStatus | null>(null)
   const [pairingPad, setPairingPad] = useState(false)
+  const loadRequestId = useRef(0)
 
   const refreshPadDeviceStatus = useCallback(() => {
     const bridge = getAndroidPadDeviceBridge()
@@ -420,61 +406,91 @@ export function PrintingSettingsPage() {
     setPadDeviceStatus(parseAndroidPadStatus(bridge.getDeviceStatus()))
   }, [])
 
-  const loadData = useCallback(async (storeId: number) => {
+  const loadData = useCallback(async (storeId: number, requestId: number) => {
+    const isCurrentRequest = () => loadRequestId.current === requestId
     setLoading(true)
     setJobsLoading(true)
     setDevicesLoading(true)
     setError(null)
     setJobsError(null)
     setDevicesError(null)
+    setPrintCenter(null)
+    setPrintJobs([])
+    setStoreDevices([])
     try {
-      const loadPlatformOverview = async () => {
-        try {
-          return await fetchPlatformOverview(storeId)
-        } catch (overviewError) {
-          if (overviewError instanceof ApiRequestError && overviewError.status === 403) {
-            return buildStoreOnlyOverview(storeId, currentStore.storeName)
-          }
-          throw overviewError
-        }
+      const printOverview = await fetchPrintCenterOverview(storeId)
+      if (isCurrentRequest()) {
+        setPrintCenter(printOverview)
       }
-      const [platformOverview, printOverview] = await Promise.all([
-        loadPlatformOverview(),
-        fetchPrintCenterOverview(storeId),
-      ])
-      setOverview(platformOverview)
-      setPrintCenter(printOverview)
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : '打印中心设置加载失败')
+      if (isCurrentRequest()) {
+        setError(loadError instanceof Error ? loadError.message : '打印中心设置加载失败')
+      }
     } finally {
-      setLoading(false)
+      if (isCurrentRequest()) {
+        setLoading(false)
+      }
     }
 
     try {
-      setPrintJobs(await fetchPrintJobs({ storeId }))
+      const nextPrintJobs = await fetchPrintJobs({ storeId })
+      if (isCurrentRequest()) {
+        setPrintJobs(nextPrintJobs)
+      }
     } catch (jobError) {
-      setPrintJobs([])
-      setJobsError(jobError instanceof Error ? jobError.message : '打印任务加载失败')
+      if (isCurrentRequest()) {
+        setPrintJobs([])
+        setJobsError(jobError instanceof Error ? jobError.message : '打印任务加载失败')
+      }
     } finally {
-      setJobsLoading(false)
+      if (isCurrentRequest()) {
+        setJobsLoading(false)
+      }
     }
 
     try {
-      setStoreDevices(await fetchStoreDevices(storeId))
+      const nextStoreDevices = await fetchStoreDevices(storeId)
+      if (isCurrentRequest()) {
+        setStoreDevices(nextStoreDevices)
+      }
     } catch (deviceError) {
-      setStoreDevices([])
-      setDevicesError(deviceError instanceof Error ? deviceError.message : 'Pad 设备加载失败')
+      if (isCurrentRequest()) {
+        setStoreDevices([])
+        setDevicesError(deviceError instanceof Error ? deviceError.message : 'Pad 设备加载失败')
+      }
     } finally {
-      setDevicesLoading(false)
+      if (isCurrentRequest()) {
+        setDevicesLoading(false)
+      }
     }
-  }, [currentStore.storeName])
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    fetchWorkspaces(user?.id, { preferOfflineSnapshot: isOfflineRestricted })
+      .then((workspaces) => {
+        if (active) {
+          setWorkspaceStores(workspaces.stores ?? [])
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setWorkspaceStores([])
+        }
+      })
+    return () => {
+      active = false
+    }
+  }, [isOfflineRestricted, user?.id])
 
   useEffect(() => {
     setSelectedStoreId(String(storeId))
   }, [storeId])
 
   useEffect(() => {
-    void loadData(Number(selectedStoreId))
+    const requestId = loadRequestId.current + 1
+    loadRequestId.current = requestId
+    void loadData(Number(selectedStoreId), requestId)
   }, [loadData, selectedStoreId])
 
   useEffect(() => {
@@ -482,11 +498,24 @@ export function PrintingSettingsPage() {
   }, [refreshPadDeviceStatus, selectedStoreId])
 
   const stores = useMemo(
-    () => (overview?.stores ?? []).map((store) => ({
-      id: String(store.id),
-      label: asString(store.name, `Store ${store.id}`),
-    })),
-    [overview],
+    () => {
+      const currentStoreOption: WorkspaceStore = {
+        id: storeId,
+        name: currentStore.storeName,
+        code: currentStore.storeCode,
+        status: null,
+        organization_id: currentStore.organizationId,
+        role_code: currentStore.roleCode,
+      }
+      const selectorStores = workspaceStores.some((store) => Number(store.id) === storeId)
+        ? workspaceStores
+        : [currentStoreOption, ...workspaceStores]
+      return selectorStores.map((store) => ({
+        id: String(store.id),
+        label: asString(store.name, `Store ${store.id}`),
+      }))
+    },
+    [currentStore, storeId, workspaceStores],
   )
 
   const assignmentsByModule = useMemo(() => {
