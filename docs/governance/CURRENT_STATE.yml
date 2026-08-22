@@ -3,7 +3,7 @@ updated_at: 2026-08-22
 
 repository:
   ref: origin/main
-  sha: 72fecac3a17e0ac40d6207f4c501eb0308210123
+  sha: 7bebe49f81ba45d151a4b8934a1d143c8925311d
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
@@ -13,11 +13,11 @@ phase:
   next_phase_authorized: false
 
 staging:
-  deployed_sha: 72fecac3a17e0ac40d6207f4c501eb0308210123
-  flyway: V25
+  deployed_sha: 7bebe49f81ba45d151a4b8934a1d143c8925311d
+  flyway: V26
   acceptance: PHASE_B_PART2_STAGING_AUTOMATED_ACCEPTANCE_PASS
   evidence: PHASE_B_PART2_STAGING_AUTOMATED_ACCEPTANCE_EVIDENCE.md
-  cleanup_evidence: PHASE_B_STAGING_STORE_CLEANUP_EVIDENCE.md
+  cleanup_evidence: PHASE_B_STAGING_SYNTHETIC_FIXTURE_CLEANUP_EXECUTION_EVIDENCE.md
 
 production:
   deployed_sha: 3ec4d88a47f68e05b92d9246bfd63af2d1f297f9

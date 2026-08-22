@@ -8719,3 +8719,7 @@ The additive V26 cleanup ledger makes execute replay and changed-key conflicts
 auditable; ordered Store locks and a per-key advisory lock serialize cleanup
 requests without weakening the existing Store boundary.
 Production is fail-closed and has no mutation path.
+The 2026-08-22 audited cleanup execution retained only STG005 Store 1 and
+deleted Store-local fixtures 2-17 through this path; sanitized execution
+evidence is recorded in
+`docs/governance/PHASE_B_STAGING_SYNTHETIC_FIXTURE_CLEANUP_EXECUTION_EVIDENCE.md`.
