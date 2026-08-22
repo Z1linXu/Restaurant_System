@@ -3,7 +3,7 @@ updated_at: 2026-08-21
 
 repository:
   ref: origin/main
-  sha: 9bebac8a427690ca2a842ab8fad9dc09e2c75208
+  sha: 8e787fa1c0030d74cb9d785122392f540b206db5
   sha_semantics: BASELINE_AT_STATE_WRITE
 
 phase:
@@ -13,10 +13,10 @@ phase:
   next_phase_authorized: false
 
 staging:
-  deployed_sha: 9bebac8a427690ca2a842ab8fad9dc09e2c75208
+  deployed_sha: 8e787fa1c0030d74cb9d785122392f540b206db5
   flyway: V21
   acceptance: PHASE_B_PART1_AUTOMATED_ACCEPTANCE_PASS
-  evidence: ../archive/governance-pre-simplification/runtime/PHASE_B_PART1_SIZE_OPTION_REPAIR_STAGING_EVIDENCE.md
+  evidence: ../archive/governance-pre-simplification/runtime/PHASE_B_PART1_DYNAMIC_ADDON_PRINTING_REPAIR_STAGING_EVIDENCE.md
 
 production:
   deployed_sha: 3ec4d88a47f68e05b92d9246bfd63af2d1f297f9
