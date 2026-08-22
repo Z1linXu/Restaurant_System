@@ -106,6 +106,7 @@ RELEASE_PLAN="$RELEASE_ROOT/evidence/release-retention.plan"
 UNSAFE_LEGACY_RELEASE_SHA=ffffffffffffffffffffffffffffffffffffffff
 mkdir "$RELEASE_ROOT/releases/$UNSAFE_LEGACY_RELEASE_SHA"
 chmod 775 "$RELEASE_ROOT/releases/$UNSAFE_LEGACY_RELEASE_SHA"
+printf 'legacy dirty release\n' >"$RELEASE_ROOT/releases/${RELEASE_SHAS[0]}/legacy-untracked.txt"
 
 (
   PATH="$FAKE_FLOCK_DIR:$PATH"
@@ -117,8 +118,9 @@ chmod 775 "$RELEASE_ROOT/releases/$UNSAFE_LEGACY_RELEASE_SHA"
 chmod 600 "$RELEASE_PLAN"
 assert_contains "RELEASE_RETENTION|PROTECTED|$CURRENT_RELEASE_SHA|current_staging" "$RELEASE_PLAN"
 assert_contains "RELEASE_RETENTION|PROTECTED|$PREVIOUS_RELEASE_SHA|previous_verified" "$RELEASE_PLAN"
-assert_contains "RELEASE_RETENTION|ELIGIBLE|${RELEASE_SHAS[0]}|" "$RELEASE_PLAN"
 assert_contains "RELEASE_RETENTION|ELIGIBLE|${RELEASE_SHAS[1]}|" "$RELEASE_PLAN"
+assert_contains "RELEASE_RETENTION|PROTECTED|${RELEASE_SHAS[0]}|unsafe_legacy_release_metadata" "$RELEASE_PLAN"
+assert_contains "RELEASE_RETENTION|UNSAFE_RETAINED|${RELEASE_SHAS[0]}|mode=700;worktree_validation_failed" "$RELEASE_PLAN"
 assert_not_contains 'state/postgres' "$RELEASE_PLAN"
 assert_contains "RELEASE_RETENTION|PROTECTED|$UNSAFE_LEGACY_RELEASE_SHA|unsafe_legacy_release_metadata" "$RELEASE_PLAN"
 assert_contains "RELEASE_RETENTION|UNSAFE_RETAINED|$UNSAFE_LEGACY_RELEASE_SHA|mode=775;content_not_inspected" "$RELEASE_PLAN"
@@ -134,7 +136,7 @@ RELEASE_PLAN_SHA256="$(sha256sum "$RELEASE_PLAN" | awk '{print $1}')"
     --plan-file "$RELEASE_PLAN" --plan-sha256 "$RELEASE_PLAN_SHA256"
 ) >"$TMP_DIR/release-execute.out"
 assert_contains 'RELEASE_RETENTION|REMOVED|' "$TMP_DIR/release-execute.out"
-[[ ! -e "$RELEASE_ROOT/releases/${RELEASE_SHAS[0]}" ]] || fail 'eligible release 1 was not removed'
+[[ -d "$RELEASE_ROOT/releases/${RELEASE_SHAS[0]}" ]] || fail 'dirty legacy release must be retained untouched'
 [[ ! -e "$RELEASE_ROOT/releases/${RELEASE_SHAS[1]}" ]] || fail 'eligible release 2 was not removed'
 [[ -d "$RELEASE_ROOT/releases/$CURRENT_RELEASE_SHA" ]] || fail 'current release was removed'
 [[ -d "$RELEASE_ROOT/releases/$PREVIOUS_RELEASE_SHA" ]] || fail 'previous verified release was removed'

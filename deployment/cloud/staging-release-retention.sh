@@ -293,6 +293,24 @@ validate_release_worktree() {
   printf '%s|%s\n' "$mtime" "$sha"
 }
 
+release_content_is_fully_validated() {
+  local sha="$1" path status submodules line
+  path="$RELEASES_DIR/$sha"
+  [[ "$(git -C "$path" rev-parse HEAD 2>/dev/null || true)" == "$sha" ]] || return 1
+  status="$(git -C "$path" status --porcelain=v1 --untracked-files=all 2>/dev/null)" || return 1
+  [[ -z "$status" ]] || return 1
+  submodules="$(git -C "$path" submodule status --recursive 2>/dev/null)" || return 1
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    case "${line:0:1}" in -|+|U) return 1 ;; esac
+  done <<<"$submodules"
+  git --git-dir="$REPOSITORY" worktree list --porcelain 2>/dev/null | awk -v wanted_path="$path" -v wanted_sha="$sha" '
+    $1 == "worktree" { current_path=$2; next }
+    $1 == "HEAD" && current_path == wanted_path && $2 == wanted_sha { found=1 }
+    END { exit !found }
+  '
+}
+
 enumerate_releases() {
   local path base metadata mode
   ALL_RELEASE_LINES=""
@@ -312,6 +330,11 @@ enumerate_releases() {
     if [[ "$mode" != "700" ]]; then
       UNSAFE_RELEASE_SHA_SET="${UNSAFE_RELEASE_SHA_SET}${base}"$'\n'
       UNSAFE_RELEASE_LINES="${UNSAFE_RELEASE_LINES}RELEASE_RETENTION|UNSAFE_RETAINED|${base}|mode=${mode};content_not_inspected"$'\n'
+      continue
+    fi
+    if ! release_content_is_fully_validated "$base"; then
+      UNSAFE_RELEASE_SHA_SET="${UNSAFE_RELEASE_SHA_SET}${base}"$'\n'
+      UNSAFE_RELEASE_LINES="${UNSAFE_RELEASE_LINES}RELEASE_RETENTION|UNSAFE_RETAINED|${base}|mode=700;worktree_validation_failed"$'\n'
       continue
     fi
     metadata="$(validate_release_worktree "$base")"
