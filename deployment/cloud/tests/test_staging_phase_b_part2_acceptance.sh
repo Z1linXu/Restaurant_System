@@ -25,6 +25,8 @@ printf '%s\n' '{"data":{"ready":false,"readiness_status":"NOT_READY","checks":[{
 "$JQ_COMPAT" -e '.data.ready == false and .data.readiness_status == "NOT_READY" and any(.data.checks[]; .code == "DEVICE_READINESS" and .status == "FAIL")' "$TMP_DIR/readiness.json" >/dev/null
 printf '%s\n' '{"data":{"device_token":"one-time"}}' >"$TMP_DIR/response.json"
 "$JQ_COMPAT" -e '[paths(scalars)[] | tostring | select(test("password_hash|device_token_hash|printer_endpoint|ip_address"; "i"))] | length == 0' "$TMP_DIR/response.json" >/dev/null
+printf '%s\n' '{"data":{"readiness":{"readiness_fingerprint":"0123456789012345678901234567890123456789012345678901234567890123"}}}' >"$TMP_DIR/provision-response.json"
+test "$("$JQ_COMPAT" -er '.data.readiness.readiness_fingerprint | strings | select(length == 64)' "$TMP_DIR/provision-response.json")" = "0123456789012345678901234567890123456789012345678901234567890123"
 "$SCRIPT" --help >"$TMP_DIR/help"
 assert_contains 'PHASE_B_VALIDATION_STORE_' "$TMP_DIR/help"
 assert_contains '--execute-runtime' "$TMP_DIR/help"

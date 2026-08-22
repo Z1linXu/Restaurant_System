@@ -245,6 +245,9 @@ elif ".data.proof_status == \"NOT_READY\"" in filter_text or ".data.proof_status
     expected = "PASS" if ".data.proof_status == \"PASS\"" in filter_text else "NOT_READY"
     result = value.get("data", {}).get("proof_status")
     require(result == expected)
+elif ".data.readiness.readiness_fingerprint | strings" in filter_text:
+    result = value.get("data", {}).get("readiness", {}).get("readiness_fingerprint")
+    require(isinstance(result, str) and len(result) == 64)
 elif ".data.readiness_fingerprint | strings" in filter_text:
     result = value.get("data", {}).get("readiness_fingerprint")
     require(isinstance(result, str) and len(result) == 64)

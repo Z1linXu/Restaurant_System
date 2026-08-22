@@ -24,6 +24,12 @@
 > response-state boundary. This repair does not change the readiness contract,
 > Store/Organization scope, credential delivery policy or activation gate.
 
+> 2026-08-22 Staging acceptance tooling repair: the host-side jq-compatible
+> parser now extracts the nested provisioning response fingerprint at
+> `.data.readiness.readiness_fingerprint` as well as the existing readiness
+> endpoint shape. The parser regression test covers this exact response shape;
+> no credential or endpoint value is emitted.
+
 > 2026-08-21 Owner confirmed `PHASE_B_PART1_OWNER_ACCEPTANCE = PASS` after the
 > exact-SHA Staging automated acceptance. `CURRENT_STATE.yml` now closes Part 1
 > and records `PHASE_B_PART2` as Owner-authorized for planning and implementation
