@@ -8820,7 +8820,9 @@ removing accidental product and request complexity:
   retention tool never rewrites historical evidence to normalize permissions.
   A same-owner, canonical exact-SHA legacy release with unsafe metadata is
   retained without content inspection and can never become a deletion target;
-  current and previous verified releases still require full clean validation.
+  a legacy release that fails HEAD, clean status, submodule, or worktree
+  registration validation is retained the same way. Current and previous
+  verified releases still require full clean validation.
 
 This repair adds no Flyway migration, Owner readiness step, general Store
 delete UI, real Printer/Pad binding, Production mutation, KDS/Pickup

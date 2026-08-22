@@ -31,6 +31,10 @@ Release retention 将固定的 `state/postgres` 数据目录视为不可遍历�
 加入 protected set。当前或 previous verified release 必须是完整验证过的 `0700` clean
 worktree，否则仍 fail closed。
 
+同样地，旧 release 即使 mode 为 `0700`，只要 HEAD、clean status、submodule 或 bare
+repository worktree registration 不能完整验证，也只会进入 `UNSAFE_RETAINED`，不会成为
+删除候选。工具不会尝试修理这类历史目录。
+
 ## Release rotation 接入
 
 `staging-release-rotation.sh` 在 recovery record 中记录 `PRIOR_STAGING_SHA`。
