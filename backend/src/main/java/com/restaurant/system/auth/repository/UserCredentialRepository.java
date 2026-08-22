@@ -10,5 +10,7 @@ public interface UserCredentialRepository extends JpaRepository<UserCredential, 
 
     Optional<UserCredential> findFirstByLoginIdentifierIgnoreCase(String loginIdentifier);
 
+    Optional<UserCredential> findFirstByUserIdAndIsActiveTrue(Long userId);
+
     boolean existsByLoginIdentifierIgnoreCase(String loginIdentifier);
 }

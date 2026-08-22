@@ -254,6 +254,26 @@ class PlatformAdminServiceImplMenuOrderingTest {
         verify(storeRepository, never()).save(any(Store.class));
     }
 
+    @Test
+    void part2ValidationFixtureCannotUseLegacyDirectActiveWriter() {
+        Store target = store(44L, 100L);
+        target.store_kind = "VALIDATION_FIXTURE";
+        target.provisioning_source = "PHASE_B_OWNER_PROVISIONING";
+        target.lifecycle_status = "READY_FOR_REVIEW";
+        when(storeRepository.findById(44L)).thenReturn(Optional.of(target));
+
+        Store request = store(44L, 100L);
+        request.status = "active";
+
+        com.restaurant.system.common.exception.BusinessException exception = assertThrows(
+            com.restaurant.system.common.exception.BusinessException.class,
+            () -> service.saveStore(request)
+        );
+
+        assertEquals("PHASE_B_PART2_ACTIVATION_COORDINATOR_REQUIRED", exception.getMessage());
+        verify(storeRepository, never()).save(any(Store.class));
+    }
+
     private Store store(Long storeId, Long organizationId) {
         Store store = new Store();
         store.id = storeId;

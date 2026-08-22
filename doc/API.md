@@ -5,6 +5,26 @@
 > owned by `docs/governance/CURRENT_STATE.yml`; historical status notes below
 > provide API evolution context only.
 
+> Phase B Part 2 Store readiness and activation contract (2026-08-22): the
+> Owner-only API is bounded to an inactive synthetic validation Store created
+> by the Part 1 materializer. `GET
+> /api/v1/owner/organizations/{organizationId}/stores/{storeId}/phase-b/part2/readiness`
+> independently evaluates Store/Profile/Master/menu/module/station/table/
+> staff/access/logical-printing/device prerequisites and returns `READY` or
+> `NOT_READY` with sanitized checks, counts, evidence fingerprint and TTL.
+> `POST .../provision` requires `Idempotency-Key`, performs transactional
+> Store-local tables/stations, synthetic BCrypt staff plus Organization/Store
+> memberships, endpoint-free `DISABLED`/`MOCK` logical printer roles and
+> synthetic device registration/readiness. The first response may contain
+> one-time synthetic staff/device credentials; replay responses never do.
+> `POST .../activate` requires a fresh readiness fingerprint and
+> `Idempotency-Key`, revalidates and locks the Store, then maps `READY` to the
+> existing `ACTIVE`/`ACTIVE` lifecycle state as the operational `LIVE` state.
+> No endpoint performs real printer binding, `PAD_DIRECT`/`REAL` configuration,
+> Production mutation or real Store activation. The legacy Platform Admin
+> direct-active writer rejects Part 2 validation fixtures and requires the
+> coordinator.
+
 > Owner Menu Size compatibility contract: Phase B provisioning returns one
 > canonical Store-local option per enabled standard Size with `option_group`
 > `SIZE` and stable `option_code` `size_small`, `size_regular` or `size_large`.

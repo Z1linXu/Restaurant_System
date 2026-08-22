@@ -7,6 +7,15 @@
 > notes below preserve technical context and must not be interpreted as current
 > mutation authorization.
 
+> 2026-08-22 Phase B Part 2 implementation is being delivered under the
+> current Owner authorization. The repository implementation adds additive
+> Flyway V23 readiness, Store-local provisioning ledgers, logical printer-role
+> readiness, synthetic device proof and the locked Owner activation
+> coordinator. The current implementation is fail-closed and Staging-only for
+> validation fixtures; it does not authorize real Store, credential, Printer,
+> Pad or Production mutation. Exact-SHA Staging deployment and automated
+> acceptance remain separate execution gates until their evidence is recorded.
+
 > 2026-08-21 Owner confirmed `PHASE_B_PART1_OWNER_ACCEPTANCE = PASS` after the
 > exact-SHA Staging automated acceptance. `CURRENT_STATE.yml` now closes Part 1
 > and records `PHASE_B_PART2` as Owner-authorized for planning and implementation
