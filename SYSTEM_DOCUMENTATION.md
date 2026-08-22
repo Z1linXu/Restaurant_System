@@ -9,7 +9,7 @@
 
 > 2026-08-22 Phase B Part 2 implementation is being delivered under the
 > current Owner authorization. The repository implementation adds additive
-> Flyway V23/V24 readiness, immutable readiness evidence history, Store-local
+> Flyway V23/V24/V25 readiness, immutable readiness evidence history, Store-local
 > provisioning ledgers, logical printer-role readiness, synthetic device proof
 > and the locked Owner activation
 > coordinator. The current implementation is fail-closed and Staging-only for

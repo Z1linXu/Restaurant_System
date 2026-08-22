@@ -257,10 +257,10 @@ login() {
 verify_health_and_flyway() {
   api_call health GET /system/health "" "$ACCESS_TOKEN" ""
   reject_secret_fields health
-  db_expect_pass FLYWAY_V24 "
+  db_expect_pass FLYWAY_V25 "
 select case when exists (
-  select 1 from flyway_schema_history where version = '24' and success = true
-) then 'PASS' else 'FAIL Flyway V24 is not installed' end;
+  select 1 from flyway_schema_history where version = '25' and success = true
+) then 'PASS' else 'FAIL Flyway V25 is not installed' end;
 "
 }
 
