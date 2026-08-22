@@ -537,12 +537,24 @@ no order, printer assignment, PrintJob, device action or physical output.
 POST `/api/v1/admin/printing/display-rules/draft`
 
 Saves a Store-scoped draft revision. Drafts are versioned configuration
-candidates only and do not affect live printing until published.
+candidates only and do not affect live printing until published. A rule set
+has at most one mutable DRAFT; repeated saves update that DRAFT. Historical
+content may be reused by a later rollback revision even when its
+`fingerprint_sha256` matches an older PUBLISHED revision. When the submitted
+content already equals the active revision, no revision is created and the
+endpoint returns the active PUBLISHED revision with
+`lifecycle_result=ALREADY_ACTIVE`. A normal draft save returns
+`lifecycle_result=DRAFT_SAVED`.
 
 POST `/api/v1/admin/printing/display-rules/publish`
 
 Publishes a valid draft as the Store's active revision. Published revisions are
 protected from content rewrites; later edits create another draft/revision.
+Publishing changes that existing DRAFT to PUBLISHED and atomically advances
+`active_revision_id`; it returns `lifecycle_result=PUBLISHED`. Prior published
+revisions remain immutable history. Lifecycle/constraint races return HTTP 409
+with a stable Printing Display Rule conflict code instead of a generic HTTP
+500.
 
 Rule document shape is structured, not executable:
 

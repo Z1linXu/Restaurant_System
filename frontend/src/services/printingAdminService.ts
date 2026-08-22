@@ -163,6 +163,7 @@ export interface PrintingDisplayRuleRevision {
   revision_number: number
   status: 'DRAFT' | 'PUBLISHED' | string
   schema_version: string
+  lifecycle_result?: 'DRAFT_SAVED' | 'ALREADY_ACTIVE' | 'PUBLISHED' | string | null
   fingerprint_sha256: string
   source_reference?: string | null
   summary?: string | null

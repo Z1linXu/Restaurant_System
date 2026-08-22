@@ -9,6 +9,7 @@ public class PrintingDisplayRuleRevisionResponse {
     public Integer revision_number;
     public String status;
     public String schema_version;
+    public String lifecycle_result;
 
     @JsonProperty("fingerprint_sha256")
     public String fingerprint_sha256;

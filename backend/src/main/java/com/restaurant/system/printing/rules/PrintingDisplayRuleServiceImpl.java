@@ -21,6 +21,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -190,7 +191,32 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
         LocalDateTime now = LocalDateTime.now();
         String canonicalContent = StoreProfileCanonicalJson.canonicalize(content);
         String fingerprint = StoreProfileCanonicalJson.sha256(canonicalContent);
-        PrintingDisplayRuleRevision draft = revisionRepository.findDraftsByRuleSetId(ruleSet.id).stream().findFirst().orElse(null);
+        List<PrintingDisplayRuleRevision> drafts = revisionRepository.findDraftsByRuleSetId(ruleSet.id);
+        if (drafts.size() > 1) {
+            throw conflict(
+                "PRINTING_DISPLAY_RULE_MULTIPLE_DRAFTS",
+                "Printing display rules have multiple drafts; resolve the stale draft state before saving"
+            );
+        }
+        PrintingDisplayRuleRevision draft = drafts.stream().findFirst().orElse(null);
+        PrintingDisplayRuleRevision active = ruleSet.active_revision_id == null
+            ? null
+            : revisionRepository.findById(ruleSet.active_revision_id).orElse(null);
+        if (active != null && !ruleSet.id.equals(active.rule_set_id)) {
+            throw conflict(
+                "PRINTING_DISPLAY_RULE_ACTIVE_REVISION_INVALID",
+                "Active printing display rule revision does not belong to this Store rule set"
+            );
+        }
+        if (sameContent(active, canonicalContent, fingerprint)) {
+            if (draft != null) {
+                revisionRepository.delete(draft);
+                revisionRepository.flush();
+            }
+            PrintingDisplayRuleRevisionResponse response = toResponse(active);
+            response.lifecycle_result = "ALREADY_ACTIVE";
+            return response;
+        }
         if (draft == null) {
             draft = new PrintingDisplayRuleRevision();
             draft.rule_set_id = ruleSet.id;
@@ -204,7 +230,17 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
         draft.fingerprint_sha256 = fingerprint;
         draft.summary = truncate(request.summary, 500);
         draft.updated_at = now;
-        return toResponse(revisionRepository.save(draft));
+        try {
+            PrintingDisplayRuleRevisionResponse response = toResponse(revisionRepository.saveAndFlush(draft));
+            response.lifecycle_result = "DRAFT_SAVED";
+            return response;
+        } catch (DataIntegrityViolationException exception) {
+            throw conflict(
+                "PRINTING_DISPLAY_RULE_DRAFT_CONFLICT",
+                "Printing display rule draft conflicted with another revision update",
+                exception
+            );
+        }
     }
 
     @Override
@@ -230,11 +266,21 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
         revision.status = "PUBLISHED";
         revision.published_at = now;
         revision.updated_at = now;
-        revision = revisionRepository.save(revision);
-        ruleSet.active_revision_id = revision.id;
-        ruleSet.updated_at = now;
-        ruleSetRepository.save(ruleSet);
-        return toResponse(revision);
+        try {
+            revision = revisionRepository.saveAndFlush(revision);
+            ruleSet.active_revision_id = revision.id;
+            ruleSet.updated_at = now;
+            ruleSetRepository.saveAndFlush(ruleSet);
+            PrintingDisplayRuleRevisionResponse response = toResponse(revision);
+            response.lifecycle_result = "PUBLISHED";
+            return response;
+        } catch (DataIntegrityViolationException exception) {
+            throw conflict(
+                "PRINTING_DISPLAY_RULE_PUBLISH_CONFLICT",
+                "Printing display rule publish conflicted with another revision update",
+                exception
+            );
+        }
     }
 
     @Override
@@ -758,6 +804,20 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
 
     private PrintingDisplayRuleValidationIssue issue(String code, String path, String message) {
         return new PrintingDisplayRuleValidationIssue(code, path, message);
+    }
+
+    private boolean sameContent(PrintingDisplayRuleRevision revision, String canonicalContent, String fingerprint) {
+        return revision != null
+            && fingerprint.equals(revision.fingerprint_sha256 == null ? null : revision.fingerprint_sha256.trim())
+            && canonicalContent.equals(StoreProfileCanonicalJson.canonicalize(revision.content_json));
+    }
+
+    private PrintingDisplayRuleConflictException conflict(String code, String message) {
+        return new PrintingDisplayRuleConflictException(code, message);
+    }
+
+    private PrintingDisplayRuleConflictException conflict(String code, String message, Throwable cause) {
+        return new PrintingDisplayRuleConflictException(code, message, cause);
     }
 
     private String stable(String value) {

@@ -34,6 +34,18 @@
 > reprints, FRONTDESK_RECEIPT, Combo component/egg semantics, station routing
 > and MOCK/REAL/PAD_DIRECT transport remain unchanged.
 
+> Printing Display Rule revision lifecycle: revision identity is
+> `(rule_set_id, revision_number)`. `fingerprint_sha256` is a content checksum
+> and query key, not a historical uniqueness identity, so a later rollback may
+> publish the same canonical content/fingerprint as an older immutable
+> PUBLISHED revision. Each rule set has at most one mutable DRAFT. Saving
+> content equal to the active revision returns `lifecycle_result=ALREADY_ACTIVE`
+> without creating a revision; saving historical non-active content creates or
+> updates the single DRAFT, and publishing atomically advances
+> `active_revision_id`. V22 replaces the historical fingerprint unique
+> constraint with a normal lookup index and adds the single-DRAFT partial
+> unique index. `OPTION-CODE-STABILITY` remains separate deferred debt.
+
 > 2026-08-21 Phase B Part 1 Staging automated acceptance: exact merged runtime
 > `96c81cf4fab8e771187ceeddeed28e5fc3e87f4a` is deployed to isolated Staging
 > with Flyway V21. Canonical acceptance created inactive validation Store 11,
