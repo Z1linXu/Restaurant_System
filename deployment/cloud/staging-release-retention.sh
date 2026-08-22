@@ -127,6 +127,7 @@ validate_state_and_evidence_roots() {
   EVIDENCE_DIR="$HYGIENE_ROOT/evidence"
   hygiene_validate_fixed_directory "Staging state directory" "$STATE_DIR" "$HYGIENE_ROOT/state"
   hygiene_validate_fixed_directory "Staging evidence directory" "$EVIDENCE_DIR" "$HYGIENE_ROOT/evidence"
+  [[ "$(hygiene_file_mode "$EVIDENCE_DIR")" == "700" ]] || hygiene_die "Staging evidence directory must use owner-only mode 0700"
   STATE_IDENTITY="$(hygiene_root_identity "$STATE_DIR")"
 }
 
@@ -159,7 +160,7 @@ validate_repository() {
 }
 
 validate_reference_tree() {
-  local root="$1" path
+  local root="$1" path mode
   while IFS= read -r path; do
     [[ -n "$path" ]] || continue
     [[ ! -L "$path" ]] || hygiene_die "protected reference tree contains a symlink: $path"
@@ -168,7 +169,15 @@ validate_reference_tree() {
       hygiene_mode_has_group_or_other_write "$path" && hygiene_die "protected reference directory is group or other writable: $path"
     elif [[ -f "$path" ]]; then
       [[ "$(hygiene_file_owner "$path")" == "$(id -u)" ]] || hygiene_die "protected reference file owner is unsafe: $path"
-      hygiene_mode_has_group_or_other_write "$path" && hygiene_die "protected reference file is group or other writable: $path"
+      if [[ "$root" == "$EVIDENCE_DIR" ]]; then
+        # Historical evidence predates the owner-only 0600 convention. The
+        # fixed parent remains owner-only and non-writable by group/other; do
+        # not mutate immutable evidence solely to normalize its legacy mode.
+        mode="$(hygiene_file_mode "$path")"
+        [[ "$mode" =~ ^(600|640|644|660|664)$ ]] || hygiene_die "historical evidence file mode is unsafe: $path"
+      else
+        hygiene_mode_has_group_or_other_write "$path" && hygiene_die "protected reference file is group or other writable: $path"
+      fi
     else
       hygiene_die "protected reference tree contains a non-regular path: $path"
     fi

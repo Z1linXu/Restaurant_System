@@ -22,6 +22,10 @@ Release retention 将固定的 `state/postgres` 数据目录视为不可遍历�
 只校验其 exact path、非 symlink、owner（部署用户或 PostgreSQL UID 70）和不可被组/其他
 用户写入的 metadata，不读取数据库内容，也不把数据库文件当作 release evidence。
 
+固定且强制为 `0700` 的 owner-only evidence 目录中的历史 regular files 可能保留既有
+`0640/0644/0660/0664` mode；工具验证 owner、父目录、symlink 和有限 mode allowlist，但不会为了 mode normalization
+改写历史 evidence。world-writable、executable、owner drift 或非 regular evidence 仍 fail closed。
+
 ## Release rotation 接入
 
 `staging-release-rotation.sh` 在 recovery record 中记录 `PRIOR_STAGING_SHA`。

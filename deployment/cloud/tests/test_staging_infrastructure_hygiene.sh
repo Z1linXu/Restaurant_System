@@ -94,6 +94,8 @@ make_release_fixture() {
   chmod 600 "$root/state/rotation.record"
   printf 'EVIDENCE|APPROVED_SHA|%s\n' "$PREVIOUS_RELEASE_SHA" >"$root/evidence/previous-verified.evidence"
   chmod 600 "$root/evidence/previous-verified.evidence"
+  printf 'EVIDENCE|HISTORICAL|legacy-mode\n' >"$root/evidence/legacy-mode.evidence"
+  chmod 664 "$root/evidence/legacy-mode.evidence"
 }
 
 RELEASE_SHAS=()
@@ -115,6 +117,7 @@ assert_contains "RELEASE_RETENTION|PROTECTED|$PREVIOUS_RELEASE_SHA|previous_veri
 assert_contains "RELEASE_RETENTION|ELIGIBLE|${RELEASE_SHAS[0]}|" "$RELEASE_PLAN"
 assert_contains "RELEASE_RETENTION|ELIGIBLE|${RELEASE_SHAS[1]}|" "$RELEASE_PLAN"
 assert_not_contains 'state/postgres' "$RELEASE_PLAN"
+[[ "$(stat -f '%Lp' "$RELEASE_ROOT/evidence/legacy-mode.evidence" 2>/dev/null || stat -c '%a' "$RELEASE_ROOT/evidence/legacy-mode.evidence")" == 664 ]] || fail 'historical evidence mode was mutated'
 RELEASE_PLAN_SHA256="$(sha256sum "$RELEASE_PLAN" | awk '{print $1}')"
 
 (
@@ -150,12 +153,20 @@ chmod 775 "$RELEASE_ROOT/state"
 expect_failure release_state_mode_rejected bash -c \
   "source '$RELEASE_SCRIPT'; HYGIENE_EXPECTED_ROOT='$RELEASE_ROOT'; HYGIENE_ROOT='$RELEASE_ROOT'; main --dry-run --env-file '$RELEASE_ENV'"
 chmod 700 "$RELEASE_ROOT/state"
+chmod 750 "$RELEASE_ROOT/evidence"
+expect_failure release_evidence_parent_not_owner_only bash -c \
+  "source '$RELEASE_SCRIPT'; HYGIENE_EXPECTED_ROOT='$RELEASE_ROOT'; HYGIENE_ROOT='$RELEASE_ROOT'; main --dry-run --env-file '$RELEASE_ENV'"
+chmod 700 "$RELEASE_ROOT/evidence"
 mv "$RELEASE_ROOT/state/postgres" "$RELEASE_ROOT/state/postgres-safe"
 ln -s "$RELEASE_ROOT/state/postgres-safe" "$RELEASE_ROOT/state/postgres"
 expect_failure release_postgres_symlink_rejected bash -c \
   "source '$RELEASE_SCRIPT'; HYGIENE_EXPECTED_ROOT='$RELEASE_ROOT'; HYGIENE_ROOT='$RELEASE_ROOT'; main --dry-run --env-file '$RELEASE_ENV'"
 rm "$RELEASE_ROOT/state/postgres"
 mv "$RELEASE_ROOT/state/postgres-safe" "$RELEASE_ROOT/state/postgres"
+chmod 666 "$RELEASE_ROOT/evidence/legacy-mode.evidence"
+expect_failure release_world_writable_evidence_rejected bash -c \
+  "source '$RELEASE_SCRIPT'; HYGIENE_EXPECTED_ROOT='$RELEASE_ROOT'; HYGIENE_ROOT='$RELEASE_ROOT'; main --dry-run --env-file '$RELEASE_ENV'"
+chmod 664 "$RELEASE_ROOT/evidence/legacy-mode.evidence"
 expect_failure release_arbitrary_env_rejected "$RELEASE_SCRIPT" --dry-run --env-file "$TMP_DIR/arbitrary/.env.staging"
 assert_contains 'fixed Staging path' "$TMP_DIR/release_arbitrary_env_rejected.err"
 
