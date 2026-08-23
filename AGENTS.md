@@ -309,6 +309,108 @@ real Store activation, new real credentials or Master-data mutation, or real
 Printer/Pad binding. Do not copy Production credentials/data/endpoints into
 Staging. Staging authorization never implies Production authorization.
 
+## Docker Build Cache / Disk Hygiene
+
+Frequent exact-SHA builds, Staging deploys and repair/rebuild loops make
+BuildKit cache a managed deployment resource. Cache should retain recent useful
+layers, but it must not grow without age, size and disk-pressure limits.
+
+### Safety boundary
+
+- Never run `docker system prune`, `docker volume prune`, unrestricted
+  `docker image prune`, unrestricted `docker builder prune -a`, manually delete
+  `/var/lib/docker` or containerd snapshots, directly `rm -rf` release
+  directories, or delete database volumes without explicit Owner authorization
+  and destructive-safety review.
+- Build cache, images, releases, logs, containers and volumes are separate
+  retention domains. Permission to clean one does not authorize cleaning the
+  others.
+- Every cleanup must protect the current Staging and Production exact-SHA
+  runtimes, active containers and images, rollback/recovery artifacts, database
+  containers/volumes, private configuration and authority-required evidence.
+- If cache activity, rollback provenance, evidence references, Production
+  impact or volume/data safety cannot be proven, fail closed.
+
+### Deploy inspection and thresholds
+
+For each runtime-sensitive Staging or Production deploy, inspect before and
+after at least `df -h` and `docker system df`. When needed, also inspect
+`docker builder du`, running containers/images, current Staging and Production
+SHAs, and protected rollback/recovery artifacts. Inspection is routine;
+cleanup is conditional and must not run automatically on every deploy.
+
+- Healthy disk target: below 70% used.
+- Warning: 75% or more used.
+- Critical: 90% or more used.
+- BuildKit soft target: at most 8 GB when practical.
+- From 8–12 GB, observe and explain growth.
+- Above 12 GB, perform a cache-hygiene review.
+- If disk is at least 75% used and old reclaimable cache exists, prioritize
+  reviewed old-cache cleanup.
+
+The target is not zero cache. Stop after the conservative layer once disk is
+below 70% and cache is reasonable; if disk remains at least 75% or cache remains
+above 12 GB, perform a second review rather than escalating automatically.
+
+### Default bounded retention
+
+- Prefer only build cache older than seven days that is clearly
+  reclaimable/dangling. The default reviewed command shape is
+  `docker builder prune --filter "until=168h"`; do not add `-a`.
+- Before execution, prove Staging and Production containers are healthy,
+  identify active images, confirm database volumes are outside scope, and use
+  the repository's reviewed hygiene tooling when it imposes stricter
+  eligibility or protected-set checks.
+- Do not remove an active image merely because related BuildKit records appear
+  reclaimable.
+- Old Staging releases must use reviewed bounded rotation, retaining current
+  Staging, previous verified Staging, shared current Production artifacts,
+  explicit rollback/recovery artifacts and authority/evidence references.
+  Never directly delete release directories.
+- Inactive historical images may be removed only through a reviewed retention
+  path after proving that no running container, current exact SHA or protected
+  rollback/recovery artifact uses them.
+- Maintain bounded Docker/container, Nginx and journald retention without
+  deleting logs or evidence needed for an active incident or acceptance run.
+
+### Exact-SHA reuse
+
+Avoid rebuilding the same exact SHA when its image already exists, provenance
+is verifiable and the deployment contract permits reuse. Validation retries,
+acceptance retries, evidence sync and docs-only governance commits with no
+executable/runtime change should reuse the verified application image and
+must not trigger an unnecessary application Docker build.
+
+### Post-cleanup proof and reporting
+
+After cleanup, verify `df -h`, `docker system df`, Staging and Production
+containers Up, PostgreSQL healthy, Staging reachable, and no unapproved
+Production mutation or restart. Record before/after disk used percentage, free
+GB, total/reclaimable Build Cache and reclaimed GB.
+
+If a runtime-sensitive deploy observes disk at least 75%, Build Cache above
+8 GB, or performs cleanup, the final report must include a `Docker / Disk
+Hygiene` section with:
+
+- Disk Before and After;
+- Build Cache Before and After;
+- Cleanup Performed and Reclaimed Space;
+- Protected Runtime Artifacts;
+- Staging Health;
+- Production Mutation.
+
+Routine read-only inspection, reviewed cleanup of clearly reclaimable cache
+older than seven days, reviewed Staging release rotation and existing-policy
+log rotation may proceed inside current authorization. Unrestricted builder
+prune, system prune, volume/database cleanup, active image/release deletion,
+Production mutation or any destructive cleanup whose safety cannot be proven
+is a TRUE OWNER GATE.
+
+Server-side Docker builds remain supported. If build frequency continues to
+grow, prefer proposing CI-built immutable images in a registry followed by
+server pull/deploy. That is a future deployment-architecture decision and must
+not be introduced without Owner authorization.
+
 ## 15. Production
 
 Production is always a TRUE OWNER GATE.
