@@ -176,6 +176,15 @@ Immediate independent post-deploy verification confirmed:
 - Staging still runs the accepted backend/frontend image IDs and exact
   application SHA.
 
+A stabilized observation found one non-blocking static-file error: the accepted
+frontend image stores `/usr/share/nginx/html/favicon.svg` as mode 0600, so that
+single URL returns HTTP 403. Production and Staging use the same immutable image
+and show the same mode/response. `index.html` and all nine referenced JS/CSS
+bundle assets returned HTTP 200, while authenticated API/WebSocket smoke and
+container health remained PASS. This is tracked as P3 frontend packaging debt;
+it is not a V26 migration, data-integrity or operational-flow failure and did
+not justify rebuilding an already accepted artifact during this release.
+
 ## Evidence and process hygiene
 
 | Artifact | SHA-256 |
@@ -211,6 +220,10 @@ physical print or APK deployment occurred. Staging mutation was `NONE`.
 Real Printer/Pad field behavior was not exercised by this release; compatibility
 was established by unchanged contracts and fingerprints. Phase B Part 2 Owner
 manual acceptance remains pending. Phase C remains unauthorized.
+
+The static favicon mode/HTTP 403 issue above remains a non-blocking visual debt.
+Its eventual repair must normalize public-asset readability in the image and
+pass the normal exact-SHA Staging path before any later Production promotion.
 
 Stop marker:
 `PHASE_B_PART2_STAGING_AUTOMATED_ACCEPTANCE_PASS_WAITING_FOR_OWNER_MANUAL_ACCEPTANCE`.
