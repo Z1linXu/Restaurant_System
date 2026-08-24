@@ -1,9 +1,9 @@
 schema_version: 1
-updated_at: 2026-08-22
+updated_at: 2026-08-24
 
 repository:
   ref: origin/main
-  sha: 7dfe1e9d691941c6c36ee61aaaa69b4e17fca9ed
+  sha: 9e4d13ba8d210585518cbdb81bb14cf41be51c27
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
@@ -21,10 +21,10 @@ staging:
   cleanup_evidence: PHASE_B_STAGING_SYNTHETIC_FIXTURE_CLEANUP_EXECUTION_EVIDENCE.md
 
 production:
-  deployed_sha: 3ec4d88a47f68e05b92d9246bfd63af2d1f297f9
-  flyway: V10
+  deployed_sha: ae446874e6a6bc7d2c19cdbc1ca92603ed53d6de
+  flyway: V26
   mutation_authorized: false
-  evidence: ../archive/governance-pre-simplification/runtime/PRODUCTION_THREE_RELIABILITY_RC_PROMOTION_EVIDENCE.md
+  evidence: PRODUCTION_V10_V26_RELEASE_EVIDENCE.md
 
 gate:
   type: OWNER
