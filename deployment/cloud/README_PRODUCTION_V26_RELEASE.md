@@ -25,6 +25,11 @@ V26. It does not authorize a release by itself; current Owner authorization and
   primary clone unchanged, then switching database names while the failed V26
   database remains quarantined until V10 application smoke passes. Write smoke rejects live Production and Staging DB
   identities before reading a credential, database row or API.
+- Fresh PostgreSQL containers are not considered restore-ready until the image
+  entrypoint has completed its temporary initialization server, emitted its
+  post-init completion marker, and the final server passes two stable readiness
+  checks. A transient `pg_isready` during entrypoint initialization cannot start
+  a restore.
 - The rehearsal also proves that the installed Production Pad identity remains
   `versionCode=2` / `0.2.0-offline-pr7`: the Android/WebView tree, worker DTOs,
   PAD_DIRECT service contract, API paths and required headers are unchanged;

@@ -44,6 +44,29 @@ grep -Fq 'docker_default volume rm "$VOLUME"' "$REHEARSAL"
 grep -Fq 'timeout -s TERM -k 10 840 pg_restore' "$REHEARSAL"
 grep -Fq 'OLD_PRODUCTION_APP_ON_V26_SCHEMA=' "$REHEARSAL"
 grep -Fq 'production-backup-integrity-' "$BACKUP"
+grep -Fq 'wait_fresh_postgres_ready' "$BACKUP"
+grep -Fq 'wait_fresh_postgres_ready' "$REHEARSAL"
+[[ "$(grep -Fhc 'PostgreSQL init process complete; ready for start up.' "$BACKUP" "$REHEARSAL" | awk '{total += $1} END {print total}')" == "2" ]]
+grep -Fq "'{{.State.Running}}|{{.State.Restarting}}'" "$BACKUP"
+grep -Fq "'{{.State.Running}}|{{.State.Restarting}}'" "$REHEARSAL"
+[[ "$(grep -Fhc 'bounded "$remaining"' "$BACKUP" "$REHEARSAL" | awk '{total += $1} END {print total}')" == "2" ]]
+backup_until_function="$(sed -n '/^docker_until()/,/^}/p' "$BACKUP")"
+rehearsal_until_function="$(sed -n '/^docker_until()/,/^}/p' "$REHEARSAL")"
+backup_ready_function="$(sed -n '/^wait_fresh_postgres_ready()/,/^}/p' "$BACKUP")"
+rehearsal_ready_function="$(sed -n '/^wait_fresh_postgres_ready()/,/^}/p' "$REHEARSAL")"
+[[ -n "$backup_until_function" && "$backup_until_function" == "$rehearsal_until_function" ]]
+[[ -n "$backup_ready_function" && "$backup_ready_function" == "$rehearsal_ready_function" ]]
+eval "$backup_ready_function"
+docker_until() {
+  shift
+  if [[ "${1:-}" == "logs" ]]; then
+    sleep 3
+    printf 'PostgreSQL init process complete; ready for start up.\n'
+    return 0
+  fi
+  return 0
+}
+! wait_fresh_postgres_ready delayed-container postgres delayed-db 2
 grep -Fq 'target restart did not prove no pending migration' "$REHEARSAL"
 grep -Fq 'ANDROID_COMPATIBILITY|run_id=' "$REHEARSAL"
 grep -Fq 'accepted backend requires a different Android app tree' "$REHEARSAL"

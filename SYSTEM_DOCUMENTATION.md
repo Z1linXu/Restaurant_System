@@ -8910,3 +8910,13 @@ network, private frontend address and absence of every published port. Live
 Production/Staging database names and ordinary non-loopback URLs remain rejected.
 This accommodates Docker engines that intentionally suppress port publication
 on internal networks without weakening clone isolation or opening a public edge.
+
+## Production V26 PostgreSQL restore readiness
+
+Every fresh-container restore waits past the PostgreSQL image entrypoint's
+temporary initialization server. The helper requires the exact post-init
+completion log marker, a successful readiness probe, a still-running and
+non-restarting container, and a second readiness probe after a stability delay.
+Only then may `pg_restore` start. This prevents a transient initialization
+`pg_isready` response from racing the entrypoint's normal fast shutdown, while
+keeping the existing timeouts, exact container ownership and cleanup behavior.

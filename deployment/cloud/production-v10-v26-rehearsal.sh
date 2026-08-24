@@ -51,8 +51,38 @@ bounded() {
 docker_default() {
   bounded "$DOCKER_TIMEOUT_SECONDS" env -i PATH="$SAFE_PATH" HOME="$HOME" DOCKER_CONFIG="${DOCKER_CONFIG:-$HOME/.docker}" docker --context default "$@"
 }
+docker_until() {
+  local deadline="$1" remaining
+  shift
+  remaining=$((deadline - SECONDS))
+  (( remaining > 0 )) || return 124
+  bounded "$remaining" env -i PATH="$SAFE_PATH" HOME="$HOME" DOCKER_CONFIG="${DOCKER_CONFIG:-$HOME/.docker}" docker --context default "$@"
+}
 docker_restore() {
   bounded "$RESTORE_TIMEOUT_SECONDS" env -i PATH="$SAFE_PATH" HOME="$HOME" DOCKER_CONFIG="${DOCKER_CONFIG:-$HOME/.docker}" docker --context default "$@"
+}
+wait_fresh_postgres_ready() {
+  local container_id="$1" database_user="$2" database_name="$3" timeout_seconds="${4:-120}" deadline logs remaining
+  [[ "$timeout_seconds" =~ ^[0-9]+$ && "$timeout_seconds" -ge 2 && "$timeout_seconds" -le 120 ]] || return 1
+  deadline=$((SECONDS + timeout_seconds))
+  while (( SECONDS < deadline )); do
+    logs="$(docker_until "$deadline" logs "$container_id" 2>&1)" || return 1
+    if grep -Fq 'PostgreSQL init process complete; ready for start up.' <<<"$logs" &&
+       docker_until "$deadline" exec "$container_id" pg_isready -U "$database_user" -d "$database_name" >/dev/null 2>&1; then
+      remaining=$((deadline - SECONDS))
+      (( remaining > 1 )) || return 1
+      sleep 1
+      [[ "$(docker_until "$deadline" inspect --format '{{.State.Running}}|{{.State.Restarting}}' "$container_id")" == "true|false" ]] || return 1
+      if docker_until "$deadline" exec "$container_id" pg_isready -U "$database_user" -d "$database_name" >/dev/null 2>&1; then
+        (( SECONDS < deadline )) && return 0
+        return 1
+      fi
+    fi
+    remaining=$((deadline - SECONDS))
+    (( remaining > 1 )) || return 1
+    sleep 1
+  done
+  return 1
 }
 
 container_identity() {
@@ -319,18 +349,14 @@ create_volume() {
 }
 
 start_db_and_restore() {
-  local created ready="false"
+  local created
   create_volume
   DB_PASSWORD="$(openssl rand -hex 24)"
   created="$(docker_default run -d --pull=never --name "$DB_CONTAINER" --label restaurant.production-v26-rehearsal="$RUN_ID" --network "$NETWORK" --network-alias db --cpus 1 --memory 768m --pids-limit 256 -v "$VOLUME:/var/lib/postgresql/data" -e POSTGRES_DB=restaurant_pos_rehearsal -e POSTGRES_USER=rehearsal -e POSTGRES_PASSWORD="$DB_PASSWORD" "$POSTGRES_IMAGE_ID")" || die "cannot create isolated PostgreSQL"
   [[ "$created" =~ ^[0-9a-f]{64}$ ]] || die "isolated PostgreSQL ID is invalid"
   DB_CONTAINER_ID="$created"
   [[ "$(container_identity "$DB_CONTAINER")" == "$DB_CONTAINER_ID|$RUN_ID" ]] || die "isolated PostgreSQL ownership differs"
-  for _ in $(seq 1 60); do
-    if docker_default exec "$DB_CONTAINER_ID" pg_isready -U rehearsal -d restaurant_pos_rehearsal >/dev/null 2>&1; then ready="true"; break; fi
-    sleep 1
-  done
-  [[ "$ready" == "true" ]] || die "isolated PostgreSQL did not become ready"
+  wait_fresh_postgres_ready "$DB_CONTAINER_ID" rehearsal restaurant_pos_rehearsal || die "isolated PostgreSQL did not reach stable post-init readiness"
   docker_restore exec -i "$DB_CONTAINER_ID" timeout -s TERM -k 10 840 pg_restore -U rehearsal -d restaurant_pos_rehearsal --no-owner --no-privileges --exit-on-error --single-transaction <"$BACKUP_FILE" || die "isolated restore failed or timed out"
   [[ "$(ledger "$DB_CONTAINER_ID")" == "$(expected_ledger 10)" ]] || die "restored clone Flyway is not exact V10"
 }
