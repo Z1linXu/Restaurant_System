@@ -45,6 +45,10 @@ V26. It does not authorize a release by itself; current Owner authorization and
   tooling checkout must contain no tracked or untracked drift. Every required
   rehearsal marker carries the same random run ID, so evidence from different
   executions cannot be spliced into a PASS.
+- The Production control checkout must have no tracked drift. Its untracked
+  status is restricted to the exact fixed runtime paths already used for the
+  ops lock, backups, bootstrap secret, database/Nginx state and retained legacy
+  Store migration archives; any additional untracked path fails closed.
 - Every Docker, Compose, restore and smoke subprocess is bounded. Temporary
   containers, volume and internal network are removed only after exact ID,
   label and mountpoint ownership checks; Docker query/timeout errors are

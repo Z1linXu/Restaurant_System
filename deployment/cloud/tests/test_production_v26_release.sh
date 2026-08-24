@@ -16,8 +16,12 @@ MANIFEST="$ROOT/deployment/cloud/ops001-flyway-v26-checksums.txt"
 for script in "$BACKUP" "$REHEARSAL" "$PROMOTION" "$RECOVERY" "$DATA_CONTRACT"; do
   bash -n "$script"
 done
-python3 -m py_compile "$SMOKE" "$EVIDENCE"
-python3 -m unittest "$ROOT/deployment/cloud/tests/test_production_v26_smoke.py" "$ROOT/deployment/cloud/tests/test_production_v26_evidence.py"
+python3 -I - "$SMOKE" "$EVIDENCE" <<'PY'
+import pathlib, sys
+for source in sys.argv[1:]:
+    compile(pathlib.Path(source).read_text(encoding="utf-8"), source, "exec")
+PY
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s "$ROOT/deployment/cloud/tests" -p 'test_production_v26_*.py'
 bash "$ROOT/deployment/cloud/tests/test_production_v26_recovery_policy.sh"
 
 diff -u <(grep -E '^[0-9]+[|]' "$ROOT/deployment/cloud/ops001-flyway-checksums.txt") <(grep -E '^[0-9]+[|]' "$MANIFEST")
@@ -91,6 +95,42 @@ grep -Fq 'resolved Compose DB identity differs from running DB container' "$PROM
 ! grep -Fq 'createdb -U "$POSTGRES_USER" -O "$POSTGRES_USER" "$POSTGRES_DB"' "$RECOVERY"
 grep -Fq 'Production data changed outside the rehearsed migration contract' "$RECOVERY"
 grep -Fq 'RECOVERY|rc_id=' "$RECOVERY"
+
+promotion_control_function="$(sed -n '/^control_checkout_is_release_safe()/,/^}/p' "$PROMOTION")"
+recovery_control_function="$(sed -n '/^control_checkout_is_release_safe()/,/^}/p' "$RECOVERY")"
+[[ -n "$promotion_control_function" && "$promotion_control_function" == "$recovery_control_function" ]]
+eval "$promotion_control_function"
+control_test_root="$(mktemp -d)"
+trap 'rm -rf -- "$control_test_root"' EXIT
+git -C "$control_test_root" init -q
+git -C "$control_test_root" config user.name release-test
+git -C "$control_test_root" config user.email release-test@example.invalid
+mkdir -p "$control_test_root/deployment/cloud"
+printf 'services: {}\n' >"$control_test_root/deployment/cloud/docker-compose.yml"
+git -C "$control_test_root" add deployment/cloud/docker-compose.yml
+git -C "$control_test_root" commit -qm baseline
+control_test_sha="$(git -C "$control_test_root" rev-parse HEAD)"
+test_control_function="$(sed "s#/home/ubuntu/Restaurant_System#$control_test_root#g" <<<"$promotion_control_function")"
+eval "$test_control_function"
+control_checkout_is_release_safe "$control_test_sha"
+mkdir -p "$control_test_root/deployment/cloud/backups" "$control_test_root/deployment/cloud/data"
+touch "$control_test_root/deployment/cloud/.production-ops.lock" \
+  "$control_test_root/deployment/cloud/backups/retained.dump" \
+  "$control_test_root/deployment/cloud/bootstrap-admin.env" \
+  "$control_test_root/deployment/cloud/data/runtime" \
+  "$control_test_root/deployment/cloud/old-store-config.dump" \
+  "$control_test_root/deployment/cloud/old-store-config.sql"
+control_checkout_is_release_safe "$control_test_sha"
+touch "$control_test_root/unexpected-runtime-path"
+! control_checkout_is_release_safe "$control_test_sha"
+rm "$control_test_root/unexpected-runtime-path"
+printf 'drift\n' >>"$control_test_root/deployment/cloud/docker-compose.yml"
+! control_checkout_is_release_safe "$control_test_sha"
+git -C "$control_test_root" restore deployment/cloud/docker-compose.yml
+! control_checkout_is_release_safe 0000000000000000000000000000000000000000
+rm -rf -- "$control_test_root"
+trap - EXIT
+printf 'Production V26 control-checkout allowlist tests: PASS\n'
 
 python3 - "$PROMOTION" <<'PY'
 import pathlib,sys
