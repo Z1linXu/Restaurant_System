@@ -76,6 +76,54 @@ grep -Fq 'RECOVERY_PROOF|run_id=' "$REHEARSAL"
 grep -Fq 'rename_rehearsal_database "$PRIMARY_DB" "$QUARANTINED_V26_DB"' "$REHEARSAL"
 ! grep -Fq 'stop_db_and_volume' <(tail -n 30 "$REHEARSAL")
 
+database_absent_function="$(sed -n '/^rehearsal_database_absent()/,/^}/p' "$REHEARSAL")"
+terminate_sessions_function="$(sed -n '/^terminate_rehearsal_database_sessions()/,/^}/p' "$REHEARSAL")"
+[[ -n "$database_absent_function" && -n "$terminate_sessions_function" ]]
+eval "$database_absent_function"
+eval "$terminate_sessions_function"
+DB_CONTAINER_ID=test-rehearsal-db
+FAKE_DATABASE_COUNT=0
+FAKE_DOCKER_FAIL=false
+assert_fails() {
+  local label="$1"
+  shift
+  if "$@"; then
+    printf 'expected failure was not observed: %s\n' "$label" >&2
+    exit 1
+  fi
+}
+docker_default() {
+  [[ "$*" == *'exec -i test-rehearsal-db psql '* ]] || return 1
+  [[ "$*" == *'-v candidate=valid_database_1'* ]] || return 1
+  [[ "$*" != *' -c '* ]] || return 1
+  [[ "$(cat)" == "select count(*) from pg_database where datname = :'candidate';" ]] || return 1
+  [[ "$FAKE_DOCKER_FAIL" == "false" ]] || return 1
+  printf '%s\n' "$FAKE_DATABASE_COUNT"
+}
+rehearsal_database_absent valid_database_1
+FAKE_DATABASE_COUNT=1
+assert_fails database-already-exists rehearsal_database_absent valid_database_1
+FAKE_DATABASE_COUNT=0
+FAKE_DOCKER_FAIL=true
+assert_fails database-query-failure rehearsal_database_absent valid_database_1
+FAKE_DOCKER_FAIL=false
+assert_fails invalid-database-name rehearsal_database_absent 'invalid-database'
+legacy_database_absent_with_c() {
+  local database="$1" count
+  count="$(docker_default exec "$DB_CONTAINER_ID" psql -qX -v ON_ERROR_STOP=1 -At -U rehearsal -d postgres -v "candidate=$database" -c "select count(*) from pg_database where datname = :'candidate'")" || return 1
+  [[ "$count" == "0" ]]
+}
+assert_fails legacy-psql-c-shape legacy_database_absent_with_c valid_database_1
+docker_restore() {
+  [[ "$*" == *'exec -i test-rehearsal-db timeout -s TERM -k 10 120 psql '* ]] || return 1
+  [[ "$*" == *'-v candidate=valid_database_1'* ]] || return 1
+  [[ "$*" != *' -c '* ]] || return 1
+  [[ "$(cat)" == "select pg_terminate_backend(pid) from pg_stat_activity where datname = :'candidate' and pid <> pg_backend_pid();" ]] || return 1
+}
+terminate_rehearsal_database_sessions valid_database_1
+assert_fails invalid-terminate-database-name terminate_rehearsal_database_sessions 'invalid-database'
+printf 'Production V26 recovery psql stdin-variable tests: PASS\n'
+
 grep -Fq 'to_jsonb(t)' "$DATA_CONTRACT"
 grep -Fq "'printer_id'" "$DATA_CONTRACT" || grep -Fq 'to_jsonb(t)' "$DATA_CONTRACT"
 grep -Fq 'v26_business_fingerprint' "$PROMOTION"
