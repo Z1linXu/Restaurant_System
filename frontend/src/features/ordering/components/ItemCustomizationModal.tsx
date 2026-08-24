@@ -8,6 +8,7 @@ import {
   resolveComboDraftSelections,
   resolveComboGroupOptionId,
 } from '../../../utils/comboSelection'
+import { formatNoodleTypeDisplayLabel } from './noodleTypePresentation'
 
 function isToggleAddOn(labelZh: string, priceDelta?: number) {
   return (priceDelta ?? 0) === 0 && (labelZh === '加香菜' || labelZh === '加葱')
@@ -427,7 +428,7 @@ export function ItemCustomizationModal({
                       key={option.id}
                       active={draft.noodleTypeId === option.id}
                       label={option.labelEn}
-                      sublabel={option.labelZh}
+                      sublabel={formatNoodleTypeDisplayLabel(option.labelZh, option.optionCode)}
                       compact={compact}
                       onClick={() => onChange({ ...draft, noodleTypeId: option.id })}
                     />
