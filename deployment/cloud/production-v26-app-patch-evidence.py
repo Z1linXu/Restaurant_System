@@ -15,6 +15,8 @@ PASS_FIELDS = (
     "printing_endpoint_free",
     "final_result",
 )
+BUSINESS_PROFILE = "V26_BUSINESS_STORE_CREATE"
+SMALL_FRONTEND_PROFILE = "SMALL_FRONTEND_DISPLAY_ONLY"
 KEYS = {
     "schema", "run_id", "source_sha", "backend_image_id", "frontend_image_id", "environment_sha256",
     "runtime_preflight_sha256", "owner_approval_sha256",
@@ -37,7 +39,7 @@ def sha256_lines(lines):
     return hashlib.sha256(payload).hexdigest()
 
 
-def validate(path, source_sha, backend_image_id, frontend_image_id, env_sha, preflight_sha, approval_sha, run_id):
+def validate_business(path, source_sha, backend_image_id, frontend_image_id, env_sha, preflight_sha, approval_sha, run_id):
     with open(path, encoding="utf-8") as handle:
         data = json.load(handle, object_pairs_hook=unique_object)
     if set(data) != KEYS:
@@ -89,9 +91,48 @@ def validate(path, source_sha, backend_image_id, frontend_image_id, env_sha, pre
     return data
 
 
+def validate_small_frontend_display(path, source_sha, backend_image_id, frontend_image_id):
+    with open(path, encoding="utf-8") as handle:
+        lines = [line.rstrip("\n") for line in handle]
+    required = {
+        f"HOTFIX_CLASS|{SMALL_FRONTEND_PROFILE}",
+        "ENVIRONMENT|restaurant-pos-staging",
+        f"ACCEPTED_SHA|{source_sha}",
+        f"BACKEND_IMAGE_ID|{backend_image_id}",
+        f"FRONTEND_IMAGE_ID|{frontend_image_id}",
+        "FLYWAY|26|26|true",
+        "VISUAL|Capillary|毛细（1）|PASS",
+        "VISUAL|Thin|细（2）|PASS",
+        "VISUAL|Sanxi|三细（3）|PASS",
+        "VISUAL|Erxi|二细（4）|PASS",
+        "VISUAL|Leek Leaf|韭叶（5）|PASS",
+        "VISUAL|Wide|宽（6）|PASS",
+        "VISUAL|Extra Wide|大宽（7）|PASS",
+        "SELECTION|Thin_active_after_click|PASS",
+        "ADD_TO_ORDER|PASS",
+        "ORDER_SUMMARY_SEMANTIC|Thin / 细|PASS",
+        "MODAL_RUNTIME_ERRORS|0|PASS",
+        "HEALTH|PASS",
+        "PRODUCTION_MUTATION|NONE",
+        "RESULT|PASS",
+    }
+    if len(lines) != len(set(lines)) or set(lines) != required:
+        raise ValueError("small frontend display evidence differs")
+    return {"profile": SMALL_FRONTEND_PROFILE, "result": "PASS"}
+
+
+def validate(path, profile, source_sha, backend_image_id, frontend_image_id, env_sha, preflight_sha, approval_sha, run_id):
+    if profile == BUSINESS_PROFILE:
+        return validate_business(path, source_sha, backend_image_id, frontend_image_id, env_sha, preflight_sha, approval_sha, run_id)
+    if profile == SMALL_FRONTEND_PROFILE:
+        return validate_small_frontend_display(path, source_sha, backend_image_id, frontend_image_id)
+    raise ValueError("acceptance profile differs")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--acceptance", required=True)
+    parser.add_argument("--profile", default=BUSINESS_PROFILE)
     parser.add_argument("--source-sha", required=True)
     parser.add_argument("--backend-image-id", required=True)
     parser.add_argument("--frontend-image-id", required=True)
@@ -101,10 +142,12 @@ def main():
     parser.add_argument("--run-id", required=True)
     args = parser.parse_args()
     data = validate(
-        args.acceptance, args.source_sha, args.backend_image_id, args.frontend_image_id, args.environment_sha256,
+        args.acceptance, args.profile, args.source_sha, args.backend_image_id, args.frontend_image_id, args.environment_sha256,
         args.runtime_preflight_sha256, args.owner_approval_sha256, args.run_id,
     )
-    print(f"ACCEPTANCE_STORE_ID={data['store_id']}")
+    if args.profile == BUSINESS_PROFILE:
+        print(f"ACCEPTANCE_STORE_ID={data['store_id']}")
+    print(f"ACCEPTANCE_PROFILE={args.profile}")
     print("ACCEPTANCE_TYPED_GATES=PASS")
 
 

@@ -51,6 +51,17 @@ require_private_file() {
   [[ "$(stat -c '%u|%a' "$path")" == "$(id -u)|600" ]] || die "private file owner/mode differs"
 }
 
+control_binding_is_valid() {
+  local repository="$1" profile="$2" source_sha="$3" control_sha="$4" actual_head
+  actual_head="$(git -C "$repository" rev-parse HEAD 2>/dev/null || true)"
+  [[ "$actual_head" == "$control_sha" ]] || return 1
+  case "$profile" in
+    V26_BUSINESS_STORE_CREATE) [[ "$control_sha" == "$source_sha" ]] ;;
+    SMALL_FRONTEND_DISPLAY_ONLY) git -C "$repository" merge-base --is-ancestor "$source_sha" "$control_sha" >/dev/null 2>&1 ;;
+    *) return 1 ;;
+  esac
+}
+
 exact_container_id() {
   local output
   output="$(docker_default ps -aq --no-trunc --filter "name=^/${1}$")" || return 1
@@ -90,22 +101,33 @@ keys=("status","source_sha","previous_source_sha","control_checkout_sha","postgr
       "promotion_helper_sha256","promotion_override_sha256","evidence_validator_sha256",
       "production_environment_sha256","target_resolved_compose_sha256","rollback_resolved_compose_sha256",
       "production_runtime_config_sha256","staging_acceptance_result","agent_6_review","production_preflight_result")
+profile_keys=("acceptance_profile","backend_business_change","database_change","flyway_change",
+              "android_apk_update","printing_impact","frontend_build","focused_tests","staging_visual_acceptance")
 d=json.load(open(sys.argv[1],encoding="utf-8"),object_pairs_hook=unique)
-if set(d)!=set(keys): raise SystemExit(2)
+if set(d)==set(keys):
+    profile_values=("V26_BUSINESS_STORE_CREATE",)+("N/A",)*8
+elif set(d)==set(keys+profile_keys):
+    profile_values=tuple(d[key] for key in profile_keys)
+else: raise SystemExit(2)
 for key in keys:
     value=d[key]
+    if not isinstance(value,str) or "\n" in value or "\r" in value: raise SystemExit(2)
+    print(value)
+for value in profile_values:
     if not isinstance(value,str) or "\n" in value or "\r" in value: raise SystemExit(2)
     print(value)
 PY
 )" || die "manifest is invalid"
 mapfile -t m <<<"$manifest_output"; unset manifest_output
-[[ ${#m[@]} -eq 28 ]] || die "manifest field count differs"
+[[ ${#m[@]} -eq 37 ]] || die "manifest field count differs"
 STATUS="${m[0]}"; SOURCE_SHA="${m[1]}"; PREVIOUS_SHA="${m[2]}"; CONTROL_SHA="${m[3]}"; POSTGRES_ID="${m[4]}"
 BACKEND_TAG="${m[5]}"; BACKEND_ID="${m[6]}"; FRONTEND_TAG="${m[7]}"; FRONTEND_ID="${m[8]}"
 ROLLBACK_BACKEND_ID="${m[9]}"; ROLLBACK_FRONTEND_ID="${m[10]}"; ACCEPTANCE_FILE="${m[11]}"; ACCEPTANCE_DIGEST="${m[12]}"
 STAGING_ENV_DIGEST="${m[13]}"; STAGING_PREFLIGHT_DIGEST="${m[14]}"; STAGING_APPROVAL_DIGEST="${m[15]}"; ACCEPTANCE_RUN_ID="${m[16]}"
 FLYWAY_DIGEST="${m[17]}"; HELPER_DIGEST="${m[18]}"; OVERRIDE_DIGEST="${m[19]}"; EVIDENCE_VALIDATOR_DIGEST="${m[20]}"
 PRODUCTION_ENV_DIGEST="${m[21]}"; TARGET_COMPOSE_DIGEST="${m[22]}"; ROLLBACK_COMPOSE_DIGEST="${m[23]}"; RUNTIME_CONFIG_DIGEST="${m[24]}"
+ACCEPTANCE_PROFILE="${m[28]}"; BACKEND_BUSINESS_CHANGE="${m[29]}"; DATABASE_CHANGE="${m[30]}"; FLYWAY_CHANGE="${m[31]}"
+ANDROID_APK_UPDATE="${m[32]}"; PRINTING_IMPACT="${m[33]}"; FRONTEND_BUILD="${m[34]}"; FOCUSED_TESTS="${m[35]}"; VISUAL_ACCEPTANCE="${m[36]}"
 
 [[ "$STATUS" == "V26_APP_PATCH_FROZEN" ]] || die "manifest status differs"
 for sha in "$SOURCE_SHA" "$PREVIOUS_SHA" "$CONTROL_SHA"; do [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || die "Git identity is invalid"; done
@@ -116,16 +138,26 @@ for value in "$PRODUCTION_ENV_DIGEST" "$TARGET_COMPOSE_DIGEST" "$ROLLBACK_COMPOS
 [[ "$BACKEND_TAG" == *"$SOURCE_SHA" && "$FRONTEND_TAG" == *"$SOURCE_SHA" ]] || die "target image tags are not exact-SHA-bound"
 [[ "${m[25]}" == "PASS" && "${m[26]}" == "ACCEPT" ]] || die "Staging acceptance or Agent 6 gate differs"
 if [[ "$ACTION" == "execute" ]]; then [[ "${m[27]}" == "PASS" ]] || die "Production preflight gate is not PASS"; else [[ "${m[27]}" == "PENDING" || "${m[27]}" == "PASS" ]] || die "Production preflight gate differs"; fi
+case "$ACCEPTANCE_PROFILE" in
+  V26_BUSINESS_STORE_CREATE)
+    [[ "$BACKEND_BUSINESS_CHANGE|$DATABASE_CHANGE|$FLYWAY_CHANGE|$ANDROID_APK_UPDATE|$PRINTING_IMPACT|$FRONTEND_BUILD|$FOCUSED_TESTS|$VISUAL_ACCEPTANCE" == "N/A|N/A|N/A|N/A|N/A|N/A|N/A|N/A" ]] || die "business Store acceptance profile declarations differ"
+    ;;
+  SMALL_FRONTEND_DISPLAY_ONLY)
+    [[ "$BACKEND_BUSINESS_CHANGE|$DATABASE_CHANGE|$FLYWAY_CHANGE|$ANDROID_APK_UPDATE|$PRINTING_IMPACT|$FRONTEND_BUILD|$FOCUSED_TESTS|$VISUAL_ACCEPTANCE" == "NO|NO|NO|NO|NONE|PASS|PASS|PASS" ]] || die "small frontend display profile declarations differ"
+    ;;
+  *) die "acceptance profile differs" ;;
+esac
 
 for path in "$BASE_COMPOSE" "$OVERRIDE_COMPOSE" "$ENV_FILE" "$STAGING_ENV" "$FLYWAY_MANIFEST" "$DATA_CONTRACT" "$SMOKE" "$EVIDENCE_VALIDATOR"; do [[ -f "$path" && ! -L "$path" ]] || die "required control file is missing or symlinked"; done
-[[ "$(realpath "$SCRIPT_DIR")" == "$CONTROL_ROOT" && "$(git -C "$REPOSITORY_ROOT" rev-parse HEAD)" == "$CONTROL_SHA" && "$CONTROL_SHA" == "$SOURCE_SHA" ]] || die "Production control checkout is not the exact accepted SHA"
+[[ "$(realpath "$SCRIPT_DIR")" == "$CONTROL_ROOT" ]] || die "Production control path differs"
+control_binding_is_valid "$REPOSITORY_ROOT" "$ACCEPTANCE_PROFILE" "$SOURCE_SHA" "$CONTROL_SHA" || die "Production control checkout is not valid for the acceptance profile"
 [[ -z "$(git -C "$REPOSITORY_ROOT" status --porcelain --untracked-files=normal | grep -Ev '^\?\? deployment/cloud/(\.production-ops\.lock|backups/|bootstrap-admin\.env|data/|old-store-config\.(dump|sql))' || true)" ]] || die "Production control checkout is dirty"
 [[ "$(digest "${BASH_SOURCE[0]}")" == "$HELPER_DIGEST" && "$(digest "$OVERRIDE_COMPOSE")" == "$OVERRIDE_DIGEST" && "$(digest "$FLYWAY_MANIFEST")" == "$FLYWAY_DIGEST" && "$(digest "$EVIDENCE_VALIDATOR")" == "$EVIDENCE_VALIDATOR_DIGEST" ]] || die "reviewed tooling digest differs"
 git -C "$REPOSITORY_ROOT" merge-base --is-ancestor "$PREVIOUS_SHA" "$SOURCE_SHA" || die "target SHA does not descend from current Production authority"
 
 require_private_file "$ACCEPTANCE_FILE"
 [[ "$(digest "$ACCEPTANCE_FILE")" == "$ACCEPTANCE_DIGEST" ]] || die "Staging acceptance digest differs"
-bounded 30 env -i PATH="$SAFE_PATH" python3 -I "$EVIDENCE_VALIDATOR" --acceptance "$ACCEPTANCE_FILE" --source-sha "$SOURCE_SHA" --backend-image-id "$BACKEND_ID" --frontend-image-id "$FRONTEND_ID" --environment-sha256 "$STAGING_ENV_DIGEST" --runtime-preflight-sha256 "$STAGING_PREFLIGHT_DIGEST" --owner-approval-sha256 "$STAGING_APPROVAL_DIGEST" --run-id "$ACCEPTANCE_RUN_ID" >/dev/null || die "typed business Store acceptance evidence differs"
+bounded 30 env -i PATH="$SAFE_PATH" python3 -I "$EVIDENCE_VALIDATOR" --profile "$ACCEPTANCE_PROFILE" --acceptance "$ACCEPTANCE_FILE" --source-sha "$SOURCE_SHA" --backend-image-id "$BACKEND_ID" --frontend-image-id "$FRONTEND_ID" --environment-sha256 "$STAGING_ENV_DIGEST" --runtime-preflight-sha256 "$STAGING_PREFLIGHT_DIGEST" --owner-approval-sha256 "$STAGING_APPROVAL_DIGEST" --run-id "$ACCEPTANCE_RUN_ID" >/dev/null || die "typed Staging acceptance evidence differs"
 grep -Fxq "STAGING_COMMIT_SHA=$SOURCE_SHA" "$STAGING_ENV" || die "current Staging SHA differs"
 [[ "$(digest "$STAGING_ENV")" == "$STAGING_ENV_DIGEST" ]] || die "Staging environment changed after acceptance"
 [[ "$(docker_default inspect --format '{{.Image}}' restaurant-pos-staging-backend-1)" == "$BACKEND_ID" && "$(docker_default inspect --format '{{.Image}}' restaurant-pos-staging-nginx-1)" == "$FRONTEND_ID" ]] || die "current Staging runtime does not use accepted images"
