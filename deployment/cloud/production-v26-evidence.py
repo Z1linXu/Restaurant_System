@@ -154,7 +154,7 @@ def verify_rehearsal(
     require_pattern_marker(
         markers,
         "READ_SMOKE",
-        rf"READ_SMOKE\|run_id={run_id}\|.*historical_detail=PASS\|wrong_organization_real_store=PASS\|wrong_store=PASS\|websocket=PASS\|result=PASS",
+        rf"READ_SMOKE\|run_id={run_id}\|.*historical_detail=PASS\|organization_claim_db_authority=PASS\|wrong_store=PASS\|websocket=PASS\|result=PASS",
         "read smoke",
     )
     require_pattern_marker(

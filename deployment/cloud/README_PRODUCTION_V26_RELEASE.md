@@ -52,6 +52,12 @@ V26. It does not authorize a release by itself; current Owner authorization and
   tooling checkout must contain no tracked or untracked drift. Every required
   rehearsal marker carries the same random run ID, so evidence from different
   executions cannot be spliced into a PASS.
+- Authentication rehydrates the signed token's user identity, role and active
+  Store/Organization memberships from the database; `organization_id` in the
+  token is not a second authorization source. Read smoke deliberately supplies
+  an inconsistent Organization claim and requires Store context/workspaces to
+  remain bound to canonical database authority, while an unavailable Store
+  remains forbidden.
 - The Production control checkout must have no tracked drift. Its untracked
   status is restricted to the exact fixed runtime paths already used for the
   ops lock, backups, bootstrap secret, database/Nginx state and retained legacy

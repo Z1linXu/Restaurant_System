@@ -8928,3 +8928,14 @@ the existing `/api/v1/admin/platform/stations` contract. The shorter
 `/api/v1/admin/stations` path is not an application endpoint and must not be
 used as a release gate. Authorization, Store module checks, non-empty legacy
 data validation and all other read-smoke requirements remain unchanged.
+
+## Production V26 Organization authority smoke
+
+The bearer filter uses the signed token to identify the user and then reloads
+the user's current role and active Store/Organization memberships from the
+database. The token's `organization_id` claim is not an authorization source.
+Production smoke therefore supplies an intentionally inconsistent claim and
+requires both Store context and workspace data to retain the canonical
+database Organization, reject the claimed nonexistent Organization, and still
+deny an unavailable Store. This tests the implemented single source of truth
+without incorrectly denying a valid Owner access to their own Store.

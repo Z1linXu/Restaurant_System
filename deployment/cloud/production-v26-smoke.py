@@ -282,6 +282,47 @@ def require_non_empty(value: object, label: str) -> None:
     fail(f"required Production-clone data is empty: {label}")
 
 
+def validate_database_organization_authority(
+    context: object,
+    workspaces: object,
+    store_id: int,
+    organization_id: int,
+    inconsistent_claim_id: int,
+) -> None:
+    if inconsistent_claim_id == organization_id:
+        fail("organization authority probe claim is not inconsistent")
+    if (
+        not isinstance(context, dict)
+        or context.get("id") != store_id
+        or context.get("organization_id") != organization_id
+        or context.get("organization_id") == inconsistent_claim_id
+    ):
+        fail("Store context trusted an inconsistent Organization token claim")
+    if not isinstance(workspaces, dict):
+        fail("workspace response for Organization authority probe is invalid")
+    organizations = workspaces.get("organizations")
+    stores = workspaces.get("stores")
+    if not isinstance(organizations, list) or not isinstance(stores, list):
+        fail("workspace Organization authority data is invalid")
+    organization_ids = {
+        row.get("id") for row in organizations if isinstance(row, dict) and isinstance(row.get("id"), int)
+    }
+    store_organization_ids = {
+        row.get("organization_id")
+        for row in stores
+        if isinstance(row, dict) and isinstance(row.get("organization_id"), int)
+    }
+    matching_stores = [row for row in stores if isinstance(row, dict) and row.get("id") == store_id]
+    if (
+        organization_id not in organization_ids
+        or inconsistent_claim_id in organization_ids
+        or inconsistent_claim_id in store_organization_ids
+    ):
+        fail("workspace trusted an inconsistent Organization token claim")
+    if len(matching_stores) != 1 or matching_stores[0].get("organization_id") != organization_id:
+        fail("workspace Store Organization differs from database authority")
+
+
 def menu_items(menu: object) -> list[dict[str, object]]:
     if not isinstance(menu, dict):
         fail("menu catalog is invalid")
@@ -295,9 +336,10 @@ def menu_items(menu: object) -> list[dict[str, object]]:
 
 def read_smoke(
     api: Api,
-    wrong_organization_api: Api,
+    inconsistent_organization_claim_api: Api,
     store_id: int,
     organization_id: int,
+    inconsistent_organization_claim_id: int,
     evidence_run_id: str | None = None,
 ) -> dict[str, object]:
     checks = {
@@ -338,17 +380,32 @@ def read_smoke(
     if not isinstance(detail, dict) or detail.get("store_id") != store_id or not isinstance(detail.get("items"), list):
         fail("historical order detail is invalid")
 
-    # This uses the real Store ID with a deliberately wrong Organization claim;
-    # it is stronger than probing a made-up maximum Store ID.
-    wrong_organization_api.request(f"/api/v1/stores/{store_id}/context", expected=403)
-    api.request(f"/api/v1/stores/{store_id + 1000000}/context", expected=403)
+    # Organization authorization is rehydrated from database memberships, not
+    # trusted from a token claim. A deliberately inconsistent claim must not
+    # alter the canonical Store context or workspace returned for this user.
+    inconsistent_context = assert_data(
+        inconsistent_organization_claim_api.request(f"/api/v1/stores/{store_id}/context"),
+        "inconsistent_organization_claim_context",
+    )
+    inconsistent_workspaces = assert_data(
+        inconsistent_organization_claim_api.request("/api/v1/me/workspaces"),
+        "inconsistent_organization_claim_workspaces",
+    )
+    validate_database_organization_authority(
+        inconsistent_context,
+        inconsistent_workspaces,
+        store_id,
+        organization_id,
+        inconsistent_organization_claim_id,
+    )
+    inconsistent_organization_claim_api.request(f"/api/v1/stores/{store_id + 1000000}/context", expected=403)
     ws = api.request("/ws/info", envelope=False)
     if not isinstance(ws, dict):
         fail("WebSocket bootstrap response is invalid")
     print(
         f"READ_SMOKE|{f'run_id={evidence_run_id}|' if evidence_run_id else ''}"
-        f"store_id={store_id}|checks={len(checks) + 4}|nonempty=PASS|"
-        "historical_detail=PASS|wrong_organization_real_store=PASS|wrong_store=PASS|"
+        f"store_id={store_id}|checks={len(checks) + 5}|nonempty=PASS|"
+        "historical_detail=PASS|organization_claim_db_authority=PASS|wrong_store=PASS|"
         "websocket=PASS|result=PASS"
     )
     return results
@@ -716,19 +773,21 @@ def main() -> None:
     if args.mode == "legacy-read":
         legacy_read_smoke(api, store_id, organization_id, args.evidence_run_id)
         return
-    wrong_organization_token = mint_token(
+    inconsistent_organization_claim_id = organization_id + 1000000
+    inconsistent_organization_token = mint_token(
         secret,
         user_id,
         role_id,
         store_id,
-        organization_id + 1000000,
+        inconsistent_organization_claim_id,
         role_code,
     )
     results = read_smoke(
         api,
-        Api(args.base_url, wrong_organization_token, validated_rehearsal_host),
+        Api(args.base_url, inconsistent_organization_token, validated_rehearsal_host),
         store_id,
         organization_id,
+        inconsistent_organization_claim_id,
         args.evidence_run_id,
     )
     if args.mode == "write":
