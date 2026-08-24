@@ -22,11 +22,41 @@ path_has_symlink() { local path="$1" part current="" old_ifs="$IFS"; IFS='/'; se
 bounded() { local seconds="$1"; shift; timeout --foreground --kill-after=10s "${seconds}s" "$@"; }
 docker_default() { bounded "$DOCKER_TIMEOUT_SECONDS" env -i PATH="$SAFE_PATH" HOME="$HOME" DOCKER_CONFIG="${DOCKER_CONFIG:-$HOME/.docker}" docker --context default "$@"; }
 docker_long() { bounded "$RESTORE_TIMEOUT_SECONDS" env -i PATH="$SAFE_PATH" HOME="$HOME" DOCKER_CONFIG="${DOCKER_CONFIG:-$HOME/.docker}" docker --context default "$@"; }
+docker_until() {
+  local deadline="$1" remaining
+  shift
+  remaining=$((deadline - SECONDS))
+  (( remaining > 0 )) || return 124
+  bounded "$remaining" env -i PATH="$SAFE_PATH" HOME="$HOME" DOCKER_CONFIG="${DOCKER_CONFIG:-$HOME/.docker}" docker --context default "$@"
+}
 exact_container_id() {
   local output
   output="$(docker_default ps -aq --no-trunc --filter "name=^/${1}$")" || return 1
   [[ -z "$output" || "$output" =~ ^[0-9a-f]{64}$ ]] || return 1
   printf '%s' "$output"
+}
+wait_fresh_postgres_ready() {
+  local container_id="$1" database_user="$2" database_name="$3" timeout_seconds="${4:-120}" deadline logs remaining
+  [[ "$timeout_seconds" =~ ^[0-9]+$ && "$timeout_seconds" -ge 2 && "$timeout_seconds" -le 120 ]] || return 1
+  deadline=$((SECONDS + timeout_seconds))
+  while (( SECONDS < deadline )); do
+    logs="$(docker_until "$deadline" logs "$container_id" 2>&1)" || return 1
+    if grep -Fq 'PostgreSQL init process complete; ready for start up.' <<<"$logs" &&
+       docker_until "$deadline" exec "$container_id" pg_isready -U "$database_user" -d "$database_name" >/dev/null 2>&1; then
+      remaining=$((deadline - SECONDS))
+      (( remaining > 1 )) || return 1
+      sleep 1
+      [[ "$(docker_until "$deadline" inspect --format '{{.State.Running}}|{{.State.Restarting}}' "$container_id")" == "true|false" ]] || return 1
+      if docker_until "$deadline" exec "$container_id" pg_isready -U "$database_user" -d "$database_name" >/dev/null 2>&1; then
+        (( SECONDS < deadline )) && return 0
+        return 1
+      fi
+    fi
+    remaining=$((deadline - SECONDS))
+    (( remaining > 1 )) || return 1
+    sleep 1
+  done
+  return 1
 }
 cleanup() {
   local actual="" actual_id="" remaining="" leftovers=""
@@ -138,8 +168,7 @@ created_container="$(docker_default run -d --rm --pull=never --name "$REHEARSAL_
   --tmpfs /var/lib/postgresql/data:rw,nosuid,nodev,size=512m -e POSTGRES_PASSWORD="$rehearsal_password" -e POSTGRES_DB=restore_rehearsal "$POSTGRES_IMAGE_ID")" || die "cannot create isolated restore container"
 [[ "$created_container" =~ ^[0-9a-f]{64}$ ]] || die "isolated restore container identity is invalid"
 REHEARSAL_CONTAINER="$created_container"
-for _ in $(seq 1 60); do docker_default exec "$REHEARSAL_CONTAINER" pg_isready -U postgres -d restore_rehearsal >/dev/null 2>&1 && break; sleep 1; done
-docker_default exec "$REHEARSAL_CONTAINER" pg_isready -U postgres -d restore_rehearsal >/dev/null 2>&1 || die "isolated DB did not become ready"
+wait_fresh_postgres_ready "$REHEARSAL_CONTAINER" postgres restore_rehearsal || die "isolated DB did not reach stable post-init readiness"
 docker_long exec -i "$REHEARSAL_CONTAINER" timeout -s TERM -k 10 840 pg_restore -U postgres -d restore_rehearsal --no-owner --no-privileges --exit-on-error --single-transaction <"$canonical_backup"
 actual_flyway="$(docker_default exec "$REHEARSAL_CONTAINER" psql -X -v ON_ERROR_STOP=1 -At -U postgres -d restore_rehearsal -c "select version || chr(124) || script || chr(124) || success::text || chr(124) || checksum from flyway_schema_history order by installed_rank")"
 target_version="${tooling[3]#V}"
