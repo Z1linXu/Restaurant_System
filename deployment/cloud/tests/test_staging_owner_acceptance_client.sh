@@ -29,6 +29,20 @@ printf '{"data":{"user":{"id":7}}}' >"$TMP_DIR/compat-user-id.json"
 [[ "$("$COMPAT" -er '.data.user.id | numbers' "$TMP_DIR/compat-user-id.json")" == 7 ]] || fail 'compat parser did not retain the Owner user ID contract'
 printf '{"data":{"user":{"username":"STG005_OWNER_TEST"}}}' >"$TMP_DIR/compat-username.json"
 "$COMPAT" -e --arg login STG005_OWNER_TEST '.data.user.username == $login' "$TMP_DIR/compat-username.json"
+PRINTING_FILTER='.data.store_id == $store and (.data.printing_mode == "DISABLED" or .data.printing_mode == "MOCK") and (.data.printers | type == "array" and all(.[]; ((.ip_address // "") | length) == 0))'
+printf '{"data":{"store_id":44,"printing_mode":"DISABLED","printers":[]}}' >"$TMP_DIR/compat-printing-valid.json"
+"$COMPAT" -e --argjson store 44 "$PRINTING_FILTER" "$TMP_DIR/compat-printing-valid.json"
+for scalar in '"bad"' '1' 'null'; do
+  printf '{"data":{"store_id":44,"printing_mode":"DISABLED","printers":[%s]}}' "$scalar" >"$TMP_DIR/compat-printing-scalar.json"
+  expect_failure "compat_printing_scalar_${scalar//[^A-Za-z0-9]/_}" "$COMPAT" -e --argjson store 44 "$PRINTING_FILTER" "$TMP_DIR/compat-printing-scalar.json"
+done
+expect_failure compat_known_filter_suffix "$COMPAT" -e --argjson store 44 "$PRINTING_FILTER and false" "$TMP_DIR/compat-printing-valid.json"
+expect_failure compat_known_filter_prefix "$COMPAT" -e --argjson store 44 ".data | $PRINTING_FILTER" "$TMP_DIR/compat-printing-valid.json"
+printf '{"data":{"enabled":true,"profile_code":"PROFILE"}}' >"$TMP_DIR/compat-catalog-enabled.json"
+"$COMPAT" -e '.data.enabled == true' "$TMP_DIR/compat-catalog-enabled.json"
+expect_failure compat_catalog_enabled_suffix "$COMPAT" -e '.data.enabled == true and false' "$TMP_DIR/compat-catalog-enabled.json"
+expect_failure compat_catalog_enabled_prefix "$COMPAT" -e 'true and .data.enabled == true' "$TMP_DIR/compat-catalog-enabled.json"
+expect_failure compat_catalog_enabled_handler_collision "$COMPAT" -e '.data.enabled == true and false and .data.profile_code' "$TMP_DIR/compat-catalog-enabled.json"
 "$SCRIPT" --help >"$TMP_DIR/help"
 assert_contains 'Secret values are forbidden in argv/environment/output.' "$TMP_DIR/help"
 expect_failure missing_bindings "$SCRIPT" --validate
@@ -250,6 +264,7 @@ EOF
 chmod 600 "$BUSINESS_SECRET"
 rm -f "$FAKE_STATE/business"
 cleanup
+JQ_BIN="$COMPAT"
 initialize_private_root
 exec 7<"$BUSINESS_SECRET"; SECRETS_FD=7; ACTION=business-store-create-acceptance; TARGET_STORE_ID=""; ACCEPTANCE_RUN_ID=0123456789abcdef0123456789abcdef; APPROVAL_SHA256=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; ENV_DIGEST=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; PREFLIGHT_EVIDENCE_SHA256=cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 read_secret_input

@@ -461,7 +461,7 @@ main() {
   [[ -n "$APPROVED_SHA$ENV_FILE" ]] || ops001_die "approved SHA and environment file are required"
   CURL_BIN="$(command -v curl || true)"; JQ_BIN="$(command -v jq || true)"
   DOCKER_BIN="$(command -v docker || true)"
-  if [[ -z "$JQ_BIN" && ( "$ACTION" == "owner-login-acceptance" || "$ACTION" == "rotate-owner-credential" ) ]]; then
+  if [[ -z "$JQ_BIN" && ( "$ACTION" == "owner-login-acceptance" || "$ACTION" == "rotate-owner-credential" || "$ACTION" == "business-store-create-acceptance" ) ]]; then
     JQ_BIN="$SCRIPT_DIR/ops001-jq-compat.py"
   fi
   [[ "$CURL_BIN" == /* && "$JQ_BIN" == /* && -x "$JQ_BIN" && "$DOCKER_BIN" == /* ]] || ops001_die "curl, Docker, and jq-compatible parser are required"
