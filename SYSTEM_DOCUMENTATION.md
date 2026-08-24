@@ -9017,3 +9017,10 @@ login identifiers `owner` and `manager`; the Staging-only acceptance client
 accepts exactly those two compatibility identifiers in addition to the
 `STG005_*` convention. Arbitrary unprefixed identities remain fail-closed, and
 credential rotation remains bound to the exact approved Owner identifier.
+
+The V26 application-only promotion also recognizes the one established V26
+legacy runtime shape where the already-running Production backend predates the
+explicit `APP_ENVIRONMENT=production` Compose field. All other runtime keys
+must still match exactly. The frozen runtime fingerprint normalizes only this
+single missing key to the exact target value; any non-production value remains
+fail-closed, and rollback uses the same reviewed production value.
