@@ -49,6 +49,18 @@ V26. It does not authorize a release by itself; current Owner authorization and
   keeps V26 data and is retried with `--finalize-edge`, never by restoring V10.
   The authenticated read-only smoke is repeated through the public edge after
   that boundary; a failure cannot invoke database recovery.
+- A reviewed V26-to-V26 blocker repair with no Flyway change uses
+  `production-v26-app-patch-promote.sh`. This bounded path accepts only the
+  immutable image IDs currently running on exact-SHA Staging with a
+  strict typed, digest-bound Owner-shaped acceptance artifact. The artifact
+  binds fresh create/replay, an active foreign Organization denial, Manager
+  denial, runtime/preflight/approval identity, LIVE context, Frontdesk and
+  endpoint-free Printing checks. Production `.env`, target/rollback resolved
+  Compose and current runtime configuration fingerprints are frozen before
+  execution. The helper performs no build, pull,
+  migration, backup restore or database mutation, preserves the database
+  container and exact V26 ledger, runs read-only smoke, and restores the prior
+  application images if app replacement fails.
 - Production `.env` remains a Compose dotenv file and is never shell-sourced.
   The helpers require exactly one `DB_NAME`, `DB_USER`, and `JWT_SECRET`, extract
   their resolved values from the reviewed Compose model, and cross-check the DB

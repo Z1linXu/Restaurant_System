@@ -8997,3 +8997,15 @@ endpoints, or Pad bindings. Printing remains endpoint-free, unbound and
 The existing `/phase-b/store-provisioning` family remains a Staging-only
 synthetic validation path guarded by its Platform feature and runtime gates.
 No schema or Flyway change is required for the business path.
+
+## Production V26 application-only blocker promotion
+
+V26-to-V26 blocker repairs with no Flyway change use the reviewed
+`deployment/cloud/production-v26-app-patch-promote.sh` path. It promotes only
+the exact immutable backend/frontend image IDs already accepted on Staging,
+requires digest-bound Owner-shaped acceptance evidence, preserves the exact V26
+Flyway ledger and database container, and performs no build, pull, migration,
+restore, or Production write smoke. Acceptance evidence is a strict typed
+contract bound to the exact runtime/preflight/approval and fresh request run;
+the promotion also freezes Production environment, target/rollback Compose and
+current runtime configuration fingerprints before replacing either app image.

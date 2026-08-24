@@ -13,7 +13,7 @@ creation, login, API acceptance, restart, or Production access.
 | `staging-release-control-bootstrap.sh` | verifies an exact Git-materialized control source and private temporary bundle | delegates unchanged arguments to `staging-release-rotation.sh`; it has no release/runtime action of its own |
 | `staging-release-rotation.sh` | validates exact SHA, private env and dedicated bare repository | `prepare-release-env`: ordinary detached worktree plus atomic four-field identity rotation; `prepare-recovery-release-env`: the same release/env operation while retaining one exact reviewed AL-003S blocked pair |
 | `staging-runtime-evidence.sh` | validates the exact release/env/preflight binding | `collect-evidence`; `same-image-restart` using existing containers only |
-| `staging-owner-acceptance-client.sh` | validates exact release, private env and approved preflight identity | `owner-login-acceptance`; `rotate-owner-credential`; `prepare-target`; `clone-acceptance` against loopback APIs |
+| `staging-owner-acceptance-client.sh` | validates exact release, private env and approved preflight identity | `owner-login-acceptance`; `rotate-owner-credential`; `prepare-target`; `clone-acceptance`; `business-store-create-acceptance` against loopback APIs |
 
 The tools share `staging-ops-common.sh` for fixed environment identity,
 mode-0600 files, digests, approval fingerprints and one-use approval records.

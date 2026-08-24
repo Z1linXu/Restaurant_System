@@ -23,7 +23,14 @@ PREFLIGHT_EVIDENCE_SHA256=""
 SECRETS_FD=""
 APPROVED_LOGIN_IDENTIFIER=""
 ORGANIZATION_ID=""
+FOREIGN_ORGANIZATION_ID=""
 TARGET_STORE_ID=""
+BUSINESS_STORE_ID=""
+ACCEPTANCE_RUN_ID=""
+ACCEPTANCE_EVIDENCE=""
+FOREIGN_CLEANUP_REQUIRED="false"
+ACCEPTED_BACKEND_IMAGE_ID=""
+ACCEPTED_FRONTEND_IMAGE_ID=""
 SOURCE_STORE_ID="1"
 PROFILE_CODE="CHINATOWN_MENU_2026_02_02"
 API_BASE="http://127.0.0.1:18080/api/v1"
@@ -37,6 +44,8 @@ LAST_HTTP_STATUS=""
 LAST_RESPONSE=""
 CURL_BIN=""
 JQ_BIN=""
+DOCKER_BIN=""
+SAFE_API_PATH_REGEX='^/[A-Za-z0-9_./?=&-]+$'
 
 usage() {
   cat <<'EOF'
@@ -60,6 +69,11 @@ Usage:
     --preflight-evidence-sha256 <sha256> --organization-id <id> \
     --target-store-id <id> --source-store-id 1 --profile-code CHINATOWN_MENU_2026_02_02 \
     --approval <file> --approval-sha256 <sha256> --secrets-fd <open-fd>
+  staging-owner-acceptance-client.sh --execute-runtime --action business-store-create-acceptance \
+    --approved-sha <full-sha> --env-file <fixed-env> --preflight-evidence <file> \
+    --preflight-evidence-sha256 <sha256> --organization-id <id> \
+    --acceptance-run-id <32-hex> \
+    --approval <file> --approval-sha256 <sha256> --secrets-fd <open-fd>
 
 The inherited FD contains one JSON object. Every action requires
 login_identifier/login_password. owner-login-acceptance performs only login,
@@ -71,6 +85,10 @@ and proves the new credential through a second login/context/logout sequence.
 prepare-target additionally requires
 onboarding_idempotency_key and onboarding_request. clone-acceptance requires
 clone_idempotency_key. Secret values are forbidden in argv/environment/output.
+business-store-create-acceptance requires a synthetic business request/key and
+a synthetic Manager login in the inherited secret JSON. It proves Owner
+create/replay, wrong-Organization and Manager denial, immediate LIVE context,
+Frontdesk access, and endpoint-free DISABLED/MOCK Printing Management access.
 The client uses only loopback HTTP, no redirects/proxy, private mode-0600
 request/response/config files, disables ambient curl configuration, validates
 the exact running image through the OPS-001 runtime gate, and reuses the
@@ -80,6 +98,14 @@ EOF
 
 cleanup() {
   local status=$?
+  if [[ "$FOREIGN_CLEANUP_REQUIRED" == "true" && "$FOREIGN_ORGANIZATION_ID" =~ ^[1-9][0-9]*$ && -n "$ACCESS_TOKEN" && -d "$PRIVATE_ROOT" && -x "$CURL_BIN" && -x "$JQ_BIN" ]]; then
+    local foreign_cleanup_body="$PRIVATE_ROOT/cleanup-foreign-organization.json" foreign_cleanup_config="$PRIVATE_ROOT/cleanup-foreign-organization.curl" foreign_cleanup_response="$PRIVATE_ROOT/cleanup-foreign-organization.response"
+    "$JQ_BIN" -n --argjson id "$FOREIGN_ORGANIZATION_ID" --arg run "$ACCEPTANCE_RUN_ID" '{id:$id,name:("STG005 Foreign Acceptance " + $run),code:("STG005_FOREIGN_" + ($run | ascii_upcase)),status:"inactive"}' >"$foreign_cleanup_body" 2>/dev/null || true
+    chmod 600 "$foreign_cleanup_body" 2>/dev/null || true
+    write_curl_config "$foreign_cleanup_config" "$ACCESS_TOKEN" "" 2>/dev/null || true
+    "$CURL_BIN" -q --config "$foreign_cleanup_config" --request PUT --output "$foreign_cleanup_response" --max-time 15 --data-binary "@$foreign_cleanup_body" "$API_BASE/admin/platform/organizations/$FOREIGN_ORGANIZATION_ID" >/dev/null 2>&1 || true
+  fi
+  FOREIGN_CLEANUP_REQUIRED="false"; FOREIGN_ORGANIZATION_ID=""
   if [[ -n "$ACCESS_TOKEN" && -n "$REFRESH_TOKEN" && -d "$PRIVATE_ROOT" && -x "$CURL_BIN" && -x "$JQ_BIN" ]]; then
     local cleanup_body="$PRIVATE_ROOT/cleanup-logout.json" cleanup_config="$PRIVATE_ROOT/cleanup-logout.curl" cleanup_response="$PRIVATE_ROOT/cleanup-logout.response"
     "$JQ_BIN" -n --arg refresh "$REFRESH_TOKEN" '{refresh_token: $refresh}' >"$cleanup_body" 2>/dev/null || true
@@ -125,6 +151,9 @@ validate_exact_runtime_target() {
 
 client_scope() {
   printf 'organization_id=%s;target_store_id=%s;source_store_id=%s;profile_code=%s;preflight=%s' "$ORGANIZATION_ID" "$TARGET_STORE_ID" "$SOURCE_STORE_ID" "$PROFILE_CODE" "$PREFLIGHT_EVIDENCE_SHA256"
+  if [[ "$ACTION" == "business-store-create-acceptance" ]]; then
+    printf ';acceptance_run_id=%s' "$ACCEPTANCE_RUN_ID"
+  fi
   if [[ "$ACTION" == "rotate-owner-credential" ]]; then
     printf ';owner_login_identifier=%s' "$APPROVED_LOGIN_IDENTIFIER"
   fi
@@ -165,6 +194,9 @@ read_secret_input() {
     clone-acceptance)
       "$JQ_BIN" -e '(.clone_idempotency_key | type == "string" and length >= 16)' "$SECRET_INPUT" >/dev/null || ops001_die "clone-acceptance secret payload is incomplete"
       ;;
+    business-store-create-acceptance)
+      "$JQ_BIN" -e --arg run "$ACCEPTANCE_RUN_ID" '(.business_create_idempotency_key | type == "string" and contains($run)) and (.business_create_request | type == "object") and (.business_create_request.store_name | type == "string" and length > 0) and (.business_create_request.store_code == ("STG005_BUSINESS_" + ($run | ascii_upcase))) and (.manager_login_identifier | type == "string" and startswith("STG005_")) and (.manager_login_password | type == "string" and length >= 12)' "$SECRET_INPUT" >/dev/null || ops001_die "business Store acceptance secret payload is incomplete or not bound to this run"
+      ;;
   esac
 }
 
@@ -179,8 +211,8 @@ write_curl_config() {
 api_call() {
   local label="$1" method="$2" path="$3" body="$4" token="${5:-}" idempotency="${6:-}"
   local config="$PRIVATE_ROOT/$label.curl" response="$PRIVATE_ROOT/$label.response" status_file="$PRIVATE_ROOT/$label.status"
-  [[ "$path" == /* && "$path" != *'..'* && "$path" =~ ^/[A-Za-z0-9_./-]+$ ]] || ops001_die "unsafe API path"
-  [[ "$method" == "GET" || "$method" == "POST" ]] || ops001_die "unsupported HTTP method"
+  [[ "$path" == /* && "$path" != *'..'* && "$path" =~ $SAFE_API_PATH_REGEX ]] || ops001_die "unsafe API path"
+  [[ "$method" == "GET" || "$method" == "POST" || "$method" == "PUT" ]] || ops001_die "unsupported HTTP method"
   [[ -z "$idempotency" || "$idempotency" =~ ^[A-Za-z0-9._:-]{16,255}$ ]] || ops001_die "idempotency key has unsafe characters or length"
   write_curl_config "$config" "$token" "$idempotency"
   local -a args=(-q --config "$config" --request "$method" --output "$response" --write-out '%{http_code}' "$API_BASE$path")
@@ -189,6 +221,22 @@ api_call() {
   LAST_HTTP_STATUS="$(cat "$status_file")"; LAST_RESPONSE="$response"
   [[ "$LAST_HTTP_STATUS" =~ ^2[0-9][0-9]$ ]] || ops001_die "$label returned HTTP $LAST_HTTP_STATUS"
   "$JQ_BIN" -e '.success == true' "$response" >/dev/null || ops001_die "$label returned invalid or unsuccessful JSON"
+}
+
+api_expect_error() {
+  local label="$1" method="$2" path="$3" body="$4" token="$5" idempotency="$6" expected_status="$7" expected_code="$8"
+  local config="$PRIVATE_ROOT/$label.curl" response="$PRIVATE_ROOT/$label.response" status_file="$PRIVATE_ROOT/$label.status"
+  [[ "$path" == /* && "$path" != *'..'* && "$path" =~ $SAFE_API_PATH_REGEX ]] || ops001_die "unsafe API path"
+  [[ "$method" == "GET" || "$method" == "POST" ]] || ops001_die "unsupported HTTP method"
+  [[ -z "$idempotency" || "$idempotency" =~ ^[A-Za-z0-9._:-]{16,255}$ ]] || ops001_die "idempotency key has unsafe characters or length"
+  write_curl_config "$config" "$token" "$idempotency"
+  local -a args=(-q --config "$config" --request "$method" --output "$response" --write-out '%{http_code}' "$API_BASE$path")
+  [[ -z "$body" ]] || args+=(--data-binary "@$body")
+  "$CURL_BIN" "${args[@]}" >"$status_file" || true
+  LAST_HTTP_STATUS="$(cat "$status_file")"; LAST_RESPONSE="$response"
+  [[ "$LAST_HTTP_STATUS" == "$expected_status" ]] || ops001_die "$label returned HTTP $LAST_HTTP_STATUS instead of $expected_status"
+  "$JQ_BIN" -e --arg code "$expected_code" '.success == false and .error_code == $code' "$response" >/dev/null || ops001_die "$label returned an unexpected error contract"
+  reject_secret_response_fields "$label"
 }
 
 reject_secret_response_fields() {
@@ -309,13 +357,87 @@ clone_acceptance() {
   printf 'OPS001_API|CLONE_EXECUTE_REPLAY|HTTP_%s|REQUEST_ID|%s|PASS\n' "$LAST_HTTP_STATUS" "$first_request"
 }
 
+business_store_create_acceptance() {
+  local request="$PRIVATE_ROOT/business-create.json" key first_id second_id replayed first_replayed manager_body manager_token manager_refresh logout_body request_digest request_fingerprint foreign_proof foreign_body foreign_after
+  "$JQ_BIN" -c '.business_create_request' "$SECRET_INPUT" >"$request"; chmod 600 "$request"
+  key="$("$JQ_BIN" -er '.business_create_idempotency_key' "$SECRET_INPUT")"
+
+  foreign_body="$PRIVATE_ROOT/foreign-organization.json"
+  "$JQ_BIN" -n --arg run "$ACCEPTANCE_RUN_ID" '{name:("STG005 Foreign Acceptance " + $run),code:("STG005_FOREIGN_" + ($run | ascii_upcase)),status:"active"}' >"$foreign_body"; chmod 600 "$foreign_body"
+  api_call foreign_org_create POST /admin/platform/organizations "$foreign_body" "$ACCESS_TOKEN"
+  FOREIGN_ORGANIZATION_ID="$("$JQ_BIN" -er '.data.id | numbers' "$LAST_RESPONSE")"
+  FOREIGN_CLEANUP_REQUIRED="true"
+  "$JQ_BIN" -e --argjson foreign "$FOREIGN_ORGANIZATION_ID" '.data.id == $foreign and (.data.status | ascii_downcase) == "active"' "$LAST_RESPONSE" >/dev/null || ops001_die "synthetic foreign Organization creation did not return active authority"
+
+  api_call business_catalog GET "/owner/organizations/$ORGANIZATION_ID/stores/create-catalog" "" "$ACCESS_TOKEN"
+  "$JQ_BIN" -e '.data.enabled == true' "$LAST_RESPONSE" >/dev/null || ops001_die "business Store catalog is not enabled"
+  api_call business_create POST "/owner/organizations/$ORGANIZATION_ID/stores" "$request" "$ACCESS_TOKEN" "$key"
+  reject_secret_response_fields business_create
+  "$JQ_BIN" -e '.data.replayed == false and .data.store_kind == "BUSINESS" and .data.store_status == "active" and .data.lifecycle_status == "ACTIVE" and .data.operational_state == "LIVE" and .data.is_live == true and .data.validation_status == "PASS"' "$LAST_RESPONSE" >/dev/null || ops001_die "business Store first request was not a fresh canonical LIVE creation"
+  first_replayed="false"
+  first_id="$("$JQ_BIN" -er '.data.store_id | numbers' "$LAST_RESPONSE")"
+  api_call business_replay POST "/owner/organizations/$ORGANIZATION_ID/stores" "$request" "$ACCESS_TOKEN" "$key"
+  second_id="$("$JQ_BIN" -er '.data.store_id | numbers' "$LAST_RESPONSE")"; replayed="$("$JQ_BIN" -er '.data.replayed | select(. == true)' "$LAST_RESPONSE")"
+  [[ "$first_id" == "$second_id" && "$replayed" == "true" ]] || ops001_die "business Store create replay contract failed"
+  BUSINESS_STORE_ID="$first_id"
+
+  api_call business_context GET "/stores/$BUSINESS_STORE_ID/context" "" "$ACCESS_TOKEN"
+  "$JQ_BIN" -e --argjson store "$BUSINESS_STORE_ID" '.data.id == $store and .data.operational_state == "LIVE" and .data.is_live == true' "$LAST_RESPONSE" >/dev/null || ops001_die "new business Store context is not immediately LIVE"
+  api_call business_frontdesk GET "/frontdesk/dining-tables?store_id=$BUSINESS_STORE_ID" "" "$ACCESS_TOKEN"
+  "$JQ_BIN" -e '.data | type == "array" and length >= 2' "$LAST_RESPONSE" >/dev/null || ops001_die "new business Store lacks default Frontdesk tables"
+  api_call business_printing GET "/admin/printing?store_id=$BUSINESS_STORE_ID" "" "$ACCESS_TOKEN"
+  "$JQ_BIN" -e --argjson store "$BUSINESS_STORE_ID" '.data.store_id == $store and (.data.printing_mode == "DISABLED" or .data.printing_mode == "MOCK") and (.data.printers | type == "array" and all(.[]; ((.ip_address // "") | length) == 0))' "$LAST_RESPONSE" >/dev/null || ops001_die "new business Store Printing Management is not endpoint-free DISABLED/MOCK"
+  api_call business_overview GET /owner/overview "" "$ACCESS_TOKEN"
+  "$JQ_BIN" -e --argjson organization "$ORGANIZATION_ID" --argjson store "$BUSINESS_STORE_ID" '.data.organizations | any(.id == $organization and .can_create_store == true and (.stores | any(.id == $store and .operational_state == "LIVE" and .is_live == true)))' "$LAST_RESPONSE" >/dev/null || ops001_die "Owner overview does not expose canonical create/LIVE state"
+
+  foreign_proof="$(printf '%s\n' "select (select count(*) from organizations where id = :'foreign' and lower(status) = 'active') || chr(124) || (select count(*) from organization_memberships where organization_id = :'foreign' and user_id = :'owner' and is_active = true);" | "$DOCKER_BIN" --context default exec -i restaurant-pos-staging-db-1 sh -eu -c 'psql -qX -v ON_ERROR_STOP=1 -At -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v foreign="$1" -v owner="$2"' sh "$FOREIGN_ORGANIZATION_ID" "$OWNER_USER_ID")" || ops001_die "foreign Organization authority proof query failed"
+  [[ "$foreign_proof" == "1|0" ]] || ops001_die "foreign Organization must exist, be active, and have no active membership for this Owner"
+  api_expect_error business_wrong_org POST "/owner/organizations/$FOREIGN_ORGANIZATION_ID/stores" "$request" "$ACCESS_TOKEN" "${key}-foreign-org" 403 BUSINESS_STORE_CREATE_ORGANIZATION_DENIED
+
+  "$JQ_BIN" --argjson id "$FOREIGN_ORGANIZATION_ID" '.id=$id | .status="inactive"' "$foreign_body" >"$PRIVATE_ROOT/foreign-organization-inactive.json"; chmod 600 "$PRIVATE_ROOT/foreign-organization-inactive.json"
+  api_call foreign_org_deactivate PUT "/admin/platform/organizations/$FOREIGN_ORGANIZATION_ID" "$PRIVATE_ROOT/foreign-organization-inactive.json" "$ACCESS_TOKEN"
+  foreign_after="$(printf '%s\n' "select count(*) from organizations where id = :'foreign' and lower(status) = 'active';" | "$DOCKER_BIN" --context default exec -i restaurant-pos-staging-db-1 sh -eu -c 'psql -qX -v ON_ERROR_STOP=1 -At -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v foreign="$1"' sh "$FOREIGN_ORGANIZATION_ID")" || ops001_die "foreign Organization deactivation proof query failed"
+  [[ "$foreign_after" == "0" ]] || ops001_die "synthetic foreign Organization remained active after authority test"
+  FOREIGN_CLEANUP_REQUIRED="false"
+
+  manager_body="$PRIVATE_ROOT/manager-login.json"
+  "$JQ_BIN" -c '{login_identifier: .manager_login_identifier, password: .manager_login_password}' "$SECRET_INPUT" >"$manager_body"; chmod 600 "$manager_body"
+  api_call manager_login POST /auth/login "$manager_body"
+  manager_token="$("$JQ_BIN" -er '.data.access_token | strings | select(length > 20)' "$LAST_RESPONSE")"
+  manager_refresh="$("$JQ_BIN" -er '.data.refresh_token | strings | select(length > 20)' "$LAST_RESPONSE")"
+  "$JQ_BIN" -e '.data.user.role_code == "MANAGER"' "$LAST_RESPONSE" >/dev/null || ops001_die "negative authority principal is not Manager-shaped"
+  api_expect_error business_manager_denied POST "/owner/organizations/$ORGANIZATION_ID/stores" "$request" "$manager_token" "${key}-manager" 403 BUSINESS_STORE_CREATE_AUTHORIZATION_DENIED
+  logout_body="$PRIVATE_ROOT/manager-logout.json"; "$JQ_BIN" -n --arg refresh "$manager_refresh" '{refresh_token: $refresh}' >"$logout_body"; chmod 600 "$logout_body"
+  api_call manager_logout POST /auth/logout "$logout_body" "$manager_token"
+  manager_token=""; manager_refresh=""
+  [[ "$first_replayed" == "false" ]] || ops001_die "fresh-create proof was lost"
+  request_digest="$(ops001_file_digest "$request")"
+  ACCEPTED_BACKEND_IMAGE_ID="$("$DOCKER_BIN" --context default inspect --format '{{.Image}}' restaurant-pos-staging-backend-1)"
+  ACCEPTED_FRONTEND_IMAGE_ID="$("$DOCKER_BIN" --context default inspect --format '{{.Image}}' restaurant-pos-staging-nginx-1)"
+  [[ "$ACCEPTED_BACKEND_IMAGE_ID" =~ ^sha256:[0-9a-f]{64}$ && "$ACCEPTED_FRONTEND_IMAGE_ID" =~ ^sha256:[0-9a-f]{64}$ ]] || ops001_die "accepted Staging immutable image identity is invalid"
+  request_fingerprint="$(ops001_request_fingerprint "$ACTION" "$APPROVED_SHA" "$ENV_DIGEST" "$(client_scope)")"
+  ACCEPTANCE_EVIDENCE="$OPS001_EXPECTED_ROOT/evidence/v26-business-create-$ACCEPTANCE_RUN_ID.json"
+  [[ -d "$OPS001_EXPECTED_ROOT/evidence" && ! -L "$OPS001_EXPECTED_ROOT/evidence" && "$(ops001_canonical_dir "$OPS001_EXPECTED_ROOT/evidence")" == "$OPS001_EXPECTED_ROOT/evidence" && "$(ops001_file_owner "$OPS001_EXPECTED_ROOT/evidence")" == "$(id -u)" ]] || ops001_die "acceptance evidence root is unsafe"
+  [[ ! -e "$ACCEPTANCE_EVIDENCE" && ! -L "$ACCEPTANCE_EVIDENCE" ]] || ops001_die "acceptance evidence path already exists"
+  umask 077
+  ( set -o noclobber; "$JQ_BIN" -n \
+    --arg schema "V26_BUSINESS_STORE_CREATE_ACCEPTANCE_V1" --arg run "$ACCEPTANCE_RUN_ID" --arg sha "$APPROVED_SHA" \
+    --arg env "$ENV_DIGEST" --arg preflight "$PREFLIGHT_EVIDENCE_SHA256" --arg approval "$APPROVAL_SHA256" \
+    --arg fingerprint "$request_fingerprint" --arg request "$request_digest" --arg backend "$ACCEPTED_BACKEND_IMAGE_ID" --arg frontend "$ACCEPTED_FRONTEND_IMAGE_ID" --argjson organization "$ORGANIZATION_ID" \
+    --argjson foreign "$FOREIGN_ORGANIZATION_ID" --argjson store "$BUSINESS_STORE_ID" \
+    '{schema:$schema,run_id:$run,source_sha:$sha,backend_image_id:$backend,frontend_image_id:$frontend,environment_sha256:$env,runtime_preflight_sha256:$preflight,owner_approval_sha256:$approval,request_fingerprint:$fingerprint,request_body_sha256:$request,organization_id:$organization,foreign_organization_id:$foreign,store_id:$store,fresh_create:"PASS",replay:"PASS",foreign_active_organization_denied:"PASS",manager_denied:"PASS",live_context:"PASS",frontdesk_defaults:"PASS",printing_management:"PASS",printing_endpoint_free:"PASS",final_result:"PASS"}' >"$ACCEPTANCE_EVIDENCE" ) || ops001_die "acceptance evidence creation failed"
+  chmod 600 "$ACCEPTANCE_EVIDENCE"
+  printf 'OPS001_API|BUSINESS_STORE_CREATE|RUN_ID|%s|STORE_ID|%s|FRESH_CREATE|PASS|REPLAY|PASS|FOREIGN_ACTIVE_ORG|DENIED|MANAGER|DENIED|PRINTING|ENDPOINT_FREE\n' "$ACCEPTANCE_RUN_ID" "$BUSINESS_STORE_ID"
+  printf 'OPS001_API|BUSINESS_STORE_CREATE_EVIDENCE|SHA256|%s|FINAL|PASS\n' "$(ops001_file_digest "$ACCEPTANCE_EVIDENCE")"
+}
+
 run_action() {
   acquire_action_lock
   validate_exact_runtime_target
   ops001_validate_approval "$APPROVAL_FILE" "$APPROVAL_SHA256" "$ACTION" "$APPROVED_SHA" "$ENV_DIGEST" "$(client_scope)"
   OPS001_APPROVAL_FILE="$APPROVAL_FILE"; ops001_assert_approval_unchanged; ops001_consume_approval
   initialize_private_root; read_secret_input; login; verify_owner_context
-  case "$ACTION" in owner-login-acceptance) ;; rotate-owner-credential) rotate_owner_credential ;; prepare-target) prepare_target; clone_validation ;; clone-acceptance) clone_acceptance ;; esac
+  case "$ACTION" in owner-login-acceptance) ;; rotate-owner-credential) rotate_owner_credential ;; prepare-target) prepare_target; clone_validation ;; clone-acceptance) clone_acceptance ;; business-store-create-acceptance) business_store_create_acceptance ;; esac
   logout
   printf 'OPS001_API|%s|PASS\n' "$(printf '%s' "$ACTION" | tr '[:lower:]' '[:upper:]')"
 }
@@ -326,10 +448,10 @@ main() {
     case "$1" in
       --validate) ACTION="validate" ;;
       --execute-runtime) EXECUTE_RUNTIME="true" ;;
-      --action|--approved-sha|--env-file|--preflight-evidence|--preflight-evidence-sha256|--approval|--approval-sha256|--secrets-fd|--organization-id|--target-store-id|--source-store-id|--profile-code|--owner-login-identifier)
+      --action|--approved-sha|--env-file|--preflight-evidence|--preflight-evidence-sha256|--approval|--approval-sha256|--secrets-fd|--organization-id|--acceptance-run-id|--target-store-id|--source-store-id|--profile-code|--owner-login-identifier)
         [[ $# -ge 2 && "$seen" != *"|$1|"* ]] || ops001_die "$1 requires one value and may appear once"
         seen="${seen}${1}|"
-        case "$1" in --action) ACTION="$2" ;; --approved-sha) APPROVED_SHA="$2" ;; --env-file) ENV_FILE="$2" ;; --preflight-evidence) PREFLIGHT_EVIDENCE="$2" ;; --preflight-evidence-sha256) PREFLIGHT_EVIDENCE_SHA256="$2" ;; --approval) APPROVAL_FILE="$2" ;; --approval-sha256) APPROVAL_SHA256="$2" ;; --secrets-fd) SECRETS_FD="$2" ;; --organization-id) ORGANIZATION_ID="$2" ;; --target-store-id) TARGET_STORE_ID="$2" ;; --source-store-id) SOURCE_STORE_ID="$2" ;; --profile-code) PROFILE_CODE="$2" ;; --owner-login-identifier) APPROVED_LOGIN_IDENTIFIER="$2" ;; esac
+        case "$1" in --action) ACTION="$2" ;; --approved-sha) APPROVED_SHA="$2" ;; --env-file) ENV_FILE="$2" ;; --preflight-evidence) PREFLIGHT_EVIDENCE="$2" ;; --preflight-evidence-sha256) PREFLIGHT_EVIDENCE_SHA256="$2" ;; --approval) APPROVAL_FILE="$2" ;; --approval-sha256) APPROVAL_SHA256="$2" ;; --secrets-fd) SECRETS_FD="$2" ;; --organization-id) ORGANIZATION_ID="$2" ;; --acceptance-run-id) ACCEPTANCE_RUN_ID="$2" ;; --target-store-id) TARGET_STORE_ID="$2" ;; --source-store-id) SOURCE_STORE_ID="$2" ;; --profile-code) PROFILE_CODE="$2" ;; --owner-login-identifier) APPROVED_LOGIN_IDENTIFIER="$2" ;; esac
         shift ;;
       --help|-h) usage; exit 0 ;;
       *) ops001_die "unsupported option: $1" ;;
@@ -338,18 +460,24 @@ main() {
   done
   [[ -n "$APPROVED_SHA$ENV_FILE" ]] || ops001_die "approved SHA and environment file are required"
   CURL_BIN="$(command -v curl || true)"; JQ_BIN="$(command -v jq || true)"
+  DOCKER_BIN="$(command -v docker || true)"
   if [[ -z "$JQ_BIN" && ( "$ACTION" == "owner-login-acceptance" || "$ACTION" == "rotate-owner-credential" ) ]]; then
     JQ_BIN="$SCRIPT_DIR/ops001-jq-compat.py"
   fi
-  [[ "$CURL_BIN" == /* && "$JQ_BIN" == /* && -x "$JQ_BIN" ]] || ops001_die "curl and jq-compatible parser are required"
+  [[ "$CURL_BIN" == /* && "$JQ_BIN" == /* && -x "$JQ_BIN" && "$DOCKER_BIN" == /* ]] || ops001_die "curl, Docker, and jq-compatible parser are required"
   validate_release_and_env
   if [[ "$ACTION" == "validate" ]]; then
     [[ "$EXECUTE_RUNTIME" == "false" && -z "$APPROVAL_FILE$APPROVAL_SHA256$SECRETS_FD" ]] || ops001_die "validation accepts no runtime, approval, or secret input"
     printf 'OPS001_API|VALIDATE|PASS|no login or API request executed\n'; return
   fi
-  [[ "$ACTION" == "owner-login-acceptance" || "$ACTION" == "rotate-owner-credential" || "$ACTION" == "prepare-target" || "$ACTION" == "clone-acceptance" ]] || ops001_die "unsupported action: $ACTION"
+  [[ "$ACTION" == "owner-login-acceptance" || "$ACTION" == "rotate-owner-credential" || "$ACTION" == "prepare-target" || "$ACTION" == "clone-acceptance" || "$ACTION" == "business-store-create-acceptance" ]] || ops001_die "unsupported action: $ACTION"
   [[ "$EXECUTE_RUNTIME" == "true" ]] || ops001_die "$ACTION requires --execute-runtime"
   [[ "$ORGANIZATION_ID" =~ ^[1-9][0-9]*$ ]] || ops001_die "organization ID must be positive"
+  if [[ "$ACTION" == "business-store-create-acceptance" ]]; then
+    [[ "$ACCEPTANCE_RUN_ID" =~ ^[0-9a-f]{32}$ ]] || ops001_die "business acceptance requires a 32-hex run ID"
+  else
+    [[ -z "$ACCEPTANCE_RUN_ID" ]] || ops001_die "run binding is accepted only for business Store acceptance"
+  fi
   [[ "$SOURCE_STORE_ID" == "1" && "$PROFILE_CODE" == "CHINATOWN_MENU_2026_02_02" ]] || ops001_die "Owner acceptance requires reviewed source/profile bindings"
   if [[ "$ACTION" == "rotate-owner-credential" ]]; then
     [[ "$APPROVED_LOGIN_IDENTIFIER" =~ ^STG005_[A-Z0-9_]{1,96}$ ]] || ops001_die "credential rotation requires an approved synthetic Owner login identifier"
