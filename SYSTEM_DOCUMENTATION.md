@@ -4644,6 +4644,7 @@ Current frontend behavior in code:
     - size selection
     - soup base selection
     - noodle type selection
+      - the ordering UI appends presentation-only numbers `（1）` through `（7）` to the seven canonical noodle-type Chinese labels by stable `optionCode`; stored labels and order snapshots remain unchanged
     - spicy level selection
     - combo toggle
     - combo egg selection

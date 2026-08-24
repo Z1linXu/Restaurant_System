@@ -73,6 +73,28 @@ function draft(overrides: Partial<ItemCustomizationDraft> = {}): ItemCustomizati
 }
 
 describe('order option mapping for dynamic combo groups', () => {
+  it('keeps noodle display numbering out of the order payload snapshot', () => {
+    const item = menuItem({
+      customization: {
+        noodleTypes: [{
+          id: '720',
+          labelEn: 'Thin',
+          labelZh: '细',
+          optionType: 'noodle_type',
+          optionCode: 'noodle_thin',
+          optionGroup: 'NOODLE_TYPE',
+        }],
+      },
+    })
+
+    expect(mapOptions(draft({ comboEnabled: false, noodleTypeId: '720' }), item)).toEqual([expect.objectContaining({
+      option_id: 720,
+      option_code_snapshot: 'noodle_thin',
+      option_name_snapshot_en: 'Thin',
+      option_name_snapshot_zh: '细',
+    })])
+  })
+
   it('uses the current default when a disabled dynamic component disappears from the menu snapshot', () => {
     const options = mapOptions(draft(), menuItem())
 
