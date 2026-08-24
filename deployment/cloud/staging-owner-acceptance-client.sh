@@ -180,7 +180,7 @@ read_secret_input() {
   dd bs=4096 of="$SECRET_INPUT" <&"$SECRETS_FD" 2>/dev/null
   chmod 600 "$SECRET_INPUT"
   "$JQ_BIN" -e 'type == "object" and (.login_identifier | type == "string" and length > 0) and (.login_password | type == "string" and length >= 12)' "$SECRET_INPUT" >/dev/null || ops001_die "secret input JSON is invalid"
-  LOGIN_IDENTIFIER="$("$JQ_BIN" -er '.login_identifier | strings | select(startswith("STG005_"))' "$SECRET_INPUT")" || ops001_die "Owner login identifier is outside the synthetic contract"
+  LOGIN_IDENTIFIER="$("$JQ_BIN" -er '.login_identifier | strings | select(startswith("STG005_") or . == "owner")' "$SECRET_INPUT")" || ops001_die "Owner login identifier is outside the retained synthetic contract"
   if [[ "$ACTION" == "rotate-owner-credential" && "$LOGIN_IDENTIFIER" != "$APPROVED_LOGIN_IDENTIFIER" ]]; then
     ops001_die "credential rotation login identifier does not match the approval binding"
   fi
@@ -195,7 +195,7 @@ read_secret_input() {
       "$JQ_BIN" -e '(.clone_idempotency_key | type == "string" and length >= 16)' "$SECRET_INPUT" >/dev/null || ops001_die "clone-acceptance secret payload is incomplete"
       ;;
     business-store-create-acceptance)
-      "$JQ_BIN" -e --arg run "$ACCEPTANCE_RUN_ID" '(.business_create_idempotency_key | type == "string" and contains($run)) and (.business_create_request | type == "object") and (.business_create_request.store_name | type == "string" and length > 0) and (.business_create_request.store_code == ("STG005_BUSINESS_" + ($run | ascii_upcase))) and (.manager_login_identifier | type == "string" and startswith("STG005_")) and (.manager_login_password | type == "string" and length >= 12)' "$SECRET_INPUT" >/dev/null || ops001_die "business Store acceptance secret payload is incomplete or not bound to this run"
+      "$JQ_BIN" -e --arg run "$ACCEPTANCE_RUN_ID" '(.business_create_idempotency_key | type == "string" and contains($run)) and (.business_create_request | type == "object") and (.business_create_request.store_name | type == "string" and length > 0) and (.business_create_request.store_code == ("STG005_BUSINESS_" + ($run | ascii_upcase))) and (.manager_login_identifier | type == "string" and (startswith("STG005_") or . == "manager")) and (.manager_login_password | type == "string" and length >= 12)' "$SECRET_INPUT" >/dev/null || ops001_die "business Store acceptance secret payload is incomplete or not bound to this run"
       ;;
   esac
 }
@@ -480,7 +480,7 @@ main() {
   fi
   [[ "$SOURCE_STORE_ID" == "1" && "$PROFILE_CODE" == "CHINATOWN_MENU_2026_02_02" ]] || ops001_die "Owner acceptance requires reviewed source/profile bindings"
   if [[ "$ACTION" == "rotate-owner-credential" ]]; then
-    [[ "$APPROVED_LOGIN_IDENTIFIER" =~ ^STG005_[A-Z0-9_]{1,96}$ ]] || ops001_die "credential rotation requires an approved synthetic Owner login identifier"
+    [[ "$APPROVED_LOGIN_IDENTIFIER" == "owner" || "$APPROVED_LOGIN_IDENTIFIER" =~ ^STG005_[A-Z0-9_]{1,96}$ ]] || ops001_die "credential rotation requires an approved retained synthetic Owner login identifier"
   else
     [[ -z "$APPROVED_LOGIN_IDENTIFIER" ]] || ops001_die "Owner login identifier binding is accepted only for credential rotation"
   fi
