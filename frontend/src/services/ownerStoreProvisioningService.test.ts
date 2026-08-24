@@ -19,7 +19,7 @@ describe('owner store provisioning service', () => {
     mockedApiRequest.mockReset()
   })
 
-  it('loads the organization-scoped Phase B catalog', async () => {
+  it('loads the organization-scoped business Store catalog', async () => {
     mockedApiRequest.mockResolvedValueOnce({
       enabled: true,
       profile_code: 'ST_DENIS_CANONICAL_PROFILE',
@@ -32,7 +32,7 @@ describe('owner store provisioning service', () => {
     await fetchOwnerStoreProvisioningCatalog(100)
 
     expect(mockedApiRequest).toHaveBeenCalledWith(
-      '/api/v1/owner/organizations/100/phase-b/store-provisioning/catalog',
+      '/api/v1/owner/organizations/100/stores/create-catalog',
     )
   })
 
@@ -66,7 +66,7 @@ describe('owner store provisioning service', () => {
     }, 'stable-create-key')
 
     const [, init] = mockedApiRequest.mock.calls[0]
-    expect(mockedApiRequest.mock.calls[0][0]).toBe('/api/v1/owner/organizations/100/phase-b/store-provisioning')
+    expect(mockedApiRequest.mock.calls[0][0]).toBe('/api/v1/owner/organizations/100/stores')
     expect(init?.method).toBe('POST')
     expect((init?.headers as Record<string, string>)['Idempotency-Key']).toBe('stable-create-key')
     expect(JSON.parse(String(init?.body))).toMatchObject({

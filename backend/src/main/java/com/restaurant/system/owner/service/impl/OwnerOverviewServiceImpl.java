@@ -116,6 +116,7 @@ public class OwnerOverviewServiceImpl implements OwnerOverviewService {
         if (response.role_code == null || response.role_code.isBlank()) {
             response.role_code = user.roleCode();
         }
+        response.can_create_store = canCreateStore(user, organizationId);
         response.stores = new ArrayList<>();
         return response;
     }
@@ -127,11 +128,19 @@ public class OwnerOverviewServiceImpl implements OwnerOverviewService {
         response.code = organization.code;
         response.status = organization.status;
         response.role_code = storeAccessService.roleCodeForOrganization(user, organization.id);
+        response.can_create_store = "OWNER".equalsIgnoreCase(user.roleCode())
+            && "OWNER".equalsIgnoreCase(response.role_code);
         if (response.role_code == null || response.role_code.isBlank()) {
             response.role_code = user.roleCode();
         }
         response.stores = new ArrayList<>();
         return response;
+    }
+
+    private boolean canCreateStore(AuthenticatedUser user, Long organizationId) {
+        return user != null
+            && "OWNER".equalsIgnoreCase(user.roleCode())
+            && "OWNER".equalsIgnoreCase(storeAccessService.roleCodeForOrganization(user, organizationId));
     }
 
     private OwnerOverviewResponse.StoreOverview buildStore(

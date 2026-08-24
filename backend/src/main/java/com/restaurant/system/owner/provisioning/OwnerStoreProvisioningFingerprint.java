@@ -10,6 +10,7 @@ public class OwnerStoreProvisioningFingerprint {
 
     public String fingerprint(OwnerStoreProvisioningCommand command) {
         String canonical = Stream.of(
+                "purpose=" + safe(command.purpose()),
                 "organization_id=" + safe(command.organizationId()),
                 "store_name=" + safe(command.storeName()),
                 "store_code=" + safe(command.storeCode()),

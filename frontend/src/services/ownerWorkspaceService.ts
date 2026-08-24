@@ -38,12 +38,17 @@ export interface OwnerOverviewOrganization {
   code: string | null
   status: string | null
   role_code: string | null
+  can_create_store: boolean
   stores: OwnerOverviewStore[]
 }
 
 export interface OwnerOverviewResponse {
   organizations: OwnerOverviewOrganization[]
   generated_at: string
+}
+
+export function canCreateStoreInOrganization(organization: OwnerOverviewOrganization) {
+  return organization.can_create_store === true
 }
 
 export function fetchOwnerOverview() {

@@ -164,11 +164,11 @@ public class StoreReadinessServiceImpl implements StoreReadinessService {
     ) {
         Store store = storeRepository.findById(storeId)
             .orElseThrow(() -> new BusinessException("PART2_STORE_NOT_FOUND"));
-        requireScope(organizationId, store);
+        requireScope(organizationId, store, policy);
         LocalDateTime now = LocalDateTime.now();
         List<StoreReadinessResponse.Check> checks = new ArrayList<>();
 
-        checkStoreBoundary(store, checks);
+        checkStoreBoundary(store, policy, checks);
         ChainMasterMenuVersionEntity masterVersion = checkProfileAndMaster(store, checks);
         checkMenu(store, masterVersion, checks);
         checkModules(store, checks);
@@ -234,11 +234,19 @@ public class StoreReadinessServiceImpl implements StoreReadinessService {
             valid ? "Owner access is Organization/Store scoped" : "Owner Store access is incomplete"));
     }
 
-    private void checkStoreBoundary(Store store, List<StoreReadinessResponse.Check> checks) {
-        boolean part2 = "PHASE_B_OWNER_PROVISIONING".equalsIgnoreCase(store.provisioning_source)
-            && "VALIDATION_FIXTURE".equalsIgnoreCase(store.store_kind);
-        if (!part2) {
-            checks.add(check("STORE_BOUNDARY", FAIL, "Only a Phase B validation fixture may be evaluated"));
+    private void checkStoreBoundary(
+        Store store,
+        ReadinessPolicy policy,
+        List<StoreReadinessResponse.Check> checks
+    ) {
+        boolean expectedScope = policy == ReadinessPolicy.OPERATIONAL_BASELINE
+            ? isBusinessStore(store) || isSyntheticValidationStore(store)
+            : isSyntheticValidationStore(store);
+        if (!expectedScope) {
+            checks.add(check("STORE_BOUNDARY", FAIL,
+                policy == ReadinessPolicy.OPERATIONAL_BASELINE
+                    ? "Only an Owner-created Business Store or Phase B validation fixture may be evaluated"
+                    : "Only a Phase B validation fixture may be evaluated"));
             return;
         }
         boolean safeState = "inactive".equalsIgnoreCase(store.status)
@@ -643,14 +651,28 @@ public class StoreReadinessServiceImpl implements StoreReadinessService {
         return counts;
     }
 
-    private void requireScope(Long organizationId, Store store) {
+    private void requireScope(Long organizationId, Store store, ReadinessPolicy policy) {
         if (organizationId == null || !organizationId.equals(store.organization_id)) {
             throw new BusinessException("PART2_STORE_ORGANIZATION_MISMATCH");
         }
-        if (!"PHASE_B_OWNER_PROVISIONING".equalsIgnoreCase(store.provisioning_source)
-            || !"VALIDATION_FIXTURE".equalsIgnoreCase(store.store_kind)) {
-            throw new BusinessException("PART2_ONLY_VALIDATION_FIXTURE_ALLOWED");
+        boolean allowed = policy == ReadinessPolicy.OPERATIONAL_BASELINE
+            ? isBusinessStore(store) || isSyntheticValidationStore(store)
+            : isSyntheticValidationStore(store);
+        if (!allowed) {
+            throw new BusinessException(policy == ReadinessPolicy.OPERATIONAL_BASELINE
+                ? "STORE_OPERATIONAL_BASELINE_SCOPE_INVALID"
+                : "PART2_ONLY_VALIDATION_FIXTURE_ALLOWED");
         }
+    }
+
+    private boolean isSyntheticValidationStore(Store store) {
+        return "PHASE_B_OWNER_PROVISIONING".equalsIgnoreCase(store.provisioning_source)
+            && "VALIDATION_FIXTURE".equalsIgnoreCase(store.store_kind);
+    }
+
+    private boolean isBusinessStore(Store store) {
+        return "OWNER_BUSINESS_CREATE".equalsIgnoreCase(store.provisioning_source)
+            && "BUSINESS".equalsIgnoreCase(store.store_kind);
     }
 
     private boolean blank(String value) {

@@ -13,6 +13,7 @@ import {
   type OwnerStoreProvisioningResult,
 } from '../../services/ownerStoreProvisioningService'
 import {
+  canCreateStoreInOrganization,
   fetchOwnerOverview,
   type OwnerOverviewOrganization,
   type OwnerOverviewResponse,
@@ -229,7 +230,7 @@ function CreateStorePanel({
   onProvisioned: (result: OwnerStoreProvisioningResult) => void
 }) {
   const eligibleOrganizations = useMemo(
-    () => organizations.filter((organization) => (organization.role_code ?? '').toUpperCase() === 'OWNER'),
+    () => organizations.filter(canCreateStoreInOrganization),
     [organizations],
   )
   const [selectedOrganizationId, setSelectedOrganizationId] = useState('')
@@ -413,7 +414,7 @@ function CreateStorePanel({
         <div className="mt-4 rounded-[20px] border border-emerald-100 bg-emerald-50 px-4 py-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <div className="text-[1rem] font-black text-emerald-800">Store created and ready.</div>
+              <div className="text-[1rem] font-black text-emerald-800">Store created and LIVE.</div>
               <div className="mt-1 text-[0.82rem] font-bold text-emerald-700">You can open the Dashboard or Frontdesk now.</div>
             </div>
             {result.store_id ? (

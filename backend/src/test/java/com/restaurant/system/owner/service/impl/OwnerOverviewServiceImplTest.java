@@ -72,6 +72,23 @@ class OwnerOverviewServiceImplTest {
         assertThat(response.organizations).hasSize(1);
         assertThat(response.organizations.get(0).id).isEqualTo(100L);
         assertThat(response.organizations.get(0).role_code).isEqualTo("OWNER");
+        assertThat(response.organizations.get(0).can_create_store).isTrue();
         assertThat(response.organizations.get(0).stores).isEmpty();
+    }
+
+    @Test
+    void createCapabilityIsFalseWhenOrganizationMembershipRoleIsNotOwner() {
+        Organization organization = new Organization();
+        organization.id = 100L;
+        organization.name = "Lanzhou Group";
+
+        when(requestUserContextService.getRequiredUser()).thenReturn(owner);
+        when(storeAccessService.accessibleOrganizations(owner)).thenReturn(List.of(organization));
+        when(storeAccessService.accessibleStores(owner)).thenReturn(List.of());
+        when(storeAccessService.roleCodeForOrganization(owner, 100L)).thenReturn("MANAGER");
+
+        OwnerOverviewResponse response = service.getOverview();
+
+        assertThat(response.organizations.get(0).can_create_store).isFalse();
     }
 }

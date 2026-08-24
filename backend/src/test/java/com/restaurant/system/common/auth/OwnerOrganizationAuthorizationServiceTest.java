@@ -81,6 +81,16 @@ class OwnerOrganizationAuthorizationServiceTest {
     }
 
     @Test
+    void frontdeskIsDeniedEvenWithMatchingOrganizationMembership() {
+        AuthenticatedUser frontdesk = user(11L, "frontdesk", "FRONTDESK");
+
+        assertThrows(
+            ForbiddenException.class,
+            () -> authorizationService.requireActiveOwnerMembership(frontdesk, 100L)
+        );
+    }
+
+    @Test
     void stagingPrefixedOwnerFromWrongOrganizationIsDenied() {
         AuthenticatedUser owner = user(10L, "STG005_OWNER_WRONG_ORG", "OWNER");
         when(organizationMembershipRepository.findFirstByUserIdAndOrganizationId(10L, 200L))

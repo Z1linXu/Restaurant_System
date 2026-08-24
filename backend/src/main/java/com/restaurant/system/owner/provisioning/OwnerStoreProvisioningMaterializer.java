@@ -50,7 +50,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class OwnerStoreProvisioningMaterializer {
 
-    private static final String RESULT_CODE = "STORE_CREATED_LIVE";
+    private static final String SYNTHETIC_RESULT_CODE = "STORE_CREATED_LIVE";
+    private static final String BUSINESS_RESULT_CODE = "BUSINESS_STORE_CREATED_LIVE";
 
     private final OrganizationRepository organizationRepository;
     private final StoreRepository storeRepository;
@@ -199,7 +200,7 @@ public class OwnerStoreProvisioningMaterializer {
             command.masterMenuFingerprintSha256(),
             validation.status(),
             counts,
-            RESULT_CODE
+            command.isBusinessCreation() ? BUSINESS_RESULT_CODE : SYNTHETIC_RESULT_CODE
         ));
         return toResult(completed);
     }
@@ -217,9 +218,11 @@ public class OwnerStoreProvisioningMaterializer {
         store.name = command.storeName().trim();
         store.code = command.storeCode().trim();
         store.status = "inactive";
-        store.store_kind = "VALIDATION_FIXTURE";
+        store.store_kind = command.isBusinessCreation() ? "BUSINESS" : "VALIDATION_FIXTURE";
         store.lifecycle_status = "CONFIGURING";
-        store.provisioning_source = "PHASE_B_OWNER_PROVISIONING";
+        store.provisioning_source = command.isBusinessCreation()
+            ? "OWNER_BUSINESS_CREATE"
+            : "PHASE_B_OWNER_PROVISIONING";
         store.enable_bar_kitchen_tasks = false;
         store.printing_enabled = false;
         store.printing_mode = "DISABLED";
