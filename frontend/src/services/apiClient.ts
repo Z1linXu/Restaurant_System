@@ -98,6 +98,18 @@ export function userMessageForStatus(status: number, backendMessage?: string) {
 
 export function getApiUserMessage(error: unknown, fallback = '请求失败，请稍后重试 / Request failed. Please try again.') {
   if (error instanceof ApiRequestError) {
+    if (error.code === 'FEATURE_DISABLED') {
+      return '此功能当前未启用 / This feature is currently unavailable.'
+    }
+    if (error.code?.includes('STAGING_RUNTIME_REQUIRED') || error.code?.includes('RUNTIME_REQUIRED')) {
+      return '此操作不适用于当前运行环境 / This operation is unavailable in this runtime.'
+    }
+    if (error.code === 'BUSINESS_STORE_CREATE_ORGANIZATION_DENIED') {
+      return '你不是该 Organization 的有效 Owner / Active Owner membership is required for this Organization.'
+    }
+    if (error.code === 'BUSINESS_STORE_CREATE_AUTHORIZATION_DENIED') {
+      return '只有 Organization Owner 可以创建门店 / Only an Organization Owner can create a Store.'
+    }
     return error.userMessage
   }
   if (error instanceof Error) {

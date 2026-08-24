@@ -38,6 +38,13 @@ export interface OwnerStoreProvisioningResult {
   validation_status: string
   result_code: string | null
   error_code: string | null
+  store_name: string
+  store_code: string
+  store_kind: string
+  store_status: string
+  lifecycle_status: string
+  operational_state: string
+  is_live: boolean
   counts: OwnerStoreProvisioningCounts
 }
 
@@ -72,7 +79,7 @@ export function shouldRotateOwnerStoreProvisioningAttempt(error: unknown) {
 
 export function fetchOwnerStoreProvisioningCatalog(organizationId: number) {
   return apiRequest<OwnerStoreProvisioningCatalog>(
-    `/api/v1/owner/organizations/${organizationId}/phase-b/store-provisioning/catalog`,
+    `/api/v1/owner/organizations/${organizationId}/stores/create-catalog`,
   )
 }
 
@@ -82,7 +89,7 @@ export function provisionOwnerStore(
   idempotencyKey: string,
 ) {
   return apiRequest<OwnerStoreProvisioningResult>(
-    `/api/v1/owner/organizations/${organizationId}/phase-b/store-provisioning`,
+    `/api/v1/owner/organizations/${organizationId}/stores`,
     {
       method: 'POST',
       headers: {

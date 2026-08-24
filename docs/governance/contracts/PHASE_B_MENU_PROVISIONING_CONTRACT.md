@@ -62,9 +62,25 @@ No Phase B provisioning API is implemented by A11.5. Future APIs must be
 separate from legacy Platform Admin direct active Store creation, which remains
 disabled until the Phase B provisioning path exists.
 
-Current Part 1 implementation adds the canonical Owner API under
+Current Part 1 implementation retains the Staging-only synthetic validation
+API under
 `/api/v1/owner/organizations/{organizationId}/phase-b/store-provisioning`;
 see [PHASE_B_PART1_IMPLEMENTATION_EVIDENCE](../../archive/governance-pre-simplification/agile/PHASE_B_PART1_IMPLEMENTATION_EVIDENCE.md).
+
+The canonical product boundary for an Organization Owner is:
+
+```text
+GET  /api/v1/owner/organizations/{organizationId}/stores/create-catalog
+POST /api/v1/owner/organizations/{organizationId}/stores
+```
+
+It requires application `OWNER` plus active exact-Organization `OWNER`
+membership, not a pre-existing Store membership. It creates one transactional,
+idempotent `BUSINESS` Store aggregate and completes internal readiness and
+activation to LIVE. It does not create synthetic staff/credentials/devices or
+bind Printer/Pad hardware. Optional unbound hardware is not a lifecycle
+blocker. The Owner overview's `can_create_store` field is the frontend
+availability contract.
 
 Likely future API families:
 

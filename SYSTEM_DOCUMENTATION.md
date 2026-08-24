@@ -8967,3 +8967,33 @@ updates a real synthetic order through the application API and requires the
 normal order inventory transactions to reconcile. This fixture cannot run in
 live read smoke, never reaches Production or Staging, and is removed with the
 run-owned clone volume.
+
+## Production-safe Owner Business Store creation
+
+The product Create Store workflow uses the Organization-scoped business API,
+not the Staging-only Phase B validation-fixture endpoint:
+
+- `GET /api/v1/owner/organizations/{organizationId}/stores/create-catalog`
+- `POST /api/v1/owner/organizations/{organizationId}/stores`
+
+Both operations require an authenticated application `OWNER`, an active
+`OWNER` membership in the exact Organization, and an active Organization.
+They deliberately do not require membership in a Store that does not yet
+exist. The Owner overview returns the
+canonical `can_create_store` capability for each Organization; the frontend
+does not infer this permission from a label alone.
+
+Create is a single idempotent, transactional business action. It reuses the
+reviewed Profile/Master Menu provisioning engine and creates a Store-local
+menu and mappings, modules, stations, default tables, Owner Store membership,
+logical printer roles, operational readiness evidence and activation record.
+The result is a `BUSINESS` Store with canonical LIVE (`status=active`,
+`lifecycle_status=ACTIVE`) state. A changed request under the same
+`Idempotency-Key` conflicts, and a failure rolls back the Store aggregate.
+
+The action does not create staff users or credentials, devices, Printer
+endpoints, or Pad bindings. Printing remains endpoint-free, unbound and
+`DISABLED`; optional hardware does not block Store LIVE or management access.
+The existing `/phase-b/store-provisioning` family remains a Staging-only
+synthetic validation path guarded by its Platform feature and runtime gates.
+No schema or Flyway change is required for the business path.

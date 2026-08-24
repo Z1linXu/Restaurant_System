@@ -29,6 +29,7 @@ import com.restaurant.system.owner.provisioning.OwnerStoreProvisioningCounts;
 import com.restaurant.system.owner.provisioning.OwnerStoreProvisioningResult;
 import com.restaurant.system.owner.provisioning.OwnerStoreProvisioningService;
 import com.restaurant.system.owner.provisioning.PhaseBProvisioningRuntimeGate;
+import com.restaurant.system.owner.provisioning.StoreProvisioningPurpose;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -161,6 +162,7 @@ class OwnerStoreProvisioningControllerTest {
         assertThat(command.profileVersion()).isEqualTo("v2");
         assertThat(command.masterMenuKey()).isEqualTo("LANZHOU_CHAIN_MASTER_MENU");
         assertThat(command.masterMenuVersion()).isEqualTo("v1");
+        assertThat(command.purpose()).isEqualTo(StoreProvisioningPurpose.STAGING_VALIDATION);
     }
 
     @Test

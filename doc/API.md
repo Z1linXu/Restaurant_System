@@ -5,8 +5,8 @@
 > owned by `docs/governance/CURRENT_STATE.yml`; historical status notes below
 > provide API evolution context only.
 
-> **Current Owner Store creation and lifecycle contract (2026-08-22):** `POST
-> /api/v1/owner/organizations/{organizationId}/phase-b/store-provisioning` is
+> **Current Owner Store creation and lifecycle contract (2026-08-24):** `POST
+> /api/v1/owner/organizations/{organizationId}/stores` is
 > one complete business action. Inside one transaction it materializes the
 > immutable Profile/Master-derived Store graph, creates Store-local default
 > tables, grants the creating Owner explicit Store membership, creates
@@ -17,8 +17,15 @@
 > Normal creation does not create synthetic staff credentials, devices,
 > heartbeats, device proof or physical printer bindings. The Part 2 synthetic
 > provision/readiness/activate APIs below remain internal Staging acceptance and
-> diagnostic contracts, not normal Owner workflow steps. This contract does not
-> authorize Production mutation.
+> diagnostic contracts, not normal Owner workflow steps. `GET
+> /api/v1/owner/organizations/{organizationId}/stores/create-catalog` returns
+> the reviewed Profile/Master selection. Both endpoints require application
+> `OWNER`, an active exact-Organization `OWNER` membership and an active
+> Organization; they do not require membership in a Store that does not yet
+> exist. The Owner overview's `can_create_store` is the frontend capability
+> contract. The older `/phase-b/store-provisioning` API remains Staging-only
+> synthetic validation tooling. This contract does not authorize Production
+> mutation by itself.
 
 > Phase B Part 2 Store readiness and activation contract (2026-08-22): the
 > Owner-only API is bounded to an inactive synthetic validation Store created

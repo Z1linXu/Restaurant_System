@@ -16,6 +16,7 @@ public class OwnerOverviewResponse {
         public String code;
         public String status;
         public String role_code;
+        public Boolean can_create_store;
         public List<StoreOverview> stores;
     }
 

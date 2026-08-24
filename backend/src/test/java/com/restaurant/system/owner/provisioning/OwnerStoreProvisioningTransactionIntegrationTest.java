@@ -18,6 +18,7 @@ import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.menu.repository.MenuItemRepository;
 import com.restaurant.system.menu.service.MenuRevisionService;
 import com.restaurant.system.modules.StoreModuleRepository;
+import com.restaurant.system.owner.exception.OwnerStoreProvisioningException;
 import com.restaurant.system.owner.master.ChainMasterMenuVersionEntity;
 import com.restaurant.system.owner.profile.StoreProfileArtifactEntity;
 import com.restaurant.system.owner.profile.StoreProfileVersionEntity;
@@ -34,10 +35,12 @@ import com.restaurant.system.printing.rules.PrintingDisplayRuleRevision;
 import com.restaurant.system.printing.rules.PrintingDisplayRuleRevisionRepository;
 import com.restaurant.system.printing.rules.PrintingDisplayRuleSet;
 import com.restaurant.system.printing.rules.PrintingDisplayRuleSetRepository;
+import com.restaurant.system.printing.repository.StoreDeviceRepository;
 import com.restaurant.system.station.repository.DiningTableRepository;
 import com.restaurant.system.station.repository.StationRepository;
 import com.restaurant.system.user.repository.StoreMembershipRepository;
 import com.restaurant.system.user.repository.StoreRepository;
+import com.restaurant.system.user.repository.UserRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -91,6 +94,8 @@ class OwnerStoreProvisioningTransactionIntegrationTest {
     @Autowired private StoreLogicalPrinterRoleRepository printerRoleRepository;
     @Autowired private StoreReadinessEvidenceRepository readinessEvidenceRepository;
     @Autowired private StoreActivationRequestRepository activationRequestRepository;
+    @Autowired private StoreDeviceRepository storeDeviceRepository;
+    @Autowired private UserRepository userRepository;
 
     @MockBean private StoreModuleRepository moduleRepository;
     @MockBean private StationRepository stationRepository;
@@ -172,6 +177,55 @@ class OwnerStoreProvisioningTransactionIntegrationTest {
 
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void inactiveOrganizationCannotMaterializeAStore() {
+        Organization organization = organizationRepository.findById(organizationId).orElseThrow();
+        organization.status = "inactive";
+        organizationRepository.saveAndFlush(organization);
+        OwnerStoreProvisioningRequestEntity request = requestRepository.saveAndFlush(requestEntity("inactive-org-key"));
+
+        assertThrows(OwnerStoreProvisioningException.class, () -> materializer.materialize(
+            reservation(request.id),
+            input(StoreProvisioningPurpose.BUSINESS)
+        ));
+
+        assertThat(storeRepository.findAllByOrganizationIdAndCodeIgnoreCase(organizationId, "ROLLBACK_STORE")).isEmpty();
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void businessCreationProducesLiveBusinessStoreWithoutStaffDevicesOrHardwareBindings() {
+        StoreReadinessResponse ready = new StoreReadinessResponse();
+        ready.ready = true;
+        ready.evidence_id = 902L;
+        ready.readiness_fingerprint = FINGERPRINT;
+        doReturn(ready).when(readinessService).evaluateOperationalBaseline(anyLong(), anyLong(), anyLong());
+
+        OwnerStoreProvisioningRequestEntity request = requestRepository.saveAndFlush(requestEntity("business-create-key"));
+        OwnerStoreProvisioningResult result = materializer.materialize(
+            reservation(request.id),
+            input(StoreProvisioningPurpose.BUSINESS)
+        );
+
+        var store = storeRepository.findById(result.storeId()).orElseThrow();
+        assertThat(store.store_kind).isEqualTo("BUSINESS");
+        assertThat(store.provisioning_source).isEqualTo("PHASE_B_OWNER_PROVISIONING");
+        assertThat(store.status).isEqualTo("active");
+        assertThat(store.lifecycle_status).isEqualTo("ACTIVE");
+        assertThat(store.printing_enabled).isFalse();
+        assertThat(store.printing_mode).isEqualTo("DISABLED");
+        assertThat(membershipRepository.findFirstByUserIdAndStoreId(501L, store.id)).isPresent();
+        assertThat(diningTableRepository.findAllByStoreIdAndTableCode(store.id, "T01")).hasSize(1);
+        assertThat(diningTableRepository.findAllByStoreIdAndTableCode(store.id, "T02")).hasSize(1);
+        assertThat(printerRoleRepository.findByStoreIdAndRoleCode(store.id, "GRAB")).get()
+            .extracting(role -> role.physical_binding_status, role -> role.assigned_printer_id)
+            .containsExactly("UNBOUND", null);
+        assertThat(userRepository.findAllByStore_id(store.id)).isEmpty();
+        assertThat(storeDeviceRepository.findAllByStoreIdOrderByIdAsc(store.id)).isEmpty();
+        assertThat(result.resultCode()).isEqualTo("BUSINESS_STORE_CREATED_LIVE");
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void organizationLockSerializesConcurrentRequestsForTheSameStoreCode() throws Exception {
         StoreReadinessResponse ready = new StoreReadinessResponse();
         ready.ready = true;
@@ -216,6 +270,10 @@ class OwnerStoreProvisioningTransactionIntegrationTest {
     }
 
     private ResolvedOwnerStoreProvisioningInput input() {
+        return input(StoreProvisioningPurpose.STAGING_VALIDATION);
+    }
+
+    private ResolvedOwnerStoreProvisioningInput input(StoreProvisioningPurpose purpose) {
         AuthenticatedUser owner = new AuthenticatedUser(501L, null, 601L, "owner", "Owner", "OWNER");
         OwnerStoreProvisioningCommand command = new OwnerStoreProvisioningCommand(
             owner,
@@ -228,7 +286,8 @@ class OwnerStoreProvisioningTransactionIntegrationTest {
             FINGERPRINT,
             "TEST_MASTER",
             "v1",
-            FINGERPRINT
+            FINGERPRINT,
+            purpose
         );
         StoreProfileVersionEntity profileVersion = new StoreProfileVersionEntity();
         profileVersion.content_json = "{\"module_defaults\":{\"modules\":[]},\"source_store_semantics\":{},\"template_references\":{}}";

@@ -83,8 +83,10 @@ public class OwnerStoreProvisioningServiceImpl implements OwnerStoreProvisioning
     @Override
     public OwnerStoreProvisioningResult provision(OwnerStoreProvisioningCommand command) {
         validateCommandBasics(command);
-        featureFlagService.requireEnabled(FeaturePackage.PLATFORM);
-        runtimeGate.requireEnabled();
+        if (!command.isBusinessCreation()) {
+            featureFlagService.requireEnabled(FeaturePackage.PLATFORM);
+            runtimeGate.requireEnabled();
+        }
         authorizationService.requireActiveOwnerMembership(command.actor(), command.organizationId());
         ResolvedOwnerStoreProvisioningInput input = resolve(command);
         OwnerStoreProvisioningReservation reservation = requestCoordinator.reserve(input);
@@ -153,7 +155,8 @@ public class OwnerStoreProvisioningServiceImpl implements OwnerStoreProvisioning
             profileFingerprint,
             masterMenuKey,
             masterMenuVersion,
-            masterFingerprint
+            masterFingerprint,
+            command.purpose()
         );
         String requestFingerprint = fingerprintService.fingerprint(resolvedCommand);
         return new ResolvedOwnerStoreProvisioningInput(
@@ -171,7 +174,7 @@ public class OwnerStoreProvisioningServiceImpl implements OwnerStoreProvisioning
     private void validateCommandBasics(OwnerStoreProvisioningCommand command) {
         if (command == null || command.actor() == null || command.actor().userId() == null
             || command.organizationId() == null || isBlank(command.idempotencyKey())
-            || isBlank(command.storeName()) || isBlank(command.storeCode())) {
+            || isBlank(command.storeName()) || isBlank(command.storeCode()) || command.purpose() == null) {
             throw badRequest("STORE_PROVISIONING_REQUEST_INVALID", "Provisioning scope, Store identity and actor are required");
         }
         if (!STORE_CODE_PATTERN.matcher(command.storeCode().trim()).matches()) {

@@ -1,8 +1,10 @@
 package com.restaurant.system.owner.provisioning;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.never;
 
 import com.restaurant.system.common.auth.AuthenticatedUser;
 import com.restaurant.system.common.auth.OwnerOrganizationAuthorizationService;
@@ -113,6 +115,20 @@ class OwnerStoreProvisioningServiceImplTest {
         );
     }
 
+    @Test
+    void businessCreationSkipsStagingRuntimeGatesAndUsesOrganizationOwnerAuthorization() {
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.provision(businessCommand()))
+            .isInstanceOf(OwnerStoreProvisioningException.class)
+            .hasMessageContaining("Store Profile not found");
+
+        verify(featureFlagService, never()).requireEnabled(any());
+        verify(runtimeGate, never()).requireEnabled();
+        verify(authorizationService).requireActiveOwnerMembership(
+            businessCommand().actor(),
+            businessCommand().organizationId()
+        );
+    }
+
     private OwnerStoreProvisioningCommand command() {
         return new OwnerStoreProvisioningCommand(
             new AuthenticatedUser(20L, null, 1L, "owner", "Owner", "OWNER"),
@@ -126,6 +142,24 @@ class OwnerStoreProvisioningServiceImplTest {
             "LANZHOU_CHAIN_MASTER_MENU",
             "v1",
             "m".repeat(64)
+        );
+    }
+
+    private OwnerStoreProvisioningCommand businessCommand() {
+        OwnerStoreProvisioningCommand command = command();
+        return new OwnerStoreProvisioningCommand(
+            command.actor(),
+            command.organizationId(),
+            "business-key",
+            "Business Store",
+            "BUSINESS_STORE",
+            command.profileCode(),
+            command.profileVersion(),
+            command.profileFingerprintSha256(),
+            command.masterMenuKey(),
+            command.masterMenuVersion(),
+            command.masterMenuFingerprintSha256(),
+            StoreProvisioningPurpose.BUSINESS
         );
     }
 }
