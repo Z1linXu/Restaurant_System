@@ -307,7 +307,7 @@ def read_smoke(
         "store_context": f"/api/v1/stores/{store_id}/context",
         "admin": f"/api/v1/admin/dashboard?range=today&compare=true&organization_id={organization_id}&store_id={store_id}",
         "tables": f"/api/v1/frontdesk/dining-tables?store_id={store_id}",
-        "stations": f"/api/v1/admin/stations?store_id={store_id}",
+        "stations": f"/api/v1/admin/platform/stations?store_id={store_id}",
         "menu": f"/api/v1/menu/catalog?store_id={store_id}",
         "orders": f"/api/v1/frontdesk/orders/history?store_id={store_id}&limit=5",
         "staff": f"/api/v1/admin/staff?store_id={store_id}",

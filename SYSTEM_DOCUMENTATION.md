@@ -8920,3 +8920,11 @@ non-restarting container, and a second readiness probe after a stability delay.
 Only then may `pg_restore` start. This prevents a transient initialization
 `pg_isready` response from racing the entrypoint's normal fast shutdown, while
 keeping the existing timeouts, exact container ownership and cleanup behavior.
+
+## Production V26 station smoke route
+
+The authenticated Production clone smoke reads Store-scoped stations through
+the existing `/api/v1/admin/platform/stations` contract. The shorter
+`/api/v1/admin/stations` path is not an application endpoint and must not be
+used as a release gate. Authorization, Store module checks, non-empty legacy
+data validation and all other read-smoke requirements remain unchanged.
