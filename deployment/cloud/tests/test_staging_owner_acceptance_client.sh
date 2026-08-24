@@ -32,6 +32,20 @@ printf '{"data":{"user":{"username":"STG005_OWNER_TEST"}}}' >"$TMP_DIR/compat-us
 PRINTING_FILTER='.data.store_id == $store and (.data.printing_mode == "DISABLED" or .data.printing_mode == "MOCK") and (.data.printers | type == "array" and all(.[]; ((.ip_address // "") | length) == 0))'
 printf '{"data":{"store_id":44,"printing_mode":"DISABLED","printers":[]}}' >"$TMP_DIR/compat-printing-valid.json"
 "$COMPAT" -e --argjson store 44 "$PRINTING_FILTER" "$TMP_DIR/compat-printing-valid.json"
+OWNER_LOGIN_FILTER='.login_identifier | strings | select(startswith("STG005_") or . == "owner")'
+printf '{"login_identifier":"owner"}' >"$TMP_DIR/compat-retained-owner.json"
+printf '{"login_identifier":"STG005_OWNER_TEST"}' >"$TMP_DIR/compat-prefixed-owner.json"
+"$COMPAT" -er "$OWNER_LOGIN_FILTER" "$TMP_DIR/compat-retained-owner.json" >/dev/null
+"$COMPAT" -er "$OWNER_LOGIN_FILTER" "$TMP_DIR/compat-prefixed-owner.json" >/dev/null
+for owner_file in "$TMP_DIR/compat-retained-owner.json" "$TMP_DIR/compat-prefixed-owner.json"; do
+  expect_failure compat_owner_selector_suffix "$COMPAT" -er "$OWNER_LOGIN_FILTER and false" "$owner_file"
+  expect_failure compat_owner_selector_prefix "$COMPAT" -er "true and $OWNER_LOGIN_FILTER" "$owner_file"
+  expect_failure compat_owner_selector_pipeline "$COMPAT" -er "$OWNER_LOGIN_FILTER | select(false)" "$owner_file"
+done
+printf '{"login_identifier":"cashier"}' >"$TMP_DIR/compat-arbitrary-login.json"
+expect_failure compat_owner_selector_whitespace "$COMPAT" -er '.login_identifier | strings | select(startswith ("STG005_") or . == "owner")' "$TMP_DIR/compat-arbitrary-login.json"
+expect_failure compat_owner_selector_compact "$COMPAT" -er '.login_identifier|strings|select(startswith("STG005_")or.=="owner")' "$TMP_DIR/compat-arbitrary-login.json"
+expect_failure compat_owner_selector_comment "$COMPAT" -er $'.login_identifier | strings | select(startswith("STG005_") # comment\n or . == "owner")' "$TMP_DIR/compat-arbitrary-login.json"
 for scalar in '"bad"' '1' 'null'; do
   printf '{"data":{"store_id":44,"printing_mode":"DISABLED","printers":[%s]}}' "$scalar" >"$TMP_DIR/compat-printing-scalar.json"
   expect_failure "compat_printing_scalar_${scalar//[^A-Za-z0-9]/_}" "$COMPAT" -e --argjson store 44 "$PRINTING_FILTER" "$TMP_DIR/compat-printing-scalar.json"
@@ -259,12 +273,13 @@ assert_not_contains 'idem-clone' "$TMP_DIR/clone.out"
 
 BUSINESS_SECRET="$TMP_DIR/business-create.json"
 cat >"$BUSINESS_SECRET" <<'EOF'
-{"login_identifier":"STG005_OWNER_TEST","login_password":"OwnerPassphrase-123","manager_login_identifier":"STG005_MANAGER_TEST","manager_login_password":"ManagerPassphrase-123","business_create_idempotency_key":"idem-business-0123456789abcdef0123456789abcdef","business_create_request":{"store_name":"STG005 Business Acceptance","store_code":"STG005_BUSINESS_0123456789ABCDEF0123456789ABCDEF"}}
+{"login_identifier":"owner","login_password":"OwnerPassphrase-123","manager_login_identifier":"manager","manager_login_password":"ManagerPassphrase-123","business_create_idempotency_key":"idem-business-0123456789abcdef0123456789abcdef","business_create_request":{"store_name":"STG005 Business Acceptance","store_code":"STG005_BUSINESS_0123456789ABCDEF0123456789ABCDEF"}}
 EOF
 chmod 600 "$BUSINESS_SECRET"
 rm -f "$FAKE_STATE/business"
 cleanup
 JQ_BIN="$COMPAT"
+export FAKE_LOGIN_USERNAME=owner
 initialize_private_root
 exec 7<"$BUSINESS_SECRET"; SECRETS_FD=7; ACTION=business-store-create-acceptance; TARGET_STORE_ID=""; ACCEPTANCE_RUN_ID=0123456789abcdef0123456789abcdef; APPROVAL_SHA256=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; ENV_DIGEST=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; PREFLIGHT_EVIDENCE_SHA256=cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 read_secret_input
@@ -276,6 +291,27 @@ assert_not_contains 'OwnerPassphrase' "$TMP_DIR/business.out"
 assert_not_contains 'ManagerPassphrase' "$TMP_DIR/business.out"
 assert_not_contains 'access-token-value' "$TMP_DIR/business.out"
 assert_not_contains 'idem-business' "$TMP_DIR/business.out"
+cleanup
+unset FAKE_LOGIN_USERNAME
+
+RETAINED_OWNER_ROTATE_SECRET="$TMP_DIR/retained-owner-rotate.json"
+printf '%s\n' '{"login_identifier":"owner","login_password":"OwnerPassphrase-123","new_login_password":"NewOwnerPassphrase20"}' >"$RETAINED_OWNER_ROTATE_SECRET"
+chmod 600 "$RETAINED_OWNER_ROTATE_SECRET"
+initialize_private_root
+exec 6<"$RETAINED_OWNER_ROTATE_SECRET"; SECRETS_FD=6; ACTION=rotate-owner-credential; APPROVED_LOGIN_IDENTIFIER=owner
+read_secret_input
+cleanup
+
+INVALID_RETAINED_SECRET="$TMP_DIR/invalid-retained-business.json"
+python3 - "$BUSINESS_SECRET" "$INVALID_RETAINED_SECRET" <<'PY'
+import json,sys
+d=json.load(open(sys.argv[1])); d['manager_login_identifier']='cashier'
+json.dump(d,open(sys.argv[2],'w'),separators=(',',':'))
+PY
+chmod 600 "$INVALID_RETAINED_SECRET"
+initialize_private_root
+exec 6<"$INVALID_RETAINED_SECRET"; SECRETS_FD=6; ACTION=business-store-create-acceptance; ACCEPTANCE_RUN_ID=0123456789abcdef0123456789abcdef
+expect_failure invalid_retained_manager read_secret_input
 cleanup
 
 REPLAY_SECRET="$TMP_DIR/business-first-replay.json"

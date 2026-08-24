@@ -147,7 +147,9 @@ result = None
 BUSINESS_EVIDENCE_FILTER = '{schema:$schema,run_id:$run,source_sha:$sha,backend_image_id:$backend,frontend_image_id:$frontend,environment_sha256:$env,runtime_preflight_sha256:$preflight,owner_approval_sha256:$approval,request_fingerprint:$fingerprint,request_body_sha256:$request,organization_id:$organization,foreign_organization_id:$foreign,store_id:$store,fresh_create:"PASS",replay:"PASS",foreign_active_organization_denied:"PASS",manager_denied:"PASS",live_context:"PASS",frontdesk_defaults:"PASS",printing_management:"PASS",printing_endpoint_free:"PASS",final_result:"PASS"}'
 FOREIGN_ACTIVE_FILTER = '{name:("STG005 Foreign Acceptance " + $run),code:("STG005_FOREIGN_" + ($run | ascii_upcase)),status:"active"}'
 FOREIGN_INACTIVE_FILTER = '{id:$id,name:("STG005 Foreign Acceptance " + $run),code:("STG005_FOREIGN_" + ($run | ascii_upcase)),status:"inactive"}'
-BUSINESS_SECRET_FILTER = '(.business_create_idempotency_key | type == "string" and contains($run)) and (.business_create_request | type == "object") and (.business_create_request.store_name | type == "string" and length > 0) and (.business_create_request.store_code == ("STG005_BUSINESS_" + ($run | ascii_upcase))) and (.manager_login_identifier | type == "string" and startswith("STG005_")) and (.manager_login_password | type == "string" and length >= 12)'
+BUSINESS_SECRET_FILTER = '(.business_create_idempotency_key | type == "string" and contains($run)) and (.business_create_request | type == "object") and (.business_create_request.store_name | type == "string" and length > 0) and (.business_create_request.store_code == ("STG005_BUSINESS_" + ($run | ascii_upcase))) and (.manager_login_identifier | type == "string" and (startswith("STG005_") or . == "manager")) and (.manager_login_password | type == "string" and length >= 12)'
+OWNER_LOGIN_FILTER = '.login_identifier | strings | select(startswith("STG005_") or . == "owner")'
+LEGACY_LOGIN_FILTER = '.login_identifier | strings | select(length > 0)'
 MANAGER_LOGIN_FILTER = '{login_identifier: .manager_login_identifier, password: .manager_login_password}'
 ERROR_FILTER = '.success == false and .error_code == $code'
 EVIDENCE_ASSERT_FILTER = '.schema == "V26_BUSINESS_STORE_CREATE_ACCEPTANCE_V1" and .fresh_create == "PASS" and .foreign_active_organization_denied == "PASS" and .final_result == "PASS"'
@@ -159,7 +161,7 @@ PRINTING_FILTER = '.data.store_id == $store and (.data.printing_mode == "DISABLE
 OVERVIEW_FILTER = '.data.organizations | any(.id == $organization and .can_create_store == true and (.stores | any(.id == $store and .operational_state == "LIVE" and .is_live == true)))'
 BUSINESS_EXACT_FILTERS = {
     BUSINESS_EVIDENCE_FILTER, FOREIGN_ACTIVE_FILTER, FOREIGN_INACTIVE_FILTER,
-    BUSINESS_SECRET_FILTER, ".business_create_request", ".business_create_idempotency_key",
+    BUSINESS_SECRET_FILTER, OWNER_LOGIN_FILTER, LEGACY_LOGIN_FILTER, ".business_create_request", ".business_create_idempotency_key",
     MANAGER_LOGIN_FILTER, ERROR_FILTER, EVIDENCE_ASSERT_FILTER,
     FOREIGN_ACTIVE_ASSERT_FILTER, ".data.enabled == true", FRESH_CREATE_FILTER,
     LIVE_CONTEXT_FILTER, TABLES_FILTER, PRINTING_FILTER, OVERVIEW_FILTER,
@@ -167,6 +169,7 @@ BUSINESS_EXACT_FILTERS = {
 }
 BUSINESS_FILTER_MARKERS = (
     "fresh_create:", "STG005 Foreign Acceptance", ".business_create_",
+    ".login_identifier | strings | select(",
     ".manager_login_", ".error_code == $code", "V26_BUSINESS_STORE_CREATE_ACCEPTANCE_V1",
     ".data.id == $foreign", ".data.enabled == true", '.data.store_kind == "BUSINESS"',
     '.data.id == $store and .data.operational_state == "LIVE"',
@@ -252,11 +255,12 @@ elif null_input and "name_zh: \"Phase B Store-only Item\"" in filter_text:
     }
 elif null_input and "revision_id: $revision" in filter_text:
     result = {"store_id": as_int("store"), "revision_id": as_int("revision")}
-elif filter_text.startswith(".login_identifier"):
+elif filter_text == OWNER_LOGIN_FILTER:
+    result = value.get("login_identifier") if isinstance(value, dict) else None
+    require(isinstance(result, str) and (result.startswith("STG005_") or result == "owner"))
+elif filter_text == LEGACY_LOGIN_FILTER:
     result = value.get("login_identifier") if isinstance(value, dict) else None
     require(isinstance(result, str) and len(result) > 0)
-    if 'startswith("STG005_")' in filter_text:
-        require(result.startswith("STG005_"))
 elif ".new_login_password" in filter_text and "length == 20" in filter_text:
     new_password = value.get("new_login_password") if isinstance(value, dict) else None
     require(isinstance(new_password, str) and len(new_password) == 20 and new_password != value.get("login_password"))
@@ -278,7 +282,7 @@ elif filter_text == BUSINESS_SECRET_FILTER:
     require(isinstance(key, str) and run_id in key)
     require(isinstance(request, dict) and isinstance(request.get("store_name"), str) and len(request["store_name"]) > 0)
     require(request.get("store_code") == "STG005_BUSINESS_" + run_id.upper())
-    require(isinstance(value.get("manager_login_identifier"), str) and value["manager_login_identifier"].startswith("STG005_"))
+    require(isinstance(value.get("manager_login_identifier"), str) and (value["manager_login_identifier"].startswith("STG005_") or value["manager_login_identifier"] == "manager"))
     require(isinstance(value.get("manager_login_password"), str) and len(value["manager_login_password"]) >= 12)
     result = True
 elif filter_text.strip() == ".business_create_request":

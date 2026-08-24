@@ -9012,3 +9012,8 @@ current runtime configuration fingerprints before replacing either app image.
 The Staging Owner-shaped acceptance action remains executable on the reviewed
 host when `jq` is absent: `ops001-jq-compat.py` implements only its fixed,
 fail-closed expressions and rejects every unknown filter.
+The retained TWIN001 synthetic fixture deliberately uses the product-shaped
+login identifiers `owner` and `manager`; the Staging-only acceptance client
+accepts exactly those two compatibility identifiers in addition to the
+`STG005_*` convention. Arbitrary unprefixed identities remain fail-closed, and
+credential rotation remains bound to the exact approved Owner identifier.
