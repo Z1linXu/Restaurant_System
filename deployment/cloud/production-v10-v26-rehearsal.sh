@@ -424,8 +424,14 @@ stop_db_and_volume() {
   VOLUME_MOUNTPOINT=""
 }
 
-rehearsal_database_exists() {
-  [[ "$(docker_default exec "$DB_CONTAINER_ID" psql -qX -v ON_ERROR_STOP=1 -At -U rehearsal -d postgres -v "candidate=$1" -c "select count(*) from pg_database where datname = :'candidate'")" == "1" ]]
+rehearsal_database_absent() {
+  local database="$1" count
+  [[ "$database" =~ ^[A-Za-z_][A-Za-z0-9_]{0,62}$ ]] || return 1
+  count="$(docker_default exec -i "$DB_CONTAINER_ID" psql -qX -v ON_ERROR_STOP=1 -At -U rehearsal -d postgres -v "candidate=$database" <<'SQL'
+select count(*) from pg_database where datname = :'candidate';
+SQL
+)" || return 1
+  [[ "$count" == "0" ]]
 }
 
 create_rehearsal_database() {
@@ -441,7 +447,11 @@ drop_rehearsal_database() {
 }
 
 terminate_rehearsal_database_sessions() {
-  docker_restore exec "$DB_CONTAINER_ID" timeout -s TERM -k 10 120 psql -qX -v ON_ERROR_STOP=1 -At -U rehearsal -d postgres -v "candidate=$1" -c "select pg_terminate_backend(pid) from pg_stat_activity where datname = :'candidate' and pid <> pg_backend_pid()" >/dev/null
+  local database="$1"
+  [[ "$database" =~ ^[A-Za-z_][A-Za-z0-9_]{0,62}$ ]] || return 1
+  docker_restore exec -i "$DB_CONTAINER_ID" timeout -s TERM -k 10 120 psql -qX -v ON_ERROR_STOP=1 -At -U rehearsal -d postgres -v "candidate=$database" >/dev/null <<'SQL'
+select pg_terminate_backend(pid) from pg_stat_activity where datname = :'candidate' and pid <> pg_backend_pid();
+SQL
 }
 
 rename_rehearsal_database() {
@@ -560,7 +570,7 @@ REHEARSAL_QUERY_DB="$PRIMARY_DB"
 FAILED_V26_BUSINESS="$(v26_business_fingerprint)"
 FAILED_V26_PRINTING="$(v26_printing_fingerprint)"
 [[ "$(ledger_named "$DB_CONTAINER_ID" "$PRIMARY_DB")" == "$(expected_ledger 26)" ]] || die "failed V26 clone ledger differs before recovery proof"
-! rehearsal_database_exists "$FAILED_RESTORE_DB" && ! rehearsal_database_exists "$RESTORED_V10_DB" && ! rehearsal_database_exists "$QUARANTINED_V26_DB" || die "generated recovery proof database already exists"
+rehearsal_database_absent "$FAILED_RESTORE_DB" && rehearsal_database_absent "$RESTORED_V10_DB" && rehearsal_database_absent "$QUARANTINED_V26_DB" || die "generated recovery proof database exists or cannot be verified absent"
 
 create_rehearsal_database "$FAILED_RESTORE_DB" || die "cannot create restore-failure proof database"
 if printf 'not-a-postgresql-custom-dump\n' | docker_restore exec -i "$DB_CONTAINER_ID" timeout -s TERM -k 10 120 pg_restore -U rehearsal -d "$FAILED_RESTORE_DB" --no-owner --no-privileges --exit-on-error --single-transaction >/dev/null 2>&1; then
