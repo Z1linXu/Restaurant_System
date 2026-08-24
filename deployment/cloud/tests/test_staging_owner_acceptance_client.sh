@@ -51,7 +51,7 @@ FAKE_STATE="$TMP_DIR/fake-state"
 cat >"$FAKE_CURL" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-config=""; output=""; url=""; data_file=""
+config=""; output=""; url=""; data_file=""; status=200; body=""
 [[ "${1:-}" == '-q' ]] || exit 98
 args="$*"
 [[ "$args" != *'OwnerPassphrase'* && "$args" != *'StaffPassphrase'* && "$args" != *'idem-'* && "$args" != *'access-token-value'* ]] || exit 97
@@ -63,11 +63,12 @@ done
 case "$url" in
   */auth/login)
     [[ -f "$data_file" ]] || exit 91
-    if grep -Fq 'NewOwnerPassphrase20' "$data_file"; then printf 'new' >"$FAKE_STATE/login-password";
+    if grep -Fq 'ManagerPassphrase-123' "$data_file"; then
+      body='{"success":true,"data":{"access_token":"manager-access-token-value-abcdefghijklmnopqrstuvwxyz","refresh_token":"manager-refresh-token-value-abcdefghijklmnopqrstuvwxyz","user":{"id":8,"username":"STG005_MANAGER_TEST","role_code":"MANAGER","organization_id":10}}}'
+    elif grep -Fq 'NewOwnerPassphrase20' "$data_file"; then printf 'new' >"$FAKE_STATE/login-password";
     elif grep -Fq 'OwnerPassphrase-123' "$data_file"; then printf 'old' >"$FAKE_STATE/login-password";
     else exit 90; fi
-    username="${FAKE_LOGIN_USERNAME:-STG005_OWNER_TEST}"
-    body="{\"success\":true,\"data\":{\"access_token\":\"access-token-value-abcdefghijklmnopqrstuvwxyz\",\"refresh_token\":\"refresh-token-value-abcdefghijklmnopqrstuvwxyz\",\"user\":{\"id\":7,\"username\":\"$username\",\"role_code\":\"OWNER\",\"organization_id\":10}}}" ;;
+    if [[ -z "$body" ]]; then username="${FAKE_LOGIN_USERNAME:-STG005_OWNER_TEST}"; body="{\"success\":true,\"data\":{\"access_token\":\"access-token-value-abcdefghijklmnopqrstuvwxyz\",\"refresh_token\":\"refresh-token-value-abcdefghijklmnopqrstuvwxyz\",\"user\":{\"id\":7,\"username\":\"$username\",\"role_code\":\"OWNER\",\"organization_id\":10}}}"; fi ;;
   */auth/me) grep -Eq 'Authorization: Bearer (access|me-access)-token-value-' "$config" || exit 95; body='{"success":true,"data":{"access_token":"me-access-token-value-abcdefghijklmnopqrstuvwxyz","refresh_token":null,"user":{"role_code":"OWNER","organization_id":10}}}' ;;
   */me/workspaces)
     grep -Fq 'Authorization: Bearer me-access-token-value-' "$config" || exit 95
@@ -76,7 +77,7 @@ case "$url" in
     else body='{"success":true,"data":{"organizations":[{"id":10,"role_code":"OWNER"}],"stores":[{"id":22}]}}'; fi ;;
   */owner/overview)
     grep -Fq 'Authorization: Bearer me-access-token-value-' "$config" || exit 95
-    if [[ "${FAKE_LOGIN_ONLY:-0}" == 1 ]]; then body='{"success":true,"data":{"organizations":[{"id":10,"role_code":"OWNER","stores":[{"id":1}]}]}}'; else body='{"success":true,"data":{"organizations":[{"id":10,"role_code":"OWNER","stores":[{"id":22}]}]}}'; fi ;;
+    if [[ -f "$FAKE_STATE/business" ]]; then body='{"success":true,"data":{"organizations":[{"id":10,"role_code":"OWNER","can_create_store":true,"stores":[{"id":44,"operational_state":"LIVE","is_live":true}]}]}}'; elif [[ "${FAKE_LOGIN_ONLY:-0}" == 1 ]]; then body='{"success":true,"data":{"organizations":[{"id":10,"role_code":"OWNER","stores":[{"id":1}]}]}}'; else body='{"success":true,"data":{"organizations":[{"id":10,"role_code":"OWNER","stores":[{"id":22}]}]}}'; fi ;;
   */admin/staff/7/reset-password)
     grep -Fq 'Authorization: Bearer me-access-token-value-' "$config" || exit 95
     grep -Fq 'NewOwnerPassphrase20' "$data_file" || exit 89
@@ -91,14 +92,33 @@ case "$url" in
     count=0; [[ ! -f "$FAKE_STATE/clone" ]] || count="$(cat "$FAKE_STATE/clone")"; count=$((count+1)); printf '%s' "$count" >"$FAKE_STATE/clone"
     grep -Fq 'Idempotency-Key: idem-clone-acceptance-' "$config" || exit 93
     if [[ "$count" -eq 1 ]]; then body='{"success":true,"data":{"clone_request_id":33,"replayed":false,"target_revision_before":4,"target_revision_after":5,"created":{"categories":4,"stations":3,"items":17,"options":74}}}'; else body='{"success":true,"data":{"clone_request_id":33,"replayed":true,"target_revision_before":4,"target_revision_after":5,"created":{"categories":4,"stations":3,"items":17,"options":74}}}'; fi ;;
+  */owner/organizations/10/stores/create-catalog) body='{"success":true,"data":{"enabled":true}}' ;;
+  */admin/platform/organizations) body='{"success":true,"data":{"id":20,"status":"active"}}' ;;
+  */admin/platform/organizations/20) printf inactive >"$FAKE_STATE/foreign-deactivated"; body='{"success":true,"data":{"id":20,"status":"inactive"}}' ;;
+  */owner/organizations/10/stores)
+    if grep -Fq 'manager-access-token-value-' "$config"; then status=403; body='{"success":false,"error_code":"BUSINESS_STORE_CREATE_AUTHORIZATION_DENIED"}'
+    else count=0; [[ ! -f "$FAKE_STATE/business" ]] || count="$(cat "$FAKE_STATE/business")"; count=$((count+1)); printf '%s' "$count" >"$FAKE_STATE/business"; if [[ "$count" -eq 1 && "${FAKE_FIRST_REPLAY:-0}" != 1 ]]; then replay=false; else replay=true; fi; body="{\"success\":true,\"data\":{\"store_id\":44,\"store_kind\":\"BUSINESS\",\"store_status\":\"active\",\"lifecycle_status\":\"ACTIVE\",\"operational_state\":\"LIVE\",\"is_live\":true,\"validation_status\":\"PASS\",\"replayed\":$replay}}"; fi ;;
+  */owner/organizations/20/stores) status=403; body='{"success":false,"error_code":"BUSINESS_STORE_CREATE_ORGANIZATION_DENIED"}' ;;
+  */stores/44/context) body='{"success":true,"data":{"id":44,"operational_state":"LIVE","is_live":true}}' ;;
+  */frontdesk/dining-tables?store_id=44) body='{"success":true,"data":[{"id":1},{"id":2}]}' ;;
+  */admin/printing?store_id=44) body='{"success":true,"data":{"store_id":44,"printing_mode":"DISABLED","printers":[],"assignments":[]}}' ;;
   */auth/logout) body='{"success":true,"data":null}' ;;
   *) exit 92 ;;
 esac
 printf '%s' "$body" >"$output"
-printf '200'
+printf '%s' "$status"
 EOF
 chmod +x "$FAKE_CURL"; mkdir "$FAKE_STATE"; export FAKE_STATE
 CURL_BIN="$FAKE_CURL"
+FAKE_DOCKER="$TMP_DIR/docker"
+cat >"$FAKE_DOCKER" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "$*" == *'inspect'*'restaurant-pos-staging-backend-1'* ]]; then printf 'sha256:%064d\n' 0
+elif [[ "$*" == *'inspect'*'restaurant-pos-staging-nginx-1'* ]]; then printf 'sha256:%064d\n' 1
+else [[ "$*" == *'restaurant-pos-staging-db-1'* ]]; query="$(cat)"; if [[ "$query" == *'is_active = true'* ]]; then printf '1|0\n'; else printf '0\n'; fi; fi
+EOF
+chmod +x "$FAKE_DOCKER"; DOCKER_BIN="$FAKE_DOCKER"
 
 LOGIN_ONLY_SECRET="$TMP_DIR/login-only.json"
 cat >"$LOGIN_ONLY_SECRET" <<'EOF'
@@ -222,6 +242,42 @@ login >"$TMP_DIR/clone.out"; verify_owner_context >>"$TMP_DIR/clone.out"; clone_
 assert_contains 'OPS001_API|CLONE_VALIDATE|HTTP_200|PASS' "$TMP_DIR/clone.out"
 assert_contains 'OPS001_API|CLONE_EXECUTE_REPLAY|HTTP_200|REQUEST_ID|33|PASS' "$TMP_DIR/clone.out"
 assert_not_contains 'idem-clone' "$TMP_DIR/clone.out"
+
+BUSINESS_SECRET="$TMP_DIR/business-create.json"
+cat >"$BUSINESS_SECRET" <<'EOF'
+{"login_identifier":"STG005_OWNER_TEST","login_password":"OwnerPassphrase-123","manager_login_identifier":"STG005_MANAGER_TEST","manager_login_password":"ManagerPassphrase-123","business_create_idempotency_key":"idem-business-0123456789abcdef0123456789abcdef","business_create_request":{"store_name":"STG005 Business Acceptance","store_code":"STG005_BUSINESS_0123456789ABCDEF0123456789ABCDEF"}}
+EOF
+chmod 600 "$BUSINESS_SECRET"
+rm -f "$FAKE_STATE/business"
+cleanup
+initialize_private_root
+exec 7<"$BUSINESS_SECRET"; SECRETS_FD=7; ACTION=business-store-create-acceptance; TARGET_STORE_ID=""; ACCEPTANCE_RUN_ID=0123456789abcdef0123456789abcdef; APPROVAL_SHA256=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; ENV_DIGEST=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; PREFLIGHT_EVIDENCE_SHA256=cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+read_secret_input
+login >"$TMP_DIR/business.out"; verify_owner_context >>"$TMP_DIR/business.out"; business_store_create_acceptance >>"$TMP_DIR/business.out"; logout >>"$TMP_DIR/business.out"
+assert_contains 'OPS001_API|BUSINESS_STORE_CREATE|RUN_ID|0123456789abcdef0123456789abcdef|STORE_ID|44|FRESH_CREATE|PASS|REPLAY|PASS|FOREIGN_ACTIVE_ORG|DENIED|MANAGER|DENIED|PRINTING|ENDPOINT_FREE' "$TMP_DIR/business.out"
+BUSINESS_EVIDENCE="$OPS001_EXPECTED_ROOT/evidence/v26-business-create-$ACCEPTANCE_RUN_ID.json"
+"$JQ_BIN" -e '.schema == "V26_BUSINESS_STORE_CREATE_ACCEPTANCE_V1" and .fresh_create == "PASS" and .foreign_active_organization_denied == "PASS" and .final_result == "PASS"' "$BUSINESS_EVIDENCE" >/dev/null
+assert_not_contains 'OwnerPassphrase' "$TMP_DIR/business.out"
+assert_not_contains 'ManagerPassphrase' "$TMP_DIR/business.out"
+assert_not_contains 'access-token-value' "$TMP_DIR/business.out"
+assert_not_contains 'idem-business' "$TMP_DIR/business.out"
+cleanup
+
+REPLAY_SECRET="$TMP_DIR/business-first-replay.json"
+cat >"$REPLAY_SECRET" <<'EOF'
+{"login_identifier":"STG005_OWNER_TEST","login_password":"OwnerPassphrase-123","manager_login_identifier":"STG005_MANAGER_TEST","manager_login_password":"ManagerPassphrase-123","business_create_idempotency_key":"idem-business-fedcba9876543210fedcba9876543210","business_create_request":{"store_name":"STG005 Replay Rejection","store_code":"STG005_BUSINESS_FEDCBA9876543210FEDCBA9876543210"}}
+EOF
+chmod 600 "$REPLAY_SECRET"; rm -f "$FAKE_STATE/business" "$FAKE_STATE/foreign-deactivated"; export FAKE_FIRST_REPLAY=1
+initialize_private_root
+exec 7<"$REPLAY_SECRET"; SECRETS_FD=7; ACTION=business-store-create-acceptance; ACCEPTANCE_RUN_ID=fedcba9876543210fedcba9876543210
+read_secret_input; login >/dev/null; verify_owner_context >/dev/null
+business_with_failure_cleanup() { trap cleanup EXIT; business_store_create_acceptance; }
+expect_failure first_request_replay business_with_failure_cleanup
+assert_contains 'first request was not a fresh canonical LIVE creation' "$TMP_DIR/first_request_replay.err"
+[[ ! -e "$OPS001_EXPECTED_ROOT/evidence/v26-business-create-$ACCEPTANCE_RUN_ID.json" ]] || fail 'replayed first request created PASS evidence'
+[[ -f "$FAKE_STATE/foreign-deactivated" ]] || fail 'failed acceptance did not deactivate its synthetic foreign Organization'
+unset FAKE_FIRST_REPLAY; cleanup
+initialize_private_root
 
 FORBIDDEN="$PRIVATE_ROOT/forbidden.json"; printf '{"data":{"access_token":"should-not-escape"}}' >"$FORBIDDEN"; LAST_RESPONSE="$FORBIDDEN"
 expect_failure response_redaction reject_secret_response_fields forbidden
