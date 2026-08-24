@@ -18,6 +18,60 @@ SPEC.loader.exec_module(MODULE)
 
 
 class ProductionV26SmokeTest(unittest.TestCase):
+    def test_inconsistent_organization_claim_keeps_database_authority(self):
+        MODULE.validate_database_organization_authority(
+            {"id": 1, "organization_id": 10},
+            {
+                "organizations": [{"id": 10}],
+                "stores": [{"id": 1, "organization_id": 10}],
+            },
+            1,
+            10,
+            1000010,
+        )
+
+    def test_inconsistent_organization_claim_cannot_replace_context_or_workspace(self):
+        valid_workspaces = {
+            "organizations": [{"id": 10}],
+            "stores": [{"id": 1, "organization_id": 10}],
+        }
+        with self.subTest("context"):
+            with self.assertRaises(SystemExit):
+                MODULE.validate_database_organization_authority(
+                    {"id": 1, "organization_id": 1000010},
+                    valid_workspaces,
+                    1,
+                    10,
+                    1000010,
+                )
+        with self.subTest("workspace"):
+            with self.assertRaises(SystemExit):
+                MODULE.validate_database_organization_authority(
+                    {"id": 1, "organization_id": 10},
+                    {
+                        "organizations": [{"id": 10}, {"id": 1000010}],
+                        "stores": [{"id": 1, "organization_id": 10}],
+                    },
+                    1,
+                    10,
+                    1000010,
+                )
+        with self.subTest("workspace store"):
+            with self.assertRaises(SystemExit):
+                MODULE.validate_database_organization_authority(
+                    {"id": 1, "organization_id": 10},
+                    {
+                        "organizations": [{"id": 10}],
+                        "stores": [
+                            {"id": 1, "organization_id": 10},
+                            {"id": 2, "organization_id": 1000010},
+                        ],
+                    },
+                    1,
+                    10,
+                    1000010,
+                )
+
     def test_minted_token_has_valid_hs256_signature_and_short_expiry(self):
         secret = "s" * 48
         token = MODULE.mint_token(secret, 1, 2, 1, 1, "OWNER")
