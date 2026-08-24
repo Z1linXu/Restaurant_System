@@ -18,6 +18,7 @@ import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.menu.repository.MenuItemRepository;
 import com.restaurant.system.menu.service.MenuRevisionService;
 import com.restaurant.system.modules.StoreModuleRepository;
+import com.restaurant.system.owner.exception.OwnerStoreProvisioningException;
 import com.restaurant.system.owner.master.ChainMasterMenuVersionEntity;
 import com.restaurant.system.owner.profile.StoreProfileArtifactEntity;
 import com.restaurant.system.owner.profile.StoreProfileVersionEntity;
@@ -176,6 +177,22 @@ class OwnerStoreProvisioningTransactionIntegrationTest {
 
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void inactiveOrganizationCannotMaterializeAStore() {
+        Organization organization = organizationRepository.findById(organizationId).orElseThrow();
+        organization.status = "inactive";
+        organizationRepository.saveAndFlush(organization);
+        OwnerStoreProvisioningRequestEntity request = requestRepository.saveAndFlush(requestEntity("inactive-org-key"));
+
+        assertThrows(OwnerStoreProvisioningException.class, () -> materializer.materialize(
+            reservation(request.id),
+            input(StoreProvisioningPurpose.BUSINESS)
+        ));
+
+        assertThat(storeRepository.findAllByOrganizationIdAndCodeIgnoreCase(organizationId, "ROLLBACK_STORE")).isEmpty();
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void businessCreationProducesLiveBusinessStoreWithoutStaffDevicesOrHardwareBindings() {
         StoreReadinessResponse ready = new StoreReadinessResponse();
         ready.ready = true;
@@ -191,7 +208,7 @@ class OwnerStoreProvisioningTransactionIntegrationTest {
 
         var store = storeRepository.findById(result.storeId()).orElseThrow();
         assertThat(store.store_kind).isEqualTo("BUSINESS");
-        assertThat(store.provisioning_source).isEqualTo("OWNER_BUSINESS_CREATE");
+        assertThat(store.provisioning_source).isEqualTo("PHASE_B_OWNER_PROVISIONING");
         assertThat(store.status).isEqualTo("active");
         assertThat(store.lifecycle_status).isEqualTo("ACTIVE");
         assertThat(store.printing_enabled).isFalse();

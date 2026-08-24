@@ -671,7 +671,7 @@ public class StoreReadinessServiceImpl implements StoreReadinessService {
     }
 
     private boolean isBusinessStore(Store store) {
-        return "OWNER_BUSINESS_CREATE".equalsIgnoreCase(store.provisioning_source)
+        return "PHASE_B_OWNER_PROVISIONING".equalsIgnoreCase(store.provisioning_source)
             && "BUSINESS".equalsIgnoreCase(store.store_kind);
     }
 

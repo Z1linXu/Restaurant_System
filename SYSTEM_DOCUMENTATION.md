@@ -8976,9 +8976,10 @@ not the Staging-only Phase B validation-fixture endpoint:
 - `GET /api/v1/owner/organizations/{organizationId}/stores/create-catalog`
 - `POST /api/v1/owner/organizations/{organizationId}/stores`
 
-Both operations require an authenticated application `OWNER` and an active
-`OWNER` membership in the exact Organization. They deliberately do not require
-membership in a Store that does not yet exist. The Owner overview returns the
+Both operations require an authenticated application `OWNER`, an active
+`OWNER` membership in the exact Organization, and an active Organization.
+They deliberately do not require membership in a Store that does not yet
+exist. The Owner overview returns the
 canonical `can_create_store` capability for each Organization; the frontend
 does not infer this permission from a label alone.
 

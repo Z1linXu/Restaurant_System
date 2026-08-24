@@ -26,6 +26,7 @@ import com.restaurant.system.owner.profile.StoreProfileCanonicalJson;
 import com.restaurant.system.owner.provisioning.part2.StoreActivationRequestCoordinator;
 import com.restaurant.system.owner.provisioning.part2.StoreReadinessResponse;
 import com.restaurant.system.owner.provisioning.part2.StoreReadinessService;
+import com.restaurant.system.platform.entity.Organization;
 import com.restaurant.system.platform.repository.OrganizationRepository;
 import com.restaurant.system.printing.rules.PrintingDisplayRuleDefaults;
 import com.restaurant.system.printing.rules.PrintingDisplayRuleRevision;
@@ -121,8 +122,11 @@ public class OwnerStoreProvisioningMaterializer {
         ResolvedOwnerStoreProvisioningInput input
     ) {
         OwnerStoreProvisioningCommand command = input.command();
-        organizationRepository.findByIdForUpdate(command.organizationId())
+        Organization organization = organizationRepository.findByIdForUpdate(command.organizationId())
             .orElseThrow(() -> conflict("ORGANIZATION_NOT_FOUND", "Organization not found"));
+        if (!"active".equalsIgnoreCase(organization.status)) {
+            throw conflict("ORGANIZATION_INACTIVE", "Organization must be active to create a Store");
+        }
         requireUniqueStoreCode(command.organizationId(), command.storeCode());
         Map<String, StoreProfileArtifactEntity> artifacts = indexArtifacts(input.artifacts());
         JsonNode profileContent = StoreProfileCanonicalJson.parse(input.profileVersion().content_json);
@@ -220,9 +224,7 @@ public class OwnerStoreProvisioningMaterializer {
         store.status = "inactive";
         store.store_kind = command.isBusinessCreation() ? "BUSINESS" : "VALIDATION_FIXTURE";
         store.lifecycle_status = "CONFIGURING";
-        store.provisioning_source = command.isBusinessCreation()
-            ? "OWNER_BUSINESS_CREATE"
-            : "PHASE_B_OWNER_PROVISIONING";
+        store.provisioning_source = "PHASE_B_OWNER_PROVISIONING";
         store.enable_bar_kitchen_tasks = false;
         store.printing_enabled = false;
         store.printing_mode = "DISABLED";

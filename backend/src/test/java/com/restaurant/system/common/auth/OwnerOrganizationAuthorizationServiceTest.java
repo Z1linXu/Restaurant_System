@@ -3,8 +3,11 @@ package com.restaurant.system.common.auth;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
+import com.restaurant.system.platform.entity.Organization;
+import com.restaurant.system.platform.repository.OrganizationRepository;
 import com.restaurant.system.user.entity.OrganizationMembership;
 import com.restaurant.system.user.entity.Store;
 import com.restaurant.system.user.repository.OrganizationMembershipRepository;
@@ -22,6 +25,8 @@ class OwnerOrganizationAuthorizationServiceTest {
     @Mock
     private OrganizationMembershipRepository organizationMembershipRepository;
     @Mock
+    private OrganizationRepository organizationRepository;
+    @Mock
     private StoreRepository storeRepository;
 
     private OwnerOrganizationAuthorizationService authorizationService;
@@ -30,8 +35,13 @@ class OwnerOrganizationAuthorizationServiceTest {
     void setUp() {
         authorizationService = new OwnerOrganizationAuthorizationService(
             organizationMembershipRepository,
+            organizationRepository,
             storeRepository
         );
+        Organization active = new Organization();
+        active.id = 100L;
+        active.status = "active";
+        lenient().when(organizationRepository.findById(100L)).thenReturn(Optional.of(active));
     }
 
     @Test
@@ -50,6 +60,7 @@ class OwnerOrganizationAuthorizationServiceTest {
     @Test
     void ownerFromAnotherOrganizationIsDenied() {
         AuthenticatedUser owner = user(10L, "OWNER");
+        when(organizationRepository.findById(200L)).thenReturn(Optional.of(organization(200L, "active")));
         when(organizationMembershipRepository.findFirstByUserIdAndOrganizationId(10L, 200L))
             .thenReturn(Optional.of(ownerMembership(10L, 100L, "OWNER", true)));
 
@@ -93,6 +104,7 @@ class OwnerOrganizationAuthorizationServiceTest {
     @Test
     void stagingPrefixedOwnerFromWrongOrganizationIsDenied() {
         AuthenticatedUser owner = user(10L, "STG005_OWNER_WRONG_ORG", "OWNER");
+        when(organizationRepository.findById(200L)).thenReturn(Optional.of(organization(200L, "active")));
         when(organizationMembershipRepository.findFirstByUserIdAndOrganizationId(10L, 200L))
             .thenReturn(Optional.empty());
 
@@ -120,6 +132,20 @@ class OwnerOrganizationAuthorizationServiceTest {
         AuthenticatedUser owner = user(10L, "OWNER");
         when(organizationMembershipRepository.findFirstByUserIdAndOrganizationId(10L, 100L))
             .thenReturn(Optional.of(ownerMembership(10L, 100L, "OWNER", false)));
+
+        assertThrows(
+            ForbiddenException.class,
+            () -> authorizationService.requireActiveOwnerMembership(owner, 100L)
+        );
+    }
+
+    @Test
+    void inactiveOrganizationIsDeniedEvenWithActiveOwnerMembership() {
+        AuthenticatedUser owner = user(10L, "OWNER");
+        Organization inactive = new Organization();
+        inactive.id = 100L;
+        inactive.status = "inactive";
+        when(organizationRepository.findById(100L)).thenReturn(Optional.of(inactive));
 
         assertThrows(
             ForbiddenException.class,
@@ -164,5 +190,12 @@ class OwnerOrganizationAuthorizationServiceTest {
         store.id = storeId;
         store.organization_id = organizationId;
         return store;
+    }
+
+    private Organization organization(Long organizationId, String status) {
+        Organization organization = new Organization();
+        organization.id = organizationId;
+        organization.status = status;
+        return organization;
     }
 }

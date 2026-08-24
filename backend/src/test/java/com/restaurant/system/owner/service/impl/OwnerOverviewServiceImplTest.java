@@ -59,6 +59,7 @@ class OwnerOverviewServiceImplTest {
         Organization organization = new Organization();
         organization.id = 100L;
         organization.name = "Lanzhou Group";
+        organization.status = "active";
         organization.code = "LANZHOU_GROUP";
         organization.status = "active";
 
@@ -81,11 +82,29 @@ class OwnerOverviewServiceImplTest {
         Organization organization = new Organization();
         organization.id = 100L;
         organization.name = "Lanzhou Group";
+        organization.status = "active";
 
         when(requestUserContextService.getRequiredUser()).thenReturn(owner);
         when(storeAccessService.accessibleOrganizations(owner)).thenReturn(List.of(organization));
         when(storeAccessService.accessibleStores(owner)).thenReturn(List.of());
         when(storeAccessService.roleCodeForOrganization(owner, 100L)).thenReturn("MANAGER");
+
+        OwnerOverviewResponse response = service.getOverview();
+
+        assertThat(response.organizations.get(0).can_create_store).isFalse();
+    }
+
+    @Test
+    void createCapabilityIsFalseWhenOrganizationIsInactive() {
+        Organization organization = new Organization();
+        organization.id = 100L;
+        organization.name = "Lanzhou Group";
+        organization.status = "inactive";
+
+        when(requestUserContextService.getRequiredUser()).thenReturn(owner);
+        when(storeAccessService.accessibleOrganizations(owner)).thenReturn(List.of(organization));
+        when(storeAccessService.accessibleStores(owner)).thenReturn(List.of());
+        when(storeAccessService.roleCodeForOrganization(owner, 100L)).thenReturn("OWNER");
 
         OwnerOverviewResponse response = service.getOverview();
 
