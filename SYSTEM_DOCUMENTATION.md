@@ -704,6 +704,36 @@
 > `pg_restore --list`, and rehearses it only in a network-isolated disposable
 > PostgreSQL tmpfs with transactional, exit-on-error restore semantics. It
 > contains no Production restore authority.
+>
+> The bounded V10 → V26 extension is documented in
+> [README_PRODUCTION_V26_RELEASE](deployment/cloud/README_PRODUCTION_V26_RELEASE.md).
+> It keeps the V10 RC tooling intact and adds a separate V26 checksum manifest,
+> an internal-network Production-clone rehearsal, sanitized read/write smoke,
+> backup-plus-old-artifact recovery proof and a V26-only exact-image promotion
+> helper. Typed RC gates and strict parsed evidence bind full V10 business and
+> printing fingerprints, exact run-owned cleanup and pre-public-edge automatic
+> recovery. Recovery restores into and validates a separate V10 database before
+> a bounded name switch; the failed V26 database is retained until the V10 app
+> and legacy smoke pass, and an injected restore failure proves the primary is
+> unchanged and retryable. The helper parses Production configuration through
+> the Compose dotenv/resolved-model contract rather than shell-sourcing `.env`,
+> cross-checks DB identity with the canonical running container, and rejects any
+> unknown or duplicate `cloud` project resource before the switch.
+> Database recovery additionally requires Nginx to be absent or the same exact
+> stopped V10 rollback container; target-image or running Nginx state closes the
+> recovery boundary and is rejected.
+> Promotion remains no-build/no-pull, preserves the fixed Production PostgreSQL
+> container/state root, applies only Flyway V11–V26 through normal backend
+> startup, proves a same-image no-pending restart, and performs authenticated
+> read-only smoke through a run-owned loopback target frontend. Automatic
+> database-restore authority is then permanently closed before reopening the
+> public edge, so edge-only failures keep V26 and use the bounded finalize-edge
+> path instead of overwriting possible public writes. The rehearsal
+> permits MOCK writes only inside its disposable internal-network clone; its
+> write guard rejects Production/Staging DB identities before token or DB access.
+> All required evidence markers bind one random run ID, parser execution uses an
+> isolated Python environment, untracked tooling drift is rejected, and Docker
+> query/timeout errors cannot be treated as successful temporary-resource cleanup.
 > Historical stop (superseded):
 > `RC_PREPARED_WAITING_FOR_MANDATORY_PROMOTION_GATES`.
 
