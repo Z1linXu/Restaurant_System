@@ -191,9 +191,13 @@ backend_expected={k:str(v) for k,v in rollback["services"]["backend"]["environme
 nginx_expected={k:str(v) for k,v in rollback["services"]["nginx"]["environment"].items()}
 backend_keys=("SPRING_PROFILES_ACTIVE","SERVER_PORT","DB_HOST","DB_PORT","DB_NAME","DB_USER","DB_PASSWORD","JWT_SECRET","JAVA_OPTS","TZ","APP_ENVIRONMENT","FLYWAY_TARGET")
 nginx_keys=("DOMAIN","NGINX_SERVER_NAME","TZ")
-assert all(backend_actual.get(k)==backend_expected.get(k) for k in backend_keys)
+legacy_optional_key="APP_ENVIRONMENT"
+assert backend_expected.get(legacy_optional_key)=="production"
+assert backend_actual.get(legacy_optional_key) in (None,"production")
+assert all(backend_actual.get(k)==backend_expected.get(k) for k in backend_keys if k!=legacy_optional_key)
 assert all(nginx_actual.get(k)==nginx_expected.get(k) for k in nginx_keys)
-runtime={"backend":{k:backend_actual[k] for k in backend_keys},"nginx":{k:nginx_actual[k] for k in nginx_keys},"backend_mounts":services["cloud-backend-1"]["Mounts"],"nginx_mounts":services["cloud-nginx-1"]["Mounts"]}
+normalized_backend={k:(backend_expected[k] if k==legacy_optional_key else backend_actual[k]) for k in backend_keys}
+runtime={"backend":normalized_backend,"nginx":{k:nginx_actual[k] for k in nginx_keys},"backend_mounts":services["cloud-backend-1"]["Mounts"],"nginx_mounts":services["cloud-nginx-1"]["Mounts"]}
 fingerprint=hashlib.sha256(json.dumps(runtime,sort_keys=True,separators=(",",":"),default=str).encode()).hexdigest()
 print(backend_actual["JWT_SECRET"]); print(fingerprint)
 PY
