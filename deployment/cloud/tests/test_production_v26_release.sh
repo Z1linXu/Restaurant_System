@@ -198,6 +198,8 @@ grep -Fq 'wrong_organization_real_store=PASS' "$SMOKE"
 grep -Fq 'historical_detail=PASS' "$SMOKE"
 grep -Fq 'mock_endpoint_free=PASS' "$SMOKE"
 grep -Fq 'inventory=PASS' "$SMOKE"
+grep -Fq '"stations": f"/api/v1/admin/platform/stations?store_id={store_id}"' "$SMOKE"
+! grep -Fq '"stations": f"/api/v1/admin/stations?store_id={store_id}"' "$SMOKE"
 
 for script in "$BACKUP" "$REHEARSAL" "$PROMOTION" "$RECOVERY"; do
   grep -Fq 'timeout --foreground --kill-after=10s' "$script"
