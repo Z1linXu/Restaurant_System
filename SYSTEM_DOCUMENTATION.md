@@ -1,5 +1,22 @@
 # SYSTEM DOCUMENTATION
 
+> 2026-08-24 Production V10 → V26 release: the exact immutable application
+> artifact accepted on Staging at SHA
+> `ae446874e6a6bc7d2c19cdbc1ca92603ed53d6de` is now deployed to Production
+> with backend image
+> `sha256:d4e20d682b12fc7f0055eb7e259972af4bd118989cf54109272c3217c3ad8a77`
+> and frontend image
+> `sha256:2071601ba5064e323dad1723cf210dac14b079fdabb717bc2e3b6ebcc6ccbfb9`.
+> Normal Flyway startup advanced the retained Production database from exact
+> V10 to exact V26 while preserving the PostgreSQL container and canonical
+> business/printing fingerprints. Fresh backup, isolated restore/migration,
+> read/write clone smoke, Android compatibility, recovery proof, frozen-RC
+> preflight, private/public authenticated smoke and post-deploy verification
+> passed. The current Android app remains compatible and no real credential,
+> Printer/Pad binding or hardware action occurred. Phase B Part 2 Owner manual
+> acceptance remains pending and Phase C is not authorized. See
+> `docs/governance/PRODUCTION_V10_V26_RELEASE_EVIDENCE.md`.
+
 > 2026-08-22 Phase B Part 2 P0/P1 repair: Frontdesk now uses only Store-scoped
 > tables with guarded loading/switching, a single static SockJS/STOMP lifecycle
 > and bounded reconciliation. Printing requirements follow enabled logical
