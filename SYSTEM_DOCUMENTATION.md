@@ -8898,3 +8898,15 @@ legacy Store migration archives. Missing allowlisted artifacts are tolerated,
 but any additional untracked path fails closed. This distinction lets the
 release validate the actual Production filesystem without weakening source,
 Compose, credential, database, image, or exact-SHA checks.
+
+## Production V26 internal rehearsal access
+
+The Production-shaped rehearsal uses one run-owned Docker network with
+`Internal=true` and no published host ports. The host reaches backend health and
+the frontend only through their exact private bridge addresses. Before smoke
+reads a token, database identity or API, it verifies the immutable database,
+backend and frontend container IDs, the random run label, the exact three-member
+network, private frontend address and absence of every published port. Live
+Production/Staging database names and ordinary non-loopback URLs remain rejected.
+This accommodates Docker engines that intentionally suppress port publication
+on internal networks without weakening clone isolation or opening a public edge.

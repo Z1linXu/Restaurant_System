@@ -35,7 +35,7 @@ VOLUME_MOUNTPOINT=""
 DB_CONTAINER_ID=""
 BACKEND_CONTAINER_ID=""
 FRONTEND_CONTAINER_ID=""
-FRONTEND_PORT=""
+FRONTEND_URL=""
 DB_PASSWORD=""
 REHEARSAL_JWT_SECRET="$(openssl rand -hex 48)"
 BEFORE_FINGERPRINT=""
@@ -335,8 +335,11 @@ start_db_and_restore() {
   [[ "$(ledger "$DB_CONTAINER_ID")" == "$(expected_ledger 10)" ]] || die "restored clone Flyway is not exact V10"
 }
 
-container_port() {
-  docker_default port "$1" "$2/tcp" | awk -F: 'NR==1 {print $NF}'
+container_network_ip() {
+  local address
+  address="$(docker_default inspect --format "{{(index .NetworkSettings.Networks \"$NETWORK\").IPAddress}}" "$1")" || return 1
+  [[ "$address" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]] || return 1
+  printf '%s' "$address"
 }
 
 start_backend() {
@@ -344,18 +347,18 @@ start_backend() {
   BACKEND_CONTAINER="production-v26-rehearsal-${label}-backend-$RUN_SUFFIX"
   existing="$(exact_container_id "$BACKEND_CONTAINER")" || die "cannot query rehearsal backend name"
   [[ -z "$existing" ]] || die "rehearsal backend name already exists"
-  created="$(docker_default run -d --pull=never --name "$BACKEND_CONTAINER" --label restaurant.production-v26-rehearsal="$RUN_ID" --network "$NETWORK" --network-alias backend -p 127.0.0.1::8080 --cpus 2 --memory 1024m --pids-limit 512 -e SPRING_PROFILES_ACTIVE=cloud -e SERVER_PORT=8080 -e DB_HOST=db -e DB_PORT=5432 -e DB_NAME=restaurant_pos_rehearsal -e DB_USER=rehearsal -e DB_PASSWORD="$DB_PASSWORD" -e JWT_SECRET="$REHEARSAL_JWT_SECRET" -e APP_ENVIRONMENT=production -e FLYWAY_TARGET="$target" -e APP_AUTH_X_USER_ID_FALLBACK_ENABLED=false -e APP_DEV_TOOLS_ROLE_SWITCHER_ENABLED=false -e APP_SEED_DEFAULT_USERS_ENABLED=false -e APP_SEED_DEMO_DATA_ENABLED=false -e APP_SEED_MEMBERSHIP_SUPPLEMENT_ENABLED=false -e APP_SEED_PRODUCTION_BOOTSTRAP_ENABLED=false -e APP_PHASE_B_PROVISIONING_ENABLED=false -e APP_PHASE_B_RUNTIME=disabled -e APP_PRINTING_ALLOWED_MODES=DISABLED,MOCK,PAD_DIRECT -e APP_PRINTING_ENDPOINT_CONFIGURATION_ENABLED=false -e APP_PRINTING_DISPATCH_OUTBOX_INITIAL_DELAY_MS=3600000 "$image")" || die "cannot create rehearsal backend"
+  created="$(docker_default run -d --pull=never --name "$BACKEND_CONTAINER" --label restaurant.production-v26-rehearsal="$RUN_ID" --network "$NETWORK" --network-alias backend --cpus 2 --memory 1024m --pids-limit 512 -e SPRING_PROFILES_ACTIVE=cloud -e SERVER_PORT=8080 -e DB_HOST=db -e DB_PORT=5432 -e DB_NAME=restaurant_pos_rehearsal -e DB_USER=rehearsal -e DB_PASSWORD="$DB_PASSWORD" -e JWT_SECRET="$REHEARSAL_JWT_SECRET" -e APP_ENVIRONMENT=production -e FLYWAY_TARGET="$target" -e APP_AUTH_X_USER_ID_FALLBACK_ENABLED=false -e APP_DEV_TOOLS_ROLE_SWITCHER_ENABLED=false -e APP_SEED_DEFAULT_USERS_ENABLED=false -e APP_SEED_DEMO_DATA_ENABLED=false -e APP_SEED_MEMBERSHIP_SUPPLEMENT_ENABLED=false -e APP_SEED_PRODUCTION_BOOTSTRAP_ENABLED=false -e APP_PHASE_B_PROVISIONING_ENABLED=false -e APP_PHASE_B_RUNTIME=disabled -e APP_PRINTING_ALLOWED_MODES=DISABLED,MOCK,PAD_DIRECT -e APP_PRINTING_ENDPOINT_CONFIGURATION_ENABLED=false -e APP_PRINTING_DISPATCH_OUTBOX_INITIAL_DELAY_MS=3600000 "$image")" || die "cannot create rehearsal backend"
   [[ "$created" =~ ^[0-9a-f]{64}$ ]] || die "rehearsal backend ID is invalid"
   BACKEND_CONTAINER_ID="$created"
   [[ "$(container_identity "$BACKEND_CONTAINER")" == "$BACKEND_CONTAINER_ID|$RUN_ID" ]] || die "rehearsal backend ownership differs"
 }
 
 wait_backend() {
-  local port deadline body
-  port="$(container_port "$BACKEND_CONTAINER_ID" 8080)"; [[ "$port" =~ ^[0-9]+$ ]] || return 1
+  local address deadline body
+  address="$(container_network_ip "$BACKEND_CONTAINER_ID")" || return 1
   deadline=$((SECONDS + 120))
   while (( SECONDS < deadline )); do
-    body="$(curl --noproxy '*' --connect-timeout 2 --max-time 5 -fsS "http://127.0.0.1:$port/api/v1/system/health" 2>/dev/null || true)"
+    body="$(curl --noproxy '*' --connect-timeout 2 --max-time 5 -fsS "http://$address:8080/api/v1/system/health" 2>/dev/null || true)"
     [[ "$body" == *'"status":"UP"'* ]] && return 0
     sleep 1
   done
@@ -367,14 +370,14 @@ start_frontend() {
   FRONTEND_CONTAINER="production-v26-rehearsal-${label}-frontend-$RUN_SUFFIX"
   existing="$(exact_container_id "$FRONTEND_CONTAINER")" || die "cannot query rehearsal frontend name"
   [[ -z "$existing" ]] || die "rehearsal frontend name already exists"
-  created="$(docker_default run -d --pull=never --name "$FRONTEND_CONTAINER" --label restaurant.production-v26-rehearsal="$RUN_ID" --network "$NETWORK" -p 127.0.0.1::80 --cpus 0.5 --memory 256m --pids-limit 256 -e NGINX_SERVER_NAME=localhost -v "$NGINX_TEMPLATE:/etc/nginx/templates/default.conf.template:ro" "$image")" || die "cannot create rehearsal frontend"
+  created="$(docker_default run -d --pull=never --name "$FRONTEND_CONTAINER" --label restaurant.production-v26-rehearsal="$RUN_ID" --network "$NETWORK" --cpus 0.5 --memory 256m --pids-limit 256 -e NGINX_SERVER_NAME=localhost -v "$NGINX_TEMPLATE:/etc/nginx/templates/default.conf.template:ro" "$image")" || die "cannot create rehearsal frontend"
   [[ "$created" =~ ^[0-9a-f]{64}$ ]] || die "rehearsal frontend ID is invalid"
   FRONTEND_CONTAINER_ID="$created"
   [[ "$(container_identity "$FRONTEND_CONTAINER")" == "$FRONTEND_CONTAINER_ID|$RUN_ID" ]] || die "rehearsal frontend ownership differs"
-  FRONTEND_PORT="$(container_port "$FRONTEND_CONTAINER_ID" 80)"; [[ "$FRONTEND_PORT" =~ ^[0-9]+$ ]] || die "temporary frontend port is unavailable"
+  FRONTEND_URL="http://$(container_network_ip "$FRONTEND_CONTAINER_ID")" || die "temporary frontend address is unavailable"
   deadline=$((SECONDS + 60))
   while (( SECONDS < deadline )); do
-    code="$(curl --noproxy '*' --connect-timeout 2 --max-time 5 -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:$FRONTEND_PORT/" 2>/dev/null || true)"
+    code="$(curl --noproxy '*' --connect-timeout 2 --max-time 5 -sS -o /dev/null -w '%{http_code}' "$FRONTEND_URL/" 2>/dev/null || true)"
     [[ "$code" == "200" ]] && return
     sleep 1
   done
@@ -384,7 +387,7 @@ start_frontend() {
 stop_app() {
   remove_owned_container "$FRONTEND_CONTAINER" "$FRONTEND_CONTAINER_ID" || die "cannot remove exact rehearsal frontend"
   remove_owned_container "$BACKEND_CONTAINER" "$BACKEND_CONTAINER_ID" || die "cannot remove exact rehearsal backend"
-  FRONTEND_CONTAINER=""; FRONTEND_CONTAINER_ID=""; FRONTEND_PORT=""
+  FRONTEND_CONTAINER=""; FRONTEND_CONTAINER_ID=""; FRONTEND_URL=""
   BACKEND_CONTAINER=""; BACKEND_CONTAINER_ID=""
 }
 
@@ -422,11 +425,9 @@ rename_rehearsal_database() {
 }
 
 run_smoke() {
-  local port="$1" mode="$2"
-  local arguments=(--base-url "http://127.0.0.1:$port" --db-container "$DB_CONTAINER_ID" --mode "$mode" --evidence-run-id "$RUN_ID")
-  if [[ "$mode" == "write" ]]; then
-    arguments+=(--expected-db-container-id "$DB_CONTAINER_ID" --expected-backend-container-id "$BACKEND_CONTAINER_ID" --expected-api-container-id "$FRONTEND_CONTAINER_ID" --expected-run-id "$RUN_ID" --expected-network "$NETWORK")
-  fi
+  local base_url="$1" mode="$2"
+  local arguments=(--base-url "$base_url" --db-container "$DB_CONTAINER_ID" --mode "$mode" --evidence-run-id "$RUN_ID")
+  arguments+=(--expected-db-container-id "$DB_CONTAINER_ID" --expected-backend-container-id "$BACKEND_CONTAINER_ID" --expected-api-container-id "$FRONTEND_CONTAINER_ID" --expected-run-id "$RUN_ID" --expected-network "$NETWORK")
   bounded "$SMOKE_TIMEOUT_SECONDS" env -i PATH="$SAFE_PATH" HOME="$HOME" DOCKER_CONFIG="${DOCKER_CONFIG:-$HOME/.docker}" JWT_SECRET="$REHEARSAL_JWT_SECRET" python3 -I "$SMOKE_HELPER" "${arguments[@]}"
 }
 
@@ -506,7 +507,7 @@ wait_backend || die "target backend failed same-image restart"
 target_restart_logs="$(docker_default logs --since "$target_restart_epoch" "$BACKEND_CONTAINER_ID" 2>&1)"
 grep -Fq 'is up to date. No migration necessary' <<<"$target_restart_logs" || die "target restart did not prove no pending migration"
 start_frontend "$TARGET_FRONTEND_ID" target
-run_smoke "$FRONTEND_PORT" write
+run_smoke "$FRONTEND_URL" write
 printf 'TARGET_STACK|run_id=%s|backend_image_id=%s|frontend_image_id=%s|restart=PASS|result=PASS\n' "$RUN_ID" "$TARGET_BACKEND_ID" "$TARGET_FRONTEND_ID"
 
 stop_app
@@ -514,7 +515,7 @@ start_backend "$ROLLBACK_BACKEND_ID" 10 old-on-v26
 OLD_ON_V26="NOT_SUPPORTED"
 if wait_backend; then
   start_frontend "$ROLLBACK_FRONTEND_ID" old-on-v26
-  if old_on_v26_output="$(run_smoke "$FRONTEND_PORT" legacy-read 2>&1)"; then
+  if old_on_v26_output="$(run_smoke "$FRONTEND_URL" legacy-read 2>&1)"; then
     printf '%s\n' "$old_on_v26_output"
     OLD_ON_V26="PASS"
   fi
@@ -565,7 +566,7 @@ REHEARSAL_QUERY_DB="$PRIMARY_DB"
 start_backend "$ROLLBACK_BACKEND_ID" 10 recovery
 wait_backend || die "old Production backend did not boot after recovery restore"
 start_frontend "$ROLLBACK_FRONTEND_ID" recovery
-run_smoke "$FRONTEND_PORT" legacy-read
+run_smoke "$FRONTEND_URL" legacy-read
 [[ "$(ledger_named "$DB_CONTAINER_ID" "$PRIMARY_DB")" == "$(expected_ledger 10)" ]] || die "recovery Flyway is not exact V10"
 [[ "$(v26_business_fingerprint)" == "$BEFORE_FINGERPRINT" && "$(v26_printing_fingerprint)" == "$BEFORE_PRINTING" ]] || die "verified recovery content fingerprint differs"
 terminate_rehearsal_database_sessions "$QUARANTINED_V26_DB" || die "cannot prepare rehearsal quarantine cleanup"

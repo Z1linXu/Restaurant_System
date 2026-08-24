@@ -30,17 +30,20 @@ class ProductionV26SmokeTest(unittest.TestCase):
         self.assertEqual(claims["role_code"], "OWNER")
         self.assertLessEqual(claims["exp"] - claims["iat"], 600)
 
-    def test_api_rejects_non_loopback_targets(self):
+    def test_api_requires_loopback_or_prevalidated_internal_host(self):
         with self.assertRaises(SystemExit):
             MODULE.Api("https://production.example", "token")
         with self.assertRaises(SystemExit):
             MODULE.Api("http://192.0.2.10", "token")
         MODULE.Api("http://127.0.0.1:18080", "token")
+        MODULE.Api("http://172.20.0.4", "token", "172.20.0.4")
+        with self.assertRaises(SystemExit):
+            MODULE.Api("http://172.20.0.4", "token", "172.20.0.5")
 
     def test_write_target_rejects_live_before_docker_access(self):
         with mock.patch.object(MODULE, "docker_json") as docker_json:
             with self.assertRaises(SystemExit):
-                MODULE.validate_write_target("http://127.0.0.1:18080", "cloud-db-1", "a" * 64, "b" * 64, "c" * 64, "run", "network")
+                MODULE.validate_rehearsal_target("http://172.20.0.4", "cloud-db-1", "a" * 64, "b" * 64, "c" * 64, "run", "network")
             docker_json.assert_not_called()
 
     def test_write_target_accepts_only_exact_internal_run_owned_clone(self):
@@ -54,19 +57,19 @@ class ProductionV26SmokeTest(unittest.TestCase):
                 [{
                     "Id": container_id,
                     "Config": {"Labels": {"restaurant.production-v26-rehearsal": "run-1"}},
-                    "NetworkSettings": {"Networks": {"isolated-1": {}}},
+                    "NetworkSettings": {"Networks": {"isolated-1": {"IPAddress": "172.20.0.2"}}, "Ports": {"5432/tcp": None}},
                 }],
                 [{
                     "Id": backend_id,
                     "Config": {"Labels": {"restaurant.production-v26-rehearsal": "run-1"}},
-                    "NetworkSettings": {"Networks": {"isolated-1": {}}},
+                    "NetworkSettings": {"Networks": {"isolated-1": {"IPAddress": "172.20.0.3"}}, "Ports": {"8080/tcp": None}},
                 }],
                 [{
                     "Id": api_id,
                     "Config": {"Labels": {"restaurant.production-v26-rehearsal": "run-1"}},
                     "NetworkSettings": {
-                        "Networks": {"isolated-1": {}},
-                        "Ports": {"80/tcp": [{"HostIp": "127.0.0.1", "HostPort": "18080"}]},
+                        "Networks": {"isolated-1": {"IPAddress": "172.20.0.4"}},
+                        "Ports": {"80/tcp": None},
                     },
                 }],
                 [{
@@ -76,7 +79,44 @@ class ProductionV26SmokeTest(unittest.TestCase):
                 }],
             ],
         ):
-            MODULE.validate_write_target("http://127.0.0.1:18080", "clone-db", container_id, backend_id, api_id, "run-1", "isolated-1")
+            self.assertEqual(
+                MODULE.validate_rehearsal_target("http://172.20.0.4", "clone-db", container_id, backend_id, api_id, "run-1", "isolated-1"),
+                "172.20.0.4",
+            )
+
+    def test_rehearsal_target_rejects_any_published_port(self):
+        container_id = "a" * 64
+        backend_id = "b" * 64
+        api_id = "c" * 64
+        with mock.patch.object(
+            MODULE,
+            "docker_json",
+            side_effect=[
+                [{
+                    "Id": container_id,
+                    "Config": {"Labels": {"restaurant.production-v26-rehearsal": "run-1"}},
+                    "NetworkSettings": {"Networks": {"isolated-1": {"IPAddress": "172.20.0.2"}}, "Ports": {}},
+                }],
+                [{
+                    "Id": backend_id,
+                    "Config": {"Labels": {"restaurant.production-v26-rehearsal": "run-1"}},
+                    "NetworkSettings": {"Networks": {"isolated-1": {"IPAddress": "172.20.0.3"}}, "Ports": {}},
+                }],
+                [{
+                    "Id": api_id,
+                    "Config": {"Labels": {"restaurant.production-v26-rehearsal": "run-1"}},
+                    "HostConfig": {"PortBindings": {"80/tcp": [{"HostIp": "127.0.0.1", "HostPort": ""}]}},
+                    "NetworkSettings": {
+                        "Networks": {"isolated-1": {"IPAddress": "172.20.0.4"}},
+                        "Ports": {"80/tcp": None},
+                    },
+                }],
+            ],
+        ):
+            with self.assertRaises(SystemExit):
+                MODULE.validate_rehearsal_target(
+                    "http://172.20.0.4", "clone-db", container_id, backend_id, api_id, "run-1", "isolated-1"
+                )
 
     def test_write_target_rejects_wrong_owner_label(self):
         container_id = "b" * 64
@@ -86,16 +126,16 @@ class ProductionV26SmokeTest(unittest.TestCase):
             return_value=[{
                 "Id": container_id,
                 "Config": {"Labels": {"restaurant.production-v26-rehearsal": "another-run"}},
-                "NetworkSettings": {"Networks": {"isolated-1": {}}},
+                "NetworkSettings": {"Networks": {"isolated-1": {"IPAddress": "172.20.0.2"}}, "Ports": {}},
             }],
         ):
             with self.assertRaises(SystemExit):
-                MODULE.validate_write_target("http://127.0.0.1:18080", "clone-db", container_id, "c" * 64, "d" * 64, "run-1", "isolated-1")
+                MODULE.validate_rehearsal_target("http://172.20.0.4", "clone-db", container_id, "c" * 64, "d" * 64, "run-1", "isolated-1")
 
     def test_write_target_rejects_default_production_port_before_docker_access(self):
         with mock.patch.object(MODULE, "docker_json") as docker_json:
             with self.assertRaises(SystemExit):
-                MODULE.validate_write_target(
+                MODULE.validate_rehearsal_target(
                     "http://127.0.0.1",
                     "clone-db",
                     "a" * 64,
