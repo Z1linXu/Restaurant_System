@@ -25,6 +25,11 @@ V26. It does not authorize a release by itself; current Owner authorization and
   primary clone unchanged, then switching database names while the failed V26
   database remains quarantined until V10 application smoke passes. Write smoke rejects live Production and Staging DB
   identities before reading a credential, database row or API.
+- If the Production clone has no inventory/BOM configuration, write smoke uses
+  one atomic Store-scoped statement to create a single audited synthetic
+  inventory item and BOM only after immutable clone ownership validation. The
+  real order API must then produce the expected inventory deductions. The
+  fixture never runs in live read smoke and is destroyed with the clone volume.
 - Fresh PostgreSQL containers are not considered restore-ready until the image
   entrypoint has completed its temporary initialization server, emitted its
   post-init completion marker, and the final server passes two stable readiness

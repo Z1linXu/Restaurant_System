@@ -18,6 +18,32 @@ SPEC.loader.exec_module(MODULE)
 
 
 class ProductionV26SmokeTest(unittest.TestCase):
+    def test_clone_inventory_fixture_is_atomic_store_scoped_and_audited(self):
+        with mock.patch.object(MODULE, "run_psql", return_value="11|12|13|14") as run_psql:
+            self.assertEqual(MODULE.provision_clone_inventory_fixture("clone-db", 7, 9), (11, 12, 13, 14))
+        container, sql = run_psql.call_args.args
+        self.assertEqual(container, "clone-db")
+        self.assertIn("with candidate as", sql)
+        self.assertIn("item.store_id = 7", sql)
+        self.assertIn("inventory_fixture as", sql)
+        self.assertIn("bom_fixture as", sql)
+        self.assertIn("transaction_fixture as", sql)
+        self.assertIn("inventory_fixture.id, 9, 'restock', 'production_v26_rehearsal'", sql)
+
+    def test_clone_inventory_fixture_fails_closed_without_candidate(self):
+        with mock.patch.object(MODULE, "run_psql", return_value=""):
+            with self.assertRaises(SystemExit):
+                MODULE.provision_clone_inventory_fixture("clone-db", 7, 9)
+
+    def test_inventory_update_deduction_requires_increment_even_when_submit_has_two(self):
+        MODULE.validate_inventory_update_deductions(2, 3, 3)
+        with self.assertRaises(SystemExit):
+            MODULE.validate_inventory_update_deductions(2, 2, 2)
+
+    def test_inventory_update_replay_cannot_deduct_twice(self):
+        with self.assertRaises(SystemExit):
+            MODULE.validate_inventory_update_deductions(1, 2, 3)
+
     def test_inconsistent_organization_claim_keeps_database_authority(self):
         MODULE.validate_database_organization_authority(
             {"id": 1, "organization_id": 10},
