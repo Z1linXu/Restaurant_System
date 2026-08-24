@@ -9010,6 +9010,12 @@ restore, or Production write smoke. Acceptance evidence is a strict typed
 contract bound to the exact runtime/preflight/approval and fresh request run;
 the promotion also freezes Production environment, target/rollback Compose and
 current runtime configuration fingerprints before replacing either app image.
+The same helper supports a bounded `SMALL_FRONTEND_DISPLAY_ONLY` acceptance
+profile. That profile requires exact source/image/evidence identities, explicit
+`NO` declarations for backend business, database, Flyway and Android changes,
+`NONE` printing impact, passing focused tests/build/visual acceptance, and the
+fixed seven noodle-label visual and unchanged-order-semantic proof. The original
+business Store acceptance profile remains backward compatible and unchanged.
 The Staging Owner-shaped acceptance action remains executable on the reviewed
 host when `jq` is absent: `ops001-jq-compat.py` implements only its fixed,
 fail-closed expressions and rejects every unknown filter.

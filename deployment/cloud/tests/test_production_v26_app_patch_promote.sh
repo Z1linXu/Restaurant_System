@@ -14,7 +14,10 @@ grep -Fq 'DB_ID_AFTER' "$SCRIPT"
 grep -Fq 'same_staging_artifact=true' "$SCRIPT"
 grep -Fq 'AUTO_ROLLBACK' "$SCRIPT"
 grep -Fq -- '--mode read' "$SCRIPT"
-grep -Fq 'typed business Store acceptance evidence differs' "$SCRIPT"
+grep -Fq 'typed Staging acceptance evidence differs' "$SCRIPT"
+grep -Fq 'SMALL_FRONTEND_DISPLAY_ONLY' "$SCRIPT"
+grep -Fq 'NO|NO|NO|NO|NONE|PASS|PASS|PASS' "$SCRIPT"
+grep -Fq 'Staging acceptance digest differs' "$SCRIPT"
 grep -Fq 'Production environment digest differs from frozen preflight' "$SCRIPT"
 grep -Fq 'target resolved Production Compose digest differs from frozen preflight' "$SCRIPT"
 grep -Fq 'current runtime and target/rollback Compose config differ beyond immutable app images' "$SCRIPT"
@@ -26,6 +29,54 @@ grep -Fq '"$(exact_container_id cloud-db-1)" == "$DB_ID_BEFORE"' "$SCRIPT"
 ! grep -Eq 'docker (build|pull|system prune|image prune)|compose[^\n]* build|flyway (clean|repair)|down( -v)?|dropdb|createdb|pg_restore|pg_dump' "$SCRIPT"
 ! grep -Fq 'source "$ENV_FILE"' "$SCRIPT"
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest "$ROOT/deployment/cloud/tests/test_production_v26_app_patch_evidence.py"
+
+profile_case="$(sed -n '/^case "$ACCEPTANCE_PROFILE" in$/,/^esac$/p' "$SCRIPT")"
+[[ -n "$profile_case" ]]
+validate_profile() ( die() { return 1; }; eval "$profile_case" )
+ACCEPTANCE_PROFILE=SMALL_FRONTEND_DISPLAY_ONLY
+BACKEND_BUSINESS_CHANGE=NO DATABASE_CHANGE=NO FLYWAY_CHANGE=NO ANDROID_APK_UPDATE=NO
+PRINTING_IMPACT=NONE FRONTEND_BUILD=PASS FOCUSED_TESTS=PASS VISUAL_ACCEPTANCE=PASS
+validate_profile
+
+control_binding_function="$(sed -n '/^control_binding_is_valid() {/,/^}/p' "$SCRIPT")"
+[[ -n "$control_binding_function" ]]
+eval "$control_binding_function"
+control_repo="$(mktemp -d)"
+git -C "$control_repo" init -q
+git -C "$control_repo" config user.name release-test
+git -C "$control_repo" config user.email release-test@example.invalid
+printf 'application\n' >"$control_repo/content"
+git -C "$control_repo" add content
+git -C "$control_repo" commit -qm application
+application_sha="$(git -C "$control_repo" rev-parse HEAD)"
+printf 'tooling\n' >>"$control_repo/content"
+git -C "$control_repo" commit -qam tooling
+tooling_sha="$(git -C "$control_repo" rev-parse HEAD)"
+control_binding_is_valid "$control_repo" SMALL_FRONTEND_DISPLAY_ONLY "$application_sha" "$tooling_sha"
+! control_binding_is_valid "$control_repo" SMALL_FRONTEND_DISPLAY_ONLY "$tooling_sha" "$application_sha"
+! control_binding_is_valid "$control_repo" SMALL_FRONTEND_DISPLAY_ONLY "$(printf 'f%.0s' {1..40})" "$tooling_sha"
+! control_binding_is_valid "$control_repo" V26_BUSINESS_STORE_CREATE "$application_sha" "$tooling_sha"
+control_binding_is_valid "$control_repo" V26_BUSINESS_STORE_CREATE "$tooling_sha" "$tooling_sha"
+rm -rf -- "$control_repo"
+for mutation in \
+  'ACCEPTANCE_PROFILE=SMALL_FRONTEND_DISPLAY_ONLY_EXTRA' \
+  'BACKEND_BUSINESS_CHANGE=YES' \
+  'DATABASE_CHANGE=YES' \
+  'FLYWAY_CHANGE=YES' \
+  'ANDROID_APK_UPDATE=YES' \
+  'PRINTING_IMPACT=MINOR' \
+  'FRONTEND_BUILD=FAIL' \
+  'FOCUSED_TESTS=FAIL' \
+  'VISUAL_ACCEPTANCE=FAIL'; do
+  (
+    eval "$mutation"
+    ! validate_profile
+  )
+done
+ACCEPTANCE_PROFILE=V26_BUSINESS_STORE_CREATE
+BACKEND_BUSINESS_CHANGE=N/A DATABASE_CHANGE=N/A FLYWAY_CHANGE=N/A ANDROID_APK_UPDATE=N/A
+PRINTING_IMPACT=N/A FRONTEND_BUILD=N/A FOCUSED_TESTS=N/A VISUAL_ACCEPTANCE=N/A
+validate_profile
 
 python3 - "$SCRIPT" <<'PY'
 import pathlib,sys
