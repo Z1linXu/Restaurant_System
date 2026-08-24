@@ -160,7 +160,7 @@ def verify_rehearsal(
     require_pattern_marker(
         markers,
         "WRITE_SMOKE",
-        rf"WRITE_SMOKE\|run_id={run_id}\|.*options=PASS\|combo=PASS\|inventory=PASS\|printing_roles=PASS\|mock_endpoint_free=PASS\|result=PASS",
+        rf"WRITE_SMOKE\|run_id={run_id}\|.*inventory_fixture=PASS\|options=PASS\|combo=PASS\|inventory=PASS\|printing_roles=PASS\|mock_endpoint_free=PASS\|result=PASS",
         "write smoke",
     )
     require_pattern_marker(markers, "ADDITIVE_INVARIANTS", rf"ADDITIVE_INVARIANTS\|run_id={run_id}\|.*violations=0\|result=PASS", "additive invariants")

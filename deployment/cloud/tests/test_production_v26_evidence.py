@@ -28,7 +28,7 @@ def rehearsal_text() -> str:
         f"MIGRATION|run_id={RUN_ID}|from=V10|to=V26|migrations=16|ledger=exact|business_fingerprint=unchanged|printing_fingerprint=unchanged|result=PASS",
         f"ADDITIVE_INVARIANTS|run_id={RUN_ID}|stores=1|violations=0|result=PASS",
         f"READ_SMOKE|run_id={RUN_ID}|store_id=1|historical_detail=PASS|organization_claim_db_authority=PASS|wrong_store=PASS|websocket=PASS|result=PASS",
-        f"WRITE_SMOKE|run_id={RUN_ID}|order_id=2|options=PASS|combo=PASS|inventory=PASS|printing_roles=PASS|mock_endpoint_free=PASS|result=PASS",
+        f"WRITE_SMOKE|run_id={RUN_ID}|order_id=2|inventory_fixture=PASS|options=PASS|combo=PASS|inventory=PASS|printing_roles=PASS|mock_endpoint_free=PASS|result=PASS",
         f"TARGET_STACK|run_id={RUN_ID}|backend_image_id={BACKEND}|frontend_image_id={FRONTEND}|restart=PASS|result=PASS",
         f"RECOVERY_RESTORE_FAILURE_PROOF|run_id={RUN_ID}|restore_failed=true|primary_untouched=true|result=PASS",
         f"LEGACY_READ_SMOKE|run_id={RUN_ID}|store_id=1|checks=11|isolation=PASS|result=PASS",

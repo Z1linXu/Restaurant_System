@@ -8939,3 +8939,14 @@ requires both Store context and workspace data to retain the canonical
 database Organization, reject the claimed nonexistent Organization, and still
 deny an unavailable Store. This tests the implemented single source of truth
 without incorrectly denying a valid Owner access to their own Store.
+
+## Production V26 isolated inventory fixture
+
+Production may legitimately have no configured inventory items or menu BOMs.
+The V26 write rehearsal therefore creates one synthetic Store-scoped inventory
+item, one menu-item BOM and one positive audit transaction in a single atomic
+statement after the immutable clone ownership guard. It then submits and
+updates a real synthetic order through the application API and requires the
+normal order inventory transactions to reconcile. This fixture cannot run in
+live read smoke, never reaches Production or Staging, and is removed with the
+run-owned clone volume.

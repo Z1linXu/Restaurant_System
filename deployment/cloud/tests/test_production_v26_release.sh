@@ -200,6 +200,8 @@ grep -Fq 'inconsistent_organization_claim_api.request(f"/api/v1/stores/{store_id
 grep -Fq 'historical_detail=PASS' "$SMOKE"
 grep -Fq 'mock_endpoint_free=PASS' "$SMOKE"
 grep -Fq 'inventory=PASS' "$SMOKE"
+grep -Fq 'inventory_fixture=PASS' "$SMOKE"
+grep -Fq "'production_v26_rehearsal'" "$SMOKE"
 grep -Fq '"stations": f"/api/v1/admin/platform/stations?store_id={store_id}"' "$SMOKE"
 ! grep -Fq '"stations": f"/api/v1/admin/stations?store_id={store_id}"' "$SMOKE"
 

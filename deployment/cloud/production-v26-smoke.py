@@ -535,31 +535,91 @@ def combo_item_and_options(menu: object) -> tuple[dict[str, object], list[dict[s
     fail("no active combo-capable menu item exists")
 
 
-def inventory_backed_item_id(container: str, store_id: int) -> int:
+def provision_clone_inventory_fixture(container: str, store_id: int, operated_by: int) -> tuple[int, int, int, int]:
+    fixture_code = f"RCV26_{uuid.uuid4().hex[:16].upper()}"
     row = run_psql(container, f"""
-select item.id
-from menu_items item
-join menu_item_bom bom on bom.menu_item_id = item.id
-join inventory_items inventory on inventory.id = bom.inventory_item_id
-where item.store_id = {store_id}
-  and item.is_active is true
-  and item.is_sold_out is false
-  and item.station_id is not null
-group by item.id
-having bool_and(coalesce(inventory.current_stock, 0) >= bom.qty_per_unit)
-order by item.id
-limit 1
-""".strip())
+with candidate as (
+    select item.id, item.store_id
+    from menu_items item
+    where item.store_id = {store_id}
+      and item.is_active is true
+      and item.is_sold_out is not true
+      and item.station_id is not null
+      and exists (
+          select 1
+          from menu_item_options option_row
+          where option_row.menu_item_id = item.id
+            and option_row.is_active is not false
+            and option_row.parent_option_id is null
+            and upper(coalesce(option_row.option_group, '')) not in
+                ('COMBO', 'COMBO_EGG', 'COMBO_SIDE', 'COMBO_SIDE_REMOVE', 'REMOVE')
+      )
+    order by item.id
+    limit 1
+), inventory_fixture as (
+    insert into inventory_items (
+        store_id, code, name, item_level, item_type, unit, current_stock,
+        safety_stock, default_prep_batch, is_key_item, is_active, created_at, updated_at
+    )
+    select
+        candidate.store_id, '{fixture_code}', 'Production V26 isolated clone fixture',
+        'RAW_MATERIAL', 'SYNTHETIC', 'unit', 1000000.00,
+        0.00, 1.00, false, true, current_timestamp, current_timestamp
+    from candidate
+    returning id
+), bom_fixture as (
+    insert into menu_item_bom (menu_item_id, inventory_item_id, qty_per_unit, created_at, updated_at)
+    select candidate.id, inventory_fixture.id, 1.00, current_timestamp, current_timestamp
+    from candidate cross join inventory_fixture
+    returning id, menu_item_id, inventory_item_id
+), transaction_fixture as (
+    insert into inventory_transactions (
+        inventory_item_id, operated_by, txn_type, source_type, source_id,
+        qty_change, stock_before, stock_after, remarks, created_at
+    )
+    select
+        inventory_fixture.id, {operated_by}, 'restock', 'production_v26_rehearsal', candidate.id,
+        1000000.00, 0.00, 1000000.00, 'Production V26 isolated clone fixture', current_timestamp
+    from candidate cross join inventory_fixture
+    returning id
+)
+select bom_fixture.menu_item_id || '|' || bom_fixture.inventory_item_id || '|' ||
+       transaction_fixture.id || '|' || bom_fixture.id
+from bom_fixture cross join transaction_fixture
+""".strip()).split("|")
+    try:
+        values = tuple(int(value) for value in row)
+    except ValueError:
+        fail("isolated clone inventory fixture result is malformed")
+    if len(values) != 4 or any(value <= 0 for value in values):
+        fail("isolated clone inventory fixture could not be created atomically")
+    return values
+
+
+def inventory_order_deduction_count(container: str, order_id: int, inventory_item_id: int) -> int:
+    row = run_psql(
+        container,
+        "select count(*) from inventory_transactions "
+        "where source_type='order' and source_id=%d and inventory_item_id=%d "
+        "and qty_change < 0 and stock_after = stock_before + qty_change"
+        % (order_id, inventory_item_id),
+    )
     try:
         return int(row)
     except ValueError:
-        fail("no inventory-backed item with sufficient clone stock exists")
+        fail("fixture-specific inventory deduction count is malformed")
+
+
+def validate_inventory_update_deductions(submit_count: int, update_count: int, replay_count: int) -> None:
+    if submit_count < 1 or update_count != submit_count + 1 or replay_count != update_count:
+        fail("fixture inventory submit/update/replay deductions differ")
 
 
 def write_smoke(
     api: Api,
     container: str,
     store_id: int,
+    operated_by: int,
     menu: object,
     evidence_run_id: str | None = None,
 ) -> None:
@@ -601,7 +661,10 @@ def write_smoke(
     if not isinstance(disabled_role, dict) or disabled_role.get("success") is not False or "disabled" not in str(disabled_role.get("message") or "").lower():
         fail("disabled printing role did not fail closed")
 
-    inventory_item = orderable_item(menu, inventory_backed_item_id(container, store_id))
+    fixture_menu_item_id, fixture_inventory_id, fixture_transaction_id, fixture_bom_id = (
+        provision_clone_inventory_fixture(container, store_id, operated_by)
+    )
+    inventory_item = orderable_item(menu, fixture_menu_item_id)
     combo_item, combo_options = combo_item_and_options(menu)
     marker = f"RCV26-{uuid.uuid4().hex[:12]}"
     inventory_order_item = {
@@ -635,6 +698,7 @@ def write_smoke(
     submitted = assert_data(api.request(f"/api/v1/orders/{order_id}/submit", method="POST"), "submit_order")
     if not isinstance(submitted, dict) or submitted.get("status") not in {"submitted", "preparing", "ready"}:
         fail("synthetic order did not enter submitted workflow")
+    submit_inventory_transactions = inventory_order_deduction_count(container, order_id, fixture_inventory_id)
 
     update_key = f"{marker}-UPDATE"
     first_update = assert_data(
@@ -645,6 +709,7 @@ def write_smoke(
         ),
         "order_update",
     )
+    update_inventory_transactions = inventory_order_deduction_count(container, order_id, fixture_inventory_id)
     replay = assert_data(
         api.request(
             f"/api/v1/orders/{order_id}/updates",
@@ -652,6 +717,12 @@ def write_smoke(
             body={"idempotency_key": update_key, "items": [inventory_order_item]},
         ),
         "order_update_replay",
+    )
+    replay_inventory_transactions = inventory_order_deduction_count(container, order_id, fixture_inventory_id)
+    validate_inventory_update_deductions(
+        submit_inventory_transactions,
+        update_inventory_transactions,
+        replay_inventory_transactions,
     )
     if (
         not isinstance(first_update, dict)
@@ -711,28 +782,49 @@ def write_smoke(
         "(select count(*) from print_jobs where order_id = %d and status = 'PRINTED') || '|' || "
         "(select count(*) from order_item_options oio join order_items oi on oi.id=oio.order_item_id where oi.order_id=%d) || '|' || "
         "(select count(*) from order_item_options oio join order_items oi on oi.id=oio.order_item_id where oi.order_id=%d and upper(coalesce(oio.option_group_snapshot,'')) in ('COMBO','COMBO_EGG','COMBO_SIDE')) || '|' || "
-        "(select count(*) from inventory_transactions where source_type='order' and source_id=%d and qty_change < 0 and stock_after = stock_before + qty_change) || '|' || "
+        "(select count(*) from inventory_transactions where source_type='order' and source_id=%d and inventory_item_id=%d and qty_change < 0 and stock_after = stock_before + qty_change) || '|' || "
         "(select count(*) from print_jobs where order_id=%d and module_code='HOT_KITCHEN') || '|' || "
-        "(select count(*) from order_dispatch_outbox where order_id=%d) "
-        "from kitchen_tasks where order_id = %d" % (order_id, order_id, order_id, order_id, order_id, order_id, order_id, order_id),
+        "(select count(*) from order_dispatch_outbox where order_id=%d) || '|' || "
+        "(select count(*) from inventory_transactions where id=%d and inventory_item_id=%d and source_type='production_v26_rehearsal' and qty_change > 0 and stock_after = stock_before + qty_change) || '|' || "
+        "(select count(*) from menu_item_bom where id=%d and menu_item_id=%d and inventory_item_id=%d and qty_per_unit=1) "
+        "from kitchen_tasks where order_id = %d" % (
+            order_id,
+            order_id,
+            order_id,
+            order_id,
+            order_id,
+            fixture_inventory_id,
+            order_id,
+            order_id,
+            fixture_transaction_id,
+            fixture_inventory_id,
+            fixture_bom_id,
+            fixture_menu_item_id,
+            fixture_inventory_id,
+            order_id,
+        ),
     ).split("|")
     if (
-        len(facts) != 8
+        len(facts) != 10
         or int(facts[0]) < 2
         or int(facts[1]) != 1
         or int(facts[2]) < 1
         or int(facts[3]) < 3
         or int(facts[4]) < 3
-        or int(facts[5]) < 2
+        or int(facts[5]) != replay_inventory_transactions
         or int(facts[6]) != 0
         or int(facts[7]) < 4
+        or int(facts[8]) != 1
+        or int(facts[9]) != 1
     ):
         fail("synthetic order/options/combo/inventory/printing transaction facts differ")
     print(
         f"WRITE_SMOKE|{f'run_id={evidence_run_id}|' if evidence_run_id else ''}"
         f"order_id={order_id}|kitchen_tasks={facts[0]}|update_batches={facts[1]}|"
         f"printed_jobs={facts[2]}|options={facts[3]}|combo_options={facts[4]}|inventory_txns={facts[5]}|outbox_events={facts[7]}|"
-        "disabled_hot_jobs=0|options=PASS|combo=PASS|inventory=PASS|printing_roles=PASS|"
+        f"inventory_submit_txns={submit_inventory_transactions}|inventory_update_txns={update_inventory_transactions}|"
+        f"inventory_replay_txns={replay_inventory_transactions}|disabled_hot_jobs=0|inventory_fixture_items=1|"
+        "inventory_fixture=PASS|options=PASS|combo=PASS|inventory=PASS|printing_roles=PASS|"
         "mock_endpoint_free=PASS|result=PASS"
     )
 
@@ -791,7 +883,7 @@ def main() -> None:
         args.evidence_run_id,
     )
     if args.mode == "write":
-        write_smoke(api, args.db_container, store_id, results["menu"], args.evidence_run_id)
+        write_smoke(api, args.db_container, store_id, user_id, results["menu"], args.evidence_run_id)
 
 
 if __name__ == "__main__":
