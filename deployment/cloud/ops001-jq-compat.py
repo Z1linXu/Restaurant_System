@@ -144,8 +144,63 @@ def output(result):
 
 result = None
 
+BUSINESS_EVIDENCE_FILTER = '{schema:$schema,run_id:$run,source_sha:$sha,backend_image_id:$backend,frontend_image_id:$frontend,environment_sha256:$env,runtime_preflight_sha256:$preflight,owner_approval_sha256:$approval,request_fingerprint:$fingerprint,request_body_sha256:$request,organization_id:$organization,foreign_organization_id:$foreign,store_id:$store,fresh_create:"PASS",replay:"PASS",foreign_active_organization_denied:"PASS",manager_denied:"PASS",live_context:"PASS",frontdesk_defaults:"PASS",printing_management:"PASS",printing_endpoint_free:"PASS",final_result:"PASS"}'
+FOREIGN_ACTIVE_FILTER = '{name:("STG005 Foreign Acceptance " + $run),code:("STG005_FOREIGN_" + ($run | ascii_upcase)),status:"active"}'
+FOREIGN_INACTIVE_FILTER = '{id:$id,name:("STG005 Foreign Acceptance " + $run),code:("STG005_FOREIGN_" + ($run | ascii_upcase)),status:"inactive"}'
+BUSINESS_SECRET_FILTER = '(.business_create_idempotency_key | type == "string" and contains($run)) and (.business_create_request | type == "object") and (.business_create_request.store_name | type == "string" and length > 0) and (.business_create_request.store_code == ("STG005_BUSINESS_" + ($run | ascii_upcase))) and (.manager_login_identifier | type == "string" and startswith("STG005_")) and (.manager_login_password | type == "string" and length >= 12)'
+MANAGER_LOGIN_FILTER = '{login_identifier: .manager_login_identifier, password: .manager_login_password}'
+ERROR_FILTER = '.success == false and .error_code == $code'
+EVIDENCE_ASSERT_FILTER = '.schema == "V26_BUSINESS_STORE_CREATE_ACCEPTANCE_V1" and .fresh_create == "PASS" and .foreign_active_organization_denied == "PASS" and .final_result == "PASS"'
+FOREIGN_ACTIVE_ASSERT_FILTER = '.data.id == $foreign and (.data.status | ascii_downcase) == "active"'
+FRESH_CREATE_FILTER = '.data.replayed == false and .data.store_kind == "BUSINESS" and .data.store_status == "active" and .data.lifecycle_status == "ACTIVE" and .data.operational_state == "LIVE" and .data.is_live == true and .data.validation_status == "PASS"'
+LIVE_CONTEXT_FILTER = '.data.id == $store and .data.operational_state == "LIVE" and .data.is_live == true'
+TABLES_FILTER = '.data | type == "array" and length >= 2'
+PRINTING_FILTER = '.data.store_id == $store and (.data.printing_mode == "DISABLED" or .data.printing_mode == "MOCK") and (.data.printers | type == "array" and all(.[]; ((.ip_address // "") | length) == 0))'
+OVERVIEW_FILTER = '.data.organizations | any(.id == $organization and .can_create_store == true and (.stores | any(.id == $store and .operational_state == "LIVE" and .is_live == true)))'
+BUSINESS_EXACT_FILTERS = {
+    BUSINESS_EVIDENCE_FILTER, FOREIGN_ACTIVE_FILTER, FOREIGN_INACTIVE_FILTER,
+    BUSINESS_SECRET_FILTER, ".business_create_request", ".business_create_idempotency_key",
+    MANAGER_LOGIN_FILTER, ERROR_FILTER, EVIDENCE_ASSERT_FILTER,
+    FOREIGN_ACTIVE_ASSERT_FILTER, ".data.enabled == true", FRESH_CREATE_FILTER,
+    LIVE_CONTEXT_FILTER, TABLES_FILTER, PRINTING_FILTER, OVERVIEW_FILTER,
+    '.id=$id | .status="inactive"', '.data.user.role_code == "MANAGER"',
+}
+BUSINESS_FILTER_MARKERS = (
+    "fresh_create:", "STG005 Foreign Acceptance", ".business_create_",
+    ".manager_login_", ".error_code == $code", "V26_BUSINESS_STORE_CREATE_ACCEPTANCE_V1",
+    ".data.id == $foreign", ".data.enabled == true", '.data.store_kind == "BUSINESS"',
+    '.data.id == $store and .data.operational_state == "LIVE"',
+    '.data | type == "array" and length >= 2', ".data.printing_mode",
+    ".can_create_store == true", '.id=$id | .status="inactive"',
+    '.data.user.role_code == "MANAGER"',
+)
+if any(marker in filter_text for marker in BUSINESS_FILTER_MARKERS) and filter_text not in BUSINESS_EXACT_FILTERS:
+    fail()
+
 if null_input and "refresh_token" in filter_text:
     result = {"refresh_token": arg.get("refresh", "")}
+elif null_input and filter_text == BUSINESS_EVIDENCE_FILTER:
+    result = {
+        "schema": arg.get("schema"), "run_id": arg.get("run"), "source_sha": arg.get("sha"),
+        "backend_image_id": arg.get("backend"), "frontend_image_id": arg.get("frontend"),
+        "environment_sha256": arg.get("env"), "runtime_preflight_sha256": arg.get("preflight"),
+        "owner_approval_sha256": arg.get("approval"), "request_fingerprint": arg.get("fingerprint"),
+        "request_body_sha256": arg.get("request"), "organization_id": as_int("organization"),
+        "foreign_organization_id": as_int("foreign"), "store_id": as_int("store"),
+        "fresh_create": "PASS", "replay": "PASS", "foreign_active_organization_denied": "PASS",
+        "manager_denied": "PASS", "live_context": "PASS", "frontdesk_defaults": "PASS",
+        "printing_management": "PASS", "printing_endpoint_free": "PASS", "final_result": "PASS",
+    }
+elif null_input and filter_text in (FOREIGN_ACTIVE_FILTER, FOREIGN_INACTIVE_FILTER):
+    run_id = arg.get("run")
+    require(isinstance(run_id, str) and re.fullmatch(r"[0-9a-f]{32}", run_id))
+    result = {
+        "name": "STG005 Foreign Acceptance " + run_id,
+        "code": "STG005_FOREIGN_" + run_id.upper(),
+        "status": "inactive" if filter_text == FOREIGN_INACTIVE_FILTER else "active",
+    }
+    if filter_text == FOREIGN_INACTIVE_FILTER:
+        result["id"] = as_int("id")
 elif null_input and "profile_code: $catalog[0].data.profile_code" in filter_text:
     catalog = slurpfile.get("catalog", [{}])[0].get("data", {})
     result = {
@@ -206,7 +261,7 @@ elif ".new_login_password" in filter_text and "length == 20" in filter_text:
     new_password = value.get("new_login_password") if isinstance(value, dict) else None
     require(isinstance(new_password, str) and len(new_password) == 20 and new_password != value.get("login_password"))
     result = True
-elif "type == \"object\"" in filter_text and ".login_identifier" in filter_text and ".login_password" in filter_text:
+elif "type == \"object\"" in filter_text and ".login_identifier" in filter_text and ".login_password" in filter_text and ".business_create_idempotency_key" not in filter_text:
     require(isinstance(value, dict))
     require(isinstance(value.get("login_identifier"), str) and len(value["login_identifier"]) > 0)
     require(isinstance(value.get("login_password"), str) and len(value["login_password"]) >= 12)
@@ -214,6 +269,27 @@ elif "type == \"object\"" in filter_text and ".login_identifier" in filter_text 
         key = value.get("phase_b_idempotency_key")
         require(isinstance(key, str) and re.match(r"^[A-Za-z0-9._:-]{16,255}$", key))
     result = True
+elif filter_text == BUSINESS_SECRET_FILTER:
+    require(isinstance(value, dict))
+    run_id = arg.get("run")
+    key = value.get("business_create_idempotency_key")
+    request = value.get("business_create_request")
+    require(isinstance(run_id, str) and re.fullmatch(r"[0-9a-f]{32}", run_id))
+    require(isinstance(key, str) and run_id in key)
+    require(isinstance(request, dict) and isinstance(request.get("store_name"), str) and len(request["store_name"]) > 0)
+    require(request.get("store_code") == "STG005_BUSINESS_" + run_id.upper())
+    require(isinstance(value.get("manager_login_identifier"), str) and value["manager_login_identifier"].startswith("STG005_"))
+    require(isinstance(value.get("manager_login_password"), str) and len(value["manager_login_password"]) >= 12)
+    result = True
+elif filter_text.strip() == ".business_create_request":
+    result = value.get("business_create_request")
+    require(isinstance(result, dict))
+elif filter_text.strip() == ".business_create_idempotency_key":
+    result = value.get("business_create_idempotency_key")
+    require(isinstance(result, str) and len(result) >= 16)
+elif filter_text == MANAGER_LOGIN_FILTER:
+    result = {"login_identifier": value.get("manager_login_identifier"), "password": value.get("manager_login_password")}
+    require(all(isinstance(item, str) and item for item in result.values()))
 elif "{new_password:" in filter_text and ".new_login_password" in filter_text:
     result = {"new_password": value["new_login_password"]}
 elif ".login_identifier" in filter_text and ".new_login_password" in filter_text:
@@ -240,6 +316,51 @@ elif ".clone_idempotency_key" in filter_text and "length >= 16" in filter_text:
     result = True
 elif ".success == true" in filter_text:
     require(isinstance(value, dict) and value.get("success") is True)
+    result = True
+elif filter_text == ERROR_FILTER:
+    require(isinstance(value, dict) and value.get("success") is False and value.get("error_code") == arg.get("code"))
+    result = True
+elif filter_text == EVIDENCE_ASSERT_FILTER:
+    require(value.get("schema") == "V26_BUSINESS_STORE_CREATE_ACCEPTANCE_V1")
+    require(value.get("fresh_create") == "PASS" and value.get("foreign_active_organization_denied") == "PASS" and value.get("final_result") == "PASS")
+    result = True
+elif filter_text == FOREIGN_ACTIVE_ASSERT_FILTER:
+    data = value.get("data", {})
+    require(data.get("id") == as_int("foreign") and str(data.get("status", "")).lower() == "active")
+    result = True
+elif filter_text.strip() == ".data.enabled == true":
+    require(value.get("data", {}).get("enabled") is True)
+    result = True
+elif filter_text == FRESH_CREATE_FILTER:
+    data = value.get("data", {})
+    require(data.get("replayed") is False and data.get("store_kind") == "BUSINESS")
+    require(data.get("store_status") == "active" and data.get("lifecycle_status") == "ACTIVE")
+    require(data.get("operational_state") == "LIVE" and data.get("is_live") is True and data.get("validation_status") == "PASS")
+    result = True
+elif filter_text == LIVE_CONTEXT_FILTER:
+    data = value.get("data", {})
+    require(data.get("id") == as_int("store") and data.get("operational_state") == "LIVE" and data.get("is_live") is True)
+    result = True
+elif filter_text == TABLES_FILTER:
+    data = value.get("data")
+    require(isinstance(data, list) and len(data) >= 2)
+    result = True
+elif filter_text == PRINTING_FILTER:
+    data = value.get("data", {})
+    require(data.get("store_id") == as_int("store") and data.get("printing_mode") in ("DISABLED", "MOCK"))
+    printers = data.get("printers")
+    require(isinstance(printers, list) and all(isinstance(row, dict) and not str(row.get("ip_address") or "") for row in printers))
+    result = True
+elif filter_text == OVERVIEW_FILTER:
+    org = as_int("organization"); store = as_int("store")
+    organizations = value.get("data", {}).get("organizations", [])
+    require(any(row.get("id") == org and row.get("can_create_store") is True and any(item.get("id") == store and item.get("operational_state") == "LIVE" and item.get("is_live") is True for item in row.get("stores", [])) for row in organizations))
+    result = True
+elif filter_text.strip() == '.id=$id | .status="inactive"':
+    require(isinstance(value, dict))
+    result = dict(value); result["id"] = as_int("id"); result["status"] = "inactive"
+elif filter_text.strip() == '.data.user.role_code == "MANAGER"':
+    require(value.get("data", {}).get("user", {}).get("role_code") == "MANAGER")
     result = True
 elif ".data.proof_status == \"NOT_READY\"" in filter_text or ".data.proof_status == \"PASS\"" in filter_text:
     expected = "PASS" if ".data.proof_status == \"PASS\"" in filter_text else "NOT_READY"

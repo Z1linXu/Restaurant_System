@@ -9009,3 +9009,6 @@ restore, or Production write smoke. Acceptance evidence is a strict typed
 contract bound to the exact runtime/preflight/approval and fresh request run;
 the promotion also freezes Production environment, target/rollback Compose and
 current runtime configuration fingerprints before replacing either app image.
+The Staging Owner-shaped acceptance action remains executable on the reviewed
+host when `jq` is absent: `ops001-jq-compat.py` implements only its fixed,
+fail-closed expressions and rejects every unknown filter.
