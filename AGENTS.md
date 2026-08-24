@@ -224,6 +224,127 @@ transaction/idempotency safety、auditability 和 Production safety 的前提下
 
 **更少的用户步骤 > 更多的显式工程控制。复杂度应留在系统内部。**
 
+## Anti-Overengineering / Bounded Repair
+
+Bounded bug repair must converge on the original business outcome without
+turning a local defect into an unrequested framework, lifecycle or deployment
+architecture project. Safety remains mandatory; unrelated improvement does
+not become in-scope merely because investigation discovered it.
+
+### Primary goal and minimum repair
+
+- At the start, record one `PRIMARY_REPAIR_GOAL` and an approximate
+  `EXPECTED_REPAIR_CLASS` (`SMALL`, `MEDIUM` or `HIGH`). Every implementation
+  action must be necessary to complete that goal safely. Otherwise classify it
+  as `BACKLOG`, `TECH_DEBT`, `FOLLOW_UP` or a non-blocking/P3 finding.
+- Choose the minimum correct root-cause repair in this order: existing code
+  path -> existing abstraction -> small extension -> small new boundary ->
+  larger framework/tooling change only when the earlier options cannot safely
+  work.
+- Do not turn a local bug into a new generalized platform, lifecycle,
+  acceptance framework or deployment architecture for elegance,
+  future-proofing or architectural completeness.
+
+### Reviewed tooling and expansion gate
+
+- Reuse existing reviewed test, Staging, acceptance, Production promotion,
+  backup, rollback and evidence paths when they can safely close the repair.
+  Do not create a second deployment, evidence, credential or release lifecycle
+  merely because it could be cleaner or more automated.
+- Before adding or materially changing deployment, acceptance or governance
+  tooling, classify it as `BLOCKING` or `NON_BLOCKING`. Only a change without
+  which the current repair cannot be completed safely is `BLOCKING` and may
+  enter the repair; cleaner, more generic, stronger-than-required or
+  future-oriented changes are deferred.
+- If tooling changed files, complexity or review effort approaches or exceeds
+  the product fix, perform a `SCOPE_EXPANSION_CHECK` recording the original
+  bug, product-code repair size, tooling expansion size, why it is strictly
+  required, whether reviewed tooling can be reused and what can be deferred.
+  Stop the expansion if necessity cannot be demonstrated.
+- Do not enter a recursive tooling loop. If newly written tooling produces a
+  second layer of blocking defects, perform `TOOLING_REASSESSMENT`: decide
+  whether to continue, return to the existing reviewed path, simplify the
+  acceptance or split the tooling project out. Default to the smallest
+  existing reviewed path that preserves safety.
+
+### Risk-proportionate proof
+
+- Acceptance follows the changed dependency graph and risk. Run focused tests,
+  directly relevant regression, changed integration boundaries, affected
+  Staging acceptance and required Production safety checks. A
+  Production-facing repair does not automatically require every historical
+  acceptance matrix when Android, Flyway/schema, printing, inventory, KDS or
+  device contracts are unchanged.
+- Reuse authoritative evidence for stable facts that the diff did not affect,
+  such as Android compatibility, migration proof, Flyway ledger, rollback or
+  Store-isolation proof. Re-prove it only when the dependency changed, the
+  evidence is stale or the runtime fact materially changed.
+- Do not rotate credentials, recreate staff/devices, rebuild synthetic
+  authority or normalize fixture identity for an unrelated bug unless the
+  credential/fixture is the subject under test or valid acceptance cannot
+  otherwise proceed. Prefer a current valid fixture; fixture hygiene is not
+  automatically part of product repair.
+- Classify missing host packages, legacy environment markers, historical
+  fixture naming, non-critical configuration drift and optional observability
+  gaps as `BLOCKS_CURRENT_REPAIR` or `NON_BLOCKING_EXISTING_DEBT`. Discovery
+  alone is not a requirement to repair it now.
+
+### Review, build and time budget
+
+- Batch Agent 6 review: implementation -> focused validation -> self-review ->
+  consolidated repair -> Agent 6. If review finds blockers, close the related
+  finding cluster locally before one re-review; do not use Agent 6 as an
+  interactive line-by-line debugger.
+- Stabilize executable code before building. Prefer one review-ready exact-SHA
+  application build and one affected Staging deployment, then reuse that
+  verified artifact. Documentation/evidence-only changes must not cause an
+  application rebuild without a runtime-contract reason.
+- If a `SMALL` or `MEDIUM` repair exceeds 45 minutes after the product bug is
+  fixed, emit `REPAIR_TIME_ESCALATION` with product investigation,
+  implementation and test time; tooling/governance, Staging/deployment and
+  rework time; why remaining work blocks closure; and what can be deferred.
+  This is not an Owner Gate, but it requires immediate scope reconvergence.
+- Avoid micro-PR fragmentation. Related findings discovered before merge
+  should normally stay in one repair branch/PR and receive consolidated
+  review. Split only when governance, security/isolation or a blocker found
+  after merge requires it.
+
+### Product/tooling separation and stop condition
+
+- Final repair reports must distinguish `PRODUCT REPAIR` from
+  `TOOLING / GOVERNANCE REPAIR`, listing changed files, time, why each change
+  was required and whether it blocked the primary goal.
+- Stop immediately when root cause, required tests, required Agent 6 review,
+  affected Staging acceptance, authorized Production promotion and required
+  post-deploy smoke are complete. Success is not permission to refactor,
+  normalize fixtures, improve tooling, clean unrelated code or resolve P3s.
+- Anti-overengineering never permits bypassing authorization/isolation,
+  required backup, Flyway and database integrity, rollback/recovery, Agent 6,
+  exact-SHA identity, Production mutation boundaries, credential/secret safety
+  or remote-process hygiene. It removes duplicate proof, side improvements and
+  unnecessary framework expansion—not required safety.
+
+Preferred loop:
+
+```text
+Ground Truth
+-> reproduce / root cause
+-> minimum correct repair
+-> focused tests and relevant regression
+-> consolidated self-review
+-> Agent 6 when required
+-> PR / merge
+-> exact-SHA affected Staging acceptance
+-> authorized same-artifact Production promotion when applicable
+-> post-deploy smoke
+-> concise evidence sync
+-> STOP
+```
+
+Expand tooling or governance only when the current step is genuinely blocked
+and the expansion is necessary to preserve the directly affected safety
+contract.
+
 ## 10. Database and Migrations
 
 - Staging and Production schema evolution uses reviewed Flyway migrations.
