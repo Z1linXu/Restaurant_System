@@ -63,6 +63,25 @@ require_real_path() {
   [[ $((8#$(stat -c '%a' "$path") & 8#022)) -eq 0 ]] || die "$kind is group/other writable"
 }
 
+control_checkout_is_release_safe() {
+  local expected_sha="$1" line control_status
+  [[ "$(git -C /home/ubuntu/Restaurant_System rev-parse HEAD)" == "$expected_sha" ]] || return 1
+  control_status="$(git -C /home/ubuntu/Restaurant_System status --porcelain=v1 --untracked-files=normal)" || return 1
+  while IFS= read -r line; do
+    [[ -n "$line" ]] || continue
+    case "$line" in
+      '?? deployment/cloud/.production-ops.lock'|\
+      '?? deployment/cloud/backups/'|\
+      '?? deployment/cloud/bootstrap-admin.env'|\
+      '?? deployment/cloud/data/'|\
+      '?? deployment/cloud/old-store-config.dump'|\
+      '?? deployment/cloud/old-store-config.sql') ;;
+      *) return 1 ;;
+    esac
+  done <<<"$control_status"
+  return 0
+}
+
 usage() {
   printf '%s\n' "Usage: $0 --snapshot|--validate|--execute|--finalize-edge --rc-manifest <absolute-json> --rc-manifest-sha256 <sha256>"
 }
@@ -204,7 +223,7 @@ bounded 60 env -i PATH="$SAFE_PATH" python3 -I "$EVIDENCE_HELPER" --scope full \
   --backup-sha256 "$BACKUP_DIGEST" --recovery-helper-sha256 "$RECOVERY_DIGEST" \
   >/dev/null || die "release evidence contract differs"
 
-[[ "$(git -C /home/ubuntu/Restaurant_System rev-parse HEAD)" == "$CONTROL_SHA" && -z "$(git -C /home/ubuntu/Restaurant_System status --porcelain)" ]] || die "Production control checkout identity drifted"
+control_checkout_is_release_safe "$CONTROL_SHA" || die "Production control checkout identity drifted"
 production_services_output="$(docker_default ps --filter "label=com.docker.compose.project=$EXPECTED_PROJECT" --format '{{.Label "com.docker.compose.service"}}' | sort)" || die "cannot enumerate running Production services"
 production_resources_output="$(docker_default ps -a --filter "label=com.docker.compose.project=$EXPECTED_PROJECT" --format '{{.Label "com.docker.compose.service"}}' | sort)" || die "cannot enumerate Production resources"
 mapfile -t production_services <<<"$production_services_output"

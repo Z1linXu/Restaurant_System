@@ -8886,3 +8886,15 @@ removing accidental product and request complexity:
 This repair adds no Flyway migration, Owner readiness step, general Store
 delete UI, real Printer/Pad binding, Production mutation, KDS/Pickup
 optimization, or Phase C scope.
+
+## Production V26 control-checkout boundary
+
+The V10 to V26 release tooling keeps the detached tooling checkout completely
+clean. The long-lived Production control checkout must have no tracked drift,
+while its untracked status may contain only the six fixed runtime path classes
+already required by operations: the Production lock, backup directory,
+bootstrap secret file, database/Nginx data directory, and the two retained
+legacy Store migration archives. Missing allowlisted artifacts are tolerated,
+but any additional untracked path fails closed. This distinction lets the
+release validate the actual Production filesystem without weakening source,
+Compose, credential, database, image, or exact-SHA checks.
