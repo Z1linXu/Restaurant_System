@@ -14,8 +14,10 @@ V26. It does not authorize a release by itself; current Owner authorization and
 - Create the fresh backup with `production-backup-rehearsal.sh` and validate its
   exact V10 ledger before any migration.
 - Run `production-v10-v26-rehearsal.sh` against that backup. Its Docker network
-  is internal, ports bind only to loopback, and its database volume and
-  containers are run-owned and removed on exit.
+  is internal, publishes no host ports, and its database volume and containers
+  are run-owned and removed on exit. Host-side smoke may reach only the exact
+  private frontend address after validating all three run-owned members and the
+  internal network before any token, database or API access.
 - The rehearsal starts the target V26 backend/frontend images, runs read/write
   smoke only on the clone, checks a canonical content fingerprint plus additive
   V11–V26 relationships, and exercises recovery by restoring the backup into a

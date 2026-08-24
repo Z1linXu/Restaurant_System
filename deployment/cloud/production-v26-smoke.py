@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Sanitized V26 read/write smoke for an isolated clone or live Production.
 
-The helper never accepts a non-loopback URL.  It discovers only numeric
-authorization identities from the explicitly named PostgreSQL container,
-mints a short-lived in-memory access token with the supplied runtime secret,
-and emits no credential or business payload.  Write mode additionally requires
-an immutable, labelled rehearsal DB on an internal run-owned network; this
-guard runs before any database or API call.
+Live checks accept only loopback HTTP. Rehearsal checks may use the exact
+private IP of a run-owned frontend on an internal Docker network with no
+published ports. That immutable container/network guard runs before any token,
+database or API access. The helper discovers only numeric authorization
+identities, mints a short-lived in-memory token and emits no credential or
+business payload.
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ import argparse
 import base64
 import hashlib
 import hmac
+import ipaddress
 import json
 import os
 import re
@@ -78,7 +79,7 @@ def docker_json(*arguments: str) -> object:
         fail("write-target Docker identity is malformed")
 
 
-def validate_write_target(
+def validate_rehearsal_target(
     base_url: str,
     container: str,
     expected_container_id: str | None,
@@ -86,18 +87,33 @@ def validate_write_target(
     expected_api_container_id: str | None,
     run_id: str | None,
     network_name: str | None,
-) -> None:
-    """Reject live/ambiguous targets before token, DB, or API access."""
+) -> str:
+    """Reject live, published or ambiguous clone targets before any data access."""
     if container in {"cloud-db-1", "restaurant-pos-staging-db-1"}:
         fail("write smoke refuses live Production/Staging DB containers")
     if not expected_container_id or not expected_backend_container_id or not expected_api_container_id or not run_id or not network_name:
-        fail("write smoke requires immutable rehearsal ownership arguments")
+        fail("rehearsal smoke requires immutable ownership arguments")
     for expected_id in (expected_container_id, expected_backend_container_id, expected_api_container_id):
         if re.fullmatch(r"[0-9a-f]{64}", expected_id) is None:
             fail("expected rehearsal container ID is malformed")
     parsed_api = urllib.parse.urlparse(base_url)
-    if parsed_api.scheme != "http" or parsed_api.hostname not in {"127.0.0.1", "localhost"} or parsed_api.port in {None, 80, 443}:
-        fail("write smoke requires an explicit non-default loopback rehearsal port")
+    try:
+        requested_address = ipaddress.ip_address(parsed_api.hostname or "")
+    except ValueError:
+        fail("rehearsal smoke requires a literal private container IP")
+    if (
+        parsed_api.scheme != "http"
+        or parsed_api.username is not None
+        or parsed_api.password is not None
+        or parsed_api.path not in {"", "/"}
+        or parsed_api.query
+        or parsed_api.fragment
+        or parsed_api.port not in {None, 80}
+        or requested_address.version != 4
+        or not requested_address.is_private
+        or requested_address.is_loopback
+    ):
+        fail("rehearsal smoke requires the private internal frontend address")
 
     containers = docker_json("inspect", container)
     if not isinstance(containers, list) or len(containers) != 1 or not isinstance(containers[0], dict):
@@ -131,14 +147,20 @@ def validate_write_target(
         if row_labels.get("com.docker.compose.project") == "cloud" or set(row_networks) != {network_name}:
             fail(f"write-target {label} is not isolated from Production")
 
-    api_ports = ((api_rows[0].get("NetworkSettings") or {}).get("Ports") or {}).get("80/tcp")
-    if (
-        not isinstance(api_ports, list)
-        or len(api_ports) != 1
-        or api_ports[0].get("HostIp") != "127.0.0.1"
-        or api_ports[0].get("HostPort") != str(parsed_api.port)
-    ):
-        fail("write-target API URL is not bound to the exact rehearsal frontend")
+    for label, rows in (("database", containers), ("backend", backend_rows), ("API frontend", api_rows)):
+        configured_bindings = ((rows[0].get("HostConfig") or {}).get("PortBindings") or {})
+        ports = ((rows[0].get("NetworkSettings") or {}).get("Ports") or {})
+        if configured_bindings or any(bindings not in (None, []) for bindings in ports.values()):
+            fail(f"rehearsal {label} unexpectedly publishes a host port")
+
+    api_network = (((api_rows[0].get("NetworkSettings") or {}).get("Networks") or {}).get(network_name) or {})
+    api_address = str(api_network.get("IPAddress") or "")
+    try:
+        exact_api_address = ipaddress.ip_address(api_address)
+    except ValueError:
+        fail("rehearsal API frontend has no valid internal address")
+    if exact_api_address != requested_address or exact_api_address.version != 4 or not exact_api_address.is_private or exact_api_address.is_loopback:
+        fail("rehearsal API URL is not the exact internal frontend address")
 
     network_rows = docker_json("network", "inspect", network_name)
     if not isinstance(network_rows, list) or len(network_rows) != 1 or not isinstance(network_rows[0], dict):
@@ -150,6 +172,7 @@ def validate_write_target(
     attached_ids = set((network.get("Containers") or {}).keys())
     if attached_ids != {expected_container_id, expected_backend_container_id, expected_api_container_id}:
         fail("write-target network members differ from the exact rehearsal stack")
+    return api_address
 
 
 def b64url(value: bytes) -> str:
@@ -177,10 +200,12 @@ def mint_token(secret: str, user_id: int, role_id: int, store_id: int, organizat
 
 
 class Api:
-    def __init__(self, base_url: str, token: str):
+    def __init__(self, base_url: str, token: str, validated_rehearsal_host: str | None = None):
         parsed = urllib.parse.urlparse(base_url)
-        if parsed.scheme != "http" or parsed.hostname not in {"127.0.0.1", "localhost"}:
-            fail("smoke URL must be loopback HTTP")
+        live_loopback = parsed.scheme == "http" and parsed.hostname in {"127.0.0.1", "localhost"}
+        rehearsal_internal = parsed.scheme == "http" and validated_rehearsal_host is not None and parsed.hostname == validated_rehearsal_host
+        if not live_loopback and not rehearsal_internal:
+            fail("smoke URL is neither loopback nor the validated rehearsal frontend")
         self.base_url = base_url.rstrip("/")
         self.token = token
 
@@ -668,22 +693,26 @@ def main() -> None:
     parser.add_argument("--evidence-run-id")
     args = parser.parse_args()
 
-    if args.mode == "write":
-        validate_write_target(
+    ownership_arguments = (
+        args.expected_db_container_id,
+        args.expected_backend_container_id,
+        args.expected_api_container_id,
+        args.expected_run_id,
+        args.expected_network,
+    )
+    validated_rehearsal_host = None
+    if any(ownership_arguments) or args.mode == "write":
+        validated_rehearsal_host = validate_rehearsal_target(
             args.base_url,
             args.db_container,
-            args.expected_db_container_id,
-            args.expected_backend_container_id,
-            args.expected_api_container_id,
-            args.expected_run_id,
-            args.expected_network,
+            *ownership_arguments,
         )
     secret = os.environ.get("JWT_SECRET", "")
     if len(secret.encode("utf-8")) < 32:
         fail("JWT secret is unavailable or too short")
     user_id, role_id, role_code, store_id, organization_id = numeric_identity(args.db_container)
     token = mint_token(secret, user_id, role_id, store_id, organization_id, role_code)
-    api = Api(args.base_url, token)
+    api = Api(args.base_url, token, validated_rehearsal_host)
     if args.mode == "legacy-read":
         legacy_read_smoke(api, store_id, organization_id, args.evidence_run_id)
         return
@@ -697,7 +726,7 @@ def main() -> None:
     )
     results = read_smoke(
         api,
-        Api(args.base_url, wrong_organization_token),
+        Api(args.base_url, wrong_organization_token, validated_rehearsal_host),
         store_id,
         organization_id,
         args.evidence_run_id,
