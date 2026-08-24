@@ -1,0 +1,8 @@
+services:
+  backend:
+    image: ${RECOVERY_BACKEND_IMAGE:?RECOVERY_BACKEND_IMAGE is required}
+    environment:
+      FLYWAY_TARGET: "10"
+
+  nginx:
+    image: ${RECOVERY_FRONTEND_IMAGE:?RECOVERY_FRONTEND_IMAGE is required}

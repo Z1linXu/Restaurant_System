@@ -1,0 +1,14 @@
+services:
+  db:
+    volumes:
+      - ${PRODUCTION_POSTGRES_DATA_DIR:?PRODUCTION_POSTGRES_DATA_DIR is required}:/var/lib/postgresql/data
+  backend:
+    image: ${PROMOTION_BACKEND_IMAGE:?PROMOTION_BACKEND_IMAGE is required}
+    environment:
+      FLYWAY_TARGET: "26"
+  nginx:
+    image: ${PROMOTION_FRONTEND_IMAGE:?PROMOTION_FRONTEND_IMAGE is required}
+    volumes:
+      - ${PRODUCTION_NGINX_TEMPLATE:?PRODUCTION_NGINX_TEMPLATE is required}:/etc/nginx/templates/default.conf.template:ro
+      - ${PRODUCTION_CERTBOT_WWW_DIR:?PRODUCTION_CERTBOT_WWW_DIR is required}:/var/www/certbot:ro
+      - ${PRODUCTION_LETSENCRYPT_DIR:?PRODUCTION_LETSENCRYPT_DIR is required}:/etc/letsencrypt:ro
