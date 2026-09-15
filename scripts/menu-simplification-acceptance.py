@@ -246,6 +246,21 @@ def frozen_order(order):
             **{key: order[key] for key in ('subtotal_amount', 'discount_amount', 'total_amount')}}
 
 
+def verify_mock_job(job, printing, store_id, order_id):
+    # Existing dispatcher treats null execution_mode as Store-mode execution;
+    # the field is not a mandatory MOCK marker. Never infer safety from null alone.
+    require(printing['printing_mode'] == 'MOCK'
+            and all(not x.get('ip_address') for x in printing['printers'])
+            and job['store_id'] == store_id and job['order_id'] == order_id
+            and job['module_code'] == 'GRAB' and job['status'] == 'PRINTED'
+            and job.get('execution_mode') in (None, 'MOCK')
+            and job.get('printer_id') is None and not job.get('printer_endpoint')
+            and job.get('printed_by_device_id') is None,
+            'mock_job_execution_boundary_mismatch')
+    require('+TESTADD' in job['rendered_text_snapshot']
+            and '+TESTCOMBO' in job['rendered_text_snapshot'], 'mock_job_missing_distinct_tokens')
+
+
 class Acceptance:
     def __init__(self, args, api, report):
         self.args, self.api, self.report = args, api, report
@@ -526,8 +541,7 @@ class Acceptance:
                     break
                 time.sleep(1)
             job = one(jobs, lambda x: x['module_code'] == 'GRAB' and x['status'] == 'PRINTED', 'mock_grab_job_missing')
-            require(job['execution_mode'] == 'MOCK' and '+TESTADD' in job['rendered_text_snapshot']
-                    and '+TESTCOMBO' in job['rendered_text_snapshot'], 'mock_job_missing_distinct_tokens')
+            verify_mock_job(job, self.api.call(f'/admin/printing?store_id={self.a}'), self.a, historical['id'])
             self.record('mock_print_job_distinct_code_tokens', job_id=job['id'],
                         rendered_sha256=digest(job['rendered_text_snapshot']))
         else:
