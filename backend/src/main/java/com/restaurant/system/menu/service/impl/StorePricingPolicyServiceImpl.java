@@ -236,6 +236,11 @@ public class StorePricingPolicyServiceImpl implements StorePricingPolicyService 
             combo.created_at = combo.updated_at;
         }
         MenuItemOption savedCombo = menuItemOptionRepository.save(combo);
+        if (!allowed) {
+            if (menuItemRepository.updateItemComboEggDefault(itemId, item.store_id, null, now()) != 1) {
+                throw new BusinessException("MENU_ITEM_STORE_MISMATCH");
+            }
+        }
         for (MenuItemOption option : options) {
             if (!option.id.equals(savedCombo.id) && isComboUpcharge(option) && Boolean.TRUE.equals(option.is_active)) {
                 option.is_active = false;
@@ -382,8 +387,14 @@ public class StorePricingPolicyServiceImpl implements StorePricingPolicyService 
     }
 
     private boolean isSizeOption(MenuItemOption option) {
-        return "SIZE".equalsIgnoreCase(blankToEmpty(option.option_group))
-            || "size".equalsIgnoreCase(blankToEmpty(option.option_type));
+        if (option == null || option.store_addon_id != null) {
+            return false;
+        }
+        String group = blankToEmpty(option.option_group);
+        if (!group.isBlank()) {
+            return GROUP_SIZE.equalsIgnoreCase(group);
+        }
+        return "size".equalsIgnoreCase(blankToEmpty(option.option_type));
     }
 
     private MenuItemOption preferCanonicalSizeOption(MenuItemOption current, MenuItemOption candidate) {
@@ -402,11 +413,12 @@ public class StorePricingPolicyServiceImpl implements StorePricingPolicyService 
     }
 
     private boolean isComboUpcharge(MenuItemOption option) {
-        if (option == null) {
+        if (option == null || option.store_addon_id != null) {
             return false;
         }
-        if ("COMBO".equalsIgnoreCase(blankToEmpty(option.option_group))) {
-            return true;
+        String group = blankToEmpty(option.option_group);
+        if (!group.isBlank()) {
+            return GROUP_COMBO.equalsIgnoreCase(group);
         }
         if ("combo".equalsIgnoreCase(blankToEmpty(option.option_code))) {
             return true;
@@ -482,6 +494,7 @@ public class StorePricingPolicyServiceImpl implements StorePricingPolicyService 
         response.menu_item_id = option.menu_item_id;
         response.option_type = option.option_type;
         response.option_code = option.option_code;
+        response.store_addon_id = option.store_addon_id;
         response.option_group = option.option_group;
         response.parent_option_id = option.parent_option_id;
         response.sort_order = option.sort_order;

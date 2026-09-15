@@ -82,6 +82,7 @@ export interface MenuItemAdminRecord {
   is_active: boolean
   is_sold_out: boolean
   sort_order: number
+  default_combo_egg_component_code?: string | null
   created_at?: string
   updated_at?: string
 }

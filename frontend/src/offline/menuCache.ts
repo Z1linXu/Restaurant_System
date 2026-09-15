@@ -82,7 +82,7 @@ function appendOptions(parts: string[], options: BackendMenuOption[] | undefined
   })
 }
 
-function appendCategories(parts: string[], categories: BackendMenuCategory[], includeItemSortOrder: boolean) {
+function appendCategories(parts: string[], categories: BackendMenuCategory[], includeItemSortOrder: boolean, includeComboEggDefault: boolean) {
   appendValue(parts, categories.length)
   categories.forEach((category) => {
     appendValue(parts, category.id)
@@ -105,6 +105,9 @@ function appendCategories(parts: string[], categories: BackendMenuCategory[], in
       appendValue(parts, item.is_sold_out)
       if (includeItemSortOrder) {
         appendValue(parts, item.sort_order)
+      }
+      if (includeComboEggDefault) {
+        appendValue(parts, item.default_combo_egg_component_code)
       }
       appendOptions(parts, item.options)
     })
@@ -174,7 +177,7 @@ export function calculateMenuContentHash(catalog: BackendMenuCatalog) {
   appendValue(parts, catalog.pricing_policy?.size_large_delta)
   appendValue(parts, catalog.pricing_policy?.combo_delta)
   appendComboConfiguration(parts, catalog)
-  appendCategories(parts, catalog.categories, catalog.catalog_version !== 'menu-catalog-v2')
+  appendCategories(parts, catalog.categories, catalog.catalog_version !== 'menu-catalog-v2', catalog.catalog_version === 'menu-catalog-v4')
   return `fnv1a32:${fnv1a32(parts.join(''))}`
 }
 

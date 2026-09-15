@@ -1076,7 +1076,8 @@ Response behavior:
 
 ### Menu Modeling Notes
 - `menu_items.station_id` 是菜品默认工位
-- `menu_item_options` 为菜品级独立选项，不是全局选项
+- `menu_item_options` 保留菜品级选项 ID；ADD_ON 的名称、价格和全店可用状态
+  由 Store Add-on Catalog 统一维护，关联 option row 是兼容物化与商品 eligibility。
 - `option_type` remains for compatibility: `noodle_type`, `size`, `addon`, `remove`, `soup_base`, `spicy_level`
 - `option_group` is the preferred semantic grouping for new code: `SIZE`, `SOUP_BASE`, `NOODLE_TYPE`, `SPICY_LEVEL`, `ADD_ON`, `REMOVE`, `COMBO`, `COMBO_EGG`, `COMBO_SIDE`, `COMBO_SIDE_REMOVE`
 - `option_code` is the preferred stable machine identifier. Legacy Chinese-name matching is fallback only.
@@ -1199,7 +1200,54 @@ Request:
 The item controls only whether Combo is allowed. The Combo delta remains
 Store-level.
 
-#### Get Store Combo Configuration
+#### Update Item Combo Egg Default
+
+`PUT /api/v1/admin/menu/items/{itemId}/combo-egg-default`
+
+Requires `admin:menu_manage` on the item's Store. Body:
+`{"default_combo_egg_component_code":"combo_fried_egg"}` or null to inherit
+the Store default. The item must allow Combo and a non-null code must reference
+an enabled same-Store COMBO_EGG component. Wrong Store/group, disabled and
+arbitrary codes are rejected. This is an initial default only; employee/draft
+selection wins. Catalog items expose the nullable field; Combo Configuration
+exposes `item_overrides` with item ID, bilingual names and exception code.
+Removing/disabling an in-use component must not leave invalid item defaults.
+
+#### Store Add-on Catalog
+
+All endpoints use the existing authenticated principal/`X-User-Id` contract
+and require `admin:menu_manage` for the resolved Store. Store IDs and item/Add-on
+IDs are revalidated on the backend; frontend Store context is not authorization.
+
+| Method | Path | Body / result data |
+| --- | --- | --- |
+| GET | `/api/v1/admin/menu/addons?store_id={storeId}` | `{addons, conflicts}` |
+| POST | `/api/v1/admin/menu/addons` | `{store_id, code, name_zh, name_en, price, active}` |
+| PUT | `/api/v1/admin/menu/addons/{addonId}` | `{name_zh, name_en, price, active}`; changed code rejected |
+| GET | `/api/v1/admin/menu/items/{itemId}/addons` | Catalog entries with item `enabled` |
+| PUT | `/api/v1/admin/menu/items/{itemId}/addons/{addonId}` | `{enabled: boolean}` |
+| POST | `/api/v1/admin/menu/addons/reconcile` | `{store_id, dry_run: boolean}`; sanitized linking/conflict report |
+
+Catalog entries expose `id`, `store_id`, immutable `code`, bilingual names,
+`price`, `active` and `printing_configured`. Missing Printing MODIFIER_ADD
+coverage is a non-blocking fallback warning. Printing token editing remains
+in Printing Management; catalog name/price edits never rewrite tokens.
+
+Canonical code is unique per Organization and immutable after creation.
+Each Store has at most one catalog row per definition and independent names,
+price and availability. Linked option rows preserve item IDs and eligibility;
+name/price/effective-active propagation and existing menu revision increment
+are one transaction. Catalog deactivation does not delete links. Generic
+option editing cannot change ADD_ON semantic fields or bypass this boundary
+by changing option group. Non-ADD_ON editing remains supported.
+
+Reconciliation never chooses between conflicting business values. Identical
+current values may be linked, active differences remain item eligibility,
+and unresolved groups retain their legacy runtime rows with conflict evidence.
+GET is read-only. Historical order name/price/code snapshots are untouched;
+semantic replacement/remap is not an ordinary editing operation.
+
+#### Get Store Combo Configuration (response)
 
 `GET /api/v1/admin/menu/combo-configuration?store_id={storeId}`
 

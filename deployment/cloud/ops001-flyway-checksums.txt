@@ -26,3 +26,5 @@
 24|V24__harden_phase_b_part2_evidence_and_device_heartbeat.sql|755635947
 25|V25__widen_phase_b_device_contract_version.sql|-1891760137
 26|V26__add_staging_store_fixture_cleanup_ledger.sql|624267691
+27|V27__add_item_combo_egg_default.sql|1012997460
+28|V28__add_store_addon_catalog.sql|-235902998

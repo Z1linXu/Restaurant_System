@@ -3783,6 +3783,7 @@ The schema below is based on entity classes. Exact SQL column types other than e
 - `base_price` BigDecimal
 - `is_active` Boolean
 - `is_sold_out` Boolean
+- `default_combo_egg_component_code` nullable String (Store Combo egg exception)
 - `created_at` LocalDateTime
 - `updated_at` LocalDateTime
 
@@ -3793,6 +3794,9 @@ The schema below is based on entity classes. Exact SQL column types other than e
 - `option_code` String
 - `option_group` String
 - `parent_option_id` Long
+- `store_addon_id` nullable Long
+- `store_addon_store_id` nullable Long (composite Store isolation FK)
+- `addon_eligible` nullable Boolean (item enablement independent of catalog active)
 - `sort_order` Integer
 - `name_zh` String
 - `name_en` String
@@ -3800,6 +3804,19 @@ The schema below is based on entity classes. Exact SQL column types other than e
 - `is_active` Boolean
 - `created_at` LocalDateTime
 - `updated_at` LocalDateTime
+
+#### organization_addon_definitions
+
+- `id`, `organization_id`, immutable `code`, `created_at`, `updated_at`
+- Unique `(organization_id, code)`; Organization/code identity is immutable.
+
+#### store_addons
+
+- `id`, `store_id`, `organization_id`, `organization_addon_definition_id`
+- Store-local `name_zh`, `name_en`, `price`, `active`, audit timestamps
+- Unique `(store_id, organization_addon_definition_id)`
+- Composite FKs bind the Store and definition to the same Organization, and
+  linked option/item rows to the same Store.
 
 #### store_pricing_policies
 - `id` BIGSERIAL
@@ -7156,7 +7173,8 @@ The Owner Menu Management option panel now shows a dedicated
 Owners choose which of those canonical Sizes an item supports and, when
 Regular is not enabled with multiple Sizes, which enabled Size is default. The
 generic option create/update/deactivate/reorder endpoints reject Size writes.
-`Noodle Type`, `Remove`, and ordinary `Add-on` remain in the option list;
+`Noodle Type` and `Remove` remain in the editable option list;
+ADD_ON uses the Store Add-on catalog and item eligibility described below.
 `NOODLE_TYPE` remains display/default-order oriented.
 
 The canonical product model is `MenuItem -> SizeVariant[1..N]` implemented
@@ -7239,6 +7257,46 @@ and kitchen printing paths. Submitted/completed orders, receipts, print
 snapshots and reports are never repriced by future policy changes.
 
 Owner menu option APIs use the `admin:menu_manage` capability instead of the broader `admin:store_config` capability. All calls remain store-scoped and still verify that the menu item and option belong to the current store. Menu item create/update endpoints accept `admin:menu_manage` as well as the older `admin:store_config` capability for backward compatibility.
+
+### Store Add-on Catalog and Item Combo Egg Exceptions
+
+The bounded menu simplification contract is
+[`MENU_ADDON_CATALOG_CONTRACT`](docs/governance/contracts/MENU_ADDON_CATALOG_CONTRACT.md).
+Organization-scoped `organization_addon_definitions` owns immutable semantic
+codes. `store_addons` owns each Store's bilingual names, selling price and
+availability. Existing `menu_item_options` retain their IDs as linked item
+eligibility and runtime materialization, preserving the established ordering
+and snapshot path. Other option groups keep their current editing behavior.
+
+Catalog edits atomically propagate names/prices and effective active state to
+all linked options in that Store, and increment the existing menu revision.
+`is_active = store_addon.active AND addon_eligible`; deactivating a catalog
+entry does not erase item eligibility. Store A pricing never mutates Store B,
+the immutable Master or Profile. Normal menu revision refresh exposes changes
+without logout or app restart. Already frozen draft/order snapshots retain
+their established compatibility behavior and are not silently repriced.
+
+Menu Management exposes a Store Add-ons list with add/edit/activate/deactivate;
+code is entered on creation and read-only thereafter. Item Add-ons expose
+only enable/disable plus read-only names/prices. Printing coverage is a
+lightweight configured/fallback indicator. The MODIFIER_ADD editor remains in
+Printing Management and binds the same immutable code; name edits do not
+change tokens. `fried_egg` and `combo_fried_egg` remain separate identities.
+
+Existing data reconciliation links only identical name/price groups; active
+differences remain item eligibility. Business-value conflicts remain explicit
+and unresolved, preserving the existing current runtime rows. Migration adds
+schema; business choices are not hardcoded in Flyway. Reconciliation is
+transactional and idempotent, uses the existing Store materialization boundary
+for new Stores, and never rewrites historical order or printing snapshots.
+
+Combo Configuration retains the Store COMBO_EGG default and lists only item
+exceptions. An item's nullable `default_combo_egg_component_code` is validated
+against its enabled same-Store COMBO_EGG components and Combo eligibility.
+Initial selection honors user/draft choice, then item exception, then Store
+default and the existing safe fallback. Removing an exception restores Store
+default inheritance. Product names never choose the default; Combo prices,
+component identities and kitchen behavior remain governed by existing policy.
 
 ### Combo UI and Child Remove Options
 

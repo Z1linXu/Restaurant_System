@@ -97,6 +97,7 @@ public class MenuCatalogHashService {
                 append(target, item.is_active);
                 append(target, item.is_sold_out);
                 append(target, item.sort_order);
+                append(target, item.default_combo_egg_component_code);
                 appendOptions(target, item.options);
             }
         }

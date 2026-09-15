@@ -55,6 +55,8 @@ public class OwnerMenuItemOrderingServiceImpl implements OwnerMenuItemOrderingSe
             throw new BusinessException("Menu item reorder list contains duplicate item ids");
         }
 
+        // Match item configuration writers: Store first, then item rows.
+        menuRevisionService.lockStoresInOrder(List.of(storeId));
         List<MenuItem> categoryItems = menuItemRepository.findAllByStoreIdAndCategoryIdForUpdate(storeId, categoryId);
         Map<Long, MenuItem> itemsById = categoryItems.stream()
             .collect(Collectors.toMap(item -> item.id, Function.identity(), (left, right) -> left, LinkedHashMap::new));

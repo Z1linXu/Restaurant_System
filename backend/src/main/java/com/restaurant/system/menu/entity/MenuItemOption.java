@@ -50,6 +50,16 @@ public class MenuItemOption {
     @Column(name = "is_active")
     public Boolean is_active;
 
+    @Column(name = "store_addon_id")
+    public Long store_addon_id;
+
+    // Scope anchor for the two composite foreign keys on a linked Add-on.
+    @Column(name = "store_addon_store_id")
+    public Long store_addon_store_id;
+
+    @Column(name = "addon_eligible")
+    public Boolean addon_eligible;
+
     @Column(name = "created_at")
     public LocalDateTime created_at;
 

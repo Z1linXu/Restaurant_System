@@ -57,6 +57,9 @@ class OwnerMenuItemOrderingServiceImplTest {
         assertEquals(10, second.sort_order);
         assertEquals(20, first.sort_order);
         verify(menuRevisionService).incrementRevision(1L);
+        var order = org.mockito.Mockito.inOrder(menuRevisionService, menuItemRepository);
+        order.verify(menuRevisionService).lockStoresInOrder(List.of(1L));
+        order.verify(menuItemRepository).findAllByStoreIdAndCategoryIdForUpdate(1L, 7L);
     }
 
     @Test

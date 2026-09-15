@@ -1,6 +1,7 @@
 package com.restaurant.system.owner.provisioning;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.restaurant.system.menu.addon.StoreAddonService;
 import com.restaurant.system.menu.combo.StoreComboComponent;
 import com.restaurant.system.menu.combo.StoreComboComponentRepository;
 import com.restaurant.system.menu.combo.StoreComboGroup;
@@ -73,6 +74,7 @@ public class OwnerStoreProvisioningMaterializer {
     private final OperationalStoreBaselineProvisioner baselineProvisioner;
     private final StoreReadinessService readinessService;
     private final StoreActivationRequestCoordinator activationRequestCoordinator;
+    private final StoreAddonService storeAddonService;
 
     public OwnerStoreProvisioningMaterializer(
         OrganizationRepository organizationRepository,
@@ -93,7 +95,8 @@ public class OwnerStoreProvisioningMaterializer {
         OwnerStoreProvisioningRequestCoordinator requestCoordinator,
         OperationalStoreBaselineProvisioner baselineProvisioner,
         StoreReadinessService readinessService,
-        StoreActivationRequestCoordinator activationRequestCoordinator
+        StoreActivationRequestCoordinator activationRequestCoordinator,
+        StoreAddonService storeAddonService
     ) {
         this.organizationRepository = organizationRepository;
         this.storeRepository = storeRepository;
@@ -114,6 +117,7 @@ public class OwnerStoreProvisioningMaterializer {
         this.baselineProvisioner = baselineProvisioner;
         this.readinessService = readinessService;
         this.activationRequestCoordinator = activationRequestCoordinator;
+        this.storeAddonService = storeAddonService;
     }
 
     @Transactional
@@ -143,6 +147,7 @@ public class OwnerStoreProvisioningMaterializer {
         pricingPolicyRepository.mirrorPolicyToSizeAndComboOptions(store.id);
         materializeComboConfiguration(store.id, artifacts.get("COMBO_CONFIGURATION"), itemByMasterKey, now);
         materializePrintingRules(store.id, artifacts.get("PRINTING_DISPLAY_RULES"), now);
+        StoreAddonService.ReconciliationReport addonReconciliation = storeAddonService.reconcile(store.id, false);
 
         menuRevisionService.incrementRevision(store.id);
         store.lifecycle_status = "READY_FOR_REVIEW";
@@ -206,7 +211,7 @@ public class OwnerStoreProvisioningMaterializer {
             counts,
             command.isBusinessCreation() ? BUSINESS_RESULT_CODE : SYNTHETIC_RESULT_CODE
         ));
-        return toResult(completed);
+        return toResult(completed, addonReconciliation.conflicts());
     }
 
     private Store createStore(
@@ -649,7 +654,10 @@ public class OwnerStoreProvisioningMaterializer {
         };
     }
 
-    private OwnerStoreProvisioningResult toResult(OwnerStoreProvisioningReservation reservation) {
+    private OwnerStoreProvisioningResult toResult(
+        OwnerStoreProvisioningReservation reservation,
+        List<StoreAddonService.Conflict> addonConflicts
+    ) {
         return new OwnerStoreProvisioningResult(
             reservation.requestId(),
             reservation.storeId(),
@@ -658,7 +666,8 @@ public class OwnerStoreProvisioningMaterializer {
             reservation.validationStatus(),
             reservation.resultCode(),
             reservation.errorCode(),
-            reservation.counts()
+            reservation.counts(),
+            addonConflicts
         );
     }
 

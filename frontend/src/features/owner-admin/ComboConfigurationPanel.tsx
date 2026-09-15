@@ -6,6 +6,7 @@ import {
   type StoreComboConfigurationRecord,
 } from '../../services/ownerMenuOptionService'
 import type { MenuItemAdminRecord } from '../../services/platformAdminService'
+import { ComboEggOverridesPanel } from './ComboEggOverridesPanel'
 import {
   comboConfigurationLayoutClasses,
   moveWithDisplayOrder,
@@ -96,6 +97,8 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
   }, [storeId])
 
   const dirty = useMemo(() => canonical(configuration) !== canonical(draft), [configuration, draft])
+  const eggGroupIndex = draft?.groups.findIndex((group) => groupCode(group) === 'COMBO_EGG') ?? -1
+  const eggGroup = draft?.groups[eggGroupIndex]
   const activeMenuItems = useMemo(
     () => menuItems.filter((item) => item.is_active),
     [menuItems],
@@ -260,7 +263,7 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
       })
       setConfiguration(saved)
       setDraft(cloneConfiguration(saved))
-      onSaved?.(`Combo Configuration saved at menu revision ${saved.menu_revision}. Pads will refresh the complete menu snapshot.`)
+      onSaved?.('Combo Configuration saved / 套餐配置已保存')
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Failed to save Combo Configuration')
     } finally {
@@ -276,9 +279,6 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
           <div className="mt-1 text-[0.85rem] text-[var(--muted)]">
             Store-level combo groups and components. Combo price still comes from Pricing Rules.
           </div>
-          {configuration ? (
-            <div className="mt-1 text-[0.76rem] text-[var(--muted)]">Menu revision {configuration.menu_revision}</div>
-          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           <button
@@ -312,6 +312,38 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
         </div>
       ) : (
         <div className="mt-4 grid gap-3">
+          {eggGroup ? (
+            <div className="rounded-[20px] bg-[rgba(26,28,25,0.035)] p-4">
+              <label className="grid gap-2 font-semibold">
+                Store Default Egg / 门店默认蛋
+                <select
+                  aria-label="Store Default Egg"
+                  value={eggGroup.default_component_code ?? ''}
+                  disabled={saving || eggGroup.enabled === false}
+                  onChange={(event) => patchGroup(eggGroupIndex, {
+                    default_component_code: event.target.value || null,
+                    components: eggGroup.components.map((component) => ({
+                      ...component, is_default: component.component_code === event.target.value,
+                    })),
+                  })}
+                  className="min-h-11 rounded-[12px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2"
+                >
+                  <option value="">Choose egg / 选择蛋</option>
+                  {eggGroup.components.filter((component) => component.enabled && component.component_code).map((component) => (
+                    <option key={component.component_code} value={component.component_code}>{component.name_zh} / {component.name_en}</option>
+                  ))}
+                </select>
+              </label>
+              <p className="mt-2 text-sm text-[var(--muted)]">Applies to Combo items unless an item has an override. Customers can still choose another egg. / 套餐菜品默认使用此蛋；可为个别菜品设置例外，点单时仍可更改。</p>
+            </div>
+          ) : null}
+          {configuration ? (
+            <ComboEggOverridesPanel key={storeId} storeId={storeId} configuration={configuration} onChanged={(next) => {
+              setConfiguration(next)
+              setDraft((current) => current ? { ...current, item_overrides: next.item_overrides } : current)
+              onSaved?.('Item egg default saved / 菜品默认蛋已保存')
+            }} />
+          ) : null}
           {draft.groups.map((group, groupIndex) => (
             <div key={`${group.group_id ?? 'new'}:${group.group_code ?? groupIndex}`} className="rounded-[20px] bg-[rgba(26,28,25,0.035)] px-4 py-4">
               <div className={comboConfigurationLayoutClasses.groupRow}>
@@ -507,7 +539,7 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
                     >
                       Delete
                     </button>
-                    <label className={comboConfigurationLayoutClasses.defaultRow}>
+                    {groupCode(group) !== 'COMBO_EGG' ? <label className={comboConfigurationLayoutClasses.defaultRow}>
                       <input
                         type="radio"
                         checked={component.is_default || group.default_component_code === component.component_code}
@@ -517,7 +549,7 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
                         })) })}
                       />
                       Default component {component.component_code ? `· ${component.component_code}` : '· generated after save'}
-                    </label>
+                    </label> : null}
                   </div>
                 ))}
               </div>

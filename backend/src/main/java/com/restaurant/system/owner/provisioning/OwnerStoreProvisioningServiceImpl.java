@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.restaurant.system.common.auth.OwnerOrganizationAuthorizationService;
 import com.restaurant.system.common.feature.FeatureFlagService;
 import com.restaurant.system.common.feature.FeaturePackage;
+import com.restaurant.system.menu.addon.StoreAddonService;
 import com.restaurant.system.owner.exception.OwnerStoreProvisioningException;
 import com.restaurant.system.owner.master.ChainMasterMenuCatalogService;
 import com.restaurant.system.owner.master.ChainMasterMenuCategoryRepository;
@@ -47,6 +48,7 @@ public class OwnerStoreProvisioningServiceImpl implements OwnerStoreProvisioning
     private final OwnerStoreProvisioningFingerprint fingerprintService;
     private final OwnerStoreProvisioningRequestCoordinator requestCoordinator;
     private final OwnerStoreProvisioningMaterializer materializer;
+    private final StoreAddonService storeAddonService;
 
     public OwnerStoreProvisioningServiceImpl(
         FeatureFlagService featureFlagService,
@@ -62,7 +64,8 @@ public class OwnerStoreProvisioningServiceImpl implements OwnerStoreProvisioning
         ChainMasterMenuOptionRepository masterOptionRepository,
         OwnerStoreProvisioningFingerprint fingerprintService,
         OwnerStoreProvisioningRequestCoordinator requestCoordinator,
-        OwnerStoreProvisioningMaterializer materializer
+        OwnerStoreProvisioningMaterializer materializer,
+        StoreAddonService storeAddonService
     ) {
         this.featureFlagService = featureFlagService;
         this.runtimeGate = runtimeGate;
@@ -78,6 +81,7 @@ public class OwnerStoreProvisioningServiceImpl implements OwnerStoreProvisioning
         this.fingerprintService = fingerprintService;
         this.requestCoordinator = requestCoordinator;
         this.materializer = materializer;
+        this.storeAddonService = storeAddonService;
     }
 
     @Override
@@ -238,7 +242,8 @@ public class OwnerStoreProvisioningServiceImpl implements OwnerStoreProvisioning
             reservation.validationStatus(),
             reservation.resultCode(),
             reservation.errorCode(),
-            reservation.counts()
+            reservation.counts(),
+            reservation.storeId() == null ? List.of() : storeAddonService.getAddons(reservation.storeId()).conflicts()
         );
     }
 

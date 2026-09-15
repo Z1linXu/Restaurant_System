@@ -6,6 +6,7 @@ import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.menu.entity.MenuCategory;
 import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.entity.MenuItemOption;
+import com.restaurant.system.menu.addon.StoreAddonService;
 import com.restaurant.system.menu.repository.MenuCategoryRepository;
 import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.menu.repository.MenuItemRepository;
@@ -298,10 +299,28 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
     @Override
     @Transactional
     public MenuItem saveMenuItem(MenuItem menuItem) {
+        if (menuItem == null || menuItem.store_id == null) {
+            throw new BusinessException("Menu item Store is required");
+        }
         boolean creating = menuItem.id == null;
+        Long sampledStoreId = creating ? menuItem.store_id : menuItemRepository.findStoreIdById(menuItem.id)
+            .orElseThrow(() -> new BusinessException("Menu item not found"));
+        menuRevisionService.lockStoresInOrder(java.util.stream.Stream.of(sampledStoreId, menuItem.store_id)
+            .distinct().sorted().toList());
         MenuItem target = creating
             ? new MenuItem()
             : menuItemRepository.findById(menuItem.id).orElseThrow(() -> new BusinessException("Menu item not found"));
+        if (!creating && !java.util.Objects.equals(sampledStoreId, target.store_id)) {
+            throw new BusinessException("Menu item Store changed during update; reload the item and retry.");
+        }
+        if (menuItem.default_combo_egg_component_code != null
+            && !java.util.Objects.equals(menuItem.default_combo_egg_component_code, target.default_combo_egg_component_code)) {
+            throw new BusinessException("Use the item Combo Egg Default endpoint to change the default Combo egg component.");
+        }
+        if (target.default_combo_egg_component_code != null
+            && !java.util.Objects.equals(target.store_id, menuItem.store_id)) {
+            throw new BusinessException("Clear the item Combo egg default before moving the item to another Store.");
+        }
         Long previousStoreId = target.store_id;
         Long previousCategoryId = target.category_id;
         target.store_id = menuItem.store_id;
@@ -392,6 +411,10 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         MenuItemOption target = menuItemOption.id == null
             ? new MenuItemOption()
             : menuItemOptionRepository.findById(menuItemOption.id).orElseThrow(() -> new BusinessException("Menu item option not found"));
+        rejectComboWrite(target);
+        rejectAddonWrite(target);
+        rejectComboWrite(menuItemOption);
+        rejectAddonWrite(menuItemOption);
         Long previousStoreId = target.menu_item_id == null ? null : findMenuItemStoreId(target.menu_item_id);
         target.menu_item_id = menuItemOption.menu_item_id;
         target.option_type = menuItemOption.option_type;
@@ -407,6 +430,25 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         MenuItemOption saved = menuItemOptionRepository.save(target);
         incrementMenuRevisions(previousStoreId, findMenuItemStoreId(saved.menu_item_id));
         return saved;
+    }
+
+    private void rejectAddonWrite(MenuItemOption option) {
+        if (StoreAddonService.isAddon(option.option_group, option.option_type, option.option_code, option.name_zh, option.name_en)) {
+            throw new BusinessException("ADD_ON options are managed by the Store Add-on catalog. Use Add-ons and item eligibility; unresolved legacy rows require reconciliation.");
+        }
+    }
+
+    private void rejectComboWrite(MenuItemOption option) {
+        String group = option.option_group == null ? "" : option.option_group.trim();
+        boolean combo = !group.isEmpty()
+            ? "COMBO".equalsIgnoreCase(group)
+            : "combo".equalsIgnoreCase(option.option_code == null ? "" : option.option_code.trim())
+                || ("addon".equalsIgnoreCase(option.option_type == null ? "" : option.option_type.trim())
+                    && ("套餐".equals(option.name_zh == null ? "" : option.name_zh.trim())
+                        || "combo".equalsIgnoreCase(option.name_en == null ? "" : option.name_en.trim())));
+        if (combo) {
+            throw new BusinessException("COMBO pricing is system-controlled. Use Combo Policy and Pricing Rules.");
+        }
     }
 
     private Long findMenuItemStoreId(Long menuItemId) {

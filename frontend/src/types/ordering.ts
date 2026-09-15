@@ -227,6 +227,7 @@ export interface BackendMenuItem {
   is_active: boolean
   is_sold_out: boolean
   sort_order: number | null
+  default_combo_egg_component_code?: string | null
   options: BackendMenuOption[]
 }
 

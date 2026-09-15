@@ -24,6 +24,9 @@ The transaction creates or initializes Store-owned rows:
 - `stations` from profile station template;
 - `menu_items`;
 - `menu_item_options`;
+- Store-owned `store_addons` and item eligibility links to Organization-scoped
+  immutable Add-on definitions; ambiguous template business values remain
+  unresolved under the [catalog contract](MENU_ADDON_CATALOG_CONTRACT.md);
 - `store_pricing_policies`;
 - `store_combo_groups` and `store_combo_components`;
 - Store-owned `printing_display_rule_sets` and initial published revision;

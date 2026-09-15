@@ -117,21 +117,22 @@ public class MenuServiceImpl implements MenuService {
 
         Map<Long, List<MenuCatalogResponse.ItemResponse>> itemsByCategoryId = new LinkedHashMap<>();
         for (MenuItem item : items) {
-            itemsByCategoryId.computeIfAbsent(item.category_id, ignored -> new ArrayList<>())
-                .add(new MenuCatalogResponse.ItemResponse(
-                    item.id,
-                    item.category_id,
-                    item.station_id,
-                    item.name_zh,
-                    item.name_en,
-                    item.sku,
-                    item.item_type,
-                    item.base_price,
-                    item.is_active,
-                    item.is_sold_out,
-                    item.sort_order,
-                    optionsByItemId.getOrDefault(item.id, List.of())
-                ));
+            MenuCatalogResponse.ItemResponse itemResponse = new MenuCatalogResponse.ItemResponse(
+                item.id,
+                item.category_id,
+                item.station_id,
+                item.name_zh,
+                item.name_en,
+                item.sku,
+                item.item_type,
+                item.base_price,
+                item.is_active,
+                item.is_sold_out,
+                item.sort_order,
+                optionsByItemId.getOrDefault(item.id, List.of())
+            );
+            itemResponse.default_combo_egg_component_code = item.default_combo_egg_component_code;
+            itemsByCategoryId.computeIfAbsent(item.category_id, ignored -> new ArrayList<>()).add(itemResponse);
         }
 
         List<MenuCatalogResponse.CategoryResponse> categoryResponses = categories.stream()

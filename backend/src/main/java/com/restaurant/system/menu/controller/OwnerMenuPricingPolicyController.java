@@ -5,6 +5,7 @@ import com.restaurant.system.common.auth.AuthorizationService;
 import com.restaurant.system.common.auth.Capability;
 import com.restaurant.system.common.response.ApiResponse;
 import com.restaurant.system.menu.dto.MenuItemComboPolicyRequest;
+import com.restaurant.system.menu.dto.MenuItemComboEggDefaultRequest;
 import com.restaurant.system.menu.dto.MenuItemOptionAdminResponse;
 import com.restaurant.system.menu.dto.MenuItemSizeConfigurationRequest;
 import com.restaurant.system.menu.dto.StorePricingPolicyPreviewRequest;
@@ -139,6 +140,23 @@ public class OwnerMenuPricingPolicyController {
         List<MenuItemOptionAdminResponse> response = storePricingPolicyService.updateComboPolicy(itemId, request);
         auditLogService.record(user.storeId(), user, "MENU_ITEM_COMBO_POLICY_UPDATED", "MENU_ITEM", itemId, "Updated item combo policy", Map.of("menu_item_id", itemId), servletRequest);
         return ApiResponse.success("Combo policy updated", response);
+    }
+
+    @PutMapping("/items/{itemId}/combo-egg-default")
+    public ApiResponse<Void> updateComboEggDefault(
+        @PathVariable Long itemId,
+        @RequestBody MenuItemComboEggDefaultRequest request,
+        HttpServletRequest servletRequest
+    ) {
+        MenuItem item = menuItemRepository.findById(itemId)
+            .orElseThrow(() -> new com.restaurant.system.common.exception.BusinessException("Menu item not found: " + itemId));
+        Long authorizedStoreId = item.store_id;
+        var user = authorizationService.requireForStore(authorizedStoreId, Capability.ADMIN_MENU_MANAGE);
+        requireMenuManagement(authorizedStoreId);
+        storeComboConfigurationService.updateItemEggDefault(itemId, authorizedStoreId, request);
+        auditLogService.record(authorizedStoreId, user, "MENU_ITEM_COMBO_EGG_DEFAULT_UPDATED", "MENU_ITEM", itemId,
+            "Updated item combo egg default", Map.of("menu_item_id", itemId), servletRequest);
+        return ApiResponse.success("Combo egg default updated", null);
     }
 
     private com.restaurant.system.common.auth.AuthenticatedUser requireItemStore(Long itemId) {

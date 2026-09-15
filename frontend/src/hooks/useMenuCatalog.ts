@@ -55,26 +55,30 @@ function mapOption(option: BackendMenuItem['options'][number]): ChoiceOption {
 }
 
 function isComboUpcharge(option: ChoiceOption) {
-  if (option.optionGroup === 'COMBO' || option.optionCode === 'combo') {
-    return true
-  }
+  const group = normalizeComponentGroup(option.optionGroup)
+  if (group) return group === 'COMBO'
+  const code = normalizeComponentCode(option.optionCode)
+  if (code) return code === 'combo'
   // Legacy fallback for databases created before option_group/option_code existed.
-  return option.labelZh === '套餐' || option.labelEn === 'Combo'
+  return option.optionType?.trim().toLowerCase() === 'addon'
+    && (option.labelZh?.trim() === '套餐' || option.labelEn?.trim().toLowerCase() === 'combo')
 }
 
 function isComboEgg(option: ChoiceOption) {
-  if (option.optionGroup === 'COMBO_EGG') {
-    return true
-  }
-  // Legacy fallback for databases created before option_group existed.
+  const group = normalizeComponentGroup(option.optionGroup)
+  if (group) return group === 'COMBO_EGG'
+  const code = normalizeComponentCode(option.optionCode)
+  if (code) return code === 'combo_tea_egg' || code === 'combo_fried_egg'
+  // Names only identify legacy rows that have neither group nor code.
   return option.labelZh.includes('套餐') && (option.labelZh.includes('卤蛋') || option.labelZh.includes('煎蛋'))
 }
 
 function isComboSide(option: ChoiceOption) {
-  if (option.optionGroup === 'COMBO_SIDE') {
-    return true
-  }
-  // Legacy fallback for databases created before option_group existed.
+  const group = normalizeComponentGroup(option.optionGroup)
+  if (group) return group === 'COMBO_SIDE'
+  const code = normalizeComponentCode(option.optionCode)
+  if (code) return code === 'combo_edamame' || code === 'combo_shredded_potato' || code === 'combo_cucumber_salad'
+  // Names only identify legacy rows that have neither group nor code.
   return option.labelZh.includes('套餐') && (
     option.labelZh.includes('毛豆') || option.labelZh.includes('土豆丝') || option.labelZh.includes('拌黄瓜')
   )
@@ -290,7 +294,13 @@ export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
                   option: comboUpcharge,
                   optionId: comboUpcharge.id,
                   upcharge: comboUpcharge.priceDelta ?? 0,
-                  groups: storeComboGroups,
+                  groups: storeComboGroups.map((group) => {
+                    if (group.groupCode !== 'COMBO_EGG') return group
+                    const override = group.options.find((option) =>
+                      normalizeComponentCode(option.optionCode) === normalizeComponentCode(item.default_combo_egg_component_code),
+                    )
+                    return override ? { ...group, defaultOptionId: override.id } : group
+                  }),
                   eggs: storeComboEggs,
                   sides: storeComboSides,
                   sideRemoveOptions: buildSideRemoveOptions(storeComboSides, comboSideRemoves),

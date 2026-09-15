@@ -8,6 +8,14 @@ public class StoreComboConfigurationResponse {
     public Long store_id;
     public Long menu_revision;
     public List<GroupResponse> groups = new ArrayList<>();
+    public List<ItemOverrideResponse> item_overrides = new ArrayList<>();
+
+    public static class ItemOverrideResponse {
+        public Long item_id;
+        public String name_zh;
+        public String name_en;
+        public String default_combo_egg_component_code;
+    }
 
     public static class GroupResponse {
         public Long group_id;

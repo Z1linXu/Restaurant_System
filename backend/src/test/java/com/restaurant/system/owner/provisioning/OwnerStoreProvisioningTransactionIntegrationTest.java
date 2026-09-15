@@ -4,12 +4,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration;
 import com.restaurant.system.common.auth.AuthenticatedUser;
 import com.restaurant.system.common.exception.BusinessException;
+import com.restaurant.system.menu.addon.StoreAddonService;
 import com.restaurant.system.menu.combo.StoreComboComponentRepository;
 import com.restaurant.system.menu.combo.StoreComboGroupRepository;
 import com.restaurant.system.menu.pricing.StorePricingPolicyRepository;
@@ -112,6 +116,7 @@ class OwnerStoreProvisioningTransactionIntegrationTest {
     @MockBean private PhaseBPart1ProvisioningValidator provisioningValidator;
     @MockBean private StoreReadinessService readinessService;
     @MockBean private StoreActivationRequestCoordinator activationRequestCoordinator;
+    @MockBean private StoreAddonService storeAddonService;
 
     private Long organizationId;
 
@@ -127,6 +132,8 @@ class OwnerStoreProvisioningTransactionIntegrationTest {
 
         when(pricingPolicyRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(comboComponentRepository.findActiveByStoreIdOrdered(anyLong())).thenReturn(List.of());
+        when(storeAddonService.reconcile(anyLong(), eq(false))).thenAnswer(invocation ->
+            new StoreAddonService.ReconciliationReport(invocation.getArgument(0), false, 0, 0, List.of()));
         when(provisioningValidator.validate(anyLong(), anyLong(), any(Integer.class), any(Integer.class), any()))
             .thenReturn(new PhaseBProvisioningValidationResult("PASS", List.of()));
         when(printingRuleSetRepository.save(any())).thenAnswer(invocation -> {
@@ -173,6 +180,21 @@ class OwnerStoreProvisioningTransactionIntegrationTest {
         assertThat(failed.status).isEqualTo("FAILED");
         assertThat(failed.error_code).isEqualTo("INJECTED_LATE_READINESS_FAILURE");
         assertThat(failed.store_id).isNull();
+        verify(storeAddonService).reconcile(anyLong(), eq(false));
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void addonReconciliationFailureRollsBackNewStore() {
+        when(storeAddonService.reconcile(anyLong(), eq(false)))
+            .thenThrow(new BusinessException("INJECTED_ADDON_RECONCILIATION_FAILURE"));
+        OwnerStoreProvisioningRequestEntity request = requestRepository.saveAndFlush(requestEntity("addon-failure-key"));
+
+        BusinessException error = assertThrows(BusinessException.class,
+            () -> materializer.materialize(reservation(request.id), input()));
+
+        assertThat(error.getMessage()).isEqualTo("INJECTED_ADDON_RECONCILIATION_FAILURE");
+        assertThat(storeRepository.findAllByOrganizationIdAndCodeIgnoreCase(organizationId, "ROLLBACK_STORE")).isEmpty();
     }
 
     @Test
@@ -200,6 +222,12 @@ class OwnerStoreProvisioningTransactionIntegrationTest {
         ready.readiness_fingerprint = FINGERPRINT;
         doReturn(ready).when(readinessService).evaluateOperationalBaseline(anyLong(), anyLong(), anyLong());
 
+        StoreAddonService.Conflict addonConflict = new StoreAddonService.Conflict(
+            "fried_egg", List.of(81L, 82L), List.of("加煎蛋"), List.of("Fried Egg"),
+            List.of(new java.math.BigDecimal("2.00"), new java.math.BigDecimal("3.00")), "VALUES_DIFFER");
+        when(storeAddonService.reconcile(anyLong(), eq(false))).thenAnswer(invocation ->
+            new StoreAddonService.ReconciliationReport(invocation.getArgument(0), false, 0, 0, List.of(addonConflict)));
+
         OwnerStoreProvisioningRequestEntity request = requestRepository.saveAndFlush(requestEntity("business-create-key"));
         OwnerStoreProvisioningResult result = materializer.materialize(
             reservation(request.id),
@@ -222,6 +250,17 @@ class OwnerStoreProvisioningTransactionIntegrationTest {
         assertThat(userRepository.findAllByStore_id(store.id)).isEmpty();
         assertThat(storeDeviceRepository.findAllByStoreIdOrderByIdAsc(store.id)).isEmpty();
         assertThat(result.resultCode()).isEqualTo("BUSINESS_STORE_CREATED_LIVE");
+        assertThat(result.addonConflicts()).containsExactly(addonConflict);
+        assertThat(com.restaurant.system.owner.dto.OwnerBusinessStoreCreateResponse.from(result, store).addon_conflicts)
+            .containsExactly(addonConflict);
+        assertThat(com.restaurant.system.owner.dto.OwnerStoreProvisioningResponse.from(result).addon_conflicts)
+            .containsExactly(addonConflict);
+        assertThat(store.provisioned_profile_fingerprint_sha256).isEqualTo(FINGERPRINT);
+        assertThat(store.provisioned_master_menu_fingerprint_sha256).isEqualTo(FINGERPRINT);
+        var order = inOrder(printingRuleRevisionRepository, storeAddonService, provisioningValidator);
+        order.verify(printingRuleRevisionRepository).save(any());
+        order.verify(storeAddonService).reconcile(store.id, false);
+        order.verify(provisioningValidator).validate(anyLong(), anyLong(), any(Integer.class), any(Integer.class), any());
     }
 
     @Test

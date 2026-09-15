@@ -95,6 +95,7 @@ public class MenuCatalogResponse {
         public Boolean is_sold_out;
         public Integer sort_order;
         public List<OptionResponse> options;
+        public String default_combo_egg_component_code;
 
         public ItemResponse(
             Long id,

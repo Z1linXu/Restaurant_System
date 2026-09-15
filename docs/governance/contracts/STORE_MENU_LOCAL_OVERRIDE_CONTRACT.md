@@ -43,6 +43,7 @@ Store actual pricing remains:
 ```text
 menu_items.base_price
 store_pricing_policies
+store_addons.price (ADD_ON catalog; option rows are materialization)
 ```
 
 Store-local pricing changes do not rewrite Master Menu prices.

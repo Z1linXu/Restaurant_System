@@ -2,6 +2,7 @@ package com.restaurant.system.staging.cleanup;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -9,6 +10,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.mockingDetails;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.restaurant.system.common.auth.AuthenticatedUser;
@@ -109,6 +111,38 @@ class StoreFixtureCleanupServiceImplTest {
             request
         ));
         verifyNoInteractions(jdbcTemplate);
+    }
+
+    @Test
+    void fixtureCleanupDeletesStoreAddonsAfterOptionsAndPreservesOrganizationDefinitions() {
+        Store store = phaseBStore(9L, "CHINATOWN");
+        doReturn(List.of(store)).when(storeRepository).findAllByIdInForUpdateOrderByIdAsc(List.of(9L));
+        doReturn(1).when(jdbcTemplate).update(anyString(), any(Object[].class));
+        doReturn(List.of("store_addons")).when(jdbcTemplate).query(
+            eq("select distinct table_name from information_schema.columns where table_schema = 'public' and column_name = 'store_id' order by table_name"),
+            any(RowMapper.class)
+        );
+        StoreFixtureCleanupRequest request = new StoreFixtureCleanupRequest();
+        request.store_ids = List.of(9L);
+        request.approved_owner_manual_store_ids = List.of(9L);
+        request.dry_run = false;
+
+        StoreFixtureCleanupResponse response = service.cleanup(
+            new AuthenticatedUser(7L, 1L, 1L, "owner", "Owner", "OWNER"),
+            1L, "addon-cleanup-key", request);
+
+        List<String> mutations = mockingDetails(jdbcTemplate).getInvocations().stream()
+            .filter(invocation -> invocation.getMethod().getName().equals("update"))
+            .map(invocation -> (String) invocation.getArgument(0))
+            .toList();
+        int optionDelete = mutations.indexOf("delete from menu_item_options where menu_item_id in (select id from menu_items where store_id in (?))");
+        int addonDelete = mutations.indexOf("delete from store_addons where store_id in (?)");
+        int storeDelete = mutations.indexOf("delete from stores where id in (?)");
+        assertThat(optionDelete).isGreaterThanOrEqualTo(0).isLessThan(addonDelete);
+        assertThat(addonDelete).isLessThan(storeDelete);
+        assertThat(mutations).noneMatch(sql -> sql.contains("organization_addon_definitions"));
+        assertThat(response.status).isEqualTo("EXECUTED");
+        assertThat(response.deleted_counts).containsEntry("store_addons", 1);
     }
 
     private static Store phaseBStore(Long id, String code) {
