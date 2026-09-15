@@ -103,9 +103,15 @@ Before and after fixture creation/menu edits/negative authorization checks:
   `d2bc60a40ed879bf45d51d1bfdaa15f000f2b4ad4312d491484c525005b5dab3`.
 
 The supported Master selection API advertises its fingerprint but does not
-return Master artifact bytes. Do not claim before/after Master artifact content
-proof from that API. Repository immutability/transaction tests are separate
-evidence; a suitable runtime artifact proof remains to be completed.
+return Master artifact bytes; that API alone is not content proof. A separate
+19:02:22 UTC Staging database audit used `BEGIN READ ONLY`, 15-second timeout,
+Organization 1 / Master version 50 only. Actual `content_json` was canonicalized
+with sorted keys, preserved arrays and compact UTF-8 JSON; its SHA-256 equalled
+the pre-acceptance advertised fingerprint above. The stored fingerprint also
+matched; `updated_at` remained `2026-08-16T09:49:12.883696`. No content or secret
+was printed. This supplies actual current canonical-content agreement with the
+before-run fingerprint, not a claim of an independently captured before-run raw
+byte snapshot. The earlier script's NOT_RUN record remains unchanged.
 
 ## Remaining acceptance evidence
 
@@ -117,7 +123,6 @@ evidence; a suitable runtime artifact proof remains to be completed.
    same-Organization Store isolation. PostgreSQL composite-FK and authorization
    tests passed, but are not a substitute for this requested runtime slice.
    Do not invent direct membership SQL or a new provisioning engine to obtain it.
-3. Master artifact byte/content immutability proof as distinguished above.
 
 Once the Owner browser session is available, continue Combo exception add/edit/
 remove and initial default/manual choice, Add-ons CRUD/code-readonly/coverage,
