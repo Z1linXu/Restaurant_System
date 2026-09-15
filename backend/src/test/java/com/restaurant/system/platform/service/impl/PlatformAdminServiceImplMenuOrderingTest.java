@@ -6,11 +6,14 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.restaurant.system.menu.entity.MenuCategory;
+import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.entity.MenuItemOption;
 import com.restaurant.system.menu.repository.MenuCategoryRepository;
@@ -43,6 +46,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 @ExtendWith(MockitoExtension.class)
 class PlatformAdminServiceImplMenuOrderingTest {
@@ -335,5 +341,291 @@ class PlatformAdminServiceImplMenuOrderingTest {
         store.code = "STORE_" + storeId;
         store.status = "inactive";
         return store;
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"ADD_ON", " add_on ", " "})
+    void platformCreateCannotBypassAddonCatalog(String group) {
+        MenuItemOption request = addon(group);
+
+        BusinessException error = assertThrows(BusinessException.class, () -> service.saveMenuItemOption(request));
+
+        assertThat(error.getMessage()).contains("Store Add-on catalog", "reconciliation");
+        verify(menuItemOptionRepository, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"ADD_ON", " add_on ", " "})
+    void platformCannotDisguiseExistingAddonAsAnotherGroupOrMoveIt(String group) {
+        MenuItemOption existing = addon(group);
+        existing.id = 90L;
+        when(menuItemOptionRepository.findById(90L)).thenReturn(Optional.of(existing));
+        MenuItemOption request = addon("REMOVE");
+        request.id = 90L;
+        request.menu_item_id = 25L;
+        request.option_type = "remove";
+        request.name_zh = "替换";
+
+        assertThrows(BusinessException.class, () -> service.saveMenuItemOption(request));
+
+        assertEquals(14L, existing.menu_item_id);
+        assertEquals("加煎蛋", existing.name_zh);
+        verify(menuItemOptionRepository, never()).save(any());
+    }
+
+    @Test
+    void platformCannotConvertNonAddonIntoCatalogAddon() {
+        MenuItemOption existing = addon("REMOVE");
+        existing.option_type = "remove";
+        existing.id = 90L;
+        when(menuItemOptionRepository.findById(90L)).thenReturn(Optional.of(existing));
+        MenuItemOption request = addon("ADD_ON");
+        request.id = 90L;
+
+        assertThrows(BusinessException.class, () -> service.saveMenuItemOption(request));
+
+        assertEquals("REMOVE", existing.option_group);
+        verify(menuItemOptionRepository, never()).save(any());
+    }
+
+    @Test
+    void platformNonAddonWriteStillUpdatesOwningStoreRevision() {
+        MenuItemOption request = addon("REMOVE");
+        request.option_type = "remove";
+        MenuItem item = new MenuItem();
+        item.id = 14L;
+        item.store_id = 3L;
+        when(menuItemRepository.findById(14L)).thenReturn(Optional.of(item));
+        when(menuItemOptionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertEquals("REMOVE", service.saveMenuItemOption(request).option_group);
+
+        verify(menuRevisionService).incrementRevision(3L);
+    }
+
+    private MenuItemOption addon(String group) {
+        MenuItemOption option = new MenuItemOption();
+        option.menu_item_id = 14L;
+        option.option_type = "addon";
+        option.option_group = group;
+        option.option_code = "fried_egg";
+        option.name_zh = "加煎蛋";
+        option.name_en = "Fried Egg";
+        return option;
+    }
+
+    @Test
+    void genericItemCreationCannotSetComboEggOverride() {
+        MenuItem item = new MenuItem();
+        item.store_id = 3L;
+        item.default_combo_egg_component_code = "combo_fried_egg";
+
+        assertThrows(BusinessException.class, () -> service.saveMenuItem(item));
+
+        verify(menuItemRepository, never()).save(any());
+    }
+
+    @Test
+    void genericItemUpdateCannotChangeComboEggOverrideOrMoveItsStore() {
+        MenuItem existing = new MenuItem();
+        existing.id = 14L;
+        existing.store_id = 3L;
+        existing.default_combo_egg_component_code = "combo_fried_egg";
+        when(menuItemRepository.findStoreIdById(14L)).thenReturn(Optional.of(3L));
+        when(menuItemRepository.findById(14L)).thenReturn(Optional.of(existing));
+        MenuItem request = new MenuItem();
+        request.id = 14L;
+        request.store_id = 3L;
+        request.default_combo_egg_component_code = "combo_tea_egg";
+
+        assertThrows(BusinessException.class, () -> service.saveMenuItem(request));
+        request.default_combo_egg_component_code = null;
+        request.store_id = 4L;
+        assertThrows(BusinessException.class, () -> service.saveMenuItem(request));
+
+        assertEquals(3L, existing.store_id);
+        assertEquals("combo_fried_egg", existing.default_combo_egg_component_code);
+        verify(menuItemRepository, never()).save(any());
+    }
+
+    @Test
+    void genericItemUpdatePreservesOmittedComboEggOverride() {
+        MenuItem existing = new MenuItem();
+        existing.id = 14L;
+        existing.store_id = 3L;
+        existing.sort_order = 10;
+        existing.default_combo_egg_component_code = "combo_fried_egg";
+        when(menuItemRepository.findStoreIdById(14L)).thenReturn(Optional.of(3L));
+        when(menuItemRepository.findById(14L)).thenReturn(Optional.of(existing));
+        when(menuItemRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        MenuItem request = new MenuItem();
+        request.id = 14L;
+        request.store_id = 3L;
+        request.name_zh = "新名称";
+
+        assertEquals("combo_fried_egg", service.saveMenuItem(request).default_combo_egg_component_code);
+        verify(menuRevisionService).incrementRevision(3L);
+    }
+
+    @Test
+    void genericItemMoveLocksBothStoresBeforeLoadingManagedItem() {
+        MenuItem existing = new MenuItem();
+        existing.id = 14L;
+        existing.store_id = 9L;
+        when(menuItemRepository.findStoreIdById(14L)).thenReturn(Optional.of(9L));
+        when(menuItemRepository.findById(14L)).thenReturn(Optional.of(existing));
+        when(menuItemRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        MenuItem request = new MenuItem();
+        request.id = 14L;
+        request.store_id = 3L;
+
+        assertEquals(3L, service.saveMenuItem(request).store_id);
+
+        var order = inOrder(menuItemRepository, menuRevisionService);
+        order.verify(menuItemRepository).findStoreIdById(14L);
+        order.verify(menuRevisionService).lockStoresInOrder(List.of(3L, 9L));
+        order.verify(menuItemRepository).findById(14L);
+        verify(menuRevisionService).incrementRevisionsInOrder(List.of(9L, 3L));
+    }
+
+    @Test
+    void genericItemMoveFailsIfItemMovedWhileWaitingForStoreLocks() {
+        MenuItem existing = new MenuItem();
+        existing.id = 14L;
+        existing.store_id = 5L;
+        when(menuItemRepository.findStoreIdById(14L)).thenReturn(Optional.of(9L));
+        when(menuItemRepository.findById(14L)).thenReturn(Optional.of(existing));
+        MenuItem request = new MenuItem();
+        request.id = 14L;
+        request.store_id = 3L;
+
+        BusinessException error = assertThrows(BusinessException.class, () -> service.saveMenuItem(request));
+
+        assertThat(error.getMessage()).contains("Store changed");
+        assertEquals(5L, existing.store_id);
+        verify(menuRevisionService).lockStoresInOrder(List.of(3L, 9L));
+        verify(menuItemRepository, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"COMBO", "combo", " COMBO "})
+    void platformCannotCreateCanonicalComboThroughGenericOptionWriter(String group) {
+        MenuItemOption request = addon(group);
+
+        BusinessException error = assertThrows(BusinessException.class, () -> service.saveMenuItemOption(request));
+
+        assertThat(error.getMessage()).contains("Combo Policy", "Pricing Rules");
+        verify(menuItemOptionRepository, never()).save(any());
+        verifyNoInteractions(menuItemRepository, menuRevisionService);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"deactivate", "move", "convert", "convert_to_addon"})
+    void platformRejectsSourceComboMutationBeforeChangingOptionOrItemOverride(String mutation) {
+        MenuItemOption existing = addon("COMBO");
+        existing.id = 90L;
+        existing.option_code = "combo";
+        existing.name_zh = "套餐";
+        existing.name_en = "Combo";
+        existing.price_delta = new java.math.BigDecimal("5.00");
+        existing.is_active = true;
+        when(menuItemOptionRepository.findById(90L)).thenReturn(Optional.of(existing));
+        MenuItemOption request = addon("COMBO");
+        request.id = 90L;
+        request.option_code = "combo";
+        request.name_zh = "套餐";
+        request.name_en = "Combo";
+        request.is_active = true;
+        switch (mutation) {
+            case "deactivate" -> request.is_active = false;
+            case "move" -> request.menu_item_id = 25L;
+            case "convert" -> {
+                request.option_group = "REMOVE";
+                request.option_type = "remove";
+                request.option_code = "no_cilantro";
+            }
+            case "convert_to_addon" -> request.option_group = "ADD_ON";
+            default -> throw new AssertionError("Unexpected test mutation");
+        }
+
+        BusinessException error = assertThrows(BusinessException.class, () -> service.saveMenuItemOption(request));
+
+        assertThat(error.getMessage()).contains("Combo Policy");
+        assertEquals(14L, existing.menu_item_id);
+        assertEquals("COMBO", existing.option_group);
+        assertEquals("combo", existing.option_code);
+        assertEquals("套餐", existing.name_zh);
+        assertEquals(new java.math.BigDecimal("5.00"), existing.price_delta);
+        assertEquals(true, existing.is_active);
+        verify(menuItemOptionRepository, never()).save(any());
+        // Denial occurs before any item lookup/write, so the owning item's override stays intact.
+        verifyNoInteractions(menuItemRepository, menuRevisionService);
+    }
+
+    @Test
+    void platformCannotConvertAnotherGroupIntoCanonicalCombo() {
+        MenuItemOption existing = addon("REMOVE");
+        existing.id = 90L;
+        existing.option_type = "remove";
+        existing.option_code = "no_cilantro";
+        existing.is_active = true;
+        when(menuItemOptionRepository.findById(90L)).thenReturn(Optional.of(existing));
+        MenuItemOption request = addon("COMBO");
+        request.id = 90L;
+
+        BusinessException error = assertThrows(BusinessException.class, () -> service.saveMenuItemOption(request));
+
+        assertThat(error.getMessage()).contains("Combo Policy");
+        assertEquals("REMOVE", existing.option_group);
+        assertEquals("no_cilantro", existing.option_code);
+        assertEquals(true, existing.is_active);
+        verify(menuItemOptionRepository, never()).save(any());
+        verifyNoInteractions(menuItemRepository, menuRevisionService);
+    }
+
+    @Test
+    void platformExplicitRemoveWithComboCodeAndNamesKeepsItsOwnSemantics() {
+        MenuItemOption existing = addon("REMOVE");
+        existing.id = 90L;
+        existing.option_code = "combo";
+        existing.name_zh = "套餐";
+        existing.name_en = "Combo";
+        when(menuItemOptionRepository.findById(90L)).thenReturn(Optional.of(existing));
+        MenuItem item = new MenuItem();
+        item.id = 14L;
+        item.store_id = 3L;
+        item.default_combo_egg_component_code = "combo_fried_egg";
+        when(menuItemRepository.findById(14L)).thenReturn(Optional.of(item));
+        when(menuItemOptionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        MenuItemOption request = addon("REMOVE");
+        request.id = 90L;
+        request.option_code = "combo";
+        request.name_zh = "套餐";
+        request.name_en = "Combo";
+        request.is_active = false;
+
+        MenuItemOption saved = service.saveMenuItemOption(request);
+
+        assertEquals("REMOVE", saved.option_group);
+        assertEquals(false, saved.is_active);
+        assertEquals("combo_fried_egg", item.default_combo_egg_component_code);
+        verify(menuRevisionService).incrementRevision(3L);
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" "})
+    void platformStillProtectsLegacyComboUpcharge(String group) {
+        MenuItemOption request = addon(group);
+        request.option_code = "combo";
+        request.name_zh = "套餐";
+        request.name_en = "Combo";
+
+        BusinessException error = assertThrows(BusinessException.class, () -> service.saveMenuItemOption(request));
+
+        assertThat(error.getMessage()).contains("Combo Policy");
+        verify(menuItemOptionRepository, never()).save(any());
     }
 }

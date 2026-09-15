@@ -49,15 +49,16 @@ function getSelectedAddOns(options: ChoiceOption[] | undefined, addOnQuantities:
 }
 
 export function buildDefaultDraft(menuItem: MenuItem): ItemCustomizationDraft {
+  const comboSelections = defaultComboSelections(menuItem.customization?.combo?.groups ?? [])
   return {
     sizeId: menuItem.customization?.sizes?.options[0]?.id,
     soupBaseId: menuItem.customization?.soupBases?.options[0]?.id,
     noodleTypeId: menuItem.customization?.noodleTypes?.[0]?.id,
     spicyLevelId: menuItem.customization?.spicyLevels?.[0]?.id,
     comboEnabled: false,
-    comboEggId: menuItem.customization?.combo?.eggs[0]?.id,
-    comboSideId: menuItem.customization?.combo?.sides[0]?.id,
-    comboSelections: defaultComboSelections(menuItem.customization?.combo?.groups ?? []),
+    comboEggId: comboSelections.COMBO_EGG ?? menuItem.customization?.combo?.eggs[0]?.id,
+    comboSideId: comboSelections.COMBO_SIDE ?? menuItem.customization?.combo?.sides[0]?.id,
+    comboSelections,
     comboSideRemoveIds: [],
     addOnQuantities: {},
     removeIds: [],

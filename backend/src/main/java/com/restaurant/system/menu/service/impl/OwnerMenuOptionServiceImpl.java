@@ -1,6 +1,7 @@
 package com.restaurant.system.menu.service.impl;
 
 import com.restaurant.system.common.exception.BusinessException;
+import com.restaurant.system.menu.addon.StoreAddonService;
 import com.restaurant.system.menu.dto.MenuItemOptionAdminResponse;
 import com.restaurant.system.menu.dto.MenuItemOptionReorderRequest;
 import com.restaurant.system.menu.dto.MenuItemOptionUpsertRequest;
@@ -122,7 +123,8 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
             option.updated_at = now;
         }
         validateSizeConfiguration(new ArrayList<>(optionsById.values()));
-        optionsById.values().forEach(menuItemOptionRepository::save);
+        request.options.stream().map(optionOrder -> optionsById.get(optionOrder.id))
+            .distinct().forEach(menuItemOptionRepository::save);
         menuRevisionService.incrementRevision(menuItem.store_id);
         return getOptions(itemId);
     }
@@ -137,6 +139,8 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
         String optionGroup = normalizeGroup(request.option_group);
         Long parentOptionId = request.parent_option_id;
         String optionType = normalizeOptionType(request.option_type, optionGroup);
+        rejectAddonWrite(optionGroup, optionType, request.option_code, request.name_zh, request.name_en);
+        rejectComboWrite(optionGroup, optionType, request.option_code, request.name_zh, request.name_en);
         if (isSizeSemantic(optionGroup, optionType) && parentOptionId != null) {
             throw new BusinessException("SIZE options cannot have a parent option");
         }
@@ -295,8 +299,15 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
         if (option != null && isSizeOption(option)) {
             throw new BusinessException("SIZE options are system-controlled. Use Size Configuration to choose supported Sizes.");
         }
-        if (option != null && isComboUpcharge(option)) {
-            throw new BusinessException("COMBO pricing is system-controlled. Use Combo Policy and Pricing Rules.");
+        if (option != null) {
+            rejectComboWrite(option.option_group, option.option_type, option.option_code, option.name_zh, option.name_en);
+            rejectAddonWrite(option.option_group, option.option_type, option.option_code, option.name_zh, option.name_en);
+        }
+    }
+
+    private void rejectAddonWrite(String group, String type, String code, String nameZh, String nameEn) {
+        if (StoreAddonService.isAddon(group, type, code, nameZh, nameEn)) {
+            throw new BusinessException("ADD_ON options are managed by the Store Add-on catalog. Use Add-ons and item eligibility; unresolved legacy rows require reconciliation.");
         }
     }
 
@@ -308,18 +319,16 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
         return option != null && GROUP_SIZE.equals(normalizeGroup(option.option_group));
     }
 
-    private boolean isComboUpcharge(MenuItemOption option) {
-        if (option == null) {
-            return false;
+    private void rejectComboWrite(String group, String type, String code, String nameZh, String nameEn) {
+        String normalizedGroup = normalizeGroup(group);
+        boolean combo = normalizedGroup != null
+            ? GROUP_COMBO.equals(normalizedGroup)
+            : "combo".equalsIgnoreCase(blankToNull(code))
+                || ("addon".equalsIgnoreCase(normalizeOptionTypeValue(type))
+                    && ("套餐".equals(blankToNull(nameZh)) || "combo".equalsIgnoreCase(blankToNull(nameEn))));
+        if (combo) {
+            throw new BusinessException("COMBO pricing is system-controlled. Use Combo Policy and Pricing Rules.");
         }
-        if (GROUP_COMBO.equals(normalizeGroup(option.option_group))) {
-            return true;
-        }
-        if ("combo".equalsIgnoreCase(blankToNull(option.option_code))) {
-            return true;
-        }
-        return "addon".equalsIgnoreCase(normalizeOptionTypeValue(option.option_type))
-            && ("套餐".equals(option.name_zh) || "combo".equalsIgnoreCase(blankToNull(option.name_en)));
     }
 
     private boolean isSizeSemantic(String optionGroup, String optionType) {
@@ -341,6 +350,7 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
         response.menu_item_id = option.menu_item_id;
         response.option_type = option.option_type;
         response.option_code = option.option_code;
+        response.store_addon_id = option.store_addon_id;
         response.option_group = option.option_group;
         response.parent_option_id = option.parent_option_id;
         response.sort_order = option.sort_order;

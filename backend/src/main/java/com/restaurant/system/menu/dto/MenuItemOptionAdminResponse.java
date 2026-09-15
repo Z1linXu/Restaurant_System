@@ -7,6 +7,7 @@ public class MenuItemOptionAdminResponse {
 
     public Long id;
     public Long menu_item_id;
+    public Long store_addon_id;
     public String option_type;
     public String option_code;
     public String option_group;

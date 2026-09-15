@@ -58,6 +58,9 @@ public class MenuItem {
     @Column(name = "sort_order")
     public Integer sort_order;
 
+    @Column(name = "default_combo_egg_component_code", length = 120)
+    public String default_combo_egg_component_code;
+
     @Column(name = "created_at")
     public LocalDateTime created_at;
 

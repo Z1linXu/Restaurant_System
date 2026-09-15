@@ -14,6 +14,7 @@ export type MenuOptionGroup =
 
 export interface MenuItemOptionAdminRecord {
   id: number
+  store_addon_id?: number | null
   menu_item_id: number
   option_type: string
   option_code: string | null
@@ -118,6 +119,12 @@ export interface StoreComboConfigurationRecord {
   store_id: number
   menu_revision: number
   groups: StoreComboConfigurationGroupRecord[]
+  item_overrides?: Array<{
+    item_id: number
+    name_zh: string
+    name_en: string
+    default_combo_egg_component_code: string | null
+  }>
 }
 
 export interface StoreComboConfigurationPayload {
@@ -218,6 +225,13 @@ export function updateStorePricingPolicy(payload: StorePricingPolicyPayload) {
 
 export function fetchStoreComboConfiguration(storeId: number) {
   return request<StoreComboConfigurationRecord>(`/api/v1/admin/menu/combo-configuration?store_id=${storeId}`)
+}
+
+export function updateOwnerMenuItemComboEggDefault(itemId: number, componentCode: string | null) {
+  return request<void>(`/api/v1/admin/menu/items/${itemId}/combo-egg-default`, {
+    method: 'PUT',
+    body: JSON.stringify({ default_combo_egg_component_code: componentCode }),
+  })
 }
 
 export function updateStoreComboConfiguration(payload: StoreComboConfigurationPayload) {

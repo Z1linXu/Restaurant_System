@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import type { BackendMenuCatalog } from '../types/ordering'
+import type { BackendMenuCatalog, BackendMenuOption } from '../types/ordering'
 import { createLocalDraftRecord } from '../offline/localDrafts'
 import { buildFrozenSubmitPayload, buildLocalLineItem } from './useDraftOrder'
 import { mapCatalog } from './useMenuCatalog'
 import { buildDefaultDraft } from './useOrderSessions'
+import { resolveComboDraftSelections } from '../utils/comboSelection'
 
 function catalog(): BackendMenuCatalog {
   return {
@@ -56,7 +57,134 @@ function catalog(): BackendMenuCatalog {
   }
 }
 
+function catalogWithOptions(options: BackendMenuOption[]): BackendMenuCatalog {
+  const data = catalog()
+  data.categories[0].items = [{ ...data.categories[0].items[0], options }]
+  data.combo_configuration = {
+    store_id: 1, menu_revision: 2,
+    groups: [{
+      component_group: 'COMBO_EGG', name_zh: '蛋', name_en: 'Egg', default_component_code: 'combo_fried_egg',
+      components: [{ component_group: 'COMBO_EGG', component_code: 'combo_fried_egg', name_zh: '套餐煎蛋', name_en: 'Combo', enabled: true, display_order: 1, is_default: true }],
+    }],
+  }
+  return data
+}
+
+function addonOption(patch: Partial<BackendMenuOption> = {}): BackendMenuOption {
+  return { id: 200, option_type: 'addon', option_group: 'ADD_ON', option_code: 'fried_egg', name_zh: '煎蛋', name_en: 'Fried Egg', price_delta: 2, is_active: true, parent_option_id: null, sort_order: 1, ...patch }
+}
+
+describe('menu option semantic identity survives renames', () => {
+  it.each([
+    ['套餐煎蛋', 'Fried Egg'], ['套餐卤蛋', 'Tea Egg'], ['套餐土豆丝', 'Side'], ['煎蛋', 'Combo'], ['套餐', 'Combo'],
+  ])('keeps explicit ADD_ON visible without Combo capability when renamed to %s / %s', (name_zh, name_en) => {
+    const before = mapCatalog(catalogWithOptions([addonOption()])).items[0]
+    const renamed = mapCatalog(catalogWithOptions([addonOption({ name_zh, name_en })])).items[0]
+    expect(renamed.customization?.combo).toBeUndefined()
+    expect(renamed.customization?.addOns).toEqual([expect.objectContaining({ id: '200', optionCode: 'fried_egg', optionGroup: 'ADD_ON', labelZh: name_zh, labelEn: name_en, priceDelta: 2 })])
+    const selection = { ...buildDefaultDraft(renamed), addOnQuantities: { '200': 1 } }
+    expect(buildLocalLineItem(renamed, selection).lineSubtotal).toBe(buildLocalLineItem(before, selection).lineSubtotal)
+  })
+
+  it.each([
+    ['ADD_ON', 'combo', false, true],
+    [' ADD_ON ', 'combo_fried_egg', false, true],
+    ['COMBO_EGG', 'combo', false, false],
+    ['COMBO', 'fried_egg', true, false],
+    [null, 'fried_egg', false, true],
+    [null, 'combo_fried_egg', false, false],
+    [null, 'combo_tea_egg', false, false],
+    [null, 'combo_edamame', false, false],
+    [null, 'combo', true, false],
+    [null, null, true, false],
+    [' ', ' ', true, false],
+  ] as const)('uses group=%s then code=%s before the legacy name', (option_group, option_code, combo, visible) => {
+    const item = mapCatalog(catalogWithOptions([addonOption({ option_group, option_code, name_zh: '套餐', name_en: 'Combo' })])).items[0]
+    expect(Boolean(item.customization?.combo)).toBe(combo)
+    expect(item.customization?.addOns?.some((option) => option.id === '200')).toBe(visible)
+  })
+
+  it('still recognizes name-only legacy egg and side choices without treating them as upgrades', () => {
+    const options = ['套餐煎蛋', '套餐卤蛋', '套餐毛豆', '套餐土豆丝', '套餐拌黄瓜'].map((name_zh, index) => addonOption({ id: 200 + index, option_group: null, option_code: null, name_zh, name_en: '' }))
+    const item = mapCatalog(catalogWithOptions(options)).items[0]
+    expect(item.customization?.addOns).toEqual([])
+    expect(item.customization?.combo).toBeUndefined()
+  })
+
+  it('preserves separate paid fried_egg and included combo_fried_egg snapshots even with identical names', () => {
+    const item = mapCatalog(catalogWithOptions([
+      addonOption({ name_zh: '套餐煎蛋', name_en: 'Combo' }),
+      addonOption({ id: 201, option_group: 'COMBO', option_code: 'combo', name_zh: '升级', name_en: 'Upgrade', price_delta: 5 }),
+    ])).items[0]
+    expect(item.customization?.combo?.upcharge).toBe(5)
+    expect(item.customization?.combo?.optionId).toBe('201')
+    const line = buildLocalLineItem(item, { ...buildDefaultDraft(item), comboEnabled: true, addOnQuantities: { '200': 1 } })
+    expect(line.lineSubtotal).toBe(item.price + 5 + 2)
+    expect(line.optionSnapshots).toEqual(expect.arrayContaining([
+      expect.objectContaining({ optionCode: 'fried_egg', optionGroup: 'ADD_ON', priceDelta: 2 }),
+      expect.objectContaining({ optionCode: 'combo_fried_egg', optionGroup: 'COMBO_EGG', priceDelta: 0 }),
+    ]))
+  })
+})
+
 describe('ordering menu item display order', () => {
+  it('resolves item egg defaults after user choices and before Store defaults without changing pricing or frozen lines', () => {
+    const data = catalog()
+    data.combo_configuration = {
+      store_id: 1, menu_revision: 2,
+      groups: [{
+        component_group: 'COMBO_EGG', name_zh: '蛋', name_en: 'Egg',
+        default_component_code: 'combo_tea_egg',
+        components: ['combo_tea_egg', 'combo_fried_egg'].map((code, index) => ({
+          component_group: 'COMBO_EGG', component_code: code, name_zh: code, name_en: code,
+          enabled: true, display_order: index, is_default: index === 0,
+        })),
+      }],
+    }
+    const sourceItem = data.categories[0].items[0]
+    data.categories[0].items = [sourceItem]
+    sourceItem.default_combo_egg_component_code = 'combo_fried_egg'
+    sourceItem.options = [{
+      id: 100, option_type: 'addon', option_code: 'combo', option_group: 'COMBO',
+      parent_option_id: null, sort_order: 0, name_zh: '套餐', name_en: 'Combo', price_delta: 5, is_active: true,
+    }]
+    const item = mapCatalog(data).items[0]
+    const defaultDraft = { ...buildDefaultDraft(item), comboEnabled: true }
+    expect(defaultDraft.comboEggId).toBe('-20102')
+    expect(defaultDraft.comboSelections.COMBO_EGG).toBe('-20102')
+    const line = buildLocalLineItem(item, defaultDraft)
+    expect(line.lineSubtotal).toBe(sourceItem.base_price + 5)
+    expect(line.optionSnapshots).toEqual(expect.arrayContaining([
+      expect.objectContaining({ optionCode: 'combo_fried_egg', optionGroup: 'COMBO_EGG', priceDelta: 0 }),
+    ]))
+    const manual = { ...defaultDraft, comboEggId: '-20101', comboSelections: { COMBO_EGG: '-20101' } }
+    expect(resolveComboDraftSelections(manual, item.customization!.combo!.groups).comboEggId).toBe('-20101')
+    expect(buildLocalLineItem(item, manual).lineSubtotal).toBe(line.lineSubtotal)
+
+    sourceItem.default_combo_egg_component_code = null
+    const storeDefaultItem = mapCatalog(data).items[0]
+    expect(buildDefaultDraft(storeDefaultItem).comboEggId).toBe('-20101')
+    expect(resolveComboDraftSelections(defaultDraft, storeDefaultItem.customization!.combo!.groups).comboEggId).toBe('-20102')
+    expect(line.optionSnapshots!.some((option) => option.optionCode === 'combo_fried_egg')).toBe(true)
+
+    for (const invalid of ['add_fried_egg', 'combo_missing']) {
+      sourceItem.default_combo_egg_component_code = invalid
+      expect(buildDefaultDraft(mapCatalog(data).items[0]).comboEggId).toBe('-20101')
+    }
+    sourceItem.default_combo_egg_component_code = 'combo_fried_egg'
+    data.combo_configuration.groups[0].components[1].enabled = false
+    expect(buildDefaultDraft(mapCatalog(data).items[0]).comboEggId).toBe('-20101')
+    data.combo_configuration.groups[0].default_component_code = 'missing'
+    expect(buildDefaultDraft(mapCatalog(data).items[0]).comboEggId).toBe('-20101')
+
+    data.combo_configuration.groups[0].components[1].enabled = true
+    data.combo_configuration.groups[0].default_component_code = 'combo_tea_egg'
+    data.categories[0].items.push({ ...sourceItem, id: 99, default_combo_egg_component_code: null })
+    const siblings = mapCatalog(data).items
+    expect(buildDefaultDraft(siblings.find((candidate) => candidate.id === String(sourceItem.id))!).comboEggId).toBe('-20102')
+    expect(buildDefaultDraft(siblings.find((candidate) => candidate.id === '99')!).comboEggId).toBe('-20101')
+  })
+
   it('maps category items by persisted sort order with stable id fallback', () => {
     const mapped = mapCatalog(catalog())
 

@@ -15,6 +15,8 @@ public interface StorePricingPolicyRepository extends JpaRepository<StorePricing
     @Query(value = """
         update menu_item_options option_row
         set price_delta = case
+                when lower(trim(coalesce(option_row.option_group, ''))) = 'combo'
+                then (select combo_delta from store_pricing_policies where store_id = :storeId)
                 when lower(coalesce(option_row.option_code, '')) = 'size_small'
                   or option_row.name_zh = '小碗'
                   or lower(coalesce(option_row.name_en, '')) = 'small'
@@ -27,15 +29,17 @@ public interface StorePricingPolicyRepository extends JpaRepository<StorePricing
                   or option_row.name_zh = '大碗'
                   or lower(coalesce(option_row.name_en, '')) = 'large'
                 then (select size_large_delta from store_pricing_policies where store_id = :storeId)
-                when lower(coalesce(option_row.option_group, '')) = 'combo'
-                  or lower(coalesce(option_row.option_code, '')) = 'combo'
-                  or (
-                    lower(coalesce(option_row.option_type, '')) = 'addon'
-                    and option_row.name_zh = '套餐'
-                  )
-                  or (
-                    lower(coalesce(option_row.option_type, '')) = 'addon'
-                    and lower(coalesce(option_row.name_en, '')) = 'combo'
+                when trim(coalesce(option_row.option_group, '')) = ''
+                  and (
+                    lower(coalesce(option_row.option_code, '')) = 'combo'
+                    or (
+                        lower(coalesce(option_row.option_type, '')) = 'addon'
+                        and option_row.name_zh = '套餐'
+                    )
+                    or (
+                        lower(coalesce(option_row.option_type, '')) = 'addon'
+                        and lower(coalesce(option_row.name_en, '')) = 'combo'
+                    )
                   )
                 then (select combo_delta from store_pricing_policies where store_id = :storeId)
                 else option_row.price_delta
@@ -44,18 +48,23 @@ public interface StorePricingPolicyRepository extends JpaRepository<StorePricing
         from menu_items item
         where item.id = option_row.menu_item_id
           and item.store_id = :storeId
+          and option_row.store_addon_id is null
           and (
-            lower(coalesce(option_row.option_group, '')) = 'size'
-            or lower(coalesce(option_row.option_type, '')) = 'size'
-            or lower(coalesce(option_row.option_group, '')) = 'combo'
-            or lower(coalesce(option_row.option_code, '')) = 'combo'
+            lower(trim(coalesce(option_row.option_group, ''))) in ('size', 'combo')
             or (
-                lower(coalesce(option_row.option_type, '')) = 'addon'
-                and option_row.name_zh = '套餐'
-            )
-            or (
-                lower(coalesce(option_row.option_type, '')) = 'addon'
-                and lower(coalesce(option_row.name_en, '')) = 'combo'
+                trim(coalesce(option_row.option_group, '')) = ''
+                and (
+                    lower(coalesce(option_row.option_type, '')) = 'size'
+                    or lower(coalesce(option_row.option_code, '')) = 'combo'
+                    or (
+                        lower(coalesce(option_row.option_type, '')) = 'addon'
+                        and option_row.name_zh = '套餐'
+                    )
+                    or (
+                        lower(coalesce(option_row.option_type, '')) = 'addon'
+                        and lower(coalesce(option_row.name_en, '')) = 'combo'
+                    )
+                )
             )
           )
         """, nativeQuery = true)

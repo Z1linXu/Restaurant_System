@@ -23,7 +23,22 @@ class MenuCatalogHashServiceTest {
         catalog.generated_at = catalog.generated_at.plusHours(2);
 
         assertEquals(first, service.calculate(catalog));
-        assertEquals("fnv1a32:07ab0e4f", first);
+        // Shared with frontend/src/offline/menuCache.test.ts (v4 fixture).
+        assertEquals("fnv1a32:d0abe163", first);
+    }
+
+    @Test
+    void hashChangesWhenOnlyItemEggDefaultChanges() {
+        MenuCatalogResponse catalog = catalog();
+        String inherited = service.calculate(catalog);
+
+        catalog.categories.get(0).items.get(0).default_combo_egg_component_code = "combo_fried_egg";
+        String friedEgg = service.calculate(catalog);
+        assertNotEquals(inherited, friedEgg);
+        catalog.categories.get(0).items.get(0).default_combo_egg_component_code = "combo_tea_egg";
+        assertNotEquals(friedEgg, service.calculate(catalog));
+        catalog.categories.get(0).items.get(0).default_combo_egg_component_code = null;
+        assertEquals(inherited, service.calculate(catalog));
     }
 
     @Test
@@ -98,7 +113,7 @@ class MenuCatalogHashServiceTest {
             9L,
             7L,
             LocalDateTime.of(2026, 7, 13, 10, 0),
-            "menu-catalog-v3",
+            "menu-catalog-v4",
             "stable-option-semantics-v1",
             new MenuCatalogResponse.TaxPolicyResponse(
                 new BigDecimal("0.14975"),

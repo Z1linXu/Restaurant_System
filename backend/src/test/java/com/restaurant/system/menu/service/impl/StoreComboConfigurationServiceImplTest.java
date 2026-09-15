@@ -5,6 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -14,6 +17,7 @@ import com.restaurant.system.menu.combo.StoreComboComponentRepository;
 import com.restaurant.system.menu.combo.StoreComboGroup;
 import com.restaurant.system.menu.combo.StoreComboGroupRepository;
 import com.restaurant.system.menu.dto.MenuRevisionResponse;
+import com.restaurant.system.menu.dto.MenuItemComboEggDefaultRequest;
 import com.restaurant.system.menu.dto.StoreComboConfigurationUpdateRequest;
 import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.entity.MenuItemOption;
@@ -175,6 +179,159 @@ class StoreComboConfigurationServiceImplTest {
             return savedList;
         });
         when(menuRevisionService.getRevision(any())).thenAnswer(invocation -> revision(invocation.getArgument(0), 12L));
+        when(menuItemRepository.updateItemComboEggDefault(any(), any(), any(), any())).thenReturn(1);
+    }
+
+    @Test
+    void itemEggDefaultRejectsItemMovedAfterControllerAuthorization() {
+        when(menuItemRepository.findById(200L)).thenReturn(Optional.of(menuItem(200L, 20L, true)));
+
+        BusinessException error = assertThrows(BusinessException.class,
+            () -> service.updateItemEggDefault(200L, 10L, eggDefault(null)));
+
+        assertEquals("COMBO_EGG_DEFAULT_STORE_MISMATCH", error.getMessage());
+        verify(menuRevisionService).lockStoresInOrder(List.of(10L));
+        verify(menuItemRepository, never()).updateItemComboEggDefault(any(), any(), any(), any());
+        verify(menuRevisionService, never()).incrementRevision(any());
+    }
+
+    @Test
+    void conditionalStoreWriteRejectsAStaleItemReadWithoutAdvancingRevision() {
+        when(menuItemRepository.findById(200L)).thenReturn(Optional.of(menuItem(200L, 10L, true)));
+        when(menuItemRepository.updateItemComboEggDefault(eq(200L), eq(10L), isNull(), any())).thenReturn(0);
+
+        BusinessException error = assertThrows(BusinessException.class,
+            () -> service.updateItemEggDefault(200L, 10L, eggDefault(null)));
+
+        assertEquals("COMBO_EGG_DEFAULT_STORE_MISMATCH", error.getMessage());
+        verify(menuRevisionService, never()).incrementRevision(any());
+    }
+
+    @Test
+    void itemEggDefaultUsesStableSameStoreEnabledComponentAndBumpsRevision() {
+        MenuItem item = menuItem(200L, 10L, true);
+        when(menuItemRepository.findById(200L)).thenReturn(Optional.of(item));
+        when(menuItemOptionRepository.findAllByMenuItemIdOrdered(200L))
+            .thenReturn(List.of(option(80L, 200L, "COMBO", "combo")));
+
+        service.updateItemEggDefault(200L, 10L, eggDefault("combo_fried_egg"));
+
+        verify(menuRevisionService).lockStoresInOrder(List.of(10L));
+        verify(menuItemRepository).updateItemComboEggDefault(eq(200L), eq(10L), eq("combo_fried_egg"), any());
+        verify(menuRevisionService).incrementRevision(10L);
+        assertFalse(componentForStore(20L, "COMBO_EGG", "combo_fried_egg").enabled);
+    }
+
+    @Test
+    void nullClearsOverrideEvenWhenComboIsNoLongerAllowed() {
+        MenuItem item = menuItem(200L, 10L, true);
+        item.default_combo_egg_component_code = "combo_fried_egg";
+        when(menuItemRepository.findById(200L)).thenReturn(Optional.of(item));
+
+        service.updateItemEggDefault(200L, 10L, eggDefault(null));
+
+        verify(menuItemRepository).updateItemComboEggDefault(eq(200L), eq(10L), isNull(), any());
+        verify(menuRevisionService).incrementRevision(10L);
+    }
+
+    @Test
+    void itemDefaultRejectsInactiveComboAndAddonRowsRegardlessOfDisplayName() {
+        when(menuItemRepository.findById(200L)).thenReturn(Optional.of(menuItem(200L, 10L, true)));
+        MenuItemOption disabledCombo = option(80L, 200L, "COMBO", "combo");
+        disabledCombo.is_active = false;
+        when(menuItemOptionRepository.findAllByMenuItemIdOrdered(200L))
+            .thenReturn(List.of(disabledCombo, option(81L, 200L, "ADD_ON", "fried_egg")));
+
+        assertEquals("COMBO_EGG_DEFAULT_REQUIRES_COMBO_ALLOWED", assertThrows(BusinessException.class,
+            () -> service.updateItemEggDefault(200L, 10L, eggDefault("combo_fried_egg"))).getMessage());
+        verify(menuItemRepository, never()).updateItemComboEggDefault(any(), any(), any(), any());
+        verify(menuRevisionService, never()).incrementRevision(any());
+    }
+
+    @Test
+    void itemDefaultRejectsDisabledOwnStoreComponentEvenIfAnotherStoreEnablesIt() {
+        when(menuItemRepository.findById(200L)).thenReturn(Optional.of(menuItem(200L, 20L, true)));
+        when(menuItemOptionRepository.findAllByMenuItemIdOrdered(200L))
+            .thenReturn(List.of(option(80L, 200L, "COMBO", "combo")));
+
+        assertEquals("COMBO_EGG_DEFAULT_COMPONENT_INVALID", assertThrows(BusinessException.class,
+            () -> service.updateItemEggDefault(200L, 20L, eggDefault("combo_fried_egg"))).getMessage());
+        verify(menuItemRepository, never()).updateItemComboEggDefault(any(), any(), any(), any());
+    }
+
+    @Test
+    void itemDefaultRejectsDisabledOrArchivedGroupAndNonEggIdentity() {
+        when(menuItemRepository.findById(200L)).thenReturn(Optional.of(menuItem(200L, 10L, true)));
+        when(menuItemOptionRepository.findAllByMenuItemIdOrdered(200L))
+            .thenReturn(List.of(option(80L, 200L, "COMBO", "combo")));
+        assertThrows(BusinessException.class, () -> service.updateItemEggDefault(200L, 10L, eggDefault("fried_egg")));
+        assertThrows(BusinessException.class, () -> service.updateItemEggDefault(200L, 10L, eggDefault("combo_edamame")));
+        groups.get(0).enabled = false;
+        assertThrows(BusinessException.class, () -> service.updateItemEggDefault(200L, 10L, eggDefault("combo_tea_egg")));
+        groups.get(0).enabled = true;
+        groups.get(0).archived_at = LocalDateTime.now();
+        assertThrows(BusinessException.class, () -> service.updateItemEggDefault(200L, 10L, eggDefault("combo_tea_egg")));
+        verify(menuItemRepository, never()).updateItemComboEggDefault(any(), any(), any(), any());
+    }
+
+    @Test
+    void itemDefaultDoesNotGuessCodesFromLabelsOrMalformedInput() {
+        when(menuItemRepository.findById(200L)).thenReturn(Optional.of(menuItem(200L, 10L, true)));
+        for (String code : List.of("", "Combo Fried Egg", "COMBO_FRIED_EGG", " combo_fried_egg", "煎蛋")) {
+            assertEquals("COMBO_EGG_DEFAULT_CODE_INVALID", assertThrows(BusinessException.class,
+                () -> service.updateItemEggDefault(200L, 10L, eggDefault(code))).getMessage());
+        }
+        verify(menuItemRepository, never()).updateItemComboEggDefault(any(), any(), any(), any());
+    }
+
+    @Test
+    void configurationListsOnlyExplicitOverridesWithItemNames() {
+        MenuItem item = menuItem(200L, 10L, true);
+        item.name_zh = "牛肉面";
+        item.name_en = "Beef noodle";
+        item.default_combo_egg_component_code = "combo_fried_egg";
+        when(menuItemRepository.findAllByStoreIdOrderByIdAsc(10L))
+            .thenReturn(List.of(item, menuItem(201L, 10L, true)));
+
+        var response = service.getConfiguration(10L);
+
+        assertEquals(1, response.item_overrides.size());
+        assertEquals(200L, response.item_overrides.get(0).item_id);
+        assertEquals("牛肉面", response.item_overrides.get(0).name_zh);
+        assertEquals("Beef noodle", response.item_overrides.get(0).name_en);
+        assertEquals("combo_fried_egg", response.item_overrides.get(0).default_combo_egg_component_code);
+        assertTrue(service.getConfiguration(20L).item_overrides.isEmpty());
+    }
+
+    @Test
+    void configurationRejectsDisablingAnOverriddenComponent() {
+        MenuItem item = menuItem(200L, 10L, true);
+        item.default_combo_egg_component_code = "combo_fried_egg";
+        when(menuItemRepository.findAllByStoreIdOrderByIdAsc(10L)).thenReturn(List.of(item));
+
+        BusinessException error = assertThrows(BusinessException.class, () -> service.updateConfiguration(10L,
+            updateForStore(10L, toggle("COMBO_EGG", "combo_fried_egg", false))));
+
+        assertTrue(error.getMessage().startsWith("COMBO_EGG_DEFAULT_IN_USE:"));
+        assertTrue(error.getMessage().contains("item_id=200"));
+        verify(storeComboComponentRepository, never()).saveAll(any());
+        verify(menuRevisionService, never()).incrementRevision(any());
+    }
+
+    @Test
+    void configurationRejectsRemovingAnOverriddenGroup() {
+        MenuItem item = menuItem(200L, 10L, true);
+        item.default_combo_egg_component_code = "combo_fried_egg";
+        when(menuItemRepository.findAllByStoreIdOrderByIdAsc(10L)).thenReturn(List.of(item));
+        StoreComboConfigurationUpdateRequest request = new StoreComboConfigurationUpdateRequest();
+        request.groups = List.of(groupUpdate("COMBO_SIDE", "小菜", "Side", "EXACTLY_ONE",
+            componentUpdate(3L, "COMBO_SIDE", "combo_edamame", "毛豆", "Edamame", true, 10, true)));
+
+        BusinessException error = assertThrows(BusinessException.class, () -> service.updateConfiguration(10L, request));
+
+        assertTrue(error.getMessage().startsWith("COMBO_EGG_DEFAULT_IN_USE:"));
+        verify(storeComboGroupRepository, never()).saveAll(any());
+        verify(menuRevisionService, never()).incrementRevision(any());
     }
 
     @Test
@@ -376,6 +533,12 @@ class StoreComboConfigurationServiceImplTest {
         StoreComboConfigurationUpdateRequest request = new StoreComboConfigurationUpdateRequest();
         request.store_id = storeId;
         request.components = List.of(updates);
+        return request;
+    }
+
+    private MenuItemComboEggDefaultRequest eggDefault(String code) {
+        MenuItemComboEggDefaultRequest request = new MenuItemComboEggDefaultRequest();
+        request.default_combo_egg_component_code = code;
         return request;
     }
 

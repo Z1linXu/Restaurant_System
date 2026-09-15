@@ -201,6 +201,24 @@ describe('versioned menu cache identity and integrity', () => {
     expect(catalog().content_hash).toBe('fnv1a32:07ab0e4f')
   })
 
+  it('hashes item egg overrides in v4 while preserving v3 cached snapshot validation', () => {
+    const legacy = catalog()
+    validateMenuCatalog(legacy, scope, legacy.menu_revision)
+    const next = structuredClone(legacy)
+    next.catalog_version = 'menu-catalog-v4'
+    const noOverrideHash = calculateMenuContentHash(next)
+    // Shared with backend MenuCatalogHashServiceTest's v4 fixture.
+    expect(noOverrideHash).toBe('fnv1a32:d0abe163')
+    next.categories[0].items[0].default_combo_egg_component_code = null
+    expect(calculateMenuContentHash(next)).toBe(noOverrideHash)
+    next.categories[0].items[0].default_combo_egg_component_code = 'combo_fried_egg'
+    expect(calculateMenuContentHash(next)).not.toBe(noOverrideHash)
+    next.content_hash = calculateMenuContentHash(next)
+    validateMenuCatalog(next, scope, next.menu_revision)
+    next.categories[0].items[0].default_combo_egg_component_code = 'combo_tea_egg'
+    expect(() => validateMenuCatalog(next, scope, next.menu_revision)).toThrow('MENU_CACHE_HASH_MISMATCH')
+  })
+
   it('rejects scope, revision, and content corruption', () => {
     const valid = catalog()
     expect(() => validateMenuCatalog(valid, scope, 7)).not.toThrow()

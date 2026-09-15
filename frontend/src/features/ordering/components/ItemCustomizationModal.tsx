@@ -4,7 +4,6 @@ import { Card } from '../../../components/ui/Card'
 import { useIpadLandscape } from '../../../hooks/useIpadLandscape'
 import type { ComboChoiceGroup, ItemCustomizationDraft, MenuItem } from '../../../types/ordering'
 import {
-  defaultComboSelections,
   resolveComboDraftSelections,
   resolveComboGroupOptionId,
 } from '../../../utils/comboSelection'
@@ -199,7 +198,6 @@ export function ItemCustomizationModal({
               { groupCode: 'COMBO_EGG', labelEn: 'Egg', labelZh: '鸡蛋', selectionRule: 'EXACTLY_ONE', required: true, options: comboConfig.eggs, defaultOptionId: comboConfig.eggs[0]?.id },
               { groupCode: 'COMBO_SIDE', labelEn: 'Side Dish', labelZh: '配菜', selectionRule: 'EXACTLY_ONE', required: true, options: comboConfig.sides, defaultOptionId: comboConfig.sides[0]?.id },
             ].filter((group) => group.options.length) satisfies ComboChoiceGroup[]
-        const nextDefaultSelections = defaultComboSelections(comboGroups)
         const selectedComboSideId = resolveComboGroupOptionId(
           draft,
           comboGroups.find((group) => group.groupCode === 'COMBO_SIDE')
@@ -214,14 +212,7 @@ export function ItemCustomizationModal({
               <button
                 type="button"
                 onClick={() => {
-                  const resolvedDraft = resolveComboDraftSelections({
-                    ...draft,
-                    comboEggId: !draft.comboEnabled ? draft.comboEggId ?? nextDefaultSelections.COMBO_EGG ?? comboConfig.eggs[0]?.id : draft.comboEggId,
-                    comboSideId: !draft.comboEnabled ? draft.comboSideId ?? nextDefaultSelections.COMBO_SIDE ?? comboConfig.sides[0]?.id : draft.comboSideId,
-                    comboSelections: !draft.comboEnabled
-                      ? { ...nextDefaultSelections, ...(draft.comboSelections ?? {}) }
-                      : (draft.comboSelections ?? {}),
-                  }, comboGroups)
+                  const resolvedDraft = resolveComboDraftSelections(draft, comboGroups)
                   onChange({
                     ...resolvedDraft,
                     comboEnabled: !draft.comboEnabled,

@@ -14,16 +14,22 @@ import {
   buildDefaultNoodleTypeOrder,
   defaultNoodleTypeOptionId,
 } from './menuOptionDefaults'
+import { ItemAddonsSection, isOrdinaryAddon } from './ItemAddonsSection'
 
-type EditableOptionGroup = 'REMOVE' | 'ADD_ON'
+type EditableOptionGroup = 'REMOVE' | 'SOUP_BASE' | 'SPICY_LEVEL' | 'COMBO_EGG' | 'COMBO_SIDE' | 'COMBO_SIDE_REMOVE'
 type DisplayOptionGroup = EditableOptionGroup | 'NOODLE_TYPE'
 
-const DISPLAY_GROUPS: DisplayOptionGroup[] = ['NOODLE_TYPE', 'REMOVE', 'ADD_ON']
+const EDITABLE_GROUPS: EditableOptionGroup[] = ['REMOVE', 'SOUP_BASE', 'SPICY_LEVEL', 'COMBO_EGG', 'COMBO_SIDE', 'COMBO_SIDE_REMOVE']
+const DISPLAY_GROUPS: DisplayOptionGroup[] = ['NOODLE_TYPE', ...EDITABLE_GROUPS]
 
 const GROUP_LABELS: Record<DisplayOptionGroup, string> = {
   NOODLE_TYPE: '面型 / Noodle Type',
   REMOVE: 'Remove',
-  ADD_ON: 'Add-on',
+  SOUP_BASE: 'Soup Base',
+  SPICY_LEVEL: 'Spicy Level',
+  COMBO_EGG: 'Combo Egg',
+  COMBO_SIDE: 'Combo Side',
+  COMBO_SIDE_REMOVE: 'Combo Side Remove',
 }
 
 const STANDARD_SIZES: Array<{ code: StandardSizeCode; zh: string; en: string }> = [
@@ -33,9 +39,9 @@ const STANDARD_SIZES: Array<{ code: StandardSizeCode; zh: string; en: string }> 
 ]
 
 const DEFAULT_DRAFT: MenuItemOptionPayload = {
-  option_type: 'addon',
+  option_type: 'remove',
   option_code: '',
-  option_group: 'ADD_ON',
+  option_group: 'REMOVE',
   parent_option_id: null,
   sort_order: null,
   name_zh: '',
@@ -45,21 +51,21 @@ const DEFAULT_DRAFT: MenuItemOptionPayload = {
 }
 
 interface MenuOptionsPanelProps {
+  storeId: number
   itemId: number
   itemName: string
 }
 
 function optionTypeForGroup(group: EditableOptionGroup) {
-  return group === 'REMOVE' ? 'remove' : 'addon'
+  if (group === 'REMOVE' || group === 'COMBO_SIDE_REMOVE') return 'remove'
+  if (group === 'SOUP_BASE') return 'soup_base'
+  if (group === 'SPICY_LEVEL') return 'spicy_level'
+  return 'addon'
 }
 
 function editableGroupFromDraft(draft: MenuItemOptionPayload): EditableOptionGroup {
   const group = draft.option_group?.toUpperCase()
-  if (group === 'REMOVE' || group === 'ADD_ON') {
-    return group
-  }
-  const optionType = draft.option_type?.toLowerCase()
-  return optionType === 'remove' ? 'REMOVE' : 'ADD_ON'
+  return EDITABLE_GROUPS.find((candidate) => candidate === group) ?? 'REMOVE'
 }
 
 function standardSizeCode(option: MenuItemOptionAdminRecord): StandardSizeCode | null {
@@ -78,18 +84,19 @@ function isSizeOption(option: MenuItemOptionAdminRecord) {
 }
 
 function isComboUpcharge(option: MenuItemOptionAdminRecord) {
-  if (option.option_group?.toUpperCase() === 'COMBO' || option.option_code?.toLowerCase() === 'combo') {
-    return true
-  }
-  return option.option_type?.toLowerCase() === 'addon'
-    && (option.name_zh === '套餐' || option.name_en?.toLowerCase() === 'combo')
+  const group = option.option_group?.trim().toUpperCase()
+  if (group) return group === 'COMBO'
+  const code = option.option_code?.trim().toLowerCase()
+  if (code) return code === 'combo'
+  return option.option_type?.trim().toLowerCase() === 'addon'
+    && (option.name_zh?.trim() === '套餐' || option.name_en?.trim().toLowerCase() === 'combo')
 }
 
 function normalizeGroup(option: MenuItemOptionAdminRecord): DisplayOptionGroup | null {
   const optionGroup = option.option_group?.toUpperCase()
-  if (optionGroup === 'REMOVE' || optionGroup === 'ADD_ON' || optionGroup === 'NOODLE_TYPE') {
-    return optionGroup
-  }
+  if (isOrdinaryAddon(option)) return null
+  const knownGroup = DISPLAY_GROUPS.find((group) => group === optionGroup)
+  if (knownGroup) return knownGroup
 
   if (optionGroup === 'SIZE' || optionGroup === 'COMBO') {
     return null
@@ -107,7 +114,7 @@ function normalizeGroup(option: MenuItemOptionAdminRecord): DisplayOptionGroup |
     if (isComboUpcharge(option)) {
       return null
     }
-    return 'ADD_ON'
+    return null
   }
 
   return null
@@ -162,7 +169,7 @@ function formatMoney(value: number | string | null | undefined) {
   return `$${Number(value ?? 0).toFixed(2)}`
 }
 
-export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
+export function MenuOptionsPanel({ storeId, itemId, itemName }: MenuOptionsPanelProps) {
   const [options, setOptions] = useState<MenuItemOptionAdminRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -209,7 +216,7 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
         options: options
           .filter((option) => normalizeGroup(option) === group)
           .sort(sortOptions),
-      })),
+      })).filter(({ group, options: groupOptions }) => group === 'REMOVE' || group === 'NOODLE_TYPE' || groupOptions.length > 0),
     [options],
   )
   const defaultNoodleTypeId = useMemo(() => defaultNoodleTypeOptionId(options), [options])
@@ -218,17 +225,17 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
     setEditingId(null)
     setDraft({
       ...DEFAULT_DRAFT,
-      option_group: 'ADD_ON',
-      option_type: 'addon',
+      option_group: 'REMOVE',
+      option_type: 'remove',
       parent_option_id: null,
-      sort_order: nextSortOrder(options, 'ADD_ON'),
+      sort_order: nextSortOrder(options, 'REMOVE'),
       is_active: true,
     })
     setFormOpen(true)
   }
 
   const beginEdit = (option: MenuItemOptionAdminRecord) => {
-    if (isSizeOption(option) || isComboUpcharge(option)) {
+    if (isSizeOption(option) || isComboUpcharge(option) || isOrdinaryAddon(option)) {
       return
     }
     setEditingId(option.id)
@@ -251,7 +258,7 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
         ...draft,
         option_type: optionTypeForGroup(group),
         option_group: group,
-        parent_option_id: null,
+        parent_option_id: draft.parent_option_id ?? null,
         option_code: draft.option_code?.trim() || null,
         name_zh: draft.name_zh.trim(),
         name_en: draft.name_en?.trim() || '',
@@ -279,7 +286,7 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
   }
 
   const setOptionActive = async (option: MenuItemOptionAdminRecord, isActive: boolean) => {
-    if (isSizeOption(option) || isComboUpcharge(option)) {
+    if (isSizeOption(option) || isComboUpcharge(option) || isOrdinaryAddon(option)) {
       return
     }
     try {
@@ -481,6 +488,8 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
         </div>
       </section>
 
+      <ItemAddonsSection key={`${storeId}:${itemId}`} storeId={storeId} itemId={itemId} options={options} onChanged={loadOptions} />
+
       {formOpen ? (
         <div className="mt-4 rounded-[20px] border border-[rgba(26,28,25,0.06)] bg-[rgba(26,28,25,0.02)] p-4">
           <div className="grid gap-3 sm:grid-cols-2">
@@ -500,8 +509,9 @@ export function MenuOptionsPanel({ itemId, itemName }: MenuOptionsPanelProps) {
                 }}
                 className="mt-1 w-full rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2.5 text-[0.88rem] outline-none"
               >
-                <option value="ADD_ON">Add-on</option>
-                <option value="REMOVE">Remove</option>
+                {EDITABLE_GROUPS.filter((group) => group === 'REMOVE' || group === editableGroupFromDraft(draft)).map((group) => (
+                  <option key={group} value={group}>{GROUP_LABELS[group]}</option>
+                ))}
               </select>
             </label>
 

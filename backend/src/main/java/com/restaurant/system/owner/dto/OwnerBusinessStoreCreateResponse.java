@@ -2,8 +2,10 @@ package com.restaurant.system.owner.dto;
 
 import com.restaurant.system.owner.provisioning.OwnerStoreProvisioningCounts;
 import com.restaurant.system.owner.provisioning.OwnerStoreProvisioningResult;
+import com.restaurant.system.menu.addon.StoreAddonService;
 import com.restaurant.system.user.StoreOperationalState;
 import com.restaurant.system.user.entity.Store;
+import java.util.List;
 
 public class OwnerBusinessStoreCreateResponse {
 
@@ -21,6 +23,7 @@ public class OwnerBusinessStoreCreateResponse {
     public String validation_status;
     public String result_code;
     public OwnerStoreProvisioningResponse.CountsResponse counts;
+    public List<StoreAddonService.Conflict> addon_conflicts;
 
     public static OwnerBusinessStoreCreateResponse from(
         OwnerStoreProvisioningResult result,
@@ -41,6 +44,7 @@ public class OwnerBusinessStoreCreateResponse {
         response.validation_status = result.validationStatus();
         response.result_code = result.resultCode();
         response.counts = counts(result.counts());
+        response.addon_conflicts = result.addonConflicts();
         return response;
     }
 

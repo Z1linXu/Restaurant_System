@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface MenuRevisionService {
 
-    String CATALOG_VERSION = "menu-catalog-v3";
+    String CATALOG_VERSION = "menu-catalog-v4";
     String TAX_POLICY_VERSION = "ca-qc-tax-2026-01";
 
     MenuRevisionResponse getRevision(Long storeId);

@@ -6,6 +6,7 @@ import com.restaurant.system.menu.combo.StoreComboComponentRepository;
 import com.restaurant.system.menu.combo.StoreComboGroup;
 import com.restaurant.system.menu.combo.StoreComboGroupRepository;
 import com.restaurant.system.menu.dto.MenuRevisionResponse;
+import com.restaurant.system.menu.dto.MenuItemComboEggDefaultRequest;
 import com.restaurant.system.menu.dto.StoreComboConfigurationResponse;
 import com.restaurant.system.menu.dto.StoreComboConfigurationUpdateRequest;
 import com.restaurant.system.menu.entity.MenuItem;
@@ -99,11 +100,73 @@ public class StoreComboConfigurationServiceImpl implements StoreComboConfigurati
             throw new BusinessException("COMBO_CONFIGURATION_EMPTY");
         }
 
+        validateItemEggOverrides(storeId, nextState);
         validateConfiguration(storeId, menuItemOptionRepository.findActiveByStoreIdOrdered(storeId), nextState);
         storeComboGroupRepository.saveAll(nextState.groups());
         storeComboComponentRepository.saveAll(nextState.components());
         menuRevisionService.incrementRevision(storeId);
         return toResponse(storeId, loadState(storeId), menuRevisionService.getRevision(storeId));
+    }
+
+    @Override
+    @Transactional
+    public void updateItemEggDefault(Long itemId, Long authorizedStoreId, MenuItemComboEggDefaultRequest request) {
+        if (request == null) {
+            throw new BusinessException("COMBO_EGG_DEFAULT_PAYLOAD_REQUIRED");
+        }
+        if (authorizedStoreId == null) {
+            throw new BusinessException("STORE_ID_REQUIRED");
+        }
+        menuRevisionService.lockStoresInOrder(List.of(authorizedStoreId));
+        MenuItem item = menuItemRepository.findById(itemId)
+            .orElseThrow(() -> new BusinessException("Menu item not found: " + itemId));
+        if (!authorizedStoreId.equals(item.store_id)) {
+            throw new BusinessException("COMBO_EGG_DEFAULT_STORE_MISMATCH");
+        }
+        String code = request.default_combo_egg_component_code;
+        if (code != null) {
+            if (code.length() > 120 || !code.matches("[a-z][a-z0-9]*(?:_[a-z0-9]+)*")) {
+                throw new BusinessException("COMBO_EGG_DEFAULT_CODE_INVALID");
+            }
+            boolean comboAllowed = menuItemOptionRepository.findAllByMenuItemIdOrdered(itemId).stream()
+                .anyMatch(option -> Boolean.TRUE.equals(option.is_active)
+                    && option.store_addon_id == null
+                    && GROUP_COMBO.equals(normalizeGroup(option.option_group)));
+            if (!comboAllowed) {
+                throw new BusinessException("COMBO_EGG_DEFAULT_REQUIRES_COMBO_ALLOWED");
+            }
+            if (!validItemEggDefault(item.store_id, code, loadState(item.store_id))) {
+                throw new BusinessException("COMBO_EGG_DEFAULT_COMPONENT_INVALID");
+            }
+        }
+        // A direct write under the Store lock also clears a value committed while
+        // an earlier controller read was waiting for that lock.
+        if (menuItemRepository.updateItemComboEggDefault(itemId, authorizedStoreId, code, now()) != 1) {
+            throw new BusinessException("COMBO_EGG_DEFAULT_STORE_MISMATCH");
+        }
+        menuRevisionService.incrementRevision(authorizedStoreId);
+    }
+
+    private void validateItemEggOverrides(Long storeId, ComboState state) {
+        for (MenuItem item : menuItemRepository.findAllByStoreIdOrderByIdAsc(storeId)) {
+            if (item.default_combo_egg_component_code != null
+                && !validItemEggDefault(storeId, item.default_combo_egg_component_code, state)) {
+                throw new BusinessException("COMBO_EGG_DEFAULT_IN_USE: remove item overrides before disabling or removing the component/group; item_id=" + item.id);
+            }
+        }
+    }
+
+    private boolean validItemEggDefault(Long storeId, String code, ComboState state) {
+        return state.groups().stream()
+            .filter(group -> storeId.equals(group.store_id) && "COMBO_EGG".equals(group.group_code))
+            .filter(group -> group.archived_at == null && Boolean.TRUE.equals(group.enabled))
+            .anyMatch(group -> state.components().stream().anyMatch(component ->
+                storeId.equals(component.store_id)
+                    && group.id.equals(component.group_id)
+                    && "COMBO_EGG".equals(component.component_group)
+                    && code.equals(component.component_code)
+                    && component.archived_at == null
+                    && Boolean.TRUE.equals(component.enabled)));
     }
 
     @Override
@@ -508,6 +571,17 @@ public class StoreComboConfigurationServiceImpl implements StoreComboConfigurati
         StoreComboConfigurationResponse response = new StoreComboConfigurationResponse();
         response.store_id = storeId;
         response.menu_revision = revision == null ? null : revision.menu_revision;
+        for (MenuItem item : menuItemRepository.findAllByStoreIdOrderByIdAsc(storeId)) {
+            if (item.default_combo_egg_component_code == null) {
+                continue;
+            }
+            StoreComboConfigurationResponse.ItemOverrideResponse override = new StoreComboConfigurationResponse.ItemOverrideResponse();
+            override.item_id = item.id;
+            override.name_zh = item.name_zh;
+            override.name_en = item.name_en;
+            override.default_combo_egg_component_code = item.default_combo_egg_component_code;
+            response.item_overrides.add(override);
+        }
         Map<Long, List<StoreComboComponent>> componentsByGroupId = state.components().stream()
             .filter(component -> component.archived_at == null)
             .collect(Collectors.groupingBy(component -> component.group_id, LinkedHashMap::new, Collectors.toList()));
@@ -641,11 +715,12 @@ public class StoreComboConfigurationServiceImpl implements StoreComboConfigurati
     }
 
     private boolean isComboAllowedOption(MenuItemOption option) {
-        if (option == null) {
+        if (option == null || option.store_addon_id != null) {
             return false;
         }
-        if (GROUP_COMBO.equals(normalizeGroup(option.option_group))) {
-            return true;
+        String group = normalizeGroup(option.option_group);
+        if (!group.isBlank()) {
+            return GROUP_COMBO.equals(group);
         }
         if ("combo".equals(normalizeCode(option.option_code))) {
             return true;

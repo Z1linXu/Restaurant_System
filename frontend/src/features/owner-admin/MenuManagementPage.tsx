@@ -12,6 +12,7 @@ import {
 import { ApiRequestError } from '../../services/apiClient'
 import { MenuOptionsPanel } from './MenuOptionsPanel'
 import { ComboConfigurationPanel } from './ComboConfigurationPanel'
+import { AddonCatalogPanel } from './AddonCatalogPanel'
 import { CategoryManagementPanel, StationManagementPanel } from './MenuStructurePanels'
 import { PricingRulesPanel } from './PricingRulesPanel'
 import { ItemPrintingRuleAliasPanel } from './PrintingDisplayRulesPanel'
@@ -48,7 +49,7 @@ type ToastState =
   | null
 
 type StatusFilter = 'all' | 'active' | 'inactive' | 'sold_out' | 'available'
-type MenuManagementSection = 'menu_items' | 'categories' | 'stations' | 'combo' | 'pricing'
+type MenuManagementSection = 'menu_items' | 'categories' | 'stations' | 'combo' | 'pricing' | 'addons'
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('en-CA', {
@@ -187,6 +188,8 @@ export function MenuManagementPage() {
   useEffect(() => {
     setReorderMode(false)
     setFiltersBeforeReorder(null)
+    setOptionsItem(null)
+    setEditor(null)
   }, [selectedStoreId])
 
   const stores = useMemo(
@@ -233,6 +236,7 @@ export function MenuManagementPage() {
     const query = searchTerm.trim().toLowerCase()
 
     return menuItems.filter((item) => {
+      if (item.store_id !== Number(selectedStoreId)) return false
       if (categoryFilter !== 'all' && String(item.category_id) !== categoryFilter) {
         return false
       }
@@ -262,7 +266,7 @@ export function MenuManagementPage() {
         .map((value) => value.toLowerCase())
         .some((value) => value.includes(query))
     })
-  }, [categoryFilter, menuItems, searchTerm, stationFilter, statusFilter])
+  }, [categoryFilter, menuItems, searchTerm, selectedStoreId, stationFilter, statusFilter])
 
   const canReorder = reorderMode && categoryFilter !== 'all'
   const selectedCategoryLabel = categoryFilter === 'all'
@@ -621,6 +625,7 @@ export function MenuManagementPage() {
             <div className="flex flex-wrap gap-2 rounded-[22px] bg-[rgba(255,255,255,0.72)] p-2 shadow-[0_12px_24px_rgba(26,28,25,0.04)]">
               {[
                 ['menu_items', 'Menu Items'],
+                ['addons', 'Add-ons'],
                 ['categories', 'Categories'],
                 ['stations', 'Stations'],
                 ['combo', 'Combo Configuration'],
@@ -659,8 +664,13 @@ export function MenuManagementPage() {
               />
             ) : null}
 
+            {activeSection === 'addons' ? (
+              <AddonCatalogPanel key={selectedStoreId} storeId={Number(selectedStoreId)} onSaved={(message) => setToast({ kind: 'success', message })} />
+            ) : null}
+
             {activeSection === 'combo' ? (
               <ComboConfigurationPanel
+                key={selectedStoreId}
                 storeId={Number(selectedStoreId)}
                 menuItems={menuItems.map((item) => ({
                   ...item,
@@ -1088,8 +1098,10 @@ export function MenuManagementPage() {
                 )}
               </div>
 
-              {optionsItem?.id ? (
+              {optionsItem?.id && optionsItem.store_id === Number(selectedStoreId) ? (
                 <MenuOptionsPanel
+                  key={`${selectedStoreId}:${optionsItem.id}`}
+                  storeId={Number(selectedStoreId)}
                   itemId={optionsItem.id}
                   itemName={`${optionsItem.name_zh || optionsItem.name_en || 'Menu Item'}${optionsItem.sku ? ` · ${optionsItem.sku}` : ''}`}
                 />

@@ -19,6 +19,33 @@ const noodleTypes = [
 ] as const
 
 describe('noodle type presentation labels', () => {
+  it('preserves a restored manual egg when Combo is turned off and on after the default changes', async () => {
+    const eggs = [
+      { id: 'tea', labelEn: 'Tea Egg', labelZh: '卤蛋', optionCode: 'combo_tea_egg', optionGroup: 'COMBO_EGG' },
+      { id: 'fried', labelEn: 'Fried Egg', labelZh: '煎蛋', optionCode: 'combo_fried_egg', optionGroup: 'COMBO_EGG' },
+    ]
+    const item: MenuItem = {
+      id: '1', categoryId: '1', categoryCode: 'NOODLES', nameEn: 'Dish', nameZh: '菜', descriptionEn: '', descriptionZh: '', price: 10,
+      customization: { combo: { upcharge: 5, eggs, sides: [], sideRemoveOptions: [], groups: [{
+        groupCode: 'COMBO_EGG', labelEn: 'Egg', labelZh: '蛋', required: true, selectionRule: 'EXACTLY_ONE', defaultOptionId: 'tea', options: eggs,
+      }] } },
+    }
+    let draft: ItemCustomizationDraft = { comboEnabled: false, comboEggId: 'fried', comboSelections: {}, comboSideRemoveIds: [], addOnQuantities: {}, removeIds: [], quantity: 1, notes: '' }
+    const onChange = vi.fn((next: ItemCustomizationDraft) => { draft = next })
+    let view: ReturnType<typeof create>
+    const render = () => <ItemCustomizationModal item={item} draft={draft} mode="add" subtotal={15} onClose={vi.fn()} onChange={onChange} onSubmit={vi.fn()} />
+    await act(async () => { view = create(render()) })
+    const toggle = () => view!.root.findAllByType('button').find((button) => button.findAllByType('span').some((node) => node.children.includes('Make it a Combo / 设为套餐')))!
+    for (const enabled of [true, false, true]) {
+      await act(async () => toggle().props.onClick())
+      expect(draft.comboEnabled).toBe(enabled)
+      expect(draft.comboEggId).toBe('fried')
+      expect(draft.comboSelections.COMBO_EGG).toBe('fried')
+      await act(async () => view!.update(render()))
+    }
+    await act(async () => view!.unmount())
+  })
+
   it.each(noodleTypes)('formats %s by stable option code', (_id, _en, zh, code, expected) => {
     expect(formatNoodleTypeDisplayLabel(zh, code)).toBe(expected)
   })

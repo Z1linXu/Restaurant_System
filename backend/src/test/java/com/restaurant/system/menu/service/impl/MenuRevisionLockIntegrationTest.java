@@ -6,6 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration;
 import com.restaurant.system.menu.service.MenuRevisionService;
+import com.restaurant.system.menu.entity.MenuItem;
+import com.restaurant.system.menu.repository.MenuItemRepository;
+import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.platform.service.impl.PlatformAdminServiceImpl;
 import com.restaurant.system.station.entity.Station;
 import com.restaurant.system.station.repository.StationRepository;
@@ -56,6 +59,7 @@ class MenuRevisionLockIntegrationTest {
     @Autowired private PlatformAdminServiceImpl platformAdminService;
     @Autowired private StoreRepository storeRepository;
     @Autowired private StationRepository stationRepository;
+    @Autowired private MenuItemRepository menuItemRepository;
     @Autowired private PlatformTransactionManager transactionManager;
 
     private ExecutorService executor;
@@ -121,6 +125,52 @@ class MenuRevisionLockIntegrationTest {
         Store updated = storeRepository.findById(source.id).orElseThrow();
         assertThat(updated.menu_revision).isEqualTo(2L);
         assertThat(updated.menu_updated_at).isAfterOrEqualTo(source.menu_updated_at);
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void itemMoveWaitsForComboDefaultWriteAndRejectsCrossStoreOverride() throws Exception {
+        Store source = createStore("COMBO_MOVE_SOURCE");
+        Store destination = createStore("COMBO_MOVE_TARGET");
+        MenuItem item = new MenuItem();
+        item.store_id = source.id;
+        item.name_zh = "套餐菜品";
+        item.created_at = LocalDateTime.now();
+        item.updated_at = item.created_at;
+        Long itemId = menuItemRepository.saveAndFlush(item).id;
+        CountDownLatch defaultLocked = new CountDownLatch(1);
+        CountDownLatch releaseDefault = new CountDownLatch(1);
+        CountDownLatch moveStarted = new CountDownLatch(1);
+
+        Future<?> defaultWrite = executor.submit(() -> new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            menuRevisionService.lockStoresInOrder(List.of(source.id));
+            menuItemRepository.updateItemComboEggDefault(itemId, source.id, "combo_fried_egg", LocalDateTime.now());
+            defaultLocked.countDown();
+            await(releaseDefault);
+        }));
+        assertThat(defaultLocked.await(2, TimeUnit.SECONDS)).isTrue();
+        Future<?> move = executor.submit(() -> {
+            MenuItem request = new MenuItem();
+            request.id = itemId;
+            request.store_id = destination.id;
+            request.name_zh = "Moved Item";
+            moveStarted.countDown();
+            return platformAdminService.saveMenuItem(request);
+        });
+        assertThat(moveStarted.await(2, TimeUnit.SECONDS)).isTrue();
+        try {
+            assertThrows(TimeoutException.class, () -> move.get(250, TimeUnit.MILLISECONDS));
+        } finally {
+            releaseDefault.countDown();
+        }
+        defaultWrite.get(5, TimeUnit.SECONDS);
+        var error = assertThrows(java.util.concurrent.ExecutionException.class,
+            () -> move.get(5, TimeUnit.SECONDS));
+        assertThat(error.getCause()).isInstanceOf(BusinessException.class)
+            .hasMessageContaining("Clear the item Combo egg default");
+        MenuItem unchanged = menuItemRepository.findById(itemId).orElseThrow();
+        assertThat(unchanged.store_id).isEqualTo(source.id);
+        assertThat(unchanged.default_combo_egg_component_code).isEqualTo("combo_fried_egg");
     }
 
     private void incrementAfter(CountDownLatch start, List<Long> storeIds) {

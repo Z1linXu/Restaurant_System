@@ -56,6 +56,7 @@ public class StoreFixtureCleanupServiceImpl implements StoreFixtureCleanupServic
         "sales_daily_summary",
         "sales_hourly_summary",
         "stations",
+        "store_addons",
         "store_combo_components",
         "store_combo_groups",
         "store_device_readiness",
@@ -84,6 +85,7 @@ public class StoreFixtureCleanupServiceImpl implements StoreFixtureCleanupServic
     private static final Set<String> ALLOWED_STORE_FK_TABLES = Set.of(
         "owner_store_provisioning_requests",
         "printing_display_rule_sets",
+        "store_addons",
         "store_combo_components",
         "store_combo_groups",
         "store_menu_master_mappings",
@@ -500,6 +502,7 @@ public class StoreFixtureCleanupServiceImpl implements StoreFixtureCleanupServic
         delete(response, "menu_item_bom", "delete from menu_item_bom where menu_item_id in (select id from menu_items where store_id in (" + p + ")) or inventory_item_id in (select id from inventory_items where store_id in (" + p + "))", concat(storeIds, storeIds));
         delete(response, "menu_item_sales_summary", "delete from menu_item_sales_summary where store_id in (" + p + ")", storeIds);
         delete(response, "menu_item_options", "delete from menu_item_options where menu_item_id in (select id from menu_items where store_id in (" + p + "))", storeIds);
+        delete(response, "store_addons", "delete from store_addons where store_id in (" + p + ")", storeIds);
         delete(response, "menu_items", "delete from menu_items where store_id in (" + p + ")", storeIds);
         delete(response, "menu_categories", "delete from menu_categories where store_id in (" + p + ")", storeIds);
         delete(response, "inventory_transactions", "delete from inventory_transactions where inventory_item_id in (select id from inventory_items where store_id in (" + p + "))", storeIds);
