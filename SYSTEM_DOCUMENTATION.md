@@ -8699,10 +8699,14 @@ item-level order to `menu_items`.
 - New items append at the category maximum plus ten. Moving an item to another
   category also appends it to the new category; disabling or re-enabling an item
   preserves its position.
-- Catalog version `menu-catalog-v3` includes item `sort_order` in the response
-  and deterministic content hash. Ordering sorts by position with item id as a
-  stable fallback. The version/revision change refreshes IndexedDB atomically;
-  legacy v2 snapshots remain hash-readable until a network refresh succeeds.
+- Current catalog version `menu-catalog-v4` includes item `sort_order` and
+  nullable `default_combo_egg_component_code` in the deterministic content hash.
+  Ordering sorts by position with item id as a stable fallback. The new frontend
+  retains v2/v3 snapshot hash support until a normal network refresh succeeds;
+  this is not a claim that an old frontend can validate a new v4 response.
+  Android bundled-frontend builds must be aligned to the accepted frontend
+  before a later Production rollout. This does not require native-code changes
+  and does not authorize APK installation, Pad mutation or Production release.
 
 ## Pilot Reliability 2: Terminal Drafts, Noodle Default, And Reorder UX
 

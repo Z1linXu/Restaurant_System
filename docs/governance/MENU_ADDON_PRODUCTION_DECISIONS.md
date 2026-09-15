@@ -8,6 +8,8 @@ Re-run before a later release because operating menu values may change.
 The query found the following 15 Store/code conflict groups. No automatic
 choice is recommended; each Store may choose a different business value.
 Unambiguous codes are deliberately excluded from these decision tables.
+The additional same-item eligibility/parent ambiguity audit returned zero
+groups; different items' independent active values are not conflicts.
 
 ## Store 1 — St-Denis (`4483_R_SAINT_DENIS`)
 

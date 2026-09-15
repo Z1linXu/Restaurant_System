@@ -18,6 +18,25 @@ SPEC.loader.exec_module(acceptance)
 
 
 class SafetyTests(unittest.TestCase):
+    def test_mock_job_uses_existing_store_mode_contract_without_hardware(self):
+        job = {'store_id': 24, 'order_id': 64, 'module_code': 'GRAB', 'status': 'PRINTED',
+               'execution_mode': None, 'printer_id': None, 'printer_endpoint': None,
+               'printed_by_device_id': None, 'rendered_text_snapshot': '+TESTADD +TESTCOMBO'}
+        printing = {'printing_mode': 'MOCK', 'printers': []}
+        for mode in (None, 'MOCK'):
+            acceptance.verify_mock_job({**job, 'execution_mode': mode}, printing, 24, 64)
+        for changed in ({'execution_mode': 'REAL'}, {'execution_mode': 'PAD_DIRECT'},
+                        {'store_id': 25}, {'order_id': 65}, {'printer_id': 1},
+                        {'printer_endpoint': '192.0.2.1'}, {'printed_by_device_id': 1},
+                        {'status': 'FAILED'}, {'module_code': 'FRONTDESK_RECEIPT'},
+                        {'rendered_text_snapshot': '+TESTADD'}, {'rendered_text_snapshot': '+TESTCOMBO'}):
+            with self.subTest(changed=changed), self.assertRaises(acceptance.NoGo):
+                acceptance.verify_mock_job({**job, **changed}, printing, 24, 64)
+        for changed in ({'printing_mode': 'REAL'}, {'printing_mode': 'DISABLED'},
+                        {'printers': [{'ip_address': '192.0.2.1'}]}):
+            with self.subTest(changed=changed), self.assertRaises(acceptance.NoGo):
+                acceptance.verify_mock_job(job, {**printing, **changed}, 24, 64)
+
     def arguments(self):
         return ['--execute', '--approved-sha', 'a' * 40, '--preflight-evidence', '/safe/preflight',
                 '--preflight-evidence-sha256', 'b' * 64, '--organization-id', '1',
