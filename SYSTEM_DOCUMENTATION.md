@@ -7299,6 +7299,14 @@ Historical jobs use their recorded revision and retain legacy fallback behavior.
 No new alias table or Flyway migration is needed. Printing preview derives the
 current Menu name; actual jobs use frozen snapshots, never live catalog joins.
 
+Staging follow-through (2026-09-16): PR #232 / executable
+`11996ef919d9b28ee5366c7e40a58a78c074b675`, Flyway V28 unchanged. Alias API
+and browser create/edit/reset checks passed. Store 1 explicit price reconciliation
+linked 13 groups / 48 current options; missing codes and conflicting names remain
+unresolved. Overall acceptance remains PARTIAL, not Production-ready approval;
+see `docs/governance/MENU_ADDON_ALIAS_OWNERSHIP_EVIDENCE.md` for exact evidence
+and remaining runtime/UI gates. Production was not mutated.
+
 Existing data reconciliation links only identical name/price groups; active
 differences remain item eligibility. Business-value conflicts remain explicit
 and unresolved, preserving the existing current runtime rows. Migration adds
