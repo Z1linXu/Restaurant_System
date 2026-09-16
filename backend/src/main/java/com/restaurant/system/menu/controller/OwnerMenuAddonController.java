@@ -24,6 +24,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/admin/menu")
 public class OwnerMenuAddonController {
+    @org.springframework.beans.factory.annotation.Value("${app.environment:unknown}")
+    private String environment;
+    @org.springframework.beans.factory.annotation.Value("${spring.datasource.url:}")
+    private String datasourceUrl;
     private final StoreAddonService addons;
     private final AuthorizationService authorization;
     private final StoreModuleAccessEvaluator modules;
@@ -89,10 +93,17 @@ public class OwnerMenuAddonController {
         @RequestBody StoreAddonService.ReconcileRequest request, HttpServletRequest servletRequest) {
         if (request == null || request.dry_run == null) throw new BusinessException("ADDON_RECONCILE_DRY_RUN_REQUIRED");
         var user = requireStore(request.store_id);
-        var result = addons.reconcile(request.store_id, request.dry_run);
+        boolean hasDecisions = request.confirmed_prices != null && !request.confirmed_prices.isEmpty();
+        if (hasDecisions && (!"staging".equals(environment)
+            || datasourceUrl == null || !datasourceUrl.matches("jdbc:postgresql://[^/]+/restaurant_pos_staging(?:\\?.*)?"))) {
+            throw new BusinessException("ADDON_PRICE_RECONCILIATION_STAGING_ONLY");
+        }
+        var result = hasDecisions ? addons.reconcilePrices(request.store_id, request.dry_run, request.confirmed_prices)
+            : addons.reconcile(request.store_id, request.dry_run);
         if (!request.dry_run) audit.record(request.store_id, user, "MENU_ADDONS_RECONCILED", "STORE", request.store_id,
             "Reconciled Store Add-ons", Map.of("linked_groups", result.linked_groups(),
-                "linked_options", result.linked_options(), "conflict_count", result.conflicts().size()), servletRequest);
+                "linked_options", result.linked_options(), "conflict_count", result.conflicts().size(),
+                "confirmed_prices", hasDecisions ? request.confirmed_prices : Map.of()), servletRequest);
         return ApiResponse.success(result);
     }
 

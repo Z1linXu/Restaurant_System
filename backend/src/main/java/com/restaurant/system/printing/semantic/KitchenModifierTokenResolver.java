@@ -51,6 +51,9 @@ public final class KitchenModifierTokenResolver {
         if (fallback == null) {
             fallback = addonFallback(labelZh, labelEn, semanticCode);
         }
+        if (printingRules != null && "CANONICAL_SNAPSHOT".equals(printingRules.formatting("addon_fallback", ""))) {
+            fallback = firstLabel(labelZh, labelEn, semanticCode, "未知加项");
+        }
         String token = printingRules == null
             ? fallback
             : printingRules.resolveModifierToken("MODIFIER_ADD", semanticCode, fallback);

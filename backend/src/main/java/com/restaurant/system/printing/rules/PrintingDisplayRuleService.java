@@ -13,6 +13,8 @@ public interface PrintingDisplayRuleService {
 
     PrintingDisplayRuleSettingsResponse getSettings(Long storeId);
 
+    void ensureCanonicalAddonFallback(Long storeId);
+
     PrintingDisplayRuleRevisionResponse saveDraft(PrintingDisplayRuleDraftRequest request);
 
     PrintingDisplayRuleRevisionResponse publishDraft(Long storeId, Long revisionId);

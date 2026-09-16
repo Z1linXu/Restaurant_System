@@ -1,6 +1,7 @@
 package com.restaurant.system.printing.rules;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.owner.profile.StoreProfileCanonicalJson;
 import com.restaurant.system.printing.PrintModuleCode;
@@ -90,7 +91,8 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
         "multi_noodle_quantity",
         "addon_quantity_marker",
         "green_compression",
-        "frontdesk_combo_prefix"
+        "frontdesk_combo_prefix",
+        "addon_fallback"
     );
     private static final Set<String> PROHIBITED_KEY_EXACT = Set.of(
         "printer_id",
@@ -138,17 +140,23 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
     private final PrintingDisplayRuleRevisionRepository revisionRepository;
     private final StoreRepository storeRepository;
     private final PrintJobRepository printJobRepository;
+    private final PrintingAddonVocabulary addonVocabulary;
+    private final jakarta.persistence.EntityManager entityManager;
 
     public PrintingDisplayRuleServiceImpl(
         PrintingDisplayRuleSetRepository ruleSetRepository,
         PrintingDisplayRuleRevisionRepository revisionRepository,
         StoreRepository storeRepository,
-        PrintJobRepository printJobRepository
+        PrintJobRepository printJobRepository,
+        PrintingAddonVocabulary addonVocabulary,
+        jakarta.persistence.EntityManager entityManager
     ) {
         this.ruleSetRepository = ruleSetRepository;
         this.revisionRepository = revisionRepository;
         this.storeRepository = storeRepository;
         this.printJobRepository = printJobRepository;
+        this.addonVocabulary = addonVocabulary;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -171,7 +179,33 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
             .findFirst()
             .map(this::toResponse)
             .orElse(null);
+        response.addon_aliases = addonEntries(storeId);
         return response;
+    }
+
+    /** One immutable policy revision; never edits old revisions or the Owner's draft. */
+    @Override
+    @Transactional
+    public void ensureCanonicalAddonFallback(Long storeId) {
+        PrintingDisplayRuleSet set = requireRuleSetForUpdate(storeId);
+        PrintingDisplayRuleContext current = activeContext(storeId);
+        if ("CANONICAL_SNAPSHOT".equals(current.formatting("addon_fallback", ""))) return;
+        ObjectNode content = current.content().deepCopy();
+        content.with("formatting").put("addon_fallback", "CANONICAL_SNAPSHOT");
+        PrintingDisplayRuleRevision revision = new PrintingDisplayRuleRevision();
+        revision.rule_set_id = set.id;
+        revision.revision_number = revisionRepository.findMaxRevisionNumber(set.id) + 1;
+        revision.status = "PUBLISHED";
+        revision.schema_version = PrintingDisplayRuleDefaults.SCHEMA_VERSION;
+        revision.content_json = StoreProfileCanonicalJson.canonicalize(content);
+        revision.fingerprint_sha256 = StoreProfileCanonicalJson.sha256(revision.content_json);
+        revision.source_reference = "MENU_ADDON_CANONICAL_FALLBACK";
+        revision.summary = "Use frozen Menu names when no Add-on print alias exists; preserve explicit aliases";
+        revision.created_at = revision.updated_at = revision.published_at = LocalDateTime.now();
+        revision = revisionRepository.saveAndFlush(revision);
+        set.active_revision_id = revision.id;
+        set.updated_at = revision.updated_at;
+        ruleSetRepository.saveAndFlush(set);
     }
 
     @Override
@@ -188,6 +222,11 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
             throw new BusinessException("PRINTING_RULE_VALIDATION_FAILED: " + validation.issues());
         }
         PrintingDisplayRuleSet ruleSet = requireRuleSetForUpdate(request.store_id);
+        if ("CANONICAL_SNAPSHOT".equals(activeContext(request.store_id).formatting("addon_fallback", ""))) {
+            content = content.deepCopy();
+            ((ObjectNode) content).with("formatting").put("addon_fallback", "CANONICAL_SNAPSHOT");
+        }
+        requireKnownAddonCodes(request.store_id, content);
         LocalDateTime now = LocalDateTime.now();
         String canonicalContent = StoreProfileCanonicalJson.canonicalize(content);
         String fingerprint = StoreProfileCanonicalJson.sha256(canonicalContent);
@@ -262,6 +301,13 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
         if (!validation.valid()) {
             throw new BusinessException("PRINTING_RULE_VALIDATION_FAILED: " + validation.issues());
         }
+        requireKnownAddonCodes(storeId, StoreProfileCanonicalJson.parse(revision.content_json));
+        if ("CANONICAL_SNAPSHOT".equals(activeContext(storeId).formatting("addon_fallback", ""))) {
+            ObjectNode content = StoreProfileCanonicalJson.parse(revision.content_json).deepCopy();
+            content.with("formatting").put("addon_fallback", "CANONICAL_SNAPSHOT");
+            revision.content_json = StoreProfileCanonicalJson.canonicalize(content);
+            revision.fingerprint_sha256 = StoreProfileCanonicalJson.sha256(revision.content_json);
+        }
         LocalDateTime now = LocalDateTime.now();
         revision.status = "PUBLISHED";
         revision.published_at = now;
@@ -328,7 +374,7 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
         String sizeHot = context.resolveDictionaryOutput("SIZE", PrintModuleCode.HOT_KITCHEN, null, size, null, "");
         String noodleHot = resolvePreviewDictionary(context, itemSku, "NOODLE_TYPE", PrintModuleCode.HOT_KITCHEN, noodle);
         String spicyHot = context.resolveDictionaryOutput("SPICINESS", PrintModuleCode.HOT_KITCHEN, null, spicy, null, "");
-        String modifiers = buildPreviewModifiers(context, add, remove);
+        String modifiers = buildPreviewModifiers(request.store_id, context, add, remove);
 
         PrintingDisplayRulePreviewResponse response = new PrintingDisplayRulePreviewResponse();
         response.grab_preview = sizeGrab + grabAlias + noodleGrab + spicyGrab + "×1" + (modifiers.isBlank() ? "" : " | " + modifiers);
@@ -391,7 +437,12 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
 
     private PrintingDisplayRuleSet requireRuleSetForUpdate(Long storeId) {
         requireStore(storeId);
-        return ruleSetRepository.findByStoreIdForUpdate(storeId).orElseGet(() -> createDefaultRuleSet(storeId));
+        var existing = ruleSetRepository.findByStoreIdForUpdate(storeId);
+        if (existing.isEmpty()) return createDefaultRuleSet(storeId);
+        // A Menu transaction may have read this entity before the lock. Locking
+        // alone does not replace its first-level cached active pointer.
+        entityManager.refresh(existing.get(), jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        return existing.get();
     }
 
     private PrintingDisplayRuleSet createDefaultRuleSet(Long storeId) {
@@ -472,6 +523,9 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
                     issues.add(issue("UNKNOWN_FIELD", "$.formatting." + field, "Unknown formatting field"));
                 }
                 JsonNode value = formatting.path(field);
+                if ("addon_fallback".equals(field) && !"CANONICAL_SNAPSHOT".equals(value.asText())) {
+                    issues.add(issue("FORMATTING_VALUE_INVALID", "$.formatting." + field, "Unsupported Add-on fallback policy"));
+                }
                 if (!value.isTextual()) {
                     issues.add(issue("FORMATTING_VALUE_INVALID", "$.formatting." + field, "formatting values must be text"));
                 }
@@ -568,7 +622,7 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
             for (JsonNode entry : dictionary) {
                 String entryPath = "$.dictionaries." + name + "[" + index + "]";
                 if ("MODIFIER_ADD".equals(name) || "MODIFIER_REMOVE".equals(name)) {
-                    validateModifierDictionaryEntry(entry, entryPath, issues);
+                    validateModifierDictionaryEntry(entry, entryPath, "MODIFIER_ADD".equals(name), issues);
                 } else {
                     validateStructuredDictionaryEntry(entry, entryPath, issues);
                 }
@@ -580,6 +634,7 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
     private void validateModifierDictionaryEntry(
         JsonNode entry,
         String path,
+        boolean nullableAlias,
         List<PrintingDisplayRuleValidationIssue> issues
     ) {
         if (!entry.isArray() || entry.size() != 2) {
@@ -588,6 +643,7 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
         }
         for (int i = 0; i < entry.size(); i++) {
             JsonNode value = entry.get(i);
+            if (i == 1 && nullableAlias && value.isNull()) continue;
             if (!value.isTextual() || value.asText("").isBlank()) {
                 issues.add(issue("MODIFIER_DICTIONARY_ENTRY_INVALID", path + "[" + i + "]", "Modifier dictionary values must be non-blank text"));
             }
@@ -785,10 +841,12 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
         return context.resolveDictionaryOutput(dictionary, outputType, null, zh, null, zh);
     }
 
-    private String buildPreviewModifiers(PrintingDisplayRuleContext context, List<String> addCodes, List<String> removeCodes) {
+    private String buildPreviewModifiers(Long storeId, PrintingDisplayRuleContext context, List<String> addCodes, List<String> removeCodes) {
         List<String> tokens = new ArrayList<>();
+        var vocabulary = addonEntries(storeId);
         for (String code : addCodes == null ? List.<String>of() : addCodes) {
-            String token = KitchenModifierTokenResolver.resolveAddon("ADD_ON", code, code, null, 1, context);
+            String name = vocabulary.stream().filter(e -> e.code().equals(code)).map(e -> e.default_print_text() == null ? code : e.default_print_text()).findFirst().orElse(code);
+            String token = KitchenModifierTokenResolver.resolveAddon("ADD_ON", code, name, null, 1, context);
             if (token != null && !token.isBlank()) {
                 tokens.add(token);
             }
@@ -800,6 +858,33 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
             }
         }
         return String.join(" ", tokens);
+    }
+
+    private void requireKnownAddonCodes(Long storeId, JsonNode content) {
+        var known = addonEntries(storeId).stream()
+            .map(PrintingAddonVocabulary.Entry::code).collect(java.util.stream.Collectors.toSet());
+        Set<String> seen = new LinkedHashSet<>();
+        for (JsonNode pair : content.path("dictionaries").path("MODIFIER_ADD")) {
+            String code = pair.path(0).asText();
+            if (!known.contains(code) || !seen.add(code)) {
+                throw new BusinessException("PRINTING_ADDON_IDENTITY_READ_ONLY: " + code);
+            }
+        }
+    }
+
+    private List<PrintingAddonVocabulary.Entry> addonEntries(Long storeId) {
+        ObjectNode persisted = activeContext(storeId).content().deepCopy();
+        var aliases = persisted.with("dictionaries").withArray("MODIFIER_ADD");
+        ruleSetRepository.findByStoreId(storeId).ifPresent(set -> {
+            for (var draft : revisionRepository.findDraftsByRuleSetId(set.id)) {
+                for (JsonNode pair : StoreProfileCanonicalJson.parse(draft.content_json).path("dictionaries").path("MODIFIER_ADD")) {
+                    aliases.add(pair.deepCopy());
+                }
+            }
+        });
+        // Only persisted pre-request legacy vocabulary is trusted, never new
+        // codes from the incoming draft body.
+        return addonVocabulary.entries(storeId, persisted);
     }
 
     private PrintingDisplayRuleValidationIssue issue(String code, String path, String message) {

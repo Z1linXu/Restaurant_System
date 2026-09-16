@@ -1,5 +1,5 @@
 schema_version: 1
-updated_at: 2026-09-15
+updated_at: 2026-09-16
 
 repository:
   ref: origin/main
@@ -9,7 +9,7 @@ repository:
 phase:
   current: PHASE_B
   package: MENU_MANAGEMENT_PRODUCT_SIMPLIFICATION
-  status: IMPLEMENTATION_MERGED_STAGING_ACCEPTANCE_PARTIAL
+  status: ADDON_ALIAS_OWNERSHIP_IMPLEMENTATION_AND_VALIDATION
   next_phase_authorized: false
 
 staging:
@@ -30,7 +30,7 @@ production:
 
 gate:
   type: TECHNICAL
-  next_action: COMPLETE_STAGING_OWNER_BROWSER_AND_FOREIGN_ORGANIZATION_ACCEPTANCE_PROOF
+  next_action: COMPLETE_ADDON_ALIAS_REVIEW_MERGE_EXACT_SHA_STAGING_ACCEPTANCE
 
 authorization:
   repository_governance: COMPLETE

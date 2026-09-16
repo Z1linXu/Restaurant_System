@@ -25,6 +25,7 @@ class PrintingDisplayRuleServiceConflictTest {
     @Mock private PrintingDisplayRuleRevisionRepository revisionRepository;
     @Mock private StoreRepository storeRepository;
     @Mock private PrintJobRepository printJobRepository;
+    @Mock private PrintingAddonVocabulary vocabulary;
 
     private PrintingDisplayRuleServiceImpl service;
     private PrintingDisplayRuleSet ruleSet;
@@ -35,9 +36,13 @@ class PrintingDisplayRuleServiceConflictTest {
             ruleSetRepository,
             revisionRepository,
             storeRepository,
-            printJobRepository
+            printJobRepository,
+            vocabulary,
+            org.mockito.Mockito.mock(jakarta.persistence.EntityManager.class)
         );
         ruleSet = new PrintingDisplayRuleSet();
+        org.mockito.Mockito.lenient().when(vocabulary.entries(any(), any())).thenReturn(List.of(
+            new PrintingAddonVocabulary.Entry("addon_beef_tendon", "加牛筋", "加牛筋", "MENU")));
         ruleSet.id = 10L;
         ruleSet.store_id = 1L;
         ruleSet.active_revision_id = 100L;

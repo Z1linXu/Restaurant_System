@@ -7279,9 +7279,25 @@ their established compatibility behavior and are not silently repriced.
 Menu Management exposes a Store Add-ons list with add/edit/activate/deactivate;
 code is entered on creation and read-only thereafter. Item Add-ons expose
 only enable/disable plus read-only names/prices. Printing coverage is a
-lightweight configured/fallback indicator. The MODIFIER_ADD editor remains in
-Printing Management and binds the same immutable code; name edits do not
-change tokens. `fried_egg` and `combo_fried_egg` remain separate identities.
+lightweight configured/fallback indicator. Printing Settings derives its Add-on
+alias rows from the Store catalog, legacy Menu codes, Combo components and
+retained published aliases. Code/name/default text are read-only; only the
+optional kitchen alias is editable. New Menu Add-ons appear automatically.
+Reset stores a null alias, never deletes Menu identity. No Add/Remove/code-edit
+controls exist in this alias section. Other dictionaries retain their behavior.
+Backend draft/publish rejects unknown or duplicate MODIFIER_ADD codes.
+`fried_egg` and `combo_fried_egg` remain separate identities; Combo-only egg
+codes are excluded from normal catalog/eligibility and cannot be created there.
+
+On catalog create/update/reconciliation, the existing rule-set lock and revision
+repository install the `formatting.addon_fallback=CANONICAL_SNAPSHOT` policy once.
+This creates an immutable published revision preserving every explicit alias;
+it never overwrites prior published content or an outstanding Owner draft.
+Subsequent draft publication retains that policy. New print jobs without an
+alias use frozen order-option Chinese/English/code fallback; custom aliases win.
+Historical jobs use their recorded revision and retain legacy fallback behavior.
+No new alias table or Flyway migration is needed. Printing preview derives the
+current Menu name; actual jobs use frozen snapshots, never live catalog joins.
 
 Existing data reconciliation links only identical name/price groups; active
 differences remain item eligibility. Business-value conflicts remain explicit
@@ -7289,6 +7305,17 @@ and unresolved, preserving the existing current runtime rows. Migration adds
 schema; business choices are not hardcoded in Flyway. Reconciliation is
 transactional and idempotent, uses the existing Store materialization boundary
 for new Stores, and never rewrites historical order or printing snapshots.
+
+The explicit Staging-only reconciliation request may include `confirmed_prices`.
+It requires both the Staging application marker and exact Staging database name,
+plus normal Store authorization. It applies only supplied stable codes to current
+Store rows/catalogs atomically, then links deterministic names; unresolved names
+remain reported. Dry-run leaves data unchanged and reports existing conflicts.
+This is not a future default-price policy and automatic provisioning never
+supplies business decisions. Owner-confirmed 2026-09-16 current prices are
+tea/fried egg 1.99, noodles 3.99, meat and `addon_beef_tendon` 6.99, cilantro/onion
+0, and the remaining nine explicitly listed current normal codes 3.00.
+No label-based identity remap, Combo repricing or Production reconciliation occurs.
 
 Combo Configuration retains the Store COMBO_EGG default and lists only item
 exceptions. An item's nullable `default_combo_egg_component_code` is validated

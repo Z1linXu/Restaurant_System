@@ -43,6 +43,7 @@ public class StoreAddonService {
     public static class ReconcileRequest {
         public Long store_id;
         public Boolean dry_run;
+        public Map<String, BigDecimal> confirmed_prices;
     }
     public static class EligibilityRequest { public Boolean enabled; }
 
@@ -95,6 +96,7 @@ public class StoreAddonService {
     public Addon create(WriteRequest request) {
         if (request == null) throw failure("ADDON_PAYLOAD_REQUIRED");
         String code = normalizeCode(request.code);
+        requireNormalCode(code);
         Values values = validateValues(request);
         Long organizationId = lockStore(request.store_id);
         if (addons(request.store_id).stream().anyMatch(a -> a.code().equals(code))) {
@@ -106,6 +108,7 @@ public class StoreAddonService {
         }
         Long definitionId = definition(organizationId, code);
         long id = insertAddon(request.store_id, definitionId, values);
+        printingRules.ensureCanonicalAddonFallback(request.store_id);
         revisions.incrementRevision(request.store_id);
         return requireAddon(id);
     }
@@ -115,11 +118,13 @@ public class StoreAddonService {
         Addon before = requireAddon(addonId);
         lockStore(before.store_id());
         before = requireAddon(addonId);
+        requireNormalCode(before.code());
         if (request == null) throw failure("ADDON_PAYLOAD_REQUIRED");
         if (request.code != null && !before.code().equals(normalizeCode(request.code))) {
             throw failure("ADDON_CODE_IMMUTABLE");
         }
         Values values = validateValues(request);
+        printingRules.ensureCanonicalAddonFallback(before.store_id());
         jdbc.update("""
             update store_addons set name_zh=?, name_en=?, price=?, active=?, updated_at=current_timestamp
             where id=? and store_id=?
@@ -163,6 +168,7 @@ public class StoreAddonService {
         lockStore(storeId);
         if (!storeId.equals(storeIdForItem(itemId))) throw failure("ADDON_STORE_MISMATCH");
         Addon addon = requireAddon(addonId);
+        requireNormalCode(addon.code());
         if (!storeId.equals(addon.store_id())) throw failure("ADDON_STORE_MISMATCH");
         List<Row> itemRows = rows(storeId).stream().filter(r -> itemId.equals(r.itemId())).toList();
         if (itemRows.stream().anyMatch(r -> r.addonId() == null && addon.code().equals(r.code()))) {
@@ -223,8 +229,40 @@ public class StoreAddonService {
                     """, addonId, storeId, Boolean.TRUE.equals(row.active()), catalogActive && Boolean.TRUE.equals(row.active()), row.id());
             }
         }
-        if (!dryRun && optionCount > 0) revisions.incrementRevision(storeId);
+        if (!dryRun) {
+            printingRules.ensureCanonicalAddonFallback(storeId);
+            if (optionCount > 0) revisions.incrementRevision(storeId);
+        }
         return new ReconciliationReport(storeId, dryRun, groupCount, optionCount, conflicts(groups));
+    }
+
+    /** Explicit current-data business decisions; never called by automatic provisioning. */
+    @Transactional
+    public ReconciliationReport reconcilePrices(Long storeId, boolean dryRun, Map<String, BigDecimal> prices) {
+        lockStore(storeId);
+        if (prices == null || prices.isEmpty()) throw failure("ADDON_PRICE_DECISIONS_REQUIRED");
+        for (var entry : prices.entrySet()) {
+            if (!entry.getKey().equals(normalizeCode(entry.getKey()))) throw failure("ADDON_CODE_INVALID");
+            requireNormalCode(entry.getKey());
+            if (entry.getValue() == null || entry.getValue().signum() < 0 || entry.getValue().scale() > 2)
+                throw failure("ADDON_PRICE_INVALID");
+        }
+        if (dryRun) return reconcile(storeId, true);
+        int changed = 0;
+        for (Row row : rows(storeId)) {
+            BigDecimal price = prices.get(row.code());
+            if (price != null && !moneyEqual(price, row.price())) {
+                changed += jdbc.update("update menu_item_options set price_delta=?,updated_at=current_timestamp where id=?", price, row.id());
+            }
+        }
+        for (Addon addon : addons(storeId)) {
+            BigDecimal price = prices.get(addon.code());
+            if (price != null && !moneyEqual(price, addon.price())) {
+                changed += jdbc.update("update store_addons set price=?,updated_at=current_timestamp where id=? and store_id=?", price, addon.id(), storeId);
+            }
+        }
+        if (changed > 0) revisions.incrementRevision(storeId);
+        return reconcile(storeId, false);
     }
 
     private List<Group> plan(Long storeId, List<Addon> catalog) {
@@ -286,6 +324,7 @@ public class StoreAddonService {
     }
 
     public static boolean isAddon(String group, String type, String code, String zh, String en) {
+        if (isComboOnlyCode(code)) return false;
         if (group != null && !group.isBlank()) return "ADD_ON".equalsIgnoreCase(group.trim());
         return "addon".equalsIgnoreCase(type == null ? null : type.trim())
             && !"combo".equalsIgnoreCase(code == null ? null : code.trim())
@@ -338,7 +377,16 @@ public class StoreAddonService {
 
     private List<Addon> addons(Long storeId) {
         PrintingDisplayRuleContext context = printingRules.activeContext(storeId);
-        return jdbc.query(SELECT_ADDONS + " where a.store_id=? order by d.code,a.id", (rs, n) -> addon(rs, context), storeId);
+        return jdbc.query(SELECT_ADDONS + " where a.store_id=? order by d.code,a.id", (rs, n) -> addon(rs, context), storeId)
+            .stream().filter(a -> !isComboOnlyCode(a.code())).toList();
+    }
+
+    private static boolean isComboOnlyCode(String code) {
+        return "combo_tea_egg".equalsIgnoreCase(code) || "combo_fried_egg".equalsIgnoreCase(code);
+    }
+
+    private static void requireNormalCode(String code) {
+        if (isComboOnlyCode(code)) throw failure("ADDON_COMBO_COMPONENT_IDENTITY: configure Combo components separately");
     }
 
     private Addon requireAddon(Long id) {

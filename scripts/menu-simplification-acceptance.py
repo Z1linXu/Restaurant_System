@@ -454,6 +454,82 @@ class Acceptance:
             finally:
                 api.logout()
 
+    def alias_ownership(self):
+        self.fixture(self.a, self.args.store_a_code)
+        b_before = self.catalog(self.b)
+        order_before = frozen_order(self.api.call(f'/orders/{self.report["order_id"]}'))
+        jobs_before = self.api.call(f'/orders/{self.report["order_id"]}/print-jobs')
+        settings = self.api.call(f'/admin/printing/display-rules?store_id={self.a}')
+        require(settings.get('draft_revision') is None, 'existing_printing_draft_protected')
+        original = copy.deepcopy(settings['active_revision']['content'])
+        code = self.prefix + '_cheese'
+        addon = self.api.call('/admin/menu/addons', 'POST', {'store_id': self.a, 'code': code,
+            'name_zh': '加测试芝士', 'name_en': 'Synthetic Cheese', 'price': 2.25, 'active': True})
+        settings = self.api.call(f'/admin/printing/display-rules?store_id={self.a}')
+        row = one(settings['addon_aliases'], lambda x: x['code'] == code, 'new_addon_not_derived')
+        require(row['default_print_text'] == addon['name_zh'], 'alias_default_not_menu_name')
+        for combo in ('combo_tea_egg', 'combo_fried_egg'):
+            require(not any(x['code'] == combo for x in self.catalog(self.a)['addons']), 'combo_in_normal_catalog')
+            one(settings['addon_aliases'], lambda x: x['code'] == combo, 'combo_alias_identity_missing')
+        content = copy.deepcopy(settings['active_revision']['content'])
+        def preview(expected):
+            result = self.api.call('/admin/printing/display-rules/preview', 'POST', {'store_id': self.a,
+                'content': content, 'modifier_add_codes': [code], 'modifier_remove_codes': []})
+            require(all(expected in result[field] for field in ('grab_preview', 'hot_kitchen_preview')), 'alias_preview_wrong')
+        def publish():
+            draft = self.api.call('/admin/printing/display-rules/draft', 'POST',
+                {'store_id': self.a, 'content': content, 'summary': 'Synthetic Add-on alias ownership acceptance'})
+            if draft.get('lifecycle_result') != 'ALREADY_ACTIVE':
+                self.api.call('/admin/printing/display-rules/publish', 'POST', {'store_id': self.a, 'revision_id': draft['id']})
+        preview('加测试芝士')
+        self.record('new_menu_addon_derived_in_printing_and_canonical_fallback')
+        invalid = copy.deepcopy(content)
+        invalid['dictionaries']['MODIFIER_ADD'].append([self.prefix + '_not_a_menu_identity', '+INVALID'])
+        catalog_before_denial = self.catalog(self.a)
+        self.api.call('/admin/printing/display-rules/draft', 'POST', {'store_id': self.a, 'content': invalid}, expected=(400,))
+        require(self.catalog(self.a) == catalog_before_denial, 'denied_alias_write_changed_menu')
+        content['dictionaries']['MODIFIER_ADD'].append([code, '+芝测试'])
+        publish()
+        preview('+芝测试')
+        require(one(self.catalog(self.a)['addons'], lambda x: x['id'] == addon['id'], 'addon_disappeared') == {**addon, 'printing_configured': True},
+                'alias_changed_menu_values')
+        content['dictionaries']['MODIFIER_ADD'] = [pair if pair[0] != code else [code, None]
+                                                   for pair in content['dictionaries']['MODIFIER_ADD']]
+        publish()
+        preview('加测试芝士')
+        self.api.call(f'/admin/menu/addons/{addon["id"]}', 'PUT',
+            {'name_zh': '加新测试芝士', 'name_en': 'Synthetic Cheese Renamed', 'price': 2.25, 'active': True})
+        preview('加新测试芝士')
+        require([p for p in content['dictionaries']['MODIFIER_ADD'] if p[0] != code] == original['dictionaries']['MODIFIER_ADD'],
+                'existing_alias_changed')
+        self.record('alias_only_edit_reset_rename_and_legacy_alias_preservation')
+        prices = {c: 3 for c in ('extra_radish', 'bok_choy', 'extra_sauce', 'broccoli', 'cabbage',
+                                 'corn', 'seaweed', 'mushroom', 'carrot_slice')}
+        prices.update(tea_egg=1.99, fried_egg=1.99, extra_noodle=3.99, addon_beef_tendon=6.99,
+                      extra_meat=6.99, green_onion=0, cilantro=0)
+        before = self.catalog(self.a)
+        self.api.call('/admin/menu/addons/reconcile', 'POST', {'store_id': self.a, 'dry_run': True, 'confirmed_prices': prices})
+        require(self.catalog(self.a) == before, 'price_dry_run_mutated')
+        result = self.api.call('/admin/menu/addons/reconcile', 'POST', {'store_id': self.a, 'dry_run': False, 'confirmed_prices': prices})
+        after = self.catalog(self.a)
+        for a in after['addons']:
+            if a['code'] in prices:
+                require(a['price'] == prices[a['code']], 'confirmed_catalog_price_not_applied')
+        for item in flatten_menu(self.menu(self.a)):
+            for option in item['options']:
+                if option.get('option_group') == 'ADD_ON' and option.get('option_code') in prices:
+                    require(option['price_delta'] == prices[option['option_code']], 'confirmed_option_price_not_applied')
+        self.api.call('/admin/menu/addons/reconcile', 'POST', {'store_id': self.a, 'dry_run': False, 'confirmed_prices': prices})
+        require(after == self.catalog(self.a), 'confirmed_price_replay_changed_catalog')
+        require(b_before == self.catalog(self.b), 'price_reconciliation_cross_store_mutation')
+        require(order_before == frozen_order(self.api.call(f'/orders/{self.report["order_id"]}')), 'historical_order_changed')
+        jobs_after = self.api.call(f'/orders/{self.report["order_id"]}/print-jobs')
+        frozen_job = lambda j: {k: j.get(k) for k in ('id', 'rendered_text_snapshot', 'printing_rule_revision_id', 'printing_rule_fingerprint_sha256')}
+        require([frozen_job(j) for j in jobs_before] == [frozen_job(j) for j in jobs_after], 'historical_print_changed')
+        self.record('confirmed_prices_replay_isolation_historical_snapshots', unresolved=result['conflicts'],
+                    confirmed_prices=prices, order_snapshot_sha256=digest(order_before))
+        self.record('alias_owner_browser_controls', 'NOT_RUN', reason='requires_authenticated_browser')
+
     def run(self, credentials, runtime):
         context_a = self.fixture(self.a, self.args.store_a_code)
         self.fixture(self.b, self.args.store_b_code)
@@ -552,6 +628,7 @@ class Acceptance:
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--execute', action='store_true', help='Explicit synthetic Store mutation gate')
+    parser.add_argument('--alias-ownership', action='store_true', help='Also test derived aliases and Owner-confirmed current fixture prices')
     parser.add_argument('--create-fixtures', action='store_true', help='Create fixed STG005_MENU_<RUN>_A/B via normal Owner API')
     parser.add_argument('--create-isolation-fixtures', action='store_true',
                         help='Create one private synthetic OWNER on B using normal Staff API')
@@ -772,6 +849,8 @@ def main(argv=None):
                 'approved_store_membership_missing')
         acceptance = Acceptance(args, api, report)
         acceptance.run(credentials, runtime)
+        if args.alias_ownership:
+            acceptance.alias_ownership()
         assert_templates_unchanged(api, args, templates, report, 'after_menu_acceptance')
         report['checks'].append({'check': 'master_artifact_content_immutability', 'status': 'NOT_RUN',
             'reason': 'no_master_artifact_read_api_catalog_fingerprint_is_advertised_selection_only'})

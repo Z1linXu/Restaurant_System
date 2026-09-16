@@ -10,6 +10,22 @@ import org.junit.jupiter.api.Test;
 class KitchenModifierTokenResolverTest {
 
     @Test
+    void canonicalFallbackUsesFrozenNameWhileLegacyAndExplicitAliasesKeepTheirMeaning() {
+        var content = (com.fasterxml.jackson.databind.node.ObjectNode) PrintingDisplayRuleContext.defaultContext().content().deepCopy();
+        content.with("formatting").put("addon_fallback", "CANONICAL_SNAPSHOT");
+        content.with("dictionaries").putArray("MODIFIER_ADD").addArray().add("combo_fried_egg").add("+煎");
+        var current = new PrintingDisplayRuleContext(99L, 2, "new", content);
+        assertThat(KitchenModifierTokenResolver.resolveAddon(addon("fried_egg", "加荷包蛋", 1), current)).isEqualTo("加荷包蛋");
+        assertThat(KitchenModifierTokenResolver.resolveAddon(addon("combo_fried_egg", "套餐煎蛋", 1), current)).isEqualTo("+煎");
+        assertThat(KitchenModifierTokenResolver.resolveAddon(addon("extra_cheese", "加芝士", 1), current)).isEqualTo("加芝士");
+        assertThat(KitchenModifierTokenResolver.resolveAddon(addon("fried_egg", "旧蛋名", 1), PrintingDisplayRuleContext.defaultContext())).isEqualTo("+煎");
+        content.with("dictionaries").withArray("MODIFIER_ADD").addArray().add("fried_egg").add("+自定义");
+        assertThat(KitchenModifierTokenResolver.resolveAddon(addon("fried_egg", "加荷包蛋", 1), current)).isEqualTo("+自定义");
+        content.with("dictionaries").withArray("MODIFIER_ADD").remove(1);
+        assertThat(KitchenModifierTokenResolver.resolveAddon(addon("fried_egg", "新名字", 1), current)).isEqualTo("新名字");
+    }
+
+    @Test
     void predefinedAddonKeepsExistingTokenAndQuantity() {
         OrderItemOption option = addon("tea_egg", "加蛋", 2);
 
