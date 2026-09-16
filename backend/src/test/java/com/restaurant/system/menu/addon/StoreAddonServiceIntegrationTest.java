@@ -99,6 +99,81 @@ class StoreAddonServiceIntegrationTest {
     @AfterEach void close() { context.close(); }
 
     @Test
+    void ownerConfirmedPricesResolveOnlyPricesAndRetainUnresolvedNamesAndHistory() {
+        long egg = option(10, "fried_egg", "加煎蛋", "Extra Fried Egg", "1.80", true);
+        option(11, "fried_egg", "加煎蛋", "Extra Fried Egg", "1.99", false);
+        option(20, "fried_egg", "加煎蛋", "Extra Fried Egg", "2.49", true);
+        option(30, "fried_egg", "加煎蛋", "Extra Fried Egg", "4.00", true);
+        option(10, "extra_meat", "加肉", "Extra Beef", "5.00", true);
+        option(11, "extra_meat", "加肉", "Extra Meat", "6.99", true);
+        jdbc.update("insert into order_item_options values (1,?,'加煎蛋',1.80)", egg);
+        var decisions = java.util.Map.of("fried_egg", new BigDecimal("1.99"), "extra_meat", new BigDecimal("6.99"));
+        service.reconcilePrices(1L, true, decisions);
+        assertThat(jdbc.queryForObject("select price_delta from menu_item_options where id=?", BigDecimal.class, egg)).isEqualByComparingTo("1.80");
+        var result = service.reconcilePrices(1L, false, decisions);
+        assertThat(result.conflicts()).extracting(StoreAddonService.Conflict::code).containsExactly("extra_meat");
+        assertThat(service.getAddons(1L).addons()).singleElement().satisfies(a -> {
+            assertThat(a.code()).isEqualTo("fried_egg");
+            assertThat(a.price()).isEqualByComparingTo("1.99");
+        });
+        assertThat(jdbc.queryForList("select price_delta from menu_item_options where menu_item_id in (20,30)", BigDecimal.class))
+            .containsExactly(new BigDecimal("2.49"), new BigDecimal("4.00"));
+        assertThat(jdbc.queryForObject("select price_delta from order_item_options where id=1", BigDecimal.class)).isEqualByComparingTo("1.80");
+        long revision = revision(1);
+        service.reconcilePrices(1L, false, decisions);
+        assertThat(revision(1)).isEqualTo(revision);
+    }
+
+    @Test
+    void confirmedVocabularyPricesAndComboExclusionAreExplicit() {
+        java.util.Map<String, BigDecimal> prices = new java.util.LinkedHashMap<>();
+        for (String code : List.of("extra_radish", "bok_choy", "extra_sauce", "broccoli", "cabbage", "corn", "seaweed", "mushroom", "carrot_slice")) prices.put(code, new BigDecimal("3.00"));
+        prices.put("tea_egg", new BigDecimal("1.99")); prices.put("fried_egg", new BigDecimal("1.99"));
+        prices.put("extra_noodle", new BigDecimal("3.99")); prices.put("extra_meat", new BigDecimal("6.99"));
+        prices.put("addon_beef_tendon", new BigDecimal("6.99"));
+        prices.put("cilantro", BigDecimal.ZERO); prices.put("green_onion", BigDecimal.ZERO);
+        prices.forEach((code, price) -> option(10, code, code, code, "0.50", true));
+        long combo = option(10, "combo_fried_egg", "套餐煎蛋", "Combo Fried Egg", "0.00", true);
+        option(11, "combo_tea_egg", "套餐卤蛋", "Combo Tea Egg", "0.00", true);
+        service.reconcilePrices(1L, false, prices);
+        assertThat(service.getAddons(1L).addons()).hasSize(16).allSatisfy(a -> {
+            assertThat(a.price()).isEqualByComparingTo(prices.get(a.code()));
+            assertThat(a.active()).isTrue();
+        });
+        assertThat(service.getItemAddons(10L)).noneMatch(a -> a.code().startsWith("combo_"));
+        assertThat(jdbc.queryForObject("select store_addon_id from menu_item_options where id=?", Long.class, combo)).isNull();
+        assertThatThrownBy(() -> service.create(request(1, "combo_tea_egg", "套餐蛋", "Combo", "1.99", true)))
+            .hasMessageContaining("ADDON_COMBO_COMPONENT_IDENTITY");
+    }
+
+    @Test
+    void priceReconciliationRollsBackEarlierRowsOnLateFailure() {
+        long egg = option(10, "fried_egg", "蛋", "Egg", "1.80", true);
+        option(11, "fried_egg", "蛋", "Egg", "1.80", true);
+        jdbc.execute("alter table menu_item_options add constraint reject_price check(menu_item_id<>11 or price_delta=1.80)");
+        assertThatThrownBy(() -> service.reconcilePrices(1L, false, java.util.Map.of("fried_egg", new BigDecimal("1.99"))))
+            .isInstanceOf(RuntimeException.class);
+        assertThat(jdbc.queryForObject("select price_delta from menu_item_options where id=?", BigDecimal.class, egg)).isEqualByComparingTo("1.80");
+        assertThat(count("store_addons")).isZero();
+        assertThat(revision(1)).isEqualTo(1);
+    }
+
+    @Test
+    void printingVocabularyIsDerivedAndDoesNotOwnMenuIdentity() {
+        jdbc.execute("create table store_combo_components(store_id bigint,component_code varchar(255),name_zh varchar(255))");
+        jdbc.update("insert into store_combo_components values (1,'combo_tea_egg','套餐卤蛋')");
+        var created = service.create(request(1, "extra_cheese", "加芝士", "Extra Cheese", "2.50", true));
+        service.create(request(2, "foreign_addon", "其他店", "Other", "1.00", true));
+        var vocabulary = new com.restaurant.system.printing.rules.PrintingAddonVocabulary(jdbc);
+        var entries = vocabulary.entries(1L, PrintingDisplayRuleContext.defaultContext().content());
+        assertThat(entries).extracting(com.restaurant.system.printing.rules.PrintingAddonVocabulary.Entry::code)
+            .contains("extra_cheese", "combo_tea_egg").doesNotContain("foreign_addon");
+        assertThat(entries.stream().filter(e -> e.code().equals("extra_cheese"))).singleElement()
+            .satisfies(e -> assertThat(e.default_print_text()).isEqualTo("加芝士"));
+        assertThat(service.getAddons(1L).addons()).containsExactly(created);
+    }
+
+    @Test
     void reconciliationIsDeterministicReadOnlyOnGetAndDryRunAndIdempotent() {
         option(10, "beef", "牛肉", "Beef", "2.00", true);
         option(11, "beef", "牛肉", "Beef", "2.00", false);
@@ -252,12 +327,9 @@ class StoreAddonServiceIntegrationTest {
                   "COMBO_EGG":[{"match_codes":["combo_fried_egg"],"outputs":{"HOT_KITCHEN":"煎蛋"}}]}}
                 """)));
         var addon = service.create(request(1, "fried_egg", "煎蛋", "Fried egg", "1.00", true));
-        var comboNamed = service.create(request(1, "combo_fried_egg", "煎蛋", "Fried egg", "1.00", true));
         assertThat(addon.printing_configured()).isTrue();
-        assertThat(comboNamed.printing_configured()).isFalse();
-        service.setEligibility(10L, comboNamed.id(), true);
-        assertThat(service.getItemAddons(10L)).filteredOn(a -> a.id().equals(comboNamed.id())).singleElement()
-            .satisfies(a -> assertThat(a.enabled()).isTrue());
+        assertThatThrownBy(() -> service.create(request(1, "combo_fried_egg", "煎蛋", "Fried egg", "1.00", true)))
+            .hasMessageContaining("ADDON_COMBO_COMPONENT_IDENTITY");
     }
 
     @Test

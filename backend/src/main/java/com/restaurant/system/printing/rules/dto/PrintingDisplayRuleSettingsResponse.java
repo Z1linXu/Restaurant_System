@@ -9,4 +9,5 @@ public class PrintingDisplayRuleSettingsResponse {
     public PrintingDisplayRuleRevisionResponse active_revision;
     public PrintingDisplayRuleRevisionResponse draft_revision;
     public List<PrintingDisplayRuleRevisionResponse> revisions;
+    public List<com.restaurant.system.printing.rules.PrintingAddonVocabulary.Entry> addon_aliases;
 }

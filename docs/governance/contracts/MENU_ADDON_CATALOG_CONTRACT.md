@@ -58,9 +58,10 @@ semantic fields independently. New Store materialization uses the same bounded
 reconciliation boundary inside the existing transaction and preserves unresolved
 template conflicts without silently choosing a value.
 
-Historical order/print snapshots are never rewritten or backfilled. Current
-Staging beef-tendon aliases may be reconciled only by explicit audited code
-mapping to `extra_beef_tendon`; historical aliases remain printable. Production
+Historical order/print snapshots are never rewritten or backfilled. Owner's
+2026-09-16 vocabulary confirms `addon_beef_tendon` at 6.99 for current Staging;
+no automatic remap to another code is permitted. Unmapped legacy codes remain
+unresolved; historical aliases remain printable. Production
 value choices and reconciliation require the separate Owner Production gate.
 
 ## Printing and product simplicity
@@ -70,6 +71,18 @@ counterparts. Equal labels/tokens never justify deduplication. Printing resolver
 and historical fallbacks stay unchanged unless tests demonstrate a regression.
 Missing MODIFIER_ADD coverage produces a lightweight fallback warning; it does
 not block menu editing or create an invented token.
+
+Menu Management alone owns normal Add-on creation and immutable code. Printing
+Settings derives a read-only identity projection and edits only nullable aliases.
+No duplicate Add/Remove/code controls. A new Menu entry appears automatically.
+The versioned CANONICAL_SNAPSHOT fallback policy preserves old published revisions
+and explicit aliases while new jobs use frozen Menu names without an alias.
+Combo egg codes remain available to Combo/printing but absent from normal Add-ons.
+
+Explicit confirmed prices may be reconciled through the bounded Staging request
+in one transaction. This does not select unresolved Chinese/English names, remap
+identity, alter historical snapshots, or authorize Production. The current price
+schedule is a dated Owner decision, not a permanent future Add-on default.
 
 Add-ons UI edits names, price and availability once per Store; item UI only
 enables/disables an Add-on and displays read-only prices. Code is entered on

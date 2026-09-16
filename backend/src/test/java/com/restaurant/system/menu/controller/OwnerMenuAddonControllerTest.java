@@ -59,6 +59,16 @@ class OwnerMenuAddonControllerTest {
         verify(service, never()).setEligibility(anyLong(), anyLong(), any(), anyLong());
     }
 
+    @Test void explicitPricesCannotBeReconciledOnProductionOrUnknownEnvironment() {
+        var request = new StoreAddonService.ReconcileRequest(); request.store_id = 12L; request.dry_run = false;
+        request.confirmed_prices = java.util.Map.of("fried_egg", new java.math.BigDecimal("1.99"));
+        assertThatThrownBy(() -> controller.reconcile(request, null)).hasMessage("ADDON_PRICE_RECONCILIATION_STAGING_ONLY");
+        org.springframework.test.util.ReflectionTestUtils.setField(controller, "environment", "staging");
+        org.springframework.test.util.ReflectionTestUtils.setField(controller, "datasourceUrl", "jdbc:postgresql://db:5432/restaurant_pos");
+        assertThatThrownBy(() -> controller.reconcile(request, null)).hasMessage("ADDON_PRICE_RECONCILIATION_STAGING_ONLY");
+        verify(service, never()).reconcilePrices(anyLong(), org.mockito.ArgumentMatchers.anyBoolean(), any());
+    }
+
     @Test void missingDryRunFlagCannotAccidentallyMutate() {
         var request = new StoreAddonService.ReconcileRequest(); request.store_id = 12L;
         assertThatThrownBy(() -> controller.reconcile(request, null)).hasMessage("ADDON_RECONCILE_DRY_RUN_REQUIRED");

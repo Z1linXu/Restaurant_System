@@ -174,6 +174,7 @@ export interface PrintingDisplayRuleRevision {
 }
 
 export interface PrintingDisplayRuleSettings {
+  addon_aliases?: { code: string; name_zh: string | null; default_print_text: string | null; source: string }[]
   store_id: number
   rule_set_id: number
   active_revision_id?: number | null

@@ -49,10 +49,102 @@ class PrintingDisplayRuleServiceLifecycleIntegrationTest {
     }
 
     @Autowired private PrintingDisplayRuleServiceImpl service;
+    @org.springframework.boot.test.mock.mockito.MockBean private PrintingAddonVocabulary vocabulary;
+
+    @org.junit.jupiter.api.BeforeEach
+    void vocabulary() {
+        org.mockito.Mockito.when(vocabulary.entries(any(), any())).thenReturn(List.of(
+            new PrintingAddonVocabulary.Entry("addon_beef_tendon", "加牛筋", "加牛筋", "MENU")));
+    }
     @Autowired private StoreRepository storeRepository;
     @SpyBean private PrintingDisplayRuleSetRepository ruleSetRepository;
     @Autowired private PrintingDisplayRuleRevisionRepository revisionRepository;
     @Autowired private EntityManager entityManager;
+    @Autowired private org.springframework.transaction.PlatformTransactionManager transactionManager;
+    @Autowired private org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Autowired private com.restaurant.system.printing.repository.PrintJobRepository printJobs;
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void policyUpgradeRefreshesActivePointerAfterConcurrentPublish() throws Exception {
+        Store store = createStore("RULE_INTERLEAVED");
+        publish(store.id, content("+A"));
+        var read = new java.util.concurrent.CountDownLatch(1);
+        var published = new java.util.concurrent.CountDownLatch(1);
+        var executor = java.util.concurrent.Executors.newSingleThreadExecutor();
+        try {
+            var upgrade = executor.submit(() -> new org.springframework.transaction.support.TransactionTemplate(transactionManager)
+                .execute(status -> {
+                    assertThat(service.activeContext(store.id).resolveModifierToken("MODIFIER_ADD", "addon_beef_tendon", null)).isEqualTo("+A");
+                    read.countDown();
+                    try { assertThat(published.await(10, java.util.concurrent.TimeUnit.SECONDS)).isTrue(); }
+                    catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new RuntimeException(e); }
+                    service.ensureCanonicalAddonFallback(store.id);
+                    return service.activeContext(store.id);
+                }));
+            assertThat(read.await(10, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            publish(store.id, content("+B"));
+            published.countDown();
+            var finalContext = upgrade.get(15, java.util.concurrent.TimeUnit.SECONDS);
+            assertThat(finalContext.resolveModifierToken("MODIFIER_ADD", "addon_beef_tendon", null)).isEqualTo("+B");
+            service.ensureCanonicalAddonFallback(store.id);
+            assertThat(service.activeContext(store.id).revisionId()).isEqualTo(finalContext.revisionId());
+        } finally { published.countDown(); executor.shutdownNow(); }
+    }
+
+    @Test
+    void persistedLegacyDraftVocabularyIsVisibleAndEditableWithoutAdmittingIncomingCodes() {
+        Store store = createStore("LEGACY_DRAFT_CODES");
+        publish(store.id, content("+牛筋"));
+        var set = ruleSetRepository.findByStoreId(store.id).orElseThrow();
+        var legacy = (com.fasterxml.jackson.databind.node.ObjectNode) content("+牛筋");
+        legacy.with("dictionaries").withArray("MODIFIER_ADD").addArray().add("legacy_draft_only").add("+旧稿");
+        revisionRepository.saveAndFlush(revision("DRAFT", set.id, 3, legacy));
+        var real = new PrintingDisplayRuleServiceImpl(ruleSetRepository, revisionRepository, storeRepository,
+            printJobs, new PrintingAddonVocabulary(jdbc), entityManager);
+        assertThat(real.getSettings(store.id).addon_aliases).extracting(PrintingAddonVocabulary.Entry::code)
+            .contains("legacy_draft_only");
+        var saved = real.saveDraft(request(store.id, legacy));
+        real.publishDraft(store.id, saved.id);
+        assertThat(real.activeContext(store.id).resolveModifierToken("MODIFIER_ADD", "legacy_draft_only", null)).isEqualTo("+旧稿");
+        legacy.with("dictionaries").withArray("MODIFIER_ADD").addArray().add("brand_new_printing_identity").add("+新");
+        assertThatThrownBy(() -> real.saveDraft(request(store.id, legacy))).hasMessageContaining("PRINTING_ADDON_IDENTITY_READ_ONLY");
+    }
+
+    @Test
+    void canonicalFallbackUpgradePreservesPublishedHistoryAliasesAndDraftAndIsIdempotent() {
+        Store store = createStore("CANONICAL_ADDON");
+        var original = publish(store.id, content("+牛筋"));
+        var draft = service.saveDraft(request(store.id, content("+未发布")));
+        service.ensureCanonicalAddonFallback(store.id);
+        var upgraded = service.activeContext(store.id);
+        assertThat(upgraded.formatting("addon_fallback", "")).isEqualTo("CANONICAL_SNAPSHOT");
+        assertThat(upgraded.resolveModifierToken("MODIFIER_ADD", "addon_beef_tendon", null)).isEqualTo("+牛筋");
+        assertThat(service.getSettings(store.id).draft_revision.id).isEqualTo(draft.id);
+        assertThat(revisionRepository.findById(original.id).orElseThrow().content_json).isEqualTo(StoreProfileCanonicalJson.canonicalize(original.content));
+        var job = new com.restaurant.system.printing.entity.PrintJob();
+        job.store_id = store.id; job.printingRuleRevisionId = original.id;
+        assertThat(service.contextForJob(job).formatting("addon_fallback", "LEGACY")).isEqualTo("LEGACY");
+        service.ensureCanonicalAddonFallback(store.id);
+        assertThat(service.activeContext(store.id).revisionId()).isEqualTo(upgraded.revisionId());
+        service.publishDraft(store.id, draft.id);
+        assertThat(service.activeContext(store.id).formatting("addon_fallback", "")).isEqualTo("CANONICAL_SNAPSHOT");
+    }
+
+    @Test
+    void printingCannotIntroduceNewIdentityButCanResetExistingAlias() {
+        Store store = createStore("ALIAS_IDENTITY");
+        var unknown = content("+牛筋").deepCopy();
+        ((com.fasterxml.jackson.databind.node.ObjectNode) unknown).with("dictionaries").withArray("MODIFIER_ADD")
+            .addArray().add("invented_addon").add("+未授权");
+        assertThatThrownBy(() -> service.saveDraft(request(store.id, unknown)))
+            .hasMessageContaining("PRINTING_ADDON_IDENTITY_READ_ONLY");
+        var reset = (com.fasterxml.jackson.databind.node.ObjectNode) content("+牛筋").deepCopy();
+        reset.with("dictionaries").putArray("MODIFIER_ADD").addArray().add("addon_beef_tendon").addNull();
+        reset.with("formatting").put("addon_fallback", "CANONICAL_SNAPSHOT");
+        publish(store.id, reset);
+        assertThat(service.activeContext(store.id).resolveModifierToken("MODIFIER_ADD", "addon_beef_tendon", "加牛筋")).isEqualTo("加牛筋");
+    }
 
     @Test
     void publishesFirstSecondAndThirdRevisionsIncludingAToBToARollback() {

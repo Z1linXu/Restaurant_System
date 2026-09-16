@@ -35,7 +35,9 @@ class PrintingDisplayRuleServiceValidationTest {
             ruleSetRepository,
             revisionRepository,
             storeRepository,
-            printJobRepository
+            printJobRepository,
+            org.mockito.Mockito.mock(PrintingAddonVocabulary.class),
+            org.mockito.Mockito.mock(jakarta.persistence.EntityManager.class)
         );
         when(storeRepository.existsById(1L)).thenReturn(true);
     }

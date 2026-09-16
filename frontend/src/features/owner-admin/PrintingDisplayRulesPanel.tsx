@@ -39,7 +39,7 @@ interface ConditionalOverride {
   omit?: boolean
 }
 
-type RuleDictionaries = Record<string, Array<DictionaryObjectEntry | [string, string]>>
+type RuleDictionaries = Record<string, Array<DictionaryObjectEntry | [string, string | null]>>
 
 interface StructuredRuleContent extends PrintingDisplayRuleContent {
   schema_version?: string
@@ -57,7 +57,6 @@ const STRUCTURED_DICTIONARIES = [
 ] as const
 
 const MODIFIER_DICTIONARIES = [
-  { key: 'MODIFIER_ADD', label: 'Modifier Add / 加料' },
   { key: 'MODIFIER_REMOVE', label: 'Modifier Remove / 去除' },
 ] as const
 
@@ -144,7 +143,7 @@ function objectDictionaryEntries(content: StructuredRuleContent, key: string) {
 }
 
 function modifierDictionaryEntries(content: StructuredRuleContent, key: string) {
-  return dictionaryEntries(content, key).filter((entry): entry is [string, string] => Array.isArray(entry) && entry.length >= 2)
+  return dictionaryEntries(content, key).filter((entry): entry is [string, string | null] => Array.isArray(entry) && entry.length >= 2)
 }
 
 function activeContentFrom(settings: PrintingDisplayRuleSettings | null) {
@@ -165,7 +164,11 @@ interface PrintingDisplayRulesPanelProps {
   onToast?: ToastHandler
 }
 
-export function PrintingDisplayRulesPanel({ storeId, onToast }: PrintingDisplayRulesPanelProps) {
+export function PrintingDisplayRulesPanel(props: PrintingDisplayRulesPanelProps) {
+  return <StorePrintingDisplayRulesPanel key={props.storeId} {...props} />
+}
+
+function StorePrintingDisplayRulesPanel({ storeId, onToast }: PrintingDisplayRulesPanelProps) {
   const [settings, setSettings] = useState<PrintingDisplayRuleSettings | null>(null)
   const [content, setContent] = useState<StructuredRuleContent>(() => cloneContent(null))
   const [summary, setSummary] = useState('Owner edited printing display rules')
@@ -299,7 +302,7 @@ export function PrintingDisplayRulesPanel({ storeId, onToast }: PrintingDisplayR
     }))
   }
 
-  const updateModifierPair = (dictionaryKey: string, index: number, pair: [string, string]) => {
+  const updateModifierPair = (dictionaryKey: string, index: number, pair: [string, string | null]) => {
     setContent((current) => updateContent(current, (draft) => {
       const entries = modifierDictionaryEntries(draft, dictionaryKey)
       entries[index] = pair
@@ -456,6 +459,30 @@ export function PrintingDisplayRulesPanel({ storeId, onToast }: PrintingDisplayR
         ))}
 
         <div className="grid gap-5 lg:grid-cols-2">
+          <section className="rounded-[22px] border border-[rgba(26,28,25,0.08)] p-4" aria-label="Add-on print aliases">
+            <div className="text-[1rem] font-bold">Add-on Print Alias / 加料打印别名</div>
+            <p className="my-2 text-sm">在 Menu Management 创建和管理加料。这里只修改厨房打印别名；留空使用默认打印。</p>
+            {(settings?.addon_aliases ?? []).map((entry) => {
+              const pairs = modifierDictionaryEntries(content, 'MODIFIER_ADD')
+              const alias = pairs.find(([code]) => code === entry.code)?.[1] ?? ''
+              const change = (value: string) => setContent((current) => updateContent(current, (draft) => {
+                const entries = modifierDictionaryEntries(draft, 'MODIFIER_ADD').filter(([code]) => code !== entry.code)
+                entries.push([entry.code, value.trim() ? value : null])
+                draft.dictionaries = { ...draft.dictionaries, MODIFIER_ADD: entries }
+                draft.formatting = { ...draft.formatting, addon_fallback: 'CANONICAL_SNAPSHOT' }
+              }))
+              return <div key={entry.code} className="my-3 rounded-[14px] bg-white p-3">
+                <div className="font-semibold">{entry.name_zh ?? 'Legacy / 名称待确认'}</div>
+                <div className="text-sm">System Code / 系统代码: <code>{entry.code}</code></div>
+                <div className="text-sm">Default Print / 默认打印: {entry.default_print_text ?? 'Order snapshot / 订单快照名称'}</div>
+                <label className="block text-sm">Print Alias / 打印别名
+                  <input aria-label={`Print alias ${entry.code}`} value={alias} onChange={(event) => change(event.target.value)}
+                    className="my-2 w-full rounded-[12px] border px-3 py-2" />
+                </label>
+                <button type="button" onClick={() => change('')} className="rounded-[12px] bg-gray-100 px-3 py-2">Reset to Default / 恢复默认</button>
+              </div>
+            })}
+          </section>
           {MODIFIER_DICTIONARIES.map((dictionary) => (
             <ModifierDictionarySection
               key={dictionary.key}
@@ -672,8 +699,8 @@ function ModifierDictionarySection({
   onRemove,
 }: {
   title: string
-  entries: [string, string][]
-  onChange: (index: number, pair: [string, string]) => void
+  entries: [string, string | null][]
+  onChange: (index: number, pair: [string, string | null]) => void
   onAdd: () => void
   onRemove: (index: number) => void
 }) {
@@ -699,7 +726,7 @@ function ModifierDictionarySection({
               className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.86rem] outline-none"
             />
             <input
-              value={entry[1]}
+              value={entry[1] ?? ''}
               onChange={(event) => onChange(index, [entry[0], event.target.value])}
               aria-label={`${title} output`}
               className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.86rem] outline-none"

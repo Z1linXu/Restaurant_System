@@ -580,6 +580,8 @@ history. The response includes:
 - `active_revision`
 - `draft_revision`
 - `revisions[]`
+- `addon_aliases[]`: read-only `{code,name_zh,default_print_text,source}` projection
+  from this Store's Menu/Combo identities and retained published legacy aliases.
 - `schema_version`
 - `fingerprint_sha256`
 
@@ -589,6 +591,12 @@ Validates a structured rule document without publishing it. Validation rejects
 unknown outputs, duplicate/blank aliases, unknown structured fields,
 operational keys such as printer/device/credential/order-payment fields, and
 executable/script-like content.
+
+MODIFIER_ADD values may be `[existing_code, null]` to remove only the custom
+alias. Draft save and publish reject unknown/duplicate Add-on codes with
+`PRINTING_ADDON_IDENTITY_READ_ONLY`. Menu owns identity; these APIs never create,
+rename or delete Menu Add-ons. `formatting.addon_fallback=CANONICAL_SNAPSHOT`
+selects snapshot-name fallback for new versions; legacy revisions are preserved.
 
 POST `/api/v1/admin/printing/display-rules/preview`
 
@@ -1227,6 +1235,14 @@ IDs are revalidated on the backend; frontend Store context is not authorization.
 | GET | `/api/v1/admin/menu/items/{itemId}/addons` | Catalog entries with item `enabled` |
 | PUT | `/api/v1/admin/menu/items/{itemId}/addons/{addonId}` | `{enabled: boolean}` |
 | POST | `/api/v1/admin/menu/addons/reconcile` | `{store_id, dry_run: boolean}`; sanitized linking/conflict report |
+
+An optional `confirmed_prices: {stable_code: nonnegative_price}` on reconciliation
+is restricted to the verified Staging marker/database and authorized Store.
+Production/unknown environment returns `ADDON_PRICE_RECONCILIATION_STAGING_ONLY`.
+Apply is atomic across current catalog/options and menu revision. It never picks
+an unresolved name or edits history. Dry-run reports existing conflicts without
+writes. Combo-only `combo_tea_egg`/`combo_fried_egg` cannot be normal catalog
+entries (`ADDON_COMBO_COMPONENT_IDENTITY`) and are omitted from catalog/eligibility.
 
 Catalog entries expose `id`, `store_id`, immutable `code`, bilingual names,
 `price`, `active` and `printing_configured`. Missing Printing MODIFIER_ADD
