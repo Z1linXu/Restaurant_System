@@ -3,23 +3,23 @@ updated_at: 2026-09-17
 
 repository:
   ref: origin/main
-  sha: 78d20faeb8ba144aae74a0c1c5a787d3641e932d
+  sha: 101dbdc75c25904c340251134ee1a0a03f5ce4b7
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
   package: UBER_EATS_ORDER_INTEGRATION_V1
-  status: MERGE_GATE_PASSED_STAGING_IN_PROGRESS
+  status: STAGING_WEBHOOK_OAUTH_PASS_TEST_STORE_PROVISIONING_BLOCKED
   next_phase_authorized: false
 
 staging:
-  deployed_sha: 11996ef919d9b28ee5366c7e40a58a78c074b675
-  flyway: V28
-  acceptance: MENU_SIMPLIFICATION_PARTIAL_BROWSER_AND_FOREIGN_ORGANIZATION_PROOF_PENDING
-  evidence: MENU_ADDON_ALIAS_OWNERSHIP_EVIDENCE.md
+  deployed_sha: 101dbdc75c25904c340251134ee1a0a03f5ce4b7
+  flyway: V29
+  acceptance: UBER_TRANSPORT_OAUTH_PASS_REAL_SANDBOX_E2E_BLOCKED
+  evidence: UBER_EATS_STAGING_ACCEPTANCE.md
   repair_evidence: PHASE_B_PART2_P0_P1_REPAIR_STAGING_EVIDENCE.md
   cleanup_evidence: PHASE_B_STAGING_SYNTHETIC_FIXTURE_CLEANUP_EXECUTION_EVIDENCE.md
-  runtime_observation_evidence: MENU_SIMPLIFICATION_IMPLEMENTATION_EVIDENCE.md
+  runtime_observation_evidence: UBER_EATS_STAGING_ACCEPTANCE.md
 
 production:
   deployed_sha: b4d0350c15cf777ff0ee53e9acb0d4e4127d9b99
@@ -29,8 +29,8 @@ production:
   runtime_observation_evidence: MENU_SIMPLIFICATION_IMPLEMENTATION_EVIDENCE.md
 
 gate:
-  type: TECHNICAL
-  next_action: MERGE_PR234_AND_DEPLOY_ISOLATED_STAGING
+  type: OWNER
+  next_action: PROVIDE_REQUIRED_TEST_STORE_ADDRESS_THEN_SUBMIT_UBER_PROVISIONING_REQUEST
 
 authorization:
   repository_governance: COMPLETE
@@ -43,4 +43,4 @@ authorization:
   production: NONE
 
 stop:
-  marker: UBER_TEST_STORE_PROVISIONING_PENDING
+  marker: TEST_STORE_NOT_PROVISIONED

@@ -300,6 +300,8 @@ Owner须直接将新值保存到backend secret `UBER_EATS_CLIENT_SECRET` 或其�
 
 ### Authorized Test Secret rotation and merge gate
 
+本阶段后续合并、部署、公开HTTPS和真实OAuth结果见 [2026-09-17 Staging acceptance](governance/UBER_EATS_STAGING_ACCEPTANCE.md)。历史BLOCKED不覆盖该新证据；真实Sandbox订单E2E仍未完成。
+
 Owner明确授权Test App密钥在本次工具操作中被读取后，完成Add/Confirm和旧Secret revoke；Dashboard确认旧行消失、新行保留。新值保存到仓库外mode0600 backend.env，并通过SSH标准输入配置到已核实服务器的Staging私密env；剪贴板已清空，不输出值。撤销后Sandbox OAuth再次HTTP200，requested/granted均为 `eats.order eats.store.orders.read`。门店发现单独使用 `eats.store` 测试token（不扩大runtime默认scopes），GET `https://test-api.uber.com/v1/eats/stores` HTTP200，stores=[]，无next_key。
 
 最终Agent6审查发现并关闭可脱敏order-manager字段比较P2；保留Store/menu/远端204门槛，补充脱敏ID accept/deny和403无本地副作用验证。完整backend verify：800项，794通过，6既有环境门控跳过，0失败；Uber24项实际执行。Frontend225通过，build与targeted eslint通过。真实新Secret精确扫描tracked files及PR branch commits无命中，diff-check通过。此处不宣称真实Sandbox订单E2E或物理打印通过。
