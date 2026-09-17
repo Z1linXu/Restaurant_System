@@ -297,3 +297,9 @@ Fresh origin/main仍为 `78d20faeb8ba144aae74a0c1c5a787d3641e932d`；继续工�
 使用Owner提供的同一链接进入Chrome已有账户会话，已确认 `Restaurant Pos` / `TEST APP` / `Sandbox Access Granted`。应用内浏览器的登录阻塞不再适用于该Chrome会话。Setup页面现有Secret保持隐藏；点击 `Add Client Secret` 后出现 `Cancel` / `Confirm`，停在确认步骤供Owner接手安全保存。未点击Confirm，未读取/复制Secret字段，未撤销旧Secret，未声称完成轮换。仅Sandbox access badge不能证明订单scope或Test Store已provision。当前阻塞见CURRENT_STATE；merge、部署和真实Sandbox测试仍未开始。
 
 Owner须直接将新值保存到backend secret `UBER_EATS_CLIENT_SECRET` 或其安全密码库供后续私密注入，不将值发送聊天。当前没有已核实、可供Agent无回显转存的secret-store通道，故在生成前交接；这不是对所有credential变更一律需要人工的工具规则。上文首次登录checkpoint的该规则描述不作为本次判断依据。
+
+### Authorized Test Secret rotation and merge gate
+
+Owner明确授权Test App密钥在本次工具操作中被读取后，完成Add/Confirm和旧Secret revoke；Dashboard确认旧行消失、新行保留。新值保存到仓库外mode0600 backend.env，并通过SSH标准输入配置到已核实服务器的Staging私密env；剪贴板已清空，不输出值。撤销后Sandbox OAuth再次HTTP200，requested/granted均为 `eats.order eats.store.orders.read`。门店发现单独使用 `eats.store` 测试token（不扩大runtime默认scopes），GET `https://test-api.uber.com/v1/eats/stores` HTTP200，stores=[]，无next_key。
+
+最终Agent6审查发现并关闭可脱敏order-manager字段比较P2；保留Store/menu/远端204门槛，补充脱敏ID accept/deny和403无本地副作用验证。完整backend verify：800项，794通过，6既有环境门控跳过，0失败；Uber24项实际执行。Frontend225通过，build与targeted eslint通过。真实新Secret精确扫描tracked files及PR branch commits无命中，diff-check通过。此处不宣称真实Sandbox订单E2E或物理打印通过。

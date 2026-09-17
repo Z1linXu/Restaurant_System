@@ -235,9 +235,8 @@ public class UberEatsOrderTransactions {
             throw UberEatsException.conflict("UBER_RESPONSE_STORE_MISMATCH");
         if (!"CREATED".equals(snapshot.current_state()))
             throw UberEatsException.conflict("UBER_ORDER_NOT_CREATED");
-        if (!snapshot.order_manager_client_id().isBlank()
-                && !config.clientId.equals(snapshot.order_manager_client_id()))
-            throw UberEatsException.conflict("UBER_NOT_ORDER_MANAGER");
+        // Uber may redact this display field. The authenticated decision API enforces
+        // nominated-manager permission; only its successful ACK permits local submission.
         if ("ACCEPT".equals(action)) {
             modules.requireOperationalCapability(storeId, ModuleKeys.ORDERING_POS);
             modules.requireOperationalCapability(storeId, ModuleKeys.MENU);

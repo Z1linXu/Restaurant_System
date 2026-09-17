@@ -9,7 +9,7 @@ repository:
 phase:
   current: PHASE_B
   package: UBER_EATS_ORDER_INTEGRATION_V1
-  status: CONTINUATION_BLOCKED_AT_CLIENT_SECRET_SECURE_SAVE
+  status: MERGE_GATE_PASSED_STAGING_IN_PROGRESS
   next_phase_authorized: false
 
 staging:
@@ -29,8 +29,8 @@ production:
   runtime_observation_evidence: MENU_SIMPLIFICATION_IMPLEMENTATION_EVIDENCE.md
 
 gate:
-  type: OWNER
-  next_action: OWNER_CONFIRM_NEW_CLIENT_SECRET_AND_SAVE_SECURELY
+  type: TECHNICAL
+  next_action: MERGE_PR234_AND_DEPLOY_ISOLATED_STAGING
 
 authorization:
   repository_governance: COMPLETE
@@ -43,4 +43,4 @@ authorization:
   production: NONE
 
 stop:
-  marker: MANUAL_SECRET_ACTION_REQUIRED
+  marker: UBER_TEST_STORE_PROVISIONING_PENDING

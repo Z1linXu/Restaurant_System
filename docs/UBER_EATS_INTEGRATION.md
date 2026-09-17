@@ -62,7 +62,7 @@ Owner/Admin 管理页：`/stores/{storeId}/admin/integrations/uber-eats`。选�
 
 Frontdesk：`/stores/{storeId}/frontdesk/uber-eats`。顶栏 badge、5 秒可见页轮询与现有门店 WebSocket 提示；卡片显示来源、display ID、时间、数量、所有嵌套 modifiers、备注、mapping errors、后端状态。列表优先未完成记录，最多 100 条；大量积压须运维查询，v1 无分页。双击 UI ref guard + backend row lock/状态机/DB unique 共同防重复。
 
-Accept 分短事务：锁行并 refresh（避免 JPA first-level stale state）→ 验证 store、CREATED、order manager、mapping、Ordering/Menu capability → 冻结本地 request 与 actor、写 ACCEPTING → 事务外 POST Uber（reference `rs-uber-{integrationId}`）→ UBER_ACCEPTED checkpoint → 本地统一领域事务与 localOrderId 原子提交。网络 I/O 不占业务 DB 事务。
+Accept 分短事务：锁行并 refresh（避免 JPA first-level stale state）→ 验证 store、CREATED、mapping、Ordering/Menu capability → 冻结本地 request 与 actor、写 ACCEPTING → 事务外 POST Uber（reference `rs-uber-{integrationId}`）→ UBER_ACCEPTED checkpoint → 本地统一领域事务与 localOrderId 原子提交。网络 I/O 不占业务 DB 事务。GET Order 的 `order_manager_client_id` 可被Uber脱敏，因此不与明文client ID比较；nominated-manager权限由真实Accept/Deny API判定，只有远端204才允许本地提交，403不得产生本地订单或厨房/打印任务。
 
 Deny 必须有官方 reason_code；写 DENYING → 真实 POST → DENIED。重复点击终态不重复调用 Uber，不创建本地订单。官方 Deny 不保证立即取消消费者订单，仍以 Uber 状态/事件为准。
 

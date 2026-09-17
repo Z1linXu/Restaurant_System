@@ -302,6 +302,7 @@ class UberEatsPostgresIntegrationTest {
     void duplicateEventNotificationAndConcurrentAcceptCreateOnePipeline() throws Exception {
         String id = UUID.randomUUID().toString();
         var order = payload(id);
+        order.put("order_manager_client_id", "redacted-manager");
         when(client.getOrder(id)).thenReturn(order);
         byte[] raw = event(UUID.randomUUID().toString(), "orders.notification", id);
         receive(raw);
@@ -868,12 +869,29 @@ class UberEatsPostgresIntegrationTest {
 
     @Test
     void denyCallsUberAndDoesNotCreateLocal() {
-        var row = notify(payload(UUID.randomUUID().toString()));
+        var remote = payload(UUID.randomUUID().toString());
+        remote.put("order_manager_client_id", "redacted-manager");
+        var row = notify(remote);
         assertThat(imports.decide(store, row.id, actorId, "DENY", "CAPACITY").status)
                 .isEqualTo("DENIED");
         imports.decide(store, row.id, actorId, "DENY", "CAPACITY");
         verify(client, times(1)).deny(row.uberOrderId, "CAPACITY");
         assertThat(count("orders", "store_id", store)).isZero();
+    }
+
+    @Test
+    void remoteManagerPermissionDenialNeverCreatesLocalSideEffects() {
+        var remote = payload(UUID.randomUUID().toString());
+        remote.put("order_manager_client_id", "redacted-manager");
+        var row = notify(remote);
+        doThrow(new UberEatsApiException(403)).when(client).accept(eq(row.uberOrderId), anyString());
+        var result = accept(row);
+        assertThat(result.localOrderId).isNull();
+        assertThat(result.status).isEqualTo("PENDING");
+        assertThat(count("orders", "store_id", store)).isZero();
+        assertThat(count("kitchen_tasks", "store_id", store)).isZero();
+        assertThat(count("print_jobs", "store_id", store)).isZero();
+        verify(client, times(1)).accept(eq(row.uberOrderId), anyString());
     }
 
     @Test

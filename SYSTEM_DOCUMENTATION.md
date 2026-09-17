@@ -9138,3 +9138,5 @@ fail-closed, and rollback uses the same reviewed production value.
 Uber Production Pilot 配置计划针对 St-Denis 与 St-Catherine；第三家店暂不启用。真实 UUID、Store-scoped enable control 与激活门槛见 [Uber integration contract](docs/UBER_EATS_INTEGRATION.md#production-pilot-门店配置计划)。该计划不等于真实门店已开通，也不扩大现有Production授权。
 
 Client Secret 轮换应将新值直接保存到 backend 私密配置 `UBER_EATS_CLIENT_SECRET`；不通过聊天、工具输出或版本控制传递。安全保存新值并确认配置后再撤销旧值；完成撤销前不能宣称 compromised credential 已完成轮换。
+
+Uber订单管理权限由真实Accept/Deny接口授权结果判定；GET响应中可脱敏的 `order_manager_client_id` 不与明文client ID比较。Store隔离与菜单校验仍在本地执行，只有远端204成功才能建立本地订单。
