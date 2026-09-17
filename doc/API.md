@@ -1788,3 +1788,25 @@ Capability summary:
 - Frontdesk board and history must use snapshot-backed order/item/task/beverage data, not live menu names
 - Chinese is the default display language; English is optional via UI language switch
 - If English text is empty, frontend should fall back to Chinese
+
+## Uber Eats Integration v1
+
+Webhook：`POST /api/v1/integrations/uber-eats/webhook`，raw bytes + `X-Uber-Signature`（HMAC SHA256/client secret/lower hex）+ `X-Environment`。无 browser bearer；durable 200 empty ACK，400 malformed/environment，401 invalid signature，409 event/body conflict，413 size >256 KiB，503 disabled。
+
+以下 base 为 `/api/v1/stores/{storeId}/integrations/uber-eats`，普通 `ApiResponse` envelope，正常认证 + StoreAccessService。
+
+| Method / suffix | Authorization / behavior |
+|---|---|
+| GET `/orders` | Frontdesk ORDER_VIEW_ACTIVE；最多100条，待处理优先；不返回 OAuth 或 frozen local request |
+| POST `/orders/{id}/accept` | ORDER_SUBMIT + operational ORDERING_POS；实时 GET/revalidate，幂等 remote Accept + local domain |
+| POST `/orders/{id}/deny` | ORDER_CANCEL；JSON `reason_code` 为官方 deny code |
+| POST `/orders/{id}/retry-local` | ORDER_SUBMIT；已持久 accepted 的 frozen request，仅重试本地 |
+| GET `/connection` | ORDER_VIEW_ACTIVE；enabled/environment/store/webhook_status/last_event_at/mappings/unmapped_orders |
+| PUT `/store` | 平台 ADMIN；JSON `uber_store_id` UUID；不允许已有 store 跨 tenant 重绑 |
+| PUT `/mappings` | Owner/Admin ADMIN_MENU_MANAGE；kind ITEM/MODIFIER/REMOVED_MODIFIER，identifierType ID/EXTERNAL_DATA，uberIdentifier，uberItemId（modifier 根菜品），localMenuItemId，localOptionCode，localOptionGroup，parentOptionCode |
+| GET `/mapping-catalog` | Owner/Admin；本地 effective menu catalog，管理访问不依赖 operational MENU |
+| GET `/mapping-options/{itemId}` | Owner/Admin；同店 option/组合子项 choices，供配置选择 |
+
+InboxOrder 字段：id/status/display_id/uber_order_id/mapping_status/mapping_errors/last_error/local_order_id/placed_at/created_at/accepted_at/cancelled_at/snapshot。snapshot 为最小化 UberOrderSnapshot（items/modifiers/notes），不含 eater/payment。API 网络错误映射安全错误码；POST 返回的 status 为 authoritative，200 不必然等于已接单，应检查 ACCEPTED/local_order_id 或 MAPPING_REQUIRED/ACCEPTING/LOCAL_FAILED 等。
+
+来源与完整 state/recovery contract：[UBER_EATS_INTEGRATION](../docs/UBER_EATS_INTEGRATION.md)。

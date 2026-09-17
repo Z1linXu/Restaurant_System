@@ -40,6 +40,12 @@ public class AuthTokenFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return "POST".equals(request.getMethod())
+            && "/api/v1/integrations/uber-eats/webhook".equals(request.getServletPath());
+    }
+
+    @Override
     protected void doFilterInternal(
         HttpServletRequest request,
         HttpServletResponse response,

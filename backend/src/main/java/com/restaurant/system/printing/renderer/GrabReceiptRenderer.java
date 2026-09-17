@@ -36,6 +36,7 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
     public String render(PrintRenderRequest request) {
         Order order = request.order;
         StringBuilder builder = new StringBuilder();
+        ExternalOrderReceiptHeader.append(builder, request.order);
         builder.append("\n\n\n\n");
         if (Boolean.TRUE.equals(request.is_update_ticket)) {
             builder.append(PrintMarkup.large("UPDATED")).append("\n");
@@ -135,6 +136,7 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
     }
 
     private String resolveTopDisplayLabel(Order order) {
+        if (ExternalOrderReceiptHeader.isPresent(order)) return null;
         if (isTakeout(order)) {
             if (order.pickup_no != null && !order.pickup_no.isBlank()) {
                 return order.pickup_no;

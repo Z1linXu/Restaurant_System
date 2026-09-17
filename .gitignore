@@ -24,3 +24,5 @@ backend/src/main/resources/application-local.yml
 
 # Misc
 coverage/
+
+!backend/.env.uber-eats.example
