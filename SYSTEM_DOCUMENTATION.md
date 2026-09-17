@@ -9140,3 +9140,5 @@ Uber Production Pilot 配置计划针对 St-Denis 与 St-Catherine；第三家�
 Client Secret 轮换应将新值直接保存到 backend 私密配置 `UBER_EATS_CLIENT_SECRET`；不通过聊天、工具输出或版本控制传递。安全保存新值并确认配置后再撤销旧值；完成撤销前不能宣称 compromised credential 已完成轮换。
 
 Uber订单管理权限由真实Accept/Deny接口授权结果判定；GET响应中可脱敏的 `order_manager_client_id` 不与明文client ID比较。Store隔离与菜单校验仍在本地执行，只有远端204成功才能建立本地订单。
+
+Sandbox公开回调可使用独立的临时HTTPS tunnel与 [webhook-only nginx](deployment/cloud/nginx.uber-sandbox-webhook.conf)：仅精确POST路径通往独立Staging，其他路径404、其他方法405，保留原始body/签名，不公开登录页或后台。它不修改Production nginx，不属于Production hosting方案；临时进程/URL失效时须先复验并更新TEST APP。实际部署与外部阻塞证据见 [Staging acceptance](docs/governance/UBER_EATS_STAGING_ACCEPTANCE.md)。

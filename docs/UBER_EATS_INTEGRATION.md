@@ -40,6 +40,8 @@ Uber → `UberEatsWebhookController` → raw-body HMAC → `UberEatsWebhookServi
 
 ## Webhook
 
+TEST APP可配置Primary Webhook + BASIC_HMAC，Signing Key与backend私密配置一致。Primary URL接收该应用的事件，不需要为每种事件各创建URL；真实通知仍取决于Test Store授权与order-manager provisioning。临时Sandbox入口使用 `deployment/cloud/nginx.uber-sandbox-webhook.conf` 作为独立非root sidecar，只开放准确的webhook POST，不能用于Production。恢复测试前确认tunnel URL可达、签名验证正常以及Dashboard URL未过期，详见 [部署证据](governance/UBER_EATS_STAGING_ACCEPTANCE.md)。
+
 `POST /api/v1/integrations/uber-eats/webhook`，部署时组合可公开访问的 HTTPS origin。`X-Uber-Signature` 为 client secret 对**原始请求字节**计算的 HMAC SHA256、小写 hex；常量时间比较。要求 `X-Environment` 与配置一致。仅此精确 POST 路径绕过浏览器 bearer 解析，完全依赖 signature trust；其他 integration endpoints 保留正常用户认证。
 
 body 上限 256 KiB；仅存 event ID/type、environment、store/order UUID、body SHA256、重试状态。缺少/错误签名 401；已签名的错误 JSON/元数据或环境不符 400；超限 413；disabled 503。已保存相同事件重放 200；相同 event ID 不同 body 409；未知事件类型 IGNORED 并 200。有效事件持久化后 200 empty ACK，不等待 GET、OAuth、本地订单或打印。
