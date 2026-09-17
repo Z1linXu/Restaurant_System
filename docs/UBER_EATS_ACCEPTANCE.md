@@ -291,3 +291,9 @@ Fresh origin/main仍为 `78d20faeb8ba144aae74a0c1c5a787d3641e932d`；继续工�
 当前阻塞：`UBER_DASHBOARD_MANUAL_ACTION_REQUIRED`。本轮应用内浏览器访问指定Test App后停在Uber手机号/邮箱登录页，无当前账户会话；未进入/读取任何secret字段，未rotation。本机执行环境 `UBER_EATS_CLIENT_ID=MISSING`、`UBER_EATS_CLIENT_SECRET=MISSING`；尚未核实远端Staging私密env，不能据此声称远端也缺失。用户须先在已打开页面登录后继续，不能把密码、OTP或secret发聊天。浏览器工具规则要求authentication credential变更由用户本人完成；后续轮换入口仍待登录后核实。
 
 本轮未开始完整merge-gate重跑、merge、Staging部署或真实Uber E2E；上文PASS均为原本地验收证据。当前用户已授权review-gated merge、独立Staging/Sandbox与后续符合官方条件的申请，旧报告的“未获merge授权”不再作为当前边界，当前授权以CURRENT_STATE为准。Production接单激活仍未授权。
+
+### Direct-link Chrome follow-up
+
+使用Owner提供的同一链接进入Chrome已有账户会话，已确认 `Restaurant Pos` / `TEST APP` / `Sandbox Access Granted`。应用内浏览器的登录阻塞不再适用于该Chrome会话。Setup页面现有Secret保持隐藏；点击 `Add Client Secret` 后出现 `Cancel` / `Confirm`，停在确认步骤供Owner接手安全保存。未点击Confirm，未读取/复制Secret字段，未撤销旧Secret，未声称完成轮换。仅Sandbox access badge不能证明订单scope或Test Store已provision。当前阻塞见CURRENT_STATE；merge、部署和真实Sandbox测试仍未开始。
+
+Owner须直接将新值保存到backend secret `UBER_EATS_CLIENT_SECRET` 或其安全密码库供后续私密注入，不将值发送聊天。当前没有已核实、可供Agent无回显转存的secret-store通道，故在生成前交接；这不是对所有credential变更一律需要人工的工具规则。上文首次登录checkpoint的该规则描述不作为本次判断依据。

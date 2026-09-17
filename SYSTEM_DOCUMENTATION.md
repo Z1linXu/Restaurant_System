@@ -9136,3 +9136,5 @@ fail-closed, and rollback uses the same reviewed production value.
 详细 contract、API 来源、配置、安全与恢复见 [UBER_EATS_INTEGRATION](docs/UBER_EATS_INTEGRATION.md)，逐项证据与未完成的 Uber Sandbox/硬件验证见 [Acceptance](docs/UBER_EATS_ACCEPTANCE.md)。前台 `/stores/{storeId}/frontdesk/uber-eats`；Owner/Admin mapping `/stores/{storeId}/admin/integrations/uber-eats`。Store binding 仅平台 ADMIN；其余 integration staff APIs 经过 StoreAccessService。无凭据、真实门店绑定或 Production deploy 随代码启用。
 
 Uber Production Pilot 配置计划针对 St-Denis 与 St-Catherine；第三家店暂不启用。真实 UUID、Store-scoped enable control 与激活门槛见 [Uber integration contract](docs/UBER_EATS_INTEGRATION.md#production-pilot-门店配置计划)。该计划不等于真实门店已开通，也不扩大现有Production授权。
+
+Client Secret 轮换应将新值直接保存到 backend 私密配置 `UBER_EATS_CLIENT_SECRET`；不通过聊天、工具输出或版本控制传递。安全保存新值并确认配置后再撤销旧值；完成撤销前不能宣称 compromised credential 已完成轮换。

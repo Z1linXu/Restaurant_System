@@ -9,7 +9,7 @@ repository:
 phase:
   current: PHASE_B
   package: UBER_EATS_ORDER_INTEGRATION_V1
-  status: CONTINUATION_BLOCKED_AT_UBER_DASHBOARD_LOGIN
+  status: CONTINUATION_BLOCKED_AT_CLIENT_SECRET_SECURE_SAVE
   next_phase_authorized: false
 
 staging:
@@ -30,7 +30,7 @@ production:
 
 gate:
   type: OWNER
-  next_action: OWNER_UBER_DASHBOARD_LOGIN_THEN_CLIENT_SECRET_ROTATION
+  next_action: OWNER_CONFIRM_NEW_CLIENT_SECRET_AND_SAVE_SECURELY
 
 authorization:
   repository_governance: COMPLETE
@@ -43,4 +43,4 @@ authorization:
   production: NONE
 
 stop:
-  marker: UBER_DASHBOARD_MANUAL_ACTION_REQUIRED_LOGIN
+  marker: MANUAL_SECRET_ACTION_REQUIRED
