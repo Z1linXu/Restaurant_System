@@ -9128,3 +9128,15 @@ explicit `APP_ENVIRONMENT=production` Compose field. All other runtime keys
 must still match exactly. The frozen runtime fingerprint normalizes only this
 single missing key to the exact target value; any non-production value remains
 fail-closed, and rollback uses the same reviewed production value.
+
+## Uber Eats Order Integration v1
+
+默认关闭的 backend OAuth、raw HMAC webhook、durable inbox/recovery 与 store-scoped 前台 Accept/Deny 已加入。V29 新增 integration events/orders/store/menu mappings，普通 orders 增加 nullable external source/order/display metadata。外部订单只通过现有 OrderService 提交、厨房/库存、dispatch outbox 与通用 renderer/execution mode。未知 modifier 阻塞；取消/改单只置复核状态；不改变 completeOrder、支付或 Pad shorthand。
+
+详细 contract、API 来源、配置、安全与恢复见 [UBER_EATS_INTEGRATION](docs/UBER_EATS_INTEGRATION.md)，逐项证据与未完成的 Uber Sandbox/硬件验证见 [Acceptance](docs/UBER_EATS_ACCEPTANCE.md)。前台 `/stores/{storeId}/frontdesk/uber-eats`；Owner/Admin mapping `/stores/{storeId}/admin/integrations/uber-eats`。Store binding 仅平台 ADMIN；其余 integration staff APIs 经过 StoreAccessService。无凭据、真实门店绑定或 Production deploy 随代码启用。
+
+Uber Production Pilot 配置计划针对 St-Denis 与 St-Catherine；第三家店暂不启用。真实 UUID、Store-scoped enable control 与激活门槛见 [Uber integration contract](docs/UBER_EATS_INTEGRATION.md#production-pilot-门店配置计划)。该计划不等于真实门店已开通，也不扩大现有Production授权。
+
+Client Secret 轮换应将新值直接保存到 backend 私密配置 `UBER_EATS_CLIENT_SECRET`；不通过聊天、工具输出或版本控制传递。安全保存新值并确认配置后再撤销旧值；完成撤销前不能宣称 compromised credential 已完成轮换。
+
+Uber订单管理权限由真实Accept/Deny接口授权结果判定；GET响应中可脱敏的 `order_manager_client_id` 不与明文client ID比较。Store隔离与菜单校验仍在本地执行，只有远端204成功才能建立本地订单。

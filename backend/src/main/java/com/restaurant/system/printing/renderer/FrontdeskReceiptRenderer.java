@@ -59,7 +59,8 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         BigDecimal total = updateTicket ? TaxCalculator.calculateTotal(subtotal) : safeMoney(order.total_amount);
 
         StringBuilder builder = new StringBuilder();
-        appendLargeLine(builder, resolveLargeDisplayLabel(order));
+        ExternalOrderReceiptHeader.append(builder, request.order);
+        if (!ExternalOrderReceiptHeader.isPresent(order)) appendLargeLine(builder, resolveLargeDisplayLabel(order));
         if (updateTicket) {
             appendLargeLine(builder, "UPDATED");
             appendSizedLine(builder, "Added items only");

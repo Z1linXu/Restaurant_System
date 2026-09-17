@@ -1,3 +1,4 @@
+import { UberInboxBadge } from '../../uber-eats/UberInboxBadge'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { navigateTo } from '../navigation'
@@ -258,6 +259,7 @@ export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
             </button>
           )
         })}
+        {currentStore && <UberInboxBadge key={currentStore.storeId} storeId={currentStore.storeId} />}
       </nav>
     </div>
   )

@@ -11,6 +11,8 @@ import { fetchWorkspaces } from './services/storeWorkspaceService'
 import { navigateTo } from './features/frontdesk/navigation'
 import { useAuth } from './features/auth/useAuth'
 
+const UberInboxPage = lazy(() => import('./features/uber-eats/UberInboxPage'))
+const UberMappingPage = lazy(() => import('./features/uber-eats/UberMappingPage'))
 const DineIn = lazy(() => import('./pages/DineIn'))
 const AdminAuditLogs = lazy(() => import('./pages/AdminAuditLogs'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
@@ -225,6 +227,13 @@ function App() {
     || pathname.startsWith('/admin/')
   )) {
     return <AppShell>{guard(<LegacyStoreRedirect pathname={pathname} />, ALL_ROLES)}</AppShell>
+  }
+
+  if (storeId && routePath === '/frontdesk/uber-eats') {
+    return <AppShell>{storePage(storeId, <UberInboxPage />, FRONTDESK_ROLES)}</AppShell>
+  }
+  if (storeId && routePath === '/admin/integrations/uber-eats') {
+    return <AppShell>{storePage(storeId, ownerAdminPage(<UberMappingPage />, 'Uber Eats'), OWNER_ROLES)}</AppShell>
   }
 
   if (storeId && routePath.startsWith('/kds/grab')) {

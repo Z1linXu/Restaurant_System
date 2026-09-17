@@ -72,6 +72,7 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
         }
 
         StringBuilder builder = new StringBuilder();
+        ExternalOrderReceiptHeader.append(builder, request.order);
         builder.append("\n\n\n");
         if (Boolean.TRUE.equals(request.is_update_ticket)) {
             builder.append(PrintMarkup.large("UPDATED")).append("\n");
@@ -549,6 +550,7 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
     }
 
     private String resolveTopDisplayLabel(Order order) {
+        if (ExternalOrderReceiptHeader.isPresent(order)) return null;
         if (order == null) {
             return null;
         }

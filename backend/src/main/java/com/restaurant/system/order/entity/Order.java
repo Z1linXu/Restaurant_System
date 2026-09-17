@@ -23,6 +23,15 @@ public class Order {
     @Column(name = "store_id")
     public Long store_id;
 
+    @Column(name = "external_source")
+    public String external_source;
+
+    @Column(name = "external_order_id")
+    public String external_order_id;
+
+    @Column(name = "external_display_id")
+    public String external_display_id;
+
     @Column(name = "created_by")
     public Long created_by;
 
