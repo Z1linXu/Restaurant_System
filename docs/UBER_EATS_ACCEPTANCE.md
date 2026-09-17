@@ -283,3 +283,11 @@ CODE BLOCKER：当前已审查范围内无未关闭P0/P1/P2代码问题；不代
 PRODUCT IMPLEMENTATION：backend/frontend/Flyway/tests及少量generic printer header。TOOLING/GOVERNANCE：隔离本机PG/测试进程、文档/env示例/state/backlog；用于保护原脏工作区、验证数据库约束与说明外部阻塞。无额外平台重构、无真实Store/硬件绑定。
 
 本机验收结束后，测试Web进程已停止，专用PostgreSQL 55439已正常停止；保留synthetic数据目录供复验，没有删除或修改原项目数据库。
+
+## 2026-09-17 continuation checkpoint
+
+Fresh origin/main仍为 `78d20faeb8ba144aae74a0c1c5a787d3641e932d`；继续工作前PR234 HEAD为 `7d94c0254ae42dd402714ca5554d289989ac221d`，Draft/Open/MERGEABLE/CLEAN，GitHub没有返回check runs。main无新integration/order/printing改动；原Owner工作区仍merge in progress，独立worktree初始clean。56个PR changed files重新做位置-only heuristic credential scan，0条非fixture发现，1条原文档random...占位符。未做全历史凭据取证。
+
+当前阻塞：`UBER_DASHBOARD_MANUAL_ACTION_REQUIRED`。本轮应用内浏览器访问指定Test App后停在Uber手机号/邮箱登录页，无当前账户会话；未进入/读取任何secret字段，未rotation。本机执行环境 `UBER_EATS_CLIENT_ID=MISSING`、`UBER_EATS_CLIENT_SECRET=MISSING`；尚未核实远端Staging私密env，不能据此声称远端也缺失。用户须先在已打开页面登录后继续，不能把密码、OTP或secret发聊天。浏览器工具规则要求authentication credential变更由用户本人完成；后续轮换入口仍待登录后核实。
+
+本轮未开始完整merge-gate重跑、merge、Staging部署或真实Uber E2E；上文PASS均为原本地验收证据。当前用户已授权review-gated merge、独立Staging/Sandbox与后续符合官方条件的申请，旧报告的“未获merge授权”不再作为当前边界，当前授权以CURRENT_STATE为准。Production接单激活仍未授权。

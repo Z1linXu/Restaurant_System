@@ -104,3 +104,11 @@ Accept 前取消：CANCELLED，无本地 kitchen/print。Accept 后或网络决�
 Normalized snapshot 是字段白名单，排除 eater phone/email/address、payment、courier；raw 字段名为历史命名但内容并非原始 Uber 全包。自由备注仍可能包含顾客主动输入的个人信息，应按订单访问/保留政策处理，不能宣称彻底去 PII。HTTP response 不暴露 local frozen request 或凭据。V29 不预置真实 Store/菜单/secret。Store ID 为公开标识，不是认证。
 
 本地用 catalog price/tax 保留现有订单语义，不做 Uber 总额、优惠、税费、佣金和付款 reconciliation，也不向顾客再收费。Uber pickup 在本系统作为来源订单 delivery context 进入厨房，保留外部 fulfillment_type，不占 Pad pickup/table 编号。v1 不支持自动 scheduled release、自动改单/取消厨房、自动 provision/menu sync、映射删除/重绑；订单超多时 inbox 100 条限制需关注。实际 Sandbox 远端证据、真实 Android、REAL 出纸尚需独立完成。
+
+## Production Pilot 门店配置计划
+
+目标门店由 Owner 确认：St-Denis、St-Catherine 需要 Uber Eats，第三家暂不需要。两家真实 Uber Store UUID 尚未提供（PRODUCTION_STORE_UUIDS_PENDING）；收到后仅做格式/记录验证，不能据此自动 provision、切 order manager 或启用接单。计划配置为两家各自启用并绑定独立 UUID、第三家禁用；这不是当前真实环境已配置的声明。
+
+先满足真正 Sandbox E2E PASS、Integration Verification approved、Production scopes approved，再取得明确 Production Pilot 授权，才执行各门店 Enable → Bind UUID → Map Menu → Test → Activate。当前缺少专属 Store feature package 开关，后续小 PR 补 Store-scoped UBER_EATS enable control，不为此重构现有订单/打印。
+
+2026-09-17 继续工作授权已扩大到 merge-gate review、修复/测试/合并、独立 Staging备份部署与HTTPS webhook、真实Testing E2E及符合Uber流程的verification/scope申请；不包含Production接单激活或任何Production不可逆操作。Secret仍只允许配置于backend私密环境，例如经核实部署目标后的 `/srv/restaurant-pos/staging/config/.env.staging` 的 `UBER_EATS_CLIENT_SECRET`，不可写入仓库或聊天。当前技术文档路径不代表服务器已核实或配置已生效。
