@@ -209,7 +209,7 @@ Sandbox Order / Integration / Local / Uber Store / Local Store / GRAB / HOT IDs�
 
 Branch：`codex/uber-eats-order-integration`；base：`main`；fresh origin/main base SHA：`78d20faeb8ba144aae74a0c1c5a787d3641e932d`。原工作区保留其既有merge中状态；clean要求仅针对本次独立worktree。
 
-实现Commit / PR：见本报告最终Git证据更新与交付消息。**不merge main，不部署Production；Staging未修改。**
+实现Commit：`76e552003b52a24a58c44fbc0c5833c257a333fd`。Draft PR：[#234](https://github.com/Z1linXu/Restaurant_System/pull/234)。后续提交仅补本段Git交付证据。独立worktree提交后已检查clean；最终HEAD见PR。**不merge main，不部署Production；Staging未修改。**
 
 ## Y. Final Acceptance Matrix
 
@@ -278,6 +278,8 @@ CODE BLOCKER：当前已审查范围内无未关闭P0/P1/P2代码问题；不代
 | Staging Deploy | N/A | 未执行 |
 | Staging Acceptance | N/A | 未执行 |
 | Evidence / Governance | Estimated 10–15min | A–Z、配置与运行限制 |
-| Total | Estimated active 60–90min；墙钟至少9h47min | 已知实现文件创建13:17、本次收尾23:04（America/Toronto）；包含中断空档。任务初始时间无法精确回溯，不能把墙钟空档当作持续执行时间。 |
+| Total | Estimated active 60–90min；墙钟至少9h51min | 已知实现文件创建13:17、本次收尾23:08（America/Toronto）；包含中断空档。任务初始时间无法精确回溯，不能把墙钟空档当作持续执行时间。 |
 
 PRODUCT IMPLEMENTATION：backend/frontend/Flyway/tests及少量generic printer header。TOOLING/GOVERNANCE：隔离本机PG/测试进程、文档/env示例/state/backlog；用于保护原脏工作区、验证数据库约束与说明外部阻塞。无额外平台重构、无真实Store/硬件绑定。
+
+本机验收结束后，测试Web进程已停止，专用PostgreSQL 55439已正常停止；保留synthetic数据目录供复验，没有删除或修改原项目数据库。
