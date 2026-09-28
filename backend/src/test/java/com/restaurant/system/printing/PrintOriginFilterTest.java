@@ -26,7 +26,7 @@ class PrintOriginFilterTest {
     PrintOriginFilterTest() {
         store.id = 1L; store.organization_id = 2L; store.printing_mode = "PAD_DIRECT";
         device.id = 10L; device.storeId = 1L; device.organizationId = 2L; device.isActive = true; device.status = "ACTIVE";
-        device.deviceTokenHash = PrintRequestAttestation.sha256("synthetic-not-a-real-token".getBytes(StandardCharsets.UTF_8));
+        device.deviceTokenHash = persistedHash("synthetic-not-a-real-token");
         when(stores.findById(1L)).thenReturn(Optional.of(store)); when(devices.findById(10L)).thenReturn(Optional.of(device));
     }
     MockHttpServletRequest request() {
@@ -46,9 +46,37 @@ class PrintOriginFilterTest {
         assertThat(response.getStatus()).isEqualTo(200);
     }
     @Test void nativeAndBackendShareExactGoldenVector() {
-        assertThat(PrintRequestAttestation.sign(PrintRequestAttestation.sha256("synthetic-token".getBytes(StandardCharsets.UTF_8)),
+        assertThat(PrintRequestAttestation.sign(persistedHash("synthetic-token"),
             "10", "1800000000", "/api/v1/orders/9/reprint", "{}".getBytes(StandardCharsets.UTF_8), "Bearer synthetic"))
             .isEqualTo("21898df597d27ff1f9f7d192567b5dce2e2aabb3c030c1c788531d0817be98e7");
+    }
+    static String persistedHash(String token) {
+        return java.util.Base64.getEncoder().encodeToString(java.util.HexFormat.of().parseHex(
+            PrintRequestAttestation.sha256(token.getBytes(StandardCharsets.UTF_8))));
+    }
+    @Test void realRegistrationHashAcceptsNativeRawTokenProof() throws Exception {
+        var saved = new java.util.concurrent.atomic.AtomicReference<StoreDevice>();
+        when(devices.save(any(StoreDevice.class))).thenAnswer(call -> {
+            StoreDevice row = call.getArgument(0); row.id = 10L; saved.set(row); return row;
+        });
+        var registration = new com.restaurant.system.printing.dto.DeviceRegisterRequest();
+        registration.store_id = 1L; registration.device_name = "Synthetic interoperability test";
+        var result = new com.restaurant.system.printing.service.impl.StoreDeviceServiceImpl(devices, stores).registerDevice(registration);
+        when(devices.findById(10L)).thenReturn(Optional.of(saved.get()));
+        var request = request();
+        String stamp = request.getHeader("X-Print-Timestamp");
+        // Independent native-side algorithm starts from the raw registration token.
+        byte[] key = java.security.MessageDigest.getInstance("SHA-256").digest(result.device_token.getBytes(StandardCharsets.UTF_8));
+        var mac = javax.crypto.Mac.getInstance("HmacSHA256");
+        mac.init(new javax.crypto.spec.SecretKeySpec(key, "HmacSHA256"));
+        String canonical = "PRINT_ORIGIN_V1\n10\n" + stamp + "\nPOST\n" + path + "\n"
+            + PrintRequestAttestation.sha256(body) + "\n" + PrintRequestAttestation.sha256("Bearer synthetic".getBytes(StandardCharsets.UTF_8));
+        request.removeHeader("X-Print-Signature");
+        request.addHeader("X-Print-Signature", java.util.HexFormat.of().formatHex(mac.doFinal(canonical.getBytes(StandardCharsets.UTF_8))));
+        var response = new MockHttpServletResponse();
+        filter.doFilter(request, response, (r, s) -> assertThat(r.getAttribute(PrintOriginContext.ATTRIBUTE))
+            .isEqualTo(new PrintOriginContext.Origin(10L, 1L, 2L)));
+        assertThat(response.getStatus()).isEqualTo(200);
     }
     @Test void tamperedBodyWrongOrganizationRevokedAndExpiredProofFailClosed() throws Exception {
         var changed = request(); changed.setContent("{}".getBytes(StandardCharsets.UTF_8)); assertDenied(changed);

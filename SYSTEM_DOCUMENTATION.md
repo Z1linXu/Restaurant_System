@@ -1,5 +1,10 @@
 # SYSTEM DOCUMENTATION
 
+Pad print-origin proof uses the bytes of the existing SHA-256 device-token
+hash; its persisted representation is Base64 (the canonical device-registration
+contract), while the HMAC signature and body/auth digests are lowercase hex.
+Native and server interoperability is tested through real registration logic.
+
 Staging release retention treats NUL-containing opaque state artifacts
 (executables/caches) conservatively: all retained releases are protected and
 the binary is not interpreted as line-oriented evidence. This prevents slow
