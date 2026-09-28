@@ -1,5 +1,13 @@
 # SYSTEM DOCUMENTATION
 
+Current Production runtime (2026-09-28): exact accepted application
+`11996ef919d9b28ee5366c7e40a58a78c074b675`, Flyway V28. Uber PR #234/V29
+are excluded from Production. DB container/storage and printing/device/Store
+configuration preserved; 21 read-only smoke checks passed. Release-local
+Compose configuration and rollback limits are recorded in
+`docs/governance/PRODUCTION_V26_V28_RELEASE_EVIDENCE.md`. Earlier release
+observations below are historical, not the current deployed identity.
+
 > 2026-08-24 Production V10 → V26 release: the exact immutable application
 > artifact accepted on Staging at SHA
 > `ae446874e6a6bc7d2c19cdbc1ca92603ed53d6de` is now deployed to Production

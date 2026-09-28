@@ -1,36 +1,36 @@
 schema_version: 1
-updated_at: 2026-09-17
+updated_at: 2026-09-28
 
 repository:
   ref: origin/main
-  sha: 78d20faeb8ba144aae74a0c1c5a787d3641e932d
+  sha: 101dbdc75c25904c340251134ee1a0a03f5ce4b7
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
-  package: UBER_EATS_ORDER_INTEGRATION_V1
-  status: MERGE_GATE_PASSED_STAGING_IN_PROGRESS
+  package: PRODUCTION_V26_V28_EXACT_ARTIFACT_RELEASE
+  status: DEPLOYMENT_AND_READ_ONLY_VERIFICATION_PASS_STOPPED
   next_phase_authorized: false
 
 staging:
-  deployed_sha: 11996ef919d9b28ee5366c7e40a58a78c074b675
-  flyway: V28
-  acceptance: MENU_SIMPLIFICATION_PARTIAL_BROWSER_AND_FOREIGN_ORGANIZATION_PROOF_PENDING
-  evidence: MENU_ADDON_ALIAS_OWNERSHIP_EVIDENCE.md
+  deployed_sha: 101dbdc75c25904c340251134ee1a0a03f5ce4b7
+  flyway: V29
+  acceptance: UBER_SANDBOX_E2E_NOT_VERIFIED_BY_THIS_RELEASE
+  evidence: PRODUCTION_V26_V28_RELEASE_EVIDENCE.md
   repair_evidence: PHASE_B_PART2_P0_P1_REPAIR_STAGING_EVIDENCE.md
   cleanup_evidence: PHASE_B_STAGING_SYNTHETIC_FIXTURE_CLEANUP_EXECUTION_EVIDENCE.md
-  runtime_observation_evidence: MENU_SIMPLIFICATION_IMPLEMENTATION_EVIDENCE.md
+  runtime_observation_evidence: PRODUCTION_V26_V28_RELEASE_EVIDENCE.md
 
 production:
-  deployed_sha: b4d0350c15cf777ff0ee53e9acb0d4e4127d9b99
-  flyway: V26
+  deployed_sha: 11996ef919d9b28ee5366c7e40a58a78c074b675
+  flyway: V28
   mutation_authorized: false
-  evidence: PRODUCTION_V10_V26_RELEASE_EVIDENCE.md
-  runtime_observation_evidence: MENU_SIMPLIFICATION_IMPLEMENTATION_EVIDENCE.md
+  evidence: PRODUCTION_V26_V28_RELEASE_EVIDENCE.md
+  runtime_observation_evidence: PRODUCTION_V26_V28_RELEASE_EVIDENCE.md
 
 gate:
   type: TECHNICAL
-  next_action: MERGE_PR234_AND_DEPLOY_ISOLATED_STAGING
+  next_action: STOP_WAIT_FOR_NEW_OWNER_TASK
 
 authorization:
   repository_governance: COMPLETE
@@ -43,4 +43,4 @@ authorization:
   production: NONE
 
 stop:
-  marker: UBER_TEST_STORE_PROVISIONING_PENDING
+  marker: PRODUCTION_V28_EXACT_ARTIFACT_DEPLOYMENT_PASS_STOP
