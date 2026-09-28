@@ -25,6 +25,12 @@ STORE = 26
 CONTROL = 27
 
 
+def menu_business_snapshot(catalog):
+    # MenuCatalogResponse.generated_at is a response clock, not menu mutation.
+    # Keep every other field, including revision/hash/prices/eligibility/scope.
+    return {key: value for key, value in catalog.items() if key != 'generated_at'}
+
+
 class ProofApi(m.Api):
     device = None
     def call(self, path, method='GET', body=None, expected=(200,), **kwargs):
@@ -150,7 +156,8 @@ def main():
         current = {j['id']: j for j in api.call(f'/admin/printing/jobs?store_id={STORE}')}
         require(all(current.get(j['id']) == j for j in old_jobs), 'historical_print_job_mutated')
         require(current[source['id']] == source and api.call(f'/orders/{order_id}') == frozen_order, 'source_or_order_snapshot_changed')
-        require(api.call(f'/menu/catalog?store_id={STORE}') == before_menu and api.call(f'/menu/catalog?store_id={CONTROL}') == before_control, 'menu_cross_store_mutation')
+        require(menu_business_snapshot(api.call(f'/menu/catalog?store_id={STORE}')) == menu_business_snapshot(before_menu)
+                and menu_business_snapshot(api.call(f'/menu/catalog?store_id={CONTROL}')) == menu_business_snapshot(before_control), 'menu_cross_store_mutation')
         require(m.template_snapshot(api, 1) == before_templates, 'shared_authority_mutated')
         record('old_jobs_orders_menu_control_store_and_shared_authority_unchanged')
         report['not_executed'] = ['Staging PAD_DIRECT claim/affinity expiry/start-print/active-job confirmation (MOCK-only policy)',
