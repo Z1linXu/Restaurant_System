@@ -1,5 +1,9 @@
 # SYSTEM DOCUMENTATION
 
+Printing acceptance compares the full Menu Catalog business representation
+excluding only the per-response `generated_at` clock; revision/content hash,
+Store/Organization, pricing, names and eligibility must remain identical.
+
 Pad print-origin proof uses the bytes of the existing SHA-256 device-token
 hash; its persisted representation is Base64 (the canonical device-registration
 contract), while the HMAC signature and body/auth digests are lowercase hex.

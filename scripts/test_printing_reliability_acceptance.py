@@ -20,6 +20,14 @@ class Response:
 
 
 class AcceptanceSafetyTest(unittest.TestCase):
+    def test_menu_comparison_ignores_only_response_clock(self):
+        original = {'generated_at': 'old', 'store_id': 26, 'menu_revision': 1,
+                    'content_hash': 'hash', 'categories': [{'price': 2, 'name': 'unchanged'}]}
+        self.assertEqual(a.menu_business_snapshot(original), a.menu_business_snapshot({**original, 'generated_at': 'new'}))
+        for key, value in [('store_id', 27), ('menu_revision', 2), ('content_hash', 'changed'),
+                           ('categories', [{'price': 3, 'name': 'unchanged'}])]:
+            self.assertNotEqual(a.menu_business_snapshot(original), a.menu_business_snapshot({**original, key: value}))
+
     def test_request_proof_is_bound_to_exact_body_path_and_bearer_without_device_token_header(self):
         api = a.ProofApi()
         api.device = {'device_id': 10, 'device_token': 'synthetic-token'}
