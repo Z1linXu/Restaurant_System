@@ -46,6 +46,19 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class MainActivity extends Activity {
+    private static final AtomicLong ACTIVITY_SEQUENCE = new AtomicLong();
+    private static final Object ACTIVITY_OWNERSHIP = new Object();
+    private static long nextActivityIdentity() {
+        synchronized (ACTIVITY_OWNERSHIP) { return ACTIVITY_SEQUENCE.incrementAndGet(); }
+    }
+    private final long activityIdentity = nextActivityIdentity();
+    private volatile boolean activityDestroyed;
+    private volatile String rendererState = "STARTING";
+    private volatile String activityState = "CREATED";
+    private boolean ownsActivity() { return !activityDestroyed && activityIdentity == ACTIVITY_SEQUENCE.get(); }
+    private void postOwnedUi(Runnable callback) {
+        runOnUiThread(() -> { if (ownsActivity()) callback.run(); });
+    }
     private static final String TAG = "RestaurantPad";
     private static final String WORKER_TAG = "RestaurantPadWorker";
     private static final String APP_HOST = "restaurant-pad.local";
@@ -183,7 +196,7 @@ public class MainActivity extends Activity {
                 settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
             }
         }
-        printerPluginBridge = new PrinterPluginBridge();
+        if (printerPluginBridge == null) printerPluginBridge = new PrinterPluginBridge(this::ownsActivity);
         webView.addJavascriptInterface(printerPluginBridge, "RestaurantPrinter");
         webView.addJavascriptInterface(new PadDeviceBridge(), "RestaurantPadDevice");
 
@@ -199,6 +212,29 @@ public class MainActivity extends Activity {
 
         webView.setWebChromeClient(new WebChromeClient());
         webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                if (ownsActivity() && view == webView) rendererState = "READY";
+            }
+
+            @Override
+            public boolean onRenderProcessGone(WebView view, android.webkit.RenderProcessGoneDetail detail) {
+                if (!ownsActivity() || view != webView) return true;
+                rendererState = detail.didCrash() ? "CRASHED" : "KILLED";
+                Log.e(WORKER_TAG, "renderer_gone crashed=" + detail.didCrash() + " generation=" + padDirectWorkerGeneration
+                    + " job=" + padDirectWorkerCurrentJobId + " worker=" + padDirectWorkerState);
+                // Recreate ONLY the UI. Never kick/reset the worker, credentials or in-flight ambiguity.
+                view.removeJavascriptInterface("RestaurantPrinter");
+                view.removeJavascriptInterface("RestaurantPadDevice");
+                if (view.getParent() instanceof ViewGroup) ((ViewGroup) view.getParent()).removeView(view);
+                view.destroy();
+                webView = new WebView(MainActivity.this);
+                setContentView(webView, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                rendererState = "RECOVERING";
+                configureWebView(); loadApp();
+                Toast.makeText(MainActivity.this, "页面已恢复，请检查打印状态；不会自动重新打印", Toast.LENGTH_LONG).show();
+                return true;
+            }
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 return assetLoader.shouldInterceptRequest(request.getUrl());
@@ -644,7 +680,7 @@ public class MainActivity extends Activity {
     }
 
     private boolean isCurrentPadDirectGeneration(long generation, String source) {
-        boolean current = PadDirectWorkerPolicy.isCurrentGeneration(generation, padDirectWorkerGeneration);
+        boolean current = ownsActivity() && PadDirectWorkerPolicy.isCurrentGeneration(generation, padDirectWorkerGeneration);
         if (!current) {
             Log.i(WORKER_TAG, "stale callback ignored source=" + source
                 + " callbackGeneration=" + generation
@@ -704,6 +740,8 @@ public class MainActivity extends Activity {
     }
 
     private void persistPadDirectActiveJob(PadDirectActiveJobContext context) {
+        synchronized (ACTIVITY_OWNERSHIP) {
+        if (!ownsActivity()) return;
         padDirectActiveJob = context;
         if (context == null) {
             preferences.edit().remove(KEY_PAD_DIRECT_ACTIVE_JOB).apply();
@@ -715,11 +753,15 @@ public class MainActivity extends Activity {
         padDirectWorkerCurrentPhase = context.phase.name();
         padDirectWorkerLocalPrintMayHaveSucceeded = context.localPrintMayHaveSucceeded;
         preferences.edit().putString(KEY_PAD_DIRECT_ACTIVE_JOB, context.toJson().toString()).apply();
+        }
     }
 
     private void clearPadDirectActiveJob() {
+        synchronized (ACTIVITY_OWNERSHIP) {
+        if (!ownsActivity()) return;
         padDirectActiveJob = null;
         preferences.edit().remove(KEY_PAD_DIRECT_ACTIVE_JOB).apply();
+        }
     }
 
     private boolean hasActivePadDirectJobInProgress() {
@@ -728,6 +770,8 @@ public class MainActivity extends Activity {
     }
 
     private void persistPadDirectHighRiskStop(String errorCode, String reason, PadDirectActiveJobContext context) {
+        synchronized (ACTIVITY_OWNERSHIP) {
+        if (!ownsActivity()) return;
         String jobId = context == null ? padDirectWorkerCurrentJobId : String.valueOf(context.jobId);
         String module = context == null ? padDirectWorkerCurrentModule : context.moduleCode;
         String endpoint = context == null ? padDirectWorkerCurrentPrinterEndpoint : context.printerEndpoint;
@@ -750,9 +794,12 @@ public class MainActivity extends Activity {
             .putString(KEY_PAD_DIRECT_ERROR_PHASE, phase == null ? "" : phase)
             .putBoolean(KEY_PAD_DIRECT_ERROR_LOCAL_PRINT_MAY_HAVE_SUCCEEDED, localPrintMayHaveSucceeded)
             .apply();
+        }
     }
 
     private void clearPersistedPadDirectHighRiskStop() {
+        synchronized (ACTIVITY_OWNERSHIP) {
+        if (!ownsActivity() || PrinterPluginBridge.nativeBusy()) return;
         padDirectWorkerErrorStopped = false;
         padDirectWorkerHighRiskErrorCode = "";
         padDirectWorkerLocalPrintMayHaveSucceeded = false;
@@ -767,6 +814,7 @@ public class MainActivity extends Activity {
             .remove(KEY_PAD_DIRECT_ERROR_PHASE)
             .remove(KEY_PAD_DIRECT_ERROR_LOCAL_PRINT_MAY_HAVE_SUCCEEDED)
             .apply();
+        }
     }
 
     private void clearPadDirectCurrentJob() {
@@ -787,6 +835,7 @@ public class MainActivity extends Activity {
         boolean localPrintMayHaveSucceeded,
         String printerEndpoint
     ) {
+        if (!ownsActivity() || generation > 0 && !isCurrentPadDirectGeneration(generation, "active-job-before-persist")) return;
         PadDirectActiveJobContext context = new PadDirectActiveJobContext(
             jobId,
             moduleCode,
@@ -807,7 +856,7 @@ public class MainActivity extends Activity {
     }
 
     private void setPadDirectWorkerStateForGeneration(long generation, PadDirectWorkerState state) {
-        if (generation <= 0 || isCurrentPadDirectGeneration(generation, "worker-state")) {
+        if (ownsActivity() && (generation <= 0 || isCurrentPadDirectGeneration(generation, "worker-state"))) {
             setPadDirectWorkerState(state);
         }
     }
@@ -928,7 +977,7 @@ public class MainActivity extends Activity {
         if (Looper.myLooper() == Looper.getMainLooper()) {
             update.run();
         } else {
-            runOnUiThread(update);
+            postOwnedUi(update);
         }
     }
 
@@ -976,6 +1025,11 @@ public class MainActivity extends Activity {
         builder.append("Generation：").append(padDirectWorkerGeneration)
             .append(" | Phase：").append(padDirectWorkerCurrentPhase.isBlank() ? "-" : padDirectWorkerCurrentPhase)
             .append('\n');
+        builder.append("Activity：").append(activityState).append(" #").append(activityIdentity)
+            .append(" | Renderer：").append(rendererState).append('\n');
+        try {
+            if (printerPluginBridge != null) builder.append("Native：").append(printerPluginBridge.nativeStatus()).append('\n');
+        } catch (Exception ignored) { builder.append("Native diagnostics unavailable\n"); }
         builder.append("运行中：").append(padDirectWorkerRunning && !padDirectWorkerStopRequested ? "是" : "否")
             .append(" | App 前台：").append(padDirectAppForeground ? "是" : "否")
             .append(" | Job处理中：").append(padDirectWorkerInProgress || padDirectJobInProgress ? "是" : "否")
@@ -1058,7 +1112,7 @@ public class MainActivity extends Activity {
         if (Looper.myLooper() == Looper.getMainLooper()) {
             update.run();
         } else {
-            runOnUiThread(update);
+            postOwnedUi(update);
         }
     }
 
@@ -1157,7 +1211,7 @@ public class MainActivity extends Activity {
                 }
             }
             String finalMessage = message;
-            runOnUiThread(() -> new AlertDialog.Builder(this)
+            postOwnedUi(() -> new AlertDialog.Builder(this)
                 .setTitle("Web App URL Test")
                 .setMessage(finalMessage)
                 .setPositiveButton("OK", null)
@@ -1224,7 +1278,7 @@ public class MainActivity extends Activity {
             }
             String finalMessage = message;
             String finalSuccessBody = successBody;
-            runOnUiThread(() -> {
+            postOwnedUi(() -> {
                 if (finalSuccessBody == null) {
                     resultView.setText(finalMessage);
                     jobsList.removeAllViews();
@@ -1409,7 +1463,7 @@ public class MainActivity extends Activity {
         EditText printerPortInput,
         EditText printerTimeoutInput
     ) {
-        if (padDirectJobInProgress) {
+        if (!ownsActivity() || padDirectJobInProgress || padDirectWorkerInProgress || PrinterPluginBridge.nativeBusy()) {
             resultView.setText("已有任务正在处理，请等待当前任务完成。");
             return;
         }
@@ -1459,7 +1513,7 @@ public class MainActivity extends Activity {
         EditText printerPortInput,
         EditText printerTimeoutInput
     ) {
-        runOnUiThread(() -> {
+        postOwnedUi(() -> {
             resultView.setText(message);
             padDirectJobInProgress = false;
             refreshButton.setEnabled(isDevicePaired());
@@ -1850,6 +1904,8 @@ public class MainActivity extends Activity {
     }
 
     private String mapNativePrintErrorCode(NativePrintAttemptResult result) {
+        if ("ANDROID_PRINT_UNCERTAIN".equals(result.nativeErrorCode) || "NATIVE_EXECUTION_BUSY".equals(result.nativeErrorCode))
+            return "ANDROID_PRINT_UNCERTAIN";
         String phase = result == null ? "UNKNOWN" : result.phase;
         String code = result == null ? "UNKNOWN" : result.nativeErrorCode;
         if ("CONNECT".equals(phase) && "TIMEOUT".equals(code)) {
@@ -2050,6 +2106,10 @@ public class MainActivity extends Activity {
                 || startReason.contains("recover-error-stopped")
                 || startReason.equals("device-paired")
         );
+        if (!ownsActivity() || PrinterPluginBridge.nativeBusy() || padDirectWorkerInProgress || padDirectJobInProgress) {
+            autoStatus.setText("旧执行尚未结束，请等待并核对实体打印机；不会启动并行打印。");
+            return;
+        }
         if (padDirectWorkerErrorStopped && !explicitUserStart) {
             Log.i(WORKER_TAG, "Worker Started skipped: persisted high-risk stop requires operator confirmation");
             setPadDirectWorkerState(PadDirectWorkerState.ERROR_STOPPED);
@@ -2170,6 +2230,7 @@ public class MainActivity extends Activity {
     }
 
     private void startPadDirectWorkerHeadlessIfPaired(String reason) {
+        if (!ownsActivity() || PrinterPluginBridge.nativeBusy()) return;
         if (padDirectWorkerRunning && !padDirectWorkerStopRequested) {
             return;
         }
@@ -2484,7 +2545,15 @@ public class MainActivity extends Activity {
     }
 
     private JSONObject buildPadDirectWorkerStatusJson() throws Exception {
+        // No credentials, ESC/POS data or customer content in diagnostics.
         JSONObject response = new JSONObject();
+        response.put("activity_identity", activityIdentity);
+        response.put("activity_state", activityState);
+        response.put("renderer_state", rendererState);
+        response.put("worker_generation", padDirectWorkerGeneration);
+        response.put("current_phase", padDirectWorkerCurrentPhase);
+        response.put("uncertain", padDirectWorkerLocalPrintMayHaveSucceeded || padDirectWorkerErrorStopped);
+        if (printerPluginBridge != null) response.put("native", printerPluginBridge.nativeStatus());
         response.put("auto_enabled", isPadDirectAutoPrintEnabled());
         response.put("worker_running", padDirectWorkerRunning && !padDirectWorkerStopRequested);
         response.put("worker_state", padDirectWorkerState.name());
@@ -2575,7 +2644,7 @@ public class MainActivity extends Activity {
                 return jsonSuccess(response);
             }
             long firstDelayMs = padDirectWorkerState == PadDirectWorkerState.RECOVERING ? 0 : PAD_DIRECT_KICK_FIRST_DELAY_MS;
-            runOnUiThread(() -> schedulePadDirectQuickKickWindow(reason, firstDelayMs));
+            postOwnedUi(() -> schedulePadDirectQuickKickWindow(reason, firstDelayMs));
             response.put("accepted", true);
             response.put("status", padDirectWorkerState == PadDirectWorkerState.RECOVERING ? "scheduled_recovery_poll" : "scheduled_quick_window");
             response.put("first_delay_ms", firstDelayMs);
@@ -2729,7 +2798,7 @@ public class MainActivity extends Activity {
             }
             PadDirectJobResult finalResult = workerResult;
             JSONObject finalJob = job;
-            runOnUiThread(() -> {
+            postOwnedUi(() -> {
                 if (!isCurrentPadDirectGeneration(generation, "worker-result")) {
                     if (padDirectWorkerInProgressGeneration == generation) {
                         padDirectWorkerInProgress = false;
@@ -3060,7 +3129,7 @@ public class MainActivity extends Activity {
             }
 
             String finalMessage = message;
-            runOnUiThread(() -> {
+            postOwnedUi(() -> {
                 resultView.setText(finalMessage);
                 testConnectionButton.setEnabled(true);
                 testPrintButton.setEnabled(true);
@@ -3571,6 +3640,23 @@ public class MainActivity extends Activity {
 
     private class PadDeviceBridge {
         @JavascriptInterface
+        public String attestPrintRequest(String json) {
+            try {
+                if (!ownsActivity() || !isDevicePaired()) return jsonFailure("Pad not paired or inactive");
+                JSONObject request = new JSONObject(json);
+                String method = request.optString("method");
+                String path = request.optString("path");
+                if (!PrintRequestProof.allowed(method, path)) return jsonFailure("Unsupported proof request");
+                String id = preferences.getString(KEY_DEVICE_ID, "");
+                String timestamp = Long.toString(System.currentTimeMillis() / 1000L);
+                String signature = PrintRequestProof.sign(preferences.getString(KEY_DEVICE_TOKEN, ""), id, timestamp,
+                    path, request.optString("body", ""), request.optString("authorization", ""));
+                JSONObject result = new JSONObject(); result.put("device_id", id);
+                result.put("timestamp", timestamp); result.put("signature", signature);
+                return jsonSuccess(result);
+            } catch (Exception ex) { return jsonFailure("Unable to attest print request"); }
+        }
+        @JavascriptInterface
         public String saveDeviceCredentials(String json) {
             try {
                 JSONObject request = new JSONObject(json == null ? "{}" : json);
@@ -3594,7 +3680,7 @@ public class MainActivity extends Activity {
                     .apply();
                 padDirectWorkerUserStopped = false;
                 padDirectWorkerErrorStopped = false;
-                runOnUiThread(() -> startPadDirectWorkerHeadlessIfPaired("device-paired"));
+                postOwnedUi(() -> startPadDirectWorkerHeadlessIfPaired("device-paired"));
                 JSONObject response = new JSONObject();
                 response.put("message", "Device credentials saved");
                 response.put("device_id", deviceId);
@@ -3664,6 +3750,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onStart() {
         super.onStart();
+        activityState = "STARTED";
         padDirectAppForeground = true;
         Log.i(WORKER_TAG, "onStart workerRunning=" + padDirectWorkerRunning + " autoEnabled=" + isPadDirectAutoPrintEnabled());
         resumePadDirectWorkerAfterLifecycleIfNeeded();
@@ -3675,6 +3762,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        activityState = "RESUMED";
         padDirectAppForeground = true;
         Log.i(WORKER_TAG, "onResume workerRunning=" + padDirectWorkerRunning + " autoEnabled=" + isPadDirectAutoPrintEnabled());
         resumePadDirectWorkerAfterLifecycleIfNeeded();
@@ -3694,6 +3782,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onPause() {
+        activityState = "PAUSED";
         Log.i(WORKER_TAG, "onPause workerRunning=" + padDirectWorkerRunning + " inProgress=" + padDirectWorkerInProgress);
         padDirectAppForeground = false;
         stopPadDirectWorkerForLifecycle("app-pause");
@@ -3702,6 +3791,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onStop() {
+        activityState = "STOPPED";
         Log.i(WORKER_TAG, "onStop workerRunning=" + padDirectWorkerRunning + " stoppedForLifecycle=" + padDirectWorkerStoppedForLifecycle);
         padDirectAppForeground = false;
         stopPadDirectWorkerForLifecycle("app-stopped");
@@ -3712,7 +3802,17 @@ public class MainActivity extends Activity {
     protected void onDestroy() {
         Log.i(WORKER_TAG, "onDestroy workerRunning=" + padDirectWorkerRunning);
         padDirectAppForeground = false;
-        stopPadDirectWorkerForLifecycle("app-destroyed");
+        if (hasActivePadDirectJobInProgress() || PrinterPluginBridge.nativeBusy()) {
+            persistPadDirectHighRiskStop("ACTIVITY_DESTROYED_IN_FLIGHT", "Activity 已销毁，打印结果需人工核对。", padDirectActiveJob);
+        }
+        activityState = "DESTROYED";
+        activityDestroyed = true;
+        padDirectWorkerStopRequested = true;
+        padDirectWorkerRunning = false;
+        invalidatePadDirectWorkerGeneration("app-destroyed");
+        clearPadDirectWorkerCallbacks();
+        if (printerPluginBridge != null) printerPluginBridge.close();
+        if (webView != null) { webView.removeJavascriptInterface("RestaurantPrinter"); webView.removeJavascriptInterface("RestaurantPadDevice"); webView.destroy(); }
         padDirectWorkerStoppedForLifecycle = false;
         activePadDirectWorkerControls = null;
         super.onDestroy();

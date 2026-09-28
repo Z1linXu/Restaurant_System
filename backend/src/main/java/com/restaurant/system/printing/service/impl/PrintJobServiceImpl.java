@@ -114,13 +114,17 @@ public class PrintJobServiceImpl implements PrintJobService {
                 return existing;
             }
         }
+        var manual = com.restaurant.system.printing.service.ManualReprintService.currentIntent();
+        if (dispatchSourceKey == null && manual != null) dispatchSourceKey = manual.sourceKey();
         LocalDateTime now = LocalDateTime.now();
         PrintJob job = new PrintJob();
         job.organization_id = organizationId;
+        job.preferredDeviceId = com.restaurant.system.printing.security.PrintOriginContext.deviceFor(storeId, organizationId);
         job.store_id = storeId;
         job.order_id = orderId;
         job.order_update_batch_id = orderUpdateBatchId;
         job.dispatchSourceKey = dispatchSourceKey;
+        job.manualRequestHash = manual == null ? null : manual.hash();
         job.printer_id = printerId;
         job.module_code = moduleCode;
         job.receipt_type = receiptType;
@@ -172,8 +176,12 @@ public class PrintJobServiceImpl implements PrintJobService {
     @Transactional
     public PrintJob markPadDirectQueued(PrintJob job, PrinterConfig printer, String fontSize) {
         PrintJob target = requireJob(job.id);
+        if (!PrintJobStatus.PENDING.equals(target.status)) throw new BusinessException("An existing active or terminal job cannot be requeued; create a new manual reprint");
         target.executionMode = "PAD_DIRECT";
         target.status = PrintJobStatus.PENDING;
+        if (target.preferredDeviceId != null && target.preferredDeviceUntil == null) {
+            target.preferredDeviceUntil = LocalDateTime.now().plusSeconds(10);
+        }
         target.printer_id = printer == null ? target.printer_id : printer.id;
         target.claimedByDeviceId = null;
         target.claimedAt = null;

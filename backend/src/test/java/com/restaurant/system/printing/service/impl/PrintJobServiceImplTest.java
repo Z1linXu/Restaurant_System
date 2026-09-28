@@ -47,6 +47,7 @@ class PrintJobServiceImplTest {
     void padDirectPayloadUsesProvidedFontSize() {
         PrintJob job = new PrintJob();
         job.id = 1L;
+        job.status = "PENDING";
         job.rendered_text_snapshot = PrintMarkup.doubleHeight("牛肉面 x1");
 
         PrinterConfig printer = new PrinterConfig();
@@ -61,6 +62,26 @@ class PrintJobServiceImplTest {
         byte[] payload = Base64.getDecoder().decode(queued.escposPayloadBase64);
 
         assertTrue(containsBytes(payload, EscPosFontSizeMode.LARGE.activate_bytes));
+    }
+
+    @Test
+    void durableOriginAppliesToAllModulesAndQueueReplayDoesNotExtendPreference() {
+        when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        try (var scope = com.restaurant.system.printing.security.PrintOriginContext.dispatch(22L, 1L, 7L)) {
+            for (String module : new String[]{"GRAB", "FRONTDESK_RECEIPT", "HOT_KITCHEN"}) {
+                PrintJob job = service.createPendingJob(7L, 1L, 9L, null, null, module, module, null, "{}");
+                assertEquals(22L, job.preferredDeviceId);
+                job.id = 99L; job.rendered_text_snapshot = "TEST";
+                when(printJobRepository.findById(99L)).thenReturn(Optional.of(job));
+                PrinterConfig printer = new PrinterConfig(); printer.id = 1L; printer.text_encoding = "GBK";
+                service.markPadDirectQueued(job, printer, "SMALL");
+                var deadline = job.preferredDeviceUntil;
+                assertTrue(deadline.isAfter(java.time.LocalDateTime.now().plusSeconds(8)));
+                service.markPadDirectQueued(job, printer, "SMALL");
+                assertEquals(deadline, job.preferredDeviceUntil);
+            }
+        }
+        assertEquals(null, com.restaurant.system.printing.security.PrintOriginContext.deviceFor(1L, 7L));
     }
 
     @Test

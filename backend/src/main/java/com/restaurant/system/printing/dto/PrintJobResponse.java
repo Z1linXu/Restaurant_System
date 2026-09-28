@@ -5,6 +5,11 @@ import java.time.LocalDateTime;
 
 public class PrintJobResponse {
 
+    public Long preferred_device_id;
+    public LocalDateTime preferred_device_until;
+    public Long reprint_source_job_id;
+    public LocalDateTime printing_started_at;
+
     public Long id;
     public Long organization_id;
     public Long store_id;
@@ -47,6 +52,10 @@ public class PrintJobResponse {
 
     public static PrintJobResponse from(PrintJob job, String printerName, String printerEndpoint) {
         PrintJobResponse response = new PrintJobResponse();
+        response.preferred_device_id = job.preferredDeviceId;
+        response.preferred_device_until = job.preferredDeviceUntil;
+        response.reprint_source_job_id = job.reprintSourceJobId;
+        response.printing_started_at = job.printingStartedAt;
         response.id = job.id;
         response.organization_id = job.organization_id;
         response.store_id = job.store_id;
@@ -116,6 +125,8 @@ public class PrintJobResponse {
         }
 
         return switch (code) {
+            case "ANDROID_PRINT_UNCERTAIN", "ANDROID_RESTART_WITH_IN_FLIGHT_JOB", "ACTIVITY_DESTROYED_IN_FLIGHT" ->
+                "Print result uncertain. Check the physical printer before confirming a new reprint; do not automatically resend.";
             case "CLOUD_PRIVATE_PRINTER_BLOCKED" ->
                 "Cloud server cannot directly connect to this LAN printer. Use PAD_DIRECT, MOCK, DISABLED, or a local print bridge.";
             case "PRINTING_DISABLED" ->

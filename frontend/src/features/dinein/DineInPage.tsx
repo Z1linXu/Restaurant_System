@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { followReprint, printResultMessage, reprintErrorMessage } from '../../services/manualReprintService'
 import { useMenuCatalog } from '../../hooks/useMenuCatalog'
 import { Card } from '../../components/ui/Card'
 import { useIpadLandscape } from '../../hooks/useIpadLandscape'
@@ -153,7 +154,9 @@ interface DineInPageProps {
 }
 
 export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
+  const reprintFollow = useRef<(() => void) | null>(null)
   const { storeId, organizationId } = useCurrentStore()
+  useEffect(() => () => reprintFollow.current?.(), [storeId])
   const { user } = useAuth()
   const isIpadLandscape = useIpadLandscape()
   const workstation = inferFrontdeskWorkstation(routePath)
@@ -477,15 +480,13 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
       setPrintError(null)
       const result = await reprintOrderReceipt(target.orderDbId, option.module_code)
       if (printOptionsRequestIdRef.current !== requestId) return
-      if (result.status !== 'PRINTED') {
-        throw new Error(result.error_message ?? 'Print failed')
-      }
-      setSubmissionMessage(`${option.label} sent for ${formatSplitSlotLabel(target.label)}.`)
+      reprintFollow.current?.()
+      reprintFollow.current = followReprint(result, job => setSubmissionMessage(printResultMessage(job)))
       setPrintAttentionMessage(null)
       setPrintTarget(null)
     } catch (error) {
       if (printOptionsRequestIdRef.current === requestId) {
-        setPrintError(error instanceof Error ? error.message : 'Print failed')
+        setPrintError(reprintErrorMessage(error))
       }
     } finally {
       if (printOptionsRequestIdRef.current === requestId) {

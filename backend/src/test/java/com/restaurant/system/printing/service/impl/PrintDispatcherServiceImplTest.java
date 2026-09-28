@@ -488,6 +488,7 @@ class PrintDispatcherServiceImplTest {
         job.order_id = order.id;
         job.module_code = PrintModuleCode.GRAB;
         job.status = PrintJobStatus.PRINTED;
+
         when(printerConfigService.getStorePrintingMode(store.id)).thenReturn("MOCK");
         when(storeRepository.findById(store.id)).thenReturn(Optional.of(store));
         when(orderRepository.findById(order.id)).thenReturn(Optional.of(order));
@@ -597,6 +598,11 @@ class PrintDispatcherServiceImplTest {
         job.rendered_text_snapshot = "FROZEN HISTORICAL COMBO OUTPUT";
         job.status = PrintJobStatus.PRINTED;
 
+        PrintJob fresh = new PrintJob();
+        fresh.id = 78L; fresh.store_id = job.store_id; fresh.order_id = job.order_id;
+        fresh.module_code = job.module_code; fresh.status = PrintJobStatus.PENDING;
+        when(printJobService.createPendingJob(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(fresh);
+
         PrinterConfig printer = new PrinterConfig();
         printer.id = job.printer_id;
         printer.store_id = job.store_id;
@@ -604,12 +610,14 @@ class PrintDispatcherServiceImplTest {
         when(printJobService.requireJob(job.id)).thenReturn(job);
         when(printerConfigRepository.findById(printer.id)).thenReturn(Optional.of(printer));
         when(printerConfigService.getStorePrintingMode(job.store_id)).thenReturn("MOCK");
-        when(printJobService.markPrinting(job, null)).thenReturn(job);
-        when(printJobService.markPrinted(job, null, "Mock print succeeded - no physical printer used")).thenReturn(job);
+        when(printJobService.markPrinting(fresh, null)).thenReturn(fresh);
+        when(printJobService.markPrinted(fresh, null, "Mock print succeeded - no physical printer used")).thenReturn(fresh);
 
         service.reprintJob(job.id, 5L);
 
-        verify(printJobService).attachRenderedContent(job, null, "FROZEN HISTORICAL COMBO OUTPUT");
+        verify(printJobService).attachRenderedContent(fresh, null, "FROZEN HISTORICAL COMBO OUTPUT");
+        org.junit.jupiter.api.Assertions.assertEquals(PrintJobStatus.PRINTED, job.status);
+        org.junit.jupiter.api.Assertions.assertEquals(job.id, fresh.reprintSourceJobId);
         verify(grabRenderer, never()).render(any());
         verifyNoInteractions(printerTransport);
     }

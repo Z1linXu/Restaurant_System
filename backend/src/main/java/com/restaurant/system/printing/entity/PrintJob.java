@@ -16,6 +16,17 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "print_jobs")
 public class PrintJob {
 
+    @Column(name = "preferred_device_id")
+    public Long preferredDeviceId;
+    @Column(name = "preferred_device_until")
+    public LocalDateTime preferredDeviceUntil;
+    @Column(name = "reprint_source_job_id")
+    public Long reprintSourceJobId;
+    @Column(name = "manual_request_hash")
+    public String manualRequestHash;
+    @Column(name = "printing_started_at")
+    public LocalDateTime printingStartedAt;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")

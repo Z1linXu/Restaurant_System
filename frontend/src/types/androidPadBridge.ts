@@ -46,6 +46,7 @@ export interface AndroidPadPrintWorkerStatus {
 }
 
 export interface AndroidPadDeviceBridge {
+  attestPrintRequest?: (json: string) => string
   saveDeviceCredentials: (json: string) => string
   getDeviceStatus: () => string
   clearDeviceCredentials: () => string

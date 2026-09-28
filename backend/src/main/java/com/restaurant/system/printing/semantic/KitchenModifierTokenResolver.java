@@ -108,7 +108,7 @@ public final class KitchenModifierTokenResolver {
             case "extra_radish" -> "+萝";
             case "bok_choy" -> "加上海青";
             case "cilantro" -> "+香";
-            case "green_onion" -> "+葱";
+            case "green_onion" -> "加葱";
             case "extra_sauce" -> "+酱";
             case "broccoli" -> "+西兰";
             case "cabbage" -> "+包";
@@ -128,7 +128,8 @@ public final class KitchenModifierTokenResolver {
             return null;
         }
         return switch (code) {
-            case "cilantro" -> "走香";
+            case "cilantro" -> "走香菜";
+            case "onion" -> "走洋葱";
             case "green_onion" -> "走葱";
             case "beef" -> "走牛";
             case "radish" -> "走萝";
@@ -163,7 +164,7 @@ public final class KitchenModifierTokenResolver {
             case "加萝卜" -> "+萝";
             case "加上海青" -> "加上海青";
             case "加香菜" -> "+香";
-            case "加葱" -> "+葱";
+            case "加葱" -> "加葱";
             case "加酱" -> "+酱";
             case "加西兰花" -> "+西兰";
             case "加包菜" -> "+包";
@@ -184,8 +185,9 @@ public final class KitchenModifierTokenResolver {
             return null;
         }
         return switch (label) {
-            case "走香菜", "不要香菜" -> "走香";
-            case "走葱", "不要葱", "走洋葱" -> "走葱";
+            case "走香菜", "不要香菜" -> "走香菜";
+            case "走葱", "不要葱" -> "走葱";
+            case "走洋葱", "不要洋葱" -> "走洋葱";
             case "走牛肉" -> "走牛";
             case "走萝卜" -> "走萝";
             case "走面", "No Noodle" -> "走面";

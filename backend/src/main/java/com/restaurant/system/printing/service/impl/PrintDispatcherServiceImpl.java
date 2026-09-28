@@ -816,7 +816,8 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
 
     @Override
     public PrintJobResponse reprintJob(Long jobId, Long requestedByUserId) {
-        PrintJob job = printJobService.requireJob(jobId);
+        PrintJob source = printJobService.requireJob(jobId);
+        PrintJob job = source;
         requirePrintingModule(job.store_id);
         String printingMode = printerConfigService.getStorePrintingMode(job.store_id);
         if (PrintingMode.DISABLED.equals(printingMode)) {
@@ -826,11 +827,18 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             throw new BusinessException("Store printing role is disabled: " + job.module_code);
         }
         PrinterConfig printer = PrintingMode.MOCK.equals(printingMode) ? null : requirePrinterForJob(job);
+        job = printJobService.createPendingJob(source.organization_id, source.store_id, source.order_id,
+            source.order_update_batch_id, printer == null ? null : printer.id, source.module_code,
+            source.receipt_type, requestedByUserId, source.payload_snapshot);
+        job.reprintSourceJobId = source.id;
+        job.printingRuleRevisionId = source.printingRuleRevisionId;
+        job.printingRuleFingerprint = source.printingRuleFingerprint;
+        printJobRepository.save(job);
         try {
-            String content = job.rendered_text_snapshot;
+            String content = source.rendered_text_snapshot;
             PrinterAssignment assignment = printerAssignmentRepository.findByStoreIdAndModuleCode(job.store_id, job.module_code).orElse(null);
             if (content == null || content.isBlank()) {
-                PrintingDisplayRuleContext context = printingDisplayRuleService.contextForJob(job);
+                PrintingDisplayRuleContext context = printingDisplayRuleService.contextForJob(source);
                 content = renderOrderContent(job.module_code, job.store_id, job.order_id, null, context);
                 job = printJobService.attachRenderedContent(
                     job,
@@ -844,7 +852,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             }
             if (PrintingMode.PAD_DIRECT.equals(printingMode)) {
                 job = printJobService.markPadDirectQueued(job, printer, resolveEffectiveFontSize(assignment, printer));
-                logger.info("PAD_DIRECT queued existing print job {} for client-side reprint", job.id);
+                logger.info("PAD_DIRECT queued new print job {} reprinting source {}", job.id, source.id);
                 return printJobService.toResponse(job);
             }
             job.requested_by_user_id = requestedByUserId;
@@ -857,6 +865,8 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 logMockPrint(job.module_code, printer, job, content);
                 return printJobService.toResponse(printJobService.markPrinted(job, printer, "Mock print succeeded - no physical printer used"));
             }
+            if (deferManualRealTransport(job, printer, content, resolveEffectiveFontSize(assignment, printer)))
+                return printJobService.toResponse(job);
             sendToPrinter(printer, content, resolveEffectiveFontSize(assignment, printer));
             return printJobService.toResponse(printJobService.markPrinted(job, printer));
         } catch (Exception exception) {
@@ -928,6 +938,8 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 logMockPrint(moduleCode, printer, job, content);
                 return printJobService.toResponse(printJobService.markPrinted(job, printer, "Mock print succeeded - no physical printer used"));
             }
+            if (deferManualRealTransport(job, printer, content, resolveEffectiveFontSize(assignment, printer)))
+                return printJobService.toResponse(job);
             sendToPrinter(printer, content, resolveEffectiveFontSize(assignment, printer));
             return printJobService.toResponse(printJobService.markPrinted(job, printer));
         } catch (Exception exception) {
@@ -1210,6 +1222,17 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             throw new BusinessException("Printer does not belong to store");
         }
         return printer;
+    }
+
+    private boolean deferManualRealTransport(PrintJob job, PrinterConfig printer, String content, String fontSize) {
+        return com.restaurant.system.printing.service.ManualReprintService.deferRealTransport(() -> {
+            try {
+                sendToPrinter(printer, content, fontSize);
+                printJobService.markPrinted(job, printer);
+            } catch (Exception exception) {
+                printJobService.markFailed(job, printer, "REPRINT_FAILED", exception.getMessage());
+            }
+        });
     }
 
     private String normalizeReceiptType(String receiptType) {

@@ -1,4 +1,5 @@
 import { apiRequest } from './apiClient'
+import { manualReprint } from './manualReprintService'
 
 export interface PrinterConfigRecord {
   id?: number
@@ -58,6 +59,10 @@ export interface PrinterConnectionTestResponse {
 }
 
 export interface PrintJobRecord {
+  preferred_device_id?: number | null
+  preferred_device_until?: string | null
+  reprint_source_job_id?: number | null
+  printing_started_at?: string | null
   id: number
   organization_id?: number | null
   store_id: number
@@ -376,10 +381,7 @@ export async function registerStoreDevice(input: DeviceRegisterRequest): Promise
 }
 
 export async function reprintPrintJob(jobId: number) {
-  return request<PrintJobRecord>(`/api/v1/admin/printing/jobs/${jobId}/reprint`, {
-    method: 'POST',
-    headers: buildHeaders(),
-  })
+  return manualReprint(`/api/v1/admin/printing/jobs/${jobId}/reprint`)
 }
 
 export async function acknowledgePrintJob(jobId: number, note?: string) {

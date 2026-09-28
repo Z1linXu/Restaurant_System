@@ -1,6 +1,6 @@
 package com.restaurant.system.printing.dto;
 
-public class OrderReprintRequest {
+public class OrderReprintRequest extends ManualReprintRequest {
 
     public String receipt_type;
     public Long printer_id;

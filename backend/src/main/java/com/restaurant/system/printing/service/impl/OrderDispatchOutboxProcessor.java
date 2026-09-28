@@ -88,7 +88,8 @@ public class OrderDispatchOutboxProcessor {
             if (event == null) {
                 return;
             }
-            try {
+            try (var origin = com.restaurant.system.printing.security.PrintOriginContext.dispatch(
+                event.originatingDeviceId, event.storeId, event.organizationId)) {
                 PrintDispatchOutcome outcome = printDispatcherService.dispatchPersistedEvent(
                     event.moduleCode,
                     event.storeId,

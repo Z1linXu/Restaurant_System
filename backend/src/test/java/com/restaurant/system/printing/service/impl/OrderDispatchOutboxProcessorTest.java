@@ -59,18 +59,24 @@ class OrderDispatchOutboxProcessorTest {
     @Test
     void persistedEventIsDispatchedOnceAndMarkedCompleted() {
         OrderDispatchOutbox event = event();
+        event.originatingDeviceId = 22L;
         when(repository.findDueForDispatch(any(), any())).thenReturn(List.of(event));
         when(repository.claimDueForProcessing(eq(event.id), any(), any())).thenReturn(1);
         when(repository.findById(event.id)).thenReturn(Optional.of(event));
         when(printerAssignmentRepository.findByStoreIdAndModuleCode(event.storeId, event.moduleCode))
             .thenReturn(Optional.of(assignment(event.storeId, event.moduleCode, 4L)));
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(printDispatcherService.dispatchPersistedEvent("GRAB", 1L, 9L, null, "submit:9:GRAB")).thenAnswer(invocation -> {
+            assertEquals(22L, com.restaurant.system.printing.security.PrintOriginContext.deviceFor(event.storeId, event.organizationId));
+            return PrintDispatchOutcome.DISPATCHED;
+        });
 
         processor.processDueEvents();
 
         verify(printDispatcherService).dispatchPersistedEvent("GRAB", 1L, 9L, null, "submit:9:GRAB");
         assertEquals("DISPATCHED", event.status);
         assertNotNull(event.completedAt);
+        assertEquals(null, com.restaurant.system.printing.security.PrintOriginContext.deviceFor(event.storeId, event.organizationId));
     }
 
     @Test

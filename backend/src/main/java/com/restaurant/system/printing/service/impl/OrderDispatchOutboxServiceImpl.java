@@ -39,7 +39,8 @@ public class OrderDispatchOutboxServiceImpl implements OrderDispatchOutboxServic
             moduleCode,
             orderUpdateBatchId == null ? "ORDER_SUBMITTED" : "ORDER_UPDATED",
             sourceKey,
-            now
+            now,
+            com.restaurant.system.printing.security.PrintOriginContext.deviceFor(storeId, store.organization_id)
         );
     }
 

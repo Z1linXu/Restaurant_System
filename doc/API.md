@@ -542,6 +542,47 @@ hardware binding; no socket/TCP transport is attempted.
 
 ### Store Printing Modes
 
+### Manual reprint and verified originating Pad (V30)
+
+- `POST /api/v1/orders/{id}/reprint`: retains `receipt_type` and optional
+  `printer_id`, adds required `idempotency_key` (8–128 ASCII letters/digits,
+  underscore or hyphen), optional `confirmation_fingerprint`.
+- `POST /api/v1/admin/printing/jobs/{id}/reprint`: JSON body with the same
+  key/confirmation fields. Both endpoints create a **new** PrintJob, never
+  reset the source job. Job reprint copies its frozen rendered snapshot;
+  order reprint still renders the complete current order.
+- Same intent replays return the same new job. Reusing a key for a changed
+  user/device/source/module/printer conflicts. Existing Store permissions
+  remain mandatory. Active same-Store/order/module PENDING/CLAIMED/PRINTING
+  jobs return HTTP 409 `REPRINT_CONFIRMATION_REQUIRED`, with `data` containing
+  `confirmation_fingerprint` and `active_jobs` (job_id, status, module,
+  claimed_device_id, preferred_device_id, age_seconds, created_at,
+  printing_started_at). Confirmation rechecks the current locked state.
+- PENDING/CLAIMED/PRINTING are queued/in-progress, not failures or completion.
+  Only PRINTED is completion; request timeout and ambiguous native output are
+  operator-review/unknown outcomes. UI tracks the returned new job ID and
+  preserves its request key after a lost response.
+- PAD_DIRECT order `idempotent-submit`, `submit`, `updates`, and both reprint
+  requests additionally require `X-Print-Device-Id`, `X-Print-Timestamp`,
+  `X-Print-Signature`. Normal Bearer authorization is unchanged. These proof
+  headers are produced by the narrow native `attestPrintRequest` bridge, not
+  by exposing a device token to JavaScript. POST path, exact body bytes,
+  Authorization header digest, device ID and timestamp are HMAC-bound using
+  `PRINT_ORIGIN_V1`; allowed clock age is 90 seconds, future skew 15 seconds.
+  Backend validates ACTIVE, enabled, same Store/Organization device. Proof
+  failure is HTTP 403 `PRINT_ORIGIN_INVALID`. MOCK/REAL without proof retain
+  existing behavior; a supplied proof is always validated.
+- V30 response additions: `preferred_device_id`, `preferred_device_until`,
+  `reprint_source_job_id`, `printing_started_at`. Origin survives the dispatch
+  outbox. New PENDING PAD_DIRECT jobs prefer the originating Pad for 10 seconds;
+  queue filtering happens before pagination, and claim enforces the same
+  condition. Expired preference permits any active same-Store Pad. Expired
+  CLAIMED leases remain reclaimable; PRINTING never automatically fails over.
+- Existing APKs without attestation cannot submit operational PAD_DIRECT
+  requests to this contract. Use the matching bundled APK; no automatic install.
+
+### Store mode behavior
+
 Print Center stores the active mode in `stores.printing_mode`.
 
 The shared service may additionally receive an environment-specific
@@ -773,7 +814,8 @@ Pad print queue:
 
 - `GET /api/v1/stores/{storeId}/printing/jobs/pending?limit=25`
   - Auth: `X-Device-Id`, `X-Device-Token`.
-  - Returns `PAD_DIRECT` jobs with status `PENDING` or expired `CLAIMED` lease.
+  - Returns eligible `PAD_DIRECT` PENDING jobs (including originating-Pad
+    preference filtering) or expired CLAIMED leases. Never PRINTING.
 - `POST /api/v1/printing/jobs/{jobId}/claim`
   - Auth: `X-Device-Id`, `X-Device-Token`.
   - Request: `client_attempt_token`, optional `lease_seconds`.
@@ -781,8 +823,9 @@ Pad print queue:
 - `POST /api/v1/printing/jobs/{jobId}/start-print`
   - Auth: `X-Device-Id`, `X-Device-Token`.
   - Request: `client_attempt_token`, optional `lease_seconds`.
-  - Changes the claimed job to `PRINTING` for the same device/attempt and
-    extends the lease before native TCP output starts.
+  - Atomically changes the unexpired claimed job to PRINTING for the same
+    device/attempt; a stale/reclaimed/expired attempt receives 409. A retry for
+    the same already-PRINTING owner remains idempotent and extends its lease.
 - `GET /api/v1/printing/jobs/{jobId}/payload`
   - Auth: `X-Device-Id`, `X-Device-Token`.
   - Only the claiming device can read payload.

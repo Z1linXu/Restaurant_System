@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { followReprint, printResultMessage, reprintErrorMessage } from '../../services/manualReprintService'
 import { Card } from '../../components/ui/Card'
 import { useIpadLandscape } from '../../hooks/useIpadLandscape'
 import {
@@ -14,13 +15,15 @@ import { FrontdeskTopNav } from '../frontdesk/components/FrontdeskTopNav'
 import { OrderHistoryDetail } from './components/OrderHistoryDetail'
 import { OrderMiniCard } from './components/OrderMiniCard'
 import { useCurrentStore } from '../store/useStoreContext'
-import { printJobOperatorDisplayMessage, printOptionDisplayLabel } from '../../utils/displayLabels'
 
 export function OrdersPage() {
+  const reprintFollow = useRef<(() => void) | null>(null)
   const { storeId } = useCurrentStore()
+  const reprintScope = useRef(0)
   const isIpadLandscape = useIpadLandscape()
   const [orders, setOrders] = useState<BackendFrontdeskOrderBoardItem[]>([])
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
+  useEffect(() => () => { reprintScope.current += 1; reprintFollow.current?.() }, [storeId, selectedOrderId])
   const [selectedOrder, setSelectedOrder] = useState<BackendOrderResponse | null>(null)
   const [printOptions, setPrintOptions] = useState<OrderPrintOption[]>([])
   const [printJobs, setPrintJobs] = useState<PrintJobRecord[]>([])
@@ -83,24 +86,25 @@ export function OrdersPage() {
 
   const handleReprint = async (option: OrderPrintOption) => {
     if (!selectedOrder || !option.available) return
+    const scope = reprintScope.current
     try {
       setPrintBusy(option.module_code)
       setPrintStatusMessage(null)
       const result = await reprintOrderReceipt(selectedOrder.id, option.module_code)
-      setPrintStatusMessage({
-        kind: result.status === 'PRINTED' ? 'success' : 'error',
-        message: result.status === 'PRINTED'
-          ? `${printOptionDisplayLabel(option.module_code, option.label)}已发送。`
-          : `${printOptionDisplayLabel(option.module_code, option.label)}失败：${printJobOperatorDisplayMessage(result) || '未知错误'}`,
+      if (scope !== reprintScope.current) return
+      reprintFollow.current?.()
+      reprintFollow.current = followReprint(result, job => {
+        setPrintStatusMessage({ kind: job.status === 'FAILED' ? 'error' : 'success', message: printResultMessage(job) })
+        setPrintJobs(current => [job, ...current.filter(existing => existing.id !== job.id)])
       })
-      setPrintJobs(await fetchOrderPrintJobs(selectedOrder.id))
     } catch (printError) {
+      if (scope !== reprintScope.current) return
       setPrintStatusMessage({
         kind: 'error',
-        message: printError instanceof Error ? printError.message : '重打失败',
+        message: reprintErrorMessage(printError),
       })
     } finally {
-      setPrintBusy(null)
+      if (scope === reprintScope.current) setPrintBusy(null)
     }
   }
 

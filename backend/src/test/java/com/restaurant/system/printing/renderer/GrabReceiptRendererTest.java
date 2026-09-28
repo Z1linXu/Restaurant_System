@@ -106,6 +106,13 @@ class GrabReceiptRendererTest {
     }
 
     @Test
+    void onionIsNotGreenOnionInGrabInstructions() {
+        String output = renderNoodle("走洋葱");
+        assertTrue(output.contains("走洋葱"));
+        assertFalse(output.contains("走葱"));
+    }
+
+    @Test
     void keepsSingleRemoveOnionAsRemoveOnion() {
         String output = renderNoodle("走葱");
 
