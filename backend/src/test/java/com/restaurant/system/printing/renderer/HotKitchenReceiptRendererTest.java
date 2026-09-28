@@ -448,6 +448,22 @@ class HotKitchenReceiptRendererTest {
     }
 
     @Test
+    void stableOnionAndLegacyOnionStayDistinctFromGreenOnionInHotKitchen() {
+        for (String code : new String[]{"remove_onion", "legacy_custom"}) {
+            PrintRenderRequest request = baseRequest();
+            request.printing_rules = PrintingDisplayRuleContext.defaultContext();
+            OrderItemOption onion = new OrderItemOption();
+            onion.order_item_id = request.order_items.get(0).id;
+            onion.option_type_snapshot = "remove"; onion.option_group_snapshot = "REMOVE";
+            onion.option_code_snapshot = code; onion.option_name_snapshot_zh = "走洋葱"; onion.quantity = 1;
+            request.order_item_options = List.of(request.order_item_options.get(0), onion);
+            String result = renderer().render(request);
+            assertTrue(result.contains("走洋葱"));
+            assertFalse(result.contains("走葱"));
+        }
+    }
+
+    @Test
     void dynamicAddonAndRemoveUseFrozenLabelsOnApplicableHotPath() {
         HotKitchenReceiptRenderer renderer = renderer();
         PrintRenderRequest request = baseRequest();

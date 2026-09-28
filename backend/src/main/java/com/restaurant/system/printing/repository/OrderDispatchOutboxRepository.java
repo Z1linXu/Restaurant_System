@@ -28,7 +28,8 @@ public interface OrderDispatchOutboxRepository extends JpaRepository<OrderDispat
             attempt_count,
             next_attempt_at,
             created_at,
-            updated_at
+            updated_at,
+            originating_device_id
         ) values (
             :organizationId,
             :storeId,
@@ -41,7 +42,8 @@ public interface OrderDispatchOutboxRepository extends JpaRepository<OrderDispat
             0,
             :now,
             :now,
-            :now
+            :now,
+            :originatingDeviceId
         )
         on conflict (source_key) do nothing
         """, nativeQuery = true)
@@ -53,7 +55,8 @@ public interface OrderDispatchOutboxRepository extends JpaRepository<OrderDispat
         @Param("moduleCode") String moduleCode,
         @Param("eventType") String eventType,
         @Param("sourceKey") String sourceKey,
-        @Param("now") LocalDateTime now
+        @Param("now") LocalDateTime now,
+        @Param("originatingDeviceId") Long originatingDeviceId
     );
 
     @Query("""

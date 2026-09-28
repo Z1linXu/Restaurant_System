@@ -53,6 +53,14 @@ class PadPrintJobServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(printJobRepository.findLockedById(any())).thenAnswer(call ->
+            Optional.ofNullable(printJobService.requireJob(call.getArgument(0))));
+        org.mockito.Mockito.lenient().when(printJobRepository.startPadPrint(any(), any(), any(), any(), any(), any())).thenAnswer(call -> {
+            PrintJob job = printJobService.requireJob(call.getArgument(0));
+            job.status = PrintJobStatus.PRINTING;
+            job.claimExpiresAt = call.getArgument(5);
+            return 1;
+        });
         service = new PadPrintJobServiceImpl(
             printJobRepository,
             printJobAttemptRepository,
@@ -66,7 +74,7 @@ class PadPrintJobServiceImplTest {
         StoreDevice device = device();
         PrintJob job = padJob(PrintJobStatus.PENDING);
         PrintJobResponse response = PrintJobResponse.from(job, "Kitchen", "10.0.0.5:9100");
-        when(printJobRepository.findPendingPadDirectJobs(eq(1L), any(LocalDateTime.class), any())).thenReturn(List.of(job));
+        when(printJobRepository.findPendingPadDirectJobs(eq(1L), eq(device.id), any(LocalDateTime.class), any())).thenReturn(List.of(job));
         when(printJobService.toResponse(job)).thenReturn(response);
 
         List<PrintJobResponse> jobs = service.listPendingJobs(device, 1L, 25);
@@ -170,7 +178,7 @@ class PadPrintJobServiceImplTest {
         PrintJobAttempt attempt = attempt("attempt-1", PrintJobStatus.CLAIMED);
         PadPrintJobStartPrintRequest request = startPrintRequest("attempt-1", 600);
         when(printJobService.requireJob(job.id)).thenReturn(job);
-        when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        org.mockito.Mockito.lenient().when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(printJobAttemptRepository.findAllByPrintJobIdAndClientAttemptToken(job.id, "attempt-1")).thenReturn(List.of(attempt));
         when(printJobService.toResponse(any(PrintJob.class))).thenAnswer(invocation -> PrintJobResponse.from(invocation.getArgument(0), null, null));
 
@@ -189,7 +197,7 @@ class PadPrintJobServiceImplTest {
         PrintJob job = claimedPadJob(PrintJobStatus.PRINTING, device.id, "attempt-1");
         PadPrintJobStartPrintRequest request = startPrintRequest("attempt-1", 300);
         when(printJobService.requireJob(job.id)).thenReturn(job);
-        when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        org.mockito.Mockito.lenient().when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(printJobAttemptRepository.findAllByPrintJobIdAndClientAttemptToken(job.id, "attempt-1")).thenReturn(List.of(attempt("attempt-1", PrintJobStatus.PRINTING)));
         when(printJobService.toResponse(any(PrintJob.class))).thenAnswer(invocation -> PrintJobResponse.from(invocation.getArgument(0), null, null));
 
@@ -272,7 +280,7 @@ class PadPrintJobServiceImplTest {
         request.client_attempt_token = "attempt-1";
         request.raw_result = "ok";
         when(printJobService.requireJob(job.id)).thenReturn(job);
-        when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        org.mockito.Mockito.lenient().when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(printJobAttemptRepository.findAllByPrintJobIdAndClientAttemptToken(job.id, "attempt-1")).thenReturn(List.of(attempt("attempt-1", PrintJobStatus.PRINTING)));
         when(printJobService.toResponse(any(PrintJob.class))).thenAnswer(invocation -> PrintJobResponse.from(invocation.getArgument(0), null, null));
 
@@ -289,7 +297,7 @@ class PadPrintJobServiceImplTest {
         PadPrintJobCompleteRequest request = new PadPrintJobCompleteRequest();
         request.client_attempt_token = "attempt-1";
         when(printJobService.requireJob(job.id)).thenReturn(job);
-        when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        org.mockito.Mockito.lenient().when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(printJobAttemptRepository.findAllByPrintJobIdAndClientAttemptToken(job.id, "attempt-1"))
             .thenReturn(List.of(attempt("attempt-1", PrintJobStatus.PRINTING)));
         when(printerConfigRepository.findByIdAndStoreId(job.printer_id, job.store_id)).thenReturn(Optional.empty());
@@ -313,7 +321,7 @@ class PadPrintJobServiceImplTest {
         PadPrintJobCompleteRequest request = new PadPrintJobCompleteRequest();
         request.client_attempt_token = "attempt-1";
         when(printJobService.requireJob(job.id)).thenReturn(job);
-        when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        org.mockito.Mockito.lenient().when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(printJobAttemptRepository.findAllByPrintJobIdAndClientAttemptToken(job.id, "attempt-1"))
             .thenReturn(List.of(attempt("attempt-1", PrintJobStatus.PRINTING)));
         when(printerConfigRepository.findByIdAndStoreId(job.printer_id, job.store_id)).thenReturn(Optional.of(printer));
@@ -339,7 +347,7 @@ class PadPrintJobServiceImplTest {
         request.error_code = "ANDROID_NATIVE_PRINT_FAILED";
         request.error_message = "printer offline";
         when(printJobService.requireJob(job.id)).thenReturn(job);
-        when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        org.mockito.Mockito.lenient().when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(printJobAttemptRepository.findAllByPrintJobIdAndClientAttemptToken(job.id, "attempt-1")).thenReturn(List.of(attempt("attempt-1", PrintJobStatus.PRINTING)));
         when(printerConfigRepository.findByIdAndStoreId(job.printer_id, job.store_id)).thenReturn(Optional.of(printer));
         when(printJobService.toResponse(any(PrintJob.class))).thenAnswer(invocation -> PrintJobResponse.from(invocation.getArgument(0), null, null));
@@ -364,7 +372,7 @@ class PadPrintJobServiceImplTest {
         request.error_code = "ANDROID_NATIVE_PRINT_FAILED";
         request.error_message = "printer offline";
         when(printJobService.requireJob(job.id)).thenReturn(job);
-        when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        org.mockito.Mockito.lenient().when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(printJobAttemptRepository.findAllByPrintJobIdAndClientAttemptToken(job.id, "attempt-1"))
             .thenReturn(List.of(attempt("attempt-1", PrintJobStatus.PRINTING)));
         when(printerConfigRepository.findByIdAndStoreId(job.printer_id, job.store_id)).thenReturn(Optional.empty());
@@ -387,7 +395,7 @@ class PadPrintJobServiceImplTest {
         PadPrintJobCompleteRequest request = new PadPrintJobCompleteRequest();
         request.client_attempt_token = "attempt-1";
         when(printJobService.requireJob(job.id)).thenReturn(job);
-        when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        org.mockito.Mockito.lenient().when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(printJobAttemptRepository.findAllByPrintJobIdAndClientAttemptToken(job.id, "attempt-1")).thenReturn(List.of(attempt("attempt-1", PrintJobStatus.CLAIMED)));
         when(printJobService.toResponse(any(PrintJob.class))).thenAnswer(invocation -> PrintJobResponse.from(invocation.getArgument(0), null, null));
 

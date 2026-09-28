@@ -11,6 +11,7 @@ import type {
 import type { RealtimeUpdateMessage } from '../types/kds'
 import type { PrintJobRecord } from './printingAdminService'
 import { ApiRequestError, apiRequest } from './apiClient'
+import { manualReprint } from './manualReprintService'
 import { resolveComboGroupOptionId } from '../utils/comboSelection'
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
@@ -599,13 +600,9 @@ export async function reprintOrderReceipt(
   orderId: number,
   receiptType: string,
 ) {
-  return request<PrintJobRecord>(`/api/v1/orders/${orderId}/reprint`, {
-    method: 'POST',
-    headers: buildHeaders(),
-    body: JSON.stringify({
+  return manualReprint(`/api/v1/orders/${orderId}/reprint`, {
       receipt_type: receiptType,
       update_ticket: false,
-    }),
   })
 }
 

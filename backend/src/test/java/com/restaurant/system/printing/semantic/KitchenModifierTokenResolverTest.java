@@ -8,6 +8,18 @@ import com.restaurant.system.printing.rules.PrintingDisplayRuleContext;
 import org.junit.jupiter.api.Test;
 
 class KitchenModifierTokenResolverTest {
+    @Test
+    void onionNeverBecomesGreenOnionAndLegacyIngredientNamesRemainDistinct() {
+        var rules = context("{\"dictionaries\":{\"MODIFIER_REMOVE\":[],\"MODIFIER_ADD\":[]}}");
+        assertThat(KitchenModifierTokenResolver.resolveRemove(remove("remove_onion", "走洋葱"), rules)).isEqualTo("走洋葱");
+        assertThat(KitchenModifierTokenResolver.resolveRemove(remove("remove_onion", "走葱"), rules)).isEqualTo("走洋葱");
+        assertThat(KitchenModifierTokenResolver.resolveRemove(remove("remove_green_onion", "走洋葱"), rules)).isEqualTo("走葱");
+        assertThat(KitchenModifierTokenResolver.resolveRemove(remove(null, "走洋葱"), rules)).isEqualTo("走洋葱");
+        assertThat(KitchenModifierTokenResolver.resolveRemove(remove(null, "走葱"), rules)).isEqualTo("走葱");
+        assertThat(KitchenModifierTokenResolver.resolveRemove(remove(null, "走香菜"), rules)).isEqualTo("走香菜");
+        assertThat(KitchenModifierTokenResolver.resolveRemove(remove(null, "走所有菜"), rules)).isEqualTo("走所有菜");
+        assertThat(KitchenModifierTokenResolver.resolveAddon(addon("green_onion", "加葱", 1), rules)).isEqualTo("加葱");
+    }
 
     @Test
     void canonicalFallbackUsesFrozenNameWhileLegacyAndExplicitAliasesKeepTheirMeaning() {

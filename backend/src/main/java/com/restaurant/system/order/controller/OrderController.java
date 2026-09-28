@@ -48,6 +48,8 @@ public class OrderController {
     private final AuditLogService auditLogService;
     private final StoreModuleAccessEvaluator moduleAccessEvaluator;
     private final OrderRepository orderRepository;
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.restaurant.system.printing.service.ManualReprintService manualReprintService;
 
     public OrderController(
         OrderService orderService,
@@ -208,7 +210,7 @@ public class OrderController {
     ) {
         var user = authorizationService.requireOrder(id, Capability.ORDER_VIEW_DETAIL);
         requirePrinting(resolveOrderStoreId(id));
-        PrintJobResponse response = printDispatcherService.reprintOrder(id, request, user.userId());
+        PrintJobResponse response = manualReprintService.reprintOrder(id, request, user.userId());
         auditLogService.record(user.storeId(), user, "ORDER_REPRINTED", "ORDER", id, "Reprint requested", Map.of("receipt_type", request.receipt_type == null ? "" : request.receipt_type), servletRequest);
         return ApiResponse.success("Reprint requested", response);
     }

@@ -55,6 +55,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/admin/printing")
 public class OwnerPrintingController {
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.restaurant.system.printing.service.ManualReprintService manualReprintService;
 
     private final PrinterConfigService printerConfigService;
     private final PrinterAssignmentService printerAssignmentService;
@@ -246,11 +248,13 @@ public class OwnerPrintingController {
     }
 
     @PostMapping("/jobs/{jobId}/reprint")
-    public ApiResponse<PrintJobResponse> reprintJob(@PathVariable Long jobId, HttpServletRequest servletRequest) {
+    public ApiResponse<PrintJobResponse> reprintJob(@PathVariable Long jobId,
+        @RequestBody com.restaurant.system.printing.dto.ManualReprintRequest request, HttpServletRequest servletRequest) {
         var job = printJobService.requireJob(jobId);
         var user = requirePrintingAccess(job.store_id);
-        PrintJobResponse response = printDispatcherService.reprintJob(jobId, user.userId());
-        recordAudit(job.store_id, user, "PRINT_JOB_REPRINTED", "PRINT_JOB", jobId, "Print job reprint requested", Map.of("module_code", job.module_code), servletRequest);
+        PrintJobResponse response = manualReprintService.reprintJob(jobId, request, user.userId());
+        recordAudit(job.store_id, user, "PRINT_JOB_REPRINTED", "PRINT_JOB", response.id, "New print job reprint requested",
+            Map.of("module_code", job.module_code, "source_job_id", jobId, "new_job_id", response.id), servletRequest);
         return ApiResponse.success("Reprint requested", response);
     }
 

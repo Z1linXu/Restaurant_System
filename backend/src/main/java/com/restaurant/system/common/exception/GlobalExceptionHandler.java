@@ -23,6 +23,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(com.restaurant.system.printing.service.ManualReprintService.ConfirmationRequired.class)
+    public ResponseEntity<ApiResponse<com.restaurant.system.printing.service.ManualReprintService.Confirmation>> handleReprintConfirmation(
+        com.restaurant.system.printing.service.ManualReprintService.ConfirmationRequired ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiResponse<>(false, ex.getMessage(), ex.confirmation,
+            "REPRINT_CONFIRMATION_REQUIRED"));
+    }
+
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException ex) {
         return ResponseEntity.badRequest().body(ApiResponse.failure(ex.getMessage()));

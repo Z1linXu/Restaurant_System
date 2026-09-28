@@ -16,6 +16,22 @@ import org.json.JSONObject;
 
 public class PrinterPluginBridge {
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final DeadlineTcpPrinter transport;
+    private volatile boolean closed;
+    public PrinterPluginBridge() { this(() -> true); }
+    public PrinterPluginBridge(java.util.function.BooleanSupplier owner) {
+        transport = new DeadlineTcpPrinter(() -> !closed && owner.getAsBoolean());
+    }
+    public void close() { closed = true; transport.close(); executor.shutdownNow(); }
+    public static boolean nativeBusy() { return DeadlineTcpPrinter.busy(); }
+    public JSONObject nativeStatus() throws Exception {
+        DeadlineTcpPrinter.Result result = transport.lastResult();
+        JSONObject status = new JSONObject();
+        status.put("phase", result.phase); status.put("error", result.error);
+        status.put("bytes_written", result.bytesWritten); status.put("elapsed_ms", result.elapsedMs);
+        status.put("uncertain", result.uncertain); status.put("operation_stopped", result.stopped);
+        status.put("operation_active", nativeBusy()); return status;
+    }
 
     @JavascriptInterface
     public String testConnection(String jsonRequest) {
@@ -34,53 +50,23 @@ public class PrinterPluginBridge {
 
     @JavascriptInterface
     public String printRawTcp(String jsonRequest) {
-        return runPrinterTask(() -> {
+        try {
             JSONObject request = new JSONObject(jsonRequest);
             String ip = request.getString("ip");
             int port = request.optInt("port", 9100);
             int timeoutMs = request.optInt("timeoutMs", 3000);
             byte[] payload = Base64.decode(request.getString("payloadBase64"), Base64.DEFAULT);
             String endpoint = ip + ":" + port;
-            String phase = "CONNECT";
-            int bytesWritten = 0;
-            Socket socket = new Socket();
-            try {
-                socket.connect(new InetSocketAddress(ip, port), timeoutMs);
-                socket.setSoTimeout(timeoutMs);
-                OutputStream outputStream = socket.getOutputStream();
-                phase = "WRITE";
-                int offset = 0;
-                while (offset < payload.length) {
-                    int length = Math.min(4096, payload.length - offset);
-                    outputStream.write(payload, offset, length);
-                    offset += length;
-                    bytesWritten = offset;
-                }
-                phase = "FLUSH";
-                outputStream.flush();
-                phase = "CLOSE";
-                socket.close();
-                socket = null;
-            } catch (Exception exception) {
-                return failure(
-                    resolveErrorCode(exception, phase),
-                    exception.getMessage() == null ? exception.toString() : exception.getMessage(),
-                    phase,
-                    bytesWritten,
-                    exception,
-                    endpoint
-                );
-            } finally {
-                if (socket != null) {
-                    try {
-                        socket.close();
-                    } catch (Exception ignored) {
-                        // Close failures after an already-failed socket operation do not change the primary diagnostic.
-                    }
-                }
-            }
-            return success("Print payload sent", endpoint, bytesWritten);
-        });
+            timeoutMs = Math.max(500, Math.min(timeoutMs, 10000));
+            DeadlineTcpPrinter.Result result = transport.send(ip, port, timeoutMs, Math.min(30000L, Math.max(10000L, timeoutMs * 3L)), payload);
+            JSONObject response = new JSONObject(result.success ? success("Print payload sent", endpoint, result.bytesWritten)
+                : failure(result.uncertain ? "ANDROID_PRINT_UNCERTAIN" : result.error,
+                    result.uncertain ? "打印结果不确定，请人工检查；禁止自动重发" : "Native print execution failed",
+                    result.phase, result.bytesWritten, null, endpoint));
+            response.put("uncertain", result.uncertain); response.put("operation_stopped", result.stopped);
+            response.put("elapsed_ms", result.elapsedMs);
+            return response.toString();
+        } catch (Exception ex) { return failure("NATIVE_REQUEST_INVALID", "Invalid native print request"); }
     }
 
     private String runPrinterTask(Callable<String> task) {

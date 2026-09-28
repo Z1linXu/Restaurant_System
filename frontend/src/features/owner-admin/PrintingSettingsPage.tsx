@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { followReprint, printResultMessage, reprintErrorMessage } from '../../services/manualReprintService'
 import { isFeatureEnabled } from '../feature-flags/featureConfig'
 import { fetchWorkspaces, type WorkspaceStore } from '../../services/storeWorkspaceService'
 import { useCurrentStore } from '../store/useStoreContext'
@@ -372,12 +373,15 @@ function parseAndroidPadStatus(rawStatus: string): AndroidPadDeviceStatus | null
 }
 
 export function PrintingSettingsPage() {
+  const reprintFollow = useRef<(() => void) | null>(null)
   const currentStore = useCurrentStore()
   const { storeId } = currentStore
   const { isOfflineRestricted, user } = useAuth()
   const [workspaceStores, setWorkspaceStores] = useState<WorkspaceStore[]>([])
   const [printCenter, setPrintCenter] = useState<PrintCenterOverview | null>(null)
   const [selectedStoreId, setSelectedStoreId] = useState(String(storeId))
+  const reprintScope = useRef(0)
+  useEffect(() => () => { reprintScope.current += 1; reprintFollow.current?.() }, [selectedStoreId])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<ToastState>(null)
@@ -776,17 +780,19 @@ export function PrintingSettingsPage() {
   }
 
   const handleReprintJob = async (jobId: number) => {
+    const scope = reprintScope.current
     try {
       setToast(null)
       const result = await reprintPrintJob(jobId)
-      setPrintJobs(await fetchPrintJobs({ storeId: Number(selectedStoreId) }))
-      setPrintCenter(await fetchPrintCenterOverview(Number(selectedStoreId)))
-      setToast({
-        kind: result.status === 'PRINTED' ? 'success' : 'error',
-        message: result.status === 'PRINTED' ? `打印任务 #${jobId} 已重新打印。` : `重打失败：${printJobOperatorMessage(result) || '未知错误'}`,
+      if (scope !== reprintScope.current) return
+      reprintFollow.current?.()
+      reprintFollow.current = followReprint(result, job => {
+        setToast({ kind: job.status === 'FAILED' ? 'error' : 'success', message: printResultMessage(job) })
+        setPrintJobs(current => [job, ...current.filter(existing => existing.id !== job.id)])
       })
     } catch (reprintError) {
-      setToast({ kind: 'error', message: reprintError instanceof Error ? reprintError.message : '重打失败' })
+      if (scope !== reprintScope.current) return
+      setToast({ kind: 'error', message: reprintErrorMessage(reprintError) })
     }
   }
 

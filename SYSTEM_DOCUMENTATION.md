@@ -8834,6 +8834,57 @@ unless a client explicitly supplies the optional diagnostic value.
 
 ## Pilot Reliability: Print Attention Acknowledgement
 
+### Printing reliability V30
+
+Manual reprint creates a new job in both Order Center/Dine-in and Print Center.
+The original status, attempts, ownership, timestamps and frozen text are never
+reset. Print Center copies frozen text; order reprint retains full-current-order
+content. A Store-serialized manual intent reuses the unique dispatch source key
+for replay protection. REAL manual output starts only after reservation/job/
+PRINTING commit; completion persistence uses a new transaction. Failure after
+output retains the committed intent and cannot cause same-key retransmission.
+Active same-order/module jobs require explicit operator
+confirmation with a current-state fingerprint; backend revalidates under lock.
+All three UIs share queued/claimed/printing/printed/failed messaging, preserve
+unknown-outcome request identity in durable localStorage partitioned by API
+environment, account/Organization and exact order/job path (no credential
+copies). A later 401/403 or renderer recreation cannot discard that identity.
+They follow only the returned job and kick the Pad
+as a latency optimization—not evidence of physical success.
+
+Operational PAD_DIRECT submit/update/reprint carries a native HMAC attestation
+bound to exact HTTP body/path, Bearer digest, device and bounded timestamp.
+React retains its existing API, offline outbox and idempotency responsibilities.
+The full device token never enters JS, localStorage, order snapshots or logs.
+Backend verifies device ACTIVE/enabled and Store/Organization scope. The outbox
+persists `originating_device_id`; dispatched jobs retain `preferred_device_id`
+and a once-set 10-second `preferred_device_until`. This window follows the
+existing 300ms kick, 700ms fast retry, 4s idle and 1s outbox timing. It applies
+only to PENDING, is enforced by both paginated query and atomic claim, and does
+not alter printer routing. Expired CLAIMED ownership can be reclaimed; PRINTING
+never fails over. Atomic start-print also checks current device, attempt and
+unexpired claim. V30 adds nullable fields/index only, with no historical rewrite.
+
+Android 0.3.0-printing-reliability adds request proof and a process-wide native
+transport lane with bounded connect/write/flush execution. Deadline cancellation
+closes the socket and waits for actual exit; an unconfirmed exit or possible
+partial write remains uncertain and cannot trigger blind resend. Activity
+ownership protects persisted safety state and UI callbacks. Renderer loss
+recreates only WebView UI, not the worker or current PRINTING job. Diagnostics
+include worker/native phase, generation, Activity/renderer state, elapsed time,
+bytes and safe error codes, without payload or credentials. JVM transport tests
+are not real Android/printer proof; Owner hardware acceptance remains separate.
+
+The matching rebuilt bundled APK is required before operational PAD_DIRECT use
+of this backend. Staging remains endpoint-free MOCK/DISABLED under its reviewed
+runbook; physical three-Pad/printer validation is an explicit later Owner Gate.
+
+`remove_onion` and legacy 走洋葱 resolve to 走洋葱, never 走葱. Configured display
+rules retain priority and green-onion/cilantro/all-vegetable identities remain
+distinct. Only new rendering changes; historical order/job snapshots are frozen.
+
+### Attention acknowledgement
+
 Flyway migration `V7__add_print_job_attention_acknowledgement.sql` adds an
 additive acknowledgement snapshot to `print_jobs`. The Print Center can mark a
 job as handled without changing its `status`, `error_code`, `error_message`,

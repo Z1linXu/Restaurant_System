@@ -62,7 +62,7 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
         ensureDeviceStore(device, storeId);
         int effectiveLimit = limit <= 0 ? DEFAULT_PENDING_LIMIT : Math.min(limit, 100);
         LocalDateTime now = LocalDateTime.now();
-        List<PrintJobResponse> jobs = printJobRepository.findPendingPadDirectJobs(storeId, now, PageRequest.of(0, effectiveLimit))
+        List<PrintJobResponse> jobs = printJobRepository.findPendingPadDirectJobs(storeId, device.id, now, PageRequest.of(0, effectiveLimit))
             .stream()
             .map(printJobService::toResponse)
             .toList();
@@ -126,17 +126,16 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
 
         LocalDateTime now = LocalDateTime.now();
         int leaseSeconds = clampPrintingLeaseSeconds(request == null ? null : request.lease_seconds);
-        job.status = PrintJobStatus.PRINTING;
-        job.claimExpiresAt = now.plusSeconds(leaseSeconds);
-        job.last_attempt_at = now;
-        job.updated_at = now;
-        PrintJob saved = printJobRepository.save(job);
+        int transitioned = printJobRepository.startPadPrint(jobId, device.storeId, device.id, attemptToken, now, now.plusSeconds(leaseSeconds));
+        if (transitioned != 1) throw new ResponseStatusException(HttpStatus.CONFLICT, "Print claim expired or ownership changed");
+        PrintJob saved = printJobService.requireJob(jobId);
         markAttemptPrinting(saved, device, attemptToken, now);
         logger.info("PAD_DIRECT Job Processing job {} module {} device {} store {}", saved.id, saved.module_code, device.id, device.storeId);
         return printJobService.toResponse(saved);
     }
 
     @Override
+    @Transactional
     public PadPrintJobPayloadResponse getPayload(StoreDevice device, Long jobId) {
         PrintJob job = requirePadJobForDevice(device, jobId);
         ensureClaimedOrPrintingByDevice(job, device, job.clientAttemptToken);
@@ -226,7 +225,8 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
     }
 
     private PrintJob requirePadJobForDevice(StoreDevice device, Long jobId) {
-        PrintJob job = printJobService.requireJob(jobId);
+        PrintJob job = printJobRepository.findLockedById(jobId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Print job not found"));
         ensureDeviceStore(device, job.store_id);
         if (!"PAD_DIRECT".equals(job.executionMode)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Print job is not a Pad Direct job");

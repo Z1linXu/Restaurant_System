@@ -14,6 +14,9 @@ import lombok.Data;
 @Table(name = "order_dispatch_outbox")
 public class OrderDispatchOutbox {
 
+    @Column(name = "originating_device_id")
+    public Long originatingDeviceId;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")

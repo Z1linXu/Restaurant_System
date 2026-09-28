@@ -1,4 +1,5 @@
 import type { BackendApiResponse } from '../types/ordering'
+import { attestPrintRequest } from './printRequestAttestation'
 import {
   normalizeApiEndpoint,
   recordApiRequestMetric,
@@ -270,7 +271,7 @@ async function fetchWithAuth(input: string, init: RequestInit = {}) {
   const accessToken = includeAuth ? getAccessToken() : null
   const response = await fetchWithTimeout(input, {
     ...init,
-    headers: buildApiHeaders(init.headers, includeAuth),
+    headers: attestPrintRequest(requestPath(input), init, buildApiHeaders(init.headers, includeAuth)),
   })
   return {
     response,

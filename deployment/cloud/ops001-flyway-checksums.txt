@@ -28,3 +28,5 @@
 26|V26__add_staging_store_fixture_cleanup_ledger.sql|624267691
 27|V27__add_item_combo_egg_default.sql|1012997460
 28|V28__add_store_addon_catalog.sql|-235902998
+29|V29__add_uber_eats_integration.sql|-1088042546
+30|V30__printing_reliability_affinity.sql|119071053

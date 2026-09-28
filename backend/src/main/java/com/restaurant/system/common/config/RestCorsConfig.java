@@ -17,7 +17,7 @@ public class RestCorsConfig implements WebMvcConfigurer {
                 "http://192.168.*.*:5173"
             )
             .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-            .allowedHeaders("Content-Type", "Authorization", "Accept")
+            .allowedHeaders("Content-Type", "Authorization", "Accept", "X-Print-Device-Id", "X-Print-Timestamp", "X-Print-Signature")
             .allowCredentials(false)
             .maxAge(3600);
     }

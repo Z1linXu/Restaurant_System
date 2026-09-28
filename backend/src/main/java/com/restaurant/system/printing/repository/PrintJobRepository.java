@@ -11,7 +11,19 @@ import org.springframework.data.repository.query.Param;
 
 public interface PrintJobRepository extends JpaRepository<PrintJob, Long> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select pj from PrintJob pj where pj.id = :id")
+    java.util.Optional<PrintJob> findLockedById(@Param("id") Long id);
+
     java.util.Optional<PrintJob> findByDispatchSourceKey(String dispatchSourceKey);
+
+    @Query("""
+        select pj from PrintJob pj where pj.store_id = :storeId
+          and ((:orderId is null and pj.order_id is null) or pj.order_id = :orderId)
+          and pj.module_code = :module and pj.status in ('PENDING', 'CLAIMED', 'PRINTING') order by pj.id
+        """)
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    List<PrintJob> findActiveForReprint(@Param("storeId") Long storeId, @Param("orderId") Long orderId, @Param("module") String module);
 
     @Query("""
         select pj from PrintJob pj
@@ -68,18 +80,20 @@ public interface PrintJobRepository extends JpaRepository<PrintJob, Long> {
         where pj.store_id = :storeId
           and pj.executionMode = 'PAD_DIRECT'
           and (
-            pj.status = 'PENDING'
+            (pj.status = 'PENDING' and (pj.preferredDeviceId is null or pj.preferredDeviceId = :deviceId
+                or pj.preferredDeviceUntil is null or pj.preferredDeviceUntil <= :now))
             or (pj.status = 'CLAIMED' and pj.claimExpiresAt < :now)
           )
         order by pj.created_at asc, pj.id asc
         """)
     List<PrintJob> findPendingPadDirectJobs(
         @Param("storeId") Long storeId,
+        @Param("deviceId") Long deviceId,
         @Param("now") LocalDateTime now,
         Pageable pageable
     );
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
         update PrintJob pj
         set pj.status = 'CLAIMED',
@@ -95,7 +109,8 @@ public interface PrintJobRepository extends JpaRepository<PrintJob, Long> {
           and pj.store_id = :storeId
           and pj.executionMode = 'PAD_DIRECT'
           and (
-            pj.status = 'PENDING'
+            (pj.status = 'PENDING' and (pj.preferredDeviceId is null or pj.preferredDeviceId = :deviceId
+                or pj.preferredDeviceUntil is null or pj.preferredDeviceUntil <= :now))
             or (pj.status = 'CLAIMED' and pj.claimExpiresAt < :now)
           )
         """)
@@ -107,4 +122,15 @@ public interface PrintJobRepository extends JpaRepository<PrintJob, Long> {
         @Param("now") LocalDateTime now,
         @Param("claimExpiresAt") LocalDateTime claimExpiresAt
     );
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        update PrintJob pj set pj.status = 'PRINTING', pj.claimExpiresAt = :expires,
+            pj.printingStartedAt = coalesce(pj.printingStartedAt, :now), pj.last_attempt_at = :now, pj.updated_at = :now
+        where pj.id = :id and pj.store_id = :storeId and pj.executionMode = 'PAD_DIRECT'
+          and pj.claimedByDeviceId = :deviceId and pj.clientAttemptToken = :token
+          and ((pj.status = 'CLAIMED' and pj.claimExpiresAt > :now) or pj.status = 'PRINTING')
+        """)
+    int startPadPrint(@Param("id") Long id, @Param("storeId") Long storeId, @Param("deviceId") Long deviceId,
+        @Param("token") String token, @Param("now") LocalDateTime now, @Param("expires") LocalDateTime expires);
 }
