@@ -3,23 +3,23 @@ updated_at: 2026-09-28
 
 repository:
   ref: origin/main
-  sha: 3a5a92dbd7fbed1cf46c5caf2ea4e4604c45e519
+  sha: 7b70a4fac4e350444bcd37687ca88a8636ff8f2a
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
   package: PRINTING_RELIABILITY
-  status: IMPLEMENTATION_REVIEW_AND_STAGING_IN_PROGRESS
+  status: IMPLEMENTATION_AND_NON_PHYSICAL_SLICE_COMPLETE_WAITING_FOR_OWNER_HARDWARE_ACCEPTANCE
   next_phase_authorized: false
 
 staging:
-  deployed_sha: 101dbdc75c25904c340251134ee1a0a03f5ce4b7
-  flyway: V29
-  acceptance: UBER_SANDBOX_E2E_NOT_VERIFIED_BY_THIS_RELEASE
-  evidence: PRODUCTION_V26_V28_RELEASE_EVIDENCE.md
+  deployed_sha: 7b70a4fac4e350444bcd37687ca88a8636ff8f2a
+  flyway: V30
+  acceptance: PRINTING_RELIABILITY_PASS_NON_PHYSICAL_SLICE_WITH_EXPLICIT_NOT_EXECUTED_ITEMS
+  evidence: PRINTING_RELIABILITY_EVIDENCE.md
   repair_evidence: PHASE_B_PART2_P0_P1_REPAIR_STAGING_EVIDENCE.md
   cleanup_evidence: PHASE_B_STAGING_SYNTHETIC_FIXTURE_CLEANUP_EXECUTION_EVIDENCE.md
-  runtime_observation_evidence: PRODUCTION_V26_V28_RELEASE_EVIDENCE.md
+  runtime_observation_evidence: PRINTING_RELIABILITY_EVIDENCE.md
 
 production:
   deployed_sha: 11996ef919d9b28ee5366c7e40a58a78c074b675
@@ -29,8 +29,8 @@ production:
   runtime_observation_evidence: PRODUCTION_V26_V28_RELEASE_EVIDENCE.md
 
 gate:
-  type: TECHNICAL
-  next_action: AGENT6_ACCEPT_THEN_MERGE_EXACT_SHA_STAGING_AND_BUNDLED_APK
+  type: OWNER
+  next_action: REVIEW_NON_EXECUTED_ITEMS_AND_AUTHORIZE_ISOLATED_THREE_PAD_HARDWARE_ACCEPTANCE
 
 authorization:
   repository_governance: COMPLETE
