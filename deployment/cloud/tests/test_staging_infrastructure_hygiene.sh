@@ -128,6 +128,19 @@ assert_contains "RELEASE_RETENTION|UNSAFE_RETAINED|$UNSAFE_LEGACY_RELEASE_SHA|mo
 [[ "$(stat -f '%Lp' "$RELEASE_ROOT/evidence/legacy-mode.evidence" 2>/dev/null || stat -c '%a' "$RELEASE_ROOT/evidence/legacy-mode.evidence")" == 664 ]] || fail 'historical evidence mode was mutated'
 RELEASE_PLAN_SHA256="$(sha256sum "$RELEASE_PLAN" | awk '{print $1}')"
 
+# Opaque state artifacts must not be parsed as shell text or permit deletion.
+printf 'executable\000opaque\n' >"$RELEASE_ROOT/state/tool-binary"
+(
+  PATH="$FAKE_FLOCK_DIR:$PATH"
+  source "$RELEASE_SCRIPT"
+  HYGIENE_EXPECTED_ROOT="$RELEASE_ROOT"
+  HYGIENE_ROOT="$RELEASE_ROOT"
+  main --dry-run --env-file "$RELEASE_ENV" --previous-verified-sha "$PREVIOUS_RELEASE_SHA"
+) >"$TMP_DIR/release-opaque.plan"
+assert_contains "RELEASE_RETENTION|PROTECTED|${RELEASE_SHAS[1]}|opaque_reference_retains_all" "$TMP_DIR/release-opaque.plan"
+assert_not_contains 'RELEASE_RETENTION|ELIGIBLE|' "$TMP_DIR/release-opaque.plan"
+mv "$RELEASE_ROOT/state/tool-binary" "$TMP_DIR/retained-test-binary"
+
 (
   PATH="$FAKE_FLOCK_DIR:$PATH"
   source "$RELEASE_SCRIPT"
