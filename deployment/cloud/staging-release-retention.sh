@@ -217,9 +217,19 @@ is_retention_plan_file() {
 }
 
 collect_reference_shas() {
-  local tree="$1" path base normalized_base line sha protect_all_shas
+  local tree="$1" path base normalized_base line sha protect_all_shas ignored_mtime
   while IFS= read -r path; do
     [[ -n "$path" && -f "$path" && ! -L "$path" ]] || continue
+    # State may contain an opaque executable/cache, not line-oriented evidence.
+    # Never infer that it has no recovery references: protect every release.
+    # Streaming NUL detection avoids shell-per-line parsing of large binaries.
+    if ! LC_ALL=C tr -d '\000' <"$path" | cmp -s "$path" -; then
+      while IFS='|' read -r ignored_mtime sha; do
+        [[ -n "$sha" ]] || continue
+        add_protected_sha "$sha" "opaque_reference_retains_all" "$(basename -- "$path")"
+      done <<<"$ALL_RELEASE_LINES"
+      continue
+    fi
     is_retention_plan_file "$path" && continue
     base="$(basename -- "$path")"
     normalized_base="$(printf '%s' "$base" | tr '[:upper:]' '[:lower:]')"

@@ -1,5 +1,10 @@
 # SYSTEM DOCUMENTATION
 
+Staging release retention treats NUL-containing opaque state artifacts
+(executables/caches) conservatively: all retained releases are protected and
+the binary is not interpreted as line-oriented evidence. This prevents slow
+pre-build scanning without weakening cleanup safety or changing runtime code.
+
 Current Production runtime (2026-09-28): exact accepted application
 `11996ef919d9b28ee5366c7e40a58a78c074b675`, Flyway V28. Uber PR #234/V29
 are excluded from Production. DB container/storage and printing/device/Store
