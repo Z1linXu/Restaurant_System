@@ -1,5 +1,14 @@
 # SYSTEM DOCUMENTATION
 
+Printing Reliability Staging (2026-09-28): exact application
+`7b70a4fac4e350444bcd37687ca88a8636ff8f2a`, Flyway V30; endpoint-free
+MOCK/API acceptance PASS for the executed slice. The matching bundled debug APK
+is versionCode 3 / `0.3.0-printing-reliability`. Real three-Pad/TCP/renderer
+acceptance, online PAD_DIRECT state transitions and the remaining browser
+interaction checks are not implied by that PASS. See
+`docs/governance/PRINTING_RELIABILITY_EVIDENCE.md` for evidence and limitations.
+Production remains unchanged at V28; this package is not Production-approved.
+
 Printing acceptance compares the full Menu Catalog business representation
 excluding only the per-response `generated_at` clock; revision/content hash,
 Store/Organization, pricing, names and eligibility must remain identical.
