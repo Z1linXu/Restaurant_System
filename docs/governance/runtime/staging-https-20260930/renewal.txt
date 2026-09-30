@@ -1,0 +1,44 @@
+# /etc/systemd/system/restaurant-staging-cert-renew.service
+[Unit]
+Description=Renew Staging POS TLS certificate
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/restaurant-staging-cert-renew
+
+# /etc/systemd/system/restaurant-staging-cert-renew.timer
+[Unit]
+Description=Twice-daily Staging POS TLS renewal check
+
+[Timer]
+OnCalendar=*-*-* 00,12:00:00
+RandomizedDelaySec=3600
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+Oct 01 04:34:24 VM-0-5-ubuntu systemd[1]: Starting Renew Staging POS TLS certificate...
+Oct 01 04:34:25 VM-0-5-ubuntu restaurant-staging-cert-renew[2870074]: Saving debug log to /var/log/restaurant-staging-certbot/letsencrypt.log
+Oct 01 04:34:25 VM-0-5-ubuntu restaurant-staging-cert-renew[2870074]: - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Oct 01 04:34:25 VM-0-5-ubuntu restaurant-staging-cert-renew[2870074]: Processing
+Oct 01 04:34:25 VM-0-5-ubuntu restaurant-staging-cert-renew[2870074]: /home/ubuntu/Restaurant_System/deployment/cloud/data/letsencrypt/renewal/staging-pos.lanzhounoodlesmtl.com.conf
+Oct 01 04:34:25 VM-0-5-ubuntu restaurant-staging-cert-renew[2870074]: - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Oct 01 04:34:25 VM-0-5-ubuntu restaurant-staging-cert-renew[2870074]: Certificate not yet due for renewal
+Oct 01 04:34:25 VM-0-5-ubuntu restaurant-staging-cert-renew[2870074]: - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Oct 01 04:34:25 VM-0-5-ubuntu restaurant-staging-cert-renew[2870074]: The following certificates are not due for renewal yet:
+Oct 01 04:34:25 VM-0-5-ubuntu restaurant-staging-cert-renew[2870074]:   /home/ubuntu/Restaurant_System/deployment/cloud/data/letsencrypt/live/staging-pos.lanzhounoodlesmtl.com/fullchain.pem expires on 2026-12-29 (skipped)
+Oct 01 04:34:25 VM-0-5-ubuntu restaurant-staging-cert-renew[2870074]: No renewals were attempted.
+Oct 01 04:34:25 VM-0-5-ubuntu restaurant-staging-cert-renew[2870074]: No hooks were run.
+Oct 01 04:34:25 VM-0-5-ubuntu restaurant-staging-cert-renew[2870074]: - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Oct 01 04:34:25 VM-0-5-ubuntu systemd[1]: restaurant-staging-cert-renew.service: Deactivated successfully.
+Oct 01 04:34:25 VM-0-5-ubuntu systemd[1]: Finished Renew Staging POS TLS certificate.
+NEXT                        LEFT    LAST PASSED UNIT                                ACTIVATES
+Thu 2026-10-01 12:29:20 CST 7h left n/a  n/a    restaurant-staging-cert-renew.timer restaurant-staging-cert-renew.service
+
+1 timers listed.
+2026-10-01 04:34:25,764:INFO:certbot._internal.renewal:Non-interactive renewal: random delay of 307.27927163212394 seconds
+2026-10-01 04:39:40,973:DEBUG:certbot._internal.display.obj:Notifying user: Congratulations, all simulated renewals succeeded: 
+2026-10-01 04:39:40,973:DEBUG:certbot._internal.display.obj:Notifying user:   /home/ubuntu/Restaurant_System/deployment/cloud/data/letsencrypt/live/staging-pos.lanzhounoodlesmtl.com/fullchain.pem (success)
+
+Dry-run exit status: 0. Reviewed deploy hook tested separately: nginx -t PASS; graceful reload PASS; Production continuity PASS.
+Certificate unchanged by dry-run: notAfter 2026-12-29 19:35:01 UTC.

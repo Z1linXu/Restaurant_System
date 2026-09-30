@@ -1,0 +1,40 @@
+{
+  "https://staging-pos.lanzhounoodlesmtl.com": {
+    "status": 200,
+    "acao": null,
+    "credentials": null,
+    "headers": null
+  },
+  "https://restaurant-pad.local": {
+    "status": 200,
+    "acao": "https://restaurant-pad.local",
+    "credentials": null,
+    "headers": "authorization, content-type"
+  },
+  "http://localhost:5173": {
+    "status": 200,
+    "acao": "http://localhost:5173",
+    "credentials": null,
+    "headers": "authorization, content-type"
+  },
+  "https://attacker.invalid": {
+    "status": 403,
+    "acao": null,
+    "credentials": null,
+    "headers": null
+  },
+  "pos.lanzhounoodlesmtl.com": {
+    "tls_rejected": true,
+    "reason": "TLSV1_UNRECOGNIZED_NAME"
+  },
+  "www.lanzhounoodlesmtl.com": {
+    "tls_rejected": true,
+    "reason": "TLSV1_UNRECOGNIZED_NAME"
+  },
+  "dns": {
+    "staging-pos.lanzhounoodlesmtl.com": "170.106.13.34",
+    "pos.lanzhounoodlesmtl.com": "170.106.13.34",
+    "www.lanzhounoodlesmtl.com": "170.106.13.34",
+    "lanzhounoodlesmtl.com": "170.106.13.34"
+  }
+}

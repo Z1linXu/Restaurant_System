@@ -1,0 +1,6 @@
+PRODUCTION_CONTINUITY=PASS
+b7c785a5eadb09c2b39002bceddd925f65fb6be4a8b373e0256fee9ebc830af1  /srv/restaurant-pos/staging/ingress-20260930/apply-once.py
+e7712b341a21c045537d9e8ad380cd36c6062168cf85aa123013c58e66e98240  /srv/restaurant-pos/staging/ingress-20260930/staging.conf.template
+d9ddb4be6b97eeb8fe102bee5421af9fa1d43447c6640145e7afa9e5d14897f9  /usr/local/sbin/restaurant-staging-cert-renew
+6796dec372f4340b83e53a593e81ccc9b1d7cb582ec6d4e45e0b92287d203ecf  /etc/systemd/system/restaurant-staging-cert-renew.service
+1c45d514b3c897368f3f72c19de57f4d1c9734d285e67a583a10664597e3a59a  /etc/systemd/system/restaurant-staging-cert-renew.timer

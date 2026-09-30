@@ -13,7 +13,12 @@ exact-proxy trust; Origin and the existing REST CORS whitelist are preserved.
 No application image, business contract or migration is changed. See the
 [ingress runbook](deployment/cloud/staging-ingress/README.md) for deployment,
 renewal, rollback, runtime-address guards and Android configuration. Repository
-configuration alone does not prove public runtime acceptance.
+configuration alone does not prove public runtime acceptance. The deployed
+Staging URL is `https://staging-pos.lanzhounoodlesmtl.com`; public TLS, API,
+CORS, real WSS upgrade and renewal dry-run passed on 2026-09-30. See
+[Phase 1 evidence](docs/governance/runtime/STAGING_HTTPS_PHASE1_20260930_EVIDENCE.md).
+The standard future Staging deploy must retain this forwarding/mount overlay;
+see the ingress runbook before replacing either app container.
 
 Printing Reliability Staging (2026-09-28): exact application
 `7b70a4fac4e350444bcd37687ca88a8636ff8f2a`, Flyway V30; endpoint-free

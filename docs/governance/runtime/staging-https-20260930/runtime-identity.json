@@ -1,0 +1,315 @@
+{
+  "before_utc": "2026-09-30T20:12:59.584243+00:00",
+  "after_utc": "2026-09-30T20:35:19.837957+00:00",
+  "config_merge_sha": "f9734e379e957e81f49706c79a5c38730cad82e0",
+  "production_application_sha": "11996ef919d9b28ee5366c7e40a58a78c074b675",
+  "staging_application_sha": "7b70a4fac4e350444bcd37687ca88a8636ff8f2a",
+  "containers": [
+    {
+      "before": {
+        "name": "cloud-nginx-1",
+        "id": "a08622790b2c011e987ec71a301c3b7b6b9a11b08155571e2705b0603b97ab3e",
+        "image": "sha256:d82650726a7faec62f1270a98bc7e878f0060392d5b6d62fa75ee03bf6e0728f",
+        "tags": [
+          "restaurant-pos-frontend:staging-11996ef919d9b28ee5366c7e40a58a78c074b675"
+        ],
+        "started_at": "2026-09-28T15:42:10.65589413Z",
+        "restart_count": 0,
+        "status": "running",
+        "health": "NO_HEALTHCHECK",
+        "ports": {
+          "443/tcp": [
+            {
+              "HostIp": "0.0.0.0",
+              "HostPort": "443"
+            },
+            {
+              "HostIp": "::",
+              "HostPort": "443"
+            }
+          ],
+          "80/tcp": [
+            {
+              "HostIp": "0.0.0.0",
+              "HostPort": "80"
+            },
+            {
+              "HostIp": "::",
+              "HostPort": "80"
+            }
+          ]
+        },
+        "networks": {
+          "cloud_restaurant-pos": "172.18.0.4"
+        }
+      },
+      "after": {
+        "name": "cloud-nginx-1",
+        "id": "a08622790b2c011e987ec71a301c3b7b6b9a11b08155571e2705b0603b97ab3e",
+        "image": "sha256:d82650726a7faec62f1270a98bc7e878f0060392d5b6d62fa75ee03bf6e0728f",
+        "tags": [
+          "restaurant-pos-frontend:staging-11996ef919d9b28ee5366c7e40a58a78c074b675"
+        ],
+        "started_at": "2026-09-28T15:42:10.65589413Z",
+        "restart_count": 0,
+        "status": "running",
+        "health": "NO_HEALTHCHECK",
+        "ports": {
+          "443/tcp": [
+            {
+              "HostIp": "0.0.0.0",
+              "HostPort": "443"
+            },
+            {
+              "HostIp": "::",
+              "HostPort": "443"
+            }
+          ],
+          "80/tcp": [
+            {
+              "HostIp": "0.0.0.0",
+              "HostPort": "80"
+            },
+            {
+              "HostIp": "::",
+              "HostPort": "80"
+            }
+          ]
+        },
+        "networks": {
+          "cloud_restaurant-pos": "172.18.0.4"
+        }
+      }
+    },
+    {
+      "before": {
+        "name": "cloud-backend-1",
+        "id": "72f78e86d9076de2ade18d38b264d1a832c928678ddb54e32719b02a35665160",
+        "image": "sha256:603f79e0272a3fe83fdd7ac9bb58b72dc2b1facb3ceef720bc636bf5b9c5469d",
+        "tags": [
+          "restaurant-pos-backend:staging-11996ef919d9b28ee5366c7e40a58a78c074b675"
+        ],
+        "started_at": "2026-09-28T15:42:10.253935927Z",
+        "restart_count": 0,
+        "status": "running",
+        "health": "NO_HEALTHCHECK",
+        "ports": {
+          "8080/tcp": null
+        },
+        "networks": {
+          "cloud_restaurant-pos": "172.18.0.3"
+        }
+      },
+      "after": {
+        "name": "cloud-backend-1",
+        "id": "72f78e86d9076de2ade18d38b264d1a832c928678ddb54e32719b02a35665160",
+        "image": "sha256:603f79e0272a3fe83fdd7ac9bb58b72dc2b1facb3ceef720bc636bf5b9c5469d",
+        "tags": [
+          "restaurant-pos-backend:staging-11996ef919d9b28ee5366c7e40a58a78c074b675"
+        ],
+        "started_at": "2026-09-28T15:42:10.253935927Z",
+        "restart_count": 0,
+        "status": "running",
+        "health": "NO_HEALTHCHECK",
+        "ports": {
+          "8080/tcp": null
+        },
+        "networks": {
+          "cloud_restaurant-pos": "172.18.0.3"
+        }
+      }
+    },
+    {
+      "before": {
+        "name": "cloud-db-1",
+        "id": "c2ab37fec6ac966e77a1d8ab7aa41d1da294b9ac57b1a21ce18904d04cfae91e",
+        "image": "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+        "tags": [
+          "postgres:16-alpine"
+        ],
+        "started_at": "2026-07-11T12:09:37.936437539Z",
+        "restart_count": 0,
+        "status": "running",
+        "health": "healthy",
+        "ports": {
+          "5432/tcp": null
+        },
+        "networks": {
+          "cloud_restaurant-pos": "172.18.0.2"
+        }
+      },
+      "after": {
+        "name": "cloud-db-1",
+        "id": "c2ab37fec6ac966e77a1d8ab7aa41d1da294b9ac57b1a21ce18904d04cfae91e",
+        "image": "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+        "tags": [
+          "postgres:16-alpine"
+        ],
+        "started_at": "2026-07-11T12:09:37.936437539Z",
+        "restart_count": 0,
+        "status": "running",
+        "health": "healthy",
+        "ports": {
+          "5432/tcp": null
+        },
+        "networks": {
+          "cloud_restaurant-pos": "172.18.0.2"
+        }
+      }
+    },
+    {
+      "before": {
+        "name": "restaurant-pos-staging-nginx-1",
+        "id": "92f3872694ac7cadd7e7800c8ecc672560585254f18d5110386d705a4382fe5a",
+        "image": "sha256:a146f2b927e29afd46d6a1355712052f58db3c98ab3346f9df72a59fab81d3cf",
+        "tags": [
+          "restaurant-pos-frontend:staging-7b70a4fac4e350444bcd37687ca88a8636ff8f2a"
+        ],
+        "started_at": "2026-09-28T17:57:23.359233149Z",
+        "restart_count": 0,
+        "status": "running",
+        "health": "NO_HEALTHCHECK",
+        "ports": {
+          "443/tcp": null,
+          "80/tcp": [
+            {
+              "HostIp": "127.0.0.1",
+              "HostPort": "18080"
+            }
+          ]
+        },
+        "networks": {
+          "restaurant-pos-staging_restaurant-pos": "172.19.0.4"
+        }
+      },
+      "after": {
+        "name": "restaurant-pos-staging-nginx-1",
+        "id": "c90aade1e899bb28a1505a08928a76dbb93e2034a61ea2da198c73e890c92460",
+        "image": "sha256:a146f2b927e29afd46d6a1355712052f58db3c98ab3346f9df72a59fab81d3cf",
+        "tags": [
+          "restaurant-pos-frontend:staging-7b70a4fac4e350444bcd37687ca88a8636ff8f2a"
+        ],
+        "started_at": "2026-09-30T20:32:00.473792919Z",
+        "restart_count": 0,
+        "status": "running",
+        "health": "NO_HEALTHCHECK",
+        "ports": {
+          "443/tcp": null,
+          "80/tcp": [
+            {
+              "HostIp": "127.0.0.1",
+              "HostPort": "18080"
+            }
+          ]
+        },
+        "networks": {
+          "restaurant-pos-staging_restaurant-pos": "172.19.0.4"
+        }
+      }
+    },
+    {
+      "before": {
+        "name": "restaurant-pos-staging-backend-1",
+        "id": "a3eb3ead95ef7750c35c25fcf99abf8d0ffcd497ba251ddb537776c3398b8fcc",
+        "image": "sha256:23f332075f0142f2aeb941da62d58212cd595b1e393a69adb609b4869f18d870",
+        "tags": [
+          "restaurant-pos-backend:staging-7b70a4fac4e350444bcd37687ca88a8636ff8f2a"
+        ],
+        "started_at": "2026-09-28T17:57:23.153668891Z",
+        "restart_count": 0,
+        "status": "running",
+        "health": "NO_HEALTHCHECK",
+        "ports": {
+          "8080/tcp": null
+        },
+        "networks": {
+          "restaurant-pos-staging_restaurant-pos": "172.19.0.3"
+        }
+      },
+      "after": {
+        "name": "restaurant-pos-staging-backend-1",
+        "id": "83733b81a37cd7cf66295788dcecdc8592a398947791aafbbf8049e95e05e7a1",
+        "image": "sha256:23f332075f0142f2aeb941da62d58212cd595b1e393a69adb609b4869f18d870",
+        "tags": [
+          "restaurant-pos-backend:staging-7b70a4fac4e350444bcd37687ca88a8636ff8f2a"
+        ],
+        "started_at": "2026-09-30T20:31:10.448974271Z",
+        "restart_count": 0,
+        "status": "running",
+        "health": "NO_HEALTHCHECK",
+        "ports": {
+          "8080/tcp": null
+        },
+        "networks": {
+          "restaurant-pos-staging_restaurant-pos": "172.19.0.3"
+        }
+      }
+    },
+    {
+      "before": {
+        "name": "restaurant-pos-staging-db-1",
+        "id": "b64d3c676dbb4003368279453e5c6b390ac6327c3cf28001ead671155f93f4c5",
+        "image": "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+        "tags": [
+          "postgres:16-alpine"
+        ],
+        "started_at": "2026-08-22T19:14:39.633030411Z",
+        "restart_count": 0,
+        "status": "running",
+        "health": "healthy",
+        "ports": {
+          "5432/tcp": null
+        },
+        "networks": {
+          "restaurant-pos-staging_restaurant-pos": "172.19.0.2"
+        }
+      },
+      "after": {
+        "name": "restaurant-pos-staging-db-1",
+        "id": "b64d3c676dbb4003368279453e5c6b390ac6327c3cf28001ead671155f93f4c5",
+        "image": "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+        "tags": [
+          "postgres:16-alpine"
+        ],
+        "started_at": "2026-08-22T19:14:39.633030411Z",
+        "restart_count": 0,
+        "status": "running",
+        "health": "healthy",
+        "ports": {
+          "5432/tcp": null
+        },
+        "networks": {
+          "restaurant-pos-staging_restaurant-pos": "172.19.0.2"
+        }
+      }
+    }
+  ],
+  "flyway": {
+    "cloud-db-1": {
+      "unchanged": true,
+      "ledger": "1|V1__baseline_current_schema.sql|431188510|t\n2|V2__add_versioned_menu_revision.sql|-1546045661|t\n3|V3__add_idempotent_order_submission_and_dispatch_outbox.sql|-1713808660|t\n4|V4__add_menu_item_sort_order.sql|1636049775|t\n5|V5__set_cold_chicken_noodle_default_type.sql|-1638580130|t\n6|V6__add_order_item_routing_snapshots.sql|-1681894826|t\n7|V7__add_print_job_attention_acknowledgement.sql|625683957|t\n8|V8__add_owner_store_onboarding_requests.sql|1654406856|t\n9|V9__add_staging_synthetic_bootstrap_requests.sql|1828097009|t\n10|V10__add_owner_store_menu_clone_requests.sql|482267873|t\n11|V11__add_store_pricing_policies.sql|-1257180446|t\n12|V12__add_store_combo_components.sql|-1484328108|t\n13|V13__add_store_modules.sql|1338109061|t\n14|V14__add_store_profiles.sql|-965973533|t\n15|V15__seed_st_denis_canonical_profile.sql|-800444250|t\n16|V16__add_dynamic_menu_management_configuration.sql|473655687|t\n17|V17__add_printing_display_rules.sql|-1840784048|t\n18|V18__add_phase_b_master_menu_provisioning.sql|-1514098834|t\n19|V19__seed_phase_b_master_menu_profile_v2.sql|182579909|t\n20|V20__align_phase_b_provisioning_validation_status.sql|-1638534388|t\n21|V21__repair_phase_b_master_menu_fingerprint.sql|2011567215|t\n22|V22__repair_printing_display_rule_revision_lifecycle.sql|-699128137|t\n23|V23__add_phase_b_part2_readiness_and_activation.sql|-1207640832|t\n24|V24__harden_phase_b_part2_evidence_and_device_heartbeat.sql|755635947|t\n25|V25__widen_phase_b_device_contract_version.sql|-1891760137|t\n26|V26__add_staging_store_fixture_cleanup_ledger.sql|624267691|t\n27|V27__add_item_combo_egg_default.sql|1012997460|t\n28|V28__add_store_addon_catalog.sql|-235902998|t\n",
+      "sha256": "e2ca549ea9bea072c9aa3113783b44bf0392c2d2d736c625f8585169f8b1d602"
+    },
+    "restaurant-pos-staging-db-1": {
+      "unchanged": true,
+      "ledger": "1|V1__baseline_current_schema.sql|431188510|t\n2|V2__add_versioned_menu_revision.sql|-1546045661|t\n3|V3__add_idempotent_order_submission_and_dispatch_outbox.sql|-1713808660|t\n4|V4__add_menu_item_sort_order.sql|1636049775|t\n5|V5__set_cold_chicken_noodle_default_type.sql|-1638580130|t\n6|V6__add_order_item_routing_snapshots.sql|-1681894826|t\n7|V7__add_print_job_attention_acknowledgement.sql|625683957|t\n8|V8__add_owner_store_onboarding_requests.sql|1654406856|t\n9|V9__add_staging_synthetic_bootstrap_requests.sql|1828097009|t\n10|V10__add_owner_store_menu_clone_requests.sql|482267873|t\n11|V11__add_store_pricing_policies.sql|-1257180446|t\n12|V12__add_store_combo_components.sql|-1484328108|t\n13|V13__add_store_modules.sql|1338109061|t\n14|V14__add_store_profiles.sql|-965973533|t\n15|V15__seed_st_denis_canonical_profile.sql|-800444250|t\n16|V16__add_dynamic_menu_management_configuration.sql|473655687|t\n17|V17__add_printing_display_rules.sql|-1840784048|t\n18|V18__add_phase_b_master_menu_provisioning.sql|-1514098834|t\n19|V19__seed_phase_b_master_menu_profile_v2.sql|182579909|t\n20|V20__align_phase_b_provisioning_validation_status.sql|-1638534388|t\n21|V21__repair_phase_b_master_menu_fingerprint.sql|2011567215|t\n22|V22__repair_printing_display_rule_revision_lifecycle.sql|-699128137|t\n23|V23__add_phase_b_part2_readiness_and_activation.sql|-1207640832|t\n24|V24__harden_phase_b_part2_evidence_and_device_heartbeat.sql|755635947|t\n25|V25__widen_phase_b_device_contract_version.sql|-1891760137|t\n26|V26__add_staging_store_fixture_cleanup_ledger.sql|624267691|t\n27|V27__add_item_combo_egg_default.sql|1012997460|t\n28|V28__add_store_addon_catalog.sql|-235902998|t\n29|V29__add_uber_eats_integration.sql|-1088042546|t\n30|V30__printing_reliability_affinity.sql|119071053|t\n",
+      "sha256": "0d719d2b06ad4bfdb7cf1cab7b583d6a8f91c9091b3242bca7b16fbe0832b589"
+    }
+  },
+  "production_original_vhost_byte_prefix_unchanged": true,
+  "proxy_sha256": {
+    "cloud-nginx-1": {
+      "before": "b0852f297eb08fae789a15bbc4e11a596d41c5736d88465bfcfaec6800edd54b",
+      "after": "9da52b5ae9c8bb639fa71c1741818cde6d4a843aaa6a914c3fe9bfdcad928a6c"
+    },
+    "restaurant-pos-staging-nginx-1": {
+      "before": "61f4e561b4442054a59803a1a39fd73ca53197f1f36bebc5387f6f50d76f8d26",
+      "after": "e7712b341a21c045537d9e8ad380cd36c6062168cf85aa123013c58e66e98240"
+    }
+  },
+  "frontend_sha256": {
+    "public_and_staging": "35f40bb5bec31c5e175426574923ac08515f892b7c7be821cfc759c2cc36fbc0",
+    "production": "b195fa9e26b838a476c81f41d27194ab1a4e115d82db173f65e29657c6fc18d0"
+  },
+  "public_upstream_probe": "uri=/api/v1/system/health status=200 upstream=172.19.0.3:8080 client=38.253.17.131 proto=https host=staging-pos.lanzhounoodlesmtl.com probe=phase1-spoof"
+}
