@@ -1,0 +1,62 @@
+# Only the host relay, through Docker's loopback publication, may assert HTTPS.
+map "$remote_addr|$http_host|$http_x_forwarded_proto" $staging_https_ingress {
+    default 0;
+    "172.19.0.1|staging-pos.lanzhounoodlesmtl.com|https" 1;
+}
+map $staging_https_ingress $staging_external_proto { default $scheme; 1 https; }
+map $staging_https_ingress $staging_external_host { default $http_host; 1 staging-pos.lanzhounoodlesmtl.com; }
+map $http_host $staging_http_port {
+    default 80;
+    ~:(?<staging_explicit_port>[0-9]+)$ $staging_explicit_port;
+}
+map $staging_https_ingress $staging_external_port { default $staging_http_port; 1 443; }
+map $staging_https_ingress $staging_client_ip { default $remote_addr; 1 $http_x_forwarded_for; }
+map $http_origin $staging_ws_origin_allowed {
+    default 0;
+    "" 1;
+    "https://staging-pos.lanzhounoodlesmtl.com" 1;
+    "https://restaurant-pad.local" 1;
+    "http://localhost:5173" 1;
+    "http://127.0.0.1:5173" 1;
+    ~^http://192\.168\.[0-9]+\.[0-9]+:5173$ 1;
+}
+log_format staging_ingress '$time_iso8601 uri=$uri status=$status upstream=$upstream_addr client=$staging_client_ip proto=$staging_external_proto host=$staging_external_host probe=$arg_ingress_probe';
+access_log /dev/stdout staging_ingress;
+server {
+    listen 80;
+    server_name localhost staging-pos.lanzhounoodlesmtl.com;
+    root /usr/share/nginx/html;
+    index index.html;
+    location /api/ {
+        proxy_pass http://backend:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $staging_external_host;
+        proxy_set_header X-Forwarded-Host $staging_external_host;
+        proxy_set_header X-Forwarded-Proto $staging_external_proto;
+        proxy_set_header X-Forwarded-Port $staging_external_port;
+        proxy_set_header X-Forwarded-For $staging_client_ip;
+        proxy_set_header X-Real-IP $staging_client_ip;
+        proxy_set_header Forwarded "";
+        proxy_set_header X-Forwarded-Prefix "";
+        proxy_set_header X-Forwarded-Ssl "";
+        proxy_read_timeout 120s;
+    }
+    location /ws {
+        if ($staging_ws_origin_allowed = 0) { return 403; }
+        proxy_pass http://backend:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $staging_external_host;
+        proxy_set_header X-Forwarded-Host $staging_external_host;
+        proxy_set_header X-Forwarded-Proto $staging_external_proto;
+        proxy_set_header X-Forwarded-Port $staging_external_port;
+        proxy_set_header X-Forwarded-For $staging_client_ip;
+        proxy_set_header X-Real-IP $staging_client_ip;
+        proxy_set_header Forwarded "";
+        proxy_set_header X-Forwarded-Prefix "";
+        proxy_set_header X-Forwarded-Ssl "";
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 3600s;
+    }
+    location / { try_files $uri $uri/ /index.html; }
+}
