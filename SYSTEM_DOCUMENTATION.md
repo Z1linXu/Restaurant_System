@@ -1,5 +1,17 @@
 # SYSTEM DOCUMENTATION
 
+## Staging HTTPS ingress
+
+The bounded ingress configuration is in `deployment/cloud/staging-ingress/`.
+It adds only the Staging TLS hostname to the existing edge Nginx and uses a
+separate host relay to the existing loopback Staging entry. Production HTTP
+remains unchanged. Staging uses Tomcat NATIVE forwarded-header processing with
+exact-proxy trust; Origin and the existing REST CORS whitelist are preserved.
+No application image, business contract or migration is changed. See the
+[ingress runbook](deployment/cloud/staging-ingress/README.md) for deployment,
+renewal, rollback, runtime-address guards and Android configuration. Repository
+configuration alone does not prove public runtime acceptance.
+
 Printing Reliability Staging (2026-09-28): exact application
 `7b70a4fac4e350444bcd37687ca88a8636ff8f2a`, Flyway V30; endpoint-free
 MOCK/API acceptance PASS for the executed slice. The matching bundled debug APK
