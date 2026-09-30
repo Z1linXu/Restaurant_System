@@ -2,7 +2,7 @@
 
 ## Staging HTTPS ingress
 
-Staging ingress 的一次性 Compose 校验按服务器 v5 的字面美元转义序列化比较，
+Staging ingress 的一次性 Compose 校验按服务器 v5 的字面美元转义及字节数字字符串序列化比较，
 重建后再核对实际容器 Env/Entrypoint/Cmd；差异会触发 Staging 配置回滚。
 
 The bounded ingress configuration is in `deployment/cloud/staging-ingress/`.

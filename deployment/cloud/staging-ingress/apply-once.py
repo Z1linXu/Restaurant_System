@@ -109,9 +109,10 @@ def prepare():
   assert set(resolved['services'])=={'backend','nginx'}
   for service,wanted in expected['services'].items():
    actual=resolved['services'][service]
-   for key in ['image','environment','entrypoint','command','logging','mem_limit','memswap_limit','restart','labels','networks']:
+   for key in ['image','environment','entrypoint','command','logging','restart','labels','networks']:
     # Compose v5 serializes literal dollars escaped; Engine create decodes them.
     assert actual.get(key)==escape_compose(wanted[key]),'Resolved '+service+' '+key+' differs'
+   for key in ['mem_limit','memswap_limit']:assert int(actual[key])==wanted[key],'Resolved '+service+' '+key+' differs'
    assert float(actual['cpus'])==wanted['cpus']
    if service=='backend':assert not actual.get('ports') and not actual.get('volumes')
    else:
