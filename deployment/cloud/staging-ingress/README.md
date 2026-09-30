@@ -100,6 +100,11 @@ normal Staging deployment lifecycle. It provides `prepare`, `stage`, `http`,
 baseline, preserves literal dollar signs through Compose escaping, and compares
 resolved settings with the live snapshot without printing credentials. It
 refuses nondefault omitted Docker settings rather than silently discarding them.
+On the audited Compose v5.3.1, `config --format json` retains escaped dollars;
+the comparison uses that representation. A disposable, network-disabled create
+probe verified Engine entrypoint/environment/label decoding. After Staging
+recreation, actual Engine environment, entrypoint and command must equal the
+original snapshot plus the six approved backend variables or rollback runs.
 Copy the reviewed batch to `/srv/restaurant-pos/staging/ingress-20260930` and
 the driver takes the existing Production operations and Staging hygiene locks. After preparation,
 review the sanitized resolved comparison before `stage`. Its rollback action

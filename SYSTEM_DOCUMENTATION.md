@@ -9225,6 +9225,9 @@ fail-closed, and rollback uses the same reviewed production value.
 
 ## Uber Eats Order Integration v1
 
+Staging ingress 的一次性 Compose 校验按服务器 v5 的字面美元转义序列化比较，
+重建后再核对实际容器 Env/Entrypoint/Cmd；差异会触发 Staging 配置回滚。
+
 默认关闭的 backend OAuth、raw HMAC webhook、durable inbox/recovery 与 store-scoped 前台 Accept/Deny 已加入。V29 新增 integration events/orders/store/menu mappings，普通 orders 增加 nullable external source/order/display metadata。外部订单只通过现有 OrderService 提交、厨房/库存、dispatch outbox 与通用 renderer/execution mode。未知 modifier 阻塞；取消/改单只置复核状态；不改变 completeOrder、支付或 Pad shorthand。
 
 详细 contract、API 来源、配置、安全与恢复见 [UBER_EATS_INTEGRATION](docs/UBER_EATS_INTEGRATION.md)，逐项证据与未完成的 Uber Sandbox/硬件验证见 [Acceptance](docs/UBER_EATS_ACCEPTANCE.md)。前台 `/stores/{storeId}/frontdesk/uber-eats`；Owner/Admin mapping `/stores/{storeId}/admin/integrations/uber-eats`。Store binding 仅平台 ADMIN；其余 integration staff APIs 经过 StoreAccessService。无凭据、真实门店绑定或 Production deploy 随代码启用。
