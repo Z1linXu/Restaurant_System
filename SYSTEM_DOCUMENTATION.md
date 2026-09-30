@@ -2,6 +2,9 @@
 
 ## Staging HTTPS ingress
 
+Staging ingress 的一次性 Compose 校验按服务器 v5 的字面美元转义序列化比较，
+重建后再核对实际容器 Env/Entrypoint/Cmd；差异会触发 Staging 配置回滚。
+
 The bounded ingress configuration is in `deployment/cloud/staging-ingress/`.
 It adds only the Staging TLS hostname to the existing edge Nginx and uses a
 separate host relay to the existing loopback Staging entry. Production HTTP
@@ -9224,9 +9227,6 @@ single missing key to the exact target value; any non-production value remains
 fail-closed, and rollback uses the same reviewed production value.
 
 ## Uber Eats Order Integration v1
-
-Staging ingress 的一次性 Compose 校验按服务器 v5 的字面美元转义序列化比较，
-重建后再核对实际容器 Env/Entrypoint/Cmd；差异会触发 Staging 配置回滚。
 
 默认关闭的 backend OAuth、raw HMAC webhook、durable inbox/recovery 与 store-scoped 前台 Accept/Deny 已加入。V29 新增 integration events/orders/store/menu mappings，普通 orders 增加 nullable external source/order/display metadata。外部订单只通过现有 OrderService 提交、厨房/库存、dispatch outbox 与通用 renderer/execution mode。未知 modifier 阻塞；取消/改单只置复核状态；不改变 completeOrder、支付或 Pad shorthand。
 
