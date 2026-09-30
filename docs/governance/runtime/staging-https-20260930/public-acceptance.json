@@ -1,0 +1,236 @@
+[
+  {
+    "check": "frontend",
+    "passed": true,
+    "sha256": "35f40bb5bec31c5e175426574923ac08515f892b7c7be821cfc759c2cc36fbc0"
+  },
+  {
+    "check": "asset",
+    "passed": true,
+    "path": "/assets/apiClient-Crea8iOA.js",
+    "sha256": "5b42cb3e8056f41bd3a6d2daf3dc0942b4624ddfef3fce516aba51358f46857d"
+  },
+  {
+    "check": "asset",
+    "passed": true,
+    "path": "/assets/chunk-B3K2TuZy.js",
+    "sha256": "03a76345c69f8bd751dac18894f65c0918f1690fbbb661f38052819cd5ae8209"
+  },
+  {
+    "check": "asset",
+    "passed": true,
+    "path": "/assets/entry-Yk7lggtH.js",
+    "sha256": "5c72bd46fd1d538e6c4be0942a5a6c010f4591f13040c9257f44b27f410f911c"
+  },
+  {
+    "check": "asset",
+    "passed": true,
+    "path": "/assets/index-BYrWyw8u.css",
+    "sha256": "3e230b77683a07d515c373dcd459972234e94cb23db48b28effd3b805f5eaf55"
+  },
+  {
+    "check": "asset",
+    "passed": true,
+    "path": "/assets/index-CzXAVTN1.js",
+    "sha256": "53a3f1ab1ee03a5f2e880892286fdef85218fb962d4d3cddfa6188c45a46613c"
+  },
+  {
+    "check": "asset",
+    "passed": true,
+    "path": "/assets/jsx-runtime-CY5pMtCq.js",
+    "sha256": "0409cf7b6f815204cfce6cfaa7e3bc8d8367571b7a2f8b718a13d70d4abde527"
+  },
+  {
+    "check": "asset",
+    "passed": true,
+    "path": "/assets/manualReprintService-Dd4gmnXz.js",
+    "sha256": "8022aadd34732065a85d60007beff8e432c2de2c2df877bd599cd446b795e85e"
+  },
+  {
+    "check": "asset",
+    "passed": true,
+    "path": "/assets/navigation-COCNNzl1.js",
+    "sha256": "62e1a9bcf56c735f35b3bbc42f6762be0db291ac84fcd1db688178955d4bd0eb"
+  },
+  {
+    "check": "asset",
+    "passed": true,
+    "path": "/assets/orderService-Cm5HoUcx.js",
+    "sha256": "1f362858250f2fd817c60a1c1adb5ce78403abc042d55fddda055ce7791c61f0"
+  },
+  {
+    "check": "asset",
+    "passed": true,
+    "path": "/assets/stomp.umd-3KJXgp1Y.js",
+    "sha256": "ffc853f553ce13d1466fd72e66e00e1b157b1019f9892942ef33733d8fc4984d"
+  },
+  {
+    "check": "asset",
+    "passed": true,
+    "path": "/assets/storeOperationalState-CpZOXOF6.js",
+    "sha256": "36816de91a2fc3f76d63eb18133e8f1c18294bd4cc422418adefe2fc7963a153"
+  },
+  {
+    "check": "asset",
+    "passed": true,
+    "path": "/assets/storeRoutes-rY6wXjko.js",
+    "sha256": "e58cbad94e9d5bd5bb29d0504fa86cd7351e026a10daee8940eabd4b50c03351"
+  },
+  {
+    "check": "asset",
+    "passed": true,
+    "path": "/assets/storeWorkspaceService-Rh_qyJ1E.js",
+    "sha256": "e46a42312540e944eb3984e7e9f7582fbb58b42d6c3dd61c5817d04be52e3caa"
+  },
+  {
+    "check": "asset",
+    "passed": true,
+    "path": "/assets/useAuth-D82CIBep.js",
+    "sha256": "204c130b79688c3d71dd2f11d99d12942aa6cbc0bbd0d5c88219041506bb885f"
+  },
+  {
+    "check": "asset",
+    "passed": true,
+    "path": "/assets/useStoreContext-C7bxI3uF.js",
+    "sha256": "0389f41f3909c805e7805d76e70a28117a5293667bdd489d632cb9db8ebcd7b6"
+  },
+  {
+    "check": "origin",
+    "passed": true,
+    "origin": "https://staging-pos.lanzhounoodlesmtl.com",
+    "status": 200
+  },
+  {
+    "check": "no_wildcard",
+    "passed": true,
+    "origin": "https://staging-pos.lanzhounoodlesmtl.com"
+  },
+  {
+    "check": "health_up",
+    "passed": true,
+    "origin": "https://staging-pos.lanzhounoodlesmtl.com"
+  },
+  {
+    "check": "origin",
+    "passed": true,
+    "origin": "https://restaurant-pad.local",
+    "status": 200
+  },
+  {
+    "check": "no_wildcard",
+    "passed": true,
+    "origin": "https://restaurant-pad.local"
+  },
+  {
+    "check": "health_up",
+    "passed": true,
+    "origin": "https://restaurant-pad.local"
+  },
+  {
+    "check": "origin",
+    "passed": true,
+    "origin": "http://localhost:5173",
+    "status": 200
+  },
+  {
+    "check": "no_wildcard",
+    "passed": true,
+    "origin": "http://localhost:5173"
+  },
+  {
+    "check": "health_up",
+    "passed": true,
+    "origin": "http://localhost:5173"
+  },
+  {
+    "check": "origin",
+    "passed": true,
+    "origin": "http://127.0.0.1:5173",
+    "status": 200
+  },
+  {
+    "check": "no_wildcard",
+    "passed": true,
+    "origin": "http://127.0.0.1:5173"
+  },
+  {
+    "check": "health_up",
+    "passed": true,
+    "origin": "http://127.0.0.1:5173"
+  },
+  {
+    "check": "origin",
+    "passed": true,
+    "origin": "http://192.168.1.9:5173",
+    "status": 200
+  },
+  {
+    "check": "no_wildcard",
+    "passed": true,
+    "origin": "http://192.168.1.9:5173"
+  },
+  {
+    "check": "health_up",
+    "passed": true,
+    "origin": "http://192.168.1.9:5173"
+  },
+  {
+    "check": "origin",
+    "passed": true,
+    "origin": "https://attacker.invalid",
+    "status": 403
+  },
+  {
+    "check": "no_wildcard",
+    "passed": true,
+    "origin": "https://attacker.invalid"
+  },
+  {
+    "check": "origin",
+    "passed": true,
+    "origin": "https://pos.lanzhounoodlesmtl.com",
+    "status": 403
+  },
+  {
+    "check": "no_wildcard",
+    "passed": true,
+    "origin": "https://pos.lanzhounoodlesmtl.com"
+  },
+  {
+    "check": "origin",
+    "passed": true,
+    "origin": "https://staging-pos.lanzhounoodlesmtl.com:444",
+    "status": 403
+  },
+  {
+    "check": "no_wildcard",
+    "passed": true,
+    "origin": "https://staging-pos.lanzhounoodlesmtl.com:444"
+  },
+  {
+    "check": "auth_401",
+    "passed": true,
+    "status": 401
+  },
+  {
+    "check": "spoofed_forwarding_ignored",
+    "passed": true,
+    "status": 200
+  },
+  {
+    "check": "spoof_does_not_allow_invalid_origin",
+    "passed": true,
+    "status": 403
+  },
+  {
+    "check": "wss_rfc6455_handshake",
+    "passed": true,
+    "path": "/ws",
+    "status": 101
+  },
+  {
+    "check": "invalid_websocket_origin_rejected",
+    "passed": true,
+    "status": 403
+  }
+]

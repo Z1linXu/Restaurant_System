@@ -1,0 +1,79 @@
+Connecting to 170.106.13.34
+depth=3 C=US, O=Internet Security Research Group, CN=ISRG Root X1
+verify return:1
+depth=2 C=US, O=ISRG, CN=Root YR
+verify return:1
+depth=1 C=US, O=Let's Encrypt, CN=YR2
+verify return:1
+depth=0 CN=staging-pos.lanzhounoodlesmtl.com
+verify return:1
+CONNECTED(00000005)
+---
+Certificate chain
+ 0 s:CN=staging-pos.lanzhounoodlesmtl.com
+   i:C=US, O=Let's Encrypt, CN=YR2
+   a:PKEY: RSA, 2048 (bit); sigalg: sha256WithRSAEncryption
+   v:NotBefore: Sep 30 19:35:02 2026 GMT; NotAfter: Dec 29 19:35:01 2026 GMT
+ 1 s:C=US, O=Let's Encrypt, CN=YR2
+   i:C=US, O=ISRG, CN=Root YR
+   a:PKEY: RSA, 2048 (bit); sigalg: sha256WithRSAEncryption
+   v:NotBefore: Sep  3 00:00:00 2025 GMT; NotAfter: Sep  2 23:59:59 2028 GMT
+ 2 s:C=US, O=ISRG, CN=Root YR
+   i:C=US, O=Internet Security Research Group, CN=ISRG Root X1
+   a:PKEY: RSA, 4096 (bit); sigalg: sha256WithRSAEncryption
+   v:NotBefore: May 13 00:00:00 2026 GMT; NotAfter: Sep  2 23:59:59 2032 GMT
+---
+Server certificate
+-----BEGIN CERTIFICATE-----
+MIIFHDCCBASgAwIBAgISBRAjeQNRxMhKW6Pwt8dKd/YdMA0GCSqGSIb3DQEBCwUA
+MDMxCzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1MZXQncyBFbmNyeXB0MQwwCgYDVQQD
+EwNZUjIwHhcNMjYwOTMwMTkzNTAyWhcNMjYxMjI5MTkzNTAxWjAsMSowKAYDVQQD
+EyFzdGFnaW5nLXBvcy5sYW56aG91bm9vZGxlc210bC5jb20wggEiMA0GCSqGSIb3
+DQEBAQUAA4IBDwAwggEKAoIBAQDQe4BnM9U9ODPI0GdXogPrdfnx7wCvXVEsu+L4
+lDwWC+yzPlB0m/c7CJWnadYiJTnQY+yfn9H7gOHgCiPE5alq34QD29aMZ2Inv/vU
+33GbVG2GTrKyj4El08vyZTds8IvKrV+qsR7vuikNaXwoc7xjJe6cu0O8sTJGiE49
+KmYVjdq6KWL+dZLXZBa2TOZasb5B+rMtlVa5Vgum5dRdaLzLedngOYhySBJCzbc6
+xInbX5XlI+t+x/cxcP2hl28zkWzsaFAei2LB+/33ttBE2j+ZgbU2Hb6nWy175H3V
+GFaJms4QBahWrWeaAvHi4zhioPlblrVpycZUG/IIlrkpIStLAgMBAAGjggIvMIIC
+KzAOBgNVHQ8BAf8EBAMCBaAwEwYDVR0lBAwwCgYIKwYBBQUHAwEwDAYDVR0TAQH/
+BAIwADAdBgNVHQ4EFgQU/9aHocbHeSTvxBdIIxflbl6YyzIwHwYDVR0jBBgwFoAU
+QBUtJnntMiCe35pyHdYyH4EMgQwwMwYIKwYBBQUHAQEEJzAlMCMGCCsGAQUFBzAC
+hhdodHRwOi8veXIyLmkubGVuY3Iub3JnLzAsBgNVHREEJTAjgiFzdGFnaW5nLXBv
+cy5sYW56aG91bm9vZGxlc210bC5jb20wEwYDVR0gBAwwCjAIBgZngQwBAgEwLgYD
+VR0fBCcwJTAjoCGgH4YdaHR0cDovL3lyMi5jLmxlbmNyLm9yZy8zMC5jcmwwggEM
+BgorBgEEAdZ5AgQCBIH9BIH6APgAdwDXbX0Q0af1d8LH6V/XAL/5gskzWmXh0LMB
+cxfAyMVpdwAAAaD0Bb2tAAAEAwBIMEYCIQClbA38kbpIpC6i4gAVrD0uRVURvh5B
+2sE/NLdrqwrVyQIhAOd7JZb8YpRWqe3s4eWSNztNvaShd5RMVhzxtmeyxRCrAH0A
+jspHC6zeavOiBrCkeoS3Rv4fxr+VPiXmm07kAkjzxugAAAGg9AXIjgAIAAAFABjZ
+STAEAwBGMEQCIA9XYdNzDYuyPNk1KQQa74NYfUDApG8JwSAT0vVH9snzAiBdakuN
+WvXiXGxytD1z0U8hykASc+J0phL/ZRdE4tLsLDANBgkqhkiG9w0BAQsFAAOCAQEA
+WCvmuCgNWGKFlJOfcPmAwj+Q01g+6RDtRaUcVPcZ24ZhW7Iixy//PMJmA4yZ/lrC
+pHrAq6jL3upbQSyciylz4nVZdXLF1nexmMWxstuleswkUhQNrR8eytZck7xY4QLJ
+UlXoOEFpVtTQiisCGiVDKN7e/Gik8nmR6/yesCeD/i/d4ORlo+EpmJvwIVaDMB6N
+3n3vOC/QXa8jal9HJOeZ75SDispYwJrWMzrbAs6/aIAClikJAVPxY+dG80AA8LCv
+N0dJOh+JKuxoNUL28GIzk7NERsLi43q090A/e818foZR6uuYvCBwH039yzdMMvZd
+Tf/V1AkQsPczXBSqPiXrag==
+-----END CERTIFICATE-----
+subject=CN=staging-pos.lanzhounoodlesmtl.com
+issuer=C=US, O=Let's Encrypt, CN=YR2
+---
+No client certificate CA names sent
+Peer signing digest: SHA256
+Peer signature type: rsa_pss_rsae_sha256
+Peer Temp Key: X25519, 253 bits
+---
+SSL handshake has read 4656 bytes and written 1644 bytes
+Verification: OK
+Verified peername: staging-pos.lanzhounoodlesmtl.com
+---
+New, TLSv1.3, Cipher is TLS_AES_256_GCM_SHA384
+Protocol: TLSv1.3
+Server public key is 2048 bit
+This TLS version forbids renegotiation.
+Compression: NONE
+Expansion: NONE
+No ALPN negotiated
+Early data was not sent
+Verify return code: 0 (ok)
+---
+DONE

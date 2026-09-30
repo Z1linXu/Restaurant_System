@@ -115,3 +115,9 @@ The native forwarding regression runs a real embedded Tomcat10.1 / Spring Boot3.
 with the actual REST CORS configuration. Seven cases include trusted HTTPS,
 unknown Origin, Android, development origins, wrong port, absent forwarding
 and a socket source excluded from the trusted-proxy regex. No DB is started.
+
+Runtime acceptance and the actual timer/rollback evidence are recorded in
+[`STAGING_HTTPS_PHASE1_20260930_EVIDENCE.md`](../../../docs/governance/runtime/STAGING_HTTPS_PHASE1_20260930_EVIDENCE.md).
+Before a later standard Staging app deployment, explicitly retain these six
+forwarding variables, the external Staging Nginx template mount and exact proxy
+addresses. The pre-ingress defaults are not a compatible replacement.

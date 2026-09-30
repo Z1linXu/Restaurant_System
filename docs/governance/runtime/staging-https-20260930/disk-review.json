@@ -1,0 +1,13 @@
+{
+  "before_cache_source": "Owner workspace buildkit-audit-20260930/cache-raw-after.json, collected before this ingress batch",
+  "before_cache_bytes": 14167109724,
+  "before_cache_records": 251,
+  "after_cache_bytes_rounded_gb": 14.17,
+  "after_cache_records": 251,
+  "before_disk_percent": 60,
+  "after_disk_percent": 60,
+  "after_free_gb": 24,
+  "cleanup_performed": false,
+  "reclaimed_space_bytes": 0,
+  "review": "Above 12 GB soft target; no new build/cache growth in this package. Shared 3.447 GB, private 10.72 GB; active and rollback images retained. Healthy 60% disk: no expanded cleanup during ingress."
+}
