@@ -1,3 +1,4 @@
+map_hash_bucket_size 128;
 # Only the host relay, through Docker's loopback publication, may assert HTTPS.
 map "$remote_addr|$http_host|$http_x_forwarded_proto" $staging_https_ingress {
     default 0;

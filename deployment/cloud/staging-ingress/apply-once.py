@@ -45,6 +45,11 @@ def verify_staging(original=False):
  for service in ['backend','nginx']:
   d=inspect('restaurant-pos-staging-'+service+'-1');assert d['Image']==SIMG[service]
   assert d['NetworkSettings']['Networks']['restaurant-pos-staging_restaurant-pos']['IPAddress']==('172.19.0.3' if service=='backend' else '172.19.0.4')
+  previous=json.loads((BACKUP/'inspect.private.json').read_text())['restaurant-pos-staging-'+service+'-1']['Config']
+  expected_env=dict(x.split('=',1) for x in previous['Env'])
+  if service=='backend' and not original:expected_env.update(json.loads((ROOT/'backend-environment.json').read_text()))
+  assert dict(x.split('=',1) for x in d['Config']['Env'])==expected_env,service+' runtime environment differs'
+  for key in ['Entrypoint','Cmd']:assert d['Config'][key]==previous[key],service+' runtime '+key+' differs'
  continuity()
 def compose(path,*args): return run(['docker','compose','-p','restaurant-pos-staging','-f',str(path),*args],stderr=subprocess.STDOUT)
 def model(service,d):
@@ -105,7 +110,8 @@ def prepare():
   for service,wanted in expected['services'].items():
    actual=resolved['services'][service]
    for key in ['image','environment','entrypoint','command','logging','mem_limit','memswap_limit','restart','labels','networks']:
-    assert actual[key]==wanted[key],'Resolved '+service+' '+key+' differs'
+    # Compose v5 serializes literal dollars escaped; Engine create decodes them.
+    assert actual.get(key)==escape_compose(wanted[key]),'Resolved '+service+' '+key+' differs'
    assert float(actual['cpus'])==wanted['cpus']
    if service=='backend':assert not actual.get('ports') and not actual.get('volumes')
    else:
@@ -123,6 +129,7 @@ def stage():
   wait_health()
   print(compose(ROOT/'target.private.json','up','-d','--no-build','--pull','never','--no-deps','nginx').decode())
   wait_health()
+  verify_staging()
   assert inspect(STAGE[0])['NetworkSettings']['Networks']['restaurant-pos-staging_restaurant-pos']['IPAddress']=='172.19.0.4'
   assert inspect(STAGE[1])['NetworkSettings']['Networks']['restaurant-pos-staging_restaurant-pos']['IPAddress']=='172.19.0.3'
   b=json.loads((BACKUP/'baseline.json').read_text());assert fingerprint('restaurant-pos-staging-db-1')==b['fingerprints']['restaurant-pos-staging-db-1']
