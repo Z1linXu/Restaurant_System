@@ -10,7 +10,11 @@ or application build are needed. Application images remain `7b70a4f` / V30.
 See the [bounded policy runbook](deployment/cloud/staging-pad-direct/README.md).
 
 The previous mode-only deployment is [recorded here](docs/governance/runtime/STAGING_PAD_DIRECT_POLICY_20260930_EVIDENCE.md).
-Repository endpoint permission alone does not prove deployment or printer binding.
+Endpoint config `d2316234` is deployed: create/update API, REAL rejection and
+42 HTTPS/WSS checks passed. Temporary unassigned API-test printer was deleted;
+Store 18 still needs confirmed real endpoints and module mapping. No online
+PENDING job was created; payload generation passed focused tests. See the
+[endpoint execution evidence](docs/governance/runtime/STAGING_ENDPOINT_POLICY_20260930_EVIDENCE.md).
 Chinatown is Store 18; bind only confirmed endpoints, preserve module assignment
 settings, and do not generate executable PENDING jobs without paused Pad workers.
 Backend PAD_DIRECT queues payloads and returns before TCP transport. Existing
