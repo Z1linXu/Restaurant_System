@@ -33,7 +33,7 @@ receipt/no-order proof, public ingress verification and a masked Dashboard read.
 The legacy client-secret fallback remains code-compatible, but this particular
 Staging acceptance requires the explicit property to be PRESENT and used.
 
-Private evidence/rollback files: `/srv/restaurant-pos/staging/uber-signing-key-20261001`.
+Private evidence/rollback files: `/srv/restaurant-pos/staging/uber-signing-key-20261001-attempt2`.
 Do not print resolved Compose or private env files. Do not use the generic
 Staging wrapper to replace the current ingress/PAD policy overlays.
 

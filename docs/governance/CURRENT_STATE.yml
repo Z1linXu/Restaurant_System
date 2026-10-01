@@ -13,7 +13,9 @@ phase:
   next_phase_authorized: false
 
 staging:
-  deployed_sha: 7b70a4fac4e350444bcd37687ca88a8636ff8f2a
+  deployed_sha: 21826ea5b2dc9297dd98bc8be47f5223446d11c6
+  deployed_sha_semantics: BACKEND_ONLY
+  frontend_deployed_sha: 7b70a4fac4e350444bcd37687ca88a8636ff8f2a
   policy_config_sha: d2316234b2936fd89a926aa24a7b6343008834e6
   flyway: V30
   acceptance: ENDPOINT_CREATE_UPDATE_PASS_REAL_REJECTED_BINDING_AND_ONLINE_PENDING_BLOCKED
@@ -42,7 +44,7 @@ uber_test_store_audit:
   real_testing_store_api: PASS_ONE_PROVISIONED_STORE
   internal_signature_test: PASS_FIXED_STAGING_DOMAIN
   dashboard_webhook: PASS_VERIFIED_FIXED_DOMAIN_PRIMARY_BASIC_HMAC
-  explicit_signing_key_runtime: PENDING_REVIEWED_STAGING_UPDATE
+  explicit_signing_key_runtime: PASS_PRESENT_PUBLIC_WRONG_401_VALID_200
   menu_mapping: REQUIRED_ZERO_RULES
   real_order_test_ready: false
   real_uber_webhook: NOT_TESTED

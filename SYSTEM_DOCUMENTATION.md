@@ -9297,3 +9297,7 @@ Uber订单管理权限由真实Accept/Deny接口授权结果判定；GET响应�
 ### 2026-10-01 Uber signing-key deployment checkpoint
 
 The first backend-only update rolled back after a strict model comparison: inherited image Compose management labels were included in the expected model but excluded from runtime normalization. Filter those labels consistently and preserve the first private backup in a separate retry evidence directory. Old Staging backend health was restored; runtime independent-key acceptance remains pending until the retry and public probes pass.
+
+### 2026-10-01 Uber pre-order final runtime acceptance
+
+Backend-only Staging source `21826ea5b2dc9297dd98bc8be47f5223446d11c6` deployed successfully; frontend remains `7b70a4fac4e350444bcd37687ca88a8636ff8f2a`. Explicit private `UBER_EATS_WEBHOOK_SIGNING_KEY` is PRESENT and preferred for HMAC; public wrong-key 401 and current-key 200 passed at 17:42:56 UTC. Internal event IGNORED, zero Uber orders, target Store 1/org 1/sandbox/MOCK binding intact; Inbox healthy. DB/frontend/Production fingerprints and V30 unchanged. Public ingress 42/42 PASS. Complete mapping remains 0/41 items and 0/33 modifiers: no HIGH stable-identity correspondences, so READY_FOR_REAL_SANDBOX_ORDER_TEST=NO. See [final evidence](docs/governance/UBER_PREORDER_CHECK_20261001.md) and [complete mapping diff](docs/governance/UBER_TEST_MENU_MAPPING_DIFF_20261001.md). No order/Accept/Deny or Production mutation performed.
