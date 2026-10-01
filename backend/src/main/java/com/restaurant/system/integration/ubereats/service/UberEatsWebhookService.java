@@ -48,14 +48,15 @@ public class UberEatsWebhookService {
     }
 
     public boolean validSignature(byte[] raw, String signature) {
-        if (config.clientSecret().isBlank()
+        String signingKey = config.webhookSigningKey();
+        if (signingKey.isBlank()
                 || signature == null
                 || !signature.matches("[0-9a-f]{64}")) return false;
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
             mac.init(
                     new SecretKeySpec(
-                            config.clientSecret().getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+                            signingKey.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
             return MessageDigest.isEqual(mac.doFinal(raw), HexFormat.of().parseHex(signature));
         } catch (Exception ex) {
             return false;

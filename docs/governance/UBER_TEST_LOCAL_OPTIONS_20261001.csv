@@ -1,0 +1,271 @@
+menu_item_id,id,option_code,option_group,name_zh,name_en,parent_option_id,active
+1,294,combo,COMBO,套餐,Combo,,True
+1,287,size_regular,SIZE,中碗,Regular,,True
+1,286,size_large,SIZE,大碗,Large,,True
+1,288,combo_cucumber_no_peanut,COMBO_SIDE_REMOVE,走花生,No Peanut,289,True
+1,3,noodle_sanxi,NOODLE_TYPE,三细,Sanxi,,True
+1,4,noodle_erxi,NOODLE_TYPE,二细,Erxi,,True
+1,2,noodle_thin,NOODLE_TYPE,细,Thin,,True
+1,1,noodle_capillary,NOODLE_TYPE,毛细,Capillary,,True
+1,5,noodle_leek_leaf,NOODLE_TYPE,韭叶,Leek Leaf,,True
+1,6,noodle_wide,NOODLE_TYPE,宽,Wide,,True
+1,7,noodle_extra_wide,NOODLE_TYPE,大宽,Extra Wide,,True
+1,285,spicy_none,SPICY_LEVEL,不辣,Non-Spicy,,True
+1,284,spicy_mild,SPICY_LEVEL,少辣,Mild,,True
+1,283,spicy_regular,SPICY_LEVEL,正常辣,Regular,,True
+1,282,spicy_extra,SPICY_LEVEL,加辣,Extra,,True
+1,281,fried_egg,ADD_ON,加煎蛋,Extra Fried Egg,,True
+1,36,tea_egg,ADD_ON,加蛋,Extra Tea Egg,,True
+1,280,extra_noodle,ADD_ON,加面,Extra Noodle,,True
+1,37,extra_meat,ADD_ON,加肉,Extra Beef,,True
+1,279,bok_choy,ADD_ON,加上海青,Extra Bok Choy,,True
+1,278,cilantro,ADD_ON,加香菜,Extra Cilantro,,True
+1,277,green_onion,ADD_ON,加葱,Extra Green Onion,,True
+1,276,extra_radish,ADD_ON,加萝卜,Extra Radish,,True
+1,275,remove_cilantro,REMOVE,走香菜,No Cilantro,,True
+1,274,remove_green_onion,REMOVE,走葱,No Green Onion,,True
+1,273,remove_beef,REMOVE,走牛肉,No Beef,,True
+1,272,remove_noodle,REMOVE,走面,No Noodle,,True
+1,271,less_noodle,REMOVE,少面,Less Noodle,,True
+1,270,remove_radish,REMOVE,走萝卜,No Radish,,True
+2,255,size_regular,SIZE,中碗,Regular,,True
+2,382,size_small,SIZE,小碗,Small,,True
+2,254,size_large,SIZE,大碗,Large,,True
+2,10,noodle_sanxi,NOODLE_TYPE,三细,Sanxi,,True
+2,11,noodle_erxi,NOODLE_TYPE,二细,Erxi,,True
+2,9,noodle_thin,NOODLE_TYPE,细,Thin,,True
+2,8,noodle_capillary,NOODLE_TYPE,毛细,Capillary,,True
+2,12,noodle_leek_leaf,NOODLE_TYPE,韭叶,Leek Leaf,,True
+2,13,noodle_wide,NOODLE_TYPE,宽,Wide,,True
+2,14,noodle_extra_wide,NOODLE_TYPE,大宽,Extra Wide,,True
+2,253,spicy_none,SPICY_LEVEL,不辣,Non-Spicy,,True
+2,252,spicy_mild,SPICY_LEVEL,少辣,Mild,,True
+2,251,spicy_regular,SPICY_LEVEL,正常辣,Regular,,True
+2,250,spicy_extra,SPICY_LEVEL,加辣,Extra,,True
+2,249,extra_noodle,ADD_ON,加面,Extra Noodle,,True
+2,248,tea_egg,ADD_ON,加蛋,Extra Tea Egg,,True
+2,246,fried_egg,ADD_ON,加煎蛋,Extra Fried Egg,,True
+2,245,bok_choy,ADD_ON,加上海青,Extra Bok Choy,,True
+2,244,cilantro,ADD_ON,加香菜,Extra Cilantro,,True
+2,243,green_onion,ADD_ON,加葱,Extra Green Onion,,True
+2,3437,addon_beef_tendons,ADD_ON,加牛筋,addon_beef_tendons,,True
+2,247,extra_meat,ADD_ON,加肉,Extra Beef,,True
+2,241,remove_cilantro,REMOVE,走香菜,No Cilantro,,True
+2,242,extra_radish,ADD_ON,加萝卜,Extra Radish,,True
+2,240,remove_green_onion,REMOVE,走葱,No Green Onion,,True
+2,239,remove_beef,REMOVE,走牛筋,No Beef,,True
+2,238,remove_noodle,REMOVE,走面,No Noodle,,True
+2,237,less_noodle,REMOVE,少面,Less Noodle,,True
+2,236,remove_radish,REMOVE,走萝卜,No Radish,,True
+2,3438,removebaicai,REMOVE,走上海青,zoushanghaiqing,,True
+26,368,combo,COMBO,套餐,Combo,,True
+26,362,combo_cucumber_no_peanut,COMBO_SIDE_REMOVE,走花生,No Peanut,363,True
+26,361,size_regular,SIZE,中碗,Regular,,True
+26,360,size_large,SIZE,大碗,Large,,True
+26,359,noodle_sanxi,NOODLE_TYPE,三细,Sanxi,,True
+26,358,noodle_erxi,NOODLE_TYPE,二细,Erxi,,True
+26,357,noodle_thin,NOODLE_TYPE,细,Thin,,True
+26,356,noodle_capillary,NOODLE_TYPE,毛细,Capillary,,True
+26,355,noodle_leek_leaf,NOODLE_TYPE,韭叶,Leek Leaf,,True
+26,354,noodle_wide,NOODLE_TYPE,宽,Wide,,True
+26,353,noodle_extra_wide,NOODLE_TYPE,大宽,Extra Wide,,True
+26,352,spicy_none,SPICY_LEVEL,不辣,Non-Spicy,,True
+26,351,spicy_mild,SPICY_LEVEL,少辣,Mild,,True
+26,350,spicy_regular,SPICY_LEVEL,正常辣,Regular,,True
+26,349,spicy_extra,SPICY_LEVEL,加辣,Extra,,True
+26,348,extra_noodle,ADD_ON,加面,Extra Noodle,,True
+26,347,tea_egg,ADD_ON,加蛋,Extra Tea Egg,,True
+26,346,extra_meat,ADD_ON,加肉,Extra Beef,,True
+26,345,fried_egg,ADD_ON,加煎蛋,Extra Fried Egg,,True
+26,344,bok_choy,ADD_ON,加上海青,Extra Bok Choy,,True
+26,343,cilantro,ADD_ON,加香菜,Extra Cilantro,,True
+26,342,green_onion,ADD_ON,加葱,Extra Green Onion,,True
+26,341,extra_radish,ADD_ON,加萝卜,Extra Radish,,True
+26,340,remove_cilantro,REMOVE,走香菜,No Cilantro,,True
+26,339,remove_green_onion,REMOVE,走葱,No Green Onion,,True
+26,338,remove_beef,REMOVE,走牛肉,No Beef,,True
+26,337,remove_noodle,REMOVE,走面,No Noodle,,True
+26,336,less_noodle,REMOVE,少面,Less Noodle,,True
+26,335,remove_radish,REMOVE,走萝卜,No Radish,,True
+3,229,combo,COMBO,套餐,Combo,,True
+3,223,combo_cucumber_no_peanut,COMBO_SIDE_REMOVE,走花生,No Peanut,224,True
+3,222,size_regular,SIZE,中碗,Regular,,True
+3,221,size_large,SIZE,大碗,Large,,True
+3,17,noodle_sanxi,NOODLE_TYPE,三细,Sanxi,,True
+3,18,noodle_erxi,NOODLE_TYPE,二细,Erxi,,True
+3,16,noodle_thin,NOODLE_TYPE,细,Thin,,True
+3,15,noodle_capillary,NOODLE_TYPE,毛细,Capillary,,True
+3,19,noodle_leek_leaf,NOODLE_TYPE,韭叶,Leek Leaf,,True
+3,20,noodle_wide,NOODLE_TYPE,宽,Wide,,True
+3,21,noodle_extra_wide,NOODLE_TYPE,大宽,Extra Wide,,True
+3,220,spicy_none,SPICY_LEVEL,不辣,Non-Spicy,,True
+3,219,spicy_mild,SPICY_LEVEL,少辣,Mild,,True
+3,218,spicy_regular,SPICY_LEVEL,正常辣,Regular,,True
+3,217,spicy_extra,SPICY_LEVEL,加辣,Extra,,True
+3,216,soup_vegan,SOUP_BASE,素汤,Vegan Broth,,True
+3,215,soup_beef,SOUP_BASE,肉汤,Beef Broth,,True
+3,214,extra_noodle,ADD_ON,加面,Extra Noodle,,True
+3,213,tea_egg,ADD_ON,加蛋,Extra Tea Egg,,True
+3,212,extra_meat,ADD_ON,加肉,Extra Beef,,True
+3,211,fried_egg,ADD_ON,加煎蛋,Extra Fried Egg,,True
+3,210,bok_choy,ADD_ON,加上海青,Extra Bok Choy,,True
+3,209,broccoli,ADD_ON,加西兰花,Extra Broccoli,,True
+3,208,corn,ADD_ON,加玉米,Extra Corn,,True
+3,207,seaweed,ADD_ON,加海菜,Extra Seaweed,,True
+3,206,mushroom,ADD_ON,加蘑菇,Extra Mushroom,,True
+3,205,carrot_slice,ADD_ON,加胡萝卜片,Extra Carrot Slice,,True
+3,204,remove_noodle,REMOVE,走面,No Noodle,,True
+3,203,less_noodle,REMOVE,少面,Less Noodle,,True
+3,202,remove_bok_choy,REMOVE,走上海青,No Bok Choy,,True
+3,201,remove_broccoli,REMOVE,走西兰花,No Broccoli,,True
+3,200,remove_corn,REMOVE,走玉米,No Corn,,True
+3,199,remove_mushroom,REMOVE,走蘑菇,No Mushroom,,True
+3,198,remove_seaweed,REMOVE,走海菜,No Seaweed,,True
+3,197,remove_carrot,REMOVE,走胡萝卜片,No Carrot Slice,,True
+14,140,combo,COMBO,套餐,Combo,,True
+14,134,combo_cucumber_no_peanut,COMBO_SIDE_REMOVE,走花生,No Peanut,135,True
+14,133,spicy_none,SPICY_LEVEL,不辣,Non-Spicy,,True
+14,132,spicy_mild,SPICY_LEVEL,少辣,Mild,,True
+14,131,spicy_regular,SPICY_LEVEL,正常辣,Regular,,True
+14,130,spicy_extra,SPICY_LEVEL,加辣,Extra,,True
+14,129,fried_egg,ADD_ON,加煎蛋,Extra Fried Egg,,True
+14,128,tea_egg,ADD_ON,加卤蛋,Extra Tea Egg,,True
+14,127,remove_bean_sprouts,REMOVE,走豆芽,No Bean Sprouts,,True
+14,126,remove_onion,REMOVE,走洋葱,No Onion,,True
+14,125,remove_green_pepper,REMOVE,走青椒,No Green Pepper,,True
+14,124,remove_broccoli,REMOVE,走西兰花,No Broccoli,,True
+14,123,remove_cabbage,REMOVE,走大头菜,No Cabbage,,True
+14,122,remove_zucchini,REMOVE,走西葫芦,No Zucchini,,True
+14,121,remove_all_vegetables,REMOVE,走所有菜,No Vegetables,,True
+14,120,remove_tomato,REMOVE,走番茄,No Tomato,,True
+15,114,combo,COMBO,套餐,Combo,,True
+15,108,combo_cucumber_no_peanut,COMBO_SIDE_REMOVE,走花生,No Peanut,109,True
+15,107,spicy_none,SPICY_LEVEL,不辣,Non-Spicy,,True
+15,106,spicy_mild,SPICY_LEVEL,少辣,Mild,,True
+15,105,spicy_regular,SPICY_LEVEL,正常辣,Regular,,True
+15,104,spicy_extra,SPICY_LEVEL,加辣,Extra,,True
+15,103,fried_egg,ADD_ON,加煎蛋,Extra Fried Egg,,True
+15,102,tea_egg,ADD_ON,加卤蛋,Extra Tea Egg,,True
+15,101,remove_bean_sprouts,REMOVE,走豆芽,No Bean Sprouts,,True
+15,100,remove_onion,REMOVE,走洋葱,No Onion,,True
+15,99,remove_green_pepper,REMOVE,走青椒,No Green Pepper,,True
+15,98,remove_broccoli,REMOVE,走西兰花,No Broccoli,,True
+15,97,remove_cabbage,REMOVE,走大头菜,No Cabbage,,True
+15,96,remove_zucchini,REMOVE,走西葫芦,No Zucchini,,True
+15,95,remove_all_vegetables,REMOVE,走所有菜,No Vegetables,,True
+15,94,remove_tomato,REMOVE,走番茄,No Tomato,,True
+16,88,combo,COMBO,套餐,Combo,,True
+16,82,combo_cucumber_no_peanut,COMBO_SIDE_REMOVE,走花生,No Peanut,83,True
+16,81,spicy_none,SPICY_LEVEL,不辣,Non-Spicy,,True
+16,80,spicy_mild,SPICY_LEVEL,少辣,Mild,,True
+16,79,spicy_regular,SPICY_LEVEL,正常辣,Regular,,True
+16,78,spicy_extra,SPICY_LEVEL,加辣,Extra,,True
+16,77,fried_egg,ADD_ON,加煎蛋,Extra Fried Egg,,True
+16,76,tea_egg,ADD_ON,加卤蛋,Extra Tea Egg,,True
+16,75,remove_bean_sprouts,REMOVE,走豆芽,No Bean Sprouts,,True
+16,74,remove_onion,REMOVE,走洋葱,No Onion,,True
+16,73,remove_green_pepper,REMOVE,走青椒,No Green Pepper,,True
+16,72,remove_broccoli,REMOVE,走西兰花,No Broccoli,,True
+16,71,remove_cabbage,REMOVE,走大头菜,No Cabbage,,True
+16,70,remove_zucchini,REMOVE,走西葫芦,No Zucchini,,True
+16,69,remove_all_vegetables,REMOVE,走所有菜,No Vegetables,,True
+16,68,remove_tomato,REMOVE,走番茄,No Tomato,,True
+17,62,combo,COMBO,套餐,Combo,,True
+17,56,combo_cucumber_no_peanut,COMBO_SIDE_REMOVE,走花生,No Peanut,57,True
+17,55,spicy_none,SPICY_LEVEL,不辣,Non-Spicy,,True
+17,54,spicy_mild,SPICY_LEVEL,少辣,Mild,,True
+17,53,spicy_regular,SPICY_LEVEL,正常辣,Regular,,True
+17,52,spicy_extra,SPICY_LEVEL,加辣,Extra,,True
+17,51,fried_egg,ADD_ON,加煎蛋,Extra Fried Egg,,True
+17,50,tea_egg,ADD_ON,加卤蛋,Extra Tea Egg,,True
+17,49,remove_bean_sprouts,REMOVE,走豆芽,No Bean Sprouts,,True
+17,48,remove_onion,REMOVE,走洋葱,No Onion,,True
+17,47,remove_green_pepper,REMOVE,走青椒,No Green Pepper,,True
+17,46,remove_broccoli,REMOVE,走西兰花,No Broccoli,,True
+17,45,remove_cabbage,REMOVE,走大头菜,No Cabbage,,True
+17,44,remove_zucchini,REMOVE,走西葫芦,No Zucchini,,True
+17,43,remove_all_vegetables,REMOVE,走所有菜,No Vegetables,,True
+17,42,remove_tomato,REMOVE,走番茄,No Tomato,,True
+24,328,combo,COMBO,套餐,Combo,,True
+24,326,noodle_thin,NOODLE_TYPE,细,Thin,,True
+24,324,noodle_leek_leaf,NOODLE_TYPE,韭叶,Leek Leaf,,True
+24,323,noodle_erxi,NOODLE_TYPE,二细,Erxi,,True
+24,321,noodle_sanxi,NOODLE_TYPE,三细,Sanxi,,True
+24,318,noodle_capillary,NOODLE_TYPE,毛细,Capillary,,True
+24,316,combo_cucumber_no_peanut,COMBO_SIDE_REMOVE,走花生,No Peanut,319,True
+24,317,noodle_wide,NOODLE_TYPE,宽,Wide,,True
+24,315,noodle_extra_wide,NOODLE_TYPE,大宽,Extra Wide,,True
+24,314,spicy_none,SPICY_LEVEL,不辣,Non-Spicy,,True
+24,313,spicy_mild,SPICY_LEVEL,少辣,Mild,,True
+24,312,spicy_regular,SPICY_LEVEL,正常辣,Regular,,True
+24,311,spicy_extra,SPICY_LEVEL,加辣,Extra,,True
+24,310,extra_noodle,ADD_ON,加面,Extra Noodle,,True
+24,309,tea_egg,ADD_ON,加蛋,Extra Tea Egg,,True
+24,308,extra_meat,ADD_ON,加肉,Extra Meat,,True
+24,307,fried_egg,ADD_ON,加煎蛋,Extra Fried Egg,,True
+24,305,cilantro,ADD_ON,加香菜,Extra Cilantro,,True
+24,304,green_onion,ADD_ON,加葱,Extra Green Onion,,True
+24,303,remove_cilantro,REMOVE,走香菜,No Cilantro,,True
+24,302,remove_green_onion,REMOVE,走葱,No Green Onion,,True
+24,301,remove_peanut,REMOVE,走花生,No Peanut,,True
+24,300,remove_carrot,REMOVE,走胡萝卜,No Carrot,,True
+24,299,remove_cucumber,REMOVE,走黄瓜丝,remove cucumber,,True
+5,196,combo,COMBO,套餐,Combo,,True
+5,190,combo_cucumber_no_peanut,COMBO_SIDE_REMOVE,走花生,No Peanut,191,True
+5,33,noodle_leek_leaf,NOODLE_TYPE,韭叶,Leek Leaf,,True
+5,32,noodle_erxi,NOODLE_TYPE,二细,Erxi,,True
+5,31,noodle_sanxi,NOODLE_TYPE,三细,Sanxi,,True
+5,30,noodle_thin,NOODLE_TYPE,细,Thin,,True
+5,29,noodle_capillary,NOODLE_TYPE,毛细,Capillary,,True
+5,34,noodle_wide,NOODLE_TYPE,宽,Wide,,True
+5,35,noodle_extra_wide,NOODLE_TYPE,大宽,Extra Wide,,True
+5,189,spicy_none,SPICY_LEVEL,不辣,Non-Spicy,,True
+5,188,spicy_mild,SPICY_LEVEL,少辣,Mild,,True
+5,187,spicy_regular,SPICY_LEVEL,正常辣,Regular,,True
+5,186,spicy_extra,SPICY_LEVEL,加辣,Extra,,True
+5,185,extra_noodle,ADD_ON,加面,Extra Noodle,,True
+5,184,tea_egg,ADD_ON,加蛋,Extra Tea Egg,,True
+5,183,extra_meat,ADD_ON,加肉,Extra Meat,,True
+5,182,fried_egg,ADD_ON,加煎蛋,Extra Fried Egg,,True
+5,181,bok_choy,ADD_ON,加上海青,Extra Bok Choy,,True
+5,180,extra_sauce,ADD_ON,加酱,Extra Sauce,,True
+5,179,cilantro,ADD_ON,加香菜,Extra Cilantro,,True
+5,178,green_onion,ADD_ON,加葱,Extra Green Onion,,True
+5,177,remove_cilantro,REMOVE,走香菜,No Cilantro,,True
+5,176,remove_green_onion,REMOVE,走葱,No Green Onion,,True
+5,175,remove_carrot,REMOVE,走胡萝卜,No Carrot,,True
+5,174,remove_cucumber,REMOVE,走黄瓜,No Cucumber,,True
+5,173,remove_edamame,REMOVE,走毛豆,No Edamame,,True
+5,172,remove_bok_choy,REMOVE,走上海青,No Bok Choy,,True
+4,167,combo,COMBO,套餐,Combo,,True
+4,161,combo_cucumber_no_peanut,COMBO_SIDE_REMOVE,走花生,No Peanut,162,True
+4,24,noodle_sanxi,NOODLE_TYPE,三细,Sanxi,,True
+4,25,noodle_erxi,NOODLE_TYPE,二细,Erxi,,True
+4,23,noodle_thin,NOODLE_TYPE,细,Thin,,True
+4,22,noodle_capillary,NOODLE_TYPE,毛细,Capillary,,True
+4,26,noodle_leek_leaf,NOODLE_TYPE,韭叶,Leek Leaf,,True
+4,27,noodle_wide,NOODLE_TYPE,宽,Wide,,True
+4,28,noodle_extra_wide,NOODLE_TYPE,大宽,Extra Wide,,True
+4,160,spicy_none,SPICY_LEVEL,不辣,Non-Spicy,,True
+4,159,spicy_mild,SPICY_LEVEL,少辣,Mild,,True
+4,158,spicy_regular,SPICY_LEVEL,正常辣,Regular,,True
+4,157,spicy_extra,SPICY_LEVEL,加辣,Extra,,True
+4,156,extra_noodle,ADD_ON,加面,Extra Noodle,,True
+4,155,tea_egg,ADD_ON,加蛋,Extra Tea Egg,,True
+4,154,extra_meat,ADD_ON,加肉,Extra Meat,,True
+4,153,fried_egg,ADD_ON,加煎蛋,Extra Fried Egg,,True
+4,152,bok_choy,ADD_ON,加上海青,Extra Bok Choy,,True
+4,151,extra_sauce,ADD_ON,加酱,Extra Sauce,,True
+4,150,cilantro,ADD_ON,加香菜,Extra Cilantro,,True
+4,149,green_onion,ADD_ON,加葱,Extra Green Onion,,True
+4,148,remove_cilantro,REMOVE,走香菜,No Cilantro,,True
+4,147,remove_green_onion,REMOVE,走葱,No Green Onion,,True
+4,146,remove_peanut,REMOVE,走花生,No Peanut,,True
+4,145,remove_bok_choy,REMOVE,走上海青,No Bok Choy,,True
+7,38,remove_peanut,REMOVE,走花生,No Peanut,,True
+9,380,remove_onion,REMOVE,走洋葱,No Onion,,True
+9,379,remove_peanut,REMOVE,走花生,No Peanut,,True
+9,378,remove_cilantro,REMOVE,走香菜,No Cilantro,,True
+6,377,remove_cilantro,REMOVE,走香菜,No Cilantro,,True
+6,376,remove_crushed_peanut,REMOVE,走花生碎,No Crushed Peanut,,True
+6,375,remove_green_onion,REMOVE,走葱,No Green Onion,,True

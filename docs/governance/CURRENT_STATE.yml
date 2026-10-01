@@ -1,9 +1,9 @@
 schema_version: 1
-updated_at: 2026-09-30
+updated_at: 2026-10-01
 
 repository:
   ref: origin/main
-  sha: d2316234b2936fd89a926aa24a7b6343008834e6
+  sha: 43d86d11a0354868df209441cf8a4abc1a1bfa91
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
@@ -29,6 +29,25 @@ production:
   evidence: PRODUCTION_V26_V28_RELEASE_EVIDENCE.md
   runtime_observation_evidence: PRODUCTION_V26_V28_RELEASE_EVIDENCE.md
 
+uber_test_store_audit:
+  observed_at: 2026-10-01
+  environment: STAGING_SANDBOX_ONLY
+  evidence: UBER_PREORDER_CHECK_20261001.md
+  test_store_uuid: bd993244-5589-4b19-8f0d-dc2ba73d4273
+  target_store_code: STG005_SRC_20260809_R01
+  target_store_id: 1
+  target_organization_id: 1
+  binding: PASS_ENABLED
+  real_testing_oauth: PASS
+  real_testing_store_api: PASS_ONE_PROVISIONED_STORE
+  internal_signature_test: PASS_FIXED_STAGING_DOMAIN
+  dashboard_webhook: PASS_VERIFIED_FIXED_DOMAIN_PRIMARY_BASIC_HMAC
+  explicit_signing_key_runtime: PENDING_REVIEWED_STAGING_UPDATE
+  menu_mapping: REQUIRED_ZERO_RULES
+  real_order_test_ready: false
+  real_uber_webhook: NOT_TESTED
+  production_changed: false
+
 gate:
   type: OWNER
   next_action: OWNER_PROVIDE_STORE18_PRINTER_NAMES_IPS_PORTS_MODULE_MAPPING_AND_WORKER_PAUSE_STATUS
@@ -39,6 +58,8 @@ authorization:
   phase_b_part2: IMPLEMENTATION_AND_STAGING_AUTOMATED_ACCEPTANCE_COMPLETE_OWNER_MANUAL_ACCEPTANCE_PENDING
   menu_management_product_simplification: OWNER_AUTHORIZED_IMPLEMENTATION_TEST_REVIEW_PR_MERGE_AND_SYNTHETIC_STAGING
   uber_eats_v1: OWNER_AUTHORIZED_REVIEW_FIX_TEST_MERGE_STAGING_SANDBOX_VERIFICATION_NO_PRODUCTION_ACTIVATION
+  uber_test_store_binding: OWNER_AUTHORIZED_TEST_WEBHOOK_AND_STAGING_BINDING_ONLY_NO_ORDER_ACCEPT_DENY_PRINT
+  uber_preorder_check: OWNER_AUTHORIZED_STAGING_SIGNING_KEY_FIX_AND_HIGH_CONFIDENCE_MAPPING_ONLY_NO_ORDER_DECISIONS_PRINT
   phase_c: NONE
   printing_reliability: OWNER_AUTHORIZED_IMPLEMENTATION_TEST_AGENT6_PR_MERGE_STAGING_NON_PAPER_AND_APK_BUILD
   staging: OWNER_AUTHORIZED_ENDPOINT_POLICY_TEST_REVIEW_MERGE_STAGING_CONFIG_AND_CONFIRMED_STORE18_BINDINGS_NO_PHYSICAL_PRINT

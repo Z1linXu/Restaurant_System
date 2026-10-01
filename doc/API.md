@@ -1834,7 +1834,7 @@ Capability summary:
 
 ## Uber Eats Integration v1
 
-Webhook：`POST /api/v1/integrations/uber-eats/webhook`，raw bytes + `X-Uber-Signature`（HMAC SHA256/client secret/lower hex）+ `X-Environment`。无 browser bearer；durable 200 empty ACK，400 malformed/environment，401 invalid signature，409 event/body conflict，413 size >256 KiB，503 disabled。
+Webhook：`POST /api/v1/integrations/uber-eats/webhook`，raw bytes + `X-Uber-Signature`（HMAC SHA256/`UBER_EATS_WEBHOOK_SIGNING_KEY`/lower hex；独立 key 未配置时兼容 client secret）+ `X-Environment`。无 browser bearer；durable 200 empty ACK，400 malformed/environment，401 invalid signature，409 event/body conflict，413 size >256 KiB，503 disabled。
 
 以下 base 为 `/api/v1/stores/{storeId}/integrations/uber-eats`，普通 `ApiResponse` envelope，正常认证 + StoreAccessService。
 

@@ -1,5 +1,36 @@
 # SYSTEM DOCUMENTATION
 
+## Uber webhook signing-key contract
+
+`UBER_EATS_WEBHOOK_SIGNING_KEY` is the preferred backend HMAC key. It is separate
+from OAuth configuration; if absent, existing installations retain the legacy
+client-secret fallback. An explicit key replaces that fallback, rather than
+trusting both credentials. Raw bytes, lowercase SHA-256 HMAC, constant-time
+comparison, signature-before-parse and environment guards are unchanged.
+The current menu identity review is in the [mapping diff](docs/governance/UBER_TEST_MENU_MAPPING_DIFF_20261001.md):
+41 root items, 33 unique modifiers, no HIGH-confidence stable-ID correspondences.
+No name-based mapping is automatically saved. This source capability alone does
+not prove the Staging runtime has been updated; use current pre-order evidence.
+
+## Uber TEST Store binding audit — 2026-10-01
+
+Current Staging remains application `7b70a4fac4e350444bcd37687ca88a8636ff8f2a`
+at `https://staging-pos.lanzhounoodlesmtl.com`, with validated Flyway V30 and an
+active Uber worker. Real Testing OAuth and read-only Store/menu APIs passed.
+Official Test Store `bd993244-5589-4b19-8f0d-dc2ba73d4273` is now bound, enabled,
+to the uniquely verified Staging Store `STG005_SRC_20260809_R01` (Store 1,
+Organization 1, MOCK). Binding was a guarded Staging-only maintenance transaction
+with audit record 768 because this Staging database has no platform ADMIN account;
+no account or role was changed.
+
+The earlier Dashboard access failure is resolved: the TEST APP now displays the
+fixed-domain PRIMARY / BASIC_HMAC webhook. Current menu coverage is 0/41 root
+items and 0/258 item/modifier contexts; stable identities require review before
+a first mapped order can be recommended. No real Uber webhook/order, Accept/Deny
+or printing was exercised. Follow the [pre-order check](docs/governance/UBER_PREORDER_CHECK_20261001.md)
+for the independent signing-key runtime result; the [earlier binding audit](docs/governance/UBER_TEST_STORE_BINDING_20261001.md)
+remains a dated snapshot.
+
 ## Staging PAD_DIRECT runtime policy
 
 Staging uses an explicit `DISABLED,MOCK,PAD_DIRECT` mode ceiling and continues to
@@ -9257,7 +9288,7 @@ fail-closed, and rollback uses the same reviewed production value.
 
 详细 contract、API 来源、配置、安全与恢复见 [UBER_EATS_INTEGRATION](docs/UBER_EATS_INTEGRATION.md)，逐项证据与未完成的 Uber Sandbox/硬件验证见 [Acceptance](docs/UBER_EATS_ACCEPTANCE.md)。前台 `/stores/{storeId}/frontdesk/uber-eats`；Owner/Admin mapping `/stores/{storeId}/admin/integrations/uber-eats`。Store binding 仅平台 ADMIN；其余 integration staff APIs 经过 StoreAccessService。无凭据、真实门店绑定或 Production deploy 随代码启用。
 
-Uber Production Pilot 配置计划针对 St-Denis 与 St-Catherine；第三家店暂不启用。真实 UUID、Store-scoped enable control 与激活门槛见 [Uber integration contract](docs/UBER_EATS_INTEGRATION.md#production-pilot-门店配置计划)。该计划不等于真实门店已开通，也不扩大现有Production授权。
+Uber Production Pilot 候选店仅 St-Denis；St-Catherine 和第三家店暂不启用。已提供的 Production UUID 仅作记录；Store-scoped enable control 与激活门槛见 [Uber integration contract](docs/UBER_EATS_INTEGRATION.md#production-pilot-门店配置计划)。该计划不等于真实门店已开通，也不扩大现有 Production 授权。
 
 Client Secret 轮换应将新值直接保存到 backend 私密配置 `UBER_EATS_CLIENT_SECRET`；不通过聊天、工具输出或版本控制传递。安全保存新值并确认配置后再撤销旧值；完成撤销前不能宣称 compromised credential 已完成轮换。
 

@@ -22,6 +22,9 @@ public class UberEatsProperties {
     @Value("${UBER_EATS_CLIENT_SECRET:}")
     private String clientSecret = "";
 
+    @Value("${UBER_EATS_WEBHOOK_SIGNING_KEY:}")
+    private String webhookSigningKey = "";
+
     @Value("${UBER_EATS_SCOPES:eats.order eats.store.orders.read}")
     public String scopes = "eats.order eats.store.orders.read";
 
@@ -31,6 +34,15 @@ public class UberEatsProperties {
 
     public void setClientSecret(String value) {
         clientSecret = value;
+    }
+
+    public String webhookSigningKey() {
+        // Preserve existing installations; an explicit webhook key replaces the OAuth secret.
+        return webhookSigningKey.isBlank() ? clientSecret : webhookSigningKey;
+    }
+
+    public void setWebhookSigningKey(String value) {
+        webhookSigningKey = value;
     }
 
     public String apiBaseUrl() {

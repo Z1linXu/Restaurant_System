@@ -2,6 +2,8 @@
 
 本版本接入外卖订单收件箱，员工明确 Accept/Deny。默认关闭。真实账号连接、测试门店与公开 HTTPS callback 必须另行配置；代码与本机 fixture 通过不代表 Uber Sandbox 或 Production 验收通过。验收证据见 [Final Acceptance Report](UBER_EATS_ACCEPTANCE.md)。
 
+2026-10-01 最新证据见 [下单前检查](governance/UBER_PREORDER_CHECK_20261001.md)：Dashboard 已恢复访问，显示固定 Staging URL / PRIMARY / BASIC_HMAC。Test Store 已绑定 Staging `STG005_SRC_20260809_R01`；独立 signing-key 部署结果以新检查为准。真实订单/Webhook/Accept/打印仍未测试，菜单稳定 ID 映射尚未建立。[此前 binding audit](governance/UBER_TEST_STORE_BINDING_20261001.md) 的 Dashboard 阻塞与旧验收 `0 stores` 都是历史观察。
+
 ## 数据流与现有领域复用
 
 Uber → `UberEatsWebhookController` → raw-body HMAC → `UberEatsWebhookService` durable event → `UberEatsWorker` → `UberEatsOrderClient.getOrder` → `UberEatsOrderNormalizer` → `UberEatsMenuMappingService` → Frontdesk inbox → 员工 Accept → `UberEatsOrderTransactions.prepare` → Uber Accept → accepted durable checkpoint → `submitLocal` → `OrderService.createOrReplaceDraftAndSubmit` → 现有 order items/options、kitchen/production tasks、BOM 库存流水、realtime、dispatch outbox → `PrintDispatcherService` → 现有 GRAB/HOT_KITCHEN/FRONTDESK renderer 与执行模式。
@@ -32,7 +34,8 @@ Uber → `UberEatsWebhookController` → raw-body HMAC → `UberEatsWebhookServi
 | `UBER_EATS_ENABLED` | `false`；true 时必须有 client ID/secret |
 | `UBER_EATS_ENVIRONMENT` | `sandbox`；仅允许 sandbox/production，host 固定 |
 | `UBER_EATS_CLIENT_ID` | 空；backend only |
-| `UBER_EATS_CLIENT_SECRET` | 空；backend secret manager/private env，亦为 HMAC key |
+| `UBER_EATS_CLIENT_SECRET` | 空；backend secret manager/private env，用于 OAuth |
+| `UBER_EATS_WEBHOOK_SIGNING_KEY` | 空；独立 webhook HMAC key，配置后优先使用；未配置时兼容原 client secret |
 | `UBER_EATS_SCOPES` | `eats.order eats.store.orders.read` |
 | `UBER_EATS_WORKER_ENABLED` | `true`；维护时暂停异步消费/恢复 |
 
@@ -40,7 +43,7 @@ Uber → `UberEatsWebhookController` → raw-body HMAC → `UberEatsWebhookServi
 
 ## Webhook
 
-`POST /api/v1/integrations/uber-eats/webhook`，部署时组合可公开访问的 HTTPS origin。`X-Uber-Signature` 为 client secret 对**原始请求字节**计算的 HMAC SHA256、小写 hex；常量时间比较。要求 `X-Environment` 与配置一致。仅此精确 POST 路径绕过浏览器 bearer 解析，完全依赖 signature trust；其他 integration endpoints 保留正常用户认证。
+`POST /api/v1/integrations/uber-eats/webhook`，部署时组合可公开访问的 HTTPS origin。`X-Uber-Signature` 为 `UBER_EATS_WEBHOOK_SIGNING_KEY` 对**原始请求字节**计算的 HMAC SHA256、小写 hex；常量时间比较。独立 key 未配置时才兼容原 client secret；配置独立 key 后不再额外接受 client secret 签名。此版本不实现 Secondary Key 双验签。要求 `X-Environment` 与配置一致。仅此精确 POST 路径绕过浏览器 bearer 解析，完全依赖 signature trust；其他 integration endpoints 保留正常用户认证。
 
 body 上限 256 KiB；仅存 event ID/type、environment、store/order UUID、body SHA256、重试状态。缺少/错误签名 401；已签名的错误 JSON/元数据或环境不符 400；超限 413；disabled 503。已保存相同事件重放 200；相同 event ID 不同 body 409；未知事件类型 IGNORED 并 200。有效事件持久化后 200 empty ACK，不等待 GET、OAuth、本地订单或打印。
 
@@ -107,7 +110,7 @@ Normalized snapshot 是字段白名单，排除 eater phone/email/address、paym
 
 ## Production Pilot 门店配置计划
 
-目标门店由 Owner 确认：St-Denis、St-Catherine 需要 Uber Eats，第三家暂不需要。两家真实 Uber Store UUID 尚未提供（PRODUCTION_STORE_UUIDS_PENDING）；收到后仅做格式/记录验证，不能据此自动 provision、切 order manager 或启用接单。计划配置为两家各自启用并绑定独立 UUID、第三家禁用；这不是当前真实环境已配置的声明。
+Owner 最新确认的 Production 候选店仅 St-Denis，已提供 UUID `5a7dca5c-b7ec-57c8-a684-87d23e66e8d9`；St-Catherine 和第三家店暂不启用。本 UUID 仅记录，不用于 Sandbox binding，不据此 provision、切 order manager、改菜单或启用接单。真实 TEST Store 是 `bd993244-5589-4b19-8f0d-dc2ba73d4273`，不能混用这两个 UUID。
 
 先满足真正 Sandbox E2E PASS、Integration Verification approved、Production scopes approved，再取得明确 Production Pilot 授权，才执行各门店 Enable → Bind UUID → Map Menu → Test → Activate。当前缺少专属 Store feature package 开关，后续小 PR 补 Store-scoped UBER_EATS enable control，不为此重构现有订单/打印。
 

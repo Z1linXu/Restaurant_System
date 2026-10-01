@@ -1,0 +1,36 @@
+id,sku,name_zh,name_en,category,active
+1,traditional_beef_noodle,传统牛肉面,Traditional Beef Noodle,SOUP_NOODLE,True
+2,braised_beef_tendon_noodle,红烧牛筋面,Braised Beef Tendon Noodle,SOUP_NOODLE,True
+26,pickled_vegetable_beef_noodle,酸菜牛肉面,Pickled Vegetable Beef Noodle,SOUP_NOODLE,True
+3,vegetable_noodle,蔬菜面,Vegetable Noodle,SOUP_NOODLE,True
+14,beef_chow_mein,牛肉炒面,Beef Chow Mein,FRIED_NOODLE,True
+15,chicken_chow_mein,鸡肉炒面,Chicken Chow Mein,FRIED_NOODLE,True
+16,tomato_chow_mein,番茄炒面,Tomato Chow Mein,FRIED_NOODLE,True
+17,vegetable_chow_mein,素菜炒面,Vegetable Chow Mein,FRIED_NOODLE,True
+24,cold_noodle_shredded_chicken,鸡丝凉面,Cold Noodle with Shredded Chicken,DRY_NOODLE,True
+5,zha_jiang_noodle,炸酱面,Zha Jiang Noodle,DRY_NOODLE,True
+4,dan_dan_noodle,担担面,Dan Dan Noodle,DRY_NOODLE,True
+27,tea_egg,茶叶蛋,Tea Egg,SIDE,True
+7,cucumber_salad,拌黄瓜,Cucumber Salad,SIDE,True
+8,edamame,毛豆,Edamame,SIDE,True
+9,shredded_potato,土豆丝,Shredded Potato,SIDE,True
+6,braised_beef_shank_salad,拌牛展,Braised Beef Shank Salad,SIDE,True
+18,fried_egg,煎蛋,Fried Egg,SIDE,True
+28,beef,纯牛肉,pure_beef,SIDE,True
+29,tendon,纯牛筋,pure_tendon,SIDE,True
+19,fried_spring_rolls,炸春卷,Fried Spring Rolls,FRIED,True
+20,tempura_shrimp,炸虾,Tempura Shrimp,FRIED,True
+21,fried_steamed_buns,炸馒头,Fried Steamed Buns,FRIED,True
+22,fried_wontons,炸馄饨,Fried Wontons,FRIED,True
+30,seven_up,七喜,Seven Up,DRINK,True
+10,coke,可乐,Coke,DRINK,True
+11,diet_coke,健怡可乐,Diet Coke,DRINK,True
+13,chinese_herbal_tea,王老吉,Chinese Herbal Tea,DRINK,True
+12,ice_tea,冰红茶,Ice Tea,DRINK,True
+31,canada_dry,姜汁汽水,canada dry,DRINK,True
+32,shochu_fruit,果味烧酒,Shochu Fruit,DRINK,True
+33,lg_sake,大清酒,Large Sake,DRINK,True
+34,tsingtao_beer,青岛啤酒,Tsingtao Beer,DRINK,True
+35,sapporo,Sapporo,sapporo,DRINK,True
+36,sm_sake,小清酒,Small Sake,DRINK,True
+37,soju,原味烧酒,Soju,DRINK,True

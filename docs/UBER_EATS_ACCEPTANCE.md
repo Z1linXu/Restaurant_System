@@ -1,5 +1,11 @@
 # Final Acceptance Report — Uber Eats v1
 
+> Historical implementation acceptance and continuation checkpoints below are dated evidence.
+> For the current 2026-10-01 Staging identity, provisioned Test Store, binding,
+> menu coverage and Dashboard access blocker, use the
+> [current binding audit](governance/UBER_TEST_STORE_BINDING_20261001.md).
+> Earlier missing-credential / zero-store observations do not replace that fresh evidence.
+
 日期：2026-09-16。范围：独立 worktree `Restaurant_System_uber_eats`、本机 PostgreSQL 16 / synthetic fixtures、真实应用代码；远端 Uber 请求在自动化测试中使用 HTTP mock。**不把 fixture 成功当作 Sandbox 成功。** 原工作区有未完成 merge，本轮未修改其文件/索引；没有 merge main，没有部署或修改 Staging/Production。
 
 ## A. Uber Dashboard Audit — PARTIAL

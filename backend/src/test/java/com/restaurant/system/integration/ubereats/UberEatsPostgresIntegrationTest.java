@@ -28,6 +28,7 @@ import com.restaurant.system.printing.service.PrintDispatcherService;
 import com.restaurant.system.printing.service.impl.OrderDispatchOutboxProcessor;
 import com.restaurant.system.user.repository.StoreRepository;
 
+import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,7 +66,8 @@ import javax.crypto.spec.SecretKeySpec;
             "UBER_EATS_ENABLED=true",
             "UBER_EATS_WORKER_ENABLED=false",
             "UBER_EATS_CLIENT_ID=fixture-client",
-            "UBER_EATS_CLIENT_SECRET=fixture-webhook-secret",
+            "UBER_EATS_CLIENT_SECRET=fixture-oauth-secret",
+            "UBER_EATS_WEBHOOK_SIGNING_KEY=fixture-webhook-secret",
             "app.features.printing=true",
             "app.features.kds=true",
             "app.features.core-pos=true"
@@ -80,6 +82,7 @@ class UberEatsPostgresIntegrationTest {
     }
 
     @Autowired JdbcTemplate db;
+    @Autowired Flyway flyway;
     @Autowired ObjectMapper json;
     @Autowired MockMvc mvc;
     @Autowired UberEatsWebhookService webhook;
@@ -236,11 +239,13 @@ class UberEatsPostgresIntegrationTest {
 
     @Test
     void migrationsAndUniqueConstraints() {
+        assertThatCode(flyway::validate).doesNotThrowAnyException();
+        assertThat(flyway.info().pending()).isEmpty();
         assertThat(
                         db.queryForObject(
-                                "select count(*) from flyway_schema_history where success",
+                                "select count(*) from flyway_schema_history where version = '29' and success",
                                 Integer.class))
-                .isEqualTo(29);
+                .isOne();
         assertThat(
                         db.queryForObject(
                                 "select count(*) from pg_constraint where conname in"
