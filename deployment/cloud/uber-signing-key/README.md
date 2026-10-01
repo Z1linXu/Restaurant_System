@@ -17,12 +17,16 @@ and make the runtime image by replacing /app/app.jar in the exact existing JRE
 image; no other package or runtime change is needed. No secret enters the build.
 
 Run from `/srv/restaurant-pos/staging/releases/<sha>` with that SHA argument.
+Invoke with `python3 -B`; the helper also disables bytecode before importing the
+existing model helper so its own cache cannot dirty the source checkout.
 The helper refuses unexpected old image, pending Uber/print/outbox work, wrong
 Store/org/MOCK identity or an existing evidence directory. It backs up Staging
 DB and exact old backend model privately, validates resolved Compose, recreates
 only backend with --no-deps/--no-build/--pull never, checks health/model/Flyway
 and unchanged other container fingerprints, and restores old backend on failure.
 No DB restore/migration change or other container restart is performed.
+Queue checks accept both historical COMPLETED and current DISPATCHED terminal
+outbox records, plus MOCK_RENDERED/SKIPPED; pending and unknown states block.
 
 Follow apply with public invalid/valid internal-signature probes, IGNORED-event
 receipt/no-order proof, public ingress verification and a masked Dashboard read.

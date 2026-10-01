@@ -3,6 +3,11 @@
 > Earlier 16:xx UTC snapshot. Dashboard access and URL were later verified;
 > the [subsequent pre-order check](UBER_PREORDER_CHECK_20261001.md) supersedes
 > current readiness/menu counts. Historical failures below are preserved.
+>
+> Count correction: re-reading this audit's original menu JSON yields **41 root
+> items / 258 root-modifier contexts / 0 unreferenced items**, not the 31 / 238 / 10
+> reported below. The new and old identity sets match. This was an audit counting
+> omission, not a later menu change. The zero-mapping conclusion is unchanged.
 
 Scope: STAGING / TEST ONLY. Evidence is from the current running containers,
 Staging database, browser UI, real Uber Testing OAuth/API, and isolated local

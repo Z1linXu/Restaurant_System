@@ -9,6 +9,7 @@ import re
 import subprocess
 import sys
 
+sys.dont_write_bytecode = True
 HERE = pathlib.Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location('ingress', HERE.parent / 'staging-ingress/apply-once.py')
 i = importlib.util.module_from_spec(spec)
@@ -25,7 +26,7 @@ def queue_guard():
 SELECT (SELECT count(*) FROM uber_eats_orders),
  (SELECT count(*) FROM uber_eats_events WHERE status <> 'IGNORED'),
  (SELECT count(*) FROM print_jobs WHERE status IN ('PENDING','CLAIMED','PRINTING')),
- (SELECT count(*) FROM order_dispatch_outbox WHERE status NOT IN ('DISPATCHED','MOCK_RENDERED','SKIPPED')),
+ (SELECT count(*) FROM order_dispatch_outbox WHERE status NOT IN ('DISPATCHED','COMPLETED','MOCK_RENDERED','SKIPPED')),
  (SELECT count(*) FROM stores WHERE id=1 AND code='STG005_SRC_20260809_R01' AND organization_id=1 AND printing_mode='MOCK');
 ROLLBACK;"""
     out = i.run(['docker', 'exec', '-i', D, 'sh', '-c',

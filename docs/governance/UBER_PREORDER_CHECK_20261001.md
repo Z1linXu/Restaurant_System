@@ -49,7 +49,7 @@ catalog `menu-catalog-v4`, content hash `fnv1a32:562b32ff`.
 | Metric | Current |
 |---|---:|
 | Uber API item objects | 74 |
-| UBER_ROOT_ITEMS | 41 (previous observation 31 is superseded) |
+| UBER_ROOT_ITEMS | 41 (earlier report's 31 was a counting omission) |
 | UBER_MODIFIER_GROUPS | 11 |
 | UBER_UNIQUE_MODIFIERS | 33 |
 | Root/modifier contexts | 258 |
@@ -62,6 +62,9 @@ catalog `menu-catalog-v4`, content hash `fnv1a32:562b32ff`.
 | HIGH-confidence correspondences | 0 |
 
 All Uber external_data values are blank/missing; external_id is absent.
+Re-reading the earlier private snapshot also yields 41 roots and 258 contexts;
+the old/new root, modifier and context identity sets are identical. The earlier
+31/238/10-unreferenced report is explicitly corrected; no menu change is inferred.
 Actual Uber stable IDs have no confirmed exact local SKU/option_code contract.
 Names alone cannot establish HIGH confidence, even when exact display names match.
 **No mapping was saved or overwritten. No menu was changed.**
@@ -101,8 +104,10 @@ there is no fully mapped dish to recommend for checkout this round.
   exact image, DB backup, zero pending work, unchanged DB/frontend/Production
   container fingerprints and unchanged Flyway are required by the helper.
 - Exact current Staging key/client-secret scan over 16 task-changed files: PASS.
-- Reviewer found incorrect outbox terminal label COMPLETED in the helper;
-  corrected to actual DISPATCHED before runtime execution. No data repair.
+- Reviewer and read-only preflight reconciled historical COMPLETED and current
+  DISPATCHED outbox terminal records; both are accepted, pending/unknown states
+  remain blocked. Bytecode cache generation is disabled before helper imports.
+  Initial attempts stopped before runtime mutation. No data repair was performed.
 
 ## F. Readiness
 

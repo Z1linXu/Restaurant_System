@@ -2,7 +2,7 @@
 
 Snapshot: 2026-10-01T17:15:56Z. TEST Store `bd993244-5589-4b19-8f0d-dc2ba73d4273` → local Store 1 / org 1.
 
-Fresh root count **41** (previous observation 31); 74 API item objects, 11 groups, 33 unique modifiers. Local catalog revision 215, menu-catalog-v4, content hash `fnv1a32:562b32ff`. Uber returned no menu version, ETag or Last-Modified. All external_data values are blank/missing; external_id is absent.
+Root count **41**; re-reading the earlier snapshot confirms its reported 31 was a counting omission, not a menu change. There are 74 API item objects, 11 groups, 33 unique modifiers. Local catalog revision 215, menu-catalog-v4, content hash `fnv1a32:562b32ff`. Uber returned no menu version, ETag or Last-Modified. All external_data values are blank/missing; external_id is absent.
 
 **HIGH = 0. No mapping writes authorized by the supplied stable-identity criterion are possible.** Display-name candidates below remain REVIEW_REQUIRED even where names exactly match. NO_MATCH means no reliable candidate in the current catalog. No name-derived guess is saved. Combo-root suggestions require explicit combo semantics confirmation, not just an ITEM link.
 
@@ -104,7 +104,18 @@ Uber `b940caa7-6e37-4b3b-b964-3e10151e7903` Traditional Lanzhou Hand-pull Beef N
 | Extra Topping | 0 / 999 | Extra Meat, Extra Fried Egg, Extra Tea Boil Egg, Extra Vegetable, Extra Noodle |
 | Ingredients Option | 0 / 2 | Non Scallion/ Green Onion, Non Coriander |
 
-Proposed review combination: main item above + Large + Extra Fried Egg + Non Coriander; include a reviewed noodle type and spicy level if required by the menu. Every selected stable-ID pair requires confirmation. This is **not an instruction to place an order**.
+Proposed review combination: main item above + Large + Extra Fried Egg + Non Coriander + Non-spicy + Three Fine. The last two selections satisfy required groups, but their identities still need confirmation. This is **not an instruction to place an order**.
+
+| Uber stable ID | Proposed local identity | Confidence |
+|---|---|---|
+| b940caa7-6e37-4b3b-b964-3e10151e7903 | item 1 / traditional_beef_noodle / 传统牛肉面 | REVIEW_REQUIRED |
+| 01c44198-eeb9-4452-bc2b-0939bf713a39 | item 1 option 286 / size_large / SIZE / 大碗 | REVIEW_REQUIRED |
+| 62c5d2f7-0f32-4cbe-8514-47060f55ea7d | item 1 option 281 / fried_egg / ADD_ON / 加煎蛋 | REVIEW_REQUIRED |
+| 54c53703-db68-4044-85a3-5f4962715566 | item 1 option 275 / remove_cilantro / REMOVE / 走香菜 | REVIEW_REQUIRED |
+| fa1544e9-4e8e-4a4f-81a1-8643e200028e | item 1 option 285 / spicy_none / SPICY_LEVEL / 不辣 | REVIEW_REQUIRED |
+| d9750fe4-14fe-4efd-bcd6-8ea85774850d | item 1 option 3 / noodle_sanxi / NOODLE_TYPE / 三细 | REVIEW_REQUIRED |
+
+Each modifier proposal is explicitly scoped to root `b940caa7-6e37-4b3b-b964-3e10151e7903` and local item 1, with no parent option. These are proposed associations requiring identity confirmation, not existing or automatically saved rules.
 
 Items: {'REVIEW_REQUIRED': 32, 'NO_MATCH': 9}. Unique modifiers: {'REVIEW_REQUIRED': 23, 'NO_MATCH': 10}. Root/modifier contexts: 258; mapped 0.
 
