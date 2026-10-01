@@ -84,6 +84,25 @@ class PrinterConfigServiceImplTest {
     }
 
     @Test
+    void stagingPadDirectPolicyPersistsPadModeButRejectsRealWithoutAnotherSave() {
+        runtimePolicy.setAllowedModes(java.util.List.of("DISABLED", "MOCK", "PAD_DIRECT"));
+        runtimePolicy.setEndpointConfigurationEnabled(false);
+        runtimePolicy.validate();
+        com.restaurant.system.user.entity.Store store = new com.restaurant.system.user.entity.Store();
+        store.id = 18L;
+        store.printing_mode = "DISABLED";
+        when(storeRepository.findById(18L)).thenReturn(Optional.of(store));
+        when(storeRepository.save(store)).thenReturn(store);
+
+        assertEquals("PAD_DIRECT", service.updateStorePrintingMode(18L, "PAD_DIRECT"));
+        assertEquals("PAD_DIRECT", store.printing_mode);
+        assertEquals(true, store.printing_enabled);
+        assertThrows(BusinessException.class, () -> service.updateStorePrintingMode(18L, "REAL"));
+        assertEquals("PAD_DIRECT", store.printing_mode);
+        verify(storeRepository, org.mockito.Mockito.times(1)).save(store);
+    }
+
+    @Test
     void blankPersistedModeResolvesToDisabledInsteadOfLegacyRealFallback() {
         com.restaurant.system.user.entity.Store store = new com.restaurant.system.user.entity.Store();
         store.id = 1L;

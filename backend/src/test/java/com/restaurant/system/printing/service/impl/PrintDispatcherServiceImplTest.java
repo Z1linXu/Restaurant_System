@@ -578,13 +578,7 @@ class PrintDispatcherServiceImplTest {
         service.dispatchPersistedEvent(PrintModuleCode.GRAB, 1L, fixture.order.id, null, null);
 
         verify(printJobService).markPadDirectQueued(any(PrintJob.class), eq(fixture.printer), eq("LARGE"));
-        verify(printerTransport, never()).print(
-            any(PrinterConfig.class),
-            anyString(),
-            any(),
-            any(),
-            anyString()
-        );
+        verifyNoInteractions(printerTransport);
     }
 
     @Test

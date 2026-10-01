@@ -1,5 +1,16 @@
 # SYSTEM DOCUMENTATION
 
+## Staging PAD_DIRECT runtime policy
+
+The Owner-authorized 2026-09-30 policy batch permits only `DISABLED,MOCK,PAD_DIRECT`
+on Staging, retaining `REAL` rejection and disabled endpoint configuration.
+`PrintingRuntimePolicyProperties` enforces this environment ceiling; PAD_DIRECT
+returns after queueing and never invokes backend printer transport. Application
+images remain at `7b70a4f` / V30. See the [bounded policy runbook](deployment/cloud/staging-pad-direct/README.md).
+Repository configuration is not runtime acceptance. Chinatown is Store 18; online
+PENDING verification requires printer assignments and paused Pad workers. Existing
+queued jobs remain claimable after mode/policy rollback. Production is out of scope.
+
 ## Staging HTTPS ingress
 
 Staging ingress 的一次性 Compose 校验按服务器 v5 的字面美元转义及字节数字字符串序列化比较，
