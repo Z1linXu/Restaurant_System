@@ -36,3 +36,5 @@ Staging acceptance requires the explicit property to be PRESENT and used.
 Private evidence/rollback files: `/srv/restaurant-pos/staging/uber-signing-key-20261001`.
 Do not print resolved Compose or private env files. Do not use the generic
 Staging wrapper to replace the current ingress/PAD policy overlays.
+
+The first backend update restored the previous healthy image after a management-label comparison failure. The bounded repair filters Docker Compose-owned image labels, consistently with runtime normalization; application revision remains verified. Attempt 2 preserves the original backup and uses a separate evidence directory. Agent 6 accepted this repair without P0/P1/P2 findings.

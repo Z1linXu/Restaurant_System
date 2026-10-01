@@ -17,7 +17,7 @@ spec.loader.exec_module(i)
 B = 'restaurant-pos-staging-backend-1'
 D = 'restaurant-pos-staging-db-1'
 UNCHANGED = i.PROD + ['restaurant-pos-staging-nginx-1', D]
-ROOT = pathlib.Path('/srv/restaurant-pos/staging/uber-signing-key-20261001')
+ROOT = pathlib.Path('/srv/restaurant-pos/staging/uber-signing-key-20261001-attempt2')
 os.umask(0o077)
 
 
@@ -72,7 +72,8 @@ def main():
     i.write_compose(ROOT / 'rollback.private.json', base)
     wanted = base['services']['backend']
     wanted['image'] = image['Id']
-    wanted['labels'].update(image['Config'].get('Labels') or {})
+    wanted['labels'].update({k: v for k, v in (image['Config'].get('Labels') or {}).items()
+                             if not k.startswith('com.docker.compose.')})
     wanted['environment']['UBER_EATS_WEBHOOK_SIGNING_KEY'] = key
     i.write_compose(ROOT / 'target.private.json', base)
     resolved = json.loads(i.compose(ROOT / 'target.private.json', 'config', '--format', 'json'))

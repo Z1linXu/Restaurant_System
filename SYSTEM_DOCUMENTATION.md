@@ -9293,3 +9293,7 @@ Uber Production Pilot 候选店仅 St-Denis；St-Catherine 和第三家店暂不
 Client Secret 轮换应将新值直接保存到 backend 私密配置 `UBER_EATS_CLIENT_SECRET`；不通过聊天、工具输出或版本控制传递。安全保存新值并确认配置后再撤销旧值；完成撤销前不能宣称 compromised credential 已完成轮换。
 
 Uber订单管理权限由真实Accept/Deny接口授权结果判定；GET响应中可脱敏的 `order_manager_client_id` 不与明文client ID比较。Store隔离与菜单校验仍在本地执行，只有远端204成功才能建立本地订单。
+
+### 2026-10-01 Uber signing-key deployment checkpoint
+
+The first backend-only update rolled back after a strict model comparison: inherited image Compose management labels were included in the expected model but excluded from runtime normalization. Filter those labels consistently and preserve the first private backup in a separate retry evidence directory. Old Staging backend health was restored; runtime independent-key acceptance remains pending until the retry and public probes pass.
