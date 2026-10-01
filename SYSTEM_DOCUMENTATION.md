@@ -7,8 +7,10 @@ on Staging, retaining `REAL` rejection and disabled endpoint configuration.
 `PrintingRuntimePolicyProperties` enforces this environment ceiling; PAD_DIRECT
 returns after queueing and never invokes backend printer transport. Application
 images remain at `7b70a4f` / V30. See the [bounded policy runbook](deployment/cloud/staging-pad-direct/README.md).
-Repository configuration is not runtime acceptance. Chinatown is Store 18; online
-PENDING verification requires printer assignments and paused Pad workers. Existing
+Policy config `7ab9366` is deployed; Chinatown Store 18 mode update and REAL
+rejection passed. Public HTTPS/WSS regression passed 42 checks. Online PENDING
+verification is blocked by missing printer bindings and worker-pause prerequisites;
+no acceptance order/job was created. See [execution evidence](docs/governance/runtime/STAGING_PAD_DIRECT_POLICY_20260930_EVIDENCE.md). Existing
 queued jobs remain claimable after mode/policy rollback. Production is out of scope.
 
 ## Staging HTTPS ingress
