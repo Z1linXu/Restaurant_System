@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Owner-authorized, config-only Staging printing policy batch, 2026-09-30."""
+"""Owner-authorized, config-only Staging endpoint policy batch, 2026-09-30."""
 import fcntl
 import importlib.util
 import json
@@ -11,20 +11,21 @@ HERE = pathlib.Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location('ingress', HERE.parent / 'staging-ingress/apply-once.py')
 i = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(i)
-ROOT = pathlib.Path('/srv/restaurant-pos/staging/pad-direct-20260930')
+ROOT = pathlib.Path('/srv/restaurant-pos/staging/pad-direct-endpoints-20260930')
 BACKEND = 'restaurant-pos-staging-backend-1'
 UNCHANGED = i.PROD + ['restaurant-pos-staging-nginx-1', 'restaurant-pos-staging-db-1']
 POLICY = json.loads((HERE / 'backend-environment.json').read_text())
-assert POLICY == {'APP_PRINTING_ALLOWED_MODES': 'DISABLED,MOCK,PAD_DIRECT'}
+assert POLICY == {'APP_PRINTING_ALLOWED_MODES': 'DISABLED,MOCK,PAD_DIRECT',
+                  'APP_PRINTING_ENDPOINT_CONFIGURATION_ENABLED': 'true'}
 
 
 def guard(d):
     env = dict(v.split('=', 1) for v in d['Config']['Env'])
     assert env['APP_ENVIRONMENT'] == 'staging'
     assert env['SPRING_PROFILES_ACTIVE'] == 'cloud'
-    assert env['APP_PRINTING_ENDPOINT_CONFIGURATION_ENABLED'] == 'false'
+    assert env['APP_PRINTING_ENDPOINT_CONFIGURATION_ENABLED'] in ['false', 'true']
     assert env['APP_FEATURES_PRINTING'] == 'true'
-    assert env['APP_PRINTING_ALLOWED_MODES'] in ['DISABLED,MOCK', POLICY['APP_PRINTING_ALLOWED_MODES']]
+    assert env['APP_PRINTING_ALLOWED_MODES'] == POLICY['APP_PRINTING_ALLOWED_MODES']
     assert d['Image'] == i.SIMG['backend']
     return env
 
@@ -52,21 +53,22 @@ def verify(original=False):
 
 def queue_preflight():
     sql = """SELECT
-      (SELECT count(*) FROM stores WHERE UPPER(TRIM(printing_mode))='PAD_DIRECT'),
+      (SELECT count(*) FROM stores WHERE UPPER(TRIM(printing_mode))='PAD_DIRECT' AND id<>18),
       (SELECT count(*) FROM print_jobs WHERE status IN ('PENDING','CLAIMED','PRINTING')),
-      (SELECT count(*) FROM order_dispatch_outbox WHERE status NOT IN ('COMPLETED','MOCK_RENDERED','SKIPPED'))"""
+      (SELECT count(*) FROM order_dispatch_outbox WHERE status NOT IN ('COMPLETED','MOCK_RENDERED','SKIPPED')),
+      (SELECT count(*) FROM stores WHERE id=18 AND code='CHINATOWN' AND organization_id=1 AND printing_mode='PAD_DIRECT')"""
     result = i.run(['docker', 'exec', '-i', 'restaurant-pos-staging-db-1', 'sh', '-c',
         'PGOPTIONS="-c default_transaction_read_only=on -c statement_timeout=5000" '
         'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -v ON_ERROR_STOP=1'], input=sql.encode()).decode().strip()
-    assert result == '0|0|0', 'Existing PAD stores or pending work; stop before policy enablement'
-    print('ALL_STAGING_PAD_STORES_AND_PENDING_WORK=NONE')
+    assert result == '0|0|0|1', 'Unexpected PAD stores, target or pending work; stop before endpoint enablement'
+    print('CHINATOWN_PAD_DIRECT_ONLY; PENDING_WORK=NONE')
 
 
 def prepare():
     assert not ROOT.exists(), 'Existing backup must not be overwritten'
     queue_preflight()
     previous = i.inspect(BACKEND)
-    assert guard(previous)['APP_PRINTING_ALLOWED_MODES'] == 'DISABLED,MOCK'
+    assert guard(previous)['APP_PRINTING_ENDPOINT_CONFIGURATION_ENABLED'] == 'false'
     baseline = {'fingerprints': {n: i.fingerprint(n) for n in UNCHANGED},
                 'flyway': {n: i.ledger(n) for n in ['cloud-db-1', 'restaurant-pos-staging-db-1']}}
     assert baseline['flyway']['cloud-db-1'].splitlines()[-1].startswith('28|')

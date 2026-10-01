@@ -152,6 +152,42 @@ class PrinterConfigServiceImplTest {
     }
 
     @Test
+    void endpointPermissionAllowsCreateAndUpdateWithoutAllowingRealMode() {
+        runtimePolicy.setAllowedModes(java.util.List.of("DISABLED", "MOCK", "PAD_DIRECT"));
+        runtimePolicy.setEndpointConfigurationEnabled(true);
+        runtimePolicy.validate();
+        when(printerConfigRepository.save(any(PrinterConfig.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
+        PrinterConfig request = printer(null, 18L, "Endpoint policy test");
+        request.ip_address = "create.test.invalid";
+        request.port = 9100;
+        request.timeout_ms = 3100;
+        request.paper_width_mm = 80;
+        request.text_encoding = "GBK";
+        PrinterConfig created = service.savePrinter(request);
+        assertEquals("create.test.invalid", created.ip_address);
+        assertEquals(9100, created.port);
+        assertEquals(3100, created.timeout_ms);
+
+        created.id = 7L;
+        when(printerConfigRepository.findByIdAndStoreId(7L, 18L)).thenReturn(Optional.of(created));
+        PrinterConfig update = printer(7L, 18L, "Endpoint policy test updated");
+        update.ip_address = "update.test.invalid";
+        update.port = 9101;
+        update.timeout_ms = 4500;
+        update.paper_width_mm = 58;
+        update.text_encoding = "UTF-8";
+        PrinterConfig saved = service.savePrinter(update);
+        assertEquals("update.test.invalid", saved.ip_address);
+        assertEquals(9101, saved.port);
+        assertEquals(4500, saved.timeout_ms);
+        assertEquals(58, saved.paper_width_mm);
+        assertEquals("UTF-8", saved.text_encoding);
+        assertThrows(BusinessException.class, () -> runtimePolicy.requireAllowedMode("REAL"));
+        org.mockito.Mockito.verifyNoInteractions(cloudPrintingGuard);
+    }
+
+    @Test
     void rejectsMovingExistingPrinterAcrossStores() {
         PrinterConfig existing = printer(7L, 1L, "Existing");
         PrinterConfig request = printer(7L, 2L, "Moved");

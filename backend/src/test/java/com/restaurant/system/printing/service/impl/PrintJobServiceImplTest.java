@@ -62,6 +62,9 @@ class PrintJobServiceImplTest {
         byte[] payload = Base64.getDecoder().decode(queued.escposPayloadBase64);
 
         assertTrue(containsBytes(payload, EscPosFontSizeMode.LARGE.activate_bytes));
+        assertEquals("PAD_DIRECT", queued.executionMode);
+        assertEquals("PENDING", queued.status);
+        assertEquals(10L, queued.printer_id);
     }
 
     @Test

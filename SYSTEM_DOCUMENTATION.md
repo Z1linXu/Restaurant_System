@@ -2,15 +2,18 @@
 
 ## Staging PAD_DIRECT runtime policy
 
-The Owner-authorized 2026-09-30 policy batch permits only `DISABLED,MOCK,PAD_DIRECT`
-on Staging, retaining `REAL` rejection and disabled endpoint configuration.
-`PrintingRuntimePolicyProperties` enforces this environment ceiling; PAD_DIRECT
-returns after queueing and never invokes backend printer transport. Application
-images remain at `7b70a4f` / V30. See the [bounded policy runbook](deployment/cloud/staging-pad-direct/README.md).
-Policy config `7ab9366` is deployed; Chinatown Store 18 mode update and REAL
-rejection passed. Public HTTPS/WSS regression passed 42 checks. Online PENDING
-verification is blocked by missing printer bindings and worker-pause prerequisites;
-no acceptance order/job was created. See [execution evidence](docs/governance/runtime/STAGING_PAD_DIRECT_POLICY_20260930_EVIDENCE.md). Existing
+Staging uses an explicit `DISABLED,MOCK,PAD_DIRECT` mode ceiling and continues to
+reject REAL. Endpoint write permission is a separate
+`APP_PRINTING_ENDPOINT_CONFIGURATION_ENABLED` field. The Owner-authorized
+endpoint batch changes only that permission to true; no business code changes
+or application build are needed. Application images remain `7b70a4f` / V30.
+See the [bounded policy runbook](deployment/cloud/staging-pad-direct/README.md).
+
+The previous mode-only deployment is [recorded here](docs/governance/runtime/STAGING_PAD_DIRECT_POLICY_20260930_EVIDENCE.md).
+Repository endpoint permission alone does not prove deployment or printer binding.
+Chinatown is Store 18; bind only confirmed endpoints, preserve module assignment
+settings, and do not generate executable PENDING jobs without paused Pad workers.
+Backend PAD_DIRECT queues payloads and returns before TCP transport. Existing
 queued jobs remain claimable after mode/policy rollback. Production is out of scope.
 
 ## Staging HTTPS ingress

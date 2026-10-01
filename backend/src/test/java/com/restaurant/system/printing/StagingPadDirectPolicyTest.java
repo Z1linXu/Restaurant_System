@@ -18,7 +18,7 @@ class StagingPadDirectPolicyTest {
         Map<String, Object> overlay = new ObjectMapper().readValue(
             Path.of("../deployment/cloud/staging-pad-direct/backend-environment.json").toFile(),
             new TypeReference<Map<String, Object>>() {});
-        assertEquals(1, overlay.size(), "This batch changes only the mode ceiling");
+        assertEquals(2, overlay.size(), "Only Staging mode ceiling and endpoint permission belong here");
         var environment = new StandardEnvironment();
         environment.getPropertySources().remove(StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME);
         environment.getPropertySources().remove(StandardEnvironment.SYSTEM_PROPERTIES_PROPERTY_SOURCE_NAME);
@@ -34,7 +34,15 @@ class StagingPadDirectPolicyTest {
         }
         assertThrows(BusinessException.class, () -> policy.requireAllowedMode("REAL"));
         assertEquals("DISABLED", policy.safePersistedModeOrDisabled("REAL"));
-        assertFalse(policy.isEndpointConfigurationEnabled());
-        assertThrows(BusinessException.class, () -> policy.requireEndpointConfigurationAllowed("192.168.1.100"));
+        assertTrue(policy.isEndpointConfigurationEnabled());
+        assertDoesNotThrow(() -> policy.requireEndpointConfigurationAllowed("printer.test.invalid"));
+    }
+    @Test
+    void sharedDefaultsRemainUnchangedWithoutStagingOverlay() {
+        // Production 11996ef binds these unchanged defaults; no Staging overlay is loaded there.
+        var policy = new PrintingRuntimePolicyProperties();
+        policy.validate();
+        assertEquals(List.of("REAL", "MOCK", "DISABLED", "PAD_DIRECT"), policy.getAllowedModes());
+        assertTrue(policy.isEndpointConfigurationEnabled());
     }
 }
