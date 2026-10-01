@@ -217,6 +217,8 @@ class PadPrintJobServiceImplTest {
         assertEquals(9100, response.printer_port);
         assertEquals("192.168.1.101:9100", response.printer_endpoint);
         assertEquals("GBK", response.text_encoding);
+        assertEquals(3000, response.timeout_ms);
+        assertEquals(80, response.paper_width_mm);
     }
 
     @Test
