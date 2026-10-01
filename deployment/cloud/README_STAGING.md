@@ -54,6 +54,10 @@ branch movement cannot silently change the tested artifact.
 
 ## Configuration
 
+The explicitly authorized [PAD_DIRECT acceptance batch](staging-pad-direct/README.md)
+is a separate one-off Staging overlay. The generic defaults and guards below
+remain unchanged; they do not describe that opt-in runtime exception.
+
 Copy [`.env.staging.example`](.env.staging.example) to the external config path
 and replace every placeholder with unique Staging-only values. Never store the
 filled file inside a release worktree or commit it.
