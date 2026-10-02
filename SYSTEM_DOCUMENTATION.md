@@ -9301,3 +9301,31 @@ The first backend-only update rolled back after a strict model comparison: inher
 ### 2026-10-01 Uber pre-order final runtime acceptance
 
 Backend-only Staging source `21826ea5b2dc9297dd98bc8be47f5223446d11c6` deployed successfully; frontend remains `7b70a4fac4e350444bcd37687ca88a8636ff8f2a`. Explicit private `UBER_EATS_WEBHOOK_SIGNING_KEY` is PRESENT and preferred for HMAC; public wrong-key 401 and current-key 200 passed at 17:42:56 UTC. Internal event IGNORED, zero Uber orders, target Store 1/org 1/sandbox/MOCK binding intact; Inbox healthy. DB/frontend/Production fingerprints and V30 unchanged. Public ingress 42/42 PASS. Complete mapping remains 0/41 items and 0/33 modifiers: no HIGH stable-identity correspondences, so READY_FOR_REAL_SANDBOX_ORDER_TEST=NO. See [final evidence](docs/governance/UBER_PREORDER_CHECK_20261001.md) and [complete mapping diff](docs/governance/UBER_TEST_MENU_MAPPING_DIFF_20261001.md). No order/Accept/Deny or Production mutation performed.
+
+
+### 2026-10-02 Uber Kitchen Mirror / V31
+
+Store-scoped `processing_mode=KITCHEN_MIRROR` adds a release-driven kitchen path.
+Notification saves only; `orders.release` fetches current Uber data and releases
+mapped items through the existing OrderService, kitchen/production/inventory and
+unique dispatch outbox. Mirror never calls Accept/Deny or produces customer
+receipts. Legacy ORDER_MANAGER remains supported. Cancel/edit events retain
+historical tasks/jobs and require operator review.
+
+`financial_mode=EXTERNAL_PLATFORM` isolates kitchen orders from cashier actions
+and in-store revenue aggregation. Local monetary columns are zero; actual Uber
+`payment.charges` is retained in integration JSON plus minor-unit amount fields.
+A shared kitchen header uses first name + last initial or display ID. Today's
+Uber page exposes durable kitchen module status and snapshot-safe reprints through
+the existing audited/idempotent printing API.
+
+Mapping supports explicit COMBO_ROOT -> main + implicit `combo`, parent-scoped
+MAP and explicit NO_OP (`INGREDIENT_NOT_USED`). Unknown identifiers still block.
+The final human review table is
+`docs/governance/UBER_KITCHEN_MAPPING_FINAL_20261002.md`; approval is required before
+writing the planned mappings to Staging. No name-based expansion is authorized.
+
+Real TEST pos_data read on 2026-10-02: integration enabled, online, TEST app is the
+current order manager, `order_release_enabled=false`; pending flag absent. Uber
+must provision/confirm release notifications and Uber Tablet order management
+before a Pad-driven real test. Code tests do not establish Sandbox readiness.

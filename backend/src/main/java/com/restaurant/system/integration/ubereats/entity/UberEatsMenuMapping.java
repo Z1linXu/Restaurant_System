@@ -7,6 +7,15 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "uber_eats_menu_mappings")
 public class UberEatsMenuMapping {
+    @Column(name = "mapping_action")
+    public String mappingAction = "MAP";
+
+    @Column(name = "item_mapping_mode")
+    public String itemMappingMode = "STANDARD";
+
+    @Column(name = "action_reason")
+    public String actionReason;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;

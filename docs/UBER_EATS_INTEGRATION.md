@@ -115,3 +115,21 @@ Owner 最新确认的 Production 候选店仅 St-Denis，已提供 UUID `5a7dca5
 先满足真正 Sandbox E2E PASS、Integration Verification approved、Production scopes approved，再取得明确 Production Pilot 授权，才执行各门店 Enable → Bind UUID → Map Menu → Test → Activate。当前缺少专属 Store feature package 开关，后续小 PR 补 Store-scoped UBER_EATS enable control，不为此重构现有订单/打印。
 
 2026-09-17 继续工作授权已扩大到 merge-gate review、修复/测试/合并、独立 Staging备份部署与HTTPS webhook、真实Testing E2E及符合Uber流程的verification/scope申请；不包含Production接单激活或任何Production不可逆操作。Secret仍只允许配置于backend私密环境，例如经核实部署目标后的 `/srv/restaurant-pos/staging/config/.env.staging` 的 `UBER_EATS_CLIENT_SECRET`，不可写入仓库或聊天。当前技术文档路径不代表服务器已核实或配置已生效。
+
+
+## Kitchen Mirror extension (2026-10-02, V31)
+
+See `doc/API.md` for the additive mode/mapping/inbox contract. In KITCHEN_MIRROR,
+notification is save-only; release is the only kitchen trigger, after fresh GET,
+Store validation and complete mapping. No remote Accept/Deny or local receipts.
+Financial snapshots remain separate from zero-valued kitchen records and in-store
+analytics. Existing OrderService, task/inventory logic, GRAB/HOT renderers, outbox,
+manual reprint audit/idempotency/Pad protections are reused.
+
+Test Store `bd993244-5589-4b19-8f0d-dc2ba73d4273` currently reports
+`order_release_enabled=false`. Official release documentation describes kitchen
+release (including courier proximity behavior), so Tablet acceptance alone must
+not be represented as a guaranteed immediate release event. The documented PATCH
+pos_data does not expose a writable order_release_enabled field. Do not invent a
+PATCH or substitute production Store IDs. Uber configuration/support is required;
+no real Sandbox test order is authorized in this batch.

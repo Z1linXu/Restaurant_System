@@ -33,7 +33,22 @@ public class UberEatsOrderNormalizer {
                 text(order, "estimated_ready_for_pickup_at", 80),
                 text(order.path("cart"), "special_instructions", 2000),
                 items,
-                issues);
+                issues,
+                customerName(order.path("eater")),
+                order.path("payment").path("charges").isObject()
+                        ? order.path("payment").path("charges").deepCopy()
+                        : null);
+    }
+
+    private String customerName(JsonNode eater) {
+        // Print only the supplied first name and last initial; strip control/markup characters.
+        String first = text(eater, "first_name", 120).replaceAll("[^\\p{L}\\p{N} .'-]", "").trim();
+        String last = text(eater, "last_name", 120).replaceAll("[^\\p{L}\\p{N}]", "");
+        return (first
+                        + (last.isEmpty()
+                                ? ""
+                                : " " + last.substring(0, last.offsetByCodePoints(0, 1))))
+                .trim();
     }
 
     private List<UberOrderSnapshot.Item> items(

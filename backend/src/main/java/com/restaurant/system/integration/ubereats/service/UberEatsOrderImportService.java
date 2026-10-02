@@ -54,6 +54,7 @@ public class UberEatsOrderImportService {
     public UberEatsOrder decide(Long store, Long id, Long actor, String action, String reason) {
         if (!config.enabled) throw UberEatsException.conflict("UBER_DISABLED");
         var row = tx.scoped(store, id);
+        tx.requireOrderManager(row);
         if (row.localOrderId != null
                 || "DENIED".equals(row.status)
                 || Set.of("ACCEPTING", "DENYING", "UBER_ACCEPTED", "LOCAL_FAILED")
@@ -81,6 +82,12 @@ public class UberEatsOrderImportService {
         for (var row : orders.due(config.environment, LocalDateTime.now(), PageRequest.of(0, 10))) {
             if (!tx.claimRecovery(row.id)) continue;
             try {
+                if ("KITCHEN_MIRROR".equals(row.processingMode)) {
+                    tx.refreshReleased(
+                            row.id, normalizer.normalize(client.getOrder(row.uberOrderId)));
+                    local(row.id);
+                    continue;
+                }
                 if (Set.of("UBER_ACCEPTED", "LOCAL_FAILED").contains(row.status)) {
                     local(row.id);
                     continue;

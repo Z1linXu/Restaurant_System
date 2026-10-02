@@ -137,9 +137,9 @@ public class AnalyticsAggregationServiceImpl implements AnalyticsAggregationServ
 
     private void rebuildStoreForDate(LocalDate summaryDate, Store store) {
         Date sqlSummaryDate = Date.valueOf(summaryDate);
-        List<Order> storeOrders = orderRepository.findAllByStoreId(store.id);
-        List<Order> completedOrders = orderRepository.findCompletedByStoreIdAndCompletedDate(store.id, sqlSummaryDate);
-        List<Order> cancelledOrders = orderRepository.findCancelledByStoreIdAndUpdatedDate(store.id, sqlSummaryDate);
+        List<Order> storeOrders = orderRepository.findAllByStoreId(store.id).stream().filter(order -> !order.kitchenMirror() && !"UBER_EATS".equals(order.external_source)).toList();
+        List<Order> completedOrders = orderRepository.findCompletedByStoreIdAndCompletedDate(store.id, sqlSummaryDate).stream().filter(order -> !order.kitchenMirror() && !"UBER_EATS".equals(order.external_source)).toList();
+        List<Order> cancelledOrders = orderRepository.findCancelledByStoreIdAndUpdatedDate(store.id, sqlSummaryDate).stream().filter(order -> !order.kitchenMirror() && !"UBER_EATS".equals(order.external_source)).toList();
         List<OrderItem> completedOrderItems = fetchOrderItems(completedOrders);
         Map<Long, BigDecimal> costByMenuItemId = loadItemCosts(completedOrderItems);
 

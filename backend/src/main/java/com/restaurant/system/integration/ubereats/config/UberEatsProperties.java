@@ -28,6 +28,9 @@ public class UberEatsProperties {
     @Value("${UBER_EATS_SCOPES:eats.order eats.store.orders.read}")
     public String scopes = "eats.order eats.store.orders.read";
 
+    @Value("${UBER_EATS_BUSINESS_TIME_ZONE:America/Toronto}")
+    public String businessTimeZone = "America/Toronto";
+
     public String clientSecret() {
         return clientSecret;
     }
@@ -60,6 +63,7 @@ public class UberEatsProperties {
 
     @PostConstruct
     public void validate() {
+        java.time.ZoneId.of(businessTimeZone);
         if (!"sandbox".equals(environment) && !"production".equals(environment))
             throw new IllegalStateException("UBER_EATS_ENVIRONMENT must be sandbox or production");
         if (enabled && (clientId.isBlank() || clientSecret.isBlank()))

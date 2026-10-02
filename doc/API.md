@@ -1850,6 +1850,53 @@ Webhook：`POST /api/v1/integrations/uber-eats/webhook`，raw bytes + `X-Uber-Si
 | GET `/mapping-catalog` | Owner/Admin；本地 effective menu catalog，管理访问不依赖 operational MENU |
 | GET `/mapping-options/{itemId}` | Owner/Admin；同店 option/组合子项 choices，供配置选择 |
 
-InboxOrder 字段：id/status/display_id/uber_order_id/mapping_status/mapping_errors/last_error/local_order_id/placed_at/created_at/accepted_at/cancelled_at/snapshot。snapshot 为最小化 UberOrderSnapshot（items/modifiers/notes），不含 eater/payment。API 网络错误映射安全错误码；POST 返回的 status 为 authoritative，200 不必然等于已接单，应检查 ACCEPTED/local_order_id 或 MAPPING_REQUIRED/ACCEPTING/LOCAL_FAILED 等。
+InboxOrder 字段：id/status/display_id/uber_order_id/mapping_status/mapping_errors/last_error/local_order_id/placed_at/created_at/accepted_at/cancelled_at/snapshot。snapshot 为最小化 UberOrderSnapshot；V31 新增的 customer/financial 字段见下方 Kitchen Mirror 合约。API 网络错误映射安全错误码；POST 返回的 status 为 authoritative，200 不必然等于已接单，应检查 ACCEPTED/local_order_id 或 MAPPING_REQUIRED/ACCEPTING/LOCAL_FAILED 等。
 
 来源与完整 state/recovery contract：[UBER_EATS_INTEGRATION](../docs/UBER_EATS_INTEGRATION.md)。
+
+
+### Uber Kitchen Mirror (V31)
+
+`PUT /api/v1/stores/{storeId}/integrations/uber-eats/processing-mode` accepts
+`{"processing_mode":"KITCHEN_MIRROR"}` or `ORDER_MANAGER`; authenticated Owner/Admin
+with Store access required. Existing binding required; changing mode after any
+Uber order history returns `PROCESSING_MODE_HAS_ORDER_HISTORY`. Existing bindings
+default to `ORDER_MANAGER`. Mode is captured on each integration order.
+
+Mirror `/accept` and `/deny` return `KITCHEN_MIRROR_REMOTE_DECISION_DISABLED` before
+any remote decision. `orders.notification` and scheduled notification only save a
+snapshot (`WAITING_FOR_RELEASE`). `orders.release` durably schedules fresh GET,
+validates Store and remote ACCEPTED state, maps then submits one local kitchen
+mirror. Missing mapping -> `RELEASED_MAPPING_REQUIRED`; no kitchen side effects.
+Recovery and new mappings re-fetch before release. Cancel/edit flags are monotonic;
+after-release cancellation keeps history as `CANCELLED_AFTER_RELEASE`.
+
+`PUT .../mappings` adds `mappingAction` (`MAP` default or explicit `NO_OP`),
+`itemMappingMode` (`STANDARD` default or ITEM-only `COMBO_ROOT`), `actionReason`.
+NO_OP requires `INGREDIENT_NOT_USED`, exact root/local item context and no nested
+modifiers/notes. COMBO_ROOT requires the local `combo` option and injects it before
+validating COMBO_EGG/COMBO_SIDE. Unknown identities still block.
+
+`GET .../orders` adds `processing_mode`, `customer_header`, `released_at`,
+`mapped_items`, `grab_status`, `hot_kitchen_status`. Mirror rows use the current
+business day (release, otherwise placement/creation), plus unresolved waiting or
+review rows, max 200. `UBER_EATS_BUSINESS_TIME_ZONE` defaults to `America/Toronto`;
+Remote placement and new release timestamps use UTC day boundaries; legacy
+creation fallback uses JVM-local boundaries. ORDER_MANAGER rows retain
+the existing workflow. Print status is projected from durable jobs/outbox; it
+never overrides cancellation/edit warnings.
+
+Snapshot now includes sanitized eater first name + last initial and raw
+`payment.charges` (no phone/address/eater object). Dedicated financial fields use
+integer minor units and ISO currency, retain never-observed values as null and
+previously observed values when later optional amounts are omitted, and are not
+payout/net revenue. Raw financial JSON is the latest non-empty charges response,
+never a fabricated merge; scalar fields are last-observed per amount. Local mirror monetary columns are zero; Uber actual money
+is stored separately and excluded from in-store analytics aggregation.
+
+Kitchen reprint reuses `POST /api/v1/orders/{localId}/reprint` with `receipt_type`
+GRAB or HOT_KITCHEN and the existing stable `idempotency_key`, active-job
+confirmation and verified Pad origin contract. It references the original
+`submit:{orderId}:{module}` job and its frozen rendered/rule snapshots. Existing
+audit logging applies. All customer receipt modules and cashier mutation/complete/
+cancel actions are rejected for EXTERNAL_PLATFORM kitchen mirrors.

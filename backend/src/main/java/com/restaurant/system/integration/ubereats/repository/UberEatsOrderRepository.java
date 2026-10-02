@@ -30,13 +30,30 @@ public interface UberEatsOrderRepository extends JpaRepository<UberEatsOrder, Lo
             @Param("storeId") Long storeId,
             Pageable page);
 
+    @Query(
+            "select o from UberEatsOrder o where o.environment=:env and o.storeId=:store and"
+                + " (o.processingMode <> 'KITCHEN_MIRROR' or (coalesce(o.releasedAt,o.placedAt) >="
+                + " :start and coalesce(o.releasedAt,o.placedAt) < :end) or (o.releasedAt is null"
+                + " and o.placedAt is null and o.createdAt >= :createdStart and o.createdAt <"
+                + " :createdEnd) or o.status in"
+                + " ('WAITING_FOR_RELEASE','RELEASED_MAPPING_REQUIRED','MIRROR_READY','MIRROR_LOCAL_FAILED','LOCAL_REVIEW_REQUIRED','EDIT_REVIEW_REQUIRED','EXTERNAL_STATE_REVIEW_REQUIRED','CANCELLED_AFTER_RELEASE'))"
+                + " order by o.id desc")
+    List<UberEatsOrder> todayInbox(
+            @Param("env") String env,
+            @Param("store") Long store,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            @Param("createdStart") LocalDateTime createdStart,
+            @Param("createdEnd") LocalDateTime createdEnd,
+            Pageable page);
+
     List<UberEatsOrder> findByEnvironmentAndStoreIdOrderByIdDesc(
             String environment, Long storeId, Pageable page);
 
     @Query(
             "select o from UberEatsOrder o where o.environment = :env and o.status in"
-                + " ('ACCEPTING','DENYING','UBER_ACCEPTED','LOCAL_FAILED') and o.nextAttemptAt <="
-                + " :now order by o.id")
+                + " ('ACCEPTING','DENYING','UBER_ACCEPTED','LOCAL_FAILED','MIRROR_READY','MIRROR_LOCAL_FAILED','RELEASED_MAPPING_REQUIRED')"
+                + " and o.nextAttemptAt <= :now order by o.id")
     List<UberEatsOrder> due(
             @Param("env") String env, @Param("now") LocalDateTime now, Pageable page);
 
@@ -44,8 +61,8 @@ public interface UberEatsOrderRepository extends JpaRepository<UberEatsOrder, Lo
     @Query(
             value =
                     """
-                    insert into uber_eats_orders(environment,store_mapping_id,store_id,uber_store_id,uber_order_id,uber_event_id,status,mapping_status,attempt_count,cancelled,edit_required,scheduled,next_attempt_at,created_at,updated_at)
-                    values (:env,:mapping,:store,:uberStore,:orderId,:event,'RECEIVED','PENDING',0,false,false,false,:now,:now,:now)
+                    insert into uber_eats_orders(environment,store_mapping_id,store_id,uber_store_id,uber_order_id,uber_event_id,status,mapping_status,attempt_count,cancelled,edit_required,scheduled,next_attempt_at,created_at,updated_at,processing_mode)
+                    values (:env,:mapping,:store,:uberStore,:orderId,:event,'RECEIVED','PENDING',0,false,false,false,:now,:now,:now,(select processing_mode from uber_eats_store_mappings where id=:mapping))
                     on conflict(environment,uber_order_id) do nothing
                     """,
             nativeQuery = true)

@@ -108,6 +108,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             select *
             from orders
             where store_id = :storeId
+              and financial_mode <> 'EXTERNAL_PLATFORM'
               and (
                 (created_at is not null and created_at >= :startAt and created_at < :endAt)
                 or (submitted_at is not null and submitted_at >= :startAt and submitted_at < :endAt)

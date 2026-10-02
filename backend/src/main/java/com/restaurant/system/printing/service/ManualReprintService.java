@@ -73,6 +73,14 @@ public class ManualReprintService {
         String module = request == null ? null : request.receipt_type;
         if (!Set.of("GRAB", "FRONTDESK_RECEIPT", "HOT_KITCHEN").contains(module == null ? "" : module))
             throw new BusinessException("receiptType must be GRAB, FRONTDESK_RECEIPT, or HOT_KITCHEN");
+        if (order.kitchenMirror()) {
+            if (!Set.of("GRAB", "HOT_KITCHEN").contains(module))
+                throw new BusinessException("Kitchen mirror allows only GRAB / HOT_KITCHEN");
+            var source = jobs.findByDispatchSourceKey("submit:" + orderId + ":" + module)
+                    .filter(job -> order.store_id.equals(job.store_id) && orderId.equals(job.order_id))
+                    .orElseThrow(() -> new BusinessException("Original kitchen print job is not ready"));
+            return execute(order.store_id, orderId, module, source.id, null, request, userId);
+        }
         return execute(order.store_id, orderId, module, null, request, request, userId);
     }
     private PrintJobResponse execute(Long storeId, Long orderId, String module, Long sourceId,

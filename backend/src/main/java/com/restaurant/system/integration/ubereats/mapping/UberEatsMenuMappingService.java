@@ -73,6 +73,10 @@ public class UberEatsMenuMappingService {
                                 + (candidates.isEmpty() ? "MISSING" : "AMBIGUOUS"));
                 continue;
             }
+            if (rule != null && !"MAP".equals(rule.mappingAction)) {
+                errors.add(label(source) + ": ITEM_ACTION_INVALID");
+                continue;
+            }
             var item = candidates.get(0);
             if (!Boolean.TRUE.equals(item.is_active) || Boolean.TRUE.equals(item.is_sold_out))
                 errors.add(label(source) + ": ITEM_UNAVAILABLE");
@@ -97,6 +101,17 @@ public class UberEatsMenuMappingService {
             line.notes = joinNotes(snapshot.notes(), source.notes());
             List<Choice> choices = choices(catalog, item);
             Set<Long> selected = new HashSet<>();
+            if (rule != null && "COMBO_ROOT".equals(rule.itemMappingMode)) {
+                var combo =
+                        choices.stream()
+                                .filter(c -> "COMBO".equals(c.group()) && "combo".equals(c.code()))
+                                .toList();
+                if (combo.size() != 1) errors.add(label(source) + ": COMBO_ROOT_TRIGGER_MISSING");
+                else {
+                    line.options.add(option(combo.get(0), 1));
+                    selected.add(combo.get(0).id());
+                }
+            }
             for (UberOrderSnapshot.Item modifier : source.modifiers())
                 mapModifier(modifier, source.id(), null, 1, rules, choices, line, errors, selected);
             validateSelections(catalog, item, line, choices, errors, source);
@@ -136,6 +151,14 @@ public class UberEatsMenuMappingService {
             errors.add(label(source) + ": MODIFIER_PARENT_ITEM_MISMATCH");
             return;
         }
+        if (rule != null && "NO_OP".equals(rule.mappingAction)) {
+            if (!"INGREDIENT_NOT_USED".equals(rule.actionReason)
+                    || parent != null
+                    || !source.modifiers().isEmpty()
+                    || !source.notes().isBlank())
+                errors.add(label(source) + ": NO_OP_REQUIRES_REVIEW");
+            return; // Only this explicit, Store/root/local-item-scoped identity is resolved.
+        }
         // Removed ingredients require explicit REMOVE mapping; never interpret an ingredient as an
         // Add-on.
         List<Choice> found =
@@ -170,16 +193,7 @@ public class UberEatsMenuMappingService {
         long quantity = (long) multiplier * source.quantity();
         if (quantity < 1 || quantity > 100)
             errors.add(label(source) + ": MODIFIER_QUANTITY_INVALID");
-        CreateOrderItemOptionRequest option = new CreateOrderItemOptionRequest();
-        option.option_id = choice.id();
-        option.option_code_snapshot = choice.code();
-        option.option_group_snapshot = choice.group();
-        option.option_type_snapshot = choice.type();
-        option.parent_option_id_snapshot = choice.parentId();
-        option.option_name_snapshot_zh = choice.zh();
-        option.option_name_snapshot_en = choice.en();
-        option.option_price_snapshot = choice.price();
-        option.quantity = (int) quantity;
+        CreateOrderItemOptionRequest option = option(choice, (int) quantity);
         line.options.add(option);
         line.notes =
                 joinNotes(
@@ -196,6 +210,20 @@ public class UberEatsMenuMappingService {
                     line,
                     errors,
                     selected);
+    }
+
+    private CreateOrderItemOptionRequest option(Choice c, int quantity) {
+        CreateOrderItemOptionRequest o = new CreateOrderItemOptionRequest();
+        o.option_id = c.id();
+        o.option_code_snapshot = c.code();
+        o.option_group_snapshot = c.group();
+        o.option_type_snapshot = c.type();
+        o.parent_option_id_snapshot = c.parentId();
+        o.option_name_snapshot_zh = c.zh();
+        o.option_name_snapshot_en = c.en();
+        o.option_price_snapshot = c.price();
+        o.quantity = quantity;
+        return o;
     }
 
     private void validateSelections(

@@ -30,6 +30,7 @@ public class UberEatsInboxController {
     private final UberEatsMenuMappingService menu;
     private final StoreModuleAccessEvaluator modules;
     private final AuditLogService audit;
+    private final UberEatsKitchenView kitchen;
 
     public UberEatsInboxController(
             AuthorizationService auth,
@@ -41,7 +42,8 @@ public class UberEatsInboxController {
             UberEatsConfigurationService configuration,
             UberEatsMenuMappingService menu,
             StoreModuleAccessEvaluator modules,
-            AuditLogService audit) {
+            AuditLogService audit,
+            UberEatsKitchenView kitchen) {
         this.auth = auth;
         this.access = access;
         this.config = config;
@@ -52,6 +54,7 @@ public class UberEatsInboxController {
         this.menu = menu;
         this.modules = modules;
         this.audit = audit;
+        this.kitchen = kitchen;
     }
 
     public record InboxOrder(
@@ -67,7 +70,13 @@ public class UberEatsInboxController {
             LocalDateTime created_at,
             LocalDateTime accepted_at,
             LocalDateTime cancelled_at,
-            UberOrderSnapshot snapshot) {}
+            UberOrderSnapshot snapshot,
+            String processing_mode,
+            String customer_header,
+            LocalDateTime released_at,
+            List<String> mapped_items,
+            String grab_status,
+            String hot_kitchen_status) {}
 
     private AuthenticatedUser staff(Long storeId, Capability capability) {
         var actor = auth.requireFrontdeskAccessForStore(storeId, capability);
@@ -86,8 +95,20 @@ public class UberEatsInboxController {
     @GetMapping("/orders")
     public ApiResponse<List<InboxOrder>> inbox(@PathVariable Long storeId) {
         staff(storeId, Capability.ORDER_VIEW_ACTIVE);
+        var zone = java.time.ZoneId.of(config.businessTimeZone);
+        var today = java.time.LocalDate.now(zone);
+        var day = UberEatsInboxDay.of(today, zone, java.time.ZoneId.systemDefault());
         return ApiResponse.success(
-                orders.inbox(config.environment, storeId, PageRequest.of(0, 100)).stream()
+                orders
+                        .todayInbox(
+                                config.environment,
+                                storeId,
+                                day.start(),
+                                day.end(),
+                                day.createdStart(),
+                                day.createdEnd(),
+                                PageRequest.of(0, 200))
+                        .stream()
                         .map(this::view)
                         .toList());
     }
@@ -158,6 +179,15 @@ public class UberEatsInboxController {
         return ApiResponse.success(configuration.bind(storeId, request.uber_store_id(), actor));
     }
 
+    public record ProcessingModeRequest(String processing_mode) {}
+
+    @PutMapping("/processing-mode")
+    public ApiResponse<UberEatsStoreMapping> processingMode(
+            @PathVariable Long storeId, @RequestBody ProcessingModeRequest request) {
+        return ApiResponse.success(
+                configuration.setMode(storeId, request.processing_mode(), admin(storeId)));
+    }
+
     @PutMapping("/mappings")
     public ApiResponse<UberEatsMenuMapping> mapping(
             @PathVariable Long storeId, @RequestBody UberEatsMenuMapping request) {
@@ -187,9 +217,10 @@ public class UberEatsInboxController {
 
     @SuppressWarnings("unchecked")
     private InboxOrder view(UberEatsOrder row) {
+        var print = kitchen.state(row);
         return new InboxOrder(
                 row.id,
-                row.status,
+                print.status(),
                 row.displayId,
                 row.uberOrderId,
                 row.mappingStatus,
@@ -202,6 +233,13 @@ public class UberEatsInboxController {
                 row.cancelledAt,
                 row.rawOrderSnapshotJson == null
                         ? null
-                        : tx.decode(row.rawOrderSnapshotJson, UberOrderSnapshot.class));
+                        : tx.decode(row.rawOrderSnapshotJson, UberOrderSnapshot.class),
+                row.processingMode,
+                com.restaurant.system.printing.renderer.ExternalOrderReceiptHeader.kitchenLabel(
+                        row.customerDisplayName, row.displayId),
+                row.releasedAt,
+                kitchen.mappedItems(row),
+                print.grab(),
+                print.hotKitchen());
     }
 }
