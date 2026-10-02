@@ -1,5 +1,5 @@
 schema_version: 1
-updated_at: 2026-10-01
+updated_at: 2026-10-02
 
 repository:
   ref: origin/main
@@ -46,6 +46,9 @@ uber_test_store_audit:
   dashboard_webhook: PASS_VERIFIED_FIXED_DOMAIN_PRIMARY_BASIC_HMAC
   explicit_signing_key_runtime: PASS_PRESENT_PUBLIC_WRONG_401_VALID_200
   menu_mapping: REQUIRED_ZERO_RULES
+  menu_comparison_evidence: UBER_TEST_MENU_FULL_COMPARE_20261002.md
+  menu_comparison_observed_at: 2026-10-02T15:43:24Z
+  human_mapping_confirmation: READY_299_CSV_ROWS_ALL_UNCONFIRMED
   real_order_test_ready: false
   real_uber_webhook: NOT_TESTED
   production_changed: false

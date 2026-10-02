@@ -7,14 +7,14 @@ from OAuth configuration; if absent, existing installations retain the legacy
 client-secret fallback. An explicit key replaces that fallback, rather than
 trusting both credentials. Raw bytes, lowercase SHA-256 HMAC, constant-time
 comparison, signature-before-parse and environment guards are unchanged.
-The current menu identity review is in the [mapping diff](docs/governance/UBER_TEST_MENU_MAPPING_DIFF_20261001.md):
-41 root items, 33 unique modifiers, no HIGH-confidence stable-ID correspondences.
+The current full menu identity review is in the [2026-10-02 comparison](docs/governance/UBER_TEST_MENU_FULL_COMPARE_20261002.md), with item and per-root modifier CSVs for explicit human confirmation.
+It includes 41 Uber roots, 33 unique modifiers / 258 contexts, and the full Store 1 DB inventory (39 items / 385 option rows; 35 / 332 active). There are no HIGH-confidence stable-ID correspondences. Confirmed cells remain blank and no mapping is persisted.
 No name-based mapping is automatically saved. This source capability alone does
 not prove the Staging runtime has been updated; use current pre-order evidence.
 
 ## Uber TEST Store binding audit — 2026-10-01
 
-Current Staging remains application `7b70a4fac4e350444bcd37687ca88a8636ff8f2a`
+Current Staging backend is `21826ea5b2dc9297dd98bc8be47f5223446d11c6`; frontend remains `7b70a4fac4e350444bcd37687ca88a8636ff8f2a`
 at `https://staging-pos.lanzhounoodlesmtl.com`, with validated Flyway V30 and an
 active Uber worker. Real Testing OAuth and read-only Store/menu APIs passed.
 Official Test Store `bd993244-5589-4b19-8f0d-dc2ba73d4273` is now bound, enabled,
