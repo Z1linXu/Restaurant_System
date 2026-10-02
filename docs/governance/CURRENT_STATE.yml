@@ -3,26 +3,28 @@ updated_at: 2026-10-02
 
 repository:
   ref: origin/main
-  sha: 43d86d11a0354868df209441cf8a4abc1a1bfa91
+  sha: aa0ee0918f4ab4ae1c8686eccd1b4b7d2a6a5627
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
-  package: STAGING_PAD_DIRECT_ENDPOINT_POLICY
-  status: ENDPOINT_POLICY_API_PASS_AWAITING_CONFIRMED_PRINTER_BINDINGS
+  package: UBER_KITCHEN_MIRROR
+  status: STAGING_MOCK_ACCEPTED_RELEASE_AND_MAPPING_GATES
   next_phase_authorized: false
 
 staging:
-  deployed_sha: 21826ea5b2dc9297dd98bc8be47f5223446d11c6
-  deployed_sha_semantics: BACKEND_ONLY
-  frontend_deployed_sha: 7b70a4fac4e350444bcd37687ca88a8636ff8f2a
+  deployed_sha: aa0ee0918f4ab4ae1c8686eccd1b4b7d2a6a5627
+  deployed_sha_semantics: BACKEND_AND_FRONTEND
+  frontend_deployed_sha: aa0ee0918f4ab4ae1c8686eccd1b4b7d2a6a5627
   policy_config_sha: d2316234b2936fd89a926aa24a7b6343008834e6
-  flyway: V30
-  acceptance: ENDPOINT_CREATE_UPDATE_PASS_REAL_REJECTED_BINDING_AND_ONLINE_PENDING_BLOCKED
-  evidence: runtime/STAGING_ENDPOINT_POLICY_20260930_EVIDENCE.md
+  flyway: V31
+  acceptance: UBER_KITCHEN_MIRROR_MOCK_RUNTIME_PASS_REAL_RELEASE_AND_MAPPING_BLOCKED
+  evidence: UBER_KITCHEN_MIRROR_ACCEPTANCE_20261002.md
   repair_evidence: PHASE_B_PART2_P0_P1_REPAIR_STAGING_EVIDENCE.md
   cleanup_evidence: PHASE_B_STAGING_SYNTHETIC_FIXTURE_CLEANUP_EXECUTION_EVIDENCE.md
-  runtime_observation_evidence: runtime/STAGING_ENDPOINT_POLICY_20260930_EVIDENCE.md
+  runtime_observation_evidence: UBER_KITCHEN_MIRROR_ACCEPTANCE_20261002.md
+  endpoint_policy_evidence: runtime/STAGING_ENDPOINT_POLICY_20260930_EVIDENCE.md
+  endpoint_policy_gate: OWNER_CONFIRMED_STORE18_PRINTER_BINDINGS_PENDING
 
 production:
   deployed_sha: 11996ef919d9b28ee5366c7e40a58a78c074b675
@@ -32,9 +34,9 @@ production:
   runtime_observation_evidence: PRODUCTION_V26_V28_RELEASE_EVIDENCE.md
 
 uber_test_store_audit:
-  observed_at: 2026-10-01
+  observed_at: 2026-10-02T17:43:51Z
   environment: STAGING_SANDBOX_ONLY
-  evidence: UBER_PREORDER_CHECK_20261001.md
+  evidence: UBER_KITCHEN_MIRROR_ACCEPTANCE_20261002.md
   test_store_uuid: bd993244-5589-4b19-8f0d-dc2ba73d4273
   target_store_code: STG005_SRC_20260809_R01
   target_store_id: 1
@@ -52,14 +54,17 @@ uber_test_store_audit:
   final_mapping_table: UBER_KITCHEN_MAPPING_FINAL_20261002.md
   order_release_enabled: false
   order_manager_client_id: t86ofdunSsVjL-0AvK6MA6LCTyF2eYLf
-  kitchen_mirror: IMPLEMENTED_LOCAL_TESTS_AND_AGENT6_PASS_STAGING_PENDING
+  processing_mode: KITCHEN_MIRROR
+  kitchen_mirror: STAGING_MOCK_ACCEPTED_NO_REAL_ORDER
+  persisted_mapping_rules: 0
+  first_stage_test_combination_fully_mapped: false
   real_order_test_ready: false
   real_uber_webhook: NOT_TESTED
   production_changed: false
 
 gate:
   type: OWNER
-  next_action: OWNER_PROVIDE_STORE18_PRINTER_NAMES_IPS_PORTS_MODULE_MAPPING_AND_WORKER_PAUSE_STATUS
+  next_action: OWNER_CONFIRM_FINAL_MAPPING_TABLE_AND_UBER_ENABLE_TEST_RELEASE_TABLET_FLOW
 
 authorization:
   repository_governance: COMPLETE
@@ -77,4 +82,4 @@ authorization:
   production: NONE
 
 stop:
-  marker: ENDPOINT_API_PASS_STOP_MISSING_CONFIRMED_STORE18_PRINTER_INFO_NO_PHYSICAL_PRINT_OR_PRODUCTION
+  marker: UBER_MIRROR_STAGING_PASS_STOP_MAPPING_APPROVAL_AND_TEST_RELEASE_DISABLED_NO_REAL_ORDER_OR_PRODUCTION

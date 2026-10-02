@@ -1,5 +1,9 @@
 # Final Acceptance Report — Uber Eats v1
 
+> Historical ORDER_MANAGER acceptance. For the current Store 1 Kitchen Mirror
+> implementation, Staging verification and explicit release/mapping gates, see
+> [2026-10-02 Kitchen Mirror acceptance](governance/UBER_KITCHEN_MIRROR_ACCEPTANCE_20261002.md).
+
 > Historical implementation acceptance and continuation checkpoints below are dated evidence.
 > For the current 2026-10-01 Staging identity, provisioned Test Store, binding,
 > menu coverage and Dashboard access blocker, use the
