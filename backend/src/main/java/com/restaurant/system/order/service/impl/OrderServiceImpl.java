@@ -217,6 +217,20 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse createOrder(CreateOrderRequest request) {
+        return createOrder(request, null, null, null);
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse createKitchenMirror(CreateOrderRequest request, String externalOrderId, String displayId, String customerName) {
+        if (externalOrderId == null || externalOrderId.isBlank() || !"delivery".equals(request.order_type)
+                || request.table_no != null || request.pickup_no != null)
+            throw new BusinessException("Invalid kitchen mirror identity");
+        var draft = createOrder(request, externalOrderId, displayId, customerName);
+        return submitOrder(draft.id);
+    }
+
+    private OrderResponse createOrder(CreateOrderRequest request, String externalOrderId, String displayId, String customerName) {
         LocalDateTime now = LocalDateTime.now();
         Order existingEditableOrder = findExistingEditableOrder(request.store_id, request.table_no, request.pickup_no);
         if (existingEditableOrder != null) {
@@ -226,6 +240,13 @@ public class OrderServiceImpl implements OrderService {
         Order order = new Order();
         order.store_id = request.store_id;
         order.created_by = request.created_by;
+        if (externalOrderId != null) {
+            order.external_source = "UBER_EATS";
+            order.external_order_id = externalOrderId;
+            order.external_display_id = displayId;
+            order.external_customer_display_name = customerName;
+            order.financial_mode = "EXTERNAL_PLATFORM";
+        }
         order.order_type = request.order_type;
         order.table_no = request.table_no;
         order.pickup_no = request.pickup_no;
@@ -244,6 +265,12 @@ public class OrderServiceImpl implements OrderService {
             addDraftOrderItemInternal(savedOrder, itemRequest, now);
         }
 
+        if (savedOrder.kitchenMirror()) {
+            // Kitchen prices are deliberately non-financial. Uber charges live in the integration snapshot.
+            var items = orderItemRepository.findAllByOrderId(savedOrder.id);
+            for (var item : items) { item.unit_price = BigDecimal.ZERO; item.line_amount = BigDecimal.ZERO; }
+            for (var option : loadOptionsForOrderItems(items)) option.price_delta = BigDecimal.ZERO;
+        }
         recalculateOrderAmounts(savedOrder, now);
         publishOrderEvent("order.created", savedOrder, null, null, null);
         return loadOrderResponse(savedOrder.id);
@@ -437,7 +464,8 @@ public class OrderServiceImpl implements OrderService {
             publishOrderEvent("order.ready", order, null, null, null);
         }
         printDispatcherService.dispatchAfterCommit(PrintModuleCode.GRAB, order.store_id, order.id);
-        printDispatcherService.dispatchAfterCommit(PrintModuleCode.FRONTDESK_RECEIPT, order.store_id, order.id);
+        if (!order.kitchenMirror())
+            printDispatcherService.dispatchAfterCommit(PrintModuleCode.FRONTDESK_RECEIPT, order.store_id, order.id);
         if (printDispatcherService.hasPrintableContent(PrintModuleCode.HOT_KITCHEN, order.store_id, order.id)) {
             printDispatcherService.dispatchAfterCommit(PrintModuleCode.HOT_KITCHEN, order.store_id, order.id);
         }
@@ -505,6 +533,7 @@ public class OrderServiceImpl implements OrderService {
         if (order == null) {
             throw new BusinessException("Order not found: " + id);
         }
+        requireInStoreOrder(order);
         if (!MODIFIABLE_AFTER_SUBMIT_ORDER_STATUSES.contains(order.status)) {
             throw new BusinessException("Only submitted, preparing, or ready orders can receive an update batch");
         }
@@ -584,6 +613,7 @@ public class OrderServiceImpl implements OrderService {
     public List<OrderResponse> getActiveOrders(Long storeId, List<String> statuses, String orderType, String sortBy) {
         Set<String> statusFilter = normalizeStatuses(statuses);
         List<Order> orders = orderRepository.findActiveOperationalOrders(storeId).stream()
+            .filter(order -> !order.kitchenMirror())
             .filter(order -> statusFilter.contains(order.status))
             .filter(order -> orderType == null || orderType.isBlank() || orderType.equals(order.order_type))
             .sorted(resolveOrderComparator(sortBy))
@@ -603,6 +633,7 @@ public class OrderServiceImpl implements OrderService {
     ) {
         Set<String> statusFilter = normalizeStatuses(statuses);
         List<Order> orders = orderRepository.findAllByStoreId(storeId).stream()
+            .filter(order -> !order.kitchenMirror())
             .filter(order -> statusFilter.contains(order.status))
             .filter(order -> matchesOrderType(order, orderType))
             .filter(order -> matchesExact(order.table_no, tableNo))
@@ -626,6 +657,7 @@ public class OrderServiceImpl implements OrderService {
         Set<String> statusFilter = normalizeHistoryStatuses(statuses);
         int historyLimit = normalizeHistoryLimit(limit);
         List<Order> orders = orderRepository.findAllByStoreId(storeId).stream()
+            .filter(order -> !order.kitchenMirror())
             .filter(order -> statusFilter.contains(order.status))
             .filter(order -> matchesOrderType(order, orderType))
             .filter(order -> matchesExact(order.table_no, tableNo))
@@ -647,13 +679,14 @@ public class OrderServiceImpl implements OrderService {
             today.plusDays(1).atStartOfDay(),
             PageRequest.of(0, resolvedLimit)
         );
-        return buildFrontdeskOrderBoardResponses(orders);
+        return buildFrontdeskOrderBoardResponses(orders.stream().filter(order -> !order.kitchenMirror()).toList());
     }
 
     @Override
     @Transactional
     public OrderResponse completeOrder(Long id) {
         Order order = requireOrder(id);
+        requireInStoreOrder(order);
 
         if (ORDER_STATUS_COMPLETED.equals(order.status)) {
             throw new BusinessException("Order is already completed");
@@ -707,6 +740,7 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponse cancelOrder(Long id) {
         Order order = requireOrder(id);
+        requireInStoreOrder(order);
 
         if (ORDER_STATUS_COMPLETED.equals(order.status)) {
             throw new BusinessException("Completed orders cannot be cancelled");
@@ -847,8 +881,13 @@ public class OrderServiceImpl implements OrderService {
         return responses;
     }
 
+    private void requireInStoreOrder(Order order) {
+        if (order.kitchenMirror()) throw new BusinessException("Uber kitchen mirrors cannot use local cashier actions");
+    }
+
     private Order requireDraftOrder(Long id) {
         Order order = requireOrder(id);
+        requireInStoreOrder(order);
         if (!ORDER_STATUS_DRAFT.equals(order.status)) {
             throw new BusinessException("Only draft orders can be edited");
         }
@@ -857,6 +896,7 @@ public class OrderServiceImpl implements OrderService {
 
     private Order requireItemEditableOrder(Long id) {
         Order order = requireOrder(id);
+        requireInStoreOrder(order);
         if (ORDER_STATUS_COMPLETED.equals(order.status) || ORDER_STATUS_CANCELLED.equals(order.status)) {
             throw new BusinessException("Completed or cancelled orders cannot be modified");
         }

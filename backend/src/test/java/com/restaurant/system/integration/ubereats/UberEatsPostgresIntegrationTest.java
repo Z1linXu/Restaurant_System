@@ -28,12 +28,14 @@ import com.restaurant.system.printing.service.PrintDispatcherService;
 import com.restaurant.system.printing.service.impl.OrderDispatchOutboxProcessor;
 import com.restaurant.system.user.repository.StoreRepository;
 
+import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.*;
 import org.springframework.test.web.servlet.MockMvc;
@@ -65,7 +67,8 @@ import javax.crypto.spec.SecretKeySpec;
             "UBER_EATS_ENABLED=true",
             "UBER_EATS_WORKER_ENABLED=false",
             "UBER_EATS_CLIENT_ID=fixture-client",
-            "UBER_EATS_CLIENT_SECRET=fixture-webhook-secret",
+            "UBER_EATS_CLIENT_SECRET=fixture-oauth-secret",
+            "UBER_EATS_WEBHOOK_SIGNING_KEY=fixture-webhook-secret",
             "app.features.printing=true",
             "app.features.kds=true",
             "app.features.core-pos=true"
@@ -80,6 +83,7 @@ class UberEatsPostgresIntegrationTest {
     }
 
     @Autowired JdbcTemplate db;
+    @Autowired Flyway flyway;
     @Autowired ObjectMapper json;
     @Autowired MockMvc mvc;
     @Autowired UberEatsWebhookService webhook;
@@ -236,11 +240,14 @@ class UberEatsPostgresIntegrationTest {
 
     @Test
     void migrationsAndUniqueConstraints() {
+        assertThatCode(flyway::validate).doesNotThrowAnyException();
+        assertThat(flyway.info().pending()).isEmpty();
         assertThat(
                         db.queryForObject(
-                                "select count(*) from flyway_schema_history where success",
+                                "select count(*) from flyway_schema_history where version = '29'"
+                                    + " and success",
                                 Integer.class))
-                .isEqualTo(29);
+                .isOne();
         assertThat(
                         db.queryForObject(
                                 "select count(*) from pg_constraint where conname in"
@@ -595,7 +602,7 @@ class UberEatsPostgresIntegrationTest {
     void allModifierGroupsComboParentAndThreeItemIdentities() {
         id(
                 "insert into stations(store_id,code,name,is_active) values (?,'COLD','凉菜',true)"
-                    + " returning id",
+                        + " returning id",
                 store);
         Long side =
                 id(
@@ -755,7 +762,9 @@ class UberEatsPostgresIntegrationTest {
             var payload = padPrinting.getPayload(device, job.id);
             assertThat(payload.printer_endpoint).isEqualTo("127.0.0.1:9");
             assertThat(payload.escpos_payload_base64).isNotBlank();
-            assertThat(payload.rendered_text_snapshot).contains("UBER EATS #FIX01").doesNotContain("Walk-in", "桌号");
+            assertThat(payload.rendered_text_snapshot)
+                    .contains("UBER EATS #FIX01")
+                    .doesNotContain("Walk-in", "桌号");
             var done = new com.restaurant.system.printing.dto.PadPrintJobCompleteRequest();
             done.client_attempt_token = claim.client_attempt_token;
             done.raw_result = "SIMULATED_ACK_NO_PHYSICAL_PRINT";
@@ -884,7 +893,9 @@ class UberEatsPostgresIntegrationTest {
         var remote = payload(UUID.randomUUID().toString());
         remote.put("order_manager_client_id", "redacted-manager");
         var row = notify(remote);
-        doThrow(new UberEatsApiException(403)).when(client).accept(eq(row.uberOrderId), anyString());
+        doThrow(new UberEatsApiException(403))
+                .when(client)
+                .accept(eq(row.uberOrderId), anyString());
         var result = accept(row);
         assertThat(result.localOrderId).isNull();
         assertThat(result.status).isEqualTo("PENDING");
@@ -909,6 +920,644 @@ class UberEatsPostgresIntegrationTest {
         c.enabled = true;
         c.clientId = "fixture-client";
         return c;
+    }
+
+    @Autowired com.restaurant.system.printing.service.ManualReprintService manualReprint;
+    @Autowired UberEatsKitchenView kitchenView;
+    @Autowired com.restaurant.system.analytics.service.AnalyticsAggregationService analytics;
+
+    void mirrorMode() {
+        binding.processingMode = "KITCHEN_MIRROR";
+        bindings.save(binding);
+    }
+
+    UberEatsOrder release(ObjectNode data) {
+        String id = data.path("id").asText();
+        data.put("current_state", "ACCEPTED");
+        when(client.getOrder(id)).thenReturn(data);
+        receive(event(UUID.randomUUID().toString(), "orders.release", id));
+        imports.processEvents();
+        imports.recover();
+        return row(id);
+    }
+
+    @Test
+    void mirrorNotificationSavesFinancialSnapshotWithoutAnyKitchenOrRemoteDecision() {
+        mirrorMode();
+        var data = payload(UUID.randomUUID().toString());
+        data.withObject("/eater").put("first_name", "Ashton").put("last_name", "Zhang");
+        var charges = data.withObject("/payment/charges");
+        for (String key : List.of("total", "sub_total", "tax", "total_fee"))
+            charges.putObject(key)
+                    .put("amount", key.equals("total") ? 1999 : 100)
+                    .put("currency_code", "CAD");
+        var row = notify(data);
+        assertThat(row.processingMode).isEqualTo("KITCHEN_MIRROR");
+        assertThat(row.status).isEqualTo("WAITING_FOR_RELEASE");
+        assertThat(row.customerDisplayName).isEqualTo("Ashton Z");
+        assertThat(row.financialTotalMinor).isEqualTo(1999);
+        assertThat(row.financialCurrency).isEqualTo("CAD");
+        assertThat(row.rawFinancialSnapshotJson).contains("1999");
+        assertThat(row.rawOrderSnapshotJson).doesNotContain("private-not-stored", "Zhang");
+        assertThat(count("orders", "store_id", store)).isZero();
+        assertThat(count("order_dispatch_outbox", "store_id", store)).isZero();
+        assertThatThrownBy(() -> imports.decide(store, row.id, actorId, "ACCEPT", null))
+                .hasMessageContaining("KITCHEN_MIRROR_REMOTE_DECISION_DISABLED");
+        assertThatThrownBy(() -> imports.decide(store, row.id, actorId, "DENY", "OTHER"))
+                .hasMessageContaining("KITCHEN_MIRROR_REMOTE_DECISION_DISABLED");
+        verify(client, never()).accept(anyString(), anyString());
+        verify(client, never()).deny(anyString(), anyString());
+        var released = release(data);
+        assertThat(released.status).isEqualTo("RELEASED_TO_KITCHEN");
+        assertThat(released.financialTotalMinor).isEqualTo(1999);
+        assertThat(orders.findById(released.localOrderId).orElseThrow().total_amount).isZero();
+        assertThat(items.findAllByOrderId(released.localOrderId))
+                .allSatisfy(i -> assertThat(i.unit_price).isZero());
+        dispatch(released.localOrderId);
+        assertThat(jobs.findAllByStoreIdAndOrderId(store, released.localOrderId))
+                .allSatisfy(
+                        j ->
+                                assertThat(j.rendered_text_snapshot)
+                                        .contains("UBER - Ashton Z")
+                                        .doesNotContain("Zhang", "private-not-stored"));
+    }
+
+    @Test
+    void
+            mirrorReleaseWithoutNotificationDuplicateConcurrentAndRestartCreateExactlyOneKitchenPipeline()
+                    throws Exception {
+        mirrorMode();
+        var data = payload(UUID.randomUUID().toString());
+        var row = release(data);
+        assertThat(row.status).isEqualTo("RELEASED_TO_KITCHEN");
+        Long local = row.localOrderId;
+        var pool = Executors.newFixedThreadPool(2);
+        try {
+            var a = pool.submit(() -> tx.submitLocal(row.id));
+            var b = pool.submit(() -> tx.submitLocal(row.id));
+            a.get(30, TimeUnit.SECONDS);
+            b.get(30, TimeUnit.SECONDS);
+        } finally {
+            pool.shutdownNow();
+        }
+        release(data);
+        notify(data);
+        new UberEatsOrderImportService(newProperties(), client, normalizer, tx, events, inbox)
+                .recover();
+        assertThat(row(data.path("id").asText()).localOrderId).isEqualTo(local);
+        assertThat(count("orders", "store_id", store)).isOne();
+        assertThat(count("kitchen_tasks", "order_id", local)).isOne();
+        assertThat(count("production_tasks", "order_id", local)).isOne();
+        assertThat(count("inventory_transactions", "source_id", local)).isOne();
+        assertThat(
+                        db.queryForList(
+                                "select module_code from order_dispatch_outbox where order_id=?",
+                                String.class,
+                                local))
+                .containsExactlyInAnyOrder("GRAB", "HOT_KITCHEN");
+        dispatch(local);
+        dispatch(local);
+        assertThat(count("print_jobs", "order_id", local)).isEqualTo(2);
+        assertThat(kitchenView.state(row(data.path("id").asText())).status()).isEqualTo("PRINTED");
+        assertThat(jobs.findAllByStoreIdAndOrderId(store, local))
+                .allSatisfy(j -> assertThat(j.rendered_text_snapshot).contains("UBER - FIX01"));
+        verify(client, never()).accept(anyString(), anyString());
+        verify(client, never()).deny(anyString(), anyString());
+    }
+
+    UberEatsProperties newProperties() {
+        var p = new UberEatsProperties();
+        p.enabled = true;
+        return p;
+    }
+
+    @Test
+    void mirrorReleaseMappingFailureBlocksThenFreshRecoveryAfterExplicitMapping() {
+        mirrorMode();
+        var data = payload(UUID.randomUUID().toString());
+        ((ObjectNode) data.at("/cart/items/0")).put("external_data", "");
+        var blocked = release(data);
+        assertThat(blocked.status).isEqualTo("RELEASED_MAPPING_REQUIRED");
+        assertThat(count("orders", "store_id", store)).isZero();
+        var rule = new UberEatsMenuMapping();
+        rule.kind = "ITEM";
+        rule.identifierType = "ID";
+        rule.uberIdentifier = "uber-noodle";
+        rule.localMenuItemId = item;
+        configuration.saveMapping(store, rule, actor);
+        imports.recover();
+        assertThat(row(blocked.uberOrderId).status).isEqualTo("RELEASED_TO_KITCHEN");
+        assertThat(count("orders", "store_id", store)).isOne();
+        verify(client, times(2)).getOrder(blocked.uberOrderId);
+    }
+
+    @Test
+    void mirrorFailedLocalTransactionRollsBackAndRestartRecoveryNeverAccepts() {
+        mirrorMode();
+        db.update("update stations set is_active=false where id=?", station);
+        var row = release(payload(UUID.randomUUID().toString()));
+        assertThat(row.status).isEqualTo("MIRROR_LOCAL_FAILED");
+        assertThat(count("orders", "store_id", store)).isZero();
+        assertThat(count("order_dispatch_outbox", "store_id", store)).isZero();
+        db.update("update stations set is_active=true where id=?", station);
+        due(row.id);
+        new UberEatsOrderImportService(newProperties(), client, normalizer, tx, events, inbox)
+                .recover();
+        assertThat(row(row.uberOrderId).status).isEqualTo("RELEASED_TO_KITCHEN");
+        assertThat(count("orders", "store_id", store)).isOne();
+        verify(client, never()).accept(anyString(), anyString());
+    }
+
+    @Test
+    void mirrorCancelBeforeReleaseAndCancelEditAfterReleasePreserveKitchenHistory() {
+        mirrorMode();
+        var beforeData = payload(UUID.randomUUID().toString());
+        var before = notify(beforeData);
+        receive(event(UUID.randomUUID().toString(), "orders.cancel", before.uberOrderId));
+        release(beforeData);
+        assertThat(row(before.uberOrderId).status).isEqualTo("CANCELLED");
+        assertThat(count("orders", "store_id", store)).isZero();
+        var after = release(payload(UUID.randomUUID().toString()));
+        dispatch(after.localOrderId);
+        receive(event(UUID.randomUUID().toString(), "orders.cancel", after.uberOrderId));
+        assertThat(row(after.uberOrderId).status).isEqualTo("CANCELLED_AFTER_RELEASE");
+        assertThat(kitchenView.state(row(after.uberOrderId)).status())
+                .isEqualTo("CANCELLED_AFTER_RELEASE");
+        receive(
+                event(
+                        UUID.randomUUID().toString(),
+                        "orders.customer_order_edit",
+                        after.uberOrderId));
+        imports.processEvents();
+        assertThat(row(after.uberOrderId).status).isEqualTo("EDIT_REVIEW_REQUIRED");
+        assertThat(count("print_jobs", "order_id", after.localOrderId)).isEqualTo(2);
+        assertThat(count("kitchen_tasks", "order_id", after.localOrderId)).isOne();
+    }
+
+    @Test
+    void mirrorGrabOnlyKitchenReprintsAreSnapshotSafeAndReceiptsAndCashierAreRejected() {
+        mirrorMode();
+        var data = payload(UUID.randomUUID().toString());
+        var mods = (ArrayNode) data.at("/cart/items/0/selected_modifier_groups/0/selected_items");
+        mods.remove(1); // no fried egg -> no HOT_KITCHEN
+        var row = release(data);
+        dispatch(row.localOrderId);
+        assertThat(jobs.findAllByStoreIdAndOrderId(store, row.localOrderId))
+                .extracting(j -> j.module_code)
+                .containsExactly("GRAB");
+        assertThat(kitchenView.state(row).hotKitchen()).isEqualTo("NOT_REQUIRED");
+        var original = jobs.findAllByStoreIdAndOrderId(store, row.localOrderId).get(0);
+        db.update("update menu_items set name_zh='后来改名' where id=?", item);
+        var request = new com.restaurant.system.printing.dto.OrderReprintRequest();
+        request.receipt_type = "GRAB";
+        request.idempotency_key = UUID.randomUUID().toString();
+        var reprinted = manualReprint.reprintOrder(row.localOrderId, request, actorId);
+        var replay = manualReprint.reprintOrder(row.localOrderId, request, actorId);
+        assertThat(replay.id).isEqualTo(reprinted.id);
+        assertThat(jobs.findById(reprinted.id).orElseThrow().rendered_text_snapshot)
+                .isEqualTo(original.rendered_text_snapshot);
+        request.receipt_type = "FRONTDESK_RECEIPT";
+        assertThatThrownBy(() -> manualReprint.reprintOrder(row.localOrderId, request, actorId))
+                .hasMessageContaining("only GRAB");
+        assertThatThrownBy(
+                        () ->
+                                dispatcher.dispatchPersistedEvent(
+                                        "FRONTDESK_RECEIPT",
+                                        store,
+                                        row.localOrderId,
+                                        null,
+                                        "forbidden-receipt"))
+                .hasMessageContaining("only GRAB");
+        assertThatThrownBy(() -> orderService.completeOrder(row.localOrderId))
+                .hasMessageContaining("cashier");
+        assertThatThrownBy(() -> orderService.cancelOrder(row.localOrderId))
+                .hasMessageContaining("cashier");
+        assertThat(orderService.getFrontdeskOrderBoard(store, null, null, null, null, null))
+                .isEmpty();
+        assertThat(dispatcher.getOrderPrintOptions(row.localOrderId))
+                .extracting(o -> o.module_code)
+                .doesNotContain("FRONTDESK_RECEIPT");
+    }
+
+    @Test
+    void mirrorHotReprintUsesOriginalSnapshotAndPrintFailuresRemainVisible() {
+        mirrorMode();
+        var row = release(payload(UUID.randomUUID().toString()));
+        dispatch(row.localOrderId);
+        var original =
+                jobs.findByDispatchSourceKey("submit:" + row.localOrderId + ":HOT_KITCHEN")
+                        .orElseThrow();
+        db.update("update menu_item_options set name_zh='后来修改' where menu_item_id=?", item);
+        var request = new com.restaurant.system.printing.dto.OrderReprintRequest();
+        request.receipt_type = "HOT_KITCHEN";
+        request.idempotency_key = UUID.randomUUID().toString();
+        var newJob = manualReprint.reprintOrder(row.localOrderId, request, actorId);
+        assertThat(jobs.findById(newJob.id).orElseThrow().rendered_text_snapshot)
+                .isEqualTo(original.rendered_text_snapshot);
+        db.update(
+                "update print_jobs set status='FAILED' where order_id=? and"
+                    + " module_code='HOT_KITCHEN'",
+                row.localOrderId);
+        assertThat(kitchenView.state(row).status()).isEqualTo("PRINT_PARTIAL");
+        db.update("update print_jobs set status='FAILED' where order_id=?", row.localOrderId);
+        assertThat(kitchenView.state(row).status()).isEqualTo("PRINT_FAILED");
+    }
+
+    @Test
+    void mirrorFinancialSnapshotIsExcludedFromEveryInStoreAnalyticsSummary() {
+        mirrorMode();
+        var row = release(payload(UUID.randomUUID().toString()));
+        db.update(
+                "update orders set"
+                    + " status='completed',completed_at=now(),subtotal_amount=999,total_amount=999"
+                    + " where id=?",
+                row.localOrderId);
+        analytics.rebuildForDate(LocalDate.now(), store);
+        assertThat(
+                        db.queryForObject(
+                                "select gross_sales from sales_daily_summary where store_id=?",
+                                java.math.BigDecimal.class,
+                                store))
+                .isZero();
+        assertThat(count("menu_item_sales_summary", "store_id", store)).isZero();
+        assertThat(
+                        db.queryForObject(
+                                "select sales_amount from store_performance_summary where"
+                                    + " store_id=?",
+                                java.math.BigDecimal.class,
+                                store))
+                .isZero();
+    }
+
+    @Test
+    void mirrorReleaseRejectsCrossStoreFreshResponseAndUnacceptedState() {
+        mirrorMode();
+        var data = payload(UUID.randomUUID().toString());
+        String id = data.path("id").asText();
+        when(client.getOrder(id)).thenReturn(data);
+        receive(event(UUID.randomUUID().toString(), "orders.release", id));
+        imports.processEvents();
+        imports.recover();
+        assertThat(row(id).status).isEqualTo("EXTERNAL_STATE_REVIEW_REQUIRED");
+        data.put("current_state", "ACCEPTED");
+        data.withObject("/store").put("id", UUID.randomUUID().toString());
+        receive(event(UUID.randomUUID().toString(), "orders.release", id));
+        imports.processEvents();
+        imports.recover();
+        assertThat(count("orders", "store_id", store)).isZero();
+    }
+
+    @Test
+    void mirrorExplicitNoOpResolvesOnlyConfiguredParentAndUnknownModifierStillBlocks() {
+        mirrorMode();
+        db.update("update menu_items set sku='beef_chow_mein' where id=?", item);
+        for (String modifier :
+                List.of(
+                        "54c53703-db68-4044-85a3-5f4962715566",
+                        "d1f4a19b-fd7c-4cdf-863a-581391172f23")) {
+            var rule = new UberEatsMenuMapping();
+            rule.kind = "MODIFIER";
+            rule.identifierType = "ID";
+            rule.uberIdentifier = modifier;
+            rule.uberItemId = "uber-noodle";
+            rule.localMenuItemId = item;
+            rule.mappingAction = "NO_OP";
+            rule.actionReason = "INGREDIENT_NOT_USED";
+            configuration.saveMapping(store, rule, actor);
+        }
+        var data = payload(UUID.randomUUID().toString());
+        ((ObjectNode) data.at("/cart/items/0")).put("external_data", "beef_chow_mein");
+        var mods = (ArrayNode) data.at("/cart/items/0/selected_modifier_groups/0/selected_items");
+        mods.removeAll();
+        addModifier(mods, "large", "size_large", "Large");
+        addModifier(mods, "54c53703-db68-4044-85a3-5f4962715566", "", "Non Coriander");
+        addModifier(mods, "d1f4a19b-fd7c-4cdf-863a-581391172f23", "", "Non Scallion");
+        var mapped = mapping.map(binding, normalizer.normalize(data));
+        assertThat(mapped.errors()).isEmpty();
+        assertThat(mapped.request().items.get(0).options)
+                .extracting(o -> o.option_code_snapshot)
+                .containsExactly("size_large");
+        addModifier(mods, "unknown", "", "Unknown modifier");
+        assertThat(mapping.map(binding, normalizer.normalize(data)).valid()).isFalse();
+        mods.remove(mods.size() - 1);
+        ((ObjectNode) data.at("/cart/items/0")).put("id", "another-parent");
+        assertThat(mapping.map(binding, normalizer.normalize(data)).valid()).isFalse();
+    }
+
+    @Test
+    void mirrorComboRootInjectsComboWithBothEggsAndThreeConfirmedSides() {
+        mirrorMode();
+        id(
+                "insert into stations(store_id,code,name,is_active) values (?,'COLD','凉菜',true)"
+                        + " returning id",
+                store);
+        Long side =
+                id(
+                        "insert into"
+                            + " menu_items(store_id,category_id,station_id,sku,name_zh,name_en,base_price,is_active,is_sold_out,item_type,sort_order)"
+                            + " values"
+                            + " (?,?,?,'cucumber_salad','拍黄瓜','Cucumber',4,true,false,'food',2)"
+                            + " returning id",
+                        store,
+                        category,
+                        station);
+        Long rice =
+                id(
+                        "insert into"
+                            + " menu_items(store_id,category_id,station_id,sku,name_zh,name_en,base_price,is_active,is_sold_out,item_type,sort_order)"
+                            + " values (?,?,?,'fried_rice','炒饭','Fried"
+                            + " Rice',10,true,false,'food',3) returning id",
+                        store,
+                        category,
+                        station);
+        option(side, "remove_garlic", "REMOVE", "remove", "走蒜", 0);
+        option(item, "combo", "COMBO", "addon", "套餐", 5);
+        Long eggGroup =
+                id(
+                        "insert into"
+                            + " store_combo_groups(store_id,group_code,name_zh,name_en,selection_rule,required,enabled,display_order,created_at,updated_at)"
+                            + " values"
+                            + " (?,'COMBO_EGG','蛋','Egg','EXACTLY_ONE',true,true,1,now(),now())"
+                            + " returning id",
+                        store);
+        Long sideGroup =
+                id(
+                        "insert into"
+                            + " store_combo_groups(store_id,group_code,name_zh,name_en,selection_rule,required,enabled,display_order,created_at,updated_at)"
+                            + " values"
+                            + " (?,'COMBO_SIDE','小菜','Side','EXACTLY_ONE',true,true,2,now(),now())"
+                            + " returning id",
+                        store);
+        db.update(
+                "insert into"
+                    + " store_combo_components(store_id,group_id,component_group,component_code,name_zh,name_en,enabled,display_order,business_behavior,created_at,updated_at)"
+                    + " values (?,?,'COMBO_EGG','combo_fried_egg','煎蛋','Fried"
+                    + " egg',true,1,'NO_KITCHEN_TASK',now(),now())",
+                store,
+                eggGroup);
+        db.update(
+                "insert into"
+                    + " store_combo_components(store_id,group_id,component_group,component_code,name_zh,name_en,enabled,display_order,linked_menu_item_id,business_behavior,created_at,updated_at)"
+                    + " values"
+                    + " (?,?,'COMBO_SIDE','combo_cucumber_salad','拍黄瓜','Cucumber',true,1,?,'NO_KITCHEN_TASK',now(),now())",
+                store,
+                sideGroup,
+                side);
+        db.update(
+                "update store_combo_groups set default_component_code='combo_fried_egg' where id=?",
+                eggGroup);
+        db.update(
+                "update store_combo_groups set default_component_code='combo_cucumber_salad' where"
+                        + " id=?",
+                sideGroup);
+
+        db.update(
+                "insert into"
+                    + " store_combo_components(store_id,group_id,component_group,component_code,name_zh,name_en,enabled,display_order,business_behavior,created_at,updated_at)"
+                    + " values (?,?,'COMBO_EGG','combo_tea_egg','茶叶蛋','Tea"
+                    + " egg',true,2,'NO_KITCHEN_TASK',now(),now())",
+                store,
+                eggGroup);
+        for (String sku : List.of("edamame", "shredded_potato")) {
+            Long sideItem =
+                    id(
+                            "insert into"
+                                + " menu_items(store_id,category_id,station_id,sku,name_zh,name_en,base_price,is_active,is_sold_out,item_type,sort_order)"
+                                + " values (?,?,?,?,'小菜',?,4,true,false,'food',4) returning id",
+                            store,
+                            category,
+                            station,
+                            sku,
+                            sku);
+            db.update(
+                    "insert into"
+                        + " store_combo_components(store_id,group_id,component_group,component_code,name_zh,name_en,enabled,display_order,linked_menu_item_id,business_behavior,created_at,updated_at)"
+                        + " values"
+                        + " (?,?,'COMBO_SIDE',?,'小菜',?,true,2,?,'NO_KITCHEN_TASK',now(),now())",
+                    store,
+                    sideGroup,
+                    "combo_" + sku,
+                    sku,
+                    sideItem);
+        }
+        var rule = new UberEatsMenuMapping();
+        rule.kind = "ITEM";
+        rule.identifierType = "ID";
+        rule.uberIdentifier = "uber-noodle";
+        rule.localMenuItemId = item;
+        rule.itemMappingMode = "COMBO_ROOT";
+        configuration.saveMapping(store, rule, actor);
+        for (String egg : List.of("combo_tea_egg", "combo_fried_egg")) {
+            for (String sideCode :
+                    List.of("combo_cucumber_salad", "combo_edamame", "combo_shredded_potato")) {
+                var data = payload(UUID.randomUUID().toString());
+                ((ObjectNode) data.at("/cart/items/0")).put("external_data", "");
+                var mods =
+                        (ArrayNode)
+                                data.at("/cart/items/0/selected_modifier_groups/0/selected_items");
+                mods.removeAll();
+                addModifier(mods, "large", "size_large", "Large");
+                addModifier(mods, "egg-component", egg, egg);
+                addModifier(mods, "side-component", sideCode, sideCode);
+                var mapped = mapping.map(binding, normalizer.normalize(data));
+                assertThat(mapped.errors()).isEmpty();
+                assertThat(mapped.request().items.get(0).options)
+                        .extracting(o -> o.option_code_snapshot)
+                        .containsExactlyInAnyOrder("combo", "size_large", egg, sideCode);
+                var row = release(data);
+                assertThat(row.status).isEqualTo("RELEASED_TO_KITCHEN");
+                assertThat(
+                                options.findAllByOrderItemIds(
+                                        items.findAllByOrderId(row.localOrderId).stream()
+                                                .map(i -> i.id)
+                                                .toList()))
+                        .extracting(o -> o.option_code_snapshot)
+                        .contains("combo", egg, sideCode);
+                var pad = orderService.createOrReplaceDraftAndSubmit(mapped.request(), null);
+                assertThat(tasks.findAllByOrderId(row.localOrderId))
+                        .extracting(t -> t.special_instructions_snapshot)
+                        .containsExactlyElementsOf(
+                                tasks.findAllByOrderId(pad.id).stream()
+                                        .map(t -> t.special_instructions_snapshot)
+                                        .toList());
+                assertThat(render(row.localOrderId)).isEqualTo(render(pad.id));
+                assertThat(
+                                db.queryForList(
+                                        "select module_code from order_dispatch_outbox where"
+                                            + " order_id=?",
+                                        String.class,
+                                        row.localOrderId))
+                        .doesNotContain("FRONTDESK_RECEIPT");
+            }
+        }
+    }
+
+    @Test
+    void confirmedNoodleStableIdsPreserveDistinctChineseKitchenSemantics() {
+        String[][] noodles = {
+            {"Fine", "noodle_capillary", "毛细"},
+            {"One Fine", "noodle_thin", "细"},
+            {"Two Fine", "noodle_erxi", "二细"},
+            {"Three Fine", "noodle_sanxi", "三细"},
+            {"Leek Leaves", "noodle_leek_leaf", "韭叶"},
+            {"Wide", "noodle_wide", "宽"},
+            {"Big Wide", "noodle_extra_wide", "大宽"}
+        };
+        for (String[] noodle : noodles) {
+            option(item, noodle[1], "NOODLE_TYPE", "noodle_type", noodle[2], 0);
+            var rule = new UberEatsMenuMapping();
+            rule.kind = "MODIFIER";
+            rule.identifierType = "ID";
+            rule.uberIdentifier = "stable-" + noodle[1];
+            rule.uberItemId = "uber-noodle";
+            rule.localMenuItemId = item;
+            rule.localOptionCode = noodle[1];
+            rule.localOptionGroup = "NOODLE_TYPE";
+            configuration.saveMapping(store, rule, actor);
+            var data = payload(UUID.randomUUID().toString());
+            var mods =
+                    (ArrayNode) data.at("/cart/items/0/selected_modifier_groups/0/selected_items");
+            addModifier(mods, rule.uberIdentifier, "", noodle[0]);
+            var mapped = mapping.map(binding, normalizer.normalize(data));
+            assertThat(mapped.errors()).isEmpty();
+            assertThat(mapped.request().items.get(0).options)
+                    .anySatisfy(
+                            o -> {
+                                assertThat(o.option_code_snapshot).isEqualTo(noodle[1]);
+                                assertThat(o.option_name_snapshot_zh).isEqualTo(noodle[2]);
+                            });
+        }
+    }
+
+    @Test
+    void mirrorTodayQueryHonorsUtcReleaseAndLegacyCreationAcrossMidnightAndDst() {
+        mirrorMode();
+        var row = release(payload(UUID.randomUUID().toString()));
+        for (LocalDate date :
+                List.of(
+                        LocalDate.of(2026, 10, 2),
+                        LocalDate.of(2026, 3, 8),
+                        LocalDate.of(2026, 11, 1))) {
+            var zone = ZoneId.of("America/Toronto");
+            var day = UberEatsInboxDay.of(date, zone, zone);
+            var at =
+                    date.atTime(0, 30)
+                            .atZone(zone)
+                            .withZoneSameInstant(ZoneOffset.UTC)
+                            .toLocalDateTime();
+            db.update(
+                    "update uber_eats_orders set released_at=?,status='RELEASED_TO_KITCHEN' where"
+                        + " id=?",
+                    at,
+                    row.id);
+            assertThat(
+                            inbox.todayInbox(
+                                    "sandbox",
+                                    store,
+                                    day.start(),
+                                    day.end(),
+                                    day.createdStart(),
+                                    day.createdEnd(),
+                                    PageRequest.of(0, 200)))
+                    .extracting(o -> o.id)
+                    .contains(row.id);
+            db.update("update uber_eats_orders set released_at=? where id=?", day.end(), row.id);
+            assertThat(
+                            inbox.todayInbox(
+                                    "sandbox",
+                                    store,
+                                    day.start(),
+                                    day.end(),
+                                    day.createdStart(),
+                                    day.createdEnd(),
+                                    PageRequest.of(0, 200)))
+                    .extracting(o -> o.id)
+                    .doesNotContain(row.id);
+            db.update(
+                    "update uber_eats_orders set released_at=null,placed_at=null,created_at=? where"
+                        + " id=?",
+                    date.atTime(0, 30),
+                    row.id);
+            assertThat(
+                            inbox.todayInbox(
+                                    "sandbox",
+                                    store,
+                                    day.start(),
+                                    day.end(),
+                                    day.createdStart(),
+                                    day.createdEnd(),
+                                    PageRequest.of(0, 200)))
+                    .extracting(o -> o.id)
+                    .contains(row.id);
+        }
+        assertThat(
+                        Duration.between(
+                                        UberEatsInboxDay.of(
+                                                        LocalDate.of(2026, 3, 8),
+                                                        ZoneId.of("America/Toronto"),
+                                                        ZoneOffset.UTC)
+                                                .start(),
+                                        UberEatsInboxDay.of(
+                                                        LocalDate.of(2026, 3, 8),
+                                                        ZoneId.of("America/Toronto"),
+                                                        ZoneOffset.UTC)
+                                                .end())
+                                .toHours())
+                .isEqualTo(23);
+        assertThat(
+                        Duration.between(
+                                        UberEatsInboxDay.of(
+                                                        LocalDate.of(2026, 11, 1),
+                                                        ZoneId.of("America/Toronto"),
+                                                        ZoneOffset.UTC)
+                                                .start(),
+                                        UberEatsInboxDay.of(
+                                                        LocalDate.of(2026, 11, 1),
+                                                        ZoneId.of("America/Toronto"),
+                                                        ZoneOffset.UTC)
+                                                .end())
+                                .toHours())
+                .isEqualTo(25);
+    }
+
+    @Test
+    void mirrorDoesNotConsumeOrdinaryPosHistoryLimit() {
+        var data = payload(UUID.randomUUID().toString());
+        var pad =
+                orderService.createOrReplaceDraftAndSubmit(
+                        mapping.map(binding, normalizer.normalize(data)).request(), null);
+        mirrorMode();
+        release(data);
+        assertThat(orderService.getFrontdeskTodayOrderHistory(store, 1))
+                .extracting(o -> o.order_id)
+                .containsExactly(pad.id);
+    }
+
+    @Test
+    void mirrorMissingEmptyAndPartialChargesKeepLastObservedAmountsAndRawResponseTruth() {
+        mirrorMode();
+        var data = payload(UUID.randomUUID().toString());
+        var charges = data.withObject("/payment/charges");
+        charges.putObject("total").put("amount", 1999).put("currency_code", "CAD");
+        charges.putObject("tax").put("amount", 199).put("currency_code", "CAD");
+        var first = notify(data);
+        data.remove("payment");
+        notify(data);
+        assertThat(row(first.uberOrderId).financialTotalMinor).isEqualTo(1999);
+        data.withObject("/payment/charges");
+        notify(data);
+        assertThat(row(first.uberOrderId).financialTotalMinor).isEqualTo(1999);
+        assertThat(row(first.uberOrderId).rawFinancialSnapshotJson).contains("1999");
+        data.withObject("/payment/charges")
+                .putObject("tax")
+                .put("amount", 250)
+                .put("currency_code", "CAD");
+        var released = release(data);
+        assertThat(released.financialTotalMinor).isEqualTo(1999);
+        assertThat(released.financialTaxMinor).isEqualTo(250);
+        assertThat(released.financialCurrency).isEqualTo("CAD");
+        JsonNode savedCharges = tx.decode(released.rawFinancialSnapshotJson, JsonNode.class);
+        assertThat(savedCharges).isEqualTo(data.at("/payment/charges"));
     }
 
     UberEatsOrder accept(UberEatsOrder row) {

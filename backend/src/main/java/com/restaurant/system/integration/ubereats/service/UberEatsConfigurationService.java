@@ -124,6 +124,33 @@ public class UberEatsConfigurationService {
     }
 
     @Transactional
+    public UberEatsStoreMapping setMode(Long storeId, String mode, AuthenticatedUser actor) {
+        if (!Set.of("ORDER_MANAGER", "KITCHEN_MIRROR").contains(empty(mode)))
+            throw UberEatsException.conflict("PROCESSING_MODE_INVALID");
+        var binding = stores.findByEnvironmentAndStoreId(config.environment, storeId).orElseThrow();
+        binding = stores.lock(binding.id).orElseThrow();
+        if (Objects.equals(mode, binding.processingMode)) return binding;
+        if (orders.findByEnvironmentAndStoreIdOrderByIdDesc(
+                                config.environment,
+                                storeId,
+                                org.springframework.data.domain.PageRequest.of(0, 1))
+                        .size()
+                > 0) throw UberEatsException.conflict("PROCESSING_MODE_HAS_ORDER_HISTORY");
+        binding.processingMode = mode;
+        stores.save(binding);
+        audit.record(
+                storeId,
+                actor,
+                "UBER_PROCESSING_MODE_SET",
+                "UBER_STORE",
+                binding.id,
+                "Uber processing mode configured",
+                Map.of("mode", mode),
+                null);
+        return binding;
+    }
+
+    @Transactional
     public UberEatsMenuMapping saveMapping(
             Long storeId, UberEatsMenuMapping request, AuthenticatedUser actor) {
         var binding =
@@ -140,13 +167,26 @@ public class UberEatsConfigurationService {
         request.uberItemId = "ITEM".equals(request.kind) ? "" : empty(request.uberItemId);
         if (!"ITEM".equals(request.kind) && request.uberItemId.isBlank())
             throw UberEatsException.conflict("UBER_PARENT_ITEM_REQUIRED");
+        if (!Set.of("MAP", "NO_OP").contains(empty(request.mappingAction))
+                || !Set.of("STANDARD", "COMBO_ROOT").contains(empty(request.itemMappingMode)))
+            throw UberEatsException.conflict("MAPPING_ACTION_INVALID");
+        if ("NO_OP".equals(request.mappingAction)
+                && ("ITEM".equals(request.kind)
+                        || !"INGREDIENT_NOT_USED".equals(request.actionReason)))
+            throw UberEatsException.conflict("NO_OP_REASON_REQUIRED");
+        if (!"ITEM".equals(request.kind) && !"STANDARD".equals(request.itemMappingMode))
+            throw UberEatsException.conflict("COMBO_ROOT_REQUIRES_ITEM");
         var catalog = menu.catalog(storeId);
         var target =
                 menu.allItems(catalog).stream()
                         .filter(i -> i.id.equals(request.localMenuItemId))
                         .findFirst()
                         .orElseThrow(() -> UberEatsException.conflict("LOCAL_ITEM_NOT_IN_STORE"));
-        if (!"ITEM".equals(request.kind)) {
+        if ("NO_OP".equals(request.mappingAction)) {
+            request.localOptionCode = null;
+            request.localOptionGroup = null;
+            request.parentOptionCode = null;
+        } else if (!"ITEM".equals(request.kind)) {
             var choices =
                     menu.choices(catalog, target).stream()
                             .filter(
@@ -168,6 +208,11 @@ public class UberEatsConfigurationService {
             request.localOptionGroup = null;
             request.parentOptionCode = null;
         }
+        if ("COMBO_ROOT".equals(request.itemMappingMode)
+                && menu.choices(catalog, target).stream()
+                                .filter(c -> "COMBO".equals(c.group()) && "combo".equals(c.code()))
+                                .count()
+                        != 1) throw UberEatsException.conflict("COMBO_ROOT_TRIGGER_MISSING");
         var existing =
                 mappings.findAllByStoreMappingIdOrderByIdAsc(binding.id).stream()
                         .filter(
@@ -187,6 +232,9 @@ public class UberEatsConfigurationService {
         existing.localOptionCode = request.localOptionCode;
         existing.localOptionGroup = request.localOptionGroup;
         existing.parentOptionCode = request.parentOptionCode;
+        existing.mappingAction = request.mappingAction;
+        existing.itemMappingMode = request.itemMappingMode;
+        existing.actionReason = request.actionReason;
         existing.updatedAt = LocalDateTime.now();
         mappings.saveAndFlush(existing);
         tx.remapStore(storeId);

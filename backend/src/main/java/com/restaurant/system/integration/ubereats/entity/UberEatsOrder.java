@@ -7,6 +7,36 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "uber_eats_orders")
 public class UberEatsOrder {
+    @Column(name = "processing_mode")
+    public String processingMode = "ORDER_MANAGER";
+
+    @Column(name = "released_at")
+    public LocalDateTime releasedAt;
+
+    @Column(name = "kitchen_dispatched_at")
+    public LocalDateTime kitchenDispatchedAt;
+
+    @Column(name = "customer_display_name")
+    public String customerDisplayName;
+
+    @Column(name = "raw_financial_snapshot_json", columnDefinition = "text")
+    public String rawFinancialSnapshotJson;
+
+    @Column(name = "financial_currency")
+    public String financialCurrency;
+
+    @Column(name = "financial_total_minor")
+    public Long financialTotalMinor;
+
+    @Column(name = "financial_subtotal_minor")
+    public Long financialSubtotalMinor;
+
+    @Column(name = "financial_tax_minor")
+    public Long financialTaxMinor;
+
+    @Column(name = "financial_fees_minor")
+    public Long financialFeesMinor;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;

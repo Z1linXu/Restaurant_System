@@ -15,6 +15,9 @@ public interface OrderService {
 
     OrderResponse createOrder(CreateOrderRequest request);
 
+    /** Internal trusted integration boundary; never accepts client-supplied financial/source fields. */
+    OrderResponse createKitchenMirror(CreateOrderRequest request, String externalOrderId, String displayId, String customerName);
+
     OrderResponse findOpenDraftOrder(Long storeId, String tableNo, String pickupNo);
 
     OrderResponse findOpenEditableOrder(Long storeId, String tableNo, String pickupNo);

@@ -7,6 +7,9 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "uber_eats_store_mappings")
 public class UberEatsStoreMapping {
+    @Column(name = "processing_mode")
+    public String processingMode = "ORDER_MANAGER";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;

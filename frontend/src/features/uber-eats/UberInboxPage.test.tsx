@@ -2,11 +2,11 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import UberInboxPage from './UberInboxPage'
 import { useUberInbox } from './useUberInbox'
-import { decideUberOrder, type UberOrder } from '../../services/uberEatsService'
+import { decideUberOrder, reprintUberKitchen, type UberOrder } from '../../services/uberEatsService'
 vi.mock('../store/useStoreContext', () => ({ useCurrentStore: () => ({ storeId: 12 }) }))
 vi.mock('../frontdesk/components/FrontdeskTopNav', () => ({ FrontdeskTopNav: () => null }))
 vi.mock('./useUberInbox', () => ({ useUberInbox: vi.fn() }))
-vi.mock('../../services/uberEatsService', async original => ({ ...await original<typeof import('../../services/uberEatsService')>(), decideUberOrder: vi.fn() }))
+vi.mock('../../services/uberEatsService', async original => ({ ...await original<typeof import('../../services/uberEatsService')>(), decideUberOrder: vi.fn(), reprintUberKitchen: vi.fn() }))
 const pending: UberOrder = { id: 1, status: 'PENDING', display_id: 'ABC01', uber_order_id: 'fixture-order', mapping_status: 'MAPPED', mapping_errors: [], last_error: null, local_order_id: null, placed_at: '2026-09-16T16:00:00', created_at: '2026-09-16T16:00:00', accepted_at: null, cancelled_at: null, snapshot: { notes: 'Allergy note', items: [{ id: 'noodle', external_data: 'beef_noodle', title: 'Noodle', quantity: 2, removed: false, notes: '', modifiers: [{ id: 'egg', external_data: 'fried_egg', title: 'Fried Egg', quantity: 1, removed: false, notes: '', modifiers: [], issues: [] }], issues: [] }] } }
 describe('Uber inbox staff workflow', () => {
   let view: ReactTestRenderer | undefined
@@ -31,6 +31,22 @@ describe('Uber inbox staff workflow', () => {
     await act(async () => { view = create(<UberInboxPage />) })
     expect(button('Accept').props.disabled).toBe(true)
     expect(JSON.stringify(view!.toJSON())).toContain('MODIFIER_MAPPING_MISSING')
+  })
+  it('mirror mode hides remote decisions even if an old PENDING status arrives', async () => {
+    vi.mocked(useUberInbox).mockReturnValue({ orders: [{ ...pending, processing_mode: 'KITCHEN_MIRROR', customer_header: 'UBER - Ashton Z', released_at: null }], loading: false, error: null, refresh })
+    await act(async () => { view = create(<UberInboxPage />) })
+    expect(button('Accept')).toBeUndefined(); expect(button('Deny')).toBeUndefined()
+    expect(JSON.stringify(view!.toJSON())).toContain('UBER - Ashton Z')
+    expect(decideUberOrder).not.toHaveBeenCalled()
+  })
+  it('mirror mode exposes only applicable kitchen reprints through the shared idempotent service', async () => {
+    vi.mocked(useUberInbox).mockReturnValue({ orders: [{ ...pending, processing_mode: 'KITCHEN_MIRROR', status: 'PRINTED', local_order_id: 22, customer_header: 'UBER - Ashton Z', grab_status: 'PRINTED', hot_kitchen_status: 'NOT_REQUIRED', mapped_items: ['牛肉面 ×1 · 大碗'] }], loading: false, error: null, refresh })
+    vi.mocked(reprintUberKitchen).mockResolvedValue({ id: 10, status: 'PRINTED' } as Awaited<ReturnType<typeof reprintUberKitchen>>)
+    await act(async () => { view = create(<UberInboxPage />) })
+    expect(button('Accept')).toBeUndefined(); expect(button('HOT KITCHEN')).toBeUndefined()
+    await act(async () => button('重打 GRAB').props.onClick())
+    expect(reprintUberKitchen).toHaveBeenCalledExactlyOnceWith(22, 'GRAB')
+    expect(JSON.stringify(view!.toJSON())).toContain('牛肉面 ×1 · 大碗')
   })
   it('requires a denial reason and submits it to the backend', async () => {
     vi.mocked(decideUberOrder).mockResolvedValue({ ...pending, status: 'DENIED' })

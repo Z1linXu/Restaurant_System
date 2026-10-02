@@ -15,6 +15,12 @@ import lombok.Data;
 @Table(name = "orders")
 public class Order {
 
+    @Column(name = "financial_mode")
+    public String financial_mode = "IN_STORE";
+    @Column(name = "external_customer_display_name")
+    public String external_customer_display_name;
+    public boolean kitchenMirror() { return "EXTERNAL_PLATFORM".equals(financial_mode); }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")

@@ -169,6 +169,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         Long orderUpdateBatchId,
         String sourceKey
     ) {
+        requireKitchenModule(orderId, moduleCode);
         if (!printingRoleRequirementService.requirement(storeId, moduleCode).required()) {
             logger.info("Skipping persisted print event {} because Store printing role {} is disabled", sourceKey, moduleCode);
             return PrintDispatchOutcome.SKIPPED;
@@ -814,9 +815,18 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         }
     }
 
+    private void requireKitchenModule(Long orderId, String module) {
+        if (orderId == null) return;
+        Order order = orderRepository.findExistingById(orderId);
+        if (order != null && order.kitchenMirror()
+                && !Set.of(PrintModuleCode.GRAB, PrintModuleCode.HOT_KITCHEN).contains(module))
+            throw new BusinessException("Kitchen mirror allows only GRAB / HOT_KITCHEN");
+    }
+
     @Override
     public PrintJobResponse reprintJob(Long jobId, Long requestedByUserId) {
         PrintJob source = printJobService.requireJob(jobId);
+        requireKitchenModule(source.order_id, source.module_code);
         PrintJob job = source;
         requirePrintingModule(job.store_id);
         String printingMode = printerConfigService.getStorePrintingMode(job.store_id);
@@ -888,6 +898,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             throw new BusinessException("Store printing is disabled");
         }
         String moduleCode = normalizeReceiptType(request == null ? null : request.receipt_type);
+        requireKitchenModule(orderId, moduleCode);
         if (!printingRoleRequirementService.requirement(order.store_id, moduleCode).required()) {
             throw new BusinessException("Store printing role is disabled: " + moduleCode);
         }
@@ -958,6 +969,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         boolean storeEnabled = printerConfigService.isPrintingEnabled(order.store_id);
         String printingMode = printerConfigService.getStorePrintingMode(order.store_id);
         return renderersByModuleCode.keySet().stream()
+            .filter(module -> !order.kitchenMirror() || Set.of(PrintModuleCode.GRAB, PrintModuleCode.HOT_KITCHEN).contains(module))
             .sorted()
             .map(moduleCode -> buildOrderPrintOption(
                 order.id,
@@ -990,6 +1002,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             response.unavailable_reason = "Store printing mode is disabled";
             return response;
         }
+        requireKitchenModule(orderId, moduleCode);
         if (!printingRoleRequirementService.requirement(storeId, moduleCode).required()) {
             response.unavailable_reason = "Printing role is disabled for this Store";
             return response;

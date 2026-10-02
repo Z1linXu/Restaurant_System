@@ -22,6 +22,7 @@ public class UberEatsWebhookService {
     private static final Set<String> EVENTS =
             Set.of(
                     "orders.notification",
+                    "orders.release",
                     "orders.cancel",
                     "orders.scheduled.notification",
                     "orders.customer_order_edit");
@@ -48,14 +49,12 @@ public class UberEatsWebhookService {
     }
 
     public boolean validSignature(byte[] raw, String signature) {
-        if (config.clientSecret().isBlank()
-                || signature == null
-                || !signature.matches("[0-9a-f]{64}")) return false;
+        String signingKey = config.webhookSigningKey();
+        if (signingKey.isBlank() || signature == null || !signature.matches("[0-9a-f]{64}"))
+            return false;
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(
-                    new SecretKeySpec(
-                            config.clientSecret().getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            mac.init(new SecretKeySpec(signingKey.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
             return MessageDigest.isEqual(mac.doFinal(raw), HexFormat.of().parseHex(signature));
         } catch (Exception ex) {
             return false;
@@ -110,6 +109,8 @@ public class UberEatsWebhookService {
                 stores.findByEnvironmentAndUberStoreId(config.environment, storeId).orElse(null);
         if (mapping == null || !Boolean.TRUE.equals(mapping.enabled))
             return; // durable retry after configuration
+        mapping = stores.lock(mapping.id).orElseThrow();
+        entityManager.refresh(mapping, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         orders.insertIfAbsent(
                 config.environment, mapping.id, mapping.storeId, storeId, orderId, eventId, now);
         var row = orders.findByEnvironmentAndUberOrderId(config.environment, orderId).orElseThrow();
@@ -117,15 +118,27 @@ public class UberEatsWebhookService {
         entityManager.refresh(row, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         if (!row.storeMappingId.equals(mapping.id))
             throw UberEatsException.conflict("WEBHOOK_STORE_MISMATCH");
+        // New release timestamps are UTC. Existing event/retry timestamps retain JVM-local
+        // semantics.
+        if ("orders.release".equals(type)
+                && "KITCHEN_MIRROR".equals(row.processingMode)
+                && row.releasedAt == null
+                && !Boolean.TRUE.equals(row.cancelled)
+                && !Boolean.TRUE.equals(row.editRequired)) {
+            row.releasedAt = LocalDateTime.now(java.time.ZoneOffset.UTC);
+            row.scheduled = false;
+        }
         // Persist disruptive events immediately, even before GET or an in-flight acceptance
         // returns.
         if ("orders.cancel".equals(type)) {
             row.cancelled = true;
             row.cancelledAt = now;
             row.status =
-                    row.localOrderId != null || row.acceptedBy != null
-                            ? "CANCELLED_REVIEW_REQUIRED"
-                            : "CANCELLED";
+                    "KITCHEN_MIRROR".equals(row.processingMode) && row.releasedAt != null
+                            ? "CANCELLED_AFTER_RELEASE"
+                            : row.localOrderId != null || row.acceptedBy != null
+                                    ? "CANCELLED_REVIEW_REQUIRED"
+                                    : "CANCELLED";
         } else if ("orders.customer_order_edit".equals(type)) {
             row.editRequired = true;
             row.status = "EDIT_REVIEW_REQUIRED";

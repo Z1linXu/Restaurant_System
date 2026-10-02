@@ -1,5 +1,36 @@
 # SYSTEM DOCUMENTATION
 
+## Uber webhook signing-key contract
+
+`UBER_EATS_WEBHOOK_SIGNING_KEY` is the preferred backend HMAC key. It is separate
+from OAuth configuration; if absent, existing installations retain the legacy
+client-secret fallback. An explicit key replaces that fallback, rather than
+trusting both credentials. Raw bytes, lowercase SHA-256 HMAC, constant-time
+comparison, signature-before-parse and environment guards are unchanged.
+The current full menu identity review is in the [2026-10-02 comparison](docs/governance/UBER_TEST_MENU_FULL_COMPARE_20261002.md), with item and per-root modifier CSVs for explicit human confirmation.
+It includes 41 Uber roots, 33 unique modifiers / 258 contexts, and the full Store 1 DB inventory (39 items / 385 option rows; 35 / 332 active). There are no HIGH-confidence stable-ID correspondences. Confirmed cells remain blank and no mapping is persisted.
+No name-based mapping is automatically saved. This source capability alone does
+not prove the Staging runtime has been updated; use current pre-order evidence.
+
+## Uber TEST Store binding audit — 2026-10-01
+
+Current Staging backend is `21826ea5b2dc9297dd98bc8be47f5223446d11c6`; frontend remains `7b70a4fac4e350444bcd37687ca88a8636ff8f2a`
+at `https://staging-pos.lanzhounoodlesmtl.com`, with validated Flyway V30 and an
+active Uber worker. Real Testing OAuth and read-only Store/menu APIs passed.
+Official Test Store `bd993244-5589-4b19-8f0d-dc2ba73d4273` is now bound, enabled,
+to the uniquely verified Staging Store `STG005_SRC_20260809_R01` (Store 1,
+Organization 1, MOCK). Binding was a guarded Staging-only maintenance transaction
+with audit record 768 because this Staging database has no platform ADMIN account;
+no account or role was changed.
+
+The earlier Dashboard access failure is resolved: the TEST APP now displays the
+fixed-domain PRIMARY / BASIC_HMAC webhook. Current menu coverage is 0/41 root
+items and 0/258 item/modifier contexts; stable identities require review before
+a first mapped order can be recommended. No real Uber webhook/order, Accept/Deny
+or printing was exercised. Follow the [pre-order check](docs/governance/UBER_PREORDER_CHECK_20261001.md)
+for the independent signing-key runtime result; the [earlier binding audit](docs/governance/UBER_TEST_STORE_BINDING_20261001.md)
+remains a dated snapshot.
+
 ## Staging PAD_DIRECT runtime policy
 
 Staging uses an explicit `DISABLED,MOCK,PAD_DIRECT` mode ceiling and continues to
@@ -9257,8 +9288,44 @@ fail-closed, and rollback uses the same reviewed production value.
 
 详细 contract、API 来源、配置、安全与恢复见 [UBER_EATS_INTEGRATION](docs/UBER_EATS_INTEGRATION.md)，逐项证据与未完成的 Uber Sandbox/硬件验证见 [Acceptance](docs/UBER_EATS_ACCEPTANCE.md)。前台 `/stores/{storeId}/frontdesk/uber-eats`；Owner/Admin mapping `/stores/{storeId}/admin/integrations/uber-eats`。Store binding 仅平台 ADMIN；其余 integration staff APIs 经过 StoreAccessService。无凭据、真实门店绑定或 Production deploy 随代码启用。
 
-Uber Production Pilot 配置计划针对 St-Denis 与 St-Catherine；第三家店暂不启用。真实 UUID、Store-scoped enable control 与激活门槛见 [Uber integration contract](docs/UBER_EATS_INTEGRATION.md#production-pilot-门店配置计划)。该计划不等于真实门店已开通，也不扩大现有Production授权。
+Uber Production Pilot 候选店仅 St-Denis；St-Catherine 和第三家店暂不启用。已提供的 Production UUID 仅作记录；Store-scoped enable control 与激活门槛见 [Uber integration contract](docs/UBER_EATS_INTEGRATION.md#production-pilot-门店配置计划)。该计划不等于真实门店已开通，也不扩大现有 Production 授权。
 
 Client Secret 轮换应将新值直接保存到 backend 私密配置 `UBER_EATS_CLIENT_SECRET`；不通过聊天、工具输出或版本控制传递。安全保存新值并确认配置后再撤销旧值；完成撤销前不能宣称 compromised credential 已完成轮换。
 
 Uber订单管理权限由真实Accept/Deny接口授权结果判定；GET响应中可脱敏的 `order_manager_client_id` 不与明文client ID比较。Store隔离与菜单校验仍在本地执行，只有远端204成功才能建立本地订单。
+
+### 2026-10-01 Uber signing-key deployment checkpoint
+
+The first backend-only update rolled back after a strict model comparison: inherited image Compose management labels were included in the expected model but excluded from runtime normalization. Filter those labels consistently and preserve the first private backup in a separate retry evidence directory. Old Staging backend health was restored; runtime independent-key acceptance remains pending until the retry and public probes pass.
+
+### 2026-10-01 Uber pre-order final runtime acceptance
+
+Backend-only Staging source `21826ea5b2dc9297dd98bc8be47f5223446d11c6` deployed successfully; frontend remains `7b70a4fac4e350444bcd37687ca88a8636ff8f2a`. Explicit private `UBER_EATS_WEBHOOK_SIGNING_KEY` is PRESENT and preferred for HMAC; public wrong-key 401 and current-key 200 passed at 17:42:56 UTC. Internal event IGNORED, zero Uber orders, target Store 1/org 1/sandbox/MOCK binding intact; Inbox healthy. DB/frontend/Production fingerprints and V30 unchanged. Public ingress 42/42 PASS. Complete mapping remains 0/41 items and 0/33 modifiers: no HIGH stable-identity correspondences, so READY_FOR_REAL_SANDBOX_ORDER_TEST=NO. See [final evidence](docs/governance/UBER_PREORDER_CHECK_20261001.md) and [complete mapping diff](docs/governance/UBER_TEST_MENU_MAPPING_DIFF_20261001.md). No order/Accept/Deny or Production mutation performed.
+
+
+### 2026-10-02 Uber Kitchen Mirror / V31
+
+Store-scoped `processing_mode=KITCHEN_MIRROR` adds a release-driven kitchen path.
+Notification saves only; `orders.release` fetches current Uber data and releases
+mapped items through the existing OrderService, kitchen/production/inventory and
+unique dispatch outbox. Mirror never calls Accept/Deny or produces customer
+receipts. Legacy ORDER_MANAGER remains supported. Cancel/edit events retain
+historical tasks/jobs and require operator review.
+
+`financial_mode=EXTERNAL_PLATFORM` isolates kitchen orders from cashier actions
+and in-store revenue aggregation. Local monetary columns are zero; actual Uber
+`payment.charges` is retained in integration JSON plus minor-unit amount fields.
+A shared kitchen header uses first name + last initial or display ID. Today's
+Uber page exposes durable kitchen module status and snapshot-safe reprints through
+the existing audited/idempotent printing API.
+
+Mapping supports explicit COMBO_ROOT -> main + implicit `combo`, parent-scoped
+MAP and explicit NO_OP (`INGREDIENT_NOT_USED`). Unknown identifiers still block.
+The final human review table is
+`docs/governance/UBER_KITCHEN_MAPPING_FINAL_20261002.md`; approval is required before
+writing the planned mappings to Staging. No name-based expansion is authorized.
+
+Real TEST pos_data read on 2026-10-02: integration enabled, online, TEST app is the
+current order manager, `order_release_enabled=false`; pending flag absent. Uber
+must provision/confirm release notifications and Uber Tablet order management
+before a Pad-driven real test. Code tests do not establish Sandbox readiness.

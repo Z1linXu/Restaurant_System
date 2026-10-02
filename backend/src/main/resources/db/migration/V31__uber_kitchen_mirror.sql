@@ -1,0 +1,22 @@
+-- Additive, opt-in kitchen mirroring. Existing integrations remain ORDER_MANAGER.
+ALTER TABLE uber_eats_store_mappings ADD COLUMN processing_mode VARCHAR(40) NOT NULL DEFAULT 'ORDER_MANAGER';
+ALTER TABLE uber_eats_store_mappings ADD CONSTRAINT ck_uber_processing_mode CHECK (processing_mode IN ('ORDER_MANAGER','KITCHEN_MIRROR'));
+ALTER TABLE uber_eats_menu_mappings ADD COLUMN mapping_action VARCHAR(20) NOT NULL DEFAULT 'MAP';
+ALTER TABLE uber_eats_menu_mappings ADD COLUMN item_mapping_mode VARCHAR(30) NOT NULL DEFAULT 'STANDARD';
+ALTER TABLE uber_eats_menu_mappings ADD COLUMN action_reason VARCHAR(255);
+ALTER TABLE uber_eats_menu_mappings ADD CONSTRAINT ck_uber_mapping_action CHECK (mapping_action IN ('MAP','NO_OP'));
+ALTER TABLE uber_eats_menu_mappings ADD CONSTRAINT ck_uber_item_mode CHECK (item_mapping_mode IN ('STANDARD','COMBO_ROOT'));
+ALTER TABLE uber_eats_orders ADD COLUMN processing_mode VARCHAR(40) NOT NULL DEFAULT 'ORDER_MANAGER';
+ALTER TABLE uber_eats_orders ADD COLUMN released_at TIMESTAMP;
+ALTER TABLE uber_eats_orders ADD COLUMN kitchen_dispatched_at TIMESTAMP;
+ALTER TABLE uber_eats_orders ADD COLUMN customer_display_name VARCHAR(160);
+ALTER TABLE uber_eats_orders ADD COLUMN raw_financial_snapshot_json TEXT;
+ALTER TABLE uber_eats_orders ADD COLUMN financial_currency VARCHAR(8);
+ALTER TABLE uber_eats_orders ADD COLUMN financial_total_minor BIGINT;
+ALTER TABLE uber_eats_orders ADD COLUMN financial_subtotal_minor BIGINT;
+ALTER TABLE uber_eats_orders ADD COLUMN financial_tax_minor BIGINT;
+ALTER TABLE uber_eats_orders ADD COLUMN financial_fees_minor BIGINT;
+ALTER TABLE orders ADD COLUMN financial_mode VARCHAR(40) NOT NULL DEFAULT 'IN_STORE';
+ALTER TABLE orders ADD COLUMN external_customer_display_name VARCHAR(160);
+ALTER TABLE orders ADD CONSTRAINT ck_order_financial_mode CHECK (financial_mode IN ('IN_STORE','EXTERNAL_PLATFORM'));
+CREATE INDEX idx_uber_released_recovery ON uber_eats_orders(environment,processing_mode,status,next_attempt_at);

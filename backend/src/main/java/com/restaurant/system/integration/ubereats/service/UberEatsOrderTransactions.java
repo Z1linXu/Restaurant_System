@@ -106,6 +106,7 @@ public class UberEatsOrderTransactions {
         var store =
                 stores.findByEnvironmentAndUberStoreId(config.environment, e.uberStoreId)
                         .orElseThrow(() -> UberEatsException.conflict("STORE_MAPPING_MISSING"));
+        store = stores.lock(store.id).orElseThrow();
         requireMapping(store.id);
         if (!e.uberOrderId.equals(snapshot.id()) || !e.uberStoreId.equals(snapshot.store_id()))
             throw UberEatsException.conflict("UBER_RESPONSE_STORE_MISMATCH");
@@ -123,7 +124,9 @@ public class UberEatsOrderTransactions {
         var row = lockOrder(current.id);
         if (!row.storeMappingId.equals(store.id))
             throw UberEatsException.conflict("UBER_STORE_MISMATCH");
-        if (row.acceptedBy == null
+        if ("KITCHEN_MIRROR".equals(row.processingMode)) {
+            importMirror(row, store, snapshot, "orders.release".equals(e.eventType));
+        } else if (row.acceptedBy == null
                 && row.localOrderId == null
                 && !Boolean.TRUE.equals(row.cancelled)
                 && !Boolean.TRUE.equals(row.editRequired)
@@ -165,6 +168,7 @@ public class UberEatsOrderTransactions {
         var store =
                 stores.findByEnvironmentAndUberStoreId(config.environment, e.uberStoreId)
                         .orElseThrow(() -> UberEatsException.conflict("STORE_MAPPING_MISSING"));
+        store = stores.lock(store.id).orElseThrow();
         requireMapping(store.id);
         orders.insertIfAbsent(
                 config.environment,
@@ -185,9 +189,11 @@ public class UberEatsOrderTransactions {
             row.cancelled = true;
             row.cancelledAt = LocalDateTime.now();
             row.status =
-                    row.localOrderId != null || row.acceptedBy != null
-                            ? "CANCELLED_REVIEW_REQUIRED"
-                            : "CANCELLED";
+                    "KITCHEN_MIRROR".equals(row.processingMode) && row.releasedAt != null
+                            ? "CANCELLED_AFTER_RELEASE"
+                            : row.localOrderId != null || row.acceptedBy != null
+                                    ? "CANCELLED_REVIEW_REQUIRED"
+                                    : "CANCELLED";
         } else {
             row.editRequired = true;
             row.status = "EDIT_REVIEW_REQUIRED";
@@ -222,6 +228,7 @@ public class UberEatsOrderTransactions {
             String reason) {
         scoped(storeId, id);
         var row = lockOrder(id);
+        requireOrderManager(row);
         if (row.localOrderId != null
                 || "DENIED".equals(row.status)
                 || Set.of("ACCEPTING", "DENYING", "UBER_ACCEPTED", "LOCAL_FAILED")
@@ -326,7 +333,13 @@ public class UberEatsOrderTransactions {
         if (row.localOrderId != null) return row;
         requireUsable(row);
         requireMapping(row.storeMappingId);
-        if (!Set.of("UBER_ACCEPTED", "LOCAL_FAILED").contains(row.status)) return row;
+        boolean mirror = "KITCHEN_MIRROR".equals(row.processingMode);
+        if (!(mirror
+                        ? Set.of("MIRROR_READY", "MIRROR_LOCAL_FAILED")
+                        : Set.of("UBER_ACCEPTED", "LOCAL_FAILED"))
+                .contains(row.status)) return row;
+        if (mirror && (row.releasedAt == null || !"MAPPED".equals(row.mappingStatus)))
+            throw UberEatsException.conflict("MIRROR_RELEASE_NOT_READY");
         modules.requireOperationalCapability(row.storeId, ModuleKeys.ORDERING_POS);
         CreateOrderRequest request = decode(row.localRequestJson, CreateOrderRequest.class);
         if (!row.storeId.equals(request.store_id)
@@ -334,14 +347,19 @@ public class UberEatsOrderTransactions {
                 || request.table_no != null
                 || request.pickup_no != null)
             throw UberEatsException.conflict("FROZEN_REQUEST_SCOPE_INVALID");
-        var response = domain.createOrReplaceDraftAndSubmit(request, null);
+        var response =
+                mirror
+                        ? domain.createKitchenMirror(
+                                request, row.uberOrderId, row.displayId, row.customerDisplayName)
+                        : domain.createOrReplaceDraftAndSubmit(request, null);
         var order = localOrders.findById(response.id).orElseThrow();
         order.external_source = "UBER_EATS";
         order.external_order_id = row.uberOrderId;
         order.external_display_id = row.displayId;
         localOrders.save(order);
         row.localOrderId = response.id;
-        row.status = "ACCEPTED";
+        row.status = mirror ? "RELEASED_TO_KITCHEN" : "ACCEPTED";
+        if (mirror) row.kitchenDispatchedAt = LocalDateTime.now(ZoneOffset.UTC);
         row.lastError = null;
         row.updatedAt = LocalDateTime.now();
         orders.save(row);
@@ -367,7 +385,12 @@ public class UberEatsOrderTransactions {
                 || Boolean.TRUE.equals(row.cancelled)
                 || Boolean.TRUE.equals(row.editRequired)) return;
         row.attemptCount++;
-        row.status = row.attemptCount >= 10 ? "LOCAL_REVIEW_REQUIRED" : "LOCAL_FAILED";
+        row.status =
+                row.attemptCount >= 10
+                        ? "LOCAL_REVIEW_REQUIRED"
+                        : "KITCHEN_MIRROR".equals(row.processingMode)
+                                ? "MIRROR_LOCAL_FAILED"
+                                : "LOCAL_FAILED";
         row.lastError = "LOCAL_SUBMISSION_FAILED";
         row.updatedAt = LocalDateTime.now();
         row.nextAttemptAt = row.updatedAt.plusSeconds(Math.min(300, 30L * row.attemptCount));
@@ -387,7 +410,15 @@ public class UberEatsOrderTransactions {
     @Transactional
     public boolean claimRecovery(Long id) {
         var row = lockOrder(id);
-        if (!Set.of("ACCEPTING", "DENYING", "UBER_ACCEPTED", "LOCAL_FAILED").contains(row.status)
+        if (!Set.of(
+                                "ACCEPTING",
+                                "DENYING",
+                                "UBER_ACCEPTED",
+                                "LOCAL_FAILED",
+                                "MIRROR_READY",
+                                "MIRROR_LOCAL_FAILED",
+                                "RELEASED_MAPPING_REQUIRED")
+                        .contains(row.status)
                 || row.nextAttemptAt.isAfter(LocalDateTime.now())) return false;
         row.nextAttemptAt = LocalDateTime.now().plusSeconds(90);
         orders.save(row);
@@ -411,9 +442,16 @@ public class UberEatsOrderTransactions {
         scoped(storeId, id);
         var row = lockOrder(id);
         requireUsable(row);
-        if (row.acceptedAt == null || row.localRequestJson == null || row.localOrderId != null)
+        if (("KITCHEN_MIRROR".equals(row.processingMode)
+                        ? row.releasedAt == null
+                        : row.acceptedAt == null)
+                || row.localRequestJson == null
+                || row.localOrderId != null)
             throw UberEatsException.conflict("LOCAL_RETRY_NOT_ALLOWED");
-        row.status = "LOCAL_FAILED";
+        row.status =
+                "KITCHEN_MIRROR".equals(row.processingMode)
+                        ? "MIRROR_LOCAL_FAILED"
+                        : "LOCAL_FAILED";
         row.attemptCount = 0;
         row.nextAttemptAt = LocalDateTime.now();
         orders.save(row);
@@ -428,6 +466,12 @@ public class UberEatsOrderTransactions {
                         storeId,
                         org.springframework.data.domain.PageRequest.of(0, 100))) {
             var row = lockOrder(candidate.id);
+            if ("RELEASED_MAPPING_REQUIRED".equals(row.status)
+                    && "KITCHEN_MIRROR".equals(row.processingMode)) {
+                row.nextAttemptAt = LocalDateTime.now();
+                orders.save(row);
+                continue; // Recovery must GET a fresh order before kitchen release.
+            }
             if (!Set.of("PENDING", "MAPPING_REQUIRED").contains(row.status)
                     || row.rawOrderSnapshotJson == null) continue;
             var result =
@@ -439,6 +483,62 @@ public class UberEatsOrderTransactions {
             orders.save(row);
             inboxEvents.changed(storeId);
         }
+    }
+
+    public void requireOrderManager(UberEatsOrder row) {
+        if ("KITCHEN_MIRROR".equals(row.processingMode)
+                || "KITCHEN_MIRROR".equals(requireMapping(row.storeMappingId).processingMode))
+            throw UberEatsException.conflict("KITCHEN_MIRROR_REMOTE_DECISION_DISABLED");
+    }
+
+    @Transactional
+    public void refreshReleased(Long id, UberOrderSnapshot snapshot) {
+        var row = lockOrder(id);
+        var store = requireMapping(row.storeMappingId);
+        if (!"KITCHEN_MIRROR".equals(row.processingMode) || row.releasedAt == null)
+            throw UberEatsException.conflict("MIRROR_RELEASE_NOT_READY");
+        if (!row.uberOrderId.equals(snapshot.id()) || !row.uberStoreId.equals(snapshot.store_id()))
+            throw UberEatsException.conflict("UBER_RESPONSE_STORE_MISMATCH");
+        importMirror(row, store, snapshot, true);
+    }
+
+    private void importMirror(
+            UberEatsOrder row,
+            UberEatsStoreMapping store,
+            UberOrderSnapshot snapshot,
+            boolean release) {
+        if (row.localOrderId != null
+                || Boolean.TRUE.equals(row.cancelled)
+                || Boolean.TRUE.equals(row.editRequired)
+                || "LOCAL_REVIEW_REQUIRED".equals(row.status)) return;
+        // A delayed notification cannot downgrade or replace a released snapshot.
+        if (!release && row.releasedAt != null) return;
+        applySnapshot(row, snapshot);
+        if (release) {
+            if (row.releasedAt == null) row.releasedAt = LocalDateTime.now(ZoneOffset.UTC);
+            row.scheduled = false;
+        }
+        if ("CANCELED".equals(snapshot.current_state())) {
+            row.cancelled = true;
+            row.cancelledAt = LocalDateTime.now();
+            row.status = row.releasedAt == null ? "CANCELLED" : "CANCELLED_AFTER_RELEASE";
+        } else if (!release) {
+            row.status = "WAITING_FOR_RELEASE";
+        } else if (!"ACCEPTED".equals(snapshot.current_state())) {
+            row.status = "EXTERNAL_STATE_REVIEW_REQUIRED";
+            row.lastError = "RELEASE_REQUIRES_ACCEPTED_ORDER";
+        } else {
+            var result = mapping.map(store, snapshot);
+            setMapping(row, result);
+            row.status = result.valid() ? "MIRROR_READY" : "RELEASED_MAPPING_REQUIRED";
+            row.localRequestJson = result.valid() ? encode(result.request()) : null;
+            row.nextAttemptAt =
+                    result.valid() ? LocalDateTime.now() : LocalDateTime.now().plusMinutes(5);
+            row.lastError = null;
+        }
+        row.updatedAt = LocalDateTime.now();
+        orders.save(row);
+        inboxEvents.changed(row.storeId);
     }
 
     private UberEatsOrder lockOrder(Long id) {
@@ -459,10 +559,48 @@ public class UberEatsOrderTransactions {
     private void applySnapshot(UberEatsOrder row, UberOrderSnapshot s) {
         row.rawOrderSnapshotJson = encode(s);
         row.displayId = s.display_id();
+        row.customerDisplayName = s.customer_display_name();
+        var charges = s.financial_charges();
+        // Raw means the latest non-empty response, never a fabricated merge. Scalar fields retain
+        // their last observed value when that optional amount is omitted on a subsequent GET.
+        if (charges != null && !charges.isEmpty()) {
+            row.rawFinancialSnapshotJson = encode(charges);
+            Set<String> currencies = new HashSet<>();
+            for (String key : List.of("total", "sub_total", "tax", "total_fee")) {
+                String observed = charges.path(key).path("currency_code").asText("");
+                if (observed.matches("[A-Z]{3}")) currencies.add(observed);
+            }
+            if (currencies.size() == 1) {
+                String currency = currencies.iterator().next();
+                if (row.financialCurrency != null && !currency.equals(row.financialCurrency)) {
+                    // Never retain an amount across a currency change.
+                    row.financialTotalMinor =
+                            row.financialSubtotalMinor =
+                                    row.financialTaxMinor = row.financialFeesMinor = null;
+                }
+                row.financialCurrency = currency;
+                Long total = money(charges, "total", currency),
+                        subtotal = money(charges, "sub_total", currency);
+                Long tax = money(charges, "tax", currency),
+                        fees = money(charges, "total_fee", currency);
+                if (total != null) row.financialTotalMinor = total;
+                if (subtotal != null) row.financialSubtotalMinor = subtotal;
+                if (tax != null) row.financialTaxMinor = tax;
+                if (fees != null) row.financialFeesMinor = fees;
+            }
+        }
         row.fulfillmentType = s.fulfillment_type();
         row.placedAt = parseTime(s.placed_at());
         row.scheduledAt =
                 Boolean.TRUE.equals(row.scheduled) ? parseTime(s.estimated_ready_at()) : null;
+    }
+
+    private Long money(
+            com.fasterxml.jackson.databind.JsonNode charges, String field, String currency) {
+        if (charges == null || !currency.equals(charges.path(field).path("currency_code").asText()))
+            return null;
+        var amount = charges.path(field).path("amount");
+        return amount.isIntegralNumber() && amount.canConvertToLong() ? amount.longValue() : null;
     }
 
     private void setMapping(UberEatsOrder row, UberEatsMenuMappingService.Result result) {
