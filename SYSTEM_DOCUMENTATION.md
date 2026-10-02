@@ -9329,3 +9329,10 @@ Real TEST pos_data read on 2026-10-02: integration enabled, online, TEST app is 
 current order manager, `order_release_enabled=false`; pending flag absent. Uber
 must provision/confirm release notifications and Uber Tablet order management
 before a Pad-driven real test. Code tests do not establish Sandbox readiness.
+
+Kitchen Mirror's V31 runtime and staged mapping boundary are verified in
+[2026-10-02 acceptance](docs/governance/UBER_KITCHEN_MIRROR_ACCEPTANCE_20261002.md).
+The public webhook is POST-only; unsupported GET currently receives the existing
+generic, redacted HTTP 500 handler (non-blocking debt), while invalid/valid HMAC
+POST responses are 401/200. The technical implementation does not grant release
+capability in Uber or authorize automatic persistence of a review table.

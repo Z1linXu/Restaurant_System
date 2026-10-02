@@ -164,3 +164,16 @@ FIRST_STAGE_TEST_COMBINATION_FULLY_MAPPED = NO
 | UNMAPPED/MODIFIER | 37 |
 
 Human confirmation of this table must precede persistence. Kitchen Mirror代码/部署验收另行记录，不能由本表推断PASS。
+
+## Staging 数据库最终读回（2026-10-02T17:43:51Z）
+
+正式规则 0 条；API 与只读 DB 查询一致。本轮未执行 mapping 写入。
+
+- MAPPED_ITEMS = 0
+- MAPPED_MODIFIERS = 0
+- NO_OP_MODIFIERS = 0
+- UNMAPPED_ITEMS = 41
+- UNMAPPED_MODIFIERS = 258 parent contexts / 33 unique stable IDs
+- FIRST_STAGE_TEST_COMBINATION_FULLY_MAPPED = NO
+
+上方计划计数仅描述批准后应写入的规则，不能替代数据库验收。
