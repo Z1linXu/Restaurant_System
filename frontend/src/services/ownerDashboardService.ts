@@ -71,6 +71,15 @@ export interface OwnerDashboardRecentOrder {
   occurred_at_label: string
 }
 
+export type ReportingGroup = 'SOUP_NOODLE' | 'DRY_NOODLE' | 'FRIED_NOODLE' | 'DRINK' | 'ALCOHOL' | 'SIDE' | 'FRIED' | 'OTHER'
+
+export interface OwnerDashboardCategorySales {
+  reporting_group: ReportingGroup
+  quantity_sold: number
+  revenue: number
+  percentage: number
+}
+
 export interface OwnerDashboardResponse {
   organization_id: number | null
   organization_name: string
@@ -85,6 +94,9 @@ export interface OwnerDashboardResponse {
   order_status: OwnerDashboardOrderStatus
   store_comparison: OwnerDashboardStoreComparisonRow[]
   recent_orders: OwnerDashboardRecentOrder[]
+  sales_timestamp: string
+  noodle_sales: OwnerDashboardCategorySales[]
+  revenue_mix: OwnerDashboardCategorySales[]
 }
 
 const request = apiRequest

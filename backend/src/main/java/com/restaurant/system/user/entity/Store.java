@@ -30,6 +30,9 @@ public class Store {
     @Column(name = "code")
     public String code;
 
+    @Column(name = "timezone", length = 64)
+    public String timezone;
+
     @Column(name = "status")
     public String status;
 

@@ -1,16 +1,8 @@
 package com.restaurant.system.platform.service.impl;
 
-import com.restaurant.system.analytics.entity.AnalyticsAlert;
-import com.restaurant.system.analytics.entity.MenuItemSalesSummary;
-import com.restaurant.system.analytics.entity.SalesDailySummary;
-import com.restaurant.system.analytics.entity.SalesHourlySummary;
-import com.restaurant.system.analytics.entity.StorePerformanceSummary;
-import com.restaurant.system.analytics.repository.AnalyticsAlertRepository;
-import com.restaurant.system.analytics.repository.MenuItemSalesSummaryRepository;
-import com.restaurant.system.analytics.repository.SalesDailySummaryRepository;
-import com.restaurant.system.analytics.repository.SalesHourlySummaryRepository;
-import com.restaurant.system.analytics.repository.StorePerformanceSummaryRepository;
-import com.restaurant.system.inventory.entity.InventoryItem;
+import com.restaurant.system.analytics.support.SalesReporting;
+import com.restaurant.system.menu.repository.MenuItemRepository;
+import com.restaurant.system.menu.repository.MenuCategoryRepository;
 import com.restaurant.system.inventory.repository.InventoryItemRepository;
 import com.restaurant.system.order.entity.Order;
 import com.restaurant.system.order.entity.OrderItem;
@@ -28,7 +20,6 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.WeekFields;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -45,41 +36,31 @@ public class OwnerDashboardServiceImpl implements OwnerDashboardService {
 
     private static final DateTimeFormatter TIME_LABEL = DateTimeFormatter.ofPattern("h:mm a");
     private static final Set<String> ACTIVE_ORDER_STATUSES = Set.of("submitted", "preparing", "ready");
-    private static final Set<String> COMPLETED_ORDER_STATUSES = Set.of("completed");
 
+    private final MenuItemRepository menuItemRepository;
+    private final MenuCategoryRepository menuCategoryRepository;
     private final StoreRepository storeRepository;
     private final OrganizationRepository organizationRepository;
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final InventoryItemRepository inventoryItemRepository;
-    private final SalesDailySummaryRepository salesDailySummaryRepository;
-    private final SalesHourlySummaryRepository salesHourlySummaryRepository;
-    private final MenuItemSalesSummaryRepository menuItemSalesSummaryRepository;
-    private final StorePerformanceSummaryRepository storePerformanceSummaryRepository;
-    private final AnalyticsAlertRepository analyticsAlertRepository;
 
     public OwnerDashboardServiceImpl(
+        MenuItemRepository menuItemRepository,
+        MenuCategoryRepository menuCategoryRepository,
         StoreRepository storeRepository,
         OrganizationRepository organizationRepository,
         OrderRepository orderRepository,
         OrderItemRepository orderItemRepository,
-        InventoryItemRepository inventoryItemRepository,
-        SalesDailySummaryRepository salesDailySummaryRepository,
-        SalesHourlySummaryRepository salesHourlySummaryRepository,
-        MenuItemSalesSummaryRepository menuItemSalesSummaryRepository,
-        StorePerformanceSummaryRepository storePerformanceSummaryRepository,
-        AnalyticsAlertRepository analyticsAlertRepository
+        InventoryItemRepository inventoryItemRepository
     ) {
+        this.menuItemRepository = menuItemRepository;
+        this.menuCategoryRepository = menuCategoryRepository;
         this.storeRepository = storeRepository;
         this.organizationRepository = organizationRepository;
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.inventoryItemRepository = inventoryItemRepository;
-        this.salesDailySummaryRepository = salesDailySummaryRepository;
-        this.salesHourlySummaryRepository = salesHourlySummaryRepository;
-        this.menuItemSalesSummaryRepository = menuItemSalesSummaryRepository;
-        this.storePerformanceSummaryRepository = storePerformanceSummaryRepository;
-        this.analyticsAlertRepository = analyticsAlertRepository;
     }
 
     @Override
@@ -91,143 +72,92 @@ public class OwnerDashboardServiceImpl implements OwnerDashboardService {
         List<Store> organizationStores = resolveStores(organizationId, storeId);
         List<Long> scopedStoreIds = resolveScopedStoreIds(organizationStores, storeId);
         Map<Long, List<Order>> ordersByStore = organizationStores.stream()
-            .collect(Collectors.toMap(store -> store.id, store -> orderRepository.findAllByStoreId(store.id)));
+            .collect(Collectors.toMap(store -> store.id, store -> orderRepository.findAllByStoreId(store.id).stream()
+                .filter(order -> !order.kitchenMirror() && !"UBER_EATS".equalsIgnoreCase(order.external_source)).toList()));
 
         List<Order> scopedOrders = scopedStoreIds.stream()
             .flatMap(id -> ordersByStore.getOrDefault(id, List.of()).stream())
             .toList();
 
         List<Order> currentCompletedOrders = scopedOrders.stream()
-            .filter(order -> COMPLETED_ORDER_STATUSES.contains(normalize(order.status)))
-            .filter(order -> inWindow(order.completed_at, currentWindow))
+            .filter(SalesReporting::eligible)
+            .filter(order -> inWindow(order.submitted_at, currentWindow))
             .toList();
         List<Order> previousCompletedOrders = scopedOrders.stream()
-            .filter(order -> COMPLETED_ORDER_STATUSES.contains(normalize(order.status)))
-            .filter(order -> inWindow(order.completed_at, previousWindow))
+            .filter(SalesReporting::eligible)
+            .filter(order -> inWindow(order.submitted_at, previousWindow))
             .toList();
         List<Order> activeOrders = scopedOrders.stream()
             .filter(order -> ACTIVE_ORDER_STATUSES.contains(normalize(order.status)))
             .toList();
 
-        List<SalesDailySummary> currentDailySummaries = fetchDailySummaries(organizationId, storeId, currentWindow);
-        List<SalesDailySummary> previousDailySummaries = fetchDailySummaries(organizationId, storeId, previousWindow);
-        boolean useSummaryData = hasCurrentSummaryCoverage(currentDailySummaries, currentWindow, scopedStoreIds);
-        List<MenuItemSalesSummary> currentItemSummaries = useSummaryData ? fetchItemSummaries(organizationId, storeId, currentWindow) : List.of();
-        List<MenuItemSalesSummary> previousItemSummaries = useSummaryData ? fetchItemSummaries(organizationId, storeId, previousWindow) : List.of();
-        List<AnalyticsAlert> currentAlerts = useSummaryData ? fetchAlerts(organizationId, storeId, currentWindow) : List.of();
-
+        // Read the already-loaded eligible orders consistently. Old summary rows
+        // may still use completion time and cannot be mixed with submission-time mix.
         List<OrderItem> currentOrderItems = fetchOrderItems(currentCompletedOrders);
         List<OrderItem> previousOrderItems = fetchOrderItems(previousCompletedOrders);
 
         OwnerDashboardResponse response = new OwnerDashboardResponse();
         response.organization_id = organizationStores.stream().findFirst().map(store -> store.organization_id).orElse(organizationId);
-        response.organization_name = resolveOrganizationName(organizationStores, organizationId);
+        response.organization_name = resolveOrganizationName(organizationStores, response.organization_id);
         response.range = normalizedRange;
         response.compare_enabled = compareEnabled;
         response.stores = organizationStores.stream().map(this::toStoreSummary).toList();
-        response.kpis = useSummaryData
-            ? buildKpisFromSummaries(currentDailySummaries, previousDailySummaries, activeOrders)
-            : buildKpis(currentCompletedOrders, previousCompletedOrders, activeOrders);
-        response.insights = useSummaryData
-            ? buildInsightsFromSummaries(currentAlerts, currentDailySummaries, previousDailySummaries, currentItemSummaries, previousItemSummaries, scopedStoreIds)
-            : buildInsights(currentCompletedOrders, previousCompletedOrders, currentOrderItems, previousOrderItems, scopedStoreIds);
-        response.trend = useSummaryData
-            ? buildTrendFromSummaries(organizationId, storeId, normalizedRange, currentDailySummaries, currentWindow)
-            : buildTrend(normalizedRange, currentCompletedOrders, currentWindow);
-        response.top_items = useSummaryData
-            ? buildItemPerformanceFromSummaries(currentItemSummaries, previousItemSummaries, true)
-            : buildItemPerformance(currentOrderItems, previousOrderItems, true);
-        response.worst_items = useSummaryData
-            ? buildItemPerformanceFromSummaries(currentItemSummaries, previousItemSummaries, false)
-            : buildItemPerformance(currentOrderItems, previousOrderItems, false);
+        response.kpis = buildKpis(currentCompletedOrders, previousCompletedOrders, activeOrders);
+        response.insights = buildInsights(currentCompletedOrders, previousCompletedOrders, currentOrderItems, previousOrderItems, scopedStoreIds);
+        response.trend = buildTrend(normalizedRange, currentCompletedOrders, currentWindow);
+        response.top_items = buildItemPerformance(currentOrderItems, previousOrderItems, true);
+        response.worst_items = buildItemPerformance(currentOrderItems, previousOrderItems, false);
         response.order_status = buildOrderStatus(activeOrders);
-        response.store_comparison = useSummaryData
-            ? buildStoreComparisonFromSummaries(organizationStores, currentWindow, previousWindow, activeOrders)
-            : buildStoreComparison(organizationStores, ordersByStore, currentWindow, previousWindow);
+        response.store_comparison = buildStoreComparison(organizationStores, ordersByStore, currentWindow, previousWindow);
+        response.revenue_mix = buildRevenueMix(currentCompletedOrders, currentOrderItems);
+        response.noodle_sales = buildNoodleSales(response.revenue_mix, scopedStoreIds);
+        response.sales_timestamp = "submitted_at";
         response.recent_orders = buildRecentOrders(scopedOrders);
         return response;
     }
 
-    private boolean hasCurrentSummaryCoverage(List<SalesDailySummary> summaries, TimeWindow currentWindow, List<Long> scopedStoreIds) {
-        LocalDate currentDate = currentWindow.start.toLocalDate();
-        long coveredStores = summaries.stream()
-            .filter(summary -> currentDate.equals(summary.summary_date))
-            .map(summary -> summary.store_id)
-            .distinct()
-            .count();
-        return coveredStores >= scopedStoreIds.size() && coveredStores > 0;
+    private List<OwnerDashboardResponse.CategorySales> buildRevenueMix(List<Order> orders, List<OrderItem> items) {
+        Map<SalesReporting.Group, OwnerDashboardResponse.CategorySales> rows = new LinkedHashMap<>();
+        for (var group : SalesReporting.Group.values()) {
+            var row = new OwnerDashboardResponse.CategorySales();
+            row.reporting_group = group.name();
+            row.quantity_sold = 0;
+            row.revenue = BigDecimal.ZERO.setScale(2);
+            row.percentage = BigDecimal.ZERO.setScale(2);
+            rows.put(group, row);
+        }
+        for (var allocation : SalesReporting.allocate(orders, items)) {
+            OrderItem item = allocation.item();
+            var group = item == null ? SalesReporting.Group.OTHER : SalesReporting.group(item.category_code_snapshot, item.item_sku_snapshot);
+            var row = rows.get(group);
+            row.quantity_sold += item == null || item.quantity == null ? 0 : item.quantity;
+            row.revenue = row.revenue.add(allocation.revenue());
+        }
+        BigDecimal total = sumTotals(orders);
+        BigDecimal cumulative = BigDecimal.ZERO;
+        BigDecimal assigned = BigDecimal.ZERO;
+        for (var row : rows.values()) {
+            cumulative = cumulative.add(row.revenue);
+            BigDecimal target = total.signum() <= 0 ? BigDecimal.ZERO.setScale(2)
+                : cumulative.multiply(BigDecimal.valueOf(100)).divide(total, 2, RoundingMode.HALF_UP);
+            row.percentage = target.subtract(assigned);
+            assigned = target;
+        }
+        return new ArrayList<>(rows.values());
     }
 
-    private List<SalesDailySummary> fetchDailySummaries(Long organizationId, Long storeId, TimeWindow window) {
-        if (storeId != null) {
-            return salesDailySummaryRepository.findAllByStore_idAndSummary_dateBetweenOrderBySummary_dateAsc(
-                storeId,
-                window.start.toLocalDate(),
-                window.end.minusNanos(1).toLocalDate()
-            );
-        }
-        if (organizationId != null) {
-            return salesDailySummaryRepository.findAllByOrganization_idAndSummary_dateBetweenOrderBySummary_dateAsc(
-                organizationId,
-                window.start.toLocalDate(),
-                window.end.minusNanos(1).toLocalDate()
-            );
-        }
-        return List.of();
-    }
-
-    private List<MenuItemSalesSummary> fetchItemSummaries(Long organizationId, Long storeId, TimeWindow window) {
-        if (storeId != null) {
-            return menuItemSalesSummaryRepository.findAllByStore_idAndSummary_dateBetween(
-                storeId,
-                window.start.toLocalDate(),
-                window.end.minusNanos(1).toLocalDate()
-            );
-        }
-        if (organizationId != null) {
-            return menuItemSalesSummaryRepository.findAllByOrganization_idAndSummary_dateBetween(
-                organizationId,
-                window.start.toLocalDate(),
-                window.end.minusNanos(1).toLocalDate()
-            );
-        }
-        return List.of();
-    }
-
-    private List<AnalyticsAlert> fetchAlerts(Long organizationId, Long storeId, TimeWindow window) {
-        if (storeId != null) {
-            return analyticsAlertRepository.findAllByStore_idAndCreated_atBetweenAndIs_resolvedFalseOrderByCreated_atDesc(
-                storeId,
-                window.start,
-                window.end
-            );
-        }
-        if (organizationId != null) {
-            return analyticsAlertRepository.findAllByOrganization_idAndCreated_atBetweenAndIs_resolvedFalseOrderByCreated_atDesc(
-                organizationId,
-                window.start,
-                window.end
-            );
-        }
-        return List.of();
-    }
-
-    private List<StorePerformanceSummary> fetchStorePerformanceSummaries(Long organizationId, Long storeId, TimeWindow window) {
-        if (storeId != null) {
-            return storePerformanceSummaryRepository.findAllByStore_idAndSummary_dateBetweenOrderBySummary_dateAsc(
-                storeId,
-                window.start.toLocalDate(),
-                window.end.minusNanos(1).toLocalDate()
-            );
-        }
-        if (organizationId != null) {
-            return storePerformanceSummaryRepository.findAllByOrganization_idAndSummary_dateBetweenOrderBySummary_dateAsc(
-                organizationId,
-                window.start.toLocalDate(),
-                window.end.minusNanos(1).toLocalDate()
-            );
-        }
-        return List.of();
+    private List<OwnerDashboardResponse.CategorySales> buildNoodleSales(
+        List<OwnerDashboardResponse.CategorySales> mix, List<Long> storeIds
+    ) {
+        boolean hasFriedNoodles = storeIds.stream().anyMatch(storeId -> {
+            var categories = menuCategoryRepository.findAllByStoreIdOrderByIdAsc(storeId).stream()
+                .collect(Collectors.toMap(category -> category.id, category -> category.code));
+            return menuItemRepository.findActiveByStoreId(storeId).stream()
+                .anyMatch(item -> SalesReporting.group(categories.get(item.category_id), item.sku) == SalesReporting.Group.FRIED_NOODLE);
+        });
+        return mix.stream().filter(row -> "SOUP_NOODLE".equals(row.reporting_group)
+            || "DRY_NOODLE".equals(row.reporting_group)
+            || (hasFriedNoodles && "FRIED_NOODLE".equals(row.reporting_group))).toList();
     }
 
     private List<Store> resolveStores(Long organizationId, Long storeId) {
@@ -235,13 +165,12 @@ public class OwnerDashboardServiceImpl implements OwnerDashboardService {
             .filter(store -> store.organization_id != null)
             .toList();
 
-        if (organizationId != null) {
-            return allStores.stream().filter(store -> Objects.equals(store.organization_id, organizationId)).toList();
-        }
-
         if (storeId != null) {
             Store store = storeRepository.findById(storeId).orElseThrow(() -> new IllegalArgumentException("Store not found"));
             return allStores.stream().filter(candidate -> Objects.equals(candidate.organization_id, store.organization_id)).toList();
+        }
+        if (organizationId != null) {
+            return allStores.stream().filter(store -> Objects.equals(store.organization_id, organizationId)).toList();
         }
 
         return allStores;
@@ -282,27 +211,6 @@ public class OwnerDashboardServiceImpl implements OwnerDashboardService {
         BigDecimal previousSales = sumTotals(previousCompletedOrders);
         BigDecimal currentOrders = BigDecimal.valueOf(currentCompletedOrders.size());
         BigDecimal previousOrders = BigDecimal.valueOf(previousCompletedOrders.size());
-        BigDecimal currentAov = safeDivide(currentSales, currentOrders);
-        BigDecimal previousAov = safeDivide(previousSales, previousOrders);
-        BigDecimal currentActive = BigDecimal.valueOf(activeOrders.size());
-
-        summary.sales = metric(currentSales, previousSales);
-        summary.orders = metric(currentOrders, previousOrders);
-        summary.average_order_value = metric(currentAov, previousAov);
-        summary.active_orders = metric(currentActive, currentActive);
-        return summary;
-    }
-
-    private OwnerDashboardResponse.KpiSummary buildKpisFromSummaries(
-        List<SalesDailySummary> currentDailySummaries,
-        List<SalesDailySummary> previousDailySummaries,
-        List<Order> activeOrders
-    ) {
-        OwnerDashboardResponse.KpiSummary summary = new OwnerDashboardResponse.KpiSummary();
-        BigDecimal currentSales = currentDailySummaries.stream().map(row -> optional(row.net_sales)).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal previousSales = previousDailySummaries.stream().map(row -> optional(row.net_sales)).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal currentOrders = BigDecimal.valueOf(currentDailySummaries.stream().mapToInt(row -> row.completed_order_count == null ? 0 : row.completed_order_count).sum());
-        BigDecimal previousOrders = BigDecimal.valueOf(previousDailySummaries.stream().mapToInt(row -> row.completed_order_count == null ? 0 : row.completed_order_count).sum());
         BigDecimal currentAov = safeDivide(currentSales, currentOrders);
         BigDecimal previousAov = safeDivide(previousSales, previousOrders);
         BigDecimal currentActive = BigDecimal.valueOf(activeOrders.size());
@@ -378,71 +286,6 @@ public class OwnerDashboardServiceImpl implements OwnerDashboardService {
         return cards;
     }
 
-    private List<OwnerDashboardResponse.InsightCard> buildInsightsFromSummaries(
-        List<AnalyticsAlert> currentAlerts,
-        List<SalesDailySummary> currentDailySummaries,
-        List<SalesDailySummary> previousDailySummaries,
-        List<MenuItemSalesSummary> currentItemSummaries,
-        List<MenuItemSalesSummary> previousItemSummaries,
-        List<Long> scopedStoreIds
-    ) {
-        List<OwnerDashboardResponse.InsightCard> cards = currentAlerts.stream()
-            .sorted(Comparator.comparing((AnalyticsAlert alert) -> alert.created_at).reversed())
-            .limit(4)
-            .map(alert -> insight(alert.alert_type, alert.title, alert.message, alert.severity))
-            .collect(Collectors.toCollection(ArrayList::new));
-
-        if (!cards.isEmpty()) {
-            return cards;
-        }
-
-        BigDecimal currentSales = currentDailySummaries.stream().map(row -> optional(row.net_sales)).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal previousSales = previousDailySummaries.stream().map(row -> optional(row.net_sales)).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal salesDrop = percentChange(currentSales, previousSales);
-        if (previousSales.compareTo(BigDecimal.ZERO) > 0 && salesDrop.compareTo(BigDecimal.valueOf(-15)) <= 0) {
-            cards.add(insight(
-                "sales_drop",
-                "Sales dropped more than 15%",
-                "Sales are down " + scale(salesDrop).abs() + "% versus the previous period.",
-                "warning"
-            ));
-        }
-
-        buildTrendingItemsFromSummaries(currentItemSummaries, previousItemSummaries).stream()
-            .limit(2)
-            .forEach(item -> cards.add(insight(
-                "trending_item",
-                "Trending item: " + item.item_name,
-                item.item_name + " is up by " + item.quantity_change.intValue() + " units versus the previous period.",
-                "info"
-            )));
-
-        inventoryItemRepository.findAll().stream()
-            .filter(item -> scopedStoreIds.contains(item.store_id))
-            .filter(item -> Boolean.TRUE.equals(item.is_active))
-            .filter(item -> item.safety_stock != null && item.current_stock != null)
-            .filter(item -> item.current_stock.compareTo(item.safety_stock) <= 0)
-            .sorted(Comparator.comparing(item -> optional(item.current_stock)))
-            .limit(3)
-            .forEach(item -> cards.add(insight(
-                "low_inventory",
-                "Low inventory: " + item.name,
-                "Current stock " + scale(item.current_stock) + " is at or below safety stock " + scale(item.safety_stock) + ".",
-                "critical"
-            )));
-
-        if (cards.isEmpty()) {
-            cards.add(insight(
-                "stable",
-                "Operations look stable",
-                "No significant sales drop or low inventory risk was detected in the current dashboard scope.",
-                "success"
-            ));
-        }
-
-        return cards;
-    }
-
     private OwnerDashboardResponse.InsightCard insight(String type, String title, String message, String severity) {
         OwnerDashboardResponse.InsightCard card = new OwnerDashboardResponse.InsightCard();
         card.type = type;
@@ -454,145 +297,40 @@ public class OwnerDashboardServiceImpl implements OwnerDashboardService {
 
     private OwnerDashboardResponse.SalesTrend buildTrend(String range, List<Order> currentCompletedOrders, TimeWindow currentWindow) {
         OwnerDashboardResponse.SalesTrend trend = new OwnerDashboardResponse.SalesTrend();
-        trend.granularity = switch (range) {
-            case "today" -> "hourly";
-            case "week" -> "daily";
-            default -> "weekly";
-        };
-        trend.points = switch (trend.granularity) {
-            case "hourly" -> buildHourlyPoints(currentCompletedOrders, currentWindow);
-            case "daily" -> buildDailyPoints(currentCompletedOrders, currentWindow);
-            default -> buildWeeklyPoints(currentCompletedOrders, currentWindow);
-        };
-        return trend;
-    }
-
-    private OwnerDashboardResponse.SalesTrend buildTrendFromSummaries(
-        Long organizationId,
-        Long storeId,
-        String range,
-        List<SalesDailySummary> currentDailySummaries,
-        TimeWindow currentWindow
-    ) {
-        OwnerDashboardResponse.SalesTrend trend = new OwnerDashboardResponse.SalesTrend();
-        trend.granularity = switch (range) {
-            case "today" -> "hourly";
-            case "week" -> "daily";
-            default -> "weekly";
-        };
-        if ("hourly".equals(trend.granularity)) {
-            List<SalesHourlySummary> hourlySummaries = storeId != null
-                ? salesHourlySummaryRepository.findAllByStore_idAndSummary_dateOrderByHour_of_dayAsc(storeId, currentWindow.start.toLocalDate())
-                : salesHourlySummaryRepository.findAllByOrganization_idAndSummary_dateOrderByHour_of_dayAsc(organizationId, currentWindow.start.toLocalDate());
-            trend.points = buildHourlyPointsFromSummaries(hourlySummaries);
-        } else if ("daily".equals(trend.granularity)) {
-            trend.points = buildDailyPointsFromSummaries(currentDailySummaries, currentWindow);
-        } else {
-            trend.points = buildWeeklyPointsFromSummaries(currentDailySummaries, currentWindow);
-        }
+        trend.granularity = "today".equals(range) ? "hourly" : "daily";
+        trend.points = "today".equals(range)
+            ? buildHourlyPoints(currentCompletedOrders, currentWindow)
+            : buildDailyPoints(currentCompletedOrders, currentWindow);
         return trend;
     }
 
     private List<OwnerDashboardResponse.TrendPoint> buildHourlyPoints(List<Order> orders, TimeWindow currentWindow) {
         Map<Integer, BigDecimal> totals = new LinkedHashMap<>();
-        for (int hour = 0; hour < 24; hour += 1) {
+        for (int hour = 10; hour < 23; hour += 1) {
             totals.put(hour, BigDecimal.ZERO);
         }
         orders.forEach(order -> {
-            if (order.completed_at != null && inWindow(order.completed_at, currentWindow)) {
-                totals.computeIfPresent(order.completed_at.getHour(), (key, value) -> value.add(optional(order.total_amount)));
+            if (order.submitted_at != null && inWindow(order.submitted_at, currentWindow)) {
+                totals.computeIfPresent(order.submitted_at.getHour(), (key, value) -> value.add(optional(order.total_amount)));
             }
         });
-        return totals.entrySet().stream().map(entry -> point(String.format("%02d:00", entry.getKey()), entry.getValue())).toList();
-    }
-
-    private List<OwnerDashboardResponse.TrendPoint> buildHourlyPointsFromSummaries(List<SalesHourlySummary> hourlySummaries) {
-        Map<Integer, BigDecimal> totals = new LinkedHashMap<>();
-        for (int hour = 0; hour < 24; hour += 1) {
-            totals.put(hour, BigDecimal.ZERO);
-        }
-        hourlySummaries.forEach(summary ->
-            totals.computeIfPresent(summary.hour_of_day, (key, value) -> value.add(optional(summary.sales_amount)))
-        );
         return totals.entrySet().stream().map(entry -> point(String.format("%02d:00", entry.getKey()), entry.getValue())).toList();
     }
 
     private List<OwnerDashboardResponse.TrendPoint> buildDailyPoints(List<Order> orders, TimeWindow currentWindow) {
         Map<LocalDate, BigDecimal> totals = new LinkedHashMap<>();
         LocalDate startDate = currentWindow.start.toLocalDate();
-        for (int day = 0; day < 7; day += 1) {
+        for (int day = 0; startDate.plusDays(day).isBefore(currentWindow.end.toLocalDate()); day += 1) {
             totals.put(startDate.plusDays(day), BigDecimal.ZERO);
         }
         orders.forEach(order -> {
-            if (order.completed_at != null && inWindow(order.completed_at, currentWindow)) {
-                LocalDate date = order.completed_at.toLocalDate();
+            if (order.submitted_at != null && inWindow(order.submitted_at, currentWindow)) {
+                LocalDate date = order.submitted_at.toLocalDate();
                 totals.computeIfPresent(date, (key, value) -> value.add(optional(order.total_amount)));
             }
         });
         return totals.entrySet().stream()
             .map(entry -> point(entry.getKey().getMonthValue() + "/" + entry.getKey().getDayOfMonth(), entry.getValue()))
-            .toList();
-    }
-
-    private List<OwnerDashboardResponse.TrendPoint> buildDailyPointsFromSummaries(
-        List<SalesDailySummary> summaries,
-        TimeWindow currentWindow
-    ) {
-        Map<LocalDate, BigDecimal> totals = new LinkedHashMap<>();
-        LocalDate startDate = currentWindow.start.toLocalDate();
-        for (int day = 0; day < 7; day += 1) {
-            totals.put(startDate.plusDays(day), BigDecimal.ZERO);
-        }
-        summaries.forEach(summary -> totals.computeIfPresent(summary.summary_date, (key, value) -> value.add(optional(summary.net_sales))));
-        return totals.entrySet().stream()
-            .map(entry -> point(entry.getKey().getMonthValue() + "/" + entry.getKey().getDayOfMonth(), entry.getValue()))
-            .toList();
-    }
-
-    private List<OwnerDashboardResponse.TrendPoint> buildWeeklyPoints(List<Order> orders, TimeWindow currentWindow) {
-        Map<LocalDate, BigDecimal> totals = new LinkedHashMap<>();
-        LocalDate startDate = currentWindow.start.toLocalDate();
-        LocalDate cursor = startDate;
-        while (!cursor.isAfter(currentWindow.end.toLocalDate())) {
-            totals.put(cursor, BigDecimal.ZERO);
-            cursor = cursor.plusWeeks(1);
-        }
-        orders.forEach(order -> {
-            if (order.completed_at != null && inWindow(order.completed_at, currentWindow)) {
-                LocalDate date = order.completed_at.toLocalDate().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-                if (date.isBefore(startDate)) {
-                    date = startDate;
-                }
-                LocalDate finalDate = date;
-                totals.computeIfPresent(finalDate, (key, value) -> value.add(optional(order.total_amount)));
-            }
-        });
-        return totals.entrySet().stream()
-            .map(entry -> point("Week of " + entry.getKey().getMonthValue() + "/" + entry.getKey().getDayOfMonth(), entry.getValue()))
-            .toList();
-    }
-
-    private List<OwnerDashboardResponse.TrendPoint> buildWeeklyPointsFromSummaries(
-        List<SalesDailySummary> summaries,
-        TimeWindow currentWindow
-    ) {
-        Map<LocalDate, BigDecimal> totals = new LinkedHashMap<>();
-        LocalDate startDate = currentWindow.start.toLocalDate();
-        LocalDate cursor = startDate;
-        while (!cursor.isAfter(currentWindow.end.toLocalDate())) {
-            totals.put(cursor, BigDecimal.ZERO);
-            cursor = cursor.plusWeeks(1);
-        }
-        summaries.forEach(summary -> {
-            LocalDate date = summary.summary_date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-            if (date.isBefore(startDate)) {
-                date = startDate;
-            }
-            LocalDate bucket = date;
-            totals.computeIfPresent(bucket, (key, value) -> value.add(optional(summary.net_sales)));
-        });
-        return totals.entrySet().stream()
-            .map(entry -> point("Week of " + entry.getKey().getMonthValue() + "/" + entry.getKey().getDayOfMonth(), entry.getValue()))
             .toList();
     }
 
@@ -626,45 +364,9 @@ public class OwnerDashboardServiceImpl implements OwnerDashboardService {
             .toList();
     }
 
-    private List<OwnerDashboardResponse.ItemPerformance> buildItemPerformanceFromSummaries(
-        List<MenuItemSalesSummary> currentItemSummaries,
-        List<MenuItemSalesSummary> previousItemSummaries,
-        boolean descending
-    ) {
-        Map<String, SummaryItemAccumulator> current = aggregateItemSummaries(currentItemSummaries);
-        Map<String, SummaryItemAccumulator> previous = aggregateItemSummaries(previousItemSummaries);
-
-        Comparator<OwnerDashboardResponse.ItemPerformance> comparator = Comparator
-            .comparing((OwnerDashboardResponse.ItemPerformance row) -> optional(row.revenue))
-            .thenComparing(row -> optional(row.quantity_change));
-        if (descending) {
-            comparator = comparator.reversed();
-        }
-
-        return current.entrySet().stream()
-            .map(entry -> toPerformance(entry.getKey(), entry.getValue(), previous.get(entry.getKey())))
-            .filter(row -> optional(row.revenue).compareTo(BigDecimal.ZERO) > 0)
-            .sorted(comparator)
-            .limit(5)
-            .toList();
-    }
-
     private List<OwnerDashboardResponse.ItemPerformance> buildTrendingItems(List<OrderItem> currentOrderItems, List<OrderItem> previousOrderItems) {
         Map<String, ItemAccumulator> current = aggregateItems(currentOrderItems);
         Map<String, ItemAccumulator> previous = aggregateItems(previousOrderItems);
-        return current.entrySet().stream()
-            .map(entry -> toPerformance(entry.getKey(), entry.getValue(), previous.get(entry.getKey())))
-            .filter(row -> optional(row.quantity_change).compareTo(BigDecimal.ZERO) > 0)
-            .sorted(Comparator.comparing((OwnerDashboardResponse.ItemPerformance row) -> optional(row.quantity_change)).reversed())
-            .toList();
-    }
-
-    private List<OwnerDashboardResponse.ItemPerformance> buildTrendingItemsFromSummaries(
-        List<MenuItemSalesSummary> currentItemSummaries,
-        List<MenuItemSalesSummary> previousItemSummaries
-    ) {
-        Map<String, SummaryItemAccumulator> current = aggregateItemSummaries(currentItemSummaries);
-        Map<String, SummaryItemAccumulator> previous = aggregateItemSummaries(previousItemSummaries);
         return current.entrySet().stream()
             .map(entry -> toPerformance(entry.getKey(), entry.getValue(), previous.get(entry.getKey())))
             .filter(row -> optional(row.quantity_change).compareTo(BigDecimal.ZERO) > 0)
@@ -682,19 +384,7 @@ public class OwnerDashboardServiceImpl implements OwnerDashboardService {
         return row;
     }
 
-    private OwnerDashboardResponse.ItemPerformance toPerformance(
-        String itemName,
-        SummaryItemAccumulator current,
-        SummaryItemAccumulator previous
-    ) {
-        OwnerDashboardResponse.ItemPerformance row = new OwnerDashboardResponse.ItemPerformance();
-        row.item_name = itemName;
-        row.quantity = current.quantity;
-        row.revenue = scale(current.revenue);
-        row.previous_quantity = previous == null ? 0 : previous.quantity;
-        row.quantity_change = scale(BigDecimal.valueOf(current.quantity - (previous == null ? 0 : previous.quantity)));
-        return row;
-    }
+
 
     private Map<String, ItemAccumulator> aggregateItems(List<OrderItem> orderItems) {
         Map<String, ItemAccumulator> rows = new LinkedHashMap<>();
@@ -705,19 +395,6 @@ public class OwnerDashboardServiceImpl implements OwnerDashboardService {
             ItemAccumulator current = rows.computeIfAbsent(key, ignored -> new ItemAccumulator());
             current.quantity += item.quantity == null ? 0 : item.quantity;
             current.revenue = current.revenue.add(optional(item.line_amount));
-        });
-        return rows;
-    }
-
-    private Map<String, SummaryItemAccumulator> aggregateItemSummaries(List<MenuItemSalesSummary> summaries) {
-        Map<String, SummaryItemAccumulator> rows = new LinkedHashMap<>();
-        summaries.forEach(item -> {
-            String key = item.item_name_snapshot_zh != null && !item.item_name_snapshot_zh.isBlank()
-                ? item.item_name_snapshot_zh
-                : item.item_name_snapshot_en;
-            SummaryItemAccumulator current = rows.computeIfAbsent(key, ignored -> new SummaryItemAccumulator());
-            current.quantity += item.quantity_sold == null ? 0 : item.quantity_sold;
-            current.revenue = current.revenue.add(optional(item.sales_amount));
         });
         return rows;
     }
@@ -745,12 +422,12 @@ public class OwnerDashboardServiceImpl implements OwnerDashboardService {
         return stores.stream().map(store -> {
             List<Order> storeOrders = ordersByStore.getOrDefault(store.id, List.of());
             BigDecimal currentSales = sumTotals(storeOrders.stream()
-                .filter(order -> COMPLETED_ORDER_STATUSES.contains(normalize(order.status)))
-                .filter(order -> inWindow(order.completed_at, currentWindow))
+                .filter(SalesReporting::eligible)
+                .filter(order -> inWindow(order.submitted_at, currentWindow))
                 .toList());
             BigDecimal previousSales = sumTotals(storeOrders.stream()
-                .filter(order -> COMPLETED_ORDER_STATUSES.contains(normalize(order.status)))
-                .filter(order -> inWindow(order.completed_at, previousWindow))
+                .filter(SalesReporting::eligible)
+                .filter(order -> inWindow(order.submitted_at, previousWindow))
                 .toList());
             int activeCount = (int) storeOrders.stream()
                 .filter(order -> ACTIVE_ORDER_STATUSES.contains(normalize(order.status)))
@@ -763,44 +440,6 @@ public class OwnerDashboardServiceImpl implements OwnerDashboardService {
             row.previous_sales = scale(previousSales);
             row.change_pct = scale(percentChange(currentSales, previousSales));
             row.active_orders = activeCount;
-            return row;
-        }).sorted(Comparator.comparing((OwnerDashboardResponse.StoreComparisonRow row) -> optional(row.sales)).reversed()).toList();
-    }
-
-    private List<OwnerDashboardResponse.StoreComparisonRow> buildStoreComparisonFromSummaries(
-        List<Store> stores,
-        TimeWindow currentWindow,
-        TimeWindow previousWindow,
-        List<Order> activeOrders
-    ) {
-        Map<Long, List<StorePerformanceSummary>> currentByStore = fetchStorePerformanceSummaries(
-            stores.stream().findFirst().map(store -> store.organization_id).orElse(null),
-            null,
-            currentWindow
-        ).stream().collect(Collectors.groupingBy(summary -> summary.store_id));
-        Map<Long, List<StorePerformanceSummary>> previousByStore = fetchStorePerformanceSummaries(
-            stores.stream().findFirst().map(store -> store.organization_id).orElse(null),
-            null,
-            previousWindow
-        ).stream().collect(Collectors.groupingBy(summary -> summary.store_id));
-        Map<Long, Long> activeCounts = activeOrders.stream()
-            .collect(Collectors.groupingBy(order -> order.store_id, Collectors.counting()));
-
-        return stores.stream().map(store -> {
-            BigDecimal currentSales = currentByStore.getOrDefault(store.id, List.of()).stream()
-                .map(summary -> optional(summary.sales_amount))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal previousSales = previousByStore.getOrDefault(store.id, List.of()).stream()
-                .map(summary -> optional(summary.sales_amount))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            OwnerDashboardResponse.StoreComparisonRow row = new OwnerDashboardResponse.StoreComparisonRow();
-            row.store_id = store.id;
-            row.store_name = store.name;
-            row.sales = scale(currentSales);
-            row.previous_sales = scale(previousSales);
-            row.change_pct = scale(percentChange(currentSales, previousSales));
-            row.active_orders = activeCounts.getOrDefault(store.id, 0L).intValue();
             return row;
         }).sorted(Comparator.comparing((OwnerDashboardResponse.StoreComparisonRow row) -> optional(row.sales)).reversed()).toList();
     }
@@ -827,7 +466,8 @@ public class OwnerDashboardServiceImpl implements OwnerDashboardService {
         if (orders.isEmpty()) {
             return List.of();
         }
-        return orderItemRepository.findAllByOrderIds(orders.stream().map(order -> order.id).toList());
+        return orderItemRepository.findAllByOrderIds(orders.stream().map(order -> order.id).toList()).stream()
+            .filter(SalesReporting::eligibleItem).toList();
     }
 
     private BigDecimal sumTotals(List<Order> orders) {
@@ -931,8 +571,4 @@ public class OwnerDashboardServiceImpl implements OwnerDashboardService {
         private BigDecimal revenue = BigDecimal.ZERO;
     }
 
-    private static class SummaryItemAccumulator {
-        private int quantity;
-        private BigDecimal revenue = BigDecimal.ZERO;
-    }
 }

@@ -78,6 +78,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class OrderServiceImplTest {
 
     @Mock
+    private jakarta.persistence.EntityManager entityManager;
+    @Mock
     private OrderRepository orderRepository;
     @Mock
     private OrderUpdateBatchRepository orderUpdateBatchRepository;
@@ -162,7 +164,8 @@ class OrderServiceImplTest {
             realtimeEventPublisher,
             printDispatcherService,
             storeComboConfigurationService,
-            printingDisplayRuleService
+            printingDisplayRuleService,
+            entityManager
         );
         kitchenService = new KitchenServiceImpl(kitchenTaskRepository, orderRepository, realtimeEventPublisher);
         frontdeskBeverageService = new FrontdeskBeverageServiceImpl(

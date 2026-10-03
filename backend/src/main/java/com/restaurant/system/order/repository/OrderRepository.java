@@ -83,6 +83,24 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Order findLatestEditableByStoreIdAndPickupNo(@Param("storeId") Long storeId, @Param("pickupNo") String pickupNo);
 
     @Query("""
+        select o.id from Order o
+        where o.store_id = :storeId
+          and o.order_type = 'dine_in'
+          and o.status in ('submitted', 'preparing', 'ready')
+          and o.completed_at is null
+          and o.table_no is not null and trim(o.table_no) <> ''
+          and o.financial_mode = 'IN_STORE'
+          and (o.external_source is null or o.external_source <> 'UBER_EATS')
+          and o.submitted_at >= :startAt and o.submitted_at < :endAt
+        order by o.id
+        """)
+    List<Long> findDailyCloseCandidateIds(
+        @Param("storeId") Long storeId,
+        @Param("startAt") LocalDateTime startAt,
+        @Param("endAt") LocalDateTime endAt
+    );
+
+    @Query("""
         select o from Order o
         where o.store_id = :storeId and o.ready_at is not null
         order by coalesce(o.completed_at, o.ready_at) desc

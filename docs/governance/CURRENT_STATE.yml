@@ -1,15 +1,15 @@
 schema_version: 1
-updated_at: 2026-10-02
+updated_at: 2026-10-03
 
 repository:
   ref: origin/main
-  sha: f957960dda5af682aa84a4834c91f4e0ad1685d5
+  sha: 9c8d8887ec4ad12ac384e3e8a3ee80aec80d1e14
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
-  package: UBER_KITCHEN_MIRROR
-  status: STAGING_ALL_41_ROOT_MAPPINGS_PERSISTED
+  package: FINAL_PRODUCT_CLOSEOUT
+  status: IMPLEMENTATION_AND_STAGING_VALIDATION_IN_PROGRESS
   next_phase_authorized: false
 
 staging:
@@ -47,16 +47,16 @@ uber_test_store_audit:
   internal_signature_test: PASS_FIXED_STAGING_DOMAIN
   dashboard_webhook: PASS_VERIFIED_FIXED_DOMAIN_PRIMARY_BASIC_HMAC
   explicit_signing_key_runtime: PASS_PRESENT_PUBLIC_WRONG_401_VALID_200
-  menu_mapping: CONFIRMED_RULES_PERSISTED_RUNTIME_RESOLUTION_PASS
+  menu_mapping: CONFIRMED_RULES_PERSISTED_25_FINAL_CONTEXT_PREVIEWS_PASS
   menu_comparison_evidence: UBER_TEST_MENU_FULL_COMPARE_20261002.md
   menu_comparison_observed_at: 2026-10-02T15:43:24Z
-  human_mapping_confirmation: ALL_41_ROOTS_AND_EXISTING_MODIFIERS_APPROVED_262_RULES_PERSISTED
+  human_mapping_confirmation: ALL_41_ROOTS_PLUS_25_FINAL_MODIFIER_CONTEXTS_287_RULES_PERSISTED
   final_mapping_table: UBER_KITCHEN_MAPPING_FINAL_20261002.md
   order_release_enabled: false
   order_manager_client_id: NOT_RETURNED_AFTER_AUTHORIZED_TEST_RESIGNATION
   processing_mode: KITCHEN_MIRROR
   kitchen_mirror: REAL_TEST_ORDER_ACCEPTED_OBSERVED_ONE_LOCAL_ORDER_TWO_MOCK_MODULES_PASS
-  persisted_mapping_rules: 262
+  persisted_mapping_rules: 287
   mapped_root_items: 41
   unmapped_root_items: 0
   combo_root_items: 8
@@ -79,9 +79,10 @@ uber_test_store_audit:
 
 gate:
   type: TECHNICAL
-  next_action: NONE_FOR_ROOT_MAPPING_BATCH_NO_BUSINESS_TEST_AUTHORIZED_THIS_TURN
+  next_action: COMPLETE_OWNER_AUTHORIZED_FINAL_CLOSEOUT_REVIEW_MERGE_STAGING
 
 authorization:
+  final_product_closeout: OWNER_AUTHORIZED_MODIFIER_MAPPING_ADDON_RECONCILIATION_DAILY_FINISH_ANALYTICS_TEST_REVIEW_MERGE_STAGING_AND_READ_ONLY_PRODUCTION_RUNBOOK
   repository_governance: COMPLETE
   phase_b_part1: OWNER_ACCEPTED_CLOSED
   phase_b_part2: IMPLEMENTATION_AND_STAGING_AUTOMATED_ACCEPTANCE_COMPLETE_OWNER_MANUAL_ACCEPTANCE_PENDING

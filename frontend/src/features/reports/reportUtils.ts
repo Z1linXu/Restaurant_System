@@ -101,9 +101,9 @@ export function buildSalesTrendPoints(
   endDate?: string,
 ) {
   if (range === 'today') {
-    return hourly.map((entry) => ({
-      label: `${String(entry.hour_of_day).padStart(2, '0')}:00`,
-      value: Number(entry.sales_amount ?? 0),
+    return Array.from({ length: 13 }, (_, index) => index + 10).map((hour) => ({
+      label: `${String(hour).padStart(2, '0')}:00`,
+      value: hourly.filter((entry) => entry.hour_of_day === hour).reduce((sum, entry) => sum + Number(entry.sales_amount ?? 0), 0),
     }))
   }
 
@@ -124,7 +124,7 @@ export function fillMissingDailySummaries(
 
   const byDate = new Map(rows.map((row) => [normalizeDateKey(row.summary_date), row]))
   const filled: SalesDailySummaryRecord[] = []
-  let cursor = new Date(`${startDate}T00:00:00`)
+  const cursor = new Date(`${startDate}T00:00:00`)
   const end = new Date(`${endDate}T00:00:00`)
 
   while (cursor.getTime() <= end.getTime()) {

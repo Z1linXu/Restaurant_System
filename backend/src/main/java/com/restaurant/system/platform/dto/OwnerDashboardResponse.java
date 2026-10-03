@@ -17,6 +17,16 @@ public class OwnerDashboardResponse {
     public OrderStatusPanel order_status;
     public List<StoreComparisonRow> store_comparison;
     public List<RecentOrderRow> recent_orders;
+    public String sales_timestamp;
+    public List<CategorySales> noodle_sales;
+    public List<CategorySales> revenue_mix;
+
+    public static class CategorySales {
+        public String reporting_group;
+        public int quantity_sold;
+        public BigDecimal revenue;
+        public BigDecimal percentage;
+    }
 
     public static class StoreSummary {
         public Long id;
