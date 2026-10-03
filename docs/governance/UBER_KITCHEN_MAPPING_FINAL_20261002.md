@@ -184,3 +184,12 @@ FIRST_STAGE_TEST_COMBINATION_FULLY_MAPPED = YES
 ## Runtime resolution after persistence
 
 2026-10-03T00:58:45Z, Staging `703488638ec2bf2002cee113b037ef547aaa61fa`: the authenticated mapping-preview API used the persisted 226 rules and actual Store 1 menu catalog. First-stage item plus size_large/noodle_sanxi/spicy_none/fried_egg/remove_cilantro resolved without errors. COMBO_ROOT injected combo and all three side variants plus combo_tea_egg resolved without errors. Unknown modifier remained blocked. All 16 NO_OP contexts resolved without emitting options in an isolated exact-SKU diagnostic; their 8 actual Uber roots remain UNMAPPED and still block full orders. No order was inserted by these previews. A read-only preview of real TEST order `4ab95dd8-3a9d-49c8-9b13-9795adadf5c6` confirmed the same five options, with no fuzzy matching. This mapping proof is not real webhook/dispatch E2E.
+
+## Real TEST E2E and final readback
+
+2026-10-03T01:15:34Z: final authenticated API exact-set comparison plus DB counts
+still match all 226 approved rules; no unapproved or cross-scope rows. Real TEST
+order `05c16dcb-8ef8-4b75-9548-45581ef2a3a2` resolved the first combination into
+local order 77 and both MOCK kitchen modules. See [real E2E evidence](UBER_KITCHEN_MIRROR_E2E_20261002.md).
+UNMAPPED totals remain 36 items / 37 modifier contexts; Human Confirmed semantics
+and all mapping actions are unchanged.

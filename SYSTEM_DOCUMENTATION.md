@@ -7,29 +7,22 @@ from OAuth configuration; if absent, existing installations retain the legacy
 client-secret fallback. An explicit key replaces that fallback, rather than
 trusting both credentials. Raw bytes, lowercase SHA-256 HMAC, constant-time
 comparison, signature-before-parse and environment guards are unchanged.
-The current full menu identity review is in the [2026-10-02 comparison](docs/governance/UBER_TEST_MENU_FULL_COMPARE_20261002.md), with item and per-root modifier CSVs for explicit human confirmation.
-It includes 41 Uber roots, 33 unique modifiers / 258 contexts, and the full Store 1 DB inventory (39 items / 385 option rows; 35 / 332 active). There are no HIGH-confidence stable-ID correspondences. Confirmed cells remain blank and no mapping is persisted.
-No name-based mapping is automatically saved. This source capability alone does
-not prove the Staging runtime has been updated; use current pre-order evidence.
+The full menu audit and stable parent contexts are recorded in the
+[comparison](docs/governance/UBER_TEST_MENU_FULL_COMPARE_20261002.md) and
+[approved final mapping table](docs/governance/UBER_KITCHEN_MAPPING_FINAL_20261002.md).
+Mapping is explicit and fail-closed; names never authorize automatic persistence.
 
-## Uber TEST Store binding audit — 2026-10-01
+## Uber TEST Store and kitchen-mirror evidence
 
-Current Staging backend is `21826ea5b2dc9297dd98bc8be47f5223446d11c6`; frontend remains `7b70a4fac4e350444bcd37687ca88a8636ff8f2a`
-at `https://staging-pos.lanzhounoodlesmtl.com`, with validated Flyway V30 and an
-active Uber worker. Real Testing OAuth and read-only Store/menu APIs passed.
-Official Test Store `bd993244-5589-4b19-8f0d-dc2ba73d4273` is now bound, enabled,
-to the uniquely verified Staging Store `STG005_SRC_20260809_R01` (Store 1,
-Organization 1, MOCK). Binding was a guarded Staging-only maintenance transaction
-with audit record 768 because this Staging database has no platform ADMIN account;
-no account or role was changed.
-
-The earlier Dashboard access failure is resolved: the TEST APP now displays the
-fixed-domain PRIMARY / BASIC_HMAC webhook. Current menu coverage is 0/41 root
-items and 0/258 item/modifier contexts; stable identities require review before
-a first mapped order can be recommended. No real Uber webhook/order, Accept/Deny
-or printing was exercised. Follow the [pre-order check](docs/governance/UBER_PREORDER_CHECK_20261001.md)
-for the independent signing-key runtime result; the [earlier binding audit](docs/governance/UBER_TEST_STORE_BINDING_20261001.md)
-remains a dated snapshot.
+The fixed HTTPS TEST webhook targets Staging Store 1 / organization 1 /
+`STG005_SRC_20260809_R01`, Uber TEST UUID
+`bd993244-5589-4b19-8f0d-dc2ba73d4273`, printing MOCK. Current deployed identity
+belongs in [CURRENT_STATE](docs/governance/CURRENT_STATE.yml); real TEST consumer
+order → human Uber Pad Accept → accepted-state detection → shared kitchen/print
+pipeline is documented in the [real E2E evidence](docs/governance/UBER_KITCHEN_MIRROR_E2E_20261002.md).
+The TEST integration remains enabled after resigning Order Manager. The accepted
+worker supports this store even with `order_release_enabled=false`. Production
+activation and physical-printer acceptance remain separate gates.
 
 ## Staging PAD_DIRECT runtime policy
 
@@ -9292,7 +9285,7 @@ Uber Production Pilot 候选店仅 St-Denis；St-Catherine 和第三家店暂不
 
 Client Secret 轮换应将新值直接保存到 backend 私密配置 `UBER_EATS_CLIENT_SECRET`；不通过聊天、工具输出或版本控制传递。安全保存新值并确认配置后再撤销旧值；完成撤销前不能宣称 compromised credential 已完成轮换。
 
-Uber订单管理权限由真实Accept/Deny接口授权结果判定；GET响应中可脱敏的 `order_manager_client_id` 不与明文client ID比较。Store隔离与菜单校验仍在本地执行，只有远端204成功才能建立本地订单。
+Legacy ORDER_MANAGER 模式的Uber订单管理权限由真实Accept/Deny接口授权结果判定；GET响应中可脱敏的 `order_manager_client_id` 不与明文client ID比较。Store隔离与菜单校验仍在本地执行，只有远端204成功才能建立本地订单。
 
 ### 2026-10-01 Uber signing-key deployment checkpoint
 
@@ -9305,10 +9298,10 @@ Backend-only Staging source `21826ea5b2dc9297dd98bc8be47f5223446d11c6` deployed 
 
 ### 2026-10-02 Uber Kitchen Mirror / V31
 
-Store-scoped `processing_mode=KITCHEN_MIRROR` adds a release-driven kitchen path.
-Notification saves only; `orders.release` fetches current Uber data and releases
-mapped items through the existing OrderService, kitchen/production/inventory and
-unique dispatch outbox. Mirror never calls Accept/Deny or produces customer
+Store-scoped `processing_mode=KITCHEN_MIRROR` shares one kitchen gate between
+ACCEPTED-state observation and `orders.release`. Notification persists the snapshot
+and schedules bounded backend state checks. Both triggers release mapped items
+through the existing OrderService, kitchen/production/inventory and unique dispatch outbox. Mirror never calls Accept/Deny or produces customer
 receipts. Legacy ORDER_MANAGER remains supported. Cancel/edit events retain
 historical tasks/jobs and require operator review.
 
@@ -9321,17 +9314,13 @@ the existing audited/idempotent printing API.
 
 Mapping supports explicit COMBO_ROOT -> main + implicit `combo`, parent-scoped
 MAP and explicit NO_OP (`INGREDIENT_NOT_USED`). Unknown identifiers still block.
-The final human review table is
-`docs/governance/UBER_KITCHEN_MAPPING_FINAL_20261002.md`; approval is required before
-writing the planned mappings to Staging. No name-based expansion is authorized.
+The [final mapping table](docs/governance/UBER_KITCHEN_MAPPING_FINAL_20261002.md)
+contains approved rules and explicit UNMAPPED entries. Only approved MAP/NO_OP
+rows are persisted; no name-based expansion is authorized. The
+[real E2E evidence](docs/governance/UBER_KITCHEN_MIRROR_E2E_20261002.md) verifies
+runtime resolution, human Uber Pad acceptance, both kitchen modules, Today,
+reprint and financial isolation. Unmapped roots still block kitchen release.
 
-Real TEST pos_data read on 2026-10-02: integration enabled, online, TEST app is the
-current order manager, `order_release_enabled=false`; pending flag absent. Uber
-must provision/confirm release notifications and Uber Tablet order management
-before a Pad-driven real test. Code tests do not establish Sandbox readiness.
-
-Kitchen Mirror's V31 runtime and staged mapping boundary are verified in
-[2026-10-02 acceptance](docs/governance/UBER_KITCHEN_MIRROR_ACCEPTANCE_20261002.md).
 The public webhook is POST-only; unsupported GET currently receives the existing
 generic, redacted HTTP 500 handler (non-blocking debt), while invalid/valid HMAC
 POST responses are 401/200. The technical implementation does not grant release

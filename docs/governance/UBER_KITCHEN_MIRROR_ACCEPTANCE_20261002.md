@@ -1,5 +1,7 @@
 # Uber Kitchen Mirror acceptance — 2026-10-02
 
+Latest real TEST Kitchen Mirror evidence: [UBER_KITCHEN_MIRROR_E2E_20261002.md](UBER_KITCHEN_MIRROR_E2E_20261002.md). The dated results below remain historical.
+
 Scope: TEST/Sandbox only; local Store 1 / org 1 / STG005_SRC_20260809_R01,
 Test UUID bd993244-5589-4b19-8f0d-dc2ba73d4273. No Production mutation,
 real Sandbox order, Accept/Deny or physical print is authorized/executed.

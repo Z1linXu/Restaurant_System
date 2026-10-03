@@ -1,5 +1,7 @@
 # Final Acceptance Report — Uber Eats v1
 
+Latest real TEST Kitchen Mirror evidence: [governance/UBER_KITCHEN_MIRROR_E2E_20261002.md](governance/UBER_KITCHEN_MIRROR_E2E_20261002.md). The dated results below remain historical.
+
 > Historical ORDER_MANAGER acceptance. For the current Store 1 Kitchen Mirror
 > implementation, Staging verification and explicit release/mapping gates, see
 > [2026-10-02 Kitchen Mirror acceptance](governance/UBER_KITCHEN_MIRROR_ACCEPTANCE_20261002.md).
