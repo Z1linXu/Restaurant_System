@@ -55,6 +55,8 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -578,6 +580,47 @@ class PrintDispatcherServiceImplTest {
         service.dispatchPersistedEvent(PrintModuleCode.GRAB, 1L, fixture.order.id, null, null);
 
         verify(printJobService).markPadDirectQueued(any(PrintJob.class), eq(fixture.printer), eq("LARGE"));
+        verifyNoInteractions(printerTransport);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {PrintModuleCode.GRAB, PrintModuleCode.HOT_KITCHEN})
+    void reprintKeepsFrozenOrderAndItemNotesEvenIfCurrentOrderWasChanged(String module) {
+        Order current = new Order();
+        current.id = 123L; current.store_id = 1L; current.external_source = "UBER_EATS";
+        current.external_order_note_snapshot = "Please make everything less salty";
+        OrderItem currentItem = new OrderItem();
+        currentItem.notes = "No cilantro";
+        PrintJob original = new PrintJob();
+        original.id = 77L; original.store_id = current.store_id; original.order_id = current.id;
+        original.module_code = module; original.printer_id = 10L; original.status = PrintJobStatus.PRINTED;
+        original.rendered_text_snapshot = "菜品\n备注：" + currentItem.notes
+                + "\n订单备注：\n" + current.external_order_note_snapshot + "\n外卖\n";
+        String frozen = original.rendered_text_snapshot;
+        current.external_order_note_snapshot = "Changed remote order note";
+        currentItem.notes = "Changed item note";
+        when(orderRepository.findById(current.id)).thenReturn(Optional.of(current));
+        when(orderItemRepository.findAllByOrderId(current.id)).thenReturn(List.of(currentItem));
+
+        PrintJob fresh = new PrintJob();
+        fresh.id = 78L; fresh.store_id = original.store_id; fresh.order_id = original.order_id;
+        fresh.module_code = module; fresh.status = PrintJobStatus.PENDING;
+        when(printJobService.createPendingJob(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(fresh);
+        PrinterConfig printer = new PrinterConfig();
+        printer.id = original.printer_id; printer.store_id = original.store_id; printer.enabled = true;
+        when(printJobService.requireJob(original.id)).thenReturn(original);
+        when(printerConfigRepository.findById(printer.id)).thenReturn(Optional.of(printer));
+        when(printerConfigService.getStorePrintingMode(original.store_id)).thenReturn("MOCK");
+        when(printJobService.markPrinting(fresh, null)).thenReturn(fresh);
+        when(printJobService.markPrinted(fresh, null, "Mock print succeeded - no physical printer used")).thenReturn(fresh);
+
+        service.reprintJob(original.id, 5L);
+
+        verify(printJobService).attachRenderedContent(fresh, null, frozen);
+        assertEquals(frozen, original.rendered_text_snapshot);
+        assertEquals(original.id, fresh.reprintSourceJobId);
+        verify(grabRenderer, never()).render(any());
+        verify(hotKitchenRenderer, never()).render(any());
         verifyNoInteractions(printerTransport);
     }
 

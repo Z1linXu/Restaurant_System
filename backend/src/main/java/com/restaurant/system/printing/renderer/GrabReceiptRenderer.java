@@ -130,6 +130,7 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
 
         ExternalKitchenFallbackContent.append(builder, request.order_items,
                 tasks.stream().map(t -> t.order_item_id).collect(java.util.stream.Collectors.toSet()));
+        ExternalOrderNoteContent.append(builder, order);
         builder.append("--------------------------------\n");
         if (isTakeout(order)) {
             builder.append(PrintMarkup.large("外卖")).append("\n");

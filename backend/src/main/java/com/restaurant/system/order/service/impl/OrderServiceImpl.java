@@ -220,7 +220,14 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse createOrder(CreateOrderRequest request) {
+        rejectExternalOrderNote(request);
         return createOrder(request, null, null, null);
+    }
+
+    private void rejectExternalOrderNote(CreateOrderRequest request) {
+        if (request.external_order_note_snapshot != null) {
+            throw new BusinessException("External order note requires trusted integration creation");
+        }
     }
 
     @Override
@@ -248,6 +255,7 @@ public class OrderServiceImpl implements OrderService {
             order.external_order_id = externalOrderId;
             order.external_display_id = displayId;
             order.external_customer_display_name = customerName;
+            order.external_order_note_snapshot = request.external_order_note_snapshot;
             order.financial_mode = "EXTERNAL_PLATFORM";
         }
         order.order_type = request.order_type;
@@ -478,6 +486,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse createOrReplaceDraftAndSubmit(CreateOrderRequest request, Long serverOrderId) {
+        rejectExternalOrderNote(request);
         OrderResponse draft;
         if (serverOrderId == null) {
             Order existingOrder = findExistingEditableOrder(request.store_id, request.table_no, request.pickup_no);

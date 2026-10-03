@@ -86,6 +86,12 @@ public class UberEatsKitchenView {
                                                                         .toList())))
                 .toList();
     }
+    /** New imports freeze this separately; null identifies legacy requests without this field. */
+    public String orderNote(UberEatsOrder row) {
+        if (row.localRequestJson == null) return null;
+        return tx.decode(row.localRequestJson, CreateOrderRequest.class).external_order_note_snapshot;
+    }
+
     public List<String> rawItems(UberEatsOrder row) {
         if (row.localRequestJson == null) return List.of();
         var request = tx.decode(row.localRequestJson, CreateOrderRequest.class);
@@ -95,7 +101,6 @@ public class UberEatsKitchenView {
             if (raw == null) continue;
             lines.add((raw.rawRoot() ? raw.itemName() : item.item_name_snapshot_zh) + " ×" + item.quantity);
             appendRaw(lines, raw.modifiers(), 1);
-            if (raw.notes() != null && !raw.notes().isBlank()) lines.add(raw.notes());
         }
         return List.copyOf(lines);
     }
@@ -106,7 +111,6 @@ public class UberEatsKitchenView {
                 lines.add("选项归属：" + raw.parentContext().stream().map(c -> c.name())
                         .collect(java.util.stream.Collectors.joining(" → ")));
             lines.add((raw.removed() ? "去除 " : "") + raw.name() + " ×" + Math.multiplyExact(multiplier, raw.quantity()));
-            if (raw.notes() != null && !raw.notes().isBlank()) lines.add(raw.notes());
             appendRaw(lines, raw.modifiers(), Math.multiplyExact(multiplier, raw.quantity()));
         }
     }

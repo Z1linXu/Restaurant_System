@@ -1966,3 +1966,17 @@ change, rebuild the union of old summary dates and eligible submitted dates, wit
 an explicit Store ID. No order, payment or print records are rewritten. Daily
 automatic Finish runs at23:30 Store-local time (default America/Toronto, DST-aware). It is an internal worker, not a new public API; it reuses the manual
 complete domain and records AUTO_FINISHED_END_OF_DAY plus the durable V34 ledger.
+
+### Uber kitchen note scopes (V36)
+
+`GET .../integrations/uber-eats/orders` adds nullable `order_note_snapshot` from
+the frozen local request. Empty string is a frozen absence; null/absent permits
+legacy fallback to `snapshot.notes`. `raw_items` contains names/context/quantity
+only; notes display using `snapshot.items` and its modifier tree. Cart-level notes
+never become local item notes. Equality dedupe is case-sensitive after whitespace
+normalization and only compares item/modifier notes against the cart note.
+
+Mapping-preview request projection adds internal `external_order_note_snapshot`.
+It is for trusted integration creation only; ordinary POS create and
+create-or-replace/submit reject any non-null value, including an empty string.
+GRAB/HOT reprint retains the original rendered snapshot and does not fetch Uber.

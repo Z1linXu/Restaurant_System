@@ -1096,6 +1096,85 @@ class UberEatsPostgresIntegrationTest {
                                         .doesNotContain("Zhang", "private-not-stored"));
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"MAPPED", "RAW", "MIXED"})
+    void tenItemNotesKeepOrderScopeAndFrozenReprints(String mode) {
+        mirrorMode();
+        var data = payload(UUID.randomUUID().toString());
+        String cartNote = "Please make everything less salty";
+        data.withObject("/cart").put("special_instructions", "  Please make everything\r\n less  salty  ");
+        ObjectNode template = ((ObjectNode) data.at("/cart/items/0")).deepCopy();
+        var lines = (ArrayNode) data.at("/cart/items");
+        lines.removeAll();
+        for (int n = 0; n < 10; n++) {
+            ObjectNode line = template.deepCopy().put("id", "note-root-" + n);
+            if (mode.equals("RAW") || mode.equals("MIXED") && n >= 7)
+                line.put("external_data", "").put("title", "Raw note item " + n);
+            line.put("special_instructions", n == 0 ? "No cilantro" : n == 1 ? "Extra soup"
+                    : n == 2 ? "Please make everything\nless salty" : n == 3 ? "no onion"
+                    : n == 4 ? "no onion please" : "");
+            ((ObjectNode) line.at("/selected_modifier_groups/0/selected_items/0"))
+                    .put("special_instructions", n == 5 ? cartNote : "");
+            lines.add(line);
+        }
+        var row = release(data);
+        assertThat(row.localOrderId).isNotNull();
+        var local = orders.findById(row.localOrderId).orElseThrow();
+        assertThat(local.external_order_note_snapshot).isEqualTo(cartNote);
+        var frozen = tx.decode(row.localRequestJson, CreateOrderRequest.class);
+        assertThat(frozen.external_order_note_snapshot).isEqualTo(cartNote);
+        assertThat(frozen.items).hasSize(10).allSatisfy(i -> {
+            assertThat(i.notes == null ? "" : i.notes).doesNotContain(cartNote);
+            if (i.external_kitchen_snapshot != null)
+                assertThat(json.valueToTree(i.external_kitchen_snapshot).toString()).doesNotContain(cartNote);
+        });
+        assertThat(kitchenView.orderNote(row)).isEqualTo(cartNote);
+        assertThat(kitchenView.rawItems(row)).doesNotContain("No cilantro", "Extra soup", cartNote);
+        dispatch(row.localOrderId);
+        var originals = jobs.findAllByStoreIdAndOrderId(store, row.localOrderId);
+        assertThat(originals).hasSize(mode.equals("RAW") ? 1 : 2);
+        assertThat(originals).allSatisfy(job -> {
+            String rendered = job.rendered_text_snapshot;
+            assertThat(rendered.split(java.util.regex.Pattern.quote(cartNote), -1).length - 1).isOne();
+            assertThat(rendered).contains("订单备注：", "No cilantro", "Extra soup", "no onion", "no onion please");
+            assertThat(rendered.indexOf("订单备注：")).isLessThan(rendered.lastIndexOf("外卖"));
+        });
+        // A later upstream response cannot change either the local or request note snapshot.
+        data.withObject("/cart").put("special_instructions", "Changed upstream later");
+        notify(data);
+        assertThat(orders.findById(row.localOrderId).orElseThrow().external_order_note_snapshot).isEqualTo(cartNote);
+        assertThat(row(row.uberOrderId).localRequestJson).isEqualTo(row.localRequestJson);
+        db.update("update orders set external_order_note_snapshot='Changed local later' where id=?", row.localOrderId);
+        db.update("update order_items set notes='Changed item later' where order_id=?", row.localOrderId);
+        clearInvocations(client);
+        for (var original : originals) {
+            var request = new com.restaurant.system.printing.dto.OrderReprintRequest();
+            request.receipt_type = original.module_code;
+            request.idempotency_key = UUID.randomUUID().toString();
+            var reprint = manualReprint.reprintOrder(row.localOrderId, request, actorId);
+            assertThat(jobs.findById(reprint.id).orElseThrow().rendered_text_snapshot)
+                    .isEqualTo(original.rendered_text_snapshot);
+        }
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    void itemOnlyNotesAndLegacyManagerOrderNoteArePreservedWithoutFuzzyDedupe() {
+        var data = payload(UUID.randomUUID().toString());
+        ((ObjectNode) data.at("/cart/items/0")).put("special_instructions", "No soup please");
+        var preview = mapping.map(bindings.findById(binding.id).orElseThrow(), normalizer.normalize(data));
+        assertThat(preview.request().external_order_note_snapshot).isEmpty();
+        assertThat(preview.request().items.get(0).notes).isEqualTo("No soup please");
+        data.withObject("/cart").put("special_instructions", "no onion");
+        ((ObjectNode) data.at("/cart/items/0")).put("special_instructions", "no onion please");
+        var accepted = accept(notify(data));
+        assertThat(orders.findById(accepted.localOrderId).orElseThrow().external_order_note_snapshot).isEqualTo("no onion");
+        assertThat(items.findAllByOrderId(accepted.localOrderId).get(0).notes).isEqualTo("no onion please");
+        dispatch(accepted.localOrderId);
+        assertThat(jobs.findByDispatchSourceKey("submit:" + accepted.localOrderId + ":GRAB").orElseThrow().rendered_text_snapshot)
+                .contains("订单备注：", "no onion please");
+    }
+
     @Test
     void heldAcceptedFinancialSnapshotCannotBeRepricedByRefreshOrRemap() throws Exception {
         mirrorMode();
@@ -1280,6 +1359,7 @@ class UberEatsPostgresIntegrationTest {
         var safe = payload(UUID.randomUUID().toString());
         ((ObjectNode)safe.at("/cart/items/0")).put("id", "raw-root").put("external_data", "");
         var request = mapping.mapMirror(binding, normalizer.normalize(safe)).request();
+        request.external_order_note_snapshot = null; // Isolate the raw-item injection guard.
         assertThatThrownBy(() -> orderService.createOrReplaceDraftAndSubmit(request, null))
             .hasMessageContaining("External kitchen fallback requires Kitchen Mirror");
         assertThat(count("orders", "store_id", store)).isZero();
@@ -1290,6 +1370,7 @@ class UberEatsPostgresIntegrationTest {
         db.update("update stores set printing_mode='PAD_DIRECT' where id=?", store);
         var normalRequest = mapping.map(binding, normalizer.normalize(payload(UUID.randomUUID().toString()))).request();
         normalRequest.order_type = "takeout";
+        normalRequest.external_order_note_snapshot = null; // Ordinary Pad has no external metadata.
         var normal = orderService.createOrReplaceDraftAndSubmit(normalRequest, null); dispatch(normal.id);
         mirrorMode();
         var mirror = release(payload(UUID.randomUUID().toString())); dispatch(mirror.localOrderId);
@@ -1635,6 +1716,7 @@ class UberEatsPostgresIntegrationTest {
                                                 .toList()))
                         .extracting(o -> o.option_code_snapshot)
                         .contains("combo", egg, sideCode);
+                mapped.request().external_order_note_snapshot = null;
                 var pad = orderService.createOrReplaceDraftAndSubmit(mapped.request(), null);
                 assertThat(tasks.findAllByOrderId(row.localOrderId))
                         .extracting(t -> t.special_instructions_snapshot)
@@ -1786,9 +1868,9 @@ class UberEatsPostgresIntegrationTest {
     @Test
     void mirrorDoesNotConsumeOrdinaryPosHistoryLimit() {
         var data = payload(UUID.randomUUID().toString());
-        var pad =
-                orderService.createOrReplaceDraftAndSubmit(
-                        mapping.map(binding, normalizer.normalize(data)).request(), null);
+        var padRequest = mapping.map(binding, normalizer.normalize(data)).request();
+        padRequest.external_order_note_snapshot = null;
+        var pad = orderService.createOrReplaceDraftAndSubmit(padRequest, null);
         mirrorMode();
         release(data);
         assertThat(orderService.getFrontdeskTodayOrderHistory(store, 1))
