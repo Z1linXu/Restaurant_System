@@ -102,6 +102,9 @@ public class UberEatsKitchenView {
 
     private void appendRaw(List<String> lines, List<com.restaurant.system.order.dto.ExternalKitchenSnapshot.Modifier> modifiers, int multiplier) {
         for (var raw : modifiers) {
+            if (raw.parentContext() != null && !raw.parentContext().isEmpty())
+                lines.add("选项归属：" + raw.parentContext().stream().map(c -> c.name())
+                        .collect(java.util.stream.Collectors.joining(" → ")));
             lines.add((raw.removed() ? "去除 " : "") + raw.name() + " ×" + Math.multiplyExact(multiplier, raw.quantity()));
             if (raw.notes() != null && !raw.notes().isBlank()) lines.add(raw.notes());
             appendRaw(lines, raw.modifiers(), Math.multiplyExact(multiplier, raw.quantity()));

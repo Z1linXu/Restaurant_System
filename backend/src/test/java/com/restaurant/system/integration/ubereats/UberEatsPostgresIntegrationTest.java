@@ -1203,6 +1203,26 @@ class UberEatsPostgresIntegrationTest {
     }
 
     @Test
+    void unknownChildRetainsKnownParentContextWithoutDuplicatingMappedParent() {
+        mirrorMode();
+        var data = payload(UUID.randomUUID().toString());
+        var egg = (ObjectNode)data.at("/cart/items/0/selected_modifier_groups/0/selected_items/1");
+        addModifier(egg.putArray("selected_modifier_groups").addObject().putArray("selected_items"),
+                "unknown-child", "", "No Salt");
+        var row = release(data); dispatch(row.localOrderId);
+        var line = items.findAllByOrderId(row.localOrderId).get(0);
+        assertThat(options.findAllByOrderItemIds(List.of(line.id)).stream()
+                .filter(o -> "fried_egg".equals(o.option_code_snapshot))).hasSize(1);
+        var raw = line.externalKitchenSnapshot.modifiers().get(0);
+        assertThat(raw.id()).isEqualTo("unknown-child");
+        assertThat(raw.parentContext()).hasSize(1);
+        assertThat(raw.parentContext().get(0).id()).isEqualTo(egg.path("id").asText());
+        var text = jobs.findByDispatchSourceKey("submit:"+row.localOrderId+":GRAB").orElseThrow().rendered_text_snapshot;
+        assertThat(text).contains("（选项归属：Fried Egg）", "No Salt x1").doesNotContain("Fried Egg x1");
+        assertThat(kitchenView.rawItems(row)).contains("选项归属：Fried Egg", "No Salt ×1");
+    }
+
+    @Test
     void unknownRequiredSizeKeepsKnownEggAndRemoveAndPreservesRawChoice() {
         mirrorMode();
         var data = payload(UUID.randomUUID().toString());

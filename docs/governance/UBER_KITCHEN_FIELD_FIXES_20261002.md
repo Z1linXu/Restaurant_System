@@ -71,8 +71,8 @@ Bounded `apply-field-fixes-once.py` is required because the prior one-shot deplo
 
 ## Validation (local, not physical proof)
 
-- Full backend verify: 857 tests, 0 failures/errors, 7 environment-gated skips; final affected tests add2 =859 aggregate, no failures/errors. Real local PostgreSQL V1→V33 migration/validation and integration tests enabled.
+- Full backend verify: 857 tests, 0 failures/errors, 7 environment-gated skips; final affected tests add3 =860 aggregate, no failures/errors. Real local PostgreSQL V1→V33 migration/validation and integration tests enabled.
 - Frontend238 tests, build, targeted lint PASS. Android worker policy unit tests PASS. Credential scan1558 files /4 runtime-secret fingerprints PASS (values never output).
-- Added integration coverage: ordinary/mirror HOT pending→claim→start→payload→complete; partial/mixed/raw/missing required option; no guessed HOT/no drop; immutable reprint after mapping mutation; malformed nested quantity and public ordinary fallback injection rejection; both footer markers/no Uber frontdesk. Existing DINE_IN/TAKEOUT renderer tests pass.
+- Added integration coverage: ordinary/mirror HOT pending→claim→start→payload→complete; partial/mixed/raw/missing required option; no guessed HOT/no drop; immutable reprint after mapping mutation; nested raw parent context and no duplicate known add-on; malformed nested quantity and public ordinary fallback injection rejection; both footer markers/no Uber frontdesk. Existing DINE_IN/TAKEOUT renderer tests pass.
 
 Runtime deployment/physical acceptance remains pending until recorded below. No physical PASS inferred from MockMvc, MOCK or device API simulation.

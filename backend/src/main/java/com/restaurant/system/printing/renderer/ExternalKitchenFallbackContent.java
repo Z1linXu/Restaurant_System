@@ -26,6 +26,10 @@ final class ExternalKitchenFallbackContent {
         if (modifiers == null) return;
         for (var modifier : modifiers) {
             int quantity = Math.multiplyExact(multiplier, modifier.quantity());
+            if (modifier.parentContext() != null && !modifier.parentContext().isEmpty())
+                out.append("（选项归属：").append(modifier.parentContext().stream()
+                        .map(c -> plain(display(c.name(), c.id())))
+                        .collect(java.util.stream.Collectors.joining(" → "))).append("）\n");
             if (modifier.removed()) out.append("去除 ");
             out.append(plain(display(modifier.name(), modifier.id()))).append(" x").append(quantity).append('\n');
             if (modifier.notes() != null && !modifier.notes().isBlank()) out.append(plain(modifier.notes())).append('\n');

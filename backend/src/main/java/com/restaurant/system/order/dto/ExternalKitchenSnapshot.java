@@ -7,5 +7,6 @@ public record ExternalKitchenSnapshot(
         String itemId, boolean rawRoot, String itemName, int quantity, String notes,
         List<Modifier> modifiers) {
     public record Modifier(String id, String name, int quantity, boolean removed, String notes,
-                           List<Modifier> modifiers) {}
+                           List<Modifier> modifiers, List<Context> parentContext) {}
+    public record Context(String id, String name) {}
 }

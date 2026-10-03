@@ -136,7 +136,7 @@ public class UberEatsMenuMappingService {
             List<ExternalKitchenSnapshot.Modifier> rawModifiers = new ArrayList<>();
             for (UberOrderSnapshot.Item modifier : source.modifiers())
                 mapModifier(modifier, source.id(), null, 1, rules, choices, line, errors, selected,
-                        mirror, rawModifiers, warnings);
+                        mirror, rawModifiers, warnings, List.of());
             List<String> selectionErrors = new ArrayList<>();
             validateSelections(catalog, item, line, choices, selectionErrors, source);
             if (mirror && !selectionErrors.isEmpty()) {
@@ -165,7 +165,7 @@ public class UberEatsMenuMappingService {
                 line.notes = joinNotes(snapshot.notes(), source.notes());
                 for (var modifier : source.modifiers())
                     mapModifier(modifier, source.id(), null, 1, rules, safeChoices, line, errors,
-                            selected, true, rawModifiers, warnings);
+                            selected, true, rawModifiers, warnings, List.of());
             } else errors.addAll(selectionErrors);
             if (mirror && (!rawModifiers.isEmpty() || line.notes != null && line.notes.length() > 255)) {
                 line.external_kitchen_snapshot = new ExternalKitchenSnapshot(source.id(), false,
@@ -202,7 +202,7 @@ public class UberEatsMenuMappingService {
             CreateOrderItemRequest line,
             List<String> errors,
             Set<Long> selected, boolean mirror, List<ExternalKitchenSnapshot.Modifier> raw,
-            List<String> warnings) {
+            List<String> warnings, List<ExternalKitchenSnapshot.Context> parentContext) {
         addIssues(errors, source);
         if (mirror) {
             List<String> probeErrors = new ArrayList<>();
@@ -210,10 +210,10 @@ public class UberEatsMenuMappingService {
             probe.menu_item_id = line.menu_item_id;
             Set<Long> probeSelected = new HashSet<>(selected);
             mapModifier(source, root, parent, multiplier, rules, choices, probe, probeErrors,
-                    probeSelected, false, new ArrayList<>(), new ArrayList<>());
+                    probeSelected, false, new ArrayList<>(), new ArrayList<>(), parentContext);
             if (!probeErrors.isEmpty()) {
                 if (probeErrors.stream().anyMatch(e -> e.contains("NO_OP_REQUIRES_REVIEW"))) {
-                    raw.add(rawModifier(source, multiplier)); warnings.addAll(probeErrors); return;
+                    raw.add(rawModifier(source, multiplier, parentContext)); warnings.addAll(probeErrors); return;
                 }
                 // Map the parent independently so an unknown child does not erase a known parent.
                 var shallow = new UberOrderSnapshot.Item(source.id(), source.external_data(), source.title(),
@@ -221,9 +221,9 @@ public class UberEatsMenuMappingService {
                 probeErrors.clear(); probe.options.clear(); probe.notes = null;
                 probeSelected = new HashSet<>(selected);
                 mapModifier(shallow, root, parent, multiplier, rules, choices, probe, probeErrors,
-                        probeSelected, false, new ArrayList<>(), new ArrayList<>());
+                        probeSelected, false, new ArrayList<>(), new ArrayList<>(), parentContext);
                 if (!probeErrors.isEmpty()) {
-                    raw.add(rawModifier(source, multiplier)); warnings.addAll(probeErrors); return;
+                    raw.add(rawModifier(source, multiplier, parentContext)); warnings.addAll(probeErrors); return;
                 }
             }
         }
@@ -280,6 +280,8 @@ public class UberEatsMenuMappingService {
                 joinNotes(
                         line.notes,
                         source.notes().isBlank() ? "" : source.title() + ": " + source.notes());
+        var childContext = new ArrayList<>(parentContext);
+        childContext.add(new ExternalKitchenSnapshot.Context(source.id(), source.title()));
         for (var child : source.modifiers())
             mapModifier(
                     child,
@@ -290,7 +292,7 @@ public class UberEatsMenuMappingService {
                     choices,
                     line,
                     errors,
-                    selected, mirror, raw, warnings);
+                    selected, mirror, raw, warnings, List.copyOf(childContext));
     }
 
     private void addTreeIssues(List<String> errors, UberOrderSnapshot.Item source) {
@@ -309,14 +311,14 @@ public class UberEatsMenuMappingService {
         line.combo_role = "standalone";
         line.external_kitchen_snapshot = new ExternalKitchenSnapshot(source.id(), true, source.title(),
                 source.quantity(), joinNotes(orderNotes, source.notes()),
-                source.modifiers().stream().map(m -> rawModifier(m, 1)).toList());
+                source.modifiers().stream().map(m -> rawModifier(m, 1, List.of())).toList());
         return line;
     }
 
-    private ExternalKitchenSnapshot.Modifier rawModifier(UberOrderSnapshot.Item source, int multiplier) {
+    private ExternalKitchenSnapshot.Modifier rawModifier(UberOrderSnapshot.Item source, int multiplier, List<ExternalKitchenSnapshot.Context> parentContext) {
         return new ExternalKitchenSnapshot.Modifier(source.id(), source.title(),
                 Math.multiplyExact(multiplier, source.quantity()), source.removed(), source.notes(),
-                source.modifiers().stream().map(m -> rawModifier(m, 1)).toList());
+                source.modifiers().stream().map(m -> rawModifier(m, 1, List.of())).toList(), List.copyOf(parentContext));
     }
 
     private CreateOrderItemOptionRequest option(Choice c, int quantity) {
