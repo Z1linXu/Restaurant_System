@@ -3,26 +3,26 @@ updated_at: 2026-10-02
 
 repository:
   ref: origin/main
-  sha: f7f0bb344bfa8a157cb15ccbefb9e588aebd3da5
+  sha: 500aacd991fddbc8f224174fc65db833e60d7848
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
   package: UBER_KITCHEN_MIRROR
-  status: STAGING_FIELD_REPAIR_REVIEW_AND_ACCEPTANCE
+  status: STAGING_FIELD_REPAIR_UBER_PHYSICAL_PASS_NORMAL_CONTROL_PENDING
   next_phase_authorized: false
 
 staging:
-  deployed_sha: f7f0bb344bfa8a157cb15ccbefb9e588aebd3da5
+  deployed_sha: 500aacd991fddbc8f224174fc65db833e60d7848
   deployed_sha_semantics: BACKEND_AND_FRONTEND
-  frontend_deployed_sha: f7f0bb344bfa8a157cb15ccbefb9e588aebd3da5
+  frontend_deployed_sha: 500aacd991fddbc8f224174fc65db833e60d7848
   policy_config_sha: d2316234b2936fd89a926aa24a7b6343008834e6
-  flyway: V32
-  acceptance: REAL_SANDBOX_KITCHEN_MIRROR_GRAB_HOT_TODAY_REPRINT_FINANCIAL_PASS_MOCK
-  evidence: UBER_KITCHEN_MIRROR_E2E_20261002.md
-  repair_evidence: PHASE_B_PART2_P0_P1_REPAIR_STAGING_EVIDENCE.md
+  flyway: V33
+  acceptance: REAL_SANDBOX_MIXED_RAW_GRAB_HOT_TODAY_PHYSICAL_PASS_NORMAL_CONTROL_PENDING
+  evidence: UBER_KITCHEN_FIELD_FIXES_20261002.md
+  repair_evidence: UBER_KITCHEN_FIELD_FIXES_20261002.md
   cleanup_evidence: PHASE_B_STAGING_SYNTHETIC_FIXTURE_CLEANUP_EXECUTION_EVIDENCE.md
-  runtime_observation_evidence: UBER_KITCHEN_MIRROR_E2E_20261002.md
+  runtime_observation_evidence: UBER_KITCHEN_FIELD_FIXES_20261002.md
   endpoint_policy_evidence: runtime/STAGING_ENDPOINT_POLICY_20260930_EVIDENCE.md
   endpoint_policy_gate: OWNER_CONFIRMED_STORE18_PRINTER_BINDINGS_PENDING
 
@@ -64,13 +64,17 @@ uber_test_store_audit:
   ready_for_uber_kitchen_mirror_pilot: true
   pilot_readiness_scope: VALIDATED_MAPPED_COMBINATION_MOCK_NO_PRODUCTION_AUTHORIZATION
   chow_mein_second_test: ROOT_UNCONFIRMED_RAW_GRAB_FALLBACK_AUTHORIZED_HOT_ROUTING_NOT_GUESSED
-  physical_pad_direct: NOT_TESTED
+  physical_pad_direct: OWNER_CONFIRMED_UBER_GRAB213_HOT214_PAPER_FOOTERS_APK040
+  field_test_order_id: 87673b75-8257-4d2c-93e1-091fb1f26bed
+  field_local_order_id: 82
+  field_mapping: PARTIALLY_MAPPED_RAW_ROOT_NO_GUESSED_HOT
+  legacy_mapping_held_orders: RETAINED_40D26_63A1E_NO_AUTOMATIC_REPLAY
   real_uber_webhook: PASS_REAL_SIGNED_TEST_EVENT_WITH_EXACT_PAIR_SANDBOX_GET_VALIDATION
   production_changed: false
 
 gate:
   type: TECHNICAL
-  next_action: REVIEW_MERGE_DEPLOY_V33_AND_VERIFY_CURRENT_PAD_HOT_QUEUE_RAW_FALLBACK
+  next_action: CONFIRM_ORDINARY_POS_DRAFT83_PAD_HOT_PHYSICAL_CONTROL
 
 authorization:
   repository_governance: COMPLETE
@@ -88,4 +92,4 @@ authorization:
   production: NONE
 
 stop:
-  marker: FIELD_REPAIR_IN_PROGRESS_NATIVE_PAD_LOG_ACCESS_UNAVAILABLE_NO_PRODUCTION
+  marker: UBER_PHYSICAL_PASS_NORMAL_CONTROL_PENDING_NO_PRODUCTION
