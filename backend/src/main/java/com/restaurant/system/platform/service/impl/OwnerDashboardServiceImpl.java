@@ -37,6 +37,8 @@ public class OwnerDashboardServiceImpl implements OwnerDashboardService {
     private static final DateTimeFormatter TIME_LABEL = DateTimeFormatter.ofPattern("h:mm a");
     private static final Set<String> ACTIVE_ORDER_STATUSES = Set.of("submitted", "preparing", "ready");
 
+    private final com.restaurant.system.analytics.service.ChannelSalesService channelSalesService;
+    private final com.restaurant.system.analytics.service.AnalyticsReadScope readScope;
     private final MenuItemRepository menuItemRepository;
     private final MenuCategoryRepository menuCategoryRepository;
     private final StoreRepository storeRepository;
@@ -52,8 +54,12 @@ public class OwnerDashboardServiceImpl implements OwnerDashboardService {
         OrganizationRepository organizationRepository,
         OrderRepository orderRepository,
         OrderItemRepository orderItemRepository,
-        InventoryItemRepository inventoryItemRepository
+        InventoryItemRepository inventoryItemRepository,
+        com.restaurant.system.analytics.service.ChannelSalesService channelSalesService,
+        com.restaurant.system.analytics.service.AnalyticsReadScope readScope
     ) {
+        this.readScope = readScope;
+        this.channelSalesService = channelSalesService;
         this.menuItemRepository = menuItemRepository;
         this.menuCategoryRepository = menuCategoryRepository;
         this.storeRepository = storeRepository;
@@ -111,7 +117,8 @@ public class OwnerDashboardServiceImpl implements OwnerDashboardService {
         response.store_comparison = buildStoreComparison(organizationStores, ordersByStore, currentWindow, previousWindow);
         response.revenue_mix = buildRevenueMix(currentCompletedOrders, currentOrderItems);
         response.noodle_sales = buildNoodleSales(response.revenue_mix, scopedStoreIds);
-        response.sales_timestamp = "submitted_at";
+        response.sales_timestamp = "POS_SUBMITTED_AT_UBER_PLACED_AT";
+        response.channel_sales = channelSalesService.build(scopedStoreIds, currentWindow.start.toLocalDate(), currentWindow.end.toLocalDate().minusDays(1), "today".equals(normalizedRange));
         response.recent_orders = buildRecentOrders(scopedOrders);
         return response;
     }
@@ -161,19 +168,7 @@ public class OwnerDashboardServiceImpl implements OwnerDashboardService {
     }
 
     private List<Store> resolveStores(Long organizationId, Long storeId) {
-        List<Store> allStores = storeRepository.findAll().stream()
-            .filter(store -> store.organization_id != null)
-            .toList();
-
-        if (storeId != null) {
-            Store store = storeRepository.findById(storeId).orElseThrow(() -> new IllegalArgumentException("Store not found"));
-            return allStores.stream().filter(candidate -> Objects.equals(candidate.organization_id, store.organization_id)).toList();
-        }
-        if (organizationId != null) {
-            return allStores.stream().filter(store -> Objects.equals(store.organization_id, organizationId)).toList();
-        }
-
-        return allStores;
+        return readScope.comparisonStores(organizationId, storeId);
     }
 
     private List<Long> resolveScopedStoreIds(List<Store> organizationStores, Long storeId) {

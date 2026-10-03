@@ -1933,18 +1933,36 @@ PAD printing endpoints retain their ResponseStatusException HTTP codes and retur
 
 ### Owner Dashboard sales presentation contract
 
-The existing Dashboard response additionally returns `sales_timestamp: "submitted_at"`,
-`noodle_sales[]` and `revenue_mix[]`. Category rows contain `reporting_group`,
-`quantity_sold`, `revenue`, `percentage`. Groups are SOUP_NOODLE, DRY_NOODLE,
-FRIED_NOODLE, DRINK, ALCOHOL, SIDE, FRIED, OTHER. Eligibility remains completed,
-submitted, non-Uber/non-EXTERNAL_PLATFORM. Actual existing Sales totals are allocated
-by frozen line amounts, not current catalog prices. Today trend is10:00–22:00;
-week/month remain daily. Old Recent/Active/order-status response fields remain
-compatible but are no longer shown on Dashboard.
+Dashboard and analytics summary responses add `channel_sales`, a shared read-only
+projection with `revenue_basis`, `currency`, `revenue_note`, `totals`, `categories`,
+`noodle_sales`, `items`, `trend`, `daily`, and `stores`. Every row contains `in_store`,
+`uber_eats`, and `total` metrics: `revenue` (nullable), `known_revenue`,
+`unknown_amount_count`, `order_count`, `quantity`, `average_order_value` (nullable),
+and category `percentage` (nullable when incomplete). Unknown money must not be
+rendered as zero. Both Dashboard and Reports restrict organization/store parameters to the authenticated
+user's accessible Stores, including comparison rows. Foreign scope returns403;
+ADMIN retains existing global access. Non-admin rebuild requires explicit store_id.
+Existing legacy summary/KPI money fields remain in-store for
+backward compatibility; updated Dashboard/Reports use `channel_sales`.
+
+Basis: `MERCHANDISE_INCLUDING_TAX_EXCLUDING_PLATFORM_FEES_TIPS`. POS uses completed
+orders' existing `total_amount` and first `submitted_at`; Uber uses verified accepted,
+non-cancelled/non-edit-review orders' immutable V35 financial evidence and `placed_at`
+in each Store's local timezone. Mirror local orders are excluded from POS. Uber root
+`total_price` already includes quantity/modifiers; no local menu price enters Uber
+revenue. Supported charges must reconcile root sum=subtotal and subtotal+tax=total
+with no unsupported adjustment/fee. Actual tax is allocated by actual Uber line
+weights. Unsupported/missing financial data keeps quantity but null revenue.
+
+Groups remain SOUP_NOODLE, DRY_NOODLE, FRIED_NOODLE, DRINK, ALCOHOL, SIDE, FRIED, OTHER.
+Unknown historical root identity remains OTHER. Today trend remains10:00–22:00;
+Week/Month remain daily. Revenue donut defaults to TOTAL, switches IN_STORE/UBER_EATS.
+Existing profit summaries are explicitly in-store; no Uber settlement/profit estimate.
+V35 is additive and does not rewrite historical raw financial/order/print snapshots.
 
 Report summary rebuild remains `POST /api/v1/admin/analytics/rebuild?date=YYYY-MM-DD&store_id=ID`
 (no body, existing authenticated Store authorization). After the submitted-time
 change, rebuild the union of old summary dates and eligible submitted dates, with
 an explicit Store ID. No order, payment or print records are rewritten. Daily
-automatic Finish is an internal worker, not a new public API; it reuses the manual
+automatic Finish runs at23:30 Store-local time (default America/Toronto, DST-aware). It is an internal worker, not a new public API; it reuses the manual
 complete domain and records AUTO_FINISHED_END_OF_DAY plus the durable V34 ledger.

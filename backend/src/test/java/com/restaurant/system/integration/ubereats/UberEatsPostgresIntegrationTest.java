@@ -1071,6 +1071,7 @@ class UberEatsPostgresIntegrationTest {
         assertThat(row.financialTotalMinor).isEqualTo(1999);
         assertThat(row.financialCurrency).isEqualTo("CAD");
         assertThat(row.rawFinancialSnapshotJson).contains("1999");
+        assertThat(row.itemFinancialSnapshotJson).isNull(); // CREATED is not a frozen sale.
         assertThat(row.rawOrderSnapshotJson).doesNotContain("private-not-stored", "Zhang");
         assertThat(count("orders", "store_id", store)).isZero();
         assertThat(count("order_dispatch_outbox", "store_id", store)).isZero();
@@ -1093,6 +1094,35 @@ class UberEatsPostgresIntegrationTest {
                                 assertThat(j.rendered_text_snapshot)
                                         .contains("UBER - Ashton Z")
                                         .doesNotContain("Zhang", "private-not-stored"));
+    }
+
+    @Test
+    void heldAcceptedFinancialSnapshotCannotBeRepricedByRefreshOrRemap() throws Exception {
+        mirrorMode();
+        var data = payload(UUID.randomUUID().toString());
+        data.put("current_state", "ACCEPTED");
+        data.withObject("/cart").putArray("fulfillment_issues").add("review");
+        var charges = data.withObject("/payment/charges");
+        charges.putObject("sub_total").put("amount", 1000).put("currency_code", "CAD");
+        charges.putObject("tax").put("amount", 150).put("currency_code", "CAD");
+        charges.putObject("total").put("amount", 1150).put("currency_code", "CAD");
+        ((ObjectNode) data.path("cart").path("items").get(0)).putObject("price")
+            .putObject("total_price").put("amount", 1000).put("currency_code", "CAD");
+        var held = notify(data);
+        assertThat(held.status).isEqualTo("RELEASED_MAPPING_REQUIRED");
+        assertThat(held.localOrderId).isNull();
+        String frozen = held.itemFinancialSnapshotJson;
+        assertThat(new com.fasterxml.jackson.databind.ObjectMapper().readTree(frozen).path("revenue_minor").asLong()).isEqualTo(1150);
+        charges.withObject("/sub_total").put("amount", 2000);
+        charges.withObject("/tax").put("amount", 300);
+        charges.withObject("/total").put("amount", 2300);
+        ((ObjectNode) data.path("cart").path("items").get(0).path("price").path("total_price")).put("amount", 2000);
+        tx.remapStore(store);
+        tx.refreshMirror(held.id, normalizer.normalize(data));
+        assertThat(row(held.uberOrderId).itemFinancialSnapshotJson).isEqualTo(frozen);
+        assertThat(row(held.uberOrderId).localOrderId).isNull();
+        assertThat(count("orders", "store_id", store)).isZero();
+        assertThat(count("print_jobs", "store_id", store)).isZero();
     }
 
     @Test

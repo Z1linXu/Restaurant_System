@@ -1,3 +1,4 @@
+import type { ChannelSalesSummary } from './channelSales'
 import { apiRequest } from './apiClient'
 
 export type AnalyticsReportRange = 'today' | 'week' | 'month' | 'custom'
@@ -78,6 +79,7 @@ export interface AnalyticsAlertRecord {
 }
 
 export interface AnalyticsSummaryResponse {
+  channel_sales?: ChannelSalesSummary
   organization_id: number | null
   store_id: number | null
   range: string

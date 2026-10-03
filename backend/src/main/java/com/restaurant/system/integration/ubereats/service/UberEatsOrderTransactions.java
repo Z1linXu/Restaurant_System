@@ -296,6 +296,8 @@ public class UberEatsOrderTransactions {
     public void accepted(Long id) {
         var row = lockOrder(id);
         row.acceptedAt = LocalDateTime.now();
+        if (row.rawOrderSnapshotJson != null)
+            freezeFinancial(row, decode(row.rawOrderSnapshotJson, UberOrderSnapshot.class));
         if (!Boolean.TRUE.equals(row.cancelled)
                 && !Boolean.TRUE.equals(row.editRequired)
                 && row.localOrderId == null) row.status = "UBER_ACCEPTED";
@@ -673,6 +675,10 @@ public class UberEatsOrderTransactions {
     }
 
     private void applySnapshot(UberEatsOrder row, UberOrderSnapshot s) {
+        // Only verified acceptance freezes sales evidence. CREATED can still change before accept.
+        // Once captured, even a held order/remap cannot rewrite the financial history.
+        if ("ACCEPTED".equals(s.current_state()) || row.acceptedAt != null || row.acceptedObservedAt != null)
+            freezeFinancial(row, s);
         row.rawOrderSnapshotJson = encode(s);
         row.displayId = s.display_id();
         row.customerDisplayName = s.customer_display_name();
@@ -709,6 +715,11 @@ public class UberEatsOrderTransactions {
         row.placedAt = parseTime(s.placed_at());
         row.scheduledAt =
                 Boolean.TRUE.equals(row.scheduled) ? parseTime(s.estimated_ready_at()) : null;
+    }
+
+    private void freezeFinancial(UberEatsOrder row, UberOrderSnapshot snapshot) {
+        if (row.itemFinancialSnapshotJson == null && snapshot.item_financial_snapshot() != null)
+            row.itemFinancialSnapshotJson = encode(snapshot.item_financial_snapshot());
     }
 
     private Long money(

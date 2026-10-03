@@ -1,3 +1,4 @@
+import type { ChannelSalesSummary } from './channelSales'
 import { apiRequest } from './apiClient'
 
 export type OwnerDashboardRange = 'today' | 'week' | 'month'
@@ -81,6 +82,7 @@ export interface OwnerDashboardCategorySales {
 }
 
 export interface OwnerDashboardResponse {
+  channel_sales?: ChannelSalesSummary
   organization_id: number | null
   organization_name: string
   range: OwnerDashboardRange | string

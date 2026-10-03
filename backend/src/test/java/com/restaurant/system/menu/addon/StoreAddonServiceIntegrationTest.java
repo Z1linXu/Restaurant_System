@@ -73,7 +73,9 @@ class StoreAddonServiceIntegrationTest {
             foreign key(menu_item_id,store_addon_store_id) references menu_items(id,store_id),
             foreign key(store_addon_id,store_addon_store_id) references store_addons(id,store_id))
             """);
-        jdbc.execute("create table order_item_options(id bigint primary key,menu_item_option_id bigint,name_zh varchar(255),price_delta numeric(38,2))");
+        jdbc.execute("create table orders(id bigint primary key,store_id bigint,status varchar(50))");
+        jdbc.execute("create table order_items(id bigint primary key,order_id bigint,status varchar(50))");
+        jdbc.execute("create table order_item_options(id bigint primary key,option_id bigint,order_item_id bigint,parent_option_id_snapshot bigint,name_zh varchar(255),price_delta numeric(38,2))");
         jdbc.update("insert into organizations values (1),(2)");
         jdbc.update("insert into stores(id,organization_id) values (1,1),(2,1),(3,2)");
         jdbc.update("insert into menu_items values (10,1),(11,1),(20,2),(30,3)");
@@ -99,6 +101,66 @@ class StoreAddonServiceIntegrationTest {
     @AfterEach void close() { context.close(); }
 
     @Test
+    void retiredUnlinkedRowsDoNotBlockCanonicalCatalogAndCompletedSnapshotsStayUntouched() {
+        long active = option(10, "extra_meat", "加肉", "Extra Meat", "6.99", true);
+        long retired = option(11, "extra_meat", "旧肉", "Legacy Beef", "4.00", false);
+        long retiredMissingCode = option(11, null, "加包菜", "Cabbage", "2.00", false);
+        jdbc.update("insert into orders values (90,1,'completed')");
+        jdbc.update("insert into order_items values (91,90,'active')");
+        jdbc.update("insert into order_item_options(id,option_id,order_item_id,name_zh,price_delta) values (92,?,91,'历史牛肉',4.00)", retired);
+        var beforeRetired = jdbc.queryForList("select * from menu_item_options where id in (?,?) order by id", retired, retiredMissingCode);
+        var beforeHistory = jdbc.queryForList("select * from order_item_options");
+        assertThat(service.getAddons(1L).conflicts()).isEmpty();
+        assertThat(service.reconcile(1L, false).linked_options()).isEqualTo(1);
+        var addon = service.getAddons(1L).addons().get(0);
+        assertThat(addon.code()).isEqualTo("extra_meat");
+        assertThat(addon.name_zh()).isEqualTo("加肉");
+        assertThat(jdbc.queryForObject("select store_addon_id from menu_item_options where id=?", Long.class, active)).isEqualTo(addon.id());
+        assertThat(jdbc.queryForList("select * from menu_item_options where id in (?,?) order by id", retired, retiredMissingCode)).isEqualTo(beforeRetired);
+        assertThat(jdbc.queryForList("select * from order_item_options")).isEqualTo(beforeHistory);
+    }
+
+    @Test
+    void genuinelyAmbiguousActiveOrUnknownActiveMissingCodesRemainOwnerDecisions() {
+        long activeEgg = option(10, null, "加蛋", "Extra Egg", "1.99", true);
+        long unknownActive = option(11, null, "未知旧值", "Unknown", "2.00", false);
+        jdbc.update("update menu_item_options set is_active=null where id=?", unknownActive);
+        option(11, null, "已停用", "Retired", "1.00", false);
+        var before = jdbc.queryForList("select * from menu_item_options order by id");
+        var conflicts = service.getAddons(1L).conflicts();
+        assertThat(conflicts).singleElement().satisfies(c -> assertThat(c.option_ids()).containsExactly(activeEgg, unknownActive));
+        assertThat(service.reconcile(1L, false).conflicts()).isEqualTo(conflicts);
+        assertThat(jdbc.queryForList("select * from menu_item_options order by id")).isEqualTo(before);
+    }
+
+    @Test
+    void inactiveOptionUsedByAnOpenOrderRemainsVisibleUntilThatOrderCloses() {
+        long retired = option(10, null, "加蛋", "Extra Egg", "1.99", false);
+        jdbc.update("insert into orders values (90,1,'submitted')");
+        jdbc.update("insert into order_items values (91,90,'active')");
+        jdbc.update("insert into order_item_options(id,option_id,order_item_id,name_zh,price_delta) values (92,?,91,'加蛋',1.99)", retired);
+        assertThat(service.getAddons(1L).conflicts()).singleElement()
+            .satisfies(c -> assertThat(c.option_ids()).containsExactly(retired));
+        jdbc.update("update orders set status='completed' where id=90");
+        assertThat(service.getAddons(1L).conflicts()).isEmpty();
+        assertThat(count("order_item_options")).isEqualTo(1);
+        assertThat(count("menu_item_options")).isEqualTo(1);
+    }
+
+    @Test
+    void activeOrderParentSnapshotAndActiveChildOptionKeepInactiveParentVisible() {
+        long orderParent = option(10, null, "旧父选项", "Legacy parent", "1.00", false);
+        long childParent = option(11, null, "旧父选项二", "Legacy parent two", "1.00", false);
+        long child = option(11, "child", "子选项", "Child", "0.00", true);
+        jdbc.update("update menu_item_options set parent_option_id=?,option_group='REMOVE',option_type='remove' where id=?", childParent, child);
+        jdbc.update("insert into orders values (90,1,'draft')");
+        jdbc.update("insert into order_items values (91,90,'active')");
+        jdbc.update("insert into order_item_options(id,order_item_id,parent_option_id_snapshot,name_zh,price_delta) values (92,91,?,'Snapshot',1.00)", orderParent);
+        assertThat(service.getAddons(1L).conflicts()).singleElement()
+            .satisfies(c -> assertThat(c.option_ids()).containsExactly(orderParent, childParent));
+    }
+
+    @Test
     void ownerConfirmedPricesResolveOnlyPricesAndRetainUnresolvedNamesAndHistory() {
         long egg = option(10, "fried_egg", "加煎蛋", "Extra Fried Egg", "1.80", true);
         option(11, "fried_egg", "加煎蛋", "Extra Fried Egg", "1.99", false);
@@ -106,7 +168,7 @@ class StoreAddonServiceIntegrationTest {
         option(30, "fried_egg", "加煎蛋", "Extra Fried Egg", "4.00", true);
         option(10, "extra_meat", "加肉", "Extra Beef", "5.00", true);
         option(11, "extra_meat", "加肉", "Extra Meat", "6.99", true);
-        jdbc.update("insert into order_item_options values (1,?,'加煎蛋',1.80)", egg);
+        jdbc.update("insert into order_item_options(id,option_id,name_zh,price_delta) values (1,?,'加煎蛋',1.80)", egg);
         var decisions = java.util.Map.of("fried_egg", new BigDecimal("1.99"), "extra_meat", new BigDecimal("6.99"));
         service.reconcilePrices(1L, true, decisions);
         assertThat(jdbc.queryForObject("select price_delta from menu_item_options where id=?", BigDecimal.class, egg)).isEqualByComparingTo("1.80");
@@ -187,7 +249,7 @@ class StoreAddonServiceIntegrationTest {
         assertThat(count("store_addons")).isZero();
         var dry = service.reconcile(1L, true);
         assertThat(dry.linked_groups()).isEqualTo(1);
-        assertThat(dry.linked_options()).isEqualTo(3);
+        assertThat(dry.linked_options()).isEqualTo(2);
         assertThat(dry.conflicts()).extracting(StoreAddonService.Conflict::code).containsExactly(null, "bad-code", "conflict");
         assertThat(count("store_addons")).isZero();
         assertThat(revision(1)).isEqualTo(1);
@@ -195,7 +257,7 @@ class StoreAddonServiceIntegrationTest {
         assertThat(applied.conflicts()).isEqualTo(dry.conflicts());
         assertThat(count("menu_item_options")).isEqualTo(7);
         assertThat(jdbc.queryForList("select addon_eligible from menu_item_options where store_addon_id is not null", Boolean.class))
-            .containsExactly(true, false, true);
+            .containsExactly(true, true);
         assertThat(service.getAddons(1L).addons()).singleElement().satisfies(a -> assertThat(a.active()).isTrue());
         assertThat(service.reconcile(1L, false).linked_options()).isZero();
         assertThat(revision(1)).isEqualTo(2);
@@ -206,6 +268,8 @@ class StoreAddonServiceIntegrationTest {
         long first = option(10, "beef", "牛肉", "Beef", "2.00", true);
         long second = option(10, "beef", "牛肉", "Beef", "2.00", false);
         long otherItem = option(11, "beef", "牛肉", "Beef", "2.00", true);
+        long activeChild = option(10, "child", "子选项", "Child", "0.00", true);
+        jdbc.update("update menu_item_options set parent_option_id=?,option_group='REMOVE',option_type='remove' where id=?", second, activeChild);
         assertUnlinkedRelationshipConflictPreserved(first, second, otherItem);
     }
 
@@ -273,10 +337,11 @@ class StoreAddonServiceIntegrationTest {
     @Test
     void catalogRenameAndRepricePropagateAllRowsAndEligibilitySurvivesActiveCycle() {
         long first = option(10, "beef", "牛肉", "Beef", "2.00", true);
-        option(11, "beef", "牛肉", "Beef", "2.00", false);
-        jdbc.update("insert into order_item_options values (100,?,'牛肉',2.00)", first);
+        option(11, "beef", "牛肉", "Beef", "2.00", true);
+        jdbc.update("insert into order_item_options(id,option_id,name_zh,price_delta) values (100,?,'牛肉',2.00)", first);
         service.reconcile(1L, false);
         var addon = service.getAddons(1L).addons().get(0);
+        service.setEligibility(11L, addon.id(), false);
         service.update(addon.id(), request(1, "beef", "精选牛肉", "Premium beef", "3.25", false));
         assertThat(jdbc.queryForList("select is_active from menu_item_options", Boolean.class)).containsOnly(false);
         assertThat(jdbc.queryForList("select name_zh from menu_item_options", String.class)).containsOnly("精选牛肉");

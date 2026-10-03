@@ -53,6 +53,8 @@ public class AnalyticsAggregationServiceImpl implements AnalyticsAggregationServ
     private static final Set<String> COMPLETED_ORDER_STATUSES = Set.of("completed");
     private static final Set<String> CANCELLED_ORDER_STATUSES = Set.of("cancelled");
 
+    private final com.restaurant.system.analytics.service.ChannelSalesService channelSalesService;
+    private final com.restaurant.system.analytics.service.AnalyticsReadScope readScope;
     private final StoreRepository storeRepository;
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
@@ -74,8 +76,12 @@ public class AnalyticsAggregationServiceImpl implements AnalyticsAggregationServ
         SalesHourlySummaryRepository salesHourlySummaryRepository,
         MenuItemSalesSummaryRepository menuItemSalesSummaryRepository,
         StorePerformanceSummaryRepository storePerformanceSummaryRepository,
-        AnalyticsAlertRepository analyticsAlertRepository
+        AnalyticsAlertRepository analyticsAlertRepository,
+        com.restaurant.system.analytics.service.ChannelSalesService channelSalesService,
+        com.restaurant.system.analytics.service.AnalyticsReadScope readScope
     ) {
+        this.readScope = readScope;
+        this.channelSalesService = channelSalesService;
         this.storeRepository = storeRepository;
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
@@ -125,14 +131,17 @@ public class AnalyticsAggregationServiceImpl implements AnalyticsAggregationServ
         response.range = normalizedRange;
         response.start_date = window.startDate.toString();
         response.end_date = window.endDate.toString();
-        response.sales_daily_summaries = getDailySummaries(organizationId, storeId, window);
+        List<Long> scope = readScope.stores(organizationId, storeId).stream().map(store -> store.id).toList();
+        response.sales_daily_summaries = scope.stream().flatMap(id -> getDailySummaries(null, id, window).stream()).toList();
         response.sales_hourly_summaries =
             "today".equals(normalizedRange) && window.startDate.equals(window.endDate)
-                ? getHourlySummaries(organizationId, storeId, window.startDate)
+                ? scope.stream().flatMap(id -> getHourlySummaries(null, id, window.startDate).stream()).toList()
                 : List.of();
-        response.menu_item_sales_summaries = getMenuItemSummaries(organizationId, storeId, window);
-        response.store_performance_summaries = getStorePerformanceSummaries(organizationId, storeId, window);
-        response.analytics_alerts = getAlerts(organizationId, storeId, window);
+        response.menu_item_sales_summaries = scope.stream().flatMap(id -> getMenuItemSummaries(null, id, window).stream()).toList();
+        response.store_performance_summaries = scope.stream().flatMap(id -> getStorePerformanceSummaries(null, id, window).stream()).toList();
+        response.analytics_alerts = scope.stream().flatMap(id -> getAlerts(null, id, window).stream()).toList();
+        response.channel_sales = channelSalesService.build(scope, window.startDate, window.endDate,
+            "today".equals(normalizedRange) && window.startDate.equals(window.endDate));
         return response;
     }
 

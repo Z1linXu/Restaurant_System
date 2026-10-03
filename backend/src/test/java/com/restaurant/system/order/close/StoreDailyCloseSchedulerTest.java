@@ -14,7 +14,7 @@ class StoreDailyCloseSchedulerTest {
         Store first = new Store(); first.id = 1L;
         Store second = new Store(); second.id = 2L;
         when(stores.findAllByStatusIgnoreCase("active")).thenReturn(List.of(first, second));
-        Instant now = Instant.parse("2026-10-03T02:35:00Z");
+        Instant now = Instant.parse("2026-10-03T03:35:00Z");
         when(service.closeStore(1L, now)).thenThrow(new IllegalStateException("fixture failure"));
         new StoreDailyCloseScheduler(stores, service).closeDueStores(now);
         verify(service).closeStore(1L, now);

@@ -27,6 +27,8 @@ class AnalyticsAdminControllerTest {
     @Mock
     private StoreModuleAccessEvaluator moduleAccessEvaluator;
 
+    @Mock private com.restaurant.system.analytics.service.AnalyticsReadScope readScope;
+
     private AnalyticsAdminController controller;
 
     @BeforeEach
@@ -35,7 +37,8 @@ class AnalyticsAdminControllerTest {
             analyticsAggregationService,
             authorizationService,
             featureFlagService,
-            moduleAccessEvaluator
+            moduleAccessEvaluator,
+            readScope
         );
     }
 
@@ -46,5 +49,6 @@ class AnalyticsAdminControllerTest {
         verify(authorizationService).require(Capability.ADMIN_STORE_CONFIG);
         verify(featureFlagService).requireEnabled(FeaturePackage.ANALYTICS);
         verifyNoInteractions(moduleAccessEvaluator);
+        verify(readScope).requireGlobalRebuild();
     }
 }

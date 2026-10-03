@@ -37,7 +37,8 @@ public class UberEatsOrderNormalizer {
                 customerName(order.path("eater")),
                 order.path("payment").path("charges").isObject()
                         ? order.path("payment").path("charges").deepCopy()
-                        : null);
+                        : null,
+                com.restaurant.system.integration.ubereats.dto.UberFinancialSnapshot.capture(order));
     }
 
     private String customerName(JsonNode eater) {

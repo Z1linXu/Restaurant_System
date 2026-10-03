@@ -40,6 +40,9 @@ public class UberEatsOrder {
     @Column(name = "raw_financial_snapshot_json", columnDefinition = "text")
     public String rawFinancialSnapshotJson;
 
+    @Column(name = "item_financial_snapshot_json", columnDefinition = "text")
+    public String itemFinancialSnapshotJson;
+
     @Column(name = "financial_currency")
     public String financialCurrency;
 

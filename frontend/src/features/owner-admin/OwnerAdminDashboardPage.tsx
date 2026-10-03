@@ -11,6 +11,7 @@ import { fetchWorkspaces, type WorkspaceStore } from '../../services/storeWorksp
 import { useAuth } from '../auth/useAuth'
 import { useCurrentStore } from '../store/useStoreContext'
 import { NoodleSalesPanel, RevenueMixPanel } from './RevenueCategoryPanels'
+import { ChannelSalesKpis, ChannelNoodleSales, ChannelRevenueMix, ChannelTrend } from '../reports/components/ChannelSalesPanels'
 
 const RANGE_OPTIONS: { value: OwnerDashboardRange; label: string }[] = [
   { value: 'today', label: 'Today' },
@@ -363,6 +364,7 @@ export function OwnerAdminDashboardPage() {
               </div>
             ) : (
               <>
+                {dashboard.channel_sales ? <ChannelSalesKpis summary={dashboard.channel_sales} /> : (
                 <div className="grid gap-4 md:grid-cols-3">
                   <MetricCard label="Sales" value={formatCurrency(dashboard.kpis.sales.value)} change={dashboard.kpis.sales.change_pct} />
                   <MetricCard label="Orders" value={dashboard.kpis.orders.value.toFixed(0)} change={dashboard.kpis.orders.change_pct} />
@@ -373,6 +375,7 @@ export function OwnerAdminDashboardPage() {
                   />
 
                 </div>
+                )}
 
                 <div className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
                   <div className="min-w-0 rounded-[26px] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
@@ -387,11 +390,11 @@ export function OwnerAdminDashboardPage() {
                         {selectedRange}
                       </div>
                     </div>
-                    <TrendChart points={salesTrendPoints} granularity={dashboard.trend.granularity} />
+                    {dashboard.channel_sales ? <ChannelTrend points={dashboard.channel_sales.trend} /> : <TrendChart points={salesTrendPoints} granularity={dashboard.trend.granularity} />}
                   </div>
 
                   <div className="space-y-4">
-                    <RevenueMixPanel rows={dashboard.revenue_mix ?? []} sales={dashboard.kpis.sales.value} range={selectedRange} />
+                    {dashboard.channel_sales ? <ChannelRevenueMix summary={dashboard.channel_sales} range={selectedRange} /> : <RevenueMixPanel rows={dashboard.revenue_mix ?? []} sales={dashboard.kpis.sales.value} range={selectedRange} />}
 
                     <div className="min-w-0 rounded-[26px] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
                       <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">Alerts & Insights</div>
@@ -410,24 +413,24 @@ export function OwnerAdminDashboardPage() {
 
                 <div className="grid gap-4 xl:grid-cols-[0.9fr_0.9fr_1.2fr]">
                   <ItemPerformanceList
-                    title="Top Selling Items"
+                    title="Top Selling Items · In-store"
                     description="Best performers by quantity and revenue."
                     items={topItems}
                     emptyMessage="No item sales in the selected period yet."
                   />
 
                   <ItemPerformanceList
-                    title="Worst Items"
+                    title="Worst Items · In-store"
                     description="Lowest revenue items in the selected period."
                     items={worstItems}
                     emptyMessage="No completed sales to rank yet."
                   />
 
-                  <NoodleSalesPanel rows={dashboard.noodle_sales ?? []} range={selectedRange} />
+                  {dashboard.channel_sales ? <ChannelNoodleSales rows={dashboard.channel_sales.noodle_sales} range={selectedRange} /> : <NoodleSalesPanel rows={dashboard.noodle_sales ?? []} range={selectedRange} />}
                 </div>
 
                 <div className="min-w-0 rounded-[26px] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
-                  <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">Sales by Store</div>
+                  <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">In-store Sales by Store</div>
                   <div className="mt-1 text-[0.85rem] text-[var(--muted)]">Organization-wide comparison with trend indicators.</div>
                   <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                     {storeComparison.length ? (

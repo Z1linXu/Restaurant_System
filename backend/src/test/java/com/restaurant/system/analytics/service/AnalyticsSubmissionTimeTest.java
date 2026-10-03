@@ -34,7 +34,7 @@ class AnalyticsSubmissionTimeTest {
         MenuItemSalesSummaryRepository itemSales = mock(MenuItemSalesSummaryRepository.class);
         MenuItemRepository menu = mock(MenuItemRepository.class);
         var service = new AnalyticsAggregationServiceImpl(stores, orders, items, mock(InventoryItemRepository.class),
-            menu, daily, hourly, itemSales, mock(StorePerformanceSummaryRepository.class), mock(AnalyticsAlertRepository.class));
+            menu, daily, hourly, itemSales, mock(StorePerformanceSummaryRepository.class), mock(AnalyticsAlertRepository.class), mock(ChannelSalesService.class), mock(AnalyticsReadScope.class));
         Store store = new Store(); store.id = 1L; store.organization_id = 1L;
         when(stores.findById(1L)).thenReturn(Optional.of(store));
         LocalDate date = LocalDate.of(2026, 10, 2);

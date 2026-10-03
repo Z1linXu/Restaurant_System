@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/dashboard")
 public class OwnerDashboardController {
 
+    private final com.restaurant.system.analytics.service.AnalyticsReadScope readScope;
     private final OwnerDashboardService ownerDashboardService;
     private final AuthorizationService authorizationService;
     private final StoreModuleAccessEvaluator moduleAccessEvaluator;
@@ -23,8 +24,10 @@ public class OwnerDashboardController {
     public OwnerDashboardController(
         OwnerDashboardService ownerDashboardService,
         AuthorizationService authorizationService,
-        StoreModuleAccessEvaluator moduleAccessEvaluator
+        StoreModuleAccessEvaluator moduleAccessEvaluator,
+        com.restaurant.system.analytics.service.AnalyticsReadScope readScope
     ) {
+        this.readScope = readScope;
         this.ownerDashboardService = ownerDashboardService;
         this.authorizationService = authorizationService;
         this.moduleAccessEvaluator = moduleAccessEvaluator;
@@ -43,6 +46,7 @@ public class OwnerDashboardController {
         } else {
             authorizationService.require(Capability.ADMIN_STORE_CONFIG);
         }
+        readScope.stores(organization_id, store_id);
         return ApiResponse.success(ownerDashboardService.getDashboard(organization_id, store_id, range, compare));
     }
 }
