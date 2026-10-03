@@ -3,26 +3,26 @@ updated_at: 2026-10-03
 
 repository:
   ref: origin/main
-  sha: 04cc828d7bfb0c6dbc8baafc6499c32e0958dd47
+  sha: 8c3a9e356f59cd025beff25f7fb1d5a20594e028
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
   package: FINAL_PRODUCT_CLOSEOUT
-  status: UBER_STORE_CAPABILITY_IMPLEMENTATION_AND_RECONCILIATION
+  status: UBER_STORE_CAPABILITY_STAGING_ACCEPTED
   next_phase_authorized: false
 
 staging:
-  deployed_sha: 7ccef30919b268732a7f7c369cdd8370a8782ffe
+  deployed_sha: 8eea8d47c9fe7906563d051196c703da7c14e198
   deployed_sha_semantics: BACKEND_FRONTEND_TRACKED_SEPARATELY
-  frontend_deployed_sha: 7ccef30919b268732a7f7c369cdd8370a8782ffe
+  frontend_deployed_sha: 8c3a9e356f59cd025beff25f7fb1d5a20594e028
   policy_config_sha: d2316234b2936fd89a926aa24a7b6343008834e6
-  flyway: V36
-  acceptance: NOTE_SCOPE_BACKEND941_FRONTEND258_EXACT_RUNTIME_SYNTHETIC_RENDER_HISTORY_CHANNELS_PASS
-  evidence: UBER_ORDER_NOTE_SCOPE_20261003.md
-  repair_evidence: UBER_ORDER_NOTE_SCOPE_20261003.md
+  flyway: V37
+  acceptance: UBER_CAPABILITY_BACKEND946_FRONTEND267_OPTION370_CONFLICTS0_ROUTES_API_STORE_SWITCH_HISTORY_PASS
+  evidence: UBER_STORE_CAPABILITY_20261003.md
+  repair_evidence: UBER_STORE_CAPABILITY_20261003.md
   cleanup_evidence: PHASE_B_STAGING_SYNTHETIC_FIXTURE_CLEANUP_EXECUTION_EVIDENCE.md
-  runtime_observation_evidence: UBER_ORDER_NOTE_SCOPE_20261003.md
+  runtime_observation_evidence: UBER_STORE_CAPABILITY_20261003.md
   endpoint_policy_evidence: runtime/STAGING_ENDPOINT_POLICY_20260930_EVIDENCE.md
   endpoint_policy_gate: OWNER_CONFIRMED_STORE18_PRINTER_BINDINGS_PENDING
 
@@ -86,20 +86,12 @@ final_product_closeout:
   modifier_contexts_added: 12
   remaining_unmapped_modifier_contexts: 0
   read_only_mapping_previews: PASS_12_OF_12
-  canonical_tea_egg_links: 11
+  canonical_tea_egg_links: 12
   addon_conflicts_before: 2
-  addon_conflicts_after: 1
-  remaining_addon_conflict:
-    option_id: 370
-    menu_item_id: 25
-    local_sku: braised_beef_noodle
-    name_zh: 加蛋
-    name_en: Extra Egg
-    price: 1.99
-    active: true
-    option_code: null
-    option_group: null
-    decision: OWNER_CONFIRMED_TEA_EGG_RECONCILIATION_AUTHORIZED
+  addon_conflicts_after: 0
+  remaining_addon_conflict: null
+  option370_reconciliation: OWNER_CONFIRMED_TEA_EGG_ADD_ON_ADDON_ID370_PRICE1_99_HISTORY_PRESERVED
+  option370_evidence: UBER_STORE_CAPABILITY_20261003.md
   b8e83_note_source: cart.special_instructions
   note_author_classification: UNKNOWN
   boilerplate_filter: NOT_APPLIED_CUSTOMER_CAPABLE_FIELD_PRESERVED
@@ -129,9 +121,25 @@ uber_order_note_scope:
   browser_today: PASS_ORDER_NOTE_ONCE_DISTINCT_ITEM_NOTE_SEPARATE
   production_mutation: NONE
 
+uber_store_capability:
+  evidence: UBER_STORE_CAPABILITY_20261003.md
+  staging_observed_at: 2026-10-03T22:52:09Z
+  default: DISABLED
+  staging_enabled_store_ids: [1]
+  staging_chinatown_store_id: 18
+  staging_chinatown_enabled: false
+  staging_chinatown_active_bindings: 0
+  frontend_topnav_sidebar_routes_store_switch: PASS
+  backend_scoped_api_reprint_worker_isolation: PASS
+  disabled_runtime_api_denials: 11
+  production_desired_st_denis: ENABLED_NOT_CONFIGURED_THIS_BATCH
+  production_desired_st_catherine: ENABLED_NOT_CONFIGURED_THIS_BATCH
+  production_desired_chinatown: DISABLED_NOT_CONFIGURED_THIS_BATCH
+  production_mutation: NONE
+
 gate:
-  type: TECHNICAL
-  next_action: REVIEW_MERGE_EXACT_SHA_STAGING_OPTION370_AND_UBER_CAPABILITY
+  type: CLOSED
+  next_action: NONE_WITHIN_CURRENT_BATCH_PRODUCTION_REQUIRES_EXPLICIT_OWNER_AUTHORIZATION
 
 authorization:
   uber_store_capability: OWNER_AUTHORIZED_OPTION370_TEA_EGG_KEEP_ID_PRICE_HISTORY_FORMAL_UBER_EATS_GATES_V37_TEST_REVIEW_MERGE_STAGING_ONLY
@@ -153,4 +161,4 @@ authorization:
   production: NONE
 
 stop:
-  marker: UBER_STORE_CAPABILITY_STAGING_ACCEPTANCE_REQUIRED_PRODUCTION_NOT_AUTHORIZED
+  marker: UBER_STORE_CAPABILITY_STAGING_ACCEPTED_PRODUCTION_NOT_AUTHORIZED
