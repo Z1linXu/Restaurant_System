@@ -5,7 +5,7 @@
 `UBER_EATS` is an optional formal Store module in catalog/graph V3, default off.
 V37 adds the key and explicitly backfills existing Stores disabled; normal Owner
 Store provisioning also persists it disabled when older immutable profiles omit it.
-Authenticated module configuration controls the Frontdesk badge, both Uber routes
+Authenticated module configuration controls the Frontdesk badge, desktop sidebar, both Uber routes
 and Owner/Admin navigation. Store switches reset context immediately and discard
 stale capabilities. Store/Organization access and roles are checked before module
 authorization; disabled Store APIs return `403 MODULE_DISABLED`. Connection,
