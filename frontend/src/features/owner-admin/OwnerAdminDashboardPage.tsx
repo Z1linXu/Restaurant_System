@@ -397,8 +397,8 @@ export function OwnerAdminDashboardPage() {
                     {dashboard.channel_sales ? <ChannelRevenueMix summary={dashboard.channel_sales} range={selectedRange} /> : <RevenueMixPanel rows={dashboard.revenue_mix ?? []} sales={dashboard.kpis.sales.value} range={selectedRange} />}
 
                     <div className="min-w-0 rounded-[26px] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
-                      <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">Alerts & Insights</div>
-                      <div className="mt-1 text-[0.85rem] text-[var(--muted)]">Automated checks from current period performance.</div>
+                      <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">Alerts & Insights · In-store</div>
+                      <div className="mt-1 text-[0.85rem] text-[var(--muted)]">In-store sales and item trends, plus current Store inventory alerts.</div>
                       <div className="mt-4 space-y-3">
                         {dashboard.insights.map((insight) => (
                           <div key={`${insight.type}-${insight.title}`} className={`rounded-[18px] border px-4 py-3 ${getSeverityTone(insight.severity)}`}>
