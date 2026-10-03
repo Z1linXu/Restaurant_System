@@ -1917,3 +1917,5 @@ rules and catalog as import. It performs no remote API call, order/event write o
 printing; a preview is not evidence of a real Sandbox order. Foreign store_id yields
 STORE_MISMATCH, preventing a valid result. V32 adds accepted/state/poll observations
 and allows null next_attempt_at to represent stopped work, preserving existing data.
+
+Uber webhook environment enum comparison accepts case variants (for example `Sandbox`); missing, unknown and foreign environments still fail closed. Rejection diagnostics log only fixed reason codes and an allowlisted environment category, never request bodies/signatures/credentials.

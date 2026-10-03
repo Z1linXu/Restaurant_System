@@ -9348,3 +9348,5 @@ FINISHED/UNKNOWN/limits require review. Mapping failure waits for mapping change
 The Today view includes the observed acceptance time. An Owner/Admin read-only
 mapping-preview endpoint resolves against the deployed service/catalog/rules without
 creating synthetic kitchen orders. Runtime proof is separate from real Sandbox E2E.
+
+Uber webhook environment enum comparison accepts case variants (for example `Sandbox`); missing, unknown and foreign environments still fail closed. Rejection diagnostics log only fixed reason codes and an allowlisted environment category, never request bodies/signatures/credentials.

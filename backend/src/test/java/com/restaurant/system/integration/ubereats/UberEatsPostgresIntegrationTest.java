@@ -274,6 +274,23 @@ class UberEatsPostgresIntegrationTest {
         mvc.perform(
                         post("/api/v1/integrations/uber-eats/webhook")
                                 .content(raw)
+                                .header("X-Uber-Signature", sign(raw))
+                                .header("X-Environment", "Sandbox"))
+                .andExpect(status().isOk());
+        mvc.perform(
+                        post("/api/v1/integrations/uber-eats/webhook")
+                                .content(raw)
+                                .header("X-Uber-Signature", sign(raw)))
+                .andExpect(status().isBadRequest());
+        mvc.perform(
+                        post("/api/v1/integrations/uber-eats/webhook")
+                                .content(raw)
+                                .header("X-Uber-Signature", sign(raw))
+                                .header("X-Environment", "unknown"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(
+                        post("/api/v1/integrations/uber-eats/webhook")
+                                .content(raw)
                                 .header("X-Environment", "sandbox"))
                 .andExpect(status().isUnauthorized());
         mvc.perform(
