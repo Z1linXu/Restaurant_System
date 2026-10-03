@@ -3,26 +3,26 @@ updated_at: 2026-10-03
 
 repository:
   ref: origin/main
-  sha: fa51366625e770e5c331e30115c9371b6abac61f
+  sha: ad3de48e973298604362cf21f119434d0b3f85f6
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
   package: FINAL_PRODUCT_CLOSEOUT
-  status: STAGING_DEPLOYED_PAD_LAYOUT_CORRECTION_IN_PROGRESS
+  status: STAGING_FINAL_PRODUCT_CLOSEOUT_ACCEPTED
   next_phase_authorized: false
 
 staging:
-  deployed_sha: fa51366625e770e5c331e30115c9371b6abac61f
+  deployed_sha: ad3de48e973298604362cf21f119434d0b3f85f6
   deployed_sha_semantics: BACKEND_AND_FRONTEND
-  frontend_deployed_sha: fa51366625e770e5c331e30115c9371b6abac61f
+  frontend_deployed_sha: ad3de48e973298604362cf21f119434d0b3f85f6
   policy_config_sha: d2316234b2936fd89a926aa24a7b6343008834e6
   flyway: V34
-  acceptance: FINAL_CLOSEOUT_API_DATA_REPORTS_PASS_PAD_LAYOUT_FOLLOWUP
+  acceptance: FINAL_CLOSEOUT_BACKEND891_FRONTEND242_RUNTIME_DATA_REPORTS_PAD_LAYOUT_PASS
   evidence: FINAL_PRODUCT_CLOSEOUT_20261003.md
-  repair_evidence: UBER_KITCHEN_FIELD_FIXES_20261002.md
+  repair_evidence: FINAL_PRODUCT_CLOSEOUT_20261003.md
   cleanup_evidence: PHASE_B_STAGING_SYNTHETIC_FIXTURE_CLEANUP_EXECUTION_EVIDENCE.md
-  runtime_observation_evidence: UBER_KITCHEN_FIELD_FIXES_20261002.md
+  runtime_observation_evidence: FINAL_PRODUCT_CLOSEOUT_20261003.md
   endpoint_policy_evidence: runtime/STAGING_ENDPOINT_POLICY_20260930_EVIDENCE.md
   endpoint_policy_gate: OWNER_CONFIRMED_STORE18_PRINTER_BINDINGS_PENDING
 
@@ -77,9 +77,26 @@ uber_test_store_audit:
   real_uber_webhook: PASS_REAL_SIGNED_TEST_EVENT_WITH_EXACT_PAIR_SANDBOX_GET_VALIDATION
   production_changed: false
 
+final_product_closeout:
+  evidence: FINAL_PRODUCT_CLOSEOUT_20261003.md
+  modifier_contexts_added: 25
+  remaining_unmapped_modifier_contexts: 12
+  addon_conflicts_before: 3
+  addon_conflicts_after: 2
+  b8e83_note_source: cart.special_instructions
+  note_author_classification: UNKNOWN
+  boilerplate_filter: NOT_APPLIED_CUSTOMER_CAPABLE_FIELD_PRESERVED
+  daily_finish: PASS_DOMAIN_POSTGRES_CONCURRENCY_TIMEZONE_CATCHUP_TESTS
+  daily_finish_actual_2230_observation: NOT_YET_DUE_AT_ACCEPTANCE
+  dashboard_reports: PASS_SUBMITTED_TIME_EXTERNAL_AND_CANCELLED_EXCLUSION
+  report_store_date_pairs_rebuilt: 289
+  pad_layout: PASS_1024_AND_768_NO_PAGE_OVERFLOW
+  production_plan: UBER_PRODUCTION_ROLLOUT_PLAN_ZH.md
+  production_mutation: NONE
+
 gate:
   type: TECHNICAL
-  next_action: COMPLETE_OWNER_AUTHORIZED_FINAL_CLOSEOUT_REVIEW_MERGE_STAGING
+  next_action: NONE_FOR_COMPLETED_BATCH_PRODUCTION_REQUIRES_SEPARATE_OWNER_GATE
 
 authorization:
   final_product_closeout: OWNER_AUTHORIZED_MODIFIER_MAPPING_ADDON_RECONCILIATION_DAILY_FINISH_ANALYTICS_TEST_REVIEW_MERGE_STAGING_AND_READ_ONLY_PRODUCTION_RUNBOOK
@@ -99,4 +116,4 @@ authorization:
   production: NONE
 
 stop:
-  marker: ALL_41_ROOT_MAPPINGS_PERSISTED_NO_NEW_ORDER_PRINT_OR_PRODUCTION
+  marker: FINAL_PRODUCT_CLOSEOUT_STAGING_ACCEPTED_PRODUCTION_UNCHANGED
