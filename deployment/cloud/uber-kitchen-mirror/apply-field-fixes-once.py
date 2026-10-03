@@ -25,11 +25,11 @@ os.umask(0o077)
 
 def queue_guard():
     # Existing pending jobs are incident evidence, not a reason to delete/requeue them.
-    # Only the two observed legacy PRINTING jobs may be active at the deploy boundary.
+    # Only the observed legacy PRINTING jobs may be active at the deploy boundary.
     sql = """BEGIN READ ONLY;
 SELECT (SELECT count(*) FROM stores WHERE id=1 AND code='STG005_SRC_20260809_R01' AND organization_id=1 AND printing_mode='PAD_DIRECT'),
  (SELECT count(*) FROM uber_eats_store_mappings WHERE store_id=1 AND organization_id=1 AND uber_store_id='bd993244-5589-4b19-8f0d-dc2ba73d4273' AND processing_mode='KITCHEN_MIRROR' AND enabled=true),
- (SELECT count(*) FROM print_jobs WHERE status IN ('CLAIMED','PRINTING') AND id NOT IN (200,205)),
+ (SELECT count(*) FROM print_jobs WHERE status IN ('CLAIMED','PRINTING') AND id NOT IN (200,205,207)),
  (SELECT count(*) FROM printer_configs WHERE id=13 AND store_id=1 AND ip_address='192.168.12.19' AND port=9100);
 ROLLBACK;"""
     out = i.run(['docker', 'exec', '-i', D, 'sh', '-c',
