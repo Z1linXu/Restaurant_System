@@ -3,23 +3,23 @@ updated_at: 2026-10-03
 
 repository:
   ref: origin/main
-  sha: 9c8d8887ec4ad12ac384e3e8a3ee80aec80d1e14
+  sha: fa51366625e770e5c331e30115c9371b6abac61f
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
   package: FINAL_PRODUCT_CLOSEOUT
-  status: IMPLEMENTATION_AND_STAGING_VALIDATION_IN_PROGRESS
+  status: STAGING_DEPLOYED_PAD_LAYOUT_CORRECTION_IN_PROGRESS
   next_phase_authorized: false
 
 staging:
-  deployed_sha: 500aacd991fddbc8f224174fc65db833e60d7848
+  deployed_sha: fa51366625e770e5c331e30115c9371b6abac61f
   deployed_sha_semantics: BACKEND_AND_FRONTEND
-  frontend_deployed_sha: 500aacd991fddbc8f224174fc65db833e60d7848
+  frontend_deployed_sha: fa51366625e770e5c331e30115c9371b6abac61f
   policy_config_sha: d2316234b2936fd89a926aa24a7b6343008834e6
-  flyway: V33
-  acceptance: REAL_SANDBOX_MIXED_RAW_GRAB_HOT_TODAY_PHYSICAL_PASS_NORMAL_CONTROL_PENDING
-  evidence: UBER_KITCHEN_FIELD_FIXES_20261002.md
+  flyway: V34
+  acceptance: FINAL_CLOSEOUT_API_DATA_REPORTS_PASS_PAD_LAYOUT_FOLLOWUP
+  evidence: FINAL_PRODUCT_CLOSEOUT_20261003.md
   repair_evidence: UBER_KITCHEN_FIELD_FIXES_20261002.md
   cleanup_evidence: PHASE_B_STAGING_SYNTHETIC_FIXTURE_CLEANUP_EXECUTION_EVIDENCE.md
   runtime_observation_evidence: UBER_KITCHEN_FIELD_FIXES_20261002.md

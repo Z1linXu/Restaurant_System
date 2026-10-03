@@ -432,10 +432,10 @@ export function OwnerAdminDashboardPage() {
                   <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                     {storeComparison.length ? (
                       storeComparison.map((store) => (
-                        <div key={store.store_id} className="rounded-[20px] bg-[rgba(26,28,25,0.04)] px-4 py-4">
+                        <div key={store.store_id} className="min-w-0 rounded-[20px] bg-[rgba(26,28,25,0.04)] px-4 py-4">
                           <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <div className="text-[0.98rem] font-bold text-[var(--on-surface)]">{store.store_name}</div>
+                            <div className="min-w-0 flex-1">
+                              <div className="break-words text-[0.98rem] font-bold text-[var(--on-surface)]">{store.store_name}</div>
                             </div>
                             <div className={`shrink-0 rounded-full px-2.5 py-1 text-[0.76rem] font-semibold ${getChangeTone(store.change_pct)}`}>
                               {formatPercent(store.change_pct)}
