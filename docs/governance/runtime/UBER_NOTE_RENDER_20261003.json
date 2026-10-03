@@ -1,0 +1,43 @@
+{
+  "at": "2026-10-03T21:10:47.723944+00:00",
+  "sha": "7ccef30919b268732a7f7c369cdd8370a8782ffe",
+  "backend_image": "sha256:8a014fa1ef503662805b06652386352368220cdf74c9451f23c4a0d249c23635",
+  "runtime_jar_sha256": "79262cab93e1109d0687d7e3c4b14f50336a649491c8af07fae4fc6467692449",
+  "helper_class_sha256": "23e62997249e77f05c1b560da7a1b9d5ba5bf65298194990a44ad87cda5d4e69",
+  "mapping_preview": {
+    "status": "PASS",
+    "synthetic_root_count": 10,
+    "warning_count": 1
+  },
+  "rendering": {
+    "status": "PASS",
+    "acceptance_kind": "SYNTHETIC_PREVIEW_RENDER_ONLY",
+    "task_routing": "SYNTHETIC_WOK_FOR_CONFIRMED_CHOW_MEIN_AND_RAW_HOLDING",
+    "durable_order_created": false,
+    "database_written": false,
+    "print_dispatched": false,
+    "real_uber_e2e": false,
+    "fixture_roots": 10,
+    "mapped_roots": 9,
+    "raw_roots": 1,
+    "GRAB": {
+      "order_note_before_takeout": true,
+      "order_note_count": 1,
+      "raw_item_note_count": 1,
+      "distinct_item_notes_preserved": true,
+      "rendered_snapshot": "[[LARGE]]UBER - Synthetic Fixture[[/LARGE]]\n\n\n\n\n--------------------------------\n[[DOUBLE_HEIGHT]]牛肉炒面×1 | 备注：No cilantro[[/DOUBLE_HEIGHT]]\n\n[[DOUBLE_HEIGHT]]牛肉炒面×1 | 备注：Extra soup[[/DOUBLE_HEIGHT]]\n\n[[DOUBLE_HEIGHT]](牛肉炒面) ×7[[/DOUBLE_HEIGHT]]\n\nSynthetic Raw Dish x1\nRaw item customer note\n【未映射 Uber 菜】\n订单备注：\nPlease make everything less salty\n--------------------------------\n[[LARGE]]外卖[[/LARGE]]\n[[SMALL]]12:00[[/SMALL]]\n--------------------------------\n\n"
+    },
+    "HOT_KITCHEN": {
+      "order_note_before_takeout": true,
+      "order_note_count": 1,
+      "raw_item_note_count": 0,
+      "distinct_item_notes_preserved": true,
+      "rendered_snapshot": "[[LARGE]]UBER - Synthetic Fixture[[/LARGE]]\n\n\n\n[[LARGE]]HOT KITCHEN[[/LARGE]]\n--------------------------------\n[[DOUBLE_HEIGHT]]牛炒×1 | +煎 | 备注：No cilantro[[/DOUBLE_HEIGHT]]\n\n[[DOUBLE_HEIGHT]]牛炒×1 | +煎 | 备注：Extra soup[[/DOUBLE_HEIGHT]]\n\n[[DOUBLE_HEIGHT]](牛炒 | +煎) ×7[[/DOUBLE_HEIGHT]]\n\n订单备注：\nPlease make everything less salty\n--------------------------------\n[[LARGE]]外卖 / TAKEOUT[[/LARGE]]\n[[SMALL]]12:00[[/SMALL]]\n--------------------------------\n\n"
+    }
+  },
+  "status": "PASS",
+  "scope": "STAGING_SYNTHETIC_PREVIEW_AND_RENDER_ONLY",
+  "durable_submission_proof": "NOT_TESTED_HERE",
+  "reprint_durability_proof": "NOT_TESTED_HERE",
+  "production_changed": false
+}
