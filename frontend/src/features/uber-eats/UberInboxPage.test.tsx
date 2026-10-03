@@ -2,7 +2,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import UberInboxPage from './UberInboxPage'
 import { useUberInbox } from './useUberInbox'
-import { decideUberOrder, reprintUberKitchen, type UberOrder } from '../../services/uberEatsService'
+import { decideUberOrder, reprintUberKitchen, type UberItem, type UberOrder } from '../../services/uberEatsService'
 vi.mock('../store/useStoreContext', () => ({ useCurrentStore: () => ({ storeId: 12 }) }))
 vi.mock('../frontdesk/components/FrontdeskTopNav', () => ({ FrontdeskTopNav: () => null }))
 vi.mock('./useUberInbox', () => ({ useUberInbox: vi.fn() }))
@@ -14,6 +14,62 @@ describe('Uber inbox staff workflow', () => {
   beforeEach(() => { vi.clearAllMocks(); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.mocked(useUberInbox).mockReturnValue({ orders: [pending], loading: false, error: null, refresh }) })
   afterEach(async () => { if (view) await act(async () => view!.unmount()); vi.unstubAllGlobals() })
   const button = (text: string) => view!.root.findAllByType('button').find(b => b.children.join('').includes(text))!
+  const item = (title: string, notes: string, modifiers: UberItem[] = []): UberItem => ({ id: title, external_data: title, title, quantity: 1, removed: false, notes, modifiers, issues: [] })
+  const renderOrder = async (order: UberOrder) => {
+    vi.mocked(useUberInbox).mockReturnValue({ orders: [order], loading: false, error: null, refresh })
+    await act(async () => { view = create(<UberInboxPage />) })
+  }
+  const noteParagraphs = () => view!.root.findAllByType('p').map(p => p.children.join('')).filter(text => text.startsWith('订单备注：') || text.startsWith('商品备注：'))
+  const itemNotes = (title: string) => view!.root.findAllByType('span').find(span => span.children.join('') === `${title} ×1`)!.parent!.children.filter(child => typeof child !== 'string' && child.type === 'p').map(child => typeof child === 'string' ? child : child.children.join(''))
+  it('shows a cart note once for ten items without fanning it out under the items', async () => {
+    const note = 'Please check order contents are correct'
+    await renderOrder({ ...pending, order_note_snapshot: note, snapshot: { notes: note, items: Array.from({ length: 10 }, (_, index) => item(`Noodle ${index}`, note)) } })
+    expect(noteParagraphs()).toEqual([`订单备注：${note}`])
+  })
+  it('keeps each distinct item note at its own root or modifier, including the same note on different items', async () => {
+    await renderOrder({ ...pending, snapshot: { notes: 'Pack carefully', items: [item('Soup', 'no onion', [item('Egg', 'soft please')]), item('Fried noodle', 'no onion'), item('Drink', '')] } })
+    expect(itemNotes('Soup')).toEqual(['商品备注：no onion'])
+    expect(itemNotes('Egg')).toEqual(['商品备注：soft please'])
+    expect(itemNotes('Fried noodle')).toEqual(['商品备注：no onion'])
+    expect(itemNotes('Drink')).toEqual([])
+    expect(noteParagraphs()).toEqual(['商品备注：no onion', '商品备注：soft please', '商品备注：no onion', '订单备注：Pack carefully'])
+  })
+  it('keeps an item-only note when no cart note exists', async () => {
+    await renderOrder({ ...pending, snapshot: { notes: '', items: [item('Soup', 'no onion')] } })
+    expect(noteParagraphs()).toEqual(['商品备注：no onion'])
+  })
+  it('deduplicates only exact whitespace-normalized cart and item notes, recursively', async () => {
+    await renderOrder({ ...pending, order_note_snapshot: '  no\r\n onion  ', snapshot: { notes: 'stale note', items: [item('Soup', 'no   onion', [item('Egg', ' no\t onion ')]), item('Fried noodle', 'no onion please'), item('Drink', 'No onion')] } })
+    expect(noteParagraphs()).toEqual(['商品备注：no onion please', '商品备注：No onion', '订单备注：  no\r\n onion  '])
+  })
+  it('uses Unicode whitespace including NEL and em spaces for exact note deduplication', async () => {
+    await renderOrder({ ...pending, order_note_snapshot: '\u0085no\u2003onion\u00a0', snapshot: { notes: '', items: [item('Soup', 'no onion'), item('Drink', 'no onion please')] } })
+    expect(noteParagraphs()).toEqual(['商品备注：no onion please', '订单备注：\u0085no\u2003onion\u00a0'])
+  })
+  it.each([undefined, null])('falls back to source cart note when the frozen field is %s on an old order', async frozenNote => {
+    await renderOrder({ ...pending, order_note_snapshot: frozenNote })
+    expect(noteParagraphs()).toEqual(['订单备注：Allergy note'])
+  })
+  it('uses the frozen order note instead of a newer source cart note', async () => {
+    await renderOrder({ ...pending, order_note_snapshot: 'Frozen order note', snapshot: { notes: 'New cart note', items: [item('Soup', 'Frozen order note'), item('Drink', 'Own note')] } })
+    expect(noteParagraphs()).toEqual(['商品备注：Own note', '订单备注：Frozen order note'])
+  })
+  it('treats an empty frozen order note as explicitly absent and keeps the item note', async () => {
+    await renderOrder({ ...pending, order_note_snapshot: '', snapshot: { notes: 'Later cart note', items: [item('Soup', 'Later cart note')] } })
+    expect(noteParagraphs()).toEqual(['商品备注：Later cart note'])
+  })
+  it('shows a frozen order note when the source snapshot is unavailable', async () => {
+    await renderOrder({ ...pending, order_note_snapshot: 'Frozen order note', snapshot: null })
+    expect(noteParagraphs()).toEqual(['订单备注：Frozen order note'])
+  })
+  it('shows scoped notes once alongside note-free mapped and raw kitchen summaries', async () => {
+    await renderOrder({ ...pending, processing_mode: 'KITCHEN_MIRROR', order_note_snapshot: 'Pack together', mapped_items: ['汤面 ×1'], raw_items: ['Unknown noodle ×1', 'Unknown topping ×1'], snapshot: { notes: 'Pack together', items: [item('Soup', 'less spicy'), item('Unknown noodle', 'no onion', [item('Unknown topping', 'extra crispy')])] } })
+    expect(noteParagraphs()).toEqual(['商品备注：less spicy', '商品备注：no onion', '商品备注：extra crispy', '订单备注：Pack together'])
+    const rendered = JSON.stringify(view!.toJSON())
+    expect(rendered).toContain('汤面 ×1')
+    expect(rendered).toContain('Unknown noodle ×1')
+    expect(rendered).toContain('Unknown topping ×1')
+  })
   it('shows notes, quantity, modifier and calls backend exactly once for double tap', async () => {
     let resolve!: (result: UberOrder) => void
     vi.mocked(decideUberOrder).mockReturnValue(new Promise(done => { resolve = done }))

@@ -91,6 +91,7 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
 
         ExternalKitchenFallbackContent.append(builder, request.order_items,
                 tasks.stream().map(t -> t.order_item_id).collect(java.util.stream.Collectors.toSet()));
+        ExternalOrderNoteContent.append(builder, request.order);
         builder.append("--------------------------------\n");
         if (isTakeout(request.order)) {
             builder.append(PrintMarkup.large("外卖 / TAKEOUT")).append("\n");

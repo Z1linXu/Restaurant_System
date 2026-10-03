@@ -20,6 +20,9 @@ public class CreateOrderRequest {
 
     public String pickup_no;
 
+    /** Frozen whole-order instructions; accepted only by trusted external-order creation. */
+    public String external_order_note_snapshot;
+
     @Valid
     @NotNull
     public List<CreateOrderItemRequest> items = new ArrayList<>();

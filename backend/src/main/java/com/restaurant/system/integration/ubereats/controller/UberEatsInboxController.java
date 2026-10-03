@@ -77,7 +77,7 @@ public class UberEatsInboxController {
             List<String> mapped_items,
             String grab_status,
             String hot_kitchen_status,
-            LocalDateTime accepted_observed_at, List<String> raw_items) {}
+            LocalDateTime accepted_observed_at, List<String> raw_items, String order_note_snapshot) {}
 
     private AuthenticatedUser staff(Long storeId, Capability capability) {
         var actor = auth.requireFrontdeskAccessForStore(storeId, capability);
@@ -257,6 +257,6 @@ public class UberEatsInboxController {
                 kitchen.mappedItems(row),
                 print.grab(),
                 print.hotKitchen(),
-                row.acceptedObservedAt, kitchen.rawItems(row));
+                row.acceptedObservedAt, kitchen.rawItems(row), kitchen.orderNote(row));
     }
 }

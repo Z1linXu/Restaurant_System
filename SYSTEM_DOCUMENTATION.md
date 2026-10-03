@@ -9372,3 +9372,22 @@ The shared channel projection exposes total/in-store/Uber quantity, revenue, ord
 Add-on conflict reconciliation preserves IDs, actual prices, activation and historical snapshots. Only unlinked, explicitly inactive rows without active child or open-order references are excluded from the editable conflict catalog. Active ambiguous rows remain visible. Canonical identities confirmed by Owner are `extra_meat / 加肉 / Extra Meat` and `tea_egg / 加卤蛋 / Extra Tea Egg`. The bounded Staging data script persists8 egg MAP contexts plus4 vegetable-noodle/Combo NO_OP contexts without replaying historical orders. `cart.special_instructions` remains unfiltered customer-capable data.
 
 Dashboard Store comparison cards permit long stable Store names to wrap within their flex cell; percentage badges remain visible without horizontal page overflow on Pad.
+
+### Uber order and item note scope (V36)
+
+Uber cart `special_instructions` remains an order-level note. Mapping freezes it
+in internal `CreateOrderRequest.external_order_note_snapshot`, and trusted import
+persists `orders.external_order_note_snapshot` before initial dispatch. Ordinary
+POS create/replace rejects this external-only field. Item and raw-fallback notes
+contain only their own instructions; normalized whitespace exact matches against
+the cart note are omitted at item/modifier level, with no fuzzy or content filter.
+Distinct instructions remain on their own item. Shared GRAB/HOT rendering emits
+the frozen whole-order note once after all items and before the takeout footer.
+Existing durable rendered snapshots remain authoritative for reprints; later
+Uber responses or catalog changes never rewrite historical print jobs.
+
+Today exposes `order_note_snapshot` from frozen local request JSON (null for legacy
+requests, empty string for explicit no note). UI uses legacy snapshot notes only
+when that field is absent/null. `raw_items` is a note-free kitchen summary;
+customer item/modifier notes display under the corresponding source item once.
+V36 only adds a nullable TEXT field and does not migrate historical note content.

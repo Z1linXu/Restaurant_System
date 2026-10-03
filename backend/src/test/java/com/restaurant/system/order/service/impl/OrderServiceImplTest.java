@@ -353,6 +353,45 @@ class OrderServiceImplTest {
     }
 
     @Test
+    void publicCreationAndDraftReplacementRejectExternalOrderNoteEvenWhenBlank() {
+        for (String note : List.of("Uber order instructions", "")) {
+            CreateOrderRequest request = new CreateOrderRequest();
+            request.store_id = store.id;
+            request.order_type = "dine_in";
+            request.external_order_note_snapshot = note;
+            assertThrows(com.restaurant.system.common.exception.BusinessException.class,
+                () -> orderService.createOrder(request));
+            assertThrows(com.restaurant.system.common.exception.BusinessException.class,
+                () -> orderService.createOrReplaceDraftAndSubmit(request, null));
+            assertThrows(com.restaurant.system.common.exception.BusinessException.class,
+                () -> orderService.createOrReplaceDraftAndSubmit(request, 999L));
+        }
+        assertTrue(orders.isEmpty());
+    }
+
+    @Test
+    void trustedMirrorCreationFreezesWholeOrderNoteSeparatelyFromItemNotes() {
+        CreateOrderItemRequest item = new CreateOrderItemRequest();
+        item.menu_item_id = menuItem.id;
+        item.quantity = 1;
+        item.notes = "No cilantro";
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.store_id = store.id;
+        request.order_type = "delivery";
+        request.external_order_note_snapshot = "Please make everything less salty";
+        request.items = List.of(item);
+
+        OrderResponse response = orderService.createKitchenMirror(request, "uber-test-order", "12345", "Test");
+        Order persisted = orders.get(response.id);
+        assertEquals("UBER_EATS", persisted.external_source);
+        assertEquals("EXTERNAL_PLATFORM", persisted.financial_mode);
+        assertEquals("Please make everything less salty", persisted.external_order_note_snapshot);
+        assertEquals("No cilantro", response.items.get(0).notes);
+        request.external_order_note_snapshot = "Later source changed";
+        assertEquals("Please make everything less salty", persisted.external_order_note_snapshot);
+    }
+
+    @Test
     void draftSubmitReadyCompleteLifecycleWorks() {
         CreateOrderItemRequest itemRequest = new CreateOrderItemRequest();
         itemRequest.menu_item_id = menuItem.id;

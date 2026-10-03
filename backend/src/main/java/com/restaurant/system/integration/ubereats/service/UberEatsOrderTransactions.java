@@ -360,6 +360,9 @@ public class UberEatsOrderTransactions {
                 || request.table_no != null
                 || request.pickup_no != null)
             throw UberEatsException.conflict("FROZEN_REQUEST_SCOPE_INVALID");
+        // Internal external metadata is never accepted by the ordinary public POS path.
+        String orderNote = request.external_order_note_snapshot;
+        if (!mirror) request.external_order_note_snapshot = null;
         var response =
                 mirror
                         ? domain.createKitchenMirror(
@@ -369,6 +372,7 @@ public class UberEatsOrderTransactions {
         order.external_source = "UBER_EATS";
         order.external_order_id = row.uberOrderId;
         order.external_display_id = row.displayId;
+        if (!mirror) order.external_order_note_snapshot = orderNote;
         localOrders.save(order);
         row.localOrderId = response.id;
         row.status = mirror ? ("PARTIALLY_MAPPED".equals(row.mappingStatus)

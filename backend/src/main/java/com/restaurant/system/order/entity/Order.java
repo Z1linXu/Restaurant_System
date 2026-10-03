@@ -38,6 +38,9 @@ public class Order {
     @Column(name = "external_display_id")
     public String external_display_id;
 
+    @Column(name = "external_order_note_snapshot", columnDefinition = "TEXT")
+    public String external_order_note_snapshot;
+
     @Column(name = "created_by")
     public Long created_by;
 
