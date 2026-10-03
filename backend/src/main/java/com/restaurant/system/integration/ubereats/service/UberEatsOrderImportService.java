@@ -83,9 +83,9 @@ public class UberEatsOrderImportService {
             if (!tx.claimRecovery(row.id)) continue;
             try {
                 if ("KITCHEN_MIRROR".equals(row.processingMode)) {
-                    tx.refreshReleased(
-                            row.id, normalizer.normalize(client.getOrder(row.uberOrderId)));
-                    local(row.id);
+                    if (tx.refreshMirror(
+                            row.id, normalizer.normalize(client.getOrder(row.uberOrderId))))
+                        local(row.id);
                     continue;
                 }
                 if (Set.of("UBER_ACCEPTED", "LOCAL_FAILED").contains(row.status)) {
@@ -107,7 +107,13 @@ public class UberEatsOrderImportService {
                     tx.denied(row.id);
                 else tx.review(row.id, "AMBIGUOUS_DECISION_REQUIRES_OPERATOR");
             } catch (RuntimeException ex) {
-                tx.recoveryFailed(row.id);
+                tx.recoveryFailed(
+                        row.id,
+                        ex instanceof UberEatsApiException api
+                                ? api.status
+                                : ex instanceof UberEatsException domain
+                                        ? domain.status.value()
+                                        : 0);
             }
         }
     }

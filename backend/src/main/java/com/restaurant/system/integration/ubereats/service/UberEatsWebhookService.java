@@ -134,7 +134,8 @@ public class UberEatsWebhookService {
             row.cancelled = true;
             row.cancelledAt = now;
             row.status =
-                    "KITCHEN_MIRROR".equals(row.processingMode) && row.releasedAt != null
+                    "KITCHEN_MIRROR".equals(row.processingMode)
+                                    && (row.releasedAt != null || row.localOrderId != null)
                             ? "CANCELLED_AFTER_RELEASE"
                             : row.localOrderId != null || row.acceptedBy != null
                                     ? "CANCELLED_REVIEW_REQUIRED"

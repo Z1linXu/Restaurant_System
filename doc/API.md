@@ -1864,12 +1864,19 @@ Uber order history returns `PROCESSING_MODE_HAS_ORDER_HISTORY`. Existing binding
 default to `ORDER_MANAGER`. Mode is captured on each integration order.
 
 Mirror `/accept` and `/deny` return `KITCHEN_MIRROR_REMOTE_DECISION_DISABLED` before
-any remote decision. `orders.notification` and scheduled notification only save a
-snapshot (`WAITING_FOR_RELEASE`). `orders.release` durably schedules fresh GET,
-validates Store and remote ACCEPTED state, maps then submits one local kitchen
-mirror. Missing mapping -> `RELEASED_MAPPING_REQUIRED`; no kitchen side effects.
-Recovery and new mappings re-fetch before release. Cancel/edit flags are monotonic;
-after-release cancellation keeps history as `CANCELLED_AFTER_RELEASE`.
+any remote decision. Notification GET saves the current snapshot and charges.
+CREATED -> WAITING_FOR_ACCEPTANCE; backend durable polling uses 2/5/10/15/30/60s
+then 120s delays, a 30-minute deadline, maximum 40 attempts and 90s crash lease.
+HTTP failures back off at least 60s; permanent 4xx requires review. The worker is
+independent of browser sessions. `accepted_observed_at` is the first local UTC
+observation of official current_state=ACCEPTED, never an Uber official timestamp.
+ACCEPTED and `orders.release` enter the same fresh Store-bound mapping/kitchen gate.
+No release webhook is fabricated by polling. Scheduled notices remain held until
+regular notification/release. DENIED/CANCELED stop without printing; FINISHED or
+UNKNOWN without kitchen dispatch requires review. Cancel/edit flags remain monotonic.
+Mapping failure -> RELEASED_MAPPING_REQUIRED with no scheduled retries; an explicit
+mapping update schedules one fresh GET. Duplicate triggers cannot duplicate the
+local order, tasks, inventory or initial module jobs.
 
 `PUT .../mappings` adds `mappingAction` (`MAP` default or explicit `NO_OP`),
 `itemMappingMode` (`STANDARD` default or ITEM-only `COMBO_ROOT`), `actionReason`.
@@ -1878,8 +1885,8 @@ modifiers/notes. COMBO_ROOT requires the local `combo` option and injects it bef
 validating COMBO_EGG/COMBO_SIDE. Unknown identities still block.
 
 `GET .../orders` adds `processing_mode`, `customer_header`, `released_at`,
-`mapped_items`, `grab_status`, `hot_kitchen_status`. Mirror rows use the current
-business day (release, otherwise placement/creation), plus unresolved waiting or
+`mapped_items`, `grab_status`, `hot_kitchen_status`, `accepted_observed_at`. Mirror rows use the current
+business day (kitchen dispatch, accepted observation, release, otherwise placement/creation), plus unresolved waiting or
 review rows, max 200. `UBER_EATS_BUSINESS_TIME_ZONE` defaults to `America/Toronto`;
 Remote placement and new release timestamps use UTC day boundaries; legacy
 creation fallback uses JVM-local boundaries. ORDER_MANAGER rows retain
@@ -1900,3 +1907,13 @@ confirmation and verified Pad origin contract. It references the original
 `submit:{orderId}:{module}` job and its frozen rendered/rule snapshots. Existing
 audit logging applies. All customer receipt modules and cashier mutation/complete/
 cancel actions are rejected for EXTERNAL_PLATFORM kitchen mirrors.
+
+### Uber mapping preview (V32)
+
+`POST .../mapping-preview` requires Owner/Admin ADMIN_MENU_MANAGE and Store access.
+Body is a bounded Uber order-shaped JSON; response contains `request` (local semantic
+projection) and `errors`. It invokes the same normalizer, Store binding, persisted
+rules and catalog as import. It performs no remote API call, order/event write or
+printing; a preview is not evidence of a real Sandbox order. Foreign store_id yields
+STORE_MISMATCH, preventing a valid result. V32 adds accepted/state/poll observations
+and allows null next_attempt_at to represent stopped work, preserving existing data.

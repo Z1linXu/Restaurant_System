@@ -10,6 +10,24 @@ public class UberEatsOrder {
     @Column(name = "processing_mode")
     public String processingMode = "ORDER_MANAGER";
 
+    @Column(name = "accepted_observed_at")
+    public LocalDateTime acceptedObservedAt;
+
+    @Column(name = "current_state")
+    public String currentState;
+
+    @Column(name = "state_observed_at")
+    public LocalDateTime stateObservedAt;
+
+    @Column(name = "acceptance_poll_started_at")
+    public LocalDateTime acceptancePollStartedAt;
+
+    @Column(name = "acceptance_poll_expires_at")
+    public LocalDateTime acceptancePollExpiresAt;
+
+    @Column(name = "acceptance_poll_count")
+    public Integer acceptancePollCount = 0;
+
     @Column(name = "released_at")
     public LocalDateTime releasedAt;
 

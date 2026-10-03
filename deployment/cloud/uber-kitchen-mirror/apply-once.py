@@ -16,10 +16,10 @@ i = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(i)
 D = 'restaurant-pos-staging-db-1'
 OLD = {
-    'backend': 'sha256:1cafba0b58575ffa93e66d95622700c88ced7ad313da8eec4085ca5743938d3e',
-    'nginx': 'sha256:a146f2b927e29afd46d6a1355712052f58db3c98ab3346f9df72a59fab81d3cf',
+    'backend': 'sha256:9fa3fde316e14e675a9567a44ffdac0710544a08b67cb6a9c862f4f51af5b61b',
+    'nginx': 'sha256:91974a411434e19f4187084c50805825442df3ad80e6a9a5f592f86e1a7e61d1',
 }
-ROOT = pathlib.Path('/srv/restaurant-pos/staging/uber-kitchen-mirror-20261002')
+ROOT = pathlib.Path('/srv/restaurant-pos/staging/uber-accepted-trigger-20261002')
 os.umask(0o077)
 
 
@@ -63,7 +63,7 @@ def main():
     ROOT.mkdir(mode=0o700)
     baseline = {'fingerprints': {n: i.fingerprint(n) for n in i.PROD + [D]},
                 'staging_flyway': i.ledger(D), 'production_flyway': i.ledger('cloud-db-1')}
-    assert baseline['staging_flyway'].strip().splitlines()[-1].startswith('30|')
+    assert baseline['staging_flyway'].strip().splitlines()[-1].startswith('31|')
     i.write_json(ROOT / 'baseline.private.json', baseline)
     with (ROOT / 'staging-before.dump').open('wb') as f:
         subprocess.run(['docker', 'exec', D, 'sh', '-c', 'pg_dump -Fc -U "$POSTGRES_USER" -d "$POSTGRES_DB"'], stdout=f, check=True)
@@ -113,10 +113,10 @@ def main():
         ledger = i.ledger(D)
         assert ledger.startswith(baseline['staging_flyway'])
         delta = ledger[len(baseline['staging_flyway']):].strip().splitlines()
-        assert len(delta) == 1 and delta[0].startswith('31|V31__uber_kitchen_mirror.sql|') and delta[0].endswith('|t')
+        assert len(delta) == 1 and delta[0].startswith('32|V32__uber_accepted_observation.sql|') and delta[0].endswith('|t')
         continuity()
     except BaseException:
-        # An additive V31 can remain; never restore/drop database data automatically.
+        # An additive V32 can remain; never restore/drop database data automatically.
         queue_guard()
         i.compose(ROOT / 'rollback.private.json', 'up', '-d', '--no-deps', '--no-build', '--pull', 'never', 'backend', 'nginx')
         i.wait_health()
@@ -124,7 +124,7 @@ def main():
             assert modeled(service, i.inspect('restaurant-pos-staging-' + service + '-1')) == modeled(service, before[service])
         continuity()
         raise RuntimeError('Staging update failed; previous application restored; additive schema retained') from None
-    print('STAGING_APPLICATION_UPDATE=PASS; FLYWAY_V31=PASS; DB_CONTAINER_PRODUCTION_UNCHANGED=PASS')
+    print('STAGING_APPLICATION_UPDATE=PASS; FLYWAY_V32=PASS; DB_CONTAINER_PRODUCTION_UNCHANGED=PASS')
 
 
 if __name__ == '__main__':

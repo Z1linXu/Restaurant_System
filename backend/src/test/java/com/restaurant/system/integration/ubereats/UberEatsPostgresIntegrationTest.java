@@ -245,7 +245,7 @@ class UberEatsPostgresIntegrationTest {
         assertThat(
                         db.queryForObject(
                                 "select count(*) from flyway_schema_history where version = '29'"
-                                    + " and success",
+                                        + " and success",
                                 Integer.class))
                 .isOne();
         assertThat(
@@ -953,7 +953,7 @@ class UberEatsPostgresIntegrationTest {
                     .put("currency_code", "CAD");
         var row = notify(data);
         assertThat(row.processingMode).isEqualTo("KITCHEN_MIRROR");
-        assertThat(row.status).isEqualTo("WAITING_FOR_RELEASE");
+        assertThat(row.status).isEqualTo("WAITING_FOR_ACCEPTANCE");
         assertThat(row.customerDisplayName).isEqualTo("Ashton Z");
         assertThat(row.financialTotalMinor).isEqualTo(1999);
         assertThat(row.financialCurrency).isEqualTo("CAD");
@@ -1156,7 +1156,7 @@ class UberEatsPostgresIntegrationTest {
                 .isEqualTo(original.rendered_text_snapshot);
         db.update(
                 "update print_jobs set status='FAILED' where order_id=? and"
-                    + " module_code='HOT_KITCHEN'",
+                        + " module_code='HOT_KITCHEN'",
                 row.localOrderId);
         assertThat(kitchenView.state(row).status()).isEqualTo("PRINT_PARTIAL");
         db.update("update print_jobs set status='FAILED' where order_id=?", row.localOrderId);
@@ -1183,7 +1183,7 @@ class UberEatsPostgresIntegrationTest {
         assertThat(
                         db.queryForObject(
                                 "select sales_amount from store_performance_summary where"
-                                    + " store_id=?",
+                                        + " store_id=?",
                                 java.math.BigDecimal.class,
                                 store))
                 .isZero();
@@ -1198,7 +1198,7 @@ class UberEatsPostgresIntegrationTest {
         receive(event(UUID.randomUUID().toString(), "orders.release", id));
         imports.processEvents();
         imports.recover();
-        assertThat(row(id).status).isEqualTo("EXTERNAL_STATE_REVIEW_REQUIRED");
+        assertThat(row(id).status).isEqualTo("WAITING_FOR_ACCEPTANCE");
         data.put("current_state", "ACCEPTED");
         data.withObject("/store").put("id", UUID.randomUUID().toString());
         receive(event(UUID.randomUUID().toString(), "orders.release", id));
@@ -1384,7 +1384,7 @@ class UberEatsPostgresIntegrationTest {
                 assertThat(
                                 db.queryForList(
                                         "select module_code from order_dispatch_outbox where"
-                                            + " order_id=?",
+                                                + " order_id=?",
                                         String.class,
                                         row.localOrderId))
                         .doesNotContain("FRONTDESK_RECEIPT");
@@ -1446,8 +1446,9 @@ class UberEatsPostgresIntegrationTest {
                             .withZoneSameInstant(ZoneOffset.UTC)
                             .toLocalDateTime();
             db.update(
-                    "update uber_eats_orders set released_at=?,status='RELEASED_TO_KITCHEN' where"
-                        + " id=?",
+                    "update uber_eats_orders set"
+                        + " kitchen_dispatched_at=null,accepted_observed_at=null,released_at=?,status='RELEASED_TO_KITCHEN'"
+                        + " where id=?",
                     at,
                     row.id);
             assertThat(
@@ -1475,7 +1476,7 @@ class UberEatsPostgresIntegrationTest {
                     .doesNotContain(row.id);
             db.update(
                     "update uber_eats_orders set released_at=null,placed_at=null,created_at=? where"
-                        + " id=?",
+                            + " id=?",
                     date.atTime(0, 30),
                     row.id);
             assertThat(
@@ -1562,6 +1563,304 @@ class UberEatsPostgresIntegrationTest {
 
     UberEatsOrder accept(UberEatsOrder row) {
         return imports.decide(store, row.id, actorId, "ACCEPT", null);
+    }
+
+    @Test
+    void acceptedPollingSurvivesRestartAndLateReleaseSharesExactlyOneKitchenGate()
+            throws Exception {
+        mirrorMode();
+        var data = payload(UUID.randomUUID().toString());
+        var waiting = notify(data);
+        assertThat(waiting.status).isEqualTo("WAITING_FOR_ACCEPTANCE");
+        assertThat(waiting.acceptancePollExpiresAt).isAfter(waiting.acceptancePollStartedAt);
+        assertThat(waiting.acceptedObservedAt).isNull();
+        assertThat(waiting.currentState).isEqualTo("CREATED");
+        clearInvocations(client);
+        imports.recover();
+        verifyNoInteractions(client); // Persisted due time survives worker iterations.
+        due(waiting.id);
+        assertThat(tx.claimRecovery(waiting.id)).isTrue(); // Crash after durable lease claim.
+        var restarted =
+                new UberEatsOrderImportService(
+                        newProperties(), client, normalizer, tx, events, inbox);
+        restarted.recover();
+        verifyNoInteractions(client);
+        data.put("current_state", "ACCEPTED");
+        due(waiting.id); // Expired lease on the isolated PostgreSQL fixture.
+        restarted.recover();
+        var accepted = row(waiting.uberOrderId);
+        assertThat(accepted.status).isEqualTo("RELEASED_TO_KITCHEN");
+        assertThat(accepted.acceptedObservedAt).isNotNull();
+        assertThat(accepted.acceptedAt).isNull(); // Never pretend this was our remote Accept.
+        assertThat(accepted.releasedAt).isNull(); // No invented release webhook.
+        assertThat(accepted.acceptancePollCount).isEqualTo(2);
+        var observed = accepted.acceptedObservedAt;
+        Long local = accepted.localOrderId;
+        release(data);
+        notify(data);
+        var pool = Executors.newFixedThreadPool(2);
+        try {
+            pool.submit(() -> tx.submitLocal(accepted.id)).get(20, TimeUnit.SECONDS);
+            pool.submit(() -> tx.submitLocal(accepted.id)).get(20, TimeUnit.SECONDS);
+        } finally {
+            pool.shutdownNow();
+        }
+        assertThat(row(waiting.uberOrderId).acceptedObservedAt).isEqualTo(observed);
+        assertThat(row(waiting.uberOrderId).localOrderId).isEqualTo(local);
+        assertThat(count("orders", "store_id", store)).isOne();
+        assertThat(count("kitchen_tasks", "order_id", local)).isOne();
+        assertThat(count("inventory_transactions", "source_id", local)).isOne();
+        dispatch(local);
+        dispatch(local);
+        assertThat(jobs.findAllByStoreIdAndOrderId(store, local))
+                .hasSize(2)
+                .allSatisfy(j -> assertThat(j.module_code).isIn("GRAB", "HOT_KITCHEN"));
+        clearInvocations(client);
+        restarted.recover();
+        verifyNoInteractions(client);
+        verify(client, never()).accept(anyString(), anyString());
+        verify(client, never()).deny(anyString(), anyString());
+    }
+
+    @Test
+    void acceptedPollingStopsForEveryTerminalOrUnknownStateWithoutPrinting() {
+        mirrorMode();
+        for (String state : List.of("DENIED", "CANCELED", "FINISHED", "UNKNOWN", "UNRECOGNIZED")) {
+            var data = payload(UUID.randomUUID().toString());
+            var waiting = notify(data);
+            data.put("current_state", state);
+            due(waiting.id);
+            imports.recover();
+            var stopped = row(waiting.uberOrderId);
+            assertThat(stopped.status)
+                    .isEqualTo(
+                            state.equals("DENIED")
+                                    ? "DENIED"
+                                    : state.equals("CANCELED")
+                                            ? "CANCELLED"
+                                            : "EXTERNAL_STATE_REVIEW_REQUIRED");
+            assertThat(stopped.currentState).isEqualTo(state);
+            assertThat(stopped.nextAttemptAt).isNull();
+            assertThat(stopped.localOrderId).isNull();
+            clearInvocations(client);
+            imports.recover();
+            verifyNoInteractions(client);
+            data.put("current_state", "ACCEPTED");
+            release(data);
+            assertThat(row(waiting.uberOrderId).localOrderId).isNull();
+        }
+        assertThat(count("orders", "store_id", store)).isZero();
+    }
+
+    @Test
+    void acceptedPollingHasDurableAttemptDeadlineAndHttpBackoffLimits() {
+        mirrorMode();
+        var data = payload(UUID.randomUUID().toString());
+        var waiting = notify(data);
+        due(waiting.id);
+        when(client.getOrder(waiting.uberOrderId)).thenThrow(new UberEatsApiException(429));
+        var before = LocalDateTime.now();
+        imports.recover();
+        var retried = row(waiting.uberOrderId);
+        assertThat(retried.acceptancePollCount).isEqualTo(1);
+        assertThat(retried.nextAttemptAt).isAfter(before.plusSeconds(59));
+        assertThat(retried.lastError).isEqualTo("UBER_ACCEPTANCE_CHECK_UNAVAILABLE");
+        db.update("update uber_eats_orders set acceptance_poll_count=40 where id=?", waiting.id);
+        due(waiting.id);
+        clearInvocations(client);
+        imports.recover();
+        verifyNoInteractions(client);
+        assertThat(row(waiting.uberOrderId).status).isEqualTo("ACCEPTANCE_REVIEW_REQUIRED");
+        var deadlineData = payload(UUID.randomUUID().toString());
+        var deadline = notify(deadlineData);
+        db.update(
+                "update uber_eats_orders set acceptance_poll_expires_at=? where id=?",
+                LocalDateTime.now(ZoneOffset.UTC).minusMinutes(1),
+                deadline.id);
+        due(deadline.id);
+        clearInvocations(client);
+        imports.recover();
+        verifyNoInteractions(client);
+        assertThat(row(deadline.uberOrderId).status).isEqualTo("ACCEPTANCE_REVIEW_REQUIRED");
+        var rejected = notify(payload(UUID.randomUUID().toString()));
+        due(rejected.id);
+        when(client.getOrder(rejected.uberOrderId)).thenThrow(new UberEatsApiException(403));
+        imports.recover();
+        assertThat(row(rejected.uberOrderId).status).isEqualTo("ACCEPTANCE_REVIEW_REQUIRED");
+        assertThat(row(rejected.uberOrderId).lastError)
+                .isEqualTo("UBER_ACCEPTANCE_CHECK_REJECTED_403");
+        assertThat(count("orders", "store_id", store)).isZero();
+    }
+
+    @Test
+    void pollingContinuesCreatedButCannotDowngradeAnAcceptedCheckpoint() {
+        mirrorMode();
+        var data = payload(UUID.randomUUID().toString());
+        var waiting = notify(data);
+        due(waiting.id);
+        imports.recover();
+        assertThat(row(waiting.uberOrderId).status).isEqualTo("WAITING_FOR_ACCEPTANCE");
+        assertThat(row(waiting.uberOrderId).acceptancePollCount).isEqualTo(1);
+        data.put("current_state", "ACCEPTED");
+        assertThat(tx.refreshMirror(waiting.id, normalizer.normalize(data))).isTrue();
+        data.put("current_state", "CREATED");
+        tx.refreshMirror(waiting.id, normalizer.normalize(data));
+        assertThat(row(waiting.uberOrderId).status).isEqualTo("MIRROR_READY");
+        assertThat(row(waiting.uberOrderId).currentState).isEqualTo("ACCEPTED");
+        tx.submitLocal(waiting.id);
+        assertThat(count("orders", "store_id", store)).isOne();
+    }
+
+    @Test
+    void acceptedMappingFailureWaitsForMappingChangeWithoutUnboundedGetCalls() {
+        mirrorMode();
+        var data = payload(UUID.randomUUID().toString());
+        ((ObjectNode) data.at("/cart/items/0")).put("external_data", "");
+        var waiting = notify(data);
+        data.put("current_state", "ACCEPTED");
+        due(waiting.id);
+        imports.recover();
+        var blocked = row(waiting.uberOrderId);
+        assertThat(blocked.status).isEqualTo("RELEASED_MAPPING_REQUIRED");
+        assertThat(blocked.nextAttemptAt).isNull();
+        assertThat(blocked.acceptedObservedAt).isNotNull();
+        clearInvocations(client);
+        imports.recover();
+        verifyNoInteractions(client);
+        // More than an inbox page of newer terminal rows must not strand this mapping gate.
+        db.update(
+                "insert into"
+                    + " uber_eats_orders(environment,store_mapping_id,store_id,uber_store_id,uber_order_id,status,mapping_status,attempt_count,cancelled,edit_required,scheduled,next_attempt_at,created_at,updated_at,processing_mode)"
+                    + " select"
+                    + " 'sandbox',?,?,?,gen_random_uuid()::text,'DENIED','PENDING',0,false,false,false,null,now(),now(),'KITCHEN_MIRROR'"
+                    + " from generate_series(1,105)",
+                binding.id,
+                store,
+                uberStore);
+        var rule = new UberEatsMenuMapping();
+        rule.kind = "ITEM";
+        rule.identifierType = "ID";
+        rule.uberIdentifier = "uber-noodle";
+        rule.localMenuItemId = item;
+        configuration.saveMapping(store, rule, actor);
+        imports.recover();
+        assertThat(row(waiting.uberOrderId).localOrderId).isNotNull();
+        verify(client, times(1)).getOrder(waiting.uberOrderId);
+    }
+
+    @Test
+    void scheduledAcceptedOrderWaitsForRegularNotificationAndDisruptiveEventWinsPolling() {
+        mirrorMode();
+        var data = payload(UUID.randomUUID().toString());
+        data.put("current_state", "ACCEPTED");
+        String id = data.path("id").asText();
+        when(client.getOrder(id)).thenReturn(data);
+        receive(event(UUID.randomUUID().toString(), "orders.scheduled.notification", id));
+        imports.processEvents();
+        imports.recover();
+        assertThat(row(id).status).isEqualTo("SCHEDULED_REVIEW_REQUIRED");
+        assertThat(count("orders", "store_id", store)).isZero();
+        var zone = ZoneId.of("America/Toronto");
+        var today = LocalDate.now(zone);
+        var yesterday =
+                today.minusDays(1)
+                        .atStartOfDay(zone)
+                        .withZoneSameInstant(ZoneOffset.UTC)
+                        .toLocalDateTime();
+        db.update(
+                "update uber_eats_orders set accepted_observed_at=?,placed_at=? where id=?",
+                yesterday,
+                yesterday,
+                row(id).id);
+        notify(data);
+        imports.recover();
+        assertThat(row(id).localOrderId).isNotNull();
+        assertThat(row(id).acceptedObservedAt).isEqualTo(yesterday);
+        var day = UberEatsInboxDay.of(today, zone, ZoneId.systemDefault());
+        assertThat(
+                        inbox.todayInbox(
+                                "sandbox",
+                                store,
+                                day.start(),
+                                day.end(),
+                                day.createdStart(),
+                                day.createdEnd(),
+                                PageRequest.of(0, 200)))
+                .extracting(o -> o.id)
+                .contains(row(id).id);
+        var pendingData = payload(UUID.randomUUID().toString());
+        var waiting = notify(pendingData);
+        receive(
+                event(
+                        UUID.randomUUID().toString(),
+                        "orders.customer_order_edit",
+                        waiting.uberOrderId));
+        pendingData.put("current_state", "ACCEPTED");
+        tx.refreshMirror(waiting.id, normalizer.normalize(pendingData));
+        assertThat(row(waiting.uberOrderId).status).isEqualTo("EDIT_REVIEW_REQUIRED");
+        assertThat(row(waiting.uberOrderId).localOrderId).isNull();
+    }
+
+    @Test
+    void mappingPreviewUsesRuntimeCatalogAndRulesWithoutWritingOrderAndRequiresOwnerScope()
+            throws Exception {
+        mirrorMode();
+        var source = payload(UUID.randomUUID().toString());
+        String url = "/api/v1/stores/" + store + "/integrations/uber-eats/mapping-preview";
+        mvc.perform(post(url).contentType("application/json").content(source.toString()))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(
+                        post(url)
+                                .contentType("application/json")
+                                .content(source.toString())
+                                .requestAttr(
+                                        RequestUserContextService.AUTHENTICATED_USER_ATTRIBUTE,
+                                        actor))
+                .andExpect(status().isForbidden());
+        db.update(
+                "update store_memberships set role_code='OWNER' where user_id=? and store_id=?",
+                actorId,
+                store);
+        db.update(
+                "insert into"
+                    + " organization_memberships(user_id,organization_id,role_code,is_active,created_at,updated_at)"
+                    + " values (?,?,'OWNER',true,now(),now())",
+                actorId,
+                org);
+        var owner =
+                new AuthenticatedUser(
+                        actorId, store, actor.roleId(), "fixture", "Fixture Owner", "OWNER");
+        var response =
+                mvc.perform(
+                                post(url)
+                                        .contentType("application/json")
+                                        .content(source.toString())
+                                        .requestAttr(
+                                                RequestUserContextService
+                                                        .AUTHENTICATED_USER_ATTRIBUTE,
+                                                owner))
+                        .andExpect(status().isOk())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        assertThat(json.readTree(response).path("data").path("errors")).isEmpty();
+        source.withObject("/store").put("id", UUID.randomUUID().toString());
+        response =
+                mvc.perform(
+                                post(url)
+                                        .contentType("application/json")
+                                        .content(source.toString())
+                                        .requestAttr(
+                                                RequestUserContextService
+                                                        .AUTHENTICATED_USER_ATTRIBUTE,
+                                                owner))
+                        .andExpect(status().isOk())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        assertThat(response).contains("STORE_MISMATCH");
+        assertThat(count("orders", "store_id", store)).isZero();
+        assertThat(count("uber_eats_orders", "store_id", store)).isZero();
     }
 
     UberEatsOrder notify(ObjectNode payload) {

@@ -39,6 +39,15 @@ describe('Uber inbox staff workflow', () => {
     expect(JSON.stringify(view!.toJSON())).toContain('UBER - Ashton Z')
     expect(decideUberOrder).not.toHaveBeenCalled()
   })
+  it('shows the accepted observation time without enabling cashier or remote decision controls', async () => {
+    vi.mocked(useUberInbox).mockReturnValue({ orders: [{ ...pending, processing_mode: 'KITCHEN_MIRROR', status: 'WAITING_FOR_ACCEPTANCE', accepted_observed_at: '2026-10-02T17:00:00', released_at: null }], loading: false, error: null, refresh })
+    await act(async () => { view = create(<UberInboxPage />) })
+    const rendered = JSON.stringify(view!.toJSON())
+    expect(rendered).toContain('等待 Uber 接单'); expect(rendered).toContain('接单观察时间')
+    expect(rendered).not.toContain('厨房释放通知')
+    expect(button('Accept')).toBeUndefined(); expect(button('Deny')).toBeUndefined()
+    expect(button('Checkout')).toBeUndefined(); expect(button('Payment')).toBeUndefined()
+  })
   it('mirror mode exposes only applicable kitchen reprints through the shared idempotent service', async () => {
     vi.mocked(useUberInbox).mockReturnValue({ orders: [{ ...pending, processing_mode: 'KITCHEN_MIRROR', status: 'PRINTED', local_order_id: 22, customer_header: 'UBER - Ashton Z', grab_status: 'PRINTED', hot_kitchen_status: 'NOT_REQUIRED', mapped_items: ['牛肉面 ×1 · 大碗'] }], loading: false, error: null, refresh })
     vi.mocked(reprintUberKitchen).mockResolvedValue({ id: 10, status: 'PRINTED' } as Awaited<ReturnType<typeof reprintUberKitchen>>)
