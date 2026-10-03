@@ -67,12 +67,68 @@ Pad was not USB-accessible; Owner confirmed it cannot be connected now. Native w
 
 ## Tooling / governance repair
 
-Bounded `apply-field-fixes-once.py` is required because the prior one-shot deploy forbids any existing orders and assumes MOCK. The new exact-SHA helper preserves all runtime environment/endpoints, permits only observed in-flight205/200, backs up Staging, applies V33 and checks unchanged Production/DB container fingerprints. No generic deployment refactor. Contracts updated for the Owner's explicit fallback rule.
+Bounded `apply-field-fixes-once.py` is required because the prior one-shot deploy forbids any existing orders and assumes MOCK. The new exact-SHA helper preserves all runtime environment/endpoints, permits only observed in-flight200/205/207, backs up Staging, applies V33 and checks unchanged Production/DB container fingerprints. No generic deployment refactor. Contracts updated for the Owner's explicit fallback rule.
 
 ## Validation (local, not physical proof)
 
-- Full backend verify: 857 tests, 0 failures/errors, 7 environment-gated skips; final affected tests add3 =860 aggregate, no failures/errors. Real local PostgreSQL V1→V33 migration/validation and integration tests enabled.
-- Frontend238 tests, build, targeted lint PASS. Android worker policy unit tests PASS. Credential scan1558 files /4 runtime-secret fingerprints PASS (values never output).
+- Fresh merged application full backend verify: 860 tests, 0 failures/errors, 7 environment-gated skips; Uber PostgreSQL integration:48 tests,0 skips. Real local PostgreSQL V1→V33 migration/validation and integration tests enabled.
+- Frontend238 tests, build, targeted lint PASS. Android worker policy unit tests PASS. Final credential scan1559 files /4 runtime-secret fingerprints PASS (values never output).
 - Added integration coverage: ordinary/mirror HOT pending→claim→start→payload→complete; partial/mixed/raw/missing required option; no guessed HOT/no drop; immutable reprint after mapping mutation; nested raw parent context and no duplicate known add-on; malformed nested quantity and public ordinary fallback injection rejection; both footer markers/no Uber frontdesk. Existing DINE_IN/TAKEOUT renderer tests pass.
 
-Runtime deployment/physical acceptance remains pending until recorded below. No physical PASS inferred from MockMvc, MOCK or device API simulation.
+## Reviewed merge and exact-SHA Staging
+
+- PR [#255](https://github.com/Z1linXu/Restaurant_System/pull/255), merge `75c82482e7c72de063973128ebb9ac0a98f83b5d`: Agent6 ACCEPT, P0/P1/P2=0 after closing duplicate known-addon fallback and nested parent-context findings.
+- First deployment preflight stopped before mutation: device32 had completed206 and started207 during investigation. PR [#256](https://github.com/Z1linXu/Restaurant_System/pull/256), merge `500aacd991fddbc8f224174fc65db833e60d7848`, only adds the observed207 to the retained legacy in-flight allowlist. Separate Agent6 ACCEPT; no jobs reset/reclaimed.
+- Backend/frontend running SHA `500aacd991fddbc8f224174fc65db833e60d7848`; source blobs identical to tested75c8248, reused application artifacts. No configured GitHub status checks; required local tests/reviews passed.
+- Backend image `sha256:76b68f936c08a7997682fe05ae15a14761eeeffbbe15e649b6140362e620d654`; frontend image `sha256:5cbf1ad709ff42b5a3bafbef59f9bb1f8b7fbd2c44c2282d6a404b3e20a4ec5a`.
+- Private backup `/srv/restaurant-pos/staging/uber-kitchen-field-fixes-20261002/staging-before.dump` (1,133,657 bytes; archive listing PASS). V32→V33 at03:21:58Z, backend started03:22:25Z. No destructive SQL.
+- 03:28:52Z runtime acceptance PASS: public HTTPS health, login, Store1 context, frontdesk/printing/Today routes, Today API, V33, PAD_DIRECT,226 mapping rules/5 mapped roots. Production and both DB container continuity/fingerprints passed; Production remains SHA11996ef… / V28.
+
+## Real Sandbox mixed order and physical proof
+
+Official Test Store consumer checkout used **Uber Test** payment. New order `87673b75-8257-4d2c-93e1-091fb1f26bed` / **26BED** was placed03:26:59Z, observed CREATED/WAITING_FOR_ACCEPTANCE with no local order at03:27:15Z, then accepted through official Uber TEST Orders UI. No integration Accept API or Production order used.
+
+At03:27:37Z acceptance was observed. One local order **82** (`UBER_EATS`, `EXTERNAL_PLATFORM`, amounts0); two root lines:
+
+| Source | Local identity | Task route | Frozen kitchen content |
+| --- | --- | --- | --- |
+| Traditional Lanzhou Hand-pull Beef Noodle | traditional_beef_noodle / menu1 | NOODLE; known egg reaches existing HOT renderer | 不辣 / 大碗 / 三细 / 加煎蛋 / 走香菜 |
+| Lanzhou Beef Chow Mein (Beef) | RAW_UBER_FALLBACK; menu/station null | RAW holding task; GRAB only | Original root, Mild Spicy ×1, Add Fried Egg ×1; stable IDs frozen |
+
+Kitchen tasks147/148 and production tasks148/149 exist. Dispatch outbox199/200 DISPATCHED; exactly one automatic GRAB213 and HOT214. No FRONTDESK receipt. Today UI verified `KITCHEN_SENT_WITH_MAPPING_WARNINGS`, `PARTIALLY_MAPPED`, mapped Chinese content, full raw block and `UNMAPPED_ROUTE_REVIEW`; both reprint buttons available.
+
+- GRAB213 includes the full raw root/options, known local semantics and **外卖**; SHA256 `e22b855eef2d7f3311d583a099cf6e937c460aaf2a107669bad8ee6a3f43c910`.
+- HOT214 includes known local content and **外卖 / TAKEOUT**; excludes the unconfirmed chow root/options; SHA256 `a97890bc21cfd440219cd739ba557cdfdfbf8bea3651a4902827429b03aa6fcc`.
+- Current resolved printer is13, endpoint192.168.12.19:9100, for both jobs. Legacy printer2 remains unbound; no printer/binding mutation by this repair.
+- Device33 completed both jobs by03:29Z. Owner explicitly confirmed **real paper for both, both footer markers, and installed0.4.0 APK**. Therefore Uber physical test PASS; not inferred from API-only evidence.
+- Concurrent human GRAB reprint215 has the exact same frozen snapshot hash as213 and PRINTED; it is a manual source, not a duplicate automatic dispatch. Mapping count unchanged226/5. Later mapping-change immutability separately covered by integration tests, not a live mapping mutation.
+- APK versionCode4 / `0.4.0-kitchen-field-fixes`; SHA256 `43897ddfcffc0d8fdf0e5648a381bf6e6045321a49562271b803ec765dba1dfd`. Owner confirmed installation, while server device `app_version` remains `unknown`.
+
+Sanitized GRAB raw section:
+
+```text
+Lanzhou Beef Chow Mein (Beef) x1
+Mild Spicy x1
+Add Fried Egg x1
+【未映射 Uber 菜】
+外卖
+```
+
+### Ordinary POS control
+
+Prepared Store1 ordinary TAKEOUT draft83, pickup `FIELD-A-20261002`, same menu1/five local options as the known line of82. Server-origin submit correctly returned403 `PRINT_ORIGIN_INVALID` (valid paired Pad proof required); no bypass or copied device credential was used to submit. Owner Pad submission/physical confirmation pending. Existing ordinary successful jobs201–204 and local automated ordinary HOT claim/lifecycle tests are separate evidence, not substituted for this exact field HOT control.
+
+### Retained legacy state and limits
+
+- Predeployment accepted TEST orders40D26 and63A1E were parked under the old strict mapping rule. They remain `RELEASED_MAPPING_REQUIRED`; no automatic historical replay/backfill or fake mapping write was performed. The new postdeployment raw/mixed order26BED passed. Any deliberate legacy replay must first re-fetch current Uber state through a bounded recovery path; this repair does not claim those old rows recovered.
+- Historical jobs200/205/207 already PRINTING remain untouched; possible prior paper is not guessed. Device33 later completed HOT208 and marked unbound209/212 FAILED/ANDROID_ASSIGNED_PRINTER_MISSING, then completed new213/214. No blind retry of ambiguous printing jobs.
+- Native worker state/generation/TCP logs remain unavailable without USB. Actual backend job ownership/completion plus Owner paper confirmation prove this field result; exact native TCP call lines are NOT OBSERVED.
+- Partial known-root/unknown-modifier and nested cases passed integration tests. The real order proved mixed known/raw roots; no fabricated Uber modifier was injected to inflate real Sandbox coverage.
+
+## Docker / Disk Hygiene
+
+Disk63%/22GB free →64%/21GB free. Build Cache14.64GB→14.75GB; reclaimable10.01GB unchanged. Above12GB cache-hygiene review performed; no cleanup because disk remains below70% and reviewed protected-cache eligibility was not broadened. Reclaimed0GB. Active Staging/Production images, DB volumes/containers, current and rollback releases, backup and private configuration retained. Both DBs healthy, applications Up; Production mutation/restart NO.
+
+## Evidence-only closure
+
+Final evidence/governance sync changes documentation only. Risk-based Agent6 exception: no executable/runtime/schema/config changes; prior required code/deployment reviews retained. No rebuild/redeploy for this documentation commit.
