@@ -15,9 +15,10 @@ interface DineInSidebarProps {
 const navItems = [
   { id: 'orders', label: 'Orders', icon: '▤', moduleKey: 'ORDER_HISTORY' },
   { id: 'menu', label: 'Menu', icon: '✕', moduleKey: 'ORDERING_POS' },
+  { id: 'uber-eats', label: 'Uber Eats', icon: 'U', moduleKey: 'UBER_EATS' },
   { id: 'dashboard', label: 'Dashboard', icon: '◫', moduleKey: 'STORE_ADMINISTRATION' },
 ] as const satisfies Array<{
-  id: 'orders' | 'menu' | 'dashboard'
+  id: 'orders' | 'menu' | 'dashboard' | 'uber-eats'
   label: string
   icon: string
   moduleKey: StoreModuleKey
@@ -88,6 +89,10 @@ export function DineInSidebar({
                   }
                   if (item.id === 'menu') {
                     navigateTo(path('/frontdesk'))
+                    return
+                  }
+                  if (item.id === 'uber-eats') {
+                    navigateTo(path('/frontdesk/uber-eats'))
                     return
                   }
                   if (item.id === 'dashboard') {

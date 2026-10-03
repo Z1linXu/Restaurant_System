@@ -1,6 +1,7 @@
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../App'
+import { DineInSidebar } from '../dinein/components/DineInSidebar'
 import { FrontdeskTopNav } from '../frontdesk/components/FrontdeskTopNav'
 import { StoreContext, mapStoreContext } from '../store/StoreContextCore'
 import type { StoreContextResponse, StoreModuleConfiguration, StoreModuleState } from '../../services/storeWorkspaceService'
@@ -43,6 +44,15 @@ describe('Uber Store capability on the shared frontend', () => {
     expect(text()).not.toContain('Uber Eats')
     await act(async () => view!.update(nav(context(52, true))))
     expect(text()).toContain('Uber Eats ')
+  })
+  it('gates the desktop sidebar on both Store switching directions', async () => {
+    const sidebar = (data: StoreContextResponse) => <StoreContext.Provider value={mapStoreContext(data.id, data, false, null)}><DineInSidebar /></StoreContext.Provider>
+    await act(async () => { view = create(sidebar(context(51, true))) })
+    expect(text()).toContain('Uber Eats')
+    await act(async () => view!.update(sidebar(context(73, false))))
+    expect(text()).not.toContain('Uber Eats')
+    await act(async () => view!.update(sidebar(context(52, true))))
+    expect(text()).toContain('Uber Eats')
   })
   it('never lends an old Store capability to a newly selected Store', () => {
     const value = mapStoreContext(73, context(51, true), false, null)
