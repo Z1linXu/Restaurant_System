@@ -83,3 +83,28 @@ Remaining unmapped12 contexts: Add Fried Egg43731428-8827-403a-b401-246ff779bef0
 - Existing report rebuild API refreshed289 exact Store/date pairs across Staging Stores1/18/21/22/23/24/25/26/27. SQL read-back compared every net_sales against eligible submitted-date total: zero mismatches. Derived summaries only; no order mutation.
 - Browser Desktop and1024px Pad show new panels and removed Recent/Active/status panels. Pad inspection caught an existing long Store-name min-content overflow (page1085px at viewport1024); a three-class wrap/shrink follow-up is under final acceptance. Backend source remains identical to the891-test artifact.
 - Docker before64%/21GBfree, buildcache14.75GB; after first deployment64%/21GBfree,14.8GB cache. Cache growth is small; no prune or release/volume/database cleanup. Active/rollback images and runtime artifacts preserved.
+
+## Final runtime acceptance
+
+- PR260 merged/deployed `ad3de48e973298604362cf21f119434d0b3f85f6`. Backend source is byte-identical to PR259; reuse of the891-test backend artifact verified by Git diff and SHA256. Frontend follow-up focused4 tests/build/ESLint PASS; only3 CSS classes changed. Agent6 delta ACCEPT.
+- Both runtime image revision labels match ad3de48e; backend image `sha256:a18231092ca5f7663b21638e7db7b38a62ffb19432300b0d4a34156f4120aec9`, frontend `sha256:86c966656d1bcd836e66c1f58b70b79f10c7f04a7c784a9735c22b3b9338ee4e`. Flyway remains V34 with no delta. Private backup/rollback artifacts retained for both deploys.
+- 2026-10-03T18:06:41Z final runtime acceptance PASS: HTTPS health UP, authenticated login/Store context, Frontdesk/printing/Uber routes,287 mappings and41 roots, Today13/Week7/Month31 buckets, category totals and percentages,2 remaining Add-on conflict groups. Production container fingerprints and Flyway ledger unchanged.
+- Browser measured viewport/page widths1024/1024 and768/768, no horizontal page overflow. Actual nonzero19.53 week/month sales match Reports, soup quantity1/revenue19.53, donut100%; active chow offering with0 sales shows0. Recent Orders and Active Orders card absent. Month chart scrolls internally; browser viewport reset afterward.
+- B8E83 raw-normalized/local/frozen-note audit hashes and metadata compare exactly equal before/after. All25 approved mapping contexts passed actual deployed read-only preview. No new Sandbox orders, manual Accept/Deny, physical prints or historical replay initiated.
+- Auto Finish timing/catch-up/idempotence/store isolation/payment invariants and stale-HTTP-entity races passed real PostgreSQL automated tests. The actual wall-clock22:30 run was not yet due at this afternoon acceptance; do not describe it as physically observed.
+
+## Docker / Disk Hygiene
+
+| Metric | Before | Final |
+| --- | --- | --- |
+| Root filesystem |64%,21GB available|65%,21GB available|
+| Build cache |14.75GB|14.92GB|
+| Images |93|97|
+| Staging health |UP|UP|
+| Production mutation |NONE|NONE|
+
+Reviewed cache above12GB; only0.17GB growth and21GB available. No prune, volume deletion, database cleanup or release rotation performed; reclaimed0. Active images, rollback images, releases, private backups, mounted configs, credentials and Production runtime artifacts protected. Local isolated PostgreSQL test cluster stopped after verification. One initial artifact-integrity check correctly rejected an incomplete upload before any build/deploy; retry after transfer completion passed. One runtime probe expected `day` instead of the real `daily` enum; correcting that probe produced PASS without application changes.
+
+## Execution timing
+
+Work began2026-10-03T17:42:55Z. Initial implementation/runtime reached acceptance around18:01Z; Pad-only repair merged18:04:39Z and passed runtime18:06:41Z, browser18:08Z. Investigation, implementation and Agent6 work overlapped. The final Owner report records total elapsed through evidence merge. No Production gate was crossed.
