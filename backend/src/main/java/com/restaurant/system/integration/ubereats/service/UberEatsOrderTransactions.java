@@ -77,6 +77,7 @@ public class UberEatsOrderTransactions {
                 || !Boolean.TRUE.equals(store.enabled)
                 || !Objects.equals(local.organization_id, store.organizationId))
             throw UberEatsException.conflict("STORE_MAPPING_INVALID");
+        modules.requireCapability(store.storeId, ModuleKeys.UBER_EATS);
         return store;
     }
 
@@ -95,6 +96,13 @@ public class UberEatsOrderTransactions {
         var e = events.lock(id).orElseThrow();
         if (!"PENDING".equals(e.status) || e.nextAttemptAt.isAfter(LocalDateTime.now()))
             return false;
+        var binding = stores.findByEnvironmentAndUberStoreId(config.environment, e.uberStoreId).orElse(null);
+        if (binding != null && !modules.evaluateCapability(binding.storeId, ModuleKeys.UBER_EATS).allowed()) {
+            // Configuration drift must not keep this Store at the head of every worker page.
+            e.nextAttemptAt = LocalDateTime.now().plusSeconds(90);
+            events.save(e);
+            return false;
+        }
         e.nextAttemptAt = LocalDateTime.now().plusSeconds(90);
         events.save(e);
         return true;
@@ -471,6 +479,11 @@ public class UberEatsOrderTransactions {
                         .contains(row.status)
                 || row.nextAttemptAt == null
                 || row.nextAttemptAt.isAfter(LocalDateTime.now())) return false;
+        if (!modules.evaluateCapability(row.storeId, ModuleKeys.UBER_EATS).allowed()) {
+            row.nextAttemptAt = LocalDateTime.now().plusSeconds(90);
+            orders.save(row);
+            return false;
+        }
         if (UberEatsAcceptancePolling.waiting(row)) {
             initializeAcceptanceWindow(row);
             if (UberEatsAcceptancePolling.expired(row, LocalDateTime.now(ZoneOffset.UTC))) {

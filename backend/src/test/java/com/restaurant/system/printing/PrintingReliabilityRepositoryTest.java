@@ -42,7 +42,7 @@ class PrintingReliabilityRepositoryTest {
         org.mockito.Mockito.when(service.toResponse(org.mockito.ArgumentMatchers.any())).thenAnswer(i ->
             com.restaurant.system.printing.dto.PrintJobResponse.from(i.getArgument(0), null, null));
         var manual = new com.restaurant.system.printing.service.ManualReprintService(jobs,
-            org.mockito.Mockito.mock(com.restaurant.system.order.repository.OrderRepository.class), service, dispatcher, em, transactions);
+            org.mockito.Mockito.mock(com.restaurant.system.order.repository.OrderRepository.class), service, dispatcher, em, transactions, org.mockito.Mockito.mock(com.restaurant.system.modules.StoreModuleAccessEvaluator.class));
         var physicalSends = new java.util.concurrent.atomic.AtomicInteger();
         org.mockito.Mockito.when(dispatcher.reprintJob(777L, 1L)).thenAnswer(invocation -> {
             var intent = com.restaurant.system.printing.service.ManualReprintService.currentIntent();

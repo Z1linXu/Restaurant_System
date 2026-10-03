@@ -60,7 +60,9 @@ public interface UberEatsOrderRepository extends JpaRepository<UberEatsOrder, Lo
     @Query(
             "select o from UberEatsOrder o where o.environment = :env and o.status in"
                 + " ('ACCEPTING','DENYING','UBER_ACCEPTED','LOCAL_FAILED','WAITING_FOR_ACCEPTANCE','WAITING_FOR_RELEASE','MIRROR_READY','MIRROR_LOCAL_FAILED','RELEASED_MAPPING_REQUIRED')"
-                + " and o.nextAttemptAt <= :now order by o.id")
+                + " and o.nextAttemptAt <= :now and exists (select m.id from StoreModule m"
+                + " where m.store_id=o.storeId and m.module_key='UBER_EATS' and m.enabled=true)"
+                + " and exists (select b.id from UberEatsStoreMapping b where b.id=o.storeMappingId and b.enabled=true) order by o.id")
     List<UberEatsOrder> due(
             @Param("env") String env, @Param("now") LocalDateTime now, Pageable page);
 

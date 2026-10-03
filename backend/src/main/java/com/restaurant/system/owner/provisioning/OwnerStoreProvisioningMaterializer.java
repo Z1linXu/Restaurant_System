@@ -252,6 +252,18 @@ public class OwnerStoreProvisioningMaterializer {
         List<JsonNode> moduleNodes,
         LocalDateTime now
     ) {
+        if (moduleNodes.stream().noneMatch(n -> "UBER_EATS".equals(n.path("module_key").asText()))) {
+            StoreModule optional = new StoreModule();
+            optional.store_id = storeId;
+            optional.module_key = "UBER_EATS";
+            optional.enabled = false;
+            optional.source = "SYSTEM_DEFAULT";
+            optional.configuration_status = "CONFIGURED";
+            optional.metadata_json = "{}";
+            optional.created_at = now;
+            optional.updated_at = now;
+            moduleRepository.save(optional);
+        }
         for (JsonNode moduleNode : moduleNodes) {
             StoreModule module = new StoreModule();
             module.store_id = storeId;

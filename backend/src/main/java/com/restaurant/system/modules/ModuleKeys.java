@@ -14,6 +14,8 @@ public final class ModuleKeys {
     public static final String KDS = "KDS";
     public static final String ANALYTICS_ADVANCED = "ANALYTICS_ADVANCED";
 
+    public static final String UBER_EATS = "UBER_EATS";
+
     private ModuleKeys() {
     }
 }

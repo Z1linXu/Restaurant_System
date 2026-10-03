@@ -17,6 +17,7 @@ import java.util.*;
 
 @Service
 public class UberEatsConfigurationService {
+    private final com.restaurant.system.modules.StoreModuleAccessEvaluator modules;
     private final UberEatsProperties config;
     private final UberEatsOrderTransactions tx;
     private final UberEatsOrderRepository orders;
@@ -36,7 +37,9 @@ public class UberEatsConfigurationService {
             UberEatsMenuMappingService menu,
             AuditLogService audit,
             UberEatsOrderTransactions tx,
-            UberEatsOrderRepository orders) {
+            UberEatsOrderRepository orders,
+            com.restaurant.system.modules.StoreModuleAccessEvaluator modules) {
+        this.modules = modules;
         this.orders = orders;
         this.tx = tx;
         this.config = config;
@@ -58,6 +61,7 @@ public class UberEatsConfigurationService {
             long unmapped_orders) {}
 
     public Connection connection(Long storeId) {
+        modules.requireCapability(storeId, com.restaurant.system.modules.ModuleKeys.UBER_EATS);
         var binding = stores.findByEnvironmentAndStoreId(config.environment, storeId).orElse(null);
         var event =
                 binding == null
@@ -82,6 +86,7 @@ public class UberEatsConfigurationService {
     // establish the external Store ownership binding.
     @Transactional
     public UberEatsStoreMapping bind(Long storeId, String uberId, AuthenticatedUser actor) {
+        modules.requireCapability(storeId, com.restaurant.system.modules.ModuleKeys.UBER_EATS);
         if (!"ADMIN".equals(actor.roleCode()))
             throw new ForbiddenException("Platform ADMIN must establish Uber Store ownership");
         try {
@@ -125,6 +130,7 @@ public class UberEatsConfigurationService {
 
     @Transactional
     public UberEatsStoreMapping setMode(Long storeId, String mode, AuthenticatedUser actor) {
+        modules.requireCapability(storeId, com.restaurant.system.modules.ModuleKeys.UBER_EATS);
         if (!Set.of("ORDER_MANAGER", "KITCHEN_MIRROR").contains(empty(mode)))
             throw UberEatsException.conflict("PROCESSING_MODE_INVALID");
         var binding = stores.findByEnvironmentAndStoreId(config.environment, storeId).orElseThrow();
@@ -153,6 +159,7 @@ public class UberEatsConfigurationService {
     @Transactional
     public UberEatsMenuMapping saveMapping(
             Long storeId, UberEatsMenuMapping request, AuthenticatedUser actor) {
+        modules.requireCapability(storeId, com.restaurant.system.modules.ModuleKeys.UBER_EATS);
         var binding =
                 stores.findByEnvironmentAndStoreId(config.environment, storeId)
                         .orElseThrow(() -> UberEatsException.conflict("STORE_MAPPING_MISSING"));

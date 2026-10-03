@@ -1,5 +1,22 @@
 # Restaurant System API
 
+## Uber Store module authorization (V37)
+
+`UBER_EATS` is a default-disabled optional key in the existing Store module
+configuration and authenticated Store context. Configure it through the existing
+`PUT /api/v1/admin/stores/{storeId}/modules` contract; Store access and Owner/Admin
+roles remain required. No implicit Uber binding or credential provisioning occurs.
+All `/api/v1/stores/{storeId}/integrations/uber-eats` operations require this module
+after Store/Organization authorization, including connection, Inbox/Today, catalog,
+mapping, preview, binding, mode, Accept/Deny/retry. Disabled returns HTTP 403 with
+`error_code=MODULE_DISABLED`. Existing order/job reprint APIs apply the same check
+for `external_source=UBER_EATS`, before reservation or idempotent replay.
+The external signed webhook remains unauthenticated by user token and resolves
+its Store through the verified environment/UUID binding; a disabled capability
+cannot create orders or perform import/recovery. Existing signing and isolation
+checks remain mandatory.
+
+
 > **Governance notice (2026-08-21):** this is the current API contract, not
 > Phase, Package, deployment or mutation authority. Current execution state is
 > owned by `docs/governance/CURRENT_STATE.yml`; historical status notes below

@@ -28,6 +28,7 @@ public class UberEatsWebhookService {
                     "orders.cancel",
                     "orders.scheduled.notification",
                     "orders.customer_order_edit");
+    private final com.restaurant.system.modules.StoreModuleAccessEvaluator modules;
     private final UberEatsProperties config;
     private final com.restaurant.system.integration.ubereats.client.UberEatsOrderClient client;
     private final UberEatsInboxEvents inboxEvents;
@@ -43,7 +44,9 @@ public class UberEatsWebhookService {
             UberEatsStoreMappingRepository stores,
             UberEatsOrderRepository orders,
             UberEatsInboxEvents inboxEvents,
-            com.restaurant.system.integration.ubereats.client.UberEatsOrderClient client) {
+            com.restaurant.system.integration.ubereats.client.UberEatsOrderClient client,
+            com.restaurant.system.modules.StoreModuleAccessEvaluator modules) {
+        this.modules = modules;
         this.client = client;
         this.inboxEvents = inboxEvents;
         this.config = config;
@@ -100,6 +103,7 @@ public class UberEatsWebhookService {
                         || !"KITCHEN_MIRROR".equals(target.processingMode))
                     throw new UberEatsException(
                             HttpStatus.BAD_REQUEST, "TEST_WEBHOOK_BINDING_MISMATCH");
+                modules.requireCapability(target.storeId, com.restaurant.system.modules.ModuleKeys.UBER_EATS);
                 // Only this opt-in TEST exception needs a pre-ack Sandbox identity read.
                 // No event/order/terminal mutation is allowed until this read proves the identity.
                 com.fasterxml.jackson.databind.JsonNode remote;
@@ -171,6 +175,8 @@ public class UberEatsWebhookService {
             return; // durable retry after configuration
         mapping = stores.lock(mapping.id).orElseThrow();
         entityManager.refresh(mapping, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        if (!Boolean.TRUE.equals(mapping.enabled)
+                || !modules.evaluateCapability(mapping.storeId, com.restaurant.system.modules.ModuleKeys.UBER_EATS).allowed()) return;
         orders.insertIfAbsent(
                 config.environment, mapping.id, mapping.storeId, storeId, orderId, eventId, now);
         var row = orders.findByEnvironmentAndUberOrderId(config.environment, orderId).orElseThrow();

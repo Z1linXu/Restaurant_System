@@ -20,6 +20,7 @@ const moduleKeys: StoreModuleKey[] = [
   'STORE_ADMINISTRATION',
   'KDS',
   'ANALYTICS_ADVANCED',
+  'UBER_EATS',
 ]
 
 function moduleState(moduleKey: StoreModuleKey, enabled: boolean): StoreModuleState {
@@ -63,6 +64,12 @@ function moduleConfiguration(overrides: Partial<Record<StoreModuleKey, boolean>>
 }
 
 describe('Store module access contract', () => {
+  it('requires the Uber Store module for both public workspace paths', () => {
+    expect(getRequiredStoreModuleForPath('/stores/42/frontdesk/uber-eats')).toBe('UBER_EATS')
+    expect(getRequiredStoreModuleForPath('/stores/91/admin/integrations/uber-eats')).toBe('UBER_EATS')
+    expect(isStoreModuleEnabled(moduleConfiguration({ UBER_EATS: false }), 'UBER_EATS')).toBe(false)
+    expect(isStoreModuleEnabled(moduleConfiguration({ UBER_EATS: true }), 'UBER_EATS')).toBe(true)
+  })
   it('fails closed when Store Context has no module configuration', () => {
     expect(evaluateStoreModuleAccess(null, 'ORDERING_POS')).toMatchObject({
       allowed: false,

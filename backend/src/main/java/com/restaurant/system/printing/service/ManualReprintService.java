@@ -48,6 +48,7 @@ public class ManualReprintService {
         public final Confirmation confirmation;
         public ConfirmationRequired(Confirmation confirmation) { super("请确认当前打印任务后再重打"); this.confirmation = confirmation; }
     }
+    private final com.restaurant.system.modules.StoreModuleAccessEvaluator modules;
     private final PrintJobRepository jobs;
     private final OrderRepository orders;
     private final PrintJobService jobService;
@@ -55,7 +56,8 @@ public class ManualReprintService {
     private final EntityManager entityManager;
     private final TransactionTemplate transportTransaction;
     public ManualReprintService(PrintJobRepository jobs, OrderRepository orders,
-        PrintJobService jobService, PrintDispatcherService dispatcher, EntityManager entityManager, PlatformTransactionManager transactions) {
+        PrintJobService jobService, PrintDispatcherService dispatcher, EntityManager entityManager, PlatformTransactionManager transactions, com.restaurant.system.modules.StoreModuleAccessEvaluator modules) {
+        this.modules = modules;
         this.jobs = jobs; this.orders = orders;
         this.jobService = jobService; this.dispatcher = dispatcher; this.entityManager = entityManager;
         this.transportTransaction = new TransactionTemplate(transactions);
@@ -87,6 +89,11 @@ public class ManualReprintService {
         OrderReprintRequest orderRequest, ManualReprintRequest request, Long userId) {
         if (request == null || request.idempotency_key == null || !request.idempotency_key.matches("[A-Za-z0-9_-]{8,128}"))
             throw new BusinessException("A stable manual reprint idempotency_key is required");
+        if (orderId != null) {
+            var order = orders.findExistingById(orderId);
+            if (order != null && "UBER_EATS".equals(order.external_source))
+                modules.requireCapability(storeId, com.restaurant.system.modules.ModuleKeys.UBER_EATS);
+        }
         // Both reprint entry points share this lock, including printer test jobs without an order.
         Store store = entityManager.find(Store.class, storeId, LockModeType.PESSIMISTIC_WRITE);
         if (store == null) throw new BusinessException("Store not found");

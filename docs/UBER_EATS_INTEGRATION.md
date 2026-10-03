@@ -110,9 +110,9 @@ Normalized snapshot 是字段白名单，排除 eater phone/email/address、paym
 
 ## Production Pilot 门店配置计划
 
-Owner 最新确认的 Production 候选店仅 St-Denis，已提供 UUID `5a7dca5c-b7ec-57c8-a684-87d23e66e8d9`；St-Catherine 和第三家店暂不启用。本 UUID 仅记录，不用于 Sandbox binding，不据此 provision、切 order manager、改菜单或启用接单。真实 TEST Store 是 `bd993244-5589-4b19-8f0d-dc2ba73d4273`，不能混用这两个 UUID。
+Owner 最新确认的最终 Production capability 目标为 St-Denis 和 St-Catherine 启用、Chinatown 禁用。St-Denis 已提供 UUID `5a7dca5c-b7ec-57c8-a684-87d23e66e8d9`；St-Catherine UUID 待提供。本 UUID 仅记录，不用于 Sandbox binding，不据此 provision、切 order manager、改菜单或启用接单。真实 TEST Store 是 `bd993244-5589-4b19-8f0d-dc2ba73d4273`，不能混用这两个 UUID。
 
-先满足真正 Sandbox E2E PASS、Integration Verification approved、Production scopes approved，再取得明确 Production Pilot 授权，才执行各门店 Enable → Bind UUID → Map Menu → Test → Activate。当前缺少专属 Store feature package 开关，后续小 PR 补 Store-scoped UBER_EATS enable control，不为此重构现有订单/打印。
+先满足真正 Sandbox E2E PASS、Integration Verification approved、Production scopes approved，再取得明确 Production Pilot 授权，才执行各门店 Enable → Bind UUID → Map Menu → Test → Activate。V37 已复用正式 `store_modules` 增加默认关闭的 `UBER_EATS` capability，统一控制按钮、前台/管理路由、所有 Store-scoped Uber APIs、重打与后台导入恢复；不重构现有订单/打印。启用 module 不等于建立 binding 或授权 Production activation。
 
 2026-09-17 继续工作授权已扩大到 merge-gate review、修复/测试/合并、独立 Staging备份部署与HTTPS webhook、真实Testing E2E及符合Uber流程的verification/scope申请；不包含Production接单激活或任何Production不可逆操作。Secret仍只允许配置于backend私密环境，例如经核实部署目标后的 `/srv/restaurant-pos/staging/config/.env.staging` 的 `UBER_EATS_CLIENT_SECRET`，不可写入仓库或聊天。当前技术文档路径不代表服务器已核实或配置已生效。
 
