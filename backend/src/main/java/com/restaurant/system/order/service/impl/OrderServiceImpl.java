@@ -939,11 +939,17 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private OrderItem addDraftOrderItemInternal(Order order, CreateOrderItemRequest itemRequest, LocalDateTime now) {
-        MenuItem menuItem = menuItemRepository.findById(itemRequest.menu_item_id).orElse(null);
+        boolean raw = itemRequest.external_kitchen_snapshot != null && itemRequest.external_kitchen_snapshot.rawRoot();
+        if (itemRequest.external_kitchen_snapshot != null && !order.kitchenMirror())
+            throw new BusinessException("External kitchen fallback requires Kitchen Mirror");
+        if (raw && (itemRequest.menu_item_id != null || !itemRequest.options.isEmpty()
+                || !"RAW_UBER_FALLBACK".equals(itemRequest.category_code_snapshot)))
+            throw new BusinessException("Raw kitchen line cannot grant local menu or option identity");
+        MenuItem menuItem = itemRequest.menu_item_id == null ? null : menuItemRepository.findById(itemRequest.menu_item_id).orElse(null);
         if (menuItem != null) {
             validateMenuItemBelongsToStore(menuItem, order.store_id);
-        } else if (itemRequest.station_id_snapshot == null || itemRequest.category_code_snapshot == null
-            || itemRequest.unit_price_snapshot == null) {
+        } else if (!raw && (itemRequest.station_id_snapshot == null || itemRequest.category_code_snapshot == null
+            || itemRequest.unit_price_snapshot == null)) {
             throw new BusinessException("Cached menu item snapshot is incomplete: " + itemRequest.menu_item_id);
         }
         String categoryCode = itemRequest.category_code_snapshot;
@@ -957,7 +963,8 @@ public class OrderServiceImpl implements OrderService {
         orderItem.category_code_snapshot = categoryCode;
         orderItem.station_id_snapshot = itemRequest.station_id_snapshot != null
             ? itemRequest.station_id_snapshot
-            : menuItem.station_id;
+            : menuItem == null ? null : menuItem.station_id;
+        orderItem.externalKitchenSnapshot = itemRequest.external_kitchen_snapshot;
         orderItem.item_sku_snapshot = firstNonBlank(itemRequest.item_sku_snapshot, menuItem == null ? null : menuItem.sku);
         orderItem.item_name_snapshot_zh = firstNonBlank(itemRequest.item_name_snapshot_zh, menuItem == null ? null : menuItem.name_zh);
         orderItem.item_name_snapshot_en = firstNonBlank(itemRequest.item_name_snapshot_en, menuItem == null ? null : menuItem.name_en);
@@ -976,7 +983,7 @@ public class OrderServiceImpl implements OrderService {
         orderItem.updated_at = now;
 
         OrderItem savedOrderItem = orderItemRepository.save(orderItem);
-        List<OrderItemOption> savedOptions = createOrderItemOptions(
+        List<OrderItemOption> savedOptions = raw ? List.of() : createOrderItemOptions(
             savedOrderItem,
             order.store_id,
             itemRequest.menu_item_id,
@@ -1448,6 +1455,19 @@ public class OrderServiceImpl implements OrderService {
         PrintingDisplayRuleContext printingRules = printingDisplayRuleService.activeContext(order.store_id);
 
         for (OrderItem orderItem : orderItems) {
+            if (order.kitchenMirror() && orderItem.externalKitchenSnapshot != null
+                    && orderItem.externalKitchenSnapshot.rawRoot()) {
+                KitchenTask rawTask = new KitchenTask();
+                rawTask.order_id = order.id; rawTask.order_item_id = orderItem.id;
+                rawTask.store_id = order.store_id;
+                rawTask.station_code = "RAW_UBER_FALLBACK"; // GRAB-only holding lane, never a guessed station.
+                rawTask.item_name_snapshot_zh = "未映射 Uber 菜";
+                rawTask.item_name_snapshot_en = "Unmapped Uber item";
+                rawTask.quantity = orderItem.quantity;
+                rawTask.status = KitchenTaskStatus.pending.name(); rawTask.created_at = now;
+                kitchenTasks.add(rawTask);
+                continue;
+            }
             if (isDirectServe(orderItem.category_code_snapshot, store)) {
                 continue;
             }
@@ -1502,6 +1522,7 @@ public class OrderServiceImpl implements OrderService {
         Map<Long, List<OrderItemOption>> optionsByOrderItemId = groupOptionsByOrderItemId(orderItemOptions);
 
         for (OrderItem orderItem : orderItems) {
+            if (orderItem.menu_item_id == null) continue;
             List<MenuItemBom> itemBoms = menuItemBomRepository.findAllByMenuItemId(orderItem.menu_item_id);
             for (MenuItemBom itemBom : itemBoms) {
                 BigDecimal qtyChange = itemBom.qty_per_unit

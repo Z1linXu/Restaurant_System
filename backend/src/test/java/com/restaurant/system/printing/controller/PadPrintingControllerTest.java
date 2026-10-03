@@ -113,6 +113,22 @@ class PadPrintingControllerTest {
         verify(padPrintJobService).listPendingJobs(device, 1L, 25);
     }
 
+    @Test
+    void payloadConfigurationConflictRemains409WithGlobalExceptionAdvice() throws Exception {
+        StoreDevice device = device(1L, 10L);
+        PrintJob job = new PrintJob(); job.id = 77L; job.store_id = 1L;
+        when(storeDeviceService.authenticateDevice(10L, "fixture-token")).thenReturn(device);
+        when(printJobService.requireJob(77L)).thenReturn(job);
+        when(padPrintJobService.getPayload(device, 77L)).thenThrow(new ResponseStatusException(
+            org.springframework.http.HttpStatus.CONFLICT, "Assigned printer is missing host"));
+        var mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(controller)
+            .setControllerAdvice(new com.restaurant.system.common.exception.GlobalExceptionHandler()).build();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/printing/jobs/77/payload")
+            .header("X-Device-Id", 10).header("X-Device-Token", "fixture-token"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isConflict())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.message").value("Assigned printer is missing host"));
+    }
+
     private StoreDevice device(Long storeId, Long deviceId) {
         StoreDevice device = new StoreDevice();
         device.id = deviceId;

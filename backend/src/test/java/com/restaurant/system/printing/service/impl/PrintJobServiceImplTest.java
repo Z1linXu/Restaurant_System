@@ -44,6 +44,20 @@ class PrintJobServiceImplTest {
     }
 
     @Test
+    void unboundPrinterRetainsTicketButCannotBlockDeviceQueue() {
+        PrintJob job = new PrintJob(); job.id = 10L; job.status = "PENDING";
+        job.rendered_text_snapshot = "Raw Uber item x1\n外卖";
+        PrinterConfig printer = new PrinterConfig(); printer.id = 2L; printer.port = 9100;
+        when(printJobRepository.findById(job.id)).thenReturn(Optional.of(job));
+        when(printJobRepository.save(any(PrintJob.class))).thenAnswer(i -> i.getArgument(0));
+        PrintJob result = service.markPadDirectQueued(job, printer);
+        assertEquals("FAILED", result.status);
+        assertEquals("PRINTER_CONFIGURATION_REQUIRED", result.error_code);
+        assertEquals("Raw Uber item x1\n外卖", result.rendered_text_snapshot);
+        assertTrue(Base64.getDecoder().decode(result.escposPayloadBase64).length > 0);
+    }
+
+    @Test
     void padDirectPayloadUsesProvidedFontSize() {
         PrintJob job = new PrintJob();
         job.id = 1L;
@@ -52,6 +66,7 @@ class PrintJobServiceImplTest {
 
         PrinterConfig printer = new PrinterConfig();
         printer.id = 10L;
+        printer.ip_address = "127.0.0.1";
         printer.text_encoding = "GBK";
         printer.font_size = "SMALL";
 
@@ -76,7 +91,7 @@ class PrintJobServiceImplTest {
                 assertEquals(22L, job.preferredDeviceId);
                 job.id = 99L; job.rendered_text_snapshot = "TEST";
                 when(printJobRepository.findById(99L)).thenReturn(Optional.of(job));
-                PrinterConfig printer = new PrinterConfig(); printer.id = 1L; printer.text_encoding = "GBK";
+                PrinterConfig printer = new PrinterConfig(); printer.id = 1L; printer.ip_address = "127.0.0.1"; printer.text_encoding = "GBK";
                 service.markPadDirectQueued(job, printer, "SMALL");
                 var deadline = job.preferredDeviceUntil;
                 assertTrue(deadline.isAfter(java.time.LocalDateTime.now().plusSeconds(8)));

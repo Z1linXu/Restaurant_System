@@ -1145,23 +1145,122 @@ class UberEatsPostgresIntegrationTest {
     }
 
     @Test
-    void mirrorReleaseMappingFailureBlocksThenFreshRecoveryAfterExplicitMapping() {
+    void unmappedRootReleasesRawGrabAndLaterMappingCannotRewriteHistory() {
         mirrorMode();
         var data = payload(UUID.randomUUID().toString());
-        ((ObjectNode) data.at("/cart/items/0")).put("external_data", "");
-        var blocked = release(data);
-        assertThat(blocked.status).isEqualTo("RELEASED_MAPPING_REQUIRED");
-        assertThat(count("orders", "store_id", store)).isZero();
-        var rule = new UberEatsMenuMapping();
-        rule.kind = "ITEM";
-        rule.identifierType = "ID";
-        rule.uberIdentifier = "uber-noodle";
-        rule.localMenuItemId = item;
+        ((ObjectNode) data.at("/cart/items/0")).put("external_data", "").put("title", "Lanzhou Beef Chow Mein (Beef)");
+        var released = release(data);
+        assertThat(released.status).isEqualTo("KITCHEN_SENT_WITH_MAPPING_WARNINGS");
+        assertThat(released.mappingStatus).isEqualTo("PARTIALLY_MAPPED");
+        assertThat(released.mappingError).contains("UNMAPPED_ROUTE_REVIEW");
+        assertThat(count("orders", "store_id", store)).isOne();
+        assertThat(count("inventory_transactions", "source_id", released.localOrderId)).isZero();
+        var raw = items.findAllByOrderId(released.localOrderId).get(0);
+        assertThat(raw.menu_item_id).isNull();
+        assertThat(raw.externalKitchenSnapshot.itemId()).isEqualTo("uber-noodle");
+        assertThat(tasks.findAllByOrderId(released.localOrderId)).allSatisfy(t -> assertThat(t.station_code).isEqualTo("RAW_UBER_FALLBACK"));
+        dispatch(released.localOrderId);
+        var printed = jobs.findAllByStoreIdAndOrderId(store, released.localOrderId);
+        assertThat(printed).hasSize(1);
+        assertThat(printed.get(0).module_code).isEqualTo("GRAB");
+        assertThat(printed.get(0).rendered_text_snapshot).contains("Lanzhou Beef Chow Mein (Beef)", "Large", "Fried Egg", "No Cilantro", "未映射 Uber 菜", "外卖");
+        var rule = new UberEatsMenuMapping(); rule.kind = "ITEM"; rule.identifierType = "ID";
+        rule.uberIdentifier = "uber-noodle"; rule.localMenuItemId = item;
         configuration.saveMapping(store, rule, actor);
         imports.recover();
-        assertThat(row(blocked.uberOrderId).status).isEqualTo("RELEASED_TO_KITCHEN");
+        var request = new com.restaurant.system.printing.dto.OrderReprintRequest();
+        request.receipt_type = "GRAB"; request.idempotency_key = UUID.randomUUID().toString();
+        var copy = manualReprint.reprintOrder(released.localOrderId, request, actorId);
+        assertThat(jobs.findById(copy.id).orElseThrow().rendered_text_snapshot).isEqualTo(printed.get(0).rendered_text_snapshot);
         assertThat(count("orders", "store_id", store)).isOne();
-        verify(client, times(2)).getOrder(blocked.uberOrderId);
+        verify(client, never()).accept(anyString(), anyString());
+    }
+
+    @Test
+    void mixedKnownAndRawLinesPreserveEveryUnknownModifierAndOnlyKnownHotRouting() {
+        mirrorMode();
+        var data = payload(UUID.randomUUID().toString());
+        var selected = (ArrayNode) data.at("/cart/items/0/selected_modifier_groups/0/selected_items");
+        addModifier(selected, "unknown-mod", "", "Unknown Modifier");
+        var nested = ((ObjectNode) selected.get(3)).putArray("selected_modifier_groups").addObject().putArray("selected_items");
+        addModifier(nested, "child-mod", "", "Nested Unknown");
+        var raw = ((ArrayNode)data.at("/cart/items")).addObject();
+        raw.put("id", "unknown-root").put("title", "Unknown Uber Item").put("quantity", 2);
+        addModifier(raw.putArray("selected_modifier_groups").addObject().putArray("selected_items"), "raw-egg", "", "Add Fried Egg");
+        var released = release(data); dispatch(released.localOrderId);
+        assertThat(released.status).isEqualTo("KITCHEN_SENT_WITH_MAPPING_WARNINGS");
+        assertThat(items.findAllByOrderId(released.localOrderId)).hasSize(2);
+        var known = items.findAllByOrderId(released.localOrderId).stream().filter(i -> i.menu_item_id != null).findFirst().orElseThrow();
+        assertThat(known.item_sku_snapshot).isEqualTo("traditional_beef_noodle");
+        assertThat(options.findAllByOrderItemIds(List.of(known.id))).extracting(o -> o.option_code_snapshot).containsExactlyInAnyOrder("size_large", "fried_egg", "remove_cilantro");
+        var grabJob = jobs.findByDispatchSourceKey("submit:"+released.localOrderId+":GRAB").orElseThrow();
+        var hotJob = jobs.findByDispatchSourceKey("submit:"+released.localOrderId+":HOT_KITCHEN").orElseThrow();
+        assertThat(grabJob.rendered_text_snapshot).contains("Unknown Modifier x1", "Nested Unknown x1", "Unknown Uber Item x2", "Add Fried Egg x1", "外卖");
+        assertThat(hotJob.rendered_text_snapshot).contains("Unknown Modifier", "Nested Unknown", "外卖").doesNotContain("Unknown Uber Item", "Add Fried Egg");
+        assertThat(jobs.findAllByStoreIdAndOrderId(store, released.localOrderId)).hasSize(2);
+        assertThat(kitchenView.rawItems(released)).contains("Unknown Uber Item ×2", "Unknown Modifier ×1");
+        assertThat(kitchenView.state(released).status()).isEqualTo("KITCHEN_SENT_WITH_MAPPING_WARNINGS");
+    }
+
+    @Test
+    void unknownRequiredSizeKeepsKnownEggAndRemoveAndPreservesRawChoice() {
+        mirrorMode();
+        var data = payload(UUID.randomUUID().toString());
+        ((ObjectNode)data.at("/cart/items/0/selected_modifier_groups/0/selected_items/0"))
+            .put("id", "unknown-size").put("external_data", "").put("title", "Unknown Size");
+        var row = release(data);
+        assertThat(row.status).isEqualTo("KITCHEN_SENT_WITH_MAPPING_WARNINGS");
+        var line = items.findAllByOrderId(row.localOrderId).get(0);
+        assertThat(options.findAllByOrderItemIds(List.of(line.id))).extracting(o -> o.option_code_snapshot)
+            .containsExactlyInAnyOrder("fried_egg", "remove_cilantro");
+        dispatch(row.localOrderId);
+        assertThat(jobs.findByDispatchSourceKey("submit:"+row.localOrderId+":GRAB").orElseThrow().rendered_text_snapshot)
+            .contains("Unknown Size", "外卖").doesNotContain("Fried Egg", "No Cilantro");
+    }
+
+    @Test
+    void rawFallbackDoesNotAllowInvalidNestedQuantityOrOrdinaryOrderInjection() {
+        mirrorMode();
+        var data = payload(UUID.randomUUID().toString());
+        ((ObjectNode)data.at("/cart/items/0")).put("id", "raw-root").put("external_data", "");
+        ((ObjectNode)data.at("/cart/items/0/selected_modifier_groups/0/selected_items/0")).put("quantity", -1);
+        var row = release(data);
+        assertThat(row.localOrderId).isNull();
+        assertThat(row.status).isEqualTo("RELEASED_MAPPING_REQUIRED");
+        var safe = payload(UUID.randomUUID().toString());
+        ((ObjectNode)safe.at("/cart/items/0")).put("id", "raw-root").put("external_data", "");
+        var request = mapping.mapMirror(binding, normalizer.normalize(safe)).request();
+        assertThatThrownBy(() -> orderService.createOrReplaceDraftAndSubmit(request, null))
+            .hasMessageContaining("External kitchen fallback requires Kitchen Mirror");
+        assertThat(count("orders", "store_id", store)).isZero();
+    }
+
+    @Test
+    void normalAndMirrorHotJobsShareRealDevicePendingClaimStartPayloadCompleteApi() throws Exception {
+        db.update("update stores set printing_mode='PAD_DIRECT' where id=?", store);
+        var normalRequest = mapping.map(binding, normalizer.normalize(payload(UUID.randomUUID().toString()))).request();
+        normalRequest.order_type = "takeout";
+        var normal = orderService.createOrReplaceDraftAndSubmit(normalRequest, null); dispatch(normal.id);
+        mirrorMode();
+        var mirror = release(payload(UUID.randomUUID().toString())); dispatch(mirror.localOrderId);
+        var device = new com.restaurant.system.printing.entity.StoreDevice();
+        device.storeId=store; device.organizationId=org; device.deviceName="Fixture Pad"; device.deviceType="PAD"; device.platform="ANDROID";
+        String token="fixture-device-"+UUID.randomUUID();
+        device.deviceTokenHash=Base64.getEncoder().encodeToString(java.security.MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8)));
+        device.status="ACTIVE"; device.isActive=true; device.createdAt=LocalDateTime.now(); device.updatedAt=device.createdAt;
+        device=devices.save(device);
+        var result=mvc.perform(get("/api/v1/stores/"+store+"/printing/jobs/pending").header("X-Device-Id",device.id).header("X-Device-Token",token)).andExpect(status().isOk()).andReturn();
+        var ids=new HashSet<Long>(); json.readTree(result.getResponse().getContentAsString()).path("data").forEach(j->ids.add(j.path("id").asLong()));
+        for (Long orderId : List.of(normal.id, mirror.localOrderId)) {
+            var job=jobs.findByDispatchSourceKey("submit:"+orderId+":HOT_KITCHEN").orElseThrow();
+            assertThat(ids).contains(job.id);
+            String body="{\"client_attempt_token\":\"fixture-attempt-"+job.id+"\"}";
+            for(String step:List.of("claim","start-print")) mvc.perform(post("/api/v1/printing/jobs/"+job.id+"/"+step).header("X-Device-Id",device.id).header("X-Device-Token",token).contentType("application/json").content(body)).andExpect(status().isOk());
+            mvc.perform(get("/api/v1/printing/jobs/"+job.id+"/payload").header("X-Device-Id",device.id).header("X-Device-Token",token)).andExpect(status().isOk()).andExpect(jsonPath("$.data.printer_host").value("127.0.0.1"));
+            mvc.perform(post("/api/v1/printing/jobs/"+job.id+"/complete").header("X-Device-Id",device.id).header("X-Device-Token",token).contentType("application/json").content(body)).andExpect(status().isOk());
+            assertThat(jobs.findById(job.id).orElseThrow().status).isEqualTo("PRINTED");
+        }
+        assertThat(jobs.findAllByStoreIdAndOrderId(store, mirror.localOrderId)).noneMatch(j->"FRONTDESK_RECEIPT".equals(j.module_code));
     }
 
     @Test
@@ -1825,40 +1924,15 @@ class UberEatsPostgresIntegrationTest {
     }
 
     @Test
-    void acceptedMappingFailureWaitsForMappingChangeWithoutUnboundedGetCalls() {
-        mirrorMode();
-        var data = payload(UUID.randomUUID().toString());
-        ((ObjectNode) data.at("/cart/items/0")).put("external_data", "");
-        var waiting = notify(data);
-        data.put("current_state", "ACCEPTED");
-        due(waiting.id);
-        imports.recover();
-        var blocked = row(waiting.uberOrderId);
-        assertThat(blocked.status).isEqualTo("RELEASED_MAPPING_REQUIRED");
-        assertThat(blocked.nextAttemptAt).isNull();
-        assertThat(blocked.acceptedObservedAt).isNotNull();
-        clearInvocations(client);
-        imports.recover();
-        verifyNoInteractions(client);
-        // More than an inbox page of newer terminal rows must not strand this mapping gate.
-        db.update(
-                "insert into"
-                    + " uber_eats_orders(environment,store_mapping_id,store_id,uber_store_id,uber_order_id,status,mapping_status,attempt_count,cancelled,edit_required,scheduled,next_attempt_at,created_at,updated_at,processing_mode)"
-                    + " select"
-                    + " 'sandbox',?,?,?,gen_random_uuid()::text,'DENIED','PENDING',0,false,false,false,null,now(),now(),'KITCHEN_MIRROR'"
-                    + " from generate_series(1,105)",
-                binding.id,
-                store,
-                uberStore);
-        var rule = new UberEatsMenuMapping();
-        rule.kind = "ITEM";
-        rule.identifierType = "ID";
-        rule.uberIdentifier = "uber-noodle";
-        rule.localMenuItemId = item;
-        configuration.saveMapping(store, rule, actor);
-        imports.recover();
-        assertThat(row(waiting.uberOrderId).localOrderId).isNotNull();
-        verify(client, times(1)).getOrder(waiting.uberOrderId);
+    void acceptedUnmappedRootDispatchesOnceWithoutWaitingForMappingMutation() {
+        mirrorMode(); var data=payload(UUID.randomUUID().toString());
+        ((ObjectNode)data.at("/cart/items/0")).put("external_data", "");
+        var waiting=notify(data); data.put("current_state", "ACCEPTED"); due(waiting.id); imports.recover();
+        var sent=row(waiting.uberOrderId);
+        assertThat(sent.status).isEqualTo("KITCHEN_SENT_WITH_MAPPING_WARNINGS");
+        assertThat(sent.localOrderId).isNotNull(); assertThat(sent.acceptedObservedAt).isNotNull();
+        clearInvocations(client); imports.recover(); verifyNoInteractions(client);
+        assertThat(count("orders", "store_id", store)).isOne();
     }
 
     @Test

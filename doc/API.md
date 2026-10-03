@@ -1874,7 +1874,7 @@ ACCEPTED and `orders.release` enter the same fresh Store-bound mapping/kitchen g
 No release webhook is fabricated by polling. Scheduled notices remain held until
 regular notification/release. DENIED/CANCELED stop without printing; FINISHED or
 UNKNOWN without kitchen dispatch requires review. Cancel/edit flags remain monotonic.
-Mapping failure -> RELEASED_MAPPING_REQUIRED with no scheduled retries; an explicit
+Structural/scope validation failure -> RELEASED_MAPPING_REQUIRED with no scheduled retries; an explicit
 mapping update schedules one fresh GET. Duplicate triggers cannot duplicate the
 local order, tasks, inventory or initial module jobs.
 
@@ -1882,10 +1882,10 @@ local order, tasks, inventory or initial module jobs.
 `itemMappingMode` (`STANDARD` default or ITEM-only `COMBO_ROOT`), `actionReason`.
 NO_OP requires `INGREDIENT_NOT_USED`, exact root/local item context and no nested
 modifiers/notes. COMBO_ROOT requires the local `combo` option and injects it before
-validating COMBO_EGG/COMBO_SIDE. Unknown identities still block.
+validating COMBO_EGG/COMBO_SIDE. Mirror unknown identities follow V33 fallback below; ORDER_MANAGER remains strict.
 
 `GET .../orders` adds `processing_mode`, `customer_header`, `released_at`,
-`mapped_items`, `grab_status`, `hot_kitchen_status`, `accepted_observed_at`. Mirror rows use the current
+`mapped_items`, `raw_items` (V33), `grab_status`, `hot_kitchen_status`, `accepted_observed_at`. Mirror rows use the current
 business day (kitchen dispatch, accepted observation, release, otherwise placement/creation), plus unresolved waiting or
 review rows, max 200. `UBER_EATS_BUSINESS_TIME_ZONE` defaults to `America/Toronto`;
 Remote placement and new release timestamps use UTC day boundaries; legacy
@@ -1912,7 +1912,7 @@ cancel actions are rejected for EXTERNAL_PLATFORM kitchen mirrors.
 
 `POST .../mapping-preview` requires Owner/Admin ADMIN_MENU_MANAGE and Store access.
 Body is a bounded Uber order-shaped JSON; response contains `request` (local semantic
-projection) and `errors`. It invokes the same normalizer, Store binding, persisted
+projection), `errors` and `warnings` (V33). It invokes the same normalizer, Store binding, persisted
 rules and catalog as import. It performs no remote API call, order/event write or
 printing; a preview is not evidence of a real Sandbox order. Foreign store_id yields
 STORE_MISMATCH, preventing a valid result. V32 adds accepted/state/poll observations
@@ -1923,3 +1923,9 @@ Uber webhook environment enum comparison accepts case variants (for example `San
 ### TEST webhook environment compatibility (Owner authorized 2026-10-02)
 
 The real TEST Store notification used `X-Environment: production` despite a valid TEST HMAC and a readable matching order on `test-api.uber.com`. Default strict environment isolation remains. Only `APP_ENVIRONMENT=staging`, `UBER_EATS_ENVIRONMENT=sandbox`, a matching nonempty `UBER_EATS_TEST_WEBHOOK_CLIENT_ID` and exact `UBER_EATS_TEST_WEBHOOK_STORE_ID` opt in. A recognized order event must target an enabled KITCHEN_MIRROR binding; raw HMAC is verified first. Before any durable event/order/cancel mutation, Sandbox GET Order must return the same order and store UUID. Failed lookup returns retryable 503; identity mismatch returns 400. Missing/unknown headers, other stores/apps and Production runtimes cannot use this exception. Credentials and raw traffic are never logged. The TEST-only pre-ack read uses the existing bounded API timeouts; ordinary matching-environment webhooks retain fast durable receipt.
+
+### Mirror raw kitchen fallback and device errors (V33)
+
+Mirror accepted/released orders with missing identities dispatch as `PARTIALLY_MAPPED` / `KITCHEN_SENT_WITH_MAPPING_WARNINGS`. Unknown roots use null local menu/station IDs and the frozen internal `external_kitchen_snapshot` (item ID/title/quantity/notes plus recursive modifier ID/name/quantity/removed/notes). They always enter GRAB with `UNMAPPED_ROUTE_REVIEW`, without guessed HOT routing or BOM. Known roots keep safe local mappings and raw unknown modifiers. `raw_items` exposes the frozen readable fallback alongside `mapped_items`; kitchen reprint stays available. Public ordinary order creation cannot supply external fallback metadata. Structural and identity errors still block. No new mapping persistence or remote decision API is introduced.
+
+PAD printing endpoints retain their ResponseStatusException HTTP codes and return `PAD_PRINT_PROTOCOL_ERROR` plus the safe reason. Missing assigned host yields 409. New jobs with unconfigured endpoints are FAILED / `PRINTER_CONFIGURATION_REQUIRED`, retaining payload and preview. The Android worker advances only after a definite pre-TCP payload/configuration failure is acknowledged by `/fail`; it never marks such a job PRINTED.

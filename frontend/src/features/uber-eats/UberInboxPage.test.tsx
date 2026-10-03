@@ -57,6 +57,17 @@ describe('Uber inbox staff workflow', () => {
     expect(reprintUberKitchen).toHaveBeenCalledExactlyOnceWith(22, 'GRAB')
     expect(JSON.stringify(view!.toJSON())).toContain('牛肉面 ×1 · 大碗')
   })
+  it('shows mapped and frozen raw content with warnings and keeps both kitchen reprints enabled', async () => {
+    vi.mocked(useUberInbox).mockReturnValue({ orders: [{ ...pending, processing_mode: 'KITCHEN_MIRROR', status: 'KITCHEN_SENT_WITH_MAPPING_WARNINGS', mapping_status: 'PARTIALLY_MAPPED', local_order_id: 22, grab_status: 'FAILED', hot_kitchen_status: 'PENDING', mapped_items: ['传统牛肉面 ×1 · 大'], raw_items: ['Unknown Uber Item ×2', 'Unknown Modifier ×1'], mapping_errors: ['UNMAPPED_ROUTE_REVIEW'] }], loading: false, error: null, refresh })
+    vi.mocked(reprintUberKitchen).mockResolvedValue({ id: 11, status: 'PENDING' } as Awaited<ReturnType<typeof reprintUberKitchen>>)
+    await act(async () => { view = create(<UberInboxPage />) })
+    const rendered = JSON.stringify(view!.toJSON())
+    expect(rendered).toContain('部分匹配'); expect(rendered).toContain('Unknown Uber Item'); expect(rendered).toContain('传统牛肉面'); expect(rendered).toContain('UNMAPPED_ROUTE_REVIEW')
+    expect(button('Accept')).toBeUndefined()
+    await act(async () => button('重打 HOT KITCHEN').props.onClick())
+    expect(reprintUberKitchen).toHaveBeenCalledWith(22, 'HOT_KITCHEN')
+    expect(button('重打 GRAB')).toBeDefined()
+  })
   it('requires a denial reason and submits it to the backend', async () => {
     vi.mocked(decideUberOrder).mockResolvedValue({ ...pending, status: 'DENIED' })
     await act(async () => { view = create(<UberInboxPage />) })

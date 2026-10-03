@@ -120,8 +120,7 @@ Owner 最新确认的 Production 候选店仅 St-Denis，已提供 UUID `5a7dca5
 ## Kitchen Mirror extension (2026-10-02, V31)
 
 See `doc/API.md` for the additive mode/mapping/inbox contract. In KITCHEN_MIRROR,
-notification is save-only; release is the only kitchen trigger, after fresh GET,
-Store validation and complete mapping. No remote Accept/Deny or local receipts.
+notification schedules the accepted-state checks described in V32 below. ACCEPTED/release shares the kitchen gate after fresh GET and Store validation. No remote Accept/Deny or local receipts.
 Financial snapshots remain separate from zero-valued kitchen records and in-store
 analytics. Existing OrderService, task/inventory logic, GRAB/HOT renderers, outbox,
 manual reprint audit/idempotency/Pad protections are reused.
@@ -140,8 +139,8 @@ Kitchen Mirror no longer requires orders.release as its only trigger. The existi
 backend worker durably checks CREATED orders until it observes ACCEPTED, with
 2/5/10/15/30/60/120-second backoff, maximum 40 attempts or 30 minutes, and a 90-second
 claim lease. Terminal states and unknown/FINISHED states stop; ambiguous states
-require review. API failures back off at least 60 seconds. Mapping-incomplete rows
-wait for mapping changes rather than polling forever. accepted_observed_at is a
+require review. API failures back off at least 60 seconds. Structural/scope failures
+wait for corrective review; missing mappings use V33 frozen fallback. accepted_observed_at is a
 local UTC observation timestamp; accepted_at remains reserved for legacy decisions.
 Both triggers reuse the same transactional kitchen checkpoint/local-order/outbox path.
 No Accept/Deny or receipt is enabled by this change. See the [API contract](../doc/API.md).
@@ -155,3 +154,9 @@ consumer/Tablet E2E are separate gates; code and mapping preview cannot prove th
 ### TEST webhook environment compatibility (Owner authorized 2026-10-02)
 
 The real TEST Store notification used `X-Environment: production` despite a valid TEST HMAC and a readable matching order on `test-api.uber.com`. Default strict environment isolation remains. Only `APP_ENVIRONMENT=staging`, `UBER_EATS_ENVIRONMENT=sandbox`, a matching nonempty `UBER_EATS_TEST_WEBHOOK_CLIENT_ID` and exact `UBER_EATS_TEST_WEBHOOK_STORE_ID` opt in. A recognized order event must target an enabled KITCHEN_MIRROR binding; raw HMAC is verified first. Before any durable event/order/cancel mutation, Sandbox GET Order must return the same order and store UUID. Failed lookup returns retryable 503; identity mismatch returns 400. Missing/unknown headers, other stores/apps and Production runtimes cannot use this exception. Credentials and raw traffic are never logged. The TEST-only pre-ack read uses the existing bounded API timeouts; ordinary matching-environment webhooks retain fast durable receipt.
+
+## Mirror mapping fallback — V33
+
+The Owner changed only Kitchen Mirror's missing-identity behavior: accepted orders must reach kitchen. Known roots/options retain local semantics; unknown modifiers print raw. Unknown roots freeze raw IDs/names/quantity/nested modifiers/notes in the additive order-item snapshot column, create GRAB-only holding tasks, and show `UNMAPPED_ROUTE_REVIEW`. No guessed HOT station, menu identity, BOM or auto-persisted mapping. Mixed orders preserve every line. `KITCHEN_SENT_WITH_MAPPING_WARNINGS` / `PARTIALLY_MAPPED` and Today `raw_items` expose the issue without disabling kitchen reprint. Existing frozen tickets do not change when future mapping rules change. Unsupported source structures, invalid quantities, tenant/environment mismatch and cancellation/edit guards remain blocking. ORDER_MANAGER behavior above is unchanged. Both existing kitchen renderers use their TAKEOUT footer for Mirror.
+
+[All 41 roots and current persistence](governance/UBER_ROOT_MAPPING_STATUS_20261002.md). The current field repair is TEST/Staging Store 1 only, including the Owner's already-paired Pad and printer endpoint; it authorizes no Production action.

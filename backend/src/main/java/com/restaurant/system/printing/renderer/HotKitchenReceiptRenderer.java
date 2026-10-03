@@ -89,6 +89,8 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
             appendTask(builder, task);
         }
 
+        ExternalKitchenFallbackContent.append(builder, request.order_items,
+                tasks.stream().map(t -> t.order_item_id).collect(java.util.stream.Collectors.toSet()));
         builder.append("--------------------------------\n");
         if (isTakeout(request.order)) {
             builder.append(PrintMarkup.large("外卖 / TAKEOUT")).append("\n");
@@ -567,7 +569,7 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
     }
 
     private boolean isTakeout(Order order) {
-        return order != null && ("pickup".equalsIgnoreCase(order.order_type) || "takeout".equalsIgnoreCase(order.order_type));
+        return order != null && (order.kitchenMirror() || "pickup".equalsIgnoreCase(order.order_type) || "takeout".equalsIgnoreCase(order.order_type));
     }
 
     private String resolveTime(Order order) {

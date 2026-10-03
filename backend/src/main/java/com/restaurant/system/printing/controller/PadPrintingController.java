@@ -29,6 +29,13 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 public class PadPrintingController {
 
+    // Preserve device protocol failures: the global catch-all otherwise turns 409 into retryable 500.
+    @org.springframework.web.bind.annotation.ExceptionHandler(ResponseStatusException.class)
+    public org.springframework.http.ResponseEntity<ApiResponse<Void>> deviceProtocolError(ResponseStatusException error) {
+        return org.springframework.http.ResponseEntity.status(error.getStatusCode())
+                .body(ApiResponse.failure("PAD_PRINT_PROTOCOL_ERROR", error.getReason()));
+    }
+
     private final StoreDeviceService storeDeviceService;
     private final PadPrintJobService padPrintJobService;
     private final StoreModuleAccessEvaluator moduleAccessEvaluator;

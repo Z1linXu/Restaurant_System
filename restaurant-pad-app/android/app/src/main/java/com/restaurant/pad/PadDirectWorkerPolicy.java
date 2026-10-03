@@ -25,6 +25,14 @@ final class PadDirectWorkerPolicy {
     private PadDirectWorkerPolicy() {
     }
 
+    static boolean canContinueAfterReportedJobFailure(String errorCode, JobPhase phase,
+                                                       boolean localPrintMayHaveSucceeded) {
+        if (localPrintMayHaveSucceeded || phase != JobPhase.PAYLOAD_FETCHING) return false;
+        return "ANDROID_ASSIGNED_PRINTER_MISSING".equals(errorCode)
+            || "ANDROID_PAYLOAD_MISSING".equals(errorCode)
+            || "ANDROID_PAYLOAD_INVALID".equals(errorCode);
+    }
+
     static HttpDisposition classifyHttpStatus(int status) {
         if (status >= 200 && status < 300) {
             return HttpDisposition.SUCCESS;

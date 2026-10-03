@@ -1782,7 +1782,14 @@ public class MainActivity extends Activity {
                 String failMessage = reportPadDirectFail(jobId, attemptToken, exception.errorCode, exception.getMessage(), exception.rawResult);
                 message = message + "\n" + failMessage;
                 if (failMessage.startsWith("打印失败，已回报后端")) {
+                    boolean continueQueue = PadDirectWorkerPolicy.canContinueAfterReportedJobFailure(
+                        exception.errorCode, padDirectActiveJob == null ? activeJob.phase : padDirectActiveJob.phase,
+                        activeJob.localPrintMayHaveSucceeded);
                     clearPadDirectActiveJob();
+                    if (continueQueue) {
+                        Log.i(WORKER_TAG, "job_configuration_failed_queue_continues jobId=" + jobId);
+                        return PadDirectJobResult.idle(message);
+                    }
                 }
                 return PadDirectJobResult.stop(message, true);
             }

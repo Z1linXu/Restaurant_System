@@ -349,7 +349,7 @@ public class UberEatsOrderTransactions {
                 .contains(row.status)) return row;
         if (mirror
                 && ((row.releasedAt == null && row.acceptedObservedAt == null)
-                        || !"MAPPED".equals(row.mappingStatus)))
+                        || !Set.of("MAPPED", "PARTIALLY_MAPPED").contains(row.mappingStatus)))
             throw UberEatsException.conflict("MIRROR_RELEASE_NOT_READY");
         modules.requireOperationalCapability(row.storeId, ModuleKeys.ORDERING_POS);
         CreateOrderRequest request = decode(row.localRequestJson, CreateOrderRequest.class);
@@ -369,7 +369,8 @@ public class UberEatsOrderTransactions {
         order.external_display_id = row.displayId;
         localOrders.save(order);
         row.localOrderId = response.id;
-        row.status = mirror ? "RELEASED_TO_KITCHEN" : "ACCEPTED";
+        row.status = mirror ? ("PARTIALLY_MAPPED".equals(row.mappingStatus)
+                ? "KITCHEN_SENT_WITH_MAPPING_WARNINGS" : "RELEASED_TO_KITCHEN") : "ACCEPTED";
         if (mirror) row.kitchenDispatchedAt = LocalDateTime.now(ZoneOffset.UTC);
         row.lastError = null;
         row.updatedAt = LocalDateTime.now();
@@ -629,8 +630,12 @@ public class UberEatsOrderTransactions {
     /** Both accepted observation and release enter this same idempotent kitchen gate. */
     private void prepareKitchenOnce(
             UberEatsOrder row, UberEatsStoreMapping store, UberOrderSnapshot snapshot) {
-        var result = mapping.map(store, snapshot);
+        var result = mapping.mapMirror(store, snapshot);
         setMapping(row, result);
+        if (result.valid() && !result.warnings().isEmpty()) {
+            row.mappingStatus = "PARTIALLY_MAPPED";
+            row.mappingError = encode(result.warnings());
+        }
         row.status = result.valid() ? "MIRROR_READY" : "RELEASED_MAPPING_REQUIRED";
         row.localRequestJson = result.valid() ? encode(result.request()) : null;
         // Incomplete mappings wait for an explicit mapping write, not perpetual Uber GET polling.
