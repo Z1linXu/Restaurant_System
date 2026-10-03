@@ -9315,7 +9315,7 @@ the existing audited/idempotent printing API.
 Mapping supports explicit COMBO_ROOT -> main + implicit `combo`, parent-scoped
 MAP and explicit NO_OP (`INGREDIENT_NOT_USED`). Mirror unknown identities use the V33 fallback below; ORDER_MANAGER remains strict.
 The [final mapping table](docs/governance/UBER_KITCHEN_MAPPING_FINAL_20261002.md)
-contains approved rules and explicit UNMAPPED entries. Only approved MAP/NO_OP
+contains41 human-confirmed persisted root mappings (including8 COMBO_ROOT) and the existing parent-scoped modifier rules. Current root coverage is41/41; raw-root fallback remains for future menu drift. Only approved MAP/NO_OP
 rows are persisted; no name-based expansion is authorized. The
 [real E2E evidence](docs/governance/UBER_KITCHEN_MIRROR_E2E_20261002.md) verifies
 runtime resolution, human Uber Pad acceptance, both kitchen modules, Today,

@@ -3,13 +3,13 @@ updated_at: 2026-10-02
 
 repository:
   ref: origin/main
-  sha: 500aacd991fddbc8f224174fc65db833e60d7848
+  sha: f957960dda5af682aa84a4834c91f4e0ad1685d5
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
   package: UBER_KITCHEN_MIRROR
-  status: STAGING_FIELD_REPAIR_UBER_PHYSICAL_PASS_NORMAL_CONTROL_PENDING
+  status: STAGING_ALL_41_ROOT_MAPPINGS_PERSISTED
   next_phase_authorized: false
 
 staging:
@@ -50,20 +50,25 @@ uber_test_store_audit:
   menu_mapping: CONFIRMED_RULES_PERSISTED_RUNTIME_RESOLUTION_PASS
   menu_comparison_evidence: UBER_TEST_MENU_FULL_COMPARE_20261002.md
   menu_comparison_observed_at: 2026-10-02T15:43:24Z
-  human_mapping_confirmation: FINAL_TABLE_APPROVED_AND_226_RULES_PERSISTED
+  human_mapping_confirmation: ALL_41_ROOTS_AND_EXISTING_MODIFIERS_APPROVED_262_RULES_PERSISTED
   final_mapping_table: UBER_KITCHEN_MAPPING_FINAL_20261002.md
   order_release_enabled: false
   order_manager_client_id: NOT_RETURNED_AFTER_AUTHORIZED_TEST_RESIGNATION
   processing_mode: KITCHEN_MIRROR
   kitchen_mirror: REAL_TEST_ORDER_ACCEPTED_OBSERVED_ONE_LOCAL_ORDER_TWO_MOCK_MODULES_PASS
-  persisted_mapping_rules: 226
+  persisted_mapping_rules: 262
+  mapped_root_items: 41
+  unmapped_root_items: 0
+  combo_root_items: 8
+  root_mapping_evidence: UBER_ROOT_MAPPING_STATUS_20261002.md
+  root_mapping_observed_at: 2026-10-03T03:50:59Z
   first_stage_test_combination_fully_mapped: true
   real_order_test_ready: true
   real_test_order_id: 05c16dcb-8ef8-4b75-9548-45581ef2a3a2
   local_order_id: 77
   ready_for_uber_kitchen_mirror_pilot: true
   pilot_readiness_scope: VALIDATED_MAPPED_COMBINATION_MOCK_NO_PRODUCTION_AUTHORIZATION
-  chow_mein_second_test: ROOT_UNCONFIRMED_RAW_GRAB_FALLBACK_AUTHORIZED_HOT_ROUTING_NOT_GUESSED
+  chow_mein_second_test: HISTORICAL_RAW_FALLBACK_PASS_ROOT_NOW_CONFIRMED_BEEF_CHOW_MEIN
   physical_pad_direct: OWNER_CONFIRMED_UBER_GRAB213_HOT214_PAPER_FOOTERS_APK040
   field_test_order_id: 87673b75-8257-4d2c-93e1-091fb1f26bed
   field_local_order_id: 82
@@ -74,13 +79,14 @@ uber_test_store_audit:
 
 gate:
   type: TECHNICAL
-  next_action: CONFIRM_ORDINARY_POS_DRAFT83_PAD_HOT_PHYSICAL_CONTROL
+  next_action: NONE_FOR_ROOT_MAPPING_BATCH_NO_BUSINESS_TEST_AUTHORIZED_THIS_TURN
 
 authorization:
   repository_governance: COMPLETE
   phase_b_part1: OWNER_ACCEPTED_CLOSED
   phase_b_part2: IMPLEMENTATION_AND_STAGING_AUTOMATED_ACCEPTANCE_COMPLETE_OWNER_MANUAL_ACCEPTANCE_PENDING
   menu_management_product_simplification: OWNER_AUTHORIZED_IMPLEMENTATION_TEST_REVIEW_PR_MERGE_AND_SYNTHETIC_STAGING
+  uber_root_mapping_batch: OWNER_CONFIRMED_ALL_41_ROOTS_STAGING_WRITE_READBACK_ONLY_NO_ORDER_REPLAY_PRINT_OR_PRODUCTION
   uber_kitchen_mirror: OWNER_AUTHORIZED_FIELD_REPAIR_RAW_FALLBACK_TAKEOUT_FOOTER_REVIEW_MERGE_STAGING_STORE1_EXISTING_PAD_PRINTER_PHYSICAL_TEST_NO_PRODUCTION
   uber_eats_v1: OWNER_AUTHORIZED_REVIEW_FIX_TEST_MERGE_STAGING_SANDBOX_VERIFICATION_NO_PRODUCTION_ACTIVATION
   uber_test_store_binding: OWNER_AUTHORIZED_TEST_WEBHOOK_AND_STAGING_BINDING_ONLY_NO_ORDER_ACCEPT_DENY_PRINT
@@ -92,4 +98,4 @@ authorization:
   production: NONE
 
 stop:
-  marker: UBER_PHYSICAL_PASS_NORMAL_CONTROL_PENDING_NO_PRODUCTION
+  marker: ALL_41_ROOT_MAPPINGS_PERSISTED_NO_NEW_ORDER_PRINT_OR_PRODUCTION
