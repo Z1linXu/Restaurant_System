@@ -1,5 +1,26 @@
 # SYSTEM DOCUMENTATION
 
+## Uber Store capability and confirmed Add-on identity (V37)
+
+`UBER_EATS` is an optional formal Store module in catalog/graph V3, default off.
+V37 adds the key and explicitly backfills existing Stores disabled; normal Owner
+Store provisioning also persists it disabled when older immutable profiles omit it.
+Authenticated module configuration controls the Frontdesk badge, both Uber routes
+and Owner/Admin navigation. Store switches reset context immediately and discard
+stale capabilities. Store/Organization access and roles are checked before module
+authorization; disabled Store APIs return `403 MODULE_DISABLED`. Connection,
+Inbox, Today, mapping, preview, Accept/Deny/retry, manual reprint and internal
+import/recovery all require this capability. Signed webhooks retain durable receipt,
+but a disabled mapped Store cannot create orders or run import/recovery. Module
+enablement neither binds a Store nor enables Production; enabled configuration
+management remains available before credentials or binding are complete.
+
+Owner confirmed option 370 on `braised_beef_noodle` as `tea_egg` / 加卤蛋 /
+Extra Tea Egg, group `ADD_ON`, type `addon`, linked to the existing Store catalog.
+The reviewed Staging reconciliation preserves ID, price 1.99, active state and all
+historical order/print snapshots. No generic egg name inference is performed.
+
+
 ## Uber webhook signing-key contract
 
 `UBER_EATS_WEBHOOK_SIGNING_KEY` is the preferred backend HMAC key. It is separate
@@ -9281,7 +9302,7 @@ fail-closed, and rollback uses the same reviewed production value.
 
 详细 contract、API 来源、配置、安全与恢复见 [UBER_EATS_INTEGRATION](docs/UBER_EATS_INTEGRATION.md)，逐项证据与未完成的 Uber Sandbox/硬件验证见 [Acceptance](docs/UBER_EATS_ACCEPTANCE.md)。前台 `/stores/{storeId}/frontdesk/uber-eats`；Owner/Admin mapping `/stores/{storeId}/admin/integrations/uber-eats`。Store binding 仅平台 ADMIN；其余 integration staff APIs 经过 StoreAccessService。无凭据、真实门店绑定或 Production deploy 随代码启用。
 
-Uber Production Pilot 候选店仅 St-Denis；St-Catherine 和第三家店暂不启用。已提供的 Production UUID 仅作记录；Store-scoped enable control 与激活门槛见 [Uber integration contract](docs/UBER_EATS_INTEGRATION.md#production-pilot-门店配置计划)。该计划不等于真实门店已开通，也不扩大现有 Production 授权。
+Owner 确认的最终 Production capability 目标为 St-Denis、St-Catherine 启用，Chinatown 禁用；本轮仅实施代码和 Staging，不修改 Production 配置。已提供的 Production UUID 仅作记录；Store-scoped enable control 与激活门槛见 [Uber integration contract](docs/UBER_EATS_INTEGRATION.md#production-pilot-门店配置计划)。该计划不等于真实门店已开通，也不扩大现有 Production 授权。
 
 Client Secret 轮换应将新值直接保存到 backend 私密配置 `UBER_EATS_CLIENT_SECRET`；不通过聊天、工具输出或版本控制传递。安全保存新值并确认配置后再撤销旧值；完成撤销前不能宣称 compromised credential 已完成轮换。
 

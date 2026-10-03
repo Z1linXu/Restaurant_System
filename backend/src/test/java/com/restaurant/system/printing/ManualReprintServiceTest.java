@@ -15,13 +15,14 @@ import java.util.*;
 import org.junit.jupiter.api.Test;
 
 class ManualReprintServiceTest {
+    final com.restaurant.system.modules.StoreModuleAccessEvaluator modules = mock(com.restaurant.system.modules.StoreModuleAccessEvaluator.class);
     final PrintJobRepository jobs = mock(PrintJobRepository.class);
     final OrderRepository orders = mock(OrderRepository.class);
     final PrintJobService jobService = mock(PrintJobService.class);
     final PrintDispatcherService dispatcher = mock(PrintDispatcherService.class);
     final EntityManager em = mock(EntityManager.class);
     final ManualReprintService service = new ManualReprintService(jobs, orders, jobService, dispatcher, em,
-        mock(org.springframework.transaction.PlatformTransactionManager.class));
+        mock(org.springframework.transaction.PlatformTransactionManager.class), modules);
     final PrintJob original = new PrintJob();
     final Map<String, PrintJob> durable = new HashMap<>();
     ManualReprintServiceTest() {
@@ -65,6 +66,20 @@ class ManualReprintServiceTest {
         long first = service.reprintJob(7L, request, 3L).id;
         request.idempotency_key = "manual-key-3";
         assertThat(service.reprintJob(7L, request, 3L).id).isNotEqualTo(first);
+    }
+    @Test void disabledUberModuleBlocksBothManualReprintPathsBeforeReservation() {
+        var order = new com.restaurant.system.order.entity.Order();
+        order.id = 4L; order.store_id = 1L; order.external_source = "UBER_EATS";
+        order.financial_mode = "EXTERNAL_PLATFORM";
+        when(orders.findExistingById(4L)).thenReturn(order);
+        doThrow(new com.restaurant.system.modules.ModuleAccessException("MODULE_DISABLED", "UBER_EATS", "disabled"))
+            .when(modules).requireCapability(1L, "UBER_EATS");
+        assertThatThrownBy(() -> service.reprintJob(7L, request("disabled-job"), 3L)).hasMessageContaining("disabled");
+        when(jobs.findByDispatchSourceKey("submit:4:GRAB")).thenReturn(Optional.of(original));
+        var r = new OrderReprintRequest(); r.idempotency_key = "disabled-order"; r.receipt_type = "GRAB";
+        assertThatThrownBy(() -> service.reprintOrder(4L, r, 3L)).hasMessageContaining("disabled");
+        verifyNoInteractions(dispatcher);
+        assertThat(durable).isEmpty();
     }
     @Test void invalidIntentDoesNotDispatch() {
         assertThatThrownBy(() -> service.reprintJob(7L, request(""), 3L)).hasMessageContaining("idempotency_key");

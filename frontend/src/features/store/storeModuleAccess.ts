@@ -16,6 +16,7 @@ export const STORE_MODULE_KEYS = [
   'STORE_ADMINISTRATION',
   'KDS',
   'ANALYTICS_ADVANCED',
+  'UBER_EATS',
 ] as const
 
 export type StoreModuleKey = typeof STORE_MODULE_KEYS[number]
@@ -49,6 +50,7 @@ export const STORE_MODULE_DISPLAY_NAMES: Record<StoreModuleKey, string> = {
   STORE_ADMINISTRATION: 'Store Administration',
   KDS: 'Kitchen Display System',
   ANALYTICS_ADVANCED: 'Advanced Analytics',
+  UBER_EATS: 'Uber Eats',
 }
 
 export function getStoreModuleDisplayName(moduleKey: StoreModuleKey) {
@@ -184,6 +186,9 @@ export function isStoreModuleManagementEnabled(
 
 export function getRequiredStoreModuleForPath(pathname: string): StoreModuleKey | null {
   const normalized = normalizeStoreRoutePath(pathname)
+  if (normalized.startsWith('/frontdesk/uber-eats') || normalized.startsWith('/admin/integrations/uber-eats')) {
+    return 'UBER_EATS'
+  }
   if (normalized.startsWith('/admin/platform')) {
     return null
   }

@@ -1,6 +1,6 @@
 {
-  "graph_version": "PHASE_A8_MODULE_DEPENDENCY_GRAPH_HARDWARE_CAPABILITY_V2",
-  "catalog_version": "PHASE_A8_MODULE_CATALOG_HARDWARE_CAPABILITY_V2",
+  "graph_version": "STORE_MODULE_DEPENDENCY_GRAPH_V3",
+  "catalog_version": "STORE_MODULE_CATALOG_V3",
     "catalog_resource": "module/module-catalog.v1.json",
     "hardware_capability_catalog_resource": "hardware/hardware-capability-catalog.v1.json",
   "authority": {
@@ -17,6 +17,9 @@
     "REQUIRES_HARDWARE_CAPABILITY"
   ],
   "dependencies": [
+    {"source_module": "UBER_EATS", "type": "REQUIRES", "target": "ORDERING_POS"},
+    {"source_module": "UBER_EATS", "type": "REQUIRES", "target": "MENU"},
+
     {"source_module": "ORDERING_POS", "type": "REQUIRES", "target": "MENU"},
     {"source_module": "MENU_MANAGEMENT", "type": "REQUIRES", "target": "MENU"},
     {"source_module": "PRINTING", "type": "REQUIRES", "target": "ORDERING_POS"},

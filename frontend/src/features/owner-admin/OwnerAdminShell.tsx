@@ -27,7 +27,7 @@ const navItems: NavItem[] = [
   { label: 'Dining Tables', path: '/admin/settings/tables', match: (path) => path.startsWith('/admin/settings/tables'), moduleKey: 'TABLE_MANAGEMENT' },
   { label: 'Printing Settings', path: '/admin/settings/printing', match: (path) => path.startsWith('/admin/settings/printing'), moduleKey: 'PRINTING', frontdeskVisible: true },
   { label: 'Staff Management', path: '/admin/staff', match: (path) => path.startsWith('/admin/staff'), moduleKey: 'STAFF_ACCESS' },
-  { label: 'Integrations / Uber Eats', path: '/admin/integrations/uber-eats', match: (path) => path.startsWith('/admin/integrations/uber-eats') },
+  { label: 'Integrations / Uber Eats', moduleKey: 'UBER_EATS', path: '/admin/integrations/uber-eats', match: (path) => path.startsWith('/admin/integrations/uber-eats') },
   { label: 'Audit Logs', path: '/admin/audit-logs', match: (path) => path.startsWith('/admin/audit-logs') || path.startsWith('/admin/audit'), moduleKey: 'STORE_ADMINISTRATION' },
   { label: 'Reports', path: '/admin/reports/sales', match: (path) => path.startsWith('/admin/reports'), moduleKey: 'REPORTING_CORE' },
 ]

@@ -159,18 +159,17 @@ integration；官方说明前者关闭会失去多数 API 和 webhook。
 保留现有 `(environment, uber_store_id)` 和 `(environment, store_id)` 唯一约束；每次处理核对
 organization。不能让同一 Uber Store 绑定两家 local Store，也不能把 Staging binding 复制到 Production。
 
-**设计待实现，不是当前已有能力：** 当前 `FeaturePackage`、`ModuleKeys` 都没有 `UBER_EATS`；
-binding.enabled 负责路由是否生效，`connection.enabled` 只反映全局配置，现有 staff read APIs
-并没有完整的“Chinatown integration disabled → feature unavailable”门禁。
-参考：[ModuleKeys](../../backend/src/main/java/com/restaurant/system/modules/ModuleKeys.java)、
-[Configuration service](../../backend/src/main/java/com/restaurant/system/integration/ubereats/service/UberEatsConfigurationService.java)、
-[Inbox controller](../../backend/src/main/java/com/restaurant/system/integration/ubereats/controller/UberEatsInboxController.java)。
+**代码支持（V37，Production 尚未部署/配置）：** 正式 `ModuleKeys.UBER_EATS`
+复用 `store_modules`，迁移和新 Store 默认 false；同一 Frontend/APK 读取已认证 Store
+Context，enabled 才渲染 Uber 按钮，切店立即清除旧 capability。前台和管理路由都由
+`RequireStoreModule` 保护。Backend StoreAccess/角色校验后要求相同 capability；
+disabled 返回 `403 MODULE_DISABLED`。重打、Webhook 导入和恢复也受约束。
 
-上线前用一个小批次复用 `store_modules` 增加 `UBER_EATS` capability，默认 false；同一 APK
-读取已认证 Store Context，enabled 才显示入口。backend 以相同 capability、StoreAccess 和有效 binding
-共同授权，disabled 的运行接口明确返回 feature unavailable/403；仅隐藏按钮不够。
-配置管理入口保留给有权限的 Owner/Admin，不能因尚未绑定而陷入无法配置的循环。
-不新增按店名判断，不给 Chinatown 创建 fake binding，不为每家店编译 APK。
+配置管理入口对 module enabled 的授权 Owner/Admin 开放，不要求已经绑定或 OAuth
+配置完成。binding.enabled 仍决定外部 UUID 路由，module 不自动创建 binding。
+不按店名/ID 硬编码、不为 Chinatown 创建 binding、不为每店编译 APK。
+未来 Production 批次需经授权配置 St-Denis/St-Catherine enabled、Chinatown disabled；
+本轮仅在现有 Staging TEST Store 启用，不能把代码实现当成 Production 配置已生效。
 
 本轮 Production 有 OWNER/MANAGER/FRONTDESK 账号，**没有 ADMIN 账号**；现有 binding API
 只允许平台 ADMIN。未来发布批次还要确定经过审阅的绑定执行主体/受控后台操作。

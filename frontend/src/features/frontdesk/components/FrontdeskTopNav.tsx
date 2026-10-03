@@ -259,7 +259,7 @@ export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
             </button>
           )
         })}
-        {currentStore && <UberInboxBadge key={currentStore.storeId} storeId={currentStore.storeId} />}
+        {currentStore && !currentStore.loading && isStoreModuleEnabled(moduleConfiguration, 'UBER_EATS') && <UberInboxBadge key={currentStore.storeId} storeId={currentStore.storeId} />}
       </nav>
     </div>
   )

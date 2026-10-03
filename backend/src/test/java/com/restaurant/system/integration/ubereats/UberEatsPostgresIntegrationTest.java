@@ -142,6 +142,7 @@ class UberEatsPostgresIntegrationTest {
                         org);
         for (String module :
                 List.of(
+                        "UBER_EATS",
                         "ORDERING_POS",
                         "MENU",
                         "MENU_MANAGEMENT",
@@ -617,6 +618,90 @@ class UberEatsPostgresIntegrationTest {
                         "eater");
         assertThatThrownBy(() -> tx.scoped(store + 99999, row.id))
                 .isInstanceOf(UberEatsException.class);
+    }
+
+    @Test
+    void disabledUberModuleBlocksAllScopedEndpointsAndCrossStoreAccess() throws Exception {
+        var row = notify(payload(UUID.randomUUID().toString()));
+        db.update("update store_memberships set role_code='OWNER' where user_id=? and store_id=?", actorId, store);
+        db.update("insert into organization_memberships(user_id,organization_id,role_code,is_active,created_at,updated_at) values (?,?,'OWNER',true,now(),now())", actorId, org);
+        var owner = new AuthenticatedUser(actorId, store, actor.roleId(), "fixture", "Owner", "OWNER");
+        String base = "/api/v1/stores/" + store + "/integrations/uber-eats";
+        mvc.perform(get(base + "/connection").requestAttr(RequestUserContextService.AUTHENTICATED_USER_ATTRIBUTE, owner)).andExpect(status().isOk());
+        mvc.perform(get(base + "/mapping-catalog").requestAttr(RequestUserContextService.AUTHENTICATED_USER_ATTRIBUTE, owner)).andExpect(status().isOk());
+        db.update("update store_modules set enabled=false where store_id=? and module_key='UBER_EATS'", store);
+        for (String path : List.of("/orders", "/connection", "/mapping-catalog", "/mapping-options/" + item))
+            mvc.perform(get(base + path).requestAttr(RequestUserContextService.AUTHENTICATED_USER_ATTRIBUTE, owner))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.error_code").value("MODULE_DISABLED"));
+        for (String path : List.of("/mapping-preview", "/orders/" + row.id + "/accept", "/orders/" + row.id + "/deny", "/orders/" + row.id + "/retry-local"))
+            mvc.perform(post(base + path).contentType("application/json").content("{}")
+                .requestAttr(RequestUserContextService.AUTHENTICATED_USER_ATTRIBUTE, owner))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.error_code").value("MODULE_DISABLED"));
+        for (String path : List.of("/store", "/processing-mode", "/mappings"))
+            mvc.perform(put(base + path).contentType("application/json").content("{}")
+                .requestAttr(RequestUserContextService.AUTHENTICATED_USER_ATTRIBUTE, owner))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.error_code").value("MODULE_DISABLED"));
+        var foreign = new AuthenticatedUser(-999L, store + 99999, 1L, "foreign", "Foreign", "OWNER");
+        mvc.perform(get(base + "/orders").requestAttr(RequestUserContextService.AUTHENTICATED_USER_ATTRIBUTE, foreign)).andExpect(status().isForbidden());
+        assertThatThrownBy(() -> configuration.bind(store, UUID.randomUUID().toString(), owner))
+            .isInstanceOf(com.restaurant.system.modules.ModuleAccessException.class);
+        assertThatThrownBy(() -> tx.requireMapping(binding.id)).isInstanceOf(com.restaurant.system.modules.ModuleAccessException.class);
+    }
+
+    @Test
+    void disabledStoreCannotImportWebhookOrRecoverEvenWithStaleActiveBinding() {
+        var row = notify(payload(UUID.randomUUID().toString()));
+        db.update("update store_modules set enabled=false where store_id=? and module_key='UBER_EATS'", store);
+        var source = payload(UUID.randomUUID().toString()); String id = source.path("id").asText();
+        clearInvocations(client);
+        receive(event(UUID.randomUUID().toString(), "orders.notification", id));
+        assertThat(inbox.findByEnvironmentAndUberOrderId("sandbox", id)).isEmpty();
+        imports.processEvents();
+        assertThat(inbox.findByEnvironmentAndUberOrderId("sandbox", id)).isEmpty();
+        verify(client, never()).getOrder(id);
+        db.update("update uber_eats_orders set status='WAITING_FOR_ACCEPTANCE',next_attempt_at=now() where id=?", row.id);
+        assertThat(tx.claimRecovery(row.id)).isFalse();
+        assertThat(tx.scoped(store, row.id).localOrderId).isNull();
+    }
+
+    @Test
+    void disabledStoreBacklogDoesNotStarveEnabledStoreEventsOrRecovery() {
+        // Preserve a real earlier page of disabled work; enabled Store must still be selected.
+        var disabledRows = new ArrayList<UberEatsOrder>();
+        for (int n=0;n<10;n++) disabledRows.add(notify(payload(UUID.randomUUID().toString())));
+        db.update("update uber_eats_orders set status='WAITING_FOR_ACCEPTANCE',next_attempt_at=now() where store_id=?", store);
+        db.update("update uber_eats_events set status='PENDING',next_attempt_at=now() where uber_store_id=?", uberStore);
+        Long disabledStore=store;
+        db.update("update store_modules set enabled=false where store_id=? and module_key='UBER_EATS'", disabledStore);
+        fixture();
+        var source=payload(UUID.randomUUID().toString());
+        String id=source.path("id").asText();
+        when(client.getOrder(id)).thenReturn(source);
+        receive(event(UUID.randomUUID().toString(), "orders.notification", id));
+        assertThat(events.due("sandbox",LocalDateTime.now().plusSeconds(1),PageRequest.of(0,10)))
+            .extracting(e -> e.uberOrderId).contains(id)
+            .doesNotContainAnyElementsOf(disabledRows.stream().map(r -> r.uberOrderId).toList());
+        imports.processEvents();
+        var enabled=row(id);
+        db.update("update uber_eats_orders set status='WAITING_FOR_ACCEPTANCE',next_attempt_at=now() where id=?",enabled.id);
+        assertThat(inbox.due("sandbox",LocalDateTime.now().plusSeconds(1),PageRequest.of(0,10)))
+            .extracting(r -> r.id).contains(enabled.id)
+            .doesNotContainAnyElementsOf(disabledRows.stream().map(r -> r.id).toList());
+        db.update("update store_modules set enabled=true where store_id=? and module_key='UBER_EATS'",disabledStore);
+        assertThat(events.due("sandbox",LocalDateTime.now().plusSeconds(1),PageRequest.of(0,10))).hasSize(10);
+        assertThat(inbox.due("sandbox",LocalDateTime.now().plusSeconds(1),PageRequest.of(0,10)))
+            .extracting(r -> r.id).containsAll(disabledRows.stream().map(r -> r.id).toList());
+        db.update("update store_modules set enabled=false where store_id=? and module_key='MENU'",disabledStore);
+        // Invalid enabled configuration is deferred, not allowed to occupy every next page.
+        var blockedEvents=events.due("sandbox",LocalDateTime.now(),PageRequest.of(0,10));
+        assertThat(blockedEvents).hasSize(10);
+        for (var e:blockedEvents) assertThat(tx.claimEvent(e.id)).isFalse();
+        for (var r:disabledRows) assertThat(tx.claimRecovery(r.id)).isFalse();
+        assertThat(events.due("sandbox",LocalDateTime.now(),PageRequest.of(0,10))).isEmpty();
+        assertThat(inbox.due("sandbox",LocalDateTime.now(),PageRequest.of(0,10)))
+            .extracting(r -> r.id).contains(enabled.id)
+            .doesNotContainAnyElementsOf(disabledRows.stream().map(r -> r.id).toList());
+        db.update("update store_modules set enabled=false where store_id=? and module_key='UBER_EATS'",disabledStore);
     }
 
     @Test

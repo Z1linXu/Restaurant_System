@@ -16,7 +16,7 @@ import javax.crypto.spec.SecretKeySpec;
 class UberEatsWebhookSignatureTest {
     private final UberEatsProperties config = new UberEatsProperties();
     private final UberEatsWebhookService service =
-            new UberEatsWebhookService(config, null, null, null, null, null, null);
+            new UberEatsWebhookService(config, null, null, null, null, null, null, null);
     private final byte[] body =
             "{\"event_type\":\"internal.signature_test\"}\n".getBytes(StandardCharsets.UTF_8);
 

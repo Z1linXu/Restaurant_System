@@ -28,6 +28,10 @@ export function mapStoreContext(
   loading: boolean,
   error: string | null,
 ): StoreContextValue {
+  if (data != null && data.id !== storeId) {
+    data = null
+    loading = true
+  }
   return {
     storeId,
     storeName: data?.name ?? `门店 ${storeId}`,

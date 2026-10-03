@@ -82,6 +82,7 @@ public class UberEatsInboxController {
     private AuthenticatedUser staff(Long storeId, Capability capability) {
         var actor = auth.requireFrontdeskAccessForStore(storeId, capability);
         access.requireStoreAccess(actor, storeId);
+        modules.requireCapability(storeId, ModuleKeys.UBER_EATS);
         return actor;
     }
 
@@ -90,6 +91,7 @@ public class UberEatsInboxController {
         access.requireStoreAccess(actor, storeId);
         if (!Set.of("OWNER", "ADMIN").contains(actor.roleCode()))
             throw new ForbiddenException("Owner or Admin required");
+        modules.requireCapability(storeId, ModuleKeys.UBER_EATS);
         return actor;
     }
 

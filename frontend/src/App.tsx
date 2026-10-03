@@ -86,7 +86,7 @@ function storePage(
     content = <RequireLiveStore>{content}</RequireLiveStore>
   }
   return guard(
-    <StoreContextProvider storeId={storeId}>
+    <StoreContextProvider key={storeId} storeId={storeId}>
       <RequireStoreAccess>
         {content}
       </RequireStoreAccess>
@@ -230,10 +230,10 @@ function App() {
   }
 
   if (storeId && routePath === '/frontdesk/uber-eats') {
-    return <AppShell>{storePage(storeId, <UberInboxPage />, FRONTDESK_ROLES)}</AppShell>
+    return <AppShell>{storePage(storeId, <UberInboxPage />, FRONTDESK_ROLES, 'UBER_EATS')}</AppShell>
   }
   if (storeId && routePath === '/admin/integrations/uber-eats') {
-    return <AppShell>{storePage(storeId, ownerAdminPage(<UberMappingPage />, 'Uber Eats'), OWNER_ROLES)}</AppShell>
+    return <AppShell>{storePage(storeId, ownerAdminPage(<UberMappingPage />, 'Uber Eats'), OWNER_ROLES, 'UBER_EATS')}</AppShell>
   }
 
   if (storeId && routePath.startsWith('/kds/grab')) {

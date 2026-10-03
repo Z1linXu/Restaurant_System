@@ -1,5 +1,5 @@
 {
-  "catalog_version": "PHASE_A8_MODULE_CATALOG_HARDWARE_CAPABILITY_V2",
+  "catalog_version": "STORE_MODULE_CATALOG_V3",
   "authority": {
     "phase": "PHASE_A1_MODULE_CATALOG",
     "owner_required_normal_store_capabilities": [
@@ -539,6 +539,41 @@
       ],
       "store_configuration_relationship": "Current advanced analytics shares the ANALYTICS flag with Reporting Core; A3 must keep Reporting Core required while allowing advanced analytics to remain optional.",
       "profile_relationship": "Future profiles may enable advanced analytics separately from required Reporting Core."
+    },
+    {
+      "module_key": "UBER_EATS",
+      "display_name": "Uber Eats",
+      "category": "OPTIONAL_OPERATIONS",
+      "classification": "OPTIONAL_MODULE",
+      "core": false,
+      "optional": true,
+      "default_state": "DISABLED",
+      "activation_blocking": false,
+      "capabilities": [
+        "UBER_INBOX",
+        "UBER_MENU_MAPPING",
+        "UBER_KITCHEN_MIRROR"
+      ],
+      "depends_on": [
+        "ORDERING_POS",
+        "MENU"
+      ],
+      "conflicts_with": [],
+      "required_environment_capabilities": [],
+      "required_hardware_capabilities": [],
+      "frontend_routes": [
+        "/stores/{storeId}/frontdesk/uber-eats",
+        "/stores/{storeId}/admin/integrations/uber-eats"
+      ],
+      "backend_api_prefixes": [
+        "/api/v1/stores/{storeId}/integrations/uber-eats"
+      ],
+      "required_permissions": [
+        "order:view_active",
+        "admin:menu_manage"
+      ],
+      "store_configuration_relationship": "Explicit Store opt-in, independent of external Store binding, credentials and runtime readiness.",
+      "profile_relationship": "Optional and disabled for existing/new Stores unless explicitly configured."
     }
   ],
   "capability_classification": {
