@@ -31,6 +31,25 @@ public class UberEatsProperties {
     @Value("${UBER_EATS_BUSINESS_TIME_ZONE:America/Toronto}")
     public String businessTimeZone = "America/Toronto";
 
+    @Value("${APP_ENVIRONMENT:local}")
+    public String runtimeEnvironment = "local";
+
+    @Value("${UBER_EATS_TEST_WEBHOOK_CLIENT_ID:}")
+    public String testWebhookClientId = "";
+
+    @Value("${UBER_EATS_TEST_WEBHOOK_STORE_ID:}")
+    public String testWebhookStoreId = "";
+
+    public boolean allowsTestWebhook(String header, String storeId) {
+        return "staging".equals(runtimeEnvironment)
+                && "sandbox".equals(environment)
+                && "production".equalsIgnoreCase(header)
+                && !testWebhookClientId.isBlank()
+                && testWebhookClientId.equals(clientId)
+                && !testWebhookStoreId.isBlank()
+                && testWebhookStoreId.equals(storeId);
+    }
+
     public String clientSecret() {
         return clientSecret;
     }
@@ -64,6 +83,17 @@ public class UberEatsProperties {
     @PostConstruct
     public void validate() {
         java.time.ZoneId.of(businessTimeZone);
+        if (!testWebhookClientId.isBlank() || !testWebhookStoreId.isBlank()) {
+            if (!"staging".equals(runtimeEnvironment)
+                    || !"sandbox".equals(environment)
+                    || testWebhookClientId.isBlank()
+                    || !testWebhookClientId.equals(clientId)
+                    || testWebhookStoreId.isBlank())
+                throw new IllegalStateException(
+                        "TEST webhook compatibility requires an exact Staging Sandbox app/store"
+                            + " pair");
+            java.util.UUID.fromString(testWebhookStoreId);
+        }
         if (!"sandbox".equals(environment) && !"production".equals(environment))
             throw new IllegalStateException("UBER_EATS_ENVIRONMENT must be sandbox or production");
         if (enabled && (clientId.isBlank() || clientSecret.isBlank()))

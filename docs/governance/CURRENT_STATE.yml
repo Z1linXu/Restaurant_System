@@ -3,21 +3,21 @@ updated_at: 2026-10-02
 
 repository:
   ref: origin/main
-  sha: aa0ee0918f4ab4ae1c8686eccd1b4b7d2a6a5627
+  sha: 703488638ec2bf2002cee113b037ef547aaa61fa
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
   package: UBER_KITCHEN_MIRROR
-  status: ACCEPTED_TRIGGER_IMPLEMENTATION_MAPPING_PERSISTED
+  status: ACCEPTED_TRIGGER_DEPLOYED_TEST_HEADER_COMPAT_REPAIR
   next_phase_authorized: false
 
 staging:
-  deployed_sha: aa0ee0918f4ab4ae1c8686eccd1b4b7d2a6a5627
+  deployed_sha: 703488638ec2bf2002cee113b037ef547aaa61fa
   deployed_sha_semantics: BACKEND_AND_FRONTEND
-  frontend_deployed_sha: aa0ee0918f4ab4ae1c8686eccd1b4b7d2a6a5627
+  frontend_deployed_sha: 703488638ec2bf2002cee113b037ef547aaa61fa
   policy_config_sha: d2316234b2936fd89a926aa24a7b6343008834e6
-  flyway: V31
+  flyway: V32
   acceptance: UBER_KITCHEN_MIRROR_MOCK_RUNTIME_PASS_REAL_RELEASE_AND_MAPPING_BLOCKED
   evidence: UBER_KITCHEN_MIRROR_ACCEPTANCE_20261002.md
   repair_evidence: PHASE_B_PART2_P0_P1_REPAIR_STAGING_EVIDENCE.md
@@ -34,7 +34,7 @@ production:
   runtime_observation_evidence: PRODUCTION_V26_V28_RELEASE_EVIDENCE.md
 
 uber_test_store_audit:
-  observed_at: 2026-10-02T17:43:51Z
+  observed_at: 2026-10-03T01:00:06Z
   environment: STAGING_SANDBOX_ONLY
   evidence: UBER_KITCHEN_MIRROR_ACCEPTANCE_20261002.md
   test_store_uuid: bd993244-5589-4b19-8f0d-dc2ba73d4273
@@ -47,24 +47,24 @@ uber_test_store_audit:
   internal_signature_test: PASS_FIXED_STAGING_DOMAIN
   dashboard_webhook: PASS_VERIFIED_FIXED_DOMAIN_PRIMARY_BASIC_HMAC
   explicit_signing_key_runtime: PASS_PRESENT_PUBLIC_WRONG_401_VALID_200
-  menu_mapping: CONFIRMED_RULES_PERSISTED_RUNTIME_PREVIEW_PENDING
+  menu_mapping: CONFIRMED_RULES_PERSISTED_RUNTIME_RESOLUTION_PASS
   menu_comparison_evidence: UBER_TEST_MENU_FULL_COMPARE_20261002.md
   menu_comparison_observed_at: 2026-10-02T15:43:24Z
   human_mapping_confirmation: FINAL_TABLE_APPROVED_AND_226_RULES_PERSISTED
   final_mapping_table: UBER_KITCHEN_MAPPING_FINAL_20261002.md
   order_release_enabled: false
-  order_manager_client_id: t86ofdunSsVjL-0AvK6MA6LCTyF2eYLf
+  order_manager_client_id: NOT_RETURNED_AFTER_AUTHORIZED_TEST_RESIGNATION
   processing_mode: KITCHEN_MIRROR
-  kitchen_mirror: STAGING_MOCK_ACCEPTED_NO_REAL_ORDER
+  kitchen_mirror: ACCEPTED_TRIGGER_DEPLOYED_REAL_WEBHOOK_ENVIRONMENT_MISMATCH
   persisted_mapping_rules: 226
-  first_stage_test_combination_fully_mapped: false
+  first_stage_test_combination_fully_mapped: true
   real_order_test_ready: false
-  real_uber_webhook: NOT_TESTED
+  real_uber_webhook: SIGNATURE_VALID_PRODUCTION_HEADER_REJECTED_OWNER_APPROVED_TEST_COMPAT_REPAIR
   production_changed: false
 
 gate:
   type: OWNER
-  next_action: COMPLETE_ACCEPTED_TRIGGER_REVIEW_STAGING_TEST_MANAGER_RESIGNATION_AND_SANDBOX_E2E
+  next_action: DEPLOY_REVIEWED_EXACT_TEST_WEBHOOK_COMPAT_AND_REPEAT_REAL_SANDBOX_E2E
 
 authorization:
   repository_governance: COMPLETE
@@ -82,4 +82,4 @@ authorization:
   production: NONE
 
 stop:
-  marker: ACCEPTED_TRIGGER_IN_PROGRESS_NO_PRODUCTION
+  marker: TEST_WEBHOOK_HEADER_COMPAT_REPAIR_NO_PRODUCTION

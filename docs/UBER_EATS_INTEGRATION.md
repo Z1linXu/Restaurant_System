@@ -151,3 +151,7 @@ for Test Store -> Store 1 only. The exact table retains all unconfirmed identiti
 The authorized TEST-only Order Manager resignation uses optional is_order_manager=false
 with eats.store scope and preserves integration_enabled. Its runtime result and real
 consumer/Tablet E2E are separate gates; code and mapping preview cannot prove them.
+
+### TEST webhook environment compatibility (Owner authorized 2026-10-02)
+
+The real TEST Store notification used `X-Environment: production` despite a valid TEST HMAC and a readable matching order on `test-api.uber.com`. Default strict environment isolation remains. Only `APP_ENVIRONMENT=staging`, `UBER_EATS_ENVIRONMENT=sandbox`, a matching nonempty `UBER_EATS_TEST_WEBHOOK_CLIENT_ID` and exact `UBER_EATS_TEST_WEBHOOK_STORE_ID` opt in. A recognized order event must target an enabled KITCHEN_MIRROR binding; raw HMAC is verified first. Before any durable event/order/cancel mutation, Sandbox GET Order must return the same order and store UUID. Failed lookup returns retryable 503; identity mismatch returns 400. Missing/unknown headers, other stores/apps and Production runtimes cannot use this exception. Credentials and raw traffic are never logged. The TEST-only pre-ack read uses the existing bounded API timeouts; ordinary matching-environment webhooks retain fast durable receipt.
