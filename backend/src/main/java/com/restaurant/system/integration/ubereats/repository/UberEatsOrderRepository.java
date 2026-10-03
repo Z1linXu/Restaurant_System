@@ -32,11 +32,14 @@ public interface UberEatsOrderRepository extends JpaRepository<UberEatsOrder, Lo
 
     @Query(
             "select o from UberEatsOrder o where o.environment=:env and o.storeId=:store and"
-                + " (o.processingMode <> 'KITCHEN_MIRROR' or (coalesce(o.releasedAt,o.placedAt) >="
-                + " :start and coalesce(o.releasedAt,o.placedAt) < :end) or (o.releasedAt is null"
-                + " and o.placedAt is null and o.createdAt >= :createdStart and o.createdAt <"
-                + " :createdEnd) or o.status in"
-                + " ('WAITING_FOR_RELEASE','RELEASED_MAPPING_REQUIRED','MIRROR_READY','MIRROR_LOCAL_FAILED','LOCAL_REVIEW_REQUIRED','EDIT_REVIEW_REQUIRED','EXTERNAL_STATE_REVIEW_REQUIRED','CANCELLED_AFTER_RELEASE'))"
+                + " (o.processingMode <> 'KITCHEN_MIRROR' or"
+                + " (coalesce(o.kitchenDispatchedAt,o.acceptedObservedAt,o.releasedAt,o.placedAt)"
+                + " >= :start and"
+                + " coalesce(o.kitchenDispatchedAt,o.acceptedObservedAt,o.releasedAt,o.placedAt) <"
+                + " :end) or (o.kitchenDispatchedAt is null and o.acceptedObservedAt is null and"
+                + " o.releasedAt is null and o.placedAt is null and o.createdAt >= :createdStart"
+                + " and o.createdAt < :createdEnd) or o.status in"
+                + " ('WAITING_FOR_ACCEPTANCE','WAITING_FOR_RELEASE','ACCEPTANCE_REVIEW_REQUIRED','RELEASED_MAPPING_REQUIRED','MIRROR_READY','MIRROR_LOCAL_FAILED','LOCAL_REVIEW_REQUIRED','EDIT_REVIEW_REQUIRED','EXTERNAL_STATE_REVIEW_REQUIRED','CANCELLED_AFTER_RELEASE'))"
                 + " order by o.id desc")
     List<UberEatsOrder> todayInbox(
             @Param("env") String env,
@@ -52,10 +55,18 @@ public interface UberEatsOrderRepository extends JpaRepository<UberEatsOrder, Lo
 
     @Query(
             "select o from UberEatsOrder o where o.environment = :env and o.status in"
-                + " ('ACCEPTING','DENYING','UBER_ACCEPTED','LOCAL_FAILED','MIRROR_READY','MIRROR_LOCAL_FAILED','RELEASED_MAPPING_REQUIRED')"
+                + " ('ACCEPTING','DENYING','UBER_ACCEPTED','LOCAL_FAILED','WAITING_FOR_ACCEPTANCE','WAITING_FOR_RELEASE','MIRROR_READY','MIRROR_LOCAL_FAILED','RELEASED_MAPPING_REQUIRED')"
                 + " and o.nextAttemptAt <= :now order by o.id")
     List<UberEatsOrder> due(
             @Param("env") String env, @Param("now") LocalDateTime now, Pageable page);
+
+    @Modifying
+    @Query(
+            "update UberEatsOrder o set o.nextAttemptAt=:now where o.environment=:env"
+                    + " and o.storeId=:store and o.processingMode='KITCHEN_MIRROR'"
+                    + " and o.status='RELEASED_MAPPING_REQUIRED'")
+    int scheduleMirrorRemap(
+            @Param("env") String env, @Param("store") Long store, @Param("now") LocalDateTime now);
 
     @Modifying
     @Query(

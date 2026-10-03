@@ -76,7 +76,8 @@ public class UberEatsInboxController {
             LocalDateTime released_at,
             List<String> mapped_items,
             String grab_status,
-            String hot_kitchen_status) {}
+            String hot_kitchen_status,
+            LocalDateTime accepted_observed_at) {}
 
     private AuthenticatedUser staff(Long storeId, Capability capability) {
         var actor = auth.requireFrontdeskAccessForStore(storeId, capability);
@@ -195,6 +196,20 @@ public class UberEatsInboxController {
         return ApiResponse.success(configuration.saveMapping(storeId, request, actor));
     }
 
+    @PostMapping("/mapping-preview")
+    public ApiResponse<UberEatsMenuMappingService.Result> mappingPreview(
+            @PathVariable Long storeId,
+            @RequestBody com.fasterxml.jackson.databind.JsonNode source) {
+        admin(storeId);
+        var binding = configuration.connection(storeId).store();
+        if (binding == null) throw UberEatsException.conflict("STORE_MAPPING_MISSING");
+        tx.requireMapping(binding.id);
+        if (source.toString().length() > 262144)
+            throw UberEatsException.conflict("MAPPING_PREVIEW_TOO_LARGE");
+        var snapshot = new UberEatsOrderNormalizer().normalize(source);
+        return ApiResponse.success(menu.map(binding, snapshot));
+    }
+
     @GetMapping("/mapping-catalog")
     public ApiResponse<com.restaurant.system.menu.dto.MenuCatalogResponse> mappingCatalog(
             @PathVariable Long storeId) {
@@ -240,6 +255,7 @@ public class UberEatsInboxController {
                 row.releasedAt,
                 kitchen.mappedItems(row),
                 print.grab(),
-                print.hotKitchen());
+                print.hotKitchen(),
+                row.acceptedObservedAt);
     }
 }

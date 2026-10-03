@@ -18,6 +18,8 @@ import javax.crypto.spec.SecretKeySpec;
 
 @Service
 public class UberEatsWebhookService {
+    private static final org.slf4j.Logger log =
+            org.slf4j.LoggerFactory.getLogger(UberEatsWebhookService.class);
     @jakarta.persistence.PersistenceContext private jakarta.persistence.EntityManager entityManager;
     private static final Set<String> EVENTS =
             Set.of(
@@ -69,8 +71,18 @@ public class UberEatsWebhookService {
             throw new UberEatsException(HttpStatus.PAYLOAD_TOO_LARGE, "WEBHOOK_TOO_LARGE");
         if (!validSignature(raw, signature))
             throw new UberEatsException(HttpStatus.UNAUTHORIZED, "WEBHOOK_SIGNATURE_INVALID");
-        if (!config.environment.equals(environment))
+        // Header enum spelling is case-insensitive; never infer an absent or foreign environment.
+        if (environment == null || !config.environment.equalsIgnoreCase(environment)) {
+            String observed =
+                    environment == null
+                            ? "MISSING"
+                            : Set.of("sandbox", "production")
+                                            .contains(environment.toLowerCase(Locale.ROOT))
+                                    ? environment.toLowerCase(Locale.ROOT)
+                                    : "UNRECOGNIZED";
+            log.warn("Uber webhook rejected: WEBHOOK_ENVIRONMENT_MISMATCH observed={}", observed);
             throw new UberEatsException(HttpStatus.BAD_REQUEST, "WEBHOOK_ENVIRONMENT_MISMATCH");
+        }
         String eventId, type, storeId, orderId, hash;
         try {
             var body = json.readTree(raw);
@@ -84,6 +96,7 @@ public class UberEatsWebhookService {
             }
             hash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(raw));
         } catch (Exception ex) {
+            log.warn("Uber webhook rejected: WEBHOOK_MALFORMED");
             throw new UberEatsException(HttpStatus.BAD_REQUEST, "WEBHOOK_MALFORMED");
         }
         LocalDateTime now = LocalDateTime.now();
@@ -134,7 +147,8 @@ public class UberEatsWebhookService {
             row.cancelled = true;
             row.cancelledAt = now;
             row.status =
-                    "KITCHEN_MIRROR".equals(row.processingMode) && row.releasedAt != null
+                    "KITCHEN_MIRROR".equals(row.processingMode)
+                                    && (row.releasedAt != null || row.localOrderId != null)
                             ? "CANCELLED_AFTER_RELEASE"
                             : row.localOrderId != null || row.acceptedBy != null
                                     ? "CANCELLED_REVIEW_REQUIRED"

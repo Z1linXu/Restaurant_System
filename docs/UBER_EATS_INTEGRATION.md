@@ -133,3 +133,21 @@ not be represented as a guaranteed immediate release event. The documented PATCH
 pos_data does not expose a writable order_release_enabled field. Do not invent a
 PATCH or substitute production Store IDs. Uber configuration/support is required;
 no real Sandbox test order is authorized in this batch.
+
+## Kitchen Mirror ACCEPTED observation — V32
+
+Kitchen Mirror no longer requires orders.release as its only trigger. The existing
+backend worker durably checks CREATED orders until it observes ACCEPTED, with
+2/5/10/15/30/60/120-second backoff, maximum 40 attempts or 30 minutes, and a 90-second
+claim lease. Terminal states and unknown/FINISHED states stop; ambiguous states
+require review. API failures back off at least 60 seconds. Mapping-incomplete rows
+wait for mapping changes rather than polling forever. accepted_observed_at is a
+local UTC observation timestamp; accepted_at remains reserved for legacy decisions.
+Both triggers reuse the same transactional kitchen checkpoint/local-order/outbox path.
+No Accept/Deny or receipt is enabled by this change. See the [API contract](../doc/API.md).
+
+The Owner approved the final-table MAP/NO_OP rules; 226 context rules are persisted
+for Test Store -> Store 1 only. The exact table retains all unconfirmed identities.
+The authorized TEST-only Order Manager resignation uses optional is_order_manager=false
+with eats.store scope and preserves integration_enabled. Its runtime result and real
+consumer/Tablet E2E are separate gates; code and mapping preview cannot prove them.

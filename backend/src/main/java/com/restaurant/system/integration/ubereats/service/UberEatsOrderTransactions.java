@@ -125,7 +125,15 @@ public class UberEatsOrderTransactions {
         if (!row.storeMappingId.equals(store.id))
             throw UberEatsException.conflict("UBER_STORE_MISMATCH");
         if ("KITCHEN_MIRROR".equals(row.processingMode)) {
-            importMirror(row, store, snapshot, "orders.release".equals(e.eventType));
+            if ("orders.scheduled.notification".equals(e.eventType)
+                    && row.releasedAt == null
+                    && row.acceptedObservedAt == null
+                    && !events.existsByEnvironmentAndUberStoreIdAndUberOrderIdAndEventType(
+                            config.environment,
+                            e.uberStoreId,
+                            e.uberOrderId,
+                            "orders.notification")) row.scheduled = true;
+            importMirror(row, store, snapshot, "orders.release".equals(e.eventType), false);
         } else if (row.acceptedBy == null
                 && row.localOrderId == null
                 && !Boolean.TRUE.equals(row.cancelled)
@@ -189,7 +197,8 @@ public class UberEatsOrderTransactions {
             row.cancelled = true;
             row.cancelledAt = LocalDateTime.now();
             row.status =
-                    "KITCHEN_MIRROR".equals(row.processingMode) && row.releasedAt != null
+                    "KITCHEN_MIRROR".equals(row.processingMode)
+                                    && (row.releasedAt != null || row.localOrderId != null)
                             ? "CANCELLED_AFTER_RELEASE"
                             : row.localOrderId != null || row.acceptedBy != null
                                     ? "CANCELLED_REVIEW_REQUIRED"
@@ -338,7 +347,9 @@ public class UberEatsOrderTransactions {
                         ? Set.of("MIRROR_READY", "MIRROR_LOCAL_FAILED")
                         : Set.of("UBER_ACCEPTED", "LOCAL_FAILED"))
                 .contains(row.status)) return row;
-        if (mirror && (row.releasedAt == null || !"MAPPED".equals(row.mappingStatus)))
+        if (mirror
+                && ((row.releasedAt == null && row.acceptedObservedAt == null)
+                        || !"MAPPED".equals(row.mappingStatus)))
             throw UberEatsException.conflict("MIRROR_RELEASE_NOT_READY");
         modules.requireOperationalCapability(row.storeId, ModuleKeys.ORDERING_POS);
         CreateOrderRequest request = decode(row.localRequestJson, CreateOrderRequest.class);
@@ -399,10 +410,40 @@ public class UberEatsOrderTransactions {
     }
 
     @Transactional
-    public void recoveryFailed(Long id) {
+    public void recoveryFailed(Long id, int remoteStatus) {
         var row = lockOrder(id);
-        row.lastError = "UBER_RECONCILIATION_UNAVAILABLE";
-        row.nextAttemptAt = LocalDateTime.now().plusSeconds(60);
+        if (row.localOrderId != null
+                || Boolean.TRUE.equals(row.cancelled)
+                || Boolean.TRUE.equals(row.editRequired)) return;
+        if (UberEatsAcceptancePolling.waiting(row)) {
+            if (remoteStatus >= 400
+                    && remoteStatus < 500
+                    && !Set.of(401, 408, 429).contains(remoteStatus))
+                acceptanceReview(row, "UBER_ACCEPTANCE_CHECK_REJECTED_" + remoteStatus);
+            else if (UberEatsAcceptancePolling.expired(row, LocalDateTime.now(ZoneOffset.UTC)))
+                acceptanceReview(row, "ACCEPTANCE_POLL_LIMIT_REACHED");
+            else {
+                row.lastError = "UBER_ACCEPTANCE_CHECK_UNAVAILABLE";
+                // Do not amplify rate limits or transport failures with the fast CREATED cadence.
+                row.nextAttemptAt =
+                        LocalDateTime.now()
+                                .plusSeconds(
+                                        Math.max(
+                                                60,
+                                                UberEatsAcceptancePolling.delaySeconds(
+                                                        row.acceptancePollCount)));
+            }
+        } else if ("KITCHEN_MIRROR".equals(row.processingMode)) {
+            if (!Set.of("MIRROR_READY", "MIRROR_LOCAL_FAILED", "RELEASED_MAPPING_REQUIRED")
+                    .contains(row.status)) return;
+            row.attemptCount++;
+            row.lastError = "UBER_RECONCILIATION_UNAVAILABLE";
+            row.status = row.attemptCount >= 10 ? "LOCAL_REVIEW_REQUIRED" : row.status;
+            row.nextAttemptAt = row.attemptCount >= 10 ? null : LocalDateTime.now().plusSeconds(60);
+        } else {
+            row.lastError = "UBER_RECONCILIATION_UNAVAILABLE";
+            row.nextAttemptAt = LocalDateTime.now().plusSeconds(60);
+        }
         orders.save(row);
         inboxEvents.changed(row.storeId);
     }
@@ -415,11 +456,25 @@ public class UberEatsOrderTransactions {
                                 "DENYING",
                                 "UBER_ACCEPTED",
                                 "LOCAL_FAILED",
+                                "WAITING_FOR_ACCEPTANCE",
+                                "WAITING_FOR_RELEASE",
                                 "MIRROR_READY",
                                 "MIRROR_LOCAL_FAILED",
                                 "RELEASED_MAPPING_REQUIRED")
                         .contains(row.status)
+                || row.nextAttemptAt == null
                 || row.nextAttemptAt.isAfter(LocalDateTime.now())) return false;
+        if (UberEatsAcceptancePolling.waiting(row)) {
+            initializeAcceptanceWindow(row);
+            if (UberEatsAcceptancePolling.expired(row, LocalDateTime.now(ZoneOffset.UTC))) {
+                acceptanceReview(row, "ACCEPTANCE_POLL_LIMIT_REACHED");
+                orders.save(row);
+                inboxEvents.changed(row.storeId);
+                return false;
+            }
+            row.status = "WAITING_FOR_ACCEPTANCE";
+            row.acceptancePollCount++;
+        }
         row.nextAttemptAt = LocalDateTime.now().plusSeconds(90);
         orders.save(row);
         inboxEvents.changed(row.storeId);
@@ -443,7 +498,7 @@ public class UberEatsOrderTransactions {
         var row = lockOrder(id);
         requireUsable(row);
         if (("KITCHEN_MIRROR".equals(row.processingMode)
-                        ? row.releasedAt == null
+                        ? row.releasedAt == null && row.acceptedObservedAt == null
                         : row.acceptedAt == null)
                 || row.localRequestJson == null
                 || row.localOrderId != null)
@@ -460,18 +515,15 @@ public class UberEatsOrderTransactions {
 
     @Transactional
     public void remapStore(Long storeId) {
+        // Schedule every blocked mirror, including rows older than the inbox display window.
+        // The existing due worker claims them in bounded batches and performs fresh remote GETs.
+        orders.scheduleMirrorRemap(config.environment, storeId, LocalDateTime.now());
         for (var candidate :
                 orders.findByEnvironmentAndStoreIdOrderByIdDesc(
                         config.environment,
                         storeId,
                         org.springframework.data.domain.PageRequest.of(0, 100))) {
             var row = lockOrder(candidate.id);
-            if ("RELEASED_MAPPING_REQUIRED".equals(row.status)
-                    && "KITCHEN_MIRROR".equals(row.processingMode)) {
-                row.nextAttemptAt = LocalDateTime.now();
-                orders.save(row);
-                continue; // Recovery must GET a fresh order before kitchen release.
-            }
             if (!Set.of("PENDING", "MAPPING_REQUIRED").contains(row.status)
                     || row.rawOrderSnapshotJson == null) continue;
             var result =
@@ -492,53 +544,112 @@ public class UberEatsOrderTransactions {
     }
 
     @Transactional
-    public void refreshReleased(Long id, UberOrderSnapshot snapshot) {
+    public boolean refreshMirror(Long id, UberOrderSnapshot snapshot) {
         var row = lockOrder(id);
         var store = requireMapping(row.storeMappingId);
-        if (!"KITCHEN_MIRROR".equals(row.processingMode) || row.releasedAt == null)
-            throw UberEatsException.conflict("MIRROR_RELEASE_NOT_READY");
+        if (!"KITCHEN_MIRROR".equals(row.processingMode))
+            throw UberEatsException.conflict("MIRROR_MODE_REQUIRED");
         if (!row.uberOrderId.equals(snapshot.id()) || !row.uberStoreId.equals(snapshot.store_id()))
             throw UberEatsException.conflict("UBER_RESPONSE_STORE_MISMATCH");
-        importMirror(row, store, snapshot, true);
+        importMirror(row, store, snapshot, false, true);
+        return "MIRROR_READY".equals(row.status) && row.localOrderId == null;
     }
 
     private void importMirror(
             UberEatsOrder row,
             UberEatsStoreMapping store,
             UberOrderSnapshot snapshot,
-            boolean release) {
+            boolean release,
+            boolean poll) {
         if (row.localOrderId != null
                 || Boolean.TRUE.equals(row.cancelled)
                 || Boolean.TRUE.equals(row.editRequired)
-                || "LOCAL_REVIEW_REQUIRED".equals(row.status)) return;
-        // A delayed notification cannot downgrade or replace a released snapshot.
-        if (!release && row.releasedAt != null) return;
+                || Set.of(
+                                "DENIED",
+                                "LOCAL_REVIEW_REQUIRED",
+                                "ACCEPTANCE_REVIEW_REQUIRED",
+                                "EXTERNAL_STATE_REVIEW_REQUIRED")
+                        .contains(row.status)) return;
+        // A delayed notification cannot downgrade a checkpoint observed by either trigger.
+        if (!release
+                && !poll
+                && !"SCHEDULED_REVIEW_REQUIRED".equals(row.status)
+                && (row.releasedAt != null || row.acceptedObservedAt != null)) return;
+        if (row.acceptedObservedAt != null && "CREATED".equals(snapshot.current_state())) return;
         applySnapshot(row, snapshot);
+        row.currentState = snapshot.current_state();
+        row.stateObservedAt = LocalDateTime.now(ZoneOffset.UTC);
         if (release) {
-            if (row.releasedAt == null) row.releasedAt = LocalDateTime.now(ZoneOffset.UTC);
+            if (row.releasedAt == null) row.releasedAt = row.stateObservedAt;
             row.scheduled = false;
         }
-        if ("CANCELED".equals(snapshot.current_state())) {
-            row.cancelled = true;
-            row.cancelledAt = LocalDateTime.now();
-            row.status = row.releasedAt == null ? "CANCELLED" : "CANCELLED_AFTER_RELEASE";
-        } else if (!release) {
-            row.status = "WAITING_FOR_RELEASE";
-        } else if (!"ACCEPTED".equals(snapshot.current_state())) {
-            row.status = "EXTERNAL_STATE_REVIEW_REQUIRED";
-            row.lastError = "RELEASE_REQUIRES_ACCEPTED_ORDER";
-        } else {
-            var result = mapping.map(store, snapshot);
-            setMapping(row, result);
-            row.status = result.valid() ? "MIRROR_READY" : "RELEASED_MAPPING_REQUIRED";
-            row.localRequestJson = result.valid() ? encode(result.request()) : null;
-            row.nextAttemptAt =
-                    result.valid() ? LocalDateTime.now() : LocalDateTime.now().plusMinutes(5);
-            row.lastError = null;
+        row.nextAttemptAt = null;
+        row.lastError = null;
+        switch (snapshot.current_state()) {
+            case "CANCELED" -> {
+                row.cancelled = true;
+                row.cancelledAt = LocalDateTime.now();
+                row.status = row.releasedAt == null ? "CANCELLED" : "CANCELLED_AFTER_RELEASE";
+            }
+            case "DENIED" -> row.status = "DENIED";
+            case "CREATED" -> {
+                if (Boolean.TRUE.equals(row.scheduled)) row.status = "SCHEDULED_REVIEW_REQUIRED";
+                else {
+                    initializeAcceptanceWindow(row);
+                    if (UberEatsAcceptancePolling.expired(row, row.stateObservedAt))
+                        acceptanceReview(row, "ACCEPTANCE_POLL_LIMIT_REACHED");
+                    else {
+                        row.status = "WAITING_FOR_ACCEPTANCE";
+                        row.nextAttemptAt =
+                                LocalDateTime.now()
+                                        .plusSeconds(
+                                                UberEatsAcceptancePolling.delaySeconds(
+                                                        row.acceptancePollCount));
+                    }
+                }
+            }
+            case "ACCEPTED" -> {
+                if (row.acceptedObservedAt == null) row.acceptedObservedAt = row.stateObservedAt;
+                if (Boolean.TRUE.equals(row.scheduled)) row.status = "SCHEDULED_REVIEW_REQUIRED";
+                else prepareKitchenOnce(row, store, snapshot);
+            }
+            default -> {
+                row.status = "EXTERNAL_STATE_REVIEW_REQUIRED";
+                row.lastError =
+                        "FINISHED".equals(snapshot.current_state())
+                                ? "FINISHED_WITHOUT_KITCHEN_DISPATCH_REQUIRES_REVIEW"
+                                : "UNKNOWN_UBER_STATE_REQUIRES_REVIEW";
+            }
         }
         row.updatedAt = LocalDateTime.now();
         orders.save(row);
         inboxEvents.changed(row.storeId);
+    }
+
+    /** Both accepted observation and release enter this same idempotent kitchen gate. */
+    private void prepareKitchenOnce(
+            UberEatsOrder row, UberEatsStoreMapping store, UberOrderSnapshot snapshot) {
+        var result = mapping.map(store, snapshot);
+        setMapping(row, result);
+        row.status = result.valid() ? "MIRROR_READY" : "RELEASED_MAPPING_REQUIRED";
+        row.localRequestJson = result.valid() ? encode(result.request()) : null;
+        // Incomplete mappings wait for an explicit mapping write, not perpetual Uber GET polling.
+        row.nextAttemptAt = result.valid() ? LocalDateTime.now() : null;
+    }
+
+    private void initializeAcceptanceWindow(UberEatsOrder row) {
+        if (row.acceptancePollStartedAt == null) {
+            row.acceptancePollStartedAt = LocalDateTime.now(ZoneOffset.UTC);
+            row.acceptancePollExpiresAt =
+                    row.acceptancePollStartedAt.plusMinutes(UberEatsAcceptancePolling.MAX_MINUTES);
+        }
+    }
+
+    private void acceptanceReview(UberEatsOrder row, String reason) {
+        row.status = "ACCEPTANCE_REVIEW_REQUIRED";
+        row.lastError = reason;
+        row.nextAttemptAt = null;
+        row.updatedAt = LocalDateTime.now();
     }
 
     private UberEatsOrder lockOrder(Long id) {

@@ -9336,3 +9336,17 @@ The public webhook is POST-only; unsupported GET currently receives the existing
 generic, redacted HTTP 500 handler (non-blocking debt), while invalid/valid HMAC
 POST responses are 401/200. The technical implementation does not grant release
 capability in Uber or authorize automatic persistence of a review table.
+
+### Kitchen Mirror accepted-state worker (V32)
+
+Mirror notification persists CREATED as WAITING_FOR_ACCEPTANCE. Existing backend
+recovery durably polls with bounded cadence/deadline/attempts and a crash lease,
+records accepted_observed_at in UTC, and shares the release kitchen gate when
+current_state becomes ACCEPTED. Polling never fabricates release/official accept
+time, calls remote Accept/Deny or generates customer receipts. Terminal states stop;
+FINISHED/UNKNOWN/limits require review. Mapping failure waits for mapping change.
+The Today view includes the observed acceptance time. An Owner/Admin read-only
+mapping-preview endpoint resolves against the deployed service/catalog/rules without
+creating synthetic kitchen orders. Runtime proof is separate from real Sandbox E2E.
+
+Uber webhook environment enum comparison accepts case variants (for example `Sandbox`); missing, unknown and foreign environments still fail closed. Rejection diagnostics log only fixed reason codes and an allowlisted environment category, never request bodies/signatures/credentials.
