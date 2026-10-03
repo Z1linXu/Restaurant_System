@@ -40,6 +40,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.*;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.charset.StandardCharsets;
@@ -82,6 +83,7 @@ class UberEatsPostgresIntegrationTest {
         r.add("spring.datasource.password", () -> "");
     }
 
+    @Autowired UberEatsProperties config;
     @Autowired JdbcTemplate db;
     @Autowired Flyway flyway;
     @Autowired ObjectMapper json;
@@ -320,6 +322,100 @@ class UberEatsPostgresIntegrationTest {
                                 .header("X-Uber-Signature", sign(raw))
                                 .header("X-Environment", "production"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testWebhookCompatibilityRequiresExactPairSignatureAndSandboxIdentity() throws Exception {
+        mirrorMode();
+        String id = UUID.randomUUID().toString();
+        byte[] raw = event(UUID.randomUUID().toString(), "orders.notification", id);
+        var source = payload(id);
+        try {
+            config.runtimeEnvironment = "staging";
+            config.testWebhookClientId = config.clientId;
+            config.testWebhookStoreId = uberStore;
+            config.validate();
+            when(client.getOrder(id)).thenReturn(source);
+            mvc.perform(
+                            post("/api/v1/integrations/uber-eats/webhook")
+                                    .content(raw)
+                                    .header("X-Uber-Signature", "0".repeat(64))
+                                    .header("X-Environment", "production"))
+                    .andExpect(status().isUnauthorized());
+            verifyNoInteractions(client);
+            source.with("store").put("id", UUID.randomUUID().toString());
+            mvc.perform(
+                            post("/api/v1/integrations/uber-eats/webhook")
+                                    .content(raw)
+                                    .header("X-Uber-Signature", sign(raw))
+                                    .header("X-Environment", "production"))
+                    .andExpect(status().isBadRequest());
+            assertThat(inbox.findByEnvironmentAndUberOrderId("sandbox", id)).isEmpty();
+            when(client.getOrder(id)).thenThrow(new UberEatsApiException(503));
+            mvc.perform(
+                            post("/api/v1/integrations/uber-eats/webhook")
+                                    .content(raw)
+                                    .header("X-Uber-Signature", sign(raw))
+                                    .header("X-Environment", "production"))
+                    .andExpect(status().isServiceUnavailable());
+            assertThat(inbox.findByEnvironmentAndUberOrderId("sandbox", id)).isEmpty();
+            doAnswer(
+                            invocation -> {
+                                var independent = new TransactionTemplate(transactions);
+                                independent.setPropagationBehavior(
+                                        TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+                                independent.executeWithoutResult(
+                                        status ->
+                                                db.update(
+                                                        "update uber_eats_store_mappings set"
+                                                                + " processing_mode='ORDER_MANAGER'"
+                                                                + " where id=?",
+                                                        binding.id));
+                                return payload(id);
+                            })
+                    .when(client)
+                    .getOrder(id);
+            mvc.perform(
+                            post("/api/v1/integrations/uber-eats/webhook")
+                                    .content(raw)
+                                    .header("X-Uber-Signature", sign(raw))
+                                    .header("X-Environment", "production"))
+                    .andExpect(status().isBadRequest());
+            assertThat(inbox.findByEnvironmentAndUberOrderId("sandbox", id)).isEmpty();
+            assertThat(
+                            events.findByEnvironmentAndEventId(
+                                    "sandbox", json.readTree(raw).path("event_id").asText()))
+                    .isEmpty();
+            mirrorMode();
+            doReturn(payload(id)).when(client).getOrder(id);
+            mvc.perform(
+                            post("/api/v1/integrations/uber-eats/webhook")
+                                    .content(raw)
+                                    .header("X-Uber-Signature", sign(raw))
+                                    .header("X-Environment", "production"))
+                    .andExpect(status().isOk());
+            assertThat(row(id).localOrderId).isNull();
+            imports.processEvents();
+            assertThat(row(id).status).isEqualTo("WAITING_FOR_ACCEPTANCE");
+            for (String wrong :
+                    List.of("missing-app", "production-runtime", "wrong-store", "production-api")) {
+                config.runtimeEnvironment = "staging";
+                config.environment = "sandbox";
+                config.testWebhookClientId = config.clientId;
+                config.testWebhookStoreId = uberStore;
+                if (wrong.equals("missing-app")) config.testWebhookClientId = "";
+                if (wrong.equals("production-runtime")) config.runtimeEnvironment = "production";
+                if (wrong.equals("wrong-store"))
+                    config.testWebhookStoreId = UUID.randomUUID().toString();
+                if (wrong.equals("production-api")) config.environment = "production";
+                assertThat(config.allowsTestWebhook("production", uberStore)).isFalse();
+            }
+        } finally {
+            config.runtimeEnvironment = "local";
+            config.environment = "sandbox";
+            config.testWebhookClientId = "";
+            config.testWebhookStoreId = "";
+        }
     }
 
     @Test

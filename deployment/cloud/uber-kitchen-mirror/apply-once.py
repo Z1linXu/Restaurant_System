@@ -16,10 +16,10 @@ i = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(i)
 D = 'restaurant-pos-staging-db-1'
 OLD = {
-    'backend': 'sha256:9fa3fde316e14e675a9567a44ffdac0710544a08b67cb6a9c862f4f51af5b61b',
-    'nginx': 'sha256:91974a411434e19f4187084c50805825442df3ad80e6a9a5f592f86e1a7e61d1',
+    'backend': 'sha256:ec2f4732973be6e593b0abf698d99051fe9679e86789d6f856e55f619bc215d9',
+    'nginx': 'sha256:e6dbf815c7e8033d5485c00dda700983d47a973a7ae0c936f522b53235d09712',
 }
-ROOT = pathlib.Path('/srv/restaurant-pos/staging/uber-accepted-trigger-20261002')
+ROOT = pathlib.Path('/srv/restaurant-pos/staging/uber-test-webhook-compat-20261002')
 os.umask(0o077)
 
 
@@ -63,7 +63,7 @@ def main():
     ROOT.mkdir(mode=0o700)
     baseline = {'fingerprints': {n: i.fingerprint(n) for n in i.PROD + [D]},
                 'staging_flyway': i.ledger(D), 'production_flyway': i.ledger('cloud-db-1')}
-    assert baseline['staging_flyway'].strip().splitlines()[-1].startswith('31|')
+    assert baseline['staging_flyway'].strip().splitlines()[-1].startswith('32|')
     i.write_json(ROOT / 'baseline.private.json', baseline)
     with (ROOT / 'staging-before.dump').open('wb') as f:
         subprocess.run(['docker', 'exec', D, 'sh', '-c', 'pg_dump -Fc -U "$POSTGRES_USER" -d "$POSTGRES_DB"'], stdout=f, check=True)
@@ -74,6 +74,10 @@ def main():
     target = {'services': {s: modeled(s, before[s]) for s in OLD},
               'networks': {'restaurant-pos': {'external': True, 'name': 'restaurant-pos-staging_restaurant-pos'}}}
     i.write_compose(ROOT / 'rollback.private.json', target)
+    target['services']['backend']['environment'].update({
+        'UBER_EATS_TEST_WEBHOOK_CLIENT_ID': 't86ofdunSsVjL-0AvK6MA6LCTyF2eYLf',
+        'UBER_EATS_TEST_WEBHOOK_STORE_ID': 'bd993244-5589-4b19-8f0d-dc2ba73d4273',
+    })
     for service, wanted in target['services'].items():
         name = 'restaurant-pos-' + ('frontend' if service == 'nginx' else service) + ':staging-' + sha
         image = json.loads(i.run(['docker', 'image', 'inspect', name]))[0]
@@ -113,7 +117,7 @@ def main():
         ledger = i.ledger(D)
         assert ledger.startswith(baseline['staging_flyway'])
         delta = ledger[len(baseline['staging_flyway']):].strip().splitlines()
-        assert len(delta) == 1 and delta[0].startswith('32|V32__uber_accepted_observation.sql|') and delta[0].endswith('|t')
+        assert delta == [], 'Unexpected migration delta'
         continuity()
     except BaseException:
         # An additive V32 can remain; never restore/drop database data automatically.
@@ -124,7 +128,7 @@ def main():
             assert modeled(service, i.inspect('restaurant-pos-staging-' + service + '-1')) == modeled(service, before[service])
         continuity()
         raise RuntimeError('Staging update failed; previous application restored; additive schema retained') from None
-    print('STAGING_APPLICATION_UPDATE=PASS; FLYWAY_V32=PASS; DB_CONTAINER_PRODUCTION_UNCHANGED=PASS')
+    print('STAGING_APPLICATION_UPDATE=PASS; FLYWAY_V32_UNCHANGED=PASS; DB_CONTAINER_PRODUCTION_UNCHANGED=PASS')
 
 
 if __name__ == '__main__':

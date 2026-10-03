@@ -147,7 +147,7 @@ R编号仅是本报告的简写，持久化必须展开为完整root ID；禁止
 
 Traditional Lanzhou Hand-pull Beef Noodle + Large + Three Fine + Non-spicy + Extra Fried Egg + Non Coriander：六项 identity 均已人工确认，正式规则已落库；实际部署 mapping service 的 resolution 结果另见本轮验收。
 
-FIRST_STAGE_TEST_COMBINATION_FULLY_MAPPED = PENDING_RUNTIME_RESOLUTION
+FIRST_STAGE_TEST_COMBINATION_FULLY_MAPPED = YES
 
 ## 当前外部条件
 
@@ -179,4 +179,8 @@ FIRST_STAGE_TEST_COMBINATION_FULLY_MAPPED = PENDING_RUNTIME_RESOLUTION
 - Human Confirmed=NO / UNMAPPED 写入数 = 0
 - Target = Store 1 / organization 1 / sandbox / bd993244-5589-4b19-8f0d-dc2ba73d4273
 
-FIRST_STAGE_TEST_COMBINATION_FULLY_MAPPED = PENDING_RUNTIME_RESOLUTION
+FIRST_STAGE_TEST_COMBINATION_FULLY_MAPPED = YES
+
+## Runtime resolution after persistence
+
+2026-10-03T00:58:45Z, Staging `703488638ec2bf2002cee113b037ef547aaa61fa`: the authenticated mapping-preview API used the persisted 226 rules and actual Store 1 menu catalog. First-stage item plus size_large/noodle_sanxi/spicy_none/fried_egg/remove_cilantro resolved without errors. COMBO_ROOT injected combo and all three side variants plus combo_tea_egg resolved without errors. Unknown modifier remained blocked. All 16 NO_OP contexts resolved without emitting options in an isolated exact-SKU diagnostic; their 8 actual Uber roots remain UNMAPPED and still block full orders. No order was inserted by these previews. A read-only preview of real TEST order `4ab95dd8-3a9d-49c8-9b13-9795adadf5c6` confirmed the same five options, with no fuzzy matching. This mapping proof is not real webhook/dispatch E2E.

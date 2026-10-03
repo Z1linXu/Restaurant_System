@@ -29,6 +29,7 @@ public class UberEatsWebhookService {
                     "orders.scheduled.notification",
                     "orders.customer_order_edit");
     private final UberEatsProperties config;
+    private final com.restaurant.system.integration.ubereats.client.UberEatsOrderClient client;
     private final UberEatsInboxEvents inboxEvents;
     private final ObjectMapper json;
     private final UberEatsEventRepository events;
@@ -41,7 +42,9 @@ public class UberEatsWebhookService {
             UberEatsEventRepository events,
             UberEatsStoreMappingRepository stores,
             UberEatsOrderRepository orders,
-            UberEatsInboxEvents inboxEvents) {
+            UberEatsInboxEvents inboxEvents,
+            com.restaurant.system.integration.ubereats.client.UberEatsOrderClient client) {
+        this.client = client;
         this.inboxEvents = inboxEvents;
         this.config = config;
         this.json = json;
@@ -71,18 +74,6 @@ public class UberEatsWebhookService {
             throw new UberEatsException(HttpStatus.PAYLOAD_TOO_LARGE, "WEBHOOK_TOO_LARGE");
         if (!validSignature(raw, signature))
             throw new UberEatsException(HttpStatus.UNAUTHORIZED, "WEBHOOK_SIGNATURE_INVALID");
-        // Header enum spelling is case-insensitive; never infer an absent or foreign environment.
-        if (environment == null || !config.environment.equalsIgnoreCase(environment)) {
-            String observed =
-                    environment == null
-                            ? "MISSING"
-                            : Set.of("sandbox", "production")
-                                            .contains(environment.toLowerCase(Locale.ROOT))
-                                    ? environment.toLowerCase(Locale.ROOT)
-                                    : "UNRECOGNIZED";
-            log.warn("Uber webhook rejected: WEBHOOK_ENVIRONMENT_MISMATCH observed={}", observed);
-            throw new UberEatsException(HttpStatus.BAD_REQUEST, "WEBHOOK_ENVIRONMENT_MISMATCH");
-        }
         String eventId, type, storeId, orderId, hash;
         try {
             var body = json.readTree(raw);
@@ -98,6 +89,62 @@ public class UberEatsWebhookService {
         } catch (Exception ex) {
             log.warn("Uber webhook rejected: WEBHOOK_MALFORMED");
             throw new UberEatsException(HttpStatus.BAD_REQUEST, "WEBHOOK_MALFORMED");
+        }
+        if (environment == null || !config.environment.equalsIgnoreCase(environment)) {
+            if (EVENTS.contains(type) && config.allowsTestWebhook(environment, storeId)) {
+                var target =
+                        stores.findByEnvironmentAndUberStoreId(config.environment, storeId)
+                                .orElse(null);
+                if (target == null
+                        || !Boolean.TRUE.equals(target.enabled)
+                        || !"KITCHEN_MIRROR".equals(target.processingMode))
+                    throw new UberEatsException(
+                            HttpStatus.BAD_REQUEST, "TEST_WEBHOOK_BINDING_MISMATCH");
+                // Only this opt-in TEST exception needs a pre-ack Sandbox identity read.
+                // No event/order/terminal mutation is allowed until this read proves the identity.
+                com.fasterxml.jackson.databind.JsonNode remote;
+                try {
+                    remote = client.getOrder(orderId);
+                } catch (RuntimeException ex) {
+                    throw new UberEatsException(
+                            HttpStatus.SERVICE_UNAVAILABLE,
+                            "TEST_WEBHOOK_VERIFICATION_UNAVAILABLE");
+                }
+                if (remote == null
+                        || !orderId.equals(remote.path("id").asText())
+                        || !storeId.equals(remote.path("store").path("id").asText()))
+                    throw new UberEatsException(
+                            HttpStatus.BAD_REQUEST, "TEST_WEBHOOK_IDENTITY_MISMATCH");
+                // Revalidate under the same binding lock used by configuration changes. The
+                // network read must not leave a mode-change race before durable receipt.
+                target =
+                        stores.lock(target.id)
+                                .orElseThrow(
+                                        () ->
+                                                new UberEatsException(
+                                                        HttpStatus.BAD_REQUEST,
+                                                        "TEST_WEBHOOK_BINDING_MISMATCH"));
+                entityManager.refresh(target, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+                if (!Boolean.TRUE.equals(target.enabled)
+                        || !"KITCHEN_MIRROR".equals(target.processingMode)
+                        || !config.environment.equals(target.environment)
+                        || !storeId.equals(target.uberStoreId))
+                    throw new UberEatsException(
+                            HttpStatus.BAD_REQUEST, "TEST_WEBHOOK_BINDING_MISMATCH");
+                log.info("Uber TEST webhook environment compatibility verified via Sandbox GET");
+            } else {
+                String observed =
+                        environment == null
+                                ? "MISSING"
+                                : Set.of("sandbox", "production")
+                                                .contains(environment.toLowerCase(Locale.ROOT))
+                                        ? environment.toLowerCase(Locale.ROOT)
+                                        : "UNRECOGNIZED";
+                log.warn(
+                        "Uber webhook rejected: WEBHOOK_ENVIRONMENT_MISMATCH observed={}",
+                        observed);
+                throw new UberEatsException(HttpStatus.BAD_REQUEST, "WEBHOOK_ENVIRONMENT_MISMATCH");
+            }
         }
         LocalDateTime now = LocalDateTime.now();
         int inserted =

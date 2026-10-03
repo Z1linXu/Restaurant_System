@@ -1,22 +1,24 @@
 package com.restaurant.system.integration.ubereats;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.restaurant.system.integration.ubereats.config.UberEatsProperties;
 import com.restaurant.system.integration.ubereats.service.UberEatsWebhookService;
+
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HexFormat;
+
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class UberEatsWebhookSignatureTest {
     private final UberEatsProperties config = new UberEatsProperties();
     private final UberEatsWebhookService service =
-            new UberEatsWebhookService(config, null, null, null, null, null);
-    private final byte[] body = "{\"event_type\":\"internal.signature_test\"}\n"
-            .getBytes(StandardCharsets.UTF_8);
+            new UberEatsWebhookService(config, null, null, null, null, null, null);
+    private final byte[] body =
+            "{\"event_type\":\"internal.signature_test\"}\n".getBytes(StandardCharsets.UTF_8);
 
     @Test
     void independentKeyReplacesOAuthSecretAndPreservesRawBytes() throws Exception {
@@ -26,9 +28,15 @@ class UberEatsWebhookSignatureTest {
         assertThat(service.validSignature(body, signature)).isTrue();
         assertThat(service.validSignature(body, sign(body, "fixture-oauth-only"))).isFalse();
         assertThat(service.validSignature(body, sign(body, "fixture-wrong-key"))).isFalse();
-        assertThat(service.validSignature("{}".getBytes(StandardCharsets.UTF_8), signature)).isFalse();
-        assertThat(service.validSignature(new String(body, StandardCharsets.UTF_8).strip()
-                .getBytes(StandardCharsets.UTF_8), signature)).isFalse();
+        assertThat(service.validSignature("{}".getBytes(StandardCharsets.UTF_8), signature))
+                .isFalse();
+        assertThat(
+                        service.validSignature(
+                                new String(body, StandardCharsets.UTF_8)
+                                        .strip()
+                                        .getBytes(StandardCharsets.UTF_8),
+                                signature))
+                .isFalse();
         assertThat(config.clientSecret()).isEqualTo("fixture-oauth-only");
     }
 
