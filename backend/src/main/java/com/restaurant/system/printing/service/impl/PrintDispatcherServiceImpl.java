@@ -254,8 +254,10 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             if (PrintingMode.PAD_DIRECT.equals(printingMode)) {
                 job = printJobService.markPadDirectQueued(job, printer, printer.font_size);
                 PrinterTestResponse response = new PrinterTestResponse();
-                response.success = true;
-                response.message = "Pad Direct test print job queued. Backend did not connect to the physical printer.";
+                response.success = PrintJobStatus.PENDING.equals(job.status);
+                response.message = response.success
+                    ? "Pad Direct test print job queued. Backend did not connect to the physical printer."
+                    : job.error_message;
                 logger.info("Queued PAD_DIRECT test print job {} for printer {} store {}", job.id, printer.id, request.store_id);
                 return response;
             }
@@ -531,8 +533,10 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             job = printJobService.attachRenderedContent(job, printer == null ? null : printer.id, content);
             if (PrintingMode.PAD_DIRECT.equals(printingMode)) {
                 job = printJobService.markPadDirectQueued(job, printer, resolveEffectiveFontSize(assignment, printer));
-                response.success = true;
-                response.message = "Pad Direct " + request.module_code + " test print job queued. Backend did not connect to the physical printer.";
+                response.success = PrintJobStatus.PENDING.equals(job.status);
+                response.message = response.success
+                    ? "Pad Direct " + request.module_code + " test print job queued. Backend did not connect to the physical printer."
+                    : job.error_message;
                 logger.info("Queued PAD_DIRECT module test print job {} module {} store {}", job.id, request.module_code, request.store_id);
                 return response;
             }

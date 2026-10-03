@@ -1,6 +1,6 @@
 # Uber Kitchen Mapping 最终执行表 — 2026-10-02
 
-状态：用户于 2026-10-02 正式批准“确认按表执行”；已按批准范围写入 Staging。Human Confirmed=YES 表示本次附件/消息已明确确认身份或NO_OP；Persisted=YES 表示本轮已从数据库重新读取并核对。MAP/NO_OP 是已执行规则；UNMAPPED 遇到即阻止 kitchen release。本轮不会将旧review稿或占位文字“[这里粘贴...]”当成确认。
+状态：用户于 2026-10-02 正式批准“确认按表执行”；已按批准范围写入 Staging。Human Confirmed=YES 表示本次附件/消息已明确确认身份或NO_OP；Persisted=YES 表示本轮已从数据库重新读取并核对。MAP/NO_OP 是已执行规则；UNMAPPED 不授予本地身份；Owner 后续明确修改 Mirror 规则：新接单使用冻结 raw GRAB fallback，详见 [V33 合约](../../doc/API.md)。本表身份确认和持久化结果不变。本轮不会将旧review稿或占位文字“[这里粘贴...]”当成确认。
 
 范围：sandbox Test Store `bd993244-5589-4b19-8f0d-dc2ba73d4273` → Store 1 / org 1 / STG005_SRC_20260809_R01 / MOCK。新鲜读取 2026-10-02T16:41:08Z；正式规则已写入 226 条，见文末读回。
 

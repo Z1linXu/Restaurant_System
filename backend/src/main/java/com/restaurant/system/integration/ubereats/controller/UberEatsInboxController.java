@@ -77,7 +77,7 @@ public class UberEatsInboxController {
             List<String> mapped_items,
             String grab_status,
             String hot_kitchen_status,
-            LocalDateTime accepted_observed_at) {}
+            LocalDateTime accepted_observed_at, List<String> raw_items) {}
 
     private AuthenticatedUser staff(Long storeId, Capability capability) {
         var actor = auth.requireFrontdeskAccessForStore(storeId, capability);
@@ -207,7 +207,8 @@ public class UberEatsInboxController {
         if (source.toString().length() > 262144)
             throw UberEatsException.conflict("MAPPING_PREVIEW_TOO_LARGE");
         var snapshot = new UberEatsOrderNormalizer().normalize(source);
-        return ApiResponse.success(menu.map(binding, snapshot));
+        return ApiResponse.success("KITCHEN_MIRROR".equals(binding.processingMode)
+                ? menu.mapMirror(binding, snapshot) : menu.map(binding, snapshot));
     }
 
     @GetMapping("/mapping-catalog")
@@ -256,6 +257,6 @@ public class UberEatsInboxController {
                 kitchen.mappedItems(row),
                 print.grab(),
                 print.hotKitchen(),
-                row.acceptedObservedAt);
+                row.acceptedObservedAt, kitchen.rawItems(row));
     }
 }

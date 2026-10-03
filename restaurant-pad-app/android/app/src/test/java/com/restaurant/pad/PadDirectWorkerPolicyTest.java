@@ -8,6 +8,17 @@ import org.junit.Test;
 
 public class PadDirectWorkerPolicyTest {
     @Test
+    public void confirmedPreTcpConfigurationFailureAllowsNextJobButAmbiguousOutputDoesNot() {
+        for (String code : new String[]{"ANDROID_ASSIGNED_PRINTER_MISSING", "ANDROID_PAYLOAD_MISSING", "ANDROID_PAYLOAD_INVALID"}) {
+            assertTrue(PadDirectWorkerPolicy.canContinueAfterReportedJobFailure(code, PadDirectWorkerPolicy.JobPhase.PAYLOAD_FETCHING, false));
+            assertFalse(PadDirectWorkerPolicy.canContinueAfterReportedJobFailure(code, PadDirectWorkerPolicy.JobPhase.PAYLOAD_FETCHING, true));
+            assertFalse(PadDirectWorkerPolicy.canContinueAfterReportedJobFailure(code, PadDirectWorkerPolicy.JobPhase.TCP_WRITING, false));
+        }
+        assertFalse(PadDirectWorkerPolicy.canContinueAfterReportedJobFailure("ANDROID_HTTP_UNAUTHORIZED", PadDirectWorkerPolicy.JobPhase.PAYLOAD_FETCHING, false));
+        assertFalse(PadDirectWorkerPolicy.canContinueAfterReportedJobFailure("ANDROID_NETWORK_ERROR", PadDirectWorkerPolicy.JobPhase.PAYLOAD_FETCHING, false));
+    }
+
+    @Test
     public void staleGenerationIsRejected() {
         assertTrue(PadDirectWorkerPolicy.isCurrentGeneration(4, 4));
         assertFalse(PadDirectWorkerPolicy.isCurrentGeneration(3, 4));

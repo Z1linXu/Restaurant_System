@@ -67,6 +67,7 @@ public class UberEatsKitchenView {
         if (row.localRequestJson == null) return List.of();
         var request = tx.decode(row.localRequestJson, CreateOrderRequest.class);
         return request.items.stream()
+                .filter(item -> item.external_kitchen_snapshot == null || !item.external_kitchen_snapshot.rawRoot())
                 .map(
                         item ->
                                 item.item_name_snapshot_zh
@@ -85,4 +86,29 @@ public class UberEatsKitchenView {
                                                                         .toList())))
                 .toList();
     }
+    public List<String> rawItems(UberEatsOrder row) {
+        if (row.localRequestJson == null) return List.of();
+        var request = tx.decode(row.localRequestJson, CreateOrderRequest.class);
+        List<String> lines = new ArrayList<>();
+        for (var item : request.items) {
+            var raw = item.external_kitchen_snapshot;
+            if (raw == null) continue;
+            lines.add((raw.rawRoot() ? raw.itemName() : item.item_name_snapshot_zh) + " ×" + item.quantity);
+            appendRaw(lines, raw.modifiers(), 1);
+            if (raw.notes() != null && !raw.notes().isBlank()) lines.add(raw.notes());
+        }
+        return List.copyOf(lines);
+    }
+
+    private void appendRaw(List<String> lines, List<com.restaurant.system.order.dto.ExternalKitchenSnapshot.Modifier> modifiers, int multiplier) {
+        for (var raw : modifiers) {
+            if (raw.parentContext() != null && !raw.parentContext().isEmpty())
+                lines.add("选项归属：" + raw.parentContext().stream().map(c -> c.name())
+                        .collect(java.util.stream.Collectors.joining(" → ")));
+            lines.add((raw.removed() ? "去除 " : "") + raw.name() + " ×" + Math.multiplyExact(multiplier, raw.quantity()));
+            if (raw.notes() != null && !raw.notes().isBlank()) lines.add(raw.notes());
+            appendRaw(lines, raw.modifiers(), Math.multiplyExact(multiplier, raw.quantity()));
+        }
+    }
+
 }

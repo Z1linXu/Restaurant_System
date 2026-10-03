@@ -194,6 +194,15 @@ public class PrintJobServiceImpl implements PrintJobService {
         target.error_code = null;
         target.error_message = null;
         target.updated_at = LocalDateTime.now();
+        if (printer == null || printer.ip_address == null || printer.ip_address.isBlank()
+                || Boolean.FALSE.equals(printer.enabled)
+                || printer.port != null && (printer.port < 1 || printer.port > 65535)) {
+            // Retain the rendered ticket for preview/reprint without feeding an unprintable queue head.
+            target.status = PrintJobStatus.FAILED;
+            target.error_code = "PRINTER_CONFIGURATION_REQUIRED";
+            target.error_message = "Assigned printer endpoint is not configured";
+            target.failed_at = target.updated_at;
+        }
         return printJobRepository.save(target);
     }
 

@@ -9313,13 +9313,13 @@ Uber page exposes durable kitchen module status and snapshot-safe reprints throu
 the existing audited/idempotent printing API.
 
 Mapping supports explicit COMBO_ROOT -> main + implicit `combo`, parent-scoped
-MAP and explicit NO_OP (`INGREDIENT_NOT_USED`). Unknown identifiers still block.
+MAP and explicit NO_OP (`INGREDIENT_NOT_USED`). Mirror unknown identities use the V33 fallback below; ORDER_MANAGER remains strict.
 The [final mapping table](docs/governance/UBER_KITCHEN_MAPPING_FINAL_20261002.md)
 contains approved rules and explicit UNMAPPED entries. Only approved MAP/NO_OP
 rows are persisted; no name-based expansion is authorized. The
 [real E2E evidence](docs/governance/UBER_KITCHEN_MIRROR_E2E_20261002.md) verifies
 runtime resolution, human Uber Pad acceptance, both kitchen modules, Today,
-reprint and financial isolation. Unmapped roots still block kitchen release.
+reprint and financial isolation. Unmapped roots now follow the V33 frozen fallback.
 
 The public webhook is POST-only; unsupported GET currently receives the existing
 generic, redacted HTTP 500 handler (non-blocking debt), while invalid/valid HMAC
@@ -9333,7 +9333,7 @@ recovery durably polls with bounded cadence/deadline/attempts and a crash lease,
 records accepted_observed_at in UTC, and shares the release kitchen gate when
 current_state becomes ACCEPTED. Polling never fabricates release/official accept
 time, calls remote Accept/Deny or generates customer receipts. Terminal states stop;
-FINISHED/UNKNOWN/limits require review. Mapping failure waits for mapping change.
+FINISHED/UNKNOWN/limits require review. Structural/scope errors remain blocking; missing identities follow V33 fallback.
 The Today view includes the observed acceptance time. An Owner/Admin read-only
 mapping-preview endpoint resolves against the deployed service/catalog/rules without
 creating synthetic kitchen orders. Runtime proof is separate from real Sandbox E2E.
@@ -9343,3 +9343,11 @@ Uber webhook environment enum comparison accepts case variants (for example `San
 ### TEST webhook environment compatibility (Owner authorized 2026-10-02)
 
 The real TEST Store notification used `X-Environment: production` despite a valid TEST HMAC and a readable matching order on `test-api.uber.com`. Default strict environment isolation remains. Only `APP_ENVIRONMENT=staging`, `UBER_EATS_ENVIRONMENT=sandbox`, a matching nonempty `UBER_EATS_TEST_WEBHOOK_CLIENT_ID` and exact `UBER_EATS_TEST_WEBHOOK_STORE_ID` opt in. A recognized order event must target an enabled KITCHEN_MIRROR binding; raw HMAC is verified first. Before any durable event/order/cancel mutation, Sandbox GET Order must return the same order and store UUID. Failed lookup returns retryable 503; identity mismatch returns 400. Missing/unknown headers, other stores/apps and Production runtimes cannot use this exception. Credentials and raw traffic are never logged. The TEST-only pre-ack read uses the existing bounded API timeouts; ordinary matching-environment webhooks retain fast durable receipt.
+
+### Kitchen Mirror field repair (V33)
+
+After verified Uber acceptance, missing root mappings freeze a display-only `ExternalKitchenSnapshot` in `order_items.external_kitchen_snapshot_json` with raw stable IDs, titles, quantities, nested modifiers and notes. No local menu identity, BOM or HOT station is invented. The shared OrderService creates a RAW_UBER_FALLBACK holding task and the existing GRAB renderer prints the complete frozen content. Known roots retain safe mapped options and normal station routing; unknown modifiers remain raw with frozen parent IDs/names so nested instructions retain their target. Ambiguous selections are shown for review without inventing defaults. No candidate mappings are written automatically.
+
+Successful partial dispatch uses `mapping_status=PARTIALLY_MAPPED` and `KITCHEN_SENT_WITH_MAPPING_WARNINGS`; Today exposes `mapped_items` and `raw_items`. Shared reprints use the original frozen rendered snapshots even after mappings change. Unsupported structural instructions, invalid source quantities, identity/environment/tenant failures and cancel/edit safety remain fail-closed. Legacy ORDER_MANAGER still requires complete mapping before Accept. Kitchen Mirror GRAB/HOT use the existing TAKEOUT footer (外卖), without customer receipt/price/tax/address/phone.
+
+The shared device controller preserves ResponseStatusException HTTP status (not a generic 500). Unconfigured PAD_DIRECT endpoints retain a FAILED ticket with `PRINTER_CONFIGURATION_REQUIRED`, rendered snapshot and ESC/POS payload instead of entering the pending queue. The Android worker can continue only after the backend confirms failure of a definite payload/configuration error before TCP; authentication/network/lease ambiguity and possible physical output keep their existing stop/recovery guards. Existing pending/PRINTING jobs are not automatically reset or replayed.

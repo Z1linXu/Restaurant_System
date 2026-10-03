@@ -19,6 +19,10 @@ import lombok.Data;
 @Table(name = "order_items")
 public class OrderItem {
 
+    @jakarta.persistence.Convert(converter = ExternalKitchenSnapshotConverter.class)
+    @Column(name = "external_kitchen_snapshot_json", columnDefinition = "text")
+    public com.restaurant.system.order.dto.ExternalKitchenSnapshot externalKitchenSnapshot;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")

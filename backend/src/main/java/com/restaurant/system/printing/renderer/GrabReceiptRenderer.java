@@ -23,7 +23,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class GrabReceiptRenderer implements ReceiptRenderer {
 
-    private static final Set<String> GRAB_STATIONS = Set.of("NOODLE", "WOK", "COLD", "DEEPFRIED");
+    private static final Set<String> GRAB_STATIONS = Set.of("NOODLE", "WOK", "COLD", "DEEPFRIED", "RAW_UBER_FALLBACK");
     private static final Set<String> MODIFIER_PREFIXES = Set.of("+", "走", "少", "不要", "无");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
 
@@ -86,6 +86,8 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
 
         for (KitchenTask task : tasks) {
             OrderItem orderItem = orderItemById.get(task.order_item_id);
+            if (orderItem != null && orderItem.externalKitchenSnapshot != null
+                    && orderItem.externalKitchenSnapshot.rawRoot()) continue;
             if (isSideTask(task, orderItem)) {
                 SideGroupKey key = buildSideGroupKey(task, orderItem);
                 if (!printedSideGroups.add(key)) {
@@ -126,6 +128,8 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
             appendPrintLines(builder, simplifyGreenOptions(buildItemLines(task, orderItem)));
         }
 
+        ExternalKitchenFallbackContent.append(builder, request.order_items,
+                tasks.stream().map(t -> t.order_item_id).collect(java.util.stream.Collectors.toSet()));
         builder.append("--------------------------------\n");
         if (isTakeout(order)) {
             builder.append(PrintMarkup.large("外卖")).append("\n");
@@ -150,7 +154,7 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
     }
 
     private boolean isTakeout(Order order) {
-        return "pickup".equalsIgnoreCase(order.order_type) || "takeout".equalsIgnoreCase(order.order_type);
+        return order.kitchenMirror() || "pickup".equalsIgnoreCase(order.order_type) || "takeout".equalsIgnoreCase(order.order_type);
     }
 
     private String resolveTime(Order order) {

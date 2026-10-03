@@ -9,6 +9,9 @@ import java.util.List;
 
 public class CreateOrderItemRequest {
 
+    // Only accepted by the internal Kitchen Mirror path; ordinary POS rejects this field.
+    public ExternalKitchenSnapshot external_kitchen_snapshot;
+
     @NotNull
     public Long menu_item_id;
 

@@ -23,7 +23,8 @@ public class UberEatsMenuMappingService {
         this.mappings = mappings;
     }
 
-    public record Result(CreateOrderRequest request, List<String> errors) {
+    public record Result(CreateOrderRequest request, List<String> errors, List<String> warnings) {
+        public Result(CreateOrderRequest request, List<String> errors) { this(request, errors, List.of()); }
         public boolean valid() {
             return errors.isEmpty();
         }
@@ -45,10 +46,19 @@ public class UberEatsMenuMappingService {
     }
 
     public Result map(UberEatsStoreMapping store, UberOrderSnapshot snapshot) {
+        return map(store, snapshot, false);
+    }
+
+    public Result mapMirror(UberEatsStoreMapping store, UberOrderSnapshot snapshot) {
+        return map(store, snapshot, true);
+    }
+
+    private Result map(UberEatsStoreMapping store, UberOrderSnapshot snapshot, boolean mirror) {
         CreateOrderRequest request = new CreateOrderRequest();
         request.store_id = store.storeId;
         request.order_type = "delivery";
         List<String> errors = new ArrayList<>(snapshot.issues());
+        List<String> warnings = new ArrayList<>();
         if (!store.uberStoreId.equals(snapshot.store_id())) errors.add("STORE_MISMATCH");
         MenuCatalogResponse catalog = menus.getCatalog(store.storeId);
         if (!store.storeId.equals(catalog.store_id)
@@ -56,7 +66,7 @@ public class UberEatsMenuMappingService {
             errors.add("CATALOG_STORE_MISMATCH");
         List<UberEatsMenuMapping> rules = mappings.findAllByStoreMappingIdOrderByIdAsc(store.id);
         for (UberOrderSnapshot.Item source : snapshot.items()) {
-            addIssues(errors, source);
+            addTreeIssues(errors, source);
             var rule = resolve(rules, "ITEM", "", source);
             List<MenuCatalogResponse.ItemResponse> candidates =
                     allItems(catalog).stream()
@@ -67,6 +77,11 @@ public class UberEatsMenuMappingService {
                                                     : stableItemMatch(i, source))
                             .toList();
             if (candidates.size() != 1) {
+                if (mirror) {
+                    request.items.add(rawLine(source, snapshot.notes()));
+                    warnings.add(label(source) + ": UNMAPPED_ROUTE_REVIEW");
+                    continue;
+                }
                 errors.add(
                         label(source)
                                 + ": ITEM_MAPPING_"
@@ -78,6 +93,12 @@ public class UberEatsMenuMappingService {
                 continue;
             }
             var item = candidates.get(0);
+            if (mirror && (!Boolean.TRUE.equals(item.is_active) || Boolean.TRUE.equals(item.is_sold_out)
+                    || item.station_id == null || item.name_zh == null || item.name_zh.isBlank())) {
+                request.items.add(rawLine(source, snapshot.notes()));
+                warnings.add(label(source) + ": LOCAL_ITEM_UNAVAILABLE_UNMAPPED_ROUTE_REVIEW");
+                continue;
+            }
             if (!Boolean.TRUE.equals(item.is_active) || Boolean.TRUE.equals(item.is_sold_out))
                 errors.add(label(source) + ": ITEM_UNAVAILABLE");
             if (item.station_id == null || item.name_zh == null || item.name_zh.isBlank())
@@ -106,15 +127,51 @@ public class UberEatsMenuMappingService {
                         choices.stream()
                                 .filter(c -> "COMBO".equals(c.group()) && "combo".equals(c.code()))
                                 .toList();
-                if (combo.size() != 1) errors.add(label(source) + ": COMBO_ROOT_TRIGGER_MISSING");
+                if (combo.size() != 1) (mirror ? warnings : errors).add(label(source) + ": COMBO_ROOT_TRIGGER_MISSING");
                 else {
                     line.options.add(option(combo.get(0), 1));
                     selected.add(combo.get(0).id());
                 }
             }
+            List<ExternalKitchenSnapshot.Modifier> rawModifiers = new ArrayList<>();
             for (UberOrderSnapshot.Item modifier : source.modifiers())
-                mapModifier(modifier, source.id(), null, 1, rules, choices, line, errors, selected);
-            validateSelections(catalog, item, line, choices, errors, source);
+                mapModifier(modifier, source.id(), null, 1, rules, choices, line, errors, selected,
+                        mirror, rawModifiers, warnings, List.of());
+            List<String> selectionErrors = new ArrayList<>();
+            validateSelections(catalog, item, line, choices, selectionErrors, source);
+            if (mirror && !selectionErrors.isEmpty()) {
+                // Keep unambiguous known choices; never invent a missing selection or combo.
+                warnings.addAll(selectionErrors);
+                Set<String> conflictingGroups = new HashSet<>();
+                for (String group : List.of("SIZE", "SOUP_BASE", "NOODLE_TYPE", "SPICY_LEVEL", "COMBO"))
+                    if (line.options.stream().filter(o -> group.equals(o.option_group_snapshot))
+                            .mapToLong(o -> o.quantity).sum() > 1) conflictingGroups.add(group);
+                boolean invalidCombo = selectionErrors.stream().anyMatch(e -> e.contains("COMBO")
+                        || e.contains("CHILD_WITHOUT_PARENT")
+                        || e.contains("REQUIRED_") && !e.contains("REQUIRED_SIZE") && !e.contains("REQUIRED_SOUP_BASE"));
+                line.options.removeIf(o -> conflictingGroups.contains(o.option_group_snapshot)
+                        || invalidCombo && o.option_group_snapshot.startsWith("COMBO"));
+                // Re-resolve only surviving safe choices: rejected choices become raw once,
+                // while already mapped add-ons/removals must not print a second time as raw.
+                Set<Long> safeIds = new HashSet<>();
+                line.options.forEach(o -> safeIds.add(o.option_id));
+                List<Choice> safeChoices = choices.stream().filter(c -> safeIds.contains(c.id())).toList();
+                var implicitCombo = rule != null && "COMBO_ROOT".equals(rule.itemMappingMode)
+                        ? line.options.stream().filter(o -> "COMBO".equals(o.option_group_snapshot)).toList()
+                        : List.<CreateOrderItemOptionRequest>of();
+                line.options.clear(); line.options.addAll(implicitCombo);
+                selected.clear(); implicitCombo.forEach(o -> selected.add(o.option_id));
+                rawModifiers.clear();
+                line.notes = joinNotes(snapshot.notes(), source.notes());
+                for (var modifier : source.modifiers())
+                    mapModifier(modifier, source.id(), null, 1, rules, safeChoices, line, errors,
+                            selected, true, rawModifiers, warnings, List.of());
+            } else errors.addAll(selectionErrors);
+            if (mirror && (!rawModifiers.isEmpty() || line.notes != null && line.notes.length() > 255)) {
+                line.external_kitchen_snapshot = new ExternalKitchenSnapshot(source.id(), false,
+                        source.title(), source.quantity(), line.notes, List.copyOf(rawModifiers));
+                line.notes = null; // The full display-only notes are frozen without a 255-char truncation.
+            }
             if (line.notes != null && line.notes.length() > 255)
                 errors.add(label(source) + ": NOTES_EXCEED_LOCAL_LIMIT");
             int instructionBudget =
@@ -128,11 +185,11 @@ public class UberEatsMenuMappingService {
                                                                             .length())
                                                             + 8)
                                     .sum();
-            if (instructionBudget > 255)
+            if (!mirror && instructionBudget > 255)
                 errors.add(label(source) + ": INSTRUCTIONS_EXCEED_LOCAL_LIMIT");
             request.items.add(line);
         }
-        return new Result(request, List.copyOf(errors));
+        return new Result(request, List.copyOf(errors), List.copyOf(warnings));
     }
 
     private void mapModifier(
@@ -144,8 +201,32 @@ public class UberEatsMenuMappingService {
             List<Choice> choices,
             CreateOrderItemRequest line,
             List<String> errors,
-            Set<Long> selected) {
+            Set<Long> selected, boolean mirror, List<ExternalKitchenSnapshot.Modifier> raw,
+            List<String> warnings, List<ExternalKitchenSnapshot.Context> parentContext) {
         addIssues(errors, source);
+        if (mirror) {
+            List<String> probeErrors = new ArrayList<>();
+            CreateOrderItemRequest probe = new CreateOrderItemRequest();
+            probe.menu_item_id = line.menu_item_id;
+            Set<Long> probeSelected = new HashSet<>(selected);
+            mapModifier(source, root, parent, multiplier, rules, choices, probe, probeErrors,
+                    probeSelected, false, new ArrayList<>(), new ArrayList<>(), parentContext);
+            if (!probeErrors.isEmpty()) {
+                if (probeErrors.stream().anyMatch(e -> e.contains("NO_OP_REQUIRES_REVIEW"))) {
+                    raw.add(rawModifier(source, multiplier, parentContext)); warnings.addAll(probeErrors); return;
+                }
+                // Map the parent independently so an unknown child does not erase a known parent.
+                var shallow = new UberOrderSnapshot.Item(source.id(), source.external_data(), source.title(),
+                        source.quantity(), source.removed(), source.notes(), List.of(), source.issues());
+                probeErrors.clear(); probe.options.clear(); probe.notes = null;
+                probeSelected = new HashSet<>(selected);
+                mapModifier(shallow, root, parent, multiplier, rules, choices, probe, probeErrors,
+                        probeSelected, false, new ArrayList<>(), new ArrayList<>(), parentContext);
+                if (!probeErrors.isEmpty()) {
+                    raw.add(rawModifier(source, multiplier, parentContext)); warnings.addAll(probeErrors); return;
+                }
+            }
+        }
         var rule = resolve(rules, source.removed() ? "REMOVED_MODIFIER" : "MODIFIER", root, source);
         if (rule != null && !Objects.equals(rule.localMenuItemId, line.menu_item_id)) {
             errors.add(label(source) + ": MODIFIER_PARENT_ITEM_MISMATCH");
@@ -199,6 +280,8 @@ public class UberEatsMenuMappingService {
                 joinNotes(
                         line.notes,
                         source.notes().isBlank() ? "" : source.title() + ": " + source.notes());
+        var childContext = new ArrayList<>(parentContext);
+        childContext.add(new ExternalKitchenSnapshot.Context(source.id(), source.title()));
         for (var child : source.modifiers())
             mapModifier(
                     child,
@@ -209,7 +292,33 @@ public class UberEatsMenuMappingService {
                     choices,
                     line,
                     errors,
-                    selected);
+                    selected, mirror, raw, warnings, List.copyOf(childContext));
+    }
+
+    private void addTreeIssues(List<String> errors, UberOrderSnapshot.Item source) {
+        addIssues(errors, source);
+        source.modifiers().forEach(m -> addTreeIssues(errors, m));
+    }
+
+    private CreateOrderItemRequest rawLine(UberOrderSnapshot.Item source, String orderNotes) {
+        CreateOrderItemRequest line = new CreateOrderItemRequest();
+        line.item_name_snapshot_zh = "未映射 Uber 菜";
+        line.item_name_snapshot_en = "Unmapped Uber item";
+        line.item_sku_snapshot = "RAW_UBER_FALLBACK";
+        line.category_code_snapshot = "RAW_UBER_FALLBACK";
+        line.unit_price_snapshot = BigDecimal.ZERO;
+        line.quantity = source.quantity();
+        line.combo_role = "standalone";
+        line.external_kitchen_snapshot = new ExternalKitchenSnapshot(source.id(), true, source.title(),
+                source.quantity(), joinNotes(orderNotes, source.notes()),
+                source.modifiers().stream().map(m -> rawModifier(m, 1, List.of())).toList());
+        return line;
+    }
+
+    private ExternalKitchenSnapshot.Modifier rawModifier(UberOrderSnapshot.Item source, int multiplier, List<ExternalKitchenSnapshot.Context> parentContext) {
+        return new ExternalKitchenSnapshot.Modifier(source.id(), source.title(),
+                Math.multiplyExact(multiplier, source.quantity()), source.removed(), source.notes(),
+                source.modifiers().stream().map(m -> rawModifier(m, 1, List.of())).toList(), List.copyOf(parentContext));
     }
 
     private CreateOrderItemOptionRequest option(Choice c, int quantity) {

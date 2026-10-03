@@ -90,6 +90,7 @@ public class HotKitchenPrintEligibilityService {
         List<OrderItemOption> options,
         Map<Long, String> skuByMenuItemId
     ) {
+        if (item != null && item.externalKitchenSnapshot != null && item.externalKitchenSnapshot.rawRoot()) return false;
         boolean hotStation = isDeepFriedStation(task) || isWokStation(task);
         if (isSyntheticComboSideTask(task)) {
             return hotStation;
