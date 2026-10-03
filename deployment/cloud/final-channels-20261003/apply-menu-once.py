@@ -154,6 +154,20 @@ COMMIT;
     return sql
 
 
+
+def parse_history_evidence(output):
+    # PostgreSQL can pretty-print composite rows inside json_agg across lines.
+    # Decode one whole object, allowing only psql transaction tags/lock IDs around it.
+    start = output.find('{')
+    assert start >= 0, 'HISTORY_EVIDENCE_MISSING'
+    evidence, end = json.JSONDecoder().raw_decode(output[start:])
+    surrounding = output[:start] + '\n' + output[start + end:]
+    assert all(not line.strip() or line.strip() in {'BEGIN', 'COMMIT'} or line.strip().isdecimal()
+               for line in surrounding.splitlines()), 'UNEXPECTED_SQL_OUTPUT_OR_EXTRA_JSON'
+    assert isinstance(evidence, dict) and evidence.get('history_unchanged') is True, 'HISTORY_EVIDENCE_INVALID'
+    return evidence
+
+
 def runtime():
     inspected = json.loads(subprocess.check_output(['docker', 'inspect', 'restaurant-pos-staging-backend-1']))[0]
     env = dict(value.split('=', 1) for value in inspected['Config']['Env'])
@@ -214,7 +228,7 @@ def main():
         subprocess.run(['docker', 'exec', '-i', DB, 'pg_restore', '--list'], stdin=source, stdout=subprocess.DEVNULL, check=True)
     runtime()  # Recheck exact Staging runtime immediately before the transaction.
     write_result = db(sql, True)
-    history_evidence = [json.loads(line) for line in write_result.splitlines() if line.startswith('{')]
+    history_evidence = [parse_history_evidence(write_result)]
     assert len(history_evidence) == 1 and history_evidence[0]['history_unchanged'] is True
     counts = json.loads(db("select json_build_object('total',count(*),'roots',count(*) filter(where kind='ITEM' and mapping_action='MAP'),'modifier_maps',count(*) filter(where kind='MODIFIER' and mapping_action='MAP'),'noops',count(*) filter(where mapping_action='NO_OP')) from uber_eats_menu_mappings where store_mapping_id=1"))
     assert counts == {'total': 299, 'roots': 41, 'modifier_maps': 238, 'noops': 20}

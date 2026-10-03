@@ -3,26 +3,26 @@ updated_at: 2026-10-03
 
 repository:
   ref: origin/main
-  sha: ad3de48e973298604362cf21f119434d0b3f85f6
+  sha: 22a71b050371a319a912a025d5252604346539ea
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
   package: FINAL_PRODUCT_CLOSEOUT
-  status: FINAL_CHANNEL_CLOSEOUT_REVIEW_AND_STAGING_PENDING
+  status: FINAL_CHANNEL_CLOSEOUT_STAGING_ACCEPTED
   next_phase_authorized: false
 
 staging:
-  deployed_sha: ad3de48e973298604362cf21f119434d0b3f85f6
-  deployed_sha_semantics: BACKEND_AND_FRONTEND
-  frontend_deployed_sha: ad3de48e973298604362cf21f119434d0b3f85f6
+  deployed_sha: 9c832cae9704033aea6c504e174c41f5129f8bee
+  deployed_sha_semantics: BACKEND_FRONTEND_TRACKED_SEPARATELY
+  frontend_deployed_sha: 22a71b050371a319a912a025d5252604346539ea
   policy_config_sha: d2316234b2936fd89a926aa24a7b6343008834e6
-  flyway: V34
-  acceptance: FINAL_CLOSEOUT_BACKEND891_FRONTEND242_RUNTIME_DATA_REPORTS_PAD_LAYOUT_PASS
-  evidence: FINAL_PRODUCT_CLOSEOUT_20261003.md
-  repair_evidence: FINAL_PRODUCT_CLOSEOUT_20261003.md
+  flyway: V35
+  acceptance: FINAL_CHANNEL_BACKEND921_FRONTEND247_RUNTIME_MAPPING_FINANCIAL_REPORTS_PASS
+  evidence: FINAL_CHANNEL_CLOSEOUT_20261003.md
+  repair_evidence: FINAL_CHANNEL_CLOSEOUT_20261003.md
   cleanup_evidence: PHASE_B_STAGING_SYNTHETIC_FIXTURE_CLEANUP_EXECUTION_EVIDENCE.md
-  runtime_observation_evidence: FINAL_PRODUCT_CLOSEOUT_20261003.md
+  runtime_observation_evidence: FINAL_CHANNEL_CLOSEOUT_20261003.md
   endpoint_policy_evidence: runtime/STAGING_ENDPOINT_POLICY_20260930_EVIDENCE.md
   endpoint_policy_gate: OWNER_CONFIRMED_STORE18_PRINTER_BINDINGS_PENDING
 
@@ -34,7 +34,7 @@ production:
   runtime_observation_evidence: PRODUCTION_V26_V28_RELEASE_EVIDENCE.md
 
 uber_test_store_audit:
-  observed_at: 2026-10-03T01:15:34Z
+  observed_at: 2026-10-03T20:49:02Z
   environment: STAGING_SANDBOX_ONLY
   evidence: UBER_KITCHEN_MIRROR_E2E_20261002.md
   test_store_uuid: bd993244-5589-4b19-8f0d-dc2ba73d4273
@@ -47,16 +47,20 @@ uber_test_store_audit:
   internal_signature_test: PASS_FIXED_STAGING_DOMAIN
   dashboard_webhook: PASS_VERIFIED_FIXED_DOMAIN_PRIMARY_BASIC_HMAC
   explicit_signing_key_runtime: PASS_PRESENT_PUBLIC_WRONG_401_VALID_200
-  menu_mapping: CONFIRMED_RULES_PERSISTED_25_FINAL_CONTEXT_PREVIEWS_PASS
+  menu_mapping: ALL_KNOWN_CONTEXTS_PERSISTED_FINAL_12_READ_ONLY_PREVIEWS_PASS
   menu_comparison_evidence: UBER_TEST_MENU_FULL_COMPARE_20261002.md
   menu_comparison_observed_at: 2026-10-02T15:43:24Z
-  human_mapping_confirmation: ALL_41_ROOTS_PLUS_25_FINAL_MODIFIER_CONTEXTS_287_RULES_PERSISTED
+  human_mapping_confirmation: ALL_41_ROOTS_AND_APPROVED_MODIFIER_CONTEXTS_299_RULES_PERSISTED
   final_mapping_table: UBER_KITCHEN_MAPPING_FINAL_20261002.md
   order_release_enabled: false
   order_manager_client_id: NOT_RETURNED_AFTER_AUTHORIZED_TEST_RESIGNATION
   processing_mode: KITCHEN_MIRROR
   kitchen_mirror: REAL_TEST_ORDER_ACCEPTED_OBSERVED_ONE_LOCAL_ORDER_TWO_MOCK_MODULES_PASS
-  persisted_mapping_rules: 287
+  persisted_mapping_rules: 299
+  mapped_modifier_contexts: 238
+  noop_modifier_contexts: 20
+  known_unmapped_modifier_contexts: 0
+  latest_mapping_evidence: FINAL_CHANNEL_CLOSEOUT_20261003.md
   mapped_root_items: 41
   unmapped_root_items: 0
   combo_root_items: 8
@@ -78,25 +82,43 @@ uber_test_store_audit:
   production_changed: false
 
 final_product_closeout:
-  evidence: FINAL_PRODUCT_CLOSEOUT_20261003.md
-  modifier_contexts_added: 25
-  remaining_unmapped_modifier_contexts: 12
-  addon_conflicts_before: 3
-  addon_conflicts_after: 2
+  evidence: FINAL_CHANNEL_CLOSEOUT_20261003.md
+  modifier_contexts_added: 12
+  remaining_unmapped_modifier_contexts: 0
+  read_only_mapping_previews: PASS_12_OF_12
+  canonical_tea_egg_links: 11
+  addon_conflicts_before: 2
+  addon_conflicts_after: 1
+  remaining_addon_conflict:
+    option_id: 370
+    menu_item_id: 25
+    local_sku: braised_beef_noodle
+    name_zh: 加蛋
+    name_en: Extra Egg
+    price: 1.99
+    active: true
+    option_code: null
+    option_group: null
+    decision: OWNER_IDENTITY_REQUIRED_NO_UNIQUE_MATCH
   b8e83_note_source: cart.special_instructions
   note_author_classification: UNKNOWN
   boilerplate_filter: NOT_APPLIED_CUSTOMER_CAPABLE_FIELD_PRESERVED
-  daily_finish: PASS_DOMAIN_POSTGRES_CONCURRENCY_TIMEZONE_CATCHUP_TESTS
-  daily_finish_actual_2230_observation: NOT_YET_DUE_AT_ACCEPTANCE
-  dashboard_reports: PASS_SUBMITTED_TIME_EXTERNAL_AND_CANCELLED_EXCLUSION
-  report_store_date_pairs_rebuilt: 289
+  daily_finish: PASS_2330_STORE_LOCAL_TORONTO_EDT_EST_CATCHUP_IDEMPOTENCY_TESTS
+  daily_finish_actual_2330_observation: NOT_YET_DUE_AT_ACCEPTANCE
+  dashboard_reports: PASS_CHANNEL_TOTALS_SCOPE_ISOLATION_AND_REPORT_PARITY
+  financial_snapshots_backfilled: 13
+  financial_snapshots_complete_revenue: 13
+  financial_backfill_blocked: 0
+  historical_fields_order_print_hashes: UNCHANGED
+  uber_today_database_parity: PASS_5_ORDERS_45_ITEMS_CAD_646_92
+  week_month_channel_totals: PASS_IN_STORE_CAD_19_53_UBER_CAD_885_92_TOTAL_CAD_905_45
   pad_layout: PASS_1024_AND_768_NO_PAGE_OVERFLOW
   production_plan: UBER_PRODUCTION_ROLLOUT_PLAN_ZH.md
   production_mutation: NONE
 
 gate:
-  type: TECHNICAL
-  next_action: REVIEW_MERGE_STAGING_MAPPING_FINANCIAL_BACKFILL_AND_CHANNEL_ACCEPTANCE
+  type: OWNER
+  next_action: DECIDE_ACTIVE_GENERIC_ADDON_370_IDENTITY_ONLY
 
 authorization:
   final_product_closeout: OWNER_AUTHORIZED_FINAL_12_MODIFIER_CONTEXTS_ADDON_CANONICAL_2330_LOCAL_FINISH_CHANNEL_ANALYTICS_V35_BACKFILL_TEST_REVIEW_MERGE_STAGING_ONLY
@@ -116,4 +138,4 @@ authorization:
   production: NONE
 
 stop:
-  marker: FINAL_CHANNEL_CLOSEOUT_IN_PROGRESS_PRODUCTION_NOT_AUTHORIZED
+  marker: FINAL_CHANNEL_CLOSEOUT_STAGING_ACCEPTED_PRODUCTION_NOT_AUTHORIZED
