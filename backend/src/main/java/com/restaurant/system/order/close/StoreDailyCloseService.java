@@ -23,8 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class StoreDailyCloseService {
     public static final String ACTION = "AUTO_FINISHED_END_OF_DAY";
-    public static final String REASON = "DAILY_22_30_AUTO_FINISH";
-    private static final LocalTime CLOSE_TIME = LocalTime.of(22, 30);
+    public static final String REASON = "DAILY_23_30_AUTO_FINISH";
+    private static final LocalTime CLOSE_TIME = LocalTime.of(23, 30);
     private static final Set<String> ACTIVE_STATUSES = Set.of("submitted", "preparing", "ready");
     private final StoreRepository stores;
     private final OrderRepository orders;

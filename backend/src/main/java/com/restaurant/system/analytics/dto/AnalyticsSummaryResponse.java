@@ -11,6 +11,7 @@ public class AnalyticsSummaryResponse {
     public Long organization_id;
     public Long store_id;
     public String range;
+    public ChannelSalesSummary channel_sales;
     public String start_date;
     public String end_date;
     public List<SalesDailySummary> sales_daily_summaries;

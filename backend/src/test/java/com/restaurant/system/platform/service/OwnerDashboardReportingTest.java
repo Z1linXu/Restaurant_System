@@ -27,12 +27,13 @@ class OwnerDashboardReportingTest {
     OrderRepository orders = mock(OrderRepository.class);
     OrderItemRepository items = mock(OrderItemRepository.class);
     MenuItemRepository menu = mock(MenuItemRepository.class);
+    com.restaurant.system.analytics.service.AnalyticsReadScope readScope = mock(com.restaurant.system.analytics.service.AnalyticsReadScope.class);
     OwnerDashboardService service = new OwnerDashboardServiceImpl(menu, mock(MenuCategoryRepository.class), stores,
-        mock(OrganizationRepository.class), orders, items, mock(InventoryItemRepository.class));
+        mock(OrganizationRepository.class), orders, items, mock(InventoryItemRepository.class), mock(com.restaurant.system.analytics.service.ChannelSalesService.class), readScope);
 
     @BeforeEach void setup() {
         Store store = new Store(); store.id = 1L; store.organization_id = 1L; store.name = "Test";
-        when(stores.findAll()).thenReturn(List.of(store));
+        when(readScope.comparisonStores(1L, 1L)).thenReturn(List.of(store));
         when(stores.findById(1L)).thenReturn(java.util.Optional.of(store));
     }
 
@@ -46,7 +47,7 @@ class OwnerDashboardReportingTest {
         assertThat(result.trend.points).extracting(row -> row.label).containsExactly("10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00");
         assertThat(result.trend.points.get(8).value).isEqualByComparingTo("30.00");
         assertThat(result.trend.points.get(11).value).isZero();
-        assertThat(result.sales_timestamp).isEqualTo("submitted_at");
+        assertThat(result.sales_timestamp).isEqualTo("POS_SUBMITTED_AT_UBER_PLACED_AT");
     }
 
     @Test void outsideTradingHoursRemainInSalesAndDailyWeekMonthButNotHourlyChart() {
@@ -100,7 +101,7 @@ class OwnerDashboardReportingTest {
 
     @Test void selectedStoreCannotIncludeAnotherStoresSalesOrFriedCatalog() {
         Store second = new Store(); second.id = 2L; second.organization_id = 1L;
-        var first = stores.findById(1L).orElseThrow(); when(stores.findAll()).thenReturn(List.of(first, second));
+        var first = stores.findById(1L).orElseThrow(); when(readScope.comparisonStores(1L, 1L)).thenReturn(List.of(first, second));
         when(orders.findAllByStoreId(1L)).thenReturn(List.of(order(1, 18, "10")));
         when(orders.findAllByStoreId(2L)).thenReturn(List.of(order(2, 18, "90")));
         MenuItem chow = new MenuItem(); chow.sku = "chicken_chow_mein";

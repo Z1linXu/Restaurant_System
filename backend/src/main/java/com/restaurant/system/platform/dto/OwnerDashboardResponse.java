@@ -18,6 +18,7 @@ public class OwnerDashboardResponse {
     public List<StoreComparisonRow> store_comparison;
     public List<RecentOrderRow> recent_orders;
     public String sales_timestamp;
+    public com.restaurant.system.analytics.dto.ChannelSalesSummary channel_sales;
     public List<CategorySales> noodle_sales;
     public List<CategorySales> revenue_mix;
 

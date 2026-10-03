@@ -311,10 +311,29 @@ public class StoreAddonService {
             g.rows().stream().map(Row::price).distinct().toList(), g.conflict())).toList();
     }
 
+    // Only unlinked, explicitly inactive legacy rows with no current business
+    // references leave the editable catalog. Their DB rows and order snapshots
+    // remain intact. Linked inactive eligibility and ambiguous active rows stay.
     private List<Row> rows(Long storeId) {
         return jdbc.query("""
             select o.* from menu_item_options o join menu_items i on i.id=o.menu_item_id
-            where i.store_id=? order by o.option_code asc nulls first, o.id asc
+            where i.store_id=?
+              and (
+                o.store_addon_id is not null or o.is_active is distinct from false
+                or exists (
+                  select 1 from menu_item_options child
+                  where child.parent_option_id=o.id and child.is_active=true
+                )
+                or exists (
+                  select 1 from order_item_options chosen
+                  join order_items line on line.id=chosen.order_item_id
+                  join orders current_order on current_order.id=line.order_id
+                  where (chosen.option_id=o.id or chosen.parent_option_id_snapshot=o.id)
+                    and coalesce(current_order.status,'') not in ('completed','cancelled')
+                    and coalesce(line.status,'') <> 'cancelled'
+                )
+              )
+            order by o.option_code asc nulls first, o.id asc
             """, (rs, n) -> new Row(rs.getLong("id"), rs.getLong("menu_item_id"), rs.getString("option_code"),
                 rs.getString("option_group"), rs.getString("option_type"), rs.getString("name_zh"),
                 rs.getString("name_en"), rs.getBigDecimal("price_delta"), rs.getObject("is_active", Boolean.class),

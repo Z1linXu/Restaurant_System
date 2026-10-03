@@ -49,7 +49,7 @@ class StoreDailyClosePostgresIntegrationTest {
     @SpyBean StoreDailyCloseRunRepository runs;
     @MockBean OrderDispatchOutboxProcessor outboxProcessor;
     Long org, store;
-    Instant now = Instant.parse("2026-10-03T02:30:00Z");
+    Instant now = Instant.parse("2026-10-03T03:30:00Z");
     LocalDateTime submitted = LocalDateTime.ofInstant(Instant.parse("2026-10-02T22:15:00Z"), ZoneId.systemDefault());
 
     @BeforeEach void setup() {
@@ -76,7 +76,7 @@ class StoreDailyClosePostgresIntegrationTest {
         assertThat(count("store_daily_close_runs", "store_id=? and completed_at is not null", store)).isEqualTo(1);
         String metadata = db.queryForObject("select metadata_json from audit_logs where store_id=? and entity_id=? and action='AUTO_FINISHED_END_OF_DAY'", String.class, store, order);
         var audit = json.readTree(metadata);
-        assertThat(audit.path("reason").asText()).isEqualTo("DAILY_22_30_AUTO_FINISH");
+        assertThat(audit.path("reason").asText()).isEqualTo("DAILY_23_30_AUTO_FINISH");
         assertThat(audit.path("table_no").asText()).isEqualTo("T1-A");
         assertThat(audit.path("executed_at").asText()).isEqualTo(now.toString());
         assertThat(close.closeStore(store, now.plusSeconds(300))).isZero();

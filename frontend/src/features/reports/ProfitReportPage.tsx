@@ -55,8 +55,8 @@ export function ProfitReportPage() {
   return (
     <OwnerAdminReportsShell
       activeReport="profit"
-      title="Profit Report"
-      description="Profitability reporting built from sales_daily_summary and menu_item_sales_summary."
+      title="In-store Profit Report"
+      description="In-store POS profitability only. Uber merchandise revenue is in Sales; platform fees and payout costs are not assumed."
       topBar={
         <ReportsTopBar
           stores={stores}
@@ -80,7 +80,7 @@ export function ProfitReportPage() {
       ) : null}
 
       <div className="grid gap-4 xl:grid-cols-4">
-        <ReportMetricCard label="Total Sales" value={formatCurrency(totals.totalSales)} compareValue={0} />
+        <ReportMetricCard label="In-store Sales" value={formatCurrency(totals.totalSales)} compareValue={0} />
         <ReportMetricCard label="Total Cost" value={formatCurrency(totals.totalCost)} compareValue={0} />
         <ReportMetricCard label="Total Profit" value={formatCurrency(totals.totalProfit)} compareValue={0} />
         <ReportMetricCard label="Profit Margin" value={formatPercent(totals.profitMargin)} compareValue={0} />

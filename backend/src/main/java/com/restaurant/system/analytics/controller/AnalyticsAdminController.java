@@ -24,6 +24,7 @@ public class AnalyticsAdminController {
 
     private static final Logger log = LoggerFactory.getLogger(AnalyticsAdminController.class);
 
+    private final com.restaurant.system.analytics.service.AnalyticsReadScope readScope;
     private final AnalyticsAggregationService analyticsAggregationService;
     private final AuthorizationService authorizationService;
     private final FeatureFlagService featureFlagService;
@@ -33,8 +34,10 @@ public class AnalyticsAdminController {
         AnalyticsAggregationService analyticsAggregationService,
         AuthorizationService authorizationService,
         FeatureFlagService featureFlagService,
-        StoreModuleAccessEvaluator moduleAccessEvaluator
+        StoreModuleAccessEvaluator moduleAccessEvaluator,
+        com.restaurant.system.analytics.service.AnalyticsReadScope readScope
     ) {
+        this.readScope = readScope;
         this.analyticsAggregationService = analyticsAggregationService;
         this.authorizationService = authorizationService;
         this.featureFlagService = featureFlagService;
@@ -54,6 +57,8 @@ public class AnalyticsAdminController {
             featureFlagService.requireEnabled(FeaturePackage.ANALYTICS);
         }
 
+        if (store_id == null) readScope.requireGlobalRebuild();
+        else readScope.stores(null, store_id);
         analyticsAggregationService.rebuildForDate(LocalDate.parse(date), store_id);
         return ApiResponse.success("Analytics rebuild completed", "OK");
     }
@@ -75,6 +80,7 @@ public class AnalyticsAdminController {
             featureFlagService.requireEnabled(FeaturePackage.ANALYTICS);
         }
 
+        readScope.stores(organization_id, store_id);
         AnalyticsSummaryResponse response = analyticsAggregationService.getSummaries(
                 organization_id,
                 store_id,

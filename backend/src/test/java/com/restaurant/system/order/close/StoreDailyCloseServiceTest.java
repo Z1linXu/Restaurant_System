@@ -26,7 +26,7 @@ class StoreDailyCloseServiceTest {
     AuditLogRepository audits = mock(AuditLogRepository.class);
     StoreDailyCloseService service = new StoreDailyCloseService(stores, orders, runs, finish, audits, new ObjectMapper(), "America/Toronto");
     Store store;
-    Instant closing = Instant.parse("2026-10-03T02:30:00Z");
+    Instant closing = Instant.parse("2026-10-03T03:30:00Z");
 
     @BeforeEach void setup() {
         store = new Store(); store.id = 1L; store.status = "active";
@@ -35,12 +35,12 @@ class StoreDailyCloseServiceTest {
         when(orders.findDailyCloseCandidateIds(anyLong(), any(), any())).thenReturn(List.of());
     }
 
-    @Test void at2229NothingIsReservedOrFinished() {
+    @Test void at2329NothingIsReservedOrFinished() {
         assertThat(service.closeStore(1L, closing.minusSeconds(60))).isZero();
         verifyNoInteractions(runs, orders, finish, audits);
     }
 
-    @Test void at2230UsesStoreDayAndRequiredAuditWithNoPayment() throws Exception {
+    @Test void at2330UsesStoreDayAndRequiredAuditWithNoPayment() throws Exception {
         Order order = order(2L); candidates(order);
         assertThat(service.closeStore(1L, closing)).isEqualTo(1);
         verify(finish).completeOrder(2L);
@@ -52,7 +52,7 @@ class StoreDailyCloseServiceTest {
         assertThat(audit.getValue().entity_id).isEqualTo(2L);
         var metadata = new ObjectMapper().readTree(audit.getValue().metadata_json);
         assertThat(metadata.path("table_no").asText()).isEqualTo("T1-A");
-        assertThat(metadata.path("reason").asText()).isEqualTo("DAILY_22_30_AUTO_FINISH");
+        assertThat(metadata.path("reason").asText()).isEqualTo("DAILY_23_30_AUTO_FINISH");
         assertThat(metadata.path("executed_at").asText()).isEqualTo(closing.toString());
         assertThat(audit.getValue().metadata_json).doesNotContain("payment");
     }
@@ -64,7 +64,7 @@ class StoreDailyCloseServiceTest {
         verifyNoInteractions(orders, finish, audits);
     }
 
-    @Test void first2235RunCatchesUpOnlyTodaysBusinessDate() {
+    @Test void first2335RunCatchesUpOnlyTodaysBusinessDate() {
         Order order = order(2L); candidates(order);
         service.closeStore(1L, closing.minusSeconds(60));
         StoreDailyCloseService restarted = new StoreDailyCloseService(stores, orders, runs, finish, audits, new ObjectMapper(), "America/Toronto");
@@ -77,7 +77,7 @@ class StoreDailyCloseServiceTest {
     @Test void timezoneComesFromStoreIncludingItsDifferentDateAndDst() {
         store.timezone = "America/Vancouver";
         assertThat(service.closeStore(1L, closing)).isZero();
-        Instant westClosing = Instant.parse("2026-10-03T05:30:00Z");
+        Instant westClosing = Instant.parse("2026-10-03T06:30:00Z");
         service.closeStore(1L, westClosing);
         verify(runs).reserve(1L, LocalDate.of(2026, 10, 2), "America/Vancouver", westClosing);
         verify(orders).findDailyCloseCandidateIds(1L,
@@ -85,10 +85,23 @@ class StoreDailyCloseServiceTest {
             LocalDateTime.ofInstant(Instant.parse("2026-10-03T07:00:00Z"), ZoneId.systemDefault()));
         // Toronto's fall-back day has 25 hours, not a fixed 24-hour query window.
         store.timezone = "America/Toronto";
-        service.closeStore(1L, Instant.parse("2026-11-02T03:30:00Z"));
+        service.closeStore(1L, Instant.parse("2026-11-02T04:30:00Z"));
         verify(orders).findDailyCloseCandidateIds(1L,
             LocalDateTime.ofInstant(Instant.parse("2026-11-01T04:00:00Z"), ZoneId.systemDefault()),
             LocalDateTime.ofInstant(Instant.parse("2026-11-02T05:00:00Z"), ZoneId.systemDefault()));
+    }
+
+    @Test void summerAndWinterBothWaitUntilTorontoWallClock2330() {
+        // EDT is UTC-04; EST is UTC-05. Neither uses a fixed UTC closing hour.
+        Map<LocalDate, Instant> closings = Map.of(
+            LocalDate.of(2026, 7, 14), Instant.parse("2026-07-15T03:30:00Z"),
+            LocalDate.of(2026, 1, 14), Instant.parse("2026-01-15T04:30:00Z"));
+        closings.forEach((date, instant) -> {
+            service.closeStore(1L, instant.minusSeconds(60));
+            verify(runs, never()).reserve(1L, date, "America/Toronto", instant.minusSeconds(60));
+            service.closeStore(1L, instant);
+            verify(runs).reserve(1L, date, "America/Toronto", instant);
+        });
     }
 
     @Test void rechecksLockedOrdersAndIgnoresHistoryDraftUberTakeoutCancelledAndOtherStore() {

@@ -12,6 +12,10 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 public interface UberEatsOrderRepository extends JpaRepository<UberEatsOrder, Long> {
+    @Query("select o from UberEatsOrder o where o.environment=:env and o.storeId=:store"
+            + " and o.placedAt>=:start and o.placedAt<:end order by o.id")
+    List<UberEatsOrder> salesWindow(@Param("env") String env, @Param("store") Long store,
+            @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
     Optional<UberEatsOrder> findByEnvironmentAndUberOrderId(String environment, String uberOrderId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
