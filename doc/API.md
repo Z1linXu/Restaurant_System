@@ -1929,3 +1929,22 @@ The real TEST Store notification used `X-Environment: production` despite a vali
 Mirror accepted/released orders with missing identities dispatch as `PARTIALLY_MAPPED` / `KITCHEN_SENT_WITH_MAPPING_WARNINGS`. Unknown roots use null local menu/station IDs and the frozen internal `external_kitchen_snapshot` (item ID/title/quantity/notes plus recursive modifier ID/name/quantity/removed/notes plus parentContext IDs/names). They always enter GRAB with `UNMAPPED_ROUTE_REVIEW`, without guessed HOT routing or BOM. Known roots keep safe local mappings and raw unknown modifiers. `raw_items` exposes the frozen readable fallback alongside `mapped_items`; kitchen reprint stays available. Public ordinary order creation cannot supply external fallback metadata. Structural and identity errors still block. No new mapping persistence or remote decision API is introduced.
 
 PAD printing endpoints retain their ResponseStatusException HTTP codes and return `PAD_PRINT_PROTOCOL_ERROR` plus the safe reason. Missing assigned host yields 409. New jobs with unconfigured endpoints are FAILED / `PRINTER_CONFIGURATION_REQUIRED`, retaining payload and preview. The Android worker advances only after a definite pre-TCP payload/configuration failure is acknowledged by `/fail`; it never marks such a job PRINTED.
+
+
+### Owner Dashboard sales presentation contract
+
+The existing Dashboard response additionally returns `sales_timestamp: "submitted_at"`,
+`noodle_sales[]` and `revenue_mix[]`. Category rows contain `reporting_group`,
+`quantity_sold`, `revenue`, `percentage`. Groups are SOUP_NOODLE, DRY_NOODLE,
+FRIED_NOODLE, DRINK, ALCOHOL, SIDE, FRIED, OTHER. Eligibility remains completed,
+submitted, non-Uber/non-EXTERNAL_PLATFORM. Actual existing Sales totals are allocated
+by frozen line amounts, not current catalog prices. Today trend is10:00–22:00;
+week/month remain daily. Old Recent/Active/order-status response fields remain
+compatible but are no longer shown on Dashboard.
+
+Report summary rebuild remains `POST /api/v1/admin/analytics/rebuild?date=YYYY-MM-DD&store_id=ID`
+(no body, existing authenticated Store authorization). After the submitted-time
+change, rebuild the union of old summary dates and eligible submitted dates, with
+an explicit Store ID. No order, payment or print records are rewritten. Daily
+automatic Finish is an internal worker, not a new public API; it reuses the manual
+complete domain and records AUTO_FINISHED_END_OF_DAY plus the durable V34 ledger.

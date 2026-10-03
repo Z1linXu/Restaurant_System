@@ -1,6 +1,7 @@
 package com.restaurant.system.analytics.service.impl;
 
 import com.restaurant.system.analytics.dto.AnalyticsSummaryResponse;
+import com.restaurant.system.analytics.support.SalesReporting;
 import com.restaurant.system.analytics.entity.AnalyticsAlert;
 import com.restaurant.system.analytics.entity.MenuItemSalesSummary;
 import com.restaurant.system.analytics.entity.SalesDailySummary;
@@ -138,7 +139,7 @@ public class AnalyticsAggregationServiceImpl implements AnalyticsAggregationServ
     private void rebuildStoreForDate(LocalDate summaryDate, Store store) {
         Date sqlSummaryDate = Date.valueOf(summaryDate);
         List<Order> storeOrders = orderRepository.findAllByStoreId(store.id).stream().filter(order -> !order.kitchenMirror() && !"UBER_EATS".equals(order.external_source)).toList();
-        List<Order> completedOrders = orderRepository.findCompletedByStoreIdAndCompletedDate(store.id, sqlSummaryDate).stream().filter(order -> !order.kitchenMirror() && !"UBER_EATS".equals(order.external_source)).toList();
+        List<Order> completedOrders = storeOrders.stream().filter(SalesReporting::eligible).filter(order -> matchesDate(order.submitted_at, summaryDate)).toList();
         List<Order> cancelledOrders = orderRepository.findCancelledByStoreIdAndUpdatedDate(store.id, sqlSummaryDate).stream().filter(order -> !order.kitchenMirror() && !"UBER_EATS".equals(order.external_source)).toList();
         List<OrderItem> completedOrderItems = fetchOrderItems(completedOrders);
         Map<Long, BigDecimal> costByMenuItemId = loadItemCosts(completedOrderItems);
@@ -184,8 +185,8 @@ public class AnalyticsAggregationServiceImpl implements AnalyticsAggregationServ
         salesDailySummaryRepository.save(dailySummary);
 
         Map<Integer, List<Order>> ordersByHour = completedOrders.stream()
-            .filter(order -> order.completed_at != null)
-            .collect(Collectors.groupingBy(order -> order.completed_at.getHour()));
+            .filter(order -> order.submitted_at != null)
+            .collect(Collectors.groupingBy(order -> order.submitted_at.getHour()));
         for (int hour = 0; hour < 24; hour += 1) {
             List<Order> hourOrders = ordersByHour.getOrDefault(hour, List.of());
             SalesHourlySummary hourlySummary = new SalesHourlySummary();
@@ -201,13 +202,15 @@ public class AnalyticsAggregationServiceImpl implements AnalyticsAggregationServ
         }
 
         Map<Long, AggregatedItem> aggregatedItems = new LinkedHashMap<>();
-        for (OrderItem item : completedOrderItems) {
+        for (var allocation : SalesReporting.allocate(completedOrders, completedOrderItems)) {
+            OrderItem item = allocation.item();
+            if (item == null) continue;
             AggregatedItem current = aggregatedItems.computeIfAbsent(
                 item.menu_item_id,
                 ignored -> new AggregatedItem(item.menu_item_id, item.item_name_snapshot_zh, item.item_name_snapshot_en)
             );
             current.quantitySold += optionalInt(item.quantity);
-            current.salesAmount = current.salesAmount.add(optional(item.line_amount));
+            current.salesAmount = current.salesAmount.add(allocation.revenue());
             current.totalCost = current.totalCost.add(scale(optional(costByMenuItemId.get(item.menu_item_id)).multiply(BigDecimal.valueOf(Math.max(optionalInt(item.quantity), 0)))));
             current.orderIds.add(item.order_id);
         }
@@ -405,7 +408,7 @@ public class AnalyticsAggregationServiceImpl implements AnalyticsAggregationServ
             return List.of();
         }
         List<Long> orderIds = orders.stream().map(order -> order.id).toList();
-        return orderItemRepository.findAllByOrderIds(orderIds);
+        return orderItemRepository.findAllByOrderIds(orderIds).stream().filter(SalesReporting::eligibleItem).toList();
     }
 
     private boolean matchesDate(LocalDateTime value, LocalDate targetDate) {

@@ -149,6 +149,7 @@ public class OrderServiceImpl implements OrderService {
         ORDER_STATUS_READY
     );
 
+    private final jakarta.persistence.EntityManager entityManager;
     private final OrderRepository orderRepository;
     private final OrderUpdateBatchRepository orderUpdateBatchRepository;
     private final OrderItemRepository orderItemRepository;
@@ -190,8 +191,10 @@ public class OrderServiceImpl implements OrderService {
         RealtimeEventPublisher realtimeEventPublisher,
         PrintDispatcherService printDispatcherService,
         StoreComboConfigurationService storeComboConfigurationService,
-        PrintingDisplayRuleService printingDisplayRuleService
+        PrintingDisplayRuleService printingDisplayRuleService,
+        jakarta.persistence.EntityManager entityManager
     ) {
+        this.entityManager = entityManager;
         this.orderRepository = orderRepository;
         this.orderUpdateBatchRepository = orderUpdateBatchRepository;
         this.orderItemRepository = orderItemRepository;
@@ -685,7 +688,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse completeOrder(Long id) {
-        Order order = requireOrder(id);
+        Order order = requireOrderForUpdate(id);
         requireInStoreOrder(order);
 
         if (ORDER_STATUS_COMPLETED.equals(order.status)) {
@@ -739,7 +742,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse cancelOrder(Long id) {
-        Order order = requireOrder(id);
+        Order order = requireOrderForUpdate(id);
         requireInStoreOrder(order);
 
         if (ORDER_STATUS_COMPLETED.equals(order.status)) {
@@ -1395,6 +1398,18 @@ public class OrderServiceImpl implements OrderService {
     private Long orderItemsOrderId(Long orderItemId) {
         OrderItem orderItem = requireOrderItem(orderItemId);
         return orderItem.order_id;
+    }
+
+    private Order requireOrderForUpdate(Long id) {
+        Order order = orderRepository.findByIdForUpdate(id);
+        if (order == null) {
+            throw new BusinessException("Order not found: " + id);
+        }
+        // Authorization may have loaded this Order into the HTTP request's OSIV
+        // persistence context before another transaction completed it. A locking
+        // query alone does not replace that managed state; refresh while locked.
+        entityManager.refresh(order, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        return order;
     }
 
     private Order requireOrder(Long id) {

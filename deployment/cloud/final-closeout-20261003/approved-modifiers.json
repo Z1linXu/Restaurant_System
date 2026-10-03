@@ -1,0 +1,252 @@
+[
+  {
+    "uberIdentifier": "524842f3-7e5d-441f-813b-895f0491179f",
+    "uberName": "Extra Meat",
+    "uberItemId": "eca7fbf3-a666-454b-b36e-7d380e80b49d",
+    "parentName": "Beef Lanzhou Noodles Special Combo",
+    "localSku": "traditional_beef_noodle",
+    "localOptionCode": "extra_meat",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "524842f3-7e5d-441f-813b-895f0491179f",
+    "uberName": "Extra Meat",
+    "uberItemId": "Braised_Beef_Tendon_",
+    "parentName": "Braised Beef Tendon in Brown Sauce with Noodles",
+    "localSku": "braised_beef_tendon_noodle",
+    "localOptionCode": "extra_meat",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "524842f3-7e5d-441f-813b-895f0491179f",
+    "uberName": "Extra Meat",
+    "uberItemId": "3b8b2764-d492-47e0-9977-107ed4e67d1f",
+    "parentName": "Noodle with Vegetables",
+    "localSku": "vegetable_noodle",
+    "localOptionCode": "extra_meat",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "524842f3-7e5d-441f-813b-895f0491179f",
+    "uberName": "Extra Meat",
+    "uberItemId": "e72231fb-9029-4539-91d6-b6efbeeb3767",
+    "parentName": "Noodles with Vegetables Combo",
+    "localSku": "vegetable_noodle",
+    "localOptionCode": "extra_meat",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "524842f3-7e5d-441f-813b-895f0491179f",
+    "uberName": "Extra Meat",
+    "uberItemId": "b940caa7-6e37-4b3b-b964-3e10151e7903",
+    "parentName": "Traditional Lanzhou Hand-pull Beef Noodle",
+    "localSku": "traditional_beef_noodle",
+    "localOptionCode": "extra_meat",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "2ad33578-e7c6-4fa3-ac38-f4dff54a7eae",
+    "uberName": "Extra Noodle",
+    "uberItemId": "87bbecca-85fa-4681-a3dd-06c8bd97d70a",
+    "parentName": "Dandan Noodle Combo (With Peanuts)",
+    "localSku": "dan_dan_noodle",
+    "localOptionCode": "extra_noodle",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "2ad33578-e7c6-4fa3-ac38-f4dff54a7eae",
+    "uberName": "Extra Noodle",
+    "uberItemId": "2be2f7be-aa39-4742-bf91-edc9759f19c0",
+    "parentName": "Dandan Noodles (With Peanuts)",
+    "localSku": "dan_dan_noodle",
+    "localOptionCode": "extra_noodle",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "2ad33578-e7c6-4fa3-ac38-f4dff54a7eae",
+    "uberName": "Extra Noodle",
+    "uberItemId": "41989752-4e09-4fc5-8d22-96e9427173eb",
+    "parentName": "Zha Jiang Noodle",
+    "localSku": "zha_jiang_noodle",
+    "localOptionCode": "extra_noodle",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "2ad33578-e7c6-4fa3-ac38-f4dff54a7eae",
+    "uberName": "Extra Noodle",
+    "uberItemId": "e8188b13-132d-48af-a981-a3dd1476ee01",
+    "parentName": "Zhajiang Noodles Combo",
+    "localSku": "zha_jiang_noodle",
+    "localOptionCode": "extra_noodle",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "dddc88d0-5f52-4266-af87-ea7477d63f30",
+    "uberName": "Extra Noodle",
+    "uberItemId": "eca7fbf3-a666-454b-b36e-7d380e80b49d",
+    "parentName": "Beef Lanzhou Noodles Special Combo",
+    "localSku": "traditional_beef_noodle",
+    "localOptionCode": "extra_noodle",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "dddc88d0-5f52-4266-af87-ea7477d63f30",
+    "uberName": "Extra Noodle",
+    "uberItemId": "Braised_Beef_Tendon_",
+    "parentName": "Braised Beef Tendon in Brown Sauce with Noodles",
+    "localSku": "braised_beef_tendon_noodle",
+    "localOptionCode": "extra_noodle",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "dddc88d0-5f52-4266-af87-ea7477d63f30",
+    "uberName": "Extra Noodle",
+    "uberItemId": "3b8b2764-d492-47e0-9977-107ed4e67d1f",
+    "parentName": "Noodle with Vegetables",
+    "localSku": "vegetable_noodle",
+    "localOptionCode": "extra_noodle",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "dddc88d0-5f52-4266-af87-ea7477d63f30",
+    "uberName": "Extra Noodle",
+    "uberItemId": "e72231fb-9029-4539-91d6-b6efbeeb3767",
+    "parentName": "Noodles with Vegetables Combo",
+    "localSku": "vegetable_noodle",
+    "localOptionCode": "extra_noodle",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "dddc88d0-5f52-4266-af87-ea7477d63f30",
+    "uberName": "Extra Noodle",
+    "uberItemId": "b940caa7-6e37-4b3b-b964-3e10151e7903",
+    "parentName": "Traditional Lanzhou Hand-pull Beef Noodle",
+    "localSku": "traditional_beef_noodle",
+    "localOptionCode": "extra_noodle",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "2ca784f1-b086-42bb-aee0-64840d75cacf",
+    "uberName": "Extra Vegetable",
+    "uberItemId": "eca7fbf3-a666-454b-b36e-7d380e80b49d",
+    "parentName": "Beef Lanzhou Noodles Special Combo",
+    "localSku": "traditional_beef_noodle",
+    "localOptionCode": "bok_choy",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "2ca784f1-b086-42bb-aee0-64840d75cacf",
+    "uberName": "Extra Vegetable",
+    "uberItemId": "Braised_Beef_Tendon_",
+    "parentName": "Braised Beef Tendon in Brown Sauce with Noodles",
+    "localSku": "braised_beef_tendon_noodle",
+    "localOptionCode": "bok_choy",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "2ca784f1-b086-42bb-aee0-64840d75cacf",
+    "uberName": "Extra Vegetable",
+    "uberItemId": "3b8b2764-d492-47e0-9977-107ed4e67d1f",
+    "parentName": "Noodle with Vegetables",
+    "localSku": "vegetable_noodle",
+    "localOptionCode": "bok_choy",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "2ca784f1-b086-42bb-aee0-64840d75cacf",
+    "uberName": "Extra Vegetable",
+    "uberItemId": "e72231fb-9029-4539-91d6-b6efbeeb3767",
+    "parentName": "Noodles with Vegetables Combo",
+    "localSku": "vegetable_noodle",
+    "localOptionCode": "bok_choy",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "2ca784f1-b086-42bb-aee0-64840d75cacf",
+    "uberName": "Extra Vegetable",
+    "uberItemId": "b940caa7-6e37-4b3b-b964-3e10151e7903",
+    "parentName": "Traditional Lanzhou Hand-pull Beef Noodle",
+    "localSku": "traditional_beef_noodle",
+    "localOptionCode": "bok_choy",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "a79813fd-2d14-45bd-a57c-462a8ddbb70f",
+    "uberName": "Extra Vegetable",
+    "uberItemId": "87bbecca-85fa-4681-a3dd-06c8bd97d70a",
+    "parentName": "Dandan Noodle Combo (With Peanuts)",
+    "localSku": "dan_dan_noodle",
+    "localOptionCode": "bok_choy",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "a79813fd-2d14-45bd-a57c-462a8ddbb70f",
+    "uberName": "Extra Vegetable",
+    "uberItemId": "2be2f7be-aa39-4742-bf91-edc9759f19c0",
+    "parentName": "Dandan Noodles (With Peanuts)",
+    "localSku": "dan_dan_noodle",
+    "localOptionCode": "bok_choy",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "a79813fd-2d14-45bd-a57c-462a8ddbb70f",
+    "uberName": "Extra Vegetable",
+    "uberItemId": "41989752-4e09-4fc5-8d22-96e9427173eb",
+    "parentName": "Zha Jiang Noodle",
+    "localSku": "zha_jiang_noodle",
+    "localOptionCode": "bok_choy",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "a79813fd-2d14-45bd-a57c-462a8ddbb70f",
+    "uberName": "Extra Vegetable",
+    "uberItemId": "e8188b13-132d-48af-a981-a3dd1476ee01",
+    "parentName": "Zhajiang Noodles Combo",
+    "localSku": "zha_jiang_noodle",
+    "localOptionCode": "bok_choy",
+    "localOptionGroup": "ADD_ON",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "133d15f2-124d-43c6-9b2c-15352e25926b",
+    "uberName": "Meat Broth",
+    "uberItemId": "3b8b2764-d492-47e0-9977-107ed4e67d1f",
+    "parentName": "Noodle with Vegetables",
+    "localSku": "vegetable_noodle",
+    "localOptionCode": "soup_beef",
+    "localOptionGroup": "SOUP_BASE",
+    "humanConfirmed": true
+  },
+  {
+    "uberIdentifier": "182b7ed4-d3c7-4aeb-9516-aa0c3959de97",
+    "uberName": "Vegan Broth",
+    "uberItemId": "3b8b2764-d492-47e0-9977-107ed4e67d1f",
+    "parentName": "Noodle with Vegetables",
+    "localSku": "vegetable_noodle",
+    "localOptionCode": "soup_vegan",
+    "localOptionGroup": "SOUP_BASE",
+    "humanConfirmed": true
+  }
+]

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { navigateTo } from '../frontdesk/navigation'
 import {
   fetchOwnerDashboard,
   type OwnerDashboardItemPerformance,
@@ -11,7 +10,7 @@ import {
 import { fetchWorkspaces, type WorkspaceStore } from '../../services/storeWorkspaceService'
 import { useAuth } from '../auth/useAuth'
 import { useCurrentStore } from '../store/useStoreContext'
-import { buildStorePath } from '../store/storeRoutes'
+import { NoodleSalesPanel, RevenueMixPanel } from './RevenueCategoryPanels'
 
 const RANGE_OPTIONS: { value: OwnerDashboardRange; label: string }[] = [
   { value: 'today', label: 'Today' },
@@ -85,7 +84,7 @@ function TrendChart({
   const maxValue = Math.max(...points.map((point) => point.value), 1)
 
   return (
-    <div className="mt-5 grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.max(points.length, 1)}, minmax(0, 1fr))` }}>
+    <div className="mt-5 overflow-x-auto pb-2"><div className="grid gap-2" style={{ minWidth: Math.max(650, points.length * 54), gridTemplateColumns: `repeat(${Math.max(points.length, 1)}, minmax(0, 1fr))` }}>
       {points.map((point) => (
         <div key={point.label} className="flex min-w-0 flex-col items-center gap-2">
           <div className="flex h-[190px] w-full items-end rounded-[16px] bg-[rgba(26,28,25,0.04)] px-1.5 pb-2">
@@ -104,9 +103,9 @@ function TrendChart({
         </div>
       ) : null}
       <div className="col-span-full mt-1 text-[0.8rem] text-[var(--muted)]">
-        Real {granularity} sales trend based on completed orders.
+        Eligible sales by first submission time · {granularity === 'hourly' ? '10:00–22:00' : 'daily totals'}.
       </div>
-    </div>
+    </div></div>
   )
 }
 
@@ -122,7 +121,7 @@ function ItemPerformanceList({
   emptyMessage: string
 }) {
   return (
-    <div className="rounded-[26px] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
+    <div className="min-w-0 rounded-[26px] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
       <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">{title}</div>
       <div className="mt-1 text-[0.85rem] text-[var(--muted)]">{description}</div>
       <div className="mt-4 space-y-3">
@@ -278,9 +277,7 @@ export function OwnerAdminDashboardPage() {
   const salesTrendPoints = dashboard?.trend.points ?? []
   const topItems = dashboard?.top_items ?? []
   const worstItems = dashboard?.worst_items ?? []
-  const recentOrders = dashboard?.recent_orders ?? []
   const storeComparison = dashboard?.store_comparison ?? []
-  const statusPanel = dashboard?.order_status ?? { pending: 0, preparing: 0, ready: 0 }
 
   return (
     <div className="space-y-5">
@@ -366,7 +363,7 @@ export function OwnerAdminDashboardPage() {
               </div>
             ) : (
               <>
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="grid gap-4 md:grid-cols-3">
                   <MetricCard label="Sales" value={formatCurrency(dashboard.kpis.sales.value)} change={dashboard.kpis.sales.change_pct} />
                   <MetricCard label="Orders" value={dashboard.kpis.orders.value.toFixed(0)} change={dashboard.kpis.orders.change_pct} />
                   <MetricCard
@@ -374,15 +371,11 @@ export function OwnerAdminDashboardPage() {
                     value={formatCurrency(dashboard.kpis.average_order_value.value)}
                     change={dashboard.kpis.average_order_value.change_pct}
                   />
-                  <MetricCard
-                    label="Active Orders"
-                    value={dashboard.kpis.active_orders.value.toFixed(0)}
-                    change={dashboard.kpis.active_orders.change_pct}
-                  />
+
                 </div>
 
                 <div className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
-                  <div className="rounded-[26px] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
+                  <div className="min-w-0 rounded-[26px] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">Sales Trend</div>
@@ -398,24 +391,9 @@ export function OwnerAdminDashboardPage() {
                   </div>
 
                   <div className="space-y-4">
-                    <div className="rounded-[26px] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
-                      <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">Order Status</div>
-                      <div className="mt-1 text-[0.85rem] text-[var(--muted)]">Live active order workload.</div>
-                      <div className="mt-4 grid grid-cols-3 gap-3">
-                        {[
-                          { label: 'Pending', value: statusPanel.pending, tone: 'bg-[rgba(191,104,32,0.08)] text-[rgb(140,76,17)]' },
-                          { label: 'Preparing', value: statusPanel.preparing, tone: 'bg-[rgba(97,0,0,0.08)] text-[var(--primary)]' },
-                          { label: 'Ready', value: statusPanel.ready, tone: 'bg-[rgba(18,141,77,0.08)] text-[rgb(25,112,69)]' },
-                        ].map((status) => (
-                          <div key={status.label} className={`rounded-[18px] px-4 py-4 ${status.tone}`}>
-                            <div className="text-[0.76rem] font-semibold uppercase tracking-[0.14em]">{status.label}</div>
-                            <div className="mt-2 text-[1.6rem] font-black tracking-[-0.05em]">{status.value}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    <RevenueMixPanel rows={dashboard.revenue_mix ?? []} sales={dashboard.kpis.sales.value} range={selectedRange} />
 
-                    <div className="rounded-[26px] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
+                    <div className="min-w-0 rounded-[26px] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
                       <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">Alerts & Insights</div>
                       <div className="mt-1 text-[0.85rem] text-[var(--muted)]">Automated checks from current period performance.</div>
                       <div className="mt-4 space-y-3">
@@ -445,40 +423,10 @@ export function OwnerAdminDashboardPage() {
                     emptyMessage="No completed sales to rank yet."
                   />
 
-                  <div className="rounded-[26px] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
-                    <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">Recent Orders</div>
-                    <div className="mt-1 text-[0.85rem] text-[var(--muted)]">Tap an order to open the read-only order history detail.</div>
-                    <div className="mt-4 space-y-3">
-                      {recentOrders.length ? (
-                        recentOrders.map((order) => (
-                          <button
-                            key={order.order_id}
-                            type="button"
-                            onClick={() => navigateTo(`${buildStorePath(storeId, '/frontdesk/order')}?orderId=${order.order_id}`)}
-                            className="flex w-full items-center justify-between gap-4 rounded-[18px] bg-[rgba(26,28,25,0.04)] px-4 py-3 text-left transition hover:bg-[rgba(97,0,0,0.05)]"
-                          >
-                            <div className="min-w-0">
-                              <div className="truncate text-[0.96rem] font-bold text-[var(--on-surface)]">{order.label}</div>
-                              <div className="mt-0.5 text-[0.78rem] text-[var(--muted)]">
-                                {order.order_no} · {order.order_type === 'pickup' ? 'Takeout' : 'Dine-in'} · {order.occurred_at_label}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-[0.96rem] font-bold text-[var(--primary)]">{formatCurrency(order.total_amount)}</div>
-                              <div className="mt-0.5 text-[0.78rem] text-[var(--muted)]">{order.status}</div>
-                            </div>
-                          </button>
-                        ))
-                      ) : (
-                        <div className="rounded-[18px] bg-[rgba(26,28,25,0.04)] px-4 py-5 text-[0.88rem] text-[var(--muted)]">
-                          No recent orders in this scope yet.
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <NoodleSalesPanel rows={dashboard.noodle_sales ?? []} range={selectedRange} />
                 </div>
 
-                <div className="rounded-[26px] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
+                <div className="min-w-0 rounded-[26px] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
                   <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">Sales by Store</div>
                   <div className="mt-1 text-[0.85rem] text-[var(--muted)]">Organization-wide comparison with trend indicators.</div>
                   <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -488,7 +436,6 @@ export function OwnerAdminDashboardPage() {
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <div className="text-[0.98rem] font-bold text-[var(--on-surface)]">{store.store_name}</div>
-                              <div className="mt-1 text-[0.8rem] text-[var(--muted)]">{store.active_orders} active orders</div>
                             </div>
                             <div className={`shrink-0 rounded-full px-2.5 py-1 text-[0.76rem] font-semibold ${getChangeTone(store.change_pct)}`}>
                               {formatPercent(store.change_pct)}
