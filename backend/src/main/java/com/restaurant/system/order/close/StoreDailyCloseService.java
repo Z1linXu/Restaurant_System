@@ -59,14 +59,14 @@ public class StoreDailyCloseService {
         if (!runs.reserve(store.id, date, zone.getId(), now)) return 0;
 
         // Existing Order timestamps are LocalDateTime.now() in the application/JVM
-        // timezone. Translate the Store's day boundaries into that storage clock.
+        // timezone. Bound future submissions using the Store day end; older open
+        // tables must also close, regardless of their original submission date.
         ZoneId storageZone = ZoneId.systemDefault();
-        LocalDateTime start = date.atStartOfDay(zone).withZoneSameInstant(storageZone).toLocalDateTime();
         LocalDateTime end = date.plusDays(1).atStartOfDay(zone).withZoneSameInstant(storageZone).toLocalDateTime();
         int finished = 0;
-        for (Long id : orders.findDailyCloseCandidateIds(store.id, start, end)) {
+        for (Long id : orders.findDailyCloseCandidateIds(store.id, end)) {
             Order order = orders.findByIdForUpdate(id);
-            if (!eligibleOrder(order, store.id, start, end)) continue;
+            if (!eligibleOrder(order, store.id, end)) continue;
             orderService.completeOrder(id);
             AuditLog audit = new AuditLog();
             audit.store_id = store.id;
@@ -99,11 +99,11 @@ public class StoreDailyCloseService {
             && "BUSINESS".equalsIgnoreCase(store.store_kind);
     }
 
-    private boolean eligibleOrder(Order order, Long storeId, LocalDateTime start, LocalDateTime end) {
+    private boolean eligibleOrder(Order order, Long storeId, LocalDateTime end) {
         return order != null && Objects.equals(storeId, order.store_id)
             && "dine_in".equals(order.order_type) && ACTIVE_STATUSES.contains(order.status)
             && order.completed_at == null && order.table_no != null && !order.table_no.isBlank()
             && "IN_STORE".equals(order.financial_mode) && !"UBER_EATS".equals(order.external_source)
-            && order.submitted_at != null && !order.submitted_at.isBefore(start) && order.submitted_at.isBefore(end);
+            && order.submitted_at != null && order.submitted_at.isBefore(end);
     }
 }

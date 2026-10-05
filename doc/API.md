@@ -1982,7 +1982,7 @@ Report summary rebuild remains `POST /api/v1/admin/analytics/rebuild?date=YYYY-M
 change, rebuild the union of old summary dates and eligible submitted dates, with
 an explicit Store ID. No order, payment or print records are rewritten. Daily
 automatic Finish runs at23:30 Store-local time (default America/Toronto, DST-aware). It is an internal worker, not a new public API; it reuses the manual
-complete domain and records AUTO_FINISHED_END_OF_DAY plus the durable V34 ledger.
+complete domain for all still-open dine-in tables, including prior-date submissions, and records AUTO_FINISHED_END_OF_DAY plus the durable V34 ledger. Completed orders are not replayed and payment/submission fields are unchanged.
 
 ### Uber kitchen note scopes (V36)
 

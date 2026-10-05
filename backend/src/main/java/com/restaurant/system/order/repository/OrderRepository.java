@@ -91,12 +91,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
           and o.table_no is not null and trim(o.table_no) <> ''
           and o.financial_mode = 'IN_STORE'
           and (o.external_source is null or o.external_source <> 'UBER_EATS')
-          and o.submitted_at >= :startAt and o.submitted_at < :endAt
+          and o.submitted_at < :endAt
         order by o.id
         """)
     List<Long> findDailyCloseCandidateIds(
         @Param("storeId") Long storeId,
-        @Param("startAt") LocalDateTime startAt,
         @Param("endAt") LocalDateTime endAt
     );
 
