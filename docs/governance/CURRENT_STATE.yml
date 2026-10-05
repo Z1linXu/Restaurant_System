@@ -29,7 +29,8 @@ staging:
 production:
   deployed_sha: 11996ef919d9b28ee5366c7e40a58a78c074b675
   flyway: V28
-  mutation_authorized: true
+  mutation_authorized: false
+  current_release_authorization: OWNER_EXPLICIT_ONE_TIME_V37_HTTPS_RELEASE_20261005
   evidence: PRODUCTION_V26_V28_RELEASE_EVIDENCE.md
   runtime_observation_evidence: PRODUCTION_V26_V28_RELEASE_EVIDENCE.md
 
