@@ -9412,3 +9412,28 @@ requests, empty string for explicit no note). UI uses legacy snapshot notes only
 when that field is absent/null. `raw_items` is a note-free kitchen summary;
 customer item/modifier notes display under the corresponding source item once.
 V36 only adds a nullable TEXT field and does not migrate historical note content.
+
+
+## Production V37 application release (2026-10-05)
+
+Restaurant_System Production application release = COMPLETE. Canonical endpoint
+is https://pos.lanzhounoodlesmtl.com (HTTPS API and WSS); dedicated TLS and308
+redirect are active, separate from Staging. Backend source758dc5b and retained
+frontend8c3a9e3 run with V37 after all9 sequential migrations. Production Uber
+remains NOT ACTIVATED: all3 Store capabilities false and zero bindings. This
+Owner release supersedes earlier Staging-only Production target descriptions;
+future activation still requires a separate Owner decision.
+
+Daily Finish includes prior-day still-open dine-in tables at23:30 America/Toronto.
+Existing payment, Store/printing/device configuration and historical snapshots
+were retained. Production test8359 used Chinatown MOCK, completed submit/kitchen/
+queue checks and was normally cancelled. Authenticated API smoke passed, but a
+password login on the new domain and physical Production Pad URL switch remain
+unobserved; do not equate an operational smoke token with password authentication.
+KDS remains disabled per existing Store configuration.
+
+Use the [V37 operations runbook](deployment/cloud/README_PRODUCTION_V37_RELEASE.md)
+for actual private canonical Compose and bounded recovery. Do not overwrite the
+shared Production/Staging edge with the old generic HTTPS template. Exact backup,
+images, migration and acceptance limits are in
+[release evidence](docs/governance/PRODUCTION_V37_RELEASE_20261005.md).

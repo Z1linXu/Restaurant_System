@@ -3,17 +3,17 @@ updated_at: 2026-10-05
 
 repository:
   ref: origin/main
-  sha: 8c3a9e356f59cd025beff25f7fb1d5a20594e028
+  sha: 758dc5b2111db1b298b6104fac81c07f8aee0e12
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
   package: FINAL_PRODUCT_CLOSEOUT
-  status: OWNER_AUTHORIZED_PRODUCTION_RELEASE_IN_PROGRESS
+  status: PRODUCTION_V37_DEPLOYED_SERVER_ACCEPTED_MANUAL_LOGIN_PAD_PENDING
   next_phase_authorized: false
 
 staging:
-  deployed_sha: 8eea8d47c9fe7906563d051196c703da7c14e198
+  deployed_sha: 758dc5b2111db1b298b6104fac81c07f8aee0e12
   deployed_sha_semantics: BACKEND_FRONTEND_TRACKED_SEPARATELY
   frontend_deployed_sha: 8c3a9e356f59cd025beff25f7fb1d5a20594e028
   policy_config_sha: d2316234b2936fd89a926aa24a7b6343008834e6
@@ -24,15 +24,23 @@ staging:
   cleanup_evidence: PHASE_B_STAGING_SYNTHETIC_FIXTURE_CLEANUP_EXECUTION_EVIDENCE.md
   runtime_observation_evidence: UBER_STORE_CAPABILITY_20261003.md
   endpoint_policy_evidence: runtime/STAGING_ENDPOINT_POLICY_20260930_EVIDENCE.md
+  latest_backend_release_evidence: PRODUCTION_V37_RELEASE_20261005.md
   endpoint_policy_gate: OWNER_CONFIRMED_STORE18_PRINTER_BINDINGS_PENDING
 
 production:
-  deployed_sha: 11996ef919d9b28ee5366c7e40a58a78c074b675
-  flyway: V28
+  deployed_sha: 758dc5b2111db1b298b6104fac81c07f8aee0e12
+  frontend_deployed_sha: 8c3a9e356f59cd025beff25f7fb1d5a20594e028
+  canonical_url: https://pos.lanzhounoodlesmtl.com
+  application_release: COMPLETE
+  password_login: MANUAL_OBSERVATION_PENDING
+  physical_pad_url_switch: MANUAL_OBSERVATION_PENDING
+  uber_activated: false
+  uber_active_bindings: 0
+  flyway: V37
   mutation_authorized: false
-  current_release_authorization: OWNER_EXPLICIT_ONE_TIME_V37_HTTPS_RELEASE_20261005
-  evidence: PRODUCTION_V26_V28_RELEASE_EVIDENCE.md
-  runtime_observation_evidence: PRODUCTION_V26_V28_RELEASE_EVIDENCE.md
+  current_release_authorization: OWNER_EXPLICIT_ONE_TIME_V37_HTTPS_RELEASE_20261005_EXECUTED
+  evidence: PRODUCTION_V37_RELEASE_20261005.md
+  runtime_observation_evidence: PRODUCTION_V37_RELEASE_20261005.md
 
 uber_test_store_audit:
   observed_at: 2026-10-03T20:49:02Z
@@ -133,14 +141,14 @@ uber_store_capability:
   frontend_topnav_sidebar_routes_store_switch: PASS
   backend_scoped_api_reprint_worker_isolation: PASS
   disabled_runtime_api_denials: 11
-  production_desired_st_denis: ENABLED_NOT_CONFIGURED_THIS_BATCH
-  production_desired_st_catherine: ENABLED_NOT_CONFIGURED_THIS_BATCH
-  production_desired_chinatown: DISABLED_NOT_CONFIGURED_THIS_BATCH
+  production_desired_st_denis: DISABLED_OWNER_RELEASE_20261005
+  production_desired_st_catherine: DISABLED_OWNER_RELEASE_20261005
+  production_desired_chinatown: DISABLED_OWNER_RELEASE_20261005
   production_mutation: NONE
 
 gate:
-  type: TECHNICAL
-  next_action: COMPLETE_OWNER_AUTHORIZED_V37_PRODUCTION_RELEASE_WITH_UBER_DISABLED
+  type: OWNER
+  next_action: CONFIRM_NEW_DOMAIN_LOGIN_AND_NATIVE_PRODUCTION_PAD_URL_SWITCH_NO_UBER_ACTIVATION
 
 authorization:
   uber_store_capability: OWNER_AUTHORIZED_OPTION370_TEA_EGG_KEEP_ID_PRICE_HISTORY_FORMAL_UBER_EATS_GATES_V37_TEST_REVIEW_MERGE_STAGING_ONLY
@@ -162,4 +170,4 @@ authorization:
   production: NONE
 
 stop:
-  marker: STOP_ON_UNRECOVERABLE_PRODUCTION_RELEASE_FAILURE_NO_UBER_ACTIVATION
+  marker: PRODUCTION_V37_SERVER_ACCEPTED_NO_FURTHER_PRODUCTION_OR_UBER_ACTIVATION_AUTHORITY
