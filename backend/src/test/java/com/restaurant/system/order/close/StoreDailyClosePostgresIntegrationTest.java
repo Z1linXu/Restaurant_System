@@ -83,11 +83,13 @@ class StoreDailyClosePostgresIntegrationTest {
         assertThat(count("audit_logs", "store_id=? and action='AUTO_FINISHED_END_OF_DAY'", store)).isEqualTo(1);
     }
 
-    @Test void candidateQueryExcludesHistoricalDraftCancelledFinishedTakeoutAndUberAndOtherStore() {
+    @Test void candidateQueryIncludesOlderOpenTablesAndExcludesDraftCancelledFinishedTakeoutUberAndOtherStore() {
         Long eligible = order(store, "dine_in", "preparing", submitted, "IN_STORE");
         List<Long> ignored = new ArrayList<>();
         ignored.add(order(store, "dine_in", "draft", null, "IN_STORE"));
-        ignored.add(order(store, "dine_in", "submitted", submitted.minusDays(1), "IN_STORE"));
+        Long yesterday = order(store, "dine_in", "submitted", submitted.minusDays(1), "IN_STORE");
+        Long older = order(store, "dine_in", "ready", submitted.minusDays(7), "IN_STORE");
+        ignored.add(order(store, "dine_in", "submitted", submitted.plusDays(1), "IN_STORE"));
         ignored.add(order(store, "dine_in", "cancelled", submitted, "IN_STORE"));
         ignored.add(order(store, "dine_in", "completed", submitted, "IN_STORE"));
         ignored.add(order(store, "takeout", "submitted", submitted, "IN_STORE"));
@@ -98,7 +100,11 @@ class StoreDailyClosePostgresIntegrationTest {
         Long otherStore = store("America/Toronto");
         Long otherOrder = order(otherStore, "dine_in", "ready", submitted, "IN_STORE");
         Map<Long, String> before = new HashMap<>(); for (Long id : ignored) before.put(id, status(id));
-        assertThat(close.closeStore(store, now)).isEqualTo(1);
+        assertThat(close.closeStore(store, now)).isEqualTo(3);
+        assertThat(status(yesterday)).isEqualTo("completed");
+        assertThat(status(older)).isEqualTo("completed");
+        assertThat(db.queryForObject("select submitted_at from orders where id=?", LocalDateTime.class, older)).isEqualTo(submitted.minusDays(7));
+        assertThat(db.queryForObject("select total_amount from orders where id=?", BigDecimal.class, older)).isEqualByComparingTo("23.45");
         assertThat(status(eligible)).isEqualTo("completed");
         for (Long id : ignored) assertThat(status(id)).isEqualTo(before.get(id));
         assertThat(status(otherOrder)).isEqualTo("ready");
@@ -202,16 +208,17 @@ class StoreDailyClosePostgresIntegrationTest {
         assertThat(status(order)).isEqualTo("completed");
     }
 
-    @Test void localTimezoneGatesEachStoreAndNextDayDoesNotReplayHistoricalOrders() {
+    @Test void localTimezoneGatesEachStoreAndNextDayClosesLateUnfinishedTablesOnce() {
         Long west = store("America/Vancouver");
         Long order = order(west, "dine_in", "submitted", submitted, "IN_STORE");
         assertThat(close.closeStore(west, now)).isZero();
         assertThat(close.closeStore(west, now.plusSeconds(3 * 3600))).isEqualTo(1);
         assertThat(status(order)).isEqualTo("completed");
         Long late = order(west, "dine_in", "submitted", submitted, "IN_STORE");
-        assertThat(close.closeStore(west, now.plusSeconds(27 * 3600))).isZero();
-        assertThat(status(late)).isEqualTo("submitted");
-        assertThat(count("audit_logs", "store_id=? and action='AUTO_FINISHED_END_OF_DAY'", west)).isEqualTo(1);
+        assertThat(close.closeStore(west, now.plusSeconds(27 * 3600))).isEqualTo(1);
+        assertThat(status(late)).isEqualTo("completed");
+        assertThat(close.closeStore(west, now.plusSeconds(27 * 3600 + 300))).isZero();
+        assertThat(count("audit_logs", "store_id=? and action='AUTO_FINISHED_END_OF_DAY'", west)).isEqualTo(2);
         assertThat(count("store_daily_close_runs", "store_id=?", west)).isEqualTo(2);
     }
 
