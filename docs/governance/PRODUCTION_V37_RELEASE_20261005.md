@@ -107,6 +107,7 @@ Actual canonical private Compose is
 control checkout's generic deploy script over the shared HTTPS template. See
 [current operations](../../deployment/cloud/README_PRODUCTION_V37_RELEASE.md).
 Dedicated Production renewal timer and original Staging renewal timer are active.
+Production `certbot renew --dry-run --cert-name pos.lanzhounoodlesmtl.com` passed.
 Private release directory contains sanitized result files,
 private runtime/config baselines, checksums, exact target and rollback models.
 
