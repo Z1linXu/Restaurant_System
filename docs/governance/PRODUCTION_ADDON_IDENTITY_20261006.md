@@ -80,4 +80,10 @@ in-transaction protected-data/eligibility checks. Failure rolls back. Applicatio
 rollback restores previous V37-compatible backend; materialized option values
 remain compatible. Never restore the full database over subsequent orders.
 
+PR #272 merged as `ce35278b3569a4eacfa29efc01cadbf0c409bec6`. Application image
+`sha256:5b9583ee43ad2ceeb9b47a08a47397cb8802a19f1d89366a0b0b04889ebbaaad`.
+First Stage promotion reached healthy startup, then the helper compared Docker
+Env lists positionally and automatically rolled back. Environment key/value
+comparison is corrected to dictionary equality; no config relaxation or
+application rebuild. Production remained untouched during this attempt.
 Deployment and final runtime read-back are pending at this evidence write.

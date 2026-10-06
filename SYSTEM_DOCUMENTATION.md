@@ -7399,7 +7399,9 @@ selection or direct draft submission with a stale canonical price is rejected
 with `ADDON_CATALOG_CHANGED`; disabled/cross-Store assignments are rejected.
 Kitchen Mirror keeps its existing non-financial zero amounts while validating
 canonical identity and eligibility. Submitted orders and rendered print snapshots
-continue to use frozen values. Menu cloning reconciles target-Store references
+continue to use frozen values. The bounded backend-only Add-on promotion verifies environment key/value equality
+independent of Docker list ordering and preserves existing runtime configuration.
+Menu cloning reconciles target-Store references
 inside its existing transaction and rolls back unresolved identity conflicts.
 
 Menu Management exposes a Store Add-ons list with add/edit/activate/deactivate;

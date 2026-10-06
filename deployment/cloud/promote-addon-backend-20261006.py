@@ -83,7 +83,9 @@ try:
         raise RuntimeError('Backend health timeout')
     after = inspect(container)
     assert after['Image'] == image
-    for key in ['Env', 'Entrypoint', 'Cmd', 'User']:
+    assert dict(v.split('=', 1) for v in after['Config']['Env']) == dict(
+        v.split('=', 1) for v in baseline[container]['Config']['Env'])
+    for key in ['Entrypoint', 'Cmd', 'User']:
         assert after['Config'][key] == baseline[container]['Config'][key], key
     for name, before in baseline.items():
         if name != container:
