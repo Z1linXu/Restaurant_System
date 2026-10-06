@@ -1316,6 +1316,13 @@ name/price/effective-active propagation and existing menu revision increment
 are one transaction. Catalog deactivation does not delete links. Generic
 option editing cannot change ADD_ON semantic fields or bypass this boundary
 by changing option group. Non-ADD_ON editing remains supported.
+Current linked option reads and new selections resolve through `store_addon_id`;
+legacy option name/code/price copies cannot override the Store catalog. New
+selections and direct draft submission reject a changed canonical quote with
+`ADDON_CATALOG_CHANGED`, unavailable assignments with `ADDON_ASSIGNMENT_UNAVAILABLE`,
+and unlinked attempts to use catalog identities with `ADDON_ASSIGNMENT_REQUIRED`.
+Existing submitted snapshots are not rewritten. Kitchen Mirror financial amounts
+remain zero; canonical identity and eligibility still apply.
 
 Reconciliation never chooses between conflicting business values. Identical
 current values may be linked, active differences remain item eligibility,

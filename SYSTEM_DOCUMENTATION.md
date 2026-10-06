@@ -7381,8 +7381,12 @@ The bounded menu simplification contract is
 Organization-scoped `organization_addon_definitions` owns immutable semantic
 codes. `store_addons` owns each Store's bilingual names, selling price and
 availability. Existing `menu_item_options` retain their IDs as linked item
-eligibility and runtime materialization, preserving the established ordering
-and snapshot path. Other option groups keep their current editing behavior.
+eligibility and compatibility materialization. Their formal `store_addon_id` /
+`store_addon_store_id` composite FK points to the same Store catalog identity
+returned by Add-ons and item eligibility APIs. `StoreAddonOptionResolver` projects
+current code/name/price/availability from that FK for POS catalogs, Admin options,
+Uber mapping and new order selections; copied option fields are not authority.
+Other option groups keep their current editing behavior.
 
 Catalog edits atomically propagate names/prices and effective active state to
 all linked options in that Store, and increment the existing menu revision.
@@ -7390,7 +7394,13 @@ all linked options in that Store, and increment the existing menu revision.
 entry does not erase item eligibility. Store A pricing never mutates Store B,
 the immutable Master or Profile. Normal menu revision refresh exposes changes
 without logout or app restart. Already frozen draft/order snapshots retain
-their established compatibility behavior and are not silently repriced.
+their established compatibility behavior and are not silently repriced. A new
+selection or direct draft submission with a stale canonical price is rejected
+with `ADDON_CATALOG_CHANGED`; disabled/cross-Store assignments are rejected.
+Kitchen Mirror keeps its existing non-financial zero amounts while validating
+canonical identity and eligibility. Submitted orders and rendered print snapshots
+continue to use frozen values. Menu cloning reconciles target-Store references
+inside its existing transaction and rolls back unresolved identity conflicts.
 
 Menu Management exposes a Store Add-ons list with add/edit/activate/deactivate;
 code is entered on creation and read-only thereafter. Item Add-ons expose

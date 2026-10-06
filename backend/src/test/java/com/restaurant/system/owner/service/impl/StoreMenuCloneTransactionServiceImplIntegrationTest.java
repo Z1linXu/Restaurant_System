@@ -1,5 +1,7 @@
 package com.restaurant.system.owner.service.impl;
 
+import com.restaurant.system.menu.addon.StoreAddonService;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -70,9 +72,14 @@ import org.springframework.transaction.support.TransactionTemplate;
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 @ContextConfiguration(classes = StoreMenuCloneTransactionServiceImplIntegrationTest.JpaSliceConfiguration.class)
-@Import(MenuRevisionServiceImpl.class)
+@Import({MenuRevisionServiceImpl.class, StoreAddonService.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class StoreMenuCloneTransactionServiceImplIntegrationTest {
+    @org.springframework.beans.factory.annotation.Autowired
+    private StoreAddonService addonService;
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.restaurant.system.printing.rules.PrintingDisplayRuleService addonPrinting;
+
 
     private static final long ORGANIZATION_ID = 81L;
     private static final String PROFILE_CODE = "SYNTHETIC_BASE_GRAPH_V1";
@@ -603,7 +610,9 @@ class StoreMenuCloneTransactionServiceImplIntegrationTest {
         List<StoreMenuCloneGraphComposer> composers,
         MenuRevisionService revisionService
     ) {
+        org.mockito.Mockito.when(addonPrinting.activeContext(org.mockito.ArgumentMatchers.anyLong())).thenReturn(com.restaurant.system.printing.rules.PrintingDisplayRuleContext.defaultContext());
         return new StoreMenuCloneTransactionServiceImpl(
+            addonService,
             storeRepository,
             categoryRepository,
             stationRepository,
@@ -624,7 +633,7 @@ class StoreMenuCloneTransactionServiceImplIntegrationTest {
         int sortOrder
     ) {
         return new StoreMenuClonePlannedOption(
-            targetItemId, null, "addon", code, "ADD_ON", parentCode, sortOrder, code, code, BigDecimal.ZERO, true
+            targetItemId, null, "addon", code, parentCode == null ? "COMBO_SIDE" : "COMBO_SIDE_REMOVE", parentCode, sortOrder, code, code, BigDecimal.ZERO, true
         );
     }
 

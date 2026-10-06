@@ -1,5 +1,7 @@
 package com.restaurant.system.owner.menu.profile;
 
+import com.restaurant.system.menu.addon.StoreAddonService;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -60,9 +62,14 @@ import org.springframework.transaction.support.TransactionTemplate;
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 @ContextConfiguration(classes = ChinatownMenuCloneTransactionIntegrationTest.JpaSliceConfiguration.class)
-@Import(MenuRevisionServiceImpl.class)
+@Import({MenuRevisionServiceImpl.class, StoreAddonService.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class ChinatownMenuCloneTransactionIntegrationTest {
+    @org.springframework.beans.factory.annotation.Autowired
+    private StoreAddonService addonService;
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.restaurant.system.printing.rules.PrintingDisplayRuleService addonPrinting;
+
 
     private static final long ORGANIZATION_ID = 83L;
 
@@ -89,6 +96,9 @@ class ChinatownMenuCloneTransactionIntegrationTest {
     @BeforeEach
     void cleanDatabase() {
         transaction().executeWithoutResult(status -> {
+            entityManager.createNativeQuery("delete from store_addons").executeUpdate();
+            entityManager.createNativeQuery("delete from organization_addon_definitions").executeUpdate();
+            entityManager.createNativeQuery("merge into organizations(id,code,name,status,created_at,updated_at) key(id) values (83,'CLONE_ORG','Clone Org','active',current_timestamp,current_timestamp)").executeUpdate();
             optionRepository.deleteAll();
             itemRepository.deleteAll();
             categoryRepository.deleteAll();
@@ -241,7 +251,9 @@ class ChinatownMenuCloneTransactionIntegrationTest {
         ChinatownMenuCloneProfile profile,
         List<StoreMenuCloneGraphComposer> composers
     ) {
+        org.mockito.Mockito.when(addonPrinting.activeContext(org.mockito.ArgumentMatchers.anyLong())).thenReturn(com.restaurant.system.printing.rules.PrintingDisplayRuleContext.defaultContext());
         return new StoreMenuCloneTransactionServiceImpl(
+            addonService,
             storeRepository,
             categoryRepository,
             stationRepository,

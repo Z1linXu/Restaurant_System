@@ -1,5 +1,7 @@
 package com.restaurant.system.owner.service.impl;
 
+import com.restaurant.system.menu.addon.StoreAddonService;
+
 import com.restaurant.system.menu.entity.MenuCategory;
 import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.entity.MenuItemOption;
@@ -65,6 +67,7 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
     private static final String PRINTING_MODE_DISABLED = "DISABLED";
     private static final String RESULT_CODE = "MENU_CLONE_COMPLETED";
 
+    private final StoreAddonService addonService;
     private final StoreRepository storeRepository;
     private final MenuCategoryRepository categoryRepository;
     private final StationRepository stationRepository;
@@ -77,6 +80,7 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
     private final StoreMenuCloneOptionPlanValidator optionPlanValidator;
 
     public StoreMenuCloneTransactionServiceImpl(
+        StoreAddonService addonService,
         StoreRepository storeRepository,
         MenuCategoryRepository categoryRepository,
         StationRepository stationRepository,
@@ -88,6 +92,7 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
         List<StoreMenuCloneGraphComposer> graphComposers,
         StoreMenuCloneOptionPlanValidator optionPlanValidator
     ) {
+        this.addonService = addonService;
         this.storeRepository = storeRepository;
         this.categoryRepository = categoryRepository;
         this.stationRepository = stationRepository;
@@ -153,7 +158,14 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
 
         validatePersistedGraph(stores.target().id, resolved, baseGraph, optionPlan);
         recheckSourceRevision(resolved.snapshot());
-        menuRevisionService.incrementRevision(stores.target().id);
+        // Materialized options become target-Store assignments, never source-Store references.
+        var reconciliation = addonService.reconcile(stores.target().id, false);
+        if (!reconciliation.conflicts().isEmpty()) {
+            throw invalidTarget("Target Add-on identities require reconciliation");
+        }
+        if (reconciliation.linked_options() == 0) {
+            menuRevisionService.incrementRevision(stores.target().id);
+        }
 
         long expectedTargetRevisionAfter = Math.addExact(targetRevisionBefore, 1L);
         Long targetRevisionAfter = storeRepository.findMenuRevisionById(stores.target().id);

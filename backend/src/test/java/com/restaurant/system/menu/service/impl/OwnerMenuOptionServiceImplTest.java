@@ -1,5 +1,9 @@
 package com.restaurant.system.menu.service.impl;
 
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+
+import com.restaurant.system.menu.addon.StoreAddonOptionResolver;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -38,15 +42,31 @@ class OwnerMenuOptionServiceImplTest {
     @Mock
     private MenuRevisionService menuRevisionService;
 
+    private final StoreAddonOptionResolver addonResolver = org.mockito.Mockito.spy(new StoreAddonOptionResolver(org.mockito.Mockito.mock(NamedParameterJdbcTemplate.class)));
     private OwnerMenuOptionServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new OwnerMenuOptionServiceImpl(
+        service = new OwnerMenuOptionServiceImpl(addonResolver,
             menuItemRepository,
             menuItemOptionRepository,
             menuRevisionService
         );
+    }
+
+    @Test
+    void linkedOptionAndDisguisedCatalogCodeCannotBeEditedAsIndependentAddons() {
+        var item = new MenuItem(); item.id=14L; item.store_id=3L;
+        when(menuItemRepository.findById(14L)).thenReturn(Optional.of(item));
+        org.mockito.Mockito.doReturn(true).when(addonResolver).hasCanonicalCode(3L, "extra_meat");
+        var request = new MenuItemOptionUpsertRequest();
+        request.option_type="addon"; request.option_group="CUSTOM"; request.option_code="extra_meat";
+        request.name_zh="加肉"; request.name_en="Fake meat";
+        assertThrows(BusinessException.class, () -> service.createOption(14L, request));
+        var linked = new MenuItemOption(); linked.id=99L; linked.menu_item_id=14L; linked.store_addon_id=8L;
+        linked.option_type="other"; linked.option_group="CUSTOM";
+        when(menuItemOptionRepository.findAllByMenuItemIdOrdered(14L)).thenReturn(List.of(linked));
+        assertTrue(assertThrows(BusinessException.class, () -> service.updateOption(14L,99L,request)).getMessage().contains("Store Add-on catalog"));
     }
 
     @Test

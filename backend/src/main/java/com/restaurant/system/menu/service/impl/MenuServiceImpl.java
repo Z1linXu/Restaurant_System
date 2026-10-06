@@ -1,5 +1,7 @@
 package com.restaurant.system.menu.service.impl;
 
+import com.restaurant.system.menu.addon.StoreAddonOptionResolver;
+
 import com.restaurant.system.common.pricing.TaxCalculator;
 import com.restaurant.system.menu.dto.MenuCatalogResponse;
 import com.restaurant.system.menu.dto.MenuRevisionResponse;
@@ -30,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class MenuServiceImpl implements MenuService {
 
+    private final StoreAddonOptionResolver addonResolver;
     private final MenuCategoryRepository menuCategoryRepository;
     private final MenuItemRepository menuItemRepository;
     private final MenuItemOptionRepository menuItemOptionRepository;
@@ -39,6 +42,7 @@ public class MenuServiceImpl implements MenuService {
     private final StoreComboConfigurationService storeComboConfigurationService;
 
     public MenuServiceImpl(
+        StoreAddonOptionResolver addonResolver,
         MenuCategoryRepository menuCategoryRepository,
         MenuItemRepository menuItemRepository,
         MenuItemOptionRepository menuItemOptionRepository,
@@ -47,6 +51,7 @@ public class MenuServiceImpl implements MenuService {
         StorePricingPolicyService storePricingPolicyService,
         StoreComboConfigurationService storeComboConfigurationService
     ) {
+        this.addonResolver = addonResolver;
         this.menuCategoryRepository = menuCategoryRepository;
         this.menuItemRepository = menuItemRepository;
         this.menuItemOptionRepository = menuItemOptionRepository;
@@ -65,7 +70,8 @@ public class MenuServiceImpl implements MenuService {
         List<Long> itemIds = items.stream().map(menuItem -> menuItem.id).toList();
         List<MenuItemOption> options = itemIds.isEmpty()
             ? List.of()
-            : menuItemOptionRepository.findActiveByMenuItemIds(itemIds);
+            : addonResolver.resolve(menuItemOptionRepository.findAllByMenuItemIdsOrdered(itemIds)).stream()
+                .filter(o -> Boolean.TRUE.equals(o.is_active)).toList();
         StorePricingPolicy pricingPolicy = storePricingPolicyService.getEffectivePolicy(storeId);
         StoreComboConfigurationResponse comboConfiguration = storeComboConfigurationService.getConfiguration(storeId);
         storeComboConfigurationService.validateRequiredComponentsForCatalog(storeId, options);

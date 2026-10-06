@@ -1,5 +1,9 @@
 package com.restaurant.system.menu.service.impl;
 
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+
+import com.restaurant.system.menu.addon.StoreAddonOptionResolver;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -26,7 +30,7 @@ class MenuServiceImplComboDefaultsTest {
         MenuCategoryRepository categories = mock(MenuCategoryRepository.class);
         MenuItemRepository items = mock(MenuItemRepository.class);
         MenuRevisionService revisions = mock(MenuRevisionService.class);
-        MenuServiceImpl service = new MenuServiceImpl(categories, items, mock(MenuItemOptionRepository.class),
+        MenuServiceImpl service = new MenuServiceImpl(new StoreAddonOptionResolver(org.mockito.Mockito.mock(NamedParameterJdbcTemplate.class)), categories, items, mock(MenuItemOptionRepository.class),
             revisions, new MenuCatalogHashService(), mock(StorePricingPolicyService.class),
             mock(StoreComboConfigurationService.class));
         MenuCategory category = new MenuCategory();
