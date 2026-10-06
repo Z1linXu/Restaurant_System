@@ -97,6 +97,7 @@ class UberEatsPostgresIntegrationTest {
     @Autowired UberEatsMenuMappingService mapping;
     @Autowired UberEatsOrderNormalizer normalizer;
     @Autowired UberEatsConfigurationService configuration;
+    @Autowired com.restaurant.system.menu.addon.StoreAddonService addons;
     @Autowired OrderService orderService;
     @Autowired OrderRepository orders;
     @Autowired OrderItemRepository items;
@@ -239,6 +240,35 @@ class UberEatsPostgresIntegrationTest {
         binding.enabled = true;
         binding.createdAt = LocalDateTime.now();
         bindings.save(binding);
+    }
+
+    @Test
+    void uberAndPadCatalogResolveSameCanonicalAddonDespiteCorruptedLegacyCopies() {
+        Long optionId=db.queryForObject("select id from menu_item_options where menu_item_id=? and option_code='fried_egg'",Long.class,item);
+        addons.reconcile(store,false);
+        Long addonId=addons.getAddons(store).addons().get(0).id();
+        var update=new com.restaurant.system.menu.addon.StoreAddonService.WriteRequest();
+        update.name_zh="加煎蛋"; update.name_en="Extra Fried Egg";
+        update.price=new java.math.BigDecimal("1.99"); update.active=true;
+        addons.update(addonId,update);
+        db.update("update menu_item_options set option_code='corrupt_copy',name_zh='错误',price_delta=9.99,is_active=false where id=?",optionId);
+        var result=mapping.mapMirror(binding,normalizer.normalize(payload(UUID.randomUUID().toString())));
+        assertThat(result.errors()).isEmpty();
+        var selected=result.request().items.get(0).options.stream().filter(o -> optionId.equals(o.option_id)).findFirst().orElseThrow();
+        assertThat(selected.option_code_snapshot).isEqualTo("fried_egg");
+        assertThat(selected.option_name_snapshot_zh).isEqualTo("加煎蛋");
+        assertThat(selected.option_price_snapshot).isEqualByComparingTo("1.99");
+        var order=orderService.createKitchenMirror(result.request(), UUID.randomUUID().toString(), "CANONICAL", null);
+        var frozen=options.findAllByOrderItemIds(items.findAllByOrderId(order.id).stream().map(i -> i.id).toList()).stream()
+            .filter(o -> optionId.equals(o.option_id)).findFirst().orElseThrow();
+        assertThat(frozen.option_code_snapshot).isEqualTo("fried_egg");
+        assertThat(frozen.option_name_snapshot_en).isEqualTo("Extra Fried Egg");
+        assertThat(frozen.price_delta).isZero(); // Kitchen Mirror deliberately has no POS financial amount.
+        update.name_zh="新名称"; update.price=new java.math.BigDecimal("2.99");
+        addons.update(addonId,update);
+        assertThat(options.findById(frozen.id).orElseThrow().option_name_snapshot_zh).isEqualTo("加煎蛋");
+        assertThat(options.findById(frozen.id).orElseThrow().price_delta).isZero();
+        assertThat(addons.getItemAddons(item,store)).anySatisfy(a -> {assertThat(a.id()).isEqualTo(addonId);assertThat(a.enabled()).isTrue();});
     }
 
     @Test

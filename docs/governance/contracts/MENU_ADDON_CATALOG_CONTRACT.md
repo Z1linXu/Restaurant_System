@@ -36,6 +36,12 @@ Master artifacts or Profile fingerprints. Master/Profile values are defaults
 for independent Store materialization, not shared mutable operating prices.
 
 Existing option IDs and runtime fields remain as compatibility materialization.
+A current-read resolver joins the formal Store Add-on FK; these copies cannot
+choose a second price/name/code for POS, Admin options, Uber mapping or new orders.
+New selections and direct draft submission reject stale canonical prices without
+rewriting snapshots. Kitchen Mirror retains non-financial zero amounts.
+Disabled or foreign assignments fail closed. Explicit Combo/Remove semantics
+remain separate from ordinary Add-ons.
 Catalog updates and all linked option name/price/effective-active updates occur
 in one transaction together with the existing menu revision update. Item
 eligibility persists independently when the whole catalog Add-on is inactive.
@@ -56,11 +62,12 @@ Legacy unresolved rows remain readable/orderable under the established runtime
 contract until explicit reconciliation; normal business UI cannot edit their
 semantic fields independently. New Store materialization uses the same bounded
 reconciliation boundary inside the existing transaction and preserves unresolved
-template conflicts without silently choosing a value.
+template conflicts without silently choosing a value. Menu cloning now fails closed on unresolved target Add-on identities within the original transaction; target references never copy source Store IDs.
 
 Historical order/print snapshots are never rewritten or backfilled. Owner's
-2026-09-16 vocabulary confirms `addon_beef_tendon` at 6.99 for current Staging;
-no automatic remap to another code is permitted. Unmapped legacy codes remain
+2026-10-06 Production decision explicitly confirms `addon_beef_tendons` at 6.99
+and the exact existing `extra_beef_tendon` row identity; no fuzzy or automatic
+remap of other codes is permitted. Unmapped legacy codes remain
 unresolved; historical aliases remain printable. Production
 value choices and reconciliation require the separate Owner Production gate.
 

@@ -1,5 +1,7 @@
 package com.restaurant.system.menu.service.impl;
 
+import com.restaurant.system.menu.addon.StoreAddonOptionResolver;
+
 import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.menu.addon.StoreAddonService;
 import com.restaurant.system.menu.dto.MenuItemOptionAdminResponse;
@@ -33,15 +35,18 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
     public static final String GROUP_COMBO_SIDE_REMOVE = "COMBO_SIDE_REMOVE";
     private static final String OPTION_TYPE_SIZE = "size";
 
+    private final StoreAddonOptionResolver addonResolver;
     private final MenuItemRepository menuItemRepository;
     private final MenuItemOptionRepository menuItemOptionRepository;
     private final MenuRevisionService menuRevisionService;
 
     public OwnerMenuOptionServiceImpl(
+        StoreAddonOptionResolver addonResolver,
         MenuItemRepository menuItemRepository,
         MenuItemOptionRepository menuItemOptionRepository,
         MenuRevisionService menuRevisionService
     ) {
+        this.addonResolver = addonResolver;
         this.menuItemRepository = menuItemRepository;
         this.menuItemOptionRepository = menuItemOptionRepository;
         this.menuRevisionService = menuRevisionService;
@@ -50,7 +55,7 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
     @Override
     public List<MenuItemOptionAdminResponse> getOptions(Long itemId) {
         loadMenuItem(itemId);
-        return menuItemOptionRepository.findAllByMenuItemIdOrdered(itemId).stream()
+        return addonResolver.resolve(menuItemOptionRepository.findAllByMenuItemIdOrdered(itemId)).stream()
             .map(this::toResponse)
             .toList();
     }
@@ -140,6 +145,10 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
         Long parentOptionId = request.parent_option_id;
         String optionType = normalizeOptionType(request.option_type, optionGroup);
         rejectAddonWrite(optionGroup, optionType, request.option_code, request.name_zh, request.name_en);
+        if ("addon".equals(optionType)
+            && addonResolver.hasCanonicalCode(loadMenuItem(option.menu_item_id).store_id, request.option_code)) {
+            throw new BusinessException("ADD_ON options are managed by the Store Add-on catalog.");
+        }
         rejectComboWrite(optionGroup, optionType, request.option_code, request.name_zh, request.name_en);
         if (isSizeSemantic(optionGroup, optionType) && parentOptionId != null) {
             throw new BusinessException("SIZE options cannot have a parent option");
@@ -296,6 +305,9 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
     }
 
     private void rejectSystemControlledPricingWrite(MenuItemOption option) {
+        if (option != null && option.store_addon_id != null) {
+            throw new BusinessException("ADD_ON options are managed by the Store Add-on catalog.");
+        }
         if (option != null && isSizeOption(option)) {
             throw new BusinessException("SIZE options are system-controlled. Use Size Configuration to choose supported Sizes.");
         }

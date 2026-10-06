@@ -1,5 +1,7 @@
 package com.restaurant.system.staging.menu;
 
+import com.restaurant.system.menu.addon.StoreAddonService;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
@@ -62,7 +64,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 @ActiveProfiles("staging-synthetic-bootstrap")
 @ContextConfiguration(classes = StagingSyntheticSourceMenuServiceIntegrationTest.JpaSliceConfiguration.class)
-@Import({
+@Import({StoreAddonService.class,
     StagingSyntheticBootstrapGuard.class,
     StagingSyntheticSourceMenuGuard.class,
     StagingSyntheticSourceMenuManifestFactory.class,
@@ -73,6 +75,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 })
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class StagingSyntheticSourceMenuServiceIntegrationTest {
+    @org.springframework.beans.factory.annotation.Autowired
+    private StoreAddonService addonService;
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.restaurant.system.printing.rules.PrintingDisplayRuleService addonPrinting;
+
 
     private static final long ORGANIZATION_ID = 83L;
     private static final String RUNTIME_SHA = "4397f995bdc56f35b4d65a6ee9b99ab966dc4e9c";
@@ -316,7 +323,9 @@ class StagingSyntheticSourceMenuServiceIntegrationTest {
             new StoreMenuCloneSourceOptionsComposer(registry),
             new ChinatownMenuProfileOverridesComposer()
         );
+        org.mockito.Mockito.when(addonPrinting.activeContext(org.mockito.ArgumentMatchers.anyLong())).thenReturn(com.restaurant.system.printing.rules.PrintingDisplayRuleContext.defaultContext());
         StoreMenuCloneTransactionServiceImpl cloneService = new StoreMenuCloneTransactionServiceImpl(
+            addonService,
             storeRepository,
             categoryRepository,
             stationRepository,

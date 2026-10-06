@@ -1,5 +1,8 @@
 package com.restaurant.system.order.service.impl;
 
+
+import com.restaurant.system.menu.addon.StoreAddonOptionResolver;
+
 import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.common.pricing.TaxCalculator;
 import com.restaurant.system.common.realtime.RealtimeEventPublisher;
@@ -72,6 +75,8 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -149,6 +154,7 @@ public class OrderServiceImpl implements OrderService {
         ORDER_STATUS_READY
     );
 
+    private final StoreAddonOptionResolver addonResolver;
     private final jakarta.persistence.EntityManager entityManager;
     private final OrderRepository orderRepository;
     private final OrderUpdateBatchRepository orderUpdateBatchRepository;
@@ -172,6 +178,7 @@ public class OrderServiceImpl implements OrderService {
     private final PrintingDisplayRuleService printingDisplayRuleService;
 
     public OrderServiceImpl(
+        StoreAddonOptionResolver addonResolver,
         OrderRepository orderRepository,
         OrderUpdateBatchRepository orderUpdateBatchRepository,
         OrderItemRepository orderItemRepository,
@@ -195,6 +202,7 @@ public class OrderServiceImpl implements OrderService {
         jakarta.persistence.EntityManager entityManager
     ) {
         this.entityManager = entityManager;
+        this.addonResolver = addonResolver;
         this.orderRepository = orderRepository;
         this.orderUpdateBatchRepository = orderUpdateBatchRepository;
         this.orderItemRepository = orderItemRepository;
@@ -452,6 +460,8 @@ public class OrderServiceImpl implements OrderService {
         }
 
         List<OrderItemOption> orderItemOptions = loadOptionsForOrderItems(orderItems);
+
+        validateDraftAddons(order, orderItems, orderItemOptions);
 
         order.status = ORDER_STATUS_SUBMITTED;
         order.submitted_at = now;
@@ -1086,9 +1096,58 @@ public class OrderServiceImpl implements OrderService {
                 : defaultIfNull(menuItemOption.price_delta);
             orderItemOption.quantity = optionRequest.quantity;
             orderItemOption.created_at = now;
+            if (menuItemOption != null && menuItemOption.store_addon_id != null) {
+                // A linked option is an assignment, not independent name/price authority.
+                validateOptionBelongsToMenuItem(menuItemOption, menuItemId);
+                if (!Objects.equals(storeId, menuItemOption.store_addon_store_id)
+                    || !Boolean.TRUE.equals(menuItemOption.is_active)) {
+                    throw new BusinessException("ADDON_ASSIGNMENT_UNAVAILABLE");
+                }
+                if (optionRequest.option_price_snapshot != null
+                    && optionRequest.option_price_snapshot.compareTo(menuItemOption.price_delta) != 0) {
+                    throw new BusinessException("ADDON_CATALOG_CHANGED: refresh menu and confirm the current Add-on price");
+                }
+                orderItemOption.option_type_snapshot = "addon";
+                orderItemOption.option_code_snapshot = menuItemOption.option_code;
+                orderItemOption.option_group_snapshot = "ADD_ON";
+                orderItemOption.parent_option_id_snapshot = menuItemOption.parent_option_id;
+                orderItemOption.option_name_snapshot_zh = menuItemOption.name_zh;
+                orderItemOption.option_name_snapshot_en = menuItemOption.name_en;
+                orderItemOption.price_delta = menuItemOption.price_delta;
+            } else if ((menuItemOption != null && addonResolver.requiresAssignment(storeId, menuItemOption.option_group, menuItemOption.option_code))
+                || addonResolver.requiresAssignment(storeId, orderItemOption.option_group_snapshot, orderItemOption.option_code_snapshot)) {
+                throw new BusinessException("ADDON_ASSIGNMENT_REQUIRED: refresh menu and select the Store Add-on");
+            }
             savedOptions.add(orderItemOptionRepository.save(orderItemOption));
         }
         return savedOptions;
+    }
+
+    private void validateDraftAddons(Order order, List<OrderItem> lines, List<OrderItemOption> snapshots) {
+        Long storeId = order.store_id;
+        Map<Long, Long> itemIds = new HashMap<>();
+        lines.forEach(line -> itemIds.put(line.id, line.menu_item_id));
+        List<MenuItemOption> raw = snapshots.stream().map(s -> s.option_id).filter(Objects::nonNull).distinct()
+            .map(menuItemOptionRepository::findById).flatMap(java.util.Optional::stream).toList();
+        Map<Long, MenuItemOption> current = addonResolver.resolve(raw).stream()
+            .collect(Collectors.toMap(option -> option.id, option -> option));
+        for (OrderItemOption snapshot : snapshots) {
+            MenuItemOption option = current.get(snapshot.option_id);
+            if (option != null && option.store_addon_id != null) {
+                if (!Objects.equals(storeId, option.store_addon_store_id)
+                    || !Objects.equals(itemIds.get(snapshot.order_item_id), option.menu_item_id)
+                    || !Boolean.TRUE.equals(option.is_active)) {
+                    throw new BusinessException("ADDON_ASSIGNMENT_UNAVAILABLE");
+                }
+                if ((!order.kitchenMirror() && (snapshot.price_delta == null || snapshot.price_delta.compareTo(option.price_delta) != 0))
+                    || !Objects.equals(snapshot.option_code_snapshot, option.option_code)) {
+                    throw new BusinessException("ADDON_CATALOG_CHANGED: refresh menu and confirm the current Add-on price");
+                }
+            } else if ((option != null && addonResolver.requiresAssignment(storeId, option.option_group, option.option_code))
+                || addonResolver.requiresAssignment(storeId, snapshot.option_group_snapshot, snapshot.option_code_snapshot)) {
+                throw new BusinessException("ADDON_ASSIGNMENT_REQUIRED: refresh menu and select the Store Add-on");
+            }
+        }
     }
 
     private Map<Long, MenuItemOption> loadRequestedMenuItemOptions(List<CreateOrderItemOptionRequest> optionRequests) {
@@ -1102,6 +1161,10 @@ public class OrderServiceImpl implements OrderService {
             }
             menuItemOptionRepository.findById(optionRequest.option_id)
                 .ifPresent(option -> optionsById.put(option.id, option));
+        }
+        if (optionsById.values().stream().anyMatch(o -> o.store_addon_id != null)) {
+            return addonResolver.resolve(new ArrayList<>(optionsById.values())).stream()
+                .collect(Collectors.toMap(o -> o.id, o -> o));
         }
         return optionsById;
     }

@@ -1,5 +1,9 @@
 package com.restaurant.system.order.service.impl;
 
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+
+import com.restaurant.system.menu.addon.StoreAddonOptionResolver;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -12,6 +16,7 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.inventory.entity.InventoryTransaction;
 import com.restaurant.system.inventory.repository.InventoryItemRepository;
 import com.restaurant.system.inventory.repository.InventoryTransactionRepository;
@@ -137,6 +142,7 @@ class OrderServiceImplTest {
     private final AtomicLong orderUpdateBatchIdSeq = new AtomicLong(1);
     private final Map<Long, OrderUpdateBatch> orderUpdateBatches = new HashMap<>();
 
+    private StoreAddonOptionResolver addonResolver;
     private Store store;
     private MenuCategory menuCategory;
     private MenuItem menuItem;
@@ -144,7 +150,8 @@ class OrderServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        orderService = new OrderServiceImpl(
+        addonResolver = org.mockito.Mockito.spy(new StoreAddonOptionResolver(org.mockito.Mockito.mock(NamedParameterJdbcTemplate.class)));
+        orderService = new OrderServiceImpl(addonResolver,
             orderRepository,
             orderUpdateBatchRepository,
             orderItemRepository,
@@ -350,6 +357,75 @@ class OrderServiceImplTest {
                 .filter(item -> statuses.contains(item.status))
                 .toList();
         });
+    }
+
+    @Test
+    void linkedAddonFreezesCanonicalNamesPriceAndCodeWhileExistingSnapshotStaysFrozen() {
+        MenuItemOption linked = menuOption(880L, "addon", "green_onion", "ADD_ON", "加葱", "Extra Green Onion", BigDecimal.ZERO);
+        linked.store_addon_id=99L; linked.store_addon_store_id=store.id; linked.addon_eligible=true; linked.is_active=true;
+        when(menuItemOptionRepository.findById(linked.id)).thenReturn(Optional.of(linked));
+        org.mockito.Mockito.doReturn(List.of(linked)).when(addonResolver).resolve(anyList());
+        var selected=optionRequest(linked.id, 1);
+        selected.option_name_snapshot_zh="旧名"; selected.option_code_snapshot="wrong";
+        selected.option_price_snapshot=BigDecimal.ZERO;
+        var request=canonicalAddonRequest(selected);
+        var first=orderService.createOrder(request);
+        OrderItemOption frozen=orderItemOptions.values().iterator().next();
+        assertEquals("green_onion", frozen.option_code_snapshot);
+        assertEquals("加葱", frozen.option_name_snapshot_zh);
+        assertEquals(0, BigDecimal.ZERO.compareTo(frozen.price_delta));
+        linked.name_zh="新葱";
+        orderService.createOrder(request);
+        assertEquals("加葱", frozen.option_name_snapshot_zh);
+        assertTrue(orderItemOptions.values().stream().anyMatch(o -> "新葱".equals(o.option_name_snapshot_zh)));
+        linked.price_delta=new BigDecimal("0.50");
+        var stale=assertThrows(BusinessException.class, () -> orderService.createOrder(request));
+        assertTrue(stale.getMessage().contains("ADDON_CATALOG_CHANGED"));
+        assertEquals(0, BigDecimal.ZERO.compareTo(frozen.price_delta));
+        assertTrue(assertThrows(BusinessException.class, () -> orderService.submitOrder(first.id)).getMessage().contains("ADDON_CATALOG_CHANGED"));
+        assertEquals("draft", orders.get(first.id).status);
+        linked.price_delta=BigDecimal.ZERO; linked.is_active=false;
+        assertTrue(assertThrows(BusinessException.class, () -> orderService.submitOrder(first.id)).getMessage().contains("ADDON_ASSIGNMENT_UNAVAILABLE"));
+        assertTrue(kitchenTasks.isEmpty());
+    }
+
+    @Test
+    void linkedAddonCannotBypassDisabledAssignmentOrStoreScopeWithClientSnapshot() {
+        MenuItemOption linked = menuOption(881L, "addon", "fried_egg", "ADD_ON", "加煎蛋", "Extra Fried Egg", new BigDecimal("1.99"));
+        linked.store_addon_id=99L; linked.store_addon_store_id=store.id; linked.addon_eligible=false; linked.is_active=false;
+        when(menuItemOptionRepository.findById(linked.id)).thenReturn(Optional.of(linked));
+        org.mockito.Mockito.doReturn(List.of(linked)).when(addonResolver).resolve(anyList());
+        var request=canonicalAddonRequest(optionRequest(linked.id,1));
+        assertTrue(assertThrows(BusinessException.class, () -> orderService.createOrder(request)).getMessage().contains("ADDON_ASSIGNMENT_UNAVAILABLE"));
+        linked.is_active=true; linked.store_addon_store_id=store.id+1;
+        assertTrue(assertThrows(BusinessException.class, () -> orderService.createOrder(request)).getMessage().contains("ADDON_ASSIGNMENT_UNAVAILABLE"));
+        linked.store_addon_store_id=store.id; linked.menu_item_id=menuItem.id+1;
+        request.items.get(0).options.get(0).parent_option_id_snapshot=100L;
+        assertThrows(BusinessException.class, () -> orderService.createOrder(request));
+        assertTrue(orderItemOptions.isEmpty());
+    }
+
+    @Test
+    void customGroupCannotForgeExistingCanonicalAddonForMissingOrUnlinkedOption() {
+        org.mockito.Mockito.doReturn(true).when(addonResolver).hasCanonicalCode(store.id, "extra_meat");
+        var selected=optionRequest(990L,1); selected.option_type_snapshot="addon";
+        selected.option_group_snapshot="CUSTOM"; selected.option_code_snapshot="extra_meat";
+        selected.option_name_snapshot_zh="加肉"; selected.option_price_snapshot=BigDecimal.ZERO;
+        var request=canonicalAddonRequest(selected);
+        assertTrue(assertThrows(BusinessException.class, () -> orderService.createOrder(request)).getMessage().contains("ADDON_ASSIGNMENT_REQUIRED"));
+        selected.option_group_snapshot="COMBO_FAKE";
+        assertTrue(assertThrows(BusinessException.class, () -> orderService.createOrder(request)).getMessage().contains("ADDON_ASSIGNMENT_REQUIRED"));
+        selected.option_code_snapshot="fake_code";
+        var legacy=menuOption(990L,"addon","extra_meat","CUSTOM","加肉","Extra Meat",BigDecimal.ZERO);
+        when(menuItemOptionRepository.findById(990L)).thenReturn(Optional.of(legacy));
+        assertTrue(assertThrows(BusinessException.class, () -> orderService.createOrder(request)).getMessage().contains("ADDON_ASSIGNMENT_REQUIRED"));
+        assertTrue(orderItemOptions.isEmpty());
+    }
+
+    private CreateOrderRequest canonicalAddonRequest(CreateOrderItemOptionRequest selected) {
+        var item=new CreateOrderItemRequest(); item.menu_item_id=menuItem.id; item.quantity=1; item.options=List.of(selected);
+        var request=new CreateOrderRequest(); request.store_id=store.id; request.created_by=1L;
+        request.order_type="takeout"; request.items=List.of(item); return request;
     }
 
     @Test

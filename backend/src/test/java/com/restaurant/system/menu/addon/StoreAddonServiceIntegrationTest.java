@@ -101,6 +101,39 @@ class StoreAddonServiceIntegrationTest {
     @AfterEach void close() { context.close(); }
 
     @Test
+    void canonicalResolverIgnoresStaleCopiesAndPreservesLegacyEntityAndFrozenHistory() {
+        long optionId = option(10, "green_onion", "加葱", "Extra Green Onion", "0.00", true);
+        service.reconcile(1L, false);
+        Long addonId = jdbc.queryForObject("select store_addon_id from menu_item_options where id=?", Long.class, optionId);
+        var legacy = new com.restaurant.system.menu.entity.MenuItemOption();
+        legacy.id=optionId; legacy.menu_item_id=10L; legacy.store_addon_id=addonId;
+        legacy.store_addon_store_id=1L; legacy.addon_eligible=true;
+        legacy.name_zh="旧葱"; legacy.name_en="Old onion"; legacy.option_code="wrong_copy";
+        legacy.price_delta=new BigDecimal("9.99"); legacy.is_active=false;
+        var resolver = new StoreAddonOptionResolver(new org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate(jdbc));
+        var current = resolver.resolve(List.of(legacy)).get(0);
+        assertThat(current.id).isEqualTo(optionId);
+        assertThat(current.store_addon_id).isEqualTo(addonId);
+        assertThat(current.option_code).isEqualTo("green_onion");
+        assertThat(current.name_zh).isEqualTo("加葱");
+        assertThat(current.price_delta).isEqualByComparingTo("0.00");
+        assertThat(current.is_active).isTrue();
+        assertThat(legacy.name_zh).isEqualTo("旧葱");
+        service.update(addonId, request(1, "green_onion", "加新葱", "New onion", "0.25", true));
+        var changed=resolver.resolve(List.of(legacy)).get(0);
+        assertThat(changed.name_zh).isEqualTo("加新葱");
+        assertThat(changed.price_delta).isEqualByComparingTo("0.25");
+        assertThat(current.name_zh).isEqualTo("加葱");
+        legacy.addon_eligible=false;
+        assertThat(resolver.resolve(List.of(legacy)).get(0).is_active).isFalse();
+        legacy.addon_eligible=true;
+        jdbc.update("update store_addons set active=false where id=?",addonId);
+        assertThat(resolver.resolve(List.of(legacy)).get(0).is_active).isFalse();
+        legacy.store_addon_store_id=2L;
+        assertThatThrownBy(() -> resolver.resolve(List.of(legacy))).hasMessageContaining("ADDON_REFERENCE_INVALID");
+    }
+
+    @Test
     void retiredUnlinkedRowsDoNotBlockCanonicalCatalogAndCompletedSnapshotsStayUntouched() {
         long active = option(10, "extra_meat", "加肉", "Extra Meat", "6.99", true);
         long retired = option(11, "extra_meat", "旧肉", "Legacy Beef", "4.00", false);
