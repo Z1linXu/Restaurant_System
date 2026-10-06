@@ -3,32 +3,32 @@ updated_at: 2026-10-06
 
 repository:
   ref: origin/main
-  sha: 758dc5b2111db1b298b6104fac81c07f8aee0e12
+  sha: 420dbb1268540c3ad5a2d0befa1d9fd96c684bd0
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
   package: FINAL_PRODUCT_CLOSEOUT
-  status: PRODUCTION_ADDON_IDENTITY_RECONCILIATION_IN_PROGRESS
+  status: PRODUCTION_ADDON_IDENTITY_RECONCILIATION_COMPLETE
   next_phase_authorized: false
 
 staging:
-  deployed_sha: 758dc5b2111db1b298b6104fac81c07f8aee0e12
+  deployed_sha: ce35278b3569a4eacfa29efc01cadbf0c409bec6
   deployed_sha_semantics: BACKEND_FRONTEND_TRACKED_SEPARATELY
   frontend_deployed_sha: 8c3a9e356f59cd025beff25f7fb1d5a20594e028
   policy_config_sha: d2316234b2936fd89a926aa24a7b6343008834e6
   flyway: V37
-  acceptance: UBER_CAPABILITY_BACKEND946_FRONTEND267_OPTION370_CONFLICTS0_ROUTES_API_STORE_SWITCH_HISTORY_PASS
-  evidence: UBER_STORE_CAPABILITY_20261003.md
-  repair_evidence: UBER_STORE_CAPABILITY_20261003.md
+  acceptance: CANONICAL_ADDON_BACKEND953_POSTGRES_IDENTITY_API_HISTORY_ELIGIBILITY_PASS
+  evidence: PRODUCTION_ADDON_IDENTITY_20261006.md
+  repair_evidence: PRODUCTION_ADDON_IDENTITY_20261006.md
   cleanup_evidence: PHASE_B_STAGING_SYNTHETIC_FIXTURE_CLEANUP_EXECUTION_EVIDENCE.md
-  runtime_observation_evidence: UBER_STORE_CAPABILITY_20261003.md
+  runtime_observation_evidence: PRODUCTION_ADDON_IDENTITY_20261006.md
   endpoint_policy_evidence: runtime/STAGING_ENDPOINT_POLICY_20260930_EVIDENCE.md
-  latest_backend_release_evidence: PRODUCTION_V37_RELEASE_20261005.md
+  latest_backend_release_evidence: PRODUCTION_ADDON_IDENTITY_20261006.md
   endpoint_policy_gate: OWNER_CONFIRMED_STORE18_PRINTER_BINDINGS_PENDING
 
 production:
-  deployed_sha: 758dc5b2111db1b298b6104fac81c07f8aee0e12
+  deployed_sha: ce35278b3569a4eacfa29efc01cadbf0c409bec6
   frontend_deployed_sha: 8c3a9e356f59cd025beff25f7fb1d5a20594e028
   canonical_url: https://pos.lanzhounoodlesmtl.com
   application_release: COMPLETE
@@ -37,10 +37,15 @@ production:
   uber_activated: false
   uber_active_bindings: 0
   flyway: V37
-  mutation_authorized: true
-  current_release_authorization: OWNER_20261006_CANONICAL_ADDONS_FORMAL_REFERENCE_BACKEND_RELEASE_NO_HISTORY_OR_UBER_CHANGE
-  evidence: PRODUCTION_V37_RELEASE_20261005.md
-  runtime_observation_evidence: PRODUCTION_V37_RELEASE_20261005.md
+  mutation_authorized: false
+  current_release_authorization: OWNER_20261006_ADDON_BATCH_COMPLETED_NO_FURTHER_MUTATION
+  evidence: PRODUCTION_ADDON_IDENTITY_20261006.md
+  runtime_observation_evidence: PRODUCTION_ADDON_IDENTITY_20261006.md
+  canonical_addons_per_store: 15
+  canonical_addon_assignments: 195
+  addon_conflicts: 0
+  addon_identity_api_acceptance: PASS_THREE_STORES
+  addon_post_release_browser_acceptance: NOT_COMPLETED_CUA_CLIPBOARD_TIMEOUT
 
 uber_test_store_audit:
   observed_at: 2026-10-03T20:49:02Z
@@ -147,8 +152,8 @@ uber_store_capability:
   production_mutation: NONE
 
 gate:
-  type: ENGINEERING
-  next_action: REVIEW_MERGE_EXACT_BACKEND_STAGING_ACCEPTANCE_THEN_AUTHORIZED_PRODUCTION_RECONCILIATION
+  type: TECHNICAL
+  next_action: NONE_AUTHORIZED_ADDON_BATCH_COMPLETE
 
 authorization:
   uber_store_capability: OWNER_AUTHORIZED_OPTION370_TEA_EGG_KEEP_ID_PRICE_HISTORY_FORMAL_UBER_EATS_GATES_V37_TEST_REVIEW_MERGE_STAGING_ONLY
@@ -167,7 +172,7 @@ authorization:
   printing_reliability: OWNER_AUTHORIZED_IMPLEMENTATION_TEST_AGENT6_PR_MERGE_STAGING_NON_PAPER_AND_APK_BUILD
   staging: OWNER_AUTHORIZED_ENDPOINT_POLICY_TEST_REVIEW_MERGE_STAGING_CONFIG_AND_CONFIRMED_STORE18_BINDINGS_NO_PHYSICAL_PRINT
   staging_https_phase_1: OWNER_AUTHORIZED_INGRESS_TLS_FORWARDING_AGENT6_PR_MERGE_COMPLETE
-  production: OWNER_20261006_ADDON_CATALOG_IDENTITY_RECONCILIATION_AND_NECESSARY_BACKEND_ONLY_RELEASE
+  production: NONE
 
 stop:
-  marker: ADDON_IDENTITY_BATCH_ONLY_NO_HISTORY_PRINTER_DEVICE_OR_UBER_ACTIVATION_CHANGE
+  marker: ADDON_IDENTITY_ACCEPTED_STOP_NO_FURTHER_PRODUCTION_OR_PHASE_AUTHORIZATION
