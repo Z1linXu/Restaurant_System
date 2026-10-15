@@ -23,12 +23,12 @@ class StoreProfileIsolationPostgresTest {
                 from store_profiles p join store_profile_versions v on v.profile_id=p.id
                 where p.profile_code='ST_DENIS_CANONICAL_PROFILE' and v.profile_version='v2'
                 """, a);
-            var before = jdbc.queryForList("select id,content_json,fingerprint_sha256 from store_profile_versions order by id");
+            var before = jdbc.queryForList("select id,content_json,fingerprint_sha256 from store_profile_versions where profile_id in (select id from store_profiles where profile_code <> 'NEUTRAL_RESTAURANT') order by id");
             var flyway = Flyway.configure().dataSource(db.dataSource).load();
             flyway.migrate(); flyway.validate();
             assertThat(jdbc.queryForObject("select owner_organization_id from store_profiles where profile_code='ST_DENIS_CANONICAL_PROFILE'", Long.class)).isEqualTo(a);
-            assertThat(jdbc.queryForObject("select count(*) from store_profiles where visibility <> 'PRIVATE'", Integer.class)).isZero();
-            assertThat(jdbc.queryForList("select id,content_json,fingerprint_sha256 from store_profile_versions order by id")).isEqualTo(before);
+            assertThat(jdbc.queryForObject("select count(*) from store_profiles where profile_code <> 'NEUTRAL_RESTAURANT' and visibility <> 'PRIVATE'", Integer.class)).isZero();
+            assertThat(jdbc.queryForList("select id,content_json,fingerprint_sha256 from store_profile_versions where profile_id in (select id from store_profiles where profile_code <> 'NEUTRAL_RESTAURANT') order by id")).isEqualTo(before);
             assertThat(flyway.migrate().migrationsExecuted).isZero();
             assertThatThrownBy(() -> jdbc.update("update store_profiles set visibility='PUBLIC_PRESET' where owner_organization_id=?", a))
                 .isInstanceOf(org.springframework.dao.DataAccessException.class);
@@ -57,7 +57,7 @@ class StoreProfileIsolationPostgresTest {
         try (var db = new CommercialPostgres()) {
             Flyway.configure().dataSource(db.dataSource).load().migrate();
             var jdbc = new JdbcTemplate(db.dataSource);
-            assertThat(jdbc.queryForObject("select count(*) from store_profiles where owner_organization_id is not null or visibility <> 'PRIVATE'", Integer.class)).isZero();
+            assertThat(jdbc.queryForObject("select count(*) from store_profiles where profile_code <> 'NEUTRAL_RESTAURANT' and (owner_organization_id is not null or visibility <> 'PRIVATE')", Integer.class)).isZero();
         }
     }
 }

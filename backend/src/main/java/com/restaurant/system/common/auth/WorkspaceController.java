@@ -24,19 +24,22 @@ public class WorkspaceController {
     private final StoreRepository storeRepository;
     private final OrganizationRepository organizationRepository;
     private final StoreModuleService storeModuleService;
+    private final com.restaurant.system.merchant.MerchantConfigurationService merchantConfiguration;
 
     public WorkspaceController(
         RequestUserContextService requestUserContextService,
         StoreAccessService storeAccessService,
         StoreRepository storeRepository,
         OrganizationRepository organizationRepository,
-        StoreModuleService storeModuleService
+        StoreModuleService storeModuleService,
+        com.restaurant.system.merchant.MerchantConfigurationService merchantConfiguration
     ) {
         this.requestUserContextService = requestUserContextService;
         this.storeAccessService = storeAccessService;
         this.storeRepository = storeRepository;
         this.organizationRepository = organizationRepository;
         this.storeModuleService = storeModuleService;
+        this.merchantConfiguration = merchantConfiguration;
     }
 
     @GetMapping("/me/workspaces")
@@ -89,6 +92,7 @@ public class WorkspaceController {
         response.organizationId = store.organization_id;
         response.roleCode = storeAccessService.roleCodeForStore(user, store);
         response.moduleConfiguration = storeModuleService.getConfiguration(storeId);
+        response.safe_summary = merchantConfiguration.safeSummary(storeId);
         if (store.organization_id != null) {
             organizationRepository.findById(store.organization_id).ifPresent(organization -> {
                 response.organizationName = organization.name;

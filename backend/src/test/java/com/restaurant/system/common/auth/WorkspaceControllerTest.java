@@ -47,7 +47,7 @@ class WorkspaceControllerTest {
             storeAccessService,
             storeRepository,
             organizationRepository,
-            storeModuleService
+            storeModuleService, org.mockito.Mockito.mock(com.restaurant.system.merchant.MerchantConfigurationService.class)
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
             .setControllerAdvice(new GlobalExceptionHandler())

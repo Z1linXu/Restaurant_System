@@ -73,6 +73,9 @@ public class StoreProfileContractValidator {
         String expectedFingerprint,
         List<StoreProfileArtifactInput> artifacts
     ) {
+        if (NeutralRestaurantProfile.CODE.equals(profileCode)) {
+            return NeutralRestaurantProfile.validate(profileVersion, schemaVersion, contentJson, expectedFingerprint, artifacts);
+        }
         List<StoreProfileValidationIssue> issues = new ArrayList<>();
         if (!StoreProfileIdentity.isExact(profileCode)) {
             issues.add(issue("INVALID_PROFILE_CODE", "profile_code", "Profile code must be exact"));

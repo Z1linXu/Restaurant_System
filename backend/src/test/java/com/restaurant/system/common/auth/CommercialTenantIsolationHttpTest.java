@@ -70,7 +70,7 @@ class CommercialTenantIsolationHttpTest {
         when(service.saveMenuItemOption(any())).thenAnswer(i -> i.getArgument(0));
         when(service.getRoles()).thenAnswer(i -> new ArrayList<>(f.roleRows.values()));
         var platform=new PlatformAdminController(service,auth,mock(FeatureFlagService.class),audit,modules,guard);
-        var workspace=new WorkspaceController(f.context,f.access,f.stores,f.organizations,mock(StoreModuleService.class));
+        var workspace=new WorkspaceController(f.context,f.access,f.stores,f.organizations,mock(StoreModuleService.class), mock(com.restaurant.system.merchant.MerchantConfigurationService.class));
         var staffService=new com.restaurant.system.staff.service.impl.StaffAdminServiceImpl(f.users,f.roles,f.stores,
             mock(com.restaurant.system.auth.repository.UserCredentialRepository.class),mock(com.restaurant.system.auth.service.PasswordService.class),
             auth,audit,modules,f.access,f.storeMembers,mock(jakarta.persistence.EntityManager.class));

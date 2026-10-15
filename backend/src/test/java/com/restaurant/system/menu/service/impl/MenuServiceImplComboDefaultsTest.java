@@ -32,7 +32,7 @@ class MenuServiceImplComboDefaultsTest {
         MenuRevisionService revisions = mock(MenuRevisionService.class);
         MenuServiceImpl service = new MenuServiceImpl(new StoreAddonOptionResolver(org.mockito.Mockito.mock(NamedParameterJdbcTemplate.class)), categories, items, mock(MenuItemOptionRepository.class),
             revisions, new MenuCatalogHashService(), mock(StorePricingPolicyService.class),
-            mock(StoreComboConfigurationService.class));
+            mock(StoreComboConfigurationService.class), mock(com.restaurant.system.merchant.MerchantConfigurationService.class));
         MenuCategory category = new MenuCategory();
         category.id = 8L;
         category.is_active = true;

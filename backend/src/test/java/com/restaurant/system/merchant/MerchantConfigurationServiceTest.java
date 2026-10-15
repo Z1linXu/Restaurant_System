@@ -19,12 +19,13 @@ class MerchantConfigurationServiceTest {
     final AuthorizationService auth = mock(AuthorizationService.class);
     final MenuRevisionService revisions = mock(MenuRevisionService.class);
     final AuditLogService audit = mock(AuditLogService.class);
+    final jakarta.persistence.EntityManager entityManager = mock(jakarta.persistence.EntityManager.class);
     final ObjectMapper json = new ObjectMapper();
     final AuthenticatedUser owner = new AuthenticatedUser(7L, 3L, 1L, "synthetic", "Synthetic", "OWNER");
     MerchantConfigurationService service;
     Store store;
     @BeforeEach void setup() {
-        service = new MerchantConfigurationService(configs, stores, auth, revisions, audit, "America/Toronto");
+        service = new MerchantConfigurationService(configs, stores, auth, revisions, audit, "America/Toronto", entityManager);
         store = new Store(); store.id = 3L; store.organization_id = 11L; store.name = "Synthetic Neutral";
         when(stores.findById(3L)).thenReturn(Optional.of(store));
         when(stores.findByIdForUpdate(3L)).thenReturn(Optional.of(store));
@@ -69,7 +70,12 @@ class MerchantConfigurationServiceTest {
         verify(configs).saveAndFlush(argument.capture());
         assertThat(argument.getValue().config_revision).isEqualTo(1L);
         assertThat(argument.getValue().profile_code).isEqualTo("NEUTRAL_RESTAURANT");
-        verify(auth, times(2)).requireForStore(3L, Capability.ADMIN_STORE_CONFIG);
+        var order = inOrder(auth, stores, entityManager);
+        order.verify(auth).requireForStore(3L, Capability.ADMIN_STORE_CONFIG);
+        order.verify(auth).isOwner(owner);
+        order.verify(stores).findByIdForUpdate(3L);
+        order.verify(entityManager).refresh(store, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        order.verify(auth).requireForStore(3L, Capability.ADMIN_STORE_CONFIG);
         verify(audit).record(eq(3L), eq(owner), eq("MERCHANT_CONFIGURATION_UPDATED"), anyString(), eq(3L), anyString(), anyMap(), isNull());
         verify(revisions).incrementRevision(3L);
         assertThat(result.resource_references()).allMatch(r -> r.api_path().contains("3"));

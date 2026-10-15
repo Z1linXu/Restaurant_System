@@ -55,8 +55,8 @@ class OwnerBusinessStoreCreateControllerTest {
             ))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
-        org.mockito.Mockito.lenient().when(catalogService.catalog(org.mockito.ArgumentMatchers.any()))
-            .thenReturn(com.restaurant.system.owner.dto.OwnerStoreProvisioningCatalogResponse.initial(true));
+        org.mockito.Mockito.lenient().when(catalogService.businessCatalog(org.mockito.ArgumentMatchers.any()))
+            .thenReturn(com.restaurant.system.owner.dto.OwnerStoreProvisioningCatalogResponse.neutral(true));
         objectMapper = new ObjectMapper();
         owner = new AuthenticatedUser(1L, null, 10L, "owner", "Owner", "OWNER");
     }

@@ -38,12 +38,15 @@ public class MerchantConfigurationService {
     private final MenuRevisionService menuRevisions;
     private final AuditLogService audit;
     private final String defaultTimezone;
+    private final jakarta.persistence.EntityManager entityManager;
 
     public MerchantConfigurationService(StoreMerchantConfigurationRepository configurations, StoreRepository stores,
         AuthorizationService authorization, MenuRevisionService menuRevisions, AuditLogService audit,
-        @Value("${app.daily-close.default-timezone:America/Toronto}") String defaultTimezone) {
+        @Value("${app.daily-close.default-timezone:America/Toronto}") String defaultTimezone,
+        jakarta.persistence.EntityManager entityManager) {
         this.configurations = configurations; this.stores = stores; this.authorization = authorization;
         this.menuRevisions = menuRevisions; this.audit = audit; this.defaultTimezone = ZoneId.of(defaultTimezone).getId();
+        this.entityManager = entityManager;
     }
 
     /** Internal compatibility decision. Missing, corrupt and unsupported configurations fail closed. */
@@ -75,7 +78,9 @@ public class MerchantConfigurationService {
         AuthenticatedUser owner = requireOwner(storeId);
         validateWrite(body);
         Store store = stores.findByIdForUpdate(storeId).orElseThrow(() -> new ForbiddenException("Store not available"));
-        owner = requireOwner(storeId); // Reload scope after waiting on the Store lock.
+        // A previously authorized OSIV entity may predate a Store move while the lock waited.
+        entityManager.refresh(store, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        owner = requireOwner(storeId); // Recheck the refreshed scope after waiting on the Store lock.
         StoreMerchantConfiguration c = configurations.findById(storeId).orElseGet(() -> neutral(store));
         if (!valid(c)) throw conflict("MERCHANT_CONFIGURATION_INVALID", "Stored configuration requires repair");
         if (c.config_revision != body.get("expected_config_revision").longValue())
@@ -110,11 +115,13 @@ public class MerchantConfigurationService {
     private MerchantConfigurationResponse response(Store store) {
         String source = configurations.findById(store.id).filter(this::valid).map(c -> c.configuration_source).orElse("MISSING_NEUTRAL");
         return new MerchantConfigurationResponse(store.id, store.organization_id, safeSummary(store.id), source,
-            List.of(new ResourceReference(1, "MODULES", "/api/v1/admin/stores/" + store.id + "/modules"),
+            List.of(new ResourceReference(1, "MODULES", "/api/v1/stores/" + store.id + "/modules"),
                 new ResourceReference(1, "MENU", "/api/v1/menu/catalog?store_id=" + store.id),
                 new ResourceReference(1, "STATIONS", "/api/v1/admin/platform/stations?store_id=" + store.id),
                 new ResourceReference(1, "TABLES", "/api/v1/admin/platform/dining-tables?store_id=" + store.id),
-                new ResourceReference(1, "PRINTING", "/api/v1/admin/printing?store_id=" + store.id)));
+                new ResourceReference(1, "PRINTING", "/api/v1/admin/printing?store_id=" + store.id),
+                new ResourceReference(1, "MENU_OPTIONS", "/api/v1/admin/platform/menu/item-options?store_id=" + store.id),
+                new ResourceReference(1, "COMBOS", "/api/v1/admin/menu/combo-configuration?store_id=" + store.id)));
     }
 
     private AuthenticatedUser requireOwner(Long storeId) {

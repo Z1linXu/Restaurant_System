@@ -45,7 +45,7 @@ public class OwnerBusinessStoreCreateController {
     @GetMapping("/create-catalog")
     public ApiResponse<OwnerStoreProvisioningCatalogResponse> catalog(@PathVariable Long organizationId) {
         requireOrganizationOwner(organizationId);
-        return ApiResponse.success("Business Store creation catalog", catalogService.catalog(organizationId));
+        return ApiResponse.success("Business Store creation catalog", catalogService.businessCatalog(organizationId));
     }
 
     @PostMapping

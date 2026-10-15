@@ -118,6 +118,8 @@ class OwnerStoreProvisioningTransactionIntegrationTest {
     @MockBean private StoreActivationRequestCoordinator activationRequestCoordinator;
     @MockBean private StoreAddonService storeAddonService;
 
+    @MockBean private com.restaurant.system.merchant.MerchantConfigurationService merchantConfiguration;
+    @MockBean private com.restaurant.system.common.auth.OwnerOrganizationAuthorizationService ownerAuthorization;
     private Long organizationId;
 
     @BeforeEach

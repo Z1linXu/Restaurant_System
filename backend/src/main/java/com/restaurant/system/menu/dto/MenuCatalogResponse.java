@@ -6,6 +6,7 @@ import java.util.List;
 
 public class MenuCatalogResponse {
 
+    public com.restaurant.system.merchant.dto.MerchantConfigurationSummary safe_summary;
     public Long store_id;
     public Long organization_id;
     public Long menu_revision;

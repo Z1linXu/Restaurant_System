@@ -9593,3 +9593,14 @@ physical output and bundled assets are unchanged. Local React/TypeScript tests d
 not replace physical iPad/WebView/printing QA. See
 [Phase 3 UI boundaries](docs/commercialization/PHASE3_UI_BOUNDARIES.md) for tests and
 the exact limits; deployment and runtime authority remain in governance.
+V40 adds the reviewed empty `NEUTRAL_RESTAURANT@v1` public preset. Blank Profile
+on the existing Owner Business Store endpoint now uses Neutral in the original
+idempotency/transaction chain. It creates no menu/master/station/table/printer/
+device/staff graph beyond the Owner membership and existing module defaults;
+printing transport remains DISABLED. Explicit authorized canonical v2 creation
+keeps the original private provisioner. StoreContext/MenuCatalog expose the
+nine-field `safe_summary`; its revision participates in menu hash invalidation.
+Contracts and bounded local evidence are in
+[Configuration Contract](docs/commercialization/PHASE3_CONFIGURATION_CONTRACT.md),
+[Profile Design](docs/commercialization/PHASE3_PROFILE_DESIGN.md), and
+[Backend Evidence](docs/commercialization/PHASE3_BACKEND_CONFIGURATION_EVIDENCE.md).

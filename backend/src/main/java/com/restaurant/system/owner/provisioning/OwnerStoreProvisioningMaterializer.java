@@ -75,6 +75,8 @@ public class OwnerStoreProvisioningMaterializer {
     private final StoreReadinessService readinessService;
     private final StoreActivationRequestCoordinator activationRequestCoordinator;
     private final StoreAddonService storeAddonService;
+    private final com.restaurant.system.merchant.MerchantConfigurationService merchantConfiguration;
+    private final com.restaurant.system.common.auth.OwnerOrganizationAuthorizationService ownerAuthorization;
 
     public OwnerStoreProvisioningMaterializer(
         OrganizationRepository organizationRepository,
@@ -96,7 +98,9 @@ public class OwnerStoreProvisioningMaterializer {
         OperationalStoreBaselineProvisioner baselineProvisioner,
         StoreReadinessService readinessService,
         StoreActivationRequestCoordinator activationRequestCoordinator,
-        StoreAddonService storeAddonService
+        StoreAddonService storeAddonService,
+        com.restaurant.system.merchant.MerchantConfigurationService merchantConfiguration,
+        com.restaurant.system.common.auth.OwnerOrganizationAuthorizationService ownerAuthorization
     ) {
         this.organizationRepository = organizationRepository;
         this.storeRepository = storeRepository;
@@ -118,6 +122,8 @@ public class OwnerStoreProvisioningMaterializer {
         this.readinessService = readinessService;
         this.activationRequestCoordinator = activationRequestCoordinator;
         this.storeAddonService = storeAddonService;
+        this.merchantConfiguration = merchantConfiguration;
+        this.ownerAuthorization = ownerAuthorization;
     }
 
     @Transactional
@@ -131,12 +137,17 @@ public class OwnerStoreProvisioningMaterializer {
         if (!"active".equalsIgnoreCase(organization.status)) {
             throw conflict("ORGANIZATION_INACTIVE", "Organization must be active to create a Store");
         }
+        ownerAuthorization.requireActiveOwnerMembership(command.actor(), command.organizationId());
         requireUniqueStoreCode(command.organizationId(), command.storeCode());
         Map<String, StoreProfileArtifactEntity> artifacts = indexArtifacts(input.artifacts());
         JsonNode profileContent = StoreProfileCanonicalJson.parse(input.profileVersion().content_json);
         LocalDateTime now = LocalDateTime.now();
 
         Store store = createStore(command, input, profileContent, now);
+        merchantConfiguration.initializeForProvisionedStore(store, command.actor().userId(), command.profileCode(), command.profileVersion());
+        if (com.restaurant.system.owner.profile.NeutralRestaurantProfile.CODE.equals(command.profileCode())) {
+            return materializeNeutral(reservation, input, store, profileContent, now);
+        }
         List<JsonNode> moduleNodes = iterable(profileContent.path("module_defaults").path("modules"));
         materializeModules(store.id, command, moduleNodes, now);
         Map<String, Station> stationByRef = materializeStations(store.id, artifacts.get("STATION_TEMPLATE"), now);
@@ -212,6 +223,22 @@ public class OwnerStoreProvisioningMaterializer {
             command.isBusinessCreation() ? BUSINESS_RESULT_CODE : SYNTHETIC_RESULT_CODE
         ));
         return toResult(completed, addonReconciliation.conflicts());
+    }
+
+    private OwnerStoreProvisioningResult materializeNeutral(OwnerStoreProvisioningReservation reservation,
+        ResolvedOwnerStoreProvisioningInput input, Store store, JsonNode profileContent, LocalDateTime now) {
+        OwnerStoreProvisioningCommand command = input.command();
+        materializeModules(store.id, command, iterable(profileContent.path("module_defaults").path("modules")), now);
+        baselineProvisioner.provisionNeutral(store, command.actor());
+        // Empty setup is a valid Neutral workspace: there are deliberately no business-menu,
+        // station/table/printing prerequisites to copy from the legacy readiness preset.
+        store.status = "active"; store.lifecycle_status = "ACTIVE"; store.updated_at = now;
+        storeRepository.save(store);
+        OwnerStoreProvisioningCounts counts = new OwnerStoreProvisioningCounts(0, 0, 0, 0, 0, 0, 0);
+        OwnerStoreProvisioningReservation completed = requestCoordinator.complete(new OwnerStoreProvisioningSuccessEvidence(
+            reservation.requestId(), command.organizationId(), store.id, command.profileCode(), command.profileVersion(),
+            command.profileFingerprintSha256(), null, null, null, "PASS", counts, BUSINESS_RESULT_CODE));
+        return toResult(completed, List.of());
     }
 
     private Store createStore(

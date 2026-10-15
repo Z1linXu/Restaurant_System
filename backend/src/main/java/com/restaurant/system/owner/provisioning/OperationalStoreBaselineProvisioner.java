@@ -55,6 +55,14 @@ public class OperationalStoreBaselineProvisioner {
         store.updated_at = now;
     }
 
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void provisionNeutral(Store store, AuthenticatedUser owner) {
+        requireScope(store, owner);
+        ensureOwnerMembership(store, owner, LocalDateTime.now());
+        store.printing_mode = "DISABLED";
+        store.printing_enabled = false;
+    }
+
     private void ensureOwnerMembership(Store store, AuthenticatedUser owner, LocalDateTime now) {
         StoreMembership membership = storeMembershipRepository
             .findFirstByUserIdAndStoreId(owner.userId(), store.id)

@@ -17,6 +17,7 @@ import com.restaurant.system.owner.profile.StoreProfileArtifactRepository;
 import com.restaurant.system.owner.profile.StoreProfileCanonicalJson;
 import com.restaurant.system.owner.profile.StoreProfileContractValidator;
 import com.restaurant.system.owner.profile.StoreProfileEntity;
+import com.restaurant.system.owner.profile.NeutralRestaurantProfile;
 import com.restaurant.system.owner.profile.StoreProfileAccessService;
 import com.restaurant.system.owner.profile.StoreProfileRepository;
 import com.restaurant.system.owner.profile.StoreProfileValidationResult;
@@ -112,7 +113,9 @@ public class OwnerStoreProvisioningServiceImpl implements OwnerStoreProvisioning
 
     private ResolvedOwnerStoreProvisioningInput resolve(OwnerStoreProvisioningCommand command) {
         validateCommandBasics(command);
-        String profileCode = defaultIfBlank(command.profileCode(), DEFAULT_PROFILE_CODE);
+        String profileCode = defaultIfBlank(command.profileCode(), command.isBusinessCreation()
+            ? NeutralRestaurantProfile.CODE : DEFAULT_PROFILE_CODE);
+        if (NeutralRestaurantProfile.CODE.equals(profileCode)) return resolveNeutral(command);
         String profileVersionKey = defaultIfBlank(command.profileVersion(), DEFAULT_PROFILE_VERSION);
         String masterMenuKey = defaultIfBlank(
             command.masterMenuKey(),
@@ -175,6 +178,31 @@ public class OwnerStoreProvisioningServiceImpl implements OwnerStoreProvisioning
             masterOptionRepository.findAllByVersionOrdered(masterVersion.id),
             requestFingerprint
         );
+    }
+
+    private ResolvedOwnerStoreProvisioningInput resolveNeutral(OwnerStoreProvisioningCommand command) {
+        if (!command.isBusinessCreation() || !isBlank(command.masterMenuKey()) || !isBlank(command.masterMenuVersion())
+            || !isBlank(command.masterMenuFingerprintSha256())) {
+            throw badRequest("NEUTRAL_PROFILE_REFERENCE_INVALID", "Neutral Business Store has no Master Menu reference");
+        }
+        String version = defaultIfBlank(command.profileVersion(), NeutralRestaurantProfile.VERSION);
+        String fingerprint = defaultIfBlank(command.profileFingerprintSha256(), NeutralRestaurantProfile.FINGERPRINT);
+        StoreProfileEntity profile = profileRepository.findByProfileCode(NeutralRestaurantProfile.CODE).orElse(null);
+        StoreProfileAccessService.requireUse(profile, command.organizationId());
+        StoreProfileVersionEntity profileVersion = profileVersionRepository.findByProfileIdAndProfileVersion(profile.id, version)
+            .orElseThrow(() -> badRequest("STORE_PROFILE_VERSION_NOT_FOUND", "Store Profile version not found"));
+        requireReadyProfile(profileVersion);
+        List<StoreProfileArtifactEntity> artifacts = profileArtifactRepository
+            .findAllByProfileVersionIdOrderByArtifactTypeAscArtifactCodeAsc(profileVersion.id);
+        validateProfile(profile, profileVersion, artifacts);
+        if (!fingerprint.equals(profileVersion.fingerprint_sha256)) {
+            throw badRequest("STORE_PROFILE_FINGERPRINT_MISMATCH", "Store Profile fingerprint mismatch");
+        }
+        OwnerStoreProvisioningCommand resolved = new OwnerStoreProvisioningCommand(command.actor(), command.organizationId(),
+            command.idempotencyKey(), command.storeName().trim(), command.storeCode().trim(), NeutralRestaurantProfile.CODE,
+            version, fingerprint, null, null, null, command.purpose());
+        return new ResolvedOwnerStoreProvisioningInput(resolved, profileVersion, List.of(), null, List.of(), List.of(),
+            List.of(), fingerprintService.fingerprint(resolved));
     }
 
     private void validateCommandBasics(OwnerStoreProvisioningCommand command) {
@@ -245,7 +273,8 @@ public class OwnerStoreProvisioningServiceImpl implements OwnerStoreProvisioning
             reservation.resultCode(),
             reservation.errorCode(),
             reservation.counts(),
-            reservation.storeId() == null ? List.of() : storeAddonService.getAddons(reservation.storeId()).conflicts()
+            reservation.storeId() == null || NeutralRestaurantProfile.CODE.equals(reservation.profileCode())
+                ? List.of() : storeAddonService.getAddons(reservation.storeId()).conflicts()
         );
     }
 

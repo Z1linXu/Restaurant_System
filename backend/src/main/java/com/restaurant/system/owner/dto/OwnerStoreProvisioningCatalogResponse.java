@@ -9,6 +9,12 @@ public class OwnerStoreProvisioningCatalogResponse {
     public String master_menu_version;
     public String master_menu_fingerprint_sha256;
 
+    public static OwnerStoreProvisioningCatalogResponse neutral(Boolean enabled) {
+        OwnerStoreProvisioningCatalogResponse response = new OwnerStoreProvisioningCatalogResponse();
+        response.enabled = enabled; response.profile_code = "NEUTRAL_RESTAURANT"; response.profile_version = "v1";
+        return response;
+    }
+
     public static OwnerStoreProvisioningCatalogResponse initial(Boolean enabled) {
         OwnerStoreProvisioningCatalogResponse response = new OwnerStoreProvisioningCatalogResponse();
         response.enabled = enabled;
