@@ -62,3 +62,23 @@
 | Root最终后端 | `phase3-integrated-backend.log`在`9fdf5e7`：Java17、全部六类optional PG fresh目标，**1047/0failure/0error/0skip BUILD SUCCESS**；Reviewer核实际日志并复算JAR SHA-256=`49f9eea2deecfbb06f7d794c92dbaaece6168052272847cef068d4adbc577f5e`。本轮测试缺少上方hash断言，不能用suitePASS覆盖新P1 |
 
 除A6-P3-CFG-01外，本批未识别其他阻断问题。修复后须集中复审受影响Profile/version/migration/request/metadata边界并重跑对应测试；G3最终仍需稳定UI审查、受影响整合回归与主线程唯一状态同步。未运行Production/Staging请求、真实设备/打印或Phase4实现。
+
+## Backend fingerprint 定义更正 — A6-P3-CFG-01 WITHDRAWN，批次 PASS
+
+更正日期：2026-10-15；源码仍为`9fdf5e79eee28ab42849bda7e6a02c5a826ee7b9`，**没有产品修复或迁移变化**。保留上节原始审查记录供追溯；其“A6-P3-CFG-01 OPEN / REPAIR REQUIRED”是Reviewer误判，已由本节撤回，不能再作为有效P1或迁移/新版本依据。Reviewer把canonical content摘要误当成了项目定义的Profile聚合指纹，未先核完整合同，这是此次false positive的原因。
+
+项目既有[StoreProfileContractValidator.computeAggregateFingerprint](../../backend/src/main/java/com/restaurant/system/owner/profile/StoreProfileContractValidator.java)第121–144行对以下内容换行拼接后SHA-256：`profile_code`、`profile_version`、`schema_version`、canonical `content`、排序后的artifact身份与各自content摘要。`StoreProfileCanonicalJson.sha256Canonical(content)`仅是内容摘要；二者本来不应相等。当前Profile API/metadata使用前者。
+
+Reviewer在Java17、同一Git archive编译classpath直接调用既有helper，独立结果如下：
+
+| 独立调用 | 实际结果 |
+| --- | --- |
+| `computeAggregateFingerprint(CODE, VERSION, SCHEMA, CONTENT, List.of())` | `3e696169e5609a9c8b7708bf9e5bb77a995a6539fc15155665f60f17095648ba`，**等于类常量和V40所存Profile fingerprint** |
+| `sha256Canonical(CONTENT)` | `1f2742fb30ee9fea4ddb9a11b182c0ad088a6f403611422998f69e063ad4e8dc`，仅content摘要 |
+| Neutral validator以正确aggregate为expected | `true` |
+| Neutral validator以raw content hash为expected | `false` |
+| 保持aggregate但将`ORDERING_POS`改为`CHANGED_MODULE` | `false`；严格canonical内容白名单拒绝修改 |
+
+**A6-P3-CFG-01 WITHDRAWN / FALSE POSITIVE；Backend config/Neutral批次 PASS，未识别其余阻断问题。** 现代码的固定完整内容白名单与正确aggregate常量组合没有本审查所声称的篡改接受路径；既有指纹/创建/replay/provenance定义一致。独立四组27/0failure/0error/0skip、Root1047/0/0/0、实际JARhash与上节正向边界核对保持有效，不需为误判改V39/V40、旧ledger、历史、profile版本或配置schema。
+
+若Root选择增加“真实DB内容按既有aggregate helper重算、错误raw hash被拒”的回归，可作为防止将来常量漂移的有界加强，**不是本批未关闭blocker，也不是新迁移/框架要求**。本报告只撤回误判并更正此后端模块审查结论；整体G3仍待稳定UI独立review与最终集成/证据汇总，动态状态由主线程唯一CURRENT_STATE同步。
