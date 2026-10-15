@@ -9560,3 +9560,5 @@ existing tax policy are read-only metadata; configuration does not change amount
 time calculations. Owner-only revision-checked writes change brand/locale, audit the
 change and increment the existing menu revision. References are authorized Store API
 pointers; there is no second mutable menu/device/module graph.
+
+Phase3 focused backend evidence: Merchant Configuration plus Neutral/Lanzhou order, renderer, eligibility, modifier and printing-rule suites pass 142 tests (zero failure/error/skip). The Uber PostgreSQL regression fixture now explicitly initializes its synthetic Lanzhou compatibility configuration; newly inserted unconfigured Stores remain Neutral. Web module suppression does not imply stopping the paired native headless device worker; that existing lifecycle remains Phase7.
