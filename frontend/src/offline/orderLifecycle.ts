@@ -1,3 +1,4 @@
+import { matchesOfflineScope } from './environmentScope'
 import type { BackendOrderResponse } from '../types/ordering'
 import {
   isServerTerminalLocalState,
@@ -64,9 +65,7 @@ export function buildTerminalOrderOutbox(
 }
 
 function matchesScope(record: LocalDraftScope, scope: LocalDraftScope) {
-  return record.accountId === scope.accountId
-    && record.organizationId === scope.organizationId
-    && record.storeId === scope.storeId
+  return matchesOfflineScope(record, scope)
 }
 
 export async function finalizeOfflineOrderRecords(

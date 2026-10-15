@@ -1,3 +1,4 @@
+import { assertEnvironmentSession, captureEnvironmentSession, getEnvironmentId, invalidateOfflineSession } from '../offline/environmentScope'
 import type { BackendApiResponse } from '../types/ordering'
 import { attestPrintRequest } from './printRequestAttestation'
 import {
@@ -12,26 +13,33 @@ const REFRESH_ENDPOINT = '/api/v1/auth/refresh'
 const DEFAULT_REQUEST_TIMEOUT_MS = 20_000
 const REFRESH_REQUEST_TIMEOUT_MS = 15_000
 
-let refreshInFlight: Promise<void> | null = null
+const activeRequests = new Set<AbortController>()
+
+let refreshInFlight: { key: string; promise: Promise<void> } | null = null
+
+const authKey = (key: string) => `${key}:environment:${encodeURIComponent(getEnvironmentId())}`
 
 export function getAccessToken() {
-  return window.localStorage.getItem(ACCESS_TOKEN_KEY)
+  return window.localStorage.getItem(authKey(ACCESS_TOKEN_KEY))
 }
 
 export function getRefreshToken() {
-  return window.localStorage.getItem(REFRESH_TOKEN_KEY)
+  return window.localStorage.getItem(authKey(REFRESH_TOKEN_KEY))
 }
 
 export function saveAuthTokens(accessToken: string, refreshToken?: string | null) {
-  window.localStorage.setItem(ACCESS_TOKEN_KEY, accessToken)
+  window.localStorage.setItem(authKey(ACCESS_TOKEN_KEY), accessToken)
   if (refreshToken) {
-    window.localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
+    window.localStorage.setItem(authKey(REFRESH_TOKEN_KEY), refreshToken)
   }
 }
 
 export function clearAuthTokens() {
-  window.localStorage.removeItem(ACCESS_TOKEN_KEY)
-  window.localStorage.removeItem(REFRESH_TOKEN_KEY)
+  invalidateOfflineSession()
+  for (const controller of activeRequests) controller.abort()
+  window.localStorage.removeItem(authKey(ACCESS_TOKEN_KEY))
+  window.localStorage.removeItem(authKey(REFRESH_TOKEN_KEY))
+  window.dispatchEvent(new CustomEvent('restaurant-auth-expired'))
 }
 
 export class ApiRequestError extends Error {
@@ -146,6 +154,7 @@ async function readResponsePayload(response: Response) {
 
 async function fetchWithTimeout(input: string, init: RequestInit = {}, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS) {
   const controller = new AbortController()
+  activeRequests.add(controller)
   let timedOut = false
   const timeoutId = window.setTimeout(() => {
     timedOut = true
@@ -165,6 +174,7 @@ async function fetchWithTimeout(input: string, init: RequestInit = {}, timeoutMs
   try {
     return await fetch(input, {
       ...init,
+      redirect: 'error',
       signal: controller.signal,
     })
   } catch (error) {
@@ -176,6 +186,7 @@ async function fetchWithTimeout(input: string, init: RequestInit = {}, timeoutMs
     }
     throw new ApiRequestError(0, error instanceof Error ? error.message : 'Network request failed', networkFailureMessage(), error, 'NETWORK_ERROR')
   } finally {
+    activeRequests.delete(controller)
     window.clearTimeout(timeoutId)
     externalSignal?.removeEventListener('abort', abortFromExternalSignal)
   }
@@ -225,15 +236,17 @@ function canAttemptRefresh(input: string) {
   return Boolean(getRefreshToken()) && !isAuthCredentialEndpoint(input)
 }
 
-async function refreshSessionOnce() {
-  if (!refreshInFlight) {
-    refreshInFlight = (async () => {
+async function refreshSessionOnce(session: ReturnType<typeof captureEnvironmentSession>) {
+  const key = `${session.environmentId}:${session.generation}`
+  if (!refreshInFlight || refreshInFlight.key !== key) {
+    const promise = (async () => {
+      assertEnvironmentSession(session)
       const refreshToken = getRefreshToken()
       if (!refreshToken) {
         throw new ApiRequestError(401, 'Refresh token is missing', userMessageForStatus(401))
       }
 
-      const response = await fetchWithTimeout(REFRESH_ENDPOINT, {
+      const response = await fetchWithTimeout(session.environmentId + REFRESH_ENDPOINT, {
         method: 'POST',
         headers: buildApiHeaders({}, false),
         body: JSON.stringify({ refresh_token: refreshToken }),
@@ -257,30 +270,34 @@ async function refreshSessionOnce() {
         const backendMessage = apiPayload.message || 'Session refresh failed'
         throw new ApiRequestError(401, backendMessage, userMessageForStatus(401), apiPayload)
       }
+      assertEnvironmentSession(session)
       saveAuthTokens(apiPayload.data.access_token, apiPayload.data.refresh_token)
       window.dispatchEvent(new CustomEvent('restaurant-auth-updated'))
     })().finally(() => {
-      refreshInFlight = null
+      if (refreshInFlight?.key === key) refreshInFlight = null
     })
+    refreshInFlight = { key, promise }
   }
-  return refreshInFlight
+  return refreshInFlight.promise
 }
 
-async function fetchWithAuth(input: string, init: RequestInit = {}) {
+async function fetchWithAuth(input: string, init: RequestInit, session: ReturnType<typeof captureEnvironmentSession>) {
+  assertEnvironmentSession(session)
+  const target = new URL(input, session.environmentId)
+  if (target.origin !== session.environmentId) throw new Error('API_ENVIRONMENT_MISMATCH')
   const includeAuth = !isAuthCredentialEndpoint(input)
   const accessToken = includeAuth ? getAccessToken() : null
-  const response = await fetchWithTimeout(input, {
-    ...init,
-    headers: attestPrintRequest(requestPath(input), init, buildApiHeaders(init.headers, includeAuth)),
-  })
-  return {
-    response,
-    payload: await readResponsePayload(response),
-    accessToken,
-  }
+  const headers = await attestPrintRequest(requestPath(input), init, buildApiHeaders(init.headers, includeAuth))
+  assertEnvironmentSession(session)
+  const response = await fetchWithTimeout(target.href, { ...init, headers })
+  assertEnvironmentSession(session)
+  const payload = await readResponsePayload(response)
+  assertEnvironmentSession(session)
+  return { response, payload, accessToken }
 }
 
 export async function apiRequest<T>(input: string, init: RequestInit = {}) {
+  const environmentSession = captureEnvironmentSession()
   const requestId = createRequestId()
   const startedAtMs = Date.now()
   const startedAt = new Date(startedAtMs).toISOString()
@@ -305,22 +322,22 @@ export async function apiRequest<T>(input: string, init: RequestInit = {}) {
   }
 
   try {
-    let { response, payload, accessToken } = await fetchWithAuth(input, init)
+    let { response, payload, accessToken } = await fetchWithAuth(input, init, environmentSession)
 
     if (response.status === 401 && canAttemptRefresh(input)) {
       try {
         if (accessToken && getAccessToken() && getAccessToken() !== accessToken) {
-          ;({ response, payload, accessToken } = await fetchWithAuth(input, init))
+          ;({ response, payload, accessToken } = await fetchWithAuth(input, init, environmentSession))
         } else {
-          await refreshSessionOnce()
+          await refreshSessionOnce(environmentSession)
           authRefreshOutcome = 'SUCCEEDED'
-          ;({ response, payload, accessToken } = await fetchWithAuth(input, init))
+          ;({ response, payload, accessToken } = await fetchWithAuth(input, init, environmentSession))
         }
       } catch (refreshError) {
         authRefreshOutcome = 'FAILED'
+        assertEnvironmentSession(environmentSession)
         if (isRefreshCredentialRejection(refreshError)) {
           clearAuthTokens()
-          window.dispatchEvent(new CustomEvent('restaurant-auth-expired'))
         }
         throw refreshError
       }
@@ -329,7 +346,6 @@ export async function apiRequest<T>(input: string, init: RequestInit = {}) {
     if (!response.ok) {
       if (response.status === 401) {
         clearAuthTokens()
-        window.dispatchEvent(new CustomEvent('restaurant-auth-expired'))
       }
       const backendMessage = messageFromPayload(payload)
       const userMessage = userMessageForStatus(response.status, backendMessage)
@@ -352,6 +368,7 @@ export async function apiRequest<T>(input: string, init: RequestInit = {}) {
       const backendMessage = apiPayload.message || 'Request failed'
       throw new ApiRequestError(200, backendMessage, userMessageForStatus(400, backendMessage), apiPayload, 'API_RESPONSE_FAILED')
     }
+    assertEnvironmentSession(environmentSession)
     record(response.status, 'SUCCESS', null)
     return apiPayload.data
   } catch (error) {

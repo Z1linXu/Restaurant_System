@@ -1,3 +1,4 @@
+import { getEnvironmentId, offlineScopeKey, type OfflineScope } from './environmentScope'
 import type { IdempotentOrderSubmitPayload } from '../services/orderService'
 import {
   isServerTerminalLocalState,
@@ -12,7 +13,7 @@ import {
 } from './offlineDatabase'
 import { stablePayloadHash } from './offlineHash'
 
-export const ORDER_OUTBOX_SCHEMA_VERSION = 1
+export const ORDER_OUTBOX_SCHEMA_VERSION = 2
 export const ORDER_OUTBOX_UPDATED_EVENT = 'restaurant-order-outbox-updated'
 
 export const ORDER_OUTBOX_RETRY_DELAYS_MS = [2_000, 5_000, 15_000, 30_000, 60_000] as const
@@ -26,7 +27,7 @@ const MENU_COMPATIBILITY_FAILURE_CODES = new Set([
   'REQUIRED_OPTION_MISSING',
 ])
 
-export interface OrderOutboxRecord {
+export interface OrderOutboxRecord extends OfflineScope {
   key: string
   localDraftId: string
   clientOrderId: string
@@ -55,8 +56,8 @@ const PROCESSABLE_STATES = new Set<LocalDraftSubmitState>([
   'FAILED_RETRYABLE',
 ])
 
-export function orderOutboxKey(accountId: number, organizationId: number, storeId: number, clientOrderId: string) {
-  return `account:${accountId}|organization:${organizationId}|store:${storeId}|client:${clientOrderId}`
+export function orderOutboxKey(accountId: number, organizationId: number, storeId: number, clientOrderId: string, environmentId = getEnvironmentId()) {
+  return `${offlineScopeKey({ environmentId, accountId, organizationId, storeId })}|client:${clientOrderId}`
 }
 
 export function createOrderOutboxRecord(
@@ -66,7 +67,8 @@ export function createOrderOutboxRecord(
 ): OrderOutboxRecord {
   const timestamp = now.toISOString()
   return {
-    key: orderOutboxKey(draft.accountId, draft.organizationId, draft.storeId, draft.clientOrderId),
+    key: orderOutboxKey(draft.accountId, draft.organizationId, draft.storeId, draft.clientOrderId, draft.environmentId),
+    environmentId: draft.environmentId,
     localDraftId: draft.localDraftId,
     clientOrderId: draft.clientOrderId,
     accountId: draft.accountId,
@@ -89,13 +91,16 @@ export function createOrderOutboxRecord(
 }
 
 function normalizeRecord(record: OrderOutboxRecord): OrderOutboxRecord {
+  if (!record.environmentId) throw new Error('ORDER_OUTBOX_ENVIRONMENT_REQUIRED')
   const expectedKey = orderOutboxKey(
     record.accountId,
     record.organizationId,
     record.storeId,
     record.clientOrderId,
+    record.environmentId,
   )
-  if (record.key !== expectedKey || record.frozenPayload.store_id !== record.storeId) {
+  if (record.key !== expectedKey || record.frozenPayload.store_id !== record.storeId
+    || record.frozenPayload.organization_id !== record.organizationId) {
     throw new Error('ORDER_OUTBOX_SCOPE_MISMATCH')
   }
   if (record.frozenPayload.client_order_id !== record.clientOrderId
@@ -153,21 +158,26 @@ export async function readOrderOutboxRecord(
   organizationId: number,
   storeId: number,
   clientOrderId: string,
+  environmentId = getEnvironmentId(),
 ) {
   const database = await openOfflineDatabase()
   const transaction = database.transaction(OFFLINE_STORES.orderOutbox, 'readonly')
   const completed = transactionComplete(transaction)
   const record = await requestResult<OrderOutboxRecord | undefined>(
     transaction.objectStore(OFFLINE_STORES.orderOutbox).get(
-      orderOutboxKey(accountId, organizationId, storeId, clientOrderId),
+      orderOutboxKey(accountId, organizationId, storeId, clientOrderId, environmentId),
     ),
   )
   await completed
-  if (!record || record.schemaVersion !== ORDER_OUTBOX_SCHEMA_VERSION) return null
+  if (!record || record.schemaVersion !== ORDER_OUTBOX_SCHEMA_VERSION
+    || record.environmentId !== environmentId || record.accountId !== accountId
+    || record.organizationId !== organizationId || record.storeId !== storeId
+    || record.clientOrderId !== clientOrderId) return null
+  try { normalizeRecord(record) } catch { return null }
   return record
 }
 
-export async function listOrderOutboxForAccount(accountId: number) {
+export async function listOrderOutboxForAccount(accountId: number, environmentId = getEnvironmentId()) {
   const database = await openOfflineDatabase()
   const transaction = database.transaction(OFFLINE_STORES.orderOutbox, 'readonly')
   const completed = transactionComplete(transaction)
@@ -175,7 +185,8 @@ export async function listOrderOutboxForAccount(accountId: number) {
     transaction.objectStore(OFFLINE_STORES.orderOutbox).index('byAccountId').getAll(accountId),
   )
   await completed
-  return records.filter((record) => record.schemaVersion === ORDER_OUTBOX_SCHEMA_VERSION)
+  return records.filter((record) => record.schemaVersion === ORDER_OUTBOX_SCHEMA_VERSION
+    && record.environmentId === environmentId && record.accountId === accountId)
 }
 
 export function isOrderOutboxRecordDue(record: OrderOutboxRecord, nowMs = Date.now()) {

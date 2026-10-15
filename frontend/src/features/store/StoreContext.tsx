@@ -1,3 +1,4 @@
+import { activateOfflineStore, getEnvironmentId } from '../../offline/environmentScope'
 import { useEffect, useMemo, useState } from 'react'
 import { fetchStoreContext, type StoreContextResponse } from '../../services/storeWorkspaceService'
 import { getApiUserMessage } from '../../services/apiClient'
@@ -19,6 +20,7 @@ export function StoreContextProvider({ storeId, children }: { storeId: number; c
 
   useEffect(() => {
     let active = true
+    let releaseOfflineScope: (() => void) | undefined
     const loadContext = (showLoading: boolean, preferOfflineSnapshot: boolean) => {
       if (showLoading) {
         setLoading(true)
@@ -27,10 +29,15 @@ export function StoreContextProvider({ storeId, children }: { storeId: number; c
       fetchStoreContext(storeId, user?.id, { preferOfflineSnapshot })
         .then((response) => {
           if (!active) return
+          releaseOfflineScope?.()
+          if (user?.id && response.id === storeId && response.organization_id != null) {
+            releaseOfflineScope = activateOfflineStore({ environmentId: getEnvironmentId(), accountId: user.id, organizationId: response.organization_id, storeId })
+          }
           setData(response)
         })
         .catch((exception) => {
           if (!active) return
+          releaseOfflineScope?.()
           setData(null)
           setError(getApiUserMessage(exception, '你没有权限访问这家门店。'))
         })
@@ -44,6 +51,7 @@ export function StoreContextProvider({ storeId, children }: { storeId: number; c
     window.addEventListener('online', handleOnline)
     return () => {
       active = false
+      releaseOfflineScope?.()
       window.removeEventListener('online', handleOnline)
     }
   }, [isOfflineRestricted, storeId, user?.id])

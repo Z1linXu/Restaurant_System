@@ -9,7 +9,7 @@ import {
 import { createOrderOutboxRecord } from './orderOutbox'
 import type { IdempotentOrderSubmitPayload } from '../services/orderService'
 
-const scope = { accountId: 7, organizationId: 9, storeId: 3 }
+const scope = { environmentId: 'https://synthetic.invalid', accountId: 7, organizationId: 9, storeId: 3 }
 const context = {
   orderType: 'dine_in' as const,
   slotLabel: 'T1',

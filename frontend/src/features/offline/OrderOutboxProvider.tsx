@@ -1,3 +1,4 @@
+import { LegacyOfflineRecoveryNotice } from './LegacyOfflineRecoveryNotice'
 import { useEffect } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { startOrderOutboxProcessor } from '../../services/orderOutboxProcessor'
@@ -10,5 +11,5 @@ export function OrderOutboxProvider({ children }: { children: React.ReactNode })
     return startOrderOutboxProcessor(user.id)
   }, [user?.id])
 
-  return <>{children}</>
+  return <><LegacyOfflineRecoveryNotice />{children}</>
 }

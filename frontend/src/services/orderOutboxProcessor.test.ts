@@ -1,3 +1,4 @@
+import { activateOfflineAccount, activateOfflineStore, invalidateOfflineSession } from '../offline/environmentScope'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BackendOrderResponse } from '../types/ordering'
 import {
@@ -33,9 +34,10 @@ vi.mock('./orderService', async () => {
 import { processOrderOutboxRecord } from './orderOutboxProcessor'
 
 const draft = {
-  key: 'account:7|organization:9|store:3|table:T1',
+  key: 'environment:https%3A%2F%2Fsynthetic.invalid|account:7|organization:9|store:3|table:T1',
   localDraftId: 'local-draft-1',
   clientOrderId: 'client-order-1',
+  environmentId: 'https://synthetic.invalid',
   accountId: 7,
   organizationId: 9,
   storeId: 3,
@@ -94,6 +96,10 @@ describe('order outbox processor single-flight', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubGlobal('window', Object.assign(new EventTarget(), { location: { origin: 'https://synthetic.invalid' } }))
+    invalidateOfflineSession()
+    activateOfflineAccount(7)
+    activateOfflineStore(draft)
     stored = createOrderOutboxRecord(draft, payload)
     mocks.read.mockImplementation(async () => stored)
     mocks.save.mockImplementation(async (record: OrderOutboxRecord) => {
@@ -130,4 +136,33 @@ describe('order outbox processor single-flight', () => {
     expect(automaticResult.record?.state).toBe('SUBMITTED')
     expect(automaticResult.record?.serverReplayed).toBe(true)
   })
+  it('does not transmit foreign environment/account manual records', async () => {
+    const foreign = { ...stored, environmentId: 'https://other.synthetic.invalid' }
+    expect((await processOrderOutboxRecord(foreign)).order).toBeNull()
+    expect((await processOrderOutboxRecord({ ...stored, accountId: 8 })).order).toBeNull()
+    expect((await processOrderOutboxRecord({ ...stored, organizationId: 10 })).order).toBeNull()
+    expect((await processOrderOutboxRecord({ ...stored, storeId: 4 })).order).toBeNull()
+    expect(mocks.read).not.toHaveBeenCalled(); expect(mocks.submit).not.toHaveBeenCalled()
+  })
+  it('does not submit when logout happens while IndexedDB lookup is pending', async () => {
+    let finish!: (record: OrderOutboxRecord) => void
+    mocks.read.mockReturnValueOnce(new Promise((resolve) => { finish = resolve }))
+    const operation = processOrderOutboxRecord(stored)
+    invalidateOfflineSession(); finish(stored)
+    expect((await operation).order).toBeNull(); expect(mocks.submit).not.toHaveBeenCalled()
+    expect(stored.state).toBe('QUEUED'); expect(stored.attemptCount).toBe(0)
+  })
+
+  it('pauses an old Store during an IndexedDB lookup and resumes with its stable retry identity on return', async () => {
+    let finish!: (record: OrderOutboxRecord) => void
+    mocks.read.mockReturnValueOnce(new Promise((resolve) => { finish = resolve }))
+    const operation = processOrderOutboxRecord(stored)
+    activateOfflineStore({ ...draft, organizationId: 10, storeId: 4 }); finish(stored)
+    await operation; expect(mocks.submit).not.toHaveBeenCalled(); expect(stored.state).toBe('QUEUED')
+    activateOfflineStore(draft)
+    mocks.submit.mockResolvedValueOnce({ order_id: 491, replayed: true, order: { id: 491 } })
+    await processOrderOutboxRecord(stored)
+    expect(mocks.submit).toHaveBeenCalledWith(payload)
+  })
+
 })

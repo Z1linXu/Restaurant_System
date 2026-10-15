@@ -74,18 +74,18 @@ export function PrintWorkerHealthBanner() {
   const [status, setStatus] = useState<AndroidPadPrintWorkerStatus | null>(null)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
 
-  const refreshStatus = () => {
+  const refreshStatus = async () => {
     const bridge = getAndroidPadDeviceBridge()
     setBridgeAvailable(Boolean(bridge?.getPrintWorkerStatus))
     if (!bridge?.getPrintWorkerStatus) {
       setStatus(null)
       return
     }
-    setStatus(parseWorkerStatus(bridge.getPrintWorkerStatus()))
+    setStatus(parseWorkerStatus(await bridge.getPrintWorkerStatus().catch(() => '')))
   }
 
   useEffect(() => {
-    refreshStatus()
+    const initialTimer = window.setTimeout(() => { void refreshStatus() }, 0)
     const intervalId = window.setInterval(refreshStatus, 5000)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -94,6 +94,7 @@ export function PrintWorkerHealthBanner() {
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => {
+      window.clearTimeout(initialTimer)
       window.clearInterval(intervalId)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
@@ -102,7 +103,7 @@ export function PrintWorkerHealthBanner() {
   const tone = useMemo(() => statusTone(status, bridgeAvailable), [bridgeAvailable, status])
   const title = useMemo(() => statusTitle(status, bridgeAvailable), [bridgeAvailable, status])
 
-  const handleKick = () => {
+  const handleKick = async () => {
     const bridge = getAndroidPadDeviceBridge()
     if (!bridge?.kickPrintWorker) {
       setActionMessage('当前不是 Android Pad App，无法唤醒本地打印执行器。')
@@ -118,7 +119,7 @@ export function PrintWorkerHealthBanner() {
     }
     try {
       const result = parseAndroidBridgeJson<{ success?: boolean; data?: { status?: string; message?: string }; message?: string }>(
-        bridge.kickPrintWorker(JSON.stringify({
+        await bridge.kickPrintWorker(JSON.stringify({
           reason: 'frontdesk-print-health',
           recover_error_stopped: recoverErrorStopped,
         })),

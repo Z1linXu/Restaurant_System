@@ -1,3 +1,4 @@
+import { activateOfflineAccount, captureEnvironmentSession, invalidateOfflineSession, isEnvironmentSessionCurrent } from '../../offline/environmentScope'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ApiRequestError, clearAuthTokens, getAccessToken, getRefreshToken } from '../../services/apiClient'
 import { fetchCurrentUser, login as loginRequest, logout as logoutRequest, type AuthUser, type LoginResponse } from '../../services/authService'
@@ -23,6 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     nextFeatures: Record<string, boolean>,
     nextSessionMode: AuthSessionMode,
   ) => {
+    activateOfflineAccount(nextUser.id)
     setUser(nextUser)
     setPermissions(nextPermissions)
     setFeatures(nextFeatures)
@@ -30,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const clearAuthIdentity = useCallback(() => {
+    invalidateOfflineSession()
     setUser(null)
     setPermissions([])
     setFeatures({})
@@ -44,6 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [applyAuthIdentity])
 
   const refreshMe = useCallback(async () => {
+    const environmentSession = captureEnvironmentSession()
     if (!getAccessToken() && !getRefreshToken()) {
       clearAuthIdentity()
       void clearRestrictedAuthSnapshot().catch(() => undefined)
@@ -54,6 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null)
     if (!navigator.onLine) {
       const snapshot = await readRestrictedAuthSnapshot().catch(() => null)
+      if (!isEnvironmentSessionCurrent(environmentSession)) return
       if (snapshot) {
         applyAuthIdentity(
           snapshot.user,
@@ -67,14 +72,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
     try {
-      applyOnlineAuthResponse(await fetchCurrentUser())
+      const response = await fetchCurrentUser()
+      if (!isEnvironmentSessionCurrent(environmentSession)) return
+      applyOnlineAuthResponse(response)
     } catch (exception) {
+      if (!isEnvironmentSessionCurrent(environmentSession)) return
+      if (!getAccessToken() && !getRefreshToken()) return
       if (exception instanceof ApiRequestError && (exception.status === 401 || exception.status === 403)) {
         clearAuthTokens()
         clearAuthIdentity()
         void clearRestrictedAuthSnapshot().catch(() => undefined)
       } else if (canUseOfflineSnapshot(exception)) {
         const snapshot = await readRestrictedAuthSnapshot().catch(() => null)
+        if (!isEnvironmentSessionCurrent(environmentSession)) return
         if (snapshot) {
           applyAuthIdentity(
             snapshot.user,
@@ -133,6 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback(
     async (loginIdentifier: string, password: string) => {
+      clearAuthTokens()
       const response = await loginRequest(loginIdentifier, password)
       applyOnlineAuthResponse(response)
       return response
@@ -141,9 +152,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 
   const signOut = useCallback(async () => {
-    await logoutRequest()
     clearAuthIdentity()
+    const revocation = logoutRequest()
     await clearRestrictedAuthSnapshot().catch(() => undefined)
+    await revocation
   }, [clearAuthIdentity])
 
   const role = user?.role_code?.toUpperCase()
@@ -159,7 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signIn,
       signOut,
       refreshMe,
-      isOwner: role === 'OWNER' || role === 'ADMIN',
+      isOwner: role === 'OWNER',
       isManager: role === 'MANAGER',
       isFrontdesk: role === 'FRONTDESK',
     }),

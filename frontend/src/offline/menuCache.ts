@@ -1,3 +1,4 @@
+import { matchesOfflineScope, offlineScopeKey, type OfflineScope } from './environmentScope'
 import type {
   BackendMenuCatalog,
   BackendMenuCategory,
@@ -10,13 +11,9 @@ import {
   transactionComplete,
 } from './offlineDatabase'
 
-export const MENU_CACHE_SCHEMA_VERSION = 1
+export const MENU_CACHE_SCHEMA_VERSION = 2
 
-export interface MenuCacheScope {
-  accountId: number
-  organizationId: number
-  storeId: number
-}
+export type MenuCacheScope = OfflineScope
 
 export interface MenuHeadRecord extends MenuCacheScope {
   key: string
@@ -42,7 +39,7 @@ export interface ActiveMenuSnapshot {
 }
 
 export function menuScopeKey(scope: MenuCacheScope) {
-  return `account:${scope.accountId}|organization:${scope.organizationId}|store:${scope.storeId}`
+  return offlineScopeKey(scope)
 }
 
 export function menuSnapshotKey(scope: MenuCacheScope, revision: number) {
@@ -198,9 +195,7 @@ export function validateMenuCatalog(
 }
 
 function recordMatchesScope(record: MenuCacheScope, scope: MenuCacheScope) {
-  return record.accountId === scope.accountId
-    && record.organizationId === scope.organizationId
-    && record.storeId === scope.storeId
+  return matchesOfflineScope(record, scope)
 }
 
 export async function readActiveMenuSnapshot(scope: MenuCacheScope): Promise<ActiveMenuSnapshot | null> {

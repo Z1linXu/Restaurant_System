@@ -48,14 +48,15 @@ export async function runBoundedReconciliation<T>(
 
 export function useStoreOfflineOrders(scope: LocalDraftScope | null, enabled = true) {
   const [orders, setOrders] = useState<OfflineOrderBadge[]>([])
+  const environmentId = scope?.environmentId ?? null
   const accountId = scope?.accountId ?? null
   const organizationId = scope?.organizationId ?? null
   const storeId = scope?.storeId ?? null
 
   useEffect(() => {
     setOrders([])
-    if (accountId == null || organizationId == null || storeId == null || !enabled) return
-    const activeScope = { accountId, organizationId, storeId }
+    if (environmentId == null || accountId == null || organizationId == null || storeId == null || !enabled) return
+    const activeScope = { environmentId, accountId, organizationId, storeId }
 
     let active = true
     let reloadTimer: number | null = null
@@ -66,7 +67,7 @@ export function useStoreOfflineOrders(scope: LocalDraftScope | null, enabled = t
       try {
         let [drafts, accountOutbox] = await Promise.all([
           listLocalDraftsForScope(activeScope),
-          listOrderOutboxForAccount(activeScope.accountId),
+          listOrderOutboxForAccount(activeScope.accountId, activeScope.environmentId),
         ])
         if (!active) return
         const scopedOutbox = accountOutbox.filter((record) => (
@@ -95,7 +96,7 @@ export function useStoreOfflineOrders(scope: LocalDraftScope | null, enabled = t
           if (terminalRecordChanged) {
             ;[drafts, accountOutbox] = await Promise.all([
               listLocalDraftsForScope(activeScope),
-              listOrderOutboxForAccount(activeScope.accountId),
+              listOrderOutboxForAccount(activeScope.accountId, activeScope.environmentId),
             ])
           }
         }
@@ -194,7 +195,7 @@ export function useStoreOfflineOrders(scope: LocalDraftScope | null, enabled = t
       window.removeEventListener('online', scheduleLoad)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [accountId, enabled, organizationId, storeId])
+  }, [accountId, enabled, environmentId, organizationId, storeId])
 
   return enabled && accountId != null && organizationId != null && storeId != null ? orders : []
 }

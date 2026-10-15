@@ -9,7 +9,7 @@ import {
 } from './menuCache'
 
 const scope: MenuCacheScope = {
-  accountId: 5,
+  environmentId: 'https://synthetic.invalid', accountId: 5,
   organizationId: 9,
   storeId: 1,
 }
@@ -191,8 +191,8 @@ function catalog(): BackendMenuCatalog {
 
 describe('versioned menu cache identity and integrity', () => {
   it('uses account, organization, store, and revision in cache keys', () => {
-    expect(menuScopeKey(scope)).toBe('account:5|organization:9|store:1')
-    expect(menuSnapshotKey(scope, 7)).toBe('account:5|organization:9|store:1|revision:7')
+    expect(menuScopeKey(scope)).toBe('environment:https%3A%2F%2Fsynthetic.invalid|account:5|organization:9|store:1')
+    expect(menuSnapshotKey(scope, 7)).toBe('environment:https%3A%2F%2Fsynthetic.invalid|account:5|organization:9|store:1|revision:7')
     expect(menuScopeKey({ ...scope, accountId: 6 })).not.toBe(menuScopeKey(scope))
     expect(menuScopeKey({ ...scope, storeId: 2 })).not.toBe(menuScopeKey(scope))
   })

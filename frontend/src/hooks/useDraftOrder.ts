@@ -1,3 +1,4 @@
+import { getEnvironmentId } from '../offline/environmentScope'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   cancelDraftOrder,
@@ -476,6 +477,7 @@ export function useDraftOrder(
   const localScope = useMemo<LocalDraftScope | null>(() => {
     if (offlineIdentity.accountId == null || offlineIdentity.organizationId == null) return null
     return {
+      environmentId: getEnvironmentId(),
       accountId: offlineIdentity.accountId,
       organizationId: offlineIdentity.organizationId,
       storeId,
@@ -516,6 +518,7 @@ export function useDraftOrder(
                 storedDraft.organizationId,
                 storedDraft.storeId,
                 storedDraft.clientOrderId,
+                storedDraft.environmentId,
               )
             : null
           if (storedDraft && pendingSubmission && isMenuCompatibilityFailure(pendingSubmission.lastErrorCode)) {
@@ -995,11 +998,13 @@ export function useDraftOrder(
           draft.organizationId,
           draft.storeId,
           draft.clientOrderId,
+          draft.environmentId,
         )
         if (queued && isMenuCompatibilityFailure(queued.lastErrorCode)) {
           queued = recoverMenuCompatibilityOutboxRecord(
             queued,
             await buildRecoverySubmitPayload(draft, session.items, catalogItems, {
+              environmentId: draft.environmentId,
               accountId: draft.accountId,
               organizationId: draft.organizationId,
               storeId: draft.storeId,
@@ -1081,6 +1086,7 @@ export function useDraftOrder(
         outboxRecord.organizationId,
         outboxRecord.storeId,
         outboxRecord.clientOrderId,
+        outboxRecord.environmentId,
       )
       if (!latest) return
       if (latest.state === 'SUBMITTING' || latest.state === 'FAILED_RETRYABLE') {

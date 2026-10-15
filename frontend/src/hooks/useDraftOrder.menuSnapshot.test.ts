@@ -55,7 +55,7 @@ describe('offline order menu snapshots', () => {
   it('keeps the name, price, routing, and option snapshots captured when the item was added', () => {
     const line = buildLocalLineItem(menuItem, draft)
     const record = createLocalDraftRecord(
-      { accountId: 7, organizationId: 9, storeId: 1 },
+      { environmentId: 'https://synthetic.invalid', accountId: 7, organizationId: 9, storeId: 1 },
       {
         orderType: 'dine_in',
         slotLabel: 'T1',
@@ -85,7 +85,7 @@ describe('offline order menu snapshots', () => {
   it('can submit an already frozen line after the live catalog item disappears', () => {
     const line = buildLocalLineItem(menuItem, draft)
     const record = createLocalDraftRecord(
-      { accountId: 7, organizationId: 9, storeId: 1 },
+      { environmentId: 'https://synthetic.invalid', accountId: 7, organizationId: 9, storeId: 1 },
       {
         orderType: 'dine_in',
         slotLabel: 'T1',
@@ -143,7 +143,7 @@ describe('offline order menu snapshots', () => {
     }
     const line = buildLocalLineItem(chinatownItem, smallDraft)
     const record = createLocalDraftRecord(
-      { accountId: 7, organizationId: 9, storeId: 1 },
+      { environmentId: 'https://synthetic.invalid', accountId: 7, organizationId: 9, storeId: 1 },
       {
         orderType: 'dine_in',
         slotLabel: 'T1',

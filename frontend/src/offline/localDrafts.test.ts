@@ -11,7 +11,7 @@ import {
   withDraftPayloadHash,
 } from './localDrafts'
 
-const scope = { accountId: 7, organizationId: 9, storeId: 3 }
+const scope = { environmentId: 'https://synthetic.invalid', accountId: 7, organizationId: 9, storeId: 3 }
 const tableContext = {
   orderType: 'dine_in' as const,
   slotLabel: 'T1-A',
@@ -27,7 +27,7 @@ describe('local draft records', () => {
     expect(record.localDraftId).toMatch(/^local-draft-/)
     expect(record.clientOrderId).toMatch(/^client-order-/)
     expect(record.contextKey).toBe('table:T1-A')
-    expect(record.key).toBe('account:7|organization:9|store:3|table:T1-A')
+    expect(record.key).toBe('environment:https%3A%2F%2Fsynthetic.invalid|account:7|organization:9|store:3|table:T1-A')
     expect(record.submitState).toBe('LOCAL_DRAFT')
     expect(record.payloadHash).toMatch(/^fnv1a32:/)
   })

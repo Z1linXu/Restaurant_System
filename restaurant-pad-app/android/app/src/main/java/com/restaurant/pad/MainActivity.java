@@ -15,7 +15,6 @@ import android.view.WindowManager;
 import android.view.ViewGroup;
 import android.util.Base64;
 import android.webkit.WebChromeClient;
-import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -28,6 +27,10 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.webkit.WebViewAssetLoader;
+import androidx.webkit.WebViewCompat;
+import androidx.webkit.WebViewFeature;
+import java.util.HashSet;
+import java.util.Set;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -102,6 +105,8 @@ public class MainActivity extends Activity {
 
     private WebView webView;
     private SharedPreferences preferences;
+    private KeystoreDeviceCredentials credentialStore;
+    private final Object runtimeEnvironmentLock = new Object();
     private PrinterPluginBridge printerPluginBridge;
     private volatile boolean padDirectJobInProgress = false;
     private final Handler padDirectWorkerHandler = new Handler(Looper.getMainLooper());
@@ -167,6 +172,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         padDirectAppForeground = true;
         preferences = getSharedPreferences(PREFS, MODE_PRIVATE);
+        credentialStore = new KeystoreDeviceCredentials(preferences);
         restorePersistedPadDirectSafetyState();
         webView = new WebView(this);
         setContentView(webView, new ViewGroup.LayoutParams(
@@ -197,14 +203,13 @@ public class MainActivity extends Activity {
             }
         }
         if (printerPluginBridge == null) printerPluginBridge = new PrinterPluginBridge(this::ownsActivity);
-        webView.addJavascriptInterface(printerPluginBridge, "RestaurantPrinter");
-        webView.addJavascriptInterface(new PadDeviceBridge(), "RestaurantPadDevice");
+        configureTrustedDeviceMessages();
 
         WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
             .setDomain(APP_HOST)
             .addPathHandler("/", new FrontendAssetPathHandler(
                 this,
-                this::getApiBaseUrl,
+                this::pendingJobsApiBaseOrigin,
                 this::getPairedStoreId,
                 this::getAppVersionName
             ))
@@ -224,8 +229,7 @@ public class MainActivity extends Activity {
                 Log.e(WORKER_TAG, "renderer_gone crashed=" + detail.didCrash() + " generation=" + padDirectWorkerGeneration
                     + " job=" + padDirectWorkerCurrentJobId + " worker=" + padDirectWorkerState);
                 // Recreate ONLY the UI. Never kick/reset the worker, credentials or in-flight ambiguity.
-                view.removeJavascriptInterface("RestaurantPrinter");
-                view.removeJavascriptInterface("RestaurantPadDevice");
+                WebViewCompat.removeWebMessageListener(view, "RestaurantPadMessages");
                 if (view.getParent() instanceof ViewGroup) ((ViewGroup) view.getParent()).removeView(view);
                 view.destroy();
                 webView = new WebView(MainActivity.this);
@@ -258,6 +262,61 @@ public class MainActivity extends Activity {
         });
     }
 
+    private void configureTrustedDeviceMessages() {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
+            Log.e(TAG, "Trusted WebView messaging unavailable; device bridge disabled"); return;
+        }
+        Set<String> origins = new HashSet<>();
+        String trusted = getWebAppUrl().isBlank() ? APP_URL : RuntimeEnvironmentPolicy.canonicalOrigin(getWebAppUrl());
+        if (trusted.isBlank()) return;
+        origins.add(RuntimeEnvironmentPolicy.canonicalOrigin(trusted));
+        PadDeviceBridge deviceBridge = new PadDeviceBridge();
+        WebViewCompat.addWebMessageListener(webView, "RestaurantPadMessages", origins, (view, message, sourceOrigin, isMainFrame, reply) -> {
+            if (!ownsActivity() || view != webView || !RuntimeEnvironmentPolicy.trustedMessage(sourceOrigin.toString(), isMainFrame, getWebAppUrl())) return;
+            try {
+                JSONObject request = new JSONObject(message.getData());
+                String payload = request.optString("payload", "{}"); String result;
+                switch (request.optString("method")) {
+                    case "attestPrintRequest": result = deviceBridge.attestPrintRequest(payload); break;
+                    case "saveDeviceCredentials": result = deviceBridge.saveDeviceCredentials(payload); break;
+                    case "getDeviceStatus": result = deviceBridge.getDeviceStatus(); break;
+                    case "getPrintWorkerStatus": result = deviceBridge.getPrintWorkerStatus(); break;
+                    case "clearDeviceCredentials": result = deviceBridge.clearDeviceCredentials(); break;
+                    case "kickPrintWorker": result = deviceBridge.kickPrintWorker(payload); break;
+                    default: result = jsonFailure("Unsupported device operation");
+                }
+                JSONObject response = new JSONObject(); response.put("request_id", request.optString("request_id")); response.put("result", result);
+                reply.postMessage(response.toString());
+            } catch (Exception invalid) { Log.w(TAG, "Invalid trusted device message"); }
+        });
+    }
+    private boolean validApiBase(String value) {
+        try { URL url = new URL(value); return (url.getPath().isBlank() || url.getPath().equals("/"))
+            && !RuntimeEnvironmentPolicy.canonicalOrigin(value).isBlank(); }
+        catch (Exception invalid) { return false; }
+    }
+    private String scopedPrinterKey(String key) {
+        return RuntimeEnvironmentPolicy.settingKey(pendingJobsApiBaseOrigin(), key);
+    }
+    private String pairedField(String key, String fallback) {
+        synchronized (runtimeEnvironmentLock) {
+            JSONObject credentials = credentialStore.read(pendingJobsApiBaseOrigin());
+            return credentials == null ? fallback : credentials.optString(key, fallback);
+        }
+    }
+    private boolean mayChangeRuntimeBinding() {
+        return RuntimeEnvironmentPolicy.mayReplaceBinding(hasActivePadDirectJobInProgress() || padDirectJobInProgress || padDirectWorkerInProgress,
+            PrinterPluginBridge.nativeBusy(), padDirectWorkerErrorStopped || padDirectWorkerLocalPrintMayHaveSucceeded);
+    }
+    private void stopWorkerForEnvironmentChange(String reason) {
+        invalidatePadDirectWorkerGeneration(reason);
+        padDirectWorkerStopRequested = true; padDirectWorkerRunning = false;
+        padDirectWorkerUserStopped = true; padDirectWorkerLifecycleResumePending = false;
+        padDirectWorkerStoppedForLifecycle = false; padDirectWorkerPendingKick = false;
+        setPadDirectAutoPrintEnabled(false); clearPadDirectWorkerCallbacks();
+        setPadDirectWorkerState(PadDirectWorkerState.STOPPED); updatePadDirectKeepScreenOn();
+    }
+
     private void loadApp() {
         String webAppUrl = getWebAppUrl();
         webView.loadUrl(webAppUrl.isBlank() ? APP_URL : webAppUrl);
@@ -272,7 +331,7 @@ public class MainActivity extends Activity {
     }
 
     private String getPairedStoreId() {
-        return preferences.getString(KEY_DEVICE_STORE_ID, "");
+        return pairedField(KEY_DEVICE_STORE_ID, "");
     }
 
     private String getAppVersionName() {
@@ -293,7 +352,7 @@ public class MainActivity extends Activity {
         if (uri == null) {
             return false;
         }
-        if (APP_HOST.equals(uri.getHost())) {
+        if (RuntimeEnvironmentPolicy.canonicalOrigin(APP_URL).equals(RuntimeEnvironmentPolicy.canonicalOrigin(uri.toString()))) {
             return true;
         }
         Uri configuredWebAppUri = Uri.parse(getWebAppUrl());
@@ -552,7 +611,6 @@ public class MainActivity extends Activity {
             .setView(scrollView)
             .setPositiveButton("Save", (ignored, which) -> {
                 saveRuntimeSettings(webUrlInput, apiBaseInput, printerIpInput, printerPortInput, printerTimeoutInput, dialogRef, false);
-                loadApp();
             })
             .setNegativeButton(firstLaunch ? "Load Bundled Assets" : "Cancel", (ignored, which) -> {
                 if (firstLaunch) {
@@ -602,14 +660,29 @@ public class MainActivity extends Activity {
         printerPortInput.setText(String.valueOf(printerPort));
         printerTimeoutInput.setText(String.valueOf(printerTimeoutMs));
 
-        preferences.edit()
-            .putString(KEY_WEB_APP_URL, webAppUrl)
-            .putString(KEY_API_BASE, apiBaseUrl)
-            .putString(KEY_PRINTER_TEST_IP, printerIp)
-            .putString(KEY_PRINTER_TEST_PORT, String.valueOf(printerPort))
-            .putString(KEY_PRINTER_TEST_TIMEOUT_MS, String.valueOf(printerTimeoutMs))
-            .apply();
-
+        String nextOrigin = RuntimeEnvironmentPolicy.apiOrigin(webAppUrl, apiBaseUrl);
+        if (nextOrigin.isBlank() || (!apiBaseUrl.isBlank() && !validApiBase(apiBaseUrl))
+            || (!webAppUrl.isBlank() && RuntimeEnvironmentPolicy.canonicalOrigin(webAppUrl).isBlank())) {
+            Toast.makeText(this, "请输入有效的 API/Web 地址。", Toast.LENGTH_LONG).show(); return;
+        }
+        boolean targetChanged = !getWebAppUrl().equals(webAppUrl) || !getApiBaseUrl().equals(apiBaseUrl);
+        synchronized (runtimeEnvironmentLock) {
+            if (targetChanged && !mayChangeRuntimeBinding()) {
+                Toast.makeText(this, "当前打印结果尚未确认，请先核对 Print Center，再切换服务器。", Toast.LENGTH_LONG).show(); return;
+            }
+            if (targetChanged) {
+                stopWorkerForEnvironmentChange("runtime-target-changed");
+                // Destroy the old document before changing its target or exposing a new bridge.
+                if (webView != null) { webView.stopLoading(); webView.destroy(); }
+            }
+            boolean saved = preferences.edit().putString(KEY_WEB_APP_URL, webAppUrl).putString(KEY_API_BASE, apiBaseUrl)
+                .putString(scopedPrinterKey(KEY_PRINTER_TEST_IP), printerIp).putString(scopedPrinterKey(KEY_PRINTER_TEST_PORT), String.valueOf(printerPort))
+                .putString(scopedPrinterKey(KEY_PRINTER_TEST_TIMEOUT_MS), String.valueOf(printerTimeoutMs)).commit();
+            if (!saved) throw new IllegalStateException("Unable to save runtime settings");
+            if (targetChanged) {
+                webView = new WebView(this); setContentView(webView); configureWebView(); loadApp();
+            }
+        }
         Toast.makeText(this, "Settings saved.", Toast.LENGTH_SHORT).show();
         if (dismissAndReload) {
             dismissDialog(dialogRef);
@@ -636,16 +709,18 @@ public class MainActivity extends Activity {
     }
 
     private String deviceStatusText() {
-        String deviceId = preferences.getString(KEY_DEVICE_ID, "");
+        String deviceId = pairedField(KEY_DEVICE_ID, "");
         if (deviceId == null || deviceId.isBlank()) {
-            return "未配对。请在 Web 打印中心点击“配对本机 Pad”。";
+            return preferences.contains(KEY_DEVICE_TOKEN)
+                ? "旧版配对已保留但来源未确认。请在当前服务器重新配对；请勿清理应用数据。"
+                : "未配对。请在 Web 打印中心点击“配对本机 Pad”。";
         }
-        String storeId = preferences.getString(KEY_DEVICE_STORE_ID, "");
-        String deviceName = preferences.getString(KEY_DEVICE_NAME, "");
-        String registeredAt = preferences.getString(KEY_DEVICE_REGISTERED_AT, "");
-        String appVersion = preferences.getString(KEY_DEVICE_APP_VERSION, "");
-        String platform = preferences.getString(KEY_DEVICE_PLATFORM, "");
-        String tokenLast4 = tokenLast4(preferences.getString(KEY_DEVICE_TOKEN, ""));
+        String storeId = pairedField(KEY_DEVICE_STORE_ID, "");
+        String deviceName = pairedField(KEY_DEVICE_NAME, "");
+        String registeredAt = pairedField(KEY_DEVICE_REGISTERED_AT, "");
+        String appVersion = pairedField(KEY_DEVICE_APP_VERSION, "");
+        String platform = pairedField(KEY_DEVICE_PLATFORM, "");
+        String tokenLast4 = tokenLast4(pairedField(KEY_DEVICE_TOKEN, ""));
         return "已配对"
             + "\nDevice ID: " + deviceId
             + "\nStore ID: " + (storeId == null || storeId.isBlank() ? "-" : storeId)
@@ -658,9 +733,9 @@ public class MainActivity extends Activity {
     }
 
     private boolean isDevicePaired() {
-        String deviceId = preferences.getString(KEY_DEVICE_ID, "");
-        String deviceToken = preferences.getString(KEY_DEVICE_TOKEN, "");
-        String storeId = preferences.getString(KEY_DEVICE_STORE_ID, "");
+        String deviceId = pairedField(KEY_DEVICE_ID, "");
+        String deviceToken = pairedField(KEY_DEVICE_TOKEN, "");
+        String storeId = pairedField(KEY_DEVICE_STORE_ID, "");
         return deviceId != null && !deviceId.isBlank()
             && deviceToken != null && !deviceToken.isBlank()
             && storeId != null && !storeId.isBlank();
@@ -1015,8 +1090,8 @@ public class MainActivity extends Activity {
 
     private String formatPadDirectWorkerStatus() {
         long now = System.currentTimeMillis();
-        String deviceId = preferences.getString(KEY_DEVICE_ID, "");
-        String storeId = preferences.getString(KEY_DEVICE_STORE_ID, "");
+        String deviceId = pairedField(KEY_DEVICE_ID, "");
+        String storeId = pairedField(KEY_DEVICE_STORE_ID, "");
         StringBuilder builder = new StringBuilder();
         builder.append("自动处理：")
             .append(isPadDirectAutoPrintEnabled() ? "开启" : "关闭，不会消费 PENDING 打印任务")
@@ -1122,9 +1197,13 @@ public class MainActivity extends Activity {
             .setMessage("确定要清除本机 Pad Direct device credentials 吗？清除后需要重新配对才能领取打印任务。")
             .setNegativeButton("取消", null)
             .setPositiveButton("清除", (ignored, which) -> {
-                clearDeviceCredentials();
-                Toast.makeText(this, "本机配对已清除。", Toast.LENGTH_LONG).show();
-                dismissDialog(dialogRef);
+                try {
+                    clearDeviceCredentials();
+                    Toast.makeText(this, "本机配对已清除。", Toast.LENGTH_LONG).show();
+                    dismissDialog(dialogRef);
+                } catch (IllegalStateException blocked) {
+                    Toast.makeText(this, blocked.getMessage(), Toast.LENGTH_LONG).show();
+                }
             })
             .show();
     }
@@ -1227,9 +1306,9 @@ public class MainActivity extends Activity {
         EditText printerPortInput,
         EditText printerTimeoutInput
     ) {
-        String deviceId = preferences.getString(KEY_DEVICE_ID, "");
-        String deviceToken = preferences.getString(KEY_DEVICE_TOKEN, "");
-        String storeId = preferences.getString(KEY_DEVICE_STORE_ID, "");
+        String deviceId = pairedField(KEY_DEVICE_ID, "");
+        String deviceToken = pairedField(KEY_DEVICE_TOKEN, "");
+        String storeId = pairedField(KEY_DEVICE_STORE_ID, "");
         if (deviceId == null || deviceId.isBlank() || deviceToken == null || deviceToken.isBlank() || storeId == null || storeId.isBlank()) {
             resultView.setText("请先配对本机 Pad。");
             jobsList.removeAllViews();
@@ -1299,22 +1378,7 @@ public class MainActivity extends Activity {
     }
 
     private String pendingJobsApiBaseOrigin() {
-        String webAppUrl = getWebAppUrl();
-        if (!webAppUrl.isBlank()) {
-            String origin = originOf(webAppUrl);
-            if (!origin.isBlank()) {
-                return origin;
-            }
-        }
-        String apiBaseUrl = getApiBaseUrl();
-        if (!apiBaseUrl.isBlank()) {
-            String origin = originOf(apiBaseUrl);
-            if (!origin.isBlank()) {
-                return origin;
-            }
-        }
-        String currentOrigin = originOf(webView == null ? null : webView.getUrl());
-        return currentOrigin.contains(APP_HOST) ? "" : currentOrigin;
+        return RuntimeEnvironmentPolicy.apiOrigin(getWebAppUrl(), getApiBaseUrl());
     }
 
     private String readConnectionBody(HttpURLConnection connection, int status) throws Exception {
@@ -1467,9 +1531,9 @@ public class MainActivity extends Activity {
             resultView.setText("已有任务正在处理，请等待当前任务完成。");
             return;
         }
-        String deviceId = preferences.getString(KEY_DEVICE_ID, "");
-        String deviceToken = preferences.getString(KEY_DEVICE_TOKEN, "");
-        String storeId = preferences.getString(KEY_DEVICE_STORE_ID, "");
+        String deviceId = pairedField(KEY_DEVICE_ID, "");
+        String deviceToken = pairedField(KEY_DEVICE_TOKEN, "");
+        String storeId = pairedField(KEY_DEVICE_STORE_ID, "");
         if (deviceId == null || deviceId.isBlank() || deviceToken == null || deviceToken.isBlank() || storeId == null || storeId.isBlank()) {
             resultView.setText("请先配对本机 Pad。");
             return;
@@ -1946,7 +2010,7 @@ public class MainActivity extends Activity {
             .append("; printer_id=").append(assignedPrinter.printerId == null ? "-" : assignedPrinter.printerId)
             .append("; printer_name=").append(assignedPrinter.printerName == null || assignedPrinter.printerName.isBlank() ? "-" : assignedPrinter.printerName)
             .append("; endpoint=").append(assignedPrinter.endpoint)
-            .append("; device_id=").append(preferences.getString(KEY_DEVICE_ID, "-"))
+            .append("; device_id=").append(pairedField(KEY_DEVICE_ID, "-"))
             .append("; native_error_code=").append(result.nativeErrorCode)
             .append("; phase=").append(result.phase)
             .append("; bytes_written=").append(result.bytesWritten)
@@ -2586,8 +2650,8 @@ public class MainActivity extends Activity {
         response.put("current_job_id", padDirectWorkerCurrentJobId == null || padDirectWorkerCurrentJobId.isBlank() ? JSONObject.NULL : padDirectWorkerCurrentJobId);
         response.put("current_module", padDirectWorkerCurrentModule == null || padDirectWorkerCurrentModule.isBlank() ? JSONObject.NULL : padDirectWorkerCurrentModule);
         response.put("current_printer_endpoint", padDirectWorkerCurrentPrinterEndpoint == null || padDirectWorkerCurrentPrinterEndpoint.isBlank() ? JSONObject.NULL : padDirectWorkerCurrentPrinterEndpoint);
-        response.put("device_id", preferences.getString(KEY_DEVICE_ID, ""));
-        response.put("store_id", preferences.getString(KEY_DEVICE_STORE_ID, ""));
+        response.put("device_id", pairedField(KEY_DEVICE_ID, ""));
+        response.put("store_id", pairedField(KEY_DEVICE_STORE_ID, ""));
         response.put("message", formatPadDirectWorkerStatus());
         return response;
     }
@@ -2710,8 +2774,8 @@ public class MainActivity extends Activity {
             PadDirectJobResult workerResult;
             JSONObject job = null;
             try {
-                String storeId = preferences.getString(KEY_DEVICE_STORE_ID, "");
-                String deviceId = preferences.getString(KEY_DEVICE_ID, "");
+                String storeId = pairedField(KEY_DEVICE_STORE_ID, "");
+                String deviceId = pairedField(KEY_DEVICE_ID, "");
                 Log.i(WORKER_TAG, "Worker Poll Started deviceId=" + deviceId + " storeId=" + storeId);
                 Log.i(WORKER_TAG, "poll_start deviceId=" + deviceId + " storeId=" + storeId);
                 PadDirectActiveJobContext resumableJob = padDirectActiveJob;
@@ -2941,20 +3005,13 @@ public class MainActivity extends Activity {
     }
 
     private HttpURLConnection openDeviceConnection(String path, String method) throws Exception {
-        String apiBase = pendingJobsApiBaseOrigin();
-        if (apiBase.isBlank()) {
-            throw new IllegalStateException("无法推导后端 API 地址。");
+        synchronized (runtimeEnvironmentLock) {
+            String apiBase = pendingJobsApiBaseOrigin();
+            JSONObject credentials = credentialStore.read(apiBase);
+            if (credentials == null) throw new IllegalStateException("设备需要在当前服务器重新配对。");
+            return DeviceApiConnection.open(apiBase, credentials.getString("api_origin"),
+                credentials.getString(KEY_DEVICE_ID), credentials.getString(KEY_DEVICE_TOKEN), path, method);
         }
-        URL url = new URL(trimTrailingSlash(apiBase) + path);
-        Log.d(WORKER_TAG, "Worker API Request: " + method + " " + url);
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setRequestMethod(method);
-        connection.setConnectTimeout(5000);
-        connection.setReadTimeout(10000);
-        connection.setRequestProperty("Accept", "application/json");
-        connection.setRequestProperty("X-Device-Id", preferences.getString(KEY_DEVICE_ID, ""));
-        connection.setRequestProperty("X-Device-Token", preferences.getString(KEY_DEVICE_TOKEN, ""));
-        return connection;
     }
 
     private void requireSuccessResponse(HttpResult result, String fallbackMessage) throws Exception {
@@ -3048,15 +3105,15 @@ public class MainActivity extends Activity {
     }
 
     private String getPrinterTestIp() {
-        return preferences.getString(KEY_PRINTER_TEST_IP, "");
+        return preferences.getString(scopedPrinterKey(KEY_PRINTER_TEST_IP), "");
     }
 
     private int getPrinterTestPort() {
-        return parsePort(preferences.getString(KEY_PRINTER_TEST_PORT, String.valueOf(DEFAULT_PRINTER_TEST_PORT)));
+        return parsePort(preferences.getString(scopedPrinterKey(KEY_PRINTER_TEST_PORT), String.valueOf(DEFAULT_PRINTER_TEST_PORT)));
     }
 
     private int getPrinterTestTimeoutMs() {
-        return parseTimeoutMs(preferences.getString(KEY_PRINTER_TEST_TIMEOUT_MS, String.valueOf(DEFAULT_PRINTER_TEST_TIMEOUT_MS)));
+        return parseTimeoutMs(preferences.getString(scopedPrinterKey(KEY_PRINTER_TEST_TIMEOUT_MS), String.valueOf(DEFAULT_PRINTER_TEST_TIMEOUT_MS)));
     }
 
     private int parsePort(String rawValue) {
@@ -3107,9 +3164,9 @@ public class MainActivity extends Activity {
         }
 
         preferences.edit()
-            .putString(KEY_PRINTER_TEST_IP, ip)
-            .putString(KEY_PRINTER_TEST_PORT, String.valueOf(port))
-            .putString(KEY_PRINTER_TEST_TIMEOUT_MS, String.valueOf(timeoutMs))
+            .putString(scopedPrinterKey(KEY_PRINTER_TEST_IP), ip)
+            .putString(scopedPrinterKey(KEY_PRINTER_TEST_PORT), String.valueOf(port))
+            .putString(scopedPrinterKey(KEY_PRINTER_TEST_TIMEOUT_MS), String.valueOf(timeoutMs))
             .apply();
 
         testConnectionButton.setEnabled(false);
@@ -3214,6 +3271,7 @@ public class MainActivity extends Activity {
     }
 
     private void clearDeviceCredentials() {
+        if (!mayChangeRuntimeBinding()) throw new IllegalStateException("请先核对并结束当前打印任务，再清除配对。");
         invalidatePadDirectWorkerGeneration("device-pairing-cleared");
         padDirectWorkerUserStopped = true;
         setPadDirectAutoPrintEnabled(false);
@@ -3231,15 +3289,8 @@ public class MainActivity extends Activity {
         clearPadDirectActiveJob();
         clearPadDirectCurrentJob();
         Log.i(WORKER_TAG, "Worker Stopped reason=device-pairing-cleared");
-        preferences.edit()
-            .remove(KEY_DEVICE_ID)
-            .remove(KEY_DEVICE_TOKEN)
-            .remove(KEY_DEVICE_STORE_ID)
-            .remove(KEY_DEVICE_NAME)
-            .remove(KEY_DEVICE_REGISTERED_AT)
-            .remove(KEY_DEVICE_APP_VERSION)
-            .remove(KEY_DEVICE_PLATFORM)
-            .apply();
+        try { credentialStore.clear(pendingJobsApiBaseOrigin()); }
+        catch (Exception failure) { throw new IllegalStateException("Unable to clear device credentials", failure); }
     }
 
     private void stopPadDirectWorkerForLifecycle(String reason) {
@@ -3646,7 +3697,6 @@ public class MainActivity extends Activity {
     }
 
     private class PadDeviceBridge {
-        @JavascriptInterface
         public String attestPrintRequest(String json) {
             try {
                 if (!ownsActivity() || !isDevicePaired()) return jsonFailure("Pad not paired or inactive");
@@ -3654,16 +3704,15 @@ public class MainActivity extends Activity {
                 String method = request.optString("method");
                 String path = request.optString("path");
                 if (!PrintRequestProof.allowed(method, path)) return jsonFailure("Unsupported proof request");
-                String id = preferences.getString(KEY_DEVICE_ID, "");
+                String id = pairedField(KEY_DEVICE_ID, "");
                 String timestamp = Long.toString(System.currentTimeMillis() / 1000L);
-                String signature = PrintRequestProof.sign(preferences.getString(KEY_DEVICE_TOKEN, ""), id, timestamp,
+                String signature = PrintRequestProof.sign(pairedField(KEY_DEVICE_TOKEN, ""), id, timestamp,
                     path, request.optString("body", ""), request.optString("authorization", ""));
                 JSONObject result = new JSONObject(); result.put("device_id", id);
                 result.put("timestamp", timestamp); result.put("signature", signature);
                 return jsonSuccess(result);
             } catch (Exception ex) { return jsonFailure("Unable to attest print request"); }
         }
-        @JavascriptInterface
         public String saveDeviceCredentials(String json) {
             try {
                 JSONObject request = new JSONObject(json == null ? "{}" : json);
@@ -3673,18 +3722,22 @@ public class MainActivity extends Activity {
                 if (deviceId.isEmpty() || deviceToken.isEmpty() || storeId.isEmpty()) {
                     return jsonFailure("device_id, store_id, and device_token are required");
                 }
-                // Local pilot storage only. Move this token to EncryptedSharedPreferences
-                // or Android Keystore before production Pad Direct worker rollout.
-                preferences.edit()
-                    .putString(KEY_DEVICE_ID, deviceId)
-                    .putString(KEY_DEVICE_TOKEN, deviceToken)
-                    .putString(KEY_DEVICE_STORE_ID, storeId)
-                    .putString(KEY_DEVICE_NAME, request.optString("device_name", "Restaurant Pad"))
-                    .putString(KEY_DEVICE_REGISTERED_AT, request.optString("registered_at", nowTimestamp()))
-                    .putString(KEY_DEVICE_APP_VERSION, request.optString("app_version", "unknown"))
-                    .putString(KEY_DEVICE_PLATFORM, request.optString("platform", "ANDROID"))
-                    .putBoolean(KEY_PAD_DIRECT_AUTO_ENABLED, true)
-                    .apply();
+                synchronized (runtimeEnvironmentLock) {
+                    String origin = pendingJobsApiBaseOrigin();
+                    if (!RuntimeEnvironmentPolicy.matchesCredentialOrigin(origin, request.optString("api_origin"))) {
+                        return jsonFailure("Device credentials belong to another API origin");
+                    }
+                    if (!mayChangeRuntimeBinding()) return jsonFailure("请先核对并结束当前打印任务，再更换配对。");
+                    stopWorkerForEnvironmentChange("device-repaired");
+                    JSONObject record = new JSONObject();
+                    record.put(KEY_DEVICE_ID, deviceId); record.put(KEY_DEVICE_TOKEN, deviceToken);
+                    record.put(KEY_DEVICE_STORE_ID, storeId); record.put(KEY_DEVICE_NAME, request.optString("device_name", "Restaurant Pad"));
+                    record.put(KEY_DEVICE_REGISTERED_AT, request.optString("registered_at", nowTimestamp()));
+                    record.put(KEY_DEVICE_APP_VERSION, request.optString("app_version", "unknown"));
+                    record.put(KEY_DEVICE_PLATFORM, request.optString("platform", "ANDROID"));
+                    credentialStore.save(origin, record);
+                    preferences.edit().putBoolean(KEY_PAD_DIRECT_AUTO_ENABLED, true).commit();
+                }
                 padDirectWorkerUserStopped = false;
                 padDirectWorkerErrorStopped = false;
                 postOwnedUi(() -> startPadDirectWorkerHeadlessIfPaired("device-paired"));
@@ -3699,22 +3752,23 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String getDeviceStatus() {
             try {
                 JSONObject response = new JSONObject();
-                String deviceId = preferences.getString(KEY_DEVICE_ID, "");
-                String deviceToken = preferences.getString(KEY_DEVICE_TOKEN, "");
+                String deviceId = pairedField(KEY_DEVICE_ID, "");
+                String deviceToken = pairedField(KEY_DEVICE_TOKEN, "");
                 response.put("success", true);
+                response.put("can_replace_binding", mayChangeRuntimeBinding());
+                response.put("legacy_pairing_retained", preferences.contains(KEY_DEVICE_TOKEN));
                 response.put("paired", deviceId != null && !deviceId.isBlank() && deviceToken != null && !deviceToken.isBlank());
                 response.put("device_id", blankToJsonNull(deviceId));
-                String storeId = preferences.getString(KEY_DEVICE_STORE_ID, "");
+                String storeId = pairedField(KEY_DEVICE_STORE_ID, "");
                 response.put("store_id", blankToJsonNull(storeId));
                 response.put("device_store_id", blankToJsonNull(storeId));
-                response.put("device_name", blankToJsonNull(preferences.getString(KEY_DEVICE_NAME, "")));
-                response.put("registered_at", blankToJsonNull(preferences.getString(KEY_DEVICE_REGISTERED_AT, "")));
-                response.put("app_version", blankToJsonNull(preferences.getString(KEY_DEVICE_APP_VERSION, "unknown")));
-                response.put("platform", blankToJsonNull(preferences.getString(KEY_DEVICE_PLATFORM, "ANDROID")));
+                response.put("device_name", blankToJsonNull(pairedField(KEY_DEVICE_NAME, "")));
+                response.put("registered_at", blankToJsonNull(pairedField(KEY_DEVICE_REGISTERED_AT, "")));
+                response.put("app_version", blankToJsonNull(pairedField(KEY_DEVICE_APP_VERSION, "unknown")));
+                response.put("platform", blankToJsonNull(pairedField(KEY_DEVICE_PLATFORM, "ANDROID")));
                 response.put("auto_print_enabled", isPadDirectAutoPrintEnabled());
                 response.put("token_last4", tokenLast4(deviceToken));
                 return response.toString();
@@ -3723,7 +3777,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String getPrintWorkerStatus() {
             try {
                 return jsonSuccess(buildPadDirectWorkerStatusJson());
@@ -3732,7 +3785,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String clearDeviceCredentials() {
             MainActivity.this.clearDeviceCredentials();
             try {
@@ -3744,7 +3796,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String kickPrintWorker(String json) {
             return kickPadDirectWorkerFromWeb(json);
         }
@@ -3819,7 +3870,7 @@ public class MainActivity extends Activity {
         invalidatePadDirectWorkerGeneration("app-destroyed");
         clearPadDirectWorkerCallbacks();
         if (printerPluginBridge != null) printerPluginBridge.close();
-        if (webView != null) { webView.removeJavascriptInterface("RestaurantPrinter"); webView.removeJavascriptInterface("RestaurantPadDevice"); webView.destroy(); }
+        if (webView != null) { WebViewCompat.removeWebMessageListener(webView, "RestaurantPadMessages"); webView.destroy(); }
         padDirectWorkerStoppedForLifecycle = false;
         activePadDirectWorkerControls = null;
         super.onDestroy();
