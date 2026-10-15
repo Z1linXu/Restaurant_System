@@ -33,7 +33,7 @@ G2-01…09 全满足且P0=0、BLOCKING_BASELINE_GAP=0才允许P3依赖性改造�
 
 ### Phase 3 证据路由与有界解释 — 2026-10-15
 
-`e565be0`观察点：typed配置与Neutral打印已实现，`phase3-core-focused.log`为142 tests / 0 failure/error/skip。Neutral创建/V40、完整消费者/UI、PG fresh+upgrade/history与最终独立review尚未齐备，**G3-01…08均PENDING**。逐Gate实际证据只在 [Phase3验收报告](PHASE3_ACCEPTANCE_REPORT.md)，不因142 focused通过提前关闭。
+backend `711638e`观察点：typed配置/Neutral/V39V40/中性打印、真实HTTP/PG history与独立review通过，最终backend1050/0failure/0error/0skip；早批142/1047等分别记账。UI55198bc最终61files363/build已核；另一Reviewer14files101/build/diff PASS，Provider stale/defaultdialog P1 CLOSED；P3本地54assets/DB5/debugAPK/native24通过。**768/1024实际布局/截图NOT RUN（浏览器工具被用户权限策略拒绝，未绕过）；G3-04与G3-08 BLOCKED，整体PARTIAL/BLOCKED。** 逐Gate实际证据见 [Phase3验收报告](PHASE3_ACCEPTANCE_REPORT.md)。原上表要求不改，DOM/HTTP不能代替浏览器实际无关键溢出的证明。
 
 | Gate | 本轮必须具体核对的实现边界 | 保留的延期 / 不能宣称 |
 | --- | --- | --- |

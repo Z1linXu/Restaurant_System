@@ -17,7 +17,7 @@ Owner 已明确要求连续执行 Phase 1→2→3；这构成本次隔离本地�
 | [MERCHANT_ONBOARDING_DESIGN](MERCHANT_ONBOARDING_DESIGN.md) | 外部 Codex 配置交付，manifest/dry-run/恢复设计 |
 | [COMMERCIAL_ACCEPTANCE_MATRIX](COMMERCIAL_ACCEPTANCE_MATRIX.md) | G2/G3 技术门槛、风险/测试证据与后续上市验收 |
 | [P2 Security/Test Report](PHASE2_SECURITY_TEST_REPORT.md) / [P2 Acceptance Snapshot](PHASE2_ACCEPTANCE_REPORT.md) | 5ec8abe最终代码观察点的攻击链、分批失败/修复、独立review、G2本地PASS与发行限制；不取代CURRENT_STATE |
-| [P3 Acceptance Snapshot](PHASE3_ACCEPTANCE_REPORT.md) / [P4 Entry Gates](PHASE4_ENTRY_GATES.md) | e565be0观察点的有界实现、六任务/13项P3HC与G3待验项；P4只列门槛、不授权实现 |
+| [P3 Acceptance Snapshot](PHASE3_ACCEPTANCE_REPORT.md) / [P4 Entry Gates](PHASE4_ENTRY_GATES.md) | backend711638e观察点的有界实现、六任务/13项P3HC、真实自动证据与视觉NOT RUN；P4只列门槛、不授权实现 |
 | [Phase 0 01](01_PRODUCTION_BASELINE_AUDIT.md) / [02](02_SYSTEM_ARCHITECTURE_AUDIT.md) / [03](03_HARDCODE_AND_CUSTOMIZATION_INVENTORY.md) / [04](04_COMMERCIAL_ARCHITECTURE_OPTIONS.md) / [05](05_DOCUMENTATION_GAP_REPORT.md) / [06](06_OWNER_DECISION_QUESTIONS.md) | 日期化证据和原 HC/DG 描述；不是动态状态/授权 |
 
 ## Phase 边界
@@ -51,9 +51,11 @@ P2-GATE-09 → P3-CONFIG-01 → P3-PROFILE-02 → P3-READ-03 → P3-UI-04；P3-F
 
 ## P3 已执行证据路由 — 2026-10-15
 
-`e565be0`观察点已含typedconfig/V39与`57fe6ad`Neutral打印适配，142focused为局部PASS；Neutral/V40、consumer/UI、迁移/history及最终独立review仍待整合，**G3-01…08均PENDING**。六任务执行表见 [Backlog](COMMERCIALIZATION_BACKLOG.md#phase-3-执行快照--2026-10-15)，逐Gate与13项P3HC实际/延期见 [P3验收报告](PHASE3_ACCEPTANCE_REPORT.md)，有界架构见 [Architecture](COMMERCIAL_ARCHITECTURE.md#phase-3-有界实现观察--2026-10-15)。不要把既有Canonical/Combo读取或Neutral完整snapshotadapter称成全菜单/renderer通用。
+backend`711638e`已完成typedconfig/V39、Neutral/V40、safe_summary consumer与`57fe6ad`打印适配；最终Java17/全部六类PG1050/0failure/0error/0skip、真实loopback HTTP14/14、backend/printing独立review通过。旧142/136/27/57/1047等分批证据保留，不相加或冒充最终count。UI刷新delta已整合55198bc，Root npm ci后最终61files363/build PASS；另一独立Reviewer14files101/build/diff PASS，Provider stale/defaultdialog P1 CLOSED；P3本地54assets/DB5/debugAPK/native6suites24通过。本批新增P0=0/未关闭新P1=0，预存KDS角色P1继续P5，未称全角色已运营。
 
-最终配置/Profile技术合同由实现者维护并与代码/API同步；此索引不另立schema或动态状态。只有最终exactSHA/tests/review使G3全满足后，主线程才能依唯一CURRENT_STATE记录P3结果；之后停止。[Phase4进入门槛](PHASE4_ENTRY_GATES.md)仅路由四个既定P4任务和兼容债务，Phase4未授权。Production/Staging零mutation边界继续。
+**原G3-04要求的768/1024实际截图/布局QA NOT RUN：浏览器工具被用户权限策略拒绝，未绕过。G3-08 BLOCKED，不能宣布Phase3DONE。** 基础代码与自动测试完成可如实记录，完整阶段结论保持`PHASE 3 PARTIAL/BLOCKED — REMAINING WORK LISTED`；不能把DOM/HTTP或重新命名localfoundation当原视觉gate的PASS。六任务执行表见 [Backlog](COMMERCIALIZATION_BACKLOG.md#phase-3-执行快照--2026-10-15)，逐Gate与13项P3HC见 [P3验收报告](PHASE3_ACCEPTANCE_REPORT.md)，有界实现见 [Architecture](COMMERCIAL_ARCHITECTURE.md#phase-3-有界实现观察--2026-10-15)。
+
+配置/Profile技术合同由实现者维护并已与后端核对；此索引不另立schema/动态状态。Draft [PR #278](https://github.com/Z1linXu/Restaurant_System/pull/278)已创建为可审查交付，base为P2安全/离线branch而非main。后续只补已授权P3尚缺视觉证据；Root核finalhead/remoteCI并同步唯一CURRENT_STATE；不绕过浏览器权限策略，不进行runtime mutation。[Phase4门槛](PHASE4_ENTRY_GATES.md)仅路由既定任务/兼容债务，Phase4未授权。Canonical现SoT、Neutral完整snapshotadapter不代表全菜单/renderer通用；历史bit/实装/硬件未知继续保留。npm audit对照Phase2与P3漏洞完整对象相同，引入0、仍有既有13项（1critical/7high/4moderate/1low）；隔离本地non-blocking，外部release需适用性/patchreview，不宣称zero漏洞。
 
 ## Combined Production Baseline 的复现定义
 

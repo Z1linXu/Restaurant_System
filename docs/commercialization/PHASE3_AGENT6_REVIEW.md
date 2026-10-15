@@ -82,3 +82,36 @@ Reviewer在Java17、同一Git archive编译classpath直接调用既有helper，�
 **A6-P3-CFG-01 WITHDRAWN / FALSE POSITIVE；Backend config/Neutral批次 PASS，未识别其余阻断问题。** 现代码的固定完整内容白名单与正确aggregate常量组合没有本审查所声称的篡改接受路径；既有指纹/创建/replay/provenance定义一致。独立四组27/0failure/0error/0skip、Root1047/0/0/0、实际JARhash与上节正向边界核对保持有效，不需为误判改V39/V40、旧ledger、历史、profile版本或配置schema。
 
 若Root选择增加“真实DB内容按既有aggregate helper重算、错误raw hash被拒”的回归，可作为防止将来常量漂移的有界加强，**不是本批未关闭blocker，也不是新迁移/框架要求**。本报告只撤回误判并更正此后端模块审查结论；整体G3仍待稳定UI独立review与最终集成/证据汇总，动态状态由主线程唯一CURRENT_STATE同步。
+
+
+## 后端三项小收敛 — PASS
+
+范围为`e6f9bc4`、`5024b74`、`711638e`，在已PASS的`9fdf5e7` backend config/Neutral边界上集中复核。**本批PASS，未发现新阻断产品问题。**
+
+| 改动 | 独立核对与证据 |
+| --- | --- |
+| e6f9bc4 聚合指纹测试 | 只从fresh/upgrade真实Neutral row读取code/version/schema/content，调用现aggregate helper验证DB常量，并证明raw content摘要不同且被拒；`phase3-neutral-fingerprint-postgres.log`实际1/0failure/0error/0skip PASS。产品、V39/V40、旧ledger未改；进一步巩固前节false-positive撤回 |
+| 5024b74 无效JSON局部400 | 仅MerchantConfigurationController添加`HttpMessageNotReadableException` handler，固定400/`MERCHANT_CONFIGURATION_INVALID_JSON`与通用消息；没有改GlobalExceptionHandler或暴露原异常内容。三个实际Bearer malformed/empty JSON反例验证零config/audit交互；`phase3-config-parser-focused.log` HTTP+PG23/0/0/0 PASS |
+| 711638e scanner scope | 仅既有workflow复用既有CLI，显式扫描MerchantConfigurationService、NeutralRestaurantProfile、OwnerStoreProvisioningMaterializer三新入口。Reviewer独立执行该三路径scanner PASS/3files，原scanner3tests PASS；`git diff --check 9fdf5e7..711638e` PASS。是当前commercial defaults防线所需BLOCKING小扩展，不是新部署/治理框架；不声称remoteCI已运行 |
+
+Root实际loopback HTTP证据`phase3-local-http-evidence.json`，source=`9fdf5e7`，隔离`commercial_p3_browser_qa`：Reviewer核14/14状态与预期一致，覆盖创建/replay、Owner GET/PUT/CAS、foreign读写403、unknownref400、privateversion403、StoreContext/MenuCatalog摘要一致；空白items/stations/tables/printers/devices/staff/jobs均0，未保存credentials/tokens。此证据来自真实HTTP，不是浏览器视觉验证。
+
+Root post-minor源码711638e的`phase3-final-backend.log`已核 **1050/0failure/0error/0skip BUILD SUCCESS**（Java17、all六类PG、fresh *_p3_final2），Reviewer复算JAR SHA256=`4ee0c9e45779175aaadb5129d43ccfc704ade297e3c87a294bdb0459c775692e`；早批1047另保留，不混计。HTTP JSON已由1941ec6归档到仓库，两个本机HTTP/Vite验证进程由Root正常停止。UI刷新delta最终独立结论仍待齐。768/1024实际截图/布局QA **NOT RUN**：浏览器工具被用户权限策略拒绝，未尝试绕过。原G3-04/P3-UI-04明确要求布局/视觉证据，jsdom DOM功能测试不能证明实际无关键溢出；故即使基础实现/后端tests完成，不能据此把完整G3或Phase3标DONE。主线程按原gate保留G3-04/08缺口，完成其余已授权工作，无Phase4或runtime mutation。
+
+
+## UI集中复审与最终本地打包 — PASS，视觉要求仍未完成
+
+UI审查由**另一位独立security Reviewer**执行；本报告维护者未实施UI，也未冒充执行其101项测试。来源为作者`5ec8abe..de24ac50bc17bed18d0e056bfb127bdd41e5b622`，Root整合`55198bcc0acbd6744ddea157217810f8e07376a9`。该Reviewer向主线程交付consolidated PASS，独立**14files/101tests PASS + build + diff**，同时关闭以下两组问题。
+
+| 原问题 / 归属 | 修复与独立复审关闭证据 |
+| --- | --- |
+| StoreContext Provider stale cluster | 原context仅mount/切店/online读取，menu revision/summary更新后展示与模块context不会及时收敛。复用现GET Context，以可见/在线的focus、visibilitychange、online和60s周期刷新；去重/abort，正常网络下focus或下一周期收敛。同scope保留environment/account/org/store registration，不无谓重注册或kick；真正scope变化/授权失败/卸载才释放。独立实际Provider/cache证明lateforeign不能显示/写cache，**CLOSED**；不承诺网络不可达时60s收敛 |
+| 默认确认dialog P1 | 原OPEN聚焦真实默认DOM确认仍可在模块关/切Store/logout后驻留，旧scope信息/确认未随生命周期撤销；仅mock确认函数不足以关闭。默认dialog接受可选AbortSignal，原scope cleanup/auth-expired触发close/remove并resolve(false)。独立实际默认DOM保持打开→关闭模块/切店/logout验证立即移除；旧intent key保留，零latePOST/printkick，旧已提交job/claim/lease不改，**P1 CLOSED** |
+
+本批新P0=0/未关闭新P1=0；预存纯HOT_KITCHEN完整角色页面P1仍归P5，未标CLOSED。UI功能测试与schema/fallback、跨scope取消、disabled请求/订阅/打印副作用、管理入口/readiness分离通过，不代表实际iPad布局或所有语言/角色已运营认证。
+
+Root最终frontend源码55198bc：`npm ci`后**61files/363tests PASS + TypeScript/Vite build PASS**；Reviewer本报告核实际日志，作者delta7files/59focused与另一Reviewer14files101分别记账，不相加。npm新增jsdom后的审计对照已归档`fixtures/phase3-dependency-audit-comparison.json`（524494d）：Phase2导出1609f0d与55198bc漏洞完整对象相同，引入0，仍有既有13项（1critical/7high/4moderate/1low）。隔离本地记NON_BLOCKING_EXISTING_DEBT，外部release须适用性/patchreview；未自动auditfix，不宣称zero漏洞，不把npm severity等同本批tenantP0。
+
+Root从55198bc archive复用既有bundleddebug流程：`phase3-bundled-debug-build.log` **54asset files/DB5/guard PASS、debugAPK BUILD SUCCESS**；`phase3-packaged-native-tests.log` **6suites/24tests/0failure/0error/0skip PASS**，verifyBundledFrontend实际开启。本报告核日志、XML并复算APK SHA256=`ecce54ae384a1097f94b768d4136312062a2472a46c55ab1f39a10488a893981`。未安装/分发、未接真实设备或实体出纸，不改变P7/P8发行/硬件未知。
+
+**局部实现、自动测试与独立reviews完成；完整Phase3仍PARTIAL/BLOCKED。** 原G3-04明确要求的768/1024实际截图/布局NOT RUN（浏览器用户权限策略拒绝，未绕过），G3-08不关闭；DOM的dialog shim不是视觉证明。Draft PR [#278](https://github.com/Z1linXu/Restaurant_System/pull/278)是可审查交付，head=`codex/commercial-phase3-foundation`、base=`codex/commercial-phase2-security-offline`；remoteCI/finalhead由Root核验，不以本地PASS代替。无main merge、Staging/Production mutation或Phase4实施。

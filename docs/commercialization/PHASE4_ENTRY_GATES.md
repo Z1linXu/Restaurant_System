@@ -1,16 +1,16 @@
 # Phase 4 Entry Gates — Contract and Deferred Work
 
-本文件列未来Phase4可领取条件，不保存当前Phase/Package/Gate，不授权实施。唯一动态状态为 [CURRENT_STATE](../governance/CURRENT_STATE.yml)，执行索引为 [Planbook](COMMERCIALIZATION_MASTER_PLANBOOK.md)。Owner本轮只授权1→2→3；**Phase4 NOT AUTHORIZED**。本草稿对应P3观察点`e565be0`，G3仍PENDING，不能因本文件已存在开启Phase4。
+本文件列未来Phase4可领取条件，不保存当前Phase/Package/Gate，不授权实施。唯一动态状态为 [CURRENT_STATE](../governance/CURRENT_STATE.yml)，执行索引为 [Planbook](COMMERCIALIZATION_MASTER_PLANBOOK.md)。Owner本轮只授权1→2→3；**Phase4 NOT AUTHORIZED**。本证据观察点为backend`711638e`，实现/自动证据不替代原视觉gate：G3-04的768/1024实际QA NOT RUN、G3-08 BLOCKED，Phase3仍PARTIAL/BLOCKED，不能开启Phase4。
 
 ## 必须先满足的进入条件
 
 | 条件 | 所需证据 | 当前证据状态 |
 | --- | --- | --- |
-| G3完整关闭 | [P3验收报告](PHASE3_ACCEPTANCE_REPORT.md)的G3-01…08最终exactSHA、全量与focused、migration/history、独立Agent6、remainingP0/newP1与未跑项明确 | **PENDING**；142focused不替代最终集成 |
+| G3完整关闭 | [P3验收报告](PHASE3_ACCEPTANCE_REPORT.md)的G3-01…08最终exactSHA、全量与focused、migration/history、独立Agent6、remainingP0/newP1与未跑项明确 | **PENDING**；backend1050/frontend363/build、另一UIReviewer101与所有产品review已通过，新P0/未闭新P1=0；768/1024实际视觉NOT RUN仍阻断G3完整关闭 |
 | 后续范围授权 | Owner明确打开Phase4及对应Package，主线程同步唯一CURRENT_STATE | **NOT AUTHORIZED**；不在本轮重新向Owner请求 |
-| 稳定配置/Profile边界 | typed九字段safe summary、严格StoreOwner写入/revision、现API指针与逐资源授权；PRIVATEcanonical与明确Neutral原子创建；不以missingconfig选择legacy | 合同与最终实现 **PENDING**；实现者维护技术合同，本文件不复制schema |
-| 单一菜单/价格来源 | Canonical Orgcode→Storeprice/name→Itemeligibility；现Store-owned combo rows；Owner/POS/Order/printing/缓存revision一致 | 既有SoT保留，P3consumer与最终测试 **PENDING** |
-| 历史与失败恢复 | order/task/job/payload/hash冻结、stableoutboxkey、DB5兼容、V1–V40checksum/升级证据、配置forwardfix | P3history/upgrade最终证据 **PENDING**；禁止回写历史或直接降旧DB4 APK |
+| 稳定配置/Profile边界 | typed九字段safe summary、严格StoreOwner写入/revision、现API指针与逐资源授权；PRIVATEcanonical与明确Neutral原子创建；不以missingconfig选择legacy | **PASS_LOCAL_BACKEND**：9fdf5e7/711638e与独立review、真实HTTP/PG证明；实现者维护技术合同，本文件不复制schema |
+| 单一菜单/价格来源 | Canonical Orgcode→Storeprice/name→Itemeligibility；现Store-owned combo rows；Owner/POS/Order/printing/缓存revision一致 | 后端SoT/summary/hash/revision/真实HTTP通过；UI缓存focus/周期刷新、same-scope保留与lateforeign拒绝独立review **PASS_LOCAL** |
+| 历史与失败恢复 | order/task/job/payload/hash冻结、stableoutboxkey、DB5兼容、V1–V40checksum/升级证据、配置forwardfix | P3非空history/upgrade及backend1050已证明；继续禁止回写历史或直接降旧DB4 APK |
 | 准确兼容清单 | 逐项`PROVISIONAL_COMPATIBILITY`、P4/P5 ownership与golden，不宣称全部菜单/renderer通用 | 下表定义待领取范围；未实施项保持延期 |
 
 ## 可领取的四个既定任务
@@ -33,6 +33,7 @@
 | 任意station/outputrole、完整厨房DTO、固定WOK/DEEPFRIED/GRAB、餐厅renderer/纸张presets | P5-KITCHEN-01/P5-PRINT-02；需P4稳定业务语义和旧paper/payloadgolden。P3Neutral完整snapshotadapter不等通用路由 |
 | AB/counter、报表category、Uber许可/映射 | P5-TABLE-03/REPORT-05/INTEGRATION-04；不将GRAB当Grab平台，真实外部授权未具备 |
 | 全商家blank导入/向导、manifest/diff/dryrun/idempotent执行、支持grant | P6-IMPORT-01/PLAYBOOK-02/SUPPORT-03；复用外部Codex工作流，无系统内PDF/AI |
+| 既有依赖advisories的外部release适用性/patchreview | Phase2与P3 vulnerabilities完整对象相同、引入0；仍有13项（1critical/7high/4moderate/1low）。隔离本地non-blocking不等zero漏洞/可发行；不盲auditfix或扩大当前P7升级项目 |
 | 签名Android/实装/硬件、独立交付/backuprestore/秘密生命周期 | P7-ANDROID-01/DEPLOY-02；P2本地debugAPK与P3源码不证明现装/physical/SLA |
 | 真实Pilot、语言/适用法语/税务/品牌素材与每商家发布 | P8-PILOT-01及具体授权；不以P3/P4开发通过营销承诺ready |
 | 完整库存restock/prep、新外卖connector | FUTURE-INVENTORY-01/CONNECTOR-02；不在既定首发范围，缺失API仍缺失 |
