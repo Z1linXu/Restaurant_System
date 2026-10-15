@@ -3,13 +3,13 @@ updated_at: 2026-10-15
 
 repository:
   ref: origin/main
-  sha: 420dbb1268540c3ad5a2d0befa1d9fd96c684bd0
+  sha: 06bac51ddc0a829a9aa1106f07ef886572efbb65
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
-  current: COMMERCIALIZATION_PHASE_2
+  current: COMMERCIALIZATION_PHASE_3
   package: OWNER_AUTHORIZED_PHASE_1_2_3_LOCAL_ONLY
-  status: BASELINE_AND_SECURITY_IMPLEMENTATION_IN_PROGRESS
+  status: CORE_PROFILE_CONFIGURATION_IMPLEMENTATION_IN_PROGRESS
   next_phase_authorized: false
 
 staging:
@@ -153,7 +153,7 @@ uber_store_capability:
 
 gate:
   type: TECHNICAL
-  next_action: VERIFY_BASELINE_AND_CLOSE_PHASE2_P0_BEFORE_PHASE3
+  next_action: IMPLEMENT_PHASE3_CONFIG_PROFILE_NEUTRAL_AND_COMPATIBILITY_ONLY
 
 authorization:
   uber_store_capability: OWNER_AUTHORIZED_OPTION370_TEA_EGG_KEEP_ID_PRICE_HISTORY_FORMAL_UBER_EATS_GATES_V37_TEST_REVIEW_MERGE_STAGING_ONLY
@@ -185,6 +185,9 @@ commercialization:
   environment: ISOLATED_LOCAL_DEVELOPMENT_ONLY
   integration_branch: codex/commercialization-phase1-3
   source_main: 06bac51ddc0a829a9aa1106f07ef886572efbb65
+  phase2_entry_evidence: ../commercialization/PHASE2_ACCEPTANCE_REPORT.md
+  phase2_tested_code: 5ec8abeb7a67760000b29151e7f568a88a8f36ed
+  phase2_gate: PASS_LOCAL_ONLY_BACKEND1013_FRONTEND306_NATIVE24_ALL_REVIEWS_PASS
   staging_mutation_authorized: false
   production_mutation_authorized: false
   merge_to_origin_main_authorized: false
