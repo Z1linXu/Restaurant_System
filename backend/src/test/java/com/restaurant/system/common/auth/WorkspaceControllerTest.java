@@ -84,7 +84,7 @@ class WorkspaceControllerTest {
 
         mockMvc.perform(get("/api/v1/me/workspaces"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.default_store_id").value(10))
+            .andExpect(jsonPath("$.data.default_store_id").doesNotExist())
             .andExpect(jsonPath("$.data.organizations").isArray())
             .andExpect(jsonPath("$.data.stores").isArray());
     }

@@ -1,5 +1,6 @@
 import type { BackendServingShelfItem, RealtimeUpdateMessage } from '../types/kds'
 import { apiRequest } from './apiClient'
+import { createAuthenticatedRealtimeClient } from './realtimeClient'
 
 const request = apiRequest
 
@@ -19,48 +20,18 @@ export function subscribeToServingShelf(
   onMessage: (message: RealtimeUpdateMessage) => void,
 ) {
   let disposed = false
-  let deactivate: (() => void) | null = null
-
-  void Promise.all([import('@stomp/stompjs'), import('sockjs-client')])
-    .then(([stompModule, sockJsModule]) => {
-      if (disposed) {
-        return
-      }
-
-      const ClientCtor = stompModule.Client
-      const SockJSImport = sockJsModule.default
-      const SockJSCtor =
-        typeof SockJSImport === 'function'
-          ? SockJSImport
-          : ((sockJsModule as unknown as { SockJS?: typeof SockJSImport }).SockJS ?? SockJSImport)
-
-      const client = new ClientCtor({
-        webSocketFactory: () => new SockJSCtor('/ws'),
-        reconnectDelay: 3000,
-      })
-
-      client.onConnect = () => {
-        client.subscribe(`/topic/stores/${storeId}/kds/serving-shelf`, (frame) => {
-          try {
-            const message = JSON.parse(frame.body) as RealtimeUpdateMessage
-            onMessage(message)
-          } catch {
-            // ignore malformed message
-          }
-        })
-      }
-
-      client.activate()
-      deactivate = () => {
-        void client.deactivate()
-      }
+  const connection = createAuthenticatedRealtimeClient()
+  let subscription: { unsubscribe: () => void } | null = null
+  connection.client.onConnect = () => {
+    if (disposed) return
+    subscription?.unsubscribe()
+    subscription = connection.client.subscribe(`/topic/stores/${storeId}/kds/serving-shelf`, (frame) => {
+      try {
+        const message = JSON.parse(frame.body) as RealtimeUpdateMessage
+        if (!disposed && message.store_id === storeId) onMessage(message)
+      } catch { /* malformed refresh events contain no usable update */ }
     })
-    .catch(() => {
-      // Ignore websocket bootstrap failure for MVP; the board can stay idle instead of crashing the whole app.
-    })
-
-  return () => {
-    disposed = true
-    deactivate?.()
   }
+  connection.client.activate()
+  return () => { if (disposed) return; disposed=true; subscription?.unsubscribe(); subscription=null; connection.dispose() }
 }

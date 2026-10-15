@@ -39,6 +39,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class PlatformAdminController {
 
     private final PlatformAdminService platformAdminService;
+    private final PlatformResourceAuthorization resourceScope;
     private final AuthorizationService authorizationService;
     private final FeatureFlagService featureFlagService;
     private final AuditLogService auditLogService;
@@ -49,9 +50,11 @@ public class PlatformAdminController {
         AuthorizationService authorizationService,
         FeatureFlagService featureFlagService,
         AuditLogService auditLogService,
-        StoreModuleAccessEvaluator moduleAccessEvaluator
+        StoreModuleAccessEvaluator moduleAccessEvaluator,
+        PlatformResourceAuthorization resourceScope
     ) {
         this.platformAdminService = platformAdminService;
+        this.resourceScope = resourceScope;
         this.authorizationService = authorizationService;
         this.featureFlagService = featureFlagService;
         this.auditLogService = auditLogService;
@@ -62,27 +65,33 @@ public class PlatformAdminController {
     public ApiResponse<PlatformAdminOverviewResponse> getOverview(@RequestParam Long store_id) {
         authorizationService.requireForStore(store_id, Capability.ADMIN_STORE_CONFIG, Capability.ADMIN_USER_ROLE_MANAGE);
         requireStoreAdministration(store_id);
-        return ApiResponse.success(platformAdminService.getOverview(store_id));
+        var response=platformAdminService.getOverview(store_id);
+        response.stores=resourceScope.stores();
+        response.organizations=resourceScope.organizations();
+        response.templates=resourceScope.templates();
+        response.roles=response.roles.stream().filter(role -> !"ADMIN".equalsIgnoreCase(role.getCode())).toList();
+        return ApiResponse.success(response);
     }
 
     @GetMapping("/organizations")
     public ApiResponse<List<Organization>> getOrganizations() {
         featureFlagService.requireEnabled(FeaturePackage.PLATFORM);
         authorizationService.require(Capability.ADMIN_STORE_CONFIG);
-        return ApiResponse.success(platformAdminService.getOrganizations());
+        return ApiResponse.success(resourceScope.organizations());
     }
 
     @PostMapping("/organizations")
     public ApiResponse<Organization> createOrganization(@RequestBody Organization organization) {
         featureFlagService.requireEnabled(FeaturePackage.PLATFORM);
         authorizationService.require(Capability.ADMIN_STORE_CONFIG);
-        return ApiResponse.success("Organization saved", platformAdminService.saveOrganization(organization));
+        throw new com.restaurant.system.common.auth.ForbiddenException("Organization creation requires separate platform authorization");
     }
 
     @PutMapping("/organizations/{id}")
     public ApiResponse<Organization> updateOrganization(@PathVariable Long id, @RequestBody Organization organization) {
         featureFlagService.requireEnabled(FeaturePackage.PLATFORM);
         authorizationService.require(Capability.ADMIN_STORE_CONFIG);
+        resourceScope.organization(id);
         organization.id = id;
         return ApiResponse.success("Organization updated", platformAdminService.saveOrganization(organization));
     }
@@ -91,11 +100,12 @@ public class PlatformAdminController {
     public ApiResponse<List<RestaurantTemplate>> getTemplates() {
         featureFlagService.requireEnabled(FeaturePackage.PLATFORM);
         authorizationService.require(Capability.ADMIN_STORE_CONFIG);
-        return ApiResponse.success(platformAdminService.getTemplates());
+        return ApiResponse.success(resourceScope.templates());
     }
 
     @PostMapping("/templates")
     public ApiResponse<RestaurantTemplate> createTemplate(@RequestBody RestaurantTemplate template) {
+        resourceScope.template(template.id, template);
         featureFlagService.requireEnabled(FeaturePackage.PLATFORM);
         authorizationService.require(Capability.ADMIN_STORE_CONFIG);
         return ApiResponse.success("Template saved", platformAdminService.saveTemplate(template));
@@ -103,6 +113,7 @@ public class PlatformAdminController {
 
     @PutMapping("/templates/{id}")
     public ApiResponse<RestaurantTemplate> updateTemplate(@PathVariable Long id, @RequestBody RestaurantTemplate template) {
+        resourceScope.template(id, template);
         featureFlagService.requireEnabled(FeaturePackage.PLATFORM);
         authorizationService.require(Capability.ADMIN_STORE_CONFIG);
         template.id = id;
@@ -113,11 +124,12 @@ public class PlatformAdminController {
     public ApiResponse<List<Store>> getStores() {
         featureFlagService.requireEnabled(FeaturePackage.PLATFORM);
         authorizationService.require(Capability.ADMIN_STORE_CONFIG);
-        return ApiResponse.success(platformAdminService.getStores());
+        return ApiResponse.success(resourceScope.stores());
     }
 
     @PostMapping("/stores")
     public ApiResponse<Store> createStore(@RequestBody Store store) {
+        resourceScope.store(store.id, store);
         featureFlagService.requireEnabled(FeaturePackage.PLATFORM);
         authorizationService.require(Capability.ADMIN_STORE_CONFIG);
         return ApiResponse.success("Store saved", platformAdminService.saveStore(store));
@@ -125,6 +137,7 @@ public class PlatformAdminController {
 
     @PutMapping("/stores/{id}")
     public ApiResponse<Store> updateStore(@PathVariable Long id, @RequestBody Store store) {
+        resourceScope.store(id, store);
         featureFlagService.requireEnabled(FeaturePackage.PLATFORM);
         authorizationService.require(Capability.ADMIN_STORE_CONFIG);
         store.id = id;
@@ -135,7 +148,7 @@ public class PlatformAdminController {
     public ApiResponse<Store> createStoreFromTemplate(@RequestBody CreateStoreFromTemplateRequest request) {
         featureFlagService.requireEnabled(FeaturePackage.PLATFORM);
         authorizationService.require(Capability.ADMIN_STORE_CONFIG);
-        return ApiResponse.success("Store created", platformAdminService.createStoreFromTemplate(request));
+        throw new com.restaurant.system.common.auth.ForbiddenException("Use the Owner Store provisioning API");
     }
 
     @GetMapping("/stations")
@@ -147,6 +160,7 @@ public class PlatformAdminController {
 
     @PostMapping("/stations")
     public ApiResponse<Station> createStation(@RequestBody Station station) {
+        resourceScope.station(station.id, station);
         authorizationService.requireForStore(station.store_id, Capability.ADMIN_STORE_CONFIG);
         requireMenuManagement(station.store_id);
         return ApiResponse.success("Station saved", platformAdminService.saveStation(station));
@@ -154,6 +168,7 @@ public class PlatformAdminController {
 
     @PutMapping("/stations/{id}")
     public ApiResponse<Station> updateStation(@PathVariable Long id, @RequestBody Station station) {
+        resourceScope.station(id, station);
         authorizationService.requireForStore(station.store_id, Capability.ADMIN_STORE_CONFIG);
         requireMenuManagement(station.store_id);
         station.id = id;
@@ -169,6 +184,7 @@ public class PlatformAdminController {
 
     @PostMapping("/dining-tables")
     public ApiResponse<DiningTable> createDiningTable(@RequestBody DiningTable diningTable) {
+        resourceScope.table(diningTable.id, diningTable);
         authorizationService.requireForStore(diningTable.store_id, Capability.ADMIN_STORE_CONFIG);
         requireTableManagement(diningTable.store_id);
         return ApiResponse.success("Dining table saved", platformAdminService.saveDiningTable(diningTable));
@@ -176,6 +192,7 @@ public class PlatformAdminController {
 
     @PutMapping("/dining-tables/{id}")
     public ApiResponse<DiningTable> updateDiningTable(@PathVariable Long id, @RequestBody DiningTable diningTable) {
+        resourceScope.table(id, diningTable);
         authorizationService.requireForStore(diningTable.store_id, Capability.ADMIN_STORE_CONFIG);
         requireTableManagement(diningTable.store_id);
         diningTable.id = id;
@@ -191,6 +208,7 @@ public class PlatformAdminController {
 
     @PostMapping("/menu/categories")
     public ApiResponse<MenuCategory> createMenuCategory(@RequestBody MenuCategory menuCategory) {
+        resourceScope.category(menuCategory.id, menuCategory);
         authorizationService.requireForStore(menuCategory.store_id, Capability.ADMIN_STORE_CONFIG);
         requireMenuManagement(menuCategory.store_id);
         return ApiResponse.success("Menu category saved", platformAdminService.saveMenuCategory(menuCategory));
@@ -198,6 +216,7 @@ public class PlatformAdminController {
 
     @PutMapping("/menu/categories/{id}")
     public ApiResponse<MenuCategory> updateMenuCategory(@PathVariable Long id, @RequestBody MenuCategory menuCategory) {
+        resourceScope.category(id, menuCategory);
         authorizationService.requireForStore(menuCategory.store_id, Capability.ADMIN_STORE_CONFIG);
         requireMenuManagement(menuCategory.store_id);
         menuCategory.id = id;
@@ -213,6 +232,7 @@ public class PlatformAdminController {
 
     @PostMapping("/menu/items")
     public ApiResponse<MenuItem> createMenuItem(@RequestBody MenuItem menuItem, HttpServletRequest servletRequest) {
+        resourceScope.item(menuItem.id, menuItem);
         var user = authorizationService.requireForStore(menuItem.store_id, Capability.ADMIN_MENU_MANAGE, Capability.ADMIN_STORE_CONFIG);
         requireMenuManagement(menuItem.store_id);
         MenuItem saved = platformAdminService.saveMenuItem(menuItem);
@@ -222,6 +242,7 @@ public class PlatformAdminController {
 
     @PutMapping("/menu/items/{id}")
     public ApiResponse<MenuItem> updateMenuItem(@PathVariable Long id, @RequestBody MenuItem menuItem, HttpServletRequest servletRequest) {
+        resourceScope.item(id, menuItem);
         var user = authorizationService.requireForStore(menuItem.store_id, Capability.ADMIN_MENU_MANAGE, Capability.ADMIN_STORE_CONFIG);
         requireMenuManagement(menuItem.store_id);
         menuItem.id = id;
@@ -239,12 +260,14 @@ public class PlatformAdminController {
 
     @PostMapping("/menu/item-options")
     public ApiResponse<MenuItemOption> createMenuItemOption(@RequestBody MenuItemOption menuItemOption) {
+        resourceScope.option(menuItemOption.id, menuItemOption);
         authorizationService.require(Capability.ADMIN_STORE_CONFIG);
         return ApiResponse.success("Menu item option saved", platformAdminService.saveMenuItemOption(menuItemOption));
     }
 
     @PutMapping("/menu/item-options/{id}")
     public ApiResponse<MenuItemOption> updateMenuItemOption(@PathVariable Long id, @RequestBody MenuItemOption menuItemOption) {
+        resourceScope.option(id, menuItemOption);
         authorizationService.require(Capability.ADMIN_STORE_CONFIG);
         menuItemOption.id = id;
         return ApiResponse.success("Menu item option updated", platformAdminService.saveMenuItemOption(menuItemOption));
@@ -259,6 +282,7 @@ public class PlatformAdminController {
 
     @PostMapping("/kds-configs")
     public ApiResponse<StoreKdsDisplayConfig> createKdsDisplayConfig(@RequestBody StoreKdsDisplayConfig config) {
+        resourceScope.kds(config.id, config);
         featureFlagService.requireEnabled(FeaturePackage.PLATFORM);
         authorizationService.requireForStore(config.store_id, Capability.ADMIN_STORE_CONFIG);
         return ApiResponse.success("KDS display config saved", platformAdminService.saveKdsDisplayConfig(config));
@@ -266,6 +290,7 @@ public class PlatformAdminController {
 
     @PutMapping("/kds-configs/{id}")
     public ApiResponse<StoreKdsDisplayConfig> updateKdsDisplayConfig(@PathVariable Long id, @RequestBody StoreKdsDisplayConfig config) {
+        resourceScope.kds(id, config);
         featureFlagService.requireEnabled(FeaturePackage.PLATFORM);
         authorizationService.requireForStore(config.store_id, Capability.ADMIN_STORE_CONFIG);
         config.id = id;
@@ -281,6 +306,7 @@ public class PlatformAdminController {
 
     @PostMapping("/users")
     public ApiResponse<User> createUser(@RequestBody User user) {
+        resourceScope.user(user.getId(), user);
         authorizationService.requireForStore(user.getStore_id(), Capability.ADMIN_USER_ROLE_MANAGE);
         requireStaffAccess(user.getStore_id());
         return ApiResponse.success("User saved", platformAdminService.saveUser(user));
@@ -288,6 +314,7 @@ public class PlatformAdminController {
 
     @PutMapping("/users/{id}")
     public ApiResponse<User> updateUser(@PathVariable Long id, @RequestBody User user) {
+        resourceScope.user(id, user);
         authorizationService.requireForStore(user.getStore_id(), Capability.ADMIN_USER_ROLE_MANAGE);
         requireStaffAccess(user.getStore_id());
         user.setId(id);
@@ -297,20 +324,19 @@ public class PlatformAdminController {
     @GetMapping("/roles")
     public ApiResponse<List<Role>> getRoles() {
         authorizationService.require(Capability.ADMIN_USER_ROLE_MANAGE);
-        return ApiResponse.success(platformAdminService.getRoles());
+        return ApiResponse.success(platformAdminService.getRoles().stream().filter(role -> !"ADMIN".equalsIgnoreCase(role.getCode())).toList());
     }
 
     @PostMapping("/roles")
     public ApiResponse<Role> createRole(@RequestBody Role role) {
         authorizationService.require(Capability.ADMIN_USER_ROLE_MANAGE);
-        return ApiResponse.success("Role saved", platformAdminService.saveRole(role));
+        throw new com.restaurant.system.common.auth.ForbiddenException("Shared role presets are immutable through merchant APIs");
     }
 
     @PutMapping("/roles/{id}")
     public ApiResponse<Role> updateRole(@PathVariable Long id, @RequestBody Role role) {
         authorizationService.require(Capability.ADMIN_USER_ROLE_MANAGE);
-        role.setId(id);
-        return ApiResponse.success("Role updated", platformAdminService.saveRole(role));
+        throw new com.restaurant.system.common.auth.ForbiddenException("Shared role presets are immutable through merchant APIs");
     }
 
     private void requireStoreAdministration(Long storeId) {

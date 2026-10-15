@@ -54,7 +54,7 @@ public class WorkspaceController {
                 .filter(store -> store != null && store.id != null)
                 .map(store -> store.id)
                 .findFirst()
-                .orElse(user.storeId()));
+                .orElse(null));
         response.organizations = storeAccessService.accessibleOrganizations(user).stream()
             .filter(organization -> organization != null && organization.id != null)
             .map(organization -> toOrganizationWorkspace(user, organization))

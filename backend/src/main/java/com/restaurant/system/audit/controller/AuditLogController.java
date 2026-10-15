@@ -41,13 +41,10 @@ public class AuditLogController {
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "50") int size
     ) {
-        var user = store_id == null
-            ? authorizationService.requireOwner(Capability.ADMIN_USER_ROLE_MANAGE)
-            : authorizationService.requireManagerOrOwnerForStore(store_id, Capability.ADMIN_USER_ROLE_MANAGE);
-        if (store_id != null) {
-            moduleAccessEvaluator.requireCapability(store_id, ModuleKeys.STORE_ADMINISTRATION);
-        }
-        Long effectiveStoreId = authorizationService.isOwner(user) ? store_id : user.storeId();
+        if (store_id == null) throw new com.restaurant.system.common.auth.ForbiddenException("An authorized store is required for audit logs");
+        authorizationService.requireManagerOrOwnerForStore(store_id, Capability.ADMIN_USER_ROLE_MANAGE);
+        moduleAccessEvaluator.requireCapability(store_id, ModuleKeys.STORE_ADMINISTRATION);
+        Long effectiveStoreId = store_id;
         return ApiResponse.success(auditLogService.search(effectiveStoreId, date, actor, action, page, size));
     }
 }

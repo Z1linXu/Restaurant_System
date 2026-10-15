@@ -13,8 +13,9 @@ import type { PrintJobRecord } from './printingAdminService'
 import { ApiRequestError, apiRequest } from './apiClient'
 import { manualReprint } from './manualReprintService'
 import { resolveComboGroupOptionId } from '../utils/comboSelection'
-import { Client } from '@stomp/stompjs'
+import type { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
+import { createAuthenticatedRealtimeClient, realtimeEndpoint } from './realtimeClient'
 import { networkDiagnosticsDisplayEnabled } from './networkStatus'
 
 const READ_RETRY_DELAYS_MS = [0, 250, 750]
@@ -315,12 +316,6 @@ function observeFrontdeskRealtime(event: FrontdeskRealtimeLifecycleEvent, onLife
   }
 }
 
-function frontdeskRealtimeEndpoint() {
-  if (typeof window === 'undefined') {
-    return '/ws'
-  }
-  return new URL('/ws', window.location.href).toString()
-}
 
 export function subscribeToFrontdeskOrders(
   storeId: number,
@@ -329,6 +324,7 @@ export function subscribeToFrontdeskOrders(
 ) {
   let disposed = false
   let client: Client | null = null
+  let disposeClient: (() => void) | null = null
   let unsubscribeTopic: (() => void) | null = null
   const lifecycle = (phase: FrontdeskRealtimeLifecyclePhase, closeCode?: number) => {
     if (disposed && phase !== 'CANCELLED') return
@@ -337,10 +333,10 @@ export function subscribeToFrontdeskOrders(
 
   lifecycle('BOOTSTRAP_STARTED')
   try {
-    client = new Client({
+    const authenticated = createAuthenticatedRealtimeClient({
       webSocketFactory: () => {
         lifecycle('SOCKET_FACTORY_CALLED')
-        return new SockJS(frontdeskRealtimeEndpoint())
+        return new SockJS(realtimeEndpoint())
       },
       reconnectDelay: 3_000,
       connectionTimeout: 10_000,
@@ -348,6 +344,8 @@ export function subscribeToFrontdeskOrders(
       heartbeatOutgoing: 10_000,
     })
 
+    client = authenticated.client
+    disposeClient = authenticated.dispose
     lifecycle('CLIENT_CREATED')
     client.onConnect = () => {
       if (disposed || !client) return
@@ -392,9 +390,7 @@ export function subscribeToFrontdeskOrders(
     disposed = true
     unsubscribeTopic?.()
     lifecycle('CANCELLED')
-    if (client) {
-      void client.deactivate()
-    }
+    disposeClient?.()
   }
 }
 

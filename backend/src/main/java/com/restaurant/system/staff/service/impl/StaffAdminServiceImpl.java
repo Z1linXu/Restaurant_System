@@ -36,6 +36,8 @@ public class StaffAdminServiceImpl implements StaffAdminService {
     private static final String ROLE_MANAGER = "MANAGER";
     private static final String ROLE_FRONTDESK = "FRONTDESK";
 
+    private final com.restaurant.system.common.auth.StoreAccessService storeAccessService;
+    private final com.restaurant.system.user.repository.StoreMembershipRepository memberships;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final StoreRepository storeRepository;
@@ -53,9 +55,13 @@ public class StaffAdminServiceImpl implements StaffAdminService {
         PasswordService passwordService,
         AuthorizationService authorizationService,
         AuditLogService auditLogService,
-        StoreModuleAccessEvaluator moduleAccessEvaluator
+        StoreModuleAccessEvaluator moduleAccessEvaluator,
+        com.restaurant.system.common.auth.StoreAccessService storeAccessService,
+        com.restaurant.system.user.repository.StoreMembershipRepository memberships
     ) {
         this.userRepository = userRepository;
+        this.storeAccessService=storeAccessService;
+        this.memberships=memberships;
         this.roleRepository = roleRepository;
         this.storeRepository = storeRepository;
         this.userCredentialRepository = userCredentialRepository;
@@ -68,24 +74,21 @@ public class StaffAdminServiceImpl implements StaffAdminService {
     @Override
     @Transactional(readOnly = true)
     public List<StaffStoreResponse> getAccessibleStores(AuthenticatedUser actor) {
-        if (authorizationService.isOwner(actor)) {
-            return storeRepository.findAll().stream()
-                .sorted(Comparator.comparing(store -> store.id))
-                .map(StaffStoreResponse::from)
-                .toList();
-        }
-        Store store = storeRepository.findById(actor.storeId()).orElseThrow(() -> new BusinessException("Store not found"));
-        return List.of(StaffStoreResponse.from(store));
+        return storeAccessService.accessibleStores(actor).stream()
+            .filter(store -> {
+                String role=storeAccessService.roleCodeForStore(actor, store);
+                return "OWNER".equals(role) || "MANAGER".equals(role);
+            }).map(StaffStoreResponse::from).toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<StaffUserResponse> getStaff(Long storeId, AuthenticatedUser actor) {
-        authorizationService.requireStaffManageForStore(storeId);
+        AuthenticatedUser scopedActor = authorizationService.requireStaffManageForStore(storeId);
         requireStaffAccess(storeId);
         return userRepository.findAllByStore_id(storeId).stream()
             .map(user -> StaffUserResponse.from(user, roleCode(user.getRole_id())))
-            .filter(response -> authorizationService.isOwner(actor) || ROLE_FRONTDESK.equalsIgnoreCase(response.roleCode))
+            .filter(response -> authorizationService.isOwner(scopedActor) || ROLE_FRONTDESK.equalsIgnoreCase(response.roleCode))
             .sorted(Comparator.comparing((StaffUserResponse response) -> response.roleCode == null ? "" : response.roleCode)
                 .thenComparing(response -> response.username == null ? "" : response.username))
             .toList();
@@ -94,7 +97,7 @@ public class StaffAdminServiceImpl implements StaffAdminService {
     @Override
     @Transactional
     public StaffUserResponse createStaff(StaffUserRequest request, AuthenticatedUser actor, HttpServletRequest servletRequest) {
-        authorizationService.requireStaffManageForStore(request.storeId);
+        actor = authorizationService.requireStaffManageForStore(request.storeId);
         requireStaffAccess(request.storeId);
         String targetRoleCode = normalizeRole(request.roleCode);
         ensureCanManageRole(actor, targetRoleCode);
@@ -119,6 +122,7 @@ public class StaffAdminServiceImpl implements StaffAdminService {
         user.setCreated_at(now);
         user.setUpdated_at(now);
         User saved = userRepository.save(user);
+        syncMembership(saved, null);
 
         UserCredential credential = new UserCredential();
         credential.userId = saved.getId();
@@ -139,7 +143,7 @@ public class StaffAdminServiceImpl implements StaffAdminService {
     @Transactional
     public StaffUserResponse updateStaff(Long userId, StaffUserRequest request, AuthenticatedUser actor, HttpServletRequest servletRequest) {
         User user = requireUser(userId);
-        authorizationService.requireStaffManageForStore(user.getStore_id());
+        actor = authorizationService.requireStaffManageForStore(user.getStore_id());
         requireStaffAccess(user.getStore_id());
         String currentRole = roleCode(user.getRole_id());
         ensureCanManageExistingUser(actor, user, currentRole);
@@ -148,6 +152,13 @@ public class StaffAdminServiceImpl implements StaffAdminService {
         if (!authorizationService.isOwner(actor) && !user.getStore_id().equals(request.storeId)) {
             throw new ForbiddenException("Manager cannot move staff to another store");
         }
+        AuthenticatedUser targetActor=authorizationService.requireStaffManageForStore(request.storeId);
+        requireStaffAccess(request.storeId);
+        ensureCanManageRole(targetActor,targetRoleCode);
+        Store oldStore=storeRepository.findById(user.getStore_id()).orElseThrow(() -> new ForbiddenException("Access denied for store"));
+        Store targetStore=storeRepository.findById(request.storeId).orElseThrow(() -> new ForbiddenException("Access denied for store"));
+        if (!java.util.Objects.equals(oldStore.organization_id, targetStore.organization_id)) throw new ForbiddenException("Staff cannot move across organizations");
+        Long previousStoreId=user.getStore_id();
         String previousUsername = user.getUsername();
         String nextUsername = request.username == null ? "" : request.username.trim();
         if (nextUsername.isBlank()) {
@@ -173,6 +184,7 @@ public class StaffAdminServiceImpl implements StaffAdminService {
         user.setPhone(blankToNull(request.phone));
         user.setUpdated_at(LocalDateTime.now());
         User saved = userRepository.save(user);
+        syncMembership(saved, previousStoreId);
         if (!saved.getUsername().equalsIgnoreCase(previousUsername)) {
             userCredentialRepository.findFirstByLoginIdentifierIgnoreCase(previousUsername).ifPresent(credential -> {
                 credential.loginIdentifier = saved.getUsername();
@@ -201,7 +213,7 @@ public class StaffAdminServiceImpl implements StaffAdminService {
     @Transactional
     public StaffUserResponse resetPassword(Long userId, ResetPasswordRequest request, AuthenticatedUser actor, HttpServletRequest servletRequest) {
         User user = requireUser(userId);
-        authorizationService.requireStaffManageForStore(user.getStore_id());
+        actor = authorizationService.requireStaffManageForStore(user.getStore_id());
         requireStaffAccess(user.getStore_id());
         String targetRole = roleCode(user.getRole_id());
         ensureCanManageExistingUser(actor, user, targetRole);
@@ -220,7 +232,7 @@ public class StaffAdminServiceImpl implements StaffAdminService {
 
     private StaffUserResponse setStaffStatus(Long userId, AuthenticatedUser actor, String status, String action, HttpServletRequest servletRequest) {
         User user = requireUser(userId);
-        authorizationService.requireStaffManageForStore(user.getStore_id());
+        actor = authorizationService.requireStaffManageForStore(user.getStore_id());
         requireStaffAccess(user.getStore_id());
         String targetRole = roleCode(user.getRole_id());
         ensureCanManageExistingUser(actor, user, targetRole);
@@ -240,12 +252,33 @@ public class StaffAdminServiceImpl implements StaffAdminService {
     }
 
     private void ensureCanManageExistingUser(AuthenticatedUser actor, User target, String targetRole) {
+        if ("ADMIN".equalsIgnoreCase(targetRole)) throw new ForbiddenException("Platform operator accounts are outside merchant staff management");
         if (!authorizationService.canAccessStore(actor, target.getStore_id())) {
             throw new ForbiddenException("Access denied for store " + target.getStore_id());
+        }
+        AuthenticatedUser targetIdentity=new AuthenticatedUser(target.getId(), target.getStore_id(), target.getRole_id(), target.getUsername(), target.getFull_name(), targetRole);
+        for (Store assigned : storeAccessService.accessibleStores(targetIdentity)) {
+            if (!authorizationService.canAccessStore(actor, assigned.id)) throw new ForbiddenException("Shared account is outside the authorized staff scope");
         }
         if (authorizationService.isManager(actor) && !ROLE_FRONTDESK.equalsIgnoreCase(targetRole)) {
             throw new ForbiddenException("Manager can only manage frontdesk staff");
         }
+    }
+
+    private void syncMembership(User user, Long previousStoreId) {
+        if (previousStoreId != null && !previousStoreId.equals(user.getStore_id())) {
+            memberships.findFirstByUserIdAndStoreId(user.getId(), previousStoreId).ifPresent(old -> {
+                old.isActive=false; old.updatedAt=LocalDateTime.now(); memberships.save(old);
+            });
+        }
+        Store store=storeRepository.findById(user.getStore_id()).orElseThrow(() -> new ForbiddenException("Access denied for store"));
+        var membership=memberships.findFirstByUserIdAndStoreId(user.getId(), store.id)
+            .orElseGet(com.restaurant.system.user.entity.StoreMembership::new);
+        membership.userId=user.getId(); membership.storeId=store.id; membership.organizationId=store.organization_id;
+        membership.roleId=user.getRole_id(); membership.roleCode=roleCode(user.getRole_id());
+        membership.isActive="active".equalsIgnoreCase(user.getStatus());
+        if (membership.createdAt==null) membership.createdAt=LocalDateTime.now();
+        membership.updatedAt=LocalDateTime.now(); memberships.save(membership);
     }
 
     private void requireStaffAccess(Long storeId) {
@@ -271,7 +304,7 @@ public class StaffAdminServiceImpl implements StaffAdminService {
     }
 
     private User requireUser(Long userId) {
-        return userRepository.findById(userId).orElseThrow(() -> new BusinessException("User not found"));
+        return userRepository.findByIdForUpdate(userId).orElseThrow(() -> new BusinessException("User not found"));
     }
 
     private Role findRole(String roleCode) {

@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface StoreMembershipRepository extends JpaRepository<StoreMembership, Long> {
 
+    boolean existsByUserId(Long userId);
+
     List<StoreMembership> findAllByUserIdAndIsActiveTrueOrderByStoreIdAsc(Long userId);
 
     Optional<StoreMembership> findFirstByUserIdAndStoreId(Long userId, Long storeId);

@@ -109,5 +109,16 @@ class OwnerOverviewServiceImplTest {
         OwnerOverviewResponse response = service.getOverview();
 
         assertThat(response.organizations.get(0).can_create_store).isFalse();
+    }    @Test
+    void globalOwnerWithOnlyStoreFrontdeskMembershipCannotReadStoreFinancials() {
+        var fixture=new com.restaurant.system.common.auth.CommercialSecurityFixture();
+        when(requestUserContextService.getRequiredUser()).thenReturn(fixture.actor(7));
+        var scopedService=new OwnerOverviewServiceImpl(requestUserContextService,fixture.access,fixture.organizations,
+            orderRepository,diningTableRepository,printJobRepository,printerConfigService,featureFlagService,moduleAccessEvaluator);
+        OwnerOverviewResponse response=scopedService.getOverview();
+        assertThat(response.organizations).hasSize(1);
+        assertThat(response.organizations.get(0).stores).isEmpty();
+        org.mockito.Mockito.verifyNoInteractions(orderRepository,printJobRepository,printerConfigService,diningTableRepository);
     }
+
 }

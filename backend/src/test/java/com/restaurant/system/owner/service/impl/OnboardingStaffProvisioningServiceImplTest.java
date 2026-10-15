@@ -124,8 +124,10 @@ class OnboardingStaffProvisioningServiceImplTest {
         Store otherStore = store(OTHER_STORE_ID, ORGANIZATION_ID);
         when(storeRepository.findById(TARGET_STORE_ID)).thenReturn(Optional.of(targetStore));
         when(storeRepository.findById(OTHER_STORE_ID)).thenReturn(Optional.of(otherStore));
-        when(storeMembershipRepository.existsByUserIdAndStoreIdAndIsActiveTrue(USER_ID, TARGET_STORE_ID)).thenReturn(true);
-        when(storeMembershipRepository.existsByUserIdAndStoreIdAndIsActiveTrue(USER_ID, OTHER_STORE_ID)).thenReturn(false);
+        when(storeMembershipRepository.findFirstByUserIdAndStoreId(USER_ID, TARGET_STORE_ID)).thenReturn(Optional.of(targetMembership));
+        when(storeMembershipRepository.existsByUserId(USER_ID)).thenReturn(true);
+        var organization=new com.restaurant.system.platform.entity.Organization(); organization.id=ORGANIZATION_ID; organization.status="active";
+        when(organizationRepository.findById(ORGANIZATION_ID)).thenReturn(Optional.of(organization));
         when(storeMembershipRepository.findAllByUserIdAndIsActiveTrueOrderByStoreIdAsc(USER_ID))
             .thenReturn(List.of(targetMembership));
 
