@@ -9537,3 +9537,5 @@ for actual private canonical Compose and bounded recovery. Do not overwrite the
 shared Production/Staging edge with the old generic HTTPS template. Exact backup,
 images, migration and acceptance limits are in
 [release evidence](docs/governance/PRODUCTION_V37_RELEASE_20261005.md).
+
+Phase 2 integration: the menu revision JPA slice supplies its unused user-authorization dependency explicitly; production guards remain real and are covered by the HTTP/race tests. No runtime change.
