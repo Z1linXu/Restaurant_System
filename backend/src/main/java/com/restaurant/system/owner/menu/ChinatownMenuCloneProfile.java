@@ -25,6 +25,9 @@ import org.springframework.stereotype.Component;
 @Component
 public final class ChinatownMenuCloneProfile implements StoreMenuCloneSourceOptionsProfile {
 
+    @Override
+    public String requiredStoreProfileCode() { return "ST_DENIS_CANONICAL_PROFILE"; }
+
     public static final String PROFILE_CODE = "CHINATOWN_MENU_2026_02_02";
     public static final String CONTRACT_VERSION = "AL003_CHINATOWN_PROFILE_V1";
     public static final String FINGERPRINT_VERSION = "CHINATOWN_PROFILE_SHA256_V2";

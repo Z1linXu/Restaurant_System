@@ -335,7 +335,8 @@ class StagingSyntheticSourceMenuServiceIntegrationTest {
             mock(OwnerStoreMenuCloneRequestCoordinator.class),
             registry,
             composers,
-            new StoreMenuCloneOptionPlanValidator()
+            new StoreMenuCloneOptionPlanValidator(),
+            com.restaurant.system.owner.profile.SyntheticPrivateProfileFixture.repository(ORGANIZATION_ID)
         );
 
         OwnerStoreMenuCloneValidationResult validation = cloneService.validate(

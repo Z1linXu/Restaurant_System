@@ -1,0 +1,13 @@
+name: Commercial source and default guards
+on: [pull_request, workflow_dispatch]
+jobs:
+  guards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: python3 scripts/verify-commercial-baseline.py
+      - run: python3 scripts/scan-commercial-defaults.py
+      - run: python3 -m unittest discover -s scripts -p 'test_commercial_default_scan.py'
+      - run: python3 scripts/validate-governance.py

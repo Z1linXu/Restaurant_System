@@ -1,6 +1,8 @@
 package com.restaurant.system.owner.service.impl;
 
 import com.restaurant.system.menu.addon.StoreAddonService;
+import com.restaurant.system.owner.profile.StoreProfileRepository;
+import com.restaurant.system.owner.profile.StoreProfileAccessService;
 
 import com.restaurant.system.menu.entity.MenuCategory;
 import com.restaurant.system.menu.entity.MenuItem;
@@ -78,6 +80,7 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
     private final StoreMenuCloneProfileRegistry profileRegistry;
     private final List<StoreMenuCloneGraphComposer> graphComposers;
     private final StoreMenuCloneOptionPlanValidator optionPlanValidator;
+    private final StoreProfileRepository profiles;
 
     public StoreMenuCloneTransactionServiceImpl(
         StoreAddonService addonService,
@@ -90,7 +93,8 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
         OwnerStoreMenuCloneRequestCoordinator requestCoordinator,
         StoreMenuCloneProfileRegistry profileRegistry,
         List<StoreMenuCloneGraphComposer> graphComposers,
-        StoreMenuCloneOptionPlanValidator optionPlanValidator
+        StoreMenuCloneOptionPlanValidator optionPlanValidator,
+        StoreProfileRepository profiles
     ) {
         this.addonService = addonService;
         this.storeRepository = storeRepository;
@@ -103,6 +107,7 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
         this.profileRegistry = profileRegistry;
         this.graphComposers = graphComposers == null ? List.of() : List.copyOf(graphComposers);
         this.optionPlanValidator = optionPlanValidator;
+        this.profiles = profiles;
     }
 
     @Override
@@ -113,6 +118,7 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
         validateProfile(profile);
         ReadOnlyStores stores = loadStores(command.sourceStoreId(), command.targetStoreId());
         validateStoreScope(command.organizationId(), stores.source(), stores.target());
+        requireProfileUse(profile, command.organizationId());
         requireTargetSafeAndEmpty(stores.target());
 
         long sourceRevision = requireRevision(stores.source(), "source");
@@ -144,6 +150,7 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
 
         LockedStores stores = lockStores(command.sourceStoreId(), command.targetStoreId());
         validateStoreScope(command, stores);
+        requireProfileUse(profile, command.organizationId());
         requireTargetSafeAndEmpty(stores.target());
 
         long sourceRevision = requireRevision(stores.source(), "source");
@@ -228,6 +235,13 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
             throw badRequest("MENU_CLONE_REQUEST_INVALID", "Unsupported menu clone profile");
         }
         return profile;
+    }
+
+    private void requireProfileUse(StoreMenuCloneBaseGraphProfile profile, Long organizationId) {
+        if (profile.requiredStoreProfileCode() != null) {
+            StoreProfileAccessService.requireUse(
+                profiles.findByProfileCode(profile.requiredStoreProfileCode()).orElse(null), organizationId);
+        }
     }
 
     private void validateProfile(StoreMenuCloneBaseGraphProfile profile) {

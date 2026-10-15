@@ -40,6 +40,9 @@ class OwnerStoreMenuCloneServiceImplTest {
 
     @Mock private OwnerOrganizationAuthorizationService ownerAuthorization;
     @Mock private StoreRepository storeRepository;
+    @Mock private com.restaurant.system.owner.menu.StoreMenuCloneProfileRegistry profiles;
+    @Mock private com.restaurant.system.owner.menu.StoreMenuCloneProfileDescriptor descriptor;
+    @Mock private com.restaurant.system.owner.profile.StoreProfileRepository profileRepository;
     @Mock private OwnerStoreMenuCloneRequestCoordinator requestCoordinator;
     @Mock private StoreMenuCloneTransactionService transactionService;
     @Captor private ArgumentCaptor<com.restaurant.system.owner.service.OwnerStoreMenuCloneFailureEvidence> failureCaptor;
@@ -49,8 +52,22 @@ class OwnerStoreMenuCloneServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new OwnerStoreMenuCloneServiceImpl(ownerAuthorization, storeRepository, requestCoordinator, transactionService);
+        service = new OwnerStoreMenuCloneServiceImpl(ownerAuthorization, storeRepository, requestCoordinator, transactionService, profiles, profileRepository);
+        org.mockito.Mockito.lenient().when(profiles.find(org.mockito.ArgumentMatchers.anyString())).thenReturn(Optional.of(descriptor));
         owner = new AuthenticatedUser(1L, SOURCE_STORE_ID, 1L, "owner", "Owner", "OWNER");
+    }
+
+    @Test
+    void privateCloneProfileRevocationIsCheckedEvenBeforeCompletedReplay() {
+        stubTargetInOrganization();
+        when(descriptor.requiredStoreProfileCode()).thenReturn("PRIVATE_A");
+        var profile = new com.restaurant.system.owner.profile.StoreProfileEntity();
+        profile.owner_organization_id = ORGANIZATION_ID + 1;
+        when(profileRepository.findByProfileCode("PRIVATE_A")).thenReturn(Optional.of(profile));
+        assertThatThrownBy(() -> service.cloneMenu(ORGANIZATION_ID, TARGET_STORE_ID, "same-key", request(), owner))
+            .isInstanceOf(ForbiddenException.class);
+        verify(requestCoordinator, never()).reserve(any());
+        verify(transactionService, never()).execute(any());
     }
 
     private void stubTargetInOrganization() {

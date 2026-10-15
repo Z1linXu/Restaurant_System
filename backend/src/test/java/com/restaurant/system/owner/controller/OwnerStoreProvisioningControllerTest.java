@@ -54,6 +54,8 @@ class OwnerStoreProvisioningControllerTest {
     @Mock private OwnerStoreProvisioningService provisioningService;
     @Captor private ArgumentCaptor<OwnerStoreProvisioningCommand> commandCaptor;
 
+    @Mock private com.restaurant.system.owner.provisioning.OwnerStoreProvisioningCatalogService catalogService;
+
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
     private AuthenticatedUser owner;
@@ -61,6 +63,7 @@ class OwnerStoreProvisioningControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(new OwnerStoreProvisioningController(
+                catalogService,
                 authorizationService,
                 organizationAuthorizationService,
                 featureFlagService,
@@ -69,6 +72,8 @@ class OwnerStoreProvisioningControllerTest {
             ))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
+        org.mockito.Mockito.lenient().when(catalogService.catalog(org.mockito.ArgumentMatchers.any()))
+            .thenReturn(com.restaurant.system.owner.dto.OwnerStoreProvisioningCatalogResponse.initial(true));
         objectMapper = new ObjectMapper();
         owner = new AuthenticatedUser(1L, 10L, 1L, "owner-test", "Owner Test", "OWNER");
     }

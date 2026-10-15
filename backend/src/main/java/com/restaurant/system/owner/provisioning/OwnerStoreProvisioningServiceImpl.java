@@ -17,6 +17,7 @@ import com.restaurant.system.owner.profile.StoreProfileArtifactRepository;
 import com.restaurant.system.owner.profile.StoreProfileCanonicalJson;
 import com.restaurant.system.owner.profile.StoreProfileContractValidator;
 import com.restaurant.system.owner.profile.StoreProfileEntity;
+import com.restaurant.system.owner.profile.StoreProfileAccessService;
 import com.restaurant.system.owner.profile.StoreProfileRepository;
 import com.restaurant.system.owner.profile.StoreProfileValidationResult;
 import com.restaurant.system.owner.profile.StoreProfileVersionEntity;
@@ -123,7 +124,8 @@ public class OwnerStoreProvisioningServiceImpl implements OwnerStoreProvisioning
         );
 
         StoreProfileEntity profile = profileRepository.findByProfileCode(profileCode)
-            .orElseThrow(() -> badRequest("STORE_PROFILE_NOT_FOUND", "Store Profile not found"));
+            .orElse(null);
+        StoreProfileAccessService.requireUse(profile, command.organizationId());
         StoreProfileVersionEntity profileVersion = profileVersionRepository
             .findByProfileIdAndProfileVersion(profile.id, profileVersionKey)
             .orElseThrow(() -> badRequest("STORE_PROFILE_VERSION_NOT_FOUND", "Store Profile version not found"));

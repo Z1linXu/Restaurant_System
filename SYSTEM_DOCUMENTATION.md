@@ -11,6 +11,33 @@ Flyway V37 combination; this development worktree is not a production release.
 No Production/Staging deployment, real data write, physical printing or built-in
 PDF/AI menu feature is authorized by this package.
 
+## Commercial security foundations (isolated development)
+
+Store Profiles now have root `visibility` and nullable `owner_organization_id`
+(V38). Legacy roots default PRIVATE; only unique exact provisioned Store provenance
+can infer an owner. Catalogs filter before loading child content. Provisioning and
+clone/replay enforce the same root boundary. Historical Profile version/artifact
+JSON and fingerprints are unchanged. Unproven ownership requires a separately
+reviewed binding before any release; master key copies do not prove ownership.
+
+BOM demand aggregates item and option consumption once per inventory identity.
+InventoryConsumptionService requires the Order transaction, locks same-Store rows
+in stable ID order, validates the entire demand, then writes stock and ledger.
+Submission reuses the existing locked/refreshing Order reader to prevent concurrent
+double consumption. Missing, foreign, inactive, insufficient and invalid BOM data
+fail closed. Inventory restock/prep/list APIs remain unimplemented; the health
+endpoint does not imply those capabilities exist.
+
+Device authentication checks the live Store/Organization relationship before any
+heartbeat write. Printing lifecycle and frozen payload semantics remain unchanged.
+
+The explicit `commercial` Spring profile is local-synthetic only: loopback
+`commercial_*` database, Flyway validation, no runtime/demo/default-user seed,
+no development identity fallback, DISABLED/MOCK printing without endpoint writes,
+and Uber execution disabled. Mixed profiles and unsafe overrides fail startup.
+New Commercial defaults/fixtures are scanned by the dedicated guard workflow;
+historical migrations/evidence are not rewritten or treated as new presets.
+
 ## Uber Store capability and confirmed Add-on identity (V37)
 
 `UBER_EATS` is an optional formal Store module in catalog/graph V3, default off.

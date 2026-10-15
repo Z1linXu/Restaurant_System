@@ -1,6 +1,5 @@
 package com.restaurant.system.order.service.impl;
 
-
 import com.restaurant.system.menu.addon.StoreAddonOptionResolver;
 
 import com.restaurant.system.common.exception.BusinessException;
@@ -8,10 +7,9 @@ import com.restaurant.system.common.pricing.TaxCalculator;
 import com.restaurant.system.common.realtime.RealtimeEventPublisher;
 import com.restaurant.system.common.realtime.RealtimeTopics;
 import com.restaurant.system.common.realtime.RealtimeUpdateMessage;
-import com.restaurant.system.inventory.entity.InventoryItem;
-import com.restaurant.system.inventory.entity.InventoryTransaction;
-import com.restaurant.system.inventory.repository.InventoryItemRepository;
-import com.restaurant.system.inventory.repository.InventoryTransactionRepository;
+
+import com.restaurant.system.inventory.service.InventoryConsumptionService;
+
 import com.restaurant.system.kitchen.entity.KitchenTask;
 import com.restaurant.system.kitchen.enums.KitchenTaskStatus;
 import com.restaurant.system.kitchen.repository.KitchenTaskRepository;
@@ -94,8 +92,6 @@ public class OrderServiceImpl implements OrderService {
     private static final String ORDER_STATUS_CANCELLED = "cancelled";
     private static final String ORDER_STATUS_PICKED_UP = "picked_up";
     private static final String ORDER_ITEM_STATUS_CANCELLED = "cancelled";
-    private static final String INVENTORY_TXN_TYPE_CONSUME = "consume";
-    private static final String INVENTORY_SOURCE_TYPE_ORDER = "order";
     private static final String COMBO_ROLE_MAIN = "main";
     private static final String COMBO_ROLE_SIDE = "combo_side";
     private static final String COMBO_ROLE_EGG = "combo_egg";
@@ -168,8 +164,8 @@ public class OrderServiceImpl implements OrderService {
     private final MenuItemOptionBomRepository menuItemOptionBomRepository;
     private final KitchenTaskRepository kitchenTaskRepository;
     private final ProductionTaskRepository productionTaskRepository;
-    private final InventoryItemRepository inventoryItemRepository;
-    private final InventoryTransactionRepository inventoryTransactionRepository;
+    private final InventoryConsumptionService inventoryConsumptionService;
+
     private final StationRepository stationRepository;
     private final StoreRepository storeRepository;
     private final RealtimeEventPublisher realtimeEventPublisher;
@@ -191,8 +187,7 @@ public class OrderServiceImpl implements OrderService {
         MenuItemOptionBomRepository menuItemOptionBomRepository,
         KitchenTaskRepository kitchenTaskRepository,
         ProductionTaskRepository productionTaskRepository,
-        InventoryItemRepository inventoryItemRepository,
-        InventoryTransactionRepository inventoryTransactionRepository,
+        InventoryConsumptionService inventoryConsumptionService,
         StationRepository stationRepository,
         StoreRepository storeRepository,
         RealtimeEventPublisher realtimeEventPublisher,
@@ -215,8 +210,7 @@ public class OrderServiceImpl implements OrderService {
         this.menuItemOptionBomRepository = menuItemOptionBomRepository;
         this.kitchenTaskRepository = kitchenTaskRepository;
         this.productionTaskRepository = productionTaskRepository;
-        this.inventoryItemRepository = inventoryItemRepository;
-        this.inventoryTransactionRepository = inventoryTransactionRepository;
+        this.inventoryConsumptionService = inventoryConsumptionService;
         this.stationRepository = stationRepository;
         this.storeRepository = storeRepository;
         this.realtimeEventPublisher = realtimeEventPublisher;
@@ -448,7 +442,7 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponse submitOrder(Long id) {
         LocalDateTime now = LocalDateTime.now();
-        Order order = requireOrder(id);
+        Order order = requireOrderForUpdate(id);
 
         if (!ORDER_STATUS_DRAFT.equals(order.status)) {
             throw new BusinessException("Only draft orders can be submitted");
@@ -1606,57 +1600,28 @@ public class OrderServiceImpl implements OrderService {
         List<OrderItemOption> orderItemOptions,
         LocalDateTime now
     ) {
+        Map<Long, BigDecimal> demand = new java.util.TreeMap<>();
         Map<Long, List<OrderItemOption>> optionsByOrderItemId = groupOptionsByOrderItemId(orderItemOptions);
-
         for (OrderItem orderItem : orderItems) {
             if (orderItem.menu_item_id == null) continue;
-            List<MenuItemBom> itemBoms = menuItemBomRepository.findAllByMenuItemId(orderItem.menu_item_id);
-            for (MenuItemBom itemBom : itemBoms) {
-                BigDecimal qtyChange = itemBom.qty_per_unit
-                    .multiply(BigDecimal.valueOf(orderItem.quantity))
-                    .negate();
-                consumeInventory(order, itemBom.inventory_item_id, qtyChange, now);
+            for (MenuItemBom bom : menuItemBomRepository.findAllByMenuItemId(orderItem.menu_item_id)) {
+                addInventoryDemand(demand, bom.inventory_item_id, bom.qty_per_unit, orderItem.quantity);
             }
-
-            for (OrderItemOption orderItemOption : optionsByOrderItemId.getOrDefault(orderItem.id, List.of())) {
-                List<MenuItemOptionBom> optionBoms =
-                    menuItemOptionBomRepository.findAllByMenuItemOptionId(orderItemOption.option_id);
-                for (MenuItemOptionBom optionBom : optionBoms) {
-                    BigDecimal qtyChange = optionBom.qty_per_unit
-                        .multiply(BigDecimal.valueOf(orderItemOption.quantity))
-                        .negate();
-                    consumeInventory(order, optionBom.inventory_item_id, qtyChange, now);
+            for (OrderItemOption option : optionsByOrderItemId.getOrDefault(orderItem.id, List.of())) {
+                for (MenuItemOptionBom bom : menuItemOptionBomRepository.findAllByMenuItemOptionId(option.option_id)) {
+                    // Option quantity is already the order-wide quantity in the existing contract.
+                    addInventoryDemand(demand, bom.inventory_item_id, bom.qty_per_unit, option.quantity);
                 }
             }
         }
+        inventoryConsumptionService.consume(order, demand, now);
     }
 
-    private void consumeInventory(Order order, Long inventoryItemId, BigDecimal qtyChange, LocalDateTime now) {
-        InventoryItem inventoryItem = inventoryItemRepository.findById(inventoryItemId)
-            .orElseThrow(() -> new BusinessException("Inventory item not found: " + inventoryItemId));
-
-        BigDecimal stockBefore = defaultIfNull(inventoryItem.current_stock);
-        BigDecimal stockAfter = stockBefore.add(qtyChange);
-        if (stockAfter.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessException("Insufficient inventory for item: " + inventoryItemId);
+    private void addInventoryDemand(Map<Long, BigDecimal> demand, Long id, BigDecimal perUnit, Integer quantity) {
+        if (id == null || perUnit == null || perUnit.signum() < 0 || quantity == null || quantity < 0) {
+            throw new BusinessException("Invalid inventory BOM");
         }
-
-        inventoryItem.current_stock = stockAfter;
-        inventoryItem.updated_at = now;
-        inventoryItemRepository.save(inventoryItem);
-
-        InventoryTransaction inventoryTransaction = new InventoryTransaction();
-        inventoryTransaction.inventory_item_id = inventoryItemId;
-        inventoryTransaction.operated_by = order.created_by;
-        inventoryTransaction.txn_type = INVENTORY_TXN_TYPE_CONSUME;
-        inventoryTransaction.source_type = INVENTORY_SOURCE_TYPE_ORDER;
-        inventoryTransaction.source_id = order.id;
-        inventoryTransaction.qty_change = qtyChange;
-        inventoryTransaction.stock_before = stockBefore;
-        inventoryTransaction.stock_after = stockAfter;
-        inventoryTransaction.remarks = "Order submission inventory deduction";
-        inventoryTransaction.created_at = now;
-        inventoryTransactionRepository.save(inventoryTransaction);
+        demand.merge(id, perUnit.multiply(BigDecimal.valueOf(quantity)), BigDecimal::add);
     }
 
     private void validateMenuItemBelongsToStore(MenuItem menuItem, Long storeId) {

@@ -1,6 +1,8 @@
 package com.restaurant.system.owner.profile;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.restaurant.system.common.auth.AuthenticatedUser;
+import com.restaurant.system.common.auth.ForbiddenException;
 import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.owner.profile.dto.StoreProfileArtifactResponse;
 import com.restaurant.system.owner.profile.dto.StoreProfileSummaryResponse;
@@ -16,21 +18,25 @@ public class StoreProfileCatalogService {
     private final StoreProfileVersionRepository versionRepository;
     private final StoreProfileArtifactRepository artifactRepository;
     private final StoreProfileContractValidator validator;
+    private final StoreProfileAccessService access;
 
     public StoreProfileCatalogService(
         StoreProfileRepository profileRepository,
         StoreProfileVersionRepository versionRepository,
         StoreProfileArtifactRepository artifactRepository,
-        StoreProfileContractValidator validator
+        StoreProfileContractValidator validator,
+        StoreProfileAccessService access
     ) {
         this.profileRepository = profileRepository;
         this.versionRepository = versionRepository;
         this.artifactRepository = artifactRepository;
         this.validator = validator;
+        this.access = access;
     }
 
-    public List<StoreProfileSummaryResponse> listProfiles() {
+    public List<StoreProfileSummaryResponse> listProfiles(AuthenticatedUser actor) {
         return profileRepository.findAllByOrderByProfileCodeAsc().stream()
+            .filter(profile -> access.canRead(actor, profile))
             .map(profile -> new StoreProfileSummaryResponse(
                 profile.profile_code,
                 profile.display_name,
@@ -49,9 +55,10 @@ public class StoreProfileCatalogService {
             .toList();
     }
 
-    public StoreProfileVersionResponse getVersion(String profileCode, String profileVersion) {
+    public StoreProfileVersionResponse getVersion(AuthenticatedUser actor, String profileCode, String profileVersion) {
         StoreProfileEntity profile = profileRepository.findByProfileCode(profileCode)
-            .orElseThrow(() -> new BusinessException("Store Profile not found"));
+            .orElseThrow(() -> new ForbiddenException("Store Profile is not available"));
+        access.requireRead(actor, profile);
         StoreProfileVersionEntity version = versionRepository.findByProfileIdAndProfileVersion(profile.id, profileVersion)
             .orElseThrow(() -> new BusinessException("Store Profile version not found"));
         List<StoreProfileArtifactEntity> artifacts = artifactRepository

@@ -22,6 +22,7 @@ import com.restaurant.system.printing.entity.PrintJob;
 import com.restaurant.system.printing.entity.PrintJobAttempt;
 import com.restaurant.system.printing.entity.PrinterConfig;
 import com.restaurant.system.printing.entity.StoreDevice;
+import com.restaurant.system.printing.dto.PadPrintJobReleaseRequest;
 import com.restaurant.system.printing.repository.PrintJobAttemptRepository;
 import com.restaurant.system.printing.repository.PrintJobRepository;
 import com.restaurant.system.printing.repository.PrinterConfigRepository;
@@ -439,6 +440,26 @@ class PadPrintJobServiceImplTest {
         job.executionMode = "PAD_DIRECT";
         job.status = status;
         return job;
+    }
+
+    @Test
+    void foreignDeviceCannotReadOrMutateAnyJobLifecycleOperation() {
+        StoreDevice device = device();
+        PrintJob foreign = padJob(PrintJobStatus.PENDING); foreign.store_id = device.storeId + 1;
+        when(printJobService.requireJob(foreign.id)).thenReturn(foreign);
+        java.util.List<Runnable> operations = java.util.List.of(
+            () -> service.listPendingJobs(device, foreign.store_id, 10),
+            () -> service.claimJob(device, foreign.id, new PadPrintJobClaimRequest()),
+            () -> service.startPrint(device, foreign.id, new PadPrintJobStartPrintRequest()),
+            () -> service.getPayload(device, foreign.id),
+            () -> service.completeJob(device, foreign.id, new PadPrintJobCompleteRequest()),
+            () -> service.failJob(device, foreign.id, new PadPrintJobFailRequest()),
+            () -> service.releaseJob(device, foreign.id, new PadPrintJobReleaseRequest())
+        );
+        operations.forEach(operation -> assertEquals(403,
+            assertThrows(ResponseStatusException.class, operation::run).getStatusCode().value()));
+        org.mockito.Mockito.verifyNoInteractions(printJobAttemptRepository, printerConfigRepository);
+        verify(printJobRepository, org.mockito.Mockito.never()).save(any());
     }
 
     private PadPrintJobPayloadResponse payloadForModule(String moduleCode, PrinterConfig printer) {

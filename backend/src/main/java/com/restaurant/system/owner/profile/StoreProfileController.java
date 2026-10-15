@@ -27,8 +27,7 @@ public class StoreProfileController {
 
     @GetMapping
     public ApiResponse<List<StoreProfileSummaryResponse>> listProfiles() {
-        authorizationService.requireOwner();
-        return ApiResponse.success(catalogService.listProfiles());
+        return ApiResponse.success(catalogService.listProfiles(authorizationService.requireOwner()));
     }
 
     @GetMapping("/{profileCode}/versions/{profileVersion}")
@@ -36,7 +35,6 @@ public class StoreProfileController {
         @PathVariable String profileCode,
         @PathVariable String profileVersion
     ) {
-        authorizationService.requireOwner();
-        return ApiResponse.success(catalogService.getVersion(profileCode, profileVersion));
+        return ApiResponse.success(catalogService.getVersion(authorizationService.requireOwner(), profileCode, profileVersion));
     }
 }

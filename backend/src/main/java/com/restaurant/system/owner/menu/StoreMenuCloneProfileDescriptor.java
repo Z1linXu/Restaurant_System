@@ -10,4 +10,7 @@ public interface StoreMenuCloneProfileDescriptor {
     Long sourceStoreId();
 
     String profileFingerprint();
+
+    /** Private compatibility rules inherit a database Profile's visibility. */
+    default String requiredStoreProfileCode() { return null; }
 }

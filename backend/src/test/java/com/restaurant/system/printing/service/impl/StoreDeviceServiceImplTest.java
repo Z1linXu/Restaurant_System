@@ -126,6 +126,7 @@ class StoreDeviceServiceImplTest {
         Store store = new Store();
         store.id = 1L;
         store.organization_id = 7L;
+        store.status = "active";
         when(storeRepository.findById(1L)).thenReturn(Optional.of(store));
         final StoreDevice[] saved = new StoreDevice[1];
         when(storeDeviceRepository.save(any(StoreDevice.class))).thenAnswer(invocation -> {
@@ -146,6 +147,30 @@ class StoreDeviceServiceImplTest {
 
         DeviceRegisterResponse response = service.registerDevice(request);
         return new RegisteredDevice(saved[0], response.device_token);
+    }
+
+    @Test
+    void validTokenWithMovedStoreOrOrganizationIsDeniedBeforeHeartbeatWrite() {
+        RegisteredDevice registered = registerDevice();
+        var foreignStore = new Store(); foreignStore.id = registered.device.storeId;
+        foreignStore.organization_id = 99L; foreignStore.status = "active";
+        when(storeRepository.findById(foreignStore.id)).thenReturn(Optional.of(foreignStore));
+        when(storeDeviceRepository.findById(registered.device.id)).thenReturn(Optional.of(registered.device));
+        clearInvocations(storeDeviceRepository);
+        assertEquals(403, assertThrows(ResponseStatusException.class,
+            () -> service.authenticateDevice(registered.device.id, registered.rawToken)).getStatusCode().value());
+        verify(storeDeviceRepository, never()).save(any());
+    }
+
+    @Test
+    void validTokenWithInactiveStoreIsDenied() {
+        RegisteredDevice registered = registerDevice();
+        var inactive = new Store(); inactive.id = registered.device.storeId;
+        inactive.organization_id = registered.device.organizationId; inactive.status = "inactive";
+        when(storeRepository.findById(inactive.id)).thenReturn(Optional.of(inactive));
+        when(storeDeviceRepository.findById(registered.device.id)).thenReturn(Optional.of(registered.device));
+        assertEquals(403, assertThrows(ResponseStatusException.class,
+            () -> service.authenticateDevice(registered.device.id, registered.rawToken)).getStatusCode().value());
     }
 
     private StoreDevice activeDevice() {

@@ -1,0 +1,31 @@
+# Explicit opt-in isolated local development. No restaurant seed or physical I/O.
+spring:
+  datasource:
+    url: ${COMMERCIAL_DB_URL}
+    username: ${COMMERCIAL_DB_USER}
+    password: ${COMMERCIAL_DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  flyway:
+    enabled: true
+    validate-on-migrate: true
+app:
+  environment: commercial-local
+  auth:
+    jwt-secret: ${COMMERCIAL_JWT_SECRET}
+    x-user-id-fallback-enabled: false
+  dev-tools:
+    role-switcher-enabled: false
+  seed:
+    runtime-enabled: false
+    safe-metadata-enabled: false
+    default-users-enabled: false
+    demo-data-enabled: false
+    membership-supplement-enabled: false
+    production-bootstrap-enabled: false
+    force-overwrite: false
+  printing:
+    allowed-modes: DISABLED,MOCK
+    endpoint-configuration-enabled: false

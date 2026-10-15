@@ -39,6 +39,8 @@ class OwnerBusinessStoreCreateControllerTest {
     @Mock private OwnerOrganizationAuthorizationService organizationAuthorizationService;
     @Mock private OwnerBusinessStoreCreateService createService;
 
+    @Mock private com.restaurant.system.owner.provisioning.OwnerStoreProvisioningCatalogService catalogService;
+
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
     private AuthenticatedUser owner;
@@ -46,12 +48,15 @@ class OwnerBusinessStoreCreateControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(new OwnerBusinessStoreCreateController(
+                catalogService,
                 authorizationService,
                 organizationAuthorizationService,
                 createService
             ))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
+        org.mockito.Mockito.lenient().when(catalogService.catalog(org.mockito.ArgumentMatchers.any()))
+            .thenReturn(com.restaurant.system.owner.dto.OwnerStoreProvisioningCatalogResponse.initial(true));
         objectMapper = new ObjectMapper();
         owner = new AuthenticatedUser(1L, null, 10L, "owner", "Owner", "OWNER");
     }

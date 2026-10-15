@@ -34,6 +34,12 @@ public class StoreProfileEntity {
     @Column(name = "provenance")
     public String provenance;
 
+    @Column(name = "visibility")
+    public String visibility = "PRIVATE";
+
+    @Column(name = "owner_organization_id")
+    public Long owner_organization_id;
+
     @Column(name = "created_at")
     public LocalDateTime created_at;
 

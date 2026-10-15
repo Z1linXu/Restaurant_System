@@ -21,6 +21,9 @@ import com.restaurant.system.owner.service.OwnerStoreMenuCloneValidationResult;
 import com.restaurant.system.owner.service.StoreMenuCloneTransactionService;
 import com.restaurant.system.user.entity.Store;
 import com.restaurant.system.user.repository.StoreRepository;
+import com.restaurant.system.owner.menu.StoreMenuCloneProfileRegistry;
+import com.restaurant.system.owner.profile.StoreProfileAccessService;
+import com.restaurant.system.owner.profile.StoreProfileRepository;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.http.HttpStatus;
@@ -37,17 +40,23 @@ public class OwnerStoreMenuCloneServiceImpl implements OwnerStoreMenuCloneServic
     private final StoreRepository storeRepository;
     private final OwnerStoreMenuCloneRequestCoordinator requestCoordinator;
     private final StoreMenuCloneTransactionService transactionService;
+    private final StoreMenuCloneProfileRegistry profiles;
+    private final StoreProfileRepository profileRepository;
 
     public OwnerStoreMenuCloneServiceImpl(
         OwnerOrganizationAuthorizationService ownerAuthorization,
         StoreRepository storeRepository,
         OwnerStoreMenuCloneRequestCoordinator requestCoordinator,
-        StoreMenuCloneTransactionService transactionService
+        StoreMenuCloneTransactionService transactionService,
+        StoreMenuCloneProfileRegistry profiles,
+        StoreProfileRepository profileRepository
     ) {
         this.ownerAuthorization = ownerAuthorization;
         this.storeRepository = storeRepository;
         this.requestCoordinator = requestCoordinator;
         this.transactionService = transactionService;
+        this.profiles = profiles;
+        this.profileRepository = profileRepository;
     }
 
     @Override
@@ -129,6 +138,12 @@ public class OwnerStoreMenuCloneServiceImpl implements OwnerStoreMenuCloneServic
                 "MENU_CLONE_FORBIDDEN", HttpStatus.FORBIDDEN,
                 "Target Store is not available for this Organization"
             );
+        }
+        var profile = profiles.find(request.profile_code)
+            .orElseThrow(() -> new ForbiddenException("Store Profile is not available"));
+        if (profile.requiredStoreProfileCode() != null) {
+            StoreProfileAccessService.requireUse(
+                profileRepository.findByProfileCode(profile.requiredStoreProfileCode()).orElse(null), organizationId);
         }
         return new Scope(organizationId, request.source_store_id, targetStoreId, request.profile_code);
     }
