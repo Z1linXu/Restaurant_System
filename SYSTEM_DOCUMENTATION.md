@@ -9547,3 +9547,16 @@ Phase 2 integration: the menu revision JPA slice supplies its unused user-author
 ## Phase 3 Neutral printing presentation
 
 [Printing compatibility boundary](docs/commercialization/PHASE3_PRINTING_COMPATIBILITY.md) describes the shared Merchant Configuration reader used by PrintingDisplayRuleService. Unknown/new Neutral Stores get empty dictionaries, safe settings/preview and full frozen item/option labels; existing verified/explicit legacy installations retain PROVISIONAL_COMPATIBILITY. Order submission uses the same context when freezing new KitchenTask labels. Existing job payloads, quantities, prices, leases, dispatch and historical snapshots are retained. Existing station/output roles remain provisional for Phase5; complete Modifier/Combo/price engines remain Phase4. Final test/review evidence is required before closing Phase3.
+
+## Merchant configuration foundation (commercial local development)
+
+`MerchantConfigurationService` is the typed Store reader and owns the runtime Profile
+compatibility decision. V39 snapshots verified canonical v2 provenance or the explicit
+`LEGACY_EXISTING_STORE` installation marker into persisted compatibility rows; this
+backfill never grants access to private Profile artifacts. Missing/invalid/unsupported
+configuration is Neutral, including newly inserted Stores with a legacy-looking name.
+Timezone remains `Store.timezone` with the existing daily-close default. CAD and the
+existing tax policy are read-only metadata; configuration does not change amounts or
+time calculations. Owner-only revision-checked writes change brand/locale, audit the
+change and increment the existing menu revision. References are authorized Store API
+pointers; there is no second mutable menu/device/module graph.
