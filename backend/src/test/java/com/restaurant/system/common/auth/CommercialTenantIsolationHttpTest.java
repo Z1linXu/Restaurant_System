@@ -169,6 +169,42 @@ class CommercialTenantIsolationHttpTest {
         mvc.perform(post("/api/v1/admin/analytics/rebuild").param("date","2026-10-15").header("Authorization",f.bearer(5)))
             .andExpect(status().isForbidden());
     }
+    @ParameterizedTest @ValueSource(strings={"foreign-org", "foreign-store", "empty-org"})
+    void dormantGrantsCannotBeRevivedByRoleChangeOrAccountControl(String grant) throws Exception {
+        if (grant.equals("foreign-store")) f.member(4,20,"OWNER",true);
+        else if (grant.equals("foreign-org")) f.orgMember(4,200,"OWNER",true);
+        else {
+            var organization = new com.restaurant.system.platform.entity.Organization();
+            organization.id=300L; organization.status="active"; f.organizationRows.put(300L,organization);
+            f.orgMember(4,300,"OWNER",true);
+        }
+        long ownerRole=f.roleRows.values().stream().filter(r -> "OWNER".equals(r.getCode())).findFirst().orElseThrow().getId();
+        mvc.perform(put("/api/v1/admin/platform/users/4").header("Authorization",f.bearer(1)).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"store_id\":10,\"role_id\":"+ownerRole+"}"))
+            .andExpect(status().isForbidden());
+        mvc.perform(put("/api/v1/admin/staff/4").header("Authorization",f.bearer(1)).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"store_id\":10,\"username\":\"synthetic_user_4\",\"role_code\":\"OWNER\"}"))
+            .andExpect(status().isForbidden());
+        for (String operation : List.of("reactivate","deactivate"))
+            mvc.perform(post("/api/v1/admin/staff/4/"+operation).header("Authorization",f.bearer(1))).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/admin/staff/4/reset-password").header("Authorization",f.bearer(1)).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"new_password\":\"SyntheticOnly!Password9\"}"))
+            .andExpect(status().isForbidden());
+        verify(f.users,never()).save(any()); verifyNoInteractions(service);
+        org.assertj.core.api.Assertions.assertThat(f.actor(4).roleCode()).isEqualTo("FRONTDESK");
+        if (grant.equals("foreign-store")) org.assertj.core.api.Assertions.assertThat(f.access.forStore(f.actor(4),20L).roleCode()).isEqualTo("FRONTDESK");
+        else org.assertj.core.api.Assertions.assertThat(f.access.canAccessStore(f.actor(4),20L)).isFalse();
+    }
+
+    @Test void managerCanStillManageOwnFrontdeskWithOrdinaryOrganizationMembership() throws Exception {
+        f.orgMember(4,100,"FRONTDESK",true);
+        when(f.roles.findFirstByCodeIgnoreCase(anyString())).thenAnswer(i -> f.roleRows.values().stream().filter(role -> role.getCode().equalsIgnoreCase(i.getArgument(0))).findFirst());
+        when(f.users.save(any())).thenAnswer(i -> i.getArgument(0));
+        mvc.perform(put("/api/v1/admin/staff/4").header("Authorization",f.bearer(3)).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"store_id\":10,\"username\":\"synthetic_user_4\",\"role_code\":\"FRONTDESK\"}"))
+            .andExpect(status().isOk());
+    }
+
     @Test void legitimateOwnerStaffRoleAndSameOrganizationMoveSynchronizeMembership() throws Exception {
         when(f.roles.findFirstByCodeIgnoreCase(anyString())).thenAnswer(i -> f.roleRows.values().stream().filter(role -> role.getCode().equalsIgnoreCase(i.getArgument(0))).findFirst());
         when(f.users.save(any())).thenAnswer(i -> i.getArgument(0));

@@ -1,5 +1,56 @@
 # Restaurant System API
 
+## Commercial HTTP and realtime authorization
+
+HTTP and STOMP share BearerUserResolver: validate token signature/expiry and reload
+active User/current Role on each authorization. ADMIN is a platform identity with
+no implicit merchant business grant. Effective Store capability cannot exceed the
+application role or active exact Store membership; Organization OWNER inheritance
+requires global OWNER plus exact active Organization OWNER membership. Any existing
+membership history disables legacy users.store_id fallback. Scoped principal
+roleCode is authoritative; its legacy roleId must not be used to re-expand rights.
+
+Platform resource IDs, body Store and parent/child Store must agree. POST with id
+is not an authorization bypass. Shared Role writes and global analytics rebuild
+are denied; Audit queries require explicit authorized Store. Staff target/original
+Stores and all existing memberships are checked; platform ADMIN accounts are not
+merchant staff. Aggregate reporting/Owner overview filters per-Store capabilities.
+
+WebSocket/SockJS transport can open anonymously but grants no business access.
+STOMP CONNECT requires Bearer Authorization in connectHeaders (not HTTP headers or
+query parameters). Only seven existing exact Store topics can be subscribed with
+screen capability and module authorization; SEND/wildcard/unknown destinations are
+denied. Outbound frames revalidate authority before queueing and executor delivery,
+closing revoked/expired/disabled sessions. Origins are same-origin plus explicit
+exact HTTP(S) app.realtime.allowed-origins; bundled Pad origin is included. No
+wildcard or token URL is permitted. Frontend reconnect reads current tokens;
+logout closes old connections. Topic and after-commit contracts are unchanged.
+
+## Offline / Android environment contract
+
+DB5 / record schema v2 keys include canonical API origin, account, Organization and
+Store. Only the current validated Store scope can replay; manual processing checks
+the same boundary before lookup, after async results and before submission. Logout
+synchronously invalidates session generation, aborts requests and stops workers and
+WS; late refresh/login cannot restore old tokens. Auth tokens are origin-scoped.
+
+DB4/v1 records and old unscoped tokens/native preferences remain untouched and
+unclaimed. Unknown-source orders are retained with a recovery notice and are never
+automatically replayed, displayed as the current merchant's orders or deleted.
+Return to a verified new-schema scope preserves frozen payload/hash/idempotency.
+DB4 downgrade is unsupported; use a DB5-compatible fix and controlled recovery.
+Origins must be stable and not reassigned to independent deployments with reused
+numeric identities; a server deployment-ID contract is not implemented here.
+
+Android uses asynchronous AndroidX main-frame/origin-verified messages with no
+unsafe JavascriptInterface fallback. New device credentials use origin-bound
+AndroidKeyStore AES/GCM envelopes. Target switch/re-pair stops workers and rejects
+active/ambiguous printing; old credentials never attach to another origin or follow
+HTTP redirects. Device configuration and local printer-test settings are isolated.
+Backend request/response shapes are unchanged; pairing api_origin is a native
+message field. Physical WebView/Keystore/installed APK/paper results remain pending.
+
+
 ## Commercial development Profile / Device isolation (V38)
 
 `GET /api/v1/store-profiles` filters roots before loading version metadata.

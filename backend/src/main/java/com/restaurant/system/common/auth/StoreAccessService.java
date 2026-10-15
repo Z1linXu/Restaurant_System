@@ -133,4 +133,23 @@ public class StoreAccessService {
         if (role == null) throw new ForbiddenException("Access denied for store");
         return new AuthenticatedUser(user.userId(), storeId, user.roleId(), user.username(), user.fullName(), role);
     }
+
+    /** Account mutations must include dormant grants that a new global role could revive. */
+    public void requireManageIdentity(AuthenticatedUser actor, Long targetUserId) {
+        if (!businessUser(actor) || targetUserId == null) throw new ForbiddenException("Shared account is outside the authorized staff scope");
+        for (StoreMembership member : storeMembershipRepository.findAllByUserIdAndIsActiveTrueOrderByStoreIdAsc(targetUserId)) {
+            Store store = member.storeId == null ? null : storeRepository.findById(member.storeId).orElse(null);
+            if (store == null || !java.util.Objects.equals(store.organization_id, member.organizationId)
+                || !hasCapabilityForStore(actor, store, Capability.ADMIN_USER_ROLE_MANAGE)) {
+                throw new ForbiddenException("Shared account is outside the authorized staff scope");
+            }
+        }
+        for (OrganizationMembership member : organizationMembershipRepository.findAllByUserIdAndIsActiveTrueOrderByOrganizationIdAsc(targetUserId)) {
+            boolean owner = "OWNER".equals(roleCodeForOrganization(actor, member.organizationId));
+            boolean staffScope = member.organizationId != null && !"OWNER".equalsIgnoreCase(member.roleCode)
+                && accessibleStores(actor).stream().anyMatch(store -> member.organizationId.equals(store.organization_id)
+                    && hasCapabilityForStore(actor, store, Capability.ADMIN_USER_ROLE_MANAGE));
+            if (!owner && !staffScope) throw new ForbiddenException("Shared account is outside the authorized staff scope");
+        }
+    }
 }

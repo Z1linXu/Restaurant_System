@@ -256,10 +256,7 @@ public class StaffAdminServiceImpl implements StaffAdminService {
         if (!authorizationService.canAccessStore(actor, target.getStore_id())) {
             throw new ForbiddenException("Access denied for store " + target.getStore_id());
         }
-        AuthenticatedUser targetIdentity=new AuthenticatedUser(target.getId(), target.getStore_id(), target.getRole_id(), target.getUsername(), target.getFull_name(), targetRole);
-        for (Store assigned : storeAccessService.accessibleStores(targetIdentity)) {
-            if (!authorizationService.canAccessStore(actor, assigned.id)) throw new ForbiddenException("Shared account is outside the authorized staff scope");
-        }
+        storeAccessService.requireManageIdentity(actor, target.getId());
         if (authorizationService.isManager(actor) && !ROLE_FRONTDESK.equalsIgnoreCase(targetRole)) {
             throw new ForbiddenException("Manager can only manage frontdesk staff");
         }

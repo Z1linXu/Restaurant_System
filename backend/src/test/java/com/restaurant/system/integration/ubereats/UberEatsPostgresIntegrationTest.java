@@ -171,10 +171,11 @@ class UberEatsPostgresIntegrationTest {
                         role);
         db.update(
                 "insert into"
-                    + " store_memberships(user_id,store_id,role_code,is_active,created_at,updated_at)"
-                    + " values (?,?,'FRONTDESK',true,now(),now())",
+                    + " store_memberships(user_id,store_id,organization_id,role_code,is_active,created_at,updated_at)"
+                    + " values (?,?,?,'FRONTDESK',true,now(),now())",
                 actorId,
-                store);
+                store,
+                org);
         actor =
                 new AuthenticatedUser(
                         actorId, store, role, "fixture", "Fixture Staff", "FRONTDESK");

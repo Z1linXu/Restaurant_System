@@ -115,9 +115,7 @@ public class PlatformResourceAuthorization {
             User actual=users.findById(id).orElseThrow(this::denied);
             same(actual.getStore_id(),body.getStore_id());
             allowedRole(actor,actual.getRole_id());
-            String actualRole=roles.findById(actual.getRole_id()).orElseThrow(this::denied).getCode();
-            var identity=new AuthenticatedUser(actual.getId(),actual.getStore_id(),actual.getRole_id(),actual.getUsername(),actual.getFull_name(),actualRole);
-            for (Store assigned : access.accessibleStores(identity)) if (!access.canAccessStore(actor,assigned.id)) throw denied();
+            access.requireManageIdentity(actor, actual.getId());
         }
         allowedRole(actor,body.getRole_id());
     }
