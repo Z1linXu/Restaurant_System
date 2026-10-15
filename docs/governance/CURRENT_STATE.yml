@@ -7,10 +7,10 @@ repository:
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
-  current: COMMERCIALIZATION_PHASE_1
+  current: COMMERCIALIZATION_PHASE_2
   package: OWNER_AUTHORIZED_PHASE_1_2_3_LOCAL_ONLY
-  status: MASTER_PLANBOOK_IN_PROGRESS
-  next_phase_authorized: true
+  status: BASELINE_AND_SECURITY_IMPLEMENTATION_IN_PROGRESS
+  next_phase_authorized: false
 
 staging:
   deployed_sha: ce35278b3569a4eacfa29efc01cadbf0c409bec6
@@ -153,7 +153,7 @@ uber_store_capability:
 
 gate:
   type: TECHNICAL
-  next_action: COMPLETE_PHASE1_PLAN_REVIEW_THEN_PHASE2_AND_GATED_PHASE3
+  next_action: VERIFY_BASELINE_AND_CLOSE_PHASE2_P0_BEFORE_PHASE3
 
 authorization:
   uber_store_capability: OWNER_AUTHORIZED_OPTION370_TEA_EGG_KEEP_ID_PRICE_HISTORY_FORMAL_UBER_EATS_GATES_V37_TEST_REVIEW_MERGE_STAGING_ONLY

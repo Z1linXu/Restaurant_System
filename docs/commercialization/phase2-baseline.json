@@ -1,0 +1,255 @@
+{
+  "schema_version": 1,
+  "observed_at_utc": "2026-10-15T17:30:03Z",
+  "source_main": "06bac51ddc0a829a9aa1106f07ef886572efbb65",
+  "units": {
+    "backend": {
+      "source_commit": "ce35278b3569a4eacfa29efc01cadbf0c409bec6",
+      "source_tree": "66a91a00cf039ef2cca11b9c9a858a1d0e16d498",
+      "image_id": "sha256:5b9583ee43ad2ceeb9b47a08a47397cb8802a19f1d89366a0b0b04889ebbaaad",
+      "oci_revision": "ce35278b3569a4eacfa29efc01cadbf0c409bec6",
+      "commercial_source_tree_equal": true
+    },
+    "frontend": {
+      "source_commit": "8c3a9e356f59cd025beff25f7fb1d5a20594e028",
+      "source_tree": "223d8389f14babd0cc08bae5e1a7ee937529e4cc",
+      "image_id": "sha256:4bf301d4d547cc017be91c1e6d7c0d859cca345d4aed4db1696e32000e7048fc",
+      "oci_revision": "8c3a9e356f59cd025beff25f7fb1d5a20594e028",
+      "commercial_source_tree_equal": true
+    }
+  },
+  "migrations": [
+    {
+      "version": 1,
+      "script": "V1__baseline_current_schema.sql",
+      "flyway_checksum": 431188510,
+      "sha256": "9de0b6a41cd3367cb35159bb8581439c0a8186ea66fa5dbd7e72193d8cb25900"
+    },
+    {
+      "version": 2,
+      "script": "V2__add_versioned_menu_revision.sql",
+      "flyway_checksum": -1546045661,
+      "sha256": "b10dffd0e9538a1f4754075e8a8eaa02e5c7a89716b3be724004cf495f083a44"
+    },
+    {
+      "version": 3,
+      "script": "V3__add_idempotent_order_submission_and_dispatch_outbox.sql",
+      "flyway_checksum": -1713808660,
+      "sha256": "5f60fe2e4ec743b9df563810b0c212169142ab6a1a3975c62a897701f87d7290"
+    },
+    {
+      "version": 4,
+      "script": "V4__add_menu_item_sort_order.sql",
+      "flyway_checksum": 1636049775,
+      "sha256": "495f35b3739c57b8eb646227653515776a579aab2c20d4c82514c859b70841eb"
+    },
+    {
+      "version": 5,
+      "script": "V5__set_cold_chicken_noodle_default_type.sql",
+      "flyway_checksum": -1638580130,
+      "sha256": "7b621c846941063405a97275b79c259c784f7dc3cfc3be681b965d19ea1bf9ac"
+    },
+    {
+      "version": 6,
+      "script": "V6__add_order_item_routing_snapshots.sql",
+      "flyway_checksum": -1681894826,
+      "sha256": "d9cbd94a6276836635f2a451f3a846d9a2c1ea11020ac52be03951f4f869a2d3"
+    },
+    {
+      "version": 7,
+      "script": "V7__add_print_job_attention_acknowledgement.sql",
+      "flyway_checksum": 625683957,
+      "sha256": "95621913314b7afb44f0d56b42048a10ac9927b5890b4fd6d683d84f3ba303d0"
+    },
+    {
+      "version": 8,
+      "script": "V8__add_owner_store_onboarding_requests.sql",
+      "flyway_checksum": 1654406856,
+      "sha256": "6b5545d8a1f46a2cac8dd2c5ddb8db5c2bce4ea5c30ca6c540a9055213c5f2d1"
+    },
+    {
+      "version": 9,
+      "script": "V9__add_staging_synthetic_bootstrap_requests.sql",
+      "flyway_checksum": 1828097009,
+      "sha256": "a3f7a5598e5c6094d44ececbabc5ff131979196538252e2f86ec93075b844e8c"
+    },
+    {
+      "version": 10,
+      "script": "V10__add_owner_store_menu_clone_requests.sql",
+      "flyway_checksum": 482267873,
+      "sha256": "0830c8b339cf6d6e1737c04d97c5576b450387abdfc33e1ba466802cc7a0f881"
+    },
+    {
+      "version": 11,
+      "script": "V11__add_store_pricing_policies.sql",
+      "flyway_checksum": -1257180446,
+      "sha256": "f0b58cb270512bee333871080c8f956aecf6239e02c692d19f0445e94d068688"
+    },
+    {
+      "version": 12,
+      "script": "V12__add_store_combo_components.sql",
+      "flyway_checksum": -1484328108,
+      "sha256": "f0d0967ede982ea676668cc3d9a6a0111168b84ed0029f87b95466388682372b"
+    },
+    {
+      "version": 13,
+      "script": "V13__add_store_modules.sql",
+      "flyway_checksum": 1338109061,
+      "sha256": "57a402553cd21b9ff5a7713cbd2b87eb2cdf0947137d25852d563a7dde3126f1"
+    },
+    {
+      "version": 14,
+      "script": "V14__add_store_profiles.sql",
+      "flyway_checksum": -965973533,
+      "sha256": "4942dd2928b74064386097a70a74bf057b9200ccb59a58ec94883c52debcec36"
+    },
+    {
+      "version": 15,
+      "script": "V15__seed_st_denis_canonical_profile.sql",
+      "flyway_checksum": -800444250,
+      "sha256": "89c53de3237b359f7383723f1913131513ca03bac7b2badc8f26e14bf9e45d51"
+    },
+    {
+      "version": 16,
+      "script": "V16__add_dynamic_menu_management_configuration.sql",
+      "flyway_checksum": 473655687,
+      "sha256": "3038e680c534fff3038100837d5c8c1ebe0b232c0b5728a2fc06d4b9750ae621"
+    },
+    {
+      "version": 17,
+      "script": "V17__add_printing_display_rules.sql",
+      "flyway_checksum": -1840784048,
+      "sha256": "13b707b3f6b8d6b63acd3fa883c451424314d2b66f84f3b8ae5ca828455a6dcc"
+    },
+    {
+      "version": 18,
+      "script": "V18__add_phase_b_master_menu_provisioning.sql",
+      "flyway_checksum": -1514098834,
+      "sha256": "81d497f943239fd3277b994cd47005ef2f2015d7dd22d77ba3af2ce464152d79"
+    },
+    {
+      "version": 19,
+      "script": "V19__seed_phase_b_master_menu_profile_v2.sql",
+      "flyway_checksum": 182579909,
+      "sha256": "8ed06a11e0dbce592b1330b3448dbf185a82fc438c29af6036c566acec864add"
+    },
+    {
+      "version": 20,
+      "script": "V20__align_phase_b_provisioning_validation_status.sql",
+      "flyway_checksum": -1638534388,
+      "sha256": "8007f91800576527897f4260ca3556518eaa3e68a28c32aa9e4a172803255983"
+    },
+    {
+      "version": 21,
+      "script": "V21__repair_phase_b_master_menu_fingerprint.sql",
+      "flyway_checksum": 2011567215,
+      "sha256": "fd781155c8b5a817fbdbd06e5acebb15353d05f8801222499e5ed3a5c39997ae"
+    },
+    {
+      "version": 22,
+      "script": "V22__repair_printing_display_rule_revision_lifecycle.sql",
+      "flyway_checksum": -699128137,
+      "sha256": "c057ac9646236fd73dccd4b2466c824a88d62542ed2571de9846353cb6524495"
+    },
+    {
+      "version": 23,
+      "script": "V23__add_phase_b_part2_readiness_and_activation.sql",
+      "flyway_checksum": -1207640832,
+      "sha256": "668f1788b4bc5942bd6b29c7c88f3b2a3c43a1166a828607b5a4380b446c67cb"
+    },
+    {
+      "version": 24,
+      "script": "V24__harden_phase_b_part2_evidence_and_device_heartbeat.sql",
+      "flyway_checksum": 755635947,
+      "sha256": "56983bd534b18ba08829acc67cd4cf48b524bf812e671133a16f0f16699165e8"
+    },
+    {
+      "version": 25,
+      "script": "V25__widen_phase_b_device_contract_version.sql",
+      "flyway_checksum": -1891760137,
+      "sha256": "00bd1057fb0e09ba214d8778c0b70a2e8725114067286a81945894674bbdd1b8"
+    },
+    {
+      "version": 26,
+      "script": "V26__add_staging_store_fixture_cleanup_ledger.sql",
+      "flyway_checksum": 624267691,
+      "sha256": "637333e2fd1599a1eb59f5b7bf79c9bb222df0acf9dbc713c88550851a77e24e"
+    },
+    {
+      "version": 27,
+      "script": "V27__add_item_combo_egg_default.sql",
+      "flyway_checksum": 1012997460,
+      "sha256": "8ff78af6fb1a79a8f342df4fa384faa9fd8b68118402839f1f97957ee0429620"
+    },
+    {
+      "version": 28,
+      "script": "V28__add_store_addon_catalog.sql",
+      "flyway_checksum": -235902998,
+      "sha256": "a71f3ac47d6ddc56c0967c8d119fab123f466443606a2b36f56d1e0fdd169d39"
+    },
+    {
+      "version": 29,
+      "script": "V29__add_uber_eats_integration.sql",
+      "flyway_checksum": -1088042546,
+      "sha256": "2bc261ca9f82c1bfd70c4234606bed2300a30f1d01d67e3ca721927fda3f3885"
+    },
+    {
+      "version": 30,
+      "script": "V30__printing_reliability_affinity.sql",
+      "flyway_checksum": 119071053,
+      "sha256": "6d22f91ae8045b0c4fa5ffae0c542aebc718566cce6a69dc82db4bd9a849e1b1"
+    },
+    {
+      "version": 31,
+      "script": "V31__uber_kitchen_mirror.sql",
+      "flyway_checksum": -458680414,
+      "sha256": "9f42591f6095496b40a553c55a1d13ac6cb9e1d13a65ab5b57f579cb363f8603"
+    },
+    {
+      "version": 32,
+      "script": "V32__uber_accepted_observation.sql",
+      "flyway_checksum": -834115206,
+      "sha256": "3190df449691b60c4eddbf23a2bd1aad6e0092b3a836c850d2407db6d0e860b2"
+    },
+    {
+      "version": 33,
+      "script": "V33__external_kitchen_fallback_snapshot.sql",
+      "flyway_checksum": 1585227176,
+      "sha256": "074b6192a9a427d737196bcb794fab1e2f986aa400d1852a424f4e2be6992e39"
+    },
+    {
+      "version": 34,
+      "script": "V34__add_store_daily_close.sql",
+      "flyway_checksum": 1242746246,
+      "sha256": "da572819181e0dbb4eb87d5ad8c3384448b05292b6ce10f19f195f2ddb4ea195"
+    },
+    {
+      "version": 35,
+      "script": "V35__add_uber_item_financial_snapshot.sql",
+      "flyway_checksum": -139453383,
+      "sha256": "f34113de65b47c0e900bcff8aa30a7e4800eec0d04e59fcf3f07c81fd234628f"
+    },
+    {
+      "version": 36,
+      "script": "V36__add_external_order_note_snapshot.sql",
+      "flyway_checksum": 1806435613,
+      "sha256": "05dabb68531258d2fe6afc31f61d4e03942827e7b04959cd77064e4f9dbddc45"
+    },
+    {
+      "version": 37,
+      "script": "V37__add_uber_eats_store_module.sql",
+      "flyway_checksum": 580592530,
+      "sha256": "e0319b59be2a29b06b55739c9bbcee0bc40523114d024ac596560c79a552298b"
+    }
+  ],
+  "production_bit_reproduction": "UNVERIFIED",
+  "installed_apk": "UNKNOWN",
+  "hardware_qa": "PENDING",
+  "android": {
+    "source_commit": "8c3a9e356f59cd025beff25f7fb1d5a20594e028",
+    "source_tree": "9ba2415f483697236c3fd3ee011f6cf73d5fd96b",
+    "installed_apk": "UNKNOWN",
+    "signing_certificate": "UNKNOWN",
+    "bundled_assets": "UNKNOWN"
+  }
+}
