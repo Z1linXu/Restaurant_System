@@ -109,6 +109,7 @@ public class MainActivity extends Activity {
     private final Object runtimeEnvironmentLock = new Object();
     private PrinterPluginBridge printerPluginBridge;
     private volatile boolean padDirectJobInProgress = false;
+    private volatile ManualPendingJobsRequest activeManualPendingRequest;
     private final Handler padDirectWorkerHandler = new Handler(Looper.getMainLooper());
     private final AtomicLong padDirectWorkerGenerationCounter = new AtomicLong(0L);
     private final Object padDirectWorkerLifecycleLock = new Object();
@@ -305,7 +306,7 @@ public class MainActivity extends Activity {
         }
     }
     private boolean mayChangeRuntimeBinding() {
-        return RuntimeEnvironmentPolicy.mayReplaceBinding(hasActivePadDirectJobInProgress() || padDirectJobInProgress || padDirectWorkerInProgress,
+        return RuntimeEnvironmentPolicy.mayReplaceBinding(hasActivePadDirectJobInProgress() || padDirectJobInProgress || padDirectWorkerInProgress || activeManualPendingRequest != null,
             PrinterPluginBridge.nativeBusy(), padDirectWorkerErrorStopped || padDirectWorkerLocalPrintMayHaveSucceeded);
     }
     private void stopWorkerForEnvironmentChange(String reason) {
@@ -1306,19 +1307,21 @@ public class MainActivity extends Activity {
         EditText printerPortInput,
         EditText printerTimeoutInput
     ) {
-        String deviceId = pairedField(KEY_DEVICE_ID, "");
-        String deviceToken = pairedField(KEY_DEVICE_TOKEN, "");
-        String storeId = pairedField(KEY_DEVICE_STORE_ID, "");
-        if (deviceId == null || deviceId.isBlank() || deviceToken == null || deviceToken.isBlank() || storeId == null || storeId.isBlank()) {
-            resultView.setText("请先配对本机 Pad。");
-            jobsList.removeAllViews();
-            return;
-        }
-        String apiBase = pendingJobsApiBaseOrigin();
-        if (apiBase.isBlank()) {
-            resultView.setText("无法推导后端 API 地址。Local Preview 请设置 Web App URL；Bundled Assets 请设置 API Base URL。");
-            jobsList.removeAllViews();
-            return;
+        final ManualPendingJobsRequest request;
+        synchronized (runtimeEnvironmentLock) {
+            if (!ManualPendingJobsRequest.canStart(padDirectWorkerInProgress, padDirectJobInProgress,
+                PrinterPluginBridge.nativeBusy(), activeManualPendingRequest != null)) {
+                resultView.setText("已有任务正在处理，请等待当前任务完成。"); return;
+            }
+            String origin = pendingJobsApiBaseOrigin();
+            JSONObject credentials = credentialStore.read(origin);
+            if (credentials == null || credentials.optString(KEY_DEVICE_STORE_ID).isBlank()) {
+                resultView.setText("请先在当前服务器配对本机 Pad。"); jobsList.removeAllViews(); return;
+            }
+            request = new ManualPendingJobsRequest(origin, credentials.optString("api_origin"),
+                credentials.optString(KEY_DEVICE_ID), credentials.optString(KEY_DEVICE_TOKEN),
+                credentials.optString(KEY_DEVICE_STORE_ID), padDirectWorkerGeneration);
+            activeManualPendingRequest = request;
         }
 
         refreshButton.setEnabled(false);
@@ -1329,14 +1332,7 @@ public class MainActivity extends Activity {
             String successBody = null;
             HttpURLConnection connection = null;
             try {
-                URL url = new URL(trimTrailingSlash(apiBase) + "/api/v1/stores/" + storeId + "/printing/jobs/pending?limit=25");
-                connection = (HttpURLConnection) url.openConnection();
-                connection.setRequestMethod("GET");
-                connection.setConnectTimeout(5000);
-                connection.setReadTimeout(8000);
-                connection.setRequestProperty("Accept", "application/json");
-                connection.setRequestProperty("X-Device-Id", deviceId);
-                connection.setRequestProperty("X-Device-Token", deviceToken);
+                connection = request.open();
                 int status = connection.getResponseCode();
                 String body = readConnectionBody(connection, status);
                 if (status == 401 || status == 403) {
@@ -1358,6 +1354,17 @@ public class MainActivity extends Activity {
             String finalMessage = message;
             String finalSuccessBody = successBody;
             postOwnedUi(() -> {
+                boolean current;
+                synchronized (runtimeEnvironmentLock) {
+                    current = activeManualPendingRequest == request && request.isCurrent(padDirectWorkerGeneration,
+                        pendingJobsApiBaseOrigin(), pairedField(KEY_DEVICE_ID, ""));
+                    if (activeManualPendingRequest == request) activeManualPendingRequest = null;
+                }
+                if (!current) {
+                    refreshButton.setEnabled(isDevicePaired());
+                    return; // Never expose a prior environment's actionable job cards.
+                }
+
                 if (finalSuccessBody == null) {
                     resultView.setText(finalMessage);
                     jobsList.removeAllViews();
@@ -1527,7 +1534,7 @@ public class MainActivity extends Activity {
         EditText printerPortInput,
         EditText printerTimeoutInput
     ) {
-        if (!ownsActivity() || padDirectJobInProgress || padDirectWorkerInProgress || PrinterPluginBridge.nativeBusy()) {
+        if (!ownsActivity() || padDirectJobInProgress || padDirectWorkerInProgress || activeManualPendingRequest != null || PrinterPluginBridge.nativeBusy()) {
             resultView.setText("已有任务正在处理，请等待当前任务完成。");
             return;
         }
@@ -2754,7 +2761,7 @@ public class MainActivity extends Activity {
             stopPadDirectAutoWorker(autoStatus, startAutoButton, stopAutoButton, "已停止。App 不在前台或自动处理已关闭。", reason, false);
             return;
         }
-        if (padDirectWorkerInProgress || padDirectJobInProgress) {
+        if (padDirectWorkerInProgress || padDirectJobInProgress || activeManualPendingRequest != null) {
             Log.d(WORKER_TAG, "Worker Poll Queue delayed: another PAD_DIRECT job is already in progress");
             schedulePadDirectWorkerTick(autoStatus, resultView, jobsList, refreshButton, startAutoButton, stopAutoButton, printerIpInput, printerPortInput, printerTimeoutInput, 1000);
             return;

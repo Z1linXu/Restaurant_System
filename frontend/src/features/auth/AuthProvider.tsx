@@ -47,7 +47,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [applyAuthIdentity])
 
   const refreshMe = useCallback(async () => {
-    const environmentSession = captureEnvironmentSession()
+    let environmentSession: ReturnType<typeof captureEnvironmentSession>
+    try {
+      environmentSession = captureEnvironmentSession()
+    } catch {
+      clearAuthIdentity()
+      setError('请先配置有效的服务器地址 / Configure a valid server address.')
+      setLoading(false)
+      return
+    }
     if (!getAccessToken() && !getRefreshToken()) {
       clearAuthIdentity()
       void clearRestrictedAuthSnapshot().catch(() => undefined)
@@ -59,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!navigator.onLine) {
       const snapshot = await readRestrictedAuthSnapshot().catch(() => null)
       if (!isEnvironmentSessionCurrent(environmentSession)) return
-      if (snapshot) {
+      if (snapshot?.isCurrentSession()) {
         applyAuthIdentity(
           snapshot.user,
           snapshot.permissions,
@@ -85,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else if (canUseOfflineSnapshot(exception)) {
         const snapshot = await readRestrictedAuthSnapshot().catch(() => null)
         if (!isEnvironmentSessionCurrent(environmentSession)) return
-        if (snapshot) {
+        if (snapshot?.isCurrentSession()) {
           applyAuthIdentity(
             snapshot.user,
             snapshot.permissions,

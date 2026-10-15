@@ -80,3 +80,96 @@ Store scope 只控制本机数据和调度，不是后端授权。ADMIN 是否�
 ## 主线程文档接线
 
 为避免共享文档冲突，本工作项将以下片段交主线程更新 `SYSTEM_DOCUMENTATION.md` 与 `doc/API.md`：DB5/schema-v2 origin isolation、legacy retention/recovery notice、DB4 downgrade 限制、active Store-only replay、origin-scoped auth/同步 logout、异步可信 Android bridge、新 secret 的 Keystore origin binding，以及上述 packaging/hardware pending。Backend HTTP API request/response 未变；新增 `api_origin` 是本地 native pairing message 字段，不是新的 backend API。
+
+## 独立 Agent 6 审查 — 129f66d（2026-10-15）
+
+审查者：独立 security reviewer；本次未修改 Offline/Android 产品实现。
+审查差异：`92871df..129f66dcdf4abd39f9b5311636ef6abd9a2d24d7`，53 个文件。
+结论：**BLOCKED — 下面两项 G2-06 安全/身份隔离问题须修复后复审**。
+原实现测试 PASS 和本节审查结论分别陈述，不以测试数量替代缺陷关闭。
+
+### A6-OFF-01 [P1] 手动 pending 刷新仍可随重定向泄露设备凭据
+
+- 位置：`MainActivity.java:1309–1340`，尤其 `1333` 的原始 `url.openConnection()` 与
+  `1338–1339` 的 `X-Device-Id` / `X-Device-Token`。
+- 可达入口：本地控制面板 `Refresh Pending Print Jobs` 按钮（`MainActivity.java:528–533`）。
+  自动 Worker 已走安全工厂，手动刷新没有复用 `DeviceApiConnection.open`，也未禁用 follow-redirect。
+- 场景：API A 的 pending endpoint 返回指向另一 HTTP Origin B 的 307；该 raw connection 默认跟随
+  redirect，自定义设备 header 没有被移除，B 获得 A 的 device token。它绕过本轮新增的 origin-pair /
+  no-redirect 防线；`DeviceApiConnectionTest` 只覆盖调用新工厂的路径，不能证明这个按钮安全。
+- 复现：审查时在 `/private/tmp/OfflineRedirectProbe.java` 建两个合成 loopback HttpServer，按该
+  方法同样的原始 HttpURLConnection 构造方式附 synthetic headers；JDK17 执行输出：
+  `raw_refresh_status=200 redirected_device_token=synthetic-review-token`。
+  这证明该调用形态在本地 JVM 的缺陷；真实 Android HTTP provider 仍是硬件验证范围，未冒充实机证据。
+- 最小修复：手动刷新也必须取得不可变的目标/凭据快照并复用安全工厂，禁止自动 redirect；同时给迟到
+  response 的 callback 加当前环境/配对 generation 检查。不要恢复 plaintext fallback。
+- 必补测试：覆盖手动刷新实际使用的连接构造路径，A→B 307 时 B 零连接/零设备 header；另验证刷新期间
+  切目标或重配对后，旧 response 不进入新环境的可操作队列。
+
+### A6-OFF-02 [P1] 当前离线身份快照没有与当前账户凭据绑定
+
+- 位置：`workspaceSnapshot.ts:19` 的 environment-only current key，`134–159` 的保存/读取；
+  `AuthProvider.tsx:49–67` 的离线恢复入口；`authService.ts:32–34` 先持久化 token、返回后才由
+  `AuthProvider.tsx:42–46` 异步保存身份快照。
+- 场景：同一 API Origin 先有账户 A 的有效 snapshot；B 登录的 token 已写 localStorage，而 B 的异步
+  snapshot 写入失败或进程在写入前中止。下次离线启动仅检查“当前 Origin 存在任意 token”，然后读取
+  `auth:current:environment:...`；reader 只比较 record 内 accountId 与 record.user.id，未比较当前凭据。
+  因此 B 的 token 可触发 A 的离线身份、权限和 A 的本机 Workspace/订单缓存恢复。namespace 含 Origin
+  不足以闭合此处 account 边界。pending clear 因新 generation 失效时也可能保留 A 的记录。
+- 复现：只读转译当前 `environmentScope` / `offlineDatabase` / `workspaceSnapshot` 到临时目录，实际
+  fake-indexeddb 保存 A(user 7) snapshot，设置同 Origin 的 B(user 8) credential 后调用当前 reader，输出：
+  `current_token_user=8 restored_offline_snapshot_user=7`。未修改产品文件或真实数据库。
+- 最小修复：snapshot 必须与本次已验证账户及当前持久化 credential association/fingerprint 一致；缺失或
+  不匹配时拒绝离线身份恢复。可以用 token account claim 作为本机缓存拒绝依据，或保存当前 credential
+  fingerprint；不能把客户端解码当后端授权。无需删除或认领任何 draft/outbox。
+- 必补测试：实际 AuthProvider/reader 组合模拟 A snapshot + B credential 的崩溃/失败窗口，离线不能恢复
+  A；同时验证正常同账户 refresh 后仍可恢复，以及 logout/late snapshot 不重新激活旧账户。
+
+### 已检查的其余边界与测试
+
+- DB4→DB5 没有删 store、清库或重写来源不明旧 key；schema-v1 记录退出 normal readers / expiry cleanup，
+  仍原样保留。未发现静默删除旧 pending records 的路径。
+- 新 draft/menu/outbox key 与正常 reader 均包含 canonical environment/account/Org/Store；processor 的
+  初始、IDB 返回后、发送前检查有效 scope，旧请求结果写回原 key，保持 stable idempotency identity。
+- `apiClient` 拒绝 foreign absolute URL、fetch redirect:error，refresh/login 使用 session generation；
+  同步 logout 停处理器/WS并 abort 已登记 fetch。此 Web 路径与 A6-OFF-01 的漏接 native 路径区分。
+- Android 消息入口检查 exact sourceOrigin、main-frame、当前 WebView/Activity；没有 legacy
+  JavascriptInterface fallback。新设备凭据的 AES/GCM AAD 和 envelope namespace 绑定 canonical Origin，
+  解密失败保持字节、不回退 plaintext。
+- runtime/配对替换在 worker/job/native busy 或结果不确定时拒绝；无实机证明，WebView、Keystore 生命周期、
+  APK packaging 和纸张仍 pending。
+- 审查独立运行：`npm --prefix frontend test -- src/offline/environmentIsolation.test.ts src/services/apiClient.environment.test.ts src/services/orderOutboxProcessor.test.ts src/services/storeWorkspaceService.test.ts`，
+  **4 files / 21 tests PASS**。这组测试未覆盖上述两个反例，因此未因其通过而授予安全 PASS。
+
+审查时间（Estimated）：只读调查约 4 分钟；Implementation N/A（0 产品变更）；Validation 约 1 分钟；
+报告约 1 分钟；Total 约 6 分钟。无 PR/merge/deploy/运行环境操作。修复产品代码及独立复审由 Root 协调。
+
+## Agent 6 finding cluster 的限定修复 — 2026-10-15
+
+以上独立审查的原始 BLOCKED 证据完整保留。此节是实现者的修复/测试记录，**不替代独立复审**。
+
+- `A6-OFF-01`：`refreshPendingPrintJobs` 改用 `ManualPendingJobsRequest` 的不可变 origin / credential / Store / generation 快照；其实际 `open()` 只调用 `DeviceApiConnection`，禁止自动 redirect。手动 read 在途期间纳入换服/重配对和实际 job/poll 的 busy 门禁；返回 callback 核对同一 request、generation、当前 origin/device，再允许生成可操作任务卡。没有改变 claim/lease/不确定出纸状态机。
+- `A6-OFF-02`：当前 auth snapshot 新增已验证响应对应的持久化 access+refresh credential association（环境与两份 token 的 SHA-256 fingerprint，token 本身不写入 IndexedDB）。reader 必须匹配当前 token pair；缺失 fingerprint、凭据不符、logout 或读取期间身份改变均 fail closed。旧 snapshot/queue/token 不因不匹配而删除；旧 v2 auth snapshot 需要一次正常在线验证才能建立 association。
+- Snapshot save 在 digest、DB open 和写入前核凭据/session；reader 给 AuthProvider 一个只在当前进程有效的同步复核函数，防止 reader resolve 后凭据变化仍应用旧身份。晚到 `/auth/me` 的成功响应不能在 token 已替换后被采用；晚到 refresh 的成功或 401/403 结果均不能覆盖/清除另一组已持久化凭据。
+- 同一 auth 边界中处理了 bundled 首次启动 API 未配置：捕获 environment guard，停止 loading、保持未登录并显示简短服务器配置提示；既有原生设置入口不变，不用 `restaurant-pad.local` 代替后端。
+- Credential fingerprint 依赖 WebCrypto SHA-256；不支持安全摘要时离线身份恢复不可用，不能回退到“有任意 token 即恢复”。后端仍是授权边界，fingerprint 仅作本机缓存关联/拒绝依据。
+
+修复新增测试：
+
+1. 真实 AuthProvider + fake IndexedDB：A snapshot 留盘，B tokens 已持久化且 B snapshot 写入被真实 transaction failure 拒绝；离线冷启动 user/permissions 均不恢复 A，原 A 记录完整保留。
+2. 真实 `/auth/me` 401 → refresh → 新凭据 `/auth/me` → snapshot → 同账户离线重启成功；旧 fingerprint 在新凭据未经验证时拒绝恢复。
+3. 迟到 snapshot save、旧 `/auth/me`、同 Origin 的迟到 refresh 均不能绑定/覆盖 B；缺少 bundled API 的真实 Provider 初始化没有未处理 rejection 或永久 loading。
+4. `ManualPendingJobsRequestTest` 直接运行手动 pending read 实际使用的连接入口，以两台 loopback server 验证 307 时 B 零连接、A token 不转发；并覆盖 worker/job/native/manual busy 和环境/配对/generation 变化后拒绝旧结果。
+
+本次集中验证：
+
+| 检查 | 本地结果 |
+| --- | --- |
+| Offline/Auth focused | 5 files / 33 tests PASS |
+| 完整 frontend | 52 files / 299 tests PASS |
+| TypeScript + Vite build | PASS |
+| 此 cluster 改动 TS/TSX 的 focused ESLint | PASS |
+| Android SDK source compile / JVM unit | 6 suites / 24 tests PASS，0 failures/errors/skips；仍仅为 `-x verifyBundledFrontend` 的源码单测 |
+| `git diff --check` | PASS |
+
+仍为 `AGENT6_REREVIEW_PENDING`、`PACKAGING_PENDING`、`HARDWARE_QA_PENDING`。没有生成/安装资产或 APK，没有 Production/Staging/真实设备操作。回滚必须同时保留此 credential association 和 manual-read 安全连接，不能退回已复现漏洞的旧 DB5 实现。

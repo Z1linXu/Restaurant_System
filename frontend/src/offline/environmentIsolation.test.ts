@@ -1,3 +1,4 @@
+import { saveAuthTokens } from '../services/apiClient'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { IDBFactory } from 'fake-indexeddb'
 import { closeOfflineDatabase, OFFLINE_DATABASE_NAME, OFFLINE_STORES, openOfflineDatabase, requestResult, transactionComplete } from './offlineDatabase'
@@ -21,8 +22,11 @@ function useEnvironment(environmentId: string) { window.__RESTAURANT_API_BASE_UR
 beforeEach(async () => {
   await closeOfflineDatabase()
   vi.stubGlobal('indexedDB', new IDBFactory())
-  vi.stubGlobal('window', Object.assign(new EventTarget(), { location: { origin: 'https://restaurant-pad.local' }, __RESTAURANT_API_BASE_URL__: scope.environmentId }))
+  const tokens = new Map<string, string>()
+  const localStorage = { getItem: (key: string) => tokens.get(key) ?? null, setItem: (key: string, value: string) => tokens.set(key, value), removeItem: (key: string) => tokens.delete(key) }
+  vi.stubGlobal('window', Object.assign(new EventTarget(), { localStorage, location: { origin: 'https://restaurant-pad.local' }, __RESTAURANT_API_BASE_URL__: scope.environmentId }))
   invalidateOfflineSession(); activateOfflineAccount(7)
+  saveAuthTokens('synthetic-access-A', 'synthetic-refresh-A')
 })
 afterEach(async () => { await closeOfflineDatabase(); vi.unstubAllGlobals() })
 

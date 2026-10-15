@@ -1,3 +1,4 @@
+import { getAccessToken, getRefreshToken } from '../services/apiClient'
 import { assertEnvironmentSession, captureEnvironmentSession, getEnvironmentId, isEnvironmentSessionCurrent } from './environmentScope'
 import type { AuthUser, LoginResponse } from '../services/authService'
 import type {
@@ -19,6 +20,7 @@ export const WORKSPACE_SNAPSHOT_MAX_AGE_MS = 24 * 60 * 60 * 1000
 const currentAuthKey = () => `auth:current:environment:${encodeURIComponent(getEnvironmentId())}`
 
 interface CurrentAuthSnapshotRecord {
+  credentialFingerprint: string
   key: string
   environmentId: string
   accountId: number
@@ -50,6 +52,8 @@ interface StoreContextSnapshotRecord {
 }
 
 export interface RestrictedAuthSnapshot {
+  // Process-local check; tokens are never exposed or persisted in the snapshot.
+  isCurrentSession: () => boolean
   environmentId: string
   accountId: number
   user: AuthUser
@@ -120,10 +124,11 @@ async function readSnapshotRecord<T>(key: string) {
   return record
 }
 
-async function writeSnapshotRecord(record: { key: string; environmentId: string }) {
+async function writeSnapshotRecord(record: { key: string; environmentId: string }, isStillCurrent?: () => boolean) {
   const session = captureEnvironmentSession()
   const database = await openOfflineDatabase()
   assertEnvironmentSession(session)
+  if (isStillCurrent && !isStillCurrent()) throw new Error('AUTH_CREDENTIAL_CHANGED')
   const transaction = database.transaction(OFFLINE_STORES.workspaceSnapshots, 'readwrite')
   const completed = transactionComplete(transaction)
   if (record.environmentId !== getEnvironmentId()) throw new Error('OFFLINE_ENVIRONMENT_CHANGED')
@@ -131,10 +136,29 @@ async function writeSnapshotRecord(record: { key: string; environmentId: string 
   await completed
 }
 
+function captureAuthCredentials() {
+  return { access: getAccessToken(), refresh: getRefreshToken() }
+}
+function credentialsMatch(credentials: ReturnType<typeof captureAuthCredentials>) {
+  return credentials.access === getAccessToken() && credentials.refresh === getRefreshToken()
+}
+async function credentialFingerprint(credentials: ReturnType<typeof captureAuthCredentials>, environmentId: string) {
+  if (!credentials.access && !credentials.refresh) throw new Error('AUTH_CREDENTIAL_REQUIRED')
+  const bytes = new TextEncoder().encode(JSON.stringify([environmentId, credentials.access, credentials.refresh]))
+  const hash = await crypto.subtle.digest('SHA-256', bytes)
+  return Array.from(new Uint8Array(hash), (value) => value.toString(16).padStart(2, '0')).join('')
+}
+
 export async function saveRestrictedAuthSnapshot(response: LoginResponse) {
+  const session = captureEnvironmentSession()
+  const credentials = captureAuthCredentials()
+  const fingerprint = await credentialFingerprint(credentials, session.environmentId)
+  const isStillCurrent = () => isEnvironmentSessionCurrent(session) && credentialsMatch(credentials)
+  if (!isStillCurrent()) throw new Error('AUTH_CREDENTIAL_CHANGED')
   const record: CurrentAuthSnapshotRecord = {
     key: currentAuthKey(),
-    environmentId: getEnvironmentId(),
+    environmentId: session.environmentId,
+    credentialFingerprint: fingerprint,
     accountId: response.user.id,
     user: response.user,
     permissions: [...(response.permissions ?? [])],
@@ -142,16 +166,24 @@ export async function saveRestrictedAuthSnapshot(response: LoginResponse) {
     validatedAt: new Date().toISOString(),
     schemaVersion: WORKSPACE_SNAPSHOT_SCHEMA_VERSION,
   }
-  await writeSnapshotRecord(record)
+  await writeSnapshotRecord(record, isStillCurrent)
 }
 
 export async function readRestrictedAuthSnapshot(): Promise<RestrictedAuthSnapshot | null> {
+  const session = captureEnvironmentSession()
+  const credentials = captureAuthCredentials()
+  if (!credentials.access && !credentials.refresh) return null
+  const fingerprint = await credentialFingerprint(credentials, session.environmentId)
+  const isCurrentSession = () => isEnvironmentSessionCurrent(session) && credentialsMatch(credentials)
+  if (!isCurrentSession()) return null
   const record = await readSnapshotRecord<CurrentAuthSnapshotRecord>(currentAuthKey())
-  if (!isSnapshotRecordUsable(record) || record!.accountId !== record!.user.id) {
+  if (!isCurrentSession() || !isSnapshotRecordUsable(record) || record!.accountId !== record!.user.id
+    || !record!.credentialFingerprint || record!.credentialFingerprint !== fingerprint) {
     return null
   }
   return {
-    environmentId: getEnvironmentId(),
+    isCurrentSession,
+    environmentId: session.environmentId,
     accountId: record!.accountId,
     user: record!.user,
     permissions: [...record!.permissions],

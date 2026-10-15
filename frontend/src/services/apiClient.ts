@@ -242,6 +242,7 @@ async function refreshSessionOnce(session: ReturnType<typeof captureEnvironmentS
     const promise = (async () => {
       assertEnvironmentSession(session)
       const refreshToken = getRefreshToken()
+      const previousAccessToken = getAccessToken()
       if (!refreshToken) {
         throw new ApiRequestError(401, 'Refresh token is missing', userMessageForStatus(401))
       }
@@ -252,6 +253,8 @@ async function refreshSessionOnce(session: ReturnType<typeof captureEnvironmentS
         body: JSON.stringify({ refresh_token: refreshToken }),
       }, REFRESH_REQUEST_TIMEOUT_MS)
       const payload = await readResponsePayload(response)
+      assertEnvironmentSession(session)
+      if (getRefreshToken() !== refreshToken || getAccessToken() !== previousAccessToken) throw new Error('AUTH_CREDENTIAL_CHANGED')
       if (!response.ok) {
         const backendMessage = messageFromPayload(payload)
         throw new ApiRequestError(
@@ -289,6 +292,7 @@ async function fetchWithAuth(input: string, init: RequestInit, session: ReturnTy
   const accessToken = includeAuth ? getAccessToken() : null
   const headers = await attestPrintRequest(requestPath(input), init, buildApiHeaders(init.headers, includeAuth))
   assertEnvironmentSession(session)
+  if (includeAuth && accessToken !== getAccessToken()) throw new Error('AUTH_CREDENTIAL_CHANGED')
   const response = await fetchWithTimeout(target.href, { ...init, headers })
   assertEnvironmentSession(session)
   const payload = await readResponsePayload(response)
@@ -298,6 +302,8 @@ async function fetchWithAuth(input: string, init: RequestInit, session: ReturnTy
 
 export async function apiRequest<T>(input: string, init: RequestInit = {}) {
   const environmentSession = captureEnvironmentSession()
+  const initialAccessToken = getAccessToken()
+  const initialRefreshToken = getRefreshToken()
   const requestId = createRequestId()
   const startedAtMs = Date.now()
   const startedAt = new Date(startedAtMs).toISOString()
@@ -342,6 +348,10 @@ export async function apiRequest<T>(input: string, init: RequestInit = {}) {
         throw refreshError
       }
     }
+
+    if (isAuthCredentialEndpoint(input)
+      ? initialAccessToken !== getAccessToken() || initialRefreshToken !== getRefreshToken()
+      : accessToken !== getAccessToken()) throw new Error('AUTH_CREDENTIAL_CHANGED')
 
     if (!response.ok) {
       if (response.status === 401) {

@@ -55,6 +55,24 @@ describe('API credential environment and session lifecycle', () => {
     expect(getAccessToken()).toBeNull(); expect(fetchMock).toHaveBeenCalledTimes(2)
     window.__RESTAURANT_API_BASE_URL__ = 'https://a.synthetic.invalid'; expect(getAccessToken()).toBeNull()
   })
+  it.each([200, 401, 403])('does not let late A refresh HTTP %s overwrite or clear separately persisted B credentials', async (status) => {
+    saveAuthTokens('expired-A', 'refresh-A')
+    let finish!: (value: Response) => void
+    fetchMock.mockResolvedValueOnce(response(null, 401)).mockImplementationOnce(() => new Promise((resolve) => { finish = resolve }))
+    const operation = apiRequest('/api/v1/auth/me'); const rejected = expect(operation).rejects.toThrow('AUTH_CREDENTIAL_CHANGED')
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    saveAuthTokens('access-B', 'refresh-B')
+    finish(response({ access_token: 'late-A', refresh_token: 'late-refresh-A' }, status)); await rejected
+    expect(getAccessToken()).toBe('access-B'); expect(getRefreshToken()).toBe('refresh-B'); expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+  it.each([401, 403])('does not clear a replacement access token after old auth/me HTTP %s', async (status) => {
+    saveAuthTokens('access-A')
+    let finish!: (value: Response) => void; fetchMock.mockReturnValue(new Promise((resolve) => { finish = resolve }))
+    const operation = apiRequest('/api/v1/auth/me'); const rejected = expect(operation).rejects.toThrow('AUTH_CREDENTIAL_CHANGED')
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    saveAuthTokens('access-B'); finish(response(null, status)); await rejected
+    expect(getAccessToken()).toBe('access-B'); expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
   it('refuses explicitly foreign API targets without transmitting a credential', async () => {
     saveAuthTokens('access-A', 'refresh-A')
     await expect(apiRequest('https://b.synthetic.invalid/api/v1/example')).rejects.toThrow('API_ENVIRONMENT_MISMATCH')

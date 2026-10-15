@@ -42,7 +42,8 @@ export function captureEnvironmentSession() {
   return { environmentId: getEnvironmentId(), generation: sessionGeneration }
 }
 export function isEnvironmentSessionCurrent(session: ReturnType<typeof captureEnvironmentSession>) {
-  return session.generation === sessionGeneration && session.environmentId === getEnvironmentId()
+  try { return session.generation === sessionGeneration && session.environmentId === getEnvironmentId() }
+  catch { return false }
 }
 export function assertEnvironmentSession(session: ReturnType<typeof captureEnvironmentSession>) {
   if (!isEnvironmentSessionCurrent(session)) throw new Error('AUTH_ENVIRONMENT_CHANGED')
