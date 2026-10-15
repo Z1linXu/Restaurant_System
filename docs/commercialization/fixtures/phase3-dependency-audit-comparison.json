@@ -1,0 +1,120 @@
+{
+  "observed_on": "2026-10-15",
+  "baseline_export": "1609f0d (frontend same as Phase2 tested5ec8abe)",
+  "phase3_source": "55198bcc0acbd6744ddea157217810f8e07376a9",
+  "source": "npm audit --json, current registry",
+  "baseline_counts": {
+    "info": 0,
+    "low": 1,
+    "moderate": 4,
+    "high": 7,
+    "critical": 1,
+    "total": 13
+  },
+  "phase3_counts": {
+    "info": 0,
+    "low": 1,
+    "moderate": 4,
+    "high": 7,
+    "critical": 1,
+    "total": 13
+  },
+  "same_vulnerability_details": true,
+  "new_advisories_introduced": [],
+  "existing_packages": [
+    {
+      "name": "@babel/core",
+      "severity": "low",
+      "nodes": [
+        "node_modules/@babel/core"
+      ]
+    },
+    {
+      "name": "@humanfs/node",
+      "severity": "moderate",
+      "nodes": [
+        "node_modules/@humanfs/node"
+      ]
+    },
+    {
+      "name": "@vitest/mocker",
+      "severity": "moderate",
+      "nodes": [
+        "node_modules/@vitest/mocker"
+      ]
+    },
+    {
+      "name": "baseline-browser-mapping",
+      "severity": "moderate",
+      "nodes": [
+        "node_modules/baseline-browser-mapping"
+      ]
+    },
+    {
+      "name": "brace-expansion",
+      "severity": "high",
+      "nodes": [
+        "node_modules/@typescript-eslint/typescript-estree/node_modules/brace-expansion",
+        "node_modules/brace-expansion"
+      ]
+    },
+    {
+      "name": "browserslist",
+      "severity": "high",
+      "nodes": [
+        "node_modules/browserslist"
+      ]
+    },
+    {
+      "name": "js-yaml",
+      "severity": "high",
+      "nodes": [
+        "node_modules/js-yaml"
+      ]
+    },
+    {
+      "name": "nanoid",
+      "severity": "high",
+      "nodes": [
+        "node_modules/nanoid"
+      ]
+    },
+    {
+      "name": "postcss",
+      "severity": "high",
+      "nodes": [
+        "node_modules/postcss"
+      ]
+    },
+    {
+      "name": "source-map-js",
+      "severity": "high",
+      "nodes": [
+        "node_modules/source-map-js"
+      ]
+    },
+    {
+      "name": "vite",
+      "severity": "high",
+      "nodes": [
+        "node_modules/vite"
+      ]
+    },
+    {
+      "name": "vitest",
+      "severity": "moderate",
+      "nodes": [
+        "node_modules/vitest"
+      ]
+    },
+    {
+      "name": "websocket-driver",
+      "severity": "critical",
+      "nodes": [
+        "node_modules/websocket-driver"
+      ]
+    }
+  ],
+  "classification": "NON_BLOCKING_EXISTING_DEBT_FOR_ISOLATED_DEVELOPMENT; RELEASE_GATE_REQUIRES_ADVISORY_APPLICABILITY_AND_PATCH_REVIEW",
+  "automatic_dependency_update_performed": false
+}

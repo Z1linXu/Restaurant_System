@@ -9630,3 +9630,5 @@ POST or native kick follows a cancelled scope. Deliberate operator cancellation
 and already-committed print jobs retain their prior semantics. jsdom 26.1.0 is a
 dev-only test dependency for this real default DOM path, with only dialog top-layer
 methods shimmed; no browser/native/physical QA or backend printing change is implied.
+
+The [dependency audit comparison](docs/commercialization/fixtures/phase3-dependency-audit-comparison.json) records 13 existing npm advisories (1 critical/7 high/4 moderate/1 low), with exactly identical advisory details in the Phase2 export and Phase3 lockfile; the dev-only jsdom addition introduced no advisory. This is existing dependency debt for isolated development, not a claim of zero vulnerabilities. Advisory applicability/patch review blocks external release claims; no blanket npm audit fix or unrelated dependency upgrade was performed. Temporary Vite/HTTP servers were loopback-only and are stopped.
