@@ -4,9 +4,13 @@ import ipaddress
 from pathlib import Path
 import re
 import sys
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULTS = [ROOT / "backend/src/main/resources/application-commercial.yml"]
+DEFAULTS = [
+    ROOT / "backend/src/main/resources/application-commercial.yml",
+    ROOT / "backend/src/test/java/com/restaurant/system/owner/profile/SyntheticPrivateProfileFixture.java",
+]
 DIRECTORIES = [ROOT / "deployment/commercial", ROOT / "docs/commercialization/fixtures"]
 
 
@@ -22,13 +26,17 @@ def violations(text):
                 issues.append("non-synthetic IP literal")
         except ValueError:
             pass
-    for value in re.findall(r"(?:password|jwt[-_]secret|device[-_]token|client[-_]secret)\s*[:=]\s*([^\n,}]+)", text, re.I):
+    for value in re.findall(r"(?:password|jwt[-_]secret|device[-_]token|client[-_]secret)[\"']?\s*[:=]\s*([^\n,}]+)", text, re.I):
         value = value.strip().strip("\"'")
         if value and not value.startswith(("${", "<")) and value not in ("null", "undefined"):
             issues.append("filled credential")
-    for host in re.findall(r"https?://([a-zA-Z0-9.-]+)", text):
-        if host not in ("localhost", "127.0.0.1") and not host.endswith(".invalid"):
-            issues.append("non-synthetic URL")
+    for url in re.findall(r"https?://[^\s\"'<>]+", text, re.I):
+        try:
+            host = urlsplit(url).hostname or ""
+            if host not in ("localhost", "127.0.0.1", "::1") and not host.endswith(".invalid"):
+                issues.append("non-synthetic URL")
+        except ValueError:
+            issues.append("invalid URL")
     return sorted(set(issues))
 
 
