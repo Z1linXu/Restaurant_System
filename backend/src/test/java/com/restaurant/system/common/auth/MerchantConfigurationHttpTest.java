@@ -66,6 +66,16 @@ class MerchantConfigurationHttpTest {
             .contentType(MediaType.APPLICATION_JSON).content(extra)).andExpect(status().isBadRequest());
         verifyNoInteractions(configs, audit);
     }
+    @ParameterizedTest @ValueSource(strings = {"", "{", "{invalid}"})
+    void malformedJsonReturnsLocalBadRequestWithoutAnyConfigurationWrite(String malformed) throws Exception {
+        mvc.perform(put("/api/v1/stores/10/merchant-configuration").header("Authorization", f.bearer(1))
+            .contentType(MediaType.APPLICATION_JSON).content(malformed))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error_code").value("MERCHANT_CONFIGURATION_INVALID_JSON"))
+            .andExpect(jsonPath("$.message").value("Invalid merchant configuration JSON"));
+        verifyNoInteractions(configs, audit);
+    }
+
     @Test void unsupportedVersionAndStaleLockScopeFailClosed() throws Exception {
         mvc.perform(put("/api/v1/stores/10/merchant-configuration").header("Authorization", f.bearer(1))
             .contentType(MediaType.APPLICATION_JSON).content(body.replace("\"schema_version\":1", "\"schema_version\":2")))

@@ -11,6 +11,13 @@ import org.springframework.web.bind.annotation.*;
 public class MerchantConfigurationController {
     private final MerchantConfigurationService service;
     public MerchantConfigurationController(MerchantConfigurationService service) { this.service = service; }
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public org.springframework.http.ResponseEntity<ApiResponse<Void>> invalidJson(
+        org.springframework.http.converter.HttpMessageNotReadableException unreadable) {
+        return org.springframework.http.ResponseEntity.badRequest().body(ApiResponse.failure(
+            "MERCHANT_CONFIGURATION_INVALID_JSON", "Invalid merchant configuration JSON"));
+    }
+
     @GetMapping public ApiResponse<MerchantConfigurationResponse> get(@PathVariable Long storeId) {
         return ApiResponse.success(service.get(storeId));
     }

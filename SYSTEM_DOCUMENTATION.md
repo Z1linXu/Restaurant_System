@@ -9606,3 +9606,5 @@ Contracts and bounded local evidence are in
 [Backend Evidence](docs/commercialization/PHASE3_BACKEND_CONFIGURATION_EVIDENCE.md).
 
 Neutral Profile identity uses the existing aggregate fingerprint contract (identity/schema/canonical content/artifacts), not content-only SHA256. Fresh and upgrade tests recompute the aggregate from persisted database columns and reject a raw content hash as the Profile fingerprint; V39/V40 and old ledger bytes remain unchanged.
+
+The Merchant Configuration controller handles unreadable/empty JSON locally as HTTP400 with `MERCHANT_CONFIGURATION_INVALID_JSON`; no parser detail or tenant lookup is exposed. The existing global error contract is unchanged. Real-Bearer parser tests assert no configuration/audit write.

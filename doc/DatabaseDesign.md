@@ -1119,3 +1119,9 @@ Combo 不作为独立菜品扣库存，套餐中的主品/配菜/鸡蛋都按真
 - Kitchen 负责执行
 - Inventory 负责数据一致性
 - Reporting 用于分析
+
+## Commercial configuration additions (isolated development)
+
+V39 adds Store-keyed `store_merchant_configurations` (schema/revision, brand/locale, read-only CAD/tax identity, explicit runtime Profile/mode, source and audit actor/time). Existing Store/Org/module/menu/device facts retain their original tables; no duplicate mutable graph is introduced. Backfill is limited to the migration-time verified/explicit legacy installation rows; missing/new configuration is Neutral.
+
+V40 adds only the reviewed empty public `NEUTRAL_RESTAURANT@v1` preset and permits absent Master Menu fields in the existing provisioning request ledger only for that exact preset. Existing private Profiles/artifacts and historical business rows are retained. V1–V40 are immutable after application; recovery uses additive forward repair, never queue/history deletion or restoring an unknown Store to implicit Lanzhou defaults. See the [configuration contract](../docs/commercialization/PHASE3_CONFIGURATION_CONTRACT.md) and [Profile design](../docs/commercialization/PHASE3_PROFILE_DESIGN.md).
