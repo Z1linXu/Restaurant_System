@@ -1,3 +1,4 @@
+import { getEnvironmentId, matchesOfflineScope, offlineScopeKey, type OfflineScope } from './environmentScope'
 import type { BackendOrderResponse, OrderLineItem } from '../types/ordering'
 import { createClientId } from '../utils/randomId'
 import {
@@ -8,7 +9,7 @@ import {
 } from './offlineDatabase'
 import { stablePayloadHash } from './offlineHash'
 
-export const LOCAL_DRAFT_SCHEMA_VERSION = 1
+export const LOCAL_DRAFT_SCHEMA_VERSION = 2
 export const LOCAL_DRAFT_UPDATED_EVENT = 'restaurant-local-draft-updated'
 export const NON_EMPTY_DRAFT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000
 export const EMPTY_DRAFT_RETENTION_MS = 24 * 60 * 60 * 1000
@@ -26,11 +27,7 @@ export type LocalDraftSubmitState =
   | 'COMPLETED'
   | 'CANCELLED'
 
-export interface LocalDraftScope {
-  accountId: number
-  organizationId: number
-  storeId: number
-}
+export type LocalDraftScope = OfflineScope
 
 export interface LocalDraftContext {
   orderType: 'dine_in' | 'pickup'
@@ -84,7 +81,7 @@ export function buildDraftContextKey(context: LocalDraftContext) {
 }
 
 export function localDraftKey(scope: LocalDraftScope, contextKey: string) {
-  return `account:${scope.accountId}|organization:${scope.organizationId}|store:${scope.storeId}|${contextKey}`
+  return `${offlineScopeKey(scope)}|${contextKey}`
 }
 
 export function localDraftPayload(record: Pick<
@@ -189,6 +186,7 @@ export function resolveLocalDraftWrite(
 export function reopenRejectedLocalDraft(record: LocalDraftRecord, now = new Date()) {
   const next = createLocalDraftRecord(
     {
+      environmentId: record.environmentId,
       accountId: record.accountId,
       organizationId: record.organizationId,
       storeId: record.storeId,
@@ -204,9 +202,7 @@ export function reopenRejectedLocalDraft(record: LocalDraftRecord, now = new Dat
 }
 
 function matchesScope(record: LocalDraftRecord, scope: LocalDraftScope, contextKey: string) {
-  return record.accountId === scope.accountId
-    && record.organizationId === scope.organizationId
-    && record.storeId === scope.storeId
+  return matchesOfflineScope(record, scope)
     && record.contextKey === contextKey
     && record.schemaVersion === LOCAL_DRAFT_SCHEMA_VERSION
 }
@@ -221,7 +217,6 @@ export async function readLocalDraft(scope: LocalDraftScope, contextKey: string)
   await completed
   if (!record) return null
   if (!matchesScope(record, scope, contextKey)) {
-    await deleteLocalDraft(scope, contextKey)
     return null
   }
   return record
@@ -284,9 +279,7 @@ export async function listLocalDraftsForScope(scope: LocalDraftScope) {
   )
   await completed
   return records.filter((record) => (
-    record.accountId === scope.accountId
-    && record.organizationId === scope.organizationId
-    && record.storeId === scope.storeId
+    matchesOfflineScope(record, scope)
     && record.schemaVersion === LOCAL_DRAFT_SCHEMA_VERSION
   ))
 }
@@ -347,7 +340,9 @@ export async function cleanupExpiredLocalDrafts(nowMs = Date.now()) {
   cursorRequest.onsuccess = () => {
     const cursor = cursorRequest.result
     if (!cursor) return
-    if (isLocalDraftExpired(cursor.value as LocalDraftRecord, nowMs)) {
+    const record = cursor.value as LocalDraftRecord
+    // Unknown-provenance legacy rows are retained for controlled recovery.
+    if (record.environmentId === getEnvironmentId() && record.schemaVersion === LOCAL_DRAFT_SCHEMA_VERSION && isLocalDraftExpired(record, nowMs)) {
       cursor.delete()
     }
     cursor.continue()

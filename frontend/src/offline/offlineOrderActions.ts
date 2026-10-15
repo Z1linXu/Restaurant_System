@@ -1,3 +1,4 @@
+import { canProcessOfflineRecord } from './environmentScope'
 import {
   listLocalDraftsForScope,
   reopenRejectedLocalDraft,
@@ -17,11 +18,13 @@ export async function retryOfflineOrder(
   scope: LocalDraftScope,
   clientOrderId: string,
 ) {
+  if (!canProcessOfflineRecord(scope)) throw new Error('OFFLINE_SCOPE_INACTIVE')
   const record = await readOrderOutboxRecord(
     scope.accountId,
     scope.organizationId,
     scope.storeId,
     clientOrderId,
+    scope.environmentId,
   )
   if (!record) return null
   if (record.state === 'SUBMITTING') {
@@ -45,11 +48,13 @@ export async function readOfflineOrderState(
   scope: LocalDraftScope,
   clientOrderId: string,
 ) {
+  if (!canProcessOfflineRecord(scope)) throw new Error('OFFLINE_SCOPE_INACTIVE')
   const record = await readOrderOutboxRecord(
     scope.accountId,
     scope.organizationId,
     scope.storeId,
     clientOrderId,
+    scope.environmentId,
   )
   if (record) return record.state
   const drafts = await listLocalDraftsForScope(scope)
@@ -60,11 +65,13 @@ export async function cancelOfflineOrder(
   scope: LocalDraftScope,
   clientOrderId: string,
 ) {
+  if (!canProcessOfflineRecord(scope)) throw new Error('OFFLINE_SCOPE_INACTIVE')
   const record = await readOrderOutboxRecord(
     scope.accountId,
     scope.organizationId,
     scope.storeId,
     clientOrderId,
+    scope.environmentId,
   )
   if (record?.state === 'SUBMITTING') {
     throw new Error('订单正在确认服务器结果，暂时不能取消。')
@@ -102,11 +109,13 @@ export async function returnOfflineOrderToDraft(
   scope: LocalDraftScope,
   clientOrderId: string,
 ) {
+  if (!canProcessOfflineRecord(scope)) throw new Error('OFFLINE_SCOPE_INACTIVE')
   const record = await readOrderOutboxRecord(
     scope.accountId,
     scope.organizationId,
     scope.storeId,
     clientOrderId,
+    scope.environmentId,
   )
   if (!record) return null
   if (record.state === 'SUBMITTING' || record.state === 'FAILED_RETRYABLE') {
@@ -151,5 +160,5 @@ export async function readOfflineOrderOutbox(
   scope: LocalDraftScope,
   clientOrderId: string,
 ) {
-  return readOrderOutboxRecord(scope.accountId, scope.organizationId, scope.storeId, clientOrderId)
+  return readOrderOutboxRecord(scope.accountId, scope.organizationId, scope.storeId, clientOrderId, scope.environmentId)
 }

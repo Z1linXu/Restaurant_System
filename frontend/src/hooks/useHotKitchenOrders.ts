@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { fetchKitchenOrderDetail, fetchNoodleDisplayTasks, subscribeToNoodleDisplay } from '../services/kdsService'
+import { fetchKitchenOrderDetail, fetchHotKitchenDisplayTasks, subscribeToHotKitchen } from '../services/kdsService'
 import type { NoodleStationOrder } from '../types/kds'
 
 const POLL_INTERVAL_MS = 4000
@@ -27,7 +27,7 @@ export function useHotKitchenOrders(storeId: number) {
     setError(null)
 
     try {
-      const tasks = filterHotKitchenTasks(await fetchNoodleDisplayTasks(storeId))
+      const tasks = filterHotKitchenTasks(await fetchHotKitchenDisplayTasks(storeId))
       const orderIds = Array.from(new Set(tasks.map((task) => task.order_id)))
 
       if (orderIds.length === 0) {
@@ -62,7 +62,7 @@ export function useHotKitchenOrders(storeId: number) {
   }, [load])
 
   useEffect(() => {
-    const unsubscribe = subscribeToNoodleDisplay(storeId, () => {
+    const unsubscribe = subscribeToHotKitchen(storeId, () => {
       void load(true)
     })
 

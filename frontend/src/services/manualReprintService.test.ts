@@ -3,6 +3,7 @@ import { ApiRequestError, apiRequest } from './apiClient'
 import { followReprint, manualReprint, printResultMessage, reprintErrorMessage } from './manualReprintService'
 import type { PrintJobRecord } from './printingAdminService'
 
+vi.mock('../types/androidPadBridge', () => ({ getAndroidPadDeviceBridge: () => ({ kickPrintWorker: kick }) }))
 vi.mock('./apiClient', async () => ({ ...await vi.importActual<typeof import('./apiClient')>('./apiClient'), apiRequest: vi.fn(),
   getAccessToken: () => `header.${btoa(JSON.stringify({ user_id: 1, organization_id: 1 }))}.signature` }))
 const api = vi.mocked(apiRequest)

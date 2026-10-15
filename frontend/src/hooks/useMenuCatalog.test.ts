@@ -425,7 +425,7 @@ describe('ordering menu item display order', () => {
     const item = mapCatalog(data).items[0]
     const line = buildLocalLineItem(item, buildDefaultDraft(item))
     const record = createLocalDraftRecord(
-      { accountId: 7, organizationId: 9, storeId: 1 },
+      { environmentId: 'https://synthetic.invalid', accountId: 7, organizationId: 9, storeId: 1 },
       {
         orderType: 'dine_in',
         slotLabel: 'T1',

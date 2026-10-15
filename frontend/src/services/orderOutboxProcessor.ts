@@ -1,3 +1,4 @@
+import { canProcessOfflineRecord, captureEnvironmentSession, isEnvironmentSessionCurrent } from '../offline/environmentScope'
 import { ApiRequestError, getApiUserMessage } from './apiClient'
 import { submitIdempotentOrder } from './orderService'
 import type { BackendOrderResponse } from '../types/ordering'
@@ -51,7 +52,8 @@ function submissionTrace(record: OrderOutboxRecord) {
 }
 
 async function executeOrderOutboxRecord(record: OrderOutboxRecord): Promise<OutboxProcessResult> {
-  if (!browserCanSubmit()) {
+  const session = captureEnvironmentSession()
+  if (!canProcessOfflineRecord(record) || !browserCanSubmit()) {
     return { record, order: null }
   }
 
@@ -60,8 +62,10 @@ async function executeOrderOutboxRecord(record: OrderOutboxRecord): Promise<Outb
     record.organizationId,
     record.storeId,
     record.clientOrderId,
+    record.environmentId,
   )
-  if (!current || current.state === 'SUBMITTED' || current.state === 'CONFLICT'
+  if (!isEnvironmentSessionCurrent(session) || !canProcessOfflineRecord(record)) return { record, order: null }
+  if (!current || current.key !== record.key || !canProcessOfflineRecord(current) || current.state === 'SUBMITTED' || current.state === 'CONFLICT'
     || current.state === 'FAILED_VALIDATION' || current.state === 'CANCELLED_LOCAL') {
     return { record: current, order: null }
   }
@@ -70,6 +74,7 @@ async function executeOrderOutboxRecord(record: OrderOutboxRecord): Promise<Outb
   let submitting = await saveOrderOutboxRecord(beginOrderOutboxAttempt(current, new Date(attemptStartedAt)))
   console.info('[order-outbox] submission started', submissionTrace(submitting))
   try {
+    if (!isEnvironmentSessionCurrent(session) || !canProcessOfflineRecord(submitting)) return { record: submitting, order: null }
     const result = await submitIdempotentOrder(submitting.frozenPayload)
     submitting = await saveOrderOutboxRecord(
       completeOrderOutboxAttempt(submitting, result.order_id, result.replayed),
@@ -79,7 +84,7 @@ async function executeOrderOutboxRecord(record: OrderOutboxRecord): Promise<Outb
       orderId: result.order_id,
       replayed: result.replayed,
     })
-    return { record: submitting, order: result.order as BackendOrderResponse }
+    return { record: submitting, order: isEnvironmentSessionCurrent(session) ? result.order as BackendOrderResponse : null }
   } catch (error) {
     const status = error instanceof ApiRequestError ? error.status : 0
     const errorCode = error instanceof ApiRequestError ? (error.code ?? `HTTP_${error.status}`) : 'NETWORK_ERROR'
@@ -128,7 +133,8 @@ function scheduleProcessor(delayMs: number, generation = activeGeneration) {
 
 async function nextProcessorDelay(accountId: number) {
   const records = (await listOrderOutboxForAccount(accountId)).filter((record) => (
-    !inFlightRequests.has(record.key)
+    canProcessOfflineRecord(record)
+    && !inFlightRequests.has(record.key)
     && (record.state === 'QUEUED'
       || record.state === 'SUBMITTING'
       || record.state === 'FAILED_RETRYABLE')
@@ -159,7 +165,7 @@ async function runProcessor(generation: number) {
   processorRunning = true
   try {
     const records = (await listDueOrderOutboxRecords(accountId))
-      .filter((record) => !inFlightRequests.has(record.key))
+      .filter((record) => canProcessOfflineRecord(record) && !inFlightRequests.has(record.key))
       .slice(0, MAX_BATCH_SIZE)
     for (const record of records) {
       if (generation !== activeGeneration || !browserCanSubmit()) break
@@ -216,18 +222,23 @@ export function startOrderOutboxProcessor(accountId: number) {
     previousConnectionState = nextState
   })
 
+  const stopForAuth = () => { activeGeneration += 1; activeAccountId = null; clearScheduledTimer() }
+  window.addEventListener('restaurant-auth-expired', stopForAuth)
+  window.addEventListener('restaurant-offline-scope-updated', handleOnline)
   window.addEventListener('online', handleOnline)
   document.addEventListener('visibilitychange', handleVisibility)
   scheduleProcessor(0, generation)
 
   return () => {
+    window.removeEventListener('restaurant-auth-expired', stopForAuth)
+    window.removeEventListener('restaurant-offline-scope-updated', handleOnline)
+    window.removeEventListener('online', handleOnline)
+    document.removeEventListener('visibilitychange', handleVisibility)
+    unsubscribeConnection()
     if (generation !== activeGeneration) return
     activeGeneration += 1
     activeAccountId = null
     pendingKick = false
     clearScheduledTimer()
-    window.removeEventListener('online', handleOnline)
-    document.removeEventListener('visibilitychange', handleVisibility)
-    unsubscribeConnection()
   }
 }

@@ -149,6 +149,7 @@ describe('order option mapping for dynamic combo groups', () => {
       notes: '',
     }
     const record = {
+      environmentId: 'https://synthetic.invalid',
       accountId: 1,
       organizationId: 9,
       storeId: 1,

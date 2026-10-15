@@ -10,7 +10,7 @@ vi.mock('../services/menuService', () => ({ fetchMenuCatalog: vi.fn(), fetchMenu
 vi.mock('../services/networkStatus', () => ({ recordAppOperation: vi.fn() }))
 vi.mock('../offline/menuCache', () => ({ readActiveMenuSnapshot: vi.fn(), replaceActiveMenuSnapshot: vi.fn() }))
 
-const scope = { accountId: 5, organizationId: 9, storeId: 1 }
+const scope = { environmentId: 'https://synthetic.invalid', accountId: 5, organizationId: 9, storeId: 1 }
 function catalog(revision: number, name: string, price: number): BackendMenuCatalog {
   return {
     store_id: 1, organization_id: 9, menu_revision: revision, generated_at: '2026-09-15T17:00:00Z',
@@ -44,6 +44,7 @@ describe('returning to ordering after central Add-on edits', () => {
   }
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubGlobal('window', Object.assign(new EventTarget(), { location: { origin: 'https://synthetic.invalid' } }))
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   })
   afterEach(async () => {

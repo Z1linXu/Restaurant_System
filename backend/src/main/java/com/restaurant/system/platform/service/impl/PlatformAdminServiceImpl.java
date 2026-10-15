@@ -26,6 +26,9 @@ import com.restaurant.system.platform.repository.OrganizationRepository;
 import com.restaurant.system.platform.repository.RestaurantTemplateRepository;
 import com.restaurant.system.platform.repository.StoreKdsDisplayConfigRepository;
 import com.restaurant.system.platform.service.PlatformAdminService;
+import com.restaurant.system.platform.controller.PlatformResourceAuthorization;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import com.restaurant.system.station.entity.DiningTable;
 import com.restaurant.system.station.entity.Station;
 import com.restaurant.system.station.repository.DiningTableRepository;
@@ -68,6 +71,8 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
     private final ChainMasterMenuVersionRepository chainMasterMenuVersionRepository;
     private final StoreMenuMasterMappingRepository storeMenuMasterMappingRepository;
     private final ObjectMapper objectMapper;
+    private final PlatformResourceAuthorization userAuthorization;
+    private final EntityManager entityManager;
 
     public PlatformAdminServiceImpl(
         OrganizationRepository organizationRepository,
@@ -84,7 +89,9 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         MenuRevisionService menuRevisionService,
         ChainMasterMenuRepository chainMasterMenuRepository,
         ChainMasterMenuVersionRepository chainMasterMenuVersionRepository,
-        StoreMenuMasterMappingRepository storeMenuMasterMappingRepository
+        StoreMenuMasterMappingRepository storeMenuMasterMappingRepository,
+        PlatformResourceAuthorization userAuthorization,
+        EntityManager entityManager
     ) {
         this.organizationRepository = organizationRepository;
         this.restaurantTemplateRepository = restaurantTemplateRepository;
@@ -102,14 +109,17 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         this.chainMasterMenuVersionRepository = chainMasterMenuVersionRepository;
         this.storeMenuMasterMappingRepository = storeMenuMasterMappingRepository;
         this.objectMapper = new ObjectMapper();
+        this.userAuthorization = userAuthorization;
+        this.entityManager = entityManager;
     }
 
     @Override
     public PlatformAdminOverviewResponse getOverview(Long storeId) {
         PlatformAdminOverviewResponse response = new PlatformAdminOverviewResponse();
-        response.organizations = getOrganizations();
-        response.templates = getTemplates();
-        response.stores = getStores();
+        Store selected = storeRepository.findById(storeId).orElseThrow(() -> new com.restaurant.system.common.auth.ForbiddenException("Access denied for store"));
+        response.organizations = selected.organization_id == null ? List.of() : organizationRepository.findById(selected.organization_id).map(List::of).orElse(List.of());
+        response.templates = getTemplates().stream().filter(template -> java.util.Objects.equals(template.organization_id, selected.organization_id)).toList();
+        response.stores = List.of(selected);
         response.roles = getRoles();
         response.users = getUsers(storeId);
         response.stations = getStations(storeId);
@@ -184,6 +194,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
             || "ACTIVE".equalsIgnoreCase(target.lifecycle_status))) {
             throw new BusinessException("PHASE_B_PART2_ACTIVATION_COORDINATOR_REQUIRED");
         }
+        if (!java.util.Objects.equals(target.organization_id, store.organization_id)) throw new com.restaurant.system.common.auth.ForbiddenException("Store Organization cannot be changed");
         target.organization_id = store.organization_id;
         target.name = store.name;
         target.code = store.code;
@@ -214,6 +225,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
             ? new Station()
             : stationRepository.findById(station.id).orElseThrow(() -> new BusinessException("Station not found"));
         Long previousStoreId = target.store_id;
+        if (station.id != null && !java.util.Objects.equals(target.store_id, station.store_id)) throw new com.restaurant.system.common.auth.ForbiddenException("Resource Store cannot be changed");
         target.store_id = station.store_id;
         target.name = station.name;
         target.name_zh = firstNonBlank(station.name_zh, station.name);
@@ -247,6 +259,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         DiningTable target = diningTable.id == null
             ? new DiningTable()
             : diningTableRepository.findById(diningTable.id).orElseThrow(() -> new BusinessException("Dining table not found"));
+        if (diningTable.id != null && !java.util.Objects.equals(target.store_id, diningTable.store_id)) throw new com.restaurant.system.common.auth.ForbiddenException("Resource Store cannot be changed");
         target.store_id = diningTable.store_id;
         target.table_code = diningTable.table_code;
         target.table_name = diningTable.table_name;
@@ -274,6 +287,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
             ? new MenuCategory()
             : menuCategoryRepository.findById(menuCategory.id).orElseThrow(() -> new BusinessException("Menu category not found"));
         Long previousStoreId = target.store_id;
+        if (menuCategory.id != null && !java.util.Objects.equals(target.store_id, menuCategory.store_id)) throw new com.restaurant.system.common.auth.ForbiddenException("Resource Store cannot be changed");
         target.store_id = menuCategory.store_id;
         target.code = menuCategory.code;
         target.name_zh = menuCategory.name_zh;
@@ -321,6 +335,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
             && !java.util.Objects.equals(target.store_id, menuItem.store_id)) {
             throw new BusinessException("Clear the item Combo egg default before moving the item to another Store.");
         }
+        if (!creating && !java.util.Objects.equals(target.store_id, menuItem.store_id)) throw new com.restaurant.system.common.auth.ForbiddenException("Resource Store cannot be changed");
         Long previousStoreId = target.store_id;
         Long previousCategoryId = target.category_id;
         target.store_id = menuItem.store_id;
@@ -415,6 +430,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         rejectAddonWrite(target);
         rejectComboWrite(menuItemOption);
         rejectAddonWrite(menuItemOption);
+        if (menuItemOption.id != null && !java.util.Objects.equals(target.menu_item_id, menuItemOption.menu_item_id)) throw new com.restaurant.system.common.auth.ForbiddenException("Option item cannot be changed");
         Long previousStoreId = target.menu_item_id == null ? null : findMenuItemStoreId(target.menu_item_id);
         target.menu_item_id = menuItemOption.menu_item_id;
         target.option_type = menuItemOption.option_type;
@@ -476,6 +492,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         StoreKdsDisplayConfig target = config.id == null
             ? new StoreKdsDisplayConfig()
             : storeKdsDisplayConfigRepository.findById(config.id).orElseThrow(() -> new BusinessException("KDS config not found"));
+        if (config.id != null && !java.util.Objects.equals(target.store_id, config.store_id)) throw new com.restaurant.system.common.auth.ForbiddenException("Resource Store cannot be changed");
         target.store_id = config.store_id;
         target.screen_code = config.screen_code;
         target.header_layout = config.header_layout;
@@ -498,7 +515,12 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
     public User saveUser(User user) {
         User target = user.getId() == null
             ? new User()
-            : userRepository.findById(user.getId()).orElseThrow(() -> new BusinessException("User not found"));
+            : userRepository.findByIdForUpdate(user.getId()).orElseThrow(() -> new BusinessException("User not found"));
+        // An earlier controller/OSIV read may still hold the pre-move identity.
+        // Refresh while locked, then repeat actual Store/role/raw-grant authorization.
+        if (user.getId() != null) entityManager.refresh(target, LockModeType.PESSIMISTIC_WRITE);
+        userAuthorization.user(user.getId(), user);
+        if (user.getId() != null && !java.util.Objects.equals(target.getStore_id(), user.getStore_id())) throw new com.restaurant.system.common.auth.ForbiddenException("User Store cannot be changed through generic save");
         target.setStore_id(user.getStore_id());
         target.setRole_id(user.getRole_id());
         target.setUsername(user.getUsername());

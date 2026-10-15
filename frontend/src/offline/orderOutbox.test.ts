@@ -16,9 +16,10 @@ import {
 import type { IdempotentOrderSubmitPayload } from '../services/orderService'
 
 const draft: LocalDraftRecord = {
-  key: 'account:7|organization:9|store:3|table:T1',
+  key: 'environment:https%3A%2F%2Fsynthetic.invalid|account:7|organization:9|store:3|table:T1',
   localDraftId: 'local-draft-1',
   clientOrderId: 'client-order-1',
+  environmentId: 'https://synthetic.invalid',
   accountId: 7,
   organizationId: 9,
   storeId: 3,
@@ -86,7 +87,7 @@ describe('order outbox state machine', () => {
   it('freezes one store/account-scoped payload with the stable client idempotency key', () => {
     const record = createOrderOutboxRecord(draft, payload, new Date('2026-07-13T10:00:00Z'))
 
-    expect(record.key).toBe('account:7|organization:9|store:3|client:client-order-1')
+    expect(record.key).toBe('environment:https%3A%2F%2Fsynthetic.invalid|account:7|organization:9|store:3|client:client-order-1')
     expect(record.clientOrderId).toBe('client-order-1')
     expect(record.frozenPayload).toEqual(payload)
     expect(record.state).toBe('QUEUED')

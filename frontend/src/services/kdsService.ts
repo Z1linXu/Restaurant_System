@@ -1,6 +1,7 @@
 import type { BackendOrderResponse } from '../types/ordering'
 import type { BackendKdsHistoryOrder, BackendKdsTaskDisplay } from '../types/kds'
 import { apiRequest } from './apiClient'
+import { createAuthenticatedRealtimeClient } from './realtimeClient'
 
 const request = apiRequest
 
@@ -9,6 +10,11 @@ export async function fetchNoodleDisplayTasks(storeId: number) {
   params.set('store_id', String(storeId))
 
   return request<BackendKdsTaskDisplay[]>(`/api/v1/kds/noodle-display?${params.toString()}`)
+}
+
+export async function fetchHotKitchenDisplayTasks(storeId: number) {
+  const params = new URLSearchParams({ store_id: String(storeId) })
+  return request<BackendKdsTaskDisplay[]>(`/api/v1/kds/hot-kitchen?${params.toString()}`)
 }
 
 export async function fetchKitchenOrderDetail(orderId: number) {
@@ -36,43 +42,28 @@ export function subscribeToNoodleDisplay(
   onMessage: () => void,
 ) {
   let disposed = false
-  let deactivate: (() => void) | null = null
-
-  void Promise.all([import('@stomp/stompjs'), import('sockjs-client')])
-    .then(([stompModule, sockJsModule]) => {
-      if (disposed) {
-        return
-      }
-
-      const ClientCtor = stompModule.Client
-      const SockJSImport = sockJsModule.default
-      const SockJSCtor =
-        typeof SockJSImport === 'function'
-          ? SockJSImport
-          : ((sockJsModule as unknown as { SockJS?: typeof SockJSImport }).SockJS ?? SockJSImport)
-
-      const client = new ClientCtor({
-        webSocketFactory: () => new SockJSCtor('/ws'),
-        reconnectDelay: 3000,
-      })
-
-      client.onConnect = () => {
-        client.subscribe(`/topic/stores/${storeId}/kds/noodle-display`, () => {
-          onMessage()
-        })
-      }
-
-      client.activate()
-      deactivate = () => {
-        void client.deactivate()
-      }
+  const connection = createAuthenticatedRealtimeClient()
+  let subscription: { unsubscribe: () => void } | null = null
+  connection.client.onConnect = () => {
+    if (disposed) return
+    subscription?.unsubscribe()
+    subscription = connection.client.subscribe(`/topic/stores/${storeId}/kds/noodle-display`, () => {
+      if (!disposed) onMessage()
     })
-    .catch(() => {
-      // ignore websocket bootstrap failures; polling remains the fallback
-    })
-
-  return () => {
-    disposed = true
-    deactivate?.()
   }
+  connection.client.activate()
+  return () => { if (disposed) return; disposed=true; subscription?.unsubscribe(); subscription=null; connection.dispose() }
+}
+
+export function subscribeToHotKitchen(storeId: number, onMessage: () => void) {
+  let disposed = false
+  const connection = createAuthenticatedRealtimeClient()
+  let subscription: { unsubscribe: () => void } | null = null
+  connection.client.onConnect = () => {
+    if (disposed) return
+    subscription?.unsubscribe()
+    subscription = connection.client.subscribe(`/topic/stores/${storeId}/kds/hot-kitchen`, () => { if (!disposed) onMessage() })
+  }
+  connection.client.activate()
+  return () => { if (disposed) return; disposed=true; subscription?.unsubscribe(); subscription=null; connection.dispose() }
 }

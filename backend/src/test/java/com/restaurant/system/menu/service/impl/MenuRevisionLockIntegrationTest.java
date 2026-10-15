@@ -10,6 +10,7 @@ import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.repository.MenuItemRepository;
 import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.platform.service.impl.PlatformAdminServiceImpl;
+import com.restaurant.system.platform.controller.PlatformResourceAuthorization;
 import com.restaurant.system.station.entity.Station;
 import com.restaurant.system.station.repository.StationRepository;
 import com.restaurant.system.user.entity.Store;
@@ -31,6 +32,7 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.test.context.ContextConfiguration;
@@ -54,6 +56,9 @@ class MenuRevisionLockIntegrationTest {
     @EnableJpaRepositories(basePackages = "com.restaurant.system")
     static class JpaSliceConfiguration {
     }
+
+    // This menu-lock slice never mutates users; user authorization is tested with real guards separately.
+    @MockBean private PlatformResourceAuthorization resourceAuthorization;
 
     @Autowired private MenuRevisionService menuRevisionService;
     @Autowired private PlatformAdminServiceImpl platformAdminService;

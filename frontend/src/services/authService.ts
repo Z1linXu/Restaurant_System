@@ -1,3 +1,4 @@
+import { assertEnvironmentSession, captureEnvironmentSession, getEnvironmentId } from '../offline/environmentScope'
 import { apiRequest, clearAuthTokens, getRefreshToken, saveAuthTokens } from './apiClient'
 
 export interface AuthUser {
@@ -20,6 +21,7 @@ export interface LoginResponse {
 }
 
 export async function login(loginIdentifier: string, password: string) {
+  const environmentSession = captureEnvironmentSession()
   const response = await apiRequest<LoginResponse>('/api/v1/auth/login', {
     method: 'POST',
     body: JSON.stringify({
@@ -27,6 +29,7 @@ export async function login(loginIdentifier: string, password: string) {
       password,
     }),
   })
+  assertEnvironmentSession(environmentSession)
   saveAuthTokens(response.access_token, response.refresh_token)
   return response
 }
@@ -40,21 +43,25 @@ export async function refreshAccessToken() {
   if (!refreshToken) {
     throw new Error('Refresh token is missing')
   }
+  const environmentSession = captureEnvironmentSession()
   const response = await apiRequest<LoginResponse>('/api/v1/auth/refresh', {
     method: 'POST',
     body: JSON.stringify({ refresh_token: refreshToken }),
   })
+  assertEnvironmentSession(environmentSession)
   saveAuthTokens(response.access_token, response.refresh_token)
   return response
 }
 
 export async function logout() {
+  const environmentId = getEnvironmentId()
   const refreshToken = getRefreshToken()
+  // Clear locally before waiting for revocation. Pending orders remain in IndexedDB.
+  clearAuthTokens()
   if (refreshToken) {
-    await apiRequest<void>('/api/v1/auth/logout', {
+    await apiRequest<void>(`${environmentId}/api/v1/auth/logout`, {
       method: 'POST',
       body: JSON.stringify({ refresh_token: refreshToken }),
     }).catch(() => undefined)
   }
-  clearAuthTokens()
 }

@@ -111,11 +111,11 @@ function kickPadDirectPrintWorker(reason: string, orderId: number, updateBatchId
     return
   }
   try {
-    bridge.kickPrintWorker(JSON.stringify({
+    void bridge.kickPrintWorker(JSON.stringify({
       reason,
       order_id: orderId,
       order_update_batch_id: updateBatchId ?? null,
-    }))
+    })).catch(() => undefined)
   } catch {
     // The Android bridge is an optimization for local Pad printing; ordering must not depend on it.
   }

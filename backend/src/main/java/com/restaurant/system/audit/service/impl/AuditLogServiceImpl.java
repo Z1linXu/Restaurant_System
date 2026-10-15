@@ -89,6 +89,7 @@ public class AuditLogServiceImpl implements AuditLogService {
 
     @Override
     public AuditLogPageResponse search(Long storeId, LocalDate date, String actor, String action, int page, int size) {
+        if (storeId == null) throw new com.restaurant.system.common.auth.ForbiddenException("An authorized store is required for audit logs");
         LocalDate effectiveDate = date == null ? LocalDate.now() : date;
         LocalDateTime start = effectiveDate.atStartOfDay();
         LocalDateTime end = effectiveDate.plusDays(1).atStartOfDay();

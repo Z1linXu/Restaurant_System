@@ -282,15 +282,15 @@ function StaffProfileModal({
   const [deviceStatus, setDeviceStatus] = useState<AndroidPadDeviceStatus | null>(null)
   const [workerStatus, setWorkerStatus] = useState<AndroidPadPrintWorkerStatus | null>(null)
 
-  const refreshAndroidState = () => {
+  const refreshAndroidState = async () => {
     const bridge = getAndroidPadDeviceBridge()
     setBridgeAvailable(Boolean(bridge))
-    setDeviceStatus(bridge ? parseAndroidBridgeJson<AndroidPadDeviceStatus>(bridge.getDeviceStatus()) : null)
-    setWorkerStatus(bridge?.getPrintWorkerStatus ? parseAndroidBridgeJson<AndroidPadPrintWorkerStatus>(bridge.getPrintWorkerStatus()) : null)
+    setDeviceStatus(bridge ? parseAndroidBridgeJson<AndroidPadDeviceStatus>(await bridge.getDeviceStatus().catch(() => '')) : null)
+    setWorkerStatus(bridge?.getPrintWorkerStatus ? parseAndroidBridgeJson<AndroidPadPrintWorkerStatus>(await bridge.getPrintWorkerStatus().catch(() => '')) : null)
   }
 
   useEffect(() => {
-    const animationFrameId = window.requestAnimationFrame(refreshAndroidState)
+    const animationFrameId = window.requestAnimationFrame(() => { void refreshAndroidState() })
     const intervalId = window.setInterval(refreshAndroidState, 5000)
     return () => {
       window.cancelAnimationFrame(animationFrameId)

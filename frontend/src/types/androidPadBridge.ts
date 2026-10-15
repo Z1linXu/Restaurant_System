@@ -1,5 +1,7 @@
 export interface AndroidPadDeviceStatus {
   paired?: boolean
+  can_replace_binding?: boolean
+  legacy_pairing_retained?: boolean
   device_id?: string | number | null
   store_id?: string | number | null
   device_store_id?: string | number | null
@@ -46,22 +48,69 @@ export interface AndroidPadPrintWorkerStatus {
 }
 
 export interface AndroidPadDeviceBridge {
-  attestPrintRequest?: (json: string) => string
-  saveDeviceCredentials: (json: string) => string
-  getDeviceStatus: () => string
-  clearDeviceCredentials: () => string
-  getPrintWorkerStatus?: () => string
-  kickPrintWorker?: (json: string) => string
+  attestPrintRequest?: (json: string) => Promise<string>
+  saveDeviceCredentials: (json: string) => Promise<string>
+  getDeviceStatus: () => Promise<string>
+  clearDeviceCredentials: () => Promise<string>
+  getPrintWorkerStatus?: () => Promise<string>
+  kickPrintWorker?: (json: string) => Promise<string>
 }
 
+interface NativeMessageChannel {
+  postMessage: (message: string) => void
+  onmessage?: (event: { data: string }) => void
+}
 declare global {
   interface Window {
-    RestaurantPadDevice?: AndroidPadDeviceBridge
+    RestaurantPadMessages?: NativeMessageChannel
+    // Detection only: never invoke an unverified legacy JavascriptInterface.
+    RestaurantPadDevice?: unknown
   }
 }
 
-export function getAndroidPadDeviceBridge() {
-  return typeof window === 'undefined' ? undefined : window.RestaurantPadDevice
+let channel: NativeMessageChannel | undefined
+let bridge: AndroidPadDeviceBridge | undefined
+let sequence = 0
+const pending = new Map<string, { resolve: (value: string) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }>()
+export function getAndroidPadDeviceBridge(): AndroidPadDeviceBridge | undefined {
+  const next = typeof window === 'undefined' ? undefined : window.RestaurantPadMessages
+  if (!next) return undefined
+  if (channel === next) return bridge
+  for (const operation of pending.values()) {
+    clearTimeout(operation.timer)
+    operation.reject(new Error('Pad bridge changed'))
+  }
+  pending.clear()
+  channel = next
+  next.onmessage = (event) => {
+    try {
+      const message = JSON.parse(event.data) as { request_id: string; result: string }
+      const operation = pending.get(message.request_id)
+      if (!operation) return
+      pending.delete(message.request_id)
+      clearTimeout(operation.timer)
+      operation.resolve(message.result)
+    } catch { /* Invalid replies time out; never substitute a successful result. */ }
+  }
+  const call = (method: string, json = '{}') => new Promise<string>((resolve, reject) => {
+    const requestId = String(++sequence)
+    const timer = setTimeout(() => {
+      pending.delete(requestId)
+      reject(new Error('Pad response timed out / Pad 响应超时'))
+    }, 5000)
+    pending.set(requestId, { resolve, reject, timer })
+    try { next.postMessage(JSON.stringify({ request_id: requestId, method, payload: json })) }
+    catch (error) { clearTimeout(timer); pending.delete(requestId); reject(error) }
+  })
+  bridge = {
+    attestPrintRequest: (json) => call('attestPrintRequest', json),
+    saveDeviceCredentials: (json) => call('saveDeviceCredentials', json),
+    getDeviceStatus: () => call('getDeviceStatus'),
+    clearDeviceCredentials: () => call('clearDeviceCredentials'),
+    getPrintWorkerStatus: () => call('getPrintWorkerStatus'),
+    kickPrintWorker: (json) => call('kickPrintWorker', json),
+  }
+  return bridge
 }
 
 export function parseAndroidBridgeJson<T>(raw: string | null | undefined): T | null {

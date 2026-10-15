@@ -1,3 +1,4 @@
+import { activateOfflineAccount } from '../../offline/environmentScope'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../App'
@@ -25,12 +26,13 @@ function context(id: number, enabled: boolean): StoreContextResponse {
 describe('Uber Store capability on the shared frontend', () => {
   let view: ReactTestRenderer | undefined
   let listener: (() => void) | undefined
-  let location: { pathname: string }
+  let location: { pathname: string; origin: string }
   beforeEach(() => {
     session.role = 'OWNER'; vi.clearAllMocks()
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
-    location = { pathname: '/stores/51/frontdesk/uber-eats' }
-    vi.stubGlobal('window', { location, addEventListener: (name: string, fn: () => void) => { if (name === 'popstate') listener = fn }, removeEventListener: vi.fn() })
+    location = { pathname: '/stores/51/frontdesk/uber-eats', origin: 'https://synthetic.invalid' }
+    vi.stubGlobal('window', { location, addEventListener: (name: string, fn: () => void) => { if (name === 'popstate') listener = fn }, removeEventListener: vi.fn(), dispatchEvent: vi.fn() })
+    activateOfflineAccount(1)
     vi.mocked(fetchStoreContext).mockImplementation(async id => context(id, id !== 73))
   })
   afterEach(async () => { if (view) await act(async () => view!.unmount()); vi.unstubAllGlobals() })

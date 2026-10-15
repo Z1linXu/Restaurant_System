@@ -70,6 +70,7 @@ public class OwnerOverviewServiceImpl implements OwnerOverviewService {
 
         List<Store> stores = storeAccessService.accessibleStores(user).stream()
             .filter(store -> store != null && store.id != null)
+            .filter(store -> storeAccessService.hasCapabilityForStore(user,store,com.restaurant.system.common.auth.Capability.ADMIN_STORE_CONFIG))
             .sorted(Comparator.comparing(store -> store.id))
             .toList();
 

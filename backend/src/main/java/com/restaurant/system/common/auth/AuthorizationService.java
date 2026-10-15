@@ -41,8 +41,8 @@ public class AuthorizationService {
     }
 
     public AuthenticatedUser requireForStore(Long storeId, Capability... capabilities) {
-        AuthenticatedUser authenticatedUser = require(capabilities);
-        ensureSameStore(authenticatedUser, storeId);
+        AuthenticatedUser authenticatedUser = storeAccessService.forStore(requestUserContextService.getRequiredUser(), storeId);
+        ensureHasAnyCapability(authenticatedUser, capabilities);
         return authenticatedUser;
     }
 
@@ -79,17 +79,16 @@ public class AuthorizationService {
     }
 
     public AuthenticatedUser requireOrder(Long orderId, Capability... capabilities) {
-        AuthenticatedUser authenticatedUser = require(capabilities);
+        require(capabilities);
         Order order = orderRepository.findExistingById(orderId);
         if (order == null) {
             throw new ForbiddenException("Order not found for authorization");
         }
-        ensureSameStore(authenticatedUser, order.store_id);
-        return authenticatedUser;
+        return requireForStore(order.store_id, capabilities);
     }
 
     public AuthenticatedUser requireOrderItem(Long orderItemId, Capability... capabilities) {
-        AuthenticatedUser authenticatedUser = require(capabilities);
+        require(capabilities);
         OrderItem orderItem = orderItemRepository.findExistingById(orderItemId);
         if (orderItem == null) {
             throw new ForbiddenException("Order item not found for authorization");
@@ -98,16 +97,14 @@ public class AuthorizationService {
         if (order == null) {
             throw new ForbiddenException("Order not found for authorization");
         }
-        ensureSameStore(authenticatedUser, order.store_id);
-        return authenticatedUser;
+        return requireForStore(order.store_id, capabilities);
     }
 
     public AuthenticatedUser requireKitchenTask(Long kitchenTaskId, Capability... capabilities) {
-        AuthenticatedUser authenticatedUser = require(capabilities);
+        require(capabilities);
         KitchenTask kitchenTask = kitchenTaskRepository.findById(kitchenTaskId)
             .orElseThrow(() -> new ForbiddenException("Kitchen task not found for authorization"));
-        ensureSameStore(authenticatedUser, kitchenTask.store_id);
-        return authenticatedUser;
+        return requireForStore(kitchenTask.store_id, capabilities);
     }
 
     private void ensureHasAnyCapability(AuthenticatedUser authenticatedUser, Capability... capabilities) {
@@ -126,15 +123,6 @@ public class AuthorizationService {
             .reduce((left, right) -> left + ", " + right)
             .orElse("unknown");
         throw new ForbiddenException("Access denied. Required capability: " + requestedCapabilities);
-    }
-
-    private void ensureSameStore(AuthenticatedUser authenticatedUser, Long storeId) {
-        if (storeId == null) {
-            return;
-        }
-        if (!storeAccessService.canAccessStore(authenticatedUser, storeId)) {
-            throw new ForbiddenException("Access denied for store " + storeId);
-        }
     }
 
     public boolean isOwner(AuthenticatedUser authenticatedUser) {

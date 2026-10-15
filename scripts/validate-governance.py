@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -155,8 +156,15 @@ def main() -> int:
         require("DRAFT / SUPPORTING / NOT AUTHORIZED" in draft.read_text(encoding="utf-8"),
                 f"draft lacks non-authorization banner: {draft.relative_to(ROOT)}")
 
-    for path in ROOT.rglob("*.md"):
-        validate_links(path)
+    # Validate repository documents, including new non-ignored docs, without
+    # traversing downloaded node_modules, Gradle output or other generated trees.
+    documents = subprocess.check_output(
+        ["git", "-C", str(ROOT), "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", "*.md"]
+    ).decode().split("\0")
+    for relative in sorted(set(documents) - {""}):
+        path = ROOT / relative
+        if path.exists():
+            validate_links(path)
 
     print("GOVERNANCE_VALIDATION|PASS")
     print(f"PHASE|{get(state, 'phase.current')}")

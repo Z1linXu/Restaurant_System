@@ -1,16 +1,25 @@
+import { ApiRequestError } from './apiClient'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fetchOwnerDashboard } from './ownerDashboardService'
-import { fetchWorkspaces, type WorkspaceResponse } from './storeWorkspaceService'
+import { fetchStoreContext, fetchWorkspaces, type WorkspaceResponse } from './storeWorkspaceService'
 
 const apiRequestMock = vi.hoisted(() => vi.fn())
+const snapshots = vi.hoisted(() => ({ workspace: vi.fn(), context: vi.fn() }))
 
-vi.mock('./apiClient', () => ({
+vi.mock('./apiClient', async () => ({
+  ...await vi.importActual<typeof import('./apiClient')>('./apiClient'),
   apiRequest: apiRequestMock,
+}))
+vi.mock('../offline/workspaceSnapshot', async () => ({
+  ...await vi.importActual<typeof import('../offline/workspaceSnapshot')>('../offline/workspaceSnapshot'),
+  readRestrictedWorkspaceSnapshot: snapshots.workspace, readRestrictedStoreContextSnapshot: snapshots.context,
 }))
 
 describe('admin store scope request contracts', () => {
   beforeEach(() => {
     apiRequestMock.mockReset()
+    snapshots.workspace.mockReset(); snapshots.context.mockReset()
+    vi.stubGlobal('window', { location: { origin: 'https://synthetic.invalid' } })
   })
 
   it('loads selector data with one authorized workspace request instead of platform overview payload', async () => {
@@ -45,4 +54,12 @@ describe('admin store scope request contracts', () => {
       '/api/v1/admin/dashboard?range=today&compare=true&organization_id=10&store_id=2',
     )
   })
+  it.each([401, 403])('never restores cached merchant data after actual service HTTP %s', async (status) => {
+    snapshots.workspace.mockResolvedValue({ stores: [{ id: 999 }] }); snapshots.context.mockResolvedValue({ id: 999 })
+    apiRequestMock.mockRejectedValue(new ApiRequestError(status, 'denied'))
+    await expect(fetchWorkspaces(7)).rejects.toMatchObject({ status })
+    await expect(fetchStoreContext(3, 7)).rejects.toMatchObject({ status })
+    expect(snapshots.workspace).not.toHaveBeenCalled(); expect(snapshots.context).not.toHaveBeenCalled()
+  })
+
 })

@@ -1,3 +1,4 @@
+import { getEnvironmentId } from '../offline/environmentScope'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchMenuCatalog, fetchMenuRevision } from '../services/menuService'
 import { ApiRequestError } from '../services/apiClient'
@@ -392,6 +393,7 @@ function buildScope(storeId: number, identity: MenuCatalogIdentity): MenuCacheSc
     return null
   }
   return {
+    environmentId: getEnvironmentId(),
     accountId: identity.accountId,
     organizationId: identity.organizationId,
     storeId,
@@ -415,7 +417,7 @@ export function useMenuCatalog(storeId: number, identity: MenuCatalogIdentity) {
   const [refreshStatus, setRefreshStatus] = useState<MenuRefreshStatus>('IDLE')
   const loadedCatalogScopeRef = useRef<string | null>(null)
   const catalogAvailableRef = useRef(false)
-  const scopeKey = `${accountId ?? 'anonymous'}:${organizationId ?? 'unknown'}:${storeId}`
+  const scopeKey = `${getEnvironmentId()}:${accountId ?? 'anonymous'}:${organizationId ?? 'unknown'}:${storeId}`
 
   useEffect(() => {
     let active = true

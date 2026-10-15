@@ -57,6 +57,11 @@ class AuthorizationServiceTest {
             roleRepository,
             true
         );
+        lenient().when(storeAccessService.forStore(any(AuthenticatedUser.class), any(Long.class))).thenAnswer(invocation -> {
+            AuthenticatedUser actor=invocation.getArgument(0); Long storeId=invocation.getArgument(1);
+            if (!storeAccessService.canAccessStore(actor, storeId)) throw new ForbiddenException("Access denied for store");
+            return new AuthenticatedUser(actor.userId(),storeId,actor.roleId(),actor.username(),actor.fullName(),actor.roleCode());
+        });
         authorizationService = new AuthorizationService(
             requestUserContextService,
             new RoleCapabilityRegistry(),
@@ -124,16 +129,16 @@ class AuthorizationServiceTest {
     }
 
     @Test
-    void adminBypassesStoreScopeChecks() {
+    void adminCannotUseBusinessCapabilities() {
         stubUser(6L, 100L, "ADMIN");
-        when(storeAccessService.canAccessStore(any(AuthenticatedUser.class), eq(999L))).thenReturn(true);
+
 
         Order order = new Order();
         order.id = 21L;
         order.store_id = 999L;
-        when(orderRepository.findExistingById(21L)).thenReturn(order);
+        lenient().when(orderRepository.findExistingById(21L)).thenReturn(order);
 
-        assertDoesNotThrow(() -> authorizationService.requireOrder(21L, Capability.ORDER_CANCEL));
+        assertThrows(ForbiddenException.class, () -> authorizationService.requireOrder(21L, Capability.ORDER_CANCEL));
     }
 
     @Test

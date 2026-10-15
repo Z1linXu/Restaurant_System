@@ -80,7 +80,7 @@ public class RoleCapabilityRegistry {
             Capability.SHELF_VIEW
         ),
         ROLE_ADMIN,
-        EnumSet.allOf(Capability.class)
+        EnumSet.noneOf(Capability.class)
     );
 
     public boolean hasCapability(String roleCode, Capability capability) {
@@ -104,7 +104,7 @@ public class RoleCapabilityRegistry {
     }
 
     public boolean isOwner(String roleCode) {
-        return ROLE_OWNER.equalsIgnoreCase(roleCode) || ROLE_ADMIN.equalsIgnoreCase(roleCode);
+        return ROLE_OWNER.equalsIgnoreCase(roleCode);
     }
 
     public boolean isManager(String roleCode) {

@@ -1,3 +1,4 @@
+import { getEnvironmentId } from '../../offline/environmentScope'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { followReprint, printResultMessage, reprintErrorMessage } from '../../services/manualReprintService'
 import { isFeatureEnabled } from '../feature-flags/featureConfig'
@@ -400,14 +401,14 @@ export function PrintingSettingsPage() {
   const [pairingPad, setPairingPad] = useState(false)
   const loadRequestId = useRef(0)
 
-  const refreshPadDeviceStatus = useCallback(() => {
+  const refreshPadDeviceStatus = useCallback(async () => {
     const bridge = getAndroidPadDeviceBridge()
     setPadBridgeAvailable(Boolean(bridge))
     if (!bridge) {
       setPadDeviceStatus(null)
       return
     }
-    setPadDeviceStatus(parseAndroidPadStatus(bridge.getDeviceStatus()))
+    setPadDeviceStatus(parseAndroidPadStatus(await bridge.getDeviceStatus().catch(() => '')))
   }, [])
 
   const loadData = useCallback(async (storeId: number, requestId: number) => {
@@ -842,7 +843,11 @@ export function PrintingSettingsPage() {
       return
     }
 
-    const currentStatus = parseAndroidPadStatus(bridge.getDeviceStatus())
+    const currentStatus = parseAndroidPadStatus(await bridge.getDeviceStatus().catch(() => ''))
+    if (currentStatus?.can_replace_binding === false) {
+      setToast({ kind: 'error', message: '当前打印任务尚未结束，请先核对 Print Center，再更换配对。' })
+      return
+    }
     if (currentStatus?.paired) {
       const currentStore = currentStatus.store_id ? `门店 ${currentStatus.store_id}` : '未知门店'
       const nextStore = `门店 ${selectedStoreId}`
@@ -863,7 +868,8 @@ export function PrintingSettingsPage() {
         app_version: currentStatus?.app_version ?? 'unknown',
         platform: 'ANDROID',
       })
-      const saveResult = parseAndroidPadStatus(bridge.saveDeviceCredentials(JSON.stringify({
+      const saveResult = parseAndroidPadStatus(await bridge.saveDeviceCredentials(JSON.stringify({
+        api_origin: getEnvironmentId(),
         device_id: registered.device_id,
         device_token: registered.device_token,
         store_id: registered.store_id,

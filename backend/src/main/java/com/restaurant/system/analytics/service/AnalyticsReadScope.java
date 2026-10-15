@@ -20,6 +20,7 @@ public class AnalyticsReadScope {
     public List<Store> stores(Long organizationId, Long storeId) {
         AuthenticatedUser user = authorization.require(Capability.ADMIN_STORE_CONFIG);
         List<Store> result = storeAccess.accessibleStores(user).stream()
+            .filter(store -> storeAccess.hasCapabilityForStore(user, store, Capability.ADMIN_STORE_CONFIG))
             .filter(store -> organizationId == null || Objects.equals(store.organization_id, organizationId))
             .filter(store -> storeId == null || Objects.equals(store.id, storeId)).toList();
         if (result.isEmpty()) throw new ForbiddenException("No authorized stores in the requested analytics scope");
@@ -32,7 +33,6 @@ public class AnalyticsReadScope {
     }
 
     public void requireGlobalRebuild() {
-        AuthenticatedUser user = authorization.require(Capability.ADMIN_STORE_CONFIG);
-        if (!roles.isAdmin(user.roleCode())) throw new ForbiddenException("A store_id is required for non-admin analytics rebuild");
+        throw new ForbiddenException("An authorized store is required for analytics rebuild");
     }
 }

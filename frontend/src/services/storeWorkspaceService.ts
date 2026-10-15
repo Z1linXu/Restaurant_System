@@ -1,3 +1,4 @@
+import { assertEnvironmentSession, captureEnvironmentSession } from '../offline/environmentScope'
 import { apiRequest } from './apiClient'
 import { canUseOfflineSnapshot } from '../offline/offlineFallbackPolicy'
 import {
@@ -114,23 +115,29 @@ interface OfflineSnapshotOptions {
 }
 
 export async function fetchWorkspaces(accountId?: number | null, options: OfflineSnapshotOptions = {}) {
+  const environmentSession = captureEnvironmentSession()
   if (accountId != null && options.preferOfflineSnapshot) {
     const cached = await readRestrictedWorkspaceSnapshot(accountId).catch(() => null)
+    assertEnvironmentSession(environmentSession)
     if (cached) {
       return cached
     }
   }
   try {
     const response = await apiRequest<WorkspaceResponse>('/api/v1/me/workspaces')
+    assertEnvironmentSession(environmentSession)
     if (accountId != null) {
       await saveWorkspaceSnapshot(accountId, response).catch((snapshotError) => {
         console.warn('[storeWorkspaceService] unable to save workspace snapshot', snapshotError)
       })
     }
+    assertEnvironmentSession(environmentSession)
     return response
   } catch (error) {
+    assertEnvironmentSession(environmentSession)
     if (accountId != null && canUseOfflineSnapshot(error)) {
       const cached = await readRestrictedWorkspaceSnapshot(accountId).catch(() => null)
+      assertEnvironmentSession(environmentSession)
       if (cached) {
         return cached
       }
@@ -144,23 +151,29 @@ export async function fetchStoreContext(
   accountId?: number | null,
   options: OfflineSnapshotOptions = {},
 ) {
+  const environmentSession = captureEnvironmentSession()
   if (accountId != null && options.preferOfflineSnapshot) {
     const cached = await readRestrictedStoreContextSnapshot(accountId, storeId).catch(() => null)
+    assertEnvironmentSession(environmentSession)
     if (cached) {
       return cached
     }
   }
   try {
     const response = await apiRequest<StoreContextResponse>(`/api/v1/stores/${storeId}/context`)
+    assertEnvironmentSession(environmentSession)
     if (accountId != null) {
       await saveStoreContextSnapshot(accountId, response).catch((snapshotError) => {
         console.warn('[storeWorkspaceService] unable to save store context snapshot', snapshotError)
       })
     }
+    assertEnvironmentSession(environmentSession)
     return response
   } catch (error) {
+    assertEnvironmentSession(environmentSession)
     if (accountId != null && canUseOfflineSnapshot(error)) {
       const cached = await readRestrictedStoreContextSnapshot(accountId, storeId).catch(() => null)
+      assertEnvironmentSession(environmentSession)
       if (cached) {
         return cached
       }

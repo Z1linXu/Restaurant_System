@@ -1,3 +1,4 @@
+import { getEnvironmentId } from '../../offline/environmentScope'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { followReprint, printResultMessage, reprintErrorMessage } from '../../services/manualReprintService'
 import { useMenuCatalog } from '../../hooks/useMenuCatalog'
@@ -186,7 +187,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
   const tableBoardEnabled = activeOrderingContext == null
   const offlineOrderScope = useMemo(() => (
     user?.id && organizationId
-      ? { accountId: user.id, organizationId, storeId }
+      ? { environmentId: getEnvironmentId(), accountId: user.id, organizationId, storeId }
       : null
   ), [organizationId, storeId, user?.id])
   const offlineOrders = useStoreOfflineOrders(offlineOrderScope, tableBoardEnabled)

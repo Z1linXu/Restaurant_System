@@ -35,6 +35,7 @@ class AnalyticsScopeAuthorizationTest {
     @BeforeEach void setup() {
         when(auth.require(Capability.ADMIN_STORE_CONFIG)).thenReturn(owner);
         when(access.accessibleStores(owner)).thenReturn(List.of(own));
+        when(access.hasCapabilityForStore(any(), any(), any(Capability[].class))).thenReturn(true);
         var modules = mock(StoreModuleAccessEvaluator.class);
         mvc = MockMvcBuilders.standaloneSetup(
             new AnalyticsAdminController(analytics, auth, mock(FeatureFlagService.class), modules, scope),
@@ -68,14 +69,9 @@ class AnalyticsScopeAuthorizationTest {
         verifyNoInteractions(analytics);
     }
 
-    @Test void globalAdminRetainsExplicitOrganizationAndGlobalAccess() throws Exception {
-        AuthenticatedUser admin = new AuthenticatedUser(99L, null, 99L, "admin", "Admin", "ADMIN");
-        when(auth.require(Capability.ADMIN_STORE_CONFIG)).thenReturn(admin);
-        when(access.accessibleStores(admin)).thenReturn(List.of(own, foreign));
-        when(analytics.getSummaries(eq(2L), isNull(), eq("today"), isNull(), isNull(), isNull())).thenReturn(new AnalyticsSummaryResponse());
-        mvc.perform(get("/api/v1/admin/analytics/summaries").param("organization_id", "2")).andExpect(status().isOk());
-        mvc.perform(post("/api/v1/admin/analytics/rebuild").param("date", "2026-10-03")).andExpect(status().isOk());
-        assertThat(scope.stores(null, null)).extracting(store -> store.id).containsExactly(1L, 2L);
+    @Test void platformAdminHasNoImplicitGlobalRebuildGrant() throws Exception {
+        mvc.perform(post("/api/v1/admin/analytics/rebuild").param("date", "2026-10-03")).andExpect(status().isForbidden());
+        verifyNoInteractions(analytics);
     }
 
     @Test void storeManagerComparisonNeverExpandsToUnassignedSameOrganizationStores() {

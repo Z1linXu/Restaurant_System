@@ -1,5 +1,5 @@
 export const OFFLINE_DATABASE_NAME = 'restaurant-pos-offline'
-export const OFFLINE_DATABASE_VERSION = 4
+export const OFFLINE_DATABASE_VERSION = 5
 
 export const OFFLINE_STORES = {
   menuHeads: 'menuHeads',
@@ -85,4 +85,10 @@ export function transactionComplete(transaction: IDBTransaction) {
     transaction.onerror = () => reject(transaction.error ?? new Error('IndexedDB transaction failed'))
     transaction.onabort = () => reject(transaction.error ?? new Error('IndexedDB transaction was aborted'))
   })
+}
+
+export async function closeOfflineDatabase() {
+  const pending = databasePromise
+  databasePromise = null
+  if (pending) (await pending).close()
 }

@@ -68,7 +68,7 @@ export function manualReprint(path: string, body: Record<string, unknown> = {}, 
           ...body, idempotency_key: key, confirmation_fingerprint: confirmation,
         }) })
         forget()
-        try { getAndroidPadDeviceBridge()?.kickPrintWorker?.(JSON.stringify({ reason: 'manual-reprint', order_id: job.order_id, job_id: job.id })) } catch { /* polling remains the reliability path */ }
+        try { await getAndroidPadDeviceBridge()?.kickPrintWorker?.(JSON.stringify({ reason: 'manual-reprint', order_id: job.order_id, job_id: job.id })) } catch { /* polling remains the reliability path */ }
         return job
       } catch (error) {
         if (error instanceof ApiRequestError && error.code === 'REPRINT_CONFIRMATION_REQUIRED') {

@@ -1,5 +1,11 @@
 # 🍜 餐厅管理系统数据库设计（MVP）
 
+> Current Commercial development adds V38 root Profile visibility/owner metadata; see
+> `backend/src/main/resources/db/migration/V38__isolate_private_store_profiles.sql`
+> and `docs/commercialization/PHASE2_STORE_BOUNDARIES.md`. Historical MVP sections
+> below do not imply unimplemented inventory/prep APIs exist. Runtime schemas are
+> governed by immutable Flyway migrations, mapped JPA entities and current API contract.
+
 ---
 
 # 1. 文档目的

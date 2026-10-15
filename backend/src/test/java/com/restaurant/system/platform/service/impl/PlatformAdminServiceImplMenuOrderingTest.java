@@ -88,7 +88,9 @@ class PlatformAdminServiceImplMenuOrderingTest {
             menuRevisionService,
             chainMasterMenuRepository,
             chainMasterMenuVersionRepository,
-            storeMenuMasterMappingRepository
+            storeMenuMasterMappingRepository,
+            org.mockito.Mockito.mock(com.restaurant.system.platform.controller.PlatformResourceAuthorization.class),
+            org.mockito.Mockito.mock(jakarta.persistence.EntityManager.class)
         );
     }
 
@@ -196,19 +198,18 @@ class PlatformAdminServiceImplMenuOrderingTest {
     }
 
     @Test
-    void stationMoveUsesSharedOrderedMultiStoreRevisionContract() {
+    void stationCannotBeReparentedThroughGenericSave() {
         Station existing = new Station();
         existing.id = 8L;
         existing.store_id = 9L;
         when(stationRepository.findById(8L)).thenReturn(Optional.of(existing));
-        when(stationRepository.save(any(Station.class))).thenAnswer(invocation -> invocation.getArgument(0));
         Station request = new Station();
         request.id = 8L;
         request.store_id = 2L;
 
-        service.saveStation(request);
-
-        verify(menuRevisionService).incrementRevisionsInOrder(List.of(9L, 2L));
+        assertThrows(com.restaurant.system.common.auth.ForbiddenException.class, () -> service.saveStation(request));
+        verify(stationRepository,never()).save(any());
+        verifyNoInteractions(menuRevisionService);
     }
 
     @Test
@@ -470,24 +471,24 @@ class PlatformAdminServiceImplMenuOrderingTest {
     }
 
     @Test
-    void genericItemMoveLocksBothStoresBeforeLoadingManagedItem() {
+    void genericItemSaveCannotMoveExistingItemToAnotherStore() {
         MenuItem existing = new MenuItem();
         existing.id = 14L;
         existing.store_id = 9L;
         when(menuItemRepository.findStoreIdById(14L)).thenReturn(Optional.of(9L));
         when(menuItemRepository.findById(14L)).thenReturn(Optional.of(existing));
-        when(menuItemRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         MenuItem request = new MenuItem();
         request.id = 14L;
         request.store_id = 3L;
 
-        assertEquals(3L, service.saveMenuItem(request).store_id);
+        assertThrows(com.restaurant.system.common.auth.ForbiddenException.class, () -> service.saveMenuItem(request));
 
         var order = inOrder(menuItemRepository, menuRevisionService);
         order.verify(menuItemRepository).findStoreIdById(14L);
         order.verify(menuRevisionService).lockStoresInOrder(List.of(3L, 9L));
         order.verify(menuItemRepository).findById(14L);
-        verify(menuRevisionService).incrementRevisionsInOrder(List.of(9L, 3L));
+        verify(menuItemRepository,never()).save(any());
+        verify(menuRevisionService,never()).incrementRevisionsInOrder(any());
     }
 
     @Test

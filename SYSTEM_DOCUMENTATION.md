@@ -38,6 +38,56 @@ and Uber execution disabled. Mixed profiles and unsafe overrides fail startup.
 New Commercial defaults/fixtures are scanned by the dedicated guard workflow;
 historical migrations/evidence are not rewritten or treated as new presets.
 
+## Effective merchant scope and realtime
+
+HTTP and STOMP share BearerUserResolver: validate token signature/expiry and reload
+active User/current Role on each authorization. ADMIN is a platform identity with
+no implicit merchant business grant. Effective Store capability cannot exceed the
+application role or active exact Store membership; Organization OWNER inheritance
+requires global OWNER plus exact active Organization OWNER membership. Any existing
+membership history disables legacy users.store_id fallback. Scoped principal
+roleCode is authoritative; its legacy roleId must not be used to re-expand rights.
+
+Platform resource IDs, body Store and parent/child Store must agree. POST with id
+is not an authorization bypass. Shared Role writes and global analytics rebuild
+are denied; Audit queries require explicit authorized Store. Staff target/original
+Stores and all existing memberships are checked; platform ADMIN accounts are not
+merchant staff. Aggregate reporting/Owner overview filters per-Store capabilities.
+
+WebSocket/SockJS transport can open anonymously but grants no business access.
+STOMP CONNECT requires Bearer Authorization in connectHeaders (not HTTP headers or
+query parameters). Only seven existing exact Store topics can be subscribed with
+screen capability and module authorization; SEND/wildcard/unknown destinations are
+denied. Outbound frames revalidate authority before queueing and executor delivery,
+closing revoked/expired/disabled sessions. Origins are same-origin plus explicit
+exact HTTP(S) app.realtime.allowed-origins; bundled Pad origin is included. No
+wildcard or token URL is permitted. Frontend reconnect reads current tokens;
+logout closes old connections. Topic and after-commit contracts are unchanged.
+
+## Offline and Android isolation
+
+DB5 / record schema v2 keys include canonical API origin, account, Organization and
+Store. Only the current validated Store scope can replay; manual processing checks
+the same boundary before lookup, after async results and before submission. Logout
+synchronously invalidates session generation, aborts requests and stops workers and
+WS; late refresh/login cannot restore old tokens. Auth tokens are origin-scoped.
+
+DB4/v1 records and old unscoped tokens/native preferences remain untouched and
+unclaimed. Unknown-source orders are retained with a recovery notice and are never
+automatically replayed, displayed as the current merchant's orders or deleted.
+Return to a verified new-schema scope preserves frozen payload/hash/idempotency.
+DB4 downgrade is unsupported; use a DB5-compatible fix and controlled recovery.
+Origins must be stable and not reassigned to independent deployments with reused
+numeric identities; a server deployment-ID contract is not implemented here.
+
+Android uses asynchronous AndroidX main-frame/origin-verified messages with no
+unsafe JavascriptInterface fallback. New device credentials use origin-bound
+AndroidKeyStore AES/GCM envelopes. Target switch/re-pair stops workers and rejects
+active/ambiguous printing; old credentials never attach to another origin or follow
+HTTP redirects. Device configuration and local printer-test settings are isolated.
+Backend request/response shapes are unchanged; pairing api_origin is a native
+message field. Physical WebView/Keystore/installed APK/paper results remain pending.
+
 ## Uber Store capability and confirmed Add-on identity (V37)
 
 `UBER_EATS` is an optional formal Store module in catalog/graph V3, default off.
@@ -9487,3 +9537,9 @@ for actual private canonical Compose and bounded recovery. Do not overwrite the
 shared Production/Staging edge with the old generic HTTPS template. Exact backup,
 images, migration and acceptance limits are in
 [release evidence](docs/governance/PRODUCTION_V37_RELEASE_20261005.md).
+
+Phase 2 integration: the menu revision JPA slice supplies its unused user-authorization dependency explicitly; production guards remain real and are covered by the HTTP/race tests. No runtime change.
+
+## Commercialization Phase 2 integrated local acceptance (2026-10-15)
+
+[Security test report](docs/commercialization/PHASE2_SECURITY_TEST_REPORT.md) and [acceptance report](docs/commercialization/PHASE2_ACCEPTANCE_REPORT.md) record the bounded security changes and prior failed runs. Tested code `5ec8abeb7a67760000b29151e7f568a88a8f36ed`: backend Java17 clean verify 1013/0 failures/0 errors/0 skips, all optional PostgreSQL suites enabled on dedicated loopback PG16 synthetic databases; frontend 306 tests/build PASS. The unchanged frontend/native product trees exported at `1609f0d` also pass existing bundled debug packaging (54 verified files, DB5) and full guard-enabled native tests (6 suites/24 PASS). APK SHA256 `fad05caed96762ce60bb3cd8cab9b0449219430bfb9d97c831f154a8db801899` is a local unreleased debug artifact, not installed-device evidence. All required independent Agent6 findings are closed, including the unused dependency test-slice review. Baseline/checksum/default scan/governance PASS. G2 is PASS for isolated local Phase3 development under the Owner's existing authorization; no Staging/Production mutation or main merge. Historical bit identity, installed APK, real WebView/Keystore and physical printing remain unverified and cannot support release claims.

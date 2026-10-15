@@ -1,3 +1,5 @@
+import { getAccessToken, getRefreshToken } from '../services/apiClient'
+import { assertEnvironmentSession, captureEnvironmentSession, getEnvironmentId, isEnvironmentSessionCurrent } from './environmentScope'
 import type { AuthUser, LoginResponse } from '../services/authService'
 import type {
   StoreContextResponse,
@@ -12,13 +14,15 @@ import {
   transactionComplete,
 } from './offlineDatabase'
 
-export const WORKSPACE_SNAPSHOT_SCHEMA_VERSION = 1
+export const WORKSPACE_SNAPSHOT_SCHEMA_VERSION = 2
 export const WORKSPACE_SNAPSHOT_MAX_AGE_MS = 24 * 60 * 60 * 1000
 
-const CURRENT_AUTH_KEY = 'auth:current'
+const currentAuthKey = () => `auth:current:environment:${encodeURIComponent(getEnvironmentId())}`
 
 interface CurrentAuthSnapshotRecord {
-  key: typeof CURRENT_AUTH_KEY
+  credentialFingerprint: string
+  key: string
+  environmentId: string
   accountId: number
   user: AuthUser
   permissions: string[]
@@ -29,6 +33,7 @@ interface CurrentAuthSnapshotRecord {
 
 interface WorkspaceSnapshotRecord {
   key: string
+  environmentId: string
   accountId: number
   activeStoreId: number
   workspace: WorkspaceResponse
@@ -38,6 +43,7 @@ interface WorkspaceSnapshotRecord {
 
 interface StoreContextSnapshotRecord {
   key: string
+  environmentId: string
   accountId: number
   storeId: number
   context: StoreContextResponse
@@ -46,6 +52,9 @@ interface StoreContextSnapshotRecord {
 }
 
 export interface RestrictedAuthSnapshot {
+  // Process-local check; tokens are never exposed or persisted in the snapshot.
+  isCurrentSession: () => boolean
+  environmentId: string
   accountId: number
   user: AuthUser
   permissions: string[]
@@ -54,11 +63,11 @@ export interface RestrictedAuthSnapshot {
 }
 
 function workspaceKey(accountId: number) {
-  return `workspace:account:${accountId}`
+  return `environment:${encodeURIComponent(getEnvironmentId())}|workspace:account:${accountId}`
 }
 
 function storeContextKey(accountId: number, storeId: number) {
-  return `context:account:${accountId}:store:${storeId}`
+  return `environment:${encodeURIComponent(getEnvironmentId())}|context:account:${accountId}:store:${storeId}`
 }
 
 export function isWorkspaceSnapshotFresh(
@@ -72,8 +81,9 @@ export function isWorkspaceSnapshotFresh(
     && nowMs - validatedAtMs <= maxAgeMs
 }
 
-function isSnapshotRecordUsable(record: { schemaVersion: number; validatedAt: string } | undefined) {
+function isSnapshotRecordUsable(record: { environmentId: string; schemaVersion: number; validatedAt: string } | undefined) {
   return Boolean(record)
+    && record!.environmentId === getEnvironmentId()
     && record!.schemaVersion === WORKSPACE_SNAPSHOT_SCHEMA_VERSION
     && isWorkspaceSnapshotFresh(record!.validatedAt)
 }
@@ -114,17 +124,41 @@ async function readSnapshotRecord<T>(key: string) {
   return record
 }
 
-async function writeSnapshotRecord(record: { key: string }) {
+async function writeSnapshotRecord(record: { key: string; environmentId: string }, isStillCurrent?: () => boolean) {
+  const session = captureEnvironmentSession()
   const database = await openOfflineDatabase()
+  assertEnvironmentSession(session)
+  if (isStillCurrent && !isStillCurrent()) throw new Error('AUTH_CREDENTIAL_CHANGED')
   const transaction = database.transaction(OFFLINE_STORES.workspaceSnapshots, 'readwrite')
   const completed = transactionComplete(transaction)
+  if (record.environmentId !== getEnvironmentId()) throw new Error('OFFLINE_ENVIRONMENT_CHANGED')
   transaction.objectStore(OFFLINE_STORES.workspaceSnapshots).put(record)
   await completed
 }
 
+function captureAuthCredentials() {
+  return { access: getAccessToken(), refresh: getRefreshToken() }
+}
+function credentialsMatch(credentials: ReturnType<typeof captureAuthCredentials>) {
+  return credentials.access === getAccessToken() && credentials.refresh === getRefreshToken()
+}
+async function credentialFingerprint(credentials: ReturnType<typeof captureAuthCredentials>, environmentId: string) {
+  if (!credentials.access && !credentials.refresh) throw new Error('AUTH_CREDENTIAL_REQUIRED')
+  const bytes = new TextEncoder().encode(JSON.stringify([environmentId, credentials.access, credentials.refresh]))
+  const hash = await crypto.subtle.digest('SHA-256', bytes)
+  return Array.from(new Uint8Array(hash), (value) => value.toString(16).padStart(2, '0')).join('')
+}
+
 export async function saveRestrictedAuthSnapshot(response: LoginResponse) {
+  const session = captureEnvironmentSession()
+  const credentials = captureAuthCredentials()
+  const fingerprint = await credentialFingerprint(credentials, session.environmentId)
+  const isStillCurrent = () => isEnvironmentSessionCurrent(session) && credentialsMatch(credentials)
+  if (!isStillCurrent()) throw new Error('AUTH_CREDENTIAL_CHANGED')
   const record: CurrentAuthSnapshotRecord = {
-    key: CURRENT_AUTH_KEY,
+    key: currentAuthKey(),
+    environmentId: session.environmentId,
+    credentialFingerprint: fingerprint,
     accountId: response.user.id,
     user: response.user,
     permissions: [...(response.permissions ?? [])],
@@ -132,15 +166,24 @@ export async function saveRestrictedAuthSnapshot(response: LoginResponse) {
     validatedAt: new Date().toISOString(),
     schemaVersion: WORKSPACE_SNAPSHOT_SCHEMA_VERSION,
   }
-  await writeSnapshotRecord(record)
+  await writeSnapshotRecord(record, isStillCurrent)
 }
 
 export async function readRestrictedAuthSnapshot(): Promise<RestrictedAuthSnapshot | null> {
-  const record = await readSnapshotRecord<CurrentAuthSnapshotRecord>(CURRENT_AUTH_KEY)
-  if (!isSnapshotRecordUsable(record) || record!.accountId !== record!.user.id) {
+  const session = captureEnvironmentSession()
+  const credentials = captureAuthCredentials()
+  if (!credentials.access && !credentials.refresh) return null
+  const fingerprint = await credentialFingerprint(credentials, session.environmentId)
+  const isCurrentSession = () => isEnvironmentSessionCurrent(session) && credentialsMatch(credentials)
+  if (!isCurrentSession()) return null
+  const record = await readSnapshotRecord<CurrentAuthSnapshotRecord>(currentAuthKey())
+  if (!isCurrentSession() || !isSnapshotRecordUsable(record) || record!.accountId !== record!.user.id
+    || !record!.credentialFingerprint || record!.credentialFingerprint !== fingerprint) {
     return null
   }
   return {
+    isCurrentSession,
+    environmentId: session.environmentId,
     accountId: record!.accountId,
     user: record!.user,
     permissions: [...record!.permissions],
@@ -150,21 +193,27 @@ export async function readRestrictedAuthSnapshot(): Promise<RestrictedAuthSnapsh
 }
 
 export async function clearRestrictedAuthSnapshot() {
+  const key = currentAuthKey()
+  const session = captureEnvironmentSession()
   const database = await openOfflineDatabase()
+  if (!isEnvironmentSessionCurrent(session)) return
   const transaction = database.transaction(OFFLINE_STORES.workspaceSnapshots, 'readwrite')
   const completed = transactionComplete(transaction)
-  transaction.objectStore(OFFLINE_STORES.workspaceSnapshots).delete(CURRENT_AUTH_KEY)
+  transaction.objectStore(OFFLINE_STORES.workspaceSnapshots).delete(key)
   await completed
 }
 
 export async function saveWorkspaceSnapshot(accountId: number, workspace: WorkspaceResponse) {
+  const session = captureEnvironmentSession()
   const existing = await readSnapshotRecord<WorkspaceSnapshotRecord>(workspaceKey(accountId))
+  assertEnvironmentSession(session)
   const activeStoreId = selectActiveStore(workspace, existing?.activeStoreId)
   if (activeStoreId == null) {
     return
   }
   const record: WorkspaceSnapshotRecord = {
     key: workspaceKey(accountId),
+    environmentId: getEnvironmentId(),
     accountId,
     activeStoreId,
     workspace,
@@ -208,11 +257,14 @@ function workspaceFromContext(context: StoreContextResponse): WorkspaceResponse 
 }
 
 export async function saveStoreContextSnapshot(accountId: number, context: StoreContextResponse) {
+  const session = captureEnvironmentSession()
   const existingWorkspace = await readSnapshotRecord<WorkspaceSnapshotRecord>(workspaceKey(accountId))
+  assertEnvironmentSession(session)
   const now = new Date().toISOString()
   const workspace = existingWorkspace?.workspace ?? workspaceFromContext(context)
   const workspaceRecord: WorkspaceSnapshotRecord = {
     key: workspaceKey(accountId),
+    environmentId: getEnvironmentId(),
     accountId,
     activeStoreId: context.id,
     workspace,
@@ -221,6 +273,7 @@ export async function saveStoreContextSnapshot(accountId: number, context: Store
   }
   const contextRecord: StoreContextSnapshotRecord = {
     key: storeContextKey(accountId, context.id),
+    environmentId: getEnvironmentId(),
     accountId,
     storeId: context.id,
     context,
@@ -231,6 +284,7 @@ export async function saveStoreContextSnapshot(accountId: number, context: Store
   const database = await openOfflineDatabase()
   const transaction = database.transaction(OFFLINE_STORES.workspaceSnapshots, 'readwrite')
   const completed = transactionComplete(transaction)
+  assertEnvironmentSession(session)
   const store = transaction.objectStore(OFFLINE_STORES.workspaceSnapshots)
   store.put(workspaceRecord)
   store.put(contextRecord)
@@ -247,7 +301,8 @@ export async function readRestrictedStoreContextSnapshot(accountId: number, stor
   const context = await readSnapshotRecord<StoreContextSnapshotRecord>(storeContextKey(accountId, storeId))
   if (!isSnapshotRecordUsable(context)
     || context!.accountId !== accountId
-    || context!.storeId !== storeId) {
+    || context!.storeId !== storeId
+    || context!.context.organization_id !== workspace!.workspace.stores.find((store) => store.id === storeId)?.organization_id) {
     return null
   }
   return context!.context

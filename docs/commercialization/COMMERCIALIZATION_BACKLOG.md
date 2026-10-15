@@ -1,12 +1,28 @@
 # Commercialization Backlog — 可执行 PR 与审计追踪
 
-顺序/阶段入口只由 [Planbook](COMMERCIALIZATION_MASTER_PLANBOOK.md) 路由；动态 Phase/Package/Gate 在 [CURRENT_STATE](../governance/CURRENT_STATE.yml)。本文件初始条目均为 `PLANNED`，表述的是将来的验收义务，不声称已经实现、review、合并或部署。每任务实施后在其卡片记录 commit、实际测试 counts/命令、review、证据路径与结果，不复制第二份当前阶段状态。
+顺序/阶段入口只由 [Planbook](COMMERCIALIZATION_MASTER_PLANBOOK.md) 路由；动态 Phase/Package/Gate 在 [CURRENT_STATE](../governance/CURRENT_STATE.yml)。任务卡保留 Phase 1 的计划与验收义务；已执行 P2 的结果见下方日期化快照与两份报告。未执行任务仍为 `PLANNED`；本地提交/独立审查不冒充 main merge 或部署。每任务继续记录 commit、测试、review 与证据，不复制第二份当前阶段状态。
 
 ## 所有任务共同 DoD
 
 每 PR 都须满足：有可审查 diff/commit；实现不超过目标；对应 focused、跨边界负向与受影响回归 PASS；API/契约/SYSTEM_DOCUMENTATION 与 HC/DG 记录同步；无泄露 Secrets/真实测试数据；新 migration序号经协调且旧 checksum不变；历史 snapshot/job/outbox 不被重写；rollback可执行；AGENTS规定的 review完成。未跑项写 NOT RUN，物理未知写 HARDWARE_QA_PENDING，阻断项写 BLOCKED，不以本地 commit冒充 merged。以下每任务 DoD 是在共同 DoD 上的额外条件。所有开发仅 LOCAL_SYNTHETIC，任何 Production/Staging mutation禁止。
 
 风险 P0/P1 是问题严重度；Phase 2 必修的跨边界 P1 不因数据库独立而延期。以后新增发现应给独立受限 task，不静默扩写本 PR。
+
+## Phase 2 执行快照 — 2026-10-15
+
+最终代码观察点 `5ec8abeb7a67760000b29151e7f568a88a8f36ed`。本表是任务级日期化证据，唯一当前Phase/Gate仍在CURRENT_STATE。G2-01…09本地验收证据满足，未关闭P0=0/新P1=0；不等同main merge、remoteCI或发行。完整命令/counts/原始失败与攻击链见 [安全测试报告](PHASE2_SECURITY_TEST_REPORT.md)，逐Gate限制见 [验收报告](PHASE2_ACCEPTANCE_REPORT.md)。历史bit/实装APK/硬件未知与预存KDS完整角色流程保留相应后续任务。
+
+| 任务 | 该观察点执行结果 | Commit / 可审查证据 / 余项 |
+| --- | --- | --- |
+| P2-BASE-01 | PASS_LOCAL | 92871df + c9f8d0f；Manifest/JSON/Runbook/source refs与checksum；[#275 Draft](https://github.com/Z1linXu/Restaurant_System/pull/275)。历史bit/实装APK未知仍限制发行 |
+| P2-AUTH-02 | PASS_LOCAL | 3523b47 + 9c87944 + 739b708；有效scope、原始dormantgrants、锁后refresh/实际资源重验；独立review与最终1013全PG通过；完整supportgrant仍P6 |
+| P2-WS-03 | PASS_LOCAL | 3523b47 + 9c87944；真实broker、SockJS、持续撤权与queuedframe；独立review与最终回归通过；物理Pad未认证 |
+| P2-PROFILE-04 | PASS_LOCAL | 0f1b2a4 + 87d005b、739b708 HTTP负向；V38 conservativeownership/catalog/use/clone/replay；[#276 Draft](https://github.com/Z1linXu/Restaurant_System/pull/276)。独立review/最终全PG通过，unowned仍deny |
+| P2-PRINT-05 | PASS_LOCAL；物理QA后续 | 0f1b2a4 + 30c1b52；Store/Org deviceauth、foreignassignment/七Pad操作及list/ack/reprint Bearer负向；独立review/最终回归通过；未改claim/lease/历史job |
+| P2-OFFLINE-06 | PASS_LOCAL；A6-OFF-01/02 CLOSED | 初版c9de597源于129f66d；3985eac修复→1609f0d整合，c824d21独立复审→c2fa49a报告；no-redirect/manualbusy/generation与credential-associatedauth、DB5旧记录隔离通过；本地packaging/nativeguard通过，实机未证 |
+| P2-INV-07 | PASS_LOCAL | 0f1b2a4；需求聚合、同店有序锁/ledger/订单事务；PG竞争/foreign/rollback与独立review/最终1013全PG通过；完整restock/prep NOT_IMPLEMENTED |
+| P2-FIXTURE-08 | PASS_LOCAL；不声称remoteCI | 0f1b2a4 + 4621cb7 + 9c87944；startup/staticguard/2files扫描/3tests/合成fixture；6e9a370机械补menu测试slice依赖，无产品改动；最终全PG/frontend/native/guards通过；workflow定义/本地命令非remote run |
+| P2-GATE-09 | PASS_LOCAL；G2-01…09证据满足 | 最终5ec8abe backend1013/0/0/0、frontend53files306/buildPASS；同产品树1609本地54assets/DB5/debugAPK与native6suites24PASS；全部独立reviewPASS、阶段P0=0/新P1=0。早期失败保留，主线程同步唯一CURRENT_STATE后续已授权P3 |
 
 ## Phase 2 — 基线与安全
 
@@ -412,20 +428,20 @@
 | 风险/Rollback | 缺API/许可；保持不可用，不虚构已集成；撤模块不改现GRAB |
 | DoD/并行 | 仅授权后估实施；与既有Uber/printcore分离；另须共同DoD |
 
-## HC 逐项处置（53/53，规划归属，非实施关闭）
+## HC 逐项处置（53/53，原规划与 P2 实施证据）
 
-原始证据/风险与固定代码行见 [03](03_HARDCODE_AND_CUSTOMIZATION_INVENTORY.md)。每项有一个主责任任务；保留不等于缺陷已修，延期保留兼容与发布限制。Phase 2实施报告要记录实际关闭/部分/阻塞。
+原始证据/风险与固定代码行见 [03](03_HARDCODE_AND_CUSTOMIZATION_INVENTORY.md)。每项保留一个主责任任务；以下P2实施注记对应最终5ec8abe观察点与G2本地证据，不等于发行/remoteCI/物理认证。其他Phase规划与延期理由保持。完整结果见两份P2报告。
 
 | HC | 原规则族 | 判断/阶段 | 主任务 | 保留策略或延期理由 |
 | --- | --- | --- | --- | --- |
-| HC-001 | 事务、快照、幂等和持久 dispatch outbox | CORE / 保留 | [P2-GATE-09](#p2-gate-09) | 通用事务/快照/幂等/outbox保留；只做新fixture回归，不重写状态机。 |
-| HC-002 | ADMIN 全商家访问及 Owner 全 capability | Phase 2 / CORE安全 | [P2-AUTH-02](#p2-auth-02) | 关闭无授权ADMIN业务通行；完整支持grant交P6-SUPPORT-03，未授权先deny。 |
-| HC-003 | WebSocket wildcard origin 与缺失订阅 scope 检查 | Phase 2 / CORE安全 | [P2-WS-03](#p2-ws-03) | CONNECT、持续SUBSCRIBE、origin/token撤权逐项负向，不靠topic名。 |
-| HC-004 | 固定角色矩阵和 FRONTDESK 管理权限 | Phase 2 / CONFIG | [P2-AUTH-02](#p2-auth-02) | 固定最小role preset及有效Store role；不建任意ACL编辑器，保留现店兼容。 |
-| HC-005 | legacy default Store fallback / 开发 header | Phase 2 / CORE安全 | [P2-AUTH-02](#p2-auth-02) | membership失效不能fallback，开发header与commercial启动隔离。 |
+| HC-001 | 事务、快照、幂等和持久 dispatch outbox | CORE / 保留 | [P2-GATE-09](#p2-gate-09) | 通用事务/快照/幂等/outbox保留；只做新fixture回归，不重写状态机。  **P2实施：** CORE保留；最终1013全PG/306frontend回归通过，不重写事务/状态机/历史snapshot。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
+| HC-002 | ADMIN 全商家访问及 Owner 全 capability | Phase 2 / CORE安全 | [P2-AUTH-02](#p2-auth-02) | 关闭无授权ADMIN业务通行；完整支持grant交P6-SUPPORT-03，未授权先deny。  **P2实施：** PASS_LOCAL：ADMIN业务deny、有效scope与dormantgrant/锁后授权已独立关闭，最终集成通过；supportgrant留P6且无授权先deny。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
+| HC-003 | WebSocket wildcard origin 与缺失订阅 scope 检查 | Phase 2 / CORE安全 | [P2-WS-03](#p2-ws-03) | CONNECT、持续SUBSCRIBE、origin/token撤权逐项负向，不靠topic名。  **P2实施：** PASS_LOCAL：真实broker/精确topic/Origin/持续及queued撤权、最终集成通过；真实Pad保留后续验收。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
+| HC-004 | 固定角色矩阵和 FRONTDESK 管理权限 | Phase 2 / CONFIG | [P2-AUTH-02](#p2-auth-02) | 固定最小role preset及有效Store role；不建任意ACL编辑器，保留现店兼容。  **P2实施：** PASS_LOCAL：global/membership有效preset、不可比较冲突deny、aggregate逐店检查，独立review/最终回归通过；未建任意ACL。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
+| HC-005 | legacy default Store fallback / 开发 header | Phase 2 / CORE安全 | [P2-AUTH-02](#p2-auth-02) | membership失效不能fallback，开发header与commercial启动隔离。  **P2实施：** PASS_LOCAL：任意状态membership存在即不legacyfallback，commercial/headerguard与最终回归通过；真实legacy账号依赖未知。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
 | HC-006 | 离线客户端价格/名称/station 快照授权 | DEFER Phase 4 / CONFIG | [P4-PRICE-04](#p4-price-04) | Q09旧价政策缺期限/来源契约；本轮保留既有canonical校验、不接受任意新price信任，P2保护namespace/key。 |
-| HC-007 | 库存 read-modify-save 无共享库存锁 | Phase 2 / CORE安全 | [P2-INV-07](#p2-inv-07) | 现启用写入必须锁/原子扣减并验证PostgreSQL竞争，不因完整库存延期忽略。 |
-| HC-008 | BOM 引用库存未显式比较 Store | Phase 2 / CORE安全 | [P2-INV-07](#p2-inv-07) | item/option BOM同店及零部分写强制，坏引用failclosed。 |
+| HC-007 | 库存 read-modify-save 无共享库存锁 | Phase 2 / CORE安全 | [P2-INV-07](#p2-inv-07) | 现启用写入必须锁/原子扣减并验证PostgreSQL竞争，不因完整库存延期忽略。  **P2实施：** PASS_LOCAL：同inventory需求聚合/有序同店锁/订单事务，PG竞争与ledger守恒，最终1013全PG通过。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
+| HC-008 | BOM 引用库存未显式比较 Store | Phase 2 / CORE安全 | [P2-INV-07](#p2-inv-07) | item/option BOM同店及零部分写强制，坏引用failclosed。  **P2实施：** PASS_LOCAL：foreign库存引用零部分写、item+optionBOM聚合与PG回滚、最终回归通过；不自动修真实BOM。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
 | HC-009 | 库存补货/备菜 API 文档超前 | DEFER Phase 4+ / MODULE | [FUTURE-INVENTORY-01](#future-inventory-01) | Q19不承诺完整库存；P2文档标缺失并严格关闭未实现写，不能假设restock/prep API。 |
 | HC-010 | 固定 14.975% 税率及标签 | DEFER Phase 4 / CONFIG | [P4-PRICE-04](#p4-price-04) | 税effectivepolicy/快照须与金额engine同PR；P3只给归属/引用骨架，上市另确认税规则。 |
 | HC-011 | 统一 Toronto 时区与固定日结调度 | DEFER Phase 4 / CONFIG | [P4-PRICE-04](#p4-price-04) | Store营业日/DST与历史时间解释需金额日结验收，P3只配置归属。 |
@@ -450,12 +466,12 @@
 | HC-030 | 默认两张桌与两个打印角色 | Phase 3 / CONFIG | [P3-PROFILE-02](#p3-profile-02) | 空白/无堂食不继承两桌/现打印角色；仍保持一步create与硬件可选。 |
 | HC-031 | 前台拆桌只认识 A/B 与左/右 | DEFER Phase 5 / CONFIG | [P5-TABLE-03](#p5-table-03) | 首发只整桌/可选AB，语义版本化后验收，现活跃桌号不改。 |
 | HC-032 | 中文/英文双字段与固定 UI 文案 | Phase 3 / CONFIG | [P3-UI-04](#p3-ui-04) | 统一中性品牌/locale入口且保双字段；完整语言/receipt覆盖交P5/P8，法语缺口上市验收。 |
-| HC-033 | 离线 key 包含 account/org/store 但无 deployment identity | Phase 2 / CORE安全 | [P2-OFFLINE-06](#p2-offline-06) | deployment namespace、DB4→5旧来源隔离、account/org/store guard与稳定payload。 |
-| HC-034 | Android SharedPreferences 保存 device token 与可编辑 URL | Phase 2 / CORE安全 | [P2-OFFLINE-06](#p2-offline-06) | Android切服停止worker/绑定tokenorigin/可信bridge；签名安全存储加强交P7但不得跨origin泄露。 |
+| HC-033 | 离线 key 包含 account/org/store 但无 deployment identity | Phase 2 / CORE安全 | [P2-OFFLINE-06](#p2-offline-06) | deployment namespace、DB4→5旧来源隔离、account/org/store guard与稳定payload。  **P2实施：** PASS_LOCAL：origin/完整scope与DB5旧记录原样隔离；A6-OFF-02以当前credentialassociation修复，独立复审与最终集成通过；同origin重分配限制保留。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
+| HC-034 | Android SharedPreferences 保存 device token 与可编辑 URL | Phase 2 / CORE安全 | [P2-OFFLINE-06](#p2-offline-06) | Android切服停止worker/绑定tokenorigin/可信bridge；签名安全存储加强交P7但不得跨origin泄露。  **P2实施：** PASS_LOCAL：nativeorigin/可信bridge/新secret/no-redirect/manualbusy/generation已验证；A6-OFF-01独立关闭，本地debugpackaging与guard开启native24通过；实装/旧明文配对/physical仍未知。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
 | HC-035 | Android package/版本分发与 native bridge | DEFER Phase 7 / MODULE | [P7-ANDROID-01](#p7-android-01) | Q15统一package签名与分发矩阵；P2修环境隔离，未读安装包保持UNKNOWN。 |
-| HC-036 | WebSocket topic 名称含固定工作流 | CORE / 保留MODULE事件契约 | [P2-WS-03](#p2-ws-03) | 固定topic/aftercommit保持，先ACL；多实例broker无现依赖，延期需求证实后另立项。 |
+| HC-036 | WebSocket topic 名称含固定工作流 | CORE / 保留MODULE事件契约 | [P2-WS-03](#p2-ws-03) | 固定topic/aftercommit保持，先ACL；多实例broker无现依赖，延期需求证实后另立项。  **P2实施：** CORE保留 + PASS_LOCAL：七topic与aftercommit未改，持续ACL/queuedframe拒绝及最终回归通过；不建分布式broker。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
 | HC-037 | Flyway V5 全库 SKU 修正 | DEFER Phase 7 / PROFILE迁移历史 | [P7-DEPLOY-02](#p7-deploy-02) | V5不可改；P3空库/Neutral隔离保证不物化旧seed；分发安装历史另设计，不批改生产。 |
-| HC-038 | DB 租户约束保护不均匀、无 RLS | Phase 2 / CORE安全 | [P2-AUTH-02](#p2-auth-02) | Q02独立库保留；逐现启用API/resource关系检查与P2-INV/PRINT负向，RLS非首版硬依赖，不宣称全表已自动隔离。 |
+| HC-038 | DB 租户约束保护不均匀、无 RLS | Phase 2 / CORE安全 | [P2-AUTH-02](#p2-auth-02) | Q02独立库保留；逐现启用API/resource关系检查与P2-INV/PRINT负向，RLS非首版硬依赖，不宣称全表已自动隔离。  **P2实施：** SCOPED_MITIGATION_PASS_LOCAL：现启用HTTP/WS/Profile/Device/Offline/BOM负向、独立review与最终G2本地通过；不宣称全表自动过滤或RLS，Q02独立库边界保留。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
 | HC-039 | V15/V19 自动 seed 兰州 Profile/Master | Phase 3 / PROFILE | [P3-PROFILE-02](#p3-profile-02) | V15/V19历史不改；新install legacyseed private不可见/不可误选；Neutral无经营数据污染。 |
 | HC-040 | Profile/Master 独立 materialization 可复用 | CORE / 保留 | [P3-PROFILE-02](#p3-profile-02) | 复用reservation/fingerprint/独立Store materialization；不造第二provisioning框架。 |
 | HC-041 | RuntimeDataSeeder 含现餐厅菜单和 LAN 默认 | Phase 3 / PROFILE | [P3-PROFILE-02](#p3-profile-02) | demo/seed与commercial入口分离；P2 startup/CI guard先挡错误配置。 |
@@ -464,42 +480,42 @@
 | HC-044 | Uber Kitchen Mirror、财务汇总与业务时区 | DEFER Phase 5 / MODULE | [P5-INTEGRATION-04](#p5-integration-04) | 保KitchenMirror零本地价/独立财务source，先P4时间金额契约再泛化。 |
 | HC-045 | GRAB 不是 Grab 外卖集成 | DEFER Phase 4+ / MODULE | [FUTURE-CONNECTOR-02](#future-connector-02) | Q17已明确GRAB非Grab平台；无真实API/许可，不纳入本轮/首发承诺。 |
 | HC-046 | Feature build 常量、全局 backend flags 与 Store modules | Phase 3 / MODULE | [P3-UI-04](#p3-ui-04) | 复用modulegraph，明确ceiling/Store/readiness/UI顺序，不第二feature系统。 |
-| HC-047 | 本地默认 schema update / seed / fallback 风险 | Phase 2 / CORE安全 | [P2-FIXTURE-08](#p2-fixture-08) | commercial默认拒错误profile/fallback/seed，安全scanner与启动矩阵；不改现env。 |
+| HC-047 | 本地默认 schema update / seed / fallback 风险 | Phase 2 / CORE安全 | [P2-FIXTURE-08](#p2-fixture-08) | commercial默认拒错误profile/fallback/seed，安全scanner与启动矩阵；不改现env。  **P2实施：** PASS_LOCAL：explicitcommercial启动、合成loopback/Flyway/no-seed/no-real-I/O、新默认scanner及最终checks通过；不改现env，不声称remoteCI。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
 | HC-048 | 品牌、Logo、地址/电话配置完整性未知 | Phase 3 / CONFIG | [P3-CONFIG-01](#p3-config-01) | 单一brand元数据/来源骨架，UI投影P3-UI；完整素材/preset和许可验收P5/P8。 |
-| HC-049 | 测试偏现有 noodle/打印 fixture，整体覆盖率未知 | Phase 2 / CORE回归 | [P2-FIXTURE-08](#p2-fixture-08) | 两Org负向与库存并发/离线/printing回归；P3扩双Profile；不报未知覆盖率。 |
+| HC-049 | 测试偏现有 noodle/打印 fixture，整体覆盖率未知 | Phase 2 / CORE回归 | [P2-FIXTURE-08](#p2-fixture-08) | 两Org负向与库存并发/离线/printing回归；P3扩双Profile；不报未知覆盖率。  **P2实施：** PASS_LOCAL：两Org/PG竞争/打印/幂等/HTTP/真实broker/Offline独立review及最终1013+306/native24通过；双Profile扩展留P3，不报未知覆盖率。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
 | HC-050 | 疑似无调用 mock/menuImportSeed | DEFER Phase 7 / DELETE候选 | [P7-LEGACY-03](#p7-legacy-03) | 仅疑似无引用，须bundle/import证据；不为本轮文档/安全工作删除。 |
 | HC-051 | one-off 部署与验收脚本固定 Store/Printer/endpoint | DEFER Phase 7 / PROFILE工具 | [P7-DEPLOY-02](#p7-deploy-02) | 历史oneoff保留其targetguards，不能当商家工具；P2扫描新默认先防误用。 |
 | HC-052 | 备份/恢复/监控未形成商家交付承诺 | DEFER Phase 7 / CONFIG运维 | [P7-DEPLOY-02](#p7-deploy-02) | 备份/恢复/监控/RPO/RTO缺真实证据；先合成演练，不运行线上restore或承诺ready。 |
-| HC-053 | 全局 Store Profile catalog 对所有 Owner 返回内容 | Phase 2 / CORE安全 | [P2-PROFILE-04](#p2-profile-04) | private根/版本/artifact全路径scope；公开preset显式安全，歧义owner拒绝。 |
+| HC-053 | 全局 Store Profile catalog 对所有 Owner 返回内容 | Phase 2 / CORE安全 | [P2-PROFILE-04](#p2-profile-04) | private根/版本/artifact全路径scope；公开preset显式安全，歧义owner拒绝。  **P2实施：** PASS_LOCAL：root/version/artifact/catalog/use/clone/replay及Bearer负向、独立review/最终全PG通过；V38唯一明确owner推导，歧义private-unowneddeny，无publishAPI。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
 
-## DG 逐项关闭/延期规划（22/22）
+## DG 逐项关闭/延期追踪（22/22）
 
-原始差异见 [05](05_DOCUMENTATION_GAP_REPORT.md)。这里记录责任，不声称原文已修；关闭需要实际变更、证据链接与review。历史文件保日期与scope，不批量重写。
+原始差异见 [05](05_DOCUMENTATION_GAP_REPORT.md)。这里保留原责任与延期；P2实施注记仅指当前契约/索引已核对的范围，不声称历史全文已修。历史文件保日期与scope，不批量重写。
 
 | DG | 差异 | 主任务 | 关闭路径/延期理由 |
 | --- | --- | --- | --- |
-| DG-01 | 旧MVP认知与新AGENTS | [P2-BASE-01](#p2-base-01) | 读取fresh治理与实际模块，旧文档保历史，不将旧无auth规则套当前代码。 |
-| DG-02 | 缺失docs/API_bilingual路径 | [P2-BASE-01](#p2-base-01) | Planbook已路由真实doc/API与DatabaseDesign；必要索引同步，不编造bilingual文件或接口。 |
-| DG-03 | MyBatis/JPA事实 | [P2-AUTH-02](#p2-auth-02) | scope覆盖JPA/JDBC，技术文档更正，不加无效MyBatis租户过滤当安全证据。 |
-| DG-04 | X-User-Id认证 | [P2-AUTH-02](#p2-auth-02) | API旧章节统一Bearer优先/开发fallback禁用于commercial。 |
-| DG-05 | 生命周期非线性 | [P2-GATE-09](#p2-gate-09) | 实际cancelled/ready_for_pickup/served/beverage/dailyclose回归，旧图标历史，不重写状态机。 |
-| DG-06 | 库存API文档超前 | [P2-INV-07](#p2-inv-07) | 将items/restock/prep列PLANNED/NOT_IMPLEMENTED；完整实现FUTURE-INVENTORY-01延期Q19之外。 |
-| DG-07 | Android POC/Worker描述过期 | [P2-OFFLINE-06](#p2-offline-06) | 更新受影响Android安全/配置文档为实际claim/lease/Worker；安装认证仍待P7。 |
-| DG-08 | 旧worktree V7/V8 | [P2-BASE-01](#p2-base-01) | 只标历史与链接当前Manifest，不改写历史证据。 |
+| DG-01 | 旧MVP认知与新AGENTS | [P2-BASE-01](#p2-base-01) | 读取fresh治理与实际模块，旧文档保历史，不将旧无auth规则套当前代码。  **P2实施：** CURRENT_REFERENCE_RECONCILED：fresh AGENTS/治理与SYSTEM优先，旧MVP不当现实能力清单。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
+| DG-02 | 缺失docs/API_bilingual路径 | [P2-BASE-01](#p2-base-01) | Planbook已路由真实doc/API与DatabaseDesign；必要索引同步，不编造bilingual文件或接口。  **P2实施：** ROUTING_RECONCILED：真实doc/API.md与DatabaseDesign入口已链接，缺失bilingual路径不虚构。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
+| DG-03 | MyBatis/JPA事实 | [P2-AUTH-02](#p2-auth-02) | scope覆盖JPA/JDBC，技术文档更正，不加无效MyBatis租户过滤当安全证据。  **P2实施：** CURRENT_REFERENCE_RECONCILED：DatabaseDesign头明确immutableFlyway/JPA/currentAPI，授权覆盖JPA/JDBC而非假定MyBatis自动隔离。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
+| DG-04 | X-User-Id认证 | [P2-AUTH-02](#p2-auth-02) | API旧章节统一Bearer优先/开发fallback禁用于commercial。  **P2实施：** CURRENT_CONTRACT_RECONCILED：API/SYSTEM以Bearer为主、显式localfallback为兼容；相关旧API段已改，不批量改历史证据。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
+| DG-05 | 生命周期非线性 | [P2-GATE-09](#p2-gate-09) | 实际cancelled/ready_for_pickup/served/beverage/dailyclose回归，旧图标历史，不重写状态机。  **P2实施：** FINAL_REGRESSION_PASS_LOCAL：保实际生命周期与既有快照，最终1013全PG/306frontend通过，不按旧线性图改实现。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
+| DG-06 | 库存API文档超前 | [P2-INV-07](#p2-inv-07) | 将items/restock/prep列PLANNED/NOT_IMPLEMENTED；完整实现FUTURE-INVENTORY-01延期Q19之外。  **P2实施：** CLAIM_CORRECTED：API当前只声明health与已启用BOM；restock/prep/items/transactions明确PLANNED/NOT_IMPLEMENTED，未冒充已实现。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
+| DG-07 | Android POC/Worker描述过期 | [P2-OFFLINE-06](#p2-offline-06) | 更新受影响Android安全/配置文档为实际claim/lease/Worker；安装认证仍待P7。  **P2实施：** CURRENT_REFERENCE_RECONCILED：SYSTEM/API/Offline报告写实际Worker、DB5/bridge与关闭两P1，旧POC非权威；本地debugpackaging/nativeguard通过，实装/物理认证留P7。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
+| DG-08 | 旧worktree V7/V8 | [P2-BASE-01](#p2-base-01) | 只标历史与链接当前Manifest，不改写历史证据。  **P2实施：** SOURCE_REFERENCE_RECONCILED：新Manifest分别记B/F/V37，旧handoff保日期/历史身份。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
 | DG-09 | HTTPS旧STOP | [P7-DEPLOY-02](#p7-deploy-02) | 当前证据按01与CURRENT_STATE引用；公网/TLS/旧IP清理未授权，后续发布前验证，不本轮改线上。 |
-| DG-10 | 一个deployed_sha | [P2-BASE-01](#p2-base-01) | backend/frontend/APK/assets/Flyway/config分别记录，bitrepro未知如实标。 |
+| DG-10 | 一个deployed_sha | [P2-BASE-01](#p2-base-01) | backend/frontend/APK/assets/Flyway/config分别记录，bitrepro未知如实标。  **P2实施：** MANIFEST_RECONCILED：source/image/frontend/APK/schema/config分别记录，bitrepro/实装仍未知。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
 | DG-11 | 新店状态/activation认知 | [P3-PROFILE-02](#p3-profile-02) | 维持Create→LIVE自动内部流程，不新增Owner readiness步骤。 |
 | DG-12 | 配置能力重复开发风险 | [P3-READ-03](#p3-read-03) | 复用现Profile/size/Addon，明确通用blank和深度engine尚缺。 |
-| DG-13 | 逐菜Addon价格误导 | [P3-READ-03](#p3-read-03) | 契约统一Orgcode/Storeprice/Itemeligibility，history独立；API陈旧段随实现修。 |
-| DG-14 | Org存在≠隔离 | [P2-GATE-09](#p2-gate-09) | 用API/WS/Profile/Print/Offline/BOM双Org负向证据关闭，不能只靠DB-per客户。 |
+| DG-13 | 逐菜Addon价格误导 | [P3-READ-03](#p3-read-03) | 契约统一Orgcode/Storeprice/Itemeligibility，history独立；API陈旧段随实现修。  **P2实施：** CURRENT_CONTRACT_RECONCILED：API已维持Org code/Store price-name/Item eligibility；P3统一reader仍是后续任务。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
+| DG-14 | Org存在≠隔离 | [P2-GATE-09](#p2-gate-09) | 用API/WS/Profile/Print/Offline/BOM双Org负向证据关闭，不能只靠DB-per客户。  **P2实施：** SCOPED_EVIDENCE_RECONCILED：Auth/WS/Profile/Print/Offline/BOM负向与独立review、最终集成通过；不把Org实体或DB-per客户替代授权，也不称全表RLS/SaaS认证。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
 | DG-15 | GRAB名称 | [P5-INTEGRATION-04](#p5-integration-04) | Q17已定为厨房模块；Grabconnector独立延期，任何文档不得称已集成。 |
-| DG-16 | Staging不等Production | [P2-BASE-01](#p2-base-01) | Manifest分别记环境flags/DB/config来源，不激活productionUber。 |
-| DG-17 | 旧CURRENT_STATE授权 | [P2-BASE-01](#p2-base-01) | 主线程只同步当前治理；B历史状态不构成继续线上写入授权。 |
+| DG-16 | Staging不等Production | [P2-BASE-01](#p2-base-01) | Manifest分别记环境flags/DB/config来源，不激活productionUber。  **P2实施：** SCOPE_RECONCILED：生产与Staging flags/data/credentials分别声明，不以同image作同能力/启用证据。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
+| DG-17 | 旧CURRENT_STATE授权 | [P2-BASE-01](#p2-base-01) | 主线程只同步当前治理；B历史状态不构成继续线上写入授权。  **P2实施：** AUTHORITY_RECONCILED：只有CURRENT_STATE保存当前授权，B历史reconciliation不授权线上续写。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
 | DG-18 | dump存在≠可恢复 | [P7-DEPLOY-02](#p7-deploy-02) | 合成restore演练与服务承诺后关闭；本轮不读/恢复真实dump。 |
-| DG-19 | 历史测试计数冒充新验收 | [P2-GATE-09](#p2-gate-09) | 本轮按命令/counts/skip记录，Postgres/native实际跑，硬件未知独立标。 |
+| DG-19 | 历史测试计数冒充新验收 | [P2-GATE-09](#p2-gate-09) | 本轮按命令/counts/skip记录，Postgres/native实际跑，硬件未知独立标。  **P2实施：** FINAL_EVIDENCE_RECONCILED：逐批保留951skip71/968全PG/1003含1fail/1013含3errors及1fail与修复原因，最终新合成DB1013零fail/error/skip、frontend306/native24及localdebugpackaging通过；硬件未知独立保留。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
 | DG-20 | 税/币/时区普适认知 | [P4-PRICE-04](#p4-price-04) | 首发QC/CAD且policy明确，旧常量保兼容，合规/多税未证不宣称。 |
 | DG-21 | mock≠运行菜单 | [P7-LEGACY-03](#p7-legacy-03) | bundle/import证明后才删，P3候选不阻安全。 |
-| DG-22 | Owner旧main当商业起点 | [P2-BASE-01](#p2-base-01) | freshrefs+隔离工作树+来源tree核验；原ba169ed与dirty工作保留。 |
+| DG-22 | Owner旧main当商业起点 | [P2-BASE-01](#p2-base-01) | freshrefs+隔离工作树+来源tree核验；原ba169ed与dirty工作保留。  **P2实施：** SOURCE_PROTECTION_RECONCILED：fresh main来源与独立worktree保留，旧Owner main/dirty work未覆盖。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
 
 ## 领取/关闭规则
 
