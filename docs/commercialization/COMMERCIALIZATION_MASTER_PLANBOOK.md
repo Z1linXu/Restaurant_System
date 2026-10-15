@@ -16,6 +16,7 @@ Owner 已明确要求连续执行 Phase 1→2→3；这构成本次隔离本地�
 | [COMMERCIALIZATION_AGILE_LOOP](COMMERCIALIZATION_AGILE_LOOP.md) | 已授权本地持续执行、review/PR、真实 blockers 与停机规则 |
 | [MERCHANT_ONBOARDING_DESIGN](MERCHANT_ONBOARDING_DESIGN.md) | 外部 Codex 配置交付，manifest/dry-run/恢复设计 |
 | [COMMERCIAL_ACCEPTANCE_MATRIX](COMMERCIAL_ACCEPTANCE_MATRIX.md) | G2/G3 技术门槛、风险/测试证据与后续上市验收 |
+| [P2 Security/Test Report](PHASE2_SECURITY_TEST_REPORT.md) / [P2 Acceptance Snapshot](PHASE2_ACCEPTANCE_REPORT.md) | 739b708观察点的攻击链、分批测试/独立review、G2逐项证据与Offline/最终集成待验；不取代CURRENT_STATE |
 | [Phase 0 01](01_PRODUCTION_BASELINE_AUDIT.md) / [02](02_SYSTEM_ARCHITECTURE_AUDIT.md) / [03](03_HARDCODE_AND_CUSTOMIZATION_INVENTORY.md) / [04](04_COMMERCIAL_ARCHITECTURE_OPTIONS.md) / [05](05_DOCUMENTATION_GAP_REPORT.md) / [06](06_OWNER_DECISION_QUESTIONS.md) | 日期化证据和原 HC/DG 描述；不是动态状态/授权 |
 
 ## Phase 边界
@@ -40,6 +41,12 @@ P2-GATE-09 → P3-CONFIG-01 → P3-PROFILE-02 → P3-READ-03 → P3-UI-04；P3-F
 后续链：P3-GATE-06 → P4-MENU-01 → P4-MODIFIER-02 → P4-COMBO-03 → P4-PRICE-04 → P5-KITCHEN-01 / P5-TABLE-03 / P5-REPORT-05；Kitchen→P5-PRINT-02；P5-INTEGRATION-04 依赖 Kitchen/Price。P6-IMPORT-01 等待所有可导入实体契约；P6-PLAYBOOK-02 等待工具，P6-SUPPORT-03 独立于菜单但依赖安全契约。P7-ANDROID-01 / P7-DEPLOY-02 → P8-PILOT-01。
 
 以上为任务依赖设计，所有后续阶段任务保持 `PLANNED`；不是阶段自动授权。任务详细 DoD 与证据在 Backlog 的相同 ID。
+
+## P2 已执行证据路由 — 2026-10-15
+
+截至观察点739b708，BASE、root boundaries和Auth/WS已有独立review PASS；任务级执行表见 [Backlog](COMMERCIALIZATION_BACKLOG.md#phase-2-执行快照--2026-10-15)。Offline原版两项P1与候选3985eac独立复审/整合、最终exactSHA全量重跑仍待完成，不能据已完成模块或Draft PR开启P3。原始失败与后续修复分别记账，不能用早批次968全PG或focused67代替最终integrated suite。
+
+[Security/Test Report](PHASE2_SECURITY_TEST_REPORT.md) 记录 source/PR/commit、攻击链和测试范围；[Acceptance Report](PHASE2_ACCEPTANCE_REPORT.md) 逐G2列证据、source gap分级、回滚与Phase3 entry条件。它们为日期化证据，唯一动态Phase/Package/Gate仍是CURRENT_STATE；主线程完成后在同一报告更新最终结果/SHAs与Task disposition。
 
 ## Combined Production Baseline 的复现定义
 
