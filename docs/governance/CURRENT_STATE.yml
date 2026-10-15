@@ -9,7 +9,7 @@ repository:
 phase:
   current: COMMERCIALIZATION_PHASE_3
   package: OWNER_AUTHORIZED_PHASE_1_2_3_LOCAL_ONLY
-  status: CORE_PROFILE_CONFIGURATION_IMPLEMENTATION_IN_PROGRESS
+  status: IMPLEMENTATION_AND_REVIEW_COMPLETE_VISUAL_ACCEPTANCE_BLOCKED
   next_phase_authorized: false
 
 staging:
@@ -153,7 +153,7 @@ uber_store_capability:
 
 gate:
   type: TECHNICAL
-  next_action: IMPLEMENT_PHASE3_CONFIG_PROFILE_NEUTRAL_AND_COMPATIBILITY_ONLY
+  next_action: G3_04_768_1024_LAYOUT_ACCEPTANCE_REQUIRES_BROWSER_PERMISSION
 
 authorization:
   uber_store_capability: OWNER_AUTHORIZED_OPTION370_TEA_EGG_KEEP_ID_PRICE_HISTORY_FORMAL_UBER_EATS_GATES_V37_TEST_REVIEW_MERGE_STAGING_ONLY
@@ -175,7 +175,7 @@ authorization:
   production: NONE
 
 stop:
-  marker: COMMERCIAL_PHASE3_REVIEW_OR_UNRESOLVED_GATE_NO_PHASE4_OR_RUNTIME_MUTATION
+  marker: COMMERCIAL_PHASE3_PARTIAL_VISUAL_GATE_BLOCKED_NO_PHASE4_OR_RUNTIME_MUTATION
 
 commercialization:
   execution_index: ../commercialization/COMMERCIALIZATION_MASTER_PLANBOOK.md
@@ -188,6 +188,13 @@ commercialization:
   phase2_entry_evidence: ../commercialization/PHASE2_ACCEPTANCE_REPORT.md
   phase2_tested_code: 5ec8abeb7a67760000b29151e7f568a88a8f36ed
   phase2_gate: PASS_LOCAL_ONLY_BACKEND1013_FRONTEND306_NATIVE24_ALL_REVIEWS_PASS
+  phase3_entry_evidence: ../commercialization/PHASE3_ACCEPTANCE_REPORT.md
+  phase3_backend_tested_code: 711638e8b634d31418a3bc0bf4ab5f14e08e2fd4
+  phase3_frontend_packaging_tested_code: 55198bcc0acbd6744ddea157217810f8e07376a9
+  phase3_automated_acceptance: PASS_LOCAL_ONLY_BACKEND1050_FRONTEND363_NATIVE24_HTTP14
+  phase3_agent6: PASS_NO_OPEN_NEW_P0_P1
+  phase3_visual_acceptance: NOT_RUN_BROWSER_PERMISSION_DENIED_768_1024
+  phase3_gate: PARTIAL_BLOCKED_G3_04_VISUAL_AND_G3_08_CLOSURE
   staging_mutation_authorized: false
   production_mutation_authorized: false
   merge_to_origin_main_authorized: false

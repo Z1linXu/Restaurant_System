@@ -70,3 +70,5 @@ Phase2 [本地验收](PHASE2_ACCEPTANCE_REPORT.md)允许已授权P3隔离开发�
 当前只能记录`PHASE 3 PARTIAL/BLOCKED — REMAINING WORK LISTED`，实现/自动tests/reviews已完成，仍缺768/1024实际视觉证明。不得把“本地基础代码完成”改写成原G3全部通过。全部G3通过后只可记录`PHASE 3 COMPLETE — READY FOR PHASE 4 REVIEW`并停止；Phase4需独立授权。最终证据不足时记录`PHASE 3 PARTIAL/BLOCKED — REMAINING WORK LISTED`，继续已授权有界修复，不能通过改写gate绕过。
 
 可审查交付为Draft [PR #278](https://github.com/Z1linXu/Restaurant_System/pull/278)，head `codex/commercial-phase3-foundation`、base `codex/commercial-phase2-security-offline`；不等main merge。Root负责最终head/remoteCI、唯一CURRENT_STATE和SYSTEM收束，本快照不以本地guards冒充remoteCI成功。
+
+测试结束后，本任务专用的loopback PG16集群（`/private/tmp/restaurant-commercial-pg16`，端口55439）已正常停止；本任务HTTP/Vite进程也已停止。保留合成测试库与日志供核对，未删除用户数据或操作其他数据库进程。最终仅有文档/治理同步，不触发重复应用构建；最终PR head及远端guards由交付时GitHub记录证明。
