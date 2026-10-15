@@ -31,3 +31,34 @@
 固定GRAB/WOK/DEEPFRIED station/output-role、复杂Modifier/Combo/旧synthetic身份、税/完整i18n与未提取renderer按P4/P5分工；全部HOT_KITCHEN角色页面的既有权限债务仍P5。Neutral完整snapshot适配不等任意厨房路由、所有语言或硬件认证。Web关闭模块的零请求/订阅须由UI批次证明；原生独立headless Worker可能继续轮询，不发明未存在的stop API或声称全native零poll。
 
 后续必须在稳定exactSHA集中审查config/Neutral创建/实际consumer与UI：Store Owner/foreign/ADMIN零写、锁后授权、V39/V40 fresh/V37upgrade、privateartifact与独立mutablegraph、revision/cache/跨店迟到响应、disabled模块、历史hash及G2安全负向。该项仍PENDING，本报告不擅自关闭G3或实施Phase4。
+
+## Backend config / Neutral 批次 — REPAIR REQUIRED
+
+源码：作者`66c947b`+`4058ca390a33aba4612ec86e4d0f7fe3448761da`，整合为`e565be0`+`9fdf5e79eee28ab42849bda7e6a02c5a826ee7b9`。本批审MerchantConfiguration DTO/API/strict写入、Owner创建/catalog分流、V39/V40、safe_summary的StoreContext/MenuCatalog/hash接线。UI刷新delta由另一Reviewer审；本Reviewer未实施产品修改。
+
+**结论：存在一个阻断P1，A6-P3-CFG-01 OPEN；本批不能PASS。** 原Root打印模块PASS保持其受限范围，最终G3不能因现有测试全部通过而关闭此问题。
+
+### A6-P3-CFG-01 — Neutral已发布内容的SHA-256指纹不符，专用validator仍接受
+
+位置：`backend/src/main/java/com/restaurant/system/owner/profile/NeutralRestaurantProfile.java`第11、17–21行，以及`backend/src/main/resources/db/migration/V40__neutral_restaurant_profile.sql`第8行。
+
+- 类常量与V40持久化`fingerprint_sha256`均为`3e696169e5609a9c8b7708bf9e5bb77a995a6539fc15155665f60f17095648ba`。
+- 使用项目既有`StoreProfileCanonicalJson.sha256Canonical(NeutralRestaurantProfile.CONTENT)`实际计算为`1f2742fb30ee9fea4ddb9a11b182c0ad088a6f403611422998f69e063ad4e8dc`。JSON本身已canonical，raw与canonical的实际hash相同，排除了空白/键顺序解释。
+- Java17 JShell直接调用现实现：`DECLARED=3e696...`、`CANONICAL_SHA256=1f274...`、`NeutralRestaurantProfile.validate(VERSION, SCHEMA, CONTENT, FINGERPRINT, List.of()).valid()`返回`true`。
+- 专用validator只比较硬编码CONTENT/FINGERPRINT并回传同常量，没有把实际内容计算hash与expected比较；数据库/测试只对常量的断言也接受此不一致。新request和Store provenance因此绑定错误内容指纹，按规范计算的调用方fingerprint反被拒。影响G3-02的Profile指纹与G3-07的内容来源完整性。
+
+修复须使受审内容、实际canonical hash、published metadata和validator一致，并增加数据库实际content重算hash、validator拒绝错误hash及创建/replay证据。V39/V40已在本地应用并冻结，须走有界forward repair或新的受审版本；不能通过改V40、重写既有ledger/经营历史或把hash改名为任意ID来关闭。具体最小实现由原作者/Root决定，Reviewer保持独立。
+
+### 其余核对与实跑证据
+
+| 范围 | 当前独立核对 / 限定 |
+| --- | --- |
+| DTO与写入 | 九字段safe summary不加载privateartifact；完整Owner管理对象另含实际Store/Org与现资源指针。PUT仅schema/expectedrevision/brand/locale，unknown/type/foreignref在lookup前拒绝；effectiveStoreOwner、锁Store→refresh→重授权、CAS/audit/menu revision在同一事务 |
+| 真实资源路径 | MODULES读取`/api/v1/stores/{id}/modules`、MenuCatalog、platform stations/dining-tables/item-options、OwnerPrinting getOverview和combo-configuration均核现controller；指针不授予目标API权限，无新建任意URL或第二mutablegraph |
+| Catalog/Neutral创建 | 原phase-b私有catalog与业务Neutralcatalog明确分流；原canonical code/version/artifact未改。Neutral仅BUSINESS、禁止Master refs，验证受审空内容和无artifact；复用request ledger/materializer，事务内重新核Org Owner。创建Store/config/modules/当前Owner membership，不复制菜单/工位/桌台/printer/设备/Add-on/其他staff；后段失败回滚业务graph，成功replay仍同Store |
+| Migration/SoT/history | V1–V38无diff；V39相对首个scaffold字节未变，SHA-256=`c7e48bfdb352d7db88c903440a8b379c4985bebf461fed106011db65373f8e0e`。V39明确现存Store一次兼容snapshot；V40新增空public root/精确Neutral可空Masterledger约束。Canonical Add-on/Combo经营SoT保留；非空history row hash迁移/metadata更新测试通过。此正向证据不抵消上方新Profilehash错误 |
+| Reviewer独立四组 | 从`9fdf5e7`的Git archive在临时本地目录编译，Java17、仅guarded `COMMERCIAL_TEST_POSTGRES_URL=jdbc:postgresql://127.0.0.1:55439/commercial_synthetic`，helper创建/删除自己的随机合成DB；MerchantConfigurationServiceTest/HttpTest/PostgresTest/NeutralBusinessCreationPostgresTest：**27 tests / 0failure / 0error / 0skip PASS**，日志`phase3-agent6-config-focused.log`。包括真实Bearer、PG/JPA、空白创建/replay、并发CAS、真实stale Store refresh后的403、失败回滚与非空historyproof；没有新增产品或测试源码 |
+| 作者suite | 作者报告1038total/967executedPASS/71其他PGskipped，另四组27与相关10组48；保留其分支范围，不相加成整合总数 |
+| Root最终后端 | `phase3-integrated-backend.log`在`9fdf5e7`：Java17、全部六类optional PG fresh目标，**1047/0failure/0error/0skip BUILD SUCCESS**；Reviewer核实际日志并复算JAR SHA-256=`49f9eea2deecfbb06f7d794c92dbaaece6168052272847cef068d4adbc577f5e`。本轮测试缺少上方hash断言，不能用suitePASS覆盖新P1 |
+
+除A6-P3-CFG-01外，本批未识别其他阻断问题。修复后须集中复审受影响Profile/version/migration/request/metadata边界并重跑对应测试；G3最终仍需稳定UI审查、受影响整合回归与主线程唯一状态同步。未运行Production/Staging请求、真实设备/打印或Phase4实现。
