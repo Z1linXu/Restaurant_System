@@ -39,6 +39,7 @@ class MerchantConfigurationPostgresTest {
             assertThat(jdbc.queryForObject("select count(*) from store_merchant_configurations where store_id=?", Integer.class, after)).isZero();
             assertThat(jdbc.queryForObject("select content_json from store_profile_versions where profile_id=(select id from store_profiles where profile_code='NEUTRAL_RESTAURANT')", String.class)).isEqualTo(NeutralRestaurantProfile.CONTENT);
             assertThat(jdbc.queryForObject("select count(*) from store_profile_artifacts where profile_version_id in (select v.id from store_profile_versions v join store_profiles p on p.id=v.profile_id where p.profile_code='NEUTRAL_RESTAURANT')", Integer.class)).isZero();
+            assertNeutralAggregateFingerprint(jdbc);
             assertThat(flyway.migrate().migrationsExecuted).isZero();
         }
         try (var db = new CommercialPostgres()) {
@@ -46,7 +47,28 @@ class MerchantConfigurationPostgresTest {
             var jdbc = new JdbcTemplate(db.dataSource);
             assertThat(jdbc.queryForObject("select count(*) from store_profiles where visibility='PUBLIC_PRESET'", Integer.class)).isEqualTo(1);
             assertThat(jdbc.queryForObject("select fingerprint_sha256 from store_profile_versions where profile_id=(select id from store_profiles where profile_code='NEUTRAL_RESTAURANT')", String.class)).isEqualTo(NeutralRestaurantProfile.FINGERPRINT);
+            assertNeutralAggregateFingerprint(jdbc);
         }
+    }
+    private void assertNeutralAggregateFingerprint(JdbcTemplate jdbc) {
+        var row = jdbc.queryForMap("""
+            select p.profile_code,v.profile_version,v.schema_version,v.content_json,v.fingerprint_sha256
+            from store_profile_versions v join store_profiles p on p.id=v.profile_id
+            where p.profile_code='NEUTRAL_RESTAURANT' and v.profile_version='v1'
+            """);
+        var validator = new com.restaurant.system.owner.profile.StoreProfileContractValidator();
+        String content = (String) row.get("content_json");
+        String aggregate = validator.computeAggregateFingerprint((String) row.get("profile_code"),
+            (String) row.get("profile_version"), (String) row.get("schema_version"), content, java.util.List.of());
+        // Profile fingerprints include identity/schema/artifacts; a raw JSON hash is a different contract.
+        assertThat(row.get("fingerprint_sha256")).isEqualTo(aggregate);
+        assertThat(aggregate).isEqualTo(NeutralRestaurantProfile.FINGERPRINT);
+        String contentOnly = com.restaurant.system.owner.profile.StoreProfileCanonicalJson.sha256Canonical(content);
+        assertThat(contentOnly).isNotEqualTo(aggregate);
+        assertThat(validator.validate(NeutralRestaurantProfile.CODE, "v1", NeutralRestaurantProfile.SCHEMA,
+            content, aggregate, java.util.List.of()).valid()).isTrue();
+        assertThat(validator.validate(NeutralRestaurantProfile.CODE, "v1", NeutralRestaurantProfile.SCHEMA,
+            content, contentOnly, java.util.List.of()).valid()).isFalse();
     }
     private String mode(JdbcTemplate jdbc, long store) { return jdbc.queryForObject("select compatibility_mode from store_merchant_configurations where store_id=?", String.class, store); }
     static void seedHistory(JdbcTemplate jdbc, long store, long org) {

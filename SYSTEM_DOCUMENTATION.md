@@ -9604,3 +9604,5 @@ Contracts and bounded local evidence are in
 [Configuration Contract](docs/commercialization/PHASE3_CONFIGURATION_CONTRACT.md),
 [Profile Design](docs/commercialization/PHASE3_PROFILE_DESIGN.md), and
 [Backend Evidence](docs/commercialization/PHASE3_BACKEND_CONFIGURATION_EVIDENCE.md).
+
+Neutral Profile identity uses the existing aggregate fingerprint contract (identity/schema/canonical content/artifacts), not content-only SHA256. Fresh and upgrade tests recompute the aggregate from persisted database columns and reject a raw content hash as the Profile fingerprint; V39/V40 and old ledger bytes remain unchanged.

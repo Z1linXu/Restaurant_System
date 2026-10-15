@@ -10,7 +10,7 @@
 | Lanzhou compatibility | `ST_DENIS_CANONICAL_PROFILE@v2` | 已授权原 provisioner，或 V39 明确旧安装 backfill；`PROVISIONAL_COMPATIBILITY` |
 | Neutral restaurant | `NEUTRAL_RESTAURANT@v1` | V40 受审空 public preset；`NEUTRAL` |
 
-`LANZHOU_NOODLES` 只是业务称呼；未 rename 旧 canonical code/version、artifact、fingerprint。
+`LANZHOU_NOODLE` 只是业务称呼；未 rename 旧 canonical code/version、artifact、fingerprint。
 `stores.provisioned_profile_*` 记录创建 provenance；新表 `profile_code/profile_version` 是明确 runtime
 compatibility assignment。普通 merchant PUT 不切换 Profile。缺 runtime 配置不会追溯推断 provenance。
 
@@ -92,3 +92,5 @@ Neutral 读配置不会加载兰州 artifact。打印/Order/StoreCombo 的运行
 未授权运行真实商家 migration/provision、生产/预发布部署、物理设备或打印。本轮不含 P4 价格/Modifier/Combo
 引擎、P5 站点路由重构、P6 配置导入 executor、商家 PDF 操作手册或真实税务/语言认证。
 Rollback 要保留 V39/V40 与 Neutral 语义；forward repair，不删既有数据或把 missing config 改回兰州。
+
+Profile fingerprint follows the existing `StoreProfileContractValidator.computeAggregateFingerprint` contract: profile code, version, schema, canonical content and sorted artifact identities/hashes. Neutral's aggregate is `3e696169e5609a9c8b7708bf9e5bb77a995a6539fc15155665f60f17095648ba`; the content-only SHA256 `1f2742fb30ee9fea4ddb9a11b182c0ad088a6f403611422998f69e063ad4e8dc` is deliberately a different value and is rejected as a Profile fingerprint. Fresh/upgrade PostgreSQL tests independently recompute the aggregate from actual persisted columns; no V39/V40 or historical fingerprint correction is needed.
