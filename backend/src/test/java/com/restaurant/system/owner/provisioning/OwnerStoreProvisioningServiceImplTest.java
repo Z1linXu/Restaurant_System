@@ -130,8 +130,8 @@ class OwnerStoreProvisioningServiceImplTest {
     @Test
     void businessCreationSkipsStagingRuntimeGatesAndUsesOrganizationOwnerAuthorization() {
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.provision(businessCommand()))
-            .isInstanceOf(OwnerStoreProvisioningException.class)
-            .hasMessageContaining("Store Profile not found");
+            .isInstanceOf(com.restaurant.system.common.auth.ForbiddenException.class)
+            .hasMessage("Store Profile is not available");
 
         verify(featureFlagService, never()).requireEnabled(any());
         verify(runtimeGate, never()).requireEnabled();
