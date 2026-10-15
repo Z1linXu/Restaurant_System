@@ -27,18 +27,23 @@ class PrintingDisplayRuleServiceConflictTest {
     @Mock private PrintJobRepository printJobRepository;
     @Mock private PrintingAddonVocabulary vocabulary;
 
+    private com.restaurant.system.merchant.MerchantConfigurationService merchantConfiguration;
     private PrintingDisplayRuleServiceImpl service;
     private PrintingDisplayRuleSet ruleSet;
 
     @BeforeEach
     void setUp() {
+        merchantConfiguration = org.mockito.Mockito.mock(com.restaurant.system.merchant.MerchantConfigurationService.class);
+        org.mockito.Mockito.lenient().when(merchantConfiguration.isLanzhouCompatible(org.mockito.ArgumentMatchers.any()))
+            .thenReturn(true); // These existing fixtures explicitly cover the Lanzhou compatibility profile.
         service = new PrintingDisplayRuleServiceImpl(
             ruleSetRepository,
             revisionRepository,
             storeRepository,
             printJobRepository,
             vocabulary,
-            org.mockito.Mockito.mock(jakarta.persistence.EntityManager.class)
+            org.mockito.Mockito.mock(jakarta.persistence.EntityManager.class),
+            merchantConfiguration
         );
         ruleSet = new PrintingDisplayRuleSet();
         org.mockito.Mockito.lenient().when(vocabulary.entries(any(), any())).thenReturn(List.of(

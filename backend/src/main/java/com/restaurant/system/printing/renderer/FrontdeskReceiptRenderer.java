@@ -75,12 +75,25 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
             .filter(item -> item.combo_group_no != null)
             .collect(Collectors.groupingBy(item -> item.combo_group_no));
 
+        boolean neutral = printingRules != null && !printingRules.lanzhouCompatibility();
         List<OrderItem> items = allItems.stream()
-            .filter(item -> shouldDisplayItem(item, optionsByItemId.getOrDefault(item.id, List.of())))
+            .filter(item -> neutral || shouldDisplayItem(item, optionsByItemId.getOrDefault(item.id, List.of())))
             .toList();
 
         for (OrderItem item : items) {
             List<OrderItemOption> options = optionsByItemId.getOrDefault(item.id, List.of());
+            if (neutral) {
+                appendSizedLine(builder, Math.max(1, item.quantity == null ? 1 : item.quantity)
+                    + " x " + resolveReceiptDisplayName(item, printingRules));
+                for (OrderItemOption option : options) {
+                    appendSizedLine(builder, firstPresent(option.option_name_snapshot_zh, option.option_name_snapshot_en)
+                        + " x" + Math.max(1, option.quantity == null ? 1 : option.quantity));
+                }
+                if (resolveItemNote(item) != null) appendSizedLine(builder, resolveItemNote(item));
+                appendSizedLine(builder, formatMoney(item.line_amount));
+                builder.append("\n");
+                continue;
+            }
             int displayCount = Math.max(1, item.quantity == null ? 1 : item.quantity);
             for (int copy = 0; copy < displayCount; copy += 1) {
                 appendSizedLine(builder, buildItemLine(item, options, 1, printingRules));

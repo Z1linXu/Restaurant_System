@@ -11,23 +11,42 @@ public record PrintingDisplayRuleContext(
     Long revisionId,
     Integer revisionNumber,
     String fingerprintSha256,
-    JsonNode content
+    JsonNode content,
+    boolean lanzhouCompatibility
 ) {
 
+    /** Explicit compatibility constructor for existing frozen revisions and legacy fixtures. */
+    public PrintingDisplayRuleContext(Long revisionId, Integer revisionNumber, String fingerprintSha256, JsonNode content) {
+        this(revisionId, revisionNumber, fingerprintSha256, content, true);
+    }
+
+    public static PrintingDisplayRuleContext neutralContext() {
+        JsonNode content = StoreProfileCanonicalJson.parse("""
+            {"schema_version":"PRINTING_DISPLAY_RULES_V1","outputs":["GRAB","FRONTDESK_RECEIPT","HOT_KITCHEN"],"item_aliases":[],"dictionaries":{"SIZE":[],"NOODLE_TYPE":[],"SPICINESS":[],"MODIFIER_ADD":[],"MODIFIER_REMOVE":[],"SOUP_BASE":[],"COMBO":[]},"conditional_overrides":[],"formatting":{"addon_fallback":"CANONICAL_SNAPSHOT"}}
+            """);
+        return new PrintingDisplayRuleContext(null, 1, StoreProfileCanonicalJson.sha256(StoreProfileCanonicalJson.canonicalize(content)), content, false);
+    }
+
+    /** Legacy factory; runtime callers must choose through the Store configuration reader. */
     public static PrintingDisplayRuleContext defaultContext() {
         JsonNode content = StoreProfileCanonicalJson.parse(PrintingDisplayRuleDefaults.DEFAULT_CONTENT_JSON);
         return new PrintingDisplayRuleContext(null, 1, PrintingDisplayRuleDefaults.DEFAULT_FINGERPRINT, content);
     }
 
     public static PrintingDisplayRuleContext fromRevision(PrintingDisplayRuleRevision revision) {
+        return fromRevision(revision, true);
+    }
+
+    public static PrintingDisplayRuleContext fromRevision(PrintingDisplayRuleRevision revision, boolean compatibility) {
         if (revision == null || revision.content_json == null || revision.content_json.isBlank()) {
-            return defaultContext();
+            return compatibility ? defaultContext() : neutralContext();
         }
         return new PrintingDisplayRuleContext(
             revision.id,
             revision.revision_number,
             revision.fingerprint_sha256,
-            StoreProfileCanonicalJson.parse(revision.content_json)
+            StoreProfileCanonicalJson.parse(revision.content_json),
+            compatibility
         );
     }
 

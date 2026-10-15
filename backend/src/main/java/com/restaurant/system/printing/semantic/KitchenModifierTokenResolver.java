@@ -39,6 +39,11 @@ public final class KitchenModifierTokenResolver {
         Integer quantity,
         PrintingDisplayRuleContext printingRules
     ) {
+        if (printingRules != null && !printingRules.lanzhouCompatibility()) {
+            String full = firstLabel(labelZh, labelEn, semanticCode, "Add-on");
+            String configured = printingRules.resolveModifierToken("MODIFIER_ADD", semanticCode, full);
+            return quantity != null && quantity > 1 ? configured + "x" + quantity : configured;
+        }
         String code = stable(semanticCode);
         if ("COMBO".equalsIgnoreCase(trim(optionGroup)) || "combo".equals(code)) {
             return null;
@@ -82,6 +87,10 @@ public final class KitchenModifierTokenResolver {
         String labelEn,
         PrintingDisplayRuleContext printingRules
     ) {
+        if (printingRules != null && !printingRules.lanzhouCompatibility()) {
+            return printingRules.resolveModifierToken("MODIFIER_REMOVE", semanticCode,
+                firstLabel(labelZh, labelEn, semanticCode, "Remove"));
+        }
         String code = stable(stripRemovePrefix(semanticCode));
         String fallback = knownRemoveToken(code);
         if (fallback == null) {

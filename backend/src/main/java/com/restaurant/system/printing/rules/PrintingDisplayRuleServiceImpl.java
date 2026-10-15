@@ -142,6 +142,7 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
     private final PrintJobRepository printJobRepository;
     private final PrintingAddonVocabulary addonVocabulary;
     private final jakarta.persistence.EntityManager entityManager;
+    private final com.restaurant.system.merchant.MerchantConfigurationService merchantConfiguration;
 
     public PrintingDisplayRuleServiceImpl(
         PrintingDisplayRuleSetRepository ruleSetRepository,
@@ -149,7 +150,8 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
         StoreRepository storeRepository,
         PrintJobRepository printJobRepository,
         PrintingAddonVocabulary addonVocabulary,
-        jakarta.persistence.EntityManager entityManager
+        jakarta.persistence.EntityManager entityManager,
+        com.restaurant.system.merchant.MerchantConfigurationService merchantConfiguration
     ) {
         this.ruleSetRepository = ruleSetRepository;
         this.revisionRepository = revisionRepository;
@@ -157,12 +159,28 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
         this.printJobRepository = printJobRepository;
         this.addonVocabulary = addonVocabulary;
         this.entityManager = entityManager;
+        this.merchantConfiguration = merchantConfiguration;
     }
 
     @Override
     @Transactional(readOnly = true)
     public PrintingDisplayRuleSettingsResponse getSettings(Long storeId) {
-        PrintingDisplayRuleSet ruleSet = requireRuleSet(storeId);
+        requireStore(storeId);
+        PrintingDisplayRuleSet ruleSet = ruleSetRepository.findByStoreId(storeId).orElse(null);
+        if (ruleSet == null) {
+            var response = new PrintingDisplayRuleSettingsResponse();
+            response.store_id = storeId;
+            response.revisions = List.of();
+            response.addon_aliases = addonEntries(storeId);
+            var defaults = defaultContext(storeId);
+            var projection = new PrintingDisplayRuleRevisionResponse();
+            projection.schema_version = PrintingDisplayRuleDefaults.SCHEMA_VERSION;
+            projection.status = "DEFAULT";
+            projection.content = defaults.content();
+            projection.fingerprint_sha256 = defaults.fingerprintSha256();
+            response.active_revision = projection;
+            return response;
+        }
         List<PrintingDisplayRuleRevision> revisions = revisionRepository.findAllByRuleSetIdOrderByRevisionNumberDesc(ruleSet.id);
         PrintingDisplayRuleSettingsResponse response = new PrintingDisplayRuleSettingsResponse();
         response.store_id = storeId;
@@ -215,7 +233,7 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
             throw new BusinessException("store_id is required");
         }
         JsonNode content = request.content == null
-            ? StoreProfileCanonicalJson.parse(PrintingDisplayRuleDefaults.DEFAULT_CONTENT_JSON)
+            ? defaultContext(request.store_id).content()
             : request.content;
         PrintingDisplayRuleValidationResult validation = validateContent(content);
         if (!validation.valid()) {
@@ -355,15 +373,16 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
         if (!validation.valid()) {
             throw new BusinessException("PRINTING_RULE_VALIDATION_FAILED: " + validation.issues());
         }
-        PrintingDisplayRuleContext context = new PrintingDisplayRuleContext(null, null, validation.fingerprintSha256(), content);
-        String itemSku = blankToDefault(request.item_sku, "cold_noodle_shredded_chicken");
-        String itemNameZh = blankToDefault(request.item_name_zh, "鸡丝凉面");
-        String itemNameEn = blankToDefault(request.item_name_en, "Cold Noodle with Shredded Chicken");
-        String size = blankToDefault(request.size_zh, "中碗");
-        String noodle = blankToDefault(request.noodle_type_zh, "韭叶");
-        String spicy = blankToDefault(request.spiciness_zh, "少辣");
-        List<String> add = request.modifier_add_codes == null ? List.of("bok_choy") : request.modifier_add_codes;
-        List<String> remove = request.modifier_remove_codes == null ? List.of("green_onion") : request.modifier_remove_codes;
+        PrintingDisplayRuleContext context = new PrintingDisplayRuleContext(null, null, validation.fingerprintSha256(), content, merchantConfiguration.isLanzhouCompatible(request.store_id));
+        boolean compatibility = context.lanzhouCompatibility();
+        String itemSku = blankToDefault(request.item_sku, compatibility ? "cold_noodle_shredded_chicken" : "preview_item");
+        String itemNameZh = blankToDefault(request.item_name_zh, compatibility ? "鸡丝凉面" : "商品");
+        String itemNameEn = blankToDefault(request.item_name_en, compatibility ? "Cold Noodle with Shredded Chicken" : "Item");
+        String size = blankToDefault(request.size_zh, compatibility ? "中碗" : "");
+        String noodle = blankToDefault(request.noodle_type_zh, compatibility ? "韭叶" : "");
+        String spicy = blankToDefault(request.spiciness_zh, compatibility ? "少辣" : "");
+        List<String> add = request.modifier_add_codes == null ? (compatibility ? List.of("bok_choy") : List.of()) : request.modifier_add_codes;
+        List<String> remove = request.modifier_remove_codes == null ? (compatibility ? List.of("green_onion") : List.of()) : request.modifier_remove_codes;
 
         String grabAlias = context.resolveItemAlias(PrintModuleCode.GRAB, itemSku, itemNameZh);
         String hotAlias = context.resolveItemAlias(PrintModuleCode.HOT_KITCHEN, itemSku, grabAlias);
@@ -383,7 +402,7 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
             + frontdeskAlias
             + "\n"
             + "辣度: " + context.resolveDictionaryOutput("SPICINESS", PrintModuleCode.FRONTDESK_RECEIPT, null, spicy, null, spicy)
-            + (Boolean.TRUE.equals(request.combo) ? "\n小菜: 毛豆" : "");
+            + (compatibility && Boolean.TRUE.equals(request.combo) ? "\n小菜: 毛豆" : "");
         response.fingerprint_sha256 = validation.fingerprintSha256();
         return response;
     }
@@ -393,13 +412,13 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
     public PrintingDisplayRuleContext activeContext(Long storeId) {
         PrintingDisplayRuleSet ruleSet = ruleSetRepository.findByStoreId(storeId).orElse(null);
         if (ruleSet == null || ruleSet.active_revision_id == null) {
-            return PrintingDisplayRuleContext.defaultContext();
+            return defaultContext(storeId);
         }
         PrintingDisplayRuleRevision revision = revisionRepository.findById(ruleSet.active_revision_id).orElse(null);
         if (revision != null && !ruleSet.id.equals(revision.rule_set_id)) {
-            return PrintingDisplayRuleContext.defaultContext();
+            return defaultContext(storeId);
         }
-        return PrintingDisplayRuleContext.fromRevision(revision);
+        return PrintingDisplayRuleContext.fromRevision(revision, merchantConfiguration.isLanzhouCompatible(storeId));
     }
 
     @Override
@@ -409,10 +428,10 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
             PrintingDisplayRuleRevision revision = revisionRepository.findById(job.printingRuleRevisionId).orElse(null);
             PrintingDisplayRuleSet ruleSet = job.store_id == null ? null : ruleSetRepository.findByStoreId(job.store_id).orElse(null);
             if (revision != null && ruleSet != null && ruleSet.id.equals(revision.rule_set_id)) {
-                return PrintingDisplayRuleContext.fromRevision(revision);
+                return PrintingDisplayRuleContext.fromRevision(revision, merchantConfiguration.isLanzhouCompatible(job.store_id));
             }
         }
-        return job == null || job.store_id == null ? PrintingDisplayRuleContext.defaultContext() : activeContext(job.store_id);
+        return job == null || job.store_id == null ? PrintingDisplayRuleContext.neutralContext() : activeContext(job.store_id);
     }
 
     @Override
@@ -427,6 +446,11 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
             .findFirst()
             .map(this::contextForJob)
             .orElseGet(() -> activeContext(storeId));
+    }
+
+    private PrintingDisplayRuleContext defaultContext(Long storeId) {
+        return merchantConfiguration.isLanzhouCompatible(storeId)
+            ? PrintingDisplayRuleContext.defaultContext() : PrintingDisplayRuleContext.neutralContext();
     }
 
     private PrintingDisplayRuleSet requireRuleSet(Long storeId) {
@@ -459,10 +483,13 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
         revision.revision_number = 1;
         revision.status = "PUBLISHED";
         revision.schema_version = PrintingDisplayRuleDefaults.SCHEMA_VERSION;
-        revision.content_json = StoreProfileCanonicalJson.canonicalize(PrintingDisplayRuleDefaults.DEFAULT_CONTENT_JSON);
-        revision.fingerprint_sha256 = PrintingDisplayRuleDefaults.DEFAULT_FINGERPRINT;
-        revision.source_reference = "PHASE_A11_CURRENT_CODE_EQUIVALENT_DEFAULTS";
-        revision.summary = "Initial A11 default revision equivalent to current accepted printing behavior.";
+        PrintingDisplayRuleContext defaults = defaultContext(storeId);
+        revision.content_json = StoreProfileCanonicalJson.canonicalize(defaults.content());
+        revision.fingerprint_sha256 = defaults.fingerprintSha256();
+        revision.source_reference = defaults.lanzhouCompatibility()
+            ? "PHASE_A11_CURRENT_CODE_EQUIVALENT_DEFAULTS" : "NEUTRAL_RESTAURANT_V1";
+        revision.summary = defaults.lanzhouCompatibility()
+            ? "Initial A11 default revision equivalent to current accepted printing behavior." : "Empty Neutral printing presentation.";
         revision.created_at = now;
         revision.updated_at = now;
         revision.published_at = now;

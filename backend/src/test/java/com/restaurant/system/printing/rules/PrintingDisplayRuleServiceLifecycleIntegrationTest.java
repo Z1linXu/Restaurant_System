@@ -49,10 +49,12 @@ class PrintingDisplayRuleServiceLifecycleIntegrationTest {
     }
 
     @Autowired private PrintingDisplayRuleServiceImpl service;
+    @org.springframework.boot.test.mock.mockito.MockBean private com.restaurant.system.merchant.MerchantConfigurationService merchantConfiguration;
     @org.springframework.boot.test.mock.mockito.MockBean private PrintingAddonVocabulary vocabulary;
 
     @org.junit.jupiter.api.BeforeEach
     void vocabulary() {
+        org.mockito.Mockito.when(merchantConfiguration.isLanzhouCompatible(any())).thenReturn(true);
         org.mockito.Mockito.when(vocabulary.entries(any(), any())).thenReturn(List.of(
             new PrintingAddonVocabulary.Entry("addon_beef_tendon", "加牛筋", "加牛筋", "MENU")));
     }
@@ -101,7 +103,7 @@ class PrintingDisplayRuleServiceLifecycleIntegrationTest {
         legacy.with("dictionaries").withArray("MODIFIER_ADD").addArray().add("legacy_draft_only").add("+旧稿");
         revisionRepository.saveAndFlush(revision("DRAFT", set.id, 3, legacy));
         var real = new PrintingDisplayRuleServiceImpl(ruleSetRepository, revisionRepository, storeRepository,
-            printJobs, new PrintingAddonVocabulary(jdbc), entityManager);
+            printJobs, new PrintingAddonVocabulary(jdbc), entityManager, merchantConfiguration);
         assertThat(real.getSettings(store.id).addon_aliases).extracting(PrintingAddonVocabulary.Entry::code)
             .contains("legacy_draft_only");
         var saved = real.saveDraft(request(store.id, legacy));
