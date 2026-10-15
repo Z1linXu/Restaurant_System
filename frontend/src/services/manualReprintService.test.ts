@@ -18,6 +18,45 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
 
 describe('shared Dine-in / Orders / Print Center reprint contract', () => {
+  it('does not call the server or native bridge for a closed UI scope', async () => {
+    await expect(manualReprint('/api/v1/orders/90/reprint', {}, undefined, () => false)).rejects.toThrow('无法打印')
+    expect(api).not.toHaveBeenCalled()
+    expect(kick).not.toHaveBeenCalled()
+  })
+  it('returns a committed job without a native kick if the UI scope closes during the request', async () => {
+    let active = true
+    let resolve!: (result: PrintJobRecord) => void
+    api.mockImplementationOnce(() => new Promise(done => { resolve = done }))
+    const pending = manualReprint('/api/v1/orders/91/reprint', {}, undefined, () => active)
+    active = false
+    resolve(job())
+    await expect(pending).resolves.toHaveProperty('id', 101)
+    expect(api).toHaveBeenCalledTimes(1)
+    expect(kick).not.toHaveBeenCalled()
+  })
+  it('does not send a confirmation retry after its UI scope closes and retains the intent key', async () => {
+    let active = true
+    const path = '/api/v1/orders/92/reprint'
+    api.mockRejectedValueOnce(new ApiRequestError(409, 'confirm', undefined, { data: { confirmation_fingerprint: 'same' } }, 'REPRINT_CONFIRMATION_REQUIRED'))
+    const confirm = vi.fn(async () => { active = false; return true })
+    await expect(manualReprint(path, {}, confirm, () => active)).rejects.toThrow('无法打印')
+    expect(api).toHaveBeenCalledTimes(1)
+    const key = JSON.parse(api.mock.calls[0][1]!.body as string).idempotency_key
+    expect([...storage.values()]).toContain(key)
+    expect(kick).not.toHaveBeenCalled()
+  })
+  it('does not open a late confirmation dialog for a UI scope that has closed', async () => {
+    let active = true
+    let reject!: (error: unknown) => void
+    api.mockImplementationOnce(() => new Promise((_, fail) => { reject = fail }))
+    const confirm = vi.fn(async () => true)
+    const pending = manualReprint('/api/v1/orders/93/reprint', {}, confirm, () => active)
+    active = false
+    reject(new ApiRequestError(409, 'confirm', undefined, { data: {} }, 'REPRINT_CONFIRMATION_REQUIRED'))
+    await expect(pending).rejects.toThrow('无法打印')
+    expect(confirm).not.toHaveBeenCalled()
+    expect(api).toHaveBeenCalledTimes(1)
+  })
   it.each(['PENDING', 'CLAIMED', 'PRINTING'])('%s is neither failure nor physical completion', status => {
     expect(printResultMessage(job(status))).not.toMatch(/打印失败|打印完成/)
   })

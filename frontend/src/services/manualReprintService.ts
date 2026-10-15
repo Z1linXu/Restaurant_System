@@ -52,7 +52,8 @@ export function confirmActivePrintJobs(info: ReprintConfirmation): Promise<boole
   })
 }
 
-export function manualReprint(path: string, body: Record<string, unknown> = {}, confirm = confirmActivePrintJobs): Promise<PrintJobRecord> {
+export function manualReprint(path: string, body: Record<string, unknown> = {}, confirm = confirmActivePrintJobs, isActive = () => true): Promise<PrintJobRecord> {
+  if (!isActive()) return Promise.reject(new Error('此门店当前无法打印。'))
   const identity = `${intentScope()}|${path}|${JSON.stringify(body)}`
   const existing = inFlight.get(identity)
   if (existing) return existing
@@ -63,15 +64,19 @@ export function manualReprint(path: string, body: Record<string, unknown> = {}, 
   const operation = (async () => {
     let confirmation: string | undefined
     for (;;) {
+      if (!isActive()) throw new Error('此门店当前无法打印。')
       try {
         const job = await apiRequest<PrintJobRecord>(path, { method: 'POST', body: JSON.stringify({
           ...body, idempotency_key: key, confirmation_fingerprint: confirmation,
         }) })
         forget()
-        try { await getAndroidPadDeviceBridge()?.kickPrintWorker?.(JSON.stringify({ reason: 'manual-reprint', order_id: job.order_id, job_id: job.id })) } catch { /* polling remains the reliability path */ }
+        if (isActive()) {
+          try { await getAndroidPadDeviceBridge()?.kickPrintWorker?.(JSON.stringify({ reason: 'manual-reprint', order_id: job.order_id, job_id: job.id })) } catch { /* polling remains the reliability path */ }
+        }
         return job
       } catch (error) {
         if (error instanceof ApiRequestError && error.code === 'REPRINT_CONFIRMATION_REQUIRED') {
+          if (!isActive()) throw new Error('此门店当前无法打印。')
           const info = (error.raw as { data: ReprintConfirmation }).data
           if (!await confirm(info)) { forget(); throw new Error('已取消重新打印') }
           confirmation = info.confirmation_fingerprint

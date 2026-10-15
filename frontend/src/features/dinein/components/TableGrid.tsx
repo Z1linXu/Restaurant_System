@@ -7,7 +7,7 @@ interface TableGridProps {
   onEntrySelect: (slotId: string, selection: 'left' | 'right' | 'full') => void
   onStart: (slotId: string) => void
   onEdit: (slotId: string) => void
-  onPrint: (slot: TableSlot) => void
+  onPrint?: (slot: TableSlot) => void
   onFinish: (slot: TableSlot) => void
   compact?: boolean
   offlineOrders?: OfflineOrderBadge[]

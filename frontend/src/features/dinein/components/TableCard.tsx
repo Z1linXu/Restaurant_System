@@ -10,7 +10,7 @@ interface TableCardProps {
   onEntrySelect: (slotId: string, selection: 'left' | 'right' | 'full') => void
   onStart: (slotId: string) => void
   onEdit: (slotId: string) => void
-  onPrint: (slot: TableSlot) => void
+  onPrint?: (slot: TableSlot) => void
   onFinish: (slot: TableSlot) => void
   compact?: boolean
   offlineOrders?: OfflineOrderBadge[]
@@ -142,7 +142,7 @@ export function TableCard({ slot, onEntrySelect, onStart, onEdit, onPrint, onFin
                 </Button>
                 {slot.action === 'edit' && slot.orderDbId && slot.orderStatus && ['submitted', 'preparing', 'ready'].includes(slot.orderStatus) ? (
                   <>
-                    <Button
+                    {onPrint ? <Button
                       size="lg"
                       fullWidth
                       className={`${compact ? 'min-h-[2.6rem] rounded-[16px] px-3 text-[0.92rem]' : 'min-h-[3.35rem] rounded-[18px]'}`}
@@ -150,7 +150,7 @@ export function TableCard({ slot, onEntrySelect, onStart, onEdit, onPrint, onFin
                       onClick={() => onPrint(slot)}
                     >
                       Print
-                    </Button>
+                    </Button> : null}
                     <Button
                       size="lg"
                       fullWidth

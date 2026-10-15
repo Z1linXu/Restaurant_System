@@ -31,6 +31,7 @@ import { DineInTopBar } from './components/DineInTopBar'
 import { TableGrid } from './components/TableGrid'
 import { TableStatusLegend } from './components/TableStatusLegend'
 import { useCurrentStore } from '../store/useStoreContext'
+import { isStoreModuleEnabled } from '../store/storeModuleAccess'
 import { useAuth } from '../auth/useAuth'
 import { useStoreOfflineOrders } from '../offline/useStoreOfflineOrders'
 import { offlineOrderBadgeLabel, type OfflineOrderBadge } from '../offline/offlineOrderStatus'
@@ -156,7 +157,10 @@ interface DineInPageProps {
 
 export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
   const reprintFollow = useRef<(() => void) | null>(null)
-  const { storeId, organizationId } = useCurrentStore()
+  const { storeId, organizationId, moduleConfiguration } = useCurrentStore()
+  const printingEnabled = isStoreModuleEnabled(moduleConfiguration, 'PRINTING')
+  const printingEnabledRef = useRef(printingEnabled)
+  printingEnabledRef.current = printingEnabled
   useEffect(() => () => reprintFollow.current?.(), [storeId])
   const { user } = useAuth()
   const isIpadLandscape = useIpadLandscape()
@@ -307,6 +311,8 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
 
   useEffect(() => {
     cancelPrintCoordinator()
+    reprintFollow.current?.()
+    reprintFollow.current = null
     printOptionsRequestIdRef.current += 1
     setPrintAttentionMessage(null)
     setSubmissionMessage(null)
@@ -314,7 +320,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     setPrintOptions([])
     setPrintBusy(null)
     setPrintError(null)
-  }, [cancelPrintCoordinator, storeId])
+  }, [cancelPrintCoordinator, printingEnabled, storeId])
 
   useEffect(() => {
     const routeContext = parseMenuRoute(routePath, routeSearch)
@@ -404,6 +410,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
   const startPostSubmitPrintCheck = useCallback((orderId: number, updateBatchId?: number | null) => {
     cancelPrintCoordinator()
     setPrintAttentionMessage(null)
+    if (!printingEnabledRef.current) return
     const runId = printCheckRunIdRef.current + 1
     printCheckRunIdRef.current = runId
     printCoordinatorRef.current = startOrderPrintJobCoordinator({
@@ -411,11 +418,11 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
       orderId,
       updateBatchId,
       onAttention: (attentionJobs) => {
-        if (printCheckRunIdRef.current !== runId) return
+        if (!printingEnabledRef.current || printCheckRunIdRef.current !== runId) return
         setPrintAttentionMessage(buildPostSubmitPrintAttentionMessage(attentionJobs))
       },
       onUnavailable: () => {
-        if (printCheckRunIdRef.current !== runId) return
+        if (!printingEnabledRef.current || printCheckRunIdRef.current !== runId) return
         setPrintAttentionMessage('订单已提交，但当前门店暂时无法读取打印状态；请稍后在订单记录或打印中心检查。')
       },
     })
@@ -450,6 +457,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
   }
 
   const handlePrint = async (slot: TableSlot) => {
+    if (!printingEnabledRef.current) return
     if (!slot.orderDbId) {
       window.alert('Unable to print because the order id is missing.')
       return
@@ -461,7 +469,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     printOptionsRequestIdRef.current = requestId
     try {
       const options = await fetchOrderPrintOptions(slot.orderDbId)
-      if (printOptionsRequestIdRef.current !== requestId) return
+      if (!printingEnabledRef.current || printOptionsRequestIdRef.current !== requestId) return
       setPrintOptions(options)
     } catch (error) {
       if (printOptionsRequestIdRef.current === requestId) {
@@ -473,16 +481,18 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
   const handleManualReprint = async (option: OrderPrintOption) => {
     const target = printTarget
     const requestId = printOptionsRequestIdRef.current
-    if (!target?.orderDbId || !option.available) {
+    if (!printingEnabledRef.current || !target?.orderDbId || !option.available) {
       return
     }
     try {
       setPrintBusy(option.module_code)
       setPrintError(null)
-      const result = await reprintOrderReceipt(target.orderDbId, option.module_code)
-      if (printOptionsRequestIdRef.current !== requestId) return
+      const result = await reprintOrderReceipt(target.orderDbId, option.module_code, () => printingEnabledRef.current && printOptionsRequestIdRef.current === requestId)
+      if (!printingEnabledRef.current || printOptionsRequestIdRef.current !== requestId) return
       reprintFollow.current?.()
-      reprintFollow.current = followReprint(result, job => setSubmissionMessage(printResultMessage(job)))
+      reprintFollow.current = followReprint(result, job => {
+        if (printingEnabledRef.current && printOptionsRequestIdRef.current === requestId) setSubmissionMessage(printResultMessage(job))
+      })
       setPrintAttentionMessage(null)
       setPrintTarget(null)
     } catch (error) {
@@ -525,7 +535,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
               onEntrySelect={handleEntrySelect}
               onStart={handleStart}
               onEdit={handleEdit}
-              onPrint={(slot) => void handlePrint(slot)}
+              onPrint={printingEnabled ? (slot) => void handlePrint(slot) : undefined}
               onFinish={(slot) => void handleFinish(slot)}
               compact={workstationCompact}
               offlineOrders={offlineOrders}
@@ -574,7 +584,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
         <div className="px-3 py-3">
           <div className="mx-auto max-w-none space-y-3">
             <FrontdeskTopNav activeItem={null} />
-            <PrintWorkerHealthBanner />
+            {printingEnabled ? <PrintWorkerHealthBanner /> : null}
             <DineInTopBar
               onTakeoutClick={handleTakeoutEntry}
               workstationLabel={workstationLabel}
@@ -637,7 +647,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
                 onTakeoutClick={handleTakeoutEntry}
                 workstationLabel={workstationLabel}
               />
-              <PrintWorkerHealthBanner />
+              {printingEnabled ? <PrintWorkerHealthBanner /> : null}
 
               {submissionMessage ? (
                 <div className="rounded-[24px] bg-[rgba(97,0,0,0.08)] px-5 py-4 text-base font-semibold text-[var(--primary)]">
@@ -676,7 +686,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
           </div>
         </div>
       )}
-      {printTarget ? (
+      {printingEnabled && printTarget ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(25,20,18,0.36)] p-4" onClick={() => { printOptionsRequestIdRef.current += 1; setPrintTarget(null) }}>
           <div className="w-full max-w-md rounded-[28px] bg-white p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-start justify-between gap-4">

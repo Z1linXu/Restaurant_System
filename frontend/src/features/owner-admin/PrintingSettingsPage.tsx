@@ -784,7 +784,7 @@ export function PrintingSettingsPage() {
     const scope = reprintScope.current
     try {
       setToast(null)
-      const result = await reprintPrintJob(jobId)
+      const result = await reprintPrintJob(jobId, () => scope === reprintScope.current)
       if (scope !== reprintScope.current) return
       reprintFollow.current?.()
       reprintFollow.current = followReprint(result, job => {

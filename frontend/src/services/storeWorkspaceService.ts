@@ -1,5 +1,6 @@
 import { assertEnvironmentSession, captureEnvironmentSession } from '../offline/environmentScope'
 import { apiRequest } from './apiClient'
+import type { StoreSafeSummary } from '../types/storeConfiguration'
 import { canUseOfflineSnapshot } from '../offline/offlineFallbackPolicy'
 import {
   readRestrictedStoreContextSnapshot,
@@ -108,6 +109,7 @@ export interface StoreContextResponse {
   organization_code: string | null
   role_code: string | null
   module_configuration?: StoreModuleConfiguration | null
+  safe_summary?: StoreSafeSummary | null
 }
 
 interface OfflineSnapshotOptions {
@@ -162,6 +164,7 @@ export async function fetchStoreContext(
   try {
     const response = await apiRequest<StoreContextResponse>(`/api/v1/stores/${storeId}/context`)
     assertEnvironmentSession(environmentSession)
+    if (response.id !== storeId) throw new Error('STORE_CONTEXT_SCOPE_MISMATCH')
     if (accountId != null) {
       await saveStoreContextSnapshot(accountId, response).catch((snapshotError) => {
         console.warn('[storeWorkspaceService] unable to save store context snapshot', snapshotError)

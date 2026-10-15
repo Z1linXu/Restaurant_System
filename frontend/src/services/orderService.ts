@@ -595,11 +595,12 @@ export async function completeOrder(orderId: number) {
 export async function reprintOrderReceipt(
   orderId: number,
   receiptType: string,
+  isActive?: () => boolean,
 ) {
   return manualReprint(`/api/v1/orders/${orderId}/reprint`, {
       receipt_type: receiptType,
       update_ticket: false,
-  })
+  }, undefined, isActive)
 }
 
 export async function fetchOrderPrintJobs(orderId: number, options: { signal?: AbortSignal } = {}) {

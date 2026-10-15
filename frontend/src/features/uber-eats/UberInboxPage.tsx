@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useCurrentStore } from '../store/useStoreContext'
+import { isStoreModuleEnabled } from '../store/storeModuleAccess'
 import { FrontdeskTopNav } from '../frontdesk/components/FrontdeskTopNav'
 import { useUberInbox } from './useUberInbox'
 import { canDecideUberOrder, decideUberOrder, reprintUberKitchen, type UberItem, type UberOrder } from '../../services/uberEatsService'
@@ -27,7 +28,12 @@ function OrderItemsAndNotes({ order }: { order: UberOrder }) {
   </>
 }
 export default function UberInboxPage() {
-  const { storeId } = useCurrentStore()
+  const { storeId, moduleConfiguration } = useCurrentStore()
+  const printingEnabled = isStoreModuleEnabled(moduleConfiguration, 'PRINTING')
+  const printingEnabledRef = useRef(printingEnabled)
+  printingEnabledRef.current = printingEnabled
+  const printScope = useRef(0)
+  useEffect(() => () => { printScope.current += 1 }, [printingEnabled, storeId])
   const { orders, loading, error, refresh } = useUberInbox(storeId)
   const inFlight = useRef(new Set<number>())
   const [busy, setBusy] = useState<number[]>([])
@@ -43,10 +49,15 @@ export default function UberInboxPage() {
     finally { inFlight.current.delete(order.id); setBusy([...inFlight.current]) }
   }
   const reprint = async (order: UberOrder, module: 'GRAB' | 'HOT_KITCHEN') => {
+    if (!printingEnabledRef.current) return
     if (!order.local_order_id || inFlight.current.has(order.id)) return
+    const scope = printScope.current
+    const isActive = () => printingEnabledRef.current && scope === printScope.current
     inFlight.current.add(order.id); setBusy([...inFlight.current]); setActionError(null); setPrintMessage(null)
-    try { setPrintMessage(printResultMessage(await reprintUberKitchen(order.local_order_id, module))); refresh() }
-    catch (error) { setActionError(reprintErrorMessage(error)); refresh() }
+    try {
+      const result = await reprintUberKitchen(order.local_order_id, module, isActive)
+      if (isActive()) { setPrintMessage(printResultMessage(result)); refresh() }
+    } catch (error) { if (isActive()) { setActionError(reprintErrorMessage(error)); refresh() } }
     finally { inFlight.current.delete(order.id); setBusy([...inFlight.current]) }
   }
   return <main className="min-h-screen bg-stone-100 p-4 text-stone-900"><FrontdeskTopNav /><div className="mx-auto max-w-6xl py-6"><div className="mb-4 flex items-center justify-between"><h1 className="text-2xl font-black">Uber Eats / 今日订单</h1><button className="min-h-12 rounded-xl bg-white px-5" onClick={refresh}>刷新</button></div>
@@ -63,7 +74,7 @@ export default function UberInboxPage() {
       <p className="mt-3 text-sm">菜单匹配：{order.mapping_status === 'MAPPED' ? '已匹配' : order.mapping_status === 'PARTIALLY_MAPPED' ? '部分匹配' : order.mapping_status}</p>
       {order.mapping_errors.length > 0 && <div role="alert" className="mt-2 rounded-lg bg-amber-50 p-3"><p className="font-bold">{order.local_order_id ? '已按已匹配内容及 Uber 原文送入厨房，请核对未匹配菜品。' : 'Uber 菜品无法匹配本地菜单，厨房尚未释放，请联系管理员。'}</p><ul className="list-inside list-disc break-words text-sm">{order.mapping_errors.map((message, i) => <li key={i}>{message}</li>)}</ul></div>}
       {order.local_order_id && <p className="mt-2">本地订单 #{order.local_order_id}</p>}
-      {order.processing_mode === 'KITCHEN_MIRROR' && order.local_order_id && <div className="mt-4 space-y-2"><p>GRAB：{order.grab_status}</p>{order.hot_kitchen_status !== 'NOT_REQUIRED' && <p>HOT KITCHEN：{order.hot_kitchen_status}</p>}<div className="flex gap-3"><button disabled={busy.includes(order.id) || order.grab_status === 'WAITING'} className="min-h-14 rounded-xl border px-5 font-bold disabled:opacity-40" onClick={() => void reprint(order, 'GRAB')}>重打 GRAB</button>{order.hot_kitchen_status !== 'NOT_REQUIRED' && order.hot_kitchen_status !== 'WAITING' && <button disabled={busy.includes(order.id)} className="min-h-14 rounded-xl border px-5 font-bold disabled:opacity-40" onClick={() => void reprint(order, 'HOT_KITCHEN')}>重打 HOT KITCHEN</button>}</div></div>}
+      {printingEnabled && order.processing_mode === 'KITCHEN_MIRROR' && order.local_order_id && <div className="mt-4 space-y-2"><p>GRAB：{order.grab_status}</p>{order.hot_kitchen_status !== 'NOT_REQUIRED' && <p>HOT KITCHEN：{order.hot_kitchen_status}</p>}<div className="flex gap-3"><button disabled={busy.includes(order.id) || order.grab_status === 'WAITING'} className="min-h-14 rounded-xl border px-5 font-bold disabled:opacity-40" onClick={() => void reprint(order, 'GRAB')}>重打 GRAB</button>{order.hot_kitchen_status !== 'NOT_REQUIRED' && order.hot_kitchen_status !== 'WAITING' && <button disabled={busy.includes(order.id)} className="min-h-14 rounded-xl border px-5 font-bold disabled:opacity-40" onClick={() => void reprint(order, 'HOT_KITCHEN')}>重打 HOT KITCHEN</button>}</div></div>}
       {canDecideUberOrder(order) && <div className="mt-4 flex gap-3"><button disabled={busy.includes(order.id) || order.mapping_status !== 'MAPPED'} className="min-h-14 flex-1 rounded-xl bg-emerald-800 px-5 font-bold text-white disabled:opacity-40" onClick={() => void act(order, 'accept')}>{busy.includes(order.id) ? '处理中…' : 'Accept / 接单'}</button><button disabled={busy.includes(order.id)} className="min-h-14 rounded-xl border border-red-800 px-5 font-bold text-red-800 disabled:opacity-40" onClick={() => setDenyOrder(order.id)}>Deny / 拒单</button></div>}
       {denyOrder === order.id && <div className="mt-3 flex flex-wrap gap-3"><label>拒单原因 <select className="min-h-12 border p-2" value={reason} onChange={e => setReason(e.target.value)}><option value="CAPACITY">厨房繁忙</option><option value="ITEM_AVAILABILITY">菜品售罄</option><option value="MISSING_ITEM">菜单匹配不完整</option><option value="STORE_CLOSED">门店已关</option><option value="OTHER">其他</option></select></label><button disabled={busy.includes(order.id)} className="min-h-12 rounded-xl bg-red-800 px-5 text-white" onClick={() => void act(order, 'deny')}>确认拒单</button><button className="min-h-12 px-3" onClick={() => setDenyOrder(null)}>返回</button></div>}
       {order.status === 'LOCAL_REVIEW_REQUIRED' && <button disabled={busy.includes(order.id)} className="mt-3 min-h-12 rounded-xl border px-5" onClick={() => void act(order, 'retry-local')}>重试送入厨房</button>}

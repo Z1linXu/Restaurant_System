@@ -1,3 +1,5 @@
+import { useStorePresentation } from '../../store/useStorePresentation'
+import { formatStoreMoney } from '../../store/storePresentation'
 import { useEffect, useState } from 'react'
 import { Button } from '../../../components/ui/Button'
 import type { OrderLineItem } from '../../../types/ordering'
@@ -23,6 +25,7 @@ export function OrderLineItemRow({
   compact = false,
   disabled = false,
 }: OrderLineItemRowProps) {
+  const presentation = useStorePresentation()
   const [noteValue, setNoteValue] = useState(item.notes)
   const editingDisabled = item.locked || disabled
 
@@ -57,7 +60,7 @@ export function OrderLineItemRow({
         </div>
         <div className="text-right">
           <div className={`${compact ? 'text-[1.3rem]' : 'text-[1.65rem]'} font-extrabold tracking-[-0.04em] text-[var(--primary)]`}>
-            ${item.lineSubtotal.toFixed(2)}
+            {formatStoreMoney(item.lineSubtotal, presentation)}
           </div>
           {!editingDisabled ? <button
             type="button"

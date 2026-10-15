@@ -1,3 +1,5 @@
+import { useStorePresentation } from '../../store/useStorePresentation'
+
 interface DineInTopBarProps {
   onTakeoutClick: () => void
   workstationLabel?: string | null
@@ -9,11 +11,12 @@ export function DineInTopBar({
   workstationLabel = null,
   compact = false,
 }: DineInTopBarProps) {
+  const presentation = useStorePresentation()
   return (
     <div className={`flex rounded-[28px] bg-[rgba(255,255,255,0.7)] shadow-[0_14px_32px_rgba(26,28,25,0.05)] backdrop-blur-sm ${compact ? 'items-center justify-between gap-4 px-5 py-3' : 'flex-col gap-5 px-7 py-5 xl:flex-row xl:items-center xl:justify-between'}`}>
       <div className={`flex ${compact ? 'items-center gap-6' : 'flex-col gap-5 xl:flex-row xl:items-center xl:gap-12'}`}>
-        <div className={`font-display font-extrabold tracking-[-0.05em] text-[var(--primary)] ${compact ? 'text-[2rem]' : 'text-4xl'}`}>
-          蘭
+        <div title={presentation.brandName} className={`max-w-64 truncate font-display font-extrabold tracking-[-0.05em] text-[var(--primary)] ${compact ? 'text-[2rem]' : 'text-4xl'}`}>
+          {presentation.brandName}
         </div>
         <div className={`flex items-center ${compact ? 'gap-5' : 'gap-8'}`}>
           <div

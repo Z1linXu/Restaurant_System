@@ -1,3 +1,5 @@
+import { useStorePresentation } from '../../store/useStorePresentation'
+import { formatStoreMoney } from '../../store/storePresentation'
 import { Card } from '../../../components/ui/Card'
 import type { MenuItem } from '../../../types/ordering'
 
@@ -26,6 +28,7 @@ export function MenuItemCard({
   disabledReason,
   compact = false,
 }: MenuItemCardProps) {
+  const presentation = useStorePresentation()
   const addLabel = quickAddState === 'adding' ? '...' : quickAddState === 'added' ? 'Added' : '+'
   const stepperAddLabel = quickAddState === 'adding' ? '...' : '+'
 
@@ -61,7 +64,7 @@ export function MenuItemCard({
               <p className={`${compact ? 'text-[1rem]' : 'text-[1.35rem]'} font-semibold text-[rgba(83,58,50,0.86)]`}>{item.nameZh}</p>
             </div>
             <div className={`text-right ${compact ? 'text-[1.55rem]' : 'text-[2rem]'} font-extrabold tracking-[-0.04em] text-[var(--primary)]`}>
-              ${item.price.toFixed(2)}
+              {formatStoreMoney(item.price, presentation)}
             </div>
           </div>
 

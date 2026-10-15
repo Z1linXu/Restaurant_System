@@ -4,6 +4,7 @@ import { StoreSwitcher } from '../../store/StoreSwitcher'
 import { buildStorePath } from '../../store/storeRoutes'
 import { useOptionalCurrentStore } from '../../store/useStoreContext'
 import { isStoreModuleEnabled, type StoreModuleKey } from '../../store/storeModuleAccess'
+import { useStorePresentation } from '../../store/useStorePresentation'
 
 interface DineInSidebarProps {
   activeItem?: 'menu'
@@ -32,6 +33,7 @@ export function DineInSidebar({
 }: DineInSidebarProps) {
   const { isFrontdesk } = useAuth()
   const currentStore = useOptionalCurrentStore()
+  const presentation = useStorePresentation()
   const moduleConfiguration = currentStore?.moduleConfiguration ?? null
   const path = (target: string) => currentStore ? buildStorePath(currentStore.storeId, target) : target
   return (
@@ -53,7 +55,7 @@ export function DineInSidebar({
                 <p className={`font-display font-bold tracking-[-0.04em] text-[var(--on-surface)] ${compact ? 'text-[1.15rem]' : 'text-[1.5rem]'}`}>
                   {currentStore?.storeName ?? 'Frontdesk'}
                 </p>
-                <p className={`${compact ? 'text-[0.78rem]' : 'text-sm'} text-[var(--muted)]`}>Shift: Morning</p>
+                <p className={`${compact ? 'text-[0.78rem]' : 'text-sm'} max-w-52 truncate text-[var(--muted)]`} title={presentation.brandName}>{presentation.brandName}</p>
               </div>
             </div>
           ) : (

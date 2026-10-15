@@ -70,7 +70,7 @@ describe('Uber Store capability on the shared frontend', () => {
     await act(async () => { location.pathname = '/stores/73' + path; listener!() })
     expect(text()).not.toContain('Enabled Uber')
     await act(async () => resolve(context(73, false)))
-    expect(text()).toContain('Module disabled for this Store: UBER_EATS')
+    expect(text()).toContain('功能未启用')
     expect(text()).not.toContain('Enabled Uber')
     await act(async () => { location.pathname = '/stores/52' + path; listener!() })
     expect(text()).toContain(path.startsWith('/admin') ? 'Enabled Uber Admin' : 'Enabled Uber Inbox')

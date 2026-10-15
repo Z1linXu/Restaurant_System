@@ -9562,3 +9562,34 @@ change and increment the existing menu revision. References are authorized Store
 pointers; there is no second mutable menu/device/module graph.
 
 Phase3 focused backend evidence: Merchant Configuration plus Neutral/Lanzhou order, renderer, eligibility, modifier and printing-rule suites pass 142 tests (zero failure/error/skip). The Uber PostgreSQL regression fixture now explicitly initializes its synthetic Lanzhou compatibility configuration; newly inserted unconfigured Stores remain Neutral. Web module suppression does not imply stopping the paired native headless device worker; that existing lifecycle remains Phase7.
+## Store presentation and optional Web modules (commercial development)
+
+Store Context and Menu Catalog accept an optional schema-1 `safe_summary` with
+brand, locale, CAD currency, timezone and non-secret configuration references.
+The current Store context supplies the presentation helper; Menu Catalog carries
+its summary through the existing scoped revision/cache path. Foreign Store IDs
+are rejected before snapshot/cache writes. Missing or unsupported summaries use
+the neutral Restaurant System / en-CA / CAD presentation, with the legacy browser
+timezone fallback. The UI supports CAD only and does not convert money. Current
+Store names take priority over a user's default Store. POS chrome/prices and the
+changed dashboard labels use the helper; this is not a full-site i18n migration.
+
+Web optional-module behavior is scoped to the authenticated Store configuration.
+Printing disabled prevents POS banner/status polling, submit/outbox bridge kicks,
+print coordination, options/job reads and manual reprints; Order History remains
+readable. Uber kitchen reprints also require Printing. Closing a module invalidates
+the Web action scope and cancels follow/coordination, without rewriting committed
+orders, print jobs or unknown idempotency intents. The shared manual helper checks
+an optional UI-scope predicate before a new POST, late confirmation and native
+kick. Printing management uses the existing management guard so missing hardware
+does not hide the configuration entry. KDS/Uber page guards retain their existing
+mount/subscription boundary. Advanced Analytics disabled prevents dashboard reads,
+while Reporting Core remains independently available. Module refusal screens show
+short operational messages without internal revision/readiness diagnostics.
+
+These are Web component guarantees, not proof that a separately started Android
+headless worker stops polling. Android lifecycle, backend print/lease enforcement,
+physical output and bundled assets are unchanged. Local React/TypeScript tests do
+not replace physical iPad/WebView/printing QA. See
+[Phase 3 UI boundaries](docs/commercialization/PHASE3_UI_BOUNDARIES.md) for tests and
+the exact limits; deployment and runtime authority remain in governance.

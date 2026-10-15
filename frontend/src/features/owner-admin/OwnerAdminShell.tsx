@@ -5,6 +5,7 @@ import { StoreSwitcher } from '../store/StoreSwitcher'
 import { buildStorePath, stripStorePrefix } from '../store/storeRoutes'
 import { useOptionalCurrentStore } from '../store/useStoreContext'
 import { isStoreModuleEnabled, isStoreModuleManagementEnabled, type StoreModuleKey } from '../store/storeModuleAccess'
+import { useStorePresentation } from '../store/useStorePresentation'
 
 interface OwnerAdminShellProps {
   title: string
@@ -35,6 +36,7 @@ const navItems: NavItem[] = [
 export function OwnerAdminShell({ title, description, children }: OwnerAdminShellProps) {
   const { user, isOwner, isManager, isFrontdesk, signOut } = useAuth()
   const currentStore = useOptionalCurrentStore()
+  const presentation = useStorePresentation()
   const moduleConfiguration = currentStore?.moduleConfiguration ?? null
   const [pathname, setPathname] = useState(window.location.pathname)
 
@@ -152,7 +154,8 @@ export function OwnerAdminShell({ title, description, children }: OwnerAdminShel
             onClick={() => navigateTo(currentStore ? buildStorePath(currentStore.storeId, homePath) : homePath)}
             className="w-full rounded-[24px] bg-[rgba(97,0,0,0.04)] px-4 py-4 text-left"
           >
-            <div className="text-[1.55rem] font-black tracking-[-0.05em] text-[var(--primary)]">{shellTitle}</div>
+            <div className="break-words text-[1.55rem] font-black tracking-[-0.05em] text-[var(--primary)]">{presentation.brandName}</div>
+            <div className="mt-1 text-sm font-bold text-[var(--muted)]">{shellTitle}</div>
             <div className="mt-1 text-[0.84rem] leading-5 text-[var(--muted)]">
               {user?.full_name || user?.username || 'Restaurant Admin'}
             </div>
