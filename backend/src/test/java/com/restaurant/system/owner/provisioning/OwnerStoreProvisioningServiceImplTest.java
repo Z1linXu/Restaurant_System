@@ -146,6 +146,7 @@ class OwnerStoreProvisioningServiceImplTest {
         OwnerStoreProvisioningCommand command = command();
         StoreProfileEntity profile = new StoreProfileEntity();
         profile.id = 1L;
+        profile.owner_organization_id = command.organizationId();
         profile.profile_code = command.profileCode();
         StoreProfileVersionEntity profileVersion = new StoreProfileVersionEntity();
         profileVersion.id = 2L;

@@ -164,8 +164,7 @@ class OrderServiceImplTest {
             menuItemOptionBomRepository,
             kitchenTaskRepository,
             productionTaskRepository,
-            inventoryItemRepository,
-            inventoryTransactionRepository,
+            new com.restaurant.system.inventory.service.InventoryConsumptionService(inventoryItemRepository, inventoryTransactionRepository),
             stationRepository,
             storeRepository,
             realtimeEventPublisher,
@@ -1293,6 +1292,43 @@ class OrderServiceImplTest {
         assertTrue(thinTask.special_instructions_snapshot.contains("鸡凉"));
         assertFalse(thinTask.special_instructions_snapshot.contains("鸡凉细"));
         assertTrue(leekLeafTask.special_instructions_snapshot.contains("鸡凉韭"));
+    }
+
+    @Test
+    void itemAndOptionBomAggregateOnceAndRepeatedSubmitCannotConsumeAgain() {
+        var option = menuOption(300L, "addon", "synthetic_stock", "ADD_ON", "测试", "Synthetic", BigDecimal.ZERO);
+        when(menuItemOptionRepository.findById(option.id)).thenReturn(Optional.of(option));
+        var stock = new com.restaurant.system.inventory.entity.InventoryItem();
+        stock.id = 700L; stock.store_id = store.id; stock.is_active = true; stock.current_stock = new BigDecimal("20");
+        var itemBom = new com.restaurant.system.menu.entity.MenuItemBom();
+        itemBom.inventory_item_id = stock.id; itemBom.qty_per_unit = new BigDecimal("2");
+        var optionBom = new com.restaurant.system.menu.entity.MenuItemOptionBom();
+        optionBom.inventory_item_id = stock.id; optionBom.qty_per_unit = new BigDecimal("3");
+        when(menuItemBomRepository.findAllByMenuItemId(menuItem.id)).thenReturn(List.of(itemBom));
+        when(menuItemOptionBomRepository.findAllByMenuItemOptionId(option.id)).thenReturn(List.of(optionBom));
+        when(inventoryItemRepository.findByIdAndStoreIdForUpdate(stock.id, store.id)).thenReturn(Optional.of(stock));
+        var submitted = submitSingleOptionOrder(option.id, "SYNTHETIC-BOM");
+        assertEquals(0, stock.current_stock.compareTo(new BigDecimal("15")));
+        assertThrows(BusinessException.class, () -> orderService.submitOrder(submitted.id));
+        verify(inventoryItemRepository, org.mockito.Mockito.times(1)).findByIdAndStoreIdForUpdate(stock.id, store.id);
+        verify(inventoryTransactionRepository, org.mockito.Mockito.times(1)).save(any(InventoryTransaction.class));
+    }
+
+    @Test
+    void foreignAndNegativeBomCannotWriteInventoryLedger() {
+        var bom = new com.restaurant.system.menu.entity.MenuItemBom(); bom.inventory_item_id = 701L; bom.qty_per_unit = BigDecimal.ONE;
+        when(menuItemBomRepository.findAllByMenuItemId(menuItem.id)).thenReturn(List.of(bom));
+        var item = new CreateOrderItemRequest(); item.menu_item_id = menuItem.id; item.quantity = 1;
+        var request = new CreateOrderRequest(); request.store_id = store.id; request.created_by = 1L;
+        request.order_type = "pickup"; request.pickup_no = "SYNTHETIC-FOREIGN"; request.items = List.of(item);
+        long id = orderService.createOrder(request).id;
+        assertThrows(BusinessException.class, () -> orderService.submitOrder(id));
+        verify(inventoryTransactionRepository, org.mockito.Mockito.never()).save(any());
+        bom.qty_per_unit = BigDecimal.ONE.negate();
+        request.pickup_no = "SYNTHETIC-NEGATIVE";
+        long second = orderService.createOrder(request).id;
+        assertThrows(BusinessException.class, () -> orderService.submitOrder(second));
+        verify(inventoryTransactionRepository, org.mockito.Mockito.never()).save(any());
     }
 
     private OrderResponse submitSingleOptionOrder(Long optionId, String tableNo) {

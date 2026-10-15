@@ -26,7 +26,7 @@ class PrintingReliabilityPostgresMigrationTest {
                 Long option = jdbc.queryForObject("insert into order_item_options (option_code_snapshot, option_name_snapshot_zh, price_delta, quantity) values ('remove_onion', '历史洋葱', 0, 1) returning id", Long.class);
                 var before = jdbc.queryForMap("select status, rendered_text_snapshot, payload_snapshot, printed_at from print_jobs where id = ?", job);
                 var frozen = jdbc.queryForMap("select * from order_item_options where id = ?", option);
-                var flyway = Flyway.configure().dataSource(ds).locations("classpath:db/migration").load();
+                var flyway = Flyway.configure().dataSource(ds).locations("classpath:db/migration").target("30").load();
                 assertThat(flyway.migrate().migrationsExecuted).isOne();
                 assertThat(jdbc.queryForMap("select status, rendered_text_snapshot, payload_snapshot, printed_at from print_jobs where id = ?", job)).isEqualTo(before);
                 assertThat(jdbc.queryForMap("select * from order_item_options where id = ?", option)).isEqualTo(frozen);

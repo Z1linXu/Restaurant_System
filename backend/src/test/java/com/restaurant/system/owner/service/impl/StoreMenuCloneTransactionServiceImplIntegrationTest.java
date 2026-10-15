@@ -622,7 +622,8 @@ class StoreMenuCloneTransactionServiceImplIntegrationTest {
             coordinator,
             new StoreMenuCloneProfileRegistry(List.of(profile)),
             composers,
-            new com.restaurant.system.owner.menu.StoreMenuCloneOptionPlanValidator()
+            new com.restaurant.system.owner.menu.StoreMenuCloneOptionPlanValidator(),
+            com.restaurant.system.owner.profile.SyntheticPrivateProfileFixture.repository(ORGANIZATION_ID)
         );
     }
 

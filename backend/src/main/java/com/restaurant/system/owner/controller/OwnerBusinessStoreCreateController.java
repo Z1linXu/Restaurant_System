@@ -7,6 +7,7 @@ import com.restaurant.system.common.auth.OwnerOrganizationAuthorizationService;
 import com.restaurant.system.common.response.ApiResponse;
 import com.restaurant.system.owner.dto.OwnerBusinessStoreCreateResponse;
 import com.restaurant.system.owner.dto.OwnerStoreProvisioningCatalogResponse;
+import com.restaurant.system.owner.provisioning.OwnerStoreProvisioningCatalogService;
 import com.restaurant.system.owner.dto.OwnerStoreProvisioningRequest;
 import com.restaurant.system.owner.exception.OwnerStoreProvisioningException;
 import com.restaurant.system.owner.service.OwnerBusinessStoreCreateService;
@@ -25,14 +26,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class OwnerBusinessStoreCreateController {
 
     private final AuthorizationService authorizationService;
+    private final OwnerStoreProvisioningCatalogService catalogService;
     private final OwnerOrganizationAuthorizationService organizationAuthorizationService;
     private final OwnerBusinessStoreCreateService createService;
 
     public OwnerBusinessStoreCreateController(
+        OwnerStoreProvisioningCatalogService catalogService,
         AuthorizationService authorizationService,
         OwnerOrganizationAuthorizationService organizationAuthorizationService,
         OwnerBusinessStoreCreateService createService
     ) {
+        this.catalogService = catalogService;
         this.authorizationService = authorizationService;
         this.organizationAuthorizationService = organizationAuthorizationService;
         this.createService = createService;
@@ -41,7 +45,7 @@ public class OwnerBusinessStoreCreateController {
     @GetMapping("/create-catalog")
     public ApiResponse<OwnerStoreProvisioningCatalogResponse> catalog(@PathVariable Long organizationId) {
         requireOrganizationOwner(organizationId);
-        return ApiResponse.success("Business Store creation catalog", OwnerStoreProvisioningCatalogResponse.initial(true));
+        return ApiResponse.success("Business Store creation catalog", catalogService.catalog(organizationId));
     }
 
     @PostMapping

@@ -43,7 +43,7 @@ class StoreProfileControllerTest {
 
     @Test
     void profileListRequiresOwnerAndReturnsOnlySafeMetadata() throws Exception {
-        when(catalogService.listProfiles()).thenReturn(List.of(new StoreProfileSummaryResponse(
+        when(catalogService.listProfiles(null)).thenReturn(List.of(new StoreProfileSummaryResponse(
             "ST_DENIS_CANONICAL_PROFILE",
             "St-Denis Canonical Profile",
             "safe",
@@ -62,7 +62,7 @@ class StoreProfileControllerTest {
 
     @Test
     void profileVersionReadRequiresOwner() throws Exception {
-        when(catalogService.getVersion("ST_DENIS_CANONICAL_PROFILE", "v1")).thenReturn(new StoreProfileVersionResponse(
+        when(catalogService.getVersion(null, "ST_DENIS_CANONICAL_PROFILE", "v1")).thenReturn(new StoreProfileVersionResponse(
             "ST_DENIS_CANONICAL_PROFILE",
             "St-Denis Canonical Profile",
             "safe",

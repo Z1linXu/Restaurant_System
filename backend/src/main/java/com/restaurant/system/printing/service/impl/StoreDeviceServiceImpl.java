@@ -78,8 +78,19 @@ public class StoreDeviceServiceImpl implements StoreDeviceService {
         if (!Boolean.TRUE.equals(device.isActive) || !"ACTIVE".equals(device.status)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Device is not active");
         }
-        if (!hashToken(rawDeviceToken).equals(device.deviceTokenHash)) {
+        if (device.deviceTokenHash == null || !MessageDigest.isEqual(
+            hashToken(rawDeviceToken).getBytes(StandardCharsets.UTF_8),
+            device.deviceTokenHash.getBytes(StandardCharsets.UTF_8))) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid device credentials");
+        }
+        if (device.storeId == null || device.organizationId == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Device Store is not available");
+        }
+        Store store = storeRepository.findById(device.storeId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Device Store is not available"));
+        if (device.organizationId == null || !device.organizationId.equals(store.organization_id)
+            || !"active".equalsIgnoreCase(store.status)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Device Store is not available");
         }
         touchLastSeenIfStale(device, LocalDateTime.now());
         return device;

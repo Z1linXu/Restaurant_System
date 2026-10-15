@@ -18,7 +18,7 @@ import org.springframework.util.StringUtils;
 public class ProductionSafetyConfig implements BeanFactoryPostProcessor, EnvironmentAware, PriorityOrdered {
 
     private static final int MIN_JWT_SECRET_LENGTH = 32;
-    private static final List<String> STRICT_PROFILES = List.of("cloud", "prod", "production");
+    private static final List<String> STRICT_PROFILES = List.of("cloud", "prod", "production", "commercial");
     private static final List<String> PILOT_PROFILES = List.of("pilot");
     private static final List<String> UNSAFE_DDL_AUTO_VALUES = List.of("update", "create", "create-drop", "create_drop");
     private static final String CLOUD_PROFILE = "cloud";
@@ -77,6 +77,24 @@ public class ProductionSafetyConfig implements BeanFactoryPostProcessor, Environ
             validateStrictProductionSettings(environment, violations, exactStagingSyntheticProfiles);
         } else if (pilotProfile) {
             validatePilotSettings(environment, violations);
+        }
+
+        if (activeProfiles.contains("commercial")) {
+            if (!activeProfiles.equals(List.of("commercial"))) violations.add("commercial must be the only active profile");
+            if (!"commercial-local".equals(environment.getProperty("app.environment"))) violations.add("commercial requires commercial-local environment");
+            String url = environment.getProperty("spring.datasource.url", "");
+            if (!url.matches("jdbc:postgresql://127\\.0\\.0\\.1:[0-9]+/commercial_[a-zA-Z0-9_]+")) {
+                violations.add("commercial requires an isolated loopback synthetic database");
+            }
+            if (!"validate".equals(environment.getProperty("spring.jpa.hibernate.ddl-auto"))) violations.add("commercial requires ddl-auto validate");
+            if (!environment.getProperty("spring.flyway.validate-on-migrate", Boolean.class, false)) violations.add("commercial requires Flyway validation");
+            if (environment.getProperty("app.seed.runtime-enabled", Boolean.class, true)) violations.add("commercial disables runtime seeders");
+            if (environment.getProperty("app.printing.endpoint-configuration-enabled", Boolean.class, true)) violations.add("commercial disables printer endpoints");
+            var modes = environment.getProperty("app.printing.allowed-modes", String[].class, new String[]{});
+            if (modes.length == 0 || Arrays.stream(modes).anyMatch(m -> !List.of("DISABLED", "MOCK").contains(m.trim()))) {
+                violations.add("commercial permits DISABLED/MOCK printing only");
+            }
+            if (environment.getProperty("UBER_EATS_ENABLED", Boolean.class, false)) violations.add("commercial disables external Uber execution");
         }
 
         if (!violations.isEmpty()) {

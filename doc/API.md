@@ -1,5 +1,26 @@
 # Restaurant System API
 
+## Commercial development Profile / Device isolation (V38)
+
+`GET /api/v1/store-profiles` filters roots before loading version metadata.
+Version/artifact reads inherit the root's visibility. `PRIVATE` requires the
+exact owning active Organization's active OWNER membership and application OWNER;
+`PUBLIC_PRESET` requires an explicitly reviewed ownerless safe preset and a valid
+Organization Owner. ADMIN is not a merchant Owner. Missing/foreign private roots
+return the same denial. Provisioning/create catalogs and menu-clone validation,
+execution and replay apply the same root boundary. No Profile publish API exists.
+Unowned/ambiguous legacy Profiles remain PRIVATE and unavailable; do not run a
+production backfill or guess Organization 1. V38 infers ownership only from unique
+exact Store Profile/version/fingerprint provenance.
+
+Device-token authentication validates the current Store and matching Organization
+before updating last-seen/heartbeat. Revoked/inactive, moved, missing or inactive
+Store device credentials cannot access pending jobs or any lifecycle operation.
+Printer assignments and payload printers remain Store-scoped; PAD_DIRECT lease,
+claim, PRINTING and ambiguous-failure rules are unchanged. This development
+contract does not authorize production migration or physical printing.
+
+
 ## Uber Store module authorization (V37)
 
 `UBER_EATS` is a default-disabled optional key in the existing Store module
@@ -1053,23 +1074,19 @@ Beverage item events:
 
 ---
 
-## Inventory
+## Inventory / Prep capability boundary
 
-### Get Items
-GET /inventory/items
+Only `GET /api/v1/inventory/health` exists. Inventory item listing, restock,
+transaction listing and `POST /prep-recipes/{id}/execute` are **PLANNED /
+NOT_IMPLEMENTED**; they are not supported write contracts. Full inventory/prep
+management is deferred to `FUTURE-INVENTORY-01`.
 
-### Restock
-POST /inventory/restock
-
-### Transactions
-GET /inventory/transactions
-
----
-
-## Prep
-
-### Execute Prep
-POST /prep-recipes/{id}/execute
+The enabled Order submission/update BOM path remains supported: item/option demand
+is aggregated per inventory identity, negative/invalid BOM is rejected, and every
+inventory item must belong to the Order's Store. Stable-order pessimistic locks,
+stock changes and ledger writes share the Order transaction. Insufficient,
+inactive or foreign inventory fails the whole transaction. Repeated submission
+cannot consume twice; submitted add-only update batches retain their idempotency.
 
 ---
 
@@ -1082,7 +1099,7 @@ GET /menu/health
 GET /menu/catalog?store_id=...
 
 Response behavior:
-- requires `X-User-Id`
+- requires Bearer authentication (explicit local development fallback only)
 - current backend enforces `order:create` capability for store-scoped catalog access
 - returns active categories with nested active items and nested active options
 - returns bilingual fields directly (`name_zh`, `name_en`)
@@ -1188,7 +1205,7 @@ Response behavior:
 
 ### Owner Pricing Rules
 
-All endpoints require `X-User-Id` with `admin:menu_manage` for the target Store.
+All endpoints require Bearer authentication with `admin:menu_manage` for the target Store.
 
 #### Get Store Pricing Policy
 
@@ -1283,7 +1300,7 @@ Removing/disabling an in-use component must not leave invalid item defaults.
 
 #### Store Add-on Catalog
 
-All endpoints use the existing authenticated principal/`X-User-Id` contract
+All endpoints use the authenticated Bearer principal contract (explicit local fallback only)
 and require `admin:menu_manage` for the resolved Store. Store IDs and item/Add-on
 IDs are revalidated on the backend; frontend Store context is not authorization.
 
