@@ -38,6 +38,7 @@ public class StaffAdminServiceImpl implements StaffAdminService {
 
     private final com.restaurant.system.common.auth.StoreAccessService storeAccessService;
     private final com.restaurant.system.user.repository.StoreMembershipRepository memberships;
+    private final jakarta.persistence.EntityManager entityManager;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final StoreRepository storeRepository;
@@ -57,11 +58,13 @@ public class StaffAdminServiceImpl implements StaffAdminService {
         AuditLogService auditLogService,
         StoreModuleAccessEvaluator moduleAccessEvaluator,
         com.restaurant.system.common.auth.StoreAccessService storeAccessService,
-        com.restaurant.system.user.repository.StoreMembershipRepository memberships
+        com.restaurant.system.user.repository.StoreMembershipRepository memberships,
+        jakarta.persistence.EntityManager entityManager
     ) {
         this.userRepository = userRepository;
         this.storeAccessService=storeAccessService;
         this.memberships=memberships;
+        this.entityManager=entityManager;
         this.roleRepository = roleRepository;
         this.storeRepository = storeRepository;
         this.userCredentialRepository = userCredentialRepository;
@@ -301,7 +304,9 @@ public class StaffAdminServiceImpl implements StaffAdminService {
     }
 
     private User requireUser(Long userId) {
-        return userRepository.findByIdForUpdate(userId).orElseThrow(() -> new BusinessException("User not found"));
+        User user = userRepository.findByIdForUpdate(userId).orElseThrow(() -> new BusinessException("User not found"));
+        entityManager.refresh(user, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        return user;
     }
 
     private Role findRole(String roleCode) {

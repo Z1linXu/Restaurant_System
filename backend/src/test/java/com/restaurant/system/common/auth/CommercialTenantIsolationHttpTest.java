@@ -45,6 +45,8 @@ class CommercialTenantIsolationHttpTest {
     MenuItemOptionRepository options;
     StoreKdsDisplayConfigRepository kds;
     StoreModuleAccessEvaluator modules;
+    com.restaurant.system.owner.profile.StoreProfileVersionRepository profileVersions;
+    com.restaurant.system.owner.profile.StoreProfileArtifactRepository profileArtifacts;
     @BeforeEach void setup() {
         f=new CommercialSecurityFixture();
         auth=new AuthorizationService(f.context,f.capabilities,f.access,mock(OrderRepository.class),mock(OrderItemRepository.class),mock(KitchenTaskRepository.class));
@@ -69,12 +71,26 @@ class CommercialTenantIsolationHttpTest {
         var workspace=new WorkspaceController(f.context,f.access,f.stores,f.organizations,mock(StoreModuleService.class));
         var staffService=new com.restaurant.system.staff.service.impl.StaffAdminServiceImpl(f.users,f.roles,f.stores,
             mock(com.restaurant.system.auth.repository.UserCredentialRepository.class),mock(com.restaurant.system.auth.service.PasswordService.class),
-            auth,audit,modules,f.access,f.storeMembers);
+            auth,audit,modules,f.access,f.storeMembers,mock(jakarta.persistence.EntityManager.class));
         var staff=new com.restaurant.system.staff.controller.StaffAdminController(staffService,auth,f.context);
         var aggregation=mock(com.restaurant.system.analytics.service.AnalyticsAggregationService.class);
         var readScope=new com.restaurant.system.analytics.service.AnalyticsReadScope(auth,f.access,f.capabilities);
         var analytics=new com.restaurant.system.analytics.controller.AnalyticsAdminController(aggregation,auth,mock(FeatureFlagService.class),modules,readScope);
-        mvc=MockMvcBuilders.standaloneSetup(platform,workspace,new AuditLogController(audit,auth,modules),staff,analytics)
+        var profiles=mock(com.restaurant.system.owner.profile.StoreProfileRepository.class);
+        profileVersions=mock(com.restaurant.system.owner.profile.StoreProfileVersionRepository.class);
+        profileArtifacts=mock(com.restaurant.system.owner.profile.StoreProfileArtifactRepository.class);
+        var privateProfiles = new ArrayList<com.restaurant.system.owner.profile.StoreProfileEntity>();
+        for (long org : new long[]{100,200}) {
+            var profile = new com.restaurant.system.owner.profile.StoreProfileEntity();
+            profile.id=org; profile.profile_code="SYNTHETIC_PRIVATE_"+org; profile.owner_organization_id=org;
+            privateProfiles.add(profile); when(profiles.findByProfileCode(profile.profile_code)).thenReturn(Optional.of(profile));
+        }
+        when(profiles.findAllByOrderByProfileCodeAsc()).thenReturn(privateProfiles);
+        var profileCatalog=new com.restaurant.system.owner.profile.StoreProfileCatalogService(profiles,profileVersions,profileArtifacts,
+            new com.restaurant.system.owner.profile.StoreProfileContractValidator(),
+            new com.restaurant.system.owner.profile.StoreProfileAccessService(f.orgMembers,f.organizations));
+        var profileController=new com.restaurant.system.owner.profile.StoreProfileController(auth,profileCatalog);
+        mvc=MockMvcBuilders.standaloneSetup(platform,workspace,new AuditLogController(audit,auth,modules),staff,analytics,profileController)
             .setControllerAdvice(new GlobalExceptionHandler())
             .addFilters(new RequestContextFilter(),new AuthTokenFilter(f.identities,new ObjectMapper())).build();
     }
@@ -82,6 +98,17 @@ class CommercialTenantIsolationHttpTest {
         mvc.perform(get("/api/v1/me/workspaces")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/v1/me/workspaces").header("X-User-Id","1")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/v1/me/workspaces").header("Authorization","Bearer invalid")).andExpect(status().isUnauthorized());
+    }
+
+    @Test void authenticatedProfileHttpListAndGuessedVersionCannotCrossOrganizations() throws Exception {
+        mvc.perform(get("/api/v1/store-profiles").header("Authorization",f.bearer(1)))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.length()").value(1))
+            .andExpect(jsonPath("$.data[0].profile_code").value("SYNTHETIC_PRIVATE_100"));
+        mvc.perform(get("/api/v1/store-profiles/SYNTHETIC_PRIVATE_100/versions/v1").header("Authorization",f.bearer(2)))
+            .andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/store-profiles").header("Authorization",f.bearer(5))).andExpect(status().isForbidden());
+        verify(profileVersions,never()).findByProfileIdAndProfileVersion(anyLong(),anyString());
+        verifyNoInteractions(profileArtifacts);
     }
     @Test void workspaceContainsOnlyOwnersOrganizationAndRevokedDefaultIsNotAdvertised() throws Exception {
         mvc.perform(get("/api/v1/me/workspaces").header("Authorization",f.bearer(1)))

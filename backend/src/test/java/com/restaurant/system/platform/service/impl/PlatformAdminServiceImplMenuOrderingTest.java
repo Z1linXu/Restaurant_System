@@ -88,7 +88,9 @@ class PlatformAdminServiceImplMenuOrderingTest {
             menuRevisionService,
             chainMasterMenuRepository,
             chainMasterMenuVersionRepository,
-            storeMenuMasterMappingRepository
+            storeMenuMasterMappingRepository,
+            org.mockito.Mockito.mock(com.restaurant.system.platform.controller.PlatformResourceAuthorization.class),
+            org.mockito.Mockito.mock(jakarta.persistence.EntityManager.class)
         );
     }
 

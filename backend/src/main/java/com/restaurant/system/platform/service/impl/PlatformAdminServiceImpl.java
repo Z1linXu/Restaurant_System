@@ -26,6 +26,9 @@ import com.restaurant.system.platform.repository.OrganizationRepository;
 import com.restaurant.system.platform.repository.RestaurantTemplateRepository;
 import com.restaurant.system.platform.repository.StoreKdsDisplayConfigRepository;
 import com.restaurant.system.platform.service.PlatformAdminService;
+import com.restaurant.system.platform.controller.PlatformResourceAuthorization;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import com.restaurant.system.station.entity.DiningTable;
 import com.restaurant.system.station.entity.Station;
 import com.restaurant.system.station.repository.DiningTableRepository;
@@ -68,6 +71,8 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
     private final ChainMasterMenuVersionRepository chainMasterMenuVersionRepository;
     private final StoreMenuMasterMappingRepository storeMenuMasterMappingRepository;
     private final ObjectMapper objectMapper;
+    private final PlatformResourceAuthorization userAuthorization;
+    private final EntityManager entityManager;
 
     public PlatformAdminServiceImpl(
         OrganizationRepository organizationRepository,
@@ -84,7 +89,9 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         MenuRevisionService menuRevisionService,
         ChainMasterMenuRepository chainMasterMenuRepository,
         ChainMasterMenuVersionRepository chainMasterMenuVersionRepository,
-        StoreMenuMasterMappingRepository storeMenuMasterMappingRepository
+        StoreMenuMasterMappingRepository storeMenuMasterMappingRepository,
+        PlatformResourceAuthorization userAuthorization,
+        EntityManager entityManager
     ) {
         this.organizationRepository = organizationRepository;
         this.restaurantTemplateRepository = restaurantTemplateRepository;
@@ -102,6 +109,8 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         this.chainMasterMenuVersionRepository = chainMasterMenuVersionRepository;
         this.storeMenuMasterMappingRepository = storeMenuMasterMappingRepository;
         this.objectMapper = new ObjectMapper();
+        this.userAuthorization = userAuthorization;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -507,6 +516,10 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         User target = user.getId() == null
             ? new User()
             : userRepository.findByIdForUpdate(user.getId()).orElseThrow(() -> new BusinessException("User not found"));
+        // An earlier controller/OSIV read may still hold the pre-move identity.
+        // Refresh while locked, then repeat actual Store/role/raw-grant authorization.
+        if (user.getId() != null) entityManager.refresh(target, LockModeType.PESSIMISTIC_WRITE);
+        userAuthorization.user(user.getId(), user);
         if (user.getId() != null && !java.util.Objects.equals(target.getStore_id(), user.getStore_id())) throw new com.restaurant.system.common.auth.ForbiddenException("User Store cannot be changed through generic save");
         target.setStore_id(user.getStore_id());
         target.setRole_id(user.getRole_id());
