@@ -11,7 +11,7 @@ Remote reviewers can also resolve the full commits without those local reference
 
 1. Run `python3 scripts/verify-commercial-baseline.py` from this worktree. It reads
    Git and migration files only; it never reads environment secrets or a database.
-2. For a clean historical build, use `git archive <backend source SHA> backend` and
+2. For a clean historical build, use `git archive <backend source SHA> backend deployment` and
    `git archive <frontend source SHA> frontend` into separate empty temporary directories.
    Use Java 17/Maven for `mvn clean verify`; use `npm ci`, `npm test`, `npm run build`
    with the committed lockfile. Optional PostgreSQL suites require a dedicated
