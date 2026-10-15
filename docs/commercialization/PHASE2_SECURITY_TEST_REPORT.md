@@ -1,8 +1,8 @@
 # Phase 2 Security and Test Evidence
 
-证据快照：2026-10-15，集成源码截至 `739b7085c5ed354f4a8704874f2e53c9de071363`。这是本地审查/测试结果汇总，不是第二份当前 Phase 或发布授权；动态状态只读 [CURRENT_STATE](../governance/CURRENT_STATE.yml)，执行入口为 [Planbook](COMMERCIALIZATION_MASTER_PLANBOOK.md)，gate 结论见 [验收报告](PHASE2_ACCEPTANCE_REPORT.md)。
+证据快照：2026-10-15，最终集成代码观察点 `5ec8abeb7a67760000b29151e7f568a88a8f36ed`。这是本地审查/测试结果汇总，不是第二份当前 Phase 或发布授权；动态状态只读 [CURRENT_STATE](../governance/CURRENT_STATE.yml)，执行入口为 [Planbook](COMMERCIALIZATION_MASTER_PLANBOOK.md)，gate 结论见 [验收报告](PHASE2_ACCEPTANCE_REPORT.md)。
 
-范围为 P2-BASE-01、AUTH-02、WS-03、PROFILE-04、PRINT-05、OFFLINE-06、INV-07、FIXTURE-08 的已执行部分。**Offline 两项 P1 尚待修复候选的独立复审；最终完整集成重跑尚未完成。** 本文不授予 G2 PASS 或 Phase 3 entry。全程未进行 Production/Staging mutation、真实账户/订单导出、真实设备绑定或物理打印。
+范围为 P2-BASE-01、AUTH-02、WS-03、PROFILE-04、PRINT-05、OFFLINE-06、INV-07、FIXTURE-08 与 GATE-09。**G2-01…09 的隔离本地验收证据已满足；本阶段未关闭 P0=0、新 P1=0。** BASE、root boundaries、Auth/WS、Offline 及最后测试 slice 修复均经独立审查 PASS。本文不授予发布、main merge 或真实环境操作权限；主线程依唯一 CURRENT_STATE 路由后续已授权工作。全程未进行 Production/Staging mutation、真实账户/订单导出、真实设备绑定或物理打印。
 
 ## 源码与证据身份
 
@@ -13,10 +13,11 @@
 | Profile/Print/Inventory/commercial guard | `0f1b2a4`、`87d005b`；模块证据 `0720bb2`，见 [Store Boundaries](PHASE2_STORE_BOUNDARIES.md)；独立 Agent 6 复审通过 |
 | Scanner | `4621cb7` 关闭 quoted JSON key、URL 大小写/非本地 IPv6 与实际 fixture 扫描遗漏；独立运行 2 个文件与 3 个测试方法 PASS |
 | Auth/WS | 原分支 `78b59070613f8885e767ce2582a1d21ed27cf264`，本地集成 `3523b47`；审查修复 `9c87944`、`739b708`；[分支实施报告](PHASE2_AUTH_WS_SECURITY.md) 的早期测试数不替代后续集成结果 |
-| Offline | 原分支 `129f66d`，本地集成 `c9de597`；两项独立审查 P1 未获关闭。作者候选 `3985eac` 的测试仅为候选证据，尚未纳入本快照或取得独立复审 PASS；见 [Offline 报告](PHASE2_OFFLINE_ANDROID_SECURITY.md) |
+| Offline | 初版 `129f66d` → `c9de597`；修复 `3985eacb7d0ac1c2e0a55cc043a6ca48f3e7d582` → 集成 `1609f0d3f23c81676ca014be86ec5083afcea2c5`；独立复审报告提交 `c824d21` → `c2fa49a`，A6-OFF-01/02 CLOSED。见 [Offline 报告](PHASE2_OFFLINE_ANDROID_SECURITY.md#独立-agent-6-集中复审--3985eac2026-10-15) |
+| 最终集成 / 测试修复 | `5ec8abe`；`30c1b52` 补 foreign print list/ack/reprint Bearer 负向；`6e9a370` 仅给 menu JPA slice 提供未使用的 user-only 授权依赖，独立审查 PASS，无产品逻辑变更。最终完整回归见下方账本 |
 | 可审查 PR | [#275](https://github.com/Z1linXu/Restaurant_System/pull/275) 规划/基线、[#276](https://github.com/Z1linXu/Restaurant_System/pull/276) root boundaries 为 Draft；Auth/Offline 综合 PR 由主线程后续创建。本表不声称 main merge、CI 全量成功或部署 |
 
-source lineage 与新本地构建可解释，不等于历史生产镜像逐字节复现。历史 Docker base/build 参数/SBOM、已装 APK/签名/asset/硬件仍为 `PRODUCTION_BIT_REPRO_UNVERIFIED`、`APK_UNKNOWN`、`HARDWARE_QA_PENDING`；详见验收报告中的缺口分级。
+source lineage 与新本地构建可解释，不等于历史生产镜像逐字节复现。历史 Docker base/build 参数/SBOM、已装 APK/签名/asset/硬件仍为 `PRODUCTION_BIT_REPRO_UNVERIFIED`、`APK_UNKNOWN`、`HARDWARE_QA_PENDING`。新增 `LOCAL_DEBUG_PACKAGING_PASS` 只证明本次合成构建可打包，不消除历史或物理未知；详见验收报告中的缺口分级。
 
 ## 攻击链 → 修复 → 负向与正向证据
 
@@ -37,14 +38,14 @@ source lineage 与新本地构建可解释，不等于历史生产镜像逐字�
 | 每 BOM read-modify-save → 同原料重复 / 并发 lost update / foreign stock | item+option demand 按 inventory identity 聚合，顺序同店悲观锁，全量检查后写余额/ledger，MANDATORY 加入订单事务；submit 用既有 locked-refresh Order reader | 本地 PG16 两消费者竞争 stock 5/demand 3，仅一成功，余额2/ledger-3；foreign second ingredient零部分写、后续失败回滚、事务要求；unit重复 submit只扣一次；原 add-only batch 幂等保留 |
 | 默认 local seed/header/update 或真实 endpoint/secret 进入新模板 | explicit commercial-only startup guard：loopback `commercial_*`、Flyway validate、无 seed/header/REAL/PAD_DIRECT/endpoint/Uber；静态扫描实际 defaults/fixture | CommercialSafetyConfig、scanner 反例与 workflow 配置；只读本地等价命令 PASS，不声称远端 CI run 已验 |
 
-## Offline 独立审查仍待关闭的 P1
+## Offline 独立审查 P1 修复与关闭
 
-| ID | 已复现攻击/误用 | 候选修复与必须复审的证据 |
+| ID | 独立复现攻击/误用 | 已整合修复与独立关闭证据 |
 | --- | --- | --- |
-| A6-OFF-01 | `MainActivity.refreshPendingPrintJobs` 遗漏安全 factory，raw `HttpURLConnection` 自动跟随 A→B 307；双 loopback 复现 B 收到合成 A device token | 作者候选用不可变 `ManualPendingJobsRequest` + `DeviceApiConnection` no-redirect，并校验 busy/generation/origin/device；须独立验证实际按钮路径、B零连接/凭据及迟到 callback不进入新队列 |
-| A6-OFF-02 | 同 origin A snapshot 已落盘、B token已保存而B snapshot失败/崩溃；reader只检查 record 内账户一致性，离线恢复 A 身份。fake IndexedDB 复现 current token user8 / restored snapshot user7 | 作者候选绑定当前 access+refresh credential SHA-256 association，不把明文 token 写IDB，并拦截 late auth/me/refresh/snapshot；须独立验证真实Provider失败窗口、同账户refresh恢复、logout/迟到结果、缺origin失败关闭 |
+| A6-OFF-01 | `MainActivity.refreshPendingPrintJobs` 遗漏安全 factory，raw `HttpURLConnection` 自动跟随 A→B 307；双 loopback 复现 B 收到合成 A device token | 实际按钮入口在锁内捕获不可变 `ManualPendingJobsRequest` 的 origin/credential/Store/generation，仅经 `DeviceApiConnection` no-redirect；manual/worker/job busy 互斥，callback 再核 generation/origin/device。独立 loopback 验证 B 零连接、A token仅发A、foreign credential连接前deny、15种busy组合及迟到callback；`3985eac` 修复、`c824d21` 复审 PASS，集成 `1609f0d`/`c2fa49a`，**CLOSED** |
+| A6-OFF-02 | 同 origin A snapshot 已落盘、B token已保存而B snapshot失败/崩溃；reader只检查 record 内账户一致性，离线恢复 A 身份。fake IndexedDB 复现 current token user8 / restored snapshot user7 | 以 environment+access/refresh pair SHA-256 association绑定已验证响应，不把 token 明文写 IDB；save/read/apply前检查当前会话，late auth/me/refresh与缺origin失败关闭。独立真实Provider+fakeIDB验证失败窗口不恢复A、B token不被改、A记录保留、正常refresh后同账户可恢复；同修复/复审/集成链，**CLOSED** |
 
-截至本快照，这两项为 `REMEDIATION_CANDIDATE / INDEPENDENT_REREVIEW_PENDING`，不能因作者测试 PASS 标 CLOSED。原始失败证据与候选修复章在 Offline 工作项报告中保留；主线程整合后更新最终修复 SHA、复审结论与测试总数。
+原始独立失败证据、初版 BLOCKED 与后续关闭章节均保留在 [Offline工作项报告](PHASE2_OFFLINE_ANDROID_SECURITY.md)。这是修复后独立复审与完整集成通过的结论，不将作者局部测试等同审查。旧 v2 auth snapshot 缺 association 需正常在线验证，拒绝恢复时不删除 draft/outbox。WebCrypto 不可用时拒绝离线身份恢复。DB4→DB5 原样隔离未知来源记录的行为未改变。
 
 ## 测试账本：不要合并不同阶段的计数
 
@@ -57,21 +58,27 @@ source lineage 与新本地构建可解释，不等于历史生产镜像逐字�
 | Auth 分支完整默认 suite | 984 total / 913 executed PASS / 71 optional PG skipped；真实broker11、HTTP19包含其中 | 该分支安全边界；PG skipped明确不是PASS |
 | 初次集成 `phase2-integrated-backend.log` | **1003 tests，1 failure，0 error/skip，BUILD FAILURE** | 失败在Uber PG合成 membership漏`organization_id`；`9c87944`补同源fixture关系，未放宽授权。不得把该轮记为全量PASS |
 | 随后 Uber PG focused | `UberEatsPostgresIntegrationTest` 57 tests PASS，0 failure/error/skip | 对应fixture修复通过；不是整个1003 suite已重跑成功 |
-| `739b708` focused XML | UserMutationRefresh3 + HTTP24 + MenuOrdering39 + queued1 = **67 PASS，0 failure/error/skip** | 已核锁后授权与HTTP/Profile/queued-frame；完整最终集成仍待重跑 |
-| 已集成 frontend `phase2-integrated-frontend.log` / build | 52 files / **294 tests PASS**，TypeScript/Vite PASS | 截至offline初版整合；作者候选299不代替这个已整合结果 |
-| Offline作者候选 `3985eac` | 作者报告 focused33、frontend52/299、Android6 suites/24 PASS | 候选局部结果；本报告未独立授予复审或集成PASS |
+| `739b708` focused XML | UserMutationRefresh3 + HTTP24 + MenuOrdering39 + queued1 = **67 PASS，0 failure/error/skip** | 已核锁后授权与HTTP/Profile/queued-frame；此 focused 计数不与全量相加 |
+| 初版集成 frontend `phase2-integrated-frontend.log` / build | 52 files / **294 tests PASS**，TypeScript/Vite PASS | 早期真实结果；最终结果另列，不与299/306相加 |
+| Offline修复独立复审 `3985eac` / `c824d21` | Reviewer 独立执行 frontend5 files/33 tests PASS；Android SDK/JVM6 suites/24 PASS，0 failure/error/skip；diffcheck PASS | 修复边界独立 PASS；作者早期 frontend52/299 为分支结果，最终集成306另列 |
+| 最终集成首次重跑，`1609f0d`；`phase2-integrated-final-backend.log` | **1013 tests，0 failure，3 errors，0 skipped，BUILD FAILURE** | 仅 MenuRevisionLockIntegrationTest 的 JPA slice 未提供新 user-only `PlatformResourceAuthorization` bean；`6e9a370` 加未使用的 mock，生产逻辑不变，独立只读复核 PASS |
+| 完整重跑 `phase2-integrated-repaired-backend.log` | **1013 tests，1 failure，0 error/skip，BUILD FAILURE** | Uber recovery 合成库保留旧 pending 记录，先占 `due(PageRequest(0,10))` 批次，新测试记录仍 ACCEPTING；另开全新专用合成库重跑，无产品逻辑放宽或测试断言降级 |
+| 最终 `5ec8abe`，`phase2-fresh-integrated-backend.log`；Java17 clean verify，全 optional PG 开启 | **1013 tests，0 failure，0 error，0 skipped，BUILD SUCCESS** | 全新隔离 PG16 合成目标上的最终后端结果；本报告复核日志总计及成功状态；不与早批次相加 |
+| 最终 frontend，`phase2-integrated-final-frontend.log` + `phase2-integrated-final-front-build.log` | **53 files / 306 tests PASS**；TypeScript/Vite build PASS | source `1609f0d` 与 `5ec8abe` frontend tree 相同，tree=`54f5a93a97951e2cd63a06fb60fbf894e57b00cd`；为最终产品树证据 |
+| 本地 Android packaging smoke；既有 `build-bundled-apk` 流程；`phase2-bundled-debug-build.log` | **54 asset files verified / DB5 / debug APK PASS**；SHA-256=`fad05caed96762ce60bb3cd8cab9b0449219430bfb9d97c831f154a8db801899` | source `1609f0d` 与 `5ec8abe` restaurant-pad-app tree相同，tree=`1446cdc81f035e78cfd3ba744d88335a1f822fe4`；只在临时打包工作树生成本次assets/APK，未把debug包等同实装或发行认证 |
+| 已打包资产 guard 开启的 native tests，`phase2-packaged-native-tests.log` | **6 suites / 24 PASS，0 failure/error/skip**；Gradle BUILD SUCCESS | 不再仅依赖早期 `-x verifyBundledFrontend` 源码测试；仍无物理Android provider/安装/打印证明 |
 | lint | 原始独立基线6 errors/6 warnings；集成后5/6，剩余errors均在未改文件；相关changed-core lint通过 | `NON_BLOCKING_EXISTING_DEBT`，不声称全库lint清洁，也不以此扩修无关文件 |
 | source/static/doc checks | baseline guard、scanner2files/3methods、governance validator、diffcheck PASS | 新workflow定义/本地命令通过；不等于remote CI/部署已完成 |
 
-工具版本与构建hash以 Baseline/各模块报告为准。PG16 是本机 `127.0.0.1:55439` 的专用合成 `commercial_*` 集群；测试helper只创建/删除自己新建的随机数据库。所有optional PG目标由主线程显式设置到该集群，未使用真实库或生产备份。原始日志位于 `/private/tmp/restaurant-commercial-baseline/`，该目录为本机复核辅助；本报告保留命令、count、失败原因、源码身份和审查结论，不能仅以临时目录作为长期唯一证据。
+工具版本与构建hash以 Baseline/各模块报告为准。PG16 是本机 `127.0.0.1:55439` 的专用合成 `commercial_*` 集群；随机 DB helper 只清理自己创建的库。最终持久型 Uber/clone/rules tests 使用新建的 `commercial_uber_p2_final`、`commercial_clone_p2_final`、`commercial_rules_p2_final`，避免旧合成恢复记录占据 due 批次；其余 optional PG 目标同样由主线程显式设置到该集群，未使用真实库或生产备份。原始日志位于 `/private/tmp/restaurant-commercial-baseline/`，该目录为本机复核辅助；本报告保留命令、count、失败原因、源码身份和审查结论，不能仅以临时目录作为长期唯一证据。
 
 ## 审查与残余边界
 
-独立 Agent6 已关闭 BASE Runbook fixture遗漏、scanner格式/范围遗漏、dormant grant复活、OSIV User锁后授权四组问题；root boundaries与Auth/WS已 PASS。Reviewer未实施这些业务修复。Offline由另一独立Reviewer复审，仍待结果；P2-GATE-09不关闭。
+独立 Agent6 已关闭 BASE Runbook fixture遗漏、scanner格式/范围遗漏、dormant grant复活、OSIV User锁后授权；root boundaries与Auth/WS PASS。另一独立 Reviewer 已关闭 Offline A6-OFF-01/02；menu JPA slice 的 `6e9a370` 机械修复也经只读复核。Reviewer未实施所审业务修复。最终集成回归 PASS，未关闭本阶段 P0=0、新 P1=0；P2-GATE-09 的本地证据满足。
 
 纯 `HOT_KITCHEN` 页面仍依赖无该角色许可的通用 `GET /orders/{id}` 补全 OrderResponse，完整厨房-only DTO与页面验收延期 P5-KITCHEN-01；本轮不增加厨房财务权限、不声称全部角色KDS已能运营。现店 Owner合成流程/legacy fixture不代替真实账号盘点。完整支持 grant在P6；旧价TTL/版本授权在P4，当前不猜数值。
 
-历史 bit-repro、安装APK/签名、assets、WebView/Keystore持久化、全部Pad状态、真实纸张/硬件、税/语言、backup/restore服务承诺均未由本轮证明。Profile歧义owner保持拒绝；仅新native秘密采用Keystore的候选实现，不声称原有明文旧配对已加密或已撤销。
+历史 bit-repro、实装APK/签名/asset、WebView/Keystore持久化、全部Pad状态、真实纸张/硬件、税/语言、backup/restore服务承诺均未由本轮证明。本次新生成 DB5 assets/debug APK 的打包验证已通过，不能据此推断现装包或真实升级结果。Profile歧义owner保持拒绝；新native秘密采用Keystore，不声称原有明文旧配对已全量加密或已撤销。
 
 ## Rollback / 恢复限制
 
