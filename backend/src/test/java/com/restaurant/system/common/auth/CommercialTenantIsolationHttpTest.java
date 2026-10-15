@@ -47,6 +47,8 @@ class CommercialTenantIsolationHttpTest {
     StoreModuleAccessEvaluator modules;
     com.restaurant.system.owner.profile.StoreProfileVersionRepository profileVersions;
     com.restaurant.system.owner.profile.StoreProfileArtifactRepository profileArtifacts;
+    com.restaurant.system.printing.service.PrintJobService printJobs;
+    com.restaurant.system.printing.service.ManualReprintService reprints;
     @BeforeEach void setup() {
         f=new CommercialSecurityFixture();
         auth=new AuthorizationService(f.context,f.capabilities,f.access,mock(OrderRepository.class),mock(OrderItemRepository.class),mock(KitchenTaskRepository.class));
@@ -90,7 +92,15 @@ class CommercialTenantIsolationHttpTest {
             new com.restaurant.system.owner.profile.StoreProfileContractValidator(),
             new com.restaurant.system.owner.profile.StoreProfileAccessService(f.orgMembers,f.organizations));
         var profileController=new com.restaurant.system.owner.profile.StoreProfileController(auth,profileCatalog);
-        mvc=MockMvcBuilders.standaloneSetup(platform,workspace,new AuditLogController(audit,auth,modules),staff,analytics,profileController)
+        printJobs=mock(com.restaurant.system.printing.service.PrintJobService.class);
+        reprints=mock(com.restaurant.system.printing.service.ManualReprintService.class);
+        var printing=new com.restaurant.system.printing.controller.OwnerPrintingController(
+            mock(com.restaurant.system.printing.service.PrinterConfigService.class),
+            mock(com.restaurant.system.printing.service.PrinterAssignmentService.class),
+            mock(com.restaurant.system.printing.service.PrintDispatcherService.class),printJobs,auth,
+            mock(FeatureFlagService.class),audit,modules,mock(com.restaurant.system.printing.rules.PrintingDisplayRuleService.class));
+        org.springframework.test.util.ReflectionTestUtils.setField(printing,"manualReprintService",reprints);
+        mvc=MockMvcBuilders.standaloneSetup(platform,workspace,new AuditLogController(audit,auth,modules),staff,analytics,profileController,printing)
             .setControllerAdvice(new GlobalExceptionHandler())
             .addFilters(new RequestContextFilter(),new AuthTokenFilter(f.identities,new ObjectMapper())).build();
     }
@@ -109,6 +119,19 @@ class CommercialTenantIsolationHttpTest {
         mvc.perform(get("/api/v1/store-profiles").header("Authorization",f.bearer(5))).andExpect(status().isForbidden());
         verify(profileVersions,never()).findByProfileIdAndProfileVersion(anyLong(),anyString());
         verifyNoInteractions(profileArtifacts);
+    }
+
+    @Test void foreignPrintJobsCannotBeListedAcknowledgedOrReprintedByMerchantOwner() throws Exception {
+        var foreign = new com.restaurant.system.printing.entity.PrintJob(); foreign.id=2000L; foreign.store_id=20L;
+        when(printJobs.requireJob(foreign.id)).thenReturn(foreign);
+        mvc.perform(get("/api/v1/admin/printing/jobs").param("store_id","20").header("Authorization",f.bearer(1)))
+            .andExpect(status().isForbidden());
+        for (String operation : List.of("acknowledge","reprint"))
+            mvc.perform(post("/api/v1/admin/printing/jobs/2000/"+operation).header("Authorization",f.bearer(1))
+                .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(reprints);
+        verify(printJobs,never()).searchJobs(any(),any(),any(),any(),any(),any(),any());
     }
     @Test void workspaceContainsOnlyOwnersOrganizationAndRevokedDefaultIsNotAdvertised() throws Exception {
         mvc.perform(get("/api/v1/me/workspaces").header("Authorization",f.bearer(1)))
