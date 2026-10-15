@@ -24,10 +24,15 @@ export function OrdersPage() {
   const printingEnabledRef = useRef(printingEnabled)
   printingEnabledRef.current = printingEnabled
   const reprintScope = useRef(0)
+  const reprintAbort = useRef<AbortController | null>(null)
   const isIpadLandscape = useIpadLandscape()
   const [orders, setOrders] = useState<BackendFrontdeskOrderBoardItem[]>([])
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
-  useEffect(() => () => { reprintScope.current += 1; reprintFollow.current?.() }, [storeId, selectedOrderId, printingEnabled])
+  useEffect(() => {
+    const controller = new AbortController()
+    reprintAbort.current = controller
+    return () => { reprintScope.current += 1; controller.abort(); reprintFollow.current?.() }
+  }, [storeId, selectedOrderId, printingEnabled])
   const [selectedOrder, setSelectedOrder] = useState<BackendOrderResponse | null>(null)
   const [printOptions, setPrintOptions] = useState<OrderPrintOption[]>([])
   const [printJobs, setPrintJobs] = useState<PrintJobRecord[]>([])
@@ -97,7 +102,7 @@ export function OrdersPage() {
     try {
       setPrintBusy(option.module_code)
       setPrintStatusMessage(null)
-      const result = await reprintOrderReceipt(selectedOrder.id, option.module_code, () => printingEnabledRef.current && scope === reprintScope.current)
+      const result = await reprintOrderReceipt(selectedOrder.id, option.module_code, () => printingEnabledRef.current && scope === reprintScope.current, reprintAbort.current?.signal)
       if (scope !== reprintScope.current) return
       reprintFollow.current?.()
       reprintFollow.current = followReprint(result, job => {

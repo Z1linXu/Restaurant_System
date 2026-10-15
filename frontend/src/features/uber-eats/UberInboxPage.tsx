@@ -33,7 +33,12 @@ export default function UberInboxPage() {
   const printingEnabledRef = useRef(printingEnabled)
   printingEnabledRef.current = printingEnabled
   const printScope = useRef(0)
-  useEffect(() => () => { printScope.current += 1 }, [printingEnabled, storeId])
+  const printAbort = useRef<AbortController | null>(null)
+  useEffect(() => {
+    const controller = new AbortController()
+    printAbort.current = controller
+    return () => { printScope.current += 1; controller.abort() }
+  }, [printingEnabled, storeId])
   const { orders, loading, error, refresh } = useUberInbox(storeId)
   const inFlight = useRef(new Set<number>())
   const [busy, setBusy] = useState<number[]>([])
@@ -55,7 +60,7 @@ export default function UberInboxPage() {
     const isActive = () => printingEnabledRef.current && scope === printScope.current
     inFlight.current.add(order.id); setBusy([...inFlight.current]); setActionError(null); setPrintMessage(null)
     try {
-      const result = await reprintUberKitchen(order.local_order_id, module, isActive)
+      const result = await reprintUberKitchen(order.local_order_id, module, isActive, printAbort.current?.signal)
       if (isActive()) { setPrintMessage(printResultMessage(result)); refresh() }
     } catch (error) { if (isActive()) { setActionError(reprintErrorMessage(error)); refresh() } }
     finally { inFlight.current.delete(order.id); setBusy([...inFlight.current]) }

@@ -111,7 +111,7 @@ describe('Uber inbox staff workflow', () => {
     await act(async () => { view = create(<UberInboxPage />) })
     expect(button('Accept')).toBeUndefined(); expect(button('HOT KITCHEN')).toBeUndefined()
     await act(async () => button('重打 GRAB').props.onClick())
-    expect(reprintUberKitchen).toHaveBeenCalledExactlyOnceWith(22, 'GRAB', expect.any(Function))
+    expect(reprintUberKitchen).toHaveBeenCalledExactlyOnceWith(22, 'GRAB', expect.any(Function), expect.any(AbortSignal))
     expect(JSON.stringify(view!.toJSON())).toContain('牛肉面 ×1 · 大碗')
   })
   it('shows mapped and frozen raw content with warnings and keeps both kitchen reprints enabled', async () => {
@@ -122,7 +122,7 @@ describe('Uber inbox staff workflow', () => {
     expect(rendered).toContain('部分匹配'); expect(rendered).toContain('Unknown Uber Item'); expect(rendered).toContain('传统牛肉面'); expect(rendered).toContain('UNMAPPED_ROUTE_REVIEW')
     expect(button('Accept')).toBeUndefined()
     await act(async () => button('重打 HOT KITCHEN').props.onClick())
-    expect(reprintUberKitchen).toHaveBeenCalledWith(22, 'HOT_KITCHEN', expect.any(Function))
+    expect(reprintUberKitchen).toHaveBeenCalledWith(22, 'HOT_KITCHEN', expect.any(Function), expect.any(AbortSignal))
     expect(button('重打 GRAB')).toBeDefined()
   })
   it('does not offer or execute kitchen reprints when Printing closes while Uber stays enabled', async () => {

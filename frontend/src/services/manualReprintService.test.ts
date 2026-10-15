@@ -89,7 +89,7 @@ describe('shared Dine-in / Orders / Print Center reprint contract', () => {
       .mockResolvedValueOnce(job())
     const confirm = vi.fn().mockResolvedValue(true)
     await manualReprint('/api/v1/admin/printing/jobs/3/reprint', {}, confirm)
-    expect(confirm).toHaveBeenCalledWith(info)
+    expect(confirm).toHaveBeenCalledWith(info, expect.any(AbortSignal))
     const first = JSON.parse(api.mock.calls[0][1]!.body as string)
     const second = JSON.parse(api.mock.calls[1][1]!.body as string)
     expect(second.idempotency_key).toBe(first.idempotency_key)

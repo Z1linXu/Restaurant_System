@@ -380,8 +380,8 @@ export async function registerStoreDevice(input: DeviceRegisterRequest): Promise
   })
 }
 
-export async function reprintPrintJob(jobId: number, isActive?: () => boolean) {
-  return manualReprint(`/api/v1/admin/printing/jobs/${jobId}/reprint`, {}, undefined, isActive)
+export async function reprintPrintJob(jobId: number, isActive?: () => boolean, signal?: AbortSignal) {
+  return manualReprint(`/api/v1/admin/printing/jobs/${jobId}/reprint`, {}, undefined, isActive, signal)
 }
 
 export async function acknowledgePrintJob(jobId: number, note?: string) {

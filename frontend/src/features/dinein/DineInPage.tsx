@@ -157,6 +157,7 @@ interface DineInPageProps {
 
 export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
   const reprintFollow = useRef<(() => void) | null>(null)
+  const reprintAbort = useRef<AbortController | null>(null)
   const { storeId, organizationId, moduleConfiguration } = useCurrentStore()
   const printingEnabled = isStoreModuleEnabled(moduleConfiguration, 'PRINTING')
   const printingEnabledRef = useRef(printingEnabled)
@@ -320,6 +321,9 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     setPrintOptions([])
     setPrintBusy(null)
     setPrintError(null)
+    const controller = new AbortController()
+    reprintAbort.current = controller
+    return () => controller.abort()
   }, [cancelPrintCoordinator, printingEnabled, storeId])
 
   useEffect(() => {
@@ -487,7 +491,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     try {
       setPrintBusy(option.module_code)
       setPrintError(null)
-      const result = await reprintOrderReceipt(target.orderDbId, option.module_code, () => printingEnabledRef.current && printOptionsRequestIdRef.current === requestId)
+      const result = await reprintOrderReceipt(target.orderDbId, option.module_code, () => printingEnabledRef.current && printOptionsRequestIdRef.current === requestId, reprintAbort.current?.signal)
       if (!printingEnabledRef.current || printOptionsRequestIdRef.current !== requestId) return
       reprintFollow.current?.()
       reprintFollow.current = followReprint(result, job => {

@@ -70,5 +70,19 @@ describe('admin store scope request contracts', () => {
     expect(snapshots.saveContext).not.toHaveBeenCalled()
     expect(snapshots.context).not.toHaveBeenCalled()
   })
+  it('does not read or write when the caller already cancelled its context request', async () => {
+    const controller = new AbortController(); controller.abort()
+    await expect(fetchStoreContext(3, 7, { signal: controller.signal })).rejects.toMatchObject({ name: 'AbortError' })
+    expect(apiRequestMock).not.toHaveBeenCalled()
+    expect(snapshots.context).not.toHaveBeenCalled()
+    expect(snapshots.saveContext).not.toHaveBeenCalled()
+  })
+  it('never restores a cached response after cancellation of a failed in-flight request', async () => {
+    const controller = new AbortController()
+    apiRequestMock.mockImplementationOnce(async () => { controller.abort(); throw new ApiRequestError(503, 'offline') })
+    await expect(fetchStoreContext(3, 7, { signal: controller.signal })).rejects.toMatchObject({ name: 'AbortError' })
+    expect(snapshots.context).not.toHaveBeenCalled()
+    expect(snapshots.saveContext).not.toHaveBeenCalled()
+  })
 
 })

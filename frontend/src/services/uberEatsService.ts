@@ -15,4 +15,4 @@ export const fetchUberChoices = (store: number, item: number) => apiRequest<Uber
 export const canDecideUberOrder = (order: UberOrder) => order.processing_mode !== 'KITCHEN_MIRROR' && ['PENDING', 'MAPPING_REQUIRED'].includes(order.status)
 export const needsUberAttention = (order: UberOrder) => !['ACCEPTED', 'DENIED', 'CANCELLED', 'PRINTED', 'WAITING_FOR_ACCEPTANCE', 'WAITING_FOR_RELEASE', 'RELEASED_TO_KITCHEN'].includes(order.status)
 
-export const reprintUberKitchen = (localOrder: number, module: 'GRAB' | 'HOT_KITCHEN', isActive?: () => boolean) => manualReprint(`/api/v1/orders/${localOrder}/reprint`, { receipt_type: module }, undefined, isActive)
+export const reprintUberKitchen = (localOrder: number, module: 'GRAB' | 'HOT_KITCHEN', isActive?: () => boolean, signal?: AbortSignal) => manualReprint(`/api/v1/orders/${localOrder}/reprint`, { receipt_type: module }, undefined, isActive, signal)

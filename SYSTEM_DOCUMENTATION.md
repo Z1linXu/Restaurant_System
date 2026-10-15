@@ -9612,3 +9612,21 @@ The Merchant Configuration controller handles unreadable/empty JSON locally as H
 The existing Commercial guard workflow also applies its existing defaults scanner to the three new configuration/Neutral initialization entry points. This bounded BLOCKING CI coverage extension reuses the reviewed scanner and changes no deployment or credential lifecycle.
 
 Isolated loopback HTTP acceptance against the reviewed configuration backend passed 14 requests: Neutral LIVE creation with zero operational graph, idempotent replay, revision CAS, consistent StoreContext/MenuCatalog summaries, strict reference rejection, foreign Owner denial and private Profile denial. The credential-free [synthetic HTTP evidence](docs/commercialization/fixtures/phase3-local-http-evidence.json) records backend source `9fdf5e7`; the later parser-only repair has its own HTTP tests. Browser access to loopback was denied by the browser security permission policy; 768/1024 screenshots/layout remain NOT RUN, so the G3 visual gate cannot be closed by unit/DOM tests. Local HTTP/Vite processes were stopped after testing. No Staging/Production action.
+
+The active Store Context now refreshes through its existing GET/snapshot path on
+visible-online focus, visibility restoration, online and a 60-second cadence.
+It remains the single presentation/module source; menu revisions keep their own
+existing scoped catalog cache. Foreground requests deduplicate, and cleanup aborts
+requests/timers/listeners. Store/account/environment generation changes hide old
+data immediately; cancelled or foreign responses cannot write/restore snapshots.
+Unchanged validated offline scope registration stays stable across refreshes and
+restricted-mode changes. Reachable network responses converge Context and menu
+configuration on focus or the next cadence; outages do not promise that bound.
+
+Default reprint confirmation dialogs accept a caller scope AbortSignal. Existing
+UI scope cleanup and the existing auth-expired event remove an open old-context
+dialog and resolve it as false, preserving unknown intent keys. No late confirm,
+POST or native kick follows a cancelled scope. Deliberate operator cancellation
+and already-committed print jobs retain their prior semantics. jsdom 26.1.0 is a
+dev-only test dependency for this real default DOM path, with only dialog top-layer
+methods shimmed; no browser/native/physical QA or backend printing change is implied.

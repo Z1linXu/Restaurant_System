@@ -1,5 +1,5 @@
-import { activateOfflineStore, getEnvironmentId } from '../../offline/environmentScope'
-import { useEffect, useMemo, useState } from 'react'
+import { activateOfflineStore, captureEnvironmentSession, isEnvironmentSessionCurrent, matchesOfflineScope, type OfflineScope } from '../../offline/environmentScope'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchStoreContext, type StoreContextResponse } from '../../services/storeWorkspaceService'
 import { getApiUserMessage } from '../../services/apiClient'
 import { useAuth } from '../auth/useAuth'
@@ -14,49 +14,101 @@ import {
 
 export function StoreContextProvider({ storeId, children }: { storeId: number; children: React.ReactNode }) {
   const { isOfflineRestricted, user } = useAuth()
+  const offlineRestricted = useRef(isOfflineRestricted)
+  useEffect(() => { offlineRestricted.current = isOfflineRestricted }, [isOfflineRestricted])
   const [data, setData] = useState<StoreContextResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [resultScopeKey, setResultScopeKey] = useState<string | null>(null)
+  let environmentSession: ReturnType<typeof captureEnvironmentSession> | null = null
+  try { environmentSession = captureEnvironmentSession() } catch { /* Missing server configuration stays closed. */ }
+  const environmentId = environmentSession?.environmentId ?? ''
+  const environmentGeneration = environmentSession?.generation ?? -1
+  const scopeKey = `${environmentId}:${environmentGeneration}:${user?.id ?? 'anonymous'}:${storeId}`
 
   useEffect(() => {
     let active = true
+    let request: AbortController | null = null
+    let registeredScope: OfflineScope | undefined
     let releaseOfflineScope: (() => void) | undefined
+    const session = { environmentId, generation: environmentGeneration }
+    const releaseScope = () => {
+      releaseOfflineScope?.()
+      releaseOfflineScope = undefined
+      registeredScope = undefined
+    }
+    const clearContext = (exception: unknown) => {
+      releaseScope()
+      setData(null)
+      setResultScopeKey(scopeKey)
+      setError(getApiUserMessage(exception, '你没有权限访问这家门店。'))
+      setLoading(false)
+    }
     const loadContext = (showLoading: boolean, preferOfflineSnapshot: boolean) => {
+      if (!isEnvironmentSessionCurrent(session)) {
+        request?.abort()
+        clearContext(new Error('AUTH_ENVIRONMENT_CHANGED'))
+        return
+      }
+      if (request) return
+      const controller = new AbortController()
+      request = controller
       if (showLoading) {
         setLoading(true)
       }
       setError(null)
-      fetchStoreContext(storeId, user?.id, { preferOfflineSnapshot })
+      fetchStoreContext(storeId, user?.id, { preferOfflineSnapshot, signal: controller.signal })
         .then((response) => {
-          if (!active) return
-          releaseOfflineScope?.()
-          if (user?.id && response.id === storeId && response.organization_id != null) {
-            releaseOfflineScope = activateOfflineStore({ environmentId: getEnvironmentId(), accountId: user.id, organizationId: response.organization_id, storeId })
+          if (!active || controller.signal.aborted) return
+          if (!isEnvironmentSessionCurrent(session)) throw new Error('AUTH_ENVIRONMENT_CHANGED')
+          if (response.id !== storeId) throw new Error('STORE_CONTEXT_SCOPE_MISMATCH')
+          const nextScope = user?.id && response.organization_id != null
+            ? { environmentId, accountId: user.id, organizationId: response.organization_id, storeId }
+            : undefined
+          if (nextScope && (!registeredScope || !matchesOfflineScope(nextScope, registeredScope))) {
+            releaseScope()
+            releaseOfflineScope = activateOfflineStore(nextScope)
+            registeredScope = nextScope
+          } else if (!nextScope) {
+            releaseScope()
           }
           setData(response)
+          setResultScopeKey(scopeKey)
         })
         .catch((exception) => {
-          if (!active) return
-          releaseOfflineScope?.()
-          setData(null)
-          setError(getApiUserMessage(exception, '你没有权限访问这家门店。'))
+          if (!active || controller.signal.aborted) return
+          clearContext(exception)
         })
         .finally(() => {
-          if (active) setLoading(false)
+          if (request === controller) request = null
+          if (active && !controller.signal.aborted && isEnvironmentSessionCurrent(session)) setLoading(false)
         })
     }
 
-    loadContext(true, isOfflineRestricted)
-    const handleOnline = () => loadContext(false, false)
-    window.addEventListener('online', handleOnline)
+    loadContext(true, offlineRestricted.current)
+    const refreshForeground = () => {
+      if ((typeof document === 'undefined' || document.visibilityState === 'visible')
+        && (typeof navigator === 'undefined' || navigator.onLine !== false)) loadContext(false, false)
+    }
+    const timer = window.setInterval?.(refreshForeground, 60_000)
+    window.addEventListener('online', refreshForeground)
+    window.addEventListener('focus', refreshForeground)
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', refreshForeground)
     return () => {
       active = false
-      releaseOfflineScope?.()
-      window.removeEventListener('online', handleOnline)
+      request?.abort()
+      releaseScope()
+      if (timer != null) window.clearInterval(timer)
+      window.removeEventListener('online', refreshForeground)
+      window.removeEventListener('focus', refreshForeground)
+      if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', refreshForeground)
     }
-  }, [isOfflineRestricted, storeId, user?.id])
+  }, [environmentGeneration, environmentId, scopeKey, storeId, user?.id])
 
-  const value = useMemo(() => mapStoreContext(storeId, data, loading, error), [data, error, loading, storeId])
+  const value = useMemo(() => {
+    const current = resultScopeKey === scopeKey
+    return mapStoreContext(storeId, current ? data : null, !current || loading, current ? error : null)
+  }, [data, error, loading, resultScopeKey, scopeKey, storeId])
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }
 
