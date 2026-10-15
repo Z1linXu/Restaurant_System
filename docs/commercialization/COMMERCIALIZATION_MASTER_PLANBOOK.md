@@ -17,6 +17,7 @@ Owner 已明确要求连续执行 Phase 1→2→3；这构成本次隔离本地�
 | [MERCHANT_ONBOARDING_DESIGN](MERCHANT_ONBOARDING_DESIGN.md) | 外部 Codex 配置交付，manifest/dry-run/恢复设计 |
 | [COMMERCIAL_ACCEPTANCE_MATRIX](COMMERCIAL_ACCEPTANCE_MATRIX.md) | G2/G3 技术门槛、风险/测试证据与后续上市验收 |
 | [P2 Security/Test Report](PHASE2_SECURITY_TEST_REPORT.md) / [P2 Acceptance Snapshot](PHASE2_ACCEPTANCE_REPORT.md) | 5ec8abe最终代码观察点的攻击链、分批失败/修复、独立review、G2本地PASS与发行限制；不取代CURRENT_STATE |
+| [P3 Acceptance Snapshot](PHASE3_ACCEPTANCE_REPORT.md) / [P4 Entry Gates](PHASE4_ENTRY_GATES.md) | e565be0观察点的有界实现、六任务/13项P3HC与G3待验项；P4只列门槛、不授权实现 |
 | [Phase 0 01](01_PRODUCTION_BASELINE_AUDIT.md) / [02](02_SYSTEM_ARCHITECTURE_AUDIT.md) / [03](03_HARDCODE_AND_CUSTOMIZATION_INVENTORY.md) / [04](04_COMMERCIAL_ARCHITECTURE_OPTIONS.md) / [05](05_DOCUMENTATION_GAP_REPORT.md) / [06](06_OWNER_DECISION_QUESTIONS.md) | 日期化证据和原 HC/DG 描述；不是动态状态/授权 |
 
 ## Phase 边界
@@ -47,6 +48,12 @@ P2-GATE-09 → P3-CONFIG-01 → P3-PROFILE-02 → P3-READ-03 → P3-UI-04；P3-F
 最终代码观察点 `5ec8abeb7a67760000b29151e7f568a88a8f36ed`：BASE、root boundaries、Auth/WS、Offline及最后测试slice机械修复独立review均PASS；G2-01…09隔离本地证据满足，未关闭P0=0/新P1=0。最终backend Java17/all optional PG1013项0failure/error/skip、frontend53files306/build、同产品树1609f0d本地54assets/DB5/debugAPK及guard开启native6suites24均PASS。早期失败批次/fixture修复与全新合成DB重跑分别记账，未用旧968或focused67代替最终全量。
 
 任务级结果见 [Backlog](COMMERCIALIZATION_BACKLOG.md#phase-2-执行快照--2026-10-15)；[Security/Test Report](PHASE2_SECURITY_TEST_REPORT.md) 记录source/PR/commit、攻击链与测试账本；[Acceptance Report](PHASE2_ACCEPTANCE_REPORT.md) 逐G2列本地PASS、sourcegap分级、rollback与P3边界。它们为日期化证据，唯一动态Phase/Package/Gate仍是CURRENT_STATE，由主线程同步后继续已授权P3；此文档不实施P3、不创建第二状态。历史bit/实装APK/硬件/remoteCI未被本地PASS覆盖，预存KDS完整角色流程继续P5处理。
+
+## P3 已执行证据路由 — 2026-10-15
+
+`e565be0`观察点已含typedconfig/V39与`57fe6ad`Neutral打印适配，142focused为局部PASS；Neutral/V40、consumer/UI、迁移/history及最终独立review仍待整合，**G3-01…08均PENDING**。六任务执行表见 [Backlog](COMMERCIALIZATION_BACKLOG.md#phase-3-执行快照--2026-10-15)，逐Gate与13项P3HC实际/延期见 [P3验收报告](PHASE3_ACCEPTANCE_REPORT.md)，有界架构见 [Architecture](COMMERCIAL_ARCHITECTURE.md#phase-3-有界实现观察--2026-10-15)。不要把既有Canonical/Combo读取或Neutral完整snapshotadapter称成全菜单/renderer通用。
+
+最终配置/Profile技术合同由实现者维护并与代码/API同步；此索引不另立schema或动态状态。只有最终exactSHA/tests/review使G3全满足后，主线程才能依唯一CURRENT_STATE记录P3结果；之后停止。[Phase4进入门槛](PHASE4_ENTRY_GATES.md)仅路由四个既定P4任务和兼容债务，Phase4未授权。Production/Staging零mutation边界继续。
 
 ## Combined Production Baseline 的复现定义
 

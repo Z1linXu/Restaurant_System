@@ -1,6 +1,6 @@
 # Commercial Architecture — Core / Modules / Profiles
 
-本文件定义目标边界，所有新增接口/字段均为 `PLANNED_ONLY`，以对应 PR 的实现、测试与 API 更新后才成立。执行顺序见 [Planbook](COMMERCIALIZATION_MASTER_PLANBOOK.md)，决策见 [Owner Decisions](OWNER_DECISIONS.md)，动态状态只读 [CURRENT_STATE](../governance/CURRENT_STATE.yml)。
+本文件定义目标边界；未在日期化实现表中确认的接口/字段仍为 `PLANNED_ONLY`，须由实现、测试与 API 更新证明。执行顺序见 [Planbook](COMMERCIALIZATION_MASTER_PLANBOOK.md)，决策见 [Owner Decisions](OWNER_DECISIONS.md)，动态状态只读 [CURRENT_STATE](../governance/CURRENT_STATE.yml)。
 
 ## 证据基线与架构选择
 
@@ -9,6 +9,22 @@
 采用每独立商家 app+DB、同 Org 多 Store、同一代码体系分别发布。它保留现 Compose/订单/打印路径，也缩小恢复与升级范围；初期不建共享控制面、计费或动态数据源路由。应用始终执行 Org/Store 权限，测试库故意包含两个独立 Org，防止部署隔离掩盖服务缺陷。
 
 审计确认的组合为 backend `ce35278b3569a4eacfa29efc01cadbf0c409bec6`、frontend `8c3a9e356f59cd025beff25f7fb1d5a20594e028`、Flyway V37；fresh origin/main `06bac51ddc0a829a9aa1106f07ef886572efbb65`。Git 证实 B/F 的 frontend/Android trees 相同且 main 应用树未改，不等于两个历史镜像或全部已装 APK 可逐字节重建。精确对象、checksum、image ID 和未核验部分保存在 Phase 2 Manifest，不拼贴源码制造“统一生产 commit”。
+
+## Phase 3 有界实现观察 — 2026-10-15
+
+源码观察点为 `e565be0`，包含中性打印 `57fe6ad` 与配置骨架；不是最终G3结论。[P3验收报告](PHASE3_ACCEPTANCE_REPORT.md)记录待验项，CURRENT_STATE仍独占动态阶段。配置/Profile技术合同由对应实现负责人维护，本表只说明实际边界，不建立第二份schema。
+
+| 责任 | 当前代码边界 / 后续证据 |
+| --- | --- |
+| Typed Store配置 | [MerchantConfigurationService](../../backend/src/main/java/com/restaurant/system/merchant/MerchantConfigurationService.java)与[DTO](../../backend/src/main/java/com/restaurant/system/merchant/dto/MerchantConfigurationSummary.java)提供九字段safe summary：schema_version、config_revision、brand_name、locale、currency、timezone、tax_policy_reference、profile_code、compatibility_mode；不返回私有artifact/Secret。StoreContext/menu catalog消费者接入仍待最终证明 |
+| 受限写入 | [Controller](../../backend/src/main/java/com/restaurant/system/merchant/MerchantConfigurationController.java)仅GET/PUT现Store配置；PUT严格只接受schema_version、expected_config_revision、brand_name、locale，Owner capability/实际Store、锁后再次授权、revision冲突与audit/menu revision均在服务内处理。CAD/tax reference保持现兼容值、timezone读取Store；不因此宣称税引擎或任意override已实现 |
+| 唯一经营来源 | response只指向已有MODULES/MENU/STATIONS/TABLES/PRINTING API，目标API继续独立授权；不把指针变成写入跨资源ID的后门。Canonical Add-on继续Org code→Store price/name→Item eligibility；Store-owned Combo现存rows读取不注入五项默认，完整组算法/旧synthetic ID仍P4 |
+| 兼容判定 | [V39](../../backend/src/main/resources/db/migration/V39__merchant_configuration.sql)只回填迁移当时现存Store：可核Profile引用或明确LEGACY_EXISTING_STORE标记为PROVISIONAL_COMPATIBILITY，其余Neutral。运行时仅有效persisted配置可启用ST_DENIS_CANONICAL_PROFILE@v2；missing/invalid配置走Neutral，不靠名字/SKU/Org1重新推断 |
+| 中性打印 | [打印实现记录](PHASE3_PRINTING_COMPATIBILITY.md)界定空字典、完整冻结商品/option标签、无兰州name/SKU/egg推断、零价children保留与缺settings不进入硬件readiness循环。原claim/lease/dispatch、金额及历史payload路径保留；现station/output-role约束仍PROVISIONAL_COMPATIBILITY，任意路由/renderer提取P5 |
+| Neutral初始化 | 目标是显式NEUTRAL_RESTAURANT@v1、原子创建新空Store/config/授权关系；无菜单/桌台/人员/设备/assignments，不调用Store1clone。V40与现Owner provisioning扩展、private catalog/HTTP/PG fresh+upgrade证明仍在实现，不能把本目标记已验收；不恢复无授权generic Store POST |
+| UI与缓存 | 同一build按safe summary显示Store品牌/locale，沿现menu revision/cache和module graph消费；关闭模块不发请求/订阅、管理入口不依赖硬件readiness。实现/consumer测试及768/1024证据待集成；不承诺完整i18n或所有角色KDS运行 |
+
+九字段安全摘要是最小读取契约；它不把菜单/金额/打印renderer或可售规则重新建模。字段完整合同、Profile设计与最终exactSHA测试由对应文档/报告路由。最终集成测试、迁移/history proof及独立Agent6 review未完成，所有G3门槛保持PENDING。
 
 ## 模块边界
 
@@ -54,7 +70,7 @@ Phase 3 只固定实体引用/版本/读取入口和兼容适配。Phase 4 扩�
 
 ## Profile 与新安装边界
 
-实际既有 canonical code 是 `ST_DENIS_CANONICAL_PROFILE`、版本 `v2`。`LANZHOU_NOODLE` 是测试/业务别名，不无故重命名持久 code。P2-PROFILE-04 给 Profile 增加 PUBLIC/PRIVATE 和 Org owner，版本/artifact 继承根权限；优先从 stores.provisioned_profile_code/version/fingerprint 的一致引用推导唯一 Org；V19 给多个 Org seed 的同 master_key 不能证明 owner，只有唯一且可证明的 Master 关系才作后备，不写死 Org1。多归属或无可证明归属一律不可授权，不把含兰州内容的种子自动公开。候选 schema 迁移 V38 由集成负责人确认未占用后串行分配；不得改 V1–V37。
+实际既有 canonical code 是 `ST_DENIS_CANONICAL_PROFILE`、版本 `v2`。`LANZHOU_NOODLE` 是测试/业务别名，不无故重命名持久 code。P2-PROFILE-04 给 Profile 增加 PUBLIC/PRIVATE 和 Org owner，版本/artifact 继承根权限；优先从 stores.provisioned_profile_code/version/fingerprint 的一致引用推导唯一 Org；V19 给多个 Org seed 的同 master_key 不能证明 owner，只有唯一且可证明的 Master 关系才作后备，不写死 Org1。多归属或无可证明归属一律不可授权，不把含兰州内容的种子自动公开。V38已在P2以additive迁移实现并验证；P3使用V39配置metadata与待整合V40 Neutral扩展，迁移由集成负责人串行协调；不得改V1–V38。
 
 P3-PROFILE-02 建立 `NEUTRAL_RESTAURANT` 或同语义的明确版本化配置：可复用现通用 Store API 加最小配置初始化服务，针对新空白 Store 验证，不造另一套完整 provisioning；Owner 同品牌 Master materialization 保留为明确 PRIVATE legacy compatibility。Neutral 配置：无现店菜单/SKU/面型默认、无两桌隐式需求、无真实用户、无 LAN/配对、无兰州打印字典。中性打印可用完整快照名，硬件缺失 printing DISABLED。现店 Profile 保留面型、蛋/小菜、厨房缩写、GRAB/HOT 与原默认行为；尚未隔离的 renderer/算法标 `PROVISIONAL_COMPATIBILITY` 并交 P4/P5，不谎称已通用。
 

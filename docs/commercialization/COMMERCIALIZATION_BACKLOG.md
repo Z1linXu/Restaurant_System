@@ -134,6 +134,19 @@
 | 风险/Rollback | 只见编译或历史70PASS即误过gate；发现缺陷回所属PR最小修复，保留证据，禁止跳Phase；文档可revert但不能删失败证据 |
 | DoD/并行 | G2全过、P0=0、blockingbaselinegap=0才DONE；本次Phase3已授权可继续；gate汇总串行 |
 
+## Phase 3 执行快照 — 2026-10-15
+
+实现观察点`e565be0`（含打印`57fe6ad`）。142focused已通过，Neutral/configconsumer与UI仍在实现；**六任务未最终关闭、G3-01…08均PENDING**。最终exactSHA、完整counts与独立review只在 [P3验收报告](PHASE3_ACCEPTANCE_REPORT.md)记录；当前Phase仅CURRENT_STATE负责。53HC/22DG原主任务不改：P3重点13项逐一列实现/待验/延期，不把其他Phase推定完成。
+
+| 任务 | 观察点执行证据 | 最终关闭所缺 |
+| --- | --- | --- |
+| P3-CONFIG-01 | IMPLEMENTED_FOCUSED_ONLY：e565be0 typed九字段summary、strict四字段OwnerPUT、V39、revision/audit/menu invalidation；相关unit在142focused | 最终合同/API、Bearer正负向与真实consumer、PG/history、独立review |
+| P3-PROFILE-02 | IN_PROGRESS：57fe6ad已隔离Neutral打印default/fullsnapshot；V40/显式空白Store创建由配置作者收敛 | Neutral/public-private/clone独立graph、fresh/V37upgrade、空白counts与原canonicalfingerprint、OwnerHTTP及独立review |
+| P3-READ-03 | IN_PROGRESS：既有Canonical三层SoT/StoreownedCombo保留，metadata无经营数据复制；configrevision/menu invalidation已在scaffold | StoreContext/catalog/UI读取同summary、缓存revision/晚响应、旧outbox/synthetic兼容与historyhash；复杂算法P4/P5 |
+| P3-UI-04 | IN_PROGRESS：专属UI分支执行；未以未提交实现作证据 | 同build双Storebrand/modules、disabled零API/WS、配置入口可达、切店/logout/768/1024与最终tests |
+| P3-FIXTURE-05 | PARTIAL_FOCUSED_ONLY：phase3-core-focused.log 142/0failure/0error/0skip；de1032c freshUberPG57/0/0/0分别记录；Neutral打印与legacy受影响局部回归 | 双Profile创建/PG/history/完整兼容、受影响G2负向、frontend/native集成；不能与最终suite混计 |
+| P3-GATE-06 | PENDING | G3-01…08、最终exactSHA/tests/review/remainingP0-newP1、技术合同/API/SYSTEM、HC/DG与[Phase4门槛](PHASE4_ENTRY_GATES.md)齐备；只汇总不实施P4 |
+
 ## Phase 3 — 配置与 Profile 基础（不实现完整菜单引擎）
 
 ### P3-CONFIG-01
@@ -446,42 +459,42 @@
 | HC-010 | 固定 14.975% 税率及标签 | DEFER Phase 4 / CONFIG | [P4-PRICE-04](#p4-price-04) | 税effectivepolicy/快照须与金额engine同PR；P3只给归属/引用骨架，上市另确认税规则。 |
 | HC-011 | 统一 Toronto 时区与固定日结调度 | DEFER Phase 4 / CONFIG | [P4-PRICE-04](#p4-price-04) | Store营业日/DST与历史时间解释需金额日结验收，P3只配置归属。 |
 | HC-012 | CAD / en-CA 金额展示 | DEFER Phase 4 / CONFIG | [P4-PRICE-04](#p4-price-04) | 首发CAD仍明确限制；币种/order来源和报表格式随定价统一，P3UI仅读取已有值。 |
-| HC-013 | Canonical Add-on 目录已可配置 | CORE / 保留CONFIG | [P3-READ-03](#p3-read-03) | 现canonical三层source复用，不复制15项现店默认，不新建逐菜价格source。 |
+| HC-013 | Canonical Add-on 目录已可配置 | CORE / 保留CONFIG | [P3-READ-03](#p3-read-03) | 现canonical三层source复用，不复制15项现店默认，不新建逐菜价格source。 **P3实施：** PENDING_FINAL：沿StoreAddonOptionResolver既有Orgcode/Storeprice-name/Itemeligibility与Store-ownedcombo rows，不复制15项/五combo默认；最终reader/revision/cache待证，完整算法P4。 [证据](PHASE3_ACCEPTANCE_REPORT.md#本阶段13项-hc-的具体处置)。 |
 | HC-014 | Option group 与 REMOVE/SOUP/NOODLE UI 类型固定 | DEFER Phase 4 / PROFILE兼容 | [P4-MODIFIER-02](#p4-modifier-02) | 完整group/minmax/quantity需要新契约；P3保留旧group显式兼容。 |
 | HC-015 | 标准 Small/Regular/Large 与统一 combo 差价 | DEFER Phase 4 / CONFIG | [P4-PRICE-04](#p4-price-04) | 保留当前size/default政策，新增单菜override随价格engine验证。 |
-| HC-016 | 五个内置套餐蛋/小菜定义 | Phase 3 / PROFILE | [P3-PROFILE-02](#p3-profile-02) | 五内置项只属显式兰州兼容，Neutral不注入；通用组engine交P4-COMBO-03。 |
+| HC-016 | 五个内置套餐蛋/小菜定义 | Phase 3 / PROFILE | [P3-PROFILE-02](#p3-profile-02) | 五内置项只属显式兰州兼容，Neutral不注入；通用组engine交P4-COMBO-03。 **P3实施：** PENDING_FINAL：Neutral不注入枚举五套餐目标需初始化counts证明；既有Store-ownedgroups读取不改，synthetic/完整combo语义DEFER P4-COMBO-03。 [证据](PHASE3_ACCEPTANCE_REPORT.md#本阶段13项-hc-的具体处置)。 |
 | HC-017 | Combo Side 根据 code/name 映射三种 SKU | DEFER Phase 4 / PROFILE | [P4-COMBO-03](#p4-combo-03) | legacy菜名/SKU关联未验收不删；P3限定私有兼容入口。 |
 | HC-018 | Frontend legacy synthetic option IDs 与 hash fallback | DEFER Phase 4 / PROFILE | [P4-COMBO-03](#p4-combo-03) | durableID/旧负ID/hash碰撞与离线payload要一起改；P2先保原队列。 |
 | HC-019 | POS 面型显示、noodle category 与 egg/side 兜底 UI | DEFER Phase 4 / PROFILE | [P4-MODIFIER-02](#p4-modifier-02) | POS面型/eggside控件要与新schema一致；P3不伪称任意modifierUI。 |
 | HC-020 | OrderService 厨房名、面型、省略规则 | DEFER Phase 5 / PROFILE | [P5-KITCHEN-01](#p5-kitchen-01) | 任务冻结名称/omit影响业务，P3仅兼容边界不重写Order厨房语义。 |
-| HC-021 | 全局默认 PrintingDisplayRuleDefaults 实为餐厅字典 | Phase 3 / PROFILE | [P3-PROFILE-02](#p3-profile-02) | 默认字典入口中性化与显式兰州选用；完整rendererfallback提取交P5-PRINT-02。 |
+| HC-021 | 全局默认 PrintingDisplayRuleDefaults 实为餐厅字典 | Phase 3 / PROFILE | [P3-PROFILE-02](#p3-profile-02) | 默认字典入口中性化与显式兰州选用；完整rendererfallback提取交P5-PRINT-02。 **P3实施：** IMPLEMENTED_FOCUSED_ONLY：57fe6ad空Neutral字典/完整snapshot/可访问missing-settings，NeutralProfilePrintingTest等在142focused；最终legacy/history待证；通用renderer/presets仍P5。 [证据](PHASE3_ACCEPTANCE_REPORT.md#本阶段13项-hc-的具体处置)。 |
 | HC-022 | HOT 打印由固定 WOK/DEEPFRIED/category/煎蛋决定 | DEFER Phase 5 / PROFILE | [P5-KITCHEN-01](#p5-kitchen-01) | HOT eligibility与station/egg语义需全链纸张验证；保旧路由直到通过。 |
 | HC-023 | GRAB station 白名单与菜类排序 | DEFER Phase 5 / PROFILE | [P5-PRINT-02](#p5-print-02) | GRAB filter/sort需新station和旧纸张基准；不误称外卖平台。 |
 | HC-024 | Receipt 按名字/size 文本识别、隐藏 egg/side | DEFER Phase 5 / PROFILE | [P5-PRINT-02](#p5-print-02) | receipt文本识别与隐藏children逐case迁移；历史job原payload不动。 |
 | HC-025 | 中英夹杂小票标题/税标签/固定排版 | DEFER Phase 5 / CONFIG | [P5-PRINT-02](#p5-print-02) | 有限presets/brand/locale/taxlabel依赖稳定P4语义，P3无自由模板。 |
 | HC-026 | ESC/POS 80mm/9100/GBK 等默认 | CONFIG / 保留协议默认 | [P7-ANDROID-01](#p7-android-01) | 9100/GBK/width可配默认保留；认证型号/物理结果未证不宣称支持任意设备。 |
-| HC-027 | KDS 固定 noodle/hot/pass/shelf 语义 | Phase 3 / MODULE | [P3-UI-04](#p3-ui-04) | 先模块关闭无请求/订阅且配置入口可达；专用KDS屏幕中性化交P5-KITCHEN-01。 |
-| HC-028 | Chinatown clone 硬定 source Store 1 | Phase 3 / PROFILE | [P3-PROFILE-02](#p3-profile-02) | Store1clone只保已授权legacy兼容，不作跨商家默认；Neutral不触发。 |
-| HC-029 | 新店默认 ST_DENIS profile v2 | Phase 3 / PROFILE | [P3-PROFILE-02](#p3-profile-02) | 新空白商家通过明确Neutral入口，Owner同品牌Master materialization保持PRIVATE legacycompat；不重命名现code。 |
-| HC-030 | 默认两张桌与两个打印角色 | Phase 3 / CONFIG | [P3-PROFILE-02](#p3-profile-02) | 空白/无堂食不继承两桌/现打印角色；仍保持一步create与硬件可选。 |
+| HC-027 | KDS 固定 noodle/hot/pass/shelf 语义 | Phase 3 / MODULE | [P3-UI-04](#p3-ui-04) | 先模块关闭无请求/订阅且配置入口可达；专用KDS屏幕中性化交P5-KITCHEN-01。 **P3实施：** PENDING_UI：现modulegraph消费/disabled零API和WS待整合；固定noodle/hot/pass/shelf与完整厨房DTO留P5，未称全部KDS角色可运营。 [证据](PHASE3_ACCEPTANCE_REPORT.md#本阶段13项-hc-的具体处置)。 |
+| HC-028 | Chinatown clone 硬定 source Store 1 | Phase 3 / PROFILE | [P3-PROFILE-02](#p3-profile-02) | Store1clone只保已授权legacy兼容，不作跨商家默认；Neutral不触发。 **P3实施：** PENDING_NEUTRAL：新空白入口不得调用Store1clone；保留授权PRIVATE legacycompat；创建/foreign/replay测试待提交。 [证据](PHASE3_ACCEPTANCE_REPORT.md#本阶段13项-hc-的具体处置)。 |
+| HC-029 | 新店默认 ST_DENIS profile v2 | Phase 3 / PROFILE | [P3-PROFILE-02](#p3-profile-02) | 新空白商家通过明确Neutral入口，Owner同品牌Master materialization保持PRIVATE legacycompat；不重命名现code。 **P3实施：** PENDING_NEUTRAL：显式NEUTRAL_RESTAURANT@v1与V40/Owner原子创建待整合；ST_DENIS_CANONICAL_PROFILE@v2 code/fingerprint保留；完整导入/向导P6。 [证据](PHASE3_ACCEPTANCE_REPORT.md#本阶段13项-hc-的具体处置)。 |
+| HC-030 | 默认两张桌与两个打印角色 | Phase 3 / CONFIG | [P3-PROFILE-02](#p3-profile-02) | 空白/无堂食不继承两桌/现打印角色；仍保持一步create与硬件可选。 **P3实施：** PENDING_NEUTRAL：空白Store零菜单/桌台/新staff/assignment/endpoint需counts证明；可选硬件不阻管理；legacy默认不批量删除。 [证据](PHASE3_ACCEPTANCE_REPORT.md#本阶段13项-hc-的具体处置)。 |
 | HC-031 | 前台拆桌只认识 A/B 与左/右 | DEFER Phase 5 / CONFIG | [P5-TABLE-03](#p5-table-03) | 首发只整桌/可选AB，语义版本化后验收，现活跃桌号不改。 |
-| HC-032 | 中文/英文双字段与固定 UI 文案 | Phase 3 / CONFIG | [P3-UI-04](#p3-ui-04) | 统一中性品牌/locale入口且保双字段；完整语言/receipt覆盖交P5/P8，法语缺口上市验收。 |
+| HC-032 | 中文/英文双字段与固定 UI 文案 | Phase 3 / CONFIG | [P3-UI-04](#p3-ui-04) | 统一中性品牌/locale入口且保双字段；完整语言/receipt覆盖交P5/P8，法语缺口上市验收。 **P3实施：** PENDING_UI：safe summary提供brand/locale，双Store/切店/768/1024待验；未实现完整语言/法语/receipt翻译，留P5/P8。 [证据](PHASE3_ACCEPTANCE_REPORT.md#本阶段13项-hc-的具体处置)。 |
 | HC-033 | 离线 key 包含 account/org/store 但无 deployment identity | Phase 2 / CORE安全 | [P2-OFFLINE-06](#p2-offline-06) | deployment namespace、DB4→5旧来源隔离、account/org/store guard与稳定payload。  **P2实施：** PASS_LOCAL：origin/完整scope与DB5旧记录原样隔离；A6-OFF-02以当前credentialassociation修复，独立复审与最终集成通过；同origin重分配限制保留。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
 | HC-034 | Android SharedPreferences 保存 device token 与可编辑 URL | Phase 2 / CORE安全 | [P2-OFFLINE-06](#p2-offline-06) | Android切服停止worker/绑定tokenorigin/可信bridge；签名安全存储加强交P7但不得跨origin泄露。  **P2实施：** PASS_LOCAL：nativeorigin/可信bridge/新secret/no-redirect/manualbusy/generation已验证；A6-OFF-01独立关闭，本地debugpackaging与guard开启native24通过；实装/旧明文配对/physical仍未知。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
 | HC-035 | Android package/版本分发与 native bridge | DEFER Phase 7 / MODULE | [P7-ANDROID-01](#p7-android-01) | Q15统一package签名与分发矩阵；P2修环境隔离，未读安装包保持UNKNOWN。 |
 | HC-036 | WebSocket topic 名称含固定工作流 | CORE / 保留MODULE事件契约 | [P2-WS-03](#p2-ws-03) | 固定topic/aftercommit保持，先ACL；多实例broker无现依赖，延期需求证实后另立项。  **P2实施：** CORE保留 + PASS_LOCAL：七topic与aftercommit未改，持续ACL/queuedframe拒绝及最终回归通过；不建分布式broker。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
 | HC-037 | Flyway V5 全库 SKU 修正 | DEFER Phase 7 / PROFILE迁移历史 | [P7-DEPLOY-02](#p7-deploy-02) | V5不可改；P3空库/Neutral隔离保证不物化旧seed；分发安装历史另设计，不批改生产。 |
 | HC-038 | DB 租户约束保护不均匀、无 RLS | Phase 2 / CORE安全 | [P2-AUTH-02](#p2-auth-02) | Q02独立库保留；逐现启用API/resource关系检查与P2-INV/PRINT负向，RLS非首版硬依赖，不宣称全表已自动隔离。  **P2实施：** SCOPED_MITIGATION_PASS_LOCAL：现启用HTTP/WS/Profile/Device/Offline/BOM负向、独立review与最终G2本地通过；不宣称全表自动过滤或RLS，Q02独立库边界保留。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
-| HC-039 | V15/V19 自动 seed 兰州 Profile/Master | Phase 3 / PROFILE | [P3-PROFILE-02](#p3-profile-02) | V15/V19历史不改；新install legacyseed private不可见/不可误选；Neutral无经营数据污染。 |
-| HC-040 | Profile/Master 独立 materialization 可复用 | CORE / 保留 | [P3-PROFILE-02](#p3-profile-02) | 复用reservation/fingerprint/独立Store materialization；不造第二provisioning框架。 |
-| HC-041 | RuntimeDataSeeder 含现餐厅菜单和 LAN 默认 | Phase 3 / PROFILE | [P3-PROFILE-02](#p3-profile-02) | demo/seed与commercial入口分离；P2 startup/CI guard先挡错误配置。 |
+| HC-039 | V15/V19 自动 seed 兰州 Profile/Master | Phase 3 / PROFILE | [P3-PROFILE-02](#p3-profile-02) | V15/V19历史不改；新install legacyseed private不可见/不可误选；Neutral无经营数据污染。 **P3实施：** PENDING_MIGRATION：V15/V19不改、V38 private保留；V39仅现存Store兼容snapshot，V40 Neutral与fresh/upgrade隔离待验；分发包净化P7。 [证据](PHASE3_ACCEPTANCE_REPORT.md#本阶段13项-hc-的具体处置)。 |
+| HC-040 | Profile/Master 独立 materialization 可复用 | CORE / 保留 | [P3-PROFILE-02](#p3-profile-02) | 复用reservation/fingerprint/独立Store materialization；不造第二provisioning框架。 **P3实施：** PENDING_PROVISIONING：复用现Profile/artifact/reservation/fingerprint与原子事务，独立mutablegraph/retry/失败零写待验；不造第二framework。 [证据](PHASE3_ACCEPTANCE_REPORT.md#本阶段13项-hc-的具体处置)。 |
+| HC-041 | RuntimeDataSeeder 含现餐厅菜单和 LAN 默认 | Phase 3 / PROFILE | [P3-PROFILE-02](#p3-profile-02) | demo/seed与commercial入口分离；P2 startup/CI guard先挡错误配置。 **P3实施：** PENDING_INITIALIZATION：commercial启动guard已保留，Neutral noRuntimeDataSeeder/noLAN/endpoint需新路径测试；旧demo/mock清理仍P7。 [证据](PHASE3_ACCEPTANCE_REPORT.md#本阶段13项-hc-的具体处置)。 |
 | HC-042 | Analytics 固定 noodle SKU/category 分组 | DEFER Phase 5 / PROFILE | [P5-REPORT-05](#p5-report-05) | noodle报告映射保兰州profile，新category须总额守恒；不擅自重建历史汇总。 |
 | HC-043 | Uber 全进程 credentials 与 Store mappings | DEFER Phase 5 / MODULE | [P5-INTEGRATION-04](#p5-integration-04) | 独立部署secret/商户许可与mapping受控，默认off；不带sandbox mapping进模板。 |
 | HC-044 | Uber Kitchen Mirror、财务汇总与业务时区 | DEFER Phase 5 / MODULE | [P5-INTEGRATION-04](#p5-integration-04) | 保KitchenMirror零本地价/独立财务source，先P4时间金额契约再泛化。 |
 | HC-045 | GRAB 不是 Grab 外卖集成 | DEFER Phase 4+ / MODULE | [FUTURE-CONNECTOR-02](#future-connector-02) | Q17已明确GRAB非Grab平台；无真实API/许可，不纳入本轮/首发承诺。 |
-| HC-046 | Feature build 常量、全局 backend flags 与 Store modules | Phase 3 / MODULE | [P3-UI-04](#p3-ui-04) | 复用modulegraph，明确ceiling/Store/readiness/UI顺序，不第二feature系统。 |
+| HC-046 | Feature build 常量、全局 backend flags 与 Store modules | Phase 3 / MODULE | [P3-UI-04](#p3-ui-04) | 复用modulegraph，明确ceiling/Store/readiness/UI顺序，不第二feature系统。 **P3实施：** PENDING_UI：沿现FeaturePackage/modulegraph与后端ceiling，disabled零API/WS及管理/readiness分离待验；不建新feature系统。 [证据](PHASE3_ACCEPTANCE_REPORT.md#本阶段13项-hc-的具体处置)。 |
 | HC-047 | 本地默认 schema update / seed / fallback 风险 | Phase 2 / CORE安全 | [P2-FIXTURE-08](#p2-fixture-08) | commercial默认拒错误profile/fallback/seed，安全scanner与启动矩阵；不改现env。  **P2实施：** PASS_LOCAL：explicitcommercial启动、合成loopback/Flyway/no-seed/no-real-I/O、新默认scanner及最终checks通过；不改现env，不声称remoteCI。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
-| HC-048 | 品牌、Logo、地址/电话配置完整性未知 | Phase 3 / CONFIG | [P3-CONFIG-01](#p3-config-01) | 单一brand元数据/来源骨架，UI投影P3-UI；完整素材/preset和许可验收P5/P8。 |
+| HC-048 | 品牌、Logo、地址/电话配置完整性未知 | Phase 3 / CONFIG | [P3-CONFIG-01](#p3-config-01) | 单一brand元数据/来源骨架，UI投影P3-UI；完整素材/preset和许可验收P5/P8。 **P3实施：** IMPLEMENTED_FOCUSED_ONLY：e565be0九字段typedsummary/strictOwnerbrand-locale写与revision；HTTP/consumer待验，Logo/地址/电话非已支持写字段，素材/完整preset留P5/P8。 [证据](PHASE3_ACCEPTANCE_REPORT.md#本阶段13项-hc-的具体处置)。 |
 | HC-049 | 测试偏现有 noodle/打印 fixture，整体覆盖率未知 | Phase 2 / CORE回归 | [P2-FIXTURE-08](#p2-fixture-08) | 两Org负向与库存并发/离线/printing回归；P3扩双Profile；不报未知覆盖率。  **P2实施：** PASS_LOCAL：两Org/PG竞争/打印/幂等/HTTP/真实broker/Offline独立review及最终1013+306/native24通过；双Profile扩展留P3，不报未知覆盖率。 [证据](PHASE2_SECURITY_TEST_REPORT.md)。 |
 | HC-050 | 疑似无调用 mock/menuImportSeed | DEFER Phase 7 / DELETE候选 | [P7-LEGACY-03](#p7-legacy-03) | 仅疑似无引用，须bundle/import证据；不为本轮文档/安全工作删除。 |
 | HC-051 | one-off 部署与验收脚本固定 Store/Printer/endpoint | DEFER Phase 7 / PROFILE工具 | [P7-DEPLOY-02](#p7-deploy-02) | 历史oneoff保留其targetguards，不能当商家工具；P2扫描新默认先防误用。 |
