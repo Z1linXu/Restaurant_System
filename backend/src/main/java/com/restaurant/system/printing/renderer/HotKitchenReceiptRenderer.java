@@ -49,6 +49,9 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
     public String render(PrintRenderRequest request) {
         List<KitchenTask> tasks = eligibilityService.resolveHotKitchenTasks(request);
         PrintingDisplayRuleContext printingRules = request.printing_rules;
+        if (printingRules != null && !printingRules.lanzhouCompatibility()) {
+            return NeutralKitchenReceiptContent.render(request, getModuleCode(), tasks);
+        }
         if (tasks.isEmpty()) {
             return "";
         }

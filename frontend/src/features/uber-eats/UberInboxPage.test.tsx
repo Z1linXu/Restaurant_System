@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import UberInboxPage from './UberInboxPage'
 import { useUberInbox } from './useUberInbox'
 import { decideUberOrder, reprintUberKitchen, type UberItem, type UberOrder } from '../../services/uberEatsService'
-vi.mock('../store/useStoreContext', () => ({ useCurrentStore: () => ({ storeId: 12 }) }))
+const runtime = vi.hoisted(() => ({ printing: true }))
+vi.mock('../store/useStoreContext', () => ({ useCurrentStore: () => ({ storeId: 12, moduleConfiguration: { store_id: 12, modules: [{ module_key: 'PRINTING', enabled: runtime.printing, persisted: true }], validation_issues: [] } }) }))
 vi.mock('../frontdesk/components/FrontdeskTopNav', () => ({ FrontdeskTopNav: () => null }))
 vi.mock('./useUberInbox', () => ({ useUberInbox: vi.fn() }))
 vi.mock('../../services/uberEatsService', async original => ({ ...await original<typeof import('../../services/uberEatsService')>(), decideUberOrder: vi.fn(), reprintUberKitchen: vi.fn() }))
@@ -11,7 +12,7 @@ const pending: UberOrder = { id: 1, status: 'PENDING', display_id: 'ABC01', uber
 describe('Uber inbox staff workflow', () => {
   let view: ReactTestRenderer | undefined
   const refresh = vi.fn()
-  beforeEach(() => { vi.clearAllMocks(); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.mocked(useUberInbox).mockReturnValue({ orders: [pending], loading: false, error: null, refresh }) })
+  beforeEach(() => { runtime.printing = true; vi.clearAllMocks(); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.mocked(useUberInbox).mockReturnValue({ orders: [pending], loading: false, error: null, refresh }) })
   afterEach(async () => { if (view) await act(async () => view!.unmount()); vi.unstubAllGlobals() })
   const button = (text: string) => view!.root.findAllByType('button').find(b => b.children.join('').includes(text))!
   const item = (title: string, notes: string, modifiers: UberItem[] = []): UberItem => ({ id: title, external_data: title, title, quantity: 1, removed: false, notes, modifiers, issues: [] })
@@ -110,7 +111,7 @@ describe('Uber inbox staff workflow', () => {
     await act(async () => { view = create(<UberInboxPage />) })
     expect(button('Accept')).toBeUndefined(); expect(button('HOT KITCHEN')).toBeUndefined()
     await act(async () => button('重打 GRAB').props.onClick())
-    expect(reprintUberKitchen).toHaveBeenCalledExactlyOnceWith(22, 'GRAB')
+    expect(reprintUberKitchen).toHaveBeenCalledExactlyOnceWith(22, 'GRAB', expect.any(Function), expect.any(AbortSignal))
     expect(JSON.stringify(view!.toJSON())).toContain('牛肉面 ×1 · 大碗')
   })
   it('shows mapped and frozen raw content with warnings and keeps both kitchen reprints enabled', async () => {
@@ -121,9 +122,19 @@ describe('Uber inbox staff workflow', () => {
     expect(rendered).toContain('部分匹配'); expect(rendered).toContain('Unknown Uber Item'); expect(rendered).toContain('传统牛肉面'); expect(rendered).toContain('UNMAPPED_ROUTE_REVIEW')
     expect(button('Accept')).toBeUndefined()
     await act(async () => button('重打 HOT KITCHEN').props.onClick())
-    expect(reprintUberKitchen).toHaveBeenCalledWith(22, 'HOT_KITCHEN')
+    expect(reprintUberKitchen).toHaveBeenCalledWith(22, 'HOT_KITCHEN', expect.any(Function), expect.any(AbortSignal))
     expect(button('重打 GRAB')).toBeDefined()
   })
+  it('does not offer or execute kitchen reprints when Printing closes while Uber stays enabled', async () => {
+    await renderOrder({ ...pending, processing_mode: 'KITCHEN_MIRROR', local_order_id: 22, grab_status: 'PRINTED' })
+    const oldAction = button('重打 GRAB').props.onClick
+    runtime.printing = false
+    await act(async () => view!.update(<UberInboxPage />))
+    expect(button('重打 GRAB')).toBeUndefined()
+    await act(async () => oldAction())
+    expect(reprintUberKitchen).not.toHaveBeenCalled()
+  })
+
   it('requires a denial reason and submits it to the backend', async () => {
     vi.mocked(decideUberOrder).mockResolvedValue({ ...pending, status: 'DENIED' })
     await act(async () => { view = create(<UberInboxPage />) })

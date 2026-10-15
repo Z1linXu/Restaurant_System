@@ -1,5 +1,5 @@
-import { activateOfflineStore, getEnvironmentId } from '../../offline/environmentScope'
-import { useEffect, useMemo, useState } from 'react'
+import { activateOfflineStore, captureEnvironmentSession, isEnvironmentSessionCurrent, matchesOfflineScope, type OfflineScope } from '../../offline/environmentScope'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchStoreContext, type StoreContextResponse } from '../../services/storeWorkspaceService'
 import { getApiUserMessage } from '../../services/apiClient'
 import { useAuth } from '../auth/useAuth'
@@ -14,49 +14,101 @@ import {
 
 export function StoreContextProvider({ storeId, children }: { storeId: number; children: React.ReactNode }) {
   const { isOfflineRestricted, user } = useAuth()
+  const offlineRestricted = useRef(isOfflineRestricted)
+  useEffect(() => { offlineRestricted.current = isOfflineRestricted }, [isOfflineRestricted])
   const [data, setData] = useState<StoreContextResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [resultScopeKey, setResultScopeKey] = useState<string | null>(null)
+  let environmentSession: ReturnType<typeof captureEnvironmentSession> | null = null
+  try { environmentSession = captureEnvironmentSession() } catch { /* Missing server configuration stays closed. */ }
+  const environmentId = environmentSession?.environmentId ?? ''
+  const environmentGeneration = environmentSession?.generation ?? -1
+  const scopeKey = `${environmentId}:${environmentGeneration}:${user?.id ?? 'anonymous'}:${storeId}`
 
   useEffect(() => {
     let active = true
+    let request: AbortController | null = null
+    let registeredScope: OfflineScope | undefined
     let releaseOfflineScope: (() => void) | undefined
+    const session = { environmentId, generation: environmentGeneration }
+    const releaseScope = () => {
+      releaseOfflineScope?.()
+      releaseOfflineScope = undefined
+      registeredScope = undefined
+    }
+    const clearContext = (exception: unknown) => {
+      releaseScope()
+      setData(null)
+      setResultScopeKey(scopeKey)
+      setError(getApiUserMessage(exception, '你没有权限访问这家门店。'))
+      setLoading(false)
+    }
     const loadContext = (showLoading: boolean, preferOfflineSnapshot: boolean) => {
+      if (!isEnvironmentSessionCurrent(session)) {
+        request?.abort()
+        clearContext(new Error('AUTH_ENVIRONMENT_CHANGED'))
+        return
+      }
+      if (request) return
+      const controller = new AbortController()
+      request = controller
       if (showLoading) {
         setLoading(true)
       }
       setError(null)
-      fetchStoreContext(storeId, user?.id, { preferOfflineSnapshot })
+      fetchStoreContext(storeId, user?.id, { preferOfflineSnapshot, signal: controller.signal })
         .then((response) => {
-          if (!active) return
-          releaseOfflineScope?.()
-          if (user?.id && response.id === storeId && response.organization_id != null) {
-            releaseOfflineScope = activateOfflineStore({ environmentId: getEnvironmentId(), accountId: user.id, organizationId: response.organization_id, storeId })
+          if (!active || controller.signal.aborted) return
+          if (!isEnvironmentSessionCurrent(session)) throw new Error('AUTH_ENVIRONMENT_CHANGED')
+          if (response.id !== storeId) throw new Error('STORE_CONTEXT_SCOPE_MISMATCH')
+          const nextScope = user?.id && response.organization_id != null
+            ? { environmentId, accountId: user.id, organizationId: response.organization_id, storeId }
+            : undefined
+          if (nextScope && (!registeredScope || !matchesOfflineScope(nextScope, registeredScope))) {
+            releaseScope()
+            releaseOfflineScope = activateOfflineStore(nextScope)
+            registeredScope = nextScope
+          } else if (!nextScope) {
+            releaseScope()
           }
           setData(response)
+          setResultScopeKey(scopeKey)
         })
         .catch((exception) => {
-          if (!active) return
-          releaseOfflineScope?.()
-          setData(null)
-          setError(getApiUserMessage(exception, '你没有权限访问这家门店。'))
+          if (!active || controller.signal.aborted) return
+          clearContext(exception)
         })
         .finally(() => {
-          if (active) setLoading(false)
+          if (request === controller) request = null
+          if (active && !controller.signal.aborted && isEnvironmentSessionCurrent(session)) setLoading(false)
         })
     }
 
-    loadContext(true, isOfflineRestricted)
-    const handleOnline = () => loadContext(false, false)
-    window.addEventListener('online', handleOnline)
+    loadContext(true, offlineRestricted.current)
+    const refreshForeground = () => {
+      if ((typeof document === 'undefined' || document.visibilityState === 'visible')
+        && (typeof navigator === 'undefined' || navigator.onLine !== false)) loadContext(false, false)
+    }
+    const timer = window.setInterval?.(refreshForeground, 60_000)
+    window.addEventListener('online', refreshForeground)
+    window.addEventListener('focus', refreshForeground)
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', refreshForeground)
     return () => {
       active = false
-      releaseOfflineScope?.()
-      window.removeEventListener('online', handleOnline)
+      request?.abort()
+      releaseScope()
+      if (timer != null) window.clearInterval(timer)
+      window.removeEventListener('online', refreshForeground)
+      window.removeEventListener('focus', refreshForeground)
+      if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', refreshForeground)
     }
-  }, [isOfflineRestricted, storeId, user?.id])
+  }, [environmentGeneration, environmentId, scopeKey, storeId, user?.id])
 
-  const value = useMemo(() => mapStoreContext(storeId, data, loading, error), [data, error, loading, storeId])
+  const value = useMemo(() => {
+    const current = resultScopeKey === scopeKey
+    return mapStoreContext(storeId, current ? data : null, !current || loading, current ? error : null)
+  }, [data, error, loading, resultScopeKey, scopeKey, storeId])
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }
 
@@ -135,70 +187,17 @@ export function RequireLiveStore({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-function StoreModuleUnavailablePage({
-  access,
-  storeName,
-}: {
-  access: StoreModuleAccessResult
-  storeName: string
-}) {
-  const isEnvironmentGap = access.status === 'MODULE_ENVIRONMENT_CAPABILITY_MISSING'
-  const isHardwareGap = access.status === 'MODULE_HARDWARE_CAPABILITY_MISSING'
-  const isPrinting = access.moduleKey === 'PRINTING'
-  const printingMode = access.module?.legacy_runtime_mode ?? null
-  const legacyPrintingFlag = access.module?.legacy_store_flag
+function StoreModuleUnavailablePage({ access, storeName }: { access: StoreModuleAccessResult; storeName: string }) {
+  const needsSetup = access.status === 'MODULE_HARDWARE_CAPABILITY_MISSING'
+    || access.status === 'MODULE_ENVIRONMENT_CAPABILITY_MISSING'
   return (
-    <div className="min-h-screen bg-[var(--surface)] px-6 py-6 text-[var(--on-surface)]">
-      <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-[980px] items-center justify-center">
-        <div className="w-full rounded-[30px] bg-[rgba(255,255,255,0.88)] px-7 py-8 shadow-[0_18px_42px_rgba(26,28,25,0.07)]">
-          <div className="text-[0.78rem] font-black uppercase tracking-[0.2em] text-[var(--primary)]">
-            Store module gate
-          </div>
-          <h1 className="mt-3 font-display text-[2.35rem] font-extrabold tracking-[-0.07em] text-[var(--on-surface)]">
-            {isEnvironmentGap ? '运行环境未就绪' : isHardwareGap ? '硬件能力未就绪' : '功能未启用'}
-          </h1>
-          <p className="mt-3 max-w-[660px] text-[1rem] leading-7 text-[var(--muted)]">
-            <span className="font-semibold text-[var(--on-surface)]">{storeName}</span>
-            {' '}当前不能打开{' '}
-            <span className="font-semibold text-[var(--on-surface)]">{access.displayName}</span>
-            {' '}页面。前端已从已认证的 Store Context 读取模块状态，并按 Store-scoped module contract fail closed。
-          </p>
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <ModuleStatusCard label="Module" value={access.moduleKey} />
-            <ModuleStatusCard label="Status" value={access.status} />
-            {isPrinting ? <ModuleStatusCard label="Runtime print mode" value={printingMode ?? 'UNKNOWN'} /> : null}
-            {isPrinting ? (
-              <ModuleStatusCard
-                label="Legacy printing flag"
-                value={legacyPrintingFlag == null ? 'UNKNOWN' : legacyPrintingFlag ? 'ENABLED' : 'DISABLED'}
-              />
-            ) : null}
-          </div>
-
-          <div className="mt-5 rounded-[18px] bg-[rgba(26,28,25,0.04)] px-4 py-3 text-[0.9rem] font-semibold leading-6 text-[var(--muted)]">
-            {access.message}
-            {access.issues.length ? (
-              <ul className="mt-3 space-y-1">
-                {access.issues.map((issue) => (
-                  <li key={`${issue.code}:${issue.module_key ?? ''}:${issue.target ?? ''}`}>
-                    {issue.code}{issue.target ? ` → ${issue.target}` : ''}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        </div>
+    <div className="min-h-screen bg-[var(--surface)] px-6 py-8 text-[var(--on-surface)]">
+      <div className="mx-auto max-w-[760px] rounded-[30px] bg-white px-7 py-8 shadow-[0_22px_54px_rgba(26,28,25,0.1)]">
+        <h1 className="text-[1.8rem] font-black">{needsSetup ? '功能暂不可用' : '功能未启用'}</h1>
+        <p className="mt-3 text-base leading-7 text-[var(--muted)]">
+          {storeName} 当前无法使用 {access.displayName}。{needsSetup ? '请联系门店负责人完成设置。' : '请联系门店负责人。'}
+        </p>
       </div>
-    </div>
-  )
-}
-
-function ModuleStatusCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[18px] bg-[rgba(26,28,25,0.04)] px-4 py-3">
-      <div className="text-[0.72rem] font-black uppercase tracking-[0.16em] text-[var(--muted)]">{label}</div>
-      <div className="mt-1 break-all text-[0.95rem] font-bold text-[var(--on-surface)]">{value}</div>
     </div>
   )
 }

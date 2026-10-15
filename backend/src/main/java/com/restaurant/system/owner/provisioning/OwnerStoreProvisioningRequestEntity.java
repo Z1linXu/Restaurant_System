@@ -68,13 +68,13 @@ public class OwnerStoreProvisioningRequestEntity {
     @JdbcTypeCode(SqlTypes.CHAR)
     public String profile_fingerprint_sha256;
 
-    @Column(name = "master_menu_key", nullable = false)
+    @Column(name = "master_menu_key")
     public String master_menu_key;
 
-    @Column(name = "master_menu_version", nullable = false)
+    @Column(name = "master_menu_version")
     public String master_menu_version;
 
-    @Column(name = "master_menu_fingerprint_sha256", nullable = false, columnDefinition = "char(64)", length = 64)
+    @Column(name = "master_menu_fingerprint_sha256", columnDefinition = "char(64)", length = 64)
     @JdbcTypeCode(SqlTypes.CHAR)
     public String master_menu_fingerprint_sha256;
 

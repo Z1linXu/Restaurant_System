@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.restaurant.system.modules.dto.StoreModuleConfigurationResponse;
 
 public class StoreContextResponse {
+    public com.restaurant.system.merchant.dto.MerchantConfigurationSummary safe_summary;
     public Long id;
     public String name;
     public String code;

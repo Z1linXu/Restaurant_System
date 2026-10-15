@@ -10,6 +10,9 @@ import {
 import { fetchWorkspaces, type WorkspaceStore } from '../../services/storeWorkspaceService'
 import { useAuth } from '../auth/useAuth'
 import { useCurrentStore } from '../store/useStoreContext'
+import { isStoreModuleEnabled } from '../store/storeModuleAccess'
+import { formatStoreMoney } from '../store/storePresentation'
+import { useStorePresentation } from '../store/useStorePresentation'
 import { NoodleSalesPanel, RevenueMixPanel } from './RevenueCategoryPanels'
 import { ChannelSalesKpis, ChannelNoodleSales, ChannelRevenueMix, ChannelTrend } from '../reports/components/ChannelSalesPanels'
 
@@ -18,14 +21,6 @@ const RANGE_OPTIONS: { value: OwnerDashboardRange; label: string }[] = [
   { value: 'week', label: 'Week' },
   { value: 'month', label: 'Month' },
 ]
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('en-CA', {
-    style: 'currency',
-    currency: 'CAD',
-    minimumFractionDigits: 2,
-  }).format(value)
-}
 
 function formatPercent(value: number) {
   const sign = value > 0 ? '+' : ''
@@ -82,6 +77,7 @@ function TrendChart({
   points: OwnerDashboardTrendPoint[]
   granularity: string
 }) {
+  const presentation = useStorePresentation()
   const maxValue = Math.max(...points.map((point) => point.value), 1)
 
   return (
@@ -95,7 +91,7 @@ function TrendChart({
             />
           </div>
           <div className="text-center text-[0.76rem] font-semibold text-[var(--muted)]">{point.label}</div>
-          <div className="text-center text-[0.82rem] font-bold text-[var(--on-surface)]">{formatCurrency(point.value)}</div>
+          <div className="text-center text-[0.82rem] font-bold text-[var(--on-surface)]">{formatStoreMoney(point.value, presentation)}</div>
         </div>
       ))}
       {!points.length ? (
@@ -121,6 +117,7 @@ function ItemPerformanceList({
   items: OwnerDashboardItemPerformance[]
   emptyMessage: string
 }) {
+  const presentation = useStorePresentation()
   return (
     <div className="min-w-0 rounded-[26px] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
       <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">{title}</div>
@@ -133,7 +130,7 @@ function ItemPerformanceList({
                 <div className="min-w-0">
                   <div className="truncate text-[0.96rem] font-bold text-[var(--on-surface)]">{item.item_name}</div>
                   <div className="mt-1 text-[0.78rem] text-[var(--muted)]">
-                    {item.quantity} sold · {formatCurrency(item.revenue)} revenue
+                    {item.quantity} sold · {formatStoreMoney(item.revenue, presentation)} revenue
                   </div>
                 </div>
                 <div className={`shrink-0 rounded-full px-2.5 py-1 text-[0.76rem] font-semibold ${getChangeTone(item.quantity_change)}`}>
@@ -154,7 +151,9 @@ function ItemPerformanceList({
 }
 
 export function OwnerAdminDashboardPage() {
-  const { storeId, storeName, storeCode, organizationId } = useCurrentStore()
+  const { storeId, storeName, storeCode, organizationId, moduleConfiguration } = useCurrentStore()
+  const presentation = useStorePresentation()
+  const analyticsEnabled = isStoreModuleEnabled(moduleConfiguration, 'ANALYTICS_ADVANCED')
   const { isOfflineRestricted, user } = useAuth()
   const [workspaceStores, setWorkspaceStores] = useState<WorkspaceStore[]>([])
   const [dashboard, setDashboard] = useState<OwnerDashboardResponse | null>(null)
@@ -172,6 +171,11 @@ export function OwnerAdminDashboardPage() {
   }, [])
 
   useEffect(() => {
+    if (!analyticsEnabled) {
+      setWorkspaceStores([])
+      setLoading(true)
+      return
+    }
     let active = true
     setLoading(true)
     setError(null)
@@ -200,7 +204,7 @@ export function OwnerAdminDashboardPage() {
     return () => {
       active = false
     }
-  }, [isOfflineRestricted, user?.id])
+  }, [analyticsEnabled, isOfflineRestricted, user?.id])
 
   useEffect(() => {
     setSelectedStoreId(String(storeId))
@@ -229,6 +233,11 @@ export function OwnerAdminDashboardPage() {
   )
 
   useEffect(() => {
+    if (!analyticsEnabled) {
+      setDashboard(null)
+      setDashboardLoading(false)
+      return
+    }
     if (loading || !selectedStoreId) {
       return
     }
@@ -271,7 +280,7 @@ export function OwnerAdminDashboardPage() {
     return () => {
       active = false
     }
-  }, [compareEnabled, loading, organizationId, selectedRange, selectedStoreId, storeId, workspaceStores])
+  }, [analyticsEnabled, compareEnabled, loading, organizationId, selectedRange, selectedStoreId, storeId, workspaceStores])
 
   const currentStoreLabel = stores.find((store) => String(store.id) === selectedStoreId)?.name ?? 'Store'
 
@@ -344,13 +353,15 @@ export function OwnerAdminDashboardPage() {
                 <div className="rounded-[16px] bg-[rgba(97,0,0,0.06)] px-4 py-2.5 text-right">
                   <div className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Live Clock</div>
                   <div className="mt-1 text-[1.15rem] font-bold text-[var(--primary)]">
-                    {clock.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })}
+                    {clock.toLocaleTimeString(presentation.locale, { hour: 'numeric', minute: '2-digit', second: '2-digit', timeZone: presentation.timezone })}
                   </div>
                 </div>
               </div>
       </div>
 
-      {loading ? (
+      {!analyticsEnabled ? (
+        <div className="rounded-[24px] bg-white px-5 py-4 text-base text-[var(--muted)]">此门店未启用高级分析。销售报表可从 Reports 打开。</div>
+      ) : loading ? (
               <div className="rounded-[26px] bg-[rgba(255,255,255,0.82)] px-5 py-6 text-[0.95rem] text-[var(--muted)] shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
                 Loading owner console shell...
               </div>
@@ -366,11 +377,11 @@ export function OwnerAdminDashboardPage() {
               <>
                 {dashboard.channel_sales ? <ChannelSalesKpis summary={dashboard.channel_sales} /> : (
                 <div className="grid gap-4 md:grid-cols-3">
-                  <MetricCard label="Sales" value={formatCurrency(dashboard.kpis.sales.value)} change={dashboard.kpis.sales.change_pct} />
+                  <MetricCard label="Sales" value={formatStoreMoney(dashboard.kpis.sales.value, presentation)} change={dashboard.kpis.sales.change_pct} />
                   <MetricCard label="Orders" value={dashboard.kpis.orders.value.toFixed(0)} change={dashboard.kpis.orders.change_pct} />
                   <MetricCard
                     label="Average Order Value"
-                    value={formatCurrency(dashboard.kpis.average_order_value.value)}
+                    value={formatStoreMoney(dashboard.kpis.average_order_value.value, presentation)}
                     change={dashboard.kpis.average_order_value.change_pct}
                   />
 
@@ -445,10 +456,10 @@ export function OwnerAdminDashboardPage() {
                             </div>
                           </div>
                           <div className="mt-4 text-[1.2rem] font-black tracking-[-0.04em] text-[var(--primary)]">
-                            {formatCurrency(store.sales)}
+                            {formatStoreMoney(store.sales, presentation)}
                           </div>
                           <div className="mt-1 text-[0.78rem] text-[var(--muted)]">
-                            Previous: {formatCurrency(store.previous_sales)}
+                            Previous: {formatStoreMoney(store.previous_sales, presentation)}
                           </div>
                         </div>
                       ))

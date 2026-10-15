@@ -9543,3 +9543,92 @@ Phase 2 integration: the menu revision JPA slice supplies its unused user-author
 ## Commercialization Phase 2 integrated local acceptance (2026-10-15)
 
 [Security test report](docs/commercialization/PHASE2_SECURITY_TEST_REPORT.md) and [acceptance report](docs/commercialization/PHASE2_ACCEPTANCE_REPORT.md) record the bounded security changes and prior failed runs. Tested code `5ec8abeb7a67760000b29151e7f568a88a8f36ed`: backend Java17 clean verify 1013/0 failures/0 errors/0 skips, all optional PostgreSQL suites enabled on dedicated loopback PG16 synthetic databases; frontend 306 tests/build PASS. The unchanged frontend/native product trees exported at `1609f0d` also pass existing bundled debug packaging (54 verified files, DB5) and full guard-enabled native tests (6 suites/24 PASS). APK SHA256 `fad05caed96762ce60bb3cd8cab9b0449219430bfb9d97c831f154a8db801899` is a local unreleased debug artifact, not installed-device evidence. All required independent Agent6 findings are closed, including the unused dependency test-slice review. Baseline/checksum/default scan/governance PASS. G2 is PASS for isolated local Phase3 development under the Owner's existing authorization; no Staging/Production mutation or main merge. Historical bit identity, installed APK, real WebView/Keystore and physical printing remain unverified and cannot support release claims.
+
+## Phase 3 Neutral printing presentation
+
+[Printing compatibility boundary](docs/commercialization/PHASE3_PRINTING_COMPATIBILITY.md) describes the shared Merchant Configuration reader used by PrintingDisplayRuleService. Unknown/new Neutral Stores get empty dictionaries, safe settings/preview and full frozen item/option labels; existing verified/explicit legacy installations retain PROVISIONAL_COMPATIBILITY. Order submission uses the same context when freezing new KitchenTask labels. Existing job payloads, quantities, prices, leases, dispatch and historical snapshots are retained. Existing station/output roles remain provisional for Phase5; complete Modifier/Combo/price engines remain Phase4. Final automated test/review evidence and the remaining visual acceptance are recorded in the [Phase3 acceptance report](docs/commercialization/PHASE3_ACCEPTANCE_REPORT.md): backend 1050/0 failures/0 errors/0 skips, frontend 363/build, native 24 and 14 real loopback HTTP checks PASS. The final local debug bundle has 54 verified assets/DB5 and remains unreleased. Independent Agent6 found no open new P0/P1; 768/1024 visual acceptance remains NOT RUN after browser permission denial, so these checks do not close that gate. Current execution status belongs only in CURRENT_STATE.yml.
+
+## Merchant configuration foundation (commercial local development)
+
+`MerchantConfigurationService` is the typed Store reader and owns the runtime Profile
+compatibility decision. V39 snapshots verified canonical v2 provenance or the explicit
+`LEGACY_EXISTING_STORE` installation marker into persisted compatibility rows; this
+backfill never grants access to private Profile artifacts. Missing/invalid/unsupported
+configuration is Neutral, including newly inserted Stores with a legacy-looking name.
+Timezone remains `Store.timezone` with the existing daily-close default. CAD and the
+existing tax policy are read-only metadata; configuration does not change amounts or
+time calculations. Owner-only revision-checked writes change brand/locale, audit the
+change and increment the existing menu revision. References are authorized Store API
+pointers; there is no second mutable menu/device/module graph.
+
+Phase3 focused backend evidence: Merchant Configuration plus Neutral/Lanzhou order, renderer, eligibility, modifier and printing-rule suites pass 142 tests (zero failure/error/skip). The Uber PostgreSQL regression fixture now explicitly initializes its synthetic Lanzhou compatibility configuration; newly inserted unconfigured Stores remain Neutral. Web module suppression does not imply stopping the paired native headless device worker; that existing lifecycle remains Phase7.
+## Store presentation and optional Web modules (commercial development)
+
+Store Context and Menu Catalog accept an optional schema-1 `safe_summary` with
+brand, locale, CAD currency, timezone and non-secret configuration references.
+The current Store context supplies the presentation helper; Menu Catalog carries
+its summary through the existing scoped revision/cache path. Foreign Store IDs
+are rejected before snapshot/cache writes. Missing or unsupported summaries use
+the neutral Restaurant System / en-CA / CAD presentation, with the legacy browser
+timezone fallback. The UI supports CAD only and does not convert money. Current
+Store names take priority over a user's default Store. POS chrome/prices and the
+changed dashboard labels use the helper; this is not a full-site i18n migration.
+
+Web optional-module behavior is scoped to the authenticated Store configuration.
+Printing disabled prevents POS banner/status polling, submit/outbox bridge kicks,
+print coordination, options/job reads and manual reprints; Order History remains
+readable. Uber kitchen reprints also require Printing. Closing a module invalidates
+the Web action scope and cancels follow/coordination, without rewriting committed
+orders, print jobs or unknown idempotency intents. The shared manual helper checks
+an optional UI-scope predicate before a new POST, late confirmation and native
+kick. Printing management uses the existing management guard so missing hardware
+does not hide the configuration entry. KDS/Uber page guards retain their existing
+mount/subscription boundary. Advanced Analytics disabled prevents dashboard reads,
+while Reporting Core remains independently available. Module refusal screens show
+short operational messages without internal revision/readiness diagnostics.
+
+These are Web component guarantees, not proof that a separately started Android
+headless worker stops polling. Android lifecycle, backend print/lease enforcement,
+physical output and bundled assets are unchanged. Local React/TypeScript tests do
+not replace physical iPad/WebView/printing QA. See
+[Phase 3 UI boundaries](docs/commercialization/PHASE3_UI_BOUNDARIES.md) for tests and
+the exact limits; deployment and runtime authority remain in governance.
+V40 adds the reviewed empty `NEUTRAL_RESTAURANT@v1` public preset. Blank Profile
+on the existing Owner Business Store endpoint now uses Neutral in the original
+idempotency/transaction chain. It creates no menu/master/station/table/printer/
+device/staff graph beyond the Owner membership and existing module defaults;
+printing transport remains DISABLED. Explicit authorized canonical v2 creation
+keeps the original private provisioner. StoreContext/MenuCatalog expose the
+nine-field `safe_summary`; its revision participates in menu hash invalidation.
+Contracts and bounded local evidence are in
+[Configuration Contract](docs/commercialization/PHASE3_CONFIGURATION_CONTRACT.md),
+[Profile Design](docs/commercialization/PHASE3_PROFILE_DESIGN.md), and
+[Backend Evidence](docs/commercialization/PHASE3_BACKEND_CONFIGURATION_EVIDENCE.md).
+
+Neutral Profile identity uses the existing aggregate fingerprint contract (identity/schema/canonical content/artifacts), not content-only SHA256. Fresh and upgrade tests recompute the aggregate from persisted database columns and reject a raw content hash as the Profile fingerprint; V39/V40 and old ledger bytes remain unchanged.
+
+The Merchant Configuration controller handles unreadable/empty JSON locally as HTTP400 with `MERCHANT_CONFIGURATION_INVALID_JSON`; no parser detail or tenant lookup is exposed. The existing global error contract is unchanged. Real-Bearer parser tests assert no configuration/audit write.
+
+The existing Commercial guard workflow also applies its existing defaults scanner to the three new configuration/Neutral initialization entry points. This bounded BLOCKING CI coverage extension reuses the reviewed scanner and changes no deployment or credential lifecycle.
+
+Isolated loopback HTTP acceptance against the reviewed configuration backend passed 14 requests: Neutral LIVE creation with zero operational graph, idempotent replay, revision CAS, consistent StoreContext/MenuCatalog summaries, strict reference rejection, foreign Owner denial and private Profile denial. The credential-free [synthetic HTTP evidence](docs/commercialization/fixtures/phase3-local-http-evidence.json) records backend source `9fdf5e7`; the later parser-only repair has its own HTTP tests. Browser access to loopback was denied by the browser security permission policy; 768/1024 screenshots/layout remain NOT RUN, so the G3 visual gate cannot be closed by unit/DOM tests. Local HTTP/Vite processes were stopped after testing. No Staging/Production action.
+
+The active Store Context now refreshes through its existing GET/snapshot path on
+visible-online focus, visibility restoration, online and a 60-second cadence.
+It remains the single presentation/module source; menu revisions keep their own
+existing scoped catalog cache. Foreground requests deduplicate, and cleanup aborts
+requests/timers/listeners. Store/account/environment generation changes hide old
+data immediately; cancelled or foreign responses cannot write/restore snapshots.
+Unchanged validated offline scope registration stays stable across refreshes and
+restricted-mode changes. Reachable network responses converge Context and menu
+configuration on focus or the next cadence; outages do not promise that bound.
+
+Default reprint confirmation dialogs accept a caller scope AbortSignal. Existing
+UI scope cleanup and the existing auth-expired event remove an open old-context
+dialog and resolve it as false, preserving unknown intent keys. No late confirm,
+POST or native kick follows a cancelled scope. Deliberate operator cancellation
+and already-committed print jobs retain their prior semantics. jsdom 26.1.0 is a
+dev-only test dependency for this real default DOM path, with only dialog top-layer
+methods shimmed; no browser/native/physical QA or backend printing change is implied.
+
+The [dependency audit comparison](docs/commercialization/fixtures/phase3-dependency-audit-comparison.json) records 13 existing npm advisories (1 critical/7 high/4 moderate/1 low), with exactly identical advisory details in the Phase2 export and Phase3 lockfile; the dev-only jsdom addition introduced no advisory. This is existing dependency debt for isolated development, not a claim of zero vulnerabilities. Advisory applicability/patch review blocks external release claims; no blanket npm audit fix or unrelated dependency upgrade was performed. Temporary Vite/HTTP servers were loopback-only and are stopped.

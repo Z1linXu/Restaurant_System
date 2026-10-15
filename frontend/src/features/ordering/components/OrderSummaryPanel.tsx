@@ -1,3 +1,5 @@
+import { useStorePresentation } from '../../store/useStorePresentation'
+import { formatStoreMoney } from '../../store/storePresentation'
 import { Button } from '../../../components/ui/Button'
 import type { OrderSession } from '../../../types/ordering'
 import { TAX_RATE_LABEL } from '../../../utils/tax'
@@ -56,6 +58,7 @@ export function OrderSummaryPanel({
   onReturnQueuedOrderToDraft,
   compact = false,
 }: OrderSummaryPanelProps) {
+  const presentation = useStorePresentation()
   const displaySlotLabel = formatSplitSlotLabel(session.slotLabel)
   const statusLabel = orderStatusDisplayLabel(session.status)
   const isDraft = session.status === 'draft'
@@ -132,15 +135,15 @@ export function OrderSummaryPanel({
         <div className={`rounded-[18px] bg-[rgba(26,28,25,0.04)] ${compact ? 'space-y-1.5 px-4 py-3' : 'space-y-2.5 px-5 py-4'}`}>
           <div className={`flex items-center justify-between font-bold text-[rgba(83,58,50,0.82)] ${compact ? 'text-[0.85rem]' : 'text-base'}`}>
             <span>数量：{itemCount}</span>
-            <span>小计 ${subtotal.toFixed(2)}</span>
+            <span>小计 {formatStoreMoney(subtotal, presentation)}</span>
           </div>
           <div className={`flex items-center justify-between text-[rgba(83,58,50,0.82)] ${compact ? 'text-[0.86rem]' : 'text-base'}`}>
             <span>税 ({TAX_RATE_LABEL})</span>
-            <span>${tax.toFixed(2)}</span>
+            <span>{formatStoreMoney(tax, presentation)}</span>
           </div>
           <div className={`flex items-center justify-between font-extrabold tracking-[-0.04em] text-[var(--on-surface)] ${compact ? 'text-[1.25rem]' : 'text-[1.75rem]'}`}>
             <span>合计</span>
-            <span className="text-[var(--primary)]">${total.toFixed(2)}</span>
+            <span className="text-[var(--primary)]">{formatStoreMoney(total, presentation)}</span>
           </div>
         </div>
 

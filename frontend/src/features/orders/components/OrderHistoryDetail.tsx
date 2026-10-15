@@ -16,6 +16,7 @@ interface OrderHistoryDetailProps {
   printBusy: string | null
   printStatusMessage: { kind: 'success' | 'error'; message: string } | null
   onReprint: (option: OrderPrintOption) => void
+  printingEnabled?: boolean
 }
 
 export function OrderHistoryDetail({
@@ -26,6 +27,7 @@ export function OrderHistoryDetail({
   printBusy,
   printStatusMessage,
   onReprint,
+  printingEnabled = true,
 }: OrderHistoryDetailProps) {
   if (loading) {
     return <div className="rounded-[28px] bg-white p-8 text-center text-[var(--muted)]">正在加载订单详情...</div>
@@ -73,7 +75,7 @@ export function OrderHistoryDetail({
         <span>${Number(order.total_amount).toFixed(2)}</span>
       </div>
 
-      <div className="mt-5">
+      {printingEnabled ? <><div className="mt-5">
         <p className="mb-2 text-sm font-bold text-[var(--muted)]">重打完整订单</p>
         {printStatusMessage ? (
           <div className={`mb-3 rounded-[16px] px-4 py-3 text-sm font-bold ${
@@ -158,6 +160,7 @@ export function OrderHistoryDetail({
           </div>
         )}
       </div>
+      </> : null}
     </section>
   )
 }

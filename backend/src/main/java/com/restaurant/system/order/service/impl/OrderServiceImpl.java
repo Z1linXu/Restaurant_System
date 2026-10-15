@@ -1848,6 +1848,10 @@ public class OrderServiceImpl implements OrderService {
         List<OrderItemOption> orderItemOptions,
         PrintingDisplayRuleContext printingRules
     ) {
+        if (!printingRules.lanzhouCompatibility()) {
+            // Neutral orders freeze full option labels; cuisine abbreviations stay in compatibility mode.
+            return buildBeverageInstructionsSnapshot(orderItem, orderItemOptions);
+        }
         String primaryLine = buildKitchenPrimaryLine(menuItem, orderItemOptions, printingRules);
         List<String> secondaryParts = buildKitchenSecondaryParts(orderItem, orderItemOptions, printingRules);
 
@@ -1968,6 +1972,7 @@ public class OrderServiceImpl implements OrderService {
         if (configured != null && !configured.isBlank()) {
             return configured;
         }
+        if (!printingRules.lanzhouCompatibility()) return orderItem.item_name_snapshot_zh;
         return switch (menuItem.sku) {
             case "beef_chow_mein" -> "牛炒";
             case "chicken_chow_mein" -> "鸡炒";

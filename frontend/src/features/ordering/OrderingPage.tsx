@@ -18,6 +18,7 @@ import type { ConnectionState } from '../../services/networkStatus'
 import { menuCacheNoticeDismissalKey } from '../../offline/menuCacheNotice'
 import { useAuth } from '../auth/useAuth'
 import { useCurrentStore } from '../store/useStoreContext'
+import { isStoreModuleEnabled } from '../store/storeModuleAccess'
 import { isQuickAddItem } from './orderingCustomizationRules'
 
 interface OrderingPageProps {
@@ -134,7 +135,10 @@ export function OrderingPage({
   onOrderSubmitted,
 }: OrderingPageProps) {
   const { user } = useAuth()
-  const { organizationId } = useCurrentStore()
+  const { organizationId, moduleConfiguration } = useCurrentStore()
+  const printingEnabled = isStoreModuleEnabled(moduleConfiguration, 'PRINTING')
+  const printingEnabledRef = useRef(printingEnabled)
+  printingEnabledRef.current = printingEnabled
   const {
     categories,
     items,
@@ -460,7 +464,7 @@ export function OrderingPage({
           .map((item) => item.order_update_batch_id)
           .find((batchId): batchId is number => batchId != null)
         : null
-      kickPadDirectPrintWorker(isUpdate ? 'order-update-submit' : 'order-submit', submittedOrder.id, updateBatchId)
+      if (printingEnabledRef.current) kickPadDirectPrintWorker(isUpdate ? 'order-update-submit' : 'order-submit', submittedOrder.id, updateBatchId)
       onOrderSubmitted(slotLabel, tableLabel, submittedOrder.id, updateBatchId)
     } finally {
       localSubmitRequestedRef.current = false
@@ -486,7 +490,7 @@ export function OrderingPage({
       || localSubmitRequestedRef.current
       || handledSubmittedOrderIdsRef.current.has(submittedOrderId)) return
     handledSubmittedOrderIdsRef.current.add(submittedOrderId)
-    kickPadDirectPrintWorker('order-outbox-submitted', submittedOrderId, null)
+    if (printingEnabledRef.current) kickPadDirectPrintWorker('order-outbox-submitted', submittedOrderId, null)
     onOrderSubmitted(slotLabel, tableLabel, submittedOrderId, null)
   }, [onOrderSubmitted, outboxRecord?.serverOrderId, outboxRecord?.state, slotLabel, tableLabel])
 
@@ -494,7 +498,7 @@ export function OrderingPage({
     <div className={`ordering-page-safe min-h-screen bg-[var(--surface)] ${isIpadLandscape ? 'px-3 py-3' : 'px-5 py-4 md:px-7 xl:px-8'}`}>
       <div className={`mx-auto ${isIpadLandscape ? 'max-w-none space-y-3' : 'max-w-[1720px] space-y-6'}`}>
         {isIpadLandscape ? <FrontdeskTopNav activeItem="menu" /> : null}
-        {isIpadLandscape ? <PrintWorkerHealthBanner /> : null}
+        {isIpadLandscape && printingEnabled ? <PrintWorkerHealthBanner /> : null}
 
         {connectionWarning(connection.state) ? (
           <div className="rounded-[20px] border border-[rgba(151,34,34,0.25)] bg-[rgba(151,34,34,0.1)] px-5 py-4 text-[1rem] font-bold text-[rgb(116,22,22)]">

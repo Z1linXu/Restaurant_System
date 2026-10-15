@@ -9,5 +9,10 @@ jobs:
           fetch-depth: 0
       - run: python3 scripts/verify-commercial-baseline.py
       - run: python3 scripts/scan-commercial-defaults.py
+      - run: >-
+          python3 scripts/scan-commercial-defaults.py
+          backend/src/main/java/com/restaurant/system/merchant/MerchantConfigurationService.java
+          backend/src/main/java/com/restaurant/system/owner/profile/NeutralRestaurantProfile.java
+          backend/src/main/java/com/restaurant/system/owner/provisioning/OwnerStoreProvisioningMaterializer.java
       - run: python3 -m unittest discover -s scripts -p 'test_commercial_default_scan.py'
       - run: python3 scripts/validate-governance.py

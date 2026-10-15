@@ -144,6 +144,7 @@ export interface BackendMenuCatalogResponse {
 }
 
 export interface BackendMenuCatalog {
+  safe_summary?: import('./storeConfiguration').StoreSafeSummary | null
   store_id: number
   organization_id: number
   menu_revision: number
@@ -246,6 +247,7 @@ export interface BackendMenuOption {
 }
 
 export interface OrderingCatalog {
+  safeSummary?: import('./storeConfiguration').StoreSafeSummary | null
   storeId: string
   organizationId: string
   menuRevision: number

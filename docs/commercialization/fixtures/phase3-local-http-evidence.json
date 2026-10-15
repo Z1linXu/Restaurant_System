@@ -1,0 +1,114 @@
+{
+  "source_backend": "9fdf5e79eee28ab42849bda7e6a02c5a826ee7b9",
+  "environment": "loopback-only isolated synthetic commercial_p3_browser_qa",
+  "checks": [
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/owner/organizations/1/stores",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/owner/organizations/1/stores",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/stores/1/merchant-configuration",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/stores/1/merchant-configuration",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/stores/1/merchant-configuration",
+      "status": 409,
+      "expected": 409
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/stores/1/merchant-configuration",
+      "status": 403,
+      "expected": 403
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/stores/1/merchant-configuration",
+      "status": 403,
+      "expected": 403
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/stores/1/merchant-configuration",
+      "status": 400,
+      "expected": 400
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/stores/1/context",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/menu/catalog?store_id=1",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/store-profiles",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/store-profiles/ST_DENIS_CANONICAL_PROFILE/versions/v2",
+      "status": 403,
+      "expected": 403
+    }
+  ],
+  "checks_passed": 14,
+  "store_id": 1,
+  "organization_id": 1,
+  "neutral_counts": {
+    "items": 0,
+    "stations": 0,
+    "tables": 0,
+    "printers": 0,
+    "devices": 0,
+    "staff": 0,
+    "jobs": 0
+  },
+  "summary": {
+    "schema_version": 1,
+    "config_revision": 2,
+    "brand_name": "Harbor Cafe",
+    "locale": "en-CA",
+    "currency": "CAD",
+    "timezone": "America/Toronto",
+    "tax_policy_reference": "ca-qc-tax-2026-01",
+    "profile_code": "NEUTRAL_RESTAURANT",
+    "compatibility_mode": "NEUTRAL"
+  },
+  "credentials_or_tokens_saved": false
+}

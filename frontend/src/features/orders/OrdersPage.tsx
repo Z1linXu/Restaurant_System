@@ -15,15 +15,24 @@ import { FrontdeskTopNav } from '../frontdesk/components/FrontdeskTopNav'
 import { OrderHistoryDetail } from './components/OrderHistoryDetail'
 import { OrderMiniCard } from './components/OrderMiniCard'
 import { useCurrentStore } from '../store/useStoreContext'
+import { isStoreModuleEnabled } from '../store/storeModuleAccess'
 
 export function OrdersPage() {
   const reprintFollow = useRef<(() => void) | null>(null)
-  const { storeId } = useCurrentStore()
+  const { storeId, moduleConfiguration } = useCurrentStore()
+  const printingEnabled = isStoreModuleEnabled(moduleConfiguration, 'PRINTING')
+  const printingEnabledRef = useRef(printingEnabled)
+  printingEnabledRef.current = printingEnabled
   const reprintScope = useRef(0)
+  const reprintAbort = useRef<AbortController | null>(null)
   const isIpadLandscape = useIpadLandscape()
   const [orders, setOrders] = useState<BackendFrontdeskOrderBoardItem[]>([])
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
-  useEffect(() => () => { reprintScope.current += 1; reprintFollow.current?.() }, [storeId, selectedOrderId])
+  useEffect(() => {
+    const controller = new AbortController()
+    reprintAbort.current = controller
+    return () => { reprintScope.current += 1; controller.abort(); reprintFollow.current?.() }
+  }, [storeId, selectedOrderId, printingEnabled])
   const [selectedOrder, setSelectedOrder] = useState<BackendOrderResponse | null>(null)
   const [printOptions, setPrintOptions] = useState<OrderPrintOption[]>([])
   const [printJobs, setPrintJobs] = useState<PrintJobRecord[]>([])
@@ -62,12 +71,15 @@ export function OrdersPage() {
       return
     }
     let active = true
+    setPrintOptions([])
+    setPrintJobs([])
+    setPrintBusy(null)
     setDetailLoading(true)
     setPrintStatusMessage(null)
     Promise.allSettled([
       fetchOrderDetail(selectedOrderId),
-      fetchOrderPrintOptions(selectedOrderId),
-      fetchOrderPrintJobs(selectedOrderId),
+      printingEnabled ? fetchOrderPrintOptions(selectedOrderId) : Promise.resolve([]),
+      printingEnabled ? fetchOrderPrintJobs(selectedOrderId) : Promise.resolve([]),
     ])
       .then(([detailResult, optionsResult, printJobsResult]) => {
         if (!active) return
@@ -82,15 +94,15 @@ export function OrdersPage() {
       })
       .finally(() => active && setDetailLoading(false))
     return () => { active = false }
-  }, [selectedOrderId])
+  }, [selectedOrderId, printingEnabled])
 
   const handleReprint = async (option: OrderPrintOption) => {
-    if (!selectedOrder || !option.available) return
+    if (!printingEnabledRef.current || !selectedOrder || !option.available) return
     const scope = reprintScope.current
     try {
       setPrintBusy(option.module_code)
       setPrintStatusMessage(null)
-      const result = await reprintOrderReceipt(selectedOrder.id, option.module_code)
+      const result = await reprintOrderReceipt(selectedOrder.id, option.module_code, () => printingEnabledRef.current && scope === reprintScope.current, reprintAbort.current?.signal)
       if (scope !== reprintScope.current) return
       reprintFollow.current?.()
       reprintFollow.current = followReprint(result, job => {
@@ -131,12 +143,13 @@ export function OrdersPage() {
             </div>
           </Card>
           <OrderHistoryDetail
+            printingEnabled={printingEnabled}
             order={selectedOrder}
             loading={detailLoading}
-            printOptions={printOptions}
-            printJobs={printJobs}
+            printOptions={printingEnabled ? printOptions : []}
+            printJobs={printingEnabled ? printJobs : []}
             printBusy={printBusy}
-            printStatusMessage={printStatusMessage}
+            printStatusMessage={printingEnabled ? printStatusMessage : null}
             onReprint={(option) => void handleReprint(option)}
           />
         </div>

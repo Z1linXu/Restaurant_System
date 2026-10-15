@@ -2072,3 +2072,11 @@ Mapping-preview request projection adds internal `external_order_note_snapshot`.
 It is for trusted integration creation only; ordinary POS create and
 create-or-replace/submit reject any non-null value, including an empty string.
 GRAB/HOT reprint retains the original rendered snapshot and does not fetch Uber.
+
+## Commercial Merchant Configuration foundation
+
+`GET/PUT /api/v1/stores/{storeId}/merchant-configuration` require an authenticated effective Store Owner and `ADMIN_STORE_CONFIG`. The complete PUT accepts only `{schema_version:1,expected_config_revision,brand_name,locale}`; unknown/ref/security fields and unsupported schema/types return400, concurrent/stale revision returns409, foreign Store/Manager/Staff/ADMIN return403. Malformed/empty JSON returns400/`MERCHANT_CONFIGURATION_INVALID_JSON` without parser details. Successful metadata updates audit and increment config/menu revisions, preserving historical order/task/job snapshots. See [configuration contract](../docs/commercialization/PHASE3_CONFIGURATION_CONTRACT.md) for the exact typed reader, existing resource pointers and ownership.
+
+Store Context and Menu Catalog add optional `safe_summary` with schema/config revision, brand, locale, CAD, Store timezone, current tax reference, Profile code and compatibility mode. Existing menu/pricing/modules/devices remain their own Sources of Truth; this endpoint does not import graphs, change currency/tax calculations or select a private Profile.
+
+The existing `POST /api/v1/owner/organizations/{organizationId}/stores` keeps `Idempotency-Key` and exact Organization Owner authorization. Missing/blank Profile now selects empty `NEUTRAL_RESTAURANT@v1`; explicit authorized private canonical v2 retains its materializer. Neutral has no menu/master/table/station/printer/device/staff graph beyond the creating Owner membership; the Store is LIVE independently of optional hardware. Details and rollback limits: [Profile design](../docs/commercialization/PHASE3_PROFILE_DESIGN.md). No new Profile publication/import or restock/prep endpoint is implied.

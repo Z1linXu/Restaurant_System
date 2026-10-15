@@ -1,3 +1,5 @@
+import { useStorePresentation } from '../../store/useStorePresentation'
+import { formatStoreMoney, type StorePresentation } from '../../store/storePresentation'
 import { useEffect } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
@@ -19,12 +21,12 @@ function normalizeStableCode(value?: string | null) {
   return (value ?? '').trim().toUpperCase()
 }
 
-function formatPriceDelta(priceDelta?: number) {
+function formatPriceDelta(priceDelta: number | undefined, presentation: StorePresentation) {
   if (!priceDelta) {
     return ''
   }
   const prefix = priceDelta > 0 ? '+' : '-'
-  return ` (${prefix}$${Math.abs(priceDelta).toFixed(2)})`
+  return ` (${prefix}${formatStoreMoney(Math.abs(priceDelta), presentation)})`
 }
 
 function isNoodleMenuItem(item: MenuItem) {
@@ -140,12 +142,13 @@ function AddOnQuantityRow({
   onIncrement: () => void
   compact?: boolean
 }) {
+  const presentation = useStorePresentation()
   return (
     <div className={`flex items-center justify-between gap-4 rounded-[18px] ${compact ? 'px-1 py-1.5' : 'px-2 py-2'}`}>
       <div className="min-w-0">
         <div className={`${compact ? 'text-[0.9rem]' : 'text-base'} font-medium text-[var(--on-surface)]`}>
           {label}
-          {priceDelta ? ` (+$${priceDelta.toFixed(2)})` : ''}
+          {priceDelta ? formatPriceDelta(priceDelta, presentation) : ''}
         </div>
         <div className={`${compact ? 'text-[0.76rem]' : 'text-sm'} text-[var(--muted)]`}>{sublabel}</div>
       </div>
@@ -182,6 +185,7 @@ export function ItemCustomizationModal({
   submitDisabled = false,
   submitDisabledReason,
 }: ItemCustomizationModalProps) {
+  const presentation = useStorePresentation()
   const customization = item.customization
   const compact = useIpadLandscape()
   const toggleAddOns = customization?.addOns?.filter((option) => isToggleAddOn(option.labelZh, option.priceDelta)) ?? []
@@ -237,7 +241,7 @@ export function ItemCustomizationModal({
                 </span>
               </button>
               <span className={`${compact ? 'text-[1rem]' : 'text-[1.35rem]'} font-bold text-[var(--secondary)]`}>
-                +${comboConfig.upcharge.toFixed(2)}
+                +{formatStoreMoney(comboConfig.upcharge, presentation)}
               </span>
             </div>
 
@@ -341,7 +345,7 @@ export function ItemCustomizationModal({
                 <p className={`mt-1 ${compact ? 'text-[1.45rem]' : 'text-[2rem]'} font-bold text-[rgba(53,43,38,0.9)]`}>{item.nameZh}</p>
               </div>
               <div className={`${compact ? 'text-[1.8rem]' : 'text-[2.2rem]'} font-extrabold tracking-[-0.04em] text-[var(--primary)]`}>
-                ${item.price.toFixed(2)}
+                {formatStoreMoney(item.price, presentation)}
               </div>
             </div>
           </div>
@@ -362,10 +366,10 @@ export function ItemCustomizationModal({
                 {customization.sizes.options.length === 1 ? (
                   <div className={`rounded-[18px] bg-[rgba(26,28,25,0.04)] text-[var(--on-surface)] ${compact ? 'px-4 py-3' : 'px-5 py-4'}`}>
                     <div className={`${compact ? 'text-[0.95rem]' : 'text-[1.05rem]'} font-bold`}>
-                      Auto-selected: {customization.sizes.options[0].labelEn}{formatPriceDelta(customization.sizes.options[0].priceDelta)}
+                      Auto-selected: {customization.sizes.options[0].labelEn}{formatPriceDelta(customization.sizes.options[0].priceDelta, presentation)}
                     </div>
                     <div className={`${compact ? 'mt-0.5 text-[0.78rem]' : 'mt-1 text-sm'} text-[var(--muted)]`}>
-                      自动选择：{customization.sizes.options[0].labelZh}{formatPriceDelta(customization.sizes.options[0].priceDelta)}
+                      自动选择：{customization.sizes.options[0].labelZh}{formatPriceDelta(customization.sizes.options[0].priceDelta, presentation)}
                     </div>
                   </div>
                 ) : (
@@ -374,8 +378,8 @@ export function ItemCustomizationModal({
                       <ChoiceButton
                         key={option.id}
                         active={draft.sizeId === option.id}
-                        label={`${option.labelEn}${formatPriceDelta(option.priceDelta)}`}
-                        sublabel={`${option.labelZh}${formatPriceDelta(option.priceDelta)}`}
+                        label={`${option.labelEn}${formatPriceDelta(option.priceDelta, presentation)}`}
+                        sublabel={`${option.labelZh}${formatPriceDelta(option.priceDelta, presentation)}`}
                         compact={compact}
                         onClick={() => onChange({ ...draft, sizeId: option.id })}
                       />
@@ -400,8 +404,8 @@ export function ItemCustomizationModal({
                     <ChoiceButton
                       key={option.id}
                       active={draft.soupBaseId === option.id}
-                      label={`${option.labelEn}${option.priceDelta ? ` (+$${option.priceDelta.toFixed(2)})` : ''}`}
-                      sublabel={`${option.labelZh}${option.priceDelta ? ` (+$${option.priceDelta.toFixed(2)})` : ''}`}
+                      label={`${option.labelEn}${option.priceDelta ? formatPriceDelta(option.priceDelta, presentation) : ''}`}
+                      sublabel={`${option.labelZh}${option.priceDelta ? formatPriceDelta(option.priceDelta, presentation) : ''}`}
                       compact={compact}
                       onClick={() => onChange({ ...draft, soupBaseId: option.id })}
                     />
@@ -585,7 +589,7 @@ export function ItemCustomizationModal({
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">Subtotal</p>
                 <div className={`mt-2 font-extrabold tracking-[-0.05em] text-[var(--on-surface)] ${compact ? 'text-[2rem]' : 'text-[2.8rem]'}`}>
-                  ${subtotal.toFixed(2)}
+                  {formatStoreMoney(subtotal, presentation)}
                 </div>
               </div>
             </div>

@@ -1,6 +1,6 @@
 # Commercial Acceptance Matrix
 
-此表定义技术 gate 和证据要求，不记录第二份当前阶段状态。动态状态在 [CURRENT_STATE](../governance/CURRENT_STATE.yml)，领取顺序在 [Planbook](COMMERCIALIZATION_MASTER_PLANBOOK.md)，实际结果/commit/命令/counts回写 [Backlog](COMMERCIALIZATION_BACKLOG.md) 及阶段报告。本文件初始期望均 `NOT RUN`，不是已通过声明。源码事实不等于runtime验证，历史70unit PASS也不等于本轮。
+此表定义技术 gate 和证据要求，不记录第二份当前阶段状态。动态状态在 [CURRENT_STATE](../governance/CURRENT_STATE.yml)，领取顺序在 [Planbook](COMMERCIALIZATION_MASTER_PLANBOOK.md)，实际结果/commit/命令/counts回写 [Backlog](COMMERCIALIZATION_BACKLOG.md) 及阶段报告。下表是验收要求；日期化实际结果见阶段报告，未有证据的项保持 `NOT RUN/PENDING`。源码事实不等于runtime验证，历史70unit PASS也不等于本轮。
 
 ## Phase 2 Gates
 
@@ -30,6 +30,21 @@ G2-01…09 全满足且P0=0、BLOCKING_BASELINE_GAP=0才允许P3依赖性改造�
 | G3-06 持续安全 | P3-FIXTURE-05；HC-002/003/005/008/033/034/053 | 重跑G2 Auth/WS/Profile/Device/offline/库存受影响负向；两Org隔离不被config/profile绕过 | G2历史pass不覆盖本次变更的新路径 |
 | G3-07 历史与迁移 | P3-READ-03 / FIXTURE-05 | 配置更新前后order/item/option/task/printjob/hash不变；新job读新revision，旧job原payload；旧SQLchecksum不变、新migrationempty/upgrade可执行；DB5回滚限制保留 | 不能用更新当前菜单去回填历史显示或价格 |
 | G3-08 完整证据 | P3-GATE-06；全部本阶段HC/DG | exactSHA、commit/review、实际counts与未跑项、HC关闭/延期、Config/Profilecontracts、P4可领取列表、无线上变更；所有G3过 | P3完成只表示骨架稳定，不表示PDF可立即商家上线；随后停止，P4另授权 |
+
+### Phase 3 证据路由与有界解释 — 2026-10-15
+
+backend `711638e`观察点：typed配置/Neutral/V39V40/中性打印、真实HTTP/PG history与独立review通过，最终backend1050/0failure/0error/0skip；早批142/1047等分别记账。UI55198bc最终61files363/build已核；另一Reviewer14files101/build/diff PASS，Provider stale/defaultdialog P1 CLOSED；P3本地54assets/DB5/debugAPK/native24通过。**768/1024实际布局/截图NOT RUN（浏览器工具被用户权限策略拒绝，未绕过）；G3-04与G3-08 BLOCKED，整体PARTIAL/BLOCKED。** 逐Gate实际证据见 [Phase3验收报告](PHASE3_ACCEPTANCE_REPORT.md)。原上表要求不改，DOM/HTTP不能代替浏览器实际无关键溢出的证明。
+
+| Gate | 本轮必须具体核对的实现边界 | 保留的延期 / 不能宣称 |
+| --- | --- | --- |
+| G3-01 | 九字段typed safe summary、严格四字段Owner PUT、schema/revision冲突、锁后Store授权、现API指针逐资源授权；consumer真实读取 | 不接受任意ref/继承/minmax写入；P4算法未实现时拒绝/无入口，不能用元数据替代规则执行 |
+| G3-02 | 明确Neutral新Store原子创建，无菜单/桌台/staff/assignments；PUBLIC安全Neutral与PRIVATE原canonical边界，fresh/upgrade可证明 | V15/V19旧seed保留private quarantine；不能把空白Store说成全安装包无旧SQL或完整商家导入 |
+| G3-03 | StoreContext/catalog提供同一safe summary与config/menu revision，品牌更新触发既有缓存刷新；Canonical/Combo读取沿既有SoT；旧outbox roundtrip | 旧synthetic ID兼容、完整Modifier/Combo与版本定价仍P4；不复制15项Add-on或五个combo默认 |
+| G3-04 | 同build双Store品牌/locale/modules；跨店晚响应与logout不残留；disabled无API/WS；模块设置仍可达；768/1024视觉证据 | locale metadata不等全部语言已翻译；KDS基础模块门禁不等预存HOT_KITCHEN完整角色债务已闭合 |
+| G3-05 | PRIVATE显式legacy与Neutral空字典/完整snapshot适配对照，原Lanzhougolden/金额/default回归 | Neutral固定station/output-role与未提取renderer仍PROVISIONAL_COMPATIBILITY，任意工位/通用纸张留P5 |
+| G3-06 | 新config/Neutral创建入口的Bearer/foreign/version/ref负向，持续G2 WS/Profile/Print/Offline/BOM不得回退 | 不能重开ADMIN或generic Store POST来完成Neutral；历史G2pass不替代新入口测试 |
+| G3-07 | V39/V40 fresh及V37upgrade、V1–V38checksum；更新config不改既有order/task/job bytes/hash；新task完整标签/旧job原payload | 不以fixture无历史记录替代history证明；DB5保留及旧APK不可原地降级限制继续 |
+| G3-08 | 最终exactSHA所有证据与独立review、13项P3 HC实处置、53HC/22DG唯一映射、P0/新P1余项、rollback、P4entry | 文档/compile/局部PASS不等P3DONE；Phase4仅[进入门槛](PHASE4_ENTRY_GATES.md)，不获实现授权 |
 
 ## 通用安全用例维度
 

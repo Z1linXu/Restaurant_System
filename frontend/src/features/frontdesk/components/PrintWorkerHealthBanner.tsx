@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   getAndroidPadDeviceBridge,
   parseAndroidBridgeJson,
@@ -70,21 +70,25 @@ function statusTitle(status: AndroidPadPrintWorkerStatus | null, bridgeAvailable
 }
 
 export function PrintWorkerHealthBanner() {
+  const mounted = useRef(true)
   const [bridgeAvailable, setBridgeAvailable] = useState(false)
   const [status, setStatus] = useState<AndroidPadPrintWorkerStatus | null>(null)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
 
   const refreshStatus = async () => {
+    if (!mounted.current) return
     const bridge = getAndroidPadDeviceBridge()
     setBridgeAvailable(Boolean(bridge?.getPrintWorkerStatus))
     if (!bridge?.getPrintWorkerStatus) {
       setStatus(null)
       return
     }
-    setStatus(parseWorkerStatus(await bridge.getPrintWorkerStatus().catch(() => '')))
+    const next = await bridge.getPrintWorkerStatus().catch(() => '')
+    if (mounted.current) setStatus(parseWorkerStatus(next))
   }
 
   useEffect(() => {
+    mounted.current = true
     const initialTimer = window.setTimeout(() => { void refreshStatus() }, 0)
     const intervalId = window.setInterval(refreshStatus, 5000)
     const handleVisibilityChange = () => {
@@ -94,6 +98,7 @@ export function PrintWorkerHealthBanner() {
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => {
+      mounted.current = false
       window.clearTimeout(initialTimer)
       window.clearInterval(intervalId)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
@@ -104,6 +109,7 @@ export function PrintWorkerHealthBanner() {
   const title = useMemo(() => statusTitle(status, bridgeAvailable), [bridgeAvailable, status])
 
   const handleKick = async () => {
+    if (!mounted.current) return
     const bridge = getAndroidPadDeviceBridge()
     if (!bridge?.kickPrintWorker) {
       setActionMessage('当前不是 Android Pad App，无法唤醒本地打印执行器。')
@@ -124,6 +130,7 @@ export function PrintWorkerHealthBanner() {
           recover_error_stopped: recoverErrorStopped,
         })),
       )
+      if (!mounted.current) return
       setActionMessage(result?.data?.message ?? result?.message ?? '已请求 Android Pad 检查打印队列。')
       window.setTimeout(refreshStatus, 300)
     } catch (error) {

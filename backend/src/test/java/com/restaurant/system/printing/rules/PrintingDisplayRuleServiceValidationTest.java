@@ -27,19 +27,38 @@ class PrintingDisplayRuleServiceValidationTest {
     @Mock
     private PrintJobRepository printJobRepository;
 
+    private com.restaurant.system.merchant.MerchantConfigurationService merchantConfiguration;
     private PrintingDisplayRuleServiceImpl service;
 
     @BeforeEach
     void setUp() {
+        merchantConfiguration = org.mockito.Mockito.mock(com.restaurant.system.merchant.MerchantConfigurationService.class);
+        org.mockito.Mockito.lenient().when(merchantConfiguration.isLanzhouCompatible(org.mockito.ArgumentMatchers.any()))
+            .thenReturn(true); // These existing fixtures explicitly cover the Lanzhou compatibility profile.
         service = new PrintingDisplayRuleServiceImpl(
             ruleSetRepository,
             revisionRepository,
             storeRepository,
             printJobRepository,
             org.mockito.Mockito.mock(PrintingAddonVocabulary.class),
-            org.mockito.Mockito.mock(jakarta.persistence.EntityManager.class)
+            org.mockito.Mockito.mock(jakarta.persistence.EntityManager.class),
+            merchantConfiguration
         );
         when(storeRepository.existsById(1L)).thenReturn(true);
+    }
+
+    @Test
+    void missingNeutralRuleSetHasSafeSettingsAndPreviewWithoutCreatingRows() {
+        when(merchantConfiguration.isLanzhouCompatible(1L)).thenReturn(false);
+        var settings = service.getSettings(1L);
+        assertThat(settings.rule_set_id).isNull();
+        assertThat(settings.revisions).isEmpty();
+        assertThat(settings.active_revision.content.path("item_aliases")).isEmpty();
+        var request = new PrintingDisplayRulePreviewRequest();
+        request.store_id = 1L;
+        var preview = service.preview(request);
+        assertThat(preview.grab_preview).contains("商品").doesNotContain("鸡", "韭", "上海青");
+        org.mockito.Mockito.verify(ruleSetRepository, org.mockito.Mockito.never()).save(org.mockito.ArgumentMatchers.any());
     }
 
     @Test

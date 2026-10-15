@@ -16,6 +16,13 @@ public class MenuCatalogHashService {
         append(canonical, catalog.menu_revision);
         append(canonical, catalog.catalog_version);
         append(canonical, catalog.combo_metadata_version);
+        if (catalog.safe_summary != null) {
+            var summary = catalog.safe_summary;
+            append(canonical, summary.schema_version()); append(canonical, summary.config_revision());
+            append(canonical, summary.brand_name()); append(canonical, summary.locale()); append(canonical, summary.currency());
+            append(canonical, summary.timezone()); append(canonical, summary.tax_policy_reference());
+            append(canonical, summary.profile_code()); append(canonical, summary.compatibility_mode());
+        }
         append(canonical, catalog.tax_policy == null ? null : catalog.tax_policy.rate);
         append(canonical, catalog.tax_policy == null ? null : catalog.tax_policy.label);
         append(canonical, catalog.tax_policy == null ? null : catalog.tax_policy.version);

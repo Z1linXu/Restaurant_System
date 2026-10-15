@@ -32,7 +32,7 @@ export function reprintErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : '结果待确认，请检查 Print Center'
 }
 
-export function confirmActivePrintJobs(info: ReprintConfirmation): Promise<boolean> {
+export function confirmActivePrintJobs(info: ReprintConfirmation, signal?: AbortSignal): Promise<boolean> {
   return new Promise(resolve => {
     const dialog = document.createElement('dialog')
     dialog.style.cssText = 'max-width:520px;border:0;border-radius:16px;padding:24px;font-size:18px'
@@ -43,16 +43,28 @@ export function confirmActivePrintJobs(info: ReprintConfirmation): Promise<boole
       : '已有等待或正在处理的打印任务，继续重新打印可能产生重复单。'
     const jobs = document.createElement('pre'); jobs.style.whiteSpace = 'pre-wrap'
     jobs.textContent = info.active_jobs.map(job => `#${job.job_id} · ${job.module} · ${job.status}\nPad ${job.claimed_device_id ?? job.preferred_device_id ?? '待领取'} · ${job.age_seconds}s`).join('\n')
-    const finish = (confirmed: boolean) => { dialog.close(); dialog.remove(); resolve(confirmed) }
+    let finished = false
+    const cancelScope = () => finish(false)
+    const finish = (confirmed: boolean) => {
+      if (finished) return
+      finished = true
+      signal?.removeEventListener('abort', cancelScope)
+      if (dialog.open) dialog.close()
+      dialog.remove()
+      resolve(confirmed)
+    }
     const cancel = document.createElement('button'); cancel.textContent = '取消'; cancel.onclick = () => finish(false)
     const confirm = document.createElement('button'); confirm.textContent = '确认重新打印'; confirm.onclick = () => finish(true)
     for (const button of [cancel, confirm]) button.style.cssText = 'padding:14px;margin:8px;font-size:18px'
     dialog.oncancel = event => { event.preventDefault(); finish(false) }
+    if (signal?.aborted) { finish(false); return }
+    signal?.addEventListener('abort', cancelScope, { once: true })
     dialog.append(title, warning, jobs, cancel, confirm); document.body.append(dialog); dialog.showModal()
   })
 }
 
-export function manualReprint(path: string, body: Record<string, unknown> = {}, confirm = confirmActivePrintJobs): Promise<PrintJobRecord> {
+export function manualReprint(path: string, body: Record<string, unknown> = {}, confirm = confirmActivePrintJobs, isActive = () => true, signal?: AbortSignal): Promise<PrintJobRecord> {
+  if (!isActive() || signal?.aborted) return Promise.reject(new Error('此门店当前无法打印。'))
   const identity = `${intentScope()}|${path}|${JSON.stringify(body)}`
   const existing = inFlight.get(identity)
   if (existing) return existing
@@ -60,20 +72,33 @@ export function manualReprint(path: string, body: Record<string, unknown> = {}, 
   // Survives renderer/WebView recreation. Contains only intent ID, never a credential.
   localStorage.setItem(storageKey(identity), key)
   const forget = () => localStorage.removeItem(storageKey(identity))
+  const scope = new AbortController()
+  const abort = () => scope.abort()
+  signal?.addEventListener('abort', abort, { once: true })
+  if (signal?.aborted) abort()
+  window.addEventListener?.('restaurant-auth-expired', abort)
+  const scopeIsActive = () => !scope.signal.aborted && isActive()
   const operation = (async () => {
     let confirmation: string | undefined
     for (;;) {
+      if (!scopeIsActive()) throw new Error('此门店当前无法打印。')
       try {
         const job = await apiRequest<PrintJobRecord>(path, { method: 'POST', body: JSON.stringify({
           ...body, idempotency_key: key, confirmation_fingerprint: confirmation,
         }) })
         forget()
-        try { await getAndroidPadDeviceBridge()?.kickPrintWorker?.(JSON.stringify({ reason: 'manual-reprint', order_id: job.order_id, job_id: job.id })) } catch { /* polling remains the reliability path */ }
+        if (scopeIsActive()) {
+          try { await getAndroidPadDeviceBridge()?.kickPrintWorker?.(JSON.stringify({ reason: 'manual-reprint', order_id: job.order_id, job_id: job.id })) } catch { /* polling remains the reliability path */ }
+        }
         return job
       } catch (error) {
         if (error instanceof ApiRequestError && error.code === 'REPRINT_CONFIRMATION_REQUIRED') {
+          if (!scopeIsActive()) throw new Error('此门店当前无法打印。')
           const info = (error.raw as { data: ReprintConfirmation }).data
-          if (!await confirm(info)) { forget(); throw new Error('已取消重新打印') }
+          const confirmed = await confirm(info, scope.signal)
+          // Scope cancellation is not an operator decision about an unknown request.
+          if (!scopeIsActive()) throw new Error('此门店当前无法打印。')
+          if (!confirmed) { forget(); throw new Error('已取消重新打印') }
           confirmation = info.confirmation_fingerprint
           continue // Backend rechecks, and may request a fresh confirmation if ownership changed.
         }
@@ -82,7 +107,11 @@ export function manualReprint(path: string, body: Record<string, unknown> = {}, 
         throw error
       }
     }
-  })().finally(() => inFlight.delete(identity))
+  })().finally(() => {
+    inFlight.delete(identity)
+    signal?.removeEventListener('abort', abort)
+    window.removeEventListener?.('restaurant-auth-expired', abort)
+  })
   inFlight.set(identity, operation)
   return operation
 }

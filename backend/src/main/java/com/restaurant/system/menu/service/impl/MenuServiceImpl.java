@@ -40,6 +40,7 @@ public class MenuServiceImpl implements MenuService {
     private final MenuCatalogHashService menuCatalogHashService;
     private final StorePricingPolicyService storePricingPolicyService;
     private final StoreComboConfigurationService storeComboConfigurationService;
+    private final com.restaurant.system.merchant.MerchantConfigurationService merchantConfiguration;
 
     public MenuServiceImpl(
         StoreAddonOptionResolver addonResolver,
@@ -49,7 +50,8 @@ public class MenuServiceImpl implements MenuService {
         MenuRevisionService menuRevisionService,
         MenuCatalogHashService menuCatalogHashService,
         StorePricingPolicyService storePricingPolicyService,
-        StoreComboConfigurationService storeComboConfigurationService
+        StoreComboConfigurationService storeComboConfigurationService,
+        com.restaurant.system.merchant.MerchantConfigurationService merchantConfiguration
     ) {
         this.addonResolver = addonResolver;
         this.menuCategoryRepository = menuCategoryRepository;
@@ -59,6 +61,7 @@ public class MenuServiceImpl implements MenuService {
         this.menuCatalogHashService = menuCatalogHashService;
         this.storePricingPolicyService = storePricingPolicyService;
         this.storeComboConfigurationService = storeComboConfigurationService;
+        this.merchantConfiguration = merchantConfiguration;
     }
 
     @Override
@@ -172,6 +175,7 @@ public class MenuServiceImpl implements MenuService {
             comboConfiguration,
             categoryResponses
         );
+        response.safe_summary = merchantConfiguration.safeSummary(storeId);
         response.content_hash = menuCatalogHashService.calculate(response);
         return response;
     }

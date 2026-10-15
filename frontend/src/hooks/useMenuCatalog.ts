@@ -359,6 +359,7 @@ export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
 
   return {
     storeId: String(data.store_id),
+    safeSummary: data.safe_summary,
     organizationId: String(data.organization_id),
     menuRevision: data.menu_revision,
     generatedAt: data.generated_at,
@@ -480,7 +481,7 @@ export function useMenuCatalog(storeId: number, identity: MenuCatalogIdentity) {
           setUpdating(Boolean(cached))
         }
         const revision = await fetchMenuRevision(storeId)
-        if (scope && revision.organization_id !== scope.organizationId) {
+        if (revision.store_id !== storeId || (scope && revision.organization_id !== scope.organizationId)) {
           throw new Error('MENU_CACHE_SCOPE_MISMATCH')
         }
         const cacheIsCurrent = cached
@@ -489,6 +490,9 @@ export function useMenuCatalog(storeId: number, identity: MenuCatalogIdentity) {
 
         if (!cacheIsCurrent) {
           const payload = await fetchMenuCatalog(storeId)
+          if (payload.store_id !== storeId || (scope && payload.organization_id !== scope.organizationId)) {
+            throw new Error('MENU_CACHE_SCOPE_MISMATCH')
+          }
           if (scope) {
             const stored = await replaceActiveMenuSnapshot(scope, payload, revision.etag)
             if (!active) return

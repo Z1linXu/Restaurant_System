@@ -6,7 +6,9 @@ import { useAuth } from '../../auth/useAuth'
 import { StoreSwitcher } from '../../store/StoreSwitcher'
 import { buildStorePath } from '../../store/storeRoutes'
 import { useOptionalCurrentStore } from '../../store/useStoreContext'
-import { isStoreModuleEnabled, type StoreModuleKey } from '../../store/storeModuleAccess'
+import { isStoreModuleEnabled, isStoreModuleManagementEnabled, type StoreModuleKey } from '../../store/storeModuleAccess'
+import { currentStoreDisplayName } from '../../store/storePresentation'
+import { useStorePresentation } from '../../store/useStorePresentation'
 import {
   getAndroidPadDeviceBridge,
   parseAndroidBridgeJson,
@@ -33,6 +35,7 @@ const navItems = [
 
 export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
   const currentStore = useOptionalCurrentStore()
+  const presentation = useStorePresentation()
   const { user, signOut, permissions, features } = useAuth()
   const moduleConfiguration = currentStore?.moduleConfiguration ?? null
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -44,7 +47,7 @@ export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
   const path = (target: string) => currentStore ? buildStorePath(currentStore.storeId, target) : target
   const role = user?.role_code?.toUpperCase()
   const canSeeAdminDashboard = role === 'OWNER' || role === 'ADMIN' || role === 'MANAGER'
-  const canUsePrintingSettings = isStoreModuleEnabled(moduleConfiguration, 'PRINTING')
+  const canUsePrintingSettings = isStoreModuleManagementEnabled(moduleConfiguration, 'PRINTING')
   const canUseMenuManagement = isStoreModuleEnabled(moduleConfiguration, 'MENU_MANAGEMENT')
 
   const updateUserMenuPosition = () => {
@@ -206,6 +209,7 @@ export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
           {profileOpen ? createPortal(
             <StaffProfileModal
               currentStoreName={currentStore?.storeName ?? null}
+              printingEnabled={isStoreModuleEnabled(moduleConfiguration, 'PRINTING')}
               features={features}
               onClose={() => setProfileOpen(false)}
               permissions={permissions}
@@ -215,7 +219,7 @@ export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
           ) : null}
         </div>
         <div>
-          <p className="font-display text-[1.2rem] font-extrabold tracking-[-0.04em] text-[var(--primary)]">蘭</p>
+          <p className="max-w-64 truncate font-display text-[1.2rem] font-extrabold tracking-[-0.04em] text-[var(--primary)]" title={presentation.brandName}>{presentation.brandName}</p>
           <p className="text-[0.72rem] text-[var(--muted)]">{currentStore?.storeName ?? 'Frontdesk Workstation'}</p>
         </div>
       </div>
@@ -267,12 +271,14 @@ export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
 
 function StaffProfileModal({
   currentStoreName,
+  printingEnabled,
   features,
   onClose,
   permissions,
   user,
 }: {
   currentStoreName: string | null
+  printingEnabled: boolean
   features: Record<string, boolean>
   onClose: () => void
   permissions: string[]
@@ -282,26 +288,32 @@ function StaffProfileModal({
   const [deviceStatus, setDeviceStatus] = useState<AndroidPadDeviceStatus | null>(null)
   const [workerStatus, setWorkerStatus] = useState<AndroidPadPrintWorkerStatus | null>(null)
 
-  const refreshAndroidState = async () => {
-    const bridge = getAndroidPadDeviceBridge()
-    setBridgeAvailable(Boolean(bridge))
-    setDeviceStatus(bridge ? parseAndroidBridgeJson<AndroidPadDeviceStatus>(await bridge.getDeviceStatus().catch(() => '')) : null)
-    setWorkerStatus(bridge?.getPrintWorkerStatus ? parseAndroidBridgeJson<AndroidPadPrintWorkerStatus>(await bridge.getPrintWorkerStatus().catch(() => '')) : null)
-  }
-
   useEffect(() => {
+    let active = true
+    const refreshAndroidState = async () => {
+      const bridge = getAndroidPadDeviceBridge()
+      const device = bridge ? await bridge.getDeviceStatus().catch(() => '') : null
+      if (!active) return
+      const worker = printingEnabled && bridge?.getPrintWorkerStatus ? await bridge.getPrintWorkerStatus().catch(() => '') : null
+      if (!active) return
+      setBridgeAvailable(Boolean(bridge))
+      setDeviceStatus(parseAndroidBridgeJson<AndroidPadDeviceStatus>(device))
+      setWorkerStatus(parseAndroidBridgeJson<AndroidPadPrintWorkerStatus>(worker))
+    }
     const animationFrameId = window.requestAnimationFrame(() => { void refreshAndroidState() })
     const intervalId = window.setInterval(refreshAndroidState, 5000)
     return () => {
+      active = false
       window.cancelAnimationFrame(animationFrameId)
       window.clearInterval(intervalId)
     }
-  }, [])
+  }, [printingEnabled])
 
   const enabledFeatures = Object.entries(features ?? {})
     .filter(([, enabled]) => enabled)
     .map(([feature]) => feature)
-  const storeName = user?.store_name ?? currentStoreName ?? '-'
+  const storeName = currentStoreDisplayName(currentStoreName, user?.store_name)
+  const displayedWorker = printingEnabled ? workerStatus : null
   const androidStoreId = deviceStatus?.store_id ?? deviceStatus?.device_store_id ?? null
 
   return (
@@ -380,10 +392,10 @@ function StaffProfileModal({
               <ProfileRow label="Registered" value={deviceStatus?.registered_at ?? '-'} />
               <ProfileRow label="App" value={deviceStatus?.app_version ?? '-'} />
               <ProfileRow label="Platform" value={deviceStatus?.platform ?? '-'} />
-              <ProfileRow label="Worker" value={workerStatus?.worker_state_label ?? workerStatus?.worker_state ?? '-'} />
-              <ProfileRow label="Auto print" value={workerStatus?.auto_enabled == null ? '-' : workerStatus.auto_enabled ? 'on' : 'off'} />
-              <ProfileRow label="Worker running" value={workerStatus?.worker_running == null ? '-' : workerStatus.worker_running ? 'yes' : 'no'} />
-              <ProfileRow label="Last error" value={workerStatus?.last_error ?? '-'} />
+              <ProfileRow label="Worker" value={displayedWorker?.worker_state_label ?? displayedWorker?.worker_state ?? '-'} />
+              <ProfileRow label="Auto print" value={displayedWorker?.auto_enabled == null ? '-' : displayedWorker.auto_enabled ? 'on' : 'off'} />
+              <ProfileRow label="Worker running" value={displayedWorker?.worker_running == null ? '-' : displayedWorker.worker_running ? 'yes' : 'no'} />
+              <ProfileRow label="Last error" value={displayedWorker?.last_error ?? '-'} />
             </div>
           )}
         </div>

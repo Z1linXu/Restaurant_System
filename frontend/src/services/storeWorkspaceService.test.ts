@@ -4,7 +4,7 @@ import { fetchOwnerDashboard } from './ownerDashboardService'
 import { fetchStoreContext, fetchWorkspaces, type WorkspaceResponse } from './storeWorkspaceService'
 
 const apiRequestMock = vi.hoisted(() => vi.fn())
-const snapshots = vi.hoisted(() => ({ workspace: vi.fn(), context: vi.fn() }))
+const snapshots = vi.hoisted(() => ({ workspace: vi.fn(), context: vi.fn(), saveContext: vi.fn() }))
 
 vi.mock('./apiClient', async () => ({
   ...await vi.importActual<typeof import('./apiClient')>('./apiClient'),
@@ -13,12 +13,14 @@ vi.mock('./apiClient', async () => ({
 vi.mock('../offline/workspaceSnapshot', async () => ({
   ...await vi.importActual<typeof import('../offline/workspaceSnapshot')>('../offline/workspaceSnapshot'),
   readRestrictedWorkspaceSnapshot: snapshots.workspace, readRestrictedStoreContextSnapshot: snapshots.context,
+  saveStoreContextSnapshot: snapshots.saveContext,
 }))
 
 describe('admin store scope request contracts', () => {
   beforeEach(() => {
     apiRequestMock.mockReset()
     snapshots.workspace.mockReset(); snapshots.context.mockReset()
+    snapshots.saveContext.mockReset().mockResolvedValue(undefined)
     vi.stubGlobal('window', { location: { origin: 'https://synthetic.invalid' } })
   })
 
@@ -60,6 +62,27 @@ describe('admin store scope request contracts', () => {
     await expect(fetchWorkspaces(7)).rejects.toMatchObject({ status })
     await expect(fetchStoreContext(3, 7)).rejects.toMatchObject({ status })
     expect(snapshots.workspace).not.toHaveBeenCalled(); expect(snapshots.context).not.toHaveBeenCalled()
+  })
+
+  it('rejects a foreign Store response before any snapshot write or offline fallback', async () => {
+    apiRequestMock.mockResolvedValue({ id: 99, safe_summary: { brand_name: 'Foreign Store' } })
+    await expect(fetchStoreContext(3, 7)).rejects.toThrow('STORE_CONTEXT_SCOPE_MISMATCH')
+    expect(snapshots.saveContext).not.toHaveBeenCalled()
+    expect(snapshots.context).not.toHaveBeenCalled()
+  })
+  it('does not read or write when the caller already cancelled its context request', async () => {
+    const controller = new AbortController(); controller.abort()
+    await expect(fetchStoreContext(3, 7, { signal: controller.signal })).rejects.toMatchObject({ name: 'AbortError' })
+    expect(apiRequestMock).not.toHaveBeenCalled()
+    expect(snapshots.context).not.toHaveBeenCalled()
+    expect(snapshots.saveContext).not.toHaveBeenCalled()
+  })
+  it('never restores a cached response after cancellation of a failed in-flight request', async () => {
+    const controller = new AbortController()
+    apiRequestMock.mockImplementationOnce(async () => { controller.abort(); throw new ApiRequestError(503, 'offline') })
+    await expect(fetchStoreContext(3, 7, { signal: controller.signal })).rejects.toMatchObject({ name: 'AbortError' })
+    expect(snapshots.context).not.toHaveBeenCalled()
+    expect(snapshots.saveContext).not.toHaveBeenCalled()
   })
 
 })

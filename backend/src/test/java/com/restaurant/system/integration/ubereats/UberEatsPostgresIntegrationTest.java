@@ -141,6 +141,15 @@ class UberEatsPostgresIntegrationTest {
                             + " fixture','UF-'||gen_random_uuid(),'active','ACTIVE',true,'MOCK',false)"
                             + " returning id",
                         org);
+        // This suite explicitly models LANZHOU_NOODLE; new unconfigured Stores stay Neutral.
+        db.update("""
+                insert into store_merchant_configurations(store_id,schema_version,config_revision,
+                  brand_name,locale,currency,tax_policy_reference,profile_code,profile_version,
+                  compatibility_mode,configuration_source,created_at,updated_at)
+                values (?,1,1,'Synthetic Lanzhou Fixture','en-CA','CAD','ca-qc-tax-2026-01',
+                  'ST_DENIS_CANONICAL_PROFILE','v2','PROVISIONAL_COMPATIBILITY',
+                  'SYNTHETIC_LEGACY_FIXTURE',now(),now())
+                """, store);
         for (String module :
                 List.of(
                         "UBER_EATS",

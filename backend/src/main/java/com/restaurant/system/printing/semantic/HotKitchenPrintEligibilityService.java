@@ -48,6 +48,11 @@ public class HotKitchenPrintEligibilityService {
             return List.of();
         }
 
+        if (request.printing_rules != null && !request.printing_rules.lanzhouCompatibility()) {
+            // Existing station routing remains a provisional contract; no SKU/name/egg inference.
+            return request.kitchen_tasks.stream().filter(task -> task != null && !"cancelled".equals(task.status))
+                .filter(task -> isDeepFriedStation(task) || isWokStation(task)).toList();
+        }
         Map<Long, OrderItem> itemsById = new HashMap<>();
         if (request.order_items != null) {
             for (OrderItem item : request.order_items) {

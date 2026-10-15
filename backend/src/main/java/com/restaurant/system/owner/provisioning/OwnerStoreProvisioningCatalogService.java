@@ -16,10 +16,19 @@ public class OwnerStoreProvisioningCatalogService {
 
     /** Caller authorizes exact Organization ownership before using this internal reader. */
     public OwnerStoreProvisioningCatalogResponse catalog(Long organizationId) {
-        var profile = profiles.findByProfileCode("ST_DENIS_CANONICAL_PROFILE").orElse(null);
+        return catalog(organizationId, false);
+    }
+
+    public OwnerStoreProvisioningCatalogResponse businessCatalog(Long organizationId) {
+        return catalog(organizationId, true);
+    }
+
+    private OwnerStoreProvisioningCatalogResponse catalog(Long organizationId, boolean neutralBusiness) {
+        var profile = profiles.findByProfileCode(neutralBusiness ? "NEUTRAL_RESTAURANT" : "ST_DENIS_CANONICAL_PROFILE").orElse(null);
         try {
             StoreProfileAccessService.requireUse(profile, organizationId);
-            return OwnerStoreProvisioningCatalogResponse.initial(true);
+            return neutralBusiness ? OwnerStoreProvisioningCatalogResponse.neutral(true)
+                : OwnerStoreProvisioningCatalogResponse.initial(true);
         } catch (ForbiddenException denied) {
             var response = new OwnerStoreProvisioningCatalogResponse();
             response.enabled = false;

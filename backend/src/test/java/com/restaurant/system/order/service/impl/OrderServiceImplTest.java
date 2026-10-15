@@ -1139,6 +1139,30 @@ class OrderServiceImplTest {
     }
 
     @Test
+    void neutralProfileFreezesFullLabelsEvenWhenSkuAndOptionCodesMatchLanzhou() {
+        when(printingDisplayRuleService.activeContext(anyLong())).thenReturn(PrintingDisplayRuleContext.neutralContext());
+        menuItem.sku = "beef_chow_mein";
+        menuItem.name_zh = "Custom Customer Full Name";
+        menuItem.name_en = "Custom Customer Full Name";
+        MenuItemOption size = menuOption(104L, "size", "size_large", "SIZE", "Custom Large Portion", "Custom Large Portion", BigDecimal.ZERO);
+        when(menuItemOptionRepository.findById(size.id)).thenReturn(Optional.of(size));
+        CreateOrderItemRequest itemRequest = new CreateOrderItemRequest();
+        itemRequest.menu_item_id = menuItem.id;
+        itemRequest.quantity = 1;
+        itemRequest.options = List.of(optionRequest(size.id, 1));
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.store_id = store.id;
+        request.created_by = 1L;
+        request.order_type = "dine_in";
+        request.table_no = "NEUTRAL";
+        request.items = List.of(itemRequest);
+        orderService.submitOrder(orderService.createOrder(request).id);
+        assertEquals(1, kitchenTasks.size());
+        assertEquals("Custom Customer Full Name", kitchenTasks.values().iterator().next().item_name_snapshot_zh);
+        assertEquals("Custom Large Portion", kitchenTasks.values().iterator().next().special_instructions_snapshot);
+    }
+
+    @Test
     void extraBokChoyKeepsFullKitchenInstructionName() {
         MenuItemOption bokChoy = menuOption(103L, "addon", "bok_choy", "ADD_ON", "加上海青", "Extra Bok Choy", new BigDecimal("3.00"));
         when(menuItemOptionRepository.findById(anyLong())).thenAnswer(invocation -> {

@@ -382,7 +382,12 @@ export function PrintingSettingsPage() {
   const [printCenter, setPrintCenter] = useState<PrintCenterOverview | null>(null)
   const [selectedStoreId, setSelectedStoreId] = useState(String(storeId))
   const reprintScope = useRef(0)
-  useEffect(() => () => { reprintScope.current += 1; reprintFollow.current?.() }, [selectedStoreId])
+  const reprintAbort = useRef<AbortController | null>(null)
+  useEffect(() => {
+    const controller = new AbortController()
+    reprintAbort.current = controller
+    return () => { reprintScope.current += 1; controller.abort(); reprintFollow.current?.() }
+  }, [selectedStoreId])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<ToastState>(null)
@@ -784,7 +789,7 @@ export function PrintingSettingsPage() {
     const scope = reprintScope.current
     try {
       setToast(null)
-      const result = await reprintPrintJob(jobId)
+      const result = await reprintPrintJob(jobId, () => scope === reprintScope.current, reprintAbort.current?.signal)
       if (scope !== reprintScope.current) return
       reprintFollow.current?.()
       reprintFollow.current = followReprint(result, job => {

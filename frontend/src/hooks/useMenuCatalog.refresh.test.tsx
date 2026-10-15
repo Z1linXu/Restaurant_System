@@ -61,6 +61,7 @@ describe('returning to ordering after central Add-on edits', () => {
     expect(fetchMenuCatalog).not.toHaveBeenCalled()
     await act(async () => renderer!.unmount())
     const updated = catalog(4, 'New beef', 3.5)
+    updated.safe_summary = { schema_version: 1, config_revision: 2, brand_name: 'Store One', locale: 'en-CA', currency: 'CAD', timezone: 'America/Toronto', tax_policy_reference: 'tax', profile_code: 'NEUTRAL', compatibility_mode: 'NEUTRAL' }
     vi.mocked(fetchMenuRevision).mockResolvedValue({ store_id: 1, organization_id: 9, menu_revision: 4,
       menu_updated_at: updated.generated_at, catalog_version: updated.catalog_version, tax_policy_version: 'test', etag: 'rev-4' })
     vi.mocked(fetchMenuCatalog).mockResolvedValue(updated)
@@ -70,6 +71,18 @@ describe('returning to ordering after central Add-on edits', () => {
     expect(replaceActiveMenuSnapshot).toHaveBeenCalledWith(scope, updated, 'rev-4')
     expect(latest.items[0].customization?.addOns?.[0]).toEqual(expect.objectContaining({ id: '100', labelEn: 'New beef', priceDelta: 3.5, optionCode: 'extra_beef' }))
     expect(latest.source).toBe('NETWORK')
+    expect(latest.catalog?.safeSummary).toEqual(updated.safe_summary)
     expect(old.categories[0].items[0].options[0].price_delta).toBe(2)
+  })
+
+  it('rejects a foreign catalog before it can persist branding or menu data', async () => {
+    vi.mocked(readActiveMenuSnapshot).mockResolvedValue(null)
+    const foreign = { ...catalog(4, 'Foreign', 4), store_id: 2 }
+    vi.mocked(fetchMenuRevision).mockResolvedValue({ store_id: 1, organization_id: 9, menu_revision: 4, etag: 'new' } as Awaited<ReturnType<typeof fetchMenuRevision>>)
+    vi.mocked(fetchMenuCatalog).mockResolvedValue(foreign)
+    await act(async () => { renderer = create(<Probe />) })
+    expect(replaceActiveMenuSnapshot).not.toHaveBeenCalled()
+    expect(latest.catalog).toBeNull()
+    expect(latest.error).toBe('MENU_CACHE_SCOPE_MISMATCH')
   })
 })
