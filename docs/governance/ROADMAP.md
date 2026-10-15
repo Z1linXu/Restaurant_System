@@ -145,3 +145,13 @@ Owner approval is required for:
 
 Draft plans, passing tests, merged code and Staging acceptance do not replace
 these approvals.
+
+
+## Commercialization Phases 1–8
+
+The Owner-authorized commercial track is defined in the
+[Master Planbook](../commercialization/COMMERCIALIZATION_MASTER_PLANBOOK.md).
+It reuses completed Phase A/B capabilities; the earlier Phase C customer rollout
+is not implicitly activated. Phase 1 is documents, Phase 2 local security/baseline,
+Phase 3 local configuration/profile foundations, and Phases 4–8 remain review-only
+until separately authorized. Runtime deployments remain excluded.

@@ -1,5 +1,16 @@
 # SYSTEM DOCUMENTATION
 
+## Commercialization development reference
+
+The Owner authorized planning Phase 1 and isolated local implementation of Phase 2,
+then Phase 3 only after its security/baseline gates pass. The execution entry is
+[Commercialization Master Planbook](docs/commercialization/COMMERCIALIZATION_MASTER_PLANBOOK.md);
+current state remains solely in [CURRENT_STATE](docs/governance/CURRENT_STATE.yml).
+Production remains the separately observed backend ce35278 / frontend 8c3a9e3 /
+Flyway V37 combination; this development worktree is not a production release.
+No Production/Staging deployment, real data write, physical printing or built-in
+PDF/AI menu feature is authorized by this package.
+
 ## Uber Store capability and confirmed Add-on identity (V37)
 
 `UBER_EATS` is an optional formal Store module in catalog/graph V3, default off.
