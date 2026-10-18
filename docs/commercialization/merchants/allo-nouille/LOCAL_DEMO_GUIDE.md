@@ -85,4 +85,4 @@ python3 "/Users/xuzilin/.codex/worktrees/allo-nouille-local-pilot/Restaurant_Sys
 
 ## 代码与交付来源
 
-Branch：`codex/allo-nouille-local-pilot`，base `cb6ff2e91409c3445d5a5e765e68f93599838638`。独立应用产物、最终源码指纹、Commit 和草稿 PR 记录在实施记录及私有 `delivery-manifest.json`。PR 仅面向商业开发分支，不合并 main，不部署远端。
+Branch：`codex/allo-nouille-local-pilot`，base `cb6ff2e91409c3445d5a5e765e68f93599838638`。独立应用产物、最终源码指纹、Commit 和草稿 PR 记录在实施记录及私有 `delivery-manifest.json`。草稿 [PR #279](https://github.com/Z1linXu/Restaurant_System/pull/279) 仅面向 `codex/commercial-phase3-foundation`，不合并 main，不部署远端。

@@ -209,6 +209,7 @@ allo_local_pilot:
   evidence: ../commercialization/merchants/allo-nouille/IMPLEMENTATION_RECORD.md
   status: LOCAL_DEMO_READY_AWAITING_OWNER_ACCEPTANCE
   application_source_sha: eb07448c1d0959aad15e5872738b7fcb7ed723cd
+  pull_request: https://github.com/Z1linXu/Restaurant_System/pull/279
   frontend_url: http://localhost:51026/login
   backend_url: http://localhost:8081
   demo_database: commercial_allo_demo

@@ -29,7 +29,7 @@
 
 ## 实现与 Migration
 
-应用代码提交：`eb07448c1d0959aad15e5872738b7fcb7ed723cd`。后续交付文档提交不改变应用源码。工作分支 `codex/allo-nouille-local-pilot`，草稿 PR 目标仅为 `codex/commercial-phase3-foundation`；不合并任何分支。
+应用代码提交：`eb07448c1d0959aad15e5872738b7fcb7ed723cd`。后续交付文档提交不改变应用源码。工作分支 `codex/allo-nouille-local-pilot`，已创建草稿 [PR #279](https://github.com/Z1linXu/Restaurant_System/pull/279)，目标仅为 `codex/commercial-phase3-foundation`；不合并任何分支。
 
 - Menu：`ItemCustomizationConfiguration` / `MenuItemCustomizationService` / Store-scoped GET/PUT customization；选项选择范围、distinct/default、free add-on 最大1、per-item fixed combo；现有 canonical Add-on 与 Combo group/component 唯一来源。无配置商品走原规则。
 - Order：`ConfiguredOrderItemService` 服务端检查当前配置、真实价格/资格/工位、C5 exact2、组件0价和总数量；保持现 order-line total option quantity。组件冻结 ID/Station/name，既有 BOM 存在时只消费一次，不增加配方功能。原交易/幂等/add-only 更新边界不变。
@@ -55,7 +55,7 @@
 | Local lifecycle guards | 7纯Mock PASS：无效/复用PID、stale PG状态、安全拒绝；实际start复用现有三个服务，无停止 |
 | Governance / diff | validator PASS，diff --check PASS；正式G3 PARTIAL、phase4_authorized=false保留 |
 
-71项 full 条件跳过不当作通过；其中2项Add-on和1项DisplayRule已在追加真实PG中执行。其他旧Uber/日终/clone/旧打印迁移环境门槛未在本轮全开。兰州兼容由既有Size/Combo/Add-on/renderer/dispatcher/neutral双路径回归覆盖；旧兰州Demo在线保持，不宣称对生产数据做验收。
+71项 full 条件跳过不当作通过；其中2项Add-on和1项DisplayRule已在追加真实PG中执行。其他旧Uber/日终/clone/旧打印迁移环境门槛未在本轮全开。兰州兼容由既有Size/Combo/Add-on/renderer/dispatcher/neutral双路径回归覆盖；旧Demo在线保持，不宣称对生产数据做验收。
 
 ## 真实 HTTP / DB / 浏览器
 
@@ -92,4 +92,4 @@ Backend部署源 `eb07448c1d0959aad15e5872738b7fcb7ed723cd`，当前JAR SHA256 `
 
 旧 PG55440 / Backend8080 / Frontend51025仍在线HTTP200，原两个worktree HEAD/脏更改不纳入本次提交。没有main merge、远端部署/环境变量/配置修改、真实订单/设备访问、数据库/Outbox清理或Docker清理。
 
-本轮已真实启动并持续运行；访问/登录/主要页面/日志/停止重启见 [LOCAL_DEMO_GUIDE](LOCAL_DEMO_GUIDE.md)。最终本地状态 **ALLO NOUILLE LOCAL DEMO READY — AWAITING OWNER ACCEPTANCE**。正式G3与全局Phase授权不变；完整源码/产物及最终PR标识以交付manifest和最终报告补充。
+本轮已真实启动并持续运行；访问/登录/主要页面/日志/停止重启见 [LOCAL_DEMO_GUIDE](LOCAL_DEMO_GUIDE.md)。最终本地状态 **ALLO NOUILLE LOCAL DEMO READY — AWAITING OWNER ACCEPTANCE**。正式G3与全局Phase授权不变；应用源码对应上述提交；交付文档 head 与当前产物指纹另存私有 `delivery-manifest.json`。新源码与前端已服务入口资源逐字节核对，所有新旧HTTP地址均200；商业guards在首个PR head `bcaba9e` 为SUCCESS。
