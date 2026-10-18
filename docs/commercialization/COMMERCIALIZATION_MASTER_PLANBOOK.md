@@ -11,6 +11,7 @@ Owner 已明确要求连续执行 Phase 1→2→3；这构成本次隔离本地�
 | 索引 | 内容 |
 | --- | --- |
 | [OWNER_DECISIONS](OWNER_DECISIONS.md) | 20 项已确认选择、后果和范围 |
+| [Allô Nouille local pilot](merchants/allo-nouille/IMPLEMENTATION_RECORD.md) | Owner于2026-10-18授权的独立本地商家试点；保留正式G3未闭与全局P4–6未授权，不是阶段完成证据 |
 | [COMMERCIAL_ARCHITECTURE](COMMERCIAL_ARCHITECTURE.md) | Core/Modules/Profile、唯一配置来源、兼容与安全 |
 | [COMMERCIALIZATION_BACKLOG](COMMERCIALIZATION_BACKLOG.md) | 每 PR 目标/路径/依赖/步骤/测试/证据/风险/rollback/DoD/并行，53 HC 与 22 DG 全映射 |
 | [COMMERCIALIZATION_AGILE_LOOP](COMMERCIALIZATION_AGILE_LOOP.md) | 已授权本地持续执行、review/PR、真实 blockers 与停机规则 |
