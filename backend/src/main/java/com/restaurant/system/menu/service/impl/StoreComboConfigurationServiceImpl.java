@@ -248,6 +248,7 @@ public class StoreComboConfigurationServiceImpl implements StoreComboConfigurati
             String selectionRule = normalizeSelectionRule(update.selection_rule);
             group.name_zh = cleanRequired(update.name_zh, "COMBO_GROUP_NAME_ZH_REQUIRED");
             group.name_en = cleanRequired(update.name_en, "COMBO_GROUP_NAME_EN_REQUIRED");
+            group.name_fr = update.name_fr == null ? group.name_fr : update.name_fr.trim();
             group.selection_rule = selectionRule;
             group.required = SELECTION_EXACTLY_ONE.equals(selectionRule)
                 ? true
@@ -291,6 +292,9 @@ public class StoreComboConfigurationServiceImpl implements StoreComboConfigurati
         Map<String, StoreComboGroup> groupsByCode,
         LocalDateTime now
     ) {
+        if (update.group_id != null && !groupsById.containsKey(update.group_id)) {
+            throw new BusinessException("COMBO_GROUP_STORE_MISMATCH");
+        }
         StoreComboGroup group = update.group_id == null ? null : groupsById.get(update.group_id);
         if (group == null && update.group_code != null && !update.group_code.isBlank()) {
             group = groupsByCode.get(normalizeGroup(update.group_code));
@@ -304,7 +308,13 @@ public class StoreComboConfigurationServiceImpl implements StoreComboConfigurati
 
         StoreComboGroup created = new StoreComboGroup();
         created.store_id = storeId;
-        created.group_code = nextGroupCode(storeId, firstNonBlank(update.name_en, update.name_zh));
+        if (update.group_id != null) throw new BusinessException("COMBO_GROUP_STORE_MISMATCH");
+        created.group_code = update.group_code == null || update.group_code.isBlank()
+            ? nextGroupCode(storeId, firstNonBlank(update.name_en, update.name_zh)) : explicitGroupCode(update.group_code);
+        if (storeComboGroupRepository.findAllByStoreIdIncludingArchivedOrdered(storeId).stream()
+            .anyMatch(existing -> created.group_code.equals(normalizeGroup(existing.group_code)))) {
+            throw new BusinessException("COMBO_GROUP_DUPLICATE_CODE");
+        }
         created.created_at = now;
         created.updated_at = now;
         return created;
@@ -346,6 +356,7 @@ public class StoreComboConfigurationServiceImpl implements StoreComboConfigurati
             component.component_group = normalizeGroup(group.group_code);
             component.name_zh = cleanRequired(update.name_zh, "COMBO_COMPONENT_NAME_ZH_REQUIRED");
             component.name_en = cleanRequired(update.name_en, "COMBO_COMPONENT_NAME_EN_REQUIRED");
+            component.name_fr = update.name_fr == null ? component.name_fr : update.name_fr.trim();
             component.enabled = bool(update.enabled, true);
             component.display_order = update.display_order == null ? fallbackOrder : update.display_order;
             String behavior = normalizeBusinessBehavior(
@@ -399,6 +410,9 @@ public class StoreComboConfigurationServiceImpl implements StoreComboConfigurati
         ComboState state,
         LocalDateTime now
     ) {
+        if (update.id != null && !componentsById.containsKey(update.id)) {
+            throw new BusinessException("COMBO_COMPONENT_STORE_OR_GROUP_MISMATCH");
+        }
         StoreComboComponent component = update.id == null ? null : componentsById.get(update.id);
         if (component == null && update.component_code != null && !update.component_code.isBlank()) {
             component = componentsByCode.get(normalizeCode(update.component_code));
@@ -414,7 +428,14 @@ public class StoreComboConfigurationServiceImpl implements StoreComboConfigurati
         created.store_id = storeId;
         created.group_id = group.id;
         created.component_group = normalizeGroup(group.group_code);
-        created.component_code = nextComponentCode(storeId, group, firstNonBlank(update.name_en, update.name_zh), state.components());
+        if (update.id != null) throw new BusinessException("COMBO_COMPONENT_STORE_OR_GROUP_MISMATCH");
+        created.component_code = update.component_code == null || update.component_code.isBlank()
+            ? nextComponentCode(storeId, group, firstNonBlank(update.name_en, update.name_zh), state.components())
+            : explicitComponentCode(update.component_code);
+        if (state.components().stream().anyMatch(existing -> storeId.equals(existing.store_id)
+            && group.id.equals(existing.group_id) && created.component_code.equals(normalizeCode(existing.component_code)))) {
+            throw new BusinessException("COMBO_COMPONENT_DUPLICATE_CODE");
+        }
         created.business_behavior = BEHAVIOR_NO_KITCHEN_TASK;
         created.created_at = now;
         created.updated_at = now;
@@ -599,6 +620,7 @@ public class StoreComboConfigurationServiceImpl implements StoreComboConfigurati
             groupResponse.component_group = groupResponse.group_code;
             groupResponse.name_zh = group.name_zh;
             groupResponse.name_en = group.name_en;
+            groupResponse.name_fr = group.name_fr;
             groupResponse.selection_rule = normalizeSelectionRule(group.selection_rule);
             groupResponse.required = Boolean.TRUE.equals(group.required);
             groupResponse.enabled = Boolean.TRUE.equals(group.enabled);
@@ -633,6 +655,8 @@ public class StoreComboConfigurationServiceImpl implements StoreComboConfigurati
         response.component_code = normalizeCode(component.component_code);
         response.name_zh = component.name_zh;
         response.name_en = component.name_en;
+        response.name_fr = component.name_fr;
+        response.synthetic_option_id = com.restaurant.system.menu.service.MenuItemCustomizationService.componentOptionId(component.id);
         response.enabled = Boolean.TRUE.equals(component.enabled);
         response.display_order = component.display_order;
         response.is_default = response.component_code.equals(defaultComponentCode);
@@ -640,6 +664,7 @@ public class StoreComboConfigurationServiceImpl implements StoreComboConfigurati
         response.linked_menu_item_sku = linkedItem == null ? null : linkedItem.sku;
         response.linked_menu_item_name_zh = linkedItem == null ? null : linkedItem.name_zh;
         response.linked_menu_item_name_en = linkedItem == null ? null : linkedItem.name_en;
+        response.linked_menu_item_name_fr = linkedItem == null ? null : linkedItem.name_fr;
         response.business_behavior = normalizeBusinessBehavior(component.business_behavior);
         return response;
     }
@@ -655,6 +680,22 @@ public class StoreComboConfigurationServiceImpl implements StoreComboConfigurati
         }
         return menuItemRepository.findAllById(itemIds).stream()
             .collect(Collectors.toMap(item -> item.id, Function.identity(), (left, right) -> left));
+    }
+
+    private String explicitGroupCode(String code) {
+        String normalized = normalizeGroup(code);
+        if (normalized.length() > 50 || !normalized.matches("COMBO_[A-Z0-9]+(?:_[A-Z0-9]+)*")) {
+            throw new BusinessException("COMBO_GROUP_CODE_INVALID");
+        }
+        return normalized;
+    }
+
+    private String explicitComponentCode(String code) {
+        String normalized = normalizeCode(code);
+        if (normalized.length() > 120 || !normalized.matches("combo_[a-z0-9]+(?:_[a-z0-9]+)*")) {
+            throw new BusinessException("COMBO_COMPONENT_CODE_INVALID");
+        }
+        return normalized;
     }
 
     private String nextGroupCode(Long storeId, String source) {

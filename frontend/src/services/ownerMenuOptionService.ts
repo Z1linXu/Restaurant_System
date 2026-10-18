@@ -23,6 +23,7 @@ export interface MenuItemOptionAdminRecord {
   sort_order: number | null
   name_zh: string
   name_en: string
+  name_fr?: string | null
   price_delta: number
   is_active: boolean
   created_at?: string
@@ -37,6 +38,7 @@ export interface MenuItemOptionPayload {
   sort_order: number | null
   name_zh: string
   name_en: string
+  name_fr?: string | null
   price_delta: number | string
   is_active: boolean
 }

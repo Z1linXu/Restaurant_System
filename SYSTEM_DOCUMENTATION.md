@@ -1,5 +1,54 @@
 # SYSTEM DOCUMENTATION
 
+## Allô Nouille isolated local pilot
+
+The Owner authorized a bounded local merchant pilot on 2026-10-18: generic menu,
+modifier/combo increments, Chinese-first menu, one summary MOCK kitchen ticket,
+and an independent Mac Demo. See the [implementation record](docs/commercialization/merchants/allo-nouille/IMPLEMENTATION_RECORD.md).
+Formal Phase 3 acceptance remains incomplete; this does not open global Phases
+4–6 or authorize main merge, Staging/Production or physical printing. The previous
+local Demo and merchant configurations must remain isolated and unchanged.
+
+V41 adds nullable French menu/order labels, optional typed per-item customization,
+`sellable` (default true), frozen component references and a nullable kitchen-task
+component option reference. Null customization retains legacy Size/Combo behavior.
+Configured items use Store-owned selection bounds/defaults, canonical add-on
+eligibility and fixed-price combo groups. The server validates current configured
+prices, quantities, required distinct choices, linked components and Store/station
+scope; component-only items cannot be bought directly. Option quantities retain
+the existing order-line total contract, including multi-quantity combos. Existing
+component BOM is consumed when configured; this pilot creates no recipes.
+
+Menu Catalog carries optional `name_fr`, `customization_config` and stable synthetic
+component identities through its existing Store/revision/hash/cache path. Chinese
+labels follow Store locale. New configured drafts normalize total option quantities;
+existing frozen outbox records, IndexedDB schema and retry identities are retained.
+No price TTL or separate offline quote engine is introduced.
+
+Non-Lanzhou GRAB rendering can select existing task station codes and a plain title
+through validated display formatting; it uses frozen component task names/quantities.
+This is ticket presentation only: task routing, physical assignment, transport,
+claim/lease and historical rendered snapshots remain their existing sources of truth.
+An explicit `receipt_language` enables Chinese frontdesk labels. MOCK Web status
+uses the existing Store module summary and does not poll the Pad bridge worker.
+Initial non-Lanzhou GRAB dispatch reuses the existing pre-render check: without
+printable kitchen content it creates no job, while frontdesk receipts remain
+independent. Existing jobs, Lanzhou behavior and visible renderer failures remain.
+
+PRIVATE `STORE_CONFIGURATION_PACKAGE` Profile versions reference the exact Neutral
+base and the existing nine immutable artifacts, without a Master Menu reference.
+They are reusable validated configuration archives, not a new runtime importer:
+legacy Store materialization rejects packages lacking its Master reference. The
+local explicit tool archives only the three Profile tables after exact database,
+Owner/Organization/Store/provenance checks; actual menu/configuration creation uses
+existing APIs. Neutral creation provenance is preserved.
+
+The [local Demo guide](docs/commercialization/merchants/allo-nouille/LOCAL_DEMO_GUIDE.md)
+documents endpoints, secure login, existing administration pages and limitations.
+Generic grouped KDS/Ready component presentation is not accepted in this pilot;
+its KDS module stays disabled. Formal G3 closure and physical/native QA remain
+separate from local browser and MOCK acceptance.
+
 ## Commercialization development reference
 
 The Owner authorized planning Phase 1 and isolated local implementation of Phase 2,

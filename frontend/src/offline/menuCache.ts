@@ -157,6 +157,81 @@ function fnv1a32(value: string) {
   return hash.toString(16).padStart(8, '0')
 }
 
+function hasFrenchOptions(options: BackendMenuOption[] = []): boolean {
+  return options.some((option) => option.name_fr != null || hasFrenchOptions(option.side_item_remove_options))
+}
+
+function appendFrenchOptions(parts: string[], options: BackendMenuOption[] = []) {
+  appendValue(parts, options.length)
+  options.forEach((option) => {
+    appendValue(parts, option.id)
+    appendValue(parts, option.name_fr)
+    appendFrenchOptions(parts, option.side_item_remove_options)
+  })
+}
+
+// Matches MenuCatalogHashService. Keep old canonical bytes and cache records intact.
+function appendCustomizationExtension(parts: string[], catalog: BackendMenuCatalog) {
+  const groups = catalog.combo_configuration?.groups ?? []
+  const extended = catalog.categories.some((category) => category.name_fr != null
+    || category.items.some((item) => item.name_fr != null || item.customization_config != null
+      || item.sellable === false || hasFrenchOptions(item.options)))
+    || groups.some((group) => group.name_fr != null
+      || group.components.some((component) => component.name_fr != null || component.linked_menu_item_name_fr != null))
+  if (!extended) return
+  appendValue(parts, 'menu-customization-v1')
+  appendValue(parts, catalog.categories.length)
+  catalog.categories.forEach((category) => {
+    appendValue(parts, category.id)
+    appendValue(parts, category.name_fr)
+    appendValue(parts, category.items.length)
+    category.items.forEach((item) => {
+      appendValue(parts, item.id)
+      appendValue(parts, item.name_fr)
+      appendValue(parts, item.sellable !== false)
+      const config = item.customization_config
+      appendValue(parts, config != null)
+      if (config) {
+        appendValue(parts, config.schema_version)
+        appendValue(parts, config.option_groups.length)
+        config.option_groups.forEach((group) => {
+          appendValue(parts, group.option_group)
+          appendValue(parts, group.min_select)
+          appendValue(parts, group.max_select)
+          appendValue(parts, group.distinct)
+          appendValue(parts, group.default_option_codes.length)
+          group.default_option_codes.forEach((code) => appendValue(parts, code))
+        })
+        const codes = Object.keys(config.addon_max_quantities).sort()
+        appendValue(parts, codes.length)
+        codes.forEach((code) => {
+          appendValue(parts, code)
+          appendValue(parts, config.addon_max_quantities[code])
+        })
+        appendValue(parts, config.combo != null)
+        if (config.combo) {
+          appendValue(parts, config.combo.fixed_price)
+          appendValue(parts, config.combo.group_codes.length)
+          config.combo.group_codes.forEach((code) => appendValue(parts, code))
+        }
+      }
+      appendFrenchOptions(parts, item.options)
+    })
+  })
+  appendValue(parts, groups.length)
+  groups.forEach((group) => {
+    appendValue(parts, group.group_id)
+    appendValue(parts, group.name_fr)
+    appendValue(parts, group.components.length)
+    group.components.forEach((component) => {
+      appendValue(parts, component.id)
+      appendValue(parts, component.name_fr)
+      appendValue(parts, component.linked_menu_item_name_fr)
+      appendValue(parts, component.synthetic_option_id)
+    })
+  })
+}
+
 export function calculateMenuContentHash(catalog: BackendMenuCatalog) {
   const parts: string[] = []
   appendValue(parts, catalog.store_id)
@@ -164,6 +239,18 @@ export function calculateMenuContentHash(catalog: BackendMenuCatalog) {
   appendValue(parts, catalog.menu_revision)
   appendValue(parts, catalog.catalog_version)
   appendValue(parts, catalog.combo_metadata_version)
+  if (catalog.safe_summary) {
+    const summary = catalog.safe_summary
+    appendValue(parts, summary.schema_version)
+    appendValue(parts, summary.config_revision)
+    appendValue(parts, summary.brand_name)
+    appendValue(parts, summary.locale)
+    appendValue(parts, summary.currency)
+    appendValue(parts, summary.timezone)
+    appendValue(parts, summary.tax_policy_reference)
+    appendValue(parts, summary.profile_code)
+    appendValue(parts, summary.compatibility_mode)
+  }
   appendValue(parts, catalog.tax_policy?.rate)
   appendValue(parts, catalog.tax_policy?.label)
   appendValue(parts, catalog.tax_policy?.version)
@@ -175,6 +262,7 @@ export function calculateMenuContentHash(catalog: BackendMenuCatalog) {
   appendValue(parts, catalog.pricing_policy?.combo_delta)
   appendComboConfiguration(parts, catalog)
   appendCategories(parts, catalog.categories, catalog.catalog_version !== 'menu-catalog-v2', catalog.catalog_version === 'menu-catalog-v4')
+  appendCustomizationExtension(parts, catalog)
   return `fnv1a32:${fnv1a32(parts.join(''))}`
 }
 

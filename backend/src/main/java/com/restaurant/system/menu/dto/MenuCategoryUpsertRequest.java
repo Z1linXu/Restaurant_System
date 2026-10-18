@@ -4,6 +4,7 @@ public class MenuCategoryUpsertRequest {
     public Long store_id;
     public String name_zh;
     public String name_en;
+    public String name_fr;
     public Integer sort_order;
     public Boolean enabled;
     public Boolean is_active;

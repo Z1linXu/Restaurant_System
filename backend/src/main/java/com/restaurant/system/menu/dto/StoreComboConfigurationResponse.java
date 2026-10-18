@@ -14,6 +14,7 @@ public class StoreComboConfigurationResponse {
         public Long item_id;
         public String name_zh;
         public String name_en;
+        public String name_fr;
         public String default_combo_egg_component_code;
     }
 
@@ -23,6 +24,7 @@ public class StoreComboConfigurationResponse {
         public String component_group;
         public String name_zh;
         public String name_en;
+        public String name_fr;
         public String selection_rule;
         public Boolean required;
         public Boolean enabled;
@@ -38,6 +40,7 @@ public class StoreComboConfigurationResponse {
         public String component_code;
         public String name_zh;
         public String name_en;
+        public String name_fr;
         public Boolean enabled;
         public Integer display_order;
         public Boolean is_default;
@@ -45,6 +48,8 @@ public class StoreComboConfigurationResponse {
         public String linked_menu_item_sku;
         public String linked_menu_item_name_zh;
         public String linked_menu_item_name_en;
+        public String linked_menu_item_name_fr;
+        public Long synthetic_option_id;
         public String business_behavior;
     }
 }

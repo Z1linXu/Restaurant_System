@@ -58,32 +58,13 @@ import {
 import { readMenuSnapshot } from '../offline/menuCache'
 import { mapCatalog } from './useMenuCatalog'
 import { resolveComboGroupOptionId } from '../utils/comboSelection'
+import { calculateItemLineSubtotal, customizationValidationMessage } from '../utils/itemCustomization'
 
 function calculateDraftLineSubtotal(menuItem: MenuItem | undefined, draft: ItemCustomizationDraft) {
   if (!menuItem) {
     return 0
   }
-  const sizeDelta = menuItem.customization?.sizes?.options.find((option) => option.id === draft.sizeId)?.priceDelta ?? 0
-  const soupBaseDelta =
-    menuItem.customization?.soupBases?.options.find((option) => option.id === draft.soupBaseId)?.priceDelta ?? 0
-  const comboDelta = draft.comboEnabled ? (menuItem.customization?.combo?.upcharge ?? 0) : 0
-  const comboGroupDelta = draft.comboEnabled
-    ? menuItem.customization?.combo?.groups
-      ?.reduce((sum, group) => {
-        const selectedId = resolveComboGroupOptionId(draft, group)
-        const selected = group.options.find((option) => option.id === selectedId)
-        return sum + (selected?.priceDelta ?? 0)
-      }, 0) ?? 0
-    : 0
-  const addOnDelta =
-    menuItem.customization?.addOns
-      ?.reduce((sum, option) => sum + (option.priceDelta ?? 0) * (draft.addOnQuantities[option.id] ?? 0), 0) ?? 0
-  const removeDelta =
-    menuItem.customization?.removeOptions
-      ?.filter((option) => draft.removeIds.includes(option.id))
-      .reduce((sum, option) => sum + (option.priceDelta ?? 0), 0) ?? 0
-
-  return (menuItem.price + sizeDelta + soupBaseDelta + comboDelta + comboGroupDelta + addOnDelta + removeDelta) * draft.quantity
+  return calculateItemLineSubtotal(menuItem, draft)
 }
 
 function optionTag(option: BackendOrderItemOptionResponse): LocalizedText {
@@ -106,6 +87,7 @@ function menuItemOptions(menuItem: MenuItem) {
     ...(menuItem.customization?.soupBases?.options ?? []),
     ...(menuItem.customization?.noodleTypes ?? []),
     ...(menuItem.customization?.spicyLevels ?? []),
+    ...(menuItem.customization?.modifierGroups?.flatMap((group) => group.options) ?? []),
     ...(menuItem.customization?.combo?.option ? [menuItem.customization.combo.option] : []),
     ...(menuItem.customization?.combo?.groups.flatMap((group) => group.options) ?? []),
     ...(menuItem.customization?.combo?.eggs ?? []),
@@ -130,6 +112,7 @@ function buildOptionSnapshots(menuItem: MenuItem, draft: ItemCustomizationDraft)
       parentOptionId: option.parentOptionId ?? null,
       nameEn: option.labelEn,
       nameZh: option.labelZh,
+      nameFr: option.labelFr,
       priceDelta: option.priceDelta ?? 0,
       quantity,
     }
@@ -149,6 +132,7 @@ function buildItemSelection(item: BackendOrderItemResponse, menuItem: MenuItem |
     comboSelections: {},
     comboSideRemoveIds: [],
     addOnQuantities: {},
+    modifierSelections: {},
     removeIds: [],
     quantity: item.quantity,
     notes: item.notes ?? '',
@@ -157,6 +141,11 @@ function buildItemSelection(item: BackendOrderItemResponse, menuItem: MenuItem |
   item.options.forEach((option) => {
     const optionId = String(option.option_id)
     const comboConfig = menuItem?.customization?.combo
+    const modifierGroup = menuItem?.customization?.modifierGroups?.find((group) => group.options.some((choice) => choice.id === optionId))
+    if (modifierGroup) {
+      draft.modifierSelections![modifierGroup.groupCode] = [...(draft.modifierSelections?.[modifierGroup.groupCode] ?? []), optionId]
+      return
+    }
     if (comboConfig?.optionId === optionId) {
       draft.comboEnabled = true
       return
@@ -197,7 +186,7 @@ function buildItemSelection(item: BackendOrderItemResponse, menuItem: MenuItem |
         draft.spicyLevelId = optionId
         break
       case 'addon':
-        draft.addOnQuantities[optionId] = option.quantity ?? 1
+        draft.addOnQuantities[optionId] = (option.quantity ?? 1) / (menuItem?.customizationConfig ? item.quantity : 1)
         break
       case 'remove':
         draft.removeIds.push(optionId)
@@ -214,7 +203,7 @@ function buildItemSelection(item: BackendOrderItemResponse, menuItem: MenuItem |
     draft.soupBaseId = menuItem.customization.soupBases.options[0].id
   }
   if (!draft.noodleTypeId && menuItem?.customization?.noodleTypes?.[0]?.id) {
-    draft.noodleTypeId = menuItem.customization.noodleTypes[0].id
+    draft.noodleTypeId = menuItem.customization.noodleTypeDefaultId ?? menuItem.customization.noodleTypes[0].id
   }
   if (!draft.spicyLevelId && menuItem?.customization?.spicyLevels?.[0]?.id) {
     draft.spicyLevelId = menuItem.customization.spicyLevels[0].id
@@ -248,6 +237,7 @@ function mapOrderItem(item: BackendOrderItemResponse, catalogItems: MenuItem[], 
     menuItemId: String(item.menu_item_id),
     nameEn: item.item_name_snapshot_en || menuItem?.nameEn || '',
     nameZh: item.item_name_snapshot_zh || menuItem?.nameZh || '',
+    nameFr: item.item_name_snapshot_fr,
     quantity: item.quantity,
     unitPrice: Number(item.unit_price),
     lineSubtotal: Number(item.line_amount),
@@ -263,9 +253,11 @@ function mapOrderItem(item: BackendOrderItemResponse, catalogItems: MenuItem[], 
       parentOptionId: option.parent_option_id_snapshot == null ? null : String(option.parent_option_id_snapshot),
       nameEn: option.option_name_snapshot_en,
       nameZh: option.option_name_snapshot_zh,
+      nameFr: option.option_name_snapshot_fr,
       priceDelta: Number(option.price_delta),
       quantity: option.quantity,
     })),
+    optionQuantityMode: menuItem?.customizationConfig ? 'ORDER_TOTAL' : undefined,
     selection: buildItemSelection(item, menuItem),
     summaryTags: item.options.map(optionTag),
     notes: item.notes ?? '',
@@ -290,6 +282,8 @@ function mapOrderToSession(order: BackendOrderResponse, slotLabel: string, table
 }
 
 export function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationDraft): OrderLineItem {
+  const validationMessage = customizationValidationMessage(menuItem, draft)
+  if (validationMessage) throw new Error(validationMessage)
   const summaryTags: LocalizedText[] = []
 
   const pushOptionTag = (optionId: string | undefined) => {
@@ -301,6 +295,7 @@ export function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationD
       ...(menuItem.customization?.soupBases?.options ?? []),
       ...(menuItem.customization?.noodleTypes ?? []),
       ...(menuItem.customization?.spicyLevels ?? []),
+      ...(menuItem.customization?.modifierGroups?.flatMap((group) => group.options) ?? []),
       ...(menuItem.customization?.combo?.groups.flatMap((group) => group.options) ?? []),
       ...(menuItem.customization?.combo?.eggs ?? []),
       ...(menuItem.customization?.combo?.sides ?? []),
@@ -318,6 +313,7 @@ export function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationD
   pushOptionTag(draft.soupBaseId)
   pushOptionTag(draft.noodleTypeId)
   pushOptionTag(draft.spicyLevelId)
+  Object.values(draft.modifierSelections ?? {}).flat().forEach(pushOptionTag)
   if (draft.comboEnabled) {
     summaryTags.push({ en: 'Combo', zh: '套餐' })
     const comboGroups = menuItem.customization?.combo?.groups ?? []
@@ -351,6 +347,7 @@ export function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationD
     menuItemId: menuItem.id,
     nameEn: menuItem.nameEn,
     nameZh: menuItem.nameZh,
+    nameFr: menuItem.nameFr,
     quantity: draft.quantity,
     unitPrice: menuItem.price,
     lineSubtotal: calculateDraftLineSubtotal(menuItem, draft),
@@ -359,6 +356,7 @@ export function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationD
     skuSnapshot: menuItem.sku ?? null,
     itemTypeSnapshot: menuItem.itemType ?? null,
     optionSnapshots: buildOptionSnapshots(menuItem, draft),
+    optionQuantityMode: menuItem.customizationConfig ? 'ORDER_TOTAL' : undefined,
     selection: draft,
     summaryTags,
     notes: draft.notes,
@@ -400,6 +398,7 @@ export function buildFrozenSubmitPayload(
         menu_item_id: Number(item.menuItemId),
         item_name_snapshot_zh: item.nameZh,
         item_name_snapshot_en: item.nameEn,
+        ...(item.nameFr ? { item_name_snapshot_fr: item.nameFr } : {}),
         unit_price_snapshot: item.unitPrice,
         category_code_snapshot: item.categoryCodeSnapshot ?? menuItem?.categoryCode ?? null,
         station_id_snapshot: item.stationIdSnapshot == null
@@ -419,6 +418,7 @@ export function buildFrozenSubmitPayload(
           parent_option_id_snapshot: option.parentOptionId == null ? null : Number(option.parentOptionId),
           option_name_snapshot_zh: option.nameZh,
           option_name_snapshot_en: option.nameEn,
+          ...(option.nameFr ? { option_name_snapshot_fr: option.nameFr } : {}),
           option_price_snapshot: option.priceDelta,
           quantity: option.quantity,
         })),
@@ -445,6 +445,14 @@ async function buildRecoverySubmitPayload(
 function resizeSnapshotLineSubtotal(item: OrderLineItem, nextQuantity: number) {
   const currentQuantity = Math.max(1, item.quantity)
   return Number(((item.lineSubtotal / currentQuantity) * nextQuantity).toFixed(2))
+}
+
+export function resizeSnapshotOptionQuantities(item: OrderLineItem, nextQuantity: number) {
+  if (item.optionQuantityMode !== 'ORDER_TOTAL') return item.optionSnapshots
+  return item.optionSnapshots?.map((option) => ({
+    ...option,
+    quantity: option.quantity / item.quantity * nextQuantity,
+  }))
 }
 
 const LOCAL_DRAFT_SAVE_DEBOUNCE_MS = 200
@@ -884,6 +892,7 @@ export function useDraftOrder(
           quantity: currentQuantity + 1,
           selection: nextSelection,
           lineSubtotal: resizeSnapshotLineSubtotal(item, currentQuantity + 1),
+          optionSnapshots: resizeSnapshotOptionQuantities(item, currentQuantity + 1),
         }
       }))
     },
@@ -901,6 +910,7 @@ export function useDraftOrder(
             quantity: currentQuantity - 1,
             selection: nextSelection,
             lineSubtotal: resizeSnapshotLineSubtotal(item, currentQuantity - 1),
+            optionSnapshots: resizeSnapshotOptionQuantities(item, currentQuantity - 1),
           }
         })
       })

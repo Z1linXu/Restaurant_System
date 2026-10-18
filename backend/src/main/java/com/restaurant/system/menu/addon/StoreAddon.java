@@ -37,6 +37,9 @@ public class StoreAddon {
     @Column(name = "name_en")
     public String name_en;
 
+    @Column(name = "name_fr")
+    public String name_fr;
+
     @Column(name = "price", nullable = false, precision = 38, scale = 2)
     public BigDecimal price;
 

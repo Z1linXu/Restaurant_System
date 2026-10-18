@@ -5,6 +5,7 @@ import com.restaurant.system.owner.profile.NeutralRestaurantProfile;
 import com.restaurant.system.support.CommercialPostgres;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.List;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -26,10 +27,12 @@ class MerchantConfigurationPostgresTest {
                 where p.profile_code='ST_DENIS_CANONICAL_PROFILE' and v.profile_version='v2' returning stores.id
                 """, Long.class, org);
             seedHistory(jdbc, legacy, org);
-            Map<String,String> before = history(jdbc);
+            Map<String, List<String>> originalColumns = historyColumns(jdbc);
+            Map<String,String> before = history(jdbc, originalColumns);
             var profileBefore = jdbc.queryForList("select id,content_json,fingerprint_sha256 from store_profile_versions order by id");
             var flyway = Flyway.configure().dataSource(db.dataSource).load(); flyway.migrate(); flyway.validate();
-            assertThat(history(jdbc)).isEqualTo(before);
+            assertThat(history(jdbc, originalColumns)).isEqualTo(before);
+            assertNewMenuColumnsHaveCompatibilityDefaults(jdbc);
             assertThat(jdbc.queryForList("select id,content_json,fingerprint_sha256 from store_profile_versions where profile_id in (select id from store_profiles where profile_code <> 'NEUTRAL_RESTAURANT') order by id")).isEqualTo(profileBefore);
             assertThat(mode(jdbc, legacy)).isEqualTo("PROVISIONAL_COMPATIBILITY");
             assertThat(mode(jdbc, verified)).isEqualTo("PROVISIONAL_COMPATIBILITY");
@@ -86,5 +89,33 @@ class MerchantConfigurationPostgresTest {
             hashes.put(table, jdbc.queryForObject("select md5(coalesce(json_agg(t order by t.id)::text,'null')) from " + table + " t", String.class));
         }
         return hashes;
+    }
+
+    private static Map<String, List<String>> historyColumns(JdbcTemplate jdbc) {
+        Map<String, List<String>> columns = new LinkedHashMap<>();
+        for (String table : new String[]{"orders","order_items","order_item_options","kitchen_tasks","print_jobs","menu_items","menu_item_options","chain_master_menu_products"}) {
+            columns.put(table, jdbc.queryForList("select column_name from information_schema.columns where table_schema='public' and table_name=? order by ordinal_position", String.class, table));
+        }
+        return columns;
+    }
+
+    /** Compare every pre-migration value; additional nullable columns are checked independently. */
+    private static Map<String,String> history(JdbcTemplate jdbc, Map<String, List<String>> columns) {
+        Map<String,String> hashes = new LinkedHashMap<>();
+        columns.forEach((table, names) -> {
+            String projection = names.stream().map(name -> "\"" + name.replace("\"", "\"\"") + "\"").collect(java.util.stream.Collectors.joining(","));
+            hashes.put(table, jdbc.queryForObject("select md5(coalesce(json_agg(t order by t.id)::text,'null')) from (select " + projection + " from " + table + ") t", String.class));
+        });
+        return hashes;
+    }
+
+    private void assertNewMenuColumnsHaveCompatibilityDefaults(JdbcTemplate jdbc) {
+        for (String table : new String[]{"menu_categories", "menu_items", "menu_item_options", "store_addons", "store_combo_groups", "store_combo_components"}) {
+            assertThat(jdbc.queryForObject("select count(*) from " + table + " where name_fr is not null", Long.class)).as(table + " FR remains absent for legacy rows").isZero();
+        }
+        assertThat(jdbc.queryForObject("select count(*) from menu_items where customization_config is not null or sellable is distinct from true", Long.class)).isZero();
+        assertThat(jdbc.queryForObject("select count(*) from order_items where item_name_snapshot_fr is not null", Long.class)).isZero();
+        assertThat(jdbc.queryForObject("select count(*) from order_item_options where option_name_snapshot_fr is not null or component_id_snapshot is not null or linked_menu_item_id_snapshot is not null or linked_station_id_snapshot is not null", Long.class)).isZero();
+        assertThat(jdbc.queryForObject("select count(*) from kitchen_tasks where component_option_id is not null", Long.class)).isZero();
     }
 }

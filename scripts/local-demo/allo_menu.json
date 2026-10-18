@@ -1,0 +1,1000 @@
+{
+  "schema_version": "LOCAL_MERCHANT_MENU_V1",
+  "profile_code": "ALLO_NOUILLE_PROFILE",
+  "profile_version": "v1",
+  "currency": "CAD",
+  "prices_include_tax": false,
+  "default_language": "zh-CN",
+  "source": {
+    "filename": "新菜单.pdf",
+    "sha256": "48df9e215351878dec6a5b754751e00e59aeae2506cf87a41b239b7dd482e130",
+    "pages": 4
+  },
+  "categories": [
+    {
+      "code": "APPETIZER",
+      "name_zh": "前菜",
+      "name_en": "Appetizers",
+      "name_fr": "Entrées"
+    },
+    {
+      "code": "NOODLE",
+      "name_zh": "面类",
+      "name_en": "Noodle soups",
+      "name_fr": "Soupes de nouilles"
+    },
+    {
+      "code": "RICE",
+      "name_zh": "饭类",
+      "name_en": "Rice plates",
+      "name_fr": "Plats de riz"
+    },
+    {
+      "code": "DRINK",
+      "name_zh": "饮料",
+      "name_en": "Drinks",
+      "name_fr": "Boissons"
+    },
+    {
+      "code": "DESSERT",
+      "name_zh": "甜品",
+      "name_en": "Desserts",
+      "name_fr": "Desserts"
+    }
+  ],
+  "items": [
+    {
+      "code": "A1",
+      "sku": "AN_A1",
+      "category_code": "APPETIZER",
+      "name_zh": "虾云吞汤（3颗）",
+      "name_en": "Shrimp wonton soup (3 wontons)",
+      "name_fr": "Soupe wonton aux crevettes (3 wontons)",
+      "base_price": "4.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 1,
+      "source_portion_zh": "1碗，3颗"
+    },
+    {
+      "code": "A2",
+      "sku": "AN_A2",
+      "category_code": "APPETIZER",
+      "name_zh": "炸素春卷（2条）",
+      "name_en": "Crispy vegetable spring rolls (2 rolls)",
+      "name_fr": "Rouleaux impériaux aux légumes (2 rouleaux)",
+      "base_price": "4.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 1,
+      "source_portion_zh": "1份，2条"
+    },
+    {
+      "code": "A3",
+      "sku": "AN_A3",
+      "category_code": "APPETIZER",
+      "name_zh": "凉拌黄瓜",
+      "name_en": "Cucumber salad",
+      "name_fr": "Salade de concombres",
+      "base_price": "5.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 1,
+      "source_portion_zh": "1份，重量未注明"
+    },
+    {
+      "code": "A4",
+      "sku": "AN_A4",
+      "category_code": "APPETIZER",
+      "name_zh": "凉拌牛肉",
+      "name_en": "Chilled beef with house sauce",
+      "name_fr": "Bœuf froid, sauce maison",
+      "base_price": "7.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 1,
+      "source_portion_zh": "1份，重量未注明"
+    },
+    {
+      "code": "A5",
+      "sku": "AN_A5",
+      "category_code": "APPETIZER",
+      "name_zh": "炸虾云吞（6颗）",
+      "name_en": "Fried shrimp and pork wontons (6 pcs)",
+      "name_fr": "Wontons frits aux crevettes et au porc (6 mcx)",
+      "base_price": "7.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 1,
+      "source_portion_zh": "1份，6颗"
+    },
+    {
+      "code": "A6",
+      "sku": "AN_A6",
+      "category_code": "APPETIZER",
+      "name_zh": "炸虾（6只）",
+      "name_en": "Shrimp tempura (6 pcs)",
+      "name_fr": "Crevettes tempura (6 mcx)",
+      "base_price": "7.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 1,
+      "source_portion_zh": "1份，6只"
+    },
+    {
+      "code": "A7",
+      "sku": "AN_A7",
+      "category_code": "APPETIZER",
+      "name_zh": "炸鸡翅（6只）",
+      "name_en": "Fried chicken wings (6 pcs)",
+      "name_fr": "Ailes de poulet frites (6 mcx)",
+      "base_price": "7.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 1,
+      "source_portion_zh": "1份，6只"
+    },
+    {
+      "code": "A8",
+      "sku": "AN_A8",
+      "category_code": "APPETIZER",
+      "name_zh": "烤牛肉串（2串）",
+      "name_en": "Grilled beef skewers (2 skewers)",
+      "name_fr": "Brochettes de bœuf grillé (2 brochettes)",
+      "base_price": "7.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 1,
+      "source_portion_zh": "1份，2串"
+    },
+    {
+      "code": "A9",
+      "sku": "AN_A9",
+      "category_code": "APPETIZER",
+      "name_zh": "烤鸡肉串（2串）",
+      "name_en": "Grilled chicken skewers (2 skewers)",
+      "name_fr": "Brochettes de poulet grillé (2 brochettes)",
+      "base_price": "7.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 1,
+      "source_portion_zh": "1份，2串"
+    },
+    {
+      "code": "B1",
+      "sku": "AN_B1",
+      "category_code": "NOODLE",
+      "name_zh": "经典牛肉面",
+      "name_en": "Classic beef noodle soup",
+      "name_fr": "Bœuf classique",
+      "base_price": "15.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 2
+    },
+    {
+      "code": "B2",
+      "sku": "AN_B2",
+      "category_code": "NOODLE",
+      "name_zh": "红烧牛肉面",
+      "name_en": "Braised beef noodle soup",
+      "name_fr": "Bœuf braisé",
+      "base_price": "15.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 2
+    },
+    {
+      "code": "B3",
+      "sku": "AN_B3",
+      "category_code": "NOODLE",
+      "name_zh": "红烧牛筋面",
+      "name_en": "Braised beef tendon noodle soup",
+      "name_fr": "Tendons de bœuf braisés",
+      "base_price": "15.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 2
+    },
+    {
+      "code": "B4",
+      "sku": "AN_B4",
+      "category_code": "NOODLE",
+      "name_zh": "牛排骨面",
+      "name_en": "Beef rib noodle soup",
+      "name_fr": "Côtes de bœuf",
+      "base_price": "20.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 2
+    },
+    {
+      "code": "B5",
+      "sku": "AN_B5",
+      "category_code": "NOODLE",
+      "name_zh": "虾面",
+      "name_en": "Shrimp noodle soup",
+      "name_fr": "Crevettes",
+      "base_price": "15.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 2
+    },
+    {
+      "code": "B6",
+      "sku": "AN_B6",
+      "category_code": "NOODLE",
+      "name_zh": "烤鸡肉面",
+      "name_en": "Grilled chicken noodle soup",
+      "name_fr": "Poulet grillé",
+      "base_price": "15.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 2
+    },
+    {
+      "code": "B7",
+      "sku": "AN_B7",
+      "category_code": "NOODLE",
+      "name_zh": "虾云吞面",
+      "name_en": "Shrimp wonton noodles",
+      "name_fr": "Wontons aux crevettes",
+      "base_price": "15.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 2
+    },
+    {
+      "code": "B8",
+      "sku": "AN_B8",
+      "category_code": "NOODLE",
+      "name_zh": "蔬菜面（香菇素汤）",
+      "name_en": "Vegetable & tofu soup · shiitake broth",
+      "name_fr": "Légumes, tofu, bouillon de shiitakés",
+      "base_price": "15.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 2
+    },
+    {
+      "code": "C1",
+      "sku": "AN_C1",
+      "category_code": "RICE",
+      "name_zh": "烤牛肉饭",
+      "name_en": "Grilled beef with rice",
+      "name_fr": "Bœuf grillé",
+      "base_price": "16.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 3,
+      "included_ingredients_zh": [
+        "米饭",
+        "沙拉"
+      ]
+    },
+    {
+      "code": "C2",
+      "sku": "AN_C2",
+      "category_code": "RICE",
+      "name_zh": "烤鸡扒饭",
+      "name_en": "Grilled chicken with rice",
+      "name_fr": "Poulet grillé",
+      "base_price": "16.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 3,
+      "included_ingredients_zh": [
+        "米饭",
+        "沙拉"
+      ]
+    },
+    {
+      "code": "C3",
+      "sku": "AN_C3",
+      "category_code": "RICE",
+      "name_zh": "烤猪扒饭",
+      "name_en": "Grilled pork chops & rice",
+      "name_fr": "Côtelettes de porc grillées",
+      "base_price": "16.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 3,
+      "included_ingredients_zh": [
+        "米饭",
+        "沙拉"
+      ]
+    },
+    {
+      "code": "C4",
+      "sku": "AN_C4",
+      "category_code": "RICE",
+      "name_zh": "烤虾饭",
+      "name_en": "Grilled shrimp with rice",
+      "name_fr": "Crevettes grillées",
+      "base_price": "16.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 3,
+      "included_ingredients_zh": [
+        "米饭",
+        "沙拉"
+      ]
+    },
+    {
+      "code": "C5",
+      "sku": "AN_C5",
+      "category_code": "RICE",
+      "name_zh": "烤肉双拼饭 · 四选二",
+      "name_en": "Mixed grill with rice · choose two",
+      "name_fr": "Duo de grillades au choix",
+      "base_price": "19.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 3,
+      "included_ingredients_zh": [
+        "米饭",
+        "沙拉"
+      ]
+    },
+    {
+      "code": "C6",
+      "sku": "AN_C6",
+      "category_code": "RICE",
+      "name_zh": "炸鸡排饭",
+      "name_en": "Crispy chicken cutlet with rice",
+      "name_fr": "Poulet pané croustillant",
+      "base_price": "17.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 3,
+      "included_ingredients_zh": [
+        "米饭",
+        "沙拉"
+      ]
+    },
+    {
+      "code": "E1",
+      "sku": "AN_E1",
+      "category_code": "DRINK",
+      "name_zh": "瓶装水",
+      "name_en": "Bottled water",
+      "name_fr": "Eau en bouteille",
+      "base_price": "1.99",
+      "item_type": "DRINK",
+      "sellable": true,
+      "logical_station_code": null,
+      "source_page": 4
+    },
+    {
+      "code": "E2",
+      "sku": "AN_E2",
+      "category_code": "DRINK",
+      "name_zh": "汽水",
+      "name_en": "Soft drink",
+      "name_fr": "Boisson gazeuse",
+      "base_price": "2.99",
+      "item_type": "DRINK",
+      "sellable": true,
+      "logical_station_code": null,
+      "source_page": 4
+    },
+    {
+      "code": "E3",
+      "sku": "AN_E3",
+      "category_code": "DRINK",
+      "name_zh": "气泡水",
+      "name_en": "Sparkling water",
+      "name_fr": "Eau pétillante",
+      "base_price": "3.99",
+      "item_type": "DRINK",
+      "sellable": true,
+      "logical_station_code": null,
+      "source_page": 4
+    },
+    {
+      "code": "E4",
+      "sku": "AN_E4",
+      "category_code": "DRINK",
+      "name_zh": "热茶",
+      "name_en": "Hot tea",
+      "name_fr": "Thé chaud",
+      "base_price": "2.99",
+      "item_type": "DRINK",
+      "sellable": true,
+      "logical_station_code": null,
+      "source_page": 4
+    },
+    {
+      "code": "E5",
+      "sku": "AN_E5",
+      "category_code": "DRINK",
+      "name_zh": "越式冰咖啡",
+      "name_en": "Vietnamese iced coffee",
+      "name_fr": "Café glacé vietnamien",
+      "base_price": "5.99",
+      "item_type": "DRINK",
+      "sellable": true,
+      "logical_station_code": null,
+      "source_page": 4
+    },
+    {
+      "code": "E6",
+      "sku": "AN_E6",
+      "category_code": "DRINK",
+      "name_zh": "鲜青柠水",
+      "name_en": "Fresh limeade",
+      "name_fr": "Limonade à la lime",
+      "base_price": "5.99",
+      "item_type": "DRINK",
+      "sellable": true,
+      "logical_station_code": null,
+      "source_page": 4
+    },
+    {
+      "code": "F1",
+      "sku": "AN_F1",
+      "category_code": "DESSERT",
+      "name_zh": "冰淇淋（2球）",
+      "name_en": "Ice cream (2 scoops)",
+      "name_fr": "Crème glacée (2 boules)",
+      "base_price": "3.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 4,
+      "source_portion_zh": "2球/份"
+    },
+    {
+      "code": "F2",
+      "sku": "AN_F2",
+      "category_code": "DESSERT",
+      "name_zh": "炸芝麻球（6颗）",
+      "name_en": "Fried sesame balls (6 pcs)",
+      "name_fr": "Boules au sésame frites (6 mcx)",
+      "base_price": "6.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 4,
+      "source_portion_zh": "6颗/份"
+    },
+    {
+      "code": "F3",
+      "sku": "AN_F3",
+      "category_code": "DESSERT",
+      "name_zh": "红糖滋粑（6块）",
+      "name_en": "Brown sugar sticky rice cakes (6 pcs)",
+      "name_fr": "Gâteaux de riz gluant au sucre brun (6 mcx)",
+      "base_price": "6.99",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 4,
+      "source_portion_zh": "6块/份"
+    }
+  ],
+  "component_only_items": [
+    {
+      "code": "SPRING_ROLL_1PC_COMPONENT",
+      "sku": "AN_SPRING_ROLL_1PC_COMPONENT",
+      "category_code": "APPETIZER",
+      "name_zh": "素春卷（1条）",
+      "name_en": "Vegetable spring roll (1 roll)",
+      "name_fr": "Rouleau impérial aux légumes (1 rouleau)",
+      "base_price": "0.00",
+      "price_semantics": "INCLUDED_COMPONENT_NOT_A_LA_CARTE",
+      "sellable": false,
+      "item_type": "FOOD",
+      "logical_station_code": "BACK_KITCHEN",
+      "source_page": 3,
+      "source_note_zh": "饭套餐原文明确一条春卷；此三语份量标签为配置标签，非新增单点品名/价格。A2原文和两条份量不改。",
+      "portion_count": 1,
+      "portion_unit": "roll"
+    }
+  ],
+  "optional_standalone_items": [
+    {
+      "code": "EXTRA_NOODLES",
+      "sku": "AN_EXTRA_NOODLES",
+      "category_code": "NOODLE",
+      "name_zh": "免费加面",
+      "name_en": "Free extra noodles",
+      "name_fr": "Nouilles supplémentaires gratuites",
+      "base_price": "0.00",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN"
+    },
+    {
+      "code": "EXTRA_RICE",
+      "sku": "AN_EXTRA_RICE",
+      "category_code": "RICE",
+      "name_zh": "免费加饭",
+      "name_en": "Extra rice at no charge",
+      "name_fr": "Riz supplémentaire gratuit",
+      "base_price": "0.00",
+      "item_type": "FOOD",
+      "sellable": true,
+      "logical_station_code": "BACK_KITCHEN"
+    }
+  ],
+  "addons": [
+    {
+      "code": "n_extra_noodles",
+      "name_zh": "免费加面",
+      "name_en": "Free extra noodles",
+      "name_fr": "Nouilles supplémentaires gratuites",
+      "price": "0.00",
+      "active": true,
+      "eligible_category_code": "NOODLE",
+      "source_page": 2,
+      "source_note_zh": "免费；数量/次数/时点未规定"
+    },
+    {
+      "code": "n_extra_beef",
+      "name_zh": "牛肉",
+      "name_en": "beef",
+      "name_fr": "Bœuf",
+      "price": "7.99",
+      "active": true,
+      "eligible_category_code": "NOODLE",
+      "source_page": 2,
+      "source_note_zh": "每份；做法/重量未规定"
+    },
+    {
+      "code": "n_extra_tendon",
+      "name_zh": "牛筋",
+      "name_en": "tendon",
+      "name_fr": "tendons de bœuf",
+      "price": "7.99",
+      "active": true,
+      "eligible_category_code": "NOODLE",
+      "source_page": 2,
+      "source_note_zh": "每份"
+    },
+    {
+      "code": "n_extra_chicken",
+      "name_zh": "鸡肉",
+      "name_en": "chicken",
+      "name_fr": "poulet",
+      "price": "7.99",
+      "active": true,
+      "eligible_category_code": "NOODLE",
+      "source_page": 2,
+      "source_note_zh": "不从B6推断此加料必为烤鸡"
+    },
+    {
+      "code": "n_extra_vegetables",
+      "name_zh": "蔬菜",
+      "name_en": "vegetables",
+      "name_fr": "légumes",
+      "price": "7.99",
+      "active": true,
+      "eligible_category_code": "NOODLE",
+      "source_page": 2,
+      "source_note_zh": "每份"
+    },
+    {
+      "code": "n_extra_shrimp",
+      "name_zh": "虾",
+      "name_en": "shrimp",
+      "name_fr": "crevettes",
+      "price": "7.99",
+      "active": true,
+      "eligible_category_code": "NOODLE",
+      "source_page": 2,
+      "source_note_zh": "每份，颗数未知"
+    },
+    {
+      "code": "n_extra_shrimp_wontons",
+      "name_zh": "虾云吞",
+      "name_en": "shrimp wontons",
+      "name_fr": "wontons aux crevettes",
+      "price": "7.99",
+      "active": true,
+      "eligible_category_code": "NOODLE",
+      "source_page": 2,
+      "source_note_zh": "每份，颗数未知，不等于A1三颗"
+    },
+    {
+      "code": "n_extra_broth",
+      "name_zh": "加汤",
+      "name_en": "Extra broth",
+      "name_fr": "Bouillon",
+      "price": "1.99",
+      "active": true,
+      "eligible_category_code": "NOODLE",
+      "source_page": 2,
+      "source_note_zh": "汤种/容量/素汤可用性未知"
+    },
+    {
+      "code": "n_extra_beef_bone",
+      "name_zh": "加牛骨",
+      "name_en": "Beef bone",
+      "name_fr": "Os de bœuf",
+      "price": "15.99",
+      "active": true,
+      "eligible_category_code": "NOODLE",
+      "source_page": 2,
+      "source_note_zh": "不等于B4牛排骨整碗面"
+    },
+    {
+      "code": "r_extra_rice",
+      "name_zh": "免费加饭",
+      "name_en": "Extra rice at no charge",
+      "name_fr": "Riz supplémentaire gratuit",
+      "price": "0.00",
+      "active": true,
+      "eligible_category_code": "RICE",
+      "source_page": 3,
+      "source_note_zh": "免费；数量/次数/时点未规定"
+    },
+    {
+      "code": "r_extra_grilled_beef",
+      "name_zh": "加烤牛肉",
+      "name_en": "beef",
+      "name_fr": "Bœuf",
+      "price": "7.99",
+      "active": true,
+      "eligible_category_code": "RICE",
+      "source_page": 3,
+      "source_note_zh": "明确grilled段落成员"
+    },
+    {
+      "code": "r_extra_grilled_chicken",
+      "name_zh": "加烤鸡肉",
+      "name_en": "chicken",
+      "name_fr": "poulet",
+      "price": "7.99",
+      "active": true,
+      "eligible_category_code": "RICE",
+      "source_page": 3,
+      "source_note_zh": "明确grilled段落成员"
+    },
+    {
+      "code": "r_extra_grilled_pork",
+      "name_zh": "加烤猪肉",
+      "name_en": "pork",
+      "name_fr": "porc",
+      "price": "7.99",
+      "active": true,
+      "eligible_category_code": "RICE",
+      "source_page": 3,
+      "source_note_zh": "明确grilled段落成员"
+    },
+    {
+      "code": "r_extra_grilled_shrimp",
+      "name_zh": "加烤虾",
+      "name_en": "shrimp",
+      "name_fr": "crevettes",
+      "price": "7.99",
+      "active": true,
+      "eligible_category_code": "RICE",
+      "source_page": 3,
+      "source_note_zh": "明确grilled段落成员"
+    },
+    {
+      "code": "r_extra_crispy_chicken",
+      "name_zh": "加炸鸡排",
+      "name_en": "Crispy chicken cutlet",
+      "name_fr": "Poulet pané croustillant",
+      "price": "8.99",
+      "active": true,
+      "eligible_category_code": "RICE",
+      "source_page": 3,
+      "source_note_zh": "不等于完整C6餐盘"
+    }
+  ],
+  "noodle_options": [
+    {
+      "option_type": "noodle_type",
+      "option_group": "NOODLE_TYPE",
+      "option_code": "an_noodle_thin",
+      "name_zh": "细面",
+      "name_en": "Thin",
+      "name_fr": "fines",
+      "price_delta": "0.00",
+      "sort_order": 10
+    },
+    {
+      "option_type": "noodle_type",
+      "option_group": "NOODLE_TYPE",
+      "option_code": "an_noodle_thick",
+      "name_zh": "粗面",
+      "name_en": "thick",
+      "name_fr": "épaisses",
+      "price_delta": "0.00",
+      "sort_order": 20
+    }
+  ],
+  "protein_options": [
+    {
+      "option_type": "modifier",
+      "option_group": "PROTEIN",
+      "option_code": "beef",
+      "name_zh": "烤牛肉",
+      "name_en": "beef",
+      "name_fr": "bœuf",
+      "price_delta": "0.00",
+      "sort_order": 10
+    },
+    {
+      "option_type": "modifier",
+      "option_group": "PROTEIN",
+      "option_code": "chicken",
+      "name_zh": "鸡肉",
+      "name_en": "chicken",
+      "name_fr": "poulet",
+      "price_delta": "0.00",
+      "sort_order": 20
+    },
+    {
+      "option_type": "modifier",
+      "option_group": "PROTEIN",
+      "option_code": "pork",
+      "name_zh": "猪肉",
+      "name_en": "pork",
+      "name_fr": "porc",
+      "price_delta": "0.00",
+      "sort_order": 30
+    },
+    {
+      "option_type": "modifier",
+      "option_group": "PROTEIN",
+      "option_code": "shrimp",
+      "name_zh": "虾",
+      "name_en": "shrimp",
+      "name_fr": "crevettes",
+      "price_delta": "0.00",
+      "sort_order": 40
+    }
+  ],
+  "combo_groups": [
+    {
+      "group_code": "COMBO_NOODLE_APPETIZER",
+      "name_zh": "前菜",
+      "name_en": "Appetizer",
+      "name_fr": "Entrée",
+      "selection_rule": "EXACTLY_ONE",
+      "default_component_code": "combo_n_a1",
+      "components": [
+        {
+          "component_code": "combo_n_a1",
+          "linked_item_code": "A1",
+          "name_zh": "虾云吞汤（3颗）",
+          "name_en": "Shrimp wonton soup (3 wontons)",
+          "name_fr": "Soupe wonton aux crevettes (3 wontons)",
+          "business_behavior": "LINKED_MENU_ITEM",
+          "quantity_per_main": 1
+        },
+        {
+          "component_code": "combo_n_a2",
+          "linked_item_code": "A2",
+          "name_zh": "炸素春卷（2条）",
+          "name_en": "Crispy vegetable spring rolls (2 rolls)",
+          "name_fr": "Rouleaux impériaux aux légumes (2 rouleaux)",
+          "business_behavior": "LINKED_MENU_ITEM",
+          "quantity_per_main": 1
+        },
+        {
+          "component_code": "combo_n_a3",
+          "linked_item_code": "A3",
+          "name_zh": "凉拌黄瓜",
+          "name_en": "Cucumber salad",
+          "name_fr": "Salade de concombres",
+          "business_behavior": "LINKED_MENU_ITEM",
+          "quantity_per_main": 1
+        },
+        {
+          "component_code": "combo_n_a4",
+          "linked_item_code": "A4",
+          "name_zh": "凉拌牛肉",
+          "name_en": "Chilled beef with house sauce",
+          "name_fr": "Bœuf froid, sauce maison",
+          "business_behavior": "LINKED_MENU_ITEM",
+          "quantity_per_main": 1
+        },
+        {
+          "component_code": "combo_n_a5",
+          "linked_item_code": "A5",
+          "name_zh": "炸虾云吞（6颗）",
+          "name_en": "Fried shrimp and pork wontons (6 pcs)",
+          "name_fr": "Wontons frits aux crevettes et au porc (6 mcx)",
+          "business_behavior": "LINKED_MENU_ITEM",
+          "quantity_per_main": 1
+        },
+        {
+          "component_code": "combo_n_a6",
+          "linked_item_code": "A6",
+          "name_zh": "炸虾（6只）",
+          "name_en": "Shrimp tempura (6 pcs)",
+          "name_fr": "Crevettes tempura (6 mcx)",
+          "business_behavior": "LINKED_MENU_ITEM",
+          "quantity_per_main": 1
+        },
+        {
+          "component_code": "combo_n_a7",
+          "linked_item_code": "A7",
+          "name_zh": "炸鸡翅（6只）",
+          "name_en": "Fried chicken wings (6 pcs)",
+          "name_fr": "Ailes de poulet frites (6 mcx)",
+          "business_behavior": "LINKED_MENU_ITEM",
+          "quantity_per_main": 1
+        },
+        {
+          "component_code": "combo_n_a8",
+          "linked_item_code": "A8",
+          "name_zh": "烤牛肉串（2串）",
+          "name_en": "Grilled beef skewers (2 skewers)",
+          "name_fr": "Brochettes de bœuf grillé (2 brochettes)",
+          "business_behavior": "LINKED_MENU_ITEM",
+          "quantity_per_main": 1
+        },
+        {
+          "component_code": "combo_n_a9",
+          "linked_item_code": "A9",
+          "name_zh": "烤鸡肉串（2串）",
+          "name_en": "Grilled chicken skewers (2 skewers)",
+          "name_fr": "Brochettes de poulet grillé (2 brochettes)",
+          "business_behavior": "LINKED_MENU_ITEM",
+          "quantity_per_main": 1
+        }
+      ]
+    },
+    {
+      "group_code": "COMBO_RICE_SOUP",
+      "name_zh": "包含云吞汤",
+      "name_en": "Included wonton soup",
+      "name_fr": null,
+      "selection_rule": "EXACTLY_ONE",
+      "default_component_code": "combo_r_soup_3pc",
+      "components": [
+        {
+          "component_code": "combo_r_soup_3pc",
+          "linked_item_code": "A1",
+          "name_zh": "虾云吞汤（3颗）",
+          "name_en": "Shrimp wonton soup (3 wontons)",
+          "name_fr": "Soupe wonton aux crevettes (3 wontons)",
+          "business_behavior": "LINKED_MENU_ITEM",
+          "quantity_per_main": 1
+        }
+      ]
+    },
+    {
+      "group_code": "COMBO_RICE_ROLL",
+      "name_zh": "包含春卷",
+      "name_en": "Included spring roll",
+      "name_fr": null,
+      "selection_rule": "EXACTLY_ONE",
+      "default_component_code": "combo_r_roll_1pc",
+      "components": [
+        {
+          "component_code": "combo_r_roll_1pc",
+          "linked_item_code": "SPRING_ROLL_1PC_COMPONENT",
+          "name_zh": "素春卷（1条）",
+          "name_en": "Vegetable spring roll (1 roll)",
+          "name_fr": "Rouleau impérial aux légumes (1 rouleau)",
+          "business_behavior": "LINKED_MENU_ITEM",
+          "quantity_per_main": 1
+        }
+      ]
+    }
+  ],
+  "combos": [
+    {
+      "code": "NOODLE_1999",
+      "fixed_price": "19.99",
+      "eligible_item_codes": [
+        "B1",
+        "B2",
+        "B3",
+        "B5",
+        "B6",
+        "B7",
+        "B8"
+      ],
+      "group_codes": [
+        "COMBO_NOODLE_APPETIZER"
+      ]
+    },
+    {
+      "code": "RICE_1999",
+      "fixed_price": "19.99",
+      "eligible_item_codes": [
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C6"
+      ],
+      "group_codes": [
+        "COMBO_RICE_SOUP",
+        "COMBO_RICE_ROLL"
+      ]
+    }
+  ],
+  "customization_defaults": {
+    "NOODLE": {
+      "schema_version": 1,
+      "option_groups": [
+        {
+          "option_group": "NOODLE_TYPE",
+          "min_select": 1,
+          "max_select": 1,
+          "distinct": true,
+          "default_option_codes": [
+            "an_noodle_thin"
+          ]
+        }
+      ],
+      "addon_max_quantities": {
+        "n_extra_noodles": 1
+      }
+    },
+    "RICE": {
+      "schema_version": 1,
+      "option_groups": [],
+      "addon_max_quantities": {
+        "r_extra_rice": 1
+      }
+    }
+  },
+  "customization_overrides": {
+    "C5": {
+      "schema_version": 1,
+      "option_groups": [
+        {
+          "option_group": "PROTEIN",
+          "min_select": 2,
+          "max_select": 2,
+          "distinct": true,
+          "default_option_codes": []
+        }
+      ],
+      "addon_max_quantities": {
+        "r_extra_rice": 1
+      }
+    }
+  },
+  "owner_decisions": {
+    "free_main_extra_is_boolean": true,
+    "no_size_options_for_noodle_items": true,
+    "drinks_skip_kitchen": true,
+    "other_items_logical_station": "BACK_KITCHEN",
+    "printing_mode": "MOCK",
+    "kitchen_ticket": "ONE_SUMMARY_PER_SUBMIT",
+    "test_tax_configuration": true,
+    "offline_policy": "EXISTING_COMMERCIAL_CORE"
+  },
+  "data_notes": [
+    "32编号items；component_only_items和optional_standalone_items分别计数，不伪称PDF新增商品。",
+    "全部32编号名称原样来自已逐页核对PDF的MENU_PDF_ANALYSIS表；零价组件/选项是明确配置数据。",
+    "name_fr保留A5的porc与B8的tofu；F3中文原文保留滋粑。",
+    "所有数量按主菜份数相乘：饭套餐汤1碗（三颗）和春卷1条；面套餐A2完整两条。",
+    "component-only单条春卷的FR/EN是受控份量配置标签，标价0仅表达套餐included，不作为未公布单点价。",
+    "不包含数据库ID、秘密、真实设备地址、库存或BOM配方。"
+  ]
+}

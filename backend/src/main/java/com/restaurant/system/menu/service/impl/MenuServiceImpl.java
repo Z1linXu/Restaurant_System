@@ -69,7 +69,9 @@ public class MenuServiceImpl implements MenuService {
     public MenuCatalogResponse getCatalog(Long storeId) {
         MenuRevisionResponse revision = menuRevisionService.getRevision(storeId);
         List<MenuCategory> categories = menuCategoryRepository.findActiveByStoreId(storeId);
-        List<MenuItem> items = menuItemRepository.findActiveByStoreId(storeId);
+        List<MenuItem> allItems = menuItemRepository.findActiveByStoreId(storeId);
+        List<MenuItem> items = allItems.stream().filter(item -> !Boolean.FALSE.equals(item.sellable)).toList();
+        Map<Long, MenuItem> itemById = items.stream().collect(Collectors.toMap(item -> item.id, item -> item));
         List<Long> itemIds = items.stream().map(menuItem -> menuItem.id).toList();
         List<MenuItemOption> options = itemIds.isEmpty()
             ? List.of()
@@ -82,6 +84,7 @@ public class MenuServiceImpl implements MenuService {
             .filter(this::isCatalogOption)
             .filter(option -> storeComboConfigurationService.isCatalogOptionEnabled(storeId, option))
             .map(option -> storePricingPolicyService.applyEffectiveCatalogPricing(option, pricingPolicy))
+            .map(option -> applyFixedComboPricing(option, itemById.get(option.menu_item_id)))
             .toList();
 
         Map<Long, List<MenuCatalogResponse.OptionResponse>> optionsByItemId = effectiveOptions.stream()
@@ -89,18 +92,7 @@ public class MenuServiceImpl implements MenuService {
                 option -> option.menu_item_id,
                 LinkedHashMap::new,
                 Collectors.mapping(
-                    option -> new MenuCatalogResponse.OptionResponse(
-                        option.id,
-                        option.option_type,
-                        option.option_code,
-                        option.option_group,
-                        option.parent_option_id,
-                        option.sort_order,
-                        option.name_zh,
-                        option.name_en,
-                        option.price_delta,
-                        option.is_active
-                    ),
+                    option -> toOptionResponse(option),
                     Collectors.toList()
                 )
             ));
@@ -141,6 +133,9 @@ public class MenuServiceImpl implements MenuService {
                 optionsByItemId.getOrDefault(item.id, List.of())
             );
             itemResponse.default_combo_egg_component_code = item.default_combo_egg_component_code;
+            itemResponse.name_fr = item.name_fr;
+            itemResponse.sellable = !Boolean.FALSE.equals(item.sellable);
+            itemResponse.customization_config = item.customization_config;
             itemsByCategoryId.computeIfAbsent(item.category_id, ignored -> new ArrayList<>()).add(itemResponse);
         }
 
@@ -148,15 +143,13 @@ public class MenuServiceImpl implements MenuService {
             .sorted(Comparator
                 .comparing((MenuCategory category) -> category.sort_order == null ? Integer.MAX_VALUE : category.sort_order)
                 .thenComparing(category -> category.id))
-            .map(category -> new MenuCatalogResponse.CategoryResponse(
-                category.id,
-                category.code,
-                category.name_zh,
-                category.name_en,
-                category.sort_order,
-                category.is_active,
-                itemsByCategoryId.getOrDefault(category.id, List.of())
-            ))
+            .map(category -> {
+                var response = new MenuCatalogResponse.CategoryResponse(category.id, category.code,
+                    category.name_zh, category.name_en, category.sort_order, category.is_active,
+                    itemsByCategoryId.getOrDefault(category.id, List.of()));
+                response.name_fr = category.name_fr;
+                return response;
+            })
             .toList();
 
         MenuCatalogResponse response = new MenuCatalogResponse(
@@ -178,6 +171,24 @@ public class MenuServiceImpl implements MenuService {
         response.safe_summary = merchantConfiguration.safeSummary(storeId);
         response.content_hash = menuCatalogHashService.calculate(response);
         return response;
+    }
+
+    private MenuCatalogResponse.OptionResponse toOptionResponse(MenuItemOption option) {
+        var response = new MenuCatalogResponse.OptionResponse(option.id, option.option_type, option.option_code,
+            option.option_group, option.parent_option_id, option.sort_order, option.name_zh, option.name_en,
+            option.price_delta, option.is_active);
+        response.name_fr = option.name_fr;
+        return response;
+    }
+
+    private MenuItemOption applyFixedComboPricing(MenuItemOption option, MenuItem item) {
+        if (item == null || !"COMBO".equals(option.option_group)) return option;
+        var delta = com.restaurant.system.menu.service.MenuItemCustomizationService.fixedComboDeltaFor(item);
+        if (delta == null) return option;
+        MenuItemOption projection = new MenuItemOption();
+        org.springframework.beans.BeanUtils.copyProperties(option, projection);
+        projection.price_delta = delta;
+        return projection;
     }
 
     private boolean isCatalogOption(MenuItemOption option) {

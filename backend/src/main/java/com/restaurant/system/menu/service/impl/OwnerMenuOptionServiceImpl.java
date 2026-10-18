@@ -162,6 +162,7 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
         option.sort_order = request.sort_order;
         option.name_zh = request.name_zh.trim();
         option.name_en = blankToNull(request.name_en);
+        option.name_fr = request.name_fr == null ? option.name_fr : blankToNull(request.name_fr);
         option.price_delta = request.price_delta == null ? java.math.BigDecimal.ZERO : request.price_delta;
         option.is_active = request.is_active == null ? true : request.is_active;
         option.updated_at = LocalDateTime.now();
@@ -231,7 +232,7 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
             case "NOODLE_TYPE" -> "noodle_type";
             case "SPICY_LEVEL" -> "spicy_level";
             case "REMOVE", "COMBO_SIDE_REMOVE" -> "remove";
-            default -> "addon";
+            default -> optionType != null && !optionType.isBlank() ? optionType.trim().toLowerCase(Locale.ROOT) : "addon";
         };
     }
 
@@ -368,6 +369,7 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
         response.sort_order = option.sort_order;
         response.name_zh = option.name_zh;
         response.name_en = option.name_en;
+        response.name_fr = option.name_fr;
         response.price_delta = option.price_delta;
         response.is_active = option.is_active;
         response.created_at = option.created_at;

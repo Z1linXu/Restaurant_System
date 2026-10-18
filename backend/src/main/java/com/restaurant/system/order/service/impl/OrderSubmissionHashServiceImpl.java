@@ -60,6 +60,7 @@ public class OrderSubmissionHashServiceImpl implements OrderSubmissionHashServic
         if (!legacy) {
             payload.put("item_name_snapshot_zh", normalize(item.item_name_snapshot_zh));
             payload.put("item_name_snapshot_en", normalize(item.item_name_snapshot_en));
+            if (normalize(item.item_name_snapshot_fr) != null) payload.put("item_name_snapshot_fr", normalize(item.item_name_snapshot_fr));
             payload.put("unit_price_snapshot", amount(item.unit_price_snapshot));
             payload.put("category_code_snapshot", normalize(item.category_code_snapshot));
             payload.put("station_id_snapshot", item.station_id_snapshot);
@@ -86,6 +87,7 @@ public class OrderSubmissionHashServiceImpl implements OrderSubmissionHashServic
             payload.put("parent_option_id_snapshot", option.parent_option_id_snapshot);
             payload.put("option_name_snapshot_zh", normalize(option.option_name_snapshot_zh));
             payload.put("option_name_snapshot_en", normalize(option.option_name_snapshot_en));
+            if (normalize(option.option_name_snapshot_fr) != null) payload.put("option_name_snapshot_fr", normalize(option.option_name_snapshot_fr));
             payload.put("option_price_snapshot", amount(option.option_price_snapshot));
         }
         return payload;

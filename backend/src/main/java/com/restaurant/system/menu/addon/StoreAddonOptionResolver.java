@@ -16,19 +16,19 @@ import org.springframework.stereotype.Service;
 public class StoreAddonOptionResolver {
     private final NamedParameterJdbcTemplate jdbc;
     public StoreAddonOptionResolver(NamedParameterJdbcTemplate jdbc) { this.jdbc = jdbc; }
-    private record Current(Long id, Long store, String code, String zh, String en, BigDecimal price, boolean active) {}
+    private record Current(Long id, Long store, String code, String zh, String en, String fr, BigDecimal price, boolean active) {}
 
     public List<MenuItemOption> resolve(List<MenuItemOption> options) {
         List<Long> ids = options.stream().map(o -> o.store_addon_id).filter(Objects::nonNull).distinct().toList();
         if (ids.isEmpty()) return options;
         Map<Long, Current> catalog = jdbc.query("""
-            select a.id,a.store_id,d.code,a.name_zh,a.name_en,a.price,a.active
+            select a.id,a.store_id,d.code,a.name_zh,a.name_en,a.name_fr,a.price,a.active
             from store_addons a join organization_addon_definitions d
               on d.id=a.organization_addon_definition_id and d.organization_id=a.organization_id
             where a.id in (:ids)
             """, new MapSqlParameterSource("ids", ids), (rs, n) -> new Current(rs.getLong("id"),
                 rs.getLong("store_id"), rs.getString("code"), rs.getString("name_zh"),
-                rs.getString("name_en"), rs.getBigDecimal("price"), rs.getBoolean("active")))
+                rs.getString("name_en"), rs.getString("name_fr"), rs.getBigDecimal("price"), rs.getBoolean("active")))
             .stream().collect(Collectors.toMap(Current::id, c -> c));
         return options.stream().map(option -> {
             if (option.store_addon_id == null) return option;
@@ -52,6 +52,7 @@ public class StoreAddonOptionResolver {
             current.option_group = "ADD_ON";
             current.name_zh = addon.zh();
             current.name_en = addon.en();
+            current.name_fr = addon.fr();
             current.price_delta = addon.price();
             current.is_active = addon.active() && Boolean.TRUE.equals(option.addon_eligible);
             return current;

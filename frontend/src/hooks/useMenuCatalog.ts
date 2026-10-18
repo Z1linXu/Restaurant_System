@@ -45,6 +45,7 @@ function mapOption(option: BackendMenuItem['options'][number]): ChoiceOption {
     id: String(option.id),
     labelEn: option.name_en,
     labelZh: option.name_zh,
+    labelFr: option.name_fr,
     priceDelta: Number(option.price_delta ?? 0),
     optionType: option.option_type,
     optionCode: option.option_code,
@@ -194,18 +195,24 @@ function buildSideItemRemoveOptionsByComponentCode(data: BackendMenuCatalog) {
 function storeComboChoiceGroup(
   group: NonNullable<BackendMenuCatalog['combo_configuration']>['groups'][number],
   sideItemRemoveOptionsByComponentCode: Map<string, ChoiceOption[]>,
+  useDurableOptionIds = false,
 ) {
   const groupCode = normalizeComponentGroup(group.group_code ?? group.component_group)
   const options = group.components
     .filter((component) => component.enabled)
+    .filter((component) => !useDurableOptionIds
+      || (component.synthetic_option_id != null && Number.isSafeInteger(component.synthetic_option_id) && component.synthetic_option_id < 0))
     .sort(sortStoreComboComponents)
     .map((component) => {
       const componentGroup = normalizeComponentGroup(component.component_group || groupCode)
-      const id = storeComboComponentOptionId(componentGroup, component.component_code)
+      const id = useDurableOptionIds && component.synthetic_option_id != null
+        ? String(component.synthetic_option_id)
+        : storeComboComponentOptionId(componentGroup, component.component_code)
       const option: ChoiceOption = {
         id,
         labelEn: component.name_en,
         labelZh: component.name_zh,
+        labelFr: component.name_fr,
         priceDelta: 0,
         optionType: 'addon',
         optionCode: component.component_code,
@@ -227,6 +234,7 @@ function storeComboChoiceGroup(
     groupCode,
     labelEn: group.name_en,
     labelZh: group.name_zh,
+    labelFr: group.name_fr,
     selectionRule: group.selection_rule ?? 'EXACTLY_ONE',
     required: group.required ?? (group.selection_rule !== 'OPTIONAL_ONE'),
     defaultOptionId,
@@ -237,21 +245,24 @@ function storeComboChoiceGroup(
 function storeComboChoiceGroups(
   data: BackendMenuCatalog,
   sideItemRemoveOptionsByComponentCode: Map<string, ChoiceOption[]>,
+  useDurableOptionIds = false,
 ) {
   return (data.combo_configuration?.groups ?? [])
     .filter((group) => group.enabled ?? true)
     .sort((left, right) => (left.display_order ?? 999999) - (right.display_order ?? 999999))
-    .map((group) => storeComboChoiceGroup(group, sideItemRemoveOptionsByComponentCode))
+    .map((group) => storeComboChoiceGroup(group, sideItemRemoveOptionsByComponentCode, useDurableOptionIds))
     .filter((group) => group.options.length > 0)
 }
 
 function isFreeToggleAddOn(option: ChoiceOption) {
-  return (option.priceDelta ?? 0) === 0 && (option.labelZh === '加香菜' || option.labelZh === '加葱')
+  return option.maxQuantity === 1
+    || ((option.priceDelta ?? 0) === 0 && (option.labelZh === '加香菜' || option.labelZh === '加葱'))
 }
 
 export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
   const sideItemRemoveOptionsByComponentCode = buildSideItemRemoveOptionsByComponentCode(data)
   const storeComboGroups = storeComboChoiceGroups(data, sideItemRemoveOptionsByComponentCode)
+  const configuredComboGroups = storeComboChoiceGroups(data, sideItemRemoveOptionsByComponentCode, true)
   const storeComboEggs = storeComboGroups.find((group) => group.groupCode === 'COMBO_EGG')?.options ?? []
   const storeComboSides = storeComboGroups.find((group) => group.groupCode === 'COMBO_SIDE')?.options ?? []
   const storeComboGroupCodes = new Set(storeComboGroups.map((group) => group.groupCode))
@@ -261,10 +272,12 @@ export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
     code: category.code,
     labelEn: category.name_en || formatCategoryLabel(category.code),
     labelZh: category.name_zh || category.name_en || category.code,
+    labelFr: category.name_fr,
   }))
 
   const items: MenuItem[] = data.categories.flatMap((category) =>
     [...category.items]
+      .filter((item) => item.sellable !== false)
       .sort((left, right) =>
         (left.sort_order ?? Number.MAX_SAFE_INTEGER) - (right.sort_order ?? Number.MAX_SAFE_INTEGER)
           || left.id - right.id,
@@ -278,33 +291,57 @@ export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
         }, {})
         Object.values(optionsByType).forEach((options) => options.sort(sortChoiceOptions))
         const allOptions = activeOptions.map(mapOption)
+        const configuration = item.customization_config
+        const itemComboGroups = configuration?.combo
+          ? configuredComboGroups.filter((group) => configuration.combo!.group_codes.includes(group.groupCode))
+          : storeComboGroups
+        const noodleRule = configuration?.option_groups.find((group) => normalizeComponentGroup(group.option_group) === 'NOODLE_TYPE')
+        const modifierGroups = (configuration?.option_groups ?? [])
+          .filter((group) => !['SIZE', 'SOUP_BASE', 'NOODLE_TYPE', 'SPICY_LEVEL'].includes(normalizeComponentGroup(group.option_group)))
+          .map((group) => {
+            const groupCode = normalizeComponentGroup(group.option_group)
+            const options = allOptions.filter((option) => normalizeComponentGroup(option.optionGroup) === groupCode)
+            return {
+              groupCode,
+              labelZh: groupCode === 'PROTEIN' ? '蛋白选择' : '选择项目',
+              labelEn: formatCategoryLabel(groupCode),
+              minSelect: group.min_select,
+              maxSelect: group.max_select,
+              distinct: group.distinct,
+              defaultOptionIds: options.filter((option) => group.default_option_codes.includes(option.optionCode ?? '')).map((option) => option.id),
+              options,
+            }
+          })
 
       const customization =
         activeOptions.length > 0
           ? {
               combo: (() => {
                 const comboUpcharge = allOptions.find(isComboUpcharge)
-                const requiredGroupsReady = storeComboGroups
+                const requiredGroupsReady = itemComboGroups
                   .filter((group) => group.required)
                   .every((group) => group.options.length > 0)
                 const comboSideRemoves = allOptions.filter(isComboSideRemove)
-                if (!comboUpcharge || storeComboGroups.length === 0 || !requiredGroupsReady) {
+                const configuredGroupsReady = !configuration?.combo
+                  || configuration.combo.group_codes.every((code) => itemComboGroups.some((group) => group.groupCode === code))
+                if (!comboUpcharge || itemComboGroups.length === 0 || !requiredGroupsReady || !configuredGroupsReady) {
                   return undefined
                 }
                 return {
                   option: comboUpcharge,
                   optionId: comboUpcharge.id,
                   upcharge: comboUpcharge.priceDelta ?? 0,
-                  groups: storeComboGroups.map((group) => {
+                  fixedPrice: configuration?.combo?.fixed_price,
+                  groups: itemComboGroups.map((group) => {
                     if (group.groupCode !== 'COMBO_EGG') return group
                     const override = group.options.find((option) =>
                       normalizeComponentCode(option.optionCode) === normalizeComponentCode(item.default_combo_egg_component_code),
                     )
                     return override ? { ...group, defaultOptionId: override.id } : group
                   }),
-                  eggs: storeComboEggs,
-                  sides: storeComboSides,
-                  sideRemoveOptions: buildSideRemoveOptions(storeComboSides, comboSideRemoves),
+                  eggs: configuration?.combo ? itemComboGroups.find((group) => group.groupCode === 'COMBO_EGG')?.options ?? [] : storeComboEggs,
+                  sides: configuration?.combo ? itemComboGroups.find((group) => group.groupCode === 'COMBO_SIDE')?.options ?? [] : storeComboSides,
+                  sideRemoveOptions: buildSideRemoveOptions(configuration?.combo ? itemComboGroups.find((group) => group.groupCode === 'COMBO_SIDE')?.options ?? [] : storeComboSides, comboSideRemoves),
                 }
               })(),
               sizes: optionsByType.size?.length
@@ -320,8 +357,14 @@ export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
                   }
                 : undefined,
               noodleTypes: optionsByType.noodle_type,
+              noodleTypeDefaultId: noodleRule
+                ? optionsByType.noodle_type?.find((option) => noodleRule.default_option_codes.includes(option.optionCode ?? ''))?.id
+                : optionsByType.noodle_type?.[0]?.id,
+              noodleTypeRequired: noodleRule ? noodleRule.min_select > 0 : false,
+              modifierGroups,
               spicyLevels: optionsByType.spicy_level,
               addOns: (optionsByType.addon ?? [])
+                .map((option) => ({ ...option, maxQuantity: configuration?.addon_max_quantities[option.optionCode ?? ''] }))
                 .filter((option) => !isComboUpcharge(option))
                 .filter((option) => !storeComboGroupCodes.has(normalizeComponentGroup(option.optionGroup)))
                 .filter((option) => !isComboEgg(option) && !isComboSide(option))
@@ -347,12 +390,14 @@ export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
         itemType: item.item_type,
         nameEn: item.name_en,
         nameZh: item.name_zh,
+        nameFr: item.name_fr,
         descriptionEn: '',
         descriptionZh: '',
         price: Number(item.base_price),
         isActive: item.is_active,
         soldOut: item.is_sold_out,
         customization,
+        customizationConfig: configuration,
       }
       }),
   )

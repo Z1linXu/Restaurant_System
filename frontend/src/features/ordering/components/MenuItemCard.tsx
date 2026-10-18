@@ -29,6 +29,7 @@ export function MenuItemCard({
   compact = false,
 }: MenuItemCardProps) {
   const presentation = useStorePresentation()
+  const chineseFirst = presentation.locale.toLowerCase().startsWith('zh')
   const addLabel = quickAddState === 'adding' ? '...' : quickAddState === 'added' ? 'Added' : '+'
   const stepperAddLabel = quickAddState === 'adding' ? '...' : '+'
 
@@ -59,9 +60,10 @@ export function MenuItemCard({
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-2">
               <h3 className={`${compact ? 'text-[1.45rem]' : 'text-[2rem]'} font-bold leading-tight tracking-[-0.04em] text-[var(--on-surface)]`}>
-                {item.nameEn}
+                {chineseFirst ? item.nameZh || item.nameEn : item.nameEn || item.nameZh}
               </h3>
-              <p className={`${compact ? 'text-[1rem]' : 'text-[1.35rem]'} font-semibold text-[rgba(83,58,50,0.86)]`}>{item.nameZh}</p>
+              <p className={`${compact ? 'text-[1rem]' : 'text-[1.35rem]'} font-semibold text-[rgba(83,58,50,0.86)]`}>{chineseFirst ? item.nameEn : item.nameZh}</p>
+              {item.nameFr ? <p className="text-sm text-[var(--muted)]" lang="fr">{item.nameFr}</p> : null}
             </div>
             <div className={`text-right ${compact ? 'text-[1.55rem]' : 'text-[2rem]'} font-extrabold tracking-[-0.04em] text-[var(--primary)]`}>
               {formatStoreMoney(item.price, presentation)}

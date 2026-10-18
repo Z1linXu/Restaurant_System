@@ -92,7 +92,10 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
         "addon_quantity_marker",
         "green_compression",
         "frontdesk_combo_prefix",
-        "addon_fallback"
+        "addon_fallback",
+        "grab_station_codes",
+        "grab_title",
+        "receipt_language"
     );
     private static final Set<String> PROHIBITED_KEY_EXACT = Set.of(
         "printer_id",
@@ -555,6 +558,25 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
                 }
                 if (!value.isTextual()) {
                     issues.add(issue("FORMATTING_VALUE_INVALID", "$.formatting." + field, "formatting values must be text"));
+                    continue;
+                }
+                String text = value.asText();
+                if ("grab_station_codes".equals(field)) {
+                    String[] codes = text.split(",", -1);
+                    Set<String> seen = new java.util.HashSet<>();
+                    if (codes.length > 32 || java.util.Arrays.stream(codes).map(String::trim)
+                        .anyMatch(code -> !code.matches("[A-Z][A-Z0-9_]{0,63}") || !seen.add(code))) {
+                        issues.add(issue("FORMATTING_VALUE_INVALID", "$.formatting." + field,
+                            "GRAB stations must be 1 to 32 unique uppercase station codes"));
+                    }
+                }
+                if ("receipt_language".equals(field) && !Set.of("zh", "en").contains(text)) {
+                    issues.add(issue("FORMATTING_VALUE_INVALID", "$.formatting." + field, "Receipt language must be zh or en"));
+                }
+                if ("grab_title".equals(field) && (text.isBlank() || text.length() > 80
+                    || text.chars().anyMatch(c -> Character.isISOControl(c) || "[]<>".indexOf(c) >= 0))) {
+                    issues.add(issue("FORMATTING_VALUE_INVALID", "$.formatting." + field,
+                        "GRAB title must be plain text of 1 to 80 characters"));
                 }
             }
         }

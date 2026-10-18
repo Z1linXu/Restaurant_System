@@ -1,4 +1,5 @@
 import { apiRequest } from './apiClient'
+import type { ItemCustomizationConfiguration } from '../types/ordering'
 
 export interface OrganizationRecord {
   id?: number
@@ -75,6 +76,9 @@ export interface MenuItemAdminRecord {
   station_id: number
   name_zh: string
   name_en: string
+  name_fr?: string | null
+  sellable?: boolean | null
+  customization_config?: ItemCustomizationConfiguration | null
   sku: string
   item_type: string
   base_price: number | null

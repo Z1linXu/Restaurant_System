@@ -4,6 +4,8 @@ import {
   parseAndroidBridgeJson,
   type AndroidPadPrintWorkerStatus,
 } from '../../../types/androidPadBridge'
+import { useOptionalCurrentStore } from '../../store/useStoreContext'
+import { findStoreModule } from '../../store/storeModuleAccess'
 
 function secondsSince(timestampMs: number | null | undefined) {
   if (!timestampMs || timestampMs <= 0) {
@@ -70,6 +72,18 @@ function statusTitle(status: AndroidPadPrintWorkerStatus | null, bridgeAvailable
 }
 
 export function PrintWorkerHealthBanner() {
+  const store = useOptionalCurrentStore()
+  const printingMode = findStoreModule(store?.moduleConfiguration, 'PRINTING')?.legacy_runtime_mode
+  if (printingMode === 'DISABLED') return null
+  if (printingMode === 'MOCK') {
+    return <div role="status" className="rounded-[20px] border border-black/5 bg-white/60 px-4 py-3 text-sm text-[var(--muted)]">
+      模拟打印，不连接实体打印机；提交后在打印中心查看小票。
+    </div>
+  }
+  return <PadPrintWorkerHealthBanner />
+}
+
+function PadPrintWorkerHealthBanner() {
   const mounted = useRef(true)
   const [bridgeAvailable, setBridgeAvailable] = useState(false)
   const [status, setStatus] = useState<AndroidPadPrintWorkerStatus | null>(null)

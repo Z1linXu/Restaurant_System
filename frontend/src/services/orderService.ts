@@ -81,6 +81,7 @@ export interface IdempotentOrderItemPayload {
   menu_item_id: number
   item_name_snapshot_zh: string
   item_name_snapshot_en: string
+  item_name_snapshot_fr?: string | null
   unit_price_snapshot: number
   category_code_snapshot: string | null
   station_id_snapshot: number | null
@@ -98,6 +99,7 @@ export interface IdempotentOrderItemPayload {
     parent_option_id_snapshot: number | null
     option_name_snapshot_zh: string
     option_name_snapshot_en: string
+    option_name_snapshot_fr?: string | null
     option_price_snapshot: number
     quantity: number
   }[]
@@ -112,6 +114,7 @@ interface OrderOptionPayload {
   parent_option_id_snapshot?: number | null
   option_name_snapshot_zh?: string
   option_name_snapshot_en?: string
+  option_name_snapshot_fr?: string | null
   option_price_snapshot?: number
 }
 
@@ -183,7 +186,7 @@ export function mapOptions(draft: ItemCustomizationDraft, menuItem?: MenuItem) {
     const option = optionsById.get(optionId)
     const payload: OrderOptionPayload = {
       option_id: Number(optionId),
-      quantity,
+      quantity: quantity * (menuItem?.customizationConfig ? draft.quantity : 1),
     }
     if (option) {
       payload.option_type_snapshot = option.optionType ?? null
@@ -192,6 +195,7 @@ export function mapOptions(draft: ItemCustomizationDraft, menuItem?: MenuItem) {
       payload.parent_option_id_snapshot = option.parentOptionId == null ? null : Number(option.parentOptionId)
       payload.option_name_snapshot_zh = option.labelZh
       payload.option_name_snapshot_en = option.labelEn
+      if (option.labelFr) payload.option_name_snapshot_fr = option.labelFr
       payload.option_price_snapshot = option.priceDelta ?? 0
     }
     optionPayloads.push(payload)
@@ -201,6 +205,7 @@ export function mapOptions(draft: ItemCustomizationDraft, menuItem?: MenuItem) {
   pushOption(draft.soupBaseId)
   pushOption(draft.noodleTypeId)
   pushOption(draft.spicyLevelId)
+  Object.values(draft.modifierSelections ?? {}).flat().forEach((optionId) => pushOption(optionId))
 
   if (draft.comboEnabled) {
     pushOption(menuItem?.customization?.combo?.optionId)
@@ -233,6 +238,7 @@ function collectMenuItemOptions(menuItem: MenuItem) {
     ...(menuItem.customization?.soupBases?.options ?? []),
     ...(menuItem.customization?.noodleTypes ?? []),
     ...(menuItem.customization?.spicyLevels ?? []),
+    ...(menuItem.customization?.modifierGroups?.flatMap((group) => group.options) ?? []),
     ...(menuItem.customization?.combo?.option ? [menuItem.customization.combo.option] : []),
     ...(menuItem.customization?.combo?.groups.flatMap((group) => group.options) ?? []),
     ...(menuItem.customization?.combo?.eggs ?? []),

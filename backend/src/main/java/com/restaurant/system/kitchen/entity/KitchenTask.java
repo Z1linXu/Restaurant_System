@@ -25,6 +25,9 @@ public class KitchenTask {
     @Column(name = "order_item_id")
     public Long order_item_id;
 
+    @Column(name = "component_option_id")
+    public Long component_option_id;
+
     @Column(name = "store_id")
     public Long store_id;
 

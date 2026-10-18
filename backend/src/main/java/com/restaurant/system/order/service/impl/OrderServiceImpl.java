@@ -172,6 +172,12 @@ public class OrderServiceImpl implements OrderService {
     private final PrintDispatcherService printDispatcherService;
     private final StoreComboConfigurationService storeComboConfigurationService;
     private final PrintingDisplayRuleService printingDisplayRuleService;
+    private com.restaurant.system.order.service.ConfiguredOrderItemService configuredOrderItems;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setConfiguredOrderItems(com.restaurant.system.order.service.ConfiguredOrderItemService service) {
+        this.configuredOrderItems = service;
+    }
 
     public OrderServiceImpl(
         StoreAddonOptionResolver addonResolver,
@@ -352,6 +358,20 @@ public class OrderServiceImpl implements OrderService {
         requireDraftForLegacyItemMutation(order);
         OrderItem orderItem = requireEditableOrderItem(order, itemId);
         LocalDateTime now = LocalDateTime.now();
+        MenuItem configuredItem = menuItemRepository.findById(orderItem.menu_item_id).orElse(null);
+        if (configuredItem != null && configuredItem.customization_config != null) {
+            List<OrderItemOption> current = loadOrderItemOptions(orderItem.id);
+            for (OrderItemOption option : current) {
+                if (orderItem.quantity == null || orderItem.quantity < 1 || option.quantity % orderItem.quantity != 0) {
+                    throw new BusinessException("MENU_SELECTION_QUANTITY_INVALID");
+                }
+                option.quantity = Math.multiplyExact(option.quantity / orderItem.quantity, request.quantity);
+            }
+            configuredOrderItems.validateItem(configuredItem, orderItem.unit_price);
+            configuredOrderItems.canonicalize(configuredItem, request.quantity,
+                current.stream().map(this::configuredOptionRequest).toList());
+            orderItemOptionRepository.saveAll(current);
+        }
         orderItem.quantity = request.quantity;
         orderItem.line_amount = calculateLineAmount(
             orderItem.unit_price,
@@ -964,12 +984,15 @@ public class OrderServiceImpl implements OrderService {
         MenuItem menuItem = itemRequest.menu_item_id == null ? null : menuItemRepository.findById(itemRequest.menu_item_id).orElse(null);
         if (menuItem != null) {
             validateMenuItemBelongsToStore(menuItem, order.store_id);
+            if (Boolean.FALSE.equals(menuItem.sellable)) throw new BusinessException("MENU_ITEM_COMPONENT_ONLY");
+            if (!order.kitchenMirror() && menuItem.customization_config != null)
+                configuredOrderItems.validateItem(menuItem, itemRequest.unit_price_snapshot);
         } else if (!raw && (itemRequest.station_id_snapshot == null || itemRequest.category_code_snapshot == null
             || itemRequest.unit_price_snapshot == null)) {
             throw new BusinessException("Cached menu item snapshot is incomplete: " + itemRequest.menu_item_id);
         }
         String categoryCode = itemRequest.category_code_snapshot;
-        if (categoryCode == null || categoryCode.isBlank()) {
+        if (categoryCode == null || categoryCode.isBlank() || (menuItem != null && menuItem.customization_config != null)) {
             categoryCode = findMenuCategory(menuItem).code;
         }
 
@@ -977,13 +1000,16 @@ public class OrderServiceImpl implements OrderService {
         orderItem.order_id = order.id;
         orderItem.menu_item_id = itemRequest.menu_item_id;
         orderItem.category_code_snapshot = categoryCode;
-        orderItem.station_id_snapshot = itemRequest.station_id_snapshot != null
+        orderItem.station_id_snapshot = menuItem != null && menuItem.customization_config != null
+            ? menuItem.station_id
+            : itemRequest.station_id_snapshot != null
             ? itemRequest.station_id_snapshot
             : menuItem == null ? null : menuItem.station_id;
         orderItem.externalKitchenSnapshot = itemRequest.external_kitchen_snapshot;
         orderItem.item_sku_snapshot = firstNonBlank(itemRequest.item_sku_snapshot, menuItem == null ? null : menuItem.sku);
         orderItem.item_name_snapshot_zh = firstNonBlank(itemRequest.item_name_snapshot_zh, menuItem == null ? null : menuItem.name_zh);
         orderItem.item_name_snapshot_en = firstNonBlank(itemRequest.item_name_snapshot_en, menuItem == null ? null : menuItem.name_en);
+        orderItem.item_name_snapshot_fr = firstNonBlank(itemRequest.item_name_snapshot_fr, menuItem == null ? null : menuItem.name_fr);
         orderItem.quantity = itemRequest.quantity;
         orderItem.unit_price = itemRequest.unit_price_snapshot != null
             ? itemRequest.unit_price_snapshot
@@ -1029,6 +1055,12 @@ public class OrderServiceImpl implements OrderService {
         LocalDateTime now
     ) {
         MenuItem mainMenuItem = menuItemRepository.findById(menuItemId).orElse(null);
+        if (mainMenuItem != null && mainMenuItem.customization_config != null) {
+            configuredOrderItems.validateItem(mainMenuItem, orderItem.unit_price);
+        }
+        Map<Long, com.restaurant.system.order.service.ConfiguredOrderItemService.Component> configuredComponents =
+            mainMenuItem != null && mainMenuItem.customization_config != null
+                ? configuredOrderItems.canonicalize(mainMenuItem, orderItem.quantity, optionRequests) : Map.of();
         Map<Long, MenuItemOption> requestedOptionsById = loadRequestedMenuItemOptions(optionRequests);
         Map<Long, Long> comboSideRemoveParentByOptionId = mainMenuItem == null
             ? Map.of()
@@ -1088,6 +1120,14 @@ public class OrderServiceImpl implements OrderService {
             orderItemOption.price_delta = optionRequest.option_price_snapshot != null
                 ? optionRequest.option_price_snapshot
                 : defaultIfNull(menuItemOption.price_delta);
+            orderItemOption.option_name_snapshot_fr = firstNonBlank(optionRequest.option_name_snapshot_fr,
+                menuItemOption == null ? null : menuItemOption.name_fr);
+            var configuredComponent = configuredComponents.get(optionRequest.option_id);
+            if (configuredComponent != null) {
+                orderItemOption.component_id_snapshot = configuredComponent.componentId();
+                orderItemOption.linked_menu_item_id_snapshot = configuredComponent.menuItemId();
+                orderItemOption.linked_station_id_snapshot = configuredComponent.stationId();
+            }
             orderItemOption.quantity = optionRequest.quantity;
             orderItemOption.created_at = now;
             if (menuItemOption != null && menuItemOption.store_addon_id != null) {
@@ -1107,6 +1147,7 @@ public class OrderServiceImpl implements OrderService {
                 orderItemOption.parent_option_id_snapshot = menuItemOption.parent_option_id;
                 orderItemOption.option_name_snapshot_zh = menuItemOption.name_zh;
                 orderItemOption.option_name_snapshot_en = menuItemOption.name_en;
+                orderItemOption.option_name_snapshot_fr = menuItemOption.name_fr;
                 orderItemOption.price_delta = menuItemOption.price_delta;
             } else if ((menuItemOption != null && addonResolver.requiresAssignment(storeId, menuItemOption.option_group, menuItemOption.option_code))
                 || addonResolver.requiresAssignment(storeId, orderItemOption.option_group_snapshot, orderItemOption.option_code_snapshot)) {
@@ -1118,6 +1159,16 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private void validateDraftAddons(Order order, List<OrderItem> lines, List<OrderItemOption> snapshots) {
+        if (!order.kitchenMirror()) {
+            for (OrderItem line : lines) {
+                MenuItem item = menuItemRepository.findById(line.menu_item_id).orElse(null);
+                if (item == null || item.customization_config == null) continue;
+                configuredOrderItems.validateItem(item, line.unit_price);
+                List<CreateOrderItemOptionRequest> selected = snapshots.stream()
+                    .filter(o -> line.id.equals(o.order_item_id)).map(this::configuredOptionRequest).toList();
+                configuredOrderItems.canonicalize(item, line.quantity, selected);
+            }
+        }
         Long storeId = order.store_id;
         Map<Long, Long> itemIds = new HashMap<>();
         lines.forEach(line -> itemIds.put(line.id, line.menu_item_id));
@@ -1583,6 +1634,10 @@ public class OrderServiceImpl implements OrderService {
             kitchenTask.created_at = now;
             kitchenTasks.add(kitchenTask);
 
+            List<OrderItemOption> itemOptions = optionsByOrderItemId.getOrDefault(orderItem.id, List.of());
+            if (menuItem.customization_config != null) {
+                kitchenTasks.addAll(createConfiguredComponentTasks(order, orderItem, itemOptions, now));
+            } else {
             kitchenTasks.addAll(createComboSideKitchenTasks(
                 order,
                 orderItem,
@@ -1590,6 +1645,7 @@ public class OrderServiceImpl implements OrderService {
                 now,
                 printingRules
             ));
+            }
         }
         return kitchenTaskRepository.saveAll(kitchenTasks);
     }
@@ -1608,6 +1664,11 @@ public class OrderServiceImpl implements OrderService {
                 addInventoryDemand(demand, bom.inventory_item_id, bom.qty_per_unit, orderItem.quantity);
             }
             for (OrderItemOption option : optionsByOrderItemId.getOrDefault(orderItem.id, List.of())) {
+                if (option.linked_menu_item_id_snapshot != null) {
+                    for (MenuItemBom bom : menuItemBomRepository.findAllByMenuItemId(option.linked_menu_item_id_snapshot)) {
+                        addInventoryDemand(demand, bom.inventory_item_id, bom.qty_per_unit, option.quantity);
+                    }
+                }
                 for (MenuItemOptionBom bom : menuItemOptionBomRepository.findAllByMenuItemOptionId(option.option_id)) {
                     // Option quantity is already the order-wide quantity in the existing contract.
                     addInventoryDemand(demand, bom.inventory_item_id, bom.qty_per_unit, option.quantity);
@@ -1666,6 +1727,7 @@ public class OrderServiceImpl implements OrderService {
             response.parent_option_id_snapshot = orderItemOption.parent_option_id_snapshot;
             response.option_name_snapshot_zh = orderItemOption.option_name_snapshot_zh;
             response.option_name_snapshot_en = orderItemOption.option_name_snapshot_en;
+            response.option_name_snapshot_fr = orderItemOption.option_name_snapshot_fr;
             response.price_delta = defaultIfNull(orderItemOption.price_delta);
             response.quantity = orderItemOption.quantity;
             optionsByOrderItemId.computeIfAbsent(orderItemOption.order_item_id, key -> new ArrayList<>()).add(response);
@@ -1696,6 +1758,7 @@ public class OrderServiceImpl implements OrderService {
             response.item_sku_snapshot = orderItem.item_sku_snapshot;
             response.item_name_snapshot_zh = orderItem.item_name_snapshot_zh;
             response.item_name_snapshot_en = orderItem.item_name_snapshot_en;
+            response.item_name_snapshot_fr = orderItem.item_name_snapshot_fr;
             response.quantity = orderItem.quantity;
             response.unit_price = defaultIfNull(orderItem.unit_price);
             response.line_amount = defaultIfNull(orderItem.line_amount);
@@ -1802,7 +1865,57 @@ public class OrderServiceImpl implements OrderService {
         snapshot.name_zh = orderItem.item_name_snapshot_zh;
         snapshot.name_en = orderItem.item_name_snapshot_en;
         snapshot.base_price = orderItem.unit_price;
+        snapshot.name_fr = orderItem.item_name_snapshot_fr;
+        snapshot.customization_config = live == null ? null : live.customization_config;
         return snapshot;
+    }
+
+    private CreateOrderItemOptionRequest configuredOptionRequest(OrderItemOption option) {
+        CreateOrderItemOptionRequest request = new CreateOrderItemOptionRequest();
+        request.option_id = option.option_id;
+        request.option_type_snapshot = option.option_type_snapshot;
+        request.option_code_snapshot = option.option_code_snapshot;
+        request.option_group_snapshot = option.option_group_snapshot;
+        request.option_name_snapshot_zh = option.option_name_snapshot_zh;
+        request.option_name_snapshot_en = option.option_name_snapshot_en;
+        request.option_name_snapshot_fr = option.option_name_snapshot_fr;
+        request.option_price_snapshot = option.price_delta;
+        request.quantity = option.quantity;
+        return request;
+    }
+
+    private String buildConfiguredInstructions(OrderItem line, List<OrderItemOption> options) {
+        List<String> parts = new ArrayList<>();
+        if (line.notes != null && !line.notes.isBlank()) parts.add(line.notes.trim());
+        for (OrderItemOption option : options) {
+            if (option.component_id_snapshot != null) continue;
+            String label = firstNonBlank(option.option_name_snapshot_zh, option.option_name_snapshot_en);
+            if (label != null) parts.add(label + (option.quantity != null && option.quantity > 1 ? " ×" + option.quantity : ""));
+        }
+        return parts.isEmpty() ? null : String.join(" | ", deduplicate(parts));
+    }
+
+    private List<KitchenTask> createConfiguredComponentTasks(Order order, OrderItem parent,
+        List<OrderItemOption> options, LocalDateTime now) {
+        List<KitchenTask> tasks = new ArrayList<>();
+        for (OrderItemOption option : options) {
+            if (option.component_id_snapshot == null) continue;
+            Station station = stationRepository.findActiveStationByIdAndStoreId(option.linked_station_id_snapshot, order.store_id);
+            if (station == null) throw new BusinessException("COMBO_COMPONENT_STATION_UNAVAILABLE");
+            KitchenTask task = new KitchenTask();
+            task.order_id = order.id;
+            task.order_item_id = parent.id;
+            task.component_option_id = option.id;
+            task.store_id = order.store_id;
+            task.station_code = station.code;
+            task.item_name_snapshot_zh = option.option_name_snapshot_zh;
+            task.item_name_snapshot_en = option.option_name_snapshot_en;
+            task.quantity = option.quantity; // Frozen order-line total; never multiply the parent twice.
+            task.status = KitchenTaskStatus.pending.name();
+            task.created_at = now;
+            tasks.add(task);
+        }
+        return tasks;
     }
 
     private boolean isDirectServe(String categoryCode, Store store) {
@@ -1848,6 +1961,9 @@ public class OrderServiceImpl implements OrderService {
         List<OrderItemOption> orderItemOptions,
         PrintingDisplayRuleContext printingRules
     ) {
+        if (menuItem.customization_config != null) {
+            return buildConfiguredInstructions(orderItem, orderItemOptions);
+        }
         if (!printingRules.lanzhouCompatibility()) {
             // Neutral orders freeze full option labels; cuisine abbreviations stay in compatibility mode.
             return buildBeverageInstructionsSnapshot(orderItem, orderItemOptions);
@@ -2216,7 +2332,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private boolean isComboSideKitchenTask(KitchenTask task) {
-        return ComboComponentSemanticResolver.isSyntheticSideTask(task);
+        return task.component_option_id != null || ComboComponentSemanticResolver.isSyntheticSideTask(task);
     }
 
     private record ComboSideSelection(String code, String labelZh, String labelEn, int quantity, List<String> instructions) {

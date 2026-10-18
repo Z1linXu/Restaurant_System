@@ -58,6 +58,18 @@ public class OrderItemOption {
     @Column(name = "option_name_snapshot_en")
     public String option_name_snapshot_en;
 
+    @Column(name = "option_name_snapshot_fr")
+    public String option_name_snapshot_fr;
+
+    @Column(name = "component_id_snapshot")
+    public Long component_id_snapshot;
+
+    @Column(name = "linked_menu_item_id_snapshot")
+    public Long linked_menu_item_id_snapshot;
+
+    @Column(name = "linked_station_id_snapshot")
+    public Long linked_station_id_snapshot;
+
     @Column(name = "price_delta")
     public BigDecimal price_delta;
 

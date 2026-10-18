@@ -14,8 +14,10 @@ final class NeutralKitchenReceiptContent {
         if (tasks.isEmpty()) return "";
         StringBuilder result = new StringBuilder();
         ExternalOrderReceiptHeader.append(result, request.order);
-        result.append(PrintMarkup.large(module)).append("\n");
-        if (Boolean.TRUE.equals(request.is_update_ticket)) result.append("UPDATED\n");
+        String title = "GRAB".equals(module) ? request.printing_rules.grabTitle() : module;
+        result.append(PrintMarkup.large(title)).append("\n");
+        if (Boolean.TRUE.equals(request.is_update_ticket))
+            result.append(request.printing_rules.chineseReceipt() ? "追加单\n" : "UPDATED\n");
         if (request.order != null) {
             String label = request.order.table_no != null ? request.order.table_no : request.order.pickup_no;
             if (label != null) result.append(PrintMarkup.large(label)).append("\n");
@@ -23,12 +25,17 @@ final class NeutralKitchenReceiptContent {
         for (KitchenTask task : tasks) {
             OrderItem item = request.order_items == null ? null : request.order_items.stream()
                 .filter(candidate -> Objects.equals(candidate.id, task.order_item_id)).findFirst().orElse(null);
-            String fullName = item == null ? task.item_name_snapshot_zh : item.item_name_snapshot_zh;
-            if (fullName == null || fullName.isBlank()) fullName = item == null ? task.item_name_snapshot_en : item.item_name_snapshot_en;
-            String name = request.printing_rules.resolveItemAlias(module, item == null ? null : item.item_sku_snapshot, fullName);
+            // A component task may share its parent's order_item_id. Its frozen name and
+            // total quantity describe the component, not another copy of the main dish.
+            String fullName = task.item_name_snapshot_zh;
+            if (fullName == null || fullName.isBlank()) fullName = task.item_name_snapshot_en;
+            if ((fullName == null || fullName.isBlank()) && item != null)
+                fullName = item.item_name_snapshot_zh == null ? item.item_name_snapshot_en : item.item_name_snapshot_zh;
+            boolean component = task.component_option_id != null;
+            String name = request.printing_rules.resolveItemAlias(module, item == null || component ? null : item.item_sku_snapshot, fullName);
             result.append(PrintMarkup.doubleHeight(Math.max(1, task.quantity == null ? 1 : task.quantity) + " x " + name)).append("\n");
             if (task.special_instructions_snapshot != null) result.append(task.special_instructions_snapshot).append("\n");
-            if (item != null && item.notes != null && !item.notes.isBlank()
+            if (!component && item != null && item.notes != null && !item.notes.isBlank()
                 && (task.special_instructions_snapshot == null || !task.special_instructions_snapshot.contains(item.notes)))
                 result.append(item.notes).append("\n");
         }

@@ -29,7 +29,73 @@ public class MenuCatalogHashService {
         appendPricingPolicy(canonical, catalog.pricing_policy);
         appendComboConfiguration(canonical, catalog.combo_configuration);
         appendCategories(canonical, catalog.categories);
+        appendCustomizationExtension(canonical, catalog);
         return "fnv1a32:" + fnv1a32(canonical.toString());
+    }
+
+    // Keep legacy canonical bytes stable. This suffix is shared with frontend menuCache.ts.
+    private void appendCustomizationExtension(StringBuilder target, MenuCatalogResponse catalog) {
+        var categories = catalog.categories == null ? List.<MenuCatalogResponse.CategoryResponse>of() : catalog.categories;
+        var groups = catalog.combo_configuration == null || catalog.combo_configuration.groups == null
+            ? List.<com.restaurant.system.menu.dto.StoreComboConfigurationResponse.GroupResponse>of() : catalog.combo_configuration.groups;
+        boolean extended = categories.stream().anyMatch(category -> category.name_fr != null
+            || (category.items != null && category.items.stream().anyMatch(item -> item.name_fr != null
+                || item.customization_config != null || Boolean.FALSE.equals(item.sellable) || hasFrenchOptions(item.options))))
+            || groups.stream().anyMatch(group -> group.name_fr != null || (group.components != null
+                && group.components.stream().anyMatch(component -> component.name_fr != null || component.linked_menu_item_name_fr != null)));
+        if (!extended) return;
+        append(target, "menu-customization-v1");
+        append(target, categories.size());
+        for (var category : categories) {
+            append(target, category.id); append(target, category.name_fr);
+            var items = category.items == null ? List.<MenuCatalogResponse.ItemResponse>of() : category.items;
+            append(target, items.size());
+            for (var item : items) {
+                append(target, item.id); append(target, item.name_fr); append(target, !Boolean.FALSE.equals(item.sellable));
+                var config = item.customization_config;
+                append(target, config != null);
+                if (config != null) {
+                    append(target, config.schema_version);
+                    append(target, config.option_groups.size());
+                    for (var group : config.option_groups) {
+                        append(target, group.option_group); append(target, group.min_select); append(target, group.max_select);
+                        append(target, group.distinct); append(target, group.default_option_codes.size());
+                        for (var code : group.default_option_codes) append(target, code);
+                    }
+                    var addonCodes = config.addon_max_quantities.keySet().stream().sorted().toList();
+                    append(target, addonCodes.size());
+                    for (var code : addonCodes) { append(target, code); append(target, config.addon_max_quantities.get(code)); }
+                    append(target, config.combo != null);
+                    if (config.combo != null) {
+                        append(target, config.combo.fixed_price); append(target, config.combo.group_codes.size());
+                        for (var code : config.combo.group_codes) append(target, code);
+                    }
+                }
+                appendFrenchOptions(target, item.options);
+            }
+        }
+        append(target, groups.size());
+        for (var group : groups) {
+            append(target, group.group_id); append(target, group.name_fr);
+            var components = group.components == null ? List.<com.restaurant.system.menu.dto.StoreComboConfigurationResponse.ComponentResponse>of() : group.components;
+            append(target, components.size());
+            for (var component : components) {
+                append(target, component.id); append(target, component.name_fr);
+                append(target, component.linked_menu_item_name_fr); append(target, component.synthetic_option_id);
+            }
+        }
+    }
+
+    private boolean hasFrenchOptions(List<MenuCatalogResponse.OptionResponse> options) {
+        return options != null && options.stream().anyMatch(option -> option.name_fr != null || hasFrenchOptions(option.side_item_remove_options));
+    }
+
+    private void appendFrenchOptions(StringBuilder target, List<MenuCatalogResponse.OptionResponse> options) {
+        var safe = options == null ? List.<MenuCatalogResponse.OptionResponse>of() : options;
+        append(target, safe.size());
+        for (var option : safe) {
+            append(target, option.id); append(target, option.name_fr); appendFrenchOptions(target, option.side_item_remove_options);
+        }
     }
 
     private void appendPricingPolicy(StringBuilder target, com.restaurant.system.menu.dto.StorePricingPolicyResponse policy) {

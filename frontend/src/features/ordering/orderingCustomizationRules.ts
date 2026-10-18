@@ -12,7 +12,9 @@ export function hasRequiredCustomization(item: MenuItem) {
     item.customization?.sizes?.required
     && (item.customization.sizes.options.length > 1),
   )
-  return Boolean(sizeRequiresChoice || item.customization?.soupBases?.required)
+  const modifierRequiresChoice = item.customization?.modifierGroups?.some((group) => group.minSelect > group.defaultOptionIds.length)
+  return Boolean(sizeRequiresChoice || item.customization?.soupBases?.required || modifierRequiresChoice
+    || (item.customization?.noodleTypeRequired && !item.customization.noodleTypeDefaultId))
 }
 
 export function isQuickAddItem(item: MenuItem) {

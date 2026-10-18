@@ -59,6 +59,8 @@ class MenuRevisionLockIntegrationTest {
 
     // This menu-lock slice never mutates users; user authorization is tested with real guards separately.
     @MockBean private PlatformResourceAuthorization resourceAuthorization;
+    // Customization rules are exercised separately; this slice proves the real menu mutation lock.
+    @MockBean private com.restaurant.system.menu.service.MenuItemCustomizationService customizations;
 
     @Autowired private MenuRevisionService menuRevisionService;
     @Autowired private PlatformAdminServiceImpl platformAdminService;
