@@ -218,3 +218,7 @@ allo_local_pilot:
   new_offline_price_ttl_authorized: false
   existing_local_demo_mutation_authorized: false
   physical_printing_authorized: false
+
+  apk_packaging_authorization: OWNER_20261019_LOCAL_DEBUG_APK_ONLY_NO_GLOBAL_PHASE_ADVANCE
+  apk_evidence: ../commercialization/merchants/allo-nouille/APK_DELIVERY_20261019.md
+  apk_status: BUILT_SIGNED_ASSETS_NATIVE_TESTS_REVIEW_PASS_DEVICE_NOT_RUN

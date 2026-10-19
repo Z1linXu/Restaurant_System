@@ -86,3 +86,7 @@ python3 "/Users/xuzilin/.codex/worktrees/allo-nouille-local-pilot/Restaurant_Sys
 ## 代码与交付来源
 
 Branch：`codex/allo-nouille-local-pilot`，base `cb6ff2e91409c3445d5a5e765e68f93599838638`。独立应用产物、最终源码指纹、Commit 和草稿 PR 记录在实施记录及私有 `delivery-manifest.json`。草稿 [PR #279](https://github.com/Z1linXu/Restaurant_System/pull/279) 仅面向 `codex/commercial-phase3-foundation`，不合并 main，不部署远端。
+
+## Android 测试安装包
+
+2026-10-19已生成独立包名的内置前端Debug APK；[APK交付与USB连接说明](APK_DELIVERY_20261019.md)。菜单仍从同一独立Demo后端读取，不是独立离线菜单数据库；真机安装验收尚未执行。

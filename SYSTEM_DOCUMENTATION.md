@@ -49,6 +49,18 @@ Generic grouped KDS/Ready component presentation is not accepted in this pilot;
 its KDS module stays disabled. Formal G3 closure and physical/native QA remain
 separate from local browser and MOCK acceptance.
 
+The local pilot also provides an opt-in debug APK with bundled DB5 frontend,
+packaged as `com.restaurant.pad.allo.demo` / Allô Nouille Demo. Its private packaging
+suffix and label leave the operational app and storage separate; native product
+source and tracked bundled assets are unchanged. The menu remains API-owned, with
+no embedded credentials/database. USB forwarding of 51026 permits the existing Web App URL
+`http://localhost:51026` with current REST/WebSocket policy and no LAN exposure.
+The bundled API can also use forwarded 8081, but its separate bundled-page Origin
+is not in this Demo's WebSocket allowlist; this mode has no accepted real-time
+connection. No backend Origin rule is silently broadened for packaging.
+Build/signature/assets/unit verification and actual device acceptance are separate;
+see [APK delivery](docs/commercialization/merchants/allo-nouille/APK_DELIVERY_20261019.md).
+
 ## Commercialization development reference
 
 The Owner authorized planning Phase 1 and isolated local implementation of Phase 2,
