@@ -624,15 +624,17 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                     return;
                 }
             }
-            if (orderUpdateBatchId != null) {
-                ReceiptRenderer updateRenderer = renderersByModuleCode.get(moduleCode);
-                if (updateRenderer != null) {
+            boolean neutralGrab = PrintModuleCode.GRAB.equals(moduleCode)
+                && ruleContext != null && !ruleContext.lanzhouCompatibility();
+            if (orderUpdateBatchId != null || neutralGrab) {
+                ReceiptRenderer preflightRenderer = renderersByModuleCode.get(moduleCode);
+                if (preflightRenderer != null) {
                     if (renderRequest == null) {
                         renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId, ruleContext);
                     }
                     if (renderRequest == null) {
                         logger.warn(
-                            "Skipping update print before job creation because no render data was available for module {} store {} order {} batch {}",
+                            "Skipping print before job creation because no render data was available for module {} store {} order {} batch {}",
                             moduleCode,
                             storeId,
                             orderId,
@@ -641,7 +643,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                         return;
                     }
                     try {
-                        preRenderedContent = updateRenderer.render(renderRequest);
+                        preRenderedContent = preflightRenderer.render(renderRequest);
                     } catch (RuntimeException exception) {
                         preRenderedContent = null;
                         logger.warn(
@@ -654,7 +656,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                     }
                     if (preRenderedContent != null && preRenderedContent.isBlank()) {
                         logger.info(
-                            "Skipping update print before job creation because module {} order {} batch {} has no printable content",
+                            "Skipping print before job creation because module {} order {} batch {} has no printable content",
                             moduleCode,
                             orderId,
                             orderUpdateBatchId

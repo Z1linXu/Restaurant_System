@@ -18,6 +18,7 @@ import { PricingRulesPanel } from './PricingRulesPanel'
 import { ItemPrintingRuleAliasPanel } from './PrintingDisplayRulesPanel'
 import { useAuth } from '../auth/useAuth'
 import { useCurrentStore } from '../store/useStoreContext'
+import type { ItemCustomizationConfiguration } from '../../types/ordering'
 import {
   applyCategoryItemOrder,
   enterMenuItemReorderMode,
@@ -35,6 +36,9 @@ interface MenuItemEditorState {
   station_id: number
   name_zh: string
   name_en: string
+  name_fr: string
+  sellable: boolean
+  customization_config?: ItemCustomizationConfiguration | null
   sku: string
   item_type: string
   base_price: number
@@ -86,6 +90,8 @@ function buildDraft(overview: PlatformAdminOverview, storeId: number): MenuItemE
     station_id: asNumber(defaultStation?.id, 0),
     name_zh: '',
     name_en: '',
+    name_fr: '',
+    sellable: true,
     sku: '',
     item_type: 'menu_item',
     base_price: 0,
@@ -104,6 +110,9 @@ function toEditorState(record: Record<string, unknown> | MenuItemAdminRecord, fa
     station_id: asNumber(record.station_id, 0),
     name_zh: asString(record.name_zh),
     name_en: asString(record.name_en),
+    name_fr: asString(record.name_fr),
+    sellable: asBoolean(record.sellable, true),
+    customization_config: record.customization_config as ItemCustomizationConfiguration | null | undefined,
     sku: asString(record.sku),
     item_type: asString(record.item_type, 'menu_item'),
     base_price: asNumber(record.base_price, 0),
@@ -122,7 +131,15 @@ function sameSavedValues(expected: MenuItemEditorState, actual: MenuItemEditorSt
     expected.is_sold_out === actual.is_sold_out &&
     expected.category_id === actual.category_id &&
     expected.station_id === actual.station_id
+      && expected.name_fr === actual.name_fr && expected.sellable === actual.sellable
   )
+}
+
+function menuItemWritePayload(item: MenuItemEditorState) {
+  const payload = { ...item }
+  // Option settings have their own scoped save; ordinary item edits must not replay stale settings.
+  delete payload.customization_config
+  return payload
 }
 
 export function MenuManagementPage() {
@@ -262,7 +279,7 @@ export function MenuManagementPage() {
         return true
       }
 
-      return [item.name_zh, item.name_en, item.sku]
+      return [item.name_zh, item.name_en, item.name_fr, item.sku]
         .map((value) => value.toLowerCase())
         .some((value) => value.includes(query))
     })
@@ -380,7 +397,7 @@ export function MenuManagementPage() {
       const saved = await savePlatformEntity(
         'menu/items',
         {
-          ...editor,
+          ...menuItemWritePayload(editor),
           base_price: normalizeMoney(Number(editor.base_price)),
           cost_per_item: normalizeMoney(Number(editor.cost_per_item)),
         },
@@ -425,7 +442,7 @@ export function MenuManagementPage() {
       await savePlatformEntity(
         'menu/items',
         {
-          ...item,
+          ...menuItemWritePayload(item),
           ...patch,
           base_price: normalizeMoney(item.base_price),
           cost_per_item: normalizeMoney(item.cost_per_item),
@@ -485,7 +502,7 @@ export function MenuManagementPage() {
       setSaving(true)
       setToast(null)
       const savedPayload = {
-        ...editor,
+        ...menuItemWritePayload(editor),
         is_active: nextActive,
         base_price: normalizeMoney(editor.base_price),
         cost_per_item: normalizeMoney(editor.cost_per_item),
@@ -808,6 +825,8 @@ export function MenuManagementPage() {
                             <td className="px-4 py-3">
                               <div className="font-semibold text-[var(--on-surface)]">{item.name_zh}</div>
                               <div className="text-[0.78rem] text-[var(--muted)]">{item.name_en || '—'} {item.sku ? `· ${item.sku}` : ''}</div>
+                              {item.name_fr ? <div lang="fr" className="text-[0.76rem] text-[var(--muted)]">{item.name_fr}</div> : null}
+                              {!item.sellable ? <div className="text-[0.76rem] text-[var(--muted)]">仅套餐组件</div> : null}
                             </td>
                             <td className="px-4 py-3 text-[var(--muted)]">{categoryNameById.get(item.category_id) ?? 'Unassigned'}</td>
                             <td className="px-4 py-3 text-[var(--muted)]">{stationNameById.get(item.station_id) ?? 'Unassigned'}</td>
@@ -935,6 +954,10 @@ export function MenuManagementPage() {
                         onChange={(event) => setEditor({ ...editor, name_en: event.target.value })}
                         className="mt-1 w-full rounded-[16px] border border-[rgba(26,28,25,0.08)] bg-white px-4 py-3 text-[0.92rem] outline-none"
                       />
+                    </label>
+                    <label className="block">
+                      <div className="text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">法语名称 / Nom français</div>
+                      <input value={editor.name_fr} onChange={(event) => setEditor({ ...editor, name_fr: event.target.value })} className="mt-1 w-full rounded-[16px] border border-black/10 bg-white px-4 py-3 text-[0.92rem] outline-none" />
                     </label>
 
                     <label className="block">
@@ -1104,6 +1127,7 @@ export function MenuManagementPage() {
                   storeId={Number(selectedStoreId)}
                   itemId={optionsItem.id}
                   itemName={`${optionsItem.name_zh || optionsItem.name_en || 'Menu Item'}${optionsItem.sku ? ` · ${optionsItem.sku}` : ''}`}
+                  customizationConfig={optionsItem.customization_config}
                 />
               ) : null}
             </div>

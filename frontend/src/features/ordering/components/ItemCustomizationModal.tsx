@@ -10,10 +10,7 @@ import {
   resolveComboGroupOptionId,
 } from '../../../utils/comboSelection'
 import { formatNoodleTypeDisplayLabel } from './noodleTypePresentation'
-
-function isToggleAddOn(labelZh: string, priceDelta?: number) {
-  return (priceDelta ?? 0) === 0 && (labelZh === '加香菜' || labelZh === '加葱')
-}
+import { customizationValidationMessage, isToggleAddOn } from '../../../utils/itemCustomization'
 
 const NOODLE_CATEGORY_CODES = new Set(['SOUP_NOODLE', 'DRY_NOODLE', 'FRIED_NOODLE', 'NOODLE', 'NOODLES'])
 
@@ -133,6 +130,7 @@ function AddOnQuantityRow({
   onDecrement,
   onIncrement,
   compact = false,
+  maxQuantity,
 }: {
   label: string
   sublabel: string
@@ -141,6 +139,7 @@ function AddOnQuantityRow({
   onDecrement: () => void
   onIncrement: () => void
   compact?: boolean
+  maxQuantity?: number
 }) {
   const presentation = useStorePresentation()
   return (
@@ -166,6 +165,8 @@ function AddOnQuantityRow({
           type="button"
           className={`inline-flex items-center justify-center bg-[var(--primary)] text-[var(--on-primary)] ${compact ? 'h-9 w-9 rounded-[10px] text-[1.1rem]' : 'h-10 w-10 rounded-[12px] text-xl'}`}
           onClick={onIncrement}
+          disabled={maxQuantity != null && quantity >= maxQuantity}
+          aria-label={`增加 ${label}`}
         >
           +
         </button>
@@ -186,10 +187,12 @@ export function ItemCustomizationModal({
   submitDisabledReason,
 }: ItemCustomizationModalProps) {
   const presentation = useStorePresentation()
+  const chineseFirst = presentation.locale.toLowerCase().startsWith('zh')
   const customization = item.customization
   const compact = useIpadLandscape()
-  const toggleAddOns = customization?.addOns?.filter((option) => isToggleAddOn(option.labelZh, option.priceDelta)) ?? []
-  const quantityAddOns = customization?.addOns?.filter((option) => !isToggleAddOn(option.labelZh, option.priceDelta)) ?? []
+  const toggleAddOns = customization?.addOns?.filter(isToggleAddOn) ?? []
+  const quantityAddOns = customization?.addOns?.filter((option) => !isToggleAddOn(option)) ?? []
+  const validationMessage = customizationValidationMessage(item, draft)
   const comboConfig = customization?.combo
   const isNoodleItem = isNoodleMenuItem(item)
   const showComboFirst = isNoodleItem && Boolean(comboConfig)
@@ -241,7 +244,9 @@ export function ItemCustomizationModal({
                 </span>
               </button>
               <span className={`${compact ? 'text-[1rem]' : 'text-[1.35rem]'} font-bold text-[var(--secondary)]`}>
-                +{formatStoreMoney(comboConfig.upcharge, presentation)}
+                {comboConfig.fixedPrice == null
+                  ? `+${formatStoreMoney(comboConfig.upcharge, presentation)}`
+                  : `套餐总价 ${formatStoreMoney(comboConfig.fixedPrice, presentation)}`}
               </span>
             </div>
 
@@ -250,20 +255,24 @@ export function ItemCustomizationModal({
                 {comboGroups.map((group) => (
                   <div key={group.groupCode} className="space-y-2">
                     <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
-                      {group.labelEn} / {group.labelZh}
+                      {chineseFirst ? group.labelZh : group.labelEn} / {chineseFirst ? group.labelEn : group.labelZh}
                     </span>
-                    <div className={`grid ${group.groupCode === 'COMBO_SIDE' ? 'md:grid-cols-3' : 'md:grid-cols-2'} ${compact ? 'gap-2.5' : 'gap-3'}`}>
+                    {group.required && group.options.length === 1 ? (
+                      <div className="rounded-[16px] bg-white/75 px-4 py-3 font-semibold">
+                        已包含：{chineseFirst ? group.options[0].labelZh : group.options[0].labelEn}
+                      </div>
+                    ) : <div className={`grid ${group.groupCode === 'COMBO_SIDE' ? 'md:grid-cols-3' : 'md:grid-cols-2'} ${compact ? 'gap-2.5' : 'gap-3'}`}>
                       {group.options.map((option) => (
                         <ChoiceButton
                           key={option.id}
                           active={resolveComboGroupOptionId(draft, group) === option.id}
-                          label={option.labelEn}
-                          sublabel={option.labelZh}
+                          label={chineseFirst ? option.labelZh : option.labelEn}
+                          sublabel={chineseFirst ? option.labelEn : option.labelZh}
                           compact={compact}
                           onClick={() => onChange(comboDraftWithSelection(draft, group, option.id))}
                         />
                       ))}
-                    </div>
+                    </div>}
                   </div>
                 ))}
 
@@ -336,13 +345,14 @@ export function ItemCustomizationModal({
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
           <div className={`border-b border-[rgba(26,28,25,0.05)] ${compact ? 'px-5 py-4' : 'px-8 py-7'}`}>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--primary)]">Noodle Craft</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--primary)]">{presentation.brandName}</p>
             <div className={`${compact ? 'mt-2.5' : 'mt-3'} flex items-start justify-between gap-6`}>
               <div>
                 <h2 className={`${compact ? 'text-[1.8rem]' : 'text-[2.35rem]'} font-extrabold tracking-[-0.05em] text-[var(--on-surface)]`}>
-                  {item.nameEn}
+                  {chineseFirst ? item.nameZh || item.nameEn : item.nameEn || item.nameZh}
                 </h2>
-                <p className={`mt-1 ${compact ? 'text-[1.45rem]' : 'text-[2rem]'} font-bold text-[rgba(53,43,38,0.9)]`}>{item.nameZh}</p>
+                <p className={`mt-1 ${compact ? 'text-[1.45rem]' : 'text-[2rem]'} font-bold text-[rgba(53,43,38,0.9)]`}>{chineseFirst ? item.nameEn : item.nameZh}</p>
+                {item.nameFr ? <p className="mt-1 text-sm text-[var(--muted)]" lang="fr">{item.nameFr}</p> : null}
               </div>
               <div className={`${compact ? 'text-[1.8rem]' : 'text-[2.2rem]'} font-extrabold tracking-[-0.04em] text-[var(--primary)]`}>
                 {formatStoreMoney(item.price, presentation)}
@@ -450,6 +460,36 @@ export function ItemCustomizationModal({
               </section>
             ) : null}
 
+            {customization?.modifierGroups?.map((group) => {
+              const selectedIds = draft.modifierSelections?.[group.groupCode] ?? []
+              return (
+                <section key={group.groupCode} className={compact ? 'space-y-3' : 'space-y-4'}>
+                  <h3 className={`${compact ? 'text-[1.1rem]' : 'text-[1.45rem]'} font-bold`}>
+                    {group.labelZh} / {group.labelEn}
+                  </h3>
+                  <p className="text-sm text-[var(--muted)]">
+                    {group.minSelect === group.maxSelect ? `请选择 ${group.minSelect} 项` : `选择 ${group.minSelect}–${group.maxSelect} 项`}
+                    {group.distinct ? '，不可重复' : ''} · 已选 {selectedIds.length}
+                  </p>
+                  <div className={`grid sm:grid-cols-2 ${compact ? 'gap-2.5' : 'gap-3'}`}>
+                    {group.options.map((option) => {
+                      const selected = selectedIds.includes(option.id)
+                      return <ChoiceButton key={option.id} active={selected}
+                        label={`${chineseFirst ? option.labelZh : option.labelEn}${formatPriceDelta(option.priceDelta, presentation)}`}
+                        sublabel={chineseFirst ? option.labelEn : option.labelZh} compact={compact}
+                        onClick={() => {
+                          if (!selected && selectedIds.length >= group.maxSelect) return
+                          onChange({ ...draft, modifierSelections: {
+                            ...(draft.modifierSelections ?? {}),
+                            [group.groupCode]: selected ? selectedIds.filter((id) => id !== option.id) : [...selectedIds, option.id],
+                          } })
+                        }} />
+                    })}
+                  </div>
+                </section>
+              )
+            })}
+
             {!showComboFirst ? comboSection : null}
 
             {(customization?.addOns?.length || customization?.removeOptions?.length) ? (
@@ -463,8 +503,8 @@ export function ItemCustomizationModal({
                         <CheckboxRow
                           key={option.id}
                           checked={checked}
-                          label={option.labelEn}
-                          sublabel={option.labelZh}
+                          label={`${chineseFirst ? option.labelZh : option.labelEn}${formatPriceDelta(option.priceDelta, presentation)}`}
+                          sublabel={chineseFirst ? option.labelEn : option.labelZh}
                           compact={compact}
                           onClick={() =>
                             onChange({
@@ -486,6 +526,7 @@ export function ItemCustomizationModal({
                           label={option.labelEn}
                           sublabel={option.labelZh}
                           priceDelta={option.priceDelta}
+                          maxQuantity={option.maxQuantity}
                           quantity={quantity}
                           compact={compact}
                           onDecrement={() =>
@@ -502,7 +543,7 @@ export function ItemCustomizationModal({
                               ...draft,
                               addOnQuantities: {
                                 ...draft.addOnQuantities,
-                                [option.id]: quantity + 1,
+                                [option.id]: Math.min(option.maxQuantity ?? Number.MAX_SAFE_INTEGER, quantity + 1),
                               },
                             })
                           }
@@ -594,15 +635,15 @@ export function ItemCustomizationModal({
               </div>
             </div>
 
-            {submitDisabled && submitDisabledReason ? (
+            {(submitDisabled && submitDisabledReason) || validationMessage ? (
               <div className="rounded-[16px] bg-[rgba(151,34,34,0.08)] px-4 py-3 text-[0.9rem] font-bold text-[rgb(116,22,22)]">
-                {submitDisabledReason}
+                {submitDisabledReason || validationMessage}
               </div>
             ) : null}
             <Button
               className={compact ? 'min-h-12 rounded-[18px] px-6 text-[0.95rem]' : 'min-h-16 rounded-[24px] px-8 text-lg'}
               onClick={onSubmit}
-              disabled={submitDisabled}
+              disabled={submitDisabled || Boolean(validationMessage)}
             >
               {mode === 'add' ? 'Add to Order / 添加到订单' : 'Update Item / 更新菜品'}
             </Button>

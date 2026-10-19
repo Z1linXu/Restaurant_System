@@ -15,15 +15,19 @@ import {
   defaultNoodleTypeOptionId,
 } from './menuOptionDefaults'
 import { ItemAddonsSection, isOrdinaryAddon } from './ItemAddonsSection'
+import type { ItemCustomizationConfiguration } from '../../types/ordering'
+import { fetchItemCustomization, updateItemCustomization } from '../../services/itemCustomizationService'
+import { ItemCustomizationRulesPanel } from './ItemCustomizationRulesPanel'
 
-type EditableOptionGroup = 'REMOVE' | 'SOUP_BASE' | 'SPICY_LEVEL' | 'COMBO_EGG' | 'COMBO_SIDE' | 'COMBO_SIDE_REMOVE'
+type EditableOptionGroup = 'REMOVE' | 'NOODLE_TYPE' | 'PROTEIN' | 'SOUP_BASE' | 'SPICY_LEVEL' | 'COMBO_EGG' | 'COMBO_SIDE' | 'COMBO_SIDE_REMOVE'
 type DisplayOptionGroup = EditableOptionGroup | 'NOODLE_TYPE'
 
-const EDITABLE_GROUPS: EditableOptionGroup[] = ['REMOVE', 'SOUP_BASE', 'SPICY_LEVEL', 'COMBO_EGG', 'COMBO_SIDE', 'COMBO_SIDE_REMOVE']
-const DISPLAY_GROUPS: DisplayOptionGroup[] = ['NOODLE_TYPE', ...EDITABLE_GROUPS]
+const EDITABLE_GROUPS: EditableOptionGroup[] = ['REMOVE', 'NOODLE_TYPE', 'PROTEIN', 'SOUP_BASE', 'SPICY_LEVEL', 'COMBO_EGG', 'COMBO_SIDE', 'COMBO_SIDE_REMOVE']
+const DISPLAY_GROUPS: DisplayOptionGroup[] = EDITABLE_GROUPS
 
 const GROUP_LABELS: Record<DisplayOptionGroup, string> = {
   NOODLE_TYPE: '面型 / Noodle Type',
+  PROTEIN: '蛋白选择 / Protein',
   REMOVE: 'Remove',
   SOUP_BASE: 'Soup Base',
   SPICY_LEVEL: 'Spicy Level',
@@ -54,12 +58,15 @@ interface MenuOptionsPanelProps {
   storeId: number
   itemId: number
   itemName: string
+  customizationConfig?: ItemCustomizationConfiguration | null
 }
 
 function optionTypeForGroup(group: EditableOptionGroup) {
   if (group === 'REMOVE' || group === 'COMBO_SIDE_REMOVE') return 'remove'
   if (group === 'SOUP_BASE') return 'soup_base'
   if (group === 'SPICY_LEVEL') return 'spicy_level'
+  if (group === 'NOODLE_TYPE') return 'noodle_type'
+  if (group === 'PROTEIN') return 'modifier'
   return 'addon'
 }
 
@@ -133,6 +140,7 @@ function toPayload(option: MenuItemOptionAdminRecord): MenuItemOptionPayload {
     sort_order: option.sort_order,
     name_zh: option.name_zh,
     name_en: option.name_en,
+    name_fr: option.name_fr,
     price_delta: Number(option.price_delta ?? 0),
     is_active: option.is_active,
   }
@@ -169,7 +177,7 @@ function formatMoney(value: number | string | null | undefined) {
   return `$${Number(value ?? 0).toFixed(2)}`
 }
 
-export function MenuOptionsPanel({ storeId, itemId, itemName }: MenuOptionsPanelProps) {
+export function MenuOptionsPanel({ storeId, itemId, itemName, customizationConfig }: MenuOptionsPanelProps) {
   const [options, setOptions] = useState<MenuItemOptionAdminRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -180,6 +188,7 @@ export function MenuOptionsPanel({ storeId, itemId, itemName }: MenuOptionsPanel
   const [enabledSizeCodes, setEnabledSizeCodes] = useState<StandardSizeCode[]>(['size_regular'])
   const [defaultSizeCode, setDefaultSizeCode] = useState<StandardSizeCode>('size_regular')
   const [comboAllowed, setComboAllowed] = useState(false)
+  const [customizationRules, setCustomizationRules] = useState(customizationConfig)
 
   const applyLoadedOptions = useCallback((nextOptions: MenuItemOptionAdminRecord[]) => {
     setOptions(nextOptions)
@@ -209,6 +218,19 @@ export function MenuOptionsPanel({ storeId, itemId, itemName }: MenuOptionsPanel
     void loadOptions()
   }, [itemId, loadOptions])
 
+  useEffect(() => {
+    let active = true
+    setCustomizationRules(customizationConfig)
+    if (customizationConfig) {
+      void fetchItemCustomization(itemId).then((configuration) => {
+        if (active) setCustomizationRules(configuration)
+      }).catch((failure) => {
+        if (active) setError(failure instanceof Error ? failure.message : '读取选项设置失败')
+      })
+    }
+    return () => { active = false }
+  }, [itemId, customizationConfig])
+
   const groupedOptions = useMemo(
     () =>
       DISPLAY_GROUPS.map((group) => ({
@@ -219,7 +241,10 @@ export function MenuOptionsPanel({ storeId, itemId, itemName }: MenuOptionsPanel
       })).filter(({ group, options: groupOptions }) => group === 'REMOVE' || group === 'NOODLE_TYPE' || groupOptions.length > 0),
     [options],
   )
-  const defaultNoodleTypeId = useMemo(() => defaultNoodleTypeOptionId(options), [options])
+  const defaultNoodleTypeId = useMemo(() => {
+    const rule = customizationRules?.option_groups.find((group) => group.option_group === 'NOODLE_TYPE')
+    return rule ? options.find((option) => option.is_active && rule.default_option_codes.includes(option.option_code ?? ''))?.id ?? null : defaultNoodleTypeOptionId(options)
+  }, [options, customizationRules])
 
   const beginCreate = () => {
     setEditingId(null)
@@ -341,7 +366,15 @@ export function MenuOptionsPanel({ storeId, itemId, itemName }: MenuOptionsPanel
     try {
       setSaving(true)
       setError(null)
-      await reorderOwnerMenuItemOptions(itemId, reorderPayload)
+      if (customizationRules && option.option_code) {
+        const ruleExists = customizationRules.option_groups.some((group) => group.option_group === 'NOODLE_TYPE')
+        const next = { ...customizationRules, option_groups: ruleExists
+          ? customizationRules.option_groups.map((group) => group.option_group === 'NOODLE_TYPE' ? { ...group, default_option_codes: [option.option_code!] } : group)
+          : [...customizationRules.option_groups, { option_group: 'NOODLE_TYPE', min_select: 1, max_select: 1, distinct: true, default_option_codes: [option.option_code] }] }
+        setCustomizationRules(await updateItemCustomization(itemId, next))
+      } else {
+        await reorderOwnerMenuItemOptions(itemId, reorderPayload)
+      }
       await loadOptions()
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Failed to set default noodle type')
@@ -421,7 +454,7 @@ export function MenuOptionsPanel({ storeId, itemId, itemName }: MenuOptionsPanel
         </div>
       ) : null}
 
-      <section className="mt-4 rounded-[20px] border border-[rgba(26,28,25,0.06)] bg-white/70 p-4">
+      {(!customizationRules || options.some(isSizeOption)) ? <section className="mt-4 rounded-[20px] border border-[rgba(26,28,25,0.06)] bg-white/70 p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-[0.9rem] font-black uppercase tracking-[0.12em] text-[var(--primary)]">Size Configuration / 规格</div>
@@ -467,14 +500,16 @@ export function MenuOptionsPanel({ storeId, itemId, itemName }: MenuOptionsPanel
             )
           })}
         </div>
-      </section>
+      </section> : null}
+
+      {customizationRules ? <ItemCustomizationRulesPanel key={`${itemId}:${JSON.stringify(customizationRules)}`} itemId={itemId} configuration={customizationRules} options={options} onSaved={setCustomizationRules} /> : null}
 
       <section className="mt-4 rounded-[20px] border border-[rgba(26,28,25,0.06)] bg-white/70 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="text-[0.9rem] font-black uppercase tracking-[0.12em] text-[var(--primary)]">Combo Policy / 套餐</div>
             <div className="mt-1 text-[0.76rem] text-[var(--muted)]">
-              Item only controls whether Combo is allowed; Combo price is Store-level.
+              {customizationRules?.combo ? `套餐税前总价 ${formatMoney(customizationRules.combo.fixed_price)}；加料另计。` : 'Item only controls whether Combo is allowed; Combo price is Store-level.'}
             </div>
           </div>
           <button
@@ -509,7 +544,7 @@ export function MenuOptionsPanel({ storeId, itemId, itemName }: MenuOptionsPanel
                 }}
                 className="mt-1 w-full rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2.5 text-[0.88rem] outline-none"
               >
-                {EDITABLE_GROUPS.filter((group) => group === 'REMOVE' || group === editableGroupFromDraft(draft)).map((group) => (
+                {EDITABLE_GROUPS.filter((group) => group === 'REMOVE' || group === editableGroupFromDraft(draft) || (customizationRules && ['NOODLE_TYPE', 'PROTEIN'].includes(group))).map((group) => (
                   <option key={group} value={group}>{GROUP_LABELS[group]}</option>
                 ))}
               </select>
@@ -546,6 +581,7 @@ export function MenuOptionsPanel({ storeId, itemId, itemName }: MenuOptionsPanel
               placeholder="Option code"
               className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2.5 text-[0.88rem] outline-none"
             />
+            {customizationRules ? <input value={draft.name_fr ?? ''} onChange={(event) => setDraft({ ...draft, name_fr: event.target.value })} placeholder="Nom français" className="rounded-[14px] border border-black/10 bg-white px-3 py-2.5" /> : null}
             <label className="flex items-center gap-2 rounded-[14px] bg-white px-3 py-2.5 text-[0.86rem] font-semibold text-[var(--on-surface)]">
               <input
                 type="checkbox"
@@ -592,7 +628,7 @@ export function MenuOptionsPanel({ storeId, itemId, itemName }: MenuOptionsPanel
               <div className="text-[0.82rem] font-black uppercase tracking-[0.12em] text-[var(--primary)]">{GROUP_LABELS[group]}</div>
               {group === 'NOODLE_TYPE' ? (
                 <div className="mt-1 text-[0.76rem] text-[var(--muted)]">
-                  第一个启用的面型是新点单默认值。点击“设为默认”会保存排序并刷新菜单版本。
+                  {customizationRules ? '默认面型用于新点单；可在此新增面型并修改默认值。' : '第一个启用的面型是新点单默认值。点击“设为默认”会保存排序并刷新菜单版本。'}
                 </div>
               ) : null}
               <div className="mt-2 space-y-2">
@@ -630,7 +666,7 @@ export function MenuOptionsPanel({ storeId, itemId, itemName }: MenuOptionsPanel
                           ) : null}
                           <button type="button" aria-label={`上移 ${option.name_zh}`} onClick={() => void moveOption(option, -1)} disabled={saving || optionIndex === 0} className="min-h-10 rounded-full bg-white px-3 py-1 text-[0.72rem] font-semibold disabled:opacity-35">Up</button>
                           <button type="button" aria-label={`下移 ${option.name_zh}`} onClick={() => void moveOption(option, 1)} disabled={saving || optionIndex === groupOptions.length - 1} className="min-h-10 rounded-full bg-white px-3 py-1 text-[0.72rem] font-semibold disabled:opacity-35">Down</button>
-                          {group !== 'NOODLE_TYPE' ? (
+                          {group !== 'NOODLE_TYPE' || customizationRules ? (
                             <button type="button" onClick={() => beginEdit(option)} disabled={saving} className="min-h-10 rounded-full bg-white px-3 py-1 text-[0.72rem] font-semibold disabled:opacity-50">Edit</button>
                           ) : null}
                           <button

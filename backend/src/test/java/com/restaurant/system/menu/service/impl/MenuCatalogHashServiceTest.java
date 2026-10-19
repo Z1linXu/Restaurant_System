@@ -16,6 +16,36 @@ class MenuCatalogHashServiceTest {
     private final MenuCatalogHashService service = new MenuCatalogHashService();
 
     @Test
+    void customizationAndFrenchLabelsHaveAStableSharedOfflineFingerprint() {
+        MenuCatalogResponse catalog = catalog();
+        var category = catalog.categories.get(0);
+        category.name_fr = "Soupes";
+        var item = category.items.get(0);
+        item.name_fr = "Soupe au bœuf";
+        item.options.get(0).name_fr = "Moyen";
+        item.customization_config = new com.restaurant.system.menu.dto.ItemCustomizationConfiguration();
+        var group = new com.restaurant.system.menu.dto.ItemCustomizationConfiguration.OptionGroup();
+        group.option_group = "SPICY_LEVEL"; group.min_select = 1; group.max_select = 1;
+        group.default_option_codes = List.of("medium_spicy");
+        item.customization_config.option_groups = List.of(group);
+        item.customization_config.addon_max_quantities = java.util.Map.of("extra_noodles", 1);
+        item.customization_config.combo = new com.restaurant.system.menu.dto.ItemCustomizationConfiguration.Combo();
+        item.customization_config.combo.fixed_price = new BigDecimal("19.99");
+        item.customization_config.combo.group_codes = List.of("COMBO_SIDE");
+        var combo = catalog.combo_configuration.groups.get(0);
+        combo.name_fr = "Œuf";
+        combo.components.get(0).name_fr = "Œuf mariné";
+        combo.components.get(0).synthetic_option_id = -1_000_001_001L;
+        String hash = service.calculate(catalog);
+        assertEquals("fnv1a32:25b96080", hash);
+        item.customization_config.addon_max_quantities = java.util.Map.of("extra_noodles", 2);
+        assertNotEquals(hash, service.calculate(catalog));
+        item.customization_config.addon_max_quantities = java.util.Map.of("extra_noodles", 1);
+        item.customization_config.combo.fixed_price = new BigDecimal("20.99");
+        assertNotEquals(hash, service.calculate(catalog));
+    }
+
+    @Test
     void hashIsDeterministicAndExcludesGeneratedTimestamp() {
         MenuCatalogResponse catalog = catalog();
         String first = service.calculate(catalog);

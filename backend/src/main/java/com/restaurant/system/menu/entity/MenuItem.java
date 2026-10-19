@@ -36,6 +36,16 @@ public class MenuItem {
     @Column(name = "name_en")
     public String name_en;
 
+    @Column(name = "name_fr")
+    public String name_fr;
+
+    @Column(name = "sellable", nullable = false)
+    public Boolean sellable;
+
+    @jakarta.persistence.Convert(converter = ItemCustomizationConfigurationConverter.class)
+    @Column(name = "customization_config", columnDefinition = "text")
+    public com.restaurant.system.menu.dto.ItemCustomizationConfiguration customization_config;
+
     @Column(name = "sku")
     public String sku;
 
@@ -66,4 +76,9 @@ public class MenuItem {
 
     @Column(name = "updated_at")
     public LocalDateTime updated_at;
+
+    @jakarta.persistence.PrePersist
+    public void applySellableDefault() {
+        if (sellable == null) sellable = true;
+    }
 }

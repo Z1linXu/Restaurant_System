@@ -196,6 +196,46 @@ class StoreComboConfigurationServiceImplTest {
     }
 
     @Test
+    void explicitCodesFrenchLabelsAndDurableComponentIdentitySurviveConfiguration() {
+        var linked = menuItem(900L, 10L, true); linked.name_fr = "Rouleau végétarien (1 pièce)"; linked.sellable = false;
+        when(menuItemRepository.findById(900L)).thenReturn(Optional.of(linked));
+        when(menuItemRepository.findAllById(List.of(900L))).thenReturn(List.of(linked));
+        var component = componentUpdate(null, "COMBO_TEST_INCLUDED", "combo_test_roll_1pc", "素春卷（1条）", "Spring roll (1)", true, 10, true);
+        component.name_fr = "Rouleau végétarien (1 pièce)";
+        component.linked_menu_item_id = 900L; component.business_behavior = "LINKED_MENU_ITEM";
+        var group = groupUpdate("COMBO_TEST_INCLUDED", "包含春卷", "Included roll", "EXACTLY_ONE", component);
+        group.name_fr = "Rouleau inclus";
+        var request = new StoreComboConfigurationUpdateRequest(); request.store_id = 10L; request.groups = List.of(group);
+
+        var saved = service.updateConfiguration(10L, request).groups.get(0);
+        assertEquals("COMBO_TEST_INCLUDED", saved.group_code);
+        assertEquals("Rouleau inclus", saved.name_fr);
+        var savedComponent = saved.components.get(0);
+        assertEquals("combo_test_roll_1pc", savedComponent.component_code);
+        assertEquals("Rouleau végétarien (1 pièce)", savedComponent.name_fr);
+        assertEquals("Rouleau végétarien (1 pièce)", savedComponent.linked_menu_item_name_fr);
+        assertEquals(-(1_000_000_000L + savedComponent.id), savedComponent.synthetic_option_id);
+    }
+
+    @Test
+    void existingForeignGroupIdCannotFallbackToAnAuthorizedGroupCode() {
+        var request = new StoreComboConfigurationUpdateRequest(); request.store_id = 10L;
+        var foreign = groupUpdate("COMBO_EGG", "蛋类", "Egg", "EXACTLY_ONE"); foreign.group_id = 201L;
+        request.groups = List.of(foreign);
+        assertEquals("COMBO_GROUP_STORE_MISMATCH", assertThrows(BusinessException.class,
+            () -> service.updateConfiguration(10L, request)).getMessage());
+        verify(menuRevisionService, never()).incrementRevision(any());
+    }
+
+    @Test
+    void explicitNewCodesRejectMalformedValuesRatherThanSilentlyGeneratingDifferentCodes() {
+        var request = new StoreComboConfigurationUpdateRequest(); request.store_id = 10L;
+        request.groups = List.of(groupUpdate("BAD GROUP!", "组", "Group", "EXACTLY_ONE"));
+        assertEquals("COMBO_GROUP_CODE_INVALID", assertThrows(BusinessException.class,
+            () -> service.updateConfiguration(10L, request)).getMessage());
+    }
+
+    @Test
     void conditionalStoreWriteRejectsAStaleItemReadWithoutAdvancingRevision() {
         when(menuItemRepository.findById(200L)).thenReturn(Optional.of(menuItem(200L, 10L, true)));
         when(menuItemRepository.updateItemComboEggDefault(eq(200L), eq(10L), isNull(), any())).thenReturn(0);

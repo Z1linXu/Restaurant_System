@@ -73,6 +73,8 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
     private final ObjectMapper objectMapper;
     private final PlatformResourceAuthorization userAuthorization;
     private final EntityManager entityManager;
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.restaurant.system.menu.service.MenuItemCustomizationService customizations;
 
     public PlatformAdminServiceImpl(
         OrganizationRepository organizationRepository,
@@ -292,6 +294,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         target.code = menuCategory.code;
         target.name_zh = menuCategory.name_zh;
         target.name_en = menuCategory.name_en;
+        target.name_fr = menuCategory.name_fr == null ? target.name_fr : menuCategory.name_fr;
         target.sort_order = menuCategory.sort_order;
         target.is_active = menuCategory.is_active == null ? true : menuCategory.is_active;
         stamp(target, menuCategory.id == null);
@@ -344,6 +347,9 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         target.sku = menuItem.sku;
         target.name_zh = menuItem.name_zh;
         target.name_en = menuItem.name_en;
+        target.name_fr = menuItem.name_fr == null ? target.name_fr : menuItem.name_fr;
+        if (creating || menuItem.sellable != null) target.sellable = !Boolean.FALSE.equals(menuItem.sellable);
+        if (menuItem.customization_config != null) target.customization_config = menuItem.customization_config;
         target.item_type = menuItem.item_type;
         target.base_price = menuItem.base_price;
         target.cost_per_item = menuItem.cost_per_item;
@@ -355,6 +361,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
             target.sort_order = nextMenuItemSortOrder(target.store_id, target.category_id);
         }
         stamp(target, menuItem.id == null);
+        if (target.customization_config != null) customizations.validateConfiguration(target);
         MenuItem saved = menuItemRepository.save(target);
         if (creating) {
             materializeStoreOnlyMapping(saved);
@@ -440,6 +447,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         target.sort_order = menuItemOption.sort_order;
         target.name_zh = menuItemOption.name_zh;
         target.name_en = menuItemOption.name_en;
+        target.name_fr = menuItemOption.name_fr == null ? target.name_fr : menuItemOption.name_fr;
         target.price_delta = menuItemOption.price_delta;
         target.is_active = menuItemOption.is_active == null ? true : menuItemOption.is_active;
         stamp(target, menuItemOption.id == null);

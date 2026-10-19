@@ -26,6 +26,7 @@ export function OrderLineItemRow({
   disabled = false,
 }: OrderLineItemRowProps) {
   const presentation = useStorePresentation()
+  const chineseFirst = presentation.locale.toLowerCase().startsWith('zh')
   const [noteValue, setNoteValue] = useState(item.notes)
   const editingDisabled = item.locked || disabled
 
@@ -50,8 +51,8 @@ export function OrderLineItemRow({
     <div className={`bg-[var(--surface-container-lowest)] shadow-[0_12px_30px_rgba(26,28,25,0.05)] ${compact ? 'rounded-[20px] p-3.5' : 'rounded-[26px] p-5'}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
-          <h4 className={`${compact ? 'text-[1.15rem]' : 'text-[1.55rem]'} font-bold tracking-[-0.04em] text-[var(--on-surface)]`}>{item.nameEn}</h4>
-          <p className={`${compact ? 'text-[0.86rem]' : 'text-base'} font-medium text-[var(--muted)]`}>{item.nameZh}</p>
+          <h4 className={`${compact ? 'text-[1.15rem]' : 'text-[1.55rem]'} font-bold tracking-[-0.04em] text-[var(--on-surface)]`}>{chineseFirst ? item.nameZh || item.nameEn : item.nameEn || item.nameZh}</h4>
+          <p className={`${compact ? 'text-[0.86rem]' : 'text-base'} font-medium text-[var(--muted)]`}>{chineseFirst ? item.nameEn : item.nameZh}</p>
           {editingDisabled ? (
             <span className="inline-flex rounded-full bg-[rgba(92,82,74,0.10)] px-2.5 py-1 text-[0.72rem] font-bold text-[var(--muted)]">
               {item.locked ? 'Locked / 已出单' : '待提交锁定'}
@@ -79,7 +80,7 @@ export function OrderLineItemRow({
               key={`${tag.en}-${index}`}
               className={`rounded-full bg-[rgba(97,0,0,0.06)] font-semibold text-[var(--primary)] ${compact ? 'px-2.5 py-1 text-[0.72rem]' : 'px-3 py-1.5 text-sm'}`}
             >
-              {tag.en} / {tag.zh}
+              {chineseFirst ? tag.zh : tag.en} / {chineseFirst ? tag.en : tag.zh}
             </span>
           ))}
         </div>

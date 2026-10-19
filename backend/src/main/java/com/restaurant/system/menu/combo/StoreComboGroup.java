@@ -31,6 +31,9 @@ public class StoreComboGroup {
     @Column(name = "name_en", nullable = false)
     public String name_en;
 
+    @Column(name = "name_fr")
+    public String name_fr;
+
     @Column(name = "selection_rule", nullable = false)
     public String selection_rule;
 

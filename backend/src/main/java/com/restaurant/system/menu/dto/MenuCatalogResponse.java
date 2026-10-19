@@ -60,6 +60,7 @@ public class MenuCatalogResponse {
         public String code;
         public String name_zh;
         public String name_en;
+        public String name_fr;
         public Integer sort_order;
         public Boolean is_active;
         public List<ItemResponse> items;
@@ -89,6 +90,7 @@ public class MenuCatalogResponse {
         public Long station_id;
         public String name_zh;
         public String name_en;
+        public String name_fr;
         public String sku;
         public String item_type;
         public BigDecimal base_price;
@@ -97,6 +99,8 @@ public class MenuCatalogResponse {
         public Integer sort_order;
         public List<OptionResponse> options;
         public String default_combo_egg_component_code;
+        public Boolean sellable;
+        public ItemCustomizationConfiguration customization_config;
 
         public ItemResponse(
             Long id,
@@ -136,6 +140,7 @@ public class MenuCatalogResponse {
         public Integer sort_order;
         public String name_zh;
         public String name_en;
+        public String name_fr;
         public BigDecimal price_delta;
         public Boolean is_active;
         public List<OptionResponse> side_item_remove_options;

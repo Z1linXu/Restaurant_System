@@ -1,4 +1,5 @@
 import type { MenuCategory } from '../../../types/ordering'
+import { useStorePresentation } from '../../store/useStorePresentation'
 
 interface CategoryNavProps {
   categories: MenuCategory[]
@@ -8,6 +9,7 @@ interface CategoryNavProps {
 }
 
 export function CategoryNav({ categories, activeCategoryId, onSelect, compact = false }: CategoryNavProps) {
+  const chineseFirst = useStorePresentation().locale.toLowerCase().startsWith('zh')
   return (
     <div className={compact ? 'space-y-2.5' : 'space-y-3'}>
       {categories.map((category) => {
@@ -25,8 +27,8 @@ export function CategoryNav({ categories, activeCategoryId, onSelect, compact = 
             } ${compact ? 'min-h-[3.6rem] rounded-[18px] px-4' : 'min-h-16 rounded-[22px] px-5'}`}
           >
             <div className="space-y-1">
-              <div className={compact ? 'text-[1.02rem] font-bold' : 'text-[1.2rem] font-bold'}>{category.labelEn}</div>
-              <div className={compact ? 'text-[0.8rem] font-medium text-[var(--muted)]' : 'text-sm font-medium text-[var(--muted)]'}>{category.labelZh}</div>
+              <div className={compact ? 'text-[1.02rem] font-bold' : 'text-[1.2rem] font-bold'}>{chineseFirst ? category.labelZh || category.labelEn : category.labelEn || category.labelZh}</div>
+              <div className={compact ? 'text-[0.8rem] font-medium text-[var(--muted)]' : 'text-sm font-medium text-[var(--muted)]'}>{chineseFirst ? category.labelEn : category.labelZh}</div>
             </div>
           </button>
         )

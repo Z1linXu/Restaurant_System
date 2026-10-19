@@ -24,9 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class StoreAddonService {
     public record Addon(Long id, Long store_id, String code, String name_zh, String name_en,
-                        BigDecimal price, boolean active, boolean printing_configured) {}
+                        BigDecimal price, boolean active, boolean printing_configured, String name_fr) {}
     public record ItemAddon(Long id, Long store_id, String code, String name_zh, String name_en,
-                            BigDecimal price, boolean active, boolean printing_configured, boolean enabled) {}
+                            BigDecimal price, boolean active, boolean printing_configured, boolean enabled, String name_fr) {}
     public record Conflict(String code, List<Long> option_ids, List<String> names_zh,
                            List<String> names_en, List<BigDecimal> prices, String reason) {}
     public record AddonList(List<Addon> addons, List<Conflict> conflicts) {}
@@ -37,6 +37,7 @@ public class StoreAddonService {
         public String code;
         public String name_zh;
         public String name_en;
+        public String name_fr;
         public BigDecimal price;
         public Boolean active;
     }
@@ -47,13 +48,13 @@ public class StoreAddonService {
     }
     public static class EligibilityRequest { public Boolean enabled; }
 
-    private record Values(String zh, String en, BigDecimal price, boolean active) {}
+    private record Values(String zh, String en, String fr, BigDecimal price, boolean active) {}
     private record Row(Long id, Long itemId, String code, String group, String type, String zh,
                        String en, BigDecimal price, Boolean active, Long addonId, Boolean eligible,
                        Long parentOptionId) {}
     private record Group(String code, List<Row> rows, Addon existing, String conflict) {}
     private static final String SELECT_ADDONS = """
-        select a.id, a.store_id, d.code, a.name_zh, a.name_en, a.price, a.active
+        select a.id, a.store_id, d.code, a.name_zh, a.name_en, a.name_fr, a.price, a.active
         from store_addons a join organization_addon_definitions d
           on d.id = a.organization_addon_definition_id
         join stores s on s.id = a.store_id and s.organization_id = d.organization_id
@@ -124,16 +125,17 @@ public class StoreAddonService {
             throw failure("ADDON_CODE_IMMUTABLE");
         }
         Values values = validateValues(request);
+        if (request.name_fr == null) values = new Values(values.zh(), values.en(), before.name_fr(), values.price(), values.active());
         printingRules.ensureCanonicalAddonFallback(before.store_id());
         jdbc.update("""
-            update store_addons set name_zh=?, name_en=?, price=?, active=?, updated_at=current_timestamp
+            update store_addons set name_zh=?, name_en=?, name_fr=?, price=?, active=?, updated_at=current_timestamp
             where id=? and store_id=?
-            """, values.zh(), values.en(), values.price(), values.active(), addonId, before.store_id());
+            """, values.zh(), values.en(), values.fr(), values.price(), values.active(), addonId, before.store_id());
         jdbc.update("""
-            update menu_item_options set name_zh=?, name_en=?, price_delta=?,
+            update menu_item_options set name_zh=?, name_en=?, name_fr=?, price_delta=?,
               is_active=(? and addon_eligible), updated_at=current_timestamp
             where store_addon_id=? and menu_item_id in (select id from menu_items where store_id=?)
-            """, values.zh(), values.en(), values.price(), values.active(), addonId, before.store_id());
+            """, values.zh(), values.en(), values.fr(), values.price(), values.active(), addonId, before.store_id());
         revisions.incrementRevision(before.store_id());
         return requireAddon(addonId);
     }
@@ -152,7 +154,7 @@ public class StoreAddonService {
             where menu_item_id=? and store_addon_store_id=? and store_addon_id is not null and addon_eligible=true
             """, (rs, n) -> rs.getLong(1), itemId, authorizedStoreId);
         return addons(storeId).stream().map(a -> new ItemAddon(a.id(), a.store_id(), a.code(),
-            a.name_zh(), a.name_en(), a.price(), a.active(), a.printing_configured(), enabled.contains(a.id()))).toList();
+            a.name_zh(), a.name_en(), a.price(), a.active(), a.printing_configured(), enabled.contains(a.id()), a.name_fr())).toList();
     }
 
     @Transactional
@@ -185,11 +187,11 @@ public class StoreAddonService {
             if (!enabled) return;
             jdbc.update("""
                 insert into menu_item_options(menu_item_id,option_type,option_code,option_group,
-                  name_zh,name_en,price_delta,is_active,store_addon_id,store_addon_store_id,addon_eligible,sort_order,created_at,updated_at)
-                values (?,'addon',?,'ADD_ON',?,?,?,?,?,?,true,
+                  name_zh,name_en,name_fr,price_delta,is_active,store_addon_id,store_addon_store_id,addon_eligible,sort_order,created_at,updated_at)
+                values (?,'addon',?,'ADD_ON',?,?,?,?,?,?,?,true,
                   (select coalesce(max(o.sort_order),0)+10 from menu_item_options o where o.menu_item_id=?),
                   current_timestamp,current_timestamp)
-                """, itemId, addon.code(), addon.name_zh(), addon.name_en(), addon.price(), addon.active(), addonId, storeId, itemId);
+                """, itemId, addon.code(), addon.name_zh(), addon.name_en(), addon.name_fr(), addon.price(), addon.active(), addonId, storeId, itemId);
         }
         revisions.incrementRevision(storeId);
     }
@@ -215,7 +217,7 @@ public class StoreAddonService {
             boolean catalogActive;
             if (group.existing() == null) {
                 addonId = insertAddon(storeId, definition(organizationId, group.code()),
-                    new Values(first.zh(), first.en(), first.price(), anyEligible));
+                    new Values(first.zh(), first.en(), null, first.price(), anyEligible));
                 catalogActive = anyEligible;
             } else {
                 addonId = group.existing().id();
@@ -379,9 +381,9 @@ public class StoreAddonService {
 
     private long insertAddon(Long storeId, Long definitionId, Values values) {
         return insert("""
-            insert into store_addons(store_id,organization_id,organization_addon_definition_id,name_zh,name_en,price,active,created_at,updated_at)
-            values (?,?,?,?,?,?,?,current_timestamp,current_timestamp)
-            """, storeId, organizationId(storeId), definitionId, values.zh(), values.en(), values.price(), values.active());
+            insert into store_addons(store_id,organization_id,organization_addon_definition_id,name_zh,name_en,name_fr,price,active,created_at,updated_at)
+            values (?,?,?,?,?,?,?,?,current_timestamp,current_timestamp)
+            """, storeId, organizationId(storeId), definitionId, values.zh(), values.en(), values.fr(), values.price(), values.active());
     }
 
     private long insert(String sql, Object... args) {
@@ -413,12 +415,12 @@ public class StoreAddonService {
         if (found.isEmpty()) throw failure("ADDON_NOT_FOUND");
         Addon addon = found.get(0);
         boolean configured = configured(printingRules.activeContext(addon.store_id()), addon.code());
-        return new Addon(addon.id(), addon.store_id(), addon.code(), addon.name_zh(), addon.name_en(), addon.price(), addon.active(), configured);
+        return new Addon(addon.id(), addon.store_id(), addon.code(), addon.name_zh(), addon.name_en(), addon.price(), addon.active(), configured, addon.name_fr());
     }
 
     private Addon addon(ResultSet rs, PrintingDisplayRuleContext context) throws SQLException {
         return new Addon(rs.getLong("id"), rs.getLong("store_id"), rs.getString("code"), rs.getString("name_zh"),
-            rs.getString("name_en"), rs.getBigDecimal("price"), rs.getBoolean("active"), configured(context, rs.getString("code")));
+            rs.getString("name_en"), rs.getBigDecimal("price"), rs.getBoolean("active"), configured(context, rs.getString("code")), rs.getString("name_fr"));
     }
 
     private boolean configured(PrintingDisplayRuleContext context, String code) {
@@ -439,7 +441,8 @@ public class StoreAddonService {
 
     private Values validateValues(WriteRequest request) {
         if (request.name_zh == null || request.name_zh.isBlank() || request.name_zh.trim().length() > 255
-            || (request.name_en != null && request.name_en.trim().length() > 255)) throw failure("ADDON_NAMES_INVALID");
+            || (request.name_en != null && request.name_en.trim().length() > 255)
+            || (request.name_fr != null && request.name_fr.trim().length() > 255)) throw failure("ADDON_NAMES_INVALID");
         if (request.price == null || request.price.signum() < 0) {
             throw failure("ADDON_PRICE_INVALID");
         }
@@ -448,7 +451,8 @@ public class StoreAddonService {
         catch (ArithmeticException e) { throw failure("ADDON_PRICE_INVALID"); }
         if (price.precision() > 38) throw failure("ADDON_PRICE_INVALID");
         if (request.active == null) throw failure("ADDON_ACTIVE_REQUIRED");
-        return new Values(request.name_zh.trim(), request.name_en == null ? null : request.name_en.trim(), price, request.active);
+        return new Values(request.name_zh.trim(), request.name_en == null ? null : request.name_en.trim(),
+            request.name_fr == null ? null : request.name_fr.trim(), price, request.active);
     }
 
     private boolean sameValues(Row a, Row b) {

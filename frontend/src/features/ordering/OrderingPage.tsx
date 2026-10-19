@@ -20,6 +20,7 @@ import { useAuth } from '../auth/useAuth'
 import { useCurrentStore } from '../store/useStoreContext'
 import { isStoreModuleEnabled } from '../store/storeModuleAccess'
 import { isQuickAddItem } from './orderingCustomizationRules'
+import { calculateItemLineSubtotal } from '../../utils/itemCustomization'
 
 interface OrderingPageProps {
   catalog: {
@@ -69,42 +70,6 @@ function connectionWarning(state: ConnectionState) {
   }
 }
 
-function getDraftSubtotal(item: MenuItem, draft: ItemCustomizationDraft) {
-  const sizeDelta = item.customization?.sizes?.options.find((option) => option.id === draft.sizeId)?.priceDelta ?? 0
-  const soupBaseDelta =
-    item.customization?.soupBases?.options.find((option) => option.id === draft.soupBaseId)?.priceDelta ?? 0
-  const comboDelta = draft.comboEnabled ? (item.customization?.combo?.upcharge ?? 0) : 0
-  const comboGroupDelta = draft.comboEnabled
-    ? item.customization?.combo?.groups
-      ?.reduce((sum, group) => {
-        const legacySelection = group.groupCode === 'COMBO_EGG'
-          ? draft.comboEggId
-          : group.groupCode === 'COMBO_SIDE'
-            ? draft.comboSideId
-            : undefined
-        const selectedId = draft.comboSelections?.[group.groupCode]
-          ?? legacySelection
-          ?? group.defaultOptionId
-          ?? (group.required ? group.options[0]?.id : undefined)
-        const selected = group.options.find((option) => option.id === selectedId)
-        return sum + (selected?.priceDelta ?? 0)
-      }, 0) ?? 0
-    : 0
-  const comboSideRemoveDelta = draft.comboEnabled
-    ? item.customization?.combo?.sideRemoveOptions
-      ?.filter((option) => draft.comboSideRemoveIds.includes(option.id))
-      .reduce((sum, option) => sum + (option.priceDelta ?? 0), 0) ?? 0
-    : 0
-  const addOnDelta =
-    item.customization?.addOns
-      ?.reduce((sum, option) => sum + (option.priceDelta ?? 0) * (draft.addOnQuantities[option.id] ?? 0), 0) ?? 0
-  const removeDelta =
-    item.customization?.removeOptions
-      ?.filter((option) => draft.removeIds.includes(option.id))
-      .reduce((sum, option) => sum + (option.priceDelta ?? 0), 0) ?? 0
-
-  return (item.price + sizeDelta + soupBaseDelta + comboDelta + comboGroupDelta + comboSideRemoveDelta + addOnDelta + removeDelta) * draft.quantity
-}
 
 function kickPadDirectPrintWorker(reason: string, orderId: number, updateBatchId?: number | null) {
   const bridge = getAndroidPadDeviceBridge()
@@ -720,7 +685,7 @@ export function OrderingPage({
           item={customizationState.item}
           draft={customizationState.draft}
           mode={customizationState.mode}
-          subtotal={getDraftSubtotal(customizationState.item, customizationState.draft)}
+          subtotal={calculateItemLineSubtotal(customizationState.item, customizationState.draft)}
           onClose={closeCustomizationModal}
           onChange={(nextDraft) => setCustomizationState((current) => (current ? { ...current, draft: nextDraft } : null))}
           onSubmit={() => void handleModalSubmit()}

@@ -57,6 +57,30 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class StoreAddonJpaIntegrationTest {
 
+    @Test
+    void typedCustomizationAndComponentOnlyStatePersistWithoutLosingFrenchText() {
+        transaction.executeWithoutResult(status -> {
+            MenuItem item = items.findById(itemId).orElseThrow();
+            item.name_fr = "Soupe au bœuf";
+            item.sellable = false;
+            item.customization_config = new com.restaurant.system.menu.dto.ItemCustomizationConfiguration();
+            var group = new com.restaurant.system.menu.dto.ItemCustomizationConfiguration.OptionGroup();
+            group.option_group = "NOODLE_TYPE"; group.min_select = 1; group.max_select = 1;
+            group.default_option_codes = java.util.List.of("thin");
+            item.customization_config.option_groups = java.util.List.of(group);
+            items.saveAndFlush(item);
+            entityManager.clear();
+            MenuItem saved = items.findById(itemId).orElseThrow();
+            assertThat(saved.name_fr).isEqualTo("Soupe au bœuf");
+            assertThat(saved.sellable).isFalse();
+            assertThat(saved.customization_config.option_groups.get(0).default_option_codes).containsExactly("thin");
+            saved.customization_config.option_groups.get(0).default_option_codes = java.util.List.of("thick");
+            items.saveAndFlush(saved);
+            entityManager.clear();
+            assertThat(items.findById(itemId).orElseThrow().customization_config.option_groups.get(0).default_option_codes).containsExactly("thick");
+        });
+    }
+
     @SpringBootConfiguration
     @EnableAutoConfiguration(exclude = MybatisPlusAutoConfiguration.class)
     @EntityScan(basePackages = "com.restaurant.system")

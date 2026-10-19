@@ -99,7 +99,8 @@ public class StoreProfileContractValidator {
             scanProhibitedData(root, "$", issues);
             validateModuleDefaults(root, issues);
             validateProfileReferences(root, profileCode, profileVersion, safeArtifacts, issues);
-            validateMasterMenuReference(root, profileCode, profileVersion, issues);
+            boolean configurationPackage = validateConfigurationPackageIdentity(root, issues);
+            if (!configurationPackage) validateMasterMenuReference(root, profileCode, profileVersion, issues);
             validateMenuTemplateShape(root, issues);
         }
 
@@ -254,6 +255,32 @@ public class StoreProfileContractValidator {
 
     private boolean requiresPrintingDisplayRules(String profileCode, String profileVersion) {
         return !("ST_DENIS_CANONICAL_PROFILE".equals(profileCode) && "v1".equals(profileVersion));
+    }
+
+    /** A versioned configuration archive, never an input to the legacy Master materializer. */
+    private boolean validateConfigurationPackageIdentity(JsonNode root, List<StoreProfileValidationIssue> issues) {
+        if (!root.has("configuration_kind")) {
+            if (root.has("base_profile_reference")) {
+                issues.add(issue("CONFIGURATION_KIND_REQUIRED", "configuration_kind", "A base Profile reference requires an explicit configuration kind"));
+            }
+            return false;
+        }
+        if (!"STORE_CONFIGURATION_PACKAGE".equals(root.path("configuration_kind").asText(null))) {
+            issues.add(issue("CONFIGURATION_KIND_INVALID", "configuration_kind", "Unsupported configuration kind"));
+            return false;
+        }
+        JsonNode base = root.path("base_profile_reference");
+        boolean validBase = base.isObject()
+            && NeutralRestaurantProfile.CODE.equals(base.path("profile_code").asText(null))
+            && NeutralRestaurantProfile.VERSION.equals(base.path("profile_version").asText(null));
+        if (!validBase) {
+            issues.add(issue("BASE_PROFILE_REFERENCE_INVALID", "base_profile_reference", "Configuration packages require the exact reviewed Neutral v1 base"));
+        }
+        // A Master reference would make this archive accidentally consumable by the legacy provisioning path.
+        if (root.has("master_menu_reference")) {
+            issues.add(issue("CONFIGURATION_PACKAGE_MASTER_REFERENCE_FORBIDDEN", "master_menu_reference", "Configuration packages are archives, not Master Menu provisioning inputs"));
+        }
+        return validBase;
     }
 
     private void validateMasterMenuReference(

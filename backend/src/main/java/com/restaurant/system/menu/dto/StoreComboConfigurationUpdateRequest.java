@@ -14,6 +14,7 @@ public class StoreComboConfigurationUpdateRequest {
         public String group_code;
         public String name_zh;
         public String name_en;
+        public String name_fr;
         public String selection_rule;
         public Boolean required;
         public Boolean enabled;
@@ -29,6 +30,7 @@ public class StoreComboConfigurationUpdateRequest {
         public String component_code;
         public String name_zh;
         public String name_en;
+        public String name_fr;
         public Boolean enabled;
         public Integer display_order;
         public Boolean is_default;

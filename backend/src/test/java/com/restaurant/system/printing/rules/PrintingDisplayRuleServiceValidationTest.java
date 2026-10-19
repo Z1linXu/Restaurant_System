@@ -74,6 +74,33 @@ class PrintingDisplayRuleServiceValidationTest {
     }
 
     @Test
+    void validatesBoundedStorePresentationWithoutAddingPrinterOrTaskReferences() {
+        var content = (com.fasterxml.jackson.databind.node.ObjectNode) PrintingDisplayRuleContext.neutralContext().content().deepCopy();
+        content.with("formatting").put("grab_station_codes", "BACK_KITCHEN,BAR")
+            .put("grab_title", "后厨").put("receipt_language", "zh");
+        assertThat(service.validate(1L, content).valid).isTrue();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+        "grab_station_codes,''", "grab_station_codes,'BACK_KITCHEN,'",
+        "grab_station_codes,'BACK_KITCHEN,BACK_KITCHEN'", "grab_station_codes,http://outside.invalid",
+        "receipt_language,fr", "grab_title,''", "grab_title,[L]title[/L]"
+    })
+    void rejectsMalformedPresentationSettings(String field, String value) {
+        var content = (com.fasterxml.jackson.databind.node.ObjectNode) PrintingDisplayRuleContext.neutralContext().content().deepCopy();
+        content.with("formatting").put(field, value);
+        assertThat(service.validate(1L, content).valid).isFalse();
+    }
+
+    @Test
+    void rejectsNonTextPresentationAndHeaderControlCharacters() {
+        var content = (com.fasterxml.jackson.databind.node.ObjectNode) PrintingDisplayRuleContext.neutralContext().content().deepCopy();
+        content.with("formatting").put("grab_station_codes", 123).put("grab_title", "后厨\n伪造第二张票");
+        assertThat(service.validate(1L, content).valid).isFalse();
+    }
+
+    @Test
     void rejectsOperationalSecretsAndExecutableRuleContent() {
         var content = StoreProfileCanonicalJson.parse("""
             {

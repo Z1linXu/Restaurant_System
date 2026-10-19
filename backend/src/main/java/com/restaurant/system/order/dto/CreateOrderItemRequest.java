@@ -19,6 +19,8 @@ public class CreateOrderItemRequest {
 
     public String item_name_snapshot_en;
 
+    public String item_name_snapshot_fr;
+
     public BigDecimal unit_price_snapshot;
 
     public String category_code_snapshot;

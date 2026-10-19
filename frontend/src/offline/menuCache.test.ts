@@ -201,6 +201,39 @@ describe('versioned menu cache identity and integrity', () => {
     expect(catalog().content_hash).toBe('fnv1a32:07ab0e4f')
   })
 
+  it('matches the backend customization and French-label fingerprint without changing legacy hashes', () => {
+    const next = catalog()
+    next.catalog_version = 'menu-catalog-v4'
+    expect(calculateMenuContentHash(next)).toBe('fnv1a32:d0abe163')
+    const category = next.categories[0]
+    category.name_fr = 'Soupes'
+    const item = category.items[0]
+    item.name_fr = 'Soupe au bœuf'
+    item.options[0].name_fr = 'Moyen'
+    item.customization_config = {
+      schema_version: 1,
+      option_groups: [{ option_group: 'SPICY_LEVEL', min_select: 1, max_select: 1, distinct: true, default_option_codes: ['medium_spicy'] }],
+      addon_max_quantities: { extra_noodles: 1 },
+      combo: { fixed_price: 19.99, group_codes: ['COMBO_SIDE'] },
+    }
+    const combo = next.combo_configuration!.groups[0]
+    combo.name_fr = 'Œuf'
+    combo.components[0].name_fr = 'Œuf mariné'
+    combo.components[0].synthetic_option_id = -1000001001
+    expect(calculateMenuContentHash(next)).toBe('fnv1a32:25b96080')
+    item.customization_config.addon_max_quantities.extra_noodles = 2
+    expect(calculateMenuContentHash(next)).not.toBe('fnv1a32:25b96080')
+  })
+
+  it('includes the same safe Store summary fields as the server', () => {
+    const next = catalog()
+    next.safe_summary = { schema_version: 1, config_revision: 1, brand_name: 'Test Restaurant', locale: 'zh-CN', currency: 'CAD', timezone: 'America/Toronto', tax_policy_reference: 'local-test-tax', profile_code: 'NEUTRAL', compatibility_mode: 'NEUTRAL' }
+    const branded = calculateMenuContentHash(next)
+    expect(branded).not.toBe(catalog().content_hash)
+    next.safe_summary.locale = 'en-CA'
+    expect(calculateMenuContentHash(next)).not.toBe(branded)
+  })
+
   it('hashes item egg overrides in v4 while preserving v3 cached snapshot validation', () => {
     const legacy = catalog()
     validateMenuCatalog(legacy, scope, legacy.menu_revision)

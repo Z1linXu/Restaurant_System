@@ -1,5 +1,5 @@
 schema_version: 1
-updated_at: 2026-10-15
+updated_at: 2026-10-18
 
 repository:
   ref: origin/main
@@ -8,8 +8,8 @@ repository:
 
 phase:
   current: COMMERCIALIZATION_PHASE_3
-  package: OWNER_AUTHORIZED_PHASE_1_2_3_LOCAL_ONLY
-  status: IMPLEMENTATION_AND_REVIEW_COMPLETE_VISUAL_ACCEPTANCE_BLOCKED
+  package: OWNER_AUTHORIZED_ALLO_NOUILLE_LOCAL_PILOT
+  status: FORMAL_PHASE3_ACCEPTANCE_PAUSED_LOCAL_MERCHANT_PILOT_OWNER_ACCEPTANCE_PENDING
   next_phase_authorized: false
 
 staging:
@@ -153,9 +153,10 @@ uber_store_capability:
 
 gate:
   type: TECHNICAL
-  next_action: G3_04_768_1024_LAYOUT_ACCEPTANCE_REQUIRES_BROWSER_PERMISSION
+  next_action: OWNER_ACCEPT_ALLO_LOCAL_DEMO_FORMAL_G3_REMAINS_PARTIAL
 
 authorization:
+  allo_local_pilot: OWNER_20261018_GENERIC_INCREMENT_INDEPENDENT_LOCAL_DEMO_SYNTHETIC_MOCK_NO_MAIN_MERGE_STAGING_PRODUCTION
   uber_store_capability: OWNER_AUTHORIZED_OPTION370_TEA_EGG_KEEP_ID_PRICE_HISTORY_FORMAL_UBER_EATS_GATES_V37_TEST_REVIEW_MERGE_STAGING_ONLY
   uber_order_note_scope: OWNER_AUTHORIZED_ORDER_ITEM_NOTE_SEPARATION_EXACT_DEDUPE_FROZEN_REPRINT_V36_TEST_REVIEW_MERGE_STAGING_ONLY_NO_HISTORICAL_REWRITE_NO_PHYSICAL_PRINT
   final_product_closeout: OWNER_AUTHORIZED_FINAL_12_MODIFIER_CONTEXTS_ADDON_CANONICAL_2330_LOCAL_FINISH_CHANNEL_ANALYTICS_V35_BACKFILL_TEST_REVIEW_MERGE_STAGING_ONLY
@@ -175,7 +176,7 @@ authorization:
   production: NONE
 
 stop:
-  marker: COMMERCIAL_PHASE3_PARTIAL_VISUAL_GATE_BLOCKED_NO_PHASE4_OR_RUNTIME_MUTATION
+  marker: ALLO_LOCAL_PILOT_ONLY_NO_GLOBAL_PHASE_ADVANCE_OR_REMOTE_MUTATION
 
 commercialization:
   execution_index: ../commercialization/COMMERCIALIZATION_MASTER_PLANBOOK.md
@@ -200,3 +201,24 @@ commercialization:
   merge_to_origin_main_authorized: false
   phase4_authorized: false
   builtin_pdf_ai_authorized: false
+
+allo_local_pilot:
+  authorization: OWNER_20261018_FULL_IMPLEMENTATION_AND_LOCAL_DEMO_DECISIONS_Q1_Q9
+  implementation_branch: codex/allo-nouille-local-pilot
+  base_sha: cb6ff2e91409c3445d5a5e765e68f93599838638
+  evidence: ../commercialization/merchants/allo-nouille/IMPLEMENTATION_RECORD.md
+  status: LOCAL_DEMO_READY_AWAITING_OWNER_ACCEPTANCE
+  application_source_sha: eb07448c1d0959aad15e5872738b7fcb7ed723cd
+  pull_request: https://github.com/Z1linXu/Restaurant_System/pull/279
+  frontend_url: http://localhost:51026/login
+  backend_url: http://localhost:8081
+  demo_database: commercial_allo_demo
+  postgres_port: 55441
+  global_phase_advance_authorized: false
+  new_offline_price_ttl_authorized: false
+  existing_local_demo_mutation_authorized: false
+  physical_printing_authorized: false
+
+  apk_packaging_authorization: OWNER_20261019_LOCAL_DEBUG_APK_ONLY_NO_GLOBAL_PHASE_ADVANCE
+  apk_evidence: ../commercialization/merchants/allo-nouille/APK_DELIVERY_20261019.md
+  apk_status: BUILT_SIGNED_ASSETS_NATIVE_TESTS_REVIEW_PASS_DEVICE_NOT_RUN

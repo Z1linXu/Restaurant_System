@@ -697,7 +697,8 @@ only receipt/ticket wording for the three reviewed output modules:
 
 They do not configure printer endpoints, physical devices, printer assignment,
 print mode, order totals, payment, reporting, authorization, job state,
-queueing, retry, routing eligibility, or hardware readiness.
+queueing, retry, kitchen task routing, or hardware readiness. The bounded local
+pilot extension below permits a non-Lanzhou GRAB task-presentation station filter.
 
 GET `/api/v1/admin/printing/display-rules?store_id={storeId}`
 
@@ -835,7 +836,13 @@ Rule document shape is structured, not executable:
 
 Menu Management exposes item-specific aliases for the same canonical outputs.
 If an output alias is blank or absent, renderers fall back to frozen submitted
-order/menu snapshots. A11 display rules cannot change routing or eligibility.
+order/menu snapshots. A11 display rules cannot change task or physical routing.
+Optional `formatting.grab_station_codes` is a comma-separated list of 1–32 unique
+uppercase station codes selecting existing tasks for non-Lanzhou GRAB presentation;
+Lanzhou keeps its legacy selection. `formatting.grab_title` is plain text (1–80
+characters, no control characters or markup brackets), and
+`formatting.receipt_language` accepts `zh` or `en`. Missing fields preserve prior
+behavior. These keys create no station, task, assignment or transport endpoint.
 Modifier dictionaries follow the same optional-override rule: a valid ADD_ON
 or REMOVE without a matching dictionary entry remains kitchen-visible through
 its frozen `OrderItemOption` label. Unknown modifier codes are not rejected by
@@ -2080,3 +2087,55 @@ GRAB/HOT reprint retains the original rendered snapshot and does not fetch Uber.
 Store Context and Menu Catalog add optional `safe_summary` with schema/config revision, brand, locale, CAD, Store timezone, current tax reference, Profile code and compatibility mode. Existing menu/pricing/modules/devices remain their own Sources of Truth; this endpoint does not import graphs, change currency/tax calculations or select a private Profile.
 
 The existing `POST /api/v1/owner/organizations/{organizationId}/stores` keeps `Idempotency-Key` and exact Organization Owner authorization. Missing/blank Profile now selects empty `NEUTRAL_RESTAURANT@v1`; explicit authorized private canonical v2 retains its materializer. Neutral has no menu/master/table/station/printer/device/staff graph beyond the creating Owner membership; the Store is LIVE independently of optional hardware. Details and rollback limits: [Profile design](../docs/commercialization/PHASE3_PROFILE_DESIGN.md). No new Profile publication/import or restock/prep endpoint is implied.
+
+## Optional configured menu items (V41, local merchant pilot)
+
+`GET/PUT /api/v1/admin/menu/items/{itemId}/customization` use the item's real Store,
+`admin:menu_manage` and `MENU_MANAGEMENT`; foreign scope/module refusal remains
+authoritative. GET returns nullable configuration. PUT accepts schema 1:
+
+```json
+{
+  "schema_version": 1,
+  "option_groups": [
+    {"option_group":"NOODLE_TYPE","min_select":1,"max_select":1,"distinct":true,"default_option_codes":["an_noodle_thin"]}
+  ],
+  "addon_max_quantities": {"n_extra_noodles":1},
+  "combo": {"fixed_price":19.99,"group_codes":["COMBO_NOODLE_APPETIZER"]}
+}
+```
+
+This example is merchant data, not global defaults. Selection bounds and add-on
+maximums apply per serving. Referenced options/add-ons/groups/components must be
+active, eligible and owned by this Store. Writes use the Store menu revision lock,
+increment the existing revision and audit; this endpoint does not create options.
+Existing option CRUD supplies labels, codes, prices and added noodle choices.
+An empty configuration opts into configured-item validation without required groups;
+null retains the legacy path. No new global Size or offline price policy is implied.
+
+Menu entities/admin DTOs add optional `name_fr`. Menu item admin accepts `sellable`
+(default true); active component-only items with false stay available to validated
+combo links but are hidden from the sale catalog and rejected as direct order lines.
+Catalog items add `customization_config`; combo groups/components include optional
+French/linked French labels and component `synthetic_option_id`. Group/component
+codes may be explicitly supplied through existing validated combo configuration.
+Configured catalog COMBO delta equals fixed price minus the main's base price;
+selected component delta is zero. Clients use catalog IDs and canonical prices.
+
+Order create/submit retains the existing request structure and **total option
+quantity per order line**, not per-unit quantities. Configured-line option totals
+must divide by parent quantity; the server checks each serving against rules and
+canonical labels/prices/eligibility before persisting. A component's task quantity
+uses that total once. Selected proteins and add-ons remain visible in frozen main
+task instructions; separately produced components use their own frozen task label
+and station. Direct-serve drinks still generate no kitchen task. V41's nullable
+`component_option_id` identifies a generic component task without legacy priority
+sentinels. Optional `item_name_snapshot_fr` / `option_name_snapshot_fr` are retained;
+nonempty French labels participate in submit hash while old empty-label hashes are
+unchanged. Existing order update, idempotency, outbox and print snapshot APIs remain.
+
+PRIVATE Profile validation also accepts a `STORE_CONFIGURATION_PACKAGE` with exact
+`base_profile_reference` to Neutral and nine existing artifact types. Such a package
+cannot carry a `master_menu_reference` and cannot be materialized by the legacy
+Master-based provisioner. This adds no public import/apply/provision API. See the
+[pilot implementation record](../docs/commercialization/merchants/allo-nouille/IMPLEMENTATION_RECORD.md).

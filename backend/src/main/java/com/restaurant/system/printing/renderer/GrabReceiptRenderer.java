@@ -36,7 +36,8 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
     public String render(PrintRenderRequest request) {
         if (request.printing_rules != null && !request.printing_rules.lanzhouCompatibility()) {
             List<KitchenTask> neutralTasks = request.kitchen_tasks == null ? List.of() : request.kitchen_tasks.stream()
-                .filter(task -> task != null && !"cancelled".equals(task.status) && GRAB_STATIONS.contains(task.station_code)).toList();
+                .filter(task -> task != null && !"cancelled".equals(task.status)
+                    && request.printing_rules.includesGrabStation(task.station_code, GRAB_STATIONS)).toList();
             return NeutralKitchenReceiptContent.render(request, getModuleCode(), neutralTasks);
         }
         Order order = request.order;

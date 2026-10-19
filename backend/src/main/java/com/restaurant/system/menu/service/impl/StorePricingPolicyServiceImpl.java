@@ -473,6 +473,7 @@ public class StorePricingPolicyServiceImpl implements StorePricingPolicyService 
         copy.sort_order = source.sort_order;
         copy.name_zh = source.name_zh;
         copy.name_en = source.name_en;
+        copy.name_fr = source.name_fr;
         copy.price_delta = source.price_delta;
         copy.is_active = source.is_active;
         copy.created_at = source.created_at;

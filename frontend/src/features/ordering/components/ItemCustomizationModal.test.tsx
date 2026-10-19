@@ -19,6 +19,51 @@ const noodleTypes = [
 ] as const
 
 describe('noodle type presentation labels', () => {
+  it('requires exactly two distinct modifier choices before enabling Add to Order', async () => {
+    const item: MenuItem = {
+      id: '1', categoryId: '1', nameEn: 'Mixed Grill', nameZh: '双拼饭', descriptionEn: '', descriptionZh: '', price: 19.99,
+      customization: { modifierGroups: [{ groupCode: 'PROTEIN', labelZh: '蛋白选择', labelEn: 'Protein', minSelect: 2, maxSelect: 2, distinct: true, defaultOptionIds: [], options: ['Beef', 'Chicken', 'Pork', 'Shrimp'].map((label, index) => ({ id: String(index + 1), labelEn: label, labelZh: label, priceDelta: 0 })) }] },
+    }
+    let draft: ItemCustomizationDraft = { comboEnabled: false, comboSelections: {}, comboSideRemoveIds: [], addOnQuantities: {}, modifierSelections: {}, removeIds: [], quantity: 1, notes: '' }
+    let view: ReturnType<typeof create>
+    const render = () => <ItemCustomizationModal item={item} draft={draft} mode="add" subtotal={19.99} onClose={vi.fn()} onChange={(next) => { draft = next }} onSubmit={vi.fn()} />
+    await act(async () => { view = create(render()) })
+    const submit = () => view!.root.findAllByType('button').find((button) => button.findAllByType('span').some((span) => span.children.includes('Add to Order / 添加到订单')))!
+    const select = (name: string) => view!.root.findAllByType('button').find((button) => button.findAllByType('div').some((node) => node.children.includes(name)))!
+    expect(submit().props.disabled).toBe(true)
+    for (const name of ['Beef', 'Shrimp']) {
+      await act(async () => select(name).props.onClick())
+      await act(async () => view!.update(render()))
+    }
+    expect(submit().props.disabled).toBe(false)
+    expect(draft.modifierSelections?.PROTEIN).toEqual(['1', '4'])
+    await act(async () => select('Chicken').props.onClick())
+    expect(draft.modifierSelections?.PROTEIN).toEqual(['1', '4'])
+    await act(async () => select('Beef').props.onClick())
+    await act(async () => view!.update(render()))
+    expect(submit().props.disabled).toBe(true)
+    await act(async () => view!.unmount())
+  })
+
+  it('renders fixed Combo total and a configuration-driven free checkbox without a Size section', async () => {
+    const item: MenuItem = {
+      id: '1', categoryId: '1', nameEn: 'Dish', nameZh: '菜', nameFr: 'Plat', descriptionEn: '', descriptionZh: '', price: 16.99,
+      customization: { addOns: [{ id: '1', labelEn: 'Extra Rice', labelZh: '加饭', priceDelta: 0, maxQuantity: 1 }], combo: { upcharge: 3, fixedPrice: 19.99, groups: [], eggs: [], sides: [], sideRemoveOptions: [] } },
+    }
+    const draft: ItemCustomizationDraft = { comboEnabled: false, comboSelections: {}, comboSideRemoveIds: [], addOnQuantities: {}, removeIds: [], quantity: 1, notes: '' }
+    const onChange = vi.fn()
+    let view: ReturnType<typeof create>
+    await act(async () => { view = create(<ItemCustomizationModal item={item} draft={draft} mode="add" subtotal={16.99} onClose={vi.fn()} onChange={onChange} onSubmit={vi.fn()} />) })
+    const text = JSON.stringify(view!.toJSON())
+    expect(text).toContain('套餐总价 $19.99')
+    expect(text).not.toContain('Size / 规格')
+    expect(text).toContain('Plat')
+    const rice = view!.root.findAllByType('button').find((button) => button.findAllByType('span').some((span) => span.children.includes('Extra Rice')))!
+    await act(async () => rice.props.onClick())
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ addOnQuantities: { '1': 1 } }))
+    await act(async () => view!.unmount())
+  })
+
   it('preserves a restored manual egg when Combo is turned off and on after the default changes', async () => {
     const eggs = [
       { id: 'tea', labelEn: 'Tea Egg', labelZh: '卤蛋', optionCode: 'combo_tea_egg', optionGroup: 'COMBO_EGG' },

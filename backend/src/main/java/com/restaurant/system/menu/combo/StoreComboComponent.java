@@ -37,6 +37,9 @@ public class StoreComboComponent {
     @Column(name = "name_en", nullable = false)
     public String name_en;
 
+    @Column(name = "name_fr")
+    public String name_fr;
+
     @Column(name = "enabled", nullable = false)
     public Boolean enabled;
 

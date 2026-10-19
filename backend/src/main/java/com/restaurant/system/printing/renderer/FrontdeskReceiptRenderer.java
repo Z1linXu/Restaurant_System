@@ -46,6 +46,7 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
     public String render(PrintRenderRequest request) {
         Order order = request.order;
         PrintingDisplayRuleContext printingRules = request.printing_rules;
+        boolean chinese = printingRules != null && printingRules.chineseReceipt();
         Map<Long, List<OrderItemOption>> optionsByItemId = (request.order_item_options == null ? List.<OrderItemOption>of() : request.order_item_options).stream()
             .collect(Collectors.groupingBy(option -> option.order_item_id));
         boolean updateTicket = Boolean.TRUE.equals(request.is_update_ticket);
@@ -60,13 +61,13 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
 
         StringBuilder builder = new StringBuilder();
         ExternalOrderReceiptHeader.append(builder, request.order);
-        if (!ExternalOrderReceiptHeader.isPresent(order)) appendLargeLine(builder, resolveLargeDisplayLabel(order));
+        if (!ExternalOrderReceiptHeader.isPresent(order)) appendLargeLine(builder, resolveLargeDisplayLabel(order, chinese));
         if (updateTicket) {
-            appendLargeLine(builder, "UPDATED");
-            appendSizedLine(builder, "Added items only");
+            appendLargeLine(builder, chinese ? "追加单" : "UPDATED");
+            appendSizedLine(builder, chinese ? "仅新增商品" : "Added items only");
         }
         if ("pickup".equalsIgnoreCase(order.order_type) || "takeout".equalsIgnoreCase(order.order_type)) {
-            appendSizedLine(builder, "Order Type: Takeout");
+            appendSizedLine(builder, chinese ? "订单类型：外带" : "Order Type: Takeout");
         }
         appendSizedLine(builder, "--------------------------------");
 
@@ -128,16 +129,16 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         }
 
         appendSizedLine(builder, "--------------------------------");
-        appendSizedLine(builder, "Subtotal: " + formatMoney(subtotal));
-        appendSizedLine(builder, "Tax (" + TaxCalculator.TAX_RATE_LABEL + "): " + formatMoney(tax));
-        appendSizedLine(builder, "Total: " + formatMoney(total));
+        appendSizedLine(builder, (chinese ? "小计：" : "Subtotal: ") + formatMoney(subtotal));
+        appendSizedLine(builder, (chinese ? "税额 (" : "Tax (") + TaxCalculator.TAX_RATE_LABEL + "): " + formatMoney(tax));
+        appendSizedLine(builder, (chinese ? "合计：" : "Total: ") + formatMoney(total));
         appendSizedLine(builder, "--------------------------------");
         if (order.submitted_at != null) {
-            appendSizedLine(builder, "Submitted: " + order.submitted_at.format(TIME_FORMATTER));
+            appendSizedLine(builder, (chinese ? "下单时间：" : "Submitted: ") + order.submitted_at.format(TIME_FORMATTER));
         } else if (request.happened_at != null) {
-            appendSizedLine(builder, "Printed: " + request.happened_at.format(TIME_FORMATTER));
+            appendSizedLine(builder, (chinese ? "打印时间：" : "Printed: ") + request.happened_at.format(TIME_FORMATTER));
         } else if (order.created_at != null) {
-            appendSizedLine(builder, "Created: " + order.created_at.format(TIME_FORMATTER));
+            appendSizedLine(builder, (chinese ? "创建时间：" : "Created: ") + order.created_at.format(TIME_FORMATTER));
         }
         builder.append("\n");
         return builder.toString();
@@ -559,14 +560,14 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         return "Walk-in";
     }
 
-    private String resolveLargeDisplayLabel(Order order) {
+    private String resolveLargeDisplayLabel(Order order, boolean chinese) {
         if (order.table_no != null && !order.table_no.isBlank()) {
             return "桌号: " + PrintTableDisplayFormatter.formatSplitTableLabel(order.table_no);
         }
         if (order.pickup_no != null && !order.pickup_no.isBlank()) {
             return "取餐号: " + order.pickup_no;
         }
-        return "桌号: Walk-in";
+        return chinese ? "桌号: 散客" : "桌号: Walk-in";
     }
 
     private String center(String value, int width) {

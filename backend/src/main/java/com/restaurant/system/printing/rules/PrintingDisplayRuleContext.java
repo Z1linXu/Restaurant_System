@@ -2,10 +2,12 @@ package com.restaurant.system.printing.rules;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.restaurant.system.owner.profile.StoreProfileCanonicalJson;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 public record PrintingDisplayRuleContext(
     Long revisionId,
@@ -151,6 +153,23 @@ public record PrintingDisplayRuleContext(
     public String formatting(String key, String fallback) {
         String value = text(content.path("formatting").path(key));
         return value == null ? fallback : value;
+    }
+
+    /** Filters existing Store tasks for one summary; never assigns a task or a printer. */
+    public boolean includesGrabStation(String stationCode, Set<String> legacyStations) {
+        if (stationCode == null) return false;
+        String configured = formatting("grab_station_codes", null);
+        if (lanzhouCompatibility || configured == null) return legacyStations.contains(stationCode);
+        return Arrays.stream(configured.split(",", -1))
+            .map(String::trim).anyMatch(stationCode::equals);
+    }
+
+    public String grabTitle() {
+        return formatting("grab_title", "GRAB");
+    }
+
+    public boolean chineseReceipt() {
+        return "zh".equals(formatting("receipt_language", "en"));
     }
 
     public String activeFingerprintOrDefault() {

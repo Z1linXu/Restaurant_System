@@ -61,6 +61,7 @@ public class OwnerMenuStructureServiceImpl implements OwnerMenuStructureService 
         category.code = nextCode(storeId, "CATEGORY", firstNonBlank(request.name_en, request.name_zh), true);
         category.name_zh = cleanRequired(request.name_zh, "CATEGORY_NAME_ZH_REQUIRED");
         category.name_en = cleanRequired(request.name_en, "CATEGORY_NAME_EN_REQUIRED");
+        category.name_fr = request.name_fr == null ? category.name_fr : request.name_fr.trim();
         category.sort_order = request.sort_order == null ? nextCategorySortOrder(storeId) : request.sort_order;
         category.is_active = bool(request.enabled, request.is_active, true);
         category.created_at = now;
@@ -89,6 +90,7 @@ public class OwnerMenuStructureServiceImpl implements OwnerMenuStructureService 
 
         category.name_zh = cleanRequired(request.name_zh, "CATEGORY_NAME_ZH_REQUIRED");
         category.name_en = cleanRequired(request.name_en, "CATEGORY_NAME_EN_REQUIRED");
+        category.name_fr = request.name_fr == null ? category.name_fr : request.name_fr.trim();
         category.sort_order = request.sort_order == null ? category.sort_order : request.sort_order;
         category.is_active = nextActive;
         category.updated_at = LocalDateTime.now();

@@ -415,6 +415,103 @@ class PrintDispatcherServiceImplTest {
         );
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void neutralDrinksOnlySubmitSkipsEmptyGrabBeforeCreatingAnyJob(boolean configured) {
+        DispatchFixture fixture = configureSuccessfulDispatch(PrintModuleCode.GRAB, "dine_in", 1, "MOCK");
+        var content = (com.fasterxml.jackson.databind.node.ObjectNode) PrintingDisplayRuleContext.neutralContext().content().deepCopy();
+        if (configured) content.with("formatting").put("grab_station_codes", "BACK_KITCHEN");
+        when(printingDisplayRuleService.activeContext(1L))
+            .thenReturn(new PrintingDisplayRuleContext(null, 1, "neutral", content, false));
+        var drink = item(2L, null);
+        drink.item_name_snapshot_zh = "瓶装水";
+        drink.category_code_snapshot = "DRINK";
+        when(orderItemRepository.findAllByOrderId(fixture.order.id)).thenReturn(List.of(drink));
+        when(grabRenderer.render(any())).thenAnswer(invocation ->
+            new com.restaurant.system.printing.renderer.GrabReceiptRenderer().render(invocation.getArgument(0)));
+
+        assertEquals(PrintDispatchOutcome.SKIPPED, service.dispatchPersistedEvent(
+            PrintModuleCode.GRAB, 1L, fixture.order.id, null, "submit:123:GRAB"));
+
+        verify(grabRenderer, times(1)).render(any());
+        verifyNoInteractions(printJobService, printerTransport);
+        verify(printerAssignmentRepository, never()).findByStoreIdAndModuleCode(1L, PrintModuleCode.GRAB);
+    }
+
+    @Test
+    void configuredGrabSkipsCancelledAndUnselectedTasksBeforeCreatingAnyJob() {
+        DispatchFixture fixture = configureSuccessfulDispatch(PrintModuleCode.GRAB, "dine_in", 1, "MOCK");
+        var content = (com.fasterxml.jackson.databind.node.ObjectNode) PrintingDisplayRuleContext.neutralContext().content().deepCopy();
+        content.with("formatting").put("grab_station_codes", "BACK_KITCHEN");
+        when(printingDisplayRuleService.activeContext(1L))
+            .thenReturn(new PrintingDisplayRuleContext(null, 1, "neutral", content, false));
+        var cancelled = new KitchenTask();
+        cancelled.station_code = "BACK_KITCHEN"; cancelled.status = "cancelled";
+        var otherStation = new KitchenTask();
+        otherStation.station_code = "BAR"; otherStation.status = "pending";
+        when(kitchenTaskRepository.findAllByOrderId(fixture.order.id)).thenReturn(List.of(cancelled, otherStation));
+        when(grabRenderer.render(any())).thenAnswer(invocation ->
+            new com.restaurant.system.printing.renderer.GrabReceiptRenderer().render(invocation.getArgument(0)));
+
+        assertEquals(PrintDispatchOutcome.SKIPPED, service.dispatchPersistedEvent(
+            PrintModuleCode.GRAB, 1L, fixture.order.id, null, "submit:123:GRAB"));
+        verifyNoInteractions(printJobService, printerTransport);
+    }
+
+    @Test
+    void neutralDrinksOnlySubmitStillPrintsFrontdeskReceiptInMock() {
+        DispatchFixture fixture = configureSuccessfulDispatch(PrintModuleCode.FRONTDESK_RECEIPT, "dine_in", 1, "MOCK");
+        when(printingDisplayRuleService.activeContext(1L)).thenReturn(PrintingDisplayRuleContext.neutralContext());
+        when(frontdeskRenderer.render(any())).thenReturn("瓶装水 x1\n合计：$2.29");
+        when(printJobService.markPrinted(fixture.job, null, "Mock print succeeded - no physical printer used"))
+            .thenReturn(fixture.job);
+
+        service.dispatchPersistedEvent(PrintModuleCode.FRONTDESK_RECEIPT, 1L, fixture.order.id, null, null);
+
+        verify(frontdeskRenderer, times(1)).render(any());
+        verify(grabRenderer, never()).render(any());
+        verify(printJobService).markPrinted(fixture.job, null, "Mock print succeeded - no physical printer used");
+        verifyNoInteractions(printerTransport);
+    }
+
+    @Test
+    void explicitLanzhouBlankGrabSubmitKeepsItsExistingVisibleFailure() {
+        DispatchFixture fixture = configureSuccessfulDispatch(PrintModuleCode.GRAB, "dine_in", 1, "MOCK");
+        when(grabRenderer.render(any())).thenReturn("");
+
+        service.dispatchPersistedEvent(PrintModuleCode.GRAB, 1L, fixture.order.id, null, null);
+
+        verify(printJobService).markFailed(fixture.job, null, "RENDERED_CONTENT_BLANK", "Rendered content was blank");
+        verifyNoInteractions(printerTransport);
+    }
+
+    @Test
+    void neutralGrabRendererExceptionStillCreatesAVisibleFailedJob() {
+        DispatchFixture fixture = configureSuccessfulDispatch(PrintModuleCode.GRAB, "dine_in", 1, "MOCK");
+        when(printingDisplayRuleService.activeContext(1L)).thenReturn(PrintingDisplayRuleContext.neutralContext());
+        when(grabRenderer.render(any())).thenThrow(new IllegalStateException("synthetic render failure"));
+
+        service.dispatchPersistedEvent(PrintModuleCode.GRAB, 1L, fixture.order.id, null, null);
+
+        verify(printJobService).markFailed(fixture.job, null, "DISPATCH_ERROR", "synthetic render failure");
+        verifyNoInteractions(printerTransport);
+    }
+
+    @Test
+    void existingFailedGrabJobIsNotRewrittenOrRetriedByNewPreflight() {
+        var source = new PrintJob();
+        source.status = PrintJobStatus.FAILED;
+        source.error_code = "RENDERED_CONTENT_BLANK";
+        when(printJobRepository.findByDispatchSourceKey("submit:123:GRAB")).thenReturn(Optional.of(source));
+
+        assertEquals(PrintDispatchOutcome.FAILED, service.dispatchPersistedEvent(
+            PrintModuleCode.GRAB, 1L, 123L, null, "submit:123:GRAB"));
+
+        verifyNoInteractions(printJobService, printerTransport);
+        verify(grabRenderer, never()).render(any());
+        assertEquals("RENDERED_CONTENT_BLANK", source.error_code);
+    }
+
     @Test
     void takeoutFrontdeskReceiptUsesConfiguredTwoCopies() {
         DispatchFixture fixture = configureSuccessfulDispatch(PrintModuleCode.FRONTDESK_RECEIPT, "pickup", 2);
@@ -526,6 +623,43 @@ class PrintDispatcherServiceImplTest {
             PrintingDisplayRuleContext.defaultContext().activeFingerprintOrDefault()
         );
         verifyNoInteractions(printerConfigRepository);
+        verifyNoInteractions(printerTransport);
+    }
+
+    @Test
+    void configuredKitchenSummaryRendersOnceInMockWithoutAnyTransportOrExtraJobs() {
+        DispatchFixture fixture = configureSuccessfulDispatch(PrintModuleCode.GRAB, "dine_in", 1, "MOCK");
+        var content = (com.fasterxml.jackson.databind.node.ObjectNode) PrintingDisplayRuleContext.neutralContext().content().deepCopy();
+        content.with("formatting").put("grab_station_codes", "BACK_KITCHEN")
+            .put("grab_title", "后厨").put("receipt_language", "zh");
+        var rules = new PrintingDisplayRuleContext(7L, 1, "configured", content, false);
+        when(printingDisplayRuleService.activeContext(1L)).thenReturn(rules);
+        var main = new KitchenTask();
+        main.order_item_id = 2L; main.item_name_snapshot_zh = "双拼饭";
+        main.station_code = "BACK_KITCHEN"; main.quantity = 3;
+        main.special_instructions_snapshot = "牛肉x1 / 虾x1";
+        var component = new KitchenTask();
+        component.order_item_id = 2L; component.component_option_id = 11L;
+        component.item_name_snapshot_zh = "素春卷（1条）";
+        component.station_code = "BACK_KITCHEN"; component.quantity = 3;
+        when(kitchenTaskRepository.findAllByOrderId(fixture.order.id)).thenReturn(List.of(main, component));
+        when(grabRenderer.render(any())).thenAnswer(invocation ->
+            new com.restaurant.system.printing.renderer.GrabReceiptRenderer().render(invocation.getArgument(0)));
+        when(printJobService.markPrinted(fixture.job, null, "Mock print succeeded - no physical printer used"))
+            .thenReturn(fixture.job);
+
+        service.dispatchPersistedEvent(PrintModuleCode.GRAB, 1L, fixture.order.id, null, null);
+
+        var rendered = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(printJobService).attachRenderedContent(eq(fixture.job), eq(null), rendered.capture(), eq(7L), eq("configured"));
+        org.assertj.core.api.Assertions.assertThat(rendered.getValue()).containsOnlyOnce("后厨")
+            .containsOnlyOnce("3 x 双拼饭").contains("牛肉x1 / 虾x1", "3 x 素春卷（1条）");
+        verify(grabRenderer, times(1)).render(any());
+        verify(printJobService, times(1)).createPendingJob(eq(1L), eq(1L), eq(fixture.order.id),
+            nullable(Long.class), nullable(Long.class), eq(PrintModuleCode.GRAB), eq(PrintModuleCode.GRAB),
+            nullable(Long.class), anyString());
+        verify(frontdeskRenderer, never()).render(any());
+        verify(hotKitchenRenderer, never()).render(any());
         verifyNoInteractions(printerTransport);
     }
 

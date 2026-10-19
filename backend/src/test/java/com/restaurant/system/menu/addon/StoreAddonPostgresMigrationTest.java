@@ -79,7 +79,11 @@ class StoreAddonPostgresMigrationTest {
                 .isInstanceOf(DataAccessException.class);
             assertThatThrownBy(() -> jdbc.update("update menu_items set store_id = ? where id = ?", otherStore, item))
                 .isInstanceOf(DataAccessException.class);
-            assertThat(jdbc.queryForMap("select * from order_item_options where id = ?", snapshot)).isEqualTo(snapshotBefore);
+            var snapshotAfter = jdbc.queryForMap("select * from order_item_options where id = ?", snapshot);
+            assertThat(snapshotAfter).containsAllEntriesOf(snapshotBefore);
+            assertThat(snapshotAfter).containsEntry("option_name_snapshot_fr", null)
+                .containsEntry("component_id_snapshot", null).containsEntry("linked_menu_item_id_snapshot", null)
+                .containsEntry("linked_station_id_snapshot", null);
             assertThat(flyway(dataSource, null).migrate().migrationsExecuted).isZero();
         });
     }

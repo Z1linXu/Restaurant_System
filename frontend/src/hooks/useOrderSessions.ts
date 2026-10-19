@@ -8,6 +8,7 @@ import type {
   OrderSession,
 } from '../types/ordering'
 import { calculateTax, calculateTotal } from '../utils/tax'
+import { calculateItemLineSubtotal, calculateItemUnitPrice } from '../utils/itemCustomization'
 import {
   defaultComboSelections,
   resolveComboGroupOptionId,
@@ -53,7 +54,7 @@ export function buildDefaultDraft(menuItem: MenuItem): ItemCustomizationDraft {
   return {
     sizeId: menuItem.customization?.sizes?.options[0]?.id,
     soupBaseId: menuItem.customization?.soupBases?.options[0]?.id,
-    noodleTypeId: menuItem.customization?.noodleTypes?.[0]?.id,
+    noodleTypeId: menuItem.customization?.noodleTypeDefaultId ?? menuItem.customization?.noodleTypes?.[0]?.id,
     spicyLevelId: menuItem.customization?.spicyLevels?.[0]?.id,
     comboEnabled: false,
     comboEggId: comboSelections.COMBO_EGG ?? menuItem.customization?.combo?.eggs[0]?.id,
@@ -61,51 +62,12 @@ export function buildDefaultDraft(menuItem: MenuItem): ItemCustomizationDraft {
     comboSelections,
     comboSideRemoveIds: [],
     addOnQuantities: {},
+    modifierSelections: Object.fromEntries((menuItem.customization?.modifierGroups ?? [])
+      .map((group) => [group.groupCode, [...group.defaultOptionIds]])),
     removeIds: [],
     quantity: 1,
     notes: '',
   }
-}
-
-function sumPrice(options: ChoiceOption[] | undefined, selectedIds: string[]) {
-  if (!options?.length || !selectedIds.length) {
-    return 0
-  }
-
-  return options
-    .filter((option) => selectedIds.includes(option.id))
-    .reduce((sum, option) => sum + (option.priceDelta ?? 0), 0)
-}
-
-function sumAddOnPrice(options: ChoiceOption[] | undefined, addOnQuantities: Record<string, number>) {
-  if (!options?.length) {
-    return 0
-  }
-
-  return options.reduce((sum, option) => sum + (option.priceDelta ?? 0) * (addOnQuantities[option.id] ?? 0), 0)
-}
-
-function calculateUnitPrice(menuItem: MenuItem, draft: ItemCustomizationDraft) {
-  const sizePrice =
-    menuItem.customization?.sizes?.options.find((option) => option.id === draft.sizeId)?.priceDelta ?? 0
-  const soupBasePrice =
-    menuItem.customization?.soupBases?.options.find((option) => option.id === draft.soupBaseId)?.priceDelta ?? 0
-  const comboPrice = draft.comboEnabled ? (menuItem.customization?.combo?.upcharge ?? 0) : 0
-  const comboGroupPrice = draft.comboEnabled
-    ? menuItem.customization?.combo?.groups
-      ?.reduce((sum, group) => {
-        const selectedId = resolveComboGroupOptionId(draft, group)
-        const selected = group.options.find((option) => option.id === selectedId)
-        return sum + (selected?.priceDelta ?? 0)
-      }, 0) ?? 0
-    : 0
-  const addOnPrice = sumAddOnPrice(menuItem.customization?.addOns, draft.addOnQuantities)
-  const removeOptionPrice = sumPrice(menuItem.customization?.removeOptions, draft.removeIds)
-  const comboSideRemovePrice = draft.comboEnabled
-    ? sumPrice(menuItem.customization?.combo?.sideRemoveOptions, draft.comboSideRemoveIds)
-    : 0
-
-  return menuItem.price + sizePrice + soupBasePrice + comboPrice + comboGroupPrice + addOnPrice + removeOptionPrice + comboSideRemovePrice
 }
 
 function buildSummaryTags(menuItem: MenuItem, draft: ItemCustomizationDraft) {
@@ -160,12 +122,15 @@ function buildSummaryTags(menuItem: MenuItem, draft: ItemCustomizationDraft) {
 
   summaryTags.push(...getSelectedAddOns(customization?.addOns, draft.addOnQuantities))
   summaryTags.push(...getSelectedOptions(customization?.removeOptions, draft.removeIds))
+  for (const group of customization?.modifierGroups ?? []) {
+    summaryTags.push(...getSelectedOptions(group.options, draft.modifierSelections?.[group.groupCode] ?? []))
+  }
 
   return summaryTags
 }
 
 function buildLineItem(menuItem: MenuItem, draft: ItemCustomizationDraft, itemId?: string): OrderLineItem {
-  const unitPrice = calculateUnitPrice(menuItem, draft)
+  const unitPrice = calculateItemUnitPrice(menuItem, draft)
   const summaryTags = buildSummaryTags(menuItem, draft)
 
   return {
@@ -175,7 +140,7 @@ function buildLineItem(menuItem: MenuItem, draft: ItemCustomizationDraft, itemId
     nameZh: menuItem.nameZh,
     quantity: draft.quantity,
     unitPrice,
-    lineSubtotal: unitPrice * draft.quantity,
+    lineSubtotal: calculateItemLineSubtotal(menuItem, draft),
     selection: draft,
     summaryTags,
     notes: draft.notes,
