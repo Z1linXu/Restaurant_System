@@ -45,3 +45,40 @@ Production preflight backup：
 未满足保守资格，未清理。当前/回滚 app images、DB volume、配置、备份及证据全部保护。
 
 正式 Staging / Production 部署与只读验收结果将在操作完成后补入本记录；当前不提前声称上线。
+
+## 最终集成与并行 Uber 配置
+
+发布前 fresh fetch 发现并整合 `5d2c563` / PR #284（receiver 运维 helper、6 个无网络
+unit checks、文档；Backend/Frontend 源码与已测试版本完全相同）。保留其显式授权及配置。
+PR #282 于 2026-10-22 04:51:20 UTC merge，最终 Release SHA：
+`4b3abd1349e66a146c36ac310b6a8b48bb2ad572`。
+
+04:51 UTC 独立只读复核：Production Backend 仍为 7d573be 同镜像，但 receiver 配置已
+于 04:50:13 重建：receiver=true、signing key present、worker=false、KITCHEN_MIRROR。
+仅 1 条 HELD_RECEIVE_ONLY 事件，binding、Uber/localUber order、Uber print job 全 0。
+新发布复制这份实际 current.compose，不使用先前 receiver=false 的旧备份作为恢复模型。
+
+最终小簇修复另跑 14 PostgreSQL/semantic tests，全部执行通过：generic reconcile 对
+缺失 type/group 或 mixed-prefix group 保留 conflict，不触发 V38 CHECK 回滚整店。
+Agent6 增量 ACCEPT；干净 exact-SHA server source 的治理校验 PASS。
+
+发布前三店 Printing revision：Store1 v2 / id5；Store2 v6 / id10；Store3 v2 / id6。
+三个已发布 18 项字典均原样保留；Store2 NO_SPICY 自定义内容保留。
+
+
+## Staging 实际部署与验收脚本修正
+
+Staging 于 04:56:59 UTC 部署 APP `4b3abd1` / Flyway V38；Backend image
+`sha256:c79b6bd78a2f82a4b95eb15472b5a82820a2c48248d94e334fb983969d3a80c5`，
+Frontend image `sha256:2b0749d39545a4eae784b29315be78aac0b5866dc069fb6c60372ad82ee4387b`。
+全库备份 SHA256 `717dccc62f3b11f2280e95dfd7de49a46a34bba3d6c8ec4b4d1eeba2618db624`，
+路径 `/srv/restaurant-pos/staging/pos-removes-4b3abd1349e66a146c36ac310b6a8b48bb2ad572`。
+原 Production 及两 DB container/fingerprints 保持；历史快照 hash 不变。
+
+Store18 首次补 3 个缺失 master（22→25）、0 legacy links、原 raw/effective 变化 0；
+fresh dry-run/apply replay 0/0。原 apply/dry-run/replay 已另存 `.attempt1.json`。
+首轮验收脚本错误比较整个 `combo_configuration`，其 `menu_revision` 随基线整理合法
+递增，因此误报 AssertionError。DTO/服务确认该字段为共享菜单版本；原子事务报告
+及其后 dry-run/无变更 replay 全 PASS。修正只忽略这一个 metadata 字段，仍完整比较
+Store、groups/components/item overrides，新增 2 个针对检查 PASS；不修改应用代码，
+不重建镜像。修正脚本通过独立 source SHA/clean tree/零 app-source-diff 校验后复用镜像。

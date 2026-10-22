@@ -41,3 +41,12 @@ health; the additive schema remains. Retain the previous image pair, private
 reports and scoped configuration. A Store reconciliation invariant/audit failure
 rolls back that Store transaction before any next Store. Never automatically
 restore a full database over later business orders or delete migration records.
+
+
+For a reviewed acceptance-only correction, `acceptance.py` accepts
+`--script-sha <full-clean-source-sha>` while its positional SHA remains the
+accepted application SHA. It proves no Backend/Frontend source difference before
+using existing images. Compare Combo business fields independently of the shared
+`menu_revision` metadata: normal baseline linking advances that revision without
+changing Combo configuration. Retain failed-attempt and replay reports; do not
+rebuild an unchanged application for a verification-script correction.
