@@ -176,6 +176,10 @@ Proof is `post-pos-release-http-proof.json` in the receiver root; second event I
 each unique/idempotent, with no Uber business orders/tasks/jobs. Both public
 system health endpoints are200/UP; Production login/frontdesk/Print Center HTML
 routes are200. Password login and physical output remain NOT_TESTED.
+After this independent release, the earlier7d rollback snapshot is historical;
+do not apply it over the current4b/V38 application. Any later receiver pause
+must preserve the then-current image/private model and change only the authorized
+receiver/worker flags under the existing locks; no database restore is implied.
 
 Docker/disk before73%/16GB free, after74%/16GB free. Build Cache remains16.82GB
 (10.45GB reclaimable). Cache above12GB was reviewed, no cleanup/reclaimed space;
