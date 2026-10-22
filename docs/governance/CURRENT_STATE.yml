@@ -3,7 +3,7 @@ updated_at: 2026-10-22
 
 repository:
   ref: origin/main
-  sha: eeb23cc53fc0e3c0ef0d6aa72e7fd7aea2c9c0a1
+  sha: 8a3d41074b0aaad46ced6fc31ebc0e91fd662740
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
@@ -154,7 +154,9 @@ uber_4483_launch_preparation:
   prior_oauth_error: UNKNOWN_NOT_RETAINED
   oauth_secret_source_audit: ABSENT_RUNTIME_CANONICAL_AND_BOUNDED_HISTORICAL_PRIVATE_ENVIRONMENTS
   actual_menu_get: NOT_RUN
-  remote_store_access: NOT_VERIFIED
+  remote_store_access: GTS_MANUAL_REPORTING_ASSOCIATION_CONFIRMED_ORDER_API_NOT_TESTED
+  gts_manual_association_confirmed_at: 2026-10-22T17:30:35Z
+  gts_manual_association_message: 1a164aa2920c9c05
   order_webhook_role: NOT_VERIFIED
   gts_reply_sent: true
   gts_reply_actor: OWNER_INDEPENDENT_EMAIL_OBSERVED_READ_ONLY

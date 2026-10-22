@@ -9592,7 +9592,11 @@ Chinatown (Store2) remains disabled. No formal Production menu mappings have
 been written: all299 approved semantic rules resolve locally in each target,
 but their live external Uber IDs remain unverified. GTS Case60916651 has granted
 Production `eats.store` and `eats.store.orders.read`; actual OAuth and remote
-Store/`order_webhook` access remain separate activation requirements. Device13
+order-read/`order_webhook` access remain separate activation requirements. GTS's
+2026-10-22 13:30:35 EDT reply confirms4483's UUID is associated with the Production
+Client ID for reporting; it does not confirm the webhook role. The17:46–17:49Z
+runtime, canonical and local environment checks find no accessible Production OAuth
+Secret or completed hidden-input result. Device13
 has attributed recent PAD_DIRECT claim/complete evidence and native automatic
 polling; this does not prove current HOT paper output. This is
 local preparation, not real Uber Store activation. Current exact runtime and
