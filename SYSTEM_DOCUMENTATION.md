@@ -9585,9 +9585,12 @@ V36 only adds a nullable TEXT field and does not migrate historical note content
 ## Production application and receive-only Uber preparation
 
 Production Kitchen Mirror retains its independent Primary Signing Key,
-Receiver enabled and Worker paused. A controlled 4483-only trial used the
-2026-10-22T19:59:30Z cutover, then restored worker=false/empty cutovers when the
-Owner could not arrange the field order; no order was imported or printed.
+Receiver and Worker are enabled for continuous4483-only Kitchen Mirror.
+The Owner explicitly authorized ongoing operation without arranging an immediate
+first order. Global and sole4483 UUID cutovers are2026-10-22T20:26:58Z;
+canonical private configuration and the running container agree. There is no
+timed expiry or automatic no-order pause. The previous19:59:30Z pilot and
+20:03:57Z pause remain historical evidence, not the current runtime state.
 Saint-Denis (Store1/org1) has the Owner-confirmed production binding; Sainte-Catherine
 (Store3) remains unbound and Chinatown (Store2) disabled. The existing private
 OAuth configuration is installed and preserved on the same accepted Staging/Production
@@ -9625,24 +9628,27 @@ empty by default; no Production Store/name/ID is hardcoded in application code.
 Both actual deployed environments passed300/300 previews with errors0,
 warnings0 and RAW fallback0. The299 mappings and Master/printing configuration
 remain unchanged. The controlled4483 first new-order and physical paper
-acceptance remains pending; resume only with a fresh approved field window.
-Do not infer LIVE from successful preview or the brief technical activation.
+acceptance remains pending while continuous operation is enabled. Startup health
+and actual paper acceptance are separate results; only a new natural order and
+Owner confirmation can establish real printing success.
 
 The [4483 acceptance evidence](docs/governance/UBER_4483_LAUNCH_PREPARATION_20261022.md)
 records real OAuth/menu hashes, database backup/import read-back, previews and
 remaining gap. The [activation runbook](deployment/cloud/README_UBER_TWO_STORE_ACTIVATION.md)
-continues to require fresh4483-only cutovers and a controlled field window.
-The Owner authorized that bounded launch after all technical gates, with a new
-real accepted order proving official delivery and physical GRAB/HOT output.
+requires verified technical gates and fresh4483-only cutovers. Latest Owner
+authorization permits continuous operation while awaiting the next natural
+order; do not pause merely because no immediate test order is available.
+Uber Tablet retains Accept/Deny, and only observed ACCEPTED orders may release
+through shared OrderService/GRAB/conditional HOT, without FRONTDESK_RECEIPT.
 No pre-cutover order/HELD notification may be replayed.
 The existing operator reuses configured OAuth credentials and records only
 sanitized diagnostics; the earlier generic failure discarded its response and
 its exact historical OAuth cause cannot be reconstructed. No second credential
-workflow or application build was introduced. Correct/incorrect HMAC remains
+workflow was introduced; this continuous activation reuses the accepted image. Correct/incorrect HMAC remains
 200/401 with durable receive-only receipts. Three pre-cutover signed receipts
 resolve to real accepted 4483 orders through Production GET Order; they do not
-replace a new controlled delivery test. All 10 receipts remain HELD, and no
-Uber business order or print job was created. Device13's recent native
+replace a new controlled delivery test. All 10 pre-cutover receipts remain HELD. Activation creates no synthetic
+business order or print job; subsequent natural-order results require live evidence. Device13's recent native
 PAD_DIRECT claim/complete evidence does not establish new physical GRAB/HOT
 output. Field-order and paper acceptance remain pending in the
 [launch evidence](docs/governance/UBER_4483_CONTROLLED_LAUNCH_20261022.md).

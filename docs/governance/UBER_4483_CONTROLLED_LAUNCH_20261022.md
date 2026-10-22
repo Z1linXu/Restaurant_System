@@ -167,11 +167,99 @@ retains the prior4b image/environment. Any future use requires current config
 ownership/CAS, dual locks and health checks. Do not restore a whole database,
 clear queues or retry ambiguous physical jobs as an application rollback.
 
-Resume needs an available field order/paper observer, fresh unchanged-configuration
-proof and a new4483-only UTC boundary. No OAuth reinstall,299-row remapping,
-frontend build or APK replacement is needed.
+At that pause, the then-current pilot required an available field order/paper
+observer and a fresh4483-only UTC boundary. The subsequent continuous-operation
+authorization below supersedes the immediate-order prerequisite. No OAuth
+reinstall,299-row remapping, frontend build or APK replacement is needed.
 
 Docker after build/deploy: disk74% versus73% before; shared Build Cache16.82GB
 unchanged, no pruning/reclaimed space0. Both environment runtimes, DB volumes,
 old image and rollback/backup evidence protected. The only removed cache state
 was this batch's owned disposable builder, not shared production build cache.
+
+
+## Continuous operation — latest Owner authorization
+
+PRIMARY_REPAIR_GOAL: enable ongoing4483 Kitchen Mirror using the accepted runtime,
+without creating a test order or waiting for an immediate paper observer.
+EXPECTED_REPAIR_CLASS: SMALL configuration-only operation; no product/tooling
+code change, application build, Flyway, mapping write or APK installation.
+The Owner explicitly supersedes the short pilot window: leave worker=true until
+Owner pause or a verified serious safety incident. No no-order timeout is set.
+
+Fresh origin/main `44ba78c26de372102f82b0cc7d61b5042a2a7ff2`; clean dedicated
+`codex/uber-4483-continuous-activation` branch, original dirty Owner tree protected.
+At20:24:04Z, existing private credentials returned OAuth/Store/Menu200 and exact
+`eats.store eats.store.orders.read` grants. Live menu structure remains identical;
+raw-byte SHA256 `dc7bc69a561bf741e0f52647df0f195e825615bfacd567cefce6c62be4095ca0`.
+The internal probe ID returns404/not_found as expected, while recent real HELD
+orders remain readable; neither is a new post-cutover print test.
+
+Production preview rerun completed20:24:54Z: **300/300 PASS, errors0, warnings0,
+RAW0**, persisted299, before/after configuration fingerprints identical and
+business-order/print-job deltas0. Staging's accepted same-artifact300 proof is
+reused only after its current full protected configuration fingerprint matches.
+Full running environment matches the prior valid HMAC200 acceptance; receiver/key
+and image unchanged. Fresh invalid-signature POST returned401 with no event.
+Quiet queues have no pending print/outbox/Uber/recovery work; old failed and
+four ambiguous PRINTING records remain historical, never reset or retried.
+Device13 is active and fresh; enabled same-Store GRAB3/HOT4 and PAD_DIRECT match.
+
+Agent6 confirmed the unchanged activation script hash
+`5c59c32f03816d75fc3605d28ab59368ea5a1aa40df54794c71e77be044d0e9b`
+can be reused: its120-second future-cutover guard is not a runtime expiry.
+It contains no timer/no-order pause. Under both existing deployment locks,
+validated new DB backup, complete private-model CAS, exact image/fingerprints,
+quiet queue, Store/device/routing and held-history guards, it changed only:
+worker=true; global UTC cutover; sole4483 UUID cutover. Both cutovers are
+**2026-10-22T20:26:58Z /16:26:58 Montréal**. Other Stores/containers and protected
+configuration remain unchanged. Production backup SHA256:
+`7d1529b99f08aedcff0f8ef49083bea231479c1064213926dfd5ea3f95a236bd`.
+
+Actual container started20:25:43Z on the same immutable backend56185ed/image264ba;
+private canonical configuration matches runtime, restart_count0. The
+`uber-eats-1` thread is present. Provenance is checked on the immutable image
+revision; the inherited Compose container revision label still says4b and is
+NON_BLOCKING existing metadata, not evidence of a different running artifact.
+No metadata-only restart/rebuild is needed.
+
+At20:27:15Z after cutover, same container/worker=true, current configuration and
+299 mappings unchanged; Device13 last_seen10.2 seconds old, both environments
+healthy and7 authenticated ordinary POS GET checks PASS. All10 old HELD receipts
+unchanged; integration/local Uber orders0, Uber jobs0, Uber frontdesk jobs0,
+duplicate local orders/jobs0 and foreign-Store Uber orders0. Startup ERROR lines0
+and credential log matches0. These are actual startup observations only.
+
+**Continuous processing is enabled; real-order/physical-print validation is
+PENDING.** Do not turn missing immediate natural traffic into an automatic
+pause. Uber Tablet retains acceptance; existing receipt plus placed_at gates
+exclude old orders, and ACCEPTED precedes shared local release. Existing
+conditional HOT/no blank HOT/no Uber FRONTDESK_RECEIPT and idempotency remain.
+Store3/Store2 have no binding or UUID allowance; their local modules/printers
+were not changed. No Uber remote write, synthetic order, history replay, queue
+reset, reprint or physical-print claim occurred.
+
+Private evidence root:
+`/srv/restaurant-pos/production/uber-4483-activation-20261022T202529Z`:
+`result.json`, `startup-health-proof.json`, `continuous-health-proof.json`,
+`database-before.dump` and original/target/rollback0600 private models.
+Fresh preview:
+`/srv/restaurant-pos/production/uber-4483-final-20261022/production-vegan-preview-20261022T202404Z/result.json`.
+For a verified duplicate/cross-Store/routing/severe mapping/print incident, use
+the existing Store pause or this operation's owned same-image worker=false
+rollback under locks and current CAS. Preserve records and ordinary POS/PAD_DIRECT;
+never restore the whole DB or blindly reprint. No automatic rollback is scheduled.
+
+Final20:29:03Z steady-state check: same container running/restarts0, worker=true,
+uber-eats-1 present, both environments healthy, Device13 heartbeat20.5 seconds old.
+All10 HELD receipts unchanged; Uber orders/jobs/frontdesk/duplicate/cross-Store
+counts remain0, startup ERROR and credential matches0. No absence-of-order pause
+was performed. Proof: `steady-state-health-proof.json` in the activation root.
+Agent6 final4-document review ACCEPT, no P0/P1/P2; governance/diff checks PASS
+and configured-credential diff scan matches0. No application deployment follows
+this documentation-only evidence update.
+
+Docker before/after activation:74%/74%,15G free in both checks.
+Shared Build Cache16.82GB/reclaimable10.45GB; no build or shared cleanup, reclaimed0.
+Current Stage/Prod runtimes, databases, private credentials, old image and both
+pause/application rollback evidence are protected.

@@ -6,6 +6,28 @@ preparation. Missing Uber approval, verified Store identity, actual secrets,
 mapping or printer/device proof blocks activation. The confirmed4483 vegetable Combo broth requires the bounded scoped-default
 capability; no new order/printing pipeline or React/Android change is needed.
 
+## Owner-authorized continuous operation for4483
+
+The latest2026-10-22 Owner instruction authorizes continuous Production Kitchen
+Mirror for only Store1/4483 UUID `5a7dca5c-b7ec-57c8-a684-87d23e66e8d9`.
+This supersedes the earlier requirement to arrange an immediate first field
+order before startup. Reuse the reviewed activation operation with a fresh UTC
+global cutover and only that UUID in `UBER_EATS_STORE_CUTOVERS`; retain all
+technical, backup, queue, routing, environment and configuration-drift guards.
+The activation script's120-second cutover freshness limit is a startup check,
+not a runtime expiration. Do not schedule a pause or stop merely because no
+new order arrives during startup observation. Worker remains enabled until
+Owner pause or a verified safety incident requires the existing pause path.
+
+Uber Tablet retains Accept/Deny. Receipt and remote placed_at must both meet
+the effective cutover; import only after ACCEPTED. Preserve old HELD/history
+and ambiguous print results. Store3 and Store2 remain outside the UUID allowlist;
+do not mutate their bindings, mappings or printer assignments. Existing GRAB,
+conditional HOT_KITCHEN and no Uber FRONTDESK_RECEIPT semantics remain unchanged.
+Startup/configuration health may PASS independently of physical acceptance:
+wait for a naturally occurring new order and Owner paper confirmation, recording
+real-order/physical-print validation as PENDING until actually observed.
+
 ## Verified local targets
 
 | Restaurant | Owner-provided address | Production Store / org | Current printing |
