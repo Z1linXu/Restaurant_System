@@ -1,19 +1,21 @@
 # Current Restaurant Pilot Scope
 
-This document records the operational boundary after
-`PR-PILOT-RELIABILITY-1`. It describes the current restaurant pilot, not the
-complete source tree or future product roadmap.
+This document records the pilot product boundary and current implementation
+contracts. It does not certify a deployment: environment SHA/schema/acceptance
+belong to fresh runtime evidence and `governance/CURRENT_STATE.yml`. The five
+issue repair is bounded to implementation and authorized Staging validation;
+Production mutation remains separately gated.
 
 ## Enabled / Pilot Scope
 
 | Area | Current pilot behavior |
 | --- | --- |
 | Authentication | JWT login and refresh with store-scoped authorization. |
-| Ordering | Frontdesk table/takeout ordering with server validation. |
+| Ordering | Frontdesk table/takeout ordering with server validation. Base plus per-item option deltas is multiplied by line quantity; initial submit and add-only Update serialize the same frozen quote. Tax remains 14.975% with existing rounding. |
 | Weak-network ordering | Versioned IndexedDB menu cache, persistent local drafts, idempotent server submit, foreground outbox replay, and an actionable frontdesk queue. Only server-confirmed orders are shown as received by the kitchen. |
-| Printing | Printer Restaurant Mode with GRAB, FRONTDESK_RECEIPT, and HOT_KITCHEN jobs. Printing failure does not roll back an order. |
+| Printing | GRAB, FRONTDESK_RECEIPT and HOT_KITCHEN retain separate wording. Frontdesk explicitly shows frozen soup selection and allocates stored line cents per bowl; configured NO_SPICY kitchen text wins before legacy suppression. Printing failure does not roll back an order. |
 | PAD_DIRECT | Paired Android Pads claim assigned jobs and print to the job's assigned LAN printer under the existing duplicate-print safety boundary. |
-| Menu management | Store-scoped item, option, price, availability, and sold-out management. |
+| Menu management | Seven tabs: Menu Items, Add-ons, Categories, Stations, Combo Configuration, Pricing Rules, Printing Display Rules. Add-ons contains Add-ons/Removes subnavigation. Free Removes have Store-owned names and category inheritance with item overrides; the old Printing Settings page links to the same-Store wording tab. |
 | Menu item ordering | Category-scoped up/down ordering persisted in `menu_items.sort_order`; catalog revision and IndexedDB refresh carry the new order to ordering clients. |
 | Cloud deployment | The `deployment/cloud` package remains the production deployment template; deployment requires operator review, backup, and smoke tests. |
 
@@ -41,7 +43,24 @@ complete source tree or future product roadmap.
   changing a print job's status; a later retry, error, or status change becomes
   visible again.
 - Menu caches are isolated by account, organization, store, and revision.
-- Menu item ordering is isolated by store and category.
+- Menu item ordering and modifier applicability are isolated by Store/category;
+  item overrides take precedence. A private Store rule/catalog edit never
+  changes another Store or published Master/Profile.
+- Menu refresh/recovery preserves captured draft prices/options; new submission
+  still validates current eligibility and canonical-price rules.
+- Old order amounts, kitchen instructions and rendered jobs are not rewritten.
+  Source-job reprint copies frozen text; full order reprint uses persisted order
+  snapshots. Missing old soup selection is unrecorded, never an assumed broth.
+- V38 adds schema only; legacy Remove reconciliation is explicit and leaves
+  ambiguous names unresolved. No automatic operational-data cleanup is implied.
 - The frontdesk can continue a local draft, retry a queued order, check a
   submitting result, or cancel only a locally safe record. It does not turn a
   `SUBMITTING` or uncertain retryable result into a new editable order.
+
+
+Shared Removes are maintained once per Store semantic in Menu Management →
+Add-ons → Removes. Legacy repeated item records appear only in a collapsed
+summary diagnostic. The bounded 18-item reconciliation preserves each existing
+item's choices and Combo Parent; new masters start unassigned. Printing Display
+Rules shows the same Store semantic once and edits wording independently of menu
+eligibility. Runtime deployment evidence is recorded separately from capability.

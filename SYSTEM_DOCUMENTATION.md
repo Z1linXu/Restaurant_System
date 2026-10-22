@@ -2300,7 +2300,7 @@ Submitted order editing now uses immutable old lines plus transactional update b
 - FRONTDESK update jobs use receipt type `FRONTDESK_RECEIPT_UPDATE`, retain `order_update_batch_id`, and render only items tagged with that exact batch.
 - FRONTDESK update receipts are marked `UPDATED` / `Added items only`; their subtotal, tax, and total are calculated from the added batch lines rather than the full order.
 - FRONTDESK receipts display combo side dishes under the combo main item, including combo side remove instructions such as `走花生`, so staff can pack takeout combo sides correctly.
-- Manual reprint always renders the complete current order.
+- Order-level manual reprint renders the complete current order from persisted item/option snapshots and the captured historical rule revision when available. Print-job reprint instead copies the source job's nonblank `rendered_text_snapshot`; it does not add newly configured wording to an old ticket.
 
 The occupied table card now exposes `Edit Order`, `Print`, and `Finish` in that order. Print choices come from `GET /api/v1/orders/{orderId}/print-options`; unavailable modules include a reason rather than being hardcoded in the client.
 
@@ -2311,11 +2311,40 @@ Audit Logs is available through `/admin/audit-logs`; `/admin/audit` is accepted 
 
 Database compatibility:
 
-- The project currently uses JPA `ddl-auto=update`; the new table and nullable revision columns are added on application startup.
+- Shared Staging/Production schema changes use reviewed Flyway migrations; JPA startup is not a substitute for a release migration. Existing update-batch tables and nullable revision columns are part of the baseline schema.
 - Existing orders with null `current_revision` are interpreted as revision `1` and are assigned the next revision on their first update.
 - Existing order items remain valid with null update batch fields and are treated as original/locked submitted items.
 
 Takeout receipt copies remain assignment-driven through `printer_assignments.takeout_receipt_copies`. `FRONTDESK_RECEIPT` resolves one copy for dine-in regardless of configuration, and one or two copies for `pickup`/`takeout`; GRAB always resolves one copy.
+
+## In-store Order Pricing Snapshots
+
+`order_items.unit_price` (request `unit_price_snapshot`) is the captured base
+price of one menu item before options. `order_item_options.quantity` is the
+option count **per item/bowl**, not the count for the entire line:
+
+```text
+configured_unit = unit_price + sum(option.price_delta * option.quantity)
+line_amount = configured_unit * order_item.quantity
+subtotal_amount = sum(active order_item.line_amount)
+```
+
+Size, soup-base, Combo upgrade, selected Combo component deltas and Add-ons all
+use the same formula. Their values come from the selected Store catalog quote:
+Size/Combo policy projections, Store Combo configuration and canonical Store
+Add-ons. Free selections, including canonical Removes, contribute zero. There
+is no fixed Combo/Size price in the receipt renderer. `OrderServiceImpl` owns
+persisted totals. Frontend `utils/orderPricing.ts` uses integer cents for the
+same line preview and snapshot construction; `mapFrozenOrderItem` serializes
+both initial submission and add-only Update from the captured base/option
+snapshots, rather than reconstructing an Update from a later menu revision.
+
+Existing local lines retain their captured quote across menu refresh and
+IndexedDB recovery. Submission still enforces current Store identity,
+availability, Add-on canonical-price validation and Remove eligibility; a
+rejected queued payload is not silently repriced. Submitted old lines, historical
+orders, reports and print snapshots are not recalculated/backfilled by this
+repair. Kitchen Mirror/Uber financial snapshots keep their separate contract.
 
 ## Order Tax Policy
 
@@ -5915,15 +5944,27 @@ Current dispatch architecture:
 Phase A11 display-rule architecture:
 - display rules are resolved before rendering and passed to renderers as a
   `PrintingDisplayRuleContext`
-- `GRAB`, `FRONTDESK_RECEIPT`, and `HOT_KITCHEN` can use independent
-  Store-owned display aliases and dictionaries
+- `GRAB`, `FRONTDESK_RECEIPT`, and `HOT_KITCHEN` use their corresponding
+  Store-owned output columns; customer labels and kitchen shorthand stay separate
+- `KitchenSpicinessDisplayResolver` is shared by GRAB task-snapshot creation,
+  HOT_KITCHEN rendering and rule preview. It reads the rule before legacy
+  suppression: a nonblank `NO_SPICY` output such as `（走s）` is honored, an
+  explicit empty string hides the token, and a missing/null output uses the
+  existing fallback. Stable code matching works even without a Chinese label
+- the unchanged default NO_SPICY kitchen outputs are empty; a Store's private
+  revision does not change another Store, the global defaults or Profile artifacts
 - missing aliases fall back to submitted order/menu snapshots
 - display rules do not choose printers, change assignments, alter routing
   eligibility, mutate order totals, alter PrintJob state, contact devices, or
   access other Stores
 - single job reprint still prefers `print_jobs.rendered_text_snapshot`
-- order-level reprint resolves the historical captured A11 rule revision when
-  available and falls back safely for pre-A11 jobs without A11 metadata
+- order-level reprint resolves the most recent captured revision for that
+  Store/order/module when available, otherwise its current Store context. GRAB
+  still consumes frozen kitchen-task instructions; HOT_KITCHEN can rebuild its
+  module wording from option snapshots and that selected revision. New rules
+  do not rewrite old tasks or jobs, including already queued PAD_DIRECT bytes
+- rule preview is render-only. Its spicy wording shares the runtime resolver;
+  preview itself does not prove device output, order routing or full-receipt layout
 
 Current async/safety rule:
 - printing is dispatched after transaction commit
@@ -6052,88 +6093,40 @@ Current GRAB layout behavior notes:
   - frontdesk receipt rendering
 
 Current frontdesk receipt content:
-- enlarged table number or pickup number header
+- enlarged table number or pickup number header; no `FRONTDESK RECEIPT` title
 - `Order Type: Takeout` only for takeout / pickup orders
-- submitted time
-- customer-facing item name
-- optional `Combo` marker
-- Chinese size prefix:
-  - `中碗`
-  - `大碗`
-- English size label:
-  - `Regular`
-  - `Large`
-- noodle type line when present:
-  - `二细`
-  - `三细`
-  - `毛细`
-  - `大宽`
-- quantity
-- line price from persisted order data
-- subtotal
-- tax
-- total
-- no order number
-- current text layout:
-  - centered `FRONTDESK RECEIPT`
-  - enlarged `桌号: ...` or `取餐号: ...`
-  - for takeout / pickup only:
-    - `Order Type: Takeout`
-  - divider line
-  - one order item block per line:
-    - `{中碗|大碗}{item_name} [Combo] [Regular|Large] x{quantity}`
-    - optional noodle-type line:
-      - `{noodle_type}`
-    - optional charged add-on lines only:
-      - `加面 x1`
-      - `加蛋 x1`
-    - money line:
-      - `{line_total}`
-      - or `{unit_price} x{quantity} = {line_total}` when quantity > 1
-    - blank line between item blocks
-  - divider line
-  - `Subtotal: ...`
-  - `Tax (14.975%): ...`
-  - `Total: ...`
-  - divider line
-  - `Submitted: ...`
-- dine-in orders intentionally do not print an order-type line
-- no order-number line or explanatory debug text is printed
-- frontdesk receipt intentionally does not print kitchen-production details such as:
-  - spicy level
-  - soup base
-  - remove/addon instructions
-  - grab shorthand
-- combo display rule:
-  - a main item is treated as combo when:
-    - `order_items.combo_role = main`
-    - or an addon option label contains `套餐` / `combo`
-  - zero-priced combo included parts are not printed as separate priced rows
-- size display rule:
-  - both Chinese and English size markers can be shown:
-    - `中碗 Regular`
-    - `大碗 Large`
-  - size is read from `order_item_options.option_type_snapshot = size`
-  - if no size option exists, no size label is printed
-- option visibility rule:
-  - show noodle type
-  - show charged options only when `price_delta > 0`
-  - do not show zero-priced remove instructions
-  - do not show zero-priced spicy or soup-base production-only details
+- one item block per sold unit/bowl, with Chinese soup-noodle size prefixes such
+  as `中碗牛肉面`, `大碗蔬菜面` and `1* combo 大碗牛肉面`
+- noodle-type line, customer-facing `辣度: ...`, Combo egg/side selections,
+  chargeable options and the item's own note when present
+- explicit `汤底：...` for a recorded soup choice, including zero-price choices.
+  Identification uses frozen `SOUP_BASE` group, legacy `soup_base` type, then
+  known legacy stable codes when both metadata fields are absent. The label
+  uses only the FRONTDESK_RECEIPT dictionary column or frozen bilingual label;
+  GRAB/HOT_KITCHEN shorthand is never substituted. Ordinary beef noodles with
+  no soup choice gain no soup line. An old `vegetable_noodle` snapshot without
+  a recorded soup selection prints `汤底：未记录`, never an assumed vegetarian broth
+- a soup choice shown on its own line is not duplicated among chargeable options
+- zero-priced ordinary Remove instructions remain kitchen-facing; Combo-side
+  Remove instructions retain their established position under the selected side
+- zero-priced included Combo parts do not become separate priced item rows
+- money, subtotal, tax, total and submitted/created time; no order-number/debug line
 
 Current frontdesk receipt totals source:
-- `subtotal`
-  - from `orders.subtotal_amount`
-- `tax`
-  - derived from persisted order totals as:
-    - `orders.total_amount - orders.subtotal_amount`
-  - because the current schema has no dedicated tax column
-  - displayed as `Tax (14.975%)`
-- `total`
-  - from `orders.total_amount`
-- receipt money lines still use:
-  - `order_items.unit_price`
-  - `order_items.line_amount`
+- full receipt subtotal and total come from `orders.subtotal_amount` and
+  `orders.total_amount`; displayed tax is their persisted difference, labeled
+  `Tax (14.975%)`
+- Update receives only the exact `order_update_batch_id`, prints `UPDATED` /
+  `Added items only`, and calculates batch subtotal from those stored line
+  amounts plus the existing `TaxCalculator` 14.975% HALF_UP tax
+- per-bowl money is allocated from the persisted `order_items.line_amount` in
+  integer cents. Any indivisible remainder is assigned to earlier bowl blocks,
+  so the printed blocks sum exactly to the stored line total. It is not read
+  from the base `unit_price`, recomputed from today's menu or corrected by
+  adding Size/Combo deltas in the renderer
+- order-level full reprint uses the complete current persisted order; source-job
+  reprint keeps the original frozen rendered text. Historical charged amounts
+  remain unchanged even if a historical calculation was incorrect
 
 Current owner admin APIs:
 - `GET /api/v1/admin/printing?store_id=1`
@@ -6245,7 +6238,10 @@ Current menu option price seed values:
 - existing Admin-managed option prices are preserved across restart
 - missing options are inserted on startup when `app.seed.runtime-enabled=true`
 - `syncTargetOptionPrices()` only runs when `app.seed.force-overwrite=true`
-- new order snapshots use `menu_item_options.price_delta` when creating `order_item_options.price_delta`
+- new order options freeze the selected effective catalog quote; Size/Combo
+  deltas are Store policy projections, linked Add-ons use the canonical Store
+  Add-on authority, and linked Removes are free. Raw compatibility option
+  copies are not a second price source
 - order totals continue to use persisted order item and option amounts from the order flow
 
 Current runtime seed controls:
@@ -6360,12 +6356,10 @@ Seed behavior:
 ### 10.12.1 Frontdesk Ordering Concurrency Notes
 
 Current `/frontdesk/menu` isolation model:
-- no `localStorage`
-- no `sessionStorage`
-- draft isolation is backend-driven by:
-  - `store_id`
-  - `table_no`
-  - `pickup_no`
+- versioned IndexedDB menu/draft/outbox storage is scoped by account,
+  Organization, Store and local draft identity
+- submitted-order identity and access remain backend-authoritative by Store
+  and order/table/pickup context; local persistence is not server confirmation
 - frontend hook:
   - `useDraftOrder`
 - backend lookup:
@@ -6378,7 +6372,9 @@ Current `/frontdesk/menu` isolation model:
 Current safe behavior:
 - two iPads can open different tables at the same time
 - different tables do not share draft state
-- different browser tabs/windows do not share local cart state through browser storage because browser storage is not used for draft persistence
+- browser recovery uses persisted local drafts and frozen quotes; clients must
+  preserve draft/outbox identity and never assume that another tab is an
+  independent server order
 - the table board now subscribes to realtime `frontdesk/orders` updates and also polls every 4 seconds as a fallback, so table occupancy changes appear quickly across workstation pages
 
 Current same-table behavior:
@@ -7363,8 +7359,10 @@ The Owner Menu Management option panel now shows a dedicated
 Owners choose which of those canonical Sizes an item supports and, when
 Regular is not enabled with multiple Sizes, which enabled Size is default. The
 generic option create/update/deactivate/reorder endpoints reject Size writes.
-`Noodle Type` and `Remove` remain in the editable option list;
-ADD_ON uses the Store Add-on catalog and item eligibility described below.
+`Noodle Type` and unresolved legacy Remove options retain the compatibility
+option editor. Linked canonical Removes use the Store Remove catalog and
+category/item applicability; generic option writes cannot bypass it. ADD_ON
+uses the separate Store Add-on catalog and item eligibility described below.
 `NOODLE_TYPE` remains display/default-order oriented.
 
 The canonical product model is `MenuItem -> SizeVariant[1..N]` implemented
@@ -7460,7 +7458,8 @@ eligibility and compatibility materialization. Their formal `store_addon_id` /
 returned by Add-ons and item eligibility APIs. `StoreAddonOptionResolver` projects
 current code/name/price/availability from that FK for POS catalogs, Admin options,
 Uber mapping and new order selections; copied option fields are not authority.
-Other option groups keep their current editing behavior.
+Remove identity/eligibility has its own typed Store catalog, described below;
+remaining option groups keep their established editing behavior.
 
 Catalog edits atomically propagate names/prices and effective active state to
 all linked options in that Store, and increment the existing menu revision.
@@ -7481,8 +7480,8 @@ inside its existing transaction and rolls back unresolved identity conflicts.
 Menu Management exposes a Store Add-ons list with add/edit/activate/deactivate;
 code is entered on creation and read-only thereafter. Item Add-ons expose
 only enable/disable plus read-only names/prices. Printing coverage is a
-lightweight configured/fallback indicator. Printing Settings derives its Add-on
-alias rows from the Store catalog, legacy Menu codes, Combo components and
+lightweight configured/fallback indicator. The Printing Display Rules panel
+in Menu Management derives its Add-on alias rows from the Store catalog, legacy Menu codes, Combo components and
 retained published aliases. Code/name/default text are read-only; only the
 optional kitchen alias is editable. New Menu Add-ons appear automatically.
 Reset stores a null alias, never deletes Menu identity. No Add/Remove/code-edit
@@ -7534,6 +7533,89 @@ Initial selection honors user/draft choice, then item exception, then Store
 default and the existing safe fallback. Removing an exception restores Store
 default inheritance. Product names never choose the default; Combo prices,
 component identities and kitchen behavior remain governed by existing policy.
+
+### Menu Management Navigation and Store Remove Catalog
+
+Menu Management exposes exactly seven top-level tabs: `Menu Items`, `Add-ons`,
+`Categories`, `Stations`, `Combo Configuration`, `Pricing Rules` and
+`Printing Display Rules`. `Add-ons` contains `Add-ons` / `Removes` subnavigation.
+Printing Display Rules reuses the existing panel and Store-scoped APIs at
+`/stores/{storeId}/admin/menu/items?section=printing-display-rules`; the old
+Printing Settings page retains a same-Store link and continues to own printer
+mode, devices, assignments and job diagnostics. Moving the panel grants no new
+permission: printing configuration still requires its existing capabilities and
+PRINTING module checks.
+The frontend reads `ADMIN_PRINTING_MANAGE` / `ADMIN_STORE_CONFIG` from the
+actual auth permission list (enum names); menu-only permission does not grant
+printing configuration access.
+
+V38 adds typed `store_removes`, `store_remove_categories` and
+`store_remove_item_rules`, with nullable same-Store links on
+`menu_item_options.store_remove_id / store_remove_store_id`. Removes are free,
+have immutable Store-local codes and independent bilingual names, availability
+and ordering. They do not share Add-on price authority or turn an Add-on into a
+Remove. Item ALLOW/DENY overrides category inheritance; absence of an item rule
+means INHERIT. Actual orderability is catalog active AND effective eligibility.
+Category selection applies to existing and future items in that Store;
+item/category writes refresh compatibility assignments within their existing
+transaction and menu revision change.
+
+Catalog edits update linked current options and menu revision atomically;
+`StoreRemoveOptionResolver` resolves the persisted assignment plus current Store
+master availability and applicability. Assignment identity and original active state
+are preserved during baseline linking; only an explicit catalog name/order edit
+propagates those owner-edited fields.
+New submission, direct draft submission and Update validate current same-Store
+Remove assignment, free price and selected Combo-side parent. Stable ingredient
+codes prevent Add-on/Remove conflicts within the same dish; the POS removes the
+opposite selection when a new choice is made, while crafted/stale conflicts
+are rejected with `ADD_REMOVE_CONFLICT`. Main and Combo-side instructions retain
+separate scopes. Missing/foreign/inactive canonical Remove assignments cannot
+be admitted solely from cached labels.
+
+V38 does not automatically reconcile existing business rows. The explicit
+`/api/v1/admin/menu/removes/reconcile` dry-run/apply contract links only
+unambiguous same-Store stable-code/name/free-price groups, preserving option IDs
+and existing item eligibility; conflicting legacy rows remain visible for
+review. Store provisioning/clone uses target-local reconciliation in its
+existing transaction and never copies source Store catalog IDs. No historical
+order, kitchen task, print snapshot, published Master/Profile or other Store
+is rewritten. See [Remove Catalog](docs/operations/REMOVE_CATALOG.md) and
+[API](doc/API.md#store-remove-catalog) for exact fields and endpoints. Migration
+presence and implementation tests are not a claim that Staging or Production
+has deployed this change.
+
+### Canonical Remove baseline and printing aliases
+
+The controlled `POST /api/v1/admin/menu/removes/baseline-reconcile` supplements
+only the 18 Owner-specified semantics. `RemoveSemantics` recognizes an exact
+`remove_` prefix without conflating `beef` with `meat`, `radish` with `carrot`, or
+`noodle` with `less_noodle`. Existing immutable master codes remain unchanged;
+`semantic_code` is the common catalog/printing identity. Creation rejects a
+second master from the same canonical/prefixed identity family in that Store.
+
+Dry-run returns exact per-option before/after selections and a fingerprint.
+Apply requires that fingerprint, locks the Store and reconciles only clear,
+free, parentless existing assignments in one transaction. It creates no category
+selection and no assignment for an item that lacked that Remove. Existing
+inactive options stay inactive. Ambiguous names, missing codes, nonbaseline
+codes and special Combo parents remain traceable legacy records. Any selection
+change aborts the Store transaction; audit insertion is part of that transaction.
+A fresh dry-run/apply replay is a no-op; a stale original fingerprint is rejected.
+This is an application operation on V38, with no V39 migration.
+Normal management shows shared masters once; default-collapsed diagnostics
+summarize unlinked records, conflicts and affected items.
+
+Printing Display Rules exposes `remove_aliases` from that Store's shared catalog,
+with one semantic row containing code, shared name, default text and custom alias.
+New masters appear automatically. Prefix compatibility affects new renderings;
+shared alias editing never changes menu eligibility or limits legal selections.
+Absent aliases safely fall back to the stored option label. The existing draft,
+validate, publish and preview workflow owns all rule changes. Read-only alias
+proposals preserve conflicting custom values and published revisions; matching
+canonical/prefix entries may be consolidated through that workflow. An already
+canonical rule set needs no new revision. Original orders and existing rendered
+Print Job snapshots remain unchanged.
 
 ### Combo UI and Child Remove Options
 

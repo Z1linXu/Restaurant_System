@@ -1,6 +1,7 @@
 package com.restaurant.system.printing.semantic;
 
 import com.restaurant.system.order.entity.OrderItemOption;
+import com.restaurant.system.menu.remove.RemoveSemantics;
 import com.restaurant.system.printing.rules.PrintingDisplayRuleContext;
 import java.util.Locale;
 import java.util.Set;
@@ -82,7 +83,7 @@ public final class KitchenModifierTokenResolver {
         String labelEn,
         PrintingDisplayRuleContext printingRules
     ) {
-        String code = stable(stripRemovePrefix(semanticCode));
+        String code = RemoveSemantics.canonicalSemantic(semanticCode);
         String fallback = knownRemoveToken(code);
         if (fallback == null) {
             fallback = knownLegacyRemovePresentation(labelZh);
@@ -92,7 +93,7 @@ public final class KitchenModifierTokenResolver {
         }
         String token = printingRules == null
             ? fallback
-            : printingRules.resolveModifierToken("MODIFIER_REMOVE", code, fallback);
+            : printingRules.resolveModifierToken("MODIFIER_REMOVE", semanticCode, fallback);
         return token == null || token.isBlank() ? fallback : token;
     }
 
@@ -127,28 +128,9 @@ public final class KitchenModifierTokenResolver {
         if (code == null) {
             return null;
         }
-        return switch (code) {
-            case "cilantro" -> "走香菜";
-            case "onion" -> "走洋葱";
-            case "green_onion" -> "走葱";
-            case "beef" -> "走牛";
-            case "radish" -> "走萝";
-            case "noodle" -> "走面";
-            case "less_noodle" -> "少面";
-            case "bok_choy" -> "走上海青";
-            case "broccoli" -> "走西兰";
-            case "corn" -> "走玉米";
-            case "mushroom" -> "走菇";
-            case "seaweed" -> "走海";
-            case "carrot" -> "走胡";
-            case "cucumber" -> "走黄瓜";
-            case "edamame" -> "走毛豆";
-            case "peanut" -> "走花生";
-            case "cabbage" -> "走包";
-            case "meat" -> "走肉";
-            case "green_pepper" -> "走青椒";
-            default -> null;
-        };
+        String sharedDefault = RemoveSemantics.baselineDefaults().get(code);
+        if (sharedDefault != null) return sharedDefault;
+        return "onion".equals(code) ? "走洋葱" : null;
     }
 
     private static String knownLegacyAddonPresentation(String labelZh) {
@@ -238,16 +220,6 @@ public final class KitchenModifierTokenResolver {
             label = trim(semanticCode);
         }
         return label == null ? unknown : label;
-    }
-
-    private static String stripRemovePrefix(String code) {
-        String trimmed = trim(code);
-        if (trimmed == null) {
-            return null;
-        }
-        return trimmed.toLowerCase(Locale.ROOT).startsWith("remove_")
-            ? trimmed.substring("remove_".length())
-            : trimmed;
     }
 
     private static String stable(String value) {

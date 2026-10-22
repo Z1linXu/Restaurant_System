@@ -87,6 +87,9 @@ public record PrintingDisplayRuleContext(
     }
 
     public String resolveModifierToken(String dictionaryName, String semanticCode, String fallback) {
+        if ("MODIFIER_REMOVE".equals(dictionaryName)) {
+            return PrintingRemoveAliases.resolve(content, semanticCode, fallback);
+        }
         String normalizedCode = stable(semanticCode);
         if (normalizedCode == null) {
             return fallback;

@@ -1,5 +1,11 @@
 # Isolated Staging Package
 
+The October 2026 five-fix release preserves the already-running Staging HTTPS
+and sandbox overlay using the bounded
+[five POS fixes procedure](pos-five-fixes/README.md). Use that exact procedure
+for its reviewed release; the original bootstrap defaults below do not describe
+all later runtime overlays.
+
 This package is for an Owner-approved, non-production Staging release only. It
 does not replace the production package in `deployment/cloud/docker-compose.yml`.
 The production helper remains `deploy.sh`; do not use it for Staging.

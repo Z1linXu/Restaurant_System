@@ -1,0 +1,22 @@
+{
+  "result": "PASS",
+  "checked_at": "2026-10-22T03:33:21.867403+00:00",
+  "staging": {
+    "backend": {
+      "image": "sha256:4bb38242b262de79f626453f87435c71891549d5b24c7e91f441403b9e9c444a",
+      "source_sha": "fbcdb4f8152183b62b6ecc3859e2d5a689d01d49",
+      "started_at": "2026-10-22T03:14:30.057275694Z",
+      "restarts": 0
+    },
+    "nginx": {
+      "image": "sha256:48bea3d30070c66299ee16b24ac915914004a764303097991be4850b126e734b",
+      "source_sha": "fbcdb4f8152183b62b6ecc3859e2d5a689d01d49",
+      "started_at": "2026-10-22T03:15:15.521129624Z",
+      "restarts": 0
+    }
+  },
+  "public_frontend": 200,
+  "public_backend": "UP",
+  "both_postgres_healthy": true,
+  "history_and_own_release_production_baseline_unchanged": true
+}

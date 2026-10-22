@@ -4,7 +4,7 @@
 
 Owner-approved bounded menu simplification: explicit item Combo egg defaults,
 Store Add-on editing, immutable Organization semantic codes, item eligibility,
-and existing code-based printing. Execution status belongs only to
+typed free Store Removes, and code-based printing. Execution status belongs only to
 [`CURRENT_STATE.yml`](../CURRENT_STATE.yml).
 
 PRIMARY_REPAIR_GOAL: configure Combo egg exceptions and eliminate duplicated
@@ -46,7 +46,9 @@ Catalog updates and all linked option name/price/effective-active updates occur
 in one transaction together with the existing menu revision update. Item
 eligibility persists independently when the whole catalog Add-on is inactive.
 Ordinary generic option endpoints cannot bypass the catalog for ADD_ON writes.
-Other option groups retain their current editing behavior.
+Linked canonical Removes use their separate free catalog/applicability boundary.
+Unresolved legacy Removes and remaining option groups retain their established
+compatibility behavior.
 
 ## Reconciliation and history
 
@@ -74,14 +76,18 @@ value choices and reconciliation require the separate Owner Production gate.
 ## Printing and product simplicity
 
 `fried_egg` and `combo_fried_egg` remain different identities, as do the tea egg
-counterparts. Equal labels/tokens never justify deduplication. Printing resolver
-and historical fallbacks stay unchanged unless tests demonstrate a regression.
+counterparts. Equal labels/tokens never justify deduplication. Known Add-on
+tokens and frozen historical jobs keep their identity and fallback contract. Spicy display is rule-first through the shared
+`KitchenSpicinessDisplayResolver`; it does not introduce or change Menu identity.
 Missing MODIFIER_ADD coverage produces a lightweight fallback warning; it does
 not block menu editing or create an invented token.
 
 Menu Management alone owns normal Add-on creation and immutable code. Printing
-Settings derives a read-only identity projection and edits only nullable aliases.
-No duplicate Add/Remove/code controls. A new Menu entry appears automatically.
+Display Rules, now a Menu Management tab, derives a read-only identity
+projection and edits only nullable aliases. Printing Settings retains the
+same-Store link plus physical assignment/mode/device/job management.
+The Add-on alias section cannot create, delete or rename Menu identities.
+A new Menu entry appears automatically.
 The versioned CANONICAL_SNAPSHOT fallback policy preserves old published revisions
 and explicit aliases while new jobs use frozen Menu names without an alias.
 Combo egg codes remain available to Combo/printing but absent from normal Add-ons.
@@ -96,6 +102,39 @@ enables/disables an Add-on and displays read-only prices. Code is entered on
 creation and read-only afterward. No destructive definition deletion, semantic
 replacement UI, generic migration framework or duplicate Printing editor is
 required. Normal menu re-fetch/revision invalidation exposes catalog edits.
+
+## Free Removes and price snapshots
+
+V38 adds a separate Store-owned `store_removes` identity and category/item
+applicability, not an Add-on mode or an Organization-wide price definition.
+Codes are immutable and unique per Store. There is no price field: linked
+Remove options are `REMOVE` / `remove`, price zero and never simultaneously
+linked to an Add-on. Item ALLOW/DENY overrides category inheritance; INHERIT
+means no item override. Orderability also requires catalog active. New category
+members inherit eligibility without editing every item.
+
+Normal catalog edits/assignment refresh and menu revision updates are atomic.
+Read resolution uses formal same-Store FKs; generic item-option mutation cannot
+change a linked/catalog-owned Remove. Migration does not reconcile real data.
+Explicit dry-run/apply reconciliation preserves unambiguous old option IDs and
+item eligibility, reports conflicts, and never chooses differing business names.
+Provisioning/clone creates target-owned identities rather than shared mutable
+references. See [Remove Catalog](../../operations/REMOVE_CATALOG.md).
+
+For local orders, `unit_price` is captured base price. Option quantity is per
+item, so `line_amount = (unit_price + sum(price_delta * option.quantity)) *
+item.quantity`. Initial submission and Update serialize the same frozen quote.
+The backend validates current scope/availability/canonical prices before
+persisting money; an old submitted line is never silently repriced. Frontdesk
+per-bowl amounts allocate the stored line's cents exactly rather than displaying
+the base price alone. Add-on/Remove ingredient conflicts use stable codes and
+remain scoped to their main dish or selected Combo side; stale/crafted
+conflicting submissions fail rather than selecting a preference server-side.
+
+Menu Management has seven tabs: Menu Items, Add-ons, Categories, Stations,
+Combo Configuration, Pricing Rules and Printing Display Rules. The Add-ons tab
+contains Add-ons/Removes subnavigation. There is no duplicate priced Remove
+catalog or duplicate display-rule editor in Printing Settings.
 
 ## Acceptance boundary
 

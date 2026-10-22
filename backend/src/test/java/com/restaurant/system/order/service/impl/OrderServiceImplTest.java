@@ -360,6 +360,30 @@ class OrderServiceImplTest {
     }
 
     @Test
+    void newGrabTaskUsesCurrentStoreNoSpicyRuleWithoutChangingDefaultStore() {
+        PrintingDisplayRuleContext defaults = PrintingDisplayRuleContext.defaultContext();
+        PrintingDisplayRuleContext custom = PrintingDisplayRuleContext.defaultContext();
+        ((com.fasterxml.jackson.databind.node.ObjectNode) custom.content().path("dictionaries")
+            .path("SPICINESS").get(0).path("outputs")).put("GRAB", "（走s）");
+        when(printingDisplayRuleService.activeContext(store.id)).thenReturn(custom);
+        MenuItemOption noSpicy = menuOption(799L, "spicy_level", "spicy_none", "SPICY_LEVEL", "不辣", "No Spicy", BigDecimal.ZERO);
+        when(menuItemOptionRepository.findById(noSpicy.id)).thenReturn(Optional.of(noSpicy));
+        CreateOrderItemRequest selected = new CreateOrderItemRequest();
+        selected.menu_item_id = menuItem.id; selected.quantity = 1;
+        selected.options = List.of(optionRequest(noSpicy.id, 1));
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.store_id = store.id; request.order_type = "pickup"; request.pickup_no = "SPICY";
+        request.items = List.of(selected);
+
+        OrderResponse created = orderService.createOrder(request);
+        orderService.submitOrder(created.id);
+
+        assertTrue(kitchenTasks.values().iterator().next().special_instructions_snapshot.contains("（走s）"));
+        assertEquals("", defaults.resolveDictionaryOutput("SPICINESS", PrintModuleCode.GRAB,
+            "spicy_none", "不辣", "No Spicy", null));
+    }
+
+    @Test
     void linkedAddonFreezesCanonicalNamesPriceAndCodeWhileExistingSnapshotStaysFrozen() {
         MenuItemOption linked = menuOption(880L, "addon", "green_onion", "ADD_ON", "加葱", "Extra Green Onion", BigDecimal.ZERO);
         linked.store_addon_id=99L; linked.store_addon_store_id=store.id; linked.addon_eligible=true; linked.is_active=true;

@@ -75,6 +75,10 @@ public class OwnerStoreProvisioningMaterializer {
     private final StoreReadinessService readinessService;
     private final StoreActivationRequestCoordinator activationRequestCoordinator;
     private final StoreAddonService storeAddonService;
+    private com.restaurant.system.menu.remove.StoreRemoveService removeService;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setRemoveService(com.restaurant.system.menu.remove.StoreRemoveService removeService) { this.removeService = removeService; }
 
     public OwnerStoreProvisioningMaterializer(
         OrganizationRepository organizationRepository,
@@ -148,6 +152,7 @@ public class OwnerStoreProvisioningMaterializer {
         materializeComboConfiguration(store.id, artifacts.get("COMBO_CONFIGURATION"), itemByMasterKey, now);
         materializePrintingRules(store.id, artifacts.get("PRINTING_DISPLAY_RULES"), now);
         StoreAddonService.ReconciliationReport addonReconciliation = storeAddonService.reconcile(store.id, false);
+        if (removeService != null) removeService.reconcileForMaterialization(store.id);
 
         menuRevisionService.incrementRevision(store.id);
         store.lifecycle_status = "READY_FOR_REVIEW";

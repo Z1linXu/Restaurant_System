@@ -43,6 +43,26 @@ class PrintingDisplayRuleServiceValidationTest {
     }
 
     @Test
+    void removeResetIsValidButDifferentExplicitPrefixAliasesRequireResolution() {
+        assertThat(service.validate(1L, PrintingRemoveAliasesTest.content("[[\"beef\",null]]")).valid).isTrue();
+        assertThat(service.validate(1L, PrintingRemoveAliasesTest.content("[[\"beef\",\"牛\"],[\"remove_beef\",\"牛\"]]")).valid).isTrue();
+        var conflict = service.validate(1L, PrintingRemoveAliasesTest.content("[[\"beef\",\"牛A\"],[\"remove_beef\",\"牛B\"]]"));
+        assertThat(conflict.valid).isFalse();
+        assertThat(conflict.issues).extracting(PrintingDisplayRuleValidationIssue::code).contains("REMOVE_ALIAS_CONFLICT");
+    }
+
+    @Test
+    void previewUsesCanonicalAndLegacyRemoveAliasesAndIndependentFallbacks() {
+        var request = new PrintingDisplayRulePreviewRequest();
+        request.store_id = 1L;
+        request.content = PrintingRemoveAliasesTest.content("[[\"remove_beef\",\"牛自定\"],[\"meat\",\"肉自定\"],[\"carrot\",\"胡自定\"],[\"less_noodle\",null]]");
+        request.modifier_remove_codes = List.of("beef", "remove_meat", "radish", "carrot", "noodle", "less_noodle", "carrot_slice", "cucumber_shred");
+        var result = service.preview(request);
+        assertThat(result.grab_preview).contains("牛自定", "肉自定", "走萝", "胡自定", "走面", "少面", "走carrot_slice", "走cucumber_shred");
+        assertThat(result.hot_kitchen_preview).contains("牛自定", "肉自定", "走萝", "胡自定", "走面", "少面");
+    }
+
+    @Test
     void validatesDefaultContractAndReturnsDeterministicFingerprint() {
         PrintingDisplayRuleValidationResponse response = service.validate(
             1L,

@@ -62,6 +62,12 @@ class MenuRevisionLockIntegrationTest {
     @Autowired private MenuItemRepository menuItemRepository;
     @Autowired private PlatformTransactionManager transactionManager;
 
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.restaurant.system.menu.remove.StoreRemoveService storeRemoveService;
+
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.restaurant.system.menu.remove.StoreRemoveOptionResolver storeRemoveOptionResolver;
+
     private ExecutorService executor;
 
     @BeforeEach
