@@ -9590,8 +9590,11 @@ Saint-Denis (Store1/org1) has the Owner-confirmed local production/KITCHEN_MIRRO
 binding; Sainte-Catherine (Store3) has its module prepared but no known Uber UUID.
 Chinatown (Store2) remains disabled. No formal Production menu mappings have
 been written: all299 approved semantic rules resolve locally in each target,
-but their live external Uber IDs remain unverified. Production OAuth credentials,
-remote grants and device proof are separate activation requirements. This is
+but their live external Uber IDs remain unverified. GTS Case60916651 has granted
+Production `eats.store` and `eats.store.orders.read`; actual OAuth and remote
+Store/`order_webhook` access remain separate activation requirements. Device13
+has attributed recent PAD_DIRECT claim/complete evidence and native automatic
+polling; this does not prove current HOT paper output. This is
 local preparation, not real Uber Store activation. Current exact runtime and
 [signed-receipt evidence](docs/governance/UBER_PRODUCTION_RECEIVER_20261022.md)
 are referenced from `docs/governance/CURRENT_STATE.yml`; the independent POS
@@ -9601,6 +9604,17 @@ Use the [two-store activation runbook](deployment/cloud/README_UBER_TWO_STORE_AC
 for independent Store cutovers and controlled receive-only bootstrap. Existing
 POS/printing configuration remains intact. A real password login, live draft
 submission and physical Pad output were not repeated during this release.
+
+The [4483-only preparation](docs/governance/UBER_4483_LAUNCH_PREPARATION_20261022.md)
+reuses299 approved rules against fresh Production Store1 local canonical
+identities. Its offline verifier exports Store1-only API candidates and requires
+authenticated real menu provenance plus exact stable IDs/context/quantity/
+availability before permitting persistence. It performs no database writes or
+fuzzy name expansion. The bounded hidden-TTY OAuth operator changes only the
+existing PROD Client Secret configuration on the accepted4b/V38 image, retaining
+receiver=true/worker=false and existing private configuration/backup/locks.
+Hidden Owner input has not yet occurred, so no new Production OAuth/API success
+or formal mapping persistence is claimed. Store3 is excluded from this batch.
 
 ### Historical V37 application release (2026-10-05)
 
