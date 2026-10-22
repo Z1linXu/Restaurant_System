@@ -1,5 +1,7 @@
 """Pure fake checks: never invoke HTTP, Docker, login or a server filesystem."""
 import importlib.util
+import copy
+import json
 from pathlib import Path
 import unittest
 from unittest.mock import Mock, patch
@@ -15,6 +17,71 @@ class SafetyTests(unittest.TestCase):
         self.assertEqual(a.h.API_BASE, a.API_BASE)
         with self.assertRaisesRegex(a.NoGo, 'exact_release_script_required'):
             a.runtime('a' * 40)
+
+    def test_helper_release_sha_is_separate_from_deployed_app_sha(self):
+        app_sha, script_sha = 'a' * 40, 'b' * 40
+        args = ['--sha', app_sha, '--run-id', 'run20261021', '--report', '/unused']
+        self.assertEqual(a.parse_args(args).script_sha, app_sha)
+        self.assertEqual(a.parse_args(args + ['--script-sha', script_sha]).script_sha, script_sha)
+        release = a.ROOT / 'releases' / script_sha
+        labels = {'com.docker.compose.project': 'restaurant-pos-staging', 'org.opencontainers.image.revision': app_sha}
+        env = ['APP_ENVIRONMENT=staging', 'UBER_EATS_ENVIRONMENT=sandbox', 'DB_NAME=restaurant_pos_staging', 'APP_PRINTING_ALLOWED_MODES=MOCK,PAD_DIRECT']
+        rows = [{'Name': '/restaurant-pos-staging-' + role + '-1', 'State': {'Running': True}, 'Image': role,
+                 'Config': {'Labels': labels, 'Env': env}} for role in ('backend', 'nginx')]
+        evidence = {'source_sha': app_sha, 'result': 'PASS', 'flyway': '38', 'production_unchanged': True}
+        with patch.object(a.Path, 'resolve', return_value=release / 'deployment/cloud/pos-five-fixes/acceptance.py'), \
+                patch.object(a.h, 'command', side_effect=[script_sha.encode(), b'', json.dumps(rows).encode()]) as command, \
+                patch.object(a.h, 'private_bytes', return_value=json.dumps(evidence).encode()) as private:
+            result = a.runtime(app_sha, script_sha)
+        self.assertEqual(result['app_sha'], app_sha)
+        self.assertEqual(result['script_sha'], script_sha)
+        self.assertEqual(command.call_args_list[0].args[0], ['git', '-C', str(release), 'rev-parse', 'HEAD'])
+        self.assertEqual(private.call_args.args[0], a.ROOT / ('pos-five-release-' + app_sha) / 'result.json')
+
+    def test_existing_pad_endpoints_are_preserved_and_only_mode_is_changed(self):
+        api = a.StagingApi('run20261021')
+        store = {'id': 18, 'code': 'CHINATOWN', 'organization_id': 5, 'store_kind': 'VALIDATION_FIXTURE',
+                 'lifecycle_status': 'ACTIVE', 'provisioning_source': 'PHASE_B_OWNER_PROVISIONING'}
+        printing = {'printing_mode': 'PAD_DIRECT', 'printers': [{'id': 9, 'ip_address': '192.0.2.9', 'port': 9100}],
+                    'assignments': [{'module_code': module, 'printer_id': 9, 'enabled': True}
+                                    for module in ('GRAB', 'FRONTDESK_RECEIPT', 'HOT_KITCHEN')]}
+        original = copy.deepcopy(printing)
+        def call(path, method='GET', body=None, **kwargs):
+            if path == '/me/workspaces': return {'stores': [store]}
+            if path == '/owner/overview': return {'organizations': [{'stores': [store]}]}
+            if path == '/admin/printing?store_id=18': return copy.deepcopy(printing)
+            if path == '/menu/catalog?store_id=18': return {'store_id': 18, 'organization_id': 5}
+            if path == '/admin/printing/status' and method == 'PUT':
+                api.check_write(path, method, body)
+                printing['printing_mode'] = body['printing_mode']
+                return copy.deepcopy(printing)
+            self.fail('Unexpected fake API path')
+        api.call = Mock(side_effect=call)
+        runner = a.Acceptance(api, 'run20261021', {'checks': []}, lambda: None)
+        runner.control_snapshots = Mock(return_value={})
+        runner.publish_no_spicy = Mock()
+        runner.prepare()
+        runner.assert_mock()
+        self.assertEqual(printing, dict(original, printing_mode='MOCK'))
+        writes = [entry for entry in api.call.call_args_list if len(entry.args) > 1 and entry.args[1] != 'GET']
+        self.assertEqual(len(writes), 1)
+        self.assertEqual(writes[0].args, ('/admin/printing/status', 'PUT', {'store_id': 18, 'printing_mode': 'MOCK'}))
+        printing['printing_mode'] = 'PAD_DIRECT'
+        with self.assertRaisesRegex(a.NoGo, 'mock_boundary_changed'):
+            runner.assert_mock()
+
+    def test_mock_jobs_still_reject_physical_execution_identity(self):
+        api = a.StagingApi('run20261021')
+        runner = a.Acceptance(api, 'run20261021', {'checks': []}, lambda: None)
+        job = {'id': 50, 'store_id': 18, 'order_id': 45, 'execution_mode': None}
+        runner.assert_mock_job(job, 45)
+        runner.assert_mock_job(dict(job, execution_mode='MOCK'), 45)
+        self.assertIsNone(runner.report['mock_jobs']['50']['printer_id'])
+        self.assertEqual(runner.report['mock_jobs']['50']['effective_execution_mode'], 'MOCK')
+        for field, value in [('printer_id', 9), ('printed_by_device_id', 9), ('claimed_by_device_id', 9),
+                             ('printer_endpoint', '192.0.2.9:9100'), ('execution_mode', 'PAD_DIRECT')]:
+            with self.subTest(field=field), self.assertRaisesRegex(a.NoGo, 'mock_job_boundary'):
+                runner.assert_mock_job(dict(job, **{field: value}), 45)
 
     def test_mutations_cannot_reach_other_store_old_order_or_devices(self):
         api = a.StagingApi('run20261021')
@@ -82,7 +149,8 @@ class PricingTests(unittest.TestCase):
         receipt = '$18.99\n$18.99\nSubtotal: $37.98\nTax (14.975%): $5.69\nTotal: $43.67'
         job = {'id': 50, 'store_id': 18, 'order_id': 45, 'module_code': 'FRONTDESK_RECEIPT',
                'status': 'PRINTED', 'rendered_text_snapshot': receipt}
-        api.call = Mock(side_effect=lambda path, **kw: detail if path == '/orders/45' else [job])
+        api.call = Mock(side_effect=lambda path, **kw: detail if path == '/orders/45' else
+                        {'printing_mode': 'MOCK', 'printers': [{'ip_address': '192.0.2.9'}]} if path == '/admin/printing?store_id=18' else [job])
         report = {'checks': []}
         runner = a.Acceptance(api, 'run20261021', report, lambda: None)
         runner.verify_order(45, [line])

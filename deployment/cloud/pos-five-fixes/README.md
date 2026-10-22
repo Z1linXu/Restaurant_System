@@ -19,10 +19,14 @@ Staging database backup, then builds both SHA-labelled application images with
 a disposable builder capped at 1 GiB and one CPU. It removes only that builder.
 No shared image/cache/volume pruning is performed.
 
+The first release at `ece77240a7a77896632c10798fafa29120c6ab47` completed
+the normal V37 → V38 Flyway upgrade. The current bounded application repair
+pins those exact two application images, requires V38 before starting, and
+requires the entire migration ledger to stay unchanged after starting.
+
 The helper preserves the actual Staging runtime environment, HTTPS forwarding,
 network addresses, ingress template, mounts and limits. It replaces only
-Staging backend/nginx, with `--no-deps --no-build --pull never`. Backend Flyway
-must preserve V1–V37 and add exactly V38. Production and the Staging database
+Staging backend/nginx, with `--no-deps --no-build --pull never`. Production and the Staging database
 container fingerprints, Production migration ledger, old financial/order
 option/task/print snapshots and health are checked before and after deployment.
 

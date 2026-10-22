@@ -104,6 +104,35 @@ Not yet claimed. This section will be replaced with exact deployed SHA, UTC
 time, V38 outcome, backup digest, actual orders/jobs/rendered text, browser
 checks and unchanged Production/other-Store evidence after execution.
 
+First application deployment completed at **2026-10-22 03:00:15 UTC**, source
+`ece77240a7a77896632c10798fafa29120c6ab47`. Both actual image revision labels
+and public JavaScript build SHA matched; HTTPS frontend returned 200, Backend
+health was UP and V38 was added successfully. Fresh backup digest:
+`5aad09954f75baaf2f1cd905241af00ca2027bfe58f29437454f1cea416e0ac6`.
+Old snapshot fingerprints and all deployment-baseline Production/DB container
+fingerprints and Production ledger were unchanged during this deployment.
+
+An independent concurrent Uber release had already restarted Production
+Backend before this deployment acquired the shared operations locks. This task
+did not write to or restart Production; the global environment cannot be
+described as unchanged throughout both tasks. Its own before/after continuity
+checks are recorded separately from the original preflight observation.
+
+The first API acceptance run `p5oct22a` stopped before any configuration/order
+write because the fixture had existing printer endpoint configuration. The
+bounded script now preserves those endpoints, changes only Store 18's mode to
+MOCK, and checks every new job has no printer, endpoint, claim or printing
+device. The existing backend stores a nullable raw execution mode for MOCK;
+the effective MOCK decision and null/MOCK raw value are recorded explicitly.
+
+Actual browser acceptance found the new Tab initially denied Owner access:
+`/auth/me.permissions` returns enum names (`ADMIN_PRINTING_MANAGE`), whereas
+the new wrapper had used capability codes. The wrapper and permission fixtures
+now follow the actual response contract; no backend authorization was relaxed.
+The follow-up application repair requires existing V38 and an unchanged
+Flyway ledger. Release and business acceptance below remain pending until
+the repaired images are verified.
+
 ## Technical references and remaining verification
 
 Updated [system reference](../SYSTEM_DOCUMENTATION.md), [API](../doc/API.md),

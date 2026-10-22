@@ -5,7 +5,7 @@ import { PrintingDisplayRulesPanel } from './PrintingDisplayRulesPanel'
 import { fetchStoreContext, type StoreContextResponse, type StoreModuleConfiguration } from '../../services/storeWorkspaceService'
 import { fetchPrintingDisplayRules, previewPrintingDisplayRules, publishPrintingDisplayRuleDraft, savePrintingDisplayRuleDraft, type PrintingDisplayRuleSettings } from '../../services/printingAdminService'
 
-const access = vi.hoisted(() => ({ permissions: ['admin:printing_manage'], accountId: 7, printingFeature: true }))
+const access = vi.hoisted(() => ({ permissions: ['ADMIN_PRINTING_MANAGE'], accountId: 7, printingFeature: true }))
 vi.mock('../auth/useAuth', () => ({ useAuth: () => ({ permissions: access.permissions, user: { id: access.accountId } }) }))
 vi.mock('../feature-flags/featureConfig', () => ({ isFeatureEnabled: () => access.printingFeature }))
 vi.mock('../../services/storeWorkspaceService', () => ({ fetchStoreContext: vi.fn() }))
@@ -45,7 +45,7 @@ const button = (label: string) => view!.root.findAllByType('button').find((node)
 
 beforeEach(() => {
   vi.clearAllMocks()
-  access.permissions = ['admin:printing_manage']; access.accountId = 7; access.printingFeature = true
+  access.permissions = ['ADMIN_PRINTING_MANAGE']; access.accountId = 7; access.printingFeature = true
   vi.mocked(fetchStoreContext).mockImplementation(async (id) => context(id))
   vi.mocked(fetchPrintingDisplayRules).mockImplementation(async (id) => settings(id))
   vi.mocked(savePrintingDisplayRuleDraft).mockResolvedValue({ id: 20, revision_number: 1, status: 'DRAFT' } as never)
@@ -56,7 +56,7 @@ afterEach(async () => { if (view) await act(async () => view!.unmount()); view =
 
 describe('Printing Rules Menu permission and Store boundary', () => {
   it('does not mount or fetch the rule editor for a menu-only staff member', async () => {
-    access.permissions = ['admin:menu_manage']
+    access.permissions = ['ADMIN_MENU_MANAGE']
     await mount()
     expect(fetchStoreContext).not.toHaveBeenCalled()
     expect(fetchPrintingDisplayRules).not.toHaveBeenCalled()
@@ -127,7 +127,7 @@ describe('Printing Rules Menu permission and Store boundary', () => {
     let finish!: (value: StoreContextResponse) => void
     vi.mocked(fetchStoreContext).mockImplementation(() => new Promise((resolve) => { finish = resolve }))
     await mount()
-    access.permissions = ['admin:menu_manage']
+    access.permissions = ['ADMIN_MENU_MANAGE']
     await act(async () => view!.update(<PrintingRulesMenuPanel storeId={2} onToast={onToast} />))
     expect(editor()).toHaveLength(0)
     expect(view!.root.findAllByProps({ role: 'status' })).toHaveLength(0)
@@ -136,7 +136,7 @@ describe('Printing Rules Menu permission and Store boundary', () => {
     expect(fetchPrintingDisplayRules).not.toHaveBeenCalled()
   })
 
-  it.each(['admin:printing_manage', 'admin:store_config'])('reuses the original Save, Publish and Preview actions with permission %s', async (permission) => {
+  it.each(['ADMIN_PRINTING_MANAGE', 'ADMIN_STORE_CONFIG'])('reuses the original Save, Publish and Preview actions with permission %s', async (permission) => {
     access.permissions = [permission]
     await mount()
     expect(editor()).toHaveLength(1)

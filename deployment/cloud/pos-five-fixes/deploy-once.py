@@ -20,8 +20,8 @@ HERE = Path(__file__).resolve().parent
 STAGING = Path('/srv/restaurant-pos/staging')
 DB = 'restaurant-pos-staging-db-1'
 OLD = {
-    'backend': 'sha256:6512955fe8b066855fa1e4b3675549cf4b10c975340b4f6d1db000aaff653f8b',
-    'nginx': 'sha256:4bf301d4d547cc017be91c1e6d7c0d859cca345d4aed4db1696e32000e7048fc',
+    'backend': 'sha256:573dc7d9979455d52c46de650e8ec8a4a7d0b4feb4c21823e7acf55a918625b2',
+    'nginx': 'sha256:735bf29313c5096a3e1961ed7cff9a48c59e1adc406a92ff415ee2e195589fcc',
 }
 spec = importlib.util.spec_from_file_location('staging_ingress_model', HERE.parent / 'staging-ingress/apply-once.py')
 i = importlib.util.module_from_spec(spec)
@@ -135,7 +135,7 @@ def main(sha):
     baseline = {'fingerprints': {n: i.fingerprint(n) for n in i.PROD + [DB]},
                 'staging_flyway': i.ledger(DB), 'production_flyway': i.ledger('cloud-db-1')}
     baseline['history'] = history_fingerprints()
-    assert baseline['staging_flyway'].strip().splitlines()[-1].startswith('37|')
+    assert baseline['staging_flyway'].strip().splitlines()[-1].startswith('38|V38__add_store_remove_catalog.sql|')
     i.write_json(evidence / 'baseline.private.json', baseline)
     rollback = {'services': {s: modeled(s, before[s]) for s in OLD},
                 'networks': {'restaurant-pos': {'external': True, 'name': 'restaurant-pos-staging_restaurant-pos'}}}
@@ -182,9 +182,7 @@ def main(sha):
         for service, wanted in target['services'].items():
             assert modeled(service, i.inspect('restaurant-pos-staging-' + service + '-1')) == wanted, 'Runtime model differs'
         ledger = i.ledger(DB)
-        assert ledger.startswith(baseline['staging_flyway'])
-        delta = ledger[len(baseline['staging_flyway']):].strip().splitlines()
-        assert len(delta) == 1 and delta[0].startswith('38|V38__add_store_remove_catalog.sql|') and delta[0].endswith('|t')
+        assert ledger == baseline['staging_flyway'], 'V38 repair must not alter the migration ledger'
         continuity()
     except BaseException:
         i.compose(evidence / 'rollback.private.json', 'up', '-d', '--no-deps', '--no-build', '--pull', 'never', 'backend', 'nginx')

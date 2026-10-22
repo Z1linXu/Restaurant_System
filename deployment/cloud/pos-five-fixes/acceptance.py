@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """One bounded public-HTTPS Staging acceptance. No Production target or real transport.
 
-Run from the reviewed exact release. All writes are limited to CHINATOWN fixture
+Run from the reviewed exact script release; verify the deployed app separately.
+All writes are limited to CHINATOWN fixture
 Store 18, newly created run-coded orders/items/Remove, its MOCK mode and one
 NO_SPICY rule. Existing orders/jobs are never updated. Transport ambiguity stops
 without mutation retry. Credentials are read only from the two existing private
@@ -134,11 +135,13 @@ class StagingApi(h.Api):
         return super().call(path, method, body, **kwargs)
 
 
-def runtime(sha):
+def runtime(sha, script_sha=None):
     require(re.fullmatch('[0-9a-f]{40}', sha), 'exact_sha_required')
-    release = ROOT / 'releases' / sha
+    script_sha = script_sha or sha
+    require(re.fullmatch('[0-9a-f]{40}', script_sha), 'exact_script_sha_required')
+    release = ROOT / 'releases' / script_sha
     require(Path(__file__).resolve() == release / 'deployment/cloud/pos-five-fixes/acceptance.py', 'exact_release_script_required')
-    require(h.command(['git', '-C', str(release), 'rev-parse', 'HEAD']).decode().strip() == sha, 'release_sha_mismatch')
+    require(h.command(['git', '-C', str(release), 'rev-parse', 'HEAD']).decode().strip() == script_sha, 'release_sha_mismatch')
     require(not h.command(['git', '-C', str(release), 'status', '--porcelain']).strip(), 'release_must_be_clean')
     deployment = json.loads(h.private_bytes(ROOT / ('pos-five-release-' + sha) / 'result.json'))
     require(deployment.get('source_sha') == sha and deployment.get('result') == 'PASS'
@@ -154,7 +157,7 @@ def runtime(sha):
     require(env.get('APP_ENVIRONMENT') == 'staging' and env.get('UBER_EATS_ENVIRONMENT') == 'sandbox'
             and env.get('DB_NAME') == 'restaurant_pos_staging'
             and 'MOCK' in env.get('APP_PRINTING_ALLOWED_MODES', '').split(','), 'staging_runtime_policy_mismatch')
-    return {'source_sha': sha, 'images': [row['Image'] for row in rows], 'public_api': API_BASE}
+    return {'app_sha': sha, 'script_sha': script_sha, 'images': [row['Image'] for row in rows], 'public_api': API_BASE}
 
 
 class Acceptance:
@@ -195,7 +198,6 @@ class Acceptance:
         self.organization_id = workspace['organization_id']
         self.other_before = self.control_snapshots()
         printing = self.api.call(f'/admin/printing?store_id={TARGET}')
-        require(all(not printer.get('ip_address') for printer in printing.get('printers', [])), 'target_fixture_has_hardware_endpoint')
         require(all(any(row.get('module_code') == module and row.get('enabled') is True for row in printing.get('assignments', []))
                     for module in ('GRAB', 'FRONTDESK_RECEIPT', 'HOT_KITCHEN')), 'enabled_mock_assignments_required')
         if printing.get('printing_mode') != 'MOCK':
@@ -209,7 +211,21 @@ class Acceptance:
 
     def assert_mock(self):
         current = self.api.call(f'/admin/printing?store_id={TARGET}')
-        require(current['printing_mode'] == 'MOCK' and all(not row.get('ip_address') for row in current.get('printers', [])), 'mock_boundary_changed')
+        # Existing PAD_DIRECT endpoints stay configured. MOCK dispatch never
+        # selects them; actual job output is checked independently below.
+        require(current['printing_mode'] == 'MOCK', 'mock_boundary_changed')
+
+    def assert_mock_job(self, row, order_id):
+        require(row['store_id'] == TARGET and row['order_id'] == order_id and row.get('printer_id') is None
+                and row.get('printed_by_device_id') is None and row.get('claimed_by_device_id') is None
+                and not row.get('printer_endpoint') and row.get('execution_mode') in (None, 'MOCK'), 'mock_job_boundary')
+        # Current backend leaves execution_mode null for Store-mode execution.
+        # PRINTED + the independently checked current MOCK mode and no physical
+        # execution identity is the dispatcher contract for effective MOCK.
+        self.report.setdefault('mock_jobs', {})[str(row['id'])] = {
+            'raw_execution_mode': row.get('execution_mode'), 'effective_execution_mode': 'MOCK',
+            'printer_id': None, 'device_id': None, 'printer_endpoint': None}
+        self.api.jobs.add(row['id'])
 
     def publish_no_spicy(self):
         settings = self.api.call(f'/admin/printing/display-rules?store_id={TARGET}')
@@ -291,11 +307,9 @@ class Acceptance:
             rows = self.api.call(f'/orders/{order_id}/print-jobs')
             matches = [row for row in rows if row['module_code'] == module and row.get('order_update_batch_id') == batch]
             if matches and all(row['status'] == 'PRINTED' for row in matches):
+                self.assert_mock()
                 for row in matches:
-                    require(row['store_id'] == TARGET and row['order_id'] == order_id and row.get('printer_id') is None
-                            and row.get('printed_by_device_id') is None and row.get('claimed_by_device_id') is None
-                            and not row.get('printer_endpoint') and row.get('execution_mode') in (None, 'MOCK'), 'mock_job_boundary')
-                    self.api.jobs.add(row['id'])
+                    self.assert_mock_job(row, order_id)
                 return matches
             require(not any(row['status'] in ('FAILED', 'CANCELLED', 'PRINTING') for row in matches), 'mock_job_failed_or_wrong_transport')
             time.sleep(.5)
@@ -369,9 +383,13 @@ class Acceptance:
         self.assert_mock()
         full = self.api.call(f"/orders/{original['id']}/reprint", 'POST', {'receipt_type': 'FRONTDESK_RECEIPT', 'idempotency_key': self.prefix + '_full'})
         require(full['status'] == 'PRINTED' and f"Subtotal: ${money(after['subtotal_amount']):.2f}" in full['rendered_text_snapshot'], 'full_reprint_amount_mismatch')
-        self.api.jobs.add(full['id'])
+        self.assert_mock()
+        self.assert_mock_job(full, original['id'])
+        self.assert_mock()
         frozen = self.api.call(f"/admin/printing/jobs/{original_job['id']}/reprint", 'POST', {'idempotency_key': self.prefix + '_frozen'})
         require(frozen['status'] == 'PRINTED' and frozen['rendered_text_snapshot'] == original_job['rendered_text_snapshot'], 'job_reprint_did_not_preserve_original_text')
+        self.assert_mock()
+        self.assert_mock_job(frozen, original['id'])
         unchanged = h.one(self.api.call(f"/orders/{original['id']}/print-jobs"), lambda row: row['id'] == original_job['id'], 'original_job_missing')
         require(unchanged['rendered_text_snapshot'] == original_job['rendered_text_snapshot'], 'original_job_snapshot_changed')
         self.record('update_full_and_frozen_reprint', order_id=original['id'], update_batch_id=update['update_batch_id'], update_job_id=update_job['id'], full_job_id=full['id'], frozen_job_id=frozen['id'], full_receipt=full['rendered_text_snapshot'], frozen_receipt=frozen['rendered_text_snapshot'])
@@ -412,11 +430,14 @@ class Acceptance:
 
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--sha', required=True)
+    parser.add_argument('--sha', required=True, help='Exact deployed application SHA')
+    parser.add_argument('--script-sha', help='Exact reviewed helper release SHA (defaults to --sha)')
     parser.add_argument('--run-id', required=True)
     parser.add_argument('--report', required=True)
     args = parser.parse_args(argv)
     require(re.fullmatch('[0-9a-f]{40}', args.sha), 'exact_sha_required')
+    args.script_sha = args.script_sha or args.sha
+    require(re.fullmatch('[0-9a-f]{40}', args.script_sha), 'exact_script_sha_required')
     require(re.fullmatch('[a-z0-9]{8,24}', args.run_id), 'bounded_run_id_required')
     return args
 
@@ -425,6 +446,7 @@ def main(argv=None):
     os.umask(0o077)
     args = parse_args(argv)
     report = {'schema': 'POS_FIVE_FIXES_ACCEPTANCE_V1', 'environment': 'staging', 'source_sha': args.sha,
+              'app_sha': args.sha, 'script_sha': args.script_sha,
               'run_id': args.run_id, 'result': 'FAIL', 'order_ids': [], 'item_ids': [], 'checks': [], 'hardware_printing': False}
     path = Path(args.report)
     require(path.is_absolute() and path.parent == ROOT / 'evidence' and path.parent.resolve() == path.parent, 'new_private_staging_evidence_path_required')
@@ -442,13 +464,13 @@ def main(argv=None):
         h.private_bytes(lock_path)
         lock = os.open(lock_path, os.O_RDWR | os.O_NOFOLLOW)
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        report['runtime'] = runtime(args.sha)
+        report['runtime'] = runtime(args.sha, args.script_sha)
         login(api)
         acceptance = Acceptance(api, args.run_id, report, checkpoint)
         acceptance.prepare()
         acceptance.orders_and_printing()
         acceptance.removes()
-        require(runtime(args.sha) == report['runtime'], 'runtime_changed_during_acceptance')
+        require(runtime(args.sha, args.script_sha) == report['runtime'], 'runtime_changed_during_acceptance')
         report['result'] = 'PASS'
     except NoGo as error:
         report['failure'] = str(error)

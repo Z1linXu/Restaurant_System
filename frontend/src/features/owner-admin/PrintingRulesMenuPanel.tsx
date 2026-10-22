@@ -10,7 +10,7 @@ export function PrintingRulesMenuPanel({ storeId, onToast }: {
   onToast: (message: string, kind?: 'success' | 'error') => void
 }) {
   const { permissions, user } = useAuth()
-  const authorized = (permissions ?? []).some((value) => value === 'admin:printing_manage' || value === 'admin:store_config')
+  const authorized = (permissions ?? []).some((value) => value === 'ADMIN_PRINTING_MANAGE' || value === 'ADMIN_STORE_CONFIG')
   const printingEnabled = isFeatureEnabled('PRINTING')
   return <PrintingRulesMenuContent key={`${storeId}:${user?.id}:${authorized}:${printingEnabled}`} storeId={storeId}
     onToast={onToast} authorized={authorized} printingEnabled={printingEnabled} userId={user?.id} />
