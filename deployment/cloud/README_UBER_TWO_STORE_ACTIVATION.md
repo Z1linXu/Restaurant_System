@@ -14,9 +14,11 @@ needed after those external facts and configuration are supplied.
 | Sainte-Catherine | 1395 Rue Sainte-Catherine Ouest, Montréal | 3 / 1, code `ST_CATHERINE` | DISABLED; no printer assignment or Pad |
 
 These local identities were read from Production, not inferred from the numeric
-IDs. The supplied Uber UUID `5a7dca5c-b7ec-57c8-a684-87d23e66e8d9` must be
-reconfirmed against a trusted Uber Store address before binding; its historical
-label does not satisfy the current Owner request for identity verification.
+IDs. On 2026-10-22 the Owner explicitly confirmed Uber UUID
+`5a7dca5c-b7ec-57c8-a684-87d23e66e8d9` belongs to Store1 at4483 Saint-Denis
+and authorized its local production/KITCHEN_MIRROR binding with worker false.
+This local identity confirmation does not establish Uber-granted Store Access;
+recheck the remote Store name/address once the authorized read API is available.
 The second real UUID is missing. Never use the Sandbox Store UUID as a substitute.
 Chinatown is excluded; keep its Uber module disabled and create no Uber binding.
 
@@ -46,6 +48,17 @@ read-only POS smoke plus disabled POST; missing actual HMAC proof remains BLOCKE
 The verification tool reuses the existing short-lived in-memory POS identity
 scheme for authenticated GET smoke. This is not a human password-login test.
 It does not submit a live draft, place an Uber order or trigger physical printing.
+
+For an already accepted current Production image, use the narrowly scoped
+`configure-uber-production-receiver.py IMAGE FULL_SOURCE_SHA` instead of
+rebuilding or replaying the original promotion. Supply a JSON object with only
+`primary_signing_key` over protected stdin without echo/TTY, CLI arguments,
+shell history or public output. The helper changes only the key/receiver,
+preserves OAuth credentials and the image, validates backup and signed HTTP
+receipt, and restores a disabled receiver/worker on failure. Private evidence
+is stored below `/srv/restaurant-pos/production/uber-receiver-<UTC timestamp>`.
+Do this before local binding preparation: the bounded bootstrap requires the
+zero-binding baseline. Do not rerun it against a later bound/active Store state.
 
 ## Webhook and external grants
 
