@@ -1,0 +1,47 @@
+{
+  "app_sha": "4b3abd1349e66a146c36ac310b6a8b48bb2ad572",
+  "script_sha": "d32fa709f2e895ebc4ebf729e8b546d6fd043df8",
+  "backend_full_verify": {
+    "total": 1061,
+    "executed": 975,
+    "conditional_skips": 86,
+    "failures": 0,
+    "errors": 0
+  },
+  "final_remove_postgres_semantic_regression": {
+    "executed": 14,
+    "skips": 0,
+    "failures": 0,
+    "errors": 0,
+    "note": "Covers final strict metadata guard after full verify"
+  },
+  "production_remove_data_rehearsal": {
+    "stores": 3,
+    "raw_options": 330,
+    "masters_each": 18,
+    "links_each": 53,
+    "eligibility_delta_each": 0,
+    "idempotent_replay": true
+  },
+  "frontend": {
+    "tests": 321,
+    "files": 55,
+    "typescript_vite_build": "PASS",
+    "affected_eslint": "PASS"
+  },
+  "acceptance_helper_regression_tests": 2,
+  "upstream_receiver_configuration_tests": 6,
+  "agent6_batch_and_incremental_reviews": "ACCEPT_NO_REMAINING_P0_P1_P2",
+  "staging_and_production_same_images": true,
+  "new_business_orders": 0,
+  "physical_prints": 0,
+  "password_login": "NOT_TESTED_NO_EXISTING_SESSION_OR_PRIVATE_PASSWORD",
+  "uber_postgres_and_unit_regression": {
+    "executed": 119,
+    "skips": 0,
+    "failures": 0,
+    "errors": 0,
+    "seconds": 11.096,
+    "target": "run-owned disposable PostgreSQL 16 database; mocked remote Uber client"
+  }
+}

@@ -3,13 +3,13 @@ updated_at: 2026-10-22
 
 repository:
   ref: origin/main
-  sha: 5d2c5635faf232e5f986299e7d73167d4a7c4877
+  sha: d32fa709f2e895ebc4ebf729e8b546d6fd043df8
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
   package: POS_PRODUCTION_CANONICAL_REMOVES
-  status: STAGING_DEPLOYED_PRODUCTION_PROMOTION_PENDING_ACCEPTANCE_METADATA_REPAIR
+  status: PRODUCTION_DEPLOYED_THREE_STORE_REMOVE_API_ACCEPTED_PASSWORD_BROWSER_OBSERVATION_PENDING
   next_phase_authorized: false
 
 staging:
@@ -18,42 +18,48 @@ staging:
   frontend_deployed_sha: 4b3abd1349e66a146c36ac310b6a8b48bb2ad572
   policy_config_sha: d2316234b2936fd89a926aa24a7b6343008834e6
   flyway: V38
-  acceptance: REMOVE_BASELINE_REPLAY_PREVIEW_PASS_ACCEPTANCE_METADATA_COMPARISON_REPAIR
+  acceptance: APP4B3_REMOVE_BASELINE_REPLAY_PREVIEW_AND_OWNER_BROWSER_PASS
   evidence: ../POS_PRODUCTION_REMOVES_20261022.md
-  repair_evidence: PRODUCTION_ADDON_IDENTITY_20261006.md
+  repair_evidence: ../POS_PRODUCTION_REMOVES_20261022.md
   cleanup_evidence: PHASE_B_STAGING_SYNTHETIC_FIXTURE_CLEANUP_EXECUTION_EVIDENCE.md
-  runtime_observation_evidence: UBER_TWO_STORE_RELEASE_20261022.md
+  runtime_observation_evidence: ../POS_PRODUCTION_REMOVES_20261022.md
   endpoint_policy_evidence: runtime/STAGING_ENDPOINT_POLICY_20260930_EVIDENCE.md
-  latest_backend_release_evidence: UBER_TWO_STORE_RELEASE_20261022.md
+  latest_backend_release_evidence: ../POS_PRODUCTION_REMOVES_20261022.md
   endpoint_policy_gate: TEST_STORE18_MOCK_ACCEPTED_NO_PHYSICAL_PRINT
 
   uber_verified_sha: 7d573be03d66a9505e0c68f92fa17829247f56e3
-  runtime_owner: INDEPENDENT_POS_TASK_SUBSEQUENT_DEPLOY
+  runtime_owner: POS_PRODUCTION_CANONICAL_REMOVES_COMPLETED
   uber_worker_enabled: false
 
 production:
-  deployed_sha: 7d573be03d66a9505e0c68f92fa17829247f56e3
-  frontend_deployed_sha: 8c3a9e356f59cd025beff25f7fb1d5a20594e028
+  deployed_sha: 4b3abd1349e66a146c36ac310b6a8b48bb2ad572
+  frontend_deployed_sha: 4b3abd1349e66a146c36ac310b6a8b48bb2ad572
   canonical_url: https://pos.lanzhounoodlesmtl.com
   application_release: COMPLETE
-  password_login: MANUAL_OBSERVATION_PENDING
+  password_login: NOT_TESTED_NO_EXISTING_BROWSER_SESSION_OR_PRIVATE_PASSWORD
   physical_pad_url_switch: MANUAL_OBSERVATION_PENDING
   uber_activated: false
-  uber_active_bindings: 0
-  flyway: V37
+  uber_active_bindings: 1
+  flyway: V38
   mutation_authorized: false
-  current_release_authorization: OWNER_20261022_FIVE_FIXES_CANONICAL18_REMOVE_BACKUP_MERGE_STAGING_PRODUCTION_NO_ELIGIBILITY_DEVICE_HISTORY_OR_UBER_CHANGE
-  evidence: UBER_TWO_STORE_RELEASE_20261022.md
-  runtime_observation_evidence: UBER_TWO_STORE_RELEASE_20261022.md
+  current_release_authorization: COMPLETED_OWNER_20261022_POS_CANONICAL18_RELEASE_NO_STANDING_FUTURE_MUTATION_AUTHORITY
+  evidence: ../POS_PRODUCTION_REMOVES_20261022.md
+  runtime_observation_evidence: ../POS_PRODUCTION_REMOVES_20261022.md
   canonical_addons_per_store: 15
   canonical_addon_assignments: 195
   addon_conflicts: 0
   addon_identity_api_acceptance: PASS_THREE_STORES
   addon_post_release_browser_acceptance: NOT_COMPLETED_CUA_CLIPBOARD_TIMEOUT
 
-  uber_receiver_enabled: false
+  uber_receiver_enabled: true
   uber_worker_enabled: false
-  pos_read_smoke: PASS_7_AUTHENTICATED_GETS_STORE_ISOLATION
+  pos_read_smoke: PASS_THREE_STORE_CONTEXT_MENU_REMOVES_PRINT_RULE_VALIDATE_PREVIEW_PRINT_CENTER
+
+  canonical_removes_per_store: 18
+  remove_linked_options_per_store: 53
+  remove_retained_legacy_rows_per_store: 57
+  remove_eligibility_changes: 0
+  remove_catalog_conflict_groups_per_store: 3
 
 uber_readonly_webhook:
   evidence: UBER_TWO_STORE_RELEASE_20261022.md
@@ -66,7 +72,7 @@ uber_readonly_webhook:
   live_staging_deployed: true
   live_staging_blocker: NONE_EXACT_7D573BE_RECEIVE_ONLY_ACCEPTANCE_PASS_SUBSEQUENT_POS_DEPLOY_SEPARATE
   production_deployed: true
-  production_signed_post: EXTERNALLY_BLOCKED_SIGNING_KEY_NOT_CONFIGURED
+  production_signed_post: NOT_RETESTED_THIS_POS_RELEASE_RECEIVER_TRUE_KEY_PRESENT_WORKER_FALSE
   production_registration_go: false
   production_order_import_go: false
 
@@ -79,7 +85,7 @@ uber_two_store_release:
   approved_local_store_ids: [1, 3]
   excluded_local_store_ids: [2]
   local_preparation_evidence: UBER_TWO_STORE_LOCAL_PREPARATION_20261022.md
-  external_uuid_identity: NOT_YET_VERIFIED
+  external_uuid_identity: OWNER_CONFIRMED_STORE1_REMOTE_ACCESS_UNVERIFIED_STORE3_UUID_PENDING
   production_import_authorized_without_grants: false
   followup_pr: 281
   followup_merge_sha: 7d573be03d66a9505e0c68f92fa17829247f56e3
@@ -87,7 +93,7 @@ uber_two_store_release:
   approved_local_modules_prepared: true
   production_mapping_rules: 0
   production_webhook_registered: false
-  production_signing_key_present: false
+  production_signing_key_present: true
   production_oauth_secret_present: false
   actual_production_scopes: PENDING_DASHBOARD_REVIEW
   order_webhook_role: UNVERIFIED
@@ -202,12 +208,12 @@ uber_store_capability:
   production_mutation: OWNER_20261021_LOCAL_MODULES_1_3_PREPARED_WORKER_FALSE
 
 gate:
-  type: TECHNICAL
-  next_action: REVIEW_TEST_BACKUP_DRYRUN_STAGE_THEN_PROMOTE_SAME_ARTIFACT_AND_RECONCILE_THREE_STORES
+  type: OWNER
+  next_action: OPTIONAL_PASSWORD_LOGIN_BROWSER_ACCEPTANCE_AND_RETAINED_LEGACY_REVIEW_NO_FURTHER_POS_RUNTIME_MUTATION
 
 authorization:
   uber_production_receiver: OWNER_20261022_PRIMARY_KEY_RECEIVER_ENABLED_WORKER_FALSE_STORE1_CONFIRMED_BINDING_VERIFIABLE_MAPPING_ONLY_NO_REAL_ORDER_OR_PRINT
-  pos_five_fixes: OWNER_20261022_IMPLEMENT_REVIEW_MERGE_STAGING_PRODUCTION_THREE_STORE18_REMOVE_AND_PRINT_ALIAS_NO_REAL_TEST_ORDERS_OR_PRINT
+  pos_five_fixes: COMPLETED_OWNER_20261022_MERGED_DEPLOYED_THREE_STORE18_API_ACCEPTED_NO_REAL_TEST_ORDER_OR_PHYSICAL_PRINT
   uber_readonly_webhook: OWNER_20261021_MERGE280_REVIEW_FOLLOWUP_SAFE_STAGING_PRODUCTION_WORKER_DISABLED_TWO_STORE_PREPARATION
   uber_store_capability: OWNER_AUTHORIZED_OPTION370_TEA_EGG_KEEP_ID_PRICE_HISTORY_FORMAL_UBER_EATS_GATES_V37_TEST_REVIEW_MERGE_STAGING_ONLY
   uber_order_note_scope: OWNER_AUTHORIZED_ORDER_ITEM_NOTE_SEPARATION_EXACT_DEDUPE_FROZEN_REPRINT_V36_TEST_REVIEW_MERGE_STAGING_ONLY_NO_HISTORICAL_REWRITE_NO_PHYSICAL_PRINT
@@ -228,4 +234,4 @@ authorization:
   production: NONE
 
 stop:
-  marker: POS_PRODUCTION_CANONICAL_REMOVES_STOP_ON_PROVENANCE_OR_ELIGIBILITY_FAILURE
+  marker: POS_PRODUCTION_4B3ABD1_ACCEPTED_NO_STANDING_FUTURE_MUTATION_AUTHORITY
