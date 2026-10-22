@@ -54,10 +54,22 @@ def safety(db):
     return json.loads(p.sql(db, query))
 
 
-def main(environment, sha, apply=False):
+def combo_business_values(configuration):
+    # Baseline reconciliation advances the common menu revision, not Combo policy.
+    return {key: value for key, value in configuration.items() if key != 'menu_revision'}
+
+
+def main(environment, sha, apply=False, script_sha=None):
     assert environment in ('staging', 'production')
     root = p.BASE / environment / ('pos-removes-' + sha)
-    assert HERE == p.BASE / 'staging/releases' / sha / 'deployment/cloud/pos-production-removes'
+    script_sha = script_sha or sha
+    assert p.re.fullmatch("[0-9a-f]{40}", sha) and p.re.fullmatch("[0-9a-f]{40}", script_sha)
+    assert HERE == p.BASE / 'staging/releases' / script_sha / 'deployment/cloud/pos-production-removes'
+    release = HERE.parents[2]
+    assert p.i.run(['git','-C',str(release),'rev-parse','HEAD']).decode().strip() == script_sha
+    assert not p.i.run(['git','-C',str(release),'status','--porcelain']).strip()
+    # A reviewed acceptance-only correction reuses the already accepted app images.
+    assert not p.i.run(['git','-C',str(release),'diff',sha,script_sha,'--','backend','frontend']).strip(), 'Application source changed'
     deployment = json.loads((root / 'result.json').read_text())
     assert deployment['source_sha'] == sha and deployment['health'] == 'PASS'
     project = 'cloud' if environment == 'production' else 'restaurant-pos-staging'
@@ -84,7 +96,7 @@ def main(environment, sha, apply=False):
         return envelope['data']
     identity = call('/auth/me')
     assert identity is not None
-    report = {'environment': environment, 'source_sha': sha, 'stores': [], 'password_login': 'NOT_TESTED_NO_PRODUCTION_PRIVATE_PASSWORD', 'apply': apply}
+    report = {'environment': environment, 'source_sha': sha, 'stores': [], 'password_login': 'NOT_TESTED_NO_PRODUCTION_PRIVATE_PASSWORD', 'apply': apply, 'script_sha': script_sha}
     before = safety(db)
     p.p.DB = db
     baseline = json.loads((root / 'baseline.private.json').read_text())
@@ -119,7 +131,7 @@ def main(environment, sha, apply=False):
         menu_after = call(f'/menu/catalog?store_id={store}')
         assert menu_before['categories'] == menu_after['categories'], 'Effective menu changed'
         assert menu_before['pricing_policy'] == menu_after['pricing_policy']
-        assert menu_before['combo_configuration'] == menu_after['combo_configuration']
+        assert combo_business_values(menu_before['combo_configuration']) == combo_business_values(menu_after['combo_configuration']), 'Combo business configuration changed'
         assert rules_before['active_revision'] == rules['active_revision'], 'Published rules changed'
         if apply:
             semantics = [r['semantic_code'] for r in catalog['removes']]
@@ -160,10 +172,11 @@ if __name__ == '__main__':
     parser.add_argument('environment', choices=('staging','production'))
     parser.add_argument('sha')
     parser.add_argument('--apply', action='store_true')
+    parser.add_argument('--script-sha')
     args = parser.parse_args()
     try:
         with p.ops.operation_locks():
-            main(args.environment, args.sha, args.apply)
+            main(args.environment, args.sha, args.apply, args.script_sha)
     except Exception as error:
         print('POS_REMOVE_ACCEPTANCE_FAILED:' + type(error).__name__, file=sys.stderr)
         sys.exit(1)
