@@ -1,6 +1,7 @@
 package com.restaurant.system.integration.ubereats.mapping;
 
 import com.restaurant.system.integration.ubereats.dto.UberOrderSnapshot;
+import com.restaurant.system.integration.ubereats.config.UberEatsMirrorItemDefaults;
 import com.restaurant.system.integration.ubereats.entity.*;
 import com.restaurant.system.integration.ubereats.repository.UberEatsMenuMappingRepository;
 import com.restaurant.system.menu.dto.MenuCatalogResponse;
@@ -17,10 +18,13 @@ import java.util.*;
 public class UberEatsMenuMappingService {
     private final MenuService menus;
     private final UberEatsMenuMappingRepository mappings;
+    private final UberEatsMirrorItemDefaults itemDefaults;
 
-    public UberEatsMenuMappingService(MenuService menus, UberEatsMenuMappingRepository mappings) {
+    public UberEatsMenuMappingService(MenuService menus, UberEatsMenuMappingRepository mappings,
+                                     UberEatsMirrorItemDefaults itemDefaults) {
         this.menus = menus;
         this.mappings = mappings;
+        this.itemDefaults = itemDefaults;
     }
 
     public record Result(CreateOrderRequest request, List<String> errors, List<String> warnings) {
@@ -69,6 +73,13 @@ public class UberEatsMenuMappingService {
         for (UberOrderSnapshot.Item source : snapshot.items()) {
             addTreeIssues(errors, source);
             var rule = resolve(rules, "ITEM", "", source);
+            var configuredDefault = mirror ? itemDefaults.forRoot(store, source.id())
+                    : Optional.<UberEatsMirrorItemDefaults.Rule>empty();
+            if (configuredDefault.isPresent() && (rule == null || !"COMBO_ROOT".equals(rule.itemMappingMode)
+                    || !"ID".equals(rule.identifierType) || !source.id().equals(rule.uberIdentifier))) {
+                errors.add(label(source) + ": SOUP_BASE_DEFAULT_ROOT_MAPPING_DRIFT");
+                continue;
+            }
             List<MenuCatalogResponse.ItemResponse> candidates =
                     allItems(catalog).stream()
                             .filter(
@@ -78,6 +89,10 @@ public class UberEatsMenuMappingService {
                                                     : stableItemMatch(i, source))
                             .toList();
             if (candidates.size() != 1) {
+                if (configuredDefault.isPresent()) {
+                    errors.add(label(source) + ": SOUP_BASE_DEFAULT_LOCAL_IDENTITY_DRIFT");
+                    continue;
+                }
                 if (mirror) {
                     request.items.add(rawLine(source, request.external_order_note_snapshot));
                     warnings.add(label(source) + ": UNMAPPED_ROUTE_REVIEW");
@@ -94,6 +109,12 @@ public class UberEatsMenuMappingService {
                 continue;
             }
             var item = candidates.get(0);
+            if (configuredDefault.isPresent() && (!configuredDefault.get().localSku().equals(item.sku)
+                    || !Boolean.TRUE.equals(item.is_active) || Boolean.TRUE.equals(item.is_sold_out)
+                    || item.station_id == null || item.name_zh == null || item.name_zh.isBlank())) {
+                errors.add(label(source) + ": SOUP_BASE_DEFAULT_LOCAL_IDENTITY_DRIFT");
+                continue;
+            }
             if (mirror && (!Boolean.TRUE.equals(item.is_active) || Boolean.TRUE.equals(item.is_sold_out)
                     || item.station_id == null || item.name_zh == null || item.name_zh.isBlank())) {
                 request.items.add(rawLine(source, request.external_order_note_snapshot));
@@ -138,9 +159,14 @@ public class UberEatsMenuMappingService {
             for (UberOrderSnapshot.Item modifier : source.modifiers())
                 mapModifier(modifier, source.id(), null, 1, rules, choices, line, errors, selected,
                         mirror, rawModifiers, warnings, List.of(), request.external_order_note_snapshot);
+            configuredDefault.ifPresent(defaultRule -> applyDefault(defaultRule, source, choices,
+                    line, selected, rawModifiers, errors));
             List<String> selectionErrors = new ArrayList<>();
             validateSelections(catalog, item, line, choices, selectionErrors, source);
-            if (mirror && !selectionErrors.isEmpty()) {
+            if (configuredDefault.isPresent()) {
+                // Configured identity defaults never use Mirror's permissive raw/warning fallback.
+                errors.addAll(selectionErrors);
+            } else if (mirror && !selectionErrors.isEmpty()) {
                 // Keep unambiguous known choices; never invent a missing selection or combo.
                 warnings.addAll(selectionErrors);
                 Set<String> conflictingGroups = new HashSet<>();
@@ -191,6 +217,30 @@ public class UberEatsMenuMappingService {
             request.items.add(line);
         }
         return new Result(request, List.copyOf(errors), List.copyOf(warnings));
+    }
+
+    private void applyDefault(UberEatsMirrorItemDefaults.Rule rule, UberOrderSnapshot.Item source,
+                              List<Choice> choices, CreateOrderItemRequest line, Set<Long> selected,
+                              List<ExternalKitchenSnapshot.Modifier> raw, List<String> errors) {
+        var defaults = choices.stream().filter(c -> rule.optionGroup().equals(c.group())
+                && rule.optionCode().equals(c.code()) && c.parentCode() == null).toList();
+        if (defaults.size() != 1) {
+            errors.add(label(source) + ": SOUP_BASE_DEFAULT_CHOICE_UNRESOLVED");
+            return;
+        }
+        if (!raw.isEmpty()) {
+            errors.add(label(source) + ": SOUP_BASE_DEFAULT_SOURCE_REVIEW_REQUIRED");
+            return;
+        }
+        var explicit = line.options.stream().filter(o -> rule.optionGroup().equals(o.option_group_snapshot)).toList();
+        if (explicit.isEmpty()) {
+            if (!selected.add(defaults.get(0).id()))
+                errors.add(label(source) + ": SOUP_BASE_DEFAULT_SELECTION_CONFLICT");
+            else line.options.add(option(defaults.get(0), 1));
+        } else if (explicit.size() != 1 || !rule.optionCode().equals(explicit.get(0).option_code_snapshot)
+                || !Integer.valueOf(1).equals(explicit.get(0).quantity)) {
+            errors.add(label(source) + ": SOUP_BASE_DEFAULT_SELECTION_CONFLICT");
+        }
     }
 
     private void mapModifier(

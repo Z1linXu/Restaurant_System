@@ -2091,6 +2091,23 @@ and allows null next_attempt_at to represent stopped work, preserving existing d
 
 Uber webhook environment enum comparison accepts case variants (for example `Sandbox`); missing, unknown and foreign environments still fail closed. Rejection diagnostics log only fixed reason codes and an allowlisted environment category, never request bodies/signatures/credentials.
 
+### Scoped Kitchen Mirror item defaults
+
+`UBER_EATS_MIRROR_ITEM_DEFAULTS` defaults to `[]`. Each strict JSON array entry
+contains exactly `environment`, `localStoreId`, `organizationId`, `uberStoreId`,
+`uberItemId`, `localSku`, `optionGroup` (`SOUP_BASE`) and `optionCode`. Invalid,
+unknown, duplicate or ambiguous configuration fails startup. The default applies
+only to the exact Store/root/SKU explicit `ID` + `COMBO_ROOT` rule in Mirror.
+It resolves the current eligible option identity and freezes its normal snapshot
+with quantity1; no remote menu, Master option or ordinary POS rule is modified.
+
+A single explicit matching choice is preserved without duplication. Conflicting,
+multiple/invalid-quantity choices, missing/ambiguous configured choice, raw unknown
+modifiers or further selection conflicts yield mapping `errors`, not permissive
+warnings. Import enters `RELEASED_MAPPING_REQUIRED` with no local order/print
+release. `mapping-preview` uses the identical logic without writes. Historical
+submitted orders and durable print snapshots are never recalculated by this flag.
+
 ### TEST webhook environment compatibility (Owner authorized 2026-10-02)
 
 The real TEST Store notification used `X-Environment: production` despite a valid TEST HMAC and a readable matching order on `test-api.uber.com`. Default strict environment isolation remains. Only `APP_ENVIRONMENT=staging`, `UBER_EATS_ENVIRONMENT=sandbox`, a matching nonempty `UBER_EATS_TEST_WEBHOOK_CLIENT_ID` and exact `UBER_EATS_TEST_WEBHOOK_STORE_ID` opt in. A recognized order event must target an enabled KITCHEN_MIRROR binding; raw HMAC is verified first. Before any durable event/order/cancel mutation, Sandbox GET Order must return the same order and store UUID. Failed lookup returns retryable 503; identity mismatch returns 400. Missing/unknown headers, other stores/apps and Production runtimes cannot use this exception. Credentials and raw traffic are never logged. The TEST-only pre-ack read uses the existing bounded API timeouts; ordinary matching-environment webhooks retain fast durable receipt.

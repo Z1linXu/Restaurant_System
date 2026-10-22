@@ -9604,18 +9604,31 @@ were rechecked before backup and existing Mapping API writes. Actual database
 read-back and299 OWNER audit records confirm persistence. Other Stores, Master
 menu and printing configuration are unchanged.
 
-The complete read-only preview covers41 roots and258 contexts in300 cases:
-275 clean,25 warnings, errors0, RAW fallback0. The single unresolved identity
-input is **Noodles with Vegetables Combo**: Uber offers no Soup Base group while
-local `vegetable_noodle` requires `soup_vegan` or `soup_beef`. No default was
-invented, no foreign-parent rule reused and no warning suppressed. The299
-mapping identities are complete; full-menu preview and activation remain
-blocked by that one business decision plus official webhook/field evidence.
+The pre-fix preview covered41 roots and258 contexts in300 cases:275 clean,
+25 REQUIRED_SOUP_BASE_MISSING warnings, errors0 and RAW fallback0. The Owner
+confirmed that the exact4483 vegetable Combo root uses `soup_vegan`. The optional
+`UBER_EATS_MIRROR_ITEM_DEFAULTS` strict JSON array scopes a default by environment,
+local Store/Organization, Uber Store UUID, root stable ID and local SKU. Only
+explicit COMBO_ROOT ID mappings in Kitchen Mirror may use it. The current active
+SOUP_BASE choice supplies the existing option ID, Chinese/English, price and
+quantity1 snapshot; no duplicate option or ordinary POS default is created.
+
+An explicit matching single broth is preserved; another broth, duplicate or
+invalid quantity, unavailable/ambiguous configured choice, unresolved modifier
+or subsequent selection conflict produces mapping errors and blocks local
+release. No source choice is overwritten or warning hidden. Other roots,
+Stores, environments and ORDER_MANAGER remain unchanged. Configuration is
+empty by default; no Production Store/name/ID is hardcoded in application code.
+Deployment and300-case acceptance remain environment-specific evidence, not a
+claim inferred from the implementation.
 
 The [4483 acceptance evidence](docs/governance/UBER_4483_LAUNCH_PREPARATION_20261022.md)
 records real OAuth/menu hashes, database backup/import read-back, previews and
 remaining gap. The [activation runbook](deployment/cloud/README_UBER_TWO_STORE_ACTIVATION.md)
 continues to require fresh4483-only cutovers and a controlled field window.
+The Owner authorized that bounded launch after all technical gates, with a new
+real accepted order proving official delivery and physical GRAB/HOT output.
+No pre-cutover order/HELD notification may be replayed.
 The existing operator reuses configured OAuth credentials and records only
 sanitized diagnostics; the earlier generic failure discarded its response and
 its exact historical OAuth cause cannot be reconstructed. No second credential

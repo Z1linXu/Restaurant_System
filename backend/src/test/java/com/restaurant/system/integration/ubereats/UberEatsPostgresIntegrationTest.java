@@ -86,6 +86,7 @@ class UberEatsPostgresIntegrationTest {
     }
 
     @Autowired UberEatsProperties config;
+    @Autowired UberEatsMirrorItemDefaults mirrorItemDefaults;
     @Autowired UberEatsProcessingGate processingGate;
     @Autowired JdbcTemplate db;
     @Autowired Flyway flyway;
@@ -143,6 +144,7 @@ class UberEatsPostgresIntegrationTest {
         config.runtimeEnvironment = "local";
         config.setClientSecret("fixture-oauth-secret");
         config.setWebhookSigningKey("fixture-webhook-secret");
+        mirrorItemDefaults.configuration = "[]";
         processingGate.notBefore = "";
         processingGate.storeCutovers = "";
         org =
@@ -2031,6 +2033,46 @@ class UberEatsPostgresIntegrationTest {
     }
 
     @Test
+    void scopedMissingSoupDefaultFreezesOnceThroughSharedKitchenPipeline() throws Exception {
+        mirrorMode();
+        db.update("update menu_items set sku='vegetable_noodle' where id=?", item);
+        option(item, "combo", "COMBO", "addon", "套餐", 0);
+        Long vegan = option(item, "soup_vegan", "SOUP_BASE", "soup_base", "素汤", 0);
+        option(item, "soup_beef", "SOUP_BASE", "soup_base", "肉汤", 0);
+        var rule = new UberEatsMenuMapping();
+        rule.kind = "ITEM"; rule.identifierType = "ID"; rule.uberIdentifier = "uber-noodle";
+        rule.localMenuItemId = item; rule.itemMappingMode = "COMBO_ROOT";
+        configuration.saveMapping(store, rule, actor);
+        mirrorItemDefaults.configuration = json.writeValueAsString(List.of(Map.of(
+                "environment", "sandbox", "localStoreId", store, "organizationId", org,
+                "uberStoreId", uberStore, "uberItemId", "uber-noodle", "localSku", "vegetable_noodle",
+                "optionGroup", "SOUP_BASE", "optionCode", "soup_vegan")));
+        var data = payload(UUID.randomUUID().toString());
+        var mods = (ArrayNode) data.at("/cart/items/0/selected_modifier_groups/0/selected_items");
+        mods.removeAll(); addModifier(mods, "large", "size_large", "Large");
+        var preview = mapping.mapMirror(binding, normalizer.normalize(data));
+        assertThat(preview.valid()).isTrue(); assertThat(preview.warnings()).isEmpty();
+        var released = release(data);
+        assertThat(released.status).isEqualTo("RELEASED_TO_KITCHEN");
+        assertThat(released.mappingStatus).isEqualTo("MAPPED");
+        var lines = items.findAllByOrderId(released.localOrderId);
+        assertThat(lines).hasSize(1);
+        var frozen = options.findAllByOrderItemIds(List.of(lines.get(0).id));
+        assertThat(frozen).extracting(o -> o.option_code_snapshot)
+                .containsExactlyInAnyOrder("combo", "size_large", "soup_vegan");
+        assertThat(frozen).filteredOn(o -> "soup_vegan".equals(o.option_code_snapshot)).singleElement().satisfies(o -> {
+            assertThat(o.option_id).isEqualTo(vegan); assertThat(o.quantity).isEqualTo(1);
+            assertThat(o.option_group_snapshot).isEqualTo("SOUP_BASE");
+            assertThat(o.option_name_snapshot_zh).isEqualTo("素汤");
+        });
+        assertThat(tasks.findAllByOrderId(released.localOrderId)).hasSize(1);
+        imports.recover();
+        assertThat(row(data.path("id").asText()).localOrderId).isEqualTo(released.localOrderId);
+        assertThat(db.queryForObject("select count(*) from orders where store_id=?", Long.class, store)).isEqualTo(1L);
+        verify(client, never()).accept(anyString(), anyString());
+    }
+
+    @Test
     void mixedKnownAndRawLinesPreserveEveryUnknownModifierAndOnlyKnownHotRouting() {
         mirrorMode();
         var data = payload(UUID.randomUUID().toString());
@@ -2479,6 +2521,50 @@ class UberEatsPostgresIntegrationTest {
                         .doesNotContain("FRONTDESK_RECEIPT");
             }
         }
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"meat", "quantity", "unknown", "missing-choice", "missing-size", "sku-drift", "mode-drift"})
+    void scopedSoupDefaultConflictsHoldMirrorWithoutAnyLocalOrderOrPrintPipeline(String conflict) throws Exception {
+        mirrorMode();
+        db.update("update menu_items set sku='vegetable_noodle' where id=?", item);
+        option(item, "combo", "COMBO", "addon", "套餐", 0);
+        Long vegan = option(item, "soup_vegan", "SOUP_BASE", "soup_base", "素汤", 0);
+        option(item, "soup_beef", "SOUP_BASE", "soup_base", "肉汤", 0);
+        var rule = new UberEatsMenuMapping();
+        rule.kind = "ITEM"; rule.identifierType = "ID"; rule.uberIdentifier = "uber-noodle";
+        rule.localMenuItemId = item; rule.itemMappingMode = "COMBO_ROOT";
+        configuration.saveMapping(store, rule, actor);
+        mirrorItemDefaults.configuration = json.writeValueAsString(List.of(Map.of(
+                "environment", "sandbox", "localStoreId", store, "organizationId", org,
+                "uberStoreId", uberStore, "uberItemId", "uber-noodle", "localSku", "vegetable_noodle",
+                "optionGroup", "SOUP_BASE", "optionCode", "soup_vegan")));
+        mirrorItemDefaults.validate();
+        var data = payload(UUID.randomUUID().toString());
+        var mods = (ArrayNode) data.at("/cart/items/0/selected_modifier_groups/0/selected_items");
+        switch (conflict) {
+            case "meat" -> addModifier(mods, "explicit-meat", "soup_beef", "Meat broth");
+            case "quantity" -> { addModifier(mods, "explicit-vegan", "soup_vegan", "Vegan broth");
+                ((ObjectNode) mods.get(mods.size()-1)).put("quantity", 2); }
+            case "unknown" -> addModifier(mods, "unknown-new-soup", "", "Unverified new choice");
+            case "missing-choice" -> db.update("update menu_item_options set is_active=false where id=?", vegan);
+            case "missing-size" -> mods.remove(0);
+            case "sku-drift" -> db.update("update menu_items set sku='different_sku' where id=?", item);
+            case "mode-drift" -> db.update("update uber_eats_menu_mappings set item_mapping_mode='STANDARD' where store_mapping_id=? and kind='ITEM'", binding.id);
+            default -> throw new AssertionError(conflict);
+        }
+        var preview = mapping.mapMirror(binding, normalizer.normalize(data));
+        assertThat(preview.valid()).isFalse(); assertThat(preview.errors()).isNotEmpty();
+        var held = release(data);
+        assertThat(held.status).isEqualTo("RELEASED_MAPPING_REQUIRED");
+        assertThat(held.mappingStatus).isEqualTo("MAPPING_REQUIRED");
+        assertThat(held.localRequestJson).isNull(); assertThat(held.localOrderId).isNull();
+        assertThat(held.nextAttemptAt).isNull();
+        for (String table : List.of("orders", "kitchen_tasks", "production_tasks", "order_dispatch_outbox", "print_jobs"))
+            assertThat(db.queryForObject("select count(*) from " + table + " where store_id=?", Long.class, store)).as(table).isZero();
+        imports.recover();
+        assertThat(row(data.path("id").asText()).localOrderId).isNull();
+        verify(client, never()).accept(anyString(), anyString());
     }
 
     @Test

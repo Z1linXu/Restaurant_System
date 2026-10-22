@@ -41,6 +41,12 @@ EDITABLE_ENV = frozenset({
 CREDENTIAL_KEYS = frozenset({
     'UBER_EATS_CLIENT_ID', 'UBER_EATS_CLIENT_SECRET', 'UBER_EATS_WEBHOOK_SIGNING_KEY',
 })
+CURRENT_4483_BASELINE_SHA = '4b3abd1349e66a146c36ac310b6a8b48bb2ad572'
+CURRENT_4483_BASELINE_IMAGE = 'sha256:c79b6bd78a2f82a4b95eb15472b5a82820a2c48248d94e334fb983969d3a80c5'
+CURRENT_4483_STORES = {'staging': 'bd993244-5589-4b19-8f0d-dc2ba73d4273',
+                     'production': '5a7dca5c-b7ec-57c8-a684-87d23e66e8d9'}
+CURRENT_4483_ROOT = 'e72231fb-9029-4539-91d6-b6efbeeb3767'
+CURRENT_4483_DEFAULTS_KEY = 'UBER_EATS_MIRROR_ITEM_DEFAULTS'
 QUEUE_SQL = """BEGIN READ ONLY;
 SELECT json_build_object(
  'flyway',(select version from flyway_schema_history where success order by installed_rank desc limit 1),
@@ -283,6 +289,219 @@ def wait_healthy(url):
     raise PromotionError('BACKEND_HEALTH_TIMEOUT')
 
 
+def current_4483_defaults(environment):
+    require(environment in CURRENT_4483_STORES, 'ENVIRONMENT_INVALID')
+    return [{'environment': 'production' if environment == 'production' else 'sandbox',
+             'localStoreId': 1, 'organizationId': 1,
+             'uberStoreId': CURRENT_4483_STORES[environment], 'uberItemId': CURRENT_4483_ROOT,
+             'localSku': 'vegetable_noodle', 'optionGroup': 'SOUP_BASE', 'optionCode': 'soup_vegan'}]
+
+
+def current_4483_env(environment, original):
+    expected = {'APP_ENVIRONMENT': environment, 'UBER_EATS_ENABLED': 'true',
+                'UBER_EATS_WORKER_ENABLED': 'false', 'UBER_EATS_PROCESSING_MODE': 'KITCHEN_MIRROR',
+                'UBER_EATS_ENVIRONMENT': 'production' if environment == 'production' else 'sandbox',
+                'UBER_EATS_SCOPES': SCOPES, 'UBER_EATS_STORE_CUTOVERS': '{}'}
+    require(all(original.get(k) == v for k, v in expected.items())
+            and not original.get('UBER_EATS_PROCESSING_NOT_BEFORE')
+            and all(original.get(k) for k in CREDENTIAL_KEYS), 'CURRENT_4483_RECEIVE_ONLY_REQUIRED')
+    if environment == 'production':
+        require(original['UBER_EATS_CLIENT_ID'] == PROD_CLIENT_ID, 'PRODUCTION_CLIENT_ID_MISMATCH')
+    defaults = current_4483_defaults(environment)
+    try:
+        prior = json.loads(original.get(CURRENT_4483_DEFAULTS_KEY) or '[]')
+    except Exception:
+        raise PromotionError('CURRENT_4483_DEFAULTS_DRIFT') from None
+    require(prior == [] or prior == defaults, 'CURRENT_4483_DEFAULTS_DRIFT')
+    return dict(original, **{CURRENT_4483_DEFAULTS_KEY: json.dumps(defaults, separators=(',', ':'))})
+
+
+def current_4483_configuration(db):
+    # Read-only configuration hashes exclude device heartbeats and printer telemetry.
+    tables = ('stations', 'menu_items', 'menu_item_options', 'menu_categories', 'store_addons',
+              'organization_addon_definitions', 'store_removes', 'store_remove_categories',
+              'store_remove_item_rules', 'store_combo_groups', 'store_combo_components',
+              'store_modules', 'uber_eats_menu_mappings', 'printer_assignments', 'flyway_schema_history')
+    fields = []
+    for table in tables:
+        fields += ["'" + table + "'", "(SELECT md5(coalesce(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]'::jsonb)::text) FROM " + table + " t)"]
+    fields += ["'bindings'", "(SELECT coalesce(jsonb_agg(jsonb_build_object('id',id,'store',store_id,'org',organization_id,'env',environment,'uber',uber_store_id,'enabled',enabled,'mode',processing_mode) ORDER BY id),'[]'::jsonb) FROM uber_eats_store_mappings)",
+               "'local_store'", "(SELECT jsonb_build_object('id',id,'org',organization_id,'code',code) FROM stores WHERE id=1)",
+               "'mapping_count'", "(SELECT count(*) FROM uber_eats_menu_mappings)",
+               "'printing'", "(SELECT md5(coalesce(jsonb_agg(jsonb_build_array(id,printing_enabled,printing_mode) ORDER BY id),'[]'::jsonb)::text) FROM stores)",
+               "'devices'", "(SELECT md5(coalesce(jsonb_agg(to_jsonb(d)-ARRAY['last_seen_at','last_heartbeat_at','updated_at','last_ip','last_seen_ip'] ORDER BY id),'[]'::jsonb)::text) FROM store_devices d)",
+               "'printers'", "(SELECT md5(coalesce(jsonb_agg(to_jsonb(p)-ARRAY['last_successful_print_at','last_failed_print_at','last_error_message','last_connection_success_at','last_connection_failed_at','last_connection_error','updated_at'] ORDER BY id),'[]'::jsonb)::text) FROM printer_configs p)",
+               "'fresh_printing'", "(SELECT count(*) FROM print_jobs WHERE status='PRINTING' AND (claim_expires_at>timezone('America/Toronto',now()) OR updated_at>timezone('America/Toronto',now())-interval '2 minutes'))",
+               "'retained_printing'", "(SELECT md5(coalesce(jsonb_agg(to_jsonb(p) ORDER BY id),'[]'::jsonb)::text) FROM print_jobs p WHERE status IN ('PRINTING','FAILED'))"]
+    sql = 'BEGIN READ ONLY; SELECT json_build_object(' + ','.join(fields) + '); ROLLBACK;'
+    return json.loads(run(['docker', 'exec', '-i', db, 'sh', '-c',
+                          'psql -X -qAt -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'], input=sql.encode()))
+
+
+def current_4483_guard(environment, queues, configuration):
+    require(queues['flyway'] == '38', 'CURRENT_4483_FLYWAY_V38_REQUIRED')
+    for key in ('pending_print_jobs', 'pending_outbox', 'pending_uber_events', 'due_uber_orders'):
+        require(queues[key] == 0, 'PENDING_QUEUE_REQUIRES_REVIEW')
+    expected = {'id': 1, 'store': 1, 'org': 1,
+                'env': 'production' if environment == 'production' else 'sandbox',
+                'uber': CURRENT_4483_STORES[environment], 'enabled': True, 'mode': 'KITCHEN_MIRROR'}
+    require(queues['uber_bindings'] == 1 and configuration['bindings'] == [expected]
+            and configuration['mapping_count'] == 299, 'CURRENT_4483_BINDING_MAPPING_DRIFT')
+    require(configuration['local_store'] == {'id': 1, 'org': 1,
+            'code': '4483_R_SAINT_DENIS' if environment == 'production' else 'STG005_SRC_20260809_R01'},
+            'CURRENT_4483_LOCAL_STORE_DRIFT')
+    require(configuration['fresh_printing'] == 0, 'CURRENT_PRINTING_REQUIRES_QUIET_WINDOW')
+    if environment == 'production':
+        require(all(queues[k] == 0 for k in ('uber_orders', 'local_uber_orders', 'uber_print_jobs')),
+                'CURRENT_4483_UBER_BUSINESS_DRIFT')
+
+
+def validate_current_4483_acceptance(value, image, sha):
+    expected = {'environment': 'staging', 'source_sha': sha, 'image': image,
+                'accepted': True, 'worker_enabled': False, 'health': 'PASS',
+                'preview_count': 300, 'preview_errors': 0, 'preview_warnings': 0,
+                'raw_fallback_count': 0}
+    require(isinstance(value, dict) and all(value.get(k) == v and type(value.get(k)) is type(v)
+            for k, v in expected.items()), 'CURRENT_4483_STAGING_ACCEPTANCE_REQUIRED')
+
+
+def patch_current_4483(environment, image, sha, acceptance_path=None):
+    """One V38/backend-only item-default patch; never activates a worker or changes a credential."""
+    require(environment in CURRENT_4483_STORES and bool(re.fullmatch(r'sha256:[0-9a-f]{64}', image))
+            and bool(re.fullmatch(r'[0-9a-f]{40}', sha)), 'ARTIFACT_INVALID')
+    require(environment == 'production' or acceptance_path is None, 'CURRENT_4483_ARGUMENTS_INVALID')
+    with operation_locks():
+        project = 'cloud' if environment == 'production' else 'restaurant-pos-staging'
+        container, db = project + '-backend-1', project + '-db-1'
+        baseline = {name: inspect(name) for name in run(['docker', 'ps', '--format', '{{.Names}}']).decode().splitlines()}
+        before = baseline[container]
+        require(before['State']['Running'] and baseline[db]['State']['Running'], 'RUNTIME_NOT_RUNNING')
+        require(before['Image'] == CURRENT_4483_BASELINE_IMAGE
+                and inspect(before['Image'])['Config'].get('Labels', {}).get('org.opencontainers.image.revision')
+                == CURRENT_4483_BASELINE_SHA, 'CURRENT_4483_APPLICATION_BASELINE_DRIFT')
+        require(inspect(image)['Config'].get('Labels', {}).get('org.opencontainers.image.revision') == sha,
+                'SOURCE_SHA_DRIFT')
+        original_env = env_of(before)
+        expected_env = current_4483_env(environment, original_env)
+        if environment == 'production':
+            require(acceptance_path is not None, 'CURRENT_4483_STAGING_ACCEPTANCE_REQUIRED')
+            validate_current_4483_acceptance(json.loads(private_file(acceptance_path).read_bytes()), image, sha)
+            stage = baseline['restaurant-pos-staging-backend-1']
+            stage_env = env_of(stage)
+            require(stage['Image'] == image and stage_env == current_4483_env('staging', stage_env),
+                    'CURRENT_4483_STAGING_RUNTIME_DRIFT')
+            require_production_secret_isolation(expected_env, stage_env)
+            source = BASE / 'production/current.compose.json'
+        else:
+            labels = before['Config'].get('Labels', {})
+            require(labels.get('com.docker.compose.project') == project, 'CURRENT_4483_STAGE_MODEL_UNPROVEN')
+            source = Path(labels.get('com.docker.compose.project.config_files', ''))
+            require(source.is_absolute() and source.is_relative_to(BASE / 'staging')
+                    and ',' not in str(source), 'CURRENT_4483_STAGE_MODEL_UNPROVEN')
+        source = private_file(source)
+        original_bytes = source.read_bytes()
+        original = json.loads(original_bytes)
+        require(set(original.get('services', {})) in ({'backend'}, {'backend', 'nginx'}), 'MODEL_SERVICES_DRIFT')
+        target = copy.deepcopy(original)
+        target['services']['backend']['image'] = image
+        target['services']['backend']['environment'][CURRENT_4483_DEFAULTS_KEY] = expected_env[CURRENT_4483_DEFAULTS_KEY]
+        root = BASE / environment / ('uber-4483-backend-' + sha)
+        require(not root.exists(), 'RELEASE_ALREADY_EXISTS')
+        require(not root.parent.is_symlink() and root.parent.stat().st_uid == os.getuid()
+                and not stat.S_IMODE(root.parent.stat().st_mode) & 0o022, 'RELEASE_PARENT_UNSAFE')
+        root.mkdir(mode=0o700)
+        for name, model in (('original.private.json', original), ('target.private.json', target), ('rollback.private.json', original)):
+            write_private(root / name, model)
+
+        def compose(path, *args):
+            return run(['docker', 'compose', '-p', project, '-f', str(path), *args])
+
+        resolved_before = json.loads(compose(source, 'config', '--format', 'json'))
+        resolved_target = json.loads(compose(root / 'target.private.json', 'config', '--format', 'json'))
+        for service in original['services']:
+            runtime = baseline[project + '-' + service + '-1']
+            require(resolved_before['services'][service]['image'] == runtime['Image']
+                    and resolved_before['services'][service]['environment'] == env_of(runtime), 'CANONICAL_MODEL_RUNTIME_DRIFT')
+        left, right = copy.deepcopy(resolved_before), copy.deepcopy(resolved_target)
+        require(right['services']['backend']['image'] == image
+                and right['services']['backend']['environment'] == expected_env, 'CURRENT_4483_TARGET_DRIFT')
+        left['services']['backend']['image'] = right['services']['backend']['image']
+        left['services']['backend']['environment'][CURRENT_4483_DEFAULTS_KEY] = expected_env[CURRENT_4483_DEFAULTS_KEY]
+        require(left == right, 'UNAPPROVED_SERVICE_DELTA')
+        queues, configuration = inventory(db), current_4483_configuration(db)
+        current_4483_guard(environment, queues, configuration)
+        write_private(root / 'queue-before.json', queues)
+        backup = root / 'database-before.dump'
+        with backup.open('xb') as out:
+            os.fchmod(out.fileno(), 0o600)
+            completed = subprocess.run(['docker', 'exec', db, 'sh', '-c',
+                'pg_dump -Fc -U "$POSTGRES_USER" "$POSTGRES_DB"'], stdout=out,
+                stderr=subprocess.PIPE, timeout=180, check=False)
+        require(completed.returncode == 0 and backup.stat().st_size > 0, 'DATABASE_BACKUP_FAILED')
+        with backup.open('rb') as data:
+            require(bool(run(['docker', 'exec', '-i', db, 'pg_restore', '--list'], stdin=data)), 'DATABASE_BACKUP_INVALID')
+        current_4483_guard(environment, inventory(db), current_4483_configuration(db))
+        require(current_4483_configuration(db) == configuration and source.read_bytes() == original_bytes,
+                'CURRENT_4483_PREFLIGHT_DRIFT')
+        base = 'https://' + ('pos' if environment == 'production' else 'staging-pos') + '.lanzhounoodlesmtl.com'
+        attempted = False
+        canonical_written = False
+        try:
+            attempted = True
+            compose(root / 'target.private.json', 'up', '-d', '--no-build', '--pull', 'never', '--no-deps', 'backend')
+            wait_healthy(base)
+            after = inspect(container)
+            require(after['Image'] == image and env_of(after) == expected_env, 'RUNTIME_CONFIGURATION_DRIFT')
+            for key in ('Entrypoint', 'Cmd', 'User', 'WorkingDir', 'ExposedPorts', 'Volumes'):
+                require(after['Config'].get(key) == before['Config'].get(key), 'CONTAINER_CONFIGURATION_DRIFT')
+            for key in ('NanoCpus', 'CpuQuota', 'CpuPeriod', 'Memory', 'MemorySwap', 'PidsLimit',
+                        'RestartPolicy', 'LogConfig', 'PortBindings', 'Binds', 'Mounts', 'ReadonlyRootfs',
+                        'SecurityOpt', 'CapAdd', 'CapDrop', 'NetworkMode'):
+                require(after['HostConfig'].get(key) == before['HostConfig'].get(key), 'HOST_CONFIGURATION_DRIFT')
+            old_networks, new_networks = before['NetworkSettings']['Networks'], after['NetworkSettings']['Networks']
+            require(set(old_networks) == set(new_networks) and all(new_networks[n]['IPAddress'] == v['IPAddress']
+                    for n, v in old_networks.items()), 'NETWORK_DRIFT')
+            for name, row in baseline.items():
+                if name != container:
+                    require(inspect(name)['Id'] == row['Id'], 'UNRELATED_CONTAINER_CHANGED')
+            after_queues = inventory(db)
+            current_4483_guard(environment, after_queues, current_4483_configuration(db))
+            require(all(after_queues[k] == queues[k] for k in
+                    ('uber_orders', 'local_uber_orders', 'uber_print_jobs', 'uber_bindings')), 'UBER_BUSINESS_SIDE_EFFECT')
+            require(current_4483_configuration(db) == configuration, 'CURRENT_4483_CONFIGURATION_CHANGED')
+            health('https://pos.lanzhounoodlesmtl.com')
+            health('https://staging-pos.lanzhounoodlesmtl.com')
+            require(source.read_bytes() == original_bytes, 'CANONICAL_SOURCE_CHANGED')
+            if environment == 'production':
+                write_private(source, target)
+                canonical_written = True
+        except BaseException:
+            if attempted:
+                owned = source.read_bytes() == original_bytes
+                if not owned and canonical_written:
+                    try: owned = json.loads(source.read_bytes()) == target
+                    except Exception: owned = False
+                require(owned, 'CANONICAL_DRIFT_REQUIRES_OPERATOR_NO_RECREATE')
+                require(inspect(container)['Image'] in (before['Image'], image), 'ROLLBACK_APPLICATION_DRIFT_STOP')
+                compose(root / 'rollback.private.json', 'up', '-d', '--no-build', '--pull', 'never', '--no-deps', 'backend')
+                wait_healthy(base)
+                restored = inspect(container)
+                require(restored['Image'] == before['Image'] and env_of(restored) == original_env,
+                        'ORIGINAL_RECEIVE_ONLY_ROLLBACK_FAILED')
+                if canonical_written:
+                    require(json.loads(source.read_bytes()) == target, 'CANONICAL_DRIFT_REQUIRES_OPERATOR')
+                    write_private(source, original)
+            raise PromotionError('CURRENT_4483_PATCH_FAILED_ORIGINAL_RESTORED') from None
+        result = {'environment': environment, 'source_sha': sha, 'image': image, 'accepted': False,
+                  'worker_enabled': False, 'health': 'PASS', 'defaults_entries': 1,
+                  'other_containers_and_configuration_preserved': True,
+                  'backup_sha256': hashlib.sha256(backup.read_bytes()).hexdigest()}
+        write_private(root / 'result.json', result)
+        if environment == 'production':
+            write_private(source.parent / 'release.json', {'source_sha': sha, 'release_dir': str(root), 'compose': source.name})
+        return result
+
+
 def promotion(environment, image, sha, credential_path=None):
     with operation_locks():
         return promote_locked(environment, image, sha, credential_path)
@@ -412,15 +631,22 @@ def main():
     parser.add_argument('image')
     parser.add_argument('sha')
     parser.add_argument('--uber-env-file', type=Path)
+    parser.add_argument('--current-4483', action='store_true', help='Current V38 backend/default patch; preserve all credentials and worker=false')
+    parser.add_argument('--current-4483-acceptance', type=Path, help='Reviewed exact-image Staging 300-preview acceptance for the current patch')
     parser.add_argument('--record-staging-acceptance', type=Path,
                         help='Validate operator HTTP proof plus current held receipt; do not deploy')
     args = parser.parse_args()
     os.umask(0o077)
     try:
-        if args.record_staging_acceptance:
+        require(args.current_4483 or not args.current_4483_acceptance, 'CURRENT_4483_ARGUMENTS_INVALID')
+        if args.current_4483:
+            require(not args.uber_env_file and not args.record_staging_acceptance, 'CURRENT_4483_ARGUMENTS_INVALID')
+            result = patch_current_4483(args.environment, args.image, args.sha, args.current_4483_acceptance)
+        elif args.record_staging_acceptance:
             require(args.environment == 'staging' and not args.uber_env_file, 'ACCEPTANCE_ARGUMENTS_INVALID')
             result = record_staging_acceptance(args.image, args.sha, args.record_staging_acceptance)
         else:
+            require(not args.current_4483_acceptance, 'CURRENT_4483_ARGUMENTS_INVALID')
             result = promotion(args.environment, args.image, args.sha, args.uber_env_file)
     except Exception as error:
         # Never emit subprocess args/output, JSON values, private paths or exception text.
