@@ -96,6 +96,17 @@ assignments. It adds no self-service onboarding, remote Store/menu/order writes,
 second Add-on identity, new order pipeline or PAD_DIRECT state change. A local
 module pause stops new imports but does not retract existing queued Print Jobs.
 
+`deployment/cloud/configure-uber-production-receiver.py` performs the bounded
+configuration-only bootstrap on the current verified Production image. It reads
+the Primary Signing Key from stdin, reuses the existing private Compose model
+and both deployment locks, backs up the database/configuration, and changes only
+the Primary key and receiver enablement. The worker stays false, cutovers empty
+and OAuth credentials unchanged. Public HMAC probes are synthetic supported
+notifications, retained as HELD_RECEIVE_ONLY; they do not prove official Uber
+delivery. Acceptance checks the committed event and zero new Uber orders,
+kitchen/production tasks or Print Jobs. Failure restores the disabled receiver
+and worker on the same image, including when the existing smoke exits early.
+
 ## Uber TEST Store and kitchen-mirror evidence
 
 The fixed HTTPS TEST webhook targets Staging Store 1 / organization 1 /
