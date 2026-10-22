@@ -492,16 +492,45 @@ Rules:
 ### Create Order
 POST /orders
 
-Request assumption for MVP:
-- Combo 订单必须直接提交为真实 `order_items`
-- 不允许把 Combo 作为单独 `menu_item`
-- 套餐主品、配菜、鸡蛋分别作为独立 order line
-- 同一套餐组共享 `combo_group_no`
+Current order representation:
+- Combo 不是单独 `menu_item`；当前 POS 把主商品写入 `order_items`，把套餐升级、
+  Store Combo 蛋/小菜选择写入该行的 `order_item_options` 快照
+- 旧的真实多行套餐仍可用 `combo_group_no` 分组；不能要求新客户端把每个
+  免费组件额外提交成收费 order line
+- 真实小菜厨房任务由后端根据已选稳定 Combo component 生成
 - `combo_role` 支持：`main`, `combo_side`, `combo_egg`, `standalone`
 - 订单项与选项响应应返回双语快照字段
 - 历史订单展示必须使用快照，不依赖当前菜单主数据
 - 订单项应返回 `category_code_snapshot`
 - 订单选项应返回 `option_type_snapshot`
+
+### In-store Price Snapshot Contract
+
+For initial submission and add-only Update, `unit_price_snapshot` is the frozen
+**base price per item**, before Size/Combo/Add-on deltas. An option's `quantity`
+is its count per item/bowl. The backend calculates and persists:
+
+```text
+line_amount = (unit_price + sum(option.price_delta * option.quantity)) * item.quantity
+subtotal_amount = sum(active line_amount)
+tax = subtotal_amount * 0.14975, rounded once to cents with HALF_UP
+total_amount = subtotal_amount + tax
+```
+
+The selected Store catalog supplies effective Size/Combo policy, component and
+Add-on prices; no fixed price is implied by examples in this document. Both
+frontend submission paths serialize the same captured base/option snapshots.
+A later menu refresh does not silently replace an existing draft quote. Current
+Store/identity/eligibility checks and canonical Add-on stale-price rejection
+still apply; canonical Removes must be free. This contract does not authorize
+recalculating old submitted lines, orders, reports or PrintJobs. Uber/Kitchen
+Mirror keeps its separate financial-snapshot contract.
+
+Receipt amounts use persisted totals and `order_items.line_amount`. When the
+receipt expands quantity into per-bowl blocks, it allocates the stored line's
+integer cents, including any remainder, so those blocks sum exactly to that
+line. Full receipts derive tax from persisted total minus subtotal. Update
+receipts apply the same tax utility to the exact added batch's stored lines.
 
 ### Submit Order
 POST /orders/{id}/submit
@@ -528,7 +557,9 @@ For orders in `submitted`, `preparing`, or `ready` status, existing items are im
 - New items are added atomically through `POST /orders/{id}/updates` with an `idempotency_key`.
 - One update request creates one `order_update_batches` revision and tags each new item with `order_update_batch_id`.
 - The automatic GRAB update ticket contains only items from that exact update batch.
-- FRONTDESK_RECEIPT is not automatically reprinted for an update.
+- Automatic FRONTDESK_RECEIPT_UPDATE also contains only items/options from
+  that exact update batch and shows batch-only subtotal/tax/total. HOT_KITCHEN
+  update is generated only when the batch has eligible content.
 - Manual order reprint always renders the complete current order.
 
 ### Create Submitted Order Update
@@ -761,9 +792,28 @@ Rule document shape is structured, not executable:
 }
 ```
 
-Menu Management exposes item-specific aliases for the same canonical outputs.
-If an output alias is blank or absent, renderers fall back to frozen submitted
-order/menu snapshots. A11 display rules cannot change routing or eligibility.
+Menu Management exposes the Printing Display Rules tab and item-specific aliases
+for the same canonical outputs. The old Printing Settings page links to that
+same-Store tab; endpoint paths and printing permissions are unchanged. Missing
+item aliases fall back to frozen submitted order/menu labels.
+
+GRAB task creation, HOT_KITCHEN and preview share rule-first spicy resolution.
+For SPICINESS, a nonblank configured output (including NO_SPICY `（走s）`) wins
+before legacy suppression; an explicit empty string hides the kitchen token,
+while missing/null inherits the legacy fallback at runtime. Structured
+SPICINESS writes still require textual output values; this does not make null
+a new accepted write format. The unchanged default NO_SPICY kitchen columns
+are empty. FRONTDESK_RECEIPT uses its own customer wording,
+for example `不辣`. No Store revision changes another Store or a global/Profile
+default. Publishing affects future snapshots; existing rendered jobs and frozen
+GRAB task instructions are not rewritten.
+
+Frontdesk full/Update receipts explicitly show recorded SOUP_BASE choices,
+including zero-price choices, using snapshot group/type/stable-code identity and
+its FRONTDESK_RECEIPT output or frozen bilingual label. They never use kitchen
+soup shorthand or today's menu to infer history. Missing old vegetable-noodle
+selection is `汤底：未记录`; other items without soup choices gain no such line.
+A11 display rules cannot change routing or eligibility.
 Modifier dictionaries follow the same optional-override rule: a valid ADD_ON
 or REMOVE without a matching dictionary entry remains kitchen-visible through
 its frozen `OrderItemOption` label. Unknown modifier codes are not rejected by
@@ -1145,7 +1195,8 @@ Response behavior:
 ### Menu Modeling Notes
 - `menu_items.station_id` 是菜品默认工位
 - `menu_item_options` 保留菜品级选项 ID；ADD_ON 的名称、价格和全店可用状态
-  由 Store Add-on Catalog 统一维护，关联 option row 是兼容物化与商品 eligibility。
+  由 Store Add-on Catalog 统一维护；linked REMOVE 的名称、免费价格及可用范围
+  由独立 Store Remove Catalog 维护。关联 option row 是兼容物化，不是第二套主数据。
 - `option_type` remains for compatibility: `noodle_type`, `size`, `addon`, `remove`, `soup_base`, `spicy_level`
 - `option_group` is the preferred semantic grouping for new code: `SIZE`, `SOUP_BASE`, `NOODLE_TYPE`, `SPICY_LEVEL`, `ADD_ON`, `REMOVE`, `COMBO`, `COMBO_EGG`, `COMBO_SIDE`, `COMBO_SIDE_REMOVE`
 - `option_code` is the preferred stable machine identifier. Legacy Chinese-name matching is fallback only.
@@ -1281,6 +1332,56 @@ selection wins. Catalog items expose the nullable field; Combo Configuration
 exposes `item_overrides` with item ID, bilingual names and exception code.
 Removing/disabling an in-use component must not leave invalid item defaults.
 
+#### Store Remove Catalog
+
+These typed endpoints require the authenticated principal's `admin:menu_manage`
+capability and MENU_MANAGEMENT module access for the resolved Store. Collection
+reads/writes require `store_id`; ID routes resolve the actual Store server-side
+and reject any mismatched optional query/body `store_id`. A Remove is always
+free: there is no price field and no Add-on/Remove conversion endpoint.
+
+| Method | Path | Request / result data |
+| --- | --- | --- |
+| GET | `/api/v1/admin/menu/removes?store_id={storeId}` | `{removes, conflicts, legacy_options}` |
+| POST | `/api/v1/admin/menu/removes` | `{store_id, code, name_zh, name_en?, active, sort_order?}` → Remove |
+| PUT | `/api/v1/admin/menu/removes/{id}?store_id={storeId}` | `{store_id?, name_zh, name_en?, active, sort_order?, code?}` → Remove; changed code rejected |
+| PUT | `/api/v1/admin/menu/removes/reorder` | `{store_id, ids:[...]}` → ordered Removes; IDs must contain the complete same-Store catalog exactly once |
+| GET | `/api/v1/admin/menu/removes/{id}/applicability?store_id={storeId}` | `{remove_id, store_id, category_ids, items}` |
+| PUT | `/api/v1/admin/menu/removes/{id}/applicability?store_id={storeId}` | `{store_id?, category_ids:[...], items:[{item_id, mode}]}` → applicability |
+| POST | `/api/v1/admin/menu/removes/reconcile` | `{store_id, dry_run:boolean}` → `{store_id,dry_run,linked_groups,linked_options,conflicts}` |
+
+Remove fields are `id`, `store_id`, immutable normalized lowercase `code`,
+`name_zh`, nullable `name_en`, `active`, `sort_order`, and effective-eligible
+`item_ids`. Code matches `[a-z][a-z0-9]*(_[a-z0-9]+)*` and is unique per Store;
+Chinese name is required. No delete endpoint is exposed; deactivate preserves
+identity and applicability. The catalog `item_ids` and applicability `effective`
+represent eligibility; orderability additionally requires `active=true`.
+
+Applicability `items` contains `{item_id,name_zh,name_en,category_id,mode,effective}`.
+PUT replaces this Remove's category/item rule set atomically. `ALLOW` or `DENY`
+overrides category inheritance; `INHERIT` (also the default for omitted item
+rules) follows whether the item's category is selected. New items inherit
+category applicability. Both categories and items must belong to the same Store;
+foreign/duplicate identities are rejected. Current compatibility assignments,
+menu revision and catalog edits change in the same transaction.
+
+Reconciliation is explicit: V38 itself does not rewrite legacy options. Dry-run
+is read-only; apply links only unambiguous stable-code groups with identical
+bilingual names, free price and valid relationships, keeping original option
+IDs and item eligibility. Conflicts remain unresolved and appear as
+`{code,option_ids,names_zh,names_en,reason}`; unlinked current options remain in
+`legacy_options`. Linked/canonical Remove identities cannot be overwritten via
+generic item-option mutations. No majority/name guessing selects business data.
+
+New order/Update and direct draft submission validate same-Store Remove identity,
+zero price, active canonical assignment and the selected Combo-side parent.
+Stable-code ingredient conflicts are per dish/scope: the POS deselects the
+opposite Add-on/Remove choice; backend conflicts return `ADD_REMOVE_CONFLICT`.
+Other relevant failures include `REMOVE_STORE_MISMATCH`, `REMOVE_CODE_IMMUTABLE`,
+`REMOVE_MUST_BE_FREE`, `REMOVE_ASSIGNMENT_UNAVAILABLE`, `REMOVE_LEGACY_CONFLICT`
+and `REMOVE_COMBO_SIDE_REQUIRED`. Existing history, Store peers, immutable Master
+and Profile artifacts remain unchanged. See [Remove Catalog](../docs/operations/REMOVE_CATALOG.md).
+
 #### Store Add-on Catalog
 
 All endpoints use the existing authenticated principal/`X-User-Id` contract
@@ -1307,7 +1408,7 @@ entries (`ADDON_COMBO_COMPONENT_IDENTITY`) and are omitted from catalog/eligibil
 Catalog entries expose `id`, `store_id`, immutable `code`, bilingual names,
 `price`, `active` and `printing_configured`. Missing Printing MODIFIER_ADD
 coverage is a non-blocking fallback warning. Printing token editing remains
-in Printing Management; catalog name/price edits never rewrite tokens.
+in Menu Management → Printing Display Rules; catalog name/price edits never rewrite tokens.
 
 Canonical code is unique per Organization and immutable after creation.
 Each Store has at most one catalog row per definition and independent names,

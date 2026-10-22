@@ -3,7 +3,7 @@ import {
   cancelDraftOrder,
   fetchOrderDetail,
   findEditableOrderByContext,
-  mapOptions,
+  mapFrozenOrderItem,
   submitOrderUpdate,
   updateEditableOrderHeader,
   type IdempotentOrderSubmitPayload,
@@ -16,7 +16,6 @@ import type {
   LocalizedText,
   MenuItem,
   OrderLineItem,
-  OrderLineOptionSnapshot,
   OrderSession,
 } from '../types/ordering'
 import { createIdempotencyKey } from '../utils/randomId'
@@ -57,33 +56,7 @@ import {
 import { readMenuSnapshot } from '../offline/menuCache'
 import { mapCatalog } from './useMenuCatalog'
 import { resolveComboGroupOptionId } from '../utils/comboSelection'
-
-function calculateDraftLineSubtotal(menuItem: MenuItem | undefined, draft: ItemCustomizationDraft) {
-  if (!menuItem) {
-    return 0
-  }
-  const sizeDelta = menuItem.customization?.sizes?.options.find((option) => option.id === draft.sizeId)?.priceDelta ?? 0
-  const soupBaseDelta =
-    menuItem.customization?.soupBases?.options.find((option) => option.id === draft.soupBaseId)?.priceDelta ?? 0
-  const comboDelta = draft.comboEnabled ? (menuItem.customization?.combo?.upcharge ?? 0) : 0
-  const comboGroupDelta = draft.comboEnabled
-    ? menuItem.customization?.combo?.groups
-      ?.reduce((sum, group) => {
-        const selectedId = resolveComboGroupOptionId(draft, group)
-        const selected = group.options.find((option) => option.id === selectedId)
-        return sum + (selected?.priceDelta ?? 0)
-      }, 0) ?? 0
-    : 0
-  const addOnDelta =
-    menuItem.customization?.addOns
-      ?.reduce((sum, option) => sum + (option.priceDelta ?? 0) * (draft.addOnQuantities[option.id] ?? 0), 0) ?? 0
-  const removeDelta =
-    menuItem.customization?.removeOptions
-      ?.filter((option) => draft.removeIds.includes(option.id))
-      .reduce((sum, option) => sum + (option.priceDelta ?? 0), 0) ?? 0
-
-  return (menuItem.price + sizeDelta + soupBaseDelta + comboDelta + comboGroupDelta + addOnDelta + removeDelta) * draft.quantity
-}
+import { buildOptionSnapshots, calculateDraftLineSubtotal, calculateSnapshotLineSubtotal } from '../utils/orderPricing'
 
 function optionTag(option: BackendOrderItemOptionResponse): LocalizedText {
   if ((option.quantity ?? 1) > 1) {
@@ -97,42 +70,6 @@ function optionTag(option: BackendOrderItemOptionResponse): LocalizedText {
     en: option.option_name_snapshot_en,
     zh: option.option_name_snapshot_zh,
   }
-}
-
-function menuItemOptions(menuItem: MenuItem) {
-  const options = [
-    ...(menuItem.customization?.sizes?.options ?? []),
-    ...(menuItem.customization?.soupBases?.options ?? []),
-    ...(menuItem.customization?.noodleTypes ?? []),
-    ...(menuItem.customization?.spicyLevels ?? []),
-    ...(menuItem.customization?.combo?.option ? [menuItem.customization.combo.option] : []),
-    ...(menuItem.customization?.combo?.groups.flatMap((group) => group.options) ?? []),
-    ...(menuItem.customization?.combo?.eggs ?? []),
-    ...(menuItem.customization?.combo?.sides ?? []),
-    ...(menuItem.customization?.combo?.sideRemoveOptions ?? []),
-    ...(menuItem.customization?.addOns ?? []),
-    ...(menuItem.customization?.removeOptions ?? []),
-  ]
-  return new Map(options.map((option) => [option.id, option]))
-}
-
-function buildOptionSnapshots(menuItem: MenuItem, draft: ItemCustomizationDraft): OrderLineOptionSnapshot[] {
-  const optionsById = menuItemOptions(menuItem)
-  return mapOptions(draft, menuItem).map(({ option_id, quantity }) => {
-    const option = optionsById.get(String(option_id))
-    if (!option) throw new Error(`菜单缓存缺少选项 ${option_id}，请重新选择该菜品。`)
-    return {
-      optionId: option.id,
-      optionType: option.optionType ?? null,
-      optionCode: option.optionCode ?? null,
-      optionGroup: option.optionGroup ?? null,
-      parentOptionId: option.parentOptionId ?? null,
-      nameEn: option.labelEn,
-      nameZh: option.labelZh,
-      priceDelta: option.priceDelta ?? 0,
-      quantity,
-    }
-  })
 }
 
 function buildItemSelection(item: BackendOrderItemResponse, menuItem: MenuItem | undefined): ItemCustomizationDraft {
@@ -390,39 +327,7 @@ export function buildFrozenSubmitPayload(
     expected_subtotal_amount: Number(
       items.reduce((total, item) => total + item.lineSubtotal, 0).toFixed(2),
     ),
-    items: items.map((item) => {
-      const menuItem = catalogItems.find((candidate) => candidate.id === item.menuItemId)
-      const optionSnapshots = item.optionSnapshots
-        ?? (menuItem ? buildOptionSnapshots(menuItem, item.selection) : null)
-      if (!optionSnapshots) throw new Error(`本机草稿缺少菜品 ${item.menuItemId} 的提交快照。`)
-      return {
-        menu_item_id: Number(item.menuItemId),
-        item_name_snapshot_zh: item.nameZh,
-        item_name_snapshot_en: item.nameEn,
-        unit_price_snapshot: item.unitPrice,
-        category_code_snapshot: item.categoryCodeSnapshot ?? menuItem?.categoryCode ?? null,
-        station_id_snapshot: item.stationIdSnapshot == null
-          ? (menuItem?.stationId == null ? null : Number(menuItem.stationId))
-          : Number(item.stationIdSnapshot),
-        item_sku_snapshot: item.skuSnapshot ?? menuItem?.sku ?? null,
-        item_type_snapshot: item.itemTypeSnapshot ?? menuItem?.itemType ?? null,
-        quantity: item.quantity,
-        combo_group_no: null,
-        combo_role: 'standalone',
-        notes: item.notes.trim() || null,
-        options: optionSnapshots.map((option) => ({
-          option_id: Number(option.optionId),
-          option_type_snapshot: option.optionType,
-          option_code_snapshot: option.optionCode,
-          option_group_snapshot: option.optionGroup,
-          parent_option_id_snapshot: option.parentOptionId == null ? null : Number(option.parentOptionId),
-          option_name_snapshot_zh: option.nameZh,
-          option_name_snapshot_en: option.nameEn,
-          option_price_snapshot: option.priceDelta,
-          quantity: option.quantity,
-        })),
-      }
-    }),
+    items: items.map((item) => mapFrozenOrderItem(item, catalogItems)),
   }
 }
 
@@ -442,6 +347,9 @@ async function buildRecoverySubmitPayload(
 }
 
 function resizeSnapshotLineSubtotal(item: OrderLineItem, nextQuantity: number) {
+  if (item.optionSnapshots) {
+    return calculateSnapshotLineSubtotal(item.unitPrice, nextQuantity, item.optionSnapshots)
+  }
   const currentQuantity = Math.max(1, item.quantity)
   return Number(((item.lineSubtotal / currentQuantity) * nextQuantity).toFixed(2))
 }

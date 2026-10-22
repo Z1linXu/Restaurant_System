@@ -10,6 +10,7 @@ import com.restaurant.system.printing.rules.PrintingDisplayRuleContext;
 import com.restaurant.system.printing.semantic.ComboComponentSemanticResolver;
 import com.restaurant.system.printing.semantic.HotKitchenPrintEligibilityService;
 import com.restaurant.system.printing.semantic.KitchenModifierTokenResolver;
+import com.restaurant.system.printing.semantic.KitchenSpicinessDisplayResolver;
 import java.time.format.DateTimeFormatter;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -356,27 +357,7 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
     }
 
     private String mapSpicyCode(OrderItemOption option, PrintingDisplayRuleContext printingRules) {
-        String spicyZh = option == null ? null : option.option_name_snapshot_zh;
-        if (spicyZh == null || spicyZh.isBlank() || "不辣".equals(spicyZh)) {
-            return null;
-        }
-        String configured = printingRules.resolveDictionaryOutput(
-            "SPICINESS",
-            PrintModuleCode.HOT_KITCHEN,
-            option.option_code_snapshot,
-            option.option_name_snapshot_zh,
-            option.option_name_snapshot_en,
-            null
-        );
-        if (configured != null) {
-            return configured.isBlank() ? null : configured;
-        }
-        return switch (spicyZh) {
-            case "少辣" -> "（少s）";
-            case "正常辣" -> "（s）";
-            case "加辣" -> "（大s）";
-            default -> "（s）";
-        };
+        return KitchenSpicinessDisplayResolver.resolve(PrintModuleCode.HOT_KITCHEN, option, printingRules);
     }
 
     private String mapSoupBaseCode(String sku, OrderItemOption option, PrintingDisplayRuleContext printingRules) {

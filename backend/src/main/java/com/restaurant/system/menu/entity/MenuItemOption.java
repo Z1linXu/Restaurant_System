@@ -60,6 +60,12 @@ public class MenuItemOption {
     @Column(name = "addon_eligible")
     public Boolean addon_eligible;
 
+    @Column(name = "store_remove_id")
+    public Long store_remove_id;
+
+    @Column(name = "store_remove_store_id")
+    public Long store_remove_store_id;
+
     @Column(name = "created_at")
     public LocalDateTime created_at;
 

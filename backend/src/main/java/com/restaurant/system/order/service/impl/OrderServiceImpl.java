@@ -2,9 +2,11 @@ package com.restaurant.system.order.service.impl;
 
 
 import com.restaurant.system.menu.addon.StoreAddonOptionResolver;
+import com.restaurant.system.menu.remove.RemoveSelectionValidator;
 
 import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.common.pricing.TaxCalculator;
+import com.restaurant.system.printing.semantic.KitchenSpicinessDisplayResolver;
 import com.restaurant.system.common.realtime.RealtimeEventPublisher;
 import com.restaurant.system.common.realtime.RealtimeTopics;
 import com.restaurant.system.common.realtime.RealtimeUpdateMessage;
@@ -155,6 +157,12 @@ public class OrderServiceImpl implements OrderService {
     );
 
     private final StoreAddonOptionResolver addonResolver;
+    private RemoveSelectionValidator removeSelectionValidator;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setRemoveSelectionValidator(RemoveSelectionValidator validator) {
+        this.removeSelectionValidator = validator;
+    }
     private final jakarta.persistence.EntityManager entityManager;
     private final OrderRepository orderRepository;
     private final OrderUpdateBatchRepository orderUpdateBatchRepository;
@@ -462,6 +470,22 @@ public class OrderServiceImpl implements OrderService {
         List<OrderItemOption> orderItemOptions = loadOptionsForOrderItems(orderItems);
 
         validateDraftAddons(order, orderItems, orderItemOptions);
+        if (removeSelectionValidator != null) {
+            removeSelectionValidator.validateSnapshots(order, orderItems, orderItemOptions);
+        }
+        if (!order.kitchenMirror()) {
+            // Repair pre-upgrade drafts using their own frozen prices, never the live menu.
+            Map<Long, List<OrderItemOption>> optionsByItemId = groupOptionsByOrderItemId(orderItemOptions);
+            for (OrderItem item : orderItems) {
+                if (!isActiveOrderItem(item)) continue;
+                item.line_amount = calculateLineAmount(
+                    item.unit_price, item.quantity, optionsByItemId.getOrDefault(item.id, List.of())
+                );
+                item.updated_at = now;
+                orderItemRepository.save(item);
+            }
+            recalculateOrderAmounts(order, now);
+        }
 
         order.status = ORDER_STATUS_SUBMITTED;
         order.submitted_at = now;
@@ -1034,11 +1058,14 @@ public class OrderServiceImpl implements OrderService {
         List<CreateOrderItemOptionRequest> optionRequests,
         LocalDateTime now
     ) {
+        if (removeSelectionValidator != null) {
+            removeSelectionValidator.validateRequest(storeId, menuItemId, optionRequests);
+        }
         MenuItem mainMenuItem = menuItemRepository.findById(menuItemId).orElse(null);
         Map<Long, MenuItemOption> requestedOptionsById = loadRequestedMenuItemOptions(optionRequests);
         Map<Long, Long> comboSideRemoveParentByOptionId = mainMenuItem == null
             ? Map.of()
-            : buildComboSideRemoveParentMap(mainMenuItem, requestedOptionsById);
+            : buildComboSideRemoveParentMap(mainMenuItem, requestedOptionsById, optionRequests);
 
         List<OrderItemOption> savedOptions = new ArrayList<>();
         for (CreateOrderItemOptionRequest optionRequest : optionRequests) {
@@ -1118,6 +1145,14 @@ public class OrderServiceImpl implements OrderService {
                 || addonResolver.requiresAssignment(storeId, orderItemOption.option_group_snapshot, orderItemOption.option_code_snapshot)) {
                 throw new BusinessException("ADDON_ASSIGNMENT_REQUIRED: refresh menu and select the Store Add-on");
             }
+            if (menuItemOption != null && menuItemOption.store_remove_id != null) {
+                // Shared Remove assignments keep their stable identity and are always free.
+                // Frozen labels remain the user's accepted draft labels.
+                orderItemOption.option_type_snapshot = "remove";
+                orderItemOption.option_code_snapshot = menuItemOption.option_code;
+                orderItemOption.option_group_snapshot = comboSideParentOptionId == null ? "REMOVE" : "COMBO_SIDE_REMOVE";
+                orderItemOption.price_delta = BigDecimal.ZERO;
+            }
             savedOptions.add(orderItemOptionRepository.save(orderItemOption));
         }
         return savedOptions;
@@ -1169,27 +1204,32 @@ public class OrderServiceImpl implements OrderService {
         return optionsById;
     }
 
-    private Map<Long, Long> buildComboSideRemoveParentMap(MenuItem mainMenuItem, Map<Long, MenuItemOption> requestedOptionsById) {
+    private Map<Long, Long> buildComboSideRemoveParentMap(
+        MenuItem mainMenuItem,
+        Map<Long, MenuItemOption> requestedOptionsById,
+        List<CreateOrderItemOptionRequest> requests
+    ) {
         Map<Long, Long> allowedParentByRemoveOptionId = new HashMap<>();
-        for (MenuItemOption selectedOption : requestedOptionsById.values()) {
-            if (!mainMenuItem.id.equals(selectedOption.menu_item_id) || !isComboSideOption(selectedOption)) {
-                continue;
+        for (CreateOrderItemOptionRequest selected : requests) {
+            MenuItemOption current = requestedOptionsById.get(selected.option_id);
+            String group = current == null ? selected.option_group_snapshot : current.option_group;
+            if (!"COMBO_SIDE".equalsIgnoreCase(group == null ? "" : group)) continue;
+            if (current != null && !mainMenuItem.id.equals(current.menu_item_id)) continue;
+            String code = current == null ? selected.option_code_snapshot : current.option_code;
+            Long sideItemId;
+            if (removeSelectionValidator != null) {
+                sideItemId = removeSelectionValidator.resolveSideItem(mainMenuItem.store_id, code);
+            } else {
+                // Compatibility for manually constructed legacy unit fixtures; Spring requires the validator.
+                String sideSku = resolveComboSideSku(code, current == null ? selected.option_name_snapshot_zh : current.name_zh);
+                sideItemId = sideSku == null ? null : menuItemRepository.findAll().stream()
+                    .filter(item -> mainMenuItem.store_id.equals(item.store_id) && sideSku.equals(item.sku))
+                    .map(item -> item.id).findFirst().orElse(null);
             }
-            String sideSku = resolveComboSideSku(selectedOption.option_code, selectedOption.name_zh);
-            if (sideSku == null) {
-                continue;
-            }
-            MenuItem sideItem = menuItemRepository.findAll().stream()
-                .filter(item -> mainMenuItem.store_id.equals(item.store_id))
-                .filter(item -> sideSku.equals(item.sku))
-                .findFirst()
-                .orElse(null);
-            if (sideItem == null) {
-                continue;
-            }
-            menuItemOptionRepository.findAllByMenuItemIdOrdered(sideItem.id).stream()
+            if (sideItemId == null) continue;
+            menuItemOptionRepository.findAllByMenuItemIdOrdered(sideItemId).stream()
                 .filter(this::isRemoveMenuOption)
-                .forEach(removeOption -> allowedParentByRemoveOptionId.put(removeOption.id, selectedOption.id));
+                .forEach(removeOption -> allowedParentByRemoveOptionId.put(removeOption.id, selected.option_id));
         }
         return allowedParentByRemoveOptionId;
     }
@@ -1511,11 +1551,14 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private BigDecimal calculateLineAmount(BigDecimal unitPrice, Integer quantity, List<OrderItemOption> options) {
-        BigDecimal lineAmount = defaultIfNull(unitPrice).multiply(BigDecimal.valueOf(quantity));
+        // Option quantity is per bowl/item, including Size, Combo and paid Add-ons.
+        BigDecimal configuredUnitPrice = defaultIfNull(unitPrice);
         for (OrderItemOption option : options) {
-            lineAmount = lineAmount.add(defaultIfNull(option.price_delta).multiply(BigDecimal.valueOf(option.quantity)));
+            configuredUnitPrice = configuredUnitPrice.add(
+                defaultIfNull(option.price_delta).multiply(BigDecimal.valueOf(option.quantity))
+            );
         }
-        return lineAmount;
+        return configuredUnitPrice.multiply(BigDecimal.valueOf(quantity));
     }
 
     private List<OrderItemOption> loadOptionsForOrderItems(List<OrderItem> orderItems) {
@@ -2194,27 +2237,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private String mapSpicyCode(OrderItemOption option, PrintingDisplayRuleContext printingRules) {
-        String spicyZh = option == null ? null : option.option_name_snapshot_zh;
-        if (spicyZh == null || spicyZh.isBlank() || "不辣".equals(spicyZh)) {
-            return null;
-        }
-        String configured = printingRules.resolveDictionaryOutput(
-            "SPICINESS",
-            PrintModuleCode.GRAB,
-            option.option_code_snapshot,
-            option.option_name_snapshot_zh,
-            option.option_name_snapshot_en,
-            null
-        );
-        if (configured != null) {
-            return configured.isBlank() ? null : configured;
-        }
-        return switch (spicyZh) {
-            case "少辣" -> "（少s）";
-            case "正常辣" -> "（s）";
-            case "加辣" -> "（大s）";
-            default -> "（s）";
-        };
+        return KitchenSpicinessDisplayResolver.resolve(PrintModuleCode.GRAB, option, printingRules);
     }
 
     private String mapSoupBaseCode(String sku, OrderItemOption option, PrintingDisplayRuleContext printingRules) {

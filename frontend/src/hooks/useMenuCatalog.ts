@@ -151,9 +151,9 @@ function buildSideRemoveOptions(comboSides: ChoiceOption[], comboSideRemoves: Ch
 
   comboSides.forEach((side) => {
     const managedSideRemoves = side.sideItemRemoveOptions ?? []
-    // Menu Management owns combo side requests. Legacy child options are only used when
-    // the real side item does not expose active REMOVE options.
-    const sourceOptions = managedSideRemoves.length
+    // An explicitly linked side owns its Remove set, including an empty set.
+    // Legacy child rows remain a fallback only for unlinked legacy components.
+    const sourceOptions = side.sideItemRemoveOptions !== undefined
       ? managedSideRemoves
       : comboSideRemoves.filter((option) => option.parentOptionId === side.id)
     const deduped = new Map<string, ChoiceOption>()
@@ -171,20 +171,28 @@ function buildSideRemoveOptions(comboSides: ChoiceOption[], comboSideRemoves: Ch
 
 function buildSideItemRemoveOptionsByComponentCode(data: BackendMenuCatalog) {
   const result = new Map<string, ChoiceOption[]>()
-  data.categories.forEach((category) => {
-    category.items.forEach((item) => {
-      const componentCode = COMBO_SIDE_COMPONENT_CODE_BY_SKU[item.sku]
-      if (!componentCode) {
-        return
-      }
-      const removeOptions = item.options
-        .filter((option) => option.is_active)
-        .filter(isBackendRemoveOption)
-        .map(mapOption)
-        .sort(sortChoiceOptions)
-      if (removeOptions.length) {
-        result.set(componentCode, removeOptions)
-      }
+  const configuration = data.combo_configuration
+  if (!configuration || configuration.store_id !== data.store_id) return result
+  // Items in this catalog are already Store-scoped; a foreign/missing linked ID
+  // must never silently resolve to a similarly named legacy SKU.
+  const activeItems = data.categories.filter((category) => category.is_active)
+    .flatMap((category) => category.items).filter((item) => item.is_active)
+  const itemsById = new Map(activeItems.map((item) => [item.id, item]))
+  const legacySides = new Map(activeItems.flatMap((item) => {
+    const code = COMBO_SIDE_COMPONENT_CODE_BY_SKU[item.sku]
+    return code ? [[code, item] as const] : []
+  }))
+  configuration.groups.filter((group) => group.enabled !== false).forEach((group) => {
+    const groupCode = normalizeComponentGroup(group.group_code ?? group.component_group)
+    if (groupCode !== 'COMBO_SIDE') return
+    group.components.filter((component) => component.enabled).forEach((component) => {
+      if (normalizeComponentGroup(component.component_group || groupCode) !== 'COMBO_SIDE') return
+      const code = normalizeComponentCode(component.component_code)
+      const linked = component.linked_menu_item_id != null
+      const side = linked ? itemsById.get(component.linked_menu_item_id!) : legacySides.get(code)
+      const options = (side?.options ?? []).filter((option) => option.is_active)
+        .filter(isBackendRemoveOption).map(mapOption).sort(sortChoiceOptions)
+      if (linked || options.length) result.set(code, options)
     })
   })
   return result
@@ -213,8 +221,10 @@ function storeComboChoiceGroup(
         sortOrder: component.display_order,
       }
       if (componentGroup === 'COMBO_SIDE') {
-        option.sideItemRemoveOptions = (sideItemRemoveOptionsByComponentCode.get(component.component_code) ?? [])
-          .map((removeOption) => ({ ...removeOption, parentOptionId: id }))
+        const removes = sideItemRemoveOptionsByComponentCode.get(normalizeComponentCode(component.component_code))
+        if (removes !== undefined) {
+          option.sideItemRemoveOptions = removes.map((removeOption) => ({ ...removeOption, parentOptionId: id }))
+        }
       }
       return option
     })
@@ -237,7 +247,8 @@ function storeComboChoiceGroups(
   data: BackendMenuCatalog,
   sideItemRemoveOptionsByComponentCode: Map<string, ChoiceOption[]>,
 ) {
-  return (data.combo_configuration?.groups ?? [])
+  if (data.combo_configuration?.store_id !== data.store_id) return []
+  return data.combo_configuration.groups
     .filter((group) => group.enabled ?? true)
     .sort((left, right) => (left.display_order ?? 999999) - (right.display_order ?? 999999))
     .map((group) => storeComboChoiceGroup(group, sideItemRemoveOptionsByComponentCode))

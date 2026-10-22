@@ -42,7 +42,7 @@ import {
   parseAndroidBridgeJson,
   type AndroidPadDeviceStatus,
 } from '../../types/androidPadBridge'
-import { PrintingDisplayRulesPanel } from './PrintingDisplayRulesPanel'
+import { menuManagementPath } from './menuManagementSections'
 
 type ToastState = { kind: 'success' | 'error'; message: string } | null
 
@@ -1043,10 +1043,12 @@ export function PrintingSettingsPage() {
               </button>
             </section>
 
-            <PrintingDisplayRulesPanel
-              storeId={Number(selectedStoreId)}
-              onToast={(message, kind = 'success') => setToast({ kind, message })}
-            />
+            <section className="rounded-[26px] bg-white/85 p-5">
+              <h2 className="font-bold">Printing Display Rules</h2>
+              <p className="mt-1 text-sm text-[var(--muted)]">Manage receipt wording in Menu Management. / 小票显示文字已移至菜单管理。</p>
+              <a className="mt-3 inline-flex min-h-11 items-center rounded-[14px] bg-[var(--primary)] px-4 py-2 font-semibold text-white"
+                href={menuManagementPath(Number(selectedStoreId), 'printing_display_rules')}>Open Printing Display Rules / 打开打印显示规则</a>
+            </section>
 
             <button
               type="button"

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { BackendMenuCatalog, BackendMenuOption } from '../types/ordering'
+import type { BackendMenuCatalog, BackendMenuOption, BackendStoreComboComponent } from '../types/ordering'
 import { createLocalDraftRecord } from '../offline/localDrafts'
 import { buildFrozenSubmitPayload, buildLocalLineItem } from './useDraftOrder'
 import { mapCatalog } from './useMenuCatalog'
@@ -846,5 +846,96 @@ describe('ordering menu item display order', () => {
       expect.objectContaining({ optionCode: 'combo_edamame' }),
       expect.objectContaining({ optionCode: 'combo_coke' }),
     ]))
+  })
+})
+
+
+describe('Combo Side Remove follows Store component links', () => {
+  function linkedSideCatalog(patch: Partial<BackendStoreComboComponent> = {}) {
+    const data = catalog()
+    const main = data.categories[0].items[0]
+    main.id = 40
+    main.options = [addonOption({ id: 381, option_group: 'COMBO', option_code: 'combo', name_zh: '套餐', price_delta: 5 })]
+    const remove = (id: number, code: string, name: string): BackendMenuOption => ({
+      id, option_type: 'remove', option_group: 'REMOVE', option_code: code,
+      parent_option_id: null, sort_order: 1, name_zh: name, name_en: code, price_delta: 0, is_active: true,
+    })
+    const legacySide = { ...main, id: 201, sku: 'cucumber_salad', options: [remove(2001, 'remove_peanut', '走花生')] }
+    // Linked menu items need not use a fixed legacy SKU/category: the enabled
+    // COMBO_SIDE component and explicit same-catalog ID own this association.
+    const actualSide = { ...main, id: 301, sku: 'daily_pickled_side', options: [
+      remove(3001, 'remove_onion', '走洋葱'),
+      { ...remove(3002, 'remove_cilantro', '走香菜'), is_active: false },
+      addonOption({ id: 3003, option_code: 'extra_meat' }),
+    ] }
+    data.categories[0].items = [main, legacySide, actualSide]
+    data.combo_configuration = {
+      store_id: 1, menu_revision: data.menu_revision,
+      groups: [{ component_group: 'COMBO_SIDE', group_code: 'COMBO_SIDE', name_zh: '小菜', name_en: 'Side',
+        enabled: true, required: true, default_component_code: 'combo_cucumber_salad', components: [{
+          component_group: 'COMBO_SIDE', component_code: 'combo_cucumber_salad', name_zh: '今日小菜', name_en: 'Daily side',
+          enabled: true, display_order: 1, is_default: true, linked_menu_item_id: 301, ...patch,
+        }] }],
+    }
+    return data
+  }
+
+  function main(data: BackendMenuCatalog) { return mapCatalog(data).items.find((item) => item.id === '40')! }
+
+  it('uses a changed explicit link for a legacy component code and never exposes the former SKU Remove', () => {
+    const item = main(linkedSideCatalog())
+    expect(item.customization?.combo?.sideRemoveOptions).toEqual([
+      expect.objectContaining({ id: '3001', optionCode: 'remove_onion', parentOptionId: '-20203' }),
+    ])
+    expect(item.customization?.combo?.sideRemoveOptions?.some((option) => option.id === '2001')).toBe(false)
+  })
+
+  it('supports a dynamic component code with a linked real item and freezes its synthetic parent', () => {
+    const data = linkedSideCatalog({ component_code: 'combo_daily_special' })
+    const item = main(data)
+    const side = item.customization!.combo!.sides[0]
+    expect(side.id).toMatch(/^-/)
+    expect(side.optionCode).toBe('combo_daily_special')
+    expect(item.customization!.combo!.sideRemoveOptions).toEqual([
+      expect.objectContaining({ id: '3001', parentOptionId: side.id }),
+    ])
+    const line = buildLocalLineItem(item, { ...buildDefaultDraft(item), comboEnabled: true, comboSideRemoveIds: ['3001'] })
+    expect(line.optionSnapshots).toEqual(expect.arrayContaining([
+      expect.objectContaining({ optionId: '3001', optionCode: 'remove_onion', parentOptionId: side.id, priceDelta: 0 }),
+    ]))
+  })
+
+  it.each(['missing_or_foreign', 'disabled', 'empty'] as const)('does not fall back to the legacy SKU for an explicit %s link', (condition) => {
+    const data = linkedSideCatalog({ linked_menu_item_id: condition === 'missing_or_foreign' ? 999999 : 301 })
+    data.categories[0].items[0].options.push({
+      ...addonOption({ id: 9001, option_type: 'remove', option_group: 'COMBO_SIDE_REMOVE', option_code: 'legacy_side_remove' }),
+      parent_option_id: -20203,
+    })
+    const linked = data.categories[0].items.find((item) => item.id === 301)!
+    if (condition === 'disabled') linked.is_active = false
+    if (condition === 'empty') linked.options = []
+    const item = main(data)
+    expect(item.customization!.combo!.sideRemoveOptions).toEqual([])
+    expect(item.customization!.combo!.sides[0].sideItemRemoveOptions).toEqual([])
+  })
+
+  it('uses the fixed-SKU compatibility mapping only when the component has no explicit link', () => {
+    const item = main(linkedSideCatalog({ linked_menu_item_id: null }))
+    expect(item.customization!.combo!.sideRemoveOptions).toEqual([
+      expect.objectContaining({ id: '2001', optionCode: 'remove_peanut', parentOptionId: '-20203' }),
+    ])
+  })
+
+  it('does not expose side Remove choices for a disabled component or non-Side component', () => {
+    const disabled = main(linkedSideCatalog({ enabled: false }))
+    expect(disabled.customization?.combo).toBeUndefined()
+    const nonSide = main(linkedSideCatalog({ component_group: 'COMBO_EGG' }))
+    expect(nonSide.customization?.combo?.sideRemoveOptions).toEqual([])
+  })
+
+  it('does not mix another Store combo configuration into this catalog', () => {
+    const data = linkedSideCatalog()
+    data.combo_configuration!.store_id = 2
+    expect(main(data).customization?.combo).toBeUndefined()
   })
 })

@@ -391,6 +391,27 @@ class PlatformAdminServiceImplMenuOrderingTest {
     }
 
     @Test
+    void platformCannotCreatePaidRemoveOrMutateLegacyWhileRejectingIt() {
+        MenuItemOption request = addon("REMOVE");
+        request.option_type = "remove";
+        request.price_delta = new java.math.BigDecimal("1.00");
+        assertThrows(BusinessException.class, () -> service.saveMenuItemOption(request));
+
+        MenuItemOption existing = addon("REMOVE");
+        existing.id = 90L;
+        existing.option_type = "remove";
+        existing.price_delta = java.math.BigDecimal.ZERO;
+        when(menuItemOptionRepository.findById(90L)).thenReturn(Optional.of(existing));
+        request.id = 90L;
+        request.name_zh = "不得写入";
+        assertThrows(BusinessException.class, () -> service.saveMenuItemOption(request));
+        assertEquals("加煎蛋", existing.name_zh);
+        assertEquals(java.math.BigDecimal.ZERO, existing.price_delta);
+        verify(menuItemOptionRepository, never()).save(any());
+        verifyNoInteractions(menuRevisionService);
+    }
+
+    @Test
     void platformNonAddonWriteStillUpdatesOwningStoreRevision() {
         MenuItemOption request = addon("REMOVE");
         request.option_type = "remove";

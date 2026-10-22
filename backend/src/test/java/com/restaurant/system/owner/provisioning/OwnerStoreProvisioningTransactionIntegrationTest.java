@@ -117,6 +117,7 @@ class OwnerStoreProvisioningTransactionIntegrationTest {
     @MockBean private StoreReadinessService readinessService;
     @MockBean private StoreActivationRequestCoordinator activationRequestCoordinator;
     @MockBean private StoreAddonService storeAddonService;
+    @MockBean private com.restaurant.system.menu.remove.StoreRemoveService storeRemoveService;
 
     private Long organizationId;
 

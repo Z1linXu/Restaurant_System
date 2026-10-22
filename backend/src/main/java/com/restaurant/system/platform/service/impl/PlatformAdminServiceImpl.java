@@ -7,6 +7,8 @@ import com.restaurant.system.menu.entity.MenuCategory;
 import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.entity.MenuItemOption;
 import com.restaurant.system.menu.addon.StoreAddonService;
+import com.restaurant.system.menu.remove.StoreRemoveService;
+import com.restaurant.system.menu.remove.StoreRemoveOptionResolver;
 import com.restaurant.system.menu.repository.MenuCategoryRepository;
 import com.restaurant.system.menu.repository.MenuItemOptionRepository;
 import com.restaurant.system.menu.repository.MenuItemRepository;
@@ -68,6 +70,14 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
     private final ChainMasterMenuVersionRepository chainMasterMenuVersionRepository;
     private final StoreMenuMasterMappingRepository storeMenuMasterMappingRepository;
     private final ObjectMapper objectMapper;
+    private StoreRemoveService storeRemoveService;
+    private StoreRemoveOptionResolver removeResolver;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setStoreRemoves(StoreRemoveService service, StoreRemoveOptionResolver resolver) {
+        this.storeRemoveService = service;
+        this.removeResolver = resolver;
+    }
 
     public PlatformAdminServiceImpl(
         OrganizationRepository organizationRepository,
@@ -344,6 +354,10 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         if (creating) {
             materializeStoreOnlyMapping(saved);
         }
+        if (storeRemoveService != null) {
+            menuItemRepository.flush();
+            storeRemoveService.refreshStoreAssignments(saved.store_id);
+        }
         incrementMenuRevisions(previousStoreId, saved.store_id);
         return saved;
     }
@@ -413,8 +427,10 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
             : menuItemOptionRepository.findById(menuItemOption.id).orElseThrow(() -> new BusinessException("Menu item option not found"));
         rejectComboWrite(target);
         rejectAddonWrite(target);
+        rejectRemoveWrite(target);
         rejectComboWrite(menuItemOption);
         rejectAddonWrite(menuItemOption);
+        rejectRemoveWrite(menuItemOption);
         Long previousStoreId = target.menu_item_id == null ? null : findMenuItemStoreId(target.menu_item_id);
         target.menu_item_id = menuItemOption.menu_item_id;
         target.option_type = menuItemOption.option_type;
@@ -435,6 +451,24 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
     private void rejectAddonWrite(MenuItemOption option) {
         if (StoreAddonService.isAddon(option.option_group, option.option_type, option.option_code, option.name_zh, option.name_en)) {
             throw new BusinessException("ADD_ON options are managed by the Store Add-on catalog. Use Add-ons and item eligibility; unresolved legacy rows require reconciliation.");
+        }
+    }
+
+    private void rejectRemoveWrite(MenuItemOption option) {
+        boolean removal = "remove".equalsIgnoreCase(option.option_type)
+            || "REMOVE".equalsIgnoreCase(option.option_group) || "COMBO_SIDE_REMOVE".equalsIgnoreCase(option.option_group);
+        if (removal) {
+            if (option.price_delta != null && option.price_delta.signum() != 0) {
+                throw new BusinessException("REMOVE_MUST_BE_FREE");
+            }
+            option.price_delta = java.math.BigDecimal.ZERO;
+        }
+        boolean canonical = option.store_remove_id != null;
+        if (!canonical && removeResolver != null && option.menu_item_id != null) {
+            canonical = removeResolver.hasCanonicalCode(findMenuItemStoreId(option.menu_item_id), option.option_code);
+        }
+        if (canonical) {
+            throw new BusinessException("REMOVE_CATALOG_MANAGED: use the shared Removes catalog and item eligibility");
         }
     }
 

@@ -1,5 +1,10 @@
 # Restaurant POS Cloud Rollback Runbook
 
+For the isolated Staging five-fix release, use the saved application models in
+the [bounded Staging procedure](pos-five-fixes/README.md). Preserve additive V38
+and use only the `restaurant-pos-staging` project. The general Production
+examples below are not commands for that release.
+
 This runbook is a template. Review it before live use and adapt it to the actual
 hosting provider, image registry, and database process.
 

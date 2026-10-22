@@ -235,7 +235,7 @@ export function MenuOptionsPanel({ storeId, itemId, itemName }: MenuOptionsPanel
   }
 
   const beginEdit = (option: MenuItemOptionAdminRecord) => {
-    if (isSizeOption(option) || isComboUpcharge(option) || isOrdinaryAddon(option)) {
+    if (isSizeOption(option) || isComboUpcharge(option) || isOrdinaryAddon(option) || option.store_remove_id != null) {
       return
     }
     setEditingId(option.id)
@@ -286,7 +286,7 @@ export function MenuOptionsPanel({ storeId, itemId, itemName }: MenuOptionsPanel
   }
 
   const setOptionActive = async (option: MenuItemOptionAdminRecord, isActive: boolean) => {
-    if (isSizeOption(option) || isComboUpcharge(option) || isOrdinaryAddon(option)) {
+    if (isSizeOption(option) || isComboUpcharge(option) || isOrdinaryAddon(option) || option.store_remove_id != null) {
       return
     }
     try {
@@ -615,6 +615,7 @@ export function MenuOptionsPanel({ storeId, itemId, itemName }: MenuOptionsPanel
                           </div>
                           <div className="mt-0.5 text-[0.72rem] text-[var(--muted)]">
                             {option.option_code || 'no code'} · {formatMoney(option.price_delta)} · {option.is_active ? 'active' : 'inactive'}
+                            {option.store_remove_id != null ? <a className="ml-2 underline" href={`/stores/${storeId}/admin/menu/items?section=addons&modifiers=removes`}>Shared Remove / 统一维护减料</a> : null}
                           </div>
                         </div>
                         <div className="flex shrink-0 flex-wrap justify-end gap-1">
@@ -628,15 +629,15 @@ export function MenuOptionsPanel({ storeId, itemId, itemName }: MenuOptionsPanel
                               设为默认
                             </button>
                           ) : null}
-                          <button type="button" aria-label={`上移 ${option.name_zh}`} onClick={() => void moveOption(option, -1)} disabled={saving || optionIndex === 0} className="min-h-10 rounded-full bg-white px-3 py-1 text-[0.72rem] font-semibold disabled:opacity-35">Up</button>
-                          <button type="button" aria-label={`下移 ${option.name_zh}`} onClick={() => void moveOption(option, 1)} disabled={saving || optionIndex === groupOptions.length - 1} className="min-h-10 rounded-full bg-white px-3 py-1 text-[0.72rem] font-semibold disabled:opacity-35">Down</button>
+                          <button type="button" aria-label={`上移 ${option.name_zh}`} onClick={() => void moveOption(option, -1)} disabled={saving || optionIndex === 0 || groupOptions.some((value) => value.store_remove_id != null)} className="min-h-10 rounded-full bg-white px-3 py-1 text-[0.72rem] font-semibold disabled:opacity-35">Up</button>
+                          <button type="button" aria-label={`下移 ${option.name_zh}`} onClick={() => void moveOption(option, 1)} disabled={saving || optionIndex === groupOptions.length - 1 || groupOptions.some((value) => value.store_remove_id != null)} className="min-h-10 rounded-full bg-white px-3 py-1 text-[0.72rem] font-semibold disabled:opacity-35">Down</button>
                           {group !== 'NOODLE_TYPE' ? (
-                            <button type="button" onClick={() => beginEdit(option)} disabled={saving} className="min-h-10 rounded-full bg-white px-3 py-1 text-[0.72rem] font-semibold disabled:opacity-50">Edit</button>
+                            <button type="button" onClick={() => beginEdit(option)} disabled={saving || option.store_remove_id != null} className="min-h-10 rounded-full bg-white px-3 py-1 text-[0.72rem] font-semibold disabled:opacity-50">Edit</button>
                           ) : null}
                           <button
                             type="button"
                             onClick={() => void setOptionActive(option, !option.is_active)}
-                            disabled={saving}
+                            disabled={saving || option.store_remove_id != null}
                             className="min-h-10 rounded-full bg-[rgba(97,0,0,0.08)] px-3 py-1 text-[0.72rem] font-semibold text-[var(--primary)] disabled:opacity-50"
                           >
                             {option.is_active ? 'Deactivate' : 'Reactivate'}

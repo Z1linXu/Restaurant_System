@@ -8,6 +8,7 @@ import com.restaurant.system.printing.PrintModuleCode;
 import com.restaurant.system.printing.dto.PrintRenderRequest;
 import com.restaurant.system.printing.rules.PrintingDisplayRuleContext;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -88,6 +89,10 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
                 if (noodleType != null) {
                     appendSizedLine(builder, noodleType);
                 }
+                String soupBase = resolveSoupBaseLabel(item, options, printingRules);
+                if (soupBase != null) {
+                    appendSizedLine(builder, "汤底：" + soupBase);
+                }
                 String spicyLevel = resolveSpicyLevelLabel(options, printingRules);
                 if (spicyLevel != null) {
                     appendSizedLine(builder, "辣度: " + spicyLevel);
@@ -109,7 +114,7 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
                 if (itemNote != null) {
                     appendSizedLine(builder, "备注：" + itemNote);
                 }
-                appendSizedLine(builder, formatSingleItemMoney(item));
+                appendSizedLine(builder, formatSingleItemMoney(item, copy));
                 builder.append("\n");
             }
         }
@@ -326,6 +331,35 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
             .orElse(null);
     }
 
+    private String resolveSoupBaseLabel(OrderItem item, List<OrderItemOption> options, PrintingDisplayRuleContext printingRules) {
+        List<OrderItemOption> soupOptions = options.stream().filter(this::isSoupBaseOption).toList();
+        if (soupOptions.isEmpty()) {
+            // Older vegetable-noodle orders may lack a selection; never infer a historical broth.
+            return "vegetable_noodle".equals(item.item_sku_snapshot) ? "未记录" : null;
+        }
+        return soupOptions.stream().map(option -> {
+            String snapshotLabel = firstPresent(option.option_name_snapshot_zh, option.option_name_snapshot_en);
+            String configured = printingRules == null ? null : printingRules.resolveDictionaryOutput(
+                "SOUP_BASE", PrintModuleCode.FRONTDESK_RECEIPT, option.option_code_snapshot,
+                option.option_name_snapshot_zh, option.option_name_snapshot_en, null
+            );
+            String label = firstPresent(configured, snapshotLabel);
+            return label == null ? "未记录" : label;
+        }).distinct().collect(Collectors.joining(" / "));
+    }
+
+    private boolean isSoupBaseOption(OrderItemOption option) {
+        if (option.option_group_snapshot != null && !option.option_group_snapshot.isBlank()) {
+            return "SOUP_BASE".equalsIgnoreCase(option.option_group_snapshot.trim());
+        }
+        if (option.option_type_snapshot != null && !option.option_type_snapshot.isBlank()) {
+            return "soup_base".equalsIgnoreCase(option.option_type_snapshot.trim());
+        }
+        String code = option.option_code_snapshot == null ? "" : option.option_code_snapshot.trim();
+        return "soup_vegan".equalsIgnoreCase(code)
+            || "soup_beef".equalsIgnoreCase(code);
+    }
+
     private boolean isSpicyLevelOption(OrderItemOption option) {
         if (OPTION_TYPE_SPICY_LEVEL.equals(option.option_type_snapshot)) {
             return true;
@@ -341,6 +375,7 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         return options.stream()
             .filter(option -> safeMoney(option.price_delta).compareTo(BigDecimal.ZERO) > 0)
             .filter(option -> !OPTION_TYPE_SIZE.equals(option.option_type_snapshot))
+            .filter(option -> !isSoupBaseOption(option))
             .filter(option -> !isOptionGroup(option, OPTION_GROUP_COMBO))
             .filter(option -> !isOptionGroup(option, OPTION_GROUP_COMBO_EGG))
             .filter(option -> !isOptionGroup(option, OPTION_GROUP_COMBO_SIDE))
@@ -475,25 +510,17 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         return label + " x" + quantity;
     }
 
-    private String formatItemMoney(OrderItem item) {
-        BigDecimal unitPrice = safeMoney(item.unit_price);
-        BigDecimal lineAmount = safeMoney(item.line_amount);
-        int quantity = item.quantity == null ? 1 : item.quantity;
-        if (quantity > 1 && unitPrice.compareTo(lineAmount) != 0) {
-            return formatMoney(unitPrice) + " x" + quantity + " = " + formatMoney(lineAmount);
+    private String formatSingleItemMoney(OrderItem item, int copyIndex) {
+        int quantity = Math.max(1, item.quantity == null ? 1 : item.quantity);
+        // Allocate persisted cents; old receipts must reflect their charged line total,
+        // even when historical pricing was wrong or the total is not divisible by quantity.
+        BigInteger totalCents = safeMoney(item.line_amount).movePointRight(2).toBigIntegerExact();
+        BigInteger[] allocation = totalCents.divideAndRemainder(BigInteger.valueOf(quantity));
+        BigInteger cents = allocation[0];
+        if (copyIndex < allocation[1].abs().intValueExact()) {
+            cents = cents.add(BigInteger.valueOf(allocation[1].signum()));
         }
-        return formatMoney(lineAmount);
-    }
-
-    private String formatSingleItemMoney(OrderItem item) {
-        int quantity = item.quantity == null ? 1 : item.quantity;
-        if (quantity > 1) {
-            BigDecimal unitPrice = safeMoney(item.unit_price);
-            if (unitPrice.compareTo(BigDecimal.ZERO) > 0) {
-                return formatMoney(unitPrice);
-            }
-        }
-        return formatItemMoney(item);
+        return formatMoney(new BigDecimal(cents, 2));
     }
 
     private boolean containsComboLabel(String value) {

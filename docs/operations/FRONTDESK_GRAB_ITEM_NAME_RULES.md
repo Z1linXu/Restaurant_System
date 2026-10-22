@@ -2,10 +2,12 @@
 
 > 文档状态：`OPERATIONAL_DISPLAY_RULE_SOURCE`
 >
-> 规则基线日期：2026-07-27
+> 规则语义更新：2026-10-21；下表菜单目录及其日期保留原 2026-07-27 基线。
 >
-> 适用范围：当前仓库中 Store 1 的菜单种子目录、GRAB Renderer、厨房任务快照和相关回归测试。
-> 生产启用状态：必须以目标门店的 Menu API/数据库为准；本文件不因仓库种子而断言生产菜单当前全部启用。
+> 适用范围：Store-scoped 打印规则、订单/厨房快照与前台/GRAB/HOT 渲染。
+> 下表是原 Store 1 种子映射参考，不是其他门店的私人规则或当前营业菜单。
+> 启用状态、门店编号及实际出纸必须以目标环境和目标 Store 的证据为准；
+> 本次文档更新不声明任何部署、配置修改或现场打印通过。
 
 ## 1. 目的和权威边界
 
@@ -18,12 +20,12 @@
 
 证据优先级如下：
 
-1. `GrabReceiptRenderer` 与 `KitchenNoodlePrintFormatter` 的运行代码；
-2. `OrderServiceImpl` 创建 `KitchenTask` 时写入的快照；
-3. `GrabReceiptRendererTest` 和订单服务测试；
-4. 稳定标识（`menu_item_id`、`item_sku_snapshot` / SKU、`option_code_snapshot`）；
-5. `RuntimeDataSeeder` 与菜单 API 的目录定义；
-6. 已确认的现场示例和 `SYSTEM_DOCUMENTATION.md` 摘要。
+1. 目标环境实际部署版本和目标 Store 已发布规则，不能用其他店的默认表替代；
+2. 已有订单的 item/option/task/job 快照及其捕获的 rule revision；
+3. `OrderServiceImpl`、三个 Renderer、共享语义 resolver 的当前可执行代码；
+4. 对应回归测试及稳定 SKU / `option_code_snapshot` / `option_group_snapshot`；
+5. 当前门店 Menu API；`RuntimeDataSeeder` 仅作为种子目录参考；
+6. 本文件示例和 `SYSTEM_DOCUMENTATION.md` 摘要，不作为规则写入授权。
 
 发生冲突时，已提交订单的 `KitchenTask` / `OrderItem` 快照优先于当前
 菜单；当前生产菜单的启用/停售状态优先于种子目录。
@@ -96,8 +98,9 @@ active / sold-out，必须由 Menu API 或该门店数据库确认，因而不�
 
 ### 汤面、干面和凉面
 
-1. `OrderServiceImpl.buildKitchenDisplayNameZh(...)` 仅为稳定 SKU 提供炒面
-   和部分干/凉面的短名；其余菜保持订单中文快照。
+1. `OrderServiceImpl.buildKitchenDisplayNameZh(...)` 优先使用当前 Store 的
+   GRAB alias；未配置时按稳定 SKU 保留既有炒面/干凉面 fallback，
+   其余菜保持订单中文快照。HOT_KITCHEN 独立使用自己的输出列。
 2. `buildKitchenPrimaryLine(...)` 按以下顺序组合主 shorthand：尺寸、SKU
    基础码、蔬菜面汤底、非默认面型、辣度。
 3. 代码已知的基础码包括 `红`、`酸`、`牛炒`、`鸡炒`、`番炒`、`素炒`、
@@ -147,17 +150,41 @@ active / sold-out，必须由 Menu API 或该门店数据库确认，因而不�
 - 常见转换包括 `+蛋`、`+煎`、`+面`、`+肉`、`+萝`、`+西兰` 等；多份
   加料保留数量，例如 `+蛋×2`。
 - 减料使用 `走…` / `少…` shorthand；未知稳定码回退到选项中文快照。
-- 不辣不写辣度；少辣、正常辣、加辣分别映射为 `（少s）`、`（s）`、
-  `（大s）`，未知辣度使用当前代码的保守 `（s）` 回退。
+- 辣度先读取该 Store、该模块的 SPICINESS 输出列，再走旧 fallback。
+  `NO_SPICY` / `spicy_none` 配置为 `（走s）` 时必须打印；显式空字符串隐藏，
+  缺失/null 继承旧行为。仅在无覆盖/default 为空时“不辣不打印”。
+  少辣、正常辣、加辣的旧 fallback 分别为 `（少s）`、`（s）`、`（大s）`；
+  未知辣度保留既有 `（s）` fallback，不创造新规则。
+- GRAB task 创建、HOT 和 preview 共用 `KitchenSpicinessDisplayResolver`。
+  前台使用独立 FRONTDESK_RECEIPT 列（例如 `不辣`），不能混入厨房 shorthand。
+  稳定 code 的规则查询发生在中文为空/不辣的旧抑制判断之前。
 - `order_items.notes` 以独立 `备注：{notes}` 行打印，不应并入厨房任务
   special snapshot；空备注隐藏。
+
+### 前台汤底、金额与历史补打
+
+- 前台每个商品/碗块按冻结 `SOUP_BASE` group、旧 type，最后缺少两者时的
+  `soup_vegan` / `soup_beef` code 识别汤底；不靠中文名称判断商品类型。
+  显示 `汤底：素汤` / `汤底：肉汤`，也保留自定义汤底的原名称快照；
+  只读取 FRONTDESK_RECEIPT 列或双语快照，不套用厨房的 `素` shorthand。
+- 默认/零元汤底也明确显示，普通牛肉面无汤底选择时不添行。旧蔬菜面缺少
+  选择快照时写 `汤底：未记录`，不从现菜单或厨房默认值猜测素汤。
+- 商品基础价和每份选项 delta 先相加，再乘商品数量，由 OrderService
+  持久化金额；前台逐碗金额只分摊 stored `line_amount` 的整数分，
+  总和严格等于原 line。菜单改价不能让历史票重算。
+- Update 只打印当前 batch 新增项；order full reprint 读取完整订单快照及
+  可用历史 module rule revision。已有 job reprint 优先复制冻结文本，
+  新规则不会补写旧 job、PAD payload 或 GRAB task。HOT full reprint
+  可按所选历史 revision 从 option 快照重建对应模块文字。
 
 ### 葱和香菜压缩
 
 - 同一显示块同时存在加葱和加香菜时，压缩为 `加青`。
 - 同一显示块同时存在走葱和走香菜时，压缩为 `走青`。
 - 只有其中之一时必须保留原名称，例如 `加葱`、`走香菜`。
-- 同时出现加与走的混合方向时保留原指令，不做跨方向压缩。
+- 旧快照同时出现加与走时保留原指令，不做跨方向压缩。新选择中同一食材的
+  Add-on/Remove 按稳定 code 互斥；前台清除相反选择，后端拒绝同一菜品
+  scope 的冲突。主品和套餐小菜的 scope 不混用。
 - `加上海青` 是独立食材，必须保持完整名称，不能压缩为 `加青`。
 
 ## 6. GRAB 排序、数量与 fallback
@@ -205,23 +232,26 @@ active / sold-out，必须由 Menu API 或该门店数据库确认，因而不�
   combo side 独立任务和快照生成。
 - `HotKitchenReceiptRendererTest`: HOT_KITCHEN 自身的数量格式与 GRAB
   不混淆。
+- `KitchenSpicinessDisplayResolverTest` / `NoSpicyPrintingRuleTest`: rule-first
+  NO_SPICY、模块独立、code-only/改名快照、empty/null/missing 与其他店默认。
+- `FrontdeskSoupBaseReceiptTest` / `FrontdeskReceiptPricingTest`: 汤底 full/update、
+  零价/收费去重、缺失历史、分碗精确金额；`PrintDispatcherServiceImplTest`
+  覆盖冻结 job reprint。实现测试通过不等于现场纸张验收。
 - 经批准的现场测试：菜单改动后验证 GRAB 出纸内容与本规则一致，同时不
   记录顾客信息、token 或 raw payload。
 
 ## 10. 关键代码证据
 
-- `backend/src/main/java/com/restaurant/system/order/service/impl/OrderServiceImpl.java`
-  - `createKitchenTasks(...)`：写入厨房快照（约 1368-1405）
-  - `buildKitchenDisplayNameZh(...)`：SKU 短名（1813-1825）
-  - `buildKitchenPrimaryLine(...)`：尺寸/基础码/汤底/面型/辣度（1827-1855）
-  - 加减料和稳定 option-code 回退（1985-2090）
-- `backend/src/main/java/com/restaurant/system/printing/renderer/GrabReceiptRenderer.java`
-  - station 排序与快照输出（约 64-145、163-265）
-  - 小菜和炸物聚合键（268-380）
-  - green 压缩（444-640）
-- `backend/src/main/java/com/restaurant/system/printing/renderer/KitchenNoodlePrintFormatter.java`
-  - 面类识别、稳定分组、单碗和多碗数量格式（约 22-126）
-- `backend/src/test/java/com/restaurant/system/printing/renderer/GrabReceiptRendererTest.java`
-  - 小菜、炸物、面类和 green 规则回归覆盖。
-- `backend/src/main/java/com/restaurant/system/common/config/RuntimeDataSeeder.java`
-  - 菜单目录和选项种子（430-540）。
+- `backend/src/main/java/com/restaurant/system/order/service/impl/OrderServiceImpl.java`：
+  `createKitchenTasks`、`buildKitchenDisplayNameZh`、`buildKitchenPrimaryLine`。
+- `backend/src/main/java/com/restaurant/system/printing/semantic/KitchenSpicinessDisplayResolver.java`：
+  rule-first 厨房辣度。
+- `backend/src/main/java/com/restaurant/system/printing/renderer/FrontdeskReceiptRenderer.java`：
+  `resolveSoupBaseLabel`、`isSoupBaseOption`、`formatSingleItemMoney`。
+- 同目录 `GrabReceiptRenderer.java`、`HotKitchenReceiptRenderer.java`、
+  `KitchenNoodlePrintFormatter.java`：快照、分组、模块格式和数量。
+- `backend/src/main/java/com/restaurant/system/printing/service/impl/PrintDispatcherServiceImpl.java`：
+  `reprintJob` 与 `reprintOrder` 的不同历史语义。
+- `backend/src/test/java/com/restaurant/system/printing/`：上述回归测试。
+
+表中旧目录证据的数字范围来自原基线；当前源码定位以这些方法名为准。
