@@ -199,7 +199,7 @@ uber_store_capability:
   production_desired_st_denis: LOCAL_MODULE_ENABLED_WORKER_FALSE_UNBOUND_OWNER_20261021
   production_desired_st_catherine: LOCAL_MODULE_ENABLED_WORKER_FALSE_UNBOUND_OWNER_20261021
   production_desired_chinatown: DISABLED
-  production_mutation: NONE
+  production_mutation: OWNER_20261021_LOCAL_MODULES_1_3_PREPARED_WORKER_FALSE
 
 gate:
   type: OWNER
