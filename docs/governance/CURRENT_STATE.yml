@@ -3,13 +3,13 @@ updated_at: 2026-10-22
 
 repository:
   ref: origin/main
-  sha: 79f75cf05a61bb5708eb128c99dd3d08730929a6
+  sha: 1093c0c2400f00d65b75b5c462f0ec2cfc25b6d9
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
-  package: POS_PRODUCTION_CANONICAL_REMOVES
-  status: PRODUCTION_DEPLOYED_THREE_STORE_REMOVE_API_ACCEPTED_PASSWORD_BROWSER_OBSERVATION_PENDING
+  package: UBER_PRODUCTION_4483_FINAL_PREPARATION
+  status: LOCAL_CANDIDATES_AND_REVIEWED_TOOLS_COMPLETE_HIDDEN_OAUTH_INPUT_REMOTE_ACCESS_PENDING
   next_phase_authorized: false
 
 staging:
@@ -96,10 +96,12 @@ uber_two_store_release:
   production_webhook_registered: true
   production_signing_key_present: true
   production_oauth_secret_present: false
-  actual_production_scopes: PENDING_DASHBOARD_REVIEW
+  actual_production_scopes: GTS_GRANTED_EATS_STORE_AND_EATS_STORE_ORDERS_READ_ACTUAL_OAUTH_NOT_RUN
+  scope_grant_case: 60916651
+  scope_grant_email_utc: 2026-10-22T04:41:45Z
   order_webhook_role: UNVERIFIED
   production_store_access: UNVERIFIED
-  saint_denis_device_freshness: NOT_PROVEN
+  saint_denis_device_freshness: DEVICE13_NATIVE_AUTOPOLL_AND_ATTRIBUTED_POS_CLAIM_COMPLETE_VERIFIED_20261022T161010Z
   sainte_catherine_printing: DISABLED_NO_ASSIGNMENTS_OR_PAD
   activation_requires_new_core_code: false
   controlled_pilot_ready: false
@@ -127,7 +129,42 @@ uber_production_preparation:
   new_uber_business_orders_tasks_print_jobs: 0
   apk_upgrade_required_by_this_change: false
   actual_installed_pad_version: UNKNOWN
-  authorization_for_real_import_or_print: NONE
+  authorization_for_real_import_or_print: OWNER_CONDITIONAL_4483_ONLY_AFTER_ACCESS_ROLE_MAPPING_PAD_PRINTER_AND_CONTROLLED_WINDOW
+
+uber_4483_launch_preparation:
+  evidence: UBER_4483_LAUNCH_PREPARATION_20261022.md
+  target_store_id: 1
+  excluded_from_this_batch: STORE3_SAINTE_CATHERINE_AND_STORE2_CHINATOWN
+  confirmed_semantic_rules: 299
+  local_production_identity_verified: 299
+  local_missing_or_ambiguous: 0
+  external_identity_verified: 0
+  rules_persisted: 0
+  candidate_sha256: e331993daa5748ee70e5ad32b31b0180c5b4b32effee9e001aec0d065d7e6271
+  candidate_only: true
+  offline_verifier_tests: PASS_21
+  oauth_operator_mock_tests: PASS_15
+  focused_python_tests: PASS_67
+  agent6_review: ACCEPT_NO_REMAINING_P0_P1_P2
+  oauth_operator_uploaded: true
+  oauth_operator_sha256: c64d45184054680230b727d3b146578b2e652aabc26d187f803efd210413ac25
+  hidden_oauth_input: PENDING_OWNER_TERMINAL_CONTROL_TOOL_DENIED
+  actual_oauth: NOT_RUN
+  actual_menu_get: NOT_RUN
+  remote_store_access: NOT_VERIFIED
+  order_webhook_role: NOT_VERIFIED
+  gts_reply_sent: false
+  device13_native_worker: VERIFIED_RECENT_POS_PENDING_CLAIM_PROCESSING_COMPLETE
+  device14_native_worker: UNKNOWN
+  actual_installed_apk_version: UNKNOWN
+  apk_update_required_by_this_change: false
+  hot_physical_output: NOT_VERIFIED
+  new_application_deploy: false
+  new_production_runtime_or_database_mutation: false
+  worker_enabled: false
+  utc_cutover: NOT_SET_PENDING_CONTROLLED_FIELD_WINDOW
+  activation_ready: false
+  live: false
 
 uber_test_store_audit:
   observed_at: 2026-10-03T20:49:02Z
@@ -235,9 +272,10 @@ uber_store_capability:
 
 gate:
   type: OWNER
-  next_action: OPTIONAL_PASSWORD_LOGIN_BROWSER_ACCEPTANCE_AND_RETAINED_LEGACY_REVIEW_NO_FURTHER_POS_RUNTIME_MUTATION
+  next_action: HIDDEN_PRODUCTION_OAUTH_INPUT_AND_GTS_STORE1_ACCESS_ROLE_CONFIRMATION_THEN_REAL_MENU_VERIFICATION_NO_UNCONDITIONAL_ACTIVATION
 
 authorization:
+  uber_4483_final_preparation: OWNER_20261022_STORE1_ONLY_EXISTING_SECRET_VERIFIED_MAPPING_PREPARATION_CONDITIONAL_PILOT_AFTER_ALL_EVIDENCE_NO_REMOTE_WRITES_NO_STORE3
   uber_production_receiver: OWNER_20261022_PRIMARY_KEY_RECEIVER_ENABLED_WORKER_FALSE_STORE1_CONFIRMED_BINDING_VERIFIABLE_MAPPING_ONLY_NO_REAL_ORDER_OR_PRINT
   pos_five_fixes: COMPLETED_OWNER_20261022_MERGED_DEPLOYED_THREE_STORE18_API_ACCEPTED_NO_REAL_TEST_ORDER_OR_PHYSICAL_PRINT
   uber_readonly_webhook: OWNER_20261021_MERGE280_REVIEW_FOLLOWUP_SAFE_STAGING_PRODUCTION_WORKER_DISABLED_TWO_STORE_PREPARATION
@@ -260,4 +298,4 @@ authorization:
   production: NONE
 
 stop:
-  marker: POS_PRODUCTION_4B3ABD1_ACCEPTED_NO_STANDING_FUTURE_MUTATION_AUTHORITY
+  marker: UBER_4483_HIDDEN_INPUT_REMOTE_ACCESS_AND_CONTROLLED_FIELD_WINDOW_PENDING_WORKER_FALSE

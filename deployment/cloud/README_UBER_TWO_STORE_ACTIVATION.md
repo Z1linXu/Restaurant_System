@@ -187,3 +187,80 @@ add its verified UUID/cutover, retaining the first Store's unchanged watermark.
 No scope grant alone enables printing. External confirmations plus data/config
 and controlled acceptance are the remaining work; no additional core API or UI
 development is required for these two Stores.
+
+## 4483-only preparation after the Production scope grant
+
+The 2026-10-22 Owner batch targets only Store1 at4483 Saint-Denis. Do not
+activate, bind or migrate Store3 as part of that batch. GTS Case60916651 granted
+`eats.store` and `eats.store.orders.read` to the Production Client ID and asked
+for the merchant UUID for manual integration. That email proves the grant
+decision; actual OAuth, Store Access and `order_webhook` remain separate checks.
+The accepted application is4b3abd1/V38. Do not replay the historical V37
+promotion/bootstrap or its old-image rollback over this runtime.
+
+`configure-uber-4483-oauth-20261022.py` is the bounded same-image credential
+operator. It uses existing locks, canonical private Compose, validated database
+backup, HTTP acceptance and rollback helpers. On the verified server, run it
+from a real SSH TTY and enter the existing PROD App Client Secret at its hidden
+prompt. Never supply it as argv, shell text, a chat message or an exported file
+in Git. It refuses echo fallback, a different existing Secret, image drift,
+unexpected bindings, nonempty cutovers or pending business queues. Only
+`UBER_EATS_CLIENT_SECRET` may change; Primary Signing Key, receiver=true,
+worker=false, all other environment values and unrelated containers stay intact.
+It does not create, rotate or revoke an Uber credential. OAuth POST is the only
+POST to Uber; the Eats calls are only Stores GET and the exact4483 Menu GET.
+
+The private output root is
+`/srv/restaurant-pos/production/uber-4483-final-20261022`. Token stays in memory;
+successful menu bytes and their authenticated read-proof are retained0600.
+Store count, target-listed flag and Menu HTTP status are separate evidence.
+A Menu GET200 proves readable menu provenance, not `order_webhook`, remote
+Order Manager ownership or authorization to activate printing. A0-store list
+with a readable menu is a discrepancy to resolve with GTS before activation.
+Store403/0 stores does not prevent safely configuring credentials after a
+successful read-scope OAuth grant. Failed acceptance restores the original
+same-image receive-only environment; canonical-file drift stops before a
+rollback recreate. Never apply the old7d receiver rollback to4b/V38.
+
+`uber-4483-menu-verify.py` is offline and never writes a database or calls an
+API. Supply the approved raw TEST menu, its299 approved rule contexts, freshly
+resolved Production Store1 candidates, the actual Production menu bytes and
+the reader's original proof. It requires the exact Client ID/Store UUID/GET
+URL/HTTP200, actual read scope, raw-byte hash and a recent UTC observation.
+The proof is operator-recorded provenance, not an Uber-signed attestation; keep
+the original response/proof pair private and do not manufacture one from TEST.
+Stable root/group/modifier IDs and parent context must agree, including group
+limits, quantity and availability. New/missing IDs or unsupported nesting block
+persistence and appear in a precise difference report. Names are not matched.
+
+Example with private input/output paths, no credential arguments:
+
+```bash
+python3 deployment/cloud/uber-4483-menu-verify.py \
+  --baseline "$PRIVATE_INPUT/approved-test-menu.private.json" \
+  --approved-contexts "$PRIVATE_INPUT/approved-contexts.private.json" \
+  --candidates "$PRIVATE_INPUT/production-store1-mapping-candidates.private.json" \
+  --production-menu "$PRIVATE_INPUT/production-menu.json" \
+  --read-proof "$PRIVATE_INPUT/production-menu-read-proof.json" \
+  --output "$PRIVATE_OUTPUT/mapping-manifest.private.json" \
+  --diff-output "$PRIVATE_OUTPUT/menu-difference-report.private.json"
+```
+
+Exit2 is an incomplete/unverified candidate report, never an import approval.
+Without menu/read-proof the same command, omitting those two inputs, still
+exports the299 Store1 API payload candidates with verified0 and persistence
+disabled. Store3 candidates are excluded. The tool writes no mapping itself.
+Immediately before any later authorized import, re-read the local Store1
+catalog/FKs/eligibility, confirm worker=false, back up, then use the existing
+idempotent mapping API or an explicitly reviewed bounded maintenance transaction.
+Do not fabricate a platform ADMIN to bypass the binding API. Read back every
+rule and run actual-menu previews with no errors/warnings/RAW fallback.
+
+For activation, choose a fresh UTC cutover at the controlled field window;
+do not prefill a timestamp while access or Pad readiness is pending. Configure
+global and per-Store watermarks for only the4483 UUID. Preserve all old HELD
+receipts and ambiguous print history. Existing API activity/registration alone
+does not establish a healthy native print worker or installed APK version.
+Keep worker=false until access/role/mappings, selected Pad worker, printers and
+first-order window are proven. No first-order or paper PASS may be inferred
+from the offline verifier or synthetic HMAC receipt.
