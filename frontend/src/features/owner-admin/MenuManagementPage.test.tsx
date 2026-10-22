@@ -9,6 +9,7 @@ import {
 import { AddonCatalogPanel } from './AddonCatalogPanel'
 import { MenuManagementPage } from './MenuManagementPage'
 import { MenuOptionsPanel } from './MenuOptionsPanel'
+import { PrintingRulesMenuPanel } from './PrintingRulesMenuPanel'
 
 const context = vi.hoisted(() => ({ storeId: 1 }))
 
@@ -29,6 +30,12 @@ vi.mock('./MenuOptionsPanel', () => ({
 }))
 vi.mock('./AddonCatalogPanel', () => ({
   AddonCatalogPanel: vi.fn(({ storeId }: { storeId: number }) => <div data-testid="addon-catalog" data-store-id={storeId} />),
+}))
+vi.mock('./PrintingRulesMenuPanel', () => ({
+  PrintingRulesMenuPanel: vi.fn(({ storeId }: { storeId: number }) => <div data-testid="printing-rules-menu" data-store-id={storeId} />),
+}))
+vi.mock('./RemoveCatalogPanel', () => ({
+  RemoveCatalogPanel: vi.fn(({ storeId }: { storeId: number }) => <div data-testid="remove-catalog" data-store-id={storeId} />),
 }))
 vi.mock('./ComboConfigurationPanel', () => ({ ComboConfigurationPanel: () => null }))
 vi.mock('./MenuStructurePanels', () => ({ CategoryManagementPanel: () => null, StationManagementPanel: () => null }))
@@ -59,6 +66,15 @@ function item(storeId: number): MenuItemAdminRecord {
 }
 
 let view: ReactTestRenderer | undefined
+const popstateListeners = new Set<() => void>()
+const browser = {
+  location: { search: '' },
+  history: { pushState: vi.fn((_state: unknown, _title: string, path: string) => {
+    browser.location.search = new URL(path, 'https://staging.example').search
+  }) },
+  addEventListener: vi.fn((event: string, callback: () => void) => { if (event === 'popstate') popstateListeners.add(callback) }),
+  removeEventListener: vi.fn((event: string, callback: () => void) => { if (event === 'popstate') popstateListeners.delete(callback) }),
+}
 
 function button(label: string) {
   return view!.root.findAllByType('button').find((node) => node.children.join('') === label)!
@@ -78,6 +94,10 @@ async function switchStore(storeId: number) {
 beforeEach(() => {
   vi.clearAllMocks()
   context.storeId = 1
+  browser.location.search = ''
+  popstateListeners.clear()
+  vi.stubGlobal('window', browser)
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   vi.mocked(fetchPlatformOverview).mockResolvedValue(overview)
   vi.mocked(fetchAdminMenuItems).mockImplementation(async (storeId) => [item(storeId)])
 })
@@ -85,6 +105,7 @@ beforeEach(() => {
 afterEach(async () => {
   if (view) await act(async () => view!.unmount())
   view = undefined
+  vi.unstubAllGlobals()
 })
 
 describe('MenuManagementPage Store-scoped panels', () => {
@@ -153,5 +174,62 @@ describe('MenuManagementPage Store-scoped panels', () => {
       .not.toContainEqual([2, 101])
     await act(async () => button('Add-ons').props.onClick())
     expect(view!.root.findByProps({ 'data-testid': 'addon-catalog' }).props['data-store-id']).toBe(2)
+  })
+})
+
+describe('Menu Management seven-section navigation', () => {
+  it('keeps Printing Display Rules immediately after Pricing Rules and preserves the selected query across refresh', async () => {
+    await mount()
+    const expected = ['Menu Items', 'Add-ons', 'Categories', 'Stations', 'Combo Configuration', 'Pricing Rules', 'Printing Display Rules']
+    const nav = view!.root.findAllByType('div').find((node) => {
+      const children = node.findAllByType('button')
+      return children.length === 7 && children.map((child) => child.children.join('')).join('|') === expected.join('|')
+    })!
+    expect(nav).toBeDefined()
+    await act(async () => button('Printing Display Rules').props.onClick())
+    expect(browser.history.pushState).toHaveBeenLastCalledWith({}, '', '/stores/1/admin/menu/items?section=printing-display-rules')
+    expect(view!.root.findByProps({ 'data-testid': 'printing-rules-menu' }).props['data-store-id']).toBe(1)
+    await act(async () => view!.unmount())
+    await mount()
+    expect(view!.root.findByProps({ 'data-testid': 'printing-rules-menu' }).props['data-store-id']).toBe(1)
+    expect(popstateListeners.size).toBe(1)
+  })
+
+  it('restores sections on browser history navigation and removes the history listener on unmount', async () => {
+    browser.location.search = '?section=printing-display-rules'
+    await mount()
+    expect(view!.root.findAllByProps({ 'data-testid': 'printing-rules-menu' })).toHaveLength(1)
+    await act(async () => {
+      browser.location.search = '?section=addons'
+      popstateListeners.forEach((listener) => listener())
+    })
+    expect(view!.root.findAllByProps({ 'data-testid': 'printing-rules-menu' })).toHaveLength(0)
+    expect(view!.root.findAllByProps({ 'data-testid': 'addon-catalog' })).toHaveLength(1)
+    await act(async () => view!.unmount())
+    view = undefined
+    expect(popstateListeners.size).toBe(0)
+  })
+
+  it('passes Store Two to the existing printing wrapper after a Store switch', async () => {
+    browser.location.search = '?section=printing-display-rules'
+    await mount()
+    await switchStore(2)
+    expect(view!.root.findByProps({ 'data-testid': 'printing-rules-menu' }).props['data-store-id']).toBe(2)
+    expect(vi.mocked(PrintingRulesMenuPanel).mock.calls.at(-1)![0].storeId).toBe(2)
+  })
+
+  it('shows Add-ons and Removes as sub-sections and resets their Store scope on switch', async () => {
+    await mount()
+    await act(async () => button('Add-ons').props.onClick())
+    const sections = () => view!.root.findByProps({ 'aria-label': 'Modifier catalog sections' })
+    expect(sections().findAllByType('button').map((node) => node.children.join(''))).toEqual(['Add-ons', 'Removes'])
+    await act(async () => sections().findAllByType('button')[1].props.onClick())
+    expect(view!.root.findByProps({ 'data-testid': 'remove-catalog' }).props['data-store-id']).toBe(1)
+    expect(view!.root.findAllByProps({ 'data-testid': 'addon-catalog' })).toHaveLength(0)
+    await switchStore(2)
+    expect(view!.root.findAllByProps({ 'data-testid': 'remove-catalog' })).toHaveLength(0)
+    expect(view!.root.findByProps({ 'data-testid': 'addon-catalog' }).props['data-store-id']).toBe(2)
+    await act(async () => sections().findAllByType('button')[1].props.onClick())
+    expect(view!.root.findByProps({ 'data-testid': 'remove-catalog' }).props['data-store-id']).toBe(2)
   })
 })

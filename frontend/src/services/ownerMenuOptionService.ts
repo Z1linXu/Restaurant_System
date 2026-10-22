@@ -15,6 +15,8 @@ export type MenuOptionGroup =
 export interface MenuItemOptionAdminRecord {
   id: number
   store_addon_id?: number | null
+  store_remove_id?: number | null
+  store_remove_store_id?: number | null
   menu_item_id: number
   option_type: string
   option_code: string | null

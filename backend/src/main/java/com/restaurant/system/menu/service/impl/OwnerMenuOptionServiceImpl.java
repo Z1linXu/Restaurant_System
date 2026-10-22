@@ -36,6 +36,10 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
     private static final String OPTION_TYPE_SIZE = "size";
 
     private final StoreAddonOptionResolver addonResolver;
+    private com.restaurant.system.menu.remove.StoreRemoveOptionResolver removeResolver;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setRemoveResolver(com.restaurant.system.menu.remove.StoreRemoveOptionResolver resolver) { this.removeResolver = resolver; }
     private final MenuItemRepository menuItemRepository;
     private final MenuItemOptionRepository menuItemOptionRepository;
     private final MenuRevisionService menuRevisionService;
@@ -144,6 +148,14 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
         String optionGroup = normalizeGroup(request.option_group);
         Long parentOptionId = request.parent_option_id;
         String optionType = normalizeOptionType(request.option_type, optionGroup);
+        if (("remove".equals(optionType) || "REMOVE".equals(optionGroup) || "COMBO_SIDE_REMOVE".equals(optionGroup))
+            && request.price_delta != null && request.price_delta.signum() != 0) {
+            throw new BusinessException("REMOVE_MUST_BE_FREE");
+        }
+        if (removeResolver != null && ("REMOVE".equals(optionGroup) || "remove".equals(optionType))
+            && removeResolver.hasCanonicalCode(loadMenuItem(option.menu_item_id).store_id, request.option_code)) {
+            throw new BusinessException("REMOVE options are managed by the Store Remove catalog.");
+        }
         rejectAddonWrite(optionGroup, optionType, request.option_code, request.name_zh, request.name_en);
         if ("addon".equals(optionType)
             && addonResolver.hasCanonicalCode(loadMenuItem(option.menu_item_id).store_id, request.option_code)) {
@@ -305,6 +317,9 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
     }
 
     private void rejectSystemControlledPricingWrite(MenuItemOption option) {
+        if (option != null && option.store_remove_id != null) {
+            throw new BusinessException("REMOVE options are managed by the Store Remove catalog.");
+        }
         if (option != null && option.store_addon_id != null) {
             throw new BusinessException("ADD_ON options are managed by the Store Add-on catalog.");
         }
@@ -362,6 +377,8 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
         response.menu_item_id = option.menu_item_id;
         response.option_type = option.option_type;
         response.option_code = option.option_code;
+        response.store_remove_id = option.store_remove_id;
+        response.store_remove_store_id = option.store_remove_store_id;
         response.store_addon_id = option.store_addon_id;
         response.option_group = option.option_group;
         response.parent_option_id = option.parent_option_id;

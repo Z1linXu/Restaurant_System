@@ -14,6 +14,7 @@ import com.restaurant.system.printing.rules.dto.PrintingDisplayRuleRevisionRespo
 import com.restaurant.system.printing.rules.dto.PrintingDisplayRuleSettingsResponse;
 import com.restaurant.system.printing.rules.dto.PrintingDisplayRuleValidationResponse;
 import com.restaurant.system.printing.semantic.KitchenModifierTokenResolver;
+import com.restaurant.system.printing.semantic.KitchenSpicinessDisplayResolver;
 import com.restaurant.system.user.repository.StoreRepository;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -370,15 +371,15 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
         String frontdeskAlias = context.resolveItemAlias(PrintModuleCode.FRONTDESK_RECEIPT, itemSku, itemNameZh);
         String sizeGrab = context.resolveDictionaryOutput("SIZE", PrintModuleCode.GRAB, null, size, null, "");
         String noodleGrab = resolvePreviewDictionary(context, itemSku, "NOODLE_TYPE", PrintModuleCode.GRAB, noodle);
-        String spicyGrab = context.resolveDictionaryOutput("SPICINESS", PrintModuleCode.GRAB, null, spicy, null, "");
+        String spicyGrab = KitchenSpicinessDisplayResolver.resolve(PrintModuleCode.GRAB, null, spicy, null, context);
         String sizeHot = context.resolveDictionaryOutput("SIZE", PrintModuleCode.HOT_KITCHEN, null, size, null, "");
         String noodleHot = resolvePreviewDictionary(context, itemSku, "NOODLE_TYPE", PrintModuleCode.HOT_KITCHEN, noodle);
-        String spicyHot = context.resolveDictionaryOutput("SPICINESS", PrintModuleCode.HOT_KITCHEN, null, spicy, null, "");
+        String spicyHot = KitchenSpicinessDisplayResolver.resolve(PrintModuleCode.HOT_KITCHEN, null, spicy, null, context);
         String modifiers = buildPreviewModifiers(request.store_id, context, add, remove);
 
         PrintingDisplayRulePreviewResponse response = new PrintingDisplayRulePreviewResponse();
-        response.grab_preview = sizeGrab + grabAlias + noodleGrab + spicyGrab + "×1" + (modifiers.isBlank() ? "" : " | " + modifiers);
-        response.hot_kitchen_preview = sizeHot + hotAlias + noodleHot + spicyHot + " ×1" + (modifiers.isBlank() ? "" : "\n" + modifiers);
+        response.grab_preview = sizeGrab + grabAlias + noodleGrab + (spicyGrab == null ? "" : spicyGrab) + "×1" + (modifiers.isBlank() ? "" : " | " + modifiers);
+        response.hot_kitchen_preview = sizeHot + hotAlias + noodleHot + (spicyHot == null ? "" : spicyHot) + " ×1" + (modifiers.isBlank() ? "" : "\n" + modifiers);
         response.frontdesk_receipt_preview = context.resolveDictionaryOutputKey("SIZE", "FRONTDESK_RECEIPT_ZH", null, size, null, "")
             + frontdeskAlias
             + "\n"

@@ -8,6 +8,7 @@ import {
   resolveComboGroupOptionId,
 } from '../../../utils/comboSelection'
 import { formatNoodleTypeDisplayLabel } from './noodleTypePresentation'
+import { selectAddOn, selectRemove } from '../../../utils/modifierSelection'
 
 function isToggleAddOn(labelZh: string, priceDelta?: number) {
   return (priceDelta ?? 0) === 0 && (labelZh === '加香菜' || labelZh === '加葱')
@@ -463,13 +464,7 @@ export function ItemCustomizationModal({
                           sublabel={option.labelZh}
                           compact={compact}
                           onClick={() =>
-                            onChange({
-                              ...draft,
-                              addOnQuantities: {
-                                ...draft.addOnQuantities,
-                                [option.id]: checked ? 0 : 1,
-                              },
-                            })
+                            onChange(selectAddOn(draft, option, checked ? 0 : 1, customization.removeOptions))
                           }
                         />
                       )
@@ -485,22 +480,10 @@ export function ItemCustomizationModal({
                           quantity={quantity}
                           compact={compact}
                           onDecrement={() =>
-                            onChange({
-                              ...draft,
-                              addOnQuantities: {
-                                ...draft.addOnQuantities,
-                                [option.id]: Math.max(0, quantity - 1),
-                              },
-                            })
+                            onChange(selectAddOn(draft, option, Math.max(0, quantity - 1), customization.removeOptions))
                           }
                           onIncrement={() =>
-                            onChange({
-                              ...draft,
-                              addOnQuantities: {
-                                ...draft.addOnQuantities,
-                                [option.id]: quantity + 1,
-                              },
-                            })
+                            onChange(selectAddOn(draft, option, quantity + 1, customization.removeOptions))
                           }
                         />
                       )
@@ -521,12 +504,7 @@ export function ItemCustomizationModal({
                           sublabel={option.labelZh}
                           compact={compact}
                           onClick={() =>
-                            onChange({
-                              ...draft,
-                              removeIds: checked
-                                ? draft.removeIds.filter((id) => id !== option.id)
-                                : [...draft.removeIds, option.id],
-                            })
+                            onChange(selectRemove(draft, option, customization.addOns))
                           }
                         />
                       )

@@ -68,6 +68,10 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
     private static final String RESULT_CODE = "MENU_CLONE_COMPLETED";
 
     private final StoreAddonService addonService;
+    private com.restaurant.system.menu.remove.StoreRemoveService removeService;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setRemoveService(com.restaurant.system.menu.remove.StoreRemoveService removeService) { this.removeService = removeService; }
     private final StoreRepository storeRepository;
     private final MenuCategoryRepository categoryRepository;
     private final StationRepository stationRepository;
@@ -163,6 +167,7 @@ public class StoreMenuCloneTransactionServiceImpl implements StoreMenuCloneTrans
         if (!reconciliation.conflicts().isEmpty()) {
             throw invalidTarget("Target Add-on identities require reconciliation");
         }
+        if (removeService != null) removeService.reconcileForMaterialization(stores.target().id);
         if (reconciliation.linked_options() == 0) {
             menuRevisionService.incrementRevision(stores.target().id);
         }

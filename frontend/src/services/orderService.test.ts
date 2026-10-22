@@ -4,6 +4,8 @@ import { buildFrozenSubmitPayload } from '../hooks/useDraftOrder'
 import {
   isTerminalPrintJobPollingError,
   mapOptions,
+  mapFrozenOrderItem,
+  submitOrderUpdate,
   startOrderPrintJobCoordinator,
 } from './orderService'
 import { ApiRequestError, apiRequest } from './apiClient'
@@ -182,6 +184,36 @@ describe('order option mapping for dynamic combo groups', () => {
     expect(payload.items[0].options).toEqual(expect.arrayContaining([
       expect.objectContaining({ option_id: 3001, option_code_snapshot: 'combo_coke', option_group_snapshot: 'COMBO_DRINK' }),
     ]))
+    expect(mapFrozenOrderItem(frozenLine, [menuItem({ price: 99 })])).toEqual(payload.items[0])
+  })
+})
+
+describe('frozen add-only order updates', () => {
+  it('sends the same captured base and options even after the current catalog changes or disappears', async () => {
+    const line: OrderLineItem = {
+      id: 'frozen', menuItemId: '71', nameEn: 'Frozen Noodle', nameZh: '原牛肉面',
+      quantity: 2, unitPrice: 16.99, lineSubtotal: 47.98,
+      categoryCodeSnapshot: 'SOUP_NOODLE', stationIdSnapshot: '3',
+      skuSnapshot: 'traditional_beef_noodle', itemTypeSnapshot: 'noodle',
+      optionSnapshots: [
+        { optionId: '800', optionType: 'size', optionGroup: 'SIZE', optionCode: 'size_large',
+          parentOptionId: null, nameZh: '大碗', nameEn: 'Large', priceDelta: 2, quantity: 1 },
+        { optionId: '710', optionType: 'addon', optionGroup: 'COMBO', optionCode: 'combo',
+          parentOptionId: null, nameZh: '套餐', nameEn: 'Combo', priceDelta: 5, quantity: 1 },
+      ],
+      selection: draft({ quantity: 2 }), summaryTags: [], notes: ' 少汤 ',
+    }
+    mockedApiRequest.mockResolvedValue({} as never)
+    await submitOrderUpdate(91, 'same-update-key', [line], [menuItem({ price: 99 })])
+    const firstBody = JSON.parse(mockedApiRequest.mock.calls.at(-1)![1]!.body as string)
+    await submitOrderUpdate(91, 'same-update-key', [line], [])
+    const retryBody = JSON.parse(mockedApiRequest.mock.calls.at(-1)![1]!.body as string)
+    expect(retryBody).toEqual(firstBody)
+    expect(firstBody.idempotency_key).toBe('same-update-key')
+    expect(firstBody.items).toEqual([mapFrozenOrderItem(line, [])])
+    expect(firstBody.items[0]).toMatchObject({ unit_price_snapshot: 16.99, quantity: 2, notes: '少汤' })
+    expect(firstBody.items[0].options.map((option: { option_price_snapshot: number }) => option.option_price_snapshot)).toEqual([2, 5])
+    mockedApiRequest.mockReset()
   })
 })
 

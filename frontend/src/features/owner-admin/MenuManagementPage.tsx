@@ -13,6 +13,9 @@ import { ApiRequestError } from '../../services/apiClient'
 import { MenuOptionsPanel } from './MenuOptionsPanel'
 import { ComboConfigurationPanel } from './ComboConfigurationPanel'
 import { AddonCatalogPanel } from './AddonCatalogPanel'
+import { RemoveCatalogPanel } from './RemoveCatalogPanel'
+import { PrintingRulesMenuPanel } from './PrintingRulesMenuPanel'
+import { menuManagementSection, menuManagementPath, type MenuManagementSection } from './menuManagementSections'
 import { CategoryManagementPanel, StationManagementPanel } from './MenuStructurePanels'
 import { PricingRulesPanel } from './PricingRulesPanel'
 import { ItemPrintingRuleAliasPanel } from './PrintingDisplayRulesPanel'
@@ -49,7 +52,6 @@ type ToastState =
   | null
 
 type StatusFilter = 'all' | 'active' | 'inactive' | 'sold_out' | 'available'
-type MenuManagementSection = 'menu_items' | 'categories' | 'stations' | 'combo' | 'pricing' | 'addons'
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('en-CA', {
@@ -147,7 +149,22 @@ export function MenuManagementPage() {
   const [reorderMode, setReorderMode] = useState(false)
   const [filtersBeforeReorder, setFiltersBeforeReorder] = useState<MenuItemReorderFilters | null>(null)
   const [rebuildDate, setRebuildDate] = useState(new Date().toISOString().slice(0, 10))
-  const [activeSection, setActiveSection] = useState<MenuManagementSection>('menu_items')
+  const [activeSection, setActiveSection] = useState<MenuManagementSection>(() => menuManagementSection(typeof window === 'undefined' ? '' : window.location?.search ?? ''))
+  const [modifierSection, setModifierSection] = useState<'addons' | 'removes'>(() => typeof window !== 'undefined' && new URLSearchParams(window.location?.search ?? '').get('modifiers') === 'removes' ? 'removes' : 'addons')
+
+  const selectSection = (section: MenuManagementSection) => {
+    setActiveSection(section)
+    if (typeof window !== 'undefined' && window.history?.pushState) {
+      window.history.pushState({}, '', menuManagementPath(Number(selectedStoreId), section))
+    }
+  }
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.addEventListener) return
+    const restoreSection = () => setActiveSection(menuManagementSection(window.location?.search ?? ''))
+    window.addEventListener('popstate', restoreSection)
+    return () => window.removeEventListener('popstate', restoreSection)
+  }, [])
 
   const loadOverview = async (storeId: number) => {
     setLoading(true)
@@ -190,6 +207,7 @@ export function MenuManagementPage() {
     setFiltersBeforeReorder(null)
     setOptionsItem(null)
     setEditor(null)
+    setModifierSection(typeof window !== 'undefined' && new URLSearchParams(window.location?.search ?? '').get('modifiers') === 'removes' ? 'removes' : 'addons')
   }, [selectedStoreId])
 
   const stores = useMemo(
@@ -630,11 +648,12 @@ export function MenuManagementPage() {
                 ['stations', 'Stations'],
                 ['combo', 'Combo Configuration'],
                 ['pricing', 'Pricing Rules'],
+                ['printing_display_rules', 'Printing Display Rules'],
               ].map(([key, label]) => (
                 <button
                   key={key}
                   type="button"
-                  onClick={() => setActiveSection(key as MenuManagementSection)}
+                  onClick={() => selectSection(key as MenuManagementSection)}
                   className={`rounded-[16px] px-4 py-2.5 text-[0.86rem] font-semibold ${
                     activeSection === key
                       ? 'bg-[var(--primary)] text-white shadow-[0_10px_20px_rgba(97,0,0,0.14)]'
@@ -665,8 +684,18 @@ export function MenuManagementPage() {
             ) : null}
 
             {activeSection === 'addons' ? (
-              <AddonCatalogPanel key={selectedStoreId} storeId={Number(selectedStoreId)} onSaved={(message) => setToast({ kind: 'success', message })} />
+              <div className="space-y-3">
+                <div className="flex gap-2" aria-label="Modifier catalog sections">
+                  {(['addons', 'removes'] as const).map((section) => <button key={section} type="button" aria-pressed={modifierSection === section}
+                    className={`min-h-11 rounded-[14px] px-4 py-2 font-semibold ${modifierSection === section ? 'bg-[var(--primary)] text-white' : 'bg-white'}`}
+                    onClick={() => setModifierSection(section)}>{section === 'addons' ? 'Add-ons' : 'Removes'}</button>)}
+                </div>
+                {modifierSection === 'addons' ? <AddonCatalogPanel key={selectedStoreId} storeId={Number(selectedStoreId)} onSaved={(message) => setToast({ kind: 'success', message })} />
+                  : <RemoveCatalogPanel storeId={Number(selectedStoreId)} categories={categories} onChanged={refreshMenuManagement} onSaved={(message) => setToast({ kind: 'success', message })} />}
+              </div>
             ) : null}
+
+            {activeSection === 'printing_display_rules' ? <PrintingRulesMenuPanel key={selectedStoreId} storeId={Number(selectedStoreId)} onToast={showToast} /> : null}
 
             {activeSection === 'combo' ? (
               <ComboConfigurationPanel

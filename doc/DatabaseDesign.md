@@ -4,7 +4,9 @@
 
 # 1. 文档目的
 
-本文档用于定义餐厅管理系统 MVP 阶段的核心数据库结构，支持以下业务闭环：
+本文档保留 MVP 核心结构并记录当前 Store 级菜单、金额快照及 V38 Remove
+扩展。实际列名、约束及共享环境升级以实体映射和已审阅 Flyway migration
+为准；文档中的实现能力不代表部署或 Production 写入授权。支持以下业务闭环：
 
 - 前台点单
 - 后厨制作
@@ -58,6 +60,12 @@ erDiagram
     STATIONS ||--o{ MENU_ITEMS : default_for
     MENU_CATEGORIES ||--o{ MENU_ITEMS : contains
     MENU_ITEMS ||--o{ MENU_ITEM_OPTIONS : has
+    STORES ||--o{ STORE_REMOVES : owns
+    STORE_REMOVES ||--o{ MENU_ITEM_OPTIONS : assigned_as
+    STORE_REMOVES ||--o{ STORE_REMOVE_CATEGORIES : applies_to
+    MENU_CATEGORIES ||--o{ STORE_REMOVE_CATEGORIES : inherits
+    STORE_REMOVES ||--o{ STORE_REMOVE_ITEM_RULES : overrides
+    MENU_ITEMS ||--o{ STORE_REMOVE_ITEM_RULES : configures
 
     USERS ||--o{ USER_STATIONS : assigned_to
     STATIONS ||--o{ USER_STATIONS : mapped_to
@@ -198,6 +206,13 @@ erDiagram
         bigint id PK
         bigint menu_item_id FK
         varchar option_type
+        varchar option_code
+        varchar option_group
+        bigint parent_option_id
+        bigint store_addon_id
+        bigint store_addon_store_id
+        bigint store_remove_id
+        bigint store_remove_store_id
         varchar name_zh
         varchar name_en
         decimal price_delta
@@ -251,8 +266,11 @@ erDiagram
     ORDER_ITEM_OPTIONS {
         bigint id PK
         bigint order_item_id FK
-        bigint option_id FK
+        bigint option_id
         varchar option_type_snapshot
+        varchar option_code_snapshot
+        varchar option_group_snapshot
+        bigint parent_option_id_snapshot
         varchar option_name_snapshot_zh
         varchar option_name_snapshot_en
         decimal price_delta
@@ -384,7 +402,8 @@ erDiagram
 - 存储订单头、订单行、加料项
 - 作为厨房任务与库存扣减的触发源
 - Combo 仅作为销售/定价概念存在，不作为独立 kitchen item
-- Combo 订单由真实 `order_items` 组成，通过 `combo_group_no` + `combo_role` 分组
+- 当前 POS 的 Combo 主商品保存在 `order_items`，升级及蛋/小菜选择保存为
+  `order_item_options`；旧多行套餐兼容 `combo_group_no` + `combo_role` 分组
 
 ---
 
@@ -429,8 +448,10 @@ erDiagram
 
 - Combo 是销售规则，不是独立菜品
 - 所有出品都必须对应真实 `menu_items`
-- 面类主品、配菜、鸡蛋都可作为真实下单项进入 `order_items`
-- 厨房任务只针对真实 `order_items` 生成
+- 主商品进入 `order_items`；当前 Store Combo 蛋/小菜属于该行的选项快照，
+  旧数据也可保留独立配菜/鸡蛋订单行
+- 后端按真实订单行及其稳定 Combo component 选择生成厨房任务，
+  不要求为了免费组件另外创建收费订单行
 - 历史订单展示必须读取快照字段，不依赖当前菜单主数据
 
 ---
@@ -482,7 +503,10 @@ erDiagram
 
 ### 选项建模（按菜品独立配置）
 
-`menu_item_options` 必须按 `menu_item_id` 单独配置，不使用全局选项。
+`menu_item_options` 保留每个 `menu_item_id` 的选项/assignment 身份。普通选项
+可以单品维护；ADD_ON 的共享名称/价格由 `store_addons` 提供，linked REMOVE
+由独立 `store_removes` 及分类/单品适用规则提供。兼容 option 副本不是第二套
+可编辑主数据，所有共享状态均限当前 Store，不是跨店全局选项。
 
 推荐的 `option_type`：
 
@@ -605,7 +629,7 @@ MVP 固定分类编码：
 | name_zh | varchar | 中文名称 |
 | name_en | varchar | 英文名称 |
 | station_id | bigint FK | 默认出餐工位（MVP 单工位） |
-| base_price | decimal | 价格 |
+| base_price | decimal | 每份商品基础价，不含 option delta |
 | is_active | boolean | 是否启用 |
 
 ---
@@ -613,19 +637,54 @@ MVP 固定分类编码：
 ## 5.6 menu_item_options（菜品选项）
 
 ### 说明
-定义菜品可选项（如加蛋、加面）。
+定义菜品可选项及 Store catalog 的兼容 assignment（如加蛋、加面、减料）。
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | id | bigint PK | 主键 |
 | menu_item_id | bigint FK | 菜品 |
-| option_type | varchar | 选项类型 |
+| option_type | varchar | 兼容选项类型 |
+| option_group | varchar | 稳定语义组，如 SIZE / SOUP_BASE / ADD_ON / REMOVE |
+| option_code | varchar | 稳定语义 code |
+| parent_option_id | bigint nullable | Combo 子选项父 ID |
+| sort_order | int nullable | 顺序 |
+| store_addon_id / store_addon_store_id | bigint nullable | 同店 Add-on composite FK |
+| store_remove_id / store_remove_store_id | bigint nullable | V38 同店 Remove composite FK |
 | name_zh | varchar | 中文名称 |
 | name_en | varchar | 英文名称 |
 | price_delta | decimal | 加价 |
 | is_active | boolean | 是否启用 |
 
 ---
+
+## 5.6.1 Store Remove Catalog（V38）
+
+`V38__add_store_remove_catalog.sql` 是增量 schema migration，不执行旧选项、
+订单或打印快照回填。`store_removes` 独立于收费 `store_addons`，没有 price 字段。
+
+| 表 | 字段与约束 |
+| --- | --- |
+| `store_removes` | `id`, `store_id`, `code`, `name_zh`, nullable `name_en`, `active`, `sort_order`, `created_at`, `updated_at`；UNIQUE `(store_id,code)` 及 `(id,store_id)`；code 为小写稳定标识，trigger 禁止修改 code/store_id |
+| `store_remove_categories` | `remove_id`, `store_id`, `category_id`；PK `(remove_id,category_id)`；同店 composite FKs 指向 Remove 与 Category |
+| `store_remove_item_rules` | `remove_id`, `store_id`, `menu_item_id`, `mode`；PK `(remove_id,menu_item_id)`；mode 仅 `ALLOW` / `DENY`；同店 composite FKs |
+| `menu_item_options` 新增列 | nullable `store_remove_id`, `store_remove_store_id`；两列同时为空或同时存在，composite FK 同时校验 Remove 和 item 的 Store |
+
+linked Remove 必须 `option_group=REMOVE`, `option_type=remove`,
+`parent_option_id=NULL`, `price_delta=0`，且不能同时链接 `store_addon_id`。
+数据库 link CHECK 和 composite FKs 保证 typed identity 与 Store 隔离；V38
+同时为 `menu_categories` 增加 UNIQUE `(id,store_id)` 作为 scope anchor。旧未关联
+option 行可继续作为兼容数据存在。
+
+有效适用规则为单品 ALLOW/DENY 优先，无单品 override 时继承所选分类。
+`INHERIT` 是 API/read 模式，不额外存表行。真正新单可选还要求 catalog active。
+分类/商品变动和 catalog 编辑在原事务内刷新 linked option，推进已有 menu revision；
+读路径亦使用 `StoreRemoveOptionResolver` 从 catalog/适用规则投影当前值。
+新建 Remove 不自动选择任何商品。
+
+显式 reconciliation 只关联同店、稳定 code、双语名称一致、零价格、关系无歧义的
+旧 option，保留 option ID 和原商品 eligibility；冲突不选择“多数名称”或价格。
+迁移本身不运行 reconciliation。新 Store/clone 在目标 Store 原事务内建立独立引用，
+不复制来源 Store catalog IDs，也不修改发布的 Master/Profile。
 
 ## 5.7 orders（订单表）
 
@@ -642,7 +701,8 @@ MVP 固定分类编码：
 | id | bigint PK | 主键 |
 | order_no | varchar | 订单号 |
 | status | varchar | 状态 |
-| total_amount | decimal | 总金额 |
+| subtotal_amount | decimal | active 订单行持久化金额之和 |
+| total_amount | decimal | subtotal + 按 14.975% HALF_UP 至分的税 |
 
 ---
 
@@ -656,7 +716,10 @@ MVP 固定分类编码：
 | category_code_snapshot | varchar | 分类编码快照 |
 | item_name_snapshot_zh | varchar | 菜品中文快照 |
 | item_name_snapshot_en | varchar | 菜品英文快照 |
-| quantity | int | 数量 |
+| quantity | int | 商品/碗数 |
+| unit_price | decimal | 每份商品基础价格快照，不含 option delta |
+| line_amount | decimal | `(unit_price + Σ price_delta × option.quantity) × quantity` |
+| item_sku_snapshot | varchar | 商品稳定 SKU 快照 |
 | combo_group_no | int | 套餐分组号，可空 |
 | combo_role | varchar | main / combo_side / combo_egg / standalone |
 
@@ -671,11 +734,21 @@ MVP 固定分类编码：
 |------|------|------|
 | id | bigint PK | 主键 |
 | order_item_id | bigint FK | 订单明细 |
-| menu_item_option_id | bigint FK | 选项 |
-| option_type_snapshot | varchar | 选项类型快照 |
+| option_id | bigint | 选项/Store Combo transport identity，实际列名为 option_id |
+| option_type_snapshot | varchar | 兼容类型快照 |
+| option_code_snapshot | varchar | 稳定 code 快照 |
+| option_group_snapshot | varchar | 稳定语义组快照 |
+| parent_option_id_snapshot | bigint nullable | 已选 Combo 小菜父 identity |
 | option_name_snapshot_zh | varchar | 选项中文快照 |
 | option_name_snapshot_en | varchar | 选项英文快照 |
-| quantity | int | 数量 |
+| price_delta | decimal | 每个 option 的冻结 delta；Remove 必须为 0 |
+| quantity | int | 每份商品中的选项数量，不是整行总数量 |
+
+金额计算由 OrderService 持久化，初次提交和 Update 使用相同的冻结基础价/选项
+语义。已提交行不因新菜单重算。前台每碗金额从 stored `line_amount` 按整数分
+分摊；完整票用 stored subtotal/total，Update 用新增 batch 的 stored line amounts。
+普通 job reprint 保留 rendered snapshot；order full reprint 读取订单快照，不能从
+当前菜单推断旧汤底或使用当前售价修正历史金额。
 
 ---
 
@@ -883,7 +956,9 @@ MVP 固定分类编码：
 
 菜品本体消耗来自 `menu_item_bom`
 菜品选项消耗来自 `menu_item_option_bom`
-Combo 不作为独立菜品扣库存，套餐中的主品/配菜/鸡蛋都按真实 `order_items` 分别扣库存
+Combo 不作为独立菜品扣库存。现有扣减流程读取真实 `order_items` 及其
+`order_item_options` 对应 BOM；不能因为套餐显示标签再重复创建扣减项。
+此金额/打印/Remove 修复不改变库存扣减规则。
 `DRINK` 和 `ALCOHOL` 分类为 direct-serve，不生成 `kitchen_tasks`
 `MILK_TEA` 分类归 `BAR` 工位，是否生成 `kitchen_tasks` 取决于门店是否启用 BAR 任务流
 

@@ -15,10 +15,15 @@ import org.springframework.stereotype.Service;
 @Service
 public class StoreAddonOptionResolver {
     private final NamedParameterJdbcTemplate jdbc;
+    private com.restaurant.system.menu.remove.StoreRemoveOptionResolver removeResolver;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setRemoveResolver(com.restaurant.system.menu.remove.StoreRemoveOptionResolver resolver) { this.removeResolver = resolver; }
     public StoreAddonOptionResolver(NamedParameterJdbcTemplate jdbc) { this.jdbc = jdbc; }
     private record Current(Long id, Long store, String code, String zh, String en, BigDecimal price, boolean active) {}
 
     public List<MenuItemOption> resolve(List<MenuItemOption> options) {
+        if (removeResolver != null) options = removeResolver.resolve(options);
         List<Long> ids = options.stream().map(o -> o.store_addon_id).filter(Objects::nonNull).distinct().toList();
         if (ids.isEmpty()) return options;
         Map<Long, Current> catalog = jdbc.query("""

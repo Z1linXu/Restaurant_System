@@ -470,6 +470,7 @@ class OwnerMenuOptionServiceImplTest {
         when(menuItemOptionRepository.findAllByMenuItemIdOrdered(14L)).thenReturn(List.of(existing));
         when(menuItemOptionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         MenuItemOptionUpsertRequest request = addonRequest("REMOVE");
+        request.price_delta = java.math.BigDecimal.ZERO;
         request.option_code = "combo";
         request.name_zh = "套餐";
         request.name_en = "Combo";
@@ -488,12 +489,31 @@ class OwnerMenuOptionServiceImplTest {
         when(menuItemOptionRepository.findAllByMenuItemIdOrdered(14L)).thenReturn(List.of());
         when(menuItemOptionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         MenuItemOptionUpsertRequest request = addonRequest("REMOVE");
+        request.price_delta = java.math.BigDecimal.ZERO;
         request.option_code = "combo";
         request.name_zh = "套餐";
         request.name_en = "Combo";
 
         assertEquals("REMOVE", service.createOption(14L, request).option_group);
         verify(menuRevisionService).incrementRevision(3L);
+    }
+
+    @Test
+    void genericRemoveCreateAndUpdateRejectNonzeroPricesBeforeSaving() {
+        MenuItem item = menuItem(14L, 3L);
+        MenuItemOption existing = addonOption("REMOVE");
+        existing.price_delta = java.math.BigDecimal.ZERO;
+        when(menuItemRepository.findById(14L)).thenReturn(Optional.of(item));
+        when(menuItemOptionRepository.findAllByMenuItemIdOrdered(14L)).thenReturn(List.of(existing));
+        MenuItemOptionUpsertRequest request = addonRequest("REMOVE");
+        request.price_delta = new java.math.BigDecimal("1.25");
+        assertEquals("REMOVE_MUST_BE_FREE", assertThrows(BusinessException.class,
+            () -> service.createOption(14L, request)).getMessage());
+        assertEquals("REMOVE_MUST_BE_FREE", assertThrows(BusinessException.class,
+            () -> service.updateOption(14L, 90L, request)).getMessage());
+        verify(menuItemOptionRepository, never()).save(any());
+        verify(menuRevisionService, never()).incrementRevision(any());
+        assertEquals(java.math.BigDecimal.ZERO, existing.price_delta);
     }
 
     private MenuItem menuItem(Long id, Long storeId) {

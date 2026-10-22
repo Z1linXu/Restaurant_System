@@ -1,0 +1,377 @@
+{
+  "schema": "POS_FIVE_FIXES_ACCEPTANCE_V1",
+  "environment": "staging",
+  "source_sha": "fbcdb4f8152183b62b6ecc3859e2d5a689d01d49",
+  "app_sha": "fbcdb4f8152183b62b6ecc3859e2d5a689d01d49",
+  "script_sha": "fbcdb4f8152183b62b6ecc3859e2d5a689d01d49",
+  "run_id": "p5oct22b",
+  "result": "PASS",
+  "order_ids": [
+    91,
+    92,
+    93,
+    94,
+    95,
+    96,
+    97
+  ],
+  "item_ids": [
+    919,
+    920
+  ],
+  "remove_id": 22,
+  "checks": [
+    {
+      "check": "target_fixture_and_mock_boundary",
+      "status": "PASS",
+      "store_id": 18,
+      "code": "CHINATOWN",
+      "previous_mode": "MOCK",
+      "other_store_digests": {
+        "1": {
+          "printing": "4ea6bc7e3404f2ced2005645036fd4e8d6815e3ea02a1167adb2c8f8721f1c71",
+          "rules": "59d22f9029f6ad3bfe27cb9387a998feead961131ce63eaee6b708e6e9730ed4",
+          "removes": "8f9b78ee4c60fd9991261a6d8aa5e628d54ceb33fbb50e27a4d30b534c1fa5cc"
+        },
+        "21": {
+          "printing": "9e5ca773e30b5f30b39b45af75c5f7cbffa3c93dbf1b044d9c0868fee3d5c8b6",
+          "rules": "d72ec9914ffc00ca46acddd6ced16b63c62752bb005c9b332a4541ed9fede065",
+          "removes": "e6b9eae12c670ea8f88bee5d13c4baab66f1c9b2651b3ba96356a068b68adb34"
+        },
+        "22": {
+          "printing": "9a64cfeb5b467c3c0acfeac5504999614ad470108e8f8eaa3aa6707edce404a8",
+          "rules": "d0e4a1319809358ceed6f6e6a3303be814e2b1e49ea2fd3f146c53aaa4c94b40",
+          "removes": "6c9bd3930d1fe6e618395ba25e58acc160fc01210a8be34ad817539240cf2adf"
+        },
+        "23": {
+          "printing": "8132f6f151893035ac91da73a4472505a690a1e06f7e8ecd3809c34bfc24cc9d",
+          "rules": "06ada345d209c2e586272d029712afd648830ce19836dfa08ea838223e5a7cd3",
+          "removes": "93c7ff31d211291d3220527285c522abeebf4398baada3101f33bf9ba73a24f0"
+        },
+        "24": {
+          "printing": "bfa12f53454e3296ae08e64d722a049ad7c9bb272fe36f02e467d7e9bbefcd30",
+          "rules": "9bd0569b76bb9480bd677b0814d0ebbe164b11b0a2d0907fad35409cba850cdc",
+          "removes": "60f98aebcaf335f97902877622f4ee80d42b81b7af10c26c6433089d958a941b"
+        },
+        "25": {
+          "printing": "c76ae383db30d670bf6318b20dd445292775bb4a46d8c93f58b218a2fd0ce549",
+          "rules": "2aab6d6a4d4280bb84224010a90dfb25eb6f4404a55de7872eeb1fbfb20e9fb9",
+          "removes": "ff7a9cbf7ef93dd5d240a3b64f1c15e06c074ae06d6adef2a762856cf6f4a3fb"
+        },
+        "26": {
+          "printing": "23b43da3d06715122d35a26b14712b39ab28a1767d12a59a8b1262e3e57bdb22",
+          "rules": "7ff98506d02a5a0ad1f06e54a6f988b49b9c6945c4a908d1049b97029e1a66b8",
+          "removes": "4281c11847253d8e67d12184aad39c9eb9c5c0fca5907a405e29bbedcc6bbd38"
+        },
+        "27": {
+          "printing": "671a660d927b9ce6e1464a718aaf0e54e5df680e7dc47f15b35e86376773be2d",
+          "rules": "08b1bcdf50eba38fb13281ef4dc6861dbc3b822095426d6586022a42b13d6c44",
+          "removes": "033c4fef9be9b985b9ee70ebb200df78337150de17c7e8952d19dfdcd18b0be6"
+        }
+      }
+    },
+    {
+      "check": "no_spicy_already_published",
+      "status": "PASS",
+      "revision_id": 82
+    },
+    {
+      "check": "order_database_receipt_amounts",
+      "status": "PASS",
+      "order_id": 91,
+      "job_id": 228,
+      "subtotal": "37.98",
+      "tax": "5.69",
+      "total": "43.67",
+      "receipt": "取餐号: FIVE_p5oct22b_large2\nOrder Type: Takeout\n--------------------------------\n大碗牛肉面\n三细\n辣度: 不辣\n$18.99\n\n大碗牛肉面\n三细\n辣度: 不辣\n$18.99\n\n--------------------------------\nSubtotal: $37.98\nTax (14.975%): $5.69\nTotal: $43.67\n--------------------------------\nSubmitted: 2026-10-21 23:16\n\n"
+    },
+    {
+      "check": "order_database_receipt_amounts",
+      "status": "PASS",
+      "order_id": 92,
+      "job_id": 230,
+      "subtotal": "29.98",
+      "tax": "4.49",
+      "total": "34.47",
+      "receipt": "取餐号: FIVE_p5oct22b_small2\nOrder Type: Takeout\n--------------------------------\n小碗牛肉面\n三细\n辣度: 不辣\n$14.99\n\n小碗牛肉面\n三细\n辣度: 不辣\n$14.99\n\n--------------------------------\nSubtotal: $29.98\nTax (14.975%): $4.49\nTotal: $34.47\n--------------------------------\nSubmitted: 2026-10-21 23:16\n\n"
+    },
+    {
+      "check": "order_database_receipt_amounts",
+      "status": "PASS",
+      "order_id": 93,
+      "job_id": 232,
+      "subtotal": "47.98",
+      "tax": "7.19",
+      "total": "55.17",
+      "receipt": "取餐号: FIVE_p5oct22b_combo2\nOrder Type: Takeout\n--------------------------------\n1* combo 大碗牛肉面\n三细\n辣度: 不辣\n鸡蛋: 卤蛋\n小菜: 毛豆\n$23.99\n\n1* combo 大碗牛肉面\n三细\n辣度: 不辣\n鸡蛋: 卤蛋\n小菜: 毛豆\n$23.99\n\n--------------------------------\nSubtotal: $47.98\nTax (14.975%): $7.19\nTotal: $55.17\n--------------------------------\nSubmitted: 2026-10-21 23:16\n\n"
+    },
+    {
+      "check": "order_database_receipt_amounts",
+      "status": "PASS",
+      "order_id": 94,
+      "job_id": 234,
+      "subtotal": "51.96",
+      "tax": "7.78",
+      "total": "59.74",
+      "receipt": "取餐号: FIVE_p5oct22b_comboegg2\nOrder Type: Takeout\n--------------------------------\n1* combo 大碗牛肉面\n三细\n辣度: 不辣\n加蛋 x1\n鸡蛋: 卤蛋\n小菜: 毛豆\n$25.98\n\n1* combo 大碗牛肉面\n三细\n辣度: 不辣\n加蛋 x1\n鸡蛋: 卤蛋\n小菜: 毛豆\n$25.98\n\n--------------------------------\nSubtotal: $51.96\nTax (14.975%): $7.78\nTotal: $59.74\n--------------------------------\nSubmitted: 2026-10-21 23:17\n\n"
+    },
+    {
+      "check": "actual_new_grab_no_spicy",
+      "status": "PASS",
+      "order_id": 91,
+      "job_id": 227,
+      "text": "\n\n\n\n[[LARGE]]FIVE_p5oct22b_large2[[/LARGE]]\n--------------------------------\n[[DOUBLE_HEIGHT]](大（走s）) ×2[[/DOUBLE_HEIGHT]]\n\n--------------------------------\n[[LARGE]]外卖[[/LARGE]]\n[[SMALL]]23:16[[/SMALL]]\n--------------------------------\n\n"
+    },
+    {
+      "check": "order_database_receipt_amounts",
+      "status": "PASS",
+      "order_id": 95,
+      "job_id": 236,
+      "subtotal": "37.98",
+      "tax": "5.69",
+      "total": "43.67",
+      "receipt": "取餐号: FIVE_p5oct22b_soup_vegan\nOrder Type: Takeout\n--------------------------------\n大碗蔬菜面\n三细\n汤底：素汤\n辣度: 不辣\n$18.99\n\n大碗蔬菜面\n三细\n汤底：素汤\n辣度: 不辣\n$18.99\n\n--------------------------------\nSubtotal: $37.98\nTax (14.975%): $5.69\nTotal: $43.67\n--------------------------------\nSubmitted: 2026-10-21 23:17\n\n"
+    },
+    {
+      "check": "order_database_receipt_amounts",
+      "status": "PASS",
+      "order_id": 96,
+      "job_id": 238,
+      "subtotal": "37.98",
+      "tax": "5.69",
+      "total": "43.67",
+      "receipt": "取餐号: FIVE_p5oct22b_soup_beef\nOrder Type: Takeout\n--------------------------------\n大碗蔬菜面\n三细\n汤底：肉汤\n辣度: 不辣\n$18.99\n\n大碗蔬菜面\n三细\n汤底：肉汤\n辣度: 不辣\n$18.99\n\n--------------------------------\nSubtotal: $37.98\nTax (14.975%): $5.69\nTotal: $43.67\n--------------------------------\nSubmitted: 2026-10-21 23:17\n\n"
+    },
+    {
+      "check": "order_database_receipt_amounts",
+      "status": "PASS",
+      "order_id": 97,
+      "job_id": 241,
+      "subtotal": "37.98",
+      "tax": "5.69",
+      "total": "43.67",
+      "receipt": "取餐号: FIVE_p5oct22b_hot_no_spicy\nOrder Type: Takeout\n--------------------------------\n1 x 牛肉炒面\n辣度: 不辣\n$18.99\n\n1 x 牛肉炒面\n辣度: 不辣\n$18.99\n\n--------------------------------\nSubtotal: $37.98\nTax (14.975%): $5.69\nTotal: $43.67\n--------------------------------\nSubmitted: 2026-10-21 23:17\n\n"
+    },
+    {
+      "check": "actual_new_hot_no_spicy",
+      "status": "PASS",
+      "order_id": 97,
+      "job_id": 240,
+      "source": {
+        "eligibility": "existing_active_wok_sku",
+        "sku": "beef_chow_mein",
+        "menu_item_id": 525
+      },
+      "text": "\n\n\n[[LARGE]]FIVE_p5oct22b_hot_no_spicy[[/LARGE]]\n[[LARGE]]HOT KITCHEN[[/LARGE]]\n--------------------------------\n[[DOUBLE_HEIGHT]](牛炒（走s）) ×2[[/DOUBLE_HEIGHT]]\n\n--------------------------------\n[[LARGE]]外卖 / TAKEOUT[[/LARGE]]\n[[SMALL]]23:17[[/SMALL]]\n--------------------------------\n\n"
+    },
+    {
+      "check": "update_full_and_frozen_reprint",
+      "status": "PASS",
+      "order_id": 91,
+      "update_batch_id": 8,
+      "update_job_id": 243,
+      "full_job_id": 244,
+      "frozen_job_id": 245,
+      "full_receipt": "[[LARGE]]取餐号: FIVE_p5oct22b_large2[[/LARGE]]\n[[DOUBLE_HEIGHT]]Order Type: Takeout[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]--------------------------------[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]大碗牛肉面[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]三细[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]辣度: 不辣[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]$18.99[[/DOUBLE_HEIGHT]]\n\n[[DOUBLE_HEIGHT]]大碗牛肉面[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]三细[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]辣度: 不辣[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]$18.99[[/DOUBLE_HEIGHT]]\n\n[[DOUBLE_HEIGHT]]1* combo 大碗牛肉面[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]三细[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]辣度: 不辣[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]鸡蛋: 卤蛋[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]小菜: 毛豆[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]$23.99[[/DOUBLE_HEIGHT]]\n\n[[DOUBLE_HEIGHT]]1* combo 大碗牛肉面[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]三细[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]辣度: 不辣[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]鸡蛋: 卤蛋[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]小菜: 毛豆[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]$23.99[[/DOUBLE_HEIGHT]]\n\n[[DOUBLE_HEIGHT]]--------------------------------[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]Subtotal: $85.96[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]Tax (14.975%): $12.87[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]Total: $98.83[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]--------------------------------[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]Submitted: 2026-10-21 23:16[[/DOUBLE_HEIGHT]]\n\n",
+      "frozen_receipt": "[[LARGE]]取餐号: FIVE_p5oct22b_large2[[/LARGE]]\n[[DOUBLE_HEIGHT]]Order Type: Takeout[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]--------------------------------[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]大碗牛肉面[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]三细[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]辣度: 不辣[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]$18.99[[/DOUBLE_HEIGHT]]\n\n[[DOUBLE_HEIGHT]]大碗牛肉面[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]三细[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]辣度: 不辣[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]$18.99[[/DOUBLE_HEIGHT]]\n\n[[DOUBLE_HEIGHT]]--------------------------------[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]Subtotal: $37.98[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]Tax (14.975%): $5.69[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]Total: $43.67[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]--------------------------------[[/DOUBLE_HEIGHT]]\n[[DOUBLE_HEIGHT]]Submitted: 2026-10-21 23:16[[/DOUBLE_HEIGHT]]\n\n"
+    },
+    {
+      "check": "remove_bounded_reconciliation",
+      "status": "PASS",
+      "linked_groups": 21,
+      "conflicts": [
+        {
+          "code": null,
+          "option_ids": [
+            5019,
+            5031,
+            5087,
+            5088,
+            5133,
+            5134,
+            5170,
+            5171,
+            5197,
+            5198,
+            5235,
+            5236,
+            5253,
+            5284,
+            5285,
+            5309,
+            5310,
+            5331,
+            5332
+          ],
+          "names_zh": [
+            "不要香菜",
+            "不要葱",
+            "走肉",
+            "走包菜"
+          ],
+          "names_en": [
+            "No Cilantro",
+            "No Onion",
+            "No Meat",
+            "No Cabbage"
+          ],
+          "reason": "REMOVE_RELATIONSHIP_CONFLICT"
+        },
+        {
+          "code": "remove_carrot",
+          "option_ids": [
+            5296,
+            5297,
+            5338
+          ],
+          "names_zh": [
+            "走胡萝卜",
+            "走胡萝卜片"
+          ],
+          "names_en": [
+            "No Carrot",
+            "No Carrot Slice"
+          ],
+          "reason": "REMOVE_BUSINESS_VALUES_CONFLICT"
+        },
+        {
+          "code": "remove_cucumber",
+          "option_ids": [
+            5303,
+            5304
+          ],
+          "names_zh": [
+            "走黄瓜丝",
+            "走黄瓜"
+          ],
+          "names_en": [
+            "remove cucumber",
+            "No Cucumber"
+          ],
+          "reason": "REMOVE_BUSINESS_VALUES_CONFLICT"
+        }
+      ]
+    },
+    {
+      "check": "shared_remove_two_items_and_store_isolation",
+      "status": "PASS",
+      "remove_id": 22,
+      "item_ids": [
+        919,
+        920
+      ],
+      "code": "five_p5oct22b_remove",
+      "other_store_id": 1
+    }
+  ],
+  "hardware_printing": false,
+  "runtime": {
+    "app_sha": "fbcdb4f8152183b62b6ecc3859e2d5a689d01d49",
+    "script_sha": "fbcdb4f8152183b62b6ecc3859e2d5a689d01d49",
+    "images": [
+      "sha256:4bb38242b262de79f626453f87435c71891549d5b24c7e91f441403b9e9c444a",
+      "sha256:48bea3d30070c66299ee16b24ac915914004a764303097991be4850b126e734b"
+    ],
+    "public_api": "https://staging-pos.lanzhounoodlesmtl.com/api/v1"
+  },
+  "pricing_policy": {
+    "store_id": 18,
+    "policy_revision": 1,
+    "size_small_delta": -2.0,
+    "size_regular_delta": 0.0,
+    "size_large_delta": 2.0,
+    "combo_delta": 5.0
+  },
+  "hot_source": {
+    "eligibility": "existing_active_wok_sku",
+    "sku": "beef_chow_mein",
+    "menu_item_id": 525
+  },
+  "mock_jobs": {
+    "228": {
+      "raw_execution_mode": null,
+      "effective_execution_mode": "MOCK",
+      "printer_id": null,
+      "device_id": null,
+      "printer_endpoint": null
+    },
+    "230": {
+      "raw_execution_mode": null,
+      "effective_execution_mode": "MOCK",
+      "printer_id": null,
+      "device_id": null,
+      "printer_endpoint": null
+    },
+    "232": {
+      "raw_execution_mode": null,
+      "effective_execution_mode": "MOCK",
+      "printer_id": null,
+      "device_id": null,
+      "printer_endpoint": null
+    },
+    "234": {
+      "raw_execution_mode": null,
+      "effective_execution_mode": "MOCK",
+      "printer_id": null,
+      "device_id": null,
+      "printer_endpoint": null
+    },
+    "227": {
+      "raw_execution_mode": null,
+      "effective_execution_mode": "MOCK",
+      "printer_id": null,
+      "device_id": null,
+      "printer_endpoint": null
+    },
+    "236": {
+      "raw_execution_mode": null,
+      "effective_execution_mode": "MOCK",
+      "printer_id": null,
+      "device_id": null,
+      "printer_endpoint": null
+    },
+    "238": {
+      "raw_execution_mode": null,
+      "effective_execution_mode": "MOCK",
+      "printer_id": null,
+      "device_id": null,
+      "printer_endpoint": null
+    },
+    "241": {
+      "raw_execution_mode": null,
+      "effective_execution_mode": "MOCK",
+      "printer_id": null,
+      "device_id": null,
+      "printer_endpoint": null
+    },
+    "240": {
+      "raw_execution_mode": null,
+      "effective_execution_mode": "MOCK",
+      "printer_id": null,
+      "device_id": null,
+      "printer_endpoint": null
+    },
+    "243": {
+      "raw_execution_mode": null,
+      "effective_execution_mode": "MOCK",
+      "printer_id": null,
+      "device_id": null,
+      "printer_endpoint": null
+    },
+    "244": {
+      "raw_execution_mode": null,
+      "effective_execution_mode": "MOCK",
+      "printer_id": null,
+      "device_id": null,
+      "printer_endpoint": null
+    },
+    "245": {
+      "raw_execution_mode": null,
+      "effective_execution_mode": "MOCK",
+      "printer_id": null,
+      "device_id": null,
+      "printer_endpoint": null
+    }
+  },
+  "finished_at": "2026-10-22T03:17:11.040656+00:00"
+}

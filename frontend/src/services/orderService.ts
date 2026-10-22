@@ -2,7 +2,6 @@ import type {
   BackendFrontdeskOrderBoardItem,
   BackendOrderResponse,
   BackendOrderUpdateResponse,
-  ChoiceOption,
   ItemCustomizationDraft,
   MenuItem,
   OrderLineItem,
@@ -12,7 +11,8 @@ import type { RealtimeUpdateMessage } from '../types/kds'
 import type { PrintJobRecord } from './printingAdminService'
 import { ApiRequestError, apiRequest } from './apiClient'
 import { manualReprint } from './manualReprintService'
-import { resolveComboGroupOptionId } from '../utils/comboSelection'
+import { buildOptionSnapshots, mapOptions } from '../utils/orderPricing'
+export { mapOptions } from '../utils/orderPricing'
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 import { networkDiagnosticsDisplayEnabled } from './networkStatus'
@@ -102,18 +102,6 @@ export interface IdempotentOrderItemPayload {
   }[]
 }
 
-interface OrderOptionPayload {
-  option_id: number
-  quantity: number
-  option_type_snapshot?: string | null
-  option_code_snapshot?: string | null
-  option_group_snapshot?: string | null
-  parent_option_id_snapshot?: number | null
-  option_name_snapshot_zh?: string
-  option_name_snapshot_en?: string
-  option_price_snapshot?: number
-}
-
 export interface IdempotentOrderSubmitPayload {
   client_order_id: string
   idempotency_key: string
@@ -166,81 +154,39 @@ function sleep(ms: number, signal?: AbortSignal) {
   })
 }
 
-export function mapOptions(draft: ItemCustomizationDraft, menuItem?: MenuItem) {
-  const optionPayloads: OrderOptionPayload[] = []
-  const optionsById = menuItem ? collectMenuItemOptions(menuItem) : new Map<string, ChoiceOption>()
-  const pushedOptionIds = new Set<string>()
-
-  const pushOption = (optionId: string | undefined, quantity = 1) => {
-    if (!optionId) {
-      return
-    }
-    if (pushedOptionIds.has(optionId)) {
-      return
-    }
-    pushedOptionIds.add(optionId)
-    const option = optionsById.get(optionId)
-    const payload: OrderOptionPayload = {
-      option_id: Number(optionId),
-      quantity,
-    }
-    if (option) {
-      payload.option_type_snapshot = option.optionType ?? null
-      payload.option_code_snapshot = option.optionCode ?? null
-      payload.option_group_snapshot = option.optionGroup ?? null
-      payload.parent_option_id_snapshot = option.parentOptionId == null ? null : Number(option.parentOptionId)
-      payload.option_name_snapshot_zh = option.labelZh
-      payload.option_name_snapshot_en = option.labelEn
-      payload.option_price_snapshot = option.priceDelta ?? 0
-    }
-    optionPayloads.push(payload)
+// First submission and add-only updates serialize the same captured line quote.
+export function mapFrozenOrderItem(item: OrderLineItem, catalogItems: MenuItem[]): IdempotentOrderItemPayload {
+  const menuItem = catalogItems.find((candidate) => candidate.id === item.menuItemId)
+  const snapshots = item.optionSnapshots
+    ?? (menuItem ? buildOptionSnapshots(menuItem, item.selection) : null)
+  if (!snapshots) throw new Error(`本机草稿缺少菜品 ${item.menuItemId} 的提交快照。`)
+  return {
+    menu_item_id: Number(item.menuItemId),
+    item_name_snapshot_zh: item.nameZh,
+    item_name_snapshot_en: item.nameEn,
+    unit_price_snapshot: item.unitPrice,
+    category_code_snapshot: item.categoryCodeSnapshot ?? menuItem?.categoryCode ?? null,
+    station_id_snapshot: item.stationIdSnapshot == null
+      ? (menuItem?.stationId == null ? null : Number(menuItem.stationId))
+      : Number(item.stationIdSnapshot),
+    item_sku_snapshot: item.skuSnapshot ?? menuItem?.sku ?? null,
+    item_type_snapshot: item.itemTypeSnapshot ?? menuItem?.itemType ?? null,
+    quantity: item.quantity,
+    combo_group_no: null,
+    combo_role: 'standalone',
+    notes: item.notes.trim() || null,
+    options: snapshots.map((option) => ({
+      option_id: Number(option.optionId),
+      option_type_snapshot: option.optionType,
+      option_code_snapshot: option.optionCode,
+      option_group_snapshot: option.optionGroup,
+      parent_option_id_snapshot: option.parentOptionId == null ? null : Number(option.parentOptionId),
+      option_name_snapshot_zh: option.nameZh,
+      option_name_snapshot_en: option.nameEn,
+      option_price_snapshot: option.priceDelta,
+      quantity: option.quantity,
+    })),
   }
-
-  pushOption(draft.sizeId)
-  pushOption(draft.soupBaseId)
-  pushOption(draft.noodleTypeId)
-  pushOption(draft.spicyLevelId)
-
-  if (draft.comboEnabled) {
-    pushOption(menuItem?.customization?.combo?.optionId)
-    const comboGroups = menuItem?.customization?.combo?.groups ?? []
-    if (comboGroups.length) {
-      comboGroups.forEach((group) => {
-        pushOption(resolveComboGroupOptionId(draft, group))
-      })
-    } else {
-      pushOption(draft.comboEggId ?? menuItem?.customization?.combo?.eggs[0]?.id)
-      pushOption(draft.comboSideId ?? menuItem?.customization?.combo?.sides[0]?.id)
-    }
-    draft.comboSideRemoveIds.forEach((optionId) => pushOption(optionId))
-  }
-
-  draft.removeIds.forEach((optionId) => pushOption(optionId))
-
-  Object.entries(draft.addOnQuantities).forEach(([optionId, quantity]) => {
-    if (quantity > 0) {
-      pushOption(optionId, quantity)
-    }
-  })
-
-  return optionPayloads
-}
-
-function collectMenuItemOptions(menuItem: MenuItem) {
-  const options = [
-    ...(menuItem.customization?.sizes?.options ?? []),
-    ...(menuItem.customization?.soupBases?.options ?? []),
-    ...(menuItem.customization?.noodleTypes ?? []),
-    ...(menuItem.customization?.spicyLevels ?? []),
-    ...(menuItem.customization?.combo?.option ? [menuItem.customization.combo.option] : []),
-    ...(menuItem.customization?.combo?.groups.flatMap((group) => group.options) ?? []),
-    ...(menuItem.customization?.combo?.eggs ?? []),
-    ...(menuItem.customization?.combo?.sides ?? []),
-    ...(menuItem.customization?.combo?.sideRemoveOptions ?? []),
-    ...(menuItem.customization?.addOns ?? []),
-    ...(menuItem.customization?.removeOptions ?? []),
-  ]
-  return new Map(options.map((option) => [option.id, option]))
 }
 
 export async function findDraftOrderByTableSlot(storeId: number, slotLabel: string) {
@@ -516,17 +462,7 @@ export async function submitOrderUpdate(
     headers: buildHeaders(),
     body: JSON.stringify({
       idempotency_key: idempotencyKey,
-      items: items.map((item) => {
-        const menuItem = catalogItems.find((catalogItem) => catalogItem.id === item.menuItemId)
-        return {
-          menu_item_id: Number(item.menuItemId),
-          quantity: item.quantity,
-          combo_group_no: null,
-          combo_role: 'standalone',
-          notes: item.notes.trim() || null,
-          options: mapOptions(item.selection, menuItem),
-        }
-      }),
+      items: items.map((item) => mapFrozenOrderItem(item, catalogItems)),
     }),
   })
 }
