@@ -259,5 +259,238 @@ class UberReceiveOnlyPromotionTest(unittest.TestCase):
         self.exercise_deployment(fail_after_start=True)
 
 
+class Current4483PatchTest(unittest.TestCase):
+    def environment(self, name):
+        return {'APP_ENVIRONMENT': name, 'JWT_SECRET': 'fixture-retained-pos-key',
+                'UBER_EATS_ENABLED': 'true', 'UBER_EATS_WORKER_ENABLED': 'false',
+                'UBER_EATS_ENVIRONMENT': 'production' if name == 'production' else 'sandbox',
+                'UBER_EATS_PROCESSING_MODE': 'KITCHEN_MIRROR', 'UBER_EATS_SCOPES': promotion.SCOPES,
+                'UBER_EATS_CLIENT_ID': promotion.PROD_CLIENT_ID if name == 'production' else 'fixture-test-client',
+                'UBER_EATS_CLIENT_SECRET': name + '-fixture-oauth',
+                'UBER_EATS_WEBHOOK_SIGNING_KEY': name + '-fixture-signing',
+                'UBER_EATS_STORE_CUTOVERS': '{}', 'UBER_EATS_PROCESSING_NOT_BEFORE': '',
+                'UNRELATED_POS_CONFIG': 'preserved'}
+
+    def queues(self, environment):
+        return {'flyway': '38', 'pending_print_jobs': 0, 'pending_outbox': 0,
+                'pending_uber_events': 0, 'due_uber_orders': 0, 'uber_bindings': 1,
+                'uber_orders': 0 if environment == 'production' else 13,
+                'local_uber_orders': 0 if environment == 'production' else 11,
+                'uber_print_jobs': 0 if environment == 'production' else 28,
+                'retained_print_states': [{'id': 1176, 'module_code': 'GRAB', 'status': 'PRINTING'}]}
+
+    def configuration(self, environment):
+        return {'bindings': [{'id': 1, 'store': 1, 'org': 1,
+                'env': 'production' if environment == 'production' else 'sandbox',
+                'uber': promotion.CURRENT_4483_STORES[environment], 'enabled': True, 'mode': 'KITCHEN_MIRROR'}],
+                'local_store': {'id': 1, 'org': 1, 'code': '4483_R_SAINT_DENIS' if environment == 'production' else 'STG005_SRC_20260809_R01'},
+                'mapping_count': 299, 'fresh_printing': 0, 'all_protected_configuration': 'fixture-hash',
+                'retained_printing': 'fixture-retained-historical-print-hash'}
+
+    def acceptance(self):
+        return {'environment': 'staging', 'source_sha': SHA, 'image': IMAGE,
+                'accepted': True, 'worker_enabled': False, 'health': 'PASS',
+                'preview_count': 300, 'preview_errors': 0, 'preview_warnings': 0, 'raw_fallback_count': 0}
+
+    def test_exact_default_scope_and_only_one_env_delta(self):
+        for environment in ('staging', 'production'):
+            with self.subTest(environment=environment):
+                original = self.environment(environment)
+                expected = promotion.current_4483_env(environment, original)
+                self.assertEqual({k for k in expected if expected[k] != original.get(k)},
+                                 {promotion.CURRENT_4483_DEFAULTS_KEY})
+                rule = json.loads(expected[promotion.CURRENT_4483_DEFAULTS_KEY])
+                self.assertEqual(rule, promotion.current_4483_defaults(environment))
+                self.assertEqual(rule[0]['localStoreId'], 1)
+                self.assertEqual(rule[0]['organizationId'], 1)
+                self.assertEqual(rule[0]['optionGroup'], 'SOUP_BASE')
+                self.assertEqual(rule[0]['optionCode'], 'soup_vegan')
+                self.assertEqual(rule[0]['uberStoreId'], promotion.CURRENT_4483_STORES[environment])
+                self.assertEqual(promotion.current_4483_env(environment, expected), expected)
+
+    def test_worker_credentials_cutover_and_unknown_defaults_fail_closed(self):
+        original = self.environment('production')
+        mutations = {'UBER_EATS_WORKER_ENABLED': 'true', 'UBER_EATS_CLIENT_SECRET': '',
+                     'UBER_EATS_WEBHOOK_SIGNING_KEY': '', 'UBER_EATS_ENVIRONMENT': 'sandbox',
+                     'UBER_EATS_STORE_CUTOVERS': '{"foreign":"2026-10-22T00:00:00Z"}',
+                     promotion.CURRENT_4483_DEFAULTS_KEY: '[{"localStoreId":3}]'}
+        for key, value in mutations.items():
+            with self.subTest(key=key), self.assertRaises(promotion.PromotionError):
+                promotion.current_4483_env('production', dict(original, **{key: value}))
+
+    def test_v38_existing_binding_mapping_and_retained_printing_boundary(self):
+        queues = self.queues('production')
+        configuration = self.configuration('production')
+        promotion.current_4483_guard('production', queues, configuration)
+        # Historical PRINTING/FAILED rows are retained, never a blanket activation blocker.
+        self.assertEqual(len(queues['retained_print_states']), 1)
+        for key, value in (('flyway', '37'), ('uber_bindings', 0), ('uber_orders', 1),
+                           ('pending_print_jobs', 1), ('pending_outbox', 1), ('pending_uber_events', 1)):
+            with self.subTest(key=key), self.assertRaises(promotion.PromotionError):
+                promotion.current_4483_guard('production', dict(queues, **{key: value}), configuration)
+        for key, value in (('mapping_count', 298), ('bindings', []), ('fresh_printing', 1),
+                           ('local_store', {'id': 1, 'org': 2, 'code': '4483_R_SAINT_DENIS'})):
+            with self.subTest(key=key), self.assertRaises(promotion.PromotionError):
+                promotion.current_4483_guard('production', queues, dict(configuration, **{key: value}))
+
+    def test_production_requires_reviewed_exact_stage_preview_acceptance(self):
+        promotion.validate_current_4483_acceptance(self.acceptance(), IMAGE, SHA)
+        for key, value in (('image', 'sha256:'+'0'*64), ('source_sha', '0'*40),
+                           ('preview_count', 299), ('preview_errors', 1), ('preview_warnings', 1),
+                           ('raw_fallback_count', 1), ('worker_enabled', True), ('accepted', 1)):
+            with self.subTest(key=key), self.assertRaises(promotion.PromotionError):
+                promotion.validate_current_4483_acceptance(dict(self.acceptance(), **{key: value}), IMAGE, SHA)
+
+    def exercise_patch(self, environment='staging', failure=None):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory).resolve()
+            project = 'cloud' if environment == 'production' else 'restaurant-pos-staging'
+            source = base / ('production/current.compose.json' if environment == 'production'
+                             else 'staging/pos-removes-current/target.private.json')
+            source.parent.mkdir(parents=True)
+            env = self.environment(environment)
+            original_image = promotion.CURRENT_4483_BASELINE_IMAGE
+            original = {'services': {service: {'image': original_image, 'environment': env if service == 'backend' else {'NGINX_SAFE': 'preserved'}}
+                                    for service in ('backend', 'nginx')}}
+            promotion.write_private(source, original)
+            original_bytes = source.read_bytes()
+            locks = (base/'production.lock', base/'staging.lock')
+            for lock in locks:
+                promotion.write_private(lock, {})
+            def container(name, image, values):
+                return {'Id': name+'-retained', 'Image': image, 'State': {'Running': True},
+                        'Config': {'Env': [k+'='+v for k, v in values.items()], 'Entrypoint': ['java'],
+                                   'Labels': {'com.docker.compose.project': project,
+                                              'com.docker.compose.project.config_files': str(source)}},
+                        'HostConfig': {'Memory': 768*1024*1024},
+                        'NetworkSettings': {'Networks': {'retained': {'IPAddress': '172.1.0.2'}}}}
+            backend = project+'-backend-1'
+            rows = {backend: container(backend, original_image, env),
+                    project+'-nginx-1': container(project+'-nginx-1', original_image, {'NGINX_SAFE': 'preserved'}),
+                    project+'-db-1': container(project+'-db-1', original_image, {})}
+            if environment == 'production':
+                stage_env = promotion.current_4483_env('staging', self.environment('staging'))
+                rows['restaurant-pos-staging-backend-1'] = container('restaurant-pos-staging-backend-1', IMAGE, stage_env)
+                if failure == 'stage_image':
+                    rows['restaurant-pos-staging-backend-1']['Image'] = original_image
+                acceptance_path = base/'staging-proof.json'
+                promotion.write_private(acceptance_path, self.acceptance())
+            else:
+                rows['cloud-backend-1'] = container('cloud-backend-1', original_image, self.environment('production'))
+                acceptance_path = None
+            initial_rows = copy.deepcopy(rows)
+            state = {'up': [], 'waits': 0}
+            queues, configuration = self.queues(environment), self.configuration(environment)
+            def fake_inspect(name):
+                if name == IMAGE:
+                    return {'Config': {'Labels': {'org.opencontainers.image.revision': SHA}}}
+                if name == original_image:
+                    return {'Config': {'Labels': {'org.opencontainers.image.revision': promotion.CURRENT_4483_BASELINE_SHA}}}
+                return copy.deepcopy(rows[name])
+            def fake_run(args, **kwargs):
+                if args[:2] == ['docker', 'ps']:
+                    return ('\n'.join(rows)+'\n').encode()
+                if args[:2] == ['docker', 'compose']:
+                    path = Path(args[5]); model = json.loads(path.read_text())
+                    if args[6] == 'config':
+                        return json.dumps(model).encode()
+                    self.assertEqual(args[6:], ['up', '-d', '--no-build', '--pull', 'never', '--no-deps', 'backend'])
+                    state['up'].append(path.name)
+                    rows[backend]['Image'] = model['services']['backend']['image']
+                    rows[backend]['Config']['Env'] = [k+'='+v for k, v in model['services']['backend']['environment'].items()]
+                    rows[backend]['Config']['Labels']['com.docker.compose.project.config_files'] = str(path)
+                    if failure == 'post_canonical' and len(state['up']) == 1:
+                        source.write_text('foreign same-image canonical configuration')
+                    if failure == 'history' and len(state['up']) == 1:
+                        configuration['retained_printing'] = 'changed-historical-print'
+                    return b''
+                if args[:3] == ['docker', 'exec', '-i'] and args[-2:] == ['pg_restore', '--list']:
+                    return b'fixture TOC orders print_jobs'
+                self.fail('Unexpected command in current4483 fixture')
+            def backup(args, **kwargs):
+                kwargs['stdout'].write(b'PGDMP fixture')
+                if failure == 'pre_canonical':
+                    source.write_text('foreign preflight canonical configuration')
+                return subprocess.CompletedProcess(args, 0)
+            def wait(*args):
+                state['waits'] += 1
+                if failure == 'system_exit' and state['waits'] == 1:
+                    raise SystemExit('fixture-private-value-must-not-escape')
+            with patch.object(promotion, 'BASE', base), patch.object(promotion, 'LOCKS', locks), \
+                 patch.object(promotion, 'inspect', side_effect=fake_inspect), \
+                 patch.object(promotion, 'run', side_effect=fake_run), \
+                 patch.object(promotion.subprocess, 'run', side_effect=backup), \
+                 patch.object(promotion, 'inventory', side_effect=lambda db: copy.deepcopy(queues)), \
+                 patch.object(promotion, 'current_4483_configuration', side_effect=lambda db: copy.deepcopy(configuration)), \
+                 patch.object(promotion, 'wait_healthy', side_effect=wait), patch.object(promotion, 'health'):
+                if failure:
+                    code = {'system_exit': 'CURRENT_4483_PATCH_FAILED_ORIGINAL_RESTORED',
+                            'post_canonical': 'CANONICAL_DRIFT_REQUIRES_OPERATOR_NO_RECREATE',
+                            'pre_canonical': 'CURRENT_4483_PREFLIGHT_DRIFT',
+                            'stage_image': 'CURRENT_4483_STAGING_RUNTIME_DRIFT',
+                            'history': 'CURRENT_4483_PATCH_FAILED_ORIGINAL_RESTORED'}[failure]
+                    with self.assertRaisesRegex(promotion.PromotionError, '^'+code+'$'):
+                        promotion.patch_current_4483(environment, IMAGE, SHA, acceptance_path)
+                else:
+                    result = promotion.patch_current_4483(environment, IMAGE, SHA, acceptance_path)
+                    self.assertFalse(result['worker_enabled']); self.assertFalse(result['accepted'])
+                    self.assertNotIn('fixture-', json.dumps(result))
+            for name in rows:
+                if name != backend:
+                    self.assertEqual(rows[name], initial_rows[name])
+            if failure in ('system_exit', 'history'):
+                self.assertEqual(state['up'], ['target.private.json', 'rollback.private.json'])
+                self.assertEqual(rows[backend]['Image'], original_image)
+                self.assertEqual(promotion.env_of(rows[backend]), env)
+                self.assertEqual(source.read_bytes(), original_bytes)
+            elif failure == 'stage_image':
+                self.assertEqual(state['up'], [])
+                self.assertEqual(rows[backend], initial_rows[backend])
+                self.assertEqual(source.read_bytes(), original_bytes)
+                self.assertFalse((base/environment/('uber-4483-backend-'+SHA)).exists())
+            elif failure == 'pre_canonical':
+                self.assertEqual(state['up'], [])
+                self.assertEqual(rows[backend], initial_rows[backend])
+                self.assertEqual(source.read_text(), 'foreign preflight canonical configuration')
+            else:
+                self.assertEqual(state['up'], ['target.private.json'])
+                self.assertEqual(rows[backend]['Image'], IMAGE)
+                expected = promotion.current_4483_env(environment, env)
+                self.assertEqual(promotion.env_of(rows[backend]), expected)
+                if failure == 'post_canonical':
+                    self.assertEqual(source.read_text(), 'foreign same-image canonical configuration')
+                else:
+                    target_path = base/environment/('uber-4483-backend-'+SHA)/'target.private.json'
+                    self.assertEqual(rows[backend]['Config']['Labels']['com.docker.compose.project.config_files'], str(target_path))
+                    target = json.loads(target_path.read_bytes())
+                    if environment == 'production':
+                        self.assertEqual(json.loads(source.read_bytes()), target)
+                    else:
+                        self.assertEqual(source.read_bytes(), original_bytes)
+                    self.assertEqual(target['services']['nginx'], original['services']['nginx'])
+                    self.assertEqual(target['services']['backend']['environment'], expected)
+
+    def test_stage_patch_preserves_immutable_source_and_runs_new_release_model(self):
+        self.exercise_patch()
+
+    def test_production_promotes_exact_accepted_stage_image_and_preserves_credentials(self):
+        self.exercise_patch('production')
+
+    def test_production_refuses_stage_image_drift_before_any_backup_or_recreate(self):
+        self.exercise_patch('production', 'stage_image')
+
+    def test_system_exit_restores_original_receiver_and_credentials(self):
+        self.exercise_patch('production', 'system_exit')
+
+    def test_pre_restart_canonical_drift_stops_without_recreate(self):
+        self.exercise_patch(failure='pre_canonical')
+
+    def test_post_restart_canonical_drift_never_overwrites_or_recreates(self):
+        self.exercise_patch(failure='post_canonical')
+
+    def test_historical_printing_change_is_not_reset_or_ignored(self):
+        self.exercise_patch(failure='history')
+
+
 if __name__ == '__main__':
     unittest.main()

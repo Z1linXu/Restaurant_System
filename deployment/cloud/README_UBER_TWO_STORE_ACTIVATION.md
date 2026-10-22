@@ -3,8 +3,8 @@
 This is an operator runbook, not authority to activate a Store. The 2026-10-21
 release permits code deployment with the Uber worker false and internal
 preparation. Missing Uber approval, verified Store identity, actual secrets,
-mapping or printer/device proof blocks activation. No Java/React change is
-needed after those external facts and configuration are supplied.
+mapping or printer/device proof blocks activation. The confirmed4483 vegetable Combo broth requires the bounded scoped-default
+capability; no new order/printing pipeline or React/Android change is needed.
 
 ## Verified local targets
 
@@ -137,7 +137,7 @@ client, keeping bearer credentials out of command arguments and evidence.
 
 ## Controlled first-store activation
 
-Before enabling any import, record all of: actual scope/role/Store Access proof,
+Before enabling any import, record all of: actual scope/Store Access proof,
 Production HMAC acceptance, verified local/external UUID, mapping read-back and
 zero-warning previews, each Store's own printer routing, recent correct Pad
 worker proof, and the approved first-order/time window. Sainte-Catherine's
@@ -159,6 +159,12 @@ module off/unlisted. Only then enable the global worker in the controlled
 private model and deploy that configuration under the existing locks. Production
 startup fails closed without both global and nonempty valid per-Store cutovers.
 This activation is intentionally not a mode of the receive-only promotion helper.
+
+The Owner explicitly permits the first newly placed4483 pilot order to prove
+official notification delivery and operational webhook access when the named
+role has no independent Dashboard evidence. Never substitute a synthetic probe
+or historical HELD replay. Keep named-role evidence separate from observed
+working delivery and do not prewrite PASS.
 
 Observe one naturally accepted/approved pilot order: no pre-ACCEPTED import,
 exactly one local order, correct Store/tasks/outbox and unique GRAB/HOT jobs.
@@ -203,8 +209,10 @@ existing Mapping API with299 real OWNER audit records. Worker remains false;
 other Stores, catalogs and printers are unchanged. Actual-menu read-only preview
 validation found275 clean cases and25 REQUIRED_SOUP_BASE_MISSING warnings, all
 for Noodles with Vegetables Combo, with errors0 and RAW fallback0. Uber offers
-no broth choice for that root; Owner must confirm a fixed broth or require
-customer selection. Do not inject a default or count these warnings as PASS.
+no broth choice for that root. The Owner subsequently confirmed fixed vegan
+broth for only this4483 root; configure the reviewed strict item default using
+current `soup_vegan` identity and rerun all300 previews on the deployed image.
+Do not silently replace an explicit beef-broth choice or count warnings as PASS.
 These facts do not establish `order_webhook`, official notification delivery or
 activation approval. The accepted application is4b3abd1/V38; preserve the current
 application and never apply an earlier release's bootstrap or rollback.
