@@ -9489,13 +9489,31 @@ customer item/modifier notes display under the corresponding source item once.
 V36 only adds a nullable TEXT field and does not migrate historical note content.
 
 
-## Production V37 application release (2026-10-05)
+## Production application and receive-only Uber preparation
+
+Production backend now uses the reviewed read-only Kitchen Mirror release
+`7d573be03d66a9505e0c68f92fa17829247f56e3`, retaining the existing frontend
+and V37 schema. Saint-Denis (Store1) and Sainte-Catherine (Store3) have their
+local `UBER_EATS` modules prepared; Chinatown (Store2) remains disabled.
+No Production Uber binding or menu mapping has been created. Production receiver
+and worker are both disabled because its actual Signing Key/credentials,
+external grants and verified Store identities are not yet available. This is
+code deployment and local preparation, not real Store activation. Current exact
+runtime/evidence references are in `docs/governance/CURRENT_STATE.yml`; shared
+Staging may be updated separately by the independent POS task.
+
+Use the [two-store activation runbook](deployment/cloud/README_UBER_TWO_STORE_ACTIVATION.md)
+for independent Store cutovers and controlled receive-only bootstrap. Existing
+POS/printing configuration remains intact. A real password login, live draft
+submission and physical Pad output were not repeated during this release.
+
+### Historical V37 application release (2026-10-05)
 
 Restaurant_System Production application release = COMPLETE. Canonical endpoint
 is https://pos.lanzhounoodlesmtl.com (HTTPS API and WSS); dedicated TLS and308
 redirect are active, separate from Staging. Backend source758dc5b and retained
-frontend8c3a9e3 run with V37 after all9 sequential migrations. Production Uber
-remains NOT ACTIVATED: all3 Store capabilities false and zero bindings. This
+frontend8c3a9e3 ran with V37 after all9 sequential migrations. At that release,
+Production Uber was NOT ACTIVATED: all3 Store capabilities false and zero bindings. This
 Owner release supersedes earlier Staging-only Production target descriptions;
 future activation still requires a separate Owner decision.
 

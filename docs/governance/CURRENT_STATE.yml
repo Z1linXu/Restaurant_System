@@ -3,32 +3,36 @@ updated_at: 2026-10-21
 
 repository:
   ref: origin/main
-  sha: 06bac51ddc0a829a9aa1106f07ef886572efbb65
+  sha: 7d573be03d66a9505e0c68f92fa17829247f56e3
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
   package: FINAL_PRODUCT_CLOSEOUT
-  status: UBER_TWO_STORE_WORKER_DISABLED_RELEASE_IN_PROGRESS
+  status: UBER_TWO_STORE_CODE_DEPLOYED_LOCAL_PREPARATION_COMPLETE_EXTERNAL_BLOCKERS
   next_phase_authorized: false
 
 staging:
-  deployed_sha: ce35278b3569a4eacfa29efc01cadbf0c409bec6
+  deployed_sha: ece77240a7a77896632c10798fafa29120c6ab47
   deployed_sha_semantics: BACKEND_FRONTEND_TRACKED_SEPARATELY
-  frontend_deployed_sha: 8c3a9e356f59cd025beff25f7fb1d5a20594e028
+  frontend_deployed_sha: ece77240a7a77896632c10798fafa29120c6ab47
   policy_config_sha: d2316234b2936fd89a926aa24a7b6343008834e6
-  flyway: V37
-  acceptance: CANONICAL_ADDON_BACKEND953_POSTGRES_IDENTITY_API_HISTORY_ELIGIBILITY_PASS
-  evidence: PRODUCTION_ADDON_IDENTITY_20261006.md
+  flyway: V38
+  acceptance: UBER_7D573BE_PASS_CURRENT_ECE7724_POS_TASK_ACCEPTANCE_SEPARATE
+  evidence: UBER_TWO_STORE_RELEASE_20261022.md
   repair_evidence: PRODUCTION_ADDON_IDENTITY_20261006.md
   cleanup_evidence: PHASE_B_STAGING_SYNTHETIC_FIXTURE_CLEANUP_EXECUTION_EVIDENCE.md
-  runtime_observation_evidence: PRODUCTION_ADDON_IDENTITY_20261006.md
+  runtime_observation_evidence: UBER_TWO_STORE_RELEASE_20261022.md
   endpoint_policy_evidence: runtime/STAGING_ENDPOINT_POLICY_20260930_EVIDENCE.md
-  latest_backend_release_evidence: PRODUCTION_ADDON_IDENTITY_20261006.md
+  latest_backend_release_evidence: UBER_TWO_STORE_RELEASE_20261022.md
   endpoint_policy_gate: OWNER_CONFIRMED_STORE18_PRINTER_BINDINGS_PENDING
 
+  uber_verified_sha: 7d573be03d66a9505e0c68f92fa17829247f56e3
+  runtime_owner: INDEPENDENT_POS_TASK_SUBSEQUENT_DEPLOY
+  uber_worker_enabled: false
+
 production:
-  deployed_sha: ce35278b3569a4eacfa29efc01cadbf0c409bec6
+  deployed_sha: 7d573be03d66a9505e0c68f92fa17829247f56e3
   frontend_deployed_sha: 8c3a9e356f59cd025beff25f7fb1d5a20594e028
   canonical_url: https://pos.lanzhounoodlesmtl.com
   application_release: COMPLETE
@@ -38,26 +42,30 @@ production:
   uber_active_bindings: 0
   flyway: V37
   mutation_authorized: false
-  current_release_authorization: OWNER_20261021_UBER_REVIEWED_RELEASE_BACKUP_WORKER_DISABLED_TWO_STORE_PREPARATION_NO_UNVERIFIED_BINDING_OR_ORDER_IMPORT
-  evidence: PRODUCTION_ADDON_IDENTITY_20261006.md
-  runtime_observation_evidence: PRODUCTION_ADDON_IDENTITY_20261006.md
+  current_release_authorization: COMPLETED_OWNER_20261021_UBER_WORKER_DISABLED_RELEASE_NO_STANDING_FUTURE_AUTHORIZATION
+  evidence: UBER_TWO_STORE_RELEASE_20261022.md
+  runtime_observation_evidence: UBER_TWO_STORE_RELEASE_20261022.md
   canonical_addons_per_store: 15
   canonical_addon_assignments: 195
   addon_conflicts: 0
   addon_identity_api_acceptance: PASS_THREE_STORES
   addon_post_release_browser_acceptance: NOT_COMPLETED_CUA_CLIPBOARD_TIMEOUT
 
+  uber_receiver_enabled: false
+  uber_worker_enabled: false
+  pos_read_smoke: PASS_7_AUTHENTICATED_GETS_STORE_ISOLATION
+
 uber_readonly_webhook:
-  evidence: UBER_READONLY_WEBHOOK_READINESS_20261021.md
+  evidence: UBER_TWO_STORE_RELEASE_20261022.md
   target_global_mode: KITCHEN_MIRROR
   target_scopes: eats.store eats.store.orders.read
   isolated_postgres_mock_acceptance: PASS
-  uber_tests: PASS_98_FAILURES0_ERRORS0_SKIPS0_POSTGRES69
-  backend_verify: PASS_986_FAILURES0_ERRORS0_8_CONDITIONAL_SKIPS_3_RELEVANT_MIGRATION_TESTS_RERUN_PASS
+  uber_tests: PASS_109_FAILURES0_ERRORS0_SKIPS0_POSTGRES73
+  backend_verify: PASS_998_TOTAL_993_PASSED_FAILURES0_ERRORS0_5_UNRELATED_OPTIONAL_SKIPS
   agent6_review: ACCEPT_NO_REMAINING_P0_P1_P2
-  live_staging_deployed: false
-  live_staging_blocker: EXISTING_ACTIVE_SANDBOX_PAD_DIRECT_MODEL_REQUIRES_REVIEWED_WORKER_PAUSE_DEPLOYMENT
-  production_deployed: false
+  live_staging_deployed: true
+  live_staging_blocker: NONE_EXACT_7D573BE_RECEIVE_ONLY_ACCEPTANCE_PASS_SUBSEQUENT_POS_DEPLOY_SEPARATE
+  production_deployed: true
   production_signed_post: EXTERNALLY_BLOCKED_SIGNING_KEY_NOT_CONFIGURED
   production_registration_go: false
   production_order_import_go: false
@@ -73,6 +81,21 @@ uber_two_store_release:
   local_preparation_evidence: UBER_TWO_STORE_LOCAL_PREPARATION_20261022.md
   external_uuid_identity: NOT_YET_VERIFIED
   production_import_authorized_without_grants: false
+  followup_pr: 281
+  followup_merge_sha: 7d573be03d66a9505e0c68f92fa17829247f56e3
+  release_evidence: UBER_TWO_STORE_RELEASE_20261022.md
+  approved_local_modules_prepared: true
+  production_mapping_rules: 0
+  production_webhook_registered: false
+  production_signing_key_present: false
+  production_oauth_secret_present: false
+  actual_production_scopes: PENDING_DASHBOARD_REVIEW
+  order_webhook_role: UNVERIFIED
+  production_store_access: UNVERIFIED
+  saint_denis_device_freshness: NOT_PROVEN
+  sainte_catherine_printing: DISABLED_NO_ASSIGNMENTS_OR_PAD
+  activation_requires_new_core_code: false
+  controlled_pilot_ready: false
 
 uber_test_store_audit:
   observed_at: 2026-10-03T20:49:02Z
@@ -173,14 +196,14 @@ uber_store_capability:
   frontend_topnav_sidebar_routes_store_switch: PASS
   backend_scoped_api_reprint_worker_isolation: PASS
   disabled_runtime_api_denials: 11
-  production_desired_st_denis: DISABLED_OWNER_RELEASE_20261005
-  production_desired_st_catherine: DISABLED_OWNER_RELEASE_20261005
-  production_desired_chinatown: DISABLED_OWNER_RELEASE_20261005
+  production_desired_st_denis: LOCAL_MODULE_ENABLED_WORKER_FALSE_UNBOUND_OWNER_20261021
+  production_desired_st_catherine: LOCAL_MODULE_ENABLED_WORKER_FALSE_UNBOUND_OWNER_20261021
+  production_desired_chinatown: DISABLED
   production_mutation: NONE
 
 gate:
-  type: TECHNICAL
-  next_action: REVIEW_MERGE_EXACT_SHA_STAGING_THEN_PRODUCTION_WORKER_DISABLED_RELEASE
+  type: OWNER
+  next_action: PRIVATE_PRODUCTION_KEY_AND_VERIFIED_UUIDS_UBER_GRANTS_THEN_SEPARATELY_CONTROLLED_ACTIVATION
 
 authorization:
   uber_readonly_webhook: OWNER_20261021_MERGE280_REVIEW_FOLLOWUP_SAFE_STAGING_PRODUCTION_WORKER_DISABLED_TWO_STORE_PREPARATION
