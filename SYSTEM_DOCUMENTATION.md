@@ -9584,16 +9584,18 @@ V36 only adds a nullable TEXT field and does not migrate historical note content
 
 ## Production application and receive-only Uber preparation
 
-Production backend now uses the reviewed read-only Kitchen Mirror release
-`7d573be03d66a9505e0c68f92fa17829247f56e3`, retaining the existing frontend
-and V37 schema. Saint-Denis (Store1) and Sainte-Catherine (Store3) have their
-local `UBER_EATS` modules prepared; Chinatown (Store2) remains disabled.
-No Production Uber binding or menu mapping has been created. Production receiver
-and worker are both disabled because its actual Signing Key/credentials,
-external grants and verified Store identities are not yet available. This is
-code deployment and local preparation, not real Store activation. Current exact
-runtime/evidence references are in `docs/governance/CURRENT_STATE.yml`; shared
-Staging may be updated separately by the independent POS task.
+Production runs receive-only Kitchen Mirror: its independent Primary Signing Key
+is installed, Receiver enabled and Worker disabled with empty cutovers.
+Saint-Denis (Store1/org1) has the Owner-confirmed local production/KITCHEN_MIRROR
+binding; Sainte-Catherine (Store3) has its module prepared but no known Uber UUID.
+Chinatown (Store2) remains disabled. No formal Production menu mappings have
+been written: all299 approved semantic rules resolve locally in each target,
+but their live external Uber IDs remain unverified. Production OAuth credentials,
+remote grants and device proof are separate activation requirements. This is
+local preparation, not real Uber Store activation. Current exact runtime and
+[signed-receipt evidence](docs/governance/UBER_PRODUCTION_RECEIVER_20261022.md)
+are referenced from `docs/governance/CURRENT_STATE.yml`; the independent POS
+release preserves this Uber configuration when updating application images.
 
 Use the [two-store activation runbook](deployment/cloud/README_UBER_TWO_STORE_ACTIVATION.md)
 for independent Store cutovers and controlled receive-only bootstrap. Existing
