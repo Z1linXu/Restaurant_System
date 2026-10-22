@@ -184,39 +184,56 @@ add its verified UUID/cutover, retaining the first Store's unchanged watermark.
   durably retained; reconciliation checks the cancellation/edit ledger before
   any later release. No task/job state is reset by pause/resume.
 
-No scope grant alone enables printing. External confirmations plus data/config
-and controlled acceptance are the remaining work; no additional core API or UI
-development is required for these two Stores.
+No scope grant alone enables printing. The existing per-Store cutover gates need
+no new core API/UI. Actual-menu gaps remain independent: the4483 vegetable
+Combo broth decision may require an explicit capability or an authorized Uber
+menu change. Do not promise code-free activation before that decision.
 
 ## 4483-only preparation after the Production scope grant
 
 The 2026-10-22 Owner batch targets only Store1 at4483 Saint-Denis. Do not
-activate, bind or migrate Store3 as part of that batch. GTS Case60916651 granted
-`eats.store` and `eats.store.orders.read` to the Production Client ID and asked
-for the merchant UUID for manual integration. That email proves the grant
-decision; actual OAuth, Store Access and `order_webhook` remain separate checks.
-The accepted application is4b3abd1/V38. Do not replay the historical V37
-promotion/bootstrap or its old-image rollback over this runtime.
+activate, bind or migrate Store3 as part of that batch. Production OAuth returned
+HTTP200 with actual grants `eats.store` and `eats.store.orders.read`. Stores GET
+returned HTTP200 with one Store and the target UUID listed; single-Store GET
+returned HTTP200 and the4483 address. Menu GET returned HTTP200 with1 menu,
+5 categories,74 items and11 modifier groups. All41 roots and258 modifier contexts
+matched the approved TEST menu's stable IDs, groups, quantity and availability;
+only array order differed. The299 verified rules were persisted through the
+existing Mapping API with299 real OWNER audit records. Worker remains false;
+other Stores, catalogs and printers are unchanged. Actual-menu read-only preview
+validation found275 clean cases and25 REQUIRED_SOUP_BASE_MISSING warnings, all
+for Noodles with Vegetables Combo, with errors0 and RAW fallback0. Uber offers
+no broth choice for that root; Owner must confirm a fixed broth or require
+customer selection. Do not inject a default or count these warnings as PASS.
+These facts do not establish `order_webhook`, official notification delivery or
+activation approval. The accepted application is4b3abd1/V38; preserve the current
+application and never apply an earlier release's bootstrap or rollback.
 
 `configure-uber-4483-oauth-20261022.py` is the bounded same-image credential
 operator. It uses existing locks, canonical private Compose, validated database
-backup, HTTP acceptance and rollback helpers. On the verified server, run it
-from a real SSH TTY and enter the existing PROD App Client Secret at its hidden
-prompt. Never supply it as argv, shell text, a chat message or an exported file
-in Git. It refuses echo fallback, a different existing Secret, image drift,
+backup, HTTP acceptance and rollback helpers. The Production OAuth Secret is now
+configured in the runtime and canonical private model. Normal read-only API
+checks reuse that existing credential without running configuration again or
+requesting input. This one-time operator has completed; its fixed evidence root
+now exists, so directly rerunning main stops with OPERATION_ROOT_EXISTS_REVIEW_REQUIRED.
+Do not delete or overwrite that root. A necessary future reconfiguration requires
+reviewing a distinct evidence root and the then-current runtime boundary first.
+Only an absent credential in that reviewed operation requires a real SSH TTY
+and the existing PROD App Secret at the hidden prompt. Never supply it as argv, shell text, a chat message or a file in Git.
+It refuses echo fallback, a different existing Secret, image drift,
 unexpected bindings, nonempty cutovers or pending business queues. Only
 `UBER_EATS_CLIENT_SECRET` may change; Primary Signing Key, receiver=true,
 worker=false, all other environment values and unrelated containers stay intact.
 It does not create, rotate or revoke an Uber credential. OAuth POST is the only
 POST to Uber; the Eats calls are only Stores GET and the exact4483 Menu GET.
 
-If the current runtime and canonical private model already contain the same
-OAuth Secret, the same operator reuses it without prompting or requiring TTY.
+Within an eligible reviewed operation, matching runtime/canonical credentials
+are reused without prompting or requiring TTY; this does not bypass the
+existing-root guard.
 Conflicting models fail closed. Only an absent OAuth Secret requires hidden
 input; the Webhook Signing Key is never its substitute. A matching SigningKey
-input is rejected before any OAuth request. The original generic
-PRODUCTION_OAUTH_NOT_200 result cannot recover a discarded historical response.
-Current failures report bounded/sanitized HTTP status, allowlisted OAuth error,
+input is rejected before any OAuth request. Failures report bounded/sanitized
+HTTP status, allowlisted OAuth error,
 redacted error description and requested scopes; scope-denied200 also records
 allowlisted actual grants. Failure writes only0600 safe evidence to the existing
 root's sibling `uber-4483-final-20261022-oauth-failure.json`, without credential
@@ -227,6 +244,10 @@ The private output root is
 `/srv/restaurant-pos/production/uber-4483-final-20261022`. Token stays in memory;
 successful menu bytes and their authenticated read-proof are retained0600.
 Store count, target-listed flag and Menu HTTP status are separate evidence.
+The official Stores response identifies each entry by `store_id`; the reader
+uses that field first and accepts legacy `id` only when `store_id` is absent.
+If both fields exist but disagree, it rejects the complete list rather than
+silently claiming a target match. This parser behavior has focused test coverage.
 A Menu GET200 proves readable menu provenance, not `order_webhook`, remote
 Order Manager ownership or authorization to activate printing. A0-store list
 with a readable menu is a discrepancy to resolve with GTS before activation.
@@ -263,11 +284,16 @@ Exit2 is an incomplete/unverified candidate report, never an import approval.
 Without menu/read-proof the same command, omitting those two inputs, still
 exports the299 Store1 API payload candidates with verified0 and persistence
 disabled. Store3 candidates are excluded. The tool writes no mapping itself.
-Immediately before any later authorized import, re-read the local Store1
-catalog/FKs/eligibility, confirm worker=false, back up, then use the existing
-idempotent mapping API or an explicitly reviewed bounded maintenance transaction.
-Do not fabricate a platform ADMIN to bypass the binding API. Read back every
-rule and run actual-menu previews with no errors/warnings/RAW fallback.
+For a later mapping reconciliation, first read the existing299 rules and compare
+their natural keys and complete payloads with the verified manifest. Re-read the
+local Store1 catalog/FKs/eligibility, confirm worker=false and back up before any
+authorized difference is written through the existing Mapping API. Do not replay
+unchanged PUTs: they preserve mapping IDs but update timestamps and add audit
+records. Do not fabricate a platform ADMIN to bypass the binding API. Read back
+every rule and require actual-menu previews with no errors/warnings/RAW fallback.
+Preview success proves the mapped order projection. Check kitchen routing
+against the Store's current stations and shared eligibility rules separately;
+neither check creates an order, print job or physical-print acceptance.
 
 For activation, choose a fresh UTC cutover at the controlled field window;
 do not prefill a timestamp while access or Pad readiness is pending. Configure
