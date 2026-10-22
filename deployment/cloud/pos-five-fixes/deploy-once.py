@@ -20,7 +20,7 @@ HERE = Path(__file__).resolve().parent
 STAGING = Path('/srv/restaurant-pos/staging')
 DB = 'restaurant-pos-staging-db-1'
 OLD = {
-    'backend': 'sha256:5b9583ee43ad2ceeb9b47a08a47397cb8802a19f1d89366a0b0b04889ebbaaad',
+    'backend': 'sha256:6512955fe8b066855fa1e4b3675549cf4b10c975340b4f6d1db000aaff653f8b',
     'nginx': 'sha256:4bf301d4d547cc017be91c1e6d7c0d859cca345d4aed4db1696e32000e7048fc',
 }
 spec = importlib.util.spec_from_file_location('staging_ingress_model', HERE.parent / 'staging-ingress/apply-once.py')

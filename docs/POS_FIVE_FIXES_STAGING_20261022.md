@@ -27,7 +27,7 @@ printer dispatch or external order action is authorized by this release.
 - [x] Independent Agent 6 product/deployment review accepted after repairing
   dynamic Side bindings, category delete FKs, paid Remove bypass and deployment
   datasource overrides. Acceptance-script review and its 13 local fake tests passed.
-- [ ] Exact reviewed branch pushed and draft PR attached.
+- [x] Dedicated branch pushed; draft PR [#282](https://github.com/Z1linXu/Restaurant_System/pull/282) attached.
 - [ ] Staging application images replaced; V38 and public HTTPS verified.
 - [ ] Actual Staging orders/receipts/Update/reprints/Remove/UI acceptance recorded.
 
@@ -88,6 +88,17 @@ IDs/start/restart counts and Flyway ledger plus old Staging financial, option,
 task and print snapshots are checked for continuity.
 
 ## Deployment and acceptance results
+
+The first attempt at `19ba04bf0e42ae70b887b224c86a235715de46e1` stopped at
+the initial image identity guard, before backup/build/migration/container writes.
+A concurrent independent Staging operation had restored its backend to the
+known V37 ancestor `8eea8d47c9fe7906563d051196c703da7c14e198`, image
+`sha256:6512955fe8b066855fa1e4b3675549cf4b10c975340b4f6d1db000aaff653f8b`.
+Production containers/start/restart counts and migration ledger were unchanged.
+The helper's exact backend image pin was updated to this verified baseline;
+its actual model becomes the application rollback target. No broader image
+allowlist or bypass was added. The current branch includes that ancestor and
+the merged #280/#281 changes.
 
 Not yet claimed. This section will be replaced with exact deployed SHA, UTC
 time, V38 outcome, backup digest, actual orders/jobs/rendered text, browser
