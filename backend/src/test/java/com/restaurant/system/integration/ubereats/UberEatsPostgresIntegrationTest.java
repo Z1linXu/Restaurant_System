@@ -41,6 +41,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.*;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -143,10 +144,16 @@ class UberEatsPostgresIntegrationTest {
         config.setClientSecret("fixture-oauth-secret");
         config.setWebhookSigningKey("fixture-webhook-secret");
         processingGate.notBefore = "";
+        processingGate.storeCutovers = "";
         org =
                 id(
                         "insert into organizations(name,code,status) values ('Uber"
                                 + " fixture','UF-'||gen_random_uuid(),'active') returning id");
+        createStoreFixture(org);
+    }
+
+    void createStoreFixture(Long organizationId) {
+        org = organizationId;
         store =
                 id(
                         "insert into"
@@ -1079,6 +1086,282 @@ class UberEatsPostgresIntegrationTest {
             .extracting(r -> r.id).contains(enabled.id)
             .doesNotContainAnyElementsOf(disabledRows.stream().map(r -> r.id).toList());
         db.update("update store_modules set enabled=false where store_id=? and module_key='UBER_EATS'",disabledStore);
+    }
+
+    @Test
+    void twoActiveStoresUseIndependentMappingsAndKitchenRoutes() throws Exception {
+        var a = fixtureStore();
+        createStoreFixture(a.organization());
+        var b = fixtureStore();
+        try {
+            prepareIndependentMirrorStore(a, "A", "127.0.0.1", 9);
+            prepareIndependentMirrorStore(b, "B", "127.0.0.2", 10);
+            var sourceA = mappedStorePayload(a, UUID.randomUUID().toString(), "STORE_A_NOTE_ONLY");
+            var sourceB = mappedStorePayload(b, UUID.randomUUID().toString(), "STORE_B_NOTE_ONLY");
+            useFixtureStore(a);
+            var waitingA = notify(sourceA);
+            useFixtureStore(b);
+            var waitingB = notify(sourceB);
+            assertThat(waitingA.status).isEqualTo("WAITING_FOR_ACCEPTANCE");
+            assertThat(waitingB.status).isEqualTo("WAITING_FOR_ACCEPTANCE");
+            assertThat(count("orders", "store_id", a.store())).isZero();
+            assertThat(count("orders", "store_id", b.store())).isZero();
+
+            // A may be accepted while B is still CREATED; each Store has its own gate.
+            useFixtureStore(a);
+            var importedA = release(sourceA);
+            dispatch(importedA.localOrderId);
+            assertThat(row(waitingB.uberOrderId).localOrderId).isNull();
+            useFixtureStore(b);
+            var importedB = release(sourceB);
+            dispatch(importedB.localOrderId);
+            for (var entry : List.of(a, b)) {
+                useFixtureStore(entry);
+                var source = entry.store().equals(a.store()) ? sourceA : sourceB;
+                var imported = entry.store().equals(a.store()) ? importedA : importedB;
+                receive(event(UUID.randomUUID().toString(), "orders.notification", imported.uberOrderId));
+                receive(event(UUID.randomUUID().toString(), "orders.release", imported.uberOrderId));
+                imports.processEvents();
+                imports.recover();
+                dispatch(imported.localOrderId);
+                dispatch(imported.localOrderId);
+                assertThat(count("orders", "store_id", entry.store())).isOne();
+                assertThat(count("kitchen_tasks", "order_id", imported.localOrderId)).isOne();
+                assertThat(count("inventory_transactions", "inventory_item_id", entry.inventory())).isOne();
+                var localItems = items.findAllByOrderId(imported.localOrderId);
+                assertThat(localItems).hasSize(1).allSatisfy(line -> {
+                    assertThat(line.menu_item_id).isEqualTo(entry.item());
+                    assertThat(line.item_name_snapshot_zh).isEqualTo("门店" + (entry == a ? "A" : "B") + "牛肉面");
+                });
+                var addonOption = options.findAllByOrderItemIds(localItems.stream().map(line -> line.id).toList())
+                        .stream().filter(option -> "fried_egg".equals(option.option_code_snapshot)).findFirst().orElseThrow();
+                Long addonId = addons.getAddons(entry.store()).addons().stream()
+                        .filter(addon -> "fried_egg".equals(addon.code())).findFirst().orElseThrow().id();
+                assertThat(db.queryForObject("select store_addon_id from menu_item_options where id=?", Long.class, addonOption.option_id))
+                        .isEqualTo(addonId);
+                assertThat(db.queryForObject("select store_addon_store_id from menu_item_options where id=?", Long.class, addonOption.option_id))
+                        .isEqualTo(entry.store());
+                assertThat(addonOption.option_name_snapshot_zh).isEqualTo(entry == a ? "A店加煎蛋" : "B店加煎蛋");
+                String ownNote = source.at("/cart/special_instructions").asText();
+                String foreignNote = entry == a ? "STORE_B_NOTE_ONLY" : "STORE_A_NOTE_ONLY";
+                assertThat(orders.findById(imported.localOrderId).orElseThrow().external_order_note_snapshot).isEqualTo(ownNote);
+                var storeJobs = jobs.findAllByStoreIdAndOrderId(entry.store(), imported.localOrderId);
+                assertThat(storeJobs).hasSize(2).allSatisfy(job -> {
+                    assertThat(job.store_id).isEqualTo(entry.store());
+                    assertThat(job.organization_id).isEqualTo(a.organization());
+                    assertThat(job.executionMode).isEqualTo("PAD_DIRECT");
+                    assertThat(job.status).isEqualTo("PENDING");
+                    assertThat(job.rendered_text_snapshot).contains(ownNote).doesNotContain(foreignNote);
+                    assertThat(db.queryForObject("select store_id from printer_configs where id=?", Long.class, job.printer_id))
+                            .isEqualTo(entry.store());
+                });
+            }
+            Long addonA = addons.getAddons(a.store()).addons().get(0).id();
+            Long addonB = addons.getAddons(b.store()).addons().get(0).id();
+            assertThat(addonA).isNotEqualTo(addonB);
+            assertThat(db.queryForObject("select organization_addon_definition_id from store_addons where id=?", Long.class, addonA))
+                    .isEqualTo(db.queryForObject("select organization_addon_definition_id from store_addons where id=?", Long.class, addonB));
+            var deviceA = fixtureDevice(a, "A");
+            var deviceB = fixtureDevice(b, "B");
+            var pendingA = padPrinting.listPendingJobs(deviceA, a.store(), 25);
+            var pendingB = padPrinting.listPendingJobs(deviceB, b.store(), 25);
+            assertThat(pendingA).hasSize(2).allSatisfy(job -> {
+                assertThat(job.store_id).isEqualTo(a.store());
+                assertThat(job.order_id).isEqualTo(importedA.localOrderId);
+                assertThat(job.printer_endpoint).isEqualTo("127.0.0.1:9");
+            });
+            assertThat(pendingB).hasSize(2).allSatisfy(job -> {
+                assertThat(job.store_id).isEqualTo(b.store());
+                assertThat(job.order_id).isEqualTo(importedB.localOrderId);
+                assertThat(job.printer_endpoint).isEqualTo("127.0.0.2:10");
+            });
+            assertThatThrownBy(() -> padPrinting.listPendingJobs(deviceA, b.store(), 25))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(error -> assertThat(((ResponseStatusException) error).getStatusCode().value()).isEqualTo(403));
+            var claim = new com.restaurant.system.printing.dto.PadPrintJobClaimRequest();
+            claim.client_attempt_token = "fixture-cross-store-claim";
+            assertThatThrownBy(() -> padPrinting.claimJob(deviceA, pendingB.get(0).id, claim))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(error -> assertThat(((ResponseStatusException) error).getStatusCode().value()).isEqualTo(403));
+            assertThat(jobs.findById(pendingB.get(0).id).orElseThrow().claimedByDeviceId).isNull();
+            verify(client, never()).accept(anyString(), anyString());
+            verify(client, never()).deny(anyString(), anyString());
+        } finally {
+            finishFixtureWork(a, b);
+            useFixtureStore(a);
+        }
+    }
+
+    @Test
+    void sameOrgStoreEndpointsRejectForeignOrderMappingAndBinding() throws Exception {
+        var a = fixtureStore();
+        createStoreFixture(a.organization());
+        var b = fixtureStore();
+        try {
+            prepareIndependentMirrorStore(a, "A", "127.0.0.1", 9);
+            prepareIndependentMirrorStore(b, "B", "127.0.0.2", 10);
+            useFixtureStore(a);
+            var rowA = notify(mappedStorePayload(a, UUID.randomUUID().toString(), "A private note"));
+            useFixtureStore(b);
+            var rowB = notify(mappedStorePayload(b, UUID.randomUUID().toString(), "B private note"));
+            String baseA = "/api/v1/stores/" + a.store() + "/integrations/uber-eats";
+            String baseB = "/api/v1/stores/" + b.store() + "/integrations/uber-eats";
+            mvc.perform(get(baseB + "/connection").requestAttr(RequestUserContextService.AUTHENTICATED_USER_ATTRIBUTE, a.actor()))
+                    .andExpect(status().isForbidden());
+            db.update("update store_memberships set role_code='OWNER' where user_id=? and store_id=?", a.actorId(), a.store());
+            db.update("insert into store_memberships(user_id,store_id,role_code,is_active,created_at,updated_at) values (?,?,'OWNER',true,now(),now())", a.actorId(), b.store());
+            db.update("insert into organization_memberships(user_id,organization_id,role_code,is_active,created_at,updated_at) values (?,?,'OWNER',true,now(),now())", a.actorId(), a.organization());
+            var owner = new AuthenticatedUser(a.actorId(), a.store(), a.actor().roleId(), "fixture", "Shared Owner", "OWNER");
+            mvc.perform(get(baseA + "/connection").requestAttr(RequestUserContextService.AUTHENTICATED_USER_ATTRIBUTE, owner))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.data.store.storeId").value(a.store()));
+            mvc.perform(get(baseB + "/connection").requestAttr(RequestUserContextService.AUTHENTICATED_USER_ATTRIBUTE, owner))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.data.store.storeId").value(b.store()));
+            mvc.perform(post(baseA + "/orders/" + rowB.id + "/retry-local")
+                            .requestAttr(RequestUserContextService.AUTHENTICATED_USER_ATTRIBUTE, owner))
+                    .andExpect(status().isForbidden());
+            mvc.perform(get(baseA + "/mapping-options/" + b.item())
+                            .requestAttr(RequestUserContextService.AUTHENTICATED_USER_ATTRIBUTE, owner))
+                    .andExpect(status().isConflict());
+            var foreignMapping = new UberEatsMenuMapping();
+            foreignMapping.kind = "ITEM";
+            foreignMapping.identifierType = "ID";
+            foreignMapping.uberIdentifier = "foreign-local-item";
+            foreignMapping.localMenuItemId = b.item();
+            mvc.perform(put(baseA + "/mappings").contentType("application/json")
+                            .content(json.writeValueAsString(foreignMapping))
+                            .requestAttr(RequestUserContextService.AUTHENTICATED_USER_ATTRIBUTE, owner))
+                    .andExpect(status().isConflict()).andExpect(jsonPath("$.message").value("LOCAL_ITEM_NOT_IN_STORE"));
+            var admin = new AuthenticatedUser(a.actorId(), a.store(), a.actor().roleId(), "fixture", "Platform Admin", "ADMIN");
+            assertThatThrownBy(() -> configuration.bind(a.store(), b.uberStore(), admin))
+                    .isInstanceOf(UberEatsException.class).hasMessage("UBER_STORE_ALREADY_BOUND");
+            Long addonB = addons.getAddons(b.store()).addons().get(0).id();
+            assertThatThrownBy(() -> addons.setEligibility(a.item(), addonB, true, a.store()))
+                    .hasMessageContaining("ADDON_STORE_MISMATCH");
+            assertThat(tx.scoped(a.store(), rowA.id).localOrderId).isNull();
+            assertThat(tx.scoped(b.store(), rowB.id).localOrderId).isNull();
+            assertThat(configuration.connection(a.store()).mappings()).allSatisfy(rule -> assertThat(rule.localMenuItemId).isEqualTo(a.item()));
+            assertThat(configuration.connection(b.store()).mappings()).allSatisfy(rule -> assertThat(rule.localMenuItemId).isEqualTo(b.item()));
+            assertThat(count("orders", "store_id", a.store())).isZero();
+            assertThat(count("orders", "store_id", b.store())).isZero();
+            verify(client, never()).accept(anyString(), anyString());
+            verify(client, never()).deny(anyString(), anyString());
+        } finally {
+            finishFixtureWork(a, b);
+            useFixtureStore(a);
+        }
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"MODULE_OFF", "BINDING_OFF"})
+    void disabledStoreCannotPauseOtherStoreMirror(String disabledMode) {
+        var a = fixtureStore();
+        createStoreFixture(a.organization());
+        var b = fixtureStore();
+        try {
+            prepareIndependentMirrorStore(a, "A", "127.0.0.1", 9);
+            prepareIndependentMirrorStore(b, "B", "127.0.0.2", 10);
+            useFixtureStore(a);
+            var waitingA = notify(mappedStorePayload(a, UUID.randomUUID().toString(), "A pending"));
+            for (int index = 0; index < 12; index++) {
+                var source = mappedStorePayload(a, UUID.randomUUID().toString(), "A backlog");
+                when(client.getOrder(source.path("id").asText())).thenReturn(source);
+                receive(event(UUID.randomUUID().toString(), "orders.notification", source.path("id").asText()));
+            }
+            due(waitingA.id);
+            if ("MODULE_OFF".equals(disabledMode))
+                db.update("update store_modules set enabled=false where store_id=? and module_key='UBER_EATS'", a.store());
+            else db.update("update uber_eats_store_mappings set enabled=false where id=?", a.binding().id);
+            clearInvocations(client);
+            var sourceB = mappedStorePayload(b, UUID.randomUUID().toString(), "B continues");
+            useFixtureStore(b);
+            var waitingB = notify(sourceB);
+            assertThat(waitingB.status).isEqualTo("WAITING_FOR_ACCEPTANCE");
+            sourceB.put("current_state", "ACCEPTED");
+            due(waitingB.id);
+            imports.recover();
+            var importedB = row(waitingB.uberOrderId);
+            assertThat(importedB.status).isEqualTo("RELEASED_TO_KITCHEN");
+            dispatch(importedB.localOrderId);
+            assertThat(row(waitingA.uberOrderId).localOrderId).isNull();
+            assertThat(count("orders", "store_id", a.store())).isZero();
+            assertThat(count("print_jobs", "store_id", a.store())).isZero();
+            assertThat(count("inventory_transactions", "inventory_item_id", a.inventory())).isZero();
+            assertThat(count("orders", "store_id", b.store())).isOne();
+            assertThat(count("print_jobs", "store_id", b.store())).isEqualTo(2);
+            assertThat(count("kitchen_tasks", "order_id", importedB.localOrderId)).isOne();
+            assertThat(db.queryForObject("select count(*) from uber_eats_events where uber_store_id=? and status='PENDING'", Long.class, a.uberStore())).isEqualTo(12);
+            verify(client, never()).getOrder(waitingA.uberOrderId);
+            verify(client, never()).accept(anyString(), anyString());
+            verify(client, never()).deny(anyString(), anyString());
+        } finally {
+            finishFixtureWork(a, b);
+            useFixtureStore(a);
+        }
+    }
+
+    record FixtureStore(Long store, Long organization, Long item, Long station, Long category,
+                        Long inventory, Long actorId, AuthenticatedUser actor,
+                        UberEatsStoreMapping binding, String uberStore) {}
+
+    FixtureStore fixtureStore() {
+        return new FixtureStore(store, org, item, station, category, inventory, actorId, actor, binding, uberStore);
+    }
+
+    void useFixtureStore(FixtureStore value) {
+        store = value.store(); org = value.organization(); item = value.item();
+        station = value.station(); category = value.category(); inventory = value.inventory();
+        actorId = value.actorId(); actor = value.actor(); binding = value.binding(); uberStore = value.uberStore();
+    }
+
+    void prepareIndependentMirrorStore(FixtureStore value, String label, String host, int port) {
+        useFixtureStore(value);
+        config.processingMode = "KITCHEN_MIRROR";
+        config.scopes = "eats.store eats.store.orders.read";
+        mirrorMode();
+        db.update("update stores set printing_mode='PAD_DIRECT' where id=?", store);
+        db.update("update menu_items set name_zh=? where id=?", "门店" + label + "牛肉面", item);
+        db.update("update printer_configs set ip_address=?,port=? where store_id=?", host, port, store);
+        addons.reconcile(store, false);
+        Long addonId = addons.getAddons(store).addons().stream().filter(addon -> "fried_egg".equals(addon.code())).findFirst().orElseThrow().id();
+        var update = new com.restaurant.system.menu.addon.StoreAddonService.WriteRequest();
+        update.name_zh = label + "店加煎蛋"; update.name_en = label + " Extra Fried Egg";
+        update.price = new java.math.BigDecimal("A".equals(label) ? "1.99" : "2.49"); update.active = true;
+        addons.update(addonId, update);
+        var itemRule = new UberEatsMenuMapping();
+        itemRule.kind = "ITEM"; itemRule.identifierType = "ID"; itemRule.uberIdentifier = "uber-noodle";
+        itemRule.localMenuItemId = item;
+        configuration.saveMapping(store, itemRule, actor);
+        var addonRule = new UberEatsMenuMapping();
+        addonRule.kind = "MODIFIER"; addonRule.identifierType = "ID"; addonRule.uberIdentifier = "egg";
+        addonRule.uberItemId = "uber-noodle"; addonRule.localMenuItemId = item;
+        addonRule.localOptionCode = "fried_egg"; addonRule.localOptionGroup = "ADD_ON";
+        configuration.saveMapping(store, addonRule, actor);
+    }
+
+    ObjectNode mappedStorePayload(FixtureStore value, String orderId, String note) {
+        useFixtureStore(value);
+        var source = payload(orderId);
+        ((ObjectNode) source.at("/cart/items/0")).put("external_data", "");
+        ((ObjectNode) source.at("/cart/items/0/selected_modifier_groups/0/selected_items/1")).put("external_data", "");
+        source.withObject("/cart").put("special_instructions", note);
+        return source;
+    }
+
+    com.restaurant.system.printing.entity.StoreDevice fixtureDevice(FixtureStore value, String label) {
+        var device = new com.restaurant.system.printing.entity.StoreDevice();
+        device.storeId = value.store(); device.organizationId = value.organization();
+        device.deviceName = "Fixture " + label; device.deviceType = "ANDROID_PAD";
+        device.deviceTokenHash = "fixture-only-" + UUID.randomUUID();
+        device.status = "ACTIVE"; device.isActive = true;
+        device.createdAt = LocalDateTime.now(); device.updatedAt = device.createdAt;
+        return devices.save(device);
+    }
+
+    void finishFixtureWork(FixtureStore... values) {
+        for (var value : values) {
+            db.update("update uber_eats_events set status='COMPLETED' where environment='sandbox' and uber_store_id=?", value.uberStore());
+            db.update("update uber_eats_orders set next_attempt_at=null where store_id=?", value.store());
+        }
     }
 
     @Test

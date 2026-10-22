@@ -1879,6 +1879,11 @@ the Sandbox default.
 
 Production worker startup additionally requires an explicit UTC ISO-8601
 `UBER_EATS_PROCESSING_NOT_BEFORE`. Old pending events become `HELD_CUTOVER`,
+and `UBER_EATS_STORE_CUTOVERS` must contain at least one verified Uber Store UUID
+mapped to its UTC Z cutover. Unlisted Production Stores cannot import; each
+listed Store uses the later global/store boundary. A single-Store resume must
+advance that Store's boundary before re-enabling its module; this does not
+change another Store's cutoff. Existing Store module update APIs are reused.
 delayed old/unusable `placed_at` cannot be imported, and existing unimported
 pre-cutover orders require `CUTOVER_REVIEW_REQUIRED`. Held notification/release
 receipts are never automatically promoted. Held cancel/edit safety events are

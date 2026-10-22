@@ -104,7 +104,7 @@ public class UberEatsOrderTransactions {
         if (!("PENDING".equals(e.status) || disruptive && "HELD_RECEIVE_ONLY".equals(e.status))
                 || e.nextAttemptAt.isAfter(LocalDateTime.now()))
             return false;
-        if (!disruptive && !processingGate.permitsReceipt(e.createdAt)) {
+        if (!disruptive && !processingGate.permitsReceipt(e.uberStoreId, e.createdAt)) {
             holdEvent(e, "CUTOVER_EVENT_BEFORE_START");
             return false;
         }
@@ -125,7 +125,7 @@ public class UberEatsOrderTransactions {
         processingGate.requireProcessing();
         var e = events.lock(eventId).orElseThrow();
         if (!"PENDING".equals(e.status)) return;
-        if (!processingGate.permitsReceipt(e.createdAt)) {
+        if (!processingGate.permitsReceipt(e.uberStoreId, e.createdAt)) {
             holdEvent(e, "CUTOVER_EVENT_BEFORE_START");
             return;
         }
@@ -136,7 +136,7 @@ public class UberEatsOrderTransactions {
         requireMapping(store.id);
         if (!e.uberOrderId.equals(snapshot.id()) || !e.uberStoreId.equals(snapshot.store_id()))
             throw UberEatsException.conflict("UBER_RESPONSE_STORE_MISMATCH");
-        if (!processingGate.permitsPlaced(snapshot.placed_at())) {
+        if (!processingGate.permitsPlaced(e.uberStoreId, snapshot.placed_at())) {
             holdEvent(e, "CUTOVER_ORDER_BEFORE_START");
             return;
         }
@@ -209,6 +209,13 @@ public class UberEatsOrderTransactions {
                         .orElseThrow(() -> UberEatsException.conflict("STORE_MAPPING_MISSING"));
         store = stores.lock(store.id).orElseThrow();
         requireMapping(store.id);
+        var existing = orders.findByEnvironmentAndUberOrderId(config.environment, e.uberOrderId)
+                .orElse(null);
+        if (!processingGate.permitsStore(e.uberStoreId)
+                && (existing == null || existing.localOrderId == null)) {
+            holdEvent(e, "CUTOVER_STORE_NOT_ACTIVATED");
+            return;
+        }
         orders.insertIfAbsent(
                 config.environment,
                 store.id,
@@ -270,7 +277,7 @@ public class UberEatsOrderTransactions {
         scoped(storeId, id);
         var row = lockOrder(id);
         requireOrderManager(row);
-        if (!processingGate.permitsPlaced(snapshot.placed_at()))
+        if (!processingGate.permitsPlaced(row.uberStoreId, snapshot.placed_at()))
             throw UberEatsException.conflict("CUTOVER_ORDER_REQUIRES_REVIEW");
         if (row.localOrderId != null
                 || "DENIED".equals(row.status)
@@ -614,7 +621,7 @@ public class UberEatsOrderTransactions {
             throw UberEatsException.conflict("MIRROR_MODE_REQUIRED");
         if (!row.uberOrderId.equals(snapshot.id()) || !row.uberStoreId.equals(snapshot.store_id()))
             throw UberEatsException.conflict("UBER_RESPONSE_STORE_MISMATCH");
-        if (!processingGate.permitsOrder(row) || !processingGate.permitsPlaced(snapshot.placed_at())) {
+        if (!processingGate.permitsOrder(row) || !processingGate.permitsPlaced(row.uberStoreId, snapshot.placed_at())) {
             holdOrder(row);
             return false;
         }
