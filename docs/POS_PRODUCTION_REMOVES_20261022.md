@@ -217,3 +217,5 @@ Production Mutation：本轮授权的 B/F替换、V38及三Store受控18补齐/�
 | Production Deploy / Acceptance | Estimated 4 min | 同镜像提升、V38、3个独立Store事务/replay、独立只读回查 |
 | Evidence / Governance | Estimated 10 min | 私密归档、脱敏摘要/截图、actual state、文档；与验收交叉 |
 | Total | Estimated 43 min | 04:32 UTC开始，约05:15 UTC完成证据收口；最终Owner回复报告实际Stop时间 |
+
+收口 fresh main 另整合 PR #286 / `79f75cf` 的独立 Uber 配置证据（仅文档）。其上线后签名探针已在APP4b/V38验证200/401/400/duplicate/held；Dashboard webhook注册已由该任务只读核实。保留其receiver、Store1binding、candidate-only映射及外部授权阻塞事实，不重测/修改任何Uber业务状态。本轮日志中的第二条held事件对应并行验证。参见[独立Uber证据](governance/UBER_PRODUCTION_RECEIVER_20261022.md)。
