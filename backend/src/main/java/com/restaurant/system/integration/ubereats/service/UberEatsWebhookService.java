@@ -159,7 +159,9 @@ public class UberEatsWebhookService {
                         storeId,
                         orderId,
                         hash,
-                        EVENTS.contains(type) ? "PENDING" : "IGNORED",
+                        EVENTS.contains(type)
+                                ? (config.workerEnabled ? "PENDING" : "HELD_RECEIVE_ONLY")
+                                : "IGNORED",
                         now);
         if (inserted == 0) {
             var existing =
@@ -168,7 +170,7 @@ public class UberEatsWebhookService {
                 throw UberEatsException.conflict("WEBHOOK_EVENT_CONFLICT");
             return;
         }
-        if (!EVENTS.contains(type)) return;
+        if (!EVENTS.contains(type) || !config.workerEnabled) return;
         var mapping =
                 stores.findByEnvironmentAndUberStoreId(config.environment, storeId).orElse(null);
         if (mapping == null || !Boolean.TRUE.equals(mapping.enabled))
@@ -177,9 +179,12 @@ public class UberEatsWebhookService {
         entityManager.refresh(mapping, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         if (!Boolean.TRUE.equals(mapping.enabled)
                 || !modules.evaluateCapability(mapping.storeId, com.restaurant.system.modules.ModuleKeys.UBER_EATS).allowed()) return;
-        orders.insertIfAbsent(
-                config.environment, mapping.id, mapping.storeId, storeId, orderId, eventId, now);
-        var row = orders.findByEnvironmentAndUberOrderId(config.environment, orderId).orElseThrow();
+        // A global read-only ceiling cannot inherit the legacy binding default.
+        if (config.kitchenMirror() && !"KITCHEN_MIRROR".equals(mapping.processingMode)) return;
+        // Receipt never creates an integration order. The asynchronous import owns that phase.
+        // Keep immediate disruptive guards for an existing in-flight decision.
+        var row = orders.findByEnvironmentAndUberOrderId(config.environment, orderId).orElse(null);
+        if (row == null) return;
         row = orders.lock(row.id).orElseThrow();
         entityManager.refresh(row, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         if (!row.storeMappingId.equals(mapping.id))

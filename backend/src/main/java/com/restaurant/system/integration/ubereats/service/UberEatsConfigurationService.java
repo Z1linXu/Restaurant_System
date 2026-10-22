@@ -113,6 +113,7 @@ public class UberEatsConfigurationService {
         row.uberStoreId = uberId;
         row.storeId = storeId;
         row.organizationId = local.organization_id;
+        row.processingMode = config.processingMode;
         row.enabled = true;
         row.createdAt = LocalDateTime.now();
         stores.save(row);
@@ -133,6 +134,8 @@ public class UberEatsConfigurationService {
         modules.requireCapability(storeId, com.restaurant.system.modules.ModuleKeys.UBER_EATS);
         if (!Set.of("ORDER_MANAGER", "KITCHEN_MIRROR").contains(empty(mode)))
             throw UberEatsException.conflict("PROCESSING_MODE_INVALID");
+        if (config.kitchenMirror() && !"KITCHEN_MIRROR".equals(mode))
+            throw UberEatsException.conflict("KITCHEN_MIRROR_REMOTE_DECISION_DISABLED");
         var binding = stores.findByEnvironmentAndStoreId(config.environment, storeId).orElseThrow();
         binding = stores.lock(binding.id).orElseThrow();
         if (Objects.equals(mode, binding.processingMode)) return binding;

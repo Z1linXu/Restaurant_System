@@ -78,6 +78,9 @@ public class UberEatsOrderClient {
     }
 
     private void post(String id, String action, Object body) {
+        // Global permission ceiling applies even before any Store binding is available.
+        properties.requireOrderManagerMode();
+        properties.requireProcessingEnabled();
         try {
             var response =
                     http.post()
