@@ -1,0 +1,437 @@
+{
+  "environment": "production",
+  "source_sha": "4b3abd1349e66a146c36ac310b6a8b48bb2ad572",
+  "stores": [
+    {
+      "store_id": 1,
+      "store_name": "4483 R. Saint-Denis",
+      "store_code": "4483_R_SAINT_DENIS",
+      "organization_id": 1,
+      "shared_before": 0,
+      "shared_after": 18,
+      "linked": 53,
+      "conflicts": 54,
+      "legacy_unlinked": 57,
+      "eligibility_changes": 0,
+      "semantics": [
+        {
+          "code": "cilantro",
+          "semantic_code": "cilantro",
+          "name_zh": "\u8d70\u9999",
+          "item_count": 8
+        },
+        {
+          "code": "green_onion",
+          "semantic_code": "green_onion",
+          "name_zh": "\u8d70\u8471",
+          "item_count": 7
+        },
+        {
+          "code": "beef",
+          "semantic_code": "beef",
+          "name_zh": "\u8d70\u725b",
+          "item_count": 3
+        },
+        {
+          "code": "radish",
+          "semantic_code": "radish",
+          "name_zh": "\u8d70\u841d",
+          "item_count": 3
+        },
+        {
+          "code": "noodle",
+          "semantic_code": "noodle",
+          "name_zh": "\u8d70\u9762",
+          "item_count": 4
+        },
+        {
+          "code": "less_noodle",
+          "semantic_code": "less_noodle",
+          "name_zh": "\u5c11\u9762",
+          "item_count": 4
+        },
+        {
+          "code": "bok_choy",
+          "semantic_code": "bok_choy",
+          "name_zh": "\u8d70\u4e0a\u6d77\u9752",
+          "item_count": 3
+        },
+        {
+          "code": "broccoli",
+          "semantic_code": "broccoli",
+          "name_zh": "\u8d70\u897f\u5170",
+          "item_count": 5
+        },
+        {
+          "code": "corn",
+          "semantic_code": "corn",
+          "name_zh": "\u8d70\u7389\u7c73",
+          "item_count": 1
+        },
+        {
+          "code": "mushroom",
+          "semantic_code": "mushroom",
+          "name_zh": "\u8d70\u83c7",
+          "item_count": 1
+        },
+        {
+          "code": "seaweed",
+          "semantic_code": "seaweed",
+          "name_zh": "\u8d70\u6d77",
+          "item_count": 1
+        },
+        {
+          "code": "carrot",
+          "semantic_code": "carrot",
+          "name_zh": "\u8d70\u80e1",
+          "item_count": 0
+        },
+        {
+          "code": "cucumber",
+          "semantic_code": "cucumber",
+          "name_zh": "\u8d70\u9ec4\u74dc",
+          "item_count": 0
+        },
+        {
+          "code": "edamame",
+          "semantic_code": "edamame",
+          "name_zh": "\u8d70\u6bdb\u8c46",
+          "item_count": 1
+        },
+        {
+          "code": "peanut",
+          "semantic_code": "peanut",
+          "name_zh": "\u8d70\u82b1\u751f",
+          "item_count": 4
+        },
+        {
+          "code": "cabbage",
+          "semantic_code": "cabbage",
+          "name_zh": "\u8d70\u5305",
+          "item_count": 4
+        },
+        {
+          "code": "meat",
+          "semantic_code": "meat",
+          "name_zh": "\u8d70\u8089",
+          "item_count": 0
+        },
+        {
+          "code": "green_pepper",
+          "semantic_code": "green_pepper",
+          "name_zh": "\u8d70\u9752\u6912",
+          "item_count": 4
+        }
+      ],
+      "printing_rows": 18,
+      "active_rule_revision_id": 5,
+      "active_rule_revision_number": 2,
+      "rule_unchanged": true,
+      "validate": "PASS",
+      "preview_multiple_prefix_remove": "PASS",
+      "menu_categories_sha256": "a383d755b27c22ed8d3a45eb05a1ea218f379b511dfc19a10b3bb9459c968c17"
+    },
+    {
+      "store_id": 2,
+      "store_name": "CHINATOWN",
+      "store_code": "CHINATOWN",
+      "organization_id": 1,
+      "shared_before": 0,
+      "shared_after": 18,
+      "linked": 53,
+      "conflicts": 54,
+      "legacy_unlinked": 57,
+      "eligibility_changes": 0,
+      "semantics": [
+        {
+          "code": "cilantro",
+          "semantic_code": "cilantro",
+          "name_zh": "\u8d70\u9999",
+          "item_count": 7
+        },
+        {
+          "code": "green_onion",
+          "semantic_code": "green_onion",
+          "name_zh": "\u8d70\u8471",
+          "item_count": 7
+        },
+        {
+          "code": "beef",
+          "semantic_code": "beef",
+          "name_zh": "\u8d70\u725b",
+          "item_count": 3
+        },
+        {
+          "code": "radish",
+          "semantic_code": "radish",
+          "name_zh": "\u8d70\u841d",
+          "item_count": 3
+        },
+        {
+          "code": "noodle",
+          "semantic_code": "noodle",
+          "name_zh": "\u8d70\u9762",
+          "item_count": 4
+        },
+        {
+          "code": "less_noodle",
+          "semantic_code": "less_noodle",
+          "name_zh": "\u5c11\u9762",
+          "item_count": 4
+        },
+        {
+          "code": "bok_choy",
+          "semantic_code": "bok_choy",
+          "name_zh": "\u8d70\u4e0a\u6d77\u9752",
+          "item_count": 3
+        },
+        {
+          "code": "broccoli",
+          "semantic_code": "broccoli",
+          "name_zh": "\u8d70\u897f\u5170",
+          "item_count": 5
+        },
+        {
+          "code": "corn",
+          "semantic_code": "corn",
+          "name_zh": "\u8d70\u7389\u7c73",
+          "item_count": 1
+        },
+        {
+          "code": "mushroom",
+          "semantic_code": "mushroom",
+          "name_zh": "\u8d70\u83c7",
+          "item_count": 1
+        },
+        {
+          "code": "seaweed",
+          "semantic_code": "seaweed",
+          "name_zh": "\u8d70\u6d77",
+          "item_count": 1
+        },
+        {
+          "code": "carrot",
+          "semantic_code": "carrot",
+          "name_zh": "\u8d70\u80e1",
+          "item_count": 0
+        },
+        {
+          "code": "cucumber",
+          "semantic_code": "cucumber",
+          "name_zh": "\u8d70\u9ec4\u74dc",
+          "item_count": 0
+        },
+        {
+          "code": "edamame",
+          "semantic_code": "edamame",
+          "name_zh": "\u8d70\u6bdb\u8c46",
+          "item_count": 1
+        },
+        {
+          "code": "peanut",
+          "semantic_code": "peanut",
+          "name_zh": "\u8d70\u82b1\u751f",
+          "item_count": 3
+        },
+        {
+          "code": "cabbage",
+          "semantic_code": "cabbage",
+          "name_zh": "\u8d70\u5305",
+          "item_count": 4
+        },
+        {
+          "code": "meat",
+          "semantic_code": "meat",
+          "name_zh": "\u8d70\u8089",
+          "item_count": 0
+        },
+        {
+          "code": "green_pepper",
+          "semantic_code": "green_pepper",
+          "name_zh": "\u8d70\u9752\u6912",
+          "item_count": 4
+        }
+      ],
+      "printing_rows": 18,
+      "active_rule_revision_id": 10,
+      "active_rule_revision_number": 6,
+      "rule_unchanged": true,
+      "validate": "PASS",
+      "preview_multiple_prefix_remove": "PASS",
+      "menu_categories_sha256": "6a3ea8d31a9589f5541d4c678d8daaea3e7e40c32ebd6f50f0970149649a9952"
+    },
+    {
+      "store_id": 3,
+      "store_name": "St. Catherine",
+      "store_code": "ST_CATHERINE",
+      "organization_id": 1,
+      "shared_before": 0,
+      "shared_after": 18,
+      "linked": 53,
+      "conflicts": 54,
+      "legacy_unlinked": 57,
+      "eligibility_changes": 0,
+      "semantics": [
+        {
+          "code": "cilantro",
+          "semantic_code": "cilantro",
+          "name_zh": "\u8d70\u9999",
+          "item_count": 8
+        },
+        {
+          "code": "green_onion",
+          "semantic_code": "green_onion",
+          "name_zh": "\u8d70\u8471",
+          "item_count": 7
+        },
+        {
+          "code": "beef",
+          "semantic_code": "beef",
+          "name_zh": "\u8d70\u725b",
+          "item_count": 3
+        },
+        {
+          "code": "radish",
+          "semantic_code": "radish",
+          "name_zh": "\u8d70\u841d",
+          "item_count": 3
+        },
+        {
+          "code": "noodle",
+          "semantic_code": "noodle",
+          "name_zh": "\u8d70\u9762",
+          "item_count": 4
+        },
+        {
+          "code": "less_noodle",
+          "semantic_code": "less_noodle",
+          "name_zh": "\u5c11\u9762",
+          "item_count": 4
+        },
+        {
+          "code": "bok_choy",
+          "semantic_code": "bok_choy",
+          "name_zh": "\u8d70\u4e0a\u6d77\u9752",
+          "item_count": 3
+        },
+        {
+          "code": "broccoli",
+          "semantic_code": "broccoli",
+          "name_zh": "\u8d70\u897f\u5170",
+          "item_count": 5
+        },
+        {
+          "code": "corn",
+          "semantic_code": "corn",
+          "name_zh": "\u8d70\u7389\u7c73",
+          "item_count": 1
+        },
+        {
+          "code": "mushroom",
+          "semantic_code": "mushroom",
+          "name_zh": "\u8d70\u83c7",
+          "item_count": 1
+        },
+        {
+          "code": "seaweed",
+          "semantic_code": "seaweed",
+          "name_zh": "\u8d70\u6d77",
+          "item_count": 1
+        },
+        {
+          "code": "carrot",
+          "semantic_code": "carrot",
+          "name_zh": "\u8d70\u80e1",
+          "item_count": 0
+        },
+        {
+          "code": "cucumber",
+          "semantic_code": "cucumber",
+          "name_zh": "\u8d70\u9ec4\u74dc",
+          "item_count": 0
+        },
+        {
+          "code": "edamame",
+          "semantic_code": "edamame",
+          "name_zh": "\u8d70\u6bdb\u8c46",
+          "item_count": 1
+        },
+        {
+          "code": "peanut",
+          "semantic_code": "peanut",
+          "name_zh": "\u8d70\u82b1\u751f",
+          "item_count": 4
+        },
+        {
+          "code": "cabbage",
+          "semantic_code": "cabbage",
+          "name_zh": "\u8d70\u5305",
+          "item_count": 4
+        },
+        {
+          "code": "meat",
+          "semantic_code": "meat",
+          "name_zh": "\u8d70\u8089",
+          "item_count": 0
+        },
+        {
+          "code": "green_pepper",
+          "semantic_code": "green_pepper",
+          "name_zh": "\u8d70\u9752\u6912",
+          "item_count": 4
+        }
+      ],
+      "printing_rows": 18,
+      "active_rule_revision_id": 6,
+      "active_rule_revision_number": 2,
+      "rule_unchanged": true,
+      "validate": "PASS",
+      "preview_multiple_prefix_remove": "PASS",
+      "menu_categories_sha256": "a33ad1a0976613e1069ea8c172a2ba8d8f2fe022cb78bb837926525f5ac264a2"
+    }
+  ],
+  "password_login": "NOT_TESTED_NO_PRODUCTION_PRIVATE_PASSWORD",
+  "apply": true,
+  "script_sha": "d32fa709f2e895ebc4ebf729e8b546d6fd043df8",
+  "accepted": true,
+  "health": "PASS",
+  "images": {
+    "backend": "sha256:c79b6bd78a2f82a4b95eb15472b5a82820a2c48248d94e334fb983969d3a80c5",
+    "nginx": "sha256:2b0749d39545a4eae784b29315be78aac0b5866dc069fb6c60372ad82ee4387b"
+  },
+  "safety_before": {
+    "menu": "ad541da4072624a2b3733b738520cea3",
+    "items": "4d6090ffa760932ecd5c9a24f8a73f17",
+    "pricing": "5004ee9a924532db506e41de310aadfe",
+    "combo_groups": "c464d37d5f508960dc1718990119ecc8",
+    "combo_components": "716307d7c846eea07e08eef919419cae",
+    "printers": "a0688de0474efeb26b22694948c3df10",
+    "assignments": "2442cf9021274753b23094ed8ebf9c96",
+    "device_pairing": "bac85826c0b6e77d6dbeeef2eb9ce4b8",
+    "modes": "03c4393904e5dbf7017787d66dac8870",
+    "uber_mappings": "00fec9df489953473a1c33e66119c328",
+    "uber_menu": "d41d8cd98f00b204e9800998ecf8427e",
+    "uber_events": "32d16a8ce8f68be3807af4552cadeb4c",
+    "uber_orders": "d41d8cd98f00b204e9800998ecf8427e",
+    "published_rules": "b68dd3183e650fe6da3dd48955cc99fc"
+  },
+  "safety_after": {
+    "menu": "ad541da4072624a2b3733b738520cea3",
+    "items": "4d6090ffa760932ecd5c9a24f8a73f17",
+    "pricing": "5004ee9a924532db506e41de310aadfe",
+    "combo_groups": "c464d37d5f508960dc1718990119ecc8",
+    "combo_components": "716307d7c846eea07e08eef919419cae",
+    "printers": "a0688de0474efeb26b22694948c3df10",
+    "assignments": "2442cf9021274753b23094ed8ebf9c96",
+    "device_pairing": "bac85826c0b6e77d6dbeeef2eb9ce4b8",
+    "modes": "03c4393904e5dbf7017787d66dac8870",
+    "uber_mappings": "00fec9df489953473a1c33e66119c328",
+    "uber_menu": "d41d8cd98f00b204e9800998ecf8427e",
+    "uber_events": "32d16a8ce8f68be3807af4552cadeb4c",
+    "uber_orders": "d41d8cd98f00b204e9800998ecf8427e",
+    "published_rules": "b68dd3183e650fe6da3dd48955cc99fc"
+  },
+  "history_unchanged": true,
+  "real_orders_created": 0,
+  "physical_prints_triggered": 0
+}

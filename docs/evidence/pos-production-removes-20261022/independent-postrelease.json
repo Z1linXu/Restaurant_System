@@ -1,0 +1,1125 @@
+{
+  "schema": "POS_PRODUCTION_REMOVE_INDEPENDENT_POSTRELEASE_V1",
+  "observed_at": "2026-10-22T05:07:04.809831+00:00",
+  "environment": "production",
+  "reviewer_action": "READ_ONLY_NO_BUSINESS_WRITES_NO_EVENT_PROBES",
+  "app_sha": "4b3abd1349e66a146c36ac310b6a8b48bb2ad572",
+  "script_sha": "d32fa709f2e895ebc4ebf729e8b546d6fd043df8",
+  "deployment": {
+    "source_sha": "4b3abd1349e66a146c36ac310b6a8b48bb2ad572",
+    "images": {
+      "backend": "sha256:c79b6bd78a2f82a4b95eb15472b5a82820a2c48248d94e334fb983969d3a80c5",
+      "nginx": "sha256:2b0749d39545a4eae784b29315be78aac0b5866dc069fb6c60372ad82ee4387b"
+    },
+    "health": "PASS",
+    "flyway": "38",
+    "deployed_at": "2026-10-22T05:04:20.593755+00:00",
+    "backup_sha256": "0c832c7b79ea294c42c25b0fbd89b22d6b96656d9943c14e08570146bd422202"
+  },
+  "runtime": {
+    "cloud-backend-1": {
+      "id": "6a460baab6d74eb579830bf469c46b46f3bb930f778fa55590c0ba9b929bb20f",
+      "image": "sha256:c79b6bd78a2f82a4b95eb15472b5a82820a2c48248d94e334fb983969d3a80c5",
+      "image_source_sha": "4b3abd1349e66a146c36ac310b6a8b48bb2ad572",
+      "container_source_label": "4b3abd1349e66a146c36ac310b6a8b48bb2ad572",
+      "running": true,
+      "started_at": "2026-10-22T05:03:50.867389225Z",
+      "restarts": 0,
+      "health": null,
+      "env_sha256": "640f2f4c82efca99f8bca4a5d825c4bdf8a7377ca66b6194b1463d9bbe9046a7",
+      "networks": [
+        "cloud_restaurant-pos"
+      ],
+      "policy": {
+        "APP_ENVIRONMENT": "production",
+        "DB_NAME": "restaurant_pos",
+        "UBER_EATS_ENVIRONMENT": "production",
+        "UBER_EATS_ENABLED": "true",
+        "UBER_EATS_WORKER_ENABLED": "false",
+        "UBER_EATS_PROCESSING_MODE": "KITCHEN_MIRROR",
+        "signing_key_present": true
+      }
+    },
+    "cloud-nginx-1": {
+      "id": "2d5278de9517aa69b1aa8a848aa3a21c77555819aec46d219126ca1d3e17e429",
+      "image": "sha256:2b0749d39545a4eae784b29315be78aac0b5866dc069fb6c60372ad82ee4387b",
+      "image_source_sha": "4b3abd1349e66a146c36ac310b6a8b48bb2ad572",
+      "container_source_label": "4b3abd1349e66a146c36ac310b6a8b48bb2ad572",
+      "running": true,
+      "started_at": "2026-10-22T05:04:16.562421479Z",
+      "restarts": 0,
+      "health": null,
+      "env_sha256": "6512821ea6fd77d142a076aa7987634cef6a85901981b4c986b4a1d9e76c5ac4",
+      "networks": [
+        "cloud_restaurant-pos"
+      ]
+    },
+    "cloud-db-1": {
+      "id": "c2ab37fec6ac966e77a1d8ab7aa41d1da294b9ac57b1a21ce18904d04cfae91e",
+      "image": "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+      "image_source_sha": null,
+      "container_source_label": null,
+      "running": true,
+      "started_at": "2026-07-11T12:09:37.936437539Z",
+      "restarts": 0,
+      "health": "healthy",
+      "env_sha256": "f5a123b59443563e21e22f461af8815ba8f790ee81b0760fd258542a5246df22",
+      "networks": [
+        "cloud_restaurant-pos"
+      ]
+    },
+    "restaurant-pos-staging-backend-1": {
+      "id": "07c6a1195a6b19d02dae7a7033262286fedad8371f4f84c126bab226bc33b8d4",
+      "image": "sha256:c79b6bd78a2f82a4b95eb15472b5a82820a2c48248d94e334fb983969d3a80c5",
+      "image_source_sha": "4b3abd1349e66a146c36ac310b6a8b48bb2ad572",
+      "container_source_label": "4b3abd1349e66a146c36ac310b6a8b48bb2ad572",
+      "running": true,
+      "started_at": "2026-10-22T04:56:10.247188066Z",
+      "restarts": 0,
+      "health": null,
+      "env_sha256": "a97086a06c4d1f8b2bd2d52bc7d3aa5c36bf0acfe301fc2250a664c549bc0255",
+      "networks": [
+        "restaurant-pos-staging_restaurant-pos"
+      ],
+      "policy": {
+        "APP_ENVIRONMENT": "staging",
+        "DB_NAME": "restaurant_pos_staging",
+        "UBER_EATS_ENVIRONMENT": "sandbox",
+        "UBER_EATS_ENABLED": "true",
+        "UBER_EATS_WORKER_ENABLED": "false",
+        "UBER_EATS_PROCESSING_MODE": "KITCHEN_MIRROR",
+        "signing_key_present": true
+      }
+    },
+    "restaurant-pos-staging-nginx-1": {
+      "id": "b9c800db04a218096eff4b97bf45906e7ab8a9830d28f3e1789db2d0ccf1da9c",
+      "image": "sha256:2b0749d39545a4eae784b29315be78aac0b5866dc069fb6c60372ad82ee4387b",
+      "image_source_sha": "4b3abd1349e66a146c36ac310b6a8b48bb2ad572",
+      "container_source_label": "4b3abd1349e66a146c36ac310b6a8b48bb2ad572",
+      "running": true,
+      "started_at": "2026-10-22T04:56:56.119999015Z",
+      "restarts": 0,
+      "health": null,
+      "env_sha256": "3510d668c2138b3402a6b592bfa032b573d3b6feb3ccd975a36c56efd04c3b3e",
+      "networks": [
+        "restaurant-pos-staging_restaurant-pos"
+      ]
+    },
+    "restaurant-pos-staging-db-1": {
+      "id": "b64d3c676dbb4003368279453e5c6b390ac6327c3cf28001ead671155f93f4c5",
+      "image": "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+      "image_source_sha": null,
+      "container_source_label": null,
+      "running": true,
+      "started_at": "2026-08-22T19:14:39.633030411Z",
+      "restarts": 0,
+      "health": "healthy",
+      "env_sha256": "e421647727667e7032eeb2d7488bd99b1bdb0bc5cb2486621681f99cfed372ad",
+      "networks": [
+        "restaurant-pos-staging_restaurant-pos"
+      ]
+    }
+  },
+  "public_http": {
+    "root": {
+      "status": 200,
+      "backend_up": null
+    },
+    "login": {
+      "status": 200,
+      "backend_up": null
+    },
+    "health": {
+      "status": 200,
+      "backend_up": true
+    }
+  },
+  "latest_flyway": {
+    "version": "38",
+    "script": "V38__add_store_remove_catalog.sql",
+    "checksum": 323240892,
+    "success": true
+  },
+  "stores": [
+    {
+      "id": 1,
+      "name": "4483 R. Saint-Denis",
+      "code": "4483_R_SAINT_DENIS",
+      "organization_id": 1,
+      "printing_mode": "PAD_DIRECT",
+      "menu_revision": 26,
+      "shared_count": 18,
+      "linked_options": 53,
+      "shared_semantics": [
+        {
+          "id": 3,
+          "code": "beef",
+          "name_zh": "走牛",
+          "active": true
+        },
+        {
+          "id": 7,
+          "code": "bok_choy",
+          "name_zh": "走上海青",
+          "active": true
+        },
+        {
+          "id": 8,
+          "code": "broccoli",
+          "name_zh": "走西兰",
+          "active": true
+        },
+        {
+          "id": 16,
+          "code": "cabbage",
+          "name_zh": "走包",
+          "active": true
+        },
+        {
+          "id": 12,
+          "code": "carrot",
+          "name_zh": "走胡",
+          "active": true
+        },
+        {
+          "id": 1,
+          "code": "cilantro",
+          "name_zh": "走香",
+          "active": true
+        },
+        {
+          "id": 9,
+          "code": "corn",
+          "name_zh": "走玉米",
+          "active": true
+        },
+        {
+          "id": 13,
+          "code": "cucumber",
+          "name_zh": "走黄瓜",
+          "active": true
+        },
+        {
+          "id": 14,
+          "code": "edamame",
+          "name_zh": "走毛豆",
+          "active": true
+        },
+        {
+          "id": 2,
+          "code": "green_onion",
+          "name_zh": "走葱",
+          "active": true
+        },
+        {
+          "id": 18,
+          "code": "green_pepper",
+          "name_zh": "走青椒",
+          "active": true
+        },
+        {
+          "id": 6,
+          "code": "less_noodle",
+          "name_zh": "少面",
+          "active": true
+        },
+        {
+          "id": 17,
+          "code": "meat",
+          "name_zh": "走肉",
+          "active": true
+        },
+        {
+          "id": 10,
+          "code": "mushroom",
+          "name_zh": "走菇",
+          "active": true
+        },
+        {
+          "id": 5,
+          "code": "noodle",
+          "name_zh": "走面",
+          "active": true
+        },
+        {
+          "id": 15,
+          "code": "peanut",
+          "name_zh": "走花生",
+          "active": true
+        },
+        {
+          "id": 4,
+          "code": "radish",
+          "name_zh": "走萝",
+          "active": true
+        },
+        {
+          "id": 11,
+          "code": "seaweed",
+          "name_zh": "走海",
+          "active": true
+        }
+      ],
+      "api_diagnostics": {
+        "store_id": 1,
+        "shared_count": 18,
+        "legacy_raw_records": 57,
+        "legacy_affected_items": 13,
+        "catalog_conflict_groups": 3,
+        "catalog_conflicts": [
+          {
+            "code": null,
+            "reason": "REMOVE_RELATIONSHIP_CONFLICT",
+            "option_count": 19
+          },
+          {
+            "code": "remove_carrot",
+            "reason": "REMOVE_BUSINESS_VALUES_CONFLICT",
+            "option_count": 3
+          },
+          {
+            "code": "remove_cucumber",
+            "reason": "REMOVE_BUSINESS_VALUES_CONFLICT",
+            "option_count": 2
+          }
+        ],
+        "unique_legacy_diagnostic_groups": 15
+      },
+      "published_rules": {
+        "store_id": 1,
+        "revision_id": 5,
+        "revision_number": 2,
+        "fingerprint_sha256": "185002a04a9792d0b88de25b7a9a92d56ae75e21a6238fc39504330333ce173e",
+        "modifier_remove": [
+          [
+            "cilantro",
+            "走香"
+          ],
+          [
+            "green_onion",
+            "走葱"
+          ],
+          [
+            "beef",
+            "走牛"
+          ],
+          [
+            "radish",
+            "走萝"
+          ],
+          [
+            "noodle",
+            "走面"
+          ],
+          [
+            "less_noodle",
+            "少面"
+          ],
+          [
+            "bok_choy",
+            "走上海青"
+          ],
+          [
+            "broccoli",
+            "走西兰"
+          ],
+          [
+            "corn",
+            "走玉米"
+          ],
+          [
+            "mushroom",
+            "走菇"
+          ],
+          [
+            "seaweed",
+            "走海"
+          ],
+          [
+            "carrot",
+            "走胡"
+          ],
+          [
+            "cucumber",
+            "走黄瓜"
+          ],
+          [
+            "edamame",
+            "走毛豆"
+          ],
+          [
+            "peanut",
+            "走花生"
+          ],
+          [
+            "cabbage",
+            "走包"
+          ],
+          [
+            "meat",
+            "走肉"
+          ],
+          [
+            "green_pepper",
+            "走青椒"
+          ]
+        ],
+        "drafts": 0
+      },
+      "retention_reason_summary": [
+        {
+          "store_id": 1,
+          "reason": "REMOVE_BUSINESS_VALUES_CONFLICT",
+          "entries": 2,
+          "retained_option_references": 5
+        },
+        {
+          "store_id": 1,
+          "reason": "REMOVE_CODE_MISSING",
+          "entries": 19,
+          "retained_option_references": 19
+        },
+        {
+          "store_id": 1,
+          "reason": "REMOVE_OUTSIDE_BASELINE",
+          "entries": 22,
+          "retained_option_references": 22
+        },
+        {
+          "store_id": 1,
+          "reason": "REMOVE_PARENT_RETAINED",
+          "entries": 11,
+          "retained_option_references": 11
+        }
+      ],
+      "baseline_codes_exact_unique": true,
+      "baseline_default_names_match": true,
+      "baseline_all_masters_active": true
+    },
+    {
+      "id": 2,
+      "name": "CHINATOWN",
+      "code": "CHINATOWN",
+      "organization_id": 1,
+      "printing_mode": "PAD_DIRECT",
+      "menu_revision": 117,
+      "shared_count": 18,
+      "linked_options": 53,
+      "shared_semantics": [
+        {
+          "id": 21,
+          "code": "beef",
+          "name_zh": "走牛",
+          "active": true
+        },
+        {
+          "id": 25,
+          "code": "bok_choy",
+          "name_zh": "走上海青",
+          "active": true
+        },
+        {
+          "id": 26,
+          "code": "broccoli",
+          "name_zh": "走西兰",
+          "active": true
+        },
+        {
+          "id": 34,
+          "code": "cabbage",
+          "name_zh": "走包",
+          "active": true
+        },
+        {
+          "id": 30,
+          "code": "carrot",
+          "name_zh": "走胡",
+          "active": true
+        },
+        {
+          "id": 19,
+          "code": "cilantro",
+          "name_zh": "走香",
+          "active": true
+        },
+        {
+          "id": 27,
+          "code": "corn",
+          "name_zh": "走玉米",
+          "active": true
+        },
+        {
+          "id": 31,
+          "code": "cucumber",
+          "name_zh": "走黄瓜",
+          "active": true
+        },
+        {
+          "id": 32,
+          "code": "edamame",
+          "name_zh": "走毛豆",
+          "active": true
+        },
+        {
+          "id": 20,
+          "code": "green_onion",
+          "name_zh": "走葱",
+          "active": true
+        },
+        {
+          "id": 36,
+          "code": "green_pepper",
+          "name_zh": "走青椒",
+          "active": true
+        },
+        {
+          "id": 24,
+          "code": "less_noodle",
+          "name_zh": "少面",
+          "active": true
+        },
+        {
+          "id": 35,
+          "code": "meat",
+          "name_zh": "走肉",
+          "active": true
+        },
+        {
+          "id": 28,
+          "code": "mushroom",
+          "name_zh": "走菇",
+          "active": true
+        },
+        {
+          "id": 23,
+          "code": "noodle",
+          "name_zh": "走面",
+          "active": true
+        },
+        {
+          "id": 33,
+          "code": "peanut",
+          "name_zh": "走花生",
+          "active": true
+        },
+        {
+          "id": 22,
+          "code": "radish",
+          "name_zh": "走萝",
+          "active": true
+        },
+        {
+          "id": 29,
+          "code": "seaweed",
+          "name_zh": "走海",
+          "active": true
+        }
+      ],
+      "api_diagnostics": {
+        "store_id": 2,
+        "shared_count": 18,
+        "legacy_raw_records": 57,
+        "legacy_affected_items": 13,
+        "catalog_conflict_groups": 3,
+        "catalog_conflicts": [
+          {
+            "code": null,
+            "reason": "REMOVE_RELATIONSHIP_CONFLICT",
+            "option_count": 19
+          },
+          {
+            "code": "remove_carrot",
+            "reason": "REMOVE_BUSINESS_VALUES_CONFLICT",
+            "option_count": 3
+          },
+          {
+            "code": "remove_cucumber",
+            "reason": "REMOVE_BUSINESS_VALUES_CONFLICT",
+            "option_count": 2
+          }
+        ],
+        "unique_legacy_diagnostic_groups": 15
+      },
+      "published_rules": {
+        "store_id": 2,
+        "revision_id": 10,
+        "revision_number": 6,
+        "fingerprint_sha256": "df317f36ef972c1b0d40c4c5e44ba48e4cd6d6bff1f38e21c282cc4387a87434",
+        "modifier_remove": [
+          [
+            "cilantro",
+            "走香"
+          ],
+          [
+            "green_onion",
+            "走葱"
+          ],
+          [
+            "beef",
+            "走牛"
+          ],
+          [
+            "radish",
+            "走萝"
+          ],
+          [
+            "noodle",
+            "走面"
+          ],
+          [
+            "less_noodle",
+            "少面"
+          ],
+          [
+            "bok_choy",
+            "走上海青"
+          ],
+          [
+            "broccoli",
+            "走西兰"
+          ],
+          [
+            "corn",
+            "走玉米"
+          ],
+          [
+            "mushroom",
+            "走菇"
+          ],
+          [
+            "seaweed",
+            "走海"
+          ],
+          [
+            "carrot",
+            "走胡"
+          ],
+          [
+            "cucumber",
+            "走黄瓜"
+          ],
+          [
+            "edamame",
+            "走毛豆"
+          ],
+          [
+            "peanut",
+            "走花生"
+          ],
+          [
+            "cabbage",
+            "走包"
+          ],
+          [
+            "meat",
+            "走肉"
+          ],
+          [
+            "green_pepper",
+            "走青椒"
+          ]
+        ],
+        "drafts": 0
+      },
+      "retention_reason_summary": [
+        {
+          "store_id": 2,
+          "reason": "REMOVE_BUSINESS_VALUES_CONFLICT",
+          "entries": 2,
+          "retained_option_references": 5
+        },
+        {
+          "store_id": 2,
+          "reason": "REMOVE_CODE_MISSING",
+          "entries": 19,
+          "retained_option_references": 19
+        },
+        {
+          "store_id": 2,
+          "reason": "REMOVE_OUTSIDE_BASELINE",
+          "entries": 22,
+          "retained_option_references": 22
+        },
+        {
+          "store_id": 2,
+          "reason": "REMOVE_PARENT_RETAINED",
+          "entries": 11,
+          "retained_option_references": 11
+        }
+      ],
+      "baseline_codes_exact_unique": true,
+      "baseline_default_names_match": true,
+      "baseline_all_masters_active": true
+    },
+    {
+      "id": 3,
+      "name": "St. Catherine",
+      "code": "ST_CATHERINE",
+      "organization_id": 1,
+      "printing_mode": "DISABLED",
+      "menu_revision": 3,
+      "shared_count": 18,
+      "linked_options": 53,
+      "shared_semantics": [
+        {
+          "id": 39,
+          "code": "beef",
+          "name_zh": "走牛",
+          "active": true
+        },
+        {
+          "id": 43,
+          "code": "bok_choy",
+          "name_zh": "走上海青",
+          "active": true
+        },
+        {
+          "id": 44,
+          "code": "broccoli",
+          "name_zh": "走西兰",
+          "active": true
+        },
+        {
+          "id": 52,
+          "code": "cabbage",
+          "name_zh": "走包",
+          "active": true
+        },
+        {
+          "id": 48,
+          "code": "carrot",
+          "name_zh": "走胡",
+          "active": true
+        },
+        {
+          "id": 37,
+          "code": "cilantro",
+          "name_zh": "走香",
+          "active": true
+        },
+        {
+          "id": 45,
+          "code": "corn",
+          "name_zh": "走玉米",
+          "active": true
+        },
+        {
+          "id": 49,
+          "code": "cucumber",
+          "name_zh": "走黄瓜",
+          "active": true
+        },
+        {
+          "id": 50,
+          "code": "edamame",
+          "name_zh": "走毛豆",
+          "active": true
+        },
+        {
+          "id": 38,
+          "code": "green_onion",
+          "name_zh": "走葱",
+          "active": true
+        },
+        {
+          "id": 54,
+          "code": "green_pepper",
+          "name_zh": "走青椒",
+          "active": true
+        },
+        {
+          "id": 42,
+          "code": "less_noodle",
+          "name_zh": "少面",
+          "active": true
+        },
+        {
+          "id": 53,
+          "code": "meat",
+          "name_zh": "走肉",
+          "active": true
+        },
+        {
+          "id": 46,
+          "code": "mushroom",
+          "name_zh": "走菇",
+          "active": true
+        },
+        {
+          "id": 41,
+          "code": "noodle",
+          "name_zh": "走面",
+          "active": true
+        },
+        {
+          "id": 51,
+          "code": "peanut",
+          "name_zh": "走花生",
+          "active": true
+        },
+        {
+          "id": 40,
+          "code": "radish",
+          "name_zh": "走萝",
+          "active": true
+        },
+        {
+          "id": 47,
+          "code": "seaweed",
+          "name_zh": "走海",
+          "active": true
+        }
+      ],
+      "api_diagnostics": {
+        "store_id": 3,
+        "shared_count": 18,
+        "legacy_raw_records": 57,
+        "legacy_affected_items": 13,
+        "catalog_conflict_groups": 3,
+        "catalog_conflicts": [
+          {
+            "code": null,
+            "reason": "REMOVE_RELATIONSHIP_CONFLICT",
+            "option_count": 19
+          },
+          {
+            "code": "remove_carrot",
+            "reason": "REMOVE_BUSINESS_VALUES_CONFLICT",
+            "option_count": 3
+          },
+          {
+            "code": "remove_cucumber",
+            "reason": "REMOVE_BUSINESS_VALUES_CONFLICT",
+            "option_count": 2
+          }
+        ],
+        "unique_legacy_diagnostic_groups": 15
+      },
+      "published_rules": {
+        "store_id": 3,
+        "revision_id": 6,
+        "revision_number": 2,
+        "fingerprint_sha256": "185002a04a9792d0b88de25b7a9a92d56ae75e21a6238fc39504330333ce173e",
+        "modifier_remove": [
+          [
+            "cilantro",
+            "走香"
+          ],
+          [
+            "green_onion",
+            "走葱"
+          ],
+          [
+            "beef",
+            "走牛"
+          ],
+          [
+            "radish",
+            "走萝"
+          ],
+          [
+            "noodle",
+            "走面"
+          ],
+          [
+            "less_noodle",
+            "少面"
+          ],
+          [
+            "bok_choy",
+            "走上海青"
+          ],
+          [
+            "broccoli",
+            "走西兰"
+          ],
+          [
+            "corn",
+            "走玉米"
+          ],
+          [
+            "mushroom",
+            "走菇"
+          ],
+          [
+            "seaweed",
+            "走海"
+          ],
+          [
+            "carrot",
+            "走胡"
+          ],
+          [
+            "cucumber",
+            "走黄瓜"
+          ],
+          [
+            "edamame",
+            "走毛豆"
+          ],
+          [
+            "peanut",
+            "走花生"
+          ],
+          [
+            "cabbage",
+            "走包"
+          ],
+          [
+            "meat",
+            "走肉"
+          ],
+          [
+            "green_pepper",
+            "走青椒"
+          ]
+        ],
+        "drafts": 0
+      },
+      "retention_reason_summary": [
+        {
+          "store_id": 3,
+          "reason": "REMOVE_BUSINESS_VALUES_CONFLICT",
+          "entries": 2,
+          "retained_option_references": 5
+        },
+        {
+          "store_id": 3,
+          "reason": "REMOVE_CODE_MISSING",
+          "entries": 19,
+          "retained_option_references": 19
+        },
+        {
+          "store_id": 3,
+          "reason": "REMOVE_OUTSIDE_BASELINE",
+          "entries": 22,
+          "retained_option_references": 22
+        },
+        {
+          "store_id": 3,
+          "reason": "REMOVE_PARENT_RETAINED",
+          "entries": 11,
+          "retained_option_references": 11
+        }
+      ],
+      "baseline_codes_exact_unique": true,
+      "baseline_default_names_match": true,
+      "baseline_all_masters_active": true
+    }
+  ],
+  "scope_and_free": {
+    "duplicate_normalized_semantics": 0,
+    "invalid_link_scope_or_nonfree": 0,
+    "outside_target_masters": 0
+  },
+  "all_1154_option_original_fields": {
+    "rows": 1154,
+    "before_sha256": "ad4ad5186bd9c65ca5b416a383e1a8a96d37c9ad436d88d8e6a4276b73c59f36",
+    "after_sha256": "ad4ad5186bd9c65ca5b416a383e1a8a96d37c9ad436d88d8e6a4276b73c59f36",
+    "unchanged": true
+  },
+  "original_330_remove_options": {
+    "rows_before": 330,
+    "rows_after": 330,
+    "unchanged": true
+  },
+  "inactive_options": [
+    {
+      "id": 406,
+      "menu_item_id": 59,
+      "option_code": "remove_peanut",
+      "is_active": false,
+      "store_remove_id": 33,
+      "store_id": 2,
+      "applicability": "DENY"
+    },
+    {
+      "id": 420,
+      "menu_item_id": 59,
+      "option_code": "remove_cilantro",
+      "is_active": false,
+      "store_remove_id": 19,
+      "store_id": 2,
+      "applicability": "DENY"
+    }
+  ],
+  "atomic_audit_reports": [
+    {
+      "store_id": 1,
+      "action": "MENU_REMOVE_BASELINE_RECONCILED",
+      "created_at": "2026-10-22T01:04:56.457656",
+      "created_master_count": 18,
+      "linked_option_count": 53,
+      "eligibility_changes": 0,
+      "links_in_atomic_report": 53
+    },
+    {
+      "store_id": 2,
+      "action": "MENU_REMOVE_BASELINE_RECONCILED",
+      "created_at": "2026-10-22T01:04:58.231518",
+      "created_master_count": 18,
+      "linked_option_count": 53,
+      "eligibility_changes": 0,
+      "links_in_atomic_report": 53
+    },
+    {
+      "store_id": 3,
+      "action": "MENU_REMOVE_BASELINE_RECONCILED",
+      "created_at": "2026-10-22T01:04:59.595915",
+      "created_master_count": 18,
+      "linked_option_count": 53,
+      "eligibility_changes": 0,
+      "links_in_atomic_report": 53
+    }
+  ],
+  "protected_old_print_jobs": {
+    "ids": [
+      1176,
+      3169,
+      9226,
+      20391
+    ],
+    "whole_rows_unchanged": true,
+    "before_sha256": "0d42af6113b53d3715cea8a4871ee6b6f6155d581143c7b5238fba41b86d25f7",
+    "after_sha256": "0d42af6113b53d3715cea8a4871ee6b6f6155d581143c7b5238fba41b86d25f7"
+  },
+  "historical_fingerprints": {
+    "before": {
+      "cutoffs": [
+        10415,
+        26306
+      ],
+      "hashes": [
+        "714c0d55d76d87e3675c8f8b962d1eba",
+        "e779c0eea49d234f3b518d8a4c18a651",
+        "eafe3cf67ebaea9f5fc372673ba1932a",
+        "57d4c1f2e73e7d2aa515017f41926bc0",
+        "2bf476dabb2393b51b3e68d176725fd9"
+      ]
+    },
+    "current": {
+      "cutoffs": [
+        10415,
+        26306
+      ],
+      "hashes": [
+        "714c0d55d76d87e3675c8f8b962d1eba",
+        "e779c0eea49d234f3b518d8a4c18a651",
+        "eafe3cf67ebaea9f5fc372673ba1932a",
+        "57d4c1f2e73e7d2aa515017f41926bc0",
+        "2bf476dabb2393b51b3e68d176725fd9"
+      ]
+    },
+    "unchanged": true
+  },
+  "protected_configuration_unchanged_by_field": {
+    "menu": true,
+    "items": true,
+    "pricing": true,
+    "combo_groups": true,
+    "combo_components": true,
+    "printers": true,
+    "assignments": true,
+    "device_pairing": true,
+    "modes": true,
+    "uber_mappings": true,
+    "uber_menu": true,
+    "uber_events": false,
+    "uber_orders": true,
+    "published_rules": true
+  },
+  "all_protected_configuration_except_concurrent_receive_events_unchanged": true,
+  "concurrent_observations": {
+    "changed_hash_fields_since_acceptance": [
+      "uber_events"
+    ],
+    "uber_events_note": "Remove acceptance report previously recorded matching before/after hashes. Independent later read found only uber_events hash changed; current rows are receive-only (attempt_count=0). No rollback, event delete, replay, probe or import was performed by this reviewer. Preserve latest receiver config and binding.",
+    "event_metadata": [
+      {
+        "id": 1,
+        "environment": "production",
+        "event_type": "orders.notification",
+        "status": "HELD_RECEIVE_ONLY",
+        "error_code": null,
+        "attempt_count": 0,
+        "created_at": "2026-10-22T00:50:38.512288",
+        "updated_at": "2026-10-22T00:50:38.512288"
+      },
+      {
+        "id": 3,
+        "environment": "production",
+        "event_type": "orders.notification",
+        "status": "HELD_RECEIVE_ONLY",
+        "error_code": null,
+        "attempt_count": 0,
+        "created_at": "2026-10-22T01:05:06.40377",
+        "updated_at": "2026-10-22T01:05:06.40377"
+      }
+    ],
+    "uber_current": {
+      "bindings_total": 1,
+      "bindings": [
+        {
+          "store_id": 1,
+          "environment": "production",
+          "enabled": true,
+          "processing_mode": "KITCHEN_MIRROR"
+        }
+      ],
+      "events_total": 2,
+      "events_by_status": {
+        "HELD_RECEIVE_ONLY": 2
+      },
+      "uber_orders": 0,
+      "local_uber_orders": 0,
+      "uber_print_jobs": 0
+    },
+    "mapping_hash_at_acceptance": "00fec9df489953473a1c33e66119c328",
+    "mapping_hash_now": "00fec9df489953473a1c33e66119c328",
+    "event_time_timezone": "America/Toronto (database-local timestamps; 2026-10-22 is UTC-04:00)"
+  },
+  "sanitized_logs": {
+    "since_current_container_start": true,
+    "error_lines": 0,
+    "exception_class_mentions": {}
+  },
+  "docker_disk": {
+    "disk_df": "Filesystem      Size  Used Avail Use% Mounted on\n/dev/vda2        59G   42G   16G  73% /\n/dev/vda2        59G   42G   16G  73% /\n",
+    "docker_system_df": [
+      {
+        "Active": "4",
+        "Reclaimable": "3.004GB (38%)",
+        "Size": "7.75GB",
+        "TotalCount": "115",
+        "Type": "Images"
+      },
+      {
+        "Active": "8",
+        "Reclaimable": "0B (0%)",
+        "Size": "397.3kB",
+        "TotalCount": "8",
+        "Type": "Containers"
+      },
+      {
+        "Active": "0",
+        "Reclaimable": "0B",
+        "Size": "0B",
+        "TotalCount": "2",
+        "Type": "Local Volumes"
+      },
+      {
+        "Active": "12",
+        "Reclaimable": "10.45GB",
+        "Size": "16.82GB",
+        "TotalCount": "291",
+        "Type": "Build Cache"
+      }
+    ],
+    "temporary_pos_builder_containers": [],
+    "cleanup_by_reviewer": false
+  },
+  "database_container_identity_unchanged": {
+    "cloud-db-1": true,
+    "restaurant-pos-staging-db-1": true
+  }
+}

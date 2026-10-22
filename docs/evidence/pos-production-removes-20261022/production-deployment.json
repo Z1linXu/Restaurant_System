@@ -1,0 +1,15 @@
+{
+  "environment": "production",
+  "source_sha": "4b3abd1349e66a146c36ac310b6a8b48bb2ad572",
+  "images": {
+    "backend": "sha256:c79b6bd78a2f82a4b95eb15472b5a82820a2c48248d94e334fb983969d3a80c5",
+    "nginx": "sha256:2b0749d39545a4eae784b29315be78aac0b5866dc069fb6c60372ad82ee4387b"
+  },
+  "health": "PASS",
+  "flyway": "38",
+  "deployed_at": "2026-10-22T05:04:20.593755+00:00",
+  "accepted": false,
+  "backup_sha256": "0c832c7b79ea294c42c25b0fbd89b22d6b96656d9943c14e08570146bd422202",
+  "history_unchanged": true,
+  "unrelated_containers_unchanged": true
+}

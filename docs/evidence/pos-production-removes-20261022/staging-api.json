@@ -1,0 +1,221 @@
+{
+  "environment": "staging",
+  "source_sha": "4b3abd1349e66a146c36ac310b6a8b48bb2ad572",
+  "stores": [
+    {
+      "store_id": 18,
+      "store_name": "Chinatown",
+      "store_code": "CHINATOWN",
+      "organization_id": 1,
+      "shared_before": 25,
+      "shared_after": 25,
+      "linked": 0,
+      "conflicts": 32,
+      "legacy_unlinked": 35,
+      "eligibility_changes": 0,
+      "semantics": [
+        {
+          "code": "remove_cilantro",
+          "semantic_code": "cilantro",
+          "name_zh": "\u8d70\u9999\u83dc",
+          "item_count": 8
+        },
+        {
+          "code": "remove_onion",
+          "semantic_code": "onion",
+          "name_zh": "\u8d70\u6d0b\u8471",
+          "item_count": 5
+        },
+        {
+          "code": "remove_peanut",
+          "semantic_code": "peanut",
+          "name_zh": "\u8d70\u82b1\u751f",
+          "item_count": 4
+        },
+        {
+          "code": "remove_crushed_peanut",
+          "semantic_code": "crushed_peanut",
+          "name_zh": "\u8d70\u82b1\u751f\u788e",
+          "item_count": 1
+        },
+        {
+          "code": "remove_green_onion",
+          "semantic_code": "green_onion",
+          "name_zh": "\u8d70\u8471",
+          "item_count": 7
+        },
+        {
+          "code": "remove_bean_sprouts",
+          "semantic_code": "bean_sprouts",
+          "name_zh": "\u8d70\u8c46\u82bd",
+          "item_count": 4
+        },
+        {
+          "code": "remove_green_pepper",
+          "semantic_code": "green_pepper",
+          "name_zh": "\u8d70\u9752\u6912",
+          "item_count": 4
+        },
+        {
+          "code": "remove_broccoli",
+          "semantic_code": "broccoli",
+          "name_zh": "\u8d70\u897f\u5170\u82b1",
+          "item_count": 5
+        },
+        {
+          "code": "remove_cabbage",
+          "semantic_code": "cabbage",
+          "name_zh": "\u8d70\u5927\u5934\u83dc",
+          "item_count": 4
+        },
+        {
+          "code": "remove_zucchini",
+          "semantic_code": "zucchini",
+          "name_zh": "\u8d70\u897f\u846b\u82a6",
+          "item_count": 4
+        },
+        {
+          "code": "remove_all_vegetables",
+          "semantic_code": "all_vegetables",
+          "name_zh": "\u8d70\u6240\u6709\u83dc",
+          "item_count": 4
+        },
+        {
+          "code": "remove_tomato",
+          "semantic_code": "tomato",
+          "name_zh": "\u8d70\u756a\u8304",
+          "item_count": 4
+        },
+        {
+          "code": "carrot",
+          "semantic_code": "carrot",
+          "name_zh": "\u8d70\u80e1",
+          "item_count": 0
+        },
+        {
+          "code": "cucumber",
+          "semantic_code": "cucumber",
+          "name_zh": "\u8d70\u9ec4\u74dc",
+          "item_count": 0
+        },
+        {
+          "code": "meat",
+          "semantic_code": "meat",
+          "name_zh": "\u8d70\u8089",
+          "item_count": 0
+        },
+        {
+          "code": "remove_bok_choy",
+          "semantic_code": "bok_choy",
+          "name_zh": "\u8d70\u4e0a\u6d77\u9752",
+          "item_count": 3
+        },
+        {
+          "code": "remove_beef",
+          "semantic_code": "beef",
+          "name_zh": "\u8d70\u725b\u8089",
+          "item_count": 3
+        },
+        {
+          "code": "remove_edamame",
+          "semantic_code": "edamame",
+          "name_zh": "\u8d70\u6bdb\u8c46",
+          "item_count": 1
+        },
+        {
+          "code": "remove_noodle",
+          "semantic_code": "noodle",
+          "name_zh": "\u8d70\u9762",
+          "item_count": 4
+        },
+        {
+          "code": "less_noodle",
+          "semantic_code": "less_noodle",
+          "name_zh": "\u5c11\u9762",
+          "item_count": 4
+        },
+        {
+          "code": "remove_radish",
+          "semantic_code": "radish",
+          "name_zh": "\u8d70\u841d\u535c",
+          "item_count": 3
+        },
+        {
+          "code": "remove_corn",
+          "semantic_code": "corn",
+          "name_zh": "\u8d70\u7389\u7c73",
+          "item_count": 1
+        },
+        {
+          "code": "remove_mushroom",
+          "semantic_code": "mushroom",
+          "name_zh": "\u8d70\u8611\u83c7",
+          "item_count": 1
+        },
+        {
+          "code": "remove_seaweed",
+          "semantic_code": "seaweed",
+          "name_zh": "\u8d70\u6d77\u83dc",
+          "item_count": 1
+        },
+        {
+          "code": "five_p5oct22b_remove",
+          "semantic_code": "five_p5oct22b_remove",
+          "name_zh": "\u9875\u9762\u5171\u4eab\u51cf\u6599\u9a8c\u6536",
+          "item_count": 2
+        }
+      ],
+      "printing_rows": 25,
+      "active_rule_revision_id": 82,
+      "active_rule_revision_number": 2,
+      "rule_unchanged": true,
+      "validate": "PASS",
+      "preview_multiple_prefix_remove": "PASS",
+      "menu_categories_sha256": "c92312237bd8c9201c5f728c75dd42292b13d74a82951cd7b77d1e6d5e206770"
+    }
+  ],
+  "password_login": "NOT_TESTED_NO_PRODUCTION_PRIVATE_PASSWORD",
+  "apply": true,
+  "script_sha": "d32fa709f2e895ebc4ebf729e8b546d6fd043df8",
+  "accepted": true,
+  "health": "PASS",
+  "images": {
+    "backend": "sha256:c79b6bd78a2f82a4b95eb15472b5a82820a2c48248d94e334fb983969d3a80c5",
+    "nginx": "sha256:2b0749d39545a4eae784b29315be78aac0b5866dc069fb6c60372ad82ee4387b"
+  },
+  "safety_before": {
+    "menu": "4f1ebc279a7d45883b96a53e92eec112",
+    "items": "194c337a5db041e801883a1417aec865",
+    "pricing": "46712dda2b1b2c115550d124bd32d7ea",
+    "combo_groups": "9fa5e33e12b19dd0a47f6ec9d9593836",
+    "combo_components": "f039ff6f5824bf6f415c7b4ed55f5e82",
+    "printers": "769c5632b3837b2962fa3d0c846d380f",
+    "assignments": "88df5a41496488cf517d75556bbeaf44",
+    "device_pairing": "0026ee1a8a510c1b5f81677c086b1f14",
+    "modes": "e878b4fa375d1d8cd76f36540c0142a8",
+    "uber_mappings": "e59f8ed3b7eb9319b64ece260cadf381",
+    "uber_menu": "f7beb057679ab6768cbc23e63aa0acc4",
+    "uber_events": "599684138c0504d0845f5fa9ae842d36",
+    "uber_orders": "bf33939694ca6b510f1c36de28df1548",
+    "published_rules": "ba4b5afcaf8c64e5b3e2fd58dcdec55a"
+  },
+  "safety_after": {
+    "menu": "4f1ebc279a7d45883b96a53e92eec112",
+    "items": "194c337a5db041e801883a1417aec865",
+    "pricing": "46712dda2b1b2c115550d124bd32d7ea",
+    "combo_groups": "9fa5e33e12b19dd0a47f6ec9d9593836",
+    "combo_components": "f039ff6f5824bf6f415c7b4ed55f5e82",
+    "printers": "769c5632b3837b2962fa3d0c846d380f",
+    "assignments": "88df5a41496488cf517d75556bbeaf44",
+    "device_pairing": "0026ee1a8a510c1b5f81677c086b1f14",
+    "modes": "e878b4fa375d1d8cd76f36540c0142a8",
+    "uber_mappings": "e59f8ed3b7eb9319b64ece260cadf381",
+    "uber_menu": "f7beb057679ab6768cbc23e63aa0acc4",
+    "uber_events": "599684138c0504d0845f5fa9ae842d36",
+    "uber_orders": "bf33939694ca6b510f1c36de28df1548",
+    "published_rules": "ba4b5afcaf8c64e5b3e2fd58dcdec55a"
+  },
+  "history_unchanged": true,
+  "real_orders_created": 0,
+  "physical_prints_triggered": 0
+}
