@@ -59,6 +59,11 @@ It does not submit a live draft, place an Uber order or trigger physical printin
    Securely inject its actual Primary Signing Key into the existing private
    backend model as `UBER_EATS_WEBHOOK_SIGNING_KEY`; do not reuse either TEST
    OAuth secret or TEST Signing Key, including cross-key substitution.
+   Set `UBER_EATS_ENABLED=true` while retaining `UBER_EATS_WORKER_ENABLED=false`
+   for receive-only verification; injecting a key alone does not enable receipt.
+   The observed Production Dashboard requires an operator-supplied Signing Key
+   before Save. The account owner must generate/save it privately and enter it;
+   never paste it into chat. The prepared URL alone is not registration.
 3. If Dashboard Save generates the key, coordinate a no-real-Store-traffic
    window: save, retain/inject securely, update the receiving backend while
    keeping worker false, verify. If Uber requires a healthy endpoint before
@@ -152,12 +157,15 @@ add its verified UUID/cutover, retaining the first Store's unchanged watermark.
 
 - Pause using its existing module API with `UBER_EATS=false`; leave the other
   Store and ordinary POS/printing modules unchanged. This stops new Uber
-  processing; it does not retract already committed orders or queued Print Jobs.
+  processing; it does not retract an already-running submission transaction,
+  committed orders or queued Print Jobs.
   Inspect existing jobs and handle an emergency separately. Never blindly reprint.
 - For a resume, first leave that module off, inspect its retained backlog,
   advance only that Store's UTC cutover to the newly approved window in the
   private runtime configuration, and restart under deployment locks. Then
   re-enable that Store module. Do not move the other Store's boundary.
+  This configuration restart affects the shared backend; independent Store
+  cutovers do not imply a restart-free or zero-interruption configuration change.
 - Global worker=false pauses new processing for all Stores while preserving
   receipt. It cannot undo already queued physical work. Disruptive events remain
   durably retained; reconciliation checks the cancellation/edit ledger before
