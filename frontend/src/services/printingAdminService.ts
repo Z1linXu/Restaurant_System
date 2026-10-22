@@ -180,6 +180,11 @@ export interface PrintingDisplayRuleRevision {
 
 export interface PrintingDisplayRuleSettings {
   addon_aliases?: { code: string; name_zh: string | null; default_print_text: string | null; source: string }[]
+  remove_aliases?: { code: string; name_zh: string; default_print_text: string | null; source: string; alias_codes: string[] }[]
+  remove_alias_conflicts?: { code: string; aliases: { code: string; value: string | null }[] }[]
+  legacy_remove_aliases?: { code: string; value: string | null }[]
+  proposed_remove_aliases?: [string, string | null][]
+  remove_alias_proposal_revision_id?: number | null
   store_id: number
   rule_set_id: number
   active_revision_id?: number | null

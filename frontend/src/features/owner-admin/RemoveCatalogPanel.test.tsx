@@ -68,3 +68,17 @@ it('keeps failed edits open and reports the error without publishing a false suc
   expect(view!.root.findAllByType('form')).toHaveLength(1)
   expect(reorderStoreRemoves).not.toHaveBeenCalled()
 })
+
+it('summarizes repeated legacy rows inside one collapsed diagnostic without duplicating shared maintenance', async () => {
+  vi.mocked(fetchStoreRemoves).mockResolvedValue({ ...catalog, legacy_options: [
+    ...catalog.legacy_options!,
+    { ...catalog.legacy_options![0], option_id: 5, item_id: 105 },
+  ] })
+  await mount()
+  const details = view!.root.findByProps({ 'aria-label': 'Legacy Remove diagnostics' })
+  expect(details.props.open).toBeUndefined()
+  const summary = details.findByType('summary').children.join('')
+  expect(summary).toContain('2')
+  expect(details.findAllByType('ul')[0].findAllByType('li')).toHaveLength(1)
+  expect(view!.root.findAllByProps({ 'aria-label': 'Edit Remove remove_cilantro' })).toHaveLength(1)
+})

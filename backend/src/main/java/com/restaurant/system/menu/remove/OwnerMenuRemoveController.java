@@ -20,6 +20,10 @@ public class OwnerMenuRemoveController {
     private final AuthorizationService authorization;
     private final StoreModuleAccessEvaluator modules;
     private final AuditLogService audit;
+    private StoreRemoveBaselineReconciler baseline;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setBaselineReconciler(StoreRemoveBaselineReconciler baseline) { this.baseline = baseline; }
     public OwnerMenuRemoveController(StoreRemoveService service,AuthorizationService authorization,
         StoreModuleAccessEvaluator modules,AuditLogService audit) {
         this.service=service;this.authorization=authorization;this.modules=modules;this.audit=audit;
@@ -64,6 +68,15 @@ public class OwnerMenuRemoveController {
         if(!body.dry_run) record(body.store_id,user,"MENU_REMOVES_RECONCILED",body.store_id,request);
         return ApiResponse.success(result);
     }
+    @PostMapping("/baseline-reconcile")
+    public ApiResponse<StoreRemoveBaselineReconciler.Report> baselineReconcile(
+        @RequestBody StoreRemoveBaselineReconciler.Request body
+    ) {
+        if (body == null || body.store_id == null || body.dry_run == null) throw new BusinessException("REMOVE_BASELINE_REQUEST_REQUIRED");
+        var user = require(body.store_id);
+        return ApiResponse.success(baseline.reconcile(body, user));
+    }
+
     private AuthenticatedUser require(Long storeId) {
         var user=authorization.requireForStore(storeId,Capability.ADMIN_MENU_MANAGE);
         modules.requireCapability(storeId,ModuleKeys.MENU_MANAGEMENT);return user;

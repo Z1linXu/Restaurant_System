@@ -56,3 +56,11 @@ Production mutation remains separately gated.
 - The frontdesk can continue a local draft, retry a queued order, check a
   submitting result, or cancel only a locally safe record. It does not turn a
   `SUBMITTING` or uncertain retryable result into a new editable order.
+
+
+Shared Removes are maintained once per Store semantic in Menu Management →
+Add-ons → Removes. Legacy repeated item records appear only in a collapsed
+summary diagnostic. The bounded 18-item reconciliation preserves each existing
+item's choices and Combo Parent; new masters start unassigned. Printing Display
+Rules shows the same Store semantic once and edits wording independently of menu
+eligibility. Runtime deployment evidence is recorded separately from capability.

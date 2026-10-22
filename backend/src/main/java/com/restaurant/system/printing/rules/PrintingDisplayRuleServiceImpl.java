@@ -143,6 +143,12 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
     private final PrintJobRepository printJobRepository;
     private final PrintingAddonVocabulary addonVocabulary;
     private final jakarta.persistence.EntityManager entityManager;
+    private PrintingRemoveVocabulary removeVocabulary;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setRemoveVocabulary(PrintingRemoveVocabulary vocabulary) {
+        this.removeVocabulary = vocabulary;
+    }
 
     public PrintingDisplayRuleServiceImpl(
         PrintingDisplayRuleSetRepository ruleSetRepository,
@@ -181,6 +187,18 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
             .map(this::toResponse)
             .orElse(null);
         response.addon_aliases = addonEntries(storeId);
+        var editable = response.draft_revision == null ? response.active_revision : response.draft_revision;
+        JsonNode content = editable == null ? PrintingDisplayRuleContext.defaultContext().content() : editable.content;
+        response.remove_aliases = removeVocabulary == null ? List.of() : removeVocabulary.entries(storeId, content);
+        PrintingRemoveAliases.Analysis analysis = PrintingRemoveAliases.analyze(content);
+        response.remove_alias_conflicts = analysis.conflicts();
+        response.proposed_remove_aliases = analysis.proposed_aliases();
+        response.remove_alias_proposal_revision_id = editable == null ? null : editable.id;
+        Set<String> shared = response.remove_aliases.stream().map(PrintingRemoveVocabulary.Entry::code)
+            .collect(java.util.stream.Collectors.toSet());
+        response.legacy_remove_aliases = analysis.aliases().stream()
+            .filter(alias -> !shared.contains(com.restaurant.system.menu.remove.RemoveSemantics.canonicalSemantic(alias.code())))
+            .toList();
         return response;
     }
 
@@ -623,12 +641,16 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
             for (JsonNode entry : dictionary) {
                 String entryPath = "$.dictionaries." + name + "[" + index + "]";
                 if ("MODIFIER_ADD".equals(name) || "MODIFIER_REMOVE".equals(name)) {
-                    validateModifierDictionaryEntry(entry, entryPath, "MODIFIER_ADD".equals(name), issues);
+                    validateModifierDictionaryEntry(entry, entryPath, true, issues);
                 } else {
                     validateStructuredDictionaryEntry(entry, entryPath, issues);
                 }
                 index += 1;
             }
+        }
+        for (PrintingRemoveAliases.Conflict conflict : PrintingRemoveAliases.analyze(content).conflicts()) {
+            issues.add(issue("REMOVE_ALIAS_CONFLICT", "$.dictionaries.MODIFIER_REMOVE",
+                "Different aliases exist for Remove semantic: " + conflict.code()));
         }
     }
 
@@ -845,6 +867,7 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
     private String buildPreviewModifiers(Long storeId, PrintingDisplayRuleContext context, List<String> addCodes, List<String> removeCodes) {
         List<String> tokens = new ArrayList<>();
         var vocabulary = addonEntries(storeId);
+        var removes = removeVocabulary == null ? List.<PrintingRemoveVocabulary.Entry>of() : removeVocabulary.entries(storeId, context.content());
         for (String code : addCodes == null ? List.<String>of() : addCodes) {
             String name = vocabulary.stream().filter(e -> e.code().equals(code)).map(e -> e.default_print_text() == null ? code : e.default_print_text()).findFirst().orElse(code);
             String token = KitchenModifierTokenResolver.resolveAddon("ADD_ON", code, name, null, 1, context);
@@ -853,7 +876,11 @@ public class PrintingDisplayRuleServiceImpl implements PrintingDisplayRuleServic
             }
         }
         for (String code : removeCodes == null ? List.<String>of() : removeCodes) {
-            String token = KitchenModifierTokenResolver.resolveRemove(code, code, null, context);
+            String semantic = com.restaurant.system.menu.remove.RemoveSemantics.canonicalSemantic(code);
+            String name = removes.stream()
+                .filter(entry -> entry.code().equals(semantic) && entry.default_print_text() != null).map(PrintingRemoveVocabulary.Entry::name_zh)
+                .findFirst().orElse(code);
+            String token = KitchenModifierTokenResolver.resolveRemove(code, name, null, context);
             if (token != null && !token.isBlank()) {
                 tokens.add(token);
             }

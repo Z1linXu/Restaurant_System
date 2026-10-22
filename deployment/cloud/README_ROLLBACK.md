@@ -87,3 +87,14 @@ history in production. If a migration caused damage, use a tested repair plan:
 - Submit a small test order if operationally safe.
 - Verify Print Center shows current jobs and failures clearly.
 - Record the incident, image tags, backup file, and follow-up action.
+
+## 2026-10-22 POS / Remove batch
+
+The [bounded release procedure](pos-production-removes/README.md) preserves an
+exact previous app pair/model and fresh readable V37 backup before Production
+Flyway V38. V38 is additive. Application rollback retains schema and current
+business history; database restoration is a separate incident decision. Each
+Store's 18-semantic reconciliation verifies original option and effective-choice
+snapshots in its own transaction and aborts on any unexpected delta. Never clear
+assignments, reset Pad/worker state, replay print queues or rewrite published
+printing revisions as a rollback shortcut.

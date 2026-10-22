@@ -56,10 +56,6 @@ const STRUCTURED_DICTIONARIES = [
   { key: 'SPICINESS', label: 'Spicy / 辣度', receiptMode: 'SINGLE' },
 ] as const
 
-const MODIFIER_DICTIONARIES = [
-  { key: 'MODIFIER_REMOVE', label: 'Modifier Remove / 去除' },
-] as const
-
 const OUTPUT_TYPES = ['GRAB', 'FRONTDESK_RECEIPT', 'HOT_KITCHEN'] as const
 const CONDITION_DICTIONARIES = ['SIZE', 'NOODLE_TYPE', 'SPICINESS', 'SOUP_BASE'] as const
 
@@ -302,37 +298,6 @@ function StorePrintingDisplayRulesPanel({ storeId, onToast }: PrintingDisplayRul
     }))
   }
 
-  const updateModifierPair = (dictionaryKey: string, index: number, pair: [string, string | null]) => {
-    setContent((current) => updateContent(current, (draft) => {
-      const entries = modifierDictionaryEntries(draft, dictionaryKey)
-      entries[index] = pair
-      draft.dictionaries = {
-        ...(draft.dictionaries ?? {}),
-        [dictionaryKey]: entries,
-      }
-    }))
-  }
-
-  const addModifierPair = (dictionaryKey: string) => {
-    setContent((current) => updateContent(current, (draft) => {
-      const entries = modifierDictionaryEntries(draft, dictionaryKey)
-      draft.dictionaries = {
-        ...(draft.dictionaries ?? {}),
-        [dictionaryKey]: [...entries, ['new_modifier_code', '显示文本']],
-      }
-    }))
-  }
-
-  const removeModifierPair = (dictionaryKey: string, index: number) => {
-    setContent((current) => updateContent(current, (draft) => {
-      const entries = modifierDictionaryEntries(draft, dictionaryKey)
-      draft.dictionaries = {
-        ...(draft.dictionaries ?? {}),
-        [dictionaryKey]: entries.filter((_, entryIndex) => entryIndex !== index),
-      }
-    }))
-  }
-
   const updateConditional = (index: number, updater: (entry: ConditionalOverride) => ConditionalOverride) => {
     setContent((current) => updateContent(current, (draft) => {
       const entries = [...(draft.conditional_overrides ?? [])]
@@ -483,16 +448,41 @@ function StorePrintingDisplayRulesPanel({ storeId, onToast }: PrintingDisplayRul
               </div>
             })}
           </section>
-          {MODIFIER_DICTIONARIES.map((dictionary) => (
-            <ModifierDictionarySection
-              key={dictionary.key}
-              title={dictionary.label}
-              entries={modifierDictionaryEntries(content, dictionary.key)}
-              onChange={(index, pair) => updateModifierPair(dictionary.key, index, pair)}
-              onAdd={() => addModifierPair(dictionary.key)}
-              onRemove={(index) => removeModifierPair(dictionary.key, index)}
-            />
-          ))}
+          <section className="rounded-[22px] border border-[rgba(26,28,25,0.08)] p-4" aria-label="Remove print aliases">
+            <div className="text-[1rem] font-bold">Modifier Remove / 去除打印别名</div>
+            <p className="my-2 text-sm">在 Menu Management 管理共享去除项。每个语义只显示一行；这里只修改打印别名，留空使用默认打印。</p>
+            {(settings?.remove_aliases ?? []).map((entry) => {
+              const keys = new Set(entry.alias_codes.map((key) => key.trim().toLowerCase()))
+              const pairs = modifierDictionaryEntries(content, 'MODIFIER_REMOVE').filter(([code]) => keys.has(code.trim().toLowerCase()))
+              const values = new Set(pairs.map(([, value]) => value))
+              const conflict = values.size > 1
+              const selected = pairs.find(([code]) => code.trim().toLowerCase() === entry.code) ?? pairs[0]
+              const alias = selected?.[1] ?? ''
+              const change = (value: string) => setContent((current) => updateContent(current, (draft) => {
+                const entries = modifierDictionaryEntries(draft, 'MODIFIER_REMOVE').filter(([code]) => !keys.has(code.trim().toLowerCase()))
+                entries.push([entry.code, value.trim() ? value : null])
+                draft.dictionaries = { ...draft.dictionaries, MODIFIER_REMOVE: entries }
+              }))
+              return <div key={entry.code} className="my-3 rounded-[14px] bg-white p-3">
+                <div className="font-semibold">{entry.name_zh}</div>
+                <div className="text-sm">System Code / 系统代码: <code>{entry.code}</code></div>
+                <div className="text-sm">Default Print / 默认打印: {entry.default_print_text ?? 'Order snapshot / 订单快照名称'}</div>
+                {conflict ? <div role="alert" className="my-2 text-sm text-[var(--primary)]">旧别名冲突：{pairs.map(([code, value]) => `${code}=${value ?? 'Default'}`).join(' / ')}。编辑此行或恢复默认可明确统一；保存前保留原值。</div> : null}
+                <label className="block text-sm">Print Alias / 打印别名
+                  <input aria-label={`Remove print alias ${entry.code}`} value={alias} onChange={(event) => change(event.target.value)}
+                    className="my-2 w-full rounded-[12px] border px-3 py-2" />
+                </label>
+                <button type="button" onClick={() => change('')} className="rounded-[12px] bg-gray-100 px-3 py-2">Reset to Default / 恢复默认</button>
+              </div>
+            })}
+            <details className="mt-3 text-sm" aria-label="Legacy Remove alias diagnostics">
+              <summary>Legacy / Conflict Diagnostics / 旧规则诊断</summary>
+              <p className="my-2">未绑定共享去除项的旧规则保留原值，不推测食材；需要确认后再在菜单中管理。</p>
+              {modifierDictionaryEntries(content, 'MODIFIER_REMOVE')
+                .filter(([code]) => !(settings?.remove_aliases ?? []).some((entry) => entry.alias_codes.some((key) => key.trim().toLowerCase() === code.trim().toLowerCase())))
+                .map(([code, value], index) => <div key={`${code}-${index}`}><code>{code}</code>: {value ?? 'Default / 默认'}</div>)}
+            </details>
+          </section>
         </div>
 
         <section className="rounded-[22px] border border-[rgba(26,28,25,0.08)] bg-[rgba(26,28,25,0.03)] p-4">
@@ -688,60 +678,6 @@ function RuleTextInput({ label, value, onChange }: { label: string; value: strin
         className="mt-1 w-full rounded-[14px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.88rem] font-normal text-[var(--on-surface)] outline-none"
       />
     </label>
-  )
-}
-
-function ModifierDictionarySection({
-  title,
-  entries,
-  onChange,
-  onAdd,
-  onRemove,
-}: {
-  title: string
-  entries: [string, string | null][]
-  onChange: (index: number, pair: [string, string | null]) => void
-  onAdd: () => void
-  onRemove: (index: number) => void
-}) {
-  return (
-    <section className="rounded-[22px] border border-[rgba(26,28,25,0.08)] bg-[rgba(26,28,25,0.03)] p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-[1rem] font-bold text-[var(--on-surface)]">{title}</div>
-        <button
-          type="button"
-          onClick={onAdd}
-          className="rounded-full bg-[rgba(26,28,25,0.06)] px-3 py-1.5 text-[0.78rem] font-semibold text-[var(--on-surface)]"
-        >
-          Add
-        </button>
-      </div>
-      <div className="mt-3 space-y-2">
-        {entries.map((entry, index) => (
-          <div key={`${entry[0]}-${index}`} className="grid gap-2 rounded-[16px] bg-white p-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_80px]">
-            <input
-              value={entry[0]}
-              onChange={(event) => onChange(index, [event.target.value, entry[1]])}
-              aria-label={`${title} code`}
-              className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.86rem] outline-none"
-            />
-            <input
-              value={entry[1] ?? ''}
-              onChange={(event) => onChange(index, [entry[0], event.target.value])}
-              aria-label={`${title} output`}
-              className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.86rem] outline-none"
-            />
-            <button
-              type="button"
-              onClick={() => onRemove(index)}
-              className="rounded-[12px] bg-[rgba(97,0,0,0.08)] px-3 py-2 text-[0.78rem] font-semibold text-[var(--primary)]"
-            >
-              Remove
-            </button>
-          </div>
-        ))}
-      </div>
-    </section>
   )
 }
 

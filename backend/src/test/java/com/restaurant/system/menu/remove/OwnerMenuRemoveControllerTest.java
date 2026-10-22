@@ -32,6 +32,16 @@ class OwnerMenuRemoveControllerTest {
         assertThatThrownBy(()->controller.update(80L,99L,body,null)).hasMessage("FORBIDDEN");
         verify(authorization,never()).requireForStore(99L,Capability.ADMIN_MENU_MANAGE);verify(service,never()).update(anyLong(),any());
     }
+    @Test void baselineOperationKeepsExistingStoreCapabilityAndCannotWriteWhenUnauthorized() {
+        var baseline = mock(StoreRemoveBaselineReconciler.class);
+        controller.setBaselineReconciler(baseline);
+        var body = new StoreRemoveBaselineReconciler.Request();body.store_id = 2L;body.dry_run = false;
+        body.expected_before_fingerprint = "confirmed";
+        when(authorization.requireForStore(2L,Capability.ADMIN_MENU_MANAGE)).thenThrow(new BusinessException("FORBIDDEN"));
+        assertThatThrownBy(() -> controller.baselineReconcile(body)).hasMessage("FORBIDDEN");
+        verifyNoInteractions(baseline);
+    }
+
     @Test void suppliedCrossStoreAndMissingDryRunFailClosed() {
         when(service.storeIdForRemove(80L)).thenReturn(2L);
         assertThatThrownBy(()->controller.applicability(80L,99L)).hasMessage("REMOVE_STORE_MISMATCH");

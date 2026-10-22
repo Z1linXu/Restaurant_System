@@ -240,6 +240,27 @@ class StoreRemovePostgresTest {
         return new RemoveSelectionValidator(jdbc,repository,new StoreRemoveOptionResolver(new NamedParameterJdbcTemplate(ds)),mock(StoreComboConfigurationService.class));
     }
 
+    @Test void genericReconcileRetainsUnmaterializableMetadataAndMixedPrefixIdentityWithoutWriting() throws Exception {
+        fresh(ds->{migrate(ds,null);JdbcTemplate jdbc=new JdbcTemplate(ds);Fixture f=fixture(jdbc);
+            long second=id(jdbc,"insert into menu_items(store_id,name_zh,sort_order) values (?,'second',0) returning id",f.store());
+            long missingGroup=id(jdbc,"insert into menu_item_options(menu_item_id,option_type,option_code,name_zh,price_delta,is_active) values (?,'remove','remove_radish','走萝卜',0,true) returning id",f.item());
+            legacy(jdbc,f.item(),"cilantro","走香菜",0,true);
+            legacy(jdbc,second,"remove_cilantro","走香菜",0,true);
+            var before=jdbc.queryForList("select * from menu_item_options order by id");
+            try(Harness h=new Harness(ds)) {
+                long revision=revision(jdbc,f.store());
+                var dry=h.service.reconcile(f.store(),true);
+                assertThat(dry.linked_options()).isZero();
+                assertThat(dry.conflicts()).anyMatch(c->"REMOVE_VALUES_INVALID".equals(c.reason()) && c.option_ids().contains(missingGroup));
+                assertThat(dry.conflicts()).anyMatch(c->"REMOVE_CODE_ALIAS_CONFLICT".equals(c.reason()));
+                assertThat(h.service.reconcile(f.store(),false).linked_options()).isZero();
+                assertThat(jdbc.queryForList("select * from menu_item_options order by id")).isEqualTo(before);
+                assertThat(jdbc.queryForObject("select count(*) from store_removes",Integer.class)).isZero();
+                assertThat(revision(jdbc,f.store())).isEqualTo(revision);
+            }
+        });
+    }
+
     private static StoreRemoveService.WriteRequest write(Long store,String code,String zh,boolean active,int sort) {
         var r=new StoreRemoveService.WriteRequest();r.store_id=store;r.code=code;r.name_zh=zh;r.name_en="";r.active=active;r.sort_order=sort;return r;
     }

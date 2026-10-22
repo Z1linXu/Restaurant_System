@@ -681,6 +681,11 @@ option 行可继续作为兼容数据存在。
 读路径亦使用 `StoreRemoveOptionResolver` 从 catalog/适用规则投影当前值。
 新建 Remove 不自动选择任何商品。
 
+指定 18 项的 baseline reconciliation 复用 V38，无额外 migration。它只写新 Master、
+旧明确 assignment 的同店 FK、原适用性的 ALLOW/DENY 和同事务 audit_logs；raw Code、
+名称、启停、Parent、价格及历史快照不改。`semantic_code` 是应用投影，不是可重命名
+数据库字段。canonical 与 `remove_` 家族创建重复由同 Store 锁及服务校验拒绝。
+
 显式 reconciliation 只关联同店、稳定 code、双语名称一致、零价格、关系无歧义的
 旧 option，保留 option ID 和原商品 eligibility；冲突不选择“多数名称”或价格。
 迁移本身不运行 reconciliation。新 Store/clone 在目标 Store 原事务内建立独立引用，

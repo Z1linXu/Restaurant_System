@@ -20,7 +20,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class StoreRemoveService {
     public record Remove(Long id, Long store_id, String code, String name_zh, String name_en,
-                         boolean active, int sort_order, List<Long> item_ids) {}
+                         boolean active, int sort_order, List<Long> item_ids) {
+        @com.fasterxml.jackson.annotation.JsonProperty("semantic_code")
+        public String semantic_code() { return RemoveSemantics.canonicalSemantic(code); }
+    }
     public record Conflict(String code, List<Long> option_ids, List<String> names_zh,
                            List<String> names_en, String reason) {}
     public record LegacyOption(Long option_id, Long item_id, String code, String name_zh, String name_en, Boolean active, String option_group, Long parent_option_id) {}
@@ -47,7 +50,7 @@ public class StoreRemoveService {
     }
     public static class ReconcileRequest { public Long store_id; public Boolean dry_run; }
     private record Legacy(Long id, Long item, String code, String zh, String en, BigDecimal price,
-                          Boolean active, Integer sort, Long parent, Long master) {}
+                          Boolean active, Integer sort, Long parent, Long master, String type, String group) {}
     private record Plan(String code, List<Legacy> rows, Remove master, String conflict) {}
     private final JdbcTemplate jdbc;
     private final MenuRevisionService revisions;
@@ -75,8 +78,8 @@ public class StoreRemoveService {
         String code = code(request.code);
         validateValues(request);
         lock(request.store_id);
-        if (masters(request.store_id).stream().anyMatch(r -> r.code().equals(code))) throw failure("REMOVE_CODE_EXISTS");
-        if (legacy(request.store_id).stream().anyMatch(r -> code.equals(r.code()))) throw failure("REMOVE_LEGACY_CONFLICT");
+        if (masters(request.store_id).stream().anyMatch(r -> Objects.equals(RemoveSemantics.canonicalSemantic(r.code()), RemoveSemantics.canonicalSemantic(code)))) throw failure("REMOVE_CODE_EXISTS");
+        if (legacy(request.store_id).stream().anyMatch(r -> Objects.equals(RemoveSemantics.canonicalSemantic(code), RemoveSemantics.canonicalSemantic(r.code())))) throw failure("REMOVE_LEGACY_CONFLICT");
         long id = insert("""
             insert into store_removes(store_id,code,name_zh,name_en,active,sort_order,created_at,updated_at)
             values (?,?,?,?,?,?,current_timestamp,current_timestamp)
@@ -99,6 +102,9 @@ public class StoreRemoveService {
             where id=? and store_id=?
             """, request.name_zh.trim(), text(request.name_en), request.active,
             request.sort_order == null ? before.sort_order() : request.sort_order, id, before.store_id());
+        // An explicit Owner name/order edit may update current copies; identity and parent stay untouched.
+        jdbc.update("update menu_item_options set name_zh=?,name_en=?,sort_order=?,updated_at=current_timestamp where store_remove_id=? and store_remove_store_id=?",
+            request.name_zh.trim(), text(request.name_en), request.sort_order == null ? before.sort_order() : request.sort_order, id, before.store_id());
         refreshStoreAssignments(before.store_id());
         revisions.incrementRevision(before.store_id());
         return requireRemove(id);
@@ -115,6 +121,7 @@ public class StoreRemoveService {
             jdbc.update("update store_removes set sort_order=?,updated_at=current_timestamp where id=? and store_id=?",
                 i * 10, request.ids.get(i), request.store_id);
         }
+        jdbc.update("update menu_item_options o set sort_order=r.sort_order from store_removes r where o.store_remove_id=r.id and o.store_remove_store_id=r.store_id and r.store_id=?",request.store_id);
         refreshStoreAssignments(request.store_id);
         revisions.incrementRevision(request.store_id);
         return masters(request.store_id);
@@ -175,7 +182,7 @@ public class StoreRemoveService {
                     (rs,n)->rs.getLong(1),item.item_id(),remove.id());
                 if (linked.isEmpty() && item.effective()) {
                     // An unresolved old identity must never be silently replaced by a second row.
-                    Integer existing = jdbc.queryForObject("select count(*) from menu_item_options where menu_item_id=? and option_code=? and store_remove_id is null",Integer.class,item.item_id(),remove.code());
+                    Integer existing = jdbc.queryForObject("select count(*) from menu_item_options where menu_item_id=? and option_code in (?,?) and store_remove_id is null",Integer.class,item.item_id(),RemoveSemantics.canonicalSemantic(remove.code()),"remove_"+RemoveSemantics.canonicalSemantic(remove.code()));
                     if (existing != null && existing > 0) throw failure("REMOVE_LEGACY_CONFLICT");
                     jdbc.update("""
                         insert into menu_item_options(menu_item_id,option_type,option_code,option_group,name_zh,name_en,
@@ -185,11 +192,9 @@ public class StoreRemoveService {
                         remove.active() && item.effective(),remove.sort_order(),remove.id(),storeId);
                 } else {
                     jdbc.update("""
-                        update menu_item_options set option_type='remove',option_group='REMOVE',option_code=?,name_zh=?,name_en=?,
-                        price_delta=0,is_active=?,sort_order=?,updated_at=current_timestamp
+                        update menu_item_options set is_active=?,updated_at=current_timestamp
                         where menu_item_id=? and store_remove_id=? and store_remove_store_id=?
-                        """,remove.code(),remove.name_zh(),remove.name_en(),remove.active() && item.effective(),
-                        remove.sort_order(),item.item_id(),remove.id(),storeId);
+                        """,remove.active() && item.effective(),item.item_id(),remove.id(),storeId);
                 }
             }
         }
@@ -222,11 +227,10 @@ public class StoreRemoveService {
             for (Legacy row : unlinked) {
                 if (configured.add(row.item())) jdbc.update("insert into store_remove_item_rules(remove_id,store_id,menu_item_id,mode) values (?,?,?,?)",
                     id,storeId,row.item(),Boolean.TRUE.equals(row.active())?"ALLOW":"DENY");
-                jdbc.update("update menu_item_options set store_remove_id=?,store_remove_store_id=?,option_type='remove',option_group='REMOVE' where id=? and store_remove_id is null",id,storeId,row.id());
+                jdbc.update("update menu_item_options set store_remove_id=?,store_remove_store_id=? where id=? and store_remove_id is null",id,storeId,row.id());
             }
         }
         if (!dryRun && options > 0) {
-            refreshStoreAssignments(storeId);
             if (bumpRevision) revisions.incrementRevision(storeId);
         }
         return new Reconciliation(storeId,dryRun,groups,options,conflicts(plans));
@@ -240,17 +244,19 @@ public class StoreRemoveService {
 
     private List<Plan> plan(Long storeId,List<Remove> masters) {
         Map<String,List<Legacy>> groups = new LinkedHashMap<>();
-        legacy(storeId).forEach(row->groups.computeIfAbsent(row.code(),ignored->new ArrayList<>()).add(row));
+        legacy(storeId).forEach(row->groups.computeIfAbsent(RemoveSemantics.canonicalSemantic(row.code()),ignored->new ArrayList<>()).add(row));
         List<Plan> plans = new ArrayList<>();
-        groups.forEach((code,rows)-> {
+        groups.forEach((semantic,rows)-> {
+            String code = rows.get(0).code();
             if (rows.stream().noneMatch(r->r.master()==null) && rows.stream().map(Legacy::item).distinct().count()==rows.size()) return;
-            Remove master = masters.stream().filter(m->Objects.equals(m.code(),code)).findFirst().orElse(null);
+            Remove master = masters.stream().filter(m->Objects.equals(RemoveSemantics.canonicalSemantic(m.code()),RemoveSemantics.canonicalSemantic(code))).findFirst().orElse(null);
             Legacy first = rows.get(0);
             String conflict = null;
             if (!validCode(code)) conflict="REMOVE_CODE_INVALID";
-            else if (rows.stream().anyMatch(r->text(r.zh())==null || r.price()==null || r.price().signum()!=0 || r.parent()!=null || r.active()==null)) conflict="REMOVE_VALUES_INVALID";
+            else if (rows.stream().map(Legacy::code).distinct().count() > 1) conflict="REMOVE_CODE_ALIAS_CONFLICT";
+            else if (rows.stream().anyMatch(r->text(r.zh())==null || r.price()==null || r.price().signum()!=0 || r.parent()!=null || r.active()==null || !"remove".equals(r.type()) || !"REMOVE".equals(r.group()))) conflict="REMOVE_VALUES_INVALID";
             else if (rows.stream().anyMatch(r->!Objects.equals(r.zh(),first.zh()) || !Objects.equals(r.en(),first.en()))) conflict="REMOVE_BUSINESS_VALUES_CONFLICT";
-            else if (master!=null && (!Objects.equals(master.name_zh(),first.zh()) || !Objects.equals(master.name_en(),first.en()))) conflict="REMOVE_CATALOG_VALUES_CONFLICT";
+            else if (master!=null && (!Objects.equals(master.code(),code) || !Objects.equals(master.name_zh(),first.zh()) || !Objects.equals(master.name_en(),first.en()))) conflict="REMOVE_CATALOG_VALUES_CONFLICT";
             Map<Long,Boolean> active = new LinkedHashMap<>();
             for (Legacy row:rows) {
                 if (active.containsKey(row.item())) conflict="REMOVE_RELATIONSHIP_CONFLICT";
@@ -279,7 +285,7 @@ public class StoreRemoveService {
             and (upper(o.option_group)='REMOVE' or ((o.option_group is null or trim(o.option_group)='') and lower(o.option_type)='remove'))
             order by o.option_code asc nulls first,o.id
             """,(rs,n)->new Legacy(rs.getLong("id"),rs.getLong("menu_item_id"),rs.getString("option_code"),rs.getString("name_zh"),rs.getString("name_en"),
-            rs.getBigDecimal("price_delta"),rs.getObject("is_active",Boolean.class),rs.getObject("sort_order",Integer.class),rs.getObject("parent_option_id",Long.class),rs.getObject("store_remove_id",Long.class)),storeId);
+            rs.getBigDecimal("price_delta"),rs.getObject("is_active",Boolean.class),rs.getObject("sort_order",Integer.class),rs.getObject("parent_option_id",Long.class),rs.getObject("store_remove_id",Long.class),rs.getString("option_type"),rs.getString("option_group")),storeId);
     }
 
     private List<Conflict> conflicts(List<Plan> plans) {

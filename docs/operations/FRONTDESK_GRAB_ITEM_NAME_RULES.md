@@ -255,3 +255,16 @@ active / sold-out，必须由 Menu API 或该门店数据库确认，因而不�
 - `backend/src/test/java/com/restaurant/system/printing/`：上述回归测试。
 
 表中旧目录证据的数字范围来自原基线；当前源码定位以这些方法名为准。
+
+
+## Shared Modifier Remove aliases
+
+The Store shared Remove catalog supplies one `semantic_code` row per ingredient
+or operation in Printing Display Rules. Known `remove_` prefixes resolve to the
+same Store alias; beef/meat, radish/carrot and noodle/less_noodle remain separate.
+Multiple legal Remove selections each render. Missing aliases use the stored
+option label, while null custom aliases restore fallback. Ambiguous legacy keys
+stay in a collapsed diagnostic. Published revisions are never rewritten by GET;
+any content change uses the existing Save Draft / Validate / Publish workflow.
+Already canonical content does not need a new revision. Existing Print Job text
+and order financial/option snapshots stay frozen.

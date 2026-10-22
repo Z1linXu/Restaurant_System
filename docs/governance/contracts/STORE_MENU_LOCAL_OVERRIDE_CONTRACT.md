@@ -92,3 +92,14 @@ not rebuilt merely because a new rule was published. Frontdesk can expose a
 previously stored SOUP_BASE selection; missing old vegetable-noodle selection
 is reported as unrecorded, never inferred from today's menu. No historical
 amount, task or rendered payload is rewritten.
+
+
+## Canonical Remove reconciliation
+
+The 18-item baseline operation is Store-local and fingerprint-guarded. It may
+create independent shared masters and link unambiguous existing options, but
+must preserve every item's current effective Remove choices, raw option identity,
+active state, free price and Combo Parent. No blanket Category/ALLOW assignment
+is permitted. Exact `remove_` identity aliases reuse an existing master; beef/meat,
+radish/carrot and noodle/less_noodle remain separate. Ambiguous legacy rows remain
+traceable. Printing's shared semantic projection grants no applicability.

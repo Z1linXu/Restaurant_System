@@ -1346,7 +1346,7 @@ free: there is no price field and no Add-on/Remove conversion endpoint.
 
 | Method | Path | Request / result data |
 | --- | --- | --- |
-| GET | `/api/v1/admin/menu/removes?store_id={storeId}` | `{removes, conflicts, legacy_options}` |
+| GET | `/api/v1/admin/menu/removes?store_id={storeId}` | `{removes, conflicts, legacy_options}`; each shared row adds `semantic_code` |
 | POST | `/api/v1/admin/menu/removes` | `{store_id, code, name_zh, name_en?, active, sort_order?}` → Remove |
 | PUT | `/api/v1/admin/menu/removes/{id}?store_id={storeId}` | `{store_id?, name_zh, name_en?, active, sort_order?, code?}` → Remove; changed code rejected |
 | PUT | `/api/v1/admin/menu/removes/reorder` | `{store_id, ids:[...]}` → ordered Removes; IDs must contain the complete same-Store catalog exactly once |
@@ -1354,7 +1354,16 @@ free: there is no price field and no Add-on/Remove conversion endpoint.
 | PUT | `/api/v1/admin/menu/removes/{id}/applicability?store_id={storeId}` | `{store_id?, category_ids:[...], items:[{item_id, mode}]}` → applicability |
 | POST | `/api/v1/admin/menu/removes/reconcile` | `{store_id, dry_run:boolean}` → `{store_id,dry_run,linked_groups,linked_options,conflicts}` |
 
-Remove fields are `id`, `store_id`, immutable normalized lowercase `code`,
+The controlled `POST /api/v1/admin/menu/removes/baseline-reconcile` accepts
+`{store_id,dry_run,expected_before_fingerprint?}`. Apply requires the exact dry-run
+fingerprint and only supplements the specified 18 semantics. Reports contain
+`existing_shared_count`, `resulting_shared_count`, `created_master_count`,
+`linked_option_count`, `menu_item_eligibility_changes`, fingerprints, decisions,
+links, conflicts and exact `before`/`after`. A stale fingerprint or selection
+delta aborts that Store transaction; successful linking and audit commit together.
+This endpoint does not assign new Remove choices or run generic reconciliation.
+
+Remove fields are `id`, `store_id`, immutable normalized lowercase `code`, `semantic_code`,
 `name_zh`, nullable `name_en`, `active`, `sort_order`, and effective-eligible
 `item_ids`. Code matches `[a-z][a-z0-9]*(_[a-z0-9]+)*` and is unique per Store;
 Chinese name is required. No delete endpoint is exposed; deactivate preserves
@@ -2142,3 +2151,14 @@ Mapping-preview request projection adds internal `external_order_note_snapshot`.
 It is for trusted integration creation only; ordinary POS create and
 create-or-replace/submit reject any non-null value, including an empty string.
 GRAB/HOT reprint retains the original rendered snapshot and does not fetch Uber.
+
+### Shared Remove printing vocabulary
+
+`GET /api/v1/admin/printing/display-rules?store_id=...` additionally returns
+`remove_aliases` (`code`, `name_zh`, `default_print_text`, `source`, `alias_codes`),
+`remove_alias_conflicts`, `legacy_remove_aliases`, `proposed_remove_aliases` and
+`remove_alias_proposal_revision_id`. These are read-only projections, not a
+second menu catalog. Prefix compatibility preserves distinct ingredient/operation
+semantics; proposals never choose among conflicting custom aliases. Draft/validate/
+publish/preview endpoints remain the only rule mutation workflow. No-op proposals
+need no revision. Rule edits affect future renderings, not frozen Print Job text.

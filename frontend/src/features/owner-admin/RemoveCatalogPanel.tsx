@@ -112,6 +112,16 @@ function RemoveCatalogContent({ storeId, categories, onSaved, onChanged }: Props
     finally { if (current === generation.current) setSaving(false) }
   }
 
+  const legacyGroups = new Map<string, { code: string | null; name: string; count: number; items: Set<number>; active: number }>()
+  for (const option of catalog?.legacy_options ?? []) {
+    const key = `${option.code ?? ''}\u0000${option.name_zh}\u0000${option.name_en}`
+    const group = legacyGroups.get(key) ?? { code: option.code, name: option.name_zh || option.name_en, count: 0, items: new Set<number>(), active: 0 }
+    group.count += 1
+    group.items.add(option.item_id)
+    if (option.active) group.active += 1
+    legacyGroups.set(key, group)
+  }
+  const affectedItems = new Set((catalog?.legacy_options ?? []).map((option) => option.item_id)).size
   const selectedRemove = catalog?.removes.find((remove) => remove.id === scopeDraft?.remove_id)
   return (
     <section className="rounded-[26px] bg-white/85 p-5" aria-label="Remove catalog">
@@ -159,8 +169,12 @@ function RemoveCatalogContent({ storeId, categories, onSaved, onChanged }: Props
             <div className="flex flex-wrap gap-2"><button type="button" className={buttonClass} disabled={saving} aria-label={`Edit Remove ${remove.code}`} onClick={() => { setScopeDraft(null); setError(null); setDraft({ ...remove }) }}>Edit / 编辑</button><button type="button" className={buttonClass} disabled={saving} aria-label={`Eligible items ${remove.code}`} onClick={() => void openApplicability(remove)}>Items / 商品</button><button type="button" className={buttonClass} disabled={saving || index === 0} aria-label={`Move Remove ${remove.code} up`} onClick={() => void move(index, -1)}>↑</button><button type="button" className={buttonClass} disabled={saving || index === catalog.removes.length - 1} aria-label={`Move Remove ${remove.code} down`} onClick={() => void move(index, 1)}>↓</button></div>
           </li>)}
         </ul>}
-        {catalog.legacy_options?.length ? <details className="mt-4 rounded-[16px] bg-black/[0.025] p-4"><summary className="cursor-pointer font-semibold">Legacy item Removes / 原有单品减料 ({catalog.legacy_options.length})</summary><ul className="mt-3 space-y-2 text-sm">{catalog.legacy_options.map((option) => <li key={option.option_id}>{option.name_zh || option.name_en} · {option.code || 'Missing code / 缺少代码'} · #{option.item_id} · {option.active ? 'Active / 可用' : 'Inactive / 停用'}</li>)}</ul></details> : null}
-        {catalog.conflicts.length ? <section className="mt-4 rounded-[18px] bg-amber-50 p-4" aria-label="Legacy Remove conflicts"><h3 className="font-semibold">Names needing review / 待确认名称</h3><p className="mt-1 text-sm">Existing item values are preserved. / 原有商品配置保持不变。</p><ul className="mt-3 space-y-2">{catalog.conflicts.map((conflict, index) => <li key={`${conflict.code}-${index}`} className="break-words rounded-[12px] bg-white/70 p-3 text-sm"><strong>{conflict.code || 'Missing code / 缺少代码'}</strong><div>{[...conflict.names_zh, ...conflict.names_en].filter(Boolean).join(' / ')}</div></li>)}</ul></section> : null}
+        {(catalog.legacy_options?.length || catalog.conflicts.length) ? <details className="mt-4 rounded-[16px] bg-black/[0.025] p-4" aria-label="Legacy Remove diagnostics">
+          <summary className="cursor-pointer font-semibold">Legacy diagnostics / 原有减料诊断 · {catalog.legacy_options?.length ?? 0} unlinked / 未关联 · {catalog.conflicts.length} conflicts / 冲突 · {affectedItems} items / 商品</summary>
+          <p className="mt-2 text-sm text-[var(--muted)]">Existing item choices are preserved. Review ambiguous records here. / 原有商品选项已保留；有歧义的记录仅在此汇总。</p>
+          <ul className="mt-3 space-y-2 text-sm">{[...legacyGroups.entries()].map(([key, group]) => <li key={key} className="break-words rounded-[12px] bg-white/70 p-3"><strong>{group.name || 'Unnamed / 未命名'}</strong> · {group.code || 'Missing code / 缺少代码'}<div>{group.count} records / 记录 · {group.items.size} items / 商品 · {group.active} active / 可用</div><div className="text-xs text-[var(--muted)]">Item IDs / 商品编号: {[...group.items].sort((a, b) => a - b).join(', ')}</div></li>)}</ul>
+          {catalog.conflicts.length ? <section className="mt-4 rounded-[18px] bg-amber-50 p-4" aria-label="Legacy Remove conflicts"><h3 className="font-semibold">Needs review / 待确认</h3><ul className="mt-3 space-y-2">{catalog.conflicts.map((conflict, index) => <li key={`${conflict.code}-${index}`} className="break-words rounded-[12px] bg-white/70 p-3 text-sm"><strong>{conflict.code || 'Missing code / 缺少代码'}</strong><div>{[...conflict.names_zh, ...conflict.names_en].filter(Boolean).join(' / ')}</div><div className="text-xs text-[var(--muted)]">{conflict.reason} · {conflict.option_ids.length} records / 记录</div></li>)}</ul></section> : null}
+        </details> : null}
       </> : null}
     </section>
   )

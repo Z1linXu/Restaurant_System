@@ -7550,7 +7550,10 @@ item/category writes refresh compatibility assignments within their existing
 transaction and menu revision change.
 
 Catalog edits update linked current options and menu revision atomically;
-`StoreRemoveOptionResolver` also resolves current Store catalog values for reads.
+`StoreRemoveOptionResolver` resolves the persisted assignment plus current Store
+master availability and applicability. Assignment identity and original active state
+are preserved during baseline linking; only an explicit catalog name/order edit
+propagates those owner-edited fields.
 New submission, direct draft submission and Update validate current same-Store
 Remove assignment, free price and selected Combo-side parent. Stable ingredient
 codes prevent Add-on/Remove conflicts within the same dish; the POS removes the
@@ -7570,6 +7573,38 @@ is rewritten. See [Remove Catalog](docs/operations/REMOVE_CATALOG.md) and
 [API](doc/API.md#store-remove-catalog) for exact fields and endpoints. Migration
 presence and implementation tests are not a claim that Staging or Production
 has deployed this change.
+
+### Canonical Remove baseline and printing aliases
+
+The controlled `POST /api/v1/admin/menu/removes/baseline-reconcile` supplements
+only the 18 Owner-specified semantics. `RemoveSemantics` recognizes an exact
+`remove_` prefix without conflating `beef` with `meat`, `radish` with `carrot`, or
+`noodle` with `less_noodle`. Existing immutable master codes remain unchanged;
+`semantic_code` is the common catalog/printing identity. Creation rejects a
+second master from the same canonical/prefixed identity family in that Store.
+
+Dry-run returns exact per-option before/after selections and a fingerprint.
+Apply requires that fingerprint, locks the Store and reconciles only clear,
+free, parentless existing assignments in one transaction. It creates no category
+selection and no assignment for an item that lacked that Remove. Existing
+inactive options stay inactive. Ambiguous names, missing codes, nonbaseline
+codes and special Combo parents remain traceable legacy records. Any selection
+change aborts the Store transaction; audit insertion is part of that transaction.
+A fresh dry-run/apply replay is a no-op; a stale original fingerprint is rejected.
+This is an application operation on V38, with no V39 migration.
+Normal management shows shared masters once; default-collapsed diagnostics
+summarize unlinked records, conflicts and affected items.
+
+Printing Display Rules exposes `remove_aliases` from that Store's shared catalog,
+with one semantic row containing code, shared name, default text and custom alias.
+New masters appear automatically. Prefix compatibility affects new renderings;
+shared alias editing never changes menu eligibility or limits legal selections.
+Absent aliases safely fall back to the stored option label. The existing draft,
+validate, publish and preview workflow owns all rule changes. Read-only alias
+proposals preserve conflicting custom values and published revisions; matching
+canonical/prefix entries may be consolidated through that workflow. An already
+canonical rule set needs no new revision. Original orders and existing rendered
+Print Job snapshots remain unchanged.
 
 ### Combo UI and Child Remove Options
 
