@@ -9,26 +9,26 @@ repository:
 phase:
   current: PHASE_B
   package: POS_FIVE_FIXES_STAGING
-  status: IMPLEMENTATION_TESTS_ACCEPTED_STAGING_RELEASE_IN_PROGRESS
+  status: STAGING_DEPLOYED_API_BROWSER_ACCEPTED_OWNER_MANUAL_REVIEW_PENDING
   next_phase_authorized: false
 
 staging:
-  deployed_sha: ce35278b3569a4eacfa29efc01cadbf0c409bec6
+  deployed_sha: fbcdb4f8152183b62b6ecc3859e2d5a689d01d49
   deployed_sha_semantics: BACKEND_FRONTEND_TRACKED_SEPARATELY
-  frontend_deployed_sha: 8c3a9e356f59cd025beff25f7fb1d5a20594e028
+  frontend_deployed_sha: fbcdb4f8152183b62b6ecc3859e2d5a689d01d49
   policy_config_sha: d2316234b2936fd89a926aa24a7b6343008834e6
-  flyway: V37
-  acceptance: CANONICAL_ADDON_BACKEND953_POSTGRES_IDENTITY_API_HISTORY_ELIGIBILITY_PASS
-  evidence: PRODUCTION_ADDON_IDENTITY_20261006.md
-  repair_evidence: PRODUCTION_ADDON_IDENTITY_20261006.md
+  flyway: V38
+  acceptance: POS_FIVE_FIXES_BACKEND1046_FRONTEND318_POSTGRES_MOCK_API_BROWSER_PASS
+  evidence: ../POS_FIVE_FIXES_STAGING_20261022.md
+  repair_evidence: ../POS_FIVE_FIXES_STAGING_20261022.md
   cleanup_evidence: PHASE_B_STAGING_SYNTHETIC_FIXTURE_CLEANUP_EXECUTION_EVIDENCE.md
   runtime_observation_evidence: ../POS_FIVE_FIXES_STAGING_20261022.md
   endpoint_policy_evidence: runtime/STAGING_ENDPOINT_POLICY_20260930_EVIDENCE.md
-  latest_backend_release_evidence: PRODUCTION_ADDON_IDENTITY_20261006.md
-  endpoint_policy_gate: OWNER_CONFIRMED_STORE18_PRINTER_BINDINGS_PENDING
+  latest_backend_release_evidence: ../POS_FIVE_FIXES_STAGING_20261022.md
+  endpoint_policy_gate: TEST_STORE18_MOCK_ACCEPTED_NO_PHYSICAL_PRINT
 
 production:
-  deployed_sha: ce35278b3569a4eacfa29efc01cadbf0c409bec6
+  deployed_sha: 7d573be03d66a9505e0c68f92fa17829247f56e3
   frontend_deployed_sha: 8c3a9e356f59cd025beff25f7fb1d5a20594e028
   canonical_url: https://pos.lanzhounoodlesmtl.com
   application_release: COMPLETE
@@ -40,7 +40,7 @@ production:
   mutation_authorized: false
   current_release_authorization: OWNER_20261021_UBER_REVIEWED_RELEASE_BACKUP_WORKER_DISABLED_TWO_STORE_PREPARATION_NO_UNVERIFIED_BINDING_OR_ORDER_IMPORT
   evidence: PRODUCTION_ADDON_IDENTITY_20261006.md
-  runtime_observation_evidence: PRODUCTION_ADDON_IDENTITY_20261006.md
+  runtime_observation_evidence: ../POS_FIVE_FIXES_STAGING_20261022.md
   canonical_addons_per_store: 15
   canonical_addon_assignments: 195
   addon_conflicts: 0
@@ -179,8 +179,8 @@ uber_store_capability:
   production_mutation: NONE
 
 gate:
-  type: TECHNICAL
-  next_action: DEPLOY_REVIEWED_POS_FIVE_FIXES_EXACT_SHA_STAGING_AND_ACCEPT_MOCK
+  type: OWNER
+  next_action: MANUALLY_ACCEPT_FIVE_FIXES_ON_STAGING_NO_MAIN_MERGE_OR_PRODUCTION_MUTATION
 
 authorization:
   pos_five_fixes: OWNER_20261021_IMPLEMENT_TEST_REVIEW_BRANCH_PUSH_STAGING_SCHEMA_DEPLOY_FIXTURE_MOCK_ACCEPTANCE_NO_MAIN_MERGE_NO_PRODUCTION
@@ -204,4 +204,4 @@ authorization:
   production: NONE
 
 stop:
-  marker: POS_FIVE_FIXES_STAGING_ONLY_NO_PRODUCTION_MUTATION
+  marker: POS_FIVE_FIXES_STAGING_ACCEPTED_NO_MAIN_MERGE_NO_PRODUCTION_MUTATION

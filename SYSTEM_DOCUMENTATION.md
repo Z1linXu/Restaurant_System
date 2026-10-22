@@ -7534,6 +7534,9 @@ Printing Settings page retains a same-Store link and continues to own printer
 mode, devices, assignments and job diagnostics. Moving the panel grants no new
 permission: printing configuration still requires its existing capabilities and
 PRINTING module checks.
+The frontend reads `ADMIN_PRINTING_MANAGE` / `ADMIN_STORE_CONFIG` from the
+actual auth permission list (enum names); menu-only permission does not grant
+printing configuration access.
 
 V38 adds typed `store_removes`, `store_remove_categories` and
 `store_remove_item_rules`, with nullable same-Store links on

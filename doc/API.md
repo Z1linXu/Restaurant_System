@@ -797,6 +797,10 @@ for the same canonical outputs. The old Printing Settings page links to that
 same-Store tab; endpoint paths and printing permissions are unchanged. Missing
 item aliases fall back to frozen submitted order/menu labels.
 
+Auth `permissions` exposes enum names, including `ADMIN_PRINTING_MANAGE` and
+`ADMIN_STORE_CONFIG`; the moved editor uses these actual response identifiers.
+`ADMIN_MENU_MANAGE` alone cannot mount or authorize the printing editor.
+
 GRAB task creation, HOT_KITCHEN and preview share rule-first spicy resolution.
 For SPICINESS, a nonblank configured output (including NO_SPICY `（走s）`) wins
 before legacy suppression; an explicit empty string hides the kitchen token,

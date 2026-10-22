@@ -1,0 +1,199 @@
+{
+  "result": "PASS",
+  "source_sha": "fbcdb4f8152183b62b6ecc3859e2d5a689d01d49",
+  "checked_at": "2026-10-22T03:27:19.953598+00:00",
+  "all_generated_jobs_count": 19,
+  "effective_mode": "MOCK",
+  "jobs": [
+    {
+      "id": 227,
+      "order_id": 91,
+      "module": "GRAB",
+      "status": "PRINTED",
+      "execution_mode_raw": null,
+      "printer_id": null,
+      "claimed_by_device_id": null,
+      "printed_by_device_id": null
+    },
+    {
+      "id": 228,
+      "order_id": 91,
+      "module": "FRONTDESK_RECEIPT",
+      "status": "PRINTED",
+      "execution_mode_raw": null,
+      "printer_id": null,
+      "claimed_by_device_id": null,
+      "printed_by_device_id": null
+    },
+    {
+      "id": 229,
+      "order_id": 92,
+      "module": "GRAB",
+      "status": "PRINTED",
+      "execution_mode_raw": null,
+      "printer_id": null,
+      "claimed_by_device_id": null,
+      "printed_by_device_id": null
+    },
+    {
+      "id": 230,
+      "order_id": 92,
+      "module": "FRONTDESK_RECEIPT",
+      "status": "PRINTED",
+      "execution_mode_raw": null,
+      "printer_id": null,
+      "claimed_by_device_id": null,
+      "printed_by_device_id": null
+    },
+    {
+      "id": 231,
+      "order_id": 93,
+      "module": "GRAB",
+      "status": "PRINTED",
+      "execution_mode_raw": null,
+      "printer_id": null,
+      "claimed_by_device_id": null,
+      "printed_by_device_id": null
+    },
+    {
+      "id": 232,
+      "order_id": 93,
+      "module": "FRONTDESK_RECEIPT",
+      "status": "PRINTED",
+      "execution_mode_raw": null,
+      "printer_id": null,
+      "claimed_by_device_id": null,
+      "printed_by_device_id": null
+    },
+    {
+      "id": 233,
+      "order_id": 94,
+      "module": "GRAB",
+      "status": "PRINTED",
+      "execution_mode_raw": null,
+      "printer_id": null,
+      "claimed_by_device_id": null,
+      "printed_by_device_id": null
+    },
+    {
+      "id": 234,
+      "order_id": 94,
+      "module": "FRONTDESK_RECEIPT",
+      "status": "PRINTED",
+      "execution_mode_raw": null,
+      "printer_id": null,
+      "claimed_by_device_id": null,
+      "printed_by_device_id": null
+    },
+    {
+      "id": 235,
+      "order_id": 95,
+      "module": "GRAB",
+      "status": "PRINTED",
+      "execution_mode_raw": null,
+      "printer_id": null,
+      "claimed_by_device_id": null,
+      "printed_by_device_id": null
+    },
+    {
+      "id": 236,
+      "order_id": 95,
+      "module": "FRONTDESK_RECEIPT",
+      "status": "PRINTED",
+      "execution_mode_raw": null,
+      "printer_id": null,
+      "claimed_by_device_id": null,
+      "printed_by_device_id": null
+    },
+    {
+      "id": 237,
+      "order_id": 96,
+      "module": "GRAB",
+      "status": "PRINTED",
+      "execution_mode_raw": null,
+      "printer_id": null,
+      "claimed_by_device_id": null,
+      "printed_by_device_id": null
+    },
+    {
+      "id": 238,
+      "order_id": 96,
+      "module": "FRONTDESK_RECEIPT",
+      "status": "PRINTED",
+      "execution_mode_raw": null,
+      "printer_id": null,
+      "claimed_by_device_id": null,
+      "printed_by_device_id": null
+    },
+    {
+      "id": 239,
+      "order_id": 97,
+      "module": "GRAB",
+      "status": "PRINTED",
+      "execution_mode_raw": null,
+      "printer_id": null,
+      "claimed_by_device_id": null,
+      "printed_by_device_id": null
+    },
+    {
+      "id": 240,
+      "order_id": 97,
+      "module": "HOT_KITCHEN",
+      "status": "PRINTED",
+      "execution_mode_raw": null,
+      "printer_id": null,
+      "claimed_by_device_id": null,
+      "printed_by_device_id": null
+    },
+    {
+      "id": 241,
+      "order_id": 97,
+      "module": "FRONTDESK_RECEIPT",
+      "status": "PRINTED",
+      "execution_mode_raw": null,
+      "printer_id": null,
+      "claimed_by_device_id": null,
+      "printed_by_device_id": null
+    },
+    {
+      "id": 242,
+      "order_id": 91,
+      "module": "GRAB",
+      "status": "PRINTED",
+      "execution_mode_raw": null,
+      "printer_id": null,
+      "claimed_by_device_id": null,
+      "printed_by_device_id": null
+    },
+    {
+      "id": 243,
+      "order_id": 91,
+      "module": "FRONTDESK_RECEIPT",
+      "status": "PRINTED",
+      "execution_mode_raw": null,
+      "printer_id": null,
+      "claimed_by_device_id": null,
+      "printed_by_device_id": null
+    },
+    {
+      "id": 244,
+      "order_id": 91,
+      "module": "FRONTDESK_RECEIPT",
+      "status": "PRINTED",
+      "execution_mode_raw": null,
+      "printer_id": null,
+      "claimed_by_device_id": null,
+      "printed_by_device_id": null
+    },
+    {
+      "id": 245,
+      "order_id": 91,
+      "module": "FRONTDESK_RECEIPT",
+      "status": "PRINTED",
+      "execution_mode_raw": null,
+      "printer_id": null,
+      "claimed_by_device_id": null,
+      "printed_by_device_id": null
+    }
+  ]
+}

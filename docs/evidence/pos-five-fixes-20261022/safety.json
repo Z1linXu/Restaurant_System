@@ -1,0 +1,53 @@
+{
+  "result": "PASS",
+  "checked_at": "2026-10-22T03:22:08.582005+00:00",
+  "deploy": {
+    "result": "PASS",
+    "environment": "staging",
+    "source_sha": "fbcdb4f8152183b62b6ecc3859e2d5a689d01d49",
+    "frontend_image": "sha256:48bea3d30070c66299ee16b24ac915914004a764303097991be4850b126e734b",
+    "backend_image": "sha256:4bb38242b262de79f626453f87435c71891549d5b24c7e91f441403b9e9c444a",
+    "flyway": "38",
+    "deployed_at": "2026-10-22T03:15:18.281593+00:00",
+    "backup_sha256": "a186d4f919968dde823044c5893c1183799a4371eb8c676872e4c117d29d652f",
+    "production_unchanged": true,
+    "database_container_unchanged": true
+  },
+  "history": {
+    "cutoffs": [
+      90,
+      226
+    ],
+    "hashes": [
+      "77ecbb0691b5a0dae96a8841692e1d96",
+      "2a22bb651d81a5c3a9a8df327ea24115",
+      "f9ee833aac5cee051f339b27288b9891",
+      "a01f9e5acc1351074fa70796d95b0185",
+      "7f8ce406563175f251498d4bf5970021"
+    ]
+  },
+  "production_unchanged_since_this_release_baseline": true,
+  "staging_database_container_unchanged": true,
+  "flyway_unchanged_v38": true,
+  "shared_remove_browser_save_readback": [
+    {
+      "item_id": 919,
+      "option_id": 8768,
+      "name_zh": "页面共享减料验收",
+      "name_en": "UI Shared Remove Accepted",
+      "price": "0.00"
+    },
+    {
+      "item_id": 920,
+      "option_id": 8769,
+      "name_zh": "页面共享减料验收",
+      "name_en": "UI Shared Remove Accepted",
+      "price": "0.00"
+    }
+  ],
+  "menu_revision": 14,
+  "other_store_configuration_digests_unchanged": true,
+  "printing_mode": "MOCK",
+  "configured_printers_preserved_count": 1,
+  "active_rule_revision": 82
+}
