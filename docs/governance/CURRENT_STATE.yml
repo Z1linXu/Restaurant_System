@@ -3,7 +3,7 @@ updated_at: 2026-10-22
 
 repository:
   ref: origin/main
-  sha: 5d2c5635faf232e5f986299e7d73167d4a7c4877
+  sha: d32fa709f2e895ebc4ebf729e8b546d6fd043df8
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
@@ -32,31 +32,32 @@ staging:
   uber_worker_enabled: false
 
 production:
-  deployed_sha: 7d573be03d66a9505e0c68f92fa17829247f56e3
-  frontend_deployed_sha: 8c3a9e356f59cd025beff25f7fb1d5a20594e028
+  deployed_sha: 4b3abd1349e66a146c36ac310b6a8b48bb2ad572
+  frontend_deployed_sha: 4b3abd1349e66a146c36ac310b6a8b48bb2ad572
   canonical_url: https://pos.lanzhounoodlesmtl.com
   application_release: COMPLETE
   password_login: MANUAL_OBSERVATION_PENDING
   physical_pad_url_switch: MANUAL_OBSERVATION_PENDING
   uber_activated: false
-  uber_active_bindings: 0
-  flyway: V37
+  uber_active_bindings: 1
+  uber_binding_semantics: LOCAL_ENABLED_ROW_WORKER_DISABLED_NOT_REMOTE_ACTIVATION
+  flyway: V38
   mutation_authorized: false
   current_release_authorization: OWNER_20261022_FIVE_FIXES_CANONICAL18_REMOVE_BACKUP_MERGE_STAGING_PRODUCTION_NO_ELIGIBILITY_DEVICE_HISTORY_OR_UBER_CHANGE
   evidence: UBER_TWO_STORE_RELEASE_20261022.md
-  runtime_observation_evidence: UBER_TWO_STORE_RELEASE_20261022.md
+  runtime_observation_evidence: UBER_PRODUCTION_RECEIVER_20261022.md
   canonical_addons_per_store: 15
   canonical_addon_assignments: 195
   addon_conflicts: 0
   addon_identity_api_acceptance: PASS_THREE_STORES
   addon_post_release_browser_acceptance: NOT_COMPLETED_CUA_CLIPBOARD_TIMEOUT
 
-  uber_receiver_enabled: false
+  uber_receiver_enabled: true
   uber_worker_enabled: false
   pos_read_smoke: PASS_7_AUTHENTICATED_GETS_STORE_ISOLATION
 
 uber_readonly_webhook:
-  evidence: UBER_TWO_STORE_RELEASE_20261022.md
+  evidence: UBER_PRODUCTION_RECEIVER_20261022.md
   target_global_mode: KITCHEN_MIRROR
   target_scopes: eats.store eats.store.orders.read
   isolated_postgres_mock_acceptance: PASS
@@ -66,8 +67,8 @@ uber_readonly_webhook:
   live_staging_deployed: true
   live_staging_blocker: NONE_EXACT_7D573BE_RECEIVE_ONLY_ACCEPTANCE_PASS_SUBSEQUENT_POS_DEPLOY_SEPARATE
   production_deployed: true
-  production_signed_post: EXTERNALLY_BLOCKED_SIGNING_KEY_NOT_CONFIGURED
-  production_registration_go: false
+  production_signed_post: PASS_ACTUAL_PRIMARY_KEY_SYNTHETIC_200_401_400_DUPLICATE_HELD_AFTER_V38
+  production_registration_go: true
   production_order_import_go: false
 
 uber_two_store_release:
@@ -79,15 +80,15 @@ uber_two_store_release:
   approved_local_store_ids: [1, 3]
   excluded_local_store_ids: [2]
   local_preparation_evidence: UBER_TWO_STORE_LOCAL_PREPARATION_20261022.md
-  external_uuid_identity: NOT_YET_VERIFIED
+  external_uuid_identity: STORE1_OWNER_CONFIRMED_4483_STORE3_MISSING
   production_import_authorized_without_grants: false
   followup_pr: 281
   followup_merge_sha: 7d573be03d66a9505e0c68f92fa17829247f56e3
   release_evidence: UBER_TWO_STORE_RELEASE_20261022.md
   approved_local_modules_prepared: true
   production_mapping_rules: 0
-  production_webhook_registered: false
-  production_signing_key_present: false
+  production_webhook_registered: true
+  production_signing_key_present: true
   production_oauth_secret_present: false
   actual_production_scopes: PENDING_DASHBOARD_REVIEW
   order_webhook_role: UNVERIFIED
@@ -96,6 +97,31 @@ uber_two_store_release:
   sainte_catherine_printing: DISABLED_NO_ASSIGNMENTS_OR_PAD
   activation_requires_new_core_code: false
   controlled_pilot_ready: false
+
+
+uber_production_preparation:
+  status: COMPLETE_RECEIVE_ONLY_EXTERNAL_AUTH_MAPPING_HARDWARE_PENDING
+  evidence: UBER_PRODUCTION_RECEIVER_20261022.md
+  operator_pr: 284
+  operator_merge_sha: 5d2c5635faf232e5f986299e7d73167d4a7c4877
+  receiver_configured: true
+  actual_primary_key_runtime_match: true
+  secondary_signing_key_configured: false
+  official_uber_delivery: NOT_VERIFIED
+  worker_enabled: false
+  store1_binding_id: 1
+  store1_uber_uuid: 5a7dca5c-b7ec-57c8-a684-87d23e66e8d9
+  store1_binding_authority: EXACT_OWNER_AUTHORIZED_DATABASE_MAINTENANCE_TRUE_OWNER_AUDIT_NO_ADMIN_IMPERSONATION
+  store3_uber_uuid: UNKNOWN
+  confirmed_semantic_rules_reused_per_store: 299
+  production_rules_persisted_per_store: 0
+  production_external_rules_unverified_per_store: 299
+  current_candidate_sha256: 8fa25721ea03b148cfe2ab6f20b2b32cdc457fa6de04a61ffa32fb6cd5714ba0
+  local_identity_revalidated: BOTH_STORES_299_OF_299_V38_CANONICAL_ADDON_REMOVE_AND_COMBO
+  new_uber_business_orders_tasks_print_jobs: 0
+  apk_upgrade_required_by_this_change: false
+  actual_installed_pad_version: UNKNOWN
+  authorization_for_real_import_or_print: NONE
 
 uber_test_store_audit:
   observed_at: 2026-10-03T20:49:02Z
@@ -196,7 +222,7 @@ uber_store_capability:
   frontend_topnav_sidebar_routes_store_switch: PASS
   backend_scoped_api_reprint_worker_isolation: PASS
   disabled_runtime_api_denials: 11
-  production_desired_st_denis: LOCAL_MODULE_ENABLED_WORKER_FALSE_UNBOUND_OWNER_20261021
+  production_desired_st_denis: LOCAL_MODULE_ENABLED_WORKER_FALSE_BOUND_OWNER_20261022
   production_desired_st_catherine: LOCAL_MODULE_ENABLED_WORKER_FALSE_UNBOUND_OWNER_20261021
   production_desired_chinatown: DISABLED
   production_mutation: OWNER_20261021_LOCAL_MODULES_1_3_PREPARED_WORKER_FALSE
