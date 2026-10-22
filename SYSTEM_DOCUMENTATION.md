@@ -9585,10 +9585,13 @@ V36 only adds a nullable TEXT field and does not migrate historical note content
 ## Production application and receive-only Uber preparation
 
 Production Kitchen Mirror retains its independent Primary Signing Key,
-Receiver enabled and Worker disabled with empty cutovers. Saint-Denis
-(Store1/org1) has the Owner-confirmed production binding; Sainte-Catherine
+Receiver enabled and Worker paused. A controlled 4483-only trial used the
+2026-10-22T19:59:30Z cutover, then restored worker=false/empty cutovers when the
+Owner could not arrange the field order; no order was imported or printed.
+Saint-Denis (Store1/org1) has the Owner-confirmed production binding; Sainte-Catherine
 (Store3) remains unbound and Chinatown (Store2) disabled. The existing private
-OAuth configuration is now installed and matches the running same4b/V38 image.
+OAuth configuration is installed and preserved on the same accepted Staging/Production
+backend 56185ed/V38 image; the frontend remains 4b3abd1.
 Actual Production OAuth granted exactly `eats.store eats.store.orders.read`;
 Stores list, single4483 Store and live Menu GET all returned200. The Stores
 reader uses official `store_id` with legacy `id` compatibility and rejects
@@ -9619,8 +9622,11 @@ or subsequent selection conflict produces mapping errors and blocks local
 release. No source choice is overwritten or warning hidden. Other roots,
 Stores, environments and ORDER_MANAGER remain unchanged. Configuration is
 empty by default; no Production Store/name/ID is hardcoded in application code.
-Deployment and300-case acceptance remain environment-specific evidence, not a
-claim inferred from the implementation.
+Both actual deployed environments passed300/300 previews with errors0,
+warnings0 and RAW fallback0. The299 mappings and Master/printing configuration
+remain unchanged. The controlled4483 first new-order and physical paper
+acceptance remains pending; resume only with a fresh approved field window.
+Do not infer LIVE from successful preview or the brief technical activation.
 
 The [4483 acceptance evidence](docs/governance/UBER_4483_LAUNCH_PREPARATION_20261022.md)
 records real OAuth/menu hashes, database backup/import read-back, previews and
@@ -9633,10 +9639,13 @@ The existing operator reuses configured OAuth credentials and records only
 sanitized diagnostics; the earlier generic failure discarded its response and
 its exact historical OAuth cause cannot be reconstructed. No second credential
 workflow or application build was introduced. Correct/incorrect HMAC remains
-200/401 with receive-only durable receipts; the known acceptance probes and two unattributed HELD receipts
-do not establish official Uber delivery. Device13's recent native PAD_DIRECT
-claim/complete evidence does not establish new physical HOT output. No Uber
-business order or print job was created in this batch.
+200/401 with durable receive-only receipts. Three pre-cutover signed receipts
+resolve to real accepted 4483 orders through Production GET Order; they do not
+replace a new controlled delivery test. All 10 receipts remain HELD, and no
+Uber business order or print job was created. Device13's recent native
+PAD_DIRECT claim/complete evidence does not establish new physical GRAB/HOT
+output. Field-order and paper acceptance remain pending in the
+[launch evidence](docs/governance/UBER_4483_CONTROLLED_LAUNCH_20261022.md).
 
 ### Historical V37 application release (2026-10-05)
 
