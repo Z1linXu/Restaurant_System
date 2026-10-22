@@ -149,7 +149,13 @@ def probe(secret,http=request):
         require(isinstance(listing,dict) and isinstance(listing.get('stores'),list),
                 'STORE_LIST_RESPONSE_INVALID')
         result['store_count']=len(listing['stores'])
-        result['target_store_in_list']=any(isinstance(s,dict) and s.get('id')==STORE for s in listing['stores'])
+        store_ids=[]
+        for store in listing['stores']:
+            if not isinstance(store,dict):continue
+            if 'store_id' in store and 'id' in store:
+                require(store['store_id']==store['id'],'STORE_LIST_IDENTIFIER_CONFLICT')
+            store_ids.append(store.get('store_id',store.get('id')))
+        result['target_store_in_list']=STORE in store_ids
     menu_status,menu_raw=http(MENU,token=token)
     proof={'schema_version':1,'application_client_id':CLIENT,'environment':'production',
         'uber_store_id':STORE,'method':'GET','url':MENU,'http_status':menu_status,

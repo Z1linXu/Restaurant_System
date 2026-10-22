@@ -9584,45 +9584,46 @@ V36 only adds a nullable TEXT field and does not migrate historical note content
 
 ## Production application and receive-only Uber preparation
 
-Production runs receive-only Kitchen Mirror: its independent Primary Signing Key
-is installed, Receiver enabled and Worker disabled with empty cutovers.
-Saint-Denis (Store1/org1) has the Owner-confirmed local production/KITCHEN_MIRROR
-binding; Sainte-Catherine (Store3) has its module prepared but no known Uber UUID.
-Chinatown (Store2) remains disabled. No formal Production menu mappings have
-been written: all299 approved semantic rules resolve locally in each target,
-but their live external Uber IDs remain unverified. GTS Case60916651 has granted
-Production `eats.store` and `eats.store.orders.read`; actual OAuth and remote
-Store/`order_webhook` access remain separate activation requirements. Device13
-has attributed recent PAD_DIRECT claim/complete evidence and native automatic
-polling; this does not prove current HOT paper output. This is
-local preparation, not real Uber Store activation. Current exact runtime and
-[signed-receipt evidence](docs/governance/UBER_PRODUCTION_RECEIVER_20261022.md)
-are referenced from `docs/governance/CURRENT_STATE.yml`; the independent POS
-release preserves this Uber configuration when updating application images.
+Production Kitchen Mirror retains its independent Primary Signing Key,
+Receiver enabled and Worker disabled with empty cutovers. Saint-Denis
+(Store1/org1) has the Owner-confirmed production binding; Sainte-Catherine
+(Store3) remains unbound and Chinatown (Store2) disabled. The existing private
+OAuth configuration is now installed and matches the running same4b/V38 image.
+Actual Production OAuth granted exactly `eats.store eats.store.orders.read`;
+Stores list, single4483 Store and live Menu GET all returned200. The Stores
+reader uses official `store_id` with legacy `id` compatibility and rejects
+conflicting identities. A menu read does not prove `order_webhook` or live-order
+Get Order/delivery; GTS's manual association email is reporting access evidence.
 
-Use the [two-store activation runbook](deployment/cloud/README_UBER_TWO_STORE_ACTIVATION.md)
-for independent Store cutovers and controlled receive-only bootstrap. Existing
-POS/printing configuration remains intact. A real password login, live draft
-submission and physical Pad output were not repeated during this release.
+All299 Owner-approved Store1 mappings are externally verified and **persisted**:
+41 ITEM MAP,238 MODIFIER MAP,20 NO_OP, including8 COMBO_ROOT. Stable IDs,
+modifier groups, parent contexts, quantity/availability and the full saved TEST
+menu match the live Production menu; only entity array ordering differs.
+Canonical Production Add-on/Remove FKs, eligible options and combo semantics
+were rechecked before backup and existing Mapping API writes. Actual database
+read-back and299 OWNER audit records confirm persistence. Other Stores, Master
+menu and printing configuration are unchanged.
 
-The [4483-only preparation](docs/governance/UBER_4483_LAUNCH_PREPARATION_20261022.md)
-reuses299 approved rules against fresh Production Store1 local canonical
-identities. Its offline verifier exports Store1-only API candidates and requires
-authenticated real menu provenance plus exact stable IDs/context/quantity/
-availability before permitting persistence. It performs no database writes or
-fuzzy name expansion. The bounded hidden-TTY OAuth operator changes only the
-existing PROD Client Secret configuration on the accepted4b/V38 image, retaining
-receiver=true/worker=false and existing private configuration/backup/locks.
-The Owner's first hidden-input attempt returned a non200 OAuth response before
-configuration; its HTTP status/body were discarded by the earlier operator, so
-the historical OAuth reason cannot be reconstructed. Production runtime,
-canonical model and bounded historical private configurations still have no
-Production OAuth Client Secret. The Webhook Signing Key is present and separate.
-The existing operator now reuses a matching configured OAuth Secret, prompts
-only if absent, rejects SigningKey substitution, and retains sanitized HTTP
-status/error/description/requested and actual read scopes in a private failure
-proof. It never logs tokens or stores a failed input. No new OAuth/API success
-or formal mapping persistence is claimed. Store3 is excluded from this batch.
+The complete read-only preview covers41 roots and258 contexts in300 cases:
+275 clean,25 warnings, errors0, RAW fallback0. The single unresolved identity
+input is **Noodles with Vegetables Combo**: Uber offers no Soup Base group while
+local `vegetable_noodle` requires `soup_vegan` or `soup_beef`. No default was
+invented, no foreign-parent rule reused and no warning suppressed. The299
+mapping identities are complete; full-menu preview and activation remain
+blocked by that one business decision plus official webhook/field evidence.
+
+The [4483 acceptance evidence](docs/governance/UBER_4483_LAUNCH_PREPARATION_20261022.md)
+records real OAuth/menu hashes, database backup/import read-back, previews and
+remaining gap. The [activation runbook](deployment/cloud/README_UBER_TWO_STORE_ACTIVATION.md)
+continues to require fresh4483-only cutovers and a controlled field window.
+The existing operator reuses configured OAuth credentials and records only
+sanitized diagnostics; the earlier generic failure discarded its response and
+its exact historical OAuth cause cannot be reconstructed. No second credential
+workflow or application build was introduced. Correct/incorrect HMAC remains
+200/401 with receive-only durable receipts; the known acceptance probes and two unattributed HELD receipts
+do not establish official Uber delivery. Device13's recent native PAD_DIRECT
+claim/complete evidence does not establish new physical HOT output. No Uber
+business order or print job was created in this batch.
 
 ### Historical V37 application release (2026-10-05)
 

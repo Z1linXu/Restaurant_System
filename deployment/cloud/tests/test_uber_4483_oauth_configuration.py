@@ -64,12 +64,29 @@ class Tests(unittest.TestCase):
  def base(self):
   return {'APP_ENVIRONMENT':'production','UBER_EATS_ENABLED':'true','UBER_EATS_WORKER_ENABLED':'false','UBER_EATS_ENVIRONMENT':'production','UBER_EATS_PROCESSING_MODE':'KITCHEN_MIRROR','UBER_EATS_SCOPES':m.SCOPES,'UBER_EATS_CLIENT_ID':m.CLIENT,'UBER_EATS_STORE_CUTOVERS':'{}','UBER_EATS_PROCESSING_NOT_BEFORE':'','UBER_EATS_WEBHOOK_SIGNING_KEY':'fixture-original-primary-key','UNRELATED':'fixture-preserved'}
  def test_probe_exact_readonly_requests_and_original_menu_hash(self):
-  h=FakeHttp(stores=[{'id':m.STORE}]);result,proof,raw=m.probe('fixture-input-secret',h)
+  h=FakeHttp(stores=[{'store_id':m.STORE}]);result,proof,raw=m.probe('fixture-input-secret',h)
   self.assertEqual([c[0] for c in h.calls],[m.OAUTH,m.STORES,m.MENU])
   self.assertEqual(m.urllib.parse.parse_qs(h.calls[0][1].decode())['scope'],[m.SCOPES])
   self.assertEqual(raw,MENU);self.assertEqual(result['store_count'],1)
+  self.assertTrue(result['target_store_in_list'])
   self.assertEqual(proof['raw_menu_sha256'],m.hashlib.sha256(MENU).hexdigest())
   self.assertTrue(proof['authorized_store_access']);self.assertNotIn('fixture-token',json.dumps((result,proof)))
+ def test_store_list_accepts_legacy_id_and_matching_identifiers(self):
+  for store in ({'id':m.STORE},{'store_id':m.STORE,'id':m.STORE}):
+   with self.subTest(store=store):
+    result,proof,raw=m.probe('fixture-secret',FakeHttp(stores=[store]))
+    self.assertTrue(result['target_store_in_list']);self.assertEqual(result['store_count'],1)
+ def test_store_list_conflicting_identifiers_fail_before_menu_even_after_target(self):
+  for stores in ([{'store_id':m.STORE,'id':'fixture-other-store'}],
+                 [{'store_id':m.STORE},{'store_id':'fixture-other-store','id':m.STORE}]):
+   with self.subTest(stores=stores):
+    http=FakeHttp(stores=stores)
+    with self.assertRaisesRegex(m.PreparationError,'^STORE_LIST_IDENTIFIER_CONFLICT$'):
+     m.probe('fixture-secret',http)
+    self.assertEqual([call[0] for call in http.calls],[m.OAUTH,m.STORES])
+ def test_store_list_without_target_does_not_claim_target_is_listed(self):
+  result,proof,raw=m.probe('fixture-secret',FakeHttp(stores=[{'store_id':'fixture-other-store'}]))
+  self.assertFalse(result['target_store_in_list']);self.assertEqual(result['store_count'],1)
  def test_missing_read_grant_fails_before_get(self):
   h=FakeHttp(scope='eats.store')
   with self.assertRaisesRegex(m.PreparationError,'OAUTH_READ_SCOPE_NOT_GRANTED') as caught:m.probe('fixture-secret',h)

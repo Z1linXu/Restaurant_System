@@ -1,210 +1,197 @@
-# 4483 Saint-Denis Production launch preparation — 2026-10-22
+# 4483 Saint-Denis Production mapping acceptance — 2026-10-22
 
-## Scope and actual baseline
+## Scope and runtime
 
-Owner attachment `b4e83c2f-7342-47a7-a5b9-95c92b04569d/已粘贴的文本.txt`
-authorizes4483-only Production credential, verified mapping and launch
-preparation. It conditionally permits a controlled first order only when actual
-access, role, mappings, Pad/printer readiness and a field window are established.
-It does not authorize guessing external IDs, unapproved physical output, Uber
-menu/order decisions or `/pos_data`. Sainte-Catherine and Chinatown are excluded.
+The Owner explicitly authorized installing the existing Production OAuth Secret
+and persisting verified Store1 menu mappings. This batch excludes Store3
+Sainte-Catherine and Store2 Chinatown, Uber order/menu writes, real order import,
+physical printing and activation. The original dirty Owner workspace was untouched.
+Fresh implementation baseline: `8a3d41074b0aaad46ced6fc31ebc0e91fd662740`;
+worktree branch: `codex/uber-4483-production-mapping`.
 
-Fresh main baseline: `1093c0c2400f00d65b75b5c462f0ec2cfc25b6d9`.
-Independent clean worktree/branch: `codex/uber-4483-final-mapping`.
-The protected original Owner workspace was not changed. Both actual application
-environments retain backend/frontend4b3abd1 and FlywayV38; backend image:
+Both application environments retain source
+`4b3abd1349e66a146c36ac310b6a8b48bb2ad572`, FlywayV38 and backend image
 `sha256:c79b6bd78a2f82a4b95eb15472b5a82820a2c48248d94e334fb983969d3a80c5`.
-No new application artifact or migration is required for this batch.
+Only the Production backend was recreated with that same image to load OAuth.
+No application build, migration, APK installation or Staging deployment occurred.
 
-## GTS, OAuth and remote access
+## Actual OAuth and Uber reads
 
-GTS Case**60916651**, request635DA2, email2026-10-22T04:41:45Z from
-`eats-partner-tech-support@uber.com` confirms Production Client ID
-`6GaiQpZTcfcuTa150wr4RyztC33PV7LS` has grants `eats.store` and
-`eats.store.orders.read`. GTS asks for Store UUIDs for manual integration.
-This is current grant evidence; the older Dashboard Requested screenshot is not
-the latest grant decision. It does not prove actual OAuth or `order_webhook`.
+Production Client ID: `6GaiQpZTcfcuTa150wr4RyztC33PV7LS`.
+Production Store UUID: `5a7dca5c-b7ec-57c8-a684-87d23e66e8d9`.
 
-At the11:54–11:56 Toronto preflight, the Production OAuth Secret was absent.
-The independent Primary Signing Key was present and matched the established
-receive-only configuration. No key was revealed, rotated, copied to TEST or
-written into repository content. Secondary Key remains empty.
-
-The bounded OAuth operator was tested and reviewed, then uploaded0600 to
-`/tmp/rs-uber-4483-oauth-prepare-20261022.py` on the verified server. SHA256:
-`c64d45184054680230b727d3b146578b2e652aabc26d187f803efd210413ac25`.
-Only artifact upload has occurred; upload is not configuration acceptance.
-The computer-control tool refuses Terminal access for safety reasons. The Owner
-was given a real SSH TTY command to paste the existing PROD Secret into getpass,
-with no value in chat/arguments/history/output. Live OAuth/Stores/Menu requests
-remain **NOT_RUN** until that hidden input is completed. No token is retained.
-
-The prepared GTS reply identifies4483 UUID
-`5a7dca5c-b7ec-57c8-a684-87d23e66e8d9`, asks for manual read-only access and
-`order_webhook`, retains Uber Tablet as Order Manager and excludes Store3.
-No email was sent by this task. A later direct read of Gmail confirms that the
-Owner independently sent the4483 UUID to the same GTS case at11:53:07 EDT on
-October22. Do not ask the Owner to repeat that message; no subsequent Uber
-reply was present at the current read. Remote manual integration is unconfirmed.
-
-## Mapping reuse and exact unresolved gap
-
-Fresh Staging read:11:56:44 Toronto. Production read:11:56:45 Toronto.
-
-| Fact | Observed result |
+| Check | Actual result / UTC observation |
 | --- | --- |
-| Approved semantic rules | 299 |
-| ITEM MAP / MODIFIER MAP / NO_OP | 41 / 238 / 20 |
-| COMBO_ROOT, included in ITEM count | 8 |
-| Store1 uniquely resolved Production targets | 299/299 |
-| Canonical Add-on FK references verified | 49 |
-| Canonical Remove FK + eligibility references verified | 14 |
-| Local missing/ambiguous identities | 0 |
-| Verified Production external rules | 0 |
-| Actual Production mapping rows | 0 |
+| Production OAuth, client_credentials | HTTP200, 17:54:15 |
+| Requested / actual granted scopes | `eats.store eats.store.orders.read`, no extra scopes |
+| GET `/v1/eats/stores` | HTTP200, 1 Store; target listed |
+| GET `/v1/eats/stores/{uuid}` | HTTP200, 17:56:47 |
+| Store identity | Nouilles de Lan Zhou (St Denis), 4483 Rue Saint-Denis, Montréal; active |
+| GET `/v2/eats/stores/{uuid}/menus` | HTTP200, 17:54:15 |
+| Production menu | 1 menu, 5 categories, 74 item records, 11 modifier groups |
 
-Remove selections remain source-kind MODIFIER, mapped to local REMOVE; the
-source contains no REMOVED_MODIFIER rules. No local database PK was copied from
-Staging. Exact SKU/code/group, parent root, MAP/NO_OP and combo semantics were
-reused. Owner does not need to reconfirm the299 unchanged business decisions.
+The real OAuth Secret was installed through the existing hidden-TTY operator
+into the existing private0600 Compose configuration. Runtime and canonical
+configuration match. Primary Signing Key is separate and unchanged; Secondary
+remains empty. Tokens remained in memory. No credential is included here.
+The operator reused existing deployment locks, validated database backup,
+same-image rollback and acceptance helpers; no second credential workflow exists.
 
-Private local evidence directory:
-`/Users/xuzilin/.codex/artifacts/uber-4483-20261022/`.
-`production-store1-mapping-candidates.private.json` contains only299 Store1
-rules, SHA256 `e331993daa5748ee70e5ad32b31b0180c5b4b32effee9e001aec0d065d7e6271`.
-The original TEST menu bytes SHA256 are
-`104cd731d21806244778d7cf2b9c442f34d0e116564fc96e934d11711fb3cddc`.
-The current299-rule source is paired to41 roots/258 exact modifier contexts.
-All artifacts are0600 and are not credentials or database import approvals.
+The previous generic `PRODUCTION_OAUTH_NOT_200` discarded its response status
+and body. The prior environment was confirmed to lack an OAuth Secret, and the
+Owner reported the earlier Signing Key/Client Secret confusion. The exact past
+HTTP/error code cannot be reconstructed. The correct credential now yields200;
+this does not justify inventing a historical Uber error.
 
-The offline verifier produced `mapping-manifest.private.json` with299 API payload
-candidates and `menu-difference-report.private.json`. Without actual Production
-menu/read-proof, verified0, persisted0, ready_for_persistence=false; the only
-current blocking differences are PRODUCTION_READ_PROOF_REQUIRED and
-PRODUCTION_MENU_REQUIRED. This is expected exit2, not a passed external audit.
-No fuzzy name expansion, database write, mapping remap or historical change.
+The original Stores parser looked only for `id`, making its initial target-listed
+flag false despite a valid menu response. Uber returns `store_id`. A fresh
+read correctly confirms the target; the bounded parser now accepts official
+`store_id`, retains legacy `id`, and rejects conflicting identities. Original
+proof is retained alongside the corrected read, rather than overwritten.
 
-Production mapping previews are **NOT_VERIFIED** because formal external IDs
-and mappings have not yet been established. No RAW fallback is called complete.
-When access is available the reviewed reader+verifier can check IDs/context,
-quantity/availability and exact semantics without new core development.
+GTS Case60916651 granted the scopes at2026-10-22T04:41:45Z. The Owner sent the
+UUID at11:53:07 EDT; GTS's17:30:35Z reply confirms manual reporting association.
+Neither that email nor successful Store/Menu reads prove `order_webhook` or a
+successful Get Order for a live order. No outbound support message was sent.
 
-## Binding, webhook provenance and backlog
+## Real menu comparison and actual persistence
 
-Current binding id1 remains Store1/org1, production/KITCHEN_MIRROR, enabled,
-Owner-confirmed exact4483 UUID. This is local configuration, not a remote Uber
-grant. It was created/audited in the previous authorized batch; not recreated.
-Store3 remains unbound. No platform ADMIN role was fabricated.
+Fresh Staging database semantics match all299 approved candidate rules. The
+real Production menu and saved TEST baseline differ only in top-level entity
+array ordering. Sorting menus/categories/items/modifier_groups by stable ID
+makes the complete JSON structures identical. Titles, stable IDs, parent
+contexts, quantity limits, availability, prices and menu structure have no
+remaining differences. No fuzzy name expansion or external-ID guessing occurred.
 
-Production URL is
-`https://pos.lanzhounoodlesmtl.com/api/v1/integrations/uber-eats/webhook`.
-Prior actual runtime-key HMAC acceptance on the current4b/V38 image:
-valid200, invalid401, wrong environment400, duplicate200/one durable HELD row.
-Evidence: [receiver acceptance](UBER_PRODUCTION_RECEIVER_20261022.md).
+| Fact | Database/API read-back |
+| --- | ---: |
+| Roots / modifier parent contexts externally verified | 41 / 258 |
+| Verified transferable rules | 299 |
+| Persisted Production Store1 rules | **299** |
+| ITEM MAP / MODIFIER MAP / NO_OP | **41 / 238 / 20** |
+| COMBO_ROOT, included in ITEM MAP | **8** |
+| Missing / conflicting mapping rules | **0 / 0** |
+| Canonical Add-on FK / Remove FK+eligibility rules checked | 49 / 14 |
+| Actual OWNER audit records | **299** |
 
-The current database contains exactly the two known operator-generated probes:
-`3d817c22-89ce-451a-89f1-38f93fa07164` and
-`1d477e52-d491-44ca-9c83-8e0433b71c5a`, both HELD_RECEIVE_ONLY.
-Thus **official Uber delivery is NOT_VERIFIED**; a Received Event UI does not
-prove it. Receiver=true, worker=false; no global or Store cutover. Integration
-orders/local Uber orders/Uber Print Jobs remain0. No replay/retry/reset.
+Before writing, the batch re-read Store1 catalog and eligible options, checked
+canonical IDs and parent/group semantics, validated the exact binding and
+worker=false, took a fresh dump and validated its pg_restore directory. It used
+the existing authenticated Store1 `PUT /mappings` API, item roots first. Each
+response and the final complete API list match the verified manifest. An
+independent read-only SQL aggregate confirms the counts above. No Staging PK
+was copied. Existing matching natural keys are skipped on retry; unknown or
+conflicting existing rows stop without overwrite. No ADMIN impersonation.
 
-Public Production and Staging system health were both200/UP at16:09:00Z.
-Production OAuth and role/Store grants remain external acceptance requirements;
-no real order or printing activation was attempted.
+One preflight retry occurred **before any PUT**: the guard initially compared
+canonical Remove `cilantro` directly to the supported legacy option alias
+`remove_cilantro`. The minimal correction applies the existing RemoveSemantics
+prefix normalization while retaining exact FK/Store/eligibility checks.
+Agent6 accepted both the batch and this correction. No rule or Master data was
+changed to bypass that guard. The second attempt created299 rows, skipped0.
 
-## Printing and selected Pad
+Protected fingerprints show all Master menu, Add-on/Remove applicability, combo,
+module, binding, printer/device configuration and other-Store mappings unchanged.
+No historical orders/snapshots were modified.
 
-Store1 retains PAD_DIRECT, GRAB printer3 and HOT_KITCHEN printer4. Endpoints were
-validated in memory as non-loopback private hosts with valid ports; no socket
-or print request was sent. Ten active Android registrations exist. Devices13/14
-show recent authenticated API activity at11:54:30/46 Toronto, but installed
-version is unknown and heartbeat fields are null. ADB devices0; no install,
-unpair or reset. Mere last_seen was not used as worker proof.
+## Mapping Preview — explicit remaining business gap
 
-A subsequent16:10:10Z read-only log inspection found746 HTTP200 native automatic
-pending polls over15:40:11–16:10:08Z; the4 manual polls use a distinct limit.
-Backend device-attributed logs identify Device13/Store1 with6 nonempty pending
-responses and GRAB/FRONTDESK claim → processing → complete twice each, latest
-completion16:02:00Z. These are existing POS activity, not actions by this task.
-Thus Device13's native worker is proven online. Device14 and current HOT physical
-output remain UNKNOWN: device14 last_seen cannot establish its worker activity.
-Android `MainActivity.java` automatic/manual pending paths use limit10/25;
-`PadPrintingController` and `PadPrintJobServiceImpl` record the attributed claim
-chain. Empty pending responses have no device-attributed INFO log. No raw log,
-network address, header, token or customer field was output.
+At18:09:31Z the existing **read-only** Store1 `/mapping-preview` endpoint ran
+300 real-menu-derived cases against the persisted database mappings:
 
-The unchanged4b/V38 contract retains shared GRAB, conditional nonempty HOT,
-no Mirror FRONTDESK_RECEIPT and normal POS receipts. Prior focused60 backend
-tests after V38 and16 unchanged Android policy/transport tests passed, linked in
-the receiver report. This batch does not repeat a real order or physical print.
-No APK update is justified by these tooling/configuration-only changes; actual
-installed version remains unknown. The current Device13 pipeline demonstrates
-backend compatibility without reinstalling; current HOT printer field readiness
-and the controlled first-order window remain separate from worker-online proof.
+- 41 root baselines, all258 modifier contexts and one root quantity2 case;
+- all20 NO_OP contexts and8 combo roots;
+- **275 fully passed; 25 have one warning each**;
+- errors=0, RAW fallbacks=0, local item/option snapshot mismatches=0;
+- implicit combo, egg/side, Add-on/Remove identity and quantities match exactly.
 
-## Delivery and stop condition
+All25 warnings concern only **Noodles with Vegetables Combo**, root
+`e72231fb-9029-4539-91d6-b6efbeeb3767`:
+`REQUIRED_SOUP_BASE_MISSING`.
+Its Uber menu has no Soup Base group. The mapped local `vegetable_noodle`
+requires one of `soup_vegan / 素汤` or `soup_beef / 肉汤`. The other non-combo
+vegetable root does have both choices, with rules explicitly scoped to itself.
+Those rules cannot be copied across parent context or silently made defaults.
 
-Product/core changes: none. Tooling required by this exact batch: same-image
-hidden-input OAuth wrapper plus offline stable-ID/menu verifier and focused
-mock/offline tests. Existing deployment/backup/rollback/lock mechanisms are
-reused. No generalized deployment, identity or mapping framework was added.
+Owner must decide this one missing business fact: fixed vegan broth, fixed beef
+broth, or customer selection required. Existing Mapping API has no implicit
+broth field. A confirmed default would require a narrowly scoped explicit
+capability; requiring selection would require separately authorized Uber menu
+configuration. Neither was fabricated or applied during this batch. The old
+printing fallback text is not evidence of a confirmed broth choice.
 
-SCOPE_EXPANSION_CHECK: product repair size0; tooling consists of two bounded
-operators and focused tests. Both are BLOCKING for the explicitly requested
-preparation: the old key bootstrap requires zero bindings/V37 and cannot safely
-install OAuth while preserving the current bound4b/V38 receive-only runtime;
-the Owner specifically requires an automatic external-ID verifier when Store
-Access is unavailable. The new OAuth wrapper imports existing reviewed lock,
-Compose, backup and HTTP helpers. Core refactoring, a generalized importer,
-additional Store provisioning and app deployment are deferred/not required.
+Therefore **mapping persistence/identity PASS**, but **full-menu Mapping Preview
+FAIL** and activation remains NO. No existing warning was hidden. No further
+confirmation is needed for the299 already approved identities.
 
-The remaining path is hidden credential input, actual GET evidence, GTS manual
-Store/role confirmation, verified Store1 mapping import/read-back and previews,
-then selected Pad/printer/window proof. Only then select a fresh UTC cutover
-for this UUID and enable its controlled first order. An empty watermark is safer
-than a stale prefilled cutover while external work is pending. Existing HELD and
-ambiguous physical-print history must stay untouched.
+Kitchen routing is checked from actual preview projections, active Store1
+stations and the unchanged shared OrderService/HotKitchen eligibility rules.
+WOK/fried items and fried-egg options qualify for HOT; cold combo-side tasks
+remain COLD, and no HOT content means no HOT job. GRAB3/HOT4 assignments remain
+enabled and PAD_DIRECT unchanged. This is semantic evidence, not newly executed
+kitchen tasks or physical output. No FRONTDESK_RECEIPT job was created. The300-case offline routing projection
+expects93 cases with HOT and207 without HOT;15 are direct-serve, and138 cold
+combo-side tasks stay out of HOT, including48 with a fried-egg parent. These
+counts are predictions from shared code and live configuration, not created jobs.
 
-Current readiness is **not ready for activation**. Missing evidence is not PASS.
+## Receiver, safety and retained private proof
 
-Validation:67/67 Python tests pass (21 offline menu,15 OAuth mock,31 existing
-receiver/promotion/verification). Agent6 ACCEPT, all three identified P2s fixed;
-no remaining P0/P1/P2. The fixes preserve per-root menu availability attribution,
-block same-ID title/external_data drift, and CAS-check before rollback recreate.
-Application tests/build/deployment were not repeated because app/device/schema
-contracts are unchanged. The actual candidate CLI result remains299/0/0, with
-the two missing external proof inputs only. No configured CI checks are assumed.
+Receiver=true, Worker=false; global cutover empty, per-Store cutovers `{}`.
+Post-restart HMAC acceptance: valid200, invalid401, foreign environment400,
+duplicate200 with exactly one new HELD_RECEIVE_ONLY event. New operator probe:
+`aea34753-744a-4b32-b4db-6aad9598693b`; the two prior probes remain untouched.
+The final database read contains5 HELD receipts: these3 known internal probes
+and2 additional receipts whose sender provenance was not established in this
+batch. **Official Uber delivery remains NOT_VERIFIED**; a receipt count alone
+is not evidence of the sender or the role grant. No receipt was replayed.
+Integration orders, local Uber orders and Uber print jobs remain0.
+Seven existing POS read-smoke checks and Store-isolation checks passed.
 
-## OAuth failure follow-up, 17:19–17:26 UTC
+Private server evidence, directory0700/files0600:
+`/srv/restaurant-pos/production/uber-4483-final-20261022/`.
 
-The Owner reports running the hidden command and receiving
-`UBER_4483_OAUTH_PREPARATION_FAILED:PRODUCTION_OAUTH_NOT_200`. The original
-reader received a non200 response but discarded both its HTTP status and error
-body. Its failure was before Stores/Menu GET, configuration and restart. An
-invalid client, denied scope, rate limit or another response cannot be selected
-as the historical cause without evidence. Missing current Secret is the
-consequence of not persisting a failed input, not proof of that original cause.
+| Artifact | SHA256 / observation |
+| --- | --- |
+| Saved TEST menu | `104cd731d21806244778d7cf2b9c442f34d0e116564fc96e934d11711fb3cddc` |
+| Actual Production menu | `3483e624905e0db685292da3dff4857c629f67e13ab998656ae6cd73c044798b` |
+| Store1 candidate semantics | `e331993daa5748ee70e5ad32b31b0180c5b4b32effee9e001aec0d065d7e6271` |
+| Verified manifest | `8760aa0c17eea762f2d945816b3f11e6aa223328784cb737d2cf62000603b810` |
+| Mapping dump before write | `6b0c149ed55e23a26828fc6de196107346ffae349c44a420deeee8a6956c8328` |
+| Mapping import proof | `mapping-import-20261022T180612Z/result.json`, persisted299 at18:07:18Z |
+| Preview proof | `mapping-preview-20261022T180850Z/result.json`, 300 cases at18:09:31Z |
 
-Current read-only runtime/canonical inspection finds OAuth Secret ABSENT and
-Signing Key PRESENT, worker=false, same4b/V38 image. Bounded investigation of
-the actual historical Production private models/.env and known local .env
-paths finds no paired Production OAuth Secret either. No values were output.
-The official Production endpoint remains `https://auth.uber.com/oauth/v2/token`;
-client_credentials and the requested two scopes are correct. Do not switch
-endpoints or use a TEST secret or HMAC key to guess around missing credentials.
+Private raw evidence and backups are excluded from Git. Do not restore the
+whole database over live POS activity or replay old HELD events to undo a
+mapping operation. A future correction must reconcile only the exact approved
+mapping natural keys and preserve existing IDs/audits/history.
 
-Only the existing operator and its tests were repaired. It now reuses a valid
-runtime/canonical credential when present; missing credentials require the
-existing hidden TTY input once. Sanitized diagnostic proof distinguishes HTTP
-status, OAuth error/description, requested scopes and actual allowlisted grants.
-SigningKey confusion is rejected before network; error body is bounded in
-memory and never logged. Failed attempts do not configure/restart the backend.
-Focused operator26/26, entire related Python suite78/78 PASS; Agent6 ACCEPT,
-one diagnostic P2 closed, no remaining P0/P1/P2. No duplicate script or app build.
+Focused Python tests: **81/81 PASS** (29 OAuth,21 menu verifier,31 existing
+receiver/promotion/verification). Agent6 ACCEPT: parser correction and actual
+import batch, no remaining P0/P1 code finding. The broth decision is an explicit
+activation blocker. Application/device/schema contracts were unchanged, so
+application rebuild/full regression/Staging deploy were not repeated.
 
-Fresh database read: Staging299 =41 ITEM MAP +238 MODIFIER MAP +20 NO_OP,
-including8 COMBO_ROOT; Production Store1 binding correct, formal mappings0,
-other-Store mappings0, two HELD events, integration orders0. Actual Production
-menu, Stable ID/context differences and migration previews remain unverified
-until a real OAuth credential can authenticate. No rule was guessed or written.
+Remaining activation evidence: resolve the one broth-input gap, confirm
+`order_webhook` and official notification delivery with GTS, and complete a
+controlled4483-only field window with fresh cutovers and selected Pad/printer
+proof. Device13 has recent attributed native polling/claim/complete evidence;
+this batch does not establish new HOT paper output. Worker stays disabled.
+
+Post-mapping proof at18:11:24Z confirms Secret present/runtime-canonical match,
+Primary unchanged, Secondary empty, TEST credentials separate, no secret value
+in backend logs since the batch began, protected fingerprints unchanged and
+both environments healthy. The independent database count is299/41/238/20/8.
+
+Docker inspection after the credential-only recreation: disk73% (42G used,16G
+free), Build Cache16.82GB with10.45GB reclaimable. No build or cleanup occurred.
+The prior same-day observation was74%/16.82GB; it is not an exact immediate
+pre-restart sample. Current Staging/Production image, database volumes and
+rollback/evidence are protected. Cache is above the soft target and requires
+a bounded age/eligibility review; it does not justify unrestricted pruning.
+
+Merge-gate follow-up: Agent6 ACCEPT with no remaining P0/P1/P2 after clarifying
+that broth resolution may require code and that the completed OAuth operator's
+fixed evidence root must never be deleted/overwritten to force a rerun. The
+Production credential/signing-key scan of the Git diff reports0 matches. Cache
+review found old reclaimable records; no cleanup was necessary for this bounded
+no-build batch, and no protected runtime/image/volume was removed.
