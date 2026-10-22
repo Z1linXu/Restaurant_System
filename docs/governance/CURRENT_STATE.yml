@@ -3,17 +3,17 @@ updated_at: 2026-10-22
 
 repository:
   ref: origin/main
-  sha: a939a85f1a22568da2941efe3dd9d9130cb05602
+  sha: 56185edcdd9f4496cc6073e478546a5a39ba77d9
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
   package: UBER_PRODUCTION_4483_FINAL_PREPARATION
-  status: OWNER_CONFIRMED_VEGAN_COMBO_DEFAULT_IMPLEMENTATION_AND_4483_CONTROLLED_ACTIVATION_AUTHORIZED
+  status: SCOPED_VEGAN_DEPLOYED_300_PASS_PILOT_PAUSED_OWNER_FIELD_ORDER_UNAVAILABLE
   next_phase_authorized: false
 
 staging:
-  deployed_sha: 4b3abd1349e66a146c36ac310b6a8b48bb2ad572
+  deployed_sha: 56185edcdd9f4496cc6073e478546a5a39ba77d9
   deployed_sha_semantics: BACKEND_FRONTEND_TRACKED_SEPARATELY
   frontend_deployed_sha: 4b3abd1349e66a146c36ac310b6a8b48bb2ad572
   policy_config_sha: d2316234b2936fd89a926aa24a7b6343008834e6
@@ -32,7 +32,7 @@ staging:
   uber_worker_enabled: false
 
 production:
-  deployed_sha: 4b3abd1349e66a146c36ac310b6a8b48bb2ad572
+  deployed_sha: 56185edcdd9f4496cc6073e478546a5a39ba77d9
   frontend_deployed_sha: 4b3abd1349e66a146c36ac310b6a8b48bb2ad572
   canonical_url: https://pos.lanzhounoodlesmtl.com
   application_release: COMPLETE
@@ -40,10 +40,10 @@ production:
   physical_pad_url_switch: MANUAL_OBSERVATION_PENDING
   uber_activated: false
   uber_active_bindings: 1
-  uber_binding_semantics: LOCAL_ENABLED_ROW_WORKER_DISABLED_NOT_REMOTE_ACTIVATION
+  uber_binding_semantics: LOCAL_ENABLED_STORE1_ONLY_WORKER_PAUSED_TABLET_RETAINS_ORDER_MANAGER
   flyway: V38
   mutation_authorized: false
-  current_release_authorization: COMPLETED_OWNER_20261022_POS_CANONICAL18_RELEASE_NO_STANDING_FUTURE_MUTATION_AUTHORITY
+  current_release_authorization: OWNER_20261022_4483_DEFAULT_AND_CONTROLLED_ACTIVATION_EXECUTED_NO_OTHER_STORE_OR_UNRELATED_POS_MUTATION
   evidence: ../POS_PRODUCTION_REMOVES_20261022.md
   runtime_observation_evidence: ../POS_PRODUCTION_REMOVES_20261022.md
   canonical_addons_per_store: 15
@@ -101,21 +101,21 @@ uber_two_store_release:
   scope_grant_email_utc: 2026-10-22T04:41:45Z
   order_webhook_role: UNVERIFIED
   production_store_access: STORES_LIST_SINGLE_STORE_AND_MENU_HTTP200_TARGET_LISTED
-  saint_denis_device_freshness: DEVICE13_NATIVE_AUTOPOLL_AND_ATTRIBUTED_POS_CLAIM_COMPLETE_VERIFIED_20261022T161010Z
+  saint_denis_device_freshness: DEVICE13_NATIVE_AUTOPOLL_LAST_SEEN_8_6_SECONDS_OLD_AT_20261022T200428Z_RECENT_POS_CLAIM_COMPLETE
   sainte_catherine_printing: DISABLED_NO_ASSIGNMENTS_OR_PAD
-  activation_requires_new_core_code: SCOPED_MIRROR_DEFAULT_IMPLEMENTED_TESTED_REVIEWED_NOT_DEPLOYED
+  activation_requires_new_core_code: false
   controlled_pilot_ready: false
 
 
 uber_production_preparation:
-  status: RECEIVE_ONLY_STORE1_299_PERSISTED_BROTH_ROLE_DELIVERY_AND_FIELD_ACCEPTANCE_PENDING
+  status: SCOPED_VEGAN_300_PASS_WORKER_PAUSED_PENDING_FIRST_FIELD_ORDER_AND_PAPER
   evidence: UBER_PRODUCTION_RECEIVER_20261022.md
   operator_pr: 284
   operator_merge_sha: 5d2c5635faf232e5f986299e7d73167d4a7c4877
   receiver_configured: true
   actual_primary_key_runtime_match: true
   secondary_signing_key_configured: false
-  official_uber_delivery: NOT_VERIFIED
+  official_uber_delivery: PRE_CUTOVER_SIGNED_REAL_ORDER_LINKED_RECEIPTS_OBSERVED_NEW_CONTROLLED_DELIVERY_PENDING
   worker_enabled: false
   store1_binding_id: 1
   store1_uber_uuid: 5a7dca5c-b7ec-57c8-a684-87d23e66e8d9
@@ -146,7 +146,7 @@ uber_4483_launch_preparation:
   mapping_missing: 0
   mapping_conflicts: 0
   owner_mapping_audit_rows: 299
-  full_menu_preview: FAIL_275_CLEAN_25_REQUIRED_SOUP_BASE_MISSING_WARNINGS_ERRORS0_RAW0
+  full_menu_preview: PASS_300_OF_300_STAGING_AND_PRODUCTION_ERRORS0_WARNINGS0_RAW0
   broth_gap_root: e72231fb-9029-4539-91d6-b6efbeeb3767
   broth_gap_owner_decision: CONFIRMED_FIXED_SOUP_VEGAN_STORE1_ROOT_E722_ONLY
   kitchen_route_projection: PASS_93_HOT_207_NONHOT_138_COLD_SIDES_NO_HOT_SIDE
@@ -160,12 +160,12 @@ uber_4483_launch_preparation:
   oauth_operator_uploaded: true
   oauth_operator_sha256: 8b2bba3b99e8b67972ba12e976a5262fcce9f0a54db5e7b3ea6a6b9bf11284ad
   hidden_oauth_input: COMPLETED_EXISTING_OPERATOR_NO_SECRET_OUTPUT
-  actual_oauth: PASS_HTTP200_GRANTED_EXACT_TWO_READ_SCOPES_20261022T175415Z
+  actual_oauth: PASS_HTTP200_GRANTED_EXACT_TWO_READ_SCOPES_20261022T193945Z
   prior_oauth_http_status: UNKNOWN_NOT_RETAINED
   prior_oauth_error: UNKNOWN_NOT_RETAINED
   oauth_secret_source_audit: PRESENT_0600_CANONICAL_AND_RUNTIME_MATCH_PRIMARY_KEY_UNCHANGED
-  actual_menu_get: PASS_HTTP200_REAL_PRODUCTION_20261022T175415Z
-  remote_store_access: HTTP200_STORES_LIST_COUNT1_TARGET_LISTED_SINGLE_STORE_AND_MENU_ORDER_DETAIL_NOT_TESTED
+  actual_menu_get: PASS_HTTP200_REAL_PRODUCTION_20261022T193945Z
+  remote_store_access: HTTP200_STORES_LIST_TARGET_LISTED_SINGLE_STORE_MENU_AND_THREE_PRE_CUTOVER_ORDER_DETAILS
   gts_manual_association_confirmed_at: 2026-10-22T17:30:35Z
   gts_manual_association_message: 1a164aa2920c9c05
   order_webhook_role: NOT_VERIFIED
@@ -177,10 +177,20 @@ uber_4483_launch_preparation:
   actual_installed_apk_version: UNKNOWN
   apk_update_required_by_this_change: false
   hot_physical_output: NOT_VERIFIED
-  new_application_deploy: false
-  new_production_runtime_or_database_mutation: OWNER_AUTHORIZED_OAUTH_ONLY_SAME_IMAGE_RESTART_AND_STORE1_299_MAPPING_API_WRITES
+  new_application_deploy: BACKEND_ONLY_EXACT_SAME_STAGE_PRODUCTION_IMAGE_FRONTEND_AND_APK_UNCHANGED
+  new_production_runtime_or_database_mutation: OWNER_AUTHORIZED_BACKEND_DEFAULT_DEPLOY_AND_BOUNDED_4483_ACTIVATION_THEN_SAME_IMAGE_PAUSE_MAPPINGS_RETAINED
   worker_enabled: false
-  utc_cutover: NOT_SET_PENDING_CONTROLLED_FIELD_WINDOW
+  utc_cutover: NOT_SET_WHILE_PAUSED
+  last_pilot_cutover_utc: 2026-10-22T19:59:30Z
+  field_window_paused_at_utc: 2026-10-22T20:03:57Z
+  pause_reason: OWNER_CANNOT_ARRANGE_NEW_FIELD_ORDER
+  pause_evidence: /srv/restaurant-pos/production/uber-4483-activation-20261022T195736Z/field-window-pause-result.json
+  per_store_cutovers: EMPTY_WHILE_PAUSED_FRESH_UUID_WINDOW_REQUIRED_TO_RESUME
+  first_controlled_order: NOT_YET_OBSERVED
+  physical_grab_acceptance: PENDING_OWNER_FIELD_CONFIRMATION
+  physical_hot_acceptance: PENDING_OWNER_FIELD_CONFIRMATION
+  activation_evidence: /srv/restaurant-pos/production/uber-4483-activation-20261022T195736Z/result.json
+  technical_preview_ready: true
   activation_ready: false
   live: false
 
@@ -289,8 +299,8 @@ uber_store_capability:
   production_mutation: OWNER_20261021_LOCAL_MODULES_1_3_PREPARED_WORKER_FALSE
 
 gate:
-  type: TECHNICAL
-  next_action: SCOPED_VEGAN_DEFAULT_TEST_REVIEW_MERGE_STAGING_PRODUCTION_300_PREVIEWS_THEN_FRESH_4483_CUTOVERS_AND_CONTROLLED_FIRST_ORDER
+  type: OWNER
+  next_action: OWNER_FIELD_ORDER_AVAILABLE_THEN_FRESH_4483_CUTOVERS_AND_REAL_ORDER_TABLET_ACCEPTANCE_GRAB_CONDITIONAL_HOT_PHYSICAL_CONFIRMATION
 
 authorization:
   uber_4483_final_preparation: OWNER_20261022_FIXED_VEGAN_COMBO_REVIEW_MERGE_STAGING_PRODUCTION_DEPLOY_AND_CONTROLLED_STORE1_ACTIVATION_REAL_ORDER_PRINT_AFTER_GATES_NO_OTHER_STORES_OR_REMOTE_UBER_WRITES
@@ -316,4 +326,4 @@ authorization:
   production: NONE
 
 stop:
-  marker: UBER_4483_VEGAN_DEFAULT_AND_CONTROLLED_LAUNCH_IN_PROGRESS_NO_PRE_CUTOVER_REPLAY
+  marker: UBER_4483_CODE_AND_300_PREVIEWS_COMPLETE_WORKER_PAUSED_PENDING_OWNER_FIELD_FIRST_ORDER_AND_PAPER
