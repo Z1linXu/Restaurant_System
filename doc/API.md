@@ -1858,7 +1858,33 @@ Capability summary:
 
 ## Uber Eats Integration v1
 
-Webhook：`POST /api/v1/integrations/uber-eats/webhook`，raw bytes + `X-Uber-Signature`（HMAC SHA256/`UBER_EATS_WEBHOOK_SIGNING_KEY`/lower hex；独立 key 未配置时兼容 client secret）+ `X-Environment`。无 browser bearer；durable 200 empty ACK，400 malformed/environment，401 invalid signature，409 event/body conflict，413 size >256 KiB，503 disabled。
+Webhook：`POST /api/v1/integrations/uber-eats/webhook`，raw bytes + `X-Uber-Signature`（HMAC SHA256/`UBER_EATS_WEBHOOK_SIGNING_KEY`/lower hex）+ `X-Environment`。无 browser bearer；只在 durable transaction commit 后返回 200 empty ACK；400 malformed/environment，401 invalid signature，409 event/body conflict，413 size >256 KiB，503 disabled。Database persistence failure returns non-200. GET at the same path returns 405. Enabled Production requires an explicit signing key; only Sandbox may fall back to the OAuth client secret.
+
+`UBER_EATS_PROCESSING_MODE=ORDER_MANAGER|KITCHEN_MIRROR` is the process-wide
+permission ceiling, independent of each persisted Store mode. Default
+ORDER_MANAGER requires `eats.order`; KITCHEN_MIRROR requires
+`eats.store.orders.read` and supports the configured target scopes
+`eats.store eats.store.orders.read`. Token response `scope`, when present, must
+contain the critical permission. No token/secret is returned by these APIs.
+
+`UBER_EATS_WORKER_ENABLED=false` pauses both scheduled and manual import/decision
+paths; receive-only accepts and stores valid supported events as
+`HELD_RECEIVE_ONLY`, with zero new integration/internal orders or print jobs.
+Accept/Deny/retry paths return `409 UBER_PROCESSING_PAUSED`; global Mirror remote
+decisions return `409 KITCHEN_MIRROR_REMOTE_DECISION_DISABLED` when processing
+is otherwise enabled. Read-only previews/configuration do not enable processing.
+Receive-only startup needs a key but does not need OAuth credentials. Production
+runtime explicitly requires `UBER_EATS_ENVIRONMENT=production`; it cannot inherit
+the Sandbox default.
+
+Production worker startup additionally requires an explicit UTC ISO-8601
+`UBER_EATS_PROCESSING_NOT_BEFORE`. Old pending events become `HELD_CUTOVER`,
+delayed old/unusable `placed_at` cannot be imported, and existing unimported
+pre-cutover orders require `CUTOVER_REVIEW_REQUIRED`. Held notification/release
+receipts are never automatically promoted. Held cancel/edit safety events are
+applied before eligible imports when the worker is enabled. No API automatically
+deletes, resets or requeues held history. See the
+[Production webhook runbook](../deployment/cloud/README_UBER_PRODUCTION_WEBHOOK.md).
 
 以下 base 为 `/api/v1/stores/{storeId}/integrations/uber-eats`，普通 `ApiResponse` envelope，正常认证 + StoreAccessService。
 
@@ -1884,8 +1910,10 @@ InboxOrder 字段：id/status/display_id/uber_order_id/mapping_status/mapping_er
 `PUT /api/v1/stores/{storeId}/integrations/uber-eats/processing-mode` accepts
 `{"processing_mode":"KITCHEN_MIRROR"}` or `ORDER_MANAGER`; authenticated Owner/Admin
 with Store access required. Existing binding required; changing mode after any
-Uber order history returns `PROCESSING_MODE_HAS_ORDER_HISTORY`. Existing bindings
-default to `ORDER_MANAGER`. Mode is captured on each integration order.
+Uber order history returns `PROCESSING_MODE_HAS_ORDER_HISTORY`. Existing legacy
+bindings retain `ORDER_MANAGER`; new bindings inherit the global processing mode.
+A global KITCHEN_MIRROR process rejects ORDER_MANAGER bindings/mode changes. Mode
+is captured on each integration order.
 
 Mirror `/accept` and `/deny` return `KITCHEN_MIRROR_REMOTE_DECISION_DISABLED` before
 any remote decision. Notification GET saves the current snapshot and charges.

@@ -23,15 +23,67 @@ historical order/print snapshots. No generic egg name inference is performed.
 
 ## Uber webhook signing-key contract
 
-`UBER_EATS_WEBHOOK_SIGNING_KEY` is the preferred backend HMAC key. It is separate
-from OAuth configuration; if absent, existing installations retain the legacy
-client-secret fallback. An explicit key replaces that fallback, rather than
-trusting both credentials. Raw bytes, lowercase SHA-256 HMAC, constant-time
-comparison, signature-before-parse and environment guards are unchanged.
+`UBER_EATS_WEBHOOK_SIGNING_KEY` is the backend HMAC key. An enabled Production
+integration requires an explicit key and `UBER_EATS_ENVIRONMENT=production` in a
+Production runtime. Sandbox retains the legacy OAuth client-secret fallback;
+an explicit key replaces that fallback rather than trusting both credentials.
+Raw bytes, lowercase SHA-256 HMAC, constant-time comparison, signature-before-parse
+and environment guards are unchanged. Only the exact webhook POST bypasses POS
+Bearer login. The deployed key must match the PROD App's Basic HMAC Primary
+Signing Key; Secondary Signing Key overlap is not implemented.
 The full menu audit and stable parent contexts are recorded in the
 [comparison](docs/governance/UBER_TEST_MENU_FULL_COMPARE_20261002.md) and
 [approved final mapping table](docs/governance/UBER_KITCHEN_MAPPING_FINAL_20261002.md).
 Mapping is explicit and fail-closed; names never authorize automatic persistence.
+
+## Uber read-only scopes and receive-only Production preparation
+
+`UBER_EATS_PROCESSING_MODE` is a process-wide permission ceiling evaluated before
+Store bindings are loaded. Default `ORDER_MANAGER` retains the `eats.order`
+requirement and legacy behavior. `KITCHEN_MIRROR` requires
+`eats.store.orders.read`; the target read-only scope set is
+`UBER_EATS_SCOPES=eats.store eats.store.orders.read`. A mirror process cannot
+create an ORDER_MANAGER binding or invoke remote Accept/Deny, even if a stale
+binding is configured incorrectly. New bindings inherit the global mode; each
+order still freezes the binding's mode. No remote Cancel, Store mutation or Menu
+mutation capability is added.
+
+Client Credentials requests use the actual configured scope string. The token
+remains in memory, refreshes before expiration and is invalidated after 401. If
+a token response includes `scope`, its critical mode permission is validated
+before caching; an absent scope field remains compatible. Missing OAuth
+credentials fail closed before token HTTP calls. API errors never retain remote
+response bodies, credentials or tokens.
+
+`UBER_EATS_ENABLED=true` plus `UBER_EATS_WORKER_ENABLED=false` is receive-only:
+valid signed events are durably committed before empty HTTP 200, supported events
+receive `HELD_RECEIVE_ONLY`, and no new integration order, internal order, task,
+Print Job or PAD_DIRECT dispatch is created. OAuth credentials may remain absent
+until processing is authorized; a usable signing key is still mandatory. Disabled
+integration returns 503; invalid signatures 401, environment/malformed input 400,
+and event ID/body conflicts 409. Persistence failure cannot ACK 200. GET on the
+webhook path returns 405 and does not relax POST authentication.
+
+Turning the worker on never promotes held notification/release receipts. Before
+any Production worker startup, an explicit UTC ISO-8601
+`UBER_EATS_PROCESSING_NOT_BEFORE` watermark is required. Older pending receipts
+are retained as `HELD_CUTOVER`; delayed remote orders with old or unusable
+`placed_at` cannot bypass it. Existing unimported pre-cutover integration rows
+require `CUTOVER_REVIEW_REQUIRED`. Held cancellation/edit events are safety
+signals: when processing is enabled they are applied before eligible imports,
+without reviving held notifications. Already imported order/print history is
+preserved. No delete/reset/requeue/replay tool is introduced; an operator reviews
+retained evidence and obtains explicit disposition authority for any exceptional
+recovery.
+
+The default remains disabled, and Production examples additionally set the
+worker false. Changing receive-only into import is a separate real-order and
+printing gate: enabled Stores already using PAD_DIRECT may print immediately
+when an accepted order is permitted. Code readiness does not prove a deployed
+signed Production POST or grant Store Access. See the
+[Production webhook runbook](deployment/cloud/README_UBER_PRODUCTION_WEBHOOK.md)
+for configuration, backlog inventory and activation boundaries. This change
+alone does not deploy or activate Production.
 
 ## Uber TEST Store and kitchen-mirror evidence
 

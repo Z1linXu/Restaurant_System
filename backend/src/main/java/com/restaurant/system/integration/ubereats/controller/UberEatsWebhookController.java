@@ -18,6 +18,11 @@ public class UberEatsWebhookController {
         this.service = service;
     }
 
+    @GetMapping("/webhook")
+    public ResponseEntity<Void> unsupportedGet() {
+        return ResponseEntity.status(405).header("Allow", "POST").build();
+    }
+
     @PostMapping("/webhook")
     public ResponseEntity<Void> webhook(HttpServletRequest request) throws IOException {
         service.receive(

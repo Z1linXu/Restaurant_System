@@ -1,6 +1,7 @@
 package com.restaurant.system.integration.ubereats;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -84,6 +85,7 @@ class UberEatsPostgresIntegrationTest {
     }
 
     @Autowired UberEatsProperties config;
+    @Autowired UberEatsProcessingGate processingGate;
     @Autowired JdbcTemplate db;
     @Autowired Flyway flyway;
     @Autowired ObjectMapper json;
@@ -129,6 +131,18 @@ class UberEatsPostgresIntegrationTest {
 
     @BeforeEach
     void fixture() {
+        // Scheduling remains disabled by the test annotation; direct service calls opt in.
+        config.enabled = true;
+        config.workerEnabled = true;
+        config.scopes = "eats.order eats.store.orders.read";
+        config.testWebhookClientId = "";
+        config.testWebhookStoreId = "";
+        config.processingMode = "ORDER_MANAGER";
+        config.environment = "sandbox";
+        config.runtimeEnvironment = "local";
+        config.setClientSecret("fixture-oauth-secret");
+        config.setWebhookSigningKey("fixture-webhook-secret");
+        processingGate.notBefore = "";
         org =
                 id(
                         "insert into organizations(name,code,status) values ('Uber"
@@ -356,6 +370,333 @@ class UberEatsPostgresIntegrationTest {
     }
 
     @Test
+    void receiveOnlyDurablyHoldsWebhookAndDuplicatesWithoutAnyProcessingSideEffects() throws Exception {
+        config.workerEnabled = false;
+        String orderId = UUID.randomUUID().toString();
+        String eventId = UUID.randomUUID().toString();
+        byte[] raw = event(eventId, "orders.notification", orderId);
+        for (int duplicate = 0; duplicate < 2; duplicate++)
+            mvc.perform(post("/api/v1/integrations/uber-eats/webhook")
+                            .content(raw)
+                            .header("X-Uber-Signature", sign(raw))
+                            .header("X-Environment", "sandbox"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(""));
+        var durable = events.findByEnvironmentAndEventId("sandbox", eventId).orElseThrow();
+        assertThat(durable.status).isEqualTo("HELD_RECEIVE_ONLY");
+        assertThat(count("uber_eats_events", "id", durable.id)).isOne();
+        imports.processEvents();
+        imports.recover();
+        assertNoKitchenPipeline();
+        assertThat(count("uber_eats_orders", "store_id", store)).isZero();
+        verifyNoInteractions(client);
+
+        // Enabling processing must not silently promote a receive-only backlog.
+        config.workerEnabled = true;
+        processingGate.notBefore = "2026-09-01T00:00:00Z";
+        receive(raw);
+        imports.processEvents();
+        imports.recover();
+        assertThat(events.findById(durable.id).orElseThrow().status).isEqualTo("HELD_RECEIVE_ONLY");
+        assertThat(count("uber_eats_orders", "store_id", store)).isZero();
+        assertNoKitchenPipeline();
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    void pausedWorkerBlocksManualDecisionRetryAndDirectTransactionSubmission() {
+        var row = notify(payload(UUID.randomUUID().toString()));
+        db.update("update uber_eats_orders set status='UBER_ACCEPTED',accepted_at=now(),next_attempt_at=now() where id=?", row.id);
+        config.workerEnabled = false;
+        clearInvocations(client);
+        String cancelEvent = UUID.randomUUID().toString();
+        receive(event(cancelEvent, "orders.cancel", row.uberOrderId));
+        imports.processEvents();
+        imports.recover();
+        assertThat(events.findByEnvironmentAndEventId("sandbox", cancelEvent).orElseThrow().status)
+                .isEqualTo("HELD_RECEIVE_ONLY");
+        assertThat(row(row.uberOrderId).cancelled).isFalse();
+        assertThatThrownBy(() -> imports.decide(store, row.id, actorId, "ACCEPT", null))
+                .isInstanceOf(UberEatsException.class).hasMessage("UBER_PROCESSING_PAUSED");
+        assertThatThrownBy(() -> tx.retryLocal(store, row.id))
+                .isInstanceOf(UberEatsException.class).hasMessage("UBER_PROCESSING_PAUSED");
+        assertThatThrownBy(() -> tx.submitLocal(row.id))
+                .isInstanceOf(UberEatsException.class).hasMessage("UBER_PROCESSING_PAUSED");
+        assertThat(row(row.uberOrderId).status).isEqualTo("UBER_ACCEPTED");
+        assertThat(row(row.uberOrderId).localOrderId).isNull();
+        assertNoKitchenPipeline();
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    void productionHmacRequiresExplicitSigningKeyAndStrictProductionEnvironment() throws Exception {
+        config.workerEnabled = false;
+        config.processingMode = "KITCHEN_MIRROR";
+        config.scopes = "eats.store eats.store.orders.read";
+        config.environment = "production";
+        config.runtimeEnvironment = "production";
+        config.setWebhookSigningKey("fixture-production-signing-key");
+        config.validate();
+        byte[] raw = event(UUID.randomUUID().toString(), "orders.notification", UUID.randomUUID().toString());
+        mvc.perform(post("/api/v1/integrations/uber-eats/webhook").content(raw)
+                        .header("X-Uber-Signature", sign(raw, "fixture-production-signing-key"))
+                        .header("X-Environment", "production"))
+                .andExpect(status().isOk()).andExpect(content().string(""));
+        for (String wrongKey : List.of("fixture-oauth-secret", "fixture-webhook-secret"))
+            mvc.perform(post("/api/v1/integrations/uber-eats/webhook").content(raw)
+                            .header("X-Uber-Signature", sign(raw, wrongKey))
+                            .header("X-Environment", "production"))
+                    .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/v1/integrations/uber-eats/webhook").content(raw)
+                        .header("X-Uber-Signature", sign(raw, "fixture-production-signing-key"))
+                        .header("X-Environment", "sandbox"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/integrations/uber-eats/webhook").content(raw)
+                        .header("X-Uber-Signature", sign(raw, "fixture-production-signing-key")))
+                .andExpect(status().isBadRequest());
+        assertNoKitchenPipeline();
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    void webhookDatabaseFailureNeverAcknowledgesAnUnpersistedEvent() throws Exception {
+        config.workerEnabled = false;
+        String eventId = UUID.randomUUID().toString();
+        String constraint = "fixture_event_failure_" + UUID.randomUUID().toString().replace("-", "");
+        byte[] raw = event(eventId, "orders.notification", UUID.randomUUID().toString());
+        // Exact-event CHECK forces a real PostgreSQL failure without affecting other fixture rows.
+        db.execute("alter table uber_eats_events add constraint " + constraint
+                + " check (event_id <> '" + eventId + "')");
+        try {
+            mvc.perform(post("/api/v1/integrations/uber-eats/webhook").content(raw)
+                            .header("X-Uber-Signature", sign(raw))
+                            .header("X-Environment", "sandbox"))
+                    .andExpect(status().is5xxServerError());
+            assertThat(events.findByEnvironmentAndEventId("sandbox", eventId)).isEmpty();
+            assertNoKitchenPipeline();
+            verifyNoInteractions(client);
+        } finally {
+            db.execute("alter table uber_eats_events drop constraint " + constraint);
+        }
+    }
+
+    @Test
+    void webhookGetReturnsMethodNotAllowedAndAdvertisesPost() throws Exception {
+        mvc.perform(get("/api/v1/integrations/uber-eats/webhook"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(header().string("Allow", containsString("POST")));
+        assertThat(events.findFirstByEnvironmentAndUberStoreIdOrderByIdDesc("sandbox", uberStore)).isEmpty();
+        assertNoKitchenPipeline();
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    void cutoverHoldsLegacyEventWithoutFetchingOrderAndDuplicatesCannotBypass() {
+        mirrorMode();
+        String orderId = UUID.randomUUID().toString();
+        String eventId = UUID.randomUUID().toString();
+        byte[] raw = event(eventId, "orders.notification", orderId);
+        config.workerEnabled = false;
+        receive(raw);
+        config.workerEnabled = true;
+        var saved = events.findByEnvironmentAndEventId("sandbox", eventId).orElseThrow();
+        db.update("update uber_eats_events set status='PENDING',created_at=?,next_attempt_at=now() where id=?", LocalDateTime.ofInstant(Instant.parse("2026-08-31T23:59:59Z"), ZoneId.systemDefault()), saved.id);
+        processingGate.notBefore = "2026-09-01T00:00:00Z";
+        imports.processEvents();
+        var held = events.findById(saved.id).orElseThrow();
+        assertThat(held.status).isEqualTo("HELD_CUTOVER");
+        assertThat(held.errorCode).isEqualTo("CUTOVER_EVENT_BEFORE_START");
+        receive(raw);
+        imports.processEvents();
+        imports.recover();
+        assertThat(events.findById(saved.id).orElseThrow().status).isEqualTo("HELD_CUTOVER");
+        assertThat(count("uber_eats_orders", "store_id", store)).isZero();
+        assertNoKitchenPipeline();
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    void freshNotificationCannotImportAnOrderPlacedBeforeCutover() {
+        mirrorMode();
+        processingGate.notBefore = "2026-09-01T00:00:00Z";
+        String orderId = UUID.randomUUID().toString();
+        String eventId = UUID.randomUUID().toString();
+        var oldOrder = payload(orderId).put("current_state", "ACCEPTED")
+                .put("placed_at", "2026-08-31T23:59:59Z");
+        when(client.getOrder(orderId)).thenReturn(oldOrder);
+        receive(event(eventId, "orders.notification", orderId));
+        imports.processEvents();
+        var held = events.findByEnvironmentAndEventId("sandbox", eventId).orElseThrow();
+        assertThat(held.status).isEqualTo("HELD_CUTOVER");
+        assertThat(held.errorCode).isEqualTo("CUTOVER_ORDER_BEFORE_START");
+        assertThat(inbox.findByEnvironmentAndUberOrderId("sandbox", orderId)).isEmpty();
+        receive(event(UUID.randomUUID().toString(), "orders.release", orderId));
+        imports.processEvents();
+        imports.recover();
+        assertThat(inbox.findByEnvironmentAndUberOrderId("sandbox", orderId)).isEmpty();
+        assertNoKitchenPipeline();
+        verify(client, never()).accept(anyString(), anyString());
+        verify(client, never()).deny(anyString(), anyString());
+    }
+
+    @Test
+    void cutoverHoldsMissingBlankAndMalformedOrderPlacementWithoutKitchenRelease() {
+        mirrorMode();
+        processingGate.notBefore = "2026-09-01T00:00:00Z";
+        for (String invalid : List.of("missing", "", "not-a-date")) {
+            String orderId = UUID.randomUUID().toString();
+            String eventId = UUID.randomUUID().toString();
+            var source = payload(orderId).put("current_state", "ACCEPTED");
+            if ("missing".equals(invalid)) source.remove("placed_at");
+            else source.put("placed_at", invalid);
+            when(client.getOrder(orderId)).thenReturn(source);
+            receive(event(eventId, "orders.notification", orderId));
+            imports.processEvents();
+            var held = events.findByEnvironmentAndEventId("sandbox", eventId).orElseThrow();
+            assertThat(held.status).isEqualTo("HELD_CUTOVER");
+            assertThat(held.errorCode).isEqualTo("CUTOVER_ORDER_BEFORE_START");
+            assertThat(inbox.findByEnvironmentAndUberOrderId("sandbox", orderId)).isEmpty();
+        }
+        assertNoKitchenPipeline();
+        verify(client, never()).accept(anyString(), anyString());
+        verify(client, never()).deny(anyString(), anyString());
+    }
+
+    @Test
+    void pausedCancellationLedgerWinsBeforeFreshGetCanReleaseKitchenOrder() {
+        mirrorMode();
+        var source = payload(UUID.randomUUID().toString());
+        var waiting = notify(source);
+        config.workerEnabled = false;
+        String eventId = UUID.randomUUID().toString();
+        receive(event(eventId, "orders.cancel", waiting.uberOrderId));
+        assertThat(events.findByEnvironmentAndEventId("sandbox", eventId).orElseThrow().status)
+                .isEqualTo("HELD_RECEIVE_ONLY");
+        assertThat(row(waiting.uberOrderId).cancelled).isFalse();
+        config.workerEnabled = true;
+        processingGate.notBefore = "2026-09-01T00:00:00Z";
+        clearInvocations(client);
+        source.put("current_state", "ACCEPTED");
+        // Recovery can run before the held cancellation's worker page. Its durable receipt wins.
+        assertThat(tx.refreshMirror(waiting.id, normalizer.normalize(source))).isFalse();
+        assertThat(row(waiting.uberOrderId).cancelled).isTrue();
+        assertThat(row(waiting.uberOrderId).localOrderId).isNull();
+        imports.processEvents();
+        assertThat(events.findByEnvironmentAndEventId("sandbox", eventId).orElseThrow().status)
+                .isEqualTo("COMPLETED");
+        assertThat(row(waiting.uberOrderId).status).isEqualTo("CANCELLED");
+        assertNoKitchenPipeline();
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    void pausedCancellationBeyondWorkerPagePreventsAcceptedRecoveryFromReleasingKitchen() {
+        mirrorMode();
+        var source = payload(UUID.randomUUID().toString());
+        var waiting = notify(source);
+        List<String> earlierEvents = new ArrayList<>();
+        try {
+            for (int index = 0; index < 12; index++) {
+                String orderId = UUID.randomUUID().toString();
+                String eventId = UUID.randomUUID().toString();
+                when(client.getOrder(orderId)).thenReturn(payload(orderId)); // all remain CREATED
+                receive(event(eventId, "orders.notification", orderId));
+                earlierEvents.add(eventId);
+            }
+            config.workerEnabled = false;
+            String cancelEvent = UUID.randomUUID().toString();
+            receive(event(cancelEvent, "orders.cancel", waiting.uberOrderId));
+            assertThat(row(waiting.uberOrderId).cancelled).isFalse();
+            config.workerEnabled = true;
+            clearInvocations(client);
+            imports.processEvents();
+            for (int index = 0; index < earlierEvents.size(); index++)
+                assertThat(events.findByEnvironmentAndEventId("sandbox", earlierEvents.get(index))
+                                .orElseThrow().status)
+                        .isEqualTo(index < 10 ? "COMPLETED" : "PENDING");
+            assertThat(events.findByEnvironmentAndEventId("sandbox", cancelEvent).orElseThrow().status)
+                    .isEqualTo("HELD_RECEIVE_ONLY"); // the disruptive event was beyond the first page
+            assertThat(row(waiting.uberOrderId).cancelled).isFalse();
+
+            source.put("current_state", "ACCEPTED");
+            when(client.getOrder(waiting.uberOrderId)).thenReturn(source);
+            due(waiting.id);
+            imports.recover();
+            assertThat(row(waiting.uberOrderId).cancelled).isTrue();
+            assertThat(row(waiting.uberOrderId).status).isEqualTo("CANCELLED");
+            assertThat(row(waiting.uberOrderId).localOrderId).isNull();
+            assertThat(events.findByEnvironmentAndEventId("sandbox", cancelEvent).orElseThrow().status)
+                    .isEqualTo("HELD_RECEIVE_ONLY"); // recovery consulted the ledger, not event processing
+            verify(client, never()).getOrder(waiting.uberOrderId);
+            verify(client, never()).accept(anyString(), anyString());
+            verify(client, never()).deny(anyString(), anyString());
+            assertNoKitchenPipeline();
+        } finally {
+            // These deliberately pending fixtures must not enter a later test's worker page.
+            // Scope cleanup to this test's unique Store/UUID; preserve all other fixture rows.
+            config.workerEnabled = true;
+            db.update("update uber_eats_events set status='COMPLETED' where environment='sandbox' and uber_store_id=?", uberStore);
+            db.update("update uber_eats_orders set next_attempt_at=null where store_id=?", store);
+        }
+
+    }
+
+    @Test
+    void cutoverStopsLegacyRecoveryBeforeRemoteReadOrLocalSubmission() {
+        mirrorMode();
+        var row = notify(payload(UUID.randomUUID().toString()));
+        db.update("update uber_eats_orders set status='MIRROR_LOCAL_FAILED',accepted_observed_at=now(),next_attempt_at=now() where id=?", row.id);
+        processingGate.notBefore = "2026-09-17T00:00:00Z";
+        clearInvocations(client);
+        imports.recover();
+        var held = row(row.uberOrderId);
+        assertThat(held.status).isEqualTo("CUTOVER_REVIEW_REQUIRED");
+        assertThat(held.nextAttemptAt).isNull();
+        assertThat(held.localOrderId).isNull();
+        assertNoKitchenPipeline();
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    void postCutoverMirrorImportsExactlyOnceAndPreservesCancellationOfExistingKitchenOrder() {
+        mirrorMode();
+        var row = release(payload(UUID.randomUUID().toString()));
+        dispatch(row.localOrderId);
+        Long previousLocal = row.localOrderId;
+        long previousJobs = count("print_jobs", "order_id", previousLocal);
+        // A later cutover must not suppress cancellation of an already-imported old order.
+        processingGate.notBefore = "2026-09-17T00:00:00Z";
+        receive(event(UUID.randomUUID().toString(), "orders.cancel", row.uberOrderId));
+        imports.processEvents();
+        assertThat(row(row.uberOrderId).status).isEqualTo("CANCELLED_AFTER_RELEASE");
+        assertThat(row(row.uberOrderId).localOrderId).isEqualTo(previousLocal);
+        assertThat(count("print_jobs", "order_id", previousLocal)).isEqualTo(previousJobs);
+
+        String newId = UUID.randomUUID().toString();
+        var fresh = payload(newId).put("placed_at", "2026-09-17T00:00:01Z");
+        var imported = release(fresh);
+        dispatch(imported.localOrderId);
+        notify(fresh);
+        imports.recover();
+        dispatch(imported.localOrderId);
+        assertThat(row(newId).localOrderId).isEqualTo(imported.localOrderId);
+        assertThat(count("orders", "store_id", store)).isEqualTo(2);
+        assertThat(count("kitchen_tasks", "order_id", imported.localOrderId)).isOne();
+        assertThat(count("inventory_transactions", "source_id", imported.localOrderId)).isOne();
+        assertThat(count("print_jobs", "order_id", imported.localOrderId)).isEqualTo(2);
+        verify(client, never()).accept(anyString(), anyString());
+        verify(client, never()).deny(anyString(), anyString());
+    }
+
+    void assertNoKitchenPipeline() {
+        assertThat(count("orders", "store_id", store)).isZero();
+        assertThat(count("kitchen_tasks", "store_id", store)).isZero();
+        assertThat(count("order_dispatch_outbox", "store_id", store)).isZero();
+        assertThat(count("print_jobs", "store_id", store)).isZero();
+        assertThat(count("inventory_transactions", "inventory_item_id", inventory)).isZero();
+    }
+
+    @Test
     void testWebhookCompatibilityRequiresExactPairSignatureAndSandboxIdentity() throws Exception {
         mirrorMode();
         String id = UUID.randomUUID().toString();
@@ -425,7 +766,7 @@ class UberEatsPostgresIntegrationTest {
                                     .header("X-Uber-Signature", sign(raw))
                                     .header("X-Environment", "production"))
                     .andExpect(status().isOk());
-            assertThat(row(id).localOrderId).isNull();
+            assertThat(inbox.findByEnvironmentAndUberOrderId("sandbox", id)).isEmpty();
             imports.processEvents();
             assertThat(row(id).status).isEqualTo("WAITING_FOR_ACCEPTANCE");
             for (String wrong :
@@ -603,9 +944,15 @@ class UberEatsPostgresIntegrationTest {
     void wrongStoreAndUnconfiguredStoreNeverImport() {
         var data = payload(UUID.randomUUID().toString());
         ((ObjectNode) data.path("store")).put("id", UUID.randomUUID().toString());
-        var row = notify(data);
-        assertThat(row.status).isEqualTo("RECEIVED");
-        assertThat(row.localOrderId).isNull();
+        String mismatchedOrder = data.path("id").asText();
+        String eventId = UUID.randomUUID().toString();
+        when(client.getOrder(mismatchedOrder)).thenReturn(data);
+        receive(event(eventId, "orders.notification", mismatchedOrder));
+        imports.processEvents();
+        assertThat(inbox.findByEnvironmentAndUberOrderId("sandbox", mismatchedOrder)).isEmpty();
+        assertThat(events.findByEnvironmentAndEventId("sandbox", eventId).orElseThrow().errorCode)
+                .isEqualTo("UBER_RESPONSE_STORE_MISMATCH");
+        assertNoKitchenPipeline();
         uberStore = UUID.randomUUID().toString();
         data = payload(UUID.randomUUID().toString());
         String id = data.path("id").asText();
@@ -2419,11 +2766,15 @@ class UberEatsPostgresIntegrationTest {
     }
 
     String sign(byte[] raw) {
+        return sign(raw, "fixture-webhook-secret");
+    }
+
+    String sign(byte[] raw, String key) {
         try {
             var mac = Mac.getInstance("HmacSHA256");
             mac.init(
                     new SecretKeySpec(
-                            "fixture-webhook-secret".getBytes(StandardCharsets.UTF_8),
+                            key.getBytes(StandardCharsets.UTF_8),
                             "HmacSHA256"));
             return HexFormat.of().formatHex(mac.doFinal(raw));
         } catch (Exception ex) {

@@ -36,7 +36,7 @@ public class UberEatsOrderImportService {
     }
 
     public void processEvents() {
-        if (!config.enabled) return;
+        if (!config.enabled || !config.workerEnabled) return;
         for (var event :
                 events.due(config.environment, LocalDateTime.now(), PageRequest.of(0, 10))) {
             if (!tx.claimEvent(event.id)) continue;
@@ -52,7 +52,8 @@ public class UberEatsOrderImportService {
     }
 
     public UberEatsOrder decide(Long store, Long id, Long actor, String action, String reason) {
-        if (!config.enabled) throw UberEatsException.conflict("UBER_DISABLED");
+        config.requireProcessingEnabled();
+        config.requireOrderManagerMode();
         var row = tx.scoped(store, id);
         tx.requireOrderManager(row);
         if (row.localOrderId != null
@@ -78,7 +79,7 @@ public class UberEatsOrderImportService {
     }
 
     public void recover() {
-        if (!config.enabled) return;
+        if (!config.enabled || !config.workerEnabled) return;
         for (var row : orders.due(config.environment, LocalDateTime.now(), PageRequest.of(0, 10))) {
             if (!tx.claimRecovery(row.id)) continue;
             try {

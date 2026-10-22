@@ -1,15 +1,15 @@
 schema_version: 1
-updated_at: 2026-10-06
+updated_at: 2026-10-21
 
 repository:
   ref: origin/main
-  sha: 420dbb1268540c3ad5a2d0befa1d9fd96c684bd0
+  sha: 06bac51ddc0a829a9aa1106f07ef886572efbb65
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
   package: FINAL_PRODUCT_CLOSEOUT
-  status: PRODUCTION_ADDON_IDENTITY_RECONCILIATION_COMPLETE
+  status: UBER_READONLY_WEBHOOK_CODE_ACCEPTED_PR_DELIVERY
   next_phase_authorized: false
 
 staging:
@@ -46,6 +46,21 @@ production:
   addon_conflicts: 0
   addon_identity_api_acceptance: PASS_THREE_STORES
   addon_post_release_browser_acceptance: NOT_COMPLETED_CUA_CLIPBOARD_TIMEOUT
+
+uber_readonly_webhook:
+  evidence: UBER_READONLY_WEBHOOK_READINESS_20261021.md
+  target_global_mode: KITCHEN_MIRROR
+  target_scopes: eats.store eats.store.orders.read
+  isolated_postgres_mock_acceptance: PASS
+  uber_tests: PASS_98_FAILURES0_ERRORS0_SKIPS0_POSTGRES69
+  backend_verify: PASS_986_FAILURES0_ERRORS0_8_CONDITIONAL_SKIPS_3_RELEVANT_MIGRATION_TESTS_RERUN_PASS
+  agent6_review: ACCEPT_NO_REMAINING_P0_P1_P2
+  live_staging_deployed: false
+  live_staging_blocker: EXISTING_ACTIVE_SANDBOX_PAD_DIRECT_MODEL_REQUIRES_REVIEWED_WORKER_PAUSE_DEPLOYMENT
+  production_deployed: false
+  production_signed_post: EXTERNALLY_BLOCKED_SIGNING_KEY_NOT_CONFIGURED
+  production_registration_go: false
+  production_order_import_go: false
 
 uber_test_store_audit:
   observed_at: 2026-10-03T20:49:02Z
@@ -153,9 +168,10 @@ uber_store_capability:
 
 gate:
   type: TECHNICAL
-  next_action: NONE_AUTHORIZED_ADDON_BATCH_COMPLETE
+  next_action: REVIEW_UBER_READONLY_WEBHOOK_PR_NO_PRODUCTION_MUTATION
 
 authorization:
+  uber_readonly_webhook: OWNER_20261021_IMPLEMENT_TEST_REVIEW_PR_AND_SAFE_STAGING_VALIDATION_NO_PRODUCTION_DEPLOY_OR_ORDERS
   uber_store_capability: OWNER_AUTHORIZED_OPTION370_TEA_EGG_KEEP_ID_PRICE_HISTORY_FORMAL_UBER_EATS_GATES_V37_TEST_REVIEW_MERGE_STAGING_ONLY
   uber_order_note_scope: OWNER_AUTHORIZED_ORDER_ITEM_NOTE_SEPARATION_EXACT_DEDUPE_FROZEN_REPRINT_V36_TEST_REVIEW_MERGE_STAGING_ONLY_NO_HISTORICAL_REWRITE_NO_PHYSICAL_PRINT
   final_product_closeout: OWNER_AUTHORIZED_FINAL_12_MODIFIER_CONTEXTS_ADDON_CANONICAL_2330_LOCAL_FINISH_CHANNEL_ANALYTICS_V35_BACKFILL_TEST_REVIEW_MERGE_STAGING_ONLY
@@ -175,4 +191,4 @@ authorization:
   production: NONE
 
 stop:
-  marker: ADDON_IDENTITY_ACCEPTED_STOP_NO_FURTHER_PRODUCTION_OR_PHASE_AUTHORIZATION
+  marker: UBER_READONLY_WEBHOOK_PR_ONLY_LIVE_STAGING_BLOCKED_PRODUCTION_NOT_AUTHORIZED

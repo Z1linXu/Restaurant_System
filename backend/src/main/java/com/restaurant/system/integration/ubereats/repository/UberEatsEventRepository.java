@@ -22,7 +22,8 @@ public interface UberEatsEventRepository extends JpaRepository<UberEatsEvent, Lo
     Optional<UberEatsEvent> lock(@Param("id") Long id);
 
     @Query(
-            "select e from UberEatsEvent e where e.environment = :env and e.status = 'PENDING' and"
+            "select e from UberEatsEvent e where e.environment = :env and (e.status = 'PENDING' or"
+                    + " (e.status='HELD_RECEIVE_ONLY' and e.eventType in ('orders.cancel','orders.customer_order_edit'))) and"
                     + " e.nextAttemptAt <= :now and exists (select b.id from UberEatsStoreMapping b, StoreModule m"
                     + " where b.environment=e.environment and b.uberStoreId=e.uberStoreId and b.enabled=true"
                     + " and m.store_id=b.storeId and m.module_key='UBER_EATS' and m.enabled=true) order by e.id")

@@ -50,8 +50,12 @@ public class UberEatsOAuthClient {
     }
 
     public synchronized String accessToken() {
-        if (!properties.enabled) throw new UberEatsApiException(503);
+        if (!properties.enabled || !properties.hasOAuthCredentials())
+            throw new UberEatsApiException(503);
+        if (!properties.hasRequiredScopes(properties.scopes)) throw new UberEatsApiException(403);
         if (token != null && clock.instant().isBefore(refreshAt)) return token;
+        // A failed refresh, including insufficient granted scopes, must not cache a token.
+        invalidate();
         var form = new LinkedMultiValueMap<String, String>();
         form.add("client_id", properties.clientId);
         form.add("client_secret", properties.clientSecret());
@@ -71,6 +75,11 @@ public class UberEatsOAuthClient {
                     || response.path("access_token").asText().isBlank()
                     || response.path("expires_in").asLong() <= 0)
                 throw new UberEatsApiException(502);
+            if (response.has("scope")) {
+                if (!response.get("scope").isTextual()) throw new UberEatsApiException(502);
+                if (!properties.hasRequiredScopes(response.get("scope").asText()))
+                    throw new UberEatsApiException(403);
+            }
             long expires = response.path("expires_in").asLong();
             refreshAt =
                     requestedAt.plusSeconds(
