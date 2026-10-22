@@ -9613,7 +9613,15 @@ availability before permitting persistence. It performs no database writes or
 fuzzy name expansion. The bounded hidden-TTY OAuth operator changes only the
 existing PROD Client Secret configuration on the accepted4b/V38 image, retaining
 receiver=true/worker=false and existing private configuration/backup/locks.
-Hidden Owner input has not yet occurred, so no new Production OAuth/API success
+The Owner's first hidden-input attempt returned a non200 OAuth response before
+configuration; its HTTP status/body were discarded by the earlier operator, so
+the historical OAuth reason cannot be reconstructed. Production runtime,
+canonical model and bounded historical private configurations still have no
+Production OAuth Client Secret. The Webhook Signing Key is present and separate.
+The existing operator now reuses a matching configured OAuth Secret, prompts
+only if absent, rejects SigningKey substitution, and retains sanitized HTTP
+status/error/description/requested and actual read scopes in a private failure
+proof. It never logs tokens or stores a failed input. No new OAuth/API success
 or formal mapping persistence is claimed. Store3 is excluded from this batch.
 
 ### Historical V37 application release (2026-10-05)

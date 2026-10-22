@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Prepared-only bounded Client Secret configuration and read-only Uber API proof.
+"""Configure the existing Production Client Secret and verify read-only Uber APIs.
 
-An operator runs this on the verified server from a real TTY. Existing Production
-secret is entered with getpass, never as argv, stdin JSON, shell text or a log.
+An operator runs this on the verified server. A matching runtime/canonical secret
+is reused; only a missing secret requires a real TTY and hidden getpass input.
 Only the OAuth token endpoint uses POST; every Eats request is GET. No order or
 POS-data API is called. Production import worker remains disabled throughout.
 """
@@ -14,6 +14,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import urllib.error
@@ -33,10 +34,19 @@ STORES='https://api.uber.com/v1/eats/stores'
 MENU='https://api.uber.com/v2/eats/stores/'+STORE+'/menus'
 DB='cloud-db-1'
 MENU_KEYS=frozenset({'menus','categories','items','modifier_groups'})
+ERROR_JSON_LIMIT=16*1024
+OAUTH_ERROR_CODES=frozenset({'invalid_request','invalid_client','invalid_grant','unauthorized_client',
+    'unsupported_grant_type','invalid_scope','access_denied','server_error','temporarily_unavailable'})
 
 
 class PreparationError(RuntimeError):
     pass
+
+
+class OAuthProbeError(PreparationError):
+    def __init__(self,code,diagnostic):
+        super().__init__(code)
+        self.diagnostic=diagnostic
 
 
 def require(condition,code):
@@ -51,6 +61,42 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self,*args): return None
 
 
+def error_json(response):
+    """Retain only bounded JSON in memory; never return HTML or an unbounded body."""
+    try:
+        raw=response.read(ERROR_JSON_LIMIT+1)
+        if len(raw)>ERROR_JSON_LIMIT or not isinstance(json.loads(raw),dict):return None
+        return raw
+    except Exception:return None
+
+
+def oauth_diagnostic(status,raw,secret,attempted=True):
+    diagnostic={'oauth_http_status':status,'oauth_requested_scopes':SCOPES.split(),
+                'oauth_request_attempted':attempted,'oauth_error':None,'oauth_error_description':None}
+    try:
+        document=json.loads(raw) if raw is not None and len(raw)<=ERROR_JSON_LIMIT else None
+    except Exception:document=None
+    if not isinstance(document,dict):return diagnostic
+    code=document.get('error')
+    if isinstance(code,str):
+        diagnostic['oauth_error']=code if code in OAUTH_ERROR_CODES and secret not in code else 'REDACTED_OR_UNRECOGNIZED_ERROR'
+    description=document.get('error_description')
+    if not isinstance(description,str):return diagnostic
+    # No markup, control characters, arbitrary nested fields, headers or raw bodies escape.
+    if (re.search(r'<|>|&(?:lt|gt|#\d+|#x[0-9a-f]+);',description,re.I)
+            or any(ord(c)<32 and c not in '\t\n\r' for c in description)):
+        diagnostic['oauth_error_description']='REDACTED_UNTRUSTED_ERROR_DESCRIPTION'
+        return diagnostic
+    for private in {secret,urllib.parse.quote(secret,safe=''),urllib.parse.quote_plus(secret)}:
+        if private:description=description.replace(private,'[REDACTED]')
+    description=re.sub(r'''(?i)\b(?:bearer\s+|(?:access_token|refresh_token|client_secret|token)["']?\s*[:=]\s*["']?)[^\s,;"']+''',
+                       '[REDACTED]',description)
+    description=re.sub(r'\beyJ[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+){2}\b','[REDACTED]',description)
+    description=re.sub(r'\b[A-Za-z0-9_~+/=-]{20,}\b','[REDACTED]',description)
+    diagnostic['oauth_error_description']=' '.join(description.split())[:384]
+    return diagnostic
+
+
 def request(url,*,raw=None,token=None):
     headers={'Accept':'application/json'}
     if raw is not None: headers['Content-Type']='application/x-www-form-urlencoded'
@@ -58,14 +104,14 @@ def request(url,*,raw=None,token=None):
     req=urllib.request.Request(url,data=raw,method='POST' if raw is not None else 'GET',headers=headers)
     try:
         with urllib.request.build_opener(NoRedirect()).open(req,timeout=20) as response:
-            if response.status!=200: return response.status,None
+            if response.status!=200: return response.status,error_json(response)
             body=response.read(8*1024*1024+1)
             require(len(body)<=8*1024*1024,'UBER_RESPONSE_TOO_LARGE')
             return response.status,body
     except urllib.error.HTTPError as error:
         status=error.code
-        error.close() # Do not log or retain an error body.
-        return status,None
+        try:return status,error_json(error)
+        finally:error.close()
     except PreparationError: raise
     except Exception: raise PreparationError('UBER_HTTP_REQUEST_FAILED') from None
 
@@ -73,20 +119,27 @@ def request(url,*,raw=None,token=None):
 def probe(secret,http=request):
     require(isinstance(secret,str) and bool(secret) and secret==secret.strip()
             and len(secret)<=4096 and '\n' not in secret and '\r' not in secret,'CLIENT_SECRET_INPUT_INVALID')
-    status,raw=http(OAUTH,raw=urllib.parse.urlencode({'client_id':CLIENT,'client_secret':secret,
-        'grant_type':'client_credentials','scope':SCOPES}).encode())
-    require(status==200,'PRODUCTION_OAUTH_NOT_200')
+    try:
+        status,raw=http(OAUTH,raw=urllib.parse.urlencode({'client_id':CLIENT,'client_secret':secret,
+            'grant_type':'client_credentials','scope':SCOPES}).encode())
+    except PreparationError:
+        raise OAuthProbeError('UBER_HTTP_REQUEST_FAILED',oauth_diagnostic(None,None,secret)) from None
+    if status!=200:raise OAuthProbeError('PRODUCTION_OAUTH_NOT_200',oauth_diagnostic(status,raw,secret))
     try: oauth=json.loads(raw)
-    except Exception: raise PreparationError('OAUTH_RESPONSE_INVALID') from None
-    require(isinstance(oauth,dict) and isinstance(oauth.get('access_token'),str)
-            and bool(oauth['access_token'].strip()) and isinstance(oauth.get('scope'),str),
-            'OAUTH_TOKEN_OR_GRANTED_SCOPE_MISSING')
+    except Exception: raise OAuthProbeError('OAUTH_RESPONSE_INVALID',oauth_diagnostic(status,None,secret)) from None
+    if not (isinstance(oauth,dict) and isinstance(oauth.get('access_token'),str)
+            and bool(oauth['access_token'].strip()) and isinstance(oauth.get('scope'),str)):
+        raise OAuthProbeError('OAUTH_TOKEN_OR_GRANTED_SCOPE_MISSING',oauth_diagnostic(status,None,secret))
     actual=set(oauth['scope'].split())
-    require('eats.store.orders.read' in actual,'OAUTH_READ_SCOPE_NOT_GRANTED')
     # Expose permission identifiers only; never return or write access_token/response body.
     granted=sorted(actual & {'eats.store','eats.store.orders.read','eats.order'})
-    result={'oauth_http_status':status,'oauth_granted_scopes':granted,
-            'other_granted_scope_count':len(actual-set(granted))}
+    other_count=len(actual-set(granted))
+    if 'eats.store.orders.read' not in actual:
+        diagnostic={**oauth_diagnostic(status,None,secret),'oauth_granted_scopes':granted,
+                    'other_granted_scope_count':other_count}
+        raise OAuthProbeError('OAUTH_READ_SCOPE_NOT_GRANTED',diagnostic)
+    result={'oauth_http_status':status,'oauth_requested_scopes':SCOPES.split(),'oauth_granted_scopes':granted,
+            'other_granted_scope_count':other_count}
     token=oauth['access_token']
     store_status,store_raw=http(STORES,token=token)
     result.update({'stores_http_status':store_status,'store_count':None,'target_store_in_list':False})
@@ -134,6 +187,33 @@ def updated_env(original,secret):
 def load(name,filename):
     spec=importlib.util.spec_from_file_location(name,HELPERS/filename)
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
+
+
+def configured_secret(ops):
+    """Read the already reviewed deployment only; conflicting sources fail closed."""
+    with ops.operation_locks():
+        current=ops.inspect('cloud-backend-1')
+        ops.require(current['Image']==IMAGE
+            and ops.inspect(IMAGE)['Config']['Labels']['org.opencontainers.image.revision']==SHA,
+            'EXACT_CURRENT_APPLICATION_DRIFT_STOP')
+        environment=ops.env_of(current)
+        source=ops.private_file(ops.BASE/'production/current.compose.json')
+        model=json.loads(ops.run(['docker','compose','-p','cloud','-f',str(source),'config','--format','json']))
+        ops.require(model['services']['backend']['environment']==environment
+            and model['services']['backend']['image']==IMAGE,'CANONICAL_MODEL_RUNTIME_DRIFT')
+        secret=environment.get('UBER_EATS_CLIENT_SECRET','')
+        # Validate the receive-only boundary before any OAuth call or hidden prompt.
+        updated_env(environment,secret or 'missing-secret-validation-only')
+        return secret,environment['UBER_EATS_WEBHOOK_SIGNING_KEY']
+
+
+def save_oauth_failure(ops,error):
+    # A sibling proof leaves the operation root available for a later successful retry.
+    proof={'schema_version':1,'application_client_id':CLIENT,'environment':'production',
+           'oauth_endpoint':OAUTH,'result':'FAILED','error_code':str(error),
+           **error.diagnostic,'client_secret_written':False,'deployment_attempted':False,'observed_at_utc':now()}
+    with ops.operation_locks():
+        ops.write_private(ROOT.with_name(ROOT.name+'-oauth-failure.json'),proof)
 
 
 SAFETY_SQL="""SELECT json_build_object(
@@ -254,22 +334,34 @@ def configure(secret,oauth_result,menu_proof,menu_raw,ops,verify,receiver):
 
 def main():
     os.umask(0o077)
+    ops=None
     try:
-        require(sys.stdin.isatty(),'REAL_TTY_REQUIRED_FOR_HIDDEN_SECRET')
-        with warnings.catch_warnings():
-            warnings.simplefilter('error',getpass.GetPassWarning)
-            secret=getpass.getpass('Existing Production App Client Secret (hidden): ')
-        oauth_result,menu_proof,menu_raw=probe(secret)
         ops=load('oauth_prepare_ops','promote-uber-receive-only-20261022.py')
+        secret,signing_key=configured_secret(ops)
+        if not secret:
+            require(sys.stdin.isatty(),'REAL_TTY_REQUIRED_FOR_HIDDEN_SECRET')
+            with warnings.catch_warnings():
+                warnings.simplefilter('error',getpass.GetPassWarning)
+                secret=getpass.getpass('Existing Production App Client Secret (hidden): ')
+        if secret==signing_key:
+            raise OAuthProbeError('OAUTH_INPUT_IS_WEBHOOK_SIGNING_KEY',oauth_diagnostic(None,None,secret,attempted=False))
+        oauth_result,menu_proof,menu_raw=probe(secret)
         verify=load('oauth_prepare_verify','verify-uber-receive-only-20261022.py')
         receiver=load('oauth_prepare_receiver','configure-uber-production-receiver.py')
         result=configure(secret,oauth_result,menu_proof,menu_raw,ops,verify,receiver)
         print(json.dumps(result))
         return 0
     except BaseException as error:
+        if isinstance(error,OAuthProbeError):
+            proof_saved=False
+            try:
+                save_oauth_failure(ops,error);proof_saved=True
+            except BaseException:pass
+            print(json.dumps({**error.diagnostic,'failure_proof_saved':proof_saved}))
         # Only fixed codes/type names escape. Never stringify arbitrary network/parser errors.
         allowed=isinstance(error,PreparationError) or type(error).__name__=='PromotionError'
-        print('UBER_4483_OAUTH_PREPARATION_FAILED:'+(str(error) if allowed else type(error).__name__))
+        code=str(error) if allowed and re.fullmatch(r'[A-Z][A-Z0-9_]{0,127}',str(error)) else type(error).__name__
+        print('UBER_4483_OAUTH_PREPARATION_FAILED:'+code)
         return 1
 
 

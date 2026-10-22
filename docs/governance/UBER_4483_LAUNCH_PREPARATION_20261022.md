@@ -42,7 +42,10 @@ remain **NOT_RUN** until that hidden input is completed. No token is retained.
 The prepared GTS reply identifies4483 UUID
 `5a7dca5c-b7ec-57c8-a684-87d23e66e8d9`, asks for manual read-only access and
 `order_webhook`, retains Uber Tablet as Order Manager and excludes Store3.
-Outbound sending authorization is pending; no email was sent by this task.
+No email was sent by this task. A later direct read of Gmail confirms that the
+Owner independently sent the4483 UUID to the same GTS case at11:53:07 EDT on
+October22. Do not ask the Owner to repeat that message; no subsequent Uber
+reply was present at the current read. Remote manual integration is unconfirmed.
 
 ## Mapping reuse and exact unresolved gap
 
@@ -172,3 +175,36 @@ block same-ID title/external_data drift, and CAS-check before rollback recreate.
 Application tests/build/deployment were not repeated because app/device/schema
 contracts are unchanged. The actual candidate CLI result remains299/0/0, with
 the two missing external proof inputs only. No configured CI checks are assumed.
+
+## OAuth failure follow-up, 17:19–17:26 UTC
+
+The Owner reports running the hidden command and receiving
+`UBER_4483_OAUTH_PREPARATION_FAILED:PRODUCTION_OAUTH_NOT_200`. The original
+reader received a non200 response but discarded both its HTTP status and error
+body. Its failure was before Stores/Menu GET, configuration and restart. An
+invalid client, denied scope, rate limit or another response cannot be selected
+as the historical cause without evidence. Missing current Secret is the
+consequence of not persisting a failed input, not proof of that original cause.
+
+Current read-only runtime/canonical inspection finds OAuth Secret ABSENT and
+Signing Key PRESENT, worker=false, same4b/V38 image. Bounded investigation of
+the actual historical Production private models/.env and known local .env
+paths finds no paired Production OAuth Secret either. No values were output.
+The official Production endpoint remains `https://auth.uber.com/oauth/v2/token`;
+client_credentials and the requested two scopes are correct. Do not switch
+endpoints or use a TEST secret or HMAC key to guess around missing credentials.
+
+Only the existing operator and its tests were repaired. It now reuses a valid
+runtime/canonical credential when present; missing credentials require the
+existing hidden TTY input once. Sanitized diagnostic proof distinguishes HTTP
+status, OAuth error/description, requested scopes and actual allowlisted grants.
+SigningKey confusion is rejected before network; error body is bounded in
+memory and never logged. Failed attempts do not configure/restart the backend.
+Focused operator26/26, entire related Python suite78/78 PASS; Agent6 ACCEPT,
+one diagnostic P2 closed, no remaining P0/P1/P2. No duplicate script or app build.
+
+Fresh database read: Staging299 =41 ITEM MAP +238 MODIFIER MAP +20 NO_OP,
+including8 COMBO_ROOT; Production Store1 binding correct, formal mappings0,
+other-Store mappings0, two HELD events, integration orders0. Actual Production
+menu, Stable ID/context differences and migration previews remain unverified
+until a real OAuth credential can authenticate. No rule was guessed or written.
