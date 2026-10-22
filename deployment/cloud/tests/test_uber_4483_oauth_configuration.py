@@ -6,12 +6,13 @@ m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 MENU=b'{"menus":[],"categories":[],"items":[],"modifier_groups":[]}'
 
 class FakeHttp:
- def __init__(self,scope='eats.store eats.store.orders.read',stores_status=200,stores=None,menu_status=200,menu=MENU):
-  self.calls=[];self.scope=scope;self.stores_status=stores_status;self.stores=[] if stores is None else stores;self.menu_status=menu_status;self.menu=menu
+ def __init__(self,scope='eats.store eats.store.orders.read',stores_status=200,stores=None,menu_status=200,menu=MENU,oauth_status=200,oauth_error=None):
+  self.calls=[];self.scope=scope;self.stores_status=stores_status;self.stores=[] if stores is None else stores;self.menu_status=menu_status;self.menu=menu;self.oauth_status=oauth_status;self.oauth_error=oauth_error
  def __call__(self,url,*,raw=None,token=None):
   self.calls.append((url,raw,token))
   if url==m.OAUTH:
    assert raw is not None and token is None
+   if self.oauth_status!=200:return self.oauth_status,self.oauth_error
    return 200,json.dumps({'access_token':'fixture-token-never-output','scope':self.scope}).encode()
   assert raw is None and token=='fixture-token-never-output'
   if url==m.STORES:return self.stores_status,json.dumps({'stores':self.stores}).encode() if self.stores_status==200 else None
@@ -71,7 +72,17 @@ class Tests(unittest.TestCase):
   self.assertTrue(proof['authorized_store_access']);self.assertNotIn('fixture-token',json.dumps((result,proof)))
  def test_missing_read_grant_fails_before_get(self):
   h=FakeHttp(scope='eats.store')
-  with self.assertRaisesRegex(m.PreparationError,'OAUTH_READ_SCOPE_NOT_GRANTED'):m.probe('fixture-secret',h)
+  with self.assertRaisesRegex(m.PreparationError,'OAUTH_READ_SCOPE_NOT_GRANTED') as caught:m.probe('fixture-secret',h)
+  self.assertEqual(len(h.calls),1)
+  self.assertEqual(caught.exception.diagnostic['oauth_http_status'],200)
+  self.assertEqual(caught.exception.diagnostic['oauth_granted_scopes'],['eats.store'])
+  self.assertEqual(caught.exception.diagnostic['other_granted_scope_count'],0)
+ def test_missing_read_grant_only_counts_untrusted_scope_names(self):
+  h=FakeHttp(scope='eats.store fixture-private-untrusted-scope')
+  with self.assertRaises(m.OAuthProbeError) as caught:m.probe('fixture-secret',h)
+  self.assertEqual(caught.exception.diagnostic['oauth_granted_scopes'],['eats.store'])
+  self.assertEqual(caught.exception.diagnostic['other_granted_scope_count'],1)
+  self.assertNotIn('fixture-private-untrusted-scope',json.dumps(caught.exception.diagnostic))
   self.assertEqual(len(h.calls),1)
  def test_store_access_403_remains_external_not_oauth_configuration_failure(self):
   result,proof,raw=m.probe('fixture-secret',FakeHttp(stores_status=403,menu_status=403))
@@ -93,14 +104,14 @@ class Tests(unittest.TestCase):
   with self.assertRaisesRegex(m.PreparationError,'EXISTING_CLIENT_SECRET_DIFFERS'):m.updated_env(env,'fixture-other-secret')
   self.assertEqual(m.updated_env(env,'fixture-original-secret'),env)
  def test_non_tty_refuses_before_secret_prompt_or_network(self):
-  with patch.object(m.sys,'stdin',types.SimpleNamespace(isatty=lambda:False)),patch.object(m.getpass,'getpass') as hidden,patch.object(m,'probe') as probe,contextlib.redirect_stdout(io.StringIO()) as output:
+  with patch.object(m,'load'),patch.object(m,'configured_secret',return_value=('', 'fixture-signing-key')),patch.object(m.sys,'stdin',types.SimpleNamespace(isatty=lambda:False)),patch.object(m.getpass,'getpass') as hidden,patch.object(m,'probe') as probe,contextlib.redirect_stdout(io.StringIO()) as output:
    self.assertEqual(m.main(),1);hidden.assert_not_called();probe.assert_not_called()
    self.assertIn('REAL_TTY_REQUIRED',output.getvalue())
  def test_getpass_warning_cannot_fall_back_to_echoed_input(self):
   def fallback(prompt):
    m.warnings.warn('cannot disable echo',m.getpass.GetPassWarning)
    self.fail('fallback read must not run')
-  with patch.object(m.sys,'stdin',types.SimpleNamespace(isatty=lambda:True)),patch.object(m.getpass,'getpass',fallback),patch.object(m,'probe') as probe,contextlib.redirect_stdout(io.StringIO()) as output:
+  with patch.object(m,'load'),patch.object(m,'configured_secret',return_value=('', 'fixture-signing-key')),patch.object(m.sys,'stdin',types.SimpleNamespace(isatty=lambda:True)),patch.object(m.getpass,'getpass',fallback),patch.object(m,'probe') as probe,contextlib.redirect_stdout(io.StringIO()) as output:
    self.assertEqual(m.main(),1);probe.assert_not_called()
    self.assertIn('GetPassWarning',output.getvalue())
  def test_oauth_http_failure_never_exposes_body_or_secret(self):
@@ -108,6 +119,45 @@ class Tests(unittest.TestCase):
   with self.assertRaises(m.PreparationError) as failure:m.probe('fixture-private-secret',failed)
   self.assertEqual(str(failure.exception),'PRODUCTION_OAUTH_NOT_200')
   self.assertNotIn('fixture-',str(failure.exception))
+  self.assertEqual(failure.exception.diagnostic['oauth_http_status'],401)
+  self.assertIsNone(failure.exception.diagnostic['oauth_error_description'])
+ def test_oauth_error_allowlist_description_redacts_secret_tokens_and_unknown_fields(self):
+  secret='fixture-input-private-secret';token='eyJhbGciOiJIUzI1NiJ9.fixtureAccessToken12345678901234567890.fixtureSignature1234567890'
+  raw=json.dumps({'error':'invalid_client','error_description':'Client authentication failed '+secret+' access_token='+token+' Bearer short-private-value',
+                  'private_body':'must-never-appear','access_token':token,'headers':{'private':'must-never-appear'}}).encode()
+  with self.assertRaises(m.OAuthProbeError) as caught:m.probe(secret,FakeHttp(oauth_status=401,oauth_error=raw))
+  diagnostic=caught.exception.diagnostic;serialized=json.dumps(diagnostic)
+  self.assertEqual(diagnostic['oauth_error'],'invalid_client');self.assertEqual(diagnostic['oauth_requested_scopes'],m.SCOPES.split())
+  self.assertIn('Client authentication failed',serialized)
+  for private in (secret,token,'short-private-value','must-never-appear','fixtureAccessToken'):self.assertNotIn(private,serialized)
+ def test_oauth_error_description_blocks_html_and_control_characters(self):
+  for description in ('<html>private hidden content</html>','&lt;script&gt;private&lt;/script&gt;','private\x00hidden'):
+   with self.subTest(description=repr(description)):
+    diagnostic=m.oauth_diagnostic(403,json.dumps({'error':'invalid_scope','error_description':description}).encode(),'fixture-secret')
+    self.assertEqual(diagnostic['oauth_error'],'invalid_scope')
+    self.assertEqual(diagnostic['oauth_error_description'],'REDACTED_UNTRUSTED_ERROR_DESCRIPTION')
+ def test_short_jwt_quoted_token_fields_encoded_secret_and_long_opaque_redacted(self):
+  secret='fixture private/+ secret'
+  description='Client authentication failed {"access_token":"shorttoken"} refresh_token=short-refresh eyJhbGci.eyJpc3Mi.c2lnbmF0dXJl '+m.urllib.parse.quote_plus(secret)+' AbCdEfGhIjKlMnOpQrStUvWx'
+  diagnostic=m.oauth_diagnostic(401,json.dumps({'error':'invalid_client','error_description':description}).encode(),secret)
+  value=diagnostic['oauth_error_description']
+  self.assertIn('Client authentication failed',value)
+  for private in ('shorttoken','short-refresh','eyJhbGci','c2lnbmF0dXJl',m.urllib.parse.quote_plus(secret),'AbCdEfGhIjKlMnOpQrStUvWx'):self.assertNotIn(private,value)
+ def test_network_oauth_failure_produces_safe_diagnostic_without_arbitrary_exception(self):
+  def failed(url,**kwargs):raise m.PreparationError('private-network-error-never-output')
+  with self.assertRaises(m.OAuthProbeError) as caught:m.probe('fixture-secret',failed)
+  self.assertEqual(str(caught.exception),'UBER_HTTP_REQUEST_FAILED');self.assertIsNone(caught.exception.diagnostic['oauth_http_status'])
+  self.assertTrue(caught.exception.diagnostic['oauth_request_attempted']);self.assertNotIn('private-network-error',json.dumps(caught.exception.diagnostic))
+ def test_http_error_retains_only_bounded_json_in_memory_and_closes_response(self):
+  raw=b'{"error":"invalid_scope","error_description":"Requested scope is unavailable"}'
+  body=io.BytesIO(raw)
+  error=m.urllib.error.HTTPError(m.OAUTH,401,'private-error-reason',{'private-header':'never-output'},body)
+  def rejected(*args,**kwargs):raise error
+  with patch.object(m.urllib.request,'build_opener',return_value=types.SimpleNamespace(open=rejected)):
+   status,result=m.request(m.OAUTH,raw=b'fixture-form-data')
+  self.assertEqual(status,401);self.assertEqual(result,raw);self.assertTrue(body.closed)
+  for body_raw in (b'<html>private</html>',b'[]',b'{"error":"'+b'x'*m.ERROR_JSON_LIMIT+b'"}'):
+   self.assertIsNone(m.error_json(io.BytesIO(body_raw)))
  def test_v37_guard_does_not_silently_skip(self):
   value=FakeOps(Path('/tmp'),self.base()).inventory(m.DB);value['flyway']='37'
   with self.assertRaisesRegex(PromotionError,'FLYWAY_V38_REQUIRED'):m.queue_guard(FakeOps(Path('/tmp'),self.base()),value)
@@ -120,6 +170,57 @@ class Tests(unittest.TestCase):
   verify=types.SimpleNamespace(psql=lambda db,sql:copy.deepcopy(safety))
   def backup(args,stdout,**kwargs):stdout.write(b'fixture-custom-dump');return types.SimpleNamespace(returncode=0)
   return ops,verify,source,backup
+ def set_existing_secret(self,ops,source,secret):
+  ops.current['UBER_EATS_CLIENT_SECRET']=secret
+  model=json.loads(source.read_text());model['services']['backend']['environment']=copy.deepcopy(ops.current)
+  source.write_text(json.dumps(model))
+ def test_existing_consistent_secret_reused_without_tty_or_prompt(self):
+  with tempfile.TemporaryDirectory() as td:
+   ops,verify,source,backup=self.setup_configure(td);secret='fixture-existing-private-secret';self.set_existing_secret(ops,source,secret)
+   with patch.object(m,'load',return_value=ops),patch.object(m.sys,'stdin',types.SimpleNamespace(isatty=lambda:False)),patch.object(m.getpass,'getpass') as hidden,patch.object(m,'probe',return_value=({}, {}, None)) as probe,patch.object(m,'configure',return_value={'oauth_http_status':200}) as configure,contextlib.redirect_stdout(io.StringIO()) as output:
+    self.assertEqual(m.main(),0)
+   hidden.assert_not_called();probe.assert_called_once_with(secret);self.assertEqual(configure.call_args.args[0],secret)
+   self.assertNotIn(secret,output.getvalue());self.assertEqual(ops.up,[])
+ def test_missing_consistent_secret_prompts_hidden_exactly_once(self):
+  with tempfile.TemporaryDirectory() as td:
+   ops,verify,source,backup=self.setup_configure(td)
+   with patch.object(m,'load',return_value=ops),patch.object(m.sys,'stdin',types.SimpleNamespace(isatty=lambda:True)),patch.object(m.getpass,'getpass',return_value='fixture-hidden-private-secret') as hidden,patch.object(m,'probe',return_value=({}, {}, None)) as probe,patch.object(m,'configure',return_value={'oauth_http_status':200}),contextlib.redirect_stdout(io.StringIO()) as output:
+    self.assertEqual(m.main(),0)
+   hidden.assert_called_once();probe.assert_called_once_with('fixture-hidden-private-secret')
+   self.assertNotIn('fixture-hidden-private-secret',output.getvalue())
+ def test_runtime_canonical_secret_conflict_fails_before_prompt_or_oauth(self):
+  with tempfile.TemporaryDirectory() as td:
+   ops,verify,source,backup=self.setup_configure(td);self.set_existing_secret(ops,source,'fixture-runtime-private-secret')
+   model=json.loads(source.read_text());model['services']['backend']['environment']['UBER_EATS_CLIENT_SECRET']='fixture-stale-private-secret';source.write_text(json.dumps(model));original=source.read_bytes()
+   with patch.object(m,'load',return_value=ops),patch.object(m.getpass,'getpass') as hidden,patch.object(m,'probe') as probe,patch.object(m,'configure') as configure,contextlib.redirect_stdout(io.StringIO()) as output:
+    self.assertEqual(m.main(),1)
+   hidden.assert_not_called();probe.assert_not_called();configure.assert_not_called()
+   self.assertIn('CANONICAL_MODEL_RUNTIME_DRIFT',output.getvalue());self.assertNotIn('fixture-',output.getvalue())
+   self.assertEqual(source.read_bytes(),original);self.assertEqual(ops.up,[])
+ def test_oauth_failure_persists_only_safe_proof_without_configuration_or_deploy(self):
+  with tempfile.TemporaryDirectory() as td:
+   ops,verify,source,backup=self.setup_configure(td);secret='fixture-existing-private-secret';self.set_existing_secret(ops,source,secret)
+   original=source.read_bytes();runtime=copy.deepcopy(ops.current);root=Path(td)/'operation';original_probe=m.probe
+   http=FakeHttp(oauth_status=401,oauth_error=json.dumps({'error':'invalid_client','error_description':'Client authentication failed '+secret+' opaqueToken12345678901234567890','debug':'raw-body-private'}).encode())
+   with patch.object(m,'ROOT',root),patch.object(m,'load',return_value=ops),patch.object(m.getpass,'getpass') as hidden,patch.object(m,'probe',side_effect=lambda value:original_probe(value,http)),patch.object(m,'configure') as configure,contextlib.redirect_stdout(io.StringIO()) as output:
+    self.assertEqual(m.main(),1)
+   proof_path=root.with_name(root.name+'-oauth-failure.json');proof=json.loads(proof_path.read_text());serialized=proof_path.read_text()+output.getvalue()
+   self.assertEqual(proof['oauth_http_status'],401);self.assertEqual(proof['oauth_error'],'invalid_client')
+   self.assertEqual(proof['oauth_requested_scopes'],m.SCOPES.split());self.assertTrue(proof['oauth_request_attempted'])
+   self.assertFalse(proof['client_secret_written']);self.assertFalse(proof['deployment_attempted'])
+   self.assertEqual(proof_path.stat().st_mode & 0o777,0o600);self.assertFalse(root.exists())
+   for private in (secret,'opaqueToken12345678901234567890','raw-body-private'):self.assertNotIn(private,serialized)
+   hidden.assert_not_called();configure.assert_not_called();self.assertEqual([c[0] for c in http.calls],[m.OAUTH])
+   self.assertEqual(source.read_bytes(),original);self.assertEqual(ops.current,runtime);self.assertEqual(ops.up,[])
+ def test_signing_key_input_is_rejected_before_oauth_with_safe_failure_proof(self):
+  with tempfile.TemporaryDirectory() as td:
+   ops,verify,source,backup=self.setup_configure(td);root=Path(td)/'operation';key=ops.current['UBER_EATS_WEBHOOK_SIGNING_KEY'];original=source.read_bytes()
+   with patch.object(m,'ROOT',root),patch.object(m,'load',return_value=ops),patch.object(m.sys,'stdin',types.SimpleNamespace(isatty=lambda:True)),patch.object(m.getpass,'getpass',return_value=key) as hidden,patch.object(m,'probe') as probe,patch.object(m,'configure') as configure,contextlib.redirect_stdout(io.StringIO()) as output:
+    self.assertEqual(m.main(),1)
+   proof_path=root.with_name(root.name+'-oauth-failure.json');proof=json.loads(proof_path.read_text())
+   self.assertEqual(proof['error_code'],'OAUTH_INPUT_IS_WEBHOOK_SIGNING_KEY');self.assertFalse(proof['oauth_request_attempted']);self.assertIsNone(proof['oauth_http_status'])
+   hidden.assert_called_once();probe.assert_not_called();configure.assert_not_called()
+   self.assertNotIn(key,proof_path.read_text()+output.getvalue());self.assertEqual(source.read_bytes(),original);self.assertEqual(ops.up,[])
  def test_same_image_configuration_with_pending_store_access(self):
   with tempfile.TemporaryDirectory() as td:
    ops,verify,source,backup=self.setup_configure(td);root=Path(td)/'operation'

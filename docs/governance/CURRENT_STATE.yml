@@ -3,13 +3,13 @@ updated_at: 2026-10-22
 
 repository:
   ref: origin/main
-  sha: 1093c0c2400f00d65b75b5c462f0ec2cfc25b6d9
+  sha: eeb23cc53fc0e3c0ef0d6aa72e7fd7aea2c9c0a1
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
   package: UBER_PRODUCTION_4483_FINAL_PREPARATION
-  status: LOCAL_CANDIDATES_AND_REVIEWED_TOOLS_COMPLETE_HIDDEN_OAUTH_INPUT_REMOTE_ACCESS_PENDING
+  status: PRIOR_OAUTH_NON200_DIAGNOSIS_FIXED_TRUE_PRODUCTION_OAUTH_SECRET_ABSENT
   next_phase_authorized: false
 
 staging:
@@ -143,17 +143,22 @@ uber_4483_launch_preparation:
   candidate_sha256: e331993daa5748ee70e5ad32b31b0180c5b4b32effee9e001aec0d065d7e6271
   candidate_only: true
   offline_verifier_tests: PASS_21
-  oauth_operator_mock_tests: PASS_15
-  focused_python_tests: PASS_67
+  oauth_operator_mock_tests: PASS_26
+  focused_python_tests: PASS_78
   agent6_review: ACCEPT_NO_REMAINING_P0_P1_P2
   oauth_operator_uploaded: true
-  oauth_operator_sha256: c64d45184054680230b727d3b146578b2e652aabc26d187f803efd210413ac25
-  hidden_oauth_input: PENDING_OWNER_TERMINAL_CONTROL_TOOL_DENIED
-  actual_oauth: NOT_RUN
+  oauth_operator_sha256: 8b2bba3b99e8b67972ba12e976a5262fcce9f0a54db5e7b3ea6a6b9bf11284ad
+  hidden_oauth_input: OWNER_REPORTED_PRIOR_ATTEMPT_FAILED_BEFORE_CONFIGURATION_NOT_RETAINED
+  actual_oauth: PRIOR_NON200_STATUS_AND_ERROR_DISCARDED_RETRY_REQUIRES_PRODUCTION_CLIENT_SECRET
+  prior_oauth_http_status: UNKNOWN_NOT_RETAINED
+  prior_oauth_error: UNKNOWN_NOT_RETAINED
+  oauth_secret_source_audit: ABSENT_RUNTIME_CANONICAL_AND_BOUNDED_HISTORICAL_PRIVATE_ENVIRONMENTS
   actual_menu_get: NOT_RUN
   remote_store_access: NOT_VERIFIED
   order_webhook_role: NOT_VERIFIED
-  gts_reply_sent: false
+  gts_reply_sent: true
+  gts_reply_actor: OWNER_INDEPENDENT_EMAIL_OBSERVED_READ_ONLY
+  gts_reply_sent_at: 2026-10-22T11:53:07-04:00
   device13_native_worker: VERIFIED_RECENT_POS_PENDING_CLAIM_PROCESSING_COMPLETE
   device14_native_worker: UNKNOWN
   actual_installed_apk_version: UNKNOWN

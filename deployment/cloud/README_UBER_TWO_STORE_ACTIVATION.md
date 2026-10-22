@@ -210,6 +210,19 @@ worker=false, all other environment values and unrelated containers stay intact.
 It does not create, rotate or revoke an Uber credential. OAuth POST is the only
 POST to Uber; the Eats calls are only Stores GET and the exact4483 Menu GET.
 
+If the current runtime and canonical private model already contain the same
+OAuth Secret, the same operator reuses it without prompting or requiring TTY.
+Conflicting models fail closed. Only an absent OAuth Secret requires hidden
+input; the Webhook Signing Key is never its substitute. A matching SigningKey
+input is rejected before any OAuth request. The original generic
+PRODUCTION_OAUTH_NOT_200 result cannot recover a discarded historical response.
+Current failures report bounded/sanitized HTTP status, allowlisted OAuth error,
+redacted error description and requested scopes; scope-denied200 also records
+allowlisted actual grants. Failure writes only0600 safe evidence to the existing
+root's sibling `uber-4483-final-20261022-oauth-failure.json`, without credential
+installation/restart or raw response/header/token output. Reuse this operator;
+do not create a second credential-input script or blindly change endpoints.
+
 The private output root is
 `/srv/restaurant-pos/production/uber-4483-final-20261022`. Token stays in memory;
 successful menu bytes and their authenticated read-proof are retained0600.
