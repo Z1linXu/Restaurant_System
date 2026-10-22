@@ -46,6 +46,7 @@ history, browser console, documentation, screenshots, logs or chat.
 | `UBER_EATS_CLIENT_ID`, `UBER_EATS_CLIENT_SECRET` | independent PROD App credentials; optional only while receive-only, required before OAuth/processing |
 | `UBER_EATS_WEBHOOK_SIGNING_KEY` | explicit matching PROD Primary Signing Key required when enabled; Production cannot use legacy fallback |
 | `UBER_EATS_PROCESSING_NOT_BEFORE` | explicit ISO-8601 UTC instant ending Z required before a Production worker can start |
+| `UBER_EATS_STORE_CUTOVERS` | JSON object of verified Uber Store UUIDs to UTC Z instants; Production worker requires at least one entry; unlisted Stores cannot import |
 
 Do not use the nonexistent `UBER_EATS_OAUTH_SCOPES` key. The configured scope
 string is sent unchanged in Client Credentials token requests. If the response
@@ -88,6 +89,10 @@ finite upstream retries do not replace local durable receipt. A Dashboard save
 is not proof of a healthy receiving endpoint or granted role/Store access.
 
 ## Backlog inventory and cutover
+
+For independent first-store activation and safe pause/resume, see the
+[two-store activation runbook](README_UBER_TWO_STORE_ACTIVATION.md). Each Store's
+effective watermark is the later of the global and its own UTC boundary.
 
 Turning the worker on must not turn a receive-only backlog into a batch of
 kitchen tickets. Held notification/release receipts never become pending merely
@@ -165,7 +170,7 @@ Never auto-reprint a job already in PRINTING or with uncertain physical outcome.
    one local order, expected tasks/outbox and no duplicate automatic jobs. Keep
    ordinary POS lifecycle and the Pad claim/PRINTING/complete/fail state machine.
 
-This batch does not authorize steps that mutate Production or activate Stores.
+This runbook does not itself authorize Production mutation or Store activation.
 Production webhook registration is NO-GO until the actual receiving deployment,
 matching key and durable ACK are verified; real-order import remains NO-GO until
 the separate pilot gate is satisfied. Missing Uber approval, role, Store Access

@@ -66,7 +66,12 @@ webhook path returns 405 and does not relax POST authentication.
 
 Turning the worker on never promotes held notification/release receipts. Before
 any Production worker startup, an explicit UTC ISO-8601
-`UBER_EATS_PROCESSING_NOT_BEFORE` watermark is required. Older pending receipts
+`UBER_EATS_PROCESSING_NOT_BEFORE` watermark and nonempty
+`UBER_EATS_STORE_CUTOVERS` JSON (verified Uber Store UUID -> UTC Z instant) are
+required. Unlisted Production Stores cannot import. Each Store uses the later
+global/store boundary; after pausing a Store module, advance only its own
+watermark before resuming to prevent replaying the paused interval. Other
+Stores' boundaries remain unchanged. Older pending receipts
 are retained as `HELD_CUTOVER`; delayed remote orders with old or unusable
 `placed_at` cannot bypass it. Existing unimported pre-cutover integration rows
 require `CUTOVER_REVIEW_REQUIRED`. Held cancellation/edit events are safety
@@ -84,6 +89,12 @@ signed Production POST or grant Store Access. See the
 [Production webhook runbook](deployment/cloud/README_UBER_PRODUCTION_WEBHOOK.md)
 for configuration, backlog inventory and activation boundaries. This change
 alone does not deploy or activate Production.
+
+The [two-store operator runbook](deployment/cloud/README_UBER_TWO_STORE_ACTIVATION.md)
+uses existing Store modules, binding/mapping APIs and canonical Add-on FK
+assignments. It adds no self-service onboarding, remote Store/menu/order writes,
+second Add-on identity, new order pipeline or PAD_DIRECT state change. A local
+module pause stops new imports but does not retract existing queued Print Jobs.
 
 ## Uber TEST Store and kitchen-mirror evidence
 

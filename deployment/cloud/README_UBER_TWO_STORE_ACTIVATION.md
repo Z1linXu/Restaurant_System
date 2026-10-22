@@ -1,0 +1,168 @@
+# Two-store Kitchen Mirror activation
+
+This is an operator runbook, not authority to activate a Store. The 2026-10-21
+release permits code deployment with the Uber worker false and internal
+preparation. Missing Uber approval, verified Store identity, actual secrets,
+mapping or printer/device proof blocks activation. No Java/React change is
+needed after those external facts and configuration are supplied.
+
+## Verified local targets
+
+| Restaurant | Owner-provided address | Production Store / org | Current printing |
+| --- | --- | --- | --- |
+| Saint-Denis | 4483 Rue Saint-Denis, Montréal | 1 / 1, code `4483_R_SAINT_DENIS` | PAD_DIRECT; same-Store GRAB 3 / HOT 4 |
+| Sainte-Catherine | 1395 Rue Sainte-Catherine Ouest, Montréal | 3 / 1, code `ST_CATHERINE` | DISABLED; no printer assignment or Pad |
+
+These local identities were read from Production, not inferred from the numeric
+IDs. The supplied Uber UUID `5a7dca5c-b7ec-57c8-a684-87d23e66e8d9` must be
+reconfirmed against a trusted Uber Store address before binding; its historical
+label does not satisfy the current Owner request for identity verification.
+The second real UUID is missing. Never use the Sandbox Store UUID as a substitute.
+Chinatown is excluded; keep its Uber module disabled and create no Uber binding.
+
+## Deployment and safe receipt
+
+Use the reviewed `promote-uber-receive-only-20261022.py` with one full source SHA
+and immutable image. It takes both existing operation locks, snapshots private
+models, validates a new DB backup, changes only the backend image and allowed
+Uber configuration, and preserves every unrelated container/device. Do not run
+generic historical deploy templates over these private runtime models.
+
+The target always sets `UBER_EATS_WORKER_ENABLED=false`, global
+`KITCHEN_MIRROR`, `UBER_EATS_SCOPES=eats.store eats.store.orders.read` and an empty
+`UBER_EATS_STORE_CUTOVERS={}`. Production uses environment `production`. If its
+real Signing Key is absent, `UBER_EATS_ENABLED=false`; POST 503 is intentional
+and is not a healthy registered receiver. Rollback uses the previous image with
+Uber disabled and worker false; it never restores Staging's legacy active worker.
+No schema migration beyond the deployed V37 is part of this release.
+
+Run `verify-uber-receive-only-20261022.py staging IMAGE SHA`, then the promotion
+helper's `--record-staging-acceptance` with the private `http-proof.json` path.
+This retains one synthetic HELD receipt, checks HTTP statuses and zero business
+side effects, and records a hash. Production promotion rechecks that evidence
+and current Staging image/state before any restart. Production verification is
+read-only POS smoke plus disabled POST; missing actual HMAC proof remains BLOCKED.
+
+The verification tool reuses the existing short-lived in-memory POS identity
+scheme for authenticated GET smoke. This is not a human password-login test.
+It does not submit a live draft, place an Uber order or trigger physical printing.
+
+## Webhook and external grants
+
+1. Obtain the Production scope decision, `order_webhook` role and confirmed
+   merchant Store Access from Uber GTS for Client ID
+   `6GaiQpZTcfcuTa150wr4RyztC33PV7LS`. GTS should preserve the Uber Tablet as
+   Order Manager; do not write `/pos_data`, menu, Store status or order decisions.
+2. Keep all real bindings inactive/uncreated and the worker false during key
+   bootstrap. In PROD App prepare Primary Webhook / Basic HMAC with
+   `https://pos.lanzhounoodlesmtl.com/api/v1/integrations/uber-eats/webhook`.
+   Securely inject its actual Primary Signing Key into the existing private
+   backend model as `UBER_EATS_WEBHOOK_SIGNING_KEY`; do not reuse either TEST
+   OAuth secret or TEST Signing Key, including cross-key substitution.
+3. If Dashboard Save generates the key, coordinate a no-real-Store-traffic
+   window: save, retain/inject securely, update the receiving backend while
+   keeping worker false, verify. If Uber requires a healthy endpoint before
+   revealing a key, ask GTS for bootstrap; do not bypass signature validation.
+4. Prove valid signed Production receipt commits then returns empty 200;
+   invalid signature 401; wrong environment 400; duplicate one row; zero local
+   orders/tasks/jobs. Do not mark Webhook READY without this live proof.
+5. Inject independent Production OAuth credentials through private 0600 storage.
+   Verify requested/actual scopes and authorized read-only Store/menu/order GETs;
+   never display token/secret or store them in shell history. A Client ID alone
+   is not a credential or evidence of approval.
+
+## Binding and mapping using existing APIs
+
+Keep the worker false throughout preparation. Admin APIs remain Store/org
+authorized; no new onboarding system or integration-specific Add-on catalog is
+introduced. Use a logged-in authorized operator or the existing controlled API
+client, keeping bearer credentials out of command arguments and evidence.
+
+1. Verify each Uber UUID's returned name/address against the table above.
+   Read `deployment/cloud/uber-two-store-readiness-readonly.sql` using confirmed
+   backend JVM timezone `America/Toronto`; it is `BEGIN READ ONLY` and reports
+   menu/FK/printing/backlog facts without customer fields or credentials.
+2. Enable only the intended local module with the existing module API:
+   `PUT /api/v1/admin/stores/{id}/modules`, body
+   `{"store_id":1,"modules":[{"module_key":"UBER_EATS","enabled":true}]}`
+   (use 3 for Sainte-Catherine). Other modules must remain unchanged.
+3. Platform ADMIN binds the verified UUID through
+   `PUT /api/v1/stores/{id}/integrations/uber-eats/store`, body
+   `{"uber_store_id":"<verified real UUID>"}`. Read it back: environment
+   production, correct Store/org, `KITCHEN_MIRROR`. No placeholders or guessed
+   identity may be saved. A module can be prepared without inventing a binding.
+4. Read that Store's `mapping-catalog` and `mapping-options/{itemId}`. Resolve
+   the previously Human Confirmed semantics to exact active local SKU/option
+   identities in this Production Store. Staging numeric IDs are never portable.
+   Both current local catalogs resolve the 41 approved roots and eight combo
+   triggers; this proves the local half only, not live Uber IDs or full coverage.
+5. Fetch each real Store's current Uber menu independently. Preserve external
+   stable IDs and parent context. Compare against the actual selected menu;
+   never generate mappings by fuzzy/display name or blindly copy TEST IDs.
+6. Import each explicitly verified rule through the existing idempotent
+   `PUT /api/v1/stores/{id}/integrations/uber-eats/mappings`. Its JSON uses the
+   actual entity keys `kind`, `identifierType`, `uberIdentifier`, `uberItemId`,
+   `localMenuItemId`, `localOptionCode`, `localOptionGroup`, `parentOptionCode`,
+   `mappingAction`, `itemMappingMode`, `actionReason`. Root `uberItemId` is empty;
+   modifiers require the real parent root ID. Read back every rule.
+7. Use `COMBO_ROOT` for a combo root, unique local `COMBO/combo` injection and
+   existing `COMBO_EGG` / `COMBO_SIDE` choices. Canonical Add-ons must resolve
+   through the same-Store option assignment's `store_addon_id` FK; code/name
+   similarity does not replace that relationship. NO_OP requires the approved
+   `INGREDIENT_NOT_USED` reason. Retain unknowns visibly; do not drop modifiers.
+8. POST representative actual-menu snapshots to `mapping-preview` (read-only
+   semantics). Require errors=[] and warnings=[] and no raw fallback for the
+   planned pilot menu, including size/add-on/remove/combo/notes quantities.
+   Mirror `valid=true` alone is insufficient because raw fallback is allowed
+   for future drift. Mapping writes must occur while worker=false: saving calls
+   `remapStore`; it must not release held kitchen orders.
+
+## Controlled first-store activation
+
+Before enabling any import, record all of: actual scope/role/Store Access proof,
+Production HMAC acceptance, verified local/external UUID, mapping read-back and
+zero-warning previews, each Store's own printer routing, recent correct Pad
+worker proof, and the approved first-order/time window. Sainte-Catherine's
+missing printer/device configuration must be resolved through the existing
+printing setup, not by borrowing Saint-Denis endpoints. Registration rows alone
+are not proof of a live Pad or physical output.
+
+Run the read-only backlog inventory first. Preserve all HELD/CUTOVER/PRINTING/
+FAILED history; never blanket requeue, delete, reset or retry ambiguous prints.
+Select a UTC cutover after the historical orders. The effective boundary is
+`max(UBER_EATS_PROCESSING_NOT_BEFORE, store-specific cutover)` and checks both
+receipt time and remote `placed_at`. Previously HELD notifications are never
+automatically promoted, even after configuration changes.
+
+During the separately approved pilot, set the global UTC watermark and a private
+`UBER_EATS_STORE_CUTOVERS` JSON object containing only the first verified Uber
+Store UUID mapped to its approved UTC ISO-8601 Z instant. Keep the second Store
+module off/unlisted. Only then enable the global worker in the controlled
+private model and deploy that configuration under the existing locks. Production
+startup fails closed without both global and nonempty valid per-Store cutovers.
+This activation is intentionally not a mode of the receive-only promotion helper.
+
+Observe one naturally accepted/approved pilot order: no pre-ACCEPTED import,
+exactly one local order, correct Store/tasks/outbox and unique GRAB/HOT jobs.
+Uber Tablet continues Accept/Deny. Do not infer paper output from database status.
+Enable the second Store only after its own independent readiness/window proof;
+add its verified UUID/cutover, retaining the first Store's unchanged watermark.
+
+## Pause and resume one Store
+
+- Pause using its existing module API with `UBER_EATS=false`; leave the other
+  Store and ordinary POS/printing modules unchanged. This stops new Uber
+  processing; it does not retract already committed orders or queued Print Jobs.
+  Inspect existing jobs and handle an emergency separately. Never blindly reprint.
+- For a resume, first leave that module off, inspect its retained backlog,
+  advance only that Store's UTC cutover to the newly approved window in the
+  private runtime configuration, and restart under deployment locks. Then
+  re-enable that Store module. Do not move the other Store's boundary.
+- Global worker=false pauses new processing for all Stores while preserving
+  receipt. It cannot undo already queued physical work. Disruptive events remain
+  durably retained; reconciliation checks the cancellation/edit ledger before
+  any later release. No task/job state is reset by pause/resume.
+
+No scope grant alone enables printing. External confirmations plus data/config
+and controlled acceptance are the remaining work; no additional core API or UI
+development is required for these two Stores.
