@@ -51,3 +51,10 @@ Agent 6 首轮发现一个 P2：把 `1-右 (UPDATE)` 整行四倍放大会占 52
 跳过；新增 60 个 renderer 参数用例及 29 个 PAD/TCP/宽度/旧格式兼容用例。部署隔离
 保护测试 2 PASS，本地 render/payload 验收 24 PASS。Agent 6 增量复审 ACCEPT，
 无剩余 P0/P1/P2。宽度问题修复后复测一轮，无其他产品返工。
+
+Staging 应用在 `2026-10-23T14:00:56Z` 部署成功。首轮隔离 JAR 验收未能加载
+测试 class：cap-drop ALL 的 root 无权读取 operator 的私有 0700/0600 文件。
+BLOCKING 工具修正只指定同一 operator UID/GID，保留全部隔离限制；允许同一
+未验收 proof 目录安全重跑，并以 backend/frontend Git tree 相同证明复用应用镜像。
+这是验收工具权限问题，未写 acceptance PASS、未改业务数据、未部署 Production。
+应用 source SHA 仍为 `0d2e244c3d1565a06bda8fa269e784af58e875e2`，不重建。

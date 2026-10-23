@@ -13,7 +13,8 @@ Stage 和 Production 的旧 backend image 固定为预检所得 `264babe4…`，
    放入本批次服务器私有 proof 目录。从实际 Stage 容器复制 `/app/app.jar`，只解出
    `BOOT-INF/classes/` 与 `BOOT-INF/lib/`。使用**同一镜像**的临时 `java` container，
    `--network none --read-only --memory 256m --cpus .5 --pids-limit 64 --cap-drop ALL
-   --security-opt no-new-privileges`，只读挂载 proof 目录运行该 class。
+   --security-opt no-new-privileges --user <operator-uid>:<operator-gid>`，只读挂载
+   proof 目录运行该 class。必须用私有目录属主运行，不能依靠已移除的 root DAC capability。
    不启动 Spring，不连接数据库、服务或打印机。验证 6 模块 × 4 桌号的首行和实际
    PAD 字节前缀（ESC @、原 LARGE GS ! 33、完整桌号、reset、可选常规宽 UPDATE、LF），
    并验证要求的完整桌号头部在保守 42 列内。
@@ -32,7 +33,11 @@ Stage 和 Production 的旧 backend image 固定为预检所得 `264babe4…`，
 回滚：脚本对 restart 后失败恢复保存的原 backend model，包括全部原环境变量。
 数据库不恢复、不清理队列、不重放历史任务；V38 ledger 必须完全保持一致。
 私有备份与模型保留于各环境 `dine-in-headers-<sha>/`，不得打印其中的 secrets 或业务
-payload。旧应用 image 和原 frontend 是本批次受保护恢复工件。
+   payload。旧应用 image 和原 frontend 是本批次受保护恢复工件。
+
+若仅验收脚本修正而 backend/frontend tree 完全相同，可从新的 clean exact-SHA
+release 运行 `verify.py`，参数继续传实际应用 SHA。脚本以 Git tree 差异验证这个前提，
+在结果中分别记录 `source_sha` / `script_sha`；不得因此重建已验收应用镜像。
 
 测试：`mvn -q -Dtest='com.restaurant.system.printing.**.*Test' test`（backend），
 以及 `python3 -m unittest discover -s deployment/cloud/dine-in-headers -p 'test_*.py'`。

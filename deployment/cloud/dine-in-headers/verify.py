@@ -4,8 +4,10 @@ import datetime
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import re
+import stat
 import sys
 import zipfile
 
@@ -18,7 +20,11 @@ spec.loader.exec_module(d)
 def main(environment, sha, class_sha256):
     assert environment in ('staging', 'production') and re.fullmatch('[0-9a-f]{40}', sha)
     assert re.fullmatch('[0-9a-f]{64}', class_sha256)
-    assert HERE == d.BASE / 'staging/releases' / sha / 'deployment/cloud/dine-in-headers'
+    script_release = HERE.parents[2]
+    script_sha = d.i.run(['git', '-C', str(script_release), 'rev-parse', 'HEAD']).decode().strip()
+    assert HERE == d.BASE / 'staging/releases' / script_sha / 'deployment/cloud/dine-in-headers'
+    assert not d.i.run(['git', '-C', str(script_release), 'status', '--porcelain']).strip()
+    assert not d.i.run(['git', '-C', str(script_release), 'diff', sha, script_sha, '--', 'backend', 'frontend']).strip()
     root = d.BASE / environment / ('dine-in-headers-' + sha)
     result = json.loads(d.ops.private_file(root / 'result.json').read_text())
     assert result['source_sha'] == sha and result['health'] == 'PASS'
@@ -29,7 +35,9 @@ def main(environment, sha, class_sha256):
     harness = d.ops.private_file(root / 'RenderHeaderAcceptance.class')
     assert hashlib.sha256(harness.read_bytes()).hexdigest() == class_sha256
     proof = root / 'render-proof'
-    proof.mkdir(mode=0o700)
+    assert not proof.is_symlink()
+    proof.mkdir(mode=0o700, exist_ok=True)
+    assert proof.stat().st_uid == os.getuid() and stat.S_IMODE(proof.stat().st_mode) == 0o700
     (proof / harness.name).write_bytes(harness.read_bytes())
     d.i.run(['docker', 'cp', name + ':/app/app.jar', str(proof / 'app.jar')])
     with zipfile.ZipFile(proof / 'app.jar') as jar:
@@ -43,6 +51,7 @@ def main(environment, sha, class_sha256):
                 target.write_bytes(jar.read(entry))
     observed = json.loads(d.i.run(['docker', 'run', '--rm', '--network', 'none', '--read-only',
         '--memory', '256m', '--cpus', '.5', '--pids-limit', '64', '--cap-drop', 'ALL',
+        '--user', str(os.getuid()) + ':' + str(os.getgid()),
         '--security-opt', 'no-new-privileges', '--entrypoint', 'java',
         '-v', str(proof) + ':/proof:ro', image,
         '-cp', '/proof/classes:/proof/lib/*:/proof', 'RenderHeaderAcceptance']))
@@ -57,7 +66,7 @@ def main(environment, sha, class_sha256):
     assert d.p.history_fingerprints(baseline['history']['cutoffs']) == baseline['history']
     for url in ('https://pos.lanzhounoodlesmtl.com', 'https://staging-pos.lanzhounoodlesmtl.com'): d.i.health(url)
     accepted = dict(observed, environment=environment, source_sha=sha, image=image, health='PASS',
-        accepted=True, app_jar_sha256=hashlib.sha256((proof / 'app.jar').read_bytes()).hexdigest(),
+        accepted=True, script_sha=script_sha, app_jar_sha256=hashlib.sha256((proof / 'app.jar').read_bytes()).hexdigest(),
         proof_class_sha256=class_sha256, observed_at=datetime.datetime.now(datetime.timezone.utc).isoformat())
     d.ops.write_private(root / 'render-acceptance.json', accepted)
     d.ops.write_private(root / 'acceptance.json', accepted)
