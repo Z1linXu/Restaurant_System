@@ -1,0 +1,18 @@
+{
+  "reviewer": "Agent 6",
+  "reviewed_commit": "3752e4cf5455150c3af2325a200fb99c94712d8a",
+  "application_merge_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+  "result": "ACCEPT",
+  "remaining_P0_P1_P2": 0,
+  "scope": [
+    "shared idempotent top-feed marker",
+    "new frozen reprint job only",
+    "both ESC/POS encoders after initialization",
+    "MOCK preview",
+    "all printing and frontend regression",
+    "dual-image deployment / acceptance / original-pair rollback"
+  ],
+  "full_lint": "6 unchanged baseline errors, NON_BLOCKING_EXISTING_DEBT",
+  "physical_measurement": "NOT TESTED",
+  "server_mutation_by_reviewer": false
+}

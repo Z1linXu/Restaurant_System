@@ -1,0 +1,655 @@
+{
+  "observed_at": "2026-10-23T15:39:05.613029+00:00",
+  "reviewer_action": "Independent READ_ONLY audit; no lock/restart/cleanup/order/PrintJob/business writes/event probe",
+  "app_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+  "runtime": {
+    "cloud-backend-1": {
+      "container_id": "41e5091cce71bf081061e95566026efea9045f41bea17c29258e65a264f7717f",
+      "image": "sha256:a16b8a2feacd7eed97cc2e3d971c9bd993455d262c85fe955cfdf340807b58a5",
+      "image_source_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+      "container_source_label": "e44d7a5fe534a50c675574e589751cce41615cc5",
+      "started_at": "2026-10-23T15:36:28.12734146Z",
+      "running": true,
+      "restart_count": 0,
+      "health": null,
+      "environment_sha256": "e350b03d881624ec5df4bfbdda0dfc6d11bb6b6abb7e4073fbd3133c97db7314",
+      "policy": {
+        "APP_ENVIRONMENT": "production",
+        "UBER_EATS_ENVIRONMENT": "production",
+        "UBER_EATS_ENABLED": "true",
+        "UBER_EATS_WORKER_ENABLED": "true",
+        "UBER_EATS_PROCESSING_MODE": "KITCHEN_MIRROR",
+        "signing_key_present": true,
+        "oauth_secret_present": true,
+        "cutover_entries": 1,
+        "cutovers_sha256": "123898fca5da7fc5e7f2cc32e22bc989bf159d53624fe30820f29c0c5d9bfc83"
+      }
+    },
+    "cloud-nginx-1": {
+      "container_id": "a8595e242e7ecdecc167f1b2133ac36aeda981d9083c3debdeb42269f83b2674",
+      "image": "sha256:abe9a86ac6c138143bfcfa6b37523f9213ed5d16692f4c35c904bbb2b7ae505b",
+      "image_source_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+      "container_source_label": "e44d7a5fe534a50c675574e589751cce41615cc5",
+      "started_at": "2026-10-23T15:37:03.657452491Z",
+      "running": true,
+      "restart_count": 0,
+      "health": null,
+      "environment_sha256": "23797e8c9e01d4fdf451dd76371a903fd8d443b21cc43567c6993d27c4d609fe"
+    },
+    "cloud-db-1": {
+      "container_id": "c2ab37fec6ac966e77a1d8ab7aa41d1da294b9ac57b1a21ce18904d04cfae91e",
+      "image": "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+      "image_source_sha": null,
+      "container_source_label": null,
+      "started_at": "2026-07-11T12:09:37.936437539Z",
+      "running": true,
+      "restart_count": 0,
+      "health": "healthy",
+      "environment_sha256": "77b9bbf2be51e0c6d307f1bdb769ec6256aad402ec2da6ae7535a710458c8674"
+    },
+    "restaurant-pos-staging-backend-1": {
+      "container_id": "1a06b13a38a296fa7434fd9b09046962ce8605738e46d10a7f550f22f793c17f",
+      "image": "sha256:a16b8a2feacd7eed97cc2e3d971c9bd993455d262c85fe955cfdf340807b58a5",
+      "image_source_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+      "container_source_label": "e44d7a5fe534a50c675574e589751cce41615cc5",
+      "started_at": "2026-10-23T15:34:49.650952864Z",
+      "running": true,
+      "restart_count": 0,
+      "health": null,
+      "environment_sha256": "7a8969a99d252a5779352a60bc34a63c04c6ca2701614ce100897cfda4af1ef0",
+      "policy": {
+        "APP_ENVIRONMENT": "staging",
+        "UBER_EATS_ENVIRONMENT": "sandbox",
+        "UBER_EATS_ENABLED": "true",
+        "UBER_EATS_WORKER_ENABLED": "false",
+        "UBER_EATS_PROCESSING_MODE": "KITCHEN_MIRROR",
+        "signing_key_present": true,
+        "oauth_secret_present": true,
+        "cutover_entries": 0,
+        "cutovers_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      }
+    },
+    "restaurant-pos-staging-nginx-1": {
+      "container_id": "900e7ac4350daad533ac1678baa78c92f662d5861c50a229e5543cf15e9752f8",
+      "image": "sha256:abe9a86ac6c138143bfcfa6b37523f9213ed5d16692f4c35c904bbb2b7ae505b",
+      "image_source_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+      "container_source_label": "e44d7a5fe534a50c675574e589751cce41615cc5",
+      "started_at": "2026-10-23T15:35:38.833220973Z",
+      "running": true,
+      "restart_count": 0,
+      "health": null,
+      "environment_sha256": "a31698d4a0ba0dd36b63cde2fab5fc04db487aa60ce75789ccf1d94792989810"
+    },
+    "restaurant-pos-staging-db-1": {
+      "container_id": "b64d3c676dbb4003368279453e5c6b390ac6327c3cf28001ead671155f93f4c5",
+      "image": "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+      "image_source_sha": null,
+      "container_source_label": null,
+      "started_at": "2026-08-22T19:14:39.633030411Z",
+      "running": true,
+      "restart_count": 0,
+      "health": "healthy",
+      "environment_sha256": "6a007bcecb0160df391bc32e8ee4e63679701d7c7e9153b28f48e70103c1ac80"
+    }
+  },
+  "environments": {
+    "production": {
+      "result.json": {
+        "environment": "production",
+        "source_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+        "image": "sha256:a16b8a2feacd7eed97cc2e3d971c9bd993455d262c85fe955cfdf340807b58a5",
+        "images": {
+          "backend": "sha256:a16b8a2feacd7eed97cc2e3d971c9bd993455d262c85fe955cfdf340807b58a5",
+          "nginx": "sha256:abe9a86ac6c138143bfcfa6b37523f9213ed5d16692f4c35c904bbb2b7ae505b"
+        },
+        "health": "PASS",
+        "flyway": "38",
+        "accepted": false,
+        "configuration_unchanged": true,
+        "history_unchanged": true,
+        "other_containers_unchanged": true,
+        "uber_worker_enabled": true,
+        "deployed_at": "2026-10-23T15:37:07.866174+00:00",
+        "backup_sha256": "b254967cd8aecfab93f908829f92d314a2b31412b755860006cd68530e9ab46f"
+      },
+      "acceptance.json": {
+        "header_cases": 24,
+        "status": "PASS",
+        "database_written": false,
+        "modules": {
+          "GRAB": [
+            "1",
+            "1里",
+            "1-左",
+            "1-右"
+          ],
+          "GRAB_UPDATE": [
+            "1 (UPDATE)",
+            "1里 (UPDATE)",
+            "1-左 (UPDATE)",
+            "1-右 (UPDATE)"
+          ],
+          "FRONTDESK_RECEIPT": [
+            "1",
+            "1里",
+            "1-左",
+            "1-右"
+          ],
+          "FRONTDESK_RECEIPT_UPDATE": [
+            "1 (UPDATE)",
+            "1里 (UPDATE)",
+            "1-左 (UPDATE)",
+            "1-右 (UPDATE)"
+          ],
+          "HOT_KITCHEN": [
+            "1",
+            "1里",
+            "1-左",
+            "1-右"
+          ],
+          "HOT_KITCHEN_UPDATE": [
+            "1 (UPDATE)",
+            "1里 (UPDATE)",
+            "1-左 (UPDATE)",
+            "1-右 (UPDATE)"
+          ]
+        },
+        "leftmost_payload_prefix": true,
+        "fits_42_columns": true,
+        "print_dispatched": false,
+        "large_font_preserved": true,
+        "additional_top_feed_mm": 16,
+        "top_feed_once": true,
+        "pad_tcp_payload_identical": true,
+        "takeout_cases": 6,
+        "environment": "production",
+        "source_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+        "image": "sha256:a16b8a2feacd7eed97cc2e3d971c9bd993455d262c85fe955cfdf340807b58a5",
+        "health": "PASS",
+        "images": {
+          "backend": "sha256:a16b8a2feacd7eed97cc2e3d971c9bd993455d262c85fe955cfdf340807b58a5",
+          "nginx": "sha256:abe9a86ac6c138143bfcfa6b37523f9213ed5d16692f4c35c904bbb2b7ae505b"
+        },
+        "preview_asset_sha256": "400973145dd28438ddcf4851304623447bd75ba89bd2bab8e9cb0c9d137e7d86",
+        "preview_public_asset": "PASS",
+        "accepted": true,
+        "script_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+        "app_jar_sha256": "202a70d9f9be340cf4fe20f23f0d4978d13340d7e440e6caf8378a25e2479b49",
+        "proof_class_sha256": "0b7e20c64d450c55a54a57de3da0ade16383097bcb19bc367aea1d189db2af44",
+        "observed_at": "2026-10-23T15:37:21.476361+00:00"
+      },
+      "render-acceptance.json": {
+        "header_cases": 24,
+        "status": "PASS",
+        "database_written": false,
+        "modules": {
+          "GRAB": [
+            "1",
+            "1里",
+            "1-左",
+            "1-右"
+          ],
+          "GRAB_UPDATE": [
+            "1 (UPDATE)",
+            "1里 (UPDATE)",
+            "1-左 (UPDATE)",
+            "1-右 (UPDATE)"
+          ],
+          "FRONTDESK_RECEIPT": [
+            "1",
+            "1里",
+            "1-左",
+            "1-右"
+          ],
+          "FRONTDESK_RECEIPT_UPDATE": [
+            "1 (UPDATE)",
+            "1里 (UPDATE)",
+            "1-左 (UPDATE)",
+            "1-右 (UPDATE)"
+          ],
+          "HOT_KITCHEN": [
+            "1",
+            "1里",
+            "1-左",
+            "1-右"
+          ],
+          "HOT_KITCHEN_UPDATE": [
+            "1 (UPDATE)",
+            "1里 (UPDATE)",
+            "1-左 (UPDATE)",
+            "1-右 (UPDATE)"
+          ]
+        },
+        "leftmost_payload_prefix": true,
+        "fits_42_columns": true,
+        "print_dispatched": false,
+        "large_font_preserved": true,
+        "additional_top_feed_mm": 16,
+        "top_feed_once": true,
+        "pad_tcp_payload_identical": true,
+        "takeout_cases": 6,
+        "environment": "production",
+        "source_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+        "image": "sha256:a16b8a2feacd7eed97cc2e3d971c9bd993455d262c85fe955cfdf340807b58a5",
+        "health": "PASS",
+        "images": {
+          "backend": "sha256:a16b8a2feacd7eed97cc2e3d971c9bd993455d262c85fe955cfdf340807b58a5",
+          "nginx": "sha256:abe9a86ac6c138143bfcfa6b37523f9213ed5d16692f4c35c904bbb2b7ae505b"
+        },
+        "preview_asset_sha256": "400973145dd28438ddcf4851304623447bd75ba89bd2bab8e9cb0c9d137e7d86",
+        "preview_public_asset": "PASS",
+        "accepted": true,
+        "script_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+        "app_jar_sha256": "202a70d9f9be340cf4fe20f23f0d4978d13340d7e440e6caf8378a25e2479b49",
+        "proof_class_sha256": "0b7e20c64d450c55a54a57de3da0ade16383097bcb19bc367aea1d189db2af44",
+        "observed_at": "2026-10-23T15:37:21.476361+00:00"
+      },
+      "continuity": {
+        "configuration_unchanged": true,
+        "changed_configuration_fields": [],
+        "history_unchanged": true,
+        "history_cutoffs": [
+          10579,
+          26663
+        ],
+        "history_hashes": [
+          "9f8332ff3612384fce02d8b6f7dd5b9c",
+          "2a5beb24efeb8992e7ac84d69fb5d6d1",
+          "9616f921c12e19983098cd4d906b39af",
+          "4104a14b97cb816c1951eafd95005468",
+          "1de6fb6c4a0dbb78dc3abdb6b618059c"
+        ],
+        "flyway_ledger_unchanged": true,
+        "changed_protected_container_names": [],
+        "retained_printing_full_rows_unchanged": true,
+        "retained_printing_full_row_md5": "fd09e7f919beedfdff8a35534f98fb75"
+      },
+      "backup": {
+        "bytes": 11253186,
+        "mode": "0o600",
+        "sha256": "b254967cd8aecfab93f908829f92d314a2b31412b755860006cd68530e9ab46f",
+        "matches_result_digest": true,
+        "pg_restore_toc_readable": true,
+        "contains_orders_and_print_jobs": true
+      },
+      "database": {
+        "name": "restaurant_pos",
+        "flyway": "38",
+        "flyway_failed": 0,
+        "flyway_ledger_md5": "8b39ce1e6085466cd757f40133e5f7e7",
+        "uber_bindings": 1,
+        "uber_events": 51,
+        "uber_orders": 41,
+        "local_uber_orders": 41,
+        "pending_print": 0,
+        "active_print_ids": [
+          1176,
+          3169,
+          9226,
+          20391
+        ],
+        "pending_outbox": 0,
+        "pending_uber_events": 0,
+        "max_order_id": 10579,
+        "max_job_id": 26663,
+        "jobs_after_release_baseline": 0
+      },
+      "canonical_model": {
+        "path": "/srv/restaurant-pos/production/current.compose.json",
+        "mode": "0o600",
+        "sha256": "16ff16b717baaaef542be60313dba0b71779c1f5d71478efabae69857cd765d2",
+        "matches_recorded_target": true,
+        "all_app_images_and_full_environments_match_runtime": true
+      },
+      "release_metadata": {
+        "source_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+        "release_dir": "/srv/restaurant-pos/production/dine-in-top-feed-e44d7a5fe534a50c675574e589751cce41615cc5",
+        "compose": "current.compose.json"
+      },
+      "preview_asset": {
+        "public_http_status": 200,
+        "public_matches_container_bytes": true,
+        "sha256": "400973145dd28438ddcf4851304623447bd75ba89bd2bab8e9cb0c9d137e7d86",
+        "matches_acceptance_digest": true,
+        "contains_16mm_and_layout_marker": true
+      },
+      "backend_error_log_lines": 0
+    },
+    "staging": {
+      "result.json": {
+        "environment": "staging",
+        "source_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+        "image": "sha256:a16b8a2feacd7eed97cc2e3d971c9bd993455d262c85fe955cfdf340807b58a5",
+        "images": {
+          "backend": "sha256:a16b8a2feacd7eed97cc2e3d971c9bd993455d262c85fe955cfdf340807b58a5",
+          "nginx": "sha256:abe9a86ac6c138143bfcfa6b37523f9213ed5d16692f4c35c904bbb2b7ae505b"
+        },
+        "health": "PASS",
+        "flyway": "38",
+        "accepted": false,
+        "configuration_unchanged": true,
+        "history_unchanged": true,
+        "other_containers_unchanged": true,
+        "uber_worker_enabled": false,
+        "deployed_at": "2026-10-23T15:35:41.789113+00:00",
+        "backup_sha256": "8dd66ddde62b29a6a00dbfddced039da27d715c9e8218642ceee459228694702"
+      },
+      "acceptance.json": {
+        "database_written": false,
+        "modules": {
+          "GRAB": [
+            "1",
+            "1里",
+            "1-左",
+            "1-右"
+          ],
+          "GRAB_UPDATE": [
+            "1 (UPDATE)",
+            "1里 (UPDATE)",
+            "1-左 (UPDATE)",
+            "1-右 (UPDATE)"
+          ],
+          "FRONTDESK_RECEIPT": [
+            "1",
+            "1里",
+            "1-左",
+            "1-右"
+          ],
+          "FRONTDESK_RECEIPT_UPDATE": [
+            "1 (UPDATE)",
+            "1里 (UPDATE)",
+            "1-左 (UPDATE)",
+            "1-右 (UPDATE)"
+          ],
+          "HOT_KITCHEN": [
+            "1",
+            "1里",
+            "1-左",
+            "1-右"
+          ],
+          "HOT_KITCHEN_UPDATE": [
+            "1 (UPDATE)",
+            "1里 (UPDATE)",
+            "1-左 (UPDATE)",
+            "1-右 (UPDATE)"
+          ]
+        },
+        "leftmost_payload_prefix": true,
+        "fits_42_columns": true,
+        "print_dispatched": false,
+        "large_font_preserved": true,
+        "header_cases": 24,
+        "status": "PASS",
+        "additional_top_feed_mm": 16,
+        "top_feed_once": true,
+        "pad_tcp_payload_identical": true,
+        "takeout_cases": 6,
+        "environment": "staging",
+        "source_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+        "image": "sha256:a16b8a2feacd7eed97cc2e3d971c9bd993455d262c85fe955cfdf340807b58a5",
+        "health": "PASS",
+        "images": {
+          "backend": "sha256:a16b8a2feacd7eed97cc2e3d971c9bd993455d262c85fe955cfdf340807b58a5",
+          "nginx": "sha256:abe9a86ac6c138143bfcfa6b37523f9213ed5d16692f4c35c904bbb2b7ae505b"
+        },
+        "preview_asset_sha256": "400973145dd28438ddcf4851304623447bd75ba89bd2bab8e9cb0c9d137e7d86",
+        "preview_public_asset": "PASS",
+        "accepted": true,
+        "script_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+        "app_jar_sha256": "202a70d9f9be340cf4fe20f23f0d4978d13340d7e440e6caf8378a25e2479b49",
+        "proof_class_sha256": "0b7e20c64d450c55a54a57de3da0ade16383097bcb19bc367aea1d189db2af44",
+        "observed_at": "2026-10-23T15:35:55.888403+00:00"
+      },
+      "render-acceptance.json": {
+        "database_written": false,
+        "modules": {
+          "GRAB": [
+            "1",
+            "1里",
+            "1-左",
+            "1-右"
+          ],
+          "GRAB_UPDATE": [
+            "1 (UPDATE)",
+            "1里 (UPDATE)",
+            "1-左 (UPDATE)",
+            "1-右 (UPDATE)"
+          ],
+          "FRONTDESK_RECEIPT": [
+            "1",
+            "1里",
+            "1-左",
+            "1-右"
+          ],
+          "FRONTDESK_RECEIPT_UPDATE": [
+            "1 (UPDATE)",
+            "1里 (UPDATE)",
+            "1-左 (UPDATE)",
+            "1-右 (UPDATE)"
+          ],
+          "HOT_KITCHEN": [
+            "1",
+            "1里",
+            "1-左",
+            "1-右"
+          ],
+          "HOT_KITCHEN_UPDATE": [
+            "1 (UPDATE)",
+            "1里 (UPDATE)",
+            "1-左 (UPDATE)",
+            "1-右 (UPDATE)"
+          ]
+        },
+        "leftmost_payload_prefix": true,
+        "fits_42_columns": true,
+        "print_dispatched": false,
+        "large_font_preserved": true,
+        "header_cases": 24,
+        "status": "PASS",
+        "additional_top_feed_mm": 16,
+        "top_feed_once": true,
+        "pad_tcp_payload_identical": true,
+        "takeout_cases": 6,
+        "environment": "staging",
+        "source_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+        "image": "sha256:a16b8a2feacd7eed97cc2e3d971c9bd993455d262c85fe955cfdf340807b58a5",
+        "health": "PASS",
+        "images": {
+          "backend": "sha256:a16b8a2feacd7eed97cc2e3d971c9bd993455d262c85fe955cfdf340807b58a5",
+          "nginx": "sha256:abe9a86ac6c138143bfcfa6b37523f9213ed5d16692f4c35c904bbb2b7ae505b"
+        },
+        "preview_asset_sha256": "400973145dd28438ddcf4851304623447bd75ba89bd2bab8e9cb0c9d137e7d86",
+        "preview_public_asset": "PASS",
+        "accepted": true,
+        "script_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+        "app_jar_sha256": "202a70d9f9be340cf4fe20f23f0d4978d13340d7e440e6caf8378a25e2479b49",
+        "proof_class_sha256": "0b7e20c64d450c55a54a57de3da0ade16383097bcb19bc367aea1d189db2af44",
+        "observed_at": "2026-10-23T15:35:55.888403+00:00"
+      },
+      "continuity": {
+        "configuration_unchanged": true,
+        "changed_configuration_fields": [],
+        "history_unchanged": true,
+        "history_cutoffs": [
+          97,
+          245
+        ],
+        "history_hashes": [
+          "b8373ece5e1aba072f12d5e61de60dc5",
+          "5b7aeaaf1a54a0da908feabf7c85dfd5",
+          "ccecda547806befd0b0f3133a54632cf",
+          "fc15e8cb40758f4c7d3e8dae0dc99c1b",
+          "e2daa59b0e65a1e51879ba43ed23f33f"
+        ],
+        "flyway_ledger_unchanged": true,
+        "changed_protected_container_names": [
+          "cloud-nginx-1",
+          "cloud-backend-1"
+        ],
+        "retained_printing_full_rows_unchanged": true,
+        "retained_printing_full_row_md5": "f75bbbb415fb26b1179e517ac1af9621"
+      },
+      "backup": {
+        "bytes": 1242955,
+        "mode": "0o600",
+        "sha256": "8dd66ddde62b29a6a00dbfddced039da27d715c9e8218642ceee459228694702",
+        "matches_result_digest": true,
+        "pg_restore_toc_readable": true,
+        "contains_orders_and_print_jobs": true
+      },
+      "database": {
+        "name": "restaurant_pos_staging",
+        "flyway": "38",
+        "flyway_failed": 0,
+        "flyway_ledger_md5": "8b39ce1e6085466cd757f40133e5f7e7",
+        "uber_bindings": 1,
+        "uber_events": 22,
+        "uber_orders": 13,
+        "local_uber_orders": 11,
+        "pending_print": 0,
+        "active_print_ids": [
+          200,
+          205,
+          207
+        ],
+        "pending_outbox": 0,
+        "pending_uber_events": 0,
+        "max_order_id": 97,
+        "max_job_id": 245,
+        "jobs_after_release_baseline": 0
+      },
+      "canonical_model": {
+        "path": "/srv/restaurant-pos/staging/dine-in-top-feed-e44d7a5fe534a50c675574e589751cce41615cc5/target.private.json",
+        "mode": "0o600",
+        "sha256": "408c5b352348b0ad5a3b5d66d3c5b80e539b29cace991ef84c917ad7f71f65ec",
+        "matches_recorded_target": true,
+        "all_app_images_and_full_environments_match_runtime": true
+      },
+      "preview_asset": {
+        "public_http_status": 200,
+        "public_matches_container_bytes": true,
+        "sha256": "400973145dd28438ddcf4851304623447bd75ba89bd2bab8e9cb0c9d137e7d86",
+        "matches_acceptance_digest": true,
+        "contains_16mm_and_layout_marker": true
+      },
+      "backend_error_log_lines": 0
+    }
+  },
+  "public_health": {
+    "production": {
+      "http_status": 200,
+      "status": "UP"
+    },
+    "staging": {
+      "http_status": 200,
+      "status": "UP"
+    }
+  },
+  "physical_print_measurement": "NOT_TESTED",
+  "disk": [
+    "Filesystem      Size  Used Avail Use% Mounted on",
+    "/dev/vda2        59G   43G   14G  76% /"
+  ],
+  "docker_system_df": [
+    {
+      "Active": "4",
+      "Reclaimable": "3.333GB (41%)",
+      "Size": "8.08GB",
+      "TotalCount": "119",
+      "Type": "Images"
+    },
+    {
+      "Active": "8",
+      "Reclaimable": "0B (0%)",
+      "Size": "421.9kB",
+      "TotalCount": "8",
+      "Type": "Containers"
+    },
+    {
+      "Active": "0",
+      "Reclaimable": "0B",
+      "Size": "0B",
+      "TotalCount": "2",
+      "Type": "Local Volumes"
+    },
+    {
+      "Active": "12",
+      "Reclaimable": "10.45GB",
+      "Size": "16.82GB",
+      "TotalCount": "291",
+      "Type": "Build Cache"
+    }
+  ],
+  "temporary_builders": [],
+  "cache_strict_read_only_review": {
+    "builder": "default",
+    "minimum_last_used_age_hours": 168,
+    "reviewed_records": 291,
+    "reclaimable_old_records": 279,
+    "eligible_records": 0,
+    "eligibility": "Reclaimable=true, Mutable=false, Shared=false, UsageCount=0, nonempty LastUsedAt, until=168h filter",
+    "eligible": [],
+    "excluded_nonzero_usage_records": 279,
+    "excluded_mutable_records": 27,
+    "excluded_shared_records": 135,
+    "unparseable_records": 0,
+    "cleanup_performed": false
+  },
+  "independent_comparison_to_preflight": {
+    "production": {
+      "app_images_and_sources_exact": true,
+      "full_env_hashes_unchanged_all_services": true,
+      "cutovers_unchanged": true,
+      "uber_worker_policy_preserved": true,
+      "database_container_identity_start_restarts_unchanged": true,
+      "old_printing_ids_unchanged": true,
+      "flyway_exact_and_unchanged": true,
+      "protected_containers_match_step_expectations": true,
+      "configuration_and_history_unchanged": true,
+      "actual_acceptance_valid": true,
+      "backup_readable_and_digest_matches": true,
+      "canonical_model_matches_runtime_and_target": true,
+      "public_preview_asset_matches": true,
+      "public_health_up": true,
+      "error_log_count_zero": true
+    },
+    "staging": {
+      "app_images_and_sources_exact": true,
+      "full_env_hashes_unchanged_all_services": true,
+      "cutovers_unchanged": true,
+      "uber_worker_policy_preserved": true,
+      "database_container_identity_start_restarts_unchanged": true,
+      "old_printing_ids_unchanged": true,
+      "flyway_exact_and_unchanged": true,
+      "protected_containers_match_step_expectations": true,
+      "configuration_and_history_unchanged": true,
+      "actual_acceptance_valid": true,
+      "backup_readable_and_digest_matches": true,
+      "canonical_model_matches_runtime_and_target": true,
+      "public_preview_asset_matches": true,
+      "public_health_up": true,
+      "error_log_count_zero": true
+    }
+  },
+  "expected_subsequent_stage_baseline_changes": "Only cloud-backend-1 and cloud-nginx-1 changed after Stage baseline because the accepted same-image pair was then promoted to Production.",
+  "status": "PASS",
+  "limits": [
+    "Physical top-feed length was not measured; 16mm is command-level proof from actual deployed JAR, not observed paper output.",
+    "No order/PrintJob was created by the batch acceptance harness; network-none read-only proof and no new job rows after each release cutoff were observed. Natural future Uber arrivals remain authorized.",
+    "Cache review is read-only. Reclaimable bytes alone do not satisfy immutable/unshared/zero-use/older-than-7-days eligibility.",
+    "Stage protected-container comparisons are evaluated against the expected subsequent Production app-pair promotion; Production protected set is entirely unchanged."
+  ],
+  "live_business_observation": {
+    "production_before_preflight": {
+      "uber_events": 49,
+      "uber_orders": 39,
+      "local_uber_orders": 39
+    },
+    "production_now": {
+      "uber_events": 51,
+      "uber_orders": 41,
+      "local_uber_orders": 41
+    },
+    "note": "Continuous worker remained true. Counts increased before the Production release cutoff (10579 orders /26663 jobs); independent audit observed zero new jobs after that cutoff. No replay, order/print creation or event probe was performed by reviewer. These live changes are not reported as acceptance-generated test traffic."
+  }
+}

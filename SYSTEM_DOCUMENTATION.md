@@ -8999,7 +8999,8 @@ for the marker. MOCK previews consume the same prefix as an additional 16mm
 spacer inside the existing padded preview. A new dine-in reprint job adds the
 prefix once to its copied frozen content without rewriting its source job.
 Physical paper length requires a field measurement; protocol tests alone do not
-constitute a measured physical-print result.
+constitute a measured physical-print result. The exact-artifact checks and their
+limits are recorded in [dine-in top-feed evidence](docs/DINE_IN_TOP_FEED_20261023.md).
 Takeout headers, item/price formatting, dispatch routing and frozen historical
 PrintJob contents retain their existing behavior.
 

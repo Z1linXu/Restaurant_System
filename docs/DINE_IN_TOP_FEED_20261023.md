@@ -46,4 +46,102 @@ PASS；受影响3个前端文件eslint PASS。全量eslint存在6项既有错误
 Agent 6已合并审查全部产品、测试和发布工具，ACCEPT，无剩余P0/P1/P2；确认新补打仅修改
 新任务、原快照保留、双镜像部署和原模型回滚边界。实体进纸长度NOT TESTED。
 测试/基线/只读preflight证据见`docs/evidence/dine-in-top-feed-20261023/`。
-实际部署SHA、各模块结果和磁盘信息将在执行完成后记录。
+## 不可变发布批次
+
+应用PR #297，reviewed commit `3752e4cf5455150c3af2325a200fb99c94712d8a`；合并SHA
+`e44d7a5fe534a50c675574e589751cce41615cc5`。合并后fresh fetch，默认authority未改变，
+backend/frontend/deployment与审查树一致。仅从该SHA的服务器clean checkout构建。
+Stage于15:30:36 UTC开始既有1GiB/1CPU有界builder构建backend/frontend，随后只重建
+这两个应用容器；实际验收后的同一镜像对用于Production，后者不重新构建。
+两环境各自发布前执行fresh custom-format dump且pg_restore --list可读；回滚使用
+各自原双应用模型/镜像，不恢复或重建DB。无schema/Flyway迁移。验收包括实际JAR
+24个堂食用例、6个外卖用例、PAD/TCP完整字节一致、公开MOCK预览asset与容器字节
+一致，以及全量env、V38、历史cutoff及旧PRINTING保护；不产生营业订单/PrintJob。
+
+Stage于15:35:41 UTC部署完成，15:35:55 UTC实际验收PASS（一次完成，无发布返工）。
+不可变backend为`sha256:a16b8a2feacd7eed97cc2e3d971c9bd993455d262c85fe955cfdf340807b58a5`；
+frontend为`sha256:abe9a86ac6c138143bfcfa6b37523f9213ed5d16692f4c35c904bbb2b7ae505b`。
+24个实际JAR堂食用例、6个外卖用例、PAD/TCP完整字节一致及公网预览asset均PASS。
+Production批次严格使用此SHA及镜像对，按Owner预先授权直接提升；保留原双镜像回滚。
+
+## Production结果
+
+Production于`2026-10-23T15:37:07Z`（Toronto 11:37）部署完成，15:37:21 UTC验收PASS。
+应用SHA为`e44d7a5fe534a50c675574e589751cce41615cc5`，与Stage共享以上双镜像，未重建。
+实际JAR SHA256为`202a70d9f9be340cf4fe20f23f0d4978d13340d7e440e6caf8378a25e2479b49`。
+
+| 类型 | 普通 / UPDATE桌号 | 额外单次16mm、原字号、左对齐、PAD/TCP字节 |
+| --- | --- | --- |
+| GRAB / GRAB_UPDATE | `1` / `1 (UPDATE)` | PASS |
+| FRONTDESK_RECEIPT / FRONTDESK_RECEIPT_UPDATE | `1` / `1 (UPDATE)` | PASS |
+| HOT_KITCHEN / HOT_KITCHEN_UPDATE | `1` / `1 (UPDATE)` | PASS |
+
+每行均覆盖`1`、`1里`、`1-左`、`1-右`，共24例/环境；另有6例外卖不加进纸的证明。
+重复标记不叠加，原空行/padding不删除。后端实际JAR在network-none/read-only/受限
+operator容器中验收，未调用数据库、未dispatch打印；前端公网asset与容器文件完全一致。
+**实体出纸和尺量：NOT TESTED**。16mm为ESC/POS命令目标，不能冒充实测至少15mm。
+
+部署后两站health PASS；完整环境配置、菜单/设备/打印配置、旧PRINTING、历史五类
+cutoff hash、V38均通过发布工具的原值保护。Production Uber worker=true、cutover
+保留；Stage worker=false。两环境DB容器不重建，无schema或数据迁移。
+各自fresh dump经pg_restore --list可读，原双应用镜像与rollback model保留。
+
+证据：
+[Stage部署](evidence/dine-in-top-feed-20261023/staging-deployment.json)、
+[Stage验收](evidence/dine-in-top-feed-20261023/staging-acceptance.json)、
+[Production部署](evidence/dine-in-top-feed-20261023/production-deployment.json)、
+[Production验收](evidence/dine-in-top-feed-20261023/production-acceptance.json)。
+
+## 产品修复与必要工具
+
+PRODUCT REPAIR（约8分钟，Estimated、与测试/审查交叠）：
+`PrintMarkup.java`、`PrintTableDisplayFormatter.java`表达单次堂食布局；
+`EscPosPaperFeed.java`、`PrintJobServiceImpl.java`、`EscPosTcpPrinterTransport.java`
+保证实体payload；`PrintDispatcherServiceImpl.java`为新补打任务幂等增加进纸；
+`ReceiptPreview.tsx`、`PrintingSettingsPage.tsx`显示同一留白。对应测试属于直接验证。
+
+TOOLING / GOVERNANCE REPAIR（约6分钟，Estimated、与构建/审查交叠）：复用
+`deployment/cloud/dine-in-headers/{deploy.py,verify.py,RenderHeaderAcceptance.java}`
+和现有builder/backup/rollback，仅适配本次双镜像及新增进纸验收，属于BLOCKING；
+对应2项guard测试/README及CURRENT_STATE、API、SYSTEM_DOCUMENTATION、操作说明/
+本记录用于明确批次及证据，无新平台或生命周期。全量lint既有6错误留待其他任务，
+不修复无关代码，不改APK，不触发实体订单/打印。
+
+独立发布后只读审计于15:39:05 UTC观察：实际双镜像source、全量环境hash与预检
+匹配，两个DB容器ID/启动时间/restart不变；V38 ledger、旧PRINTING全行及五类历史
+hash均不变，canonical model/actual runtime一致，fresh dump可读，两站200/UP。
+Stage protected中两个Production应用因本轮授权提升改变属预期；Production自身
+protected集合零变化。验收没有创建营业订单或PrintJob，release baseline后新job=0。
+预检到审计期间Production自然连续Uber events/orders/local各增加2（49/39/39→51/41/41），
+已按正常营业流量单独记录，不归因于验收。Agent 6发布后独立ACCEPT/PASS。详见
+[独立只读证据](evidence/dine-in-top-feed-20261023/postrelease.json)。
+
+## Docker / Disk Hygiene
+
+Disk Before/After：75%（约15GiB可用）→76%（约14GiB可用）。Build Cache Before/After：
+均为16.82GB，reclaimable10.45GB，291 records。独立只读二次审查发现279个旧
+reclaimable记录均有非零使用；按现有immutable/unshared/zero-use/>7days规则eligible=0。
+Cleanup Performed：无；Reclaimed Space：0；临时builder已移除。
+Protected Runtime Artifacts：Stage/Prod当前双镜像、原双镜像回滚、全部DB容器/卷、
+private模型、fresh dump及证据保留。Staging Health：200/UP。Production Mutation：
+仅Owner授权的backend/frontend镜像替换，DB和配置不变。76%为既有磁盘观察项，
+不扩大本次任务为缓存/部署架构调整。
+
+## Execution Time Breakdown
+
+任务开始15:09:27 UTC。以下前半阶段为Estimated且相互交叠，不相加；部署/验收取
+实际日志时间。最终Owner报告的Total包含证据PR合并后的实际结束时间。
+
+| Stage | Time | Notes |
+| --- | ---: | --- |
+| Investigation / Planning | 约3分钟 Estimated | 基线、既有打印链及ESC/POS规范 |
+| Implementation | 约8分钟 Estimated | 产品代码，保持原正文与外卖 |
+| Tests | 约9分钟 Estimated | 397打印/328前端及构建；旧测试助手修正1轮 |
+| Agent 6 / PR / Merge | 约10分钟 Estimated | 一次合并审查ACCEPT，PR297 |
+| Staging Deploy | 5分05秒 | 15:30:36–15:35:41，有界双镜像构建，无重建返工 |
+| Staging Acceptance | 14秒 | 15:35:41–15:35:55，一次PASS |
+| Production Deploy / Acceptance | 1分17秒 | 15:36:04–15:37:21，复用同组镜像，一次PASS |
+| Evidence / Governance | 约5分钟 Estimated | 独立审计、治理校验、纯证据PR；与审计交叠 |
+| Total | 见最终Owner报告 | 从15:09:27 UTC至最终Stop，包含文档PR |
+
+完成后停止当前Package；不开放新Phase/下一Package，不追加运行时变更。
