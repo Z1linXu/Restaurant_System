@@ -1,0 +1,17 @@
+{
+  "disk_before_percent": 74,
+  "disk_after_percent": 75,
+  "free_before": "15GiB",
+  "free_after": "15GiB",
+  "build_cache_before": "16.82GB",
+  "build_cache_after": "16.82GB",
+  "reclaimable_before": "10.45GB",
+  "reclaimable_after": "10.45GB",
+  "old_records_reviewed": 291,
+  "strict_reclaimable_immutable_unshared_zero_use_old_records": 0,
+  "cleanup_performed": false,
+  "reclaimed_bytes": 0,
+  "protected": "Current Stage/Prod app images, prior backend rollback image, database containers/volumes, private models and backups",
+  "staging_health": "UP",
+  "production_mutation": "AUTHORIZED_BACKEND_ONLY_IMAGE_UPDATE_NO_CONFIG_OR_DATABASE_CHANGE"
+}

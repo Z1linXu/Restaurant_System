@@ -1,0 +1,17 @@
+{
+  "failed_attempts": 2,
+  "attempts": [
+    {
+      "result": "FAILED_BEFORE_ACCEPTANCE",
+      "reason": "Capability-restricted root could not read operator-owned private class",
+      "repair": "Use operator UID/GID; retain all isolation controls"
+    },
+    {
+      "result": "FAILED_BEFORE_RENDER",
+      "reason": "Import loader wrote pyc before module disabled caching; clean-release guard stopped execution",
+      "repair": "Use python3 -B; unlink only two owner/magic/source-mtime/size-verified generated pyc files"
+    }
+  ],
+  "final_result": "PASS_24_STAGING_AND_24_PRODUCTION",
+  "application_rebuilds_due_to_retry": 0
+}

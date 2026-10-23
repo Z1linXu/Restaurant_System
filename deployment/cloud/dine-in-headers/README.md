@@ -6,7 +6,7 @@ Stage 和 Production 的旧 backend image 固定为预检所得 `264babe4…`，
 
 1. 测试、Agent 6、PR 合并后，在 Staging bare repository fetch，并建立
    `/srv/restaurant-pos/staging/releases/<full-sha>` 的 clean detached worktree。
-2. 在该 release 执行 `python3 deployment/cloud/dine-in-headers/deploy.py staging <full-sha>`。
+2. 在该 release 执行 `python3 -B deployment/cloud/dine-in-headers/deploy.py staging <full-sha>`。
    复用现有锁、隔离数据源校验、完整可读备份、历史 cutoff hashes 和 runtime model。
    仅 backend 构建一次，临时 builder 使用 1GiB/1CPU，结束后删除该 builder。
 3. 以本地 Java 17 target 编译 `RenderHeaderAcceptance.java`，保存 class 的 SHA256，
@@ -18,7 +18,7 @@ Stage 和 Production 的旧 backend image 固定为预检所得 `264babe4…`，
    不启动 Spring，不连接数据库、服务或打印机。验证 6 模块 × 4 桌号的首行和实际
    PAD 字节前缀（ESC @、原 LARGE GS ! 33、完整桌号、reset、可选常规宽 UPDATE、LF），
    并验证要求的完整桌号头部在保守 42 列内。
-4. 执行 `python3 deployment/cloud/dine-in-headers/verify.py staging <sha> <class-sha256>`，
+4. 执行 `python3 -B deployment/cloud/dine-in-headers/verify.py staging <sha> <class-sha256>`，
    自动完成上述受限 JAR 渲染并确认 Stage image/source、两站 health、Flyway、原配置及冻结历史均通过。
    将真实 PASS 输出保存在 `render-acceptance.json`；仅此时在对应 Stage 私有 release
    目录原子写入 `acceptance.json`：`accepted=true, source_sha=<sha>, image=<digest>,
