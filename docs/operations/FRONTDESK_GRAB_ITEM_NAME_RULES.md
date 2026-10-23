@@ -2,7 +2,7 @@
 
 > 文档状态：`OPERATIONAL_DISPLAY_RULE_SOURCE`
 >
-> 规则语义更新：2026-10-21；下表菜单目录及其日期保留原 2026-07-27 基线。
+> 规则语义更新：2026-10-23；下表菜单目录及其日期保留原 2026-07-27 基线。
 >
 > 适用范围：Store-scoped 打印规则、订单/厨房快照与前台/GRAB/HOT 渲染。
 > 下表是原 Store 1 种子映射参考，不是其他门店的私人规则或当前营业菜单。
@@ -198,6 +198,16 @@ active / sold-out，必须由 Menu API 或该门店数据库确认，因而不�
 5. 不能解析稳定短名或 option code 时，回退到
    `item_name_snapshot_zh`，再回退英文快照，最后才使用 `Item`。不得
    猜测新的厨房简称。
+
+### 堂食桌号头部
+
+GRAB、FRONTDESK_RECEIPT、HOT_KITCHEN 及各自 UPDATE 小票统一使用完整桌号首行：
+普通为 `1`，UPDATE 为 `1 (UPDATE)`，第二行接分隔线。堂食不再输出 `桌号：`
+前缀、头部空行、独立 `UPDATED` / `Added items only` 标题。桌号紧贴左侧，沿用
+原 LARGE 字号标记；` (UPDATE)` 紧随桌号，在同一行恢复常规宽度，避免整个后缀
+四倍放大后自动换行。`1里`、`1-左`、`1-右` 不截断，旧 `-A` / `-B` 显示转换保留。
+MOCK 与 PAD_DIRECT 共用渲染文本，Android 原样发送后端 ESC/POS payload；既有
+冻结 PrintJob 补打不会因头部规则变更被重新渲染。外卖格式保持原行为。
 
 ## 7. 当前未知和现场确认事项
 

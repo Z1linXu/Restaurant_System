@@ -336,7 +336,7 @@ class GrabReceiptRendererTest {
             assertTrue(output.contains("土豆 x1\n走花生"));
             assertEquals(1, countOccurrences(output, "备注：这是主餐备注"));
             if (update) {
-                assertTrue(output.contains("UPDATED"));
+                assertTrue(output.startsWith("T1 (UPDATE)\n"));
             }
         }
     }
@@ -369,8 +369,8 @@ class GrabReceiptRendererTest {
 
     @Test
     void grabReceiptDisplaysSplitTableSidesInChinese() {
-        assertTrue(renderNoodle("中", 1, "T1-A").contains("桌号：T1-左"));
-        assertTrue(renderNoodle("中", 1, "T1-B").contains("桌号：T1-右"));
+        assertTrue(renderNoodle("中", 1, "T1-A").startsWith("T1-左\n"));
+        assertTrue(renderNoodle("中", 1, "T1-B").startsWith("T1-右\n"));
     }
 
     @Test
@@ -411,8 +411,8 @@ class GrabReceiptRendererTest {
 
         String rawOutput = frontdeskRenderer.render(request);
         assertFalse(rawOutput.contains("FRONTDESK RECEIPT"));
-        assertTrue(rawOutput.startsWith(PrintMarkup.LARGE_OPEN + "桌号: T1" + PrintMarkup.LARGE_CLOSE));
-        assertFalse(rawOutput.contains(PrintMarkup.LARGE_OPEN + "桌号: T1" + PrintMarkup.LARGE_OPEN));
+        assertTrue(rawOutput.startsWith(PrintMarkup.large("T1") + "\n"));
+        assertFalse(rawOutput.contains(PrintMarkup.LARGE_OPEN + "T1" + PrintMarkup.LARGE_OPEN));
         assertEquals(1, countOccurrences(rawOutput, "中碗牛肉面"));
         assertFalse(rawOutput.toLowerCase().contains("regular"));
         assertFalse(rawOutput.contains("传统牛肉面"));
@@ -450,7 +450,7 @@ class GrabReceiptRendererTest {
 
         String rawOutput = frontdeskRenderer.render(request);
 
-        assertTrue(rawOutput.startsWith(PrintMarkup.LARGE_OPEN + "桌号: T1-右" + PrintMarkup.LARGE_CLOSE));
+        assertTrue(rawOutput.startsWith(PrintMarkup.large("T1-右") + "\n"));
     }
 
     @Test
@@ -733,8 +733,9 @@ class GrabReceiptRendererTest {
 
         String output = stripMarkup(frontdeskRenderer.render(request));
 
-        assertTrue(output.contains("UPDATED"));
-        assertTrue(output.contains("Added items only"));
+        assertTrue(output.startsWith("T1 (UPDATE)\n"));
+        assertFalse(output.contains("UPDATED"));
+        assertFalse(output.contains("Added items only"));
         assertTrue(output.contains("1* combo 大碗牛肉面"));
         assertFalse(output.toLowerCase().contains("large"));
         assertTrue(output.contains("鸡蛋: 煎蛋"));

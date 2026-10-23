@@ -73,18 +73,25 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
         }
 
         StringBuilder builder = new StringBuilder();
-        ExternalOrderReceiptHeader.append(builder, request.order);
-        builder.append("\n\n\n");
-        if (Boolean.TRUE.equals(request.is_update_ticket)) {
-            builder.append(PrintMarkup.large("UPDATED")).append("\n");
-            builder.append("--------------------------------\n");
+        boolean dineIn = PrintTableDisplayFormatter.isDineIn(request.order);
+        if (dineIn) {
+            builder.append(PrintTableDisplayFormatter.formatDineInHeader(
+                request.order.table_no, Boolean.TRUE.equals(request.is_update_ticket))).append("\n");
+        } else {
+            ExternalOrderReceiptHeader.append(builder, request.order);
+            builder.append("\n\n\n");
+            if (Boolean.TRUE.equals(request.is_update_ticket)) {
+                builder.append(PrintMarkup.large("UPDATED")).append("\n");
+                builder.append("--------------------------------\n");
+            }
+            String topLabel = resolveTopDisplayLabel(request.order);
+            if (topLabel != null) {
+                builder.append(PrintMarkup.large(topLabel)).append("\n");
+            }
         }
-        String topLabel = resolveTopDisplayLabel(request.order);
-        if (topLabel != null) {
-            builder.append(PrintMarkup.large(topLabel)).append("\n");
-        }
+        if (dineIn) builder.append("--------------------------------\n");
         builder.append(PrintMarkup.large("HOT KITCHEN")).append("\n");
-        builder.append("--------------------------------\n");
+        if (!dineIn) builder.append("--------------------------------\n");
 
         for (AggregatedHotKitchenTask task : aggregateTasks(tasks, itemById, optionsByItemId, printingRules)) {
             appendTask(builder, task);

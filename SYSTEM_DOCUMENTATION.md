@@ -8976,6 +8976,22 @@ behavior.
 
 ## Pilot Reliability: Receipt Formatting Rules
 
+All dine-in GRAB, FRONTDESK_RECEIPT and HOT_KITCHEN tickets share the same
+leftmost first-line table header. Normal tickets show only the complete table
+label; update tickets show `<table label> (UPDATE)` on that line, followed by
+the separator. There is no `桌号：` prefix, leading blank line or separate
+`UPDATED` title for dine-in. Labels such as `1里`, `1-左` and `1-右` remain
+complete; the existing legacy `-A` / `-B` display conversion is retained.
+The table label retains its existing LARGE markup and font commands. The inline
+` (UPDATE)` suffix uses normal width after the LARGE closing marker, keeping
+labels such as `1-右 (UPDATE)` within the 80mm printable line instead of
+enlarging the suffix fourfold. Both ESC/POS encoders honor this leading LARGE
+span and preserve existing whole-line markup behavior. MOCK previews and
+PAD_DIRECT payloads use the same rendered snapshot; ESC/POS initialization
+resets alignment to the left and no centering or indentation is added.
+Takeout headers, item/price formatting, dispatch routing and frozen historical
+PrintJob reprints retain their existing behavior.
+
 Receipt formatting restored in this batch was recovered from historical commits
 `19c2e2b` and `3e43593`; it had been overwritten by the foundation snapshot in
 `943ed07`.

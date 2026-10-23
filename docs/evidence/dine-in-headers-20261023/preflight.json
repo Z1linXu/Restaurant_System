@@ -1,0 +1,172 @@
+{
+  "observed_at": "2026-10-23T13:43:32.396619+00:00",
+  "environment": "Production and Staging",
+  "reviewer_action": "READ_ONLY SSH/docker inspect/compose config/SELECT/HTTP GET; no locks/restarts/business writes/probes",
+  "repository_baseline": "52fa04f83d567e4f7e3ce852fd3a68c3577bf7f9",
+  "applications": {
+    "backend_both": {
+      "image_id": "sha256:264babe4f4bed353b310f5989a8b93623dff69ebeee9cd2e0dda81b829238d97",
+      "image_source_sha": "56185edcdd9f4496cc6073e478546a5a39ba77d9",
+      "container_source_label_is_stale": "4b3abd1349e66a146c36ac310b6a8b48bb2ad572"
+    },
+    "frontend_both": {
+      "image_id": "sha256:2b0749d39545a4eae784b29315be78aac0b5866dc069fb6c60372ad82ee4387b",
+      "image_source_sha": "4b3abd1349e66a146c36ac310b6a8b48bb2ad572"
+    },
+    "production": {
+      "backend_container_id": "d47d229ed9e01c6ddfd892b035fae33bcc1f350e34ff9420d670eed2572fe2fb",
+      "backend_started_at": "2026-10-22T20:25:43.390050841Z",
+      "frontend_container_id": "2d5278de9517aa69b1aa8a848aa3a21c77555819aec46d219126ca1d3e17e429",
+      "frontend_started_at": "2026-10-22T05:04:16.562421479Z",
+      "restarts": 0,
+      "public_http_status": 200,
+      "health": "UP"
+    },
+    "staging": {
+      "backend_container_id": "c40307c203d20dc61194003bbca617768374aed2a50700eb29e2d727de2522c8",
+      "backend_started_at": "2026-10-22T19:53:06.869988388Z",
+      "frontend_container_id": "b9c800db04a218096eff4b97bf45906e7ab8a9830d28f3e1789db2d0ccf1da9c",
+      "frontend_started_at": "2026-10-22T04:56:56.119999015Z",
+      "restarts": 0,
+      "public_http_status": 200,
+      "health": "UP"
+    }
+  },
+  "private_compose": {
+    "production": {
+      "path": "/srv/restaurant-pos/production/current.compose.json",
+      "mode": "0600",
+      "symlink": false,
+      "sha256": "2a28829dd547c942b0b0710a966023ea7993e1d471c988147736c3e2e33e8da4",
+      "services": [
+        "backend",
+        "nginx"
+      ],
+      "resolved_images_and_full_environments_match_runtime": true,
+      "backend_environment_sha256": "e350b03d881624ec5df4bfbdda0dfc6d11bb6b6abb7e4073fbd3133c97db7314"
+    },
+    "staging": {
+      "path": "/srv/restaurant-pos/staging/uber-4483-backend-56185edcdd9f4496cc6073e478546a5a39ba77d9/target.private.json",
+      "mode": "0600",
+      "symlink": false,
+      "sha256": "990faff063d16a7161af69cd26ccd48792112215497c44e03e5500c70d1a43b1",
+      "services": [
+        "backend",
+        "nginx"
+      ],
+      "resolved_images_and_full_environments_match_runtime": true,
+      "backend_environment_sha256": "7a8969a99d252a5779352a60bc34a63c04c6ca2701614ce100897cfda4af1ef0"
+    },
+    "env_hash_format": "sha256 of JSON object, sorted keys, compact separators; values never exposed",
+    "runtime_backend_env_contains_dollar": false
+  },
+  "uber": {
+    "production": {
+      "app_environment": "production",
+      "uber_environment": "production",
+      "receiver_enabled": true,
+      "worker_enabled": true,
+      "processing_mode": "KITCHEN_MIRROR",
+      "signing_key_present": true,
+      "oauth_secret_present": true,
+      "global_cutover_present": true,
+      "cutover_entries": 1,
+      "cutovers_sha256": "123898fca5da7fc5e7f2cc32e22bc989bf159d53624fe30820f29c0c5d9bfc83",
+      "bindings": [
+        {
+          "store_id": 1,
+          "organization_id": 1,
+          "environment": "production",
+          "enabled": true,
+          "processing_mode": "KITCHEN_MIRROR"
+        }
+      ],
+      "events": 49,
+      "uber_orders": 39,
+      "local_uber_orders": 39
+    },
+    "staging": {
+      "app_environment": "staging",
+      "uber_environment": "sandbox",
+      "receiver_enabled": true,
+      "worker_enabled": false,
+      "processing_mode": "KITCHEN_MIRROR",
+      "signing_key_present": true,
+      "oauth_secret_present": true,
+      "global_cutover_present": false,
+      "cutover_entries": 0,
+      "events": 22,
+      "uber_orders": 13,
+      "local_uber_orders": 11
+    },
+    "note": "Continuous Production worker is live; natural arrivals/imports may change current counts. Preserve all environment values/cutovers and configuration, never substitute historical worker=false defaults."
+  },
+  "database": {
+    "production": {
+      "name": "restaurant_pos",
+      "container_id": "c2ab37fec6ac966e77a1d8ab7aa41d1da294b9ac57b1a21ce18904d04cfae91e",
+      "started_at": "2026-07-11T12:09:37.936437539Z",
+      "health": "healthy",
+      "restarts": 0,
+      "flyway": "38",
+      "flyway_failed": 0,
+      "flyway_ledger_md5": "8b39ce1e6085466cd757f40133e5f7e7",
+      "pending_print": 0,
+      "pending_outbox": 0,
+      "pending_uber_events": 0,
+      "protected_printing_ids": [
+        1176,
+        3169,
+        9226,
+        20391
+      ]
+    },
+    "staging": {
+      "name": "restaurant_pos_staging",
+      "container_id": "b64d3c676dbb4003368279453e5c6b390ac6327c3cf28001ead671155f93f4c5",
+      "started_at": "2026-08-22T19:14:39.633030411Z",
+      "health": "healthy",
+      "restarts": 0,
+      "flyway": "38",
+      "flyway_failed": 0,
+      "flyway_ledger_md5": "8b39ce1e6085466cd757f40133e5f7e7",
+      "pending_print": 0,
+      "pending_outbox": 0,
+      "pending_uber_events": 0,
+      "protected_printing_ids": [
+        200,
+        205,
+        207
+      ]
+    },
+    "container_volume_network_isolation": true,
+    "datasource_overrides_present": false
+  },
+  "host": {
+    "root_disk_used_percent": 74,
+    "root_disk_available": "15GiB",
+    "memory_available_mib": 1517,
+    "swap_mib": 0,
+    "docker_images_total": "7.86GB",
+    "docker_images_reclaimable": "3.113GB",
+    "build_cache_total": "16.82GB",
+    "build_cache_reclaimable": "10.45GB",
+    "build_cache_records": 291,
+    "builder_containers": 0,
+    "cleanup_performed": false
+  },
+  "minimum_reuse_route": {
+    "method": "Read actual private Stage/Production models; preserve escaped model/env; build only backend once with existing disposable bounded builder pattern; Stage verify then promote same immutable image to Production; only backend image/OCI labels change; frontend/DB unchanged; original full-env rollback.",
+    "existing_functions": [
+      "pos-five-fixes/deploy-once.py require_staging_database/history_fingerprints/run_logged",
+      "promote-uber-receive-only-20261022.py operation_locks/write_private/inspect/compose verification patterns"
+    ],
+    "do_not_directly_execute": [
+      "pos-production-removes/deploy.py: stale baseline, two-image build, worker=false guard",
+      "promote-addon-backend-20261006.py: stale Stage model, requires receiver=false",
+      "promote-uber-receive-only-20261022.py promotion: wanted_env resets worker/cutovers, V37 assumptions",
+      "promote-uber-receive-only-20261022.py --current-4483: worker=false, zero Production Uber orders,299mapping, old baseline, modifies defaults"
+    ],
+    "limits": "Retain V38 ledger exactly; build1GiB/1CPU as existing pattern, no shared cache prune; protect historical snapshots using cutoff, allow natural new rows; pause no active worker as part of header release."
+  }
+}
