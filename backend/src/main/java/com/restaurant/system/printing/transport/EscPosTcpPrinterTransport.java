@@ -114,6 +114,7 @@ public class EscPosTcpPrinterTransport implements PrinterTransport {
     }
 
     private void writeContent(OutputStream outputStream, String content, Charset charset, String fontSize) throws Exception {
+        content = EscPosPaperFeed.writeTopFeed(outputStream, content);
         String[] lines = content.split("\\n", -1);
         EscPosFontSizeMode fontSizeMode = EscPosFontSizeMode.fromConfig(fontSize);
         for (String rawLine : lines) {

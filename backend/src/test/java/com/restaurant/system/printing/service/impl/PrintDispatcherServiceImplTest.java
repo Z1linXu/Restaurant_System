@@ -624,16 +624,27 @@ class PrintDispatcherServiceImplTest {
         verifyNoInteractions(printerTransport);
     }
 
-    @Test
-    void existingPrintJobReprintUsesFrozenRenderedSnapshotWithoutRerendering() {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+        "GRAB,false,false", "GRAB,true,false", "FRONTDESK_RECEIPT,false,false", "FRONTDESK_RECEIPT,true,false",
+        "HOT_KITCHEN,false,false", "HOT_KITCHEN,true,false", "GRAB,false,true", "GRAB,true,true",
+        "FRONTDESK_RECEIPT,false,true", "FRONTDESK_RECEIPT,true,true", "HOT_KITCHEN,false,true", "HOT_KITCHEN,true,true"
+    })
+    void existingDineInPrintJobReprintAddsTopFeedOnceWithoutRerenderingFrozenContent(String module, boolean update, boolean marked) {
         PrintJob job = new PrintJob();
         job.id = 77L;
         job.store_id = 1L;
         job.order_id = 123L;
         job.printer_id = 10L;
-        job.module_code = PrintModuleCode.GRAB;
-        job.rendered_text_snapshot = "FROZEN HISTORICAL COMBO OUTPUT";
+        job.module_code = module;
+        job.receipt_type = module + (update ? "_UPDATE" : "");
+        String frozenBody = "\n\n" + com.restaurant.system.printing.renderer.PrintMarkup.large("1-右")
+            + (update ? " (UPDATE)" : "") + "\nFROZEN HISTORICAL COMBO OUTPUT";
+        job.rendered_text_snapshot = (marked ? com.restaurant.system.printing.renderer.PrintMarkup.TOP_FEED_16MM : "") + frozenBody;
+        String originalSnapshot = job.rendered_text_snapshot;
         job.status = PrintJobStatus.PRINTED;
+        Order originalOrder = new Order(); originalOrder.id = job.order_id; originalOrder.order_type = "dine_in";
+        when(orderRepository.findExistingById(job.order_id)).thenReturn(originalOrder);
 
         PrintJob fresh = new PrintJob();
         fresh.id = 78L; fresh.store_id = job.store_id; fresh.order_id = job.order_id;
@@ -652,10 +663,14 @@ class PrintDispatcherServiceImplTest {
 
         service.reprintJob(job.id, 5L);
 
-        verify(printJobService).attachRenderedContent(fresh, null, "FROZEN HISTORICAL COMBO OUTPUT");
+        verify(printJobService).attachRenderedContent(fresh, null,
+            com.restaurant.system.printing.renderer.PrintMarkup.TOP_FEED_16MM + frozenBody);
+        assertEquals(originalSnapshot, job.rendered_text_snapshot);
         org.junit.jupiter.api.Assertions.assertEquals(PrintJobStatus.PRINTED, job.status);
         org.junit.jupiter.api.Assertions.assertEquals(job.id, fresh.reprintSourceJobId);
         verify(grabRenderer, never()).render(any());
+        verify(frontdeskRenderer, never()).render(any());
+        verify(hotKitchenRenderer, never()).render(any());
         verifyNoInteractions(printerTransport);
     }
 

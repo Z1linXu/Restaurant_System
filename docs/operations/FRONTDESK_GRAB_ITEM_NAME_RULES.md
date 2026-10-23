@@ -203,11 +203,14 @@ active / sold-out，必须由 Menu API 或该门店数据库确认，因而不�
 
 GRAB、FRONTDESK_RECEIPT、HOT_KITCHEN 及各自 UPDATE 小票统一使用完整桌号首行：
 普通为 `1`，UPDATE 为 `1 (UPDATE)`，第二行接分隔线。堂食不再输出 `桌号：`
-前缀、头部空行、独立 `UPDATED` / `Added items only` 标题。桌号紧贴左侧，沿用
+前缀、独立 `UPDATED` / `Added items only` 标题。桌号紧贴左侧，沿用
 原 LARGE 字号标记；` (UPDATE)` 紧随桌号，在同一行恢复常规宽度，避免整个后缀
 四倍放大后自动换行。`1里`、`1-左`、`1-右` 不截断，旧 `-A` / `-B` 显示转换保留。
 MOCK 与 PAD_DIRECT 共用渲染文本，Android 原样发送后端 ESC/POS payload；既有
-冻结 PrintJob 补打不会因头部规则变更被重新渲染。外卖格式保持原行为。
+冻结 PrintJob 补打不会因头部规则变更被重新渲染。新堂食票及新建补打任务在原空白
+基础上额外进纸16mm（至少15mm目标），位于桌号之前；只存一个布局标记，共享
+编码器在初始化后执行一次进纸并恢复默认单位，MOCK 显示额外16mm空白。
+旧 source job 不改写，重复补打不会叠加；外卖格式保持原行为。
 
 ## 7. 当前未知和现场确认事项
 

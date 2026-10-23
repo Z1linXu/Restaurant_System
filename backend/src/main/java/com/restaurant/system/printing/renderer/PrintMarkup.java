@@ -8,6 +8,7 @@ public final class PrintMarkup {
     public static final String LARGE_CLOSE = "[[/LARGE]]";
     public static final String SMALL_OPEN = "[[SMALL]]";
     public static final String SMALL_CLOSE = "[[/SMALL]]";
+    public static final String TOP_FEED_16MM = "[[TOP_FEED_16MM]]\n";
 
     private PrintMarkup() {
     }
@@ -22,5 +23,16 @@ public final class PrintMarkup {
 
     public static String small(String value) {
         return SMALL_OPEN + value + SMALL_CLOSE;
+    }
+
+    public static String withTopFeed(String value) {
+        return TOP_FEED_16MM + stripTopFeed(value);
+    }
+
+    public static String stripTopFeed(String value) {
+        while (value.startsWith(TOP_FEED_16MM)) {
+            value = value.substring(TOP_FEED_16MM.length());
+        }
+        return value;
     }
 }

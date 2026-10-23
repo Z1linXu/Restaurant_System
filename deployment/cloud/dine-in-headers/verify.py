@@ -10,7 +10,9 @@ import re
 import stat
 import sys
 import zipfile
+import urllib.request
 
+sys.dont_write_bytecode = True
 HERE = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location('header_release', HERE / 'deploy.py')
 d = importlib.util.module_from_spec(spec)
@@ -25,13 +27,27 @@ def main(environment, sha, class_sha256):
     assert HERE == d.BASE / 'staging/releases' / script_sha / 'deployment/cloud/dine-in-headers'
     assert not d.i.run(['git', '-C', str(script_release), 'status', '--porcelain']).strip()
     assert not d.i.run(['git', '-C', str(script_release), 'diff', sha, script_sha, '--', 'backend', 'frontend']).strip()
-    root = d.BASE / environment / ('dine-in-headers-' + sha)
+    root = d.BASE / environment / (d.RELEASE_PREFIX + sha)
     result = json.loads(d.ops.private_file(root / 'result.json').read_text())
     assert result['source_sha'] == sha and result['health'] == 'PASS'
     name = ('cloud' if environment == 'production' else 'restaurant-pos-staging') + '-backend-1'
     runtime = d.i.inspect(name)
     image = runtime['Image']
     assert image == result['image'] and d.prior.revision(runtime) == sha
+    frontend_name = name.replace('-backend-1', '-nginx-1')
+    frontend = d.i.inspect(frontend_name)
+    assert frontend['Image'] == result['images']['nginx'] and d.prior.revision(frontend) == sha
+    # Verify the deployed preview module is the same public static asset, without logging in or making jobs.
+    asset_paths = d.i.run(['docker', 'exec', frontend_name, 'sh', '-c',
+        'grep -l "data-receipt-top-feed" /usr/share/nginx/html/assets/*.js']).decode().splitlines()
+    assert asset_paths
+    asset = Path(asset_paths[0])
+    assert asset.parent == Path('/usr/share/nginx/html/assets') and re.fullmatch(r'[A-Za-z0-9_.-]+\.js', asset.name)
+    asset_bytes = d.i.run(['docker', 'exec', frontend_name, 'cat', str(asset)])
+    assert b'[[TOP_FEED_16MM]]' in asset_bytes and b'16mm' in asset_bytes
+    base = 'https://' + ('pos' if environment == 'production' else 'staging-pos') + '.lanzhounoodlesmtl.com'
+    with urllib.request.urlopen(base + '/assets/' + asset.name, timeout=8) as response:
+        assert response.status == 200 and response.read() == asset_bytes
     harness = d.ops.private_file(root / 'RenderHeaderAcceptance.class')
     assert hashlib.sha256(harness.read_bytes()).hexdigest() == class_sha256
     proof = root / 'render-proof'
@@ -56,8 +72,11 @@ def main(environment, sha, class_sha256):
         '-v', str(proof) + ':/proof:ro', image,
         '-cp', '/proof/classes:/proof/lib/*:/proof', 'RenderHeaderAcceptance']))
     assert observed['status'] == 'PASS' and observed['header_cases'] == 24 and observed['fits_42_columns'] is True
+    assert observed['additional_top_feed_mm'] == 16 and observed['top_feed_once'] is True
+    assert observed['pad_tcp_payload_identical'] is True and observed['takeout_cases'] == 6
     assert observed['database_written'] is False and observed['print_dispatched'] is False
     assert d.i.inspect(name)['Id'] == runtime['Id']
+    assert d.i.inspect(frontend_name)['Id'] == frontend['Id']
     db = name.replace('-backend-1', '-db-1')
     baseline = json.loads(d.ops.private_file(root / 'baseline.private.json').read_text())
     d.p.DB = db
@@ -66,6 +85,7 @@ def main(environment, sha, class_sha256):
     assert d.p.history_fingerprints(baseline['history']['cutoffs']) == baseline['history']
     for url in ('https://pos.lanzhounoodlesmtl.com', 'https://staging-pos.lanzhounoodlesmtl.com'): d.i.health(url)
     accepted = dict(observed, environment=environment, source_sha=sha, image=image, health='PASS',
+        images=result['images'], preview_asset_sha256=hashlib.sha256(asset_bytes).hexdigest(), preview_public_asset='PASS',
         accepted=True, script_sha=script_sha, app_jar_sha256=hashlib.sha256((proof / 'app.jar').read_bytes()).hexdigest(),
         proof_class_sha256=class_sha256, observed_at=datetime.datetime.now(datetime.timezone.utc).isoformat())
     d.ops.write_private(root / 'render-acceptance.json', accepted)

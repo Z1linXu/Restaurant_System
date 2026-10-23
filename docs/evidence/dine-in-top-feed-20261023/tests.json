@@ -1,0 +1,16 @@
+{
+  "printing": {
+    "tests": 397,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 2
+  },
+  "frontend_tests": 328,
+  "frontend_build": "PASS",
+  "changed_file_lint": "PASS",
+  "full_lint": "BASELINE_6_ERRORS_REPRODUCED_UNCHANGED_FILES_NON_BLOCKING_EXISTING_DEBT",
+  "deployment_guard_tests": 2,
+  "runtime_render_cases": 24,
+  "runtime_takeout_cases": 6,
+  "initial_assertion_failures": "3 legacy test helpers required stripping the new nonprinting layout prefix; corrected, final regression PASS"
+}

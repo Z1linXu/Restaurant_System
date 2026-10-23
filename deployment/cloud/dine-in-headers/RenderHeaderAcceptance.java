@@ -7,6 +7,9 @@ import com.restaurant.system.printing.entity.PrinterConfig;
 import com.restaurant.system.printing.renderer.*;
 import com.restaurant.system.printing.semantic.HotKitchenPrintEligibilityService;
 import com.restaurant.system.printing.service.impl.PrintJobServiceImpl;
+import com.restaurant.system.printing.transport.EscPosTcpPrinterTransport;
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.nio.charset.Charset;
 import java.time.LocalDateTime;
@@ -14,10 +17,14 @@ import java.util.*;
 
 /** Render-only proof against the deployed JAR. No Spring, database, job or socket. */
 public final class RenderHeaderAcceptance {
+    private static final byte[] FEED = {0x1D, 0x50, 0, (byte)254, 0x1B, 0x4A, (byte)160, 0x1D, 0x50, 0, 0};
     public static void main(String[] args) throws Exception {
         var payloadMethod = PrintJobServiceImpl.class.getDeclaredMethod(
             "buildEscPosPayloadBase64", String.class, PrinterConfig.class, String.class);
         payloadMethod.setAccessible(true);
+        var tcpMethod = EscPosTcpPrinterTransport.class.getDeclaredMethod("writeContent", OutputStream.class,
+            String.class, Charset.class, String.class);
+        tcpMethod.setAccessible(true);
         var payloadService = new PrintJobServiceImpl(null, null, null);
         var printer = new PrinterConfig();
         printer.text_encoding = "GBK";
@@ -31,29 +38,59 @@ public final class RenderHeaderAcceptance {
                     var request = fixture(table, update);
                     request.module_code = renderer.getModuleCode();
                     String text = renderer.render(request);
+                    require(text.startsWith(PrintMarkup.TOP_FEED_16MM));
+                    String visible = PrintMarkup.stripTopFeed(text);
                     String expected = table + (update ? " (UPDATE)" : "");
-                    require(text.startsWith(PrintMarkup.large(table) + (update ? " (UPDATE)" : "") + "\n"));
-                    require(text.replaceAll("\\[\\[/?(?:DOUBLE_HEIGHT|LARGE|SMALL)]]", "")
+                    require(visible.startsWith(PrintMarkup.large(table) + (update ? " (UPDATE)" : "") + "\n"));
+                    require(visible.replaceAll("\\[\\[/?(?:DOUBLE_HEIGHT|LARGE|SMALL)]]", "")
                         .startsWith(expected + "\n--------------------------------\n"));
                     require(!text.contains("桌号：") && !text.contains("UPDATED"));
                     byte[] bytes = Base64.getDecoder().decode((String) payloadMethod.invoke(
                         payloadService, text, printer, "SMALL"));
-                    byte[] prefix = ("\u001b@\u001d!3" + table + "\u001d!\u0000" + (update ? " (UPDATE)" : "") + "\n")
-                        .getBytes(Charset.forName("GBK"));
+                    var prefixBytes = new ByteArrayOutputStream();
+                    prefixBytes.write(new byte[]{0x1B, 0x40}); prefixBytes.write(FEED);
+                    prefixBytes.write(("\u001d!3" + table + "\u001d!\u0000" + (update ? " (UPDATE)" : "") + "\n")
+                        .getBytes(Charset.forName("GBK")));
+                    byte[] prefix = prefixBytes.toByteArray();
                     require(bytes.length > prefix.length && Arrays.equals(
                         prefix, Arrays.copyOf(bytes, prefix.length)));
+                    require(occurrences(bytes, FEED) == 1 && occurrences(bytes, new byte[]{0x1B, 0x40}) == 1);
+                    require(Arrays.equals(new byte[]{0x1D, 0x56, 0x41, 0x10}, Arrays.copyOfRange(bytes, bytes.length - 4, bytes.length)));
+                    require(Arrays.equals(bytes, Base64.getDecoder().decode((String) payloadMethod.invoke(
+                        payloadService, PrintMarkup.TOP_FEED_16MM + text, printer, "SMALL"))));
+                    var tcp = new ByteArrayOutputStream(); tcp.write(new byte[]{0x1B, 0x40});
+                    tcpMethod.invoke(new EscPosTcpPrinterTransport(null), tcp, text, Charset.forName("GBK"), "SMALL");
+                    tcp.write(new byte[]{0x1D, 0x56, 0x41, 0x10});
+                    require(Arrays.equals(bytes, tcp.toByteArray()));
                     // 80mm devices commonly offer 42/48 Font-A columns. Keep only the table 4x wide.
                     int columns = table.codePoints().map(c -> c >= 0x2e80 ? 2 : 1).sum() * 4 + (update ? 9 : 0);
                     require(columns <= 42);
                     verified.add(expected);
                 }
                 modules.put(renderer.getModuleCode() + (update ? "_UPDATE" : ""), verified);
+                var takeout = fixture("1", update); takeout.order.order_type = "takeout";
+                takeout.order.table_no = null; takeout.order.pickup_no = "TO-1";
+                String takeoutText = renderer.render(takeout);
+                require(!takeoutText.startsWith(PrintMarkup.TOP_FEED_16MM));
+                require(occurrences(Base64.getDecoder().decode((String) payloadMethod.invoke(
+                    payloadService, takeoutText, printer, "SMALL")), FEED) == 0);
             }
         }
-        System.out.println(new ObjectMapper().writeValueAsString(Map.of(
+        Map<String, Object> result = new LinkedHashMap<>(Map.of(
             "status", "PASS", "modules", modules, "header_cases", 24,
             "large_font_preserved", true, "leftmost_payload_prefix", true, "fits_42_columns", true,
-            "database_written", false, "print_dispatched", false)));
+            "database_written", false, "print_dispatched", false));
+        result.put("additional_top_feed_mm", 16); result.put("top_feed_once", true);
+        result.put("pad_tcp_payload_identical", true); result.put("takeout_cases", 6);
+        System.out.println(new ObjectMapper().writeValueAsString(result));
+    }
+
+    private static int occurrences(byte[] bytes, byte[] pattern) {
+        int count = 0;
+        for (int index = 0; index <= bytes.length - pattern.length; index++) {
+            if (Arrays.equals(pattern, Arrays.copyOfRange(bytes, index, index + pattern.length))) count++;
+        }
+        return count;
     }
 
     private static PrintRenderRequest fixture(String table, boolean update) {

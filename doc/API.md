@@ -648,6 +648,12 @@ branch.
 
 `PAD_DIRECT` only changes where printing is executed. It does not change order submission, order update, manual reprint, or receipt rendering semantics.
 
+New dine-in receipt snapshots may begin with `[[TOP_FEED_16MM]]` plus a newline.
+This is one layout marker for an additional 16mm top margin, consumed once by
+MOCK preview and both ESC/POS encoders. It is not printed as text or a blank
+text line. A new dine-in reprint adds it to copied content without modifying the
+historical source job. Endpoints and DTO fields are unchanged.
+
 ### Printing Display Rules
 
 Phase A11 adds Store-scoped Printing Display Rules. These endpoints configure

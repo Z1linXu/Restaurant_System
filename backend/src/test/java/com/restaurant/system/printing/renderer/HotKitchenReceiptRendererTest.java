@@ -31,7 +31,7 @@ class HotKitchenReceiptRendererTest {
 
         String content = renderer.render(request);
 
-        assertTrue(content.startsWith(PrintMarkup.large("T2") + " (UPDATE)\n"));
+        assertTrue(PrintMarkup.stripTopFeed(content).startsWith(PrintMarkup.large("T2") + " (UPDATE)\n"));
         assertTrue(content.contains("HOT KITCHEN"));
         assertFalse(content.contains("桌号："));
         assertTrue(content.contains("大二(S)×1 | +煎蛋 +葱 | 备注：less soup"));
@@ -168,7 +168,7 @@ class HotKitchenReceiptRendererTest {
 
         String content = renderer.render(request);
 
-        assertTrue(content.startsWith(PrintMarkup.large("T2-右") + "\n"));
+        assertTrue(PrintMarkup.stripTopFeed(content).startsWith(PrintMarkup.large("T2-右") + "\n"));
     }
 
     @Test

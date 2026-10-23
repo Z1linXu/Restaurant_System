@@ -32,7 +32,9 @@ class DineInTicketHeaderTest {
             request.order.table_no = tableCode;
             String before = request.order.table_no;
 
-            String raw = render(module, request);
+            String encoded = render(module, request);
+            assertThat(encoded).startsWith(PrintMarkup.TOP_FEED_16MM);
+            String raw = PrintMarkup.stripTopFeed(encoded);
             String expected = displayCode + (update ? " (UPDATE)" : "");
 
             assertThat(raw.lines().findFirst()).contains(PrintMarkup.large(displayCode) + (update ? " (UPDATE)" : ""));
@@ -52,7 +54,7 @@ class DineInTicketHeaderTest {
         for (String tableCode : new String[] {null, "", "  "}) {
             var request = request(module, update);
             request.order.table_no = tableCode;
-            assertThat(render(module, request)).startsWith(PrintMarkup.large("Walk-in") + (update ? " (UPDATE)" : "") + "\n");
+            assertThat(PrintMarkup.stripTopFeed(render(module, request))).startsWith(PrintMarkup.large("Walk-in") + (update ? " (UPDATE)" : "") + "\n");
         }
     }
 

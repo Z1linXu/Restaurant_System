@@ -1,0 +1,38 @@
+{
+  "baseline": "06b8e57a627fc22dd23bd8e35232b93ceea67e7c",
+  "errors": [
+    {
+      "file": "src/features/auth/RequireAuth.tsx",
+      "rule": "react-refresh/only-export-components",
+      "line": 8
+    },
+    {
+      "file": "src/features/dinein/components/TakeoutEntryDialog.tsx",
+      "rule": "react-hooks/set-state-in-effect",
+      "line": 28
+    },
+    {
+      "file": "src/features/frontdesk/components/PrintWorkerHealthBanner.tsx",
+      "rule": "react-hooks/set-state-in-effect",
+      "line": 88
+    },
+    {
+      "file": "src/features/ordering/components/OrderLineItemRow.tsx",
+      "rule": "react-hooks/set-state-in-effect",
+      "line": 30
+    },
+    {
+      "file": "src/features/orders/components/OrderDetailPanel.tsx",
+      "rule": "react-hooks/set-state-in-effect",
+      "line": 140
+    },
+    {
+      "file": "src/features/owner-admin/ItemAddonsSection.tsx",
+      "rule": "react-refresh/only-export-components",
+      "line": 5
+    }
+  ],
+  "error_count": 6,
+  "exit_code": 1,
+  "changed_files_focused_lint": "PASS"
+}

@@ -1,0 +1,237 @@
+{
+  "observed_at": "2026-10-23T15:14:13.072318+00:00",
+  "reviewer_action": "READ_ONLY; no lock/restart/cleanup/business write/probe",
+  "runtime": {
+    "cloud-backend-1": {
+      "container_id": "e096d283e53e0ce60125318971eb33907d74f149049632e3189439363514e790",
+      "image": "sha256:697947b35e496b94a043b925eb13c4a62470f15d47d02c02bdb9fdd3b81a0e4a",
+      "image_source_sha": "0d2e244c3d1565a06bda8fa269e784af58e875e2",
+      "container_source_label": "0d2e244c3d1565a06bda8fa269e784af58e875e2",
+      "started_at": "2026-10-23T14:06:34.677289496Z",
+      "restart_count": 0,
+      "running": true,
+      "health": null,
+      "environment_sha256": "e350b03d881624ec5df4bfbdda0dfc6d11bb6b6abb7e4073fbd3133c97db7314",
+      "policy": {
+        "APP_ENVIRONMENT": "production",
+        "UBER_EATS_ENVIRONMENT": "production",
+        "UBER_EATS_ENABLED": "true",
+        "UBER_EATS_WORKER_ENABLED": "true",
+        "UBER_EATS_PROCESSING_MODE": "KITCHEN_MIRROR",
+        "signing_key_present": true,
+        "oauth_secret_present": true,
+        "cutover_entries": 1,
+        "cutovers_sha256": "123898fca5da7fc5e7f2cc32e22bc989bf159d53624fe30820f29c0c5d9bfc83"
+      }
+    },
+    "cloud-nginx-1": {
+      "container_id": "2d5278de9517aa69b1aa8a848aa3a21c77555819aec46d219126ca1d3e17e429",
+      "image": "sha256:2b0749d39545a4eae784b29315be78aac0b5866dc069fb6c60372ad82ee4387b",
+      "image_source_sha": "4b3abd1349e66a146c36ac310b6a8b48bb2ad572",
+      "container_source_label": "4b3abd1349e66a146c36ac310b6a8b48bb2ad572",
+      "started_at": "2026-10-22T05:04:16.562421479Z",
+      "restart_count": 0,
+      "running": true,
+      "health": null,
+      "environment_sha256": "23797e8c9e01d4fdf451dd76371a903fd8d443b21cc43567c6993d27c4d609fe"
+    },
+    "cloud-db-1": {
+      "container_id": "c2ab37fec6ac966e77a1d8ab7aa41d1da294b9ac57b1a21ce18904d04cfae91e",
+      "image": "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+      "image_source_sha": null,
+      "container_source_label": null,
+      "started_at": "2026-07-11T12:09:37.936437539Z",
+      "restart_count": 0,
+      "running": true,
+      "health": "healthy",
+      "environment_sha256": "77b9bbf2be51e0c6d307f1bdb769ec6256aad402ec2da6ae7535a710458c8674"
+    },
+    "restaurant-pos-staging-backend-1": {
+      "container_id": "2e7818b6650af0ace4ecf5e7e52bb83e9f52ca3ba61fc1e39baceb594263d96f",
+      "image": "sha256:697947b35e496b94a043b925eb13c4a62470f15d47d02c02bdb9fdd3b81a0e4a",
+      "image_source_sha": "0d2e244c3d1565a06bda8fa269e784af58e875e2",
+      "container_source_label": "0d2e244c3d1565a06bda8fa269e784af58e875e2",
+      "started_at": "2026-10-23T14:00:10.377781821Z",
+      "restart_count": 0,
+      "running": true,
+      "health": null,
+      "environment_sha256": "7a8969a99d252a5779352a60bc34a63c04c6ca2701614ce100897cfda4af1ef0",
+      "policy": {
+        "APP_ENVIRONMENT": "staging",
+        "UBER_EATS_ENVIRONMENT": "sandbox",
+        "UBER_EATS_ENABLED": "true",
+        "UBER_EATS_WORKER_ENABLED": "false",
+        "UBER_EATS_PROCESSING_MODE": "KITCHEN_MIRROR",
+        "signing_key_present": true,
+        "oauth_secret_present": true,
+        "cutover_entries": 0,
+        "cutovers_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      }
+    },
+    "restaurant-pos-staging-nginx-1": {
+      "container_id": "b9c800db04a218096eff4b97bf45906e7ab8a9830d28f3e1789db2d0ccf1da9c",
+      "image": "sha256:2b0749d39545a4eae784b29315be78aac0b5866dc069fb6c60372ad82ee4387b",
+      "image_source_sha": "4b3abd1349e66a146c36ac310b6a8b48bb2ad572",
+      "container_source_label": "4b3abd1349e66a146c36ac310b6a8b48bb2ad572",
+      "started_at": "2026-10-22T04:56:56.119999015Z",
+      "restart_count": 0,
+      "running": true,
+      "health": null,
+      "environment_sha256": "a31698d4a0ba0dd36b63cde2fab5fc04db487aa60ce75789ccf1d94792989810"
+    },
+    "restaurant-pos-staging-db-1": {
+      "container_id": "b64d3c676dbb4003368279453e5c6b390ac6327c3cf28001ead671155f93f4c5",
+      "image": "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+      "image_source_sha": null,
+      "container_source_label": null,
+      "started_at": "2026-08-22T19:14:39.633030411Z",
+      "restart_count": 0,
+      "running": true,
+      "health": "healthy",
+      "environment_sha256": "6a007bcecb0160df391bc32e8ee4e63679701d7c7e9153b28f48e70103c1ac80"
+    }
+  },
+  "compose": {
+    "production": {
+      "path": "/srv/restaurant-pos/production/current.compose.json",
+      "mode": "0o600",
+      "is_symlink": false,
+      "sha256": "1cd76a1c1802b3998f41b2b34181925104b7058178de5020a61fdbcafd5f8d52",
+      "services": [
+        "backend",
+        "nginx"
+      ],
+      "resolved_images_and_environments_match_runtime": true
+    },
+    "staging": {
+      "path": "/srv/restaurant-pos/staging/dine-in-headers-0d2e244c3d1565a06bda8fa269e784af58e875e2/target.private.json",
+      "mode": "0o600",
+      "is_symlink": false,
+      "sha256": "1bcadd9090505163f8f7b5e979a9fa1706a78ac73de1d4c19f436fa4bcda92b2",
+      "services": [
+        "backend"
+      ],
+      "resolved_images_and_environments_match_runtime": true
+    }
+  },
+  "database": {
+    "production": {
+      "name": "restaurant_pos",
+      "flyway": "38",
+      "flyway_failed": 0,
+      "flyway_ledger_md5": "8b39ce1e6085466cd757f40133e5f7e7",
+      "uber_bindings": 1,
+      "uber_events": 49,
+      "uber_orders": 39,
+      "local_uber_orders": 39,
+      "pending_print": 0,
+      "active_print_ids": [
+        1176,
+        3169,
+        9226,
+        20391
+      ],
+      "pending_outbox": 0,
+      "pending_uber_events": 0,
+      "due_uber_orders": 0
+    },
+    "staging": {
+      "name": "restaurant_pos_staging",
+      "flyway": "38",
+      "flyway_failed": 0,
+      "flyway_ledger_md5": "8b39ce1e6085466cd757f40133e5f7e7",
+      "uber_bindings": 1,
+      "uber_events": 22,
+      "uber_orders": 13,
+      "local_uber_orders": 11,
+      "pending_print": 0,
+      "active_print_ids": [
+        200,
+        205,
+        207
+      ],
+      "pending_outbox": 0,
+      "pending_uber_events": 0,
+      "due_uber_orders": 0
+    }
+  },
+  "public_health": {
+    "production": {
+      "http_status": 200,
+      "status": "UP"
+    },
+    "staging": {
+      "http_status": 200,
+      "status": "UP"
+    }
+  },
+  "disk": [
+    "Filesystem      Size  Used Avail Use% Mounted on",
+    "/dev/vda2        59G   43G   15G  75% /"
+  ],
+  "docker_system_df": [
+    {
+      "Active": "4",
+      "Reclaimable": "3.223GB (40%)",
+      "Size": "7.969GB",
+      "TotalCount": "117",
+      "Type": "Images"
+    },
+    {
+      "Active": "8",
+      "Reclaimable": "0B (0%)",
+      "Size": "4.231MB",
+      "TotalCount": "8",
+      "Type": "Containers"
+    },
+    {
+      "Active": "0",
+      "Reclaimable": "0B",
+      "Size": "0B",
+      "TotalCount": "2",
+      "Type": "Local Volumes"
+    },
+    {
+      "Active": "12",
+      "Reclaimable": "10.45GB",
+      "Size": "16.82GB",
+      "TotalCount": "291",
+      "Type": "Build Cache"
+    }
+  ],
+  "builder_containers": [],
+  "comparison_to_previous_header_postrelease": {
+    "production": {
+      "backend_image_and_source_matches_last": true,
+      "backend_container_id_unchanged": true,
+      "backend_env_hash_unchanged": true,
+      "frontend_id_start_unchanged": true,
+      "frontend_image_unchanged": true,
+      "database_id_start_unchanged": true,
+      "flyway_ledger_unchanged": true,
+      "old_active_print_ids_unchanged": true
+    },
+    "staging": {
+      "backend_image_and_source_matches_last": true,
+      "backend_container_id_unchanged": true,
+      "backend_env_hash_unchanged": true,
+      "frontend_id_start_unchanged": true,
+      "frontend_image_unchanged": true,
+      "database_id_start_unchanged": true,
+      "flyway_ledger_unchanged": true,
+      "old_active_print_ids_unchanged": true
+    }
+  },
+  "command_plan_review": {
+    "gs_p_vertical_y": 254,
+    "unit_mm": 0.1,
+    "esc_j_n": 160,
+    "nominal_feed_mm": 16,
+    "restores_default_units": true,
+    "proof_limit": "Protocol-level target; physical length on actual configured printers not measured. Mechanical pitch truncation leaves margin above15mm on standard receipt devices.",
+    "official_references": [
+      "https://download4.epson.biz/sec_pubs/pos/reference_en/escpos/gs_cp.html",
+      "https://download4.epson.biz/sec_pubs/pos/reference_en/escpos/esc_cj.html"
+    ]
+  }
+}
