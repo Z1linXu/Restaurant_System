@@ -36,7 +36,8 @@ class NoSpicyPrintingRuleTest {
 
             assertThat(text).contains("大红（走H）×1").doesNotContain("（走G）");
             assertThat(request.kitchen_tasks.get(0).special_instructions_snapshot).isEqualTo("大红");
-            assertThat(text.contains("UPDATED")).isEqualTo(update);
+            assertThat(text.contains(" (UPDATE)")).isEqualTo(update);
+            assertThat(text).doesNotContain("UPDATED");
         }
     }
 

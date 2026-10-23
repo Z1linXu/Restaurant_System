@@ -36,15 +36,20 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
     public String render(PrintRenderRequest request) {
         Order order = request.order;
         StringBuilder builder = new StringBuilder();
-        ExternalOrderReceiptHeader.append(builder, request.order);
-        builder.append("\n\n\n\n");
-        if (Boolean.TRUE.equals(request.is_update_ticket)) {
-            builder.append(PrintMarkup.large("UPDATED")).append("\n");
-            builder.append("--------------------------------\n");
-        }
-        String topLabel = resolveTopDisplayLabel(order);
-        if (topLabel != null) {
-            builder.append(PrintMarkup.large(topLabel)).append("\n");
+        if (PrintTableDisplayFormatter.isDineIn(order)) {
+            builder.append(PrintTableDisplayFormatter.formatDineInHeader(
+                order.table_no, Boolean.TRUE.equals(request.is_update_ticket))).append("\n");
+        } else {
+            ExternalOrderReceiptHeader.append(builder, request.order);
+            builder.append("\n\n\n\n");
+            if (Boolean.TRUE.equals(request.is_update_ticket)) {
+                builder.append(PrintMarkup.large("UPDATED")).append("\n");
+                builder.append("--------------------------------\n");
+            }
+            String topLabel = resolveTopDisplayLabel(order);
+            if (topLabel != null) {
+                builder.append(PrintMarkup.large(topLabel)).append("\n");
+            }
         }
         builder.append("--------------------------------\n");
 

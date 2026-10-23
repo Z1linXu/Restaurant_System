@@ -1,8 +1,23 @@
 package com.restaurant.system.printing.renderer;
 
+import com.restaurant.system.order.entity.Order;
+
 final class PrintTableDisplayFormatter {
 
     private PrintTableDisplayFormatter() {
+    }
+
+    static boolean isDineIn(Order order) {
+        return order != null && "dine_in".equalsIgnoreCase(order.order_type)
+            && !order.kitchenMirror() && !ExternalOrderReceiptHeader.isPresent(order);
+    }
+
+    static String formatDineInHeader(String tableCode, boolean updateTicket) {
+        String label = formatSplitTableLabel(tableCode);
+        if (label == null || label.isBlank()) {
+            label = "Walk-in";
+        }
+        return PrintMarkup.large(label) + (updateTicket ? " (UPDATE)" : "");
     }
 
     static String formatSplitTableLabel(String value) {

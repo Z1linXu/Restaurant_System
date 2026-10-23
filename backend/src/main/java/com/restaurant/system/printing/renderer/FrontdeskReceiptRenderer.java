@@ -60,11 +60,15 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         BigDecimal total = updateTicket ? TaxCalculator.calculateTotal(subtotal) : safeMoney(order.total_amount);
 
         StringBuilder builder = new StringBuilder();
-        ExternalOrderReceiptHeader.append(builder, request.order);
-        if (!ExternalOrderReceiptHeader.isPresent(order)) appendLargeLine(builder, resolveLargeDisplayLabel(order));
-        if (updateTicket) {
-            appendLargeLine(builder, "UPDATED");
-            appendSizedLine(builder, "Added items only");
+        if (PrintTableDisplayFormatter.isDineIn(order)) {
+            builder.append(PrintTableDisplayFormatter.formatDineInHeader(order.table_no, updateTicket)).append("\n");
+        } else {
+            ExternalOrderReceiptHeader.append(builder, request.order);
+            if (!ExternalOrderReceiptHeader.isPresent(order)) appendLargeLine(builder, resolveLargeDisplayLabel(order));
+            if (updateTicket) {
+                appendLargeLine(builder, "UPDATED");
+                appendSizedLine(builder, "Added items only");
+            }
         }
         if ("pickup".equalsIgnoreCase(order.order_type) || "takeout".equalsIgnoreCase(order.order_type)) {
             appendSizedLine(builder, "Order Type: Takeout");

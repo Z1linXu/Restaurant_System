@@ -117,6 +117,20 @@ public class EscPosTcpPrinterTransport implements PrinterTransport {
         String[] lines = content.split("\\n", -1);
         EscPosFontSizeMode fontSizeMode = EscPosFontSizeMode.fromConfig(fontSize);
         for (String rawLine : lines) {
+            int largeClose = rawLine.indexOf(PrintMarkup.LARGE_CLOSE);
+            int largeSuffix = largeClose + PrintMarkup.LARGE_CLOSE.length();
+            if (rawLine.startsWith(PrintMarkup.LARGE_OPEN) && largeClose >= PrintMarkup.LARGE_OPEN.length()
+                    && largeSuffix < rawLine.length()
+                    && rawLine.indexOf("[[", PrintMarkup.LARGE_OPEN.length()) == largeClose
+                    && rawLine.indexOf("[[", largeSuffix) < 0) {
+                // Keep a plain suffix on the same line without enlarging it with the table label.
+                outputStream.write(EscPosFontSizeMode.LARGE.activate_bytes);
+                outputStream.write(rawLine.substring(PrintMarkup.LARGE_OPEN.length(), largeClose).getBytes(charset));
+                outputStream.write(EscPosFontSizeMode.XS.reset_bytes);
+                outputStream.write(rawLine.substring(largeSuffix).getBytes(charset));
+                outputStream.write('\n');
+                continue;
+            }
             boolean doubleHeight = rawLine.contains(PrintMarkup.DOUBLE_HEIGHT_OPEN) && rawLine.contains(PrintMarkup.DOUBLE_HEIGHT_CLOSE);
             boolean large = rawLine.contains(PrintMarkup.LARGE_OPEN) && rawLine.contains(PrintMarkup.LARGE_CLOSE);
             boolean small = rawLine.contains(PrintMarkup.SMALL_OPEN) && rawLine.contains(PrintMarkup.SMALL_CLOSE);

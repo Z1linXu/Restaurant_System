@@ -28,7 +28,8 @@ class FrontdeskSoupBaseReceiptTest {
                 String text = renderer.render(request);
 
                 assertThat(text).contains("大碗蔬菜面", "汤底：" + label);
-                assertThat(text.contains("UPDATED")).isEqualTo(update);
+                assertThat(text.contains(" (UPDATE)")).isEqualTo(update);
+                assertThat(text).doesNotContain("UPDATED");
                 assertThat(text).contains("Subtotal: $14.99", "Tax (14.975%): $2.24", "Total: $17.23");
             }
         }

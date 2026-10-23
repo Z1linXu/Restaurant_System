@@ -1,0 +1,18 @@
+{
+  "command": "mvn -q -Dtest='com.restaurant.system.printing.**.*Test' test",
+  "classes": 41,
+  "tests": 377,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 2,
+  "new_header_parameter_cases": 60,
+  "release_guard_tests": 2,
+  "local_render_payload_cases": 24,
+  "conditional_skips": [
+    "PrintingReliabilityPostgresMigrationTest",
+    "PrintingDisplayRuleLifecyclePostgresIntegrationTest"
+  ],
+  "new_pad_tcp_width_compatibility_cases": 29,
+  "repair_retest_rounds": 1,
+  "retest_reason": "Keep table LARGE but UPDATE suffix normal width to fit full table codes on the same physical line."
+}
