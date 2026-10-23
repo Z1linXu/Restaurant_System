@@ -9,13 +9,15 @@ spec.loader.exec_module(release)
 
 
 class HeaderReleaseTest(unittest.TestCase):
-    def test_only_backend_image_and_labels_may_change(self):
+    def test_only_application_images_and_labels_may_change(self):
         old = {'services': {'backend': {'image': 'old', 'environment': {'UBER_EATS_WORKER_ENABLED': 'true'}},
                             'nginx': {'image': 'frontend'}}}
         import copy
         target = copy.deepcopy(old)
         target['services']['backend'].update(image='new', labels={'org.opencontainers.image.revision': 'sha'})
-        release.validate_delta(old, target, 'new')
+        target['services']['nginx']['image'] = 'new-frontend'
+        images = {'backend': 'new', 'nginx': 'new-frontend'}
+        release.validate_delta(old, target, images)
         for mutate in (
             lambda x: x['services']['backend']['environment'].update(UBER_EATS_WORKER_ENABLED='false'),
             lambda x: x['services']['nginx'].update(image='changed'),
@@ -23,7 +25,7 @@ class HeaderReleaseTest(unittest.TestCase):
         ):
             changed = copy.deepcopy(target)
             mutate(changed)
-            with self.assertRaises(AssertionError): release.validate_delta(old, changed, 'new')
+            with self.assertRaises(AssertionError): release.validate_delta(old, changed, images)
 
     def test_quiet_window_allows_existing_uber_business_but_rejects_active_work(self):
         queues = dict(flyway='38', pending_print_jobs=0, pending_outbox=0,

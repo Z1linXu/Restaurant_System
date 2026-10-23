@@ -12,6 +12,7 @@ import com.restaurant.system.printing.repository.PrintJobRepository;
 import com.restaurant.system.printing.repository.PrinterConfigRepository;
 import com.restaurant.system.printing.service.PrintJobService;
 import com.restaurant.system.printing.transport.EscPosFontSizeMode;
+import com.restaurant.system.printing.transport.EscPosPaperFeed;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -428,6 +429,7 @@ public class PrintJobServiceImpl implements PrintJobService {
     }
 
     private void writeEscPosContent(ByteArrayOutputStream outputStream, String content, Charset charset, String fontSize) throws Exception {
+        content = EscPosPaperFeed.writeTopFeed(outputStream, content);
         String[] lines = content.split("\\n", -1);
         EscPosFontSizeMode fontSizeMode = EscPosFontSizeMode.fromConfig(fontSize);
         for (String rawLine : lines) {

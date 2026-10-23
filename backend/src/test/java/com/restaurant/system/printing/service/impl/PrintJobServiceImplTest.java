@@ -128,7 +128,7 @@ class PrintJobServiceImplTest {
         }
         String rendered = renderer.render(request);
         String suffix = update ? " (UPDATE)" : "";
-        assertEquals(PrintMarkup.large(tableCode) + suffix, rendered.lines().findFirst().orElseThrow());
+        assertEquals(PrintMarkup.large(tableCode) + suffix, PrintMarkup.stripTopFeed(rendered).lines().findFirst().orElseThrow());
 
         PrintJob preview = new PrintJob();
         preview.id = 31L;
@@ -152,9 +152,13 @@ class PrintJobServiceImplTest {
 
         assertEquals(rendered, preview.rendered_text_snapshot);
         assertEquals(preview.rendered_text_snapshot, pad.rendered_text_snapshot);
+        String firstPayload = pad.escposPayloadBase64;
+        service.markPadDirectQueued(pad, printer, "SMALL");
+        assertEquals(firstPayload, pad.escposPayloadBase64);
         byte[] payload = Base64.getDecoder().decode(pad.escposPayloadBase64);
         ByteArrayOutputStream prefix = new ByteArrayOutputStream();
         prefix.write(new byte[]{0x1B, 0x40}); // Initialize printer before the first line, retaining default left alignment.
+        prefix.write(new byte[]{0x1D, 0x50, 0, (byte)254, 0x1B, 0x4A, (byte)160, 0x1D, 0x50, 0, 0});
         prefix.write(EscPosFontSizeMode.LARGE.activate_bytes);
         prefix.write(tableCode.getBytes(StandardCharsets.UTF_8));
         prefix.write(EscPosFontSizeMode.XS.reset_bytes);

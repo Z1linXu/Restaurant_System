@@ -8979,7 +8979,7 @@ behavior.
 All dine-in GRAB, FRONTDESK_RECEIPT and HOT_KITCHEN tickets share the same
 leftmost first-line table header. Normal tickets show only the complete table
 label; update tickets show `<table label> (UPDATE)` on that line, followed by
-the separator. There is no `桌号：` prefix, leading blank line or separate
+the separator. There is no `桌号：` prefix or separate
 `UPDATED` title for dine-in. Labels such as `1里`, `1-左` and `1-右` remain
 complete; the existing legacy `-A` / `-B` display conversion is retained.
 The table label retains its existing LARGE markup and font commands. The inline
@@ -8989,8 +8989,19 @@ enlarging the suffix fourfold. Both ESC/POS encoders honor this leading LARGE
 span and preserve existing whole-line markup behavior. MOCK previews and
 PAD_DIRECT payloads use the same rendered snapshot; ESC/POS initialization
 resets alignment to the left and no centering or indentation is added.
+Every newly rendered dine-in ticket also carries one `[[TOP_FEED_16MM]]`
+layout prefix. Both ESC/POS encoders consume it after initialization and before
+any original text/blank lines: `GS P 0 254`, `ESC J 160`, then `GS P 0 0`.
+This commands an additional nominal 16mm forward feed, above the existing
+paper margin, and restores default units before body spacing and the original
+end cut. Duplicate leading markers collapse to one feed; no extra LF is emitted
+for the marker. MOCK previews consume the same prefix as an additional 16mm
+spacer inside the existing padded preview. A new dine-in reprint job adds the
+prefix once to its copied frozen content without rewriting its source job.
+Physical paper length requires a field measurement; protocol tests alone do not
+constitute a measured physical-print result.
 Takeout headers, item/price formatting, dispatch routing and frozen historical
-PrintJob reprints retain their existing behavior.
+PrintJob contents retain their existing behavior.
 
 Receipt formatting restored in this batch was recovered from historical commits
 `19c2e2b` and `3e43593`; it had been overwritten by the foundation snapshot in

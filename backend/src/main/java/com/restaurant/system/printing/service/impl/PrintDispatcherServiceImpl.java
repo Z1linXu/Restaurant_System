@@ -37,6 +37,7 @@ import com.restaurant.system.printing.entity.PrintJob;
 import com.restaurant.system.printing.entity.PrinterAssignment;
 import com.restaurant.system.printing.entity.PrinterConfig;
 import com.restaurant.system.printing.renderer.PrintMarkup;
+import com.restaurant.system.printing.renderer.PrintTableDisplayFormatter;
 import com.restaurant.system.printing.renderer.ReceiptRenderer;
 import com.restaurant.system.printing.repository.PrintJobRepository;
 import com.restaurant.system.printing.repository.PrinterAssignmentRepository;
@@ -862,6 +863,11 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                     context.activeFingerprintOrDefault()
                 );
             } else {
+                Order originalOrder = orderRepository.findExistingById(source.order_id);
+                if (Set.of(PrintModuleCode.GRAB, PrintModuleCode.FRONTDESK_RECEIPT, PrintModuleCode.HOT_KITCHEN)
+                        .contains(source.module_code) && PrintTableDisplayFormatter.isDineIn(originalOrder)) {
+                    content = PrintMarkup.withTopFeed(content);
+                }
                 job = printJobService.attachRenderedContent(job, printer == null ? null : printer.id, content);
             }
             if (PrintingMode.PAD_DIRECT.equals(printingMode)) {

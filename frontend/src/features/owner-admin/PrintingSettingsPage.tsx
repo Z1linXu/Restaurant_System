@@ -43,6 +43,7 @@ import {
   type AndroidPadDeviceStatus,
 } from '../../types/androidPadBridge'
 import { menuManagementPath } from './menuManagementSections'
+import { ReceiptPreview } from './ReceiptPreview'
 
 type ToastState = { kind: 'success' | 'error'; message: string } | null
 
@@ -1485,9 +1486,7 @@ export function PrintingSettingsPage() {
                 关闭
               </button>
             </div>
-            <pre className="max-h-[70vh] overflow-auto whitespace-pre-wrap px-5 py-4 font-mono text-[0.92rem] leading-6 text-[var(--on-surface)]">
-              {previewJob.rendered_text_snapshot || '该打印任务没有保存小票预览。'}
-            </pre>
+            <ReceiptPreview content={previewJob.rendered_text_snapshot} />
           </div>
         </div>
       ) : null}

@@ -21,6 +21,19 @@ import org.springframework.mock.env.MockEnvironment;
 
 class EscPosTcpPrinterTransportTest {
 
+    @ParameterizedTest
+    @CsvSource({"1-右,false", "1-右,true", "1-左,false", "1-左,true", "1里,false", "1里,true"})
+    void addsOneExtraFeedAfterInitializeBeforeHeaderWithoutChangingTheRest(String tableCode, boolean update) throws Exception {
+        String body = "\n\n" + PrintMarkup.large(tableCode) + (update ? " (UPDATE)" : "") + "\nitem";
+        byte[] baseline = printAndCapture(body, "SMALL");
+        byte[] actual = printAndCapture(PrintMarkup.TOP_FEED_16MM + PrintMarkup.withTopFeed(body), "SMALL");
+        ByteArrayOutputStream expected = new ByteArrayOutputStream();
+        expected.write(new byte[]{0x1B, 0x40});
+        expected.write(new byte[]{0x1D, 0x50, 0, (byte)254, 0x1B, 0x4A, (byte)160, 0x1D, 0x50, 0, 0});
+        expected.write(baseline, 2, baseline.length - 2);
+        assertArrayEquals(expected.toByteArray(), actual);
+    }
+
     @Test
     void cloudProfileBlocksPrivatePrinterBeforeTcpSocket() {
         MockEnvironment environment = new MockEnvironment();

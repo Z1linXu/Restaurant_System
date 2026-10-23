@@ -411,7 +411,7 @@ class GrabReceiptRendererTest {
 
         String rawOutput = frontdeskRenderer.render(request);
         assertFalse(rawOutput.contains("FRONTDESK RECEIPT"));
-        assertTrue(rawOutput.startsWith(PrintMarkup.large("T1") + "\n"));
+        assertTrue(PrintMarkup.stripTopFeed(rawOutput).startsWith(PrintMarkup.large("T1") + "\n"));
         assertFalse(rawOutput.contains(PrintMarkup.LARGE_OPEN + "T1" + PrintMarkup.LARGE_OPEN));
         assertEquals(1, countOccurrences(rawOutput, "中碗牛肉面"));
         assertFalse(rawOutput.toLowerCase().contains("regular"));
@@ -450,7 +450,7 @@ class GrabReceiptRendererTest {
 
         String rawOutput = frontdeskRenderer.render(request);
 
-        assertTrue(rawOutput.startsWith(PrintMarkup.large("T1-右") + "\n"));
+        assertTrue(PrintMarkup.stripTopFeed(rawOutput).startsWith(PrintMarkup.large("T1-右") + "\n"));
     }
 
     @Test
@@ -1006,7 +1006,7 @@ class GrabReceiptRendererTest {
     }
 
     private String stripMarkup(String value) {
-        return value
+        return PrintMarkup.stripTopFeed(value)
             .replace(PrintMarkup.DOUBLE_HEIGHT_OPEN, "")
             .replace(PrintMarkup.DOUBLE_HEIGHT_CLOSE, "")
             .replace(PrintMarkup.LARGE_OPEN, "")
