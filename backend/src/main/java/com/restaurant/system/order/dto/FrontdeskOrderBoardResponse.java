@@ -9,6 +9,7 @@ public class FrontdeskOrderBoardResponse {
     public String order_no;
     public String order_type;
     public String table_no;
+    public String table_display_name;
     public String pickup_no;
     public String order_status;
     public Boolean is_modified_after_submit;

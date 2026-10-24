@@ -123,6 +123,55 @@ describe('useTableBoard mounted synchronization', () => {
     expect(latestBoard?.tableSlots.map((slot) => slot.label)).toEqual(['Store 21'])
   })
 
+  it('changes split presentation without changing A/B entry, occupancy or edit identities', async () => {
+    mockedFetchDiningTables.mockResolvedValue([{ ...backendTable(2), table_name: '1', table_config: 'split_supported', supports_split: true, split_label_mode: 'INSIDE_OUTSIDE' }])
+    mockedFetchActiveOrders.mockResolvedValue([])
+    await act(async () => { renderer = create(<Probe storeId={2} onBoard={captureBoard} />) })
+    const full = latestBoard!.tableSlots[0]
+    expect(full.id).toBe('1-full')
+    expect(latestBoard!.startOrder(full.id, 'left')?.slotLabel).toBe('1-A')
+    expect(latestBoard!.startOrder(full.id, 'right')?.slotLabel).toBe('1-B')
+    mockedFetchActiveOrders.mockResolvedValue([{ order_id: 100, order_no: 'ORDER100', order_status: 'submitted', table_no: '1-A', table_display_name: '1里', total_item_count: 1 }] as Awaited<ReturnType<typeof fetchActiveOrderBoardForStore>>)
+    await act(async () => { await latestBoard!.refreshFromBackend({ force: true }) })
+    expect(latestBoard!.tableSlots.map((slot) => [slot.id, slot.label, slot.displayLabel, slot.action])).toEqual([
+      ['1-A', '1-A', '1里', 'edit'], ['1-B', '1-B', '1外', 'start'],
+    ])
+    expect(latestBoard!.editOrder('1-A')?.slotLabel).toBe('1-A')
+    expect(latestBoard!.editOrder('1-A')?.orderDbId).toBe(100)
+    expect(latestBoard!.startOrder('1-B')?.slotLabel).toBe('1-B')
+  })
+
+  it('recognizes A/B after the complete hyphenated table name and keeps Finish refresh isolated', async () => {
+    mockedFetchDiningTables.mockResolvedValue([
+      { ...backendTable(2), id: 21, table_name: '1-左', table_config: 'split_supported', supports_split: true, split_label_mode: 'INSIDE_OUTSIDE' },
+      { ...backendTable(2), id: 22, table_name: '1-右', table_config: 'split_supported', supports_split: true, split_label_mode: 'LEFT_RIGHT' },
+    ])
+    const active = (id: number, tableNo: string) => ({ order_id: id, order_no: `ORDER${id}`, order_status: 'submitted', table_no: tableNo, total_item_count: 1 })
+    const leftA = active(101, '1-左-A')
+    const leftB = active(102, '1-左-B')
+    const other = active(201, '1-右-A')
+    mockedFetchActiveOrders.mockResolvedValue([leftA, leftB, other] as Awaited<ReturnType<typeof fetchActiveOrderBoardForStore>>)
+    await act(async () => { renderer = create(<Probe storeId={2} onBoard={captureBoard} />) })
+    expect(latestBoard!.tableSlots.filter((slot) => slot.baseTableLabel === '1-左').map((slot) => [slot.id, slot.displayLabel, slot.orderDbId])).toEqual([
+      ['1-左-A', '1-左里', 101], ['1-左-B', '1-左外', 102],
+    ])
+    expect(latestBoard!.editOrder('1-左-A')?.slotLabel).toBe('1-左-A')
+    expect(latestBoard!.editOrder('1-左-B')?.slotLabel).toBe('1-左-B')
+
+    mockedFetchActiveOrders.mockResolvedValue([leftB, other] as Awaited<ReturnType<typeof fetchActiveOrderBoardForStore>>)
+    await act(async () => { await latestBoard!.refreshTableAfterFinish('1-左') })
+    expect(latestBoard!.tableSlots.filter((slot) => slot.baseTableLabel === '1-左').map((slot) => [slot.id, slot.action, slot.orderDbId])).toEqual([
+      ['1-左-A', 'start', undefined], ['1-左-B', 'edit', 102],
+    ])
+    expect(latestBoard!.startOrder('1-左-A')?.slotLabel).toBe('1-左-A')
+    expect(latestBoard!.editOrder('1-右-A')?.orderDbId).toBe(201)
+
+    mockedFetchActiveOrders.mockResolvedValue([other] as Awaited<ReturnType<typeof fetchActiveOrderBoardForStore>>)
+    await act(async () => { await latestBoard!.refreshTableAfterFinish('1-左') })
+    expect(latestBoard!.tableSlots.filter((slot) => slot.baseTableLabel === '1-左').map((slot) => [slot.id, slot.action])).toEqual([['1-左-full', 'entry']])
+    expect(latestBoard!.editOrder('1-右-A')?.orderDbId).toBe(201)
+  })
+
   it('rejects a delayed old-Store response after a rapid Store switch', async () => {
     const oldTables = deferred<Awaited<ReturnType<typeof fetchDiningTables>>>()
     mockedFetchDiningTables.mockImplementation((storeId) => (

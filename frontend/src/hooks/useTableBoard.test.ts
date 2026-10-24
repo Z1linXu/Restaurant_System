@@ -55,4 +55,12 @@ describe('Frontdesk Store-scoped table presentation', () => {
       ['B', 'start'],
     ])
   })
+
+  it('prefers authoritative order display projection while retaining the original slot identity', () => {
+    const [slot] = buildTableSlots([table({ occupancyMode: 'full', fullOrder: { orderId: 'ORDER1', backendTableNo: 'C1-A', backendTableDisplayName: 'C1里' } })])
+    expect(slot.id).toBe('C1-full')
+    expect(slot.label).toBe('C1')
+    expect(slot.backendTableNo).toBe('C1-A')
+    expect(slot.displayLabel).toBe('C1里')
+  })
 })

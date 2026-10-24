@@ -2541,6 +2541,36 @@ Restaurant_System/
 
 ### 1.5 Table System
 
+Each dining table persists its own `split_label_mode`: `LEFT_RIGHT` (default)
+or `INSIDE_OUTSIDE`. Dining Tables Add/Edit exposes **Split Label / 拆桌命名方式**
+when Table Config is Split. The existing endpoints save and reload this field;
+omitting it on an old client preserves an existing value. V39 adds only this
+column with a non-null default and a two-value check; all pre-existing table
+codes, names, capacity, areas, sort order, configuration and order identities stay intact.
+
+The raw slot/order identity remains `<table_name>-A` / `<table_name>-B`.
+`DiningTableDisplayService` and the frontend `tableDisplay` helper project the
+configured name for display: LEFT_RIGHT preserves `1-左` / `1-右`, INSIDE_OUTSIDE
+shows `1里` / `1外`. Exact literal table names take precedence; independent single
+tables named `13里` and `13外` stay separate. Duplicate table codes are supported;
+mode resolution uses Store plus exact table name, never an arbitrary code match.
+Frontdesk cards, ordering/edit/update summaries and order center/history share
+these display values; `table_display_name` is additive to order DTOs and never
+replaces `table_no` in routes, drafts, offline keys, requests, filters or occupancy.
+Display-only table configuration reuses the existing account/Organization/Store
+workspace snapshot cache; unknown offline configuration falls back to the legacy display.
+
+Changing a mode is rejected while any non-completed/non-cancelled dine-in order
+(including empty drafts, full table, A/B and legacy code aliases) occupies the
+table. Scoped table row locks serialize mode changes with new draft/submission
+and draft-header context changes. Orders retain independent A/B identity through
+Update and Finish. A completed order's display field is a current configuration
+projection; its raw stored identity and frozen receipt text are not rewritten.
+New six-type dine-in receipts use the same backend display and preserve leftmost
+LARGE table text, inline UPDATE and exactly one extra nominal 16mm top feed.
+Takeout and existing frozen PrintJobs are unchanged. See
+[split-label release evidence](docs/SPLIT_TABLE_LABEL_MODE_20261024.md).
+
 Current frontend table behavior in code:
 
 - Table rendering is configuration-driven per table.

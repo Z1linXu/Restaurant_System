@@ -1,0 +1,82 @@
+{
+  "schema": "SPLIT_LABEL_ROLLBACK_COMPATIBILITY_V1",
+  "result": "PASS",
+  "old_source_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+  "old_backend_image": "sha256:a16b8a2feacd7eed97cc2e3d971c9bd993455d262c85fe955cfdf340807b58a5",
+  "old_jar_sha256": "202a70d9f9be340cf4fe20f23f0d4978d13340d7e440e6caf8378a25e2479b49",
+  "local_db_isolated": true,
+  "local_database": {
+    "host": "127.0.0.1",
+    "port": 55989,
+    "database": "split_label_rollback"
+  },
+  "shared_databases_connected": false,
+  "production_operations": [
+    "read_only_docker_cp",
+    "read_only_container_image_inspect",
+    "scp_artifact_download"
+  ],
+  "production_business_writes": false,
+  "staging_mutated": false,
+  "runtime_seeder_enabled": false,
+  "uber_worker_enabled": false,
+  "daily_close_enabled": false,
+  "print_dispatch_initial_delay_ms": 2147483647,
+  "health_requests_only_loopback": true,
+  "processes": [
+    {
+      "stage": "old-jar-on-v38",
+      "pid": 49987,
+      "stopped": true,
+      "log": "/var/folders/mv/zwf0xhl1235cdw_hl6gtxyd80000gn/T/split-label-rollback-0_ih13tq/old-jar-on-v38.log",
+      "health": "UP",
+      "health_bind": "127.0.0.1",
+      "health_port": 56109,
+      "hibernate_validate": "PASS",
+      "runtime_seed_disabled_log": true,
+      "flyway_validate_on_migrate": true,
+      "exit_code": 143
+    },
+    {
+      "stage": "old-jar-on-v39",
+      "pid": 50052,
+      "stopped": true,
+      "log": "/var/folders/mv/zwf0xhl1235cdw_hl6gtxyd80000gn/T/split-label-rollback-0_ih13tq/old-jar-on-v39.log",
+      "health": "UP",
+      "health_bind": "127.0.0.1",
+      "health_port": 56133,
+      "hibernate_validate": "PASS",
+      "runtime_seed_disabled_log": true,
+      "flyway_validate_on_migrate": true,
+      "exit_code": 143
+    }
+  ],
+  "private_log_directory": "/var/folders/mv/zwf0xhl1235cdw_hl6gtxyd80000gn/T/split-label-rollback-0_ih13tq",
+  "database_created_empty": true,
+  "jar_latest_migration": 38,
+  "v38_startup": "PASS",
+  "v39_sql_sha256": "bae5cbe1b38e06be34ab39ec8c69d0ac1ea01910549706b01bb61c3bb3927893",
+  "v39_applied_registered_by_flyway": true,
+  "v39_history": "39|V39__add_dining_table_split_label_mode.sql|1431202837|true",
+  "v39_column": "character varying|NO|'LEFT_RIGHT'::character varying",
+  "v39_startup": "PASS",
+  "flyway_future_v39_ignored_by_old_jar_default": "PASS",
+  "old_jar_flyway_no_ignore_override": true,
+  "hibernate_validate_on_v39": "PASS",
+  "health_on_v39": "UP",
+  "local_table_counts": {
+    "orders": 0,
+    "print_jobs": 0,
+    "dining_tables": 0
+  },
+  "all_owned_processes_stopped": true,
+  "root_postgres_server_stopped": false,
+  "duration_seconds": 12.82,
+  "finished_at": "2026-10-24T04:41:41.492048+00:00",
+  "owned_processes_absent_os_verified": true,
+  "remaining_local_application_connections": 0,
+  "root_postgres_server_still_responding": true,
+  "repository_files_modified": false,
+  "maven_target_used": false,
+  "scope_limit": "Startup/Flyway/Hibernate compatibility against additive V39; no Production rollback or business-flow mutation performed."
+}

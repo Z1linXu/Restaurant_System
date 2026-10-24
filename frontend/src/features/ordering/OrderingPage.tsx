@@ -38,6 +38,8 @@ interface OrderingPageProps {
   }
   slotLabel: string
   tableLabel: string
+  tableDisplayName?: string
+  slotDisplayName?: string
   orderType?: 'dine_in' | 'pickup'
   pickupLabel?: string | null
   workstationLabel?: string | null
@@ -89,6 +91,8 @@ export function OrderingPage({
   catalog,
   slotLabel,
   tableLabel,
+  tableDisplayName,
+  slotDisplayName,
   orderType = 'dine_in',
   pickupLabel = null,
   workstationLabel = null,
@@ -554,6 +558,8 @@ export function OrderingPage({
         <OrderingTopBar
           tableLabel={tableLabel}
           slotLabel={slotLabel}
+          tableDisplayName={tableDisplayName}
+          slotDisplayName={orderType === 'dine_in' ? order?.table_display_name || slotDisplayName : slotDisplayName}
           orderType={orderType}
           pickupLabel={effectivePickupLabel}
           workstationLabel={workstationLabel}
@@ -633,6 +639,7 @@ export function OrderingPage({
           {session ? (
             <OrderSummaryPanel
               session={session}
+              slotDisplayName={orderType === 'dine_in' ? order?.table_display_name || slotDisplayName : session.slotLabel}
               subtotal={subtotal}
               tax={tax}
               total={total}

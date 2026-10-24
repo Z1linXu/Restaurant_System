@@ -1,4 +1,5 @@
 import type { BackendOrderResponse, OrderPrintOption } from '../../../types/ordering'
+import { orderLocationDisplay } from '../../../utils/tableDisplay'
 import type { PrintJobRecord } from '../../../services/printingAdminService'
 import {
   orderStatusDisplayLabel,
@@ -34,7 +35,7 @@ export function OrderHistoryDetail({
     return <div className="rounded-[28px] bg-white p-8 text-center text-[var(--muted)]">请选择一个订单查看详情。</div>
   }
 
-  const location = order.table_no || order.pickup_no || '现场'
+  const location = orderLocationDisplay(order, '现场')
   const attentionJobs = printJobs.filter((job) => job.status === 'FAILED' || job.status === 'CANCELLED')
   return (
     <section className="rounded-[28px] bg-white p-5 shadow-[0_16px_36px_rgba(26,28,25,0.06)]">

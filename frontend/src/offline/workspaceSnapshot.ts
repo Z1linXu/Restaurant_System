@@ -1,4 +1,6 @@
 import type { AuthUser, LoginResponse } from '../services/authService'
+import type { BackendDiningTableConfig } from '../types/dinein'
+import type { MenuCacheScope } from './menuCache'
 import type {
   StoreContextResponse,
   WorkspaceOrganization,
@@ -43,6 +45,36 @@ interface StoreContextSnapshotRecord {
   context: StoreContextResponse
   validatedAt: string
   schemaVersion: number
+}
+
+interface DiningTableSnapshotRecord extends MenuCacheScope {
+  key: string
+  tables: BackendDiningTableConfig[]
+  validatedAt: string
+  schemaVersion: number
+}
+
+function diningTableKey(scope: MenuCacheScope) {
+  return `tables:account:${scope.accountId}:organization:${scope.organizationId}:store:${scope.storeId}`
+}
+
+export async function saveDiningTableSnapshot(scope: MenuCacheScope, tables: BackendDiningTableConfig[]) {
+  const record: DiningTableSnapshotRecord = {
+    ...scope,
+    key: diningTableKey(scope),
+    tables: tables.filter((table) => table.store_id === scope.storeId),
+    validatedAt: new Date().toISOString(),
+    schemaVersion: WORKSPACE_SNAPSHOT_SCHEMA_VERSION,
+  }
+  await writeSnapshotRecord(record)
+}
+
+export async function readDiningTableSnapshot(scope: MenuCacheScope) {
+  const record = await readSnapshotRecord<DiningTableSnapshotRecord>(diningTableKey(scope))
+  return isSnapshotRecordUsable(record)
+    && record!.accountId === scope.accountId && record!.organizationId === scope.organizationId
+    && record!.storeId === scope.storeId && record!.tables.every((table) => table.store_id === scope.storeId)
+    ? record!.tables : null
 }
 
 export interface RestrictedAuthSnapshot {

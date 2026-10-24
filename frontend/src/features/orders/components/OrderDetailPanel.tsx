@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { orderLocationDisplay } from '../../../utils/tableDisplay'
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import { Input } from '../../../components/ui/Input'
@@ -40,7 +41,7 @@ const BILL_LABELS: BillId[] = ['A', 'B', 'C', 'D']
 const EMPTY_UNASSIGNED: ItemAllocation = { mode: 'UNASSIGNED' }
 
 function getOrderDisplayLabel(order: BackendOrderResponse) {
-  return order.table_no ?? order.pickup_no ?? `#${order.id}`
+  return orderLocationDisplay(order, `#${order.id}`)
 }
 
 function toCents(amount: number) {

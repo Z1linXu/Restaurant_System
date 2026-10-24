@@ -66,7 +66,7 @@ import org.springframework.test.context.ContextConfiguration;
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ContextConfiguration(classes = OrderPricingSnapshotIntegrationTest.JpaConfiguration.class)
-@Import({OrderServiceImpl.class, StoreAddonOptionResolver.class, com.restaurant.system.menu.remove.StoreRemoveOptionResolver.class, com.restaurant.system.menu.remove.RemoveSelectionValidator.class})
+@Import({OrderServiceImpl.class, StoreAddonOptionResolver.class, com.restaurant.system.menu.remove.StoreRemoveOptionResolver.class, com.restaurant.system.menu.remove.RemoveSelectionValidator.class, com.restaurant.system.station.service.DiningTableDisplayService.class})
 class OrderPricingSnapshotIntegrationTest {
     @SpringBootConfiguration
     @EnableAutoConfiguration(exclude = MybatisPlusAutoConfiguration.class)

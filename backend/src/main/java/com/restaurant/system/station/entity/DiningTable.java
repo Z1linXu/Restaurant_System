@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import lombok.Data;
@@ -34,6 +35,9 @@ public class DiningTable {
     @Column(name = "table_config")
     public String table_config;
 
+    @Column(name = "split_label_mode", nullable = false, length = 16)
+    public String split_label_mode;
+
     @Column(name = "capacity")
     public Integer capacity;
 
@@ -51,4 +55,9 @@ public class DiningTable {
 
     @Column(name = "updated_at")
     public LocalDateTime updated_at;
+
+    @PrePersist
+    void defaultSplitLabelMode() {
+        if (split_label_mode == null) split_label_mode = "LEFT_RIGHT";
+    }
 }

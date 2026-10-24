@@ -9,6 +9,7 @@ import { OfflineOrderStatusPanel } from '../../offline/OfflineOrderStatusPanel'
 
 interface OrderSummaryPanelProps {
   session: OrderSession
+  slotDisplayName?: string
   subtotal: number
   tax: number
   total: number
@@ -34,6 +35,7 @@ interface OrderSummaryPanelProps {
 
 export function OrderSummaryPanel({
   session,
+  slotDisplayName,
   subtotal,
   tax,
   total,
@@ -56,7 +58,7 @@ export function OrderSummaryPanel({
   onReturnQueuedOrderToDraft,
   compact = false,
 }: OrderSummaryPanelProps) {
-  const displaySlotLabel = formatSplitSlotLabel(session.slotLabel)
+  const displaySlotLabel = slotDisplayName ?? formatSplitSlotLabel(session.slotLabel)
   const statusLabel = orderStatusDisplayLabel(session.status)
   const isDraft = session.status === 'draft'
   const canConfirmUpdate = !isDraft && session.isModifiedAfterSubmit

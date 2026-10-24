@@ -37,6 +37,7 @@ import com.restaurant.system.printing.entity.PrintJob;
 import com.restaurant.system.printing.entity.PrinterAssignment;
 import com.restaurant.system.printing.entity.PrinterConfig;
 import com.restaurant.system.printing.renderer.PrintMarkup;
+import com.restaurant.system.station.service.DiningTableDisplayService;
 import com.restaurant.system.printing.renderer.PrintTableDisplayFormatter;
 import com.restaurant.system.printing.renderer.ReceiptRenderer;
 import com.restaurant.system.printing.repository.PrintJobRepository;
@@ -99,6 +100,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
     private final StoreModuleCapabilityProvider moduleCapabilityProvider;
     private final StorePrintingRoleRequirementService printingRoleRequirementService;
     private final PrintingDisplayRuleService printingDisplayRuleService;
+    private final DiningTableDisplayService diningTableDisplayService;
 
     public PrintDispatcherServiceImpl(
         PrinterConfigService printerConfigService,
@@ -120,7 +122,8 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         StoreModuleAccessEvaluator moduleAccessEvaluator,
         StoreModuleCapabilityProvider moduleCapabilityProvider,
         StorePrintingRoleRequirementService printingRoleRequirementService,
-        PrintingDisplayRuleService printingDisplayRuleService
+        PrintingDisplayRuleService printingDisplayRuleService,
+        DiningTableDisplayService diningTableDisplayService
     ) {
         this.printerConfigService = printerConfigService;
         this.printerConfigRepository = printerConfigRepository;
@@ -142,6 +145,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         this.moduleCapabilityProvider = moduleCapabilityProvider;
         this.printingRoleRequirementService = printingRoleRequirementService;
         this.printingDisplayRuleService = printingDisplayRuleService;
+        this.diningTableDisplayService = diningTableDisplayService;
     }
 
     @Override
@@ -1160,6 +1164,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         PrintRenderRequest request = new PrintRenderRequest();
         request.module_code = moduleCode;
         request.store = store;
+        diningTableDisplayService.apply(order);
         request.order = order;
         request.order_items = orderItems;
         request.order_item_options = orderItemOptions;

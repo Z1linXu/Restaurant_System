@@ -3,6 +3,7 @@ export type ServiceMode = 'dine_in' | 'takeout'
 export type TableStatus = 'available' | 'occupied' | 'alert'
 
 export type TableSeatCode = 'A' | 'B'
+export type SplitLabelMode = 'LEFT_RIGHT' | 'INSIDE_OUTSIDE'
 
 export type TableConfigMode = 'split_supported' | 'single_only'
 
@@ -13,6 +14,7 @@ export interface SlotOrder {
   orderDbId?: number
   orderStatus?: string
   backendTableNo?: string
+  backendTableDisplayName?: string
 }
 
 export interface DiningTable {
@@ -21,6 +23,7 @@ export interface DiningTable {
   seats: number
   zone: string
   tableConfig: TableConfigMode
+  splitLabelMode?: SplitLabelMode
   occupancyMode: TableOccupancyMode
   alertMessage?: string
   fullOrder?: SlotOrder
@@ -30,6 +33,8 @@ export interface DiningTable {
 export interface TableSlot {
   id: string
   label: string
+  displayLabel?: string
+  splitLabelMode?: SplitLabelMode
   baseTableLabel: string
   zone: string
   status: TableStatus
@@ -56,6 +61,7 @@ export interface BackendDiningTableConfig {
   table_config: TableConfigMode
   capacity: number
   supports_split: boolean
+  split_label_mode?: SplitLabelMode
   sort_order: number
   is_active: boolean
 }

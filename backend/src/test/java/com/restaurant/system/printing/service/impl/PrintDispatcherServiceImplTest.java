@@ -108,6 +108,8 @@ class PrintDispatcherServiceImplTest {
     private OrderDispatchOutboxService orderDispatchOutboxService;
     @Mock
     private PrintingDisplayRuleService printingDisplayRuleService;
+    @Mock
+    private com.restaurant.system.station.service.DiningTableDisplayService diningTableDisplayService;
 
     private PrintDispatcherServiceImpl service;
 
@@ -150,8 +152,27 @@ class PrintDispatcherServiceImplTest {
             moduleAccessEvaluator,
             moduleCapabilityProvider,
             printingRoleRequirementService,
-            printingDisplayRuleService
+            printingDisplayRuleService,
+            diningTableDisplayService
         );
+    }
+
+    @Test
+    void renderRequestUsesDisplayProjectionWithoutChangingRawTableOrDispatchingJobs() {
+        var store = new Store(); store.id = 1L;
+        var order = new Order(); order.id = 9L; order.store_id = store.id;
+        order.order_type = "dine_in"; order.table_no = "1-A";
+        when(storeRepository.findById(1L)).thenReturn(Optional.of(store));
+        when(orderRepository.findById(9L)).thenReturn(Optional.of(order));
+        org.mockito.Mockito.doAnswer(invocation -> { order.table_display_name = "1里"; return null; })
+            .when(diningTableDisplayService).apply(order);
+        service.hasPrintableUpdateContent(PrintModuleCode.HOT_KITCHEN, 1L, 9L, 77L);
+        var request = org.mockito.ArgumentCaptor.forClass(PrintRenderRequest.class);
+        verify(hotKitchenPrintEligibilityService).hasHotKitchenContent(request.capture());
+        assertEquals("1里", request.getValue().order.table_display_name);
+        assertEquals("1-A", request.getValue().order.table_no);
+        assertEquals(Boolean.TRUE, request.getValue().is_update_ticket);
+        verifyNoInteractions(printJobService);
     }
 
     private StoreModuleAccessEvaluation printingAllowed() {
@@ -671,6 +692,7 @@ class PrintDispatcherServiceImplTest {
         verify(grabRenderer, never()).render(any());
         verify(frontdeskRenderer, never()).render(any());
         verify(hotKitchenRenderer, never()).render(any());
+        verify(diningTableDisplayService, never()).apply(any());
         verifyNoInteractions(printerTransport);
     }
 

@@ -63,6 +63,7 @@ import com.restaurant.system.printing.semantic.KitchenModifierTokenResolver;
 import com.restaurant.system.printing.service.PrintDispatcherService;
 import com.restaurant.system.station.entity.Station;
 import com.restaurant.system.station.repository.StationRepository;
+import com.restaurant.system.station.service.DiningTableDisplayService;
 import com.restaurant.system.user.entity.Store;
 import com.restaurant.system.user.repository.StoreRepository;
 import jakarta.transaction.Transactional;
@@ -158,6 +159,7 @@ public class OrderServiceImpl implements OrderService {
 
     private final StoreAddonOptionResolver addonResolver;
     private RemoveSelectionValidator removeSelectionValidator;
+    private final DiningTableDisplayService diningTableDisplayService;
 
     @org.springframework.beans.factory.annotation.Autowired
     public void setRemoveSelectionValidator(RemoveSelectionValidator validator) {
@@ -207,9 +209,11 @@ public class OrderServiceImpl implements OrderService {
         PrintDispatcherService printDispatcherService,
         StoreComboConfigurationService storeComboConfigurationService,
         PrintingDisplayRuleService printingDisplayRuleService,
-        jakarta.persistence.EntityManager entityManager
+        jakarta.persistence.EntityManager entityManager,
+        DiningTableDisplayService diningTableDisplayService
     ) {
         this.entityManager = entityManager;
+        this.diningTableDisplayService = diningTableDisplayService;
         this.addonResolver = addonResolver;
         this.orderRepository = orderRepository;
         this.orderUpdateBatchRepository = orderUpdateBatchRepository;
@@ -258,6 +262,7 @@ public class OrderServiceImpl implements OrderService {
 
     private OrderResponse createOrder(CreateOrderRequest request, String externalOrderId, String displayId, String customerName) {
         LocalDateTime now = LocalDateTime.now();
+        lockTableContexts(request.store_id, request.order_type, request.table_no);
         Order existingEditableOrder = findExistingEditableOrder(request.store_id, request.table_no, request.pickup_no);
         if (existingEditableOrder != null) {
             return loadOrderResponse(existingEditableOrder.id);
@@ -330,7 +335,12 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse updateDraftOrderHeader(Long id, UpdateDraftOrderHeaderRequest request) {
-        Order order = requireDraftOrder(id);
+        Order before = requireOrder(id);
+        Order order = lockOrderForTableChange(before, before.store_id,
+            request.order_type == null ? before.order_type : request.order_type,
+            request.table_no == null ? before.table_no : request.table_no);
+        requireInStoreOrder(order);
+        if (!ORDER_STATUS_DRAFT.equals(order.status)) throw new BusinessException("Only draft orders can be edited");
         if (request.order_type != null) {
             if (request.order_type.isBlank()) {
                 throw new BusinessException("order_type cannot be blank");
@@ -523,6 +533,7 @@ public class OrderServiceImpl implements OrderService {
         rejectExternalOrderNote(request);
         OrderResponse draft;
         if (serverOrderId == null) {
+            lockTableContexts(request.store_id, request.order_type, request.table_no);
             Order existingOrder = findExistingEditableOrder(request.store_id, request.table_no, request.pickup_no);
             if (existingOrder != null) {
                 throw new OrderSubmissionException(
@@ -533,10 +544,11 @@ public class OrderServiceImpl implements OrderService {
             }
             draft = createOrder(request);
         } else {
-            Order existingDraft = orderRepository.findByIdForUpdate(serverOrderId);
-            if (existingDraft == null) {
+            Order before = orderRepository.findExistingById(serverOrderId);
+            if (before == null) {
                 throw new BusinessException("Server draft order not found: " + serverOrderId);
             }
+            Order existingDraft = lockOrderForTableChange(before, request.store_id, request.order_type, request.table_no);
             if (!request.store_id.equals(existingDraft.store_id)) {
                 throw new BusinessException("STORE_MISMATCH: Server draft belongs to another store");
             }
@@ -910,6 +922,7 @@ public class OrderServiceImpl implements OrderService {
             response.order_no = order.order_no;
             response.order_type = order.order_type;
             response.table_no = order.table_no;
+            response.table_display_name = tableDisplayName(order);
             response.pickup_no = order.pickup_no;
             response.order_status = order.status;
             response.is_modified_after_submit = Boolean.TRUE.equals(order.is_modified_after_submit);
@@ -1542,6 +1555,33 @@ public class OrderServiceImpl implements OrderService {
         return null;
     }
 
+    private String tableDisplayName(Order order) {
+        if (!"dine_in".equalsIgnoreCase(order.order_type) || order.kitchenMirror()) return order.table_no;
+        return diningTableDisplayService.displayName(order.store_id, order.table_no);
+    }
+
+    private void lockTableContexts(Long storeId, String orderType, String... tableNos) {
+        if ("dine_in".equalsIgnoreCase(orderType)) {
+            diningTableDisplayService.lockContexts(storeId, tableNos);
+        }
+    }
+
+    private Order lockOrderForTableChange(Order before, Long storeId, String newType, String newTableNo) {
+        if (!Objects.equals(before.store_id, storeId)) throw new BusinessException("STORE_MISMATCH: Server draft belongs to another store");
+        String oldType = before.order_type;
+        String oldTable = before.table_no;
+        String oldPickup = before.pickup_no;
+        diningTableDisplayService.lockContexts(storeId,
+            "dine_in".equalsIgnoreCase(oldType) ? oldTable : null,
+            "dine_in".equalsIgnoreCase(newType) ? newTableNo : null);
+        Order locked = requireOrderForUpdate(before.id);
+        if (!Objects.equals(storeId, locked.store_id) || !Objects.equals(oldType, locked.order_type)
+            || !Objects.equals(oldTable, locked.table_no) || !Objects.equals(oldPickup, locked.pickup_no)) {
+            throw new OrderSubmissionException("ORDER_CONTEXT_CONFLICT", HttpStatus.CONFLICT, "Order context changed; refresh before continuing");
+        }
+        return locked;
+    }
+
     private OrderItem requireOrderItem(Long itemId) {
         OrderItem orderItem = orderItemRepository.findExistingById(itemId);
         if (orderItem == null) {
@@ -1812,6 +1852,7 @@ public class OrderServiceImpl implements OrderService {
         response.created_by = order.created_by;
         response.order_type = order.order_type;
         response.table_no = order.table_no;
+        response.table_display_name = tableDisplayName(order);
         response.pickup_no = order.pickup_no;
         response.subtotal_amount = defaultIfNull(order.subtotal_amount);
         response.discount_amount = defaultIfNull(order.discount_amount);

@@ -28,6 +28,9 @@ import com.restaurant.system.platform.repository.OrganizationRepository;
 import com.restaurant.system.platform.repository.RestaurantTemplateRepository;
 import com.restaurant.system.platform.repository.StoreKdsDisplayConfigRepository;
 import com.restaurant.system.platform.service.PlatformAdminService;
+import com.restaurant.system.order.repository.OrderRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import com.restaurant.system.station.entity.DiningTable;
 import com.restaurant.system.station.entity.Station;
 import com.restaurant.system.station.repository.DiningTableRepository;
@@ -59,6 +62,8 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
     private final StoreRepository storeRepository;
     private final StationRepository stationRepository;
     private final DiningTableRepository diningTableRepository;
+    private final OrderRepository orderRepository;
+    private final EntityManager entityManager;
     private final MenuCategoryRepository menuCategoryRepository;
     private final MenuItemRepository menuItemRepository;
     private final MenuItemOptionRepository menuItemOptionRepository;
@@ -85,6 +90,8 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         StoreRepository storeRepository,
         StationRepository stationRepository,
         DiningTableRepository diningTableRepository,
+        OrderRepository orderRepository,
+        EntityManager entityManager,
         MenuCategoryRepository menuCategoryRepository,
         MenuItemRepository menuItemRepository,
         MenuItemOptionRepository menuItemOptionRepository,
@@ -101,6 +108,8 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         this.storeRepository = storeRepository;
         this.stationRepository = stationRepository;
         this.diningTableRepository = diningTableRepository;
+        this.orderRepository = orderRepository;
+        this.entityManager = entityManager;
         this.menuCategoryRepository = menuCategoryRepository;
         this.menuItemRepository = menuItemRepository;
         this.menuItemOptionRepository = menuItemOptionRepository;
@@ -256,18 +265,48 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
     public DiningTable saveDiningTable(DiningTable diningTable) {
         DiningTable target = diningTable.id == null
             ? new DiningTable()
-            : diningTableRepository.findById(diningTable.id).orElseThrow(() -> new BusinessException("Dining table not found"));
+            : diningTableRepository.findByIdAndStoreIdForUpdate(diningTable.id, diningTable.store_id);
+        if (target == null) throw new BusinessException("Dining table not found in this store");
+        if (diningTable.id != null) entityManager.refresh(target, LockModeType.PESSIMISTIC_WRITE);
+        String previousMode = target.split_label_mode == null ? "LEFT_RIGHT" : target.split_label_mode;
+        String nextMode = diningTable.split_label_mode == null ? previousMode : diningTable.split_label_mode;
+        if (!List.of("LEFT_RIGHT", "INSIDE_OUTSIDE").contains(nextMode)) {
+            throw new BusinessException("Invalid split_label_mode: use LEFT_RIGHT or INSIDE_OUTSIDE");
+        }
+        if (!previousMode.equals(nextMode)) {
+            String identity = diningTable.id == null ? tableIdentity(diningTable) : tableIdentity(target);
+            if (!identity.isBlank()) {
+                if (diningTableRepository.findAllByStoreIdAndTableName(diningTable.store_id, identity).stream()
+                    .anyMatch(table -> !java.util.Objects.equals(table.id, diningTable.id))) {
+                    throw new BusinessException("Split label mode requires a unique table name in this store");
+                }
+                List<String> identities = new ArrayList<>(List.of(identity, identity + "-A", identity + "-B"));
+                String legacyCode = diningTable.id == null ? diningTable.table_code : target.table_code;
+                if (legacyCode != null && !legacyCode.isBlank() && !legacyCode.equals(identity)) {
+                    identities.addAll(List.of(legacyCode, legacyCode + "-A", legacyCode + "-B"));
+                }
+                if (orderRepository.hasActiveDiningTableOrders(diningTable.store_id, identities)) {
+                    throw new BusinessException("Finish all active orders on this table before changing Split Label / 拆桌命名方式");
+                }
+            }
+        }
         target.store_id = diningTable.store_id;
         target.table_code = diningTable.table_code;
         target.table_name = diningTable.table_name;
         target.area_name = diningTable.area_name;
         target.table_config = diningTable.table_config;
+        target.split_label_mode = nextMode;
         target.capacity = diningTable.capacity;
         target.supports_split = diningTable.supports_split;
         target.sort_order = diningTable.sort_order;
         target.is_active = diningTable.is_active == null ? true : diningTable.is_active;
         stamp(target, diningTable.id == null);
         return diningTableRepository.save(target);
+    }
+
+    private static String tableIdentity(DiningTable table) {
+        return table.table_name == null || table.table_name.isBlank()
+            ? (table.table_code == null ? "" : table.table_code) : table.table_name;
     }
 
     @Override

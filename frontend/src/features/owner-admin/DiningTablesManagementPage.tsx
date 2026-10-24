@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   fetchPlatformOverview,
   savePlatformEntity,
@@ -6,6 +6,7 @@ import {
   type PlatformAdminOverview,
 } from '../../services/platformAdminService'
 import { useCurrentStore } from '../store/useStoreContext'
+import { formatConfiguredSplitLabel, normalizeSplitLabelMode } from '../../utils/tableDisplay'
 
 type ToastState =
   | { kind: 'success' | 'error'; message: string }
@@ -34,6 +35,7 @@ function toDiningTableRecord(record: Record<string, unknown>, fallbackStoreId: n
     table_config: asString(record.table_config, 'single_only'),
     capacity: asNumber(record.capacity, 4),
     supports_split: asBoolean(record.supports_split, false),
+    split_label_mode: normalizeSplitLabelMode(record.split_label_mode),
     sort_order: asNumber(record.sort_order, 1),
     is_active: asBoolean(record.is_active, true),
   }
@@ -48,6 +50,7 @@ function buildDraft(storeId: number) {
     table_config: 'single_only',
     capacity: 4,
     supports_split: false,
+    split_label_mode: 'LEFT_RIGHT',
     sort_order: 1,
     is_active: true,
   } satisfies DiningTableRecord
@@ -61,6 +64,7 @@ function sameSavedValues(expected: DiningTableRecord, actual: DiningTableRecord)
     expected.table_config === actual.table_config &&
     expected.capacity === actual.capacity &&
     expected.supports_split === actual.supports_split &&
+    normalizeSplitLabelMode(expected.split_label_mode) === normalizeSplitLabelMode(actual.split_label_mode) &&
     expected.sort_order === actual.sort_order &&
     expected.is_active === actual.is_active
   )
@@ -78,12 +82,17 @@ export function DiningTablesManagementPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [areaFilter, setAreaFilter] = useState('all')
   const [editor, setEditor] = useState<DiningTableRecord | null>(null)
+  const loadId = useRef(0)
+  const selectedStoreRef = useRef(selectedStoreId)
+  selectedStoreRef.current = selectedStoreId
 
   const loadOverview = async (storeId: number) => {
+    const requestId = ++loadId.current
     setLoading(true)
     setError(null)
     try {
       const nextOverview = await fetchPlatformOverview(storeId)
+      if (requestId !== loadId.current || Number(selectedStoreRef.current) !== storeId) return
       setOverview(nextOverview)
       setTables(
         (nextOverview.dining_tables ?? [])
@@ -92,9 +101,9 @@ export function DiningTablesManagementPage() {
           .sort((left, right) => left.sort_order - right.sort_order || left.table_name.localeCompare(right.table_name)),
       )
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load dining tables')
+      if (requestId === loadId.current) setError(loadError instanceof Error ? loadError.message : 'Failed to load dining tables')
     } finally {
-      setLoading(false)
+      if (requestId === loadId.current) setLoading(false)
     }
   }
 
@@ -103,7 +112,10 @@ export function DiningTablesManagementPage() {
   }, [storeId])
 
   useEffect(() => {
+    setTables([])
+    setEditor(null)
     void loadOverview(Number(selectedStoreId))
+    return () => { loadId.current += 1 }
   }, [selectedStoreId])
 
   const stores = useMemo(
@@ -127,6 +139,7 @@ export function DiningTablesManagementPage() {
   const filteredTables = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
     return tables.filter((table) => {
+      if (table.store_id !== Number(selectedStoreId)) return false
       if (areaFilter !== 'all' && table.area_name !== areaFilter) {
         return false
       }
@@ -137,7 +150,7 @@ export function DiningTablesManagementPage() {
         .map((value) => value.toLowerCase())
         .some((value) => value.includes(query))
     })
-  }, [areaFilter, searchTerm, tables])
+  }, [areaFilter, searchTerm, selectedStoreId, tables])
 
   const openCreate = () => {
     setToast(null)
@@ -151,12 +164,14 @@ export function DiningTablesManagementPage() {
 
   const refreshTables = async (storeId: number) => {
     const nextOverview = await fetchPlatformOverview(storeId)
-    setOverview(nextOverview)
     const nextTables = (nextOverview.dining_tables ?? [])
       .map((record) => toDiningTableRecord(record, storeId))
       .filter((record) => record.store_id === storeId)
       .sort((left, right) => left.sort_order - right.sort_order || left.table_name.localeCompare(right.table_name))
-    setTables(nextTables)
+    if (Number(selectedStoreRef.current) === storeId) {
+      setOverview(nextOverview)
+      setTables(nextTables)
+    }
     return nextTables
   }
 
@@ -171,6 +186,7 @@ export function DiningTablesManagementPage() {
       const saved = await savePlatformEntity('dining-tables', editor as unknown as Record<string, unknown>, editor.id)
       const persistedId = asNumber(saved.id ?? editor.id, 0)
       const reloadedTables = await refreshTables(Number(selectedStoreId))
+      if (Number(selectedStoreRef.current) !== editor.store_id) return
       const persistedTable = reloadedTables.find((table) => table.id === persistedId)
 
       if (!persistedTable) {
@@ -208,6 +224,7 @@ export function DiningTablesManagementPage() {
                   <div className="rounded-[16px] bg-[rgba(26,28,25,0.04)] px-3 py-2.5">
                     <div className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Store</div>
                     <select
+                      aria-label="Dining table Store"
                       value={selectedStoreId}
                       onChange={(event) => setSelectedStoreId(event.target.value)}
                       className="mt-1 min-w-[220px] bg-transparent text-[0.95rem] font-semibold text-[var(--on-surface)] outline-none"
@@ -301,7 +318,7 @@ export function DiningTablesManagementPage() {
                         <span className="text-[0.92rem] font-semibold text-[var(--on-surface)]">{table.table_code}</span>
                         <span className="text-[0.92rem] text-[var(--on-surface)]">{table.table_name}</span>
                         <span className="text-[0.84rem] text-[var(--muted)]">{table.area_name}</span>
-                        <span className="text-[0.84rem] text-[var(--muted)]">{table.supports_split ? 'Split' : 'Single'}</span>
+                        <span className="text-[0.84rem] text-[var(--muted)]">{table.supports_split ? `Split · ${table.split_label_mode === 'INSIDE_OUTSIDE' ? '里 / 外' : '左 / 右'}` : 'Single'}</span>
                         <span className="text-[0.84rem] text-[var(--muted)]">{table.capacity}</span>
                         <span className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[0.76rem] font-semibold ${table.is_active ? 'bg-[rgba(18,141,77,0.1)] text-[rgb(25,112,69)]' : 'bg-[rgba(26,28,25,0.08)] text-[var(--muted)]'}`}>
                           {table.is_active ? 'Active' : 'Inactive'}
@@ -329,6 +346,7 @@ export function DiningTablesManagementPage() {
                     <label className="block text-[0.84rem] text-[var(--muted)]">
                       Table Code
                       <input
+                        aria-label="Table Code"
                         value={editor.table_code}
                         onChange={(event) => setEditor((current) => (current ? { ...current, table_code: event.target.value } : current))}
                         className="mt-1 w-full rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.95rem] text-[var(--on-surface)] outline-none"
@@ -338,6 +356,7 @@ export function DiningTablesManagementPage() {
                     <label className="block text-[0.84rem] text-[var(--muted)]">
                       Table Name
                       <input
+                        aria-label="Table Name"
                         value={editor.table_name}
                         onChange={(event) => setEditor((current) => (current ? { ...current, table_name: event.target.value } : current))}
                         className="mt-1 w-full rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.95rem] text-[var(--on-surface)] outline-none"
@@ -357,6 +376,7 @@ export function DiningTablesManagementPage() {
                       <label className="block text-[0.84rem] text-[var(--muted)]">
                         Table Config
                         <select
+                          aria-label="Table Config"
                           value={editor.table_config}
                           onChange={(event) =>
                             setEditor((current) =>
@@ -387,6 +407,21 @@ export function DiningTablesManagementPage() {
                         />
                       </label>
                     </div>
+
+                    <label className="block text-[0.84rem] text-[var(--muted)]">
+                      Split Label / 拆桌命名方式
+                      <select
+                        aria-label="Split Label Mode"
+                        value={normalizeSplitLabelMode(editor.split_label_mode)}
+                        disabled={!editor.supports_split}
+                        onChange={(event) => setEditor((current) => current ? { ...current, split_label_mode: normalizeSplitLabelMode(event.target.value) } : current)}
+                        className="mt-1 w-full rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.95rem] text-[var(--on-surface)] outline-none disabled:opacity-60"
+                      >
+                        <option value="LEFT_RIGHT">Left / Right · 左 / 右</option>
+                        <option value="INSIDE_OUTSIDE">Inside / Outside · 里 / 外</option>
+                      </select>
+                      {editor.supports_split ? <span className="mt-1 block">{formatConfiguredSplitLabel(editor.table_name || editor.table_code, 'A', editor.split_label_mode)} / {formatConfiguredSplitLabel(editor.table_name || editor.table_code, 'B', editor.split_label_mode)}</span> : null}
+                    </label>
 
                     <div className="grid gap-3 md:grid-cols-2">
                       <label className="block text-[0.84rem] text-[var(--muted)]">

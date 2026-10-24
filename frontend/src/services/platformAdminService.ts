@@ -40,6 +40,7 @@ export interface DiningTableRecord {
   table_config: string
   capacity: number
   supports_split: boolean
+  split_label_mode?: import('../types/dinein').SplitLabelMode
   sort_order: number
   is_active: boolean
 }

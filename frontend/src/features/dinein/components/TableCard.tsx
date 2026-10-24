@@ -1,7 +1,7 @@
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import type { TableSlot } from '../../../types/dinein'
-import { formatSplitSlotLabel } from '../../../utils/tableDisplay'
+import { formatSplitSlotLabel, splitSideLabel } from '../../../utils/tableDisplay'
 import { TableStatusBadge } from './TableStatusBadge'
 import { offlineOrderBadgeLabel, type OfflineOrderBadge } from '../../offline/offlineOrderStatus'
 
@@ -14,6 +14,7 @@ interface TableCardProps {
   onFinish: (slot: TableSlot) => void
   compact?: boolean
   offlineOrders?: OfflineOrderBadge[]
+  formatLabel?: (value: string) => string
 }
 
 const statusAccent = {
@@ -28,9 +29,9 @@ const titleColor = {
   alert: 'text-[#b4481c]',
 } as const
 
-export function TableCard({ slot, onEntrySelect, onStart, onEdit, onPrint, onFinish, compact = false, offlineOrders = [] }: TableCardProps) {
+export function TableCard({ slot, onEntrySelect, onStart, onEdit, onPrint, onFinish, compact = false, offlineOrders = [], formatLabel = formatSplitSlotLabel }: TableCardProps) {
   const buttonLabel = slot.action === 'edit' ? 'Edit order' : 'Start order'
-  const displayLabel = formatSplitSlotLabel(slot.label)
+  const displayLabel = slot.displayLabel ?? formatLabel(slot.label)
 
   return (
     <div className="text-left">
@@ -56,7 +57,7 @@ export function TableCard({ slot, onEntrySelect, onStart, onEdit, onPrint, onFin
                   key={order.clientOrderId}
                   className="rounded-[14px] border border-[rgba(177,111,21,0.24)] bg-[rgba(220,153,54,0.13)] px-3 py-2 text-[0.74rem] font-black text-[rgb(112,65,8)]"
                 >
-                  {formatSplitSlotLabel(order.contextLabel)} · {offlineOrderBadgeLabel(order.state)} · {order.itemCount} 份
+                  {order.tableNo ? formatLabel(order.tableNo) : order.contextLabel} · {offlineOrderBadgeLabel(order.state)} · {order.itemCount} 份
                 </div>
               ))}
             </div>
@@ -79,7 +80,7 @@ export function TableCard({ slot, onEntrySelect, onStart, onEdit, onPrint, onFin
                       className="min-h-[2.8rem] rounded-[16px] px-3 text-[0.95rem]"
                       onClick={() => onEntrySelect(slot.id, 'left')}
                     >
-                      左
+                      {splitSideLabel('A', slot.splitLabelMode)}
                     </Button>
                     <Button
                       size="lg"
@@ -87,7 +88,7 @@ export function TableCard({ slot, onEntrySelect, onStart, onEdit, onPrint, onFin
                       className="min-h-[2.8rem] rounded-[16px] px-3 text-[0.95rem]"
                       onClick={() => onEntrySelect(slot.id, 'right')}
                     >
-                      右
+                      {splitSideLabel('B', slot.splitLabelMode)}
                     </Button>
                   </div>
                   <Button
@@ -108,7 +109,7 @@ export function TableCard({ slot, onEntrySelect, onStart, onEdit, onPrint, onFin
                     className="min-h-[3.35rem] rounded-[18px]"
                     onClick={() => onEntrySelect(slot.id, 'left')}
                   >
-                    左
+                    {splitSideLabel('A', slot.splitLabelMode)}
                   </Button>
                   <Button
                     size="lg"
@@ -116,7 +117,7 @@ export function TableCard({ slot, onEntrySelect, onStart, onEdit, onPrint, onFin
                     className="min-h-[3.35rem] rounded-[18px]"
                     onClick={() => onEntrySelect(slot.id, 'right')}
                   >
-                    右
+                    {splitSideLabel('B', slot.splitLabelMode)}
                   </Button>
                   <Button
                     size="lg"

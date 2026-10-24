@@ -998,6 +998,27 @@ POST `/frontdesk/beverages/{orderItemId}/cancel`
 
 ---
 
+## Dining Table Split Labels
+
+Existing routes `GET /frontdesk/dining-tables?store_id=...`,
+`GET /admin/platform/dining-tables?store_id=...`,
+`POST /admin/platform/dining-tables` and `PUT /admin/platform/dining-tables/{id}`
+include `split_label_mode`: `LEFT_RIGHT` (default) or `INSIDE_OUTSIDE`.
+The mode belongs to a single table and is persisted/reloaded. Old clients that
+omit the field preserve the stored value on update and get LEFT_RIGHT on create.
+Invalid values are rejected. Existing Store authorization and TABLE_MANAGEMENT
+capability checks apply to every Store, including Chinatown.
+
+A mode change rejects any active dine-in order for the table (including drafts,
+full/A/B contexts and legacy code aliases); table locking coordinates concurrent
+order entry. It does not split/merge tables or rewrite any `orders.table_no`.
+Order detail and frontdesk board/history responses add optional
+`table_display_name` for presentation. `table_no` remains the raw A/B identity
+for submissions, updates, lookups, filters and occupancy. LEFT_RIGHT preserves
+`1-左`/`1-右`; INSIDE_OUTSIDE displays `1里`/`1外`. Exact literal table names win.
+Completed/history display is a current configuration projection; frozen print
+snapshots retain the original rendered text. There is no new order storage field.
+
 ## Frontdesk Order Board
 
 ### Frontdesk Active Board

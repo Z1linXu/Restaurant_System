@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""2026-10-23 additive top-feed release; reuse reviewed app-pair promotion primitives."""
+"""2026-10-24 per-table split labels; reuse reviewed app-pair promotion primitives."""
 import copy
 import datetime
 import hashlib
@@ -10,6 +10,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import zlib
 
 sys.dont_write_bytecode = True
 HERE = Path(__file__).resolve().parent
@@ -18,18 +19,57 @@ prior = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(prior)
 p, i, ops = prior.p, prior.i, prior.ops
 BASE = Path('/srv/restaurant-pos')
-OLD_IMAGE = 'sha256:697947b35e496b94a043b925eb13c4a62470f15d47d02c02bdb9fdd3b81a0e4a'
-OLD_FRONTEND = 'sha256:2b0749d39545a4eae784b29315be78aac0b5866dc069fb6c60372ad82ee4387b'
+OLD_IMAGE = 'sha256:a16b8a2feacd7eed97cc2e3d971c9bd993455d262c85fe955cfdf340807b58a5'
+OLD_FRONTEND = 'sha256:abe9a86ac6c138143bfcfa6b37523f9213ed5d16692f4c35c904bbb2b7ae505b'
 SERVICES = ('backend', 'nginx')
-RELEASE_PREFIX = 'dine-in-top-feed-'
+RELEASE_PREFIX = 'split-label-mode-'
 os.umask(0o077)
 
 
-def queue_guard(db):
-    value = ops.inventory(db)
-    assert value['flyway'] == '38'
-    assert all(value[k] == 0 for k in ('pending_print_jobs', 'pending_outbox', 'pending_uber_events', 'due_uber_orders'))
+def read_sql(db, sql):
+    return i.run(['docker', 'exec', '-i', '-e', 'PGOPTIONS=-c default_transaction_read_only=on -c statement_timeout=5000',
+        db, 'sh', '-c', 'psql -X -qAt -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'], input=sql.encode()).decode().strip()
+
+
+def configuration(db):
     state = ops.current_4483_configuration(db)
+    # V39 is the only allowed ledger change, checked separately below.
+    state.pop('flyway_schema_history')
+    state['dining_tables_legacy_columns'] = read_sql(db, "SELECT md5(coalesce(jsonb_agg(to_jsonb(t)-'split_label_mode' ORDER BY id),'[]'::jsonb)::text) FROM dining_tables t")
+    return state
+
+
+def validate_migration(before, after):
+    migration = HERE.parents[2] / 'backend/src/main/resources/db/migration/V39__add_dining_table_split_label_mode.sql'
+    checksum = 0
+    for line in migration.read_text().splitlines(): checksum = zlib.crc32(line.encode(), checksum)
+    if checksum >= 2**31: checksum -= 2**32
+    old, new = before.splitlines(), after.splitlines()
+    assert old[-1].startswith('38|V38__add_store_remove_catalog.sql|')
+    assert new == old + [f'39|V39__add_dining_table_split_label_mode.sql|{checksum}|t'], 'Only exact V39 append allowed'
+
+
+def table_modes(db):
+    result = json.loads(read_sql(db, """SELECT json_build_object(
+        'rows',count(*),'left_right',count(*) FILTER(WHERE split_label_mode='LEFT_RIGHT'),
+        'stores',(SELECT json_agg(t) FROM (SELECT s.id,s.code,count(d.id) AS tables,
+          count(d.id) FILTER(WHERE d.split_label_mode='LEFT_RIGHT') AS default_mode_tables
+          FROM stores s LEFT JOIN dining_tables d ON d.store_id=s.id GROUP BY s.id,s.code ORDER BY s.id) t))
+        FROM dining_tables"""))
+    assert result['rows'] == result['left_right'], 'Existing tables must all default LEFT_RIGHT'
+    return result
+
+
+def order_contexts(db, cutoff):
+    assert isinstance(cutoff, int) and cutoff >= 0
+    return read_sql(db, f"SELECT md5(coalesce(jsonb_agg(jsonb_build_array(id,store_id,order_type,table_no) ORDER BY id),'[]'::jsonb)::text) FROM orders WHERE id<={cutoff}")
+
+
+def queue_guard(db, flyway='38'):
+    value = ops.inventory(db)
+    assert value['flyway'] == flyway
+    assert all(value[k] == 0 for k in ('pending_print_jobs', 'pending_outbox', 'pending_uber_events', 'due_uber_orders'))
+    state = configuration(db)
     assert state['fresh_printing'] == 0, 'Wait for a quiet printing window'
     return state
 
@@ -95,8 +135,9 @@ def main(environment, sha):
     configuration = queue_guard(db)
     p.DB = db
     history = p.history_fingerprints()
+    contexts = order_contexts(db, history['cutoffs'][0])
     ops.write_private(root / 'baseline.private.json', {'protected': protected, 'ledger': ledger,
-        'configuration': configuration, 'history': history})
+        'configuration': configuration, 'history': history, 'order_contexts': contexts})
     with (root / 'database-before.dump').open('xb') as output:
         subprocess.run(['docker', 'exec', db, 'sh', '-c', 'pg_dump -Fc -U "$POSTGRES_USER" "$POSTGRES_DB"'],
                        stdout=output, check=True, timeout=180)
@@ -113,6 +154,7 @@ def main(environment, sha):
         assert accepted['accepted'] is True and accepted['source_sha'] == sha and accepted['images'] == images
         assert accepted['header_cases'] == 24 and accepted['health'] == 'PASS'
         assert accepted['additional_top_feed_mm'] == 16 and accepted['top_feed_once'] is True
+        assert accepted['split_label_cases'] == 48 and accepted['flyway'] == '39' and accepted['mock_split_labels'] == 'PASS'
         for service in SERVICES: assert i.inspect('restaurant-pos-staging-' + service + '-1')['Image'] == images[service]
         i.health('https://staging-pos.lanzhounoodlesmtl.com')
     target = copy.deepcopy(rollback)
@@ -124,6 +166,7 @@ def main(environment, sha):
     # Build may take minutes: recheck live state immediately before the only restart.
     for service in SERVICES: assert i.fingerprint(project + '-' + service + '-1')['id'] == before[service]['Id']
     assert queue_guard(db) == configuration and p.history_fingerprints(history['cutoffs']) == history
+    assert i.ledger(db) == ledger and order_contexts(db, history['cutoffs'][0]) == contexts
     if prod: assert source.read_bytes() == original_bytes
     try:
         for service in SERVICES:
@@ -137,7 +180,10 @@ def main(environment, sha):
                 assert after['HostConfig'].get(key) == before[service]['HostConfig'].get(key)
             assert {k: v['IPAddress'] for k, v in after['NetworkSettings']['Networks'].items()} == {k: v['IPAddress'] for k, v in before[service]['NetworkSettings']['Networks'].items()}
         assert all(i.fingerprint(n) == value for n, value in protected.items())
-        assert i.ledger(db) == ledger and queue_guard(db) == configuration
+        validate_migration(ledger, i.ledger(db))
+        assert queue_guard(db, '39') == configuration
+        modes = table_modes(db)
+        assert order_contexts(db, history['cutoffs'][0]) == contexts
         assert p.history_fingerprints(history['cutoffs']) == history
         for endpoint in ('https://pos.lanzhounoodlesmtl.com', 'https://staging-pos.lanzhounoodlesmtl.com'): i.health(endpoint)
         if prod:
@@ -149,7 +195,7 @@ def main(environment, sha):
         if prod: ops.write_private(source, rollback)
         raise RuntimeError('Application rollback applied; database retained') from None
     result = {'environment': environment, 'source_sha': sha, 'image': images['backend'], 'images': images, 'health': 'PASS',
-        'flyway': '38', 'accepted': False, 'configuration_unchanged': True, 'history_unchanged': True,
+        'flyway': '39', 'table_modes': modes, 'order_contexts_unchanged': True, 'accepted': False, 'configuration_unchanged': True, 'history_unchanged': True,
         'other_containers_unchanged': True, 'uber_worker_enabled': prod,
         'deployed_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'backup_sha256': hashlib.sha256((root / 'database-before.dump').read_bytes()).hexdigest()}

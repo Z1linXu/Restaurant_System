@@ -11,6 +11,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
+    @Query("""
+        select (count(o) > 0) from Order o
+        where o.store_id = :storeId and o.order_type = 'dine_in'
+          and o.table_no in :tableNos
+          and (o.status is null or o.status not in ('completed', 'cancelled'))
+        """)
+    boolean hasActiveDiningTableOrders(@Param("storeId") Long storeId, @Param("tableNos") List<String> tableNos);
+
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select o from Order o where o.id = :id")

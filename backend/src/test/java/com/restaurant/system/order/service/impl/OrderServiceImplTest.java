@@ -1,6 +1,7 @@
 package com.restaurant.system.order.service.impl;
 
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import java.time.LocalDateTime;
 
 import com.restaurant.system.menu.addon.StoreAddonOptionResolver;
 
@@ -143,6 +144,8 @@ class OrderServiceImplTest {
     private final Map<Long, OrderUpdateBatch> orderUpdateBatches = new HashMap<>();
 
     private StoreAddonOptionResolver addonResolver;
+    private final com.restaurant.system.station.repository.DiningTableRepository diningTables = org.mockito.Mockito.mock(com.restaurant.system.station.repository.DiningTableRepository.class);
+    private com.restaurant.system.station.service.DiningTableDisplayService tableDisplay;
     private Store store;
     private MenuCategory menuCategory;
     private MenuItem menuItem;
@@ -151,6 +154,7 @@ class OrderServiceImplTest {
     @BeforeEach
     void setUp() {
         addonResolver = org.mockito.Mockito.spy(new StoreAddonOptionResolver(org.mockito.Mockito.mock(NamedParameterJdbcTemplate.class)));
+        tableDisplay = new com.restaurant.system.station.service.DiningTableDisplayService(diningTables, entityManager);
         orderService = new OrderServiceImpl(addonResolver,
             orderRepository,
             orderUpdateBatchRepository,
@@ -172,7 +176,8 @@ class OrderServiceImplTest {
             printDispatcherService,
             storeComboConfigurationService,
             printingDisplayRuleService,
-            entityManager
+            entityManager,
+            tableDisplay
         );
         kitchenService = new KitchenServiceImpl(kitchenTaskRepository, orderRepository, realtimeEventPublisher);
         frontdeskBeverageService = new FrontdeskBeverageServiceImpl(
@@ -1317,6 +1322,65 @@ class OrderServiceImplTest {
         assertTrue(thinTask.special_instructions_snapshot.contains("鸡凉"));
         assertFalse(thinTask.special_instructions_snapshot.contains("鸡凉细"));
         assertTrue(leekLeafTask.special_instructions_snapshot.contains("鸡凉韭"));
+    }
+
+    @Test
+    void orderDetailAndHistoryExposeCurrentDisplayProjectionWithoutChangingRawIdentity() {
+        var table = new com.restaurant.system.station.entity.DiningTable();
+        table.id = 1L; table.store_id = store.id; table.table_name = "1"; table.split_label_mode = "INSIDE_OUTSIDE";
+        when(diningTables.findAllByStoreIdAndTableName(store.id, "1")).thenReturn(List.of(table));
+        var order = new Order();
+        order.id = 900L; order.store_id = store.id; order.order_type = "dine_in";
+        order.table_no = "1-A"; order.status = "completed"; order.completed_at = LocalDateTime.now();
+        orders.put(order.id, order);
+
+        assertEquals("1里", orderService.getOrderDetail(order.id).table_display_name);
+        var history = orderService.getFrontdeskOrderHistory(store.id, List.of("all"), "dine_in", "1-A", null, null, 20);
+        assertEquals("1里", history.get(0).table_display_name);
+        assertEquals("1-A", history.get(0).table_no);
+        table.split_label_mode = "LEFT_RIGHT";
+        assertEquals("1-左", orderService.getOrderDetail(order.id).table_display_name);
+        assertEquals("1-A", order.table_no);
+    }
+
+    @Test
+    void createAndHeaderChangesLockTablesBeforeOrderAndNeverTranslateRawSeat() {
+        var oldTable = new com.restaurant.system.station.entity.DiningTable();
+        oldTable.id = 8L; oldTable.store_id = store.id; oldTable.table_name = "Old";
+        var newTable = new com.restaurant.system.station.entity.DiningTable();
+        newTable.id = 2L; newTable.store_id = store.id; newTable.table_name = "Next";
+        newTable.split_label_mode = "INSIDE_OUTSIDE";
+        when(diningTables.findAllByStoreIdAndTableName(store.id, "Old")).thenReturn(List.of(oldTable));
+        when(diningTables.findAllByStoreIdAndTableName(store.id, "Next")).thenReturn(List.of(newTable));
+        when(diningTables.findByIdAndStoreIdForUpdate(oldTable.id, store.id)).thenReturn(oldTable);
+        when(diningTables.findByIdAndStoreIdForUpdate(newTable.id, store.id)).thenReturn(newTable);
+        var request = new CreateOrderRequest();
+        request.store_id = store.id; request.order_type = "dine_in"; request.table_no = "Old-A"; request.items = List.of();
+        var created = orderService.createOrder(request);
+        verify(diningTables).findByIdAndStoreIdForUpdate(8L, store.id);
+        org.mockito.Mockito.clearInvocations(diningTables, orderRepository, entityManager);
+        var header = new com.restaurant.system.order.dto.UpdateDraftOrderHeaderRequest();
+        header.table_no = "Next-B";
+        var moved = orderService.updateDraftOrderHeader(created.id, header);
+        var locks = org.mockito.Mockito.inOrder(diningTables, orderRepository);
+        locks.verify(diningTables).findByIdAndStoreIdForUpdate(2L, store.id);
+        locks.verify(diningTables).findByIdAndStoreIdForUpdate(8L, store.id);
+        locks.verify(orderRepository).findByIdForUpdate(created.id);
+        assertEquals("Next-B", moved.table_no);
+        assertEquals("Next外", moved.table_display_name);
+    }
+
+    @Test
+    void tableChangeRejectsConcurrentHeaderMutationAfterOrderLockRefresh() {
+        var order = new Order(); order.id = 901L; order.store_id = store.id;
+        order.order_type = "dine_in"; order.table_no = "Old-A"; order.status = "draft";
+        orders.put(order.id, order);
+        org.mockito.Mockito.doAnswer(invocation -> { order.table_no = "Changed-B"; return null; })
+            .when(entityManager).refresh(order, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        var header = new com.restaurant.system.order.dto.UpdateDraftOrderHeaderRequest(); header.table_no = "Next-A";
+        var error = assertThrows(OrderSubmissionException.class, () -> orderService.updateDraftOrderHeader(order.id, header));
+        assertEquals("ORDER_CONTEXT_CONFLICT", error.getErrorCode());
+        assertEquals("Changed-B", order.table_no);
     }
 
     private OrderResponse submitSingleOptionOrder(Long optionId, String tableNo) {

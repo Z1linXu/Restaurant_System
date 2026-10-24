@@ -13,6 +13,7 @@ public class OrderResponse {
     public Long created_by;
     public String order_type;
     public String table_no;
+    public String table_display_name;
     public String pickup_no;
     public BigDecimal subtotal_amount;
     public BigDecimal discount_amount;

@@ -11,9 +11,10 @@ interface TableGridProps {
   onFinish: (slot: TableSlot) => void
   compact?: boolean
   offlineOrders?: OfflineOrderBadge[]
+  formatLabel?: (value: string) => string
 }
 
-export function TableGrid({ slots, onEntrySelect, onStart, onEdit, onPrint, onFinish, compact = false, offlineOrders = [] }: TableGridProps) {
+export function TableGrid({ slots, onEntrySelect, onStart, onEdit, onPrint, onFinish, compact = false, offlineOrders = [], formatLabel }: TableGridProps) {
   return (
     <div
       className={
@@ -32,6 +33,7 @@ export function TableGrid({ slots, onEntrySelect, onStart, onEdit, onPrint, onFi
           onPrint={onPrint}
           onFinish={onFinish}
           compact={compact}
+          formatLabel={formatLabel}
           offlineOrders={offlineOrders.filter((order) => offlineOrderMatchesTable(order, slot))}
         />
       ))}

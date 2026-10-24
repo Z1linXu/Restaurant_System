@@ -1,0 +1,29 @@
+[
+  {
+    "store_id": 1,
+    "code": "4483_R_SAINT_DENIS",
+    "status": "active",
+    "lifecycle_status": "ACTIVE",
+    "module_key": "TABLE_MANAGEMENT",
+    "enabled": true,
+    "configuration_status": "CONFIGURED"
+  },
+  {
+    "store_id": 2,
+    "code": "CHINATOWN",
+    "status": "active",
+    "lifecycle_status": "ACTIVE",
+    "module_key": "TABLE_MANAGEMENT",
+    "enabled": true,
+    "configuration_status": "CONFIGURED"
+  },
+  {
+    "store_id": 3,
+    "code": "ST_CATHERINE",
+    "status": "active",
+    "lifecycle_status": "ACTIVE",
+    "module_key": "TABLE_MANAGEMENT",
+    "enabled": true,
+    "configuration_status": "CONFIGURED"
+  }
+]

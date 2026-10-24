@@ -25,6 +25,7 @@ import type { TableSlot } from '../../types/dinein'
 import type { OrderPrintOption } from '../../types/ordering'
 import type { PrintJobRecord } from '../../services/printingAdminService'
 import { formatSplitSlotLabel } from '../../utils/tableDisplay'
+import { useDiningTableDisplay } from '../../hooks/useDiningTableDisplay'
 import { DineInSidebar } from './components/DineInSidebar'
 import { DineInTopBar } from './components/DineInTopBar'
 import { TableGrid } from './components/TableGrid'
@@ -83,6 +84,7 @@ function OfflineOrdersBanner({
   onCheckStatus,
   onCancel,
   busyClientOrderId,
+  formatLabel = formatSplitSlotLabel,
 }: {
   orders: OfflineOrderBadge[]
   compact?: boolean
@@ -91,6 +93,7 @@ function OfflineOrdersBanner({
   onCheckStatus: (order: OfflineOrderBadge) => void
   onCancel: (order: OfflineOrderBadge) => void
   busyClientOrderId: string | null
+  formatLabel?: (value: string) => string
 }) {
   if (!orders.length) return null
   return (
@@ -108,7 +111,7 @@ function OfflineOrdersBanner({
           return (
             <div key={order.clientOrderId} className="rounded-[16px] bg-white/65 px-3 py-2.5">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-bold">
-                <span>{formatSplitSlotLabel(order.contextLabel)}</span>
+                <span>{order.tableNo ? formatLabel(order.tableNo) : order.contextLabel}</span>
                 <span>· {offlineOrderBadgeLabel(order.state)}</span>
                 <span>· {order.itemCount} 份</span>
                 {order.lastErrorCode ? <span className="font-semibold">· {order.lastErrorCode}</span> : null}
@@ -190,6 +193,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
       : null
   ), [organizationId, storeId, user?.id])
   const offlineOrders = useStoreOfflineOrders(offlineOrderScope, tableBoardEnabled)
+  const { formatLabel, baseLabel, rememberTables } = useDiningTableDisplay(storeId, offlineOrderScope)
   const finalizeTerminalOrder = useCallback(async (orderId: number, status: string) => {
     if (!offlineOrderScope) return
     try {
@@ -214,6 +218,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     enabled: tableBoardEnabled,
     storeId,
     onOrderTerminal: finalizeTerminalOrder,
+    onTablesLoaded: rememberTables,
   })
   const workstationCompact = isIpadLandscape
   const boardPath = buildFrontdeskBoardPath(workstation, storeId)
@@ -268,7 +273,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
   }, [offlineOrderScope])
 
   const handleOfflineCancel = useCallback(async (order: OfflineOrderBadge) => {
-    if (!offlineOrderScope || !window.confirm(`确定取消 ${formatSplitSlotLabel(order.contextLabel)} 的本机订单吗？`)) return
+    if (!offlineOrderScope || !window.confirm(`确定取消 ${order.tableNo ? formatLabel(order.tableNo) : order.contextLabel} 的本机订单吗？`)) return
     setOfflineActionBusy(order.clientOrderId)
     try {
       await cancelOfflineOrder(offlineOrderScope, order.clientOrderId)
@@ -279,7 +284,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     } finally {
       setOfflineActionBusy(null)
     }
-  }, [offlineOrderScope, refreshFromBackend])
+  }, [formatLabel, offlineOrderScope, refreshFromBackend])
 
   const cancelPrintCoordinator = useCallback(() => {
     printCheckRunIdRef.current += 1
@@ -437,7 +442,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     try {
       const completedOrder = await completeOrder(slot.orderDbId)
       await finalizeTerminalOrder(completedOrder.id, completedOrder.status)
-      setSubmissionMessage(`Order completed for ${formatSplitSlotLabel(slot.label)}.`)
+      setSubmissionMessage(`Order completed for ${slot.displayLabel ?? formatLabel(slot.label)}.`)
       await refreshTableAfterFinish(slot.baseTableLabel)
 
       // Keep one short fallback refresh for read-model lag; realtime and 30s polling handle the rest.
@@ -528,6 +533,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
               onFinish={(slot) => void handleFinish(slot)}
               compact={workstationCompact}
               offlineOrders={offlineOrders}
+              formatLabel={formatLabel}
             />
           </>
         )
@@ -538,6 +544,8 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
         catalog={menuCatalog}
         slotLabel={activeOrderingContext.slotLabel}
         tableLabel={activeOrderingContext.tableLabel}
+        tableDisplayName={baseLabel(activeOrderingContext.slotLabel, activeOrderingContext.tableLabel)}
+        slotDisplayName={activeOrderingContext.orderType === 'dine_in' ? formatLabel(activeOrderingContext.slotLabel) : activeOrderingContext.slotLabel}
         orderType={activeOrderingContext.orderType}
         pickupLabel={activeOrderingContext.pickupLabel}
         workstationLabel={workstationLabel}
@@ -556,7 +564,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
           setSubmissionMessage(
             activeOrderingContext.orderType === 'pickup'
               ? `Takeout order confirmed for ${activeOrderingContext.pickupLabel ?? slotLabel}.`
-              : `Order confirmed for ${formatSplitSlotLabel(slotLabel)}.`,
+              : `Order confirmed for ${formatLabel(slotLabel)}.`,
           )
           startPostSubmitPrintCheck(orderId, updateBatchId)
           updateActiveOrderingContext(null, 'order submitted')
@@ -603,6 +611,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
 
             <OfflineOrdersBanner
               orders={offlineOrders}
+              formatLabel={formatLabel}
               compact={workstationCompact}
               onOpen={handleOfflineOpen}
               onRetry={(order) => void handleOfflineRetry(order)}
@@ -661,6 +670,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
 
               <OfflineOrdersBanner
                 orders={offlineOrders}
+                formatLabel={formatLabel}
                 onOpen={handleOfflineOpen}
                 onRetry={(order) => void handleOfflineRetry(order)}
                 onCheckStatus={(order) => void handleOfflineCheckStatus(order)}
@@ -681,7 +691,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold text-[var(--muted)]">Print current full order</p>
-                <h2 className="mt-1 text-2xl font-extrabold">{formatSplitSlotLabel(printTarget.label)}</h2>
+                <h2 className="mt-1 text-2xl font-extrabold">{printTarget.displayLabel ?? formatLabel(printTarget.label)}</h2>
               </div>
               <button type="button" className="rounded-full px-3 py-2 font-bold" onClick={() => { printOptionsRequestIdRef.current += 1; setPrintTarget(null) }}>Close</button>
             </div>
