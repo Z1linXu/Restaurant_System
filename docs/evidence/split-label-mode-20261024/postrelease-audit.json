@@ -1,0 +1,178 @@
+{
+  "schema": "SPLIT_LABEL_POSTRELEASE_AUDIT_V1",
+  "result": "PASS",
+  "application_sha": "f838e48de1f20689253716bd1910b952fcbc00d3",
+  "script_sha": "31466c59e8330127ba707ac5d5ccb67cbf47499b",
+  "read_only": true,
+  "business_writes": false,
+  "runtime_lifecycle_changes": false,
+  "checks": {
+    "reviewed_tool_identity": true,
+    "canonical_matches_retry_target_and_marker": true,
+    "backup_checksum_verified": true,
+    "initial_failure_evidence_preserved": true,
+    "same_staging_application_pair_and_jar": true,
+    "full_runtime_environments_unchanged": true,
+    "production_uber_worker_preserved": true,
+    "production_staging_database_and_secret_isolation": true,
+    "four_protected_container_fingerprints_unchanged": true,
+    "only_exact_v39_appended": true,
+    "baseline_history_context_configuration_unchanged": true,
+    "all_existing_tables_default_left_right": true,
+    "quiet_queues_and_old_printing_retained": true,
+    "both_public_health_and_existing_render_acceptance": true,
+    "fresh_strict_cache_second_review_completed": true
+  },
+  "initial_failure_diagnostic_file_present": false,
+  "canonical_sha256": "5f6f722bd61a315741cf5d4bb085a5d43638c430a34da546b6d848308419863c",
+  "images": {
+    "backend": "sha256:ced502b10fc6d3a61eb57b55733ee24d45665ce16350c15a7caf1de2339f0b2e",
+    "nginx": "sha256:e2fee1acee5a4b9dfb137090b0be5aa8e4a361cfc6e51b6527dcd91c85593bf0"
+  },
+  "app_jar_sha256": "aca424461dff0bec7185965373b36bee5d68576b89780e4a018990ee062209da",
+  "environment_sha256": {
+    "backend": "e350b03d881624ec5df4bfbdda0dfc6d11bb6b6abb7e4073fbd3133c97db7314",
+    "nginx": "23797e8c9e01d4fdf451dd76371a903fd8d443b21cc43567c6993d27c4d609fe"
+  },
+  "protected_containers": {
+    "cloud-db-1": {
+      "container_id": "c2ab37fec6ac966e77a1d8ab7aa41d1da294b9ac57b1a21ce18904d04cfae91e",
+      "unchanged": true
+    },
+    "restaurant-pos-staging-nginx-1": {
+      "container_id": "94b727552da692ca4591bc595b512305a156da588ebcceb1fdd5d54191b40e23",
+      "unchanged": true
+    },
+    "restaurant-pos-staging-backend-1": {
+      "container_id": "fa580db9970e14ca3ebe06cc97bf3ea1553b0c31601926d2728a5d3446d5e72c",
+      "unchanged": true
+    },
+    "restaurant-pos-staging-db-1": {
+      "container_id": "b64d3c676dbb4003368279453e5c6b390ac6327c3cf28001ead671155f93f4c5",
+      "unchanged": true
+    }
+  },
+  "flyway_last_row": "39|V39__add_dining_table_split_label_mode.sql|1431202837|t",
+  "history_cutoffs": [
+    10785,
+    27105
+  ],
+  "history_hashes": [
+    "b579884183618b4d92b4cb1b15cf3ce5",
+    "4594bfb47b25772bfc1c3b84ff27c54d",
+    "f4395aff6f4c030a2a86a20f12206650",
+    "0b64d2f3689fcd3a1871f51e45032a12",
+    "2e002710b59a32362945c8a6fefacf55"
+  ],
+  "configuration_sha256": "eb0d929e37b6a3bdc9461dfcaf712f846d6facaa148f7d4428937c7636aa0405",
+  "order_contexts_hash": "89a34c408316ff69ad1da30a9089cc5b",
+  "table_modes": {
+    "rows": 39,
+    "left_right": 39,
+    "stores": [
+      {
+        "id": 1,
+        "code": "4483_R_SAINT_DENIS",
+        "tables": 13,
+        "default_mode_tables": 13
+      },
+      {
+        "id": 2,
+        "code": "CHINATOWN",
+        "tables": 24,
+        "default_mode_tables": 24
+      },
+      {
+        "id": 3,
+        "code": "ST_CATHERINE",
+        "tables": 2,
+        "default_mode_tables": 2
+      }
+    ]
+  },
+  "queues": {
+    "pending_print_jobs": 0,
+    "pending_outbox": 0,
+    "pending_uber_events": 0,
+    "due_uber_orders": 0,
+    "uber_bindings": 1
+  },
+  "old_printing_ids": [
+    1176,
+    3169,
+    9226,
+    20391
+  ],
+  "disk": {
+    "total_bytes": 63290032128,
+    "used_bytes": 46362406912,
+    "available_bytes": 14226792448,
+    "used_percent": 77
+  },
+  "docker_system_df": [
+    {
+      "Active": "4",
+      "Reclaimable": "3.444GB (42%)",
+      "Size": "8.191GB",
+      "TotalCount": "121",
+      "Type": "Images"
+    },
+    {
+      "Active": "8",
+      "Reclaimable": "0B (0%)",
+      "Size": "413.7kB",
+      "TotalCount": "8",
+      "Type": "Containers"
+    },
+    {
+      "Active": "0",
+      "Reclaimable": "0B",
+      "Size": "0B",
+      "TotalCount": "2",
+      "Type": "Local Volumes"
+    },
+    {
+      "Active": "12",
+      "Reclaimable": "10.45GB",
+      "Size": "16.82GB",
+      "TotalCount": "291",
+      "Type": "Build Cache"
+    }
+  ],
+  "build_cache": {
+    "Active": "12",
+    "Reclaimable": "10.45GB",
+    "Size": "16.82GB",
+    "TotalCount": "291",
+    "Type": "Build Cache"
+  },
+  "build_cache_bytes": 16820000000,
+  "healthy_targets": {
+    "disk_below_70_percent": false,
+    "build_cache_at_most_8_gib": false
+  },
+  "strict_cache_second_review": {
+    "minimum_age_hours": 168,
+    "records_reviewed": 291,
+    "old_reclaimable_records": 266,
+    "excluded_nonzero_usage_records": 266,
+    "eligible_records": 0,
+    "eligible": [],
+    "unparseable_records": 0,
+    "cleanup_performed": false,
+    "condition": "age>168h,reclaimable=true,mutable=false,shared=false,UsageCount=0,nonempty LastUsedAt"
+  },
+  "hygiene": {
+    "status": "WARNING",
+    "classification": "NON_BLOCKING_EXISTING_DEBT",
+    "cleanup_performed": false,
+    "cleanup_eligibility_rules_relaxed": false,
+    "business_acceptance_gate_changed": false
+  },
+  "business_result": "PASS",
+  "audit_assumption_corrections": [
+    "Initial helper did not create failure.json; original four private artifacts retained and verified.",
+    "Disk/cache healthy targets are review triggers, not new release acceptance gates."
+  ],
+  "finished_at": "2026-10-24T05:10:02.157414+00:00"
+}
