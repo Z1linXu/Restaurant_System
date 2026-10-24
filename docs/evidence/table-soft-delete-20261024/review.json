@@ -14,5 +14,7 @@
     "persisted delete confirmation and realtime refresh",
     "unchanged V39/full table data/history/env/printing protected in same-artifact promotion"
   ],
-  "physical_print": "NOT_TESTED"
+  "physical_print": "NOT_TESTED",
+  "reviewed_commit": "ec2f98c18f30aa3080d9604d3f589f3fb5c7af43",
+  "application_merge_sha": "028d4971740889a0ac0d784a43497bc3e5b54b3d"
 }
