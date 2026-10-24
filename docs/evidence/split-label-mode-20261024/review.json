@@ -17,5 +17,7 @@
   "independent_deployment_tests": 5,
   "reviewed_station_executed_tests": 15,
   "existing_lint": "NON_BLOCKING_EXISTING_DEBT; exact baseline error reproduced",
-  "physical_print": "NOT_TESTED"
+  "physical_print": "NOT_TESTED",
+  "reviewed_commit": "509d341a35235649cc2dd560d139875706b294da",
+  "application_merge_sha": "f838e48de1f20689253716bd1910b952fcbc00d3"
 }

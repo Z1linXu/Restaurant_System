@@ -16,5 +16,6 @@
   "test_repairs": [
     "new OrderService unit test missing LocalDateTime import",
     "new PG fixture required menu_items.sort_order; one retry repeated old fixture because command cwd prevented first edit"
-  ]
+  ],
+  "isolated_local_postgres_stopped": true
 }

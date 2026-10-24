@@ -73,3 +73,44 @@ workspaceSnapshots objectStore、24h freshness和account/org/store键，无新sc
 部署保护测试5 PASS；本地actual-class harness24+48+6 PASS。Agent 6合并审查ACCEPT，无剩余P0/P1/P2；独立21前端/5部署用例PASS。
 
 必要边界修正：按完整原始桌名取A/B尾部，含连字符桌名1-左-A/B的Edit/Finish隔离回归通过；不从显示中文反推身份。
+
+
+## 不可变发布批次
+
+PR #299 reviewed commit `509d341a35235649cc2dd560d139875706b294da`；应用merge SHA
+`f838e48de1f20689253716bd1910b952fcbc00d3`。fresh fetch/ancestry/authority refresh完成，
+backend/frontend/deployment树与已审commit相同。服务器clean exact-SHA release已建立。
+Stage于04:50:40 UTC开始有界双镜像构建；验收成功后按Owner预先授权将同一镜像对直接
+提升Production，不重建。两环境各自fresh pg_dump/可读TOC，原双镜像及完整model回滚；
+V39为唯一迁移，应用回滚保留V39新增列。acceptance与postrelease必须记录实际artifact。
+本机隔离PostgreSQL与旧JAR测试进程均已停止，不遗留业务worker或监听进程。
+
+Stage于04:55:35 UTC部署完成，04:56:01 UTC验收一次PASS，无发布/工具返工。
+B=`sha256:ced502b10fc6d3a61eb57b55733ee24d45665ce16350c15a7caf1de2339f0b2e`；
+F=`sha256:e2fee1acee5a4b9dfb137090b0be5aa8e4a361cfc6e51b6527dcd91c85593bf0`。
+实际JAR SHA256 `aca424461dff0bec7185965373b36bee5d68576b89780e4a018990ee062209da`。
+30旧桌均LEFT_RIGHT，旧桌列/原订单身份及其它配置全等，准确追加V39。
+24+48+6用例、单次16mm、完整PAD/TCP字节、公网MOCK/Admin设置asset全部PASS。
+Production于04:56:19 UTC开始同镜像对提升，独立fresh备份、当前e44pair回滚，保留V39。
+
+
+## Production 首次提升与有界工具修复
+
+04:56:19 UTC首次提升，V39正确追加；新双容器启动后保护比较失败，04:57:23 UTC自动
+恢复原e44应用对，V39保留。Production health UP；原V38备份、失败目录、rollback/target
+均保留，不冒称功能已发布。独立只读复核：旧表字段、39桌默认、原订单context、5类
+历史快照及4个受保护容器全等，原PRINTING四项保持。
+
+部署脚本原先逐项比较HostConfig.Binds数组，Docker重建的数组顺序不稳定。独立
+network-none、仅create未start的5轮dummy挂载实验复现2种顺序，完整字符串排序相同；
+自建容器/目录已清理。首次异常被旧catch隐藏，故精确异常未留存；该已复现缺陷与
+前端启动后立即回滚的时序一致，不能将推断写成已捕获异常。
+
+BLOCKING工具修复：仅将Binds按完整字符串排序，重复目标拒绝；失败记录仅阶段/类型/
+scriptSHA，不记录配置值；严格production retry-1子目录，保留原失败证据，fresh V39
+备份，原V38→V39逐行验证且本次账本不得变化，旧数据/配置/受保护容器仍全等。
+工具SHA可独立，但backend/frontend diff必须为空，复用已验收f838镜像，绝不重建。
+8项工具保护测试PASS；无需另建部署生命周期，其他改进延期。
+
+Agent 6定向工具修复审查ACCEPT，无P0/P1/P2；独立8 tests/diffcheck PASS，
+backend/frontend相对f838为空。原应用Agent6审查不重跑，使用原Stage工件。
