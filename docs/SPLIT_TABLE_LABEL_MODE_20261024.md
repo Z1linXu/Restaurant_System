@@ -114,3 +114,84 @@ scriptSHA，不记录配置值；严格production retry-1子目录，保留原�
 
 Agent 6定向工具修复审查ACCEPT，无P0/P1/P2；独立8 tests/diffcheck PASS，
 backend/frontend相对f838为空。原应用Agent6审查不重跑，使用原Stage工件。
+
+
+## Production 成功提升与验收
+
+工具PR #300 reviewed commit `06c7d876eddf19c408d54de6b1a70335b8a4c5a3`，merge/tool SHA
+`31466c59e8330127ba707ac5d5ccb67cbf47499b`。fresh fetch/ancestry及三份authority
+未改blob复核完成，backend/frontend相对f838空。服务器clean exact工具release，
+05:06:19 UTC无重建/无重启重新Stage验收PASS，JAR与原Stage相同。
+
+Production retry-1于05:06:22 UTC开始、05:07:09 UTC提升成功；独立fresh V39 pg_dump
+SHA256 `cd9cbad34bce20f40d3e0383b12fb60b0b1238ba67825139eb0de024415a43bb`。
+原V38备份和失败目录不覆写；当前V39 ledger逐行不变且仍精确原38+39。canonical与
+release metadata指向同一f838镜像对、retry-1目录，无再次build。
+
+验收第一次只读class时被0600检查阻断（scp默认0644），只chmod600后重试，
+不涉及应用重启/数据库/打印动作。05:07:39 UTC actual-deployed-JAR验收PASS：
+24旧头部、48双模式/双槽/完整桌名、6外卖；三模块和对应UPDATE全部覆盖；原字号、
+最左侧完整桌号、inline UPDATE、初始化之后且裁纸之前的单次16mm额外feed、
+PAD_DIRECT/TCP完整字节、公共MOCK预览与DiningTables SplitLabel资源一致。
+
+三店TABLE_MANAGEMENT已只读确认可用，39张原桌全部LEFT_RIGHT（13/24/2），
+不修改真实mode，不创建真实测试订单，不触发打印/补打/队列重放。真实隔离PG已测
+三店INSIDE_OUTSIDE保存/重载/提交/更新/Finish、A/B隔离、活跃订单保护与双向并发锁。
+未进行实体纸张输出/测量、真PAD操作、已登录Production UI点击或真实业务写入测试。
+
+## 复测入口
+
+- backend：`mvn -q -Dtest='com.restaurant.system.printing.**.*Test,com.restaurant.system.order.**.*Test,com.restaurant.system.platform.**.*Test,com.restaurant.system.station.**.*Test' test`。
+  PG集成使用各测试显式环境变量连接独立本机测试DB；此次均实际执行后已停库。
+- frontend：`npm test`、`npm run build`；changed-file lint例外见前述既有错误证据。
+- 工具：`python3 -B -m unittest discover -s deployment/cloud/dine-in-headers -p 'test_*.py' -v`。
+- 远端exact SHA/class hash及不发job的render证明见两环境acceptance JSON，禁止据此盲目重印。
+
+## Final independent audit and closure
+
+Independent read-only audit at 05:10:02 UTC: PASS. Canonical compose exactly
+matches retry target; release.json points to retry-1. Same Stage pair/JAR,
+complete environment and Uber worker=true, four protected containers, exact
+V39 append and unchanged retry ledger, five history hashes, raw order contexts,
+old table fields and business configuration all match. All 39 tables default
+LEFT_RIGHT (13/24/2); four old PRINTING jobs remain; pending/due queues are zero;
+both public sites are UP. Initial helper never wrote failure.json: the audit
+retains actual original baseline/backup/rollback/target evidence. No audit
+business writes, credential changes or lifecycle mutations occurred.
+
+### Docker / Disk Hygiene
+
+- Disk Before: 76%, 14GiB free. After: 77%, 14GiB free (14,226,792,448 bytes).
+- Build Cache Before/After: 16.82GB, reclaimable 10.45GB; 291 records, 12 active.
+- Strict second review: 266 age>168h reclaimable records all excluded for
+  UsageCount>0; eligible=0, unparseable=0. Initial 279 difference reflects
+  lastUsed/age calculation, not a relaxed predicate.
+- Cleanup Performed: no; Reclaimed Space: 0. WARNING / NON_BLOCKING_EXISTING_DEBT.
+  Healthy disk<70% and cache<=8GB targets remain unmet, not a new product gate.
+- Protected Runtime Artifacts: current Stage/Production pair, e44 rollback pair,
+  DB containers/volumes, original V38 and retry V39 backups, private models,
+  configuration and evidence retained.
+- Staging Health: HTTP200/UP. Production Mutation: only Owner-authorized app
+  pair restarts and V39; continuous Uber and existing Store data preserved.
+- Own bounded builder, dummy bind containers/directories and render containers
+  removed. Local isolated PostgreSQL/Java stopped. Other worktrees untouched.
+
+### PRODUCT REPAIR / TOOLING AND GOVERNANCE REPAIR
+
+Product: backend station/platform/order/printing, frontend shared tableDisplay
+and consuming pages, V39, relevant tests/API/SYSTEM_DOCUMENTATION. Per-table
+mode, unified display, active-order guard and A/B isolation. Implementation
+about 9 minutes, tests about 3 minutes (Estimated; parallel workers).
+Unrelated lint, legacy empty drafts and Store3 real printer setup stay out of scope.
+
+BLOCKING tooling reuses deployment/cloud/dine-in-headers deploy.py, verify.py,
+test_deploy.py and actual-JAR harness. Initial adaptation covers V39/48 cases;
+after rollback, the bind-order guard and strict same-artifact retry required
+about 9 minutes of diagnosis/repair/review (Estimated). No new deployment
+framework or app rebuild. Final CURRENT_STATE/evidence sync is docs-only with
+the risk-based review exception; governance validation/diff check required.
+
+Stop: SPLIT_TABLE_LABEL_MODE_PRODUCTION_COMPLETE. No next Package/Phase opens.
+Global Production defaults remain mutation_authorized=false and
+authorization.production=NONE. Physical paper/Pad and measurement NOT_TESTED;
+protocol/render proof is not an on-site measurement.
