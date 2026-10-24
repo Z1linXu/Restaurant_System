@@ -9,6 +9,40 @@ spec.loader.exec_module(release)
 
 
 class HeaderReleaseTest(unittest.TestCase):
+    def test_bind_order_is_nonsemantic_but_content_and_destination_are_protected(self):
+        binds = ['/source/a:/target/a:ro', '/source/b:/target/b:ro']
+        self.assertEqual(release.normalized_binds(binds), release.normalized_binds(binds[::-1]))
+        for changed in [['/other:/target/a:ro', binds[1]],
+                        ['/source/a:/target/a:rw', binds[1]], [binds[0]],
+                        [binds[0], '/source/b:/other:ro']]:
+            self.assertNotEqual(release.normalized_binds(binds), release.normalized_binds(changed))
+        for ambiguous in [[binds[0], binds[0]], [binds[0], '/other:/target/a:ro'], ['invalid']]:
+            with self.assertRaises(AssertionError): release.normalized_binds(ambiguous)
+
+    def test_retry_root_is_fixed_production_only(self):
+        sha = 'a' * 40
+        original = release.evidence_root('production', sha)
+        self.assertEqual(original / 'retry-1', release.evidence_root('production', sha, 'retry-1'))
+        for environment, attempt in [('staging', 'retry-1'), ('production', '../retry-1'),
+                                     ('production', 'retry-2'), ('production', '/tmp/retry-1')]:
+            with self.assertRaises(AssertionError): release.evidence_root(environment, sha, attempt)
+
+    def test_retry_retains_exact_v39_and_original_data_guards(self):
+        import copy
+        old = '38|V38__add_store_remove_catalog.sql|99|t'
+        new = old + '\n39|V39__add_dining_table_split_label_mode.sql|1431202837|t'
+        original = dict(ledger=old, protected={'db': 'same'}, configuration={'env': 'digest'},
+                        history={'cutoffs': [1, 2]}, order_contexts='same')
+        current = dict(original, ledger=new)
+        release.validate_retry_baseline(original, current)
+        release.validate_release_ledger(new, new, old)
+        for key in ('protected', 'configuration', 'history', 'order_contexts'):
+            changed = copy.deepcopy(current)
+            changed[key] = 'changed'
+            with self.assertRaises(AssertionError): release.validate_retry_baseline(original, changed)
+        for ledger in [old, new.replace('1431202837', '42'), new + '\n40|other.sql|1|t']:
+            with self.assertRaises(AssertionError): release.validate_release_ledger(new, ledger, old)
+
     def test_only_application_images_and_labels_may_change(self):
         old = {'services': {'backend': {'image': 'old', 'environment': {'UBER_EATS_WORKER_ENABLED': 'true'}},
                             'nginx': {'image': 'frontend'}}}

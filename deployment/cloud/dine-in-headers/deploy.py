@@ -85,10 +85,45 @@ def validate_delta(before, after, images):
     assert left == right, 'Only application images/OCI labels may change'
 
 
-def main(environment, sha):
+def normalized_binds(value):
+    # Docker's bind array order is not stable. Preserve every source/target/option.
+    binds = value or []
+    assert isinstance(binds, list) and all(isinstance(v, str) for v in binds)
+    destinations = [v.split(':')[1] for v in binds if len(v.split(':')) in (2, 3)]
+    assert len(destinations) == len(binds) and len(set(destinations)) == len(binds), 'Ambiguous bind destinations'
+    return sorted(binds)
+
+
+def evidence_root(environment, sha, attempt=''):
+    assert environment in ('staging', 'production') and re.fullmatch('[0-9a-f]{40}', sha)
+    assert attempt == '' or (environment == 'production' and attempt == 'retry-1')
+    root = BASE / environment / (RELEASE_PREFIX + sha)
+    return root / attempt if attempt else root
+
+
+def validate_release_ledger(before, after, original=None):
+    if original is None:
+        validate_migration(before, after)
+    else:
+        validate_migration(original, before)
+        assert after == before, 'Retry must not alter the V39 ledger'
+
+
+def validate_retry_baseline(original, current):
+    validate_migration(original['ledger'], current['ledger'])
+    for key in ('protected', 'configuration', 'history', 'order_contexts'):
+        assert current[key] == original[key], 'Retry baseline changed: ' + key
+
+
+def main(environment, sha, attempt=''):
     assert environment in ('staging', 'production') and re.fullmatch('[0-9a-f]{40}', sha)
     release = BASE / 'staging/releases' / sha
-    assert HERE == release / 'deployment/cloud/dine-in-headers'
+    script_release = HERE.parents[2]
+    script_sha = i.run(['git', '-C', str(script_release), 'rev-parse', 'HEAD']).decode().strip()
+    assert HERE == BASE / 'staging/releases' / script_sha / 'deployment/cloud/dine-in-headers'
+    assert script_sha == sha or attempt == 'retry-1'
+    assert not i.run(['git', '-C', str(script_release), 'status', '--porcelain']).strip()
+    assert not i.run(['git', '-C', str(script_release), 'diff', sha, script_sha, '--', 'backend', 'frontend']).strip()
     assert i.run(['git', '-C', str(release), 'rev-parse', 'HEAD']).decode().strip() == sha
     assert not i.run(['git', '-C', str(release), 'status', '--porcelain']).strip()
     prod = environment == 'production'
@@ -114,7 +149,11 @@ def main(environment, sha):
         launch = ' '.join(env.get(k, '') for k in ('JAVA_OPTS', 'JAVA_TOOL_OPTIONS', '_JAVA_OPTIONS', 'JDK_JAVA_OPTIONS'))
         launch += json.dumps([before['backend']['Config'].get('Entrypoint'), before['backend']['Config'].get('Cmd')])
         assert 'spring.datasource' not in launch.lower() and 'spring.config' not in launch.lower()
-    root = BASE / environment / (RELEASE_PREFIX + sha)
+    root = evidence_root(environment, sha, attempt)
+    original_root = evidence_root(environment, sha)
+    if attempt:
+        assert original_root.is_dir() and not original_root.is_symlink()
+        assert not (original_root / 'result.json').exists() and not (original_root / 'acceptance.json').exists()
     assert not root.exists(), 'Do not overwrite release evidence'
     root.mkdir(mode=0o700)
     source = BASE / 'production/current.compose.json'
@@ -122,6 +161,8 @@ def main(environment, sha):
     rollback = json.loads(original_bytes) if prod else i.escape_compose({
         'services': {service: p.modeled(service, before[service]) for service in SERVICES},
         'networks': {'restaurant-pos': {'external': True, 'name': 'restaurant-pos-staging_restaurant-pos'}}})
+    if attempt:
+        assert rollback == json.loads(ops.private_file(original_root / 'rollback.private.json').read_text())
     ops.write_private(root / 'rollback.private.json', rollback)
     def compose(path, *args):
         return i.run(['docker', 'compose', '-p', project, '-f', str(path), *args], stderr=subprocess.STDOUT)
@@ -132,12 +173,15 @@ def main(environment, sha):
     updated_names = {project + '-' + service + '-1' for service in SERVICES}
     protected = {n: i.fingerprint(n) for n in i.PROD + i.STAGE if n not in updated_names}
     ledger = i.ledger(db)
-    configuration = queue_guard(db)
+    configuration = queue_guard(db, '39' if attempt else '38')
     p.DB = db
-    history = p.history_fingerprints()
+    original = json.loads(ops.private_file(original_root / 'baseline.private.json').read_text()) if attempt else None
+    history = p.history_fingerprints(original['history']['cutoffs'] if attempt else None)
     contexts = order_contexts(db, history['cutoffs'][0])
-    ops.write_private(root / 'baseline.private.json', {'protected': protected, 'ledger': ledger,
-        'configuration': configuration, 'history': history, 'order_contexts': contexts})
+    baseline = {'protected': protected, 'ledger': ledger,
+        'configuration': configuration, 'history': history, 'order_contexts': contexts}
+    if attempt: validate_retry_baseline(original, baseline)
+    ops.write_private(root / 'baseline.private.json', baseline)
     with (root / 'database-before.dump').open('xb') as output:
         subprocess.run(['docker', 'exec', db, 'sh', '-c', 'pg_dump -Fc -U "$POSTGRES_USER" "$POSTGRES_DB"'],
                        stdout=output, check=True, timeout=180)
@@ -165,36 +209,54 @@ def main(environment, sha):
     validate_delta(resolved_before, json.loads(compose(root / 'target.private.json', 'config', '--format', 'json')), images)
     # Build may take minutes: recheck live state immediately before the only restart.
     for service in SERVICES: assert i.fingerprint(project + '-' + service + '-1')['id'] == before[service]['Id']
-    assert queue_guard(db) == configuration and p.history_fingerprints(history['cutoffs']) == history
+    assert queue_guard(db, '39' if attempt else '38') == configuration and p.history_fingerprints(history['cutoffs']) == history
     assert i.ledger(db) == ledger and order_contexts(db, history['cutoffs'][0]) == contexts
     if prod: assert source.read_bytes() == original_bytes
+    phase = 'restart'
     try:
         for service in SERVICES:
+            phase = service + '.restart'
             compose(root / 'target.private.json', 'up', '-d', '--no-build', '--pull', 'never', '--no-deps', service)
+            phase = service + '.health'
             prior.wait_health(url)
             after = i.inspect(project + '-' + service + '-1')
+            phase = service + '.image_environment'
             assert after['Image'] == images[service] and ops.env_of(after) == ops.env_of(before[service])
             for key in ('Entrypoint', 'Cmd', 'User', 'WorkingDir'):
+                phase = service + '.Config.' + key
                 assert after['Config'].get(key) == before[service]['Config'].get(key)
             for key in ('Memory', 'MemorySwap', 'NanoCpus', 'PortBindings', 'Binds', 'RestartPolicy', 'LogConfig'):
-                assert after['HostConfig'].get(key) == before[service]['HostConfig'].get(key)
+                phase = service + '.HostConfig.' + key
+                left, right = after['HostConfig'].get(key), before[service]['HostConfig'].get(key)
+                assert (normalized_binds(left) == normalized_binds(right)) if key == 'Binds' else left == right
+            phase = service + '.network'
             assert {k: v['IPAddress'] for k, v in after['NetworkSettings']['Networks'].items()} == {k: v['IPAddress'] for k, v in before[service]['NetworkSettings']['Networks'].items()}
+        phase = 'protected_containers'
         assert all(i.fingerprint(n) == value for n, value in protected.items())
-        validate_migration(ledger, i.ledger(db))
+        phase = 'ledger'
+        validate_release_ledger(ledger, i.ledger(db), original['ledger'] if attempt else None)
+        phase = 'configuration_and_table_modes'
         assert queue_guard(db, '39') == configuration
         modes = table_modes(db)
+        phase = 'order_contexts_and_history'
         assert order_contexts(db, history['cutoffs'][0]) == contexts
         assert p.history_fingerprints(history['cutoffs']) == history
+        phase = 'public_health'
         for endpoint in ('https://pos.lanzhounoodlesmtl.com', 'https://staging-pos.lanzhounoodlesmtl.com'): i.health(endpoint)
         if prod:
+            phase = 'canonical_model'
             assert source.read_bytes() == original_bytes
             ops.write_private(source, target)
-    except BaseException:
+    except BaseException as error:
+        # No exception text: subprocess/env/config values can contain secrets.
+        diagnostic = {'failed_phase': phase, 'error_type': type(error).__name__, 'script_sha': script_sha}
+        ops.write_private(root / 'failure.json', diagnostic)
+        print(json.dumps(diagnostic), file=sys.stderr, flush=True)
         compose(root / 'rollback.private.json', 'up', '-d', '--no-build', '--pull', 'never', '--no-deps', *SERVICES)
         prior.wait_health(url)
         if prod: ops.write_private(source, rollback)
         raise RuntimeError('Application rollback applied; database retained') from None
-    result = {'environment': environment, 'source_sha': sha, 'image': images['backend'], 'images': images, 'health': 'PASS',
+    result = {'environment': environment, 'source_sha': sha, 'script_sha': script_sha, 'attempt': attempt or 'initial', 'image': images['backend'], 'images': images, 'health': 'PASS',
         'flyway': '39', 'table_modes': modes, 'order_contexts_unchanged': True, 'accepted': False, 'configuration_unchanged': True, 'history_unchanged': True,
         'other_containers_unchanged': True, 'uber_worker_enabled': prod,
         'deployed_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),

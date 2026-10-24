@@ -1,0 +1,100 @@
+{
+  "schema": "SPLIT_LABEL_BIND_ORDER_PROOF_V1",
+  "result": "PASS",
+  "image": "sha256:e2fee1acee5a4b9dfb137090b0be5aa8e4a361cfc6e51b6527dcd91c85593bf0",
+  "project": "split-label-binds-73007a9b2385",
+  "container": "split-label-binds-73007a9b2385-proof",
+  "iterations": [
+    {
+      "iteration": 1,
+      "binds": [
+        "/tmp/split-label-binds-ohln231y/beta.dummy:/tmp/split-bind-proof/beta:ro",
+        "/tmp/split-label-binds-ohln231y/gamma.dummy:/tmp/split-bind-proof/gamma:ro",
+        "/tmp/split-label-binds-ohln231y/alpha.dummy:/tmp/split-bind-proof/alpha:ro"
+      ],
+      "sorted_binds": [
+        "/tmp/split-label-binds-ohln231y/alpha.dummy:/tmp/split-bind-proof/alpha:ro",
+        "/tmp/split-label-binds-ohln231y/beta.dummy:/tmp/split-bind-proof/beta:ro",
+        "/tmp/split-label-binds-ohln231y/gamma.dummy:/tmp/split-bind-proof/gamma:ro"
+      ],
+      "status": "created",
+      "running": false
+    },
+    {
+      "iteration": 2,
+      "binds": [
+        "/tmp/split-label-binds-ohln231y/beta.dummy:/tmp/split-bind-proof/beta:ro",
+        "/tmp/split-label-binds-ohln231y/gamma.dummy:/tmp/split-bind-proof/gamma:ro",
+        "/tmp/split-label-binds-ohln231y/alpha.dummy:/tmp/split-bind-proof/alpha:ro"
+      ],
+      "sorted_binds": [
+        "/tmp/split-label-binds-ohln231y/alpha.dummy:/tmp/split-bind-proof/alpha:ro",
+        "/tmp/split-label-binds-ohln231y/beta.dummy:/tmp/split-bind-proof/beta:ro",
+        "/tmp/split-label-binds-ohln231y/gamma.dummy:/tmp/split-bind-proof/gamma:ro"
+      ],
+      "status": "created",
+      "running": false
+    },
+    {
+      "iteration": 3,
+      "binds": [
+        "/tmp/split-label-binds-ohln231y/alpha.dummy:/tmp/split-bind-proof/alpha:ro",
+        "/tmp/split-label-binds-ohln231y/beta.dummy:/tmp/split-bind-proof/beta:ro",
+        "/tmp/split-label-binds-ohln231y/gamma.dummy:/tmp/split-bind-proof/gamma:ro"
+      ],
+      "sorted_binds": [
+        "/tmp/split-label-binds-ohln231y/alpha.dummy:/tmp/split-bind-proof/alpha:ro",
+        "/tmp/split-label-binds-ohln231y/beta.dummy:/tmp/split-bind-proof/beta:ro",
+        "/tmp/split-label-binds-ohln231y/gamma.dummy:/tmp/split-bind-proof/gamma:ro"
+      ],
+      "status": "created",
+      "running": false
+    },
+    {
+      "iteration": 4,
+      "binds": [
+        "/tmp/split-label-binds-ohln231y/alpha.dummy:/tmp/split-bind-proof/alpha:ro",
+        "/tmp/split-label-binds-ohln231y/beta.dummy:/tmp/split-bind-proof/beta:ro",
+        "/tmp/split-label-binds-ohln231y/gamma.dummy:/tmp/split-bind-proof/gamma:ro"
+      ],
+      "sorted_binds": [
+        "/tmp/split-label-binds-ohln231y/alpha.dummy:/tmp/split-bind-proof/alpha:ro",
+        "/tmp/split-label-binds-ohln231y/beta.dummy:/tmp/split-bind-proof/beta:ro",
+        "/tmp/split-label-binds-ohln231y/gamma.dummy:/tmp/split-bind-proof/gamma:ro"
+      ],
+      "status": "created",
+      "running": false
+    },
+    {
+      "iteration": 5,
+      "binds": [
+        "/tmp/split-label-binds-ohln231y/alpha.dummy:/tmp/split-bind-proof/alpha:ro",
+        "/tmp/split-label-binds-ohln231y/beta.dummy:/tmp/split-bind-proof/beta:ro",
+        "/tmp/split-label-binds-ohln231y/gamma.dummy:/tmp/split-bind-proof/gamma:ro"
+      ],
+      "sorted_binds": [
+        "/tmp/split-label-binds-ohln231y/alpha.dummy:/tmp/split-bind-proof/alpha:ro",
+        "/tmp/split-label-binds-ohln231y/beta.dummy:/tmp/split-bind-proof/beta:ro",
+        "/tmp/split-label-binds-ohln231y/gamma.dummy:/tmp/split-bind-proof/gamma:ro"
+      ],
+      "status": "created",
+      "running": false
+    }
+  ],
+  "max_iterations": 5,
+  "containers_started": false,
+  "network_mode": "none",
+  "published_ports": false,
+  "explicit_environment": false,
+  "real_runtime_touched": false,
+  "cleanup": {
+    "own_container_removed": true,
+    "own_networks_absent": true,
+    "own_volumes_absent": true,
+    "own_dummy_directory_removed": true
+  },
+  "bind_order_difference_reproduced": true,
+  "sorted_semantics_unchanged": true,
+  "distinct_order_count": 2,
+  "finished_at": "2026-10-24T05:01:51.129780+00:00"
+}

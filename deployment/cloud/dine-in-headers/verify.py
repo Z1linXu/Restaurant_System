@@ -19,7 +19,7 @@ d = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(d)
 
 
-def main(environment, sha, class_sha256):
+def main(environment, sha, class_sha256, attempt=''):
     assert environment in ('staging', 'production') and re.fullmatch('[0-9a-f]{40}', sha)
     assert re.fullmatch('[0-9a-f]{64}', class_sha256)
     script_release = HERE.parents[2]
@@ -27,7 +27,7 @@ def main(environment, sha, class_sha256):
     assert HERE == d.BASE / 'staging/releases' / script_sha / 'deployment/cloud/dine-in-headers'
     assert not d.i.run(['git', '-C', str(script_release), 'status', '--porcelain']).strip()
     assert not d.i.run(['git', '-C', str(script_release), 'diff', sha, script_sha, '--', 'backend', 'frontend']).strip()
-    root = d.BASE / environment / (d.RELEASE_PREFIX + sha)
+    root = d.evidence_root(environment, sha, attempt)
     result = json.loads(d.ops.private_file(root / 'result.json').read_text())
     assert result['source_sha'] == sha and result['health'] == 'PASS'
     name = ('cloud' if environment == 'production' else 'restaurant-pos-staging') + '-backend-1'
@@ -90,7 +90,9 @@ def main(environment, sha, class_sha256):
     db = name.replace('-backend-1', '-db-1')
     baseline = json.loads(d.ops.private_file(root / 'baseline.private.json').read_text())
     d.p.DB = db
-    d.validate_migration(baseline['ledger'], d.i.ledger(db))
+    original = json.loads(d.ops.private_file(d.evidence_root(environment, sha) / 'baseline.private.json').read_text()) if attempt else None
+    if attempt: d.validate_retry_baseline(original, baseline)
+    d.validate_release_ledger(baseline['ledger'], d.i.ledger(db), original['ledger'] if attempt else None)
     assert d.queue_guard(db, '39') == baseline['configuration']
     assert d.order_contexts(db, baseline['history']['cutoffs'][0]) == baseline['order_contexts']
     modes = d.table_modes(db)
@@ -99,7 +101,7 @@ def main(environment, sha, class_sha256):
     accepted = dict(observed, environment=environment, source_sha=sha, image=image, health='PASS',
         images=result['images'], flyway='39', table_modes=modes, mock_split_labels='PASS',
         split_label_public_asset_sha256=hashlib.sha256(label_bytes).hexdigest(), preview_asset_sha256=hashlib.sha256(asset_bytes).hexdigest(), preview_public_asset='PASS',
-        accepted=True, script_sha=script_sha, app_jar_sha256=hashlib.sha256((proof / 'app.jar').read_bytes()).hexdigest(),
+        accepted=True, attempt=attempt or 'initial', script_sha=script_sha, app_jar_sha256=hashlib.sha256((proof / 'app.jar').read_bytes()).hexdigest(),
         proof_class_sha256=class_sha256, observed_at=datetime.datetime.now(datetime.timezone.utc).isoformat())
     d.ops.write_private(root / 'render-acceptance.json', accepted)
     d.ops.write_private(root / 'acceptance.json', accepted)

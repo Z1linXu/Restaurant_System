@@ -2570,6 +2570,9 @@ New six-type dine-in receipts use the same backend display and preserve leftmost
 LARGE table text, inline UPDATE and exactly one extra nominal 16mm top feed.
 Takeout and existing frozen PrintJobs are unchanged. See
 [split-label release evidence](docs/SPLIT_TABLE_LABEL_MODE_20261024.md).
+Promotion compares bind mounts by their complete source/target/options independent
+of Docker array order; a bounded same-artifact retry retains the original migration
+and failed-release evidence and requires the existing V39 ledger to stay unchanged.
 
 Current frontend table behavior in code:
 

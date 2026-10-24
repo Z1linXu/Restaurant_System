@@ -1,0 +1,130 @@
+{
+  "large_font_preserved": true,
+  "print_dispatched": false,
+  "fits_42_columns": true,
+  "leftmost_payload_prefix": true,
+  "modules": {
+    "GRAB": [
+      "1",
+      "1里",
+      "1-左",
+      "1-右"
+    ],
+    "GRAB_UPDATE": [
+      "1 (UPDATE)",
+      "1里 (UPDATE)",
+      "1-左 (UPDATE)",
+      "1-右 (UPDATE)"
+    ],
+    "FRONTDESK_RECEIPT": [
+      "1",
+      "1里",
+      "1-左",
+      "1-右"
+    ],
+    "FRONTDESK_RECEIPT_UPDATE": [
+      "1 (UPDATE)",
+      "1里 (UPDATE)",
+      "1-左 (UPDATE)",
+      "1-右 (UPDATE)"
+    ],
+    "HOT_KITCHEN": [
+      "1",
+      "1里",
+      "1-左",
+      "1-右"
+    ],
+    "HOT_KITCHEN_UPDATE": [
+      "1 (UPDATE)",
+      "1里 (UPDATE)",
+      "1-左 (UPDATE)",
+      "1-右 (UPDATE)"
+    ]
+  },
+  "database_written": false,
+  "status": "PASS",
+  "header_cases": 24,
+  "additional_top_feed_mm": 16,
+  "top_feed_once": true,
+  "split_label_cases": 48,
+  "pad_tcp_payload_identical": true,
+  "takeout_cases": 6,
+  "environment": "staging",
+  "source_sha": "f838e48de1f20689253716bd1910b952fcbc00d3",
+  "image": "sha256:ced502b10fc6d3a61eb57b55733ee24d45665ce16350c15a7caf1de2339f0b2e",
+  "health": "PASS",
+  "images": {
+    "backend": "sha256:ced502b10fc6d3a61eb57b55733ee24d45665ce16350c15a7caf1de2339f0b2e",
+    "nginx": "sha256:e2fee1acee5a4b9dfb137090b0be5aa8e4a361cfc6e51b6527dcd91c85593bf0"
+  },
+  "flyway": "39",
+  "table_modes": {
+    "rows": 30,
+    "left_right": 30,
+    "stores": [
+      {
+        "id": 1,
+        "code": "STG005_SRC_20260809_R01",
+        "tables": 13,
+        "default_mode_tables": 13
+      },
+      {
+        "id": 18,
+        "code": "CHINATOWN",
+        "tables": 3,
+        "default_mode_tables": 3
+      },
+      {
+        "id": 21,
+        "code": "PHASE_B_VALIDATION_STORE_PRODUCT_FLOW_D0B1BDE_R03",
+        "tables": 2,
+        "default_mode_tables": 2
+      },
+      {
+        "id": 22,
+        "code": "STG005_BUSINESS_67494DE0F3D949798CF78BBC08A48856",
+        "tables": 2,
+        "default_mode_tables": 2
+      },
+      {
+        "id": 23,
+        "code": "STG005_BUSINESS_4B127620A74333F0FA4C9829E3537B5F",
+        "tables": 2,
+        "default_mode_tables": 2
+      },
+      {
+        "id": 24,
+        "code": "STG005_MENU_MENU1501_A",
+        "tables": 2,
+        "default_mode_tables": 2
+      },
+      {
+        "id": 25,
+        "code": "STG005_MENU_MENU1501_B",
+        "tables": 2,
+        "default_mode_tables": 2
+      },
+      {
+        "id": 26,
+        "code": "STG005_MENU_ALIAS1601_A",
+        "tables": 2,
+        "default_mode_tables": 2
+      },
+      {
+        "id": 27,
+        "code": "STG005_MENU_ALIAS1601_B",
+        "tables": 2,
+        "default_mode_tables": 2
+      }
+    ]
+  },
+  "mock_split_labels": "PASS",
+  "split_label_public_asset_sha256": "01e3518346cd9a7ba47cded69b2942bb74184c5eae004fbf0d45a0de0788a085",
+  "preview_asset_sha256": "ff3ee137fe5a1ec717dfd0cce70672b9957d8c44f004d6ba32c2b8d017d293b1",
+  "preview_public_asset": "PASS",
+  "accepted": true,
+  "script_sha": "f838e48de1f20689253716bd1910b952fcbc00d3",
+  "app_jar_sha256": "aca424461dff0bec7185965373b36bee5d68576b89780e4a018990ee062209da",
+  "proof_class_sha256": "75b288b27a7e22d179f98ce60d11f5d2f6b7e1457c1d3311539b047f79581049",
+  "observed_at": "2026-10-24T04:56:01.308290+00:00"
+}
