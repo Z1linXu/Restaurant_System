@@ -1,0 +1,235 @@
+{
+  "schema": "DINING_TABLE_SOFT_DELETE_POSTRELEASE_AUDIT_V1",
+  "result": "PASS",
+  "application_sha": "028d4971740889a0ac0d784a43497bc3e5b54b3d",
+  "script_sha": "028d4971740889a0ac0d784a43497bc3e5b54b3d",
+  "read_only": true,
+  "business_writes": false,
+  "runtime_lifecycle_changes": false,
+  "checks": {
+    "reviewed_tool_identity": true,
+    "canonical_matches_release_target_and_marker": true,
+    "backup_checksum_verified": true,
+    "same_staging_application_pair_and_jar": true,
+    "full_runtime_environments_unchanged": true,
+    "production_uber_worker_preserved": true,
+    "production_staging_database_and_secret_isolation": true,
+    "four_protected_container_fingerprints_unchanged": true,
+    "entire_v39_ledger_unchanged": true,
+    "baseline_history_context_configuration_unchanged": true,
+    "all_existing_table_rows_states_and_modes_preserved": true,
+    "quiet_queues_and_old_printing_retained": true,
+    "both_public_health_print_regression_and_read_only_two_list_acceptance": true,
+    "public_delete_ui_and_no_active_checkbox_acceptance": true,
+    "fresh_strict_cache_second_review_completed": true
+  },
+  "backup_sha256": "2412b382c22d587efce7abfbf2232a9e2c45d486a60bed6922cd368810ea0115",
+  "canonical_sha256": "81183b16a2c831312bf4385157ad2918237dbb93532052f1ec20ee16aa66faf4",
+  "images": {
+    "backend": "sha256:bf09f83635d532523b82c39dae30afbdfa12840858dd195d46423423cf49f696",
+    "nginx": "sha256:af9a528ae56ceb905597794823b2ad417ef3c580fac6e3689c311ec837dcc9d9"
+  },
+  "app_jar_sha256": "1983c90d201aad1cd85b26cb27764ddaf605535d083cb18d643f96df2bded618",
+  "environment_sha256": {
+    "backend": "e350b03d881624ec5df4bfbdda0dfc6d11bb6b6abb7e4073fbd3133c97db7314",
+    "nginx": "23797e8c9e01d4fdf451dd76371a903fd8d443b21cc43567c6993d27c4d609fe"
+  },
+  "protected_containers": {
+    "cloud-db-1": {
+      "container_id": "c2ab37fec6ac966e77a1d8ab7aa41d1da294b9ac57b1a21ce18904d04cfae91e",
+      "unchanged": true
+    },
+    "restaurant-pos-staging-nginx-1": {
+      "container_id": "a022ecf318a4ab69bba89ed92a92502a400055a3333524c003a5bdab42749138",
+      "unchanged": true
+    },
+    "restaurant-pos-staging-backend-1": {
+      "container_id": "65486abec3892fce9afc16f70215f80e85c92094791bdb66e650313c689b077d",
+      "unchanged": true
+    },
+    "restaurant-pos-staging-db-1": {
+      "container_id": "b64d3c676dbb4003368279453e5c6b390ac6327c3cf28001ead671155f93f4c5",
+      "unchanged": true
+    }
+  },
+  "flyway_last_row": "39|V39__add_dining_table_split_label_mode.sql|1431202837|t",
+  "history_cutoffs": [
+    10785,
+    27105
+  ],
+  "history_hashes": [
+    "b579884183618b4d92b4cb1b15cf3ce5",
+    "4594bfb47b25772bfc1c3b84ff27c54d",
+    "f4395aff6f4c030a2a86a20f12206650",
+    "0b64d2f3689fcd3a1871f51e45032a12",
+    "2e002710b59a32362945c8a6fefacf55"
+  ],
+  "configuration_sha256": "b7890dbd7aa89aca10f4669b97d012567e22981a69cffb83f7ffc1aa2e28068d",
+  "order_contexts_hash": "89a34c408316ff69ad1da30a9089cc5b",
+  "table_counts": {
+    "rows": 39,
+    "active": 35,
+    "inactive": 4,
+    "stores": [
+      {
+        "id": 1,
+        "code": "4483_R_SAINT_DENIS",
+        "total": 13,
+        "active": 13,
+        "inactive": 0
+      },
+      {
+        "id": 2,
+        "code": "CHINATOWN",
+        "total": 24,
+        "active": 20,
+        "inactive": 4
+      },
+      {
+        "id": 3,
+        "code": "ST_CATHERINE",
+        "total": 2,
+        "active": 2,
+        "inactive": 0
+      }
+    ]
+  },
+  "full_dining_tables_hash": "0f1cbbeff09d55cc6ef44e5c8bb4e5c1",
+  "table_projection_sha256": "9ad12f010f63bebe1a0e78b831e26c5bc75b5505c8f322c767433c18594b9af8",
+  "table_modes": {
+    "rows": 39,
+    "left_right": 35,
+    "inside_outside": 4,
+    "stores": [
+      {
+        "id": 1,
+        "code": "4483_R_SAINT_DENIS",
+        "tables": 13,
+        "default_mode_tables": 13,
+        "inside_outside_tables": 0
+      },
+      {
+        "id": 2,
+        "code": "CHINATOWN",
+        "tables": 24,
+        "default_mode_tables": 20,
+        "inside_outside_tables": 4
+      },
+      {
+        "id": 3,
+        "code": "ST_CATHERINE",
+        "tables": 2,
+        "default_mode_tables": 2,
+        "inside_outside_tables": 0
+      }
+    ]
+  },
+  "queues": {
+    "pending_print_jobs": 0,
+    "pending_outbox": 0,
+    "pending_uber_events": 0,
+    "due_uber_orders": 0,
+    "uber_bindings": 1
+  },
+  "old_printing_ids": [
+    1176,
+    3169,
+    9226,
+    20391
+  ],
+  "table_list_get_acceptance": [
+    {
+      "store_id": 1,
+      "active_tables": 13,
+      "excluded_inactive_tables": 0,
+      "both_lists": "PASS"
+    },
+    {
+      "store_id": 2,
+      "active_tables": 20,
+      "excluded_inactive_tables": 4,
+      "both_lists": "PASS"
+    },
+    {
+      "store_id": 3,
+      "active_tables": 2,
+      "excluded_inactive_tables": 0,
+      "both_lists": "PASS"
+    }
+  ],
+  "credential_mutation": false,
+  "disk": {
+    "total_bytes": 63290032128,
+    "used_bytes": 46868733952,
+    "available_bytes": 13720465408,
+    "used_percent": 78
+  },
+  "docker_system_df": [
+    {
+      "Active": "4",
+      "Reclaimable": "3.555GB (42%)",
+      "Size": "8.301GB",
+      "TotalCount": "123",
+      "Type": "Images"
+    },
+    {
+      "Active": "8",
+      "Reclaimable": "0B (0%)",
+      "Size": "413.7kB",
+      "TotalCount": "8",
+      "Type": "Containers"
+    },
+    {
+      "Active": "0",
+      "Reclaimable": "0B",
+      "Size": "0B",
+      "TotalCount": "2",
+      "Type": "Local Volumes"
+    },
+    {
+      "Active": "12",
+      "Reclaimable": "10.45GB",
+      "Size": "16.82GB",
+      "TotalCount": "291",
+      "Type": "Build Cache"
+    }
+  ],
+  "build_cache": {
+    "Active": "12",
+    "Reclaimable": "10.45GB",
+    "Size": "16.82GB",
+    "TotalCount": "291",
+    "Type": "Build Cache"
+  },
+  "build_cache_bytes": 16820000000,
+  "healthy_targets": {
+    "disk_below_70_percent": false,
+    "build_cache_at_most_8_gib": false
+  },
+  "strict_cache_second_review": {
+    "docker_filter": "until=168h",
+    "minimum_age_hours": 168,
+    "records_reviewed": 291,
+    "old_reclaimable_records": 266,
+    "excluded_nonzero_usage_records": 266,
+    "eligible_records": 0,
+    "eligible": [],
+    "unparseable_records": 0,
+    "cleanup_performed": false,
+    "condition": "age>168h,reclaimable=true,mutable=false,shared=false,UsageCount=0,nonempty LastUsedAt"
+  },
+  "hygiene": {
+    "status": "WARNING",
+    "classification": "NON_BLOCKING_EXISTING_DEBT",
+    "cleanup_performed": false,
+    "cleanup_eligibility_rules_relaxed": false,
+    "business_acceptance_gate_changed": false
+  },
+  "business_result": "PASS",
+  "cache_review_requires_owner_attention": false,
+  "prior_split_label_failure_evidence_traversed": false,
+  "finished_at": "2026-10-24T05:49:46.712198+00:00",
+  "root_signal_images_match": true,
+  "root_signal_jar_matches": true,
+  "root_signal_backup_matches": true
+}

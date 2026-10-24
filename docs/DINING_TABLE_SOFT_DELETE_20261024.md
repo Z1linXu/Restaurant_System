@@ -137,3 +137,84 @@ is preserved. Both shared environments have0 pre-existing invalid identities.
 No further executable changes are pending outside the consolidated review.
 
 Agent6 consolidated review ACCEPT, no remaining P0/P1/P2; independent tool8/frontend33 PASS. Local isolated PostgreSQL stopped after final validation.
+
+
+## Immutable release batch
+
+PR #302 reviewed commit `ec2f98c18f30aa3080d9604d3f589f3fb5c7af43`, application
+merge SHA `028d4971740889a0ac0d784a43497bc3e5b54b3d`. Fresh fetch/ancestry and
+unchanged reviewed backend/frontend/deployment trees verified. Authority refreshed;
+exact clean detached server release created. Stage build started05:42:17 UTC.
+No new migration; entire V39 ledger and all table rows are immutable through
+promotion. Current f838 backend/frontend pair is the exact application rollback.
+Stage and Production each require fresh custom pg_dump and readable TOC. Only
+backend/nginx are replaced; DB containers, all other runtime fingerprints, full
+private environments and continuous Uber worker remain protected.
+
+
+Stage deployed05:47:06 UTC (4m49 from build start), accepted05:47:42 UTC. Backend
+`sha256:bf09f83635d532523b82c39dae30afbdfa12840858dd195d46423423cf49f696`;
+frontend `sha256:af9a528ae56ceb905597794823b2ad417ef3c580fac6e3689c311ec837dcc9d9`.
+Actual JAR SHA256 `1983c90d201aad1cd85b26cb27764ddaf605535d083cb18d643f96df2bded618`.
+V39/all table rows/config/history/context/protected runtime remained unchanged;
+Store18 actual authenticated Admin+Frontdesk GET both match3 active tables.
+Public Delete/SplitLabel/absence of checkbox and same-byte preview assets PASS;
+actual deployed JAR24+48+6 print cases, single16mm/fullPAD-TCP parity PASS.
+No Stage application retry or rebuild. Read-only identity is not password login.
+Production same-artifact promotion started05:47:49 UTC, fresh backup and f838
+exact app-pair rollback retained; no database schema or business configuration writes.
+
+
+## Production acceptance and final audit
+
+Production deployed05:48:37 UTC, accepted05:48:58 UTC. Same Stage images/JAR;
+no application retry/rollback/rebuild, no migration. Fresh readable backup SHA256
+`2412b382c22d587efce7abfbf2232a9e2c45d486a60bed6922cd368810ea0115`.
+Actual authenticated GET Admin+Frontdesk lists both exactly match DB active rows:
+Store1 13, Chinatown20 excluding4 inactive, Store3 2. All39 table rows remain
+unchanged,35 LEFT_RIGHT/4 INSIDE_OUTSIDE. Both public apps healthUP; deployed
+Delete/SplitLabel/no-checkbox/preview assets match container bytes. Actual JAR
+24+48+6 print cases preserve the original layout and single extra16mm feed.
+
+05:49:46 UTC independent fresh read-only audit PASS: canonical target/release
+marker/backup, Stage same pair/JAR/OCI, entire V39 ledger, complete configuration
+and table hash, initial preflight independent row projection, history/context,
+complete environment/continuous Uber, four protected containers, quiet queues
+and four old PRINTING jobs unchanged. No real table/Delete/order/print API write
+or device action was performed during live acceptance; behavioral CRUD/Finish/
+isolation is actual local PG and frontend test proof, not a claimed live write.
+No password login, logged-in UI click, physical Pad print or paper measurement.
+
+## Docker / Disk Hygiene
+
+Disk before Stage77% /14GiB free; after Stage/before Production78% /13GiB free;
+after Production78%,13,720,465,408 bytes available. Build Cache before/after
+16.82GB, reclaimable10.45GB,291 records. Strict second review of age>168h has266
+reclaimable records, all excluded for UsageCount>0; eligible0/unparseable0.
+WARNING / NON_BLOCKING_EXISTING_DEBT; healthy disk<70/cache<=8GB targets remain
+unmet, no new acceptance gate introduced. Cleanup performed:no; reclaimed0.
+Current Stage/Production images, exact f838 rollback pair, database containers/
+volumes, private configuration, fresh backups and authority evidence protected.
+Both sites UP. Production mutation is only the expressly authorized app-pair
+release; no Flyway, operational data or Uber configuration mutation. Own bounded
+builder/render containers removed, local isolated PG/Java stopped.
+
+## Product / tooling and governance separation
+
+PRODUCT REPAIR: backend platform table CRUD, station context locking, order
+repository/entry guards; frontend table editor/board/ordering/cache and relevant
+tests. Implementation about8 minutes; tests/input-safety repair about9 minutes
+(Estimated, parallel). Includes persisted confirmation and ASCII case/whitespace
+edge closure; no adjacent menu/price/Combo/modifier/device/printing changes.
+
+BLOCKING TOOLING: reuse existing dine-in-headers deploy/verify/test paths, pin
+current rollback pair, preserve complete V39/table rows, verify actual read-only
+lists and public UI; about3 minutes (Estimated, parallel with product work).
+GOVERNANCE: SYSTEM/API/current-state and this evidence; docs-only final sync uses
+the risk-based review exception after successful runtime audit. No extra app
+build or deployment. Unrelated lint warning, pre-active validation-fixture
+provisioning and disk cleanup remain outside this bounded release.
+
+Stop: DINING_TABLE_SOFT_DELETE_PRODUCTION_COMPLETE; global Production default
+mutation_authorized=false and authorization.production=NONE remain. No next
+Package or Phase is opened by completion.
