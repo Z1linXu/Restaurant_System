@@ -76,7 +76,7 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
         boolean dineIn = PrintTableDisplayFormatter.isDineIn(request.order);
         if (dineIn) {
             builder.append(PrintTableDisplayFormatter.formatDineInHeader(
-                request.order.table_no, Boolean.TRUE.equals(request.is_update_ticket))).append("\n");
+                request.order, Boolean.TRUE.equals(request.is_update_ticket))).append("\n");
         } else {
             ExternalOrderReceiptHeader.append(builder, request.order);
             builder.append("\n\n\n");

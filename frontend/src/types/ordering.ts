@@ -270,6 +270,7 @@ export interface BackendFrontdeskOrderBoardItem {
   order_no: string
   order_type: string
   table_no: string | null
+  table_display_name?: string | null
   pickup_no: string | null
   order_status: string
   is_modified_after_submit: boolean
@@ -291,6 +292,7 @@ export interface BackendOrderResponse {
   created_by: number
   order_type: string
   table_no: string | null
+  table_display_name?: string | null
   pickup_no: string | null
   subtotal_amount: number
   discount_amount: number

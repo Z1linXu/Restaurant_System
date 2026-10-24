@@ -31,12 +31,44 @@ class HeaderReleaseTest(unittest.TestCase):
         queues = dict(flyway='38', pending_print_jobs=0, pending_outbox=0,
                       pending_uber_events=0, due_uber_orders=0, uber_orders=39, local_uber_orders=39)
         with patch.object(release.ops, 'inventory', return_value=queues), patch.object(
-            release.ops, 'current_4483_configuration', return_value={'fresh_printing': 0}):
-            self.assertEqual({'fresh_printing': 0}, release.queue_guard('cloud-db-1'))
+            release.ops, 'current_4483_configuration', return_value={'fresh_printing': 0, 'flyway_schema_history': 'ledger'}):
+            with patch.object(release, 'read_sql', return_value='old-table-digest'):
+                self.assertEqual({'fresh_printing': 0, 'dining_tables_legacy_columns': 'old-table-digest'}, release.queue_guard('cloud-db-1'))
             for key in ('pending_print_jobs', 'pending_outbox', 'pending_uber_events', 'due_uber_orders'):
                 queues[key] = 1
                 with self.assertRaises(AssertionError): release.queue_guard('cloud-db-1')
                 queues[key] = 0
+
+    def test_only_exact_v39_append_preserves_all_old_migrations(self):
+        import zlib
+        checksum = 0
+        migration = release.HERE.parents[2] / 'backend/src/main/resources/db/migration/V39__add_dining_table_split_label_mode.sql'
+        for line in migration.read_text().splitlines(): checksum = zlib.crc32(line.encode(), checksum)
+        if checksum >= 2**31: checksum -= 2**32
+        old = '1|V1__baseline_current_schema.sql|42|t\n38|V38__add_store_remove_catalog.sql|99|t\n'
+        added = f'39|V39__add_dining_table_split_label_mode.sql|{checksum}|t\n'
+        release.validate_migration(old, old + added)
+        for changed in [old, old.replace('|42|', '|43|') + added,
+                        old + added.replace('|t', '|f'), old + added + '40|other.sql|1|t\n',
+                        old + added.replace(str(checksum), str(checksum + 1))]:
+            with self.assertRaises(AssertionError): release.validate_migration(old, changed)
+
+    def test_existing_tables_must_default_left_right_including_every_store(self):
+        import json
+        state = {'rows': 39, 'left_right': 39, 'stores': [{'id': 2, 'code': 'CHINATOWN', 'tables': 24, 'default_mode_tables': 24}]}
+        with patch.object(release, 'read_sql', return_value=json.dumps(state)):
+            self.assertEqual(state, release.table_modes('cloud-db-1'))
+        state['left_right'] = 38
+        with patch.object(release, 'read_sql', return_value=json.dumps(state)):
+            with self.assertRaises(AssertionError): release.table_modes('cloud-db-1')
+
+    def test_post_migration_guard_requires_v39(self):
+        queues = dict(flyway='39', pending_print_jobs=0, pending_outbox=0,
+                      pending_uber_events=0, due_uber_orders=0)
+        with patch.object(release.ops, 'inventory', return_value=queues), patch.object(
+            release, 'configuration', return_value={'fresh_printing': 0}):
+            self.assertEqual({'fresh_printing': 0}, release.queue_guard('cloud-db-1', '39'))
+            with self.assertRaises(AssertionError): release.queue_guard('cloud-db-1', '38')
 
 
 if __name__ == '__main__': unittest.main()

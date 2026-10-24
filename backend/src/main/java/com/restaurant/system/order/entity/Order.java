@@ -56,6 +56,9 @@ public class Order {
     @Column(name = "table_no")
     public String table_no;
 
+    @jakarta.persistence.Transient
+    public String table_display_name;
+
     @Column(name = "pickup_no")
     public String pickup_no;
 

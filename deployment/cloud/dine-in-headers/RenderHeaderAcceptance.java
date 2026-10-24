@@ -10,6 +10,11 @@ import com.restaurant.system.printing.service.impl.PrintJobServiceImpl;
 import com.restaurant.system.printing.transport.EscPosTcpPrinterTransport;
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import com.restaurant.system.station.entity.DiningTable;
+import com.restaurant.system.station.repository.DiningTableRepository;
+import com.restaurant.system.station.service.DiningTableDisplayService;
 import java.math.BigDecimal;
 import java.nio.charset.Charset;
 import java.time.LocalDateTime;
@@ -37,34 +42,8 @@ public final class RenderHeaderAcceptance {
                 for (String table : List.of("1", "1里", "1-左", "1-右")) {
                     var request = fixture(table, update);
                     request.module_code = renderer.getModuleCode();
-                    String text = renderer.render(request);
-                    require(text.startsWith(PrintMarkup.TOP_FEED_16MM));
-                    String visible = PrintMarkup.stripTopFeed(text);
                     String expected = table + (update ? " (UPDATE)" : "");
-                    require(visible.startsWith(PrintMarkup.large(table) + (update ? " (UPDATE)" : "") + "\n"));
-                    require(visible.replaceAll("\\[\\[/?(?:DOUBLE_HEIGHT|LARGE|SMALL)]]", "")
-                        .startsWith(expected + "\n--------------------------------\n"));
-                    require(!text.contains("桌号：") && !text.contains("UPDATED"));
-                    byte[] bytes = Base64.getDecoder().decode((String) payloadMethod.invoke(
-                        payloadService, text, printer, "SMALL"));
-                    var prefixBytes = new ByteArrayOutputStream();
-                    prefixBytes.write(new byte[]{0x1B, 0x40}); prefixBytes.write(FEED);
-                    prefixBytes.write(("\u001d!3" + table + "\u001d!\u0000" + (update ? " (UPDATE)" : "") + "\n")
-                        .getBytes(Charset.forName("GBK")));
-                    byte[] prefix = prefixBytes.toByteArray();
-                    require(bytes.length > prefix.length && Arrays.equals(
-                        prefix, Arrays.copyOf(bytes, prefix.length)));
-                    require(occurrences(bytes, FEED) == 1 && occurrences(bytes, new byte[]{0x1B, 0x40}) == 1);
-                    require(Arrays.equals(new byte[]{0x1D, 0x56, 0x41, 0x10}, Arrays.copyOfRange(bytes, bytes.length - 4, bytes.length)));
-                    require(Arrays.equals(bytes, Base64.getDecoder().decode((String) payloadMethod.invoke(
-                        payloadService, PrintMarkup.TOP_FEED_16MM + text, printer, "SMALL"))));
-                    var tcp = new ByteArrayOutputStream(); tcp.write(new byte[]{0x1B, 0x40});
-                    tcpMethod.invoke(new EscPosTcpPrinterTransport(null), tcp, text, Charset.forName("GBK"), "SMALL");
-                    tcp.write(new byte[]{0x1D, 0x56, 0x41, 0x10});
-                    require(Arrays.equals(bytes, tcp.toByteArray()));
-                    // 80mm devices commonly offer 42/48 Font-A columns. Keep only the table 4x wide.
-                    int columns = table.codePoints().map(c -> c >= 0x2e80 ? 2 : 1).sum() * 4 + (update ? 9 : 0);
-                    require(columns <= 42);
+                    verifyHeader(renderer, request, table, update, payloadMethod, tcpMethod, payloadService, printer);
                     verified.add(expected);
                 }
                 modules.put(renderer.getModuleCode() + (update ? "_UPDATE" : ""), verified);
@@ -76,13 +55,73 @@ public final class RenderHeaderAcceptance {
                     payloadService, takeoutText, printer, "SMALL")), FEED) == 0);
             }
         }
+        int splitCases = 0;
+        for (String base : List.of("1", "10")) {
+            for (String mode : List.of("LEFT_RIGHT", "INSIDE_OUTSIDE")) {
+                var configured = new DiningTable(); configured.id = -10L; configured.store_id = -1L;
+                configured.table_name = base; configured.table_code = "duplicate-code";
+                configured.table_config = "split_supported"; configured.split_label_mode = mode;
+                var tables = (DiningTableRepository) Proxy.newProxyInstance(DiningTableRepository.class.getClassLoader(),
+                    new Class<?>[]{DiningTableRepository.class}, (proxy, method, values) -> {
+                        if (method.getName().equals("findAllByStoreIdAndTableName"))
+                            return Objects.equals(values[0], -1L) && Objects.equals(values[1], base) ? List.of(configured) : List.of();
+                        throw new IllegalStateException("UNEXPECTED_DATABASE_OR_REPOSITORY_OPERATION");
+                    });
+                var display = new DiningTableDisplayService(tables, null);
+                for (String seat : List.of("A", "B")) {
+                    String expectedLabel = base + (mode.equals("INSIDE_OUTSIDE")
+                        ? (seat.equals("A") ? "里" : "外") : (seat.equals("A") ? "-左" : "-右"));
+                    for (var renderer : renderers) for (boolean update : new boolean[]{false, true}) {
+                        var request = fixture(base + "-" + seat, update);
+                        request.module_code = renderer.getModuleCode(); display.apply(request.order);
+                        require(request.order.table_no.equals(base + "-" + seat));
+                        require(request.order.table_display_name.equals(expectedLabel));
+                        verifyHeader(renderer, request, expectedLabel, update, payloadMethod, tcpMethod, payloadService, printer);
+                        splitCases++;
+                    }
+                }
+            }
+        }
         Map<String, Object> result = new LinkedHashMap<>(Map.of(
             "status", "PASS", "modules", modules, "header_cases", 24,
             "large_font_preserved", true, "leftmost_payload_prefix", true, "fits_42_columns", true,
             "database_written", false, "print_dispatched", false));
         result.put("additional_top_feed_mm", 16); result.put("top_feed_once", true);
+        result.put("split_label_cases", splitCases);
         result.put("pad_tcp_payload_identical", true); result.put("takeout_cases", 6);
         System.out.println(new ObjectMapper().writeValueAsString(result));
+    }
+
+    private static void verifyHeader(ReceiptRenderer renderer, PrintRenderRequest request, String table, boolean update,
+            Method payloadMethod, Method tcpMethod, PrintJobServiceImpl payloadService, PrinterConfig printer) throws Exception {
+        String expected = table + (update ? " (UPDATE)" : "");
+        String text = renderer.render(request);
+        require(text.startsWith(PrintMarkup.TOP_FEED_16MM));
+        String visible = PrintMarkup.stripTopFeed(text);
+        require(visible.startsWith(PrintMarkup.large(table) + (update ? " (UPDATE)" : "") + "\n"));
+        require(visible.replaceAll("\\[\\[/?(?:DOUBLE_HEIGHT|LARGE|SMALL)]]", "")
+            .startsWith(expected + "\n--------------------------------\n"));
+        require(!text.contains("桌号：") && !text.contains("UPDATED"));
+        byte[] bytes = Base64.getDecoder().decode((String) payloadMethod.invoke(
+            payloadService, text, printer, "SMALL"));
+        var prefixBytes = new ByteArrayOutputStream();
+        prefixBytes.write(new byte[]{0x1B, 0x40}); prefixBytes.write(FEED);
+        prefixBytes.write(("\u001d!3" + table + "\u001d!\u0000" + (update ? " (UPDATE)" : "") + "\n")
+            .getBytes(Charset.forName("GBK")));
+        byte[] prefix = prefixBytes.toByteArray();
+        require(bytes.length > prefix.length && Arrays.equals(
+            prefix, Arrays.copyOf(bytes, prefix.length)));
+        require(occurrences(bytes, FEED) == 1 && occurrences(bytes, new byte[]{0x1B, 0x40}) == 1);
+        require(Arrays.equals(new byte[]{0x1D, 0x56, 0x41, 0x10}, Arrays.copyOfRange(bytes, bytes.length - 4, bytes.length)));
+        require(Arrays.equals(bytes, Base64.getDecoder().decode((String) payloadMethod.invoke(
+            payloadService, PrintMarkup.TOP_FEED_16MM + text, printer, "SMALL"))));
+        var tcp = new ByteArrayOutputStream(); tcp.write(new byte[]{0x1B, 0x40});
+        tcpMethod.invoke(new EscPosTcpPrinterTransport(null), tcp, text, Charset.forName("GBK"), "SMALL");
+        tcp.write(new byte[]{0x1D, 0x56, 0x41, 0x10});
+        require(Arrays.equals(bytes, tcp.toByteArray()));
+        // 80mm devices commonly offer 42/48 Font-A columns. Keep only the table 4x wide.
+        int columns = table.codePoints().map(c -> c >= 0x2e80 ? 2 : 1).sum() * 4 + (update ? 9 : 0);
+        require(columns <= 42);
     }
 
     private static int occurrences(byte[] bytes, byte[] pattern) {

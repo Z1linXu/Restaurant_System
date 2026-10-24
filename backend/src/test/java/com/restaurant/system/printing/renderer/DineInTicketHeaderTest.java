@@ -50,6 +50,27 @@ class DineInTicketHeaderTest {
 
     @ParameterizedTest(name = "{0} update={1}")
     @MethodSource("ticketTypes")
+    void configuredDisplayProjectionKeepsRawSeatAndExistingTopFeedAndMarkup(String module, boolean update) {
+        var tables = mock(com.restaurant.system.station.repository.DiningTableRepository.class);
+        var table = new com.restaurant.system.station.entity.DiningTable();
+        table.id = 1L; table.store_id = 1L; table.table_name = "1"; table.split_label_mode = "INSIDE_OUTSIDE";
+        when(tables.findAllByStoreIdAndTableName(1L, "1")).thenReturn(List.of(table));
+        var display = new com.restaurant.system.station.service.DiningTableDisplayService(tables, mock(jakarta.persistence.EntityManager.class));
+        for (String side : List.of("A", "B")) {
+            var request = request(module, update);
+            request.order.table_no = "1-" + side;
+            display.apply(request.order);
+            String label = "A".equals(side) ? "1里" : "1外";
+            String text = render(module, request);
+            assertThat(text).startsWith(PrintMarkup.TOP_FEED_16MM + PrintMarkup.large(label) + (update ? " (UPDATE)" : "") + "\n");
+            assertThat(plain(PrintMarkup.stripTopFeed(text)).lines().limit(2).toList())
+                .containsExactly(label + (update ? " (UPDATE)" : ""), DIVIDER);
+            assertThat(request.order.table_no).isEqualTo("1-" + side);
+        }
+    }
+
+    @ParameterizedTest(name = "{0} update={1}")
+    @MethodSource("ticketTypes")
     void missingDineInTableRetainsWalkInFallback(String module, boolean update) {
         for (String tableCode : new String[] {null, "", "  "}) {
             var request = request(module, update);

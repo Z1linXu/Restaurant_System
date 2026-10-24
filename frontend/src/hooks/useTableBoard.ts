@@ -6,6 +6,7 @@ import {
   type FrontdeskRealtimeLifecycleEvent,
 } from '../services/orderService'
 import type { BackendDiningTableConfig, DiningTable, TableSeatCode, TableSlot, TableStatus } from '../types/dinein'
+import { formatConfiguredSplitLabel, normalizeSplitLabelMode } from '../utils/tableDisplay'
 
 const SEAT_CODES: TableSeatCode[] = ['A', 'B']
 const FRONTDESK_FALLBACK_POLL_INTERVAL_MS = 30_000
@@ -29,17 +30,21 @@ export function mapBackendDiningTable(table: BackendDiningTableConfig): DiningTa
     seats: table.capacity,
     zone: table.area_name,
     tableConfig: table.table_config,
+    splitLabelMode: normalizeSplitLabelMode(table.split_label_mode),
     occupancyMode: 'empty',
   }
 }
 
 export function buildTableSlots(tables: DiningTable[]) {
   return tables.flatMap<TableSlot>((table) => {
+    const splitLabelMode = tables.filter((current) => current.label === table.label).length === 1 ? table.splitLabelMode : 'LEFT_RIGHT'
     if (table.occupancyMode === 'empty') {
       return [
         {
           id: `${table.label}-full`,
           label: table.label,
+          displayLabel: table.label,
+          splitLabelMode,
           baseTableLabel: table.label,
           zone: table.zone,
           status: 'available',
@@ -54,6 +59,8 @@ export function buildTableSlots(tables: DiningTable[]) {
         {
           id: `${table.label}-full`,
           label: table.label,
+          displayLabel: table.fullOrder?.backendTableDisplayName ?? table.label,
+          splitLabelMode,
           baseTableLabel: table.label,
           zone: table.zone,
           status: table.alertMessage ? 'alert' : 'occupied',
@@ -74,6 +81,8 @@ export function buildTableSlots(tables: DiningTable[]) {
       return {
         id: `${table.label}-${seatCode}`,
         label: `${table.label}-${seatCode}`,
+        displayLabel: order?.backendTableDisplayName ?? formatConfiguredSplitLabel(table.label, seatCode, splitLabelMode),
+        splitLabelMode,
         baseTableLabel: table.label,
         zone: table.zone,
         status: order && table.alertMessage ? 'alert' : order ? 'occupied' : 'available',
@@ -106,6 +115,7 @@ interface UseTableBoardOptions {
   enabled?: boolean
   storeId: number
   onOrderTerminal?: (orderId: number, status: string) => void | Promise<void>
+  onTablesLoaded?: (storeId: number, tables: BackendDiningTableConfig[]) => void
 }
 
 export function useTableBoard(options: UseTableBoardOptions) {
@@ -126,10 +136,12 @@ export function useTableBoard(options: UseTableBoardOptions) {
   const enabledRef = useRef(enabled)
   const realtimeConnectedRef = useRef(false)
   const onOrderTerminalRef = useRef(options.onOrderTerminal)
+  const onTablesLoadedRef = useRef(options.onTablesLoaded)
 
   useEffect(() => {
     onOrderTerminalRef.current = options.onOrderTerminal
   }, [options.onOrderTerminal])
+  useEffect(() => { onTablesLoadedRef.current = options.onTablesLoaded }, [options.onTablesLoaded])
 
   useEffect(() => {
     enabledRef.current = enabled
@@ -159,7 +171,9 @@ export function useTableBoard(options: UseTableBoardOptions) {
   }, [enabled, storeId])
 
   const hydrateBaseTables = useCallback(async () => {
+    const generation = generationRef.current
     const diningTables = await fetchDiningTables(storeId)
+    if (generation === generationRef.current && enabledRef.current) onTablesLoadedRef.current?.(storeId, diningTables)
     return diningTables.map(mapBackendDiningTable)
   }, [storeId])
 
@@ -190,20 +204,22 @@ export function useTableBoard(options: UseTableBoardOptions) {
               orderDbId: selectedFullOrder.order_id,
               orderStatus: selectedFullOrder.order_status,
               backendTableNo: selectedFullOrder.table_no ?? table.label,
+              backendTableDisplayName: selectedFullOrder.table_display_name ?? undefined,
             },
           }
         }
 
-        const splitOrders: Partial<Record<TableSeatCode, { orderId: string; orderDbId?: number; orderStatus?: string; backendTableNo?: string }>> = {}
+        const splitOrders: Partial<Record<TableSeatCode, { orderId: string; orderDbId?: number; orderStatus?: string; backendTableNo?: string; backendTableDisplayName?: string }>> = {}
         matchingOrders.forEach((order) => {
           const tableNo = order.table_no ?? ''
-          const seatCode = tableNo.split('-')[1]
+          const seatCode = tableNo.slice(table.label.length + 1)
           if ((seatCode === 'A' || seatCode === 'B') && !splitOrders[seatCode]) {
             splitOrders[seatCode] = {
               orderId: order.order_no,
               orderDbId: order.order_id,
               orderStatus: order.order_status,
               backendTableNo: tableNo,
+              backendTableDisplayName: order.table_display_name ?? undefined,
             }
           }
         })

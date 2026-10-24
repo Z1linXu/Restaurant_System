@@ -31,6 +31,9 @@ import com.restaurant.system.platform.repository.OrganizationRepository;
 import com.restaurant.system.platform.repository.RestaurantTemplateRepository;
 import com.restaurant.system.platform.repository.StoreKdsDisplayConfigRepository;
 import com.restaurant.system.station.entity.Station;
+import com.restaurant.system.station.entity.DiningTable;
+import com.restaurant.system.order.repository.OrderRepository;
+import jakarta.persistence.EntityManager;
 import com.restaurant.system.station.repository.DiningTableRepository;
 import com.restaurant.system.station.repository.StationRepository;
 import com.restaurant.system.user.entity.Store;
@@ -58,6 +61,8 @@ class PlatformAdminServiceImplMenuOrderingTest {
     @Mock private StoreRepository storeRepository;
     @Mock private StationRepository stationRepository;
     @Mock private DiningTableRepository diningTableRepository;
+    @Mock private OrderRepository orderRepository;
+    @Mock private EntityManager entityManager;
     @Mock private MenuCategoryRepository menuCategoryRepository;
     @Mock private MenuItemRepository menuItemRepository;
     @Mock private MenuItemOptionRepository menuItemOptionRepository;
@@ -79,6 +84,8 @@ class PlatformAdminServiceImplMenuOrderingTest {
             storeRepository,
             stationRepository,
             diningTableRepository,
+            orderRepository,
+            entityManager,
             menuCategoryRepository,
             menuItemRepository,
             menuItemOptionRepository,
@@ -648,5 +655,105 @@ class PlatformAdminServiceImplMenuOrderingTest {
 
         assertThat(error.getMessage()).contains("Combo Policy");
         verify(menuItemOptionRepository, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = {1L, 2L, 3L})
+    void newTableDefaultsToLeftRightInEveryStore(Long storeId) {
+        DiningTable request = diningTable(storeId);
+        when(diningTableRepository.save(any(DiningTable.class))).thenAnswer(call -> call.getArgument(0));
+        DiningTable saved = service.saveDiningTable(request);
+        assertEquals("LEFT_RIGHT", saved.split_label_mode);
+        assertEquals(request.table_code, saved.table_code);
+        assertEquals(request.table_name, saved.table_name);
+        assertEquals(request.capacity, saved.capacity);
+        assertEquals(request.area_name, saved.area_name);
+        assertEquals(request.sort_order, saved.sort_order);
+        assertEquals(request.supports_split, saved.supports_split);
+        verifyNoInteractions(orderRepository);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"INSIDE_OUTSIDE", "LEFT_RIGHT"})
+    void modeChangeLocksScopedTableAndRejectsActiveFullOrSplitOrders(String nextMode) {
+        DiningTable stored = diningTable(2L); stored.id = 22L;
+        stored.split_label_mode = "LEFT_RIGHT".equals(nextMode) ? "INSIDE_OUTSIDE" : "LEFT_RIGHT";
+        DiningTable request = diningTable(2L); request.id = 22L; request.split_label_mode = nextMode;
+        when(diningTableRepository.findByIdAndStoreIdForUpdate(22L, 2L)).thenReturn(stored);
+        when(diningTableRepository.findAllByStoreIdAndTableName(2L, "1")).thenReturn(List.of(stored));
+        when(orderRepository.hasActiveDiningTableOrders(2L, List.of("1", "1-A", "1-B", "T12", "T12-A", "T12-B"))).thenReturn(true);
+        String oldMode = stored.split_label_mode;
+        BusinessException error = assertThrows(BusinessException.class, () -> service.saveDiningTable(request));
+        assertThat(error.getMessage()).contains("Finish all active orders");
+        assertEquals(oldMode, stored.split_label_mode);
+        verify(diningTableRepository, never()).save(any());
+        var sequence = inOrder(diningTableRepository, orderRepository);
+        sequence.verify(diningTableRepository).findByIdAndStoreIdForUpdate(22L, 2L);
+        sequence.verify(diningTableRepository).findAllByStoreIdAndTableName(2L, "1");
+        sequence.verify(orderRepository).hasActiveDiningTableOrders(2L, List.of("1", "1-A", "1-B", "T12", "T12-A", "T12-B"));
+    }
+
+    @Test
+    void oldClientOmittingModePreservesExistingInsideOutside() {
+        DiningTable stored = diningTable(3L); stored.id = 33L; stored.split_label_mode = "INSIDE_OUTSIDE";
+        DiningTable request = diningTable(3L); request.id = 33L;
+        when(diningTableRepository.findByIdAndStoreIdForUpdate(33L, 3L)).thenReturn(stored);
+        when(diningTableRepository.save(stored)).thenReturn(stored);
+        assertEquals("INSIDE_OUTSIDE", service.saveDiningTable(request).split_label_mode);
+        verifyNoInteractions(orderRepository);
+    }
+
+    @Test
+    void inactiveTableModeCanChangeWithoutChangingOtherTableFields() {
+        DiningTable stored = diningTable(2L); stored.id = 22L; stored.split_label_mode = "LEFT_RIGHT";
+        DiningTable request = diningTable(2L); request.id = 22L; request.split_label_mode = "INSIDE_OUTSIDE";
+        when(diningTableRepository.findByIdAndStoreIdForUpdate(22L, 2L)).thenReturn(stored);
+        when(diningTableRepository.findAllByStoreIdAndTableName(2L, "1")).thenReturn(List.of(stored));
+        when(diningTableRepository.save(stored)).thenReturn(stored);
+        DiningTable saved = service.saveDiningTable(request);
+        assertEquals("INSIDE_OUTSIDE", saved.split_label_mode);
+        assertEquals("T12", saved.table_code);
+        assertEquals("1", saved.table_name);
+        assertEquals("split_supported", saved.table_config);
+        assertEquals(4, saved.capacity);
+        assertEquals("Main Hall", saved.area_name);
+        assertEquals(7, saved.sort_order);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "left_right", "SOME_MODE"})
+    void invalidModeIsRejected(String value) {
+        DiningTable request = diningTable(1L); request.split_label_mode = value;
+        assertThrows(BusinessException.class, () -> service.saveDiningTable(request));
+        verify(diningTableRepository, never()).save(any());
+        verifyNoInteractions(orderRepository);
+    }
+
+    @Test
+    void existingTableCannotBeMovedFromAnotherStore() {
+        DiningTable request = diningTable(3L); request.id = 12L; request.split_label_mode = "INSIDE_OUTSIDE";
+        assertThrows(BusinessException.class, () -> service.saveDiningTable(request));
+        verify(diningTableRepository).findByIdAndStoreIdForUpdate(12L, 3L);
+        verify(diningTableRepository, never()).save(any());
+    }
+
+    @Test
+    void ambiguousTableNamesCannotReceiveDifferentModes() {
+        DiningTable stored = diningTable(1L); stored.id = 1L;
+        DiningTable duplicate = diningTable(1L); duplicate.id = 2L;
+        DiningTable request = diningTable(1L); request.id = 1L; request.split_label_mode = "INSIDE_OUTSIDE";
+        when(diningTableRepository.findByIdAndStoreIdForUpdate(1L, 1L)).thenReturn(stored);
+        when(diningTableRepository.findAllByStoreIdAndTableName(1L, "1")).thenReturn(List.of(stored, duplicate));
+        assertThat(assertThrows(BusinessException.class, () -> service.saveDiningTable(request)).getMessage())
+            .contains("unique table name");
+        verify(diningTableRepository, never()).save(any());
+    }
+
+    private DiningTable diningTable(Long storeId) {
+        DiningTable table = new DiningTable();
+        table.store_id = storeId; table.table_code = "T12"; table.table_name = "1";
+        table.area_name = "Main Hall"; table.capacity = 4; table.sort_order = 7;
+        table.supports_split = true; table.table_config = "split_supported"; table.is_active = true;
+        return table;
     }
 }

@@ -1,37 +1,32 @@
-# 2026-10-23 堂食顶部额外16mm进纸发布
+# 2026-10-24 逐桌拆桌命名发布
 
-本目录复用已审的堂食头部发布流程，当前命令仅用于 Owner 授权的额外进纸批次。
-旧批次的不可变脚本、模型及验收记录仍保存在其 exact-SHA release 中。
-当前基线 B=`697947b3…`、F=`2b0749d3…`；V38，无 migration。Production Uber
-worker=true 和全部配置保留。只替换 backend/nginx image 及 OCI labels。
+复用本目录受审流程，不建立新的发布生命周期。历史脚本/模型仍保存在各自exact-SHA
+release。当前baseline为e44d7a5，backend a16b8a2f…、frontend abe9a86a…。
+本批次仅替换双应用镜像并通过Flyway追加V39；Production Uber worker=true和全部env保留。
 
-1. 本地完成 printing tests、frontend test/build/changed-file lint、Agent 6、PR/merge。
-   从服务器 Staging bare repo fetch，建立 clean
-   `/srv/restaurant-pos/staging/releases/<full-sha>` detached worktree。
-2. `python3 -B deployment/cloud/dine-in-headers/deploy.py staging <sha>`：复用既有锁、
-   隔离校验、fresh 可读备份、配置与历史 hash，调用已有1GiB/1CPU临时 builder
-   顺序构建两个 app image；部署后删除该 builder，不清理共享缓存或数据库。
-   私有目录为 `/srv/restaurant-pos/<environment>/dine-in-top-feed-<sha>/`。
-3. 在本地以 Java17 target 编译 `RenderHeaderAcceptance.java`，记录 class SHA256，
-   上传到本批次环境私有目录，chmod600。执行
-   `python3 -B deployment/cloud/dine-in-headers/verify.py staging <sha> <class-sha256>`。
-   它从真实容器复制 JAR，在同镜像的 operator UID/GID、network=none、read-only、
-   256MiB/.5CPU/PIDs64/cap-drop ALL/no-new-privileges 容器中运行纯内存证明。
-   验证六票型×四桌码、一次16mm进纸、完整头部、初始化/裁纸顺序、PAD/TCP字节相同，
-   并确认6例外卖不进纸。无 Spring、业务写入、真实订单或打印机连接。
-4. 同时核对实际 frontend image/source，以及含16mm预览组件的公开 JS asset 与容器
-   文件逐字节相同；重核 V38、配置/历史 hash、两站 health。只有实际全部 PASS 才原子
-   写 `acceptance.json`，绑定同一 backend/frontend 镜像对和实际 JAR。
-5. 同一应用 SHA 执行 `deploy.py production <sha>`，仅提升已接受的镜像对，保存独立
-   Production fresh dump/rollback model，顺序更新 backend/nginx，原子同步 canonical
-   Compose 和 release metadata。失败恢复原镜像对与全部原环境，不恢复数据库。
-6. 向 Production 私有目录上传同一个 class，再执行 `verify.py production ...`；保存
-   实际 Production 24例结果、公开 preview asset、配置/快照证明以及 df/docker system df。
+1. 完成相关printing/order/platform/station、前端test/build/lint、真实隔离PG迁移及
+   A/B流程/并发测试。旧Production实际JAR对V39启动兼容必须有证据。Agent 6通过后
+   PR/merge/fresh fetch，从bare repo创建clean exact-SHA release。
+2. 运行`python3 -B deployment/cloud/dine-in-headers/deploy.py staging <full-sha>`。
+   复用两锁、DB隔离、fresh可读dump、当前双镜像rollback model、有界builder；
+   不清理共享cache/DB。私有证据位于
+   `/srv/restaurant-pos/<environment>/split-label-mode-<sha>/`。
+3. 新应用启动自动执行V39。要求V1–V38 ledger每行原值不变，且只追加精确源文件的
+   V39/script/CRC32/success；非Flyway配置全等，旧dining_tables列/行全等、所有表默认
+   LEFT_RIGHT，原订单store/type/table_no保持。V39不更新旧订单/桌台其他列。
+4. 本地以Java17 target编译`RenderHeaderAcceptance.java`，记录class SHA256，上传本批次
+   私有目录chmod600。执行`python3 -B deployment/cloud/dine-in-headers/verify.py staging <sha> <class-sha256>`。
+   实际JAR在operator UID/GID、network-none/read-only/256MiB/.5CPU/PIDs64/cap-drop ALL/
+   no-new-privileges容器中验证24个旧头部、48个两mode×A/B×六票型及6个外卖。
+   共享实际display service、renderer和两编码器，无Spring/DB写入/订单/打印机连接。
+5. verifier还要求16mm单次进纸、左侧原字号及UPDATE，公开MOCK预览与DiningTables设置
+   JS逐字节匹配容器、V39/配置/旧列/身份/hash保护及双站health。仅实际PASS才写acceptance。
+6. Owner已授权直接Production：执行`deploy.py production <sha>`复用Stage已接受的同一
+   镜像对，不重建；fresh Production dump后顺序替换backend/nginx，原子同步canonical
+   model/release。失败只恢复本轮捕获的e44镜像对和全部env，**保留新增V39，不还原DB**。
+7. 同一class上传Production并执行verifier，保存实际结果、独立只读审计、磁盘及时间。
+   部署不替Owner选择任何真实桌台的新mode；全部旧桌默认LEFT_RIGHT，包括Chinatown。
 
-若仅工具修正且 backend/frontend Git tree 完全相同，可以从新 clean script release
-运行 verifier，参数仍为应用 SHA。结果分开记录 source_sha/script_sha，不重复构建应用。
-始终用 `python3 -B`；不得向 clean release 写临时缓存、凭据或构建输出。
-
-保留当前与回滚镜像、private models/dumps、历史打印及故障证据；不重放队列、不改 Pad
-绑定或 printer endpoint。物理纸张长度未现场测量时必须标记 NOT_TESTED，不能用
-名义16mm的命令证明替代现场尺量。
+始终用`python3 -B`，不向clean release写cache/凭据/构建输出。工具/证据纯文档修正如
+backend/frontend树一致则复用镜像，不重新构建。保留当前及回滚镜像、private dump/model。
+不触发实体打印；纸长未现场测量必须保持NOT_TESTED。完成本批次后STOP。

@@ -1,5 +1,6 @@
 import { Card } from '../../../components/ui/Card'
 import type { BackendFrontdeskOrderBoardItem } from '../../../types/ordering'
+import { orderLocationDisplay } from '../../../utils/tableDisplay'
 
 interface OrderMiniCardProps {
   order: BackendFrontdeskOrderBoardItem
@@ -9,7 +10,7 @@ interface OrderMiniCardProps {
 }
 
 function displayLabel(order: BackendFrontdeskOrderBoardItem) {
-  return order.table_no ?? order.pickup_no ?? `#${order.order_id}`
+  return orderLocationDisplay(order, `#${order.order_id}`)
 }
 
 export function OrderMiniCard({ order, selected, onClick, compact = false }: OrderMiniCardProps) {

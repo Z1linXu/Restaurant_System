@@ -1,0 +1,20 @@
+{
+  "frontend_tests": 354,
+  "frontend_build": "PASS",
+  "frontend_changed_files_lint": "23 files PASS; existing OrderDetailPanel setState-in-effect error reproduced on exact baseline HEAD, no new error",
+  "deployment_guard_tests": 5,
+  "actual_jar_harness_local": {
+    "legacy_headers": 24,
+    "split_label_cases": 48,
+    "takeout": 6,
+    "top_feed_mm": 16,
+    "top_feed_once": true,
+    "pad_tcp_identical": true,
+    "class_sha256": "75b288b27a7e22d179f98ce60d11f5d2f6b7e1457c1d3311539b047f79581049"
+  },
+  "physical_print": "NOT_TESTED",
+  "test_repairs": [
+    "new OrderService unit test missing LocalDateTime import",
+    "new PG fixture required menu_items.sort_order; one retry repeated old fixture because command cwd prevented first edit"
+  ]
+}

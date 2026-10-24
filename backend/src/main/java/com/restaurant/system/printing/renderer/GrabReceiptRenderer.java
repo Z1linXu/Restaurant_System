@@ -38,7 +38,7 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
         StringBuilder builder = new StringBuilder();
         if (PrintTableDisplayFormatter.isDineIn(order)) {
             builder.append(PrintTableDisplayFormatter.formatDineInHeader(
-                order.table_no, Boolean.TRUE.equals(request.is_update_ticket))).append("\n");
+                order, Boolean.TRUE.equals(request.is_update_ticket))).append("\n");
         } else {
             ExternalOrderReceiptHeader.append(builder, request.order);
             builder.append("\n\n\n\n");

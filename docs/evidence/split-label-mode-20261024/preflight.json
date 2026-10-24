@@ -1,0 +1,1161 @@
+{
+  "observed_at": "2026-10-24T04:37:08.851640+00:00",
+  "reviewer_action": "Fresh independent READ_ONLY; no locks/restarts/cleanup/real orders/PrintJobs/event probes",
+  "runtime": {
+    "cloud-backend-1": {
+      "container_id": "41e5091cce71bf081061e95566026efea9045f41bea17c29258e65a264f7717f",
+      "image": "sha256:a16b8a2feacd7eed97cc2e3d971c9bd993455d262c85fe955cfdf340807b58a5",
+      "image_source_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+      "container_source_label": "e44d7a5fe534a50c675574e589751cce41615cc5",
+      "started_at": "2026-10-23T15:36:28.12734146Z",
+      "restart_count": 0,
+      "running": true,
+      "health": null,
+      "environment_sha256": "e350b03d881624ec5df4bfbdda0dfc6d11bb6b6abb7e4073fbd3133c97db7314",
+      "networks": [
+        "cloud_restaurant-pos"
+      ],
+      "policy": {
+        "APP_ENVIRONMENT": "production",
+        "UBER_EATS_ENVIRONMENT": "production",
+        "UBER_EATS_ENABLED": "true",
+        "UBER_EATS_WORKER_ENABLED": "true",
+        "UBER_EATS_PROCESSING_MODE": "KITCHEN_MIRROR",
+        "signing_key_present": true,
+        "oauth_secret_present": true,
+        "cutover_entries": 1,
+        "cutovers_sha256": "123898fca5da7fc5e7f2cc32e22bc989bf159d53624fe30820f29c0c5d9bfc83"
+      },
+      "datasource": {
+        "db_name": "restaurant_pos",
+        "db_host": "db",
+        "db_port": "5432",
+        "spring_datasource_url_present": false,
+        "spring_application_json_present": false,
+        "external_config_present": false
+      }
+    },
+    "cloud-nginx-1": {
+      "container_id": "a8595e242e7ecdecc167f1b2133ac36aeda981d9083c3debdeb42269f83b2674",
+      "image": "sha256:abe9a86ac6c138143bfcfa6b37523f9213ed5d16692f4c35c904bbb2b7ae505b",
+      "image_source_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+      "container_source_label": "e44d7a5fe534a50c675574e589751cce41615cc5",
+      "started_at": "2026-10-23T15:37:03.657452491Z",
+      "restart_count": 0,
+      "running": true,
+      "health": null,
+      "environment_sha256": "23797e8c9e01d4fdf451dd76371a903fd8d443b21cc43567c6993d27c4d609fe",
+      "networks": [
+        "cloud_restaurant-pos"
+      ]
+    },
+    "cloud-db-1": {
+      "container_id": "c2ab37fec6ac966e77a1d8ab7aa41d1da294b9ac57b1a21ce18904d04cfae91e",
+      "image": "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+      "image_source_sha": null,
+      "container_source_label": null,
+      "started_at": "2026-07-11T12:09:37.936437539Z",
+      "restart_count": 0,
+      "running": true,
+      "health": "healthy",
+      "environment_sha256": "77b9bbf2be51e0c6d307f1bdb769ec6256aad402ec2da6ae7535a710458c8674",
+      "networks": [
+        "cloud_restaurant-pos"
+      ]
+    },
+    "restaurant-pos-staging-backend-1": {
+      "container_id": "1a06b13a38a296fa7434fd9b09046962ce8605738e46d10a7f550f22f793c17f",
+      "image": "sha256:a16b8a2feacd7eed97cc2e3d971c9bd993455d262c85fe955cfdf340807b58a5",
+      "image_source_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+      "container_source_label": "e44d7a5fe534a50c675574e589751cce41615cc5",
+      "started_at": "2026-10-23T15:34:49.650952864Z",
+      "restart_count": 0,
+      "running": true,
+      "health": null,
+      "environment_sha256": "7a8969a99d252a5779352a60bc34a63c04c6ca2701614ce100897cfda4af1ef0",
+      "networks": [
+        "restaurant-pos-staging_restaurant-pos"
+      ],
+      "policy": {
+        "APP_ENVIRONMENT": "staging",
+        "UBER_EATS_ENVIRONMENT": "sandbox",
+        "UBER_EATS_ENABLED": "true",
+        "UBER_EATS_WORKER_ENABLED": "false",
+        "UBER_EATS_PROCESSING_MODE": "KITCHEN_MIRROR",
+        "signing_key_present": true,
+        "oauth_secret_present": true,
+        "cutover_entries": 0,
+        "cutovers_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      "datasource": {
+        "db_name": "restaurant_pos_staging",
+        "db_host": "db",
+        "db_port": "5432",
+        "spring_datasource_url_present": false,
+        "spring_application_json_present": false,
+        "external_config_present": false
+      }
+    },
+    "restaurant-pos-staging-nginx-1": {
+      "container_id": "900e7ac4350daad533ac1678baa78c92f662d5861c50a229e5543cf15e9752f8",
+      "image": "sha256:abe9a86ac6c138143bfcfa6b37523f9213ed5d16692f4c35c904bbb2b7ae505b",
+      "image_source_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+      "container_source_label": "e44d7a5fe534a50c675574e589751cce41615cc5",
+      "started_at": "2026-10-23T15:35:38.833220973Z",
+      "restart_count": 0,
+      "running": true,
+      "health": null,
+      "environment_sha256": "a31698d4a0ba0dd36b63cde2fab5fc04db487aa60ce75789ccf1d94792989810",
+      "networks": [
+        "restaurant-pos-staging_restaurant-pos"
+      ]
+    },
+    "restaurant-pos-staging-db-1": {
+      "container_id": "b64d3c676dbb4003368279453e5c6b390ac6327c3cf28001ead671155f93f4c5",
+      "image": "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+      "image_source_sha": null,
+      "container_source_label": null,
+      "started_at": "2026-08-22T19:14:39.633030411Z",
+      "restart_count": 0,
+      "running": true,
+      "health": "healthy",
+      "environment_sha256": "6a007bcecb0160df391bc32e8ee4e63679701d7c7e9153b28f48e70103c1ac80",
+      "networks": [
+        "restaurant-pos-staging_restaurant-pos"
+      ]
+    }
+  },
+  "compose": {
+    "production": {
+      "path": "/srv/restaurant-pos/production/current.compose.json",
+      "mode": "0o600",
+      "is_symlink": false,
+      "sha256": "16ff16b717baaaef542be60313dba0b71779c1f5d71478efabae69857cd765d2",
+      "services": [
+        "backend",
+        "nginx"
+      ],
+      "images_and_full_environments_match_runtime": true
+    },
+    "staging": {
+      "path": "/srv/restaurant-pos/staging/dine-in-top-feed-e44d7a5fe534a50c675574e589751cce41615cc5/target.private.json",
+      "mode": "0o600",
+      "is_symlink": false,
+      "sha256": "408c5b352348b0ad5a3b5d66d3c5b80e539b29cace991ef84c917ad7f71f65ec",
+      "services": [
+        "backend",
+        "nginx"
+      ],
+      "images_and_full_environments_match_runtime": true
+    }
+  },
+  "database": {
+    "production": {
+      "name": "restaurant_pos",
+      "flyway": "38",
+      "flyway_failed": 0,
+      "flyway_ledger_md5": "8b39ce1e6085466cd757f40133e5f7e7",
+      "dining_table_columns": [
+        "id",
+        "area_name",
+        "capacity",
+        "created_at",
+        "is_active",
+        "store_id",
+        "supports_split",
+        "table_code",
+        "table_name",
+        "updated_at",
+        "sort_order",
+        "table_config"
+      ],
+      "dining_table_count": 39,
+      "dining_table_rows_md5": "3cacecace5190881a3dfaa5b3a59b10e",
+      "uber_bindings": 1,
+      "uber_events": 102,
+      "uber_orders": 91,
+      "local_uber_orders": 90,
+      "pending_print": 0,
+      "active_print_ids": [
+        1176,
+        3169,
+        9226,
+        20391
+      ],
+      "retained_printing_failed_rows_md5": "fd09e7f919beedfdff8a35534f98fb75",
+      "pending_outbox": 0,
+      "pending_uber_events": 0,
+      "due_uber_orders": 0,
+      "max_order_id": 10785,
+      "max_job_id": 27105,
+      "stores": [
+        {
+          "id": 1,
+          "organization_id": 1,
+          "name": "4483 R. Saint-Denis",
+          "code": "4483_R_SAINT_DENIS",
+          "store_kind": "BUSINESS",
+          "lifecycle_status": "ACTIVE",
+          "printing_mode": "PAD_DIRECT"
+        },
+        {
+          "id": 2,
+          "organization_id": 1,
+          "name": "CHINATOWN",
+          "code": "CHINATOWN",
+          "store_kind": "BUSINESS",
+          "lifecycle_status": "ACTIVE",
+          "printing_mode": "PAD_DIRECT"
+        },
+        {
+          "id": 3,
+          "organization_id": 1,
+          "name": "St. Catherine",
+          "code": "ST_CATHERINE",
+          "store_kind": "BUSINESS",
+          "lifecycle_status": "ACTIVE",
+          "printing_mode": "DISABLED"
+        }
+      ],
+      "configuration_and_history_baseline": {
+        "configuration": {
+          "stations": "c82f500a63d3060392db69d4eb910d82",
+          "menu_items": "50f9660ce417eb3f63237c27380a049f",
+          "menu_item_options": "8519ad1f5acc04ea8aa455f326f88137",
+          "menu_categories": "2bd360c7e3b1ffcb96d4ecae9e3e97f7",
+          "store_addons": "3353e4e465b2856307c85171a062bbd0",
+          "organization_addon_definitions": "d48fa95cb1948184f59c2db1433cdd8d",
+          "store_removes": "e0b92a30025791dad962f82283987b94",
+          "store_remove_categories": "d751713988987e9331980363e24189ce",
+          "store_remove_item_rules": "3c55890efb2a08d0a22bf55f5b642531",
+          "store_combo_groups": "89eb595c5ec3a685bcbea00a733263e6",
+          "store_combo_components": "bd7a15f6e84add5357a1c3d48fe26f89",
+          "store_modules": "b57fb5ad4ffd8d65b5169abf32ef1155",
+          "uber_eats_menu_mappings": "c1e102d4efdec48db2e5992b7ee852f7",
+          "printer_assignments": "121214de91bed0667f3628b6cc286535",
+          "flyway_schema_history": "fd7cc9a0e8ff2b1c07a369f3f7f1446b",
+          "local_store": {
+            "id": 1,
+            "org": 1,
+            "code": "4483_R_SAINT_DENIS"
+          },
+          "mapping_count": 299,
+          "printing": "ce5b19a3aa4f1dc4f9ab27233669a99c",
+          "devices": "2699e64f48448a2886e811fd0ba53af6",
+          "printers": "b4c41ed4328eb489eacb0d500952bdaa",
+          "fresh_printing": 0,
+          "retained_printing": "fd09e7f919beedfdff8a35534f98fb75",
+          "bindings_sha256": "0d87019cfc7b1adddbbc4e309d45ec93744919b09c2cce594be0137126766d8b",
+          "binding_metadata": [
+            {
+              "id": 1,
+              "store": 1,
+              "org": 1,
+              "env": "production",
+              "enabled": true,
+              "mode": "KITCHEN_MIRROR"
+            }
+          ]
+        },
+        "history": {
+          "cutoffs": [
+            10785,
+            27105
+          ],
+          "hashes": [
+            "b579884183618b4d92b4cb1b15cf3ce5",
+            "4594bfb47b25772bfc1c3b84ff27c54d",
+            "f4395aff6f4c030a2a86a20f12206650",
+            "0b64d2f3689fcd3a1871f51e45032a12",
+            "2e002710b59a32362945c8a6fefacf55"
+          ]
+        }
+      }
+    },
+    "staging": {
+      "name": "restaurant_pos_staging",
+      "flyway": "38",
+      "flyway_failed": 0,
+      "flyway_ledger_md5": "8b39ce1e6085466cd757f40133e5f7e7",
+      "dining_table_columns": [
+        "id",
+        "area_name",
+        "capacity",
+        "created_at",
+        "is_active",
+        "store_id",
+        "supports_split",
+        "table_code",
+        "table_name",
+        "updated_at",
+        "sort_order",
+        "table_config"
+      ],
+      "dining_table_count": 30,
+      "dining_table_rows_md5": "04b70cc1c157e3fb7f51c2c3c07bf22d",
+      "uber_bindings": 1,
+      "uber_events": 22,
+      "uber_orders": 13,
+      "local_uber_orders": 11,
+      "pending_print": 0,
+      "active_print_ids": [
+        200,
+        205,
+        207
+      ],
+      "retained_printing_failed_rows_md5": "f75bbbb415fb26b1179e517ac1af9621",
+      "pending_outbox": 0,
+      "pending_uber_events": 0,
+      "due_uber_orders": 0,
+      "max_order_id": 97,
+      "max_job_id": 245,
+      "stores": [
+        {
+          "id": 1,
+          "organization_id": 1,
+          "name": "STG005_SRC_20260809_R01",
+          "code": "STG005_SRC_20260809_R01",
+          "store_kind": "BUSINESS",
+          "lifecycle_status": "ACTIVE",
+          "printing_mode": "PAD_DIRECT"
+        },
+        {
+          "id": 18,
+          "organization_id": 1,
+          "name": "Chinatown",
+          "code": "CHINATOWN",
+          "store_kind": "VALIDATION_FIXTURE",
+          "lifecycle_status": "ACTIVE",
+          "printing_mode": "MOCK"
+        },
+        {
+          "id": 21,
+          "organization_id": 1,
+          "name": "PHASE_B_VALIDATION_STORE_PRODUCT_FLOW_D0B1BDE_R03",
+          "code": "PHASE_B_VALIDATION_STORE_PRODUCT_FLOW_D0B1BDE_R03",
+          "store_kind": "VALIDATION_FIXTURE",
+          "lifecycle_status": "ACTIVE",
+          "printing_mode": "MOCK"
+        },
+        {
+          "id": 22,
+          "organization_id": 1,
+          "name": "STG005 Business Acceptance 67494de0",
+          "code": "STG005_BUSINESS_67494DE0F3D949798CF78BBC08A48856",
+          "store_kind": "BUSINESS",
+          "lifecycle_status": "ACTIVE",
+          "printing_mode": "DISABLED"
+        },
+        {
+          "id": 23,
+          "organization_id": 1,
+          "name": "STG005 Final Business 4b127620",
+          "code": "STG005_BUSINESS_4B127620A74333F0FA4C9829E3537B5F",
+          "store_kind": "BUSINESS",
+          "lifecycle_status": "ACTIVE",
+          "printing_mode": "DISABLED"
+        },
+        {
+          "id": 24,
+          "organization_id": 1,
+          "name": "STG005 Menu Simplification MENU1501 A",
+          "code": "STG005_MENU_MENU1501_A",
+          "store_kind": "BUSINESS",
+          "lifecycle_status": "ACTIVE",
+          "printing_mode": "MOCK"
+        },
+        {
+          "id": 25,
+          "organization_id": 1,
+          "name": "STG005 Menu Simplification MENU1501 B",
+          "code": "STG005_MENU_MENU1501_B",
+          "store_kind": "BUSINESS",
+          "lifecycle_status": "ACTIVE",
+          "printing_mode": "DISABLED"
+        },
+        {
+          "id": 26,
+          "organization_id": 1,
+          "name": "STG005 Menu Simplification ALIAS1601 A",
+          "code": "STG005_MENU_ALIAS1601_A",
+          "store_kind": "BUSINESS",
+          "lifecycle_status": "ACTIVE",
+          "printing_mode": "MOCK"
+        },
+        {
+          "id": 27,
+          "organization_id": 1,
+          "name": "STG005 Menu Simplification ALIAS1601 B",
+          "code": "STG005_MENU_ALIAS1601_B",
+          "store_kind": "BUSINESS",
+          "lifecycle_status": "ACTIVE",
+          "printing_mode": "DISABLED"
+        }
+      ],
+      "configuration_and_history_baseline": {
+        "configuration": {
+          "stations": "264a129f495336740dd820a624f37dd2",
+          "menu_items": "34736ba0179e24b2b38aae57cb1a7134",
+          "menu_item_options": "33c91cada290e36029c5e2d76c9fdfdf",
+          "menu_categories": "17f31b51825e209917dbe75b951695e3",
+          "store_addons": "2ae7e760411890aa5dbfecd2b5a0b3d2",
+          "organization_addon_definitions": "c69a5c758accdaaf1290b0db4c53cc33",
+          "store_removes": "b5550244a04137eb24c5df7b0002429a",
+          "store_remove_categories": "d751713988987e9331980363e24189ce",
+          "store_remove_item_rules": "2da5e603453108100990941652dec271",
+          "store_combo_groups": "53ca5089eb6e691e3b277e3add68e897",
+          "store_combo_components": "d31a4b29a0f962ba9bc6ce044cda2354",
+          "store_modules": "29bed163e46b33a40dd79ae05e8ebb90",
+          "uber_eats_menu_mappings": "0790a4ec91e9dfe537e811607c806b86",
+          "printer_assignments": "b3b7cbd0c50bdd1902f40d486d2c3e48",
+          "flyway_schema_history": "c386192fd9bb9a61c5d0def878d13d8a",
+          "local_store": {
+            "id": 1,
+            "org": 1,
+            "code": "STG005_SRC_20260809_R01"
+          },
+          "mapping_count": 299,
+          "printing": "0988d32bbde16e56483eaf5b4e0f3cd1",
+          "devices": "2d62276633e18427b286c2a4036bb9ac",
+          "printers": "f6a2d60ef16794288a2e32e3fe84ddc7",
+          "fresh_printing": 0,
+          "retained_printing": "f75bbbb415fb26b1179e517ac1af9621",
+          "bindings_sha256": "5c30a368a58427662a0bc41a91a26a448825df7631b66e0a4d78da0ec4e68f05",
+          "binding_metadata": [
+            {
+              "id": 1,
+              "store": 1,
+              "org": 1,
+              "env": "sandbox",
+              "enabled": true,
+              "mode": "KITCHEN_MIRROR"
+            }
+          ]
+        },
+        "history": {
+          "cutoffs": [
+            97,
+            245
+          ],
+          "hashes": [
+            "b8373ece5e1aba072f12d5e61de60dc5",
+            "5b7aeaaf1a54a0da908feabf7c85dfd5",
+            "ccecda547806befd0b0f3133a54632cf",
+            "fc15e8cb40758f4c7d3e8dae0dc99c1b",
+            "e2daa59b0e65a1e51879ba43ed23f33f"
+          ]
+        }
+      }
+    }
+  },
+  "public_health": {
+    "production": {
+      "http_status": 200,
+      "status": "UP"
+    },
+    "staging": {
+      "http_status": 200,
+      "status": "UP"
+    }
+  },
+  "production_dining_tables": [
+    {
+      "id": 12,
+      "store_id": 1,
+      "table_code": "T12",
+      "table_name": "10",
+      "area_name": "Main Hall",
+      "table_config": "split_supported",
+      "capacity": 4,
+      "supports_split": true,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 13,
+      "store_id": 1,
+      "table_code": "T12",
+      "table_name": "11",
+      "area_name": "Main Hall",
+      "table_config": "split_supported",
+      "capacity": 4,
+      "supports_split": true,
+      "sort_order": 2,
+      "is_active": true
+    },
+    {
+      "id": 1,
+      "store_id": 1,
+      "table_code": "T1",
+      "table_name": "1里",
+      "area_name": "Main Hall",
+      "table_config": "single_only",
+      "capacity": 4,
+      "supports_split": false,
+      "sort_order": 3,
+      "is_active": true
+    },
+    {
+      "id": 9,
+      "store_id": 1,
+      "table_code": "T9",
+      "table_name": "7",
+      "area_name": "Main Hall",
+      "table_config": "split_supported",
+      "capacity": 4,
+      "supports_split": true,
+      "sort_order": 4,
+      "is_active": true
+    },
+    {
+      "id": 10,
+      "store_id": 1,
+      "table_code": "T10",
+      "table_name": "8",
+      "area_name": "Main Hall",
+      "table_config": "split_supported",
+      "capacity": 4,
+      "supports_split": true,
+      "sort_order": 5,
+      "is_active": true
+    },
+    {
+      "id": 11,
+      "store_id": 1,
+      "table_code": "T11",
+      "table_name": "9",
+      "area_name": "Main Hall",
+      "table_config": "split_supported",
+      "capacity": 4,
+      "supports_split": true,
+      "sort_order": 6,
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "store_id": 1,
+      "table_code": "T2",
+      "table_name": "1外",
+      "area_name": "Main Hall",
+      "table_config": "split_supported",
+      "capacity": 4,
+      "supports_split": true,
+      "sort_order": 7,
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "store_id": 1,
+      "table_code": "T3",
+      "table_name": "2里",
+      "area_name": "Main Hall",
+      "table_config": "single_only",
+      "capacity": 4,
+      "supports_split": false,
+      "sort_order": 8,
+      "is_active": true
+    },
+    {
+      "id": 4,
+      "store_id": 1,
+      "table_code": "T4",
+      "table_name": "2外",
+      "area_name": "Main Hall",
+      "table_config": "split_supported",
+      "capacity": 4,
+      "supports_split": true,
+      "sort_order": 9,
+      "is_active": true
+    },
+    {
+      "id": 5,
+      "store_id": 1,
+      "table_code": "T5",
+      "table_name": "3",
+      "area_name": "Main Hall",
+      "table_config": "split_supported",
+      "capacity": 4,
+      "supports_split": true,
+      "sort_order": 10,
+      "is_active": true
+    },
+    {
+      "id": 6,
+      "store_id": 1,
+      "table_code": "T6",
+      "table_name": "4",
+      "area_name": "Main Hall",
+      "table_config": "split_supported",
+      "capacity": 4,
+      "supports_split": true,
+      "sort_order": 11,
+      "is_active": true
+    },
+    {
+      "id": 7,
+      "store_id": 1,
+      "table_code": "T7",
+      "table_name": "5",
+      "area_name": "Window",
+      "table_config": "split_supported",
+      "capacity": 4,
+      "supports_split": true,
+      "sort_order": 12,
+      "is_active": true
+    },
+    {
+      "id": 8,
+      "store_id": 1,
+      "table_code": "T8",
+      "table_name": "6",
+      "area_name": "Window",
+      "table_config": "split_supported",
+      "capacity": 4,
+      "supports_split": true,
+      "sort_order": 13,
+      "is_active": true
+    },
+    {
+      "id": 14,
+      "store_id": 2,
+      "table_code": "1",
+      "table_name": "1",
+      "area_name": "Dining",
+      "table_config": "single_only",
+      "capacity": 2,
+      "supports_split": false,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 18,
+      "store_id": 2,
+      "table_code": "3",
+      "table_name": "3",
+      "area_name": "Main Hall",
+      "table_config": "single_only",
+      "capacity": 4,
+      "supports_split": false,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 19,
+      "store_id": 2,
+      "table_code": "4",
+      "table_name": "4",
+      "area_name": "Main Hall",
+      "table_config": "single_only",
+      "capacity": 4,
+      "supports_split": false,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 20,
+      "store_id": 2,
+      "table_code": "5",
+      "table_name": "5",
+      "area_name": "Main Hall",
+      "table_config": "split_supported",
+      "capacity": 4,
+      "supports_split": true,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 21,
+      "store_id": 2,
+      "table_code": "6",
+      "table_name": "6",
+      "area_name": "Main Hall",
+      "table_config": "split_supported",
+      "capacity": 4,
+      "supports_split": true,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 22,
+      "store_id": 2,
+      "table_code": "7",
+      "table_name": "7",
+      "area_name": "Main Hall",
+      "table_config": "split_supported",
+      "capacity": 4,
+      "supports_split": true,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 23,
+      "store_id": 2,
+      "table_code": "8",
+      "table_name": "8",
+      "area_name": "Main Hall",
+      "table_config": "split_supported",
+      "capacity": 4,
+      "supports_split": true,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 24,
+      "store_id": 2,
+      "table_code": "9",
+      "table_name": "9",
+      "area_name": "Main Hall",
+      "table_config": "split_supported",
+      "capacity": 4,
+      "supports_split": true,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 25,
+      "store_id": 2,
+      "table_code": "10",
+      "table_name": "10",
+      "area_name": "Main Hall",
+      "table_config": "split_supported",
+      "capacity": 4,
+      "supports_split": true,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 26,
+      "store_id": 2,
+      "table_code": "11",
+      "table_name": "11",
+      "area_name": "Main Hall",
+      "table_config": "split_supported",
+      "capacity": 4,
+      "supports_split": true,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 27,
+      "store_id": 2,
+      "table_code": "12",
+      "table_name": "12",
+      "area_name": "Main Hall",
+      "table_config": "split_supported",
+      "capacity": 4,
+      "supports_split": true,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 28,
+      "store_id": 2,
+      "table_code": "13in",
+      "table_name": "13里",
+      "area_name": "Main Hall",
+      "table_config": "single_only",
+      "capacity": 4,
+      "supports_split": false,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 29,
+      "store_id": 2,
+      "table_code": "13out",
+      "table_name": "13外",
+      "area_name": "Main Hall",
+      "table_config": "single_only",
+      "capacity": 4,
+      "supports_split": false,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 30,
+      "store_id": 2,
+      "table_code": "14in",
+      "table_name": "14里",
+      "area_name": "Main Hall",
+      "table_config": "single_only",
+      "capacity": 4,
+      "supports_split": false,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 31,
+      "store_id": 2,
+      "table_code": "14out",
+      "table_name": "14外",
+      "area_name": "Main Hall",
+      "table_config": "single_only",
+      "capacity": 4,
+      "supports_split": false,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 32,
+      "store_id": 2,
+      "table_code": "15in",
+      "table_name": "15里",
+      "area_name": "Main Hall",
+      "table_config": "single_only",
+      "capacity": 4,
+      "supports_split": false,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 33,
+      "store_id": 2,
+      "table_code": "15out",
+      "table_name": "15外",
+      "area_name": "Main Hall",
+      "table_config": "single_only",
+      "capacity": 4,
+      "supports_split": false,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 34,
+      "store_id": 2,
+      "table_code": "16in",
+      "table_name": "16里",
+      "area_name": "Main Hall",
+      "table_config": "single_only",
+      "capacity": 4,
+      "supports_split": false,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 35,
+      "store_id": 2,
+      "table_code": "16out",
+      "table_name": "16外",
+      "area_name": "Main Hall",
+      "table_config": "single_only",
+      "capacity": 4,
+      "supports_split": false,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 36,
+      "store_id": 2,
+      "table_code": "17",
+      "table_name": "17",
+      "area_name": "Main Hall",
+      "table_config": "single_only",
+      "capacity": 4,
+      "supports_split": false,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 37,
+      "store_id": 2,
+      "table_code": "18",
+      "table_name": "18",
+      "area_name": "Main Hall",
+      "table_config": "single_only",
+      "capacity": 4,
+      "supports_split": false,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 38,
+      "store_id": 2,
+      "table_code": "19",
+      "table_name": "19",
+      "area_name": "Main Hall",
+      "table_config": "single_only",
+      "capacity": 4,
+      "supports_split": false,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 39,
+      "store_id": 2,
+      "table_code": "20",
+      "table_name": "20",
+      "area_name": "Main Hall",
+      "table_config": "single_only",
+      "capacity": 4,
+      "supports_split": false,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 15,
+      "store_id": 2,
+      "table_code": "2",
+      "table_name": "2",
+      "area_name": "Dining",
+      "table_config": "single_only",
+      "capacity": 2,
+      "supports_split": false,
+      "sort_order": 2,
+      "is_active": true
+    },
+    {
+      "id": 16,
+      "store_id": 3,
+      "table_code": "T01",
+      "table_name": "Table 1",
+      "area_name": "Dining",
+      "table_config": "split_supported",
+      "capacity": 2,
+      "supports_split": true,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 17,
+      "store_id": 3,
+      "table_code": "T02",
+      "table_name": "Table 2",
+      "area_name": "Dining",
+      "table_config": "split_supported",
+      "capacity": 2,
+      "supports_split": true,
+      "sort_order": 2,
+      "is_active": true
+    }
+  ],
+  "active_dinein_order_metadata": [
+    {
+      "id": 1,
+      "store_id": 1,
+      "table_no": "T3",
+      "status": "draft"
+    }
+  ],
+  "database_isolation": {
+    "containers_different": true,
+    "networks_disjoint": true,
+    "mount_sources_disjoint": true
+  },
+  "existing_production_recovery_artifacts": {
+    "release_metadata": {
+      "source_sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+      "release_dir": "/srv/restaurant-pos/production/dine-in-top-feed-e44d7a5fe534a50c675574e589751cce41615cc5",
+      "compose": "current.compose.json"
+    },
+    "release_metadata_mode": "0o600",
+    "previous_database_backup": {
+      "path": "/srv/restaurant-pos/production/dine-in-top-feed-e44d7a5fe534a50c675574e589751cce41615cc5/database-before.dump",
+      "bytes": 11253186,
+      "mode": "0o600",
+      "sha256": "b254967cd8aecfab93f908829f92d314a2b31412b755860006cd68530e9ab46f",
+      "pg_restore_toc_readable": true
+    },
+    "rollback_model_path": "/srv/restaurant-pos/production/dine-in-top-feed-e44d7a5fe534a50c675574e589751cce41615cc5/rollback.private.json",
+    "rollback_model_mode": "0o600",
+    "rollback_images": {
+      "backend": "sha256:697947b35e496b94a043b925eb13c4a62470f15d47d02c02bdb9fdd3b81a0e4a",
+      "nginx": "sha256:2b0749d39545a4eae784b29315be78aac0b5866dc069fb6c60372ad82ee4387b"
+    }
+  },
+  "operation_lock_metadata": [
+    {
+      "path": "/home/ubuntu/Restaurant_System/deployment/cloud/.production-ops.lock",
+      "exists": true,
+      "is_symlink": false,
+      "mode": "0o600",
+      "owner_uid": 1000,
+      "kernel_lock_listed": false
+    },
+    {
+      "path": "/srv/restaurant-pos/staging/state/restaurant-pos-staging-hygiene.lock",
+      "exists": true,
+      "is_symlink": false,
+      "mode": "0o600",
+      "owner_uid": 1000,
+      "kernel_lock_listed": false
+    }
+  ],
+  "disk": [
+    "Filesystem      Size  Used Avail Use% Mounted on",
+    "/dev/vda2        59G   43G   14G  76% /"
+  ],
+  "memory": [
+    "               total        used        free      shared  buff/cache   available",
+    "Mem:            3719        1723         269         171        1726        1534",
+    "Swap:              0           0           0"
+  ],
+  "docker_system_df": [
+    {
+      "Active": "4",
+      "Reclaimable": "3.333GB (41%)",
+      "Size": "8.08GB",
+      "TotalCount": "119",
+      "Type": "Images"
+    },
+    {
+      "Active": "8",
+      "Reclaimable": "0B (0%)",
+      "Size": "1.278MB",
+      "TotalCount": "8",
+      "Type": "Containers"
+    },
+    {
+      "Active": "0",
+      "Reclaimable": "0B",
+      "Size": "0B",
+      "TotalCount": "2",
+      "Type": "Local Volumes"
+    },
+    {
+      "Active": "12",
+      "Reclaimable": "10.45GB",
+      "Size": "16.82GB",
+      "TotalCount": "291",
+      "Type": "Build Cache"
+    }
+  ],
+  "temporary_builders": [],
+  "strict_cache_review": {
+    "minimum_age_hours": 168,
+    "records_reviewed": 291,
+    "old_reclaimable_records": 279,
+    "excluded_nonzero_usage_records": 279,
+    "eligible_records": 0,
+    "eligible": [],
+    "unparseable_records": 0,
+    "cleanup_performed": false,
+    "condition": "reclaimable, immutable, unshared, UsageCount=0, nonempty LastUsedAt, until=168h"
+  },
+  "production_table_summary": [
+    {
+      "store_id": 1,
+      "store_name": "4483 R. Saint-Denis",
+      "organization_id": 1,
+      "tables": 13,
+      "active": 13,
+      "split_supported": 11,
+      "single_only": 2,
+      "new_mode_column_currently_absent": true,
+      "effective_existing_mode": "LEFT_RIGHT legacy display convention",
+      "table_code_differs_from_display_name": 13
+    },
+    {
+      "store_id": 2,
+      "store_name": "CHINATOWN",
+      "organization_id": 1,
+      "tables": 24,
+      "active": 24,
+      "split_supported": 8,
+      "single_only": 16,
+      "new_mode_column_currently_absent": true,
+      "effective_existing_mode": "LEFT_RIGHT legacy display convention",
+      "table_code_differs_from_display_name": 8
+    },
+    {
+      "store_id": 3,
+      "store_name": "St. Catherine",
+      "organization_id": 1,
+      "tables": 2,
+      "active": 2,
+      "split_supported": 2,
+      "single_only": 0,
+      "new_mode_column_currently_absent": true,
+      "effective_existing_mode": "LEFT_RIGHT legacy display convention",
+      "table_code_differs_from_display_name": 2
+    }
+  ],
+  "table_identity_risks": {
+    "duplicate_table_codes": [
+      {
+        "store_id": 1,
+        "value": "T12",
+        "table_ids": [
+          12,
+          13
+        ],
+        "names": [
+          "10",
+          "11"
+        ]
+      }
+    ],
+    "duplicate_display_names": [],
+    "existing_independent_inside_outside_single_table_ids": [
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35
+    ],
+    "active_order_matching": [
+      {
+        "order_id": 1,
+        "store_id": 1,
+        "table_no": "T3",
+        "status": "draft",
+        "existing_frontend_label_matches": [],
+        "table_code_alias_matches": [
+          3
+        ],
+        "preexisting_unmatched_display_risk": true
+      }
+    ],
+    "active_split_suffix_orders": 0
+  },
+  "comparison_to_last_release": {
+    "cloud-backend-1": {
+      "container_id_unchanged": true,
+      "image_unchanged": true,
+      "environment_hash_unchanged": true,
+      "start_and_restarts_unchanged": true
+    },
+    "cloud-nginx-1": {
+      "container_id_unchanged": true,
+      "image_unchanged": true,
+      "environment_hash_unchanged": true,
+      "start_and_restarts_unchanged": true
+    },
+    "cloud-db-1": {
+      "container_id_unchanged": true,
+      "image_unchanged": true,
+      "environment_hash_unchanged": true,
+      "start_and_restarts_unchanged": true
+    },
+    "restaurant-pos-staging-backend-1": {
+      "container_id_unchanged": true,
+      "image_unchanged": true,
+      "environment_hash_unchanged": true,
+      "start_and_restarts_unchanged": true
+    },
+    "restaurant-pos-staging-nginx-1": {
+      "container_id_unchanged": true,
+      "image_unchanged": true,
+      "environment_hash_unchanged": true,
+      "start_and_restarts_unchanged": true
+    },
+    "restaurant-pos-staging-db-1": {
+      "container_id_unchanged": true,
+      "image_unchanged": true,
+      "environment_hash_unchanged": true,
+      "start_and_restarts_unchanged": true
+    }
+  },
+  "v39_release_notes": [
+    "Create fresh per-environment full readable backup before app replacement/migration; old recovery dumps are historical reference only.",
+    "Existing queue_guard fixes Flyway38 and configuration hash includes flyway_schema_history. Permit only expected V39 script/checksum append; preserve every prior ledger row, and compare all unrelated config fields unchanged.",
+    "Require projected dining_tables legacy columns/rows exactly unchanged and new split_label_mode NOT NULL DEFAULT LEFT_RIGHT for all39 Production/30 Stage tables. Do not infer mode from existing names or rewrite code/name/order.table_no.",
+    "Store1 duplicateT12 cannot be resolved with a single-result table_code lookup. Preserve stable tableID/display-label identity and fail conservatively for ambiguous aliases.",
+    "Historical order/item/task/job frozen data remains protected by cutoffs; continuous Uber workertrue, receiver, credentials and cutovers remain identical.",
+    "Stage then promote same accepted B/F immutable pair. App rollback must retain additive V39 column and LEFT_RIGHT default; never drop/restore database automatically. Confirm prior application tolerates V39 before relying on app-only rollback.",
+    "Use established -B/ownerUID restricted verifier execution; operation locks are observed only and must be acquired by actual release tool, never this reviewer."
+  ],
+  "status": "PREFLIGHT_PASS_WITH_PREEXISTING_TABLE_IDENTITY_RISKS"
+}

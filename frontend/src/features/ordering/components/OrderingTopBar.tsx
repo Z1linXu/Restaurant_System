@@ -4,6 +4,8 @@ import { formatSplitSlotLabel } from '../../../utils/tableDisplay'
 interface OrderingTopBarProps {
   tableLabel: string
   slotLabel: string
+  tableDisplayName?: string
+  slotDisplayName?: string
   orderType?: 'dine_in' | 'pickup'
   pickupLabel?: string | null
   workstationLabel?: string | null
@@ -17,6 +19,8 @@ interface OrderingTopBarProps {
 export function OrderingTopBar({
   tableLabel,
   slotLabel,
+  tableDisplayName,
+  slotDisplayName,
   orderType = 'dine_in',
   pickupLabel = null,
   workstationLabel = null,
@@ -26,8 +30,8 @@ export function OrderingTopBar({
   onSearchChange,
   compact = false,
 }: OrderingTopBarProps) {
-  const displayTableLabel = formatSplitSlotLabel(tableLabel)
-  const displaySlotLabel = formatSplitSlotLabel(slotLabel)
+  const displayTableLabel = orderType === 'dine_in' ? tableDisplayName ?? formatSplitSlotLabel(tableLabel) : tableLabel
+  const displaySlotLabel = orderType === 'dine_in' ? slotDisplayName ?? formatSplitSlotLabel(slotLabel) : slotLabel
 
   return (
     <div className={`flex rounded-[30px] bg-[rgba(255,255,255,0.74)] shadow-[0_14px_32px_rgba(26,28,25,0.05)] ${compact ? 'items-center justify-between gap-4 px-5 py-3.5' : 'flex-col gap-4 px-6 py-5 xl:flex-row xl:items-center xl:justify-between'}`}>

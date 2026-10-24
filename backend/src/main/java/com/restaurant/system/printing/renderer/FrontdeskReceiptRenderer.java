@@ -61,7 +61,7 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
 
         StringBuilder builder = new StringBuilder();
         if (PrintTableDisplayFormatter.isDineIn(order)) {
-            builder.append(PrintTableDisplayFormatter.formatDineInHeader(order.table_no, updateTicket)).append("\n");
+            builder.append(PrintTableDisplayFormatter.formatDineInHeader(order, updateTicket)).append("\n");
         } else {
             ExternalOrderReceiptHeader.append(builder, request.order);
             if (!ExternalOrderReceiptHeader.isPresent(order)) appendLargeLine(builder, resolveLargeDisplayLabel(order));
