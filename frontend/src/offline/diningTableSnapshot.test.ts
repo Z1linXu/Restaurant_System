@@ -21,3 +21,10 @@ it('reuses bounded workspace storage while isolating account, Organization and S
   saved.validatedAt = new Date(Date.now() - WORKSPACE_SNAPSHOT_MAX_AGE_MS - 1).toISOString()
   expect(await readDiningTableSnapshot(scope)).toBeNull()
 })
+it('does not restore explicitly inactive rows from older display snapshots', async () => {
+  await saveDiningTableSnapshot(scope, [table, { ...table, id: 21, is_active: false }])
+  expect(await readDiningTableSnapshot(scope)).toEqual([table])
+  const saved = [...records.values()][0]
+  saved.tables = [{ ...table, is_active: false }]
+  expect(await readDiningTableSnapshot(scope)).toEqual([])
+})

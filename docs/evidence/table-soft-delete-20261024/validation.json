@@ -1,0 +1,24 @@
+{
+  "frontend": {
+    "files": 65,
+    "tests": 372,
+    "result": "PASS",
+    "build": "PASS",
+    "changed_file_lint_errors": 0,
+    "existing_warning": "useDraftOrder catalogItems dependency; exact c7b65ec baseline reproduced"
+  },
+  "deployment_guard_tests": 8,
+  "postgres_executed": 35,
+  "soft_delete_postgres_tests": 28,
+  "prior_split_postgres_tests": 6,
+  "migration_postgres_tests": 1,
+  "physical_print": "NOT_TESTED",
+  "password_login": "NOT_TESTED",
+  "render_harness_sha256": "75b288b27a7e22d179f98ce60d11f5d2f6b7e1457c1d3311539b047f79581049",
+  "late_cluster_repairs": [
+    "confirmation uses persisted labels",
+    "Java trim parity in native active-order query",
+    "nonempty and no outer-whitespace config identity"
+  ],
+  "local_postgres_stopped": true
+}

@@ -2541,6 +2541,28 @@ Restaurant_System/
 
 ### 1.5 Table System
 
+Dining Tables uses `is_active=false` as a soft-delete tombstone. Add defaults to
+active; the UI has no Active checkbox/status column. Edit provides a red
+**Delete Table / 删除桌台** action with a table-name confirmation. Both Admin and
+Frontdesk list endpoints filter inactive tables. Normal saves cannot resurrect
+a tombstone, and its name/code identities cannot be reused by Add or rename.
+This prevents old raw table contexts from pointing to a recreated table without
+changing `orders.table_no` or adding an order storage field.
+
+Deletion holds the Store/table configuration locks and rejects unfinished
+dine-in orders for the full table, A/B and legacy code aliases, including empty
+drafts. Order entry, draft submission and header changes lock and revalidate the
+table before writing. Historical table-display lookup still includes tombstones;
+orders, sales and frozen print records are never deleted or rewritten.
+Table names/codes reject outer whitespace on save; lock/occupancy guards recognize
+legacy case and whitespace variants without rewriting order identities. Saves and
+deletes publish `dining_table.changed` after commit on the existing Store Frontdesk
+topic, triggering a prompt table-list refresh on other Pads.
+Frontdesk does not use cached table configuration as permission: opening or
+restoring a dining menu and manual submission require a fresh active context.
+When the server cannot confirm it, local drafts/outbox are retained but that
+context cannot enter ordering. Existing automatic idempotent replay is preserved.
+
 Each dining table persists its own `split_label_mode`: `LEFT_RIGHT` (default)
 or `INSIDE_OUTSIDE`. Dining Tables Add/Edit exposes **Split Label / 拆桌命名方式**
 when Table Config is Split. The existing endpoints save and reload this field;

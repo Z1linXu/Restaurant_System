@@ -2,11 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   fetchPlatformOverview,
   savePlatformEntity,
+  deleteDiningTable,
   type DiningTableRecord,
   type PlatformAdminOverview,
 } from '../../services/platformAdminService'
 import { useCurrentStore } from '../store/useStoreContext'
 import { formatConfiguredSplitLabel, normalizeSplitLabelMode } from '../../utils/tableDisplay'
+import { notifyDiningTablesChanged } from '../../services/frontdeskConfigService'
 
 type ToastState =
   | { kind: 'success' | 'error'; message: string }
@@ -97,7 +99,7 @@ export function DiningTablesManagementPage() {
       setTables(
         (nextOverview.dining_tables ?? [])
           .map((record) => toDiningTableRecord(record, storeId))
-          .filter((record) => record.store_id === storeId)
+          .filter((record) => record.store_id === storeId && record.is_active !== false)
           .sort((left, right) => left.sort_order - right.sort_order || left.table_name.localeCompare(right.table_name)),
       )
     } catch (loadError) {
@@ -166,7 +168,7 @@ export function DiningTablesManagementPage() {
     const nextOverview = await fetchPlatformOverview(storeId)
     const nextTables = (nextOverview.dining_tables ?? [])
       .map((record) => toDiningTableRecord(record, storeId))
-      .filter((record) => record.store_id === storeId)
+      .filter((record) => record.store_id === storeId && record.is_active !== false)
       .sort((left, right) => left.sort_order - right.sort_order || left.table_name.localeCompare(right.table_name))
     if (Number(selectedStoreRef.current) === storeId) {
       setOverview(nextOverview)
@@ -198,12 +200,42 @@ export function DiningTablesManagementPage() {
       }
 
       setEditor(null)
+      notifyDiningTablesChanged(editor.store_id)
       setToast({ kind: 'success', message: `Saved ${persistedTable.table_name || persistedTable.table_code}.` })
     } catch (saveError) {
       setToast({
         kind: 'error',
         message: saveError instanceof Error ? saveError.message : 'Failed to save dining table',
       })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!editor?.id || saving) return
+    const persisted = tables.find((table) => table.id === editor.id && table.store_id === editor.store_id)
+    if (!persisted) {
+      setToast({ kind: 'error', message: '该桌台当前不可用，请刷新桌台列表后重试。' })
+      return
+    }
+    const label = persisted.table_name || persisted.table_code
+    if (!window.confirm(`删除桌台 ${label}（${persisted.table_code}）？\nDelete Table ${label}? 此操作将从前台移除此桌台，历史订单仍保留。`)) return
+    const target = editor
+    setSaving(true)
+    setToast(null)
+    try {
+      await deleteDiningTable(target.store_id, target.id!)
+      notifyDiningTablesChanged(target.store_id)
+      if (Number(selectedStoreRef.current) === target.store_id) {
+        setTables((current) => current.filter((table) => table.id !== target.id))
+        setEditor(null)
+      }
+      await refreshTables(target.store_id)
+      if (Number(selectedStoreRef.current) !== target.store_id) return
+      setToast({ kind: 'success', message: `已删除桌台 ${label} / Table deleted.` })
+    } catch (error) {
+      if (Number(selectedStoreRef.current) === target.store_id) setToast({ kind: 'error', message: error instanceof Error ? error.message : '删除失败，请稍后重试。' })
     } finally {
       setSaving(false)
     }
@@ -298,13 +330,12 @@ export function DiningTablesManagementPage() {
                 </div>
 
                 <div className="mt-5 overflow-hidden rounded-[22px] border border-[rgba(26,28,25,0.06)]">
-                  <div className="grid grid-cols-[1.05fr_1.2fr_1fr_0.9fr_0.9fr_0.8fr] bg-[rgba(26,28,25,0.04)] px-4 py-3 text-[0.75rem] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                  <div className="grid grid-cols-[1.05fr_1.2fr_1fr_0.9fr_0.9fr] bg-[rgba(26,28,25,0.04)] px-4 py-3 text-[0.75rem] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
                     <span>Code</span>
                     <span>Name</span>
                     <span>Area</span>
                     <span>Config</span>
                     <span>Capacity</span>
-                    <span>Status</span>
                   </div>
 
                   <div className="divide-y divide-[rgba(26,28,25,0.06)] bg-white">
@@ -313,16 +344,13 @@ export function DiningTablesManagementPage() {
                         key={table.id ?? table.table_code}
                         type="button"
                         onClick={() => openEdit(table)}
-                        className="grid w-full grid-cols-[1.05fr_1.2fr_1fr_0.9fr_0.9fr_0.8fr] items-center gap-3 px-4 py-3 text-left transition hover:bg-[rgba(97,0,0,0.03)]"
+                        className="grid w-full grid-cols-[1.05fr_1.2fr_1fr_0.9fr_0.9fr] items-center gap-3 px-4 py-3 text-left transition hover:bg-[rgba(97,0,0,0.03)]"
                       >
                         <span className="text-[0.92rem] font-semibold text-[var(--on-surface)]">{table.table_code}</span>
                         <span className="text-[0.92rem] text-[var(--on-surface)]">{table.table_name}</span>
                         <span className="text-[0.84rem] text-[var(--muted)]">{table.area_name}</span>
                         <span className="text-[0.84rem] text-[var(--muted)]">{table.supports_split ? `Split · ${table.split_label_mode === 'INSIDE_OUTSIDE' ? '里 / 外' : '左 / 右'}` : 'Single'}</span>
                         <span className="text-[0.84rem] text-[var(--muted)]">{table.capacity}</span>
-                        <span className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[0.76rem] font-semibold ${table.is_active ? 'bg-[rgba(18,141,77,0.1)] text-[rgb(25,112,69)]' : 'bg-[rgba(26,28,25,0.08)] text-[var(--muted)]'}`}>
-                          {table.is_active ? 'Active' : 'Inactive'}
-                        </span>
                       </button>
                     ))}
 
@@ -435,36 +463,7 @@ export function DiningTablesManagementPage() {
                         />
                       </label>
 
-                      <div className="flex items-center gap-4 pt-7">
-                        <label className="inline-flex items-center gap-2 text-[0.88rem] font-medium text-[var(--on-surface)]">
-                          <input
-                            type="checkbox"
-                            checked={editor.supports_split}
-                            onChange={(event) =>
-                              setEditor((current) =>
-                                current
-                                  ? {
-                                      ...current,
-                                      supports_split: event.target.checked,
-                                      table_config: event.target.checked ? 'split_supported' : 'single_only',
-                                    }
-                                  : current,
-                              )
-                            }
-                          />
-                          Supports split
-                        </label>
-                        <label className="inline-flex items-center gap-2 text-[0.88rem] font-medium text-[var(--on-surface)]">
-                          <input
-                            type="checkbox"
-                            checked={editor.is_active}
-                            onChange={(event) => setEditor((current) => (current ? { ...current, is_active: event.target.checked } : current))}
-                          />
-                          Active
-                        </label>
-                      </div>
                     </div>
-
                     <div className="flex flex-wrap items-center gap-3 pt-2">
                       <button
                         type="button"
@@ -482,6 +481,7 @@ export function DiningTablesManagementPage() {
                         Cancel
                       </button>
                     </div>
+                    {editor.id ? <button type="button" onClick={() => void handleDelete()} disabled={saving} className="min-h-12 rounded-[16px] bg-red-50 px-4 py-3 text-[0.92rem] font-bold text-red-700 disabled:opacity-60">Delete Table / 删除桌台</button> : null}
                   </div>
                 ) : (
                   <div className="mt-5 rounded-[20px] border border-dashed border-[rgba(97,0,0,0.16)] bg-[rgba(97,0,0,0.03)] px-4 py-6 text-[0.9rem] text-[var(--primary)]">

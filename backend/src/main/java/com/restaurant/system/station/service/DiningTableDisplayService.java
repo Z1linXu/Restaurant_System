@@ -61,6 +61,9 @@ public class DiningTableDisplayService {
             if (locked == null) throw new BusinessException("TABLE_CONTEXT_CHANGED: Refresh before continuing");
             // OSIV may contain the row read before another transaction changed its mode.
             entityManager.refresh(locked, LockModeType.PESSIMISTIC_WRITE);
+            if (Boolean.FALSE.equals(locked.is_active)) {
+                throw new BusinessException("TABLE_INACTIVE: This table was deleted; refresh the table list / 此桌台已删除，请刷新桌台列表");
+            }
             if (!identities.get(id).equals(tableName(locked))) {
                 throw new BusinessException("TABLE_CONTEXT_CHANGED: Refresh before continuing");
             }
@@ -73,6 +76,11 @@ public class DiningTableDisplayService {
         List<DiningTable> exact = tables.findAllByStoreIdAndTableName(storeId, raw);
         if (!exact.isEmpty()) return unambiguous(exact);
         String base = splitBase(raw);
+        // Recognize legacy lower-case seat identities for locking only. Keep
+        // raw order storage and the existing display projection unchanged.
+        if (base == null && raw.length() > 2 && (raw.endsWith("-a") || raw.endsWith("-b"))) {
+            base = raw.substring(0, raw.length() - 2);
+        }
         if (base != null) {
             List<DiningTable> split = tables.findAllByStoreIdAndTableName(storeId, base);
             if (!split.isEmpty()) return unambiguous(split);

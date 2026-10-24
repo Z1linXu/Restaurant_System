@@ -1,0 +1,32 @@
+{
+  "printing": {
+    "tests": 404,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 2
+  },
+  "order": {
+    "tests": 78,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 8
+  },
+  "platform": {
+    "tests": 69,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "station": {
+    "tests": 46,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "total": {
+    "tests": 597,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 10
+  }
+}

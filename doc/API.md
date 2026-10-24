@@ -998,6 +998,33 @@ POST `/frontdesk/beverages/{orderItemId}/cancel`
 
 ---
 
+## Dining Table Soft Delete
+
+`GET /frontdesk/dining-tables?store_id=...` and
+`GET /admin/platform/dining-tables?store_id=...` return only tables whose
+`is_active` is not false (legacy null remains compatible).
+`POST /admin/platform/dining-tables` always creates an active table. POST/PUT
+with explicit false is rejected: deletion uses the dedicated endpoint.
+`PUT /admin/platform/dining-tables/{id}` cannot reactivate a deleted table,
+even when an old client sends `is_active=true`.
+
+`DELETE /admin/platform/dining-tables/{id}?store_id=...` returns the soft-deleted
+DiningTable in the normal ApiResponse. It requires the existing
+ADMIN_STORE_CONFIG and TABLE_MANAGEMENT checks for the same Store, performs no
+physical DELETE, and is idempotent for an existing tombstone. An unfinished
+dine-in order on the full table, A/B or legacy code aliases rejects deletion
+with a clear finish/cancel message, including empty drafts and null statuses.
+Row locks serialize deletion with order entry and draft submission, including
+legacy case/whitespace variants without rewriting stored order values. Names/codes
+with outer whitespace, or both name and code blank, are rejected on save. Store-scoped `dining_table.changed`
+reuses the existing Frontdesk WebSocket topic after commit. Deleted
+names/codes cannot be reused by a new table or rename because table_no retains
+the raw legacy identity. Existing unchanged live duplicate codes remain valid.
+
+Known inactive contexts are rejected at order creation/submission/context writes;
+no cached frontend record grants access. Historical orders, sales and frozen
+print snapshots remain unchanged and readable. No database migration is needed.
+
 ## Dining Table Split Labels
 
 Existing routes `GET /frontdesk/dining-tables?store_id=...`,

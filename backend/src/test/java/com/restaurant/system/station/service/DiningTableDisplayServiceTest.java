@@ -118,6 +118,36 @@ class DiningTableDisplayServiceTest {
         assertThatThrownBy(() -> service.lockContexts(1L, "1-A")).hasMessageContaining("TABLE_CONTEXT_CHANGED");
     }
 
+    @Test
+    void concurrentDeletionIsDetectedAfterLockRefreshWhileHistoryStillDisplaysItsMode() {
+        var row = table(1L, "1", "T1", "INSIDE_OUTSIDE"); row.is_active = true;
+        when(tables.findAllByStoreIdAndTableName(1L, "1")).thenReturn(List.of(row));
+        when(tables.findByIdAndStoreIdForUpdate(1L, 1L)).thenReturn(row);
+        doAnswer(invocation -> { row.is_active = false; return null; }).when(entityManager).refresh(row, LockModeType.PESSIMISTIC_WRITE);
+        assertThatThrownBy(() -> service.lockContexts(1L, "1-A")).hasMessageContaining("TABLE_INACTIVE");
+        assertThat(service.displayName(1L, "1-A")).isEqualTo("1里");
+    }
+
+    @Test
+    void lowerCaseSeatsLockTheOriginalCaseBaseAndDeletedRowsAreNotUnknownLegacyContexts() {
+        var row = table(1L, "MixedCase", "T1", "INSIDE_OUTSIDE"); row.is_active = false;
+        when(tables.findAllByStoreIdAndTableName(1L, "MixedCase")).thenReturn(List.of(row));
+        when(tables.findByIdAndStoreIdForUpdate(1L, 1L)).thenReturn(row);
+        assertThatThrownBy(() -> service.lockContexts(1L, " MixedCase-a ")).hasMessageContaining("TABLE_INACTIVE");
+        assertThatThrownBy(() -> service.lockContexts(1L, "MixedCase-b")).hasMessageContaining("TABLE_INACTIVE");
+        verify(tables, never()).findAllByStoreIdAndTableName(1L, "MIXEDCASE");
+    }
+
+    @Test
+    void exactLiteralLowerCaseSeatNameWinsOverAnInactiveBaseTable() {
+        var literal = table(2L, "1-a", "LITERAL", "LEFT_RIGHT"); literal.is_active = true;
+        when(tables.findAllByStoreIdAndTableName(1L, "1-a")).thenReturn(List.of(literal));
+        when(tables.findByIdAndStoreIdForUpdate(2L, 1L)).thenReturn(literal);
+        service.lockContexts(1L, "1-a");
+        verify(tables, never()).findAllByStoreIdAndTableName(1L, "1");
+        assertThat(service.displayName(1L, "1-a")).isEqualTo("1-a");
+    }
+
     private DiningTable table(Long id, String name, String code, String mode) {
         var table = new DiningTable(); table.id = id; table.store_id = 1L;
         table.table_name = name; table.table_code = code; table.split_label_mode = mode;

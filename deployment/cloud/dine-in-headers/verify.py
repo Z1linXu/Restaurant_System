@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Split-label/render acceptance of this exact deployed JAR; never dispatches a job."""
+"""Table-delete UI and unchanged split-label/render acceptance of this exact deployed JAR; never dispatches a job."""
 import datetime
 import hashlib
 import importlib.util
@@ -19,7 +19,49 @@ d = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(d)
 
 
-def main(environment, sha, class_sha256, attempt=''):
+def validate_table_response(rows, expected, store):
+    fields = ('id', 'store_id', 'table_code', 'table_name', 'table_config', 'split_label_mode', 'is_active')
+    assert isinstance(rows, list) and len(rows) == len(expected)
+    assert all(row['store_id'] == store and row.get('is_active') is not False for row in rows)
+    projected = [{field: row.get(field) for field in fields} for row in rows]
+    assert sorted(projected, key=lambda row: row['id']) == expected, 'Table API must exactly match active database rows'
+
+
+def verify_table_lists(environment, db, env, base):
+    # Reuse the reviewed short-lived existing numeric identity. GET only, no login
+    # password, credential write, table mutation, order or print operation.
+    def load(name, path):
+        spec = importlib.util.spec_from_file_location(name, path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    smoke = load('table_smoke', HERE.parent / 'production-v26-smoke.py')
+    http = load('table_http', HERE.parent / 'verify-uber-receive-only-20261022.py')
+    smoke.run_psql = d.read_sql
+    user, role, role_code, _, org = smoke.numeric_identity(db)
+    targets = [1, 2, 3] if environment == 'production' else [18]
+    if environment == 'production': assert org == 1
+    token = smoke.mint_token(env['JWT_SECRET'], user, role, targets[0], org, role_code)
+    def get(path):
+        assert path == '/auth/me' or any(path == f'{prefix}?store_id={store}' for store in targets
+            for prefix in ('/frontdesk/dining-tables', '/admin/platform/dining-tables'))
+        status, raw = http.request(base + '/api/v1' + path, headers={'Authorization': 'Bearer ' + token})
+        assert status == 200, 'Table read-only acceptance HTTP status ' + str(status)
+        response = json.loads(raw)
+        assert response.get('success') is True
+        return response['data']
+    assert get('/auth/me') is not None
+    report = []
+    for store in targets:
+        expected = json.loads(d.read_sql(db, f"SELECT coalesce(json_agg(t ORDER BY id),'[]'::json) FROM (SELECT id,store_id,table_code,table_name,table_config,split_label_mode,is_active FROM dining_tables WHERE store_id={store} AND is_active IS DISTINCT FROM false) t"))
+        inactive = int(d.read_sql(db, f'SELECT count(*) FROM dining_tables WHERE store_id={store} AND is_active=false'))
+        for prefix in ('/frontdesk/dining-tables', '/admin/platform/dining-tables'):
+            validate_table_response(get(f'{prefix}?store_id={store}'), expected, store)
+        report.append({'store_id': store, 'active_tables': len(expected), 'excluded_inactive_tables': inactive, 'both_lists': 'PASS'})
+    return report
+
+
+def main(environment, sha, class_sha256):
     assert environment in ('staging', 'production') and re.fullmatch('[0-9a-f]{40}', sha)
     assert re.fullmatch('[0-9a-f]{64}', class_sha256)
     script_release = HERE.parents[2]
@@ -27,7 +69,7 @@ def main(environment, sha, class_sha256, attempt=''):
     assert HERE == d.BASE / 'staging/releases' / script_sha / 'deployment/cloud/dine-in-headers'
     assert not d.i.run(['git', '-C', str(script_release), 'status', '--porcelain']).strip()
     assert not d.i.run(['git', '-C', str(script_release), 'diff', sha, script_sha, '--', 'backend', 'frontend']).strip()
-    root = d.evidence_root(environment, sha, attempt)
+    root = d.evidence_root(environment, sha)
     result = json.loads(d.ops.private_file(root / 'result.json').read_text())
     assert result['source_sha'] == sha and result['health'] == 'PASS'
     name = ('cloud' if environment == 'production' else 'restaurant-pos-staging') + '-backend-1'
@@ -55,6 +97,7 @@ def main(environment, sha, class_sha256, attempt=''):
     assert label_asset.parent == Path('/usr/share/nginx/html/assets') and re.fullmatch(r'[A-Za-z0-9_.-]+\.js', label_asset.name)
     label_bytes = d.i.run(['docker', 'exec', frontend_name, 'cat', str(label_asset)])
     assert b'INSIDE_OUTSIDE' in label_bytes and b'LEFT_RIGHT' in label_bytes
+    assert b'Delete Table' in label_bytes and b'checkbox' not in label_bytes
     with urllib.request.urlopen(base + '/assets/' + label_asset.name, timeout=8) as response:
         assert response.status == 200 and response.read() == label_bytes
     harness = d.ops.private_file(root / 'RenderHeaderAcceptance.class')
@@ -90,9 +133,8 @@ def main(environment, sha, class_sha256, attempt=''):
     db = name.replace('-backend-1', '-db-1')
     baseline = json.loads(d.ops.private_file(root / 'baseline.private.json').read_text())
     d.p.DB = db
-    original = json.loads(d.ops.private_file(d.evidence_root(environment, sha) / 'baseline.private.json').read_text()) if attempt else None
-    if attempt: d.validate_retry_baseline(original, baseline)
-    d.validate_release_ledger(baseline['ledger'], d.i.ledger(db), original['ledger'] if attempt else None)
+    table_lists = verify_table_lists(environment, db, d.ops.env_of(runtime), base)
+    d.validate_ledger(baseline['ledger'], d.i.ledger(db))
     assert d.queue_guard(db, '39') == baseline['configuration']
     assert d.order_contexts(db, baseline['history']['cutoffs'][0]) == baseline['order_contexts']
     modes = d.table_modes(db)
@@ -101,7 +143,9 @@ def main(environment, sha, class_sha256, attempt=''):
     accepted = dict(observed, environment=environment, source_sha=sha, image=image, health='PASS',
         images=result['images'], flyway='39', table_modes=modes, mock_split_labels='PASS',
         split_label_public_asset_sha256=hashlib.sha256(label_bytes).hexdigest(), preview_asset_sha256=hashlib.sha256(asset_bytes).hexdigest(), preview_public_asset='PASS',
-        accepted=True, attempt=attempt or 'initial', script_sha=script_sha, app_jar_sha256=hashlib.sha256((proof / 'app.jar').read_bytes()).hexdigest(),
+        accepted=True, table_soft_delete_ui='PASS', table_lists=table_lists,
+        password_login='NOT_TESTED_EXISTING_NUMERIC_IDENTITY_GET_ONLY',
+        migration='NONE_V39_UNCHANGED', script_sha=script_sha, app_jar_sha256=hashlib.sha256((proof / 'app.jar').read_bytes()).hexdigest(),
         proof_class_sha256=class_sha256, observed_at=datetime.datetime.now(datetime.timezone.utc).isoformat())
     d.ops.write_private(root / 'render-acceptance.json', accepted)
     d.ops.write_private(root / 'acceptance.json', accepted)
