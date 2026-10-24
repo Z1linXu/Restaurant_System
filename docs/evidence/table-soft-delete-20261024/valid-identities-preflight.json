@@ -1,0 +1,1 @@
+{"existing_invalid_identity_rows": {"cloud-db-1": {"outer_whitespace": 0, "empty_identity": 0}, "restaurant-pos-staging-db-1": {"outer_whitespace": 0, "empty_identity": 0}}, "read_only": true, "result": "PASS"}

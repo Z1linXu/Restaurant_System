@@ -14,6 +14,9 @@ import static org.mockito.Mockito.when;
 
 import com.restaurant.system.menu.entity.MenuCategory;
 import com.restaurant.system.common.exception.BusinessException;
+import com.restaurant.system.common.realtime.RealtimeEventPublisher;
+import com.restaurant.system.common.realtime.RealtimeUpdateMessage;
+import com.restaurant.system.common.realtime.RealtimeTopics;
 import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.entity.MenuItemOption;
 import com.restaurant.system.menu.repository.MenuCategoryRepository;
@@ -63,6 +66,7 @@ class PlatformAdminServiceImplMenuOrderingTest {
     @Mock private DiningTableRepository diningTableRepository;
     @Mock private OrderRepository orderRepository;
     @Mock private EntityManager entityManager;
+    @Mock private RealtimeEventPublisher realtimeEventPublisher;
     @Mock private MenuCategoryRepository menuCategoryRepository;
     @Mock private MenuItemRepository menuItemRepository;
     @Mock private MenuItemOptionRepository menuItemOptionRepository;
@@ -95,7 +99,8 @@ class PlatformAdminServiceImplMenuOrderingTest {
             menuRevisionService,
             chainMasterMenuRepository,
             chainMasterMenuVersionRepository,
-            storeMenuMasterMappingRepository
+            storeMenuMasterMappingRepository,
+            realtimeEventPublisher
         );
     }
 
@@ -681,7 +686,7 @@ class PlatformAdminServiceImplMenuOrderingTest {
         DiningTable request = diningTable(2L); request.id = 22L; request.split_label_mode = nextMode;
         when(diningTableRepository.findByIdAndStoreIdForUpdate(22L, 2L)).thenReturn(stored);
         when(diningTableRepository.findAllByStoreIdAndTableName(2L, "1")).thenReturn(List.of(stored));
-        when(orderRepository.hasActiveDiningTableOrders(2L, List.of("1", "1-A", "1-B", "T12", "T12-A", "T12-B"))).thenReturn(true);
+        when(orderRepository.hasActiveDiningTableOrders(2L, List.of("1", "1-A", "1-B", "1-a", "1-b", "T12", "T12-A", "T12-B", "T12-a", "T12-b"))).thenReturn(true);
         String oldMode = stored.split_label_mode;
         BusinessException error = assertThrows(BusinessException.class, () -> service.saveDiningTable(request));
         assertThat(error.getMessage()).contains("Finish all active orders");
@@ -690,7 +695,7 @@ class PlatformAdminServiceImplMenuOrderingTest {
         var sequence = inOrder(diningTableRepository, orderRepository);
         sequence.verify(diningTableRepository).findByIdAndStoreIdForUpdate(22L, 2L);
         sequence.verify(diningTableRepository).findAllByStoreIdAndTableName(2L, "1");
-        sequence.verify(orderRepository).hasActiveDiningTableOrders(2L, List.of("1", "1-A", "1-B", "T12", "T12-A", "T12-B"));
+        sequence.verify(orderRepository).hasActiveDiningTableOrders(2L, List.of("1", "1-A", "1-B", "1-a", "1-b", "T12", "T12-A", "T12-B", "T12-a", "T12-b"));
     }
 
     @Test
@@ -755,5 +760,33 @@ class PlatformAdminServiceImplMenuOrderingTest {
         table.area_name = "Main Hall"; table.capacity = 4; table.sort_order = 7;
         table.supports_split = true; table.table_config = "split_supported"; table.is_active = true;
         return table;
+    }
+
+    @Test
+    void successfulTableSaveAndDeletePublishOnlyTheStoreFrontdeskEventAndRepeatDeleteIsSilent() {
+        DiningTable stored = diningTable(2L); stored.id = 22L;
+        DiningTable request = diningTable(2L); request.id = 22L;
+        when(diningTableRepository.findByIdAndStoreIdForUpdate(22L, 2L)).thenReturn(stored);
+        when(diningTableRepository.save(stored)).thenReturn(stored);
+        service.saveDiningTable(request);
+        service.deleteDiningTable(22L, 2L);
+        service.deleteDiningTable(22L, 2L);
+        ArgumentCaptor<RealtimeUpdateMessage> messages = ArgumentCaptor.forClass(RealtimeUpdateMessage.class);
+        verify(realtimeEventPublisher, org.mockito.Mockito.times(2)).publish(messages.capture(), org.mockito.ArgumentMatchers.eq(List.of(RealtimeTopics.FRONTDESK_ORDERS)));
+        assertThat(messages.getAllValues()).allSatisfy(message -> {
+            assertThat(message.event_type).isEqualTo("dining_table.changed");
+            assertThat(message.store_id).isEqualTo(2L);
+            assertThat(message.order_id).isNull();
+            assertThat(message.happened_at).isNotNull();
+        });
+    }
+
+    @Test
+    void rejectedDeletionDoesNotPublishARefreshEvent() {
+        DiningTable stored = diningTable(2L); stored.id = 22L;
+        when(diningTableRepository.findByIdAndStoreIdForUpdate(22L, 2L)).thenReturn(stored);
+        when(orderRepository.hasActiveDiningTableOrders(2L, List.of("1", "1-A", "1-B", "1-a", "1-b", "T12", "T12-A", "T12-B", "T12-a", "T12-b"))).thenReturn(true);
+        assertThrows(BusinessException.class, () -> service.deleteDiningTable(22L, 2L));
+        verifyNoInteractions(realtimeEventPublisher);
     }
 }

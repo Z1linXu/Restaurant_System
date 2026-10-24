@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { requireActiveDiningTable } from '../services/frontdeskConfigService'
 import {
   cancelDraftOrder,
   fetchOrderDetail,
@@ -837,6 +838,10 @@ export function useDraftOrder(
     },
     submitOrder: async () => {
       if (submitInFlightRef.current) return null
+      if (orderType === 'dine_in') {
+        try { await requireActiveDiningTable(storeId, slotLabel) }
+        catch (error) { setError(error instanceof Error ? error.message : '无法确认桌台状态；本机草稿已保留。'); return null }
+      }
       if (!session?.items.length) {
         setError('订单至少需要一个菜品。')
         return null
@@ -845,6 +850,7 @@ export function useDraftOrder(
         localDraftRef.current = { ...localDraftRef.current, items: session.items }
       }
       await flushLocalDraft().catch(() => undefined)
+      if (submitInFlightRef.current) return null
       const submitStartedAtMs = Date.now()
       const submitStartedAt = new Date(submitStartedAtMs).toISOString()
       const recordSubmit = (stage: 'STARTED' | 'SUCCEEDED' | 'FAILED', submitError?: unknown) => {

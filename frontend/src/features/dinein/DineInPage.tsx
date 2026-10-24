@@ -26,6 +26,7 @@ import type { OrderPrintOption } from '../../types/ordering'
 import type { PrintJobRecord } from '../../services/printingAdminService'
 import { formatSplitSlotLabel } from '../../utils/tableDisplay'
 import { useDiningTableDisplay } from '../../hooks/useDiningTableDisplay'
+import { requireActiveDiningTable } from '../../services/frontdeskConfigService'
 import { DineInSidebar } from './components/DineInSidebar'
 import { DineInTopBar } from './components/DineInTopBar'
 import { TableGrid } from './components/TableGrid'
@@ -237,6 +238,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
 
   const handleOfflineOpen = useCallback(async (order: OfflineOrderBadge) => {
     try {
+      if (order.tableNo) await requireActiveDiningTable(storeId, order.tableNo)
       if (offlineOrderScope && order.state !== 'LOCAL_DRAFT') {
         await returnOfflineOrderToDraft(offlineOrderScope, order.clientOrderId)
       }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""2026-10-24 per-table split labels; reuse reviewed app-pair promotion primitives."""
+"""2026-10-24 table soft delete; reuse reviewed app-pair promotion primitives."""
 import copy
 import datetime
 import hashlib
@@ -10,7 +10,6 @@ from pathlib import Path
 import re
 import subprocess
 import sys
-import zlib
 
 sys.dont_write_bytecode = True
 HERE = Path(__file__).resolve().parent
@@ -19,10 +18,10 @@ prior = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(prior)
 p, i, ops = prior.p, prior.i, prior.ops
 BASE = Path('/srv/restaurant-pos')
-OLD_IMAGE = 'sha256:a16b8a2feacd7eed97cc2e3d971c9bd993455d262c85fe955cfdf340807b58a5'
-OLD_FRONTEND = 'sha256:abe9a86ac6c138143bfcfa6b37523f9213ed5d16692f4c35c904bbb2b7ae505b'
+OLD_IMAGE = 'sha256:ced502b10fc6d3a61eb57b55733ee24d45665ce16350c15a7caf1de2339f0b2e'
+OLD_FRONTEND = 'sha256:e2fee1acee5a4b9dfb137090b0be5aa8e4a361cfc6e51b6527dcd91c85593bf0'
 SERVICES = ('backend', 'nginx')
-RELEASE_PREFIX = 'split-label-mode-'
+RELEASE_PREFIX = 'dining-table-soft-delete-'
 os.umask(0o077)
 
 
@@ -33,30 +32,27 @@ def read_sql(db, sql):
 
 def configuration(db):
     state = ops.current_4483_configuration(db)
-    # V39 is the only allowed ledger change, checked separately below.
+    # This release has no migration; the entire ledger is checked below.
     state.pop('flyway_schema_history')
-    state['dining_tables_legacy_columns'] = read_sql(db, "SELECT md5(coalesce(jsonb_agg(to_jsonb(t)-'split_label_mode' ORDER BY id),'[]'::jsonb)::text) FROM dining_tables t")
+    state['dining_tables'] = read_sql(db, "SELECT md5(coalesce(jsonb_agg(to_jsonb(t) ORDER BY id),'[]'::jsonb)::text) FROM dining_tables t")
     return state
 
 
-def validate_migration(before, after):
-    migration = HERE.parents[2] / 'backend/src/main/resources/db/migration/V39__add_dining_table_split_label_mode.sql'
-    checksum = 0
-    for line in migration.read_text().splitlines(): checksum = zlib.crc32(line.encode(), checksum)
-    if checksum >= 2**31: checksum -= 2**32
-    old, new = before.splitlines(), after.splitlines()
-    assert old[-1].startswith('38|V38__add_store_remove_catalog.sql|')
-    assert new == old + [f'39|V39__add_dining_table_split_label_mode.sql|{checksum}|t'], 'Only exact V39 append allowed'
+def validate_ledger(before, after):
+    assert before.splitlines()[-1] == '39|V39__add_dining_table_split_label_mode.sql|1431202837|t'
+    assert after == before, 'No migration or ledger change allowed'
 
 
 def table_modes(db):
     result = json.loads(read_sql(db, """SELECT json_build_object(
         'rows',count(*),'left_right',count(*) FILTER(WHERE split_label_mode='LEFT_RIGHT'),
+        'inside_outside',count(*) FILTER(WHERE split_label_mode='INSIDE_OUTSIDE'),
         'stores',(SELECT json_agg(t) FROM (SELECT s.id,s.code,count(d.id) AS tables,
-          count(d.id) FILTER(WHERE d.split_label_mode='LEFT_RIGHT') AS default_mode_tables
+          count(d.id) FILTER(WHERE d.split_label_mode='LEFT_RIGHT') AS default_mode_tables,
+          count(d.id) FILTER(WHERE d.split_label_mode='INSIDE_OUTSIDE') AS inside_outside_tables
           FROM stores s LEFT JOIN dining_tables d ON d.store_id=s.id GROUP BY s.id,s.code ORDER BY s.id) t))
         FROM dining_tables"""))
-    assert result['rows'] == result['left_right'], 'Existing tables must all default LEFT_RIGHT'
+    assert result['rows'] == result['left_right'] + result['inside_outside'], 'Invalid table mode'
     return result
 
 
@@ -65,7 +61,7 @@ def order_contexts(db, cutoff):
     return read_sql(db, f"SELECT md5(coalesce(jsonb_agg(jsonb_build_array(id,store_id,order_type,table_no) ORDER BY id),'[]'::jsonb)::text) FROM orders WHERE id<={cutoff}")
 
 
-def queue_guard(db, flyway='38'):
+def queue_guard(db, flyway='39'):
     value = ops.inventory(db)
     assert value['flyway'] == flyway
     assert all(value[k] == 0 for k in ('pending_print_jobs', 'pending_outbox', 'pending_uber_events', 'due_uber_orders'))
@@ -94,34 +90,18 @@ def normalized_binds(value):
     return sorted(binds)
 
 
-def evidence_root(environment, sha, attempt=''):
+def evidence_root(environment, sha):
     assert environment in ('staging', 'production') and re.fullmatch('[0-9a-f]{40}', sha)
-    assert attempt == '' or (environment == 'production' and attempt == 'retry-1')
-    root = BASE / environment / (RELEASE_PREFIX + sha)
-    return root / attempt if attempt else root
+    return BASE / environment / (RELEASE_PREFIX + sha)
 
 
-def validate_release_ledger(before, after, original=None):
-    if original is None:
-        validate_migration(before, after)
-    else:
-        validate_migration(original, before)
-        assert after == before, 'Retry must not alter the V39 ledger'
-
-
-def validate_retry_baseline(original, current):
-    validate_migration(original['ledger'], current['ledger'])
-    for key in ('protected', 'configuration', 'history', 'order_contexts'):
-        assert current[key] == original[key], 'Retry baseline changed: ' + key
-
-
-def main(environment, sha, attempt=''):
+def main(environment, sha):
     assert environment in ('staging', 'production') and re.fullmatch('[0-9a-f]{40}', sha)
     release = BASE / 'staging/releases' / sha
     script_release = HERE.parents[2]
     script_sha = i.run(['git', '-C', str(script_release), 'rev-parse', 'HEAD']).decode().strip()
     assert HERE == BASE / 'staging/releases' / script_sha / 'deployment/cloud/dine-in-headers'
-    assert script_sha == sha or attempt == 'retry-1'
+    assert script_sha == sha
     assert not i.run(['git', '-C', str(script_release), 'status', '--porcelain']).strip()
     assert not i.run(['git', '-C', str(script_release), 'diff', sha, script_sha, '--', 'backend', 'frontend']).strip()
     assert i.run(['git', '-C', str(release), 'rev-parse', 'HEAD']).decode().strip() == sha
@@ -149,11 +129,7 @@ def main(environment, sha, attempt=''):
         launch = ' '.join(env.get(k, '') for k in ('JAVA_OPTS', 'JAVA_TOOL_OPTIONS', '_JAVA_OPTIONS', 'JDK_JAVA_OPTIONS'))
         launch += json.dumps([before['backend']['Config'].get('Entrypoint'), before['backend']['Config'].get('Cmd')])
         assert 'spring.datasource' not in launch.lower() and 'spring.config' not in launch.lower()
-    root = evidence_root(environment, sha, attempt)
-    original_root = evidence_root(environment, sha)
-    if attempt:
-        assert original_root.is_dir() and not original_root.is_symlink()
-        assert not (original_root / 'result.json').exists() and not (original_root / 'acceptance.json').exists()
+    root = evidence_root(environment, sha)
     assert not root.exists(), 'Do not overwrite release evidence'
     root.mkdir(mode=0o700)
     source = BASE / 'production/current.compose.json'
@@ -161,8 +137,6 @@ def main(environment, sha, attempt=''):
     rollback = json.loads(original_bytes) if prod else i.escape_compose({
         'services': {service: p.modeled(service, before[service]) for service in SERVICES},
         'networks': {'restaurant-pos': {'external': True, 'name': 'restaurant-pos-staging_restaurant-pos'}}})
-    if attempt:
-        assert rollback == json.loads(ops.private_file(original_root / 'rollback.private.json').read_text())
     ops.write_private(root / 'rollback.private.json', rollback)
     def compose(path, *args):
         return i.run(['docker', 'compose', '-p', project, '-f', str(path), *args], stderr=subprocess.STDOUT)
@@ -173,14 +147,12 @@ def main(environment, sha, attempt=''):
     updated_names = {project + '-' + service + '-1' for service in SERVICES}
     protected = {n: i.fingerprint(n) for n in i.PROD + i.STAGE if n not in updated_names}
     ledger = i.ledger(db)
-    configuration = queue_guard(db, '39' if attempt else '38')
+    configuration = queue_guard(db)
     p.DB = db
-    original = json.loads(ops.private_file(original_root / 'baseline.private.json').read_text()) if attempt else None
-    history = p.history_fingerprints(original['history']['cutoffs'] if attempt else None)
+    history = p.history_fingerprints()
     contexts = order_contexts(db, history['cutoffs'][0])
     baseline = {'protected': protected, 'ledger': ledger,
         'configuration': configuration, 'history': history, 'order_contexts': contexts}
-    if attempt: validate_retry_baseline(original, baseline)
     ops.write_private(root / 'baseline.private.json', baseline)
     with (root / 'database-before.dump').open('xb') as output:
         subprocess.run(['docker', 'exec', db, 'sh', '-c', 'pg_dump -Fc -U "$POSTGRES_USER" "$POSTGRES_DB"'],
@@ -199,6 +171,7 @@ def main(environment, sha, attempt=''):
         assert accepted['header_cases'] == 24 and accepted['health'] == 'PASS'
         assert accepted['additional_top_feed_mm'] == 16 and accepted['top_feed_once'] is True
         assert accepted['split_label_cases'] == 48 and accepted['flyway'] == '39' and accepted['mock_split_labels'] == 'PASS'
+        assert accepted['table_soft_delete_ui'] == 'PASS' and accepted['migration'] == 'NONE_V39_UNCHANGED'
         for service in SERVICES: assert i.inspect('restaurant-pos-staging-' + service + '-1')['Image'] == images[service]
         i.health('https://staging-pos.lanzhounoodlesmtl.com')
     target = copy.deepcopy(rollback)
@@ -209,7 +182,7 @@ def main(environment, sha, attempt=''):
     validate_delta(resolved_before, json.loads(compose(root / 'target.private.json', 'config', '--format', 'json')), images)
     # Build may take minutes: recheck live state immediately before the only restart.
     for service in SERVICES: assert i.fingerprint(project + '-' + service + '-1')['id'] == before[service]['Id']
-    assert queue_guard(db, '39' if attempt else '38') == configuration and p.history_fingerprints(history['cutoffs']) == history
+    assert queue_guard(db) == configuration and p.history_fingerprints(history['cutoffs']) == history
     assert i.ledger(db) == ledger and order_contexts(db, history['cutoffs'][0]) == contexts
     if prod: assert source.read_bytes() == original_bytes
     phase = 'restart'
@@ -234,7 +207,7 @@ def main(environment, sha, attempt=''):
         phase = 'protected_containers'
         assert all(i.fingerprint(n) == value for n, value in protected.items())
         phase = 'ledger'
-        validate_release_ledger(ledger, i.ledger(db), original['ledger'] if attempt else None)
+        validate_ledger(ledger, i.ledger(db))
         phase = 'configuration_and_table_modes'
         assert queue_guard(db, '39') == configuration
         modes = table_modes(db)
@@ -256,7 +229,7 @@ def main(environment, sha, attempt=''):
         prior.wait_health(url)
         if prod: ops.write_private(source, rollback)
         raise RuntimeError('Application rollback applied; database retained') from None
-    result = {'environment': environment, 'source_sha': sha, 'script_sha': script_sha, 'attempt': attempt or 'initial', 'image': images['backend'], 'images': images, 'health': 'PASS',
+    result = {'environment': environment, 'source_sha': sha, 'script_sha': script_sha, 'migration': 'NONE_V39_UNCHANGED', 'image': images['backend'], 'images': images, 'health': 'PASS',
         'flyway': '39', 'table_modes': modes, 'order_contexts_unchanged': True, 'accepted': False, 'configuration_unchanged': True, 'history_unchanged': True,
         'other_containers_unchanged': True, 'uber_worker_enabled': prod,
         'deployed_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),

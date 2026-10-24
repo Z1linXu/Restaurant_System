@@ -466,7 +466,8 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponse submitOrder(Long id) {
         LocalDateTime now = LocalDateTime.now();
-        Order order = requireOrder(id);
+        Order before = requireOrder(id);
+        Order order = lockOrderForTableChange(before, before.store_id, before.order_type, before.table_no);
 
         if (!ORDER_STATUS_DRAFT.equals(order.status)) {
             throw new BusinessException("Only draft orders can be submitted");
@@ -1561,9 +1562,13 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private void lockTableContexts(Long storeId, String orderType, String... tableNos) {
-        if ("dine_in".equalsIgnoreCase(orderType)) {
+        if (isDineInTableContext(orderType)) {
             diningTableDisplayService.lockContexts(storeId, tableNos);
         }
+    }
+
+    private static boolean isDineInTableContext(String orderType) {
+        return orderType != null && "dine_in".equalsIgnoreCase(orderType.trim());
     }
 
     private Order lockOrderForTableChange(Order before, Long storeId, String newType, String newTableNo) {
@@ -1572,8 +1577,8 @@ public class OrderServiceImpl implements OrderService {
         String oldTable = before.table_no;
         String oldPickup = before.pickup_no;
         diningTableDisplayService.lockContexts(storeId,
-            "dine_in".equalsIgnoreCase(oldType) ? oldTable : null,
-            "dine_in".equalsIgnoreCase(newType) ? newTableNo : null);
+            isDineInTableContext(oldType) ? oldTable : null,
+            isDineInTableContext(newType) ? newTableNo : null);
         Order locked = requireOrderForUpdate(before.id);
         if (!Objects.equals(storeId, locked.store_id) || !Objects.equals(oldType, locked.order_type)
             || !Objects.equals(oldTable, locked.table_no) || !Objects.equals(oldPickup, locked.pickup_no)) {

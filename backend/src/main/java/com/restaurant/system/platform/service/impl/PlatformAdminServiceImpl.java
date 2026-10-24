@@ -3,6 +3,9 @@ package com.restaurant.system.platform.service.impl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.restaurant.system.common.exception.BusinessException;
+import com.restaurant.system.common.realtime.RealtimeEventPublisher;
+import com.restaurant.system.common.realtime.RealtimeTopics;
+import com.restaurant.system.common.realtime.RealtimeUpdateMessage;
 import com.restaurant.system.menu.entity.MenuCategory;
 import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.entity.MenuItemOption;
@@ -75,6 +78,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
     private final ChainMasterMenuVersionRepository chainMasterMenuVersionRepository;
     private final StoreMenuMasterMappingRepository storeMenuMasterMappingRepository;
     private final ObjectMapper objectMapper;
+    private final RealtimeEventPublisher realtimeEventPublisher;
     private StoreRemoveService storeRemoveService;
     private StoreRemoveOptionResolver removeResolver;
 
@@ -101,7 +105,8 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         MenuRevisionService menuRevisionService,
         ChainMasterMenuRepository chainMasterMenuRepository,
         ChainMasterMenuVersionRepository chainMasterMenuVersionRepository,
-        StoreMenuMasterMappingRepository storeMenuMasterMappingRepository
+        StoreMenuMasterMappingRepository storeMenuMasterMappingRepository,
+        RealtimeEventPublisher realtimeEventPublisher
     ) {
         this.organizationRepository = organizationRepository;
         this.restaurantTemplateRepository = restaurantTemplateRepository;
@@ -121,6 +126,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         this.chainMasterMenuVersionRepository = chainMasterMenuVersionRepository;
         this.storeMenuMasterMappingRepository = storeMenuMasterMappingRepository;
         this.objectMapper = new ObjectMapper();
+        this.realtimeEventPublisher = realtimeEventPublisher;
     }
 
     @Override
@@ -249,7 +255,8 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
 
     @Override
     public List<DiningTable> getDiningTables(Long storeId) {
-        List<DiningTable> tables = new ArrayList<>(diningTableRepository.findAllByStoreIdOrderBySortOrderAscIdAsc(storeId));
+        List<DiningTable> tables = new ArrayList<>(diningTableRepository.findAllByStoreIdOrderBySortOrderAscIdAsc(storeId)
+            .stream().filter(table -> !Boolean.FALSE.equals(table.is_active)).toList());
         tables.sort(Comparator
             .comparing((DiningTable table) -> extractNaturalPrefix(table.table_code))
             .thenComparingInt(table -> extractNaturalNumber(table.table_code))
@@ -263,30 +270,49 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
     @Override
     @Transactional
     public DiningTable saveDiningTable(DiningTable diningTable) {
+        if (tableIdentity(diningTable).isBlank()) {
+            throw new BusinessException("TABLE_IDENTITY_REQUIRED: Enter a table name or code / 请填写桌台名称或编号");
+        }
+        if ((diningTable.table_name != null && !diningTable.table_name.equals(diningTable.table_name.trim()))
+            || (diningTable.table_code != null && !diningTable.table_code.equals(diningTable.table_code.trim()))) {
+            throw new BusinessException("TABLE_IDENTITY_WHITESPACE: Remove leading or trailing spaces from the table name and code / 请先去除桌台名称及编号首尾的空白");
+        }
+        if (Boolean.FALSE.equals(diningTable.is_active)) {
+            throw new BusinessException("TABLE_INACTIVE: Use Delete to remove a table / 请使用删除操作移除桌台");
+        }
+        // Serialize table identity edits with deletion. Tombstone names/codes
+        // cannot be claimed by a concurrent create/rename after the delete.
+        storeRepository.findByIdForUpdate(diningTable.store_id);
         DiningTable target = diningTable.id == null
             ? new DiningTable()
             : diningTableRepository.findByIdAndStoreIdForUpdate(diningTable.id, diningTable.store_id);
         if (target == null) throw new BusinessException("Dining table not found in this store");
         if (diningTable.id != null) entityManager.refresh(target, LockModeType.PESSIMISTIC_WRITE);
+        if (Boolean.FALSE.equals(target.is_active)) {
+            throw new BusinessException("TABLE_INACTIVE: This table was deleted; refresh the list / 此桌台已删除，请刷新列表");
+        }
+        rejectDeletedTableIdentity(diningTable, target);
         String previousMode = target.split_label_mode == null ? "LEFT_RIGHT" : target.split_label_mode;
         String nextMode = diningTable.split_label_mode == null ? previousMode : diningTable.split_label_mode;
         if (!List.of("LEFT_RIGHT", "INSIDE_OUTSIDE").contains(nextMode)) {
             throw new BusinessException("Invalid split_label_mode: use LEFT_RIGHT or INSIDE_OUTSIDE");
         }
-        if (!previousMode.equals(nextMode)) {
+        boolean identityChanged = diningTable.id != null &&
+            (!java.util.Objects.equals(diningTable.table_name, target.table_name)
+                || !java.util.Objects.equals(diningTable.table_code, target.table_code));
+        if (!previousMode.equals(nextMode) || identityChanged) {
             String identity = diningTable.id == null ? tableIdentity(diningTable) : tableIdentity(target);
             if (!identity.isBlank()) {
                 if (diningTableRepository.findAllByStoreIdAndTableName(diningTable.store_id, identity).stream()
                     .anyMatch(table -> !java.util.Objects.equals(table.id, diningTable.id))) {
                     throw new BusinessException("Split label mode requires a unique table name in this store");
                 }
-                List<String> identities = new ArrayList<>(List.of(identity, identity + "-A", identity + "-B"));
+                List<String> identities = new ArrayList<>();
+                addTableIdentities(identities, identity);
                 String legacyCode = diningTable.id == null ? diningTable.table_code : target.table_code;
-                if (legacyCode != null && !legacyCode.isBlank() && !legacyCode.equals(identity)) {
-                    identities.addAll(List.of(legacyCode, legacyCode + "-A", legacyCode + "-B"));
-                }
+                addTableIdentities(identities, legacyCode);
                 if (orderRepository.hasActiveDiningTableOrders(diningTable.store_id, identities)) {
-                    throw new BusinessException("Finish all active orders on this table before changing Split Label / 拆桌命名方式");
+                    throw new BusinessException("Finish all active orders on this table before changing its identity or Split Label / 请先结束此桌台的全部订单");
                 }
             }
         }
@@ -299,9 +325,68 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         target.capacity = diningTable.capacity;
         target.supports_split = diningTable.supports_split;
         target.sort_order = diningTable.sort_order;
-        target.is_active = diningTable.is_active == null ? true : diningTable.is_active;
+        target.is_active = true;
         stamp(target, diningTable.id == null);
-        return diningTableRepository.save(target);
+        DiningTable saved = diningTableRepository.save(target);
+        publishDiningTableChanged(saved.store_id);
+        return saved;
+    }
+
+    @Override
+    @Transactional
+    public DiningTable deleteDiningTable(Long id, Long storeId) {
+        storeRepository.findByIdForUpdate(storeId);
+        DiningTable target = diningTableRepository.findByIdAndStoreIdForUpdate(id, storeId);
+        if (target == null) throw new BusinessException("Dining table not found in this store");
+        entityManager.refresh(target, LockModeType.PESSIMISTIC_WRITE);
+        if (Boolean.FALSE.equals(target.is_active)) return target;
+        List<String> identities = new ArrayList<>();
+        addTableIdentities(identities, tableIdentity(target));
+        addTableIdentities(identities, target.table_code);
+        if (!identities.isEmpty() && orderRepository.hasActiveDiningTableOrders(storeId, identities)) {
+            throw new BusinessException("TABLE_HAS_ACTIVE_ORDERS: Complete or cancel all unfinished orders before deleting this table / 请先完成或取消此桌台及拆桌位置的全部未完成订单，再删除桌台");
+        }
+        target.is_active = false;
+        target.updated_at = LocalDateTime.now();
+        DiningTable saved = diningTableRepository.save(target);
+        publishDiningTableChanged(saved.store_id);
+        return saved;
+    }
+
+    private void publishDiningTableChanged(Long storeId) {
+        RealtimeUpdateMessage message = new RealtimeUpdateMessage();
+        message.event_type = "dining_table.changed";
+        message.store_id = storeId;
+        message.happened_at = LocalDateTime.now();
+        realtimeEventPublisher.publish(message, List.of(RealtimeTopics.FRONTDESK_ORDERS));
+    }
+
+    private void rejectDeletedTableIdentity(DiningTable requested, DiningTable previous) {
+        List<String> introduced = new ArrayList<>();
+        if (requested.id == null || !java.util.Objects.equals(requested.table_name, previous.table_name)) {
+            addTableIdentities(introduced, requested.table_name);
+        }
+        if (requested.id == null || !java.util.Objects.equals(requested.table_code, previous.table_code)) {
+            addTableIdentities(introduced, requested.table_code);
+        }
+        if (introduced.isEmpty()) return;
+        for (DiningTable table : diningTableRepository.findAllByStoreIdOrderBySortOrderAscIdAsc(requested.store_id)) {
+            if (!Boolean.FALSE.equals(table.is_active)) continue;
+            List<String> reserved = new ArrayList<>();
+            addTableIdentities(reserved, tableIdentity(table));
+            addTableIdentities(reserved, table.table_code);
+            if (introduced.stream().anyMatch(reserved::contains)) {
+                throw new BusinessException("TABLE_INACTIVE: Deleted table names and codes cannot be reused / 已删除桌台的名称及编号不可复用");
+            }
+        }
+    }
+
+    private static void addTableIdentities(List<String> identities, String value) {
+        if (value == null || value.isBlank()) return;
+        String raw = value.trim();
+        for (String alias : List.of(raw, raw + "-A", raw + "-B", raw + "-a", raw + "-b")) {
+            if (!identities.contains(alias)) identities.add(alias);
+        }
     }
 
     private static String tableIdentity(DiningTable table) {

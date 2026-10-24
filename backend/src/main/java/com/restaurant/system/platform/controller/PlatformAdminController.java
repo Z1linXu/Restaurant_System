@@ -26,6 +26,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -180,6 +181,13 @@ public class PlatformAdminController {
         requireTableManagement(diningTable.store_id);
         diningTable.id = id;
         return ApiResponse.success("Dining table updated", platformAdminService.saveDiningTable(diningTable));
+    }
+
+    @DeleteMapping("/dining-tables/{id}")
+    public ApiResponse<DiningTable> deleteDiningTable(@PathVariable Long id, @RequestParam Long store_id) {
+        authorizationService.requireForStore(store_id, Capability.ADMIN_STORE_CONFIG);
+        requireTableManagement(store_id);
+        return ApiResponse.success("Dining table deleted", platformAdminService.deleteDiningTable(id, store_id));
     }
 
     @GetMapping("/menu/categories")

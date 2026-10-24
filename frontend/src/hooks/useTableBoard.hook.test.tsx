@@ -7,6 +7,7 @@ import { useTableBoard } from './useTableBoard'
 
 vi.mock('../services/frontdeskConfigService', () => ({
   fetchDiningTables: vi.fn(),
+  DINING_TABLES_CHANGED_EVENT: 'restaurant-dining-tables-changed',
 }))
 
 vi.mock('../services/orderService', () => ({
@@ -185,6 +186,36 @@ describe('useTableBoard mounted synchronization', () => {
 
     await act(async () => { oldTables.resolve([backendTable(18)]); await oldTables.promise })
     expect(latestBoard?.tableSlots.map((slot) => slot.label)).toEqual(['Store 21'])
+  })
+
+  it('filters tombstones and drops stale active rows after failed refresh instead of offering cached entry', async () => {
+    mockedFetchDiningTables.mockResolvedValue([backendTable(2), { ...backendTable(2, 20), table_name: 'deleted', is_active: false }])
+    mockedFetchActiveOrders.mockResolvedValue([])
+    await act(async () => { renderer = create(<Probe storeId={2} onBoard={captureBoard} />) })
+    expect(latestBoard!.tableSlots.map((slot) => slot.label)).toEqual(['Store 2'])
+    mockedFetchDiningTables.mockRejectedValue(new Error('network unavailable'))
+    await act(async () => { await latestBoard!.refreshFromBackend({ force: true }) })
+    expect(latestBoard!.tableSlots).toEqual([])
+    expect(latestBoard!.startOrder('Store 2-full', 'full')).toBeNull()
+  })
+
+  it('refreshes tables within 100ms for a same-Store configuration event with no order id', async () => {
+    vi.useFakeTimers()
+    window.setTimeout = setTimeout
+    window.clearTimeout = clearTimeout
+    mockedFetchDiningTables.mockResolvedValue([backendTable(2)])
+    mockedFetchActiveOrders.mockResolvedValue([])
+    await act(async () => { renderer = create(<Probe storeId={2} onBoard={captureBoard} />) })
+    const receive = mockedSubscribe.mock.calls[0][1]
+    const changed = { event_type: 'dining_table.changed', store_id: 2, order_id: null, order_item_id: null, order_status: null, task_status: null, beverage_status: null, is_modified_after_submit: null, happened_at: '2026-10-24T01:00:00', suggested_topics: [] }
+    mockedFetchDiningTables.mockResolvedValue([])
+    await act(async () => { receive({ ...changed, store_id: 1 }); await vi.advanceTimersByTimeAsync(100) })
+    expect(latestBoard!.tableSlots).toHaveLength(1)
+    await act(async () => { receive(changed); await vi.advanceTimersByTimeAsync(99) })
+    expect(latestBoard!.tableSlots).toHaveLength(1)
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    expect(latestBoard!.tableSlots).toEqual([])
+    expect(latestBoard!.startOrder('Store 2-full')).toBeNull()
   })
 
   it('cancels the old topic and fallback polling when Store scope changes', async () => {

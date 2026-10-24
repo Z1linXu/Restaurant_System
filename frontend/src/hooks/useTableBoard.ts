@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { fetchDiningTables } from '../services/frontdeskConfigService'
+import { DINING_TABLES_CHANGED_EVENT, fetchDiningTables } from '../services/frontdeskConfigService'
 import {
   fetchActiveOrderBoardForStore,
   subscribeToFrontdeskOrders,
@@ -172,7 +172,7 @@ export function useTableBoard(options: UseTableBoardOptions) {
 
   const hydrateBaseTables = useCallback(async () => {
     const generation = generationRef.current
-    const diningTables = await fetchDiningTables(storeId)
+    const diningTables = (await fetchDiningTables(storeId)).filter((table) => table.store_id === storeId && table.is_active !== false)
     if (generation === generationRef.current && enabledRef.current) onTablesLoadedRef.current?.(storeId, diningTables)
     return diningTables.map(mapBackendDiningTable)
   }, [storeId])
@@ -272,6 +272,7 @@ export function useTableBoard(options: UseTableBoardOptions) {
         && (options?.force || document.visibilityState === 'visible'))
     } catch (error) {
       if (generationRef.current === generation && enabledRef.current && syncStateRef.current === syncState) {
+        setTables([])
         setHasLoaded(true)
         setTablesStoreId(storeId)
         setSyncError(error instanceof Error ? error.message : 'Unable to sync table board')
@@ -316,6 +317,7 @@ export function useTableBoard(options: UseTableBoardOptions) {
         )
       } catch (error) {
         if (generationRef.current === generation && enabledRef.current) {
+          setTables([])
           setHasLoaded(true)
           setTablesStoreId(storeId)
           setSyncError(error instanceof Error ? error.message : 'Unable to sync table board')
@@ -412,7 +414,7 @@ export function useTableBoard(options: UseTableBoardOptions) {
       if (isFinishEvent && message.order_id != null && terminalStatus) {
         void onOrderTerminalRef.current?.(message.order_id, terminalStatus)
       }
-      scheduleWebSocketRefresh(isFinishEvent)
+      scheduleWebSocketRefresh(isFinishEvent || eventType === 'dining_table.changed')
     }, { onLifecycle: handleRealtimeLifecycle })
     schedulePoll()
 
@@ -446,18 +448,26 @@ export function useTableBoard(options: UseTableBoardOptions) {
 
     const handleOffline = () => {
       setIsOnline(false)
+      setTables([])
       setSyncError('当前设备离线，请检查网络后重试 / Device is offline. Please check the network and try again.')
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
+    window.addEventListener('focus', handleVisibilityChange)
+    const handleTablesChanged = (event: Event) => {
+      if ((event as CustomEvent<{ storeId: number }>).detail?.storeId === storeId) void syncFromBackend({ force: true })
+    }
+    window.addEventListener(DINING_TABLES_CHANGED_EVENT, handleTablesChanged)
 
     return () => {
       unsubscribe()
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
+      window.removeEventListener('focus', handleVisibilityChange)
+      window.removeEventListener(DINING_TABLES_CHANGED_EVENT, handleTablesChanged)
       if (wsRefreshTimeoutRef.current !== null) {
         window.clearTimeout(wsRefreshTimeoutRef.current)
         wsRefreshTimeoutRef.current = null

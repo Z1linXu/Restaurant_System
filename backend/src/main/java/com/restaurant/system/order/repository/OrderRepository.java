@@ -11,12 +11,17 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
-    @Query("""
-        select (count(o) > 0) from Order o
-        where o.store_id = :storeId and o.order_type = 'dine_in'
-          and o.table_no in :tableNos
-          and (o.status is null or o.status not in ('completed', 'cancelled'))
-        """)
+    @Query(value = """
+        with java_trim as (
+            select string_agg(chr(code), '') as chars from generate_series(1, 32) as codes(code)
+        )
+        select exists (
+            select 1 from orders o cross join java_trim
+            where o.store_id = :storeId and lower(btrim(o.order_type, java_trim.chars)) = 'dine_in'
+              and btrim(o.table_no, java_trim.chars) in (:tableNos)
+              and (o.status is null or o.status not in ('completed', 'cancelled'))
+        )
+        """, nativeQuery = true)
     boolean hasActiveDiningTableOrders(@Param("storeId") Long storeId, @Param("tableNos") List<String> tableNos);
 
 

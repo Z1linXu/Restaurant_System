@@ -6,7 +6,7 @@ import { fetchDiningTables } from '../services/frontdeskConfigService'
 import { readDiningTableSnapshot, saveDiningTableSnapshot } from '../offline/workspaceSnapshot'
 import type { BackendDiningTableConfig } from '../types/dinein'
 
-vi.mock('../services/frontdeskConfigService', () => ({ fetchDiningTables: vi.fn() }))
+vi.mock('../services/frontdeskConfigService', () => ({ fetchDiningTables: vi.fn(), DINING_TABLES_CHANGED_EVENT: 'restaurant-dining-tables-changed' }))
 vi.mock('../offline/workspaceSnapshot', () => ({ readDiningTableSnapshot: vi.fn(), saveDiningTableSnapshot: vi.fn() }))
 let view: ReactTestRenderer | undefined
 let current: ReturnType<typeof useDiningTableDisplay>

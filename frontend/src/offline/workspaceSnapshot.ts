@@ -62,7 +62,7 @@ export async function saveDiningTableSnapshot(scope: MenuCacheScope, tables: Bac
   const record: DiningTableSnapshotRecord = {
     ...scope,
     key: diningTableKey(scope),
-    tables: tables.filter((table) => table.store_id === scope.storeId),
+    tables: tables.filter((table) => table.store_id === scope.storeId && table.is_active !== false),
     validatedAt: new Date().toISOString(),
     schemaVersion: WORKSPACE_SNAPSHOT_SCHEMA_VERSION,
   }
@@ -74,7 +74,7 @@ export async function readDiningTableSnapshot(scope: MenuCacheScope) {
   return isSnapshotRecordUsable(record)
     && record!.accountId === scope.accountId && record!.organizationId === scope.organizationId
     && record!.storeId === scope.storeId && record!.tables.every((table) => table.store_id === scope.storeId)
-    ? record!.tables : null
+    ? record!.tables.filter((table) => table.is_active !== false) : null
 }
 
 export interface RestrictedAuthSnapshot {

@@ -220,6 +220,11 @@ export async function savePlatformEntity(path: string, payload: Record<string, u
   })
 }
 
+export async function deleteDiningTable(storeId: number, tableId: number) {
+  const params = new URLSearchParams({ store_id: String(storeId) })
+  return request<DiningTableRecord>(`/api/v1/admin/platform/dining-tables/${tableId}?${params.toString()}`, { method: 'DELETE' })
+}
+
 export async function rebuildAnalyticsForDate(date: string, storeId: number) {
   const params = new URLSearchParams({
     date,

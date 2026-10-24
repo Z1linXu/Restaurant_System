@@ -33,6 +33,7 @@ public interface PlatformAdminService {
 
     List<DiningTable> getDiningTables(Long storeId);
     DiningTable saveDiningTable(DiningTable diningTable);
+    DiningTable deleteDiningTable(Long id, Long storeId);
 
     List<MenuCategory> getMenuCategories(Long storeId);
     MenuCategory saveMenuCategory(MenuCategory menuCategory);

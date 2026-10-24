@@ -6,9 +6,22 @@ from unittest.mock import patch
 spec = importlib.util.spec_from_file_location('headers', Path(__file__).with_name('deploy.py'))
 release = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(release)
+verify_spec = importlib.util.spec_from_file_location('table_verify', Path(__file__).with_name('verify.py'))
+verify = importlib.util.module_from_spec(verify_spec)
+verify_spec.loader.exec_module(verify)
 
 
 class HeaderReleaseTest(unittest.TestCase):
+    def test_actual_table_lists_must_match_active_rows_and_store(self):
+        import copy
+        expected = [dict(id=1, store_id=2, table_code='T1', table_name='1', table_config='split_supported', split_label_mode='INSIDE_OUTSIDE', is_active=True)]
+        verify.validate_table_response(expected, expected, 2)
+        for rows in [[], expected + expected, [dict(expected[0], is_active=False)],
+                     [dict(expected[0], store_id=3)], [dict(expected[0], split_label_mode='LEFT_RIGHT')]]:
+            with self.assertRaises(AssertionError): verify.validate_table_response(rows, expected, 2)
+        legacy_null = [dict(expected[0], is_active=None)]
+        verify.validate_table_response(legacy_null, legacy_null, 2)
+
     def test_bind_order_is_nonsemantic_but_content_and_destination_are_protected(self):
         binds = ['/source/a:/target/a:ro', '/source/b:/target/b:ro']
         self.assertEqual(release.normalized_binds(binds), release.normalized_binds(binds[::-1]))
@@ -19,29 +32,11 @@ class HeaderReleaseTest(unittest.TestCase):
         for ambiguous in [[binds[0], binds[0]], [binds[0], '/other:/target/a:ro'], ['invalid']]:
             with self.assertRaises(AssertionError): release.normalized_binds(ambiguous)
 
-    def test_retry_root_is_fixed_production_only(self):
+    def test_evidence_paths_are_environment_and_sha_scoped(self):
         sha = 'a' * 40
-        original = release.evidence_root('production', sha)
-        self.assertEqual(original / 'retry-1', release.evidence_root('production', sha, 'retry-1'))
-        for environment, attempt in [('staging', 'retry-1'), ('production', '../retry-1'),
-                                     ('production', 'retry-2'), ('production', '/tmp/retry-1')]:
-            with self.assertRaises(AssertionError): release.evidence_root(environment, sha, attempt)
-
-    def test_retry_retains_exact_v39_and_original_data_guards(self):
-        import copy
-        old = '38|V38__add_store_remove_catalog.sql|99|t'
-        new = old + '\n39|V39__add_dining_table_split_label_mode.sql|1431202837|t'
-        original = dict(ledger=old, protected={'db': 'same'}, configuration={'env': 'digest'},
-                        history={'cutoffs': [1, 2]}, order_contexts='same')
-        current = dict(original, ledger=new)
-        release.validate_retry_baseline(original, current)
-        release.validate_release_ledger(new, new, old)
-        for key in ('protected', 'configuration', 'history', 'order_contexts'):
-            changed = copy.deepcopy(current)
-            changed[key] = 'changed'
-            with self.assertRaises(AssertionError): release.validate_retry_baseline(original, changed)
-        for ledger in [old, new.replace('1431202837', '42'), new + '\n40|other.sql|1|t']:
-            with self.assertRaises(AssertionError): release.validate_release_ledger(new, ledger, old)
+        self.assertEqual(release.BASE / 'production' / (release.RELEASE_PREFIX + sha), release.evidence_root('production', sha))
+        for environment, value in [('invalid', sha), ('production', '../bad'), ('staging', 'a' * 39)]:
+            with self.assertRaises(AssertionError): release.evidence_root(environment, value)
 
     def test_only_application_images_and_labels_may_change(self):
         old = {'services': {'backend': {'image': 'old', 'environment': {'UBER_EATS_WORKER_ENABLED': 'true'}},
@@ -62,37 +57,31 @@ class HeaderReleaseTest(unittest.TestCase):
             with self.assertRaises(AssertionError): release.validate_delta(old, changed, images)
 
     def test_quiet_window_allows_existing_uber_business_but_rejects_active_work(self):
-        queues = dict(flyway='38', pending_print_jobs=0, pending_outbox=0,
+        queues = dict(flyway='39', pending_print_jobs=0, pending_outbox=0,
                       pending_uber_events=0, due_uber_orders=0, uber_orders=39, local_uber_orders=39)
         with patch.object(release.ops, 'inventory', return_value=queues), patch.object(
             release.ops, 'current_4483_configuration', return_value={'fresh_printing': 0, 'flyway_schema_history': 'ledger'}):
             with patch.object(release, 'read_sql', return_value='old-table-digest'):
-                self.assertEqual({'fresh_printing': 0, 'dining_tables_legacy_columns': 'old-table-digest'}, release.queue_guard('cloud-db-1'))
+                self.assertEqual({'fresh_printing': 0, 'dining_tables': 'old-table-digest'}, release.queue_guard('cloud-db-1'))
             for key in ('pending_print_jobs', 'pending_outbox', 'pending_uber_events', 'due_uber_orders'):
                 queues[key] = 1
                 with self.assertRaises(AssertionError): release.queue_guard('cloud-db-1')
                 queues[key] = 0
 
-    def test_only_exact_v39_append_preserves_all_old_migrations(self):
-        import zlib
-        checksum = 0
-        migration = release.HERE.parents[2] / 'backend/src/main/resources/db/migration/V39__add_dining_table_split_label_mode.sql'
-        for line in migration.read_text().splitlines(): checksum = zlib.crc32(line.encode(), checksum)
-        if checksum >= 2**31: checksum -= 2**32
-        old = '1|V1__baseline_current_schema.sql|42|t\n38|V38__add_store_remove_catalog.sql|99|t\n'
-        added = f'39|V39__add_dining_table_split_label_mode.sql|{checksum}|t\n'
-        release.validate_migration(old, old + added)
-        for changed in [old, old.replace('|42|', '|43|') + added,
-                        old + added.replace('|t', '|f'), old + added + '40|other.sql|1|t\n',
-                        old + added.replace(str(checksum), str(checksum + 1))]:
-            with self.assertRaises(AssertionError): release.validate_migration(old, changed)
+    def test_entire_v39_ledger_must_remain_unchanged(self):
+        old = '1|V1__baseline_current_schema.sql|42|t\n39|V39__add_dining_table_split_label_mode.sql|1431202837|t'
+        release.validate_ledger(old, old)
+        for changed in [old.replace('|42|', '|43|'), old.replace('1431202837', '42'),
+                        old + '\n40|other.sql|1|t', old.rsplit('\n', 1)[0]]:
+            with self.assertRaises(AssertionError): release.validate_ledger(old, changed)
+        with self.assertRaises(AssertionError): release.validate_ledger(old.replace('1431202837', '42'), old)
 
-    def test_existing_tables_must_default_left_right_including_every_store(self):
+    def test_both_persisted_split_modes_are_accepted_without_mutation(self):
         import json
-        state = {'rows': 39, 'left_right': 39, 'stores': [{'id': 2, 'code': 'CHINATOWN', 'tables': 24, 'default_mode_tables': 24}]}
+        state = {'rows': 39, 'left_right': 38, 'inside_outside': 1, 'stores': [{'id': 2, 'code': 'CHINATOWN', 'tables': 24, 'default_mode_tables': 24}]}
         with patch.object(release, 'read_sql', return_value=json.dumps(state)):
             self.assertEqual(state, release.table_modes('cloud-db-1'))
-        state['left_right'] = 38
+        state['left_right'] = 37
         with patch.object(release, 'read_sql', return_value=json.dumps(state)):
             with self.assertRaises(AssertionError): release.table_modes('cloud-db-1')
 

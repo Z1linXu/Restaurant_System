@@ -20,6 +20,7 @@ import { menuCacheNoticeDismissalKey } from '../../offline/menuCacheNotice'
 import { useAuth } from '../auth/useAuth'
 import { useCurrentStore } from '../store/useStoreContext'
 import { isQuickAddItem } from './orderingCustomizationRules'
+import { DiningTableOrderGate } from './DiningTableOrderGate'
 
 interface OrderingPageProps {
   catalog: {
@@ -87,7 +88,11 @@ function kickPadDirectPrintWorker(reason: string, orderId: number, updateBatchId
   }
 }
 
-export function OrderingPage({
+export function OrderingPage(props: OrderingPageProps) {
+  return <DiningTableOrderGate storeId={props.storeId} tableNo={props.slotLabel} enabled={(props.orderType ?? 'dine_in') === 'dine_in'} onBack={props.onBack}><OrderingWorkspace {...props} /></DiningTableOrderGate>
+}
+
+function OrderingWorkspace({
   catalog,
   slotLabel,
   tableLabel,
