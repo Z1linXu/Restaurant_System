@@ -85,6 +85,38 @@ class ComposeBoundaryTest(unittest.TestCase):
     def test_network_egress_rejected(self):
         self.rejected(lambda m: m['networks']['test_internal'].update(internal=False))
 
+    def test_real_compose_has_frontend_only_ingress_and_internal_backend(self):
+        self.assertEqual({'test_internal', 'test_ingress'}, set(self.model['networks']))
+        self.assertIs(False, self.model['networks']['test_ingress'].get('internal', False))
+        self.assertEqual('bridge', self.model['networks']['test_ingress']['driver'])
+        self.assertEqual(remote.PROJECT + '_ingress', self.model['networks']['test_ingress']['name'])
+        self.assertEqual({'test_internal', 'test_ingress'}, set(self.model['services']['frontend']['networks']))
+        self.assertEqual(1, self.model['services']['frontend']['networks']['test_ingress']['gw_priority'])
+        self.assertFalse(self.model['services']['frontend'].get('environment'))
+        for name in ('db', 'backend'):
+            self.assertEqual({'test_internal'}, set(self.model['services'][name]['networks']))
+            self.assertFalse(self.model['services'][name].get('ports'))
+
+    def test_frontend_missing_ingress_rejected(self):
+        self.rejected(lambda m: m['services']['frontend']['networks'].pop('test_ingress'))
+
+    def test_frontend_foreign_network_join_rejected(self):
+        self.rejected(lambda m: m['services']['frontend']['networks'].update(cloud_restaurant_pos={}))
+
+    def test_backend_or_db_cannot_join_ingress(self):
+        for name in ('backend', 'db'):
+            with self.subTest(service=name):
+                self.rejected(lambda m: m['services'][name]['networks'].update(test_ingress={}))
+
+    def test_ingress_must_be_own_noninternal_bridge(self):
+        for patch_value in [{'internal': True}, {'name': 'cloud_restaurant-pos'}, {'driver': 'host'},
+                            {'external': True}, {'driver_opts': {'com.docker.network.bridge.name': 'docker0'}}]:
+            with self.subTest(patch=patch_value):
+                self.rejected(lambda m: m['networks']['test_ingress'].update(patch_value))
+
+    def test_ingress_gateway_priority_required(self):
+        self.rejected(lambda m: m['services']['frontend']['networks']['test_ingress'].update(gw_priority=0))
+
     def test_production_network_join_rejected(self):
         self.rejected(lambda m: m['services']['backend']['networks'].update(cloud_restaurant_pos={}))
 
@@ -152,7 +184,9 @@ def container(service, identity='test-container-id'):
                                  'com.docker.compose.service': service,
                                  'org.opencontainers.image.revision': SHA}},
             'State': {'Running': True, 'Restarting': False, 'Health': {'Status': 'healthy'}},
-            'NetworkSettings': {'Networks': {'host': {}} if service == 'relay' else {remote.PROJECT + '_internal': {'IPAddress': '172.30.0.4'}},
+            'NetworkSettings': {'Networks': {'host': {}} if service == 'relay' else
+                                {remote.PROJECT + '_internal': {'IPAddress': '172.30.0.4'}, remote.PROJECT + '_ingress': {'IPAddress': '172.31.0.4'}} if service == 'frontend' else
+                                {remote.PROJECT + '_internal': {'IPAddress': '172.30.0.4'}},
                                 'Ports': {'8080/tcp': [{'HostIp': '127.0.0.1', 'HostPort': '28080'}]} if service == 'frontend' else {}}}
 
 
@@ -164,6 +198,45 @@ class ExistingResourceTest(unittest.TestCase):
         for field, value in [('Internal', False), ('Driver', 'host'), ('Labels', {}), ('Name', 'cloud_restaurant-pos')]:
             changed = copy.deepcopy(good); changed[field] = value
             with self.assertRaises(ValueError): remote.validate_network_document(changed)
+
+    def test_ingress_requires_exact_owner_noninternal_bridge(self):
+        good = {'Name': remote.PROJECT + '_ingress', 'Driver': 'bridge', 'Scope': 'local', 'Internal': False,
+                'Labels': {'com.docker.compose.project': remote.PROJECT, 'com.docker.compose.network': 'test_ingress'}}
+        remote.validate_network_document(good, 'test_ingress')
+        for field, value in [('Internal', True), ('Driver', 'host'), ('Labels', {}), ('Name', 'cloud_restaurant-pos'),
+                             ('Options', {'com.docker.network.bridge.name': 'docker0'})]:
+            changed = copy.deepcopy(good); changed[field] = value
+            with self.assertRaises(ValueError): remote.validate_network_document(changed, 'test_ingress')
+
+    def test_ingress_allows_only_exact_test_frontend_member(self):
+        remote.validate_network_member(container('frontend'), 'test_ingress')
+        for name in ('db', 'backend', 'relay'):
+            with self.subTest(service=name), self.assertRaises(ValueError):
+                remote.validate_network_member(container(name), 'test_ingress')
+        foreign = container('frontend'); foreign['Config']['Labels']['com.docker.compose.project'] = 'cloud'
+        with self.assertRaises(ValueError): remote.validate_network_member(foreign, 'test_ingress')
+        replica = container('frontend'); replica['Name'] = '/' + remote.PROJECT + '-frontend-2'
+        with self.assertRaises(ValueError): remote.validate_network_member(replica, 'test_ingress')
+
+    def existing_networks(self, ingress_member):
+        docs = {}
+        for key, suffix, internal in [('test_internal', '_internal', True), ('test_ingress', '_ingress', False)]:
+            docs[remote.PROJECT + suffix] = {'Name': remote.PROJECT + suffix, 'Driver': 'bridge', 'Scope': 'local',
+                'Internal': internal, 'Labels': {'com.docker.compose.project': remote.PROJECT, 'com.docker.compose.network': key},
+                'Containers': {key + '-member': {}}}
+        def inspect(args):
+            if args[:3] == ['docker', 'network', 'inspect']: return [docs[args[3]]]
+            return [container('backend' if args[2] == 'test_internal-member' else ingress_member)]
+        with patch.object(remote, 'run', side_effect=lambda args: ('\n'.join(docs).encode() if args[:3] == ['docker', 'network', 'ls'] else b'')), \
+             patch.object(remote, 'jsonrun', side_effect=inspect) as calls:
+            remote.verify_existing_resources()
+            self.assertEqual(2, sum(call.args[0][:3] == ['docker', 'network', 'inspect'] for call in calls.call_args_list))
+
+    def test_existing_resource_reentry_checks_both_test_networks(self):
+        self.existing_networks('frontend')
+
+    def test_existing_ingress_with_backend_member_rejected(self):
+        with self.assertRaises(ValueError): self.existing_networks('backend')
 
     def test_volume_refuses_foreign_or_host_redirected_storage(self):
         good = {'Name': remote.PROJECT + '_postgres', 'Driver': 'local', 'Options': None,
@@ -193,11 +266,14 @@ class RelayHealthTest(unittest.TestCase):
 
     def test_frontend_listener_requires_exact_docker_mapping(self):
         row = {'port': 28080, 'ip': '127.0.0.1', 'pids': [8]}
-        args = ['/usr/bin/docker-proxy', '-host-ip', '127.0.0.1', '-host-port', '28080', '-container-ip', '172.30.0.4', '-container-port', '8080']
+        args = ['/usr/bin/docker-proxy', '-host-ip', '127.0.0.1', '-host-port', '28080', '-container-ip', '172.31.0.4', '-container-port', '8080']
         remote.validate_port_owners([row], {'frontend': container('frontend')}, {8: {'cgroup': '/', 'args': args}})
         changed = list(args); changed[-1] = '8081'
         with self.assertRaises(ValueError):
             remote.validate_port_owners([row], {'frontend': container('frontend')}, {8: {'cgroup': '/', 'args': changed}})
+        wrong_network = list(args); wrong_network[wrong_network.index('-container-ip') + 1] = '172.30.0.4'
+        with self.assertRaises(ValueError):
+            remote.validate_port_owners([row], {'frontend': container('frontend')}, {8: {'cgroup': '/', 'args': wrong_network}})
 
     def test_public_binding_rejected_even_without_userland_proxy(self):
         frontend = container('frontend')
@@ -240,6 +316,14 @@ class RelayHealthTest(unittest.TestCase):
         documents = {s: container(s) for s in ('db', 'backend', 'frontend', 'relay')}
         documents['db']['State']['Health']['Status'] = 'unhealthy'
         with self.assertRaises(ValueError): self.runtime(documents)
+
+    def test_runtime_rejects_missing_extra_or_backend_ingress_network(self):
+        for service, add in [('frontend', False), ('frontend', True), ('backend', True), ('db', True)]:
+            documents = {s: container(s) for s in ('db', 'backend', 'frontend', 'relay')}
+            if not add: documents['frontend']['NetworkSettings']['Networks'].pop(remote.PROJECT + '_ingress')
+            else: documents[service]['NetworkSettings']['Networks']['cloud_restaurant-pos' if service == 'frontend' else remote.PROJECT + '_ingress'] = {}
+            with self.subTest(service=service, add=add), self.assertRaisesRegex(ValueError, 'network boundary'):
+                self.runtime(documents)
 
 
 class EdgeCASTest(unittest.TestCase):

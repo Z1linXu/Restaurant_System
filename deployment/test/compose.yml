@@ -71,7 +71,10 @@ services:
     tmpfs: ['/tmp:size=8m,mode=1777']
     ports: ['127.0.0.1:28080:8080']
     depends_on: [backend]
-    networks: [test_internal]
+    networks:
+      test_internal: {}
+      test_ingress:
+        gw_priority: 1
     logging: *logging
   relay:
     image: ${TEST_NGINX_IMAGE:?fixed official digest required}
@@ -91,7 +94,12 @@ services:
 networks:
   test_internal:
     name: restaurant-template-test_internal
+    driver: bridge
     internal: true
+  test_ingress:
+    name: restaurant-template-test_ingress
+    driver: bridge
+    internal: false
 volumes:
   test_postgres:
     name: restaurant-template-test_postgres

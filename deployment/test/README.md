@@ -7,8 +7,8 @@ PRIMARY_REPAIR_GOAL：把已验证的 M0+M1 精确候选部署到 `https://test.
 ## 隔离和资源
 
 - 项目名固定 `restaurant-template-test`，目录 `/srv/restaurant-pos/test`（0700）。DB、Volume、配置、JWT 和测试账号密码全部新建；不读取任何 Production/Staging `.env`、数据库或设备凭据。
-- 重入时严格核对同名network/volume的Compose project/resource labels、internal bridge/本地无redirect volume及成员归属；不收养无标签/其他项目资源。unknown端口监听不kill、不复用：frontend必须是精确localhost Docker绑定/转发，relay监听PID的cgroup必须属于本Test relay。
-- DB/backend/frontend 只加入 `restaurant-template-test_internal` 内部网络，DB/backend 无宿主端口。frontend 仅 `127.0.0.1:28080`；新 relay 仅 `172.18.0.1:28480`，只允许现 edge `172.18.0.4`，不加入任何既有 Docker 网络。
+- 重入时严格核对两个Test专用bridge的Compose project/resource labels、名称、internal属性和成员；本地volume不允许redirect，不收养无标签/其他项目资源。unknown端口监听不kill、不复用：frontend必须是精确localhost Docker绑定至其Test ingress地址，relay监听PID的cgroup必须属于本Test relay。
+- DB/backend仅加入 `restaurant-template-test_internal` 内部网络，无宿主端口及外网。frontend同时加入该内部网络和全新 `restaurant-template-test_ingress`（非internal bridge，唯一成员必须为Test frontend），后者允许Docker发布 `127.0.0.1:28080`。frontend具备该桥的出站能力，但无秘密环境变量，nginx仅固定代理Test backend；后端/数据库不接入该桥。新 relay 仅 `172.18.0.1:28480`，只允许现 edge `172.18.0.4`，不加入任何既有 Docker 网络。
 - 上限：backend 512MiB / DB 128MiB / frontend 32MiB / relay 16MiB，CPU 合计上限1.25。JVM heap224MiB，并限制 metaspace/direct/code cache。首次启动要求 available RAM≥1100MiB、磁盘≥6GiB；不足即停止，不清理其他镜像、卷或服务。后续更新若资源不足，单独评估仅Test停用窗口，不能削弱准入或停止旧服务凑空间。
 - 只使用 `images.json` 的官方 amd64 digest。其2026-10-31 registry manifest观察对应 JRE17.0.20.1_1、nginx1.30.6-alpine、Postgres16.15-alpine；不是依赖安全审计证明。业务镜像不继承现有 Production/Staging image ENV。远端只 COPY 已编译 jar/dist，不运行 Maven/npm，不上传源码、node_modules、真实数据或密钥。
 - 公网 `/ws` 在Test edge/relay/frontend均403；REST读取刷新状态。F31未修复、不视为SaaS安全放行；已部署Android、PAD_DIRECT、Renderer、去重机制不变。应用端MOCK-only启动/执行守卫由后端独立实现，网络隔离不能替代该守卫。

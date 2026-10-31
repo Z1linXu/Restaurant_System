@@ -130,12 +130,25 @@ def require_project_container(document, service):
         raise ValueError('refusing non-Test container ownership')
 
 
-def validate_network_document(document):
+def validate_network_document(document, key='test_internal'):
+    if key not in ('test_internal', 'test_ingress'):
+        raise ValueError('unexpected Test network')
+    suffix, internal = ('_internal', True) if key == 'test_internal' else ('_ingress', False)
     labels = document.get('Labels') or {}
-    if document.get('Name') != PROJECT + '_internal' or document.get('Driver') != 'bridge' or document.get('Scope') != 'local' or document.get('Internal') is not True:
-        raise ValueError('existing Test network is not the isolated internal bridge')
-    if labels.get('com.docker.compose.project') != PROJECT or labels.get('com.docker.compose.network') != 'test_internal':
+    if document.get('Name') != PROJECT + suffix or document.get('Driver') != 'bridge' or document.get('Scope') != 'local' or document.get('Internal') is not internal or document.get('Options'):
+        raise ValueError('existing Test network has unexpected bridge isolation or options')
+    if labels.get('com.docker.compose.project') != PROJECT or labels.get('com.docker.compose.network') != key:
         raise ValueError('refusing unowned existing Test network')
+
+
+def validate_network_member(document, key):
+    allowed = ('db', 'backend', 'frontend') if key == 'test_internal' else ('frontend',) if key == 'test_ingress' else ()
+    service = document.get('Config', {}).get('Labels', {}).get('com.docker.compose.service')
+    if service not in allowed:
+        raise ValueError('unexpected Test network member')
+    require_project_container(document, service)
+    if document.get('Name') != '/' + PROJECT + '-' + service + '-1':
+        raise ValueError('unexpected Test network container identity')
 
 
 def validate_volume_document(document):
@@ -147,15 +160,16 @@ def validate_volume_document(document):
 
 
 def verify_existing_resources():
-    network = PROJECT + '_internal'
-    if network in run(['docker', 'network', 'ls', '--format', '{{.Name}}']).decode().splitlines():
+    networks = run(['docker', 'network', 'ls', '--format', '{{.Name}}']).decode().splitlines()
+    for key, suffix in [('test_internal', '_internal'), ('test_ingress', '_ingress')]:
+        network = PROJECT + suffix
+        if network not in networks:
+            continue
         document = jsonrun(['docker', 'network', 'inspect', network])[0]
-        validate_network_document(document)
+        validate_network_document(document, key)
         ids = list((document.get('Containers') or {}).keys())
         for container in jsonrun(['docker', 'inspect', *ids]) if ids else []:
-            service = container.get('Config', {}).get('Labels', {}).get('com.docker.compose.service')
-            if service not in ('db', 'backend', 'frontend'): raise ValueError('unexpected network member')
-            require_project_container(container, service)
+            validate_network_member(container, key)
     volume = PROJECT + '_postgres'
     if volume in run(['docker', 'volume', 'ls', '--format', '{{.Name}}']).decode().splitlines():
         validate_volume_document(jsonrun(['docker', 'volume', 'inspect', volume])[0])
@@ -206,7 +220,7 @@ def validate_port_owners(records, containers, process_info):
             if record['ip'] != '127.0.0.1': raise ValueError('frontend listener escaped localhost')
             bindings = document.get('NetworkSettings', {}).get('Ports', {}).get('8080/tcp') or []
             if bindings != [{'HostIp': '127.0.0.1', 'HostPort': '28080'}]: raise ValueError('unexpected frontend port binding')
-            ip = document.get('NetworkSettings', {}).get('Networks', {}).get(PROJECT + '_internal', {}).get('IPAddress')
+            ip = document.get('NetworkSettings', {}).get('Networks', {}).get(PROJECT + '_ingress', {}).get('IPAddress')
             for pid in record['pids']:
                 args = process_info[pid]['args']
                 expected = {'-host-ip': '127.0.0.1', '-host-port': '28080', '-container-ip': ip, '-container-port': '8080'}
@@ -248,7 +262,7 @@ def verify_runtime(sha):
             raise ValueError('Test container not steadily running: ' + service)
         if service in ('backend', 'frontend') and document['Config'].get('Labels', {}).get('org.opencontainers.image.revision') != sha:
             raise ValueError('running Test application SHA mismatch')
-        expected = {'host'} if service == 'relay' else {PROJECT + '_internal'}
+        expected = {'host'} if service == 'relay' else {PROJECT + '_internal', PROJECT + '_ingress'} if service == 'frontend' else {PROJECT + '_internal'}
         if set(document['NetworkSettings']['Networks']) != expected: raise ValueError('running Test network boundary mismatch')
     if containers['db']['State'].get('Health', {}).get('Status') != 'healthy': raise ValueError('Test database not healthy')
     records = verify_port_owners(containers)
@@ -300,10 +314,12 @@ def validate_compose(model, sha, release_dir=None):
             raise ValueError('tmpfs mount paths must be absolute')
         if mounts != expected:
             raise ValueError('unexpected tmpfs target, size or mode for ' + name)
-    if set(model.get('networks', {})) != {'test_internal'} or not model['networks']['test_internal'].get('internal'):
-        raise ValueError('Test network must be internal only')
-    if model['networks']['test_internal'].get('name') != PROJECT + '_internal':
-        raise ValueError('unexpected network name')
+    if set(model.get('networks', {})) != {'test_internal', 'test_ingress'}:
+        raise ValueError('exactly the two private Test-owned networks are required')
+    for key, suffix, internal in [('test_internal', '_internal', True), ('test_ingress', '_ingress', False)]:
+        network = model['networks'][key]
+        if network.get('name') != PROJECT + suffix or network.get('driver') != 'bridge' or network.get('internal', False) is not internal or network.get('external') or network.get('driver_opts'):
+            raise ValueError('unexpected Test network name, driver or isolation')
     if set(model.get('volumes', {})) != {'test_postgres'} or model['volumes']['test_postgres'].get('name') != PROJECT + '_postgres':
         raise ValueError('unexpected persistent volume')
     db_mounts = services['db'].get('volumes', [])
@@ -317,8 +333,11 @@ def validate_compose(model, sha, release_dir=None):
     if release_dir is not None and relay_mounts[0].get('source') != str(Path(release_dir) / 'relay.conf'):
         raise ValueError('relay mount outside verified Test release')
     for name in ('db', 'backend', 'frontend'):
-        if set(services[name].get('networks', {})) != {'test_internal'} or services[name].get('network_mode'):
+        expected = {'test_internal', 'test_ingress'} if name == 'frontend' else {'test_internal'}
+        if set(services[name].get('networks', {})) != expected or services[name].get('network_mode'):
             raise ValueError('application connected to another network')
+    if services['frontend']['networks']['test_ingress'].get('gw_priority') != 1:
+        raise ValueError('frontend publication must use its dedicated Test ingress network')
     if services['db'].get('ports') or services['backend'].get('ports'):
         raise ValueError('DB/backend host ports forbidden')
     ports = services['frontend'].get('ports', [])
