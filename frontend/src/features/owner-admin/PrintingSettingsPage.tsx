@@ -44,6 +44,8 @@ import {
 } from '../../types/androidPadBridge'
 import { menuManagementPath } from './menuManagementSections'
 import { ReceiptPreview } from './ReceiptPreview'
+import { KitchenRoutingPanel } from './KitchenRoutingPanel'
+import { TemplatePrintDiagnosticsPanel } from './TemplatePrintDiagnosticsPanel'
 
 type ToastState = { kind: 'success' | 'error'; message: string } | null
 
@@ -378,6 +380,7 @@ export function PrintingSettingsPage() {
   const currentStore = useCurrentStore()
   const { storeId } = currentStore
   const { isOfflineRestricted, user } = useAuth()
+  const canManageTemplate = ['OWNER', 'ADMIN', 'MANAGER'].includes(user?.role_code ?? '')
   const [workspaceStores, setWorkspaceStores] = useState<WorkspaceStore[]>([])
   const [printCenter, setPrintCenter] = useState<PrintCenterOverview | null>(null)
   const [selectedStoreId, setSelectedStoreId] = useState(String(storeId))
@@ -939,6 +942,8 @@ export function PrintingSettingsPage() {
   return (
     <>
       <div className="space-y-5">
+            {canManageTemplate ? <KitchenRoutingPanel key={`routing:${selectedStoreId}`} storeId={Number(selectedStoreId)} canManage={canManageTemplate} /> : null}
+            <TemplatePrintDiagnosticsPanel key={`diagnostics:${selectedStoreId}`} storeId={Number(selectedStoreId)} />
             <div className="flex flex-wrap items-center justify-between gap-4 rounded-[28px] bg-[rgba(255,255,255,0.84)] px-5 py-4 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
               <div>
                 <div className="text-[1.7rem] font-black tracking-[-0.05em] text-[var(--on-surface)]">打印中心</div>

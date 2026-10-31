@@ -1,9 +1,9 @@
-export type MenuManagementSection = 'menu_items' | 'categories' | 'stations' | 'combo' | 'pricing' | 'addons' | 'printing_display_rules'
+export type MenuManagementSection = 'menu_items' | 'categories' | 'stations' | 'combo' | 'pricing' | 'addons' | 'printing_display_rules' | 'option_groups'
 
 export function menuManagementSection(search: string): MenuManagementSection {
   const value = new URLSearchParams(search).get('section')
   if (value === 'printing-display-rules') return 'printing_display_rules'
-  return value === 'addons' || value === 'categories' || value === 'stations' || value === 'combo' || value === 'pricing'
+  return value === 'addons' || value === 'categories' || value === 'stations' || value === 'combo' || value === 'pricing' || value === 'option_groups'
     ? value : 'menu_items'
 }
 

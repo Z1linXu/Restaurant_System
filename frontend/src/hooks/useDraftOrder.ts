@@ -58,6 +58,7 @@ import { readMenuSnapshot } from '../offline/menuCache'
 import { mapCatalog } from './useMenuCatalog'
 import { resolveComboGroupOptionId } from '../utils/comboSelection'
 import { buildOptionSnapshots, calculateDraftLineSubtotal, calculateSnapshotLineSubtotal } from '../utils/orderPricing'
+import { activeTemplateGroups, templateSelectionError } from '../utils/templateCustomization'
 
 function optionTag(option: BackendOrderItemOptionResponse): LocalizedText {
   if ((option.quantity ?? 1) > 1) {
@@ -118,6 +119,13 @@ function buildItemSelection(item: BackendOrderItemResponse, menuItem: MenuItem |
     }
     if (comboConfig?.sideRemoveOptions.some((comboOption) => comboOption.id === optionId)) {
       draft.comboSideRemoveIds.push(optionId)
+      return
+    }
+    const templateGroup = menuItem?.optionGroups?.find((group) => group.kind !== 'COMBO' && group.options.some((candidate) => String(candidate.id) === optionId))
+    if (templateGroup) {
+      draft.groupSelections ??= {}
+      draft.groupSelections[templateGroup.group_instance_code] ??= {}
+      draft.groupSelections[templateGroup.group_instance_code][optionId] = option.quantity ?? 1
       return
     }
     switch (option.option_type_snapshot) {
@@ -227,7 +235,13 @@ function mapOrderToSession(order: BackendOrderResponse, slotLabel: string, table
 }
 
 export function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationDraft): OrderLineItem {
+  const selectionError = templateSelectionError(menuItem, draft)
+  if (selectionError) throw new Error(selectionError)
   const summaryTags: LocalizedText[] = []
+  for (const group of activeTemplateGroups(menuItem)) for (const option of group.options) {
+    const quantity = draft.groupSelections?.[group.group_instance_code]?.[String(option.id)] ?? 0
+    if (quantity > 0) summaryTags.push({ en: `${option.name_en}${quantity > 1 ? ` x${quantity}` : ''}`, zh: `${option.name_zh}${quantity > 1 ? ` x${quantity}` : ''}` })
+  }
 
   const pushOptionTag = (optionId: string | undefined) => {
     if (!optionId) {

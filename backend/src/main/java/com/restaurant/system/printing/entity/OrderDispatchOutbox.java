@@ -61,6 +61,9 @@ public class OrderDispatchOutbox {
     @Column(name = "completed_at")
     public LocalDateTime completedAt;
 
+    @Column(name = "routing_context", columnDefinition = "text")
+    public String routingContext;
+
     @Column(name = "last_error", columnDefinition = "text")
     public String lastError;
 }

@@ -8,6 +8,8 @@ import type {
   OrderSession,
 } from '../types/ordering'
 import { calculateTax, calculateTotal } from '../utils/tax'
+import { activeTemplateGroups, templateDefaultSelections } from '../utils/templateCustomization'
+import { calculateDraftLineSubtotal } from '../utils/orderPricing'
 import {
   defaultComboSelections,
   resolveComboGroupOptionId,
@@ -51,6 +53,7 @@ function getSelectedAddOns(options: ChoiceOption[] | undefined, addOnQuantities:
 export function buildDefaultDraft(menuItem: MenuItem): ItemCustomizationDraft {
   const comboSelections = defaultComboSelections(menuItem.customization?.combo?.groups ?? [])
   return {
+    ...(menuItem.optionGroups != null ? { groupSelections: templateDefaultSelections(menuItem.optionGroups) } : {}),
     sizeId: menuItem.customization?.sizes?.options[0]?.id,
     soupBaseId: menuItem.customization?.soupBases?.options[0]?.id,
     noodleTypeId: menuItem.customization?.noodleTypes?.[0]?.id,
@@ -86,6 +89,7 @@ function sumAddOnPrice(options: ChoiceOption[] | undefined, addOnQuantities: Rec
 }
 
 function calculateUnitPrice(menuItem: MenuItem, draft: ItemCustomizationDraft) {
+  if (menuItem.optionGroups != null) return calculateDraftLineSubtotal(menuItem, { ...draft, quantity: 1 })
   const sizePrice =
     menuItem.customization?.sizes?.options.find((option) => option.id === draft.sizeId)?.priceDelta ?? 0
   const soupBasePrice =
@@ -110,6 +114,12 @@ function calculateUnitPrice(menuItem: MenuItem, draft: ItemCustomizationDraft) {
 
 function buildSummaryTags(menuItem: MenuItem, draft: ItemCustomizationDraft) {
   const summaryTags: LocalizedText[] = []
+  for (const group of activeTemplateGroups(menuItem)) {
+    for (const option of group.options) {
+      const quantity = draft.groupSelections?.[group.group_instance_code]?.[String(option.id)] ?? 0
+      if (quantity > 0) summaryTags.push({ en: `${option.name_en}${quantity > 1 ? ` x${quantity}` : ''}`, zh: `${option.name_zh}${quantity > 1 ? ` x${quantity}` : ''}` })
+    }
+  }
   const customization = menuItem.customization
 
   const sizeLabel = getChoiceLabel(customization?.sizes?.options, draft.sizeId)

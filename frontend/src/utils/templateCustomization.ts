@@ -1,0 +1,53 @@
+import type { TemplateOptionGroup } from '../services/templatePlatformService'
+import type { ChoiceOption, ItemCustomizationDraft, MenuItem } from '../types/ordering'
+import type { TemplateOption } from '../services/templatePlatformService'
+import { modifierIngredient } from './modifierSelection'
+
+export function templateChoiceOption(option: TemplateOption): ChoiceOption {
+  return { id: String(option.id), labelEn: option.name_en, labelZh: option.name_zh,
+    priceDelta: Number(option.price_delta), optionType: option.option_type,
+    optionCode: option.option_code, optionGroup: option.option_group,
+    parentOptionId: option.parent_option_id == null ? null : String(option.parent_option_id), sortOrder: option.sort_order }
+}
+
+export function activeTemplateGroups(item: MenuItem) {
+  return [...(item.optionGroups ?? [])].filter((group) => group.is_active && group.kind !== 'COMBO')
+    .sort((a, b) => a.sort_order - b.sort_order)
+}
+
+export function templateDefaultSelections(groups: TemplateOptionGroup[]) {
+  return Object.fromEntries(groups.filter((group) => group.is_active && group.kind !== 'COMBO').map((group) => {
+    const options = group.options.filter((option) => option.is_active && option.id != null)
+    const defaults = options.filter((option) => option.is_default || group.default_option_ids.includes(option.id!))
+    return [group.group_instance_code, Object.fromEntries((group.selection_mode === 'SINGLE' ? defaults.slice(0, 1) : defaults).map((option) => [String(option.id), 1]))]
+  }))
+}
+
+export function templateSelectionError(item: MenuItem, draft: ItemCustomizationDraft): string | null {
+  if (item.optionGroups == null) return null
+  for (const group of activeTemplateGroups(item)) {
+    const selected = Object.entries(draft.groupSelections?.[group.group_instance_code] ?? {}).filter(([, qty]) => qty > 0)
+    if (group.required && selected.length === 0) return `请选择 ${group.name} / Choose ${group.name}`
+    if (group.selection_mode === 'SINGLE' && (selected.length > 1 || selected.some(([, qty]) => qty !== 1))) return `${group.name} 只能选择一项 / Select one option`
+    if (selected.some(([id, qty]) => !Number.isSafeInteger(qty) || qty < 1 || !group.options.some((option) => option.is_active && String(option.id) === id))) return `${group.name} 选项已变更，请重新选择 / Options changed`
+  }
+  return null
+}
+
+export function selectTemplateOption(draft: ItemCustomizationDraft, group: TemplateOptionGroup, optionId: number, quantity: number, groups: TemplateOptionGroup[]): ItemCustomizationDraft {
+  const selections = { ...(draft.groupSelections ?? {}) }
+  selections[group.group_instance_code] = group.selection_mode === 'SINGLE'
+    ? (quantity > 0 ? { [optionId]: 1 } : {})
+    : { ...(selections[group.group_instance_code] ?? {}), [optionId]: quantity }
+  const option = group.options.find((candidate) => candidate.id === optionId)
+  const ingredient = modifierIngredient(option?.option_code)
+  if (quantity > 0 && ingredient && (group.kind === 'ADD_ON' || group.kind === 'REMOVE')) {
+    const opposite = group.kind === 'ADD_ON' ? 'REMOVE' : 'ADD_ON'
+    for (const other of groups.filter((candidate) => candidate.kind === opposite)) {
+      const next = { ...(selections[other.group_instance_code] ?? {}) }
+      for (const candidate of other.options) if (candidate.id != null && modifierIngredient(candidate.option_code) === ingredient) delete next[String(candidate.id)]
+      selections[other.group_instance_code] = next
+    }
+  }
+  return { ...draft, groupSelections: selections }
+}

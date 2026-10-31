@@ -23,6 +23,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Profile("!staging-synthetic-bootstrap")
 public class OrderDispatchOutboxProcessor {
 
+    private com.restaurant.system.printing.routing.TemplateKitchenDispatchHandler templateHandler;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setTemplateHandler(com.restaurant.system.printing.routing.TemplateKitchenDispatchHandler handler) {this.templateHandler=handler;}
+
     private static final Logger logger = LoggerFactory.getLogger(OrderDispatchOutboxProcessor.class);
     private static final int BATCH_SIZE = 10;
     private static final long PROCESSING_LEASE_SECONDS = 120L;
@@ -90,7 +94,8 @@ public class OrderDispatchOutboxProcessor {
             }
             try (var origin = com.restaurant.system.printing.security.PrintOriginContext.dispatch(
                 event.originatingDeviceId, event.storeId, event.organizationId)) {
-                PrintDispatchOutcome outcome = printDispatcherService.dispatchPersistedEvent(
+                boolean templateEvent = templateHandler != null && templateHandler.handles(event);
+                PrintDispatchOutcome outcome = templateEvent ? templateHandler.dispatch(event) : printDispatcherService.dispatchPersistedEvent(
                     event.moduleCode,
                     event.storeId,
                     event.orderId,
@@ -104,7 +109,7 @@ public class OrderDispatchOutboxProcessor {
                 }
                 event.status = outcome.name();
                 event.completedAt = LocalDateTime.now();
-                event.lastError = switch (outcome) {
+                event.lastError = templateEvent ? event.lastError : switch (outcome) {
                     case DISPATCHED, MOCK_RENDERED -> null;
                     default -> outcome.name();
                 };
@@ -121,6 +126,7 @@ public class OrderDispatchOutboxProcessor {
     }
 
     private String serializationKey(OrderDispatchOutbox event) {
+        if (templateHandler != null && templateHandler.handles(event)) return templateHandler.serializationKey(event);
         return printerAssignmentRepository.findByStoreIdAndModuleCode(event.storeId, event.moduleCode)
             .filter(assignment -> Boolean.TRUE.equals(assignment.enabled) && assignment.printer_id != null)
             .map(assignment -> "store:" + event.storeId + "|printer:" + assignment.printer_id)

@@ -96,6 +96,7 @@ public class MenuCatalogResponse {
         public Integer sort_order;
         public List<OptionResponse> options;
         public String default_combo_egg_component_code;
+        public List<com.restaurant.system.menu.template.TemplateMenuModels.Group> option_groups;
 
         public ItemResponse(
             Long id,

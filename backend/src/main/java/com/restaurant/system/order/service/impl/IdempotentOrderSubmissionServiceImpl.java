@@ -40,6 +40,9 @@ public class IdempotentOrderSubmissionServiceImpl implements IdempotentOrderSubm
     private static final Set<String> REQUIRED_OPTION_TYPES = Set.of("size", "soup_base");
     private static final Logger log = LoggerFactory.getLogger(IdempotentOrderSubmissionServiceImpl.class);
 
+    private com.restaurant.system.menu.template.TemplateMenuService templateMenus;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setTemplateMenus(com.restaurant.system.menu.template.TemplateMenuService value) {this.templateMenus=value;}
     private final OrderSubmissionRequestRepository submissionRepository;
     private final StoreRepository storeRepository;
     private final MenuItemRepository menuItemRepository;
@@ -100,6 +103,7 @@ public class IdempotentOrderSubmissionServiceImpl implements IdempotentOrderSubm
         }
 
         Store store = validateStore(request);
+        if(templateMenus!=null)templateMenus.lockMenuIfEnabled(store.id);
         validateSnapshotsAndLogMenuDrift(request, store);
 
         CreateOrderRequest createRequest = new CreateOrderRequest();
@@ -227,7 +231,7 @@ public class IdempotentOrderSubmissionServiceImpl implements IdempotentOrderSubm
                     logMenuDrift(request, itemRequest, "MENU_OPTION_PRICE_CHANGED", option.name_zh, option.price_delta, store.menu_revision);
                 }
             }
-            if (currentMenuRevision && item != null) {
+            if (currentMenuRevision && item != null && (templateMenus == null || !templateMenus.manages(item))) {
                 Set<String> requiredOptionTypes = menuItemOptionRepository.findAllByMenuItemIdOrdered(item.id).stream()
                     .filter(option -> Boolean.TRUE.equals(option.is_active) && option.option_type != null)
                     .map(option -> option.option_type.toLowerCase(Locale.ROOT))

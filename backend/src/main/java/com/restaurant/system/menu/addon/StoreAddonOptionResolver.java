@@ -55,10 +55,12 @@ public class StoreAddonOptionResolver {
             current.option_code = addon.code();
             current.option_type = "addon";
             current.option_group = "ADD_ON";
-            current.name_zh = addon.zh();
-            current.name_en = addon.en();
-            current.price_delta = addon.price();
-            current.is_active = addon.active() && Boolean.TRUE.equals(option.addon_eligible);
+            current.template_group_code = option.template_group_code;
+            current.template_default = option.template_default;
+            current.name_zh = option.template_group_code == null ? addon.zh() : option.name_zh;
+            current.name_en = option.template_group_code == null ? addon.en() : option.name_en;
+            current.price_delta = option.template_group_code == null ? addon.price() : option.price_delta;
+            current.is_active = addon.active() && Boolean.TRUE.equals(option.addon_eligible) && (option.template_group_code == null || Boolean.TRUE.equals(option.is_active));
             return current;
         }).toList();
     }

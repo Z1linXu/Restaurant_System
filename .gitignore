@@ -26,3 +26,5 @@ backend/src/main/resources/application-local.yml
 coverage/
 
 !backend/.env.uber-eats.example
+
+/.template-test-private/

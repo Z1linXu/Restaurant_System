@@ -9,6 +9,7 @@ import {
 } from '../../../utils/comboSelection'
 import { formatNoodleTypeDisplayLabel } from './noodleTypePresentation'
 import { selectAddOn, selectRemove } from '../../../utils/modifierSelection'
+import { selectTemplateOption, templateSelectionError } from '../../../utils/templateCustomization'
 
 function isToggleAddOn(labelZh: string, priceDelta?: number) {
   return (priceDelta ?? 0) === 0 && (labelZh === '加香菜' || labelZh === '加葱')
@@ -184,12 +185,14 @@ export function ItemCustomizationModal({
   submitDisabledReason,
 }: ItemCustomizationModalProps) {
   const customization = item.customization
+  const selectionError = templateSelectionError(item, draft)
   const compact = useIpadLandscape()
   const toggleAddOns = customization?.addOns?.filter((option) => isToggleAddOn(option.labelZh, option.priceDelta)) ?? []
   const quantityAddOns = customization?.addOns?.filter((option) => !isToggleAddOn(option.labelZh, option.priceDelta)) ?? []
   const comboConfig = customization?.combo
   const isNoodleItem = isNoodleMenuItem(item)
-  const showComboFirst = isNoodleItem && Boolean(comboConfig)
+  const templateMode = item.optionGroups != null
+  const showComboFirst = !templateMode && isNoodleItem && Boolean(comboConfig)
   const comboSection = comboConfig ? (
     <section className={`bg-[rgba(26,28,25,0.03)] ${compact ? 'space-y-3 rounded-[20px] p-4' : 'space-y-4 rounded-[28px] p-6'}`}>
       {(() => {
@@ -333,7 +336,7 @@ export function ItemCustomizationModal({
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
           <div className={`border-b border-[rgba(26,28,25,0.05)] ${compact ? 'px-5 py-4' : 'px-8 py-7'}`}>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--primary)]">Noodle Craft</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--primary)]">{item.optionGroups == null ? 'Noodle Craft' : 'Customize / 选项'}</p>
             <div className={`${compact ? 'mt-2.5' : 'mt-3'} flex items-start justify-between gap-6`}>
               <div>
                 <h2 className={`${compact ? 'text-[1.8rem]' : 'text-[2.35rem]'} font-extrabold tracking-[-0.05em] text-[var(--on-surface)]`}>
@@ -349,6 +352,22 @@ export function ItemCustomizationModal({
 
           <div className={`${compact ? 'space-y-4 px-5 py-4' : 'space-y-6 px-8 py-7'}`}>
             {showComboFirst ? comboSection : null}
+
+            {[...(item.optionGroups ?? [])].filter((group) => group.is_active).sort((a, b) => a.sort_order - b.sort_order).map((group) => group.kind === 'COMBO' ? <div key={group.group_instance_code} data-option-group={group.group_instance_code}>{comboSection}</div> : (
+              <section key={group.group_instance_code} className={compact ? 'space-y-3' : 'space-y-4'} data-option-group={group.group_instance_code}>
+                <h3 className={`${compact ? 'text-[1.1rem]' : 'text-[1.45rem]'} font-bold`}>
+                  {group.name} {group.required ? <span className="ml-2 text-sm text-[var(--primary)]">Required / 必选</span> : null}
+                </h3>
+                {group.options.filter((option) => option.is_active && option.id != null).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)).map((option) => {
+                  const quantity = draft.groupSelections?.[group.group_instance_code]?.[String(option.id)] ?? 0
+                  const select = (next: number) => onChange(selectTemplateOption(draft, group, option.id!, next, item.optionGroups ?? []))
+                  if (group.selection_mode === 'SINGLE') return <ChoiceButton key={option.id} compact={compact} active={quantity > 0} label={`${option.name_en || option.name_zh}${formatPriceDelta(option.price_delta)}`} sublabel={option.name_zh} onClick={() => select(quantity > 0 && !group.required ? 0 : 1)} />
+                  if (group.kind === 'ADD_ON') return <AddOnQuantityRow key={option.id} compact={compact} label={option.name_en || option.name_zh} sublabel={option.name_zh} quantity={quantity} priceDelta={option.price_delta} onIncrement={() => select(quantity + 1)} onDecrement={() => select(Math.max(0, quantity - 1))} />
+                  return <CheckboxRow key={option.id} compact={compact} checked={quantity > 0} label={`${option.name_en || option.name_zh}${formatPriceDelta(option.price_delta)}`} sublabel={option.name_zh} onClick={() => select(quantity > 0 ? 0 : 1)} />
+                })}
+                {!group.options.some((option) => option.is_active) ? <p className="text-sm text-[var(--muted)]">No available options / 暂无可选项</p> : null}
+              </section>
+            ))}
 
             {customization?.sizes ? (
               <section className={compact ? 'space-y-3' : 'space-y-4'}>
@@ -447,7 +466,7 @@ export function ItemCustomizationModal({
               </section>
             ) : null}
 
-            {!showComboFirst ? comboSection : null}
+            {!templateMode && !showComboFirst ? comboSection : null}
 
             {(customization?.addOns?.length || customization?.removeOptions?.length) ? (
               <section className={`grid md:grid-cols-2 ${compact ? 'gap-4' : 'gap-6'}`}>
@@ -568,15 +587,15 @@ export function ItemCustomizationModal({
               </div>
             </div>
 
-            {submitDisabled && submitDisabledReason ? (
+            {(submitDisabled && submitDisabledReason) || selectionError ? (
               <div className="rounded-[16px] bg-[rgba(151,34,34,0.08)] px-4 py-3 text-[0.9rem] font-bold text-[rgb(116,22,22)]">
-                {submitDisabledReason}
+                {selectionError ?? submitDisabledReason}
               </div>
             ) : null}
             <Button
               className={compact ? 'min-h-12 rounded-[18px] px-6 text-[0.95rem]' : 'min-h-16 rounded-[24px] px-8 text-lg'}
               onClick={onSubmit}
-              disabled={submitDisabled}
+              disabled={submitDisabled || Boolean(selectionError)}
             >
               {mode === 'add' ? 'Add to Order / 添加到订单' : 'Update Item / 更新菜品'}
             </Button>

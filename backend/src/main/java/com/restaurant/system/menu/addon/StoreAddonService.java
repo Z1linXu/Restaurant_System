@@ -132,7 +132,7 @@ public class StoreAddonService {
         jdbc.update("""
             update menu_item_options set name_zh=?, name_en=?, price_delta=?,
               is_active=(? and addon_eligible), updated_at=current_timestamp
-            where store_addon_id=? and menu_item_id in (select id from menu_items where store_id=?)
+            where store_addon_id=? and template_group_code is null and menu_item_id in (select id from menu_items where store_id=?)
             """, values.zh(), values.en(), values.price(), values.active(), addonId, before.store_id());
         revisions.incrementRevision(before.store_id());
         return requireAddon(addonId);

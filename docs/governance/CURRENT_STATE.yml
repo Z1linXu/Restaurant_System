@@ -1,5 +1,5 @@
 schema_version: 1
-updated_at: 2026-10-24
+updated_at: 2026-10-31
 
 repository:
   ref: origin/main
@@ -7,10 +7,17 @@ repository:
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
-  current: PHASE_B
-  package: DINING_TABLE_SOFT_DELETE
-  status: TABLE_DELETE_IMPLEMENTATION_AND_REVIEW
+  current: PHASE_6
+  package: TEMPLATE_M0_M1_TEST
+  status: IMPLEMENTATION_IN_PROGRESS
   next_phase_authorized: false
+  authorization: OWNER_20261031_M0_M1_CONTINUOUS_TEST_ONLY
+  implementation_base_sha: 028d4971740889a0ac0d784a43497bc3e5b54b3d
+  target: https://test.lanzhounoodlesmtl.com
+  production_mutation_authorized: false
+  staging_mutation_authorized: false
+  protected_printing_core_mutation_authorized: false
+  tracker: ../template-modernization/phase-6/IMPLEMENTATION_TRACKER.md
 
 staging:
   deployed_sha: f838e48de1f20689253716bd1910b952fcbc00d3

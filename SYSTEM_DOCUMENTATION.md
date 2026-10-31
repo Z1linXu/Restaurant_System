@@ -9759,3 +9759,14 @@ for actual private canonical Compose and bounded recovery. Do not overwrite the
 shared Production/Staging edge with the old generic HTTPS template. Exact backup,
 images, migration and acceptance limits are in
 [release evidence](docs/governance/PRODUCTION_V37_RELEASE_20261005.md).
+
+
+## Restaurant Template M0/M1 (isolated Test candidate, 2026-10-31)
+
+Additive V40 introduces per-item group metadata/library and existing Outbox frozen routing context. Explicit item.template_option_groups_enabled distinguishes new configuration from the unchanged legacy path. Existing menu_item_options remain the runtime price leaves; copied groups have item-owned Option identities and prices. Group changes do not rewrite historical order/print snapshots. COMBO binds the existing Combo policy/components and virtual IDs, not an alternate Combo implementation.
+
+Authenticated Owner/Manager template management uses /api/v1/stores/{storeId}/template. Configuration parsing and KitchenRoutingPlanner are shared by pure preview and the existing Order transaction's frozen per-group Outbox intents. A narrow processor event-type branch delegates new TEMPLATE_KITCHEN events to an independent MOCK-only handler using the existing PrintJobService and source-key uniqueness. Existing Renderer/PrintDispatcher internals/PAD_DIRECT/state/dedupe implementations are unchanged. Frontdesk complete and Update incremental receipts retain the original path.
+
+Expected intent diagnostics include pre-Job errors, so a legal order can succeed while one missing/disabled target warns and other groups continue. Diagnostics are persistent, scoped and refreshable; queued is not server-confirmed and uncertain MOCK failures never automatically resend. All new dispatches retain PRINTING module/environment gates.
+
+The template-test profile disables default/demo/member/production seeders, real printer endpoints, REAL/PAD_DIRECT modes, daily-close and Uber processing. Its guarded bootstrap uses only a new database named restaurant_template_test and explicit private Test secrets; internal deployment networking and denied public WebSocket routes bound the known F31 risk without claiming SaaS security approval. No Production/Staging or old-store migration is authorized. Actual candidate/review/Test deployment status is recorded in docs/template-modernization/phase-6/IMPLEMENTATION_TRACKER.md.

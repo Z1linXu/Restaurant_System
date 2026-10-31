@@ -82,4 +82,13 @@ public interface OrderDispatchOutboxRepository extends JpaRepository<OrderDispat
         @Param("now") LocalDateTime now,
         @Param("leaseExpiresAt") LocalDateTime leaseExpiresAt
     );
+
+    @Query("""
+        select e from OrderDispatchOutbox e where e.storeId=:storeId and e.eventType='TEMPLATE_KITCHEN'
+          and (:orderId is null or e.orderId=:orderId)
+          and (:batchId is null or e.orderUpdateBatchId=:batchId)
+        order by e.id desc
+        """)
+    List<OrderDispatchOutbox> findTemplateIntents(@Param("storeId") Long storeId,@Param("orderId") Long orderId,
+        @Param("batchId") Long batchId,Pageable pageable);
 }

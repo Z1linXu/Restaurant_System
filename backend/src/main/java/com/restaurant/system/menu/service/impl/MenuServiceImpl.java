@@ -32,6 +32,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class MenuServiceImpl implements MenuService {
 
+    private com.restaurant.system.menu.template.TemplateMenuService templateMenus;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setTemplateMenus(com.restaurant.system.menu.template.TemplateMenuService value) {this.templateMenus=value;}
     private final StoreAddonOptionResolver addonResolver;
     private final MenuCategoryRepository menuCategoryRepository;
     private final MenuItemRepository menuItemRepository;
@@ -138,6 +141,7 @@ public class MenuServiceImpl implements MenuService {
                 optionsByItemId.getOrDefault(item.id, List.of())
             );
             itemResponse.default_combo_egg_component_code = item.default_combo_egg_component_code;
+            if(templateMenus != null && templateMenus.manages(item)) itemResponse.option_groups=templateMenus.getItem(storeId,item.id).groups;
             itemsByCategoryId.computeIfAbsent(item.category_id, ignored -> new ArrayList<>()).add(itemResponse);
         }
 
@@ -180,6 +184,7 @@ public class MenuServiceImpl implements MenuService {
         if (option == null) {
             return false;
         }
+        if (option.template_group_code != null) return true;
         boolean sizeSemantic = "SIZE".equalsIgnoreCase(option.option_group == null ? "" : option.option_group)
             || "size".equalsIgnoreCase(option.option_type == null ? "" : option.option_type);
         if (!sizeSemantic) {

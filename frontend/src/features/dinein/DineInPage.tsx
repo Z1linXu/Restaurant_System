@@ -14,6 +14,7 @@ import {
 import { FrontdeskTopNav } from '../frontdesk/components/FrontdeskTopNav'
 import { PrintWorkerHealthBanner } from '../frontdesk/components/PrintWorkerHealthBanner'
 import { OrderingPage } from '../ordering/OrderingPage'
+import { TemplatePrintDiagnosticsPanel } from '../owner-admin/TemplatePrintDiagnosticsPanel'
 import {
   completeOrder,
   fetchOrderPrintOptions,
@@ -174,6 +175,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     workstation: string | null
   } | null>(() => parseMenuRoute(routePath, routeSearch))
   const [submissionMessage, setSubmissionMessage] = useState<string | null>(null)
+  const [confirmedPrintOrder, setConfirmedPrintOrder] = useState<{ orderId: number; batchId?: number | null } | null>(null)
   const [printAttentionMessage, setPrintAttentionMessage] = useState<string | null>(null)
   const [printTarget, setPrintTarget] = useState<TableSlot | null>(null)
   const [printOptions, setPrintOptions] = useState<OrderPrintOption[]>([])
@@ -252,7 +254,11 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     if (!offlineOrderScope) return
     setOfflineActionBusy(order.clientOrderId)
     try {
-      await retryOfflineOrder(offlineOrderScope, order.clientOrderId)
+      const result = await retryOfflineOrder(offlineOrderScope, order.clientOrderId)
+      if (result?.state === 'SUBMITTED' && result.serverOrderId != null) {
+        setSubmissionMessage(`Order #${result.serverOrderId} confirmed / 订单已由服务器确认。`)
+        setConfirmedPrintOrder({ orderId: result.serverOrderId, batchId: null })
+      }
       await refreshFromBackend({ force: true })
     } catch (error) {
       setSubmissionMessage(error instanceof Error ? error.message : '订单重试失败，请稍后再试。')
@@ -316,6 +322,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     printOptionsRequestIdRef.current += 1
     setPrintAttentionMessage(null)
     setSubmissionMessage(null)
+    setConfirmedPrintOrder(null)
     setPrintTarget(null)
     setPrintOptions([])
     setPrintBusy(null)
@@ -410,6 +417,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
   const startPostSubmitPrintCheck = useCallback((orderId: number, updateBatchId?: number | null) => {
     cancelPrintCoordinator()
     setPrintAttentionMessage(null)
+    setConfirmedPrintOrder({ orderId, batchId: updateBatchId })
     const runId = printCheckRunIdRef.current + 1
     printCheckRunIdRef.current = runId
     printCoordinatorRef.current = startOrderPrintJobCoordinator({
@@ -596,6 +604,9 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
               </div>
             ) : null}
 
+            {submissionMessage && confirmedPrintOrder ? <TemplatePrintDiagnosticsPanel key={`${storeId}:${confirmedPrintOrder.orderId}:${confirmedPrintOrder.batchId ?? "submit"}`} storeId={storeId} orderId={confirmedPrintOrder.orderId} batchId={confirmedPrintOrder.batchId} poll hideWhenEmpty /> : null}
+
+
             {printAttentionMessage ? (
               <div className={`rounded-[20px] border-2 border-[rgba(151,34,34,0.35)] bg-[rgba(151,34,34,0.12)] font-black text-[rgb(116,22,22)] shadow-[0_18px_34px_rgba(151,34,34,0.12)] ${workstationCompact ? 'px-4 py-2.5 text-[0.95rem]' : 'px-5 py-4 text-base'}`}>
                 {printAttentionMessage}
@@ -654,6 +665,9 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
                   {submissionMessage}
                 </div>
               ) : null}
+
+              {submissionMessage && confirmedPrintOrder ? <TemplatePrintDiagnosticsPanel key={`${storeId}:${confirmedPrintOrder.orderId}:${confirmedPrintOrder.batchId ?? "submit"}`} storeId={storeId} orderId={confirmedPrintOrder.orderId} batchId={confirmedPrintOrder.batchId} poll hideWhenEmpty /> : null}
+
 
               {printAttentionMessage ? (
                 <div className="rounded-[24px] border-2 border-[rgba(151,34,34,0.35)] bg-[rgba(151,34,34,0.12)] px-5 py-4 text-base font-black text-[rgb(116,22,22)] shadow-[0_18px_34px_rgba(151,34,34,0.12)]">

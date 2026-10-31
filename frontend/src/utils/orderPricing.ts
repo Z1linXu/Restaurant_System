@@ -1,5 +1,6 @@
 import type { ChoiceOption, ItemCustomizationDraft, MenuItem, OrderLineOptionSnapshot } from '../types/ordering'
 import { resolveComboGroupOptionId } from './comboSelection'
+import { activeTemplateGroups, templateChoiceOption } from './templateCustomization'
 
 interface OrderOptionPayload {
   option_id: number
@@ -43,6 +44,14 @@ export function mapOptions(draft: ItemCustomizationDraft, menuItem?: MenuItem) {
     optionPayloads.push(payload)
   }
 
+  if (menuItem?.optionGroups != null) {
+    for (const group of activeTemplateGroups(menuItem)) {
+      for (const [id, quantity] of Object.entries(draft.groupSelections?.[group.group_instance_code] ?? {})) {
+        if (quantity > 0) pushOption(id, quantity)
+      }
+    }
+  }
+
   pushOption(draft.sizeId)
   pushOption(draft.soupBaseId)
   pushOption(draft.noodleTypeId)
@@ -75,6 +84,7 @@ export function mapOptions(draft: ItemCustomizationDraft, menuItem?: MenuItem) {
 
 function collectMenuItemOptions(menuItem: MenuItem) {
   const options = [
+    ...(menuItem.optionGroups ?? []).flatMap((group) => group.options.filter((option) => option.id != null).map(templateChoiceOption)),
     ...(menuItem.customization?.sizes?.options ?? []),
     ...(menuItem.customization?.soupBases?.options ?? []),
     ...(menuItem.customization?.noodleTypes ?? []),

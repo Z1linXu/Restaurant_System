@@ -256,7 +256,7 @@ public class StorePricingPolicyServiceImpl implements StorePricingPolicyService 
 
     @Override
     public MenuItemOption applyEffectiveCatalogPricing(MenuItemOption option, StorePricingPolicy policy) {
-        if (option == null || policy == null) {
+        if (option == null || policy == null || option.template_group_code != null) {
             return option;
         }
         Optional<StandardSize> size = resolveSize(option);

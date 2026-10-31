@@ -19,6 +19,7 @@ import { menuManagementSection, menuManagementPath, type MenuManagementSection }
 import { CategoryManagementPanel, StationManagementPanel } from './MenuStructurePanels'
 import { PricingRulesPanel } from './PricingRulesPanel'
 import { ItemPrintingRuleAliasPanel } from './PrintingDisplayRulesPanel'
+import { TemplateOptionGroupsPanel } from './TemplateOptionGroupsPanel'
 import { useAuth } from '../auth/useAuth'
 import { useCurrentStore } from '../store/useStoreContext'
 import {
@@ -129,7 +130,8 @@ function sameSavedValues(expected: MenuItemEditorState, actual: MenuItemEditorSt
 
 export function MenuManagementPage() {
   const { storeId } = useCurrentStore()
-  const { isFrontdesk } = useAuth()
+  const { isFrontdesk, isOwner, isManager } = useAuth()
+  const canManageTemplate = Boolean(isOwner || isManager)
   const [overview, setOverview] = useState<PlatformAdminOverview | null>(null)
   const [menuItems, setMenuItems] = useState<MenuItemEditorState[]>([])
   const [selectedStoreId, setSelectedStoreId] = useState(String(storeId))
@@ -643,6 +645,7 @@ export function MenuManagementPage() {
             <div className="flex flex-wrap gap-2 rounded-[22px] bg-[rgba(255,255,255,0.72)] p-2 shadow-[0_12px_24px_rgba(26,28,25,0.04)]">
               {[
                 ['menu_items', 'Menu Items'],
+                ...(canManageTemplate ? [['option_groups', 'Option Group Library / 组选项库']] : []),
                 ['addons', 'Add-ons'],
                 ['categories', 'Categories'],
                 ['stations', 'Stations'],
@@ -664,6 +667,8 @@ export function MenuManagementPage() {
                 </button>
               ))}
             </div>
+
+            {activeSection === 'option_groups' && canManageTemplate ? <TemplateOptionGroupsPanel key={`library:${selectedStoreId}`} storeId={Number(selectedStoreId)} /> : null}
 
             {activeSection === 'categories' ? (
               <CategoryManagementPanel
@@ -1128,6 +1133,12 @@ export function MenuManagementPage() {
               </div>
 
               {optionsItem?.id && optionsItem.store_id === Number(selectedStoreId) ? (
+                canManageTemplate ? <div className="space-y-4">
+                  <TemplateOptionGroupsPanel key={`groups:${selectedStoreId}:${optionsItem.id}`} storeId={Number(selectedStoreId)} itemId={optionsItem.id} itemName={optionsItem.name_zh || optionsItem.name_en} />
+                  <details className="rounded-2xl bg-white p-4"><summary className="cursor-pointer font-semibold">Existing item controls / 原有选项控件</summary>
+                    <MenuOptionsPanel key={`${selectedStoreId}:${optionsItem.id}`} storeId={Number(selectedStoreId)} itemId={optionsItem.id} itemName={optionsItem.name_zh || optionsItem.name_en} />
+                  </details>
+                </div> :
                 <MenuOptionsPanel
                   key={`${selectedStoreId}:${optionsItem.id}`}
                   storeId={Number(selectedStoreId)}

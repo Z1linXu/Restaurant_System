@@ -289,7 +289,7 @@ export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
         Object.values(optionsByType).forEach((options) => options.sort(sortChoiceOptions))
         const allOptions = activeOptions.map(mapOption)
 
-      const customization =
+      let customization: MenuItem['customization'] =
         activeOptions.length > 0
           ? {
               combo: (() => {
@@ -347,7 +347,15 @@ export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
             }
           : undefined
 
+      // Explicit metadata selects the new group path; absent metadata is a legacy item.
+      // Combo keeps its existing linked components and selection implementation.
+      if (item.option_groups != null) {
+        customization = customization?.combo && item.option_groups.some((group) => group.is_active && group.kind === 'COMBO')
+          ? { combo: customization.combo } : undefined
+      }
+
       return {
+        optionGroups: item.option_groups == null ? undefined : item.option_groups,
         id: String(item.id),
         sku: item.sku,
         sortOrder: item.sort_order,

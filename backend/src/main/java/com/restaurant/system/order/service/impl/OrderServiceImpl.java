@@ -89,6 +89,13 @@ import org.springframework.data.domain.PageRequest;
 @Service
 public class OrderServiceImpl implements OrderService {
 
+    private com.restaurant.system.menu.template.TemplateMenuService templateMenus;
+    private com.restaurant.system.printing.routing.TemplateRoutingService templateRouting;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setTemplateMenus(com.restaurant.system.menu.template.TemplateMenuService value) {this.templateMenus=value;}
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setTemplateRouting(com.restaurant.system.printing.routing.TemplateRoutingService value) {this.templateRouting=value;}
+
     private static final String ORDER_STATUS_DRAFT = "draft";
     private static final String ORDER_STATUS_SUBMITTED = "submitted";
     private static final String ORDER_STATUS_PREPARING = "preparing";
@@ -480,6 +487,7 @@ public class OrderServiceImpl implements OrderService {
 
         List<OrderItemOption> orderItemOptions = loadOptionsForOrderItems(orderItems);
 
+        if(templateMenus!=null) templateMenus.validateSnapshots(order,orderItems,orderItemOptions);
         validateDraftAddons(order, orderItems, orderItemOptions);
         if (removeSelectionValidator != null) {
             removeSelectionValidator.validateSnapshots(order, orderItems, orderItemOptions);
@@ -519,12 +527,12 @@ public class OrderServiceImpl implements OrderService {
         if (ORDER_STATUS_READY.equals(order.status)) {
             publishOrderEvent("order.ready", order, null, null, null);
         }
-        printDispatcherService.dispatchAfterCommit(PrintModuleCode.GRAB, order.store_id, order.id);
-        if (!order.kitchenMirror())
-            printDispatcherService.dispatchAfterCommit(PrintModuleCode.FRONTDESK_RECEIPT, order.store_id, order.id);
-        if (printDispatcherService.hasPrintableContent(PrintModuleCode.HOT_KITCHEN, order.store_id, order.id)) {
-            printDispatcherService.dispatchAfterCommit(PrintModuleCode.HOT_KITCHEN, order.store_id, order.id);
-        }
+        boolean configuredKitchen = !order.kitchenMirror() && templateRouting != null && templateRouting.enabled(order.store_id);
+        if (configuredKitchen) templateRouting.enqueue(order,null,orderItems,orderItemOptions);
+        else printDispatcherService.dispatchAfterCommit(PrintModuleCode.GRAB,order.store_id,order.id);
+        if (!order.kitchenMirror()) printDispatcherService.dispatchAfterCommit(PrintModuleCode.FRONTDESK_RECEIPT,order.store_id,order.id);
+        if (!configuredKitchen && printDispatcherService.hasPrintableContent(PrintModuleCode.HOT_KITCHEN,order.store_id,order.id))
+            printDispatcherService.dispatchAfterCommit(PrintModuleCode.HOT_KITCHEN,order.store_id,order.id);
         return loadOrderResponse(order.id);
     }
 
@@ -645,26 +653,12 @@ public class OrderServiceImpl implements OrderService {
         recalculateOrderStatusAfterSubmittedModification(order, now);
         publishOrderEvent("order.updated", order, null, null, null);
 
-        printDispatcherService.dispatchOrderUpdateAfterCommit(
-            PrintModuleCode.GRAB,
-            order.store_id,
-            order.id,
-            batch.id
-        );
-        printDispatcherService.dispatchOrderUpdateAfterCommit(
-            PrintModuleCode.FRONTDESK_RECEIPT,
-            order.store_id,
-            order.id,
-            batch.id
-        );
-        if (printDispatcherService.hasPrintableUpdateContent(PrintModuleCode.HOT_KITCHEN, order.store_id, order.id, batch.id)) {
-            printDispatcherService.dispatchOrderUpdateAfterCommit(
-                PrintModuleCode.HOT_KITCHEN,
-                order.store_id,
-                order.id,
-                batch.id
-            );
-        }
+        boolean configuredKitchen = templateRouting != null && templateRouting.enabled(order.store_id);
+        if(configuredKitchen) templateRouting.enqueue(order,batch.id,addedItems,addedOptions);
+        else printDispatcherService.dispatchOrderUpdateAfterCommit(PrintModuleCode.GRAB,order.store_id,order.id,batch.id);
+        printDispatcherService.dispatchOrderUpdateAfterCommit(PrintModuleCode.FRONTDESK_RECEIPT,order.store_id,order.id,batch.id);
+        if(!configuredKitchen && printDispatcherService.hasPrintableUpdateContent(PrintModuleCode.HOT_KITCHEN,order.store_id,order.id,batch.id))
+            printDispatcherService.dispatchOrderUpdateAfterCommit(PrintModuleCode.HOT_KITCHEN,order.store_id,order.id,batch.id);
         return buildOrderUpdateResponse(order.id, batch, false);
     }
 
@@ -1005,7 +999,9 @@ public class OrderServiceImpl implements OrderService {
         if (raw && (itemRequest.menu_item_id != null || !itemRequest.options.isEmpty()
                 || !"RAW_UBER_FALLBACK".equals(itemRequest.category_code_snapshot)))
             throw new BusinessException("Raw kitchen line cannot grant local menu or option identity");
+        if(templateMenus!=null && !raw)templateMenus.lockMenuIfEnabled(order.store_id);
         MenuItem menuItem = itemRequest.menu_item_id == null ? null : menuItemRepository.findById(itemRequest.menu_item_id).orElse(null);
+        if (templateMenus != null && !raw) templateMenus.validateSelection(order.store_id,itemRequest);
         if (menuItem != null) {
             validateMenuItemBelongsToStore(menuItem, order.store_id);
         } else if (!raw && (itemRequest.station_id_snapshot == null || itemRequest.category_code_snapshot == null
@@ -1166,6 +1162,15 @@ public class OrderServiceImpl implements OrderService {
                 orderItemOption.option_code_snapshot = menuItemOption.option_code;
                 orderItemOption.option_group_snapshot = comboSideParentOptionId == null ? "REMOVE" : "COMBO_SIDE_REMOVE";
                 orderItemOption.price_delta = BigDecimal.ZERO;
+            }
+            if(menuItemOption != null && menuItemOption.template_group_code != null) {
+                orderItemOption.option_type_snapshot=menuItemOption.option_type;
+                orderItemOption.option_code_snapshot=menuItemOption.option_code;
+                orderItemOption.option_group_snapshot=menuItemOption.option_group;
+                orderItemOption.parent_option_id_snapshot=menuItemOption.parent_option_id;
+                orderItemOption.option_name_snapshot_zh=menuItemOption.name_zh;
+                orderItemOption.option_name_snapshot_en=menuItemOption.name_en;
+                orderItemOption.price_delta=menuItemOption.price_delta;
             }
             savedOptions.add(orderItemOptionRepository.save(orderItemOption));
         }

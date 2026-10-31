@@ -66,6 +66,12 @@ public class MenuItemOption {
     @Column(name = "store_remove_store_id")
     public Long store_remove_store_id;
 
+    @Column(name = "template_group_code")
+    public String template_group_code;
+
+    @Column(name = "template_default")
+    public boolean template_default;
+
     @Column(name = "created_at")
     public LocalDateTime created_at;
 

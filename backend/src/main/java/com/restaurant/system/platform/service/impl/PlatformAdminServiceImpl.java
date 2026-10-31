@@ -56,6 +56,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PlatformAdminServiceImpl implements PlatformAdminService {
 
+    @org.springframework.beans.factory.annotation.Value("$" + "{app.template.enabled:false}")
+    private boolean templateEnabled;
+
     private static final Pattern NATURAL_CODE_PATTERN = Pattern.compile("^([A-Za-z]+)?\\s*(\\d+)?(.*)$");
     static final String LEGACY_STORE_CREATION_DISABLED =
         "LEGACY_PLATFORM_STORE_CREATION_DISABLED_USE_PHASE_B_PROVISIONING";
@@ -444,6 +447,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         MenuItem target = creating
             ? new MenuItem()
             : menuItemRepository.findById(menuItem.id).orElseThrow(() -> new BusinessException("Menu item not found"));
+        if(menuItem.id==null && templateEnabled) target.template_option_groups_enabled=true;
         if (!creating && !java.util.Objects.equals(sampledStoreId, target.store_id)) {
             throw new BusinessException("Menu item Store changed during update; reload the item and retry.");
         }

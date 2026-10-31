@@ -2233,3 +2233,21 @@ second menu catalog. Prefix compatibility preserves distinct ingredient/operatio
 semantics; proposals never choose among conflicting custom aliases. Draft/validate/
 publish/preview endpoints remain the only rule mutation workflow. No-op proposals
 need no revision. Rule edits affect future renderings, not frozen Print Job text.
+
+
+## Template management (M0/M1 Test candidate, 2026-10-31)
+
+All endpoints use the existing ApiResponse envelope and bearer authentication. Base /api/v1/stores/{storeId}/template. Owner/Manager require actual Store access and existing management capabilities; foreign Item/Category/Printer identities are rejected. Frontdesk may read authorized Store printing diagnostics. The process flag app.template.enabled is required (default false).
+
+| Method | Relative path | Contract |
+| --- | --- | --- |
+| GET/PUT | /option-library | {groups:[group]} library; immutable copies become per-item leaves |
+| GET/PUT | /items/{itemId}/option-groups | Atomic complete group bindings/sort/defaults; canonical Option IDs and menu_revision returned |
+| GET/PUT | /kitchen-routing | {enabled,revision,groups,item_overrides}; writes audited, MOCK-only |
+| GET | /printers | Authorized Store mock-device choices, no endpoint values |
+| POST | /kitchen-routing/preview | Existing menu_item_id/quantity/options input; tickets/rendered_text/coverage/source versions; zero Order/Outbox/Job writes |
+| GET | /printing-diagnostics?order_id=&batch_id= | Persistent expected intents, optional Job, status/reason/real rendered snapshot; no execution or retry side effect |
+
+Group: group_instance_code,name,kind(SPICY_LEVEL/ADD_ON/REMOVE/SIZE/CUSTOM/COMBO),selection_mode(SINGLE/MULTIPLE),required,is_active,sort_order,default_option_ids,options(existing leaf fields plus is_default). COMBO is metadata-only and delegates existing components. Item catalog option_groups=null means legacy; [] means explicit no-group mode and Quick Add. Required/single/default/price/Store checks remain server-authoritative; there is no new multi-select business maximum or general rules engine.
+
+Routing groups: group_code,name,enabled,sort_order,category_ids,item_ids,combo_component_codes,logical_target,printer_id,optional clearly marked MOCK failure injection. Item overrides use menu_item_id/group_codes. Multiple logical groups sharing a device remain separate. Diagnostics expose intent_id/source_key/order_id/order_update_batch_id/group_code/group_name/logical_target/job_id(nullable)/state/reason/error_code/rendered_text/menu_revision/routing_revision/execution_mode. No job is never PRINTED. Frozen new event identity uses distinct group vs diagnostic namespaces; the existing queue and deduplication engine are reused.

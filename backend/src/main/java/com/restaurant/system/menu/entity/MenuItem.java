@@ -61,6 +61,9 @@ public class MenuItem {
     @Column(name = "default_combo_egg_component_code", length = 120)
     public String default_combo_egg_component_code;
 
+    @Column(name = "template_option_groups_enabled")
+    public boolean template_option_groups_enabled;
+
     @Column(name = "created_at")
     public LocalDateTime created_at;
 

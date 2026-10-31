@@ -1,3 +1,5 @@
+import type { TemplateOptionGroup } from '../services/templatePlatformService'
+
 export interface LocalizedText {
   en: string
   zh: string
@@ -59,6 +61,8 @@ export interface MenuItemCustomizationConfig {
 }
 
 export interface MenuItem {
+  /** Undefined keeps the legacy customization path; [] explicitly enables group-free ordering. */
+  optionGroups?: TemplateOptionGroup[]
   id: string
   sku?: string
   sortOrder?: number | null
@@ -90,6 +94,7 @@ export interface OrderLineOptionSnapshot {
 }
 
 export interface ItemSelectionState {
+  groupSelections?: Record<string, Record<string, number>>
   sizeId?: string
   soupBaseId?: string
   noodleTypeId?: string
@@ -216,6 +221,7 @@ export interface BackendMenuCategory {
 }
 
 export interface BackendMenuItem {
+  option_groups?: TemplateOptionGroup[] | null
   id: number
   category_id: number
   station_id: number
