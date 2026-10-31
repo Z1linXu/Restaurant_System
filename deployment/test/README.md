@@ -77,7 +77,7 @@ Root负责Test fixture账号合同、禁用历史默认登录、MOCK守卫与Own
 
 先完成Test本地健康、认证/Scope、MOCK及公共/ws拒绝测试，再由Root审阅本步骤。只追加带明确marker的Test vhost；现有default/Production/Staging块字节保持。共享入口reload是获授权的唯一共享运行变更，**不能声称共享Nginx完全未变**；旧应用/DB不部署、不重启。
 
-1. `edge-http`复用已有Production operations与Staging hygiene共享flock（只持锁，不重写锁字节），并持受控`O_NOFOLLOW`源fd；校验源pathname/bind-mount inode和生效inode、双方摘要匹配expected值，保存私有原始配置。现有nginx经stdin验证candidate、旧入口HEAD后，**立即在写前再次CAS核对inode与内容**。source/effective均保留inode原地写，再`nginx -t`及graceful reload。Test HTTP只开放ACME，其余503。
+1. `edge-http`复用已有Production operations与Staging hygiene共享flock（只持锁，不重写锁字节），并持受控`O_NOFOLLOW`源fd；校验源pathname/bind-mount inode和生效inode、双方摘要匹配expected值，保存私有原始配置。candidate仅经stdin写入edge容器内新建的私有临时普通文件，现有nginx对该绝对路径执行校验、旧入口HEAD后，**立即在写前再次CAS核对inode与内容**。source/effective均保留inode原地写，再`nginx -t`及graceful reload。Test HTTP只开放ACME，其余503。
 2. `issue-cert`只对`test.lanzhounoodlesmtl.com`执行webroot certonly，独立cert-name；显式`--config /dev/null --no-directory-hooks`及空pre/post/deploy hooks，不能继承宿主ini或目录Hooks。无nginx插件/standalone/旧证书替换/服务重启。ACME工作/日志在私有Test目录，证书留共享edge已有只读证书树。不上载私钥，不把证书密钥放Test应用容器。
 3. `edge-https`使用第一步输出的新hash重验，再追加Test TLS和80→HTTPS；proxy只到受限Test relay。未知SNI原拒绝规则不变，Host/SNI不匹配421，/ws403。验证公共HTTPS（禁止-k/--insecure/--resolve）、静态资产、SPA、登录与API。
 
@@ -88,7 +88,9 @@ ssh restaurant-prod "python3 /srv/restaurant-pos/test/releases/<SHA>/remote.py i
 ssh restaurant-prod "python3 /srv/restaurant-pos/test/releases/<SHA>/remote.py edge-https --sha <SHA> --apply-tested-candidate <SHA> --shared-entry-reviewed --expected-edge-sha256 <HTTP_STEP_HASH>"
 ```
 
-安全说明：pre-validation用 `docker exec -i cloud-nginx-1 nginx -t -c /dev/stdin`，不写candidate临时文件、不另建含旧secret的验证容器；重载后比较旧入口HEAD状态与容器身份。此步骤仍需真正执行才有PASS，静态测试不能证明其线上行为。
+安全说明：pre-validation在现有edge中以`umask 077`和固定`/tmp/restaurant-template-nginx.XXXXXX`前缀`mktemp -d`新建0700目录，stdin写入其中0600的`candidate.conf`，执行`nginx -t -c <绝对普通文件路径>`。不使用`/dev/stdin`作配置文件；不输出candidate或nginx诊断，不复制配置出容器。成功、失败及受控信号退出均通过trap只删除本次精确candidate文件并rmdir本次目录，绝不递归删除其他目录。重载后比较旧入口HEAD状态与容器身份；真实nginx及共享入口验证仍须实际执行，本地shell测试不证明线上PASS。
+
+若已封存且健康的应用仅需修复运维helper，可将独立审查后的新helper放入`/srv/restaurant-pos/test/operations/<TOOL_SHA>/remote.py`，以原封存`APP_SHA`调用入口动作；`verify_release`仍校验`releases/<APP_SHA>`，不覆盖旧release、不执行`deploy`、不重建或重启应用。证据须分别记录实际应用SHA、独立Tool Commit与helper文件摘要，不能将Tool SHA冒充应用版本。
 
 异常回退同样受CAS约束：仅同一受控inode且内容仍为本次old/candidate（源文件另允许本次已计数写入可证明的半写状态）才能恢复；第三方内容/rename/不可证明的effective半写均fail closed，保留备份并报告，不盲目回写旧值。共享锁要求其他已review运维工具遵守同一锁，不能声称可阻止恶意root绕锁修改。
 

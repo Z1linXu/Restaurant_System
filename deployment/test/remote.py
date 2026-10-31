@@ -517,7 +517,17 @@ def edge_block(tls):
 
 def validate_edge(data):
     wrapper = b'worker_processes 1; error_log stderr; events {} http { include /etc/nginx/mime.types;\n' + data + b'\n}'
-    run(['docker', 'exec', '-i', EDGE, 'nginx', '-t', '-c', '/dev/stdin'], wrapper)
+    script = '''set -eu
+umask 077
+directory=$(mktemp -d /tmp/restaurant-template-nginx.XXXXXX)
+trap 'status=$?; trap - 0; rm -f -- "$directory/candidate.conf"; rmdir -- "$directory"; exit "$status"' 0
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+cat > "$directory/candidate.conf"
+nginx -t -c "$directory/candidate.conf" >/dev/null 2>&1
+'''
+    run(['docker', 'exec', '-i', EDGE, 'sh', '-c', script], wrapper)
 
 
 def head_status(url):

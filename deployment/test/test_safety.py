@@ -326,6 +326,79 @@ class RelayHealthTest(unittest.TestCase):
                 self.runtime(documents)
 
 
+class EdgeValidationFileTest(unittest.TestCase):
+    def test_candidate_uses_stdin_payload_and_private_regular_file_command(self):
+        candidate = b'server { listen 80; server_name synthetic.example; }'
+        with patch.object(remote, 'run', return_value=b'') as command:
+            remote.validate_edge(candidate)
+        args, payload = command.call_args.args
+        self.assertEqual(['docker', 'exec', '-i', remote.EDGE, 'sh', '-c'], args[:6])
+        self.assertEqual(7, len(args))
+        script = args[-1]
+        self.assertIn('umask 077', script)
+        self.assertIn('mktemp -d /tmp/restaurant-template-nginx.XXXXXX', script)
+        self.assertIn('rm -f -- "$directory/candidate.conf"; rmdir -- "$directory"', script)
+        self.assertNotIn('rm -r', script)
+        self.assertIn('nginx -t -c "$directory/candidate.conf" >/dev/null 2>&1', script)
+        self.assertNotIn('/dev/stdin', script)
+        self.assertNotIn(candidate.decode(), script)
+        self.assertTrue(payload.startswith(b'worker_processes 1; error_log stderr; events {} http {'))
+        self.assertIn(candidate, payload)
+        self.assertEqual(0, subprocess.run(['sh', '-n', '-c', script], capture_output=True).returncode)
+
+    def validation_lifecycle(self, exit_status):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            record = root / 'observed.json'
+            sentinel = root / 'unrelated.conf'; sentinel.write_text('leave unchanged')
+            executable = root / 'nginx'
+            executable.write_text('''#!/usr/bin/env python3
+import hashlib,json,os,pathlib,stat,sys
+assert sys.argv[1:3] == ['-t','-c'] and len(sys.argv) == 4
+path=pathlib.Path(sys.argv[3])
+assert path.is_absolute() and path.is_file() and not path.is_symlink()
+record={'path':str(path),'directory_mode':stat.S_IMODE(path.parent.stat().st_mode),
+        'file_mode':stat.S_IMODE(path.stat().st_mode),'content_sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
+pathlib.Path(os.environ['TEST_NGINX_RECORD']).write_text(json.dumps(record))
+print('SYNTHETIC_DIAGNOSTIC_MUST_NOT_ESCAPE')
+print('SYNTHETIC_DIAGNOSTIC_MUST_NOT_ESCAPE',file=sys.stderr)
+sys.exit(int(os.environ['TEST_NGINX_EXIT']))
+''')
+            executable.chmod(0o700)
+            observed = {}
+            def execute(args, data=None):
+                observed['payload'] = data
+                process = subprocess.run(['sh', '-c', args[-1]], input=data, capture_output=True,
+                    env={'PATH': str(root) + os.pathsep + os.environ['PATH'],
+                         'TEST_NGINX_RECORD': str(record), 'TEST_NGINX_EXIT': str(exit_status)})
+                self.assertEqual(exit_status, process.returncode)
+                self.assertEqual(b'', process.stdout)
+                self.assertEqual(b'', process.stderr)
+                if process.returncode: raise RuntimeError('Candidate validation failed')
+                return process.stdout
+            with patch.object(remote, 'run', side_effect=execute):
+                if exit_status:
+                    with self.assertRaisesRegex(RuntimeError, 'validation failed'):
+                        remote.validate_edge(b'server { listen 80; server_name synthetic.example; }')
+                else:
+                    remote.validate_edge(b'server { listen 80; server_name synthetic.example; }')
+            evidence = json.loads(record.read_text())
+            candidate = Path(evidence['path'])
+            self.assertTrue(str(candidate.parent).startswith('/tmp/restaurant-template-nginx.'))
+            self.assertEqual(0o700, evidence['directory_mode'])
+            self.assertEqual(0o600, evidence['file_mode'])
+            self.assertEqual(remote.sha256(observed['payload']), evidence['content_sha256'])
+            self.assertFalse(candidate.exists())
+            self.assertFalse(candidate.parent.exists())
+            self.assertEqual('leave unchanged', sentinel.read_text())
+
+    def test_success_cleans_only_private_validation_file_and_directory(self):
+        self.validation_lifecycle(0)
+
+    def test_nginx_failure_preserves_failure_status_and_cleans_private_directory(self):
+        self.validation_lifecycle(42)
+
+
 class EdgeCASTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
