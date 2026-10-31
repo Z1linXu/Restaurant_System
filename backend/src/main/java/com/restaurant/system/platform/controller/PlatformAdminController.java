@@ -44,6 +44,15 @@ public class PlatformAdminController {
     private final FeatureFlagService featureFlagService;
     private final AuditLogService auditLogService;
     private final StoreModuleAccessEvaluator moduleAccessEvaluator;
+    private com.restaurant.system.common.auth.StoreAccessService overviewStoreAccess;
+    private com.restaurant.system.common.auth.RoleCapabilityRegistry overviewRoles;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setOverviewScope(com.restaurant.system.common.auth.StoreAccessService access,
+        com.restaurant.system.common.auth.RoleCapabilityRegistry roles) {
+        this.overviewStoreAccess = access;
+        this.overviewRoles = roles;
+    }
 
     public PlatformAdminController(
         PlatformAdminService platformAdminService,
@@ -61,9 +70,22 @@ public class PlatformAdminController {
 
     @GetMapping("/overview")
     public ApiResponse<PlatformAdminOverviewResponse> getOverview(@RequestParam Long store_id) {
-        authorizationService.requireForStore(store_id, Capability.ADMIN_STORE_CONFIG, Capability.ADMIN_USER_ROLE_MANAGE);
+        var user = authorizationService.requireForStore(store_id, Capability.ADMIN_STORE_CONFIG, Capability.ADMIN_USER_ROLE_MANAGE);
         requireStoreAdministration(store_id);
-        return ApiResponse.success(platformAdminService.getOverview(store_id));
+        var overview = platformAdminService.getOverview(store_id);
+        if (!overviewRoles.isAdmin(user.roleCode())) {
+            var storeIds = overviewStoreAccess.accessibleStores(user).stream().map(store -> store.id)
+                .collect(java.util.stream.Collectors.toSet());
+            var organizationIds = overviewStoreAccess.accessibleOrganizations(user).stream().map(org -> org.id)
+                .collect(java.util.stream.Collectors.toSet());
+            overview.stores = overview.stores.stream().filter(store -> storeIds.contains(store.id)).toList();
+            overview.organizations = overview.organizations.stream().filter(org -> organizationIds.contains(org.id)).toList();
+            // No implicit sharing for unowned/global or cross-Store template configuration.
+            overview.templates = overview.templates.stream().filter(template -> template.organization_id != null
+                && organizationIds.contains(template.organization_id)
+                && (template.source_store_id == null || storeIds.contains(template.source_store_id))).toList();
+        }
+        return ApiResponse.success(overview);
     }
 
     @GetMapping("/organizations")

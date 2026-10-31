@@ -66,6 +66,7 @@ class Client:
         self.requests += 1
         try:
             with self.opener.open(request, timeout=25) as response:
+                self.last_response_status = response.status
                 self.last_response_headers = {key.lower(): value for key, value in response.headers.items()}
                 if not envelope:
                     response.read()
@@ -189,6 +190,19 @@ class Acceptance:
         if not self.printers or not all(printer["name"].startswith("SYNTHETIC MOCK") for printer in self.printers):
             raise AssertionError("Safety guard: expected endpoint-free synthetic MOCK printer choices")
         return {"store_id": self.store, "organization_id": self.org, "foreign_store_id": self.foreign, "roles": ["OWNER", "MANAGER"]}
+
+    def scoped_platform_overview(self, client):
+        overview = client.call("GET", f"/api/v1/admin/platform/overview?store_id={self.store}")
+        equal(client.last_response_status, 200, "Own-store platform overview HTTP status")
+        equal(sorted(row["id"] for row in overview["stores"]), [self.store], "Platform overview must expose only this actor's synthetic Store")
+        equal(sorted(row["id"] for row in overview["organizations"]), [self.org], "Platform overview must expose only this actor's Organization")
+        templates = overview["templates"]
+        if not isinstance(templates, list):
+            raise AssertionError("Platform overview templates must be a scoped list")
+        if any(row.get("organization_id") != self.org or row.get("source_store_id") not in (None, self.store) for row in templates):
+            raise AssertionError("Platform overview leaked a foreign/global-default template or foreign source Store")
+        return {"store_ids": [self.store], "organization_ids": [self.org], "template_count": len(templates),
+                "templates_have_actor_org_and_null_or_own_source_store": True, "http_status": client.last_response_status}
 
     def create_item(self, label, category, station, price, client=None):
         body = {"store_id": self.store, "category_id": self.categories[category], "station_id": self.stations[station],
@@ -747,6 +761,10 @@ class Acceptance:
     def run(self):
         if not self.case("auth_and_synthetic_environment_guard", self.setup):
             return
+        for role, client in (("owner", self.owner), ("manager", self.manager)):
+            self.case(role + "_platform_overview_metadata_scoped", lambda client=client: self.scoped_platform_overview(client))
+            self.case(role + "_platform_overview_foreign_store_forbidden", lambda client=client: self.rejected(
+                lambda: client.call("GET", f"/api/v1/admin/platform/overview?store_id={self.foreign}"), (403,)))
         self.case("anonymous_management_rejected", lambda: self.rejected(lambda: self.anonymous.call("GET", self.path("option-library")), (401,)))
         for origin in ("http://127.0.0.1:28080", "https://test.lanzhounoodlesmtl.com"):
             self.case("exact_browser_origin_login_" + ("local" if "127.0.0.1" in origin else "test_https"), lambda origin=origin: self.cors(origin, True))
