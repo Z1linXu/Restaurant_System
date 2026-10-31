@@ -11,14 +11,28 @@ public class TemplateComboAdapter {
  public record Component(Long virtualId,String group,String code,String name,Long linkedItemId,String behavior) {}
  private static final Map<Long,String> CODES=Map.of(-20101L,"combo_tea_egg",-20102L,"combo_fried_egg",-20201L,"combo_edamame",-20202L,"combo_shredded_potato",-20203L,"combo_cucumber_salad");
  private final StoreComboConfigurationService combos;
- public TemplateComboAdapter(StoreComboConfigurationService combos){this.combos=combos;}
+ private final com.restaurant.system.menu.repository.MenuItemRepository items;
+ private final com.restaurant.system.station.repository.StationRepository stations;
+ public TemplateComboAdapter(StoreComboConfigurationService combos,com.restaurant.system.menu.repository.MenuItemRepository items,
+   com.restaurant.system.station.repository.StationRepository stations){this.combos=combos;this.items=items;this.stations=stations;}
  public Component resolve(Long store,CreateOrderItemOptionRequest option){
   String code=CODES.get(option.option_id);
   if(code==null)throw new BusinessException("COMBO_VIRTUAL_OPTION_INVALID");
   for(var group:combos.getConfiguration(store).groups) for(var c:group.components) if(code.equals(c.component_code)){
    if(!Boolean.TRUE.equals(group.enabled)||!Boolean.TRUE.equals(c.enabled))throw new BusinessException("COMBO_COMPONENT_DISABLED");
-   if(option.option_code_snapshot!=null&&!code.equals(option.option_code_snapshot))throw new BusinessException("COMBO_VIRTUAL_CODE_MISMATCH");
-   if(option.option_group_snapshot!=null&&!group.component_group.equals(option.option_group_snapshot))throw new BusinessException("COMBO_VIRTUAL_GROUP_MISMATCH");
+   if(!code.equals(option.option_code_snapshot))throw new BusinessException("COMBO_VIRTUAL_CODE_MISMATCH");
+   if(!group.component_group.equals(option.option_group_snapshot))throw new BusinessException("COMBO_VIRTUAL_GROUP_MISMATCH");
+   // The mature task writer implements these stable sides as COLD tasks and eggs as modifiers.
+   // Reject unsupported mappings at this new boundary rather than silently disagreeing with it.
+   boolean side="COMBO_SIDE".equals(group.component_group);
+   if(side ? !"LEGACY_COMBO_SIDE_TASK".equals(c.business_behavior) : !"NO_KITCHEN_TASK".equals(c.business_behavior))
+     throw new BusinessException("TEMPLATE_COMBO_BEHAVIOR_UNSUPPORTED");
+   if(side && c.linked_menu_item_id!=null){
+    var item=items.findById(c.linked_menu_item_id).orElseThrow(()->new BusinessException("COMBO_COMPONENT_MAPPING_INVALID"));
+    var station=stations.findActiveStationByIdAndStoreId(item.station_id,store);
+    if(!Objects.equals(item.store_id,store)||!Boolean.TRUE.equals(item.is_active)||Boolean.TRUE.equals(item.is_sold_out)
+       ||station==null||!"COLD".equals(station.code))throw new BusinessException("TEMPLATE_COMBO_REQUIRES_COLD_LINKED_ITEM");
+   }
    if(option.option_price_snapshot!=null&&option.option_price_snapshot.signum()!=0)throw new BusinessException("COMBO_COMPONENT_PRICE_INVALID");
    if(option.quantity==null||option.quantity!=1)throw new BusinessException("COMBO_COMPONENT_QUANTITY_INVALID");
    return new Component(option.option_id,group.component_group,code,c.name_zh==null?c.name_en:c.name_zh,c.linked_menu_item_id,c.business_behavior);

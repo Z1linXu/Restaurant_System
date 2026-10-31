@@ -1,4 +1,5 @@
 import { apiRequest } from './apiClient'
+import type { OrderOptionPayload } from '../utils/orderPricing'
 
 export interface TemplateOption {
   id?: number
@@ -54,7 +55,7 @@ export interface KitchenRoutingConfig {
 
 export interface TemplatePrinter { id: number; name: string; is_active: boolean }
 export interface RoutingDiagnostic { code: string; message: string; source_key?: string | null }
-export interface KitchenPreviewItem { menu_item_id: number; quantity: number; options: { option_id: number; quantity: number }[] }
+export interface KitchenPreviewItem { menu_item_id: number; quantity: number; options: OrderOptionPayload[] }
 export interface KitchenRoutingPreview {
   tickets: {
     group_code: string

@@ -1,0 +1,9 @@
+ARG JRE_BASE
+FROM ${JRE_BASE}
+ARG CODE_SHA
+LABEL org.opencontainers.image.revision=${CODE_SHA}
+WORKDIR /app
+COPY --chown=10001:10001 app.jar /app/app.jar
+USER 10001:10001
+EXPOSE 8080
+ENTRYPOINT ["java","-Xms64m","-Xmx224m","-XX:MaxMetaspaceSize=144m","-XX:ReservedCodeCacheSize=32m","-XX:MaxDirectMemorySize=16m","-XX:+UseSerialGC","-XX:ActiveProcessorCount=1","-Djava.io.tmpdir=/tmp","-jar","/app/app.jar"]

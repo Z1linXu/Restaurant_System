@@ -1,0 +1,13 @@
+{
+  "observed_at": "2026-10-31",
+  "platform": "linux/amd64",
+  "jre": "eclipse-temurin@sha256:ffa8e6c3d7a01feaa427587fe53402c29704d39915bb65f840cc2f262deeba62",
+  "nginx": "nginx@sha256:84ed8c0dd296c188bfc24ed506f46589e9285fb0b11cf3a04d91d524d3067e11",
+  "postgres": "postgres@sha256:cbf42f0edc946c0bc1b8eeed62403734e1f25dc67a3491455d07a92fdb558b28",
+  "source": "Docker Official Images registry manifests read with docker buildx imagetools inspect; tags 17-jre-jammy / stable-alpine / 16-alpine; exact amd64 child manifests, not application images",
+  "upstream_sources": [
+    "https://github.com/adoptium/containers/tree/511f9356dc4d50932a0a5f8cfb0f87ed1aef4f07/17/jre/ubuntu/jammy",
+    "https://github.com/nginx/docker-nginx/tree/4b9f658be76820b24e4ef4605413a5c08707a512/stable/alpine",
+    "https://github.com/docker-library/postgres/tree/9d15534160ade17f2b6c455a39ee967c49b1937d/16/alpine3.24"
+  ]
+}

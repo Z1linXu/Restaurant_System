@@ -1,0 +1,97 @@
+name: restaurant-template-test
+services:
+  db:
+    image: ${TEST_DB_IMAGE:?fixed official digest required}
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.25
+    pids_limit: 100
+    environment:
+      POSTGRES_DB: restaurant_template_test
+      POSTGRES_USER: template_test
+      POSTGRES_PASSWORD: ${TEST_DB_PASSWORD:?private Test password required}
+    command: [postgres, -c, shared_buffers=16MB, -c, max_connections=20, -c, work_mem=1MB, -c, maintenance_work_mem=16MB]
+    volumes: [test_postgres:/var/lib/postgresql/data]
+    networks: [test_internal]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U template_test -d restaurant_template_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    logging: &logging
+      driver: json-file
+      options: {max-size: 2m, max-file: '2'}
+  backend:
+    image: restaurant-template-test-backend:${TEST_IMAGE_SHA:?exact SHA required}
+    restart: 'on-failure:3'
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    cpus: 0.75
+    pids_limit: 160
+    tmpfs: [/tmp:size=64m,mode=1777]
+    environment:
+      SPRING_PROFILES_ACTIVE: template-test
+      APP_BUILD_SHA: ${TEST_IMAGE_SHA:?exact SHA required}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/restaurant_template_test
+      SPRING_DATASOURCE_USERNAME: template_test
+      SPRING_DATASOURCE_PASSWORD: ${TEST_DB_PASSWORD:?required}
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '4'
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: '1'
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_FLYWAY_ENABLED: 'true'
+      APP_AUTH_JWT_SECRET: ${TEST_JWT_SECRET:?new Test secret required}
+      JWT_SECRET: ${TEST_JWT_SECRET:?required}
+      APP_AUTH_X_USER_ID_FALLBACK_ENABLED: 'false'
+      APP_SEED_RUNTIME_ENABLED: 'false'
+      APP_SEED_DEFAULT_USERS_ENABLED: 'false'
+      APP_SEED_DEMO_DATA_ENABLED: 'false'
+      APP_SEED_MEMBERSHIP_SUPPLEMENT_ENABLED: 'false'
+      APP_SEED_PRODUCTION_BOOTSTRAP_ENABLED: 'false'
+      TEMPLATE_TEST_ENABLED: 'true'
+      TEMPLATE_TEST_MOCK_ONLY: 'true'
+      TEMPLATE_TEST_OWNER_PASSWORD: ${TEMPLATE_TEST_OWNER_PASSWORD:?new Test account required}
+      TEMPLATE_TEST_MANAGER_PASSWORD: ${TEMPLATE_TEST_MANAGER_PASSWORD:?new Test account required}
+    depends_on:
+      db: {condition: service_healthy}
+    networks: [test_internal]
+    logging: *logging
+  frontend:
+    image: restaurant-template-test-frontend:${TEST_IMAGE_SHA:?exact SHA required}
+    restart: 'on-failure:3'
+    read_only: true
+    user: '101:101'
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 32m
+    cpus: 0.15
+    pids_limit: 32
+    tmpfs: [/tmp:size=8m,mode=1777]
+    ports: ['127.0.0.1:28080:8080']
+    depends_on: [backend]
+    networks: [test_internal]
+    logging: *logging
+  relay:
+    image: ${TEST_NGINX_IMAGE:?fixed official digest required}
+    entrypoint: [nginx, -c, /etc/nginx/nginx.conf, -g, 'daemon off;']
+    restart: 'on-failure:3'
+    network_mode: host
+    read_only: true
+    user: '101:101'
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 16m
+    cpus: 0.10
+    pids_limit: 24
+    tmpfs: [/tmp:size=8m,mode=1777]
+    volumes: ['./relay.conf:/etc/nginx/nginx.conf:ro']
+    logging: *logging
+networks:
+  test_internal:
+    name: restaurant-template-test_internal
+    internal: true
+volumes:
+  test_postgres:
+    name: restaurant-template-test_postgres

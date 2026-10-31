@@ -317,6 +317,9 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
     }
 
     private void rejectSystemControlledPricingWrite(MenuItemOption option) {
+        if (option != null && option.template_group_code != null) {
+            throw new BusinessException("TEMPLATE_GROUP_OPTIONS_MANAGED_IN_GROUP_EDITOR");
+        }
         if (option != null && option.store_remove_id != null) {
             throw new BusinessException("REMOVE options are managed by the Store Remove catalog.");
         }

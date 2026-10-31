@@ -1,0 +1,10 @@
+ARG NGINX_BASE
+FROM ${NGINX_BASE}
+ARG CODE_SHA
+LABEL org.opencontainers.image.revision=${CODE_SHA}
+COPY --chown=101:101 dist/ /usr/share/nginx/html/
+COPY --chown=101:101 code-sha.txt /usr/share/nginx/html/test-code-sha
+COPY --chown=101:101 nginx.conf /etc/nginx/nginx.conf
+USER 101:101
+EXPOSE 8080
+ENTRYPOINT ["nginx","-c","/etc/nginx/nginx.conf","-g","daemon off;"]

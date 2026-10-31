@@ -59,7 +59,7 @@ export function KitchenRoutingPanel({ storeId, canManage }: { storeId: number; c
         if (!item) throw new Error('Please reload the menu / 请刷新菜单')
         const invalid = templateSelectionError(item, draft)
         if (invalid) throw new Error(`${item.nameZh || item.nameEn}: ${invalid}`)
-        return { menu_item_id: Number(id), quantity: draft.quantity, options: mapOptions(draft, item).map(({ option_id, quantity }) => ({ option_id, quantity })) }
+        return { menu_item_id: Number(id), quantity: draft.quantity, options: mapOptions(draft, item) }
       })
       if (!items.length) throw new Error('Choose preview items / 请选择预览菜品')
       setPreview(await previewKitchenRouting(storeId, { items }))

@@ -2,7 +2,7 @@ import type { ChoiceOption, ItemCustomizationDraft, MenuItem, OrderLineOptionSna
 import { resolveComboGroupOptionId } from './comboSelection'
 import { activeTemplateGroups, templateChoiceOption } from './templateCustomization'
 
-interface OrderOptionPayload {
+export interface OrderOptionPayload {
   option_id: number
   quantity: number
   option_type_snapshot?: string | null

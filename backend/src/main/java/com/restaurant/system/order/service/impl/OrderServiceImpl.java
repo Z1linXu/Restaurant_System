@@ -1166,8 +1166,8 @@ public class OrderServiceImpl implements OrderService {
             if(menuItemOption != null && menuItemOption.template_group_code != null) {
                 orderItemOption.option_type_snapshot=menuItemOption.option_type;
                 orderItemOption.option_code_snapshot=menuItemOption.option_code;
-                orderItemOption.option_group_snapshot=menuItemOption.option_group;
-                orderItemOption.parent_option_id_snapshot=menuItemOption.parent_option_id;
+                orderItemOption.option_group_snapshot=comboSideParentOptionId == null ? menuItemOption.option_group : "COMBO_SIDE_REMOVE";
+                orderItemOption.parent_option_id_snapshot=comboSideParentOptionId == null ? menuItemOption.parent_option_id : comboSideParentOptionId;
                 orderItemOption.option_name_snapshot_zh=menuItemOption.name_zh;
                 orderItemOption.option_name_snapshot_en=menuItemOption.name_en;
                 orderItemOption.price_delta=menuItemOption.price_delta;

@@ -38,6 +38,7 @@ import org.springframework.mock.env.MockEnvironment;
 
 class TemplateMenuServiceTest {
 
+    private final com.restaurant.system.menu.repository.MenuCategoryRepository categories = mock(com.restaurant.system.menu.repository.MenuCategoryRepository.class);
     private final MenuItemRepository items = mock(MenuItemRepository.class);
     private final MenuItemOptionRepository options = mock(MenuItemOptionRepository.class);
     private final TemplateItemOptionGroupRepository groups = mock(TemplateItemOptionGroupRepository.class);
@@ -55,6 +56,10 @@ class TemplateMenuServiceTest {
 
     @BeforeEach
     void setUp() {
+        when(categories.findById(anyLong())).thenAnswer(call -> {
+            long id=call.getArgument(0);var row=new com.restaurant.system.menu.entity.MenuCategory();
+            row.id=id;row.store_id=id/1000L;row.code="SYNTHETIC";return Optional.of(row);
+        });
         itemRows.put(10L, item(10L, 1L));
         itemRows.put(20L, item(20L, 1L));
         itemRows.put(30L, item(30L, 2L));
@@ -94,7 +99,7 @@ class TemplateMenuServiceTest {
             revision.get(), LocalDateTime.of(2026, 10, 31, 0, 0), "test", "ca-qc-tax-2026-01", "test"));
         doAnswer(call -> { revision.incrementAndGet(); return null; }).when(revisions).incrementRevision(anyLong());
         service = new TemplateMenuService(items, options, groups, configs, revisions, mapper,
-            new MockEnvironment().withProperty("app.template.enabled", "true"));
+            new MockEnvironment().withProperty("app.template.enabled", "true"), categories);
     }
 
     @Test
@@ -286,10 +291,26 @@ class TemplateMenuServiceTest {
 
     @Test
     void templateFeatureDisabledDoesNotManageLegacyItemsOrWriteNewGroups() {
-        TemplateMenuService disabled = new TemplateMenuService(items, options, groups, configs, revisions, mapper, new MockEnvironment());
+        TemplateMenuService disabled = new TemplateMenuService(items, options, groups, configs, revisions, mapper, new MockEnvironment(), categories);
         assertFalse(disabled.manages(itemRows.get(10L)));
         assertCode("TEMPLATE_FEATURE_DISABLED", () -> disabled.saveItem(1L, 10L, new Groups()));
         verify(items, never()).save(any());
+    }
+
+    @Test
+    void unknownOrNegativeItemCannotUseTrustedLookingCachedSnapshot() {
+        var request=new com.restaurant.system.order.dto.CreateOrderItemRequest();request.menu_item_id=9999L;
+        request.quantity=1;request.unit_price_snapshot=new BigDecimal("0.01");request.station_id_snapshot=100L;
+        assertCode("TEMPLATE_ITEM_NOT_FOUND",()->service.validateSelection(1L,request));
+        request.menu_item_id=-1L;assertCode("TEMPLATE_ITEM_NOT_FOUND",()->service.validateSelection(1L,request));
+    }
+
+    @Test
+    void categoryForgeryCannotSkipRequiredKitchenProduction() {
+        service.saveItem(1L,10L,new Groups());
+        var request=new com.restaurant.system.order.dto.CreateOrderItemRequest();request.menu_item_id=10L;request.quantity=1;
+        request.unit_price_snapshot=new BigDecimal("10.00");request.station_id_snapshot=100L;request.category_code_snapshot="DRINK";
+        assertCode("TEMPLATE_CATEGORY_MISMATCH",()->service.validateSelection(1L,request));
     }
 
     @Test
@@ -356,6 +377,7 @@ class TemplateMenuServiceTest {
         item.id = id;
         item.store_id = store;
         item.station_id = 100L;
+        item.category_id = store*1000L;
         item.base_price = new BigDecimal("10.00");
         item.is_active = true;
         item.is_sold_out = false;

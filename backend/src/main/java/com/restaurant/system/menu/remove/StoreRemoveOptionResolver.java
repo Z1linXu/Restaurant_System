@@ -43,6 +43,7 @@ public class StoreRemoveOptionResolver {
             if(row==null || !Objects.equals(row.store(),option.store_remove_store_id)) throw new BusinessException("REMOVE_REFERENCE_INVALID");
             MenuItemOption projection=new MenuItemOption();
             projection.id=option.id;projection.menu_item_id=option.menu_item_id;
+            projection.template_group_code=option.template_group_code;projection.template_default=option.template_default;
             projection.store_remove_id=option.store_remove_id;projection.store_remove_store_id=option.store_remove_store_id;
             projection.option_type=row.type();projection.option_group=row.group();projection.option_code=row.code();
             projection.name_zh=row.zh();projection.name_en=row.en();projection.sort_order=row.sort();

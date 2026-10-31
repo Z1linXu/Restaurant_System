@@ -79,6 +79,7 @@ public class TemplateRoutingService {
   menus.requireEnabled();if(request==null||request.items==null||request.items.size()>200)throw new BusinessException("PREVIEW_INPUT_INVALID");
   List<KitchenRoutingPlanner.SourceLine> lines=new ArrayList<>();int index=0;
   for(var input:request.items){
+   menus.validateSelection(storeId,input);
    var item=menus.requireItem(storeId,input.menu_item_id);if(input.quantity==null||input.quantity<1)throw new BusinessException("ITEM_QUANTITY_INVALID");
    List<KitchenRoutingPlanner.Instruction> instructions=new ArrayList<>();
    List<com.restaurant.system.order.dto.CreateOrderItemOptionRequest> selected=input.options==null?List.of():input.options;
@@ -162,7 +163,7 @@ public class TemplateRoutingService {
    var child=menus.requireItem(store,c.linkedItemId());List<KitchenRoutingPlanner.Instruction> instructions=new ArrayList<>();
    for(var remove:choices)if(Objects.equals(remove.parent_option_id_snapshot,choice.option_id)){
     var leaf=options.findById(remove.option_id).orElseThrow(()->new BusinessException("COMBO_REMOVE_NOT_FOUND"));
-    if(!Objects.equals(leaf.menu_item_id,child.id)||!"remove".equalsIgnoreCase(leaf.option_type))throw new BusinessException("COMBO_REMOVE_SCOPE_MISMATCH");
+    if(!Objects.equals(leaf.menu_item_id,child.id)||!"remove".equalsIgnoreCase(leaf.option_type)||!Boolean.TRUE.equals(leaf.is_active)||leaf.price_delta.signum()!=0)throw new BusinessException("COMBO_REMOVE_SCOPE_MISMATCH");
     instructions.add(new KitchenRoutingPlanner.Instruction(leaf.option_code,leaf.option_group,leaf.name_zh,remove.quantity));
    }
    sources.add(new KitchenRoutingPlanner.SourceLine(parent+":component:"+c.code(),parent,child.id,child.category_id,c.name(),Math.multiplyExact(quantity,choice.quantity),instructions,c.code()));
