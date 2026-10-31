@@ -42,9 +42,33 @@ class ComposeBoundaryTest(unittest.TestCase):
     def test_rendered_configuration_passes_guards(self):
         remote.validate_compose(self.model, SHA, HERE)
 
+    def test_real_compose_parser_keeps_each_tmpfs_mount_and_options_together(self):
+        for name, size in [('backend', '64m'), ('frontend', '8m'), ('relay', '8m')]:
+            with self.subTest(service=name):
+                mounts = self.model['services'][name]['tmpfs']
+                self.assertEqual(1, len(mounts), 'A YAML comma must not create an extra mount')
+                target, options = mounts[0].split(':', 1)
+                self.assertEqual('/tmp', target)
+                self.assertEqual({'size': size, 'mode': '1777'}, dict(value.split('=', 1) for value in options.split(',')))
+
     def rejected(self, mutate):
         model = copy.deepcopy(self.model); mutate(model)
         with self.assertRaises(ValueError): remote.validate_compose(model, SHA)
+
+    def test_split_yaml_tmpfs_mode_is_not_a_mount_path(self):
+        self.rejected(lambda m: m['services']['backend'].update(tmpfs=['/tmp:size=64m', 'mode=1777']))
+
+    def test_relative_tmpfs_mount_rejected(self):
+        self.rejected(lambda m: m['services']['frontend'].update(tmpfs=['tmp:size=8m,mode=1777']))
+
+    def test_unexpected_tmpfs_target_rejected(self):
+        self.rejected(lambda m: m['services']['relay'].update(tmpfs=['/var/cache:size=8m,mode=1777']))
+
+    def test_unexpected_tmpfs_size_rejected(self):
+        self.rejected(lambda m: m['services']['backend'].update(tmpfs=['/tmp:size=8m,mode=1777']))
+
+    def test_missing_tmpfs_mode_rejected(self):
+        self.rejected(lambda m: m['services']['frontend'].update(tmpfs=['/tmp:size=8m']))
 
     def test_public_frontend_bind_rejected(self):
         self.rejected(lambda m: m['services']['frontend']['ports'][0].update(host_ip='0.0.0.0'))

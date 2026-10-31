@@ -292,6 +292,14 @@ def validate_compose(model, sha, release_dir=None):
     services = model.get('services', {})
     if set(services) != {'db', 'backend', 'frontend', 'relay'}:
         raise ValueError('unexpected service')
+    expected_tmpfs = {'db': [], 'backend': ['/tmp:size=64m,mode=1777'],
+                      'frontend': ['/tmp:size=8m,mode=1777'], 'relay': ['/tmp:size=8m,mode=1777']}
+    for name, expected in expected_tmpfs.items():
+        mounts = services[name].get('tmpfs', [])
+        if not isinstance(mounts, list) or any(not isinstance(mount, str) or not mount.split(':', 1)[0].startswith('/') for mount in mounts):
+            raise ValueError('tmpfs mount paths must be absolute')
+        if mounts != expected:
+            raise ValueError('unexpected tmpfs target, size or mode for ' + name)
     if set(model.get('networks', {})) != {'test_internal'} or not model['networks']['test_internal'].get('internal'):
         raise ValueError('Test network must be internal only')
     if model['networks']['test_internal'].get('name') != PROJECT + '_internal':

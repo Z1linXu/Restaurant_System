@@ -31,7 +31,7 @@ services:
     mem_limit: 512m
     cpus: 0.75
     pids_limit: 160
-    tmpfs: [/tmp:size=64m,mode=1777]
+    tmpfs: ['/tmp:size=64m,mode=1777']
     environment:
       SPRING_PROFILES_ACTIVE: template-test
       APP_BUILD_SHA: ${TEST_IMAGE_SHA:?exact SHA required}
@@ -68,7 +68,7 @@ services:
     mem_limit: 32m
     cpus: 0.15
     pids_limit: 32
-    tmpfs: [/tmp:size=8m,mode=1777]
+    tmpfs: ['/tmp:size=8m,mode=1777']
     ports: ['127.0.0.1:28080:8080']
     depends_on: [backend]
     networks: [test_internal]
@@ -85,7 +85,7 @@ services:
     mem_limit: 16m
     cpus: 0.10
     pids_limit: 24
-    tmpfs: [/tmp:size=8m,mode=1777]
+    tmpfs: ['/tmp:size=8m,mode=1777']
     volumes: ['./relay.conf:/etc/nginx/nginx.conf:ro']
     logging: *logging
 networks:
