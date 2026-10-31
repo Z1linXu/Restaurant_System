@@ -77,3 +77,10 @@ Local private runtime and receipts are under .template-test-private/ (ignored, 0
 - All 147 protected files remain byte-identical to fixed source baseline. Deployment-only review repairs and 42 pure safety tests are under independent rereview; no remote mutation yet.
 
 Known scope limits: general Combo LINKED_MENU_ITEM behavior is unsupported by the new adapter while the mature task writer remains fixed COLD; custom zero-price groups appear in the new kitchen tickets but the protected legacy FRONTDESK renderer omits their individual instruction labels. Existing complete item/amount/tax/incremental receipt behavior is retained; this detail is reported PARTIAL, not silently rewritten or hidden in notes.
+
+### Integrated regression checkpoint — 2026-10-31 05:03 UTC
+
+- Full JDK21 `mvn -q verify` initially ran 1303 tests with 20 fixture/context errors (0 assertion failures): isolated Order JPA slice lacked new optional-feature dependency mocks, Addon hand-built H2 schema lacked the V40 marker column, and existing MenuRevisionLock slice lacked its preexisting realtime publisher mock. Repaired only fixture bean/schema setup, preserving all business assertions. Second full verify exit0: 1303 total, 1186 executed successful, 117 conditional external-Postgres tests skipped, 0 failures/errors. Original failing log preserved.
+- Frontend full suite: 71 files / 401 tests PASS, build PASS. Real local strict HTTP: 40/40 PASS, receipt http-local-review-complete.json; browser exact-Origin login and Spring Roll Quick Add without modal PASS. Final clean candidate adds a 41st null-linked Combo negative case; not yet called PASS.
+- Deployment Agent6 ACCEPT (11 files, 42/42 safety tests), frozen tree digest e4d3bed68e1220f4e8d1d10cb9dd59a38fa2fe1d3653c1655fdcfe9dc876a8d6. Product rereview found one remaining null-linked legacy-side gap; fixed by requiring a real linked COLD side at the new adapter boundary, with a focused regression and a real HTTP negative case. Mature Task logic unchanged.
+- Source freeze to build exact candidate follows this checkpoint. Remote deployment and domain acceptance remain NOT_RUN until actual execution.

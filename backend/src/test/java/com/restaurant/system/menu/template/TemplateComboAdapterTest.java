@@ -39,6 +39,7 @@ class TemplateComboAdapterTest {
  @Test void forgedCodeCannotBorrowStableVirtualId(){selected.option_code_snapshot="combo_edamame";assertThrows(BusinessException.class,()->adapter.resolve(1L,selected));}
  @Test void unsupportedNoTaskSideIsRejected(){component.business_behavior="NO_KITCHEN_TASK";assertThrows(BusinessException.class,()->adapter.resolve(1L,selected));}
  @Test void unsupportedGeneralLinkedTaskIsRejected(){component.business_behavior="LINKED_MENU_ITEM";assertThrows(BusinessException.class,()->adapter.resolve(1L,selected));}
+ @Test void unlinkedLegacySideCannotDisappearFromKitchenTickets(){component.linked_menu_item_id=null;assertThrows(BusinessException.class,()->adapter.resolve(1L,selected));}
  @Test void hotLinkedItemCannotDisagreeWithLegacyColdTask(){station.code="WOK";assertThrows(BusinessException.class,()->adapter.resolve(1L,selected));}
  @Test void unavailableLinkedItemCannotBeSelected(){when(stations.findActiveStationByIdAndStoreId(3L,1L)).thenReturn(null);assertThrows(BusinessException.class,()->adapter.resolve(1L,selected));}
 }

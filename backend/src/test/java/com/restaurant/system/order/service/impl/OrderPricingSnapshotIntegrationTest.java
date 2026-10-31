@@ -91,6 +91,8 @@ class OrderPricingSnapshotIntegrationTest {
     @MockBean private PrintDispatcherService printing;
     @MockBean private StoreComboConfigurationService comboConfiguration;
     @MockBean private PrintingDisplayRuleService printingRules;
+    @MockBean private com.restaurant.system.menu.template.TemplateMenuService templateMenus;
+    @MockBean private com.restaurant.system.printing.routing.TemplateRoutingService templateRouting;
     private Store store;
     private MenuItem item;
 

@@ -27,6 +27,7 @@ public class TemplateComboAdapter {
    boolean side="COMBO_SIDE".equals(group.component_group);
    if(side ? !"LEGACY_COMBO_SIDE_TASK".equals(c.business_behavior) : !"NO_KITCHEN_TASK".equals(c.business_behavior))
      throw new BusinessException("TEMPLATE_COMBO_BEHAVIOR_UNSUPPORTED");
+   if(side && c.linked_menu_item_id==null)throw new BusinessException("TEMPLATE_COMBO_LINKED_SIDE_REQUIRED");
    if(side && c.linked_menu_item_id!=null){
     var item=items.findById(c.linked_menu_item_id).orElseThrow(()->new BusinessException("COMBO_COMPONENT_MAPPING_INVALID"));
     var station=stations.findActiveStationByIdAndStoreId(item.station_id,store);

@@ -609,6 +609,38 @@ class Acceptance:
             if saved:
                 self.owner.call("PUT", path, {"store_id": self.store, "groups": original["groups"]})
 
+    def combo_legacy_side_requires_linked_item(self):
+        if not hasattr(self, "combo_line"):
+            raise AssertionError("Normal Combo fixture is required")
+        path = "/api/v1/admin/menu/combo-configuration"
+        original = self.owner.call("GET", path + f"?store_id={self.store}")
+        proposed = {"store_id": self.store, "groups": copy.deepcopy(original["groups"])}
+        side = next(group for group in proposed["groups"] if group["component_group"] == "COMBO_SIDE")
+        chosen = next(component for component in side["components"] if component["component_code"] == side["default_component_code"])
+        chosen["business_behavior"] = "LEGACY_COMBO_SIDE_TASK"
+        chosen["linked_menu_item_id"] = None
+        saved = False
+        before = self.observation()
+        try:
+            try:
+                self.owner.call("PUT", path, proposed)
+                saved = True
+            except ApiFault as error:
+                if error.status not in (400, 409, 422):
+                    raise
+                equal(self.observation(), before, "Unlinked legacy Combo side config rejection must not create business artifacts")
+                return {"behavior": "LEGACY_COMBO_SIDE_TASK", "linked_menu_item_id": None, "rejected_at": "configuration", "http_status": error.status}
+            line = copy.deepcopy(self.combo_line)
+            preview = self.rejected(lambda: self.owner.call("POST", self.path("kitchen-routing/preview"), {
+                "items": [{"menu_item_id": line["menu_item_id"], "quantity": line["quantity"], "options": line["options"]}]}))
+            order = self.rejected(lambda: self.submit(self.payload([line], "UNLINKEDCOMBOSIDE")))
+            equal(self.observation(), before, "Unlinked legacy Combo side must not create a Task without its child ticket")
+            return {"behavior": "LEGACY_COMBO_SIDE_TASK", "linked_menu_item_id": None, "rejected_at": "preview_and_order",
+                    "preview": preview, "order": order, "no_order_job_intent_created": True}
+        finally:
+            if saved:
+                self.owner.call("PUT", path, {"store_id": self.store, "groups": original["groups"]})
+
     def cors(self, origin, allowed):
         client = Client(self.owner.base, self.owner.redactions)
         if not allowed:
@@ -738,6 +770,7 @@ class Acceptance:
         self.case("combo_child_remove_full_snapshot_preview_and_real_child_ticket", self.combo_child_remove)
         self.case("known_combo_virtual_id_missing_code_group_rejected", self.combo_missing_virtual_metadata)
         self.case("unsupported_combo_behavior_fails_closed_no_business_artifacts", self.unsupported_combo_behavior)
+        self.case("legacy_combo_side_without_linked_item_rejected_no_business_artifacts", self.combo_legacy_side_requires_linked_item)
         if ready:
             self.case("historical_snapshots_immutable_zero_price_custom_kitchen_instruction", self.snapshot_and_zero_price_instruction)
         for kind in ("MISSING", "FAILED", "UNCERTAIN"):
